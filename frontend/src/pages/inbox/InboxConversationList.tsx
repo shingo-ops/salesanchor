@@ -215,7 +215,7 @@ export function InboxConversationList({
                       getInitials(conv.customer_name)
                     )}
                   </div>
-                  <span className={`conv-platform-dot icon-frame${SQUIRCLE_ICONS.has(conv.platform ?? "") ? " conv-platform-dot--squircle" : ""}`}>
+                  <span className={`conv-platform-dot${SQUIRCLE_ICONS.has(conv.platform ?? "") ? " conv-platform-dot--squircle" : ""}`}>
                     <PlatformIcon platform={conv.platform} size={ICON.base} />
                   </span>
                 </div>
