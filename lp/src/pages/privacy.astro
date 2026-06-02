@@ -147,6 +147,18 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     <li>Never used as AI training data</li>
   </ul>
 
+  <h3>4.4 AI-Assisted Message Translation</h3>
+  <p>The Service provides an optional AI-assisted translation feature that helps sales representatives understand messages written in foreign languages. When this feature is used, message text received via Messenger or Instagram Direct Messages may be sent to Google LLC's Gemini API (gemini-2.5-flash model) for translation processing.</p>
+  <ul>
+    <li><strong>Data sent:</strong> Message text only (no sender identifiers or profile information)</li>
+    <li><strong>Purpose:</strong> Translating message content into the language selected by the sales representative</li>
+    <li><strong>Processor:</strong> Google LLC (United States) — operating as a data processor under a Data Processing Addendum (DPA)</li>
+    <li><strong>Training use:</strong> Google does NOT use API inputs or outputs to train its models under the paid API terms</li>
+    <li><strong>Caching:</strong> Translation results are cached in our database (tenant schema: <code>message_translations</code> table) to avoid redundant API calls. This cache is deleted as part of the data deletion process (see Section 9)</li>
+    <li><strong>Legal basis (APPI):</strong> Outsourcing (委託) under Article 25 of the APPI; Google LLC is supervised as a sub-processor</li>
+    <li><strong>Legal basis (GDPR):</strong> Legitimate interests (providing the contracted translation feature) under Article 6(1)(f) GDPR</li>
+  </ul>
+
   <h2>5. Purpose of Use</h2>
 
   <h3>5.1 Purpose for User Information</h3>
@@ -165,6 +177,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <ul>
     <li>Mediating message transmission between client companies and End Users</li>
     <li>Storing conversation history for reference by client companies</li>
+    <li>AI-assisted translation of message content via Google Gemini API (optional feature; message text only; see Section 4.4)</li>
     <li>Complying with Meta Platform policies such as the 24-hour window rule</li>
     <li>Detecting fraudulent activity</li>
     <li>Legal compliance and responding to legal requests</li>
@@ -224,7 +237,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     </thead>
     <tbody>
       <tr><td>SAKURA internet Inc.</td><td>Server infrastructure</td><td>Japan</td></tr>
-      <tr><td>Google LLC</td><td>Authentication (Google Identity Platform)</td><td>United States</td></tr>
+      <tr><td>Google LLC</td><td>Authentication (Google Identity Platform) / AI-assisted message translation (Gemini API — paid tier, DPA in place)</td><td>United States</td></tr>
       <tr><td>Meta Platforms, Inc.</td><td>Messenger/Instagram API</td><td>United States</td></tr>
       <tr><td>Cloudflare, Inc.</td><td>DNS</td><td>United States</td></tr>
       <tr><td>GitHub, Inc.</td><td>Source code management</td><td>United States</td></tr>
@@ -290,7 +303,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <p>Upon receiving a deletion request, we will:</p>
   <ul>
     <li>Begin deletion within 7 business days of receipt</li>
-    <li>Delete data from the main database</li>
+    <li>Delete message history (<code>meta_messages</code>) from the main database</li>
+    <li>Delete AI translation cache (<code>message_translations</code>) associated with the deleted messages</li>
     <li>Delete data from the backup database (within 30 days)</li>
     <li>Issue a confirmation code upon completion (with verification URL)</li>
     <li>Deletion status verifiable at <a href="https://salesanchor.jp/deletion-status">https://salesanchor.jp/deletion-status</a></li>
@@ -368,6 +382,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
       <tr><td>1.4</td><td>2026-05-20</td><td>Full conversion to English-only; professional SaaS redesign (ADR-046)</td></tr>
       <tr><td>1.5</td><td>2026-05-21</td><td>Effective Date updated to today; GDPR mention added; Cookie table added; Data Deletion Callback flow clarified</td></tr>
       <tr><td>1.6</td><td>2026-05-21</td><td>§6.1 corrected: replaced inaccurate "no transfer outside Japan" with accurate description of US-provider data flows; §6.3 added PSID/IGSID retention period</td></tr>
+      <tr><td>1.7</td><td>2026-06-03</td><td>§4.4 added: AI-assisted message translation via Google Gemini API disclosure (APPI Art.25 outsourcing, GDPR Art.6(1)(f)); §5.2 updated: added AI translation purpose; §7.2 updated: Google LLC entry expanded to include Gemini API; §9.2 updated: AI translation cache (message_translations) added to deletion scope</td></tr>
     </tbody>
   </table>
 

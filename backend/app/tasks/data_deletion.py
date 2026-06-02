@@ -6,14 +6,19 @@ Meta Data Deletion Callback で受領した削除リクエストを非同期に�
 
 実行内容:
 1. data_deletion_logs を status='processing' / started_at=NOW() に更新
-2. 全テナントスキーマを列挙し、各テナントの meta_messages を sender_id でフィルタして削除
+2. 全テナントスキーマを列挙し、各テナントの以下テーブルを sender_id でフィルタして削除:
+   - message_translations（AI翻訳キャッシュ）: meta_messages.message_id を介して削除
+   - meta_messages: sender_id で直接削除
 3. 削除実績（件数）を data_items_deleted JSONB に記録
 4. status='completed' / completed_at=NOW() に更新
 5. 完了通知メールを送信（しんごさん設定の SMTP 経由、未設定なら idle）
 
 注意:
+- message_translations は meta_messages の派生データ（AI翻訳キャッシュ）。
+  Privacy Policy §9.2 の削除義務対象として追加（2026-06-03）。
+  meta_messages より先に削除すること（message_id 参照が失われるため）。
 - lead_channels / raw_webhook_events テーブルは Phase 3 で実装予定（仕様書 §4.2）。
-  現状は meta_messages のみ削除対象。実装され次第拡張。
+  実装され次第拡張。
 """
 
 from __future__ import annotations
@@ -46,6 +51,32 @@ def _list_tenant_schemas(session) -> list[str]:
     """tenant_NNN スキーマを一覧。アクティブテナントのみ。"""
     result = session.execute(text("SELECT id FROM public.tenants WHERE is_active = true"))
     return [f"tenant_{row[0]:03d}" for row in result]
+
+
+def _delete_message_translations_in_tenant(session, schema: str, sender_id: str) -> int:
+    """
+    指定テナントスキーマの message_translations から、sender_id に紐づくメッセージの
+    翻訳キャッシュを削除。meta_messages より先に呼び出すこと。
+    テーブルが存在しない場合は 0 を返す。
+    """
+    exists = session.execute(
+        text("SELECT to_regclass(:qualified) IS NOT NULL"),
+        {"qualified": f"{schema}.message_translations"},
+    ).scalar()
+    if not exists:
+        return 0
+
+    result = session.execute(
+        text(f"""
+            DELETE FROM {schema}.message_translations
+            WHERE message_id IN (
+                SELECT message_id FROM {schema}.meta_messages
+                WHERE sender_id = :sender_id
+            )
+        """),
+        {"sender_id": sender_id},
+    )
+    return result.rowcount or 0
 
 
 def _delete_meta_messages_in_tenant(session, schema: str, sender_id: str) -> int:
@@ -118,6 +149,7 @@ def process_data_deletion(request_id: str) -> dict:
 
     # 2) end_user (Meta) なら全テナントの meta_messages を sender_id で削除
     deleted_counts: dict[str, int] = {}
+    translation_counts: dict[str, int] = {}
     total_tenants_searched = 0
     error_message: str | None = None
 
@@ -127,6 +159,12 @@ def process_data_deletion(request_id: str) -> dict:
                 schemas = _list_tenant_schemas(session)
                 total_tenants_searched = len(schemas)
                 for schema in schemas:
+                    # message_translations を先に削除（meta_messages.message_id 参照が必要なため）
+                    t_count = _delete_message_translations_in_tenant(
+                        session, schema, identifier_value
+                    )
+                    if t_count > 0:
+                        translation_counts[schema] = t_count
                     count = _delete_meta_messages_in_tenant(
                         session, schema, identifier_value
                     )
@@ -146,6 +184,7 @@ def process_data_deletion(request_id: str) -> dict:
     #     {"meta_messages": <total>, "tenants_searched": <total>, "by_tenant": {...}}
     final_status = "failed" if error_message else "completed"
     total_messages = sum(deleted_counts.values())
+    total_translations = sum(translation_counts.values())
     with Session() as session:
         session.execute(
             text("""
@@ -161,6 +200,7 @@ def process_data_deletion(request_id: str) -> dict:
                 "status": final_status,
                 "data_items": json.dumps({
                     "meta_messages": total_messages,
+                    "message_translations": total_translations,
                     "tenants_searched": total_tenants_searched,
                     "by_tenant": deleted_counts,
                 }),
