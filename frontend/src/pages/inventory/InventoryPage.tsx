@@ -82,6 +82,8 @@ export default function InventoryPage() {
   const [filtersLoaded, setFiltersLoaded] = useState(false);
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
+  // カテゴリーは常にコード順（文字コード昇順）で左から並べる（プルダウン・詳細フィルタ共通）。
+  const sortedCategories = useMemo(() => [...categoryFacet].sort(), [categoryFacet]);
   const colVisible = (c: string) => !filterEnabled || !hiddenColumns.has(c);
   // checkbox(1) + title(1) + 可視の取捨対象列
   const visibleColCount = 2 + HIDEABLE_COLUMNS.filter(colVisible).length;
@@ -178,8 +180,8 @@ export default function InventoryPage() {
     });
   };
 
-  const goCreate = (path: string) => {
-    const selectedProducts = items
+  const selectedPayload = () =>
+    items
       .filter((it) => selectedIds.has(it.id))
       .map((it) => ({
         product_id: it.product_id,
@@ -190,8 +192,20 @@ export default function InventoryPage() {
         supplier_id: it.supplier_id,
         supplier_name: it.supplier_name,
       }));
+
+  const goCreate = (path: string) => {
+    const selectedProducts = selectedPayload();
     if (selectedProducts.length === 0) return;
     navigate(path, { state: { selectedProducts } });
+  };
+
+  // ヘッダー常設の発注書ボタン: 選択行があれば前埋めして発注書作成へ、無ければ発注書画面を開く。
+  const openPurchaseOrder = () => {
+    const selectedProducts = selectedPayload();
+    navigate(
+      "/purchase-orders",
+      selectedProducts.length > 0 ? { state: { selectedProducts } } : undefined,
+    );
   };
 
   // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。
@@ -203,7 +217,12 @@ export default function InventoryPage() {
     }
     setPage(1);
   };
-  const resetSort = () => {
+  // リセット: 検索語・カテゴリー絞り込み・ソートを既定（タイトル昇順）に戻す。
+  // ユーザー別の「詳細フィルタ」（仕入元/列の取捨）は意図的な設定なので保持する。
+  const resetAll = () => {
+    setSearchQ("");
+    setDebouncedQ("");
+    setCategory("");
     setSortField("name");
     setSortDir("asc");
     setPage(1);
@@ -242,29 +261,44 @@ export default function InventoryPage() {
     });
   };
 
-  // ソート可能な見出しセル（関数で返す＝nested-component を避ける）
-  const sortTh = (colKey: string, field: string, align?: "right") => (
-    <th style={{ textAlign: align ?? "left" }}>
-      <button
-        type="button"
-        onClick={() => onSort(field)}
-        data-testid={`inventory-sort-${field}`}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          font: "inherit",
-          fontWeight: "var(--font-weight-semi)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "var(--space-1)",
-        }}
-      >
-        {t(`inventory.col.${colKey}`)}
-        <span aria-hidden="true" style={{ color: "var(--text-secondary)" }}>{sortArrow(field)}</span>
-      </button>
-    </th>
-  );
+  // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
+  // 全列がソート可能であることが伝わるよう、非アクティブ列にも淡い中立アイコン(↕)を出す。
+  const sortTh = (colKey: string, field: string, align?: "right") => {
+    const active = sortField === field;
+    return (
+      <th style={{ textAlign: align ?? "left" }}>
+        <button
+          type="button"
+          onClick={() => onSort(field)}
+          data-testid={`inventory-sort-${field}`}
+          aria-label={t("inventory.sortBy", { col: t(`inventory.col.${colKey}`) })}
+          title={t("inventory.sortBy", { col: t(`inventory.col.${colKey}`) })}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            font: "inherit",
+            fontWeight: "var(--font-weight-semi)",
+            color: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+          }}
+        >
+          {t(`inventory.col.${colKey}`)}
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: "var(--font-xs)",
+              color: active ? "var(--accent)" : "var(--text-muted)",
+            }}
+          >
+            {active ? sortArrow(field) : t("inventory.sortNone")}
+          </span>
+        </button>
+      </th>
+    );
+  };
 
   return (
     <PageLayout navKey="nav.inventory" subtitleKey="inventory.view.subtitle">
@@ -278,14 +312,12 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* ツールバー: リセット / 検索窓(広め) / 検索ボタン / カテゴリー / フィルタ */}
+      {/* ツールバー: 検索窓 / 検索 / リセット / カテゴリー / 詳細フィルタ / 発注書 */}
       <section
         className="inventory-filter"
         style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-4)" }}
       >
-        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetSort}>
-          {t("inventory.resetSort")}
-        </button>
+        {/* 検索窓: タイトル列の終端あたりまでの固定幅（伸び縮みさせない） */}
         <input
           type="search"
           placeholder={t("inventory.view.searchPlaceholder")}
@@ -296,10 +328,13 @@ export default function InventoryPage() {
             setPage(1);
           }}
           onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-          style={{ minWidth: "28rem", flex: "1 1 28rem" }}
+          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto" }}
         />
         <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch}>
           {t("common.search")}
+        </button>
+        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll}>
+          {t("inventory.resetSort")}
         </button>
         <select
           data-testid="inventory-category-filter"
@@ -309,9 +344,10 @@ export default function InventoryPage() {
             setPage(1);
           }}
           aria-label={t("inventory.col.category")}
+          style={{ minWidth: "12rem" }}
         >
           <option value="">{t("inventory.filter.allCategories")}</option>
-          {categoryFacet.map((c) => (
+          {sortedCategories.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
@@ -325,6 +361,17 @@ export default function InventoryPage() {
         >
           {t("inventory.filterPanel.button")}
         </button>
+        {hasPermission("purchase_orders.create") && (
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            data-testid="inventory-create-po"
+            onClick={openPurchaseOrder}
+            style={{ marginLeft: "auto" }}
+          >
+            {t("inventory.createPO")}
+          </button>
+        )}
       </section>
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
@@ -354,6 +401,31 @@ export default function InventoryPage() {
             {t("inventory.filterPanel.enable")}
           </label>
 
+          {/* 1) カテゴリーの表示／非表示（コード順で左から） */}
+          <div>
+            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+              {t("inventory.filterPanel.categories")}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {sortedCategories.length === 0 ? (
+                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
+              ) : (
+                sortedCategories.map((c) => (
+                  <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                    <input
+                      type="checkbox"
+                      data-testid={`inventory-filter-category-${c}`}
+                      checked={!hiddenCategories.has(c)}
+                      onChange={() => toggleHiddenCategory(c)}
+                    />
+                    {c}
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 2) 仕入元の表示／非表示 */}
           <div>
             <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
               {t("inventory.filterPanel.suppliers")}
@@ -377,32 +449,20 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.categories")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {categoryFacet.length === 0 ? (
-                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-              ) : (
-                categoryFacet.map((c) => (
-                  <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-filter-category-${c}`}
-                      checked={!hiddenCategories.has(c)}
-                      onChange={() => toggleHiddenCategory(c)}
-                    />
-                    {c}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+          {/* 3) 表示する列（データの絞り込みではなく列の取捨。上2つと毛色が違うため枠で区別） */}
+          <div
+            style={{
+              background: "var(--bg-subtle)",
+              border: "1px dashed var(--border-strong)",
+              borderRadius: "var(--radius-sm)",
+              padding: "var(--space-3)",
+            }}
+          >
+            <div style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
               {t("inventory.filterPanel.columns")}
+            </div>
+            <div style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
+              {t("inventory.filterPanel.columnsNote")}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
               {HIDEABLE_COLUMNS.map((c) => (
@@ -453,7 +513,7 @@ export default function InventoryPage() {
             {t("products.createInvoice")}
           </button>
           {hasPermission("purchase_orders.create") && (
-            <button className="btn-primary btn-sm" onClick={() => goCreate("/purchase-orders")} data-testid="create-po-from-inventory">
+            <button className="btn-primary btn-sm" onClick={openPurchaseOrder} data-testid="create-po-from-inventory">
               {t("inventory.createPO")}
             </button>
           )}

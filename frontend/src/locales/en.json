@@ -766,16 +766,19 @@
     "pageOf": "Page {{page}} / {{total}} ({{count}} items)",
     "sortAsc": "▲",
     "sortDesc": "▼",
+    "sortNone": "↕",
+    "sortBy": "Sort by {{col}}",
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "createPO": "Create PO",
     "filterPanel": {
-      "button": "Filter",
+      "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
       "suppliers": "Show / hide suppliers",
       "categories": "Show / hide categories",
-      "columns": "Visible columns"
+      "columns": "Visible columns",
+      "columnsNote": "Choose which columns appear in the table (not a data filter)."
     },
     "search": {
       "placeholder": "Search by product name, card number, JAN, expansion code, or supplier alias",
@@ -939,6 +942,16 @@
     "status_discontinued": "Discontinued",
     "outOfStockTooltip": "Out of stock — requires reorder or replenishment",
     "pageLabel": "Page {{page}} ({{count}} items)",
+    "field": {
+      "category": "Category",
+      "mark": "Mark",
+      "cardNumber": "Card Number",
+      "expansionCode": "Set Code (Expansion)",
+      "rarity": "Rarity",
+      "condition": "Condition",
+      "imageUrl": "Image URL",
+      "publishStatus": "Publish Status"
+    },
     "master": {
       "sectionBox": "Box / Packaging",
       "sectionShipping": "Shipping label",
@@ -1554,7 +1567,10 @@
         "versionLabel": "Version",
         "rawContent": "Raw content",
         "noItems": "No parsed items.",
-        "missingProduct": "Product not linked (must skip)",
+        "missingProduct": "Not found in the product master. Pick a product below, or check \"Skip\" on the left.",
+        "selectFromMaster": "Select from product master",
+        "linkedToMaster": "Linked to product master",
+        "masterPickerPlaceholder": "Search product master…",
         "operatorComment": "Reviewer comment",
         "approveBtn": "Approve and apply to stock",
         "rejectBtn": "Reject",
@@ -1566,17 +1582,17 @@
         "rejectSuccess": "Rejected.",
         "versionConflict": "Another reviewer updated this item first. Reloaded — please review again.",
         "col": {
-          "productId": "Product ID",
+          "productId": "Product",
           "alias": "Supplier alias",
           "notes": "Notes",
           "skip": "Skip",
           "condition": "Condition",
-          "quantityOffered": "Qty on hand",
+          "quantityOffered": "Qty",
           "quantityOfferedPlaceholder": "Offered qty",
-          "unit": "Unit",
-          "offerType": "Type",
+          "unit": "Form",
+          "offerType": "Stock / Pre-order",
           "shipTiming": "Ship timing",
-          "unitPrice": "Unit price (JPY)",
+          "unitPrice": "Unit price",
           "unitPricePlaceholder": "Offered price"
         },
         "condition": {

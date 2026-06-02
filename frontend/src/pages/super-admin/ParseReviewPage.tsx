@@ -506,15 +506,15 @@ export default function ParseReviewPage() {
                       <th className="review-col-skip">
                         {t("superAdmin.inbound.review.col.skip")}
                       </th>
-                      <th>#</th>
+                      {/* 在庫表と並び・呼称を統一: 商品 / 状態 / 形態 / 在庫・予約 / 発送日 / 数量 / 単価。
+                          内部 index(#) と仕入元呼称(別名) は明細から外し、別名はメモ行へ。 */}
                       <th>{t("superAdmin.inbound.review.col.productId")}</th>
                       <th>{t("superAdmin.inbound.review.col.condition")}</th>
-                      <th>{t("superAdmin.inbound.review.col.quantityOffered")}</th>
                       <th>{t("superAdmin.inbound.review.col.unit")}</th>
                       <th>{t("superAdmin.inbound.review.col.offerType")}</th>
                       <th>{t("superAdmin.inbound.review.col.shipTiming")}</th>
+                      <th>{t("superAdmin.inbound.review.col.quantityOffered")}</th>
                       <th>{t("superAdmin.inbound.review.col.unitPrice")}</th>
-                      <th>{t("superAdmin.inbound.review.col.alias")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -549,8 +549,9 @@ export default function ParseReviewPage() {
                               }
                             />
                           </td>
-                          <td>{idx}</td>
-                          <td style={{ minWidth: 'var(--col-width-wide)' }}>
+                          {/* 商品（＝商品マスタ）。コード(ID)は表示しない。未紐付け時は
+                              商品マスタから選択する picker を出す。 */}
+                          <td className="review-col-product" style={{ minWidth: "10rem", maxWidth: "18rem" }}>
                             {row.product_name && (
                               <div
                                 data-testid={`review-row-${idx}-product-name`}
@@ -568,9 +569,13 @@ export default function ParseReviewPage() {
                                 </em>
                                 {!isFinal && (
                                   <div style={{ marginTop: "var(--space-1)" }}>
+                                    <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                                      {t("superAdmin.inbound.review.selectFromMaster")}
+                                    </div>
                                     <InventoryPicker
                                       disabled={row.skipped}
                                       testIdPrefix={`review-row-${idx}-inv-search`}
+                                      placeholder={t("superAdmin.inbound.review.masterPickerPlaceholder")}
                                       /* QA 2026-05-30: 解析された商品名で商品マスタ候補を予め絞り込む */
                                       initialQuery={row.product_name || undefined}
                                       /* QA 2026-05-30: 商品マスタ選択では在庫(目安)は無関係なので非表示 */
@@ -583,11 +588,12 @@ export default function ParseReviewPage() {
                                 )}
                               </div>
                             ) : (
-                              <code data-testid={`review-row-${idx}-product-id`}>{row.product_id}</code>
+                              <span className="badge" data-testid={`review-row-${idx}-product-id`}>
+                                {t("superAdmin.inbound.review.linkedToMaster")}
+                              </span>
                             )}
                           </td>
-                          {/* Sprint 11 / F11 AC11.3: condition / quantity_offered / unit / unit_price
-                              QA 2026-05-30: 差分数量列は撤去（在庫は目安・増減不要） */}
+                          {/* 在庫表と並び・呼称を統一: 状態 / 形態 / 在庫・予約 / 発送日 / 数量 / 単価 */}
                           <td>
                             <select
                               data-testid={`review-row-${idx}-condition`}
@@ -596,7 +602,7 @@ export default function ParseReviewPage() {
                               onChange={(e) =>
                                 updateDraft(idx, { condition: e.target.value })
                               }
-                              style={{ width: "8rem" }}
+                              style={{ width: "7rem" }}
                             >
                               <option value="">
                                 {t("superAdmin.inbound.review.condition.unspecified")}
@@ -608,22 +614,7 @@ export default function ParseReviewPage() {
                               ))}
                             </select>
                           </td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              data-testid={`review-row-${idx}-quantity-offered`}
-                              value={row.quantity_offered}
-                              disabled={row.skipped || isFinal}
-                              placeholder={t(
-                                "superAdmin.inbound.review.col.quantityOfferedPlaceholder",
-                              )}
-                              onChange={(e) =>
-                                updateDraft(idx, { quantity_offered: e.target.value })
-                              }
-                              style={{ width: "5rem" }}
-                            />
-                          </td>
+                          {/* 形態(unit) */}
                           <td>
                             <select
                               data-testid={`review-row-${idx}-unit`}
@@ -632,7 +623,7 @@ export default function ParseReviewPage() {
                               onChange={(e) =>
                                 updateDraft(idx, { unit: e.target.value })
                               }
-                              style={{ width: "6rem" }}
+                              style={{ width: "5.5rem" }}
                             >
                               <option value="">
                                 {t("superAdmin.inbound.review.condition.unspecified")}
@@ -644,7 +635,7 @@ export default function ParseReviewPage() {
                               ))}
                             </select>
                           </td>
-                          {/* ADR-093 Phase 3b: 区分(在庫/予約) */}
+                          {/* ADR-093 Phase 3b: 在庫・予約(offer_type) */}
                           <td>
                             <select
                               data-testid={`review-row-${idx}-offer-type`}
@@ -674,7 +665,7 @@ export default function ParseReviewPage() {
                               onChange={(e) =>
                                 updateDraft(idx, { ship_timing: e.target.value })
                               }
-                              style={{ width: "8rem" }}
+                              style={{ width: "7rem" }}
                             >
                               <option value="">
                                 {t("superAdmin.inbound.review.condition.unspecified")}
@@ -686,6 +677,24 @@ export default function ParseReviewPage() {
                               ))}
                             </select>
                           </td>
+                          {/* 数量(quantity_offered) */}
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              data-testid={`review-row-${idx}-quantity-offered`}
+                              value={row.quantity_offered}
+                              disabled={row.skipped || isFinal}
+                              placeholder={t(
+                                "superAdmin.inbound.review.col.quantityOfferedPlaceholder",
+                              )}
+                              onChange={(e) =>
+                                updateDraft(idx, { quantity_offered: e.target.value })
+                              }
+                              style={{ width: "4.5rem" }}
+                            />
+                          </td>
+                          {/* 単価(unit_price) */}
                           <td>
                             <input
                               type="number"
@@ -703,18 +712,6 @@ export default function ParseReviewPage() {
                               style={{ width: "6rem" }}
                             />
                           </td>
-                          <td>
-                            <input
-                              type="text"
-                              data-testid={`review-row-${idx}-alias`}
-                              value={row.alias_text}
-                              disabled={row.skipped || isFinal}
-                              onChange={(e) =>
-                                updateDraft(idx, { alias_text: e.target.value })
-                              }
-                              style={{ width: "8rem" }}
-                            />
-                          </td>
                         </tr>
                         {/* QA 2026-05-30: メモは2段目に降ろし、1段目の横幅を抑える */}
                         <tr
@@ -729,33 +726,70 @@ export default function ParseReviewPage() {
                           }
                         >
                           <td className="review-col-skip" aria-hidden="true" />
+                          {/* 仕入元呼称(別名)とメモを2段目にまとめ、明細行の横幅を抑える */}
                           <td colSpan={7}>
-                            <label
+                            <div
                               style={{
                                 display: "flex",
+                                flexWrap: "wrap",
                                 alignItems: "center",
-                                gap: "var(--space-2)",
+                                gap: "var(--space-2) var(--space-4)",
                               }}
                             >
-                              <span
+                              <label
                                 style={{
-                                  color: "var(--text-secondary)",
-                                  whiteSpace: "nowrap",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "var(--space-2)",
                                 }}
                               >
-                                {t("superAdmin.inbound.review.col.notes")}
-                              </span>
-                              <input
-                                type="text"
-                                data-testid={`review-row-${idx}-notes`}
-                                value={row.notes}
-                                disabled={row.skipped || isFinal}
-                                onChange={(e) =>
-                                  updateDraft(idx, { notes: e.target.value })
-                                }
-                                style={{ flex: 1 }}
-                              />
-                            </label>
+                                <span
+                                  style={{
+                                    color: "var(--text-secondary)",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {t("superAdmin.inbound.review.col.alias")}
+                                </span>
+                                <input
+                                  type="text"
+                                  data-testid={`review-row-${idx}-alias`}
+                                  value={row.alias_text}
+                                  disabled={row.skipped || isFinal}
+                                  onChange={(e) =>
+                                    updateDraft(idx, { alias_text: e.target.value })
+                                  }
+                                  style={{ width: "12rem" }}
+                                />
+                              </label>
+                              <label
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "var(--space-2)",
+                                  flex: "1 1 16rem",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: "var(--text-secondary)",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {t("superAdmin.inbound.review.col.notes")}
+                                </span>
+                                <input
+                                  type="text"
+                                  data-testid={`review-row-${idx}-notes`}
+                                  value={row.notes}
+                                  disabled={row.skipped || isFinal}
+                                  onChange={(e) =>
+                                    updateDraft(idx, { notes: e.target.value })
+                                  }
+                                  style={{ flex: 1 }}
+                                />
+                              </label>
+                            </div>
                           </td>
                         </tr>
                         </Fragment>
