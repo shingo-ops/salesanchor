@@ -101,3 +101,4 @@
 | Proposed | 提案中 / レビュー待ち |
 | Deprecated | 非推奨（後継 ADR 参照） |
 | Superseded | 別 ADR により上書き済み |
+
