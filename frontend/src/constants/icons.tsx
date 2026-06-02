@@ -292,12 +292,12 @@ export function PlatformIcon({ platform, size = 16 }: { platform: string | null;
     );
   }
 
-  // squircle(Instagram) → 70%(14px) / 真円SVG(Messenger等) → 90%(18px) / シンボルのみ(Discord等) → 72%
+  // squircle(Instagram) → 70%(14px) / 真円SVG(Messenger等) → 80%(16px) / シンボルのみ(Discord等) → 72%
   const isSquircle = SQUIRCLE_ICONS.has(platform);
   const imgSize = isSquircle
     ? Math.round(size * 0.70)
     : FULL_CIRCLE_ICONS.has(platform)
-      ? Math.round(size * 0.90)
+      ? Math.round(size * 0.80)
       : Math.round(size * 0.72);
   const wrapClass = isSquircle ? "platform-icon-wrap platform-icon-wrap--squircle" : "platform-icon-wrap";
 
