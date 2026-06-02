@@ -939,6 +939,16 @@
     "status_discontinued": "Discontinued",
     "outOfStockTooltip": "Out of stock — requires reorder or replenishment",
     "pageLabel": "Page {{page}} ({{count}} items)",
+    "field": {
+      "category": "Category",
+      "mark": "Mark",
+      "cardNumber": "Card Number",
+      "expansionCode": "Set Code (Expansion)",
+      "rarity": "Rarity",
+      "condition": "Condition",
+      "imageUrl": "Image URL",
+      "publishStatus": "Publish Status"
+    },
     "master": {
       "sectionBox": "Box / Packaging",
       "sectionShipping": "Shipping label",
