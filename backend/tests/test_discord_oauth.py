@@ -234,7 +234,7 @@ class TestDiscordOAuthCallback:
         ):
             res = await app_client.get(
                 "/api/v1/discord/oauth/callback",
-                params={"state": "valid-state", "guild_id": "123456789"},
+                params={"state": "valid-state", "guild_id": "123456789012345678"},
             )
 
         assert res.status_code in (302, 307)
@@ -264,7 +264,7 @@ class TestDiscordOAuthCallback:
         ):
             res = await app_client.get(
                 "/api/v1/discord/oauth/callback",
-                params={"state": "tampered-state", "guild_id": "123456789"},
+                params={"state": "tampered-state", "guild_id": "123456789012345678"},
             )
 
         assert res.status_code in (302, 307)
