@@ -220,9 +220,16 @@ export default function DiscordInboundPage() {
       navKey="nav.superAdminInbound"
       subtitleKey="superAdmin.inbound.subtitle"
       headerAction={
-        <button className="btn-secondary" onClick={openImport} data-testid="open-import-from-inbound">
-          {t("products.importFromInbound")}
-        </button>
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={openImport}
+            data-testid="open-import-from-inbound"
+          >
+            {t("products.importFromInbound")}
+          </button>
+        </div>
       }
     >
 
