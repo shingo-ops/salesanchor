@@ -88,7 +88,7 @@
     "archive": "Archive",
     "inventory": "Inventory List",
     "products": "Product Master",
-    "quotesInvoices": "Create Invoice",
+    "quotesInvoices": "Quotes & Invoices",
     "orders": "Orders",
     "newQuote": "New Quote",
     "quoteHistory": "Quote History",
@@ -772,6 +772,10 @@
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "createPO": "Create PO",
+    "actions": {
+      "purchasingRole": "Purchasing",
+      "salesRole": "Sales"
+    },
     "filterPanel": {
       "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
@@ -818,6 +822,8 @@
     "title": "Quotes",
     "newQuote": "New Quote",
     "quoteCode": "Quote code",
+    "customer": "Customer",
+    "salesRep": "Sales rep",
     "subtotal": "Subtotal",
     "shippingFee": "Shipping fee",
     "tax": "Tax",

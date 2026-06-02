@@ -19,12 +19,17 @@ interface Quote {
   deal_id: number | null;
   // Step 5d: 旧 customer_id を撤去、company_id を必須化
   company_id: number;
+  contact_id: number | null;
   currency: string;
   subtotal: number | null;
   total_amount: number | null;
   status: string;
   validity_date: string | null;
   created_at: string;
+  // 一覧表示用（backend が JOIN で付与）: 顧客名・担当者名・営業担当(起票者)名
+  company_name: string | null;
+  contact_name: string | null;
+  created_by_name: string | null;
 }
 
 const QUOTE_STATUSES = ["draft", "sent", "approved", "rejected", "expired"];
@@ -90,6 +95,8 @@ export default function QuotesPage() {
           <thead>
             <tr>
               <th>{t("quotes.quoteCode")}</th>
+              <th>{t("quotes.customer")}</th>
+              <th>{t("quotes.salesRep")}</th>
               <th>{t("common.currency")}</th>
               <th>{t("quotes.total")}</th>
               <th>{t("common.status")}</th>
@@ -102,6 +109,13 @@ export default function QuotesPage() {
             {quotes.map((q) => (
               <tr key={q.id}>
                 <td className="mono">{q.quote_code || "-"}</td>
+                <td>
+                  <div>{q.company_name || "-"}</div>
+                  {q.contact_name && (
+                    <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{q.contact_name}</div>
+                  )}
+                </td>
+                <td>{q.created_by_name || "-"}</td>
                 <td>{q.currency}</td>
                 <td>{fmt(q.total_amount, q.currency)}</td>
                 <td><span className={`badge badge-${q.status === "approved" ? "won" : q.status === "rejected" ? "lost" : q.status === "expired" ? "cancelled" : q.status === "sent" ? "negotiating" : "pending"}`}>
@@ -114,7 +128,7 @@ export default function QuotesPage() {
                 </td>
               </tr>
             ))}
-            {quotes.length === 0 && <tr><td colSpan={7} className="empty">{t("quotes.noQuotes")}</td></tr>}
+            {quotes.length === 0 && <tr><td colSpan={9} className="empty">{t("quotes.noQuotes")}</td></tr>}
           </tbody>
         </table>
       )}
