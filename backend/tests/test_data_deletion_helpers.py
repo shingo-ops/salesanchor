@@ -140,7 +140,7 @@ class TestProcessDataDeletion:
 
 
     def test_end_user_deletion_completes(self):
-        """end_user タイプで全テナントの meta_messages を削除する。"""
+        """end_user タイプで全テナントの meta_messages と message_translations を削除する。"""
         from app.tasks.data_deletion import process_data_deletion
 
         mock_session = MagicMock()
@@ -151,36 +151,53 @@ class TestProcessDataDeletion:
         # Session 1: SELECT (identifier_value, channel, user_type)
         mock_select_result = MagicMock()
         mock_select_result.first.return_value = ("sender123", "messenger", "end_user")
-        # Session 2: UPDATE status='processing'
+        # Session 1: UPDATE status='processing'
         mock_update1 = MagicMock()
-        # Session 2 (end_user deletion): _list_tenant_schemas → [(1,)]
+        # Session 2: _list_tenant_schemas → [(1,)]
         mock_schemas_result = MagicMock()
         mock_schemas_result.__iter__ = MagicMock(return_value=iter([(1,)]))
+        # _delete_message_translations_in_tenant: exists True, delete 1 row
+        mock_exists_trans = MagicMock()
+        mock_exists_trans.scalar.return_value = True
+        mock_delete_trans = MagicMock()
+        mock_delete_trans.rowcount = 1
         # _delete_meta_messages_in_tenant: exists True, delete 2 rows
-        mock_exists = MagicMock()
-        mock_exists.scalar.return_value = True
-        mock_delete = MagicMock()
-        mock_delete.rowcount = 2
+        mock_exists_msg = MagicMock()
+        mock_exists_msg.scalar.return_value = True
+        mock_delete_msg = MagicMock()
+        mock_delete_msg.rowcount = 2
         # Session 3: UPDATE status='completed'
         mock_update2 = MagicMock()
 
         # Sequence of execute() calls across sessions
+        # n=1: SELECT row
+        # n=2: UPDATE processing
+        # n=3: SELECT tenants
+        # n=4: message_translations exists check
+        # n=5: DELETE message_translations
+        # n=6: meta_messages exists check
+        # n=7: DELETE meta_messages
+        # n=8: UPDATE completed
         call_counter = [0]
         def execute_side_effect(*args, **kwargs):
             call_counter[0] += 1
             n = call_counter[0]
             if n == 1:
-                return mock_select_result  # session 1: SELECT row
+                return mock_select_result
             elif n == 2:
-                return mock_update1         # session 1: UPDATE processing
+                return mock_update1
             elif n == 3:
-                return mock_schemas_result  # session 2: SELECT tenants
+                return mock_schemas_result
             elif n == 4:
-                return mock_exists          # session 2: table exists check
+                return mock_exists_trans
             elif n == 5:
-                return mock_delete          # session 2: DELETE
+                return mock_delete_trans
+            elif n == 6:
+                return mock_exists_msg
+            elif n == 7:
+                return mock_delete_msg
             else:
-                return mock_update2         # session 3: UPDATE completed
+                return mock_update2
 
         mock_session.execute.side_effect = execute_side_effect
 
