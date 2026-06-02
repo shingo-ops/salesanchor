@@ -52,10 +52,11 @@ _FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL") or "https://app.salesanchor.
 
 
 def _build_invite_url(state: str) -> str:
+    # integration_type は新アプリインストール方式用のパラメータ。
+    # scope=bot のみの従来 Bot OAuth では redirect_uri コールバックが呼ばれなくなるため除外。
     params = {
         "client_id": _DISCORD_CLIENT_ID,
         "permissions": _DISCORD_PERMISSIONS,
-        "integration_type": "0",
         "scope": "bot",
         "redirect_uri": _DISCORD_CALLBACK_URL,
         "state": state,
