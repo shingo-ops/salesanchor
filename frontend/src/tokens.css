@@ -331,6 +331,7 @@
 
   /* ---- Phase 5: モーダル・パネル幅 (ADR-067) ---- */
   --modal-wide-w:          880px;  /* 広めモーダル（詳細・配送パネル） */
+  --modal-xwide-w:        1100px;  /* 特大モーダル（多項目フォーム＝商品マスタ編集の多列グリッド） */
   --modal-commission-w:    760px;  /* 手数料パネル */
   --modal-detail-max-w:    720px;  /* 売上情報パネル */
   --dropdown-list-h:       280px;  /* マージモーダル候補リスト高さ */

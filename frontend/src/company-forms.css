@@ -214,3 +214,52 @@
     display: none;
   }
 }
+
+/* === ADR-093 商品マスタ編集フォーム ===
+   要望: (1)入力枠が薄くて見えない (2)同名ラベルで何を入れるか不明 (3)横幅を活かして一覧視認性UP
+   → 別ウィンドウ前提で横幅を広げ、項目を2〜3列グリッドに整列し、入力枠を濃くする */
+.modal.product-edit-modal {
+  max-width: min(96vw, var(--modal-xwide-w));
+}
+
+/* 上位の項目を可変列グリッドで並べ、縦スクロールを減らす */
+.product-edit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: start;
+}
+
+/* グリッド内では form-group の下マージンを消して gap に統一 */
+.product-edit-form .form-group {
+  margin-bottom: 0;
+}
+
+/* セクション(fieldset)・全幅項目・操作ボタンは1行を使い切る */
+.product-edit-form > fieldset,
+.product-edit-form > .form-group-full,
+.product-edit-form > .form-actions {
+  grid-column: 1 / -1;
+}
+
+/* fieldset 内も同じグリッドで整列。legend と textarea 系の項目は全幅 */
+.product-edit-form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+}
+
+.product-edit-form fieldset > legend,
+.product-edit-form fieldset > .form-group-full {
+  grid-column: 1 / -1;
+}
+
+/* 入力枠が薄くて見えない問題の解消（--border → --border-strong で輪郭を明確に） */
+/* stylelint-disable no-descending-specificity -- 既存 .form-row *:focus より後段になるが、商品マスタ編集専用スコープの枠線上書きで意図的 */
+.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]),
+.product-edit-form .form-group select,
+.product-edit-form .form-group textarea {
+  border: 1px solid var(--border-strong);
+}
+/* stylelint-enable no-descending-specificity */

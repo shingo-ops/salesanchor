@@ -939,6 +939,16 @@
     "status_discontinued": "廃番",
     "outOfStockTooltip": "在庫切れ — 仕入元の発注または在庫補充が必要です",
     "pageLabel": "{{page}} ページ目 ({{count}} 件表示中)",
+    "field": {
+      "category": "カテゴリー",
+      "mark": "型番",
+      "cardNumber": "カード番号",
+      "expansionCode": "セット記号（エキスパンション）",
+      "rarity": "レアリティ",
+      "condition": "状態（コンディション）",
+      "imageUrl": "画像URL",
+      "publishStatus": "公開状態"
+    },
     "master": {
       "sectionBox": "Box・梱包",
       "sectionShipping": "発送ラベル",

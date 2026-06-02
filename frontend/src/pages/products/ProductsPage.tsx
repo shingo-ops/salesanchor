@@ -420,19 +420,19 @@ export default function ProductsPage() {
 
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal product-edit-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{editId ? t("products.editProduct") : t("products.newProduct")}</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("products.nameJa")} *</label>
+            <form className="product-edit-form" onSubmit={handleSubmit}>
+              <div className="form-group form-group-full"><label>{t("products.nameJa")} *</label>
                 <input required value={form.name_ja} onChange={(e) => setForm({ ...form, name_ja: e.target.value })} />
               </div>
-              <div className="form-group"><label>{t("products.nameEn")}</label>
+              <div className="form-group form-group-full"><label>{t("products.nameEn")}</label>
                 <input value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} />
               </div>
-              <div className="form-group"><label>{t("leads.type")}</label>
+              <div className="form-group"><label>{t("products.field.category")}</label>
                 <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
               </div>
-              <div className="form-group"><label>{t("common.code")}</label>
+              <div className="form-group"><label>{t("products.field.mark")}</label>
                 <input value={form.mark} onChange={(e) => setForm({ ...form, mark: e.target.value })} />
               </div>
 
@@ -442,13 +442,13 @@ export default function ProductsPage() {
                 <div className="form-group"><label>JAN/EAN</label>
                   <input maxLength={20} value={form.jan_code} onChange={(e) => setForm({ ...form, jan_code: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("common.code")}</label>
+                <div className="form-group"><label>{t("products.field.cardNumber")}</label>
                   <input maxLength={50} value={form.card_number} onChange={(e) => setForm({ ...form, card_number: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("common.code")}</label>
+                <div className="form-group"><label>{t("products.field.expansionCode")}</label>
                   <input maxLength={20} value={form.expansion_code} onChange={(e) => setForm({ ...form, expansion_code: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("common.type")}</label>
+                <div className="form-group"><label>{t("products.field.rarity")}</label>
                   <input maxLength={20} value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("language.label")}</label>
@@ -462,7 +462,7 @@ export default function ProductsPage() {
                 </div>
               </fieldset>
 
-              <div className="form-group"><label>{t("common.status")}</label>
+              <div className="form-group"><label>{t("products.field.condition")}</label>
                 <input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} />
               </div>
 
@@ -495,16 +495,16 @@ export default function ProductsPage() {
               <div className="form-group"><label>{t("products.weight")}</label>
                 <input type="number" min="0" step="0.001" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} />
               </div>
-              <div className="form-group"><label>URL</label>
+              <div className="form-group form-group-full"><label>{t("products.field.imageUrl")}</label>
                 <input type="url" maxLength={500} placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
               </div>
-              <div className="form-group"><label>{t("common.status")}</label>
+              <div className="form-group"><label>{t("products.field.publishStatus")}</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   <option value="active">{t("products.status_active")}</option>
                   <option value="discontinued">{t("products.status_discontinued")}</option>
                 </select>
               </div>
-              <div className="form-group"><label>{t("common.notes")}</label>
+              <div className="form-group form-group-full"><label>{t("common.notes")}</label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
 
@@ -557,10 +557,10 @@ export default function ProductsPage() {
                 <div className="form-group"><label>{t("products.master.relatedSeries")}</label>
                   <input maxLength={255} value={form.related_series} onChange={(e) => setForm({ ...form, related_series: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("products.master.searchKeywords")}</label>
+                <div className="form-group form-group-full"><label>{t("products.master.searchKeywords")}</label>
                   <textarea maxLength={5000} value={form.search_keywords} onChange={(e) => setForm({ ...form, search_keywords: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("products.master.excludeKeywords")}</label>
+                <div className="form-group form-group-full"><label>{t("products.master.excludeKeywords")}</label>
                   <textarea maxLength={5000} value={form.exclude_keywords} onChange={(e) => setForm({ ...form, exclude_keywords: e.target.value })} />
                 </div>
               </fieldset>
