@@ -366,7 +366,15 @@ export default function ProductsPage() {
       subtitleKey="products.subtitle"
       headerAction={
         hasPermission("products.create") ? (
-          <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}>{t("products.newProduct")}</button>
+          <div className="page-header-actions">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}
+            >
+              {t("products.newProduct")}
+            </button>
+          </div>
         ) : undefined
       }
     >
