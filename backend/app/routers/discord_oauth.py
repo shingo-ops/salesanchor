@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -52,12 +53,17 @@ _FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL") or "https://app.salesanchor.
 
 
 def _build_invite_url(state: str) -> str:
-    # integration_type は新アプリインストール方式用のパラメータ。
-    # scope=bot のみの従来 Bot OAuth では redirect_uri コールバックが呼ばれなくなるため除外。
+    # scope=bot 単体は Discord の "callback-less flow" として設計されており
+    # redirect_uri へのリダイレクトが発生しない（公式仕様・2017年から不変）。
+    # applications.commands を追加し response_type=code を明示することで
+    # フル OAuth2 Authorization Code フローが実行され、
+    # redirect_uri?guild_id=GUILD_ID&code=CODE&state=STATE にリダイレクトされる。
+    # 参考: MEE6 (1,950万サーバー) / Carl-bot (1,332万サーバー) が同一パターンを採用。
     params = {
         "client_id": _DISCORD_CLIENT_ID,
         "permissions": _DISCORD_PERMISSIONS,
-        "scope": "bot",
+        "scope": "bot applications.commands",
+        "response_type": "code",
         "redirect_uri": _DISCORD_CALLBACK_URL,
         "state": state,
     }
@@ -123,6 +129,11 @@ async def discord_oauth_callback(
     if not guild_id:
         # ユーザーがサーバー選択をキャンセルした場合など
         return RedirectResponse(f"{channels_url}?discord_status=error&reason=missing_guild_id")
+
+    # guild_id は Discord Snowflake（17〜19桁の数字）のみ許可（多層防御）
+    if not re.fullmatch(r"\d{17,19}", guild_id):
+        logger.warning("[discord_oauth] 不正な guild_id フォーマット: %s", guild_id)
+        return RedirectResponse(f"{channels_url}?discord_status=error&reason=invalid_guild_id")
 
     # state 検証（one-time: 検証後に Redis から削除）
     try:
