@@ -87,21 +87,36 @@ async def list_quotes(
     params: dict = {"limit": per_page, "offset": offset}
 
     if status_filter:
-        conditions.append("status = :status")
+        conditions.append("q.status = :status")
         params["status"] = status_filter
     if company_id:
-        conditions.append("company_id = :company_id")
+        conditions.append("q.company_id = :company_id")
         params["company_id"] = company_id
     if contact_id:
-        conditions.append("contact_id = :contact_id")
+        conditions.append("q.contact_id = :contact_id")
         params["contact_id"] = contact_id
     if deal_id:
-        conditions.append("deal_id = :did")
+        conditions.append("q.deal_id = :did")
         params["did"] = deal_id
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    # 見積履歴の「顧客」「営業担当」表示用に会社名 / 担当者名 / 起票ユーザー名を JOIN で付与する。
+    # companies / contacts はテナントスキーマ（search_path 解決）、users は public 固定。
+    # いずれも LEFT JOIN なので欠損行は NULL（QuoteResponse 側で Optional）。
+    quote_cols = ", ".join(f"q.{c.strip()}" for c in _QUOTE_COLUMNS.split(",") if c.strip())
     result = await db.execute(
-        text(f"SELECT {_QUOTE_COLUMNS} FROM quotes {where} ORDER BY updated_at DESC LIMIT :limit OFFSET :offset"),
+        text(
+            f"SELECT {quote_cols}, "
+            "co.name AS company_name, "
+            "ct.display_name AS contact_name, "
+            "u.username AS created_by_name "
+            "FROM quotes q "
+            "LEFT JOIN companies co ON co.id = q.company_id "
+            "LEFT JOIN contacts ct ON ct.id = q.contact_id "
+            "LEFT JOIN public.users u ON u.id = q.created_by "
+            f"{where} "
+            "ORDER BY q.updated_at DESC LIMIT :limit OFFSET :offset"
+        ),
         params,
     )
     return [QuoteResponse(**row) for row in result.mappings().all()]

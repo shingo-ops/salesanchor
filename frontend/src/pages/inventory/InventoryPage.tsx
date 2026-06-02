@@ -208,6 +208,9 @@ export default function InventoryPage() {
     );
   };
 
+  const clearSelection = () => setSelectedIds(new Set());
+  const noSelection = selectedIds.size === 0;
+
   // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。
   const onSort = (field: string) => {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -361,17 +364,6 @@ export default function InventoryPage() {
         >
           {t("inventory.filterPanel.button")}
         </button>
-        {hasPermission("purchase_orders.create") && (
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            data-testid="inventory-create-po"
-            onClick={openPurchaseOrder}
-            style={{ marginLeft: "auto" }}
-          >
-            {t("inventory.createPO")}
-          </button>
-        )}
       </section>
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
@@ -487,39 +479,63 @@ export default function InventoryPage() {
         </section>
       )}
 
-      {/* 選択 → 見積/請求/発注書作成 */}
-      {selectedIds.size > 0 && (
+      {/* アクション: 役割ごとに2段で固定表示（チェック前から常時表示）。
+          各段は権限で出し分け、作成系は商品選択時のみ有効、クリアは両段に表示。 */}
+      {(hasPermission("purchase_orders.create") ||
+        hasPermission("quotes.create") ||
+        hasPermission("invoices.create")) && (
         <div
           className="selection-action-bar"
+          data-testid="inventory-action-groups"
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            flexWrap: "wrap",
-            margin: "var(--space-2) 0",
-            padding: "var(--space-2) var(--space-3)",
+            flexDirection: "column",
+            gap: "var(--space-2)",
+            margin: "var(--space-2) 0 var(--space-4)",
+            padding: "var(--space-3)",
             background: "var(--bg-subtle)",
             border: "1px solid var(--border)",
             borderRadius: "var(--radius-sm)",
           }}
         >
-          <span style={{ fontWeight: "var(--font-weight-semi)" }}>
+          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }} data-testid="inventory-selected-count">
             {t("products.selectedCount", { count: selectedIds.size })}
           </span>
-          <button className="btn-primary btn-sm" onClick={() => goCreate("/quotes/new")} data-testid="create-quote-from-inventory">
-            {t("products.createQuote")}
-          </button>
-          <button className="btn-primary btn-sm" onClick={() => goCreate("/invoices/new")} data-testid="create-invoice-from-inventory">
-            {t("products.createInvoice")}
-          </button>
+
           {hasPermission("purchase_orders.create") && (
-            <button className="btn-primary btn-sm" onClick={openPurchaseOrder} data-testid="create-po-from-inventory">
-              {t("inventory.createPO")}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+              <span style={{ minWidth: "6rem", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)" }}>
+                {t("inventory.actions.purchasingRole")}
+              </span>
+              <button className="btn-primary btn-sm" disabled={noSelection} onClick={openPurchaseOrder} data-testid="create-po-from-inventory">
+                {t("inventory.createPO")}
+              </button>
+              <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-purchasing">
+                {t("common.clear")}
+              </button>
+            </div>
           )}
-          <button className="btn-sm" onClick={() => setSelectedIds(new Set())}>
-            {t("common.clear")}
-          </button>
+
+          {(hasPermission("quotes.create") || hasPermission("invoices.create")) && (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+              <span style={{ minWidth: "6rem", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)" }}>
+                {t("inventory.actions.salesRole")}
+              </span>
+              {hasPermission("quotes.create") && (
+                <button className="btn-primary btn-sm" disabled={noSelection} onClick={() => goCreate("/quotes/new")} data-testid="create-quote-from-inventory">
+                  {t("products.createQuote")}
+                </button>
+              )}
+              {hasPermission("invoices.create") && (
+                <button className="btn-primary btn-sm" disabled={noSelection} onClick={() => goCreate("/invoices/new")} data-testid="create-invoice-from-inventory">
+                  {t("products.createInvoice")}
+                </button>
+              )}
+              <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-sales">
+                {t("common.clear")}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
