@@ -551,8 +551,8 @@ export default function ParseReviewPage() {
                           </td>
                           {/* 商品（＝商品マスタ）。コード(ID)は表示しない。未紐付け時は
                               商品マスタから選択する picker を出す。 */}
-                          {/* picker を候補ドロップダウンと同じ幅まで広げるためセル幅を拡張 */}
-                          <td className="review-col-product" style={{ minWidth: "16rem", maxWidth: "24rem" }}>
+                          {/* 商品列はコンパクトに（タイトル＋紐付け状態のみ）。picker は下の全幅行へ。 */}
+                          <td className="review-col-product" style={{ minWidth: "10rem", maxWidth: "16rem" }}>
                             {row.product_name && (
                               <div
                                 data-testid={`review-row-${idx}-product-name`}
@@ -562,33 +562,13 @@ export default function ParseReviewPage() {
                               </div>
                             )}
                             {row.product_id === null ? (
-                              <div data-testid={`review-row-${idx}-missing-product`}>
-                                {/* 未登録: 赤の短い文言 */}
-                                <span
-                                  style={{ color: "var(--danger)", fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-medium)" }}
-                                >
-                                  {t("superAdmin.inbound.review.missingProduct")}
-                                </span>
-                                {!isFinal && (
-                                  <div style={{ marginTop: "var(--space-1)" }}>
-                                    <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-                                      {t("superAdmin.inbound.review.selectFromMaster")}
-                                    </div>
-                                    <InventoryPicker
-                                      disabled={row.skipped}
-                                      testIdPrefix={`review-row-${idx}-inv-search`}
-                                      placeholder={t("superAdmin.inbound.review.masterPickerPlaceholder")}
-                                      /* QA 2026-05-30: 解析された商品名で商品マスタ候補を予め絞り込む */
-                                      initialQuery={row.product_name || undefined}
-                                      /* QA 2026-05-30: 商品マスタ選択では在庫(目安)は無関係なので非表示 */
-                                      showStockGuide={false}
-                                      onSelect={(c: PickedProduct) =>
-                                        updateDraft(idx, { product_id: c.product_id })
-                                      }
-                                    />
-                                  </div>
-                                )}
-                              </div>
+                              /* 未登録: 赤の短い文言 */
+                              <span
+                                data-testid={`review-row-${idx}-missing-product`}
+                                style={{ color: "var(--danger)", fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-medium)" }}
+                              >
+                                {t("superAdmin.inbound.review.missingProduct")}
+                              </span>
                             ) : (
                               /* 登録済み: 黒の短い文言（バッジをやめる） */
                               <span data-testid={`review-row-${idx}-product-id`} style={{ color: "var(--text-primary)", fontSize: "var(--font-sm)" }}>
@@ -605,7 +585,7 @@ export default function ParseReviewPage() {
                               onChange={(e) =>
                                 updateDraft(idx, { condition: e.target.value })
                               }
-                              style={{ width: "7rem" }}
+                              style={{ width: "6rem" }}
                             >
                               <option value="">
                                 {t("superAdmin.inbound.review.condition.unspecified")}
@@ -668,7 +648,7 @@ export default function ParseReviewPage() {
                               onChange={(e) =>
                                 updateDraft(idx, { ship_timing: e.target.value })
                               }
-                              style={{ width: "7rem" }}
+                              style={{ width: "6rem" }}
                             >
                               <option value="">
                                 {t("superAdmin.inbound.review.condition.unspecified")}
@@ -716,6 +696,40 @@ export default function ParseReviewPage() {
                             />
                           </td>
                         </tr>
+                        {/* 未登録時のみ: 商品マスタ選択 picker を全幅行に置く。
+                            入力欄を候補ドロップダウン幅(〜40rem)まで広げつつ、データ行は
+                            コンパクトに保って横スクロールを出さない。 */}
+                        {row.product_id === null && !isFinal && (
+                          <tr
+                            data-testid={`review-row-${idx}-picker-row`}
+                            style={
+                              row.skipped
+                                ? { opacity: "var(--opacity-skipped)", background: "var(--bg-disabled)" }
+                                : undefined
+                            }
+                          >
+                            <td className="review-col-skip" aria-hidden="true" />
+                            <td colSpan={7}>
+                              <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                                {t("superAdmin.inbound.review.selectFromMaster")}
+                              </div>
+                              <div style={{ width: "min(100%, 40rem)" }}>
+                                <InventoryPicker
+                                  disabled={row.skipped}
+                                  testIdPrefix={`review-row-${idx}-inv-search`}
+                                  placeholder={t("superAdmin.inbound.review.masterPickerPlaceholder")}
+                                  /* 解析された商品名で商品マスタ候補を予め絞り込む */
+                                  initialQuery={row.product_name || undefined}
+                                  /* 商品マスタ選択では在庫(目安)は無関係なので非表示 */
+                                  showStockGuide={false}
+                                  onSelect={(c: PickedProduct) =>
+                                    updateDraft(idx, { product_id: c.product_id })
+                                  }
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
                         {/* QA 2026-05-30: メモは2段目に降ろし、1段目の横幅を抑える */}
                         <tr
                           data-testid={`review-row-${idx}-memo-row`}
