@@ -193,6 +193,13 @@ export default [{
   rules: {
     'no-restricted-syntax': 'off',
   },
+}, // 例外: 独自全画面レイアウトのページは h2 を直接使ってよい
+// SchedulePage は画面余白ゼロのため PageLayout から独立した専用レイアウトを使用
+{
+  files: ['src/pages/schedule/SchedulePage.tsx'],
+  rules: {
+    'no-restricted-syntax': 'off',
+  },
 }, // i18n ルール除外: Storybook / デザインシステム / ロケールファイル
 // ストーリーファイルはデモ用途のため除外。ロケールファイルは翻訳定義そのもの。
 {
