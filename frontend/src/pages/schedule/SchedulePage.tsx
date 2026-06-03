@@ -385,6 +385,12 @@ function EventDetailPopover({
           <p className="event-popover__title">{event.title || t("schedule.noTitle")}</p>
           <p className="event-popover__time">{timeLabel}</p>
           {organizer && <p className="event-popover__organizer">{organizer}</p>}
+          {event.raw?.location && (
+            <p className="event-popover__location">{event.raw.location}</p>
+          )}
+          {event.raw?.description && (
+            <p className="event-popover__description">{event.raw.description}</p>
+          )}
           {isShift && <p className="event-popover__badge">({t("schedule.shiftLabel")})</p>}
         </div>
 

@@ -589,6 +589,20 @@
   margin: 0;
 }
 
+.event-popover__location {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+.event-popover__description {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .event-popover__badge {
   font-size: var(--font-xs);
   color: var(--text-muted);
