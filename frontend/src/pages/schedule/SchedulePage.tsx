@@ -539,12 +539,13 @@ export default function SchedulePage() {
 
       {/* カレンダー本体（残り全域） */}
       <div className="schedule-body">
-        {loadingEvents && (
-          <div className="gcal-loading">
-            {t("schedule.loading")}
-          </div>
-        )}
-        <FullCalendar
+        <div className="schedule-body__inner">
+          {loadingEvents && (
+            <div className="gcal-loading">
+              {t("schedule.loading")}
+            </div>
+          )}
+          <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -582,6 +583,7 @@ export default function SchedulePage() {
             );
           }}
         />
+        </div>
       </div>
 
       {/* イベントモーダル */}
