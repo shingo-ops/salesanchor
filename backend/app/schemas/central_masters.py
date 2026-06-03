@@ -260,6 +260,13 @@ class CentralSupplierBase(BaseModel):
     address: Optional[str] = Field(default=None, max_length=5000)
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: bool = True
+    # ADR-093: LINE名 + 構造化住所
+    line_name: Optional[str] = Field(default=None, max_length=255)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+    prefecture: Optional[str] = Field(default=None, max_length=50)
+    city: Optional[str] = Field(default=None, max_length=100)
+    address1: Optional[str] = Field(default=None, max_length=255)
+    address2: Optional[str] = Field(default=None, max_length=255)
 
     @field_validator("supplier_type")
     @classmethod
@@ -294,6 +301,13 @@ class CentralSupplierUpdate(BaseModel):
     address: Optional[str] = Field(default=None, max_length=5000)
     notes: Optional[str] = Field(default=None, max_length=5000)
     is_active: Optional[bool] = None
+    # ADR-093: LINE名 + 構造化住所
+    line_name: Optional[str] = Field(default=None, max_length=255)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+    prefecture: Optional[str] = Field(default=None, max_length=50)
+    city: Optional[str] = Field(default=None, max_length=100)
+    address1: Optional[str] = Field(default=None, max_length=255)
+    address2: Optional[str] = Field(default=None, max_length=255)
 
 
 class CentralSupplierResponse(CentralSupplierBase):
@@ -301,6 +315,8 @@ class CentralSupplierResponse(CentralSupplierBase):
     supplier_code: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    # 一覧表示用: 紐付け済み Discord チャンネル ID（list_suppliers のサブクエリで付与）
+    discord_channel_id: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

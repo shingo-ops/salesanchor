@@ -28,14 +28,14 @@
       "type": "text",
       "title": "",
       "gridPos": {
-        "h": 8,
-        "w": 24,
+        "h": 60,
+        "w": 4,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"display:flex;height:100%;align-items:stretch;font-family:sans-serif;box-sizing:border-box\"><div style=\"width:154px;min-width:154px;display:flex;flex-direction:column;padding:6px 4px;gap:2px;border-right:1px solid rgba(204,204,220,0.12)\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a></div><div style=\"flex:1;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;overflow:hidden\"><p style=\"margin:0;font-size:18px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">バックエンド API メトリクス</p><p style=\"margin:4px 0 0;font-size:10px;opacity:0.6;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden\">バックエンドの総合評価から詳細推移までを 1 画面で確認します。緑=OK、黄=注意、赤=異常。repo 変更だけでは反映されず、監視VPS の provisioning 読み込み後に画面へ出ます。</p></div></div>"
+        "content": "<div style=\"display:flex;flex-direction:column;height:100%;font-family:sans-serif;box-sizing:border-box;padding:0\"><div style=\"padding:10px 8px 8px;border-bottom:1px solid rgba(204,204,220,0.12)\"><p style=\"margin:0;font-size:11px;font-weight:700;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">バックエンド API メトリクス</p></div><div style=\"flex:1;padding:8px 4px;display:flex;flex-direction:column;gap:2px\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a></div></div>"
       },
       "transparent": true
     },
@@ -44,9 +44,9 @@
       "type": "row",
       "title": "総合通知",
       "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 24,
+        "x": 4,
+        "y": 0,
+        "w": 20,
         "h": 1
       }
     },
@@ -55,9 +55,9 @@
       "title": "総合評価",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 9,
-        "w": 6,
+        "x": 4,
+        "y": 1,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -126,9 +126,9 @@
       "title": "要確認件数",
       "type": "stat",
       "gridPos": {
-        "x": 6,
-        "y": 9,
-        "w": 6,
+        "x": 9,
+        "y": 1,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -197,9 +197,9 @@
       "title": "P99 レイテンシ",
       "type": "stat",
       "gridPos": {
-        "x": 12,
-        "y": 9,
-        "w": 6,
+        "x": 14,
+        "y": 1,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -268,9 +268,9 @@
       "title": "5xx エラー率",
       "type": "stat",
       "gridPos": {
-        "x": 18,
-        "y": 9,
-        "w": 6,
+        "x": 19,
+        "y": 1,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -339,9 +339,9 @@
       "type": "row",
       "title": "部門サマリー",
       "gridPos": {
-        "x": 0,
-        "y": 14,
-        "w": 24,
+        "x": 4,
+        "y": 6,
+        "w": 20,
         "h": 1
       }
     },
@@ -350,9 +350,9 @@
       "title": "リクエスト数（req/s）",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 15,
-        "w": 6,
+        "x": 4,
+        "y": 7,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -421,9 +421,9 @@
       "title": "5xx エラー数（req/s）",
       "type": "stat",
       "gridPos": {
-        "x": 6,
-        "y": 15,
-        "w": 6,
+        "x": 9,
+        "y": 7,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -492,9 +492,9 @@
       "title": "同時処理中リクエスト数",
       "type": "stat",
       "gridPos": {
-        "x": 12,
-        "y": 15,
-        "w": 6,
+        "x": 14,
+        "y": 7,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -563,9 +563,9 @@
       "title": "SSE 接続数",
       "type": "stat",
       "gridPos": {
-        "x": 18,
-        "y": 15,
-        "w": 6,
+        "x": 19,
+        "y": 7,
+        "w": 5,
         "h": 5
       },
       "datasource": {
@@ -634,9 +634,9 @@
       "type": "row",
       "title": "機能別詳細",
       "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 24,
+        "x": 4,
+        "y": 12,
+        "w": 20,
         "h": 1
       }
     },
@@ -645,9 +645,9 @@
       "title": "レスポンスタイム推移（P50 / P95 / P99）",
       "type": "timeseries",
       "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 12,
+        "x": 4,
+        "y": 13,
+        "w": 10,
         "h": 8
       },
       "datasource": {
@@ -706,9 +706,9 @@
       "title": "エンドポイント別 リクエスト数（req/s）",
       "type": "bargauge",
       "gridPos": {
-        "x": 0,
-        "y": 29,
-        "w": 12,
+        "x": 4,
+        "y": 21,
+        "w": 10,
         "h": 8
       },
       "datasource": {
@@ -755,9 +755,9 @@
       "title": "エンドポイント別 P95 レスポンスタイム",
       "type": "bargauge",
       "gridPos": {
-        "x": 12,
-        "y": 29,
-        "w": 12,
+        "x": 14,
+        "y": 21,
+        "w": 10,
         "h": 8
       },
       "datasource": {
@@ -804,9 +804,9 @@
       "type": "row",
       "title": "補助監視",
       "gridPos": {
-        "x": 0,
-        "y": 38,
-        "w": 24,
+        "x": 4,
+        "y": 30,
+        "w": 20,
         "h": 1
       }
     },
@@ -815,9 +815,9 @@
       "title": "同時処理中リクエスト / SSE 接続数 推移",
       "type": "timeseries",
       "gridPos": {
-        "x": 0,
-        "y": 39,
-        "w": 12,
+        "x": 4,
+        "y": 31,
+        "w": 10,
         "h": 8
       },
       "datasource": {

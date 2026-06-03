@@ -1534,12 +1534,19 @@
       "newSupplier": "New Supplier",
       "fields": {
         "name": "Supplier Name",
+        "lineName": "LINE Name",
+        "discordId": "Discord ID",
         "supplierType": "Corporate / Individual",
         "defaultLanguage": "Default Language",
         "contactName": "Contact",
         "email": "Email",
         "phone": "Phone",
         "address": "Address",
+        "postalCode": "Postal Code",
+        "prefecture": "Prefecture",
+        "city": "City",
+        "address1": "Address 1",
+        "address2": "Address 2",
         "notes": "Notes",
         "isActive": "Active"
       },
@@ -1550,7 +1557,8 @@
       "discordRouting": "Discord Routing",
       "addRouting": "Add Discord Routing",
       "guildId": "Guild ID",
-      "channelId": "Channel ID"
+      "channelId": "Channel ID",
+      "bulkDeleteConfirm": "Delete the {{count}} selected suppliers. Are you sure?"
     },
     "llmBudget": {
       "title": "Monthly LLM Budget (Gemini 2.5 Flash)",
