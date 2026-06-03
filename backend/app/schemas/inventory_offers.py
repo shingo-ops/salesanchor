@@ -104,6 +104,11 @@ class InventoryOfferResponse(InventoryOfferBase):
     supplier_name: str | None = None
     product_code: str | None = None
     product_name: str | None = None
+    # ADR-093: オファー画面の列順を在庫表に揃えるため products 由来の表示列を付与（読取専用）
+    name_en: str | None = None
+    category: str | None = None
+    mark: str | None = None
+    tcg_type: str | None = None
 
 
 class InventoryOfferListResponse(BaseModel):
