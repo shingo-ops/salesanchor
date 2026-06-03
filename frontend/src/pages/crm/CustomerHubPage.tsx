@@ -46,7 +46,7 @@ export default function CustomerHubPage() {
   const visibleItems = items.filter((i) => i.visible);
 
   return (
-    <PageLayout navKey="nav.leads" noScroll>
+    <PageLayout navKey="nav.leads" subtitleKey="crm.subtitle" noScroll>
       <div className="hub-shell">
         {/* 左サブナビ */}
         <nav className="hub-subnav" aria-label={t("nav.leads")}>

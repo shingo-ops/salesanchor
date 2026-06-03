@@ -82,7 +82,9 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 
 # 在庫表ビュー用 SELECT（参考画像準拠の列。admin 専用の notes/source/status は除外）。
 _VIEW_SELECT = """
-    SELECT i.id, i.product_id, i.condition, i.unit,
+    SELECT i.id, i.product_id, i.condition,
+           -- ADR-093: 単位はオファー優先。未設定なら商品マスタ(public.products.unit)を使う
+           COALESCE(NULLIF(i.unit, ''), p.unit) AS unit,
            i.offer_type, i.ship_timing, i.unit_price,
            i.quantity, i.offered_at, i.supplier_id,
            s.name AS supplier_name,
@@ -109,7 +111,8 @@ _SORT_COLUMNS = {
     "category": "p.category",
     "mark": "p.mark",
     "condition": "i.condition",
-    "unit": "i.unit",
+    # 表示・フィルタと同じく単位はオファー優先・未設定は商品マスタへフォールバック
+    "unit": "COALESCE(NULLIF(i.unit, ''), p.unit)",
     "offer_type": "i.offer_type",
     "quantity": "i.quantity",
     "unit_price": "i.unit_price",
@@ -206,7 +209,8 @@ async def list_inventory_view(
     unit_list = [u.strip() for u in (unit_in or "").split(",") if u.strip()]
     if unit_list:
         ph = ", ".join(f":unit{i}" for i in range(len(unit_list)))
-        conditions.append(f"i.unit IN ({ph})")
+        # 表示と同じく単位はオファー優先・未設定は商品マスタへフォールバックして照合
+        conditions.append(f"COALESCE(NULLIF(i.unit, ''), p.unit) IN ({ph})")
         for i, u in enumerate(unit_list):
             params[f"unit{i}"] = u
     ot_list = [o.strip() for o in (offer_type_in or "").split(",") if o.strip()]
@@ -287,9 +291,12 @@ async def list_inventory_view(
     condition_facet = [r["v"] for r in cond_rows.mappings().all()]
     unit_rows = await db.execute(
         text(
-            "SELECT DISTINCT i.unit AS v FROM public.inventory i "
+            "SELECT DISTINCT COALESCE(NULLIF(i.unit, ''), p.unit) AS v "
+            "FROM public.inventory i LEFT JOIN public.products p ON p.id = i.product_id "
             "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "AND i.unit IS NOT NULL AND i.unit <> '' ORDER BY i.unit"
+            "AND COALESCE(NULLIF(i.unit, ''), p.unit) IS NOT NULL "
+            "AND COALESCE(NULLIF(i.unit, ''), p.unit) <> '' "
+            "ORDER BY 1"
         )
     )
     unit_facet = [r["v"] for r in unit_rows.mappings().all()]
