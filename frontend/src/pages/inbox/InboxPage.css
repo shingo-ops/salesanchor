@@ -8,6 +8,7 @@
   overflow: hidden;
   font-family: 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background: transparent;
+  padding-left: var(--space-3); /* 他ページと揃える 12px 左余白 */
 }
 
 /* 左＋中央エリア（ヘッダー・タブ・カラム）— タブバーはここまで */
