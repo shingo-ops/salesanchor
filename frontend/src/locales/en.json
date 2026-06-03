@@ -792,7 +792,11 @@
       "suppliers": "Show / hide suppliers",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",
-      "columnsNote": "Choose which columns appear in the table (not a data filter)."
+      "columnsNote": "Choose which columns appear in the table (not a data filter).",
+      "displayConditions": "Display conditions",
+      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all).",
+      "min": "Min",
+      "max": "Max"
     },
     "search": {
       "placeholder": "Search by product name, card number, JAN, expansion code, or supplier alias",

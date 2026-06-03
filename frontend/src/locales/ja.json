@@ -792,7 +792,11 @@
       "suppliers": "仕入元の表示／非表示",
       "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",
-      "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）"
+      "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）",
+      "displayConditions": "表示条件",
+      "displayConditionsNote": "選択した条件に一致する行だけを表示します（各項目で未選択なら全件）。",
+      "min": "以上",
+      "max": "以下"
     },
     "search": {
       "placeholder": "商品名・カード番号・JAN・型番・仕入元 alias で検索",
