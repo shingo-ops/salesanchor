@@ -27,6 +27,10 @@ class QuoteStatus(str, Enum):
 class QuoteItemInput(BaseModel):
     product_id: int | None = Field(default=None, ge=1)
     product_name: str = Field(min_length=1, max_length=255)
+    # 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
+    name_en: str | None = Field(default=None, max_length=255)
+    condition: str | None = Field(default=None, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
     quantity: int = Field(ge=1)
     unit_price: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
     weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
@@ -62,6 +66,10 @@ class QuoteItemResponse(BaseModel):
     id: int
     product_id: int | None
     product_name: str
+    # 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
+    name_en: str | None = None
+    condition: str | None = None
+    unit: str | None = None
     quantity: int
     unit_price: Decimal
     weight: Decimal | None

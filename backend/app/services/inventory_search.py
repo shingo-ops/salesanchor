@@ -95,6 +95,15 @@ class SearchCandidate:
     image_url: str | None
     matched_via: str
     score: float
+    # 海外顧客向け見積/請求明細用 (public.products の付帯情報)。
+    # condition=状態 / unit=形態 / box_weight_kg・case_weight_kg=形態別重量
+    # mark=型番 / tcg_type=TCG 種別。見積/請求の明細行に引き込んで使う。
+    condition: str | None = None
+    unit: str | None = None
+    box_weight_kg: float | None = None
+    case_weight_kg: float | None = None
+    mark: str | None = None
+    tcg_type: str | None = None
     # spec v1.3 F11 AC11.4: 仕入元 × condition の現在オファー (status='in_stock' のみ)
     inventory_offers: tuple[OfferSummary, ...] = ()
 
@@ -330,6 +339,13 @@ SELECT
     p.supplier_default_id,
     s.name AS supplier_name,
     p.image_url,
+    -- 海外顧客向け見積/請求明細用の付帯列 (public.products)
+    p.condition,
+    p.unit,
+    p.box_weight_kg,
+    p.case_weight_kg,
+    p.mark,
+    p.tcg_type,
     r.matched_via,
     -- ranking score:
     --   matched_via 優先度 (10〜30) を base + 在庫切れ penalty (+1000 で末尾) で総合化
@@ -420,6 +436,16 @@ async def search_inventory(
                 supplier_default_id=r.get("supplier_default_id"),
                 supplier_name=r.get("supplier_name"),
                 image_url=r.get("image_url"),
+                condition=r.get("condition"),
+                unit=r.get("unit"),
+                box_weight_kg=(
+                    float(r["box_weight_kg"]) if r.get("box_weight_kg") is not None else None
+                ),
+                case_weight_kg=(
+                    float(r["case_weight_kg"]) if r.get("case_weight_kg") is not None else None
+                ),
+                mark=r.get("mark"),
+                tcg_type=r.get("tcg_type"),
                 matched_via=str(r["matched_via"]),
                 score=float(r["score"]),
                 inventory_offers=tuple(offers_by_product.get(pid, ())),

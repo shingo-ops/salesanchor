@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildInitialItems,
   lineFromSelected,
+  weightForUnit,
   type LineItem,
   type QuoteDraft,
 } from "./quoteDraft";
@@ -19,7 +20,41 @@ const draftOf = (items: LineItem[]): QuoteDraft => ({
 describe("lineFromSelected", () => {
   it("maps a selected product to a line item (qty 1, null price -> 0)", () => {
     expect(lineFromSelected({ product_id: 5, product_name: "X", unit_price: null, inventory_id: 9 }))
-      .toEqual({ product_id: 5, product_name: "X", quantity: 1, unit_price: 0, weight: null, inventory_id: 9 });
+      .toEqual({
+        product_id: 5,
+        product_name: "X",
+        name_en: null,
+        condition: null,
+        unit: null,
+        quantity: 1,
+        unit_price: 0,
+        weight: null,
+        box_weight_kg: null,
+        case_weight_kg: null,
+        inventory_id: 9,
+      });
+  });
+});
+
+describe("weightForUnit", () => {
+  it("returns box_weight_kg when unit is box", () => {
+    expect(weightForUnit("box", 1.25, 20.5, null)).toBe(1.25);
+  });
+  it("returns case_weight_kg when unit is case", () => {
+    expect(weightForUnit("case", 1.25, 20.5, null)).toBe(20.5);
+  });
+  it("falls back when unit is neither box nor case", () => {
+    expect(weightForUnit("pack", 1.25, 20.5, 0.3)).toBe(0.3);
+  });
+  it("falls back to null when no fallback given", () => {
+    expect(weightForUnit("pack", 1.25, 20.5, null)).toBeNull();
+    expect(weightForUnit(null, null, null, undefined)).toBeNull();
+  });
+  it("is case-insensitive on unit", () => {
+    expect(weightForUnit("BOX", 1.25, 20.5, null)).toBe(1.25);
+  });
+  it("falls back when the matching weight column is null", () => {
+    expect(weightForUnit("box", null, 20.5, 0.3)).toBe(0.3);
   });
 });
 

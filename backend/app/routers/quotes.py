@@ -57,8 +57,8 @@ _UPDATABLE_COLUMNS = {
 async def _get_quote_items(db: AsyncSession, quote_id: int) -> list[dict]:
     result = await db.execute(
         text("""
-            SELECT id, product_id, product_name, quantity, unit_price,
-                   weight, subtotal, sort_order
+            SELECT id, product_id, product_name, name_en, condition, unit,
+                   quantity, unit_price, weight, subtotal, sort_order
             FROM quote_items WHERE quote_id = :qid ORDER BY sort_order, id
         """),
         {"qid": quote_id},
@@ -223,11 +223,12 @@ async def create_quote(
         line_subtotal = item.quantity * item.unit_price
         await db.execute(
             text("""
-                INSERT INTO quote_items (quote_id, product_id, product_name, quantity, unit_price, weight, subtotal, sort_order)
-                VALUES (:qid, :pid, :pname, :qty, :price, :weight, :sub, :sort)
+                INSERT INTO quote_items (quote_id, product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order)
+                VALUES (:qid, :pid, :pname, :name_en, :condition, :unit, :qty, :price, :weight, :sub, :sort)
             """),
             {
                 "qid": quote_id, "pid": item.product_id, "pname": item.product_name,
+                "name_en": item.name_en, "condition": item.condition, "unit": item.unit,
                 "qty": item.quantity, "price": item.unit_price, "weight": item.weight,
                 "sub": line_subtotal, "sort": i,
             },

@@ -20,6 +20,7 @@ import {
   type QuoteHandoffState,
   blankItem,
   buildInitialItems,
+  weightForUnit,
 } from "../quote-create/quoteDraft";
 
 interface QuoteSummary {
@@ -42,6 +43,9 @@ interface QuoteDetail {
   items: Array<{
     product_id: number | null;
     product_name: string;
+    name_en?: string | null;
+    condition?: string | null;
+    unit?: string | null;
     quantity: number;
     unit_price: number;
     weight: number | null;
@@ -113,6 +117,7 @@ export default function InvoiceCreatePage() {
     });
   };
   // 「検索して追加」: 選択商品を新しい明細行として追加（上書きではない）。
+  // 海外顧客向け: 英語タイトル/状態/形態を引き込み、形態(unit)に応じてマスタ重量を weight にセットする。
   const appendFromSearch = (c: InventorySearchCandidate) => {
     const isOutOfStock = c.stock_quantity !== null && c.stock_quantity <= 0;
     setItems((prev) => [
@@ -120,9 +125,14 @@ export default function InvoiceCreatePage() {
       {
         product_id: c.product_id,
         product_name: c.name,
+        name_en: c.name_en ?? null,
+        condition: c.condition ?? null,
+        unit: c.unit ?? null,
         quantity: isOutOfStock ? 0 : 1,
         unit_price: c.unit_price ?? 0,
-        weight: null,
+        box_weight_kg: c.box_weight_kg ?? null,
+        case_weight_kg: c.case_weight_kg ?? null,
+        weight: weightForUnit(c.unit, c.box_weight_kg, c.case_weight_kg, null),
         inventory_id: null,
         zero_stock_warning: isOutOfStock,
       },
@@ -155,6 +165,9 @@ export default function InvoiceCreatePage() {
           ? q.items.map((it) => ({
               product_id: it.product_id,
               product_name: it.product_name,
+              name_en: it.name_en ?? null,
+              condition: it.condition ?? null,
+              unit: it.unit ?? null,
               quantity: it.quantity,
               unit_price: it.unit_price,
               weight: it.weight ?? null,
@@ -172,6 +185,8 @@ export default function InvoiceCreatePage() {
   };
 
   const subtotal = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+  // 総重量 = Σ(数量 × 行重量)。重量未設定の行は 0 扱い。
+  const totalWeight = items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
   const shipping = shippingFee ? Number(shippingFee) : 0;
   const tax = taxAmount ? Number(taxAmount) : 0;
   const total = subtotal + shipping + tax;
@@ -200,6 +215,9 @@ export default function InvoiceCreatePage() {
         items: items.map((i) => ({
           product_id: i.product_id,
           product_name: i.product_name,
+          name_en: i.name_en ?? null,
+          condition: i.condition ?? null,
+          unit: i.unit ?? null,
           quantity: i.quantity,
           unit_price: i.unit_price,
           weight: i.weight,
@@ -326,7 +344,9 @@ export default function InvoiceCreatePage() {
             <table className="data-table" style={{ minWidth: "var(--table-min-width-base)" }}>
               <thead>
                 <tr>
-                  <th>{t("quotes.product")}</th>
+                  <th>{t("quotes.titleColumn")}</th>
+                  <th>{t("quotes.condition")}</th>
+                  <th>{t("quotes.unit")}</th>
                   <th>{t("quotes.quantity")}</th>
                   <th>{t("quotes.unitPrice")}</th>
                   <th>{t("quotes.weight")}</th>
@@ -338,7 +358,21 @@ export default function InvoiceCreatePage() {
                 {items.map((item, i) => (
                   <tr key={i} data-testid={`invoice-item-row-${i}`}>
                     <td style={{ minWidth: "var(--table-col-product-name-min-w)" }}>
-                      <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} placeholder={t("quotes.productNamePlaceholder")} style={{ width: "100%", minWidth: "var(--input-width-product-name)" }} data-testid={`invoice-item-row-${i}-name`} />
+                      {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。 */}
+                      <input
+                        value={item.name_en ?? ""}
+                        onChange={(e) => updateItem(i, "name_en", e.target.value || null)}
+                        placeholder={t("quotes.titleColumn")}
+                        style={{ width: "100%", minWidth: "var(--input-width-product-name)", fontWeight: "var(--font-weight-semi)" }}
+                        data-testid={`invoice-item-row-${i}-name-en`}
+                      />
+                      <input
+                        value={item.product_name}
+                        onChange={(e) => updateItem(i, "product_name", e.target.value)}
+                        placeholder={t("quotes.productNamePlaceholder")}
+                        style={{ width: "100%", minWidth: "var(--input-width-product-name)", marginTop: "var(--space-1)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}
+                        data-testid={`invoice-item-row-${i}-name`}
+                      />
                       {item.zero_stock_warning && (
                         <div
                           data-testid={`invoice-item-row-${i}-zero-stock-warning`}
@@ -350,13 +384,30 @@ export default function InvoiceCreatePage() {
                       )}
                     </td>
                     <td>
-                      <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} />
+                      <input value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-condition`} />
+                    </td>
+                    <td>
+                      {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}
+                      <input
+                        value={item.unit ?? ""}
+                        onChange={(e) => {
+                          const nextUnit = e.target.value || null;
+                          updateItem(i, "unit", nextUnit);
+                          updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
+                        }}
+                        placeholder={t("quotes.unit")}
+                        style={{ width: "var(--input-width-weight)" }}
+                        data-testid={`invoice-item-row-${i}-unit`}
+                      />
+                    </td>
+                    <td>
+                      <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
                     </td>
                     <td>
                       <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} />
+                      <input type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
                     </td>
                     <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                     <td>
@@ -391,7 +442,11 @@ export default function InvoiceCreatePage() {
 
           {addMode === "search" && (
             <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
-              <InventorySearchBar onSelect={appendFromSearch} testIdPrefix="invoice-add-search" />
+              <InventorySearchBar
+                onSelect={appendFromSearch}
+                testIdPrefix="invoice-add-search"
+                placeholder={t("inventory.view.searchPlaceholder")}
+              />
             </div>
           )}
 
@@ -407,6 +462,10 @@ export default function InvoiceCreatePage() {
             <div className="form-group">
               <label>{t("quotes.total")}</label>
               <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{total.toLocaleString()} {currency}</div>
+            </div>
+            <div className="form-group">
+              <label>{t("quotes.totalWeight")}</label>
+              <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-semi)" }} data-testid="invoice-total-weight">{totalWeight.toLocaleString()} kg</div>
             </div>
           </div>
 
