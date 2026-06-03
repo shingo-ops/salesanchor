@@ -113,7 +113,8 @@ async def list_events(
             f" ce.sync_status, ce.created_by_user_id, ce.created_at, ce.updated_at,"
             f" TRIM(COALESCE(s.surname_jp,'') || ' ' || COALESCE(s.given_name_jp,'')) AS created_by_name"
             f" FROM calendar_events ce"
-            f" LEFT JOIN staff s ON s.user_id = ce.created_by_user_id"
+            f" LEFT JOIN public.users u ON u.id = ce.created_by_user_id"
+            f" LEFT JOIN staff s ON s.primary_email = u.email"
             f" WHERE {where}"
             f" ORDER BY ce.start_datetime"
         ),
