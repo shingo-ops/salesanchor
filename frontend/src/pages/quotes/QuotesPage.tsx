@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { badgeVariant, sortQuotes } from "./quotesSort";
 
 interface Quote {
   id: number;
@@ -33,27 +34,8 @@ interface Quote {
 }
 
 // 絞り込みに出すステータス（承認済 approved / 却下 rejected は除外）。
+// 配色・ソートの純関数は ./quotesSort に分離（ユニットテスト対象）。
 const FILTER_STATUSES = ["draft", "sent", "expired"];
-
-// テーブルのステータスバッジと同じ配色をフィルタボタンにも使う（見た目を揃える）。
-const badgeVariant = (status: string): string =>
-  status === "approved" ? "won"
-    : status === "rejected" ? "lost"
-      : status === "expired" ? "cancelled"
-        : status === "sent" ? "negotiating"
-          : "pending";
-
-// 各列ソート用の値抽出（クライアントサイド）。
-const SORT_VALUE: Record<string, (q: Quote) => string | number> = {
-  quote_code: (q) => q.quote_code ?? "",
-  customer: (q) => `${q.company_name ?? ""}${q.contact_name ?? ""}`,
-  sales_rep: (q) => q.created_by_name ?? "",
-  currency: (q) => q.currency ?? "",
-  total: (q) => q.total_amount ?? Number.NEGATIVE_INFINITY,
-  status: (q) => q.status ?? "",
-  validity_date: (q) => q.validity_date ?? "",
-  created_at: (q) => q.created_at ?? "",
-};
 
 export default function QuotesPage() {
   const { t } = useTranslation();
@@ -94,16 +76,10 @@ export default function QuotesPage() {
   };
   const sortArrow = (field: string) =>
     sortField === field ? (sortDir === "asc" ? t("common.sortAsc") : t("common.sortDesc")) : t("common.sortNone");
-  const sortedQuotes = useMemo(() => {
-    const getv = SORT_VALUE[sortField] ?? SORT_VALUE.created_at;
-    const dir = sortDir === "asc" ? 1 : -1;
-    return [...quotes].sort((a, b) => {
-      const av = getv(a);
-      const bv = getv(b);
-      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-      return String(av).localeCompare(String(bv), "ja") * dir;
-    });
-  }, [quotes, sortField, sortDir]);
+  const sortedQuotes = useMemo(
+    () => sortQuotes(quotes, sortField, sortDir),
+    [quotes, sortField, sortDir],
+  );
 
   // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
   const sortTh = (labelKey: string, field: string) => (
