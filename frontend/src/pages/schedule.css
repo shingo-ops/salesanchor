@@ -378,11 +378,20 @@
 .schedule-body {
   flex: 1;
   min-height: 0;
-  position: relative;
   padding: 0 var(--page-padding-x);
+  display: flex;
+  flex-direction: column;
 }
 
-.schedule-body .fc {
+/* FullCalendar は padding を持つ flex 親の height:100% を正確に計算できないため
+   内側ラッパーで高さ計算を分離する（padding と flex sizing を切り離す） */
+.schedule-body__inner {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.schedule-body__inner .fc {
   height: 100%;
 }
 

@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=84
+TOTAL=85
 
 run_py() {
   local script="$1"
@@ -195,6 +195,9 @@ run_sql migrations/20260602_200000_add_discord_config_connected_by_staff.sql
 #   run_sql migrations/YYYYMMDD_HHMMSS_description.sql
 #   run_py  scripts/migrate_description.py
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ADR-093: 商品マスタに「商品種類」(product_kind, 値='TCG' 等) を追加
+run_sql migrations/20260603_000000_add_products_product_kind.sql
 
 echo ""
 echo "============================================"

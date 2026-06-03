@@ -25,6 +25,7 @@ interface Product {
   product_code: string | null;
   name_ja: string;
   name_en: string | null;
+  product_kind: string | null;
   category: string | null;
   mark: string | null;
   status: string;
@@ -70,6 +71,7 @@ interface Product {
 type FormState = {
   name_ja: string;
   name_en: string;
+  product_kind: string;
   category: string;
   mark: string;
   status: string;
@@ -106,7 +108,7 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  name_ja: "", name_en: "", category: "", mark: "",
+  name_ja: "", name_en: "", product_kind: "TCG", category: "", mark: "",
   status: "active", condition: "", unit: "", unit_price: "", quantity: "0",
   weight: "", notes: "",
   jan_code: "", card_number: "", expansion_code: "", rarity: "", language: "",
@@ -240,6 +242,7 @@ export default function ProductsPage() {
     const payload = {
       name_ja: form.name_ja,
       name_en: toNull(form.name_en),
+      product_kind: form.product_kind || null,
       category: toNull(form.category),
       mark: toNull(form.mark),
       status: form.status,
@@ -293,6 +296,7 @@ export default function ProductsPage() {
     setForm({
       name_ja: p.name_ja,
       name_en: p.name_en || "",
+      product_kind: p.product_kind || "TCG",
       category: p.category || "",
       mark: p.mark || "",
       status: p.status,
@@ -428,6 +432,11 @@ export default function ProductsPage() {
               </div>
               <div className="form-group form-group-full"><label>{t("products.nameEn")}</label>
                 <input value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} />
+              </div>
+              <div className="form-group"><label>{t("products.field.productKind")}</label>
+                <select value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>
+                  <option value="TCG">TCG</option>
+                </select>
               </div>
               <div className="form-group"><label>{t("products.field.category")}</label>
                 <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
@@ -589,6 +598,8 @@ export default function ProductsPage() {
                 aria-label={t("products.selectHint")}
                 title={t("products.selectHint")}
               ></th>
+              {/* 商品種類（最上位ジャンル区分）= 一番左。2段にまたがる単一セル。 */}
+              <th rowSpan={2}>{t("products.masterCol.productKind")}</th>
               {/* 関連項目を同じ列の上下に置く（見やすさ）: 上段=主、下段=対になる詳細 */}
               <th>{t("products.masterCol.category")}</th>
               <th>{t("products.masterCol.mark")}</th>
@@ -638,6 +649,8 @@ export default function ProductsPage() {
                       data-testid={`product-select-${p.id}`}
                     />
                   </td>
+                  {/* 商品種類（最上位ジャンル区分）= 一番左の単一セル */}
+                  <td rowSpan={2} style={{ verticalAlign: "middle" }}>{p.product_kind || "-"}</td>
                   {/* カテゴリーは種別マスタの日本語名(name_ja)で表示（英語の生 category は使わない） */}
                   <td>{p.tcg_type ? (tcgTypeName.get(p.tcg_type) ?? p.tcg_type) : (p.category || "-")}</td>
                   <td>{p.mark || "-"}</td>
@@ -671,7 +684,7 @@ export default function ProductsPage() {
               </Fragment>
               );
             })}
-            {products.length === 0 && <tr><td colSpan={9} className="empty">{t("products.noProducts")}</td></tr>}
+            {products.length === 0 && <tr><td colSpan={10} className="empty">{t("products.noProducts")}</td></tr>}
           </tbody>
         </table>
       )}

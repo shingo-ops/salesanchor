@@ -120,7 +120,7 @@
     "signOut": "サインアウト",
     "signOutTitle": "サインアウト",
     "signOutMessage": "サインアウトしますか？未保存のデータは失われます。",
-    "superAdminMasters": "マスタ管理（中央）",
+    "superAdminMasters": "マスタ管理",
     "superAdminInbound": "Discord 受信一覧",
     "inventoryVisibility": "在庫表示権限",
     "tenantProfile": "発行者情報",
@@ -727,16 +727,16 @@
   "inventory": {
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
-      "searchPlaceholder": "商品名・英名・カテゴリ・マーク・仕入元で検索"
+      "searchPlaceholder": "商品名・英名・TCGシリーズ・マーク・仕入元で検索"
     },
     "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
-    "filter": { "allTypes": "全種別", "allOfferTypes": "在庫・予約すべて", "allCategories": "全カテゴリー" },
+    "filter": { "allTypes": "全種別", "allOfferTypes": "在庫・予約すべて", "allCategories": "全TCGシリーズ" },
     "resetSort": "リセット",
     "offerType": { "in_stock": "在庫", "pre_order": "予約" },
     "shipTiming": { "on_release": "発売日発送", "1day_before": "発売1日前発送", "2day_before": "発売2日前発送", "other": "その他" },
     "col": {
       "product": "商品",
-      "category": "カテゴリー",
+      "category": "TCGシリーズ",
       "mark": "型番",
       "title": "タイトル",
       "offerType": "在庫・予約",
@@ -790,7 +790,7 @@
       "button": "詳細フィルタ",
       "enable": "フィルタを有効化（自分用の表示設定を適用）",
       "suppliers": "仕入元の表示／非表示",
-      "categories": "カテゴリーの表示／非表示",
+      "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",
       "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）"
     },
@@ -966,7 +966,8 @@
     "outOfStockTooltip": "在庫切れ — 仕入元の発注または在庫補充が必要です",
     "pageLabel": "{{page}} ページ目 ({{count}} 件表示中)",
     "field": {
-      "category": "カテゴリー",
+      "productKind": "商品種類",
+      "category": "TCGシリーズ",
       "mark": "型番",
       "cardNumber": "カード番号",
       "expansionCode": "セット記号（エキスパンション）",
@@ -976,7 +977,8 @@
       "publishStatus": "公開状態"
     },
     "masterCol": {
-      "category": "カテゴリー",
+      "productKind": "商品種類",
+      "category": "TCGシリーズ",
       "mark": "型番",
       "titleJa": "日本語タイトル",
       "titleEn": "英語タイトル",
