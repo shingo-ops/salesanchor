@@ -551,7 +551,8 @@ export default function ParseReviewPage() {
                           </td>
                           {/* 商品（＝商品マスタ）。コード(ID)は表示しない。未紐付け時は
                               商品マスタから選択する picker を出す。 */}
-                          <td className="review-col-product" style={{ minWidth: "10rem", maxWidth: "18rem" }}>
+                          {/* picker を候補ドロップダウンと同じ幅まで広げるためセル幅を拡張 */}
+                          <td className="review-col-product" style={{ minWidth: "16rem", maxWidth: "24rem" }}>
                             {row.product_name && (
                               <div
                                 data-testid={`review-row-${idx}-product-name`}
@@ -562,11 +563,12 @@ export default function ParseReviewPage() {
                             )}
                             {row.product_id === null ? (
                               <div data-testid={`review-row-${idx}-missing-product`}>
-                                <em
-                                  style={{ color: "var(--color-warning)", fontSize: "0.85em" }}
+                                {/* 未登録: 赤の短い文言 */}
+                                <span
+                                  style={{ color: "var(--danger)", fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-medium)" }}
                                 >
                                   {t("superAdmin.inbound.review.missingProduct")}
-                                </em>
+                                </span>
                                 {!isFinal && (
                                   <div style={{ marginTop: "var(--space-1)" }}>
                                     <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
@@ -588,7 +590,8 @@ export default function ParseReviewPage() {
                                 )}
                               </div>
                             ) : (
-                              <span className="badge" data-testid={`review-row-${idx}-product-id`}>
+                              /* 登録済み: 黒の短い文言（バッジをやめる） */
+                              <span data-testid={`review-row-${idx}-product-id`} style={{ color: "var(--text-primary)", fontSize: "var(--font-sm)" }}>
                                 {t("superAdmin.inbound.review.linkedToMaster")}
                               </span>
                             )}
