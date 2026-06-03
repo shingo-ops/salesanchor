@@ -342,7 +342,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-surface);
+  background: transparent;
 }
 
 /* ヘッダー: タイトル行 + サブタイトル */
@@ -380,17 +380,24 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding-bottom: var(--page-padding-y);
 }
 
 /* FullCalendar に左右余白を付ける際、flex 親の padding は一部ブラウザで
    child の offsetWidth 計算に影響しない既知バグがある。
    margin を inner wrapper 自身に付けることで物理的に幅を縮め、
-   FullCalendar が正確な幅を取得できるようにする。 */
+   FullCalendar が正確な幅を取得できるようにする。
+   カード外観: 白背景・枠線・角丸・影で他ページのカードと統一 */
 .schedule-body__inner {
   flex: 1;
   min-height: 0;
   position: relative;
-  margin: 0 var(--page-padding-x);
+  margin: var(--space-2) var(--page-padding-x) 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .schedule-body__inner .fc {
