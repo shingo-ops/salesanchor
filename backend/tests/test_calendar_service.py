@@ -182,7 +182,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now)
+        row = (1, 2, "shared", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "田中 太郎")
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
