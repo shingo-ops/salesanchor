@@ -378,17 +378,19 @@
 .schedule-body {
   flex: 1;
   min-height: 0;
-  padding: 0 var(--page-padding-x);
   display: flex;
   flex-direction: column;
 }
 
-/* FullCalendar は padding を持つ flex 親の height:100% を正確に計算できないため
-   内側ラッパーで高さ計算を分離する（padding と flex sizing を切り離す） */
+/* FullCalendar に左右余白を付ける際、flex 親の padding は一部ブラウザで
+   child の offsetWidth 計算に影響しない既知バグがある。
+   margin を inner wrapper 自身に付けることで物理的に幅を縮め、
+   FullCalendar が正確な幅を取得できるようにする。 */
 .schedule-body__inner {
   flex: 1;
   min-height: 0;
   position: relative;
+  margin: 0 var(--page-padding-x);
 }
 
 .schedule-body__inner .fc {
