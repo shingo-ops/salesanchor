@@ -952,6 +952,7 @@
     "nameJa": "商品名（日本語）",
     "nameEn": "商品名（英語）",
     "unitPrice": "単価",
+    "msrp": "メーカー希望小売価格",
     "weight": "重量 (kg)",
     "stockQty": "在庫数",
     "rarityCol": "レアリティ",

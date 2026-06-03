@@ -952,6 +952,7 @@
     "nameJa": "Name (JA)",
     "nameEn": "Name (EN)",
     "unitPrice": "Unit price",
+    "msrp": "MSRP",
     "weight": "Weight (kg)",
     "stockQty": "Stock qty",
     "rarityCol": "Rarity",

@@ -123,6 +123,8 @@ const emptyForm: FormState = {
 // 正規化ルール（ひとしさん確定 2026-06-02）: 小文字化 + carton→case に統一。
 // 表示は「先頭の文字だけ大文字」（例: BOX→Box, carton→Case）。
 const UNIT_OPTIONS = ["piece", "pack", "box", "case", "set"];
+// 素材プルダウン（当面 Paper のみ。必要に応じ追加）。
+const MATERIAL_OPTIONS = ["Paper"];
 const normalizeUnit = (u: string) => {
   const lc = (u || "").toLowerCase();
   return lc === "carton" ? "case" : lc;
@@ -447,9 +449,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               {/* Phase 1-C M-MVP: TCG 列 */}
               <fieldset style={{ border: "1px solid var(--border)", padding: "var(--space-3)", marginBottom: "var(--space-4)" }}>
                 <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>TCG</legend>
-                <div className="form-group"><label>JAN/EAN</label>
-                  <input maxLength={20} value={form.jan_code} onChange={(e) => setForm({ ...form, jan_code: e.target.value })} />
-                </div>
                 <div className="form-group"><label>{t("products.field.cardNumber")}</label>
                   <input maxLength={50} value={form.card_number} onChange={(e) => setForm({ ...form, card_number: e.target.value })} />
                 </div>
@@ -470,10 +469,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 </div>
               </fieldset>
 
-              <div className="form-group"><label>{t("products.field.condition")}</label>
-                <input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} />
-              </div>
-
               <div className="form-group"><label>{t("products.unitCol")}</label>
                 <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
@@ -483,25 +478,9 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 </select>
               </div>
 
-              {/* 価格 */}
-              <fieldset style={{ border: "1px solid var(--border)", padding: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.unitPrice")}</legend>
-                <div className="form-group"><label>{t("products.unitPrice")} (JPY)</label>
-                  <input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
-                </div>
-                <div className="form-group"><label>{t("products.unitPrice")} (USD)</label>
-                  <input type="number" min="0" step="0.01" value={form.unit_price_usd} onChange={(e) => setForm({ ...form, unit_price_usd: e.target.value })} />
-                </div>
-                <div className="form-group"><label>{t("products.unitPrice")} (EUR)</label>
-                  <input type="number" min="0" step="0.01" value={form.unit_price_eur} onChange={(e) => setForm({ ...form, unit_price_eur: e.target.value })} />
-                </div>
-              </fieldset>
-
-              <div className="form-group"><label>{t("products.stockQty")}</label>
-                <input type="number" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("products.weight")}</label>
-                <input type="number" min="0" step="0.001" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} />
+              {/* 価格（メーカー希望小売価格のみ） */}
+              <div className="form-group"><label>{t("products.msrp")}</label>
+                <input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
               </div>
               <div className="form-group form-group-full"><label>{t("products.field.imageUrl")}</label>
                 <input type="url" maxLength={500} placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
@@ -519,17 +498,18 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               {/* ADR-093 Phase 1: Box・梱包属性（入数・重量・MOQ・素材） */}
               <fieldset style={{ border: "1px solid var(--border)", padding: "var(--space-3)", marginBottom: "var(--space-4)" }}>
                 <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.master.sectionBox")}</legend>
-                <div className="form-group"><label>{t("products.master.boxesPerCase")}</label>
+                {/* 左から Box数／1Case・Pack数／1Box・Case重量・Box重量 */}
+                <div className="form-group"><label>{t("products.masterCol.boxesPerCase")}</label>
                   <input type="number" min="0" value={form.boxes_per_case} onChange={(e) => setForm({ ...form, boxes_per_case: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("products.master.packsPerBox")}</label>
+                <div className="form-group"><label>{t("products.masterCol.packsPerBox")}</label>
                   <input type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("products.master.boxWeightKg")}</label>
-                  <input type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
-                </div>
                 <div className="form-group"><label>{t("products.master.caseWeightKg")}</label>
-                  <input type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+                  <input type="number" min="0" step="0.1" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t("products.master.boxWeightKg")}</label>
+                  <input type="number" min="0" step="0.1" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.master.volumeWeight")}</label>
                   <input type="number" min="0" step="0.001" value={form.volume_weight} onChange={(e) => setForm({ ...form, volume_weight: e.target.value })} />
@@ -538,7 +518,12 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <input type="number" min="0" value={form.moq} onChange={(e) => setForm({ ...form, moq: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.master.material")}</label>
-                  <input maxLength={50} value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} />
+                  <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
+                    <option value="">{t("common.notSet")}</option>
+                    {MATERIAL_OPTIONS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
               </fieldset>
 
@@ -550,26 +535,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 </div>
                 <div className="form-group"><label>{t("products.master.item")}</label>
                   <input maxLength={255} value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} />
-                </div>
-                <div className="form-group"><label>{t("products.master.requiredOutputValue")}</label>
-                  <input maxLength={255} value={form.required_output_value} onChange={(e) => setForm({ ...form, required_output_value: e.target.value })} />
-                </div>
-              </fieldset>
-
-              {/* ADR-093 Phase 1: 検索・分類（キーワード・関連シリーズ・カテゴリ分類） */}
-              <fieldset style={{ border: "1px solid var(--border)", padding: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-                <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.master.sectionSearch")}</legend>
-                <div className="form-group"><label>{t("products.master.categoryClassification")}</label>
-                  <input maxLength={100} value={form.category_classification} onChange={(e) => setForm({ ...form, category_classification: e.target.value })} />
-                </div>
-                <div className="form-group"><label>{t("products.master.relatedSeries")}</label>
-                  <input maxLength={255} value={form.related_series} onChange={(e) => setForm({ ...form, related_series: e.target.value })} />
-                </div>
-                <div className="form-group form-group-full"><label>{t("products.master.searchKeywords")}</label>
-                  <textarea maxLength={5000} value={form.search_keywords} onChange={(e) => setForm({ ...form, search_keywords: e.target.value })} />
-                </div>
-                <div className="form-group form-group-full"><label>{t("products.master.excludeKeywords")}</label>
-                  <textarea maxLength={5000} value={form.exclude_keywords} onChange={(e) => setForm({ ...form, exclude_keywords: e.target.value })} />
                 </div>
               </fieldset>
 
@@ -660,7 +625,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   </td>
                   <td>{p.boxes_per_case ?? "-"}</td>
                   <td>{p.packs_per_box ?? "-"}</td>
-                  <td>{p.weight ?? "-"}</td>
+                  <td>{p.weight != null ? Number(p.weight).toFixed(1) : "-"}</td>
                   <td>{p.item || "-"}</td>
                   {/* 操作: td は table-cell のまま（rowSpan を壊さない）。内側 div を flex に。 */}
                   <td rowSpan={2} style={{ verticalAlign: "middle" }}>
@@ -675,8 +640,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <td>{p.category_classification || "-"}</td>
                   <td>{p.release_date || "-"}</td>
                   <td>{p.name_en || "-"}</td>
-                  <td>{p.box_weight_kg ?? "-"}</td>
-                  <td>{p.case_weight_kg ?? "-"}</td>
+                  <td>{p.box_weight_kg != null ? Number(p.box_weight_kg).toFixed(1) : "-"}</td>
+                  <td>{p.case_weight_kg != null ? Number(p.case_weight_kg).toFixed(1) : "-"}</td>
                   <td>{p.material || "-"}</td>
                   <td>{p.hs_code || "-"}</td>
                 </tr>
