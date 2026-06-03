@@ -36,9 +36,11 @@ interface Props {
   initialSupplierId?: number | "";
   /** 在庫表からの前埋め: 明細行（ADR-093 Phase 2b）。 */
   initialItems?: POLineItem[];
+  /** 在庫表から前埋めした場合は商品が確定済みのため、商品選択列・明細追加を出さない。 */
+  pickerless?: boolean;
 }
 
-export default function PurchaseOrdersFormModal({ open, onClose, onCreated, initialSupplierId, initialItems }: Props) {
+export default function PurchaseOrdersFormModal({ open, onClose, onCreated, initialSupplierId, initialItems, pickerless }: Props) {
   const { t } = useTranslation();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierId, setSupplierId] = useState<number | "">("");
@@ -142,7 +144,7 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: "var(--table-col-min-width)" }}>{t("quotes.selectProduct")}</th>
+                  {!pickerless && <th style={{ minWidth: "var(--table-col-min-width)" }}>{t("quotes.selectProduct")}</th>}
                   <th>{t("quotes.product")}</th>
                   <th>{t("quotes.quantity")}</th>
                   <th>{t("products.unitPrice")}</th>
@@ -153,12 +155,14 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
               <tbody>
                 {items.map((item, i) => (
                   <tr key={i} data-testid={`po-item-row-${i}`}>
-                    <td style={{ minWidth: "var(--table-col-min-width)" }}>
-                      <InventoryPicker
-                        onSelect={(c) => onPickProduct(i, c)}
-                        testIdPrefix={`po-inventory-search-${i}`}
-                      />
-                    </td>
+                    {!pickerless && (
+                      <td style={{ minWidth: "var(--table-col-min-width)" }}>
+                        <InventoryPicker
+                          onSelect={(c) => onPickProduct(i, c)}
+                          testIdPrefix={`po-inventory-search-${i}`}
+                        />
+                      </td>
+                    )}
                     <td>
                       <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} readOnly style={{ minWidth: "var(--min-width-input-sm)" }} />
                     </td>
@@ -180,7 +184,9 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
                 ))}
               </tbody>
             </table>
-            <button type="button" className="btn-secondary" onClick={addItem} style={{ marginTop: "var(--space-2)" }}>{t("quotes.addItem")}</button>
+            {!pickerless && (
+              <button type="button" className="btn-secondary" onClick={addItem} style={{ marginTop: "var(--space-2)" }}>{t("quotes.addItem")}</button>
+            )}
           </div>
 
           <div className="form-group">

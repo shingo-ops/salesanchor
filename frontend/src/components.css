@@ -245,6 +245,27 @@
   padding: var(--space-8);
 }
 
+/* ADR-093 商品マスタ一覧: ヘッダー固定。縦に長い一覧をスクロールしても 2 段ヘッダーが
+   上部に残るよう、ラッパーを独立スクロール領域にして thead を sticky にする。
+   .data-table の overflow:hidden（角丸用）は sticky を無効化するため、ラッパー側で
+   角丸・影を持たせ、table 側は overflow:visible に上書きする。 */
+.products-master-table-wrap {
+  max-height: calc(100vh - 18rem);
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.products-master-table-wrap > .data-table {
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+}
+.products-master-table-wrap > .data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+}
+
 /* --- KPI --- */
 .kpi-grid {
   display: grid;

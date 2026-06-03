@@ -195,6 +195,7 @@ export default function PurchaseOrdersPage() {
         onCreated={() => { setInfo(t("purchaseOrders.createdInfo")); load(); }}
         initialSupplierId={poInitial?.supplierId}
         initialItems={poInitial?.items}
+        pickerless={poInitial != null}
       />
       <div className="filter-bar">
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>

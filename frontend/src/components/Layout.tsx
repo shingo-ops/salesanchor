@@ -244,6 +244,18 @@ export default function Layout() {
                 </NavLink>
               )}
 
+              {/* 発注管理（在庫表 ↔ 見積・請求管理 の間）。在庫表を経由せず発注書を確認・管理できる単独導線。 */}
+              {hasPermission("purchase_orders.view") && (
+                <NavLink
+                  to="/purchase-orders"
+                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                  onClick={handleNavClick}
+                >
+                  <span className="sidebar-icon"><NAV_ICONS.purchaseOrders size={ICON.base} /></span>
+                  <span className="sidebar-label">{t("nav.purchaseOrders")}</span>
+                </NavLink>
+              )}
+
               {/* 商品マスタ管理は管理センターのスーパー管理者セクションへ集約（ADR-093 / 重複排除）。 */}
 
               {showSalesLink && (

@@ -102,7 +102,7 @@
     "admin": "管理",
     "deals": "案件",
     "suppliers": "仕入先",
-    "purchaseOrders": "発注",
+    "purchaseOrders": "発注管理",
     "staff": "スタッフ",
     "bots": "ボット",
     "teams": "チーム",
@@ -732,7 +732,7 @@
   "inventory": {
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
-      "searchPlaceholder": "商品名・英名・TCGシリーズ・マーク・仕入元で検索"
+      "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索"
     },
     "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
     "filter": { "allTypes": "全種別", "allOfferTypes": "在庫・予約すべて", "allCategories": "全TCGシリーズ" },
@@ -786,6 +786,7 @@
     "minutesAgo": "{{count}}分前",
     "hoursAgo": "{{count}}時間前",
     "createPO": "発注書作成",
+    "differentSuppliersAlert": "異なる仕入先が選択されています。発注書は1つの仕入先ごとに作成してください。",
     "applyToQuote": "選択を反映して戻る",
     "actions": {
       "purchasingRole": "仕入れ担当",
