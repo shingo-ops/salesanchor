@@ -304,9 +304,9 @@
   --schedule-cell-icon-size: 24px;   /* スケジュールセルアイコンサイズ */
   --schedule-min-h:          500px;  /* カレンダー最小高 */
   --schedule-mini-col-min-w: 100px;  /* ミニカレンダーカラム最小幅 */
-  --schedule-slot-h:         80px;   /* タイムグリッド1時間スロット高（30分×2） */
+  --schedule-slot-h:         60px;   /* タイムグリッド1時間スロット高（デスクトップ≥1280px） */
   --schedule-nav-btn-size:   32px;   /* カレンダーナビボタン幅・高さ */
-  --schedule-allday-row-h:   28px;   /* 終日エリア固定高（1イベント行 + 余白）*/
+  --schedule-allday-row-h:   24px;   /* 終日エリア固定高（デスクトップ≥1280px） */
   --schedule-day-num-size:   1.625rem; /* 26px — カレンダー日付数字（曜日ヘッダー） */
 
   /* ---- Field sizes ---- */
@@ -343,4 +343,16 @@
   --ds-preview-width:      320px;  /* Storybookプレビューコンテナ幅 */
   --ds-panel-size:         120px;  /* デザインシステムデモパネルサイズ */
   --story-width-sm:        280px;  /* Storybookコンパクトプレビュー幅 */
+}
+
+/* ============================================================
+   レスポンシブ トークン上書き（受信箱と同一ブレークポイント基準）
+   ============================================================ */
+
+/* タブレット（≤1279px） */
+@media (max-width: 1279px) {
+  :root {
+    --schedule-slot-h:       40px;  /* タイムグリッド1時間スロット高（タブレット） */
+    --schedule-allday-row-h: 14px;  /* 終日エリア固定高（タブレット） */
+  }
 }
