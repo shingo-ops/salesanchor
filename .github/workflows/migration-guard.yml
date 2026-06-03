@@ -208,3 +208,69 @@ jobs:
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
           fi
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック4（新規）: REFERENCES public.X — FK参照先が public スキーマに実在するか
+      #
+      # 背景: 2026-06-03 PR #1532 で REFERENCES public.staff(id) を書いてしまい
+      #       本番デプロイがブロックされた。staff は tenant_NNN スキーマにのみ存在し
+      #       public.staff は存在しない。静的解析で PR 段階でブロックする。
+      # ──────────────────────────────────────────────────────────────────────
+      - name: REFERENCES public.X — FK 参照先が public スキーマに実在するか確認
+        if: steps.detect_sql.outputs.new_sql == 'true'
+        run: |
+          # public スキーマに実際に存在するテーブルの許可リスト
+          # 新しいテーブルを public に追加した場合はここを更新すること（SSoT）
+          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master tcg_type_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters"
+
+          FAILED=0
+          IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
+          for sql_path in "${SQL_FILES[@]}"; do
+            # REFERENCES public.テーブル名 のパターンを抽出（コメント行を除く）
+            REFS=$(grep -v '^\s*--' "$sql_path" \
+              | grep -oE 'REFERENCES[[:space:]]+public\.[a-zA-Z_]+' \
+              | grep -oE 'public\.[a-zA-Z_]+' \
+              | sed 's/public\.//' \
+              | tr '[:upper:]' '[:lower:]' \
+              | sort -u || true)
+
+            if [ -z "$REFS" ]; then
+              echo "✅ $(basename $sql_path) — public FK 参照なし"
+              continue
+            fi
+
+            for ref in $REFS; do
+              if echo " $PUBLIC_TABLES " | grep -q " $ref "; then
+                echo "✅ $(basename $sql_path) → REFERENCES public.$ref — 許可リストに存在"
+              else
+                echo "❌ $(basename $sql_path) → REFERENCES public.$ref — public スキーマに存在しません"
+                FAILED=1
+              fi
+            done
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "❌ MIGRATION GUARD FAILED (チェック4)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "REFERENCES public.X の X が public スキーマに存在しないテーブルです。"
+            echo ""
+            echo "よくある間違い:"
+            echo "  ❌ REFERENCES public.staff(id)   → staff は tenant_NNN.staff にあります"
+            echo "  ❌ REFERENCES public.leads(id)   → leads は tenant_NNN.leads にあります"
+            echo "  ❌ REFERENCES public.deals(id)   → deals は tenant_NNN.deals にあります"
+            echo "  ❌ REFERENCES public.orders(id)  → orders は tenant_NNN.orders にあります"
+            echo "  ❌ REFERENCES public.companies(id) → companies は tenant_NNN.companies にあります"
+            echo ""
+            echo "対処方法:"
+            echo "  テナント個別テーブルへの参照は FK 制約を設けず plain INTEGER で記録してください"
+            echo "  例: connected_by_staff_id INTEGER  -- tenant_NNN.staff(id) 参照（FK不使用）"
+            echo ""
+            echo "public スキーマの許可テーブル一覧:"
+            echo "  $PUBLIC_TABLES"
+            echo ""
+            echo "新テーブルを public に追加した場合は migration-guard.yml の PUBLIC_TABLES を更新してください"
+            echo "前例: PR #1532（connected_by_staff_id で本番デプロイ停止）"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 1
+          fi

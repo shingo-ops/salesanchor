@@ -152,13 +152,61 @@ jobs:
           # テナントスキーマ（PL/pgSQL DO ブロック型 SQL 用）
           psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'TENANT_SQL'
           CREATE SCHEMA IF NOT EXISTS tenant_001;
+
           -- role_permissions: 078 の DO ブロックがスキーマ判定に使用するテーブル
           CREATE TABLE IF NOT EXISTS tenant_001.role_permissions (
               id         SERIAL PRIMARY KEY,
               role       VARCHAR(50) NOT NULL,
               permission VARCHAR(100) NOT NULL
           );
+
+          -- staff: テナント個別スキーマにのみ存在（public.staff は存在しない）
+          -- ここで定義しておくことで「REFERENCES public.staff」を書いた migration が
+          -- PostgreSQL のエラーで検出できる（public.staff が見つからない → ERROR）
+          CREATE TABLE IF NOT EXISTS tenant_001.staff (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              user_id    INTEGER,
+              full_name  VARCHAR(255),
+              is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- leads: テナント個別スキーマにのみ存在
+          CREATE TABLE IF NOT EXISTS tenant_001.leads (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              full_name  VARCHAR(255),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- deals: テナント個別スキーマにのみ存在
+          CREATE TABLE IF NOT EXISTS tenant_001.deals (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              title      VARCHAR(255),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
           TENANT_SQL
+
+          # public スキーマの追加テーブル（最近の migration が ALTER/参照するテーブル）
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'PUBLIC_SQL'
+          -- tenant_discord_config: discord連携設定（ALTER ADD COLUMN が多い）
+          CREATE TABLE IF NOT EXISTS public.tenant_discord_config (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              guild_id   VARCHAR(32),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- NOTE: public.suppliers / public.products は migrate_inventory_sprint1.py が
+          --       CREATE TABLE するため、ここでは作成しない。
+          --       スクリプト実行前に列が欠けた状態で存在するとエラーになる。
+          PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
       - name: Sprint 1 マイグレーションを適用
