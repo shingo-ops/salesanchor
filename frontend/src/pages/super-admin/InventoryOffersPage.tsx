@@ -239,11 +239,12 @@ export default function InventoryOffersPage() {
     const results = await Promise.allSettled(
       Array.from(selectedIds).map((id) => api.delete(`/super-admin/inventory-offers/${id}`)),
     );
-    const failed = results.filter((r) => r.status === "rejected");
-    if (failed.length === 0) {
+    // 404 は「既に削除済み」＝目的達成なので成功扱い。真の失敗（404 以外）のみエラー表示する。
+    const realFailures = results.filter(
+      (r) => r.status === "rejected" && !(r.reason instanceof ApiError && r.reason.status === 404),
+    );
+    if (realFailures.length === 0) {
       setInfo(t("superAdmin.inventoryOffers.deleteSuccess"));
-    } else if (failed.every((r) => r.reason instanceof ApiError && r.reason.status === 404)) {
-      setError(t("superAdmin.inventoryOffers.notFound"));
     } else {
       setError(t("common.operationError"));
     }
