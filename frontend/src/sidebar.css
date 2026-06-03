@@ -219,6 +219,18 @@
   letter-spacing: 4px;
 }
 
+/* SaaS管理者専用セクション区切り線 */
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+:root.force-dark .sidebar-divider {
+  background: var(--border);
+}
+
 /* --- App body (right of sidebar) ---
    グラデーション背景をここで定義し、全ページに適用する。
    サイドバー（sidebar-panel）は自前の background: var(--sidebar-bg) を持つため影響なし。
