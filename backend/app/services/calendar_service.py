@@ -17,12 +17,21 @@ from __future__ import annotations
 """
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_dt(s: str) -> datetime:
+    """ISO 8601 文字列を datetime に変換する。
+
+    URL クエリパラメータで '+09:00' がスペースに変換されるケース（例: '2026-06-07T00:00:00 09:00'）も対処する。
+    """
+    return datetime.fromisoformat(s.replace(" ", "+"))
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +96,7 @@ async def list_events(
         "start_datetime < :end",
         "end_datetime > :start",
     ]
-    params: dict = {"start": start, "end": end}
+    params: dict = {"start": _parse_dt(start), "end": _parse_dt(end)}
 
     if calendar_type == "shared":
         filters.append("calendar_type = 'shared'")
@@ -164,8 +173,8 @@ async def create_event(
             "title": payload["title"],
             "desc": payload.get("description"),
             "loc": payload.get("location"),
-            "start": payload["start_datetime"],
-            "end": payload["end_datetime"],
+            "start": _parse_dt(payload["start_datetime"]),
+            "end": _parse_dt(payload["end_datetime"]),
             "all_day": payload.get("is_all_day", False),
             "cuid": user_id,
         },
@@ -235,7 +244,10 @@ async def update_event(
     for k, col in field_map.items():
         if k in payload:
             set_clauses.append(f"{col} = :{k}")
-            params[k] = payload[k]
+            if k in ("start_datetime", "end_datetime"):
+                params[k] = _parse_dt(payload[k])
+            else:
+                params[k] = payload[k]
 
     if not set_clauses:
         return {"id": event_id}
