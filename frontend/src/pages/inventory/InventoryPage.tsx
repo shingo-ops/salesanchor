@@ -52,7 +52,14 @@ interface InventoryListResponse {
 const PER_PAGE = 50;
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
-const OFFER_TYPES = ["in_stock", "pre_order"];
+const OFFER_TYPES = ["in_stock", "pre_order"] as const;
+
+// 数量/単価フィルタ用に、入力文字列を 0 以上の整数へ正規化（小数・不正値は無視）。
+// backend は int(ge=0) のため、小数や負値をそのまま送ると 422 になるのを防ぐ。
+const toNonNegInt = (s: string): number | null => {
+  const n = Number(s);
+  return s.trim() !== "" && Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+};
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
@@ -157,10 +164,16 @@ export default function InventoryPage() {
       if (filterEnabled && showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
       if (filterEnabled && showUnits.size > 0) params.set("unit_in", Array.from(showUnits).join(","));
       if (filterEnabled && showOfferTypes.size > 0) params.set("offer_type_in", Array.from(showOfferTypes).join(","));
-      if (filterEnabled && qtyMin.trim()) params.set("qty_min", qtyMin.trim());
-      if (filterEnabled && qtyMax.trim()) params.set("qty_max", qtyMax.trim());
-      if (filterEnabled && priceMin.trim()) params.set("price_min", priceMin.trim());
-      if (filterEnabled && priceMax.trim()) params.set("price_max", priceMax.trim());
+      if (filterEnabled) {
+        const qmin = toNonNegInt(qtyMin);
+        const qmax = toNonNegInt(qtyMax);
+        const pmin = toNonNegInt(priceMin);
+        const pmax = toNonNegInt(priceMax);
+        if (qmin !== null) params.set("qty_min", String(qmin));
+        if (qmax !== null) params.set("qty_max", String(qmax));
+        if (pmin !== null) params.set("price_min", String(pmin));
+        if (pmax !== null) params.set("price_max", String(pmax));
+      }
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
       setItems(d.items);
       setTotal(d.total);
@@ -231,7 +244,6 @@ export default function InventoryPage() {
   useEffect(() => {
     if (!filtersLoaded) return;
     const timer = setTimeout(() => {
-      const toNum = (s: string) => (s.trim() === "" ? null : Number(s));
       void api
         .patch("/me/inventory-filters", {
           enabled: filterEnabled,
@@ -241,10 +253,10 @@ export default function InventoryPage() {
           show_conditions: Array.from(showConditions),
           show_units: Array.from(showUnits),
           show_offer_types: Array.from(showOfferTypes),
-          qty_min: toNum(qtyMin),
-          qty_max: toNum(qtyMax),
-          price_min: toNum(priceMin),
-          price_max: toNum(priceMax),
+          qty_min: toNonNegInt(qtyMin),
+          qty_max: toNonNegInt(qtyMax),
+          price_min: toNonNegInt(priceMin),
+          price_max: toNonNegInt(priceMax),
         })
         .catch(() => { /* 保存失敗は致命でない */ });
     }, 250);
