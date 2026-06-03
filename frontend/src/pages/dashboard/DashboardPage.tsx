@@ -396,28 +396,6 @@ export default function DashboardPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="dashboard.subtitle"
-      headerLeft={
-        <div className="db-tabs">
-          <button
-            className={`db-tab${tab === "sales" ? " active" : ""}`}
-            onClick={() => setTab("sales")}
-          >
-            {t("dashboard.tabSales")}
-          </button>
-          <button
-            className={`db-tab${tab === "lead" ? " active" : ""}`}
-            onClick={() => setTab("lead")}
-          >
-            {t("dashboard.tabLead")}
-          </button>
-          <button
-            className={`db-tab${tab === "team" ? " active" : ""}`}
-            onClick={() => setTab("team")}
-          >
-            {t("dashboard.tabTeam")}
-          </button>
-        </div>
-      }
       headerAction={
         <div className="page-header-actions">
           <select
@@ -432,6 +410,29 @@ export default function DashboardPage() {
             <option value="6m">{t("dashboard.period6m")}</option>
             <option value="12m">{t("dashboard.period12m")}</option>
           </select>
+          <div className="db-tabs">
+            <button
+              type="button"
+              className={`db-tab${tab === "sales" ? " active" : ""}`}
+              onClick={() => setTab("sales")}
+            >
+              {t("dashboard.tabSales")}
+            </button>
+            <button
+              type="button"
+              className={`db-tab${tab === "lead" ? " active" : ""}`}
+              onClick={() => setTab("lead")}
+            >
+              {t("dashboard.tabLead")}
+            </button>
+            <button
+              type="button"
+              className={`db-tab${tab === "team" ? " active" : ""}`}
+              onClick={() => setTab("team")}
+            >
+              {t("dashboard.tabTeam")}
+            </button>
+          </div>
         </div>
       }
     >

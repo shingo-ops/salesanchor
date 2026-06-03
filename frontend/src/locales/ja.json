@@ -781,7 +781,7 @@
     "minutesAgo": "{{count}}分前",
     "hoursAgo": "{{count}}時間前",
     "createPO": "発注書作成",
-    "applyToQuote": "見積に反映して戻る",
+    "applyToQuote": "選択を反映して戻る",
     "actions": {
       "purchasingRole": "仕入れ担当",
       "salesRole": "営業担当"
@@ -878,6 +878,8 @@
     "fromQuoteHelp": "自テナントで作成した承認済みの見積書から請求書を作成します。",
     "noApprovedQuotes": "承認済みの見積書がありません。",
     "createFromThisQuote": "この見積から作成",
+    "editFromThisQuote": "この見積から作成（明細を編集）",
+    "editingFromQuote": "見積 {{code}} から作成中（明細の数量・金額を編集できます）",
     "createBtn": "請求書を作成",
     "invoiceCode": "請求書コード",
     "dueDate": "支払期限",
