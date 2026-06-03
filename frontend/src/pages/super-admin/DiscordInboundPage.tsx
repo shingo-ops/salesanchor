@@ -91,6 +91,24 @@ export default function DiscordInboundPage() {
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"" | ParseStatus>("");
   const [filterQ, setFilterQ] = useState("");
+  // 受信時刻 / 仕入元 のクライアントサイドソート（既定=受信時刻の新しい順）。
+  const [sortField, setSortField] = useState<"received_at" | "supplier">("received_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const onSort = (f: "received_at" | "supplier") => {
+    if (sortField === f) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(f); setSortDir("asc"); }
+  };
+  const sortArrow = (f: string) =>
+    sortField === f ? (sortDir === "asc" ? t("common.sortAsc") : t("common.sortDesc")) : t("common.sortNone");
+  const sortedItems = useMemo(() => {
+    const factor = sortDir === "asc" ? 1 : -1;
+    return [...items].sort((a, b) => {
+      if (sortField === "received_at") {
+        return (a.received_at < b.received_at ? -1 : a.received_at > b.received_at ? 1 : 0) * factor;
+      }
+      return (a.supplier_name ?? "").localeCompare(b.supplier_name ?? "", "ja") * factor;
+    });
+  }, [items, sortField, sortDir]);
   // 受信通知 → 商品マスタ取込（プレビュー付き）。元は在庫表にあったが受信通知の文脈なので本ページへ移設。
   const [showImport, setShowImport] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
@@ -391,8 +409,28 @@ export default function DiscordInboundPage() {
         <table className="data-table" data-testid="inbound-table">
           <thead>
             <tr>
-              <th>{t("superAdmin.inbound.columns.receivedAt")}</th>
-              <th>{t("superAdmin.inbound.columns.supplier")}</th>
+              <th>
+                <button
+                  type="button"
+                  onClick={() => onSort("received_at")}
+                  data-testid="inbound-sort-received-at"
+                  style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", fontWeight: "var(--font-weight-semi)", color: "inherit", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
+                >
+                  {t("superAdmin.inbound.columns.receivedAt")}
+                  <span aria-hidden="true" style={{ fontSize: "var(--font-xs)", color: sortField === "received_at" ? "var(--accent)" : "var(--text-muted)" }}>{sortArrow("received_at")}</span>
+                </button>
+              </th>
+              <th>
+                <button
+                  type="button"
+                  onClick={() => onSort("supplier")}
+                  data-testid="inbound-sort-supplier"
+                  style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", fontWeight: "var(--font-weight-semi)", color: "inherit", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
+                >
+                  {t("superAdmin.inbound.columns.supplier")}
+                  <span aria-hidden="true" style={{ fontSize: "var(--font-xs)", color: sortField === "supplier" ? "var(--accent)" : "var(--text-muted)" }}>{sortArrow("supplier")}</span>
+                </button>
+              </th>
               <th>{t("superAdmin.inbound.columns.parseStatus")}</th>
               <th>{t("superAdmin.inbound.columns.preview")}</th>
               <th>{t("superAdmin.inbound.columns.llmCost")}</th>
@@ -400,7 +438,7 @@ export default function DiscordInboundPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((m) => (
+            {sortedItems.map((m) => (
               <tr key={m.id} data-testid={`inbound-row-${m.id}`}>
                 <td>
                   <code>{new Date(m.received_at).toLocaleString()}</code>
