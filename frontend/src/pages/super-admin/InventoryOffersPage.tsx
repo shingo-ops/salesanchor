@@ -380,32 +380,34 @@ export default function InventoryOffersPage() {
           <thead>
             <tr>
               <th style={{ width: "var(--col-width-checkbox)", textAlign: "center" }} aria-label={t("common.select")}></th>
-              <th>{t(`${c}.category`)}</th>
-              <th>{t(`${c}.mark`)}</th>
-              <th>{t(`${c}.product`)}</th>
-              <th>{t(`${c}.condition`)}</th>
-              <th>{t(`${c}.unit`)}</th>
-              <th>{t(`${c}.offerType`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${c}.quantity`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${c}.unitPrice`)}</th>
-              <th>{t(`${c}.supplier`)}</th>
-              <th>{t(`${c}.status`)}</th>
-              <th>{t(`${c}.source`)}</th>
-              <th>{t(`${c}.expiresAt`)}</th>
-              <th></th>
+              <th>{t("inventory.col.category")}</th>
+              <th>{t("inventory.col.mark")}</th>
+              <th>{t("inventory.col.title")}</th>
+              <th>{t("inventory.col.condition")}</th>
+              <th>{t("inventory.col.unit")}</th>
+              <th>{t("inventory.col.offerType")}</th>
+              <th style={{ textAlign: "right" }}>{t("inventory.col.quantity")}</th>
+              <th style={{ textAlign: "right" }}>{t("inventory.col.unitPrice")}</th>
+              <th>{t("inventory.col.supplier")}</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={14} data-testid="offers-empty">
+                <td colSpan={10} data-testid="offers-empty">
                   {t("superAdmin.inventoryOffers.noResults")}
                 </td>
               </tr>
             ) : (
               items.map((o) => (
-                <tr key={o.id} data-testid={`offers-row-${o.id}`}>
-                  <td style={{ textAlign: "center" }}>
+                // 行クリックで編集ポップアップ（チェックボックスのセルは伝播を止める）
+                <tr
+                  key={o.id}
+                  data-testid={`offers-row-${o.id}`}
+                  onClick={() => openEdit(o)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(o.id)}
@@ -453,23 +455,6 @@ export default function InventoryOffersPage() {
                     <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
                       {fmtOfferedAt(o.offered_at)}
                     </div>
-                  </td>
-                  <td>{t(`superAdmin.inventoryOffers.status.${o.status}`)}</td>
-                  <td>
-                    <span data-testid={`offers-row-${o.id}-source`}>
-                      {t(`superAdmin.inventoryOffers.source.${o.source}`, o.source)}
-                    </span>
-                  </td>
-                  <td>{o.expires_at ? o.expires_at.slice(0, 10) : "—"}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      type="button"
-                      className="btn-sm"
-                      onClick={() => openEdit(o)}
-                      data-testid={`offers-row-${o.id}-edit`}
-                    >
-                      {t("common.edit")}
-                    </button>
                   </td>
                 </tr>
               ))
