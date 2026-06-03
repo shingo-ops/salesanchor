@@ -23,14 +23,14 @@
       "type": "text",
       "title": "",
       "gridPos": {
-        "h": 8,
-        "w": 24,
+        "h": 60,
+        "w": 4,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"display:flex;height:100%;align-items:stretch;font-family:sans-serif;box-sizing:border-box\"><div style=\"width:154px;min-width:154px;display:flex;flex-direction:column;padding:6px 4px;gap:2px;border-right:1px solid rgba(204,204,220,0.12)\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a></div><div style=\"flex:1;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;overflow:hidden\"><p style=\"margin:0;font-size:18px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">CI / GitHub Actions</p><p style=\"margin:4px 0 0;font-size:10px;opacity:0.6;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden\">GitHub Actions の CI/CD パイプラインの実行時間・成功率・失敗数を分析します。</p></div></div>"
+        "content": "<div style=\"display:flex;flex-direction:column;height:100%;font-family:sans-serif;box-sizing:border-box;padding:0\"><div style=\"padding:10px 8px 8px;border-bottom:1px solid rgba(204,204,220,0.12)\"><p style=\"margin:0;font-size:11px;font-weight:700;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">CI / GitHub Actions</p></div><div style=\"flex:1;padding:8px 4px;display:flex;flex-direction:column;gap:2px\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a></div></div>"
       },
       "transparent": true
     },
@@ -41,9 +41,9 @@
       "collapsed": false,
       "gridPos": {
         "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 8
+        "w": 20,
+        "x": 4,
+        "y": 0
       },
       "panels": []
     },
@@ -52,9 +52,9 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 9
+        "w": 3,
+        "x": 4,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -103,9 +103,9 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 9
+        "w": 3,
+        "x": 7,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -154,9 +154,9 @@
       "type": "gauge",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 9
+        "w": 3,
+        "x": 11,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -209,9 +209,9 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 9
+        "w": 3,
+        "x": 14,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -269,9 +269,9 @@
       "collapsed": false,
       "gridPos": {
         "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
+        "w": 20,
+        "x": 4,
+        "y": 5
       },
       "panels": []
     },
@@ -280,9 +280,9 @@
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 14
+        "w": 20,
+        "x": 4,
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -326,9 +326,9 @@
       "type": "barchart",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 22
+        "w": 10,
+        "x": 4,
+        "y": 14
       },
       "datasource": {
         "type": "prometheus",
@@ -372,9 +372,9 @@
       "type": "barchart",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
+        "w": 10,
+        "x": 14,
+        "y": 14
       },
       "datasource": {
         "type": "prometheus",
@@ -466,9 +466,9 @@
       "collapsed": false,
       "gridPos": {
         "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 30
+        "w": 20,
+        "x": 4,
+        "y": 22
       },
       "panels": []
     },
@@ -477,9 +477,9 @@
       "type": "table",
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 31
+        "w": 20,
+        "x": 4,
+        "y": 23
       },
       "datasource": {
         "type": "prometheus",
