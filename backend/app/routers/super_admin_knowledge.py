@@ -29,6 +29,7 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
 from app.schemas.central_masters import (
+    _VALID_PATTERN_TYPES,
     KnowledgeRuleCreate,
     KnowledgeRuleResponse,
     KnowledgeRuleUpdate,
@@ -136,13 +137,22 @@ async def update_rule(
         raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = rule_id
-    result = await db.execute(
-        text(
-            f"UPDATE public.knowledge_rules SET {set_clauses} "
-            f"WHERE id = :id RETURNING {_COLS}"
-        ),
-        update_data,
-    )
+    try:
+        result = await db.execute(
+            text(
+                f"UPDATE public.knowledge_rules SET {set_clauses} "
+                f"WHERE id = :id RETURNING {_COLS}"
+            ),
+            update_data,
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        text_orig = str(getattr(exc, "orig", exc))
+        if "pattern_type" in text_orig:
+            detail = "一致方法の値が不正です（正規表現 / 完全一致 / 前方一致 / 部分一致 のいずれかを選択してください）。"
+        else:
+            detail = "ルールを更新できませんでした。入力内容を確認してください。"
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="ルールが見つかりません")
@@ -235,7 +245,8 @@ async def import_csv(
             if not row["category"] or not row["pattern"] or not row["normalized_to"]:
                 errors.append(f"L{idx}: 必須列が空")
                 continue
-            if row["pattern_type"] not in {"regex", "exact", "prefix", "suffix", "contains"}:
+            # DB CHECK 制約 / パーサ実装と同じ集合（central_masters に一元化）。
+            if row["pattern_type"] not in _VALID_PATTERN_TYPES:
                 errors.append(f"L{idx}: pattern_type 不正: {row['pattern_type']}")
                 continue
             rows.append(row)
