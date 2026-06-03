@@ -28,6 +28,7 @@
 | feature/morimoto/worktree-guard-auto-recovery | worktreeガード自動リカバリー機能 | 2026-06-02 23:00 | IN_PROGRESS | | |
 | feature/morimoto/discord-oauth-redirect-fix | Discord OAuth リダイレクト修正・テスト追加 | 2026-06-02 23:30 | IN_PROGRESS | | |
 | feature/morimoto/migrate-consolidation | マイグレーション一括化 | 2026-06-02 23:30 | IN_PROGRESS | | |
+| feature/morimoto/grafana-sidebar-nav | Grafana ナビ横タブ→サイドバー移行 | 2026-06-03 | IN_PROGRESS | | |
 ---
 
 ## 記入例
