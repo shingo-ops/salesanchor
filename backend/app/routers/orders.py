@@ -39,6 +39,7 @@ from app.schemas.order import (
     OrderCreate,
     OrderGroupCountsResponse,
     OrderListResponse,
+    OrderPaidStatusUpdate,
     OrderResponse,
     OrderStatus,
     OrderUpdate,
@@ -110,7 +111,7 @@ _SELECT_COLS = """
     total_amount, currency, status,
     shipping_carrier, shipping_fee, tracking_number,
     shipped_at, delivered_at, shipping_country,
-    notes, created_at, updated_at
+    paid_at, notes, created_at, updated_at
 """
 
 # company_id / contact_id / deal_id / invoice_id は作成後の変更を禁止（FK整合性保護）
@@ -219,6 +220,9 @@ async def list_orders(
     orders_t = tenant_table_ref(db, tenant_id, "orders")
     companies_t = tenant_table_ref(db, tenant_id, "companies")
     contacts_t = tenant_table_ref(db, tenant_id, "contacts")
+    # 区切り4: 一覧「発送先」列用に発送情報（city / country_code）を LEFT JOIN。
+    # 受注 1 件 = 発送情報 1 件（order_id UNIQUE）のため JOIN で行数は増えない。
+    shipping_t = tenant_table_ref(db, tenant_id, "order_shipping_details")
     result = await db.execute(
         text(f"""
             SELECT
@@ -226,12 +230,15 @@ async def list_orders(
                 o.order_number, o.total_amount, o.currency, o.status,
                 o.shipping_carrier, o.shipping_fee, o.tracking_number,
                 o.shipped_at, o.delivered_at, o.shipping_country,
-                o.notes, o.created_at, o.updated_at,
+                o.paid_at, o.notes, o.created_at, o.updated_at,
                 c.name AS company_name,
-                ct.display_name AS contact_display_name
+                ct.display_name AS contact_display_name,
+                sd.city AS shipping_city,
+                sd.country_code AS shipping_country_code
             FROM {orders_t} o
             LEFT JOIN {companies_t} c ON c.id = o.company_id
             LEFT JOIN {contacts_t} ct ON ct.id = o.contact_id
+            LEFT JOIN {shipping_t} sd ON sd.order_id = o.id
             {where_clause}
             ORDER BY o.{sort_by} {sort_dir}, o.id DESC
             LIMIT :limit OFFSET :offset
@@ -454,6 +461,56 @@ async def update_order(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="update", table_name="orders", record_id=order_id,
         old_data=dict(old_row), new_data=update_data,
+    )
+    await db.commit()
+    await invalidate_dashboard_cache(tenant_id)
+
+    return OrderResponse(**row)
+
+
+@router.patch("/orders/{order_id}/paid", response_model=OrderResponse,
+              dependencies=[Depends(require_permission("orders.update"))])
+async def set_order_paid(
+    order_id: int,
+    data: OrderPaidStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """受注の支払済フラグ（paid_at）を切り替える（区切り4）。
+
+    paid=true で paid_at=NOW()、paid=false で paid_at=NULL に戻す。
+    受注ステータスフローの「支払済にする」ボタンから呼ばれる。
+    将来は発注書送付フローと連動予定（現状は手動フラグ）。
+    """
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    old_result = await db.execute(
+        text(f"SELECT {_SELECT_COLS} FROM {orders_t} WHERE id = :id"),
+        {"id": order_id},
+    )
+    old_row = old_result.mappings().first()
+    if not old_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+
+    if data.paid:
+        set_clause = "paid_at = NOW()"
+    else:
+        set_clause = "paid_at = NULL"
+
+    result = await db.execute(
+        text(f"""
+            UPDATE {orders_t} SET {set_clause}, updated_at = NOW()
+            WHERE id = :id
+            RETURNING {_SELECT_COLS}
+        """),
+        {"id": order_id},
+    )
+    row = result.mappings().first()
+
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="update", table_name="orders", record_id=order_id,
+        old_data=dict(old_row), new_data={"paid": data.paid},
     )
     await db.commit()
     await invalidate_dashboard_cache(tenant_id)

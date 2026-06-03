@@ -7,14 +7,21 @@ export interface OrderListItem {
   company_id: number;
   contact_id: number | null;
   deal_id: number | null;
+  invoice_id: number | null;
   order_number: string;
   total_amount: number | null;
+  currency: string | null;
   status: string;
+  // 区切り4: 支払済日時（NULL=未払い）。ステータスフロー判定に使用。
+  paid_at: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
   company_name: string | null;
   contact_display_name: string | null;
+  // 区切り4: 一覧「発送先」列用（order_shipping_details JOIN）。
+  shipping_city: string | null;
+  shipping_country_code: string | null;
 }
 
 export interface CompanyMini {

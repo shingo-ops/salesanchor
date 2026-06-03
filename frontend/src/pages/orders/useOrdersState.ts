@@ -11,26 +11,72 @@ import type {
 } from "./orders.types";
 import { emptyForm } from "./orders.types";
 import type {
-  OrderFinancialDto,
-} from "../../components/OrderFinancialPanel";
-import type {
   ShippingDetailDto,
 } from "../../components/ShippingDetailPanel";
 import type {
   PurchaseDetailDto,
 } from "../../components/PurchaseDetailPanel";
-import type {
-  OrderCommissionsBundleDto,
-} from "../../components/CommissionPanel";
 
 /** 金額を日本円フォーマットで表示 */
 export const fmt = (n: number) =>
   n.toLocaleString("ja-JP", { style: "currency", currency: "JPY" });
 
+/**
+ * 通貨付き金額フォーマット（区切り4）。
+ * JPY は整数表示、他通貨は小数点第 2 位まで。currency 未指定は JPY 扱い。
+ */
+export const fmtCurrency = (n: number, currency: string | null | undefined) => {
+  const cur = (currency || "JPY").toUpperCase();
+  const fractionDigits = cur === "JPY" ? 0 : 2;
+  try {
+    return n.toLocaleString("ja-JP", {
+      style: "currency",
+      currency: cur,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    });
+  } catch {
+    // 未知の通貨コードは数値 + コード表記でフォールバック
+    return `${n.toLocaleString("ja-JP", {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })} ${cur}`;
+  }
+};
+
 /** 粗利率を小数 1 桁 % 表示 */
 export const fmtRate = (n: number | null | undefined) => {
   if (n === null || n === undefined) return "-";
   return `${(n * 100).toFixed(1)}%`;
+};
+
+/**
+ * 受注のステータスフロー上のフェーズを判定する（区切り4 / ④）。
+ *
+ * 判定順（上から優先）:
+ *   - cancelled / trouble       → orders.status をそのまま反映
+ *   - completed                 → 発送ラベル発行済（label_issued_at）+ 追跡番号あり
+ *   - awaiting_shipping（発送待ち）→ 仕入確定（purchase_status='confirmed'）
+ *   - sourcing（仕入れ中）       → 支払済（paid_at あり）かつ仕入未確定
+ *   - awaiting_payment（支払い待ち）→ 請求書発行済（invoice_id あり）かつ未払い
+ *   - unknown                   → いずれにも該当しない（未着手）
+ */
+export const orderPhase = (
+  o: OrderListItem,
+  purchase: PurchaseDetailDto | null,
+  shipping: ShippingDetailDto | null,
+): string => {
+  if (o.status === "cancelled") return "cancelled";
+  if (o.status === "trouble") return "trouble";
+  if (shipping && shipping.label_issued_at && shipping.tracking_number) {
+    return "completed";
+  }
+  if (purchase && purchase.purchase_status === "confirmed") {
+    return "awaiting_shipping";
+  }
+  if (o.paid_at) return "sourcing";
+  if (o.invoice_id) return "awaiting_payment";
+  return "unknown";
 };
 
 export function useOrdersState() {
@@ -73,21 +119,13 @@ export function useOrdersState() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<OrderListItem | null>(null);
 
-  // ADR-021 Sprint 2: 売上情報
-  const [financialTarget, setFinancialTarget] = useState<OrderListItem | null>(null);
-  const [financials, setFinancials] = useState<Record<number, OrderFinancialDto | null>>({});
-
-  // ADR-021 Sprint 3: 発送情報
+  // ADR-021 Sprint 3: 発送情報（フェーズ判定 + 発送パネル）
   const [shippingTarget, setShippingTarget] = useState<OrderListItem | null>(null);
   const [shippings, setShippings] = useState<Record<number, ShippingDetailDto | null>>({});
 
-  // ADR-021 Sprint 4: 仕入情報
+  // ADR-021 Sprint 4: 仕入情報（フェーズ判定 + 仕入パネル）
   const [purchaseTarget, setPurchaseTarget] = useState<OrderListItem | null>(null);
   const [purchases, setPurchases] = useState<Record<number, PurchaseDetailDto | null>>({});
-
-  // ADR-021 Sprint 5: 報酬情報
-  const [commissionTarget, setCommissionTarget] = useState<OrderListItem | null>(null);
-  const [commissionTotals, setCommissionTotals] = useState<Record<number, number>>({});
 
   // 検索入力の debounce（300ms）
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -158,32 +196,7 @@ export function useOrdersState() {
   useEffect(() => { loadGroupCounts(); }, [groupCountsQueryString]);
   useEffect(() => { loadCompanies(); }, []);
 
-  // ADR-021 Sprint 2: 売上情報を並列取得
-  useEffect(() => {
-    if (orders.length === 0) { setFinancials({}); return; }
-    let cancelled = false;
-    const fetchAll = async () => {
-      const results = await Promise.all(
-        orders.map(async (o) => {
-          try {
-            const data = await api.get<OrderFinancialDto>(`/orders/${o.id}/financial`);
-            return [o.id, data] as const;
-          } catch (e) {
-            if (e instanceof ApiError && e.status === 404) return [o.id, null] as const;
-            return [o.id, null] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      const map: Record<number, OrderFinancialDto | null> = {};
-      for (const [id, data] of results) map[id] = data;
-      setFinancials(map);
-    };
-    fetchAll();
-    return () => { cancelled = true; };
-  }, [orders]);
-
-  // ADR-021 Sprint 3: 発送情報を並列取得
+  // ADR-021 Sprint 3: 発送情報を並列取得（ステータスフロー判定 + 発送先列）
   useEffect(() => {
     if (orders.length === 0) { setShippings({}); return; }
     let cancelled = false;
@@ -208,7 +221,7 @@ export function useOrdersState() {
     return () => { cancelled = true; };
   }, [orders]);
 
-  // ADR-021 Sprint 4: 仕入情報を並列取得
+  // ADR-021 Sprint 4: 仕入情報を並列取得（ステータスフロー判定 + 仕入パネル）
   useEffect(() => {
     if (orders.length === 0) { setPurchases({}); return; }
     let cancelled = false;
@@ -228,34 +241,6 @@ export function useOrdersState() {
       const map: Record<number, PurchaseDetailDto | null> = {};
       for (const [id, data] of results) map[id] = data;
       setPurchases(map);
-    };
-    fetchAll();
-    return () => { cancelled = true; };
-  }, [orders]);
-
-  // ADR-021 Sprint 5: 報酬情報を並列取得
-  useEffect(() => {
-    if (orders.length === 0) { setCommissionTotals({}); return; }
-    let cancelled = false;
-    const fetchAll = async () => {
-      const results = await Promise.all(
-        orders.map(async (o) => {
-          try {
-            const data = await api.get<OrderCommissionsBundleDto>(`/orders/${o.id}/commissions`);
-            const total = Object.values(data.commissions).reduce(
-              (acc, c) => acc + (c ? Number(c.calculated_amount) || 0 : 0),
-              0,
-            );
-            return [o.id, total] as const;
-          } catch {
-            return [o.id, 0] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      const map: Record<number, number> = {};
-      for (const [id, total] of results) map[id] = total;
-      setCommissionTotals(map);
     };
     fetchAll();
     return () => { cancelled = true; };
@@ -336,6 +321,17 @@ export function useOrdersState() {
     return c ? c.name : `#${o.company_id}`;
   };
 
+  // 区切り4 / ④: 支払済フラグを切り替える（PATCH /orders/{id}/paid）。
+  const setPaidOrder = async (o: OrderListItem, paid: boolean) => {
+    setError("");
+    try {
+      await api.patch(`/orders/${o.id}/paid`, { paid });
+      loadOrders();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
+  };
+
   const toggleSortOrder = () => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
 
   return {
@@ -352,17 +348,13 @@ export function useOrdersState() {
     selectorError,
     error, loading,
     deleteTarget, setDeleteTarget,
-    financialTarget, setFinancialTarget,
-    financials, setFinancials,
     shippingTarget, setShippingTarget,
     shippings, setShippings,
     purchaseTarget, setPurchaseTarget,
     purchases, setPurchases,
-    commissionTarget, setCommissionTarget,
-    commissionTotals, setCommissionTotals,
     STATUS_LABELS, SORT_OPTIONS,
     loadOrders, loadGroupCounts,
     handleSubmit, handleEdit, performDelete,
-    companyDisplay, resetSelector,
+    companyDisplay, resetSelector, setPaidOrder,
   };
 }

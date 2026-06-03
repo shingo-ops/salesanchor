@@ -136,7 +136,9 @@
     "managementCenter": "Management Center",
     "saasAdmin": "SaaS Admin",
     "designSystem": "Design System",
-    "accountSettings": "Account Settings"
+    "accountSettings": "Account Settings",
+    "sales": "Sales",
+    "commissions": "Commissions"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -735,10 +737,22 @@
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier"
     },
     "expiryWarning": "Offers are automatically removed 18 hours after they are posted.",
-    "filter": { "allTypes": "All types", "allOfferTypes": "Stock & pre-order", "allCategories": "All TCG series" },
+    "filter": {
+      "allTypes": "All types",
+      "allOfferTypes": "Stock & pre-order",
+      "allCategories": "All TCG series"
+    },
     "resetSort": "Reset",
-    "offerType": { "in_stock": "In stock", "pre_order": "Pre-order" },
-    "shipTiming": { "on_release": "Ship on release", "1day_before": "Ship 1 day before", "2day_before": "Ship 2 days before", "other": "Other" },
+    "offerType": {
+      "in_stock": "In stock",
+      "pre_order": "Pre-order"
+    },
+    "shipTiming": {
+      "on_release": "Ship on release",
+      "1day_before": "Ship 1 day before",
+      "2day_before": "Ship 2 days before",
+      "other": "Other"
+    },
     "col": {
       "product": "Product",
       "category": "TCG series",
@@ -939,7 +953,21 @@
     "status_completed": "Completed",
     "status_trouble": "Trouble",
     "status_cancelled": "Cancelled",
-    "subtitle": "Manage financials, shipping, purchasing, and commissions."
+    "subtitle": "Manage sourcing and shipping in one place.",
+    "shippingTo": "Ship to",
+    "markPaid": "Mark as paid",
+    "markUnpaid": "Mark as unpaid",
+    "markPurchased": "Mark as sourced",
+    "issueLabel": "Issue label / enter tracking",
+    "readOnly": "Read only",
+    "phaseAwaitingPayment": "Awaiting payment",
+    "phaseSourcing": "Sourcing",
+    "phaseAwaitingShipping": "Awaiting shipping",
+    "phaseCompleted": "Completed",
+    "phaseTrouble": "Trouble",
+    "phaseCancelled": "Cancelled",
+    "phaseUnknown": "Not started",
+    "flowColumn": "Flow"
   },
   "products": {
     "subtitle": "Manage products and inventory.",
@@ -1295,7 +1323,8 @@
     "rateFormula": "Revenue × {{rate}}%",
     "fixedSuffix": "fixed",
     "lastUpdated": "Last Updated",
-    "subtitle": "Manage commission rates and monthly results by role."
+    "subtitle": "Manage commission rates and monthly results by role.",
+    "listSubtitle": "Review commission results by staff and month."
   },
   "faq": {
     "title": "FAQ",
@@ -1976,5 +2005,18 @@
     "sendError": "Failed to post. Check the channel ID and bot permissions.",
     "invalidChannelId": "Channel ID must be a 17–20 digit number",
     "messageRequired": "Message is required"
+  },
+  "sales": {
+    "subtitle": "Review revenue, gross profit and margin per order.",
+    "revenue": "Revenue",
+    "cost": "Cost",
+    "grossProfit": "Gross profit",
+    "grossProfitRate": "Margin",
+    "noData": "No sales data",
+    "summaryLegend": "Summary",
+    "revenueTotal": "Total revenue",
+    "costTotal": "Total cost",
+    "grossProfitTotal": "Total gross profit",
+    "count": "Count"
   }
 }

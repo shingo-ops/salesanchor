@@ -136,7 +136,9 @@
     "managementCenter": "管理センター",
     "saasAdmin": "SaaS管理者",
     "designSystem": "デザインシステム",
-    "accountSettings": "アカウント設定"
+    "accountSettings": "アカウント設定",
+    "sales": "売上管理",
+    "commissions": "報酬管理"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -735,10 +737,22 @@
       "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索"
     },
     "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
-    "filter": { "allTypes": "全種別", "allOfferTypes": "在庫・予約すべて", "allCategories": "全TCGシリーズ" },
+    "filter": {
+      "allTypes": "全種別",
+      "allOfferTypes": "在庫・予約すべて",
+      "allCategories": "全TCGシリーズ"
+    },
     "resetSort": "リセット",
-    "offerType": { "in_stock": "在庫", "pre_order": "予約" },
-    "shipTiming": { "on_release": "発売日発送", "1day_before": "発売1日前発送", "2day_before": "発売2日前発送", "other": "その他" },
+    "offerType": {
+      "in_stock": "在庫",
+      "pre_order": "予約"
+    },
+    "shipTiming": {
+      "on_release": "発売日発送",
+      "1day_before": "発売1日前発送",
+      "2day_before": "発売2日前発送",
+      "other": "その他"
+    },
     "col": {
       "product": "商品",
       "category": "TCGシリーズ",
@@ -939,7 +953,21 @@
     "status_completed": "完了",
     "status_trouble": "トラブル",
     "status_cancelled": "キャンセル",
-    "subtitle": "財務・配送・仕入・報酬を一元管理します。"
+    "subtitle": "仕入・発送を一元管理します。",
+    "shippingTo": "発送先",
+    "markPaid": "支払済にする",
+    "markUnpaid": "未払いに戻す",
+    "markPurchased": "仕入済にする",
+    "issueLabel": "発送ラベル発行・追跡番号入力",
+    "readOnly": "読取専用",
+    "phaseAwaitingPayment": "支払い待ち",
+    "phaseSourcing": "仕入れ中",
+    "phaseAwaitingShipping": "発送待ち",
+    "phaseCompleted": "完了",
+    "phaseTrouble": "トラブル",
+    "phaseCancelled": "キャンセル",
+    "phaseUnknown": "未着手",
+    "flowColumn": "フロー"
   },
   "products": {
     "subtitle": "商品と在庫情報を管理します。",
@@ -1295,7 +1323,8 @@
     "rateFormula": "売上 × {{rate}}%",
     "fixedSuffix": "固定",
     "lastUpdated": "最終更新",
-    "subtitle": "役割別の報酬レートと月次実績を管理します。"
+    "subtitle": "役割別の報酬レートと月次実績を管理します。",
+    "listSubtitle": "担当者別・月次の報酬実績を確認できます。"
   },
   "faq": {
     "title": "FAQ",
@@ -1976,5 +2005,18 @@
     "sendError": "投稿に失敗しました。チャンネルIDとBot権限を確認してください。",
     "invalidChannelId": "チャンネルIDは17〜20桁の数字で入力してください",
     "messageRequired": "メッセージを入力してください"
+  },
+  "sales": {
+    "subtitle": "受注ごとの売上・粗利・粗利率を一覧で確認できます。",
+    "revenue": "売上",
+    "cost": "原価",
+    "grossProfit": "粗利",
+    "grossProfitRate": "粗利率",
+    "noData": "売上データがありません",
+    "summaryLegend": "集計",
+    "revenueTotal": "売上合計",
+    "costTotal": "原価合計",
+    "grossProfitTotal": "粗利合計",
+    "count": "件数"
   }
 }

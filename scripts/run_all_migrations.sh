@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=90
+TOTAL=91
 
 run_py() {
   local script="$1"
@@ -216,6 +216,9 @@ run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
 
 # ADR-093 海外顧客向け明細: quote_items / invoice_items に name_en/condition/unit を追加
 run_sql migrations/20260604_030000_add_quote_invoice_item_overseas_columns.sql
+
+# ADR-021 受注ステータスフロー: orders に paid_at（支払済フラグ）を追加
+run_sql migrations/20260604_050000_add_orders_paid_at.sql
 
 echo ""
 echo "============================================"

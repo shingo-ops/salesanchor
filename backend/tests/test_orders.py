@@ -666,3 +666,135 @@ class TestOrderResponseSchema:
         from app.schemas.order import OrderResponse
 
         assert OrderResponse(**self._row(contact_id=20)).contact_id == 20
+
+
+class TestOrdersPaidFlow:
+    """区切り4 (ADR-021 改修): paid_at（支払済フラグ）と受注一覧の拡張列。"""
+
+    async def test_new_order_has_null_paid_at(self, client):
+        """新規受注は paid_at=None（未払い）。"""
+        company_id, contact_id = await _create_company_contact(client)
+        res = await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-PAID-NULL",
+        })
+        assert res.status_code == 201
+        assert res.json()["paid_at"] is None
+
+    async def test_set_order_paid_true_then_false(self, client):
+        """PATCH /orders/{id}/paid で支払済 → 未払いに戻せる。"""
+        company_id, contact_id = await _create_company_contact(client)
+        cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-PAID-TOGGLE",
+        })
+        order_id = cre.json()["id"]
+
+        # 支払済にする
+        res = await client.patch(f"/api/v1/orders/{order_id}/paid", json={"paid": True})
+        assert res.status_code == 200
+        assert res.json()["paid_at"] is not None
+
+        # 未払いに戻す
+        res = await client.patch(f"/api/v1/orders/{order_id}/paid", json={"paid": False})
+        assert res.status_code == 200
+        assert res.json()["paid_at"] is None
+
+    async def test_set_paid_defaults_to_true(self, client):
+        """ボディ省略時は paid=True（支払済にする）が既定。"""
+        company_id, contact_id = await _create_company_contact(client)
+        cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-PAID-DEFAULT",
+        })
+        order_id = cre.json()["id"]
+        res = await client.patch(f"/api/v1/orders/{order_id}/paid", json={})
+        assert res.status_code == 200
+        assert res.json()["paid_at"] is not None
+
+    async def test_set_paid_404_for_missing_order(self, client):
+        res = await client.patch("/api/v1/orders/999999/paid", json={"paid": True})
+        assert res.status_code == 404
+
+    async def test_set_paid_requires_orders_update_permission(self, client):
+        """orders.update 権限なしユーザーは 403。"""
+        from unittest.mock import patch
+
+        company_id, contact_id = await _create_company_contact(client)
+        cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-PAID-PERM",
+        })
+        order_id = cre.json()["id"]
+
+        async def _no_perms(db, tenant_id, user_id):
+            return set()
+
+        with patch("app.auth.dependencies.load_user_permissions", _no_perms):
+            res = await client.patch(f"/api/v1/orders/{order_id}/paid", json={"paid": True})
+        assert res.status_code == 403
+
+    async def test_list_orders_includes_shipping_and_currency_fields(self, client):
+        """GET /orders のレスポンスに shipping_city / shipping_country_code /
+        currency / paid_at が含まれる（発送情報未登録なら shipping_* は None）。"""
+        company_id, contact_id = await _create_company_contact(client)
+        await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-LIST-FIELDS",
+        })
+        res = await client.get("/api/v1/orders")
+        assert res.status_code == 200
+        row = next(o for o in res.json() if o["order_number"] == "ORD-LIST-FIELDS")
+        assert "shipping_city" in row
+        assert "shipping_country_code" in row
+        assert "currency" in row
+        assert "paid_at" in row
+        assert row["shipping_city"] is None
+        assert row["shipping_country_code"] is None
+
+
+class TestSalesOrdersEndpoint:
+    """区切り4: GET /financials/orders（売上管理一覧）。"""
+
+    async def test_sales_orders_empty(self, client):
+        res = await client.get("/api/v1/financials/orders")
+        assert res.status_code == 200
+        data = res.json()
+        assert "items" in data
+        assert "revenue_total" in data
+        assert "gross_profit_total" in data
+
+    async def test_sales_orders_aggregates_financial(self, client):
+        """受注 + 売上情報があれば revenue / cost / gross / rate が集計される。"""
+        company_id, contact_id = await _create_company_contact(client)
+        cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id, "contact_id": contact_id,
+            "order_number": "ORD-SALES-AGG",
+        })
+        order_id = cre.json()["id"]
+        # 売上情報を登録（revenue=1000, purchase_cost=400 → gross=600, rate=0.6）
+        fin = await client.post(f"/api/v1/orders/{order_id}/financial", json={
+            "revenue_amount": 1000,
+            "purchase_cost": 400,
+        })
+        assert fin.status_code == 201
+
+        res = await client.get("/api/v1/financials/orders")
+        assert res.status_code == 200
+        data = res.json()
+        item = next(i for i in data["items"] if i["order_id"] == order_id)
+        assert float(item["revenue_amount"]) == 1000.0
+        assert float(item["cost_total"]) == 400.0
+        assert float(item["gross_profit"]) == 600.0
+        assert abs(float(item["gross_profit_rate"]) - 0.6) < 1e-6
+        assert float(data["revenue_total"]) >= 1000.0
+
+    async def test_sales_orders_requires_orders_view(self, client):
+        from unittest.mock import patch
+
+        async def _no_perms(db, tenant_id, user_id):
+            return set()
+
+        with patch("app.auth.dependencies.load_user_permissions", _no_perms):
+            res = await client.get("/api/v1/financials/orders")
+        assert res.status_code == 403

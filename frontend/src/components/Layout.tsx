@@ -301,6 +301,32 @@ export default function Layout() {
                 </NavLink>
               )}
 
+              {/* 区切り4 (ADR-021 改修): 売上管理（受注管理の直下）。
+                  専用権限 sales.view は未定義のため orders.view を流用。 */}
+              {hasPermission("orders.view") && (
+                <NavLink
+                  to="/sales"
+                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                  onClick={handleNavClick}
+                >
+                  <span className="sidebar-icon"><NAV_ICONS.sales size={ICON.base} aria-hidden="true" /></span>
+                  <span className="sidebar-label">{t("nav.sales")}</span>
+                </NavLink>
+              )}
+
+              {/* 区切り4 (ADR-021 改修): 報酬管理（売上管理の直下）。
+                  専用権限 commissions.view は未定義のため orders.view を流用。 */}
+              {hasPermission("orders.view") && (
+                <NavLink
+                  to="/commissions"
+                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                  onClick={handleNavClick}
+                >
+                  <span className="sidebar-icon"><NAV_ICONS.commissions size={ICON.base} aria-hidden="true" /></span>
+                  <span className="sidebar-label">{t("nav.commissions")}</span>
+                </NavLink>
+              )}
+
               {showManagementCenter && (
                 <NavLink
                   to="/management-center"

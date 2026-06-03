@@ -390,6 +390,7 @@ async def setup_test_db(test_engine):
                 shipped_at TIMESTAMP,
                 delivered_at TIMESTAMP,
                 shipping_country VARCHAR(100),
+                paid_at TIMESTAMP,
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
