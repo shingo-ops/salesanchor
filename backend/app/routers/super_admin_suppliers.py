@@ -70,7 +70,8 @@ async def list_suppliers(
     conditions: list[str] = []
     params: dict = {"limit": per_page, "offset": offset}
     if q:
-        conditions.append("(name ILIKE :q OR contact_name ILIKE :q OR supplier_code ILIKE :q)")
+        # ADR-093 改修: 検索は仕入元名のみ（UI の検索窓仕様に一致）。
+        conditions.append("name ILIKE :q")
         params["q"] = f"%{q}%"
     if supplier_type:
         conditions.append("supplier_type = :supplier_type")

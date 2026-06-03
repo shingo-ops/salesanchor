@@ -92,6 +92,9 @@ export default function SuppliersAdminTab() {
   const load = useCallback(async () => {
     try {
       const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+      // 削除は soft delete (is_active=FALSE) のため、一覧は有効な仕入元のみ表示する
+      // （削除＝一覧から消える、というユーザー想定に合わせる）。
+      params.set("is_active", "true");
       if (search.trim()) params.set("q", search.trim());
       const data = await api.get<CentralSupplier[]>(`/super-admin/suppliers?${params.toString()}`);
       setItems(data);
@@ -164,9 +167,13 @@ export default function SuppliersAdminTab() {
 
   const bulkDelete = async () => {
     setConfirmDelete(false);
+    // 一部失敗しても残りは削除し、最後に必ず一覧を再取得して整合させる。
+    const results = await Promise.allSettled(
+      Array.from(selectedIds).map((id) => api.delete(`/super-admin/suppliers/${id}`)),
+    );
     try {
-      for (const id of selectedIds) {
-        await api.delete(`/super-admin/suppliers/${id}`);
+      if (results.some((r) => r.status === "rejected")) {
+        setError(t("common.deleteError"));
       }
       setSelectedIds(new Set());
       await load();
