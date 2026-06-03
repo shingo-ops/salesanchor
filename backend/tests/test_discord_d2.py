@@ -33,18 +33,21 @@ from app.services.discord_role_sync import sync_lead_discord_role
 # SQLite in-memory fixtures
 # ---------------------------------------------------------------------------
 
-_DDL = """
+_DDL_STAFF = """
 CREATE TABLE IF NOT EXISTS staff (
     id   INTEGER PRIMARY KEY,
     name VARCHAR(128) NOT NULL
-);
+)
+"""
+
+_DDL_DISCORD = """
 CREATE TABLE IF NOT EXISTS tenant_discord_config (
     tenant_id INTEGER PRIMARY KEY,
     guild_id  VARCHAR(32) NOT NULL,
     connected_by_staff_id INTEGER REFERENCES staff(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+)
 """
 
 TEST_TENANT_ID = 999
@@ -63,7 +66,8 @@ async def db_engine():
         return statement, parameters
 
     async with engine.begin() as conn:
-        await conn.execute(text(_DDL))
+        await conn.execute(text(_DDL_STAFF))
+        await conn.execute(text(_DDL_DISCORD))
     yield engine
     await engine.dispose()
 
