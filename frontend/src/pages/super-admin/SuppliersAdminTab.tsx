@@ -1,36 +1,34 @@
 /**
  * /super-admin/masters — 仕入元（中央 admin、public.suppliers）+ Discord routing タブ。
  *
- * spec.md v1.1 F2 (Sprint 2) / AC2.5:
- *   - default_language 切替
- *   - (QA 2026-05-30) supplier_type 個人/法人の区別は不要のため UI から撤去。
- *     データ列・API は温存し、新規は既定値 corporate を送る（非破壊）。
- *   - 各 supplier に Discord guild_id / channel_id 紐付け
- *
- * 注意: 既存 /suppliers（テナント側 SuppliersPage）はそのまま温存。
- *       本タブは public.suppliers 側を扱う中央 admin 専用。
- *
- * 変更履歴:
- *   2026-05-21: 初版（Sprint 2）
+ * ADR-093 改修 (2026-06-03):
+ *   - 検索は仕入元名のみ（検索窓＋検索ボタン）。
+ *   - ヘッダー右に小さい「新規作成」＋一括「削除」（チェックしたものを削除）。
+ *   - 一覧は閲覧専用。列= チェック / 仕入元名 / LINE名 / Discord ID / 電話 / メール ＋ 編集ボタン。
+ *     （Discord ID は紐付け済み routing の channel_id を表示。編集は従来の紐付けUIで）
+ *   - 編集はポップアップ。住所（郵便番号・都道府県・市町村・住所1・住所2）も編集可。
+ *   - ページネーション付き。
+ *   - 既定言語(default_language)/法人個人(supplier_type) は UI から撤去（既定値で送信）。
  */
-import { useEffect, useState, FormEvent } from "react";
+import { useCallback, useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
-import { STATUS_ICONS } from "../../constants/icons";
-import { ICON } from "../../constants/iconSizes";
+import ConfirmModal from "../../components/ConfirmModal";
 
 interface CentralSupplier {
   id: number;
   supplier_code: string | null;
   name: string;
-  supplier_type: "individual" | "corporate";
-  default_language: string;
-  contact_name: string | null;
   email: string | null;
   phone: string | null;
-  address: string | null;
-  notes: string | null;
   is_active: boolean;
+  line_name: string | null;
+  postal_code: string | null;
+  prefecture: string | null;
+  city: string | null;
+  address1: string | null;
+  address2: string | null;
+  discord_channel_id: string | null;
 }
 
 interface DiscordRouting {
@@ -43,68 +41,114 @@ interface DiscordRouting {
 
 type SupplierFormState = {
   name: string;
-  supplier_type: "individual" | "corporate";
-  default_language: string;
-  contact_name: string;
+  line_name: string;
   email: string;
   phone: string;
-  address: string;
-  notes: string;
+  postal_code: string;
+  prefecture: string;
+  city: string;
+  address1: string;
+  address2: string;
   is_active: boolean;
 };
 
 const emptyForm: SupplierFormState = {
   name: "",
-  supplier_type: "corporate",
-  default_language: "ja",
-  contact_name: "",
+  line_name: "",
   email: "",
   phone: "",
-  address: "",
-  notes: "",
+  postal_code: "",
+  prefecture: "",
+  city: "",
+  address1: "",
+  address2: "",
   is_active: true,
 };
+
+const PER_PAGE = 50;
 
 export default function SuppliersAdminTab() {
   const { t } = useTranslation();
   const [items, setItems] = useState<CentralSupplier[]>([]);
+  const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // 編集/新規ポップアップ
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<SupplierFormState>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
-  // routing 編集
-  const [routingFor, setRoutingFor] = useState<CentralSupplier | null>(null);
+  // 一括削除確認
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Discord routing 編集（編集ポップアップから開く）
+  const [routingFor, setRoutingFor] = useState<{ id: number; name: string } | null>(null);
   const [routings, setRoutings] = useState<DiscordRouting[]>([]);
-  const [routingForm, setRoutingForm] = useState({
-    discord_guild_id: "",
-    discord_channel_id: "",
-    is_active: true,
-  });
+  const [routingForm, setRoutingForm] = useState({ discord_guild_id: "", discord_channel_id: "", is_active: true });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
-      const data = await api.get<CentralSupplier[]>("/super-admin/suppliers");
+      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+      // 削除は soft delete (is_active=FALSE) のため、一覧は有効な仕入元のみ表示する
+      // （削除＝一覧から消える、というユーザー想定に合わせる）。
+      params.set("is_active", "true");
+      if (search.trim()) params.set("q", search.trim());
+      const data = await api.get<CentralSupplier[]>(`/super-admin/suppliers?${params.toString()}`);
       setItems(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     }
+  }, [page, search, t]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const runSearch = () => { setSearch(searchInput); setPage(1); };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  const openCreate = () => { setEditId(null); setForm(emptyForm); setShowForm(true); };
+  const openEdit = (s: CentralSupplier) => {
+    setEditId(s.id);
+    setForm({
+      name: s.name,
+      line_name: s.line_name || "",
+      email: s.email || "",
+      phone: s.phone || "",
+      postal_code: s.postal_code || "",
+      prefecture: s.prefecture || "",
+      city: s.city || "",
+      address1: s.address1 || "",
+      address2: s.address2 || "",
+      is_active: s.is_active,
+    });
+    setShowForm(true);
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     const toNull = (v: string) => v || null;
+    // supplier_type / default_language は backend 既定値（corporate / ja）に委ねる。
     const payload = {
-      ...form,
-      contact_name: toNull(form.contact_name),
+      name: form.name,
+      is_active: form.is_active,
+      line_name: toNull(form.line_name),
       email: toNull(form.email),
       phone: toNull(form.phone),
-      address: toNull(form.address),
-      notes: toNull(form.notes),
+      postal_code: toNull(form.postal_code),
+      prefecture: toNull(form.prefecture),
+      city: toNull(form.city),
+      address1: toNull(form.address1),
+      address2: toNull(form.address2),
     };
     try {
       if (editId) {
@@ -112,6 +156,7 @@ export default function SuppliersAdminTab() {
       } else {
         await api.post("/super-admin/suppliers", payload);
       }
+      setShowForm(false);
       setForm(emptyForm);
       setEditId(null);
       await load();
@@ -120,219 +165,220 @@ export default function SuppliersAdminTab() {
     }
   };
 
-  const startEdit = (s: CentralSupplier) => {
-    setEditId(s.id);
-    setForm({
-      name: s.name,
-      supplier_type: s.supplier_type,
-      default_language: s.default_language,
-      contact_name: s.contact_name || "",
-      email: s.email || "",
-      phone: s.phone || "",
-      address: s.address || "",
-      notes: s.notes || "",
-      is_active: s.is_active,
-    });
-  };
-
-  const remove = async (s: CentralSupplier) => {
+  const bulkDelete = async () => {
+    setConfirmDelete(false);
+    // 一部失敗しても残りは削除し、最後に必ず一覧を再取得して整合させる。
+    const results = await Promise.allSettled(
+      Array.from(selectedIds).map((id) => api.delete(`/super-admin/suppliers/${id}`)),
+    );
     try {
-      await api.delete(`/super-admin/suppliers/${s.id}`);
+      if (results.some((r) => r.status === "rejected")) {
+        setError(t("common.deleteError"));
+      }
+      setSelectedIds(new Set());
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.deleteError"));
     }
   };
 
-  const openRouting = async (s: CentralSupplier) => {
-    setRoutingFor(s);
+  // --- Discord routing（編集ポップアップ内の「Discord紐付け」ボタンから開く） ---
+  const openRouting = async () => {
+    if (editId === null) return;
+    setRoutingFor({ id: editId, name: form.name });
     try {
-      const data = await api.get<DiscordRouting[]>(
-        `/super-admin/suppliers/${s.id}/discord-routing`,
-      );
+      const data = await api.get<DiscordRouting[]>(`/super-admin/suppliers/${editId}/discord-routing`);
       setRoutings(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     }
   };
-
   const addRouting = async (e: FormEvent) => {
     e.preventDefault();
     if (!routingFor) return;
     try {
-      await api.post(`/super-admin/suppliers/${routingFor.id}/discord-routing`, {
-        supplier_id: routingFor.id,
-        ...routingForm,
-      });
+      await api.post(`/super-admin/suppliers/${routingFor.id}/discord-routing`, { supplier_id: routingFor.id, ...routingForm });
       setRoutingForm({ discord_guild_id: "", discord_channel_id: "", is_active: true });
-      const refreshed = await api.get<DiscordRouting[]>(
-        `/super-admin/suppliers/${routingFor.id}/discord-routing`,
-      );
-      setRoutings(refreshed);
+      setRoutings(await api.get<DiscordRouting[]>(`/super-admin/suppliers/${routingFor.id}/discord-routing`));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
     }
   };
-
   const deleteRouting = async (id: number) => {
     if (!routingFor) return;
     try {
       await api.delete(`/super-admin/suppliers/discord-routing/${id}`);
-      const refreshed = await api.get<DiscordRouting[]>(
-        `/super-admin/suppliers/${routingFor.id}/discord-routing`,
-      );
-      setRoutings(refreshed);
+      setRoutings(await api.get<DiscordRouting[]>(`/super-admin/suppliers/${routingFor.id}/discord-routing`));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.deleteError"));
     }
   };
 
+  const f = "superAdmin.suppliersAdmin.fields";
+
   return (
     <div className="super-admin-suppliers-tab">
-      <h3>{t("superAdmin.suppliersAdmin.title")}</h3>
       {error && <div className="error-message">{error}</div>}
 
-      <form
-        onSubmit={submit}
-        style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", margin: "0.5rem 0" }}
-      >
-        {/* QA 2026-05-30: 仕入元の個人/法人区別は不要のため select を撤去。
-            supplier_type は form 既定値 (corporate) を payload にそのまま送るため backend は不変。 */}
+      {/* ヘッダー: 検索（仕入元名）＋検索 / 右に 新規作成・削除(一括) */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", margin: "var(--space-2) 0 var(--space-4)" }}>
         <input
-          placeholder={t("superAdmin.suppliersAdmin.fields.name")}
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          required
+          type="search"
+          placeholder={t(`${f}.name`)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+          style={{ width: "22rem", maxWidth: "100%" }}
+          data-testid="suppliers-search"
         />
-        <select
-          value={form.default_language}
-          onChange={(e) => setForm({ ...form, default_language: e.target.value })}
-        >
-          <option value="ja">ja</option>
-          <option value="en">en</option>
-          <option value="ko">ko</option>
-          <option value="zh">zh</option>
-        </select>
-        <button type="submit" className="btn-primary">
-          {editId ? t("common.update") : t("superAdmin.suppliersAdmin.newSupplier")}
-        </button>
-      </form>
+        <button type="button" className="btn-primary btn-sm" onClick={runSearch} data-testid="suppliers-search-btn">{t("common.search")}</button>
+        <button type="button" className="btn-primary btn-sm" onClick={openCreate} data-testid="suppliers-new" style={{ marginLeft: "auto" }}>{t("superAdmin.suppliersAdmin.newSupplier")}</button>
+        <button type="button" className="btn-danger btn-sm" disabled={selectedIds.size === 0} onClick={() => setConfirmDelete(true)} data-testid="suppliers-bulk-delete">{t("common.delete")}</button>
+      </div>
 
+      {/* 一覧は閲覧専用。編集はポップアップ。 */}
       <table className="data-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>{t("superAdmin.suppliersAdmin.fields.name")}</th>
-            <th>{t("superAdmin.suppliersAdmin.fields.defaultLanguage")}</th>
-            <th>{t("superAdmin.suppliersAdmin.fields.isActive")}</th>
-            <th>{t("common.edit")}</th>
-            <th>{t("superAdmin.suppliersAdmin.discordRouting")}</th>
-            <th>{t("common.delete")}</th>
+            <th style={{ width: "var(--col-width-checkbox)", textAlign: "center" }} aria-label={t("common.select")}></th>
+            <th>{t(`${f}.name`)}</th>
+            <th>{t(`${f}.lineName`)}</th>
+            <th>{t(`${f}.discordId`)}</th>
+            <th>{t(`${f}.phone`)}</th>
+            <th>{t(`${f}.email`)}</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {items.map((s) => (
-            <tr key={s.id}>
-              <td>{s.id}</td>
+            <tr key={s.id} data-testid={`supplier-row-${s.id}`}>
+              <td style={{ textAlign: "center" }}>
+                <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelect(s.id)} aria-label={s.name} data-testid={`supplier-select-${s.id}`} />
+              </td>
               <td>{s.name}</td>
-              <td>{s.default_language}</td>
-              <td>{s.is_active ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "—"}</td>
-              <td>
-                <button onClick={() => startEdit(s)} className="btn-secondary">
-                  {t("common.edit")}
-                </button>
-              </td>
-              <td>
-                <button onClick={() => openRouting(s)} className="btn-secondary">
-                  {t("superAdmin.suppliersAdmin.discordRouting")}
-                </button>
-              </td>
-              <td>
-                <button onClick={() => remove(s)} className="btn-danger-link">
-                  {t("common.delete")}
-                </button>
+              <td>{s.line_name || "-"}</td>
+              <td>{s.discord_channel_id ? <code>{s.discord_channel_id}</code> : "-"}</td>
+              <td>{s.phone || "-"}</td>
+              <td>{s.email || "-"}</td>
+              <td style={{ textAlign: "right" }}>
+                <button type="button" className="btn-sm" onClick={() => openEdit(s)} data-testid={`supplier-edit-${s.id}`}>{t("common.edit")}</button>
               </td>
             </tr>
           ))}
+          {items.length === 0 && <tr><td colSpan={7} className="empty">{t("common.noData")}</td></tr>}
         </tbody>
       </table>
 
+      {/* ページネーション */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) 0" }}>
+        <button type="button" className="btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} data-testid="suppliers-prev">{t("common.prevPage")}</button>
+        <span style={{ color: "var(--text-secondary)" }} data-testid="suppliers-page">{page}</span>
+        <button type="button" className="btn-sm" disabled={items.length < PER_PAGE} onClick={() => setPage((p) => p + 1)} data-testid="suppliers-next">{t("common.nextPage")}</button>
+      </div>
+
+      {/* 編集/新規 ポップアップ */}
+      {showForm && (
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 720px)" }}>
+            <h3>{editId ? t("common.edit") : t("common.create")}</h3>
+            <form onSubmit={submit}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}><label>{t(`${f}.name`)} *</label>
+                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.lineName`)}</label>
+                  <input value={form.line_name} onChange={(e) => setForm({ ...form, line_name: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.phone`)}</label>
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}><label>{t(`${f}.email`)}</label>
+                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.postalCode`)}</label>
+                  <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.prefecture`)}</label>
+                  <input value={form.prefecture} onChange={(e) => setForm({ ...form, prefecture: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.city`)}</label>
+                  <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
+                <div className="form-group"><label>{t(`${f}.address1`)}</label>
+                  <input value={form.address1} onChange={(e) => setForm({ ...form, address1: e.target.value })} />
+                </div>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}><label>{t(`${f}.address2`)}</label>
+                  <input value={form.address2} onChange={(e) => setForm({ ...form, address2: e.target.value })} />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                  <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+                  {t(`${f}.isActive`)}
+                </label>
+                {/* Discord ID は紐付けUIで編集（既存の routing 管理） */}
+                {editId !== null && (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <button type="button" className="btn-secondary btn-sm" onClick={openRouting} data-testid="supplier-open-routing">
+                      {t("superAdmin.suppliersAdmin.discordRouting")}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+                <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.create")}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Discord routing モーダル（編集ポップアップから開く・従来の紐付けUI） */}
       {routingFor && (
-        <div
-          className="modal-overlay"
-          onClick={() => setRoutingFor(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: "var(--z-topbar)" }}
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: "var(--bg-surface)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", minWidth: "600px", maxWidth: "90%" }}
-          >
-            <h4>
-              {t("superAdmin.suppliersAdmin.discordRouting")} — {routingFor.name}
-            </h4>
-            <form
-              onSubmit={addRouting}
-              style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", margin: "0.5rem 0" }}
-            >
-              <input
-                placeholder={t("superAdmin.suppliersAdmin.guildId")}
-                value={routingForm.discord_guild_id}
-                onChange={(e) =>
-                  setRoutingForm({ ...routingForm, discord_guild_id: e.target.value })
-                }
-                required
-              />
-              <input
-                placeholder={t("superAdmin.suppliersAdmin.channelId")}
-                value={routingForm.discord_channel_id}
-                onChange={(e) =>
-                  setRoutingForm({ ...routingForm, discord_channel_id: e.target.value })
-                }
-                required
-              />
-              <button type="submit" className="btn-primary">
-                {t("superAdmin.suppliersAdmin.addRouting")}
-              </button>
+        <div className="modal-overlay" onClick={() => setRoutingFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ minWidth: "600px", maxWidth: "90%" }}>
+            <h4>{t("superAdmin.suppliersAdmin.discordRouting")} — {routingFor.name}</h4>
+            <form onSubmit={addRouting} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", margin: "var(--space-2) 0" }}>
+              <input placeholder={t("superAdmin.suppliersAdmin.guildId")} value={routingForm.discord_guild_id} onChange={(e) => setRoutingForm({ ...routingForm, discord_guild_id: e.target.value })} required />
+              <input placeholder={t("superAdmin.suppliersAdmin.channelId")} value={routingForm.discord_channel_id} onChange={(e) => setRoutingForm({ ...routingForm, discord_channel_id: e.target.value })} required />
+              <button type="submit" className="btn-primary">{t("superAdmin.suppliersAdmin.addRouting")}</button>
             </form>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>{t("superAdmin.suppliersAdmin.guildId")}</th>
                   <th>{t("superAdmin.suppliersAdmin.channelId")}</th>
-                  <th>{t("superAdmin.suppliersAdmin.fields.isActive")}</th>
-                  <th>{t("common.delete")}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {routings.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.id}</td>
-                    <td>
-                      <code>{r.discord_guild_id}</code>
-                    </td>
-                    <td>
-                      <code>{r.discord_channel_id}</code>
-                    </td>
-                    <td>{r.is_active ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "—"}</td>
-                    <td>
-                      <button onClick={() => deleteRouting(r.id)} className="btn-danger-link">
-                        {t("common.delete")}
-                      </button>
+                    <td><code>{r.discord_guild_id}</code></td>
+                    <td><code>{r.discord_channel_id}</code></td>
+                    <td style={{ textAlign: "right" }}>
+                      <button type="button" onClick={() => deleteRouting(r.id)} className="btn-sm btn-danger">{t("common.delete")}</button>
                     </td>
                   </tr>
                 ))}
+                {routings.length === 0 && <tr><td colSpan={3} className="empty">{t("common.noData")}</td></tr>}
               </tbody>
             </table>
             <div style={{ marginTop: "var(--space-2)", textAlign: "right" }}>
-              <button onClick={() => setRoutingFor(null)} className="btn-secondary">
-                {t("common.close")}
-              </button>
+              <button type="button" onClick={() => setRoutingFor(null)} className="btn-secondary">{t("common.close")}</button>
             </div>
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDelete}
+        title={t("common.delete")}
+        message={t("superAdmin.suppliersAdmin.bulkDeleteConfirm", { count: selectedIds.size })}
+        confirmLabel={t("common.delete")}
+        danger
+        onConfirm={bulkDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

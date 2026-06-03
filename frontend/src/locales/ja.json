@@ -1534,12 +1534,19 @@
       "newSupplier": "仕入元新規作成",
       "fields": {
         "name": "仕入元名",
+        "lineName": "LINE名",
+        "discordId": "Discord ID",
         "supplierType": "法人 / 個人",
         "defaultLanguage": "既定言語",
         "contactName": "担当者名",
-        "email": "メール",
-        "phone": "電話",
+        "email": "メールアドレス",
+        "phone": "電話番号",
         "address": "住所",
+        "postalCode": "郵便番号",
+        "prefecture": "都道府県",
+        "city": "市町村",
+        "address1": "住所1",
+        "address2": "住所2",
         "notes": "備考",
         "isActive": "有効"
       },
@@ -1550,7 +1557,8 @@
       "discordRouting": "Discord紐付け",
       "addRouting": "Discord紐付け追加",
       "guildId": "Guild ID",
-      "channelId": "Channel ID"
+      "channelId": "Channel ID",
+      "bulkDeleteConfirm": "選択した {{count}} 件の仕入元を削除します。よろしいですか？"
     },
     "llmBudget": {
       "title": "LLM 月次予算（Gemini 2.5 Flash）",

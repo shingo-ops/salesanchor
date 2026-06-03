@@ -39,11 +39,15 @@ router = APIRouter()
 
 _SUPPLIER_COLS = (
     "id, supplier_code, name, supplier_type, default_language, "
-    "contact_name, email, phone, address, notes, is_active, created_at, updated_at"
+    "contact_name, email, phone, address, notes, is_active, created_at, updated_at, "
+    # ADR-093: LINE名 + 構造化住所
+    "line_name, postal_code, prefecture, city, address1, address2"
 )
 _SUPPLIER_UPDATABLE = {
     "name", "supplier_type", "default_language",
     "contact_name", "email", "phone", "address", "notes", "is_active",
+    # ADR-093: LINE名 + 構造化住所
+    "line_name", "postal_code", "prefecture", "city", "address1", "address2",
 }
 
 _ROUTING_COLS = "id, supplier_id, discord_guild_id, discord_channel_id, is_active"
@@ -66,7 +70,8 @@ async def list_suppliers(
     conditions: list[str] = []
     params: dict = {"limit": per_page, "offset": offset}
     if q:
-        conditions.append("(name ILIKE :q OR contact_name ILIKE :q OR supplier_code ILIKE :q)")
+        # ADR-093 改修: 検索は仕入元名のみ（UI の検索窓仕様に一致）。
+        conditions.append("name ILIKE :q")
         params["q"] = f"%{q}%"
     if supplier_type:
         conditions.append("supplier_type = :supplier_type")
@@ -75,10 +80,16 @@ async def list_suppliers(
         conditions.append("is_active = :is_active")
         params["is_active"] = is_active
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    # Discord ID 列表示用に、紐付け済み routing の channel_id を相関サブクエリで付与
+    # （複数紐付けがある場合は最初の有効分。編集は従来の紐付けUIで行う）。
     result = await db.execute(
         text(
-            f"SELECT {_SUPPLIER_COLS} FROM public.suppliers {where} "
-            f"ORDER BY name LIMIT :limit OFFSET :offset"
+            f"SELECT {_SUPPLIER_COLS}, "
+            "(SELECT r.discord_channel_id FROM public.supplier_discord_routing r "
+            " WHERE r.supplier_id = public.suppliers.id AND r.is_active "
+            " ORDER BY r.id LIMIT 1) AS discord_channel_id "
+            f"FROM public.suppliers {where} "
+            "ORDER BY name LIMIT :limit OFFSET :offset"
         ),
         params,
     )
@@ -101,9 +112,11 @@ async def create_supplier(
             text(
                 f"INSERT INTO public.suppliers "
                 f"(name, supplier_type, default_language, contact_name, email, phone, "
-                f" address, notes, is_active, created_by) "
+                f" address, notes, is_active, created_by, "
+                f" line_name, postal_code, prefecture, city, address1, address2) "
                 f"VALUES (:name, :supplier_type, :default_language, :contact_name, :email, "
-                f"        :phone, :address, :notes, :is_active, :uid) "
+                f"        :phone, :address, :notes, :is_active, :uid, "
+                f"        :line_name, :postal_code, :prefecture, :city, :address1, :address2) "
                 f"RETURNING {_SUPPLIER_COLS}"
             ),
             {**data.model_dump(), "uid": current_user.id},
