@@ -15,6 +15,9 @@ import { usePermissions } from "../../hooks/usePermissions";
 interface QuoteItem {
   id: number;
   product_name: string;
+  name_en: string | null;
+  condition: string | null;
+  unit: string | null;
   quantity: number;
   unit_price: number;
   weight: number | null;
@@ -87,6 +90,9 @@ export default function QuoteDetailPage() {
   if (loading) return <div className="page"><div className="loading">{t("common.loading")}</div></div>;
   if (!quote) return <div className="page"><div className="error-message">{error || t("common.fetchError")}</div></div>;
 
+  // 総重量 = Σ(数量 × 行重量)。
+  const quoteTotalWeight = quote.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -125,7 +131,9 @@ export default function QuoteDetailPage() {
       <table className="data-table" style={{ marginBottom: "var(--space-6)" }}>
         <thead>
           <tr>
-            <th>{t("quotes.product")}</th>
+            <th>{t("quotes.titleColumn")}</th>
+            <th>{t("quotes.condition")}</th>
+            <th>{t("quotes.unit")}</th>
             <th>{t("quotes.quantity")}</th>
             <th>{t("quotes.unitPrice")}</th>
             <th>{t("quotes.weight")}</th>
@@ -135,7 +143,19 @@ export default function QuoteDetailPage() {
         <tbody>
           {quote.items.map((item) => (
             <tr key={item.id}>
-              <td>{item.product_name}</td>
+              <td>
+                {/* 英語タイトルをメイン(太字)、日本語を参考表示。英語が無ければ日本語のみ。 */}
+                {item.name_en ? (
+                  <>
+                    <div style={{ fontWeight: "var(--font-weight-semi)" }}>{item.name_en}</div>
+                    <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{item.product_name}</div>
+                  </>
+                ) : (
+                  item.product_name
+                )}
+              </td>
+              <td>{item.condition || "-"}</td>
+              <td>{item.unit || "-"}</td>
               <td>{item.quantity}</td>
               <td>{fmt(item.unit_price)}</td>
               <td>{item.weight != null ? `${item.weight}kg` : "-"}</td>
@@ -144,10 +164,11 @@ export default function QuoteDetailPage() {
           ))}
         </tbody>
         <tfoot>
-          <tr><td colSpan={4} style={{ textAlign: "right", fontWeight: "var(--font-weight-semi)" }}>{t("quotes.subtotal")}</td><td style={{ fontWeight: "var(--font-weight-semi)" }}>{fmt(quote.subtotal)}</td></tr>
-          <tr><td colSpan={4} style={{ textAlign: "right" }}>{t("quotes.shippingFee")}</td><td>{fmt(quote.shipping_fee)}</td></tr>
-          <tr><td colSpan={4} style={{ textAlign: "right" }}>{t("quotes.tax")}</td><td>{fmt(quote.tax_amount)}</td></tr>
-          <tr><td colSpan={4} style={{ textAlign: "right", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{t("quotes.total")}</td><td style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{fmt(quote.total_amount)} {quote.currency}</td></tr>
+          <tr><td colSpan={6} style={{ textAlign: "right", fontWeight: "var(--font-weight-semi)" }}>{t("quotes.subtotal")}</td><td style={{ fontWeight: "var(--font-weight-semi)" }}>{fmt(quote.subtotal)}</td></tr>
+          <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.totalWeight")}</td><td>{quoteTotalWeight.toLocaleString()} kg</td></tr>
+          <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.shippingFee")}</td><td>{fmt(quote.shipping_fee)}</td></tr>
+          <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.tax")}</td><td>{fmt(quote.tax_amount)}</td></tr>
+          <tr><td colSpan={6} style={{ textAlign: "right", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{t("quotes.total")}</td><td style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{fmt(quote.total_amount)} {quote.currency}</td></tr>
         </tfoot>
       </table>
     </div>

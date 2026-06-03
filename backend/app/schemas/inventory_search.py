@@ -57,6 +57,14 @@ class InventorySearchCandidate(BaseModel):
     supplier_default_id: int | None = None
     supplier_name: str | None = None
     image_url: str | None = None
+    # 海外顧客向け見積/請求明細用 (public.products の付帯情報)。
+    # 見積/請求の明細行 (タイトル/状態/形態/形態別重量) に引き込んで使う。
+    condition: str | None = Field(default=None, description="商品状態 (例: NM/SP/新品 等)。")
+    unit: str | None = Field(default=None, description="形態 (box / case / pack 等)。")
+    box_weight_kg: float | None = Field(default=None, description="Box 単体重量 (kg)。")
+    case_weight_kg: float | None = Field(default=None, description="Case 重量 (kg)。")
+    mark: str | None = Field(default=None, description="型番。")
+    tcg_type: str | None = Field(default=None, description="TCG 種別。")
     matched_via: str = Field(
         description=(
             "ヒット経路: "
