@@ -32,6 +32,7 @@
 | feature/morimoto/schedule-card-style | スケジュール カードスタイル（背景透明化・カード化） | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/grafana-sidebar-nav-v2 | Grafana 左列サイドバー実装（B案） | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/schedule-responsive-tokens | スケジュール スロット高・終日エリア レスポンシブ対応 | 2026-06-03 | IN_PROGRESS | | |
+| feature/morimoto/fix-space9-token | デザイントークン --space-9 未定義バグ修正 | 2026-06-03 | IN_PROGRESS | | |
 ---
 
 ## 記入例
