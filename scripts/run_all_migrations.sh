@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=90
+TOTAL=91
 
 run_py() {
   local script="$1"
@@ -213,6 +213,9 @@ run_sql migrations/20260604_010000_seed_product_marks.sql
 
 # ADR-093: 全商品の発送ラベル既定値を一括設定（品目=Playing card / HSコード=9504400000 / 素材=Paper）
 run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
+
+# ADR-093 海外顧客向け明細: quote_items / invoice_items に name_en/condition/unit を追加
+run_sql migrations/20260604_030000_add_quote_invoice_item_overseas_columns.sql
 
 # 8 TCG シリーズの商品マスタを中央カタログへ投入（UA/遊戯王/ガンダム/ヴァイス/デジモン/ホロライブ/ロルカナ/ポケSV 計1049件・ADR-090）
 run_sql migrations/20260604_040000_seed_tcg_products_8series.sql

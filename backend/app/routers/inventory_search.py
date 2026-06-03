@@ -119,6 +119,12 @@ async def search_inventory_endpoint(
             supplier_default_id=c.supplier_default_id,
             supplier_name=c.supplier_name,
             image_url=c.image_url,
+            condition=c.condition,
+            unit=c.unit,
+            box_weight_kg=c.box_weight_kg,
+            case_weight_kg=c.case_weight_kg,
+            mark=c.mark,
+            tcg_type=c.tcg_type,
             matched_via=c.matched_via,
             score=c.score,
             # spec v1.3 F11 AC11.4: 仕入元現在オファー一覧

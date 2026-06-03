@@ -56,8 +56,8 @@ _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchan
 async def _get_invoice_items(db: AsyncSession, invoice_id: int) -> list[dict]:
     result = await db.execute(
         text("""
-            SELECT id, product_id, product_name, quantity, unit_price,
-                   weight, subtotal, sort_order
+            SELECT id, product_id, product_name, name_en, condition, unit,
+                   quantity, unit_price, weight, subtotal, sort_order
             FROM invoice_items WHERE invoice_id = :iid ORDER BY sort_order, id
         """),
         {"iid": invoice_id},
@@ -198,14 +198,14 @@ async def create_invoice_from_quote(
 
     # 見積明細をコピー
     quote_items = await db.execute(
-        text("SELECT product_id, product_name, quantity, unit_price, weight, subtotal, sort_order FROM quote_items WHERE quote_id = :qid ORDER BY sort_order"),
+        text("SELECT product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order FROM quote_items WHERE quote_id = :qid ORDER BY sort_order"),
         {"qid": quote_id},
     )
     for item in quote_items.mappings().all():
         await db.execute(
             text("""
-                INSERT INTO invoice_items (invoice_id, product_id, product_name, quantity, unit_price, weight, subtotal, sort_order)
-                VALUES (:iid, :product_id, :product_name, :quantity, :unit_price, :weight, :subtotal, :sort_order)
+                INSERT INTO invoice_items (invoice_id, product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order)
+                VALUES (:iid, :product_id, :product_name, :name_en, :condition, :unit, :quantity, :unit_price, :weight, :subtotal, :sort_order)
             """),
             {"iid": invoice_id, **dict(item)},
         )
@@ -295,11 +295,12 @@ async def create_invoice(
         line_subtotal = item.quantity * item.unit_price
         await db.execute(
             text("""
-                INSERT INTO invoice_items (invoice_id, product_id, product_name, quantity, unit_price, weight, subtotal, sort_order)
-                VALUES (:iid, :pid, :pname, :qty, :price, :weight, :sub, :sort)
+                INSERT INTO invoice_items (invoice_id, product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order)
+                VALUES (:iid, :pid, :pname, :name_en, :condition, :unit, :qty, :price, :weight, :sub, :sort)
             """),
             {
                 "iid": invoice_id, "pid": item.product_id, "pname": item.product_name,
+                "name_en": item.name_en, "condition": item.condition, "unit": item.unit,
                 "qty": item.quantity, "price": item.unit_price, "weight": item.weight,
                 "sub": line_subtotal, "sort": i,
             },

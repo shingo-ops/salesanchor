@@ -797,6 +797,10 @@ CREATE TABLE IF NOT EXISTS {schema}.quote_items (
     quote_id INTEGER NOT NULL REFERENCES {schema}.quotes(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES {schema}.products(id),
     product_name VARCHAR(255) NOT NULL,
+    -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
+    name_en VARCHAR(255),
+    condition VARCHAR(50),
+    unit VARCHAR(20),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(15, 2) NOT NULL,
     weight NUMERIC(10, 3),
@@ -846,6 +850,10 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     invoice_id INTEGER NOT NULL REFERENCES {schema}.invoices(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES {schema}.products(id),
     product_name VARCHAR(255) NOT NULL,
+    -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
+    name_en VARCHAR(255),
+    condition VARCHAR(50),
+    unit VARCHAR(20),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(15, 2) NOT NULL,
     weight NUMERIC(10, 3),

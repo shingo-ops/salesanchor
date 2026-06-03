@@ -47,6 +47,13 @@ export interface InventorySearchCandidate {
   supplier_default_id: number | null;
   supplier_name: string | null;
   image_url: string | null;
+  // 海外顧客向け見積/請求明細用 (public.products の付帯情報)。
+  condition?: string | null;
+  unit?: string | null;
+  box_weight_kg?: number | null;
+  case_weight_kg?: number | null;
+  mark?: string | null;
+  tcg_type?: string | null;
   matched_via: string;
   score: number;
   // spec v1.3 F11 AC11.4: 仕入元 × condition の現在オファー (status='in_stock' のみ)
