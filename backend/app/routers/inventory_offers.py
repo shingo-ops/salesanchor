@@ -111,7 +111,8 @@ _SORT_COLUMNS = {
     "category": "p.category",
     "mark": "p.mark",
     "condition": "i.condition",
-    "unit": "i.unit",
+    # 表示・フィルタと同じく単位はオファー優先・未設定は商品マスタへフォールバック
+    "unit": "COALESCE(NULLIF(i.unit, ''), p.unit)",
     "offer_type": "i.offer_type",
     "quantity": "i.quantity",
     "unit_price": "i.unit_price",
