@@ -40,7 +40,7 @@
   justify-content: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-1);
-  min-height: 56px;
+  min-height: calc(var(--space-8) + var(--space-6)); /* 56px: タッチターゲット高 */
   color: var(--text-secondary);
   text-decoration: none;
   border-top: 2px solid transparent;
@@ -61,7 +61,7 @@
 .admin-hub-tab-label {
   font-size: var(--font-xs);
   font-weight: var(--font-weight-medium);
-  max-width: 80px;
+  max-width: calc(var(--space-10) * 2); /* 80px: タブラベル最大幅 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
