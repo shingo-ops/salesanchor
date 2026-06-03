@@ -120,7 +120,7 @@
     "signOut": "Sign out",
     "signOutTitle": "Sign Out",
     "signOutMessage": "Are you sure you want to sign out? Any unsaved data will be lost.",
-    "superAdminMasters": "Central Masters",
+    "superAdminMasters": "Masters",
     "superAdminInbound": "Discord Inbound",
     "inventoryVisibility": "Inventory Visibility",
     "tenantProfile": "Issuer Profile",
@@ -727,16 +727,16 @@
   "inventory": {
     "view": {
       "subtitle": "Shows suppliers' current offers.",
-      "searchPlaceholder": "Search by name, English name, category, mark, or supplier"
+      "searchPlaceholder": "Search by name, English name, TCG series, mark, or supplier"
     },
     "expiryWarning": "Offers are automatically removed 18 hours after they are posted.",
-    "filter": { "allTypes": "All types", "allOfferTypes": "Stock & pre-order", "allCategories": "All categories" },
+    "filter": { "allTypes": "All types", "allOfferTypes": "Stock & pre-order", "allCategories": "All TCG series" },
     "resetSort": "Reset",
     "offerType": { "in_stock": "In stock", "pre_order": "Pre-order" },
     "shipTiming": { "on_release": "Ship on release", "1day_before": "Ship 1 day before", "2day_before": "Ship 2 days before", "other": "Other" },
     "col": {
       "product": "Product",
-      "category": "Category",
+      "category": "TCG series",
       "mark": "Model",
       "title": "Title",
       "offerType": "Type",
@@ -790,7 +790,7 @@
       "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
       "suppliers": "Show / hide suppliers",
-      "categories": "Show / hide categories",
+      "categories": "Show / hide TCG series",
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter)."
     },
@@ -966,7 +966,7 @@
     "outOfStockTooltip": "Out of stock — requires reorder or replenishment",
     "pageLabel": "Page {{page}} ({{count}} items)",
     "field": {
-      "category": "Category",
+      "category": "TCG series",
       "mark": "Mark",
       "cardNumber": "Card Number",
       "expansionCode": "Set Code (Expansion)",
@@ -976,7 +976,7 @@
       "publishStatus": "Publish Status"
     },
     "masterCol": {
-      "category": "Category",
+      "category": "TCG series",
       "mark": "Mark",
       "titleJa": "Title (JA)",
       "titleEn": "Title (EN)",
