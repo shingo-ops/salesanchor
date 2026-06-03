@@ -27,7 +27,7 @@ export default function CustomerHubPage() {
   const items: SubNavItem[] = [
     {
       to: "leads",
-      labelKey: "nav.leads",
+      labelKey: "nav.leadsSection",
       visible: hasPermission("leads.view"),
     },
     {
