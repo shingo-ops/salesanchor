@@ -4,12 +4,6 @@
    Dark mode: :root.force-dark で同名トークンが上書き済み
    ============================================================ */
 
-/* ── ヘッダー: タイトル ↔ 右アクションを常に 30px 固定 ── */
-/* :has(.db-tabs) でダッシュボード専用スコープ（他ページの page-layout-header-right に影響しない） */
-.page-layout-title-row:has(.db-tabs) .page-layout-header-right {
-  margin-left: 30px;
-}
-
 /* ── タブ ── */
 .db-tabs {
   display: flex;
