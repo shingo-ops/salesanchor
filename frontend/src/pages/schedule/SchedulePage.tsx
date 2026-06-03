@@ -382,10 +382,11 @@ export default function SchedulePage() {
 
   // イベント保存（作成 / 更新）
   const handleSave = async (form: EventFormState, id?: string) => {
+    // ブラウザのローカルタイムゾーン（JST）で解釈してUTC ISO文字列に変換
     const body = {
       title: form.summary,
-      start_datetime: `${form.startDate}T${form.startTime}:00`,
-      end_datetime: `${form.endDate}T${form.endTime}:00`,
+      start_datetime: new Date(`${form.startDate}T${form.startTime}:00`).toISOString(),
+      end_datetime: new Date(`${form.endDate}T${form.endTime}:00`).toISOString(),
       calendar_type: "shared" as const,
       description: form.description || undefined,
       location: form.location || undefined,
