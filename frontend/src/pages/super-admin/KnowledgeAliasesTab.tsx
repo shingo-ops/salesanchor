@@ -35,11 +35,12 @@ interface SupplierAlias {
   source: string | null;
 }
 
-const PATTERN_TYPES = ["regex", "exact", "prefix", "suffix", "contains"];
+// パーサ実装 + DB CHECK 制約と一致する値のみ（部分一致 = substring）。
+const PATTERN_TYPES = ["exact", "prefix", "substring", "regex"];
 
 const emptyRule = {
   category: "",
-  pattern_type: "contains",
+  pattern_type: "substring",
   pattern: "",
   normalized_to: "",
   priority: 100,

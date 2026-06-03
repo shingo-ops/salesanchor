@@ -1474,8 +1474,7 @@
         "regex": "正規表現",
         "exact": "完全一致",
         "prefix": "前方一致",
-        "suffix": "後方一致",
-        "contains": "部分一致"
+        "substring": "部分一致"
       },
       "fields": {
         "category": "カテゴリ",
