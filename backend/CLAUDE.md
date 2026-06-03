@@ -54,7 +54,7 @@ destructive な変更が必要な場合は必ずしんごさん（PO）に確認
 - テンプレート形式（`{schema}` プレースホルダ含む）の SQL は `deploy.yml` で直接実行不可。`DO $$ ... pg_namespace` 走査形式に書き換えること
 - 既存全テナント + 新規作成テナント両方への適用経路を PR body に明記する
 - PostgreSQL実機で `information_schema.columns` により全テナントschema整合を確認（SQLite不可）
-
+- **migration-test 段階的拡充**: migration が操作するテーブルが `migration-test.yml` セットアップになければ最小定義を追加すること（migration 変更なし PR ではジョブ未起動のため速度影響ゼロ）
 ## 取引先 SSOT: companies（ADR-089 完了）
 
 `customers` テーブルは廃止済み（2026-06-01 Sprint 7 DROP）。取引先は `companies` / `company_addresses` / `company_discord` を使うこと。本番DROP手順: `scripts/migrate_089_drop_customers_tables.py`（PO確認必須）。詳細: `docs/adr/ADR-089-deprecate-customers-unify-to-companies.md`

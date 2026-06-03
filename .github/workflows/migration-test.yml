@@ -101,6 +101,22 @@ jobs:
           echo "PostgreSQL が起動しませんでした" && exit 1
 
       # ── Step 1: 本番を模擬した初期スキーマ（既存データあり）を作る ──────────────
+      #
+      # 【段階的拡充ルール】
+      # 新しい migration が操作するテーブルがここにない場合、その migration の SQL が
+      # PostgreSQL 上で正しく実行できるか検証できません。
+      #
+      # やること: 新規 migration を追加する PR では、そのテーブルの最小定義をここに追加してください。
+      #   例) ALTER TABLE public.foo ADD COLUMN bar INTEGER;  を書く場合
+      #       → public.foo の CREATE TABLE をここに追加する
+      #
+      # コスト: 1テーブル追加するだけ。migration 変更がない PR ではこのジョブ自体が起動しないため
+      #         テスト速度への影響はゼロです。
+      #
+      # 現在登録済みのテーブル:
+      #   public:    tenants / users / permissions / tenant_discord_config
+      #   tenant_001: role_permissions / staff / leads / deals
+      # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
           psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'SQL'
