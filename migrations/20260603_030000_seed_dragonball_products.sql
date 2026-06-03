@@ -13,8 +13,17 @@
 
 DO $$
 BEGIN
-    IF to_regclass('public.products') IS NULL THEN
-        RAISE NOTICE 'public.products not present (migration-test baseline) — skipping';
+    -- migration-test の最小 baseline には public.products の中央カラム
+    -- (category / tcg_type / mark / product_kind / release_date) が無いことがある。
+    -- それらを追加する additive migration はこの seed より前に本番適用済みのため、
+    -- カラムが揃っている時だけ INSERT する（揃っていなければ skip）。
+    IF to_regclass('public.products') IS NULL
+       OR (
+           SELECT COUNT(*) FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'products'
+             AND column_name IN ('category', 'tcg_type', 'mark', 'product_kind', 'release_date')
+       ) < 5 THEN
+        RAISE NOTICE 'public.products central columns not present (migration-test baseline) — skipping seed';
         RETURN;
     END IF;
 
