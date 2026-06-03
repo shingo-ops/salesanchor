@@ -28,6 +28,7 @@ import "../schedule.css";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { GoogleCalendarStatusBar, type SyncStatus } from "../../components/GoogleCalendarStatusBar";
+import { X, INBOX_ACTION_ICONS } from "../../constants/icons";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -170,16 +171,40 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
     }
   };
 
+  const TrashIcon = INBOX_ACTION_ICONS.delete;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>
-          {isNew
-            ? t("schedule.addEvent")
-            : editable
-            ? t("schedule.editEvent")
-            : (event?.title ?? t("schedule.noTitle"))}
-        </h3>
+        {/* Google Calendar 準拠ヘッダー: タイトル + 右端アクションアイコン群 */}
+        <div className="modal-header">
+          <h3 className="modal-header__title">
+            {isNew
+              ? t("schedule.addEvent")
+              : editable
+              ? t("schedule.editEvent")
+              : (event?.title ?? t("schedule.noTitle"))}
+          </h3>
+          <div className="modal-header__actions">
+            {editable && !isNew && !confirmDelete && (
+              <button
+                className="modal-icon-btn modal-icon-btn--danger"
+                onClick={() => setConfirmDelete(true)}
+                aria-label={t("schedule.deleteEvent")}
+                title={t("schedule.deleteEvent")}
+              >
+                <TrashIcon size={18} />
+              </button>
+            )}
+            <button
+              className="modal-icon-btn"
+              onClick={onClose}
+              aria-label={t("common.close")}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
 
         {editable ? (
           <>
@@ -239,15 +264,6 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
           </div>
         ) : (
           <div className="form-actions">
-            {editable && !isNew && (
-              <button
-                className="btn-danger"
-                style={{ marginRight: "auto" }}
-                onClick={() => setConfirmDelete(true)}
-              >
-                {t("schedule.deleteEvent")}
-              </button>
-            )}
             {editable && (
               <button
                 className="btn-primary"
@@ -257,7 +273,7 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
                 {saving ? t("common.saving") : t("common.save")}
               </button>
             )}
-            <button className="btn-secondary" onClick={onClose}>
+            <button className="btn-ghost" onClick={onClose}>
               {t("common.close")}
             </button>
           </div>
