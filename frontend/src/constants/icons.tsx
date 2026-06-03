@@ -230,6 +230,7 @@ export const NAV_ICONS = {
   search:      MagnifyingGlass,    // outline
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
+  purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用

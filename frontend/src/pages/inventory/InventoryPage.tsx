@@ -307,8 +307,14 @@ export default function InventoryPage() {
   };
 
   // ヘッダー常設の発注書ボタン: 選択行があれば前埋めして発注書作成へ、無ければ発注書画面を開く。
+  // 発注書は仕入元単位のため、異なる仕入元が混在して選択されている場合は作成へ進ませず警告する。
   const openPurchaseOrder = () => {
     const selectedProducts = selectedPayload();
+    const supplierIds = new Set(selectedProducts.map((p) => p.supplier_id));
+    if (supplierIds.size > 1) {
+      setError(t("inventory.differentSuppliersAlert"));
+      return;
+    }
     navigate(
       "/purchase-orders",
       selectedProducts.length > 0 ? { state: { selectedProducts } } : undefined,

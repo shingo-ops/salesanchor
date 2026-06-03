@@ -84,6 +84,7 @@ type FormState = {
   quantity: string;
   weight: string;
   notes: string;
+  release_date: string;
   // Phase 1-C M-MVP
   jan_code: string;
   card_number: string;
@@ -113,11 +114,12 @@ type FormState = {
 const emptyForm: FormState = {
   name_ja: "", name_en: "", product_kind: "TCG", category: "", tcg_type: "", set_type: "", mark: "",
   status: "active", condition: "", unit: "", unit_price: "", quantity: "0",
-  weight: "", notes: "",
+  weight: "", notes: "", release_date: "",
   jan_code: "", card_number: "", expansion_code: "", rarity: "", language: "",
   unit_price_usd: "", unit_price_eur: "", image_url: "",
   boxes_per_case: "", packs_per_box: "", box_weight_kg: "", case_weight_kg: "",
-  volume_weight: "", moq: "", hs_code: "", material: "", item: "",
+  // 発送ラベルは TCG（カード）共通の既定値（ひとしさん確定 2026-06-04）
+  volume_weight: "", moq: "", hs_code: "9504400000", material: "Paper", item: "Playing card",
   required_output_value: "", search_keywords: "", exclude_keywords: "",
   related_series: "", category_classification: "",
 };
@@ -255,6 +257,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       quantity: Number(form.quantity),
       weight: form.weight ? Number(form.weight) : null,
       notes: toNull(form.notes),
+      release_date: toNull(form.release_date),
       jan_code: toNull(form.jan_code),
       card_number: toNull(form.card_number),
       expansion_code: toNull(form.expansion_code),
@@ -311,6 +314,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       quantity: String(p.quantity),
       weight: p.weight != null ? String(p.weight) : "",
       notes: p.notes || "",
+      release_date: p.release_date || "",
       jan_code: p.jan_code || "",
       card_number: p.card_number || "",
       expansion_code: p.expansion_code || "",
@@ -393,8 +397,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
 
   const body = (
     <>
-      {/* 埋め込み時はページタイトルが無いので操作ボタンを先頭に出す */}
-      {embedded && headerAction && <div style={{ marginBottom: "var(--space-3)" }}>{headerAction}</div>}
       <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
         <input type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
         {tcgTypes.length > 0 && (
@@ -410,6 +412,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             ))}
           </select>
         )}
+        {/* 埋め込み時はページタイトルが無いので操作ボタン（新規登録・削除）を検索バー右端に配置 */}
+        {embedded && headerAction && <div style={{ marginLeft: "auto" }}>{headerAction}</div>}
       </div>
 
       {/* QA 2026-05-31: 在庫表からチェックした商品で見積/請求を作成 */}
@@ -471,6 +475,10 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                     <option key={st} value={st}>{t(`products.setType.${st}`)}</option>
                   ))}
                 </select>
+              </div>
+              {/* 発売日 */}
+              <div className="form-group"><label>{t("products.masterCol.releaseDate")}</label>
+                <input type="date" value={form.release_date} onChange={(e) => setForm({ ...form, release_date: e.target.value })} />
               </div>
 
               {/* Phase 1-C M-MVP: TCG 列 */}
@@ -544,14 +552,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 <div className="form-group"><label>{t("products.master.moq")}</label>
                   <input type="number" min="0" value={form.moq} onChange={(e) => setForm({ ...form, moq: e.target.value })} />
                 </div>
-                <div className="form-group"><label>{t("products.master.material")}</label>
-                  <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
-                    <option value="">{t("common.notSet")}</option>
-                    {MATERIAL_OPTIONS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
               </fieldset>
 
               {/* ADR-093 Phase 1: 発送ラベル（HSコード・品目・必須出力値） */}
@@ -562,6 +562,15 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 </div>
                 <div className="form-group"><label>{t("products.master.item")}</label>
                   <input maxLength={255} value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} />
+                </div>
+                {/* 素材は発送ラベルの一部（品目の右）。ADR-093 UX 改修 2026-06-04 */}
+                <div className="form-group"><label>{t("products.master.material")}</label>
+                  <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
+                    <option value="">{t("common.notSet")}</option>
+                    {MATERIAL_OPTIONS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
               </fieldset>
 
@@ -577,6 +586,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
       ) : (
+        <div className="products-master-table-wrap">
         <table className="data-table" style={{ width: "100%" }}>
           {/* ADR-093: 商品マスタの全項目を横スクロールなしで見せるため 2 段ヘッダー＋1商品=2行。
               上段=カテゴリー/型番/日本語/英語/Box数/Pack数/重量、下段=Box重量/Case重量/発売日/分類/品目/HS/素材。 */}
@@ -682,6 +692,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             {products.length === 0 && <tr><td colSpan={9} className="empty">{t("products.noProducts")}</td></tr>}
           </tbody>
         </table>
+        </div>
       )}
 
       {/* QA r7: 件数表示は常時、前/次 button は pagination 必要時のみ。

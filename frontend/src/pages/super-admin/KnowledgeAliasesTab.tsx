@@ -395,7 +395,7 @@ export default function KnowledgeAliasesTab() {
       </section>
 
       {/* ============ 仕入元個別ルール（旧 仕入元別名） ============ */}
-      <section>
+      <section style={{ marginBottom: "var(--space-8)" }}>
         <h3>{t("superAdmin.knowledge.aliasesSection")}</h3>
         <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
           {t("superAdmin.knowledge.aliasesHelp")}
