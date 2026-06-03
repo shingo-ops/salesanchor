@@ -1470,12 +1470,25 @@
       "newAlias": "個別ルール新規作成",
       "selectSupplier": "仕入元を選択してください",
       "bulkDeleteConfirm": "選択した {{count}} 件を削除します。よろしいですか？",
+      "categoryHelp": "このルールがどの処理段階で使われるかを選びます。通常は「正規化（表記統一）」。",
+      "patternTypeHelp": "受信ワードの照合方法。正規表現は高度な指定（例: 変換前『^SV1a-(\\d+)』→ 変換後『SV1a-$1』で後方参照）。",
+      "categories": {
+        "normalize": "正規化（表記統一）",
+        "split": "行の分割",
+        "alias_normalize": "別名の正規化",
+        "exclude": "除外（無視する行）"
+      },
+      "langs": {
+        "ja": "日本語",
+        "en": "英語",
+        "ko": "韓国語",
+        "zh": "中国語"
+      },
       "patternTypes": {
         "regex": "正規表現",
         "exact": "完全一致",
         "prefix": "前方一致",
-        "suffix": "後方一致",
-        "contains": "部分一致"
+        "substring": "部分一致"
       },
       "fields": {
         "category": "カテゴリ",
@@ -1486,9 +1499,11 @@
         "language": "言語",
         "isActive": "有効",
         "supplierId": "仕入元 ID",
-        "supplierName": "解析する仕入元",
-        "aliasText": "受信通知のワード"
+        "supplierName": "仕入元",
+        "aliasText": "受信通知のワード",
+        "resolvedProduct": "変換後（商品）"
       },
+      "resolvedProductHelp": "このワードを解析したときに、どの商品として扱うかを選びます（任意）。",
       "csvImport": "CSV インポート",
       "csvExport": "CSV エクスポート",
       "csvDryRun": "プレビュー（dry-run）",

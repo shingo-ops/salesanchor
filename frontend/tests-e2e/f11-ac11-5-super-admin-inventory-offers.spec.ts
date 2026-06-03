@@ -135,12 +135,12 @@ test.describe("Sprint 11 / F11 AC11.5 — /super-admin/inventory-offers admin CR
     });
 
     await page.goto("/super-admin/inventory-offers");
-    await expect(page.getByTestId("offers-row-1001-edit")).toBeVisible({
+    await expect(page.getByTestId("offers-row-1001")).toBeVisible({
       timeout: 15_000,
     });
 
-    // 編集ポップアップを開く（ADR-093: インライン編集 → ポップアップ編集）
-    await page.getByTestId("offers-row-1001-edit").click();
+    // 行クリックで編集ポップアップを開く（ADR-093: 操作列撤去 → 行クリック編集）
+    await page.getByTestId("offers-row-1001").click();
     await expect(page.getByTestId("offers-edit-quantity")).toBeVisible();
     await page.getByTestId("offers-edit-quantity").fill("7");
     await page.getByTestId("offers-edit-unit-price").fill("2000");
