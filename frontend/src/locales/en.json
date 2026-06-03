@@ -677,6 +677,7 @@
     "facebookSection": "Facebook Page Integration",
     "discordSection": "Discord Server Integration",
     "discordGuildId": "Guild ID",
+    "discordServerId": "Server ID",
     "discordGuildIdNotSet": "Not configured",
     "discordEdit": "Edit settings",
     "discordAddBot": "Add Bot to Discord Server",
@@ -685,7 +686,12 @@
     "discordConnectedSuccess": "Bot successfully added to your Discord server.",
     "discordConnectError": "Failed to connect Discord. Please try again.",
     "discordNoServer": "No Discord server connected yet",
-    "discordNoServerDesc": "Add a Bot to your Discord server to start message integration."
+    "discordNoServerDesc": "Add a Bot to your Discord server to start message integration.",
+    "discordDisconnect": "Disconnect",
+    "discordDisconnecting": "Disconnecting...",
+    "discordDisconnectTitle": "Disconnect Discord Integration",
+    "discordDisconnectConfirm": "This will remove the Discord Bot integration. After disconnecting, messages cannot be sent to Discord. Are you sure?",
+    "discordDisconnectedSuccess": "Discord integration has been disconnected."
   },
   "deals": {
     "title": "Deal Management",

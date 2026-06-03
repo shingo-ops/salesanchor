@@ -20,7 +20,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { ApiError, api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -86,7 +85,6 @@ function daysUntil(iso: string | null): number | null {
 
 export default function ChannelsPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +94,14 @@ export default function ChannelsPage() {
   const [disconnectTarget, setDisconnectTarget] = useState<Channel | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [banner, setBanner] = useState<Banner>(null);
-  const [discordGuildId, setDiscordGuildId] = useState<string | null>(null);
+  const [discordConfig, setDiscordConfig] = useState<{
+    guild_id: string | null;
+    connected_at: string | null;
+    connected_by_staff_name: string | null;
+  } | null>(null);
   const [discordConnecting, setDiscordConnecting] = useState(false);
+  const [discordDisconnecting, setDiscordDisconnecting] = useState(false);
+  const [discordDisconnectOpen, setDiscordDisconnectOpen] = useState(false);
   const focusListenerRef = useRef<(() => void) | null>(null);
   const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -117,8 +121,8 @@ export default function ChannelsPage() {
     if (discordStatus) {
       if (discordStatus === "connected") {
         setBanner({ type: "success", text: t("channels.discordConnectedSuccess") });
-        api.get<{ guild_id: string | null }>("/admin/discord-config")
-          .then((d) => setDiscordGuildId(d.guild_id))
+        api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
+          .then((d) => setDiscordConfig(d))
           .catch(() => {});
       } else {
         setBanner({ type: "error", text: t("channels.discordConnectError") });
@@ -177,11 +181,11 @@ export default function ChannelsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadChannels(); }, []);
 
-  // ----- Discord Guild ID 取得 -----
+  // ----- Discord 設定取得 -----
   useEffect(() => {
     if (!canViewDiscord) return;
-    api.get<{ guild_id: string | null }>("/admin/discord-config")
-      .then((d) => setDiscordGuildId(d.guild_id))
+    api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
+      .then((d) => setDiscordConfig(d))
       .catch(() => { /* サイレント: Discord未設定テナントは表示しない */ });
   }, [canViewDiscord]);
 
@@ -218,9 +222,9 @@ export default function ChannelsPage() {
       // window.open 直後の誤発火を避けるため 1s 遅らせて登録
       // guild_id が取得できるまでリスナーを保持する
       const handleFocus = () => {
-        api.get<{ guild_id: string | null }>("/admin/discord-config")
+        api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
           .then((d) => {
-            setDiscordGuildId(d.guild_id);
+            setDiscordConfig(d);
             if (d.guild_id) {
               setBanner({ type: "success", text: t("channels.discordConnectedSuccess") });
               if (focusListenerRef.current) {
@@ -237,6 +241,22 @@ export default function ChannelsPage() {
       const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : t("channels.discordConnectError"));
       setBanner({ type: "error", text: msg });
       setDiscordConnecting(false);
+    }
+  };
+
+  // ----- Discord 切断 -----
+  const handleDiscordDisconnect = async () => {
+    setDiscordDisconnecting(true);
+    try {
+      await api.delete("/admin/discord-config");
+      setDiscordConfig(null);
+      setDiscordDisconnectOpen(false);
+      setBanner({ type: "success", text: t("channels.discordDisconnectedSuccess") });
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : t("channels.discordConnectError"));
+      setBanner({ type: "error", text: msg });
+    } finally {
+      setDiscordDisconnecting(false);
     }
   };
 
@@ -518,7 +538,7 @@ export default function ChannelsPage() {
             {t("channels.discordSection")}
           </h3>
 
-          {!discordGuildId ? (
+          {!discordConfig?.guild_id ? (
             // ----- 未接続 空 state（Facebookと同スタイル） -----
             <div
               className="card"
@@ -543,35 +563,47 @@ export default function ChannelsPage() {
               )}
             </div>
           ) : (
-            // ----- 接続済み state -----
-            <div className="card" style={{ padding: "var(--space-4)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-4)" }}>
-              <div>
-                <div style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", marginBottom: "var(--space-1)" }}>
-                  {t("channels.discordGuildId")}
-                </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--font-sm)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                  {discordGuildId}
-                  <span className="badge" style={{ background: "var(--success-bg)", color: "var(--success-text)", fontFamily: "var(--font-sans)" }}>
+            // ----- 接続済み state（Facebookカードと同スタイル） -----
+            <div
+              className="card"
+              style={{
+                padding: "var(--space-4)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "var(--space-4)",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                  <h3 style={{ margin: 0, fontSize: "var(--font-sidebar-brand)" }}>Discord Bot</h3>
+                  <span className="badge" style={{ background: "var(--success-bg)", color: "var(--success-text)" }}>
                     {t("channels.discordBotConnected")}
                   </span>
                 </div>
+                <div style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                  <div>
+                    <strong>{t("channels.discordServerId")}:</strong>{" "}
+                    <span className="mono">{discordConfig.guild_id}</span>
+                  </div>
+                  <div>
+                    <strong>{t("channels.connectedAt")}:</strong> {formatDate(discordConfig.connected_at)}
+                    {discordConfig.connected_by_staff_name && (
+                      <> / <strong>{t("channels.connectedBy")}:</strong> {discordConfig.connected_by_staff_name}</>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
+              <div style={{ flexShrink: 0 }}>
                 {canManage && (
                   <button
-                    className="btn-sm btn-primary"
-                    onClick={handleDiscordConnect}
-                    disabled={discordConnecting}
+                    className="btn-sm btn-danger"
+                    onClick={() => setDiscordDisconnectOpen(true)}
+                    disabled={discordDisconnecting}
                   >
-                    {discordConnecting ? t("channels.discordConnecting") : t("channels.discordAddBot")}
+                    {t("channels.discordDisconnect")}
                   </button>
                 )}
-                <button
-                  className="btn-sm btn-secondary"
-                  onClick={() => navigate("/admin/discord-config")}
-                >
-                  {t("channels.discordEdit")}
-                </button>
               </div>
             </div>
           )}
@@ -592,6 +624,16 @@ export default function ChannelsPage() {
         }
         onConfirm={performDisconnect}
         onCancel={() => setDisconnectTarget(null)}
+      />
+
+      <ConfirmModal
+        open={discordDisconnectOpen}
+        title={t("channels.discordDisconnectTitle")}
+        danger
+        confirmLabel={discordDisconnecting ? t("channels.discordDisconnecting") : t("channels.discordDisconnect")}
+        message={t("channels.discordDisconnectConfirm")}
+        onConfirm={handleDiscordDisconnect}
+        onCancel={() => setDiscordDisconnectOpen(false)}
       />
     </PageLayout>
   );

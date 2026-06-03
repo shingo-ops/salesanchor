@@ -153,20 +153,25 @@ async def discord_oauth_callback(
 
     tenant_id = int(tenant_id)
 
-    # guild_id を upsert
+    staff_id_int = int(staff_id) if staff_id else None
+
+    # guild_id と接続者を upsert
     await db.execute(
         text("""
-            INSERT INTO public.tenant_discord_config (tenant_id, guild_id)
-            VALUES (:tid, :guild_id)
+            INSERT INTO public.tenant_discord_config (tenant_id, guild_id, connected_by_staff_id)
+            VALUES (:tid, :guild_id, :staff_id)
             ON CONFLICT (tenant_id)
-            DO UPDATE SET guild_id = EXCLUDED.guild_id, updated_at = NOW()
+            DO UPDATE SET
+                guild_id = EXCLUDED.guild_id,
+                connected_by_staff_id = EXCLUDED.connected_by_staff_id,
+                updated_at = NOW()
         """),
-        {"tid": tenant_id, "guild_id": guild_id},
+        {"tid": tenant_id, "guild_id": guild_id, "staff_id": staff_id_int},
     )
     await record_audit_log(
         db=db,
         tenant_id=tenant_id,
-        user_id=int(staff_id) if staff_id else tenant_id,
+        user_id=staff_id_int if staff_id_int else tenant_id,
         action="update",
         table_name="tenant_discord_config",
         record_id=tenant_id,
