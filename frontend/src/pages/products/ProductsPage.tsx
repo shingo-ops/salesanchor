@@ -12,7 +12,7 @@
  *               注: 廃番フィルタ(#1174) と行内「追加」(=廃番トグル) ボタン(QA 2026-05-30) は撤去済み
  */
 
-import { useEffect, useState, FormEvent } from "react";
+import { Fragment, useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../../lib/api";
@@ -577,34 +577,45 @@ export default function ProductsPage() {
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
       ) : (
-        <table className="data-table">
+        <table className="data-table" style={{ width: "100%" }}>
+          {/* ADR-093: 商品マスタの全項目を横スクロールなしで見せるため 2 段ヘッダー＋1商品=2行。
+              上段=カテゴリー/型番/日本語/英語/Box数/Pack数/重量、下段=Box重量/Case重量/発売日/分類/品目/HS/素材。 */}
           <thead>
             <tr>
-              {/* チェックボックス列＝見積/請求作成用の複数選択。意味が伝わるよう title/aria でツールチップ説明 */}
+              {/* チェックボックス列＝見積/請求作成用の複数選択。 */}
               <th
+                rowSpan={2}
                 style={{ width: "var(--col-width-checkbox)", textAlign: "center", cursor: "help" }}
                 aria-label={t("products.selectHint")}
                 title={t("products.selectHint")}
               ></th>
+              <th>{t("products.masterCol.category")}</th>
+              <th>{t("products.masterCol.mark")}</th>
               <th
                 onClick={toggleNameSort}
                 style={{ cursor: "pointer", userSelect: "none" }}
                 title={t("products.sortByName")}
                 data-testid="products-sort-name"
               >
-                {t("common.name")}
+                {t("products.masterCol.titleJa")}
                 <span aria-hidden="true" style={{ marginLeft: "var(--space-1)", color: "var(--text-secondary)" }}>
                   {sort === "name_asc" ? "↑" : sort === "name_desc" ? "↓" : ""}
                 </span>
               </th>
-              <th>{t("products.rarityCol")}</th>
-              <th>{t("language.label")}</th>
-              <th>{t("leads.type")}</th>
-              <th>{t("products.conditionCol")}</th>
-              <th>{t("products.unitPrice")}</th>
-              <th>{t("products.stockQty")}</th>
-              <th>{t("products.unitCol")}</th>
-              <th>{t("common.actions")}</th>
+              <th>{t("products.masterCol.titleEn")}</th>
+              <th>{t("products.masterCol.boxesPerCase")}</th>
+              <th>{t("products.masterCol.packsPerBox")}</th>
+              <th>{t("products.masterCol.weight")}</th>
+              <th rowSpan={2}>{t("common.actions")}</th>
+            </tr>
+            <tr>
+              <th>{t("products.masterCol.boxWeight")}</th>
+              <th>{t("products.masterCol.caseWeight")}</th>
+              <th>{t("products.masterCol.releaseDate")}</th>
+              <th>{t("products.masterCol.categoryClassification")}</th>
+              <th>{t("products.masterCol.item")}</th>
+              <th>{t("products.masterCol.hsCode")}</th>
+              <th>{t("products.masterCol.material")}</th>
             </tr>
           </thead>
           <tbody>
@@ -613,58 +624,54 @@ export default function ProductsPage() {
               const rowStyle: React.CSSProperties = {};
               if (p.is_archived) rowStyle.opacity = "var(--opacity-archived)";
               // 在庫0行の背景は CSS (.data-table tr[data-zero-stock="true"]) で濃淡を付ける。
-              // 文字の視認性を保つため opacity は下げない (QA 2026-05-29)。
+              const zero = isOutOfStock ? "true" : "false";
               return (
-              <tr key={p.id} style={rowStyle} data-zero-stock={isOutOfStock ? "true" : "false"}>
-                <td style={{ textAlign: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(p.id)}
-                    onChange={() => toggleSelect(p.id)}
-                    aria-label={t("common.select")}
-                    data-testid={`product-select-${p.id}`}
-                  />
-                </td>
-                <td>
-                  {p.image_url && <img src={p.image_url} alt="" style={{ width: 'var(--icon-lg)', height: 'var(--icon-lg)', marginRight: "var(--space-1)", objectFit: "cover", verticalAlign: "middle", borderRadius: "var(--radius-xs)" }} />}
-                  {isOutOfStock && !p.is_archived && (
-                    <span title={t("products.outOfStockTooltip")} aria-label={t("products.outOfStockTooltip")} style={{ marginRight: "var(--space-6px)", color: "var(--color-warning)", fontWeight: "var(--font-weight-semi)" }}>
-                      &#9888;
-                    </span>
-                  )}
-                  {p.name_ja}
-                  {p.is_archived && <span className="badge badge-lost" style={{ marginLeft: "var(--space-6px)" }}>{t("products.status_discontinued")}</span>}
-                </td>
-                <td>{p.rarity || "-"}</td>
-                <td>{p.language ? t(`language.${p.language}`, { defaultValue: p.language }) : "-"}</td>
-                <td>{p.tcg_type ? (tcgTypeName.get(p.tcg_type) ?? p.tcg_type) : (p.category || "-")}</td>
-                <td>{p.condition || "-"}</td>
-                <td>
-                  {p.unit_price != null ? `¥${Math.round(p.unit_price).toLocaleString()}` : "-"}
-                  {(p.unit_price_usd != null || p.unit_price_eur != null) && (
-                    <span style={{ display: "block", fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>
-                      {p.unit_price_usd != null ? `$${p.unit_price_usd}` : ""}
-                      {p.unit_price_usd != null && p.unit_price_eur != null ? " / " : ""}
-                      {p.unit_price_eur != null ? `€${p.unit_price_eur}` : ""}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <span style={{ color: p.quantity <= 0 ? "var(--danger)" : "inherit", fontWeight: p.quantity <= 0 ? "var(--font-weight-semi)" : "var(--font-weight-normal)" }}>
-                    {p.quantity}
-                  </span>
-                </td>
-                <td>{p.unit ? capUnit(p.unit) : "-"}</td>
-                <td className="actions">
-                  {hasPermission("products.update") && <button className="btn-sm" onClick={() => handleEdit(p)}>{t("common.edit")}</button>}
-                  {/* QA 2026-05-30: 「追加」と誤表記された廃番(archive)トグルを撤去（誤クリックで行が消える事故防止）。
-                      廃番は「削除」の FK 参照時フォールバック (handleArchiveFromBlocked) でのみ行う。 */}
-                  {hasPermission("products.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(p)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
+              <Fragment key={p.id}>
+                <tr className="product-row-top" style={rowStyle} data-zero-stock={zero} data-testid={`product-row-${p.id}`}>
+                  <td rowSpan={2} style={{ textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      aria-label={t("common.select")}
+                      data-testid={`product-select-${p.id}`}
+                    />
+                  </td>
+                  <td>{p.category || "-"}</td>
+                  <td>{p.mark || "-"}</td>
+                  <td>
+                    {p.image_url && <img src={p.image_url} alt="" style={{ width: 'var(--icon-lg)', height: 'var(--icon-lg)', marginRight: "var(--space-1)", objectFit: "cover", verticalAlign: "middle", borderRadius: "var(--radius-xs)" }} />}
+                    {isOutOfStock && !p.is_archived && (
+                      <span title={t("products.outOfStockTooltip")} aria-label={t("products.outOfStockTooltip")} style={{ marginRight: "var(--space-6px)", color: "var(--color-warning)", fontWeight: "var(--font-weight-semi)" }}>
+                        &#9888;
+                      </span>
+                    )}
+                    {p.name_ja}
+                    {p.is_archived && <span className="badge badge-lost" style={{ marginLeft: "var(--space-6px)" }}>{t("products.status_discontinued")}</span>}
+                  </td>
+                  <td>{p.name_en || "-"}</td>
+                  <td>{p.boxes_per_case ?? "-"}</td>
+                  <td>{p.packs_per_box ?? "-"}</td>
+                  <td>{p.weight ?? "-"}</td>
+                  <td rowSpan={2} className="actions">
+                    {hasPermission("products.update") && <button className="btn-sm" onClick={() => handleEdit(p)}>{t("common.edit")}</button>}
+                    {/* QA 2026-05-30: 廃番は「削除」の FK 参照時フォールバックでのみ行う。 */}
+                    {hasPermission("products.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(p)}>{t("common.delete")}</button>}
+                  </td>
+                </tr>
+                <tr className="product-row-bottom" style={rowStyle} data-zero-stock={zero}>
+                  <td>{p.box_weight_kg ?? "-"}</td>
+                  <td>{p.case_weight_kg ?? "-"}</td>
+                  <td>{p.release_date || "-"}</td>
+                  <td>{p.category_classification || "-"}</td>
+                  <td>{p.item || "-"}</td>
+                  <td>{p.hs_code || "-"}</td>
+                  <td>{p.material || "-"}</td>
+                </tr>
+              </Fragment>
               );
             })}
-            {products.length === 0 && <tr><td colSpan={10} className="empty">{t("products.noProducts")}</td></tr>}
+            {products.length === 0 && <tr><td colSpan={9} className="empty">{t("products.noProducts")}</td></tr>}
           </tbody>
         </table>
       )}
