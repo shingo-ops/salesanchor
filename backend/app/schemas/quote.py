@@ -100,6 +100,11 @@ class QuoteResponse(BaseModel):
     created_by: int | None
     created_at: datetime
     updated_at: datetime
+    # 一覧表示用の表示名（list_quotes が JOIN で埋める。単票取得では None のまま）。
+    # 見積履歴で「どの営業担当がどの顧客に出したか」をひと目で分かるようにするため。
+    company_name: str | None = None
+    contact_name: str | None = None
+    created_by_name: str | None = None
 
     model_config = {"from_attributes": True}
 
