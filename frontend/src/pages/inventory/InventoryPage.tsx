@@ -525,9 +525,36 @@ export default function InventoryPage() {
 
       {/* アクション: 役割ごとに2段で固定表示（チェック前から常時表示）。
           各段は権限で出し分け、作成系は商品選択時のみ有効、クリアは両段に表示。 */}
-      {(hasPermission("purchase_orders.create") ||
+      {/* 見積/請求作成からの往復中は、専用の「選択を反映して戻る」ボタンのみ表示（権限非依存）。 */}
+      {quoteReturn?.fromQuote ? (
+        <div
+          className="selection-action-bar"
+          data-testid="inventory-roundtrip-bar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-3)",
+            flexWrap: "wrap",
+            margin: "var(--space-2) 0 var(--space-4)",
+            padding: "var(--space-3)",
+            background: "var(--bg-subtle)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+          }}
+        >
+          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }} data-testid="inventory-selected-count">
+            {t("products.selectedCount", { count: selectedIds.size })}
+          </span>
+          <button className="btn-primary btn-sm" disabled={noSelection} onClick={onCreateQuote} data-testid="inventory-apply-selection">
+            {t("inventory.applyToQuote")}
+          </button>
+          <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-roundtrip">
+            {t("common.clear")}
+          </button>
+        </div>
+      ) : (hasPermission("purchase_orders.create") ||
         hasPermission("quotes.create") ||
-        hasPermission("invoices.create")) && (
+        hasPermission("invoices.create")) ? (
         <div
           className="selection-action-bar"
           data-testid="inventory-action-groups"
@@ -581,7 +608,7 @@ export default function InventoryPage() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       <div
         className="loading-indicator"
