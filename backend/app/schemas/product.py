@@ -63,6 +63,7 @@ class ProductCreate(BaseModel):
     supplier_default_id: int | None = None
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
+    set_type: str | None = Field(default=None, max_length=50)
     unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
@@ -113,6 +114,7 @@ class ProductUpdate(BaseModel):
     supplier_default_id: int | None = None
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
+    set_type: str | None = Field(default=None, max_length=50)
     unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
@@ -168,6 +170,7 @@ class ProductResponse(BaseModel):
     supplier_default_id: int | None = None
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
+    set_type: str | None = Field(default=None, max_length=50)
     unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）

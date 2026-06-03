@@ -50,6 +50,8 @@ import TenantProfilePage from "./pages/admin/TenantProfilePage";
 import DiscordConfigPage from "./pages/admin/DiscordConfigPage";
 // ADR-091 KPI4: Discord アナウンス投稿 admin UI
 import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
+// SaaS 管理者ハブ（ボトムタブシェル）
+import AdminHubPage from "./pages/admin/AdminHubPage";
 // spec.md v1.1 F5 (Sprint 5): Discord Inbound 受信メッセージ一覧（中央 admin）
 import DiscordInboundPage from "./pages/super-admin/DiscordInboundPage";
 import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
@@ -218,26 +220,18 @@ function App() {
                     path="/super-admin/inventory-offers"
                     element={<InventoryOffersPage />}
                   />
-                  {/* テナント admin（tenant.inventory_visibility.edit 権限が必要、Page 内で 403 ガード） */}
-                  <Route
-                    path="/admin/inventory-visibility"
-                    element={<InventoryVisibilityPage />}
-                  />
-                  {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
-                  <Route
-                    path="/admin/tenant-profile"
-                    element={<TenantProfilePage />}
-                  />
-                  {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
-                  <Route
-                    path="/admin/discord-config"
-                    element={<DiscordConfigPage />}
-                  />
-                  {/* ADR-091 KPI4: Discord アナウンス投稿 */}
-                  <Route
-                    path="/admin/discord-announce"
-                    element={<DiscordAnnouncePage />}
-                  />
+                  {/* SaaS 管理者ハブ（ボトムタブ統合） */}
+                  <Route path="/admin" element={<AdminHubPage />}>
+                    <Route index element={<Navigate to="tenant-profile" replace />} />
+                    {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
+                    <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                    {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
+                    <Route path="discord-config"      element={<DiscordConfigPage />} />
+                    {/* ADR-091 KPI4: Discord アナウンス投稿 */}
+                    <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
+                    {/* テナント admin（tenant.inventory_visibility.edit 権限が必要、Page 内で 403 ガード） */}
+                    <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
+                  </Route>
 
                   {/* ADR-069: デザインシステム パーツ保管庫（開発環境専用） */}
                   {import.meta.env.DEV && (
