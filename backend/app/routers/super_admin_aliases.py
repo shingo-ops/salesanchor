@@ -42,6 +42,36 @@ _UPDATABLE = {"supplier_id", "alias_text", "language", "product_id", "confidence
 
 
 @router.get(
+    "/super-admin/product-options",
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_product_options(
+    q: str | None = Query(default=None, max_length=255),
+    limit: int = Query(default=1000, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db),
+):
+    """個別ルールの「変換後（商品）」選択肢用。public.products の id / 名称を返す。
+
+    supplier_aliases.product_id は public.products.id を参照するため、中央の
+    public.products を一覧する（テナント別 products とは別）。
+    """
+    conditions: list[str] = []
+    params: dict = {"limit": limit}
+    if q:
+        conditions.append("(name ILIKE :q OR name_en ILIKE :q OR product_code ILIKE :q)")
+        params["q"] = f"%{q}%"
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    result = await db.execute(
+        text(
+            f"SELECT id, name, name_en FROM public.products {where} "
+            "ORDER BY name LIMIT :limit"
+        ),
+        params,
+    )
+    return [dict(row) for row in result.mappings().all()]
+
+
+@router.get(
     "/super-admin/aliases",
     response_model=list[SupplierAliasResponse],
     dependencies=[Depends(require_super_admin)],
