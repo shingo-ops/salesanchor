@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=89
+TOTAL=90
 
 run_py() {
   local script="$1"
@@ -210,6 +210,12 @@ run_sql migrations/20260603_040000_add_products_set_type.sql
 
 # ADR-093: 商品マスタ 型番(mark) をシート B列で更新（日本語タイトル一致・125件）
 run_sql migrations/20260604_010000_seed_product_marks.sql
+
+# ADR-093: 全商品の発送ラベル既定値を一括設定（品目=Playing card / HSコード=9504400000 / 素材=Paper）
+run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
+
+# ADR-093 海外顧客向け明細: quote_items / invoice_items に name_en/condition/unit を追加
+run_sql migrations/20260604_030000_add_quote_invoice_item_overseas_columns.sql
 
 echo ""
 echo "============================================"
