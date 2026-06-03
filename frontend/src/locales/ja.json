@@ -775,6 +775,7 @@
     "minutesAgo": "{{count}}分前",
     "hoursAgo": "{{count}}時間前",
     "createPO": "発注書作成",
+    "applyToQuote": "見積に反映して戻る",
     "actions": {
       "purchasingRole": "仕入れ担当",
       "salesRole": "営業担当"
@@ -843,6 +844,11 @@
     "addItem": "明細を追加",
     "removeItem": "削除",
     "selectProduct": "商品を選択",
+    "productNamePlaceholder": "商品名（マスタに無いものは自由記入）",
+    "addMethod": "追加方法",
+    "addModeInventory": "在庫表から",
+    "addModeSearch": "検索して追加／新規追加",
+    "addFromInventory": "在庫表で選択",
     "customProduct": "カスタム商品",
     "saveDraft": "下書き保存",
     "send": "送付",

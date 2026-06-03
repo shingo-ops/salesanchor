@@ -4,11 +4,12 @@
  *
  * 変更履歴:
  *   2026-04-17: 初版作成（Phase 2）
- *   2026-04-25: Phase 1-B-2 Step 5c-3 — 顧客セレクタを CompanyContactSelector
- *     （company + contact）に置換。
- *   2026-05-22: Sprint 7 / F7 — 既存 <select> ベースの商品選択を InventorySearchBar
- *     (全 7 種横断 + AND/OR + 在庫マスク対応) に置換。標準名は
- *     public.products.name (旧 tenant スキーマの name_ja とは別) を採用 (AC7.4)。
+ *   2026-04-25: Phase 1-B-2 Step 5c-3 — 顧客セレクタを CompanyContactSelector に置換。
+ *   2026-05-22: Sprint 7 / F7 — 商品選択を InventorySearchBar に置換。
+ *   2026-06-03: ADR-093 明細 UX 刷新 — 行内検索/AND-OR を廃止。明細追加は
+ *     [在庫表から(往復)] / [検索して追加・新規追加(自由記入可)] のモード切替に。
+ *     在庫表往復ではドラフト全体（顧客・通貨・明細・送料等）を保持する。
+ *     在庫表起点で開いた場合、キャンセルは在庫表へ戻る。
  */
 
 import { useState, FormEvent } from "react";
@@ -17,89 +18,88 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
-
-interface LineItem {
-  product_id: number | null;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  weight: number | null;
-  /** AC7.5: 在庫 0 商品を選択した行はフラグでマークし、確認 UI を出す。 */
-  zero_stock_warning?: boolean;
-}
-
-// QA 2026-05-31: 在庫表から「見積書作成」で渡される選択商品 (location.state)
-interface SelectedProduct {
-  product_id: number;
-  product_name: string;
-  unit_price: number | null;
-}
-
-const blankItem: LineItem = { product_id: null, product_name: "", quantity: 1, unit_price: 0, weight: null };
+import {
+  type LineItem,
+  type QuoteDraft,
+  type QuoteHandoffState,
+  blankItem,
+  buildInitialItems,
+} from "./quoteDraft";
 
 export default function QuoteCreatePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  // 在庫表からの選択商品があれば初期明細に展開する
-  const handoff = (location.state as { selectedProducts?: SelectedProduct[] } | null)
-    ?.selectedProducts;
-  const initialItems: LineItem[] =
-    handoff && handoff.length > 0
-      ? handoff.map((p) => ({
-          product_id: p.product_id,
-          product_name: p.product_name,
-          quantity: 1,
-          unit_price: p.unit_price ?? 0,
-          weight: null,
-        }))
-      : [{ ...blankItem }];
-  const [companyId, setCompanyId] = useState<number | null>(null);
-  const [contactId, setContactId] = useState<number | null>(null);
+  const handoff = location.state as QuoteHandoffState;
+  const draft = handoff?.draft;
+  // 在庫表起点（新規 or 往復）かどうか。キャンセル先の判定に使う。
+  const cameFromInventory = !!(
+    handoff?.fromInventory ||
+    handoff?.draft ||
+    (handoff?.selectedProducts && handoff.selectedProducts.length > 0)
+  );
+
+  const [companyId, setCompanyId] = useState<number | null>(draft?.companyId ?? null);
+  const [contactId, setContactId] = useState<number | null>(draft?.contactId ?? null);
   const [selectorError, setSelectorError] = useState("");
-  const [currency, setCurrency] = useState("JPY");
-  const [shippingFee, setShippingFee] = useState("");
-  const [taxAmount, setTaxAmount] = useState("");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItem[]>(initialItems);
+  const [currency, setCurrency] = useState(draft?.currency ?? "JPY");
+  const [shippingFee, setShippingFee] = useState(draft?.shippingFee ?? "");
+  const [taxAmount, setTaxAmount] = useState(draft?.taxAmount ?? "");
+  const [notes, setNotes] = useState(draft?.notes ?? "");
+  const [items, setItems] = useState<LineItem[]>(() => buildInitialItems(handoff));
+  // 明細の追加方法: 在庫表から（往復） / 検索して追加・新規追加。
+  const [addMode, setAddMode] = useState<"inventory" | "search">("search");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // 自由記入の空行を追加（マスタに無い商品も入力できる）。
   const addItem = () => {
-    setItems([...items, { ...blankItem }]);
+    setItems((prev) => [...prev, { ...blankItem }]);
   };
 
   const removeItem = (index: number) => {
-    if (items.length <= 1) return;
-    setItems(items.filter((_, i) => i !== index));
+    setItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
   };
 
   const updateItem = (index: number, field: keyof LineItem, value: unknown) => {
-    const newItems = [...items];
-    (newItems[index] as unknown as Record<string, unknown>)[field] = value;
-    setItems(newItems);
+    setItems((prev) => {
+      const next = [...prev];
+      (next[index] as unknown as Record<string, unknown>)[field] = value;
+      return next;
+    });
   };
 
-  /**
-   * InventorySearchBar から選択された商品で対象行を上書きする (AC7.4)。
-   * 標準名 (public.products.name) と標準 unit_price を採用する。
-   */
-  const onPickProduct = (index: number, c: InventorySearchCandidate) => {
-    const newItems = [...items];
-    // QA r7 SM-3 trial3: 在庫 0 商品を選択した時、数量を 1 で入れると
-    // 「在庫 0 警告が出ているのに数量 1」という矛盾表示になっていた。
-    // 誤発注防止のため、在庫 0 商品は数量 0 で line に入れて、
-    // ユーザーが意図的に数量を入力するまでは送信できない状態にする。
+  // 「検索して追加」: InventorySearchBar の選択商品を新しい明細行として追加する（上書きではなく追加）。
+  const appendFromSearch = (c: InventorySearchCandidate) => {
     const isOutOfStock = c.stock_quantity !== null && c.stock_quantity <= 0;
-    newItems[index] = {
-      product_id: c.product_id,
-      product_name: c.name, // AC7.4: 標準名 (public.products.name)
-      quantity: isOutOfStock ? 0 : 1,
-      unit_price: c.unit_price ?? 0,
-      weight: null,
-      zero_stock_warning: isOutOfStock,
-    };
-    setItems(newItems);
+    setItems((prev) => [
+      ...prev,
+      {
+        product_id: c.product_id,
+        product_name: c.name,
+        quantity: isOutOfStock ? 0 : 1,
+        unit_price: c.unit_price ?? 0,
+        weight: null,
+        inventory_id: null,
+        zero_stock_warning: isOutOfStock,
+      },
+    ]);
+  };
+
+  // 「在庫表から」: ドラフト全体を持って在庫表へ移動。在庫表で追加選択して
+  // 「見積書作成」を押すと、選択が反映された状態でここへ戻る。
+  const goToInventory = () => {
+    const currentDraft: QuoteDraft = { items, companyId, contactId, currency, notes, shippingFee, taxAmount };
+    navigate("/inventory", {
+      state: {
+        fromQuote: true,
+        returnTo: "/quotes/new",
+        draft: currentDraft,
+        preselectedInventoryIds: items
+          .filter((i) => i.inventory_id != null)
+          .map((i) => i.inventory_id),
+      },
+    });
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
@@ -112,8 +112,6 @@ export default function QuoteCreatePage() {
     setError("");
     setSelectorError("");
     if (contactId === null) { setSelectorError(t("companyContactSelector.contactRequired")); return; }
-    // QA r7 SM-3: 在庫 0 商品を選択した行は quantity=0 で入るため、
-    // 送信前にユーザーが意図的に数量を入力したか検証する。
     if (items.some((i) => !i.product_name || i.unit_price <= 0 || i.quantity <= 0)) {
       setError(t("quotes.itemsRequired"));
       return;
@@ -178,11 +176,11 @@ export default function QuoteCreatePage() {
         </div>
 
         <h3 style={{ marginBottom: "var(--space-3)" }}>{t("quotes.items")}</h3>
+        {/* 明細表示ゾーン: 行内検索/AND-OR は廃止。商品名は自由記入可（マスタに無い商品も入力できる）。 */}
         <div style={{ overflowX: "auto", marginBottom: "var(--space-4)" }}>
           <table className="data-table" style={{ minWidth: 'var(--table-min-width-base)' }}>
             <thead>
               <tr>
-                <th>{t("quotes.selectProduct")}</th>
                 <th>{t("quotes.product")}</th>
                 <th>{t("quotes.quantity")}</th>
                 <th>{t("quotes.unitPrice")}</th>
@@ -194,11 +192,8 @@ export default function QuoteCreatePage() {
             <tbody>
               {items.map((item, i) => (
                 <tr key={i} data-testid={`quote-item-row-${i}`}>
-                  <td style={{ minWidth: 'var(--table-col-min-width)' }}>
-                    <InventorySearchBar
-                      onSelect={(c) => onPickProduct(i, c)}
-                      testIdPrefix={`quote-inventory-search-${i}`}
-                    />
+                  <td style={{ minWidth: 'var(--table-col-product-name-min-w)' }}>
+                    <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} placeholder={t("quotes.productNamePlaceholder")} style={{ width: "100%", minWidth: 'var(--input-width-product-name)' }} data-testid={`quote-item-row-${i}-name`} />
                     {item.zero_stock_warning && (
                       <div
                         data-testid={`quote-item-row-${i}-zero-stock-warning`}
@@ -208,9 +203,6 @@ export default function QuoteCreatePage() {
                         {t("inventory.search.zeroStockWarning", { name: item.product_name })}
                       </div>
                     )}
-                  </td>
-                  <td style={{ minWidth: 'var(--table-col-product-name-min-w)' }}>
-                    <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} style={{ width: "100%", minWidth: 'var(--input-width-product-name)' }} data-testid={`quote-item-row-${i}-name`} />
                   </td>
                   <td>
                     <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: 'var(--input-width-qty)' }} />
@@ -232,7 +224,32 @@ export default function QuoteCreatePage() {
             </tbody>
           </table>
         </div>
-        <button type="button" className="btn-secondary" onClick={addItem} style={{ marginBottom: "var(--space-6)" }}>{t("quotes.addItem")}</button>
+
+        {/* 明細の追加方法: [在庫表から(往復)] / [検索して追加・新規追加]。 */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
+          {addMode === "search" ? (
+            <button type="button" className="btn-secondary" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</button>
+          ) : (
+            <button type="button" className="btn-secondary" onClick={goToInventory} data-testid="quote-add-from-inventory">{t("quotes.addFromInventory")}</button>
+          )}
+          <div role="radiogroup" aria-label={t("quotes.addMethod")} style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <input type="radio" name="quote-add-mode" data-testid="quote-add-mode-inventory" checked={addMode === "inventory"} onChange={() => setAddMode("inventory")} />
+              {t("quotes.addModeInventory")}
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <input type="radio" name="quote-add-mode" data-testid="quote-add-mode-search" checked={addMode === "search"} onChange={() => setAddMode("search")} />
+              {t("quotes.addModeSearch")}
+            </label>
+          </div>
+        </div>
+
+        {/* 「検索して追加」モード: 幅広の検索窓。選択すると明細ゾーンに行が追加される。 */}
+        {addMode === "search" && (
+          <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
+            <InventorySearchBar onSelect={appendFromSearch} testIdPrefix="quote-add-search" />
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("quotes.shippingFee")}</label>
@@ -247,7 +264,8 @@ export default function QuoteCreatePage() {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.cancel")}</button>
+          {/* 在庫表起点で開いた場合のキャンセルは在庫表へ戻す（請求書一覧に飛ばさない）。 */}
+          <button type="button" className="btn-secondary" onClick={() => navigate(cameFromInventory ? "/inventory" : "/quotes")}>{t("common.cancel")}</button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</button>
         </div>
       </form>

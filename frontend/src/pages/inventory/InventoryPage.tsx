@@ -8,7 +8,7 @@
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
@@ -57,7 +57,16 @@ const HIDEABLE_COLUMNS = [
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission } = usePermissions();
+
+  // 見積作成からの往復（在庫表から）: 戻り先・編集中ドラフト・事前選択（在庫行 ID）。
+  const quoteReturn = location.state as {
+    fromQuote?: boolean;
+    returnTo?: string;
+    draft?: unknown;
+    preselectedInventoryIds?: number[];
+  } | null;
 
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -67,7 +76,10 @@ export default function InventoryPage() {
   const [category, setCategory] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(
+    () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -184,6 +196,8 @@ export default function InventoryPage() {
     items
       .filter((it) => selectedIds.has(it.id))
       .map((it) => ({
+        // inventory_id: 見積往復で同一オファー行を再選択判定するためのキー。
+        inventory_id: it.id,
         product_id: it.product_id,
         product_name: it.product_name ?? "",
         unit_price: it.unit_price,
@@ -197,6 +211,18 @@ export default function InventoryPage() {
     const selectedProducts = selectedPayload();
     if (selectedProducts.length === 0) return;
     navigate(path, { state: { selectedProducts } });
+  };
+
+  // 見積作成（営業担当）ボタン。見積往復で来ている場合は、編集中ドラフトを保持したまま
+  // 選択を反映して見積画面へ戻す。通常時は新規見積へ前埋め遷移する。
+  const onCreateQuote = () => {
+    if (quoteReturn?.fromQuote) {
+      navigate(quoteReturn.returnTo ?? "/quotes/new", {
+        state: { selectedProducts: selectedPayload(), draft: quoteReturn.draft, fromInventory: true },
+      });
+      return;
+    }
+    goCreate("/quotes/new");
   };
 
   // ヘッダー常設の発注書ボタン: 選択行があれば前埋めして発注書作成へ、無ければ発注書画面を開く。
@@ -522,8 +548,8 @@ export default function InventoryPage() {
                 {t("inventory.actions.salesRole")}
               </span>
               {hasPermission("quotes.create") && (
-                <button className="btn-primary btn-sm" disabled={noSelection} onClick={() => goCreate("/quotes/new")} data-testid="create-quote-from-inventory">
-                  {t("products.createQuote")}
+                <button className="btn-primary btn-sm" disabled={noSelection} onClick={onCreateQuote} data-testid="create-quote-from-inventory">
+                  {quoteReturn?.fromQuote ? t("inventory.applyToQuote") : t("products.createQuote")}
                 </button>
               )}
               {hasPermission("invoices.create") && (

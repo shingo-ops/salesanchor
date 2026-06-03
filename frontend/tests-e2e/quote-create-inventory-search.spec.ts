@@ -1,16 +1,14 @@
 /**
- * Sprint 7 (F7) — QuoteCreatePage に組み込まれた InventorySearchBar の UI smoke。
+ * QuoteCreatePage の「検索して追加」検索バー UI smoke。
  *
- * AC 対応:
- *   AC7.4: 候補選択 → quote_items に標準名 + 標準 unit_price が乗る (UI 経路)
- *   AC7.5: 在庫 0 商品はグレーアウト、選択時 warning メッセージ表示
- *   AC7.7: i18n placeholder / AND/OR ラベル / バッジ がすべて t() 経由 (mock 上の表示確認)
- *   AC7.8: AND/OR トグルが UI 操作可能
+ * ADR-093 (2026-06-03) で明細 UX を刷新:
+ *   - 行内検索を廃止し、明細ゾーン下に単一の「検索して追加／新規追加」検索バーを配置
+ *     (testIdPrefix="quote-add-search")。候補選択で明細行を「追加」する（上書きではない）。
+ *   - 商品名は自由記入可。AND/OR トグルは検索バー内に存続。
  *
  * Note:
  *   - 本 spec は `/api/v1/inventory/search` を Playwright route で mock 化する。
  *   - 実 PG 横断 / ranking / pg_trgm の SLO 検証は backend/tests/test_inventory_search*.py で実施。
- *   - QuoteCreatePage への組み込み骨格と UI 動作 (キーボード操作 / トグル / 警告) を確認する。
  */
 
 import { expect, test } from "@playwright/test";
@@ -68,7 +66,6 @@ async function setupQuoteCreatePageMocks(page: import("@playwright/test").Page) 
     "GET /products": [],
     "GET /companies": [],
     "GET /contacts": [],
-    // 検索 q を含む URL は wildcard で受ける必要があるため key を method+path のみで対応:
     "GET /inventory/search": (route) => {
       const url = new URL(route.request().url());
       const q = url.searchParams.get("q") || "";
@@ -88,74 +85,61 @@ async function setupQuoteCreatePageMocks(page: import("@playwright/test").Page) 
   });
 }
 
-test.describe("Sprint 7 / F7 — QuoteCreatePage InventorySearchBar UI smoke", () => {
+test.describe("ADR-093 — QuoteCreatePage 検索して追加 UI smoke", () => {
   test("検索バーが描画され placeholder が i18n 経由", async ({ page }) => {
     await setupQuoteCreatePageMocks(page);
     await page.goto("/quotes/new");
 
-    const input = page.getByTestId("quote-inventory-search-0-input");
+    // 既定で「検索して追加」モード → 検索バーが表示される
+    const input = page.getByTestId("quote-add-search-input");
     await expect(input).toBeVisible({ timeout: 20_000 });
-    // placeholder は ja.json の inventory.search.placeholder を表示するはず
     const placeholder = await input.getAttribute("placeholder");
     expect(placeholder).toBeTruthy();
     expect(placeholder!.length).toBeGreaterThan(0);
   });
 
-  test("AC7.7 / AC7.8: AND/OR トグルが UI 上でクリック可能", async ({ page }) => {
+  test("AND/OR トグルが UI 上でクリック可能", async ({ page }) => {
     await setupQuoteCreatePageMocks(page);
     await page.goto("/quotes/new");
 
-    const input = page.getByTestId("quote-inventory-search-0-input");
-    const orBtn = page.getByTestId("quote-inventory-search-0-op-or");
-    const andBtn = page.getByTestId("quote-inventory-search-0-op-and");
+    const input = page.getByTestId("quote-add-search-input");
+    const orBtn = page.getByTestId("quote-add-search-op-or");
+    const andBtn = page.getByTestId("quote-add-search-op-and");
     await expect(orBtn).toBeVisible({ timeout: 20_000 });
     await expect(andBtn).toBeVisible();
     await expect(orBtn).toHaveAttribute("aria-pressed", "true");
 
-    // QA r6 PR-3: 1 単語入力では AND/OR トグルは disable される (1 単語では
-    // tokens.length === 1 で AND/OR どちらも同じ結果になるため UX 改善)。
-    // 2 単語以上のときに切替できることを検証する。
+    // 1 単語では AND/OR は同義のため disable。2 単語以上で切替可能。
     await input.fill("リザードン ex");
-
     await andBtn.click();
     await expect(andBtn).toHaveAttribute("aria-pressed", "true");
     await expect(orBtn).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("AC7.4 / AC7.5: 候補選択 → 行の name input が標準名で埋まり、在庫 0 行は警告が出る", async ({ page }) => {
+  test("候補選択 → 明細に行が追加され、在庫 0 行は警告が出る", async ({ page }) => {
     await setupQuoteCreatePageMocks(page);
     await page.goto("/quotes/new");
 
-    const input = page.getByTestId("quote-inventory-search-0-input");
+    const input = page.getByTestId("quote-add-search-input");
     await input.fill("リザードン");
-    // debounce 250ms
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(400); // debounce 250ms
 
-    // 候補リスト
-    const result0 = page.getByTestId("quote-inventory-search-0-result-0");
+    const result0 = page.getByTestId("quote-add-search-result-0");
     await expect(result0).toBeVisible();
-    const result0Name = page.getByTestId("quote-inventory-search-0-result-0-name");
-    await expect(result0Name).toContainText("リザードン ex SAR (in-stock)");
+    await expect(page.getByTestId("quote-add-search-result-0-name")).toContainText(
+      "リザードン ex SAR (in-stock)",
+    );
+    // 在庫 0 の候補は data-zero-stock=true
+    await expect(page.getByTestId("quote-add-search-result-1")).toHaveAttribute("data-zero-stock", "true");
 
-    // 在庫 0 の row は data-zero-stock=true
-    const result1 = page.getByTestId("quote-inventory-search-0-result-1");
-    await expect(result1).toHaveAttribute("data-zero-stock", "true");
-
-    // in-stock を選択
+    // in-stock を選択 → 既存の空行(0)に続けて行(1)が追加され、標準名が入る
     await result0.click();
+    await expect(page.getByTestId("quote-item-row-1-name")).toHaveValue("リザードン ex SAR (in-stock)");
 
-    // AC7.4: 行の name 列に標準名が入る
-    const nameInput = page.getByTestId("quote-item-row-0-name");
-    await expect(nameInput).toHaveValue("リザードン ex SAR (in-stock)");
-
-    // 再度 search → zero-stock を選択
+    // 再検索 → zero-stock を選択 → さらに行(2)が追加され、警告が表示される
     await input.fill("リザードン");
     await page.waitForTimeout(400);
-    const result1b = page.getByTestId("quote-inventory-search-0-result-1");
-    await result1b.click();
-
-    // AC7.5: zero-stock warning が QuoteCreatePage 行内に表示される
-    const warning = page.getByTestId("quote-item-row-0-zero-stock-warning");
-    await expect(warning).toBeVisible();
+    await page.getByTestId("quote-add-search-result-1").click();
+    await expect(page.getByTestId("quote-item-row-2-zero-stock-warning")).toBeVisible();
   });
 });
