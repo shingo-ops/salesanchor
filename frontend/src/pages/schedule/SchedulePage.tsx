@@ -27,7 +27,6 @@ import type { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/co
 import "../schedule.css";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
-import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { GoogleCalendarStatusBar, type SyncStatus } from "../../components/GoogleCalendarStatusBar";
 import { X, INBOX_ACTION_ICONS, SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 
@@ -47,6 +46,7 @@ interface AppEvent {
   source: "app" | "google";
   sync_status: "synced" | "pending" | "failed";
   created_by_user_id: number;
+  created_by_name?: string | null;
 }
 
 interface Shift {
@@ -290,10 +290,9 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
 
 interface EventDetailPopoverProps {
   event: CalEvent;
-  x: number;
-  y: number;
-  staffName: string | null;
-  selfStaffId: number | null;
+  anchorLeft: number;
+  anchorRight: number;
+  anchorTop: number;
   canEdit: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -301,7 +300,7 @@ interface EventDetailPopoverProps {
 }
 
 function EventDetailPopover({
-  event, x, y, staffName, selfStaffId, canEdit, onClose, onEdit, onDelete,
+  event, anchorLeft, anchorRight, anchorTop, canEdit, onClose, onEdit, onDelete,
 }: EventDetailPopoverProps) {
   const { t } = useTranslation();
   const [deleting, setDeleting] = useState(false);
@@ -309,7 +308,7 @@ function EventDetailPopover({
 
   const isShift = event.source === "shift";
   const editable = canEdit && !isShift;
-  const organizer = event.raw?.created_by_user_id === selfStaffId ? staffName : null;
+  const organizer = event.raw?.created_by_name ?? null;
   const isAllDay = event.raw?.is_all_day ?? false;
 
   const dateLabel = new Intl.DateTimeFormat("ja-JP", {
@@ -319,9 +318,17 @@ function EventDetailPopover({
     ? dateLabel
     : `${dateLabel} ${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(event.start)}–${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(event.end)}`;
 
+  // イベント要素の左上に配置（左に収まらない場合は右に）
   const POPOVER_W = 280;
-  const safeX = Math.min(x + 12, window.innerWidth - POPOVER_W - 16);
-  const safeY = Math.max(Math.min(y - 40, window.innerHeight - 220 - 16), 16);
+  const MARGIN = 8;
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+  let safeX = anchorLeft - POPOVER_W - MARGIN;
+  if (safeX < MARGIN) {
+    safeX = Math.min(anchorRight + MARGIN, viewportW - POPOVER_W - MARGIN);
+  }
+  safeX = Math.max(MARGIN, safeX);
+  const safeY = Math.max(MARGIN, Math.min(anchorTop, viewportH - 220 - MARGIN));
 
   const EditIcon   = SCHEDULE_POPOVER_ICONS.edit;
   const DeleteIcon = SCHEDULE_POPOVER_ICONS.delete;
@@ -406,7 +413,6 @@ function EventDetailPopover({
 export default function SchedulePage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const { staffName, selfStaffId } = useUiPrefs();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = hasPermission("channels.manage");
@@ -423,7 +429,12 @@ export default function SchedulePage() {
   const [modalEvent, setModalEvent] = useState<CalEvent | null>(null);
   const [isNewEvent, setIsNewEvent] = useState(false);
   const [newSlot, setNewSlot] = useState<{ start: Date; end: Date } | null>(null);
-  const [popoverState, setPopoverState] = useState<{ event: CalEvent; x: number; y: number } | null>(null);
+  const [popoverState, setPopoverState] = useState<{
+    event: CalEvent;
+    anchorLeft: number;
+    anchorRight: number;
+    anchorTop: number;
+  } | null>(null);
 
   const loadingRef = useRef(false);
 
@@ -563,10 +574,12 @@ export default function SchedulePage() {
       source: arg.event.extendedProps.source as "app" | "google" | "shift",
       raw: arg.event.extendedProps.raw as AppEvent | undefined,
     };
+    const rect = arg.el.getBoundingClientRect();
     setPopoverState({
       event: calEvent,
-      x: arg.jsEvent?.clientX ?? window.innerWidth / 2,
-      y: arg.jsEvent?.clientY ?? window.innerHeight / 2,
+      anchorLeft: rect.left,
+      anchorRight: rect.right,
+      anchorTop: rect.top,
     });
     setModalEvent(null);
     setIsNewEvent(false);
@@ -739,10 +752,9 @@ export default function SchedulePage() {
       {popoverState && (
         <EventDetailPopover
           event={popoverState.event}
-          x={popoverState.x}
-          y={popoverState.y}
-          staffName={staffName}
-          selfStaffId={selfStaffId}
+          anchorLeft={popoverState.anchorLeft}
+          anchorRight={popoverState.anchorRight}
+          anchorTop={popoverState.anchorTop}
           canEdit={canManage}
           onClose={() => setPopoverState(null)}
           onEdit={handlePopoverEdit}
