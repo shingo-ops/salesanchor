@@ -27,8 +27,9 @@ import type { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/co
 import "../schedule.css";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { GoogleCalendarStatusBar, type SyncStatus } from "../../components/GoogleCalendarStatusBar";
-import { X, INBOX_ACTION_ICONS } from "../../constants/icons";
+import { X, INBOX_ACTION_ICONS, SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -284,12 +285,128 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
 }
 
 // ---------------------------------------------------------------------------
+// EventDetailPopover
+// ---------------------------------------------------------------------------
+
+interface EventDetailPopoverProps {
+  event: CalEvent;
+  x: number;
+  y: number;
+  staffName: string | null;
+  selfStaffId: number | null;
+  canEdit: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: (id: string) => Promise<void>;
+}
+
+function EventDetailPopover({
+  event, x, y, staffName, selfStaffId, canEdit, onClose, onEdit, onDelete,
+}: EventDetailPopoverProps) {
+  const { t } = useTranslation();
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isShift = event.source === "shift";
+  const editable = canEdit && !isShift;
+  const organizer = event.raw?.created_by_user_id === selfStaffId ? staffName : null;
+  const isAllDay = event.raw?.is_all_day ?? false;
+
+  const dateLabel = new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric", month: "long", day: "numeric", weekday: "narrow",
+  }).format(event.start);
+  const timeLabel = isAllDay
+    ? dateLabel
+    : `${dateLabel} ${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(event.start)}–${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(event.end)}`;
+
+  const POPOVER_W = 280;
+  const safeX = Math.min(x + 12, window.innerWidth - POPOVER_W - 16);
+  const safeY = Math.max(Math.min(y - 40, window.innerHeight - 220 - 16), 16);
+
+  const EditIcon   = SCHEDULE_POPOVER_ICONS.edit;
+  const DeleteIcon = SCHEDULE_POPOVER_ICONS.delete;
+  const CloseIcon  = SCHEDULE_POPOVER_ICONS.close;
+
+  const handleDelete = async () => {
+    if (!event.id) return;
+    setDeleting(true);
+    try {
+      await onDelete(event.id);
+      onClose();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="event-popover-backdrop" onClick={onClose} />
+      <div
+        className="event-popover"
+        style={{ left: safeX, top: safeY }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="event-popover__header">
+          <div className="event-popover__actions">
+            {editable && (
+              <button
+                className="modal-icon-btn"
+                onClick={onEdit}
+                aria-label={t("schedule.editEvent")}
+                title={t("schedule.editEvent")}
+              >
+                <EditIcon size={18} />
+              </button>
+            )}
+            {editable && !confirmDelete && (
+              <button
+                className="modal-icon-btn modal-icon-btn--danger"
+                onClick={() => setConfirmDelete(true)}
+                aria-label={t("schedule.deleteEvent")}
+                title={t("schedule.deleteEvent")}
+              >
+                <DeleteIcon size={18} />
+              </button>
+            )}
+            <button className="modal-icon-btn" onClick={onClose} aria-label={t("common.close")}>
+              <CloseIcon size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="event-popover__body">
+          <p className="event-popover__title">{event.title || t("schedule.noTitle")}</p>
+          <p className="event-popover__time">{timeLabel}</p>
+          {organizer && <p className="event-popover__organizer">{organizer}</p>}
+          {isShift && <p className="event-popover__badge">({t("schedule.shiftLabel")})</p>}
+        </div>
+
+        {confirmDelete && (
+          <div className="event-popover__delete-confirm">
+            <span className="event-popover__delete-text">{t("schedule.deleteEventConfirm")}</span>
+            <div className="event-popover__delete-actions">
+              <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
+                {deleting ? t("common.saving") : t("common.delete")}
+              </button>
+              <button className="btn-secondary" onClick={() => setConfirmDelete(false)}>
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // SchedulePage
 // ---------------------------------------------------------------------------
 
 export default function SchedulePage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const { staffName, selfStaffId } = useUiPrefs();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const canManage = hasPermission("channels.manage");
@@ -306,6 +423,7 @@ export default function SchedulePage() {
   const [modalEvent, setModalEvent] = useState<CalEvent | null>(null);
   const [isNewEvent, setIsNewEvent] = useState(false);
   const [newSlot, setNewSlot] = useState<{ start: Date; end: Date } | null>(null);
+  const [popoverState, setPopoverState] = useState<{ event: CalEvent; x: number; y: number } | null>(null);
 
   const loadingRef = useRef(false);
 
@@ -435,16 +553,31 @@ export default function SchedulePage() {
     calendarRef.current?.getApi().changeView(viewName);
   };
 
-  // イベントクリック → モーダル表示
+  // イベントクリック → 詳細ポップオーバー表示（編集はポップオーバーから遷移）
   const handleEventClick = (arg: EventClickArg) => {
-    setModalEvent({
+    const calEvent: CalEvent = {
       id: arg.event.id,
       title: arg.event.title,
       start: arg.event.start ?? new Date(),
       end: arg.event.end ?? arg.event.start ?? new Date(),
       source: arg.event.extendedProps.source as "app" | "google" | "shift",
       raw: arg.event.extendedProps.raw as AppEvent | undefined,
+    };
+    setPopoverState({
+      event: calEvent,
+      x: arg.jsEvent?.clientX ?? window.innerWidth / 2,
+      y: arg.jsEvent?.clientY ?? window.innerHeight / 2,
     });
+    setModalEvent(null);
+    setIsNewEvent(false);
+    setNewSlot(null);
+  };
+
+  // ポップオーバーの「編集」→ 編集モーダルへ遷移
+  const handlePopoverEdit = () => {
+    if (!popoverState) return;
+    setModalEvent(popoverState.event);
+    setPopoverState(null);
     setIsNewEvent(false);
     setNewSlot(null);
   };
@@ -602,7 +735,22 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* イベントモーダル */}
+      {/* イベント詳細ポップオーバー（既存イベントクリック時） */}
+      {popoverState && (
+        <EventDetailPopover
+          event={popoverState.event}
+          x={popoverState.x}
+          y={popoverState.y}
+          staffName={staffName}
+          selfStaffId={selfStaffId}
+          canEdit={canManage}
+          onClose={() => setPopoverState(null)}
+          onEdit={handlePopoverEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* イベント編集モーダル（新規作成 or ポップオーバーから遷移） */}
       {(modalEvent || isNewEvent) && (
         <EventModal
           event={modalEvent}
