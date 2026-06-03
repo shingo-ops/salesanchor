@@ -22,7 +22,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 # knowledge_rules
 # ============================================================================
 
-_VALID_PATTERN_TYPES = {"regex", "exact", "prefix", "suffix", "contains"}
+# パーサ実装 + DB CHECK 制約(knowledge_rules_pattern_type_check) と一致させる。
+# regex / prefix / substring / exact のみが inventory_parser で実装されている。
+# （旧値 suffix / contains は未実装かつ DB 制約違反になるため廃止。部分一致 = substring）
+_VALID_PATTERN_TYPES = {"regex", "exact", "prefix", "substring"}
 
 
 class KnowledgeRuleBase(BaseModel):

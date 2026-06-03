@@ -1474,8 +1474,7 @@
         "regex": "Regex",
         "exact": "Exact match",
         "prefix": "Prefix match",
-        "suffix": "Suffix match",
-        "contains": "Contains"
+        "substring": "Substring"
       },
       "fields": {
         "category": "Category",

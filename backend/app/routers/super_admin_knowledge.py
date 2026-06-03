@@ -106,10 +106,15 @@ async def create_rule(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
-        )
+        # 生の DB エラーは出さず、原因が分かる日本語メッセージを返す。
+        text_orig = str(getattr(exc, "orig", exc))
+        if "pattern_type" in text_orig:
+            detail = "一致方法の値が不正です（正規表現 / 完全一致 / 前方一致 / 部分一致 のいずれかを選択してください）。"
+        elif "unique" in text_orig.lower() or "duplicate" in text_orig.lower():
+            detail = "同じ内容のルールが既に登録されています。"
+        else:
+            detail = "ルールを保存できませんでした。入力内容を確認してください。"
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
     row = result.mappings().first()
     await db.commit()
     return KnowledgeRuleResponse(**dict(row))
