@@ -966,6 +966,7 @@
     "outOfStockTooltip": "Out of stock — requires reorder or replenishment",
     "pageLabel": "Page {{page}} ({{count}} items)",
     "field": {
+      "productKind": "Product type",
       "category": "TCG series",
       "mark": "Mark",
       "cardNumber": "Card Number",
@@ -976,6 +977,7 @@
       "publishStatus": "Publish Status"
     },
     "masterCol": {
+      "productKind": "Product type",
       "category": "TCG series",
       "mark": "Mark",
       "titleJa": "Title (JA)",

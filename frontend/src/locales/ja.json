@@ -966,6 +966,7 @@
     "outOfStockTooltip": "在庫切れ — 仕入元の発注または在庫補充が必要です",
     "pageLabel": "{{page}} ページ目 ({{count}} 件表示中)",
     "field": {
+      "productKind": "商品種類",
       "category": "TCGシリーズ",
       "mark": "型番",
       "cardNumber": "カード番号",
@@ -976,6 +977,7 @@
       "publishStatus": "公開状態"
     },
     "masterCol": {
+      "productKind": "商品種類",
       "category": "TCGシリーズ",
       "mark": "型番",
       "titleJa": "日本語タイトル",
