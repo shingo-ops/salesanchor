@@ -56,6 +56,8 @@ _UPDATABLE_COLUMNS = {
     "jan_code", "card_number", "expansion_code", "rarity", "language",
     "unit_price_usd", "unit_price_eur", "image_url",
     "is_archived", "supplier_default_id",
+    # ADR-093: 商品種類（最上位ジャンル区分）
+    "product_kind",
     # ADR-090 PR5a: TCG 種別マスタ統一
     "tcg_type",
     # ADR-090 PR5b: 取引単位（Box/Case 等）
@@ -91,7 +93,9 @@ def _select_columns(ctx: dict[str, str]) -> str:
         # ADR-093 Phase 1: 商品マスタ全項目
         "boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg, "
         "volume_weight, moq, hs_code, material, item, required_output_value, "
-        "search_keywords, exclude_keywords, related_series, category_classification"
+        "search_keywords, exclude_keywords, related_series, category_classification, "
+        # ADR-093: 商品種類（最上位ジャンル区分。値='TCG' 等）
+        "product_kind"
     )
 
 
@@ -246,7 +250,7 @@ async def create_product(
                 boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg,
                 volume_weight, moq, hs_code, material, item,
                 required_output_value, search_keywords, exclude_keywords,
-                related_series, category_classification
+                related_series, category_classification, product_kind
             ) VALUES (
                 :tenant_id, :name_ja, :name_en, :category, :mark,
                 :status, :condition, :unit_price, :quantity, :weight,
@@ -257,7 +261,7 @@ async def create_product(
                 :boxes_per_case, :packs_per_box, :box_weight_kg, :case_weight_kg,
                 :volume_weight, :moq, :hs_code, :material, :item,
                 :required_output_value, :search_keywords, :exclude_keywords,
-                :related_series, :category_classification
+                :related_series, :category_classification, :product_kind
             ) RETURNING id
         """),
         payload,
