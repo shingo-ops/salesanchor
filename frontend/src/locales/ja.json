@@ -792,7 +792,11 @@
       "suppliers": "仕入元の表示／非表示",
       "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",
-      "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）"
+      "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）",
+      "displayConditions": "表示条件",
+      "displayConditionsNote": "選択した条件に一致する行だけを表示します（各項目で未選択なら全件）。",
+      "min": "以上",
+      "max": "以下"
     },
     "search": {
       "placeholder": "商品名・カード番号・JAN・型番・仕入元 alias で検索",
@@ -1454,24 +1458,36 @@
       "llmBudget": "LLM 予算"
     },
     "knowledge": {
-      "title": "正規化辞書 (knowledge_rules) + 仕入元別名 (supplier_aliases)",
+      "title": "正規化ルール + 仕入元個別ルール",
       "promptSection": "仕入先別 解析プロンプト（使用保留中）",
       "promptHelp": "仕入先ごとに Gemini 解析用プロンプトを管理します（スプレッドシートから取込済み）。",
       "promptPlaceholder": "この仕入先の Gemini 解析プロンプトを入力",
       "rulesSection": "正規化ルール",
-      "aliasesSection": "仕入元別名",
+      "rulesHelp": "受信通知に含まれるワードを、別のワードに自動変換するルールです。",
+      "aliasesSection": "仕入元個別ルール",
+      "aliasesHelp": "受信通知に出てくる仕入元の呼び名（別名）を、どの仕入元として解析するか登録します。",
       "newRule": "ルール新規作成",
-      "newAlias": "別名新規作成",
+      "newAlias": "個別ルール新規作成",
+      "selectSupplier": "仕入元を選択してください",
+      "bulkDeleteConfirm": "選択した {{count}} 件を削除します。よろしいですか？",
+      "patternTypes": {
+        "regex": "正規表現",
+        "exact": "完全一致",
+        "prefix": "前方一致",
+        "suffix": "後方一致",
+        "contains": "部分一致"
+      },
       "fields": {
         "category": "カテゴリ",
-        "patternType": "パターン種別",
-        "pattern": "パターン",
-        "normalizedTo": "正規化先",
+        "patternType": "一致方法",
+        "pattern": "変換前ワード",
+        "normalizedTo": "変換後ワード",
         "priority": "優先度",
         "language": "言語",
         "isActive": "有効",
         "supplierId": "仕入元 ID",
-        "aliasText": "別名テキスト"
+        "supplierName": "解析する仕入元",
+        "aliasText": "受信通知のワード"
       },
       "csvImport": "CSV インポート",
       "csvExport": "CSV エクスポート",

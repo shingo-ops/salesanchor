@@ -43,3 +43,47 @@ class TestMeInventoryFilters:
             json={"hidden_supplier_ids": ["not-a-number"]},
         )
         assert res.status_code == 422
+
+    async def test_patch_display_conditions_echoes(self, client):
+        """ADR-093 表示条件（状態/形態/区分 + 数量/単価範囲）も受領値を返す。"""
+        res = await client.patch(
+            "/api/v1/me/inventory-filters",
+            json={
+                "enabled": True,
+                "show_conditions": ["sealed", "shrink"],
+                "show_units": ["box", "case"],
+                "show_offer_types": ["in_stock"],
+                "qty_min": 1,
+                "qty_max": 100,
+                "price_min": 500,
+                "price_max": 9999,
+            },
+        )
+        assert res.status_code == 200
+        d = res.json()
+        assert d["show_conditions"] == ["sealed", "shrink"]
+        assert d["show_units"] == ["box", "case"]
+        assert d["show_offer_types"] == ["in_stock"]
+        assert d["qty_min"] == 1
+        assert d["qty_max"] == 100
+        assert d["price_min"] == 500
+        assert d["price_max"] == 9999
+
+    async def test_patch_negative_qty_min_422(self, client):
+        """qty_min が負 → 422（ge=0 バリデーション）。"""
+        res = await client.patch(
+            "/api/v1/me/inventory-filters",
+            json={"qty_min": -1},
+        )
+        assert res.status_code == 422
+
+    async def test_get_default_display_conditions(self, client):
+        """未設定ユーザーは表示条件もデフォルト（空配列 / None）。"""
+        res = await client.get("/api/v1/me/inventory-filters")
+        assert res.status_code == 200
+        d = res.json()
+        assert d["show_conditions"] == []
+        assert d["show_units"] == []
+        assert d["show_offer_types"] == []
+        assert d["qty_min"] is None
+        assert d["price_max"] is None

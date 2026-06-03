@@ -792,7 +792,11 @@
       "suppliers": "Show / hide suppliers",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",
-      "columnsNote": "Choose which columns appear in the table (not a data filter)."
+      "columnsNote": "Choose which columns appear in the table (not a data filter).",
+      "displayConditions": "Display conditions",
+      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all).",
+      "min": "Min",
+      "max": "Max"
     },
     "search": {
       "placeholder": "Search by product name, card number, JAN, expansion code, or supplier alias",
@@ -1454,24 +1458,36 @@
       "llmBudget": "LLM Budget"
     },
     "knowledge": {
-      "title": "Normalization Rules (knowledge_rules) + Supplier Aliases",
+      "title": "Normalization Rules + Per-Supplier Rules",
       "promptSection": "Per-Supplier Parsing Prompt (on hold)",
       "promptHelp": "Manage the Gemini parsing prompt per supplier (imported from the spreadsheet).",
       "promptPlaceholder": "Enter the Gemini parsing prompt for this supplier",
       "rulesSection": "Normalization Rules",
-      "aliasesSection": "Supplier Aliases",
+      "rulesHelp": "Rules that automatically convert a word found in an inbound message into another word.",
+      "aliasesSection": "Per-Supplier Rules",
+      "aliasesHelp": "Register which supplier an alias (a supplier nickname seen in inbound messages) should be parsed as.",
       "newRule": "New Rule",
-      "newAlias": "New Alias",
+      "newAlias": "New Per-Supplier Rule",
+      "selectSupplier": "Please select a supplier",
+      "bulkDeleteConfirm": "Delete the {{count}} selected items. Are you sure?",
+      "patternTypes": {
+        "regex": "Regex",
+        "exact": "Exact match",
+        "prefix": "Prefix match",
+        "suffix": "Suffix match",
+        "contains": "Contains"
+      },
       "fields": {
         "category": "Category",
-        "patternType": "Pattern Type",
-        "pattern": "Pattern",
-        "normalizedTo": "Normalized To",
+        "patternType": "Match method",
+        "pattern": "From word",
+        "normalizedTo": "To word",
         "priority": "Priority",
         "language": "Language",
         "isActive": "Active",
         "supplierId": "Supplier ID",
-        "aliasText": "Alias Text"
+        "supplierName": "Parse as supplier",
+        "aliasText": "Inbound word"
       },
       "csvImport": "CSV Import",
       "csvExport": "CSV Export",

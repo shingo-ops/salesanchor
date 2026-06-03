@@ -175,6 +175,9 @@ class InventoryListResponse(BaseModel):
     suppliers: list[InventorySupplierFacet] = []
     # ADR-093 在庫表改修: フィルタ UI 用のカテゴリー一覧（在庫オファーに存在するカテゴリー）。
     categories: list[str] = []
+    # ADR-093 表示条件: 在庫オファーに存在する状態(condition)・形態(unit)の一覧（複数選択 UI 用）。
+    conditions: list[str] = []
+    units: list[str] = []
 
 
 __all__ = [

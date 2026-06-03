@@ -130,6 +130,14 @@ async def list_inventory_view(
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
     hide_categories: str | None = Query(default=None, max_length=2000, description="非表示にするカテゴリーのCSV（ユーザー別フィルタ用）"),
+    # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
+    condition_in: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)のCSV"),
+    unit_in: str | None = Query(default=None, max_length=2000, description="表示する形態(unit)のCSV"),
+    offer_type_in: str | None = Query(default=None, max_length=100, description="表示する区分(offer_type)のCSV"),
+    qty_min: int | None = Query(default=None, ge=0, description="数量の下限（以上）"),
+    qty_max: int | None = Query(default=None, ge=0, description="数量の上限（以下）"),
+    price_min: int | None = Query(default=None, ge=0, description="単価の下限（以上）"),
+    price_max: int | None = Query(default=None, ge=0, description="単価の上限（以下）"),
     sort: str = Query(
         default="name",
         pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at)$",
@@ -188,6 +196,38 @@ async def list_inventory_view(
         conditions.append(f"p.category NOT IN ({cat_ph})")
         for i, c in enumerate(hidden_cats):
             params[f"hcat{i}"] = c
+    # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN。値は bind param で SQLi 防止）。
+    cond_in = [c.strip() for c in (condition_in or "").split(",") if c.strip()]
+    if cond_in:
+        ph = ", ".join(f":cond{i}" for i in range(len(cond_in)))
+        conditions.append(f"i.condition IN ({ph})")
+        for i, c in enumerate(cond_in):
+            params[f"cond{i}"] = c
+    unit_list = [u.strip() for u in (unit_in or "").split(",") if u.strip()]
+    if unit_list:
+        ph = ", ".join(f":unit{i}" for i in range(len(unit_list)))
+        conditions.append(f"i.unit IN ({ph})")
+        for i, u in enumerate(unit_list):
+            params[f"unit{i}"] = u
+    ot_list = [o.strip() for o in (offer_type_in or "").split(",") if o.strip()]
+    if ot_list:
+        ph = ", ".join(f":ot{i}" for i in range(len(ot_list)))
+        conditions.append(f"i.offer_type IN ({ph})")
+        for i, o in enumerate(ot_list):
+            params[f"ot{i}"] = o
+    # ADR-093 表示条件: 数量/単価の範囲（以上・以下）。
+    if qty_min is not None:
+        conditions.append("i.quantity >= :qty_min")
+        params["qty_min"] = qty_min
+    if qty_max is not None:
+        conditions.append("i.quantity <= :qty_max")
+        params["qty_max"] = qty_max
+    if price_min is not None:
+        conditions.append("i.unit_price >= :price_min")
+        params["price_min"] = price_min
+    if price_max is not None:
+        conditions.append("i.unit_price <= :price_max")
+        params["price_max"] = price_max
     where = "WHERE " + " AND ".join(conditions)
     order_dir = "ASC" if order == "asc" else "DESC"
     sort_col = _SORT_COLUMNS.get(sort, "p.name")
@@ -234,6 +274,25 @@ async def list_inventory_view(
         )
     )
     categories = [r["category"] for r in cat_rows.mappings().all()]
+
+    # ADR-093 表示条件: 状態(condition)・形態(unit)ファセット（在庫品・未失効のみ。
+    # 他フィルタ非依存で全候補を返す＝複数選択チェックボックスの候補に使う）。
+    cond_rows = await db.execute(
+        text(
+            "SELECT DISTINCT i.condition AS v FROM public.inventory i "
+            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
+            "AND i.condition IS NOT NULL AND i.condition <> '' ORDER BY i.condition"
+        )
+    )
+    condition_facet = [r["v"] for r in cond_rows.mappings().all()]
+    unit_rows = await db.execute(
+        text(
+            "SELECT DISTINCT i.unit AS v FROM public.inventory i "
+            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
+            "AND i.unit IS NOT NULL AND i.unit <> '' ORDER BY i.unit"
+        )
+    )
+    unit_facet = [r["v"] for r in unit_rows.mappings().all()]
     return InventoryListResponse(
         items=items,
         total=int(total or 0),
@@ -241,6 +300,8 @@ async def list_inventory_view(
         per_page=per_page,
         suppliers=suppliers,
         categories=categories,
+        conditions=condition_facet,
+        units=unit_facet,
     )
 
 
