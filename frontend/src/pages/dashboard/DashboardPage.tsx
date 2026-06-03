@@ -398,18 +398,6 @@ export default function DashboardPage() {
       subtitleKey="dashboard.subtitle"
       headerAction={
         <div className="page-header-actions">
-          <select
-            className="page-header-select"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as Period)}
-            aria-label={t("dashboard.periodLabel")}
-          >
-            <option value="1w">{t("dashboard.period1w")}</option>
-            <option value="1m">{t("dashboard.period1m")}</option>
-            <option value="3m">{t("dashboard.period3m")}</option>
-            <option value="6m">{t("dashboard.period6m")}</option>
-            <option value="12m">{t("dashboard.period12m")}</option>
-          </select>
           <div className="db-tabs">
             <button
               type="button"
@@ -433,6 +421,18 @@ export default function DashboardPage() {
               {t("dashboard.tabTeam")}
             </button>
           </div>
+          <select
+            className="page-header-select"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as Period)}
+            aria-label={t("dashboard.periodLabel")}
+          >
+            <option value="1w">{t("dashboard.period1w")}</option>
+            <option value="1m">{t("dashboard.period1m")}</option>
+            <option value="3m">{t("dashboard.period3m")}</option>
+            <option value="6m">{t("dashboard.period6m")}</option>
+            <option value="12m">{t("dashboard.period12m")}</option>
+          </select>
         </div>
       }
     >
