@@ -75,6 +75,8 @@ import {
   ChatBubbleOvalLeftIcon as ChatBubbleOvalLeftOutlineIcon,
   TruckIcon as TruckOutlineIcon,
   Cog8ToothIcon as Cog8ToothOutlineIcon,
+  PencilSquareIcon as PencilSquareOutlineIcon,
+  TrashIcon as TrashOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -157,7 +159,9 @@ const SignOut           = hi(ArrowRightOnRectangleIcon);
 const SlidersHorizontal = hi(AdjustmentsHorizontalIcon);
 const MagnifyingGlass   = hi(MagnifyingGlassIcon);
 const XOutline          = hi(XMarkOutlineIcon);
-const GearEightOutline  = hi(Cog8ToothOutlineIcon);
+const GearEightOutline    = hi(Cog8ToothOutlineIcon);
+const PencilSquareOutline = hi(PencilSquareOutlineIcon);
+const TrashOutline        = hi(TrashOutlineIcon);
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -333,6 +337,13 @@ export const INBOX_ACTION_ICONS = {
   translate:  Languages,       // LanguageIcon      — AI翻訳（ADR-088）
   send:       PaperAirplane,   // PaperAirplaneIcon — 送信ボタン（solid）
   attach:     Paperclip,       // PaperClipIcon     — 画像添付ボタン
+} satisfies Record<string, Icon>;
+
+// スケジュールポップオーバー用（outline バリアント — Google Calendar 準拠）
+export const SCHEDULE_POPOVER_ICONS = {
+  edit:   PencilSquareOutline,  // PencilSquareIcon outline
+  delete: TrashOutline,         // TrashIcon outline
+  close:  XOutline,             // XMarkIcon outline
 } satisfies Record<string, Icon>;
 
 // Layout.tsx の /lead-chat ナビアイテム用（outline バリアント — サイドバー統一仕様）
