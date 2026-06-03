@@ -1,25 +1,25 @@
 /**
- * /super-admin/inventory-offers — 仕入元現在オファー一覧・編集画面 (Sprint 11 / F11 AC11.5)。
+ * /super-admin/inventory-offers — 仕入元現在オファー一覧・編集画面 (F11 AC11.5 / ADR-093 改修)。
  *
- * spec.md v1.3 F11 / AC11.5:
+ * ADR-093 改修 (2026-06-03):
+ *   - 列順を在庫表 (/inventory) に合わせる:
+ *     カテゴリー / 型番 / 商品 / 状態 / 形態 / 区分(発送日) / 数量 / 単価 / 仕入元(掲載時刻)
+ *     ＋ admin 専用列: ステータス / ソース / 有効期限
+ *   - 一覧は閲覧専用（インライン編集を撤去）。編集はポップアップで行う。
+ *   - 「操作」列を撤去。最左にチェックボックス、ヘッダー(ツールバー)に一括「削除」。
+ *
+ * 既存仕様:
  *   - is_super_admin=true のみアクセス可 (false なら 403 メッセージ + 二重ガード)
- *   - public.inventory の現在オファーを supplier × product × condition 単位で一覧
  *   - admin は quantity / unit_price / status / notes / expires_at を編集可能
- *   - 新規追加 + 削除 (UNIQUE 衝突は 409 で fail)
- *
- * 設計判断:
- *   - 営業フロー直結のため検索 (supplier_name / product_name / product_code 部分一致)
- *     と status / condition フィルタを優先
- *   - F6 承認時の UPSERT 結果 (source='f6_approved') と manual 編集 (source='manual')
- *     が混在するため source カラムで識別可能 (read-only 表示)
- *   - UNIQUE キー (supplier_id / product_id / condition) は PATCH 不可、
- *     変更したい場合は DELETE + POST する運用
+ *   - UNIQUE キー (supplier × product × condition × unit × offer_type × ship_timing) は
+ *     PATCH 不可要素を含むため、変更は DELETE + POST する運用
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import ConfirmModal from "../../components/ConfirmModal";
 
 type InventoryStatus = "in_stock" | "out_of_stock" | "reserved" | "archived";
 
@@ -31,6 +31,7 @@ interface InventoryOffer {
   // ADR-093 Phase 3b: 区分(在庫/予約)・発送日（key 要素のため表示専用。編集は削除→再作成）
   offer_type: string;
   ship_timing: string | null;
+  unit: string | null;
   quantity: number;
   unit_price: number;
   status: InventoryStatus;
@@ -44,6 +45,11 @@ interface InventoryOffer {
   supplier_name: string | null;
   product_code: string | null;
   product_name: string | null;
+  // ADR-093: 在庫表と同じ列を出すための products 由来表示列（読取専用）
+  name_en: string | null;
+  category: string | null;
+  mark: string | null;
+  tcg_type: string | null;
 }
 
 interface InventoryOffersListResponse {
@@ -91,22 +97,43 @@ export default function InventoryOffersPage() {
   const [searchQ, setSearchQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<InventoryStatus | "">("");
   const [conditionFilter, setConditionFilter] = useState("");
-  // 入力値の debounce 反映先。テキスト入力は 250ms 待ってから API を叩く
-  // (F7 InventorySearchBar と同じ閾値)。select の statusFilter は即時。
+  // 入力値の debounce 反映先。テキスト入力は 250ms 待ってから API を叩く。select は即時。
   const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
   const [debouncedConditionFilter, setDebouncedConditionFilter] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  // 一括削除（チェックボックス選択）
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // 編集ポップアップ
+  const [editing, setEditing] = useState<InventoryOffer | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を在庫表と同じ日本語表示にするため。
+  const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
+  const tcgTypeName = useMemo(() => new Map(tcgTypes.map((tt) => [tt.code, tt.name_ja])), [tcgTypes]);
+  const categoryLabel = useCallback(
+    (o: InventoryOffer): string =>
+      (o.tcg_type ? tcgTypeName.get(o.tcg_type) : null) ?? o.category ?? "-",
+    [tcgTypeName],
+  );
 
   const totalPages = useMemo(
     () => (total === 0 ? 1 : Math.ceil(total / perPage)),
     [total, perPage],
   );
+
+  // 掲載時間: YYYY-MM-DD HH:mm
+  const fmtOfferedAt = useCallback((iso: string): string => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "-";
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -145,20 +172,39 @@ export default function InventoryOffersPage() {
     void load();
   }, [isSuperAdmin, load]);
 
-  const startEdit = (offer: InventoryOffer) => {
-    setEditingId(offer.id);
+  // 種別マスタを取得（カテゴリー列の日本語表示用）。
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let cancelled = false;
+    api
+      .get<{ code: string; name_ja: string }[]>("/products/tcg-types")
+      .then((d) => { if (!cancelled) setTcgTypes(d); })
+      .catch(() => { /* 取得失敗時は生の category 表示にフォールバック */ });
+    return () => { cancelled = true; };
+  }, [isSuperAdmin]);
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openEdit = (offer: InventoryOffer) => {
+    setEditing(offer);
     setDraft(offerToDraft(offer));
     setError("");
     setInfo("");
   };
-
   const cancelEdit = () => {
-    setEditingId(null);
+    setEditing(null);
     setDraft(null);
   };
 
-  const submitEdit = async (offerId: number) => {
-    if (!draft) return;
+  const submitEdit = async () => {
+    if (!editing || !draft) return;
     setSubmitting(true);
     setError("");
     setInfo("");
@@ -173,9 +219,9 @@ export default function InventoryOffersPage() {
         notes_en: draft.notes_en || null,
         expires_at: draft.expires_at ? `${draft.expires_at}T00:00:00Z` : null,
       };
-      await api.patch(`/super-admin/inventory-offers/${offerId}`, body);
+      await api.patch(`/super-admin/inventory-offers/${editing.id}`, body);
       setInfo(t("superAdmin.inventoryOffers.updateSuccess"));
-      setEditingId(null);
+      setEditing(null);
       setDraft(null);
       await load();
     } catch (e) {
@@ -185,30 +231,27 @@ export default function InventoryOffersPage() {
     }
   };
 
-  const deleteOffer = async (offerId: number, productName: string | null) => {
-    if (
-      !window.confirm(
-        t("superAdmin.inventoryOffers.deleteConfirm", {
-          name: productName ?? `#${offerId}`,
-        }),
-      )
-    ) {
-      return;
-    }
+  const bulkDelete = async () => {
+    setConfirmDelete(false);
     setError("");
     setInfo("");
-    try {
-      await api.delete(`/super-admin/inventory-offers/${offerId}`);
+    // 一部失敗しても残りは削除し、最後に必ず一覧を再取得して整合させる。
+    const results = await Promise.allSettled(
+      Array.from(selectedIds).map((id) => api.delete(`/super-admin/inventory-offers/${id}`)),
+    );
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length === 0) {
       setInfo(t("superAdmin.inventoryOffers.deleteSuccess"));
-      await load();
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 404) {
-        setError(t("superAdmin.inventoryOffers.notFound"));
-      } else {
-        setError(e instanceof Error ? e.message : t("common.operationError"));
-      }
+    } else if (failed.every((r) => r.reason instanceof ApiError && r.reason.status === 404)) {
+      setError(t("superAdmin.inventoryOffers.notFound"));
+    } else {
+      setError(t("common.operationError"));
     }
+    setSelectedIds(new Set());
+    await load();
   };
+
+  const c = "superAdmin.inventoryOffers.col";
 
   if (superAdminLoading) {
     return (
@@ -253,6 +296,7 @@ export default function InventoryOffersPage() {
           display: "flex",
           gap: "var(--space-2)",
           flexWrap: "wrap",
+          alignItems: "center",
           marginBottom: "var(--space-4)",
           position: "sticky",
           top: 0,
@@ -299,6 +343,17 @@ export default function InventoryOffersPage() {
           }}
           style={{ width: "10rem" }}
         />
+        {/* 一括削除: チェックした行をまとめて削除 */}
+        <button
+          type="button"
+          className="btn-danger btn-sm"
+          data-testid="offers-bulk-delete"
+          disabled={selectedIds.size === 0}
+          onClick={() => setConfirmDelete(true)}
+          style={{ marginLeft: "auto" }}
+        >
+          {t("common.delete")}
+        </button>
       </section>
 
       {/* レイアウトシフト防止: loading 中も DOM に残し、visibility だけ切り替える */}
@@ -315,182 +370,112 @@ export default function InventoryOffersPage() {
         {t("common.loading")}
       </div>
 
-      <table
-        className="data-table offers-table-styled"
-        data-testid="offers-table"
-        aria-busy={loading}
-      >
-        <thead>
-          <tr>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.supplier")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.product")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.condition")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.offerType")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.shipTiming")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.quantity")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.unitPrice")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.status")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.source")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.expiresAt")}</th>
-            <th style={{ textAlign: "center" }}>{t("superAdmin.inventoryOffers.col.actions")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.length === 0 ? (
+      <div style={{ overflowX: "auto" }}>
+        <table
+          className="data-table offers-table-styled"
+          data-testid="offers-table"
+          aria-busy={loading}
+        >
+          <thead>
             <tr>
-              <td colSpan={11} data-testid="offers-empty">
-                {t("superAdmin.inventoryOffers.noResults")}
-              </td>
+              <th style={{ width: "var(--col-width-checkbox)", textAlign: "center" }} aria-label={t("common.select")}></th>
+              <th>{t(`${c}.category`)}</th>
+              <th>{t(`${c}.mark`)}</th>
+              <th>{t(`${c}.product`)}</th>
+              <th>{t(`${c}.condition`)}</th>
+              <th>{t(`${c}.unit`)}</th>
+              <th>{t(`${c}.offerType`)}</th>
+              <th style={{ textAlign: "right" }}>{t(`${c}.quantity`)}</th>
+              <th style={{ textAlign: "right" }}>{t(`${c}.unitPrice`)}</th>
+              <th>{t(`${c}.supplier`)}</th>
+              <th>{t(`${c}.status`)}</th>
+              <th>{t(`${c}.source`)}</th>
+              <th>{t(`${c}.expiresAt`)}</th>
+              <th></th>
             </tr>
-          ) : (
-            items.map((o) => {
-              const isEditing = editingId === o.id;
-              return (
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={14} data-testid="offers-empty">
+                  {t("superAdmin.inventoryOffers.noResults")}
+                </td>
+              </tr>
+            ) : (
+              items.map((o) => (
                 <tr key={o.id} data-testid={`offers-row-${o.id}`}>
-                  <td>{o.supplier_name ?? `#${o.supplier_id}`}</td>
-                  <td>
-                    <div>{o.product_name ?? `#${o.product_id}`}</div>
-                    {o.product_code && (
-                      <code style={{ fontSize: "0.85em", color: "var(--color-muted)" }}>
-                        {o.product_code}
-                      </code>
-                    )}
-                  </td>
-                  <td>
-                    <code>{o.condition}</code>
-                  </td>
-                  {/* ADR-093 Phase 3b: 区分/発送日（表示専用） */}
                   <td style={{ textAlign: "center" }}>
-                    {t(`inventory.offerType.${o.offer_type}`, { defaultValue: o.offer_type })}
-                  </td>
-                  <td style={{ textAlign: "center" }}>
-                    {o.ship_timing
-                      ? t(`inventory.shipTiming.${o.ship_timing}`, { defaultValue: o.ship_timing })
-                      : "-"}
-                  </td>
-                  <td>
-                    {isEditing && draft ? (
-                      <input
-                        type="number"
-                        min="0"
-                        data-testid={`offers-row-${o.id}-quantity`}
-                        value={draft.quantity}
-                        onChange={(e) =>
-                          setDraft({ ...draft, quantity: e.target.value })
-                        }
-                        style={{ width: "5rem" }}
-                      />
-                    ) : (
-                      o.quantity
-                    )}
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(o.id)}
+                      onChange={() => toggleSelect(o.id)}
+                      aria-label={o.product_name ?? `#${o.product_id}`}
+                      data-testid={`offers-row-${o.id}-select`}
+                    />
                   </td>
                   <td>
-                    {isEditing && draft ? (
-                      <input
-                        type="number"
-                        min="0"
-                        data-testid={`offers-row-${o.id}-unit-price`}
-                        value={draft.unit_price}
-                        onChange={(e) =>
-                          setDraft({ ...draft, unit_price: e.target.value })
-                        }
-                        style={{ width: "6rem" }}
-                      />
+                    {o.category || o.tcg_type ? (
+                      <span className="badge">{categoryLabel(o)}</span>
                     ) : (
-                      o.unit_price.toLocaleString()
+                      "-"
                     )}
                   </td>
+                  <td>{o.mark ?? "-"}</td>
                   <td>
-                    {isEditing && draft ? (
-                      <select
-                        data-testid={`offers-row-${o.id}-status`}
-                        value={draft.status}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            status: e.target.value as InventoryStatus,
-                          })
-                        }
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {t(`superAdmin.inventoryOffers.status.${s}`)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      t(`superAdmin.inventoryOffers.status.${o.status}`)
+                    <div style={{ fontWeight: "var(--font-weight-semi)" }}>
+                      {o.product_name ?? `#${o.product_id}`}
+                    </div>
+                    {o.name_en && (
+                      <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+                        {o.name_en}
+                      </div>
                     )}
                   </td>
+                  <td>{t(`inventory.condition.${o.condition}`, { defaultValue: o.condition })}</td>
+                  <td>{o.unit ? t(`inventory.unit.${o.unit}`, { defaultValue: o.unit }) : "-"}</td>
+                  <td>
+                    {o.offer_type === "pre_order" ? (
+                      <span className="badge badge-negotiating">{t("inventory.offerType.pre_order")}</span>
+                    ) : (
+                      t("inventory.offerType.in_stock")
+                    )}
+                    {o.offer_type === "pre_order" && o.ship_timing && (
+                      <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+                        {t(`inventory.shipTiming.${o.ship_timing}`, { defaultValue: o.ship_timing })}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>{o.quantity}</td>
+                  <td style={{ textAlign: "right" }}>{o.unit_price.toLocaleString()}</td>
+                  <td>
+                    <div>{o.supplier_name ?? `#${o.supplier_id}`}</div>
+                    <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+                      {fmtOfferedAt(o.offered_at)}
+                    </div>
+                  </td>
+                  <td>{t(`superAdmin.inventoryOffers.status.${o.status}`)}</td>
                   <td>
                     <span data-testid={`offers-row-${o.id}-source`}>
-                      {t(
-                        `superAdmin.inventoryOffers.source.${o.source}`,
-                        o.source,
-                      )}
+                      {t(`superAdmin.inventoryOffers.source.${o.source}`, o.source)}
                     </span>
                   </td>
-                  <td>
-                    {isEditing && draft ? (
-                      <input
-                        type="date"
-                        data-testid={`offers-row-${o.id}-expires-at`}
-                        value={draft.expires_at}
-                        onChange={(e) =>
-                          setDraft({ ...draft, expires_at: e.target.value })
-                        }
-                      />
-                    ) : o.expires_at ? (
-                      o.expires_at.slice(0, 10)
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={() => void submitEdit(o.id)}
-                          disabled={submitting}
-                          data-testid={`offers-row-${o.id}-save`}
-                          className="btn-primary"
-                        >
-                          {t("common.save")}
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="btn-secondary"
-                          style={{ marginLeft: "var(--space-1)" }}
-                        >
-                          {t("common.cancel")}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => startEdit(o)}
-                          data-testid={`offers-row-${o.id}-edit`}
-                          className="btn-secondary"
-                        >
-                          {t("common.edit")}
-                        </button>
-                        <button
-                          onClick={() => void deleteOffer(o.id, o.product_name)}
-                          data-testid={`offers-row-${o.id}-delete`}
-                          className="btn-danger"
-                          style={{ marginLeft: "var(--space-1)" }}
-                        >
-                          {t("common.delete")}
-                        </button>
-                      </>
-                    )}
+                  <td>{o.expires_at ? o.expires_at.slice(0, 10) : "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      type="button"
+                      className="btn-sm"
+                      onClick={() => openEdit(o)}
+                      data-testid={`offers-row-${o.id}-edit`}
+                    >
+                      {t("common.edit")}
+                    </button>
                   </td>
                 </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <section
         className="offers-pagination"
@@ -500,6 +485,7 @@ export default function InventoryOffersPage() {
           display: "flex",
           gap: "var(--space-2)",
           alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <button
@@ -526,6 +512,108 @@ export default function InventoryOffersPage() {
           {t("common.next")}
         </button>
       </section>
+
+      {/* 編集ポップアップ */}
+      {editing && draft && (
+        <div className="modal-overlay" onClick={cancelEdit}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 560px)" }}>
+            <h3>{t("common.edit")}</h3>
+            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-3)" }}>
+              {editing.product_name ?? `#${editing.product_id}`}
+              {" / "}
+              {editing.supplier_name ?? `#${editing.supplier_id}`}
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submitEdit();
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
+                <div className="form-group">
+                  <label>{t(`${c}.quantity`)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    data-testid="offers-edit-quantity"
+                    value={draft.quantity}
+                    onChange={(e) => setDraft({ ...draft, quantity: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t(`${c}.unitPrice`)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    data-testid="offers-edit-unit-price"
+                    value={draft.unit_price}
+                    onChange={(e) => setDraft({ ...draft, unit_price: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t(`${c}.status`)}</label>
+                  <select
+                    data-testid="offers-edit-status"
+                    value={draft.status}
+                    onChange={(e) => setDraft({ ...draft, status: e.target.value as InventoryStatus })}
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`superAdmin.inventoryOffers.status.${s}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>{t(`${c}.expiresAt`)}</label>
+                  <input
+                    type="date"
+                    data-testid="offers-edit-expires-at"
+                    value={draft.expires_at}
+                    onChange={(e) => setDraft({ ...draft, expires_at: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                  <label>{t("superAdmin.inventoryOffers.notesJa")}</label>
+                  <input
+                    type="text"
+                    data-testid="offers-edit-notes-ja"
+                    value={draft.notes_ja}
+                    onChange={(e) => setDraft({ ...draft, notes_ja: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                  <label>{t("superAdmin.inventoryOffers.notesEn")}</label>
+                  <input
+                    type="text"
+                    data-testid="offers-edit-notes-en"
+                    value={draft.notes_en}
+                    onChange={(e) => setDraft({ ...draft, notes_en: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn-secondary" onClick={cancelEdit}>
+                  {t("common.cancel")}
+                </button>
+                <button type="submit" className="btn-primary" disabled={submitting} data-testid="offers-edit-save">
+                  {t("common.save")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={confirmDelete}
+        title={t("common.delete")}
+        message={t("superAdmin.inventoryOffers.bulkDeleteConfirm", { count: selectedIds.size })}
+        confirmLabel={t("common.delete")}
+        danger
+        onConfirm={() => void bulkDelete()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </PageLayout>
   );
 }

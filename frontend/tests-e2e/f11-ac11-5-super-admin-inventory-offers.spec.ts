@@ -33,6 +33,8 @@ const baseMocks = (isSuperAdmin: boolean): MockMap => ({
       show_sidebar: true,
     },
   },
+  // ADR-093: オファー画面はカテゴリー列の日本語表示用に種別マスタを取得する。
+  "GET /products/tcg-types": [],
 });
 
 function makeOffer(over: Partial<Record<string, unknown>> = {}) {
@@ -100,7 +102,7 @@ test.describe("Sprint 11 / F11 AC11.5 — /super-admin/inventory-offers admin CR
     await expect(page.getByTestId("offers-pagination-label")).toContainText("102");
   });
 
-  test("AC11.5: 編集ボタンで row が編集モードに → PATCH 送信 → 完了 info", async ({
+  test("AC11.5: 編集ボタンで編集ポップアップ → PATCH 送信 → 完了 info", async ({
     page,
   }) => {
     let patchBody: Record<string, unknown> | null = null;
@@ -137,15 +139,15 @@ test.describe("Sprint 11 / F11 AC11.5 — /super-admin/inventory-offers admin CR
       timeout: 15_000,
     });
 
-    // 編集モード
+    // 編集ポップアップを開く（ADR-093: インライン編集 → ポップアップ編集）
     await page.getByTestId("offers-row-1001-edit").click();
-    await expect(page.getByTestId("offers-row-1001-quantity")).toBeVisible();
-    await page.getByTestId("offers-row-1001-quantity").fill("7");
-    await page.getByTestId("offers-row-1001-unit-price").fill("2000");
-    await page.getByTestId("offers-row-1001-status").selectOption("reserved");
+    await expect(page.getByTestId("offers-edit-quantity")).toBeVisible();
+    await page.getByTestId("offers-edit-quantity").fill("7");
+    await page.getByTestId("offers-edit-unit-price").fill("2000");
+    await page.getByTestId("offers-edit-status").selectOption("reserved");
 
     // 保存
-    await page.getByTestId("offers-row-1001-save").click();
+    await page.getByTestId("offers-edit-save").click();
 
     // info 表示 + PATCH ペイロード検証
     await expect(page.getByTestId("offers-info")).toBeVisible();

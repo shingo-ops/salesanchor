@@ -41,7 +41,11 @@ _BASE_SELECT = """
            i.created_at, i.updated_at,
            s.name AS supplier_name,
            p.product_code AS product_code,
-           p.name AS product_name
+           p.name AS product_name,
+           p.name_en AS name_en,
+           p.category AS category,
+           p.mark AS mark,
+           p.tcg_type AS tcg_type
     FROM public.inventory i
     LEFT JOIN public.suppliers s ON s.id = i.supplier_id
     LEFT JOIN public.products  p ON p.id = i.product_id
