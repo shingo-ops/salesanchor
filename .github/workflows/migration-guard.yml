@@ -116,7 +116,7 @@ jobs:
             exit 1
           fi
 
-      - name: deploy.yml に psql 実行行を確認
+      - name: deploy.yml または run_all_migrations.sh に登録を確認
         if: steps.detect_sql.outputs.new_sql == 'true'
         run: |
           FAILED=0
@@ -126,11 +126,13 @@ jobs:
           for sql_path in "${SQL_FILES[@]}"; do
             fname=$(basename "$sql_path")
 
-            # deploy.yml（現在の全文）に該当ファイル名の psql 行があるか確認
-            if grep -q "< migrations/$fname" .github/workflows/deploy.yml; then
-              echo "✅ $fname → deploy.yml に登録済み"
+            # deploy.yml（旧スタイル: < migrations/$fname）または
+            # scripts/run_all_migrations.sh（新スタイル: run_sql migrations/$fname）のどちらかに登録済みか確認
+            if grep -q "< migrations/$fname" .github/workflows/deploy.yml || \
+               grep -q "migrations/$fname" scripts/run_all_migrations.sh; then
+              echo "✅ $fname → 登録済み"
             else
-              echo "❌ $fname → deploy.yml に未登録"
+              echo "❌ $fname → deploy.yml / run_all_migrations.sh のいずれにも未登録"
               FAILED=1
               MISSING_FILES="$MISSING_FILES $fname"
             fi
@@ -138,30 +140,24 @@ jobs:
 
           if [ "$FAILED" -eq 0 ]; then
             echo ""
-            echo "✅ チェック2 通過: 全 migrations/*.sql が deploy.yml に登録されています"
+            echo "✅ チェック2 通過: 全 migrations/*.sql が登録されています"
             exit 0
           fi
 
           echo ""
           echo "❌ MIGRATION GUARD FAILED (チェック2)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "以下の migrations/*.sql が .github/workflows/deploy.yml に登録されていません:"
+          echo "以下の migrations/*.sql が登録されていません:"
           echo "$MISSING_FILES"
           echo ""
-          echo "【対応手順】"
-          echo "deploy.yml の part 2 マイグレーションリストの"
-          echo "「新しいマイグレーションはここに追加」コメントの直前に以下を追記してください:"
+          echo "【対応手順】scripts/run_all_migrations.sh の末尾に以下を追記してください:"
           echo ""
           for fname in $MISSING_FILES; do
-            echo "            # Migration NNN: <変更内容を記述>"
-            echo "            #   - <設計判断・冪等性の根拠>"
-            echo "            docker exec -i astro-webapp-postgres-1 \\"
-            echo "              psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 \\"
-            echo "              < migrations/$fname"
+            echo "  # <変更内容を記述>"
+            echo "  run_sql migrations/$fname"
             echo ""
           done
           echo "参考: backend/CLAUDE.md「## Migration 適用経路」セクション"
-          echo "前例: ADR-045（migration 055）、PR #1277（migration 083）"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           exit 1
 

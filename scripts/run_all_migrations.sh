@@ -186,6 +186,9 @@ run_sql migrations/20260602_180000_add_inventory_offer_type_ship_timing.sql
 # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定テーブル
 run_sql migrations/20260602_190000_create_user_inventory_filters.sql
 
+# ADR-091: Discord 接続者スタッフID記録カラム追加
+run_sql migrations/20260602_200000_add_discord_config_connected_by_staff.sql
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # >>> 新マイグレーションはここより下に追加してください <<<
 # 形式:

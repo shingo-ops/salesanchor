@@ -78,6 +78,7 @@ async def engine():
             CREATE TABLE IF NOT EXISTS tenant_discord_config (
                 tenant_id INTEGER PRIMARY KEY,
                 guild_id  VARCHAR(32) NOT NULL,
+                connected_by_staff_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )

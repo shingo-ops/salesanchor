@@ -4,12 +4,14 @@
 ロールマッピングは固定 (Small→Member, Large→Partner) なので設定不要。
 
 API:
-  GET  /api/v1/admin/discord-config   — 現在の設定取得
-  PUT  /api/v1/admin/discord-config   — guild_id 設定 / 更新
+  GET    /api/v1/admin/discord-config   — 現在の設定取得
+  PUT    /api/v1/admin/discord-config   — guild_id 設定 / 更新
+  DELETE /api/v1/admin/discord-config   — Discord 切断（行削除）
 
 権限:
-  GET: tenant.profile.view
-  PUT: tenant.profile.edit
+  GET:    tenant.profile.view
+  PUT:    tenant.profile.edit
+  DELETE: tenant.profile.edit
 """
 from __future__ import annotations
 
@@ -34,6 +36,8 @@ _GUILD_ID_RE = re.compile(r"^\d{17,20}$")
 
 class DiscordConfigResponse(BaseModel):
     guild_id: str | None = None
+    connected_at: str | None = None
+    connected_by_staff_name: str | None = None
     role_member: str = "Member"
     role_partner: str = "Partner"
 
@@ -60,11 +64,21 @@ async def get_discord_config(
 ) -> DiscordConfigResponse:
     """Discord Guild 設定を取得する。未設定の場合は guild_id=None を返す。"""
     result = await db.execute(
-        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid"),
+        text("""
+            SELECT
+                tdc.guild_id,
+                tdc.updated_at,
+                s.name AS staff_name
+            FROM public.tenant_discord_config tdc
+            LEFT JOIN public.staff s ON s.id = tdc.connected_by_staff_id
+            WHERE tdc.tenant_id = :tid
+        """),
         {"tid": tenant_id},
     )
     row = result.first()
     guild_id = str(row[0]) if row else None
+    connected_at = str(row[1]) if row and row[1] else None
+    connected_by_staff_name = str(row[2]) if row and row[2] else None
 
     # ロール名は tenant_discord_ticket_config から取得（テーブル未作成時はデフォルト）
     role_member, role_partner = "Member", "Partner"
@@ -84,7 +98,13 @@ async def get_discord_config(
     except Exception:  # noqa: BLE001 — SQLite テスト環境など
         pass
 
-    return DiscordConfigResponse(guild_id=guild_id, role_member=role_member, role_partner=role_partner)
+    return DiscordConfigResponse(
+        guild_id=guild_id,
+        connected_at=connected_at,
+        connected_by_staff_name=connected_by_staff_name,
+        role_member=role_member,
+        role_partner=role_partner,
+    )
 
 
 @router.put(
@@ -125,3 +145,36 @@ async def update_discord_config(
         tenant_id, data.guild_id, current_user.id,
     )
     return DiscordConfigResponse(guild_id=data.guild_id)
+
+
+@router.delete(
+    "/admin/discord-config",
+    status_code=204,
+    dependencies=[Depends(require_permission("tenant.profile.edit"))],
+)
+async def delete_discord_config(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Discord 連携を切断する（tenant_discord_config 行を削除）。"""
+    await db.execute(
+        text("DELETE FROM public.tenant_discord_config WHERE tenant_id = :tid"),
+        {"tid": tenant_id},
+    )
+    await record_audit_log(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        action="delete",
+        table_name="tenant_discord_config",
+        record_id=tenant_id,
+        new_data={"source": "discord_disconnect"},
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
+
+    logger.info(
+        "[discord_config] disconnected tenant=%d by user=%d",
+        tenant_id, current_user.id,
+    )
