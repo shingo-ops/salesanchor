@@ -775,6 +775,7 @@
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "createPO": "Create PO",
+    "applyToQuote": "Apply to quote",
     "actions": {
       "purchasingRole": "Purchasing",
       "salesRole": "Sales"
@@ -843,6 +844,11 @@
     "addItem": "Add item",
     "removeItem": "Remove",
     "selectProduct": "Select product",
+    "productNamePlaceholder": "Product name (free text if not in master)",
+    "addMethod": "Add method",
+    "addModeInventory": "From inventory",
+    "addModeSearch": "Search / manual add",
+    "addFromInventory": "Select from inventory",
     "customProduct": "Custom item",
     "saveDraft": "Save draft",
     "send": "Send",
