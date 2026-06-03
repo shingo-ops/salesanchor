@@ -77,6 +77,7 @@ import {
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
+  CommandLineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -162,6 +163,7 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
+const CommandLine         = hi(CommandLineIcon);
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -227,6 +229,7 @@ export const NAV_ICONS = {
   filter:      SlidersHorizontal,  // outline
   search:      MagnifyingGlass,    // outline
   close:       XOutline,           // outline
+  saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用

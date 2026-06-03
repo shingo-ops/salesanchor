@@ -81,7 +81,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "goalSettings": "Goal Settings",
-    "leads": "Leads",
+    "leads": "Customers",
     "leadChat": "Inbox",
     "newLeads": "New Leads",
     "routeCustomers": "Route Customers",
@@ -133,6 +133,7 @@
     "switchToDark": "Dark mode",
     "switchToLight": "Light mode",
     "managementCenter": "Management Center",
+    "saasAdmin": "SaaS Admin",
     "designSystem": "Design System",
     "accountSettings": "Account Settings"
   },

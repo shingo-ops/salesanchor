@@ -15,7 +15,6 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import type { NavItem, NavSection } from "../../types/nav";
 
 
@@ -27,7 +26,6 @@ interface RawNavItem extends NavItem {
 export default function ManagementCenterPage() {
   const { t } = useTranslation();
   const { hasPermission, hasAny } = usePermissions();
-  const { isSuperAdmin } = useSuperAdmin();
 
   const rawSections: { key: string; titleKey: string; items: RawNavItem[] }[] = [
     {
@@ -61,20 +59,6 @@ export default function ManagementCenterPage() {
         { to: "channels",       labelKey: "nav.channels",       visible: hasPermission("channels.view") },
         { to: "bots",           labelKey: "nav.bots",           visible: hasPermission("bots.view") },
         { to: "notifications",  labelKey: "nav.notifications",  visible: hasPermission("notifications.manage") },
-      ],
-    },
-    {
-      key: "superAdmin",
-      titleKey: "managementCenter.sectionSuperAdmin",
-      items: [
-        { to: "super-admin/masters", labelKey: "nav.superAdminMasters",    visible: isSuperAdmin },
-        { to: "super-admin/inbound", labelKey: "nav.superAdminInbound",    visible: isSuperAdmin },
-        // spec v1.3 F11 AC11.5: 仕入元現在オファー管理 (中央 admin)
-        { to: "super-admin/inventory-offers", labelKey: "nav.superAdminInventoryOffers", visible: isSuperAdmin },
-        // ADR-093: 商品マスタは「マスタ管理」(super-admin/masters) の商品マスタタブに統合したため
-        // 外出しメニューは廃止（/admin/products ルート自体は直リンク用に残置）。
-        // スプレッドシート Phase は一番下
-        { to: "super-admin/phase",   labelKey: "nav.superAdminPhaseSwitch", visible: isSuperAdmin },
       ],
     },
   ];

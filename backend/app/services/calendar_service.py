@@ -105,14 +105,17 @@ async def list_events(
         filters.append("user_id = :uid")
         params["uid"] = user_id
 
-    where = " AND ".join(filters)
+    where = " AND ".join(f"ce.{f}" for f in filters)
     result = await db.execute(
         text(
-            f"SELECT id, user_id, calendar_type, title, description, location,"
-            f" start_datetime, end_datetime, is_all_day, google_event_id, source,"
-            f" sync_status, created_by_user_id, created_at, updated_at"
-            f" FROM calendar_events WHERE {where}"
-            f" ORDER BY start_datetime"
+            f"SELECT ce.id, ce.user_id, ce.calendar_type, ce.title, ce.description, ce.location,"
+            f" ce.start_datetime, ce.end_datetime, ce.is_all_day, ce.google_event_id, ce.source,"
+            f" ce.sync_status, ce.created_by_user_id, ce.created_at, ce.updated_at,"
+            f" TRIM(COALESCE(s.surname_jp,'') || ' ' || COALESCE(s.given_name_jp,'')) AS created_by_name"
+            f" FROM calendar_events ce"
+            f" LEFT JOIN staff s ON s.user_id = ce.created_by_user_id"
+            f" WHERE {where}"
+            f" ORDER BY ce.start_datetime"
         ),
         params,
     )
@@ -134,6 +137,7 @@ async def list_events(
             "created_by_user_id": r[12],
             "created_at": r[13].isoformat() if r[13] else None,
             "updated_at": r[14].isoformat() if r[14] else None,
+            "created_by_name": r[15] or None,
         }
         for r in rows
     ]

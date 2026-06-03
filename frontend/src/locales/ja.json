@@ -81,7 +81,7 @@
   "nav": {
     "dashboard": "ダッシュボード",
     "goalSettings": "目標設定",
-    "leads": "リード",
+    "leads": "顧客管理",
     "leadChat": "受信箱",
     "newLeads": "新規リード",
     "routeCustomers": "ルート顧客",
@@ -133,6 +133,7 @@
     "switchToDark": "ダークモード",
     "switchToLight": "ライトモード",
     "managementCenter": "管理センター",
+    "saasAdmin": "SaaS管理者",
     "designSystem": "デザインシステム",
     "accountSettings": "アカウント設定"
   },
