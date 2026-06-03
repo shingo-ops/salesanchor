@@ -42,7 +42,8 @@ export default function QuoteCreatePage() {
   const [companyId, setCompanyId] = useState<number | null>(draft?.companyId ?? null);
   const [contactId, setContactId] = useState<number | null>(draft?.contactId ?? null);
   const [selectorError, setSelectorError] = useState("");
-  const [currency, setCurrency] = useState(draft?.currency ?? "JPY");
+  // 既定通貨は USD（往復ドラフトがあればその通貨を引き継ぐ）。
+  const [currency, setCurrency] = useState(draft?.currency ?? "USD");
   const [shippingFee, setShippingFee] = useState(draft?.shippingFee ?? "");
   const [taxAmount, setTaxAmount] = useState(draft?.taxAmount ?? "");
   const [notes, setNotes] = useState(draft?.notes ?? "");
