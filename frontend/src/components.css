@@ -216,6 +216,16 @@
   font-size: var(--font-sm);
   color: var(--text-secondary);
 }
+
+/* 商品マスタ一覧: 商品単位(=2行で1商品)のゼブラ表示。奇数商品の全 td に淡色を当てて
+   行を見分けやすくし、同時に操作列(rowSpan)の白浮きも解消する。hover は両者に勝たせる。 */
+.data-table tr[data-product-stripe="odd"] > td {
+  background: var(--bg-subtle);
+}
+
+.data-table tr[data-product-stripe]:hover > td {
+  background: var(--row-hover);
+}
 /* stylelint-enable no-descending-specificity */
 
 .data-table .empty {
