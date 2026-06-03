@@ -7,12 +7,13 @@
  * - カテゴリー絞り込み（プルダウン）＋検索（ボタン）＋ユーザー別フィルタ（仕入元/カテゴリー/列の取捨・永続化）。
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import InventoryFilterPanel from "./InventoryFilterPanel";
 
 interface InventoryRow {
   id: number;
@@ -370,20 +371,6 @@ export default function InventoryPage() {
     });
   };
 
-  // ADR-093 表示条件: 状態/形態/区分の複数選択トグル（選択 = 表示対象に含める）。
-  const toggleSetMember = (
-    setter: Dispatch<SetStateAction<Set<string>>>,
-    v: string,
-  ) => {
-    setter((prev) => {
-      const next = new Set(prev);
-      if (next.has(v)) next.delete(v);
-      else next.add(v);
-      return next;
-    });
-    setPage(1);
-  };
-
   // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
   // 全列がソート可能であることが伝わるよう、非アクティブ列にも淡い中立アイコン(↕)を出す。
   const sortTh = (colKey: string, field: string, align?: "right") => {
@@ -488,214 +475,38 @@ export default function InventoryPage() {
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
-        <section
-          className="inventory-filter-panel"
-          data-testid="inventory-filter-panel"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-            margin: "0 0 var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-            maxWidth: "44rem",
-          }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: "var(--font-weight-semi)" }}>
-            <input
-              type="checkbox"
-              data-testid="inventory-filter-enabled"
-              checked={filterEnabled}
-              onChange={(e) => { setFilterEnabled(e.target.checked); setPage(1); }}
-            />
-            {t("inventory.filterPanel.enable")}
-          </label>
-
-          {/* 1) カテゴリーの表示／非表示（コード順で左から） */}
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.categories")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {sortedCategories.length === 0 ? (
-                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-              ) : (
-                sortedCategories.map((c) => (
-                  <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-filter-category-${c}`}
-                      checked={!hiddenCategories.has(c)}
-                      onChange={() => toggleHiddenCategory(c)}
-                    />
-                    {c}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 2) 仕入元の表示／非表示 */}
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.suppliers")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {supplierFacet.length === 0 ? (
-                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-              ) : (
-                supplierFacet.map((s) => (
-                  <label key={s.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-filter-supplier-${s.id}`}
-                      checked={!hiddenSupplierIds.has(s.id)}
-                      onChange={() => toggleHiddenSupplier(s.id)}
-                    />
-                    {s.name ?? `#${s.id}`}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 3) 表示する列（データの絞り込みではなく列の取捨。上2つと毛色が違うため枠で区別） */}
-          <div
-            style={{
-              background: "var(--bg-subtle)",
-              border: "1px dashed var(--border-strong)",
-              borderRadius: "var(--radius-sm)",
-              padding: "var(--space-3)",
-            }}
-          >
-            <div style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.columns")}
-            </div>
-            <div style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
-              {t("inventory.filterPanel.columnsNote")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {HIDEABLE_COLUMNS.map((c) => (
-                <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <input
-                    type="checkbox"
-                    data-testid={`inventory-filter-col-${c}`}
-                    checked={!hiddenColumns.has(c)}
-                    onChange={() => toggleHiddenColumn(c)}
-                  />
-                  {t(`inventory.col.${c}`)}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* 4) 表示条件（状態/形態/区分の複数選択 + 数量/単価の範囲。選択したものだけ表示） */}
-          <div
-            style={{
-              background: "var(--bg-subtle)",
-              border: "1px dashed var(--border-strong)",
-              borderRadius: "var(--radius-sm)",
-              padding: "var(--space-3)",
-            }}
-          >
-            <div style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.displayConditions")}
-            </div>
-            <div style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
-              {t("inventory.filterPanel.displayConditionsNote")}
-            </div>
-
-            {/* 状態 */}
-            <div style={{ marginBottom: "var(--space-2)" }}>
-              <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>{t("inventory.col.condition")}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                {conditionFacet.length === 0 ? (
-                  <span style={{ color: "var(--text-muted)" }}>{t("inventory.noResults")}</span>
-                ) : (
-                  conditionFacet.map((c) => (
-                    <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                      <input
-                        type="checkbox"
-                        data-testid={`inventory-cond-${c}`}
-                        checked={showConditions.has(c)}
-                        onChange={() => toggleSetMember(setShowConditions, c)}
-                      />
-                      {t(`inventory.condition.${c}`, { defaultValue: c })}
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* 形態 */}
-            <div style={{ marginBottom: "var(--space-2)" }}>
-              <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>{t("inventory.col.unit")}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                {unitFacet.length === 0 ? (
-                  <span style={{ color: "var(--text-muted)" }}>{t("inventory.noResults")}</span>
-                ) : (
-                  unitFacet.map((u) => (
-                    <label key={u} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                      <input
-                        type="checkbox"
-                        data-testid={`inventory-unit-${u}`}
-                        checked={showUnits.has(u)}
-                        onChange={() => toggleSetMember(setShowUnits, u)}
-                      />
-                      {t(`inventory.unit.${u}`, { defaultValue: u })}
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* 在庫・予約 */}
-            <div style={{ marginBottom: "var(--space-2)" }}>
-              <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>{t("inventory.col.offerType")}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-                {OFFER_TYPES.map((o) => (
-                  <label key={o} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-offertype-${o}`}
-                      checked={showOfferTypes.has(o)}
-                      onChange={() => toggleSetMember(setShowOfferTypes, o)}
-                    />
-                    {t(`inventory.offerType.${o}`, { defaultValue: o })}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 数量・単価の範囲 */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.quantity")}</span>
-                <input type="number" min="0" inputMode="numeric" data-testid="inventory-qty-min" value={qtyMin}
-                  onChange={(e) => { setQtyMin(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.min")} />
-                <span style={{ color: "var(--text-muted)" }}>〜</span>
-                <input type="number" min="0" inputMode="numeric" data-testid="inventory-qty-max" value={qtyMax}
-                  onChange={(e) => { setQtyMax(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.max")} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.unitPrice")}</span>
-                <input type="number" min="0" inputMode="numeric" data-testid="inventory-price-min" value={priceMin}
-                  onChange={(e) => { setPriceMin(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.min")} />
-                <span style={{ color: "var(--text-muted)" }}>〜</span>
-                <input type="number" min="0" inputMode="numeric" data-testid="inventory-price-max" value={priceMax}
-                  onChange={(e) => { setPriceMax(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.max")} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <button type="button" className="btn-sm" onClick={() => setShowFilterPanel(false)}>
-              {t("common.close")}
-            </button>
-          </div>
-        </section>
+        <InventoryFilterPanel
+          filterEnabled={filterEnabled}
+          setFilterEnabled={setFilterEnabled}
+          setPage={setPage}
+          sortedCategories={sortedCategories}
+          hiddenCategories={hiddenCategories}
+          toggleHiddenCategory={toggleHiddenCategory}
+          supplierFacet={supplierFacet}
+          hiddenSupplierIds={hiddenSupplierIds}
+          toggleHiddenSupplier={toggleHiddenSupplier}
+          hideableColumns={HIDEABLE_COLUMNS}
+          hiddenColumns={hiddenColumns}
+          toggleHiddenColumn={toggleHiddenColumn}
+          conditionFacet={conditionFacet}
+          showConditions={showConditions}
+          setShowConditions={setShowConditions}
+          unitFacet={unitFacet}
+          showUnits={showUnits}
+          setShowUnits={setShowUnits}
+          offerTypes={OFFER_TYPES}
+          showOfferTypes={showOfferTypes}
+          setShowOfferTypes={setShowOfferTypes}
+          qtyMin={qtyMin}
+          setQtyMin={setQtyMin}
+          qtyMax={qtyMax}
+          setQtyMax={setQtyMax}
+          priceMin={priceMin}
+          setPriceMin={setPriceMin}
+          priceMax={priceMax}
+          setPriceMax={setPriceMax}
+          onClose={() => setShowFilterPanel(false)}
+        />
       )}
 
       {/* アクション: 役割ごとに2段で固定表示（チェック前から常時表示）。
