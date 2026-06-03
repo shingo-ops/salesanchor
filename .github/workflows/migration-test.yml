@@ -203,16 +203,9 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
-          -- products: 商品テーブル（public 中央管理）
-          -- NOTE: public.suppliers は migrate_inventory_sprint1.py が CREATE TABLE するため
-          --       ここでは作成しない（スクリプト実行前に列が存在するとエラーになる）
-          CREATE TABLE IF NOT EXISTS public.products (
-              id          SERIAL PRIMARY KEY,
-              tenant_id   INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-              name        VARCHAR(255) NOT NULL,
-              created_at  TIMESTAMPTZ DEFAULT NOW(),
-              updated_at  TIMESTAMPTZ DEFAULT NOW()
-          );
+          -- NOTE: public.suppliers / public.products は migrate_inventory_sprint1.py が
+          --       CREATE TABLE するため、ここでは作成しない。
+          --       スクリプト実行前に列が欠けた状態で存在するとエラーになる。
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
