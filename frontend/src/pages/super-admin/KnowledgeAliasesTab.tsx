@@ -523,7 +523,7 @@ export default function KnowledgeAliasesTab() {
                   <input required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.priority`)}</label>
-                  <input type="number" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) })} />
+                  <input type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.language`)}</label>
                   <select value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
