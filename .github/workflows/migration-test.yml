@@ -203,13 +203,14 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
-          -- suppliers: 仕入先テーブル
+          -- suppliers: 仕入先テーブル（migration 056 以降の列も含めた状態で作成）
           CREATE TABLE IF NOT EXISTS public.suppliers (
-              id          SERIAL PRIMARY KEY,
-              tenant_id   INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-              name        VARCHAR(255) NOT NULL,
-              created_at  TIMESTAMPTZ DEFAULT NOW(),
-              updated_at  TIMESTAMPTZ DEFAULT NOW()
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              name            VARCHAR(255) NOT NULL,
+              supplier_type   VARCHAR(20) NOT NULL DEFAULT 'corporate',
+              created_at      TIMESTAMPTZ DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ DEFAULT NOW()
           );
 
           -- products: 商品テーブル（public 中央管理）
