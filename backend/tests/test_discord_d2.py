@@ -34,9 +34,14 @@ from app.services.discord_role_sync import sync_lead_discord_role
 # ---------------------------------------------------------------------------
 
 _DDL = """
+CREATE TABLE IF NOT EXISTS staff (
+    id   INTEGER PRIMARY KEY,
+    name VARCHAR(128) NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tenant_discord_config (
     tenant_id INTEGER PRIMARY KEY,
     guild_id  VARCHAR(32) NOT NULL,
+    connected_by_staff_id INTEGER REFERENCES staff(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,6 +58,7 @@ async def db_engine():
     @event.listens_for(engine.sync_engine, "before_cursor_execute", retval=True)
     def _rewrite_sqlite(conn, cursor, statement, parameters, context, executemany):
         statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
+        statement = statement.replace("public.staff", "staff")
         statement = statement.replace("NOW()", "CURRENT_TIMESTAMP")
         return statement, parameters
 
