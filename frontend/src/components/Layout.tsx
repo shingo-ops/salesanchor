@@ -196,6 +196,15 @@ export default function Layout() {
                 </NavLink>
               )}
 
+              <NavLink
+                to="/schedule"
+                className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                onClick={handleNavClick}
+              >
+                <span className="sidebar-icon"><NAV_ICONS.schedule size={ICON.base} /></span>
+                <span className="sidebar-label">{t("nav.schedule")}</span>
+              </NavLink>
+
               {prefs.show_chat_menu && (
                 <NavLink
                   to="/lead-chat"
@@ -216,15 +225,6 @@ export default function Layout() {
                   )}
                 </NavLink>
               )}
-
-              <NavLink
-                to="/schedule"
-                className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                onClick={handleNavClick}
-              >
-                <span className="sidebar-icon"><NAV_ICONS.schedule size={ICON.base} /></span>
-                <span className="sidebar-label">{t("nav.schedule")}</span>
-              </NavLink>
 
               {hasPermission("products.view") && (
                 <NavLink
