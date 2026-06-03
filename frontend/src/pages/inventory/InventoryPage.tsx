@@ -92,6 +92,14 @@ export default function InventoryPage() {
   const [supplierFacet, setSupplierFacet] = useState<SupplierFacet[]>([]);
   const [categoryFacet, setCategoryFacet] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+  // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
+  const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
+  const tcgTypeName = useMemo(() => new Map(tcgTypes.map((tt) => [tt.code, tt.name_ja])), [tcgTypes]);
+  const categoryLabel = useCallback(
+    (row: InventoryRow): string =>
+      (row.tcg_type ? tcgTypeName.get(row.tcg_type) : null) ?? row.category ?? "-",
+    [tcgTypeName],
+  );
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
   // カテゴリーは常にコード順（文字コード昇順）で左から並べる（プルダウン・詳細フィルタ共通）。
@@ -145,6 +153,16 @@ export default function InventoryPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // 種別マスタを取得（カテゴリー列の日本語表示用）。
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ code: string; name_ja: string }[]>("/products/tcg-types")
+      .then((d) => { if (!cancelled) setTcgTypes(d); })
+      .catch(() => { /* 取得失敗時は生の category 表示にフォールバック */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // 保存済みフィルタを初回ロード（再ログイン後も保持）
   useEffect(() => {
@@ -617,7 +635,7 @@ export default function InventoryPage() {
                     />
                   </td>
                   {colVisible("category") && (
-                    <td>{it.category ? <span className="badge">{it.category}</span> : "-"}</td>
+                    <td>{it.category || it.tcg_type ? <span className="badge">{categoryLabel(it)}</span> : "-"}</td>
                   )}
                   {colVisible("mark") && <td>{it.mark ?? "-"}</td>}
                   <td>

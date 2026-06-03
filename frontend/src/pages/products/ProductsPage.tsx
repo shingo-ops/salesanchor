@@ -589,6 +589,7 @@ export default function ProductsPage() {
                 aria-label={t("products.selectHint")}
                 title={t("products.selectHint")}
               ></th>
+              {/* 関連項目を同じ列の上下に置く（見やすさ）: 上段=主、下段=対になる詳細 */}
               <th>{t("products.masterCol.category")}</th>
               <th>{t("products.masterCol.mark")}</th>
               <th
@@ -602,33 +603,33 @@ export default function ProductsPage() {
                   {sort === "name_asc" ? "↑" : sort === "name_desc" ? "↓" : ""}
                 </span>
               </th>
-              <th>{t("products.masterCol.titleEn")}</th>
               <th>{t("products.masterCol.boxesPerCase")}</th>
               <th>{t("products.masterCol.packsPerBox")}</th>
               <th>{t("products.masterCol.weight")}</th>
+              <th>{t("products.masterCol.item")}</th>
               <th rowSpan={2}>{t("common.actions")}</th>
             </tr>
             <tr>
+              {/* 下段 = 上段と対になる項目 */}
+              <th>{t("products.masterCol.categoryClassification")}</th>
+              <th>{t("products.masterCol.releaseDate")}</th>
+              <th>{t("products.masterCol.titleEn")}</th>
               <th>{t("products.masterCol.boxWeight")}</th>
               <th>{t("products.masterCol.caseWeight")}</th>
-              <th>{t("products.masterCol.releaseDate")}</th>
-              <th>{t("products.masterCol.categoryClassification")}</th>
-              <th>{t("products.masterCol.item")}</th>
-              <th>{t("products.masterCol.hsCode")}</th>
               <th>{t("products.masterCol.material")}</th>
+              <th>{t("products.masterCol.hsCode")}</th>
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => {
-              const isOutOfStock = p.quantity <= 0;
+            {products.map((p, idx) => {
               const rowStyle: React.CSSProperties = {};
               if (p.is_archived) rowStyle.opacity = "var(--opacity-archived)";
-              // 在庫0行の背景は CSS (.data-table tr[data-zero-stock="true"]) で濃淡を付ける。
-              const zero = isOutOfStock ? "true" : "false";
+              // 商品単位（=2行で1商品）でゼブラ表示にするための偶奇。CSS が全 td に同色を当てる。
+              const stripe = idx % 2 === 0 ? "even" : "odd";
               return (
               <Fragment key={p.id}>
-                <tr className="product-row-top" style={rowStyle} data-zero-stock={zero} data-testid={`product-row-${p.id}`}>
-                  <td rowSpan={2} style={{ textAlign: "center" }}>
+                <tr className="product-row-top" style={rowStyle} data-product-stripe={stripe} data-testid={`product-row-${p.id}`}>
+                  <td rowSpan={2} style={{ textAlign: "center", verticalAlign: "middle" }}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(p.id)}
@@ -637,36 +638,35 @@ export default function ProductsPage() {
                       data-testid={`product-select-${p.id}`}
                     />
                   </td>
-                  <td>{p.category || "-"}</td>
+                  {/* カテゴリーは種別マスタの日本語名(name_ja)で表示（英語の生 category は使わない） */}
+                  <td>{p.tcg_type ? (tcgTypeName.get(p.tcg_type) ?? p.tcg_type) : (p.category || "-")}</td>
                   <td>{p.mark || "-"}</td>
                   <td>
                     {p.image_url && <img src={p.image_url} alt="" style={{ width: 'var(--icon-lg)', height: 'var(--icon-lg)', marginRight: "var(--space-1)", objectFit: "cover", verticalAlign: "middle", borderRadius: "var(--radius-xs)" }} />}
-                    {isOutOfStock && !p.is_archived && (
-                      <span title={t("products.outOfStockTooltip")} aria-label={t("products.outOfStockTooltip")} style={{ marginRight: "var(--space-6px)", color: "var(--color-warning)", fontWeight: "var(--font-weight-semi)" }}>
-                        &#9888;
-                      </span>
-                    )}
                     {p.name_ja}
                     {p.is_archived && <span className="badge badge-lost" style={{ marginLeft: "var(--space-6px)" }}>{t("products.status_discontinued")}</span>}
                   </td>
-                  <td>{p.name_en || "-"}</td>
                   <td>{p.boxes_per_case ?? "-"}</td>
                   <td>{p.packs_per_box ?? "-"}</td>
                   <td>{p.weight ?? "-"}</td>
-                  <td rowSpan={2} className="actions">
-                    {hasPermission("products.update") && <button className="btn-sm" onClick={() => handleEdit(p)}>{t("common.edit")}</button>}
-                    {/* QA 2026-05-30: 廃番は「削除」の FK 参照時フォールバックでのみ行う。 */}
-                    {hasPermission("products.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(p)}>{t("common.delete")}</button>}
+                  <td>{p.item || "-"}</td>
+                  {/* 操作: td は table-cell のまま（rowSpan を壊さない）。内側 div を flex に。 */}
+                  <td rowSpan={2} style={{ verticalAlign: "middle" }}>
+                    <div style={{ display: "flex", gap: "var(--space-1)", justifyContent: "flex-end" }}>
+                      {hasPermission("products.update") && <button className="btn-sm" onClick={() => handleEdit(p)}>{t("common.edit")}</button>}
+                      {/* QA 2026-05-30: 廃番は「削除」の FK 参照時フォールバックでのみ行う。 */}
+                      {hasPermission("products.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(p)}>{t("common.delete")}</button>}
+                    </div>
                   </td>
                 </tr>
-                <tr className="product-row-bottom" style={rowStyle} data-zero-stock={zero}>
+                <tr className="product-row-bottom" style={rowStyle} data-product-stripe={stripe}>
+                  <td>{p.category_classification || "-"}</td>
+                  <td>{p.release_date || "-"}</td>
+                  <td>{p.name_en || "-"}</td>
                   <td>{p.box_weight_kg ?? "-"}</td>
                   <td>{p.case_weight_kg ?? "-"}</td>
-                  <td>{p.release_date || "-"}</td>
-                  <td>{p.category_classification || "-"}</td>
-                  <td>{p.item || "-"}</td>
-                  <td>{p.hs_code || "-"}</td>
                   <td>{p.material || "-"}</td>
+                  <td>{p.hs_code || "-"}</td>
                 </tr>
               </Fragment>
               );
