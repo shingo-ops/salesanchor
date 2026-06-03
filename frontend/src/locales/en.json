@@ -727,7 +727,7 @@
   "inventory": {
     "view": {
       "subtitle": "Shows suppliers' current offers.",
-      "searchPlaceholder": "Search by name, English name, category, mark, or supplier"
+      "searchPlaceholder": "Search by name, English name, TCG series, mark, or supplier"
     },
     "expiryWarning": "Offers are automatically removed 18 hours after they are posted.",
     "filter": { "allTypes": "All types", "allOfferTypes": "Stock & pre-order", "allCategories": "All TCG series" },

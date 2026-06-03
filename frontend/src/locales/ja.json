@@ -727,7 +727,7 @@
   "inventory": {
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
-      "searchPlaceholder": "商品名・英名・カテゴリ・マーク・仕入元で検索"
+      "searchPlaceholder": "商品名・英名・TCGシリーズ・マーク・仕入元で検索"
     },
     "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
     "filter": { "allTypes": "全種別", "allOfferTypes": "在庫・予約すべて", "allCategories": "全TCGシリーズ" },
