@@ -151,14 +151,21 @@ export default function Layout() {
   const salesLinkTo = hasPermission("quotes.view") ? "/quotes" : "/invoices";
 
   // 管理センターリンクを表示する権限チェック（いずれか1つでも持っていれば表示）
-  const showManagementCenter =
-    isSuperAdmin ||
-    hasAny(
-      "staff.view", "teams.view", "roles.view", "bots.view",
-      "shifts.view", "channels.view", "erp.view", "orders.view",
-      "customers.view", "deals.view", "suppliers.view", "purchase_orders.view",
-      "tenant.profile.view",
-    );
+  // ※ isSuperAdmin は管理センターとは別に専用メニューを持つため除外
+  const showManagementCenter = hasAny(
+    "staff.view", "teams.view", "roles.view", "bots.view",
+    "shifts.view", "channels.view", "erp.view", "orders.view",
+    "customers.view", "deals.view", "suppliers.view", "purchase_orders.view",
+    "tenant.profile.view",
+  );
+
+  // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
+  const saasAdminItems: NavItem[] = isSuperAdmin ? [
+    { to: "/super-admin/masters",          labelKey: "nav.superAdminMasters" },
+    { to: "/super-admin/inbound",          labelKey: "nav.superAdminInbound" },
+    { to: "/super-admin/inventory-offers", labelKey: "nav.superAdminInventoryOffers" },
+    { to: "/super-admin/phase-switch",     labelKey: "nav.superAdminPhaseSwitch" },
+  ] : [];
 
   const moreItems: NavItem[] = [];
 
@@ -294,6 +301,23 @@ export default function Layout() {
               )}
 
               {/* 通知設定は管理センター（/management-center/notifications）に統合済み */}
+
+              {/* SaaS管理者専用メニュー — is_super_admin のみ表示・一般テナントには非表示 */}
+              {isSuperAdmin && (
+                <>
+                  <div className="sidebar-divider" aria-hidden="true" />
+                  <SidebarAccordion
+                    label={t("nav.saasAdmin")}
+                    icon={<NAV_ICONS.saasAdmin size={ICON.base} />}
+                    items={saasAdminItems}
+                    activePaths={["/super-admin"]}
+                    isExpanded={sidebarExpanded}
+                    isOpen={openAccordion === "saasAdmin"}
+                    onToggle={() => toggleAccordion("saasAdmin")}
+                    onNavClick={handleNavClick}
+                  />
+                </>
+              )}
 
               <SidebarAccordion
                 label={t("nav.more")}
