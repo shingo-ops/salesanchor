@@ -8,7 +8,9 @@ BEGIN
     SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'tenant_discord_config'
   ) THEN
+    -- staff テーブルはテナント個別スキーマ（tenant_NNN.staff）のため
+    -- public.staff は存在しない。FK 制約は設けず plain INTEGER で記録する。
     ALTER TABLE public.tenant_discord_config
-        ADD COLUMN IF NOT EXISTS connected_by_staff_id INTEGER REFERENCES public.staff(id) ON DELETE SET NULL;
+        ADD COLUMN IF NOT EXISTS connected_by_staff_id INTEGER;
   END IF;
 END $$;
