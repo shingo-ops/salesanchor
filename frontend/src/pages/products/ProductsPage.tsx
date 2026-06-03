@@ -50,6 +50,7 @@ interface Product {
   archived_at: string | null;
   supplier_default_id: number | null;
   tcg_type: string | null;
+  set_type: string | null;
   unit: string | null;
   // ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
   boxes_per_case: number | null;
@@ -73,6 +74,8 @@ type FormState = {
   name_en: string;
   product_kind: string;
   category: string;
+  tcg_type: string;
+  set_type: string;
   mark: string;
   status: string;
   condition: string;
@@ -108,7 +111,7 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  name_ja: "", name_en: "", product_kind: "TCG", category: "", mark: "",
+  name_ja: "", name_en: "", product_kind: "TCG", category: "", tcg_type: "", set_type: "", mark: "",
   status: "active", condition: "", unit: "", unit_price: "", quantity: "0",
   weight: "", notes: "",
   jan_code: "", card_number: "", expansion_code: "", rarity: "", language: "",
@@ -125,6 +128,8 @@ const emptyForm: FormState = {
 const UNIT_OPTIONS = ["piece", "pack", "box", "case", "set"];
 // 素材プルダウン（当面 Paper のみ。必要に応じ追加）。
 const MATERIAL_OPTIONS = ["Paper"];
+// セット種別（ブースター/デッキ/シングルカード/バルク）。ラベルは i18n products.setType.*。
+const SET_TYPE_OPTIONS = ["booster", "deck", "single", "bulk"];
 const normalizeUnit = (u: string) => {
   const lc = (u || "").toLowerCase();
   return lc === "carton" ? "case" : lc;
@@ -239,6 +244,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       name_ja: form.name_ja,
       name_en: toNull(form.name_en),
       product_kind: form.product_kind || null,
+      tcg_type: toNull(form.tcg_type),
+      set_type: toNull(form.set_type),
       category: toNull(form.category),
       mark: toNull(form.mark),
       status: form.status,
@@ -293,6 +300,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       name_ja: p.name_ja,
       name_en: p.name_en || "",
       product_kind: p.product_kind || "TCG",
+      tcg_type: p.tcg_type || "",
+      set_type: p.set_type || "",
       category: p.category || "",
       mark: p.mark || "",
       status: p.status,
@@ -442,11 +451,26 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <option value="TCG">TCG</option>
                 </select>
               </div>
+              {/* TCGシリーズはシリーズ(種別)マスタから選択。マスタが日英(name_ja/name_en)を保持。 */}
               <div className="form-group"><label>{t("products.field.category")}</label>
-                <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                <select value={form.tcg_type} onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}>
+                  <option value="">{t("common.notSet")}</option>
+                  {tcgTypes.map((tt) => (
+                    <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-group"><label>{t("products.field.mark")}</label>
                 <input value={form.mark} onChange={(e) => setForm({ ...form, mark: e.target.value })} />
+              </div>
+              {/* セット種別（型番の右） */}
+              <div className="form-group"><label>{t("products.field.setType")}</label>
+                <select value={form.set_type} onChange={(e) => setForm({ ...form, set_type: e.target.value })}>
+                  <option value="">{t("common.notSet")}</option>
+                  {SET_TYPE_OPTIONS.map((st) => (
+                    <option key={st} value={st}>{t(`products.setType.${st}`)}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Phase 1-C M-MVP: TCG 列 */}

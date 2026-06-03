@@ -979,12 +979,19 @@
       "productKind": "商品種類",
       "category": "TCGシリーズ",
       "mark": "型番",
+      "setType": "セット種別",
       "cardNumber": "カード番号",
       "expansionCode": "セット記号（エキスパンション）",
       "rarity": "レアリティ",
       "condition": "状態（コンディション）",
       "imageUrl": "画像URL",
       "publishStatus": "公開状態"
+    },
+    "setType": {
+      "booster": "ブースター",
+      "deck": "デッキ",
+      "single": "シングルカード",
+      "bulk": "バルク"
     },
     "masterCol": {
       "productKind": "商品種類",
