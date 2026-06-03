@@ -134,13 +134,6 @@ const capUnit = (u: string) => {
   return n ? n.charAt(0).toUpperCase() + n.slice(1) : n;
 };
 
-interface ArchiveBlockedDetail {
-  id: number;
-  name_ja: string;
-  is_archived: boolean;
-  blocking_references: string[];
-  detail: string;
-}
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -160,12 +153,12 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
-  const [archiveBlocked, setArchiveBlocked] = useState<ArchiveBlockedDetail | null>(null);
   // QA 2026-05-31: 在庫表からチェックして見積/請求を作成するための複数選択
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   // 名前列の昇順/降順ソート（"" = 従来順 / name_asc / name_desc）
-  const [sort, setSort] = useState<"" | "name_asc" | "name_desc">("");
+  // 既定は発売日 降順（新しい商品が上）。タイトル列クリックで名前ソートに切替。
+  const [sort, setSort] = useState<"" | "name_asc" | "name_desc" | "release_date_desc">("release_date_desc");
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   // ADR-090 PR5a: TCG種別マスタによる絞り込み
   const [tcgType, setTcgType] = useState("");
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
@@ -335,47 +328,57 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     setShowForm(true);
   };
 
-  const performDelete = async () => {
-    if (!deleteTarget) return;
-    const id = deleteTarget.id;
-    setDeleteTarget(null);
+  // チェックした商品を一括削除。FK 参照ありで 409 になった商品は
+  // ハード削除できないため、アーカイブ（廃番）にフォールバックする。
+  const deleteOne = async (id: number): Promise<boolean> => {
     try {
       await api.delete(`/products/${id}`);
-      load();
+      return true;
     } catch (e) {
-      // 409 (FK 参照あり) はアーカイブ誘導モーダルへ
       if (e instanceof ApiError && e.status === 409) {
-        const detail = e.responseDetail as Partial<ArchiveBlockedDetail> | undefined;
-        if (detail && Array.isArray(detail.blocking_references)) {
-          setArchiveBlocked(detail as ArchiveBlockedDetail);
-          return;
+        try {
+          await api.patch(`/products/${id}`, { is_archived: true });
+          return true;
+        } catch {
+          return false;
         }
       }
-      setError(e instanceof Error ? e.message : t("common.deleteError"));
+      return false;
     }
   };
-
-  const handleArchiveFromBlocked = async () => {
-    if (!archiveBlocked) return;
-    const id = archiveBlocked.id;
-    setArchiveBlocked(null);
-    try {
-      await api.patch(`/products/${id}`, { is_archived: true });
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.operationError"));
+  const bulkDelete = async () => {
+    setConfirmBulkDelete(false);
+    setError("");
+    const results = await Promise.all(Array.from(selectedIds).map((id) => deleteOne(id)));
+    setSelectedIds(new Set());
+    if (results.some((ok) => !ok)) {
+      setError(t("common.deleteError"));
     }
+    load();
   };
 
-  const headerAction = hasPermission("products.create") ? (
-    <div className="page-header-actions">
-      <button
-        type="button"
-        className="btn-primary"
-        onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}
-      >
-        {t("products.newProduct")}
-      </button>
+  const headerAction = hasPermission("products.create") || hasPermission("products.delete") ? (
+    <div className="page-header-actions" style={{ display: "flex", gap: "var(--space-2)" }}>
+      {hasPermission("products.create") && (
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}
+        >
+          {t("products.newProduct")}
+        </button>
+      )}
+      {hasPermission("products.delete") && (
+        <button
+          type="button"
+          className="btn-danger"
+          disabled={selectedIds.size === 0}
+          onClick={() => setConfirmBulkDelete(true)}
+          data-testid="products-bulk-delete"
+        >
+          {t("common.delete")}
+        </button>
+      )}
     </div>
   ) : undefined;
 
@@ -565,11 +568,12 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               {/* 商品種類（最上位ジャンル区分）= 一番左。2段にまたがる単一セル。 */}
               <th rowSpan={2}>{t("products.masterCol.productKind")}</th>
               {/* 関連項目を同じ列の上下に置く（見やすさ）: 上段=主、下段=対になる詳細 */}
-              <th>{t("products.masterCol.category")}</th>
+              {/* TCGシリーズ / カテゴリ分類 の列は広めに */}
+              <th style={{ minWidth: "10rem" }}>{t("products.masterCol.category")}</th>
               <th>{t("products.masterCol.mark")}</th>
               <th
                 onClick={toggleNameSort}
-                style={{ cursor: "pointer", userSelect: "none" }}
+                style={{ cursor: "pointer", userSelect: "none", minWidth: "16rem" }}
                 title={t("products.sortByName")}
                 data-testid="products-sort-name"
               >
@@ -582,7 +586,6 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               <th>{t("products.masterCol.packsPerBox")}</th>
               <th>{t("products.masterCol.weight")}</th>
               <th>{t("products.masterCol.item")}</th>
-              <th rowSpan={2}>{t("common.actions")}</th>
             </tr>
             <tr>
               {/* 下段 = 上段と対になる項目 */}
@@ -603,8 +606,15 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               const stripe = idx % 2 === 0 ? "even" : "odd";
               return (
               <Fragment key={p.id}>
-                <tr className="product-row-top" style={rowStyle} data-product-stripe={stripe} data-testid={`product-row-${p.id}`}>
-                  <td rowSpan={2} style={{ textAlign: "center", verticalAlign: "middle" }}>
+                {/* 行クリックで編集ポップアップ（チェックボックスのセルは伝播停止）。 */}
+                <tr
+                  className="product-row-top"
+                  style={{ ...rowStyle, cursor: hasPermission("products.update") ? "pointer" : undefined }}
+                  data-product-stripe={stripe}
+                  data-testid={`product-row-${p.id}`}
+                  onClick={() => { if (hasPermission("products.update")) handleEdit(p); }}
+                >
+                  <td rowSpan={2} style={{ textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(p.id)}
@@ -627,16 +637,13 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <td>{p.packs_per_box ?? "-"}</td>
                   <td>{p.weight != null ? Number(p.weight).toFixed(1) : "-"}</td>
                   <td>{p.item || "-"}</td>
-                  {/* 操作: td は table-cell のまま（rowSpan を壊さない）。内側 div を flex に。 */}
-                  <td rowSpan={2} style={{ verticalAlign: "middle" }}>
-                    <div style={{ display: "flex", gap: "var(--space-1)", justifyContent: "flex-end" }}>
-                      {hasPermission("products.update") && <button className="btn-sm" onClick={() => handleEdit(p)}>{t("common.edit")}</button>}
-                      {/* QA 2026-05-30: 廃番は「削除」の FK 参照時フォールバックでのみ行う。 */}
-                      {hasPermission("products.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(p)}>{t("common.delete")}</button>}
-                    </div>
-                  </td>
                 </tr>
-                <tr className="product-row-bottom" style={rowStyle} data-product-stripe={stripe}>
+                <tr
+                  className="product-row-bottom"
+                  style={{ ...rowStyle, cursor: hasPermission("products.update") ? "pointer" : undefined }}
+                  data-product-stripe={stripe}
+                  onClick={() => { if (hasPermission("products.update")) handleEdit(p); }}
+                >
                   <td>{p.category_classification || "-"}</td>
                   <td>{p.release_date || "-"}</td>
                   <td>{p.name_en || "-"}</td>
@@ -648,7 +655,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               </Fragment>
               );
             })}
-            {products.length === 0 && <tr><td colSpan={10} className="empty">{t("products.noProducts")}</td></tr>}
+            {products.length === 0 && <tr><td colSpan={9} className="empty">{t("products.noProducts")}</td></tr>}
           </tbody>
         </table>
       )}
@@ -699,31 +706,13 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       )}
 
       <ConfirmModal
-        open={!!deleteTarget}
+        open={confirmBulkDelete}
         title={t("products.deleteProduct")}
-        message={<><strong>{deleteTarget?.name_ja}</strong><br />{t("common.irreversible")}</>}
+        message={<>{t("products.selectedCount", { count: selectedIds.size })}<br />{t("common.irreversible")}</>}
         confirmLabel={t("common.delete")}
         danger
-        onConfirm={performDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
-
-      <ConfirmModal
-        open={!!archiveBlocked}
-        title={t("common.error")}
-        message={
-          <>
-            <strong>{archiveBlocked?.name_ja}</strong>
-            {archiveBlocked && archiveBlocked.blocking_references.length > 0 ? (
-              <ul>{archiveBlocked.blocking_references.map((r) => <li key={r}>{r}</li>)}</ul>
-            ) : (
-              <p style={{ color: "var(--text-secondary)" }}>{t("common.notSet")}</p>
-            )}
-          </>
-        }
-        confirmLabel={t("common.archive")}
-        onConfirm={handleArchiveFromBlocked}
-        onCancel={() => setArchiveBlocked(null)}
+        onConfirm={() => void bulkDelete()}
+        onCancel={() => setConfirmBulkDelete(false)}
       />
     </>
   );
