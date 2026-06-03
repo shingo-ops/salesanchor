@@ -32,6 +32,15 @@ const SUBTITLE_ALLOWLIST = [
   'crm/CustomerHub',   // タブコンテナ（CRMハブ）、子ページで表示
 ];
 
+/**
+ * raw <h2> チェックから除外するページ（パスの一部でマッチ）。
+ * 除外理由: 画面全体を使う独自レイアウトを持つページは PageLayout を使わず
+ *           自前でヘッダーを実装するため（PageLayout 独立設計）。
+ */
+const H2_ALLOWLIST = [
+  'schedule/SchedulePage', // 独自全画面レイアウト（画面余白ゼロ設計）
+];
+
 function walkTsx(dir) {
   const results = [];
   for (const entry of readdirSync(dir)) {
@@ -59,7 +68,8 @@ for (const file of files) {
   const lines = content.split('\n');
 
   // --- チェック 1: raw <h2 ---
-  for (let i = 0; i < lines.length; i++) {
+  const isH2Allowlisted = H2_ALLOWLIST.some((pattern) => relPath.includes(pattern));
+  if (!isH2Allowlisted) for (let i = 0; i < lines.length; i++) {
     if (!lines[i].includes('<h2')) continue;
     const prevLine = i > 0 ? lines[i - 1].trim() : '';
     if (
