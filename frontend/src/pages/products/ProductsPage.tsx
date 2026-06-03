@@ -140,6 +140,12 @@ const capUnit = (u: string) => {
   const n = normalizeUnit(u);
   return n ? n.charAt(0).toUpperCase() + n.slice(1) : n;
 };
+// 素材は取込/旧データで大文字小文字が揺れる（paper / Paper）。MATERIAL_OPTIONS と
+// 大文字小文字を無視して一致させ、プルダウンで正しく選択状態にする（一致しなければ生値を返す）。
+const normalizeMaterial = (m: string): string => {
+  if (!m) return "";
+  return MATERIAL_OPTIONS.find((o) => o.toLowerCase() === m.toLowerCase()) ?? m;
+};
 
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
@@ -330,7 +336,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       volume_weight: p.volume_weight != null ? String(p.volume_weight) : "",
       moq: p.moq != null ? String(p.moq) : "",
       hs_code: p.hs_code || "",
-      material: p.material || "",
+      material: normalizeMaterial(p.material || ""),
       item: p.item || "",
       required_output_value: p.required_output_value || "",
       search_keywords: p.search_keywords || "",
@@ -570,6 +576,10 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                     {MATERIAL_OPTIONS.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
+                    {/* MATERIAL_OPTIONS に無い既存値（取込由来の表記揺れ等）も選択肢に残す */}
+                    {form.material && !MATERIAL_OPTIONS.some((m) => m.toLowerCase() === form.material.toLowerCase()) && (
+                      <option value={form.material}>{form.material}</option>
+                    )}
                   </select>
                 </div>
               </fieldset>
