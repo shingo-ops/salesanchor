@@ -6,12 +6,13 @@
  *   2026-04-17: 初版作成（Phase 2）
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { badgeVariant, sortQuotes } from "./quotesSort";
 
 interface Quote {
   id: number;
@@ -32,7 +33,9 @@ interface Quote {
   created_by_name: string | null;
 }
 
-const QUOTE_STATUSES = ["draft", "sent", "approved", "rejected", "expired"];
+// 絞り込みに出すステータス（承認済 approved / 却下 rejected は除外）。
+// 配色・ソートの純関数は ./quotesSort に分離（ユニットテスト対象）。
+const FILTER_STATUSES = ["draft", "sent", "expired"];
 
 export default function QuotesPage() {
   const { t } = useTranslation();
@@ -40,6 +43,8 @@ export default function QuotesPage() {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortField, setSortField] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -64,6 +69,35 @@ export default function QuotesPage() {
     catch { return `${ccy} ${n.toLocaleString()}`; }
   };
 
+  // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。表示中の一覧を並べ替える。
+  const onSort = (field: string) => {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir("asc"); }
+  };
+  const sortArrow = (field: string) =>
+    sortField === field ? (sortDir === "asc" ? t("common.sortAsc") : t("common.sortDesc")) : t("common.sortNone");
+  const sortedQuotes = useMemo(
+    () => sortQuotes(quotes, sortField, sortDir),
+    [quotes, sortField, sortDir],
+  );
+
+  // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
+  const sortTh = (labelKey: string, field: string) => (
+    <th>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        data-testid={`quotes-sort-${field}`}
+        style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", fontWeight: "var(--font-weight-semi)", color: "inherit", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
+      >
+        {t(labelKey)}
+        <span aria-hidden="true" style={{ fontSize: "var(--font-xs)", color: sortField === field ? "var(--accent)" : "var(--text-muted)" }}>
+          {sortArrow(field)}
+        </span>
+      </button>
+    </th>
+  );
+
   return (
     <PageLayout
       navKey="nav.quotesInvoices"
@@ -79,11 +113,43 @@ export default function QuotesPage() {
         <button onClick={() => navigate("/invoices")}>{t("nav.invoices")}</button>
       </nav>
 
-      <div className="filter-bar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">{t("quotes.allStatuses")}</option>
-          {QUOTE_STATUSES.map((s) => <option key={s} value={s}>{t(`quotes.status_${s}`)}</option>)}
-        </select>
+      {/* ステータス絞り込み: プルダウンを廃止し、表と同じバッジをボタン化。
+          押すと該当ステータスのみ表示（再度押すと全件に戻す）。承認済/却下は対象外。 */}
+      <div className="filter-bar" style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
+        <button
+          type="button"
+          className={statusFilter === "" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+          data-testid="quotes-filter-all"
+          aria-pressed={statusFilter === ""}
+          onClick={() => setStatusFilter("")}
+        >
+          {t("quotes.allStatuses")}
+        </button>
+        {FILTER_STATUSES.map((s) => {
+          const active = statusFilter === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              data-testid={`quotes-filter-${s}`}
+              aria-pressed={active}
+              onClick={() => setStatusFilter(active ? "" : s)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                // 単一ステータス選択中は非選択を淡く表示して選択を強調
+                opacity: statusFilter === "" || active ? 1 : 0.4,
+                outline: active ? "2px solid var(--accent)" : "none",
+                outlineOffset: "2px",
+                borderRadius: "var(--radius-pill)",
+              }}
+            >
+              <span className={`badge badge-${badgeVariant(s)}`}>{t(`quotes.status_${s}`)}</span>
+            </button>
+          );
+        })}
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -94,19 +160,19 @@ export default function QuotesPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>{t("quotes.quoteCode")}</th>
-              <th>{t("quotes.customer")}</th>
-              <th>{t("quotes.salesRep")}</th>
-              <th>{t("common.currency")}</th>
-              <th>{t("quotes.total")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("quotes.validityDate")}</th>
-              <th>{t("common.createdAt")}</th>
+              {sortTh("quotes.quoteCode", "quote_code")}
+              {sortTh("quotes.customer", "customer")}
+              {sortTh("quotes.salesRep", "sales_rep")}
+              {sortTh("common.currency", "currency")}
+              {sortTh("quotes.total", "total")}
+              {sortTh("common.status", "status")}
+              {sortTh("quotes.validityDate", "validity_date")}
+              {sortTh("common.createdAt", "created_at")}
               <th>{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {quotes.map((q) => (
+            {sortedQuotes.map((q) => (
               <tr key={q.id}>
                 <td className="mono">{q.quote_code || "-"}</td>
                 <td>
@@ -118,7 +184,7 @@ export default function QuotesPage() {
                 <td>{q.created_by_name || "-"}</td>
                 <td>{q.currency}</td>
                 <td>{fmt(q.total_amount, q.currency)}</td>
-                <td><span className={`badge badge-${q.status === "approved" ? "won" : q.status === "rejected" ? "lost" : q.status === "expired" ? "cancelled" : q.status === "sent" ? "negotiating" : "pending"}`}>
+                <td><span className={`badge badge-${badgeVariant(q.status)}`}>
                   {t(`quotes.status_${q.status}`) || q.status}
                 </span></td>
                 <td>{q.validity_date || "-"}</td>
@@ -128,7 +194,7 @@ export default function QuotesPage() {
                 </td>
               </tr>
             ))}
-            {quotes.length === 0 && <tr><td colSpan={9} className="empty">{t("quotes.noQuotes")}</td></tr>}
+            {sortedQuotes.length === 0 && <tr><td colSpan={9} className="empty">{t("quotes.noQuotes")}</td></tr>}
           </tbody>
         </table>
       )}

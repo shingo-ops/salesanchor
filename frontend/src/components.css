@@ -202,6 +202,22 @@
   gap: var(--space-1);
 }
 
+/* ADR-093 商品マスタ一覧: 1商品=2行表示（横スクロール回避）。
+   上段(主要項目)の下罫線を消し、下段(詳細項目)の下罫線で商品どうしを区切る。
+   下段は補助情報なので文字を控えめにして上段を引き立てる。 */
+/* stylelint-disable no-descending-specificity -- 既存 .data-table tr[data-zero-stock]:hover td より後段になるが、商品マスタ一覧専用の2段表示上書きで意図的 */
+.data-table tr.product-row-top > td {
+  border-bottom: none;
+  padding-bottom: var(--space-1);
+}
+
+.data-table tr.product-row-bottom > td {
+  padding-top: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+/* stylelint-enable no-descending-specificity */
+
 .data-table .empty {
   text-align: center;
   color: var(--text-muted);

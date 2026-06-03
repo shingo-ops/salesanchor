@@ -48,6 +48,9 @@
     "code": "コード",
     "amount": "金額",
     "currency": "通貨",
+    "sortAsc": "▲",
+    "sortDesc": "▼",
+    "sortNone": "↕",
     "date": "日付",
     "type": "タイプ",
     "description": "説明",
@@ -717,7 +720,7 @@
   },
   "inventory": {
     "view": {
-      "subtitle": "仕入元の現在オファー（取り込み済み在庫）を表示します。",
+      "subtitle": "仕入元の現在オファーを表示します。",
       "searchPlaceholder": "商品名・英名・カテゴリ・マーク・仕入元で検索"
     },
     "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
@@ -847,7 +850,7 @@
     "reject": "却下",
     "convertToInvoice": "請求書に変換",
     "status_draft": "下書き",
-    "status_sent": "送付済",
+    "status_sent": "発行済",
     "status_approved": "承認済",
     "status_rejected": "却下",
     "status_expired": "期限切れ",
@@ -957,6 +960,22 @@
       "condition": "状態（コンディション）",
       "imageUrl": "画像URL",
       "publishStatus": "公開状態"
+    },
+    "masterCol": {
+      "category": "カテゴリー",
+      "mark": "型番",
+      "titleJa": "日本語タイトル",
+      "titleEn": "英語タイトル",
+      "boxesPerCase": "Box数／1Case",
+      "packsPerBox": "Pack数／1Box",
+      "weight": "重量",
+      "boxWeight": "Box重量",
+      "caseWeight": "Case重量",
+      "releaseDate": "発売日",
+      "categoryClassification": "カテゴリ分類",
+      "item": "品目",
+      "hsCode": "HSコード",
+      "material": "素材"
     },
     "master": {
       "sectionBox": "Box・梱包",
