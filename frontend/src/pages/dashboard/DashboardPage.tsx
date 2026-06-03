@@ -443,50 +443,6 @@ export default function DashboardPage() {
 
       <div className={fixedAreaClass}>
 
-        {/* ── 目標セクション ── */}
-        <div className="db-section-card db-goals-card">
-          <div className="db-section-header">
-            <FlagIcon aria-hidden="true" className="db-section-icon" />
-            <h3>{t("dashboard.goalsTitle")}</h3>
-            <button
-              className="db-set-goals-btn"
-              onClick={() => navigate("/goals/settings")}
-            >
-              {t("dashboard.setGoals")}
-              <ArrowRightIcon aria-hidden="true" size={14} />
-            </button>
-          </div>
-
-          {loadingFixed ? (
-            <div className="db-loading">{t("common.loading")}</div>
-          ) : (
-            <div className="db-goals-body">
-              <div className="db-goals-period-block">
-                <span className="db-goals-period-label">{t("dashboard.thisMonth")}</span>
-                {(() => {
-                  const filtered = goals ? filterGoalsByTab(goals.monthly, tab) : [];
-                  return filtered.length > 0 ? (
-                    filtered.map((g) => <GoalRow key={g.kpi_type} g={g} t={t} />)
-                  ) : (
-                    <p className="db-no-goals">{t("dashboard.noGoalsSet")}</p>
-                  );
-                })()}
-              </div>
-              <div className="db-goals-period-block">
-                <span className="db-goals-period-label">{t("dashboard.thisWeek")}</span>
-                {(() => {
-                  const filtered = goals ? filterGoalsByTab(goals.weekly, tab) : [];
-                  return filtered.length > 0 ? (
-                    filtered.map((g) => <GoalRow key={g.kpi_type} g={g} t={t} />)
-                  ) : (
-                    <p className="db-no-goals">{t("dashboard.noGoalsSet")}</p>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* ── フォローアップリマインド ── */}
         <div className={`db-section-card db-followup-card${urgentCount > 0 ? " db-has-urgent" : ""}`}>
           <div className="db-section-header">
@@ -563,6 +519,50 @@ export default function DashboardPage() {
               {urgentCount === 0 && followups?.upcoming.length === 0 && (
                 <p className="db-empty">{t("dashboard.noFollowups")}</p>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* ── 目標セクション ── */}
+        <div className="db-section-card db-goals-card">
+          <div className="db-section-header">
+            <FlagIcon aria-hidden="true" className="db-section-icon" />
+            <h3>{t("dashboard.goalsTitle")}</h3>
+            <button
+              className="db-set-goals-btn"
+              onClick={() => navigate("/goals/settings")}
+            >
+              {t("dashboard.setGoals")}
+              <ArrowRightIcon aria-hidden="true" size={14} />
+            </button>
+          </div>
+
+          {loadingFixed ? (
+            <div className="db-loading">{t("common.loading")}</div>
+          ) : (
+            <div className="db-goals-body">
+              <div className="db-goals-period-block">
+                <span className="db-goals-period-label">{t("dashboard.thisMonth")}</span>
+                {(() => {
+                  const filtered = goals ? filterGoalsByTab(goals.monthly, tab) : [];
+                  return filtered.length > 0 ? (
+                    filtered.map((g) => <GoalRow key={g.kpi_type} g={g} t={t} />)
+                  ) : (
+                    <p className="db-no-goals">{t("dashboard.noGoalsSet")}</p>
+                  );
+                })()}
+              </div>
+              <div className="db-goals-period-block">
+                <span className="db-goals-period-label">{t("dashboard.thisWeek")}</span>
+                {(() => {
+                  const filtered = goals ? filterGoalsByTab(goals.weekly, tab) : [];
+                  return filtered.length > 0 ? (
+                    filtered.map((g) => <GoalRow key={g.kpi_type} g={g} t={t} />)
+                  ) : (
+                    <p className="db-no-goals">{t("dashboard.noGoalsSet")}</p>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
