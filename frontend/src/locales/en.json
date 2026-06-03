@@ -979,12 +979,19 @@
       "productKind": "Product type",
       "category": "TCG series",
       "mark": "Mark",
+      "setType": "Set type",
       "cardNumber": "Card Number",
       "expansionCode": "Set Code (Expansion)",
       "rarity": "Rarity",
       "condition": "Condition",
       "imageUrl": "Image URL",
       "publishStatus": "Publish Status"
+    },
+    "setType": {
+      "booster": "Booster",
+      "deck": "Deck",
+      "single": "Single card",
+      "bulk": "Bulk"
     },
     "masterCol": {
       "productKind": "Product type",

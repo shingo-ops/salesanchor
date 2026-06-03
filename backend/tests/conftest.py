@@ -649,6 +649,7 @@ async def setup_test_db(test_engine):
                 supplier_default_id INTEGER,
                 tcg_type VARCHAR(50),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
+                set_type VARCHAR(50),
                 unit VARCHAR(20),
                 boxes_per_case INTEGER,
                 packs_per_box INTEGER,
