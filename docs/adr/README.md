@@ -91,6 +91,7 @@
 | [ADR-091](./ADR-091-discord-bot-scope-definition.md) | ADR-091: Discord Bot 担当業務スコープ定義 | Accepted | — |
 | [ADR-092](./ADR-092-deploy-concurrency-control.md) | ADR-092: deploy.yml 多重実行防止（concurrency 制御 + コンテナ pre-cleanup） | Accepted | — |
 | [ADR-093](./ADR-093-inventory-table-product-master-redesign.md) | ADR-093: 在庫表 / 仕入元オファー / 商品マスタ 再設計 | Accepted | — |
+| [ADR-094](./ADR-094-sales-management-page.md) | ADR-094: 売上管理ページ（Single Source of Truth）— 実装禁止・詳細仕様未確定 | Proposed | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — |
 
 ## ステータス凡例

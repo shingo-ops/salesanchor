@@ -1,4 +1,4 @@
-# ADR-093: 売上管理ページ（Single Source of Truth）
+# ADR-094: 売上管理ページ（Single Source of Truth）
 
 ## Status
 **Proposed** — 未着手・実装禁止。
