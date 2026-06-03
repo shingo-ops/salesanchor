@@ -542,6 +542,7 @@
 .page-header-select {
   appearance: none;
   -webkit-appearance: none;
+  height: var(--size-icon-btn); /* btn-ghost / icon-btn と高さを統一 (36px) */
   padding: var(--space-1) var(--space-5) var(--space-1) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

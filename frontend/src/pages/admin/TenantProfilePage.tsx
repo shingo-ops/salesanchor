@@ -14,6 +14,7 @@
  *   migrations/069_create_tenant_profile.sql
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -57,7 +58,14 @@ const emptyForm: FormState = {
 
 export default function TenantProfilePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  // 発行者情報編集（請求書作成などから遷移）。直前の画面に戻れるようにする。
+  const backAction = (
+    <button type="button" className="btn-secondary" onClick={() => navigate(-1)} data-testid="tenant-profile-back">
+      {t("common.back")}
+    </button>
+  );
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -122,14 +130,14 @@ export default function TenantProfilePage() {
 
   if (!canView) {
     return (
-      <PageLayout navKey="nav.tenantProfile">
+      <PageLayout navKey="nav.tenantProfile" headerAction={backAction}>
         <div className="error-message">{t("tenantProfile.permissionRequired")}</div>
       </PageLayout>
     );
   }
 
   return (
-    <PageLayout navKey="nav.tenantProfile" subtitleKey="tenantProfile.subtitle">
+    <PageLayout navKey="nav.tenantProfile" subtitleKey="tenantProfile.subtitle" headerAction={backAction}>
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
       ) : (

@@ -77,7 +77,7 @@ export default function InvoiceCreatePage() {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [contactId, setContactId] = useState<number | null>(null);
   const [selectorError, setSelectorError] = useState("");
-  const [currency, setCurrency] = useState("JPY");
+  const [currency, setCurrency] = useState("USD");
   const [shippingFee, setShippingFee] = useState("");
   const [taxAmount, setTaxAmount] = useState("");
   const [notes, setNotes] = useState("");

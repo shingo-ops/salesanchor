@@ -677,6 +677,7 @@
     "facebookSection": "Facebookページ連携",
     "discordSection": "Discordサーバー連携",
     "discordGuildId": "Guild ID",
+    "discordServerId": "サーバーID",
     "discordGuildIdNotSet": "未設定",
     "discordEdit": "設定を編集",
     "discordAddBot": "BotをDiscordサーバーに追加",
@@ -685,7 +686,12 @@
     "discordConnectedSuccess": "DiscordサーバーにBotを追加しました。",
     "discordConnectError": "Discord連携に失敗しました。もう一度お試しください。",
     "discordNoServer": "接続済みDiscordサーバーがありません",
-    "discordNoServerDesc": "BotをDiscordサーバーに追加してメッセージ連携を開始しましょう。"
+    "discordNoServerDesc": "BotをDiscordサーバーに追加してメッセージ連携を開始しましょう。",
+    "discordDisconnect": "切断",
+    "discordDisconnecting": "切断中...",
+    "discordDisconnectTitle": "Discord連携を切断",
+    "discordDisconnectConfirm": "Discord Botの連携を解除します。切断後はDiscordへのメッセージ送信ができなくなります。よろしいですか？",
+    "discordDisconnectedSuccess": "Discord連携を切断しました。"
   },
   "deals": {
     "title": "案件管理",
@@ -1598,9 +1604,9 @@
         "versionLabel": "バージョン",
         "rawContent": "受信本文",
         "noItems": "解析行がありません。",
-        "missingProduct": "商品マスタに未登録です。下で商品マスタから選ぶか、左の「スキップ」にチェックしてください。",
+        "missingProduct": "商品マスタ未登録",
         "selectFromMaster": "商品マスタから選択",
-        "linkedToMaster": "商品マスタ紐付け済",
+        "linkedToMaster": "商品マスタ登録済み",
         "masterPickerPlaceholder": "商品マスタを検索…",
         "operatorComment": "レビュー担当者メモ",
         "approveBtn": "承認して在庫反映",
