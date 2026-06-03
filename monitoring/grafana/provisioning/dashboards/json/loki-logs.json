@@ -21,118 +21,21 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "メイン",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/monitoring-main"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "システム",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/jarvis-system-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "CI / GitHub",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "エラーログ",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/loki-error-logs"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "サービス稼働",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/uptime-kuma-monitors"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "バックエンド",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/backend-api-metrics"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "コンテナ詳細",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/container-detail"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "DB詳細",
-      "tooltip": "",
-      "type": "link",
-      "url": "/grafana/d/db-connection-detail"
-    }
-  ],
+  "links": [],
   "panels": [
     {
       "id": 9999,
       "type": "text",
       "title": "",
       "gridPos": {
-        "h": 3,
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"padding:4px 8px\"><p style=\"margin:0;font-size:20px;font-weight:600;line-height:1.3\">エラーログ監視</p><p style=\"margin:2px 0 0;font-size:10px;opacity:0.75\">アプリケーションのエラーログをリアルタイムで監視・検索します。</p></div>"
+        "content": "<div style=\"display:flex;height:100%;align-items:stretch;font-family:sans-serif;box-sizing:border-box\"><div style=\"width:154px;min-width:154px;display:flex;flex-direction:column;padding:6px 4px;gap:2px;border-right:1px solid rgba(204,204,220,0.12)\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:8px;padding:5px 10px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a></div><div style=\"flex:1;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;overflow:hidden\"><p style=\"margin:0;font-size:18px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">エラーログ監視</p><p style=\"margin:4px 0 0;font-size:10px;opacity:0.6;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden\">アプリケーションのエラーログをリアルタイムで監視・検索します。</p></div></div>"
       },
       "transparent": true
     },
@@ -142,7 +45,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 8
       },
       "id": 100,
       "title": "エラーログ トレンド",
@@ -222,7 +125,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 9
       },
       "id": 1,
       "options": {
@@ -277,7 +180,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 17
       },
       "id": 101,
       "title": "認証失敗ログ",
@@ -292,7 +195,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 18
       },
       "id": 10,
       "options": {
@@ -325,7 +228,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 26
       },
       "id": 102,
       "title": "バックエンドエラーログ",
@@ -340,7 +243,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 27
       },
       "id": 20,
       "options": {
@@ -373,7 +276,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 35
       },
       "id": 103,
       "title": "コンテナ別エラー集計",
@@ -414,7 +317,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 36
       },
       "id": 30,
       "options": {
@@ -454,7 +357,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 36
       },
       "id": 31,
       "options": {

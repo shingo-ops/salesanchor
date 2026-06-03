@@ -2,14 +2,14 @@
   "_comment": "ナビゲーションタブの SSoT。このファイルだけ編集し generate-nav.js を実行すれば全ダッシュボードに反映される。",
   "_ux_hierarchy": "大カテゴリ: 監視メイン → 中カテゴリ: 各タブのダッシュボード → 小カテゴリ: 詳細ダッシュボード（パネルリンクで遷移）",
   "links": [
-    { "title": "メイン",         "url": "/grafana/d/monitoring-main" },
-    { "title": "システム",       "url": "/grafana/d/jarvis-system-overview" },
-    { "title": "CI / GitHub",  "url": "/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206" },
-    { "title": "エラーログ",     "url": "/grafana/d/loki-error-logs" },
-    { "title": "サービス稼働",   "url": "/grafana/d/uptime-kuma-monitors" },
-    { "title": "バックエンド",   "url": "/grafana/d/backend-api-metrics" },
-    { "title": "コンテナ詳細",  "url": "/grafana/d/container-detail" },
-    { "title": "DB詳細",        "url": "/grafana/d/db-connection-detail" }
+    { "title": "メイン",         "icon": "📊", "url": "/grafana/d/monitoring-main",                        "uid": "monitoring-main" },
+    { "title": "システム",       "icon": "🖥️", "url": "/grafana/d/jarvis-system-overview",                 "uid": "jarvis-system-overview" },
+    { "title": "CI / GitHub",  "icon": "⚙️", "url": "/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206", "uid": "ea99fc9c-32f6-4678-9f45-ab1421a94206" },
+    { "title": "エラーログ",     "icon": "🚨", "url": "/grafana/d/loki-error-logs",                        "uid": "loki-error-logs" },
+    { "title": "サービス稼働",   "icon": "🟢", "url": "/grafana/d/uptime-kuma-monitors",                   "uid": "uptime-kuma-monitors" },
+    { "title": "バックエンド",   "icon": "🔧", "url": "/grafana/d/backend-api-metrics",                    "uid": "backend-api-metrics" },
+    { "title": "コンテナ詳細",  "icon": "📦", "url": "/grafana/d/container-detail",                       "uid": "container-detail" },
+    { "title": "DB詳細",        "icon": "🗄️", "url": "/grafana/d/db-connection-detail",                   "uid": "db-connection-detail" }
   ],
   "dashboards": {
     "monitoring-main": {
