@@ -10,6 +10,13 @@
   margin-left: 30px;
 }
 
+/* ── カード間余白（SSoT: ここのみ定義） ── */
+.db-content-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 /* ── タブ ── */
 .db-tabs {
   display: flex;
@@ -49,7 +56,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: var(--space-4);
-  margin-bottom: var(--space-6);
 }
 
 /* リードビュー: 着地予測カードが非表示のため2カラム */
@@ -455,7 +461,6 @@
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-4);
 }
 
 .db-chart-tooltip {
