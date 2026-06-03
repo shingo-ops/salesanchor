@@ -82,6 +82,26 @@ params = {
 
 **外部エビデンス**: MEE6（1,950万サーバー）・Carl-bot（1,332万サーバー）が同一パターンを採用している。
 
+#### 失敗した試み: `integration_type=0` の除外（PR #1481）
+
+`scope=bot` で callback が来ない問題に対し、
+Discord の新アプリインストール方式パラメータ `integration_type=0` が原因ではないかと仮説を立て除外を試みた。
+
+```python
+# 試みた変更（PR #1481）— 効果なし
+params = {
+    "client_id": _DISCORD_CLIENT_ID,
+    "permissions": _DISCORD_PERMISSIONS,
+    "scope": "bot",              # integration_type=0 を除外
+    "redirect_uri": _DISCORD_CALLBACK_URL,
+    "state": state,
+}
+```
+
+結果: `integration_type=0` の有無に関わらず `scope=bot` 単体では callback が呼ばれなかった。
+根本原因は `integration_type=0` ではなく、`scope=bot` 単体が callback-less flow である Discord の仕様そのものだった。
+正解は上記の `scope=bot applications.commands` + `response_type=code` への変更（PR #1483）。
+
 #### FRONTEND_BASE_URL 空文字バグ（PR #1469）
 
 環境変数に `FRONTEND_BASE_URL=""` が設定されている場合、
