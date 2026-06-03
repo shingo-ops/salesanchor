@@ -39,6 +39,14 @@ class InventoryFilterPayload(BaseModel):
     hidden_columns: list[str] = Field(
         default_factory=list, description="非表示にする列キー（category/mark/condition/unit/offer_type/quantity/unit_price/supplier）"
     )
+    # ADR-093 表示条件: 状態/形態/区分の複数選択（選択したもののみ表示）+ 数量/単価の範囲。
+    show_conditions: list[str] = Field(default_factory=list, description="表示する状態(condition)")
+    show_units: list[str] = Field(default_factory=list, description="表示する形態(unit)")
+    show_offer_types: list[str] = Field(default_factory=list, description="表示する区分(offer_type)")
+    qty_min: int | None = Field(default=None, ge=0, description="数量の下限（以上）")
+    qty_max: int | None = Field(default=None, ge=0, description="数量の上限（以下）")
+    price_min: int | None = Field(default=None, ge=0, description="単価の下限（以上）")
+    price_max: int | None = Field(default=None, ge=0, description="単価の上限（以下）")
 
 
 def _coerce_int_list(raw: object) -> list[int]:
@@ -52,6 +60,20 @@ def _coerce_int_list(raw: object) -> list[int]:
             elif isinstance(x, str) and x.strip().lstrip("-").isdigit():
                 out.append(int(x))
     return out
+
+
+def _coerce_str_list(raw: object) -> list[str]:
+    return [str(x) for x in raw if isinstance(x, str)] if isinstance(raw, list) else []
+
+
+def _coerce_opt_int(raw: object) -> int | None:
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, str) and raw.strip().lstrip("-").isdigit():
+        return int(raw)
+    return None
 
 
 @router.get("/me/inventory-filters", response_model=InventoryFilterPayload)
@@ -79,8 +101,15 @@ async def get_my_inventory_filters(
     return InventoryFilterPayload(
         enabled=bool(row["enabled"]),
         hidden_supplier_ids=_coerce_int_list(f.get("hidden_supplier_ids")),
-        hidden_categories=[str(x) for x in (f.get("hidden_categories") or []) if isinstance(x, str)],
-        hidden_columns=[str(x) for x in (f.get("hidden_columns") or []) if isinstance(x, str)],
+        hidden_categories=_coerce_str_list(f.get("hidden_categories")),
+        hidden_columns=_coerce_str_list(f.get("hidden_columns")),
+        show_conditions=_coerce_str_list(f.get("show_conditions")),
+        show_units=_coerce_str_list(f.get("show_units")),
+        show_offer_types=_coerce_str_list(f.get("show_offer_types")),
+        qty_min=_coerce_opt_int(f.get("qty_min")),
+        qty_max=_coerce_opt_int(f.get("qty_max")),
+        price_min=_coerce_opt_int(f.get("price_min")),
+        price_max=_coerce_opt_int(f.get("price_max")),
     )
 
 
@@ -98,6 +127,13 @@ async def update_my_inventory_filters(
             "hidden_supplier_ids": payload.hidden_supplier_ids,
             "hidden_categories": payload.hidden_categories,
             "hidden_columns": payload.hidden_columns,
+            "show_conditions": payload.show_conditions,
+            "show_units": payload.show_units,
+            "show_offer_types": payload.show_offer_types,
+            "qty_min": payload.qty_min,
+            "qty_max": payload.qty_max,
+            "price_min": payload.price_min,
+            "price_max": payload.price_max,
         }
     )
     await db.execute(

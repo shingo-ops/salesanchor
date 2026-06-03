@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import InventoryFilterPanel from "./InventoryFilterPanel";
 
 interface InventoryRow {
   id: number;
@@ -45,9 +46,21 @@ interface InventoryListResponse {
   per_page: number;
   suppliers?: SupplierFacet[];
   categories?: string[];
+  conditions?: string[];
+  units?: string[];
 }
 
 const PER_PAGE = 50;
+
+// 表示条件「在庫・予約」の選択肢（固定 2 値）。
+const OFFER_TYPES = ["in_stock", "pre_order"] as const;
+
+// 数量/単価フィルタ用に、入力文字列を 0 以上の整数へ正規化（小数・不正値は無視）。
+// backend は int(ge=0) のため、小数や負値をそのまま送ると 422 になるのを防ぐ。
+const toNonNegInt = (s: string): number | null => {
+  const n = Number(s);
+  return s.trim() !== "" && Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+};
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
@@ -91,6 +104,16 @@ export default function InventoryPage() {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [supplierFacet, setSupplierFacet] = useState<SupplierFacet[]>([]);
   const [categoryFacet, setCategoryFacet] = useState<string[]>([]);
+  // ADR-093 表示条件: 状態/形態/区分の複数選択（選択したもののみ表示。未選択なら全件）+ 数量/単価の範囲。
+  const [showConditions, setShowConditions] = useState<Set<string>>(new Set());
+  const [showUnits, setShowUnits] = useState<Set<string>>(new Set());
+  const [showOfferTypes, setShowOfferTypes] = useState<Set<string>>(new Set());
+  const [qtyMin, setQtyMin] = useState("");
+  const [qtyMax, setQtyMax] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [conditionFacet, setConditionFacet] = useState<string[]>([]);
+  const [unitFacet, setUnitFacet] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
@@ -138,17 +161,33 @@ export default function InventoryPage() {
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
       }
+      // ADR-093 表示条件（フィルタ有効時のみ適用）
+      if (filterEnabled && showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
+      if (filterEnabled && showUnits.size > 0) params.set("unit_in", Array.from(showUnits).join(","));
+      if (filterEnabled && showOfferTypes.size > 0) params.set("offer_type_in", Array.from(showOfferTypes).join(","));
+      if (filterEnabled) {
+        const qmin = toNonNegInt(qtyMin);
+        const qmax = toNonNegInt(qtyMax);
+        const pmin = toNonNegInt(priceMin);
+        const pmax = toNonNegInt(priceMax);
+        if (qmin !== null) params.set("qty_min", String(qmin));
+        if (qmax !== null) params.set("qty_max", String(qmax));
+        if (pmin !== null) params.set("price_min", String(pmin));
+        if (pmax !== null) params.set("price_max", String(pmax));
+      }
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
       setItems(d.items);
       setTotal(d.total);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
+      if (d.conditions) setConditionFacet(d.conditions);
+      if (d.units) setUnitFacet(d.units);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
       setLoading(false);
     }
-  }, [page, sortField, sortDir, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, t]);
+  }, [page, sortField, sortDir, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     void load();
@@ -168,15 +207,32 @@ export default function InventoryPage() {
   useEffect(() => {
     let cancelled = false;
     api
-      .get<{ enabled: boolean; hidden_supplier_ids: number[]; hidden_categories: string[]; hidden_columns: string[] }>(
-        "/me/inventory-filters",
-      )
+      .get<{
+        enabled: boolean;
+        hidden_supplier_ids: number[];
+        hidden_categories: string[];
+        hidden_columns: string[];
+        show_conditions?: string[];
+        show_units?: string[];
+        show_offer_types?: string[];
+        qty_min?: number | null;
+        qty_max?: number | null;
+        price_min?: number | null;
+        price_max?: number | null;
+      }>("/me/inventory-filters")
       .then((f) => {
         if (cancelled) return;
         setFilterEnabled(!!f.enabled);
         setHiddenSupplierIds(new Set(f.hidden_supplier_ids ?? []));
         setHiddenCategories(new Set(f.hidden_categories ?? []));
         setHiddenColumns(new Set(f.hidden_columns ?? []));
+        setShowConditions(new Set(f.show_conditions ?? []));
+        setShowUnits(new Set(f.show_units ?? []));
+        setShowOfferTypes(new Set(f.show_offer_types ?? []));
+        setQtyMin(f.qty_min != null ? String(f.qty_min) : "");
+        setQtyMax(f.qty_max != null ? String(f.qty_max) : "");
+        setPriceMin(f.price_min != null ? String(f.price_min) : "");
+        setPriceMax(f.price_max != null ? String(f.price_max) : "");
       })
       .catch(() => { /* デフォルト（全表示）のまま */ })
       .finally(() => { if (!cancelled) setFiltersLoaded(true); });
@@ -195,11 +251,18 @@ export default function InventoryPage() {
           hidden_supplier_ids: Array.from(hiddenSupplierIds),
           hidden_categories: Array.from(hiddenCategories),
           hidden_columns: Array.from(hiddenColumns),
+          show_conditions: Array.from(showConditions),
+          show_units: Array.from(showUnits),
+          show_offer_types: Array.from(showOfferTypes),
+          qty_min: toNonNegInt(qtyMin),
+          qty_max: toNonNegInt(qtyMax),
+          price_min: toNonNegInt(priceMin),
+          price_max: toNonNegInt(priceMax),
         })
         .catch(() => { /* 保存失敗は致命でない */ });
     }, 250);
     return () => clearTimeout(timer);
-  }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns]);
+  }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax]);
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
@@ -412,115 +475,38 @@ export default function InventoryPage() {
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
-        <section
-          className="inventory-filter-panel"
-          data-testid="inventory-filter-panel"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-            margin: "0 0 var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-            maxWidth: "44rem",
-          }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: "var(--font-weight-semi)" }}>
-            <input
-              type="checkbox"
-              data-testid="inventory-filter-enabled"
-              checked={filterEnabled}
-              onChange={(e) => { setFilterEnabled(e.target.checked); setPage(1); }}
-            />
-            {t("inventory.filterPanel.enable")}
-          </label>
-
-          {/* 1) カテゴリーの表示／非表示（コード順で左から） */}
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.categories")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {sortedCategories.length === 0 ? (
-                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-              ) : (
-                sortedCategories.map((c) => (
-                  <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-filter-category-${c}`}
-                      checked={!hiddenCategories.has(c)}
-                      onChange={() => toggleHiddenCategory(c)}
-                    />
-                    {c}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 2) 仕入元の表示／非表示 */}
-          <div>
-            <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.suppliers")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {supplierFacet.length === 0 ? (
-                <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-              ) : (
-                supplierFacet.map((s) => (
-                  <label key={s.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                    <input
-                      type="checkbox"
-                      data-testid={`inventory-filter-supplier-${s.id}`}
-                      checked={!hiddenSupplierIds.has(s.id)}
-                      onChange={() => toggleHiddenSupplier(s.id)}
-                    />
-                    {s.name ?? `#${s.id}`}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 3) 表示する列（データの絞り込みではなく列の取捨。上2つと毛色が違うため枠で区別） */}
-          <div
-            style={{
-              background: "var(--bg-subtle)",
-              border: "1px dashed var(--border-strong)",
-              borderRadius: "var(--radius-sm)",
-              padding: "var(--space-3)",
-            }}
-          >
-            <div style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-              {t("inventory.filterPanel.columns")}
-            </div>
-            <div style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
-              {t("inventory.filterPanel.columnsNote")}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-              {HIDEABLE_COLUMNS.map((c) => (
-                <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <input
-                    type="checkbox"
-                    data-testid={`inventory-filter-col-${c}`}
-                    checked={!hiddenColumns.has(c)}
-                    onChange={() => toggleHiddenColumn(c)}
-                  />
-                  {t(`inventory.col.${c}`)}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <button type="button" className="btn-sm" onClick={() => setShowFilterPanel(false)}>
-              {t("common.close")}
-            </button>
-          </div>
-        </section>
+        <InventoryFilterPanel
+          filterEnabled={filterEnabled}
+          setFilterEnabled={setFilterEnabled}
+          setPage={setPage}
+          sortedCategories={sortedCategories}
+          hiddenCategories={hiddenCategories}
+          toggleHiddenCategory={toggleHiddenCategory}
+          supplierFacet={supplierFacet}
+          hiddenSupplierIds={hiddenSupplierIds}
+          toggleHiddenSupplier={toggleHiddenSupplier}
+          hideableColumns={HIDEABLE_COLUMNS}
+          hiddenColumns={hiddenColumns}
+          toggleHiddenColumn={toggleHiddenColumn}
+          conditionFacet={conditionFacet}
+          showConditions={showConditions}
+          setShowConditions={setShowConditions}
+          unitFacet={unitFacet}
+          showUnits={showUnits}
+          setShowUnits={setShowUnits}
+          offerTypes={OFFER_TYPES}
+          showOfferTypes={showOfferTypes}
+          setShowOfferTypes={setShowOfferTypes}
+          qtyMin={qtyMin}
+          setQtyMin={setQtyMin}
+          qtyMax={qtyMax}
+          setQtyMax={setQtyMax}
+          priceMin={priceMin}
+          setPriceMin={setPriceMin}
+          priceMax={priceMax}
+          setPriceMax={setPriceMax}
+          onClose={() => setShowFilterPanel(false)}
+        />
       )}
 
       {/* アクション: 役割ごとに2段で固定表示（チェック前から常時表示）。
