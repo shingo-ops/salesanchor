@@ -334,7 +334,59 @@
 }
 
 /* ============================================================
-   カスタムコンテナ
+   独立レイアウト（PageLayout から分離）
+   ============================================================ */
+
+/* ルートコンテナ: 親から高さを継承しフレックスで縦積み */
+.schedule-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-surface);
+}
+
+/* ヘッダー: タイトル行 + サブタイトル */
+.schedule-page-header {
+  flex-shrink: 0;
+  padding: var(--page-padding-y) var(--page-header-avatar-clearance) 0 var(--page-padding-x);
+}
+
+.schedule-page-header__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--btn-min-height-md);
+  margin-bottom: -3px;
+}
+
+.schedule-page-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-md);
+}
+
+/* カレンダー本体: 残りの高さを全部使う */
+.schedule-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.schedule-body .fc {
+  height: 100%;
+}
+
+/* ============================================================
+   カスタムコンテナ（後方互換のため残す）
    ============================================================ */
 
 .gcal-container {

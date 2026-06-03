@@ -8,6 +8,10 @@
  *   - イベントの作成 / 更新 / 削除（DB 経由 → Google に自動同期）
  *   - FullCalendar による Google Calendar クローン UI（週/月/日ビュー）
  *
+ * レイアウト:
+ *   PageLayout から独立した独自レイアウトを使用。
+ *   ヘッダー固定 + ボディ flex:1 で画面残り全体をカレンダーに割り当てる。
+ *
  * ADR-027: 全 UI 文字列は t() 経由
  * ADR-067: デザイントークン参照のみ（ハードコード禁止）
  */
@@ -23,7 +27,6 @@ import type { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/co
 import "../schedule.css";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
-import { PageLayout } from "../../components/PageLayout";
 import { GoogleCalendarStatusBar, type SyncStatus } from "../../components/GoogleCalendarStatusBar";
 
 // ---------------------------------------------------------------------------
@@ -102,9 +105,6 @@ function toDateInput(d: Date): string {
 function toTimeInput(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // EventModal
@@ -455,55 +455,58 @@ export default function SchedulePage() {
       : t("schedule.connectBtn");
 
   return (
-    <PageLayout
-      navKey="nav.schedule"
-      subtitleKey="schedule.subtitle"
-      headerLeft={
-        <div className="schedule-header-nav">
-          <button className="gcal-nav__today" onClick={() => handleToolbarNavigate("TODAY")}>
-            {t("schedule.today")}
-          </button>
-          <button
-            className="gcal-nav__arrow"
-            onClick={() => handleToolbarNavigate("PREV")}
-            aria-label={t("schedule.prevPeriod")}
-          >
-            ‹
-          </button>
-          <button
-            className="gcal-nav__arrow"
-            onClick={() => handleToolbarNavigate("NEXT")}
-            aria-label={t("schedule.nextPeriod")}
-          >
-            ›
-          </button>
-          <span className="schedule-header-month">{calMonthLabel}</span>
-        </div>
-      }
-      headerAction={
-        <div className="page-header-actions">
-          <select
-            className="page-header-select"
-            value={calView}
-            onChange={(e) => handleToolbarView(e.target.value)}
-            aria-label={t("schedule.viewSelect")}
-          >
-            <option value="dayGridMonth">{t("schedule.monthView")}</option>
-            <option value="timeGridWeek">{t("schedule.weekView")}</option>
-            <option value="timeGridDay">{t("schedule.dayView")}</option>
-          </select>
-          {canManage && (
-            <button
-              className={gcalConnectBtnClass}
-              onClick={gcalStatus !== "connected" ? handleGoogleConnect : undefined}
+    <div className="schedule-root">
+      {/* ページヘッダー */}
+      <header className="schedule-page-header">
+        <div className="schedule-page-header__top">
+          <div className="schedule-page-header__title-row">
+            <h2 className="text-page-title">{t("nav.schedule")}</h2>
+            <div className="schedule-header-nav">
+              <button className="gcal-nav__today" onClick={() => handleToolbarNavigate("TODAY")}>
+                {t("schedule.today")}
+              </button>
+              <button
+                className="gcal-nav__arrow"
+                onClick={() => handleToolbarNavigate("PREV")}
+                aria-label={t("schedule.prevPeriod")}
+              >
+                ‹
+              </button>
+              <button
+                className="gcal-nav__arrow"
+                onClick={() => handleToolbarNavigate("NEXT")}
+                aria-label={t("schedule.nextPeriod")}
+              >
+                ›
+              </button>
+              <span className="schedule-header-month">{calMonthLabel}</span>
+            </div>
+          </div>
+          <div className="schedule-page-header__actions">
+            <select
+              className="page-header-select"
+              value={calView}
+              onChange={(e) => handleToolbarView(e.target.value)}
+              aria-label={t("schedule.viewSelect")}
             >
-              {gcalConnectBtnLabel}
-            </button>
-          )}
+              <option value="dayGridMonth">{t("schedule.monthView")}</option>
+              <option value="timeGridWeek">{t("schedule.weekView")}</option>
+              <option value="timeGridDay">{t("schedule.dayView")}</option>
+            </select>
+            {canManage && (
+              <button
+                className={gcalConnectBtnClass}
+                onClick={gcalStatus !== "connected" ? handleGoogleConnect : undefined}
+              >
+                {gcalConnectBtnLabel}
+              </button>
+            )}
+          </div>
         </div>
-      }
-    >
-      {/* Google Calendar 接続ステータスバー（接続中/切断中のみ表示） */}
+        <p className="page-subtitle">{t("schedule.subtitle")}</p>
+      </header>
+
+      {/* Google Calendar 接続ステータスバー */}
       <GoogleCalendarStatusBar
         onReconnect={handleGoogleConnect}
         onConnect={handleGoogleConnect}
@@ -515,7 +518,7 @@ export default function SchedulePage() {
       {banner && (
         <div
           className={banner.type === "success" ? "success-banner" : "error-banner"}
-          style={{ marginBottom: "var(--space-4)" }}
+          style={{ margin: "0 var(--page-padding-x) var(--space-2)" }}
         >
           {banner.message}
           <button
@@ -534,14 +537,13 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* カレンダー本体 */}
-      <div className="gcal-container">
+      {/* カレンダー本体（残り全域） */}
+      <div className="schedule-body">
         {loadingEvents && (
           <div className="gcal-loading">
             {t("schedule.loading")}
           </div>
         )}
-
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -598,6 +600,6 @@ export default function SchedulePage() {
           onDelete={handleDelete}
         />
       )}
-    </PageLayout>
+    </div>
   );
 }
