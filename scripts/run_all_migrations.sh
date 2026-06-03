@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=86
+TOTAL=87
 
 run_py() {
   local script="$1"
@@ -201,6 +201,9 @@ run_sql migrations/20260603_000000_add_products_product_kind.sql
 
 # ADR-093: 仕入元に LINE名 + 構造化住所を追加
 run_sql migrations/20260603_010000_add_suppliers_line_and_address.sql
+
+# ドラゴンボール フュージョンワールド 商品マスタ投入（Booster/Starter 26件）
+run_sql migrations/20260603_030000_seed_dragonball_products.sql
 
 echo ""
 echo "============================================"
