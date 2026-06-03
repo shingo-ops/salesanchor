@@ -138,6 +138,9 @@
     "designSystem": "Design System",
     "accountSettings": "Account Settings"
   },
+  "crm": {
+    "subtitle": "Manage leads and customer information in one place."
+  },
   "managementCenter": {
     "sectionTeam": "Team & HR",
     "sectionSecurity": "Permissions & Security",
