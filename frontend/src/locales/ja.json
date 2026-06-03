@@ -1448,7 +1448,7 @@
     "accessDenied": "このページには Jarvis 運用 admin（中央 admin）のみアクセスできます。",
     "tabs": {
       "knowledge": "解析プロンプト / ルール",
-      "tcg": "TCG シリーズ",
+      "tcg": "商品マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
       "llmBudget": "LLM 予算"

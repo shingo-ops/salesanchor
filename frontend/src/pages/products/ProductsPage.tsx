@@ -140,7 +140,8 @@ interface ArchiveBlockedDetail {
   detail: string;
 }
 
-export default function ProductsPage() {
+// embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
+export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const [products, setProducts] = useState<Product[]>([]);
@@ -364,24 +365,22 @@ export default function ProductsPage() {
     }
   };
 
-  return (
-    <PageLayout
-      navKey="nav.products"
-      subtitleKey="products.subtitle"
-      headerAction={
-        hasPermission("products.create") ? (
-          <div className="page-header-actions">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}
-            >
-              {t("products.newProduct")}
-            </button>
-          </div>
-        ) : undefined
-      }
-    >
+  const headerAction = hasPermission("products.create") ? (
+    <div className="page-header-actions">
+      <button
+        type="button"
+        className="btn-primary"
+        onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}
+      >
+        {t("products.newProduct")}
+      </button>
+    </div>
+  ) : undefined;
+
+  const body = (
+    <>
+      {/* 埋め込み時はページタイトルが無いので操作ボタンを先頭に出す */}
+      {embedded && headerAction && <div style={{ marginBottom: "var(--space-3)" }}>{headerAction}</div>}
       <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
         <input type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
         {tcgTypes.length > 0 && (
@@ -761,6 +760,15 @@ export default function ProductsPage() {
         onConfirm={handleArchiveFromBlocked}
         onCancel={() => setArchiveBlocked(null)}
       />
+    </>
+  );
+
+  if (embedded) {
+    return <div className="page" data-testid="products-master-embedded">{body}</div>;
+  }
+  return (
+    <PageLayout navKey="nav.products" subtitleKey="products.subtitle" headerAction={headerAction}>
+      {body}
     </PageLayout>
   );
 }
