@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+
+from app.auth.dependencies import reset_tenant_context
 from typing import Optional
 
 from sqlalchemy import text
@@ -264,6 +266,7 @@ async def update_event(
         params,
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
     # Google Calendar に同期
     row = await db.execute(
@@ -289,6 +292,7 @@ async def update_event(
                 {"id": event_id},
             )
             await db.commit()
+            await reset_tenant_context(db, tenant_id)
         except Exception as e:
             logger.warning("Google Calendar 更新同期に失敗 (event_id=%s): %s", event_id, e)
             await db.execute(
@@ -296,6 +300,7 @@ async def update_event(
                 {"id": event_id},
             )
             await db.commit()
+            await reset_tenant_context(db, tenant_id)
 
     return {"id": event_id}
 
