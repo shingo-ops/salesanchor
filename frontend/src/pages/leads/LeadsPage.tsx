@@ -254,7 +254,7 @@ export default function LeadsPage() {
 
   return (
     <PageLayout
-      navKey="nav.leads"
+      navKey="nav.leadsSection"
       subtitleKey="leads.subtitle"
       headerAction={hasPermission("leads.create") ? (
         <div className="page-header-actions">

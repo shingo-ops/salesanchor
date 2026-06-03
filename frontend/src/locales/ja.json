@@ -138,6 +138,9 @@
     "designSystem": "デザインシステム",
     "accountSettings": "アカウント設定"
   },
+  "crm": {
+    "subtitle": "リード・顧客情報を一元管理できます。"
+  },
   "managementCenter": {
     "sectionTeam": "チーム・人事",
     "sectionSecurity": "権限・セキュリティ",
