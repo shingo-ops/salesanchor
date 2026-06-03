@@ -717,7 +717,7 @@
   },
   "inventory": {
     "view": {
-      "subtitle": "Shows suppliers' current offers (imported stock).",
+      "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by name, English name, category, mark, or supplier"
     },
     "expiryWarning": "Offers are automatically removed 18 hours after they are posted.",
@@ -957,6 +957,22 @@
       "condition": "Condition",
       "imageUrl": "Image URL",
       "publishStatus": "Publish Status"
+    },
+    "masterCol": {
+      "category": "Category",
+      "mark": "Mark",
+      "titleJa": "Title (JA)",
+      "titleEn": "Title (EN)",
+      "boxesPerCase": "Boxes/Case",
+      "packsPerBox": "Packs/Box",
+      "weight": "Weight",
+      "boxWeight": "Box weight",
+      "caseWeight": "Case weight",
+      "releaseDate": "Release date",
+      "categoryClassification": "Classification",
+      "item": "Item",
+      "hsCode": "HS code",
+      "material": "Material"
     },
     "master": {
       "sectionBox": "Box / Packaging",
