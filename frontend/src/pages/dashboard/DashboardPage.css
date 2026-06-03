@@ -4,6 +4,12 @@
    Dark mode: :root.force-dark で同名トークンが上書き済み
    ============================================================ */
 
+/* ── ヘッダー: タイトルから 30px 離してコントロールを左寄せ ── */
+/* margin-left: auto（右端寄せ）を 30px で上書きし、タイトル直後に固定 */
+.page-layout-title-row:has(.db-tabs) .page-layout-header-right {
+  margin-left: 30px;
+}
+
 /* ── タブ ── */
 .db-tabs {
   display: flex;
