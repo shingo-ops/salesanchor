@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-
-from app.auth.dependencies import reset_tenant_context
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import reset_tenant_context
 
 logger = logging.getLogger(__name__)
 
