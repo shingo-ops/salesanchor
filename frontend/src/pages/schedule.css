@@ -546,7 +546,7 @@
   position: fixed; /* fixed-ok: イベント詳細ポップオーバー（クリック座標に追従） */
   z-index: var(--z-modal);
   width: var(--event-popover-w);
-  background: var(--accent-bg-subtle);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface)); /* 不透明な青みがかった背景 */
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-dropdown);
