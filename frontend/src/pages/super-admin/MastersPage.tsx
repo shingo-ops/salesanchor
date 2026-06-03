@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
-import TcgSeriesTab from "./TcgSeriesTab";
+import ProductsPage from "../products/ProductsPage";
 import DexTab from "./DexTab";
 import SuppliersAdminTab from "./SuppliersAdminTab";
 import LLMBudgetTab from "./LLMBudgetTab";
@@ -73,7 +73,7 @@ export default function MastersPage() {
       </div>
       <div className="super-admin-tab-content" role="tabpanel">
         {tab === "knowledge" && <KnowledgeAliasesTab />}
-        {tab === "tcg" && <TcgSeriesTab />}
+        {tab === "tcg" && <ProductsPage embedded />}
         {tab === "dex" && <DexTab />}
         {tab === "suppliers" && <SuppliersAdminTab />}
         {tab === "llmBudget" && <LLMBudgetTab />}

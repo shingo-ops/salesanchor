@@ -1448,7 +1448,7 @@
     "accessDenied": "Only Jarvis operations admins (central admins) can access this page.",
     "tabs": {
       "knowledge": "Parsing Prompts / Rules",
-      "tcg": "TCG Series",
+      "tcg": "Product master",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
       "llmBudget": "LLM Budget"
