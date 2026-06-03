@@ -117,14 +117,13 @@ test.describe("Sprint 2 / F2 — /super-admin/masters", () => {
     await expect(page.getByTestId("super-admin-tab-knowledge")).toBeVisible();
 
     // ADR-093: 作成は「ルール新規作成」ボタン → ポップアップで入力 → 保存。
+    // カテゴリ/一致方法/言語は select（既定値で可）。変換前ワード/変換後ワードのみ text input。
     await page.getByTestId("rules-new").click();
     const dialog = page.locator(".modal");
     await expect(dialog).toBeVisible();
-    // カテゴリ / 変換前ワード / 変換後ワード（form-group 内の text input を順に埋める）
-    const inputs = dialog.locator(".form-group input[type='text'], .form-group input:not([type])");
-    await inputs.nth(0).fill("tcg");
-    await inputs.nth(1).fill("^PSV1a-(\\d+)");
-    await inputs.nth(2).fill("SV1a-$1");
+    const textInputs = dialog.locator(".form-group input[type='text'], .form-group input:not([type])");
+    await textInputs.nth(0).fill("^PSV1a-(\\d+)"); // 変換前ワード(pattern)
+    await textInputs.nth(1).fill("SV1a-$1");        // 変換後ワード(normalized_to)
     await page.getByTestId("rule-save").click();
 
     // 一覧に反映

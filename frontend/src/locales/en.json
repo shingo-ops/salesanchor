@@ -1470,6 +1470,20 @@
       "newAlias": "New Per-Supplier Rule",
       "selectSupplier": "Please select a supplier",
       "bulkDeleteConfirm": "Delete the {{count}} selected items. Are you sure?",
+      "categoryHelp": "Choose which processing stage this rule is used in. Usually \"Normalize\".",
+      "patternTypeHelp": "How the inbound word is matched. Regex is an advanced pattern (e.g. From \"^SV1a-(\\d+)\" -> To \"SV1a-$1\" with backreference).",
+      "categories": {
+        "normalize": "Normalize",
+        "split": "Split lines",
+        "alias_normalize": "Alias normalize",
+        "exclude": "Exclude (ignore line)"
+      },
+      "langs": {
+        "ja": "Japanese",
+        "en": "English",
+        "ko": "Korean",
+        "zh": "Chinese"
+      },
       "patternTypes": {
         "regex": "Regex",
         "exact": "Exact match",
@@ -1485,9 +1499,11 @@
         "language": "Language",
         "isActive": "Active",
         "supplierId": "Supplier ID",
-        "supplierName": "Parse as supplier",
-        "aliasText": "Inbound word"
+        "supplierName": "Supplier",
+        "aliasText": "Inbound word",
+        "resolvedProduct": "Resolved product"
       },
+      "resolvedProductHelp": "Choose which product this word should resolve to when parsed (optional).",
       "csvImport": "CSV Import",
       "csvExport": "CSV Export",
       "csvDryRun": "Preview (dry-run)",
