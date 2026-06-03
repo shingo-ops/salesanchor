@@ -349,6 +349,14 @@ export const SCHEDULE_POPOVER_ICONS = {
   close:  XOutline,             // XMarkIcon outline
 } satisfies Record<string, Icon>;
 
+// SaaS 管理者ハブ ボトムタブ用
+export const ADMIN_HUB_ICONS = {
+  tenantProfile:       Briefcase,        // BriefcaseIcon solid — 発行者情報
+  discordConfig:       GearEightOutline, // Cog8ToothIcon outline — Discord設定
+  discordAnnounce:     PaperAirplane,    // PaperAirplaneIcon solid — アナウンス投稿
+  inventoryVisibility: PackageOutline,   // CubeIcon outline — 在庫表示権限
+} satisfies Record<string, Icon>;
+
 // Layout.tsx の /lead-chat ナビアイテム用（outline バリアント — サイドバー統一仕様）
 export function LeadChatIcon({ size = 20, className }: { size?: number; className?: string }) {
   return <ChatBubbleOvalLeftOutlineIcon width={size} height={size} className={className} aria-hidden="true" />;
