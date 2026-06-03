@@ -155,7 +155,13 @@ async def list_products(
 
     # 名前ソート（在庫表ヘッダーのトグル用）。ホワイトリストで SQL インジェクション防止。
     # 未指定は従来どおり updated_at DESC。
-    _SORT_MAP = {"name_asc": f"{ctx['name']} ASC", "name_desc": f"{ctx['name']} DESC"}
+    _SORT_MAP = {
+        "name_asc": f"{ctx['name']} ASC",
+        "name_desc": f"{ctx['name']} DESC",
+        # ADR-093 商品マスタ: 発売日ソート（NULL は末尾）
+        "release_date_asc": "release_date ASC NULLS LAST",
+        "release_date_desc": "release_date DESC NULLS LAST",
+    }
     order_by = _SORT_MAP.get(sort or "", "updated_at DESC")
 
     result = await db.execute(
