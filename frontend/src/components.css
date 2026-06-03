@@ -105,7 +105,18 @@
 .btn-sm:hover { background: var(--bg-hover); }
 
 .btn-danger {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
   color: var(--danger);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .btn-danger:hover { background: var(--danger-bg); }
@@ -407,12 +418,60 @@
 .modal {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
-  padding: var(--space-8);
+  padding: var(--space-6) var(--space-8) var(--space-8);
   width: 100%;
   max-width: var(--modal-max-w);
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-modal);
+}
+
+/* Google Calendar 準拠モーダルヘッダー: タイトル + 右端アクションアイコン群 */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-2);
+}
+
+.modal-header__title {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* ヘッダー内アイコンボタン（ゴミ箱・閉じる） */
+.modal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-9);
+  height: var(--space-9);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.modal-icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-icon-btn--danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .modal h3 {

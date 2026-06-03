@@ -437,6 +437,8 @@ export default function DashboardPage() {
       }
     >
 
+      <div className="db-content-stack">
+
       {/* -------------------------------------------------
           固定エリア（期間変更でも不変）
       ------------------------------------------------- */}
@@ -739,6 +741,8 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      </div>
     </PageLayout>
   );
 }
