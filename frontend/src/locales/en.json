@@ -781,7 +781,7 @@
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "createPO": "Create PO",
-    "applyToQuote": "Apply to quote",
+    "applyToQuote": "Apply selection",
     "actions": {
       "purchasingRole": "Purchasing",
       "salesRole": "Sales"
@@ -878,6 +878,8 @@
     "fromQuoteHelp": "Create an invoice from one of your tenant's approved quotes.",
     "noApprovedQuotes": "No approved quotes available.",
     "createFromThisQuote": "Create from this quote",
+    "editFromThisQuote": "Create from this quote (edit items)",
+    "editingFromQuote": "Creating from quote {{code}} (you can edit quantities & amounts)",
     "createBtn": "Create invoice",
     "invoiceCode": "Invoice code",
     "dueDate": "Due date",
