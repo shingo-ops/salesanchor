@@ -130,7 +130,7 @@ export function InboxProfileModal({
               )}
               {/* Meta channels: "Not linked" badge */}
               <div className="right-panel-row">
-                <span className="right-panel-label">Meta (Messenger / Instagram)</span>
+                <span className="right-panel-label">{t("inbox.metaChannelLabel")}</span>
                 <span className="right-panel-value karte-meta-badge">
                   {t("inbox.metaChannelBadge")}
                 </span>

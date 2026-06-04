@@ -262,7 +262,7 @@ function KarteTabContent({
 
         {/* Meta channels: "Not linked" badge */}
         <div className="right-panel-row">
-          <span className="right-panel-label">Meta (Messenger / Instagram)</span>
+          <span className="right-panel-label">{t("inbox.metaChannelLabel")}</span>
           <span className="right-panel-value karte-meta-badge">
             {t("inbox.metaChannelBadge")}
           </span>
@@ -524,7 +524,7 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
     );
   }
 
-  const hasAnyHistory = (messageCount != null && messageCount > 0) || totalRevenue != null;
+  const hasAnyHistory = totalRevenue != null;
 
   return (
     <div className="karte-performance-section">
