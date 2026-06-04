@@ -27,6 +27,7 @@
 """
 from __future__ import annotations
 
+import glob
 import io
 import logging
 import os
@@ -52,34 +53,52 @@ _FONT_NAME_FALLBACK = "Helvetica"
 _FONT_REGISTERED: Optional[str] = None  # 実際に使えるフォント名 (ja / Helvetica)
 
 
-def _register_japanese_font() -> str:
-    """日本語フォントを登録し、登録名を返す。
+def _japanese_font_candidates() -> list[str]:
+    """reportlab で埋め込める TrueType 日本語フォントの候補パス。
 
-    PO_PDF_FONT_PATH が指定されていればそれを使う。
-    候補: NotoSansCJK-Regular.ttc / ipagp.ttf / ヒラギノ等。
-    見つからない場合は Helvetica にフォールバック (日本語は ?? に化けるが
-    PDF 生成は止めない、AC8.4 では英 alias を優先するため許容)。
+    重要: reportlab の TTFont は TrueType(glyf) のみ対応。Noto CJK は CFF
+    (PostScript outlines) のため "postscript outlines are not supported" で
+    失敗する → 候補に含めない。IPA ゴシック等の TrueType を使う。
+    """
+    candidates: list[str] = []
+    if env_path := os.getenv("PO_PDF_FONT_PATH"):
+        candidates.append(env_path)
+    candidates += [
+        # IPA ゴシック (Debian fonts-ipafont-gothic, TrueType)
+        "/usr/share/fonts/opentype/ipafont-gothic/ipagp.ttf",
+        "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+        # VL / Takao ゴシック (TrueType)
+        "/usr/share/fonts/truetype/vlgothic/VL-Gothic-Regular.ttf",
+        "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf",
+        # macOS 開発機 (Arial Unicode は TrueType・日本語含む)
+        "/Library/Fonts/Arial Unicode.ttf",
+    ]
+    # 最終手段: TrueType の日本語ゴシックを glob 探索（パス差異に強くする）
+    for pat in (
+        "/usr/share/fonts/**/ipag*.ttf",
+        "/usr/share/fonts/**/*[Gg]othic*.ttf",
+        "/usr/share/fonts/**/VL-*.ttf",
+    ):
+        candidates += sorted(glob.glob(pat, recursive=True))
+    return candidates
+
+
+def _register_japanese_font() -> str:
+    """TrueType の日本語フォントを登録し、登録名を返す。
+
+    見つからない場合は Helvetica にフォールバック (日本語は ■ に化けるが
+    PDF 生成は止めない)。
     """
     global _FONT_REGISTERED
     if _FONT_REGISTERED is not None:
         return _FONT_REGISTERED
 
-    candidates = []
-    if env_path := os.getenv("PO_PDF_FONT_PATH"):
-        candidates.append(env_path)
-    # 一般的な日本語 TTF パス (Docker image / VPS)
-    candidates += [
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/ipafont/ipagp.ttf",
-        "/usr/share/fonts/truetype/ipafont-gothic/ipag.ttf",
-        # macOS (開発機)
-        "/System/Library/Fonts/Hiragino Sans GB.ttc",
-        "/Library/Fonts/Arial Unicode.ttf",
-    ]
-    for path in candidates:
-        if not path or not os.path.exists(path):
+    seen: set[str] = set()
+    for path in _japanese_font_candidates():
+        if not path or path in seen or not os.path.exists(path):
             continue
+        seen.add(path)
         try:
             pdfmetrics.registerFont(TTFont(_FONT_NAME_JA, path))
             _FONT_REGISTERED = _FONT_NAME_JA
@@ -91,8 +110,8 @@ def _register_japanese_font() -> str:
 
     _FONT_REGISTERED = _FONT_NAME_FALLBACK
     logger.warning(
-        "[po_renderer] no Japanese font found, using Helvetica fallback. "
-        "Set PO_PDF_FONT_PATH to enable Japanese rendering."
+        "[po_renderer] no usable TrueType Japanese font found; using Helvetica "
+        "(日本語は ■ になります)。fonts-ipafont-gothic を導入するか PO_PDF_FONT_PATH を設定してください。"
     )
     return _FONT_NAME_FALLBACK
 
