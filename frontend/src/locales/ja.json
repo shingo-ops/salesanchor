@@ -1122,6 +1122,7 @@
     "receivedAt": "入荷日",
     "actionOrder": "発注",
     "actionReceive": "入荷",
+    "actionUnreceive": "入荷取消",
     "actionCancel": "取消",
     "actionDownloadPdf": "PDF",
     "actionSendEmail": "メール送信",
@@ -1130,6 +1131,10 @@
     "emailResent": "メールを再送しました",
     "emailSendFailed": "メール送信に失敗しました",
     "pdfDownloadFailed": "PDFのダウンロードに失敗しました（HTTP {{status}}）",
+    "confirmOrderTitle": "発注済みにしますか？",
+    "confirmOrderMessage": "発注書PDFを作成しました。この発注を「発注済み」にしますか？",
+    "confirmOrderYes": "発注済みにする",
+    "confirmOrderNo": "下書きのまま",
     "subtitle": "発注書の作成から受取まで管理します。",
     "supplier": "仕入先",
     "supplierRequired": "仕入先を選択してください",
@@ -1550,10 +1555,37 @@
     "tabs": {
       "knowledge": "解析プロンプト / ルール",
       "tcg": "商品マスタ",
+      "attrMasters": "各種マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
       "llmBudget": "LLM 予算",
       "parseStats": "精度サマリー"
+    },
+    "attrMasters": {
+      "title": "各種マスタ",
+      "desc": "商品マスタの選択肢（プルダウン候補）を追加・編集・削除します。",
+      "empty": "登録されていません",
+      "addBtn": "追加",
+      "activeOn": "有効",
+      "activeOff": "無効",
+      "col": {
+        "labelJa": "表示名",
+        "labelEn": "英語表示",
+        "code": "コード（任意）",
+        "sortOrder": "並び順",
+        "active": "状態"
+      },
+      "attr": {
+        "productKind": "商品種類",
+        "setType": "セット種別",
+        "tcgSeries": "TCGシリーズ",
+        "rarity": "レアリティ",
+        "language": "言語",
+        "unit": "単位",
+        "hsCode": "HSコード",
+        "item": "品目",
+        "material": "素材"
+      }
     },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
