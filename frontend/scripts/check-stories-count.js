@@ -22,7 +22,7 @@ const EXEMPT = new Set([
 ]);
 
 const files = readdirSync(COMPONENTS_DIR).filter(
-  (f) => f.endsWith('.tsx') && !f.endsWith('.stories.tsx') && !EXEMPT.has(f)
+  (f) => f.endsWith('.tsx') && !f.endsWith('.stories.tsx') && !f.endsWith('.test.tsx') && !EXEMPT.has(f)
 );
 
 let missing = [];

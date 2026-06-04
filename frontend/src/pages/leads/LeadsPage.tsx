@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
+import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
@@ -44,6 +45,8 @@ interface Lead {
   updated_at: string;
   discord_user_id: string | null;
   discord_role_sync_status: string | null;
+  // ADR-107: 優先度スコア（社内専用・顧客非公開）
+  priority_score?: CustomerScoreData | null;
 }
 
 type FormState = {
@@ -390,6 +393,9 @@ export default function LeadsPage() {
               <th>{t("leads.status")}</th>
               <th>{t("leads.temperature")}</th>
               <th>{t("leads.prospectRank")}</th>
+              {hasPermission("analytics.customer_priority.view") && (
+                <th>{t("priority.sectionTitle")}</th>
+              )}
               <th>Discord</th>
               <th>{t("leads.actions")}</th>
             </tr>
@@ -402,6 +408,9 @@ export default function LeadsPage() {
                 <td><span className={`badge lead-badge-${l.status}`}>{translateLeadStatus(l.status)}</span></td>
                 <td>{l.temperature || "-"}</td>
                 <td>{rankBadge(l.prospect_rank)}</td>
+                {hasPermission("analytics.customer_priority.view") && (
+                  <td><PriorityScoreBadge score={l.priority_score} /></td>
+                )}
                 <td>
                   {l.discord_user_id && (
                     <span className={`badge badge-sm discord-sync-${l.discord_role_sync_status ?? "not_linked"}`}
