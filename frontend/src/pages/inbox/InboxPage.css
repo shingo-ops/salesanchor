@@ -1191,6 +1191,93 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 .right-panel-save-indicator .saved { color: var(--success-bg); }
 .right-panel-save-indicator .error  { color: var(--danger-bg); }
 
+/* ====== ADR-108: 固定アクションバー ====== */
+.right-panel-action-bar {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--border);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.right-panel-action-primary {
+  flex: 1;
+  width: 100%;
+  font-weight: var(--font-weight-semi);
+}
+
+/* ====== ADR-108: 連絡先タブ チャネルリンク / Meta 未連携 ====== */
+.right-panel-channel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+}
+.right-panel-channel-link:hover { background: var(--link-active-bg); }
+.right-panel-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+}
+.right-panel-unlinked-tag,
+.right-panel-readonly-tag {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: var(--space-3px) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ====== ADR-108: 商談タブ「進行中の商談なし」通知 ====== */
+.right-panel-notice {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-10px);
+  margin-bottom: var(--space-2);
+}
+
+/* ====== ADR-108: 実績サマリー（読み取り専用） ====== */
+.right-panel-readonly-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.right-panel-readonly-tag { text-transform: none; letter-spacing: 0; }
+.right-panel-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-10px) 0;
+  border-bottom: 1px solid var(--bg-subtle);
+  font-size: var(--font-sm);
+}
+.right-panel-summary-label { color: var(--text-secondary); }
+.right-panel-summary-value {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semi);
+  text-align: right;
+  word-break: break-word;
+}
+.right-panel-summary-value.muted { color: var(--text-muted); font-weight: var(--font-weight-normal); }
+
 /* ====== 受信箱設定モーダル ====== */
 .inbox-settings-modal {
   background: var(--bg-surface); border: 1px solid var(--border);

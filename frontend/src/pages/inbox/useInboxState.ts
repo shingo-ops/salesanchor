@@ -32,6 +32,7 @@ import {
   POLL_INTERVAL_MS,
   POLL_MAX_INTERVAL_MS,
   STATUS_TABS,
+  defaultKarteTab,
   readInboxSettings,
 } from "./inbox.types";
 import type { InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
@@ -330,6 +331,9 @@ export function useInboxState(): UseInboxStateReturn {
     try {
       const data = await api.get<LeadDetail>(`/leads/${leadId}`);
       setLeadDetail(data);
+      // ADR-108: 段階による既定タブ（成約前＝商談／成約後＝顧客）。
+      // loadLeadDetail は lead 選択時に 1 回だけ走るため、手動タブ切替は上書きしない。
+      setKarteTab(defaultKarteTab(data.status));
       try {
         const raw = localStorage.getItem(DRAFT_KEY(leadId));
         if (raw) {
@@ -476,7 +480,7 @@ export function useInboxState(): UseInboxStateReturn {
     const params = new URLSearchParams(searchParams);
     params.set("lead_id", String(leadId));
     setSearchParams(params, { replace: true });
-  }, [closeKartePanel, searchParams, setSearchParams]);
+  }, [closeKartePanel, clearAttachment, searchParams, setSearchParams]);
 
   const onPageFilterChange = useCallback((value: string) => {
     setPageIdFilter(value);

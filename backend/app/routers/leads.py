@@ -210,6 +210,107 @@ async def get_lead(
     return LeadResponse(**row)
 
 
+@router.get(
+    "/leads/{lead_id}/summary",
+    dependencies=[Depends(require_permission("leads.view"))],
+)
+async def get_lead_summary(
+    lead_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """ADR-108: 顧客タブの実績サマリー（読み取り専用・派生値）を返す。
+
+    - 取引額累計 / 取引回数 / 最終取引日 は `invoices` の
+      `paid_at IS NOT NULL AND voided_at IS NULL` に限定して集計する
+      （`status` では判定しない）。リードと invoice の対応は
+      `deals.lead_id` 経由で company_id + contact_id を突き合わせる。
+    - 会話数 / 最終会話 は `meta_messages` から集計する。
+    - 取引が 1 件も無い場合 deal_count=0 / total_deal_amount=0 を返し、
+      フロントは「取引実績なし」を表示する。
+
+    本エンドポイントはデータ構造を変更しない読み取り専用の派生値であり、
+    マルチテナント分離は tenant スキーマ修飾で担保する。
+    """
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
+
+    # lead 存在 + tenant 確認（他テナントの lead_id を弾く）
+    lead_check = await db.execute(
+        text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": lead_id, "tenant_id": tenant_id},
+    )
+    if lead_check.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+
+    total_deal_amount = 0.0
+    deal_count = 0
+    last_deal_at = None
+    # invoices / deals は未整備テナント・最小テスト環境では存在しない場合があるため
+    # graceful fallback（取引実績なし扱い）にする。
+    try:
+        deals_t = tenant_table_ref(db, tenant_id, "deals")
+        invoices_t = tenant_table_ref(db, tenant_id, "invoices")
+        inv_result = await db.execute(
+            text(f"""
+                SELECT
+                    COALESCE(SUM(i.total_amount), 0) AS total_amount,
+                    COUNT(i.id) AS deal_count,
+                    MAX(i.paid_at) AS last_deal_at
+                FROM {invoices_t} i
+                WHERE i.paid_at IS NOT NULL
+                  AND i.voided_at IS NULL
+                  AND EXISTS (
+                      SELECT 1 FROM {deals_t} d
+                      WHERE d.lead_id = :lead_id
+                        AND d.company_id = i.company_id
+                        AND d.contact_id = i.contact_id
+                  )
+            """),
+            {"lead_id": lead_id},
+        )
+        inv_row = inv_result.mappings().first()
+        if inv_row:
+            total_deal_amount = float(inv_row["total_amount"] or 0)
+            deal_count = int(inv_row["deal_count"] or 0)
+            last_deal_at = inv_row["last_deal_at"]
+    except Exception:
+        # deals / invoices 未整備環境では取引実績なし扱い
+        total_deal_amount = 0.0
+        deal_count = 0
+        last_deal_at = None
+
+    # 会話サマリー（meta_messages）
+    conversation_count = 0
+    last_conversation_at = None
+    try:
+        msg_result = await db.execute(
+            text(f"""
+                SELECT COUNT(*) AS conversation_count, MAX(created_at) AS last_conversation_at
+                FROM {meta_messages_t}
+                WHERE lead_id = :lead_id AND tenant_id = :tenant_id
+            """),
+            {"lead_id": lead_id, "tenant_id": tenant_id},
+        )
+        msg_row = msg_result.mappings().first()
+        if msg_row:
+            conversation_count = int(msg_row["conversation_count"] or 0)
+            last_conversation_at = msg_row["last_conversation_at"]
+    except Exception:
+        conversation_count = 0
+        last_conversation_at = None
+
+    return {
+        "lead_id": lead_id,
+        "total_deal_amount": total_deal_amount,
+        "deal_count": deal_count,
+        "last_deal_at": last_deal_at,
+        "conversation_count": conversation_count,
+        "last_conversation_at": last_conversation_at,
+    }
+
+
 @router.post(
     "/leads",
     response_model=LeadResponse,

@@ -39,6 +39,38 @@ export type KarteTabKey = "contact" | "company" | "deal";
 // eslint-disable-next-line local/no-japanese-literal -- DB 定義のリードステータス値
 export const FOLLOWUP_EXCLUDED = new Set(["失注", "対象外"]);
 
+// ADR-108: カルテの段階別挙動（既定タブ・主アクション）で参照する status 実値。
+// 内部値の正常化は ADR-109。表示ラベルは i18n（先頭段階は「リード」）。
+/* eslint-disable local/no-japanese-literal -- DB 定義のリードステータス値（ADR-108 段階表） */
+export const STATUS_NEW = "新規";       // 表示ラベル「リード」
+export const STATUS_NEGOTIATING = "商談中";
+// 成約後（既存顧客・追客短期・追客長期）。既定で顧客タブを開く。
+export const CLOSED_STATUSES = new Set(["既存顧客", "追客（短期）", "追客（長期）"]);
+/* eslint-enable local/no-japanese-literal */
+
+/**
+ * ADR-108: 段階による既定タブ。
+ * 成約後（既存顧客・追客短期・追客長期）＝顧客タブ（company）／それ以外＝商談タブ（deal）。
+ */
+export function defaultKarteTab(status: string | null | undefined): KarteTabKey {
+  return status && CLOSED_STATUSES.has(status) ? "company" : "deal";
+}
+
+// ---------------------------------------------------------------------------
+// LeadSummary 型（GET /leads/{id}/summary のレスポンス — 読み取り専用派生値）
+// ---------------------------------------------------------------------------
+
+export interface LeadSummary {
+  lead_id: number;
+  /** 取引額累計（invoices: paid_at 非NULL かつ voided_at NULL の合計） */
+  total_deal_amount: number;
+  /** 集計対象 invoice 件数。0 のとき「取引実績なし」 */
+  deal_count: number;
+  last_deal_at: string | null;
+  conversation_count: number;
+  last_conversation_at: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // LeadDetail 型（GET /leads/{id} のレスポンス）
 // ---------------------------------------------------------------------------
