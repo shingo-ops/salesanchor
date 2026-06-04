@@ -4,6 +4,7 @@ import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from "../../constants/icons
 import { ICON } from "../../constants/iconSizes";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { translateMessage } from "../../lib/messages";
+import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
 import { formatAbsolute, getInitials, relativeTime } from "./inbox.types";
 import type { LeadDetail } from "./inbox.types";
 
@@ -89,6 +90,9 @@ export function InboxMessageThread({
 
   // Translation state: keyed by message_id
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
+
+  // ADR-110: 送信下訳プレビュー表示
+  const [showOutboundPreview, setShowOutboundPreview] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -351,6 +355,21 @@ export function InboxMessageThread({
         })}
       </div>
 
+      {/* ADR-110: 送信下訳プレビューモーダル */}
+      {showOutboundPreview && (
+        <OutboundTranslationPreview
+          leadId={selectedLeadId}
+          draftText={draft}
+          onClose={() => setShowOutboundPreview(false)}
+          disabled={!canSend || sending}
+          onConfirmedSend={(finalText) => {
+            setShowOutboundPreview(false);
+            setDraft(finalText);
+            submitSend();
+          }}
+        />
+      )}
+
       {/* 送信エリア */}
       <div className="inbox-send-area sticky-bottom-bar">
         {sendError && (
@@ -417,6 +436,20 @@ export function InboxMessageThread({
                 <INBOX_ACTION_ICONS.attach size={ICON.md} aria-hidden="true" />
               </button>
             </div>
+            {/* ADR-110: 英訳プレビューボタン（担当者が日本語で書いて英訳確認したい場合） */}
+            {canSend && trimmedDraft.length > 0 && !attachedFile && (
+              <button
+                type="button"
+                className="inbox-translate-outbound-btn"
+                onClick={() => setShowOutboundPreview(true)}
+                disabled={sending}
+                title={t("translation.outbound.buttonTitle")}
+                aria-label={t("translation.outbound.buttonTitle")}
+              >
+                <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
+                <span className="inbox-translate-outbound-label">EN</span>
+              </button>
+            )}
             <button
               type="button"
               className="inbox-send-btn"
