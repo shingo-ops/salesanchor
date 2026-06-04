@@ -487,6 +487,140 @@ class TestInvoicesValidation:
         assert res.status_code == 422
 
 
+class TestFxRateService:
+    """fx_rate サービスの単体テスト"""
+
+    def test_get_fx_rate_jpy_returns_none(self):
+        """JPY 指定は None を返す"""
+        from app.services.fx_rate import get_fx_rate
+        assert get_fx_rate("JPY") is None
+
+    def test_get_fx_rate_jpy_case_insensitive(self):
+        """小文字 jpy でも None を返す"""
+        from app.services.fx_rate import get_fx_rate
+        assert get_fx_rate("jpy") is None
+
+    def test_get_fx_rate_network_failure_returns_none(self, monkeypatch):
+        """ネットワーク障害時は None を返す（non-fatal）"""
+        import httpx
+        from app.services.fx_rate import get_fx_rate
+
+        def mock_get(*args, **kwargs):
+            raise httpx.ConnectError("connection refused")
+
+        monkeypatch.setattr("app.services.fx_rate.httpx.get", mock_get)
+        result = get_fx_rate("USD")
+        assert result is None
+
+    def test_get_fx_rate_missing_currency_returns_none(self, monkeypatch):
+        """レスポンスに通貨が含まれない場合は None を返す"""
+        from unittest.mock import MagicMock
+        from app.services.fx_rate import get_fx_rate
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {"rates": {}}  # 空のrates
+        monkeypatch.setattr("app.services.fx_rate.httpx.get", lambda *a, **k: mock_resp)
+
+        result = get_fx_rate("USD")
+        assert result is None
+
+    def test_get_fx_rate_success(self, monkeypatch):
+        """正常取得時は rate/currency/fetched_at を返す"""
+        from unittest.mock import MagicMock
+        from app.services.fx_rate import get_fx_rate
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {"rates": {"USD": 0.00667}}  # 1 JPY = 0.00667 USD
+        monkeypatch.setattr("app.services.fx_rate.httpx.get", lambda *a, **k: mock_resp)
+
+        result = get_fx_rate("USD")
+        assert result is not None
+        assert result["currency"] == "USD"
+        assert result["rate"] > 0
+        assert "fetched_at" in result
+
+
+class TestInvoiceRenderer:
+    """invoice_renderer のスモークテスト（PDF バイト生成確認）"""
+
+    def test_render_invoice_pdf_returns_bytes(self):
+        """render_invoice_pdf が bytes を返すこと"""
+        from app.services.invoice_renderer import render_invoice_pdf
+
+        invoice_data = {
+            "invoice_code": "IN-0001-01",
+            "issued_at": "2026-06-04T00:00:00",
+            "ship_to_snapshot": None,
+            "bill_to_snapshot": None,
+            "items": [
+                {"name_en": "Test Item", "quantity": 1,
+                 "unit_price": 1000.0, "subtotal": 1000.0, "hs_code": None},
+            ],
+            "subtotal": 1000.0,
+            "shipping_fee": 0.0,
+            "tax_amount": 0.0,
+            "total_amount": 1000.0,
+            "currency": "JPY",
+            "duty_amount": None,
+            "fx_rate_snapshot": None,
+            "notes": None,
+        }
+        pdf_bytes = render_invoice_pdf(invoice_data, {})
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 0
+
+    def test_render_quote_pdf_returns_bytes(self):
+        """render_quote_pdf が bytes を返すこと"""
+        from app.services.invoice_renderer import render_quote_pdf
+
+        quote_data = {
+            "quote_code": "QT-0001",
+            "created_at": "2026-06-04T00:00:00",
+            "ship_to_snapshot": None,
+            "bill_to_snapshot": None,
+            "items": [
+                {"name_en": "Item A", "quantity": 2,
+                 "unit_price": 500.0, "subtotal": 1000.0, "hs_code": "1234.56"},
+            ],
+            "subtotal": 1000.0,
+            "shipping_fee": 100.0,
+            "tax_amount": 80.0,
+            "total_amount": 1180.0,
+            "currency": "USD",
+            "notes": "Test note",
+        }
+        pdf_bytes = render_quote_pdf(quote_data, {"name": "Test Corp"})
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 0
+
+    def test_render_invoice_pdf_with_fx_rate(self):
+        """為替レート付き invoice PDF のスモークテスト"""
+        from app.services.invoice_renderer import render_invoice_pdf
+
+        invoice_data = {
+            "invoice_code": "IN-0002-01",
+            "issued_at": None,
+            "ship_to_snapshot": {"company_name": "Test Co", "address": "123 Main St"},
+            "bill_to_snapshot": {"company_name": "Bill Co", "country": "US"},
+            "items": [
+                {"name_en": "Widget", "quantity": 3,
+                 "unit_price": 100.0, "subtotal": 300.0, "hs_code": "9999.00"},
+            ],
+            "subtotal": 300.0,
+            "shipping_fee": 50.0,
+            "tax_amount": 0.0,
+            "total_amount": 350.0,
+            "currency": "USD",
+            "duty_amount": 30.0,
+            "fx_rate_snapshot": {"currency": "USD", "rate": 150.0, "fetched_at": "2026-06-04"},
+            "notes": "Rush order",
+        }
+        pdf_bytes = render_invoice_pdf(invoice_data, {"name": "My Company"})
+        assert isinstance(pdf_bytes, bytes)
+
+
 class TestInvoiceResponseSchema:
     """InvoiceResponse の堅牢性（後発テナントの NULL contact_id 行）。"""
 

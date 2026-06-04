@@ -12,6 +12,12 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 
+interface FxRateResult {
+  currency: string;
+  rate: number;
+  fetched_at?: string;
+}
+
 interface QuoteItem {
   id: number;
   product_name: string;
@@ -50,6 +56,8 @@ export default function QuoteDetailPage() {
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [fxRate, setFxRate] = useState<FxRateResult | null>(null);
+  const [fxLoading, setFxLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -82,6 +90,23 @@ export default function QuoteDetailPage() {
     }
   };
 
+  const handleDownloadPdf = () => {
+    window.open(`/api/quotes/${id}/pdf`, "_blank");
+  };
+
+  const handleFetchFxRate = async () => {
+    if (!quote || !quote.currency || quote.currency === "JPY") return;
+    setFxLoading(true);
+    try {
+      const result = await api.get<FxRateResult>(`/fx-rate/${quote.currency}`);
+      setFxRate(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      setFxLoading(false);
+    }
+  };
+
   const fmt = (n: number | null) => {
     if (n == null) return "-";
     return n.toLocaleString();
@@ -111,11 +136,25 @@ export default function QuoteDetailPage() {
           {quote.status === "approved" && hasPermission("invoices.create") && (
             <button className="btn-primary" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</button>
           )}
+          {quote.currency !== "JPY" && (
+            <button className="btn-secondary" onClick={handleFetchFxRate} disabled={fxLoading}>
+              {fxLoading ? t("common.loading") : t("quotes.fx.fetchRate")}
+            </button>
+          )}
+          <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
           <button className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.back")}</button>
         </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
+
+      {fxRate && (
+        <div style={{ background: "var(--bg-surface)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }}>
+          <strong>{t("quotes.fx.rateInfo")}:</strong>
+          {" "}1 {fxRate.currency} = JPY {fxRate.rate.toLocaleString()}
+          {fxRate.fetched_at && <span style={{ color: "var(--text-muted)", marginLeft: "var(--space-2)" }}>({fxRate.fetched_at.slice(0, 19)}Z)</span>}
+        </div>
+      )}
 
       <div style={{ background: "var(--bg-surface)", padding: "var(--space-6)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-6)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>

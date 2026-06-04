@@ -91,6 +91,7 @@
     "customers": "顧客管理（旧）",
     "archive": "アーカイブ",
     "inventory": "在庫表",
+    "ownInventory": "自社在庫",
     "products": "商品マスタ",
     "quotesInvoices": "見積・請求管理",
     "orders": "受注管理",
@@ -533,7 +534,11 @@
     "changeToActive": "active に変更",
     "deleteConfirmMessage": "「{{name}}」({{code}}) を削除しますか？ 関連する商談・注文・見積・請求書がある場合は削除できません。",
     "companyRequired": "所属顧客情報を選択してください",
-    "subtitle": "クライアントごとの担当者を登録・管理できます。"
+    "subtitle": "クライアントごとの担当者を登録・管理できます。",
+    "channels": {
+      "unverified_badge": "未検証",
+      "open_link": "リンクを開く"
+    }
   },
   "inbox": {
     "title": "受信箱",
@@ -906,7 +911,11 @@
     "status_rejected": "却下",
     "status_expired": "期限切れ",
     "itemsRequired": "各明細行に商品名と単価を入力してください",
-    "subtitle": "見積書を作成・送付・状況管理できます。"
+    "subtitle": "見積書を作成・送付・状況管理できます。",
+    "fx": {
+      "fetchRate": "為替レートを取得",
+      "rateInfo": "取得レート"
+    }
   },
   "invoices": {
     "subtitle": "請求書の作成と管理ができます。",
@@ -944,7 +953,12 @@
     "exchangeRateUsd": "為替 USD",
     "usdConvert": "USD換算",
     "status_issued": "発行済",
-    "status_voided": "無効化済"
+    "status_voided": "無効化済",
+    "snapshot": {
+      "shipTo": "配送先（発行時スナップショット）",
+      "billTo": "請求先（発行時スナップショット）",
+      "downloadPdf": "PDF ダウンロード"
+    }
   },
   "orders": {
     "title": "受注管理",
@@ -2149,5 +2163,33 @@
     "completeMessage": "ご登録ありがとうございます。情報が保存されました。",
     "addressAddedTitle": "住所追加完了",
     "addressAddedMessage": "住所が正常に追加されました。"
+  },
+  "ownInventory": {
+    "title": "自社在庫",
+    "subtitle": "自社A在庫の物理在庫・引当・発送確定を管理します。",
+    "physicalQty": "物理在庫",
+    "reservedQty": "引当済み",
+    "availableQty": "利用可能",
+    "reserve": "引当",
+    "release": "引当解除",
+    "ship": "発送確定",
+    "qty": "数量",
+    "noResults": "自社在庫がありません",
+    "loadError": "自社在庫の読み込みに失敗しました",
+    "actionError": "操作に失敗しました",
+    "invalidQty": "1以上の整数を入力してください",
+    "confirmMessage": "{{productId}} の在庫に「{{action}}」操作を実行します。",
+    "col": {
+      "productId": "商品ID",
+      "condition": "状態",
+      "unitPrice": "単価",
+      "status": "ステータス",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "有効",
+      "inactive": "無効",
+      "sold_out": "売切れ"
+    }
   }
 }

@@ -34,7 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
-TOTAL=102
+TOTAL=108
 
 run_py() {
   local script="$1"
@@ -233,11 +233,14 @@ run_sql migrations/20260604_060000_add_lost_reason_code.sql
 # C-2/C-4: deprecated 列コメント追加（trust_level / products.unit_price系）
 run_sql migrations/20260604_070000_deprecate_columns.sql
 
+# ADR SA-04/05: A在庫テナント私有化（own_inventory）+ B専用source_kind明示
+run_sql migrations/20260604_140000_create_own_inventory.sql
+run_sql migrations/20260604_150000_add_inventory_source_kind.sql
+
 # ADR SA-06: 解析ログ永続化 + ドリフト検知ビュー
 run_sql migrations/20260604_110000_create_ingestion_jobs.sql
 run_sql migrations/20260604_120000_create_parse_logs.sql
 run_sql migrations/20260604_130000_create_supplier_parse_stats_view.sql
-
 
 # ADR SA-02: 会話ログテーブル + 会社集計ビュー（contact粒度・RLSはtenant_id直接列）
 run_sql migrations/20260604_090000_create_conversation_logs.sql
@@ -246,8 +249,15 @@ run_sql migrations/20260604_100000_create_company_stats_view.sql
 # ADR-SA-03: 顧客登録トークン基盤（署名検証・期限・単回使用）
 run_sql migrations/20260604_080000_create_registration_tokens.sql
 
+# ADR SA-07: 請求書スナップショット（C-6）+ 為替レート記録（C-7）
+run_sql migrations/20260604_160000_add_invoice_snapshot_columns.sql
+
+# ADR SA-05: リンクテンプレート SSOT + contact チャンネル guild_id（C-3）
+run_sql migrations/20260604_090000_create_link_templates.sql
+run_sql migrations/20260604_100000_add_guild_id_to_contact_channels.sql
+
 # 各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材)
-run_sql migrations/20260604_140000_create_product_attribute_masters.sql
+run_sql migrations/20260604_170000_create_product_attribute_masters.sql
 
 echo ""
 echo "============================================"

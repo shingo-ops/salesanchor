@@ -24,6 +24,26 @@ interface InvoiceItem {
   subtotal: number;
 }
 
+interface AddressSnapshot {
+  company_name?: string;
+  contact_name?: string;
+  label?: string;
+  postal_code?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  tax_id?: string;
+  phone?: string;
+  email?: string;
+}
+
+interface FxRateSnapshot {
+  currency: string;
+  rate: number;
+  fetched_at?: string;
+}
+
 interface InvoiceDetail {
   id: number;
   invoice_number: string | null;
@@ -51,6 +71,11 @@ interface InvoiceDetail {
   notes: string | null;
   created_at: string;
   items: InvoiceItem[];
+  // C-6: スナップショット列
+  ship_to_snapshot: AddressSnapshot | null;
+  bill_to_snapshot: AddressSnapshot | null;
+  duty_amount: number | null;
+  fx_rate_snapshot: FxRateSnapshot | null;
 }
 
 export default function InvoiceDetailPage() {
@@ -93,7 +118,33 @@ export default function InvoiceDetailPage() {
     setVoidReason("");
   };
 
+  const handleDownloadPdf = () => {
+    window.open(`/api/invoices/${id}/pdf`, "_blank");
+  };
+
   const fmt = (n: number | null) => n != null ? n.toLocaleString() : "-";
+
+  const renderAddressSnapshot = (snap: AddressSnapshot | null, label: string) => {
+    if (!snap) return null;
+    const lines = [
+      snap.company_name,
+      snap.contact_name,
+      snap.address,
+      [snap.city, snap.state].filter(Boolean).join(", "),
+      snap.country,
+      snap.tax_id ? `Tax ID: ${snap.tax_id}` : null,
+      snap.phone ? `TEL: ${snap.phone}` : null,
+    ].filter(Boolean);
+    if (lines.length === 0) return null;
+    return (
+      <div>
+        <strong>{label}</strong>
+        <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginTop: "var(--space-1)" }}>
+          {lines.map((line, idx) => <div key={idx}>{line}</div>)}
+        </div>
+      </div>
+    );
+  };
 
   if (loading) return <div className="page"><div className="loading">{t("common.loading")}</div></div>;
   if (!invoice) return <div className="page"><div className="error-message">{error || t("common.fetchError")}</div></div>;
@@ -116,6 +167,7 @@ export default function InvoiceDetailPage() {
           {invoice.status !== "voided" && hasPermission("invoices.void") && (
             <button className="btn-danger" onClick={() => setShowVoidForm(true)}>{t("invoices.voidAction")}</button>
           )}
+          <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
           <button className="btn-secondary" onClick={() => navigate("/invoices/new")}>{t("common.back")}</button>
         </div>
       </div>
@@ -149,6 +201,16 @@ export default function InvoiceDetailPage() {
           {invoice.notes && <div style={{ gridColumn: "1 / -1" }}><strong>{t("common.notes")}:</strong> {invoice.notes}</div>}
         </div>
       </div>
+
+      {/* C-6: スナップショット表示 */}
+      {(invoice.ship_to_snapshot || invoice.bill_to_snapshot) && (
+        <div style={{ background: "var(--bg-surface)", padding: "var(--space-6)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-6)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+            {renderAddressSnapshot(invoice.bill_to_snapshot, t("invoices.snapshot.billTo"))}
+            {renderAddressSnapshot(invoice.ship_to_snapshot, t("invoices.snapshot.shipTo"))}
+          </div>
+        </div>
+      )}
 
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("quotes.items")}</h3>
       <table className="data-table" style={{ marginBottom: "var(--space-6)" }}>

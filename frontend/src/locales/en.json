@@ -91,6 +91,7 @@
     "customers": "Legacy Customers",
     "archive": "Archive",
     "inventory": "Inventory List",
+    "ownInventory": "Own Inventory",
     "products": "Product Master",
     "quotesInvoices": "Quotes & Invoices",
     "orders": "Orders",
@@ -533,7 +534,11 @@
     "changeToActive": "Change to active",
     "deleteConfirmMessage": "Delete \"{{name}}\" ({{code}})? Cannot delete if related deals, orders, quotes, or invoices exist.",
     "companyRequired": "Please select a client profile",
-    "subtitle": "Register and manage contacts per client."
+    "subtitle": "Register and manage contacts per client.",
+    "channels": {
+      "unverified_badge": "Unverified",
+      "open_link": "Open Link"
+    }
   },
   "inbox": {
     "title": "Inbox",
@@ -906,7 +911,11 @@
     "status_rejected": "Rejected",
     "status_expired": "Expired",
     "itemsRequired": "Please enter product name and unit price for each line item",
-    "subtitle": "Create, send, and track quotes."
+    "subtitle": "Create, send, and track quotes.",
+    "fx": {
+      "fetchRate": "Fetch exchange rate",
+      "rateInfo": "Fetched rate"
+    }
   },
   "invoices": {
     "subtitle": "Create and manage invoices.",
@@ -944,7 +953,12 @@
     "exchangeRateUsd": "Exchange Rate USD",
     "usdConvert": "USD Equiv.",
     "status_issued": "Issued",
-    "status_voided": "Voided"
+    "status_voided": "Voided",
+    "snapshot": {
+      "shipTo": "Ship To (snapshot at issue)",
+      "billTo": "Bill To (snapshot at issue)",
+      "downloadPdf": "Download PDF"
+    }
   },
   "orders": {
     "title": "Orders",
@@ -2149,5 +2163,33 @@
     "completeMessage": "Thank you for registering. Your information has been saved.",
     "addressAddedTitle": "Address Added",
     "addressAddedMessage": "The address has been successfully added."
+  },
+  "ownInventory": {
+    "title": "Own Inventory",
+    "subtitle": "Manage physical stock, reservations, and shipments for your own (A) inventory.",
+    "physicalQty": "Physical Qty",
+    "reservedQty": "Reserved",
+    "availableQty": "Available",
+    "reserve": "Reserve",
+    "release": "Release",
+    "ship": "Ship",
+    "qty": "Qty",
+    "noResults": "No own inventory found",
+    "loadError": "Failed to load own inventory",
+    "actionError": "Action failed",
+    "invalidQty": "Enter an integer of 1 or more",
+    "confirmMessage": "Run \"{{action}}\" on product {{productId}}.",
+    "col": {
+      "productId": "Product ID",
+      "condition": "Condition",
+      "unitPrice": "Unit Price",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "sold_out": "Sold out"
+    }
   }
 }
