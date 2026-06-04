@@ -38,8 +38,8 @@ check() {
 # trust_level
 check "trust_level" "trust_level"
 
-# products.unit_price (unit_price / unit_price_usd / unit_price_eur on products)
-check "products.unit_price" "unit_price"
+# products.unit_price: "products." + unit_price のみ（own_inventory.unit_price は別列で合法）
+check "products.unit_price" "products\.unit_price\|p\.unit_price\|products\.unit_price_usd\|products\.unit_price_eur"
 
 # customers.transaction_count
 check "transaction_count" "transaction_count"
