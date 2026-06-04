@@ -25,6 +25,7 @@ from app.auth.dependencies import (
     get_current_user,
     require_permission,
     reset_tenant_context,
+    tenant_table_ref,
 )
 from app.database import get_db
 from app.models import User
@@ -41,7 +42,6 @@ from app.services.translation_glossary import (
     seed_glossary_from_products,
     update_glossary_entry,
 )
-from app.tenant.utils import tenant_table_ref
 
 logger = logging.getLogger(__name__)
 
