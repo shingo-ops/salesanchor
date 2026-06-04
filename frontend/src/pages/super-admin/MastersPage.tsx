@@ -16,12 +16,13 @@ import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
 import ProductsPage from "../products/ProductsPage";
+import ProductMastersTab from "./ProductMastersTab";
 import DexTab from "./DexTab";
 import SuppliersAdminTab from "./SuppliersAdminTab";
 import LLMBudgetTab from "./LLMBudgetTab";
 import SupplierParseStatsTab from "./SupplierParseStatsTab";
 
-type TabKey = "knowledge" | "tcg" | "dex" | "suppliers" | "llmBudget" | "parseStats";
+type TabKey = "knowledge" | "tcg" | "attrMasters" | "dex" | "suppliers" | "llmBudget" | "parseStats";
 
 export default function MastersPage() {
   const { t } = useTranslation();
@@ -45,6 +46,7 @@ export default function MastersPage() {
   const tabs: { key: TabKey; label: string }[] = [
     { key: "knowledge", label: t("superAdmin.tabs.knowledge") },
     { key: "tcg", label: t("superAdmin.tabs.tcg") },
+    { key: "attrMasters", label: t("superAdmin.tabs.attrMasters") },
     { key: "dex", label: t("superAdmin.tabs.dex") },
     { key: "suppliers", label: t("superAdmin.tabs.suppliers") },
     { key: "llmBudget", label: t("superAdmin.tabs.llmBudget") },
@@ -76,6 +78,7 @@ export default function MastersPage() {
       <div className="super-admin-tab-content" role="tabpanel">
         {tab === "knowledge" && <KnowledgeAliasesTab />}
         {tab === "tcg" && <ProductsPage embedded />}
+        {tab === "attrMasters" && <ProductMastersTab />}
         {tab === "dex" && <DexTab />}
         {tab === "suppliers" && <SuppliersAdminTab />}
         {tab === "llmBudget" && <LLMBudgetTab />}

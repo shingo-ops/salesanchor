@@ -1550,10 +1550,37 @@
     "tabs": {
       "knowledge": "Parsing Prompts / Rules",
       "tcg": "Product master",
+      "attrMasters": "Various masters",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
       "llmBudget": "LLM Budget",
       "parseStats": "Accuracy Summary"
+    },
+    "attrMasters": {
+      "title": "Various masters",
+      "desc": "Add, edit, and delete the product master dropdown options.",
+      "empty": "No entries yet",
+      "addBtn": "Add",
+      "activeOn": "Active",
+      "activeOff": "Inactive",
+      "col": {
+        "labelJa": "Label",
+        "labelEn": "Label (EN)",
+        "code": "Code (optional)",
+        "sortOrder": "Order",
+        "active": "Status"
+      },
+      "attr": {
+        "productKind": "Product type",
+        "setType": "Set type",
+        "tcgSeries": "TCG series",
+        "rarity": "Rarity",
+        "language": "Language",
+        "unit": "Unit",
+        "hsCode": "HS code",
+        "item": "Item",
+        "material": "Material"
+      }
     },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
