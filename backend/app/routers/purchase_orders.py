@@ -53,6 +53,61 @@ async def _get_po_items(db: AsyncSession, po_id: int) -> list[dict]:
     return [dict(row) for row in result.mappings().all()]
 
 
+async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int) -> int:
+    """発注モーダルの仕入元プルダウンは中央カタログ public.suppliers の id を送る。
+
+    PO は tenant.suppliers への FK を持つため、選択された public 仕入元を
+    tenant.suppliers に複製（supplier_code → 名前 の順で既存照合、無ければ INSERT）し、
+    tenant 側 id を返す（Option A・FK 維持の非破壊実装）。
+    後方互換: public に無い id は従来どおり tenant.suppliers の id とみなす。
+    """
+    pub = (await db.execute(
+        text(
+            "SELECT supplier_code, name, contact_name, email, phone, address, notes "
+            "FROM public.suppliers WHERE id = :id AND is_active = TRUE"
+        ),
+        {"id": supplier_id},
+    )).mappings().first()
+
+    if pub is None:
+        # 後方互換: tenant.suppliers の直接 id とみなす
+        legacy = (await db.execute(
+            text("SELECT id FROM suppliers WHERE id = :id AND is_active = TRUE"),
+            {"id": supplier_id},
+        )).first()
+        if legacy is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された仕入先が見つかりません")
+        return supplier_id
+
+    # 既存の tenant 仕入元を照合（supplier_code 優先、無ければ name）
+    existing = None
+    if pub["supplier_code"]:
+        existing = (await db.execute(
+            text("SELECT id FROM suppliers WHERE supplier_code = :code ORDER BY id LIMIT 1"),
+            {"code": pub["supplier_code"]},
+        )).first()
+    if existing is None:
+        existing = (await db.execute(
+            text("SELECT id FROM suppliers WHERE name = :name ORDER BY id LIMIT 1"),
+            {"name": pub["name"]},
+        )).first()
+    if existing is not None:
+        return existing[0]
+
+    # 無ければ tenant.suppliers に複製（tenant_id は schema 既定値で補完される）
+    new_id = (await db.execute(
+        text(
+            "INSERT INTO suppliers (supplier_code, name, contact_name, email, phone, address, notes, is_active) "
+            "VALUES (:code, :name, :contact, :email, :phone, :address, :notes, TRUE) RETURNING id"
+        ),
+        {
+            "code": pub["supplier_code"], "name": pub["name"], "contact": pub["contact_name"],
+            "email": pub["email"], "phone": pub["phone"], "address": pub["address"], "notes": pub["notes"],
+        },
+    )).scalar_one()
+    return new_id
+
+
 @router.get("/purchase-orders", response_model=list[POResponse],
             dependencies=[Depends(require_permission("purchase_orders.view"))])
 async def list_pos(
@@ -102,11 +157,13 @@ async def create_po(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """仕入注文を作成する（draft状態、明細含む）"""
-    # 仕入先存在確認
-    sup = await db.execute(text("SELECT id FROM suppliers WHERE id = :id AND is_active = TRUE"), {"id": data.supplier_id})
-    if not sup.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された仕入先が見つかりません")
+    """仕入注文を作成する（draft状態、明細含む）。
+
+    supplier_id は中央カタログ public.suppliers の id（在庫表と同じソース）。
+    tenant.suppliers へ複製してから FK を満たす（Option A）。
+    """
+    # 中央カタログ → tenant.suppliers へ解決（必要なら複製）
+    resolved_supplier_id = await _resolve_tenant_supplier_id(db, data.supplier_id)
 
     total = sum(item.quantity * item.unit_cost for item in data.items)
 
@@ -116,7 +173,7 @@ async def create_po(
             VALUES (:tid, :sid, 'draft', :total, :notes, :by)
             RETURNING id
         """),
-        {"tid": tenant_id, "sid": data.supplier_id, "total": total, "notes": data.notes, "by": current_user.id},
+        {"tid": tenant_id, "sid": resolved_supplier_id, "total": total, "notes": data.notes, "by": current_user.id},
     )
     po_id = header.scalar_one()
     await db.execute(text("UPDATE purchase_orders SET po_number = :code WHERE id = :id"),
@@ -134,7 +191,8 @@ async def create_po(
 
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="create", table_name="purchase_orders", record_id=po_id,
-                           new_data={"supplier_id": data.supplier_id, "items_count": len(data.items), "total": str(total)})
+                           new_data={"supplier_id": resolved_supplier_id, "catalog_supplier_id": data.supplier_id,
+                                     "items_count": len(data.items), "total": str(total)})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)

@@ -47,10 +47,6 @@ export function CompanyBasicTab({
         <input disabled={!canEdit} value={basicForm.website}
           onChange={(e) => { setBasicForm({ ...basicForm, website: e.target.value }); setBasicDirty(true); }} />
       </div>
-      <div className="form-row"><label>{t("companies.trustLevel")}</label>
-        <input type="number" min="1" max="5" disabled={!canEdit} value={basicForm.trust_level}
-          onChange={(e) => { setBasicForm({ ...basicForm, trust_level: e.target.value }); setBasicDirty(true); }} />
-      </div>
       <div className="form-row"><label>{t("companies.priorityFocus")}</label>
         <input disabled={!canEdit} value={basicForm.priority_focus}
           onChange={(e) => { setBasicForm({ ...basicForm, priority_focus: e.target.value }); setBasicDirty(true); }} />

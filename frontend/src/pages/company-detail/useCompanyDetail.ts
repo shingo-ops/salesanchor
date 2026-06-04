@@ -90,7 +90,6 @@ export function useCompanyDetail(id: string | undefined) {
         name_en: toNull(basicForm.name_en),
         industry: toNull(basicForm.industry),
         website: toNull(basicForm.website),
-        trust_level: basicForm.trust_level ? parseInt(basicForm.trust_level, 10) : null,
         priority_focus: toNull(basicForm.priority_focus),
         per_order_amount: basicForm.per_order_amount || null,
         monthly_frequency: basicForm.monthly_frequency ? parseInt(basicForm.monthly_frequency, 10) : null,
