@@ -59,6 +59,7 @@ from app.routers import (
     order_purchase_details,  # ADR-021 Phase 4 / Sprint 4: 仕入情報 MVP
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
+    own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     parse_review,
     products,
     purchase_orders,
@@ -260,6 +261,11 @@ app.include_router(
 )
 app.include_router(
     orders.router, prefix="/api/v1", tags=["orders"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR SA-04/05: A在庫テナント私有化 + 2段階引当
+app.include_router(
+    own_inventory.router, prefix="/api/v1", tags=["own-inventory"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-021 Phase 2 / Sprint 2: 受注売上情報 + 月次集計
