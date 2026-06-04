@@ -363,6 +363,7 @@ async def setup_test_db(test_engine):
                 stage VARCHAR(50) DEFAULT 'open',
                 probability INTEGER DEFAULT 10,
                 lost_reason VARCHAR(255),
+                lost_reason_code VARCHAR(30),
                 assigned_to INTEGER,
                 expected_close_date DATE,
                 notes TEXT,
