@@ -56,7 +56,9 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
     setSupplierId(initialSupplierId ?? "");
     setNotes("");
     setItems(initialItems && initialItems.length > 0 ? initialItems : [emptyLine()]);
-    api.get<Supplier[]>("/suppliers").then((rows) =>
+    // P1/P2: 在庫表と同じ中央カタログ(public.suppliers)を仕入元プルダウンの源にする。
+    // 返る id は public.suppliers.id。発注作成時に backend が tenant.suppliers へ解決する。
+    api.get<Supplier[]>("/suppliers/catalog").then((rows) =>
       setSuppliers(rows.filter((s) => s.is_active)),
     ).catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")));
   }, [open, t, initialSupplierId, initialItems]);
