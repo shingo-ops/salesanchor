@@ -22,6 +22,7 @@ import TeamsPage from "./pages/teams/TeamsPage";
 import RolesPage from "./pages/roles/RolesPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import InventoryPage from "./pages/inventory/InventoryPage";
+import OwnInventoryPage from "./pages/inventory/OwnInventoryPage";
 import QuotesPage from "./pages/quotes/QuotesPage";
 import QuoteCreatePage from "./pages/quote-create/QuoteCreatePage";
 import QuoteDetailPage from "./pages/quote-detail/QuoteDetailPage";
@@ -49,6 +50,8 @@ import SuperAdminMastersPage from "./pages/super-admin/MastersPage";
 import InventoryVisibilityPage from "./pages/admin/InventoryVisibilityPage";
 // spec.md v1.1 F8 (Sprint 8): テナント発行者情報 (PO PDF / メール差出人) admin UI
 import TenantProfilePage from "./pages/admin/TenantProfilePage";
+// ADR-106: テナントポリシー設定 admin UI
+import TenantPolicyPage from "./pages/admin/TenantPolicyPage";
 // Sprint D2: Discord Guild 設定 admin UI
 import DiscordConfigPage from "./pages/admin/DiscordConfigPage";
 // ADR-091 KPI4: Discord アナウンス投稿 admin UI
@@ -66,6 +69,9 @@ import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
 import DesignSystemPage from "./pages/design-system/DesignSystemPage";
+// ADR-SA-03: 顧客登録トークン基盤（公開・認証不要）
+import RegisterPage from "./pages/register/RegisterPage";
+import RegisterAddressPage from "./pages/register/RegisterAddressPage";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -92,6 +98,9 @@ function App() {
             <ThemeProvider>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register/address" element={<RegisterAddressPage />} />
                 <Route
                   element={
                     <ProtectedRoute>
@@ -127,6 +136,8 @@ function App() {
 
                   {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
                   <Route path="/inventory" element={<InventoryPage />} />
+                  {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
+                  <Route path="/own-inventory" element={<OwnInventoryPage />} />
                   {/* 商品マスタ CRUD（管理者向けに退避。操作は Page 内 hasPermission で制御） */}
                   <Route path="/admin/products" element={<ProductsPage />} />
 
@@ -231,6 +242,8 @@ function App() {
                     <Route index element={<Navigate to="tenant-profile" replace />} />
                     {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
                     <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                    {/* ADR-106: テナントポリシー設定 (tenant.profile.edit / view) */}
+                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
                     {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
                     <Route path="discord-config"      element={<DiscordConfigPage />} />
                     {/* ADR-091 KPI4: Discord アナウンス投稿 */}

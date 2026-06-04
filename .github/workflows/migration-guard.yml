@@ -221,7 +221,7 @@ jobs:
         run: |
           # public スキーマに実際に存在するテーブルの許可リスト
           # 新しいテーブルを public に追加した場合はここを更新すること（SSoT）
-          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master tcg_type_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters"
+          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master tcg_type_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters ingestion_jobs parse_logs link_templates registration_tokens"
 
           FAILED=0
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"

@@ -91,6 +91,7 @@
     "customers": "Legacy Customers",
     "archive": "Archive",
     "inventory": "Inventory List",
+    "ownInventory": "Own Inventory",
     "products": "Product Master",
     "quotesInvoices": "Quotes & Invoices",
     "orders": "Orders",
@@ -125,6 +126,7 @@
     "superAdminInbound": "Discord Inbound",
     "inventoryVisibility": "Inventory Visibility",
     "tenantProfile": "Issuer Profile",
+    "tenantPolicy": "Tenant Policy",
     "discordConfig": "Discord Integration",
     "discordAnnounce": "Discord Announce",
     "superAdminPhaseSwitch": "Spreadsheet Phase",
@@ -532,7 +534,11 @@
     "changeToActive": "Change to active",
     "deleteConfirmMessage": "Delete \"{{name}}\" ({{code}})? Cannot delete if related deals, orders, quotes, or invoices exist.",
     "companyRequired": "Please select a client profile",
-    "subtitle": "Register and manage contacts per client."
+    "subtitle": "Register and manage contacts per client.",
+    "channels": {
+      "unverified_badge": "Unverified",
+      "open_link": "Open Link"
+    }
   },
   "inbox": {
     "title": "Inbox",
@@ -709,7 +715,17 @@
     "amount": "Amount",
     "probability": "Probability (%)",
     "expectedCloseDate": "Expected close date",
-    "lostReason": "Lost reason",
+    "lostReason": "Lost reason (details)",
+    "lostReasonPlaceholder": "Please enter the reason for losing this deal",
+    "lostReasonCode": "Lost reason",
+    "lostReasonCodePlaceholder": "Select lost reason",
+    "lostReasonCode_price": "Price",
+    "lostReasonCode_lead_time": "Lead time / Delivery",
+    "lostReasonCode_competitor": "Competitor",
+    "lostReasonCode_spec_condition": "Spec / Condition mismatch",
+    "lostReasonCode_payment_terms": "Payment terms",
+    "lostReasonCode_no_response": "No response",
+    "lostReasonCode_other": "Other",
     "assignedTo": "Assigned to",
     "allStatuses": "All statuses",
     "noDeals": "No deals registered",
@@ -895,7 +911,11 @@
     "status_rejected": "Rejected",
     "status_expired": "Expired",
     "itemsRequired": "Please enter product name and unit price for each line item",
-    "subtitle": "Create, send, and track quotes."
+    "subtitle": "Create, send, and track quotes.",
+    "fx": {
+      "fetchRate": "Fetch exchange rate",
+      "rateInfo": "Fetched rate"
+    }
   },
   "invoices": {
     "subtitle": "Create and manage invoices.",
@@ -933,7 +953,12 @@
     "exchangeRateUsd": "Exchange Rate USD",
     "usdConvert": "USD Equiv.",
     "status_issued": "Issued",
-    "status_voided": "Voided"
+    "status_voided": "Voided",
+    "snapshot": {
+      "shipTo": "Ship To (snapshot at issue)",
+      "billTo": "Bill To (snapshot at issue)",
+      "downloadPdf": "Download PDF"
+    }
   },
   "orders": {
     "title": "Orders",
@@ -1125,6 +1150,27 @@
     "sealHint": "Optional. URL to a seal image embedded into the PDF.",
     "defaultLanguage": "Default language",
     "saved": "Issuer profile saved",
+    "permissionRequired": "Viewing this page requires the tenant.profile.view permission"
+  },
+  "tenantPolicy": {
+    "title": "Tenant Policy",
+    "subtitle": "Manage tenant-wide settings for inventory aggregation, quote validity, currency, duty terms, and more",
+    "inventoryAggFilter": "Inventory Aggregation Filter",
+    "inventoryAggFilterNone": "None",
+    "inventoryAggFilterCheapest": "Cheapest first",
+    "inventoryAggFilterBalanced": "Balanced",
+    "aggPriceThresholdJpy": "Aggregation Price Threshold (JPY)",
+    "aggQtyThreshold": "Aggregation Quantity Threshold",
+    "quoteValidityDays": "Quote Validity (days)",
+    "defaultCurrency": "Default Currency",
+    "documentLanguage": "Document Language",
+    "dutyIncoterms": "Duty Policy (Incoterms)",
+    "issueMode": "Issue Mode",
+    "issueModePaypalAuto": "PayPal Auto",
+    "issueModePaypalManual": "PayPal Manual",
+    "issueModePdf": "PDF",
+    "issueModeWisePdf": "Wise PDF",
+    "saved": "Tenant policy saved",
     "permissionRequired": "Viewing this page requires the tenant.profile.view permission"
   },
   "staff": {
@@ -1506,7 +1552,8 @@
       "tcg": "Product master",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
-      "llmBudget": "LLM Budget"
+      "llmBudget": "LLM Budget",
+      "parseStats": "Accuracy Summary"
     },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
@@ -1847,6 +1894,8 @@
     "eventEnd": "End",
     "eventDescription": "Description",
     "eventLocation": "Location",
+    "descriptionPlaceholder": "Add description",
+    "locationPlaceholder": "Add location",
     "shiftLabel": "Shift",
     "monthView": "Month",
     "weekView": "Week",
@@ -2023,5 +2072,97 @@
     "grossProfitTotal": "Total gross profit",
     "count": "Count",
     "editFinancial": "Edit financial"
+  },
+  "supplier": {
+    "parseStats": {
+      "selectSupplier": "Select Supplier",
+      "selectPlaceholder": "-- Select a supplier --",
+      "noData": "No data yet (no parse logs for this supplier)",
+      "columns": {
+        "day": "Date",
+        "totalLines": "Total Lines",
+        "parsedCount": "Parsed",
+        "excludedCount": "Excluded",
+        "unparsedCount": "Unparsed",
+        "excludeRate": "Exclude Rate",
+        "avgConfidence": "Avg Confidence"
+      },
+      "legend": {
+        "highExclude": "Exclude rate > 30% (drift warning)",
+        "lowConfidence": "Avg confidence < 0.5 (quality warning)"
+      }
+    }
+  },
+  "company": {
+    "stats": {
+      "total_deal_amount": "Total Deal Amount",
+      "deal_count": "Deal Count",
+      "conversation_count": "Conversations",
+      "last_conversation_at": "Last Conversation"
+    }
+  },
+  "registration": {
+    "title": "Customer Registration",
+    "generateLink": "Generate Registration Link",
+    "linkGenerated": "Registration Link",
+    "copyLink": "Copy",
+    "invalidToken": "Invalid or expired link",
+    "submitError": "Registration failed",
+    "companyLabel": "Company",
+    "billingAddress": "Billing Address",
+    "deliveryAddress": "Delivery Address",
+    "contactInfo": "Contact Information",
+    "contactName": "Contact Name",
+    "contactEmail": "Email Address",
+    "contactTelephone": "Phone Number",
+    "branchName": "Branch Name",
+    "name": "Name",
+    "email": "Email",
+    "telephone": "Phone",
+    "taxId": "Tax ID",
+    "addressLine1": "Address Line 1",
+    "addressLine2": "Address Line 2",
+    "addressLine3": "Address Line 3",
+    "city": "City",
+    "state": "State / Province",
+    "zip": "ZIP / Postal Code",
+    "countryCode": "Country Code",
+    "submit": "Register",
+    "addAddress": "Add Address",
+    "addAddressTitle": "Add Address",
+    "addressDetails": "Address Details",
+    "addressType": "Address Type",
+    "completeTitle": "Registration Complete",
+    "completeMessage": "Thank you for registering. Your information has been saved.",
+    "addressAddedTitle": "Address Added",
+    "addressAddedMessage": "The address has been successfully added."
+  },
+  "ownInventory": {
+    "title": "Own Inventory",
+    "subtitle": "Manage physical stock, reservations, and shipments for your own (A) inventory.",
+    "physicalQty": "Physical Qty",
+    "reservedQty": "Reserved",
+    "availableQty": "Available",
+    "reserve": "Reserve",
+    "release": "Release",
+    "ship": "Ship",
+    "qty": "Qty",
+    "noResults": "No own inventory found",
+    "loadError": "Failed to load own inventory",
+    "actionError": "Action failed",
+    "invalidQty": "Enter an integer of 1 or more",
+    "confirmMessage": "Run \"{{action}}\" on product {{productId}}.",
+    "col": {
+      "productId": "Product ID",
+      "condition": "Condition",
+      "unitPrice": "Unit Price",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "sold_out": "Sold out"
+    }
   }
 }

@@ -35,6 +35,7 @@ const EXCLUDE_FILES = new Set([
 const EXCLUDE_DIRS = new Set([
   'super-admin', // 管理者専用サブナビ体系、main sidebar 対象外
   'admin',       // テナント管理ページ群、main sidebar 対象外
+  'register',    // 公開登録フォーム（認証不要・ナビ外ページ）
 ]);
 
 // h1/h2 内で nav.* 以外の xxx.title キーを使っているパターン

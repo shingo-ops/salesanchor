@@ -10,6 +10,7 @@ from __future__ import annotations
     currency, assigned_to, lost_reason 追加、require_permission統合）
   2026-04-27: Phase 1-B-2 Step 5d — 旧 customer_id 系統撤去
     （resolver / customer 経路廃止、company_id + contact_id を唯一の正に）
+  2026-06-04: C-1 — lost_reason_code（選択式失注理由）追加
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,6 +22,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.cache import invalidate_dashboard_cache
@@ -37,15 +39,15 @@ router = APIRouter()
 _DEAL_COLUMNS = """
     id, deal_code, company_id, contact_id, lead_id,
     title, amount, currency,
-    status, stage, probability, lost_reason, assigned_to,
+    status, stage, probability, lost_reason, lost_reason_code, assigned_to,
     expected_close_date, notes, lead_source, created_at, updated_at
 """
 
 _UPDATABLE_COLUMNS = {
     "company_id", "contact_id", "lead_id",
     "title", "amount", "currency",
-    "status", "stage", "probability", "lost_reason", "assigned_to",
-    "expected_close_date", "notes", "lead_source",
+    "status", "stage", "probability", "lost_reason", "lost_reason_code",
+    "assigned_to", "expected_close_date", "notes", "lead_source",
 }
 
 
@@ -168,14 +170,14 @@ async def create_deal(
             INSERT INTO {deals_t} (
                 tenant_id, company_id, contact_id, lead_id,
                 title, amount, currency,
-                status, stage, probability, lost_reason, assigned_to,
-                expected_close_date, notes, lead_source
+                status, stage, probability, lost_reason, lost_reason_code,
+                assigned_to, expected_close_date, notes, lead_source
             )
             VALUES (
                 :tenant_id, :company_id, :contact_id, :lead_id,
                 :title, :amount, :currency,
-                :status, :stage, :probability, :lost_reason, :assigned_to,
-                :expected_close_date, :notes, :lead_source
+                :status, :stage, :probability, :lost_reason, :lost_reason_code,
+                :assigned_to, :expected_close_date, :notes, :lead_source
             )
             RETURNING id
         """),
@@ -191,6 +193,7 @@ async def create_deal(
             "stage": data.stage.value,
             "probability": data.probability,
             "lost_reason": data.lost_reason,
+            "lost_reason_code": data.lost_reason_code.value if data.lost_reason_code else None,
             "assigned_to": data.assigned_to,
             "expected_close_date": data.expected_close_date,
             "notes": data.notes,
@@ -217,6 +220,7 @@ async def create_deal(
         new_data=data.model_dump(exclude_none=True, mode="json"),
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     await invalidate_dashboard_cache(tenant_id)
 
     return DealResponse(**row)
@@ -304,7 +308,7 @@ async def update_deal(
             )
 
     # Enum型の値を文字列に変換
-    for key in ("status", "stage", "currency"):
+    for key in ("status", "stage", "currency", "lost_reason_code"):
         if key in update_data and update_data[key] is not None:
             update_data[key] = update_data[key].value
 
@@ -327,6 +331,7 @@ async def update_deal(
         old_data=dict(old_row), new_data=update_data,
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     await invalidate_dashboard_cache(tenant_id)
 
     return DealResponse(**row)
@@ -361,6 +366,7 @@ async def delete_deal(
             old_data=dict(old_row),
         )
         await db.commit()
+        await reset_tenant_context(db, tenant_id)
     except IntegrityError:
         await db.rollback()
         raise HTTPException(

@@ -185,13 +185,35 @@ async def _delete_discord(db: AsyncSession, company_id: int) -> None:
     )
 
 
+async def _fetch_company_stats(db: AsyncSession, company_id: int) -> dict:
+    """v_company_stats ビューから集計値を取得。ビューが存在しない場合は空 dict を返す。"""
+    try:
+        res = await db.execute(
+            text("""
+                SELECT total_deal_amount, deal_count, conversation_count, last_conversation_at
+                FROM v_company_stats
+                WHERE company_id = :cid
+            """),
+            {"cid": company_id},
+        )
+        row = res.mappings().first()
+        if row is None:
+            return {}
+        return dict(row)
+    except Exception:
+        # ビューが存在しない環境（migration 未適用等）では None を返す
+        return {}
+
+
 async def _compose_response(db: AsyncSession, main_row: dict) -> CompanyResponse:
     cid = main_row["id"]
+    stats = await _fetch_company_stats(db, cid)
     return CompanyResponse(
         **main_row,
         addresses=await _fetch_addresses(db, cid),
         sales_channels=await _fetch_sales_channels(db, cid),
         discord=await _fetch_discord(db, cid),
+        **stats,
     )
 
 

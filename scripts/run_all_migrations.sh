@@ -33,7 +33,8 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=92
+
+TOTAL=107
 
 run_py() {
   local script="$1"
@@ -202,6 +203,9 @@ run_sql migrations/20260603_000000_add_products_product_kind.sql
 # ADR-093: 仕入元に LINE名 + 構造化住所を追加
 run_sql migrations/20260603_010000_add_suppliers_line_and_address.sql
 
+# ADR-106: テナントポリシー列を追加（標準エンジン＋テナント変数の土台）
+run_sql migrations/20260604_050000_add_tenant_policy_columns.sql
+
 # ドラゴンボール フュージョンワールド 商品マスタ投入（Booster/Starter 26件）
 run_sql migrations/20260603_030000_seed_dragonball_products.sql
 
@@ -222,6 +226,35 @@ run_sql migrations/20260604_040000_seed_tcg_products_8series.sql
 
 # ADR-021 受注ステータスフロー: orders に paid_at（支払済フラグ）を追加
 run_sql migrations/20260604_050000_add_orders_paid_at.sql
+
+# C-1: deals に選択式失注理由(lost_reason_code)を追加
+run_sql migrations/20260604_060000_add_lost_reason_code.sql
+
+# C-2/C-4: deprecated 列コメント追加（trust_level / products.unit_price系）
+run_sql migrations/20260604_070000_deprecate_columns.sql
+
+# ADR SA-04/05: A在庫テナント私有化（own_inventory）+ B専用source_kind明示
+run_sql migrations/20260604_140000_create_own_inventory.sql
+run_sql migrations/20260604_150000_add_inventory_source_kind.sql
+
+# ADR SA-06: 解析ログ永続化 + ドリフト検知ビュー
+run_sql migrations/20260604_110000_create_ingestion_jobs.sql
+run_sql migrations/20260604_120000_create_parse_logs.sql
+run_sql migrations/20260604_130000_create_supplier_parse_stats_view.sql
+
+# ADR SA-02: 会話ログテーブル + 会社集計ビュー（contact粒度・RLSはtenant_id直接列）
+run_sql migrations/20260604_090000_create_conversation_logs.sql
+run_sql migrations/20260604_100000_create_company_stats_view.sql
+
+# ADR-SA-03: 顧客登録トークン基盤（署名検証・期限・単回使用）
+run_sql migrations/20260604_080000_create_registration_tokens.sql
+
+# ADR SA-07: 請求書スナップショット（C-6）+ 為替レート記録（C-7）
+run_sql migrations/20260604_160000_add_invoice_snapshot_columns.sql
+
+# ADR SA-05: リンクテンプレート SSOT + contact チャンネル guild_id（C-3）
+run_sql migrations/20260604_090000_create_link_templates.sql
+run_sql migrations/20260604_100000_add_guild_id_to_contact_channels.sql
 
 echo ""
 echo "============================================"

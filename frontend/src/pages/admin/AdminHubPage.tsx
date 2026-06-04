@@ -25,6 +25,11 @@ const TABS = [
     Icon:     ADMIN_HUB_ICONS.tenantProfile,
   },
   {
+    to:       "tenant-policy",
+    labelKey: "nav.tenantPolicy",
+    Icon:     ADMIN_HUB_ICONS.tenantPolicy,
+  },
+  {
     to:       "discord-config",
     labelKey: "nav.discordConfig",
     Icon:     ADMIN_HUB_ICONS.discordConfig,

@@ -357,6 +357,7 @@ export const SCHEDULE_POPOVER_ICONS = {
 // SaaS 管理者ハブ ボトムタブ用
 export const ADMIN_HUB_ICONS = {
   tenantProfile:       Briefcase,        // BriefcaseIcon solid — 発行者情報
+  tenantPolicy:        GearSix,          // Cog6ToothIcon solid — テナントポリシー
   discordConfig:       GearEightOutline, // Cog8ToothIcon outline — Discord設定
   discordAnnounce:     PaperAirplane,    // PaperAirplaneIcon solid — アナウンス投稿
   inventoryVisibility: PackageOutline,   // CubeIcon outline — 在庫表示権限

@@ -91,6 +91,7 @@
     "customers": "顧客管理（旧）",
     "archive": "アーカイブ",
     "inventory": "在庫表",
+    "ownInventory": "自社在庫",
     "products": "商品マスタ",
     "quotesInvoices": "見積・請求管理",
     "orders": "受注管理",
@@ -125,6 +126,7 @@
     "superAdminInbound": "Discord 受信一覧",
     "inventoryVisibility": "在庫表示権限",
     "tenantProfile": "発行者情報",
+    "tenantPolicy": "テナントポリシー",
     "discordConfig": "Discord 連携設定",
     "discordAnnounce": "Discordアナウンス",
     "superAdminPhaseSwitch": "スプレッドシート Phase",
@@ -532,7 +534,11 @@
     "changeToActive": "active に変更",
     "deleteConfirmMessage": "「{{name}}」({{code}}) を削除しますか？ 関連する商談・注文・見積・請求書がある場合は削除できません。",
     "companyRequired": "所属顧客情報を選択してください",
-    "subtitle": "クライアントごとの担当者を登録・管理できます。"
+    "subtitle": "クライアントごとの担当者を登録・管理できます。",
+    "channels": {
+      "unverified_badge": "未検証",
+      "open_link": "リンクを開く"
+    }
   },
   "inbox": {
     "title": "受信箱",
@@ -709,7 +715,17 @@
     "amount": "金額",
     "probability": "確度（%）",
     "expectedCloseDate": "クローズ予定日",
-    "lostReason": "失注理由",
+    "lostReason": "失注理由（詳細）",
+    "lostReasonPlaceholder": "その他の失注理由を入力してください",
+    "lostReasonCode": "失注理由",
+    "lostReasonCodePlaceholder": "失注理由を選択",
+    "lostReasonCode_price": "価格",
+    "lostReasonCode_lead_time": "リードタイム・納期",
+    "lostReasonCode_competitor": "競合",
+    "lostReasonCode_spec_condition": "仕様・状態違い",
+    "lostReasonCode_payment_terms": "支払条件",
+    "lostReasonCode_no_response": "連絡途絶",
+    "lostReasonCode_other": "その他",
     "assignedTo": "担当者",
     "allStatuses": "全ステータス",
     "noDeals": "案件が登録されていません",
@@ -895,7 +911,11 @@
     "status_rejected": "却下",
     "status_expired": "期限切れ",
     "itemsRequired": "各明細行に商品名と単価を入力してください",
-    "subtitle": "見積書を作成・送付・状況管理できます。"
+    "subtitle": "見積書を作成・送付・状況管理できます。",
+    "fx": {
+      "fetchRate": "為替レートを取得",
+      "rateInfo": "取得レート"
+    }
   },
   "invoices": {
     "subtitle": "請求書の作成と管理ができます。",
@@ -933,7 +953,12 @@
     "exchangeRateUsd": "為替 USD",
     "usdConvert": "USD換算",
     "status_issued": "発行済",
-    "status_voided": "無効化済"
+    "status_voided": "無効化済",
+    "snapshot": {
+      "shipTo": "配送先（発行時スナップショット）",
+      "billTo": "請求先（発行時スナップショット）",
+      "downloadPdf": "PDF ダウンロード"
+    }
   },
   "orders": {
     "title": "受注管理",
@@ -1125,6 +1150,27 @@
     "sealHint": "印鑑画像の URL を入力すると PDF に表示されます (オプション)",
     "defaultLanguage": "既定言語",
     "saved": "発行者情報を保存しました",
+    "permissionRequired": "この画面の閲覧には tenant.profile.view 権限が必要です"
+  },
+  "tenantPolicy": {
+    "title": "テナントポリシー",
+    "subtitle": "在庫集計・見積有効期限・通貨・関税ポリシー等のテナント共通設定を管理します",
+    "inventoryAggFilter": "在庫集計フィルタ",
+    "inventoryAggFilterNone": "なし",
+    "inventoryAggFilterCheapest": "最安値優先",
+    "inventoryAggFilterBalanced": "バランス型",
+    "aggPriceThresholdJpy": "集計価格閾値 (JPY)",
+    "aggQtyThreshold": "集計数量閾値",
+    "quoteValidityDays": "見積有効期限（日数）",
+    "defaultCurrency": "既定通貨",
+    "documentLanguage": "書類言語",
+    "dutyIncoterms": "関税ポリシー（Incoterms）",
+    "issueMode": "発行モード",
+    "issueModePaypalAuto": "PayPal 自動",
+    "issueModePaypalManual": "PayPal 手動",
+    "issueModePdf": "PDF",
+    "issueModeWisePdf": "Wise PDF",
+    "saved": "テナントポリシーを保存しました",
     "permissionRequired": "この画面の閲覧には tenant.profile.view 権限が必要です"
   },
   "staff": {
@@ -1506,7 +1552,8 @@
       "tcg": "商品マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
-      "llmBudget": "LLM 予算"
+      "llmBudget": "LLM 予算",
+      "parseStats": "精度サマリー"
     },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
@@ -1847,6 +1894,8 @@
     "eventEnd": "終了日時",
     "eventDescription": "説明",
     "eventLocation": "場所",
+    "descriptionPlaceholder": "説明を追加",
+    "locationPlaceholder": "場所を追加",
     "shiftLabel": "シフト",
     "monthView": "月",
     "weekView": "週",
@@ -2023,5 +2072,97 @@
     "grossProfitTotal": "粗利合計",
     "count": "件数",
     "editFinancial": "売上を編集"
+  },
+  "supplier": {
+    "parseStats": {
+      "selectSupplier": "仕入元を選択",
+      "selectPlaceholder": "-- 仕入元を選択 --",
+      "noData": "データがありません（この仕入元の解析ログがまだありません）",
+      "columns": {
+        "day": "日付",
+        "totalLines": "総行数",
+        "parsedCount": "解析済み",
+        "excludedCount": "除外",
+        "unparsedCount": "未解析",
+        "excludeRate": "除外率",
+        "avgConfidence": "平均確信度"
+      },
+      "legend": {
+        "highExclude": "除外率 > 30%（ドリフト警告）",
+        "lowConfidence": "平均確信度 < 0.5（品質低下警告）"
+      }
+    }
+  },
+  "company": {
+    "stats": {
+      "total_deal_amount": "累計取引額",
+      "deal_count": "商談数",
+      "conversation_count": "会話数",
+      "last_conversation_at": "最終会話日時"
+    }
+  },
+  "registration": {
+    "title": "顧客情報登録",
+    "generateLink": "登録リンクを発行",
+    "linkGenerated": "登録リンク",
+    "copyLink": "コピー",
+    "invalidToken": "無効または期限切れのリンクです",
+    "submitError": "登録に失敗しました",
+    "companyLabel": "会社名",
+    "billingAddress": "請求先住所",
+    "deliveryAddress": "配送先住所",
+    "contactInfo": "担当者情報",
+    "contactName": "担当者名",
+    "contactEmail": "メールアドレス",
+    "contactTelephone": "電話番号",
+    "branchName": "支店名",
+    "name": "名前",
+    "email": "メールアドレス",
+    "telephone": "電話番号",
+    "taxId": "税務番号",
+    "addressLine1": "住所1",
+    "addressLine2": "住所2",
+    "addressLine3": "住所3",
+    "city": "市区町村",
+    "state": "都道府県",
+    "zip": "郵便番号",
+    "countryCode": "国コード",
+    "submit": "登録する",
+    "addAddress": "住所を追加",
+    "addAddressTitle": "住所追加",
+    "addressDetails": "住所詳細",
+    "addressType": "住所種別",
+    "completeTitle": "登録完了",
+    "completeMessage": "ご登録ありがとうございます。情報が保存されました。",
+    "addressAddedTitle": "住所追加完了",
+    "addressAddedMessage": "住所が正常に追加されました。"
+  },
+  "ownInventory": {
+    "title": "自社在庫",
+    "subtitle": "自社A在庫の物理在庫・引当・発送確定を管理します。",
+    "physicalQty": "物理在庫",
+    "reservedQty": "引当済み",
+    "availableQty": "利用可能",
+    "reserve": "引当",
+    "release": "引当解除",
+    "ship": "発送確定",
+    "qty": "数量",
+    "noResults": "自社在庫がありません",
+    "loadError": "自社在庫の読み込みに失敗しました",
+    "actionError": "操作に失敗しました",
+    "invalidQty": "1以上の整数を入力してください",
+    "confirmMessage": "{{productId}} の在庫に「{{action}}」操作を実行します。",
+    "col": {
+      "productId": "商品ID",
+      "condition": "状態",
+      "unitPrice": "単価",
+      "status": "ステータス",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "有効",
+      "inactive": "無効",
+      "sold_out": "売切れ"
+    }
   }
 }

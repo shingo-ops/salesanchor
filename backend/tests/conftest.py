@@ -363,6 +363,7 @@ async def setup_test_db(test_engine):
                 stage VARCHAR(50) DEFAULT 'open',
                 probability INTEGER DEFAULT 10,
                 lost_reason VARCHAR(255),
+                lost_reason_code VARCHAR(30),
                 assigned_to INTEGER,
                 expected_close_date DATE,
                 notes TEXT,
@@ -732,7 +733,8 @@ async def setup_test_db(test_engine):
                 unit_price NUMERIC(15, 2) NOT NULL,
                 weight NUMERIC(10, 3),
                 subtotal NUMERIC(15, 2) NOT NULL,
-                sort_order INTEGER DEFAULT 0
+                sort_order INTEGER DEFAULT 0,
+                hs_code VARCHAR(20)
             )
         """))
         await conn.execute(text("""
@@ -765,7 +767,13 @@ async def setup_test_db(test_engine):
                 notes TEXT,
                 created_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ship_to_snapshot TEXT,
+                bill_to_snapshot TEXT,
+                duty_amount NUMERIC(15, 2),
+                duty_policy_snapshot TEXT,
+                fx_rate_snapshot TEXT,
+                issue_mode VARCHAR(20)
             )
         """))
         await conn.execute(text("""
@@ -781,7 +789,8 @@ async def setup_test_db(test_engine):
                 unit_price NUMERIC(15, 2) NOT NULL,
                 weight NUMERIC(10, 3),
                 subtotal NUMERIC(15, 2) NOT NULL,
-                sort_order INTEGER DEFAULT 0
+                sort_order INTEGER DEFAULT 0,
+                hs_code VARCHAR(20)
             )
         """))
         # === Phase 3 テーブル ===

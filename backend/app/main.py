@@ -30,6 +30,7 @@ from app.routers import (
     bots,
     companies,  # Phase 1-B-2 Step 5b-1
     contact,  # LP問い合わせフォーム受付
+    contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
     dashboard,
     deals,
@@ -58,10 +59,12 @@ from app.routers import (
     order_purchase_details,  # ADR-021 Phase 4 / Sprint 4: 仕入情報 MVP
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
+    own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     parse_review,
     products,
     purchase_orders,
     quotes,
+    registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
     shifts,
@@ -72,6 +75,7 @@ from app.routers import (
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
+    super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_phase_switch,
     super_admin_suppliers,
@@ -80,6 +84,7 @@ from app.routers import (
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
+    tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     webhook,
 )
@@ -182,6 +187,10 @@ app.include_router(webhook.router, prefix="/api/v1", tags=["webhook"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 # LP問い合わせフォーム受付（認証不要 - salesanchor.jp からのフォーム送信）
 app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
+# ADR-SA-03: 顧客登録トークン公開エンドポイント（認証不要 - トークン署名で検証）
+app.include_router(
+    registration_tokens.public_router, prefix="/api/v1", tags=["registration"],
+)
 
 # --- 認証必須なルーター（デフォルトで認証が強制される） ---
 # dependencies=[Depends(get_current_tenant)] により、
@@ -232,8 +241,18 @@ app.include_router(
     companies.router, prefix="/api/v1", tags=["companies"],
     dependencies=[Depends(get_current_tenant)],
 )
+# ADR-SA-03: 顧客登録トークン発行（認証必須）
+app.include_router(
+    registration_tokens.router, prefix="/api/v1", tags=["registration"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     contacts.router, prefix="/api/v1", tags=["contacts"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
+app.include_router(
+    contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
@@ -242,6 +261,11 @@ app.include_router(
 )
 app.include_router(
     orders.router, prefix="/api/v1", tags=["orders"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR SA-04/05: A在庫テナント私有化 + 2段階引当
+app.include_router(
+    own_inventory.router, prefix="/api/v1", tags=["own-inventory"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-021 Phase 2 / Sprint 2: 受注売上情報 + 月次集計
@@ -320,6 +344,11 @@ app.include_router(
     tenant_profile.router, prefix="/api/v1", tags=["tenant_profile"],
     dependencies=[Depends(get_current_tenant)],
 )
+# ADR-106: テナントポリシー設定 (在庫集計フィルタ・見積有効期限・通貨・発行モード等)
+app.include_router(
+    tenant_policy.router, prefix="/api/v1", tags=["tenant_policy"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     duplicates.router, prefix="/api/v1", tags=["duplicates"],
     dependencies=[Depends(get_current_tenant)],
@@ -391,6 +420,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_suppliers.router, prefix="/api/v1", tags=["super-admin"],
+)
+# SA-05: リンクテンプレート SSOT admin CRUD
+app.include_router(
+    super_admin_link_templates.router, prefix="/api/v1", tags=["super-admin"],
 )
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(

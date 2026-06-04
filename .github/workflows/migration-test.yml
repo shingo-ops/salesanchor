@@ -114,8 +114,11 @@ jobs:
       #         テスト速度への影響はゼロです。
       #
       # 現在登録済みのテーブル:
-      #   public:    tenants / users / permissions / tenant_discord_config
+      #   public:    tenants / users / permissions / tenant_discord_config / inventory
       #   tenant_001: role_permissions / staff / leads / deals
+      #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
+      #   ※ public.inventory は PUBLIC_SQL セクションに最小定義を登録（migration 081 相当）
+      #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
@@ -203,8 +206,125 @@ jobs:
               id         SERIAL PRIMARY KEY,
               tenant_id  INTEGER NOT NULL,
               title      VARCHAR(255),
+              company_id INTEGER,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- companies: テナント個別スキーマにのみ存在（v_company_stats ビューの参照先）
+          CREATE TABLE IF NOT EXISTS tenant_001.companies (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              name       VARCHAR(255) NOT NULL,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- conversation_logs (for PR#4 migration test)
+          CREATE TABLE IF NOT EXISTS tenant_001.conversation_logs (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              lead_id             INTEGER,
+              contact_id          INTEGER,
+              company_id          INTEGER,
+              deal_id             INTEGER,
+              channel_type        VARCHAR(30) NOT NULL,
+              channel_identity    VARCHAR(255),
+              direction           VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+              sender              VARCHAR(100),
+              content_text        TEXT,
+              original_language   VARCHAR(10),
+              external_message_id VARCHAR(255) UNIQUE,
+              raw_payload         JSONB,
+              status              VARCHAR(20) DEFAULT 'sent',
+              translated_text     TEXT,
+              analysis            JSONB,
+              occurred_at         TIMESTAMPTZ NOT NULL,
+              created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          -- quotes: 見積書テーブル（C-6 スナップショット migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.quotes (
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER NOT NULL,
+              quote_code      VARCHAR(50),
+              company_id      INTEGER,
+              contact_id      INTEGER,
+              currency        VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal        NUMERIC(15,2),
+              shipping_fee    NUMERIC(15,2),
+              tax_amount      NUMERIC(15,2),
+              total_amount    NUMERIC(15,2),
+              status          VARCHAR(30) NOT NULL DEFAULT 'draft',
+              validity_date   DATE,
+              notes           TEXT,
+              created_at      TIMESTAMPTZ DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- quote_items: 見積明細テーブル（C-6: hs_code 列追加 migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.quote_items (
+              id              SERIAL PRIMARY KEY,
+              quote_id        INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
+          );
+
+          -- invoices: 請求書テーブル（C-6/C-7 スナップショット migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.invoices (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              invoice_number      VARCHAR(50),
+              quote_id            INTEGER,
+              company_id          INTEGER,
+              contact_id          INTEGER,
+              currency            VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal            NUMERIC(15,2),
+              shipping_fee        NUMERIC(15,2),
+              tax_amount          NUMERIC(15,2),
+              total_amount        NUMERIC(15,2),
+              exchange_rate_jpy   NUMERIC(15,4),
+              exchange_rate_usd   NUMERIC(15,4),
+              amount_jpy          NUMERIC(15,2),
+              amount_usd          NUMERIC(15,2),
+              payment_method      VARCHAR(50),
+              status              VARCHAR(30) NOT NULL DEFAULT 'draft',
+              branch_number       INTEGER NOT NULL DEFAULT 1,
+              pdf_url             TEXT,
+              erp_key             VARCHAR(20),
+              issued_at           TIMESTAMPTZ,
+              due_date            DATE,
+              paid_at             TIMESTAMPTZ,
+              voided_at           TIMESTAMPTZ,
+              void_reason         TEXT,
+              notes               TEXT,
+              created_by          INTEGER,
+              created_at          TIMESTAMPTZ DEFAULT NOW(),
+              updated_at          TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- invoice_items: 請求明細テーブル（C-6: hs_code 列追加 migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.invoice_items (
+              id              SERIAL PRIMARY KEY,
+              invoice_id      INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
           );
           TENANT_SQL
 
@@ -219,9 +339,45 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
+          -- public.tenant_settings: ADR-106 テナントポリシー列が ALTER ADD COLUMN で操作する
+          CREATE TABLE IF NOT EXISTS public.tenant_settings (
+              tenant_id         INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+              spreadsheet_phase TEXT NOT NULL DEFAULT 'A',
+              created_at        TIMESTAMPTZ DEFAULT NOW(),
+              updated_at        TIMESTAMPTZ DEFAULT NOW()
+          );
+          INSERT INTO public.tenant_settings (tenant_id) VALUES (1) ON CONFLICT DO NOTHING;
+
           -- NOTE: public.suppliers / public.products は migrate_inventory_sprint1.py が
           --       CREATE TABLE するため、ここでは作成しない。
           --       スクリプト実行前に列が欠けた状態で存在するとエラーになる。
+
+          -- public.inventory: migration 081 で作成。ADR SA-05 の source_kind 追加 migration が
+          --   ALTER TABLE public.inventory を実行するため、前提として最小定義を登録する。
+          --   （migrate_inventory_sprint1.py は 056-063 のみで 081 を含まない）
+          CREATE TABLE IF NOT EXISTS public.inventory (
+              id          SERIAL PRIMARY KEY,
+              supplier_id INTEGER NOT NULL,
+              product_id  INTEGER NOT NULL,
+              condition   VARCHAR(50) NOT NULL,
+              quantity    INTEGER NOT NULL DEFAULT 0,
+              unit_price  INTEGER NOT NULL DEFAULT 0,
+              status      VARCHAR(20) NOT NULL DEFAULT 'in_stock',
+              notes_ja    TEXT,
+              notes_en    TEXT,
+              offered_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              expires_at  TIMESTAMPTZ,
+              source      VARCHAR(50) NOT NULL DEFAULT 'manual',
+              created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              UNIQUE (supplier_id, product_id, condition)
+          );
+
+          -- ADR SA-06: ingestion_jobs / parse_logs は Sprint 1 (suppliers/products) 依存のため
+          --   ここでは定義せず、Sprint 1 実行後に migration SQL として適用される。
+          --   ただし v_supplier_parse_stats VIEW が parse_logs を参照するため、
+          --   migration 実行順（20260604_110000 → 20260604_120000 → 20260604_130000）が
+          --   CI の changed_sql ソート順と一致することを確認済み。
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────

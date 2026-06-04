@@ -1107,6 +1107,128 @@ def _to_parsed_item_from_llm(llm_item: Any) -> ParsedItem:
     )
 
 
+# ---------------------------------------------------------------------------
+# parse_logs 書き込みヘルパー（non-fatal）
+# ---------------------------------------------------------------------------
+
+
+async def _write_parse_log(
+    db: AsyncSession,
+    *,
+    supplier_id: int | None,
+    raw_line: str,
+    outcome: str,  # 'parsed' / 'excluded' / 'unparsed'
+    matched_product_id: int | None = None,
+    match_confidence: float | None = None,
+    extracted_qty: int | None = None,
+    extracted_price: int | None = None,
+    extracted_condition: str | None = None,
+    parse_engine: str = PARSE_ENGINE,
+    exclude_reason: str | None = None,
+    reasoning: str | None = None,
+    ingestion_job_id: int | None = None,
+    inbound_message_id: int | None = None,
+) -> None:
+    """public.parse_logs へ 1 行分のログを INSERT する。
+
+    non-fatal: 書き込み失敗は warning ログのみ。解析処理自体は継続する。
+    """
+    try:
+        await db.execute(
+            text(
+                """
+                INSERT INTO public.parse_logs (
+                    ingestion_job_id, inbound_message_id, supplier_id,
+                    raw_line, matched_product_id, match_confidence,
+                    extracted_qty, extracted_price, extracted_condition,
+                    parse_engine, outcome, exclude_reason, reasoning
+                ) VALUES (
+                    :ingestion_job_id, :inbound_message_id, :supplier_id,
+                    :raw_line, :matched_product_id, :match_confidence,
+                    :extracted_qty, :extracted_price, :extracted_condition,
+                    :parse_engine, :outcome, :exclude_reason, :reasoning
+                )
+                """
+            ),
+            {
+                "ingestion_job_id": ingestion_job_id,
+                "inbound_message_id": inbound_message_id,
+                "supplier_id": supplier_id,
+                "raw_line": raw_line,
+                "matched_product_id": matched_product_id,
+                "match_confidence": match_confidence,
+                "extracted_qty": extracted_qty,
+                "extracted_price": extracted_price,
+                "extracted_condition": extracted_condition,
+                "parse_engine": parse_engine,
+                "outcome": outcome,
+                "exclude_reason": exclude_reason,
+                "reasoning": reasoning,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001 - ログ失敗で解析を止めない
+        logger.warning("[inventory_parser] parse_log write failed: %s", exc)
+
+
+async def write_parse_result_logs(
+    db: AsyncSession,
+    result: ParseResult,
+    supplier_id: int,
+    *,
+    ingestion_job_id: int | None = None,
+    inbound_message_id: int | None = None,
+) -> None:
+    """ParseResult の items / excludes / unparsed を一括で parse_logs に書く。
+
+    呼び出し側は parse_inventory_message() の後に本関数を呼ぶ。
+    non-fatal: 部分失敗でも呼び出し側に例外を伝播しない。
+    """
+    for item in result.items:
+        price_int: int | None = None
+        if item.unit_price is not None:
+            try:
+                price_int = int(float(item.unit_price))
+            except (ValueError, TypeError):
+                price_int = None
+        await _write_parse_log(
+            db,
+            supplier_id=supplier_id,
+            raw_line=item.raw_line,
+            outcome="parsed",
+            matched_product_id=item.product_id,
+            extracted_qty=item.quantity,
+            extracted_price=price_int,
+            extracted_condition=item.condition,
+            parse_engine=result.parse_engine,
+            ingestion_job_id=ingestion_job_id,
+            inbound_message_id=inbound_message_id,
+        )
+
+    for ex in result.excludes:
+        await _write_parse_log(
+            db,
+            supplier_id=supplier_id,
+            raw_line=ex.raw_line,
+            outcome="excluded",
+            exclude_reason=ex.exclude_reason,
+            parse_engine=result.parse_engine,
+            ingestion_job_id=ingestion_job_id,
+            inbound_message_id=inbound_message_id,
+        )
+
+    for unp in result.unparsed:
+        await _write_parse_log(
+            db,
+            supplier_id=supplier_id,
+            raw_line=unp.raw_line,
+            outcome="unparsed",
+            reasoning=unp.reason,
+            parse_engine=result.parse_engine,
+            ingestion_job_id=ingestion_job_id,
+            inbound_message_id=inbound_message_id,
+        )
+
+
 __all__ = [
     "PARSE_ENGINE",
     "AliasRow",
@@ -1117,5 +1239,6 @@ __all__ = [
     "ParseResult",
     "parse_raw_content",
     "parse_inventory_message",
+    "write_parse_result_logs",
     "DEFAULT_UNIT_NORMALIZATION",
 ]
