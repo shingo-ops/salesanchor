@@ -56,6 +56,32 @@ async def list_suppliers(
     return [SupplierResponse(**row) for row in result.mappings().all()]
 
 
+@router.get("/suppliers/catalog", response_model=list[SupplierResponse],
+            dependencies=[Depends(require_permission("purchase_orders.view"))])
+async def list_supplier_catalog(
+    search: str | None = Query(default=None, max_length=255),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """発注用の仕入元プルダウン: 中央カタログ public.suppliers を返す（全テナント共有）。
+
+    在庫表（public.suppliers 由来）とソースを統一する。返す id は public.suppliers.id。
+    発注作成 (POST /purchase-orders) 側で tenant.suppliers へ複製して FK を満たす。
+    """
+    conditions = ["is_active = TRUE"]
+    params: dict = {}
+    if search:
+        conditions.append("(name ILIKE :search OR supplier_code ILIKE :search)")
+        params["search"] = f"%{search}%"
+    where = f"WHERE {' AND '.join(conditions)}"
+    result = await db.execute(
+        text(f"SELECT {_COLS} FROM public.suppliers {where} ORDER BY name"),
+        params,
+    )
+    return [SupplierResponse(**row) for row in result.mappings().all()]
+
+
 @router.get("/suppliers/{supplier_id}", response_model=SupplierResponse,
             dependencies=[Depends(require_permission("suppliers.view"))])
 async def get_supplier(supplier_id: int, db: AsyncSession = Depends(get_db),
