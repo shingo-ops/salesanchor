@@ -19,8 +19,9 @@ import ProductsPage from "../products/ProductsPage";
 import DexTab from "./DexTab";
 import SuppliersAdminTab from "./SuppliersAdminTab";
 import LLMBudgetTab from "./LLMBudgetTab";
+import SupplierParseStatsTab from "./SupplierParseStatsTab";
 
-type TabKey = "knowledge" | "tcg" | "dex" | "suppliers" | "llmBudget";
+type TabKey = "knowledge" | "tcg" | "dex" | "suppliers" | "llmBudget" | "parseStats";
 
 export default function MastersPage() {
   const { t } = useTranslation();
@@ -47,6 +48,7 @@ export default function MastersPage() {
     { key: "dex", label: t("superAdmin.tabs.dex") },
     { key: "suppliers", label: t("superAdmin.tabs.suppliers") },
     { key: "llmBudget", label: t("superAdmin.tabs.llmBudget") },
+    { key: "parseStats", label: t("superAdmin.tabs.parseStats") },
   ];
 
   return (
@@ -77,6 +79,7 @@ export default function MastersPage() {
         {tab === "dex" && <DexTab />}
         {tab === "suppliers" && <SuppliersAdminTab />}
         {tab === "llmBudget" && <LLMBudgetTab />}
+        {tab === "parseStats" && <SupplierParseStatsTab />}
       </div>
     </PageLayout>
   );

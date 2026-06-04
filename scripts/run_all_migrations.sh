@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=92
+TOTAL=97
 
 run_py() {
   local script="$1"
@@ -231,6 +231,11 @@ run_sql migrations/20260604_060000_add_lost_reason_code.sql
 
 # C-2/C-4: deprecated 列コメント追加（trust_level / products.unit_price系）
 run_sql migrations/20260604_070000_deprecate_columns.sql
+
+# ADR SA-06: 解析ログ永続化 + ドリフト検知ビュー
+run_sql migrations/20260604_110000_create_ingestion_jobs.sql
+run_sql migrations/20260604_120000_create_parse_logs.sql
+run_sql migrations/20260604_130000_create_supplier_parse_stats_view.sql
 
 echo ""
 echo "============================================"

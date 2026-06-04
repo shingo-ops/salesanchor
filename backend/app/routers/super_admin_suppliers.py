@@ -18,6 +18,7 @@ API:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -342,3 +343,77 @@ async def upsert_supplier_prompt(
         )
     await db.commit()
     return SupplierPromptResponse(**dict(row))
+
+
+# ============================================================================
+# ADR SA-06: 解析精度サマリー (v_supplier_parse_stats)
+#   GET /super-admin/suppliers/{id}/parse-stats
+# ============================================================================
+
+
+class SupplierParseStatRow(BaseModel):
+    """v_supplier_parse_stats の 1 行（フロントエンド表示用）。"""
+
+    supplier_id: int
+    supplier_name: str | None
+    day: str  # ISO date string (YYYY-MM-DD)
+    total_lines: int
+    parsed_count: int
+    excluded_count: int
+    unparsed_count: int
+    exclude_rate_pct: float | None
+    avg_confidence: float | None
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/parse-stats",
+    response_model=list[SupplierParseStatRow],
+    dependencies=[Depends(require_super_admin)],
+)
+async def get_supplier_parse_stats(
+    supplier_id: int,
+    days: int = Query(default=30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+):
+    """仕入元の解析精度サマリーを v_supplier_parse_stats から取得する。
+
+    Args:
+        supplier_id: 対象の仕入元 ID
+        days: 過去 N 日分を返す（最大 365）
+    """
+    result = await db.execute(
+        text(
+            """
+            SELECT
+                supplier_id,
+                supplier_name,
+                day::date AS day,
+                total_lines,
+                parsed_count,
+                excluded_count,
+                unparsed_count,
+                exclude_rate_pct,
+                avg_confidence
+            FROM public.v_supplier_parse_stats
+            WHERE supplier_id = :supplier_id
+              AND day >= NOW() - INTERVAL '1 day' * :days
+            ORDER BY day DESC
+            """
+        ),
+        {"supplier_id": supplier_id, "days": days},
+    )
+    rows = result.mappings().all()
+    return [
+        SupplierParseStatRow(
+            supplier_id=row["supplier_id"],
+            supplier_name=row["supplier_name"],
+            day=str(row["day"]),
+            total_lines=int(row["total_lines"] or 0),
+            parsed_count=int(row["parsed_count"] or 0),
+            excluded_count=int(row["excluded_count"] or 0),
+            unparsed_count=int(row["unparsed_count"] or 0),
+            exclude_rate_pct=float(row["exclude_rate_pct"]) if row["exclude_rate_pct"] is not None else None,
+            avg_confidence=float(row["avg_confidence"]) if row["avg_confidence"] is not None else None,
+        )
+        for row in rows
+    ]
