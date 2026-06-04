@@ -63,9 +63,9 @@ async def _fetch_address_snapshot(
         return None
     result = await db.execute(
         text("""
-            SELECT a.label, a.postal_code, a.address_line1, a.address_line2,
-                   a.city, a.state, a.country, a.phone,
-                   c.company_name
+            SELECT a.branch_name, a.zip, a.address_line_1, a.address_line_2,
+                   a.city, a.state, a.country_code, a.telephone,
+                   c.name AS company_name
             FROM company_addresses a
             JOIN companies c ON c.id = a.company_id
             WHERE a.company_id = :cid
@@ -80,15 +80,15 @@ async def _fetch_address_snapshot(
         return None
     return {
         "company_name": row["company_name"],
-        "label": row["label"],
-        "postal_code": row["postal_code"],
+        "label": row["branch_name"],
+        "postal_code": row["zip"],
         "address": " ".join(
-            filter(None, [row["address_line1"], row["address_line2"]])
+            filter(None, [row["address_line_1"], row["address_line_2"]])
         ),
         "city": row["city"],
         "state": row["state"],
-        "country": row["country"],
-        "phone": row["phone"],
+        "country": row["country_code"],
+        "phone": row["telephone"],
     }
 
 
