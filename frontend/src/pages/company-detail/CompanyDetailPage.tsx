@@ -8,9 +8,11 @@
  * UI は各タブコンポーネントに分割済み。
  */
 
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePermissions } from "../../hooks/usePermissions";
+import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import MergeCompanyModal from "../../components/MergeCompanyModal";
 import { useCompanyDetail } from "./useCompanyDetail";
@@ -30,6 +32,9 @@ export default function CompanyDetailPage() {
   const canEdit = hasPermission("customers.update");
   // A-4: 会社マージは customers.delete 権限相当
   const canMerge = hasPermission("customers.delete");
+  // ADR-SA-03: 登録リンク発行
+  const [regLinkUrl, setRegLinkUrl] = useState<string | null>(null);
+  const [regLinkLoading, setRegLinkLoading] = useState(false);
 
   const state = useCompanyDetail(id);
   const {
@@ -66,6 +71,22 @@ export default function CompanyDetailPage() {
     );
   }
 
+  const handleGenerateRegLink = async () => {
+    if (!company.lead_id) return;
+    setRegLinkLoading(true);
+    try {
+      const res = await api.post("/registration-tokens", {
+        lead_id: company.lead_id,
+        type: "register",
+      });
+      setRegLinkUrl(res.registration_url);
+    } catch {
+      // noop
+    } finally {
+      setRegLinkLoading(false);
+    }
+  };
+
   const billingAddresses = company.addresses.filter((a) => a.address_type === "billing");
   const deliveryAddresses = company.addresses.filter((a) => a.address_type === "delivery");
 
@@ -88,9 +109,31 @@ export default function CompanyDetailPage() {
           <h1>{company.name}</h1>
         </div>
         <div className="page-header-actions">
+          {canEdit && company.lead_id && (
+            <button
+              className="btn-sm"
+              onClick={handleGenerateRegLink}
+              disabled={regLinkLoading}
+            >
+              {regLinkLoading ? t("common.loading") : t("registration.generateLink")}
+            </button>
+          )}
           <span className={`status-badge status-${company.status}`}>{company.status}</span>
         </div>
       </div>
+
+      {regLinkUrl && (
+        <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
+          {t("registration.linkGenerated")}: <a href={regLinkUrl} target="_blank" rel="noopener noreferrer">{regLinkUrl}</a>
+          <button
+            className="btn-sm"
+            style={{ marginLeft: "var(--spacing-2)" }}
+            onClick={() => { navigator.clipboard.writeText(regLinkUrl); }}
+          >
+            {t("registration.copyLink")}
+          </button>
+        </div>
+      )}
 
       {error && <div className="error-banner">{error}</div>}
 

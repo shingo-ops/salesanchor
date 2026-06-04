@@ -1,0 +1,110 @@
+from __future__ import annotations
+
+"""
+顧客登録トークン用 Pydantic スキーマ（ADR-SA-03）。
+
+担当者がリードに登録リンクを発行するリクエスト・レスポンスと、
+顧客が公開フォームから送信する登録データのスキーマを定義する。
+"""
+
+from datetime import datetime
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.base import validate_email_loose, validate_phone
+
+
+class TokenType(str, Enum):
+    register = "register"
+    add_address = "add_address"
+
+
+# --- 担当者がトークン発行する際のスキーマ ---
+
+
+class CreateTokenRequest(BaseModel):
+    """担当者がリード向けに登録リンクを発行するリクエスト。"""
+    lead_id: int = Field(..., description="リード ID")
+    type: TokenType = Field(default=TokenType.register, description="トークン種別")
+
+
+class CreateTokenResponse(BaseModel):
+    """トークン発行レスポンス。registration_url を顧客に送付する。"""
+    token: str = Field(..., description="raw token（URL に含める）")
+    registration_url: str = Field(..., description="顧客に送付する登録 URL")
+    expires_at: datetime = Field(..., description="有効期限")
+
+
+# --- 公開エンドポイント: トークン検証レスポンス ---
+
+
+class TokenVerifyResponse(BaseModel):
+    """トークン検証結果。フォーム表示用のデータを返す。"""
+    valid: bool
+    company_name: Optional[str] = None
+    lead_id: Optional[int] = None
+    token_type: Optional[str] = None
+
+
+# --- 公開エンドポイント: 顧客が登録データを送信するスキーマ ---
+
+
+class AddressInput(BaseModel):
+    """住所入力（billing / delivery 共通）。"""
+    address_type: str = Field(..., description="billing or delivery")
+    branch_name: Optional[str] = Field(None, max_length=100)
+    name: Optional[str] = Field(None, max_length=200)
+    email: Optional[str] = Field(None, max_length=255)
+    telephone: Optional[str] = Field(None, max_length=30)
+    tax_id: Optional[str] = Field(None, max_length=50)
+    address_line_1: Optional[str] = Field(None, max_length=255)
+    address_line_2: Optional[str] = Field(None, max_length=255)
+    address_line_3: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
+    zip: Optional[str] = Field(None, max_length=20)
+    country_code: Optional[str] = Field(None, max_length=5)
+    is_default: bool = False
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        return validate_email_loose(v)
+
+    @field_validator("telephone")
+    @classmethod
+    def validate_tel(cls, v: Optional[str]) -> Optional[str]:
+        return validate_phone(v)
+
+
+class RegisterRequest(BaseModel):
+    """顧客登録リクエスト（公開フォームから送信）。"""
+    token: str = Field(..., description="raw token")
+    addresses: list[AddressInput] = Field(default_factory=list, description="住所リスト")
+    contact_name: Optional[str] = Field(None, max_length=200, description="担当者名")
+    contact_email: Optional[str] = Field(None, max_length=255, description="担当者メール")
+    contact_telephone: Optional[str] = Field(None, max_length=30, description="担当者電話")
+
+    @field_validator("contact_email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        return validate_email_loose(v)
+
+    @field_validator("contact_telephone")
+    @classmethod
+    def validate_tel(cls, v: Optional[str]) -> Optional[str]:
+        return validate_phone(v)
+
+
+class AddAddressRequest(BaseModel):
+    """住所追加リクエスト（公開フォームから送信）。既存の住所を上書きしない。"""
+    token: str = Field(..., description="raw token")
+    address: AddressInput = Field(..., description="追加する住所")
+
+
+class RegisterResponse(BaseModel):
+    """登録完了レスポンス。"""
+    success: bool
+    message: str
