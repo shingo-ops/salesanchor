@@ -2138,6 +2138,7 @@
   },
   "ownInventory": {
     "title": "自社在庫",
+    "subtitle": "自社A在庫の物理在庫・引当・発送確定を管理します。",
     "physicalQty": "物理在庫",
     "reservedQty": "引当済み",
     "availableQty": "利用可能",

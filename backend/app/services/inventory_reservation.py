@@ -86,7 +86,9 @@ async def release_reservation(
     await db.execute(
         text(
             "UPDATE own_inventory"
-            " SET reserved_qty = GREATEST(0, reserved_qty - :qty), updated_at = NOW()"
+            " SET reserved_qty = CASE WHEN reserved_qty - :qty < 0 THEN 0"
+            "                        ELSE reserved_qty - :qty END,"
+            "     updated_at = NOW()"
             " WHERE id = :id AND tenant_id = :tid"
         ),
         {"qty": qty, "id": own_inventory_id, "tid": tenant_id},
@@ -117,7 +119,8 @@ async def ship_qty(
         text(
             "UPDATE own_inventory"
             " SET physical_qty = physical_qty - :qty,"
-            "     reserved_qty = GREATEST(0, reserved_qty - :qty),"
+            "     reserved_qty = CASE WHEN reserved_qty - :qty < 0 THEN 0"
+            "                        ELSE reserved_qty - :qty END,"
             "     updated_at = NOW()"
             " WHERE id = :id AND tenant_id = :tid"
         ),

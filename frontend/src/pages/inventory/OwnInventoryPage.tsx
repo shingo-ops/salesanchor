@@ -105,7 +105,7 @@ export default function OwnInventoryPage() {
   };
 
   return (
-    <PageLayout title={t("ownInventory.title")}>
+    <PageLayout title={t("ownInventory.title")} subtitleKey="ownInventory.subtitle">
       {error && (
         <div className="alert alert-error" role="alert">
           {error}

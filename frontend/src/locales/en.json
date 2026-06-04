@@ -2138,6 +2138,7 @@
   },
   "ownInventory": {
     "title": "Own Inventory",
+    "subtitle": "Manage physical stock, reservations, and shipments for your own (A) inventory.",
     "physicalQty": "Physical Qty",
     "reservedQty": "Reserved",
     "availableQty": "Available",

@@ -7,7 +7,7 @@ ADR SA-04/05: 2段階引当（reserve / release / ship）の動作検証。
   - SQLite インメモリ DB を使用（conftest.py の db_session / client フィクスチャを流用）。
   - own_inventory テーブルは本テスト内でセットアップ（conftest のスコープ外）。
   - FOR UPDATE は conftest の before_cursor_execute フックが SQLite 用に除去済み。
-  - GREATEST(0, ...) は SQLite でサポートされているため、そのまま動作する。
+  - GREATEST(0, ...) は SQLite 非対応のため、CASE WHEN ... END に変換済み（inventory_reservation.py 参照）。
   - GENERATED ALWAYS AS はSQLiteでCREATE TABLE時には非互換のため、
     テスト用テーブルでは available_qty を通常カラムとして定義し、
     サービス関数はカラムを直接更新しない（READ: physical - reserved で算出）。
@@ -124,7 +124,7 @@ async def test_reserve_qty_invalid_qty(db_session: AsyncSession, own_inventory_t
     """qty=0 は ValueError を raise する。"""
     inventory_id = own_inventory_table
 
-    with pytest.raises(ValueError, match="1以上"):
+    with pytest.raises(ValueError, match="1 以上"):
         await reserve_qty(db_session, inventory_id, qty=0, tenant_id=999)
 
 
@@ -202,5 +202,5 @@ async def test_ship_qty_invalid_qty(db_session: AsyncSession, own_inventory_tabl
     """qty=0 は ValueError を raise する。"""
     inventory_id = own_inventory_table
 
-    with pytest.raises(ValueError, match="1以上"):
+    with pytest.raises(ValueError, match="1 以上"):
         await ship_qty(db_session, inventory_id, qty=0, tenant_id=999)
