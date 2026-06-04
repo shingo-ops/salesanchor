@@ -34,6 +34,7 @@
 | feature/morimoto/schedule-responsive-tokens | スケジュール スロット高・終日エリア レスポンシブ対応 | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/fix-space9-token | デザイントークン --space-9 未定義バグ修正 | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/sa-foundation-pr1-tenant-policy | テナントポリシー列追加（ADR-106） | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/analytics-agent-a-priority | 分析エージェント(A) 顧客優先度付け ADR-107 起案 | 2026-06-04 | IN_PROGRESS | | |
 ---
 
 ## 記入例
