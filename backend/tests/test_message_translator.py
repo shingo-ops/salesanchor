@@ -98,7 +98,7 @@ def test_parse_valid_json():
         "original_language": "en",
         "flagged_terms": [{"term": "Hello", "reason": "ambiguous"}],
     })
-    text, conf, lang, flags = _parse_translation_response(raw, 0.70)
+    text, conf, lang, flags = _parse_translation_response(raw)
     assert text == "こんにちは"
     assert conf == pytest.approx(0.95)
     assert lang == "en"
@@ -109,7 +109,7 @@ def test_parse_valid_json():
 def test_parse_invalid_json_falls_back_to_raw():
     """JSON パース失敗時はテキストをそのまま返し confidence=0.5。"""
     raw = "申し訳ありません、在庫切れです"
-    text, conf, lang, flags = _parse_translation_response(raw, 0.70)
+    text, conf, lang, flags = _parse_translation_response(raw)
     assert text == raw
     assert conf == pytest.approx(0.5)
     assert flags == []
@@ -118,14 +118,14 @@ def test_parse_invalid_json_falls_back_to_raw():
 def test_parse_confidence_clamped():
     """confidence は 0–1 にクランプ。"""
     raw = json.dumps({"translated_text": "x", "confidence": 1.5})
-    _, conf, _, _ = _parse_translation_response(raw, 0.70)
+    _, conf, _, _ = _parse_translation_response(raw)
     assert conf == pytest.approx(1.0)
 
 
 def test_parse_markdown_json_block():
     """```json ... ``` ブロックを正常にパース。"""
     raw = '```json\n{"translated_text": "test", "confidence": 0.9}\n```'
-    text, conf, _, _ = _parse_translation_response(raw, 0.70)
+    text, conf, _, _ = _parse_translation_response(raw)
     assert text == "test"
     assert conf == pytest.approx(0.9)
 
