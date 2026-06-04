@@ -91,6 +91,7 @@
     "customers": "Legacy Customers",
     "archive": "Archive",
     "inventory": "Inventory List",
+    "ownInventory": "Own Inventory",
     "products": "Product Master",
     "quotesInvoices": "Quotes & Invoices",
     "orders": "Orders",

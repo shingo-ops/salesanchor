@@ -91,6 +91,7 @@
     "customers": "顧客管理（旧）",
     "archive": "アーカイブ",
     "inventory": "在庫表",
+    "ownInventory": "自社在庫",
     "products": "商品マスタ",
     "quotesInvoices": "見積・請求管理",
     "orders": "受注管理",

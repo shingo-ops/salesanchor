@@ -55,7 +55,7 @@ export default function OwnInventoryPage() {
       const res = await api.get<OwnInventoryRow[]>(
         `/own-inventory?page=${page}&per_page=${PER_PAGE}`,
       );
-      setItems(res.data);
+      setItems(res);
     } catch {
       setError(t("ownInventory.loadError"));
     } finally {
@@ -105,7 +105,7 @@ export default function OwnInventoryPage() {
   };
 
   return (
-    <PageLayout title={t("ownInventory.title")} subtitleKey="ownInventory.subtitle">
+    <PageLayout navKey="nav.ownInventory" subtitleKey="ownInventory.subtitle">
       {error && (
         <div className="alert alert-error" role="alert">
           {error}
