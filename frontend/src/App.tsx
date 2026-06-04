@@ -22,6 +22,7 @@ import TeamsPage from "./pages/teams/TeamsPage";
 import RolesPage from "./pages/roles/RolesPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import InventoryPage from "./pages/inventory/InventoryPage";
+import OwnInventoryPage from "./pages/inventory/OwnInventoryPage";
 import QuotesPage from "./pages/quotes/QuotesPage";
 import QuoteCreatePage from "./pages/quote-create/QuoteCreatePage";
 import QuoteDetailPage from "./pages/quote-detail/QuoteDetailPage";
@@ -135,6 +136,8 @@ function App() {
 
                   {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
                   <Route path="/inventory" element={<InventoryPage />} />
+                  {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
+                  <Route path="/own-inventory" element={<OwnInventoryPage />} />
                   {/* 商品マスタ CRUD（管理者向けに退避。操作は Page 内 hasPermission で制御） */}
                   <Route path="/admin/products" element={<ProductsPage />} />
 

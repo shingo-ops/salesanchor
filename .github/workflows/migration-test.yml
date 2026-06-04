@@ -116,6 +116,8 @@ jobs:
       # 現在登録済みのテーブル:
       #   public:    tenants / users / permissions / tenant_discord_config
       #   tenant_001: role_permissions / staff / leads / deals
+      #   ※ public.inventory / public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
+      #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |

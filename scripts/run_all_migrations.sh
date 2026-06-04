@@ -34,7 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
-TOTAL=105
+TOTAL=107
 
 run_py() {
   local script="$1"
@@ -232,6 +232,10 @@ run_sql migrations/20260604_060000_add_lost_reason_code.sql
 
 # C-2/C-4: deprecated 列コメント追加（trust_level / products.unit_price系）
 run_sql migrations/20260604_070000_deprecate_columns.sql
+
+# ADR SA-04/05: A在庫テナント私有化（own_inventory）+ B専用source_kind明示
+run_sql migrations/20260604_140000_create_own_inventory.sql
+run_sql migrations/20260604_150000_add_inventory_source_kind.sql
 
 # ADR SA-06: 解析ログ永続化 + ドリフト検知ビュー
 run_sql migrations/20260604_110000_create_ingestion_jobs.sql

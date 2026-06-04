@@ -2135,5 +2135,32 @@
     "completeMessage": "Thank you for registering. Your information has been saved.",
     "addressAddedTitle": "Address Added",
     "addressAddedMessage": "The address has been successfully added."
+  },
+  "ownInventory": {
+    "title": "Own Inventory",
+    "physicalQty": "Physical Qty",
+    "reservedQty": "Reserved",
+    "availableQty": "Available",
+    "reserve": "Reserve",
+    "release": "Release",
+    "ship": "Ship",
+    "qty": "Qty",
+    "noResults": "No own inventory found",
+    "loadError": "Failed to load own inventory",
+    "actionError": "Action failed",
+    "invalidQty": "Enter an integer of 1 or more",
+    "confirmMessage": "Run \"{{action}}\" on product {{productId}}.",
+    "col": {
+      "productId": "Product ID",
+      "condition": "Condition",
+      "unitPrice": "Unit Price",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "sold_out": "Sold out"
+    }
   }
 }

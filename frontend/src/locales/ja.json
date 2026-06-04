@@ -2135,5 +2135,32 @@
     "completeMessage": "ご登録ありがとうございます。情報が保存されました。",
     "addressAddedTitle": "住所追加完了",
     "addressAddedMessage": "住所が正常に追加されました。"
+  },
+  "ownInventory": {
+    "title": "自社在庫",
+    "physicalQty": "物理在庫",
+    "reservedQty": "引当済み",
+    "availableQty": "利用可能",
+    "reserve": "引当",
+    "release": "引当解除",
+    "ship": "発送確定",
+    "qty": "数量",
+    "noResults": "自社在庫がありません",
+    "loadError": "自社在庫の読み込みに失敗しました",
+    "actionError": "操作に失敗しました",
+    "invalidQty": "1以上の整数を入力してください",
+    "confirmMessage": "{{productId}} の在庫に「{{action}}」操作を実行します。",
+    "col": {
+      "productId": "商品ID",
+      "condition": "状態",
+      "unitPrice": "単価",
+      "status": "ステータス",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "有効",
+      "inactive": "無効",
+      "sold_out": "売切れ"
+    }
   }
 }
