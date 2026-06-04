@@ -1847,6 +1847,8 @@
     "eventEnd": "終了日時",
     "eventDescription": "説明",
     "eventLocation": "場所",
+    "descriptionPlaceholder": "説明を追加",
+    "locationPlaceholder": "場所を追加",
     "shiftLabel": "シフト",
     "monthView": "月",
     "weekView": "週",
