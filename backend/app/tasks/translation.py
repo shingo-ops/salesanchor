@@ -11,7 +11,7 @@ ADR-110: 翻訳バックグラウンドタスク（Celery）。
 
 import logging
 
-from app.celery_app import app as celery_app
+from app.celery_app import celery_app
 from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
 
 logger = logging.getLogger(__name__)
