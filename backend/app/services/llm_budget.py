@@ -57,6 +57,13 @@ LLM_PRICING: dict[str, dict[str, Decimal]] = {
         # $0.30 / 1M output tokens
         "output_per_token": Decimal("0.30") / Decimal("1000000"),
     },
+    # ADR-110: 送信英訳は最上位モデル必須
+    "gemini-2.5-pro": {
+        # $1.25 / 1M input tokens (2026-05 時点公式)
+        "input_per_token": Decimal("1.25") / Decimal("1000000"),
+        # $10.00 / 1M output tokens
+        "output_per_token": Decimal("10.00") / Decimal("1000000"),
+    },
 }
 
 DEFAULT_MODEL = "gemini-2.5-flash"

@@ -234,3 +234,109 @@ export async function translateMessage(
     { target_language: targetLanguage },
   );
 }
+
+// ---------------------------------------------------------------------------
+// ADR-110: 送信下訳（英訳プレビュー）
+// ---------------------------------------------------------------------------
+
+export interface FlaggedTerm {
+  term: string;
+  reason: string;
+}
+
+export interface OutboundPreviewResponse {
+  draft_id: number;
+  draft_text: string;
+  confidence: number;
+  flagged_terms: FlaggedTerm[];
+  model: string;
+  is_low_confidence: boolean;
+}
+
+export interface ConfirmOutboundResponse {
+  confirmed: boolean;
+  final_text: string;
+}
+
+/**
+ * POST /api/v1/translation/outbound-preview
+ *
+ * 日本語下書きを英訳して下訳を返す。送信はしない。
+ */
+export async function requestOutboundPreview(
+  draftText: string,
+  leadId: number | null,
+  targetLanguage = "en",
+): Promise<OutboundPreviewResponse> {
+  return api.post<OutboundPreviewResponse>("/translation/outbound-preview", {
+    draft_text: draftText,
+    lead_id: leadId,
+    target_language: targetLanguage,
+  });
+}
+
+/**
+ * POST /api/v1/translation/outbound-confirm/{draftId}
+ *
+ * 送信下訳を「人が確認済み」にマーク。送信はしない。
+ */
+export async function confirmOutboundDraft(
+  draftId: number,
+  finalText: string,
+): Promise<ConfirmOutboundResponse> {
+  return api.post<ConfirmOutboundResponse>(
+    `/translation/outbound-confirm/${draftId}`,
+    { final_text: finalText },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ADR-110: グロッサリ
+// ---------------------------------------------------------------------------
+
+export interface GlossaryEntry {
+  id: number;
+  tenant_id: number | null;
+  source_term: string;
+  target_text: string | null;
+  language_pair: string;
+  term_type: string;
+  is_active: boolean;
+  source_ref: string | null;
+  notes: string | null;
+}
+
+export interface GlossaryListResponse {
+  items: GlossaryEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export async function listGlossary(
+  page = 1,
+  perPage = 50,
+  languagePair?: string,
+): Promise<GlossaryListResponse> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  if (languagePair) params.set("language_pair", languagePair);
+  return api.get<GlossaryListResponse>(`/translation/glossary?${params}`);
+}
+
+export async function createGlossaryEntry(data: {
+  source_term: string;
+  target_text: string | null;
+  language_pair: string;
+  term_type: string;
+  notes?: string | null;
+}): Promise<GlossaryEntry> {
+  return api.post<GlossaryEntry>("/translation/glossary", data);
+}
+
+export async function deleteGlossaryEntry(id: number): Promise<void> {
+  await api.delete(`/translation/glossary/${id}`);
+}
+
+export async function seedGlossaryFromProducts(): Promise<{ seeded: number; message: string }> {
+  return api.post("/translation/glossary/seed-products", {});
+}

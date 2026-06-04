@@ -1009,6 +1009,8 @@ async def translate_message_endpoint(
             detail=str(exc),
         )
 
+    # ADR-110: translate_message() は LegacyTranslationResult を返す（ADR-088 互換）
+    # translate_inbound() に委譲しているため confidence/flagged_terms は別途取得
     return {
         "translated_text": result.translated_text,
         "cached": result.cached,

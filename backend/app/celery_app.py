@@ -28,6 +28,7 @@ celery_app = Celery(
         "app.tasks.reports",
         "app.tasks.verify_meta_subscriptions",
         "app.tasks.priority_scoring_check",
+        "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
     ],
 )
 
@@ -102,5 +103,15 @@ celery_app.conf.beat_schedule = {
     "priority-scoring-monthly-check": {
         "task": "app.tasks.priority_scoring_check.run_priority_scoring_check",
         "schedule": crontab(hour=2, minute=0, day_of_month=1),
+    },
+    # ADR-110: 未翻訳受信メッセージのバッチ翻訳（15分ごと）
+    "translate-pending-messages": {
+        "task": "app.tasks.translation.translate_pending_messages",
+        "schedule": 900.0,  # 15分
+    },
+    # ADR-110: 翻訳健全性チェック + Discord 通知（1時間ごと）
+    "check-translation-health": {
+        "task": "app.tasks.translation.check_translation_health",
+        "schedule": crontab(minute=0),  # 毎時0分
     },
 }

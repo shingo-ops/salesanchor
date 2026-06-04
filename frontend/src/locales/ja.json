@@ -2267,5 +2267,47 @@
     },
     "recalculate": "再計算",
     "lastScoredAt": "スコア計算日時"
+  },
+  "translation": {
+    "outbound": {
+      "title": "英訳プレビュー（送信前確認）",
+      "buttonTitle": "英訳プレビュー",
+      "originalLabel": "原文（日本語）",
+      "draftLabel": "英訳下訳（編集可）",
+      "generateBtn": "英訳を生成",
+      "generating": "生成中...",
+      "confirmSend": "確認して送信",
+      "confirming": "送信中...",
+      "regenerate": "再生成",
+      "lowConfidence": "低確信度",
+      "flaggedTermsTitle": "要確認の用語:",
+      "modelLabel": "モデル",
+      "confidenceLabel": "確信度",
+      "editAriaLabel": "英訳を編集",
+      "previewError": "英訳の生成に失敗しました",
+      "confirmError": "送信に失敗しました"
+    },
+    "glossary": {
+      "title": "翻訳用語集（グロッサリ）",
+      "addEntry": "用語を追加",
+      "sourceTerm": "元の語（英語など）",
+      "targetText": "訳語（空=訳さない）",
+      "languagePair": "言語ペア",
+      "termType": "種別",
+      "notes": "備考",
+      "doNotTranslate": "訳さない（原語のまま）",
+      "global": "共通（全テナント）",
+      "seedProducts": "商品マスタから取込",
+      "seededMessage": "{{count}}件の商品名を取込みました",
+      "deleteConfirm": "この用語を削除しますか？",
+      "loadError": "グロッサリの読み込みに失敗しました",
+      "saveError": "グロッサリの保存に失敗しました",
+      "termType_product_name": "商品名",
+      "termType_brand": "ブランド",
+      "termType_grade": "グレード",
+      "termType_abbreviation": "略語",
+      "termType_jargon": "専門用語",
+      "termType_general": "一般"
+    }
   }
 }

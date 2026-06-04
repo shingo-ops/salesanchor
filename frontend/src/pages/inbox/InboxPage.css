@@ -1423,3 +1423,110 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 @media (max-width: 560px) {
   .inbox-profile-modal { min-width: unset; }
 }
+
+/* ====== ADR-110: 英訳プレビューボタン（送信エリア） ====== */
+.inbox-translate-outbound-btn {
+  display: flex; align-items: center; gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: var(--font-xs); cursor: pointer; flex-shrink: 0;
+  transition: opacity var(--transition-micro), border-color var(--transition-micro);
+}
+.inbox-translate-outbound-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+.inbox-translate-outbound-btn:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent);
+}
+.inbox-translate-outbound-label { font-size: var(--font-xs); font-weight: 600; }
+
+/* ====== ADR-110: 送信下訳プレビューモーダル ====== */
+.outbound-translation-overlay {
+  position: fixed; inset: 0; z-index: var(--z-modal); /* fixed-ok: 送信下訳確認モーダルオーバーレイ */
+  background: var(--overlay-bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-4);
+}
+.outbound-translation-modal {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: var(--space-6);
+  width: 100%; max-width: var(--modal-profile-max-w); max-height: 85vh;
+  overflow-y: auto; box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+.outbound-translation-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.outbound-translation-title {
+  font-size: var(--font-sm); font-weight: 600; color: var(--text);
+}
+.outbound-translation-close {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: var(--font-base);
+  display: flex; align-items: center; padding: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+.outbound-translation-close:hover { opacity: var(--opacity-hover); }
+.outbound-translation-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.outbound-translation-label {
+  font-size: var(--font-xs); font-weight: 600; color: var(--text-muted);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.outbound-translation-original {
+  font-size: var(--font-sm); color: var(--text);
+  background: var(--bg-subtle); border-radius: var(--radius-sm);
+  padding: var(--space-3); white-space: pre-wrap; line-height: 1.5;
+}
+.outbound-translation-low-conf-badge {
+  background: var(--warning-bg); color: var(--warning-text);
+  font-size: var(--font-xs); font-weight: 600;
+  padding: 2px var(--space-2); border-radius: var(--radius-full);
+}
+.outbound-translation-flags {
+  background: var(--warning-bg);
+  border-radius: var(--radius-sm); padding: var(--space-3);
+  display: flex; flex-direction: column; gap: var(--space-1);
+}
+.outbound-translation-flags-title {
+  font-size: var(--font-xs); font-weight: 600; color: var(--warning-text);
+}
+.outbound-translation-flag-item { font-size: var(--font-xs); color: var(--text); }
+.outbound-translation-flag-term { font-weight: 600; }
+.outbound-translation-flag-reason { color: var(--text-muted); }
+.outbound-translation-edit {
+  width: 100%; padding: var(--space-3); resize: vertical;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text); font-size: var(--font-sm);
+  line-height: 1.5; font-family: inherit;
+}
+.outbound-translation-edit:focus { outline: none; border-color: var(--accent); }
+.outbound-translation-meta {
+  font-size: var(--font-xs); color: var(--text-muted);
+}
+.outbound-translation-actions {
+  display: flex; gap: var(--space-2); justify-content: flex-end;
+}
+.outbound-translation-preview-btn,
+.outbound-translation-regenerate-btn {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-surface); color: var(--text); font-size: var(--font-sm);
+  cursor: pointer; transition: opacity var(--transition-micro);
+}
+.outbound-translation-preview-btn:disabled,
+.outbound-translation-regenerate-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+.outbound-translation-preview-btn:hover:not(:disabled),
+.outbound-translation-regenerate-btn:hover:not(:disabled) { opacity: var(--opacity-hover); }
+.outbound-translation-send-btn {
+  padding: var(--space-2) var(--space-4);
+  border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--on-accent, white);
+  font-size: var(--font-sm); font-weight: 600; cursor: pointer;
+  transition: opacity var(--transition-micro);
+}
+.outbound-translation-send-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+.outbound-translation-send-btn:hover:not(:disabled) { opacity: var(--opacity-dim); }
+.outbound-translation-error {
+  color: var(--danger); font-size: var(--font-xs);
+  background: var(--danger-bg); border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}

@@ -2267,5 +2267,47 @@
     },
     "recalculate": "Recalculate",
     "lastScoredAt": "Last Scored At"
+  },
+  "translation": {
+    "outbound": {
+      "title": "English Preview (Review before send)",
+      "buttonTitle": "English Preview",
+      "originalLabel": "Original (Japanese)",
+      "draftLabel": "English Draft (editable)",
+      "generateBtn": "Generate English Draft",
+      "generating": "Generating...",
+      "confirmSend": "Confirm & Send",
+      "confirming": "Sending...",
+      "regenerate": "Regenerate",
+      "lowConfidence": "Low Confidence",
+      "flaggedTermsTitle": "Terms to review:",
+      "modelLabel": "Model",
+      "confidenceLabel": "Confidence",
+      "editAriaLabel": "Edit English draft",
+      "previewError": "Failed to generate English translation",
+      "confirmError": "Failed to send message"
+    },
+    "glossary": {
+      "title": "Translation Glossary",
+      "addEntry": "Add Term",
+      "sourceTerm": "Source Term (e.g. English)",
+      "targetText": "Translation (empty = do not translate)",
+      "languagePair": "Language Pair",
+      "termType": "Type",
+      "notes": "Notes",
+      "doNotTranslate": "Do not translate (keep as-is)",
+      "global": "Global (all tenants)",
+      "seedProducts": "Import from Product Master",
+      "seededMessage": "Imported {{count}} product names",
+      "deleteConfirm": "Delete this term?",
+      "loadError": "Failed to load glossary",
+      "saveError": "Failed to save glossary entry",
+      "termType_product_name": "Product Name",
+      "termType_brand": "Brand",
+      "termType_grade": "Grade",
+      "termType_abbreviation": "Abbreviation",
+      "termType_jargon": "Jargon",
+      "termType_general": "General"
+    }
   }
 }
