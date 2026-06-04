@@ -9,7 +9,7 @@
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useInboxSSE } from "../../hooks/useInboxSSE";
 import { api, ApiError } from "../../lib/api";
 import {
@@ -99,6 +99,8 @@ export interface UseInboxStateReturn {
   profileModalRef: RefObject<HTMLDivElement>;
   handleCardFieldChange: (field: keyof LeadDetail, value: unknown) => void;
   handleCardFieldBlur: () => Promise<void>;
+  handleConvertLead: () => void;
+  handleCreateInvoice: () => void;
 
   // 送信エリア
   draft: string;
@@ -149,6 +151,7 @@ export interface UseInboxStateReturn {
 
 export function useInboxState(): UseInboxStateReturn {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialLeadIdRaw = searchParams.get("lead_id");
   const initialLeadId = initialLeadIdRaw && !isNaN(Number(initialLeadIdRaw))
@@ -473,10 +476,22 @@ export function useInboxState(): UseInboxStateReturn {
     setDraft("");
     setSendError("");
     clearAttachment();
+
+    // ADR-108: set default karte tab based on lead_status
+    const conv = conversations.find((c) => c.lead_id === leadId);
+    const status = conv?.lead_status ?? "";
+    // eslint-disable-next-line local/no-japanese-literal -- DB value
+    const postDealStatuses = ["既存顧客", "追客（短期）", "追客（長期）"];
+    if (postDealStatuses.includes(status)) {
+      setKarteTab("company");
+    } else {
+      setKarteTab("deal");
+    }
+
     const params = new URLSearchParams(searchParams);
     params.set("lead_id", String(leadId));
     setSearchParams(params, { replace: true });
-  }, [closeKartePanel, searchParams, setSearchParams]);
+  }, [closeKartePanel, clearAttachment, searchParams, setSearchParams, conversations]);
 
   const onPageFilterChange = useCallback((value: string) => {
     setPageIdFilter(value);
@@ -641,6 +656,19 @@ export function useInboxState(): UseInboxStateReturn {
   }, [showProfileModal]);
 
   // ---------------------------------------------------------------------------
+  // ADR-108: 固定アクションバー — ナビゲーションアクション
+  // ---------------------------------------------------------------------------
+
+  const handleConvertLead = useCallback(() => {
+    if (!selectedLeadId) return;
+    navigate(`/crm/leads?convert=${selectedLeadId}`);
+  }, [selectedLeadId, navigate]);
+
+  const handleCreateInvoice = useCallback(() => {
+    navigate("/invoices/new");
+  }, [navigate]);
+
+  // ---------------------------------------------------------------------------
   // アクション
   // ---------------------------------------------------------------------------
 
@@ -794,6 +822,8 @@ export function useInboxState(): UseInboxStateReturn {
     profileModalRef,
     handleCardFieldChange,
     handleCardFieldBlur,
+    handleConvertLead,
+    handleCreateInvoice,
 
     // 送信エリア
     draft,

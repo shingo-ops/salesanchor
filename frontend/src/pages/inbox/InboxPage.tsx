@@ -34,6 +34,7 @@ export default function InboxPage() {
     showProfileModal, setShowProfileModal,
     profileModalTab, setProfileModalTab, profileModalRef,
     handleCardFieldChange, handleCardFieldBlur,
+    handleConvertLead, handleCreateInvoice,
     karteTab, setKarteTab,
     selectedConversation, avatarErrors, handleAvatarError,
   } = state;
@@ -190,6 +191,8 @@ export default function InboxPage() {
             handleAvatarError={handleAvatarError}
             handleCardFieldChange={handleCardFieldChange}
             handleCardFieldBlur={handleCardFieldBlur}
+            handleConvertLead={handleConvertLead}
+            handleCreateInvoice={handleCreateInvoice}
           />
         </div>
       </PageLayout>
