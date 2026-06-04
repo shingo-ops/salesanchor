@@ -1847,6 +1847,8 @@
     "eventEnd": "End",
     "eventDescription": "Description",
     "eventLocation": "Location",
+    "descriptionPlaceholder": "Add description",
+    "locationPlaceholder": "Add location",
     "shiftLabel": "Shift",
     "monthView": "Month",
     "weekView": "Week",

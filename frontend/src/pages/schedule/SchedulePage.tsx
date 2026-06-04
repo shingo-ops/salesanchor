@@ -92,21 +92,11 @@ interface EventFormState {
   location: string;
 }
 
-// ---------------------------------------------------------------------------
 // ユーティリティ
-// ---------------------------------------------------------------------------
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toDateInput(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function toTimeInput(d: Date): string {
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+function pad(n: number) { return String(n).padStart(2, "0"); }
+function toDateInput(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function toTimeInput(d: Date) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 
 // ---------------------------------------------------------------------------
 // EventModal
@@ -234,19 +224,34 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
             </div>
             <div className="form-group">
               <label>{t("schedule.eventDescription")}</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={3}
+                placeholder={t("schedule.descriptionPlaceholder")}
+              />
             </div>
             <div className="form-group">
               <label>{t("schedule.eventLocation")}</label>
-              <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder={t("schedule.locationPlaceholder")}
+              />
             </div>
           </>
         ) : (
-          <div style={{ padding: "var(--space-2) 0" }}>
-            {event?.raw?.description && <p>{event.raw.description}</p>}
-            {event?.raw?.location && <p>{event.raw.location}</p>}
-            {isShift && <p>({t("schedule.shiftLabel")})</p>}
-          </div>
+          <dl className="event-modal-detail-list">
+            {event?.raw?.location && <>
+              <dt className="event-modal-detail-term">{t("schedule.eventLocation")}</dt>
+              <dd className="event-modal-detail-value">{event.raw.location}</dd>
+            </>}
+            {event?.raw?.description && <>
+              <dt className="event-modal-detail-term">{t("schedule.eventDescription")}</dt>
+              <dd className="event-modal-detail-value event-modal-detail-value--pre">{event.raw.description}</dd>
+            </>}
+          </dl>
         )}
 
         {error && <div className="error-message">{error}</div>}
