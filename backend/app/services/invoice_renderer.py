@@ -25,7 +25,7 @@ from __future__ import annotations
 import io
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from reportlab.lib.pagesizes import A4
@@ -268,7 +268,6 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
     left_x = 20 * mm
     right_x = mid_x + 5 * mm
 
-    y_before_addr = y
     y_left = _draw_address_block(c, font, "BILL TO:", data.bill_to, left_x, y, mid_x - left_x - 5 * mm)
     y_right = _draw_address_block(c, font, "SHIP TO:", data.ship_to, right_x, y, 190 * mm - right_x)
     y = min(y_left, y_right)
