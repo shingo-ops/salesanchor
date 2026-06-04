@@ -123,7 +123,7 @@ class DealResponse(BaseModel):
     stage: str | None
     probability: int | None
     lost_reason: str | None
-    lost_reason_code: str | None
+    lost_reason_code: str | None = None
     assigned_to: int | None
     expected_close_date: date | None
     notes: str | None
