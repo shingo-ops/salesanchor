@@ -42,7 +42,6 @@ export interface Company {
   normalized_name: string | null;
   industry: string | null;
   website: string | null;
-  trust_level: number | null;
   priority_focus: string | null;
   per_order_amount: string | null;
   monthly_frequency: number | null;
@@ -165,7 +164,6 @@ export type BasicFormState = {
   name_en: string;
   industry: string;
   website: string;
-  trust_level: string;
   priority_focus: string;
   per_order_amount: string;
   monthly_frequency: string;
@@ -215,7 +213,6 @@ export const basicFromApi = (c: Company): BasicFormState => ({
   name_en: c.name_en || "",
   industry: c.industry || "",
   website: c.website || "",
-  trust_level: c.trust_level !== null ? String(c.trust_level) : "",
   priority_focus: c.priority_focus || "",
   per_order_amount: c.per_order_amount || "",
   monthly_frequency: c.monthly_frequency !== null ? String(c.monthly_frequency) : "",
