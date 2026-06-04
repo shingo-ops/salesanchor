@@ -34,6 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
+
 TOTAL=108
 
 run_py() {
@@ -255,6 +256,7 @@ run_sql migrations/20260604_160000_add_invoice_snapshot_columns.sql
 # ADR SA-05: リンクテンプレート SSOT + contact チャンネル guild_id（C-3）
 run_sql migrations/20260604_090000_create_link_templates.sql
 run_sql migrations/20260604_100000_add_guild_id_to_contact_channels.sql
+
 
 # 各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材)
 run_sql migrations/20260604_170000_create_product_attribute_masters.sql
