@@ -78,7 +78,7 @@ export default function CompanyDetailPage() {
       const res = await api.post("/registration-tokens", {
         lead_id: company.lead_id,
         type: "register",
-      });
+      }) as { registration_url: string };
       setRegLinkUrl(res.registration_url);
     } catch {
       // noop
