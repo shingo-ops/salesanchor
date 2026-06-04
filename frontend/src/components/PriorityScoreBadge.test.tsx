@@ -44,12 +44,12 @@ const baseScore: CustomerScoreData = {
 describe("PriorityScoreBadge", () => {
   it("score=null → 「未評価」を表示する", () => {
     render(<PriorityScoreBadge score={null} />);
-    expect(screen.getByText("未評価")).toBeInTheDocument();
+    expect(screen.getByText("未評価")).toBeTruthy();
   });
 
   it("is_cold_start=true → 「暫定」を表示する", () => {
     render(<PriorityScoreBadge score={{ ...baseScore, is_cold_start: true }} />);
-    expect(screen.getByText("暫定")).toBeInTheDocument();
+    expect(screen.getByText("暫定")).toBeTruthy();
   });
 
   it("tier=最有望 → priority-top クラスが付く", () => {
@@ -73,6 +73,6 @@ describe("PriorityScoreBadge", () => {
   it("tooltip にスコア・確信度・母数が含まれる", () => {
     render(<PriorityScoreBadge score={{ ...baseScore, score: 0.5, confidence: 0.8, sample_size: 10 }} />);
     const badge = screen.getByTitle(/スコア.*確信度.*母数/);
-    expect(badge).toBeInTheDocument();
+    expect(badge).toBeTruthy();
   });
 });
