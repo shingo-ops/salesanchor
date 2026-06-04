@@ -18,6 +18,7 @@ API:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -348,11 +349,6 @@ async def upsert_supplier_prompt(
 # ADR SA-06: 解析精度サマリー (v_supplier_parse_stats)
 #   GET /super-admin/suppliers/{id}/parse-stats
 # ============================================================================
-
-
-from pydantic import BaseModel  # noqa: E402 — ファイル末尾 import（既存スタイルに合わせる）
-from datetime import date as _date
-from decimal import Decimal as _Decimal
 
 
 class SupplierParseStatRow(BaseModel):
