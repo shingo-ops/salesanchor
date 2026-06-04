@@ -78,6 +78,7 @@ import {
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
   CommandLineIcon,
+  BanknotesIcon as BanknotesOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -164,6 +165,7 @@ const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
+const BanknotesOutline    = hi(BanknotesOutlineIcon);
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -218,6 +220,8 @@ export const NAV_ICONS = {
   inventory:   PackageOutline,     // outline
   fileText:    FileTextOutline,    // outline
   orders:      TruckOutline,       // outline
+  sales:       ChartBarOutline,    // outline — 売上管理
+  commissions: BanknotesOutline,   // outline — 報酬管理
   report:      ChartBarOutline,    // outline
   schedule:    CalendarBlank,      // outline
   help:        QuestionOutline,    // outline
