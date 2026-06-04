@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 096: public.product_attribute_masters 新設 + 既定値 seed + backfill
+-- Migration 20260604_140000: public.product_attribute_masters 新設 + 既定値 seed + backfill
 --
 -- 「各種マスタ」(商品マスタ画面の 2nd タブ) で、商品の選択肢系マスタを UI から
 -- 追加 / 編集 / 削除できるようにするための汎用マスタ表。

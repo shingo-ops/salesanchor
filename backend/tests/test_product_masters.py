@@ -76,7 +76,7 @@ async def test_product_attribute_masters_crud_round_trip(engine):
             "WHERE table_schema='public' AND table_name='product_attribute_masters'"
         ))).scalar_one_or_none()
     if not exists:
-        pytest.skip("public.product_attribute_masters 未作成 (migration 096 が必要)")
+        pytest.skip("public.product_attribute_masters 未作成 (migration 20260604_140000 が必要)")
 
     label = "TEST_RARITY_ZZZ"
     async with engine.begin() as conn:

@@ -247,7 +247,7 @@ run_sql migrations/20260604_100000_create_company_stats_view.sql
 run_sql migrations/20260604_080000_create_registration_tokens.sql
 
 # 各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材)
-run_sql migrations/096_create_product_attribute_masters.sql
+run_sql migrations/20260604_140000_create_product_attribute_masters.sql
 
 echo ""
 echo "============================================"
