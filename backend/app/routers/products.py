@@ -203,6 +203,52 @@ async def list_product_tcg_types(
 
 
 @router.get(
+    "/products/attribute-options",
+    dependencies=[Depends(require_permission("products.view"))],
+)
+async def list_product_attribute_options(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """各種マスタ(public.product_attribute_masters)の有効な選択肢を属性別に返す。
+
+    商品マスタフォームのプルダウン候補として使う。編集は super_admin の「各種マスタ」
+    のみだが、読取は products.view で可能にする（/products/tcg-types と同方針）。
+    `/products/{product_id}` より前に登録すること（path 競合防止）。
+    返却例: {"product_kind": [{"code","label_ja","label_en"}], "rarity": [...], ...}
+    """
+    if is_postgresql(db):
+        exists = await db.execute(
+            text("SELECT to_regclass('public.product_attribute_masters') IS NOT NULL")
+        )
+        if not exists.scalar():
+            return {}
+        ref = "public.product_attribute_masters"
+    else:
+        exists = await db.execute(
+            text(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_master "
+                "WHERE type='table' AND name='product_attribute_masters')"
+            )
+        )
+        if not exists.scalar():
+            return {}
+        ref = "product_attribute_masters"
+    result = await db.execute(
+        text(
+            f"SELECT attribute, code, label_ja, label_en FROM {ref} "
+            f"WHERE is_active ORDER BY attribute, sort_order, id"
+        )
+    )
+    grouped: dict[str, list[dict]] = {}
+    for r in result.mappings().all():
+        grouped.setdefault(r["attribute"], []).append(
+            {"code": r["code"], "label_ja": r["label_ja"], "label_en": r["label_en"]}
+        )
+    return grouped
+
+
+@router.get(
     "/products/{product_id}",
     response_model=ProductResponse,
     dependencies=[Depends(require_permission("products.view"))],

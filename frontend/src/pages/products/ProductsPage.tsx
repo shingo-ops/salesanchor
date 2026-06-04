@@ -124,22 +124,13 @@ const emptyForm: FormState = {
   related_series: "", category_classification: "",
 };
 
-// 取引単位は取込パーサ由来で表記が揺れる（BOX/box/carton 等）。
-// 正規化ルール（ひとしさん確定 2026-06-02）: 小文字化 + carton→case に統一。
-// 表示は「先頭の文字だけ大文字」（例: BOX→Box, carton→Case）。
-const UNIT_OPTIONS = ["piece", "pack", "box", "case", "set"];
-// 素材プルダウン（当面 Paper のみ。必要に応じ追加）。
+// 商品マスタの選択肢系プルダウン（商品種類/セット種別/レアリティ/言語/単位/HSコード/
+// 品目/素材）は各種マスタ(public.product_attribute_masters)を /products/attribute-options
+// 経由で参照する。固定配列は廃止（各種マスタ編集が即反映される）。
+// 素材プルダウンのフォールバック判定にのみ使う最小の既定集合。
 const MATERIAL_OPTIONS = ["Paper"];
-// セット種別（ブースター/デッキ/シングルカード/バルク）。ラベルは i18n products.setType.*。
-const SET_TYPE_OPTIONS = ["booster", "deck", "single", "bulk"];
-const normalizeUnit = (u: string) => {
-  const lc = (u || "").toLowerCase();
-  return lc === "carton" ? "case" : lc;
-};
-const capUnit = (u: string) => {
-  const n = normalizeUnit(u);
-  return n ? n.charAt(0).toUpperCase() + n.slice(1) : n;
-};
+// 各種マスタ(product_attribute_masters)の 1 選択肢。
+type AttrOption = { code: string | null; label_ja: string; label_en: string | null };
 // 素材は取込/旧データで大文字小文字が揺れる（paper / Paper）。MATERIAL_OPTIONS と
 // 大文字小文字を無視して一致させ、プルダウンで正しく選択状態にする（一致しなければ生値を返す）。
 const normalizeMaterial = (m: string): string => {
@@ -187,6 +178,32 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
 
   // code → name_ja マップ（「タイプ」列の表示に使用）
   const tcgTypeName = new Map(tcgTypes.map((t) => [t.code, t.name_ja]));
+
+  // 各種マスタ(product_attribute_masters)の選択肢を属性別に取得。
+  // 商品マスタの各プルダウンはこれを参照する（各種マスタ編集が反映される）。
+  const [attrOptions, setAttrOptions] = useState<Record<string, AttrOption[]>>({});
+  useEffect(() => {
+    api
+      .get<Record<string, AttrOption[]>>("/products/attribute-options")
+      .then(setAttrOptions)
+      .catch(() => setAttrOptions({}));
+  }, []);
+
+  // 属性のプルダウン option を描画。保存値は language のみ code、他は label_ja。
+  // 既存値がマスタに無い場合もフォールバック option で保持（取込/旧データの表記揺れ）。
+  const renderAttrOptions = (attr: string, current: string) => {
+    const opts = attrOptions[attr] ?? [];
+    const valOf = (o: AttrOption) => (attr === "language" ? (o.code ?? o.label_ja) : o.label_ja);
+    const hasCurrent = !!current && opts.some((o) => valOf(o) === current);
+    return (
+      <>
+        {opts.map((o) => (
+          <option key={o.code ?? o.label_ja} value={valOf(o)}>{o.label_ja}</option>
+        ))}
+        {current && !hasCurrent && <option value={current}>{current}</option>}
+      </>
+    );
+  };
 
   // 名前ヘッダークリックで 昇順 → 降順 → 解除 をトグル
   const toggleNameSort = () => {
@@ -458,7 +475,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               </div>
               <div className="form-group"><label>{t("products.field.productKind")}</label>
                 <select value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>
-                  <option value="TCG">TCG</option>
+                  <option value="">{t("common.notSet")}</option>
+                  {renderAttrOptions("product_kind", form.product_kind)}
                 </select>
               </div>
               {/* TCGシリーズはシリーズ(種別)マスタから選択。マスタが日英(name_ja/name_en)を保持。 */}
@@ -477,9 +495,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               <div className="form-group"><label>{t("products.field.setType")}</label>
                 <select value={form.set_type} onChange={(e) => setForm({ ...form, set_type: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
-                  {SET_TYPE_OPTIONS.map((st) => (
-                    <option key={st} value={st}>{t(`products.setType.${st}`)}</option>
-                  ))}
+                  {renderAttrOptions("set_type", form.set_type)}
                 </select>
               </div>
               {/* 発売日 */}
@@ -497,15 +513,15 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <input maxLength={20} value={form.expansion_code} onChange={(e) => setForm({ ...form, expansion_code: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.field.rarity")}</label>
-                  <input maxLength={20} value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })} />
+                  <select value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })}>
+                    <option value="">{t("common.notSet")}</option>
+                    {renderAttrOptions("rarity", form.rarity)}
+                  </select>
                 </div>
                 <div className="form-group"><label>{t("language.label")}</label>
                   <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
                     <option value="">-</option>
-                    <option value="ja">{t("language.ja")}</option>
-                    <option value="en">{t("language.en")}</option>
-                    <option value="kr">Korean (kr)</option>
-                    <option value="zh">Chinese (zh)</option>
+                    {renderAttrOptions("language", form.language)}
                   </select>
                 </div>
               </fieldset>
@@ -513,9 +529,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               <div className="form-group"><label>{t("products.unitCol")}</label>
                 <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
-                  {UNIT_OPTIONS.map((u) => (
-                    <option key={u} value={u}>{capUnit(u)}</option>
-                  ))}
+                  {renderAttrOptions("unit", form.unit)}
                 </select>
               </div>
 
@@ -564,22 +578,22 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               <fieldset style={{ border: "1px solid var(--border)", padding: "var(--space-3)", marginBottom: "var(--space-4)" }}>
                 <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.master.sectionShipping")}</legend>
                 <div className="form-group"><label>{t("products.master.hsCode")}</label>
-                  <input maxLength={20} value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value })} />
+                  <select value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value })}>
+                    <option value="">{t("common.notSet")}</option>
+                    {renderAttrOptions("hs_code", form.hs_code)}
+                  </select>
                 </div>
                 <div className="form-group"><label>{t("products.master.item")}</label>
-                  <input maxLength={255} value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} />
+                  <select value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })}>
+                    <option value="">{t("common.notSet")}</option>
+                    {renderAttrOptions("item", form.item)}
+                  </select>
                 </div>
                 {/* 素材は発送ラベルの一部（品目の右）。ADR-093 UX 改修 2026-06-04 */}
                 <div className="form-group"><label>{t("products.master.material")}</label>
                   <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
                     <option value="">{t("common.notSet")}</option>
-                    {MATERIAL_OPTIONS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                    {/* MATERIAL_OPTIONS に無い既存値（取込由来の表記揺れ等）も選択肢に残す */}
-                    {form.material && !MATERIAL_OPTIONS.some((m) => m.toLowerCase() === form.material.toLowerCase()) && (
-                      <option value={form.material}>{form.material}</option>
-                    )}
+                    {renderAttrOptions("material", form.material)}
                   </select>
                 </div>
               </fieldset>
