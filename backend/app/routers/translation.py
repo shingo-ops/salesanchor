@@ -20,8 +20,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
-from app.database import get_db, reset_tenant_context
+from app.auth.dependencies import (
+    get_current_tenant,
+    get_current_user,
+    require_permission,
+    reset_tenant_context,
+)
+from app.database import get_db
 from app.models import User
 from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
 from app.services.message_translator import (

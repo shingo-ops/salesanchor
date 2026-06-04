@@ -51,6 +51,13 @@ BEGIN
         WHERE nspname ~ '^tenant_\d+$'
         ORDER BY nspname
     LOOP
+        -- テーブルが存在しない場合はスキップ（CI テスト DB など先行 migration 未適用環境対応）
+        CONTINUE WHEN NOT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_rec.nspname
+              AND table_name   = 'message_translations'
+        );
+
         -- confidence 列追加（既存なら no-op）
         IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
