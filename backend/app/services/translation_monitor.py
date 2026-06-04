@@ -45,32 +45,55 @@ async def check_translation_health(
     db: AsyncSession,
     tenant_id: int,
     table_ref: str,
+    meta_table_ref: str,
     window_minutes: int = 60,
 ) -> TranslationHealthSnapshot:
-    """直近 window_minutes 分の翻訳健全性スナップショットを返す。"""
+    """直近 window_minutes 分の翻訳健全性スナップショットを返す。
+
+    total   = ウィンドウ内の受信メッセージ数（meta_messages）
+    failed  = 翻訳行がない未処理メッセージ数（LEFT JOIN で検出）
+    low_conf = 低確信度翻訳数（message_translations から）
+    """
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
+    # 未処理（pending）数 = meta_messages に対応する翻訳行がない件数
     result = await db.execute(
         text(
             f"SELECT "
             f"  COUNT(*) AS total, "
-            f"  COUNT(*) FILTER (WHERE translated_text IS NULL) AS failed, "
-            f"  COUNT(*) FILTER (WHERE confidence IS NOT NULL AND confidence < :conf_threshold) AS low_conf "
-            f"FROM {table_ref} "
-            f"WHERE created_at >= :since"
+            f"  COUNT(*) FILTER (WHERE mt.message_id IS NULL) AS pending "
+            f"FROM {meta_table_ref} m "
+            f"LEFT JOIN {table_ref} mt "
+            f"  ON mt.message_id = m.message_id AND mt.target_language = 'ja' "
+            f"WHERE m.direction = 'inbound' "
+            f"  AND m.created_at >= :since"
         ),
-        {"conf_threshold": _CONF_THRESHOLD_RECEIVE, "since": since},
+        {"since": since},
     )
     row = result.first()
     if row is None or row[0] == 0:
         return TranslationHealthSnapshot(0, 0, 0, 0.0, 0.0)
 
-    total, failed, low_conf = int(row[0]), int(row[1]), int(row[2])
-    fail_rate = failed / total if total > 0 else 0.0
+    total, pending = int(row[0]), int(row[1])
+
+    # 低確信度数は翻訳済み行から集計
+    lc_result = await db.execute(
+        text(
+            f"SELECT COUNT(*) "
+            f"FROM {table_ref} "
+            f"WHERE created_at >= :since "
+            f"  AND confidence IS NOT NULL AND confidence < :conf_threshold"
+        ),
+        {"since": since, "conf_threshold": _CONF_THRESHOLD_RECEIVE},
+    )
+    lc_row = lc_result.first()
+    low_conf = int(lc_row[0]) if lc_row else 0
+
+    fail_rate = pending / total if total > 0 else 0.0
     low_conf_rate = low_conf / total if total > 0 else 0.0
     return TranslationHealthSnapshot(
         total=total,
-        failed=failed,
+        failed=pending,
         low_confidence=low_conf,
         fail_rate=fail_rate,
         low_conf_rate=low_conf_rate,

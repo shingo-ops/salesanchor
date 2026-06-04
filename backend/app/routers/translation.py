@@ -157,6 +157,7 @@ async def outbound_preview(
             detail=f"翻訳失敗: {exc}",
         )
 
+    await reset_tenant_context(db, tenant_id)
     return OutboundPreviewResponse(
         draft_id=draft_id,
         draft_text=result.translated_text,
@@ -363,4 +364,5 @@ async def seed_products_to_glossary(
     既存エントリはスキップ（上書きしない）。
     """
     count = await seed_glossary_from_products(db, tenant_id)
+    await reset_tenant_context(db, tenant_id)
     return {"seeded": count, "message": f"{count} 件の商品名をグロッサリに追加しました"}

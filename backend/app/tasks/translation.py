@@ -35,7 +35,7 @@ def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
     """
     import asyncio
 
-    return asyncio.get_event_loop().run_until_complete(_run_batch())
+    return asyncio.run(_run_batch())
 
 
 async def _run_batch() -> dict:
@@ -129,7 +129,7 @@ def check_translation_health_task(self: object) -> dict:  # type: ignore[overrid
     """翻訳健全性チェックと Discord 通知（3点セット 状態検証 + 監視/通知）。"""
     import asyncio
 
-    return asyncio.get_event_loop().run_until_complete(_run_health_check())
+    return asyncio.run(_run_health_check())
 
 
 async def _run_health_check() -> dict:
@@ -158,9 +158,10 @@ async def _run_health_check() -> dict:
             schema_name = str(tenant_row[1])
             tenant_code = str(tenant_row[2]) if tenant_row[2] else "unknown"
             trans_t = f"{schema_name}.message_translations"
+            meta_t = f"{schema_name}.meta_messages"
 
             try:
-                snapshot = await check_translation_health(db, tenant_id, trans_t)
+                snapshot = await check_translation_health(db, tenant_id, trans_t, meta_t)
                 sent = await notify_translation_anomaly(
                     db, tenant_id, snapshot, tenant_code=tenant_code
                 )

@@ -11,7 +11,7 @@ AI 翻訳プロンプトへのグロッサリ注入インターフェースを�
 
 import logging
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 _TABLE = "public.translation_glossary"
 
+# Sentinel: "パラメータ未指定" を None（= 訳さない）と区別するため
+_UNSET: Any = object()
 
 # ---------------------------------------------------------------------------
 # Public types
@@ -184,19 +186,25 @@ async def update_glossary_entry(
     tenant_id: int,
     *,
     source_term: str | None = None,
-    target_text: str | None = None,
+    target_text: Any = _UNSET,  # _UNSET=未指定, None=「訳さない」, str=訳語
     term_type: str | None = None,
     notes: str | None = None,
     is_active: bool | None = None,
 ) -> GlossaryEntry | None:
-    """グロッサリエントリを更新。tenant_id による所有権確認あり。"""
+    """グロッサリエントリを更新。tenant_id による所有権確認あり。
+
+    target_text の扱い:
+      - 省略（_UNSET）: 変更しない
+      - None を明示: NULL に更新（「訳さない」= 原語保持）
+      - str を渡す: その値に更新
+    """
     updates: list[str] = ["updated_at = NOW()"]
     params: dict = {"entry_id": entry_id, "tenant_id": tenant_id}
 
     if source_term is not None:
         updates.append("source_term = :source_term")
         params["source_term"] = source_term
-    if target_text is not None:
+    if target_text is not _UNSET:
         updates.append("target_text = :target_text")
         params["target_text"] = target_text
     if term_type is not None:
@@ -342,19 +350,20 @@ async def seed_glossary_from_products(
         if exists_result.first() is not None:
             continue
 
-        # target_text = None で「訳さない」登録（英語名をそのまま保持）
+        # target_text = NULL = 「訳さない」（英語商品名は注文・在庫の一意キーのため原語保持）
+        # name_ja は notes に退避（参照用）
         await db.execute(
             text(
                 f"INSERT INTO {_TABLE} "
-                "(tenant_id, source_term, target_text, language_pair, term_type, source_ref) "
-                "VALUES (:tenant_id, :source_term, :target_text, :language_pair, 'product_name', 'product_master') "
+                "(tenant_id, source_term, target_text, language_pair, term_type, source_ref, notes) "
+                "VALUES (:tenant_id, :source_term, NULL, :language_pair, 'product_name', 'product_master', :notes) "
                 "ON CONFLICT (tenant_id, source_term, language_pair) DO NOTHING"
             ),
             {
                 "tenant_id": tenant_id,
                 "source_term": name_en,
-                "target_text": name_ja if name_ja else None,
                 "language_pair": language_pair,
+                "notes": name_ja if name_ja else None,
             },
         )
         count += 1

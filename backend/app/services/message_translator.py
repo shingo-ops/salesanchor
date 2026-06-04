@@ -339,7 +339,6 @@ async def _call_gemini(
 
 def _parse_translation_response(
     response_text: str,
-    threshold: float,
 ) -> tuple[str, float, str | None, list[FlaggedTerm]]:
     """Gemini JSON レスポンスをパース。
 
@@ -433,7 +432,7 @@ async def translate_inbound(
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
 
     translated_text, confidence, original_language, flagged_terms = _parse_translation_response(
-        response_text, CONF_THRESHOLD_RECEIVE
+        response_text
     )
 
     # 4. エスカレート: 低確信度 or 長文
@@ -448,7 +447,7 @@ async def translate_inbound(
             prompt2 = _build_inbound_prompt(message_text, target_language, glossary)
             resp2, in2, out2 = await _call_gemini(prompt2, MODEL_SEND)
             await record_cost(db, tenant_id, in2, out2, model=MODEL_SEND)
-            t2, c2, ol2, ft2 = _parse_translation_response(resp2, CONF_THRESHOLD_RECEIVE)
+            t2, c2, ol2, ft2 = _parse_translation_response(resp2)
             if c2 > confidence:
                 translated_text, confidence, original_language, flagged_terms = t2, c2, ol2, ft2
                 model = MODEL_SEND
@@ -503,7 +502,7 @@ async def generate_outbound_draft(
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
 
     translated_text, confidence, _, flagged_terms = _parse_translation_response(
-        response_text, CONF_THRESHOLD_SEND
+        response_text
     )
 
     draft_id = await save_outbound_draft(
