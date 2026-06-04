@@ -16,6 +16,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import ContactChannelLinks from "../../components/ContactChannelLinks";
 
 interface CompanyMini {
   id: number;
@@ -330,12 +331,13 @@ export default function ContactsPage() {
               <th>{t("common.phone")}</th>
               <th>{t("contacts.isPrimary")}</th>
               <th>{t("common.status")}</th>
+              <th>{t("nav.channels")}</th>
               <th>{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {contacts.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: "center", padding: "var(--space-4)" }}>{t("contacts.noContacts")}</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: "var(--space-4)" }}>{t("contacts.noContacts")}</td></tr>
             ) : (
               contacts.map((c) => (
                 <tr
@@ -349,6 +351,12 @@ export default function ContactsPage() {
                   <td>{c.primary_phone || "-"}</td>
                   <td>{c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : ""}</td>
                   <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
+                  <td>
+                    {/* SA-05: チャンネルリンク（link_templates SSOT 経由） */}
+                    {c.contact_channels.length > 0 && (
+                      <ContactChannelLinks contactId={c.id} />
+                    )}
+                  </td>
                   <td>
                     {hasPermission("customers.update") && (
                       <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>

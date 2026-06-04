@@ -533,7 +533,11 @@
     "changeToActive": "Change to active",
     "deleteConfirmMessage": "Delete \"{{name}}\" ({{code}})? Cannot delete if related deals, orders, quotes, or invoices exist.",
     "companyRequired": "Please select a client profile",
-    "subtitle": "Register and manage contacts per client."
+    "subtitle": "Register and manage contacts per client.",
+    "channels": {
+      "unverified_badge": "Unverified",
+      "open_link": "Open Link"
+    }
   },
   "inbox": {
     "title": "Inbox",

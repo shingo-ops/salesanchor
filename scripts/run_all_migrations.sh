@@ -34,7 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
-TOTAL=102
+TOTAL=103
 
 run_py() {
   local script="$1"
@@ -238,6 +238,7 @@ run_sql migrations/20260604_110000_create_ingestion_jobs.sql
 run_sql migrations/20260604_120000_create_parse_logs.sql
 run_sql migrations/20260604_130000_create_supplier_parse_stats_view.sql
 
+<<<<<<< HEAD
 
 # ADR SA-02: 会話ログテーブル + 会社集計ビュー（contact粒度・RLSはtenant_id直接列）
 run_sql migrations/20260604_090000_create_conversation_logs.sql
@@ -248,6 +249,11 @@ run_sql migrations/20260604_080000_create_registration_tokens.sql
 
 # ADR SA-07: 請求書スナップショット（C-6）+ 為替レート記録（C-7）
 run_sql migrations/20260604_160000_add_invoice_snapshot_columns.sql
+=======
+# ADR SA-05: リンクテンプレート SSOT + contact チャンネル guild_id（C-3）
+run_sql migrations/20260604_090000_create_link_templates.sql
+run_sql migrations/20260604_100000_add_guild_id_to_contact_channels.sql
+>>>>>>> 51e0887 (feat(link-templates): SA-05 リンクテンプレートSSoT + guild_id + クリック可能チャンネルリンク)
 
 echo ""
 echo "============================================"
