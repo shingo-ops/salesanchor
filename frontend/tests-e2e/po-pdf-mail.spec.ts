@@ -110,8 +110,9 @@ test("AC8.6: 既存 PO 一覧の表示 + 状態遷移ボタンが regression な
 
   await page.goto("/purchase-orders");
   await expect(page.getByTestId("purchase-orders-table")).toBeVisible();
-  // draft → 「発注」ボタン + 「取消」ボタン
+  // P3: draft → 「PDF」ボタン（作成時に発注済み確認）+ 「取消」ボタン
   await expect(page.getByTestId(`po-row-${PO_DRAFT.id}`)).toContainText(/PO-00103/);
+  await expect(page.getByTestId(`po-pdf-${PO_DRAFT.id}`)).toBeVisible();
   // ordered → 「入荷」ボタン + 「取消」ボタン + 「PDF」「メール送信」が出る
   await expect(page.getByTestId(`po-pdf-${PO_ORDERED.id}`)).toBeVisible();
   await expect(page.getByTestId(`po-send-email-${PO_ORDERED.id}`)).toBeVisible();

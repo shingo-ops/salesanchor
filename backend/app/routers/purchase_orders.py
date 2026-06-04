@@ -201,6 +201,42 @@ async def mark_received(po_id: int, db: AsyncSession = Depends(get_db),
     return POResponse(**dict(row))
 
 
+@router.post("/purchase-orders/{po_id}/unreceive", response_model=POResponse,
+             dependencies=[Depends(require_permission("purchase_orders.receive"))])
+async def unmark_received(po_id: int, db: AsyncSession = Depends(get_db),
+                          tenant_id: int = Depends(get_current_tenant),
+                          current_user: User = Depends(get_current_user)):
+    """
+    received → ordered に戻す（入荷取消）。
+
+    mark_received で加算した在庫を打ち消すため、各明細の quantity 分だけ
+    products.quantity を減算する（負数防止に GREATEST(.., 0)）。
+    """
+    result = await db.execute(
+        text(f"UPDATE purchase_orders SET status = 'ordered', received_at = NULL, updated_at = NOW() WHERE id = :id AND status = 'received' RETURNING {_PO_COLS}"),
+        {"id": po_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="received状態の注文のみ入荷取消できます")
+
+    # 在庫の打ち消し（受領時の加算を巻き戻す）
+    items = await _get_po_items(db, po_id)
+    for item in items:
+        await db.execute(
+            text("UPDATE products SET quantity = GREATEST(quantity - :qty, 0), updated_at = NOW() WHERE id = :pid"),
+            {"qty": item["quantity"], "pid": item["product_id"]},
+        )
+
+    await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
+                           action="unreceive", table_name="purchase_orders", record_id=po_id,
+                           new_data={"status": "ordered", "items_reverted": len(items)})
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    await invalidate_dashboard_cache(tenant_id)
+    return POResponse(**dict(row))
+
+
 @router.post("/purchase-orders/{po_id}/cancel", response_model=POResponse,
              dependencies=[Depends(require_permission("purchase_orders.update"))])
 async def cancel_po(po_id: int, db: AsyncSession = Depends(get_db),
@@ -297,7 +333,7 @@ async def send_po_email(
     if not to_addr:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="送信先メールアドレスが supplier に未登録です",
+            detail="送信先メールアドレスがマスタに未登録です",
         )
 
     subject, body = build_email_subject_and_body(data)
