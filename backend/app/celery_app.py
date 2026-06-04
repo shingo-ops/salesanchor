@@ -27,6 +27,7 @@ celery_app = Celery(
         "app.tasks.refresh_meta_tokens",
         "app.tasks.reports",
         "app.tasks.verify_meta_subscriptions",
+        "app.tasks.priority_scoring_check",
     ],
 )
 
@@ -93,5 +94,13 @@ celery_app.conf.beat_schedule = {
     "purge-expired-inventory-offers": {
         "task": "app.tasks.maintenance.purge_expired_inventory_offers",
         "schedule": 1800.0,  # 30分
+    },
+    # ADR-107 §13 安全装置 — 優先度スコアリング月次定期チェック（毎月1日 AM2:00 JST）
+    # 較正鮮度・データ量・確信度分布・スコア分布・ドリフト・自己成就監視の6点を全テナントに実施。
+    # 失敗時は discord_notifier 経由で ADMIN_NOTIFICATION_DISCORD_WEBHOOK に通知。
+    # ADR-025 3点セット ② 定期バッチ に相当。
+    "priority-scoring-monthly-check": {
+        "task": "app.tasks.priority_scoring_check.run_priority_scoring_check",
+        "schedule": crontab(hour=2, minute=0, day_of_month=1),
     },
 }
