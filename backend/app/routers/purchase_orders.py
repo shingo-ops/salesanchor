@@ -61,16 +61,19 @@ async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int) -> int
     tenant 側 id を返す（Option A・FK 維持の非破壊実装）。
     後方互換: public に無い id は従来どおり tenant.suppliers の id とみなす。
     """
+    # id が public.suppliers に存在するなら（active/inactive 問わず）カタログ id とみなす。
+    # これにより「無効化された public 仕入元 id」が legacy 経路で別 tenant 仕入元へ
+    # 誤解決される事故を防ぐ（Reviewer F1）。
     pub = (await db.execute(
         text(
-            "SELECT supplier_code, name, contact_name, email, phone, address, notes "
-            "FROM public.suppliers WHERE id = :id AND is_active = TRUE"
+            "SELECT supplier_code, name, contact_name, email, phone, address, notes, is_active "
+            "FROM public.suppliers WHERE id = :id"
         ),
         {"id": supplier_id},
     )).mappings().first()
 
     if pub is None:
-        # 後方互換: tenant.suppliers の直接 id とみなす
+        # public に存在しない → 後方互換: tenant.suppliers の直接 id とみなす
         legacy = (await db.execute(
             text("SELECT id FROM suppliers WHERE id = :id AND is_active = TRUE"),
             {"id": supplier_id},
@@ -78,6 +81,9 @@ async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int) -> int
         if legacy is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された仕入先が見つかりません")
         return supplier_id
+
+    if not pub["is_active"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="選択された仕入先は無効化されています")
 
     # 既存の tenant 仕入元を照合（supplier_code 優先、無ければ name）
     existing = None
