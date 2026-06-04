@@ -2198,5 +2198,42 @@
       "inactive": "Inactive",
       "sold_out": "Sold out"
     }
+  },
+  "priority": {
+    "sectionTitle": "Priority Score",
+    "tier": {
+      "要観察": "Watch",
+      "有望": "Promising",
+      "最有望": "Top Prospect"
+    },
+    "score": "Score",
+    "confidence": "Confidence",
+    "sampleSize": "Sample",
+    "coldStartTooltip": "Provisional — insufficient data. Accuracy improves as conversations accumulate.",
+    "provisional": "Provisional",
+    "noData": "Not Scored",
+    "noDataTooltip": "Score not yet calculated. Will be computed automatically as conversation data accumulates.",
+    "overrideTitle": "Override Score",
+    "overrideScore": "Override Score",
+    "overrideNote": "Reason (optional)",
+    "overrideNotePlaceholder": "Enter reason for override (optional)",
+    "overrideSuccess": "Score saved",
+    "overrideWarning": "This is a manual override. The auto-calculated value is kept until the next calibration.",
+    "tooltipFormat": "Score: {{score}}% / Confidence: {{confidence}}% / Sample: {{sample}}",
+    "signalSummary": "Signal Evidence",
+    "priceFocusCount": "Price-focused messages",
+    "substanceTalkCount": "Substantive conversation",
+    "selfDisclosureCount": "Self-disclosure",
+    "earlyPurchaseSignalCount": "Early purchase signal",
+    "totalMessages": "Total messages",
+    "labels": {
+      "price_focus": "Price talk",
+      "substance_talk": "Substantive talk",
+      "self_disclosure": "Self-disclosure",
+      "early_purchase_signal": "Early purchase signal",
+      "other": "Other"
+    },
+    "recalculate": "Recalculate",
+    "lastScoredAt": "Last Scored At"
   }
 }

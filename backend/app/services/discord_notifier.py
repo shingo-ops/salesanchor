@@ -205,3 +205,87 @@ async def _resolve_tenant_code(db: AsyncSession, tenant_id: int) -> str:
 
 
 __all__ = ["notify_budget_exhausted"]
+
+
+# ============================================================================
+# ADR-107 (ADR-SA-14): 分析エージェント(A) 顧客優先度付け — 監視通知
+# ============================================================================
+
+async def notify_priority_data_insufficient(
+    tenant_id: int,
+    *,
+    message_count: int,
+    deal_count: int,
+) -> bool:
+    """データ不足通知（メッセージ数<20 or 成約/失注件数<5）。"""
+    url = _get_webhook_url()
+    if not url:
+        return False
+    msg = (
+        f":bar_chart: **顧客優先度スコア — データ不足**\n"
+        f"- テナント: tenant_id={tenant_id}\n"
+        f"- メッセージ数: {message_count}件（閾値: 20件）\n"
+        f"- 成約/失注件数: {deal_count}件（閾値: 5件）\n"
+        f"- 状態: 暫定スコア（cold start）で動作中。会話・案件データが蓄積されると精度が向上します。"
+    )
+    return await _post_discord_webhook(url, msg)
+
+
+async def notify_priority_score_sudden_change(
+    tenant_id: int,
+    lead_id: int,
+    *,
+    old_tier: str,
+    new_tier: str,
+) -> bool:
+    """スコア急変通知（ティアが1段以上変動した場合）。"""
+    url = _get_webhook_url()
+    if not url:
+        return False
+    msg = (
+        f":arrows_counterclockwise: **顧客優先度スコア急変**\n"
+        f"- テナント: tenant_id={tenant_id}\n"
+        f"- リードID: {lead_id}\n"
+        f"- 変化: {old_tier} → {new_tier}\n"
+        f"- 原因: 人手上書きまたは再較正。根拠シグナルを確認してください。"
+    )
+    return await _post_discord_webhook(url, msg)
+
+
+async def notify_priority_calibration_failed(
+    tenant_id: int,
+    error_message: str,
+) -> bool:
+    """テナント較正失敗通知。"""
+    url = _get_webhook_url()
+    if not url:
+        return False
+    msg = (
+        f":x: **顧客優先度スコア — 較正失敗**\n"
+        f"- テナント: tenant_id={tenant_id}\n"
+        f"- エラー: {error_message[:300]}\n"
+        f"- 対応: 暫定（cold start）重みで継続動作中。ログを確認してください。"
+    )
+    return await _post_discord_webhook(url, msg)
+
+
+async def notify_priority_drift_detected(
+    tenant_id: int,
+    *,
+    period_days: int,
+    tier_shift_pp: float,
+    tier_name: str,
+) -> bool:
+    """ドリフト閾値超過通知（前期比 ±20pp 超）。"""
+    url = _get_webhook_url()
+    if not url:
+        return False
+    direction = "増加" if tier_shift_pp > 0 else "減少"
+    msg = (
+        f":warning: **顧客優先度スコア — ドリフト検知**\n"
+        f"- テナント: tenant_id={tenant_id}\n"
+        f"- ティア「{tier_name}」の割合が直近{period_days}日で{abs(tier_shift_pp):.1f}pp {direction}\n"
+        f"- 閾値: ±20pp\n"
+        f"- 対応: 較正の鮮度と入力データを確認してください。自己成就の兆候がある場合は較正リセットを検討。"
+    )
+    return await _post_discord_webhook(url, msg)

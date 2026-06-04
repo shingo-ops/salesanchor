@@ -2198,5 +2198,42 @@
       "inactive": "無効",
       "sold_out": "売切れ"
     }
+  },
+  "priority": {
+    "sectionTitle": "優先度スコア",
+    "tier": {
+      "要観察": "要観察",
+      "有望": "有望",
+      "最有望": "最有望"
+    },
+    "score": "スコア",
+    "confidence": "確信度",
+    "sampleSize": "母数",
+    "coldStartTooltip": "データ不足のため暫定値です。会話が蓄積されると精度が向上します。",
+    "provisional": "暫定",
+    "noData": "未評価",
+    "noDataTooltip": "スコア未計算。会話データが蓄積されると自動計算されます。",
+    "overrideTitle": "スコアを上書き",
+    "overrideScore": "上書きスコア",
+    "overrideNote": "上書き理由（任意）",
+    "overrideNotePlaceholder": "上書きの理由を入力してください（任意）",
+    "overrideSuccess": "スコアを保存しました",
+    "overrideWarning": "これは人手による上書きです。自動計算値は次回較正まで維持されます。",
+    "tooltipFormat": "スコア: {{score}}% / 確信度: {{confidence}}% / 母数: {{sample}}件",
+    "signalSummary": "根拠シグナル",
+    "priceFocusCount": "価格関連メッセージ",
+    "substanceTalkCount": "内容のある会話",
+    "selfDisclosureCount": "自己開示",
+    "earlyPurchaseSignalCount": "早期購入示唆",
+    "totalMessages": "総メッセージ数",
+    "labels": {
+      "price_focus": "価格の話",
+      "substance_talk": "中身のある話",
+      "self_disclosure": "自己開示",
+      "early_purchase_signal": "早期購入示唆",
+      "other": "その他"
+    },
+    "recalculate": "再計算",
+    "lastScoredAt": "スコア計算日時"
   }
 }

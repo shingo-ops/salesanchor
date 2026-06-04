@@ -90,6 +90,7 @@ from app.routers import (
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
+from app.routers import customer_priority  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度
 from app.services import encryption as _encryption  # Phase 1-D Sprint 2: lifespan fail-fast
 
 # 本番環境では Swagger UI を無効化（API仕様の露出を防ぐ）
@@ -356,6 +357,11 @@ app.include_router(
 )
 app.include_router(
     analytics.router, prefix="/api/v1", tags=["analytics"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け（社内ロール限定）
+app.include_router(
+    customer_priority.router, prefix="/api/v1", tags=["analytics"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ダッシュボード強化: 目標管理 (migration 075)
