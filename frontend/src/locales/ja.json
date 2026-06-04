@@ -906,7 +906,11 @@
     "status_rejected": "却下",
     "status_expired": "期限切れ",
     "itemsRequired": "各明細行に商品名と単価を入力してください",
-    "subtitle": "見積書を作成・送付・状況管理できます。"
+    "subtitle": "見積書を作成・送付・状況管理できます。",
+    "fx": {
+      "fetchRate": "為替レートを取得",
+      "rateInfo": "取得レート"
+    }
   },
   "invoices": {
     "subtitle": "請求書の作成と管理ができます。",
@@ -944,7 +948,12 @@
     "exchangeRateUsd": "為替 USD",
     "usdConvert": "USD換算",
     "status_issued": "発行済",
-    "status_voided": "無効化済"
+    "status_voided": "無効化済",
+    "snapshot": {
+      "shipTo": "配送先（発行時スナップショット）",
+      "billTo": "請求先（発行時スナップショット）",
+      "downloadPdf": "PDF ダウンロード"
+    }
   },
   "orders": {
     "title": "受注管理",

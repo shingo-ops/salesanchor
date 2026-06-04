@@ -12,10 +12,12 @@ from __future__ import annotations
     （customer 経路廃止、company_id + contact_id を唯一の正に）
 """
 
+import json
 import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,8 +39,79 @@ from app.schemas.invoice import (
     VoidRequest,
 )
 from app.services.audit import record_audit_log
+from app.services.fx_rate import get_fx_rate
+from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 
 router = APIRouter()
+
+
+async def _get_tenant_schema(tenant_id: int) -> str:
+    """tenant_id からスキーマ名 (tenant_NNN) を生成する。"""
+    return f"tenant_{tenant_id:03d}"
+
+
+async def _fetch_address_snapshot(
+    db: AsyncSession,
+    company_id: int | None,
+    address_type: str,
+) -> dict | None:
+    """
+    company_addresses から指定タイプ (delivery / billing) のデフォルト住所を取得し
+    JSONB スナップショット形式で返す。company_id が None の場合は None を返す。
+    """
+    if company_id is None:
+        return None
+    result = await db.execute(
+        text("""
+            SELECT a.label, a.postal_code, a.address_line1, a.address_line2,
+                   a.city, a.state, a.country, a.phone,
+                   c.company_name
+            FROM company_addresses a
+            JOIN companies c ON c.id = a.company_id
+            WHERE a.company_id = :cid
+              AND a.address_type = :atype
+              AND a.is_default = TRUE
+            LIMIT 1
+        """),
+        {"cid": company_id, "atype": address_type},
+    )
+    row = result.mappings().first()
+    if not row:
+        return None
+    return {
+        "company_name": row["company_name"],
+        "label": row["label"],
+        "postal_code": row["postal_code"],
+        "address": " ".join(
+            filter(None, [row["address_line1"], row["address_line2"]])
+        ),
+        "city": row["city"],
+        "state": row["state"],
+        "country": row["country"],
+        "phone": row["phone"],
+    }
+
+
+async def _fetch_tenant_profile(db: AsyncSession, tenant_schema: str) -> dict:
+    """tenant_profile からテナント情報を取得する。"""
+    result = await db.execute(
+        text(f"""
+            SELECT company_name, company_name_en, address, phone, email, website
+            FROM {tenant_schema}.tenant_profile
+            ORDER BY id LIMIT 1
+        """),
+    )
+    row = result.mappings().first()
+    if not row:
+        return {}
+    return {
+        "name": row["company_name"] or row["company_name_en"] or "",
+        "address": row["address"] or "",
+        "phone": row["phone"] or "",
+        "email": row["email"] or "",
+        "website": row["website"] or "",
+    }
+
 
 _INVOICE_COLUMNS = """
     id, invoice_number, quote_id, company_id, contact_id, currency,
@@ -47,7 +120,9 @@ _INVOICE_COLUMNS = """
     payment_method, status, branch_number,
     pdf_url, erp_key,
     issued_at, due_date, paid_at, voided_at, void_reason,
-    notes, created_by, created_at, updated_at
+    notes, created_by, created_at, updated_at,
+    ship_to_snapshot, bill_to_snapshot, issue_mode,
+    duty_amount, duty_policy_snapshot, fx_rate_snapshot
 """
 
 _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}
@@ -57,7 +132,7 @@ async def _get_invoice_items(db: AsyncSession, invoice_id: int) -> list[dict]:
     result = await db.execute(
         text("""
             SELECT id, product_id, product_name, name_en, condition, unit,
-                   quantity, unit_price, weight, subtotal, sort_order
+                   quantity, unit_price, weight, subtotal, sort_order, hs_code
             FROM invoice_items WHERE invoice_id = :iid ORDER BY sort_order, id
         """),
         {"iid": invoice_id},
@@ -172,40 +247,54 @@ async def create_invoice_from_quote(
     invoice_number = f"IN-{next_id:04d}-01"
     erp_key = str(uuid.uuid4())[:8].upper()
 
+    # スナップショット取得
+    company_id = q.get("company_id")
+    ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
+    bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
+
+    # 為替レート取得（JPY 以外の場合）
+    currency = q["currency"]
+    fx_snap = get_fx_rate(currency) if currency and currency.upper() != "JPY" else None
+
     # 請求書ヘッダー作成（Step 5d: quote から company_id/contact_id を継承）
     inv_result = await db.execute(
         text("""
             INSERT INTO invoices (
                 tenant_id, invoice_number, quote_id, company_id, contact_id, currency,
                 subtotal, shipping_fee, tax_amount, total_amount,
-                payment_method, status, branch_number, erp_key, notes, created_by
+                payment_method, status, branch_number, erp_key, notes, created_by,
+                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot
             ) VALUES (
                 :tid, :inv_num, :qid, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
-                NULL, 'draft', 1, :erp_key, :notes, :created_by
+                NULL, 'draft', 1, :erp_key, :notes, :created_by,
+                :ship_to, :bill_to, :fx_rate
             ) RETURNING id
         """),
         {
             "tid": tenant_id, "inv_num": invoice_number, "qid": quote_id,
-            "company_id": q.get("company_id"), "contact_id": q.get("contact_id"),
-            "currency": q["currency"],
+            "company_id": company_id, "contact_id": q.get("contact_id"),
+            "currency": currency,
             "subtotal": q["subtotal"], "shipping": q["shipping_fee"],
             "tax": q["tax_amount"], "total": q["total_amount"],
             "erp_key": erp_key, "notes": q["notes"], "created_by": current_user.id,
+            "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
+            "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
+            "fx_rate": json.dumps(fx_snap) if fx_snap else None,
         },
     )
     invoice_id = inv_result.scalar_one()
 
-    # 見積明細をコピー
+    # 見積明細をコピー（hs_code を含む）
     quote_items = await db.execute(
-        text("SELECT product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order FROM quote_items WHERE quote_id = :qid ORDER BY sort_order"),
+        text("SELECT product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order, hs_code FROM quote_items WHERE quote_id = :qid ORDER BY sort_order"),
         {"qid": quote_id},
     )
     for item in quote_items.mappings().all():
         await db.execute(
             text("""
-                INSERT INTO invoice_items (invoice_id, product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order)
-                VALUES (:iid, :product_id, :product_name, :name_en, :condition, :unit, :quantity, :unit_price, :weight, :subtotal, :sort_order)
+                INSERT INTO invoice_items (invoice_id, product_id, product_name, name_en, condition, unit, quantity, unit_price, weight, subtotal, sort_order, hs_code)
+                VALUES (:iid, :product_id, :product_name, :name_en, :condition, :unit, :quantity, :unit_price, :weight, :subtotal, :sort_order, :hs_code)
             """),
             {"iid": invoice_id, **dict(item)},
         )
@@ -258,6 +347,13 @@ async def create_invoice(
     total = subtotal + shipping + tax
     amount_jpy, amount_usd = _calc_currency_amounts(total, data.currency, data.exchange_rate_jpy, data.exchange_rate_usd)
 
+    # スナップショット取得
+    ship_to_snap = await _fetch_address_snapshot(db, data.company_id, "delivery")
+    bill_to_snap = await _fetch_address_snapshot(db, data.company_id, "billing")
+
+    # 為替レート取得（JPY 以外の場合）
+    fx_snap = get_fx_rate(data.currency) if data.currency and data.currency.upper() != "JPY" else None
+
     max_result = await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM invoices"))
     next_id = max_result.scalar()
     invoice_number = f"IN-{next_id:04d}-01"
@@ -270,13 +366,15 @@ async def create_invoice(
                 subtotal, shipping_fee, tax_amount, total_amount,
                 exchange_rate_jpy, exchange_rate_usd, amount_jpy, amount_usd,
                 payment_method, status, branch_number, erp_key,
-                due_date, notes, created_by
+                due_date, notes, created_by,
+                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot
             ) VALUES (
                 :tid, :inv_num, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
                 :rate_jpy, :rate_usd, :amt_jpy, :amt_usd,
                 :payment, 'draft', 1, :erp_key,
-                :due_date, :notes, :created_by
+                :due_date, :notes, :created_by,
+                :ship_to, :bill_to, :fx_rate
             ) RETURNING id
         """),
         {
@@ -287,6 +385,9 @@ async def create_invoice(
             "rate_usd": data.exchange_rate_usd, "amt_jpy": amount_jpy, "amt_usd": amount_usd,
             "payment": data.payment_method, "erp_key": erp_key,
             "due_date": data.due_date, "notes": data.notes, "created_by": current_user.id,
+            "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
+            "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
+            "fx_rate": json.dumps(fx_snap) if fx_snap else None,
         },
     )
     invoice_id = inv_result.scalar_one()
@@ -468,3 +569,166 @@ async def void_invoice(
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
     return InvoiceResponse(**dict(row))
+
+
+# ──────────────────────────────────────────────────────────────────────
+# C-8: PDF ダウンロード（請求書 / 見積書）
+# ──────────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/invoices/{invoice_id}/pdf",
+    dependencies=[Depends(require_permission("invoices.view"))],
+)
+async def download_invoice_pdf(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """請求書 PDF を生成して返す（C-8）。"""
+    result = await db.execute(
+        text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"),
+        {"id": invoice_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+
+    items = await _get_invoice_items(db, invoice_id)
+    tenant_schema = await _get_tenant_schema(tenant_id)
+    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+
+    invoice_data = {
+        "invoice_code": row["invoice_number"] or f"IN-{invoice_id:04d}-01",
+        "issued_at": row["issued_at"].isoformat() if row["issued_at"] else None,
+        "ship_to_snapshot": row["ship_to_snapshot"],
+        "bill_to_snapshot": row["bill_to_snapshot"],
+        "items": [
+            {
+                "name_en": it.get("name_en") or it.get("product_name") or "-",
+                "quantity": it["quantity"],
+                "unit_price": float(it["unit_price"] or 0),
+                "subtotal": float(it["subtotal"] or 0),
+                "hs_code": it.get("hs_code"),
+            }
+            for it in items
+        ],
+        "subtotal": float(row["subtotal"] or 0),
+        "shipping_fee": float(row["shipping_fee"] or 0),
+        "tax_amount": float(row["tax_amount"] or 0),
+        "total_amount": float(row["total_amount"] or 0),
+        "currency": row["currency"],
+        "duty_amount": float(row["duty_amount"]) if row["duty_amount"] is not None else None,
+        "fx_rate_snapshot": row["fx_rate_snapshot"],
+        "notes": row["notes"],
+    }
+
+    pdf_bytes = render_invoice_pdf(invoice_data, tenant_profile)
+    filename = f"{invoice_data['invoice_code']}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/quotes/{quote_id}/pdf",
+    dependencies=[Depends(require_permission("invoices.view"))],
+)
+async def download_quote_pdf(
+    quote_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """見積書 PDF を生成して返す（C-8）。"""
+    result = await db.execute(
+        text("""
+            SELECT id, quote_code, company_id, currency,
+                   subtotal, shipping_fee, tax_amount, total_amount,
+                   notes, created_at
+            FROM quotes WHERE id = :id
+        """),
+        {"id": quote_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="見積もりが見つかりません")
+
+    items_result = await db.execute(
+        text("""
+            SELECT product_id, product_name, name_en, condition, unit,
+                   quantity, unit_price, weight, subtotal, sort_order, hs_code
+            FROM quote_items WHERE quote_id = :qid ORDER BY sort_order, id
+        """),
+        {"qid": quote_id},
+    )
+    items = [dict(r) for r in items_result.mappings().all()]
+
+    company_id = row["company_id"]
+    ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
+    bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
+
+    tenant_schema = await _get_tenant_schema(tenant_id)
+    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+
+    quote_data = {
+        "quote_code": row["quote_code"] or f"QT-{quote_id:04d}",
+        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        "ship_to_snapshot": ship_to_snap,
+        "bill_to_snapshot": bill_to_snap,
+        "items": [
+            {
+                "name_en": it.get("name_en") or it.get("product_name") or "-",
+                "quantity": it["quantity"],
+                "unit_price": float(it["unit_price"] or 0),
+                "subtotal": float(it["subtotal"] or 0),
+                "hs_code": it.get("hs_code"),
+            }
+            for it in items
+        ],
+        "subtotal": float(row["subtotal"] or 0),
+        "shipping_fee": float(row["shipping_fee"] or 0),
+        "tax_amount": float(row["tax_amount"] or 0),
+        "total_amount": float(row["total_amount"] or 0),
+        "currency": row["currency"],
+        "notes": row["notes"],
+    }
+
+    pdf_bytes = render_quote_pdf(quote_data, tenant_profile)
+    filename = f"{quote_data['quote_code']}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/fx-rate/{currency}",
+    dependencies=[Depends(require_permission("invoices.view"))],
+)
+async def fetch_fx_rate(
+    currency: str,
+    tenant_id: int = Depends(get_current_tenant),  # noqa: ARG001
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """
+    指定通貨の為替レートをライブ取得する（C-7）。
+
+    JPY 指定時は {"currency":"JPY","rate":1.0,"fetched_at":null} を返す。
+    取得失敗時は 503 を返す。
+    """
+    if currency.upper() == "JPY":
+        return {"currency": "JPY", "rate": 1.0, "fetched_at": None}
+
+    result = get_fx_rate(currency)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"為替レートの取得に失敗しました: {currency}",
+        )
+    return result

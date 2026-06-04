@@ -34,7 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
-TOTAL=101
+TOTAL=102
 
 run_py() {
   local script="$1"
@@ -245,6 +245,9 @@ run_sql migrations/20260604_100000_create_company_stats_view.sql
 
 # ADR-SA-03: 顧客登録トークン基盤（署名検証・期限・単回使用）
 run_sql migrations/20260604_080000_create_registration_tokens.sql
+
+# ADR SA-07: 請求書スナップショット（C-6）+ 為替レート記録（C-7）
+run_sql migrations/20260604_160000_add_invoice_snapshot_columns.sql
 
 echo ""
 echo "============================================"

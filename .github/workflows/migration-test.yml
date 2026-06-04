@@ -217,17 +217,6 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
-          -- invoices: テナント個別スキーマにのみ存在（v_company_stats 累計金額の参照先）
-          CREATE TABLE IF NOT EXISTS tenant_001.invoices (
-              id         SERIAL PRIMARY KEY,
-              tenant_id  INTEGER NOT NULL,
-              company_id INTEGER,
-              total      NUMERIC(15,2),
-              status     VARCHAR(30),
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              updated_at TIMESTAMPTZ DEFAULT NOW()
-          );
-
           -- conversation_logs (for PR#4 migration test)
           CREATE TABLE IF NOT EXISTS tenant_001.conversation_logs (
               id                  SERIAL PRIMARY KEY,
@@ -249,6 +238,90 @@ jobs:
               analysis            JSONB,
               occurred_at         TIMESTAMPTZ NOT NULL,
               created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          -- quotes: 見積書テーブル（C-6 スナップショット migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.quotes (
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER NOT NULL,
+              quote_code      VARCHAR(50),
+              company_id      INTEGER,
+              contact_id      INTEGER,
+              currency        VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal        NUMERIC(15,2),
+              shipping_fee    NUMERIC(15,2),
+              tax_amount      NUMERIC(15,2),
+              total_amount    NUMERIC(15,2),
+              status          VARCHAR(30) NOT NULL DEFAULT 'draft',
+              validity_date   DATE,
+              notes           TEXT,
+              created_at      TIMESTAMPTZ DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- quote_items: 見積明細テーブル（C-6: hs_code 列追加 migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.quote_items (
+              id              SERIAL PRIMARY KEY,
+              quote_id        INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
+          );
+
+          -- invoices: 請求書テーブル（C-6/C-7 スナップショット migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.invoices (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              invoice_number      VARCHAR(50),
+              quote_id            INTEGER,
+              company_id          INTEGER,
+              contact_id          INTEGER,
+              currency            VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal            NUMERIC(15,2),
+              shipping_fee        NUMERIC(15,2),
+              tax_amount          NUMERIC(15,2),
+              total_amount        NUMERIC(15,2),
+              exchange_rate_jpy   NUMERIC(15,4),
+              exchange_rate_usd   NUMERIC(15,4),
+              amount_jpy          NUMERIC(15,2),
+              amount_usd          NUMERIC(15,2),
+              payment_method      VARCHAR(50),
+              status              VARCHAR(30) NOT NULL DEFAULT 'draft',
+              branch_number       INTEGER NOT NULL DEFAULT 1,
+              pdf_url             TEXT,
+              erp_key             VARCHAR(20),
+              issued_at           TIMESTAMPTZ,
+              due_date            DATE,
+              paid_at             TIMESTAMPTZ,
+              voided_at           TIMESTAMPTZ,
+              void_reason         TEXT,
+              notes               TEXT,
+              created_by          INTEGER,
+              created_at          TIMESTAMPTZ DEFAULT NOW(),
+              updated_at          TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- invoice_items: 請求明細テーブル（C-6: hs_code 列追加 migration が ALTER する）
+          CREATE TABLE IF NOT EXISTS tenant_001.invoice_items (
+              id              SERIAL PRIMARY KEY,
+              invoice_id      INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
           );
           TENANT_SQL
 

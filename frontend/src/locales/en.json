@@ -906,7 +906,11 @@
     "status_rejected": "Rejected",
     "status_expired": "Expired",
     "itemsRequired": "Please enter product name and unit price for each line item",
-    "subtitle": "Create, send, and track quotes."
+    "subtitle": "Create, send, and track quotes.",
+    "fx": {
+      "fetchRate": "Fetch exchange rate",
+      "rateInfo": "Fetched rate"
+    }
   },
   "invoices": {
     "subtitle": "Create and manage invoices.",
@@ -944,7 +948,12 @@
     "exchangeRateUsd": "Exchange Rate USD",
     "usdConvert": "USD Equiv.",
     "status_issued": "Issued",
-    "status_voided": "Voided"
+    "status_voided": "Voided",
+    "snapshot": {
+      "shipTo": "Ship To (snapshot at issue)",
+      "billTo": "Bill To (snapshot at issue)",
+      "downloadPdf": "Download PDF"
+    }
   },
   "orders": {
     "title": "Orders",
