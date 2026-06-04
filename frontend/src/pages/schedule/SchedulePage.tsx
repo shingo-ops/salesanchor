@@ -92,21 +92,11 @@ interface EventFormState {
   location: string;
 }
 
-// ---------------------------------------------------------------------------
 // ユーティリティ
-// ---------------------------------------------------------------------------
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toDateInput(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function toTimeInput(d: Date): string {
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+function pad(n: number) { return String(n).padStart(2, "0"); }
+function toDateInput(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function toTimeInput(d: Date) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 
 // ---------------------------------------------------------------------------
 // EventModal
@@ -252,28 +242,16 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
             </div>
           </>
         ) : (
-          <div className="event-modal-view">
-            <dl className="event-modal-detail-list">
-              {event?.raw?.location && (
-                <>
-                  <dt className="event-modal-detail-term">{t("schedule.eventLocation")}</dt>
-                  <dd className="event-modal-detail-value">{event.raw.location}</dd>
-                </>
-              )}
-              {event?.raw?.description && (
-                <>
-                  <dt className="event-modal-detail-term">{t("schedule.eventDescription")}</dt>
-                  <dd className="event-modal-detail-value event-modal-detail-value--pre">{event.raw.description}</dd>
-                </>
-              )}
-              {isShift && (
-                <>
-                  <dt className="event-modal-detail-term">{t("schedule.shiftLabel")}</dt>
-                  <dd className="event-modal-detail-value">{t("schedule.shiftLabel")}</dd>
-                </>
-              )}
-            </dl>
-          </div>
+          <dl className="event-modal-detail-list">
+            {event?.raw?.location && <>
+              <dt className="event-modal-detail-term">{t("schedule.eventLocation")}</dt>
+              <dd className="event-modal-detail-value">{event.raw.location}</dd>
+            </>}
+            {event?.raw?.description && <>
+              <dt className="event-modal-detail-term">{t("schedule.eventDescription")}</dt>
+              <dd className="event-modal-detail-value event-modal-detail-value--pre">{event.raw.description}</dd>
+            </>}
+          </dl>
         )}
 
         {error && <div className="error-message">{error}</div>}

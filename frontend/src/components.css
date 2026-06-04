@@ -502,11 +502,8 @@
 }
 
 /* イベント詳細表示（非編集モード） */
-.event-modal-view {
-  padding: var(--space-2) 0 var(--space-4);
-}
-
 .event-modal-detail-list {
+  padding: var(--space-2) 0 var(--space-4);
   display: grid;
   grid-template-columns: auto 1fr;
   gap: var(--space-1) var(--space-4);
