@@ -9,6 +9,12 @@
   max-width: var(--max-width-page);
 }
 
+/* 列の多い広いテーブル（商品マスタ等）を幅いっぱいに表示する用の修飾子。
+   既定 .page の max-width(1200px) を解除する。 */
+.page--full {
+  max-width: none;
+}
+
 .page h2 {
   font-size: var(--role-page-title-size);
   font-weight: var(--role-page-title-weight);
