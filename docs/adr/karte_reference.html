@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>受信箱カルテ — 高忠実度リファレンス</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --bd:#e7e9ec; --bd2:#dde0e4;
+    --tx:#191c20; --tx2:#5a636e; --tx3:#949ca6;
+    --pri:#1877F2; --pri-bg:#eaf2fe;
+    --ok:#0f9d77; --ok-bg:#e7f6f0;
+    --warn:#b4690e; --warn-bg:#fbf1e1;
+    --r:8px; --r2:12px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased;padding:32px 16px 56px;}
+  .wrap{max-width:880px;margin:0 auto;}
+  .doc-h{margin:0 0 4px;font-size:18px;font-weight:600;}
+  .doc-sub{margin:0 0 24px;font-size:13px;color:var(--tx2);line-height:1.6;}
+  .stage-row{display:flex;align-items:center;gap:10px;justify-content:center;margin:0 0 16px;}
+  .stage-lab{font-size:11px;color:var(--tx3);}
+  .seg{display:inline-flex;background:#eceef1;border-radius:var(--r);padding:3px;}
+  .seg button{border:none;background:transparent;color:var(--tx2);font-size:12px;padding:5px 14px;border-radius:6px;cursor:pointer;transition:all .15s;}
+  .seg button.on{background:var(--panel);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.06);font-weight:500;}
+  .panel{width:396px;max-width:100%;margin:0 auto;background:var(--panel);border:0.5px solid var(--bd);border-radius:var(--r2);box-shadow:0 4px 24px rgba(20,30,45,.07);overflow:hidden;}
+  .hd{padding:16px 18px 14px;border-bottom:0.5px solid var(--bd);}
+  .hd-top{display:flex;align-items:center;gap:11px;}
+  .av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;}
+  .nm{font-size:15px;font-weight:600;line-height:1.3;}
+  .nm-sub{font-size:12px;color:var(--tx2);}
+  .badge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .hd-meta{display:flex;align-items:center;justify-content:space-between;margin-top:11px;}
+  .last{font-size:11px;color:var(--tx3);}
+  .open-link{font-size:12px;color:var(--pri);text-decoration:none;font-weight:500;}
+  .open-link:hover{text-decoration:underline;}
+  .tabs{display:flex;border-bottom:0.5px solid var(--bd);background:var(--panel);}
+  .tab{flex:1;border:none;background:transparent;padding:11px 4px;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+  .tab:hover{color:var(--tx);}
+  .tab.on{color:var(--pri);border-bottom-color:var(--pri);font-weight:600;}
+  .body{padding:14px 18px 8px;}
+  .sec{font-size:11px;color:var(--tx3);font-weight:500;margin:14px 0 7px;letter-spacing:.02em;display:flex;align-items:center;gap:6px;}
+  .sec:first-child{margin-top:2px;}
+  .lock{color:var(--ok);}
+  .fld{margin-bottom:9px;}
+  .fld-l{font-size:11px;color:var(--tx2);margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+  .fbox{border:0.5px solid var(--bd2);background:#fafbfc;border-radius:6px;padding:7px 9px;font-size:13px;color:var(--tx);min-height:32px;line-height:1.4;}
+  .fbox.empty{color:var(--tx3);}
+  .ro{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;border-bottom:0.5px solid var(--bd);font-size:13px;}
+  .ro:last-child{border-bottom:none;}
+  .ro-l{color:var(--tx2);}
+  .ro-v{color:var(--ok);font-weight:600;text-align:right;}
+  .ro-v.muted{color:var(--tx3);font-weight:400;}
+  .tag{font-size:9.5px;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;font-weight:500;}
+  .dlink{display:inline-flex;align-items:center;gap:6px;color:var(--pri);font-size:13px;text-decoration:none;border:0.5px solid var(--pri);border-radius:6px;padding:7px 11px;font-weight:500;transition:background .15s;}
+  .dlink:hover{background:var(--pri-bg);}
+  .meta-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--tx2);padding:8px 0;border-top:0.5px solid var(--bd);margin-top:4px;}
+  .ntag{font-size:11px;color:var(--warn);background:var(--warn-bg);padding:2px 8px;border-radius:5px;}
+  .bar{border-top:0.5px solid var(--bd);padding:12px 18px;display:flex;gap:8px;align-items:center;position:relative;}
+  .primary{flex:1;background:var(--pri);color:#fff;border:none;border-radius:var(--r);padding:10px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s;}
+  .primary:hover{filter:brightness(1.07);}
+  .more{border:0.5px solid var(--bd2);background:var(--panel);border-radius:var(--r);padding:10px 13px;font-size:15px;cursor:pointer;color:var(--tx2);line-height:1;transition:background .15s;}
+  .more:hover{background:#f3f4f6;}
+  .menu{margin:0 18px;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+  .menu.hide{display:none;}
+  .menu button{display:block;width:100%;text-align:left;border:none;background:var(--panel);padding:10px 14px;font-size:13px;color:var(--tx);cursor:pointer;border-bottom:0.5px solid var(--bd);}
+  .menu button:last-child{border-bottom:none;}
+  .menu button:hover{background:#f6f7f9;}
+  .legend{max-width:396px;margin:18px auto 0;display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:11px;color:var(--tx2);}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .sw{width:10px;height:10px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="doc-h">受信箱カルテ — 高忠実度リファレンス</h1>
+  <p class="doc-sub">表示・構成・項目の並び・編集／読み取りの別・段階による既定タブと主アクションの「正本」。色・フォント・余白の最終トーンは Sales Anchor 既存のデザインシステム（Tailwind＋トークン）に従う。「追加予定」タグの項目は別ADR着地後に同レイアウト上へ追加。上の「段階」で リード／既存顧客 を、タブで 商談／顧客／連絡先 を切り替えられる。</p>
+
+  <div class="stage-row">
+    <span class="stage-lab">段階（プレビュー切替）</span>
+    <div class="seg" id="seg">
+      <button data-stage="lead">リード</button>
+      <button data-stage="cust">既存顧客</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel"></div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#fafbfc;border:0.5px solid #dde0e4;"></span>編集可（入力欄）</span>
+    <span><span class="sw" style="background:#e7f6f0;"></span>読み取り・派生</span>
+    <span><span class="sw" style="background:#fbf1e1;"></span>追加予定（別ADR）</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var LOCK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  var EXT='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>';
+
+  var DATA={
+    lead:{
+      name:'Crown Cards', sub:'イギリス・小売店', badge:'リード', bType:'pri', last:'最終接触 1日前', primary:'商談化（営業へ）',
+      deal:[
+        {sec:'次のアクション', f:[['次回アクション','取扱商材と配送先国を確認','e'],['次回アクション日','2026-06-06','e'],['返信速度','普通（2〜3日）','e']]},
+        {sec:'見極め', f:[['温度感','ウォーム','e'],['課題・ニーズ','','e'],['競合確認','未確認','e']]},
+        {sec:'商談規模', f:[['想定規模','未判定','e'],['月間見込み金額','','e'],['1件単価','','e'],['月間頻度','','e']]},
+        {sec:'メモ', f:[['商談メモ','新弾に強い関心。週内に再連絡予定。','e']]}
+      ],
+      customer:[
+        {sec:'基本', f:[['呼び名','Crown Cards','e'],['国','イギリス','e'],['言語・タイムゾーン','','e+'],['顧客タイプ','小売店','e']]},
+        {sec:'取引プロフィール', f:[['取り扱いタイトル','Pokemon, One Piece','e'],['販売形態','','e'],['決済・通貨・支払条件','','e+']]},
+        {sec:'実績サマリー', ro:true, f:[['取引額累計','取引実績なし','rm'],['取引回数・最終取引日','—','rm'],['会話数・最終会話','8件・1日前','r']]},
+        {sec:'引き継ぎ', f:[['担当者','','e'],['歴代担当','—','rm+'],['注意事項アラート','なし','e+'],['CS・関係性メモ','初回接触。','e']]}
+      ],
+      contact:{mail:'', tel:'', meta:'未連携'}
+    },
+    cust:{
+      name:'Crown Cards / James', sub:'イギリス・小売店', badge:'既存顧客', bType:'ok', last:'最終接触 3日前', primary:'見積・請求書作成',
+      deal:[
+        {sec:'次のアクション', f:[['次回アクション','新弾の卸価格を提示','e'],['次回アクション日','2026-06-08','e'],['返信速度','速い（即日〜翌日）','e']]},
+        {sec:'見極め', f:[['温度感','ホット','e'],['課題・ニーズ','競合より仕入単価を下げたい','e'],['競合確認','競合あり','e']]},
+        {sec:'商談規模', f:[['想定規模','大（50〜200万/月）','e'],['月間見込み金額','¥800,000','e'],['1件単価','¥4,200','e'],['月間頻度','月8回','e']]},
+        {sec:'メモ', f:[['商談メモ','リピート安定。新弾の初動を重視。','e']]}
+      ],
+      customer:[
+        {sec:'基本', f:[['呼び名','Crown Cards / James','e'],['国','イギリス','e'],['言語・タイムゾーン','英語・GMT','e+'],['顧客タイプ','小売店','e']]},
+        {sec:'取引プロフィール', f:[['取り扱いタイトル','Pokemon, One Piece, Yu-Gi-Oh!','e'],['販売形態','実店舗・EC自社サイト','e'],['決済・通貨・支払条件','PayPal・GBP・前払い','e+']]},
+        {sec:'実績サマリー', ro:true, f:[['取引額累計','¥2,480,000','r'],['取引回数・最終取引日','7回・2026-05-20','r'],['会話数・最終会話','142件・3日前','r']]},
+        {sec:'引き継ぎ', f:[['担当者','佐藤','e'],['歴代担当','田中 → 佐藤','r+'],['注意事項アラート','なし','e+'],['CS・関係性メモ','新弾の初動を重視。','e']]}
+      ],
+      contact:{mail:'james@crowncards.example', tel:'+44 20 7946 0000', meta:'未連携'}
+    }
+  };
+  var OVERFLOW=['商談の振り返りメモ','顧客の統合','住所追加リンク送付（別ADR）'];
+  var defTab={lead:'deal',cust:'customer'};
+  var stage='cust', tab='customer', menuOpen=false;
+  var panel=document.getElementById('panel');
+
+  function esc(s){return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function tag(flags){return flags.indexOf('+')>-1?' <span class="tag">追加予定</span>':'';}
+  function field(label,val,flags){
+    var empty=val==='';
+    return '<div class="fld"><div class="fld-l">'+esc(label)+tag(flags)+'</div>'+
+      '<div class="fbox'+(empty?' empty':'')+'">'+(empty?'未入力':esc(val))+'</div></div>';
+  }
+  function roRow(label,val,flags){
+    var muted=flags.indexOf('m')>-1;
+    return '<div class="ro"><span class="ro-l">'+esc(label)+tag(flags)+'</span>'+
+      '<span class="ro-v'+(muted?' muted':'')+'">'+esc(val)+'</span></div>';
+  }
+  function block(arr){
+    return arr.map(function(g){
+      var head='<div class="sec">'+(g.ro?'<span class="lock">'+LOCK+'</span> ':'')+esc(g.sec)+'</div>';
+      var rows=g.f.map(function(r){
+        return g.ro?roRow(r[0],r[1],r[2]):field(r[0],r[1],r[2]);
+      }).join('');
+      return head+rows;
+    }).join('');
+  }
+  function contactBlock(c){
+    return '<div class="sec">チャネル</div>'+
+      '<div style="margin-bottom:10px;"><a class="dlink" href="#" onclick="return false;">Discordで開く '+EXT+'</a></div>'+
+      field('メール',c.mail,'e')+field('電話番号',c.tel,'e')+
+      '<div class="meta-row"><span>Messenger / Instagram</span><span class="ntag">未連携</span></div>';
+  }
+
+  function render(){
+    var d=DATA[stage];
+    var bg = d.bType==='ok' ? 'var(--ok-bg)' : 'var(--pri-bg)';
+    var fg = d.bType==='ok' ? 'var(--ok)' : 'var(--pri)';
+    var content = tab==='deal'?block(d.deal):tab==='customer'?block(d.customer):contactBlock(d.contact);
+    panel.innerHTML=
+      '<div class="hd">'+
+        '<div class="hd-top">'+
+          '<div class="av" style="background:'+bg+';color:'+fg+';">CC</div>'+
+          '<div style="flex:1;min-width:0;"><div class="nm">'+esc(d.name)+'</div><div class="nm-sub">'+esc(d.sub)+'</div></div>'+
+          '<span class="badge" style="background:'+bg+';color:'+fg+';">'+esc(d.badge)+'</span>'+
+        '</div>'+
+        '<div class="hd-meta"><span class="last">'+esc(d.last)+'</span><a class="open-link" href="#" onclick="return false;">顧客ページを開く →</a></div>'+
+      '</div>'+
+      '<div class="tabs">'+
+        '<button class="tab'+(tab==='deal'?' on':'')+'" data-tab="deal">商談</button>'+
+        '<button class="tab'+(tab==='customer'?' on':'')+'" data-tab="customer">顧客</button>'+
+        '<button class="tab'+(tab==='contact'?' on':'')+'" data-tab="contact">連絡先</button>'+
+      '</div>'+
+      '<div class="body">'+content+'</div>'+
+      '<div class="menu'+(menuOpen?'':' hide')+'">'+OVERFLOW.map(function(o){return '<button onclick="return false;">'+esc(o)+'</button>';}).join('')+'</div>'+
+      '<div class="bar">'+
+        '<button class="primary" onclick="return false;">'+esc(d.primary)+'</button>'+
+        '<button class="more" data-more="1" aria-label="その他のアクション">⋯</button>'+
+      '</div>';
+  }
+
+  panel.addEventListener('click',function(e){
+    var t=e.target.closest('[data-tab]'); var m=e.target.closest('[data-more]');
+    if(t){tab=t.getAttribute('data-tab');menuOpen=false;render();}
+    else if(m){menuOpen=!menuOpen;render();}
+  });
+  document.getElementById('seg').addEventListener('click',function(e){
+    var s=e.target.closest('[data-stage]'); if(!s)return;
+    stage=s.getAttribute('data-stage'); tab=defTab[stage]; menuOpen=false;
+    document.querySelectorAll('#seg button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-stage')===stage);});
+    render();
+  });
+
+  document.querySelector('#seg button[data-stage="cust"]').classList.add('on');
+  render();
+})();
+</script>
+</body>
+</html>
