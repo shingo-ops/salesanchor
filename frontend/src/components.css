@@ -121,6 +121,17 @@
 
 .btn-danger:hover { background: var(--danger-bg); }
 
+/* 行内アクション列でのボタン高さ不揃い対策:
+   btn-danger は btn-sm より後に定義されサイズ(padding/font-size)を上書きするため、
+   btn-sm を色バリアントと併用したとき高さがバラつく。複合セレクタ(0,2,0)で
+   サイズ系を btn-sm に明示的に揃える。 */
+.btn-sm.btn-primary,
+.btn-sm.btn-secondary,
+.btn-sm.btn-danger {
+  padding: var(--space-1) var(--space-10px);
+  font-size: var(--font-xs);
+}
+
 /* --- Search / Filter --- */
 .search-bar,
 .filter-bar {

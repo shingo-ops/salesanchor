@@ -30,10 +30,6 @@ interface CardForm {
   notes?: string | null;
   meeting_memo?: string | null;
   cs_memo?: string | null;
-  messenger_link?: string | null;
-  discord_id?: string | null;
-  instagram_link?: string | null;
-  whatsapp_link?: string | null;
 }
 
 interface ConversationSummary {
@@ -58,6 +54,8 @@ interface Props {
   handleAvatarError: (id: number) => void;
   handleCardFieldChange: (field: keyof LeadDetail, value: unknown) => void;
   handleCardFieldBlur: () => void;
+  handleConvertLead: () => void;
+  handleCreateInvoice: () => void;
 }
 
 export function InboxKartePanel({
@@ -65,16 +63,17 @@ export function InboxKartePanel({
   karteTab, setKarteTab, showKartePanel, closeKartePanel, setShowProfileModal,
   inboxSettings, selectedConversation, avatarErrors, handleAvatarError,
   handleCardFieldChange, handleCardFieldBlur,
+  handleConvertLead, handleCreateInvoice,
 }: Props) {
   const { t } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
 
-  // guild_id は チケットチャンネルリンク生成に必要。チャンネルがある場合のみ1回フェッチ。
+  // guild_id is needed for Discord ticket channel link generation
   useEffect(() => {
     if (!leadDetail?.discord_guild_channel_id || guildId) return;
     api.get<{ guild_id: string | null }>("/admin/discord-config")
       .then((d) => setGuildId(d.guild_id ?? null))
-      .catch(() => { /* リンク表示を省略するだけ */ });
+      .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
 
   return (
@@ -88,7 +87,7 @@ export function InboxKartePanel({
         </div>
       ) : leadDetail ? (
         <div className="right-panel-card">
-          {/* モバイル専用: 閉じるボタン行 */}
+          {/* Mobile: close button row */}
           <div className="karte-close-row">
             <span className="karte-close-title">{t("inbox.karteToggle")}</span>
             <button type="button" className="karte-close-btn" onClick={closeKartePanel}
@@ -97,7 +96,7 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* ヘッダー */}
+          {/* Header */}
           <div className="right-panel-header">
             <div className="right-panel-avatar">
               {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
@@ -121,14 +120,14 @@ export function InboxKartePanel({
             </div>
           </div>
 
-          {/* 保存ステータス */}
+          {/* Save status */}
           <div className="right-panel-save-indicator">
             {cardSaveStatus === "saving" && <span>{t("common.saving")}</span>}
             {cardSaveStatus === "saved" && <span className="saved">{t("common.saved")}</span>}
             {cardSaveStatus === "error" && <span className="error">{cardSaveError}</span>}
           </div>
 
-          {/* タブバー */}
+          {/* Tab bar */}
           <div className="right-panel-tabs">
             {(["deal", "contact", "company"] as KarteTabKey[]).map((tab) => (
               <button key={tab} type="button"
@@ -149,6 +148,13 @@ export function InboxKartePanel({
               guildId={guildId}
             />
           </div>
+
+          {/* ADR-108: Fixed action bar */}
+          <ActionBar
+            status={leadDetail.status}
+            onConvertLead={handleConvertLead}
+            onCreateInvoice={handleCreateInvoice}
+          />
         </div>
       ) : (
         <div className="right-panel-empty">
@@ -160,7 +166,46 @@ export function InboxKartePanel({
 }
 
 // ---------------------------------------------------------------------------
-// タブコンテンツ（contact / company / deal）
+// ADR-108: Fixed Action Bar
+// ---------------------------------------------------------------------------
+
+function ActionBar({
+  status, onConvertLead, onCreateInvoice,
+}: {
+  status: string;
+  onConvertLead: () => void;
+  onCreateInvoice: () => void;
+}) {
+  const { t } = useTranslation();
+
+  // eslint-disable-next-line local/no-japanese-literal -- DB value
+  if (status === "新規") {
+    return (
+      <div className="karte-action-bar">
+        <button type="button" className="karte-action-primary" onClick={onConvertLead}>
+          {t("inbox.actionConvert")}
+        </button>
+      </div>
+    );
+  }
+
+  // eslint-disable-next-line local/no-japanese-literal -- DB value
+  if (status === "既存顧客") {
+    return (
+      <div className="karte-action-bar">
+        <button type="button" className="karte-action-primary" onClick={onCreateInvoice}>
+          {t("inbox.actionCreateInvoice")}
+        </button>
+      </div>
+    );
+  }
+
+  // Other statuses: minimal/empty action bar
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Tab content (contact / company / deal) — ADR-108 reorganized
 // ---------------------------------------------------------------------------
 
 function KarteTabContent({
@@ -175,6 +220,7 @@ function KarteTabContent({
 }) {
   const { t } = useTranslation();
 
+  // === CONTACT TAB (ADR-108: removed messenger_link, discord_id, instagram_link, whatsapp_link inputs) ===
   if (tab === "contact") {
     return (
       <div className="right-panel-section">
@@ -192,21 +238,37 @@ function KarteTabContent({
             onChange={(e) => handleCardFieldChange("phone", e.target.value)}
             onBlur={handleCardFieldBlur} />
         </div>
+
+        {/* Discord: "Open in Discord" link from discord_guild_channel_id */}
+        {leadDetail.discord_guild_channel_id && guildId ? (
+          <div className="right-panel-row">
+            <span className="right-panel-label">{t("leads.discordTicketChannel")}</span>
+            <a
+              href={`https://discord.com/channels/${guildId}/${leadDetail.discord_guild_channel_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="right-panel-field text-token-accent underline truncate"
+            >
+              {t("leads.openDiscordChannel")}
+            </a>
+          </div>
+        ) : leadDetail.discord_guild_channel_id ? (
+          <div className="right-panel-row">
+            <span className="right-panel-label">{t("leads.discordTicketChannel")}</span>
+            <input className="right-panel-field" type="text"
+              value={leadDetail.discord_guild_channel_id} readOnly tabIndex={-1} />
+          </div>
+        ) : null}
+
+        {/* Meta channels: "Not linked" badge */}
         <div className="right-panel-row">
-          <span className="right-panel-label">{t("leads.messengerLink")}</span>
-          <input className="right-panel-field" type="url"
-            value={cardForm.messenger_link ?? ""}
-            onChange={(e) => handleCardFieldChange("messenger_link", e.target.value)}
-            onBlur={handleCardFieldBlur} placeholder="https://m.me/..." />
+          <span className="right-panel-label">{t("inbox.metaChannelLabel")}</span>
+          <span className="right-panel-value karte-meta-badge">
+            {t("inbox.metaChannelBadge")}
+          </span>
         </div>
-        <div className="right-panel-row">
-          <span className="right-panel-label">{t("leads.discordId")}</span>
-          <input className="right-panel-field" type="text"
-            value={cardForm.discord_id ?? ""}
-            onChange={(e) => handleCardFieldChange("discord_id", e.target.value)}
-            onBlur={handleCardFieldBlur} placeholder="username#0000" />
-        </div>
-        {/* AC1.8: Discord Gateway 情報（読み取り専用） */}
+
+        {/* Discord user ID (read-only) */}
         {leadDetail.discord_user_id && (
           <div className="right-panel-row">
             <span className="right-panel-label">{t("leads.discordUserId")}</span>
@@ -214,35 +276,16 @@ function KarteTabContent({
               readOnly tabIndex={-1} />
           </div>
         )}
-        {/* ADR-091 KPI3: チケットチャンネルリンク */}
-        {leadDetail.discord_guild_channel_id && (
-          <div className="right-panel-row">
-            <span className="right-panel-label">{t("leads.discordTicketChannel")}</span>
-            {guildId ? (
-              <a
-                href={`https://discord.com/channels/${guildId}/${leadDetail.discord_guild_channel_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="right-panel-field text-token-accent underline truncate"
-              >
-                {t("leads.openDiscordChannel")}
-              </a>
-            ) : (
-              <input className="right-panel-field" type="text"
-                value={leadDetail.discord_guild_channel_id} readOnly tabIndex={-1} />
-            )}
-          </div>
-        )}
-        {/* ADR-091 KPI5: 規模別チャンネル招待送信 */}
+        {/* ADR-091 KPI5: Channel invite button */}
         {leadDetail.discord_guild_channel_id &&
           (leadDetail.estimated_scale === "Small" || leadDetail.estimated_scale === "Large") && (
           <ChannelInviteButton leadId={leadDetail.id} />
         )}
-        {/* ADR-091 KPI6: Discord 顧客削除操作 */}
+        {/* ADR-091 KPI6: Discord remove buttons */}
         {leadDetail.discord_user_id && (
           <DiscordRemoveButtons leadId={leadDetail.id} hasChannel={!!leadDetail.discord_guild_channel_id} />
         )}
-        {/* ADR-091 KPI7: ロール同期ステータス */}
+        {/* ADR-091 KPI7: Role sync status */}
         {leadDetail.discord_user_id && (
           <RoleSyncStatusRow
             leadId={leadDetail.id}
@@ -250,24 +293,11 @@ function KarteTabContent({
             syncAt={leadDetail.discord_role_sync_at}
           />
         )}
-        <div className="right-panel-row">
-          <span className="right-panel-label">{t("leads.instagramLink")}</span>
-          <input className="right-panel-field" type="url"
-            value={cardForm.instagram_link ?? ""}
-            onChange={(e) => handleCardFieldChange("instagram_link", e.target.value)}
-            onBlur={handleCardFieldBlur} placeholder="https://instagram.com/..." />
-        </div>
-        <div className="right-panel-row">
-          <span className="right-panel-label">{t("leads.whatsappLink")}</span>
-          <input className="right-panel-field" type="url"
-            value={cardForm.whatsapp_link ?? ""}
-            onChange={(e) => handleCardFieldChange("whatsapp_link", e.target.value)}
-            onBlur={handleCardFieldBlur} placeholder="https://wa.me/..." />
-        </div>
       </div>
     );
   }
 
+  // === COMPANY TAB (ADR-108: CRM fields + PerformanceSummary) ===
   if (tab === "company") {
     return (
       <div className="right-panel-section">
@@ -278,11 +308,48 @@ function KarteTabContent({
             onChange={(e) => handleCardFieldChange("company_name", e.target.value)}
             onBlur={handleCardFieldBlur} />
         </div>
+        <div className="right-panel-row">
+          <span className="right-panel-label">{t("leads.nickname")}</span>
+          <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
+            onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
+        </div>
+        <div className="right-panel-row">
+          <span className="right-panel-label">{t("leads.country")}</span>
+          <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
+            onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
+        </div>
+        <div className="right-panel-row">
+          <span className="right-panel-label">{t("leads.customerType")}</span>
+          <select className="right-panel-field" value={cardForm.customer_type ?? ""}
+            onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>
+            <option value="">—</option>
+            <option value="信頼重視">{t("leads.customerType_trust")}</option>
+            <option value="価格重視">{t("leads.customerType_price")}</option>
+          </select>
+        </div>
+        <div className="right-panel-row">
+          <span className="right-panel-label">{t("leads.targetTitles")}</span>
+          <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
+            onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
+            onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
+        </div>
+        <div className="right-panel-row">
+          <span className="right-panel-label">{t("leads.salesForm")}</span>
+          <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
+            onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
+        </div>
+        <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
+        <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
+          onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
+          onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
+
+        {/* ADR-108: Performance Summary (read-only) */}
+        <PerformanceSummary leadId={leadDetail.id} />
       </div>
     );
   }
 
-  // deal tab
+  // === DEAL TAB (ADR-108: SFA fields ONLY — removed nickname/country/customer_type/target_titles/sales_form/cs_memo) ===
   return (
     <div className="right-panel-section">
       <div className="right-panel-group-heading">{t("inbox.sectionNextAction")}</div>
@@ -309,37 +376,6 @@ function KarteTabContent({
       <textarea className="right-panel-field" rows={3} value={cardForm.challenge ?? ""}
         onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
         onBlur={handleCardFieldBlur} placeholder={t("leads.challenge")} />
-      <div className="right-panel-group-heading">{t("inbox.sectionCustomer")}</div>
-      <div className="right-panel-row">
-        <span className="right-panel-label">{t("leads.nickname")}</span>
-        <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
-          onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
-      </div>
-      <div className="right-panel-row">
-        <span className="right-panel-label">{t("leads.country")}</span>
-        <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
-          onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
-      </div>
-      <div className="right-panel-row">
-        <span className="right-panel-label">{t("leads.targetTitles")}</span>
-        <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
-          onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
-          onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
-      </div>
-      <div className="right-panel-row">
-        <span className="right-panel-label">{t("leads.salesForm")}</span>
-        <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-          onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
-      </div>
-      <div className="right-panel-row">
-        <span className="right-panel-label">{t("leads.customerType")}</span>
-        <select className="right-panel-field" value={cardForm.customer_type ?? ""}
-          onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>
-          <option value="">—</option>
-          <option value="信頼重視">{t("leads.customerType_trust")}</option>
-          <option value="価格重視">{t("leads.customerType_price")}</option>
-        </select>
-      </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.temperature")}</span>
         <select className="right-panel-field" value={cardForm.temperature ?? ""}
@@ -394,15 +430,138 @@ function KarteTabContent({
       <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
         onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
         onBlur={handleCardFieldBlur} placeholder={t("leads.meetingMemo")} />
-      <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
-      <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
-        onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
-        onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
     </div>
   );
 }
 
-/** ADR-091 KPI5: 規模別チャンネル招待ボタン */
+// ---------------------------------------------------------------------------
+// ADR-108: Performance Summary (read-only, displayed in company tab)
+// ---------------------------------------------------------------------------
+
+interface InvoiceSummary {
+  id: number;
+  total_amount: number | string | null;
+  paid_at: string | null;
+  voided_at: string | null;
+}
+
+function PerformanceSummary({ leadId }: { leadId: number }) {
+  const { t } = useTranslation();
+  const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
+  const [messageCount, setMessageCount] = useState<number | null>(null);
+  const [lastMessageDate, setLastMessageDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    const fetchData = async () => {
+      // Fetch messages count + last message date
+      try {
+        const msgData = await api.get<{ messages: Array<{ created_at: string }> }>(
+          `/leads/${leadId}/messages?limit=500`
+        );
+        if (!cancelled) {
+          const msgs = msgData.messages ?? [];
+          setMessageCount(msgs.length);
+          if (msgs.length > 0) {
+            const lastMsg = msgs[msgs.length - 1];
+            setLastMessageDate(lastMsg.created_at ?? null);
+          } else {
+            setLastMessageDate(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setMessageCount(0);
+          setLastMessageDate(null);
+        }
+      }
+
+      // Fetch invoices for total revenue
+      try {
+        const invoiceData = await api.get<{ invoices: InvoiceSummary[] } | InvoiceSummary[]>(
+          `/invoices?lead_id=${leadId}`
+        );
+        if (!cancelled) {
+          const invoices = Array.isArray(invoiceData) ? invoiceData : (invoiceData.invoices ?? []);
+          // ADR-108: paid_at non-null AND voided_at null
+          const paidInvoices = invoices.filter(
+            (inv) => inv.paid_at != null && inv.voided_at == null
+          );
+          if (paidInvoices.length > 0) {
+            const total = paidInvoices.reduce(
+              (sum, inv) => sum + (Number(inv.total_amount) || 0),
+              0
+            );
+            setTotalRevenue(total);
+          } else {
+            setTotalRevenue(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setTotalRevenue(null);
+        }
+      }
+
+      if (!cancelled) setLoading(false);
+    };
+
+    fetchData();
+    return () => { cancelled = true; };
+  }, [leadId]);
+
+  if (loading) {
+    return (
+      <div className="karte-performance-section">
+        <div className="right-panel-group-heading">{t("inbox.sectionPerformance")}</div>
+        <div className="right-panel-row">
+          <span className="right-panel-value">...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const hasAnyHistory = totalRevenue != null;
+
+  return (
+    <div className="karte-performance-section">
+      <div className="right-panel-group-heading">{t("inbox.sectionPerformance")}</div>
+      {!hasAnyHistory ? (
+        <div className="right-panel-row">
+          <span className="right-panel-value">{t("inbox.performanceNoHistory")}</span>
+        </div>
+      ) : (
+        <>
+          <div className="right-panel-row">
+            <span className="right-panel-label">{t("inbox.performanceTotalRevenue")}</span>
+            <span className="right-panel-value">
+              {totalRevenue != null
+                ? `${totalRevenue.toLocaleString()}`
+                : "—"}
+            </span>
+          </div>
+          <div className="right-panel-row">
+            <span className="right-panel-label">{t("inbox.performanceMessageCount")}</span>
+            <span className="right-panel-value">{messageCount ?? 0}</span>
+          </div>
+          <div className="right-panel-row">
+            <span className="right-panel-label">{t("inbox.performanceLastMessage")}</span>
+            <span className="right-panel-value">
+              {lastMessageDate
+                ? new Date(lastMessageDate.replace(" ", "T")).toLocaleDateString("ja-JP")
+                : "—"}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** ADR-091 KPI5: Channel invite button */
 function ChannelInviteButton({ leadId }: { leadId: number }) {
   const { t } = useTranslation();
   const [sending, setSending] = useState(false);
@@ -442,7 +601,7 @@ function ChannelInviteButton({ leadId }: { leadId: number }) {
   );
 }
 
-/** ADR-091 KPI7: ロール同期ステータス表示 + 手動再同期ボタン */
+/** ADR-091 KPI7: Role sync status + manual resync button */
 function RoleSyncStatusRow({
   leadId, status, syncAt,
 }: { leadId: number; status: string | null; syncAt: string | null }) {
@@ -500,7 +659,7 @@ function RoleSyncStatusRow({
   );
 }
 
-/** ADR-091 KPI6: Discord チャンネル削除・Kick・BAN ボタン */
+/** ADR-091 KPI6: Discord channel remove / Kick / BAN buttons */
 function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChannel: boolean }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState<string | null>(null);
