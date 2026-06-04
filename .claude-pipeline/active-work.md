@@ -50,6 +50,14 @@
 | feature/morimoto/sa-foundation-pr7-parse-logs | （記入してください） | 2026-06-04 10:50 | IN_PROGRESS | | |
 | feature/morimoto/sa-foundation-pr8-invoice-snapshot | （記入してください） | 2026-06-04 11:48 | IN_PROGRESS | | |
 | feature/morimoto/sa-foundation-pr6-own-inventory | A在庫テナント私有化（ADR-099） | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/fix-company-stats-view-total-col | #1606 CI修正: v_company_stats i.total→i.total_amount | 2026-06-04 | DONE | #1615 | |
+| feature/morimoto/hotfix-develop-conflict-markers | develop conflict marker修正（run_all_migrations.sh） | 2026-06-04 | DONE | #1616 | |
+| feature/morimoto/remove-trust-level-ui | trust_level UI撤去（Issue #1607 / C-2） | 2026-06-04 | DONE | #1619 | |
+| hotfix/back-merge-main-into-develop | develop←mainバックマージ | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/analytics-agent-a-priority | ADR-107 ADR文書起案 | 2026-06-04 14:50 | DONE | #1622 | ADR文書のみ、マージ済み |
+| feature/morimoto/adr-107-analytics-agent-a-impl | ADR-107 分析エージェント(A) 顧客優先度付け 実装 | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/adr-108-karte-redesign | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
+| feature/morimoto/adr-109-status-ssot | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
 ---
 
 ## 記入例
