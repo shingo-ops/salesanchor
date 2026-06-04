@@ -11,7 +11,6 @@ ADR-107 (ADR-SA-14): 分析エージェント(A) 顧客優先度付け — ス�
 from __future__ import annotations
 
 import logging
-import math
 from datetime import datetime
 
 from sqlalchemy import text

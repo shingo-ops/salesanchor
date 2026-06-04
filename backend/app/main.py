@@ -32,6 +32,7 @@ from app.routers import (
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
+    customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
     deals,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
@@ -90,7 +91,6 @@ from app.routers import (
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
-from app.routers import customer_priority  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度
 from app.services import encryption as _encryption  # Phase 1-D Sprint 2: lifespan fail-fast
 
 # 本番環境では Swagger UI を無効化（API仕様の露出を防ぐ）
