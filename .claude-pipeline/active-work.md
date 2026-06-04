@@ -32,9 +32,32 @@
 | feature/morimoto/schedule-card-style | スケジュール カードスタイル（背景透明化・カード化） | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/grafana-sidebar-nav-v2 | Grafana 左列サイドバー実装（B案） | 2026-06-03 | IN_PROGRESS | | |
 | feature/morimoto/schedule-responsive-tokens | スケジュール スロット高・終日エリア レスポンシブ対応 | 2026-06-03 | IN_PROGRESS | | |
+| feature/morimoto/schedule-modal-polish | スケジュール 予定編集モーダル Googleカレンダー準拠デザイン改善 | 2026-06-03 | DONE | #1563 | |
+| feature/morimoto/schedule-event-popover | スケジュール 既存予定クリック 詳細ポップオーバー | 2026-06-03 | DONE | #1566 | |
+| feature/morimoto/schedule-popover-style | スケジュール ポップオーバー スタイル調整 | 2026-06-03 | DONE | #1569 | |
+| feature/morimoto/schedule-popover-v2 | スケジュール ポップオーバー 色・作成者・配置改善 | 2026-06-03 | IN_PROGRESS | | |
+| feature/morimoto/crm-hub-fix-titles | （記入してください） | 2026-06-03 23:55 | IN_PROGRESS | | |
 | feature/morimoto/fix-space9-token | デザイントークン --space-9 未定義バグ修正 | 2026-06-03 | IN_PROGRESS | | |
+| feature/morimoto/admin-hub-bottom-nav | SaaS管理者ハブ ボトムタブ統合 | 2026-06-04 00:06 | IN_PROGRESS | | |
+| feature/morimoto/schedule-update-popover-fix | スケジュール 更新ADR-072バグ修正＋ポップオーバー説明・場所表示 | 2026-06-04 01:01 | DONE | #1593 | |
+| feature/morimoto/sa-foundation-step0-claude-md | （記入してください） | 2026-06-04 09:24 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr2-audit-fix | （記入してください） | 2026-06-04 09:40 | IN_PROGRESS | | |
 | feature/morimoto/sa-foundation-pr1-tenant-policy | テナントポリシー列追加（ADR-106） | 2026-06-04 | IN_PROGRESS | | |
-| feature/morimoto/analytics-agent-a-priority | 分析エージェント(A) 顧客優先度付け ADR-107 起案 | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/schedule-modal-description-display | スケジュール モーダル 説明・場所の表示追加 | 2026-06-04 10:06 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr3-reg-token | （記入してください） | 2026-06-04 10:50 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr4-conv-logs | （記入してください） | 2026-06-04 10:50 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr5-link-templates | （記入してください） | 2026-06-04 10:50 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr7-parse-logs | （記入してください） | 2026-06-04 10:50 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr8-invoice-snapshot | （記入してください） | 2026-06-04 11:48 | IN_PROGRESS | | |
+| feature/morimoto/sa-foundation-pr6-own-inventory | A在庫テナント私有化（ADR-099） | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/fix-company-stats-view-total-col | #1606 CI修正: v_company_stats i.total→i.total_amount | 2026-06-04 | DONE | #1615 | |
+| feature/morimoto/hotfix-develop-conflict-markers | develop conflict marker修正（run_all_migrations.sh） | 2026-06-04 | DONE | #1616 | |
+| feature/morimoto/remove-trust-level-ui | trust_level UI撤去（Issue #1607 / C-2） | 2026-06-04 | DONE | #1619 | |
+| hotfix/back-merge-main-into-develop | develop←mainバックマージ | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/analytics-agent-a-priority | ADR-107 ADR文書起案 | 2026-06-04 14:50 | DONE | #1622 | ADR文書のみ、マージ済み |
+| feature/morimoto/adr-107-analytics-agent-a-impl | ADR-107 分析エージェント(A) 顧客優先度付け 実装 | 2026-06-04 | IN_PROGRESS | | |
+| feature/morimoto/adr-108-karte-redesign | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
+| feature/morimoto/adr-109-status-ssot | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
 ---
 
 ## 記入例

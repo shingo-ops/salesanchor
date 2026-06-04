@@ -20,7 +20,7 @@ const adrDir = join(repoRoot, 'docs/adr');
 const outputPath = join(adrDir, 'README.md');
 const checkMode = process.argv.includes('--check');
 
-/** ADR ファイルからタイトル・ステータス・日付を抽出 */
+/** ADR ファイルからタイトル・ステータス・日付・Amends/Supersedes を抽出 */
 function parseAdr(filePath) {
   const content = readFileSync(filePath, 'utf8');
   const lines = content.split('\n');
@@ -43,8 +43,9 @@ function parseAdr(filePath) {
       }
       break;
     }
-    // **ステータス:** / **Status:** インライン
-    const inlineMatch = line.match(/\*\*(?:ステータス|Status)[：:]\*\*\s*(.+)/i);
+    // **ステータス:** / **Status:** インライン（コロンの位置が `**X:**` と `**X**:` の両方に対応）
+    const inlineMatch = line.match(/\*\*(?:ステータス|Status)\*\*[：:]\s*(.+)/i)
+      || line.match(/\*\*(?:ステータス|Status)[：:]\*\*\s*(.+)/i);
     if (inlineMatch) { status = inlineMatch[1].replace(/[*_]/g, '').trim(); break; }
     // | ステータス | 値 | テーブル行
     const tableMatch = line.match(/\|\s*(?:ステータス|Status)\s*\|\s*([^|]+)\|/i);
@@ -53,10 +54,10 @@ function parseAdr(filePath) {
 
   // ステータス値の正規化
   const s = status.toLowerCase();
-  if (/accept|承認|採択|完了|実装済|done/.test(s)) status = 'Accepted';
-  else if (/propos|提案/.test(s)) status = 'Proposed';
+  if (/supersed|上書|置換/.test(s)) status = 'Superseded';
   else if (/deprecat|廃止|非推奨/.test(s)) status = 'Deprecated';
-  else if (/supersed|上書|置換/.test(s)) status = 'Superseded';
+  else if (/accept|承認|採択|完了|実装済|done/.test(s)) status = 'Accepted';
+  else if (/propos|提案/.test(s)) status = 'Proposed';
 
   // 日付抽出
   let date = '—';
@@ -75,7 +76,41 @@ function parseAdr(filePath) {
     if (date !== '—') break;
   }
 
-  return { title, status, date };
+  // Amends / Supersedes 関係抽出
+  // 前向きリンク（このADRが何かを変更する）
+  const relations = [];
+  const fwdPatterns = [
+    /Amends ADR-(\d+)/gi,
+    /Supersedes ADR-(\d+)/gi,
+    /部分\s*Supersede.*?ADR-(\d+)/gi,
+  ];
+  for (const line of lines) {
+    for (const pat of fwdPatterns) {
+      pat.lastIndex = 0;
+      let m;
+      while ((m = pat.exec(line)) !== null) {
+        const verb = /[Aa]mends|部分/.test(m[0]) ? 'Amends' : 'Supersedes';
+        const ref = `${verb} ADR-${m[1]}`;
+        if (!relations.includes(ref)) relations.push(ref);
+      }
+    }
+    // 後ろ向きリンク（このADRが何かに変更された）
+    const bwdPatterns = [
+      { pat: /Amended by ADR-(\d+)/gi,    verb: 'Amended by' },
+      { pat: /Superseded by ADR-(\d+)/gi, verb: 'Superseded by' },
+    ];
+    for (const { pat, verb } of bwdPatterns) {
+      pat.lastIndex = 0;
+      let m;
+      while ((m = pat.exec(line)) !== null) {
+        const ref = `${verb} ADR-${m[1]}`;
+        if (!relations.includes(ref)) relations.push(ref);
+      }
+    }
+  }
+  const relStr = relations.length > 0 ? relations.join(', ') : '—';
+
+  return { title, status, date, relations: relStr };
 }
 
 /** ADR 番号を抽出（ソート用） */
@@ -95,15 +130,15 @@ const files = readdirSync(adrDir)
 
 // 各ファイルをパース
 const rows = files.map(f => {
-  const { title, status, date } = parseAdr(join(adrDir, f));
+  const { title, status, date, relations } = parseAdr(join(adrDir, f));
   const num = extractNumber(f);
-  return { num, file: f, title, status, date };
+  return { num, file: f, title, status, date, relations };
 });
 
 // README.md 生成
 const today = new Date().toISOString().slice(0, 10);
 const tableRows = rows.map(r =>
-  `| [ADR-${String(r.num).padStart(3, '0')}](./${r.file}) | ${r.title} | ${r.status} | ${r.date} |`
+  `| [ADR-${String(r.num).padStart(3, '0')}](./${r.file}) | ${r.title} | ${r.status} | ${r.relations} | ${r.date} |`
 ).join('\n');
 
 const output = `# ADR インデックス
@@ -113,10 +148,20 @@ const output = `# ADR インデックス
 
 最終更新: ${today} / ADR 総数: ${rows.length} 件
 
+## 維持ルール（整合性を保つ・必須）
+
+新ADRが過去の決定を変えるときは、**両方向＋索引を必ず更新する**:
+
+1. **新ADR冒頭**に \`Amends ADR-Y\` / \`Supersedes ADR-Y\` を明記（後ろ向きリンク）。
+2. **旧ADR-Y** の Status を「Amended by ADR-X」/「Superseded by ADR-X」に更新し前向きリンクを追加。
+3. **本索引**に新ADR行を追加し、旧ADRの Amends/Superseded 欄を更新する。
+
+> これが無いと旧ADRを読んだ人が修正に気づけず定義割れが再発する（取引額の定義割れが実例）。
+
 ## 一覧
 
-| 番号 | タイトル | ステータス | 日付 |
-|------|---------|-----------|------|
+| 番号 | タイトル | ステータス | Amends / Superseded | 日付 |
+|------|---------|-----------|---------------------|------|
 ${tableRows}
 
 ## ステータス凡例
