@@ -32,10 +32,10 @@ function rowStyle(row: ParseStatRow): React.CSSProperties {
   const lowConfidence =
     row.avg_confidence !== null && row.avg_confidence < CONFIDENCE_THRESHOLD;
   if (highExclude) {
-    return { background: "var(--color-danger-light, #fee2e2)" };
+    return { background: "var(--danger-bg)" };
   }
   if (lowConfidence) {
-    return { background: "var(--color-warning-light, #fef9c3)" };
+    return { background: "var(--warning-bg)" };
   }
   return {};
 }
@@ -136,11 +136,11 @@ export default function SupplierParseStatsTab() {
       {!loading && rows.length > 0 && (
         <div style={{ display: "flex", gap: "var(--space-4)", marginTop: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <span style={{ width: "1rem", height: "1rem", background: "var(--color-danger-light, #fee2e2)", border: "1px solid var(--border-light)", display: "inline-block" }} />
+            <span style={{ width: "1rem", height: "1rem", background: "var(--danger-bg)", border: "1px solid var(--border-light)", display: "inline-block" }} />
             {t(`${f}.legend.highExclude`)}
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <span style={{ width: "1rem", height: "1rem", background: "var(--color-warning-light, #fef9c3)", border: "1px solid var(--border-light)", display: "inline-block" }} />
+            <span style={{ width: "1rem", height: "1rem", background: "var(--warning-bg)", border: "1px solid var(--border-light)", display: "inline-block" }} />
             {t(`${f}.legend.lowConfidence`)}
           </span>
         </div>
