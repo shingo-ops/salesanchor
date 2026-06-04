@@ -1,5 +1,9 @@
 -- ============================================================================
--- Migration 20260604_170000: public.product_attribute_masters 新設 + 既定値 seed + backfill
+-- Migration 20260604_170000: public.product_attribute_masters 新設 + 既定値 seed（初回のみ）
+--
+-- 2026-06-04 修正: 毎デプロイ再実行で「削除した seed 行の復活」「products backfill による
+--   大文字小文字違い・category 名流入の重複」が発生したため、seed をテーブルが空のとき
+--   （初回作成時）だけに限定し、products 由来 backfill は廃止した。
 --
 -- 「各種マスタ」(商品マスタ画面の 2nd タブ) で、商品の選択肢系マスタを UI から
 -- 追加 / 編集 / 削除できるようにするための汎用マスタ表。
@@ -10,9 +14,8 @@
 --
 -- 冪等性:
 --   - CREATE TABLE / INDEX IF NOT EXISTS
---   - 固定 seed は ON CONFLICT (attribute, label_ja) DO NOTHING
---   - products 由来の backfill は to_regclass + information_schema 列ガード
---     （migration-test の単体ベースラインでは public.products / 各列が無いことがある）
+--   - 固定 seed は「テーブルが空のとき(初回)だけ」投入（毎デプロイ再実行でも
+--     ユーザー削除行を復活させない）。ON CONFLICT (attribute, label_ja) DO NOTHING も併用。
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.product_attribute_masters (
@@ -50,7 +53,13 @@ COMMENT ON TABLE public.product_attribute_masters IS
     '各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材) を UI から増減する。';
 
 -- === 固定 seed（既定の選択肢） ===
-INSERT INTO public.product_attribute_masters (attribute, code, label_ja, label_en, sort_order) VALUES
+-- 初回（テーブルが空）のときだけ投入する。run_all_migrations.sh は毎デプロイで
+-- 全 migration を再実行するため、ガード無しの ON CONFLICT DO NOTHING だと
+-- 「ユーザーが削除した seed 行が毎デプロイで復活する」不具合になる（2026-06-04 修正）。
+DO $seed$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.product_attribute_masters) THEN
+    INSERT INTO public.product_attribute_masters (attribute, code, label_ja, label_en, sort_order) VALUES
     -- 商品種類
     ('product_kind', 'tcg',          'TCG',            'TCG',            10),
     ('product_kind', 'sealed',       'BOX・パック',     'Sealed product', 20),
@@ -93,53 +102,14 @@ INSERT INTO public.product_attribute_masters (attribute, code, label_ja, label_e
     ('item', NULL, 'Playing card', 'Playing card', 10),
     -- 素材（発送ラベル既定）
     ('material', NULL, 'Paper', 'Paper', 10)
-ON CONFLICT (attribute, label_ja) DO NOTHING;
+    ON CONFLICT (attribute, label_ja) DO NOTHING;
+  END IF;
+END $seed$;
 
--- === backfill: 既存 public.products の実値を選択肢として取り込む ===
--- 列ガード付き。products 由来の値は label_ja=label_en=実値、code=NULL、末尾並び。
-DO $$
-DECLARE
-    has_table  BOOLEAN;
-    has_col    BOOLEAN;
-    col_attr   TEXT;
-    src_col    TEXT;
-    pairs      TEXT[][] := ARRAY[
-        ARRAY['category', 'product_kind'],
-        ARRAY['rarity',   'rarity'],
-        ARRAY['language', 'language'],
-        ARRAY['material', 'material'],
-        ARRAY['hs_code',  'hs_code']
-    ];
-    i INTEGER;
-BEGIN
-    SELECT to_regclass('public.products') IS NOT NULL INTO has_table;
-    IF NOT has_table THEN
-        RAISE NOTICE 'public.products not present; skipping backfill';
-        RETURN;
-    END IF;
-
-    FOR i IN 1 .. array_length(pairs, 1) LOOP
-        src_col  := pairs[i][1];
-        col_attr := pairs[i][2];
-        SELECT EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = 'products'
-              AND column_name = src_col
-        ) INTO has_col;
-        IF has_col THEN
-            EXECUTE format($q$
-                INSERT INTO public.product_attribute_masters
-                    (attribute, code, label_ja, label_en, sort_order)
-                SELECT DISTINCT %L, NULL, TRIM(p.%I), TRIM(p.%I), 500
-                FROM public.products p
-                WHERE p.%I IS NOT NULL AND TRIM(p.%I) <> ''
-                ON CONFLICT (attribute, label_ja) DO NOTHING
-            $q$, col_attr, src_col, src_col, src_col, src_col);
-            RAISE NOTICE 'backfilled % from products.%', col_attr, src_col;
-        END IF;
-    END LOOP;
-END $$;
+-- backfill（products からの自動取込）は廃止（2026-06-04）。
+-- 毎デプロイ再実行で大文字小文字違い（例: Paper / paper）や category 名の
+-- product_kind への流入など重複・汚染を生んでいたため。各種マスタの選択肢は
+-- 上記 seed + 画面からの手動キュレーションで管理する。
 
 -- ============================================================================
 -- Rollback:
