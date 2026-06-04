@@ -184,7 +184,45 @@ async def list_leads(
         params,
     )
     rows = result.mappings().all()
-    return [LeadResponse(**row) for row in rows]
+
+    # ADR-107: 顧客優先度スコアをバッチ取得してマージ
+    lead_ids = [r["id"] for r in rows]
+    scores_map: dict = {}
+    if lead_ids:
+        scores_t = tenant_table_ref(db, tenant_id, "customer_scores")
+        scores_q = await db.execute(
+            text(
+                f"""
+                SELECT lead_id, score, confidence, tier, signal_summary,
+                       sample_size, is_cold_start, override_score, override_note,
+                       scored_at
+                FROM {scores_t}
+                WHERE lead_id = ANY(:ids)
+                """
+            ),
+            {"ids": lead_ids},
+        )
+        for sr in scores_q.mappings().all():
+            sig = sr["signal_summary"]
+            scores_map[sr["lead_id"]] = {
+                "lead_id": sr["lead_id"],
+                "score": float(sr["score"]),
+                "confidence": float(sr["confidence"]),
+                "tier": sr["tier"],
+                "signal_summary": sig if isinstance(sig, dict) else {},
+                "sample_size": sr["sample_size"],
+                "is_cold_start": sr["is_cold_start"],
+                "override_score": float(sr["override_score"]) if sr["override_score"] is not None else None,
+                "override_note": sr["override_note"],
+                "scored_at": sr["scored_at"].isoformat() if sr["scored_at"] else None,
+            }
+
+    leads = []
+    for row in rows:
+        lead_data = dict(row)
+        lead_data["priority_score"] = scores_map.get(row["id"])
+        leads.append(LeadResponse(**lead_data))
+    return leads
 
 
 @router.get(

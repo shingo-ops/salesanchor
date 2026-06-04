@@ -15,6 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -180,6 +181,8 @@ class LeadResponse(BaseModel):
     # Discord role sync fields (read-only, set by discord_role_sync service)
     discord_role_sync_status: str | None = None
     discord_role_sync_at: datetime | None = None
+    # ADR-107: 顧客優先度スコア（analytics.customer_priority.view 権限所持者のみ意味を持つ）
+    priority_score: dict[str, Any] | None = None
 
     model_config = {"from_attributes": True}
 

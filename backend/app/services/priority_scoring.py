@@ -10,6 +10,7 @@ ADR-107 (ADR-SA-14): 分析エージェント(A) 顧客優先度付け — ス�
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 
@@ -241,7 +242,7 @@ async def calibrate_tenant_weights(
         ),
         {
             "tid": tenant_id,
-            "weights": str(weights).replace("'", '"'),
+            "weights": json.dumps(weights),
             "win_n": won_n,
             "loss_n": lost_n,
             "cold": is_cold_start,

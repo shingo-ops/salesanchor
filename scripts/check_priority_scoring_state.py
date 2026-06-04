@@ -18,16 +18,33 @@ psycopg2 同期接続で動作（stdlib のみ・追加依存なし）。
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import logging
 import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
 import psycopg2
+
+# バックエンドアプリの通知関数を利用（docker exec 環境では /app に配置される）
+_APP_ROOT = Path(__file__).parent.parent / "backend"
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
+
+try:
+    from app.services.discord_notifier import (
+        notify_priority_calibration_failed,
+        notify_priority_data_insufficient,
+        notify_priority_drift_detected,
+    )
+    _NOTIFIER_AVAILABLE = True
+except ImportError:
+    _NOTIFIER_AVAILABLE = False
 import psycopg2.extras
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -316,12 +333,37 @@ def main() -> None:
             status = "✅" if r.ok else "❌"
             logger.info("[tenant_%03d] %s %s: %s", tenant_id, status, r.name, r.message)
 
-        if failed and webhook_url:
-            lines = [f":bar_chart: **ADR-107 状態チェック失敗** (tenant_id={tenant_id})"]
-            for r in failed:
-                lines.append(f"- ❌ `{r.name}`: {r.message}")
-            _post_discord(webhook_url, "\n".join(lines))
+        if failed:
             all_ok = False
+            # ADR-107 named notification functions（通知関数が利用可能な場合は優先使用）
+            if _NOTIFIER_AVAILABLE:
+                for r in failed:
+                    if r.name == "data_volume":
+                        asyncio.run(notify_priority_data_insufficient(
+                            tenant_id,
+                            message_count=r.details.get("message_count", 0),
+                            deal_count=r.details.get("deal_count", 0),
+                        ))
+                    elif r.name == "drift":
+                        asyncio.run(notify_priority_drift_detected(
+                            tenant_id,
+                            period_days=30,
+                            tier_shift_pp=r.details.get("max_shift_pp", 0.0),
+                            tier_name=r.details.get("worst_tier", ""),
+                        ))
+                    elif r.name == "calibration_freshness":
+                        asyncio.run(notify_priority_calibration_failed(tenant_id, r.message))
+            # 通知関数が対応していないチェック失敗はまとめてフォールバック送信
+            fallback_failed = [
+                r for r in failed
+                if r.name not in {"data_volume", "drift", "calibration_freshness"}
+                or not _NOTIFIER_AVAILABLE
+            ]
+            if fallback_failed and webhook_url:
+                lines = [f":bar_chart: **ADR-107 状態チェック失敗** (tenant_id={tenant_id})"]
+                for r in fallback_failed:
+                    lines.append(f"- ❌ `{r.name}`: {r.message}")
+                _post_discord(webhook_url, "\n".join(lines))
 
     cur.close()
     conn.close()

@@ -253,7 +253,9 @@ async def recalculate_priority_score(
     tenant_id: int = Depends(get_current_tenant),
 ) -> CustomerScoreResponse:
     """キャッシュを無効化してスコアを強制再計算する。"""
-    return await priority_scoring.recompute_score(db, tenant_id, lead_id)
+    result = await priority_scoring.recompute_score(db, tenant_id, lead_id)
+    await reset_tenant_context(db, tenant_id)  # ADR-072: db.commit() 後必須
+    return result
 
 
 def _assert_lead_belongs_to_tenant(lead_id: int) -> None:
