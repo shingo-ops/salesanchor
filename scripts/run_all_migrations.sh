@@ -261,6 +261,9 @@ run_sql migrations/20260604_100000_add_guild_id_to_contact_channels.sql
 # 各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材)
 run_sql migrations/20260604_170000_create_product_attribute_masters.sql
 
+# ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け テーブル群
+run_sql migrations/20260604_180000_analytics_agent_a_tables.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

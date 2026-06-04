@@ -32,6 +32,7 @@ from app.routers import (
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
+    customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
     deals,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
@@ -356,6 +357,11 @@ app.include_router(
 )
 app.include_router(
     analytics.router, prefix="/api/v1", tags=["analytics"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け（社内ロール限定）
+app.include_router(
+    customer_priority.router, prefix="/api/v1", tags=["analytics"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ダッシュボード強化: 目標管理 (migration 075)
