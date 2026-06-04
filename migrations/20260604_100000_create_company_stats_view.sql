@@ -39,7 +39,7 @@ BEGIN
             CREATE OR REPLACE VIEW %I.v_company_stats AS
             SELECT
                 c.id AS company_id,
-                COALESCE(SUM(i.total), 0) AS total_deal_amount,
+                COALESCE(SUM(i.total_amount), 0) AS total_deal_amount,
                 COUNT(DISTINCT d.id) AS deal_count,
                 COUNT(DISTINCT cl.id) AS conversation_count,
                 MAX(cl.occurred_at) AS last_conversation_at
