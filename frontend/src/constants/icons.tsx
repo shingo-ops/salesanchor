@@ -79,6 +79,7 @@ import {
   TrashIcon as TrashOutlineIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
+  LockClosedIcon as LockClosedOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -166,6 +167,7 @@ const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
+const LockOutline         = hi(LockClosedOutlineIcon);
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -235,7 +237,7 @@ export const NAV_ICONS = {
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
   purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
-  lock:        Lock,               // 読み取り専用セクション識別（ADR-110 実績サマリー）
+  lock:        LockOutline,        // outline — 読み取り専用セクション識別（ADR-110 実績サマリー・reference の outline lock に一致）
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用
