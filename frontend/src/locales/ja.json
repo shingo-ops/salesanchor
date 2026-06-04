@@ -2078,5 +2078,13 @@
         "lowConfidence": "平均確信度 < 0.5（品質低下警告）"
       }
     }
+  },
+  "company": {
+    "stats": {
+      "total_deal_amount": "累計取引額",
+      "deal_count": "商談数",
+      "conversation_count": "会話数",
+      "last_conversation_at": "最終会話日時"
+    }
   }
 }

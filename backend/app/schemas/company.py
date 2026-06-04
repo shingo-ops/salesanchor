@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -184,6 +185,11 @@ class CompanyResponse(BaseModel):
     discord: CompanyDiscordResponse | None = None
     created_at: datetime
     updated_at: datetime
+    # 読み取り専用集計（v_company_stats から JOIN。ビューが存在しない環境では None）
+    total_deal_amount: Optional[Decimal] = None
+    deal_count: Optional[int] = None
+    conversation_count: Optional[int] = None
+    last_conversation_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
