@@ -203,8 +203,52 @@ jobs:
               id         SERIAL PRIMARY KEY,
               tenant_id  INTEGER NOT NULL,
               title      VARCHAR(255),
+              company_id INTEGER,
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- companies: テナント個別スキーマにのみ存在（v_company_stats ビューの参照先）
+          CREATE TABLE IF NOT EXISTS tenant_001.companies (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              name       VARCHAR(255) NOT NULL,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- invoices: テナント個別スキーマにのみ存在（v_company_stats 累計金額の参照先）
+          CREATE TABLE IF NOT EXISTS tenant_001.invoices (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              company_id INTEGER,
+              total      NUMERIC(15,2),
+              status     VARCHAR(30),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- conversation_logs (for PR#4 migration test)
+          CREATE TABLE IF NOT EXISTS tenant_001.conversation_logs (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              lead_id             INTEGER,
+              contact_id          INTEGER,
+              company_id          INTEGER,
+              deal_id             INTEGER,
+              channel_type        VARCHAR(30) NOT NULL,
+              channel_identity    VARCHAR(255),
+              direction           VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+              sender              VARCHAR(100),
+              content_text        TEXT,
+              original_language   VARCHAR(10),
+              external_message_id VARCHAR(255) UNIQUE,
+              raw_payload         JSONB,
+              status              VARCHAR(20) DEFAULT 'sent',
+              translated_text     TEXT,
+              analysis            JSONB,
+              occurred_at         TIMESTAMPTZ NOT NULL,
+              created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
           TENANT_SQL
 

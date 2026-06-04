@@ -104,6 +104,37 @@ export function CompanyBasicTab({
         </div>
       )}
 
+      {/* v_company_stats: 読み取り専用集計エリア */}
+      <div className="form-section-divider" />
+      <div className="form-row">
+        <label>{t("company.stats.total_deal_amount")}</label>
+        <span className="read-only-value">
+          {company.total_deal_amount != null
+            ? Number(company.total_deal_amount).toLocaleString("ja-JP", { style: "currency", currency: "JPY" })
+            : "—"}
+        </span>
+      </div>
+      <div className="form-row">
+        <label>{t("company.stats.deal_count")}</label>
+        <span className="read-only-value">
+          {company.deal_count != null ? company.deal_count : "—"}
+        </span>
+      </div>
+      <div className="form-row">
+        <label>{t("company.stats.conversation_count")}</label>
+        <span className="read-only-value">
+          {company.conversation_count != null ? company.conversation_count : "—"}
+        </span>
+      </div>
+      <div className="form-row">
+        <label>{t("company.stats.last_conversation_at")}</label>
+        <span className="read-only-value">
+          {company.last_conversation_at
+            ? new Date(company.last_conversation_at).toLocaleString("ja-JP")
+            : "—"}
+        </span>
+      </div>
+
       {/* PR #145 Q2: pending_dedup_review 解消セクション */}
       {canEdit && company.status === "pending_dedup_review" && (
         <div className="dedup-resolve-section">

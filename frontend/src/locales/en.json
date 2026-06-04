@@ -2078,5 +2078,13 @@
         "lowConfidence": "Avg confidence < 0.5 (quality warning)"
       }
     }
+  },
+  "company": {
+    "stats": {
+      "total_deal_amount": "Total Deal Amount",
+      "deal_count": "Deal Count",
+      "conversation_count": "Conversations",
+      "last_conversation_at": "Last Conversation"
+    }
   }
 }

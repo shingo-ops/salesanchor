@@ -60,6 +60,11 @@ export interface Company {
   discord: CompanyDiscord | null;
   created_at: string;
   updated_at: string;
+  // 読み取り専用集計（v_company_stats）
+  total_deal_amount: string | null;
+  deal_count: number | null;
+  conversation_count: number | null;
+  last_conversation_at: string | null;
 }
 
 export interface Contact {
