@@ -264,6 +264,9 @@ run_sql migrations/20260604_170000_create_product_attribute_masters.sql
 # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け テーブル群
 run_sql migrations/20260604_180000_analytics_agent_a_tables.sql
 
+# ADR-110: 翻訳サブシステム — グロッサリ + 確信度 + 送信下訳テーブル
+run_sql migrations/20260604_220000_create_translation_glossary.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

@@ -120,6 +120,7 @@
 | [ADR-108](./ADR-108-inbox-karte-panel-redesign.md) | ADR-108: 受信箱カルテの表示再編（商談／顧客／連絡先の再編・段階出し分け） | Proposed | — | — |
 | [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Proposed | — | — |
 | [ADR-110](./ADR-110-karte-reference-alignment.md) | ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正） | Proposed | — | — |
+| [ADR-110b](./ADR-110-sa-translation-subsystem.md) | ADR-110b: 会話ログ翻訳サブシステム — グロッサリ・確信度・送信下訳・3点セット | Accepted | — | 2026-06-04 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例

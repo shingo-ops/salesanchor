@@ -88,6 +88,7 @@ from app.routers import (
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
+    translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
@@ -494,6 +495,12 @@ app.include_router(
 # アプリ内カレンダー CRUD（DB 経由・Google Calendar 双方向同期対応）
 app.include_router(
     calendar_router.router, prefix="/api/v1", tags=["calendar"],
+    dependencies=[Depends(get_current_tenant)],
+)
+
+# ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳生成・確認）
+app.include_router(
+    translation.router, prefix="/api/v1", tags=["translation"],
     dependencies=[Depends(get_current_tenant)],
 )
 
