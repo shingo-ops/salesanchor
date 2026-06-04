@@ -80,6 +80,7 @@ from app.routers import (
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
+    tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     webhook,
 )
@@ -318,6 +319,11 @@ app.include_router(
 # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人) admin CRUD
 app.include_router(
     tenant_profile.router, prefix="/api/v1", tags=["tenant_profile"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-106: テナントポリシー設定 (在庫集計フィルタ・見積有効期限・通貨・発行モード等)
+app.include_router(
+    tenant_policy.router, prefix="/api/v1", tags=["tenant_policy"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(

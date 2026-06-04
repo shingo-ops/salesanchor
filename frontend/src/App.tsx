@@ -49,6 +49,8 @@ import SuperAdminMastersPage from "./pages/super-admin/MastersPage";
 import InventoryVisibilityPage from "./pages/admin/InventoryVisibilityPage";
 // spec.md v1.1 F8 (Sprint 8): テナント発行者情報 (PO PDF / メール差出人) admin UI
 import TenantProfilePage from "./pages/admin/TenantProfilePage";
+// ADR-106: テナントポリシー設定 admin UI
+import TenantPolicyPage from "./pages/admin/TenantPolicyPage";
 // Sprint D2: Discord Guild 設定 admin UI
 import DiscordConfigPage from "./pages/admin/DiscordConfigPage";
 // ADR-091 KPI4: Discord アナウンス投稿 admin UI
@@ -231,6 +233,8 @@ function App() {
                     <Route index element={<Navigate to="tenant-profile" replace />} />
                     {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
                     <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                    {/* ADR-106: テナントポリシー設定 (tenant.profile.edit / view) */}
+                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
                     {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
                     <Route path="discord-config"      element={<DiscordConfigPage />} />
                     {/* ADR-091 KPI4: Discord アナウンス投稿 */}

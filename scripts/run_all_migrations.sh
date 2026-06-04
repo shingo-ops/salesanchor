@@ -202,6 +202,9 @@ run_sql migrations/20260603_000000_add_products_product_kind.sql
 # ADR-093: 仕入元に LINE名 + 構造化住所を追加
 run_sql migrations/20260603_010000_add_suppliers_line_and_address.sql
 
+# ADR-106: テナントポリシー列を追加（標準エンジン＋テナント変数の土台）
+run_sql migrations/20260604_050000_add_tenant_policy_columns.sql
+
 # ドラゴンボール フュージョンワールド 商品マスタ投入（Booster/Starter 26件）
 run_sql migrations/20260603_030000_seed_dragonball_products.sql
 
