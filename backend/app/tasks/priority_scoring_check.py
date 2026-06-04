@@ -82,42 +82,47 @@ def run_priority_scoring_check(self, tenant_id: int | None = None) -> dict:
         conn.autocommit = True
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        if tenant_id is not None:
-            tenant_ids = [tenant_id]
-        else:
-            cur.execute(
-                "SELECT id FROM public.tenants WHERE is_active = TRUE ORDER BY id"
-            )
-            tenant_ids = [r["id"] for r in cur.fetchall()]
-
-        all_ok = True
-        failed_checks: list[str] = []
-
-        for tid in tenant_ids:
-            schema = f"tenant_{tid:03d}"
-            cur.execute(f"SET search_path = {schema}, public")
-            cur.execute(f"SET app.tenant_id = '{tid}'")
-
-            results = module.run_all_checks(cur, tid)
-            failed = [r for r in results if not r.ok]
-
-            for r in results:
-                status = "✅" if r.ok else "❌"
-                logger.info(
-                    "[priority_check][tenant_%03d] %s %s: %s",
-                    tid, status, r.name, r.message,
+        try:
+            if tenant_id is not None:
+                tenant_ids = [tenant_id]
+            else:
+                cur.execute(
+                    "SELECT id FROM public.tenants WHERE is_active = TRUE ORDER BY id"
                 )
+                tenant_ids = [r["id"] for r in cur.fetchall()]
 
-            if failed:
-                all_ok = False
-                failed_checks.extend(
-                    f"tenant_{tid:03d}/{r.name}" for r in failed
-                )
-                # 固有通知関数があるチェックは個別 Discord 通知
-                _dispatch_notifications(module, tid, failed)
+            all_ok = True
+            failed_checks: list[str] = []
 
-        cur.close()
-        conn.close()
+            for tid in tenant_ids:
+                schema = f"tenant_{tid:03d}"
+                cur.execute(f"SET search_path = {schema}, public")
+                cur.execute(f"SET app.tenant_id = '{tid}'")
+
+                results = module.run_all_checks(cur, tid)
+                failed = [r for r in results if not r.ok]
+
+                for r in results:
+                    status = "✅" if r.ok else "❌"
+                    logger.info(
+                        "[priority_check][tenant_%03d] %s %s: %s",
+                        tid, status, r.name, r.message,
+                    )
+
+                if failed:
+                    all_ok = False
+                    failed_checks.extend(
+                        f"tenant_{tid:03d}/{r.name}" for r in failed
+                    )
+                    # 固有通知関数があるチェックは個別 Discord 通知
+                    _dispatch_notifications(module, tid, failed)
+
+        finally:
+            try:
+                cur.close()
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
 
         logger.info(
             "[priority_check] 完了: tenants=%d, ok=%s, failed=%s",
