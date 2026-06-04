@@ -533,7 +533,11 @@
     "changeToActive": "active に変更",
     "deleteConfirmMessage": "「{{name}}」({{code}}) を削除しますか？ 関連する商談・注文・見積・請求書がある場合は削除できません。",
     "companyRequired": "所属顧客情報を選択してください",
-    "subtitle": "クライアントごとの担当者を登録・管理できます。"
+    "subtitle": "クライアントごとの担当者を登録・管理できます。",
+    "channels": {
+      "unverified_badge": "未検証",
+      "open_link": "リンクを開く"
+    }
   },
   "inbox": {
     "title": "受信箱",

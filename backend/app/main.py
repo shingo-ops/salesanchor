@@ -30,6 +30,7 @@ from app.routers import (
     bots,
     companies,  # Phase 1-B-2 Step 5b-1
     contact,  # LP問い合わせフォーム受付
+    contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
     dashboard,
     deals,
@@ -73,6 +74,7 @@ from app.routers import (
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
+    super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_phase_switch,
     super_admin_suppliers,
@@ -247,6 +249,11 @@ app.include_router(
     contacts.router, prefix="/api/v1", tags=["contacts"],
     dependencies=[Depends(get_current_tenant)],
 )
+# SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
+app.include_router(
+    contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     deals.router, prefix="/api/v1", tags=["deals"],
     dependencies=[Depends(get_current_tenant)],
@@ -407,6 +414,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_suppliers.router, prefix="/api/v1", tags=["super-admin"],
+)
+# SA-05: リンクテンプレート SSOT admin CRUD
+app.include_router(
+    super_admin_link_templates.router, prefix="/api/v1", tags=["super-admin"],
 )
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(
