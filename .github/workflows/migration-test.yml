@@ -219,6 +219,15 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
+          -- public.tenant_settings: ADR-106 テナントポリシー列が ALTER ADD COLUMN で操作する
+          CREATE TABLE IF NOT EXISTS public.tenant_settings (
+              tenant_id         INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+              spreadsheet_phase TEXT NOT NULL DEFAULT 'A',
+              created_at        TIMESTAMPTZ DEFAULT NOW(),
+              updated_at        TIMESTAMPTZ DEFAULT NOW()
+          );
+          INSERT INTO public.tenant_settings (tenant_id) VALUES (1) ON CONFLICT DO NOTHING;
+
           -- NOTE: public.suppliers / public.products は migrate_inventory_sprint1.py が
           --       CREATE TABLE するため、ここでは作成しない。
           --       スクリプト実行前に列が欠けた状態で存在するとエラーになる。
