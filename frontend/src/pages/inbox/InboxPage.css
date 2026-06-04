@@ -1191,6 +1191,50 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 .right-panel-save-indicator .saved { color: var(--success-bg); }
 .right-panel-save-indicator .error  { color: var(--danger-bg); }
 
+/* ====== ADR-108: Fixed Action Bar (flex, NOT position:fixed) ====== */
+.karte-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.karte-action-primary {
+  flex: 1;
+  max-width: var(--modal-profile-max-w, 400px);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-micro);
+  font-family: inherit;
+}
+.karte-action-primary:hover { background: var(--accent-hover); }
+
+/* ADR-108: Meta "Not linked" badge */
+.karte-meta-badge {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-badge);
+  padding: var(--space-2px) var(--space-6px);
+  display: inline-block;
+}
+
+/* ADR-108: Performance summary section */
+.karte-performance-section {
+  padding: var(--space-2) 0;
+  width: 100%;
+}
+
 /* ====== 受信箱設定モーダル ====== */
 .inbox-settings-modal {
   background: var(--bg-surface); border: 1px solid var(--border);
