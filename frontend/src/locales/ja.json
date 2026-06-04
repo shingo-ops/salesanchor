@@ -1566,6 +1566,8 @@
       "desc": "商品マスタの選択肢（プルダウン候補）を追加・編集・削除します。",
       "empty": "登録されていません",
       "addBtn": "追加",
+      "searchPlaceholder": "名称で検索",
+      "reorderHint": "行をドラッグして並び替えできます。",
       "activeOn": "有効",
       "activeOff": "無効",
       "col": {

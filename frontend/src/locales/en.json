@@ -1566,6 +1566,8 @@
       "desc": "Add, edit, and delete the product master dropdown options.",
       "empty": "No entries yet",
       "addBtn": "Add",
+      "searchPlaceholder": "Search by name",
+      "reorderHint": "Drag rows to reorder.",
       "activeOn": "Active",
       "activeOff": "Inactive",
       "col": {
