@@ -1,0 +1,20 @@
+name: Deprecated Columns Check
+
+# ADR-SA-12 C-2/C-4: deprecated 列の新規参照を CI でブロック
+# 対象: trust_level / products.unit_price / customers.transaction_count
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: deprecated 列の新規参照チェック
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check deprecated columns
+        run: bash .github/scripts/check_deprecated_columns.sh

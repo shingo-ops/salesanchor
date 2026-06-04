@@ -226,6 +226,12 @@ run_sql migrations/20260604_040000_seed_tcg_products_8series.sql
 # ADR-021 受注ステータスフロー: orders に paid_at（支払済フラグ）を追加
 run_sql migrations/20260604_050000_add_orders_paid_at.sql
 
+# C-1: deals に選択式失注理由(lost_reason_code)を追加
+run_sql migrations/20260604_060000_add_lost_reason_code.sql
+
+# C-2/C-4: deprecated 列コメント追加（trust_level / products.unit_price系）
+run_sql migrations/20260604_070000_deprecate_columns.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
