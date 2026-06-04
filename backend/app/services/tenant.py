@@ -1503,8 +1503,15 @@ async def create_tenant_schema(db: AsyncSession, tenant_id: int) -> str:
     try:
         await db.execute(
             text(
-                "INSERT INTO public.tenant_settings (tenant_id, spreadsheet_phase) "
-                "VALUES (:tid, 'A') "
+                "INSERT INTO public.tenant_settings "
+                "(tenant_id, spreadsheet_phase, "
+                " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                " quote_validity_days, default_currency, document_language, "
+                " duty_incoterms, issue_mode) "
+                "VALUES (:tid, 'A', "
+                " 'none', 0, 0, "
+                " 1, 'JPY', 'en', "
+                " 'DAP', 'pdf') "
                 "ON CONFLICT (tenant_id) DO NOTHING"
             ),
             {"tid": safe_id},
