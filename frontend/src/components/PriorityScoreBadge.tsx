@@ -33,9 +33,11 @@ interface Props {
 }
 
 const TIER_CLASS: Record<string, string> = {
+  /* eslint-disable local/no-japanese-literal -- DB enum values used as lookup keys */
   "要観察": "priority-watching",
   "有望": "priority-promising",
   "最有望": "priority-top",
+  /* eslint-enable local/no-japanese-literal */
 };
 
 export default function PriorityScoreBadge({ score }: Props) {

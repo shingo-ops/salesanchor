@@ -18,9 +18,11 @@ interface Props {
 }
 
 function tierFromScore(score: number): CustomerScoreData["tier"] {
+  /* eslint-disable local/no-japanese-literal -- DB enum values */
   if (score >= 0.65) return "最有望";
   if (score >= 0.35) return "有望";
   return "要観察";
+  /* eslint-enable local/no-japanese-literal */
 }
 
 export default function PriorityScoreOverride({ leadId, currentScore, onUpdated }: Props) {
