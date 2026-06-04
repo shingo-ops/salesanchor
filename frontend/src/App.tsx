@@ -14,6 +14,9 @@ import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
 import ContactsPage from "./pages/contacts/ContactsPage";
 import DealsPage from "./pages/deals/DealsPage";
 import OrdersPage from "./pages/orders/OrdersPage";
+// 区切り4 (ADR-021 改修): 売上管理 / 報酬管理 メニュー分離
+import SalesPage from "./pages/sales/SalesPage";
+import CommissionsPage from "./pages/commissions/CommissionsPage";
 import LeadsPage from "./pages/leads/LeadsPage";
 import TeamsPage from "./pages/teams/TeamsPage";
 import RolesPage from "./pages/roles/RolesPage";
@@ -152,6 +155,9 @@ function App() {
                   {/* 管理 */}
                   <Route path="/deals" element={<DealsPage />} />
                   <Route path="/orders" element={<OrdersPage />} />
+                  {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
+                  <Route path="/sales" element={<SalesPage />} />
+                  <Route path="/commissions" element={<CommissionsPage />} />
                   {/* ADR-021 Phase 5 / Sprint 5: 報酬設定（テナント別 rate 編集） */}
                   <Route
                     path="/commission-settings"

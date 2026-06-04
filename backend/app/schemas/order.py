@@ -103,6 +103,9 @@ class OrderResponse(BaseModel):
     shipped_at: datetime | None
     delivered_at: datetime | None
     shipping_country: str | None
+    # 支払済日時（NULL=未払い）。受注ステータスフロー判定の「支払済フラグ」。
+    # migration 20260604_050000 で追加。後発テナント未適用に備え None 許容。
+    paid_at: datetime | None = None
     notes: str | None
     created_at: datetime
     updated_at: datetime
@@ -116,9 +119,23 @@ class OrderListResponse(OrderResponse):
     ADR-021 Sprint 1: GET /orders から returns. JOIN で取得した
     company.name / contact.display_name を一覧表示用に同梱する。
     JOIN 失敗（FK 切れ / 削除済 etc.）の保険として null 許容。
+
+    区切り4（2026-06-04）: 一覧の「発送先」列表示用に
+    order_shipping_details.city / country_code を JOIN で同梱する。
     """
     company_name: str | None = None
     contact_display_name: str | None = None
+    shipping_city: str | None = None
+    shipping_country_code: str | None = None
+
+
+class OrderPaidStatusUpdate(BaseModel):
+    """`PATCH /orders/{id}/paid` 用の最小ボディ。
+
+    paid（true=支払済 / false=未払いに戻す）を受け取り、orders.paid_at を
+    NOW() / NULL に切り替える。将来は発注書送付フローと連動予定（現状は手動フラグ）。
+    """
+    paid: bool = Field(default=True, description="true=支払済にする / false=未払いに戻す")
 
 
 class OrderGroupCountsResponse(BaseModel):

@@ -9,10 +9,8 @@ import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import ConfirmModal from "../../components/ConfirmModal";
-import OrderFinancialPanel from "../../components/OrderFinancialPanel";
 import ShippingDetailPanel from "../../components/ShippingDetailPanel";
 import PurchaseDetailPanel from "../../components/PurchaseDetailPanel";
-import CommissionPanel from "../../components/CommissionPanel";
 import { useOrdersState } from "./useOrdersState";
 import { OrdersFilterBar } from "./OrdersFilterBar";
 import { OrdersFormModal } from "./OrdersFormModal";
@@ -36,18 +34,13 @@ export default function OrdersPage() {
     contactId, setContactId,
     selectorError, error, loading,
     deleteTarget, setDeleteTarget,
-    financialTarget, setFinancialTarget,
-    financials, setFinancials,
     shippingTarget, setShippingTarget,
     shippings, setShippings,
     purchaseTarget, setPurchaseTarget,
     purchases, setPurchases,
-    commissionTarget, setCommissionTarget,
-    commissionTotals, setCommissionTotals,
     STATUS_LABELS, SORT_OPTIONS,
-    loadOrders, loadGroupCounts,
     handleSubmit, handleEdit, performDelete,
-    companyDisplay, resetSelector,
+    resetSelector, setPaidOrder,
   } = state;
 
   const newOrderButton = hasPermission("orders.create") ? (
@@ -114,15 +107,13 @@ export default function OrdersPage() {
           ) : (
             <OrdersTable
               orders={orders}
-              financials={financials}
               shippings={shippings}
               purchases={purchases}
-              commissionTotals={commissionTotals}
-              panelOpeners={{ setFinancialTarget, setShippingTarget, setPurchaseTarget, setCommissionTarget }}
+              panelOpeners={{ setShippingTarget, setPurchaseTarget }}
               STATUS_LABELS={STATUS_LABELS}
-              companyDisplay={companyDisplay}
               handleEdit={handleEdit}
               setDeleteTarget={setDeleteTarget}
+              setPaidOrder={setPaidOrder}
             />
           )}
         </div>
@@ -144,17 +135,6 @@ export default function OrdersPage() {
         handleSubmit={handleSubmit}
       />
 
-      {financialTarget && (
-        <OrderFinancialPanel
-          orderId={financialTarget.id}
-          orderNumber={financialTarget.order_number}
-          onClose={() => setFinancialTarget(null)}
-          onSaved={(saved) => {
-            setFinancials((prev) => ({ ...prev, [saved.order_id]: saved }));
-          }}
-        />
-      )}
-
       {shippingTarget && (
         <ShippingDetailPanel
           orderId={shippingTarget.id}
@@ -173,21 +153,6 @@ export default function OrdersPage() {
           onClose={() => setPurchaseTarget(null)}
           onSaved={(saved) => {
             setPurchases((prev) => ({ ...prev, [saved.order_id]: saved }));
-          }}
-        />
-      )}
-
-      {commissionTarget && (
-        <CommissionPanel
-          orderId={commissionTarget.id}
-          orderNumber={commissionTarget.order_number}
-          onClose={() => setCommissionTarget(null)}
-          onSaved={(bundle) => {
-            const total = Object.values(bundle.commissions).reduce(
-              (acc, c) => acc + (c ? Number(c.calculated_amount) || 0 : 0),
-              0,
-            );
-            setCommissionTotals((prev) => ({ ...prev, [bundle.order_id]: total }));
           }}
         />
       )}

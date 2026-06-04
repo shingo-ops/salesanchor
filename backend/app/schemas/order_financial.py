@@ -193,6 +193,39 @@ class OrderFinancialResponse(OrderFinancialBase):
         return values
 
 
+class SalesOrderItem(BaseModel):
+    """売上管理一覧の 1 行（区切り4）。
+
+    受注 1 件 = 売上情報 1 件（無い場合もある）。order_financials があれば
+    導出値（gross_profit / gross_profit_rate）を同梱し、無ければ null。
+    会社名 / 受注番号 / 作成日は orders 側から JOIN 取得する。
+    """
+    order_id: int
+    order_number: str
+    company_name: str | None = None
+    contact_display_name: str | None = None
+    currency: str | None = None
+    created_at: datetime
+    revenue_amount: Decimal | None = None
+    cost_total: Decimal | None = None
+    gross_profit: Decimal | None = None
+    gross_profit_rate: Decimal | None = None
+
+
+class SalesListResponse(BaseModel):
+    """`GET /financials/orders` のレスポンス（区切り4）。
+
+    受注ごとの売上行 + 全体集計（売上合計 / 原価合計 / 粗利合計 / 件数 / 粗利率）。
+    通貨混在時の合算は単純合計（表示は JPY 換算前提・将来通貨別集計検討）。
+    """
+    items: list[SalesOrderItem]
+    count: int
+    revenue_total: Decimal
+    cost_total: Decimal
+    gross_profit_total: Decimal
+    gross_profit_rate: Decimal | None  # 合計売上=0 のとき None
+
+
 class MonthlySummaryResponse(BaseModel):
     """月次集計レスポンス（テナント単位）。
 

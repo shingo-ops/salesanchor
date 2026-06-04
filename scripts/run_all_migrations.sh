@@ -33,7 +33,7 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=91
+TOTAL=92
 
 run_py() {
   local script="$1"
@@ -219,6 +219,9 @@ run_sql migrations/20260604_030000_add_quote_invoice_item_overseas_columns.sql
 
 # 8 TCG シリーズの商品マスタを中央カタログへ投入（UA/遊戯王/ガンダム/ヴァイス/デジモン/ホロライブ/ロルカナ/ポケSV 計1049件・ADR-090）
 run_sql migrations/20260604_040000_seed_tcg_products_8series.sql
+
+# ADR-021 受注ステータスフロー: orders に paid_at（支払済フラグ）を追加
+run_sql migrations/20260604_050000_add_orders_paid_at.sql
 
 echo ""
 echo "============================================"

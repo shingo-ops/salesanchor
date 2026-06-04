@@ -449,6 +449,9 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',
+    -- 支払済日時（NULL=未払い）。受注ステータスフロー判定の「支払済フラグ」。
+    -- migration 20260604_050000 と同期。
+    paid_at TIMESTAMPTZ,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

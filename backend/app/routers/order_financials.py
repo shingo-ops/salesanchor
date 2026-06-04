@@ -43,6 +43,8 @@ from app.schemas.order_financial import (
     OrderFinancialCreate,
     OrderFinancialResponse,
     OrderFinancialUpdate,
+    SalesListResponse,
+    SalesOrderItem,
     compute_derived,
 )
 from app.services.audit import record_audit_log
@@ -366,4 +368,105 @@ async def get_monthly_summary(
         gross_profit_total=gross_profit_total,
         gross_profit_rate=rate,
         staff_id=staff_id,
+    )
+
+
+# cost_total を構成するカラム（SQL 集計用）。schema の _COST_FIELDS と一致させる。
+# 各列を COALESCE(col, 0) で囲み、いずれかが NULL の場合に合計全体が NULL に
+# 伝播するのを防ぐ（Reviewer #1598 F2）。
+_COST_SQL_EXPR = (
+    "COALESCE(purchase_cost, 0) + COALESCE(purchase_shipping, 0) + "
+    "COALESCE(paypal_fee, 0) + COALESCE(wise_fee, 0) + COALESCE(exchange_fee, 0) + "
+    "COALESCE(outsource_fee, 0) + COALESCE(packing_fee, 0) + COALESCE(ad_cost, 0) + "
+    "COALESCE(return_fee, 0) + COALESCE(refund_amount, 0)"
+)
+
+
+@router.get(
+    "/financials/orders",
+    response_model=SalesListResponse,
+    dependencies=[Depends(require_permission("orders.view"))],
+)
+async def list_sales_orders(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """売上管理一覧（区切り4）。
+
+    受注ごとに order_financials を LEFT JOIN し、売上 / 原価 / 粗利 / 粗利率を
+    1 クエリで返す（一覧の N+1 を避ける）。全体集計も同梱する。
+    導出値（gross_profit / gross_profit_rate）は SQL 側で計算する。
+    売上情報未登録の受注は revenue 等が NULL のまま行として返す。
+    """
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    companies_t = tenant_table_ref(db, tenant_id, "companies")
+    contacts_t = tenant_table_ref(db, tenant_id, "contacts")
+    financials_t = tenant_table_ref(db, tenant_id, "order_financials")
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                o.id AS order_id,
+                o.order_number,
+                o.currency,
+                o.created_at,
+                c.name AS company_name,
+                ct.display_name AS contact_display_name,
+                f.revenue_amount AS revenue_amount,
+                ({_COST_SQL_EXPR}) AS cost_total
+            FROM {orders_t} o
+            LEFT JOIN {companies_t} c ON c.id = o.company_id
+            LEFT JOIN {contacts_t} ct ON ct.id = o.contact_id
+            LEFT JOIN {financials_t} f ON f.order_id = o.id
+            ORDER BY o.created_at DESC, o.id DESC
+        """),
+    )
+    rows = result.mappings().all()
+
+    items: list[SalesOrderItem] = []
+    revenue_total = Decimal(0)
+    cost_total_sum = Decimal(0)
+    for row in rows:
+        has_financial = row["revenue_amount"] is not None or row["cost_total"] is not None
+        if has_financial:
+            revenue = Decimal(str(row["revenue_amount"])) if row["revenue_amount"] is not None else Decimal(0)
+            cost = Decimal(str(row["cost_total"])) if row["cost_total"] is not None else Decimal(0)
+            gross = revenue - cost
+            rate = (gross / revenue).quantize(Decimal("0.000001")) if revenue != 0 else None
+            revenue_total += revenue
+            cost_total_sum += cost
+        else:
+            revenue = cost = gross = None  # type: ignore[assignment]
+            rate = None
+
+        items.append(
+            SalesOrderItem(
+                order_id=row["order_id"],
+                order_number=row["order_number"],
+                company_name=row["company_name"],
+                contact_display_name=row["contact_display_name"],
+                currency=row["currency"],
+                created_at=row["created_at"],
+                revenue_amount=revenue,
+                cost_total=cost,
+                gross_profit=gross,
+                gross_profit_rate=rate,
+            )
+        )
+
+    gross_profit_total = revenue_total - cost_total_sum
+    total_rate = (
+        (gross_profit_total / revenue_total).quantize(Decimal("0.000001"))
+        if revenue_total != 0
+        else None
+    )
+
+    return SalesListResponse(
+        items=items,
+        count=len(items),
+        revenue_total=revenue_total,
+        cost_total=cost_total_sum,
+        gross_profit_total=gross_profit_total,
+        gross_profit_rate=total_rate,
     )
