@@ -33,7 +33,8 @@ docker cp migrations "${BACKEND}:/app/"
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
-TOTAL=99
+
+TOTAL=101
 
 run_py() {
   local script="$1"
@@ -237,9 +238,13 @@ run_sql migrations/20260604_110000_create_ingestion_jobs.sql
 run_sql migrations/20260604_120000_create_parse_logs.sql
 run_sql migrations/20260604_130000_create_supplier_parse_stats_view.sql
 
+
 # ADR SA-02: 会話ログテーブル + 会社集計ビュー（contact粒度・RLSはtenant_id直接列）
 run_sql migrations/20260604_090000_create_conversation_logs.sql
 run_sql migrations/20260604_100000_create_company_stats_view.sql
+
+# ADR-SA-03: 顧客登録トークン基盤（署名検証・期限・単回使用）
+run_sql migrations/20260604_080000_create_registration_tokens.sql
 
 echo ""
 echo "============================================"

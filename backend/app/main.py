@@ -62,6 +62,7 @@ from app.routers import (
     products,
     purchase_orders,
     quotes,
+    registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
     shifts,
@@ -183,6 +184,10 @@ app.include_router(webhook.router, prefix="/api/v1", tags=["webhook"])
 app.include_router(meta.router, prefix="/api/v1", tags=["meta"])
 # LP問い合わせフォーム受付（認証不要 - salesanchor.jp からのフォーム送信）
 app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
+# ADR-SA-03: 顧客登録トークン公開エンドポイント（認証不要 - トークン署名で検証）
+app.include_router(
+    registration_tokens.public_router, prefix="/api/v1", tags=["registration"],
+)
 
 # --- 認証必須なルーター（デフォルトで認証が強制される） ---
 # dependencies=[Depends(get_current_tenant)] により、
@@ -231,6 +236,11 @@ app.include_router(
 # Phase 1-B-2 Step 5b-1: companies/contacts API（ADR-089 Sprint 3: customers 廃止済み）
 app.include_router(
     companies.router, prefix="/api/v1", tags=["companies"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-SA-03: 顧客登録トークン発行（認証必須）
+app.include_router(
+    registration_tokens.router, prefix="/api/v1", tags=["registration"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
