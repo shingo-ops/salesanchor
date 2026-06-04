@@ -18,6 +18,7 @@ export interface CustomerScoreData {
   confidence: number;
   is_cold_start: boolean;
   sample_size: number;
+  override_score?: number | null;
   signal_summary: {
     total_messages: number;
     price_focus_count: number;
