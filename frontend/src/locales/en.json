@@ -1538,7 +1538,8 @@
       "tcg": "Product master",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
-      "llmBudget": "LLM Budget"
+      "llmBudget": "LLM Budget",
+      "parseStats": "Accuracy Summary"
     },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
@@ -2057,5 +2058,25 @@
     "grossProfitTotal": "Total gross profit",
     "count": "Count",
     "editFinancial": "Edit financial"
+  },
+  "supplier": {
+    "parseStats": {
+      "selectSupplier": "Select Supplier",
+      "selectPlaceholder": "-- Select a supplier --",
+      "noData": "No data yet (no parse logs for this supplier)",
+      "columns": {
+        "day": "Date",
+        "totalLines": "Total Lines",
+        "parsedCount": "Parsed",
+        "excludedCount": "Excluded",
+        "unparsedCount": "Unparsed",
+        "excludeRate": "Exclude Rate",
+        "avgConfidence": "Avg Confidence"
+      },
+      "legend": {
+        "highExclude": "Exclude rate > 30% (drift warning)",
+        "lowConfidence": "Avg confidence < 0.5 (quality warning)"
+      }
+    }
   }
 }

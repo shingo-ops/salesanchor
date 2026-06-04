@@ -1538,7 +1538,8 @@
       "tcg": "商品マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
-      "llmBudget": "LLM 予算"
+      "llmBudget": "LLM 予算",
+      "parseStats": "精度サマリー"
     },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
@@ -2057,5 +2058,25 @@
     "grossProfitTotal": "粗利合計",
     "count": "件数",
     "editFinancial": "売上を編集"
+  },
+  "supplier": {
+    "parseStats": {
+      "selectSupplier": "仕入元を選択",
+      "selectPlaceholder": "-- 仕入元を選択 --",
+      "noData": "データがありません（この仕入元の解析ログがまだありません）",
+      "columns": {
+        "day": "日付",
+        "totalLines": "総行数",
+        "parsedCount": "解析済み",
+        "excludedCount": "除外",
+        "unparsedCount": "未解析",
+        "excludeRate": "除外率",
+        "avgConfidence": "平均確信度"
+      },
+      "legend": {
+        "highExclude": "除外率 > 30%（ドリフト警告）",
+        "lowConfidence": "平均確信度 < 0.5（品質低下警告）"
+      }
+    }
   }
 }
