@@ -15,7 +15,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 _STATUS_VALUES = Literal["active", "inactive", "sold_out"]
 
 

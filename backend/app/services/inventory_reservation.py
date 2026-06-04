@@ -12,8 +12,8 @@ ADR-SA-04: 2段階引当
 """
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def reserve_qty(
