@@ -34,7 +34,7 @@ docker cp migrations "${BACKEND}:/app/"
 # ── ヘルパー関数 ──────────────────────────────────────────────────────────────
 STEP=0
 
-TOTAL=101
+TOTAL=102
 
 run_py() {
   local script="$1"
@@ -245,6 +245,9 @@ run_sql migrations/20260604_100000_create_company_stats_view.sql
 
 # ADR-SA-03: 顧客登録トークン基盤（署名検証・期限・単回使用）
 run_sql migrations/20260604_080000_create_registration_tokens.sql
+
+# 各種マスタ: 商品の選択肢系マスタ (商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材)
+run_sql migrations/096_create_product_attribute_masters.sql
 
 echo ""
 echo "============================================"

@@ -59,6 +59,7 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     parse_review,
+    product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
     purchase_orders,
     quotes,
@@ -401,6 +402,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 各種マスタ (public.product_attribute_masters) 中央 admin
+app.include_router(
+    product_masters.router, prefix="/api/v1", tags=["super-admin"],
 )
 app.include_router(
     super_admin_dex.router, prefix="/api/v1", tags=["super-admin"],
