@@ -117,12 +117,13 @@ async def _get_last_notified(db: AsyncSession, tenant_id: int) -> datetime | Non
 
 
 async def _update_last_notified(db: AsyncSession, tenant_id: int) -> None:
-    """通知日時を更新（INSERT OR UPDATE）。"""
+    """通知日時を更新（UPSERT — 行が存在しない場合も確実に記録）。"""
     await db.execute(
         text(
-            "UPDATE public.tenant_llm_budgets "
-            "SET last_translation_monitor_notified_at = NOW() "
-            "WHERE tenant_id = :tenant_id"
+            "INSERT INTO public.tenant_llm_budgets (tenant_id, last_translation_monitor_notified_at) "
+            "VALUES (:tenant_id, NOW()) "
+            "ON CONFLICT (tenant_id) DO UPDATE "
+            "SET last_translation_monitor_notified_at = NOW()"
         ),
         {"tenant_id": tenant_id},
     )

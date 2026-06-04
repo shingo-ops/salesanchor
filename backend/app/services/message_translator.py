@@ -193,7 +193,8 @@ async def save_outbound_draft(
         },
     )
     row = result.first()
-    assert row is not None
+    if row is None:
+        raise RuntimeError("INSERT ... RETURNING が行を返しませんでした（DB 障害の可能性）")
     return int(row[0])
 
 

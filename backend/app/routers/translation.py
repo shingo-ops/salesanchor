@@ -106,7 +106,8 @@ class CreateGlossaryRequest(BaseModel):
 
 class UpdateGlossaryRequest(BaseModel):
     source_term: str | None = Field(default=None, min_length=1, max_length=500)
-    target_text: str | None = None
+    # target_text は省略と明示的 null を区別するため Field(default=None) + model_fields_set で判定
+    target_text: str | None = Field(default=None)
     term_type: str | None = Field(default=None, max_length=30)
     notes: str | None = Field(default=None, max_length=500)
     is_active: bool | None = None
@@ -303,12 +304,18 @@ async def update_glossary(
     current_user: User = Depends(get_current_user),
 ) -> GlossaryEntryOut:
     """グロッサリエントリを更新（テナント所有のもののみ）。"""
+    from app.services.translation_glossary import _UNSET
+
+    # model_fields_set で「省略」と「明示的 null」を区別する
+    # 省略 → _UNSET（サービス側でスキップ）、明示 null → None（訳さない）
+    target_text_arg = body.target_text if "target_text" in body.model_fields_set else _UNSET
+
     entry = await update_glossary_entry(
         db=db,
         entry_id=entry_id,
         tenant_id=tenant_id,
         source_term=body.source_term,
-        target_text=body.target_text,
+        target_text=target_text_arg,
         term_type=body.term_type,
         notes=body.notes,
         is_active=body.is_active,

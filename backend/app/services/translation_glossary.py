@@ -172,7 +172,8 @@ async def create_glossary_entry(
         },
     )
     row = result.first()
-    assert row is not None
+    if row is None:
+        raise RuntimeError("INSERT ... RETURNING が行を返しませんでした（DB 障害の可能性）")
     return GlossaryEntry(
         id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
         language_pair=row[4], term_type=row[5], is_active=row[6],

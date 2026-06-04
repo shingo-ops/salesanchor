@@ -100,6 +100,9 @@ async def _run_batch() -> dict:
                         "[translation_task] budget exceeded for tenant %s, skip remaining",
                         tenant_id,
                     )
+                    # 残メッセージをスキップとしてカウント
+                    remaining = len(rows) - rows.index((message_id, message_text)) - 1
+                    skipped += remaining
                     break
                 except (LLMConfigError, LLMParseError) as exc:
                     logger.warning(
