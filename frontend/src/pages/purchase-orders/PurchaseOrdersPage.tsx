@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import ConfirmModal from "../../components/ConfirmModal";
 import PurchaseOrdersFormModal, { POLineItem } from "./PurchaseOrdersFormModal";
 
 // 在庫表（InventoryPage）の複数選択から渡される商品（ADR-093 Phase 2b）。
@@ -40,6 +41,8 @@ export default function PurchaseOrdersPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   // 在庫表からの前埋め（仕入元 + 明細）。null = 新規発注ボタン経由（空フォーム）。
   const [poInitial, setPoInitial] = useState<{ supplierId: number | ""; items: POLineItem[] } | null>(null);
+  // P3: PDF 作成後に「発注済みにしますか?」を確認する対象 PO（draft のみ）。null = 非表示。
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -107,8 +110,9 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  /** Sprint 8 / AC8.1: PDF ダウンロード。Firebase ID token を取得して fetch で blob を受信。 */
-  const downloadPdf = async (id: number, poNumber: string | null) => {
+  /** Sprint 8 / AC8.1: PDF ダウンロード。Firebase ID token を取得して fetch で blob を受信。
+   * P3: draft の PO は DL 成功後に「発注済みにしますか?」を確認する。 */
+  const downloadPdf = async (id: number, poNumber: string | null, status?: string) => {
     setError("");
     try {
       const user = auth.currentUser;
@@ -129,6 +133,10 @@ export default function PurchaseOrdersPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      // P3: 下書きの発注書は PDF 作成時に「発注済みにしますか?」を確認する。
+      if (status === "draft") {
+        setPendingOrderId(id);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
     }
@@ -230,21 +238,28 @@ export default function PurchaseOrdersPage() {
                 <td>{p.ordered_at ? new Date(p.ordered_at).toLocaleDateString() : "-"}</td>
                 <td>{p.received_at ? new Date(p.received_at).toLocaleDateString() : "-"}</td>
                 <td className="actions">
-                  {p.status === "draft" && hasPermission("purchase_orders.update") && (
-                    <button className="btn-sm btn-primary" onClick={() => doAction(p.id, "order")}>{t("purchaseOrders.actionOrder")}</button>
-                  )}
                   {p.status === "ordered" && hasPermission("purchase_orders.receive") && (
                     <button className="btn-sm btn-primary" onClick={() => doAction(p.id, "receive")}>{t("purchaseOrders.actionReceive")}</button>
+                  )}
+                  {/* P5: 入荷取消（received → ordered、在庫加算を巻き戻す） */}
+                  {p.status === "received" && hasPermission("purchase_orders.receive") && (
+                    <button
+                      className="btn-sm btn-secondary"
+                      data-testid={`po-unreceive-${p.id}`}
+                      onClick={() => doAction(p.id, "unreceive")}
+                    >
+                      {t("purchaseOrders.actionUnreceive")}
+                    </button>
                   )}
                   {(p.status === "draft" || p.status === "ordered") && (
                     <button className="btn-sm btn-danger" onClick={() => doAction(p.id, "cancel")}>{t("purchaseOrders.actionCancel")}</button>
                   )}
-                  {/* Sprint 8: PDF / メール / 再送 (ordered 以降で有効) */}
-                  {(p.status === "ordered" || p.status === "received" || p.status === "error") && hasPermission("purchase_orders.view") && (
+                  {/* P3 / Sprint 8: PDF（draft でも作成可。draft は作成後に発注済み確認） */}
+                  {(p.status === "draft" || p.status === "ordered" || p.status === "received" || p.status === "error") && hasPermission("purchase_orders.view") && (
                     <button
                       className="btn-sm btn-secondary"
                       data-testid={`po-pdf-${p.id}`}
-                      onClick={() => downloadPdf(p.id, p.po_number)}
+                      onClick={() => downloadPdf(p.id, p.po_number, p.status)}
                     >
                       {t("purchaseOrders.actionDownloadPdf")}
                     </button>
@@ -274,6 +289,20 @@ export default function PurchaseOrdersPage() {
           </tbody>
         </table>
       )}
+      {/* P3: PDF 作成後に発注済みへ進めるか確認 */}
+      <ConfirmModal
+        open={pendingOrderId != null}
+        title={t("purchaseOrders.confirmOrderTitle")}
+        message={t("purchaseOrders.confirmOrderMessage")}
+        confirmLabel={t("purchaseOrders.confirmOrderYes")}
+        cancelLabel={t("purchaseOrders.confirmOrderNo")}
+        onConfirm={() => {
+          const id = pendingOrderId;
+          setPendingOrderId(null);
+          if (id != null) doAction(id, "order");
+        }}
+        onCancel={() => setPendingOrderId(null)}
+      />
     </PageLayout>
   );
 }
