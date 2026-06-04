@@ -22,6 +22,7 @@ po_renderer.py とは独立した新規レンダラー（PO レンダラーと�
 """
 from __future__ import annotations
 
+import glob
 import io
 import logging
 import os
@@ -46,7 +47,11 @@ _FONT_REGISTERED: Optional[str] = None
 
 
 def _register_font() -> str:
-    """日本語フォントを登録し、登録名を返す。未登録時は Helvetica にフォールバック。"""
+    """TrueType の日本語フォントを登録し、登録名を返す。未登録時は Helvetica。
+
+    重要: reportlab の TTFont は TrueType(glyf) のみ対応。Noto CJK は CFF
+    (PostScript outlines) のため失敗する → 候補に含めず IPA ゴシック等を使う。
+    """
     global _FONT_REGISTERED
     if _FONT_REGISTERED is not None:
         return _FONT_REGISTERED
@@ -55,16 +60,28 @@ def _register_font() -> str:
     if env_path := os.getenv("PO_PDF_FONT_PATH"):
         candidates.append(env_path)
     candidates += [
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/ipafont/ipagp.ttf",
-        "/usr/share/fonts/truetype/ipafont-gothic/ipag.ttf",
-        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        # IPA ゴシック (Debian fonts-ipafont-gothic, TrueType)
+        "/usr/share/fonts/opentype/ipafont-gothic/ipagp.ttf",
+        "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+        # VL / Takao ゴシック (TrueType)
+        "/usr/share/fonts/truetype/vlgothic/VL-Gothic-Regular.ttf",
+        "/usr/share/fonts/truetype/takao-gothic/TakaoGothic.ttf",
+        # macOS 開発機
         "/Library/Fonts/Arial Unicode.ttf",
     ]
+    for pat in (
+        "/usr/share/fonts/**/ipag*.ttf",
+        "/usr/share/fonts/**/*[Gg]othic*.ttf",
+        "/usr/share/fonts/**/VL-*.ttf",
+    ):
+        candidates += sorted(glob.glob(pat, recursive=True))
+
+    seen: set[str] = set()
     for path in candidates:
-        if not path or not os.path.exists(path):
+        if not path or path in seen or not os.path.exists(path):
             continue
+        seen.add(path)
         try:
             pdfmetrics.registerFont(TTFont(_FONT_NAME_JA, path))
             _FONT_REGISTERED = _FONT_NAME_JA
@@ -75,8 +92,8 @@ def _register_font() -> str:
 
     _FONT_REGISTERED = _FONT_NAME_FALLBACK
     logger.warning(
-        "[invoice_renderer] no Japanese font found, using Helvetica fallback. "
-        "Set PO_PDF_FONT_PATH to enable Japanese rendering."
+        "[invoice_renderer] no usable TrueType Japanese font found; using Helvetica "
+        "(日本語は ■ になります)。fonts-ipafont-gothic を導入してください。"
     )
     return _FONT_NAME_FALLBACK
 

@@ -21,8 +21,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
-# 認証済みユーザー: 100回/分
-AUTHED_RATE_LIMIT = 100
+# 認証済みユーザー: 300回/分
+# データの多い画面は 1 ページで 10〜20 リクエスト飛ぶため、数ページの遷移で
+# 旧上限(100)に達し正規ユーザーが 429 でブロックされていた。内部 B2B CRM の
+# 想定利用に合わせ 300 に引き上げる（不正利用の抑止は維持できる水準）。
+AUTHED_RATE_LIMIT = 300
 AUTHED_WINDOW_SEC = 60
 
 # 未認証 IP: 60回/分（認証エンドポイントへの試行抑制）
