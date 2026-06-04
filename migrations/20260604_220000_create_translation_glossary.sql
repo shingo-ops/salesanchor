@@ -2,8 +2,8 @@
 --
 -- 変更内容:
 --   1. public.translation_glossary テーブル作成（テナント共通ベース + テナント追加）
---   2. {schema}.message_translations に confidence / original_language 列追加（ADR-088 拡張）
---   3. {schema}.outbound_translation_drafts テーブル作成（送信下訳 + 人確認管理）
+--   2. <tenant_schema>.message_translations に confidence / original_language 列追加（ADR-088 拡張）
+--   3. <tenant_schema>.outbound_translation_drafts テーブル作成（送信下訳 + 人確認管理）
 --
 -- 冪等: CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS / CREATE INDEX IF NOT EXISTS
 -- 適用: 全テナントスキーマ（pg_namespace 走査）
@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_translation_glossary_source_term
     ON public.translation_glossary (lower(source_term));
 
 -- ==========================================================================
--- 2. {schema}.message_translations 拡張（confidence / original_language 追加）
+-- 2. message_translations 拡張（confidence / original_language 追加）
 -- ==========================================================================
 
 DO $$
@@ -83,7 +83,7 @@ END
 $$;
 
 -- ==========================================================================
--- 3. {schema}.outbound_translation_drafts（送信下訳 + 人確認状態管理）
+-- 3. outbound_translation_drafts（送信下訳 + 人確認状態管理）
 -- ==========================================================================
 
 DO $$

@@ -21,8 +21,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
-from app.auth.models import User
 from app.database import get_db, reset_tenant_context
+from app.models import User
 from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
 from app.services.message_translator import (
     BudgetExceededError,
