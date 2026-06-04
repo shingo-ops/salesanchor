@@ -1,30 +1,36 @@
 /**
  * /super-admin/masters — 「各種マスタ」タブ。
  *
- * 商品マスタの選択肢系マスタ（プルダウン候補）を UI から追加・編集・削除する。
- *   - 8 区分は public.product_attribute_masters (汎用マスタ) で管理:
- *       商品種類 / セット種別 / レアリティ / 言語 / 単位 / HSコード / 品目 / 素材
- *   - TCGシリーズは既存の TcgSeriesTab（public.tcg_type_master / tcg_series_master）を
- *     そのまま埋め込み、二重管理を避ける。
+ * 商品マスタの選択肢（プルダウン候補）を「名称（日本語）」「名称（英語）」のみで
+ * 追加・編集・削除する。各区分とも UI は統一:
+ *   検索窓 + 検索ボタン / 名称 ja・en の追加フォーム / 行ごとに編集・削除 /
+ *   行のドラッグで並び替え（sort_order を更新）。
  *
- * API: /super-admin/product-masters (require_super_admin)
+ * データ源:
+ *   - 8 区分（商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材）
+ *     → public.product_attribute_masters（/super-admin/product-masters）
+ *   - TCGシリーズ → public.tcg_type_master（/super-admin/tcg/types）
+ *     ※ 種別(ポケモンカード等)を名称のみで管理。code は内部自動採番で UI 非表示。
  */
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
-import TcgSeriesTab from "./TcgSeriesTab";
 
-interface AttributeMaster {
+interface MasterRow {
   id: number;
-  attribute: string;
-  code: string | null;
-  label_ja: string;
-  label_en: string | null;
-  sort_order: number;
-  is_active: boolean;
+  name_ja: string;
+  name_en: string | null;
 }
 
-// 各種マスタの区分（表示順）。tcg_series のみ別コンポーネントに委譲する特別扱い。
+/** 1 区分の CRUD + 並び替えを抽象化したデータ源。 */
+interface MasterDataSource {
+  list: () => Promise<MasterRow[]>;
+  create: (nameJa: string, nameEn: string | null) => Promise<void>;
+  update: (id: number, nameJa: string, nameEn: string | null) => Promise<void>;
+  remove: (id: number) => Promise<void>;
+  reorder: (orderedIds: number[]) => Promise<void>;
+}
+
 const ATTRIBUTES = [
   { key: "product_kind", labelKey: "superAdmin.attrMasters.attr.productKind" },
   { key: "set_type", labelKey: "superAdmin.attrMasters.attr.setType" },
@@ -37,57 +43,108 @@ const ATTRIBUTES = [
   { key: "material", labelKey: "superAdmin.attrMasters.attr.material" },
 ] as const;
 
-const emptyForm = { code: "", label_ja: "", label_en: "", sort_order: "100" };
+interface AttributeMasterApi {
+  id: number;
+  label_ja: string;
+  label_en: string | null;
+  sort_order: number;
+}
 
-/** 汎用マスタ（product_attribute_masters）1 区分の編集 UI。 */
-function GenericAttributeEditor({ attribute }: { attribute: string }) {
+/** public.product_attribute_masters を name_ja/name_en にマップしたデータ源。 */
+function attributeSource(attribute: string): MasterDataSource {
+  const base = "/super-admin/product-masters";
+  return {
+    list: async () => {
+      const rows = await api.get<AttributeMasterApi[]>(
+        `${base}?attribute=${encodeURIComponent(attribute)}`,
+      );
+      return rows.map((r) => ({ id: r.id, name_ja: r.label_ja, name_en: r.label_en }));
+    },
+    create: async (nameJa, nameEn) => {
+      await api.post(base, { attribute, label_ja: nameJa, label_en: nameEn, sort_order: 1000 });
+    },
+    update: async (id, nameJa, nameEn) => {
+      await api.patch(`${base}/${id}`, { label_ja: nameJa, label_en: nameEn });
+    },
+    remove: async (id) => {
+      await api.delete(`${base}/${id}`);
+    },
+    reorder: async (orderedIds) => {
+      await Promise.all(
+        orderedIds.map((id, i) => api.patch(`${base}/${id}`, { sort_order: (i + 1) * 10 })),
+      );
+    },
+  };
+}
+
+interface TcgTypeApi {
+  id: number;
+  name_ja: string;
+  name_en: string | null;
+  sort_order: number;
+}
+
+/** public.tcg_type_master（TCG 種別）を name_ja/name_en で管理するデータ源。 */
+const tcgTypeSource: MasterDataSource = {
+  list: async () => {
+    const rows = await api.get<TcgTypeApi[]>("/super-admin/tcg/types");
+    return rows.map((r) => ({ id: r.id, name_ja: r.name_ja, name_en: r.name_en }));
+  },
+  create: async (nameJa, nameEn) => {
+    // code は backend が自動採番（UI 非入力）。
+    await api.post("/super-admin/tcg/types", {
+      name_ja: nameJa, name_en: nameEn, sort_order: 1000, is_active: true,
+    });
+  },
+  update: async (id, nameJa, nameEn) => {
+    await api.patch(`/super-admin/tcg/types/${id}`, { name_ja: nameJa, name_en: nameEn });
+  },
+  remove: async (id) => {
+    await api.delete(`/super-admin/tcg/types/${id}`);
+  },
+  reorder: async (orderedIds) => {
+    await Promise.all(
+      orderedIds.map((id, i) => api.patch(`/super-admin/tcg/types/${id}`, { sort_order: (i + 1) * 10 })),
+    );
+  },
+};
+
+const emptyForm = { name_ja: "", name_en: "" };
+
+/** 名称(ja/en)のみのマスタ一覧編集 UI（検索 + 追加 + 編集 + 削除 + ドラッグ並び替え）。 */
+function MasterListEditor({ source }: { source: MasterDataSource }) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<AttributeMaster[]>([]);
+  const [rows, setRows] = useState<MasterRow[]>([]);
+  const [error, setError] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
-  const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const dragId = useRef<number | null>(null);
 
   const load = async () => {
     try {
-      const data = await api.get<AttributeMaster[]>(
-        `/super-admin/product-masters?attribute=${encodeURIComponent(attribute)}`,
-      );
-      setItems(data);
+      setRows(await source.list());
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     }
   };
 
+  // 親が key={attr} で再マウントするため、マウント時に 1 回読み込めばよい。
   useEffect(() => {
-    setEditId(null);
-    setForm(emptyForm);
-    setError("");
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attribute]);
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    const payload = {
-      attribute,
-      code: form.code.trim() || null,
-      label_ja: form.label_ja.trim(),
-      label_en: form.label_en.trim() || null,
-      sort_order: Number(form.sort_order) || 100,
-      is_active: true,
-    };
+    const nameJa = form.name_ja.trim();
+    const nameEn = form.name_en.trim() || null;
+    if (!nameJa) return;
     try {
-      if (editId) {
-        await api.patch(`/super-admin/product-masters/${editId}`, {
-          code: payload.code,
-          label_ja: payload.label_ja,
-          label_en: payload.label_en,
-          sort_order: payload.sort_order,
-        });
-      } else {
-        await api.post("/super-admin/product-masters", payload);
-      }
+      if (editId) await source.update(editId, nameJa, nameEn);
+      else await source.create(nameJa, nameEn);
       setEditId(null);
       setForm(emptyForm);
       await load();
@@ -96,154 +153,154 @@ function GenericAttributeEditor({ attribute }: { attribute: string }) {
     }
   };
 
-  const startEdit = (m: AttributeMaster) => {
-    setEditId(m.id);
-    setForm({
-      code: m.code || "",
-      label_ja: m.label_ja,
-      label_en: m.label_en || "",
-      sort_order: String(m.sort_order),
-    });
+  const startEdit = (r: MasterRow) => {
+    setEditId(r.id);
+    setForm({ name_ja: r.name_ja, name_en: r.name_en || "" });
   };
-
   const cancelEdit = () => {
     setEditId(null);
     setForm(emptyForm);
   };
-
-  const toggleActive = async (m: AttributeMaster) => {
-    setError("");
-    try {
-      await api.patch(`/super-admin/product-masters/${m.id}`, {
-        is_active: !m.is_active,
-      });
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.saveError"));
-    }
-  };
-
   const remove = async (id: number) => {
     setError("");
     try {
-      await api.delete(`/super-admin/product-masters/${id}`);
+      await source.remove(id);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.deleteError"));
     }
   };
 
+  // 行ドラッグで並び替え → sort_order を一括更新。
+  const onDrop = async (targetId: number) => {
+    const from = dragId.current;
+    dragId.current = null;
+    if (from == null || from === targetId) return;
+    const cur = [...rows];
+    const fromIdx = cur.findIndex((r) => r.id === from);
+    const toIdx = cur.findIndex((r) => r.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = cur.splice(fromIdx, 1);
+    cur.splice(toIdx, 0, moved);
+    setRows(cur); // 楽観的更新
+    try {
+      await source.reorder(cur.map((r) => r.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+      await load();
+    }
+  };
+
+  const q = search.toLowerCase();
+  const filtered = q
+    ? rows.filter(
+        (r) =>
+          r.name_ja.toLowerCase().includes(q) ||
+          (r.name_en ?? "").toLowerCase().includes(q),
+      )
+    : rows;
+  // 検索で部分表示中はドラッグ並び替えを無効化（順序が崩れるため）。
+  const canDrag = !search;
+
   return (
-    <div data-testid={`attr-editor-${attribute}`}>
+    <div>
       {error && <div className="error-message">{error}</div>}
 
+      {/* 検索 */}
+      <form
+        className="search-bar"
+        style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setSearch(searchInput.trim());
+        }}
+      >
+        <input
+          type="text"
+          placeholder={t("superAdmin.attrMasters.searchPlaceholder")}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        <button type="submit" className="btn-secondary">{t("common.search")}</button>
+        {search && (
+          <button type="button" className="btn-sm" onClick={() => { setSearch(""); setSearchInput(""); }}>
+            {t("common.clear")}
+          </button>
+        )}
+      </form>
+
+      {/* 追加 / 編集フォーム（名称のみ） */}
       <form
         onSubmit={submit}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.5fr 1.5fr 1fr 0.7fr auto auto",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          margin: "0.5rem 0",
-        }}
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto auto", gap: "var(--space-2)", margin: "0.5rem 0" }}
       >
         <input
           placeholder={t("superAdmin.attrMasters.col.labelJa")}
           aria-label={t("superAdmin.attrMasters.col.labelJa")}
-          value={form.label_ja}
-          onChange={(e) => setForm({ ...form, label_ja: e.target.value })}
+          value={form.name_ja}
+          onChange={(e) => setForm({ ...form, name_ja: e.target.value })}
           required
         />
         <input
           placeholder={t("superAdmin.attrMasters.col.labelEn")}
           aria-label={t("superAdmin.attrMasters.col.labelEn")}
-          value={form.label_en}
-          onChange={(e) => setForm({ ...form, label_en: e.target.value })}
-        />
-        <input
-          placeholder={t("superAdmin.attrMasters.col.code")}
-          aria-label={t("superAdmin.attrMasters.col.code")}
-          value={form.code}
-          onChange={(e) => setForm({ ...form, code: e.target.value })}
-        />
-        <input
-          type="number"
-          placeholder={t("superAdmin.attrMasters.col.sortOrder")}
-          aria-label={t("superAdmin.attrMasters.col.sortOrder")}
-          value={form.sort_order}
-          onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+          value={form.name_en}
+          onChange={(e) => setForm({ ...form, name_en: e.target.value })}
         />
         <button type="submit" className="btn-primary">
           {editId ? t("common.update") : t("superAdmin.attrMasters.addBtn")}
         </button>
         {editId ? (
-          <button type="button" className="btn-secondary" onClick={cancelEdit}>
-            {t("common.cancel")}
-          </button>
+          <button type="button" className="btn-secondary" onClick={cancelEdit}>{t("common.cancel")}</button>
         ) : (
           <span />
         )}
       </form>
 
+      {/* 一覧 */}
       <table className="data-table">
         <thead>
           <tr>
             <th>{t("superAdmin.attrMasters.col.labelJa")}</th>
             <th>{t("superAdmin.attrMasters.col.labelEn")}</th>
-            <th>{t("superAdmin.attrMasters.col.code")}</th>
-            <th style={{ width: "1%", whiteSpace: "nowrap", textAlign: "right" }}>
-              {t("superAdmin.attrMasters.col.sortOrder")}
-            </th>
-            <th style={{ width: "1%", whiteSpace: "nowrap" }}>
-              {t("superAdmin.attrMasters.col.active")}
-            </th>
             <th style={{ width: "1%", whiteSpace: "nowrap" }}>{t("common.edit")}</th>
             <th style={{ width: "1%", whiteSpace: "nowrap" }}>{t("common.delete")}</th>
           </tr>
         </thead>
         <tbody>
-          {items.length === 0 ? (
+          {filtered.length === 0 ? (
             <tr>
-              <td colSpan={7} className="empty">
-                {t("superAdmin.attrMasters.empty")}
-              </td>
+              <td colSpan={4} className="empty">{t("superAdmin.attrMasters.empty")}</td>
             </tr>
           ) : (
-            items.map((m) => (
-              <tr key={m.id} style={{ opacity: m.is_active ? 1 : 0.5 }}>
-                <td>{m.label_ja}</td>
-                <td>{m.label_en}</td>
+            filtered.map((r) => (
+              <tr
+                key={r.id}
+                data-testid={`master-row-${r.id}`}
+                draggable={canDrag}
+                onDragStart={canDrag ? () => { dragId.current = r.id; } : undefined}
+                onDragOver={canDrag ? (e) => e.preventDefault() : undefined}
+                onDrop={canDrag ? () => onDrop(r.id) : undefined}
+                style={canDrag ? { cursor: "grab" } : undefined}
+              >
+                <td>{r.name_ja}</td>
+                <td>{r.name_en}</td>
                 <td>
-                  <code style={{ color: "var(--text-muted)" }}>{m.code || "-"}</code>
-                </td>
-                <td style={{ textAlign: "right" }}>{m.sort_order}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    onClick={() => toggleActive(m)}
-                    aria-label={`${t("superAdmin.attrMasters.col.active")} ${m.label_ja}`}
-                  >
-                    {m.is_active
-                      ? t("superAdmin.attrMasters.activeOn")
-                      : t("superAdmin.attrMasters.activeOff")}
-                  </button>
+                  <button className="btn-secondary btn-sm" onClick={() => startEdit(r)}>{t("common.edit")}</button>
                 </td>
                 <td>
-                  <button className="btn-secondary" onClick={() => startEdit(m)}>
-                    {t("common.edit")}
-                  </button>
-                </td>
-                <td>
-                  <button className="btn-danger-link" onClick={() => remove(m.id)}>
-                    {t("common.delete")}
-                  </button>
+                  <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>{t("common.delete")}</button>
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+      {canDrag && filtered.length > 1 && (
+        <p style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)", marginTop: "var(--space-1)" }}>
+          {t("superAdmin.attrMasters.reorderHint")}
+        </p>
+      )}
     </div>
   );
 }
@@ -251,6 +308,7 @@ function GenericAttributeEditor({ attribute }: { attribute: string }) {
 export default function ProductMastersTab() {
   const { t } = useTranslation();
   const [attr, setAttr] = useState<string>(ATTRIBUTES[0].key);
+  const source = attr === "tcg_series" ? tcgTypeSource : attributeSource(attr);
 
   return (
     <div className="product-masters-tab">
@@ -259,16 +317,10 @@ export default function ProductMastersTab() {
         {t("superAdmin.attrMasters.desc")}
       </p>
 
-      {/* 区分セレクタ（商品種類 / セット種別 / TCGシリーズ / レアリティ / 言語 / 単位 / HSコード / 品目 / 素材） */}
       <div
         role="tablist"
         aria-label={t("superAdmin.attrMasters.title")}
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--space-2)",
-          margin: "0.5rem 0 1rem",
-        }}
+        style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", margin: "0.5rem 0 1rem" }}
       >
         {ATTRIBUTES.map((a) => (
           <button
@@ -285,13 +337,8 @@ export default function ProductMastersTab() {
         ))}
       </div>
 
-      <div role="tabpanel">
-        {attr === "tcg_series" ? (
-          <TcgSeriesTab />
-        ) : (
-          <GenericAttributeEditor attribute={attr} />
-        )}
-      </div>
+      {/* key={attr} で区分切替時に内部 state をリセット（再マウント） */}
+      <MasterListEditor key={attr} source={source} />
     </div>
   );
 }
