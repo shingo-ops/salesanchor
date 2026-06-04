@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
-import { getInitials } from "./inbox.types";
+import { getInitials, relativeFromNow } from "./inbox.types";
 import type { LeadDetail, KarteTabKey } from "./inbox.types";
 
 interface CardForm {
@@ -35,7 +35,24 @@ interface CardForm {
 interface ConversationSummary {
   lead_id: number;
   profile_picture_url?: string | null;
+  last_message_at?: string | null;
 }
+
+// ADR-108 段階（status）→ カルテ見出しバッジの i18n ラベルキー。
+// "新規" は CRM 語彙「リード」を表示（内部値の正常化は ADR-109）。
+/* eslint-disable local/no-japanese-literal -- DB 定義の status 値（マッピングキー） */
+const STAGE_BADGE_KEY: Record<string, string> = {
+  "新規": "inbox.stageLead",
+  "商談中": "leads.status_negotiating",
+  "既存顧客": "leads.status_existing_customer",
+  "追客（短期）": "leads.status_follow_up_short",
+  "追客（長期）": "leads.status_follow_up_long",
+  "失注": "leads.status_lost",
+  "対象外": "leads.status_out_of_scope",
+};
+// 成約後（顧客）段階 = バッジ緑系・主アクション「見積・請求書作成」。
+const POST_DEAL_STATUSES = ["既存顧客", "追客（短期）", "追客（長期）"];
+/* eslint-enable local/no-japanese-literal */
 
 interface Props {
   selectedLeadId: number | null;
@@ -65,7 +82,7 @@ export function InboxKartePanel({
   handleCardFieldChange, handleCardFieldBlur,
   handleConvertLead, handleCreateInvoice,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
 
   // guild_id is needed for Discord ticket channel link generation
@@ -96,29 +113,45 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* Header */}
-          <div className="right-panel-header">
-            <div className="right-panel-avatar">
-              {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
-                <img
-                  src={selectedConversation.profile_picture_url}
-                  alt={t("inbox.avatarAlt")}
-                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                  onError={() => handleAvatarError(selectedConversation.lead_id)}
-                />
-              ) : (
-                getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
-              )}
-            </div>
-            <div className="right-panel-header-info">
-              <span className="right-panel-display-name">
-                {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
-              </span>
-              <button type="button" className="right-panel-link" onClick={() => setShowProfileModal(true)}>
-                {t("inbox.viewProfile")} →
-              </button>
-            </div>
-          </div>
+          {/* Header (ADR-110: 段階バッジ + 最終接触からの経過) */}
+          {(() => {
+            const isCustomerStage = POST_DEAL_STATUSES.includes(leadDetail.status);
+            const stageKey = STAGE_BADGE_KEY[leadDetail.status];
+            const stageLabel = stageKey ? t(stageKey) : leadDetail.status;
+            const elapsed = relativeFromNow(selectedConversation?.last_message_at, i18n.language);
+            return (
+              <div className="karte-header">
+                <div className="karte-header-top">
+                  <div className="right-panel-avatar">
+                    {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
+                      <img
+                        src={selectedConversation.profile_picture_url}
+                        alt={t("inbox.avatarAlt")}
+                        style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                        onError={() => handleAvatarError(selectedConversation.lead_id)}
+                      />
+                    ) : (
+                      getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
+                    )}
+                  </div>
+                  <div className="right-panel-header-info">
+                    <span className="right-panel-display-name">
+                      {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
+                    </span>
+                  </div>
+                  <span className={`karte-stage-badge${isCustomerStage ? " customer" : ""}`}>{stageLabel}</span>
+                </div>
+                <div className="karte-header-meta">
+                  <span className="karte-last-contact">
+                    {elapsed ? t("inbox.lastContact", { time: elapsed }) : "—"}
+                  </span>
+                  <button type="button" className="right-panel-link" onClick={() => setShowProfileModal(true)}>
+                    {t("inbox.viewProfile")} →
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Save status */}
           <div className="right-panel-save-indicator">
@@ -127,9 +160,9 @@ export function InboxKartePanel({
             {cardSaveStatus === "error" && <span className="error">{cardSaveError}</span>}
           </div>
 
-          {/* Tab bar */}
+          {/* Tab bar (ADR-110: 左から 商談／顧客／連絡先) */}
           <div className="right-panel-tabs">
-            {(["deal", "contact", "company"] as KarteTabKey[]).map((tab) => (
+            {(["deal", "company", "contact"] as KarteTabKey[]).map((tab) => (
               <button key={tab} type="button"
                 className={`right-panel-tab${karteTab === tab ? " active" : ""}`}
                 onClick={() => setKarteTab(tab)}>
@@ -177,31 +210,60 @@ function ActionBar({
   onCreateInvoice: () => void;
 }) {
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
+  const convert = { label: t("inbox.actionConvert"), onClick: onConvertLead };
+  const invoice = { label: t("inbox.actionCreateInvoice"), onClick: onCreateInvoice };
+
+  // ADR-110: 主アクションは段階別。残りは「…」オーバーフロー（実装済みアクションのみ）。
+  let primary: { label: string; onClick: () => void } | null = null;
+  let overflow: { label: string; onClick: () => void }[] = [];
   // eslint-disable-next-line local/no-japanese-literal -- DB value
   if (status === "新規") {
-    return (
-      <div className="karte-action-bar">
-        <button type="button" className="karte-action-primary" onClick={onConvertLead}>
-          {t("inbox.actionConvert")}
-        </button>
-      </div>
-    );
+    primary = convert;
+    overflow = [invoice];
+  } else if (POST_DEAL_STATUSES.includes(status)) {
+    primary = invoice;
+    overflow = [convert];
   }
 
-  // eslint-disable-next-line local/no-japanese-literal -- DB value
-  if (status === "既存顧客") {
-    return (
-      <div className="karte-action-bar">
-        <button type="button" className="karte-action-primary" onClick={onCreateInvoice}>
-          {t("inbox.actionCreateInvoice")}
-        </button>
-      </div>
-    );
-  }
+  // 失注・対象外・商談中 等は専用挙動なし（ADR-108）→ アクションバー非表示。
+  if (!primary) return null;
 
-  // Other statuses: minimal/empty action bar
-  return null;
+  return (
+    <>
+      {menuOpen && overflow.length > 0 && (
+        <div className="karte-action-menu">
+          {overflow.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              className="karte-action-menu-item"
+              onClick={() => { setMenuOpen(false); a.onClick(); }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="karte-action-bar">
+        <button type="button" className="karte-action-primary" onClick={primary.onClick}>
+          {primary.label}
+        </button>
+        {overflow.length > 0 && (
+          <button
+            type="button"
+            className="karte-action-more"
+            aria-label={t("inbox.moreActions")}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            <NAV_ICONS.more size={ICON.md} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -297,17 +359,12 @@ function KarteTabContent({
     );
   }
 
-  // === COMPANY TAB (ADR-108: CRM fields + PerformanceSummary) ===
+  // === COMPANY TAB (ADR-110: 基本／取引プロフィール／実績サマリー／引き継ぎ) ===
   if (tab === "company") {
     return (
       <div className="right-panel-section">
-        <div className="right-panel-row">
-          <span className="right-panel-label">{t("leads.companyName")}</span>
-          <input className="right-panel-field" type="text"
-            value={cardForm.company_name ?? ""}
-            onChange={(e) => handleCardFieldChange("company_name", e.target.value)}
-            onBlur={handleCardFieldBlur} />
-        </div>
+        {/* 基本 */}
+        <div className="right-panel-group-heading">{t("inbox.sectionBasic")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.nickname")}</span>
           <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
@@ -327,6 +384,9 @@ function KarteTabContent({
             <option value="価格重視">{t("leads.customerType_price")}</option>
           </select>
         </div>
+
+        {/* 取引プロフィール */}
+        <div className="right-panel-group-heading">{t("inbox.sectionTradeProfile")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.targetTitles")}</span>
           <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
@@ -338,13 +398,16 @@ function KarteTabContent({
           <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
             onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
         </div>
+
+        {/* 実績サマリー（読み取り専用） */}
+        <PerformanceSummary leadId={leadDetail.id} />
+
+        {/* 引き継ぎ */}
+        <div className="right-panel-group-heading">{t("inbox.sectionHandover")}</div>
         <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
         <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
           onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
           onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
-
-        {/* ADR-108: Performance Summary (read-only) */}
-        <PerformanceSummary leadId={leadDetail.id} />
       </div>
     );
   }
@@ -446,8 +509,10 @@ interface InvoiceSummary {
 }
 
 function PerformanceSummary({ leadId }: { leadId: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
+  const [txCount, setTxCount] = useState<number>(0);
+  const [lastTxDate, setLastTxDate] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState<number | null>(null);
   const [lastMessageDate, setLastMessageDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -465,12 +530,7 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
         if (!cancelled) {
           const msgs = msgData.messages ?? [];
           setMessageCount(msgs.length);
-          if (msgs.length > 0) {
-            const lastMsg = msgs[msgs.length - 1];
-            setLastMessageDate(lastMsg.created_at ?? null);
-          } else {
-            setLastMessageDate(null);
-          }
+          setLastMessageDate(msgs.length > 0 ? (msgs[msgs.length - 1].created_at ?? null) : null);
         }
       } catch {
         if (!cancelled) {
@@ -479,30 +539,37 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
         }
       }
 
-      // Fetch invoices for total revenue
+      // Fetch invoices for total revenue / transaction count / last transaction date.
+      // ADR-110: 取引額の取得元は別ADR（v_company_stats）に従う。それまでは ADR-108 と同じ
+      // invoices ベース（paid_at 非NULL かつ voided_at NULL）で算出する。
       try {
         const invoiceData = await api.get<{ invoices: InvoiceSummary[] } | InvoiceSummary[]>(
           `/invoices?lead_id=${leadId}`
         );
         if (!cancelled) {
           const invoices = Array.isArray(invoiceData) ? invoiceData : (invoiceData.invoices ?? []);
-          // ADR-108: paid_at non-null AND voided_at null
           const paidInvoices = invoices.filter(
             (inv) => inv.paid_at != null && inv.voided_at == null
           );
           if (paidInvoices.length > 0) {
-            const total = paidInvoices.reduce(
-              (sum, inv) => sum + (Number(inv.total_amount) || 0),
-              0
-            );
-            setTotalRevenue(total);
+            setTotalRevenue(paidInvoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0));
+            setTxCount(paidInvoices.length);
+            const latest = paidInvoices.reduce<string | null>((max, inv) => {
+              if (!inv.paid_at) return max;
+              return max == null || inv.paid_at > max ? inv.paid_at : max;
+            }, null);
+            setLastTxDate(latest);
           } else {
             setTotalRevenue(null);
+            setTxCount(0);
+            setLastTxDate(null);
           }
         }
       } catch {
         if (!cancelled) {
           setTotalRevenue(null);
+          setTxCount(0);
+          setLastTxDate(null);
         }
       }
 
@@ -513,50 +580,50 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
     return () => { cancelled = true; };
   }, [leadId]);
 
-  if (loading) {
-    return (
-      <div className="karte-performance-section">
-        <div className="right-panel-group-heading">{t("inbox.sectionPerformance")}</div>
-        <div className="right-panel-row">
-          <span className="right-panel-value">...</span>
-        </div>
-      </div>
-    );
-  }
+  // 取引額累計: 取引が無ければ「取引実績なし」(ADR-110 / status では判定しない)
+  const revenueText = totalRevenue != null
+    ? totalRevenue.toLocaleString()
+    : t("inbox.performanceNoHistory");
+  const revenueMuted = totalRevenue == null;
 
-  const hasAnyHistory = totalRevenue != null;
+  // 取引回数・最終取引日: データ無しは「—」
+  const txText = txCount > 0
+    ? t("inbox.performanceTxValue", {
+        n: txCount,
+        date: lastTxDate ? new Date(lastTxDate.replace(" ", "T")).toLocaleDateString(i18n.language) : "—",
+      })
+    : "—";
+
+  // 会話数・最終会話: データ無しは「—」
+  const lastMsgRel = relativeFromNow(lastMessageDate, i18n.language);
+  const convText = (messageCount ?? 0) > 0
+    ? t("inbox.performanceConvValue", { n: messageCount ?? 0, time: lastMsgRel ?? "—" })
+    : "—";
 
   return (
     <div className="karte-performance-section">
-      <div className="right-panel-group-heading">{t("inbox.sectionPerformance")}</div>
-      {!hasAnyHistory ? (
-        <div className="right-panel-row">
-          <span className="right-panel-value">{t("inbox.performanceNoHistory")}</span>
-        </div>
-      ) : (
-        <>
-          <div className="right-panel-row">
-            <span className="right-panel-label">{t("inbox.performanceTotalRevenue")}</span>
-            <span className="right-panel-value">
-              {totalRevenue != null
-                ? `${totalRevenue.toLocaleString()}`
-                : "—"}
-            </span>
-          </div>
-          <div className="right-panel-row">
-            <span className="right-panel-label">{t("inbox.performanceMessageCount")}</span>
-            <span className="right-panel-value">{messageCount ?? 0}</span>
-          </div>
-          <div className="right-panel-row">
-            <span className="right-panel-label">{t("inbox.performanceLastMessage")}</span>
-            <span className="right-panel-value">
-              {lastMessageDate
-                ? new Date(lastMessageDate.replace(" ", "T")).toLocaleDateString("ja-JP")
-                : "—"}
-            </span>
-          </div>
-        </>
-      )}
+      <div className="right-panel-group-heading karte-ro-heading">
+        <NAV_ICONS.lock size={ICON.sm} className="karte-ro-lock" aria-hidden="true" />
+        {t("inbox.sectionPerformance")}
+      </div>
+      <div className="karte-ro-row">
+        <span className="karte-ro-label">{t("inbox.performanceTotalRevenue")}</span>
+        <span className={`karte-ro-value${revenueMuted ? " muted" : ""}`}>
+          {loading ? "…" : revenueText}
+        </span>
+      </div>
+      <div className="karte-ro-row">
+        <span className="karte-ro-label">{t("inbox.performanceTxCount")}</span>
+        <span className={`karte-ro-value${txCount > 0 ? "" : " muted"}`}>
+          {loading ? "…" : txText}
+        </span>
+      </div>
+      <div className="karte-ro-row">
+        <span className="karte-ro-label">{t("inbox.performanceConversation")}</span>
+        <span className={`karte-ro-value${(messageCount ?? 0) > 0 ? "" : " muted"}`}>
+          {loading ? "…" : convText}
+        </span>
+      </div>
     </div>
   );
 }

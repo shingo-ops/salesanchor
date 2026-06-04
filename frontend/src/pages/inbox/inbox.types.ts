@@ -112,6 +112,25 @@ export function relativeTime(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" });
 }
 
+/**
+ * 現在を起点にロケール対応の相対表記を返す（例: ja「1日前」/ en「1 day ago」）。
+ * ADR-110 カルテ見出しの「最終接触からの経過」・実績サマリーの「最終会話」用。
+ * 値が無効なら null（呼び出し側で「—」等にフォールバック）。
+ */
+export function relativeFromNow(iso: string | null | undefined, lang: string): string | null {
+  const d = parseDate(iso ?? null);
+  if (!d) return null;
+  const sec = (d.getTime() - Date.now()) / 1000;
+  const rtf = new Intl.RelativeTimeFormat(lang || "en", { numeric: "auto" });
+  const min = sec / 60, hr = min / 60, day = hr / 24, month = day / 30, year = day / 365;
+  if (Math.abs(sec) < 60) return rtf.format(Math.round(sec), "second");
+  if (Math.abs(min) < 60) return rtf.format(Math.round(min), "minute");
+  if (Math.abs(hr) < 24) return rtf.format(Math.round(hr), "hour");
+  if (Math.abs(day) < 30) return rtf.format(Math.round(day), "day");
+  if (Math.abs(month) < 12) return rtf.format(Math.round(month), "month");
+  return rtf.format(Math.round(year), "year");
+}
+
 /** `2026-04-30 14:25` 形式の絶対時刻（吹き出しの hover タイトル用）。 */
 export function formatAbsolute(iso: string | null): string {
   const d = parseDate(iso);

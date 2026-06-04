@@ -235,6 +235,7 @@ export const NAV_ICONS = {
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
   purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
+  lock:        Lock,               // 読み取り専用セクション識別（ADR-110 実績サマリー）
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用

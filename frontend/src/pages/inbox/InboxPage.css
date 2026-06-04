@@ -1235,6 +1235,118 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   width: 100%;
 }
 
+/* ====== ADR-110: カルテ見出し（段階バッジ + 最終接触からの経過） ====== */
+.karte-header {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.karte-header-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+.karte-header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.karte-last-contact {
+  font-size: var(--font-2xs);
+  color: var(--text-muted);
+}
+.karte-stage-badge {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: var(--font-2xs);
+  font-weight: 600;
+  white-space: nowrap;
+  padding: var(--space-2px) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--link-active-bg);
+  color: var(--accent);
+}
+.karte-stage-badge.customer {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+/* ====== ADR-110: アクションバー「…」オーバーフロー ====== */
+.karte-action-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-micro);
+}
+.karte-action-more:hover { background: var(--bg-subtle); }
+.karte-action-menu {
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--border);
+}
+.karte-action-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-surface);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+.karte-action-menu-item:last-child { border-bottom: none; }
+.karte-action-menu-item:hover { background: var(--bg-subtle); }
+
+/* ====== ADR-110: 実績サマリー 読み取り専用行（編集項目と視覚的に区別） ====== */
+.karte-ro-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.karte-ro-lock {
+  flex-shrink: 0;
+  color: var(--success);
+}
+.karte-ro-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--bg-subtle);
+  font-size: var(--font-sm);
+}
+.karte-ro-row:last-child { border-bottom: none; }
+.karte-ro-label {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+.karte-ro-value {
+  color: var(--success);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+.karte-ro-value.muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 /* ====== 受信箱設定モーダル ====== */
 .inbox-settings-modal {
   background: var(--bg-surface); border: 1px solid var(--border);
