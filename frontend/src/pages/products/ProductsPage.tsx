@@ -631,7 +631,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
               <th>{t("products.masterCol.mark")}</th>
               <th
                 onClick={toggleNameSort}
-                style={{ cursor: "pointer", userSelect: "none", minWidth: "16rem" }}
+                style={{ cursor: "pointer", userSelect: "none", minWidth: "22rem" }}
                 title={t("products.sortByName")}
                 data-testid="products-sort-name"
               >
@@ -647,7 +647,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             </tr>
             <tr>
               {/* 下段 = 上段と対になる項目 */}
-              <th>{t("products.masterCol.categoryClassification")}</th>
+              <th>{t("products.field.setType")}</th>
               <th>{t("products.masterCol.releaseDate")}</th>
               <th>{t("products.masterCol.titleEn")}</th>
               <th>{t("products.masterCol.boxWeight")}</th>
@@ -702,8 +702,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   data-product-stripe={stripe}
                   onClick={() => { if (hasPermission("products.update")) handleEdit(p); }}
                 >
-                  <td>{p.category_classification || "-"}</td>
-                  <td>{p.release_date || "-"}</td>
+                  <td>{p.set_type || "-"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{p.release_date || "-"}</td>
                   <td>{p.name_en || "-"}</td>
                   <td>{p.box_weight_kg != null ? Number(p.box_weight_kg).toFixed(1) : "-"}</td>
                   <td>{p.case_weight_kg != null ? Number(p.case_weight_kg).toFixed(1) : "-"}</td>
@@ -777,7 +777,9 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   );
 
   if (embedded) {
-    return <div className="page" data-testid="products-master-embedded">{body}</div>;
+    // page--full: 商品マスタは列が多い広いテーブルのため、.page の max-width(1200px)を外して
+    // マスタ管理タブの幅いっぱいに広げる（右の余白を埋める / 発売日の改行防止）。
+    return <div className="page page--full" data-testid="products-master-embedded">{body}</div>;
   }
   return (
     <PageLayout navKey="nav.products" subtitleKey="products.subtitle" headerAction={headerAction}>
