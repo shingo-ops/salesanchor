@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-04 / ADR 総数: 85 件
+最終更新: 2026-06-04 / ADR 総数: 86 件
 
 ## 一覧
 
@@ -93,6 +93,7 @@
 | [ADR-093](./ADR-093-inventory-table-product-master-redesign.md) | ADR-093: 在庫表 / 仕入元オファー / 商品マスタ 再設計 | Accepted | — |
 | [ADR-094](./ADR-094-sales-management-page.md) | ADR-094: 売上管理ページ（Single Source of Truth） | Proposed | — |
 | [ADR-107](./ADR-107-sa-analytics-agent-a-customer-priority.md) | ADR-107 — 分析エージェント (A) 顧客優先度付け | Proposed | 2026-06-04 |
+| [ADR-108](./ADR-108-inbox-karte-panel-redesign.md) | ADR-108: 受信箱カルテの表示再編（商談／顧客／連絡先の再編・段階出し分け） | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — |
 
 ## ステータス凡例
