@@ -78,8 +78,8 @@ export default function ContactChannelLinks({ contactId }: Props) {
                 fontSize: "var(--text-xs)",
                 padding: "1px 4px",
                 borderRadius: "var(--radius-sm)",
-                background: "var(--color-warning-subtle, #fff3cd)",
-                color: "var(--color-warning, #856404)",
+                background: "var(--warning-bg)",
+                color: "var(--warning-text)",
               }}
               title={link.notes ?? undefined}
             >
