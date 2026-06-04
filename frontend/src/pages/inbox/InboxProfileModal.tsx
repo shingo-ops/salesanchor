@@ -28,10 +28,6 @@ interface CardForm {
   notes?: string | null;
   meeting_memo?: string | null;
   cs_memo?: string | null;
-  messenger_link?: string | null;
-  discord_id?: string | null;
-  instagram_link?: string | null;
-  whatsapp_link?: string | null;
 }
 
 interface ConversationSummary {
@@ -111,6 +107,7 @@ export function InboxProfileModal({
         </div>
 
         <div className="right-panel-tab-content">
+          {/* === CONTACT TAB (ADR-108: removed messenger_link, discord_id, instagram_link, whatsapp_link) === */}
           {profileModalTab === "contact" && (
             <div className="right-panel-section">
               <div className="right-panel-row">
@@ -123,19 +120,7 @@ export function InboxProfileModal({
                 <input className="right-panel-field" type="tel" value={cardForm.phone ?? ""}
                   onChange={(e) => handleCardFieldChange("phone", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.messengerLink")}</span>
-                <input className="right-panel-field" type="url" value={cardForm.messenger_link ?? ""}
-                  onChange={(e) => handleCardFieldChange("messenger_link", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="https://m.me/..." />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.discordId")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.discord_id ?? ""}
-                  onChange={(e) => handleCardFieldChange("discord_id", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="username#0000" />
-              </div>
-              {/* AC1.8: Discord Gateway 情報（読み取り専用） */}
+              {/* Discord user ID (read-only) */}
               {leadDetail.discord_user_id && (
                 <div className="right-panel-row">
                   <span className="right-panel-label">{t("leads.discordUserId")}</span>
@@ -143,20 +128,17 @@ export function InboxProfileModal({
                     readOnly tabIndex={-1} />
                 </div>
               )}
+              {/* Meta channels: "Not linked" badge */}
               <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.instagramLink")}</span>
-                <input className="right-panel-field" type="url" value={cardForm.instagram_link ?? ""}
-                  onChange={(e) => handleCardFieldChange("instagram_link", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="https://instagram.com/..." />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.whatsappLink")}</span>
-                <input className="right-panel-field" type="url" value={cardForm.whatsapp_link ?? ""}
-                  onChange={(e) => handleCardFieldChange("whatsapp_link", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="https://wa.me/..." />
+                <span className="right-panel-label">Meta (Messenger / Instagram)</span>
+                <span className="right-panel-value karte-meta-badge">
+                  {t("inbox.metaChannelBadge")}
+                </span>
               </div>
             </div>
           )}
+
+          {/* === COMPANY TAB (ADR-108: CRM fields) === */}
           {profileModalTab === "company" && (
             <div className="right-panel-section">
               <div className="right-panel-row">
@@ -164,8 +146,44 @@ export function InboxProfileModal({
                 <input className="right-panel-field" type="text" value={cardForm.company_name ?? ""}
                   onChange={(e) => handleCardFieldChange("company_name", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
+              <div className="right-panel-row">
+                <span className="right-panel-label">{t("leads.nickname")}</span>
+                <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
+                  onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
+              </div>
+              <div className="right-panel-row">
+                <span className="right-panel-label">{t("leads.country")}</span>
+                <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
+                  onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
+              </div>
+              <div className="right-panel-row">
+                <span className="right-panel-label">{t("leads.customerType")}</span>
+                <select className="right-panel-field" value={cardForm.customer_type ?? ""}
+                  onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>
+                  <option value="">—</option>
+                  <option value="信頼重視">{t("leads.customerType_trust")}</option>
+                  <option value="価格重視">{t("leads.customerType_price")}</option>
+                </select>
+              </div>
+              <div className="right-panel-row">
+                <span className="right-panel-label">{t("leads.targetTitles")}</span>
+                <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
+                  onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
+                  onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
+              </div>
+              <div className="right-panel-row">
+                <span className="right-panel-label">{t("leads.salesForm")}</span>
+                <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
+                  onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
+              </div>
+              <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
+              <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
+                onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
+                onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
             </div>
           )}
+
+          {/* === DEAL TAB (ADR-108: SFA fields ONLY) === */}
           {profileModalTab === "deal" && (
             <div className="right-panel-section">
               <div className="right-panel-memo-label">{t("leads.nextAction")}</div>
@@ -192,36 +210,6 @@ export function InboxProfileModal({
                 onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.challenge")} />
               <hr className="right-panel-divider" />
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.nickname")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
-                  onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.country")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
-                  onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.targetTitles")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
-                  onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.salesForm")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-                  onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
-              </div>
-              <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.customerType")}</span>
-                <select className="right-panel-field" value={cardForm.customer_type ?? ""}
-                  onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>
-                  <option value="">—</option>
-                  <option value="信頼重視">{t("leads.customerType_trust")}</option>
-                  <option value="価格重視">{t("leads.customerType_price")}</option>
-                </select>
-              </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.temperature")}</span>
                 <select className="right-panel-field" value={cardForm.temperature ?? ""}
@@ -276,10 +264,6 @@ export function InboxProfileModal({
               <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
                 onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.meetingMemo")} />
-              <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
-                onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
-                onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
             </div>
           )}
         </div>
