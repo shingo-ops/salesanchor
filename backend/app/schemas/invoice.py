@@ -76,6 +76,8 @@ class InvoiceItemResponse(BaseModel):
     weight: Decimal | None
     subtotal: Decimal
     sort_order: int
+    # C-6: HS コード（輸出用）
+    hs_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -117,6 +119,13 @@ class InvoiceResponse(BaseModel):
     created_by: int | None
     created_at: datetime
     updated_at: datetime
+    # C-6: スナップショット列（migration で追加、古いレコードは NULL）
+    ship_to_snapshot: dict | None = None
+    bill_to_snapshot: dict | None = None
+    issue_mode: str | None = None
+    duty_amount: Decimal | None = None
+    duty_policy_snapshot: dict | None = None
+    fx_rate_snapshot: dict | None = None
 
     model_config = {"from_attributes": True}
 
