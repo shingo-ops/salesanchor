@@ -561,10 +561,10 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   <input type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.master.caseWeightKg")}</label>
-                  <input type="number" min="0" step="0.1" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+                  <input type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.master.boxWeightKg")}</label>
-                  <input type="number" min="0" step="0.1" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
+                  <input type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t("products.master.volumeWeight")}</label>
                   <input type="number" min="0" step="0.001" value={form.volume_weight} onChange={(e) => setForm({ ...form, volume_weight: e.target.value })} />
