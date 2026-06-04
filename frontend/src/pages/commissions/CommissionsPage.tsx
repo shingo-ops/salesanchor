@@ -10,12 +10,22 @@
  *     権限は orders.view 流用（commissions.view 未定義のため）。
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { usePermissions } from "../../hooks/usePermissions";
+import CommissionPanel from "../../components/CommissionPanel";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
+
+/** 担当者割当の対象受注を選ぶための最小 DTO（/financials/orders 流用）。 */
+interface CommissionOrderItem {
+  order_id: number;
+  order_number: string;
+  company_name: string | null;
+  contact_display_name: string | null;
+}
 
 interface MonthlyByStaff {
   staff_id: number | null;
@@ -41,6 +51,8 @@ const fmt = (n: number) =>
 
 export default function CommissionsPage() {
   const { t } = useTranslation();
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission("orders.update");
 
   // 月選択の初期値は JST 業務日基準（CommissionSettingsPage と同方式）。
   const nowJst = new Date(
@@ -51,6 +63,17 @@ export default function CommissionsPage() {
   const [monthly, setMonthly] = useState<MonthlySummaryDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // 担当者割当セクション（orders.update 保持時のみ）の状態。
+  const [orders, setOrders] = useState<CommissionOrderItem[]>([]);
+  const [assigning, setAssigning] = useState<CommissionOrderItem | null>(null);
+
+  const reloadMonthly = useCallback(async () => {
+    const dto = await api.get<MonthlySummaryDto>(
+      `/commissions/monthly?year=${year}&month=${month}`,
+    );
+    setMonthly(dto);
+  }, [year, month]);
 
   const ROLE_LABELS: Record<RoleKey, string> = {
     sales: t("commissions.role_sales"),
@@ -82,6 +105,25 @@ export default function CommissionsPage() {
     load();
     return () => { cancelled = true; };
   }, [year, month, t]);
+
+  // 担当者割当の対象受注一覧（編集権限がある時のみ取得）。
+  useEffect(() => {
+    if (!canEdit) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const dto = await api.get<{ items: CommissionOrderItem[] }>(
+          "/financials/orders",
+        );
+        if (!cancelled) setOrders(dto.items);
+      } catch {
+        // 受注一覧の取得失敗は月次集計表示を妨げないため握り潰す。
+        if (!cancelled) setOrders([]);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [canEdit]);
 
   return (
     <PageLayout navKey="nav.commissions" subtitleKey="commissions.listSubtitle">
@@ -130,7 +172,7 @@ export default function CommissionsPage() {
             <table className="data-table" data-testid="commissions-by-staff">
               <thead>
                 <tr>
-                  <th>{t("commissions.colRole")}</th>
+                  <th>{t("commissions.colStaff")}</th>
                   <th>{t("commissions.total")}</th>
                 </tr>
               </thead>
@@ -174,6 +216,56 @@ export default function CommissionsPage() {
           </p>
         )}
       </fieldset>
+
+      {/* 担当者割当・再計算（orders.update 保持時のみ）。受注を選んで CommissionPanel を開く。 */}
+      {canEdit && (
+        <fieldset style={{ marginTop: "var(--space-4)" }}>
+          <legend>{t("commissions.manageLegend")}</legend>
+          <table className="data-table" data-testid="commissions-manage-orders">
+            <thead>
+              <tr>
+                <th>{t("commissions.colOrder")}</th>
+                <th>{t("common.name")}</th>
+                <th>{t("common.actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="empty">{t("commissions.noData")}</td>
+                </tr>
+              )}
+              {orders.map((o) => (
+                <tr key={o.order_id}>
+                  <td>{o.order_number}</td>
+                  <td>{o.contact_display_name ?? o.company_name ?? "-"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-sm"
+                      data-testid={`commissions-assign-${o.order_id}`}
+                      onClick={() => setAssigning(o)}
+                    >
+                      {t("commissions.assignStaff")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </fieldset>
+      )}
+
+      {assigning && (
+        <CommissionPanel
+          orderId={assigning.order_id}
+          orderNumber={assigning.order_number}
+          onClose={() => setAssigning(null)}
+          onSaved={() => {
+            void reloadMonthly();
+          }}
+        />
+      )}
     </PageLayout>
   );
 }

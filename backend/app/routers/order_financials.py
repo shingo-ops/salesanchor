@@ -372,9 +372,13 @@ async def get_monthly_summary(
 
 
 # cost_total を構成するカラム（SQL 集計用）。schema の _COST_FIELDS と一致させる。
+# 各列を COALESCE(col, 0) で囲み、いずれかが NULL の場合に合計全体が NULL に
+# 伝播するのを防ぐ（Reviewer #1598 F2）。
 _COST_SQL_EXPR = (
-    "purchase_cost + purchase_shipping + paypal_fee + wise_fee + exchange_fee + "
-    "outsource_fee + packing_fee + ad_cost + return_fee + refund_amount"
+    "COALESCE(purchase_cost, 0) + COALESCE(purchase_shipping, 0) + "
+    "COALESCE(paypal_fee, 0) + COALESCE(wise_fee, 0) + COALESCE(exchange_fee, 0) + "
+    "COALESCE(outsource_fee, 0) + COALESCE(packing_fee, 0) + COALESCE(ad_cost, 0) + "
+    "COALESCE(return_fee, 0) + COALESCE(refund_amount, 0)"
 )
 
 

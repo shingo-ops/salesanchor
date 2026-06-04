@@ -1324,7 +1324,11 @@
     "fixedSuffix": "fixed",
     "lastUpdated": "Last Updated",
     "subtitle": "Manage commission rates and monthly results by role.",
-    "listSubtitle": "Review commission results by staff and month."
+    "listSubtitle": "Review commission results by staff and month.",
+    "colStaff": "Staff",
+    "manageLegend": "Staff assignment & recalculation",
+    "colOrder": "Order number",
+    "assignStaff": "Assign staff"
   },
   "faq": {
     "title": "FAQ",
@@ -2017,6 +2021,7 @@
     "revenueTotal": "Total revenue",
     "costTotal": "Total cost",
     "grossProfitTotal": "Total gross profit",
-    "count": "Count"
+    "count": "Count",
+    "editFinancial": "Edit financial"
   }
 }

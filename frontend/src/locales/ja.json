@@ -1324,7 +1324,11 @@
     "fixedSuffix": "固定",
     "lastUpdated": "最終更新",
     "subtitle": "役割別の報酬レートと月次実績を管理します。",
-    "listSubtitle": "担当者別・月次の報酬実績を確認できます。"
+    "listSubtitle": "担当者別・月次の報酬実績を確認できます。",
+    "colStaff": "担当者",
+    "manageLegend": "担当者割当・再計算",
+    "colOrder": "受注番号",
+    "assignStaff": "担当者割当"
   },
   "faq": {
     "title": "FAQ",
@@ -2017,6 +2021,7 @@
     "revenueTotal": "売上合計",
     "costTotal": "原価合計",
     "grossProfitTotal": "粗利合計",
-    "count": "件数"
+    "count": "件数",
+    "editFinancial": "売上を編集"
   }
 }
