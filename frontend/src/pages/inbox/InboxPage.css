@@ -1191,21 +1191,20 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 .right-panel-save-indicator .saved { color: var(--success-bg); }
 .right-panel-save-indicator .error  { color: var(--danger-bg); }
 
-/* ====== ADR-108: Fixed Action Bar (flex, NOT position:fixed) ====== */
+/* ====== ADR-110: Fixed Action Bar with overflow ====== */
 .karte-action-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
   padding: var(--space-3);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 .karte-action-primary {
   flex: 1;
-  max-width: var(--modal-profile-max-w, 400px);
   padding: var(--space-2) var(--space-4);
   background: var(--accent);
   color: var(--on-accent);
@@ -1219,6 +1218,51 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 }
 .karte-action-primary:hover { background: var(--accent-hover); }
 
+/* ADR-110: "…" overflow button */
+.karte-action-overflow {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  line-height: 1;
+  font-family: inherit;
+  transition: background var(--transition-micro);
+}
+.karte-action-overflow:hover { background: var(--bg-hover); }
+
+/* ADR-110: Overflow dropdown menu */
+.karte-overflow-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  min-width: var(--min-width-dropdown);
+  overflow: hidden;
+}
+.karte-overflow-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+}
+.karte-overflow-menu button:last-child { border-bottom: none; }
+.karte-overflow-menu button:hover { background: var(--bg-hover); }
+
 /* ADR-108: Meta "Not linked" badge */
 .karte-meta-badge {
   font-size: var(--font-xs);
@@ -1229,9 +1273,79 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   display: inline-block;
 }
 
-/* ADR-108: Performance summary section */
+/* ADR-110: Header sub info (country・customer_type) */
+.right-panel-sub {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* ADR-110: Stage badge row (badge + last contact in one flex line) */
+.karte-header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+/* ADR-110: Stage badge */
+.karte-stage-badge {
+  font-size: var(--font-2xs);
+  font-weight: 600;
+  padding: var(--space-2px) var(--space-6px);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  display: inline-block;
+}
+.karte-stage-badge--lead    { background: var(--link-active-bg); color: var(--accent); }
+.karte-stage-badge--deal    { background: var(--warning-bg); color: var(--warning-text); }
+.karte-stage-badge--existing { background: var(--success-bg); color: var(--success-text); }
+.karte-stage-badge--followup { background: var(--bg-subtle); color: var(--text-secondary); }
+.karte-stage-badge--default  { background: var(--bg-subtle); color: var(--text-muted); }
+
+/* ADR-110: Last contact elapsed text */
+.karte-last-contact {
+  font-size: var(--font-2xs);
+  color: var(--text-muted);
+}
+
+/* ADR-110: Read-only section heading (with lock icon) */
+.karte-section-ro-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--success-text);
+}
+.karte-lock-icon { color: var(--success-text); flex-shrink: 0; }
+
+/* ADR-110: Read-only row in performance summary */
+.karte-ro-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-sm);
+}
+.karte-ro-row:last-child { border-bottom: none; }
+
+/* ADR-110: Read-only value (teal/green, bold) */
+.karte-ro-value {
+  color: var(--success-text);
+  font-weight: 600;
+  text-align: right;
+}
+.karte-ro-muted {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-align: right;
+}
+
+/* ADR-110: Performance summary section */
 .karte-performance-section {
-  padding: var(--space-2) 0;
+  padding: var(--space-1) 0 var(--space-2);
   width: 100%;
 }
 

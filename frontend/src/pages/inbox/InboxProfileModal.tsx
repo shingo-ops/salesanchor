@@ -97,7 +97,7 @@ export function InboxProfileModal({
         </div>
 
         <div className="right-panel-tabs">
-          {(["deal", "contact", "company"] as KarteTabKey[]).map((tab) => (
+          {(["deal", "company", "contact"] as KarteTabKey[]).map((tab) => (
             <button key={tab} type="button"
               className={`right-panel-tab${profileModalTab === tab ? " active" : ""}`}
               onClick={() => setProfileModalTab(tab)}>
