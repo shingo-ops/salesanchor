@@ -85,6 +85,21 @@
   overflow: hidden;
 }
 
+/* ── API 連携プレースホルダー ──
+   コンテンツ領域いっぱいに「現在作成中」を中央表示する白紙。 */
+.integration-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: var(--space-6);
+  color: var(--text-muted);
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semi);
+  text-align: center;
+}
+
 /* ── レスポンシブ: スマートフォン ── */
 @media (max-width: 767px) {
   .hub-shell {

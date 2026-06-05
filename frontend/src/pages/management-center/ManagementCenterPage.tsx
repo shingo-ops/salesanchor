@@ -51,6 +51,19 @@ export default function ManagementCenterPage() {
       ],
     },
     {
+      // API 連携（外部サービス連携設定）。現状は各項目とも「現在作成中」プレースホルダー。
+      key: "apiIntegration",
+      titleKey: "managementCenter.sectionApiIntegration",
+      items: [
+        { to: "integrations/google-drive", labelKey: "nav.integrationGoogleDrive", visible: hasPermission("erp.view") },
+        { to: "integrations/fedex",        labelKey: "nav.integrationFedex",       visible: hasPermission("erp.view") },
+        { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: hasPermission("erp.view") },
+        { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: hasPermission("erp.view") },
+        { to: "integrations/yamato",       labelKey: "nav.integrationYamato",      visible: hasPermission("erp.view") },
+        { to: "integrations/sagawa",       labelKey: "nav.integrationSagawa",      visible: hasPermission("erp.view") },
+      ],
+    },
+    {
       key: "business",
       titleKey: "managementCenter.sectionBusiness",
       items: [
