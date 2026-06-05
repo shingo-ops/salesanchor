@@ -65,17 +65,23 @@ async def setup_cross_tenant_tables(admin_engine):
             )
         """)
         )
-        # Grant access to app roles
+        # Grant access to app roles.
+        # SAVEPOINT per role: if the role doesn't exist the savepoint rolls back,
+        # but the outer transaction remains alive (plain try/except doesn't prevent
+        # asyncpg from aborting the transaction on error).
         for role in ("salesanchor_app", "jarvis_app"):
             try:
-                await conn.execute(text(f"GRANT USAGE ON SCHEMA tenant_998 TO {role}"))
-                await conn.execute(
-                    text(
-                        f"GRANT SELECT ON ALL TABLES IN SCHEMA tenant_998 TO {role}"
+                async with conn.begin_nested():
+                    await conn.execute(
+                        text(f"GRANT USAGE ON SCHEMA tenant_998 TO {role}")
                     )
-                )
+                    await conn.execute(
+                        text(
+                            f"GRANT SELECT ON ALL TABLES IN SCHEMA tenant_998 TO {role}"
+                        )
+                    )
             except Exception:
-                pass
+                pass  # role may not exist in this environment
 
         # Seed a reference row
         await conn.execute(
