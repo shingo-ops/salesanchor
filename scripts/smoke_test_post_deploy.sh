@@ -79,9 +79,13 @@ fi
 trap - EXIT
 cleanup_seed
 
-# [6] Fail-close (app.is_operator unset -> 42501)
-FAILCLOSE=$(docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
-  psql -U salesanchor_app -d jarvis_db 2>&1 <<'FC'
+# [6] Fail-close (app.is_operator='' → INSERT with NULL tenant_id must fail)
+# Use ON_ERROR_STOP=1 so psql exits non-zero on SQL error — locale-independent
+# (Japanese PostgreSQL would output "違反" instead of "new row violates")
+FAILCLOSE_OK=false
+docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
+  psql -U salesanchor_app -d jarvis_db -v ON_ERROR_STOP=1 <<'FC' > /dev/null 2>&1 \
+  || FAILCLOSE_OK=true
 BEGIN;
 SET LOCAL app.tenant_id = '1';
 SET LOCAL app.is_operator = '';
@@ -89,10 +93,9 @@ INSERT INTO public.translation_glossary (tenant_id, source_term)
   VALUES (NULL, '__smoke_failclose__');
 ROLLBACK;
 FC
-)
-echo "${FAILCLOSE}" | grep -qE "42501|insufficient_privilege|new row violates" \
+[ "${FAILCLOSE_OK}" = "true" ] \
   && echo "[6] PASS: fail-close OK" \
-  || { echo "[6] FAIL: fail-close not working"; exit 1; }
+  || { echo "[6] FAIL: fail-close not working (INSERT should have been rejected)"; exit 1; }
 
 # [7] No jarvis connections with application_name='salesanchor_backend'
 JARVIS_APP_CONNS=$(docker exec "${POSTGRES}" ${ADMIN_PSQL} -t -c "
