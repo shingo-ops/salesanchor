@@ -87,6 +87,9 @@ interface RowDraft {
   ship_timing: string;
   // 表示専用 (送信しない): LLM が抽出した商品名
   product_name: string;
+  // 表示専用 (送信しない): picker で選択した商品マスタの商品名。選択後も「選択中」として表示し、
+  // 何を選んだか分かるようにする。picker 経由でない自動紐付け行は空（parsed 名で代替表示）。
+  selected_product_name: string;
 }
 
 interface ApproveResponse {
@@ -179,6 +182,8 @@ function detailToDrafts(detail: ParseReviewDetail): RowDraft[] {
       ship_timing: String(item.ship_timing ?? ""),
       // 表示専用: LLM 抽出の商品名
       product_name: String(item.product_name ?? ""),
+      // 初期は未選択（picker 選択時に設定）。
+      selected_product_name: "",
     };
   });
 }
@@ -696,10 +701,10 @@ export default function ParseReviewPage() {
                             />
                           </td>
                         </tr>
-                        {/* 未登録時のみ: 商品マスタ選択 picker を全幅行に置く。
-                            入力欄を候補ドロップダウン幅(〜40rem)まで広げつつ、データ行は
-                            コンパクトに保って横スクロールを出さない。 */}
-                        {row.product_id === null && !isFinal && (
+                        {/* 商品マスタ選択 picker を全幅行に置く。選択後も表示し続け、選び直しと
+                            「選択中」表示を可能にする（承認するまで反映されないため候補選択扱い）。
+                            入力欄は候補ドロップダウン幅(〜40rem)まで広げ、データ行はコンパクトに保つ。 */}
+                        {!isFinal && (
                           <tr
                             data-testid={`review-row-${idx}-picker-row`}
                             style={
@@ -710,6 +715,16 @@ export default function ParseReviewPage() {
                           >
                             <td className="review-col-skip" aria-hidden="true" />
                             <td colSpan={7}>
+                              {/* 選択中の商品マスタ候補を表示（picker 選択名、無ければ解析名で代替）。 */}
+                              {row.product_id !== null && (
+                                <div
+                                  data-testid={`review-row-${idx}-selected-product`}
+                                  style={{ fontSize: "var(--font-sm)", color: "var(--text-primary)", marginBottom: "var(--space-1)" }}
+                                >
+                                  {t("superAdmin.inbound.review.selectedProduct")}:{" "}
+                                  <strong>{row.selected_product_name || row.product_name}</strong>
+                                </div>
+                              )}
                               <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
                                 {t("superAdmin.inbound.review.selectFromMaster")}
                               </div>
@@ -723,7 +738,10 @@ export default function ParseReviewPage() {
                                   /* 商品マスタ選択では在庫(目安)は無関係なので非表示 */
                                   showStockGuide={false}
                                   onSelect={(c: PickedProduct) =>
-                                    updateDraft(idx, { product_id: c.product_id })
+                                    updateDraft(idx, {
+                                      product_id: c.product_id,
+                                      selected_product_name: c.name,
+                                    })
                                   }
                                 />
                               </div>
