@@ -47,6 +47,7 @@ from app.routers import (
     goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
+    integrations,  # API連携 (Googleドライブ 保存テスト 等)
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
@@ -392,6 +393,8 @@ app.include_router(
     erp.router, prefix="/api/v1", tags=["erp"],
     dependencies=[Depends(get_current_tenant)],
 )
+# API連携: Googleドライブ 保存テスト（権限は各エンドポイントの require_permission で判定）
+app.include_router(integrations.router, prefix="/api/v1", tags=["integrations"])
 # Phase 1 再設計: staff / bots
 app.include_router(
     staff.router, prefix="/api/v1", tags=["staff"],

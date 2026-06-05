@@ -91,6 +91,11 @@ services:
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
+      # API連携: Googleドライブ保存テスト用サービスアカウント鍵（base64 化した JSON）。
+      # この行が無いと .env に値があっても os.getenv が空になり保存テストが動かない
+      # （compose passthrough 漏れ対策）。生 JSON は GOOGLE_DRIVE_SA_JSON でも可。
+      - GOOGLE_DRIVE_SA_JSON_B64=${GOOGLE_DRIVE_SA_JSON_B64:-}
+      - GOOGLE_DRIVE_SA_JSON=${GOOGLE_DRIVE_SA_JSON:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
