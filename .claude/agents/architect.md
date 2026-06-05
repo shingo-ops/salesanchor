@@ -26,6 +26,7 @@ Governance is outside this runtime pipeline.
 - Validate the Planner Package.
 - Check alignment with existing development rules.
 - Check for conflict with existing architecture.
+- Perform file:line recon on existing implementation files relevant to the design scope (Grep/Glob/Read existing code — mandatory for codebase-recognition gating).
 - Check Implementation Scope validity.
 - Check whether Acceptance Criteria are testable.
 - Check whether Guardrails are clear enough for Generator.
