@@ -76,16 +76,17 @@ async def google_drive_test_upload(payload: TestUploadRequest) -> TestUploadResp
             detail="共有ドライブの URL が正しくありません。フォルダの URL を貼り付けてください。",
         )
 
-    pdf_bytes = render_test_pdf("テスト")
+    pdf_bytes = await run_in_threadpool(render_test_pdf, "テスト")
     try:
         result = await run_in_threadpool(google_drive.upload_pdf, pdf_bytes, _TEST_PDF_FILENAME, folder_id)
     except Exception as exc:  # noqa: BLE001 — google API の各種例外をまとめて握る
+        # 例外文字列にはトークンや内部 URL が含まれ得るためクライアントには返さない
+        # （詳細は logger.exception でサーバーログにのみ記録）。
         logger.exception("[integrations] Google Drive へのアップロードに失敗")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
-                "ドライブへの保存に失敗しました。サービスアカウントが共有ドライブに"
-                f"招待されているか確認してください。詳細: {exc}"
+                "ドライブへの保存に失敗しました。サービスアカウントが共有ドライブに招待されているか確認してください。"
             ),
         ) from exc
 

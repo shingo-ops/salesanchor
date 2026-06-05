@@ -131,3 +131,21 @@ async def test_test_upload_bad_url(client, monkeypatch):
         json={"drive_url": "not-a-url"},
     )
     assert resp.status_code == 400
+
+
+async def test_test_upload_failure_is_502_without_leak(client, monkeypatch):
+    """アップロード失敗時は 502 を返し、例外文字列（機微情報を含み得る）を漏らさない。"""
+
+    def _boom(pdf, name, folder):
+        raise RuntimeError("secret-token-AKIA-EXAMPLE")
+
+    monkeypatch.setattr(google_drive, "is_configured", lambda: True)
+    monkeypatch.setattr(google_drive, "extract_folder_id", lambda url: "FOLDER123")
+    monkeypatch.setattr(google_drive, "upload_pdf", _boom)
+    monkeypatch.setattr("app.routers.integrations.render_test_pdf", lambda text="テスト": b"%PDF-1.4 test")
+    resp = await client.post(
+        "/api/v1/integrations/google-drive/test-upload",
+        json={"drive_url": "https://drive.google.com/drive/folders/FOLDER123"},
+    )
+    assert resp.status_code == 502
+    assert "secret-token" not in resp.text

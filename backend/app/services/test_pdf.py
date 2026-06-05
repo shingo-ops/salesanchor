@@ -15,12 +15,12 @@ import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-from app.services.po_renderer import _register_japanese_font
+from app.services.po_renderer import register_japanese_font
 
 
 def render_test_pdf(text: str = "テスト") -> bytes:
     """中央に text を描いたテスト用 PDF を bytes で返す。"""
-    font = _register_japanese_font()
+    font = register_japanese_font()
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4

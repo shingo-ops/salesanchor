@@ -93,9 +93,9 @@ services:
       - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
       # API連携: Googleドライブ保存テスト用サービスアカウント鍵（base64 化した JSON）。
       # この行が無いと .env に値があっても os.getenv が空になり保存テストが動かない
-      # （compose passthrough 漏れ対策）。生 JSON は GOOGLE_DRIVE_SA_JSON でも可。
+      # （compose passthrough 漏れ対策）。本番/コンテナは B64 に一本化（deploy.yml と整合）。
+      # 生 JSON (GOOGLE_DRIVE_SA_JSON) はコード側で読めるがローカル/テスト用途のみ。
       - GOOGLE_DRIVE_SA_JSON_B64=${GOOGLE_DRIVE_SA_JSON_B64:-}
-      - GOOGLE_DRIVE_SA_JSON=${GOOGLE_DRIVE_SA_JSON:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
