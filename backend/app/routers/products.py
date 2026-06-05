@@ -32,7 +32,7 @@ from app.auth.dependencies import (
     reset_tenant_context,
 )
 from app.cache import invalidate_dashboard_cache
-from app.database import get_db
+from app.database import get_admin_db, get_db
 from app.models import User
 from app.schemas.product import (
     InventoryCheckResponse,
@@ -463,11 +463,19 @@ _DOWNSTREAM_TABLES_TO_CHECK = (
 
 
 async def _check_product_references(
-    db: AsyncSession, product_id: int, tenant_id: int
+    db: AsyncSession,
+    product_id: int,
+    tenant_id: int,
+    admin_db: AsyncSession | None = None,
 ) -> list[str]:
     """指定 product_id を参照している下流テーブルのリストを返す。
 
     Phase 1-C M-MVP Q9: FK 参照ありの場合は物理削除せず 409 を返す。
+
+    SA-18 Phase2: pg_namespace 走査と各テナント schema の SELECT は
+    admin_db（管理者セッション）で実行する。salesanchor_app ロールでは
+    RLS により他テナント schema をまたいだ走査ができないため。
+    admin_db が None の場合は db にフォールバック（後方互換）。
 
     実装方針（PR #173 review Major 1 対応）:
         - テーブル存在チェックは to_regclass で先取り（schema 修飾名で存在確認）
@@ -477,11 +485,13 @@ async def _check_product_references(
     Issue #565: search_path 依存をやめて schema prefix を明示する。
     SQLite (pytest) は to_regclass 未対応のため prefix なしの dialect 分岐に倒す。
     """
+    # SA-18 Phase2: クロステナント走査は admin_db を使用
+    scan_db = admin_db if admin_db is not None else db
     blocking: list[str] = []
     if is_postgresql(db):
         # ADR-090: products は public 中央テーブルになったため、削除時は全テナント schema の
         # 下流参照を確認する（どこか 1 テナントでも参照していれば物理削除を拒否）。
-        schemas_result = await db.execute(
+        schemas_result = await scan_db.execute(
             text("SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_[0-9]+$' ORDER BY nspname"),
         )
         schemas = [r[0] for r in schemas_result.all()]
@@ -489,13 +499,13 @@ async def _check_product_references(
             for schema in schemas:
                 # schema は pg_namespace 由来 + table は allowlist 確定済。:id のみバインド。
                 qualified = f"{schema}.{table}"
-                exists_result = await db.execute(
+                exists_result = await scan_db.execute(
                     text("SELECT to_regclass(:qname) IS NOT NULL"),
                     {"qname": qualified},
                 )
                 if not exists_result.scalar():
                     continue
-                result = await db.execute(
+                result = await scan_db.execute(
                     text(f"SELECT EXISTS(SELECT 1 FROM {qualified} WHERE product_id = :id)"),
                     {"id": product_id},
                 )
@@ -534,6 +544,7 @@ async def _check_product_references(
 async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
+    admin_db: AsyncSession = Depends(get_admin_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
@@ -551,7 +562,7 @@ async def delete_product(
     if not old_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
 
-    blocking = await _check_product_references(db, product_id, tenant_id)
+    blocking = await _check_product_references(db, product_id, tenant_id, admin_db=admin_db)
     if blocking:
         # PR #173 review Minor 6 follow-up: 失敗 DELETE 試行も audit_log に残す。
         # 「誰がいつ削除を試みたが下流参照で拒否された」を運用側で追えるようにする。

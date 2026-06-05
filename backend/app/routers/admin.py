@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.database import get_admin_db, get_db
 from app.models import Tenant, User
 from app.schemas.tenant import TenantCreate, TenantResponse
 from app.services.audit import record_audit_log
@@ -18,6 +18,7 @@ router = APIRouter()
 async def register_tenant(
     data: TenantCreate,
     db: AsyncSession = Depends(get_db),
+    admin_db: AsyncSession = Depends(get_admin_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -63,7 +64,7 @@ async def register_tenant(
         await db.flush()  # IDを確定させる（commit前にIDが必要）
 
         # 専用スキーマを自動生成（テーブル + RLSポリシー込み）
-        schema_name = await create_tenant_schema(db, tenant.id)
+        schema_name = await create_tenant_schema(db, tenant.id, admin_db=admin_db)
 
         # 監査ログ記録
         await record_audit_log(

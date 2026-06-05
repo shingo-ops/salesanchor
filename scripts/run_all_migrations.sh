@@ -42,7 +42,11 @@ run_py() {
   shift
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  docker exec "$@" -w /app "${BACKEND}" python "${script}"
+  # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
+  # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
+  docker exec \
+    -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
+    "$@" -w /app "${BACKEND}" python "${script}"
 }
 
 run_sql() {
