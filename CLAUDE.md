@@ -58,6 +58,8 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-112-workflow-redesign-design-origin-flow.md`
 
+**自律クラフト（Phase 1–2 不要）**: バグ修正・CI 修復・リファクタは ADR・設計なしで Generator が自律実施。ゲート＝テスト＋Reviewer のみ。
+
 ---
 
 ## i18n 強制（ADR-027）
