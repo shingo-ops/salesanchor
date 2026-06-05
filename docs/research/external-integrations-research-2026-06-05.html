@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>salesanchor 外部連携 調査レポート — Google Drive / 配送5社（FedEx・DHL・UPS・ヤマト・佐川）</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#fff; --ink:#1f2933; --muted:#5b6770; --line:#e2e6ea;
+    --accent:#2563eb; --accent-soft:#eef4ff; --ok:#0a8a4a; --warn:#b7791f; --danger:#c0392b;
+    --code:#0b3d91; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+    line-height:1.75;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-radius:14px;padding:30px 32px;box-shadow:var(--shadow)}
+  header.hero h1{margin:0 0 6px;font-size:24px;line-height:1.4}
+  header.hero p{margin:4px 0;opacity:.92;font-size:14px}
+  .meta-pills{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+  .meta-pills span{background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;font-size:12px}
+  h2{font-size:20px;margin:40px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--accent);scroll-margin-top:16px}
+  h3{font-size:16px;margin:24px 0 8px;color:#0f2a6b}
+  h4{font-size:14px;margin:16px 0 6px;color:var(--muted)}
+  p{margin:8px 0}
+  a{color:var(--accent);text-decoration:none;word-break:break-all}
+  a:hover{text-decoration:underline}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin:16px 0;box-shadow:var(--shadow)}
+  .toc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 24px;margin:20px 0;box-shadow:var(--shadow)}
+  .toc ol{margin:6px 0;padding-left:22px}
+  .toc a{font-weight:600}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--accent-soft);color:#0f2a6b;font-weight:700}
+  tbody tr:nth-child(even){background:#fafbfc}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#eef1f5;color:var(--code);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .badge{display:inline-block;padding:1px 8px;border-radius:6px;font-size:11.5px;font-weight:700;line-height:1.8}
+  .b-self{background:#e6f6ec;color:var(--ok)}
+  .b-mid{background:#fcf3e0;color:var(--warn)}
+  .b-hard{background:#fbe7e4;color:var(--danger)}
+  .note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+  .warn{border-left:4px solid var(--warn);background:#fdf6e7;padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+  .danger{border-left:4px solid var(--danger);background:#fdecea;padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:3px 0}
+  .prov-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .small{font-size:12.5px;color:var(--muted)}
+  .ref{font-size:12.5px}
+  .ref li{margin:2px 0}
+  hr.sep{border:0;border-top:1px dashed var(--line);margin:22px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  footer{margin-top:48px;font-size:12.5px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>salesanchor 外部連携 調査レポート</h1>
+  <p>Google Drive 連携／発送関連 API（FedEx・DHL・UPS・ヤマト運輸・佐川急便）</p>
+  <p>各社で必要な手順を最新の公式情報からまとめたものです。</p>
+  <div class="meta-pills">
+    <span>作成日: 2026-06-05</span>
+    <span>調査基準日: 2026-06-05</span>
+    <span>出典: 各社公式 Developer Portal / 法人サービス公式ページ</span>
+    <span>関連: ADR-021 / ADR-093・094 / ADR-095・101・103</span>
+  </div>
+</header>
+
+<div class="toc">
+  <strong>目次</strong>
+  <ol>
+    <li><a href="#intro">本書の位置づけ（ADR の現状方針）</a></li>
+    <li><a href="#summary">サマリ比較表</a></li>
+    <li><a href="#roadmap">salesanchor 向け推奨ロードマップ</a></li>
+    <li><a href="#gdrive">Google Drive</a></li>
+    <li><a href="#fedex">FedEx</a></li>
+    <li><a href="#dhl">DHL</a></li>
+    <li><a href="#ups">UPS</a></li>
+    <li><a href="#yamato">ヤマト運輸（クロネコヤマト）</a></li>
+    <li><a href="#sagawa">佐川急便</a></li>
+    <li><a href="#common">横断的な実装メモ</a></li>
+  </ol>
+</div>
+
+<!-- ============ 0. INTRO ============ -->
+<h2 id="intro">1. 本書の位置づけ（ADR の現状方針）</h2>
+<div class="card">
+  <p>リポジトリの ADR を調査したところ、<strong>キャリア直接連携・Google Drive 連携を具体的に定めた ADR はまだ存在せず</strong>、いずれも「将来の別 ADR で扱う」「後日確定」という位置づけでした。関連する既存方針は以下のとおりで、本レポートはその<strong>別 ADR 起案のための前提資料</strong>です。</p>
+  <ul>
+    <li><strong>ADR-021（受注管理）</strong>：発送は <strong>eLogi（発送代行）が現行メイン</strong>。OrderFlow の eLogi CSV（19 カラム固定）を維持。<strong>出力アダプタ層を抽象化し、追加キャリア（DHL / FedEx / ヤマト等）の CSV / API 連携は別 ADR で個別追加</strong>する設計（本 ADR は Scope 外）。<strong>ラベル PDF / CSV の保存先候補に Google Drive</strong>（VPS local / S3 等と並ぶ未確定の選択肢・判断委任事項 Q7）。</li>
+    <li><strong>ADR-021</strong>：Spreadsheet 過去データ移行で <strong>サービスアカウントによる Google Sheets / Drive 直読を既に採用</strong>（＝GCP プロジェクト・サービスアカウント基盤が既存）。</li>
+    <li><strong>ADR-093 / 094（売上管理）</strong>：「Google Drive エクスポート追加」が将来項目。</li>
+    <li><strong>ADR-095 / 101 / 103</strong>：キャリア別の送料・関税の正確な数式は「キャリア連携の段（後日）」と保留。</li>
+  </ul>
+  <div class="note">
+    <strong>重要な含意：</strong>「直接キャリア連携」は eLogi（発送代行アグリゲーター）でカバーできない要件が出た場合の選択肢です。直接連携は各社とも<strong>法人配送契約が前提</strong>で、国内2社（ヤマト・佐川）は<strong>商談・審査・数か月のリードタイム</strong>を要します。まずは <strong>CSV 連携（eLogi / 各社 CSV）＋ Google Drive 保存</strong>から着手し、API 直結は段階的に追加するのが ADR-021 の抽象化方針とも整合します。
+  </div>
+</div>
+
+<!-- ============ 1. SUMMARY ============ -->
+<h2 id="summary">2. サマリ比較表</h2>
+<div class="card">
+<table>
+  <thead>
+    <tr>
+      <th style="width:11%">連携先</th>
+      <th style="width:13%">前提（契約/アカウント）</th>
+      <th style="width:14%">公開API・登録方式</th>
+      <th style="width:14%">認証方式</th>
+      <th style="width:26%">主要機能</th>
+      <th style="width:10%">導入難易度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Google Drive</strong></td>
+      <td>GCP プロジェクト（既存流用可）。Workspace（自社保存時）</td>
+      <td>セルフサーブ（Cloud Console で API 有効化）</td>
+      <td>OAuth 2.0（ユーザー）／サービスアカウント</td>
+      <td>帳票・ラベル PDF/CSV の保存・フォルダ整理・共有リンク</td>
+      <td><span class="badge b-self">低 ★</span></td>
+    </tr>
+    <tr>
+      <td><strong>FedEx</strong></td>
+      <td>FedEx アカウント番号（法人配送契約）</td>
+      <td>セルフサーブ（developer.fedex.com）</td>
+      <td>OAuth 2.0（client_credentials, token 60分）</td>
+      <td>送料見積 / ラベル発行 / 追跡 / 集荷</td>
+      <td><span class="badge b-mid">中 ★★</span></td>
+    </tr>
+    <tr>
+      <td><strong>DHL</strong></td>
+      <td>DHL Express 法人アカウント番号</td>
+      <td>申請＋DHLレビュー（developer.dhl.com）</td>
+      <td>Basic 認証（MyDHL API）※全社的にOAuth2移行中</td>
+      <td>送料見積 / ラベル発行 / 追跡 / 集荷 / 関税見積</td>
+      <td><span class="badge b-mid">中 ★★</span></td>
+    </tr>
+    <tr>
+      <td><strong>UPS</strong></td>
+      <td>UPS アカウント番号（6桁）</td>
+      <td>セルフサーブ（developer.ups.com）</td>
+      <td>OAuth 2.0（client_credentials, token 実効1時間）</td>
+      <td>送料見積 / ラベル発行 / 追跡 / 集荷</td>
+      <td><span class="badge b-mid">中 ★★</span></td>
+    </tr>
+    <tr>
+      <td><strong>ヤマト運輸</strong></td>
+      <td>法人（掛売り）契約＋YBM登録＋API契約</td>
+      <td>営業窓口・商談経由（セルフサーブ不可）</td>
+      <td>非公開（契約後の仕様書で開示）</td>
+      <td>送り状発行 / 追跡 / 集荷（送料事前計算APIは公式に確認できず）</td>
+      <td><span class="badge b-hard">高 ★★★</span></td>
+    </tr>
+    <tr>
+      <td><strong>佐川急便</strong></td>
+      <td>飛脚宅配便 法人契約（顧客コード）＋APIオプション契約</td>
+      <td>営業窓口・商談経由（セルフサーブ不可）</td>
+      <td>利用ID＋顧客コード（具体方式は仕様書で開示）</td>
+      <td>送り状発行 / 追跡 / 集荷（送料計算APIは公式に確認できず）</td>
+      <td><span class="badge b-hard">高 ★★★</span></td>
+    </tr>
+  </tbody>
+</table>
+<p class="small">※「導入難易度」は、契約・登録のハードルとリードタイムを目安にした相対評価。実際の開発工数は各社の API 仕様による。</p>
+</div>
+
+<!-- ============ 2. ROADMAP ============ -->
+<h2 id="roadmap">3. salesanchor 向け推奨ロードマップ</h2>
+<div class="card">
+  <p>ADR-021 の「eLogi-first ＋ 出力アダプタ層を抽象化」方針に沿った段階導入案です。</p>
+  <h3>Phase 0｜Google Drive 保存基盤（最速・審査負荷最小）</h3>
+  <ul>
+    <li>既存 GCP プロジェクト＋既存サービスアカウントを流用し、<strong>サービスアカウント＋自社共有ドライブ（Workspace）</strong>に帳票・ラベル PDF/CSV を保存。</li>
+    <li>ADR-021 のラベル保存先（Q7）の有力解。OAuth の機微スコープ審査・CASA を回避できる。</li>
+    <li>テナントが「自社 Drive に保管したい」要望が出たら、ユーザー OAuth（<code>drive.file</code> スコープ）を追加する二段構え。</li>
+  </ul>
+  <h3>Phase 1｜国際 3 社の API 直結（セルフサーブ寄り）</h3>
+  <ul>
+    <li><strong>UPS / FedEx は OAuth 2.0 でセルフサーブ登録可</strong>。アカウント契約があれば最短。共通の「OAuth トークン取得＋キャッシュ」クライアントを 1 つ用意し、Rate/Ship/Track/Pickup を Bearer で叩く構成。</li>
+    <li><strong>FedEx の Ship（ラベル発行）は Shipping Label Certification が必須</strong>（サンプルラベル提出→審査 約3営業日）。リードタイムを工程に織り込む。</li>
+    <li><strong>DHL は MyDHL API（DHL Express）1 本</strong>で見積/ラベル/追跡/集荷を充足。DHL 側のレビュー承認が入る。</li>
+  </ul>
+  <h3>Phase 2｜国内 2 社（ヤマト・佐川）</h3>
+  <ul>
+    <li>いずれも<strong>法人契約＋商談＋数か月のリードタイム＋従量/月額課金</strong>。即時 API キー発行はできない。</li>
+    <li><strong>第一歩は CSV 連携</strong>（ヤマト B2クラウドへの CSV 取込／佐川 e飛伝Ⅲ への CSV 取込）。API 直結（ヤマト B2クラウドAPI／佐川 送り状発行API）は本格運用フェーズで別途申込。</li>
+    <li><strong>送料の事前計算 API は両社とも公式に確認できず</strong> → 運賃表（タリフ）をアプリ側に保持して算出する設計が現実的。</li>
+    <li>ヤマト「配送連携API」は<strong>「EC事業者→購入者への発送」用途は対象外</strong>の制約があるため、事業者→顧客発送は <strong>B2クラウド/B2クラウドAPI</strong> が正規ルート（商談で要確認）。</li>
+  </ul>
+  <div class="note">共通：各社とも <code>sandbox / production</code> を環境変数で切替、認証情報・API バージョン文字列も設定値化。ADR-021 の<strong>出力アダプタ層（キャリアアダプタ）</strong>に各社実装を載せ、eLogi と並列に差し替え可能にする。</div>
+</div>
+
+<!-- ============ GOOGLE DRIVE ============ -->
+<h2 id="gdrive">4. Google Drive</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-self">導入難易度 低 ★</span></div>
+  <p>請求書/発注書 PDF、発送ラベル PDF/CSV を Drive に保存・整理・共有（<code>files.create</code> アップロード、フォルダ自動作成、<code>permissions</code> 共有リンク発行、<code>files.list</code> 検索）。</p>
+
+  <h3>前提</h3>
+  <ul>
+    <li><strong>既存の Google カレンダー連携プロジェクトをそのまま流用可</strong>。Drive API を追加で有効化するだけ（新規プロジェクト不要）。</li>
+    <li>同意画面（現名称 <strong>Google Auth platform</strong>）・OAuth クライアントも流用可（redirect URI 追加）。ADR-021 の移行用サービスアカウントも同一プロジェクト内なら認証基盤として流用可。</li>
+    <li>標準利用は現状無償（後述の通り 2026 年内に超過課金導入予定）。</li>
+  </ul>
+
+  <h3>API 利用までの手順</h3>
+  <ol>
+    <li>Cloud Console「APIs &amp; Services」で <strong>Google Drive API</strong> を有効化。</li>
+    <li>OAuth 同意画面（Branding / Audience）を確認。User Type は <strong>External</strong>（外部テナント向け SaaS）。</li>
+    <li>「Data Access」で必要最小スコープを宣言 → <strong><code>drive.file</code>（非機微）を強く推奨</strong>。</li>
+    <li>OAuth クライアント（Web アプリ）を作成 or 既存に redirect URI 追加。</li>
+    <li>審査要否を確認（下記）。Testing 状態なら審査前でも最大 100 名のテストユーザーで動作可。</li>
+  </ol>
+
+  <h3>認証方式（2 パターンの違い）</h3>
+  <table>
+    <thead><tr><th>観点</th><th>A. 各テナントの Drive に保存（ユーザー OAuth 2.0）</th><th>B. 自社サービスアカウントに保存（推奨）</th></tr></thead>
+    <tbody>
+      <tr><td>保存先</td><td>テナント各社の Google Drive</td><td>自社管理の共有ドライブ</td></tr>
+      <tr><td>認証</td><td>Web Server OAuth 2.0 ＋ refresh token をテナント別保管</td><td>サービスアカウントの JWT 認証</td></tr>
+      <tr><td>ストレージ</td><td>テナント側容量を消費</td><td><strong>サービスアカウントは自前ストレージを持てず My Drive 直書き不可 → 共有ドライブ必須（Workspace）</strong></td></tr>
+      <tr><td>ドメイン全体委任(DWD)</td><td>不要</td><td>共有ドライブ直書きなら不要（Google は DWD 回避を推奨）</td></tr>
+      <tr><td>審査</td><td>テナント毎の同意。<code>drive.file</code> で軽減</td><td>自社ドメイン内完結で外部審査の影響小</td></tr>
+    </tbody>
+  </table>
+  <div class="danger"><strong>最大の落とし穴：</strong>サービスアカウントはストレージ容量を持たずファイルを所有できない。ADR-021 のサービスアカウントを書き込みに転用すると <strong>My Drive 直書きは 403（quota exceeded）</strong>になる → <strong>Workspace の共有ドライブ</strong>へ書き込む構成が正解。</div>
+
+  <h3>主要 API・推奨ライブラリ</h3>
+  <ul>
+    <li>アップロード：<code>POST /upload/drive/v3/files</code>（<code>uploadType=resumable</code> 推奨）。Python は <code>MediaFileUpload(..., resumable=True)</code> を <code>files().create()</code> に渡す。</li>
+    <li>フォルダ作成：<code>files.create</code> で <code>mimeType=application/vnd.google-apps.folder</code>。</li>
+    <li>共有：<code>permissions.create</code>（<code>type</code>=user/anyone, <code>role</code>=reader 等）→ <code>files.get</code> の <strong><code>webViewLink</code></strong> を取得。</li>
+    <li>一覧/検索：<code>files.list</code>（<code>q</code> クエリ）。</li>
+    <li>推奨ライブラリ：<strong><code>google-api-python-client</code> + <code>google-auth(-oauthlib)</code></strong>（FastAPI 向け公式推奨。既に Calendar 連携で導入済み）。</li>
+  </ul>
+
+  <h3>本番公開・審査要件</h3>
+  <ul>
+    <li><strong><code>drive.file</code> のみ採用 → 最も軽い</strong>。制限付きスコープ審査も CASA も不要（公開時の「未確認アプリ」警告除去にブランド検証は推奨）。</li>
+    <li><code>drive</code>（フル）等の<strong>制限付き（Restricted）スコープ採用時</strong>は <strong>OAuth App Verification ＋ CASA セキュリティ評価（LOA 承認日から 12 か月毎の再評価）</strong>が必要。</li>
+    <li><strong>サービスアカウント方式（パターン B）は自社ドメイン内完結のため、これら外部審査を大きく回避できる。</strong></li>
+  </ul>
+
+  <h3>料金・制限・最新の変更点</h3>
+  <ul>
+    <li><strong>2026 年内に「クォータ超過分の課金」導入予定</strong>（90 日前告知）。2026-05-01 以降の新規プロジェクトは新クォータ体系。</li>
+    <li><strong>書き込みレート 3 req/秒/アカウント上限（引き上げ不可）</strong> → 帳票一括出力はキューイング＋指数バックオフ必須。</li>
+    <li>Workspace アップロードは 750 GB/日、最大ファイル 5 TB。</li>
+    <li><code>drive.file</code> 移行を Google が公式推奨。UI 用語が刷新（旧「OAuth consent screen」→「Google Auth platform」）。</li>
+  </ul>
+
+  <h4>公式リファレンス</h4>
+  <ul class="ref">
+    <li>Choose Drive API scopes（2026-04-20）— <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth">developers.google.com/workspace/drive/api/guides/api-specific-auth</a></li>
+    <li>Upload file data（2026-04-20）— <a href="https://developers.google.com/workspace/drive/api/guides/manage-uploads">…/guides/manage-uploads</a></li>
+    <li>Usage limits（2026-05-01）— <a href="https://developers.google.com/workspace/drive/api/guides/limits">…/guides/limits</a></li>
+    <li>Manage sharing（2026-05-07）— <a href="https://developers.google.com/workspace/drive/api/guides/manage-sharing">…/guides/manage-sharing</a></li>
+    <li>Restricted scope verification / CASA（2026-05-26）— <a href="https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification">…/restricted-scope-verification</a></li>
+    <li>Server-to-Server（サービスアカウント/DWD, 2026-03-23）— <a href="https://developers.google.com/identity/protocols/oauth2/service-account">…/oauth2/service-account</a></li>
+  </ul>
+</div>
+
+<!-- ============ FEDEX ============ -->
+<h2 id="fedex">5. FedEx</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-mid">導入難易度 中 ★★</span></div>
+  <table>
+    <thead><tr><th>機能</th><th>使う API</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>送料見積</td><td>Rates and Transit Times（<code>/rate/v1/rates/quotes</code>）</td><td>日本→海外の送料・所要日数を見積に反映</td></tr>
+      <tr><td>ラベル発行</td><td>Ship（<code>/ship/v1/shipments</code>）</td><td>国際 Air Waybill ＋税関書類（Commercial Invoice 等）生成</td></tr>
+      <tr><td>追跡</td><td>Track（<code>/track/v1/trackingnumbers</code>）</td><td>配送ステータス表示（最大 30 件/req）</td></tr>
+      <tr><td>集荷</td><td>Pickup（<code>/pickup/v1/pickups</code>）</td><td>集荷依頼の作成</td></tr>
+    </tbody>
+  </table>
+
+  <h3>前提・登録手順</h3>
+  <ul>
+    <li><strong>FedEx アカウント番号（9 桁・法人配送契約）が必須</strong>。Ship はアカウントに紐づく。</li>
+    <li>Developer Portal でユーザー登録（無料）→ <strong>Organization 作成</strong> → shipping/billing account 登録 → <strong>Project 作成</strong>（利用 API を選択）→ <strong>Test 用 Client ID / Secret 発行</strong>。</li>
+    <li>事業者タイプ：自社運用＝<strong>FedEx Shipper</strong>。テナントごとに別アカウントを持たせる SaaS 提供形態なら <strong>Integrator Provider</strong>＋<code>csp_credentials</code>（child_key/secret）を検討。</li>
+  </ul>
+
+  <h3>認証方式</h3>
+  <ul>
+    <li><strong>OAuth 2.0</strong>。<code>POST /oauth/token</code>（<code>grant_type=client_credentials</code>）で <code>access_token</code> 取得。<strong>有効期限 60 分</strong>。</li>
+    <li>各 API は <code>Authorization: Bearer &lt;token&gt;</code>。</li>
+    <li><span class="badge b-hard">注意</span> トークン生成は <strong>IP 単位で厳しいスロットル</strong>（超過で 403 を 10 分）。<strong>token を ~55 分キャッシュ必須</strong>。</li>
+    <li>Base URL：Sandbox <code>apis-sandbox.fedex.com</code> / Production <code>apis.fedex.com</code>。</li>
+  </ul>
+
+  <h3>テスト / 本番移行・認証（Certification）</h3>
+  <ul>
+    <li><strong>Test key は Project 作成時に自動発行</strong>（テスト用 shipping account 付き）。</li>
+    <li><strong>Certification 不要</strong>：Rate / Track など → Production 移行のみで本番キー利用可。</li>
+    <li><strong>Basic Certification 必要</strong>：Pickup, Address Validation など（サポートへ連絡し本番キー有効化）。</li>
+    <li><strong>Shipping Label Certification 必要</strong>：<strong>Ship API（ラベル発行）はこの認証が必須</strong>。Label Cover Sheet 提出 → サンプルラベルを 600 DPI 以上でスキャン提出 → <strong>Bar Code Analysis Group が約 3 営業日で評価</strong> → 承認後に本番有効化。</li>
+  </ul>
+
+  <h3>料金・制限・最新の変更点</h3>
+  <ul>
+    <li>コア API（Rate/Ship/Track/Pickup）は<strong>無料</strong>（配送実費は別）。レート制限 <strong>1,400 tx / 10 秒 / Project</strong>、超過で 429。</li>
+    <li><span class="badge b-hard">締切</span> <strong>旧 SOAP（Web Services）は廃止進行中。一般顧客は 2026-06-01 までに REST へ移行必須</strong>（新規実装は最初から REST なので影響なし）。</li>
+    <li>国際発送は税関書類・HS code・IATA 規制対応が Ship リクエストに必要。</li>
+  </ul>
+
+  <h4>公式リファレンス（参照 2026-06-05）</h4>
+  <ul class="ref">
+    <li>Getting Started — <a href="https://developer.fedex.com/api/en-us/get-started.html">developer.fedex.com/api/en-us/get-started.html</a></li>
+    <li>API Authorization (OAuth) — <a href="https://developer.fedex.com/api/en-us/catalog/authorization/docs.html">…/catalog/authorization/docs.html</a></li>
+    <li>Rate / Ship / Track — <a href="https://developer.fedex.com/api/en-us/catalog/rate.html">rate</a> ・ <a href="https://developer.fedex.com/api/en-us/catalog/ship/docs.html">ship</a> ・ <a href="https://developer.fedex.com/api/en-us/catalog/track.html">track</a></li>
+    <li>API Certification — <a href="https://developer.fedex.com/api/en-us/project/certification.html">…/project/certification.html</a></li>
+    <li>SOAP→REST 移行（締切 2026-06-01）— <a href="https://developer.fedex.com/api/en-us/announcements/Migrate_to_FedEx_APIs_Act_Now.html">Migrate Act Now</a></li>
+  </ul>
+</div>
+
+<!-- ============ DHL ============ -->
+<h2 id="dhl">6. DHL</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-mid">導入難易度 中 ★★</span></div>
+  <div class="note"><strong>結論：見積/ラベル/追跡/集荷の全要件は <code>MyDHL API（DHL Express）</code> 1 本で充足。</strong>横断追跡用の「Shipment Tracking - Unified」は単一部門（Express のみ）利用では<strong>非推奨</strong>（公式 FAQ が部門別 API を推奨）。</div>
+  <table>
+    <thead><tr><th>用途</th><th>MyDHL API のサービス</th></tr></thead>
+    <tbody>
+      <tr><td>送料見積（口座料率込み）</td><td>Rating</td></tr>
+      <tr><td>関税・着地コスト</td><td>Landed Cost（Duties &amp; Taxes）</td></tr>
+      <tr><td>ラベル/送り状（waybill）</td><td>Shipment（ラベル＋通関書類＋集荷を一括）</td></tr>
+      <tr><td>追跡</td><td>Tracking</td></tr>
+      <tr><td>集荷</td><td>Pickup</td></tr>
+    </tbody>
+  </table>
+
+  <h3>前提・登録手順</h3>
+  <ul>
+    <li><strong>有効な DHL Express 法人アカウント（アカウント番号付き）が必須</strong>。未契約なら口座開設フォーム → DHL コンサルタント対応 → 資格情報発行。</li>
+    <li>手順：Developer Portal 登録 → API カタログで MyDHL API 選択 → ドキュメント右上の <strong>「Get Access」</strong>で App 作成・API 追加・Create App → <strong>DHL がレビューして承認</strong> → My Apps で <strong>API Key / API Secret</strong> を表示。</li>
+    <li class="small">アカウント番号は Developer Portal の ID や API キーとは別物（DHL の請求書に記載）。桁数は公式に明記なし → DHL Express 担当に要確認。</li>
+  </ul>
+
+  <h3>認証方式</h3>
+  <ul>
+    <li><strong>MyDHL API（DHL Express）は Basic 認証</strong>（API Key / Secret を Base64 して <code>Authorization</code> ヘッダにプリエンプティブ送信）。</li>
+    <li>Shipment Tracking - Unified は <code>DHL-API-Key</code> ヘッダ方式。</li>
+    <li class="small">DHL 全社では Basic → OAuth 2.0 へ段階移行中だが、<strong>MyDHL API は現状 Basic</strong>。認証層は抽象化しておくと将来移行に強い。</li>
+  </ul>
+
+  <h3>テスト / 本番・最新の変更点</h3>
+  <ul>
+    <li>テスト：<code>https://express.api.dhl.com/mydhlapi/test</code>（<strong>1 日 500 回上限</strong>）→ 本番：<code>…/mydhlapi</code>。</li>
+    <li>本番キー（API Productive Key）は <strong>DHL の資格検証成功を条件に発行</strong>（純粋なセルフサーブ自動発行ではない）。</li>
+    <li><strong>MyDHL API REST 版は v3.3.0（2026-05-31 公開）</strong>。新規実装は REST 採用（SOAP/XML はレガシー）。</li>
+    <li>API 自体の従量課金の明示はなく、<strong>発送実費は DHL Express 契約料率</strong>（Rating が自社口座料率を返す）。</li>
+  </ul>
+
+  <h4>公式リファレンス（参照 2026-06-05）</h4>
+  <ul class="ref">
+    <li>Developer Portal — <a href="https://developer.dhl.com/">developer.dhl.com</a> ／ 登録 <a href="https://developer.dhl.com/user/register">/user/register</a></li>
+    <li>MyDHL API（DHL Express）リファレンス（v3.3.0）— <a href="https://developer.dhl.com/api-reference/mydhl-api-dhl-express">/api-reference/mydhl-api-dhl-express</a></li>
+    <li>Getting Started / Credentials — <a href="https://developer.dhl.com/documentation">/documentation</a> ・ <a href="https://developer.dhl.com/getting-started/find-your-api-credentials">find-your-api-credentials</a></li>
+    <li>サポート（アカウント番号 / Unified の違い）— <a href="https://support-developer.dhl.com/support/solutions/articles/47001197219">47001197219</a> ・ <a href="https://support-developer.dhl.com/support/solutions/articles/47001252644">47001252644</a></li>
+  </ul>
+</div>
+
+<!-- ============ UPS ============ -->
+<h2 id="ups">7. UPS</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-mid">導入難易度 中 ★★</span></div>
+  <table>
+    <thead><tr><th>機能</th><th>API</th><th>エンドポイント例（本番 onlinetools.ups.com）</th></tr></thead>
+    <tbody>
+      <tr><td>送料見積</td><td>Rating</td><td><code>POST /api/rating/{ver}/{Rate|Shop}</code></td></tr>
+      <tr><td>ラベル発行</td><td>Shipping (Ship)</td><td><code>POST /api/shipments/{ver}/ship</code></td></tr>
+      <tr><td>追跡</td><td>Tracking</td><td><code>GET /api/track/v1/details/{番号}</code></td></tr>
+      <tr><td>集荷</td><td>Pickup</td><td><code>POST /api/pickupcreation/{ver}/pickup</code></td></tr>
+    </tbody>
+  </table>
+  <p class="small">バージョン文字列は <code>YYMM</code> 形式（v2403, v2409 等）で随時更新 → 設定値化推奨。</p>
+
+  <h3>前提・登録手順</h3>
+  <ul>
+    <li><strong>UPS アカウント番号（6 桁）が事実上必須</strong>（ネゴ料金・ラベル発行に必要。OAuth トークン生成時の <code>x-merchant-id</code> にも実運用上必要）。</li>
+    <li>手順：developer.ups.com → My Apps → Add Apps → <strong>「integrate UPS technology into my business」</strong> → アカウント番号紐付け → App 名/Callback → <strong>Products 追加（Auth ＋ Rating/Shipping/Tracking/Pickup）</strong> → <strong>Client ID / Secret</strong> 取得。</li>
+  </ul>
+
+  <h3>認証方式（OAuth 2.0・旧 Access Key 廃止）</h3>
+  <ul>
+    <li><span class="badge b-hard">重要</span> <strong>旧 Access Key 認証は廃止：2023-06-05 新規発行停止 → 2024-06-03 廃止</strong>。新規実装は <strong>OAuth 2.0 Client Credentials 一択</strong>。</li>
+    <li>トークン：<code>POST /security/v1/oauth/token</code>（<code>Authorization: Basic base64(ClientID:Secret)</code>, body <code>grant_type=client_credentials</code>, <code>x-merchant-id</code>）。</li>
+    <li><span class="badge b-warn">注意</span> <code>expires_in</code> は <code>14399</code>（約4時間）を返すが、<strong>実効有効期間は 1 時間に短縮済み</strong> → 毎時 / 401 時にリフレッシュする実装を推奨。</li>
+    <li>Base URL：本番 <code>onlinetools.ups.com</code> / テスト(CIE) <code>wwwcie.ups.com</code>。</li>
+  </ul>
+
+  <h3>テスト / 本番・料金</h3>
+  <ul>
+    <li><strong>CIE（Customer Integration Environment）＝サンドボックス</strong>。同じ Client ID/Secret で<strong>ホスト名を切り替えるだけ</strong>で本番化（特別な審査は原則不要）。</li>
+    <li>API 利用は<strong>無料</strong>（配送実費別）。トークン過剰取得を避けるためキャッシュ必須。</li>
+  </ul>
+
+  <h4>公式リファレンス（参照 2026-06-05）</h4>
+  <ul class="ref">
+    <li>Developer Portal — <a href="https://developer.ups.com/">developer.ups.com</a> ／ My Apps <a href="https://developer.ups.com/apps">/apps</a></li>
+    <li>Access Key → OAuth 2.0 移行ガイド — <a href="https://developer.ups.com/oauth-developer-guide">/oauth-developer-guide</a></li>
+    <li>OAuth Client Credentials リファレンス — <a href="https://developer.ups.com/api/reference/oauth/client-credentials">/api/reference/oauth/client-credentials</a></li>
+    <li>公式 OpenAPI 仕様（GitHub, MIT）— <a href="https://github.com/UPS-API/api-documentation">github.com/UPS-API/api-documentation</a></li>
+  </ul>
+</div>
+
+<!-- ============ YAMATO ============ -->
+<h2 id="yamato">8. ヤマト運輸（クロネコヤマト）</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-hard">導入難易度 高 ★★★</span></div>
+  <div class="warn"><strong>一般公開のセルフサーブ REST API は乏しく、すべて法人（掛売り）契約＋ヤマトビジネスメンバーズ（YBM）登録＋商談（営業窓口）経由が前提。</strong>即時 API キー発行型ではない。</div>
+
+  <h3>前提・契約要件</h3>
+  <ul>
+    <li><strong>法人（掛売り＝請求書払い）契約が必須</strong>。対象は法人/各種団体/個人事業主。</li>
+    <li><strong>YBM への登録が必須</strong>（登録・利用は無料）。B2クラウド・各種 API は YBM 内サービス。</li>
+    <li>API 利用は<strong>別途「契約」が必要</strong>（「開発環境のみの利用は不可」）。</li>
+  </ul>
+
+  <h3>連携手順（最新）</h3>
+  <ol>
+    <li>掛売り（法人）契約 → 審査。</li>
+    <li>仮パスワード発行 → YBM 本登録 → サービス追加。</li>
+    <li><strong>「YBM For Developers」から仕様書 DL</strong>（要 YBM ログイン）。B2クラウドAPI は簡易版仕様書を公開ページからも DL 可。</li>
+    <li>商談で利用内容確認 → 開発環境提供 → 本番環境提供。<strong>開発提供から本番まで約 3 か月</strong>。</li>
+  </ol>
+
+  <h3>連携方式・主要機能</h3>
+  <table>
+    <thead><tr><th>機能</th><th>サービス</th><th>連携方式</th></tr></thead>
+    <tbody>
+      <tr><td>送り状（ラベル）発行</td><td>B2クラウド / B2クラウドAPI（2024-06-12 公開）</td><td>CSV 取込 または WebAPI（画面あり/なし）</td></tr>
+      <tr><td>送料計算</td><td>専用 API は公式に確認できず</td><td>—（発送後の運賃情報取得は配送連携APIで可）</td></tr>
+      <tr><td>追跡</td><td>宅急便追跡サービス（クラウド）/ 配送連携API</td><td>API（XML 連携）・CSV</td></tr>
+      <tr><td>集荷依頼</td><td>配送連携API</td><td>WebAPI（用途制約あり・下記）</td></tr>
+    </tbody>
+  </table>
+  <p class="small">認証方式（OAuth/トークン等）は公開ページに記載なし → 契約後の仕様書で確認。</p>
+
+  <div class="danger"><strong>用途制約（重要）：</strong>「配送連携API」は<strong>「EC事業者から購入者への発送」用途は対象外</strong>（対象はフリマ/C2C/返品/匿名配送等）。salesanchor の「事業者→顧客発送」では<strong>配送連携APIの送り状発行/集荷は適用外</strong>の可能性が高く、<strong>B2クラウド/B2クラウドAPI が正規ルート</strong>（商談で要確認）。</div>
+
+  <h3>料金</h3>
+  <ul>
+    <li>YBM 登録・B2クラウド（GUI）：無料。</li>
+    <li>B2クラウドAPI：<strong>1 採番あたりの従量課金</strong>（条件により月額固定費）。</li>
+    <li>配送連携API：有料（運用管理費＋件数課金、料金表なし＝商談見積）。</li>
+  </ul>
+  <p class="warn">追跡は「荷物お問い合わせシステム」のスクレイピング等の非公式手段は業務利用不可 → 正規ルート（宅急便追跡サービス クラウド等）を使う。</p>
+
+  <h4>公式リファレンス / 窓口（参照 2026-06-05）</h4>
+  <ul class="ref">
+    <li>B2クラウドAPI — <a href="https://business.kuronekoyamato.co.jp/service/lineup/b2api/index.html">business.kuronekoyamato.co.jp/…/b2api/</a></li>
+    <li>YBM For Developers — <a href="https://business.kuronekoyamato.co.jp/service/lineup/business_members/api/">…/business_members/api/</a></li>
+    <li>配送連携API — <a href="https://business.kuronekoyamato.co.jp/service/lineup/delivery_api_linkage/index.html">…/delivery_api_linkage/</a></li>
+    <li>宅急便追跡サービス（クラウド）— <a href="https://business.kuronekoyamato.co.jp/service/lineup/tracking_service/index.html">…/tracking_service/</a></li>
+    <li>ヤマトビジネスメンバーズ — <a href="https://bmypage.kuronekoyamato.co.jp/">bmypage.kuronekoyamato.co.jp</a></li>
+  </ul>
+</div>
+
+<!-- ============ SAGAWA ============ -->
+<h2 id="sagawa">9. 佐川急便</h2>
+<div class="card">
+  <div class="prov-head"><h3 style="margin-top:0">用途</h3><span class="badge b-hard">導入難易度 高 ★★★</span></div>
+  <div class="warn"><strong>用途の異なる 2 系統の「API」があり混同注意：</strong>
+    <ul style="margin:6px 0">
+      <li><strong>スマートAPI</strong>（公式・無料）＝配送状況確認・配達日時変更が中心。<strong>送り状発行・送料計算は含まない</strong>。</li>
+      <li><strong>送り状発行API</strong>（e飛伝Ⅲ の API オプション ／ SG システムの「Biz-Logi API」）＝<strong>送り状 PDF 発行・問い合わせ番号採番・集荷</strong>。<strong>本アプリの主用途はこちら</strong>。</li>
+    </ul>
+    いずれも<strong>飛脚宅配便の法人契約（顧客コード）＋営業窓口経由の個別申込</strong>が必須。
+  </div>
+
+  <h3>前提・契約要件</h3>
+  <ul>
+    <li><strong>飛脚宅配便の法人契約（請求書払い）が大前提</strong>。発行される<strong>顧客コード</strong>が連携の主要識別子。</li>
+    <li>送り状発行 API を使う場合は契約に対する<strong>「API オプション」の追加契約</strong>が必須。複数倉庫/契約はそれぞれ個別申請。</li>
+    <li>e飛伝Ⅲ（送り状クラウド）利用には「スマートクラブ for business」ID 登録が必要。</li>
+  </ul>
+
+  <h3>連携手順（最新・営業窓口経由）</h3>
+  <ol>
+    <li>専用フォームから問い合わせ → 佐川から返答 → <strong>商談</strong>。</li>
+    <li>申込手続き（申込書提出）→ <strong>利用 ID 発行＋仕様書提供</strong>（仕様書は申込完了後・公開 DL 不可）。</li>
+    <li>開発＋<strong>接続テスト</strong> → 利用開始。送り状発行 API は<strong>申請後 1〜2 週間で承認</strong>（第三者連携サービスの案内ベース）。</li>
+  </ol>
+
+  <h3>連携方式・主要機能</h3>
+  <table>
+    <thead><tr><th>機能</th><th>対応手段</th></tr></thead>
+    <tbody>
+      <tr><td>送り状発行（ラベル/PDF）・番号採番</td><td>送り状発行API（Biz-Logi：PDF 発行版/データ返却版/集荷依頼版）／ e飛伝Ⅲ への CSV 取込（最大 5,000 件）</td></tr>
+      <tr><td>送料計算</td><td>公式 API は確認できず → 法人運賃表（タリフ）をアプリ側で保持して算出</td></tr>
+      <tr><td>追跡</td><td>スマートAPI「貨物ステータス取得」／ お荷物問い合わせサービス</td></tr>
+      <tr><td>集荷依頼</td><td>Biz-Logi「集荷依頼版」／ スマートAPI</td></tr>
+      <tr><td>配達日時変更</td><td>スマートAPI（変更可能日時取得・予定変更）</td></tr>
+    </tbody>
+  </table>
+  <p class="small">認証情報は利用 ID＋顧客コード。具体的な認証方式（APIキー/トークン）は公式公開情報になく、仕様書受領後に判明。API で発行した送り状履歴は e飛伝Ⅲ では確認できない。</p>
+
+  <h3>料金</h3>
+  <ul>
+    <li>スマートAPI：初期費用・月額とも<strong>無料</strong>。</li>
+    <li>送り状発行API / e飛伝Ⅲ 本体：別途サービス料金は不要だが、<strong>API オプション料金は商談で提示</strong>。専用プリンタは月額レンタル（1,078〜2,255 円税込）。</li>
+  </ul>
+  <div class="note"><strong>現実的な実装：</strong>第一歩は <strong>e飛伝Ⅲ 形式 CSV エクスポート</strong>対応が最も低コスト。API 直結（送り状発行API）は本格運用フェーズで別途申込、という段階的アプローチが ADR-021 の方針と整合。</div>
+
+  <h4>公式リファレンス / 窓口（参照 2026-06-05）</h4>
+  <ul class="ref">
+    <li>スマートAPI — <a href="https://www.sagawa-exp.co.jp/service/smart-api/">sagawa-exp.co.jp/service/smart-api/</a></li>
+    <li>e飛伝Ⅲ — <a href="https://www.sagawa-exp.co.jp/service/okurijyou-support/e-hiden3/">…/okurijyou-support/e-hiden3/</a></li>
+    <li>送り状発行APIシステム（SG システム / Biz-Logi API）— <a href="https://www.sg-systems.co.jp/service/shipping-api/">sg-systems.co.jp/service/shipping-api/</a></li>
+    <li>物流ソリューション問い合わせ — <a href="https://www2.sagawa-exp.co.jp/contact/logistics/">www2.sagawa-exp.co.jp/contact/logistics/</a></li>
+  </ul>
+</div>
+
+<!-- ============ COMMON ============ -->
+<h2 id="common">10. 横断的な実装メモ</h2>
+<div class="card">
+  <ul>
+    <li><strong>キャリアアダプタ層（ADR-021）</strong>：eLogi と同列に各社実装を差し替え可能な抽象インターフェイス（見積/ラベル/追跡/集荷）を定義し、その配下に各社アダプタを実装。</li>
+    <li><strong>OAuth トークン管理</strong>：FedEx（60 分）・UPS（実効 1 時間）は token を必ずキャッシュ（毎リクエスト発行は IP スロットルで 403）。期限の数分前に先回りリフレッシュ＋401 時フォールバック。</li>
+    <li><strong>環境切替</strong>：各社 sandbox / production を環境変数で切替。API バージョン文字列（UPS の v24xx 等）・アカウント番号も設定値化。</li>
+    <li><strong>送料計算</strong>：国際 3 社は Rate API で取得可。国内 2 社（ヤマト・佐川）は<strong>送料計算 API が公式に確認できず</strong> → 運賃表をアプリ側に保持して算出（ADR-095/101/103 の「キャリア別数式は後日」と接続）。</li>
+    <li><strong>帳票・ラベル保存</strong>：Google Drive（サービスアカウント＋共有ドライブ）を Phase 0 で先行整備すると、各社ラベル PDF/CSV の保存先が確定し ADR-021 Q7 を解消できる。</li>
+    <li><strong>国内 2 社のリードタイム</strong>：契約＋商談＋約 3 か月（ヤマト）／申込承認 1〜2 週間（佐川 送り状発行API）。営業窓口への着手は早めに。まずは CSV 連携で価値を出す。</li>
+  </ul>
+  <div class="warn"><strong>不確実点（実装着手前に各社へ要確認）：</strong>
+    <ul style="margin:6px 0">
+      <li>DHL アカウント番号の桁数（公式に明記なし）。各社 API の従量課金有無・レート上限の正確値。</li>
+      <li>ヤマト「配送連携API」の用途制約（事業者→顧客発送の可否）と B2クラウドAPI の認証方式。</li>
+      <li>佐川 送り状発行API / ヤマト各 API の認証方式（契約後の仕様書で開示）。</li>
+      <li>マルチテナント時の各社アカウント構成（自社 1 アカウント集約 か テナント別か）。FedEx は Integrator Provider モデルの要否。</li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <p>本レポートは各社公式 Developer Portal / 法人サービス公式ページの調査（2026-06-05 時点）に基づきます。料金・締切・API バージョン等は変更され得るため、実装着手時に公式リンクで再確認してください。</p>
+  <p>salesanchor 外部連携 調査レポート — 2026-06-05</p>
+</footer>
+
+</div>
+</body>
+</html>
