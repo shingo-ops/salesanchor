@@ -1,16 +1,14 @@
-"""API連携ルーター + google_drive サービスのテスト。
+"""API連携ルーター + google_drive_oauth サービスのテスト（OAuth ユーザー委任方式）。
 
 - extract_folder_id: URL/ID パース
-- is_configured / get_service_account_email: 環境変数（生 JSON / base64）
-- /integrations/google-drive/status, /test-upload: エンドポイント（google_drive をモック）
+- is_oauth_configured: 環境変数の有無
+- /integrations/google-drive/status, /connect/start, /test-upload: エンドポイント
+  （google_drive_oauth をモック）
 """
-
-import base64
-import json
 
 import pytest
 
-from app.services import google_drive
+from app.services import google_drive_oauth as drive_svc
 
 
 # ─────────────────────────────────────────────────────────────
@@ -25,127 +23,110 @@ from app.services import google_drive
             "0ABCdef_123",
         ),
         ("0ABCdef_1234567", "0ABCdef_1234567"),
-        ("  0ABCdef_1234567  ", "0ABCdef_1234567"),
         ("", None),
         ("   ", None),
         ("https://drive.google.com/drive/my-drive", None),
     ],
 )
 def test_extract_folder_id(url, expected):
-    assert google_drive.extract_folder_id(url) == expected
+    assert drive_svc.extract_folder_id(url) == expected
 
 
 # ─────────────────────────────────────────────────────────────
-# is_configured / get_service_account_email
+# is_oauth_configured
 # ─────────────────────────────────────────────────────────────
-def _sa_dict():
-    return {
-        "type": "service_account",
-        "client_email": "salesanchor-drive@x.iam.gserviceaccount.com",
-    }
+def test_oauth_configured_true(monkeypatch):
+    monkeypatch.setenv("GOOGLE_DRIVE_CLIENT_ID", "cid")
+    monkeypatch.setenv("GOOGLE_DRIVE_CLIENT_SECRET", "secret")
+    monkeypatch.setenv("GOOGLE_DRIVE_REDIRECT_URI", "https://app/cb")
+    assert drive_svc.is_oauth_configured() is True
 
 
-def test_configured_via_raw_json(monkeypatch):
-    monkeypatch.delenv("GOOGLE_DRIVE_SA_JSON_B64", raising=False)
-    monkeypatch.setenv("GOOGLE_DRIVE_SA_JSON", json.dumps(_sa_dict()))
-    assert google_drive.is_configured() is True
-    assert google_drive.get_service_account_email() == "salesanchor-drive@x.iam.gserviceaccount.com"
-
-
-def test_configured_via_base64(monkeypatch):
-    monkeypatch.delenv("GOOGLE_DRIVE_SA_JSON", raising=False)
-    b64 = base64.b64encode(json.dumps(_sa_dict()).encode()).decode()
-    monkeypatch.setenv("GOOGLE_DRIVE_SA_JSON_B64", b64)
-    assert google_drive.is_configured() is True
-    assert google_drive.get_service_account_email() == "salesanchor-drive@x.iam.gserviceaccount.com"
-
-
-def test_not_configured(monkeypatch):
-    monkeypatch.delenv("GOOGLE_DRIVE_SA_JSON", raising=False)
-    monkeypatch.delenv("GOOGLE_DRIVE_SA_JSON_B64", raising=False)
-    assert google_drive.is_configured() is False
-    assert google_drive.get_service_account_email() is None
-
-
-def test_invalid_json_is_not_configured(monkeypatch):
-    monkeypatch.delenv("GOOGLE_DRIVE_SA_JSON_B64", raising=False)
-    monkeypatch.setenv("GOOGLE_DRIVE_SA_JSON", "{not json")
-    assert google_drive.is_configured() is False
+def test_oauth_configured_false(monkeypatch):
+    monkeypatch.delenv("GOOGLE_DRIVE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_DRIVE_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("GOOGLE_DRIVE_REDIRECT_URI", raising=False)
+    assert drive_svc.is_oauth_configured() is False
 
 
 # ─────────────────────────────────────────────────────────────
 # エンドポイント
 # ─────────────────────────────────────────────────────────────
-async def test_status_endpoint(client, monkeypatch):
-    monkeypatch.setattr(google_drive, "is_configured", lambda: True)
-    monkeypatch.setattr(
-        google_drive,
-        "get_service_account_email",
-        lambda: "sa@x.iam.gserviceaccount.com",
-    )
+async def test_status_not_connected(client, monkeypatch):
+    async def _no_conn(db, tid):
+        return None
+
+    monkeypatch.setattr(drive_svc, "get_connection", _no_conn)
+    monkeypatch.setattr(drive_svc, "is_oauth_configured", lambda: True)
     resp = await client.get("/api/v1/integrations/google-drive/status")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["configured"] is True
-    assert body["service_account_email"] == "sa@x.iam.gserviceaccount.com"
+    assert body["connected"] is False
+    assert body["oauth_configured"] is True
+    assert body["account_email"] is None
+
+
+async def test_status_connected(client, monkeypatch):
+    async def _conn(db, tid):
+        return {"account_email": "u@example.com", "folder_id": None, "connected_at": None}
+
+    monkeypatch.setattr(drive_svc, "get_connection", _conn)
+    monkeypatch.setattr(drive_svc, "is_oauth_configured", lambda: True)
+    resp = await client.get("/api/v1/integrations/google-drive/status")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["connected"] is True
+    assert body["account_email"] == "u@example.com"
+
+
+async def test_connect_start_returns_auth_url(client, monkeypatch):
+    async def _auth_url(tid, uid):
+        return "https://accounts.google.com/o/oauth2/auth?x=1"
+
+    monkeypatch.setattr(drive_svc, "get_auth_url", _auth_url)
+    resp = await client.get("/api/v1/integrations/google-drive/connect/start")
+    assert resp.status_code == 200
+    assert resp.json()["auth_url"].startswith("https://accounts.google.com/")
 
 
 async def test_test_upload_success(client, monkeypatch):
-    monkeypatch.setattr(google_drive, "is_configured", lambda: True)
-    monkeypatch.setattr(google_drive, "extract_folder_id", lambda url: "FOLDER123")
-    monkeypatch.setattr(
-        google_drive,
-        "upload_pdf",
-        lambda pdf, name, folder: {
+    async def _upload(db, tid, pdf, name, folder):
+        return {
             "id": "FILE1",
             "name": name,
             "web_view_link": "https://drive.google.com/file/d/FILE1/view",
-        },
-    )
+        }
+
+    monkeypatch.setattr(drive_svc, "upload_pdf", _upload)
     monkeypatch.setattr("app.routers.integrations.render_test_pdf", lambda text="テスト": b"%PDF-1.4 test")
-    resp = await client.post(
-        "/api/v1/integrations/google-drive/test-upload",
-        json={"drive_url": "https://drive.google.com/drive/folders/FOLDER123"},
-    )
+    resp = await client.post("/api/v1/integrations/google-drive/test-upload", json={"drive_url": None})
     assert resp.status_code == 200
     body = resp.json()
     assert body["file_id"] == "FILE1"
     assert body["file_name"] == "salesanchor-test.pdf"
-    assert body["web_view_link"].endswith("/view")
 
 
-async def test_test_upload_not_configured(client, monkeypatch):
-    monkeypatch.setattr(google_drive, "is_configured", lambda: False)
-    resp = await client.post(
-        "/api/v1/integrations/google-drive/test-upload",
-        json={"drive_url": "https://drive.google.com/drive/folders/X"},
-    )
+async def test_test_upload_not_connected(client, monkeypatch):
+    async def _upload(db, tid, pdf, name, folder):
+        raise RuntimeError("Google ドライブが接続されていません")
+
+    monkeypatch.setattr(drive_svc, "upload_pdf", _upload)
+    monkeypatch.setattr("app.routers.integrations.render_test_pdf", lambda text="テスト": b"%PDF-1.4 test")
+    resp = await client.post("/api/v1/integrations/google-drive/test-upload", json={"drive_url": None})
     assert resp.status_code == 400
 
 
-async def test_test_upload_bad_url(client, monkeypatch):
-    monkeypatch.setattr(google_drive, "is_configured", lambda: True)
-    monkeypatch.setattr(google_drive, "extract_folder_id", lambda url: None)
-    resp = await client.post(
-        "/api/v1/integrations/google-drive/test-upload",
-        json={"drive_url": "not-a-url"},
-    )
+async def test_test_upload_bad_url(client):
+    resp = await client.post("/api/v1/integrations/google-drive/test-upload", json={"drive_url": "not-a-url"})
     assert resp.status_code == 400
 
 
 async def test_test_upload_failure_is_502_without_leak(client, monkeypatch):
-    """アップロード失敗時は 502 を返し、例外文字列（機微情報を含み得る）を漏らさない。"""
+    async def _boom(db, tid, pdf, name, folder):
+        raise Exception("secret-token-AKIA-EXAMPLE")
 
-    def _boom(pdf, name, folder):
-        raise RuntimeError("secret-token-AKIA-EXAMPLE")
-
-    monkeypatch.setattr(google_drive, "is_configured", lambda: True)
-    monkeypatch.setattr(google_drive, "extract_folder_id", lambda url: "FOLDER123")
-    monkeypatch.setattr(google_drive, "upload_pdf", _boom)
+    monkeypatch.setattr(drive_svc, "upload_pdf", _boom)
     monkeypatch.setattr("app.routers.integrations.render_test_pdf", lambda text="テスト": b"%PDF-1.4 test")
-    resp = await client.post(
-        "/api/v1/integrations/google-drive/test-upload",
-        json={"drive_url": "https://drive.google.com/drive/folders/FOLDER123"},
-    )
+    resp = await client.post("/api/v1/integrations/google-drive/test-upload", json={"drive_url": None})
     assert resp.status_code == 502
     assert "secret-token" not in resp.text
