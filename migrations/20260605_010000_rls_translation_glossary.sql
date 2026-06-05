@@ -18,107 +18,113 @@
 --   app.is_operator — 新規。is_super_admin=true のセッションで SET 'true'
 --                     未設定は '' 扱い（false 相当）
 --
--- 冪等: IF NOT EXISTS / ALTER TABLE ... ENABLE は再実行無害
+-- 冪等: テーブル存在チェック / DROP POLICY IF EXISTS / ENABLE は再実行無害
+-- 依存: migrations/20260604_220000_create_translation_glossary.sql
+--       （テーブル未作成環境ではスキップ。本番・開発では先行 migration 適用済み）
 -- 作成日: 2026-06-05
-
--- ==========================================================================
--- 1. RLS 有効化
--- ==========================================================================
-
-ALTER TABLE public.translation_glossary ENABLE ROW LEVEL SECURITY;
-
--- FORCE: テーブルオーナー（superuser 以外）も必ずポリシーを通す
-ALTER TABLE public.translation_glossary FORCE ROW LEVEL SECURITY;
-
--- ==========================================================================
--- 2. SELECT ポリシー — 自テナント行 + 共有行（全認証ユーザー）
--- ==========================================================================
-
-DROP POLICY IF EXISTS tg_select ON public.translation_glossary;
-CREATE POLICY tg_select
-    ON public.translation_glossary
-    FOR SELECT
-    USING (
-        tenant_id IS NULL
-        OR tenant_id = current_setting('app.tenant_id', true)::INTEGER
-    );
-
--- ==========================================================================
--- 3. INSERT ポリシー
---    テナント行: 自テナントのみ
---    共有行 (tenant_id IS NULL): operator のみ
--- ==========================================================================
-
-DROP POLICY IF EXISTS tg_insert ON public.translation_glossary;
-CREATE POLICY tg_insert
-    ON public.translation_glossary
-    FOR INSERT
-    WITH CHECK (
-        CASE
-            WHEN tenant_id IS NULL THEN
-                current_setting('app.is_operator', true) = 'true'
-            ELSE
-                tenant_id = current_setting('app.tenant_id', true)::INTEGER
-        END
-    );
-
--- ==========================================================================
--- 4. UPDATE ポリシー
---    テナント行: 自テナントのみ
---    共有行: operator のみ
--- ==========================================================================
-
-DROP POLICY IF EXISTS tg_update ON public.translation_glossary;
-CREATE POLICY tg_update
-    ON public.translation_glossary
-    FOR UPDATE
-    USING (
-        CASE
-            WHEN tenant_id IS NULL THEN
-                current_setting('app.is_operator', true) = 'true'
-            ELSE
-                tenant_id = current_setting('app.tenant_id', true)::INTEGER
-        END
-    )
-    WITH CHECK (
-        CASE
-            WHEN tenant_id IS NULL THEN
-                current_setting('app.is_operator', true) = 'true'
-            ELSE
-                tenant_id = current_setting('app.tenant_id', true)::INTEGER
-        END
-    );
-
--- ==========================================================================
--- 5. DELETE ポリシー
---    テナント行: 自テナントのみ
---    共有行: operator のみ
--- ==========================================================================
-
-DROP POLICY IF EXISTS tg_delete ON public.translation_glossary;
-CREATE POLICY tg_delete
-    ON public.translation_glossary
-    FOR DELETE
-    USING (
-        CASE
-            WHEN tenant_id IS NULL THEN
-                current_setting('app.is_operator', true) = 'true'
-            ELSE
-                tenant_id = current_setting('app.tenant_id', true)::INTEGER
-        END
-    );
-
--- ==========================================================================
--- 6. 確認クエリ（apply 後のログ用）
--- ==========================================================================
 
 DO $$
 BEGIN
+    -- 先行 migration が未適用の環境（CI テスト DB の初回など）はスキップ
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name   = 'translation_glossary'
+    ) THEN
+        RAISE NOTICE 'migration 20260605_010000: translation_glossary が存在しないためスキップ（先行 migration 未適用）';
+        RETURN;
+    END IF;
+
+    -- ================================================================
+    -- 1. RLS 有効化
+    -- ================================================================
+    EXECUTE 'ALTER TABLE public.translation_glossary ENABLE ROW LEVEL SECURITY';
+    -- FORCE: テーブルオーナー（superuser 以外）も必ずポリシーを通す
+    EXECUTE 'ALTER TABLE public.translation_glossary FORCE ROW LEVEL SECURITY';
+
+    -- ================================================================
+    -- 2. SELECT ポリシー — 自テナント行 + 共有行（全認証ユーザー）
+    -- ================================================================
+    EXECUTE 'DROP POLICY IF EXISTS tg_select ON public.translation_glossary';
+    EXECUTE $pol$
+        CREATE POLICY tg_select
+            ON public.translation_glossary
+            FOR SELECT
+            USING (
+                tenant_id IS NULL
+                OR tenant_id = current_setting('app.tenant_id', true)::INTEGER
+            )
+    $pol$;
+
+    -- ================================================================
+    -- 3. INSERT ポリシー
+    --    テナント行: 自テナントのみ
+    --    共有行 (tenant_id IS NULL): operator のみ
+    -- ================================================================
+    EXECUTE 'DROP POLICY IF EXISTS tg_insert ON public.translation_glossary';
+    EXECUTE $pol$
+        CREATE POLICY tg_insert
+            ON public.translation_glossary
+            FOR INSERT
+            WITH CHECK (
+                CASE
+                    WHEN tenant_id IS NULL THEN
+                        current_setting('app.is_operator', true) = 'true'
+                    ELSE
+                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                END
+            )
+    $pol$;
+
+    -- ================================================================
+    -- 4. UPDATE ポリシー
+    -- ================================================================
+    EXECUTE 'DROP POLICY IF EXISTS tg_update ON public.translation_glossary';
+    EXECUTE $pol$
+        CREATE POLICY tg_update
+            ON public.translation_glossary
+            FOR UPDATE
+            USING (
+                CASE
+                    WHEN tenant_id IS NULL THEN
+                        current_setting('app.is_operator', true) = 'true'
+                    ELSE
+                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                END
+            )
+            WITH CHECK (
+                CASE
+                    WHEN tenant_id IS NULL THEN
+                        current_setting('app.is_operator', true) = 'true'
+                    ELSE
+                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                END
+            )
+    $pol$;
+
+    -- ================================================================
+    -- 5. DELETE ポリシー
+    -- ================================================================
+    EXECUTE 'DROP POLICY IF EXISTS tg_delete ON public.translation_glossary';
+    EXECUTE $pol$
+        CREATE POLICY tg_delete
+            ON public.translation_glossary
+            FOR DELETE
+            USING (
+                CASE
+                    WHEN tenant_id IS NULL THEN
+                        current_setting('app.is_operator', true) = 'true'
+                    ELSE
+                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                END
+            )
+    $pol$;
+
     RAISE NOTICE 'migration 20260605_010000: translation_glossary RLS ポリシー適用完了';
     RAISE NOTICE '  SELECT  : 自テナント行 + 共有行 (tenant_id IS NULL)';
-    RAISE NOTICE '  INSERT  : テナント行=自テナント / 共有行=operator';
-    RAISE NOTICE '  UPDATE  : テナント行=自テナント / 共有行=operator';
-    RAISE NOTICE '  DELETE  : テナント行=自テナント / 共有行=operator';
+    RAISE NOTICE '  INSERT  : テナント行=自テナント / 共有行=app.is_operator=true';
+    RAISE NOTICE '  UPDATE  : テナント行=自テナント / 共有行=app.is_operator=true';
+    RAISE NOTICE '  DELETE  : テナント行=自テナント / 共有行=app.is_operator=true';
     RAISE NOTICE '  注意    : app.is_operator をセッションに SET する実装が必要';
     RAISE NOTICE '            (auth/dependencies.py: is_super_admin=true 時に SET true)';
 END
