@@ -142,22 +142,32 @@ async def list_products(
         # 「いずれかの検索対象列に部分一致」（OR）させ、語句間も OR で広く候補化する。
         # これにより語順・余分な空白・一部語句の欠落があっても近い候補を提示できる
         # （解析レビューの「商品マスタから選択」が前方一致的に取りこぼす問題の解消）。
-        # さらに一致した語句数をスコア化し、明示ソート未指定時は関連度順に並べる。
+        # 関連度（2026-06-05 改善）: 一致語句数の単純加算だと「ポケモンカード」のような
+        # ありふれた語に一致しただけの大量の商品と、「メガブレイブ」のような希少語に一致した
+        # 目的商品が同点になり埋もれる。そこで語句の希少度で重み付けする（IDF 風）:
+        #   重み = 1000.0 / (1 + その語句に一致する商品件数)
+        # ありふれた語ほど件数が多く軽く、希少語ほど件数が少なく重い。結果、希少語に一致した
+        # 商品が上位に来る（汎用語に埋もれない）。一致しない語は 0。
         search_cols = (
             ctx["name"], "name_en", "product_code", "mark", "jan_code",
             "card_number", "category", "rarity", "expansion_code", "language",
         )
+        ref = ctx["ref"]
         tokens = [tok for tok in re.split(r"[\s　]+", search) if tok]
         if not tokens:
             tokens = [search]
         token_groups: list[str] = []   # 各語句の OR グループ（WHERE 用）
-        score_terms: list[str] = []    # 一致語句数（ORDER BY 用）
+        score_terms: list[str] = []    # 希少度重み付きスコア（ORDER BY 用）
         for i, tok in enumerate(tokens):
             key = f"search_{i}"
             params[key] = f"%{tok}%"
             ors = " OR ".join(f"{col} ILIKE :{key}" for col in search_cols)
             token_groups.append(f"({ors})")
-            score_terms.append(f"(CASE WHEN ({ors}) THEN 1 ELSE 0 END)")
+            # df = その語句に一致する商品件数（uncorrelated サブクエリ＝語句ごとに 1 回算出）。
+            df = f"(SELECT COUNT(*) FROM {ref} WHERE {ors})"
+            score_terms.append(
+                f"(CASE WHEN ({ors}) THEN (1000.0 / (1 + {df})) ELSE 0 END)"
+            )
         # いずれかの語句にマッチすれば候補（広範マッチ）。
         conditions.append("(" + " OR ".join(token_groups) + ")")
         search_score_sql = " + ".join(score_terms)
