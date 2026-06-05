@@ -15,6 +15,7 @@ from __future__ import annotations
 """
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -67,6 +68,8 @@ _UPDATABLE_COLUMNS = {
     "volume_weight", "moq", "hs_code", "material", "item",
     "required_output_value", "search_keywords", "exclude_keywords",
     "related_series", "category_classification",
+    # 手動並び替え（行ドラッグ）順
+    "display_order",
 }
 
 
@@ -95,7 +98,9 @@ def _select_columns(ctx: dict[str, str]) -> str:
         "volume_weight, moq, hs_code, material, item, required_output_value, "
         "search_keywords, exclude_keywords, related_series, category_classification, "
         # ADR-093: 商品種類（最上位ジャンル区分。値='TCG' 等）+ セット種別
-        "product_kind, set_type"
+        "product_kind, set_type, "
+        # 手動並び替え順（行ドラッグ。NULL=未設定）
+        "display_order"
     )
 
 
@@ -128,17 +133,34 @@ async def list_products(
     conditions = []
     params: dict = {"limit": per_page, "offset": offset}
 
+    # 検索の関連度スコア（ORDER BY 用）。検索時のみ設定。
+    search_score_sql: str | None = None
     if search:
         # QA r6 I-02: 「タイプ」列 (category) もユーザーから見える列のため部分一致対象に含める。
-        # 例: 「TCG」検索で category="TCG" / "Pokemon TCG" の双方をヒットさせる。
-        # language / rarity / expansion_code も検索可能列として一般的なため同時に追加。
-        conditions.append(
-            f"({ctx['name']} ILIKE :search OR name_en ILIKE :search OR product_code ILIKE :search "
-            "OR mark ILIKE :search OR jan_code ILIKE :search OR card_number ILIKE :search "
-            "OR category ILIKE :search OR rarity ILIKE :search OR expansion_code ILIKE :search "
-            "OR language ILIKE :search)"
+        # language / rarity / expansion_code も検索可能列として一般的なため同時に対象。
+        # 広範マッチ（2026-06-05）: 入力を空白（半角/全角 U+3000）で語句分割し、各語句を
+        # 「いずれかの検索対象列に部分一致」（OR）させ、語句間も OR で広く候補化する。
+        # これにより語順・余分な空白・一部語句の欠落があっても近い候補を提示できる
+        # （解析レビューの「商品マスタから選択」が前方一致的に取りこぼす問題の解消）。
+        # さらに一致した語句数をスコア化し、明示ソート未指定時は関連度順に並べる。
+        search_cols = (
+            ctx["name"], "name_en", "product_code", "mark", "jan_code",
+            "card_number", "category", "rarity", "expansion_code", "language",
         )
-        params["search"] = f"%{search}%"
+        tokens = [tok for tok in re.split(r"[\s　]+", search) if tok]
+        if not tokens:
+            tokens = [search]
+        token_groups: list[str] = []   # 各語句の OR グループ（WHERE 用）
+        score_terms: list[str] = []    # 一致語句数（ORDER BY 用）
+        for i, tok in enumerate(tokens):
+            key = f"search_{i}"
+            params[key] = f"%{tok}%"
+            ors = " OR ".join(f"{col} ILIKE :{key}" for col in search_cols)
+            token_groups.append(f"({ors})")
+            score_terms.append(f"(CASE WHEN ({ors}) THEN 1 ELSE 0 END)")
+        # いずれかの語句にマッチすれば候補（広範マッチ）。
+        conditions.append("(" + " OR ".join(token_groups) + ")")
+        search_score_sql = " + ".join(score_terms)
     if category:
         conditions.append("category = :category")
         params["category"] = category
@@ -161,8 +183,18 @@ async def list_products(
         # ADR-093 商品マスタ: 発売日ソート（NULL は末尾）
         "release_date_asc": "release_date ASC NULLS LAST",
         "release_date_desc": "release_date DESC NULLS LAST",
+        # 手動並び替え（行ドラッグ）: display_order 昇順、未設定(NULL)は末尾、同値は id 昇順で安定。
+        "manual": "display_order ASC NULLS LAST, id ASC",
     }
-    order_by = _SORT_MAP.get(sort or "", "updated_at DESC")
+    explicit_sort = _SORT_MAP.get(sort or "")
+    if explicit_sort:
+        # 明示ソート（在庫表ヘッダーのトグル等）が最優先。
+        order_by = explicit_sort
+    elif search_score_sql:
+        # 検索かつ明示ソート無し → 一致語句数の多い順（関連度）、同点は更新日時降順。
+        order_by = f"({search_score_sql}) DESC, updated_at DESC"
+    else:
+        order_by = "updated_at DESC"
 
     result = await db.execute(
         text(f"SELECT {_select_columns(ctx)} FROM {ctx['ref']} {where} ORDER BY {order_by} LIMIT :limit OFFSET :offset"),

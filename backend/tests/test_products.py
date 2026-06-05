@@ -89,6 +89,70 @@ class TestProductsCRUD:
         assert res.status_code == 200
         assert any(p["name_ja"] == "検索商品X" for p in res.json())
 
+    async def test_list_products_search_multiword_broad(self, client):
+        """複数語句検索: 語順/欠落に依存せず、各語句のいずれか一致で候補に出る（広範マッチ）。
+
+        「葬送のフリーレン 新装版」で検索したとき、DB に "新装版" が無くても
+        "葬送のフリーレン" を含む商品が候補に出る（前方一致的な取りこぼしの解消）。
+        無関係な商品は出ない。
+        """
+        await client.post("/api/v1/products", json={
+            "name_ja": "ヴァイスシュヴァルツ 葬送のフリーレン",
+        })
+        await client.post("/api/v1/products", json={
+            "name_ja": "ポケモンカード ピカチュウ",
+        })
+        res = await client.get(
+            "/api/v1/products", params={"search": "葬送のフリーレン 新装版"},
+        )
+        assert res.status_code == 200
+        names = [p["name_ja"] for p in res.json()]
+        assert "ヴァイスシュヴァルツ 葬送のフリーレン" in names
+        assert "ポケモンカード ピカチュウ" not in names
+
+    async def test_list_products_search_ranks_by_match_count(self, client):
+        """一致語句数が多い候補ほど上位（関連度順・明示ソート未指定時）。"""
+        await client.post("/api/v1/products", json={
+            "name_ja": "ヴァイスシュヴァルツ 葬送のフリーレン",
+        })
+        await client.post("/api/v1/products", json={
+            "name_ja": "ヴァイスシュヴァルツ 五等分の花嫁",
+        })
+        # 2 語一致(ヴァイスシュヴァルツ + 葬送のフリーレン) が 1 語一致より上位
+        res = await client.get(
+            "/api/v1/products", params={"search": "ヴァイスシュヴァルツ 葬送のフリーレン"},
+        )
+        assert res.status_code == 200
+        names = [p["name_ja"] for p in res.json()]
+        assert "ヴァイスシュヴァルツ 葬送のフリーレン" in names
+        assert "ヴァイスシュヴァルツ 五等分の花嫁" in names
+        assert names.index("ヴァイスシュヴァルツ 葬送のフリーレン") < names.index(
+            "ヴァイスシュヴァルツ 五等分の花嫁",
+        )
+
+    async def test_list_products_manual_sort_by_display_order(self, client):
+        """sort=manual で display_order 昇順に並ぶ（行ドラッグ並び替えの土台）。
+
+        display_order は PATCH /products/{id} で更新でき、レスポンスにも含まれる。
+        """
+        a = await client.post("/api/v1/products", json={"name_ja": "並びA"})
+        b = await client.post("/api/v1/products", json={"name_ja": "並びB"})
+        c = await client.post("/api/v1/products", json={"name_ja": "並びC"})
+        ida, idb, idc = a.json()["id"], b.json()["id"], c.json()["id"]
+        # C=10, A=20, B=30 の手動順を設定
+        await client.patch(f"/api/v1/products/{idc}", json={"display_order": 10})
+        await client.patch(f"/api/v1/products/{ida}", json={"display_order": 20})
+        await client.patch(f"/api/v1/products/{idb}", json={"display_order": 30})
+        res = await client.get("/api/v1/products", params={"sort": "manual"})
+        assert res.status_code == 200
+        names = [
+            p["name_ja"] for p in res.json()
+            if p["name_ja"] in ("並びA", "並びB", "並びC")
+        ]
+        assert names == ["並びC", "並びA", "並びB"]
+        cprod = next(p for p in res.json() if p["id"] == idc)
+        assert cprod["display_order"] == 10
+
     async def test_get_product(self, client):
         """商品詳細を取得できる"""
         create_res = await client.post("/api/v1/products", json={

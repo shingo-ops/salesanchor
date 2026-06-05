@@ -666,7 +666,8 @@ async def setup_test_db(test_engine):
                 search_keywords TEXT,
                 exclude_keywords TEXT,
                 related_series VARCHAR(255),
-                category_classification VARCHAR(100)
+                category_classification VARCHAR(100),
+                display_order INTEGER
             )
         """))
         await conn.execute(text("""
