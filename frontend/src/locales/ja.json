@@ -146,7 +146,8 @@
     "designSystem": "デザインシステム",
     "accountSettings": "アカウント設定",
     "sales": "売上管理",
-    "commissions": "報酬管理"
+    "commissions": "報酬管理",
+    "tenantGlossary": "翻訳グロッサリ"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -159,6 +160,30 @@
     "sectionApiIntegration": "API連携",
     "sectionSuperAdmin": "スーパー管理者",
     "subtitle": "組織・データ・業務設定を一か所で管理します。"
+  },
+  "tenantGlossary": {
+    "subtitle": "翻訳グロッサリを管理します。登録した用語は AI 翻訳時に優先適用されます。",
+    "sourceTerm": "原語",
+    "targetText": "訳語（空欄=訳さない）",
+    "languagePair": "言語ペア",
+    "termType": "種別",
+    "notes": "備考",
+    "isActive": "有効",
+    "addEntry": "追加",
+    "editEntry": "編集",
+    "deleteConfirm": "このエントリを削除してよいですか？",
+    "sharedBadge": "共有",
+    "tenantBadge": "独自",
+    "noTranslate": "（訳さない）",
+    "empty": "グロッサリが登録されていません。",
+    "termTypeGeneral": "一般",
+    "termTypeProductName": "商品名",
+    "termTypeBrand": "ブランド",
+    "termTypeGrade": "グレード",
+    "termTypeAbbreviation": "略語",
+    "sourceTermPlaceholder": "例: PSA 10",
+    "targetTextPlaceholder": "例: PSA 10（訳さない）",
+    "notesPlaceholder": "任意メモ"
   },
   "apiIntegration": {
     "inProgress": "現在作成中"

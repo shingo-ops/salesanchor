@@ -72,6 +72,8 @@ export default function ManagementCenterPage() {
         { to: "channels",       labelKey: "nav.channels",       visible: hasPermission("channels.view") },
         { to: "bots",           labelKey: "nav.bots",           visible: hasPermission("bots.view") },
         { to: "notifications",  labelKey: "nav.notifications",  visible: hasPermission("notifications.manage") },
+        // ADR-SA-17: テナント翻訳グロッサリ
+        { to: "tenant-glossary", labelKey: "nav.tenantGlossary", visible: hasPermission("messaging.view") },
       ],
     },
   ];

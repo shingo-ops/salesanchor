@@ -67,6 +67,8 @@ import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
 import PhaseSwitchPage from "./pages/super-admin/PhaseSwitchPage";
 import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
+// ADR-SA-17: テナント翻訳グロッサリ管理 UI
+import TenantGlossaryPage from "./pages/management-center/TenantGlossaryPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -282,6 +284,8 @@ function App() {
                     <Route path="integrations/ups"          element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
+                    {/* ADR-SA-17: テナント翻訳グロッサリ管理 */}
+                    <Route path="tenant-glossary"     element={<TenantGlossaryPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />
                     <Route path="super-admin/masters" element={<SuperAdminMastersPage />} />

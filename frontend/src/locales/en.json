@@ -146,7 +146,8 @@
     "designSystem": "Design System",
     "accountSettings": "Account Settings",
     "sales": "Sales",
-    "commissions": "Commissions"
+    "commissions": "Commissions",
+    "tenantGlossary": "Translation Glossary"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -159,6 +160,30 @@
     "sectionApiIntegration": "API Integration",
     "sectionSuperAdmin": "Super Admin",
     "subtitle": "Manage organization, data, and business settings in one place."
+  },
+  "tenantGlossary": {
+    "subtitle": "Manage translation glossary entries. Registered terms are prioritized during AI translation.",
+    "sourceTerm": "Source Term",
+    "targetText": "Target Text (empty = do not translate)",
+    "languagePair": "Language Pair",
+    "termType": "Term Type",
+    "notes": "Notes",
+    "isActive": "Active",
+    "addEntry": "Add",
+    "editEntry": "Edit",
+    "deleteConfirm": "Delete this entry?",
+    "sharedBadge": "Shared",
+    "tenantBadge": "Custom",
+    "noTranslate": "(do not translate)",
+    "empty": "No glossary entries registered.",
+    "termTypeGeneral": "General",
+    "termTypeProductName": "Product Name",
+    "termTypeBrand": "Brand",
+    "termTypeGrade": "Grade",
+    "termTypeAbbreviation": "Abbreviation",
+    "sourceTermPlaceholder": "e.g. PSA 10",
+    "targetTextPlaceholder": "e.g. PSA 10 (leave blank to keep as-is)",
+    "notesPlaceholder": "Optional memo"
   },
   "apiIntegration": {
     "inProgress": "Under construction"
