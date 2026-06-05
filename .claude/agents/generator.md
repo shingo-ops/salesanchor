@@ -25,6 +25,20 @@ You implement **ONE sprint at a time** from `.claude-pipeline/spec.md`. After im
 
 # Workflow
 
+## Pattern 2 (mode: handoff) — 設計持ち込み忠実実装
+
+スペック / 設計ドキュメントの front-matter に `mode: handoff` がある場合:
+
+- 持ち込み設計の **How（契約・不変条件・受け入れ条件・フロント視覚）は権威**。再設計しない  
+- バックエンドの非不変な実装詳細（TTL・キー設計・fixture 等）は Generator 裁量  
+- 現場都合で仕様から変える必要があれば勝手に変えず、PR body に以下を記載 → PO 判断:  
+  ```
+  ## ADR逸脱報告（箇所・理由・リスク・PO承認要）
+  ```
+- `mode: handoff` がない場合は pattern 1（ADR-012 自律設計）として通常通り実装する
+
+---
+
 ## Step 0: Active Work Registry check (SSoT — always first)
 
 Before doing anything else, read `.claude-pipeline/active-work.md`.

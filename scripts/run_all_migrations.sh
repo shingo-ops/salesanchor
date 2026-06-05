@@ -35,7 +35,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=116
+TOTAL=117
 
 run_py() {
   local script="$1"
@@ -281,6 +281,9 @@ run_sql migrations/20260605_030000_create_salesanchor_app_role.sql
 
 # SA-18: 既存 tenant_NNN スキーマ全件に salesanchor_app を付与
 run_sql migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql
+
+# API連携: テナント Google Drive OAuth 連携設定テーブル（カレンダー雛形ミラー）
+run_sql migrations/20260606_010000_add_google_drive_config.sql
 
 echo ""
 echo "============================================"

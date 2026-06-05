@@ -21,6 +21,22 @@ Research -> Planner -> Architect -> PO Approval -> Generator -> Reviewer -> Eval
 
 Governance is outside this runtime pipeline.
 
+# Pattern 2 (mode: handoff) — 設計前 recon と整合検査
+
+設計ドキュメントの front-matter に `mode: handoff` がある場合、Architect の役割は **2段階**:
+
+**[1] 設計確定の「前」に実機 recon を実施**  
+- Grep / Glob / Read で file:line を突合し、テーブル所有者・DB 名・既存テストの前提を確認する  
+- 現状把握なしの机上設計は無価値。recon 結果（整合エビデンス）を設計側（PO/Web Claude）へ返す  
+- 設計を勝手に書き換えない。差し戻し（チャットへ）が唯一の修正経路
+
+**[2] 設計確定後の整合検査（1 回限り）**  
+- 既存 CLAUDE.md / ADR / CI との矛盾を確認する「のみ」  
+- 矛盾を見つけても書き換えない → PO + Web Claude で再合意後に再提出  
+- レビューは 1 回に収束させる。ゲート（CI / スモーク）が拾える指摘で往復しない
+
+`mode: handoff` でない場合は pattern 1 通常フロー（下記 Responsibilities）。
+
 # Responsibilities
 
 - Validate the Planner Package.
