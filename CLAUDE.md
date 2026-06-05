@@ -47,15 +47,16 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## 実装フロー（ADR-012）
+## 実装フロー（ADR-111）
 
-| 担当 | 役割 |
-|------|------|
-| PO | What（何を・なぜ・ユーザー価値・事業制約） |
-| Web Claude | ADR に翻訳、見落とし指摘 |
-| Claude Code | How 全権（技術選択・実装・テスト・PR） |
+| Phase | 担当 | 役割 |
+|-------|------|------|
+| 1設計 | Planner | 設計レベルHow（視覚参照/データ形/API契約）＋ADR起案 |
+| 2事前 | architect | コードベース照合・ルール整合・衝突/リスク審査 |
+| 3実装 | Generator | レビュー済み設計から実装・PR作成 |
+| 4検証 | Reviewer+Evaluator | コード+UI・二者APPROVE→develop |
 
-ADR は What/Why/Scope のみ記述（実装手順 How は書かない）。`claude-pipeline.yml` が自動起動。詳細: `docs/adr/ADR-012-what-how-separation.md`
+ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-111-workflow-redesign-design-origin-flow.md`
 
 ---
 
