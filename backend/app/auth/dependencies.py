@@ -199,6 +199,10 @@ async def get_current_tenant(
     # RLS用のapp.tenant_idも設定
     await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
 
+    # テナントリクエストでは app.is_operator を明示的にリセット（フェイルクローズ）
+    # コネクションプール汚染防止: 前のリクエストが operator だった場合に '' で上書き
+    await db.execute(text("SET app.is_operator = ''"))
+
     return safe_id
 
 
@@ -240,6 +244,8 @@ async def reset_tenant_context(db: AsyncSession, tenant_id: int) -> None:
     schema_name = f"tenant_{safe_id:03d}"
     await db.execute(text(f"SET search_path = {schema_name}, public"))
     await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
+    # commit後もoperatorフラグをリセット（コネクションプール汚染防止）
+    await db.execute(text("SET app.is_operator = ''"))
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +304,40 @@ async def get_current_admin(
             detail="この操作には管理者権限が必要です",
         )
     return current_user
+
+
+async def set_operator_context(db: AsyncSession) -> None:
+    """operator（is_super_admin=true）のリクエストで app.is_operator='true' をセット。
+
+    ADR-SA-17: translation_glossary の共有行（tenant_id IS NULL）への
+    書き込みポリシーは app.is_operator='true' のセッションのみ通過する。
+    本関数はそのセッション変数を設定する唯一の経路。
+
+    使用例:
+        user = await require_super_admin(current_user=...)
+        await set_operator_context(db)
+        # ここから shared glossary 行の書き込みが可能
+    """
+    if not _dialect_supports_search_path(db):
+        return
+    await db.execute(text("SET app.is_operator = 'true'"))
+
+
+async def reset_operator_context(db: AsyncSession) -> None:
+    """commit 後に app.is_operator を確実にリセットする。
+
+    ADR-072 の reset_tenant_context と同じ寿命で扱い、
+    コネクションプール汚染（後続テナントリクエストが operator 権限を
+    引き継いでしまう事故）を防ぐ。
+
+    使用例:
+        await db.commit()
+        await reset_operator_context(db)
+        # 以降は app.is_operator = '' のため共有行書き込みは拒否される
+    """
+    if not _dialect_supports_search_path(db):
+        return
+    await db.execute(text("SET app.is_operator = ''"))
 
 
 async def require_super_admin(
