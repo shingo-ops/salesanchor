@@ -8,9 +8,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://myapp_user:password@postgres:5432/myapp_db")
 
 # SA-18 Phase2: application_name でスモークテスト[7]判別
+# asyncpg は application_name を connect() の直接引数として受け付けない。
+# server_settings 経由で渡す必要がある（asyncpg 0.31.0 確認済み）。
 _connect_args: dict = {
     "prepared_statement_cache_size": 0,  # ADR-065: コンテナ再起動後の InvalidCachedStatementError 防止
-    "application_name": "salesanchor_backend",
+    "server_settings": {"application_name": "salesanchor_backend"},
 }
 
 # 非同期エンジンの作成（本番ではSQLログを無効化）
@@ -59,7 +61,7 @@ ADMIN_DATABASE_URL: str = os.getenv("ADMIN_DATABASE_URL", DATABASE_URL)
 
 _admin_connect_args: dict = {
     "prepared_statement_cache_size": 0,
-    "application_name": "salesanchor_admin_ops",  # smoke[7] 判別用
+    "server_settings": {"application_name": "salesanchor_admin_ops"},  # smoke[7] 判別用
 }
 _admin_engine_kwargs = {
     "echo": os.getenv("ENVIRONMENT", "development") != "production",

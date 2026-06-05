@@ -165,6 +165,25 @@ jobs:
             GOOGLE_DRIVE_REDIRECT_URI=${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}
             ENV_EOF
 
+            echo "Step 2b: DATABASE_URL ロールバック確認..."
+            # SA-18 Phase2 緊急修正: bootstrap が DATABASE_URL を
+            # salesanchor_app@localhost:5432 に書き換えた（コンテナ内から localhost は不到達）。
+            # docker compose up の前に jarvis@postgres:5432 に復元する。
+            # 冪等: すでに jarvis URL ならスキップ。
+            if grep -q 'salesanchor_app\|localhost:5432' .env 2>/dev/null; then
+              _pguser=$(grep '^POSTGRES_USER=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
+              _pgpass=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2- | head -1 | tr -d '\r\n')
+              _pgdb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
+              # Python で URL-safe エンコード（パスワードに特殊文字があっても安全）
+              # 注意: python3 -c の継続行は YAML リテラルブロックの最低インデントを下回るため単行化必須
+              _durl=$(python3 -c "import urllib.parse,sys;u,p,d=sys.argv[1],sys.argv[2],sys.argv[3];print('postgresql+asyncpg://{}:{}@postgres:5432/{}'.format(urllib.parse.quote(u,safe=''),urllib.parse.quote(p,safe=''),d))" "${_pguser}" "${_pgpass}" "${_pgdb}")
+              sed -i '/^DATABASE_URL=/d' .env
+              echo "DATABASE_URL=${_durl}" >> .env
+              echo "ℹ️  DATABASE_URL を jarvis@postgres:5432 に復元しました（SA-18 Phase2 ロールバック）"
+            else
+              echo "ℹ️  DATABASE_URL は既に jarvis モード — スキップ"
+            fi
+
             echo "Step 3: Rebuilding and restarting containers..."
             # build と up を分離してダウンタイムを最小化する。
             # --build を up と一体で実行すると旧コンテナ停止後にビルドが走り（最大2分程度）
@@ -233,10 +252,11 @@ jobs:
               psql -U jarvis -d jarvis_db -c \
               "ALTER ROLE salesanchor_app PASSWORD '${SALESANCHOR_APP_PASSWORD}';" \
               || echo "salesanchor_app role not yet created -- will be created in migrations"
-            # [2] .env に DATABASE_URL / ADMIN_DATABASE_URL を注入（sed 削除 + 追記）
-            sed -i '/^DATABASE_URL=/d' .env
+            # [2] DATABASE_URL は触らない（Phase2 切替は別 PR で段階的に実施）
+            # NOTE: Phase2 切替時は DATABASE_URL を salesanchor_app@postgres:5432 に変更し
+            #       docker compose up -d --force-recreate backend で即時反映すること。
+            # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
-            echo "DATABASE_URL=postgresql+asyncpg://salesanchor_app:${SALESANCHOR_APP_PASSWORD}@localhost:5432/jarvis_db" >> .env
             echo "ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL}" >> .env
         env:
           SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
