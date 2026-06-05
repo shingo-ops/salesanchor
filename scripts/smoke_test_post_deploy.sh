@@ -80,19 +80,14 @@ trap - EXIT
 cleanup_seed
 
 # [6] Fail-close (app.is_operator='' → INSERT with NULL tenant_id must fail)
-# Use ON_ERROR_STOP=1 so psql exits non-zero on SQL error — locale-independent
-# (Japanese PostgreSQL would output "違反" instead of "new row violates")
+# Use -c instead of heredoc: docker exec without -i doesn't pass heredoc stdin.
+# ON_ERROR_STOP=1: psql exits non-zero on SQL error (locale-independent).
 FAILCLOSE_OK=false
 docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
-  psql -U salesanchor_app -d jarvis_db -v ON_ERROR_STOP=1 <<'FC' > /dev/null 2>&1 \
+  psql -U salesanchor_app -d jarvis_db -v ON_ERROR_STOP=1 \
+  -c "BEGIN; SET LOCAL app.tenant_id = '1'; SET LOCAL app.is_operator = ''; INSERT INTO public.translation_glossary (tenant_id, source_term) VALUES (NULL, '__smoke_failclose__'); ROLLBACK;" \
+  > /dev/null 2>&1 \
   || FAILCLOSE_OK=true
-BEGIN;
-SET LOCAL app.tenant_id = '1';
-SET LOCAL app.is_operator = '';
-INSERT INTO public.translation_glossary (tenant_id, source_term)
-  VALUES (NULL, '__smoke_failclose__');
-ROLLBACK;
-FC
 [ "${FAILCLOSE_OK}" = "true" ] \
   && echo "[6] PASS: fail-close OK" \
   || { echo "[6] FAIL: fail-close not working (INSERT should have been rejected)"; exit 1; }
