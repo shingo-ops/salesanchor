@@ -28,7 +28,9 @@ interface PickerProduct {
   name_ja: string;
   name_en: string | null;
   category: string | null;
-  // 型番（拡張パック記号 例 OP-04 / カード番号）。候補で識別しやすくするため表示する。
+  // 型番（mark = 商品マスタの「型番」欄, 例 OP-04）＋ 拡張型番 / カード番号。
+  // 候補で識別しやすくするため表示する。
+  mark: string | null;
   expansion_code: string | null;
   card_number: string | null;
   unit_price: number | null;
@@ -286,8 +288,11 @@ export default function InventoryPicker({
               results.map((p, i) => {
                 const isZero = p.quantity <= 0;
                 const isActive = i === activeIndex;
-                // 型番（拡張記号 + カード番号）。型番検索時に候補で識別しやすくする。
-                const code = [p.expansion_code, p.card_number].filter(Boolean).join(" ");
+                // 型番（mark=「型番」欄）＋ 拡張型番 + カード番号。重複排除して併記。
+                // 型番検索時に候補で識別しやすくする。
+                const code = [
+                  ...new Set([p.mark, p.expansion_code, p.card_number].filter(Boolean)),
+                ].join(" ");
                 return (
                   <li
                     key={p.id}
