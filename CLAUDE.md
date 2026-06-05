@@ -47,7 +47,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## 実装フロー（ADR-111）
+## 実装フロー（ADR-112）
 
 | Phase | 担当 | 役割 |
 |-------|------|------|
@@ -56,7 +56,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 | 3実装 | Generator | レビュー済み設計から実装・PR作成 |
 | 4検証 | Reviewer+Evaluator | コード+UI・二者APPROVE→develop |
 
-ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-111-workflow-redesign-design-origin-flow.md`
+ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-112-workflow-redesign-design-origin-flow.md`
 
 ---
 
