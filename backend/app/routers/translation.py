@@ -39,6 +39,7 @@ from app.services.translation_glossary import (
     create_glossary_entry,
     delete_glossary_entry,
     list_glossary,
+    propose_share,
     seed_glossary_from_products,
     update_glossary_entry,
 )
@@ -220,7 +221,7 @@ async def outbound_confirm(
 @router.get(
     "/glossary",
     response_model=GlossaryListResponse,
-    dependencies=[Depends(require_permission("messaging.view"))],
+    dependencies=[Depends(require_permission("translation.glossary.view"))],
 )
 async def get_glossary(
     page: Annotated[int, Query(ge=1)] = 1,
@@ -258,7 +259,7 @@ async def get_glossary(
     "/glossary",
     response_model=GlossaryEntryOut,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_permission("messaging.send"))],
+    dependencies=[Depends(require_permission("translation.glossary.edit"))],
 )
 async def create_glossary(
     body: CreateGlossaryRequest,
@@ -294,7 +295,7 @@ async def create_glossary(
 @router.patch(
     "/glossary/{entry_id}",
     response_model=GlossaryEntryOut,
-    dependencies=[Depends(require_permission("messaging.send"))],
+    dependencies=[Depends(require_permission("translation.glossary.edit"))],
 )
 async def update_glossary(
     entry_id: int,
@@ -343,7 +344,7 @@ async def update_glossary(
 @router.delete(
     "/glossary/{entry_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_permission("messaging.send"))],
+    dependencies=[Depends(require_permission("translation.glossary.edit"))],
 )
 async def delete_glossary(
     entry_id: int,
@@ -364,7 +365,7 @@ async def delete_glossary(
 
 @router.post(
     "/glossary/seed-products",
-    dependencies=[Depends(require_permission("messaging.send"))],
+    dependencies=[Depends(require_permission("translation.glossary.edit"))],
 )
 async def seed_products_to_glossary(
     db: AsyncSession = Depends(get_db),
@@ -378,3 +379,29 @@ async def seed_products_to_glossary(
     count = await seed_glossary_from_products(db, tenant_id)
     await reset_tenant_context(db, tenant_id)
     return {"seeded": count, "message": f"{count} 件の商品名をグロッサリに追加しました"}
+
+
+@router.post(
+    "/glossary/{entry_id}/propose-share",
+    dependencies=[Depends(require_permission("translation.glossary.edit"))],
+)
+async def propose_glossary_share(
+    entry_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """テナント私有エントリを共有ベース辞書へ「共有提案」する（ADR-SA-17 I-9）。
+
+    operator のレビューキューに載るだけで、承認されるまで共有には反映されない。
+    非破壊（私有エントリは残る）。自テナント所有の私有エントリのみ対象。
+    """
+    ok = await propose_share(db, entry_id=entry_id, tenant_id=tenant_id)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="グロッサリエントリが見つかりません（自テナント所有の私有エントリのみ提案可）",
+        )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return {"proposed": True, "entry_id": entry_id}

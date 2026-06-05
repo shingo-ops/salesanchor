@@ -17,6 +17,7 @@ ADR-088 基盤を拡張:
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -46,6 +47,53 @@ CONF_THRESHOLD_SEND: float = float(
 )
 # 長文エスカレート閾値（受信のみ）
 _LONG_TEXT_CHARS: int = int(os.getenv("TRANSLATION_LONG_TEXT_CHARS", "800"))
+
+
+# ---------------------------------------------------------------------------
+# ADR-SA-17: 双方向自動判定（I-1）
+# ---------------------------------------------------------------------------
+#
+# 原文の言語を判定して「反対側」へ訳す:
+#   日本語を含む → source=ja → target=en（ja->en）
+#   日本語以外（英語・中国語等）→ target=ja（en->ja に集約。非日本語はすべて日本語へ）
+#
+# 送受信の区別ではなく「原文の言語」で訳す向きを決める（ADR §1）。
+#
+# 判定シグナルは **ひらがな・カタカナ（半角含む）のみ**。漢字（CJK 統合漢字）は
+# 中国語と共有するため日本語シグナルに含めない。これにより
+#   - 中国語（漢字のみ）→ 非日本語 → 日本語へ（ADR「中国語等→日本語」を満たす）
+#   - 仮名を含む日本語   → 英語へ
+# を正しく分岐できる（ADR §1「日本語/英語以外が来た場合の target は日本語」）。
+_JAPANESE_RE = re.compile(
+    r"[぀-ゟ゠-ヿｦ-ﾟ]"  # ひらがな / カタカナ / 半角カタカナ
+)
+
+
+def detect_inbound_target_language(message_text: str) -> str:
+    """原文の言語を判定し、訳す向き（target language）を返す（ADR-SA-17 I-1）。
+
+    仮名（ひらがな/カタカナ）を含めば日本語とみなす。漢字のみ（＝中国語の可能性）や
+    英語・その他はすべて非日本語として日本語へ訳す。
+
+    Returns:
+        "en" — 原文が日本語（日本語→英語）
+        "ja" — 原文が日本語以外（非日本語→日本語）
+    """
+    if _JAPANESE_RE.search(message_text or ""):
+        return "en"
+    return "ja"
+
+
+def _glossary_pair_for_target(target_language: str) -> str:
+    """target language から 2 層辞書ロード用の language_pair を導出する。
+
+    日本語以外→日本語 = "en->ja"（非日本語はすべて en->ja 辞書に集約）
+    日本語→英語       = "ja->en"
+    """
+    return "ja->en" if target_language == "en" else "en->ja"
+
+
+_LANG_LABELS: dict[str, str] = {"ja": "Japanese", "en": "English"}
 
 
 # ---------------------------------------------------------------------------
@@ -133,16 +181,23 @@ async def _save_translation(
     engine: str,
     confidence: float,
     original_language: str | None,
+    status: str = "completed",
 ) -> None:
-    """翻訳結果を DB キャッシュに保存 (ON CONFLICT で冪等)。"""
+    """翻訳結果を DB キャッシュに保存 (ON CONFLICT で冪等・ADR-SA-17 I-4)。
+
+    status は ADR-SA-17 で追加（既定 'completed'）。即時翻訳が成功した行は
+    'completed' を記録し、sweeper / 監視が「未処理（行なし）」と区別できるようにする。
+    """
     await db.execute(
         text(
             f"INSERT INTO {table_ref} "
-            "(message_id, target_language, translated_text, engine, confidence, original_language) "
-            "VALUES (:message_id, :target_language, :translated_text, :engine, :confidence, :original_language) "
+            "(message_id, target_language, translated_text, engine, confidence, original_language, status) "
+            "VALUES (:message_id, :target_language, :translated_text, :engine, :confidence, "
+            "        :original_language, :status) "
             "ON CONFLICT (message_id, target_language) DO UPDATE "
             "SET translated_text = :translated_text, engine = :engine, "
-            "    confidence = :confidence, original_language = :original_language"
+            "    confidence = :confidence, original_language = :original_language, "
+            "    status = :status"
         ),
         {
             "message_id": message_id,
@@ -151,6 +206,7 @@ async def _save_translation(
             "engine": engine,
             "confidence": confidence,
             "original_language": original_language,
+            "status": status,
         },
     )
 
@@ -234,7 +290,7 @@ def _build_inbound_prompt(
 ) -> str:
     """受信メッセージ翻訳プロンプト。グロッサリ注入 + structured JSON 出力。"""
     glossary_block = format_glossary_for_prompt(glossary_entries)
-    lang_label = "Japanese" if target_language == "ja" else target_language
+    lang_label = _LANG_LABELS.get(target_language, target_language)
 
     parts = [
         "You are a professional translator specializing in e-commerce and trading card games (TCG).",
@@ -419,8 +475,11 @@ async def translate_inbound(
             flagged_terms=[],
         )
 
-    # 2. グロッサリロード
-    glossary = await load_glossary(db, tenant_id, language_pair="en->ja")
+    # 2. グロッサリロード（ADR-SA-17 I-5: target から 2 層辞書の language_pair を導出）
+    #    load_glossary 内でテナント私有 → 共有ベースの優先順位が解決される。
+    glossary = await load_glossary(
+        db, tenant_id, language_pair=_glossary_pair_for_target(target_language)
+    )
 
     # 3. 初回呼び出し: 安いモデル
     model = MODEL_RECEIVE
@@ -591,6 +650,7 @@ __all__ = [
     "MODEL_SEND",
     "TranslationResult",
     "confirm_outbound_draft",
+    "detect_inbound_target_language",
     "generate_outbound_draft",
     "translate_inbound",
     "translate_message",

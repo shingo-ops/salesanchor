@@ -69,6 +69,7 @@ from app.routers import (
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
+    shared_glossary,  # ADR-SA-17: 共有辞書（Layer1）+ 昇格レビュー（SaaS管理者専用）
     shifts,
     shipping,
     staff,
@@ -502,6 +503,12 @@ app.include_router(
 app.include_router(
     translation.router, prefix="/api/v1", tags=["translation"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# ADR-SA-17: 共有辞書（Layer1）管理 + 昇格レビュー（SaaS管理者専用・I-7）
+# get_current_tenant を付けない（横断参照のため）。router 内 require_super_admin で構造的に保護。
+app.include_router(
+    shared_glossary.router, prefix="/api/v1", tags=["shared-glossary"],
 )
 
 

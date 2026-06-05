@@ -654,6 +654,23 @@ async def process_messenger_event(body: dict) -> None:
                         )
                         continue
 
+                    # ADR-SA-17 I-2: 受信メッセージ保存後、即時翻訳タスクを発火（非同期・数秒）。
+                    # webhook 自体は既に即 200 を返しており（receive_messenger_webhook）、
+                    # ここはバックグラウンド処理。翻訳完了は待たない。失敗時は sweeper が後追い。
+                    if m.get("message_text"):
+                        try:
+                            from app.tasks.translation import translate_message_now
+                            translate_message_now.delay(
+                                tenant_id=tenant_id,
+                                schema_name=schema,
+                                message_id=m["message_id"],
+                                message_text=m["message_text"],
+                            )
+                        except Exception:
+                            logging.warning(
+                                "[Meta] 即時翻訳タスク投入失敗（sweeper が後追い）"
+                            )
+
                     # アバター画像URLをバックグラウンドで取得・キャッシュ
                     # 例外は握り潰してWebhook処理本体に影響させない
                     try:

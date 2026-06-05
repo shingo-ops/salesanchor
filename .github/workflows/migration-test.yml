@@ -378,6 +378,24 @@ jobs:
           --   ただし v_supplier_parse_stats VIEW が parse_logs を参照するため、
           --   migration 実行順（20260604_110000 → 20260604_120000 → 20260604_130000）が
           --   CI の changed_sql ソート順と一致することを確認済み。
+
+          -- public.translation_glossary: 20260604_220000_create_translation_glossary.sql で作成。
+          --   ADR-SA-17 の 20260605_120000 migration が ALTER ADD COLUMN / RLS / INDEX を実行するため
+          --   前提として最小定義を登録する。
+          CREATE TABLE IF NOT EXISTS public.translation_glossary (
+              id            SERIAL PRIMARY KEY,
+              tenant_id     INTEGER,
+              source_term   TEXT NOT NULL,
+              target_text   TEXT,
+              language_pair VARCHAR(20) NOT NULL DEFAULT 'en->ja',
+              term_type     VARCHAR(30) NOT NULL DEFAULT 'general',
+              is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+              source_ref    VARCHAR(50),
+              notes         TEXT,
+              created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              CONSTRAINT uq_translation_glossary UNIQUE (tenant_id, source_term, language_pair)
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────

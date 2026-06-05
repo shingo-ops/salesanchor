@@ -140,10 +140,62 @@
     "designSystem": "Design System",
     "accountSettings": "Account Settings",
     "sales": "Sales",
-    "commissions": "Commissions"
+    "commissions": "Commissions",
+    "tenantDictionary": "Tenant Dictionary",
+    "sharedDictionary": "Shared Dictionary"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
+  },
+  "glossary": {
+    "tenantSubtitle": "Manage your own proper nouns and mistranslation fixes, and propose terms to the shared dictionary.",
+    "sharedSubtitle": "Manage the shared base dictionary common to all tenants and review promotion proposals from tenants.",
+    "sourceTerm": "Source term",
+    "targetText": "Translation",
+    "targetTextPlaceholder": "Empty = do not translate (keep as-is)",
+    "languagePair": "Direction",
+    "termType": "Type",
+    "notes": "Notes",
+    "scope": "Scope",
+    "status": "Status",
+    "actions": "Actions",
+    "add": "Add",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "active": "Active",
+    "inactive": "Inactive",
+    "shared": "Shared",
+    "private": "Private",
+    "readOnly": "Read-only",
+    "doNotTranslate": "Do not translate",
+    "seedProducts": "Import from products",
+    "seedDone": "Added {{count}} product names to the dictionary",
+    "proposeShare": "Propose to shared",
+    "proposed": "Proposed",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "approve": "Approve",
+    "reject": "Reject",
+    "tabShared": "Shared dictionary",
+    "tabQueue": "Promotion review",
+    "queueEmpty": "No pending shared proposals.",
+    "empty": "No dictionary entries.",
+    "loading": "Loading…",
+    "error": "Dictionary operation failed.",
+    "confirmDelete": "Delete this entry?",
+    "pair": {
+      "en->ja": "English → Japanese",
+      "ja->en": "Japanese → English"
+    },
+    "type": {
+      "general": "General",
+      "product_name": "Product name",
+      "brand": "Brand",
+      "grade": "Grade",
+      "abbreviation": "Abbreviation",
+      "jargon": "Jargon"
+    }
   },
   "managementCenter": {
     "sectionTeam": "Team & HR",

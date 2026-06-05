@@ -48,6 +48,8 @@ export default function ManagementCenterPage() {
         { to: "suppliers",      labelKey: "nav.suppliers",      visible: hasPermission("suppliers.view") },
         { to: "purchase-orders", labelKey: "nav.purchaseOrders", visible: hasPermission("purchase_orders.view") },
         { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },
+        { to: "tenant-dictionary", labelKey: "nav.tenantDictionary",
+          visible: hasAny("translation.glossary.view", "translation.glossary.edit") },
       ],
     },
     {

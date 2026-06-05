@@ -104,7 +104,9 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.priority_scoring_check.run_priority_scoring_check",
         "schedule": crontab(hour=2, minute=0, day_of_month=1),
     },
-    # ADR-110: 未翻訳受信メッセージのバッチ翻訳（15分ごと）
+    # ADR-SA-17 I-3: 翻訳 sweeper（取りこぼし拾い・15分ごと）。
+    # 主役は即時翻訳（translate_message_now / webhook 発火）。本バッチは即時翻訳が
+    # 失敗/未処理だった分を後追いで双方向翻訳し、滞留を operator へ通知する。
     "translate-pending-messages": {
         "task": "app.tasks.translation.translate_pending_messages",
         "schedule": 900.0,  # 15分

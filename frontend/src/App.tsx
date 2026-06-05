@@ -65,6 +65,8 @@ import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
 import PhaseSwitchPage from "./pages/super-admin/PhaseSwitchPage";
 import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
+import TenantDictionaryPage from "./pages/management-center/TenantDictionaryPage";
+import SharedDictionaryPage from "./pages/super-admin/SharedDictionaryPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -237,6 +239,11 @@ function App() {
                     path="/super-admin/inventory-offers"
                     element={<InventoryOffersPage />}
                   />
+                  {/* ADR-SA-17 I-7: 共有辞書 + 昇格レビュー（is_super_admin 限定、Page 内で 403 ガード） */}
+                  <Route
+                    path="/super-admin/shared-dictionary"
+                    element={<SharedDictionaryPage />}
+                  />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
                     <Route index element={<Navigate to="tenant-profile" replace />} />
@@ -273,6 +280,8 @@ function App() {
                     <Route path="suppliers"           element={<SuppliersPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
+                    {/* ADR-SA-17 I-7: テナント辞書（Layer2 私有グロッサリ） */}
+                    <Route path="tenant-dictionary"   element={<TenantDictionaryPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />
                     <Route path="super-admin/masters" element={<SuperAdminMastersPage />} />

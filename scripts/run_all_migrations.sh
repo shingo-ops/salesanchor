@@ -270,6 +270,9 @@ run_sql migrations/20260604_220000_create_translation_glossary.sql
 # 商品マスタ一覧の手動並び替え（行ドラッグ）: public.products に display_order 追加
 run_sql migrations/20260605_000000_add_products_display_order.sql
 
+# ADR-SA-17: 翻訳改訂 — message_translations.status / glossary 昇格カラム / RLS / 権限 seed
+run_sql migrations/20260605_120000_translation_bidirectional_glossary.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

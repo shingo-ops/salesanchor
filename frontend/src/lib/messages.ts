@@ -304,6 +304,8 @@ export interface GlossaryEntry {
   is_active: boolean;
   source_ref: string | null;
   notes: string | null;
+  // ADR-SA-17 昇格状態（テナント私有エントリのみ意味を持つ）
+  share_status?: string;
 }
 
 export interface GlossaryListResponse {
@@ -333,10 +335,121 @@ export async function createGlossaryEntry(data: {
   return api.post<GlossaryEntry>("/translation/glossary", data);
 }
 
+export async function updateGlossaryEntry(
+  id: number,
+  data: {
+    source_term?: string;
+    target_text?: string | null;
+    term_type?: string;
+    notes?: string | null;
+    is_active?: boolean;
+  },
+): Promise<GlossaryEntry> {
+  return api.patch<GlossaryEntry>(`/translation/glossary/${id}`, data);
+}
+
 export async function deleteGlossaryEntry(id: number): Promise<void> {
   await api.delete(`/translation/glossary/${id}`);
 }
 
 export async function seedGlossaryFromProducts(): Promise<{ seeded: number; message: string }> {
   return api.post("/translation/glossary/seed-products", {});
+}
+
+// ADR-SA-17: テナント私有エントリを共有ベース辞書へ「共有提案」する（昇格フロー）
+export async function proposeGlossaryShare(id: number): Promise<{ proposed: boolean }> {
+  return api.post(`/translation/glossary/${id}/propose-share`, {});
+}
+
+// ---------------------------------------------------------------------------
+// ADR-SA-17: 共有辞書（Layer1）+ 昇格レビュー（SaaS管理者専用）
+// ---------------------------------------------------------------------------
+
+export interface SharedGlossaryEntry {
+  id: number;
+  source_term: string;
+  target_text: string | null;
+  language_pair: string;
+  term_type: string;
+  is_active: boolean;
+  source_ref: string | null;
+  notes: string | null;
+  share_status: string;
+}
+
+export interface SharedGlossaryListResponse {
+  items: SharedGlossaryEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface PromotionQueueItem {
+  id: number;
+  source_term: string;
+  target_text: string | null;
+  language_pair: string;
+  term_type: string;
+  notes: string | null;
+  share_proposed_at: string | null;
+}
+
+export interface PromotionQueueResponse {
+  items: PromotionQueueItem[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export async function listSharedGlossary(
+  page = 1,
+  perPage = 50,
+  languagePair?: string,
+): Promise<SharedGlossaryListResponse> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  if (languagePair) params.set("language_pair", languagePair);
+  return api.get<SharedGlossaryListResponse>(`/super-admin/shared-glossary?${params}`);
+}
+
+export async function createSharedGlossary(data: {
+  source_term: string;
+  target_text: string | null;
+  language_pair: string;
+  term_type: string;
+  notes?: string | null;
+}): Promise<SharedGlossaryEntry> {
+  return api.post<SharedGlossaryEntry>("/super-admin/shared-glossary", data);
+}
+
+export async function updateSharedGlossary(
+  id: number,
+  data: {
+    source_term?: string;
+    target_text?: string | null;
+    term_type?: string;
+    notes?: string | null;
+    is_active?: boolean;
+  },
+): Promise<SharedGlossaryEntry> {
+  return api.patch<SharedGlossaryEntry>(`/super-admin/shared-glossary/${id}`, data);
+}
+
+export async function deleteSharedGlossary(id: number): Promise<void> {
+  await api.delete(`/super-admin/shared-glossary/${id}`);
+}
+
+export async function listPromotionQueue(
+  page = 1,
+  perPage = 50,
+): Promise<PromotionQueueResponse> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  return api.get<PromotionQueueResponse>(`/super-admin/shared-glossary/promotions?${params}`);
+}
+
+export async function approvePromotion(id: number): Promise<{ approved: boolean }> {
+  return api.post(`/super-admin/shared-glossary/promotions/${id}/approve`, {});
+}
+
+export async function rejectPromotion(id: number): Promise<{ rejected: boolean }> {
+  return api.post(`/super-admin/shared-glossary/promotions/${id}/reject`, {});
 }

@@ -140,10 +140,62 @@
     "designSystem": "デザインシステム",
     "accountSettings": "アカウント設定",
     "sales": "売上管理",
-    "commissions": "報酬管理"
+    "commissions": "報酬管理",
+    "tenantDictionary": "テナント辞書",
+    "sharedDictionary": "共有辞書"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
+  },
+  "glossary": {
+    "tenantSubtitle": "自社の固有名詞・誤訳補正を管理し、共有辞書への提案ができます。",
+    "sharedSubtitle": "全テナント共通の固有名詞辞書と、テナントからの共有提案を管理します。",
+    "sourceTerm": "原語",
+    "targetText": "訳語",
+    "targetTextPlaceholder": "空欄＝訳さない（原語保持）",
+    "languagePair": "翻訳方向",
+    "termType": "種別",
+    "notes": "メモ",
+    "scope": "範囲",
+    "status": "状態",
+    "actions": "操作",
+    "add": "追加",
+    "delete": "削除",
+    "enable": "有効化",
+    "disable": "無効化",
+    "active": "有効",
+    "inactive": "無効",
+    "shared": "共有",
+    "private": "私有",
+    "readOnly": "読み取り専用",
+    "doNotTranslate": "訳さない",
+    "seedProducts": "商品名から取込",
+    "seedDone": "{{count}} 件の商品名を辞書に追加しました",
+    "proposeShare": "共有提案",
+    "proposed": "提案中",
+    "approved": "承認済",
+    "rejected": "却下",
+    "approve": "承認",
+    "reject": "却下",
+    "tabShared": "共有辞書",
+    "tabQueue": "昇格レビュー",
+    "queueEmpty": "承認待ちの共有提案はありません。",
+    "empty": "辞書エントリがありません。",
+    "loading": "読み込み中…",
+    "error": "辞書の操作に失敗しました。",
+    "confirmDelete": "このエントリを削除しますか？",
+    "pair": {
+      "en->ja": "英語→日本語",
+      "ja->en": "日本語→英語"
+    },
+    "type": {
+      "general": "一般",
+      "product_name": "商品名",
+      "brand": "ブランド",
+      "grade": "グレード",
+      "abbreviation": "略語",
+      "jargon": "専門用語"
+    }
   },
   "managementCenter": {
     "sectionTeam": "チーム・人事",

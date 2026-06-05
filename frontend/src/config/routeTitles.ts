@@ -41,4 +41,6 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/super-admin/masters":        "nav.superAdminMasters",
   "/super-admin/inbound":        "nav.superAdminInbound",
   "/super-admin/phase-switch":   "nav.superAdminPhaseSwitch",
+  "/super-admin/shared-dictionary": "nav.sharedDictionary",
+  "/management-center/tenant-dictionary": "nav.tenantDictionary",
 };

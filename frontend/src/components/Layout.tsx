@@ -164,6 +164,7 @@ export default function Layout() {
     { to: "/super-admin/masters",          labelKey: "nav.superAdminMasters" },
     { to: "/super-admin/inbound",          labelKey: "nav.superAdminInbound" },
     { to: "/super-admin/inventory-offers", labelKey: "nav.superAdminInventoryOffers" },
+    { to: "/super-admin/shared-dictionary", labelKey: "nav.sharedDictionary" },
     { to: "/super-admin/phase-switch",     labelKey: "nav.superAdminPhaseSwitch" },
   ] : [];
 

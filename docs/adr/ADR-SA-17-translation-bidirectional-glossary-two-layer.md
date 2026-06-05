@@ -111,3 +111,40 @@
 - 本体だけでなく **I-2（webhook 非ブロッキング）/ I-3（sweeper 拾い＋通知）/ I-7（共有ページ operator 限定）** が「実際に効くか」を実機で確認。
 - 即時翻訳タスク・sweeper・通知が **登録 → 稼働 → 実際に発火** まで閉じているかを裏取り（"merged ≠ live"）。
 - Generator が ADR と違う判断をした点は別表で報告させ、採否を PO が決定。
+
+---
+
+## Codebase reconnaissance（Generator が実装前に file:line で突合した結果）
+
+ADR 本文中の自然言語 referent を `grep -rn` で実体確認した結果。0-hit は無し（全 referent が既存実体に対応）。
+
+| ADR 中の referent | 実体（file:line） | 備考 |
+|---|---|---|
+| 受信 webhook ハンドラ | `backend/app/routers/webhook.py:261` `receive_messenger_webhook` / `:289` `background_tasks.add_task` → 即 200 | I-2 の非ブロッキングは既存。即時翻訳発火点は `process_messenger_event`（`:578`）の `_persist_meta_message`（`:437`）成功直後 |
+| message 保存 | `backend/app/routers/webhook.py:545` `INSERT INTO meta_messages ... ON CONFLICT (message_id) DO NOTHING` | 重複弾き＝冪等。msg_inserted_id が None なら重複 |
+| message_translator の glossary 参照 | `backend/app/services/message_translator.py:423` `load_glossary(db, tenant_id, language_pair="en->ja")` | 方向固定 → bidirectional 化（target から pair 導出）の起点 |
+| 既存 translate_inbound | `backend/app/services/message_translator.py:391` | target_language 既定 "ja" 固定 → 自動判定対象 |
+| translation_glossary スキーマ | `migrations/20260604_220000_create_translation_glossary.sql:16` `public.translation_glossary`（tenant_id NULL=共有 / 非NULL=私有） | Layer 分離は tenant_id で既存。昇格カラム（share_status 等）追加の起点 |
+| message_translations スキーマ | `migrations/094_create_message_translations.sql:25` + `20260604_220000:62` confidence/original_language | `status` 列は未存在 → I-4 用に追加 |
+| Celery 定義 / beat | `backend/app/celery_app.py:108` `translate-pending-messages`(900s) / `:113` `check-translation-health`(毎時) | translate_pending を sweeper に降格 |
+| 既存バッチ本体 | `backend/app/tasks/translation.py:29` `translate_pending_messages` / `:131` `check_translation_health_task` | sweeper 化 + 即時タスク追加 |
+| 翻訳監視 | `backend/app/services/translation_monitor.py:44` `check_translation_health` / `:152` `notify_translation_anomaly` | 即時失敗/滞留・昇格滞留の検出を拡張 |
+| 権限ファクトリ（テナント） | `backend/app/auth/dependencies.py:381` `require_permission(*keys)` | テナント辞書 view/edit に使用 |
+| 権限ガード（SaaS管理者） | `backend/app/auth/dependencies.py:303` `require_super_admin`（`users.is_super_admin`） | **I-7 の構造的ガード**。共有辞書ルータに適用 |
+| RBAC 参照パターン（ADR-107） | `backend/app/routers/customer_priority.py:38` `dependencies=[Depends(require_permission(...))]` / RLS: `migrations/20260604_180000_analytics_agent_a_tables.sql:146` | RLS は `tenant_id = current_setting('app.tenant_id', true)::INTEGER` 形式 |
+| 権限 seed パターン | `migrations/042_seed_meta_inbox_permissions.sql:30` (`public.permissions` + role_permissions ループ) | 新権限キー seed の雛形 |
+| テナントコンテキスト | `backend/app/auth/dependencies.py:200` `SET app.tenant_id`（request path）/ `:218` `reset_tenant_context` | RLS の app.tenant_id は request path で常時設定。batch/operator は未設定 |
+| 管理センター ナビ/ルート | `frontend/src/pages/management-center/ManagementCenterPage.tsx:30` rawSections / `frontend/src/App.tsx:261` `<Route path="/management-center">` | テナント辞書サブメニュー追加先（"data" section） |
+| SaaS管理者 ナビ/ルート | `frontend/src/components/Layout.tsx:163` `saasAdminItems` / `frontend/src/App.tsx:216` `/super-admin/*` | 共有辞書サブメニュー追加先 |
+| super-admin ガード（FE） | `frontend/src/hooks/useSuperAdmin.ts:19` `useSuperAdmin()` / `MastersPage.tsx:36` 403 ガード | 共有辞書ページの二重ガード雛形 |
+| 権限フック（FE） | `frontend/src/hooks/usePermissions.ts:16` `hasPermission/hasAny` | テナント辞書ナビ可視制御 |
+| 既存 glossary API クライアント | `frontend/src/lib/messages.ts:294` `GlossaryEntry` / `listGlossary` 等 | 拡張の起点（propose/shared/promotion 追加） |
+| inbox 翻訳表示（従来どおり） | `frontend/src/pages/inbox/InboxMessageThread.tsx:281` 原文＋訳併記（オンデマンド `/leads/.../translate`） | I-1「表示は従来どおり」→ 即時翻訳はキャッシュ温め。表示 UI は不変 |
+| 受信パスのモデル config | `backend/app/services/message_translator.py:39` `TRANSLATION_MODEL_RECEIVE`（既定 gemini-2.5-flash） | Gemini flash。config 化済 |
+| i18n ラベル | `frontend/src/locales/ja.json` / `en.json` `"nav"` セクション | 新メニュー・ページのラベル追加先 |
+| migration 適用経路 | `scripts/run_all_migrations.sh:268` `run_sql migrations/20260604_220000_create_translation_glossary.sql` | 新 migration はここに追記（deploy.yml は本ファイルを呼ぶ） |
+
+### Generator が ADR と異なる判断をした点（PO 採否用）
+
+- **I-8「RLS で不可視」**: `translation_glossary` は public スキーマの横断テーブルで、既存実装は **アプリ層フィルタ**（`WHERE tenant_id = :tenant_id OR tenant_id IS NULL`）でテナント分離済み。ADR の「RLS」に忠実に、防御多重化として RLS ポリシーを追加するが、batch/sweeper・operator パス（`app.tenant_id` 未設定）を壊さないため「コンテキスト未設定なら全行可視・request path（app.tenant_id 設定済）でのみ厳格分離」とする。ADR-107 は tenant スキーマ表への RLS、本件は public 横断表への RLS という違いがある。
+- **I-1 表示**: ADR §1「表示は従来どおり」に従い inbox 表示 UI は変更しない。即時翻訳はキャッシュを温め、既存オンデマンド翻訳（原文＋訳併記）が即座に解決する形で満たす。

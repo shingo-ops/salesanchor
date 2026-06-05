@@ -30,6 +30,8 @@ _FAIL_RATE_THRESHOLD = float(os.getenv("TRANSLATION_FAIL_RATE_THRESHOLD", "0.20"
 _LOW_CONF_RATE_THRESHOLD = float(os.getenv("TRANSLATION_LOW_CONF_RATE_THRESHOLD", "0.30"))
 _CONF_THRESHOLD_RECEIVE = float(os.getenv("TRANSLATION_CONFIDENCE_THRESHOLD_RECEIVE", "0.70"))
 _DEBOUNCE_HOURS = 1
+# ADR-SA-17: 昇格レビューキューが滞留とみなされる経過時間（時間）
+_PROMOTION_BACKLOG_HOURS = int(os.getenv("TRANSLATION_PROMOTION_BACKLOG_HOURS", "24"))
 
 
 @dataclass
@@ -56,7 +58,9 @@ async def check_translation_health(
     """
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
-    # 未処理（pending）数 = meta_messages に対応する翻訳行がない件数
+    # 未処理（pending）数 = meta_messages に対応する翻訳行がない件数。
+    # ADR-SA-17: 双方向化に伴い target_language を 'ja' 固定にせず、
+    # 「向きを問わず翻訳行が存在しない」ことを pending の条件とする。
     result = await db.execute(
         text(
             f"SELECT "
@@ -64,7 +68,7 @@ async def check_translation_health(
             f"  COUNT(*) FILTER (WHERE mt.message_id IS NULL) AS pending "
             f"FROM {meta_table_ref} m "
             f"LEFT JOIN {table_ref} mt "
-            f"  ON mt.message_id = m.message_id AND mt.target_language = 'ja' "
+            f"  ON mt.message_id = m.message_id "
             f"WHERE m.direction = 'inbound' "
             f"  AND m.created_at >= :since"
         ),
@@ -204,8 +208,82 @@ async def notify_translation_anomaly(
     return sent
 
 
+# ---------------------------------------------------------------------------
+# ADR-SA-17: sweeper 拾い / 昇格キュー滞留の通知（3点セット③・I-3 / I-9）
+# ---------------------------------------------------------------------------
+
+
+async def notify_sweeper_pickup(
+    stale_picked: int,
+    failed: int,
+    processed: int,
+) -> bool:
+    """sweeper が即時翻訳の取りこぼし（滞留）/ 失敗を拾ったことを operator へ通知（I-3）。
+
+    schedule（15分）でレート制限されるためデバウンスは設けない。
+    Returns True if a notification was sent.
+    """
+    if stale_picked <= 0 and failed <= 0:
+        return False
+    lines = ["🧹 **Sales Anchor 翻訳 sweeper**: 即時翻訳の取りこぼしを拾いました"]
+    if stale_picked > 0:
+        lines.append(f"・滞留（即時翻訳が未処理だった分）: {stale_picked} 件を後追い翻訳")
+    if failed > 0:
+        lines.append(f"・翻訳失敗（再試行対象）: {failed} 件")
+    lines.append(f"・本バッチ処理件数: {processed} 件")
+    return await _post_webhook("\n".join(lines))
+
+
+async def notify_promotion_backlog(db: AsyncSession) -> bool:
+    """共有辞書の昇格レビューキューが滞留している場合に operator へ通知（I-9）。
+
+    share_status='proposed' のうち最も古い提案が _PROMOTION_BACKLOG_HOURS を超えたら通知。
+    Returns True if a notification was sent.
+    """
+    # 横断参照のため RLS コンテキストをクリア（残留 app.tenant_id 対策）。
+    try:
+        await db.execute(text("SET app.tenant_id = ''"))
+    except Exception:
+        logger.debug("[translation_monitor] app.tenant_id クリア skip", exc_info=True)
+
+    try:
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*), MIN(share_proposed_at) "
+                "FROM public.translation_glossary "
+                "WHERE share_status = 'proposed'"
+            )
+        )
+    except Exception:
+        logger.debug("[translation_monitor] 昇格キュー参照 skip", exc_info=True)
+        return False
+
+    row = result.first()
+    if row is None or not row[0]:
+        return False
+    count = int(row[0])
+    oldest = row[1]
+    if oldest is None:
+        return False
+    if oldest.tzinfo is None:
+        oldest = oldest.replace(tzinfo=timezone.utc)
+    elapsed = datetime.now(timezone.utc) - oldest
+    if elapsed < timedelta(hours=_PROMOTION_BACKLOG_HOURS):
+        return False
+
+    content = (
+        "🗂️ **Sales Anchor 共有辞書 昇格レビュー滞留**\n\n"
+        f"承認待ちの共有提案が {count} 件あります"
+        f"（最古の提案から {int(elapsed.total_seconds() // 3600)} 時間経過）。\n"
+        "SaaS管理者の共有辞書ページでレビューしてください。"
+    )
+    return await _post_webhook(content)
+
+
 __all__ = [
     "TranslationHealthSnapshot",
     "check_translation_health",
+    "notify_promotion_backlog",
+    "notify_sweeper_pickup",
     "notify_translation_anomaly",
 ]

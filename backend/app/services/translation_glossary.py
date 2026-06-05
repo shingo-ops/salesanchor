@@ -39,6 +39,25 @@ class GlossaryEntry:
     is_active: bool
     source_ref: str | None
     notes: str | None
+    # ADR-SA-17 昇格フロー（I-9）。既定 'none'。翻訳ロードでは未使用（既定のまま）。
+    share_status: str = "none"
+
+
+@dataclass(frozen=True)
+class PromotionQueueItem:
+    """昇格レビューキューの 1 件（ADR-SA-17 I-9）。
+
+    匿名性のため提供テナント（tenant_id）は **意図的に含めない**。
+    operator は語の内容のみをレビューする。
+    """
+
+    id: int
+    source_term: str
+    target_text: str | None
+    language_pair: str
+    term_type: str
+    notes: str | None
+    share_proposed_at: Any | None
 
 
 @dataclass(frozen=True)
@@ -301,6 +320,299 @@ async def list_glossary(
 
 
 # ---------------------------------------------------------------------------
+# ADR-SA-17: 辞書2層化（Layer1 共有 / Layer2 私有）＋ 昇格フロー
+# ---------------------------------------------------------------------------
+#
+# Layer1 共有ベース辞書 = tenant_id IS NULL（operator 管理・全テナント読み取り専用）
+# Layer2 テナント私有辞書 = tenant_id = N（テナントが CRUD・RLS 分離）
+#
+# 昇格（I-9）: テナントが私有エントリに「共有提案」（share_status='proposed'）
+#   → operator がレビュー → 承認で共有へ **匿名コピー**（提供テナント非開示）
+#   → 私有エントリは残す（非破壊）。自動昇格はしない（operator 承認必須）。
+
+
+async def propose_share(
+    db: AsyncSession,
+    entry_id: int,
+    tenant_id: int,
+) -> bool:
+    """テナント私有エントリに「共有提案」フラグを立てる（I-9）。
+
+    自テナント所有の私有エントリ（tenant_id 一致・共有エントリ不可）のみ対象。
+    Returns True if updated, False if not found / not owned.
+    """
+    result = await db.execute(
+        text(
+            f"UPDATE {_TABLE} "
+            "SET share_status = 'proposed', share_proposed_at = NOW(), updated_at = NOW() "
+            "WHERE id = :entry_id AND tenant_id = :tenant_id "
+            "  AND tenant_id IS NOT NULL "
+            "RETURNING id"
+        ),
+        {"entry_id": entry_id, "tenant_id": tenant_id},
+    )
+    return result.first() is not None
+
+
+async def list_promotion_queue(
+    db: AsyncSession,
+    page: int = 1,
+    per_page: int = 50,
+) -> tuple[list[PromotionQueueItem], int]:
+    """昇格レビューキュー（share_status='proposed' の私有エントリ）を返す（operator 用）。
+
+    匿名性のため tenant_id は返さない（PromotionQueueItem）。
+    """
+    offset = (page - 1) * per_page
+    count_result = await db.execute(
+        text(
+            f"SELECT COUNT(*) FROM {_TABLE} "
+            "WHERE tenant_id IS NOT NULL AND share_status = 'proposed'"
+        )
+    )
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        text(
+            f"SELECT id, source_term, target_text, language_pair, term_type, notes, "
+            f"       share_proposed_at "
+            f"FROM {_TABLE} "
+            f"WHERE tenant_id IS NOT NULL AND share_status = 'proposed' "
+            f"ORDER BY share_proposed_at ASC NULLS LAST, id ASC "
+            f"LIMIT :limit OFFSET :offset"
+        ),
+        {"limit": per_page, "offset": offset},
+    )
+    items = [
+        PromotionQueueItem(
+            id=row[0],
+            source_term=row[1],
+            target_text=row[2],
+            language_pair=row[3],
+            term_type=row[4],
+            notes=row[5],
+            share_proposed_at=row[6],
+        )
+        for row in result.fetchall()
+    ]
+    return items, total
+
+
+async def approve_promotion(
+    db: AsyncSession,
+    entry_id: int,
+) -> bool:
+    """提案中の私有エントリを共有ベースへ **匿名コピー** して承認する（I-9）。
+
+    - 共有コピーは tenant_id NULL・提供テナント情報を一切持たない（匿名）。
+    - 既に同一 (source_term, language_pair) の共有エントリがあれば更新（重複させない）。
+    - 私有エントリは残し share_status='approved' にする（非破壊）。
+    - 既に 'approved' / 'proposed' でない場合は no-op（冪等）。
+
+    Returns True if approved, False if not found / already reviewed.
+    """
+    src = await db.execute(
+        text(
+            f"SELECT source_term, target_text, language_pair, term_type, notes "
+            f"FROM {_TABLE} "
+            "WHERE id = :entry_id AND tenant_id IS NOT NULL AND share_status = 'proposed'"
+        ),
+        {"entry_id": entry_id},
+    )
+    row = src.first()
+    if row is None:
+        return False
+    source_term, target_text, language_pair, term_type, notes = row
+
+    # 匿名共有コピー: 既存共有エントリがあれば更新、なければ挿入
+    # （tenant_id NULL は UNIQUE 制約で衝突判定されないため手動 upsert）
+    existing = await db.execute(
+        text(
+            f"SELECT id FROM {_TABLE} "
+            "WHERE tenant_id IS NULL "
+            "  AND lower(source_term) = lower(:source_term) "
+            "  AND language_pair = :language_pair"
+        ),
+        {"source_term": source_term, "language_pair": language_pair},
+    )
+    existing_row = existing.first()
+    if existing_row is not None:
+        await db.execute(
+            text(
+                f"UPDATE {_TABLE} "
+                "SET target_text = :target_text, term_type = :term_type, "
+                "    notes = :notes, is_active = TRUE, source_ref = 'promoted', "
+                "    updated_at = NOW() "
+                "WHERE id = :id"
+            ),
+            {
+                "id": existing_row[0],
+                "target_text": target_text,
+                "term_type": term_type,
+                "notes": notes,
+            },
+        )
+    else:
+        await db.execute(
+            text(
+                f"INSERT INTO {_TABLE} "
+                "(tenant_id, source_term, target_text, language_pair, term_type, "
+                " source_ref, notes, share_status, updated_at) "
+                "VALUES (NULL, :source_term, :target_text, :language_pair, :term_type, "
+                "        'promoted', :notes, 'none', NOW())"
+            ),
+            {
+                "source_term": source_term,
+                "target_text": target_text,
+                "language_pair": language_pair,
+                "term_type": term_type,
+                "notes": notes,
+            },
+        )
+
+    # 私有エントリは残す（非破壊）。承認済みフラグのみ更新。
+    await db.execute(
+        text(
+            f"UPDATE {_TABLE} "
+            "SET share_status = 'approved', share_reviewed_at = NOW(), updated_at = NOW() "
+            "WHERE id = :entry_id"
+        ),
+        {"entry_id": entry_id},
+    )
+    return True
+
+
+async def reject_promotion(
+    db: AsyncSession,
+    entry_id: int,
+) -> bool:
+    """提案を却下する（私有エントリは残す・非破壊）。Returns True if rejected。"""
+    result = await db.execute(
+        text(
+            f"UPDATE {_TABLE} "
+            "SET share_status = 'rejected', share_reviewed_at = NOW(), updated_at = NOW() "
+            "WHERE id = :entry_id AND tenant_id IS NOT NULL AND share_status = 'proposed' "
+            "RETURNING id"
+        ),
+        {"entry_id": entry_id},
+    )
+    return result.first() is not None
+
+
+# ---------------------------------------------------------------------------
+# Layer1 共有辞書 CRUD（operator 専用・I-7）
+# ---------------------------------------------------------------------------
+
+
+async def list_shared_glossary(
+    db: AsyncSession,
+    language_pair: str | None = None,
+    page: int = 1,
+    per_page: int = 50,
+) -> tuple[list[GlossaryEntry], int]:
+    """共有ベース辞書（tenant_id IS NULL）の一覧を返す（operator 用）。"""
+    lang_cond = "AND language_pair = :language_pair " if language_pair else ""
+    params: dict = {"language_pair": language_pair or ""}
+    offset = (page - 1) * per_page
+
+    count_result = await db.execute(
+        text(
+            f"SELECT COUNT(*) FROM {_TABLE} "
+            f"WHERE tenant_id IS NULL {lang_cond}"
+        ),
+        params,
+    )
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        text(
+            f"SELECT id, tenant_id, source_term, target_text, language_pair, "
+            f"term_type, is_active, source_ref, notes, share_status "
+            f"FROM {_TABLE} "
+            f"WHERE tenant_id IS NULL {lang_cond}"
+            f"ORDER BY language_pair, lower(source_term) "
+            f"LIMIT :limit OFFSET :offset"
+        ),
+        {**params, "limit": per_page, "offset": offset},
+    )
+    entries = [
+        GlossaryEntry(
+            id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
+            language_pair=row[4], term_type=row[5], is_active=row[6],
+            source_ref=row[7], notes=row[8], share_status=row[9],
+        )
+        for row in result.fetchall()
+    ]
+    return entries, total
+
+
+async def update_shared_entry(
+    db: AsyncSession,
+    entry_id: int,
+    *,
+    source_term: str | None = None,
+    target_text: Any = _UNSET,
+    term_type: str | None = None,
+    notes: str | None = None,
+    is_active: bool | None = None,
+) -> GlossaryEntry | None:
+    """共有ベース辞書（tenant_id IS NULL）のエントリを更新（operator 専用）。"""
+    updates: list[str] = ["updated_at = NOW()"]
+    params: dict = {"entry_id": entry_id}
+
+    if source_term is not None:
+        updates.append("source_term = :source_term")
+        params["source_term"] = source_term
+    if target_text is not _UNSET:
+        updates.append("target_text = :target_text")
+        params["target_text"] = target_text
+    if term_type is not None:
+        updates.append("term_type = :term_type")
+        params["term_type"] = term_type
+    if notes is not None:
+        updates.append("notes = :notes")
+        params["notes"] = notes
+    if is_active is not None:
+        updates.append("is_active = :is_active")
+        params["is_active"] = is_active
+
+    result = await db.execute(
+        text(
+            f"UPDATE {_TABLE} "
+            f"SET {', '.join(updates)} "
+            "WHERE id = :entry_id AND tenant_id IS NULL "
+            "RETURNING id, tenant_id, source_term, target_text, language_pair, "
+            "term_type, is_active, source_ref, notes, share_status"
+        ),
+        params,
+    )
+    row = result.first()
+    if row is None:
+        return None
+    return GlossaryEntry(
+        id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
+        language_pair=row[4], term_type=row[5], is_active=row[6],
+        source_ref=row[7], notes=row[8], share_status=row[9],
+    )
+
+
+async def delete_shared_entry(
+    db: AsyncSession,
+    entry_id: int,
+) -> bool:
+    """共有ベース辞書（tenant_id IS NULL）のエントリを削除（operator 専用）。"""
+    result = await db.execute(
+        text(
+            f"DELETE FROM {_TABLE} "
+            "WHERE id = :entry_id AND tenant_id IS NULL "
+            "RETURNING id"
+        ),
+        {"entry_id": entry_id},
+    )
+    return result.first() is not None
+
+
+# ---------------------------------------------------------------------------
 # 商品マスタ自動 seed（ADR-110 要件）
 # ---------------------------------------------------------------------------
 
@@ -379,12 +691,20 @@ async def seed_glossary_from_products(
 __all__ = [
     "GlossaryEntry",
     "GlossaryInstruction",
+    "PromotionQueueItem",
+    "approve_promotion",
     "build_glossary_instructions",
     "create_glossary_entry",
     "delete_glossary_entry",
+    "delete_shared_entry",
     "format_glossary_for_prompt",
     "list_glossary",
+    "list_promotion_queue",
+    "list_shared_glossary",
     "load_glossary",
+    "propose_share",
+    "reject_promotion",
     "seed_glossary_from_products",
     "update_glossary_entry",
+    "update_shared_entry",
 ]
