@@ -27,6 +27,9 @@ from sqlalchemy.exc import ProgrammingError
 
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# ADR-SA-17 Fix: DDL は superuser (jarvis) で実行し jarvis_app に DML GRANT する。
+# これにより本番の権限モデル（アプリユーザーは DML のみ）を再現する。
+_ADMIN_DB_URL: Optional[str] = os.getenv("ADMIN_TEST_DATABASE_URL")
 
 pytestmark = pytest.mark.skipif(
     not _RLS_DB_URL,
@@ -37,6 +40,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 _TABLE = "public.translation_glossary_rls_test"
+_APP_ROLE = "jarvis_app"
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
@@ -48,9 +52,24 @@ async def pg_engine():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def setup_glossary_table(pg_engine):
-    """テスト用テーブルを最小 DDL で作成し RLS ポリシーを適用する。"""
-    async with pg_engine.begin() as conn:
+async def admin_engine():
+    """DDL 専用エンジン（superuser）。本番と同じ権限モデルを再現するために使用。"""
+    url = _ADMIN_DB_URL or _RLS_DB_URL
+    assert url
+    eng = create_async_engine(url, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def setup_glossary_table(admin_engine):
+    """テスト用テーブルを最小 DDL で作成し RLS ポリシーを適用する。
+
+    DDL は admin_engine (superuser) で実行し、アプリユーザー (jarvis_app) に
+    DML 権限を GRANT する。FORCE RLS により jarvis_app (非 superuser) は
+    ポリシーを通る。
+    """
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {_TABLE} (
                 id          SERIAL PRIMARY KEY,
@@ -122,16 +141,24 @@ async def setup_glossary_table(pg_engine):
                 END
             )
         """))
+        # Fix item-8: superuser がテーブルを作成するため、アプリユーザーに DML を GRANT。
+        # GRANT ALL ON SCHEMA public は USAGE+CREATE のみで table-level DML は含まない。
+        await conn.execute(text(
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON {_TABLE} TO {_APP_ROLE}"
+        ))
+        await conn.execute(text(
+            f"GRANT USAGE, SELECT ON SEQUENCE {_TABLE}_id_seq TO {_APP_ROLE}"
+        ))
 
     yield
 
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"DROP TABLE IF EXISTS {_TABLE} CASCADE"))
 
 
 @pytest_asyncio.fixture(loop_scope="module")
-async def pg_conn(pg_engine, setup_glossary_table):
-    """各テストごとに共有 AsyncConnection。テストは begin() ブロックで隔離する。"""
+async def pg_conn(pg_engine, setup_glossary_table):  # noqa: F811
+    """各テストごとに共有 AsyncConnection（jarvis_app で接続）。テストは begin() ブロックで隔離する。"""
     async with pg_engine.connect() as conn:
         yield conn
 

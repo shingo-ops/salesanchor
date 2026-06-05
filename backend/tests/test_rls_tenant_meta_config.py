@@ -42,6 +42,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# ADR-SA-17 Fix: DDL は superuser (jarvis) で実行し jarvis_app に GRANT するパターン。
+_ADMIN_DB_URL: Optional[str] = os.getenv("ADMIN_TEST_DATABASE_URL")
+_APP_ROLE = "jarvis_app"
 
 
 pytestmark = pytest.mark.skipif(
@@ -62,15 +65,28 @@ async def pg_engine():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def setup_schemas(pg_engine):
+async def admin_engine():
+    """DDL 専用エンジン（superuser）。本番と同じ権限モデルを再現するために使用。"""
+    url = _ADMIN_DB_URL or _RLS_DB_URL
+    assert url
+    eng = create_async_engine(url, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def setup_schemas(admin_engine):
     """tenant_998 / tenant_999 schema + tenant_meta_config + RLS を 1 回だけ作る。
 
     本物の `_TENANT_TABLES_SQL` を呼ばずに、最小限の DDL だけを直接適用する
     （RLS ポリシーの動作検証だけが目的のため）。
 
+    DDL は admin_engine (superuser) で実行し、jarvis_app に必要な権限を GRANT する。
+    Fix item-9: CREATE SCHEMA 後の GRANT USAGE + テーブル DML + シーケンス GRANT。
+
     各テスト前に行を TRUNCATE するため、テスト間で行が混在しない。
     """
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         for tid in (998, 999):
             schema = f"tenant_{tid:03d}"
             await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
@@ -123,11 +139,22 @@ async def setup_schemas(pg_engine):
                   ON {schema}.tenant_meta_config
                   USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
             """))
+            # Fix item-9: superuser がスキーマ・テーブルを作成するため、
+            # アプリユーザーに USAGE + DML + シーケンス権限を GRANT する。
+            await conn.execute(text(
+                f"GRANT USAGE ON SCHEMA {schema} TO {_APP_ROLE}"
+            ))
+            await conn.execute(text(
+                f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {schema} TO {_APP_ROLE}"
+            ))
+            await conn.execute(text(
+                f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO {_APP_ROLE}"
+            ))
 
     yield
 
     # cleanup: テスト用 schema を完全削除
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_998 CASCADE"))
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_999 CASCADE"))
 
