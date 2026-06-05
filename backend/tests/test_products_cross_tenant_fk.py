@@ -27,6 +27,11 @@ _ADMIN_URL: str = os.getenv(
     "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
 )
 
+# Use a distinct schema number to avoid collisions with test_rls_tenant_meta_config.py
+# (which uses tenant_998 / tenant_999).  Must be all-digits to match the
+# ^tenant_[0-9]+$ pattern that _check_product_references scans for.
+_TEST_SCHEMA = "tenant_99998"
+
 pytestmark = pytest.mark.skipif(
     not _APP_URL,
     reason="RLS_TEST_DATABASE_URL not set (PostgreSQL-only test)",
@@ -51,15 +56,19 @@ async def app_engine():
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def setup_cross_tenant_tables(admin_engine):
     """
-    Create a minimal schema (tenant_998) with a quote_items table
+    Create a minimal schema (_TEST_SCHEMA) with a quote_items table
     that references a product, to test cross-tenant FK detection.
+
+    Uses a unique schema name per run to avoid conflicts when parallel CI
+    jobs share the same PostgreSQL instance.
     """
     async with admin_engine.begin() as conn:
-        # Create test schema
-        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS tenant_998"))
+        # Drop first for idempotency (handles leftover state from aborted prior runs)
+        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_TEST_SCHEMA} CASCADE"))
+        await conn.execute(text(f"CREATE SCHEMA {_TEST_SCHEMA}"))
         await conn.execute(
-            text("""
-            CREATE TABLE IF NOT EXISTS tenant_998.quote_items (
+            text(f"""
+            CREATE TABLE IF NOT EXISTS {_TEST_SCHEMA}.quote_items (
                 id SERIAL PRIMARY KEY,
                 product_id INTEGER NOT NULL
             )
@@ -73,11 +82,11 @@ async def setup_cross_tenant_tables(admin_engine):
             try:
                 async with conn.begin_nested():
                     await conn.execute(
-                        text(f"GRANT USAGE ON SCHEMA tenant_998 TO {role}")
+                        text(f"GRANT USAGE ON SCHEMA {_TEST_SCHEMA} TO {role}")
                     )
                     await conn.execute(
                         text(
-                            f"GRANT SELECT ON ALL TABLES IN SCHEMA tenant_998 TO {role}"
+                            f"GRANT SELECT ON ALL TABLES IN SCHEMA {_TEST_SCHEMA} TO {role}"
                         )
                     )
             except Exception:
@@ -86,12 +95,12 @@ async def setup_cross_tenant_tables(admin_engine):
         # Seed a reference row
         await conn.execute(
             text(
-                "INSERT INTO tenant_998.quote_items (product_id) VALUES (99999)"
+                f"INSERT INTO {_TEST_SCHEMA}.quote_items (product_id) VALUES (99999)"
             )
         )
     yield
     async with admin_engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS tenant_998 CASCADE"))
+        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_TEST_SCHEMA} CASCADE"))
 
 
 @pytest.mark.asyncio(loop_scope="module")
