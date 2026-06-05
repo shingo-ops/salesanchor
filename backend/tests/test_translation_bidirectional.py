@@ -194,3 +194,28 @@ def test_promotion_queue_item_has_no_tenant_field():
     """匿名性: PromotionQueueItem は提供テナント（tenant_id）を持たない（I-9）。"""
     fields = set(translation_glossary.PromotionQueueItem.__dataclass_fields__.keys())
     assert "tenant_id" not in fields
+
+
+@pytest.mark.asyncio
+async def test_list_glossary_selects_and_returns_share_status():
+    """list_glossary は share_status を SELECT し、エントリに反映する。
+
+    回帰防止（F1）: テナント辞書 UI の状態列・共有提案ボタン活性制御は
+    share_status を前提とするため、API への配線が欠けると死にコード化する。
+    """
+    db = AsyncMock()
+    count_res = MagicMock()
+    count_res.scalar_one.return_value = 1
+    rows_res = MagicMock()
+    rows_res.fetchall.return_value = [
+        (5, 1, "Pikachu", "ピカチュウ", "en->ja", "card_name", True, None, None, "proposed"),
+    ]
+    db.execute.side_effect = [count_res, rows_res]
+
+    entries, total = await translation_glossary.list_glossary(db, tenant_id=1)
+
+    assert total == 1
+    assert entries[0].share_status == "proposed"
+    # SELECT 句に share_status 列が含まれること（既定 'none' で握り潰さない）
+    sqls = [str(call.args[0]) for call in db.execute.call_args_list]
+    assert any("SELECT" in s and "share_status" in s for s in sqls)

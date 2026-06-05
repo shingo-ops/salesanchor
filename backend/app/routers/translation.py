@@ -88,6 +88,9 @@ class GlossaryEntryOut(BaseModel):
     is_active: bool
     source_ref: str | None
     notes: str | None
+    # ADR-SA-17 I-9: 昇格状態（'none'/'proposed'/'approved'/'rejected'）。
+    # テナント辞書 UI の状態列・共有提案ボタンの活性制御に使用。
+    share_status: str = "none"
 
 
 class GlossaryListResponse(BaseModel):
@@ -246,6 +249,7 @@ async def get_glossary(
                 is_active=e.is_active,
                 source_ref=e.source_ref,
                 notes=e.notes,
+                share_status=e.share_status,
             )
             for e in entries
         ],
@@ -289,6 +293,7 @@ async def create_glossary(
         is_active=entry.is_active,
         source_ref=entry.source_ref,
         notes=entry.notes,
+        share_status=entry.share_status,
     )
 
 
@@ -338,6 +343,7 @@ async def update_glossary(
         is_active=entry.is_active,
         source_ref=entry.source_ref,
         notes=entry.notes,
+        share_status=entry.share_status,
     )
 
 

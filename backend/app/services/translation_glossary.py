@@ -178,7 +178,7 @@ async def create_glossary_entry(
             "    notes = :notes, source_ref = :source_ref, "
             "    is_active = TRUE, updated_at = NOW() "
             "RETURNING id, tenant_id, source_term, target_text, language_pair, "
-            "term_type, is_active, source_ref, notes"
+            "term_type, is_active, source_ref, notes, share_status"
         ),
         {
             "tenant_id": tenant_id,
@@ -196,7 +196,7 @@ async def create_glossary_entry(
     return GlossaryEntry(
         id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
         language_pair=row[4], term_type=row[5], is_active=row[6],
-        source_ref=row[7], notes=row[8],
+        source_ref=row[7], notes=row[8], share_status=row[9],
     )
 
 
@@ -243,7 +243,7 @@ async def update_glossary_entry(
             f"SET {', '.join(updates)} "
             "WHERE id = :entry_id AND tenant_id = :tenant_id "
             "RETURNING id, tenant_id, source_term, target_text, language_pair, "
-            "term_type, is_active, source_ref, notes"
+            "term_type, is_active, source_ref, notes, share_status"
         ),
         params,
     )
@@ -253,7 +253,7 @@ async def update_glossary_entry(
     return GlossaryEntry(
         id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
         language_pair=row[4], term_type=row[5], is_active=row[6],
-        source_ref=row[7], notes=row[8],
+        source_ref=row[7], notes=row[8], share_status=row[9],
     )
 
 
@@ -299,7 +299,7 @@ async def list_glossary(
     result = await db.execute(
         text(
             f"SELECT id, tenant_id, source_term, target_text, language_pair, "
-            f"term_type, is_active, source_ref, notes "
+            f"term_type, is_active, source_ref, notes, share_status "
             f"FROM {_TABLE} "
             f"WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) "
             f"{lang_cond}"
@@ -312,7 +312,7 @@ async def list_glossary(
         GlossaryEntry(
             id=row[0], tenant_id=row[1], source_term=row[2], target_text=row[3],
             language_pair=row[4], term_type=row[5], is_active=row[6],
-            source_ref=row[7], notes=row[8],
+            source_ref=row[7], notes=row[8], share_status=row[9],
         )
         for row in result.fetchall()
     ]
