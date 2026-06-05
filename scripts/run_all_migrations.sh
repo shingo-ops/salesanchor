@@ -35,7 +35,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=108
+TOTAL=109
 
 run_py() {
   local script="$1"
@@ -266,6 +266,9 @@ run_sql migrations/20260604_180000_analytics_agent_a_tables.sql
 
 # ADR-110: 翻訳サブシステム — グロッサリ + 確信度 + 送信下訳テーブル
 run_sql migrations/20260604_220000_create_translation_glossary.sql
+
+# 商品マスタ一覧の手動並び替え（行ドラッグ）: public.products に display_order 追加
+run_sql migrations/20260605_000000_add_products_display_order.sql
 
 echo ""
 echo "============================================"
