@@ -112,6 +112,12 @@
     "rolesPermissions": "Roles & Permissions",
     "roles": "Roles",
     "dataManagement": "Data Management",
+    "integrationGoogleDrive": "Google Drive",
+    "integrationFedex": "FedEx",
+    "integrationDhl": "DHL",
+    "integrationUps": "UPS",
+    "integrationYamato": "Yamato",
+    "integrationSagawa": "Sagawa",
     "commissionSettings": "Commission Settings",
     "channels": "Channels",
     "settings": "Settings",
@@ -150,8 +156,12 @@
     "sectionSecurity": "Permissions & Security",
     "sectionBusiness": "Business Settings",
     "sectionData": "Data Management",
+    "sectionApiIntegration": "API Integration",
     "sectionSuperAdmin": "Super Admin",
     "subtitle": "Manage organization, data, and business settings in one place."
+  },
+  "apiIntegration": {
+    "inProgress": "Under construction"
   },
   "login": {
     "email": "Email address",
