@@ -35,7 +35,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=109
+TOTAL=113
 
 run_py() {
   local script="$1"

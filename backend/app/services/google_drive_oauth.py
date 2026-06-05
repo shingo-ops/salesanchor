@@ -290,7 +290,9 @@ async def _refresh_if_needed(
     try:
         creds.refresh(Request())
     except Exception as e:  # noqa: BLE001
-        raise RuntimeError(f"アクセストークンの更新に失敗しました: {e}") from e
+        # 例外文に OAuth エラー詳細が含まれ得るため、クライアント返却用メッセージには含めない
+        # （詳細は from e でスタックに保持され、ルーター側 logger.exception で記録される）
+        raise RuntimeError("アクセストークンの更新に失敗しました。Google アカウントを再接続してください。") from e
 
     new_expiry = creds.expiry
     if new_expiry and new_expiry.tzinfo is None:

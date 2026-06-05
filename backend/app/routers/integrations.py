@@ -172,8 +172,13 @@ async def connect_start(
     _require_admin(user)
     try:
         auth_url = await drive_svc.get_auth_url(tenant_id, user.id)
-    except RuntimeError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except RuntimeError:
+        # 例外文には未設定の環境変数名等が含まれ得るためクライアントへは固定文言を返す
+        logger.exception("[integrations] Google Drive OAuth URL 生成に失敗")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="連携の準備に失敗しました。サーバー設定をご確認ください（管理者へ連絡）。",
+        )
     return {"auth_url": auth_url}
 
 
