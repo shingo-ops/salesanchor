@@ -13,7 +13,7 @@
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
 - **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
 - **仕様書**: `salesanchor_system_overview.docx` 他 3 冊（リポジトリ外・PO から入手）
-- **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 更新時は `docs/adr/README.md` 維持ルール遵守（両方向リンク必須）
+- **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 追加・変更後は `node scripts/generate-adr-index.js` を実行し `docs/adr/README.md` を再生成してコミットすること。CI「ADR index is up to date」が必須チェック。
 
 ---
 
