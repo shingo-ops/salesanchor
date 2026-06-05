@@ -69,7 +69,7 @@ if [ "${SEED_OK}" = "true" ]; then
       SET app.is_operator = '';
       SELECT count(*) FROM public.translation_glossary
       WHERE tenant_id = 999999 AND source_term = '__smoke_canary_t999999__';" \
-    2>&1 | tr -d ' \n')
+    2>&1 | grep -v '^SET' | tr -d ' \n')
   [ "${CANARY}" = "0" ] \
     && echo "[5] PASS: cross-tenant isolation OK" \
     || { echo "[5] FAIL: tenant=1 can see tenant=999999 rows"; exit 1; }
