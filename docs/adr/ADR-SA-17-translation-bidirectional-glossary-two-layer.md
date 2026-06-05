@@ -44,6 +44,22 @@
 - **翻訳時の優先順位：テナント私有 → 共有ベース → モデル**（私有が勝つ）。
 - glossary 登録語は「訳さない／登録訳を使う」をモデルより優先。
 
+##### translation_glossary RLS ポリシー（DB 層強制）
+
+`public.translation_glossary` には **ENABLE ROW LEVEL SECURITY + FORCE ROW LEVEL SECURITY** を適用し、アプリ層フィルタに依存せず DB 層で隔離する。
+
+| 操作 | 許可条件 |
+|------|---------|
+| SELECT | `tenant_id IS NULL`（共有行）または `tenant_id = app.tenant_id`（自テナント行） |
+| INSERT | テナント行: `tenant_id = app.tenant_id` ／ 共有行(`tenant_id IS NULL`): `app.is_operator = 'true'` のみ |
+| UPDATE | 同上（USING + WITH CHECK 両方） |
+| DELETE | 同上 |
+
+**セッション変数の責務**：
+- `app.tenant_id` — 既存。`auth/dependencies.py` が認証時に `SET`
+- `app.is_operator` — **新規追加必須**。`is_super_admin = true` のユーザーがログインした際に `SET app.is_operator = 'true'`。未設定は `''`（false 相当）とする
+- migration: `migrations/20260605_010000_rls_translation_glossary.sql`
+
 #### 4. 昇格フロー（誤訳→共有辞書の成長／漏洩・汚染なし）
 
 - テナントが私有エントリに「**共有提案**」フラグ → operator のレビューキューへ。
@@ -70,7 +86,7 @@
 - **I-5** 翻訳優先順位は テナント私有 → 共有 → モデル。
 - **I-6** glossary 登録語はモデル訳より優先（固有名詞・型番・カード名を勝手に訳さない）。
 - **I-7【最重要・機密保護】** 共有辞書ページ（Layer1 ＋ 昇格レビュー）は **SaaS管理者のみ到達可**。いかなるテナント権限でも到達不可。
-- **I-8** テナント私有辞書（Layer2）は他テナントから RLS で不可視。
+- **I-8** テナント私有辞書（Layer2）は他テナントから **DB 層 RLS で不可視**（アプリ層フィルタのみでは不十分）。SELECT は自テナント行＋共有行のみ返る。書き込みは自テナント行のみ許可。
 - **I-9** 昇格は operator 承認必須・匿名コピー（提供テナント非開示）・非破壊。自動昇格しない。
 - **I-10** 確信度が閾値未満の訳はフラグ表示（受信/送信の閾値は初版踏襲・config）。
 
@@ -91,6 +107,7 @@
 - **権限キー（新規）**：テナント辞書 view/edit、共有辞書 manage/promote
 - **i18n ラベル**（新メニュー・ページ）
 - **受信パスのモデル config**（Gemini）
+- **`app.is_operator` セット箇所**：`auth/dependencies.py` の `is_super_admin=true` 判定後に `SET app.is_operator = 'true'`（RLS の共有行書き込みガードに必須）
 
 ### 3点セット（ADR-025）
 
