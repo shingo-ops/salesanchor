@@ -172,6 +172,7 @@ jobs:
           EXCEPTION WHEN duplicate_object THEN
             RAISE NOTICE 'salesanchor_app already exists, skipping';
           END $$;
+          GRANT CONNECT ON DATABASE jarvis_test_db TO salesanchor_app;
           -- DML のみ（CREATE は付与しない。CI role = 本番 role の契約）
           GRANT USAGE ON SCHEMA public TO salesanchor_app;
           GRANT SELECT, INSERT, UPDATE, DELETE

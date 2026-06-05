@@ -50,6 +50,11 @@ from scripts.db.sync_tenant_schema import (  # noqa: E402
 )
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# DDL (CREATE SCHEMA / CREATE TABLE) は管理者接続で実行（CI role = DML only）
+_ADMIN_URL: str = os.getenv(
+    "RLS_ADMIN_DATABASE_URL",
+    "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
+)
 
 _SKIP_NO_PG = pytest.mark.skipif(
     not _RLS_DB_URL,
@@ -74,6 +79,14 @@ CREATE TABLE IF NOT EXISTS {schema}.sample_table (
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def admin_engine():
+    """管理者接続（jarvis）— DDL / GRANT 専用。"""
+    eng = create_async_engine(_ADMIN_URL, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def pg_engine():
     assert _RLS_DB_URL, "RLS_TEST_DATABASE_URL が未設定"
     eng = create_async_engine(_RLS_DB_URL, echo=False, future=True)
@@ -82,9 +95,12 @@ async def pg_engine():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def test_schemas(pg_engine):
-    """テスト用スキーマを作成し、テスト後にドロップする。"""
-    async with pg_engine.begin() as conn:
+async def test_schemas(admin_engine, pg_engine):
+    """テスト用スキーマを作成し、テスト後にドロップする。
+    DDL は管理者接続（admin_engine）で実行（CI role = DML only の不変条件）。
+    pg_engine（salesanchor_app）はスキーマ読み取り（information_schema 等）専用。
+    """
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_A} CASCADE"))
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_B} CASCADE"))
         await conn.execute(text(f"CREATE SCHEMA {_SCHEMA_A}"))
@@ -96,10 +112,15 @@ async def test_schemas(pg_engine):
                 stmt = stmt.strip()
                 if stmt:
                     await conn.execute(text(stmt))
+            # salesanchor_app に USAGE + SELECT 付与（DML テストには不要だが information_schema 参照用）
+            await conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO salesanchor_app"))
+            await conn.execute(text(
+                f"GRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO salesanchor_app"
+            ))
 
     yield _SCHEMA_A, _SCHEMA_B
 
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_A} CASCADE"))
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_B} CASCADE"))
 
@@ -182,10 +203,12 @@ class TestSchemaInspection:
         )
 
     @pytest.mark.asyncio(loop_scope="module")
-    async def test_detects_added_column_in_one_schema(self, pg_engine, test_schemas):
-        """schema_a にカラムを追加した場合、schema_b との差分が検出される。"""
+    async def test_detects_added_column_in_one_schema(self, admin_engine, pg_engine, test_schemas):
+        """schema_a にカラムを追加した場合、schema_b との差分が検出される。
+        ALTER TABLE は DDL のため管理者接続（admin_engine）で実行する。
+        """
         schema_a, schema_b = test_schemas
-        async with pg_engine.begin() as conn:
+        async with admin_engine.begin() as conn:
             await conn.execute(
                 text(
                     f"ALTER TABLE {schema_a}.sample_table "
