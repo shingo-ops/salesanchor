@@ -130,6 +130,30 @@ class TestProductsCRUD:
             "ヴァイスシュヴァルツ 五等分の花嫁",
         )
 
+    async def test_list_products_search_rare_token_ranks_first(self, client):
+        """希少語に一致した商品が、ありふれた語にのみ一致した大量商品より上位（IDF 重み付け）。
+
+        「ポケモンカード メガブレイブ」で検索したとき、「ポケモンカード」に一致するだけの
+        汎用商品が多数あっても、希少語「メガブレイブ」に一致した目的商品が先頭に来る。
+        """
+        # ありふれた語「ポケモンカード」に一致する汎用商品を多数（df を大きく＝重みを小さく）
+        for n in range(6):
+            await client.post(
+                "/api/v1/products",
+                json={"name_ja": f"ポケモンカードゲーム 拡張パック{n}"},
+            )
+        # 希少語「メガブレイブ」に一致する目的商品（df=1＝重み大）
+        await client.post("/api/v1/products", json={"name_ja": "メガブレイブ"})
+        res = await client.get(
+            "/api/v1/products", params={"search": "ポケモンカード メガブレイブ"},
+        )
+        assert res.status_code == 200
+        names = [p["name_ja"] for p in res.json()]
+        # 目的商品（希少語一致）が先頭
+        assert names[0] == "メガブレイブ"
+        # 汎用商品も候補には出る（広範マッチは維持）が、メガブレイブより下位
+        assert any(n.startswith("ポケモンカードゲーム") for n in names)
+
     async def test_list_products_manual_sort_by_display_order(self, client):
         """sort=manual で display_order 昇順に並ぶ（行ドラッグ並び替えの土台）。
 
