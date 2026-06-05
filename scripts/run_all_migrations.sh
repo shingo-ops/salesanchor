@@ -26,6 +26,15 @@ PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
 cd "${REPO_DIR}"
 
+# SA-18 Phase2: bootstrap ステップが別 SSH セッションで .env に書いた
+# ADMIN_DATABASE_URL を引き継ぐ。set -a でエクスポートして子プロセスに渡す。
+if [ -f ".env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 # ── 前処理: scripts / migrations をコンテナにコピー ──────────────────────────
 echo ">>> [0] Syncing scripts/ and migrations/ into backend container..."
 docker cp scripts "${BACKEND}:/app/"
