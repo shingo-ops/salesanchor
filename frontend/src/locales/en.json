@@ -163,6 +163,20 @@
   "apiIntegration": {
     "inProgress": "Under construction"
   },
+  "googleDriveIntegration": {
+    "subtitle": "Test whether app-generated PDFs can be saved to a shared drive.",
+    "setupTitle": "Setup",
+    "saEmailHint": "Invite the service account below to the destination shared drive as an editor.",
+    "notConfigured": "The integration key is not yet configured on the server. Please contact your administrator.",
+    "testTitle": "Save test",
+    "driveUrlLabel": "Shared drive (folder) URL",
+    "driveUrlPlaceholder": "https://drive.google.com/drive/folders/...",
+    "driveUrlHint": "Open the destination shared drive or folder in your browser and paste its address-bar URL.",
+    "testButton": "Save test PDF",
+    "testing": "Saving...",
+    "successTitle": "Saved.",
+    "openFile": "Open file"
+  },
   "login": {
     "email": "Email address",
     "password": "Password",
