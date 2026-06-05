@@ -158,20 +158,23 @@ async def setup_schemas(admin_engine, pg_engine):
 
 
 @pytest_asyncio.fixture(loop_scope="module")
-async def pg_conn(pg_engine, setup_schemas):
+async def pg_conn(admin_engine, pg_engine, setup_schemas):
     """各テストごとに独立 AsyncConnection。
 
     AsyncSession ではなく AsyncConnection を使うのは、
     `cannot use Connection.transaction() in a manually started transaction`
     を避けるため（AsyncSession の savepoint 自動挿入が DDL/SET LOCAL と衝突する）。
 
-    各テストで TRUNCATE → INSERT → SELECT で完結させる。
+    テストデータ初期化は admin_engine（SUPERUSER = RLS バイパス）で実行する。
+    TRUNCATE は salesanchor_app が持たない権限、DELETE は RLS ポリシーの
+    app.tenant_id キャストエラーを引き起こすため、いずれも管理者接続で行う。
     """
+    # テストデータ初期化（admin_engine = SUPERUSER で RLS を回避）
+    async with admin_engine.begin() as admin_conn:
+        await admin_conn.execute(text("DELETE FROM tenant_998.tenant_meta_config"))
+        await admin_conn.execute(text("DELETE FROM tenant_999.tenant_meta_config"))
+    # テスト本体は salesanchor_app（pg_engine）で実行（RLS が有効）
     async with pg_engine.connect() as conn:
-        # テストデータ初期化（FK 制約 CASCADE で staff も一掃）
-        async with conn.begin():
-            await conn.execute(text("DELETE FROM tenant_998.tenant_meta_config"))
-            await conn.execute(text("DELETE FROM tenant_999.tenant_meta_config"))
         yield conn
 
 
