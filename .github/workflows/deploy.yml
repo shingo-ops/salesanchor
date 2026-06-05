@@ -175,12 +175,8 @@ jobs:
               _pgpass=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2- | head -1 | tr -d '\r\n')
               _pgdb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
               # Python で URL-safe エンコード（パスワードに特殊文字があっても安全）
-              _durl=$(python3 -c "
-import urllib.parse, sys
-u, p, d = sys.argv[1], sys.argv[2], sys.argv[3]
-print('postgresql+asyncpg://{}:{}@postgres:5432/{}'.format(
-    urllib.parse.quote(u, safe=''), urllib.parse.quote(p, safe=''), d))
-" "${_pguser}" "${_pgpass}" "${_pgdb}")
+              # 注意: python3 -c の継続行は YAML リテラルブロックの最低インデントを下回るため単行化必須
+              _durl=$(python3 -c "import urllib.parse,sys;u,p,d=sys.argv[1],sys.argv[2],sys.argv[3];print('postgresql+asyncpg://{}:{}@postgres:5432/{}'.format(urllib.parse.quote(u,safe=''),urllib.parse.quote(p,safe=''),d))" "${_pguser}" "${_pgpass}" "${_pgdb}")
               sed -i '/^DATABASE_URL=/d' .env
               echo "DATABASE_URL=${_durl}" >> .env
               echo "ℹ️  DATABASE_URL を jarvis@postgres:5432 に復元しました（SA-18 Phase2 ロールバック）"
