@@ -68,6 +68,8 @@ _UPDATABLE_COLUMNS = {
     "volume_weight", "moq", "hs_code", "material", "item",
     "required_output_value", "search_keywords", "exclude_keywords",
     "related_series", "category_classification",
+    # 手動並び替え（行ドラッグ）順
+    "display_order",
 }
 
 
@@ -96,7 +98,9 @@ def _select_columns(ctx: dict[str, str]) -> str:
         "volume_weight, moq, hs_code, material, item, required_output_value, "
         "search_keywords, exclude_keywords, related_series, category_classification, "
         # ADR-093: 商品種類（最上位ジャンル区分。値='TCG' 等）+ セット種別
-        "product_kind, set_type"
+        "product_kind, set_type, "
+        # 手動並び替え順（行ドラッグ。NULL=未設定）
+        "display_order"
     )
 
 
@@ -179,6 +183,8 @@ async def list_products(
         # ADR-093 商品マスタ: 発売日ソート（NULL は末尾）
         "release_date_asc": "release_date ASC NULLS LAST",
         "release_date_desc": "release_date DESC NULLS LAST",
+        # 手動並び替え（行ドラッグ）: display_order 昇順、未設定(NULL)は末尾、同値は id 昇順で安定。
+        "manual": "display_order ASC NULLS LAST, id ASC",
     }
     explicit_sort = _SORT_MAP.get(sort or "")
     if explicit_sort:

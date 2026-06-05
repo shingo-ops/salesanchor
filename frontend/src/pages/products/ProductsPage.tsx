@@ -12,132 +12,15 @@
  *               注: 廃番フィルタ(#1174) と行内「追加」(=廃番トグル) ボタン(QA 2026-05-30) は撤去済み
  */
 
-import { Fragment, useEffect, useState, FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
-
-interface Product {
-  id: number;
-  product_code: string | null;
-  name_ja: string;
-  name_en: string | null;
-  product_kind: string | null;
-  category: string | null;
-  mark: string | null;
-  status: string;
-  condition: string | null;
-  unit_price: number | null;
-  quantity: number;
-  weight: number | null;
-  notes: string | null;
-  release_date: string | null;
-  created_at: string;
-  updated_at: string;
-  // Phase 1-C M-MVP（2026-04-28）
-  jan_code: string | null;
-  card_number: string | null;
-  expansion_code: string | null;
-  rarity: string | null;
-  language: string | null;
-  unit_price_usd: number | null;
-  unit_price_eur: number | null;
-  image_url: string | null;
-  is_archived: boolean;
-  archived_at: string | null;
-  supplier_default_id: number | null;
-  tcg_type: string | null;
-  set_type: string | null;
-  unit: string | null;
-  // ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
-  boxes_per_case: number | null;
-  packs_per_box: number | null;
-  box_weight_kg: number | null;
-  case_weight_kg: number | null;
-  volume_weight: number | null;
-  moq: number | null;
-  hs_code: string | null;
-  material: string | null;
-  item: string | null;
-  required_output_value: string | null;
-  search_keywords: string | null;
-  exclude_keywords: string | null;
-  related_series: string | null;
-  category_classification: string | null;
-}
-
-type FormState = {
-  name_ja: string;
-  name_en: string;
-  product_kind: string;
-  category: string;
-  tcg_type: string;
-  set_type: string;
-  mark: string;
-  status: string;
-  condition: string;
-  unit: string;
-  unit_price: string;
-  quantity: string;
-  weight: string;
-  notes: string;
-  release_date: string;
-  // Phase 1-C M-MVP
-  jan_code: string;
-  card_number: string;
-  expansion_code: string;
-  rarity: string;
-  language: string;
-  unit_price_usd: string;
-  unit_price_eur: string;
-  image_url: string;
-  // ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
-  boxes_per_case: string;
-  packs_per_box: string;
-  box_weight_kg: string;
-  case_weight_kg: string;
-  volume_weight: string;
-  moq: string;
-  hs_code: string;
-  material: string;
-  item: string;
-  required_output_value: string;
-  search_keywords: string;
-  exclude_keywords: string;
-  related_series: string;
-  category_classification: string;
-};
-
-const emptyForm: FormState = {
-  name_ja: "", name_en: "", product_kind: "TCG", category: "", tcg_type: "", set_type: "", mark: "",
-  status: "active", condition: "", unit: "", unit_price: "", quantity: "0",
-  weight: "", notes: "", release_date: "",
-  jan_code: "", card_number: "", expansion_code: "", rarity: "", language: "",
-  unit_price_usd: "", unit_price_eur: "", image_url: "",
-  boxes_per_case: "", packs_per_box: "", box_weight_kg: "", case_weight_kg: "",
-  // 発送ラベルは TCG（カード）共通の既定値（ひとしさん確定 2026-06-04）
-  volume_weight: "", moq: "", hs_code: "9504400000", material: "Paper", item: "Playing card",
-  required_output_value: "", search_keywords: "", exclude_keywords: "",
-  related_series: "", category_classification: "",
-};
-
-// 商品マスタの選択肢系プルダウン（商品種類/セット種別/レアリティ/言語/単位/HSコード/
-// 品目/素材）は各種マスタ(public.product_attribute_masters)を /products/attribute-options
-// 経由で参照する。固定配列は廃止（各種マスタ編集が即反映される）。
-// 素材プルダウンのフォールバック判定にのみ使う最小の既定集合。
-const MATERIAL_OPTIONS = ["Paper"];
-// 各種マスタ(product_attribute_masters)の 1 選択肢。
-type AttrOption = { code: string | null; label_ja: string; label_en: string | null };
-// 素材は取込/旧データで大文字小文字が揺れる（paper / Paper）。MATERIAL_OPTIONS と
-// 大文字小文字を無視して一致させ、プルダウンで正しく選択状態にする（一致しなければ生値を返す）。
-const normalizeMaterial = (m: string): string => {
-  if (!m) return "";
-  return MATERIAL_OPTIONS.find((o) => o.toLowerCase() === m.toLowerCase()) ?? m;
-};
-
+import type { Product, FormState, AttrOption } from "./products.types";
+import { emptyForm, normalizeMaterial } from "./products.types";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -161,7 +44,10 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   // 名前列の昇順/降順ソート（"" = 従来順 / name_asc / name_desc）
   // 既定は発売日 降順（新しい商品が上）。タイトル列クリックで名前ソートに切替。
-  const [sort, setSort] = useState<"" | "name_asc" | "name_desc" | "release_date_desc">("release_date_desc");
+  const [sort, setSort] = useState<"" | "name_asc" | "name_desc" | "release_date_desc" | "manual">("release_date_desc");
+  // 行ドラッグ並び替えモード（ON で sort=manual + 行ドラッグ可・行クリック編集を抑止）
+  const [reorderMode, setReorderMode] = useState(false);
+  const dragId = useRef<number | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   // ADR-090 PR5a: TCG種別マスタによる絞り込み
   const [tcgType, setTcgType] = useState("");
@@ -207,8 +93,48 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
 
   // 名前ヘッダークリックで 昇順 → 降順 → 解除 をトグル
   const toggleNameSort = () => {
+    if (reorderMode) return; // 並び替えモード中はソート変更しない
     setSort((prev) => (prev === "name_asc" ? "name_desc" : prev === "name_desc" ? "" : "name_asc"));
     setPage(1);
+  };
+
+  // 行ドラッグ並び替えモードの ON/OFF。ON で sort=manual（display_order 昇順）に切替。
+  const toggleReorderMode = () => {
+    setReorderMode((on) => {
+      const next = !on;
+      setSort(next ? "manual" : "release_date_desc");
+      setPage(1);
+      return next;
+    });
+  };
+
+  // 行ドラッグで並び替え → 表示中の行が持つ display_order 値（NULL は id 補完）を昇順のまま
+  // 新しい並びへ再割り当てする。値の集合は不変なので画面外（他ページ）との相対順序は保たれる。
+  // 変更があった行だけ PATCH /products/{id} で display_order を更新する。
+  const onReorderDrop = async (targetId: number) => {
+    const fromId = dragId.current;
+    dragId.current = null;
+    if (fromId == null || fromId === targetId) return;
+    const cur = [...products];
+    const fromIdx = cur.findIndex((p) => p.id === fromId);
+    const toIdx = cur.findIndex((p) => p.id === targetId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = cur.splice(fromIdx, 1);
+    cur.splice(toIdx, 0, moved);
+    const values = products.map((p) => p.display_order ?? p.id).sort((a, b) => a - b);
+    const prevById = new Map(products.map((p) => [p.id, p.display_order ?? p.id]));
+    const next = cur.map((p, i) => ({ ...p, display_order: values[i] }));
+    setProducts(next); // 楽観的更新
+    try {
+      await Promise.all(
+        next
+          .filter((p) => prevById.get(p.id) !== p.display_order)
+          .map((p) => api.patch(`/products/${p.id}`, { display_order: p.display_order })),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+      load(); // 失敗時はサーバ状態へ再同期
+    }
   };
 
   const toggleSelect = (id: number) => {
@@ -435,9 +361,31 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             ))}
           </select>
         )}
+        {/* 行ドラッグ並び替えモード切替（ON で手動順表示＋ドラッグ可） */}
+        {hasPermission("products.update") && (
+          <button
+            type="button"
+            className={reorderMode ? "btn-primary btn-sm" : "btn-sm"}
+            onClick={toggleReorderMode}
+            aria-pressed={reorderMode}
+            data-testid="products-reorder-toggle"
+            title={t("products.reorderHint")}
+          >
+            {reorderMode ? t("products.reorderModeOn") : t("products.reorderMode")}
+          </button>
+        )}
         {/* 埋め込み時はページタイトルが無いので操作ボタン（新規登録・削除）を検索バー右端に配置 */}
         {embedded && headerAction && <div style={{ marginLeft: "auto" }}>{headerAction}</div>}
       </div>
+      {reorderMode && (
+        <div
+          className="info-message"
+          data-testid="products-reorder-hint"
+          style={{ margin: "var(--space-2) 0", color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}
+        >
+          {t("products.reorderHint")}
+        </div>
+      )}
 
       {/* QA 2026-05-31: 在庫表からチェックした商品で見積/請求を作成 */}
       {selectedIds.size > 0 && (
@@ -667,10 +615,14 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 {/* 行クリックで編集ポップアップ（チェックボックスのセルは伝播停止）。 */}
                 <tr
                   className="product-row-top"
-                  style={{ ...rowStyle, cursor: hasPermission("products.update") ? "pointer" : undefined }}
+                  style={{ ...rowStyle, cursor: reorderMode ? "grab" : (hasPermission("products.update") ? "pointer" : undefined) }}
                   data-product-stripe={stripe}
                   data-testid={`product-row-${p.id}`}
-                  onClick={() => { if (hasPermission("products.update")) handleEdit(p); }}
+                  draggable={reorderMode}
+                  onDragStart={reorderMode ? () => { dragId.current = p.id; } : undefined}
+                  onDragOver={reorderMode ? (e) => e.preventDefault() : undefined}
+                  onDrop={reorderMode ? () => onReorderDrop(p.id) : undefined}
+                  onClick={() => { if (!reorderMode && hasPermission("products.update")) handleEdit(p); }}
                 >
                   <td rowSpan={2} style={{ textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
                     <input
@@ -698,9 +650,13 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 </tr>
                 <tr
                   className="product-row-bottom"
-                  style={{ ...rowStyle, cursor: hasPermission("products.update") ? "pointer" : undefined }}
+                  style={{ ...rowStyle, cursor: reorderMode ? "grab" : (hasPermission("products.update") ? "pointer" : undefined) }}
                   data-product-stripe={stripe}
-                  onClick={() => { if (hasPermission("products.update")) handleEdit(p); }}
+                  draggable={reorderMode}
+                  onDragStart={reorderMode ? () => { dragId.current = p.id; } : undefined}
+                  onDragOver={reorderMode ? (e) => e.preventDefault() : undefined}
+                  onDrop={reorderMode ? () => onReorderDrop(p.id) : undefined}
+                  onClick={() => { if (!reorderMode && hasPermission("products.update")) handleEdit(p); }}
                 >
                   <td>{p.set_type || "-"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{p.release_date || "-"}</td>

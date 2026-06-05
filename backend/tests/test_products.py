@@ -130,6 +130,29 @@ class TestProductsCRUD:
             "ヴァイスシュヴァルツ 五等分の花嫁",
         )
 
+    async def test_list_products_manual_sort_by_display_order(self, client):
+        """sort=manual で display_order 昇順に並ぶ（行ドラッグ並び替えの土台）。
+
+        display_order は PATCH /products/{id} で更新でき、レスポンスにも含まれる。
+        """
+        a = await client.post("/api/v1/products", json={"name_ja": "並びA"})
+        b = await client.post("/api/v1/products", json={"name_ja": "並びB"})
+        c = await client.post("/api/v1/products", json={"name_ja": "並びC"})
+        ida, idb, idc = a.json()["id"], b.json()["id"], c.json()["id"]
+        # C=10, A=20, B=30 の手動順を設定
+        await client.patch(f"/api/v1/products/{idc}", json={"display_order": 10})
+        await client.patch(f"/api/v1/products/{ida}", json={"display_order": 20})
+        await client.patch(f"/api/v1/products/{idb}", json={"display_order": 30})
+        res = await client.get("/api/v1/products", params={"sort": "manual"})
+        assert res.status_code == 200
+        names = [
+            p["name_ja"] for p in res.json()
+            if p["name_ja"] in ("並びA", "並びB", "並びC")
+        ]
+        assert names == ["並びC", "並びA", "並びB"]
+        cprod = next(p for p in res.json() if p["id"] == idc)
+        assert cprod["display_order"] == 10
+
     async def test_get_product(self, client):
         """商品詳細を取得できる"""
         create_res = await client.post("/api/v1/products", json={
