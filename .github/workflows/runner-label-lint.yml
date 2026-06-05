@@ -7,6 +7,10 @@ name: Runner Label Lint
 #   VPSランナー（Linux）追加時に self-hosted のみでは誤ってLinuxで実行される。
 #   [self-hosted, macOS] で Mac に絞り込む必要がある。
 #   大文字・小文字も検証する（`macos` は別ラベルとして扱われるため）。
+#
+# 背景（ADR-111 amendment 2026-06-05）:
+#   macOS ラベルを持つ Mac が2台（Shingo-Mac-Temp / Hikky-dev-Mac）存在するため、
+#   shingo-mac 専用ラベルで Shingo-Mac-Temp のみに絞り込む必要がある。
 
 on:
   pull_request:
@@ -55,3 +59,18 @@ jobs:
             exit 1
           fi
           echo "✅ macOS ラベル大文字・小文字: OK"
+
+      - name: shingo-mac ラベルの有無を検証（ADR-111）
+        run: |
+          # [self-hosted, macOS] のみ（shingo-mac なし）はエラー
+          # 理由: macOS ラベルを持つ Mac が複数台存在するため shingo-mac で絞り込む必要がある
+          MISSING=$(grep -n "runs-on.*self-hosted.*macOS" .github/workflows/claude-pipeline.yml \
+            | grep -v "shingo-mac" || true)
+          if [ -n "$MISSING" ]; then
+            echo "::error file=.github/workflows/claude-pipeline.yml::shingo-mac ラベルがありません。runs-on: [self-hosted, macOS, shingo-mac] に変更してください。"
+            echo ""
+            echo "検出箇所:"
+            echo "$MISSING"
+            exit 1
+          fi
+          echo "✅ shingo-mac ラベル: OK"
