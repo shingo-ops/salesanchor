@@ -42,6 +42,11 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# DDL (CREATE SCHEMA / CREATE TABLE / ALTER TABLE / CREATE POLICY) は管理者接続で実行
+_ADMIN_URL: str = os.getenv(
+    "RLS_ADMIN_DATABASE_URL",
+    "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -54,6 +59,14 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def admin_engine():
+    """管理者接続（jarvis）— DDL / GRANT 専用。"""
+    eng = create_async_engine(_ADMIN_URL, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def pg_engine():
     assert _RLS_DB_URL  # mypy 用
     eng = create_async_engine(_RLS_DB_URL, echo=False, future=True)
@@ -62,15 +75,16 @@ async def pg_engine():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def setup_schemas(pg_engine):
+async def setup_schemas(admin_engine, pg_engine):
     """tenant_998 / tenant_999 schema + tenant_meta_config + RLS を 1 回だけ作る。
 
     本物の `_TENANT_TABLES_SQL` を呼ばずに、最小限の DDL だけを直接適用する
     （RLS ポリシーの動作検証だけが目的のため）。
+    DDL は管理者接続（admin_engine）で実行（CI role = DML only の不変条件）。
 
     各テスト前に行を TRUNCATE するため、テスト間で行が混在しない。
     """
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         for tid in (998, 999):
             schema = f"tenant_{tid:03d}"
             await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
@@ -123,11 +137,22 @@ async def setup_schemas(pg_engine):
                   ON {schema}.tenant_meta_config
                   USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
             """))
+            # salesanchor_app に DML 付与（CI role = DML only。CREATE は付与しない）
+            await conn.execute(text(
+                f"GRANT USAGE ON SCHEMA {schema} TO salesanchor_app"
+            ))
+            await conn.execute(text(
+                f"GRANT SELECT, INSERT, UPDATE, DELETE "
+                f"ON ALL TABLES IN SCHEMA {schema} TO salesanchor_app"
+            ))
+            await conn.execute(text(
+                f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO salesanchor_app"
+            ))
 
     yield
 
-    # cleanup: テスト用 schema を完全削除
-    async with pg_engine.begin() as conn:
+    # cleanup: テスト用 schema を完全削除（管理者接続）
+    async with admin_engine.begin() as conn:
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_998 CASCADE"))
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_999 CASCADE"))
 

@@ -35,7 +35,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=109
+TOTAL=116
 
 run_py() {
   local script="$1"
@@ -275,6 +275,12 @@ run_sql migrations/20260605_010000_rls_translation_glossary.sql
 
 # ADR-SA-17: RLS ポリシー NULLIF 修正（空文字列→NULL変換でINTEGERキャストエラー修正）
 run_sql migrations/20260605_020000_fix_translation_glossary_rls_cast.sql
+
+# SA-18: salesanchor_app ロール作成＋public スキーマ付与
+run_sql migrations/20260605_030000_create_salesanchor_app_role.sql
+
+# SA-18: 既存 tenant_NNN スキーマ全件に salesanchor_app を付与
+run_sql migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql
 
 echo ""
 echo "============================================"
