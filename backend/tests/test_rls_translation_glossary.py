@@ -72,7 +72,7 @@ async def setup_glossary_table(pg_engine):
             CREATE POLICY tg_select ON {_TABLE} FOR SELECT
             USING (
                 tenant_id IS NULL
-                OR tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                OR tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
             )
         """))
         # INSERT ポリシー
@@ -84,7 +84,7 @@ async def setup_glossary_table(pg_engine):
                     WHEN tenant_id IS NULL THEN
                         current_setting('app.is_operator', true) = 'true'
                     ELSE
-                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                        tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
                 END
             )
         """))
@@ -97,7 +97,7 @@ async def setup_glossary_table(pg_engine):
                     WHEN tenant_id IS NULL THEN
                         current_setting('app.is_operator', true) = 'true'
                     ELSE
-                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                        tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
                 END
             )
             WITH CHECK (
@@ -105,7 +105,7 @@ async def setup_glossary_table(pg_engine):
                     WHEN tenant_id IS NULL THEN
                         current_setting('app.is_operator', true) = 'true'
                     ELSE
-                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                        tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
                 END
             )
         """))
@@ -118,7 +118,7 @@ async def setup_glossary_table(pg_engine):
                     WHEN tenant_id IS NULL THEN
                         current_setting('app.is_operator', true) = 'true'
                     ELSE
-                        tenant_id = current_setting('app.tenant_id', true)::INTEGER
+                        tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
                 END
             )
         """))
