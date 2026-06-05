@@ -276,6 +276,9 @@ run_sql migrations/20260605_010000_rls_translation_glossary.sql
 # ADR-SA-17: RLS ポリシー NULLIF 修正（空文字列→NULL変換でINTEGERキャストエラー修正）
 run_sql migrations/20260605_020000_fix_translation_glossary_rls_cast.sql
 
+# API連携: テナント Google Drive OAuth 連携設定テーブル（カレンダー雛形ミラー）
+run_sql migrations/20260606_010000_add_google_drive_config.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
