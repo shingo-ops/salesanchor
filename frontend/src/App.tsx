@@ -43,6 +43,7 @@ import ChannelsPage from "./pages/channels/ChannelsPage";
 import OAuthCallbackPage from "./pages/oauth-callback/OAuthCallbackPage";
 import InboxPage from "./pages/inbox/InboxPage";
 import ComingSoonPage from "./pages/coming-soon/ComingSoonPage";
+import IntegrationPlaceholderPage from "./pages/integrations/IntegrationPlaceholderPage";
 // ADR-021 Phase 5 / Sprint 5: 担当者報酬計算 MVP
 import CommissionSettingsPage from "./pages/commission-settings/CommissionSettingsPage";
 // spec.md v1.1 F2 (Sprint 2): マスタ編集 UI（中央 admin + テナント admin の二層）
@@ -273,6 +274,13 @@ function App() {
                     <Route path="suppliers"           element={<SuppliersPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
+                    {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}
+                    <Route path="integrations/google-drive" element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/fedex"        element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/dhl"          element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/ups"          element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />
                     <Route path="super-admin/masters" element={<SuperAdminMastersPage />} />

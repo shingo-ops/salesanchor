@@ -112,6 +112,12 @@
     "rolesPermissions": "ロール・権限",
     "roles": "ロール",
     "dataManagement": "データ管理",
+    "integrationGoogleDrive": "Googleドライブ",
+    "integrationFedex": "FedEx",
+    "integrationDhl": "DHL",
+    "integrationUps": "UPS",
+    "integrationYamato": "ヤマト運輸",
+    "integrationSagawa": "佐川急便",
     "commissionSettings": "報酬設定",
     "channels": "チャンネル",
     "settings": "設定",
@@ -150,8 +156,12 @@
     "sectionSecurity": "権限・セキュリティ",
     "sectionBusiness": "ビジネス設定",
     "sectionData": "データ管理",
+    "sectionApiIntegration": "API連携",
     "sectionSuperAdmin": "スーパー管理者",
     "subtitle": "組織・データ・業務設定を一か所で管理します。"
+  },
+  "apiIntegration": {
+    "inProgress": "現在作成中"
   },
   "login": {
     "email": "メールアドレス",
