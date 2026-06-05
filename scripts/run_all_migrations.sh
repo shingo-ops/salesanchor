@@ -26,6 +26,15 @@ PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
 cd "${REPO_DIR}"
 
+# SA-18 Phase2: bootstrap ステップが別 SSH セッションで .env に書いた
+# ADMIN_DATABASE_URL を引き継ぐ。set -a でエクスポートして子プロセスに渡す。
+if [ -f ".env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 # ── 前処理: scripts / migrations をコンテナにコピー ──────────────────────────
 echo ">>> [0] Syncing scripts/ and migrations/ into backend container..."
 docker cp scripts "${BACKEND}:/app/"
@@ -42,7 +51,11 @@ run_py() {
   shift
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  docker exec "$@" -w /app "${BACKEND}" python "${script}"
+  # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
+  # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
+  docker exec \
+    -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
+    "$@" -w /app "${BACKEND}" python "${script}"
 }
 
 run_sql() {

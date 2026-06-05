@@ -215,6 +215,33 @@ jobs:
             echo "Code + env + docker compose phase done."
             echo "============================================"
 
+      # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
+      # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
+      - name: Bootstrap salesanchor_app role (idempotent)
+        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: SALESANCHOR_APP_PASSWORD,ADMIN_DATABASE_URL
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+            # [1] salesanchor_app パスワード設定（冪等）
+            docker exec astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -c \
+              "ALTER ROLE salesanchor_app PASSWORD '${SALESANCHOR_APP_PASSWORD}';" \
+              || echo "salesanchor_app role not yet created -- will be created in migrations"
+            # [2] .env に DATABASE_URL / ADMIN_DATABASE_URL を注入（sed 削除 + 追記）
+            sed -i '/^DATABASE_URL=/d' .env
+            sed -i '/^ADMIN_DATABASE_URL=/d' .env
+            echo "DATABASE_URL=postgresql+asyncpg://salesanchor_app:${SALESANCHOR_APP_PASSWORD}@localhost:5432/jarvis_db" >> .env
+            echo "ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL}" >> .env
+        env:
+          SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
+          ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
+
       # ADR-082: backend/migration 系の変更がある場合のみ実行（フロントのみは skip）
       # 旧: part 1 / part 2 の 2 ステップ（約 600 行）→ scripts/run_all_migrations.sh に統合
       # 新マイグレーション追加時は deploy.yml ではなく scripts/run_all_migrations.sh に追記する
@@ -237,6 +264,21 @@ jobs:
             echo "============================================"
             echo "Migrations done."
             echo "============================================"
+
+      # SA-19: Post-deploy smoke tests (SA-18 Phase2)
+      - name: Post-deploy smoke tests (SA-19)
+        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: SALESANCHOR_APP_PASSWORD
+          script: |
+            cd /home/ubuntu/salesanchor
+            bash scripts/smoke_test_post_deploy.sh
+        env:
+          SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
 
       # ADR-082: ヘルスチェック・監視確認・イメージ prune はマイグレーション skip 時も
       # 必ず走らせる必要があるため、マイグレーションから分離して常時実行する。

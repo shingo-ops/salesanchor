@@ -33,12 +33,15 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
-    "postgresql+asyncpg://", "postgresql://"
-)
+# SA-18 Phase2: data_deletion は全テナントを横断する管理者操作のため ADMIN_DATABASE_URL を使用。
+# ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
+_ADMIN_DATABASE_URL = os.getenv(
+    "ADMIN_DATABASE_URL",
+    os.getenv("DATABASE_URL", ""),
+).replace("postgresql+asyncpg://", "postgresql://")
 
 # F8: モジュールレベル singleton で再利用（呼び出しごとに作成しない）
-_engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+_engine = create_engine(_ADMIN_DATABASE_URL, echo=False, pool_pre_ping=True)
 _SessionLocal = sessionmaker(_engine)
 
 
