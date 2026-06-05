@@ -6,12 +6,12 @@ SUPERUSER は FORCE RLS をバイパスするため、非 SUPERUSER ロールで
 （CI では jarvis_app ロールを使用）。
 
 検証内容:
-  1. テナントセッションが共有行（tenant_id IS NULL）を INSERT/UPDATE/DELETE できない
-     → 42501 insufficient_privilege で拒否
+  1. テナントセッションが共有行（tenant_id IS NULL）を INSERT できない → 42501
   2. operator セッション（app.is_operator='true'）が共有行を書き込める
   3. テナントセッションは自テナント行のみ SELECT できる（他テナント行は見えない）
-  4. operator リセット後（app.is_operator=''）にテナントが共有行を書き込めない
-     → リセット漏れによるコネクションプール汚染がないことを確認
+  4. operator リセット後（app.is_operator=''）にテナントが共有行を書けない
+     → コネクションプール汚染防止
+  5. app.is_operator 未設定（RESET 後の NULL）でも deny（フェイルクローズ）
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ async def pg_engine():
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def setup_glossary_table(pg_engine):
-    """テスト用 translation_glossary を最小 DDL で作成し RLS を適用する。"""
+    """テスト用テーブルを最小 DDL で作成し RLS ポリシーを適用する。"""
     async with pg_engine.begin() as conn:
         await conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {_TABLE} (
@@ -67,24 +67,18 @@ async def setup_glossary_table(pg_engine):
             f"ALTER TABLE {_TABLE} FORCE ROW LEVEL SECURITY"
         ))
         # SELECT ポリシー
-        await conn.execute(text(
-            f"DROP POLICY IF EXISTS tg_select ON {_TABLE}"
-        ))
+        await conn.execute(text(f"DROP POLICY IF EXISTS tg_select ON {_TABLE}"))
         await conn.execute(text(f"""
-            CREATE POLICY tg_select ON {_TABLE}
-            FOR SELECT
+            CREATE POLICY tg_select ON {_TABLE} FOR SELECT
             USING (
                 tenant_id IS NULL
                 OR tenant_id = current_setting('app.tenant_id', true)::INTEGER
             )
         """))
         # INSERT ポリシー
-        await conn.execute(text(
-            f"DROP POLICY IF EXISTS tg_insert ON {_TABLE}"
-        ))
+        await conn.execute(text(f"DROP POLICY IF EXISTS tg_insert ON {_TABLE}"))
         await conn.execute(text(f"""
-            CREATE POLICY tg_insert ON {_TABLE}
-            FOR INSERT
+            CREATE POLICY tg_insert ON {_TABLE} FOR INSERT
             WITH CHECK (
                 CASE
                     WHEN tenant_id IS NULL THEN
@@ -95,12 +89,9 @@ async def setup_glossary_table(pg_engine):
             )
         """))
         # UPDATE ポリシー
-        await conn.execute(text(
-            f"DROP POLICY IF EXISTS tg_update ON {_TABLE}"
-        ))
+        await conn.execute(text(f"DROP POLICY IF EXISTS tg_update ON {_TABLE}"))
         await conn.execute(text(f"""
-            CREATE POLICY tg_update ON {_TABLE}
-            FOR UPDATE
+            CREATE POLICY tg_update ON {_TABLE} FOR UPDATE
             USING (
                 CASE
                     WHEN tenant_id IS NULL THEN
@@ -119,12 +110,9 @@ async def setup_glossary_table(pg_engine):
             )
         """))
         # DELETE ポリシー
-        await conn.execute(text(
-            f"DROP POLICY IF EXISTS tg_delete ON {_TABLE}"
-        ))
+        await conn.execute(text(f"DROP POLICY IF EXISTS tg_delete ON {_TABLE}"))
         await conn.execute(text(f"""
-            CREATE POLICY tg_delete ON {_TABLE}
-            FOR DELETE
+            CREATE POLICY tg_delete ON {_TABLE} FOR DELETE
             USING (
                 CASE
                     WHEN tenant_id IS NULL THEN
@@ -143,165 +131,165 @@ async def setup_glossary_table(pg_engine):
 
 @pytest_asyncio.fixture(loop_scope="module")
 async def pg_conn(pg_engine, setup_glossary_table):
-    """各テスト用に独立した AsyncConnection（autobegin で暗黙トランザクション）。"""
+    """各テストごとに共有 AsyncConnection。テストは begin() ブロックで隔離する。"""
     async with pg_engine.connect() as conn:
         yield conn
-        await conn.rollback()
-
-
-# ---------------------------------------------------------------------------
-# ヘルパー
-# ---------------------------------------------------------------------------
-
-async def _set_tenant(conn: AsyncConnection, tenant_id: int) -> None:
-    await conn.execute(text(f"SET LOCAL app.tenant_id = '{tenant_id}'"))
-    await conn.execute(text("SET LOCAL app.is_operator = ''"))
-
-
-async def _set_operator(conn: AsyncConnection) -> None:
-    await conn.execute(text("SET LOCAL app.tenant_id = ''"))
-    await conn.execute(text("SET LOCAL app.is_operator = 'true'"))
-
-
-async def _reset_operator(conn: AsyncConnection) -> None:
-    """operator リセット後は app.is_operator = '' に戻す。"""
-    await conn.execute(text("SET LOCAL app.is_operator = ''"))
 
 
 # ---------------------------------------------------------------------------
 # テスト: テナントセッション
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_tenant_cannot_insert_shared_row(pg_conn: AsyncConnection) -> None:
     """テナントセッションが共有行（tenant_id IS NULL）を INSERT できない（I-8）。"""
-    await _set_tenant(pg_conn, 1)
-    with pytest.raises(ProgrammingError, match="42501|insufficient_privilege|new row violates"):
-        await pg_conn.execute(text(f"""
-            INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'shared_term')
-        """))
+    with pytest.raises((ProgrammingError, Exception), match="42501|insufficient_privilege|new row violates"):
+        async with pg_conn.begin():
+            await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+            await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+            await pg_conn.execute(text(
+                f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'shared_forbidden')"
+            ))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_tenant_can_insert_own_row(pg_conn: AsyncConnection) -> None:
     """テナントセッションが自テナント行を INSERT できる。"""
-    await _set_tenant(pg_conn, 1)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (1, 'tenant_term')
-    """))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+        await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (1, 'tenant_own_row')"
+        ))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_tenant_cannot_see_other_tenant_row(pg_conn: AsyncConnection) -> None:
     """テナント1のセッションはテナント2の行が SELECT で見えない（I-8）。"""
-    # テナント1で行を挿入（superuser 権限の別コネクション経由は困難なため
-    # テナント1セッション自身の行として作成する）
-    await _set_tenant(pg_conn, 1)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (1, 't1_term')
-    """))
-    # テナント2に切り替え
-    await _set_tenant(pg_conn, 2)
-    result = await pg_conn.execute(text(f"""
-        SELECT source_term FROM {_TABLE} WHERE tenant_id = 1
-    """))
-    rows = result.fetchall()
-    assert rows == [], f"テナント2がテナント1の行を参照できてしまった: {rows}"
+    # テナント2の行をテナント2セッションで挿入
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '2'"))
+        await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (2, 't2_secret')"
+        ))
+    # テナント1に切り替えてテナント2の行が見えないことを確認
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+        await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+        result = await pg_conn.execute(text(
+            f"SELECT source_term FROM {_TABLE} WHERE tenant_id = 2"
+        ))
+        rows = result.fetchall()
+        assert rows == [], f"テナント1がテナント2の行を参照できてしまった: {rows}"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_tenant_can_see_shared_rows(pg_conn: AsyncConnection) -> None:
     """テナントセッションは共有行（tenant_id IS NULL）を SELECT できる（I-5読み取り）。"""
-    # operator で共有行を事前挿入
-    await _set_operator(pg_conn)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'shared_visible')
-    """))
+    # operator で共有行を挿入
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'shared_visible')"
+        ))
     # テナント1に切り替えて共有行が見えることを確認
-    await _set_tenant(pg_conn, 1)
-    result = await pg_conn.execute(text(f"""
-        SELECT source_term FROM {_TABLE} WHERE tenant_id IS NULL AND source_term = 'shared_visible'
-    """))
-    rows = result.fetchall()
-    assert len(rows) == 1, "テナントセッションが共有行を SELECT できない"
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+        await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+        result = await pg_conn.execute(text(
+            f"SELECT source_term FROM {_TABLE} WHERE tenant_id IS NULL AND source_term = 'shared_visible'"
+        ))
+        rows = result.fetchall()
+        assert len(rows) == 1, "テナントセッションが共有行を SELECT できない"
 
 
 # ---------------------------------------------------------------------------
 # テスト: operator セッション
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_operator_can_insert_shared_row(pg_conn: AsyncConnection) -> None:
     """operator セッションが共有行を INSERT できる。"""
-    await _set_operator(pg_conn)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_shared')
-    """))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_insert')"
+        ))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_operator_can_update_shared_row(pg_conn: AsyncConnection) -> None:
     """operator セッションが共有行を UPDATE できる。"""
-    await _set_operator(pg_conn)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_update_src')
-    """))
-    await pg_conn.execute(text(f"""
-        UPDATE {_TABLE} SET target_text = 'updated' WHERE source_term = 'op_update_src' AND tenant_id IS NULL
-    """))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_before_update')"
+        ))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"UPDATE {_TABLE} SET target_text = 'updated' "
+            f"WHERE source_term = 'op_before_update' AND tenant_id IS NULL"
+        ))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_operator_can_delete_shared_row(pg_conn: AsyncConnection) -> None:
     """operator セッションが共有行を DELETE できる。"""
-    await _set_operator(pg_conn)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_delete_src')
-    """))
-    await pg_conn.execute(text(f"""
-        DELETE FROM {_TABLE} WHERE source_term = 'op_delete_src' AND tenant_id IS NULL
-    """))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'op_before_delete')"
+        ))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"DELETE FROM {_TABLE} WHERE source_term = 'op_before_delete' AND tenant_id IS NULL"
+        ))
 
 
 # ---------------------------------------------------------------------------
 # テスト: operator リセット後（コネクションプール汚染防止）
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_after_operator_reset_tenant_cannot_insert_shared(
     pg_conn: AsyncConnection,
 ) -> None:
-    """operator リセット後にテナントセッションが共有行を書けない（I-8・汚染防止）。
+    """operator リセット後にテナントが共有行を書けない（コネクションプール汚染防止）。
 
-    同一コネクションで operator → reset → tenant の順で操作し、
-    リセット漏れがないことを確認する。
+    同一コネクションで operator → reset → tenant の順で確認する。
+    reset_operator_context() 相当の処理後に app.is_operator = '' になることを保証。
     """
     # 1. operator セッション → 共有行書き込み可
-    await _set_operator(pg_conn)
-    await pg_conn.execute(text(f"""
-        INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'before_reset')
-    """))
-    # 2. operator リセット（reset_operator_context と同等）
-    await _reset_operator(pg_conn)
-    # 3. テナントに切り替え → 共有行書き込み不可
-    await _set_tenant(pg_conn, 1)
-    with pytest.raises(ProgrammingError, match="42501|insufficient_privilege|new row violates"):
-        await pg_conn.execute(text(f"""
-            INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'after_reset_attempt')
-        """))
+    async with pg_conn.begin():
+        await pg_conn.execute(text("SET LOCAL app.is_operator = 'true'"))
+        await pg_conn.execute(text(
+            f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'before_reset')"
+        ))
+    # 2. operator リセット後にテナントとして共有行書き込み → 拒否
+    with pytest.raises((ProgrammingError, Exception), match="42501|insufficient_privilege|new row violates"):
+        async with pg_conn.begin():
+            # reset_operator_context() に相当: app.is_operator = ''
+            await pg_conn.execute(text("SET LOCAL app.is_operator = ''"))
+            await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+            await pg_conn.execute(text(
+                f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'after_reset_attempt')"
+            ))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 async def test_unset_is_operator_denies_shared_insert(pg_conn: AsyncConnection) -> None:
-    """app.is_operator 未設定（NULL）でも共有行 INSERT は deny（フェイルクローズ）。
+    """app.is_operator 未設定（RESET 後の NULL）でも共有行 INSERT は deny（フェイルクローズ）。
 
     current_setting('app.is_operator', true) は未設定時 NULL を返す。
     NULL = 'true' は false → deny。
     """
-    # app.is_operator を意図的に未設定にする（RESET）
-    await pg_conn.execute(text("RESET app.is_operator"))
-    await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
-    with pytest.raises(ProgrammingError, match="42501|insufficient_privilege|new row violates"):
-        await pg_conn.execute(text(f"""
-            INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'failclose_test')
-        """))
+    with pytest.raises((ProgrammingError, Exception), match="42501|insufficient_privilege|new row violates"):
+        async with pg_conn.begin():
+            await pg_conn.execute(text("RESET app.is_operator"))
+            await pg_conn.execute(text("SET LOCAL app.tenant_id = '1'"))
+            await pg_conn.execute(text(
+                f"INSERT INTO {_TABLE} (tenant_id, source_term) VALUES (NULL, 'failclose')"
+            ))
