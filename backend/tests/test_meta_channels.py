@@ -710,7 +710,7 @@ async def pg_conn_scopes(pg_engine_for_scopes, pg_setup_scopes_schema):
     async with pg_engine_for_scopes.connect() as conn:
         async with conn.begin():
             await conn.execute(text(
-                "TRUNCATE tenant_997.tenant_meta_config RESTART IDENTITY CASCADE"
+                "DELETE FROM tenant_997.tenant_meta_config"
             ))
         yield conn
 

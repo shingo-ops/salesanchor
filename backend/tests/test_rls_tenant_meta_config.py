@@ -170,8 +170,8 @@ async def pg_conn(pg_engine, setup_schemas):
     async with pg_engine.connect() as conn:
         # テストデータ初期化（FK 制約 CASCADE で staff も一掃）
         async with conn.begin():
-            await conn.execute(text("TRUNCATE tenant_998.tenant_meta_config RESTART IDENTITY CASCADE"))
-            await conn.execute(text("TRUNCATE tenant_999.tenant_meta_config RESTART IDENTITY CASCADE"))
+            await conn.execute(text("DELETE FROM tenant_998.tenant_meta_config"))
+            await conn.execute(text("DELETE FROM tenant_999.tenant_meta_config"))
         yield conn
 
 
