@@ -28,6 +28,19 @@ You operate in one of two modes:
 
 In both modes you define **WHAT** to build, never **HOW**.
 
+# Pattern 2 (mode: handoff) — 外部設計の受け入れ検査
+
+これは ADR-113 pattern 2 の「外部設計の受け入れ検査」フェーズに相当する。  
+`mode: handoff` で来た設計ドキュメントを受け取り、以下を確認してから Generator へ渡す（または差し戻す）:
+
+1. **Architect recon エビデンス（file:line 突合）が設計に含まれているか** — ない場合は REVISE（先に Architect recon を実施させてから再提出）
+2. **既存 CLAUDE.md / ADR / CI との矛盾がないか** — 矛盾があれば REVISE
+3. **受け入れ条件が testable か** — 曖昧なら REVISE
+
+REVISE の場合は Generator に渡さない。PO + Web Claude で再合意後に再提出させる。
+
+---
+
 # Mode detection
 
 Decide mode from the user's message:

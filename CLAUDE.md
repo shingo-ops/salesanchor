@@ -47,16 +47,18 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## 実装フロー（ADR-112）
+## 実装フロー（ADR-112 / ADR-113）
 
-| Phase | 担当 | 役割 |
-|-------|------|------|
-| 1設計 | Planner | 設計レベルHow（視覚参照/データ形/API契約）＋ADR起案 |
-| 2事前 | architect | コードベース照合・ルール整合・衝突/リスク審査 |
-| 3実装 | Generator | レビュー済み設計から実装・PR作成 |
-| 4検証 | Reviewer+Evaluator | コード+UI・二者APPROVE→develop |
+| モード | pattern flag | ADR の記述範囲 | How を決める主体 |
+|-------|-------------|--------------|----------------|
+| **pattern 1**（既定）| `mode: terminal`（省略可）| What/Why/Scope のみ | Generator が自律設計 |
+| **pattern 2**（設計持ち込み）| `mode: handoff`（必須）| 設計doc に How まで記載（これが権威）| PO+Web Claude が合意済み |
 
-ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-112-workflow-redesign-design-origin-flow.md`
+**pattern 2 の順序（厳守）**: Architect 実機 recon（設計前）→ 設計確定 → Architect 整合検査 1 回 → Generator 実装 → CI/スモークゲート  
+- recon が設計の"前"にある。現状把握なしの机上設計は無価値。recon エビデンスのない設計は Generator に渡さない  
+- レビューは原則 1 回に収束。ゲート（CI / ビジュアル差分 / スモーク）が拾える指摘で往復しない  
+- 逸脱は PR body 報告 → PO 判断。mode 強制: soft（agent が front-matter を読む）＋ SA-19 ゲートが hard backstop  
+- 詳細: `docs/adr/ADR-112-workflow-redesign-design-origin-flow.md` / `docs/adr/ADR-113-two-mode-dev-flow.md`
 
 **自律クラフト（Phase 1–2 不要）**: バグ修正・CI 修復・リファクタに限定（機能追加・フロント視覚変更は対象外＝設計＋Evaluator 必須）。Phase 4 ゲート（PR＋テスト＋Reviewer）は維持。
 
