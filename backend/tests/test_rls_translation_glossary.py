@@ -27,6 +27,11 @@ from sqlalchemy.exc import ProgrammingError
 
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# DDL (CREATE TABLE / ALTER TABLE / CREATE POLICY) は管理者接続で実行（CI role = DML only）
+_ADMIN_URL: str = os.getenv(
+    "RLS_ADMIN_DATABASE_URL",
+    "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
+)
 
 pytestmark = pytest.mark.skipif(
     not _RLS_DB_URL,
@@ -40,6 +45,14 @@ _TABLE = "public.translation_glossary_rls_test"
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def admin_engine():
+    """管理者接続（jarvis）— DDL / GRANT 専用。"""
+    eng = create_async_engine(_ADMIN_URL, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def pg_engine():
     assert _RLS_DB_URL
     eng = create_async_engine(_RLS_DB_URL, echo=False, future=True)
@@ -48,9 +61,11 @@ async def pg_engine():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def setup_glossary_table(pg_engine):
-    """テスト用テーブルを最小 DDL で作成し RLS ポリシーを適用する。"""
-    async with pg_engine.begin() as conn:
+async def setup_glossary_table(admin_engine, pg_engine):
+    """テスト用テーブルを最小 DDL で作成し RLS ポリシーを適用する。
+    DDL は管理者接続（admin_engine）で実行（CI role = DML only の不変条件）。
+    """
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {_TABLE} (
                 id          SERIAL PRIMARY KEY,
@@ -122,10 +137,17 @@ async def setup_glossary_table(pg_engine):
                 END
             )
         """))
+        # salesanchor_app に DML 付与（CI role = DML only。CREATE は付与しない）
+        await conn.execute(text(
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON {_TABLE} TO salesanchor_app"
+        ))
+        await conn.execute(text(
+            f"GRANT USAGE, SELECT ON SEQUENCE {_TABLE}_id_seq TO salesanchor_app"
+        ))
 
     yield
 
-    async with pg_engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"DROP TABLE IF EXISTS {_TABLE} CASCADE"))
 
 

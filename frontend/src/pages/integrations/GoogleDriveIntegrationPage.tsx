@@ -1,24 +1,25 @@
 /**
- * API連携 > Googleドライブ ページ
+ * API連携 > Googleドライブ ページ（OAuth ユーザー委任方式）
  *
- * サービスアカウント方式で「アプリが生成した PDF を共有ドライブに保存」する
- * 動作確認 UI。
- *   - サーバーの設定状況（鍵の有無）と、招待先のサービスアカウントのメールを表示
- *   - 共有ドライブ（フォルダ）の URL を入力
- *   - 「テストPDFを保存」で「テスト」と書かれた PDF を共有ドライブに保存し、リンク表示
+ *   - サーバーの OAuth 設定状況 + テナントの接続状態を表示
+ *   - 未接続なら「Google アカウントを接続」ボタン → 同意画面へリダイレクト
+ *   - 接続済みなら 接続アカウント表示 + 保存先フォルダURL（任意）+「テストPDFを保存」
+ *   - サービスアカウント方式と違い「接続した人のドライブ」に保存するため Workspace 不要
  *
  * 変更履歴:
- *   2026-06-06: 初版（API連携 Googleドライブ 保存テスト）
+ *   2026-06-06: OAuth ユーザー委任方式へ全面切替（旧サービスアカウント方式を置換）
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 
 interface DriveStatus {
-  configured: boolean;
-  service_account_email: string | null;
+  oauth_configured: boolean;
+  connected: boolean;
+  account_email: string | null;
+  connected_at: string | null;
 }
 
 interface UploadResult {
@@ -31,31 +32,73 @@ export default function GoogleDriveIntegrationPage() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [driveUrl, setDriveUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState("");
+  // OAuth リダイレクト復帰時の ?connected=true/false バナー
+  const [banner, setBanner] = useState<"ok" | "fail" | null>(null);
 
-  useEffect(() => {
+  const loadStatus = useCallback(() => {
     api
       .get<DriveStatus>("/integrations/google-drive/status")
       .then(setStatus)
       .catch(() => setStatus(null));
   }, []);
 
+  useEffect(() => {
+    const connected = new URLSearchParams(window.location.search).get("connected");
+    if (connected === "true") setBanner("ok");
+    else if (connected === "false") setBanner("fail");
+    if (connected) {
+      // クエリを消してリロードしても再表示されないようにする
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    loadStatus();
+  }, [loadStatus]);
+
+  const handleConnect = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.get<{ auth_url: string }>(
+        "/integrations/google-drive/connect/start",
+      );
+      window.location.href = res.auth_url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.operationError"));
+      setBusy(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await api.delete("/integrations/google-drive/connect");
+      setResult(null);
+      setBanner(null);
+      loadStatus();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.operationError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleTest = async () => {
-    setUploading(true);
+    setBusy(true);
     setError("");
     setResult(null);
     try {
       const res = await api.post<UploadResult>(
         "/integrations/google-drive/test-upload",
-        { drive_url: driveUrl },
+        { drive_url: driveUrl || null },
       );
       setResult(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
     } finally {
-      setUploading(false);
+      setBusy(false);
     }
   };
 
@@ -64,63 +107,91 @@ export default function GoogleDriveIntegrationPage() {
       navKey="nav.integrationGoogleDrive"
       subtitleKey="googleDriveIntegration.subtitle"
     >
-      {/* 事前準備: 招待すべきサービスアカウント */}
-      <section className="card">
-        <h3>{t("googleDriveIntegration.setupTitle")}</h3>
-        {status?.configured ? (
-          <>
-            <p>{t("googleDriveIntegration.saEmailHint")}</p>
+      {banner === "ok" && (
+        <p className="success-message">{t("googleDriveIntegration.connectedBanner")}</p>
+      )}
+      {banner === "fail" && (
+        <p className="error-message">{t("googleDriveIntegration.connectFailedBanner")}</p>
+      )}
+
+      {/* サーバー未設定 */}
+      {status && !status.oauth_configured && (
+        <section className="card">
+          <p className="notice">{t("googleDriveIntegration.notConfiguredServer")}</p>
+        </section>
+      )}
+
+      {/* 未接続 */}
+      {status?.oauth_configured && !status.connected && (
+        <section className="card">
+          <h3>{t("googleDriveIntegration.connectTitle")}</h3>
+          <p>{t("googleDriveIntegration.connectDescription")}</p>
+          <div className="form-actions">
+            <button className="btn-primary" disabled={busy} onClick={handleConnect}>
+              {busy
+                ? t("googleDriveIntegration.connecting")
+                : t("googleDriveIntegration.connectButton")}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* 接続済み */}
+      {status?.connected && (
+        <>
+          <section className="card">
+            <h3>{t("googleDriveIntegration.connectTitle")}</h3>
             <p>
-              <code>{status.service_account_email}</code>
+              {t("googleDriveIntegration.connectedAs")}：{" "}
+              <code>{status.account_email}</code>
             </p>
-          </>
-        ) : (
-          <p className="notice">{t("googleDriveIntegration.notConfigured")}</p>
-        )}
-      </section>
+            <div className="form-actions">
+              <button className="btn-secondary" disabled={busy} onClick={handleDisconnect}>
+                {t("googleDriveIntegration.disconnect")}
+              </button>
+            </div>
+          </section>
 
-      {/* 保存テスト */}
-      <section className="card">
-        <h3>{t("googleDriveIntegration.testTitle")}</h3>
-        <div className="form-group">
-          <label htmlFor="gdrive-url">
-            {t("googleDriveIntegration.driveUrlLabel")}
-          </label>
-          <input
-            id="gdrive-url"
-            type="url"
-            value={driveUrl}
-            placeholder={t("googleDriveIntegration.driveUrlPlaceholder")}
-            onChange={(e) => setDriveUrl(e.target.value)}
-          />
-          <small className="form-hint">
-            {t("googleDriveIntegration.driveUrlHint")}
-          </small>
-        </div>
-        <div className="form-actions">
-          <button
-            className="btn-primary"
-            disabled={uploading || !driveUrl || !status?.configured}
-            onClick={handleTest}
-          >
-            {uploading
-              ? t("googleDriveIntegration.testing")
-              : t("googleDriveIntegration.testButton")}
-          </button>
-        </div>
+          <section className="card">
+            <h3>{t("googleDriveIntegration.testTitle")}</h3>
+            <div className="form-group">
+              <label htmlFor="gdrive-url">
+                {t("googleDriveIntegration.driveUrlLabel")}
+              </label>
+              <input
+                id="gdrive-url"
+                type="url"
+                value={driveUrl}
+                placeholder={t("googleDriveIntegration.driveUrlPlaceholder")}
+                onChange={(e) => setDriveUrl(e.target.value)}
+              />
+              <small className="form-hint">
+                {t("googleDriveIntegration.driveUrlHint")}
+              </small>
+            </div>
+            <div className="form-actions">
+              <button className="btn-primary" disabled={busy} onClick={handleTest}>
+                {busy
+                  ? t("googleDriveIntegration.testing")
+                  : t("googleDriveIntegration.testButton")}
+              </button>
+            </div>
 
-        {result && (
-          <p className="success-message">
-            {t("googleDriveIntegration.successTitle")}{" "}
-            {result.web_view_link && (
-              <a href={result.web_view_link} target="_blank" rel="noreferrer">
-                {t("googleDriveIntegration.openFile")}
-              </a>
+            {result && (
+              <p className="success-message">
+                {t("googleDriveIntegration.successTitle")}{" "}
+                {result.web_view_link && (
+                  <a href={result.web_view_link} target="_blank" rel="noreferrer">
+                    {t("googleDriveIntegration.openFile")}
+                  </a>
+                )}
+              </p>
             )}
-          </p>
-        )}
-        {error && <p className="error-message">{error}</p>}
-      </section>
+          </section>
+        </>
+      )}
+
+      {error && <p className="error-message">{error}</p>}
     </PageLayout>
   );
 }

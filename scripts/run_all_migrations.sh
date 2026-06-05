@@ -26,6 +26,15 @@ PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
 cd "${REPO_DIR}"
 
+# SA-18 Phase2: bootstrap ステップが別 SSH セッションで .env に書いた
+# ADMIN_DATABASE_URL を引き継ぐ。set -a でエクスポートして子プロセスに渡す。
+if [ -f ".env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 # ── 前処理: scripts / migrations をコンテナにコピー ──────────────────────────
 echo ">>> [0] Syncing scripts/ and migrations/ into backend container..."
 docker cp scripts "${BACKEND}:/app/"
@@ -35,14 +44,18 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=109
+TOTAL=117
 
 run_py() {
   local script="$1"
   shift
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  docker exec "$@" -w /app "${BACKEND}" python "${script}"
+  # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
+  # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
+  docker exec \
+    -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
+    "$@" -w /app "${BACKEND}" python "${script}"
 }
 
 run_sql() {
@@ -275,6 +288,15 @@ run_sql migrations/20260605_010000_rls_translation_glossary.sql
 
 # ADR-SA-17: RLS ポリシー NULLIF 修正（空文字列→NULL変換でINTEGERキャストエラー修正）
 run_sql migrations/20260605_020000_fix_translation_glossary_rls_cast.sql
+
+# SA-18: salesanchor_app ロール作成＋public スキーマ付与
+run_sql migrations/20260605_030000_create_salesanchor_app_role.sql
+
+# SA-18: 既存 tenant_NNN スキーマ全件に salesanchor_app を付与
+run_sql migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql
+
+# API連携: テナント Google Drive OAuth 連携設定テーブル（カレンダー雛形ミラー）
+run_sql migrations/20260606_010000_add_google_drive_config.sql
 
 echo ""
 echo "============================================"

@@ -3,10 +3,6 @@ name: ADR Index Check
 on:
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'docs/adr/ADR-*.md'
-      - 'docs/adr/README.md'
-      - 'scripts/generate-adr-index.js'
 
 jobs:
   check:
@@ -14,10 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if ADR files changed
+        id: adr_changed
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep -qE '^docs/adr/ADR-.*\.md$|^docs/adr/README\.md$|^scripts/generate-adr-index\.js$' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
+        if: steps.adr_changed.outputs.changed == 'true'
         with:
           node-version: '22'
 
       - name: Check ADR index is up to date
+        if: steps.adr_changed.outputs.changed == 'true'
         run: node scripts/generate-adr-index.js --check
+
+      - name: No ADR files changed — skip
+        if: steps.adr_changed.outputs.changed == 'false'
+        run: echo "✅ ADR ファイルの変更なし — インデックスチェックをスキップ"

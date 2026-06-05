@@ -1441,18 +1441,30 @@ async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) 
             await _assign_permissions_to_role(db, schema_name, role_id, role_def["permissions"])
 
 
-async def create_tenant_schema(db: AsyncSession, tenant_id: int) -> str:
+async def create_tenant_schema(
+    db: AsyncSession,
+    tenant_id: int,
+    admin_db: AsyncSession | None = None,
+) -> str:
     """
     テナント専用スキーマを作成し、業務テーブルとRLSポリシー、
     システムロールを設定する。
 
+    SA-18 Phase2: DDL（CREATE SCHEMA/TABLE/RLS/POLICY）は admin_db で実行し、
+    シード DML（tenant_settings 等）は db で実行する。
+    admin_db が None の場合は db にフォールバック（後方互換）。
+
     Args:
-        db: データベースセッション
+        db: データベースセッション（DML 用）
         tenant_id: テナントID（public.tenants.id）
+        admin_db: 管理者セッション（DDL 用、省略時は db にフォールバック）
 
     Returns:
         作成したスキーマ名（例: "tenant_001"）
     """
+    # admin_db が未提供なら db にフォールバック（後方互換: テスト・既存スクリプト対応）
+    ddl_db = admin_db if admin_db is not None else db
+
     # スキーマ名はtenant_{数値ID}形式（int()で型を強制しSQLインジェクション防止）
     # セキュリティ不変条件: schema_nameは必ず ^tenant_\d{3,}$ にマッチすること
     safe_id = int(tenant_id)
@@ -1460,8 +1472,8 @@ async def create_tenant_schema(db: AsyncSession, tenant_id: int) -> str:
     if not re.match(r"^tenant_\d{3,}$", schema_name):
         raise ValueError(f"不正なスキーマ名: {schema_name}")
 
-    # 1. スキーマ作成
-    await db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
+    # 1. スキーマ作成（DDL → admin_db）
+    await ddl_db.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
 
     # 2. 業務テーブル作成（DO $$ ブロックがあるため単純split不可、区切り工夫）
     tables_sql = _TENANT_TABLES_SQL.format(
@@ -1472,32 +1484,53 @@ async def create_tenant_schema(db: AsyncSession, tenant_id: int) -> str:
     # DO $$ ... END $$ ブロックを保ったまま分割するため、セミコロンでのsplitを避けて
     # ブロック単位で分割する（PostgreSQLは単一execute内で複数文を許容しないため
     # ステートメントを分ける必要がある）。
-    await _execute_statements_preserving_do_blocks(db, tables_sql)
+    await _execute_statements_preserving_do_blocks(ddl_db, tables_sql)
 
-    # 3a. RLS有効化（ALTER TABLE群、;で分割可能）
+    # 3a. RLS有効化（ALTER TABLE群、;で分割可能）（DDL → admin_db）
     enable_sql = _RLS_ENABLE_SQL.format(schema=schema_name)
     for statement in enable_sql.strip().split(";"):
         statement = statement.strip()
         if statement:
-            await db.execute(text(statement))
+            await ddl_db.execute(text(statement))
 
-    # 3b. RLSポリシー（DOブロック、splitせず1ステートメントで実行）
+    # 3b. RLSポリシー（DOブロック、splitせず1ステートメントで実行）（DDL → admin_db）
     policy_sql = _RLS_POLICY_SQL.format(schema=schema_name, schema_raw=schema_name)
-    await db.execute(text(policy_sql))
+    await ddl_db.execute(text(policy_sql))
 
-    # 4. システムロール（オーナー/メンバー）をシード
+    # 3c. SA-18 Phase2: salesanchor_app に新スキーマの権限を GRANT（DDL → admin_db）
+    # salesanchor_app ロールが存在しない環境（ローカル開発・テスト）では best-effort で実行。
+    grant_sql = f"""
+    DO $$
+    BEGIN
+      GRANT USAGE ON SCHEMA {schema_name} TO salesanchor_app;
+      GRANT SELECT, INSERT, UPDATE, DELETE
+        ON ALL TABLES IN SCHEMA {schema_name} TO salesanchor_app;
+      GRANT USAGE, SELECT
+        ON ALL SEQUENCES IN SCHEMA {schema_name} TO salesanchor_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA {schema_name}
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO salesanchor_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA {schema_name}
+        GRANT USAGE, SELECT ON SEQUENCES TO salesanchor_app;
+      RAISE NOTICE 'Granted salesanchor_app on schema: {schema_name}';
+    EXCEPTION WHEN others THEN
+      RAISE WARNING 'GRANT failed for %: %', '{schema_name}', SQLERRM;
+    END $$;
+    """
+    await ddl_db.execute(text(grant_sql))
+
+    # 4. システムロール（オーナー/メンバー）をシード（DML → db）
     await seed_system_roles(db, safe_id, schema_name)
 
-    # 5. F16-FU2: meta_page_routing 同期トリガをセットアップ
+    # 5. F16-FU2: meta_page_routing 同期トリガをセットアップ（DDL → admin_db）
     # 既存テナントへの適用は scripts/migrate_meta_page_routing.py が担当する。
     # 新規テナントは public.meta_page_routing 表 (migration 043) が既に存在する前提。
     trigger_sql = _META_PAGE_ROUTING_TRIGGER_SQL.format(
         schema=schema_name,
         schema_raw=schema_name,
     )
-    await _execute_statements_preserving_do_blocks(db, trigger_sql)
+    await _execute_statements_preserving_do_blocks(ddl_db, trigger_sql)
 
-    # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed。
+    # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
     #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
     #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
     try:

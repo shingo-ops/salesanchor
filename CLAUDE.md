@@ -13,7 +13,7 @@
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
 - **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
 - **仕様書**: `salesanchor_system_overview.docx` 他 3 冊（リポジトリ外・PO から入手）
-- **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 更新時は `docs/adr/README.md` 維持ルール遵守（両方向リンク必須）
+- **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 追加・変更後は `node scripts/generate-adr-index.js` を実行し `docs/adr/README.md` を再生成してコミットすること。CI「ADR index is up to date」が必須チェック。
 
 ---
 
@@ -47,18 +47,27 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## 実装フロー（ADR-112）
+## 実装フロー（ADR-012 / ADR-113: 2モード運用）
 
-| Phase | 担当 | 役割 |
-|-------|------|------|
-| 1設計 | Planner | 設計レベルHow（視覚参照/データ形/API契約）＋ADR起案 |
-| 2事前 | architect | コードベース照合・ルール整合・衝突/リスク審査 |
-| 3実装 | Generator | レビュー済み設計から実装・PR作成 |
-| 4検証 | Reviewer+Evaluator | コード+UI・二者APPROVE→develop |
+実装の起動トリガーは **設計のハンドオフ**。ADR の push では発火しない。確実性は検証ゲート（CI / Evaluator ビジュアル差分 / スモーク / ステージング）が担保する。
 
-ADR は What/Why の決定ログ（非発火）。トリガー＝設計ハンドオフ。詳細: `docs/adr/ADR-112-workflow-redesign-design-origin-flow.md`
+| 担当 | 役割 |
+|------|------|
+| **Shingo（PO）** | What/Why の定義、事業判断、優先順位、逸脱時の最終判断 |
+| **Web Claude（Planner）** | 壁打ち→設計。pattern 2 では How（契約・データ形・API 契約・視覚参照）まで設計する |
+| **architect（専用 agent）** | 設計確定の "前" に実機 recon（file:line 突合）を行い整合エビデンスを返す。pattern 2 では整合検査と差し戻しのみ（再著述禁止） |
+| **Generator（Claude Code）** | レビュー済み設計から実装し PR 作成 |
+| **検証ゲート** | Reviewer（コード）＋ Evaluator（UI）＋ テスト/CI/スモーク。二者 APPROVE で develop マージ |
 
-**自律クラフト（Phase 1–2 不要）**: バグ修正・CI 修復・リファクタに限定（機能追加・フロント視覚変更は対象外＝設計＋Evaluator 必須）。Phase 4 ゲート（PR＋テスト＋Reviewer）は維持。
+**pattern 1**（`mode: terminal`・既定）: ADR は What/Why/Scope のみ。How は Generator が自律設計。詳細: `docs/adr/ADR-012-what-how-separation.md`
+
+**pattern 2**（`mode: handoff`・設計持ち込み）: PO＋Web Claude が How まで合意。Generator は **忠実実装**。  
+**【MUST】設計確定の前に architect の実機 recon を必ず行う。** recon エビデンスのない設計は Generator に渡さない。  
+フィデリティ規律: 契約・不変条件・受け入れ条件・フロント視覚は変えない。逸脱は PR body 報告 → PO 判断。詳細: `docs/adr/ADR-113-two-mode-dev-flow.md`
+
+**共通原則**: レビューは原則 1 回に収束。ゲートが拾える指摘で往復しない。やり取りは差分で行う。不可逆操作は PO 確認必須。
+
+**自律クラフト（設計不要）**: バグ修正・CI 修復・リファクタに限定（機能追加・フロント視覚変更は対象外）。
 
 ---
 

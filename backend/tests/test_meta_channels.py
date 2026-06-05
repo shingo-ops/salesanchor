@@ -632,6 +632,11 @@ class TestParseScopes:
 
 
 _PG_DSN: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
+# DDL (CREATE SCHEMA / CREATE TABLE) は管理者接続で実行（CI role = DML only）
+_ADMIN_URL: str = os.getenv(
+    "RLS_ADMIN_DATABASE_URL",
+    "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
+)
 
 _pg_skip = pytest.mark.skipif(
     not _PG_DSN,
@@ -643,6 +648,14 @@ _pg_skip = pytest.mark.skipif(
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def pg_admin_engine_for_scopes():
+    """管理者接続（jarvis）— DDL / GRANT 専用。"""
+    eng = create_async_engine(_ADMIN_URL, echo=False, future=True)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def pg_engine_for_scopes():
     assert _PG_DSN
     eng = create_async_engine(_PG_DSN, echo=False, future=True)
@@ -651,12 +664,13 @@ async def pg_engine_for_scopes():
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def pg_setup_scopes_schema(pg_engine_for_scopes):
+async def pg_setup_scopes_schema(pg_admin_engine_for_scopes, pg_engine_for_scopes):
     """tenant_997 schema + tenant_meta_config + granted_scopes JSONB 列を作る。
 
     test_rls_tenant_meta_config.py と schema 番号がぶつからないように 997 を使う。
+    DDL は管理者接続（pg_admin_engine_for_scopes）で実行（CI role = DML only の不変条件）。
     """
-    async with pg_engine_for_scopes.begin() as conn:
+    async with pg_admin_engine_for_scopes.begin() as conn:
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS tenant_997"))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_997.tenant_meta_config (
@@ -672,10 +686,21 @@ async def pg_setup_scopes_schema(pg_engine_for_scopes):
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
         """))
+        # salesanchor_app に DML 付与
+        await conn.execute(text(
+            "GRANT USAGE ON SCHEMA tenant_997 TO salesanchor_app"
+        ))
+        await conn.execute(text(
+            "GRANT SELECT, INSERT, UPDATE, DELETE "
+            "ON ALL TABLES IN SCHEMA tenant_997 TO salesanchor_app"
+        ))
+        await conn.execute(text(
+            "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA tenant_997 TO salesanchor_app"
+        ))
 
     yield
 
-    async with pg_engine_for_scopes.begin() as conn:
+    async with pg_admin_engine_for_scopes.begin() as conn:
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_997 CASCADE"))
 
 
@@ -685,7 +710,7 @@ async def pg_conn_scopes(pg_engine_for_scopes, pg_setup_scopes_schema):
     async with pg_engine_for_scopes.connect() as conn:
         async with conn.begin():
             await conn.execute(text(
-                "TRUNCATE tenant_997.tenant_meta_config RESTART IDENTITY CASCADE"
+                "DELETE FROM tenant_997.tenant_meta_config"
             ))
         yield conn
 

@@ -36,6 +36,11 @@ from app.services.inventory_parser import AliasRow, RuleRow
 
 # 実 Postgres URL が指定されていない場合はモジュール全体を skip
 TEST_PG_URL = os.getenv("TEST_PG_URL") or os.getenv("RLS_TEST_DATABASE_URL")
+# DDL (CREATE TABLE / CREATE INDEX) は管理者接続で実行（CI role = DML only）
+_ADMIN_URL: str = os.getenv(
+    "RLS_ADMIN_DATABASE_URL",
+    "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
+)
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -51,8 +56,16 @@ SAMPLES_JSON = FIXTURE_DIR / "samples.json"
 
 
 @pytest.fixture
+def admin_engine():
+    """管理者接続（jarvis）— DDL 専用（migration CREATE TABLE など）。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+    eng = create_async_engine(_ADMIN_URL, echo=False)
+    yield eng
+
+
+@pytest.fixture
 def engine():
-    """テスト用エンジン (function scope)。"""
+    """テスト用エンジン (function scope) — DML 専用（salesanchor_app）。"""
     from sqlalchemy.ext.asyncio import create_async_engine
 
     eng = create_async_engine(TEST_PG_URL, echo=False)
@@ -280,7 +293,7 @@ async def _cleanup_supplier(conn, supplier_id: int) -> None:
 
 
 @pytest.mark.parametrize("sample_id", [1, 2, 3, 4, 5])
-async def test_ac3_2_parse_real_supplier_sample(engine, fixture_samples, sample_id):
+async def test_ac3_2_parse_real_supplier_sample(admin_engine, engine, fixture_samples, sample_id):
     """AC3.2: 5 仕入元 fixture を実 Postgres seed 経由で解析、parse_status='parsed' 相当の結果。
 
     検証:
@@ -299,7 +312,7 @@ async def test_ac3_2_parse_real_supplier_sample(engine, fixture_samples, sample_
     from sqlalchemy.orm import sessionmaker
 
     AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    await _ensure_inventory_schema(engine)
+    await _ensure_inventory_schema(admin_engine)
     async with engine.begin() as conn:
         supplier_id = await _seed_supplier_with_aliases(
             conn, supplier_code, sample["supplier_name"], alias_texts
@@ -337,7 +350,7 @@ async def test_ac3_2_parse_real_supplier_sample(engine, fixture_samples, sample_
             await _cleanup_supplier(conn, supplier_id)
 
 
-async def test_ac3_2_db_wrapper_loads_aliases_and_rules(engine):
+async def test_ac3_2_db_wrapper_loads_aliases_and_rules(admin_engine, engine):
     """AC3.2 派生: DB ラッパが aliases / rules を正しく読み込む。"""
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -346,7 +359,7 @@ async def test_ac3_2_db_wrapper_loads_aliases_and_rules(engine):
     AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     supplier_code = "TEST-AC3-2-WRAPPER"
 
-    await _ensure_inventory_schema(engine)
+    await _ensure_inventory_schema(admin_engine)
     async with engine.begin() as conn:
         supplier_id = await _seed_supplier_with_aliases(
             conn, supplier_code, "AC3.2 DB wrapper test", ["ムニキスゼロ"]
@@ -370,7 +383,7 @@ async def test_ac3_2_db_wrapper_loads_aliases_and_rules(engine):
             await _cleanup_supplier(conn, supplier_id)
 
 
-async def test_ac3_3_idempotency_real_db(engine, fixture_samples):
+async def test_ac3_3_idempotency_real_db(admin_engine, engine, fixture_samples):
     """AC3.3: 同一 raw_content を 2 回流すと完全に同じ output JSON。"""
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
@@ -381,7 +394,7 @@ async def test_ac3_3_idempotency_real_db(engine, fixture_samples):
     raw_content = sample_path.read_text(encoding="utf-8")
 
     supplier_code = "TEST-AC3-3-IDEMP"
-    await _ensure_inventory_schema(engine)
+    await _ensure_inventory_schema(admin_engine)
     async with engine.begin() as conn:
         supplier_id = await _seed_supplier_with_aliases(
             conn, supplier_code, "AC3.3 idempotency test", SUPPLIER_ALIASES[1]
@@ -406,7 +419,7 @@ async def test_ac3_3_idempotency_real_db(engine, fixture_samples):
             await _cleanup_supplier(conn, supplier_id)
 
 
-async def test_ac3_4_unparsed_classification_real_db(engine):
+async def test_ac3_4_unparsed_classification_real_db(admin_engine, engine):
     """AC3.4: alias 未登録の token は unparsed に分類（exclude_reason ではなく）。"""
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
@@ -414,7 +427,7 @@ async def test_ac3_4_unparsed_classification_real_db(engine):
     AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     supplier_code = "TEST-AC3-4-UNPARSED"
 
-    await _ensure_inventory_schema(engine)
+    await _ensure_inventory_schema(admin_engine)
     async with engine.begin() as conn:
         supplier_id = await _seed_supplier_with_aliases(
             conn, supplier_code, "AC3.4 unparsed test", ["既知商品A"]

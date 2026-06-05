@@ -393,8 +393,12 @@ app.include_router(
     erp.router, prefix="/api/v1", tags=["erp"],
     dependencies=[Depends(get_current_tenant)],
 )
-# API連携: Googleドライブ 保存テスト（権限は各エンドポイントの require_permission で判定）
-app.include_router(integrations.router, prefix="/api/v1", tags=["integrations"])
+# API連携: Googleドライブ OAuth。public_router=callback（Bearerなし）、router=認証必須
+app.include_router(integrations.public_router, prefix="/api/v1", tags=["integrations"])
+app.include_router(
+    integrations.router, prefix="/api/v1", tags=["integrations"],
+    dependencies=[Depends(get_current_tenant)],
+)
 # Phase 1 再設計: staff / bots
 app.include_router(
     staff.router, prefix="/api/v1", tags=["staff"],
