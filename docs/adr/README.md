@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-04 / ADR 総数: 103 件
+最終更新: 2026-06-05 / ADR 総数: 104 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -121,6 +121,7 @@
 | [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Proposed | — | — |
 | [ADR-110](./ADR-110-karte-reference-alignment.md) | ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正） | Proposed | — | — |
 | [ADR-110](./ADR-110-sa-translation-subsystem.md) | ADR-110: 会話ログ翻訳サブシステム | — | — | — |
+| [ADR-111](./ADR-111-runner-label-isolation.md) | ADR-111: runner-label-isolation — Shingo-Mac-Temp 専用ラベルによる開発環境分離 | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例

@@ -59,7 +59,7 @@ jobs:
 
   # ADR-056: 全ジョブで共有する context (event 種別 / PR / ADR files / pause-automation 判定)
   context:
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       github.event_name == 'workflow_dispatch' ||
       (
@@ -191,7 +191,7 @@ jobs:
   researcher:
     name: Researcher (ADR調査)
     needs: [context]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       github.actor == 'shingo-ops' &&
@@ -263,7 +263,7 @@ jobs:
 
   claude-worker:
     needs: [context, researcher]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       needs.context.result == 'success' &&
@@ -453,7 +453,7 @@ jobs:
   # ADR-051: Reviewer job — claude-worker が PR を作成した場合 or pull_request:synchronize で起動
   reviewer:
     needs: [context, claude-worker]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       needs.context.outputs.proceed == 'true' &&
@@ -546,7 +546,7 @@ jobs:
   # ADR-051: Evaluator job — Reviewer が APPROVED した場合に自動起動
   evaluator:
     needs: [context, claude-worker, reviewer]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       needs.context.outputs.proceed == 'true' &&
@@ -687,7 +687,7 @@ jobs:
   # Governance Check — evaluator APPROVED 後、automerge 前に定着化検証を実施
   governance:
     name: Governance Check
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     needs: [context, claude-worker, reviewer, evaluator]
     if: |
       always() &&
@@ -764,7 +764,7 @@ jobs:
   # ADR-056 §2-5: 両 APPROVE 時に develop へ自動 merge
   automerge:
     needs: [context, claude-worker, reviewer, evaluator, governance]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       needs.context.outputs.proceed == 'true' &&
@@ -816,7 +816,7 @@ jobs:
   # ADR-056 §2-2: いずれかの reviewer/evaluator が REQUEST_CHANGES を出した場合に自動修正
   regenerate:
     needs: [context, claude-worker, reviewer, evaluator]
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, shingo-mac]
     if: |
       always() &&
       needs.context.outputs.proceed == 'true' &&
