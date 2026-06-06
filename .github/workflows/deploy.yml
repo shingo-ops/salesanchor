@@ -311,7 +311,7 @@ jobs:
       # 必ず走らせる必要があるため、マイグレーションから分離して常時実行する。
       # （フロントのみのデプロイでも本番の健全性検証が抜けない）
       - name: Finalize (health check + cleanup)
-        if: success()
+        if: always()
         uses: appleboy/ssh-action@v1
         env:
           # ADR-115: ロールバック Discord 通知用 webhook
