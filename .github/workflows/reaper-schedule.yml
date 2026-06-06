@@ -1,0 +1,33 @@
+name: reaper-schedule — マージ済み worktree 定期回収（ADR-114）
+
+# 各 Mac で毎日実行し、DONE/マージ済みの worktree フォルダを自動削除する
+# Mac が offline の日は次回起動時に自動追いつき（launchd 自動起動: PR-C で実装）
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # 毎日 18:00 UTC = 03:00 JST
+  workflow_dispatch:        # 手動実行（テスト・緊急時）
+
+jobs:
+  reaper:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run reaper（マージ済み worktree を自動削除）
+        run: |
+          if [ ! -f scripts/reaper-worktree.sh ]; then
+            echo "reaper-worktree.sh が見つかりません（PR-A 未マージ）"
+            exit 0
+          fi
+          bash scripts/reaper-worktree.sh --execute
+
+      - name: 未保存あり保護件数をサマリ表示
+        if: always()
+        run: |
+          if [ -f scripts/reaper-worktree.sh ]; then
+            bash scripts/reaper-worktree.sh 2>&1 | grep -E "^(⚠️|✅)" || true
+          fi

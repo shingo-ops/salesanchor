@@ -54,7 +54,7 @@ Sales Anchor では、Claude Code と Codex を並行稼働させる前提が既
 
 - 進行中の作業は `.claude-pipeline/active-work.md` に記録する
 - ここを並行作業の **唯一の真実（SSoT）** とする
-- 新規 worktree 作成時は自動登録し、終了時は削除する
+- 新規 worktree 作成時は自動登録し、終了時は**行を DONE で残す・フォルダのみ削除する**（ADR-114）
 - 重複が見つかったら STOP して開始しない
 
 ### 3. 進捗と証拠の正本
