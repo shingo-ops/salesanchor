@@ -1,0 +1,72 @@
+name: active-work auto-DONE（ADR-114）
+
+# develop への PR がマージされた瞬間に active-work.md の行を DONE に更新する
+# 担当: GitHub 側（原則 4: ノートの行を更新するのは GitHub 側）
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop]
+
+# 複数 PR の同時マージでも順番に処理（競合防止）
+concurrency:
+  group: active-work-auto-done
+  cancel-in-progress: false
+
+jobs:
+  mark-done:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          token: ${{ secrets.PIPELINE_PAT }}
+          fetch-depth: 0
+
+      - name: Update IN_PROGRESS row to DONE
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, sys
+          branch = os.environ["BRANCH"]
+          filepath = ".claude-pipeline/active-work.md"
+          with open(filepath, encoding="utf-8") as f:
+              content = f.read()
+          lines = content.splitlines(keepends=True)
+          new_lines = []
+          updated = False
+          for line in lines:
+              if branch in line and line.strip().startswith("|") and "IN_PROGRESS" in line:
+                  line = line.replace("IN_PROGRESS", "DONE", 1)
+                  updated = True
+              new_lines.append(line)
+          if updated:
+              with open(filepath, "w", encoding="utf-8") as f:
+                  f.write("".join(new_lines))
+              print(f"DONE_UPDATED: {branch}")
+          else:
+              print(f"SKIP (no IN_PROGRESS entry): {branch}")
+          PYEOF
+
+      - name: Commit and push DONE update
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet .claude-pipeline/active-work.md; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add .claude-pipeline/active-work.md
+          git commit -m "chore: active-work.md — ${BRANCH} を DONE に更新（自動）"
+
+          # 並行更新に備えて push 前に pull --rebase
+          git pull --rebase origin develop
+          git push origin HEAD:refs/heads/develop
