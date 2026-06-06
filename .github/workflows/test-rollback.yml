@@ -1,0 +1,44 @@
+name: Test Auto-Rollback Simulation
+
+# ADR-115: 自動ロールバックの実地検証ワークフロー
+# ubuntu-latest runner は Docker を持つ → 実際のコンテナでロールバック経路を確認。
+#
+# このワークフローは手動 (workflow_dispatch) でのみ実行。
+# 本番デプロイに影響を与えない（VPS に一切アクセスしない）。
+#
+# 検証内容:
+#   1. GOOD コミット（health 200）と BAD コミット（health 503）を作成
+#   2. BAD を「デプロイ」（コンテナ起動）
+#   3. ヘルスチェック失敗を検出
+#   4. 自動ロールバック（git reset --hard PREV_SHA → docker compose build → up）
+#   5. health 200 に復帰することを確認
+#   6. Discord 通知は dry-run（実際には送信しない）
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rollback-simulation:
+    name: Auto-Rollback Simulation Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker is available
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Run rollback simulation
+        run: |
+          bash scripts/test_rollback_simulation.sh
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-test-logs
+          path: /tmp/rollback-test-*/
+          retention-days: 3
