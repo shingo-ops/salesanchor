@@ -313,10 +313,15 @@ jobs:
       - name: Finalize (health check + cleanup)
         if: success()
         uses: appleboy/ssh-action@v1
+        env:
+          # ADR-115: ロールバック Discord 通知用 webhook
+          # DISCORD_WEBHOOK_OWNER_PING を使用（ADMIN_NOTIFICATION_DISCORD_WEBHOOK は未登録のため）
+          ROLLBACK_DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ROLLBACK_DISCORD_WEBHOOK
           script: |
             set -e
             cd /home/ubuntu/salesanchor
@@ -375,8 +380,8 @@ jobs:
                 fi
               fi
 
-              # Discord 通知（.env から webhook URL を取得）
-              _webhook=$(grep '^ADMIN_NOTIFICATION_DISCORD_WEBHOOK=' .env 2>/dev/null | cut -d= -f2-)
+              # Discord 通知（GitHub Secrets 経由の env var → .env フォールバック）
+              _webhook="${ROLLBACK_DISCORD_WEBHOOK:-$(grep '^ADMIN_NOTIFICATION_DISCORD_WEBHOOK=' .env 2>/dev/null | cut -d= -f2-)}"
               if [ -n "${_webhook}" ]; then
                 if [ "${_rollback_result}" = "success" ]; then
                   curl -s -X POST "${_webhook}" \
