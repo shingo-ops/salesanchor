@@ -41,7 +41,10 @@ echo "🔍 IN_PROGRESS 行を棚卸し中: ${ACTIVE_WORK_FILE}"
 echo ""
 
 # ── IN_PROGRESS ブランチを取得 ────────────────────────────────────────────
-mapfile -t IN_PROGRESS_BRANCHES < <(python3 - "${ACTIVE_WORK_FILE}" <<'PYEOF'
+IN_PROGRESS_BRANCHES=()
+while IFS= read -r branch; do
+  [ -n "${branch}" ] && IN_PROGRESS_BRANCHES+=("${branch}")
+done < <(python3 - "${ACTIVE_WORK_FILE}" <<'PYEOF'
 import sys, re
 filepath = sys.argv[1]
 content = open(filepath, encoding="utf-8").read()
