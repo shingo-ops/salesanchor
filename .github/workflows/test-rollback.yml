@@ -16,6 +16,9 @@ name: Test Auto-Rollback Simulation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/morimoto/auto-rollback-deploy
 
 jobs:
   rollback-simulation:
