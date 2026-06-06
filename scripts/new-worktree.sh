@@ -48,7 +48,8 @@ fi
 
 # 並行 worktree 数の上限チェック（メインリポジトリ除く）
 WORKTREE_COUNT=$(git worktree list | tail -n +2 | wc -l | tr -d ' ')
-WORKTREE_LIMIT="${WORKTREE_LIMIT:-5}"
+# ADR-114 §6: 上限はセーフティネット化（自動回収で減り続けるため、異常検知の閾値として設定）
+WORKTREE_LIMIT="${WORKTREE_LIMIT:-100}"
 if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
   UNSAVED_COUNT=0
   if [ -f "${REAPER_SCRIPT}" ]; then
