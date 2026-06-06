@@ -40,14 +40,27 @@ REPO_NAME="$(basename "${REPO_ROOT}")"
 BRANCH_SAFE="${BRANCH//\//-}"
 WORKTREE_DIR="${HOME}/worktrees/${REPO_NAME}/${BRANCH_SAFE}"
 
+# ── マージ済みworktreeを先に回収してから上限チェック（ADR-114）────────────────
+REAPER_SCRIPT="${REPO_ROOT}/scripts/reaper-worktree.sh"
+if [ -f "${REAPER_SCRIPT}" ]; then
+  bash "${REAPER_SCRIPT}" --execute 2>/dev/null || true
+fi
+
 # 並行 worktree 数の上限チェック（メインリポジトリ除く）
 WORKTREE_COUNT=$(git worktree list | tail -n +2 | wc -l | tr -d ' ')
 WORKTREE_LIMIT="${WORKTREE_LIMIT:-5}"
 if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
+  UNSAVED_COUNT=0
+  if [ -f "${REAPER_SCRIPT}" ]; then
+    UNSAVED_COUNT=$(bash "${REAPER_SCRIPT}" 2>/dev/null | grep -c "未保存あり" || echo "0")
+  fi
   echo ""
   echo "⚠️  worktree が上限（${WORKTREE_LIMIT}個）に達しています（現在 ${WORKTREE_COUNT} 個）。"
-  echo "   既存の PR をマージ・クリーンアップしてから新しい worktree を作成してください。"
-  echo "   強制的に作成する場合: WORKTREE_LIMIT=99 bash scripts/new-worktree.sh ${BRANCH}"
+  echo "   マージ済みworktreeを回収して空きを作ってください。"
+  echo "   → 回収実行: bash scripts/reaper-worktree.sh --execute"
+  if [ "${UNSAVED_COUNT}" -gt 0 ]; then
+    echo "   → 未保存あり ${UNSAVED_COUNT} 件は人の判断が必要（自動回収対象外）"
+  fi
   echo ""
   exit 1
 fi
