@@ -144,6 +144,7 @@
     "managementCenter": "Management Center",
     "saasAdmin": "SaaS Admin",
     "designSystem": "Design System",
+    "designPreview": "Design Preview",
     "accountSettings": "Account Settings",
     "sales": "Sales",
     "commissions": "Commissions"
@@ -2341,5 +2342,8 @@
       "termType_jargon": "Jargon",
       "termType_general": "General"
     }
+  },
+  "designPreview": {
+    "subtitle": "Visual review of component standards (dev only)"
   }
 }

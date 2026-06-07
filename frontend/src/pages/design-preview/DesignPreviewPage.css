@@ -1,0 +1,191 @@
+/**
+ * DesignPreviewPage スタイル（Task 1C / 開発環境専用）
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ */
+
+/* ── 幅セレクタバー ── */
+.dp-band-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.dp-band-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.dp-band-btn {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.dp-band-btn:hover {
+  background: var(--bg-hover);
+}
+
+.dp-band-btn--active {
+  border-color: var(--accent);
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── プレビュー枠 ── */
+.dp-preview-frame {
+  transition: max-width 0.25s ease;
+}
+
+/* ── セクション ── */
+.dp-section {
+  margin-bottom: var(--space-8, 32px);
+}
+
+.dp-section-title {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Button 確認行 ── */
+.dp-row {
+  /* コンポーネントスコープ幅トークン（80px = 5rem — ラベル列固定幅） */
+  --dp-label-w: 80px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.dp-row-label {
+  width: var(--dp-label-w);
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.dp-row-items {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dp-row-items--full {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* ── Card 確認行 ── */
+.dp-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--comp-card-gap);
+  margin-bottom: var(--comp-card-gap);
+}
+
+@media (max-width: 767px) {
+  .dp-card-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dp-card-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dp-card-col-label {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.dp-card-title {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.dp-card-body {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── グリッド検証 ── */
+.dp-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--comp-card-gap);
+}
+
+@media (max-width: 767px) {
+  .dp-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── トークンテーブル ── */
+.dp-token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+}
+
+.dp-token-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+
+.dp-token-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.dp-token-name code {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-xs);
+  color: var(--accent);
+  background: var(--accent-bg-subtle);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-2xs);
+}
+
+.dp-token-expected {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.dp-token-actual {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-xs);
+}
