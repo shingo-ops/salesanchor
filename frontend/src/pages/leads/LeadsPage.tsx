@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
+import MergeLeadModal from "../../components/MergeLeadModal";
 import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
@@ -89,6 +90,7 @@ export default function LeadsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
+  const [mergeSource, setMergeSource] = useState<Lead | null>(null);
   const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
   const [convertForm, setConvertForm] = useState({ title: "", amount: "" });
   const [convertCompanyId, setConvertCompanyId] = useState<number | null>(null);
@@ -403,6 +405,9 @@ export default function LeadsPage() {
                   {hasPermission("leads.convert") && !l.converted_deal_id && (
                     <button className="btn-sm btn-primary" onClick={() => setConvertTarget(l)}>{t("leads.convert")}</button>
                   )}
+                  {hasPermission("leads.delete") && !l.converted_deal_id && (
+                    <button className="btn-sm" onClick={() => setMergeSource(l)}>{t("leads.merge")}</button>
+                  )}
                   {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(l)}>{t("common.delete")}</button>}
                 </td>
               </tr>
@@ -411,6 +416,16 @@ export default function LeadsPage() {
           </tbody>
         </table>
       )}
+
+      <MergeLeadModal
+        open={!!mergeSource}
+        source={mergeSource ?? { id: 0, lead_code: null, customer_name: "" }}
+        onMerged={() => {
+          setMergeSource(null);
+          loadLeads();
+        }}
+        onCancel={() => setMergeSource(null)}
+      />
 
       <ConfirmModal
         open={!!deleteTarget}
