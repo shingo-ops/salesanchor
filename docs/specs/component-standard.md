@@ -1,4 +1,4 @@
-# コンポーネント標準仕様（Task 1C 確定値）
+# コンポーネント標準仕様（Task 1C / 2C 確定値）
 
 **確定日**: 2026-06-07  
 **PR**: feature/morimoto/token-button-card-preview  
@@ -104,3 +104,80 @@ npm run dev
 2. `InboxKartePanel.tsx` の Tailwind 混在 10件+ → token ref へ
 3. カード余白の統一判断: 24px (`--comp-card-padding`) / 20px (`.card`) / 16px (`db-section-card`) のどれを SSoT にするか
 4. `btn-sm` 再設計: 現状は独立カラー（`bg-hover`）を持ちバリアントと合成不可 → `comp-btn--sm` に一本化するか
+
+---
+
+## フォーム入力 標準トークン（Task 2C 追加）
+
+| トークン | 値 | 説明 |
+|---|---|---|
+| `--comp-input-radius` | `var(--radius-md)` = 6px | 入力角丸（ボタンと同じコントロール系） |
+| `--comp-input-height-sm` | 28px | sm サイズ最小高 |
+| `--comp-input-height-mobile` | 44px | モバイルタッチターゲット（WCAG 2.5.5） |
+
+### 既存 CSS との委譲関係
+
+新規 `comp-field*` クラスは既存 `.form-group` を**置き換えない**。
+コントロール角丸のみ `--radius-sm`(4px) → `--comp-input-radius`(6px) に変更。
+その他（border色・focus リング・background）は既存トークンをそのまま参照。
+
+---
+
+## TextField 金型仕様
+
+### Props
+
+| prop | 型 | 説明 |
+|---|---|---|
+| `type` | InputHTMLAttributes.type | text / email / number / password / tel / url 等 |
+| `label` | string | ラベル文字列（省略可） |
+| `helperText` | string | ヒントメッセージ（エラーがない場合に表示） |
+| `error` | string | エラーメッセージ（表示 + エラー状態 CSS） |
+| `size` | `"sm" \| "md" \| "lg"` | サイズ（デフォルト: `"md"`） |
+| `fullWidth` | boolean | width 100%（デフォルト: `false`） |
+| `required` | boolean | ラベルに `*` 表示 + `aria-required` |
+| `disabled` | boolean | 入力無効 + opacity |
+| その他 | InputHTMLAttributes | placeholder / defaultValue / onChange 等そのまま透過 |
+
+### サイズ
+
+| size | padding | font-size | min-height |
+|---|---|---|---|
+| `sm` | 4px 8px | `var(--font-sm)` = 13.6px | 28px |
+| `md` | 8px 12px | `var(--font-base)` = 14.4px | — |
+| `lg` | 12px 16px | `var(--font-md)` = 16px | 44px |
+
+- モバイル（≤767px）: input / select に `min-height: 44px` 自動付与
+
+---
+
+## Select 金型仕様
+
+### Props
+
+| prop | 型 | 説明 |
+|---|---|---|
+| `options` | `SelectOption[]` | `{ value, label, disabled? }` の配列 |
+| `placeholder` | string | 先頭に disabled option として表示（省略可） |
+| `label` / `helperText` / `error` / `size` / `fullWidth` | — | TextField と同じ |
+| `required` / `disabled` | boolean | SelectHTMLAttributes から透過 |
+
+---
+
+## Textarea 金型仕様
+
+### Props
+
+| prop | 型 | 説明 |
+|---|---|---|
+| `rows` | number | TextareaHTMLAttributes から透過（デフォルト: min-height で制御） |
+| `label` / `helperText` / `error` / `size` / `fullWidth` | — | TextField と同じ |
+| `required` / `disabled` | boolean | TextareaHTMLAttributes から透過 |
+
+---
+
+## Task 2E への引き継ぎ事項
+
+1. 実画面への展開: `<input>` / `<select>` / `<textarea>` を上記金型へ順次置き換え（206か所）
+2. バリデーション統合: React Hook Form 等との接続パターンを確立してから展開
+3. `form-group` クラスとの共存ルール: 移行期は `comp-field` と `form-group` が並存。Task 2E 完了後に `form-group` を非推奨化

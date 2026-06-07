@@ -143,6 +143,19 @@
   }
 }
 
+/* ── フォーム入力グリッド ── */
+.dp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4) var(--comp-card-gap);
+}
+
+@media (max-width: 767px) {
+  .dp-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── トークンテーブル ── */
 .dp-token-table {
   width: 100%;
