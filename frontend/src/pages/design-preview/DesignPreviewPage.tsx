@@ -1,13 +1,8 @@
 /**
  * DesignPreviewPage -- コンポーネント標準 目視確認ページ（Task 1C / 2C）
+ * dev-only preview: 日本語表記を許可（eslint.config.js の overrides 参照）
  *
  * アクセス: /design-preview（ログイン後 URL 直打ち・ナビ未掲載）
- *
- * 確認内容:
- *   - Button 全バリアント x 全サイズ x 各状態
- *   - Card 全バリアント x 全密度
- *   - TextField / Select / Textarea 全状態 x 全サイズ
- *   - 幅セレクタ（モバイル 375px / タブレット 768px / PC 全幅）で 3 バンド確認
  */
 
 import { useState } from "react";
@@ -22,36 +17,49 @@ import "./DesignPreviewPage.css";
 
 // -- 幅セレクタの選択肢 -------------------------------------------------------
 const WIDTH_BANDS = [
-  { label: "Mobile (375px)",   value: 375  },
-  { label: "Tablet (768px)",   value: 768  },
-  { label: "PC (full width)",  value: null },
+  { label: "モバイル (375px)",   value: 375  },
+  { label: "タブレット (768px)", value: 768  },
+  { label: "PC (全幅)",          value: null },
 ] as const;
 
 type BandValue = 375 | 768 | null;
 
 // -- セクションヘッダー --------------------------------------------------------
-function SectionHeader({ title }: { title: string }) {
-  return <h3 className="dp-section-title">{title}</h3>;
+function SectionHeader({ title, desc }: { title: string; desc?: string }) {
+  return (
+    <div className="dp-section-header">
+      <h3 className="dp-section-title">{title}</h3>
+      {desc != null && <p className="dp-section-desc">{desc}</p>}
+    </div>
+  );
 }
 
 // -- トークン値サマリ ----------------------------------------------------------
 const TOKEN_SUMMARY = [
-  { token: "--comp-btn-radius",           desc: "button radius",              expected: "6px (radius-md)"  },
-  { token: "--comp-card-radius",          desc: "card radius",                expected: "8px (radius-lg)"  },
-  { token: "--comp-card-padding",         desc: "card padding (PC/tab)",      expected: "24px (space-6)"   },
-  { token: "--comp-card-padding-compact", desc: "card padding (mobile)",      expected: "16px (space-4)"   },
-  { token: "--comp-card-gap",             desc: "card gap",                   expected: "24px (space-6)"   },
-  { token: "--comp-input-radius",         desc: "input/select/textarea radius", expected: "6px (radius-md)" },
-  { token: "--comp-input-height-sm",      desc: "input sm min-height",        expected: "28px"             },
-  { token: "--comp-input-height-mobile",  desc: "input mobile touch target",  expected: "44px (WCAG 2.5.5)" },
+  { token: "--comp-btn-radius",           desc: "ボタン角丸",               expected: "6px (radius-md)"    },
+  { token: "--comp-card-radius",          desc: "カード角丸",               expected: "8px (radius-lg)"    },
+  { token: "--comp-card-padding",         desc: "カード余白 PC/タブレット",  expected: "24px (space-6)"     },
+  { token: "--comp-card-padding-compact", desc: "カード余白 モバイル",      expected: "16px (space-4)"     },
+  { token: "--comp-card-gap",             desc: "カード間ギャップ",          expected: "24px (space-6)"     },
+  { token: "--comp-input-radius",         desc: "入力コントロール角丸",      expected: "6px (radius-md)"    },
+  { token: "--comp-input-height-sm",      desc: "入力 sm 最小高",           expected: "28px"               },
+  { token: "--comp-input-height-mobile",  desc: "入力 モバイルタッチ最小高", expected: "44px (WCAG 2.5.5)"  },
 ];
 
 // -- Select デモ用オプション --------------------------------------------------
 const DEMO_SELECT_OPTIONS = [
-  { value: "active",   label: "Active"   },
-  { value: "pending",  label: "Pending"  },
-  { value: "closed",   label: "Closed"   },
+  { value: "active",   label: "有効 (Active)"   },
+  { value: "pending",  label: "保留 (Pending)"  },
+  { value: "closed",   label: "終了 (Closed)"   },
 ];
+
+// -- バリアント表示ラベル -------------------------------------------------------
+const VARIANT_LABEL: Record<string, string> = {
+  primary:   "主要 (primary)",
+  secondary: "補助 (secondary)",
+  ghost:     "控えめ (ghost)",
+  danger:    "破壊的 (danger)",
+};
 
 export default function DesignPreviewPage() {
   const [bandWidth, setBandWidth] = useState<BandValue>(null);
@@ -60,7 +68,7 @@ export default function DesignPreviewPage() {
     <PageLayout navKey="nav.designPreview" subtitleKey="designPreview.subtitle">
       {/* -- 幅セレクタ -- */}
       <div className="dp-band-selector">
-        <span className="dp-band-label">Preview width:</span>
+        <span className="dp-band-label">プレビュー幅:</span>
         {WIDTH_BANDS.map((b) => (
           <button
             key={String(b.value)}
@@ -78,16 +86,19 @@ export default function DesignPreviewPage() {
         style={bandWidth != null ? { maxWidth: bandWidth, margin: "0 auto" } : undefined}
       >
 
-        {/* [1] Token values */}
+        {/* [1] デザイントークン確認 */}
         <section className="dp-section">
-          <SectionHeader title="1. Token values" />
+          <SectionHeader
+            title="1. デザイントークン確認"
+            desc="CSS 変数の実測値を自動取得して期待値と照合します。"
+          />
           <table className="dp-token-table">
             <thead>
               <tr>
-                <th>Token</th>
-                <th>Description</th>
-                <th>Expected</th>
-                <th>Actual</th>
+                <th>トークン</th>
+                <th>説明</th>
+                <th>期待値</th>
+                <th>実測値</th>
               </tr>
             </thead>
             <tbody>
@@ -98,78 +109,96 @@ export default function DesignPreviewPage() {
           </table>
         </section>
 
-        {/* [2] Button -- バリアント x サイズ */}
+        {/* [2] ボタン — 種類 × サイズ */}
         <section className="dp-section">
-          <SectionHeader title="2. Button -- variant x size" />
+          <SectionHeader
+            title="2. ボタン — 種類 × サイズ (variant x size)"
+            desc="主要＝その画面で一番押してほしい操作 / 補助＝その次 / 控えめ＝軽い操作 / 破壊的＝削除など取り消せない操作"
+          />
 
           {(["primary", "secondary", "ghost", "danger"] as const).map((variant) => (
             <div key={variant} className="dp-row">
-              <span className="dp-row-label">{variant}</span>
+              <span className="dp-row-label">{VARIANT_LABEL[variant]}</span>
               <div className="dp-row-items">
-                <Button variant={variant} size="sm">Small</Button>
-                <Button variant={variant} size="md">Medium</Button>
-                <Button variant={variant} size="lg">Large</Button>
+                <Button variant={variant} size="sm">小 (sm)</Button>
+                <Button variant={variant} size="md">中 (md)</Button>
+                <Button variant={variant} size="lg">大 (lg)</Button>
               </div>
             </div>
           ))}
         </section>
 
-        {/* [3] Button -- 状態 */}
+        {/* [3] ボタン — 状態 */}
         <section className="dp-section">
-          <SectionHeader title="3. Button -- states" />
+          <SectionHeader
+            title="3. ボタン — 状態 (states)"
+            desc="無効＝押せない状態（薄く表示）。読み込み中＝処理中のスピナー表示。横幅いっぱい＝コンテナ全幅に伸縮。"
+          />
 
           <div className="dp-row">
-            <span className="dp-row-label">normal</span>
+            <span className="dp-row-label">通常</span>
             <div className="dp-row-items">
-              <Button variant="primary">Normal</Button>
+              <Button variant="primary">通常</Button>
             </div>
           </div>
           <div className="dp-row">
-            <span className="dp-row-label">disabled</span>
+            <span className="dp-row-label">無効 (disabled)</span>
             <div className="dp-row-items">
-              <Button variant="primary" disabled>Disabled</Button>
-              <Button variant="secondary" disabled>Disabled</Button>
-              <Button variant="ghost" disabled>Disabled</Button>
-              <Button variant="danger" disabled>Disabled</Button>
+              <Button variant="primary" disabled>無効</Button>
+              <Button variant="secondary" disabled>無効</Button>
+              <Button variant="ghost" disabled>無効</Button>
+              <Button variant="danger" disabled>無効</Button>
             </div>
           </div>
           <div className="dp-row">
-            <span className="dp-row-label">loading</span>
+            <span className="dp-row-label">読み込み中 (loading)</span>
             <div className="dp-row-items">
-              <Button variant="primary" loading>Saving...</Button>
-              <Button variant="secondary" loading>Loading</Button>
+              <Button variant="primary" loading>保存中...</Button>
+              <Button variant="secondary" loading>読み込み中</Button>
             </div>
           </div>
           <div className="dp-row">
-            <span className="dp-row-label">fullWidth</span>
+            <span className="dp-row-label">横幅いっぱい (fullWidth)</span>
             <div className="dp-row-items dp-row-items--full">
-              <Button variant="primary" fullWidth>Full Width Button</Button>
+              <Button variant="primary" fullWidth>横幅いっぱいのボタン</Button>
             </div>
           </div>
           <div className="dp-row">
-            <span className="dp-row-label">icon only</span>
+            <span className="dp-row-label">アイコンのみ (icon only)</span>
             <div className="dp-row-items">
-              <Button variant="primary" iconOnly aria-label="Add item">+</Button>
-              <Button variant="ghost" iconOnly aria-label="Close">
+              <Button variant="primary" iconOnly aria-label="追加">+</Button>
+              <Button variant="ghost" iconOnly aria-label="閉じる">
                 <X size={16} aria-hidden="true" />
               </Button>
-              <Button variant="secondary" iconOnly aria-label="Settings">
+              <Button variant="secondary" iconOnly aria-label="設定">
                 <PAGE_ICONS.settingsSolid size={16} aria-hidden="true" />
               </Button>
             </div>
           </div>
         </section>
 
-        {/* [4] Card -- バリアント x 密度 */}
+        {/* [4] カード — 種類 × 余白 */}
         <section className="dp-section">
-          <SectionHeader title="4. Card -- variant x density" />
+          <SectionHeader
+            title="4. カード — 種類 × 余白 (variant x density)"
+            desc="容器＝汎用の囲み / クリック可＝hover で浮き上がる / 数値＝上部にアクセントライン。余白は既定 24px・詰め 16px の 2 種。"
+          />
 
           {(["container", "interactive", "metric"] as const).map((variant) => (
             <div key={variant} className="dp-card-row">
               <div className="dp-card-col">
-                <span className="dp-card-col-label">{variant} / default</span>
+                <span className="dp-card-col-label">
+                  {variant === "container"   ? "容器 (container)" :
+                   variant === "interactive" ? "クリック可 (interactive)" :
+                                              "数値 (metric)"}
+                  {" "}/ 既定 (24px)
+                </span>
                 <Card variant={variant} density="default">
-                  <p className="dp-card-title">{variant}</p>
+                  <p className="dp-card-title">
+                    {variant === "container"   ? "容器 (container)" :
+                     variant === "interactive" ? "クリック可 (interactive)" :
+                                                "数値 (metric)"}
+                  </p>
                   <p className="dp-card-body">
                     padding: 24px (--comp-card-padding)
                     <br />
@@ -178,9 +207,18 @@ export default function DesignPreviewPage() {
                 </Card>
               </div>
               <div className="dp-card-col">
-                <span className="dp-card-col-label">{variant} / compact</span>
+                <span className="dp-card-col-label">
+                  {variant === "container"   ? "容器 (container)" :
+                   variant === "interactive" ? "クリック可 (interactive)" :
+                                              "数値 (metric)"}
+                  {" "}/ 詰め (16px)
+                </span>
                 <Card variant={variant} density="compact">
-                  <p className="dp-card-title">{variant}</p>
+                  <p className="dp-card-title">
+                    {variant === "container"   ? "容器 (container)" :
+                     variant === "interactive" ? "クリック可 (interactive)" :
+                                                "数値 (metric)"}
+                  </p>
                   <p className="dp-card-body">
                     padding: 16px (--comp-card-padding-compact)
                     <br />
@@ -192,11 +230,11 @@ export default function DesignPreviewPage() {
           ))}
         </section>
 
-        {/* [5] カードグリッド（gap 検証） */}
+        {/* [5] カードグリッド — 間隔検証 */}
         <section className="dp-section">
-          <SectionHeader title="5. Card grid (gap = 24px)" />
+          <SectionHeader title="5. カードグリッド — 間隔検証 (gap = 24px)" />
           <div className="dp-card-grid">
-            {["Card A", "Card B", "Card C"].map((label) => (
+            {["カード A", "カード B", "カード C"].map((label) => (
               <Card key={label} variant="container">
                 <p className="dp-card-title">{label}</p>
                 <p className="dp-card-body">gap: var(--comp-card-gap) = 24px</p>
@@ -205,97 +243,103 @@ export default function DesignPreviewPage() {
           </div>
         </section>
 
-        {/* [6] Form inputs -- 状態 */}
+        {/* [6] フォーム入力 — 全状態 */}
         <section className="dp-section">
-          <SectionHeader title="6. Form inputs -- states" />
+          <SectionHeader
+            title="6. フォーム入力 — 全状態 (states)"
+            desc="通常・focus（選択中・青枠）・エラー（赤枠＋エラーメッセージ）・無効（薄く表示）の見え方を確認します。"
+          />
 
           <div className="dp-form-grid">
-            {/* TextField */}
+            {/* テキスト入力 (TextField) */}
             <div>
-              <span className="dp-card-col-label">TextField / normal</span>
-              <TextField label="Company name" placeholder="Enter name" helperText="Helper text." />
+              <span className="dp-card-col-label">テキスト入力 (TextField) / 通常</span>
+              <TextField label="会社名" placeholder="会社名を入力" helperText="補助テキストの表示例。" />
             </div>
             <div>
-              <span className="dp-card-col-label">TextField / required</span>
-              <TextField label="Email" type="email" placeholder="you@example.com" required />
+              <span className="dp-card-col-label">テキスト入力 (TextField) / 必須 (required)</span>
+              <TextField label="メールアドレス" type="email" placeholder="you@example.com" required />
             </div>
             <div>
-              <span className="dp-card-col-label">TextField / error</span>
+              <span className="dp-card-col-label">テキスト入力 (TextField) / エラー (error)</span>
               <TextField
-                label="Email"
+                label="メールアドレス"
                 type="email"
-                defaultValue="bad-email"
-                error="Invalid email address."
+                defaultValue="不正な入力値"
+                error="メールアドレスの形式が正しくありません。"
                 required
               />
             </div>
             <div>
-              <span className="dp-card-col-label">TextField / disabled</span>
-              <TextField label="Account ID" defaultValue="ACC-00123" disabled helperText="Read only." />
+              <span className="dp-card-col-label">テキスト入力 (TextField) / 無効 (disabled)</span>
+              <TextField label="アカウント ID" defaultValue="ACC-00123" disabled helperText="変更できません。" />
             </div>
 
-            {/* Select */}
+            {/* 選択 (Select) */}
             <div>
-              <span className="dp-card-col-label">Select / normal</span>
-              <Select label="Status" options={DEMO_SELECT_OPTIONS} placeholder="-- Select --" helperText="Helper text." />
+              <span className="dp-card-col-label">選択 (Select) / 通常</span>
+              <Select label="ステータス" options={DEMO_SELECT_OPTIONS} placeholder="-- 選択してください --" helperText="補助テキストの表示例。" />
             </div>
             <div>
-              <span className="dp-card-col-label">Select / required</span>
-              <Select label="Category" options={DEMO_SELECT_OPTIONS} placeholder="-- Select --" required />
+              <span className="dp-card-col-label">選択 (Select) / 必須 (required)</span>
+              <Select label="カテゴリ" options={DEMO_SELECT_OPTIONS} placeholder="-- 選択してください --" required />
             </div>
             <div>
-              <span className="dp-card-col-label">Select / error</span>
-              <Select label="Region" options={DEMO_SELECT_OPTIONS} error="Please select a valid option." required />
+              <span className="dp-card-col-label">選択 (Select) / エラー (error)</span>
+              <Select label="地域" options={DEMO_SELECT_OPTIONS} error="選択肢を選んでください。" required />
             </div>
             <div>
-              <span className="dp-card-col-label">Select / disabled</span>
-              <Select label="Currency" options={[{ value: "jpy", label: "JPY" }]} defaultValue="jpy" disabled helperText="Fixed." />
+              <span className="dp-card-col-label">選択 (Select) / 無効 (disabled)</span>
+              <Select label="通貨" options={[{ value: "jpy", label: "JPY — 日本円" }]} defaultValue="jpy" disabled helperText="このアカウントでは固定です。" />
             </div>
 
-            {/* Textarea */}
+            {/* 複数行入力 (Textarea) */}
             <div>
-              <span className="dp-card-col-label">Textarea / normal</span>
-              <Textarea label="Notes" placeholder="Enter notes..." helperText="Visible to team." />
+              <span className="dp-card-col-label">複数行入力 (Textarea) / 通常</span>
+              <Textarea label="メモ" placeholder="メモを入力してください..." helperText="チーム全員に表示されます。" />
             </div>
             <div>
-              <span className="dp-card-col-label">Textarea / error</span>
-              <Textarea label="Message" placeholder="Enter message..." error="Message is required." required />
+              <span className="dp-card-col-label">複数行入力 (Textarea) / エラー (error)</span>
+              <Textarea label="メッセージ" placeholder="メッセージを入力..." error="メッセージを入力してください。" required />
             </div>
             <div>
-              <span className="dp-card-col-label">Textarea / disabled</span>
-              <Textarea label="Template" defaultValue="Locked template." disabled helperText="Read only." />
+              <span className="dp-card-col-label">複数行入力 (Textarea) / 無効 (disabled)</span>
+              <Textarea label="テンプレート本文" defaultValue="このテンプレートはロックされています。" disabled helperText="変更できません。" />
             </div>
           </div>
         </section>
 
-        {/* [7] Form inputs -- サイズ */}
+        {/* [7] フォーム入力 — サイズ比較 */}
         <section className="dp-section">
-          <SectionHeader title="7. Form inputs -- sizes (sm / md / lg)" />
+          <SectionHeader
+            title="7. フォーム入力 — サイズ比較 (sm / md / lg)"
+            desc="小 (sm)＝28px 最小高 / 中 (md)＝既定 / 大 (lg)＝44px 最小高（モバイルタッチ対応）"
+          />
 
           <div className="dp-form-grid">
             <div>
-              <span className="dp-card-col-label">TextField sm</span>
-              <TextField label="Small" placeholder="sm input" size="sm" />
+              <span className="dp-card-col-label">テキスト入力 / 小 (sm)</span>
+              <TextField label="小サイズ" placeholder="sm 入力" size="sm" />
             </div>
             <div>
-              <span className="dp-card-col-label">TextField md (default)</span>
-              <TextField label="Medium" placeholder="md input" size="md" />
+              <span className="dp-card-col-label">テキスト入力 / 中・既定 (md)</span>
+              <TextField label="中サイズ（既定）" placeholder="md 入力" size="md" />
             </div>
             <div>
-              <span className="dp-card-col-label">TextField lg</span>
-              <TextField label="Large" placeholder="lg input" size="lg" />
+              <span className="dp-card-col-label">テキスト入力 / 大 (lg)</span>
+              <TextField label="大サイズ" placeholder="lg 入力" size="lg" />
             </div>
             <div>
-              <span className="dp-card-col-label">Select sm</span>
-              <Select label="Small" options={DEMO_SELECT_OPTIONS} size="sm" />
+              <span className="dp-card-col-label">選択 / 小 (sm)</span>
+              <Select label="小サイズ" options={DEMO_SELECT_OPTIONS} size="sm" />
             </div>
             <div>
-              <span className="dp-card-col-label">Select md (default)</span>
-              <Select label="Medium" options={DEMO_SELECT_OPTIONS} size="md" />
+              <span className="dp-card-col-label">選択 / 中・既定 (md)</span>
+              <Select label="中サイズ（既定）" options={DEMO_SELECT_OPTIONS} size="md" />
             </div>
             <div>
-              <span className="dp-card-col-label">Select lg</span>
-              <Select label="Large" options={DEMO_SELECT_OPTIONS} size="lg" />
+              <span className="dp-card-col-label">選択 / 大 (lg)</span>
+              <Select label="大サイズ" options={DEMO_SELECT_OPTIONS} size="lg" />
             </div>
           </div>
         </section>
