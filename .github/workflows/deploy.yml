@@ -255,7 +255,11 @@ jobs:
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
       - name: Bootstrap salesanchor_app role (idempotent)
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        # SA-18: 全デプロイで実行（冪等・副作用なし）。
+        # migration 条件を外した理由: SA18_PHASE2_ENABLED=1 が .env にある場合、
+        # stamp のみのデプロイでも Bootstrap が DATABASE_URL を salesanchor_app に更新して
+        # --force-recreate でコンテナを切り替える必要があるため。
+        if: ${{ success() }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
