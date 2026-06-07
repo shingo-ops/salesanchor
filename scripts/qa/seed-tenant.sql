@@ -132,15 +132,15 @@ ON CONFLICT DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 4. leads 5 件 (status: 新規 / 対応中 / 評価済 / 失注 / 受注)
 --    - lead_code は QA- 接頭辞で識別可能
---    - status 値は既存実装の VARCHAR(50) で「新規 / 対応中 / 評価済 / 失注 / 受注」
+--    - status 値は ADR-109 不変コード (lead / negotiating / existing_customer / follow_up_short / follow_up_long / lost / out_of_scope)
 -- ---------------------------------------------------------------------------
 INSERT INTO tenant_006.leads (tenant_id, lead_code, customer_name, company_name, email, source, status, ai_collection_state)
 VALUES
-    (6, 'QA-LD-001', 'QA Lead New',       'QA Company A', 'qa-lead-new@example.com',       'web',       '新規',     'completed'),
-    (6, 'QA-LD-002', 'QA Lead Contacted', 'QA Company B', 'qa-lead-contacted@example.com', 'instagram', '対応中',   'completed'),
-    (6, 'QA-LD-003', 'QA Lead Qualified', 'QA Company C', 'qa-lead-qualified@example.com', 'messenger', '評価済',   'completed'),
-    (6, 'QA-LD-004', 'QA Lead Lost',      'QA Company D', 'qa-lead-lost@example.com',      'web',       '失注',     'completed'),
-    (6, 'QA-LD-005', 'QA Lead Won',       'QA Company E', 'qa-lead-won@example.com',       'web',       '受注',     'completed');
+    (6, 'QA-LD-001', 'QA Lead New',       'QA Company A', 'qa-lead-new@example.com',       'web',       'lead',              'completed'),
+    (6, 'QA-LD-002', 'QA Lead Contacted', 'QA Company B', 'qa-lead-contacted@example.com', 'instagram', 'negotiating',       'completed'),
+    (6, 'QA-LD-003', 'QA Lead Qualified', 'QA Company C', 'qa-lead-qualified@example.com', 'messenger', 'existing_customer', 'completed'),
+    (6, 'QA-LD-004', 'QA Lead Lost',      'QA Company D', 'qa-lead-lost@example.com',      'web',       'lost',              'completed'),
+    (6, 'QA-LD-005', 'QA Lead Won',       'QA Company E', 'qa-lead-won@example.com',       'web',       'existing_customer', 'completed');
 
 -- ---------------------------------------------------------------------------
 -- 5. companies 5 件 (うち 2 件は Meta Channel 接続済 — companies と

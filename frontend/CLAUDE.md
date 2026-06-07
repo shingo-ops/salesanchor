@@ -73,5 +73,6 @@ CSS プロパティを変更する際は対象クラスの子孫セレクタを�
 - `ja.json` の `"nav.*"` キー変更 → scene1-dashboard.spec.ts のナビ検証を更新
 - 新機能追加（自動選択・バッジ挙動変更等） → 関連 scene の mock・assertion を更新
 - コンポーネントの CSS クラス名変更 → セレクタを更新
+- `InboxKartePanel.tsx` の変更時は `karte-visual-gate.spec.ts` を同一 PR で更新すること
 
 確認: `cd frontend && npx playwright test --project=chromium`

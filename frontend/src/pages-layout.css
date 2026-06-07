@@ -379,13 +379,14 @@
   color: var(--text-secondary);
 }
 
-/* リードステータスバッジ（ADR-067: CSS変数使用） */
-.lead-badge-新規       { background: var(--info-bg);           color: var(--info-text);     padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
-.lead-badge-コンタクト中 { background: var(--lead-contact-bg);   color: var(--lead-contact-text); padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
-.lead-badge-提案中     { background: var(--purple-bg);         color: var(--purple-text);   padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
-.lead-badge-案件化     { background: var(--success-bg);        color: var(--success-text);  padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
-.lead-badge-失注       { background: var(--danger-bg);         color: var(--danger-text);   padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
-.lead-badge-保留       { background: var(--bg-hover);          color: var(--text-primary);  padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+/* リードステータスバッジ（ADR-109: 不変コード化, ADR-067: CSS変数使用） */
+.lead-badge-lead              { background: var(--info-bg);           color: var(--info-text);     padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-negotiating       { background: var(--lead-contact-bg);   color: var(--lead-contact-text); padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-existing_customer { background: var(--success-bg);        color: var(--success-text);  padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-follow_up_short   { background: var(--purple-bg);         color: var(--purple-text);   padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-follow_up_long    { background: var(--purple-bg);         color: var(--purple-text);   padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-lost              { background: var(--danger-bg);         color: var(--danger-text);   padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
+.lead-badge-out_of_scope      { background: var(--bg-hover);          color: var(--text-primary);  padding: var(--space-2px) var(--space-2); border-radius: var(--radius-sm); }
 
 /* ランクバッジ拡張 */
 .badge-confirmed { background: var(--info-bg); color: var(--info-text); }

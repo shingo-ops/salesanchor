@@ -327,11 +327,7 @@
     "convert": "案件化する",
     "status_new": "新規",
     "status_negotiating": "商談中",
-    "status_contact": "コンタクト中",
-    "status_proposal": "提案中",
-    "status_won": "案件化",
     "status_lost": "失注",
-    "status_hold": "保留",
     "temp_hot": "Hot",
     "temp_warm": "Warm",
     "temp_cold": "Cold",
@@ -407,7 +403,16 @@
     "status_follow_up_short": "追客（短期）",
     "status_follow_up_long": "追客（長期）",
     "status_out_of_scope": "対象外",
-    "subtitle": "見込み客を管理して商談に案件化できます。"
+    "subtitle": "見込み客を管理して商談に案件化できます。",
+    "statusCode": {
+      "lead": "リード",
+      "negotiating": "商談中",
+      "existing_customer": "既存顧客",
+      "follow_up_short": "追客（短期）",
+      "follow_up_long": "追客（長期）",
+      "lost": "失注",
+      "out_of_scope": "対象外"
+    }
   },
   "customers": {
     "subtitle": "顧客企業の詳細情報を管理します。",
@@ -643,13 +648,6 @@
     "sectionDealProfile": "取引プロフィール",
     "sectionHandover": "引き継ぎ",
     "sectionAnalysis": "見極め",
-    "stageLead": "リード",
-    "stageDeal": "商談中",
-    "stageExisting": "既存顧客",
-    "stageFollowUp": "追客",
-    "stageLost": "失注",
-    "stageExcluded": "対象外",
-    "stageOther": "その他",
     "lastContactPrefix": "最終接触",
     "elapsedJustNow": "たった今",
     "elapsedMinutesAgo": "{{count}}分前",

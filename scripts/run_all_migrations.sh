@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=118
+TOTAL=119
 
 run_py() {
   local script="$1"
@@ -300,6 +300,9 @@ run_sql migrations/20260606_010000_add_google_drive_config.sql
 
 # SA-18 Phase2 前提条件: RLS ポリシー変数名修正（app.current_tenant_id → app.tenant_id, true）
 run_sql migrations/20260607_000000_fix_rls_policy_variable_name.sql
+
+# ADR-109: status SSOT化 — 日本語ステータスを不変英字コードへ移行
+run_py  scripts/migrate_adr109_status_codes.py
 
 echo ""
 echo "============================================"

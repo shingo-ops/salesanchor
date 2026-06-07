@@ -97,7 +97,7 @@ async def upsert_lead_and_message(
                     (tenant_id, customer_name, source, type, status,
                      discord_user_id, discord_dm_channel_id, created_at, updated_at)
                 VALUES
-                    (:tenant_id, :name, :source, 'prospect', '新規',
+                    (:tenant_id, :name, :source, 'prospect', 'lead',
                      :discord_user_id, :dm_channel_id, NOW(), NOW())
                 ON CONFLICT (source) WHERE source LIKE 'discord:%'
                 DO NOTHING

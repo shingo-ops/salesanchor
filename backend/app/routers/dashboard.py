@@ -106,7 +106,7 @@ async def get_dashboard(
     result = await db.execute(text("""
         SELECT
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status NOT IN ('商談中', '既存顧客', '失注', '追客（短期）', '追客（長期）', '対象外')) AS open_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'out_of_scope')) AS open_count,
             COUNT(*) FILTER (WHERE type = 'Inbound') AS inbound,
             COUNT(*) FILTER (WHERE type = 'Outbound') AS outbound,
             COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted

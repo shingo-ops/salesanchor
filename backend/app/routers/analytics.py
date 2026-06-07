@@ -251,7 +251,7 @@ async def followup_reminders(
             FROM leads
             WHERE next_action_date IS NOT NULL
               AND next_action_date <= :upcoming_end
-              AND status NOT IN ('失注', '対象外', '既存顧客')
+              AND status NOT IN ('lost', 'out_of_scope', 'existing_customer')
             ORDER BY next_action_date ASC
         """),
         {"upcoming_end": upcoming_end},
@@ -447,7 +447,7 @@ async def dashboard_summary(
             SELECT
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
-                COUNT(*) FILTER (WHERE status = '対象外') AS excluded
+                COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded
             FROM leads
             WHERE created_at::date >= :start AND created_at::date <= :end
             {assign_filter_leads}
