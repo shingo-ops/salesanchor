@@ -25,6 +25,8 @@ from celery import shared_task
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
+
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
@@ -199,9 +201,7 @@ def export_csv(tenant_id: int, report_type: str):
     export_config = EXPORT_QUERIES[report_type]
 
     with Session() as session:
-        schema_name = f"tenant_{tenant_id:03d}"
-        session.execute(text(f"SET search_path = {schema_name}, public"))
-        session.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+        set_tenant_context_sync(session, tenant_id)
 
         result = session.execute(text(export_config["query"]))
         rows = result.fetchall()

@@ -7,6 +7,7 @@ from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.cache import (
     cache_jwt_result,
@@ -219,6 +220,68 @@ def _dialect_supports_search_path(db: AsyncSession) -> bool:
     return name.startswith("postgresql")
 
 
+async def set_tenant_context(db: AsyncSession, tenant_id: int) -> None:
+    """テナントコンテキスト（search_path / app.tenant_id / app.is_operator）を一括設定する。
+
+    SA-18 Phase2 以降、アプリは salesanchor_app（NOBYPASSRLS）で接続するため、
+    RLS ポリシーが評価する `app.tenant_id` を search_path と同時に設定しなければならない。
+    `app.is_operator = ''` はフェイルクローズ保証（共有行書き込みを禁止する既定値）。
+
+    **この関数を経由せず生の `SET search_path` を書いてはいけない。**
+    CI grep チェック（.github/workflows/test.yml）が直接書きを検出してブロックする。
+
+    SQLite (pytest) では SET 構文が使えないため no-op になる。
+
+    使用例（エンドポイント冒頭）:
+        tenant_id = token_info["tenant_id"]
+        await set_tenant_context(db, tenant_id)
+    """
+    if not _dialect_supports_search_path(db):
+        return
+    safe_id = int(tenant_id)
+    schema_name = f"tenant_{safe_id:03d}"
+    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
+    await db.execute(text("SET app.is_operator = ''"))
+
+
+def set_tenant_context_sync(session: Session, tenant_id: int) -> None:
+    """Celery タスク（同期 SQLAlchemy Session）向け set_tenant_context。
+
+    Celery ワーカーは asyncpg ではなく psycopg2 を使うため常に PostgreSQL 接続。
+    `app.tenant_id` を設定しないと RLS が tenant_id IS NULL として評価し、
+    SELECT 0件 / INSERT 42501 のサイレント障害・クラッシュが発生する。
+
+    使用例（Celery タスクのテナントループ内）:
+        with Session_() as session:
+            set_tenant_context_sync(session, tenant_id)
+            rows = session.execute(text("SELECT ...")).fetchall()
+    """
+    safe_id = int(tenant_id)
+    schema_name = f"tenant_{safe_id:03d}"
+    session.execute(text(f"SET search_path = {schema_name}, public"))
+    session.execute(text(f"SET app.tenant_id = '{safe_id}'"))
+    session.execute(text("SET app.is_operator = ''"))
+
+
+def set_tenant_context_cursor(cur: object, tenant_id: int) -> None:
+    """生 psycopg2 カーソル向け set_tenant_context。
+
+    SQLAlchemy Session を使わず psycopg2 カーソルを直接操作するタスク
+    （priority_scoring_check.py 等）で使用する。
+
+    使用例:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            set_tenant_context_cursor(cur, tenant_id)
+            cur.execute("SELECT ...")
+    """
+    safe_id = int(tenant_id)
+    schema_name = f"tenant_{safe_id:03d}"
+    cur.execute(f"SET search_path = {schema_name}, public")  # type: ignore[union-attr]
+    cur.execute(f"SET app.tenant_id = '{safe_id}'")           # type: ignore[union-attr]
+    cur.execute("SET app.is_operator = ''")                   # type: ignore[union-attr]
+
+
 async def reset_tenant_context(db: AsyncSession, tenant_id: int) -> None:
     """
     トランザクションコミット後にテナントコンテキスト（search_path + app.tenant_id）
@@ -238,14 +301,7 @@ async def reset_tenant_context(db: AsyncSession, tenant_id: int) -> None:
     SQLite は SET 構文を解釈できないため、本関数は dialect が postgresql 系の場合のみ
     SET を実行する（pytest 環境での no-op 化）。
     """
-    if not _dialect_supports_search_path(db):
-        return
-    safe_id = int(tenant_id)
-    schema_name = f"tenant_{safe_id:03d}"
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
-    await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
-    # commit後もoperatorフラグをリセット（コネクションプール汚染防止）
-    await db.execute(text("SET app.is_operator = ''"))
+    await set_tenant_context(db, tenant_id)
 
 
 # ---------------------------------------------------------------------------

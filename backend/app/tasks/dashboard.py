@@ -19,6 +19,8 @@ from celery import shared_task
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
+
 logger = logging.getLogger(__name__)
 
 # Celeryワーカーは同期なのでasyncpgではなくpsycopg2を使用
@@ -46,9 +48,7 @@ def _get_redis():
 
 def _compute_kpis(session, tenant_id: int) -> dict:
     """テナントのKPIを計算する。"""
-    schema_name = f"tenant_{tenant_id:03d}"
-    session.execute(text(f"SET search_path = {schema_name}, public"))
-    session.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+    set_tenant_context_sync(session, tenant_id)
 
     # 会社数
     r = session.execute(text("SELECT COUNT(*) FROM companies"))

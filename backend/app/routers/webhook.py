@@ -46,7 +46,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import reset_tenant_context
+from app.auth.dependencies import reset_tenant_context, set_tenant_context
 from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
@@ -315,8 +315,22 @@ def _iter_inbound_messages(
     両方を受理する。
     """
     # ─── A) messaging[] 形式 ───
+    # Meta はメッセージ以外のイベントも messaging[] で届ける。
+    # 明示的にシステムイベントキーをチェックしてスキップする（ADR-119 PR-D）:
+    #   - reaction:           リアクション通知（message キーを持つが新規メッセージでない）
+    #   - read / delivery:    既読・配信レシート
+    #   - optin:              opt-in 通知
+    #   - policy_enforcement: ポリシー違反通知
+    # referral は「紹介リンク経由の初回メッセージ」に message キーを伴うことがあり、
+    # その場合は実ユーザーメッセージとして処理するためスキップしない。
+    _FORMAT_A_SYSTEM_KEYS = frozenset({
+        "reaction", "read", "delivery", "optin", "policy_enforcement",
+    })
     for messaging in entry.get("messaging", []) or []:
         if not isinstance(messaging, dict):
+            continue
+        # 既知のシステムイベントキーを持つ場合はスキップ
+        if any(messaging.get(k) for k in _FORMAT_A_SYSTEM_KEYS):
             continue
         msg = messaging.get("message")
         if not msg or not isinstance(msg, dict):
@@ -341,8 +355,9 @@ def _iter_inbound_messages(
         for change in entry.get("changes", []) or []:
             if not isinstance(change, dict):
                 continue
-            if change.get("field") not in (None, "messages"):
-                # IG の message 系以外（comments, mentions 等）は MVP では無視
+            # field が明示的に "messages" のもののみ処理。
+            # None や "messaging_policy_enforcement" 等のシステム通知は除外（ADR-119 PR-D）。
+            if change.get("field") != "messages":
                 continue
             value = change.get("value") or {}
             if not isinstance(value, dict):
@@ -353,16 +368,25 @@ def _iter_inbound_messages(
             for m in messages:
                 if not isinstance(m, dict):
                     continue
+                # is_echo 相当ガード（Format B）: 自分送信メッセージをスキップ
+                if m.get("is_echo"):
+                    continue
                 from_obj = m.get("from") or {}
                 sender_id = str(from_obj.get("id", "")) if isinstance(from_obj, dict) else ""
                 if not sender_id:
                     continue
+                # システム通知パターン: text/attachments が共に無く message_id もない場合はスキップ
+                msg_text = m.get("text", "") or ""
+                has_attach = bool(m.get("attachments"))
+                msg_id = m.get("id") or m.get("mid")
+                if not msg_text and not has_attach and not msg_id:
+                    continue
                 yield {
                     "sender_id": sender_id,
-                    "message_text": m.get("text", "") or "",
-                    "message_id": m.get("id") or m.get("mid"),
+                    "message_text": msg_text,
+                    "message_id": msg_id,
                     "timestamp": m.get("timestamp") or value.get("timestamp"),
-                    "has_attachments": bool(m.get("attachments")),
+                    "has_attachments": has_attach,
                 }
 
 
@@ -460,12 +484,41 @@ async def _persist_meta_message(
     # source_key: spec §3-1 の `messenger:<PSID>` / `instagram:<IGSID>` 形式
     source_key = f"{platform}:{sender_id}"
 
-    # 1) leads 検索 → 無ければ自動作成
-    result = await db.execute(
-        text("SELECT id, customer_name FROM leads WHERE source = :source LIMIT 1"),
-        {"source": source_key},
+    # 1) leads 検索 → 無ければ自動作成（ADR-119 二段 lookup）
+
+    # Stage 1: lead_channels を一次権威として検索
+    lc_result = await db.execute(
+        text("""
+            SELECT l.id, l.customer_name
+            FROM leads l
+            JOIN lead_channels lc ON lc.lead_id = l.id
+            WHERE lc.platform = :platform AND lc.external_id = :external_id
+            LIMIT 1
+        """),
+        {"platform": platform, "external_id": sender_id},
     )
-    row = result.mappings().first()
+    row = lc_result.mappings().first()
+
+    # Stage 2: source フォールバック（既存行／backfill 後の補完）
+    if row is None:
+        fb_result = await db.execute(
+            text("SELECT id, customer_name FROM leads WHERE source = :source LIMIT 1"),
+            {"source": source_key},
+        )
+        row = fb_result.mappings().first()
+        if row is not None:
+            # self-heal: lead_channels に補完して次回から Stage 1 でヒットする
+            await db.execute(
+                text("""
+                    INSERT INTO lead_channels (lead_id, platform, external_id)
+                    VALUES (:lead_id, :platform, :external_id)
+                    ON CONFLICT (platform, external_id) DO NOTHING
+                """),
+                {"lead_id": row["id"], "platform": platform, "external_id": sender_id},
+            )
+            await db.commit()
+            await reset_tenant_context(db, tenant_id)
+
     lead_id = row["id"] if row else None
     existing_name = row["customer_name"] if row else None
 
@@ -509,6 +562,15 @@ async def _persist_meta_message(
         new_lead_id = ins.scalar_one_or_none()
         if new_lead_id is not None:
             lead_id = new_lead_id
+            # lead_channels に登録（ADR-119）
+            await db.execute(
+                text("""
+                    INSERT INTO lead_channels (lead_id, platform, external_id)
+                    VALUES (:lead_id, :platform, :external_id)
+                    ON CONFLICT (platform, external_id) DO NOTHING
+                """),
+                {"lead_id": lead_id, "platform": platform, "external_id": sender_id},
+            )
             await db.execute(
                 text("UPDATE leads SET lead_code = :code WHERE id = :id"),
                 {"code": f"LD-{lead_id:05d}", "id": lead_id},
@@ -535,6 +597,17 @@ async def _persist_meta_message(
                 {"source": source_key},
             )
             lead_id = sel.scalar_one()
+            # ON CONFLICT で既存行に負けた場合も lead_channels を補完
+            await db.execute(
+                text("""
+                    INSERT INTO lead_channels (lead_id, platform, external_id)
+                    VALUES (:lead_id, :platform, :external_id)
+                    ON CONFLICT (platform, external_id) DO NOTHING
+                """),
+                {"lead_id": lead_id, "platform": platform, "external_id": sender_id},
+            )
+            await db.commit()
+            await reset_tenant_context(db, tenant_id)
 
     # 2) meta_messages INSERT（Meta 再送で同じ message_id が来たら静かに弾く）
     raw_payload = json.dumps({
@@ -631,9 +704,7 @@ async def process_messenger_event(body: dict) -> None:
                 else:
                     page_id_for_message = await _resolve_page_id_for_ig(db, entry_id)
 
-                schema = f"tenant_{tenant_id:03d}"
-                await db.execute(text(f"SET search_path = {schema}, public"))
-                await db.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+                await set_tenant_context(db, tenant_id)
 
                 for m in messages:
                     msg_id, lead_id = await _persist_meta_message(

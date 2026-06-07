@@ -29,6 +29,8 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import set_tenant_context
+
 logger = logging.getLogger(__name__)
 
 _WEBHOOK_PATH = "/api/v1/google-calendar/webhook"
@@ -203,10 +205,10 @@ async def handle_webhook_notification(
         logger.warning("不明な channel_id: %s", channel_id)
         return
 
-    tenant_id, schema_name = tenant_info
+    tenant_id, _schema_name = tenant_info
 
-    # テナントスキーマに切り替え
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    # テナントスキーマ・RLS コンテキストを設定
+    await set_tenant_context(db, tenant_id)
 
     from app.services import google_calendar as cal_svc
     from app.services.calendar_service import upsert_from_google
