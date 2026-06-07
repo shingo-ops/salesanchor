@@ -89,6 +89,23 @@ jobs:
         working-directory: backend
         run: bandit -r app/ -lll
 
+      - name: SA-18 Phase2 ポカヨケ — 生の SET search_path 検出（app.tenant_id 未セット防止）
+        working-directory: backend
+        run: |
+          # set_tenant_context / set_tenant_context_sync を経由しない生の SET search_path を検出する。
+          # 唯一の正規経路: app/auth/dependencies.py 内の set_tenant_context* 本体のみ許可。
+          # `.execute(` を伴う呼び出しのみ検出（コメント・docstring・SQL文字列定数を除外）
+          VIOLATIONS=$(grep -rn "execute.*SET search_path" app/ \
+            --include="*.py" \
+            | grep -v "^app/auth/dependencies.py:" \
+            || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ 生の 'SET search_path' を検出しました。set_tenant_context() / set_tenant_context_sync() を使ってください。"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ 生の SET search_path なし"
+
       - name: Run mypy type checking（型アノテーション整備中・警告のみ）
         working-directory: backend
         run: mypy app/ --no-error-summary || true

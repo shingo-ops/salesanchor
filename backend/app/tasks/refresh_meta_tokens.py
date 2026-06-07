@@ -57,6 +57,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
 from app.services import encryption, meta_graph
 from app.services.meta_graph import (
     MetaGraphAPIError,
@@ -377,9 +378,7 @@ def _process_tenant(
 ) -> dict[str, Any]:
     """1 テナント分のリフレッシュ処理。戻り値は集計サマリ。"""
     schema_name = f"tenant_{tenant_id:03d}"
-    # search_path はこの session 内だけに適用
-    session.execute(text(f"SET search_path = {schema_name}, public"))
-    session.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+    set_tenant_context_sync(session, tenant_id)
 
     targets = _select_refresh_targets(session, schema_name)
     summary = {

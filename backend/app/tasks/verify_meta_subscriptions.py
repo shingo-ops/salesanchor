@@ -52,6 +52,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
 from app.services import encryption, meta_graph
 from app.services.meta_graph import (
     MetaGraphAPIError,
@@ -247,8 +248,7 @@ def _verify_one_row(
 def _process_tenant(session: Session, tenant_id: int, *, self_app_id: str) -> dict[str, Any]:
     """1 テナント分の検証処理。"""
     schema_name = f"tenant_{tenant_id:03d}"
-    session.execute(text(f"SET search_path = {schema_name}, public"))
-    session.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+    set_tenant_context_sync(session, tenant_id)
 
     rows = _select_active_configs(session, schema_name)
     summary = {

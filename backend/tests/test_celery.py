@@ -93,21 +93,21 @@ class TestDashboardTask:
             call_count[0] += 1
             result = MagicMock()
             # クエリ順:
-            # 1: SET search_path / 2: SET app.tenant_id
-            # 3: companies count / 4: leads集計 / 5: deals集計
-            # 6: orders集計 / 7: teams count
-            # 8: 直近会社 / 9: 直近商談 / 10: 直近リード
-            if call_count[0] == 3:
+            # 1: SET search_path / 2: SET app.tenant_id / 3: SET app.is_operator
+            # 4: companies count / 5: leads集計 / 6: deals集計
+            # 7: orders集計 / 8: teams count
+            # 9: 直近会社 / 10: 直近商談 / 11: 直近リード
+            if call_count[0] == 4:
                 result.scalar.return_value = 10
-            elif call_count[0] == 4:
-                result.mappings.return_value.first.return_value = mock_lead
             elif call_count[0] == 5:
-                result.mappings.return_value.first.return_value = mock_deal
+                result.mappings.return_value.first.return_value = mock_lead
             elif call_count[0] == 6:
-                result.mappings.return_value.first.return_value = mock_order
+                result.mappings.return_value.first.return_value = mock_deal
             elif call_count[0] == 7:
+                result.mappings.return_value.first.return_value = mock_order
+            elif call_count[0] == 8:
                 result.scalar.return_value = 3
-            elif call_count[0] in (8, 9, 10):
+            elif call_count[0] in (9, 10, 11):
                 result.mappings.return_value.all.return_value = []
             return result
 

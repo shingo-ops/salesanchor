@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, set_tenant_context
 from app.auth.schemas import UserRegister, UserResponse
 from app.auth.utils import hash_password, set_tenant_claim
 from app.cache import (
@@ -103,8 +103,7 @@ async def register_user(
     # 新規ユーザーにデフォルトロール（CS）を自動付与（Phase 1以降）
     # CSロール未作成（Phase 1マイグレーション未適用）の場合はスキップ
     from app.services.tenant import DEFAULT_NEW_USER_ROLE
-    schema_name = f"tenant_{tenant.id:03d}"
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    await set_tenant_context(db, tenant.id)
     default_role = await db.execute(
         text("SELECT id FROM roles WHERE tenant_id = :tid AND name = :name"),
         {"tid": tenant.id, "name": DEFAULT_NEW_USER_ROLE},

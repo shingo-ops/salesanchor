@@ -32,16 +32,13 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import set_tenant_context
+
 logger = logging.getLogger(__name__)
 
 
 def _schema(tenant_id: int) -> str:
     return f"tenant_{tenant_id:03d}"
-
-
-async def _set_search_path(db: AsyncSession, tenant_id: int) -> None:
-    schema = _schema(tenant_id)
-    await db.execute(text(f"SET search_path TO {schema}, public"))
 
 
 async def upsert_lead_and_message(
@@ -72,7 +69,7 @@ async def upsert_lead_and_message(
         discord_message_id: Discord Message Snowflake ID（冪等キー）
         created_at: message.created_at（Discord 側のタイムスタンプ）
     """
-    await _set_search_path(db, tenant_id)
+    await set_tenant_context(db, tenant_id)
     schema = _schema(tenant_id)
 
     received_at = created_at
