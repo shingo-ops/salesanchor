@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=119
+TOTAL=121
 
 run_py() {
   local script="$1"
@@ -303,6 +303,12 @@ run_sql migrations/20260607_000000_fix_rls_policy_variable_name.sql
 
 # ADR-109: status SSOT化 — 日本語ステータスを不変英字コードへ移行
 run_py  scripts/migrate_adr109_status_codes.py
+
+# ADR-119: lead_channels テーブル作成（1 lead : N platforms 名寄せ）
+run_sql migrations/20260607_120000_create_lead_channels.sql
+
+# ADR-119: lead_channels バックフィル（leads.source / discord_user_id → lead_channels）
+run_py  scripts/migrate_adr119_lead_channels_backfill.py
 
 echo ""
 echo "============================================"
