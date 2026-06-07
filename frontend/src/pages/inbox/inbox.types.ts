@@ -17,16 +17,14 @@ export const POLL_BACKOFF_FACTOR = 2;
 // ステータスタブ定数（商談進捗ベース）
 // ---------------------------------------------------------------------------
 
-/* eslint-disable local/no-japanese-literal -- DB 定義のリードステータス値（backend と一致・API 送信値） */
 export const STATUS_TABS = [
   { key: "all",      labelKey: "inbox.tabAll",      statuses: null as null | string[] },
-  { key: "lead",     labelKey: "inbox.tabLead",     statuses: ["新規"] },
-  { key: "deal",     labelKey: "inbox.tabDeal",     statuses: ["商談中"] },
-  { key: "existing", labelKey: "inbox.tabExisting", statuses: ["既存顧客"] },
-  { key: "followup", labelKey: "inbox.tabFollowUp", statuses: ["追客（短期）", "追客（長期）"] },
-  { key: "archive",  labelKey: "inbox.tabArchive",  statuses: ["失注", "対象外"] },
+  { key: "lead",     labelKey: "inbox.tabLead",     statuses: ["lead"] },
+  { key: "deal",     labelKey: "inbox.tabDeal",     statuses: ["negotiating"] },
+  { key: "existing", labelKey: "inbox.tabExisting", statuses: ["existing_customer"] },
+  { key: "followup", labelKey: "inbox.tabFollowUp", statuses: ["follow_up_short", "follow_up_long"] },
+  { key: "archive",  labelKey: "inbox.tabArchive",  statuses: ["lost", "out_of_scope"] },
 ] as const;
-/* eslint-enable local/no-japanese-literal */
 
 export type StatusTabKey = "all" | "lead" | "deal" | "existing" | "followup" | "archive";
 export type KarteTabKey = "contact" | "company" | "deal";
@@ -36,8 +34,7 @@ export type KarteTabKey = "contact" | "company" | "deal";
 // ---------------------------------------------------------------------------
 
 // フォローアップフィルターから除外するステータス（返信しても意味がない相手）
-// eslint-disable-next-line local/no-japanese-literal -- DB 定義のリードステータス値
-export const FOLLOWUP_EXCLUDED = new Set(["失注", "対象外"]);
+export const FOLLOWUP_EXCLUDED = new Set(["lost", "out_of_scope"]);
 
 // ---------------------------------------------------------------------------
 // LeadDetail 型（GET /leads/{id} のレスポンス）

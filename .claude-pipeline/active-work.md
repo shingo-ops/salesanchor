@@ -57,7 +57,8 @@
 | feature/morimoto/analytics-agent-a-priority | ADR-107 ADR文書起案 | 2026-06-04 14:50 | DONE | #1622 | ADR文書のみ、マージ済み |
 | feature/morimoto/adr-107-analytics-agent-a-impl | ADR-107 分析エージェント(A) 顧客優先度付け 実装 | 2026-06-04 | IN_PROGRESS | | |
 | feature/morimoto/adr-108-karte-redesign | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
-| feature/morimoto/adr-109-status-ssot | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
+| feature/morimoto/adr-109-status-ssot | ADR-109 status SSOT化（ADR文書のみ） | 2026-06-04 15:56 | DONE | #1630 | ADR文書のみ、マージ済み |
+| feature/morimoto/adr-109-status-ssot-impl | ADR-109 status SSOT化 実装 | 2026-06-07 | IN_PROGRESS | | |
 | claude-impl/20260604-074511 | ADR-108 受信箱カルテ再設計 自動実装 | 2026-06-04 | IN_PROGRESS | #1635 | |
 | feature/morimoto/adr-107-safety-schedule | ADR-107 §13 安全装置 Celery beat 登録 | 2026-06-04 | DONE | #1648 | |
 | feature/morimoto/fix-priority-check-conn-leak | priority_scoring_check DB接続リーク修正 | 2026-06-04 | DONE | #1652 | |

@@ -23,14 +23,14 @@ from app.schemas.base import validate_email_loose, validate_phone
 
 
 class LeadStatus(str, Enum):
-    # migration 073 で整理済み（11値 → 7値）
-    new = "新規"                           # アサイン前の新規リード
-    negotiating = "商談中"                  # アサイン済み・商談進行中（旧: 案件化）
-    existing_customer = "既存顧客"          # 成約済み・会社情報登録済み
-    follow_up_short = "追客（短期）"         # 3 ヶ月以内に再アプローチ予定
-    follow_up_long = "追客（長期）"          # 3 ヶ月以上先に再アプローチ予定
-    lost = "失注"                          # 失注
-    out_of_scope = "対象外"                # スパム / 無関係
+    # ADR-109: 不変コード化（日本語 → immutable codes）
+    lead = "lead"                                # アサイン前の新規リード
+    negotiating = "negotiating"                  # アサイン済み・商談進行中
+    existing_customer = "existing_customer"       # 成約済み・会社情報登録済み
+    follow_up_short = "follow_up_short"           # 3 ヶ月以内に再アプローチ予定
+    follow_up_long = "follow_up_long"             # 3 ヶ月以上先に再アプローチ予定
+    lost = "lost"                                # 失注
+    out_of_scope = "out_of_scope"                # スパム / 無関係
 
 
 class LeadType(str, Enum):
@@ -69,7 +69,7 @@ class LeadCreate(BaseModel):
     phone: str | None = Field(default=None, max_length=50)
     source: str | None = Field(default=None, max_length=50)
     type: LeadType | None = None
-    status: LeadStatus = Field(default=LeadStatus.new)
+    status: LeadStatus = Field(default=LeadStatus.lead)
     temperature: LeadTemperature | None = None
     estimated_scale: LeadScale | None = None
     customer_type: LeadCustomerType | None = None

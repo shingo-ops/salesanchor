@@ -480,8 +480,7 @@ export function useInboxState(): UseInboxStateReturn {
     // ADR-108: set default karte tab based on lead_status
     const conv = conversations.find((c) => c.lead_id === leadId);
     const status = conv?.lead_status ?? "";
-    // eslint-disable-next-line local/no-japanese-literal -- DB value
-    const postDealStatuses = ["既存顧客", "追客（短期）", "追客（長期）"];
+    const postDealStatuses = ["existing_customer", "follow_up_short", "follow_up_long"];
     if (postDealStatuses.includes(status)) {
       setKarteTab("company");
     } else {
@@ -688,8 +687,7 @@ export function useInboxState(): UseInboxStateReturn {
   const handleExclude = useCallback(async () => {
     if (!selectedLeadId) return;
     try {
-      // eslint-disable-next-line local/no-japanese-literal -- DB 定義のリードステータス値（API 送信値）
-      await api.patch<void>(`/leads/${selectedLeadId}`, { status: "対象外" });
+      await api.patch<void>(`/leads/${selectedLeadId}`, { status: "out_of_scope" });
       setConversations((prev) => prev.filter((c) => c.lead_id !== selectedLeadId));
       setSelectedLeadId(null);
     } catch { /* noop */ }
@@ -743,8 +741,7 @@ export function useInboxState(): UseInboxStateReturn {
 
   const handleBulkExclude = useCallback(async () => {
     const targets = [...selectedLeadIds];
-    // eslint-disable-next-line local/no-japanese-literal -- DB 定義のリードステータス値（API 送信値）
-    await Promise.all(targets.map((id) => api.patch<void>(`/leads/${id}`, { status: "対象外" })));
+    await Promise.all(targets.map((id) => api.patch<void>(`/leads/${id}`, { status: "out_of_scope" })));
     setConversations((prev) => prev.filter((c) => !selectedLeadIds.has(c.lead_id)));
     if (selectedLeadId !== null && selectedLeadIds.has(selectedLeadId)) setSelectedLeadId(null);
     setSelectedLeadIds(new Set());
