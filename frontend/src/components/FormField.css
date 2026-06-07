@@ -1,0 +1,156 @@
+/**
+ * FormField — 共有スタイル（TextField / Select / Textarea）(Task 2C)
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ *
+ * セレクタ順序（specificity 昇順を厳守）:
+ *   1. ベース (0,1,0)
+ *   2. Textarea/Select 専用 (0,1,0)  ← :focus より前
+ *   3. フォーカス (0,2,0)
+ *   4. disabled (0,2,0)
+ *   5. エラー border (0,2,0)
+ *   6. サイズ sm/lg (0,2,0)
+ *   7. エラー focus (0,3,0)           ← 最後（最高 specificity）
+ *   8. @media
+ */
+
+/* ── コンテナ ── */
+.comp-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.comp-field--full {
+  width: 100%;
+}
+
+/* ── ラベル ── */
+.comp-field__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1px);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.comp-field__required {
+  color: var(--danger);
+  font-size: var(--font-xs);
+  line-height: 1;
+  margin-left: var(--space-1px);
+}
+
+/* ── 1. 入力要素 共通ベース (0,1,0) ── */
+.comp-field__input,
+.comp-field__select,
+.comp-field__textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--comp-input-radius);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: var(--line-height-base);
+  transition: border-color var(--transition-micro), box-shadow var(--transition-micro);
+}
+
+/* ── 2. Textarea 専用 (0,1,0)  ── */
+.comp-field__textarea {
+  min-height: var(--textarea-min-h);
+  resize: vertical;
+}
+
+/* ── 2. Select 専用 (0,1,0) ── */
+.comp-field__select {
+  cursor: pointer;
+}
+
+/* ── 3. フォーカス状態 (0,2,0) ── */
+.comp-field__input:focus,
+.comp-field__select:focus,
+.comp-field__textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring-shadow);
+}
+
+/* ── 4. 無効状態 (0,2,0) ── */
+.comp-field__input:disabled,
+.comp-field__select:disabled,
+.comp-field__textarea:disabled {
+  opacity: var(--opacity-archived);
+  cursor: not-allowed;
+  background: var(--bg-hover);
+}
+
+/* ── 5. エラー border (0,2,0) ── */
+.comp-field--error .comp-field__input,
+.comp-field--error .comp-field__select,
+.comp-field--error .comp-field__textarea {
+  border-color: var(--danger);
+}
+
+/* ── ヒント / エラーメッセージ ── */
+.comp-field__hint {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.comp-field__hint--error {
+  color: var(--danger);
+}
+
+/* ── 6. サイズ: sm (0,2,0) ── */
+.comp-field--sm .comp-field__input,
+.comp-field--sm .comp-field__select {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  min-height: var(--comp-input-height-sm);
+}
+
+.comp-field--sm .comp-field__textarea {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+}
+
+.comp-field--sm .comp-field__label {
+  font-size: var(--font-xs);
+}
+
+/* ── 6. サイズ: lg (0,2,0) ── */
+.comp-field--lg .comp-field__input,
+.comp-field--lg .comp-field__select,
+.comp-field--lg .comp-field__textarea {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-md);
+  min-height: var(--comp-input-height-mobile);
+}
+
+.comp-field--lg .comp-field__label {
+  font-size: var(--font-base);
+}
+
+/* ── 7. エラー focus (0,3,0) — 最高 specificity のため末尾 ── */
+/* stylelint-disable-next-line no-descending-specificity -- intentional: error focus at end for cascade */
+.comp-field--error .comp-field__input:focus,
+.comp-field--error .comp-field__select:focus,
+.comp-field--error .comp-field__textarea:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-bg-subtle);
+}
+
+/* ── 8. モバイル タッチターゲット（WCAG 2.5.5）── */
+@media (max-width: 767px) {
+  .comp-field__input,
+  .comp-field__select {
+    min-height: var(--comp-input-height-mobile);
+  }
+}
