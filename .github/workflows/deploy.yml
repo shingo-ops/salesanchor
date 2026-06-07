@@ -172,12 +172,23 @@ jobs:
             GOOGLE_DRIVE_REDIRECT_URI=${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}
             ENV_EOF
 
-            echo "Step 2b: DATABASE_URL ロールバック確認..."
-            # SA-18 Phase2 緊急修正: bootstrap が DATABASE_URL を
-            # salesanchor_app@localhost:5432 に書き換えた（コンテナ内から localhost は不到達）。
-            # docker compose up の前に jarvis@postgres:5432 に復元する。
-            # 冪等: すでに jarvis URL ならスキップ。
-            if grep -q 'salesanchor_app\|localhost:5432' .env 2>/dev/null; then
+            echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
+            # SA-18: localhost:5432 は必ずコンテナ内到達可能な postgres:5432 に修正する。
+            # Phase2 フラグ（SA18_PHASE2_ENABLED=1）が .env に立っている場合は
+            # salesanchor_app URL を保持する（ユーザー意図を尊重）。
+            # フラグがない場合は jarvis@postgres:5432 に戻す（従来動作・冪等）。
+
+            # [Step 2b-i] localhost:5432 は無条件で postgres:5432 に修正
+            if grep -q 'localhost:5432' .env 2>/dev/null; then
+              sed -i 's|@localhost:5432/|@postgres:5432/|g' .env
+              echo "ℹ️  localhost:5432 → postgres:5432 に修正しました"
+            fi
+
+            # [Step 2b-ii] Phase2 フラグで jarvis 復元を判定
+            if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
+              echo "ℹ️  SA18_PHASE2_ENABLED=1 を検出 — salesanchor_app URL を保持します（Phase2 意図的切替）"
+            elif grep -q 'salesanchor_app' .env 2>/dev/null; then
+              # Phase2 フラグなしで salesanchor_app が残っている → jarvis に戻す
               _pguser=$(grep '^POSTGRES_USER=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
               _pgpass=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2- | head -1 | tr -d '\r\n')
               _pgdb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
@@ -186,7 +197,7 @@ jobs:
               _durl=$(python3 -c "import urllib.parse,sys;u,p,d=sys.argv[1],sys.argv[2],sys.argv[3];print('postgresql+asyncpg://{}:{}@postgres:5432/{}'.format(urllib.parse.quote(u,safe=''),urllib.parse.quote(p,safe=''),d))" "${_pguser}" "${_pgpass}" "${_pgdb}")
               sed -i '/^DATABASE_URL=/d' .env
               echo "DATABASE_URL=${_durl}" >> .env
-              echo "ℹ️  DATABASE_URL を jarvis@postgres:5432 に復元しました（SA-18 Phase2 ロールバック）"
+              echo "ℹ️  DATABASE_URL を jarvis@postgres:5432 に復元しました（SA18_PHASE2_ENABLED 未設定）"
             else
               echo "ℹ️  DATABASE_URL は既に jarvis モード — スキップ"
             fi
@@ -346,6 +357,18 @@ jobs:
               if [ -n "${PREV_SHA}" ]; then
                 echo "→ Rolling back to ${PREV_SHA:0:7}..."
                 git reset --hard "${PREV_SHA}"
+
+                # SA-18: ロールバック時は DATABASE_URL を jarvis に戻し Phase2 フラグを削除する。
+                # .env は gitignore されているため git reset --hard では変更されない → 手動復元必須。
+                # これにより旧コード（Phase2 非対応）が salesanchor_app で繋いで RLS に詰まる誤りを防ぐ。
+                _pguser_rb=$(grep '^POSTGRES_USER=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
+                _pgpass_rb=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2- | head -1 | tr -d '\r\n')
+                _pgdb_rb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
+                _rb_durl=$(python3 -c "import urllib.parse,sys;u,p,d=sys.argv[1],sys.argv[2],sys.argv[3];print('postgresql+asyncpg://{}:{}@postgres:5432/{}'.format(urllib.parse.quote(u,safe=''),urllib.parse.quote(p,safe=''),d))" "${_pguser_rb}" "${_pgpass_rb}" "${_pgdb_rb}")
+                sed -i '/^DATABASE_URL=/d' .env
+                echo "DATABASE_URL=${_rb_durl}" >> .env
+                sed -i '/^SA18_PHASE2_ENABLED=/d' .env
+                echo "ℹ️  ロールバック: DATABASE_URL を jarvis@postgres:5432 に復元、SA18_PHASE2_ENABLED を削除"
 
                 # 旧コードでビルド（最大3回リトライ）
                 _rb_build=false

@@ -92,16 +92,23 @@ docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
   && echo "[6] PASS: fail-close OK" \
   || { echo "[6] FAIL: fail-close not working (INSERT should have been rejected)"; exit 1; }
 
-# [7] アプリ接続ユーザー確認（在る側 + 無い側の両面チェック）
+# [7] アプリ接続ユーザー確認（SA18_PHASE2_ENABLED フラグで Phase2 意図を判定）
 # まずヘルスチェックでプールを暖機（接続 0 のまま確認すると偽陽性になる）
 docker exec -e PGPASSWORD="${APP_PASS}" "${BACKEND}" \
   python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" \
   || { echo "[7] FAIL: backend health check failed (app is down)"; exit 1; }
 sleep 2  # pool warmup
 
-# DATABASE_URL が salesanchor_app に切替済みか判定（.env を参照）
-if grep -q '^DATABASE_URL=.*salesanchor_app' .env 2>/dev/null; then
-  # Phase2 切替済み: salesanchor_app 接続が在ることを確認（在る側）
+# SA18_PHASE2_ENABLED=1 が .env に在るかどうかで Phase2 意図を判定する。
+# DATABASE_URL を直接見ない理由: Step 2b が URL を黙って revert する可能性があるため
+# "フラグが立っているのに jarvis モード" という偽 green を検出できなくなる。
+if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
+  # Phase2 意図フラグが立っている: DATABASE_URL も salesanchor_app であるべき
+  if ! grep -q '^DATABASE_URL=.*salesanchor_app' .env 2>/dev/null; then
+    echo "[7] FAIL: SA18_PHASE2_ENABLED=1 だが DATABASE_URL が salesanchor_app でない — Phase2 切替が完了していない"
+    exit 1
+  fi
+  # salesanchor_app 接続が在ることを確認（在る側）
   APP_CONNS=$(docker exec "${POSTGRES}" ${ADMIN_PSQL} -t -c "
     SELECT count(*) FROM pg_stat_activity
     WHERE application_name = 'salesanchor_backend'
@@ -118,7 +125,7 @@ if grep -q '^DATABASE_URL=.*salesanchor_app' .env 2>/dev/null; then
     && echo "[7b] PASS: no jarvis connections with salesanchor_backend app name" \
     || { echo "[7b] FAIL: ${JARVIS_APP_CONNS} jarvis connections found -> DATABASE_URL not switched"; exit 1; }
 else
-  echo "[7] INFO: DATABASE_URL は jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ（[7a]健全動作は上記ヘルスチェックで確認済み）"
+  echo "[7] INFO: SA18_PHASE2_ENABLED 未設定 — jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ"
 fi
 
 echo ""
