@@ -158,6 +158,20 @@ _META_MSG_ID_UNIQUE_DDL = """
     WHERE message_id IS NOT NULL
 """
 
+# ADR-119: lead_channels テーブル（migration 20260607_120000 を SQLite で再現）
+_LEAD_CHANNELS_DDL = """
+    CREATE TABLE lead_channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        platform VARCHAR(30) NOT NULL,
+        external_id VARCHAR(255) NOT NULL,
+        display_name VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (platform, external_id)
+    )
+"""
+
 
 # ---------------------------------------------------------------------------
 # fixtures
@@ -179,6 +193,7 @@ async def engine():
         await conn.execute(text(_TENANTS_DDL))
         await conn.execute(text(_LEADS_SOURCE_UNIQUE_DDL))
         await conn.execute(text(_META_MSG_ID_UNIQUE_DDL))
+        await conn.execute(text(_LEAD_CHANNELS_DDL))
 
         # 既定: tenant_id=999 を tenants に追加（env fallback テスト用）
         await conn.execute(

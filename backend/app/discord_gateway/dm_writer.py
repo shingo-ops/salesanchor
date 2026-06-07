@@ -10,9 +10,11 @@ Discord Bot が顧客からの DM を受信した際に呼ばれる。
    実行する。`tenant_id → schema = tenant_{id:03d}` の変換規則は `app.auth.dependencies`
    と同じ。
 
-2. **Lead upsert**: `source = 'discord:<discord_user_id>'` を一意キーとして使用。
-   既存の Messenger（`source = 'messenger:<PSID>'`）・Instagram（`source = 'instagram:<IGSID>'`）
-   と同じパターン。
+2. **Lead lookup（ADR-119）**: `lead_channels` を一次権威として使用する二段 lookup。
+   Stage 1 で `lead_channels.platform='discord' AND external_id=<uid>` を引く。
+   Stage 2 では従来の `leads.source='discord:<uid>'` 比較にフォールバックし、
+   ヒット時は `lead_channels` 行を補完（self-heal）する。
+   どちらの経路でも自動作成時は必ず `lead_channels` に行を書く。
 
 3. **meta_messages への格納**: `platform = 'discord'`, `direction = 'inbound'`。
    既存の `/conversations` API は `meta_messages` を検索するため追加変更不要。
@@ -41,6 +43,24 @@ def _schema(tenant_id: int) -> str:
     return f"tenant_{tenant_id:03d}"
 
 
+async def _ensure_lead_channel(
+    db: AsyncSession,
+    schema: str,
+    lead_id: int,
+    discord_user_id: str,
+    display_name: str,
+) -> None:
+    """lead_channels に discord チャンネル行が無ければ補完する（冪等）。"""
+    await db.execute(
+        text(f"""
+            INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
+            VALUES (:lead_id, 'discord', :external_id, :name)
+            ON CONFLICT (platform, external_id) DO NOTHING
+        """),
+        {"lead_id": lead_id, "external_id": discord_user_id, "name": display_name},
+    )
+
+
 async def upsert_lead_and_message(
     db: AsyncSession,
     *,
@@ -55,7 +75,7 @@ async def upsert_lead_and_message(
     """Discord DM 1 件を受信箱に反映する。
 
     処理:
-      1. leads で source='discord:<user_id>' の行を検索、なければ新規作成
+      1. lead_channels → leads の二段 lookup でリードを特定（なければ新規作成）
       2. discord_dm_channel_id が未設定なら UPDATE（チャンネル ID は固定）
       3. meta_messages に platform='discord', direction='inbound' で冪等 INSERT
 
@@ -77,14 +97,38 @@ async def upsert_lead_and_message(
         received_at = received_at.replace(tzinfo=timezone.utc)
 
     source = f"discord:{discord_user_id}"
+    display = sender_name or f"Discord User {discord_user_id}"
 
-    # --- 1. Lead の検索または新規作成 ---
-    lead_row = await db.execute(
-        text(f"SELECT id, discord_dm_channel_id FROM {schema}.leads "
-             "WHERE source = :source AND tenant_id = :tenant_id LIMIT 1"),
-        {"source": source, "tenant_id": tenant_id},
+    # --- 1. Lead の検索または新規作成（ADR-119 二段 lookup） ---
+
+    # Stage 1: lead_channels を一次権威として検索
+    lc_row = await db.execute(
+        text(f"""
+            SELECT l.id, l.discord_dm_channel_id
+            FROM {schema}.leads l
+            JOIN {schema}.lead_channels lc ON lc.lead_id = l.id
+            WHERE lc.platform = 'discord' AND lc.external_id = :external_id
+            LIMIT 1
+        """),
+        {"external_id": discord_user_id},
     )
-    lead = lead_row.first()
+    lead = lc_row.first()
+
+    # Stage 2: source フォールバック（既存行／backfill 後の補完）
+    if lead is None:
+        fallback_row = await db.execute(
+            text(f"SELECT id, discord_dm_channel_id FROM {schema}.leads "
+                 "WHERE source = :source AND tenant_id = :tenant_id LIMIT 1"),
+            {"source": source, "tenant_id": tenant_id},
+        )
+        lead = fallback_row.first()
+        if lead is not None:
+            # self-heal: lead_channels に補完して次回から Stage 1 でヒットする
+            await _ensure_lead_channel(db, schema, int(lead[0]), discord_user_id, display)
+            logger.info(
+                "[dm_writer] lead_channels self-heal tenant=%d lead_id=%d discord_user=%s",
+                tenant_id, int(lead[0]), discord_user_id,
+            )
 
     if lead is None:
         # 新規 lead 作成
@@ -94,7 +138,7 @@ async def upsert_lead_and_message(
                     (tenant_id, customer_name, source, type, status,
                      discord_user_id, discord_dm_channel_id, created_at, updated_at)
                 VALUES
-                    (:tenant_id, :name, :source, 'prospect', 'lead',
+                    (:tenant_id, :name, :source, 'Inbound', 'lead',
                      :discord_user_id, :dm_channel_id, NOW(), NOW())
                 ON CONFLICT (source) WHERE source LIKE 'discord:%'
                 DO NOTHING
@@ -102,7 +146,7 @@ async def upsert_lead_and_message(
             """),
             {
                 "tenant_id": tenant_id,
-                "name": sender_name or f"Discord User {discord_user_id}",
+                "name": display,
                 "source": source,
                 "discord_user_id": discord_user_id,
                 "dm_channel_id": dm_channel_id,
@@ -128,6 +172,9 @@ async def upsert_lead_and_message(
         else:
             lead_id = int(row[0])
             existing_dm_channel_id = None
+
+        # lead_channels に登録（新規作成・競合再取得どちらも）
+        await _ensure_lead_channel(db, schema, lead_id, discord_user_id, display)
 
         logger.info(
             "[dm_writer] 新規 lead 作成 tenant=%d lead_id=%d discord_user=%s",
