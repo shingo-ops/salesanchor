@@ -97,6 +97,11 @@ async function renderKarte(
   await expect(convItem).toBeVisible({ timeout: 20_000 });
   await convItem.click();
 
+  // The karte panel is not auto-opened; click the toggle button to open it
+  const karteToggle = page.locator('button.karte-toggle-btn');
+  await expect(karteToggle).toBeVisible({ timeout: 10_000 });
+  await karteToggle.click();
+
   // Wait for karte panel tab bar to appear
   await page.locator('[data-testid="karte-tab-bar"]').waitFor({ timeout: 10_000 });
 }

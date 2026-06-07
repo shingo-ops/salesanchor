@@ -71,6 +71,19 @@ async def main() -> None:
         for tid, tc in tenants:
             schema = f"tenant_{tid:03d}"
             try:
+                # 冪等性ガード: status 列が存在しない場合はスキップ
+                async with engine.connect() as check_conn:
+                    col_check = await check_conn.execute(
+                        text("""
+                            SELECT COUNT(*) FROM information_schema.columns
+                            WHERE table_schema = :schema AND table_name = 'leads'
+                            AND column_name = 'status'
+                        """),
+                        {"schema": schema},
+                    )
+                    if not col_check.scalar():
+                        logger.warning("tenant %s: leads.status column not found, skipping", schema)
+                        continue
                 async with engine.begin() as conn:
                     counts = {}
                     for old_val, new_val in STATUS_MAP:
@@ -97,7 +110,7 @@ async def main() -> None:
 
         # ALTER DEFAULT on leads table (applies to all tenant schemas via inheritance or direct)
         async with engine.begin() as conn:
-            await conn.execute(text("ALTER TABLE leads ALTER COLUMN status SET DEFAULT 'lead'"))
+            await conn.execute(text("ALTER TABLE IF EXISTS leads ALTER COLUMN status SET DEFAULT 'lead'"))
             logger.info("ALTER TABLE leads DEFAULT -> 'lead' 完了")
 
         # Verify: check for any remaining old values
