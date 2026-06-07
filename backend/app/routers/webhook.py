@@ -315,8 +315,22 @@ def _iter_inbound_messages(
     両方を受理する。
     """
     # ─── A) messaging[] 形式 ───
+    # Meta はメッセージ以外のイベントも messaging[] で届ける。
+    # 明示的にシステムイベントキーをチェックしてスキップする（ADR-119 PR-D）:
+    #   - reaction:           リアクション通知（message キーを持つが新規メッセージでない）
+    #   - read / delivery:    既読・配信レシート
+    #   - optin:              opt-in 通知
+    #   - policy_enforcement: ポリシー違反通知
+    # referral は「紹介リンク経由の初回メッセージ」に message キーを伴うことがあり、
+    # その場合は実ユーザーメッセージとして処理するためスキップしない。
+    _FORMAT_A_SYSTEM_KEYS = frozenset({
+        "reaction", "read", "delivery", "optin", "policy_enforcement",
+    })
     for messaging in entry.get("messaging", []) or []:
         if not isinstance(messaging, dict):
+            continue
+        # 既知のシステムイベントキーを持つ場合はスキップ
+        if any(messaging.get(k) for k in _FORMAT_A_SYSTEM_KEYS):
             continue
         msg = messaging.get("message")
         if not msg or not isinstance(msg, dict):
@@ -341,8 +355,9 @@ def _iter_inbound_messages(
         for change in entry.get("changes", []) or []:
             if not isinstance(change, dict):
                 continue
-            if change.get("field") not in (None, "messages"):
-                # IG の message 系以外（comments, mentions 等）は MVP では無視
+            # field が明示的に "messages" のもののみ処理。
+            # None や "messaging_policy_enforcement" 等のシステム通知は除外（ADR-119 PR-D）。
+            if change.get("field") != "messages":
                 continue
             value = change.get("value") or {}
             if not isinstance(value, dict):
@@ -353,16 +368,25 @@ def _iter_inbound_messages(
             for m in messages:
                 if not isinstance(m, dict):
                     continue
+                # is_echo 相当ガード（Format B）: 自分送信メッセージをスキップ
+                if m.get("is_echo"):
+                    continue
                 from_obj = m.get("from") or {}
                 sender_id = str(from_obj.get("id", "")) if isinstance(from_obj, dict) else ""
                 if not sender_id:
                     continue
+                # システム通知パターン: text/attachments が共に無く message_id もない場合はスキップ
+                msg_text = m.get("text", "") or ""
+                has_attach = bool(m.get("attachments"))
+                msg_id = m.get("id") or m.get("mid")
+                if not msg_text and not has_attach and not msg_id:
+                    continue
                 yield {
                     "sender_id": sender_id,
-                    "message_text": m.get("text", "") or "",
-                    "message_id": m.get("id") or m.get("mid"),
+                    "message_text": msg_text,
+                    "message_id": msg_id,
                     "timestamp": m.get("timestamp") or value.get("timestamp"),
-                    "has_attachments": bool(m.get("attachments")),
+                    "has_attachments": has_attach,
                 }
 
 
