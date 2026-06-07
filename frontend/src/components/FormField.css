@@ -1,0 +1,144 @@
+/**
+ * FormField — 共有スタイル（TextField / Select / Textarea）(Task 2C)
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ */
+
+/* ── コンテナ ── */
+.comp-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.comp-field--full {
+  width: 100%;
+}
+
+/* ── ラベル ── */
+.comp-field__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1px);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.comp-field__required {
+  color: var(--danger);
+  font-size: var(--font-xs);
+  line-height: 1;
+  margin-left: var(--space-1px);
+}
+
+/* ── 入力要素 共通 ── */
+.comp-field__input,
+.comp-field__select,
+.comp-field__textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--comp-input-radius);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: var(--line-height-base);
+  transition: border-color var(--transition-micro), box-shadow var(--transition-micro);
+}
+
+.comp-field__input:focus,
+.comp-field__select:focus,
+.comp-field__textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.comp-field__input:disabled,
+.comp-field__select:disabled,
+.comp-field__textarea:disabled {
+  opacity: var(--opacity-archived);
+  cursor: not-allowed;
+  background: var(--bg-hover);
+}
+
+/* ── エラー状態 ── */
+/* stylelint-disable-next-line no-descending-specificity -- intentional: error overrides default border */
+.comp-field--error .comp-field__input,
+.comp-field--error .comp-field__select,
+.comp-field--error .comp-field__textarea {
+  border-color: var(--danger);
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- intentional: error focus keeps danger border */
+.comp-field--error .comp-field__input:focus,
+.comp-field--error .comp-field__select:focus,
+.comp-field--error .comp-field__textarea:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-bg-subtle);
+}
+
+/* ── ヒント / エラーメッセージ ── */
+.comp-field__hint {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.comp-field__hint--error {
+  color: var(--danger);
+}
+
+/* ── Textarea 専用 ── */
+.comp-field__textarea {
+  min-height: var(--textarea-min-h);
+  resize: vertical;
+}
+
+/* ── Select 専用 ── */
+.comp-field__select {
+  cursor: pointer;
+}
+
+/* ── サイズ: sm ── */
+.comp-field--sm .comp-field__input,
+.comp-field--sm .comp-field__select {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  min-height: var(--comp-input-height-sm);
+}
+
+.comp-field--sm .comp-field__textarea {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+}
+
+.comp-field--sm .comp-field__label {
+  font-size: var(--font-xs);
+}
+
+/* ── サイズ: lg ── */
+.comp-field--lg .comp-field__input,
+.comp-field--lg .comp-field__select,
+.comp-field--lg .comp-field__textarea {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-md);
+  min-height: var(--comp-input-height-mobile);
+}
+
+.comp-field--lg .comp-field__label {
+  font-size: var(--font-base);
+}
+
+/* ── モバイル タッチターゲット（WCAG 2.5.5）── */
+@media (max-width: 767px) {
+  .comp-field__input,
+  .comp-field__select {
+    min-height: var(--comp-input-height-mobile);
+  }
+}
