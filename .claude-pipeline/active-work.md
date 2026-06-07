@@ -59,6 +59,7 @@
 | feature/morimoto/adr-108-karte-redesign | （記入してください） | 2026-06-04 15:56 | IN_PROGRESS | | |
 | feature/morimoto/adr-109-status-ssot | ADR-109 status SSOT化（ADR文書のみ） | 2026-06-04 15:56 | DONE | #1630 | ADR文書のみ、マージ済み |
 | feature/morimoto/adr-109-status-ssot-impl | ADR-109 status SSOT化 実装 | 2026-06-07 | IN_PROGRESS | | |
+| feature/morimoto/red-proof-karte-gate | karte-gate RED証明ブランチ（一時・削除予定） | 2026-06-07 | IN_PROGRESS | | |
 | claude-impl/20260604-074511 | ADR-108 受信箱カルテ再設計 自動実装 | 2026-06-04 | IN_PROGRESS | #1635 | |
 | feature/morimoto/adr-107-safety-schedule | ADR-107 §13 安全装置 Celery beat 登録 | 2026-06-04 | DONE | #1648 | |
 | feature/morimoto/fix-priority-check-conn-leak | priority_scoring_check DB接続リーク修正 | 2026-06-04 | DONE | #1652 | |
