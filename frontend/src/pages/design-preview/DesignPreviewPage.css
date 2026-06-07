@@ -54,9 +54,15 @@
   font-size: var(--font-base);
   font-weight: var(--font-weight-semi);
   color: var(--text-primary);
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-1);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border);
+}
+
+.dp-section-desc {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 var(--space-3);
 }
 
 /* ── Button 確認行 ── */
