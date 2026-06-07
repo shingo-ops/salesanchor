@@ -493,21 +493,25 @@ def _mock_result(first_value):
 async def test_dm_writer_creates_new_lead():
     """初回 DM 受信 → lead が新規作成され、meta_messages に inbound 行が INSERT される。
 
-    実行シーケンス（set_tenant_context は AsyncMock の dialect guard で no-op）:
-      1. SELECT leads (→ None: 未登録)
-      2. INSERT leads RETURNING id (→ 新規 id=1)
-      3. UPDATE leads SET discord_dm_channel_id (dm_channel_id が None のため)
-      4. INSERT meta_messages RETURNING id (→ id=10)
-      5. commit
+    実行シーケンス（ADR-119 二段 lookup、set_tenant_context は AsyncMock の dialect guard で no-op）:
+      1. Stage 1: SELECT leads JOIN lead_channels → None（未登録）
+      2. Stage 2: SELECT leads WHERE source → None（未登録）
+      3. INSERT leads RETURNING id（→ 新規 id=1）
+      4. INSERT lead_channels（_ensure_lead_channel）
+      5. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
+      6. INSERT meta_messages RETURNING id（→ id=10）
+      7. commit
     """
     from app.discord_gateway.dm_writer import upsert_lead_and_message
 
     mock_session = AsyncMock()
     mock_session.execute.side_effect = [
-        _mock_result(None),     # (1) SELECT lead → 未登録
-        _mock_result((1,)),     # (2) INSERT lead RETURNING id=1
-        _mock_result(None),     # (3) UPDATE discord_dm_channel_id
-        _mock_result((10,)),    # (4) INSERT meta_messages RETURNING id=10
+        _mock_result(None),     # (1) Stage 1 SELECT lead_channels JOIN → 未登録
+        _mock_result(None),     # (2) Stage 2 SELECT leads WHERE source → 未登録
+        _mock_result((1,)),     # (3) INSERT leads RETURNING id=1
+        _mock_result(None),     # (4) INSERT lead_channels (_ensure_lead_channel)
+        _mock_result(None),     # (5) UPDATE discord_dm_channel_id
+        _mock_result((10,)),    # (6) INSERT meta_messages RETURNING id=10
     ]
 
     await upsert_lead_and_message(
@@ -521,8 +525,8 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 4回の execute + 1回の commit
-    assert mock_session.execute.call_count == 4
+    # 6回の execute + 1回の commit
+    assert mock_session.execute.call_count == 6
     assert mock_session.commit.call_count == 1
 
 
