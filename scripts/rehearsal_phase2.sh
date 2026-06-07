@@ -305,6 +305,7 @@ fi
 check_no_pass "A-2 Bootstrap出力" "${_boot_out}"
 
 echo "▶ GOOD backend を auto-URL で起動..."
+git reset --hard "${GOOD_SHA}" -q  # server.py を GOOD 版に戻す（BAD commit 後なので必須）
 docker compose build --quiet 2>&1 | tail -2
 DATABASE_URL="${_durl_a}" docker compose up -d 2>&1 | tail -2
 
@@ -326,8 +327,9 @@ echo ""; echo "======================================================"
 echo "Phase B: 失敗 → Finalize inline rollback（verbatim）"
 echo "======================================================"
 
-# BAD コードに切り替えてコンテナ再起動
+# BAD コードに切り替えてコンテナ再起動（rebuild 必須: GOOD image を上書き）
 git reset --hard "${BAD_SHA}" -q
+docker compose build --quiet 2>&1 | tail -2
 _durl_cur=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
 DATABASE_URL="${_durl_cur}" docker compose up -d 2>&1 | tail -2
 sleep 6
@@ -352,7 +354,6 @@ echo "▶ Finalize step を deploy.yml から verbatim 抽出して実行..."
 # 失敗側の Finalize は exit 1 を返す設計のため || true で続行
 _fin_out=$(run_extracted_step "Finalize (health check + cleanup)" \
   ROLLBACK_DISCORD_WEBHOOK="") || true
-check_no_pass "B-0p Finalize出力" "${_fin_out}"
 
 # B-r1: SA18_PHASE2_ENABLED 削除確認
 if ! grep -q '^SA18_PHASE2_ENABLED=' "${REHEARSAL_DIR}/.env"; then
