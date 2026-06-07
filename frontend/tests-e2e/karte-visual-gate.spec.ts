@@ -97,10 +97,12 @@ async function renderKarte(
   await expect(convItem).toBeVisible({ timeout: 20_000 });
   await convItem.click();
 
-  // The karte panel is not auto-opened; click the toggle button to open it
+  // On desktop (≥1280px), karte panel is always shown via CSS.
+  // On tablet/mobile (≤1279px), a toggle button appears – click it to open the panel.
   const karteToggle = page.locator('button.karte-toggle-btn');
-  await expect(karteToggle).toBeVisible({ timeout: 10_000 });
-  await karteToggle.click();
+  if (await karteToggle.isVisible()) {
+    await karteToggle.click();
+  }
 
   // Wait for karte panel tab bar to appear
   await page.locator('[data-testid="karte-tab-bar"]').waitFor({ timeout: 10_000 });
