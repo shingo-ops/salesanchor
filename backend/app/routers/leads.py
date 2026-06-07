@@ -1990,3 +1990,222 @@ async def stream_leads_updates(
             "Connection": "keep-alive",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# ADR-119: リード統合（merge）エンドポイント
+# ---------------------------------------------------------------------------
+
+
+class LeadMergeRequest(BaseModel):
+    loser_id: int = Field(..., description="吸収されて削除される側のリード ID")
+    reason: Optional[str] = Field(None, description="統合の理由（audit_logs に記録）")
+
+
+@router.post(
+    "/leads/{master_id}/merge",
+    response_model=LeadResponse,
+    dependencies=[Depends(require_permission("leads.delete"))],
+)
+async def merge_leads(
+    master_id: int,
+    body: LeadMergeRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """リードの重複統合（loser → master へ全副テーブルを付け替え、loser を削除）。
+
+    認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。
+
+    guard（v1）:
+        loser.converted_deal_id IS NOT NULL → 400 ブロック。
+        master が existing_customer / converted_deal_id 非NULL は許可（＝既存客への再接続）。
+
+    処理順序（同一トランザクション）:
+      1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
+      2. guard チェック
+      3. loser の lead_channels 行を補完（source から gap 分を拾う）
+      4. FK 付け替え: companies / contacts / deals の lead_id → master
+      5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）
+      6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）
+      7. loser 削除
+      8. 監査ログ 2 件
+    """
+    loser_id = body.loser_id
+
+    if master_id == loser_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="master_id と loser_id が同じです。自己マージはできません。",
+        )
+
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    lc_t = tenant_table_ref(db, tenant_id, "lead_channels")
+    mm_t = tenant_table_ref(db, tenant_id, "meta_messages")
+    co_t = tenant_table_ref(db, tenant_id, "companies")
+    ct_t = tenant_table_ref(db, tenant_id, "contacts")
+    dl_t = tenant_table_ref(db, tenant_id, "deals")
+
+    # 1) master / loser を昇順 FOR UPDATE ロック（デッドロック防止）
+    low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
+    locked_res = await db.execute(
+        text(f"""
+            SELECT {_LEAD_COLUMNS}
+            FROM {leads_t}
+            WHERE id IN (:id1, :id2) AND tenant_id = :tenant_id
+            ORDER BY id
+            FOR UPDATE
+        """),
+        {"id1": low_id, "id2": high_id, "tenant_id": tenant_id},
+    )
+    locked_rows = locked_res.mappings().all()
+    rows_by_id = {r["id"]: r for r in locked_rows}
+    master_row = rows_by_id.get(master_id)
+    loser_row = rows_by_id.get(loser_id)
+
+    if not master_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"master リード (id={master_id}) が見つかりません",
+        )
+    if not loser_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"loser リード (id={loser_id}) が見つかりません",
+        )
+
+    # 2) guard: loser が converted 済みなら v1 ブロック
+    #    master が existing_customer / converted_deal_id 非NULL は許可（既存客への再接続）
+    if loser_row["converted_deal_id"] is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"loser リード (id={loser_id}) は既に案件化済みです（converted_deal_id="
+                f"{loser_row['converted_deal_id']}）。"
+                "成約済みリードを loser にすることは v1 ではサポートしていません。"
+            ),
+        )
+
+    # 3) loser の lead_channels 行を補完（gap 由来の取りこぼし防止）
+    loser_source: Optional[str] = loser_row.get("source")
+    if loser_source:
+        for prefix, plat in (
+            ("messenger:", "messenger"),
+            ("instagram:", "instagram"),
+            ("discord:", "discord"),
+        ):
+            if loser_source.startswith(prefix):
+                ext_id = loser_source[len(prefix):]
+                await db.execute(
+                    text(f"""
+                        INSERT INTO {lc_t} (lead_id, platform, external_id)
+                        VALUES (:lead_id, :platform, :external_id)
+                        ON CONFLICT (platform, external_id) DO NOTHING
+                    """),
+                    {"lead_id": loser_id, "platform": plat, "external_id": ext_id},
+                )
+                break
+
+    # 4) FK 付け替え: companies / contacts / deals（NO ON DELETE のため先に付け替え）
+    reassigned_companies = (await db.execute(
+        text(f"UPDATE {co_t} SET lead_id = :master WHERE lead_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    reassigned_contacts = (await db.execute(
+        text(f"UPDATE {ct_t} SET lead_id = :master WHERE lead_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    reassigned_deals = (await db.execute(
+        text(f"UPDATE {dl_t} SET lead_id = :master WHERE lead_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    # 5) meta_messages を明示的に master へ付け替え（ON DELETE SET NULL に委ねず履歴保持）
+    reassigned_messages = (await db.execute(
+        text(f"UPDATE {mm_t} SET lead_id = :master WHERE lead_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    # 6) lead_channels を master へ再ポイント
+    #    UNIQUE (platform, external_id) 制約があるため、master 側に既に同一チャンネルが
+    #    あれば DO NOTHING で loser 側を捨てる（同一チャンネルは 1 lead に紐づく）。
+    #    PostgreSQL では ON CONFLICT ... DO NOTHING でも rowcount は 0 になるため、
+    #    重複チャンネルは先に削除してから付け替える。
+    dup_channels_res = await db.execute(
+        text(f"""
+            SELECT lc_loser.id
+            FROM {lc_t} lc_loser
+            WHERE lc_loser.lead_id = :loser
+              AND EXISTS (
+                  SELECT 1 FROM {lc_t} lc_master
+                  WHERE lc_master.lead_id = :master
+                    AND lc_master.platform = lc_loser.platform
+                    AND lc_master.external_id = lc_loser.external_id
+              )
+        """),
+        {"loser": loser_id, "master": master_id},
+    )
+    dup_channel_ids = [r[0] for r in dup_channels_res.fetchall()]
+    if dup_channel_ids:
+        await db.execute(
+            text(f"DELETE FROM {lc_t} WHERE id = ANY(:ids)"),
+            {"ids": dup_channel_ids},
+        )
+
+    reassigned_channels = (await db.execute(
+        text(f"UPDATE {lc_t} SET lead_id = :master WHERE lead_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    # 7) loser 削除（converted_deal_id は guard で NULL を確認済み）
+    await db.execute(
+        text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
+        {"loser": loser_id, "tenant_id": tenant_id},
+    )
+
+    # master の最新状態を取得
+    updated_res = await db.execute(
+        text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} WHERE id = :id AND tenant_id = :tid"),
+        {"id": master_id, "tid": tenant_id},
+    )
+    master_updated = updated_res.mappings().first()
+
+    # 8) 監査ログ 2 件
+    merge_summary = {
+        "loser_id": loser_id,
+        "loser_customer_name": loser_row["customer_name"],
+        "reassigned_companies": reassigned_companies,
+        "reassigned_contacts": reassigned_contacts,
+        "reassigned_deals": reassigned_deals,
+        "reassigned_messages": reassigned_messages,
+        "reassigned_channels": reassigned_channels,
+        "reason": body.reason,
+    }
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="merge_absorb", table_name="leads", record_id=master_id,
+        old_data=dict(master_row),
+        new_data=merge_summary,
+    )
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="merge_delete", table_name="leads", record_id=loser_id,
+        old_data=dict(loser_row),
+        new_data={"merged_into": master_id, "reason": body.reason},
+    )
+
+    await db.commit()
+    await invalidate_dashboard_cache(tenant_id)
+
+    logger.info(
+        "[merge_leads] tenant=%d master=%d ← loser=%d "
+        "(companies=%d contacts=%d deals=%d messages=%d channels=%d)",
+        tenant_id, master_id, loser_id,
+        reassigned_companies, reassigned_contacts, reassigned_deals,
+        reassigned_messages, reassigned_channels,
+    )
+
+    return LeadResponse(**master_updated)
