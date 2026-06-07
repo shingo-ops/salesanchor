@@ -315,8 +315,22 @@ def _iter_inbound_messages(
     両方を受理する。
     """
     # ─── A) messaging[] 形式 ───
+    # Meta はメッセージ以外のイベントも messaging[] で届ける。
+    # 明示的にシステムイベントキーをチェックしてスキップする（ADR-119 PR-D）:
+    #   - reaction:           リアクション通知（message キーを持つが新規メッセージでない）
+    #   - read / delivery:    既読・配信レシート
+    #   - optin:              opt-in 通知
+    #   - policy_enforcement: ポリシー違反通知
+    # referral は「紹介リンク経由の初回メッセージ」に message キーを伴うことがあり、
+    # その場合は実ユーザーメッセージとして処理するためスキップしない。
+    _FORMAT_A_SYSTEM_KEYS = frozenset({
+        "reaction", "read", "delivery", "optin", "policy_enforcement",
+    })
     for messaging in entry.get("messaging", []) or []:
         if not isinstance(messaging, dict):
+            continue
+        # 既知のシステムイベントキーを持つ場合はスキップ
+        if any(messaging.get(k) for k in _FORMAT_A_SYSTEM_KEYS):
             continue
         msg = messaging.get("message")
         if not msg or not isinstance(msg, dict):
