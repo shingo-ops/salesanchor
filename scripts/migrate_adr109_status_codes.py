@@ -112,6 +112,18 @@ async def main() -> None:
         for tid, tc in tenants:
             schema = f"tenant_{tid:03d}"
             try:
+                async with engine.connect() as check_conn:
+                    col_check = await check_conn.execute(
+                        text("""
+                            SELECT COUNT(*) FROM information_schema.columns
+                            WHERE table_schema = :schema AND table_name = 'leads'
+                            AND column_name = 'status'
+                        """),
+                        {"schema": schema},
+                    )
+                    if not col_check.scalar():
+                        logger.info("tenant %s: no status column, skipping ALTER DEFAULT", schema)
+                        continue
                 async with engine.begin() as conn:
                     await conn.execute(
                         text(f"ALTER TABLE IF EXISTS {schema}.leads ALTER COLUMN status SET DEFAULT 'lead'")
