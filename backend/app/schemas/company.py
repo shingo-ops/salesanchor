@@ -50,8 +50,11 @@ class AddressType(str, Enum):
 # ========== 副テーブル ==========
 
 
-class CompanyAddressInput(BaseModel):
-    """会社住所のリクエスト。branch_name + address_type で複数拠点対応"""
+class _CompanyAddressFields(BaseModel):
+    """会社住所の共通フィールド定義（バリデーターなし）。
+    読み取り用 Response はここを継承してバリデーターを回避する。
+    書き込み用 Input は CompanyAddressInput でバリデーターを追加する。
+    """
     address_type: AddressType
     branch_name: str | None = Field(default=None, max_length=100, description="支店・拠点名")
     name: str | None = Field(default=None, max_length=255)
@@ -67,6 +70,10 @@ class CompanyAddressInput(BaseModel):
     country_code: str | None = Field(default=None, min_length=2, max_length=2, description="ISO 3166-1 alpha-2")
     is_default: bool = Field(default=False, description="会社内で当該 address_type のデフォルトかどうか")
 
+
+class CompanyAddressInput(_CompanyAddressFields):
+    """会社住所の書き込み用スキーマ。形式バリデーターを適用する。"""
+
     @field_validator("email")
     @classmethod
     def _check_email(cls, v: str | None) -> str | None:
@@ -78,7 +85,8 @@ class CompanyAddressInput(BaseModel):
         return validate_phone(v)
 
 
-class CompanyAddressResponse(CompanyAddressInput):
+class CompanyAddressResponse(_CompanyAddressFields):
+    """会社住所の読み取り用スキーマ。既存データの形式バリデーターを実行しない。"""
     id: int
     model_config = {"from_attributes": True}
 
