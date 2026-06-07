@@ -1,21 +1,25 @@
 #!/bin/bash
 # test_rollback_simulation.sh — SA-18 Phase2 安全機構シミュレーション
 #
-# シナリオ A: Phase2 成功路（health 200 + RLS 有効 + データ取得可能）
+# シナリオ C: フラグOFF → auto-URL は no-op（DATABASE_URL 変更なし）
+# シナリオ A: フラグON → Bootstrap auto-URL が salesanchor_app URL を自動構築
+#             health 200 + RLS 有効 + データ取得可能
 # シナリオ B: Phase2 失敗路（503 → ロールバック → jarvis 復帰 → データが返る）
 #
-# 偽 green 対策の核心:
-#   ロールバック後の検証を "health 200" ではなく "データ count > 0" で行う。
-#   DATABASE_URL が salesanchor_app のまま残っていると旧コード（tenant_id 未設定）が
-#   RLS にブロックされて count=0 になるため、この確認が偽 green を検出する。
+# 追加検証:
+#   - パスワードが stdout/stderr に出力されないこと（set -x 無し・URL を echo しない）
+#   - フラグ無しでは .env の DATABASE_URL が変わらないこと（no-op）
 #
 # 前提: Docker + docker compose が使えること（ubuntu-latest runner または Mac）
 
 set -e
 
 WORKDIR=$(mktemp -d /tmp/phase2-test-XXXXXX)
-PG_PORT=15432    # postgres 用（既存テストの 5432 と衝突しない）
 APP_PORT=18766   # backend 用（既存 18765 と衝突しない）
+
+# シミュレート用シークレット（実際は GitHub Secret から inject）
+# テスト内での扱い: 値を echo・ログに出さない
+FAKE_APP_PASS="apppass"
 
 trap "echo '▶ Cleanup...'; docker compose -f '${WORKDIR}/docker-compose.yml' down --remove-orphans -v 2>/dev/null || true; rm -rf '${WORKDIR}'" EXIT
 
@@ -29,7 +33,6 @@ cd "${WORKDIR}"
 
 # ============================================================
 # インフラ: docker-compose.yml
-# DB_USER / DB_PASS / SET_TENANT_CTX は shell env var で制御する
 # ============================================================
 cat > docker-compose.yml << 'DCEOF'
 services:
@@ -67,7 +70,7 @@ DCEOF
 
 # ============================================================
 # server.py (GOOD / rollback target)
-#   SET_TENANT_CTX=1: app.tenant_id を設定（Phase2 salesanchor_app 用）
+#   SET_TENANT_CTX=1: app.tenant_id 設定（Phase2 salesanchor_app 用）
 #   SET_TENANT_CTX=0: 設定しない（pre-Phase2 / jarvis は superuser なので無問題）
 # ============================================================
 cat > backend/server.py << 'PYEOF'
@@ -87,9 +90,6 @@ def get_data_count():
         host=DB_HOST, user=DB_USER, password=DB_PASS, dbname=DB_NAME,
         application_name="salesanchor_backend"
     )
-    # autocommit=True: SET is session-level and persists for this connection lifetime.
-    # SET LOCAL requires being inside an explicit transaction (BEGIN), which psycopg2
-    # may not issue implicitly before the first statement in all versions.
     conn.autocommit = True
     cur = conn.cursor()
     if SET_TENANT_CTX:
@@ -144,10 +144,12 @@ cat > .gitignore << 'IEOF'
 .env
 IEOF
 
+# 初期 .env: jarvis DATABASE_URL（Phase2 切替前の本番状態を模擬）
 cat > .env << 'ENVEOF'
 POSTGRES_USER=jarvis
 POSTGRES_PASSWORD=testpass
 POSTGRES_DB=testdb
+DATABASE_URL=postgresql://jarvis:testpass@postgres:5432/testdb
 ENVEOF
 
 # postgres 起動
@@ -161,24 +163,18 @@ for _i in $(seq 1 20); do
 done
 
 # スキーマ + RLS + salesanchor_app ロール + テストデータ
-# -i が必須: docker exec はデフォルトで stdin を接続しない → psql がヒアドキュメントを受け取れない
+# -i が必須: docker exec はデフォルトで stdin を接続しない
 docker exec -i phase2-test-postgres-1 psql -U jarvis -d testdb -v ON_ERROR_STOP=1 << 'SQL'
--- salesanchor_app: NOSUPERUSER NOBYPASSRLS（本番ロールと同じ属性）
 DO $$ BEGIN
   CREATE ROLE salesanchor_app WITH LOGIN PASSWORD 'apppass'
     NOSUPERUSER NOCREATEDB NOBYPASSRLS;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
-
--- テストテーブル + RLS
 CREATE TABLE IF NOT EXISTS glossary (
-  id SERIAL PRIMARY KEY,
-  tenant_id INTEGER,
-  term TEXT NOT NULL
+  id SERIAL PRIMARY KEY, tenant_id INTEGER, term TEXT NOT NULL
 );
 ALTER TABLE glossary ENABLE ROW LEVEL SECURITY;
 ALTER TABLE glossary FORCE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS sel_pol ON glossary;
 CREATE POLICY sel_pol ON glossary FOR SELECT USING (
   tenant_id IS NULL
@@ -191,13 +187,9 @@ CREATE POLICY ins_pol ON glossary FOR INSERT WITH CHECK (
     ELSE tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
   END
 );
-
--- salesanchor_app に DML 付与
 GRANT USAGE ON SCHEMA public TO salesanchor_app;
 GRANT SELECT, INSERT ON glossary TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
-
--- テストデータ（operator として挿入）
 SET app.is_operator = 'true';
 INSERT INTO glossary (tenant_id, term) VALUES (1, 'term-tenant1') ON CONFLICT DO NOTHING;
 INSERT INTO glossary (tenant_id, term) VALUES (2, 'term-tenant2') ON CONFLICT DO NOTHING;
@@ -215,21 +207,78 @@ GOOD_SHA=$(git rev-parse HEAD)
 echo "▶ GOOD_SHA: ${GOOD_SHA:0:7}"
 
 # ============================================================
-# SCENARIO A: Phase2 成功路
-#   salesanchor_app + SET_TENANT_CTX=1 → health 200 + data > 0
+# helper: deploy.yml Bootstrap auto-URL ロジックを模擬
+#   引数: <env_file> <app_password>
+#   動作: SA18_PHASE2_ENABLED=1 が在れば DATABASE_URL を salesanchor_app URL に更新。
+#         ない場合は no-op。
+#   セキュリティ: パスワードを stdout/stderr に出さない。
+# ============================================================
+run_bootstrap_auto_url() {
+  local _env_file="$1"
+  local _fake_pass="$2"
+  if grep -q '^SA18_PHASE2_ENABLED=1' "${_env_file}" 2>/dev/null; then
+    local _pgdb
+    _pgdb=$(grep '^POSTGRES_DB=' "${_env_file}" | cut -d= -f2- | head -1 | tr -d '[:space:]')
+    local _sa_url
+    _sa_url=$(python3 -c \
+      "import urllib.parse,sys;p,d=sys.argv[1],sys.argv[2];print('postgresql://salesanchor_app:{}@postgres:5432/{}'.format(urllib.parse.quote(p,safe=''),d))" \
+      "${_fake_pass}" "${_pgdb}")
+    sed -i '/^DATABASE_URL=/d' "${_env_file}"
+    printf 'DATABASE_URL=%s\n' "${_sa_url}" >> "${_env_file}"
+    echo "ℹ️  SA18_PHASE2_ENABLED=1 → DATABASE_URL を salesanchor_app@postgres:5432 に設定しました"
+    unset _sa_url  # URL(パスワード含)を環境変数から即削除
+  fi
+}
+
+# ============================================================
+# SCENARIO C: フラグOFF → auto-URL は no-op
+#   SA18_PHASE2_ENABLED が無い → DATABASE_URL は jarvis のまま
 # ============================================================
 echo ""
 echo "======================================================"
-echo "SCENARIO A: Phase2 成功路"
+echo "SCENARIO C: フラグOFF → auto-URL no-op"
 echo "======================================================"
 
-# Phase2 切替: .env に salesanchor_app URL + フラグ追加（.gitignore 済のため git commit 不要）
-cat >> .env << 'ENVEOF'
-DATABASE_URL=postgresql://salesanchor_app:apppass@postgres:5432/testdb
-SA18_PHASE2_ENABLED=1
-ENVEOF
+_durl_before=$(grep '^DATABASE_URL=' .env | cut -d= -f2-)
+_bootstrap_out_c=$(run_bootstrap_auto_url .env "${FAKE_APP_PASS}" 2>&1)
+echo "${_bootstrap_out_c}"
 
-export DB_USER=salesanchor_app DB_PASS=apppass SET_TENANT_CTX=1
+_durl_after=$(grep '^DATABASE_URL=' .env | cut -d= -f2-)
+[ "${_durl_before}" = "${_durl_after}" ] \
+  && echo "✅ C-1 PASS: フラグ無し → DATABASE_URL 変更なし（no-op）" \
+  || { echo "❌ SCENARIO C FAIL: DATABASE_URL が変わってしまった"; exit 1; }
+
+echo "${_bootstrap_out_c}" | grep -qF "${FAKE_APP_PASS}" \
+  && { echo "❌ SECURITY FAIL: パスワードがログ出力に含まれている"; exit 1; } \
+  || echo "✅ C-2 PASS: パスワードがログに出ていない（no-op 路）"
+
+# ============================================================
+# SCENARIO A: フラグON → auto-URL が salesanchor_app URL を自動構築
+#   PO が SA18_PHASE2_ENABLED=1 を .env に追記した後の Bootstrap 動作を模擬。
+#   DATABASE_URL は jarvis のまま → Bootstrap が salesanchor_app に書き換える。
+# ============================================================
+echo ""
+echo "======================================================"
+echo "SCENARIO A: フラグON → auto-URL 構築 + Phase2 成功路"
+echo "======================================================"
+
+# PO が .env に SA18_PHASE2_ENABLED=1 を追記（DATABASE_URL は jarvis のまま）
+echo "SA18_PHASE2_ENABLED=1" >> .env
+
+# Bootstrap auto-URL を実行（stdout/stderr をキャプチャしてパスワード漏洩検査）
+_bootstrap_out_a=$(run_bootstrap_auto_url .env "${FAKE_APP_PASS}" 2>&1)
+echo "${_bootstrap_out_a}"
+
+grep -q '^DATABASE_URL=.*salesanchor_app' .env \
+  && echo "✅ A-1 PASS: auto-URL が salesanchor_app URL を設定" \
+  || { echo "❌ SCENARIO A FAIL: DATABASE_URL が salesanchor_app になっていない"; exit 1; }
+
+echo "${_bootstrap_out_a}" | grep -qF "${FAKE_APP_PASS}" \
+  && { echo "❌ SECURITY FAIL: パスワードがログ出力に含まれている"; exit 1; } \
+  || echo "✅ A-2 PASS: パスワードがログに出ていない（auto-URL 路）"
+
+# Backend を salesanchor_app + SET_TENANT_CTX=1 で起動
+export DB_USER=salesanchor_app DB_PASS="${FAKE_APP_PASS}" SET_TENANT_CTX=1
 docker compose build -q
 
 for _svc in backend; do
@@ -245,39 +294,20 @@ for _i in $(seq 1 15); do
 done
 
 HEALTH_A=$(curl -sf "http://localhost:${APP_PORT}/api/health" 2>/dev/null || echo "FAIL")
-echo "▶ Health response: ${HEALTH_A}"
 echo "${HEALTH_A}" | python3 -c "import sys,json;d=json.load(sys.stdin);exit(0 if d.get('status')=='ok' else 1)" \
-  && echo "✅ A-1 PASS: Phase2 health 200" \
+  && echo "✅ A-3 PASS: Phase2 health 200" \
   || { echo "❌ SCENARIO A FAIL: health not ok — ${HEALTH_A}"; exit 1; }
-
-# DB 内のデータを直接確認（デバッグ: HTTP テスト前にデータ存在を検証）
-echo "▶ DB 内データ確認 (jarvis/superuser):"
-docker exec phase2-test-postgres-1 psql -U jarvis -d testdb -t -c \
-  "SELECT count(*) FROM glossary WHERE tenant_id = 1;" | tr -d ' \n'
-echo " rows for tenant_id=1"
-
-# salesanchor_app で直接確認（SET SESSION + tenant_id=1）
-echo "▶ salesanchor_app 直接 psql 確認:"
-docker exec -e PGPASSWORD=apppass phase2-test-postgres-1 \
-  psql -U salesanchor_app -d testdb -t \
-  -c "SET app.tenant_id = '1'; SELECT count(*) FROM glossary WHERE tenant_id = 1;" 2>&1 | tr -d ' \n'
-echo ""
 
 DATA_A=$(curl -sf "http://localhost:${APP_PORT}/api/data" 2>/dev/null || echo '{"count":0,"error":"curl failed"}')
 echo "▶ Data: ${DATA_A}"
 COUNT_A=$(echo "${DATA_A}" | python3 -c "import sys,json;print(json.load(sys.stdin).get('count',0))")
 [ "${COUNT_A}" -gt 0 ] \
-  && echo "✅ A-2 PASS: data count=${COUNT_A} (salesanchor_app + tenant_id → RLS 正常通過)" \
+  && echo "✅ A-4 PASS: data count=${COUNT_A} (salesanchor_app + tenant_id → RLS 正常通過)" \
   || { echo "❌ SCENARIO A FAIL: data count=0 (salesanchor_app が RLS にブロックされた)"; exit 1; }
 
-# smoke[7] 相当: SA18_PHASE2_ENABLED=1 && DATABASE_URL=salesanchor_app の整合確認
 grep -q '^SA18_PHASE2_ENABLED=1' .env \
-  && echo "✅ A-3 PASS: SA18_PHASE2_ENABLED=1 が .env に存在" \
+  && echo "✅ A-5 PASS: SA18_PHASE2_ENABLED=1 が .env に存在" \
   || { echo "❌ SCENARIO A FAIL: SA18_PHASE2_ENABLED が .env にない"; exit 1; }
-
-grep -q '^DATABASE_URL=.*salesanchor_app' .env \
-  && echo "✅ A-4 PASS: DATABASE_URL = salesanchor_app (フラグと整合)" \
-  || { echo "❌ SCENARIO A FAIL: SA18_PHASE2_ENABLED=1 だが DATABASE_URL が salesanchor_app でない"; exit 1; }
 
 # ============================================================
 # SCENARIO B: Phase2 失敗路 → ロールバック → データ返却
@@ -310,10 +340,9 @@ PYEOF
 
 git add .
 git commit -q -m "BAD: Phase2 health 503"
-BAD_SHA=$(git rev-parse HEAD)
-echo "▶ BAD_SHA: ${BAD_SHA:0:7}"
+echo "▶ BAD_SHA: $(git rev-parse HEAD | cut -c1-7)"
 
-export DB_USER=salesanchor_app DB_PASS=apppass SET_TENANT_CTX=1
+export DB_USER=salesanchor_app DB_PASS="${FAKE_APP_PASS}" SET_TENANT_CTX=1
 docker compose build -q
 
 for _svc in backend; do
@@ -348,9 +377,10 @@ if [ -n "${PREV_SHA}" ]; then
   _pgdb_rb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
   _rb_durl="postgresql://${_pguser_rb}:${_pgpass_rb}@postgres:5432/${_pgdb_rb}"
   sed -i '/^DATABASE_URL=/d' .env
-  echo "DATABASE_URL=${_rb_durl}" >> .env
+  printf 'DATABASE_URL=%s\n' "${_rb_durl}" >> .env
   sed -i '/^SA18_PHASE2_ENABLED=/d' .env
-  echo "ℹ️  ロールバック: DATABASE_URL=${_rb_durl}、SA18_PHASE2_ENABLED 削除"
+  echo "ℹ️  ロールバック: DATABASE_URL を jarvis に復元、SA18_PHASE2_ENABLED を削除"
+  unset _rb_durl
 
   # B-r1: SA18_PHASE2_ENABLED が削除されていることを確認
   grep -q '^SA18_PHASE2_ENABLED=' .env \
@@ -387,14 +417,13 @@ if [ -n "${PREV_SHA}" ]; then
   fi
 fi
 
-# B-1: health 200 確認
 [ "${_rollback_result}" = "health_ok" ] \
   && echo "✅ B-1 PASS: ロールバック後 health 200" \
   || { echo "❌ SCENARIO B FAIL: ロールバック後 health が 200 にならない"; exit 1; }
 
 # B-2: データが返ること確認（偽 green 防止の核心）
 # DATABASE_URL が salesanchor_app のまま残っていると旧コード（SET_TENANT_CTX=0）が
-# RLS にブロックされて count=0 になり、この確認が失敗する。
+# RLS にブロックされて count=0 になる。
 # jarvis（superuser / BYPASSRLS）に正しく戻っていれば count > 0。
 DATA_RB=$(curl -sf "http://localhost:${APP_PORT}/api/data" 2>/dev/null || echo '{"count":0}')
 echo "▶ ロールバック後 Data: ${DATA_RB}"
@@ -403,14 +432,15 @@ COUNT_RB=$(echo "${DATA_RB}" | python3 -c "import sys,json;print(json.load(sys.s
   && echo "✅ B-2 PASS: ロールバック後 count=${COUNT_RB}（jarvis 接続・データ正常返却）" \
   || { echo "❌ SCENARIO B FAIL: count=0（DATABASE_URL が salesanchor_app のまま → RLS 偽 green）"; exit 1; }
 
-# Discord dry-run
 echo ""
 echo "▶ [Discord dry-run] rollback success payload (webhook not sent in simulation)"
 
 echo ""
 echo "======================================================"
 echo "✅ PHASE2 ROLLBACK SIMULATION PASSED"
-echo "   Scenario A: Phase2 成功（health 200 + RLS 有効 + データ取得可）"
+echo "   Scenario C: フラグOFF → auto-URL no-op（DATABASE_URL 変更なし）"
+echo "   Scenario A: フラグON → auto-URL で salesanchor_app URL 自動構築"
+echo "               health 200 + RLS 有効 + データ取得可"
 echo "   Scenario B: Phase2 失敗 → ロールバック → jarvis 復帰 → データ返却"
 echo "======================================================"
 exit 0
