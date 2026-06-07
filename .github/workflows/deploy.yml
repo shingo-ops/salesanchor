@@ -270,9 +270,21 @@ jobs:
               psql -U jarvis -d jarvis_db -c \
               "ALTER ROLE salesanchor_app PASSWORD '${SALESANCHOR_APP_PASSWORD}';" \
               || echo "salesanchor_app role not yet created -- will be created in migrations"
-            # [2] DATABASE_URL は触らない（Phase2 切替は別 PR で段階的に実施）
-            # NOTE: Phase2 切替時は DATABASE_URL を salesanchor_app@postgres:5432 に変更し
-            #       docker compose up -d --force-recreate backend で即時反映すること。
+            # [2] SA18_PHASE2_ENABLED=1 が .env に在れば DATABASE_URL を自動組み立て
+            # 目的: PO が SALESANCHOR_APP_PASSWORD の値を VPS で直接打つ必要をなくす。
+            # パスワードは GitHub Secret から inject するため .env / ログに平文で出ない。
+            # set -x は無効（GitHub Actions はデフォルト off）。URL 自体も echo しない。
+            # 冪等: フラグが無ければ何もしない（jarvis 接続のまま）。
+            if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
+              _pgdb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
+              _sa_url=$(python3 -c \
+                "import urllib.parse,sys;p,d=sys.argv[1],sys.argv[2];print('postgresql+asyncpg://salesanchor_app:{}@postgres:5432/{}'.format(urllib.parse.quote(p,safe=''),urllib.parse.quote(d,safe='')))" \
+                "${SALESANCHOR_APP_PASSWORD}" "${_pgdb}")
+              sed -i '/^DATABASE_URL=/d' .env
+              echo "DATABASE_URL=${_sa_url}" >> .env
+              echo "ℹ️  SA18_PHASE2_ENABLED=1 → DATABASE_URL を salesanchor_app@postgres:5432 に設定しました"
+              unset _sa_url  # URL(パスワード含)を環境変数から即削除
+            fi
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
             echo "ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL}" >> .env

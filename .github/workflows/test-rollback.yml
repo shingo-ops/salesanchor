@@ -6,20 +6,19 @@ name: Test Phase2 Rollback Simulation
 # このワークフローは手動 (workflow_dispatch) または SA-18 ブランチへの push でのみ実行。
 # 本番デプロイに影響を与えない（VPS に一切アクセスしない）。
 #
-# 検証内容（2シナリオ）:
-#   Scenario A: Phase2 成功路
-#     - salesanchor_app + app.tenant_id=1 → health 200 + data count > 0
-#     - SA18_PHASE2_ENABLED=1 + DATABASE_URL=salesanchor_app の整合確認
+# 検証内容（3シナリオ）:
+#   Scenario C: フラグ無し → no-op（DATABASE_URL 変化なし・パスワード未出力）
+#   Scenario A: フラグ ON → auto-URL 組み立て → salesanchor_app 接続
+#     - health 200 + data count > 0 + パスワードログ未出力
 #   Scenario B: Phase2 失敗路（偽 green 対策の核心）
 #     - BAD Phase2（503）→ ロールバック → jarvis 復帰
-#     - DATABASE_URL が jarvis に戻り SA18_PHASE2_ENABLED が削除されることを確認
 #     - "health 200" ではなく "data count > 0" で復旧を確認（偽 green 防止）
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - feature/morimoto/sa-18-phase2-safety-flags
+      - feature/morimoto/sa-18-phase2-auto-url
 
 jobs:
   phase2-rollback-simulation:
