@@ -1,0 +1,68 @@
+/**
+ * Card 金型スタイル（Task 1C）
+ *
+ * 既存の .card / .kpi-card は components.css に存在し、そのまま残す。
+ * このファイルは新規金型 .comp-card とそのバリアントのみを定義する。
+ *
+ * 採用値（Task 1C / PR に記録）:
+ *   角丸   : var(--comp-card-radius) = 8px（--radius-lg 相当、.card と一致）
+ *   余白   : var(--comp-card-padding) = 24px（新標準、ダッシュボード実値 16px より +8）
+ *   影     : var(--shadow-sm)（既存 .card と同じ最小影）
+ *   枠線   : なし（影のみで浮かし。interactive のみホバー時に border）
+ *
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ */
+
+/* ----------------------------------------------------------------
+   ベース
+   ---------------------------------------------------------------- */
+
+.comp-card {
+  background: var(--bg-surface);
+  border-radius: var(--comp-card-radius);
+  padding: var(--comp-card-padding);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+/* compact 密度（明示指定またはモバイル自動） */
+.comp-card--compact {
+  padding: var(--comp-card-padding-compact);
+}
+
+/* モバイル（≤767px）で default → compact 自動縮小 */
+@media (max-width: 767px) {
+  .comp-card {
+    padding: var(--comp-card-padding-compact);
+  }
+}
+
+/* ----------------------------------------------------------------
+   バリアント
+   ---------------------------------------------------------------- */
+
+/* container: 読み取り専用カード（デフォルト — 追加スタイルなし） */
+.comp-card--container {
+  /* base only */
+}
+
+/* interactive: クリック可能カード（hover / focus-visible 対応） */
+.comp-card--interactive {
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.comp-card--interactive:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.comp-card--interactive:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* metric: KPI カード（アクセントカラー上部ライン） */
+.comp-card--metric {
+  border-top: 3px solid var(--accent);
+}

@@ -1,0 +1,83 @@
+/**
+ * Button 金型 補助スタイル（Task 1C）
+ *
+ * 既存の btn-* クラスに上乗せする修飾子のみ定義。
+ * btn-primary / btn-secondary / btn-ghost / btn-danger 本体は components.css に存在。
+ * このファイルは「サイズ修飾子」「状態修飾子」「レイアウト修飾子」だけを担う。
+ *
+ * ADR-067: 全カラーは CSS 変数参照のみ（hex ハードコード禁止）
+ */
+
+/* ----------------------------------------------------------------
+   サイズ修飾子（padding / min-height のみ。色は variant クラスに委ねる）
+   ---------------------------------------------------------------- */
+
+/* sm: コンパクト（行内アクション・バッジ近傍） */
+.comp-btn--sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-xs);
+  min-height: var(--btn-min-height-sm, 28px);
+}
+
+/* lg: 画面上の主アクションCTA（モバイルでタップ領域確保） */
+.comp-btn--lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--font-md);
+  min-height: var(--btn-min-height-lg, 48px);
+}
+
+/* md はデフォルト。各 btn-* の padding がそのまま適用される */
+/* モバイルで 44px 以上を確保（WCAG 2.5.5 Target Size） */
+@media (max-width: 767px) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    min-height: var(--btn-min-height-mobile, 44px);
+  }
+}
+
+/* ----------------------------------------------------------------
+   レイアウト修飾子
+   ---------------------------------------------------------------- */
+
+.comp-btn--full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* アイコンのみ: 正方形でパディングを均等に */
+.comp-btn--icon-only {
+  padding: var(--space-2);
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ----------------------------------------------------------------
+   ローディング状態
+   ---------------------------------------------------------------- */
+
+.comp-btn--loading {
+  position: relative;
+  cursor: wait;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.comp-btn__spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radius-full);
+  animation: comp-btn-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes comp-btn-spin {
+  to { transform: rotate(360deg); }
+}
