@@ -946,6 +946,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_meta_source_unique
     ON {schema}.leads (source)
     WHERE source LIKE 'messenger:%' OR source LIKE 'instagram:%';
 
+-- ADR-119: lead_channels — 1 lead : N platforms（クロスプラットフォーム名寄せ）
+-- webhook が source 文字列比較ではなくこのテーブルを lookup 権威として使う
+CREATE TABLE IF NOT EXISTS {schema}.lead_channels (
+    id           SERIAL PRIMARY KEY,
+    lead_id      INTEGER NOT NULL REFERENCES {schema}.leads(id) ON DELETE CASCADE,
+    platform     VARCHAR(30)  NOT NULL,     -- 'messenger' / 'instagram' / 'discord'
+    external_id  VARCHAR(255) NOT NULL,     -- PSID / IGSID / Discord UID
+    display_name VARCHAR(255),              -- プラットフォーム側の表示名（任意）
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (platform, external_id)          -- 1 channel → 1 lead（テナントスコープ内）
+);
+CREATE INDEX IF NOT EXISTS idx_lead_channels_lead_id
+    ON {schema}.lead_channels (lead_id);
+-- NOTE: UNIQUE (platform, external_id) が B-tree インデックスを暗黙作成するため
+--       (platform, external_id) への追加インデックスは不要。
+
 -- Phase 1-D Sprint 1 / migration 040: Meta OAuth 接続情報（Page / IG Business Account）
 -- 同じ DDL は migrations/040_create_tenant_meta_config.sql にも置いてあり、
 -- 既存テナントへの後付けはそちらの SQL を使う。新規テナントはこの本ブロックで自動作成される。
