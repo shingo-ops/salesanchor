@@ -161,7 +161,8 @@ for _i in $(seq 1 20); do
 done
 
 # スキーマ + RLS + salesanchor_app ロール + テストデータ
-docker exec phase2-test-postgres-1 psql -U jarvis -d testdb -v ON_ERROR_STOP=1 << 'SQL'
+# -i が必須: docker exec はデフォルトで stdin を接続しない → psql がヒアドキュメントを受け取れない
+docker exec -i phase2-test-postgres-1 psql -U jarvis -d testdb -v ON_ERROR_STOP=1 << 'SQL'
 -- salesanchor_app: NOSUPERUSER NOBYPASSRLS（本番ロールと同じ属性）
 DO $$ BEGIN
   CREATE ROLE salesanchor_app WITH LOGIN PASSWORD 'apppass'
@@ -257,7 +258,8 @@ echo " rows for tenant_id=1"
 
 # salesanchor_app で直接確認（SET SESSION + tenant_id=1）
 echo "▶ salesanchor_app 直接 psql 確認:"
-docker exec phase2-test-postgres-1 psql -U salesanchor_app -d testdb -t \
+docker exec -e PGPASSWORD=apppass phase2-test-postgres-1 \
+  psql -U salesanchor_app -d testdb -t \
   -c "SET app.tenant_id = '1'; SELECT count(*) FROM glossary WHERE tenant_id = 1;" 2>&1 | tr -d ' \n'
 echo ""
 
