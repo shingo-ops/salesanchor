@@ -278,7 +278,7 @@ jobs:
             if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
               _pgdb=$(grep '^POSTGRES_DB=' .env | cut -d= -f2- | head -1 | tr -d '[:space:]')
               _sa_url=$(python3 -c \
-                "import urllib.parse,sys;p,d=sys.argv[1],sys.argv[2];print('postgresql+asyncpg://salesanchor_app:{}@postgres:5432/{}'.format(urllib.parse.quote(p,safe=''),d))" \
+                "import urllib.parse,sys;p,d=sys.argv[1],sys.argv[2];print('postgresql+asyncpg://salesanchor_app:{}@postgres:5432/{}'.format(urllib.parse.quote(p,safe=''),urllib.parse.quote(d,safe='')))" \
                 "${SALESANCHOR_APP_PASSWORD}" "${_pgdb}")
               sed -i '/^DATABASE_URL=/d' .env
               echo "DATABASE_URL=${_sa_url}" >> .env
