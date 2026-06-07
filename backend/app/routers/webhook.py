@@ -341,8 +341,9 @@ def _iter_inbound_messages(
         for change in entry.get("changes", []) or []:
             if not isinstance(change, dict):
                 continue
-            if change.get("field") not in (None, "messages"):
-                # IG の message 系以外（comments, mentions 等）は MVP では無視
+            # field が明示的に "messages" のもののみ処理。
+            # None や "messaging_policy_enforcement" 等のシステム通知は除外（ADR-119 PR-D）。
+            if change.get("field") != "messages":
                 continue
             value = change.get("value") or {}
             if not isinstance(value, dict):
@@ -353,16 +354,25 @@ def _iter_inbound_messages(
             for m in messages:
                 if not isinstance(m, dict):
                     continue
+                # is_echo 相当ガード（Format B）: 自分送信メッセージをスキップ
+                if m.get("is_echo"):
+                    continue
                 from_obj = m.get("from") or {}
                 sender_id = str(from_obj.get("id", "")) if isinstance(from_obj, dict) else ""
                 if not sender_id:
                     continue
+                # システム通知パターン: text/attachments が共に無く message_id もない場合はスキップ
+                msg_text = m.get("text", "") or ""
+                has_attach = bool(m.get("attachments"))
+                msg_id = m.get("id") or m.get("mid")
+                if not msg_text and not has_attach and not msg_id:
+                    continue
                 yield {
                     "sender_id": sender_id,
-                    "message_text": m.get("text", "") or "",
-                    "message_id": m.get("id") or m.get("mid"),
+                    "message_text": msg_text,
+                    "message_id": msg_id,
                     "timestamp": m.get("timestamp") or value.get("timestamp"),
-                    "has_attachments": bool(m.get("attachments")),
+                    "has_attachments": has_attach,
                 }
 
 
