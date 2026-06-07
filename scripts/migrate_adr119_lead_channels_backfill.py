@@ -66,6 +66,7 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
 
     # 1) source プレフィックスから移植
     for prefix, platform in PLATFORM_PREFIXES:
+        offset_val = len(prefix) + 1  # SUBSTRING は 1-indexed; int を SQL に直接埋め込む（asyncpg は :param を text 型推論するため）
         result = await conn.execute(
             text(
                 f"""
@@ -73,7 +74,7 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
                 SELECT
                     id,
                     :platform,
-                    SUBSTRING(source FROM :offset),
+                    SUBSTRING(source FROM {offset_val}),
                     customer_name
                 FROM {schema}.leads
                 WHERE source LIKE :pattern
@@ -82,7 +83,6 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
             ),
             {
                 "platform": platform,
-                "offset": len(prefix) + 1,  # SUBSTRING は 1-indexed
                 "pattern": f"{prefix}%",
             },
         )
