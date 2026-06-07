@@ -1,0 +1,48 @@
+name: SA-18 Phase2 本番リハーサル（verbatim）
+
+# SA-18 Phase2: deploy.yml の Bootstrap/Finalize を verbatim 抽出して実行するリハーサル。
+# test-rollback.yml（手書きミラー）とは別物 — drift を構造的に防ぐ。
+#
+# 検証内容:
+#   Phase A: SA18_PHASE2_ENABLED=1 → Bootstrap auto-URL → salesanchor_app → RLS → data 返却
+#   Phase B: 失敗 → Finalize inline rollback → jarvis 復帰 → data 返却
+#   Security: SALESANCHOR_APP_PASSWORD が出力に出ない（両フェーズ）
+#
+# 本番フラグ ON 前の 1 回限り実証テスト。VPS に一切アクセスしない。
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/morimoto/sa-18-phase2-auto-url
+
+jobs:
+  phase2-rehearsal:
+    name: SA-18 Phase2 本番リハーサル
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker is available
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Install PyYAML (required by extract_step_script)
+        run: pip install pyyaml --quiet
+
+      - name: Run Phase2 rehearsal (verbatim deploy.yml extraction)
+        env:
+          SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
+        run: |
+          bash scripts/rehearsal_phase2.sh
+
+      - name: Upload rehearsal logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-rehearsal-logs
+          path: /tmp/phase2-rehearsal-*/
+          retention-days: 7
