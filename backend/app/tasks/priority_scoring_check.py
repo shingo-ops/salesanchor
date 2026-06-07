@@ -25,6 +25,8 @@ from pathlib import Path
 
 from celery import shared_task
 
+from app.auth.dependencies import set_tenant_context_cursor
+
 logger = logging.getLogger(__name__)
 
 # check_priority_scoring_state.py は scripts/ に置かれているため、
@@ -95,9 +97,7 @@ def run_priority_scoring_check(self, tenant_id: int | None = None) -> dict:
             failed_checks: list[str] = []
 
             for tid in tenant_ids:
-                schema = f"tenant_{tid:03d}"
-                cur.execute(f"SET search_path = {schema}, public")
-                cur.execute(f"SET app.tenant_id = '{tid}'")
+                set_tenant_context_cursor(cur, tid)
 
                 results = module.run_all_checks(cur, tid)
                 failed = [r for r in results if not r.ok]

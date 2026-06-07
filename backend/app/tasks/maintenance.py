@@ -16,6 +16,8 @@ from celery import shared_task
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
+
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
@@ -118,7 +120,7 @@ def archive_audit_logs():
         try:
             with Session() as session:
                 schema_name = f"tenant_{tenant_id:03d}"
-                session.execute(text(f"SET search_path = {schema_name}, public"))
+                set_tenant_context_sync(session, tenant_id)
 
                 result = session.execute(text(f"""
                     DELETE FROM audit_logs

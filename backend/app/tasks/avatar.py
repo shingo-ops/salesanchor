@@ -57,6 +57,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.auth.dependencies import set_tenant_context_sync
 from app.cache import AVATAR_TTL_META
 from app.services import encryption, meta_graph
 from app.services.meta_graph import (
@@ -228,7 +229,7 @@ def fetch_avatar_for_lead(
 
     try:
         with Session_() as session:
-            session.execute(text(f"SET search_path = {schema_name}, public"))
+            set_tenant_context_sync(session, tenant_id)
             status = _fetch_and_cache_avatar(
                 r, session, schema_name, platform, sender_id, page_id
             )
@@ -297,7 +298,7 @@ def refresh_all_avatars() -> dict[str, Any]:
 
             try:
                 with Session_() as session:
-                    session.execute(text(f"SET search_path = {schema_name}, public"))
+                    set_tenant_context_sync(session, tenant_id)
 
                     # 過去30日にメッセージのあった (sender_id, platform, page_id) を取得
                     rows = session.execute(

@@ -29,6 +29,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     reset_tenant_context,
+    set_tenant_context,
 )
 from app.database import get_db
 from app.models import User
@@ -122,8 +123,7 @@ async def verify_registration_token(
     # テナントスキーマに切り替えてリード情報を取得
     tenant_id = token_info["tenant_id"]
     lead_id = token_info["lead_id"]
-    schema_name = f"tenant_{int(tenant_id):03d}"
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社名を取得（存在しない場合もある）
     company_name = None
@@ -175,9 +175,8 @@ async def register_customer(
     lead_id = token_info["lead_id"]
     token_id = token_info["id"]
 
-    # テナントスキーマに切り替え
-    schema_name = f"tenant_{int(tenant_id):03d}"
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    # テナントスキーマ・RLS コンテキストを設定
+    await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社 ID を取得
     result = await db.execute(
@@ -284,9 +283,8 @@ async def add_address(
     lead_id = token_info["lead_id"]
     token_id = token_info["id"]
 
-    # テナントスキーマに切り替え
-    schema_name = f"tenant_{int(tenant_id):03d}"
-    await db.execute(text(f"SET search_path = {schema_name}, public"))
+    # テナントスキーマ・RLS コンテキストを設定
+    await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社 ID を取得
     result = await db.execute(

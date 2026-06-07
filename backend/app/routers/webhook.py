@@ -46,7 +46,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import reset_tenant_context
+from app.auth.dependencies import reset_tenant_context, set_tenant_context
 from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
@@ -631,9 +631,7 @@ async def process_messenger_event(body: dict) -> None:
                 else:
                     page_id_for_message = await _resolve_page_id_for_ig(db, entry_id)
 
-                schema = f"tenant_{tenant_id:03d}"
-                await db.execute(text(f"SET search_path = {schema}, public"))
-                await db.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+                await set_tenant_context(db, tenant_id)
 
                 for m in messages:
                     msg_id, lead_id = await _persist_meta_message(
