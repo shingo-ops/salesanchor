@@ -39,9 +39,14 @@ class ContactStatus(str, Enum):
 # ========== 副テーブル ==========
 
 
-class ContactEmailInput(BaseModel):
+class _ContactEmailFields(BaseModel):
+    """担当者追加メールの共通フィールド（バリデーターなし）。"""
     email: str = Field(max_length=255)
     purpose: str | None = Field(default=None, max_length=50)
+
+
+class ContactEmailInput(_ContactEmailFields):
+    """担当者追加メールの書き込み用スキーマ。形式バリデーターを適用する。"""
 
     @field_validator("email")
     @classmethod
@@ -53,7 +58,8 @@ class ContactEmailInput(BaseModel):
         return result
 
 
-class ContactEmailResponse(ContactEmailInput):
+class ContactEmailResponse(_ContactEmailFields):
+    """担当者追加メールの読み取り用スキーマ。既存データの形式バリデーターを実行しない。"""
     id: int
     model_config = {"from_attributes": True}
 
