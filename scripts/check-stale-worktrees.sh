@@ -1,9 +1,13 @@
 #!/bin/bash
-# check-stale-worktrees.sh — 放置worktreeの検出・通知
+# check-stale-worktrees.sh — 長時間放置 IN_PROGRESS worktree の通知（ADR-114）
 #
-# 目的: ~/worktrees/salesanchor/ 配下の worktree を走査し、
-#       .worktree-id の created_at が 24 時間以上経過したものを
-#       「放置worktree」として検出・報告する。
+# 役割（ADR-114 §8 明確化）:
+#   「経過時間アラート」専用スクリプト。
+#   IN_PROGRESS のまま 24 時間以上経過した worktree を検出して通知する。
+#
+#   ⚠️  このスクリプトは「完了判定」に使わない。
+#       完了判定は active-work.md のステータス（DONE）と
+#       gh pr list の結果だけが行う（ADR-114 §1・§2）。
 #
 # 使用方法: bash scripts/check-stale-worktrees.sh
 #
@@ -15,7 +19,7 @@
 # 呼び出し元: 監督Cron（5分ごと）のみ実行すること
 #             フィーチャータブからは実行しない（干渉ルール）
 #
-# 参考: docs/adr/ KGI100%プラン Sprint 3
+# 参考: ADR-114 §8（役割明確化）/ docs/adr/ KGI100%プラン Sprint 3
 
 set -euo pipefail
 

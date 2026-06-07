@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-06 / ADR 総数: 107 件
+最終更新: 2026-06-06 / ADR 総数: 108 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -124,6 +124,7 @@
 | [ADR-111](./ADR-111-runner-label-isolation.md) | ADR-111: runner-label-isolation — Shingo-Mac-Temp 専用ラベルによる開発環境分離 | Accepted | — | — |
 | [ADR-112](./ADR-112-workflow-redesign-design-origin-flow.md) | ADR-112: ワークフロー再編 — 設計起点フロー v2 | Accepted | — | — |
 | [ADR-113](./ADR-113-two-mode-dev-flow.md) | ADR-113: 2モード開発フロー（terminal / handoff） | Accepted | — | — |
+| [ADR-114](./ADR-114-worktree-auto-cleanup.md) | ADR-114: worktree ライフサイクルの完全自動化 — 単一真実・イベント駆動・矛盾ゼロ | Proposed | — | — |
 | [ADR-115](./ADR-115-deploy-safety.md) | ADR-115: デプロイ安全策（自動ロールバック・環境差バグ対策） | 採用 | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 

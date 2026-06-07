@@ -49,28 +49,33 @@ git -C "${MAIN_REPO_ROOT}" branch -D "${BRANCH}" 2>/dev/null && \
   echo "✅ ブランチ削除完了: ${BRANCH}" || \
   echo "⚠️  ブランチ削除スキップ（既に存在しない可能性あり）"
 
-# ── active-work.md からエントリ削除 ─────────────────────────────────────────
+# ── active-work.md のエントリを DONE に更新（ADR-114: 行は消さず残す）────────
 ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md"
 if [ -f "${ACTIVE_WORK_FILE}" ]; then
   python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys, re
+import sys
 
 filepath, branch = sys.argv[1], sys.argv[2]
 
 with open(filepath, encoding="utf-8") as f:
     content = f.read()
 
-# ブランチ名を含む行を削除（テーブル行のみ対象）
 lines = content.splitlines(keepends=True)
-new_lines = [l for l in lines if branch not in l or not l.strip().startswith('|')]
-new_content = ''.join(new_lines)
+new_lines = []
+updated = False
+for line in lines:
+    if branch in line and line.strip().startswith('|') and 'IN_PROGRESS' in line:
+        line = line.replace('IN_PROGRESS', 'DONE', 1)
+        updated = True
+    new_lines.append(line)
 
-if new_content != content:
+new_content = ''.join(new_lines)
+if updated:
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(new_content)
-    print(f"✅ active-work.md からエントリを削除しました: {branch}")
+    print(f"✅ active-work.md → DONE に更新しました: {branch}")
 else:
-    print(f"ℹ️  active-work.md にエントリなし（スキップ）: {branch}")
+    print(f"ℹ️  active-work.md 更新不要（既に DONE または行なし）: {branch}")
 PYEOF
 fi
 

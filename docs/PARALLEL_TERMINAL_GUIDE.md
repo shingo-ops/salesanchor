@@ -95,12 +95,17 @@ bash scripts/new-worktree.sh feature/morimoto/<トピック名>
 bash scripts/new-worktree.sh feature/morimoto/<トピック名> --claude
 ```
 
-**作業完了後のクリーンアップ（必須）**
+**作業完了後のクリーンアップ（ADR-114）**
 
+- **行は DONE で残す・フォルダは消す**（active-work.md の行は削除しない）
+- PR が develop にマージされると、active-work.md の行は **自動で DONE に更新**される
+- フォルダ（worktree）の削除は `reaper-worktree.sh` が自動実行（`new-worktree.sh` 呼び出し時と毎日夜間）
+
+手動でフォルダを削除したい場合（緊急時のみ）:
 ```bash
 git worktree remove ~/worktrees/salesanchor/<ブランチ名>
 git branch -d feature/morimoto/<トピック名>
-# 定期的に: git worktree prune
+git worktree prune
 ```
 
 **注意: lockfile（package-lock.json）の Single-Writer Rule**
