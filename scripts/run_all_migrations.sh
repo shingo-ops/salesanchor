@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=117
+TOTAL=118
 
 run_py() {
   local script="$1"
@@ -297,6 +297,9 @@ run_sql migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql
 
 # API連携: テナント Google Drive OAuth 連携設定テーブル（カレンダー雛形ミラー）
 run_sql migrations/20260606_010000_add_google_drive_config.sql
+
+# ADR-109: status SSOT化 — 日本語ステータスを不変英字コードへ移行
+run_py  scripts/migrate_adr109_status_codes.py
 
 echo ""
 echo "============================================"

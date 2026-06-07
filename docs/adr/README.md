@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-06 / ADR 総数: 108 件
+最終更新: 2026-06-07 / ADR 総数: 108 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -118,7 +118,7 @@
 | [ADR-106](./ADR-106-sa-multitenant-policy.md) | ADR-106: マルチテナント＆「標準エンジン＋テナント別ポリシー」方針（ADR-SA-12） | Accepted | — | — |
 | [ADR-107](./ADR-107-sa-analytics-agent-a-customer-priority.md) | ADR-107 — 分析エージェント (A) 顧客優先度付け | Proposed | — | 2026-06-04 |
 | [ADR-108](./ADR-108-inbox-karte-panel-redesign.md) | ADR-108: 受信箱カルテの表示再編（商談／顧客／連絡先の再編・段階出し分け） | Proposed | — | — |
-| [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Proposed | — | — |
+| [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Accepted | — | — |
 | [ADR-110](./ADR-110-karte-reference-alignment.md) | ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正） | Proposed | — | — |
 | [ADR-110](./ADR-110-sa-translation-subsystem.md) | ADR-110: 会話ログ翻訳サブシステム | — | — | — |
 | [ADR-111](./ADR-111-runner-label-isolation.md) | ADR-111: runner-label-isolation — Shingo-Mac-Temp 専用ラベルによる開発環境分離 | Accepted | — | — |

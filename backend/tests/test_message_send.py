@@ -285,7 +285,7 @@ async def _insert_lead(
 ):
     await db_session.execute(text("""
         INSERT INTO leads (id, tenant_id, lead_code, customer_name, source, status)
-        VALUES (:id, :tenant_id, :code, :name, :source, '新規')
+        VALUES (:id, :tenant_id, :code, :name, :source, 'lead')
     """), {
         "id": lead_id, "tenant_id": tenant_id,
         "code": f"LD-{lead_id:05d}", "name": customer_name, "source": source,

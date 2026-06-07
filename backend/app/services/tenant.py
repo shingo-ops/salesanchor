@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     phone VARCHAR(50),
     source VARCHAR(50),
     type VARCHAR(50),
-    status VARCHAR(50) DEFAULT '新規',
+    status VARCHAR(50) DEFAULT 'lead',
     temperature VARCHAR(20),
     estimated_scale VARCHAR(20),
     customer_type VARCHAR(50),

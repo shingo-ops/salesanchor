@@ -66,15 +66,16 @@ interface Props {
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
 
 function getStageBadge(status: string): { labelKey: string; variant: string } {
-  /* eslint-disable local/no-japanese-literal -- DB status values */
-  if (status === "新規") return { labelKey: "inbox.stageLead", variant: "lead" };
-  if (status === "商談中") return { labelKey: "inbox.stageDeal", variant: "deal" };
-  if (status === "既存顧客") return { labelKey: "inbox.stageExisting", variant: "existing" };
-  if (status === "追客（短期）" || status === "追客（長期）") return { labelKey: "inbox.stageFollowUp", variant: "followup" };
-  if (status === "失注") return { labelKey: "inbox.stageLost", variant: "default" };
-  if (status === "対象外") return { labelKey: "inbox.stageExcluded", variant: "default" };
-  /* eslint-enable local/no-japanese-literal */
-  return { labelKey: "inbox.stageOther", variant: "default" };
+  switch (status) {
+    case "lead":              return { labelKey: "leads.statusCode.lead",              variant: "lead" };
+    case "negotiating":       return { labelKey: "leads.statusCode.negotiating",       variant: "deal" };
+    case "existing_customer": return { labelKey: "leads.statusCode.existing_customer", variant: "existing" };
+    case "follow_up_short":   return { labelKey: "leads.statusCode.follow_up_short",   variant: "followup" };
+    case "follow_up_long":    return { labelKey: "leads.statusCode.follow_up_long",    variant: "followup" };
+    case "lost":              return { labelKey: "leads.statusCode.lost",              variant: "default" };
+    case "out_of_scope":      return { labelKey: "leads.statusCode.out_of_scope",      variant: "default" };
+    default:                  return { labelKey: `leads.statusCode.${status}`,         variant: "default" };
+  }
 }
 
 function elapsedLabel(iso: string | null, t: TFn): string {
@@ -248,10 +249,8 @@ function ActionBar({
 
   let primaryLabel: string | null = null;
   let primaryOnClick: (() => void) | null = null;
-  // eslint-disable-next-line local/no-japanese-literal -- DB value
-  if (status === "新規") { primaryLabel = t("inbox.actionConvert"); primaryOnClick = onConvertLead; }
-  // eslint-disable-next-line local/no-japanese-literal -- DB value
-  else if (status === "既存顧客") { primaryLabel = t("inbox.actionCreateInvoice"); primaryOnClick = onCreateInvoice; }
+  if (status === "lead") { primaryLabel = t("inbox.actionConvert"); primaryOnClick = onConvertLead; }
+  else if (status === "existing_customer") { primaryLabel = t("inbox.actionCreateInvoice"); primaryOnClick = onCreateInvoice; }
 
   if (!primaryLabel) return null;
 

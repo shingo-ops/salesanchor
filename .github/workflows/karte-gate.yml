@@ -1,0 +1,90 @@
+name: Karte Visual Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# NOTE: paths filter omitted (ADR-067 deadlock lesson: #523 (2)).
+# When frontend is unchanged, detect-changes -> skipped -> aggregator reports success.
+# Same design as e2e.yml lint-run detect-changes pattern.
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+
+  karte-gate-run:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Get Playwright version
+        id: pw
+        run: |
+          PW_VERSION=$(node -p "require('@playwright/test/package.json').version")
+          echo "version=$PW_VERSION" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install system deps (chromium)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run Karte Visual Gate
+        env:
+          CI: 'true'
+          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
+          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
+          VITE_GCP_PROJECT_ID: e2e-fixture
+        run: npx playwright test karte-visual-gate.spec.ts --project=chromium
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karte-gate-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  karte-gate:
+    name: Karte Visual Gate (chromium)
+    needs: [detect-changes, karte-gate-run]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Report results
+        run: |
+          r="${{ needs.karte-gate-run.result }}"
+          echo "karte-gate-run: $r"
+          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
+            echo "OK"
+            exit 0
+          else
+            echo "FAIL"
+            exit 1
+          fi
