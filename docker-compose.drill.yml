@@ -1,0 +1,55 @@
+# docker-compose.drill.yml — ドリル環境（ローカルMac / 本番から完全隔離）
+#
+# 目的:
+#   scripts/deploy_rollback.sh の動作を本番と同じロジックで実証する。
+#   backend + postgres のみ（nginx / celery / redis / discord-gateway 不要）。
+#
+# 使用方法:
+#   bash scripts/run-drill.sh
+#
+# ポート（本番と衝突しないよう別ポートを使用）:
+#   postgres : 25432  ← 本番は expose なし（コンテナネットワーク内）
+#   backend  : 28000  ← 本番は 8000
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: drilluser
+      POSTGRES_PASSWORD: drillpass
+      POSTGRES_DB: drilldb
+    ports:
+      - "25432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drilluser -d drilldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # ドリル用: データは永続化しない（毎回クリーンスタート）
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    environment:
+      # "good" 状態: postgres に正常接続
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://drilluser:drillpass@postgres:5432/drilldb}
+      ENVIRONMENT: development
+      ALLOWED_ORIGINS: http://localhost
+      # Redis / Celery はドリルスコープ外（警告が出るが起動は継続）
+      REDIS_URL: ""
+      CELERY_BROKER_URL: ""
+      # Meta / Fernet / Google 等の必須チェックを無効化（ドリル範囲外）
+      ENFORCE_METADATA_FERNET_KEY: ""
+      ENFORCE_WEBHOOK_SECRETS: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "28000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
