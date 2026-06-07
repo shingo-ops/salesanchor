@@ -61,6 +61,8 @@
 
 /* ── Button 確認行 ── */
 .dp-row {
+  /* コンポーネントスコープ幅トークン（80px = 5rem — ラベル列固定幅） */
+  --dp-label-w: 80px;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -68,7 +70,7 @@
 }
 
 .dp-row-label {
-  width: 80px;
+  width: var(--dp-label-w);
   flex-shrink: 0;
   font-size: var(--font-xs);
   color: var(--text-muted);
