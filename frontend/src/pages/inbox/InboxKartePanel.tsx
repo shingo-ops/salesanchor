@@ -159,12 +159,12 @@ export function InboxKartePanel({
               )}
               <div className="karte-header-meta">
                 {stageBadge && (
-                  <span className={`karte-stage-badge karte-stage-badge--${stageBadge.variant}`}>
+                  <span className={`karte-stage-badge karte-stage-badge--${stageBadge.variant}`} data-testid="karte-stage-badge">
                     {t(stageBadge.labelKey)}
                   </span>
                 )}
                 {selectedConversation?.last_message_at && (
-                  <span className="karte-last-contact">
+                  <span className="karte-last-contact" data-testid="karte-last-contact">
                     {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
                   </span>
                 )}
@@ -183,10 +183,11 @@ export function InboxKartePanel({
           </div>
 
           {/* Tab bar — ADR-110: order is deal / company / contact */}
-          <div className="right-panel-tabs">
+          <div className="right-panel-tabs" data-testid="karte-tab-bar">
             {(["deal", "company", "contact"] as KarteTabKey[]).map((tab) => (
               <button key={tab} type="button"
                 className={`right-panel-tab${karteTab === tab ? " active" : ""}`}
+                data-testid={`karte-tab-${tab}`}
                 onClick={() => setKarteTab(tab)}>
                 {t(`inbox.karte${tab.charAt(0).toUpperCase()}${tab.slice(1)}`)}
               </button>
@@ -256,13 +257,14 @@ function ActionBar({
   if (!primaryLabel) return null;
 
   return (
-    <div className="karte-action-bar" ref={barRef}>
-      <button type="button" className="karte-action-primary" onClick={primaryOnClick!}>
+    <div className="karte-action-bar" ref={barRef} data-testid="karte-action-bar">
+      <button type="button" className="karte-action-primary" data-testid="karte-action-primary" onClick={primaryOnClick!}>
         {primaryLabel}
       </button>
       <button
         type="button"
         className="karte-action-overflow"
+        data-testid="karte-action-overflow"
         aria-label={t("inbox.moreActions")}
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((prev) => !prev)}
@@ -375,7 +377,7 @@ function KarteTabContent({
     return (
       <div className="right-panel-section">
         {/* 基本 */}
-        <div className="right-panel-group-heading">{t("inbox.sectionBasic")}</div>
+        <div className="right-panel-group-heading" data-testid="karte-section-basic-heading">{t("inbox.sectionBasic")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.nickname")}</span>
           <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
@@ -397,7 +399,7 @@ function KarteTabContent({
         </div>
 
         {/* 取引プロフィール */}
-        <div className="right-panel-group-heading">{t("inbox.sectionDealProfile")}</div>
+        <div className="right-panel-group-heading" data-testid="karte-section-deal-profile-heading">{t("inbox.sectionDealProfile")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.targetTitles")}</span>
           <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
@@ -411,14 +413,14 @@ function KarteTabContent({
         </div>
 
         {/* 実績サマリー (read-only) — ADR-110 */}
-        <div className="right-panel-group-heading karte-section-ro-heading">
-          <ACCOUNT_ICONS.security size={ICON.sm} aria-hidden="true" className="karte-lock-icon" />
+        <div className="right-panel-group-heading karte-section-ro-heading" data-testid="karte-section-ro-heading">
+          <span data-testid="karte-lock-icon"><ACCOUNT_ICONS.security size={ICON.sm} aria-hidden="true" className="karte-lock-icon" /></span>
           {t("inbox.sectionPerformance")}
         </div>
         <PerformanceSummary leadId={leadDetail.id} />
 
         {/* 引き継ぎ */}
-        <div className="right-panel-group-heading">{t("inbox.sectionHandover")}</div>
+        <div className="right-panel-group-heading" data-testid="karte-section-handover-heading">{t("inbox.sectionHandover")}</div>
         <div className="right-panel-memo-label">{t("inbox.csRelationMemo")}</div>
         <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
           onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
@@ -602,7 +604,7 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
 
   if (loading) {
     return (
-      <div className="karte-performance-section">
+      <div className="karte-performance-section" data-testid="karte-performance-section">
         <div className="right-panel-row">
           <span className="right-panel-value">...</span>
         </div>
@@ -622,23 +624,23 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
   })();
 
   return (
-    <div className="karte-performance-section">
+    <div className="karte-performance-section" data-testid="karte-performance-section">
       {/* 取引額累計 */}
-      <div className="karte-ro-row">
+      <div className="karte-ro-row" data-testid="karte-ro-row">
         <span className="right-panel-label">{t("inbox.performanceTotalRevenue")}</span>
         <span className="right-panel-value karte-ro-value">
           {totalRevenue != null ? `¥${totalRevenue.toLocaleString()}` : t("inbox.performanceNoHistory")}
         </span>
       </div>
       {/* 取引回数・最終取引日 */}
-      <div className="karte-ro-row">
+      <div className="karte-ro-row" data-testid="karte-ro-row">
         <span className="right-panel-label">{t("inbox.performanceOrderCount")}</span>
         <span className={`right-panel-value${!orderCount ? " karte-ro-muted" : " karte-ro-value"}`}>
           {lastOrderDisplay}
         </span>
       </div>
       {/* 会話数・最終会話 */}
-      <div className="karte-ro-row">
+      <div className="karte-ro-row" data-testid="karte-ro-row">
         <span className="right-panel-label">{t("inbox.performanceConversationCount")}</span>
         <span className={`right-panel-value${!messageCount ? " karte-ro-muted" : " karte-ro-value"}`}>
           {lastMsgDisplay}
