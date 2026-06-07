@@ -284,6 +284,19 @@ jobs:
               echo "DATABASE_URL=${_sa_url}" >> .env
               echo "ℹ️  SA18_PHASE2_ENABLED=1 → DATABASE_URL を salesanchor_app@postgres:5432 に設定しました"
               unset _sa_url  # URL(パスワード含)を環境変数から即削除
+              # deploy step では docker compose up -d 後に DATABASE_URL を書き換えた。
+              # 既に起動済みのコンテナは旧 jarvis URL を掴んでいるため、
+              # --force-recreate で再作成して salesanchor_app DATABASE_URL を反映する。
+              echo "ℹ️  backend/worker 系を --force-recreate して salesanchor_app DATABASE_URL を反映します..."
+              docker compose up -d --force-recreate backend celery-worker celery-beat discord-gateway
+              # 再作成後 backend が healthy になるまで最大 90s 待つ（smoke test の前提条件）
+              echo "ℹ️  backend の healthy 待ち (最大90s)..."
+              timeout 90 bash -c '
+                until docker inspect --format="{{.State.Health.Status}}" astro-webapp-backend-1 2>/dev/null | grep -q "healthy"; do
+                  sleep 5
+                  echo "  ...backend 起動待ち..."
+                done
+              ' || echo "⚠️  backend health wait timed out after 90s, proceeding..."
             fi
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
