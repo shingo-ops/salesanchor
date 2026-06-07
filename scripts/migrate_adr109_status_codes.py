@@ -117,6 +117,17 @@ async def main() -> None:
         async with engine.connect() as conn:
             for tid, tc in tenants:
                 schema = f"tenant_{tid:03d}"
+                col_check = await conn.execute(
+                    text("""
+                        SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = :schema AND table_name = 'leads'
+                        AND column_name = 'status'
+                    """),
+                    {"schema": schema},
+                )
+                if not col_check.scalar():
+                    logger.info("tenant %s: no status column, skipping verification", schema)
+                    continue
                 result = await conn.execute(
                     text(
                         f"SELECT COUNT(*) FROM {schema}.leads "
