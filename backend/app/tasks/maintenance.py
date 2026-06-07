@@ -119,7 +119,6 @@ def archive_audit_logs():
     for tenant_id in tenant_ids:
         try:
             with Session() as session:
-                schema_name = f"tenant_{tenant_id:03d}"
                 set_tenant_context_sync(session, tenant_id)
 
                 result = session.execute(text(f"""
