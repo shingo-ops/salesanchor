@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""ADR-109: status SSOT化 — 日本語ステータスを不変英字コードへ移行。
+"""ADR-109: status SSOT化 — 日本語・旧英語ステータスを不変英字コードへ移行。
 
 実施内容:
   全テナントスキーマの leads.status を1対1で変換する。
+
+  日本語 → 新コード:
     - '新規'        → 'lead'
     - '商談中'      → 'negotiating'
     - '既存顧客'    → 'existing_customer'
@@ -11,7 +13,12 @@
     - '失注'        → 'lost'
     - '対象外'      → 'out_of_scope'
 
-  また、public.leads テーブルの DEFAULT 値も 'lead' に変更する。
+  旧英語 → 新コード（ADR-109 以前の非標準値、tenant_006 で確認済み）:
+    - 'new'         → 'lead'             （新規リード）
+    - 'in_progress' → 'negotiating'      （商談進行中）
+    - 'converted'   → 'existing_customer'（成約済み既存顧客）
+
+  また、各テナントスキーマの leads テーブルの DEFAULT 値も 'lead' に変更する。
 
 冪等:
   WHERE status = '...' 条件付きの UPDATE なので何度実行しても安全。
@@ -37,7 +44,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# Mapping: old Japanese value -> new immutable code
+# Mapping: old value -> new immutable code
+# Japanese values (original migration targets)
 STATUS_MAP = [
     ("新規", "lead"),
     ("商談中", "negotiating"),
@@ -46,7 +54,22 @@ STATUS_MAP = [
     ("追客（長期）", "follow_up_long"),
     ("失注", "lost"),
     ("対象外", "out_of_scope"),
+    # Legacy English values (pre-ADR-109 non-standard codes, confirmed in tenant_006)
+    ("new", "lead"),
+    ("in_progress", "negotiating"),
+    ("converted", "existing_customer"),
 ]
+
+# The 7 valid ADR-109 codes — used for comprehensive post-migration verification
+VALID_STATUS_CODES = frozenset([
+    "lead",
+    "negotiating",
+    "existing_customer",
+    "follow_up_short",
+    "follow_up_long",
+    "lost",
+    "out_of_scope",
+])
 
 
 async def main() -> None:
@@ -133,7 +156,9 @@ async def main() -> None:
                 logger.error("tenant %s DEFAULT 変更失敗: %s", schema, e)
                 raise
 
-        # Verify: check for any remaining old values
+        # Verify: comprehensive check — any value outside the 7 valid ADR-109 codes must be 0
+        valid_codes_sql = ", ".join(f"'{c}'" for c in sorted(VALID_STATUS_CODES))
+        all_ok = True
         async with engine.connect() as conn:
             for tid, tc in tenants:
                 schema = f"tenant_{tid:03d}"
@@ -150,17 +175,24 @@ async def main() -> None:
                     continue
                 result = await conn.execute(
                     text(
-                        f"SELECT COUNT(*) FROM {schema}.leads "
-                        f"WHERE status IN ('新規', '商談中', '既存顧客', '追客（短期）', '追客（長期）', '失注', '対象外')"
+                        f"SELECT status, COUNT(*) AS cnt FROM {schema}.leads "
+                        f"WHERE status IS NOT NULL AND status NOT IN ({valid_codes_sql}) "
+                        f"GROUP BY status ORDER BY status"
                     )
                 )
-                remaining = result.scalar()
-                if remaining and remaining > 0:
-                    logger.warning(
-                        "WARNING: %s still has %d rows with old status values!", schema, remaining
-                    )
+                invalid_rows = result.fetchall()
+                if invalid_rows:
+                    all_ok = False
+                    for row in invalid_rows:
+                        logger.warning(
+                            "WARNING: %s still has %d rows with invalid status='%s'!",
+                            schema, row.cnt, row.status,
+                        )
                 else:
-                    logger.info("tenant %s: 旧値残存ゼロ (検証OK)", schema)
+                    logger.info("tenant %s: 全行が正規コード (検証OK)", schema)
+        if not all_ok:
+            logger.error("=== 検証失敗: 正規コード外の値が残存しています ===")
+            sys.exit(1)
 
         logger.info("=== ADR-109 Migration 完了 ===")
     finally:
