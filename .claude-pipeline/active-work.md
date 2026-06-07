@@ -67,6 +67,7 @@
 | hotfix/morimoto/fix-cross-tenant-fk-schema-collision | test_products_cross_tenant_fk テナント998スキーマ衝突修正 | 2026-06-06 | DONE | #1699 | |
 | hotfix/morimoto/fix-smoke-check6-failclose | smoke[6] fail-close ON_ERROR_STOP=1 修正（ロケール依存除去） | 2026-06-06 | DONE | #1700 | |
 | hotfix/morimoto/fix-smoke-check6-v2 | smoke[6] -c オプション修正（docker exec stdin非接続対応） | 2026-06-06 | IN_PROGRESS | | |
+| feature/morimoto/adr-116-deploy-rollback | デプロイ安全網（失敗理由保全・LAST_GOOD_SHA ロールバック・.env 復元） | 2026-06-07 | IN_PROGRESS | | |
 ---
 
 ## 記入例
