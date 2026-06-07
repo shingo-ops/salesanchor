@@ -260,10 +260,8 @@ function App() {
                   {import.meta.env.DEV && (
                     <Route path="/design-system" element={<DesignSystemPage />} />
                   )}
-                  {/* Task 1C: コンポーネント標準プレビュー（開発環境専用） */}
-                  {import.meta.env.DEV && (
-                    <Route path="/design-preview" element={<DesignPreviewPage />} />
-                  )}
+                  {/* Task 1C: コンポーネント標準プレビュー（ログイン後 URL 直打ちで確認可・ナビ未掲載） */}
+                  <Route path="/design-preview" element={<DesignPreviewPage />} />
 
                   {/* 管理センター: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
                   <Route path="/management-center" element={<ManagementCenterPage />}>
