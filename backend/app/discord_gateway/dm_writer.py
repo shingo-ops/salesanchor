@@ -61,6 +61,24 @@ async def _ensure_lead_channel(
     )
 
 
+async def _ensure_lead_channel(
+    db: AsyncSession,
+    schema: str,
+    lead_id: int,
+    discord_user_id: str,
+    display_name: str,
+) -> None:
+    """lead_channels に discord チャンネル行が無ければ補完する（冪等）。"""
+    await db.execute(
+        text(f"""
+            INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
+            VALUES (:lead_id, 'discord', :external_id, :name)
+            ON CONFLICT (platform, external_id) DO NOTHING
+        """),
+        {"lead_id": lead_id, "external_id": discord_user_id, "name": display_name},
+    )
+
+
 async def upsert_lead_and_message(
     db: AsyncSession,
     *,
