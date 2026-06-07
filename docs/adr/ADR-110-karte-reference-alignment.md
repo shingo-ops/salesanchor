@@ -1,6 +1,6 @@
 # ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正）
 
-**Status**: Proposed
+**Status**: Accepted
 **日付**: 2026-06-04
 **Corrects**: ADR-108（受信箱カルテ表示再編）
 **関連**: ADR-012 / ADR-025 / 別ADR「取引額の v_company_stats 一本化」
