@@ -87,14 +87,16 @@ def get_data_count():
         host=DB_HOST, user=DB_USER, password=DB_PASS, dbname=DB_NAME,
         application_name="salesanchor_backend"
     )
-    conn.autocommit = False
+    # autocommit=True: SET is session-level and persists for this connection lifetime.
+    # SET LOCAL requires being inside an explicit transaction (BEGIN), which psycopg2
+    # may not issue implicitly before the first statement in all versions.
+    conn.autocommit = True
     cur = conn.cursor()
     if SET_TENANT_CTX:
-        cur.execute("SET LOCAL app.tenant_id = %s", (TENANT_ID,))
-        cur.execute("SET LOCAL app.is_operator = ''")
+        cur.execute("SET app.tenant_id = %s", (TENANT_ID,))
+        cur.execute("SET app.is_operator TO ''")
     cur.execute("SELECT count(*) FROM glossary WHERE tenant_id = %s", (int(TENANT_ID),))
     count = cur.fetchone()[0]
-    conn.rollback()
     conn.close()
     return count
 
@@ -247,7 +249,19 @@ echo "${HEALTH_A}" | python3 -c "import sys,json;d=json.load(sys.stdin);exit(0 i
   && echo "✅ A-1 PASS: Phase2 health 200" \
   || { echo "❌ SCENARIO A FAIL: health not ok — ${HEALTH_A}"; exit 1; }
 
-DATA_A=$(curl -sf "http://localhost:${APP_PORT}/api/data" 2>/dev/null || echo '{"count":0}')
+# DB 内のデータを直接確認（デバッグ: HTTP テスト前にデータ存在を検証）
+echo "▶ DB 内データ確認 (jarvis/superuser):"
+docker exec phase2-test-postgres-1 psql -U jarvis -d testdb -t -c \
+  "SELECT count(*) FROM glossary WHERE tenant_id = 1;" | tr -d ' \n'
+echo " rows for tenant_id=1"
+
+# salesanchor_app で直接確認（SET SESSION + tenant_id=1）
+echo "▶ salesanchor_app 直接 psql 確認:"
+docker exec phase2-test-postgres-1 psql -U salesanchor_app -d testdb -t \
+  -c "SET app.tenant_id = '1'; SELECT count(*) FROM glossary WHERE tenant_id = 1;" 2>&1 | tr -d ' \n'
+echo ""
+
+DATA_A=$(curl -sf "http://localhost:${APP_PORT}/api/data" 2>/dev/null || echo '{"count":0,"error":"curl failed"}')
 echo "▶ Data: ${DATA_A}"
 COUNT_A=$(echo "${DATA_A}" | python3 -c "import sys,json;print(json.load(sys.stdin).get('count',0))")
 [ "${COUNT_A}" -gt 0 ] \
