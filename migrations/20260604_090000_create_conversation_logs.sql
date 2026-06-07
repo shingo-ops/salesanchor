@@ -87,7 +87,7 @@ BEGIN
         ) THEN
             EXECUTE format($q$
                 CREATE POLICY conversation_logs_tenant_isolation ON %I.conversation_logs
-                    USING (tenant_id = current_setting('app.current_tenant_id')::integer)
+                    USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
             $q$, schema_rec.nspname);
         END IF;
 

@@ -68,7 +68,7 @@ BEGIN
         ) THEN
             EXECUTE format(
                 'CREATE POLICY own_inventory_tenant_isolation ON %I.own_inventory
-                 USING (tenant_id = current_setting(''app.current_tenant_id'')::integer)',
+                 USING (tenant_id = current_setting(''app.tenant_id'', true)::INTEGER)',
                 schema_record.schema_name
             );
         END IF;

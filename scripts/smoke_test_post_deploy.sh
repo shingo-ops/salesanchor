@@ -124,6 +124,35 @@ if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
   [ "${JARVIS_APP_CONNS}" = "0" ] \
     && echo "[7b] PASS: no jarvis connections with salesanchor_backend app name" \
     || { echo "[7b] FAIL: ${JARVIS_APP_CONNS} jarvis connections found -> DATABASE_URL not switched"; exit 1; }
+
+  # [7c] salesanchor_app で実テナント（tenant_004: highlife-jpn）の companies が読めるか
+  # RLS ポリシーが正しく動作していれば count(*) が数値で返る（0 件でも OK）
+  CO_CNT=$(docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
+    psql -U salesanchor_app -d jarvis_db -t -v ON_ERROR_STOP=1 \
+    -c "SET app.tenant_id = '4'; SET app.is_operator = ''; SELECT count(*) FROM tenant_004.companies;" \
+    2>&1 | grep -v '^SET' | tr -d ' \n')
+  [[ "${CO_CNT}" =~ ^[0-9]+$ ]] \
+    && echo "[7c] PASS: companies readable (${CO_CNT} rows)" \
+    || { echo "[7c] FAIL: companies read error — ${CO_CNT}"; exit 1; }
+
+  # [7d] salesanchor_app で v_company_stats（集計ビュー）が読めるか
+  VCS_CNT=$(docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
+    psql -U salesanchor_app -d jarvis_db -t -v ON_ERROR_STOP=1 \
+    -c "SET app.tenant_id = '4'; SET app.is_operator = ''; SELECT count(*) FROM tenant_004.v_company_stats;" \
+    2>&1 | grep -v '^SET' | tr -d ' \n')
+  [[ "${VCS_CNT}" =~ ^[0-9]+$ ]] \
+    && echo "[7d] PASS: v_company_stats readable (${VCS_CNT} rows)" \
+    || { echo "[7d] FAIL: v_company_stats read error — ${VCS_CNT}"; exit 1; }
+
+  # [7e] salesanchor_app で conversation_logs が読めるか
+  CL_CNT=$(docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
+    psql -U salesanchor_app -d jarvis_db -t -v ON_ERROR_STOP=1 \
+    -c "SET app.tenant_id = '4'; SET app.is_operator = ''; SELECT count(*) FROM tenant_004.conversation_logs;" \
+    2>&1 | grep -v '^SET' | tr -d ' \n')
+  [[ "${CL_CNT}" =~ ^[0-9]+$ ]] \
+    && echo "[7e] PASS: conversation_logs readable (${CL_CNT} rows)" \
+    || { echo "[7e] FAIL: conversation_logs read error — ${CL_CNT}"; exit 1; }
+
 else
   echo "[7] INFO: SA18_PHASE2_ENABLED 未設定 — jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ"
 fi
