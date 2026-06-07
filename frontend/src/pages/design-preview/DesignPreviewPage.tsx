@@ -32,11 +32,11 @@ function SectionHeader({ title }: { title: string }) {
 
 // -- トークン値サマリ ----------------------------------------------------------
 const TOKEN_SUMMARY = [
-  { token: "--comp-btn-radius",           desc: "ボタン角丸",               expected: "6px (radius-md)" },
-  { token: "--comp-card-radius",          desc: "カード角丸",               expected: "8px (radius-lg)"  },
-  { token: "--comp-card-padding",         desc: "カード余白 (PC/tab)",      expected: "24px (space-6)"   },
-  { token: "--comp-card-padding-compact", desc: "カード余白 (mobile/compact)", expected: "16px (space-4)" },
-  { token: "--comp-card-gap",             desc: "カード間ギャップ",          expected: "24px (space-6)"   },
+  { token: "--comp-btn-radius",           desc: "button radius",        expected: "6px (radius-md)" },
+  { token: "--comp-card-radius",          desc: "card radius",          expected: "8px (radius-lg)"  },
+  { token: "--comp-card-padding",         desc: "card padding (PC/tab)", expected: "24px (space-6)"  },
+  { token: "--comp-card-padding-compact", desc: "card padding (mobile)", expected: "16px (space-4)"  },
+  { token: "--comp-card-gap",             desc: "card gap",             expected: "24px (space-6)"   },
 ];
 
 export default function DesignPreviewPage() {
@@ -64,16 +64,16 @@ export default function DesignPreviewPage() {
         style={bandWidth != null ? { maxWidth: bandWidth, margin: "0 auto" } : undefined}
       >
 
-        {/* [1] トークン確認 */}
+        {/* [1] Token values */}
         <section className="dp-section">
-          <SectionHeader title="1. 標準トークン確認" />
+          <SectionHeader title="1. Token values" />
           <table className="dp-token-table">
             <thead>
               <tr>
                 <th>Token</th>
-                <th>説明</th>
-                <th>期待値</th>
-                <th>実測値</th>
+                <th>Description</th>
+                <th>Expected</th>
+                <th>Actual</th>
               </tr>
             </thead>
             <tbody>
