@@ -2,8 +2,8 @@
 
 - 状態: 起案（Planner: Web Claude）
 - 日付: 2026-06-05
-- **本ADRは ADR-110（`docs/adr/ADR-110-translation-subsystem`）を改訂・上書きする**
-- 関連: ADR-110（翻訳サブシステム 初版）, ADR-025（外部連携 3点セット）, ADR-072（テナントコンテキスト）, ADR-107（顧客優先度: RBAC パターン参照）
+- **本ADRは ADR-117（`docs/adr/ADR-117-sa-translation-subsystem`）を改訂・上書きする**
+- 関連: ADR-117（翻訳サブシステム 初版）, ADR-025（外部連携 3点セット）, ADR-072（テナントコンテキスト）, ADR-107（顧客優先度: RBAC パターン参照）
 
 ---
 

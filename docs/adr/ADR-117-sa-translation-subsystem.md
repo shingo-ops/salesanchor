@@ -1,4 +1,6 @@
-# ADR-110: 会話ログ翻訳サブシステム
+# ADR-117: 会話ログ翻訳サブシステム
+
+**Status**: Accepted
 
 | 項目 | 内容 |
 |------|------|
@@ -85,8 +87,8 @@ ADR-088 で受信→日本語翻訳の基盤（`message_translator.py` + `messag
 ```sql
 -- {schema}.message_translations（migration 094 既存 + 本 ADR で拡張）
 id, message_id, target_language, translated_text, engine,
-confidence REAL,          -- ← ADR-110 追加: 0.0–1.0
-original_language VARCHAR(10),  -- ← ADR-110 追加: 判定言語 'en', 'zh', etc.
+confidence REAL,          -- ← ADR-117 追加: 0.0–1.0
+original_language VARCHAR(10),  -- ← ADR-117 追加: 判定言語 'en', 'zh', etc.
 created_at
 ```
 
