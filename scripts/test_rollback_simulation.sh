@@ -242,7 +242,8 @@ for _i in $(seq 1 15); do
 done
 
 HEALTH_A=$(curl -sf "http://localhost:${APP_PORT}/api/health" 2>/dev/null || echo "FAIL")
-echo "${HEALTH_A}" | grep -q '"status":"ok"' \
+echo "▶ Health response: ${HEALTH_A}"
+echo "${HEALTH_A}" | python3 -c "import sys,json;d=json.load(sys.stdin);exit(0 if d.get('status')=='ok' else 1)" \
   && echo "✅ A-1 PASS: Phase2 health 200" \
   || { echo "❌ SCENARIO A FAIL: health not ok — ${HEALTH_A}"; exit 1; }
 
