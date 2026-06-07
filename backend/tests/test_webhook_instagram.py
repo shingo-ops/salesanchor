@@ -58,7 +58,7 @@ _LEADS_DDL = """
         phone VARCHAR(50),
         source VARCHAR(100),
         type VARCHAR(50),
-        status VARCHAR(50) DEFAULT '新規',
+        status VARCHAR(50) DEFAULT 'lead',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         next_action VARCHAR(500),
@@ -804,7 +804,7 @@ async def test_persist_meta_message_reuses_existing_lead(db_session, webhook_env
     # 既存 lead を投入
     await db_session.execute(text("""
         INSERT INTO leads (id, tenant_id, lead_code, customer_name, source, status)
-        VALUES (42, 999, 'LD-00042', 'Existing', 'messenger:PSID-EX', '新規')
+        VALUES (42, 999, 'LD-00042', 'Existing', 'messenger:PSID-EX', 'lead')
     """))
     await db_session.commit()
 
@@ -1212,7 +1212,7 @@ async def test_existing_lead_does_not_trigger_graph_api(
     # 既存の lead を入れておく
     await db_session.execute(text("""
         INSERT INTO leads (id, tenant_id, customer_name, source, type, status, lead_code)
-        VALUES (5001, 999, '既存さん', 'messenger:PSID-EXISTING', 'Inbound', '新規', 'LD-05001')
+        VALUES (5001, 999, '既存さん', 'messenger:PSID-EXISTING', 'Inbound', 'lead', 'LD-05001')
     """))
     await db_session.commit()
 

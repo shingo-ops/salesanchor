@@ -27,6 +27,10 @@ regexes = [
   "Fernet\\.generate_key\\(\\)",
   # スクリプト内のサンプルARN・リソースID
   "AWS_ACCOUNT_ID",
+  # E2Eテスト用ダミーFirebase APIキー（実値でない）
+  "AIzaSyE2E-dummy",
+  "e2e-fixture\\.firebaseapp\\.com",
+  "e2e-fixture",
 ]
 
 # =============================================================

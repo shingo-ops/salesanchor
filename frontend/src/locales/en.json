@@ -327,11 +327,7 @@
     "convert": "Convert",
     "status_new": "New",
     "status_negotiating": "In Progress",
-    "status_contact": "In Contact",
-    "status_proposal": "Proposal",
-    "status_won": "Won",
     "status_lost": "Lost",
-    "status_hold": "On hold",
     "temp_hot": "Hot",
     "temp_warm": "Warm",
     "temp_cold": "Cold",
@@ -407,7 +403,16 @@
     "status_follow_up_short": "Follow-up (Short)",
     "status_follow_up_long": "Follow-up (Long)",
     "status_out_of_scope": "Out of Scope",
-    "subtitle": "Manage leads and convert them into deals."
+    "subtitle": "Manage leads and convert them into deals.",
+    "statusCode": {
+      "lead": "Lead",
+      "negotiating": "In Progress",
+      "existing_customer": "Existing Customer",
+      "follow_up_short": "Follow-up (Short)",
+      "follow_up_long": "Follow-up (Long)",
+      "lost": "Lost",
+      "out_of_scope": "Out of Scope"
+    }
   },
   "customers": {
     "subtitle": "Manage detailed customer information.",
@@ -643,13 +648,6 @@
     "sectionDealProfile": "Trade Profile",
     "sectionHandover": "Handover",
     "sectionAnalysis": "Analysis",
-    "stageLead": "Lead",
-    "stageDeal": "In Progress",
-    "stageExisting": "Existing Customer",
-    "stageFollowUp": "Follow-up",
-    "stageLost": "Lost",
-    "stageExcluded": "Excluded",
-    "stageOther": "Other",
     "lastContactPrefix": "Last contact",
     "elapsedJustNow": "Just now",
     "elapsedMinutesAgo": "{{count}}m ago",

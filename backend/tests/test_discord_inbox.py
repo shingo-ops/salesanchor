@@ -230,7 +230,7 @@ async def _insert_discord_lead(
             (id, tenant_id, lead_code, customer_name, source, type, status,
              discord_user_id, discord_dm_channel_id)
         VALUES
-            (:id, :tenant_id, :code, 'Discord Customer', :source, 'prospect', '新規',
+            (:id, :tenant_id, :code, 'Discord Customer', :source, 'prospect', 'lead',
              :discord_user_id, :discord_dm_channel_id)
     """), {
         "id": lead_id,

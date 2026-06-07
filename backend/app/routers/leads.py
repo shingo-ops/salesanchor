@@ -479,7 +479,7 @@ async def convert_lead(
     current_user: User = Depends(get_current_user),
 ):
     """
-    リードを商談化する。新しいdealを作成し、leadを'商談中'ステータスに更新＋リンクする。
+    リードを商談化する。新しいdealを作成し、leadを'negotiating'ステータスに更新＋リンクする。
 
     同時実行対策:
       - deal作成後、`UPDATE leads ... WHERE converted_deal_id IS NULL` で
@@ -550,7 +550,7 @@ async def convert_lead(
     updated = await db.execute(
         text(f"""
             UPDATE {leads_t}
-            SET status = '商談中', converted_deal_id = :deal_id, updated_at = NOW()
+            SET status = 'negotiating', converted_deal_id = :deal_id, updated_at = NOW()
             WHERE id = :id AND converted_deal_id IS NULL
             RETURNING {_LEAD_COLUMNS}
         """),
@@ -569,7 +569,7 @@ async def convert_lead(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="convert", table_name="leads", record_id=lead_id,
         old_data=dict(lead_row),
-        new_data={"converted_deal_id": new_deal_id, "status": "商談中"},
+        new_data={"converted_deal_id": new_deal_id, "status": "negotiating"},
     )
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,

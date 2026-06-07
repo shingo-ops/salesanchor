@@ -1,6 +1,6 @@
 # ADR-109: status の SSOT化（不変コード＋i18nラベル）
 
-**Status**: Proposed
+**Status**: Accepted
 **日付**: 2026-06-04
 **配置先**: `docs/adr/`
 **関連**: ADR-108（受信箱カルテ表示再編）/ ADR-012（What/How 分離）/ ADR-025 / デザイントークン・SSOT方針

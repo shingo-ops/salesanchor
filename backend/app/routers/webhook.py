@@ -503,7 +503,7 @@ async def _persist_meta_message(
                 "customer_name": customer_name,
                 "source": source_key,
                 "type": "Inbound",
-                "status": "新規",
+                "status": "lead",
             },
         )
         new_lead_id = ins.scalar_one_or_none()

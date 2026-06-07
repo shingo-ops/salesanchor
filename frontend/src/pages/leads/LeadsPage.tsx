@@ -17,6 +17,7 @@ import PriorityScoreBadge, { type CustomerScoreData } from "../../components/Pri
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
+import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -65,14 +66,12 @@ type FormState = {
   notes: string;
 };
 
-/* eslint-disable local/no-japanese-literal -- DB 定義のリードステータス初期値 */
 const emptyForm: FormState = {
   customer_name: "", company_name: "", email: "", phone: "",
-  source: "", type: "", status: "新規", temperature: "",
+  source: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
   monthly_forecast: "", notes: "",
 };
-/* eslint-enable local/no-japanese-literal */
 
 /* ------------------------------------------------------------------ */
 /* Main LeadsPage                                                       */
@@ -96,30 +95,10 @@ export default function LeadsPage() {
   const [convertContactId, setConvertContactId] = useState<number | null>(null);
   const [convertSelectorError, setConvertSelectorError] = useState("");
 
-  const LEAD_STATUSES = [
-    t("leads.status_new"),
-    t("leads.status_contact"),
-    t("leads.status_proposal"),
-    t("leads.status_won"),
-    t("leads.status_lost"),
-    t("leads.status_hold"),
-  ];
-
-  // backend が返す日本語の lead.status 値を i18n key にマッピング (UI 表示専用、API 送信値はそのまま)
-  /* eslint-disable local/no-japanese-literal -- DB 定義のリードステータス値（backend と一致・変更不可） */
-  const LEAD_STATUS_I18N_KEY: Record<string, string> = {
-    "新規": "leads.status_new",
-    "コンタクト中": "leads.status_contact",
-    "提案中": "leads.status_proposal",
-    "案件化": "leads.status_won",
-    "失注": "leads.status_lost",
-    "保留": "leads.status_hold",
-  };
-  /* eslint-enable local/no-japanese-literal */
-  const translateLeadStatus = (status: string) => {
-    const key = LEAD_STATUS_I18N_KEY[status];
-    return key ? t(key) : status;
-  };
+  // ADR-109: status codes with i18n labels
+  const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
+  const translateLeadStatus = (status: string) =>
+    t(`leads.statusCode.${status}`, { defaultValue: status });
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -268,7 +247,7 @@ export default function LeadsPage() {
       <div className="filter-bar">
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">{t("leads.allStatuses")}</option>
-          {LEAD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
         </select>
       </div>
 
@@ -303,7 +282,7 @@ export default function LeadsPage() {
               </div>
               <div className="form-group"><label>{t("leads.status")}</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  {LEAD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
                 </select>
               </div>
               <div className="form-group"><label>{t("leads.temperature")}</label>
@@ -421,8 +400,7 @@ export default function LeadsPage() {
                 </td>
                 <td className="actions">
                   {hasPermission("leads.update") && <button className="btn-sm" onClick={() => handleEdit(l)}>{t("common.edit")}</button>}
-                  {/* eslint-disable-next-line local/no-japanese-literal -- DB 定義のリードステータス比較値 */}
-                  {hasPermission("leads.convert") && l.status !== "案件化" && (
+                  {hasPermission("leads.convert") && !l.converted_deal_id && (
                     <button className="btn-sm btn-primary" onClick={() => setConvertTarget(l)}>{t("leads.convert")}</button>
                   )}
                   {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(l)}>{t("common.delete")}</button>}
