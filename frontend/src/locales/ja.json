@@ -144,6 +144,7 @@
     "managementCenter": "管理センター",
     "saasAdmin": "SaaS管理者",
     "designSystem": "デザインシステム",
+    "designPreview": "デザインプレビュー",
     "accountSettings": "アカウント設定",
     "sales": "売上管理",
     "commissions": "報酬管理"
@@ -2341,5 +2342,8 @@
       "termType_jargon": "専門用語",
       "termType_general": "一般"
     }
+  },
+  "designPreview": {
+    "subtitle": "コンポーネント標準の目視確認（開発環境専用）"
   }
 }

@@ -71,6 +71,8 @@ import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
 import DesignSystemPage from "./pages/design-system/DesignSystemPage";
+// Task 1C: コンポーネント標準プレビュー（開発環境専用）
+import DesignPreviewPage from "./pages/design-preview/DesignPreviewPage";
 // ADR-SA-03: 顧客登録トークン基盤（公開・認証不要）
 import RegisterPage from "./pages/register/RegisterPage";
 import RegisterAddressPage from "./pages/register/RegisterAddressPage";
@@ -258,6 +260,8 @@ function App() {
                   {import.meta.env.DEV && (
                     <Route path="/design-system" element={<DesignSystemPage />} />
                   )}
+                  {/* Task 1C: コンポーネント標準プレビュー（ログイン後 URL 直打ちで確認可・ナビ未掲載） */}
+                  <Route path="/design-preview" element={<DesignPreviewPage />} />
 
                   {/* 管理センター: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
                   <Route path="/management-center" element={<ManagementCenterPage />}>
