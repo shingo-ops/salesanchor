@@ -108,10 +108,18 @@ async def main() -> None:
                 logger.error("tenant %s 失敗: %s", schema, e)
                 raise
 
-        # ALTER DEFAULT on leads table (applies to all tenant schemas via inheritance or direct)
-        async with engine.begin() as conn:
-            await conn.execute(text("ALTER TABLE IF EXISTS leads ALTER COLUMN status SET DEFAULT 'lead'"))
-            logger.info("ALTER TABLE leads DEFAULT -> 'lead' 完了")
+        # ALTER DEFAULT on each tenant schema's leads table
+        for tid, tc in tenants:
+            schema = f"tenant_{tid:03d}"
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(
+                        text(f"ALTER TABLE IF EXISTS {schema}.leads ALTER COLUMN status SET DEFAULT 'lead'")
+                    )
+                    logger.info("ALTER TABLE %s.leads DEFAULT -> 'lead' 完了", schema)
+            except Exception as e:
+                logger.error("tenant %s DEFAULT 変更失敗: %s", schema, e)
+                raise
 
         # Verify: check for any remaining old values
         async with engine.connect() as conn:
