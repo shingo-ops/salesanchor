@@ -506,10 +506,12 @@ async def test_dm_writer_creates_new_lead():
     mock_session = AsyncMock()
     mock_session.execute.side_effect = [
         _mock_result(None),     # (1) SET search_path
-        _mock_result(None),     # (2) SELECT lead → 未登録
-        _mock_result((1,)),     # (3) INSERT lead RETURNING id=1
-        _mock_result(None),     # (4) UPDATE discord_dm_channel_id
-        _mock_result((10,)),    # (5) INSERT meta_messages RETURNING id=10
+        _mock_result(None),     # (2) SET app.tenant_id
+        _mock_result(None),     # (3) SET app.is_operator
+        _mock_result(None),     # (4) SELECT lead → 未登録
+        _mock_result((1,)),     # (5) INSERT lead RETURNING id=1
+        _mock_result(None),     # (6) UPDATE discord_dm_channel_id
+        _mock_result((10,)),    # (7) INSERT meta_messages RETURNING id=10
     ]
 
     await upsert_lead_and_message(
@@ -523,8 +525,8 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 5回の execute + 1回の commit
-    assert mock_session.execute.call_count == 5
+    # 7回の execute + 1回の commit
+    assert mock_session.execute.call_count == 7
     assert mock_session.commit.call_count == 1
 
 
@@ -547,8 +549,10 @@ async def test_dm_writer_idempotent_on_duplicate_message_id():
     mock_session = AsyncMock()
     mock_session.execute.side_effect = [
         _mock_result(None),                    # (1) SET search_path
-        _mock_result((5, "DM-CH-789")),        # (2) SELECT lead → 既存 (id=5, ch_id あり)
-        _mock_result(None),                    # (3) INSERT meta_messages → ON CONFLICT (None)
+        _mock_result(None),                    # (2) SET app.tenant_id
+        _mock_result(None),                    # (3) SET app.is_operator
+        _mock_result((5, "DM-CH-789")),        # (4) SELECT lead → 既存 (id=5, ch_id あり)
+        _mock_result(None),                    # (5) INSERT meta_messages → ON CONFLICT (None)
     ]
 
     await upsert_lead_and_message(
@@ -562,6 +566,6 @@ async def test_dm_writer_idempotent_on_duplicate_message_id():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 3回の execute（UPDATE なし）+ 1回の commit
-    assert mock_session.execute.call_count == 3
+    # 5回の execute（UPDATE なし）+ 1回の commit
+    assert mock_session.execute.call_count == 5
     assert mock_session.commit.call_count == 1

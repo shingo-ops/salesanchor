@@ -324,8 +324,12 @@ class TestArchiveAuditLogsTask:
         mock_session.execute.side_effect = [
             mock_tenants_result,    # SELECT tenants
             MagicMock(),            # SET search_path tenant_001
+            MagicMock(),            # SET app.tenant_id tenant_001
+            MagicMock(),            # SET app.is_operator tenant_001
             mock_delete_result,     # DELETE tenant_001
             MagicMock(),            # SET search_path tenant_002
+            MagicMock(),            # SET app.tenant_id tenant_002
+            MagicMock(),            # SET app.is_operator tenant_002
             mock_delete_result,     # DELETE tenant_002
         ]
 
