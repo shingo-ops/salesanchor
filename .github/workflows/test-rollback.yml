@@ -1,25 +1,29 @@
-name: Test Auto-Rollback Simulation
+name: Test Phase2 Rollback Simulation
 
-# ADR-115: 自動ロールバックの実地検証ワークフロー
-# ubuntu-latest runner は Docker を持つ → 実際のコンテナでロールバック経路を確認。
+# SA-18 Phase2: ロールバック安全機構の実地検証ワークフロー
+# ubuntu-latest runner は Docker を持つ → 実際のコンテナで両シナリオを確認。
 #
-# このワークフローは手動 (workflow_dispatch) でのみ実行。
+# このワークフローは手動 (workflow_dispatch) または SA-18 ブランチへの push でのみ実行。
 # 本番デプロイに影響を与えない（VPS に一切アクセスしない）。
 #
-# 検証内容:
-#   1. GOOD コミット（health 200）と BAD コミット（health 503）を作成
-#   2. BAD を「デプロイ」（コンテナ起動）
-#   3. ヘルスチェック失敗を検出
-#   4. 自動ロールバック（git reset --hard PREV_SHA → docker compose build → up）
-#   5. health 200 に復帰することを確認
-#   6. Discord 通知は dry-run（実際には送信しない）
+# 検証内容（2シナリオ）:
+#   Scenario A: Phase2 成功路
+#     - salesanchor_app + app.tenant_id=1 → health 200 + data count > 0
+#     - SA18_PHASE2_ENABLED=1 + DATABASE_URL=salesanchor_app の整合確認
+#   Scenario B: Phase2 失敗路（偽 green 対策の核心）
+#     - BAD Phase2（503）→ ロールバック → jarvis 復帰
+#     - DATABASE_URL が jarvis に戻り SA18_PHASE2_ENABLED が削除されることを確認
+#     - "health 200" ではなく "data count > 0" で復旧を確認（偽 green 防止）
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/morimoto/sa-18-phase2-safety-flags
 
 jobs:
-  rollback-simulation:
-    name: Auto-Rollback Simulation Test
+  phase2-rollback-simulation:
+    name: Phase2 Rollback Simulation Test
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +35,7 @@ jobs:
           docker --version
           docker compose version
 
-      - name: Run rollback simulation
+      - name: Run Phase2 rollback simulation
         run: |
           bash scripts/test_rollback_simulation.sh
 
@@ -39,6 +43,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: rollback-test-logs
-          path: /tmp/rollback-test-*/
+          name: phase2-rollback-test-logs
+          path: /tmp/phase2-test-*/
           retention-days: 3
