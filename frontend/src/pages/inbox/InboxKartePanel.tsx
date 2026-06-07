@@ -183,9 +183,9 @@ export function InboxKartePanel({
             {cardSaveStatus === "error" && <span className="error">{cardSaveError}</span>}
           </div>
 
-          {/* Tab bar — ADR-110: order is deal / company / contact */}
+          {/* Tab bar — INTENTIONALLY BROKEN FOR RED PROOF: wrong order deal / contact / company */}
           <div className="right-panel-tabs" data-testid="karte-tab-bar">
-            {(["deal", "company", "contact"] as KarteTabKey[]).map((tab) => (
+            {(["deal", "contact", "company"] as KarteTabKey[]).map((tab) => (
               <button key={tab} type="button"
                 className={`right-panel-tab${karteTab === tab ? " active" : ""}`}
                 data-testid={`karte-tab-${tab}`}
