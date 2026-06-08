@@ -375,6 +375,46 @@
   /* 入力コントロール サイズ（高さ） */
   --comp-input-height-sm:      28px;                   /* small バリアント最小高 */
   --comp-input-height-mobile:  44px;                   /* WCAG 2.5.5 タッチターゲット最小高 */
+
+  /* ================================================================
+     標準コンポーネントトークン（Task 3C — 2026-06-08 追加）
+     Badge: ステータス・ラベルバッジ
+     ================================================================ */
+
+  /* 塗りつぶし系背景での文字色（solid appearance 共通） */
+  --on-solid:              #ffffff;
+
+  /* Badge 形状 */
+  --comp-badge-radius:     var(--radius-full);         /* 丸ピル型 */
+
+  /* Badge サイズ（min-height） */
+  --comp-badge-height-sm:  20px;                       /* small */
+  --comp-badge-height-md:  24px;                       /* medium */
+
+  /* Badge ドットインジケーター */
+  --comp-badge-dot-size:   var(--space-6px);           /* 6px */
+
+  /* ================================================================
+     標準コンポーネントトークン（Task 4C — 2026-06-08 追加）
+     DataTable: 汎用データテーブル
+     ================================================================ */
+
+  /* DataTable 行高さ（density バリアント） */
+  --comp-table-row-h-compact:  32px;   /* compact — 高密度リスト */
+  --comp-table-row-h-default:  44px;   /* default — WCAG 2.5.5 タッチターゲット準拠 */
+  --comp-table-row-h-relaxed:  56px;   /* relaxed — 余裕のある読み取り */
+
+  /* DataTable セル横余白 */
+  --comp-table-cell-px:    var(--space-4);   /* 16px */
+
+  /* DataTable チェックボックス列幅 */
+  --comp-table-check-col-w: var(--col-width-checkbox);   /* 40px */
+
+  /* DataTable 角丸 */
+  --comp-table-radius:     var(--radius-lg);   /* 8px — Card と同一 */
+
+  /* DataTable 最小幅（横スクロール開始点） */
+  --comp-table-min-width:  480px;
 }
 
 /* ============================================================
