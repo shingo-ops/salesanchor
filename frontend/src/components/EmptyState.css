@@ -1,0 +1,75 @@
+/**
+ * EmptyState 金型スタイル（Task 8C）
+ *
+ * 名前空間: .comp-empty-* （既存 .empty / .db-empty と衝突しない）
+ * ADR-067: 全カラー・サイズは CSS 変数参照のみ（hex / px ハードコード禁止）
+ */
+
+/* ----------------------------------------------------------------
+   コンテナ
+   ---------------------------------------------------------------- */
+
+.comp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-12) var(--space-6);   /* 48px 24px */
+}
+
+.comp-empty--compact {
+  padding: var(--space-6) var(--space-4);    /* 24px 16px */
+  gap: var(--space-2);
+}
+
+/* ----------------------------------------------------------------
+   アイコン
+   ---------------------------------------------------------------- */
+
+.comp-empty__icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------
+   見出し
+   ---------------------------------------------------------------- */
+
+.comp-empty__title {
+  margin: 0;
+  font-size: var(--font-md);                 /* 16px */
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  line-height: var(--line-height-tight);
+}
+
+.comp-empty--compact .comp-empty__title {
+  font-size: var(--font-sm);                 /* 13.6px */
+}
+
+/* ----------------------------------------------------------------
+   説明文
+   ---------------------------------------------------------------- */
+
+.comp-empty__desc {
+  margin: 0;
+  font-size: var(--font-sm);                 /* 13.6px */
+  color: var(--text-muted);
+  line-height: var(--line-height-base);
+  max-width: 32em;
+}
+
+.comp-empty--compact .comp-empty__desc {
+  font-size: var(--font-xs);                 /* 12px */
+}
+
+/* ----------------------------------------------------------------
+   アクションボタン
+   ---------------------------------------------------------------- */
+
+.comp-empty__action {
+  margin-top: var(--space-1);
+}
