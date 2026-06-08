@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -53,7 +53,8 @@ class TokenVerifyResponse(BaseModel):
 
 class AddressInput(BaseModel):
     """住所入力（billing / delivery 共通）。"""
-    address_type: str = Field(..., description="billing or delivery")
+    # DRIFT-C: 値制約を Literal で明示（DBの CHECK 制約に当てて 500 にしない）
+    address_type: Literal["billing", "delivery"] = Field(..., description="billing or delivery")
     branch_name: Optional[str] = Field(None, max_length=100)
     name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=255)
@@ -65,7 +66,8 @@ class AddressInput(BaseModel):
     city: Optional[str] = Field(None, max_length=100)
     state: Optional[str] = Field(None, max_length=100)
     zip: Optional[str] = Field(None, max_length=20)
-    country_code: Optional[str] = Field(None, max_length=5)
+    # DRIFT-E: DB は CHAR(2)。3文字以上でDB例外になるため max_length=2 に制約
+    country_code: Optional[str] = Field(None, max_length=2)
     is_default: bool = False
 
     @field_validator("email")
@@ -77,6 +79,17 @@ class AddressInput(BaseModel):
     @classmethod
     def validate_tel(cls, v: Optional[str]) -> Optional[str]:
         return validate_phone(v)
+
+    @field_validator("country_code")
+    @classmethod
+    def validate_country_code(cls, v: Optional[str]) -> Optional[str]:
+        """ISO 3166-1 alpha-2: 2文字英大文字に正規化。3文字以上は 422。"""
+        if v is None:
+            return None
+        upper = v.strip().upper()
+        if len(upper) != 2 or not upper.isalpha():
+            raise ValueError("country_code は2文字のアルファベット（例: JP, US）で指定してください")
+        return upper
 
 
 class RegisterRequest(BaseModel):

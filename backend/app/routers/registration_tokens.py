@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -227,21 +228,33 @@ async def register_customer(
 
     # 担当者情報を contacts に登録（入力がある場合）
     if data.contact_name or data.contact_email or data.contact_telephone:
-        await db.execute(
+        contact_code = f"CT-PEND-{uuid.uuid4().hex[:8]}"
+        r = await db.execute(
             text("""
                 INSERT INTO contacts (
-                    company_id, name, email, telephone,
-                    is_primary_contact
+                    tenant_id, company_id, contact_code,
+                    display_name, primary_email, primary_phone,
+                    is_primary_contact, status
                 ) VALUES (
-                    :cid, :name, :email, :telephone, FALSE
+                    :tenant_id, :cid, :contact_code,
+                    :display_name, :primary_email, :primary_phone,
+                    FALSE, 'active'
                 )
+                RETURNING id
             """),
             {
+                "tenant_id": tenant_id,
                 "cid": company_id,
-                "name": data.contact_name or "",
-                "email": data.contact_email,
-                "telephone": data.contact_telephone,
+                "contact_code": contact_code,
+                "display_name": data.contact_name or "",
+                "primary_email": data.contact_email,
+                "primary_phone": data.contact_telephone,
             },
+        )
+        new_id = r.scalar_one()
+        await db.execute(
+            text("UPDATE contacts SET contact_code = :code WHERE id = :id"),
+            {"code": f"CT-{new_id:05d}", "id": new_id},
         )
 
     # トークンを使用済みにマーク

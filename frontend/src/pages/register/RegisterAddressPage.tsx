@@ -279,7 +279,8 @@ export default function RegisterAddressPage() {
                   type="text"
                   className="input"
                   value={address.country_code}
-                  onChange={(e) => updateField("country_code", e.target.value)}
+                  maxLength={2}
+                  onChange={(e) => updateField("country_code", e.target.value.toUpperCase())}
                 />
               </label>
             </div>

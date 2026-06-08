@@ -45,6 +45,14 @@ const COLOR_TOKENS = [
   { name: "--warning-bg-subtle",  label: "Warning subtle background" },
   { name: "--success",            label: "Success base" },
   { name: "--success-bg-subtle",  label: "Success subtle background" },
+  // Badge semantic solid tokens (Task 3C)
+  { name: "--neutral-bg",   label: "Neutral background" },
+  { name: "--neutral-text", label: "Neutral text" },
+  { name: "--neutral",      label: "Neutral base" },
+  { name: "--info",         label: "Info base" },
+  { name: "--warning",      label: "Warning base" },
+  { name: "--comp-badge-success-solid", label: "Badge success solid" },
+  { name: "--comp-badge-danger-solid",  label: "Badge danger solid" },
   // Inbox semantic tokens
   { name: "--inbox-separator",         label: "Inbox separator" },
   { name: "--inbox-hover",             label: "Inbox item hover" },
