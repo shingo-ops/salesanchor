@@ -211,7 +211,8 @@
 
 /* モバイル幅デモ用コンテナ（375px クリップ） */
 .dp-mobile-demo {
-  max-width: 375px;
+  --dp-mobile-demo-w: 375px;  /* iPhone SE 相当の最小幅 */
+  max-width: var(--dp-mobile-demo-w);
   overflow: hidden;
   width: 100%;
 }
