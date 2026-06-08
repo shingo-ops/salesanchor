@@ -17,6 +17,7 @@ import { TabsSection }      from "./TabsSection";
 import { SubMenuSection }   from "./SubMenuSection";
 import { ModalSection }      from "./ModalSection";
 import { EmptyStateSection } from "./EmptyStateSection";
+import { StatusSection }     from "./StatusSection";
 
 export interface SectionEntry {
   /** URL クエリパラメータ ?room=<key> に使用 */
@@ -39,4 +40,5 @@ export const SECTION_REGISTRY: SectionEntry[] = [
   { key: "submenu",  label: "サブメニュー", group: "ナビ",  component: SubMenuSection  },
   { key: "modal",      label: "モーダル",   group: "表示", component: ModalSection      },
   { key: "emptystate", label: "空状態",     group: "表示", component: EmptyStateSection },
+  { key: "status",     label: "ステータス", group: "表示", component: StatusSection     },
 ];
