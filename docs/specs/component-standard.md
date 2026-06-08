@@ -37,40 +37,12 @@
 
 ### バリアント → 既存 CSS クラスのマッピング
 
-| variant | 既存クラス | 用途 |
-|---|---|---|
-| `primary` | `btn-primary` | その画面で最も押してほしいアクション |
-| `secondary` | `btn-secondary` | 次に重要なアクション（白背景 + 枠線） |
-| `ghost` | `btn-ghost` | 軽い操作・背景と同化させたい場合 |
-| `danger` | `btn-danger` | 削除など取り消せない操作 |
-| `outline` | `btn-outline` | 色・画像背景の上に重ねるボタン（透過背景 + 枠線） |
-
-#### アイコンボタン（iconOnly）サイズ仕様（Task 7C）
-
-実物基準:
-- `.send-attach-btn`（28px箱）→ `ICON.md` = 16px のアイコン
-- `.inbox-thread-action-btn`（36px箱）→ `ICON.base` = 20px のアイコン
-- `.icon-btn`（36px箱・ページヘッダー）→ `ICON.md` = 16px のアイコン（軽量ヘッダー用途）
-
-| size | 幅×高さ | アイコン推奨サイズ | 用途 |
-|---|---|---|---|
-| `sm` | 28×28px (`--size-icon-btn-sm`) | `ICON.md` = 16px | 送信エリア内・インラインボタン |
-| `md` | 36×36px (`--size-icon-btn`) | `ICON.base` = 20px | スレッドヘッダー・ツールバー |
-| `lg` | 44×44px (`--size-icon-btn-lg`) | `ICON.lg` = 24px | モバイルタッチターゲット必須箇所 |
-
-- `padding: 0` / `width`・`height` 固定（`aspect-ratio` で制御しない）
-- `aria-label` 必須（ラベルなし操作のアクセシビリティ確保）
-- 色・背景・hover は `variant` に委ねる（ghost が最多用途）
-- **IconButton コンポーネントは作らない**: `<Button variant="ghost" size="md" iconOnly>` で十分
-
-#### `secondary` vs `outline` 使い分け
-
-| | `secondary` | `outline` |
-|---|---|---|
-| 背景 | `var(--bg-surface)`（白） | `transparent` |
-| 用途 | 白背景画面での第2アクション | バナー・カード・画像背景など色のある面の上 |
-| 白背景での見た目 | 枠線あり白背景ボタン | secondaryとほぼ同じ（意図的） |
-| 色背景での見た目 | 浮いて見える（白が目立つ） | 背景が透過して自然に馴染む |
+| variant | 既存クラス |
+|---|---|
+| `primary` | `btn-primary` |
+| `secondary` | `btn-secondary` |
+| `ghost` | `btn-ghost` |
+| `danger` | `btn-danger` |
 
 ### サイズ修飾子（`Button.css` 追加クラス）
 
@@ -80,7 +52,7 @@
 | `md` | (なし・各variant既定値) | 8px 20px | — |
 | `lg` | `comp-btn--lg` | 12px 24px | 48px |
 
-- モバイル（≤767px）: primary / secondary / ghost / danger / outline すべてに `min-height: 44px` を自動付与
+- モバイル（≤767px）: primary / secondary / ghost / danger すべてに `min-height: 44px` を自動付与
 
 ### オプション
 
@@ -265,304 +237,49 @@ npm run dev
 
 ---
 
-## Tabs（Task 5C）
+## §9 DataTable（Task 4C）
 
-**確定日**: 2026-06-08
+汎用データテーブル。ソート・行選択・density・空状態を制御型（controlled）で持つ。
 
-### 既存3系統との対応
-
-| 既存実装 | CSS クラス | 置き換え先 |
-|---------|-----------|-----------|
-| 受信箱タブバー | `.inbox-full-tab-bar` / `.inbox-full-tab` | `<Tabs variant="pill" size="md">` |
-| KartePanel タブ | `.right-panel-tabs` / `.right-panel-tab` | `<Tabs variant="underline" size="sm">` |
-| DesignSystem タブ | `.tab-bar` / `.tab-item` | `<Tabs variant="pill" size="md">` |
-
-### 採用トークン
-
-| トークン | 値 | 用途 |
-|---------|---|------|
-| `--comp-tab-h-sm` | 28px | sm タブ高さ |
-| `--comp-tab-h-md` | `var(--height-tab-item)` = 36px | md タブ高さ |
-| `--comp-tab-px-sm` | `var(--space-3)` = 12px | sm 横パディング |
-| `--comp-tab-px-md` | `var(--space-4)` = 16px | md 横パディング |
-| `--comp-tab-underline-w` | 2px | アクティブ下線幅 |
-| `--comp-tab-pill-radius` | `var(--radius-md)` = 6px | ピルタブ角丸 |
-
-既存色トークン（新規追加なし）:
-- アクティブ文字/下線: `--accent`
-- 非アクティブ文字: `--text-secondary`
-- アクティブ文字 (pill): `--text-primary`
-- pill アクティブ背景: `--link-active-bg`
-- pill ホバー背景: `--bg-subtle`
-- コンテナ下線 (underline): `--border`
-
-### Props
-
-| prop | 型 | 既定値 | 説明 |
-|---|---|---|---|
-| `items` | `TabItem<K>[]` | — | タブ定義。`key` / `label` 必須、`count` / `icon` / `disabled` 任意 |
-| `activeKey` | `K` | — | 現在アクティブなタブの key（items の key に型で限定） |
-| `onChange` | `(key: K) => void` | — | タブ切り替え時のコールバック |
-| `variant` | `'underline' \| 'pill'` | `'underline'` | underline = 下線型 / pill = ピル背景型 |
-| `size` | `'sm' \| 'md'` | `'md'` | sm = 28px / md = 36px |
-| `className` | string | — | 外部クラス追加用 |
-
-### 設計方針
-
-- `activeKey` の型 `K` は `items[].key` の型から推論されるため、規格外の key を渡すと TypeScript エラーになる。
-- 件数バッジは既存 `Badge` コンポーネントを再利用（`variant="neutral" appearance="soft" size="sm"`）。
-- モバイルでタブがはみ出す場合は横スクロール（スクロールバー非表示）。
-- 実画面への移行は Task 5E で行う（現在は金型のみ・既存実装は変更しない）。
-
-### Task 5E への引き継ぎ事項
-
-1. 実画面への展開: 受信箱・KartePanel・DesignSystem の3系統を `<Tabs>` に順次置き換え
-2. 移行順序: KartePanel（`.right-panel-tab` 3タブ）→ DesignSystem（`.tab-bar`）→ 受信箱（`.inbox-full-tab-bar` 6タブ）
-3. 共存期: `comp-tabs` と既存クラスが並存。Task 5E 完了後に既存クラスを非推奨化
-
----
-
-## SubMenu（Task 6C）
-
-縦型サイドナビゲーション。`hub-subnav` 系を将来統合する標準金型。
-
-### 既存3系統との対応
-
-| 既存実装 | 場所 | 置き換え先 |
-|---------|------|-----------|
-| ManagementCenterPage subnav | `.hub-subnav` grouped | `<SubMenu variant="grouped">` |
-| CustomerHubPage subnav | `.hub-subnav` grouped | `<SubMenu variant="grouped">` |
-| OrdersPage status filter | `.hub-subnav` flat | `<SubMenu variant="flat">` |
-
-### 採用トークン
-
-| トークン | 値 | 用途 |
-|---------|---|------|
-| `--comp-subnav-w` | `var(--mc-subnav-width)` = 200px | サブメニュー幅 |
-| `--comp-subnav-item-h` | `var(--height-tab-item)` = 36px | アイテム最小高 |
-| `--comp-subnav-px` | `var(--space-4)` = 16px | アイテム横パディング |
-| `--comp-subnav-group-title-fs` | `var(--font-xs)` = 12px | グループ見出しフォントサイズ |
-
-既存色トークン（新規追加なし）:
-- アクティブ背景: `--sidebar-item-active-bg`
-- アクティブ文字: `--accent`
-- ホバー背景: `--bg-hover`
-- グループ区切り: `--border`
-- グループ見出し: `--text-muted`
-
-### Props
-
-| prop | 型 | 既定値 | 説明 |
-|---|---|---|---|
-| `variant` | `'grouped' \| 'flat'` | `'grouped'` | grouped = グループ見出し付き / flat = フラット |
-| `groups` | `SubMenuGroup<K>[]` | — | グループ定義。両バリアントで共通（flat はグループ title 無視） |
-| `activeKey` | `K` | — | アクティブ項目の key（groups[].items[].key に型で限定） |
-| `onChange` | `(key: K) => void` | — | 項目クリック時のコールバック |
-| `className` | string | — | 外部クラス追加用 |
-
-#### SubMenuGroup
-
-| prop | 型 | 説明 |
-|---|---|---|
-| `title` | `string?` | グループ見出し（grouped のみ表示） |
-| `items` | `SubMenuItem<K>[]` | 項目配列 |
-
-#### SubMenuItem
-
-| prop | 型 | 説明 |
-|---|---|---|
-| `key` | `K` | 一意識別子 |
-| `label` | `string` | 表示ラベル |
-| `icon` | `ReactNode?` | 先頭アイコン（任意） |
-| `badge` | `number?` | 件数バッジ（任意） |
-| `disabled` | `boolean?` | 無効化フラグ |
-
-### 設計方針
-
-- `activeKey` の型 `K` は `groups[].items[].key` の型から推論されるため、規格外の key を渡すと TypeScript エラーになる。
-- 右側のみ border-radius（`0 var(--radius-md) var(--radius-md) 0`）+ `margin-right` でインセットタブ効果。コンテナは左パディングなしで配置すること。
-- アクティブ×ホバー時はアクティブ背景を維持（ホバー背景で上書きしない）。
-- 実画面への移行は Task 6E で行う（現在は金型のみ・既存 hub-subnav は変更しない）。
-
-### DesignPreviewPage との連携
-
-`DesignPreviewPage` が SubMenu 金型をドッグフーディングしている。`sections/registry.ts` に `SectionEntry`（key / label / group / component）を追加するだけでサイドメニュー項目とルームが自動で増える。
-
-### Task 6E への引き継ぎ事項
-
-1. 実画面への展開: ManagementCenterPage・CustomerHubPage・OrdersPage の hub-subnav を `<SubMenu>` に順次置き換え
-2. 移行順序: OrdersPage（flat）→ CustomerHubPage（grouped）→ ManagementCenterPage（grouped）
-3. 共存期: `comp-subnav` と `.hub-subnav` が並存。Task 6E 完了後に `.hub-subnav` を非推奨化
-
----
-
-## Modal 金型仕様（Task 7C 追加）
-
-**確定日**: 2026-06-08
-
-### 既存モーダルとの対応
-
-| 既存実装 | 場所 | 状態 |
-|---------|------|------|
-| `ConfirmModal` | `components/ConfirmModal.tsx` | 変更なし（既存のまま） |
-| `ProfileModal` | `components/ProfileModal.tsx` | 変更なし |
-| `InboxSettingsModal` | `pages/inbox/` | 変更なし |
-| その他 | 各ページ内 modal | 変更なし |
-
-新 `Modal` 金型は **ゼロ置き換え**。既存実装には一切触れない。
-
-### 採用トークン
+### トークン（非色: tokens.css のみ）
 
 | トークン | 値 | 説明 |
-|---------|---|------|
-| `--modal-max-w-sm` | 420px | sm 最大幅（確認・アラート） |
-| `--modal-max-w-md` | 600px | md 最大幅（標準フォーム） |
-| `--modal-max-w-lg` | 800px | lg 最大幅（詳細・テーブル） |
-| `--z-backdrop` | 298 | 背景暗幕レイヤー |
-| `--z-modal` | 400 | ダイアログレイヤー |
-| `--shadow-modal` | (既存) | ダイアログ影 |
-| `--radius-lg` | 8px | ダイアログ角丸 |
-| `--overlay-bg` | rgba(0,0,0,0.5) | 背景暗幕色 |
-
-### Props
-
-| prop | 型 | 既定値 | 説明 |
-|---|---|---|---|
-| `open` | boolean | — | 表示 / 非表示 |
-| `onClose` | `() => void` | — | 閉じる時のコールバック（Esc / ×ボタン / 背景クリック） |
-| `title` | string | — | ダイアログタイトル（`aria-labelledby` で参照） |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | 最大幅の選択 |
-| `dismissOnOverlay` | boolean | `true` | 背景クリックで閉じる |
-| `children` | ReactNode | — | 本体コンテンツ（スクロール可） |
-| `footer` | ReactNode | — | フッタアクション（省略可） |
-
-### アクセシビリティ
-
-- `role="dialog"` + `aria-modal="true"` + `aria-labelledby={titleId}`
-- Esc キーで閉じる（`document` の `keydown` リスナー）
-- フォーカストラップ: Tab / Shift+Tab がダイアログ内の focusable 要素を循環
-- 閉じたら `open` が `true` になる直前の `activeElement` へフォーカス復帰
-- 開いた直後はダイアログ内の最初の focusable 要素へ自動フォーカス
-- ×ボタンは `<Button variant="ghost" size="md" iconOnly aria-label={t("common.close")}>`
-- `ReactDOM.createPortal` で `document.body` にマウント（z-index 衝突を防止）
-
-### モバイル対応
-
-- ≤640px: `align-items: flex-end` + `width: 100%` のボトムシート形式
-- `border-bottom-left-radius: 0 / border-bottom-right-radius: 0`
-- `max-height: 90vh`
-
-### CSS 名前空間
-
-`.comp-modal-*`（既存 `.modal-*` / `.modal-overlay` とは完全に独立）
-
-### 設計方針
-
-- 本体スクロール: `overflow-y: auto` は `.comp-modal-body` のみ。ヘッダ・フッタは `flex-shrink: 0` で固定。
-- ×ボタンは `Button` 金型を再利用（`variant="ghost" size="md" iconOnly`）。
-- フッタは `footer` prop に `<Button>` を並べるだけ。右寄せは CSS 側で制御。
-- 閉じるラベルは `t("common.close")`（ADR-027 準拠）。
-
-### Task 7E への引き継ぎ事項
-
-1. 実画面への展開: `ConfirmModal` 等を新 `Modal` 金型ベースに順次移行
-2. アニメーション: フェードイン / スライドアップは Task 7E で検討（金型には含めない）
-3. ドラッグ移動・リサイズ: 必要になった時点で拡張
-
----
-
-## EmptyState 金型仕様（Task 8C 追加）
-
-**確定日**: 2026-06-08
-
-### 既存空状態との対応
-
-| 既存実装 | 場所 | 状態 |
-|---------|------|------|
-| `.empty`（テーブル行） | `DataTable.css` / 各ページインライン | 変更なし |
-| `.db-empty` | `DashboardPage.css` | 変更なし |
-| `.right-panel-empty` | `InboxPage.css` | 変更なし |
-| `emptyState` prop（テキスト渡し） | `DataTable.tsx` | 変更なし |
-
-新 `EmptyState` 金型は **ゼロ置き換え**。既存実装には一切触れない。
-
-### アイコン line / solid 使い分けルール（Task 8C+確定）
-
-| 種別 | 使用場面 | 例 |
-|------|---------|---|
-| **line（outline）** | **既定**。空状態・ナビ・ラベル・説明的な文脈 | `inboxEmptyOutline`、`NAV_ICONS.*` |
-| **solid（塗り）** | 選択中・アクティブ・強調用途のみ | `PAGE_ICONS.inboxEmpty`（InboxMessageThread アクティブ表示） |
-
-- 空状態のアイコンは必ず **outline** を使う（`PAGE_ICONS.inboxEmptyOutline` 等）。
-- `PAGE_ICONS.inboxEmpty`（solid）は `InboxMessageThread` の "スレッド未選択" アクティブ表示専用。他では使わない。
-- 同一グリフの solid / outline 両方が必要な場合は `icons.tsx` に `XxxOutline` を追加して区別する。
-
-### 採用トークン
-
-| トークン | 値 | 説明 |
-|---------|---|------|
-| `--icon-xl` | 48px | default サイズ推奨アイコン径（ICON.xl） |
-| `--icon-lg` | 24px | compact サイズ推奨アイコン径（ICON.lg） |
-| `--space-12` | 48px | default 縦パディング |
-| `--space-6` | 24px | compact 縦パディング |
-| `--font-md` | 16px | default 見出しフォントサイズ |
-| `--font-sm` | 13.6px | compact 見出し / default 説明文 |
-| `--font-xs` | 12px | compact 説明文 |
-| `--font-weight-medium` | 500 | 見出しウェイト |
-| `--text-secondary` | — | 見出し文字色 |
-| `--text-muted` | — | アイコン・説明文字色 |
-
-新規追加トークンなし。すべて既存トークンを参照。
-
-### Props
-
-| prop | 型 | 既定値 | 説明 |
-|---|---|---|---|
-| `title` | string | — | 見出し（**必須**） |
-| `icon` | ReactNode | — | アイコン要素（任意）。default → `ICON.xl`(48px) / compact → `ICON.lg`(24px) 推奨 |
-| `description` | string | — | 説明文（任意） |
-| `action` | ReactNode | — | アクション（任意）— `<Button>` を渡す |
-| `size` | `'default' \| 'compact'` | `'default'` | default = 全画面 / compact = テーブル・カード内 |
-| `className` | string | — | 追加クラス |
-
-### サイズ比較
-
-| | default | compact |
 |---|---|---|
-| padding | 48px 24px | 24px 16px |
-| 推奨アイコン径 | `ICON.xl` = 48px | `ICON.lg` = 24px |
-| 見出し | `font-md` (16px) + medium | `font-sm` (13.6px) + medium |
-| 説明文 | `font-sm` (13.6px) | `font-xs` (12px) |
-| 用途 | ページ全体・リスト | テーブル内・カード内 |
+| `--comp-table-row-h-compact` | `32px` | compact 行高さ |
+| `--comp-table-row-h-default` | `44px` | default 行高さ（WCAG 2.5.5 タッチ最小 44px） |
+| `--comp-table-row-h-relaxed` | `56px` | relaxed 行高さ |
+| `--comp-table-cell-px` | `var(--space-4)` = 16px | セル横余白 |
+| `--comp-table-check-col-w` | `var(--col-width-checkbox)` = 40px | チェックボックス列幅 |
+| `--comp-table-radius` | `var(--radius-lg)` = 8px | 外周角丸 |
+| `--comp-table-min-width` | `480px` | 横スクロール開始幅 |
 
-### DataTable との連携
+色は既存トークン委譲（`--bg-subtle` / `--bg-hover` / `--info-bg` / `--border` 等）。新規カラートークン追加なし。
 
-`DataTable` の `emptyState` prop（`ReactNode`）に `<EmptyState size="compact">` を渡す:
+### Props
 
-```tsx
-<DataTable
-  columns={columns}
-  data={[]}
-  emptyState={
-    <EmptyState
-      size="compact"
-      icon={<NAV_ICONS.leads size={ICON.lg} />}
-      title="リードがありません"
-      action={<Button variant="primary" size="sm">リードを追加</Button>}
-    />
-  }
-/>
-```
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `columns` | `DataTableColumn<T>[]` | — | 列定義（key / header / width / sortable / renderCell） |
+| `data` | `T[]` | — | 表示データ行 |
+| `rowKey` | `(row: T) => string` | — | 行識別子ファクトリ |
+| `sortKey` | string | — | 現在ソート中の列 key |
+| `sortDir` | `'asc' \| 'desc'` | `'asc'` | ソート方向 |
+| `onSort` | `(key, dir) => void` | — | ソートクリック時コールバック |
+| `selectable` | boolean | false | チェックボックス列を表示 |
+| `selectedKeys` | `Set<string>` | — | 選択済み rowKey 集合 |
+| `onSelectChange` | `(keys) => void` | — | 選択変更コールバック |
+| `density` | `'compact' \| 'default' \| 'relaxed'` | `'default'` | 行高さバリアント |
+| `emptyState` | ReactNode | `'No data'` | データ 0 件時の表示スロット |
 
 ### 設計方針
 
-- `title` は `<p>` タグ（見出しレベルは呼び出し側のコンテキストに委ねる）
-- アイコンサイズは呼び出し側で決める（`icon` は ReactNode）
-- `action` に渡すのは `<Button>` のみ（raw `<button>` 禁止）
-- CSS 名前空間 `.comp-empty-*`（既存 `.empty` / `.db-empty` と独立）
+- 全ての状態（sort/selection）は controlled（呼び出し側が管理）。
+- 水平スクロールはラッパー `.comp-table` が担当。モバイルで `min-width` を超えた場合に自動で横スクロール。
+- `density` でリスト・フォーム・詳細画面の用途に対応（compact=一覧/compact、relaxed=詳細/大画面）。
+- セル内に業務固有の日本語を埋め込まない。`header` プロップ・`renderCell` で渡す。
 
-### Task 8E への引き継ぎ事項
+### Task 4E への引き継ぎ事項
 
-1. 実画面への展開: 32 件の既存空状態を `<EmptyState>` に順次置き換え
-2. 展開優先順位: DataTable の `emptyState` prop（テキスト渡し）→ インライン `.empty` → `.db-empty`
-3. 共存期: `comp-empty` と `.empty` / `.db-empty` が並存。Task 8E 完了後に既存クラスを非推奨化
+1. リード一覧・会社一覧・注文一覧への DataTable 適用
+2. 列固定（sticky ヘッダー / sticky チェックボックス列）の検討
+3. ページネーション連携（`page` / `totalCount` props 追加）

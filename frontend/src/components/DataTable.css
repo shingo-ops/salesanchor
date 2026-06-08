@@ -26,6 +26,17 @@
   color: var(--text-primary);
 }
 
+/* ── 2. 密度バリアント (0,2,0) ── */
+.comp-table--compact .comp-table__th,
+.comp-table--compact .comp-table__td {
+  height: var(--comp-table-row-h-compact);
+}
+
+.comp-table--relaxed .comp-table__th,
+.comp-table--relaxed .comp-table__td {
+  height: var(--comp-table-row-h-relaxed);
+}
+
 /* ── 3. ヘッダー行 (0,2,0) ── */
 .comp-table__head-row {
   background: var(--bg-subtle);
@@ -76,7 +87,7 @@
 .comp-table__sort-icon {
   display: flex;
   align-items: center;
-  opacity: var(--opacity-skipped);
+  opacity: 0.4;
 }
 
 .comp-table__sort-btn--active .comp-table__sort-icon {
@@ -119,17 +130,6 @@
 .comp-table__td--check {
   width: var(--comp-table-check-col-w);
   padding: 0 var(--space-3);
-}
-
-/* ── 密度バリアント (0,2,0) — __th/__td の後ろに置く（no-descending-specificity 対策） ── */
-.comp-table--compact .comp-table__th,
-.comp-table--compact .comp-table__td {
-  height: var(--comp-table-row-h-compact);
-}
-
-.comp-table--relaxed .comp-table__th,
-.comp-table--relaxed .comp-table__td {
-  height: var(--comp-table-row-h-relaxed);
 }
 
 /* ── チェックボックス ── */

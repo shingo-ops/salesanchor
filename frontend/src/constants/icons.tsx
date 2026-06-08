@@ -209,6 +209,12 @@ export const TABLE_ICONS = {
   sortDesc: ArrowDown,
 } satisfies Record<string, Icon>;
 
+// テーブル用アイコン（DataTable ソートインジケーター）
+export const TABLE_ICONS = {
+  sortAsc:  ArrowUp,
+  sortDesc: ArrowDown,
+} satisfies Record<string, Icon>;
+
 // テーマ切り替え（Layout.tsx）
 // light: ライトモード時 → ダークへ切り替えるボタンに表示
 // dark:  ダークモード時 → ライトへ切り替えるボタンに表示
