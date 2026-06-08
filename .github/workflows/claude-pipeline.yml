@@ -215,7 +215,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -e
-          claude -p \
+          caffeinate -dims claude -p \
             --disallowedTools "Write Edit" \
             --allowedTools "Read Grep Glob \
               Bash(grep:*) Bash(rg:*) Bash(find:*) Bash(cat:*) Bash(ls:*) Bash(head:*) Bash(tail:*) Bash(wc:*) Bash(awk:*) Bash(sed:*) Bash(jq:*) \
@@ -249,6 +249,25 @@ jobs:
           " || true
 
           echo "completed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Failure Report (Researcher)
+        if: failure()
+        env:
+          PR_NUMBER: ${{ needs.context.outputs.pr_number }}
+          PR_URL: ${{ needs.context.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ Researcher 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | Researcher (Claude Code) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} の調査フェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
 
       - name: Notify Discord (Researcher failure)
         if: failure()
@@ -339,7 +358,7 @@ jobs:
 
           run_with_claude() {
             echo "🤖 Executor: Claude Code"
-            claude -p \
+            caffeinate -dims claude -p \
               --disallowedTools "WebFetch WebSearch" \
               --allowedTools "Read Write Edit Grep Glob \
                 Bash(grep:*) Bash(rg:*) Bash(find:*) Bash(cat:*) Bash(ls:*) Bash(head:*) Bash(tail:*) Bash(wc:*) Bash(awk:*) Bash(sed:*) Bash(jq:*) Bash(mkdir:*) Bash(touch:*) \
@@ -441,6 +460,20 @@ jobs:
             echo "pr_head_ref=${BRANCH_NAME}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Failure Report (claude-worker)
+        if: failure()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ claude-worker 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | claude-worker (Claude Code) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | 実装生成またはPR作成フェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+          EOF
+
       - name: Notify Discord (Failure)
         if: failure()
         env:
@@ -502,7 +535,7 @@ jobs:
         run: |
           set -e
           rm -f /tmp/reviewer_decision.txt
-          claude -p \
+          caffeinate -dims claude -p \
             --disallowedTools "WebFetch WebSearch" \
             --allowedTools "Read Grep Glob \
               Bash(gh pr view:*) Bash(gh pr diff:*) Bash(gh pr comment:*) \
@@ -542,6 +575,36 @@ jobs:
             DECISION="REQUEST_CHANGES"
           fi
           echo "decision=${DECISION}" >> "$GITHUB_OUTPUT"
+
+      - name: Failure Report (reviewer)
+        if: failure()
+        env:
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+          PR_URL: ${{ steps.resolve-pr.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ Reviewer 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | Reviewer (Claude Code) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} のコードレビューフェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
+
+      - name: Notify Discord (reviewer failure)
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_PLAN_REVIEW }}
+          PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+          PR_URL: ${{ steps.resolve-pr.outputs.pr_url }}
+        run: |
+          MSG="❌ **Reviewer 失敗** PR #${PR_NUMBER}\n${PR_URL}\nGitHub Actions ログを確認してください。"
+          PAYLOAD=$(jq -nc --arg msg "$MSG" '{content: $msg}')
+          curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK"
 
   # ADR-051: Evaluator job — Reviewer が APPROVED した場合に自動起動
   evaluator:
@@ -631,7 +694,7 @@ jobs:
         run: |
           set -e
           rm -f /tmp/evaluator_decision.txt
-          claude -p \
+          caffeinate -dims claude -p \
             --disallowedTools "WebFetch WebSearch" \
             --allowedTools "Read Grep Glob \
               Bash(gh pr view:*) Bash(gh pr diff:*) Bash(gh pr comment:*) \
@@ -684,6 +747,36 @@ jobs:
             echo "decision=${RUN_DECISION}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Failure Report (evaluator)
+        if: failure()
+        env:
+          PR_NUMBER: ${{ needs.reviewer.outputs.pr_number }}
+          PR_URL: ${{ needs.reviewer.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ Evaluator 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | Evaluator (Claude Code) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} のUI評価フェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
+
+      - name: Notify Discord (evaluator failure)
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_PLAN_REVIEW }}
+          PR_NUMBER: ${{ needs.reviewer.outputs.pr_number }}
+          PR_URL: ${{ needs.reviewer.outputs.pr_url }}
+        run: |
+          MSG="❌ **Evaluator 失敗** PR #${PR_NUMBER}\n${PR_URL}\nGitHub Actions ログを確認してください。"
+          PAYLOAD=$(jq -nc --arg msg "$MSG" '{content: $msg}')
+          curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK"
+
   # Governance Check — evaluator APPROVED 後、automerge 前に定着化検証を実施
   governance:
     name: Governance Check
@@ -714,7 +807,7 @@ jobs:
         run: |
           set -e
           rm -f /tmp/governance_verdict.txt
-          claude -p \
+          caffeinate -dims claude -p \
             --disallowedTools "WebFetch WebSearch" \
             --allowedTools "Read Grep Glob \
               Bash(gh pr view:*) Bash(gh pr diff:*) Bash(gh pr comment:*) \
@@ -749,6 +842,25 @@ jobs:
         run: |
           echo "Governance returned BLOCK. Merge is not allowed until critical gaps are resolved."
           exit 1
+
+      - name: Failure Report (governance)
+        if: failure()
+        env:
+          PR_NUMBER: ${{ needs.reviewer.outputs.pr_number }}
+          PR_URL: ${{ needs.reviewer.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ Governance Check 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | Governance (Claude Code) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} のガバナンス検証フェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
 
       - name: Notify Discord (Governance failure)
         if: failure()
@@ -801,6 +913,25 @@ jobs:
           MSG="✅ **develop merged** PR #${PR_NUMBER}\nADR: ${ADR_FILES}\n${PR_URL}"
           PAYLOAD=$(jq -nc --arg msg "$MSG" '{content: $msg}')
           curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK"
+
+      - name: Failure Report (automerge)
+        if: failure()
+        env:
+          PR_NUMBER: ${{ needs.reviewer.outputs.pr_number }}
+          PR_URL: ${{ needs.reviewer.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ automerge 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | automerge (gh pr merge) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} の develop 自動マージが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
 
       - name: Notify Discord (merge failure)
         if: failure()
@@ -1040,7 +1171,7 @@ jobs:
 
           run_with_claude() {
             echo "🤖 Executor: Claude Code (regenerate)"
-            claude -p \
+            caffeinate -dims claude -p \
               --disallowedTools "WebFetch WebSearch" \
               --allowedTools "Read Write Edit Grep Glob \
                 Bash(grep:*) Bash(rg:*) Bash(find:*) Bash(cat:*) Bash(ls:*) Bash(head:*) Bash(tail:*) Bash(wc:*) Bash(awk:*) Bash(sed:*) Bash(jq:*) Bash(mkdir:*) Bash(touch:*) \
@@ -1101,6 +1232,25 @@ jobs:
             exit 0
           fi
           git push origin "HEAD:refs/heads/${PR_HEAD_REF}"
+
+      - name: Failure Report (regenerate)
+        if: failure() && steps.policy.outputs.halt == 'false'
+        env:
+          PR_NUMBER: ${{ needs.reviewer.outputs.pr_number }}
+          PR_URL: ${{ needs.reviewer.outputs.pr_url }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ regenerate 失敗
+
+          | | |
+          |---|---|
+          | **WHO** | regenerate (Claude Code / Codex) |
+          | **WHEN** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
+          | **WHAT** | PR #${PR_NUMBER} の自動修正フェーズが失敗 |
+          | **WHY** | ログを確認: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID |
+
+          PR: ${PR_URL}
+          EOF
 
       - name: Notify Discord (regenerate failure)
         if: failure() && steps.policy.outputs.halt == 'false'
