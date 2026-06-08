@@ -84,13 +84,13 @@ export function ButtonSection() {
           <span className="dp-row-label">アイコン sm</span>
           <div className="dp-row-items">
             <Button variant="ghost" size="sm" iconOnly aria-label="閉じる (sm)">
-              <X size={ICON.sm} aria-hidden="true" />
+              <X size={ICON.md} aria-hidden="true" />
             </Button>
             <Button variant="primary" size="sm" iconOnly aria-label="追加 (sm)">
-              <X size={ICON.sm} aria-hidden="true" />
+              <X size={ICON.md} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="sm" iconOnly aria-label="添付 (sm)" disabled>
-              <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+              <INBOX_ACTION_ICONS.attach size={ICON.md} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -98,13 +98,13 @@ export function ButtonSection() {
           <span className="dp-row-label">アイコン md</span>
           <div className="dp-row-items">
             <Button variant="ghost" size="md" iconOnly aria-label="閉じる (md)">
-              <X size={ICON.md} aria-hidden="true" />
+              <X size={ICON.base} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="md" iconOnly aria-label="設定 (md)">
-              <PAGE_ICONS.settingsSolid size={ICON.md} aria-hidden="true" />
+              <PAGE_ICONS.settingsSolid size={ICON.base} aria-hidden="true" />
             </Button>
             <Button variant="danger" size="md" iconOnly aria-label="削除 (md)">
-              <INBOX_ACTION_ICONS.delete size={ICON.md} aria-hidden="true" />
+              <INBOX_ACTION_ICONS.delete size={ICON.base} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -112,10 +112,10 @@ export function ButtonSection() {
           <span className="dp-row-label">アイコン lg</span>
           <div className="dp-row-items">
             <Button variant="ghost" size="lg" iconOnly aria-label="閉じる (lg)">
-              <X size={ICON.base} aria-hidden="true" />
+              <X size={ICON.lg} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="lg" iconOnly aria-label="設定 (lg)" disabled>
-              <PAGE_ICONS.settingsSolid size={ICON.base} aria-hidden="true" />
+              <PAGE_ICONS.settingsSolid size={ICON.lg} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -165,13 +165,13 @@ export function ButtonSection() {
           <span className="dp-row-label">インライン</span>
           <div className="dp-icon-btn-bar dp-icon-btn-bar--pill">
             <Button variant="ghost" size="sm" iconOnly aria-label="画像を添付">
-              <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+              <INBOX_ACTION_ICONS.attach size={ICON.md} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="sm" iconOnly aria-label="翻訳">
-              <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
+              <INBOX_ACTION_ICONS.translate size={ICON.md} aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="sm" iconOnly aria-label="送信">
-              <INBOX_ACTION_ICONS.send size={ICON.sm} aria-hidden="true" />
+              <INBOX_ACTION_ICONS.send size={ICON.md} aria-hidden="true" />
             </Button>
           </div>
         </div>
