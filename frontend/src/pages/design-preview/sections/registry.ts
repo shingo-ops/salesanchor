@@ -15,6 +15,7 @@ import { BadgeSection }     from "./BadgeSection";
 import { DataTableSection } from "./DataTableSection";
 import { TabsSection }      from "./TabsSection";
 import { SubMenuSection }   from "./SubMenuSection";
+import { ModalSection }     from "./ModalSection";
 
 export interface SectionEntry {
   /** URL クエリパラメータ ?room=<key> に使用 */
@@ -35,4 +36,5 @@ export const SECTION_REGISTRY: SectionEntry[] = [
   { key: "table",    label: "テーブル",     group: "表示",  component: DataTableSection },
   { key: "tabs",     label: "タブ",         group: "表示",  component: TabsSection     },
   { key: "submenu",  label: "サブメニュー", group: "ナビ",  component: SubMenuSection  },
+  { key: "modal",    label: "モーダル",     group: "表示", component: ModalSection    },
 ];
