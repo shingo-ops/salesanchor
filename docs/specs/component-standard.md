@@ -37,12 +37,22 @@
 
 ### バリアント → 既存 CSS クラスのマッピング
 
-| variant | 既存クラス |
-|---|---|
-| `primary` | `btn-primary` |
-| `secondary` | `btn-secondary` |
-| `ghost` | `btn-ghost` |
-| `danger` | `btn-danger` |
+| variant | 既存クラス | 用途 |
+|---|---|---|
+| `primary` | `btn-primary` | その画面で最も押してほしいアクション |
+| `secondary` | `btn-secondary` | 次に重要なアクション（白背景 + 枠線） |
+| `ghost` | `btn-ghost` | 軽い操作・背景と同化させたい場合 |
+| `danger` | `btn-danger` | 削除など取り消せない操作 |
+| `outline` | `btn-outline` | 色・画像背景の上に重ねるボタン（透過背景 + 枠線） |
+
+#### `secondary` vs `outline` 使い分け
+
+| | `secondary` | `outline` |
+|---|---|---|
+| 背景 | `var(--bg-surface)`（白） | `transparent` |
+| 用途 | 白背景画面での第2アクション | バナー・カード・画像背景など色のある面の上 |
+| 白背景での見た目 | 枠線あり白背景ボタン | secondaryとほぼ同じ（意図的） |
+| 色背景での見た目 | 浮いて見える（白が目立つ） | 背景が透過して自然に馴染む |
 
 ### サイズ修飾子（`Button.css` 追加クラス）
 
@@ -52,7 +62,7 @@
 | `md` | (なし・各variant既定値) | 8px 20px | — |
 | `lg` | `comp-btn--lg` | 12px 24px | 48px |
 
-- モバイル（≤767px）: primary / secondary / ghost / danger すべてに `min-height: 44px` を自動付与
+- モバイル（≤767px）: primary / secondary / ghost / danger / outline すべてに `min-height: 44px` を自動付与
 
 ### オプション
 
@@ -291,3 +301,77 @@ npm run dev
 1. 実画面への展開: 受信箱・KartePanel・DesignSystem の3系統を `<Tabs>` に順次置き換え
 2. 移行順序: KartePanel（`.right-panel-tab` 3タブ）→ DesignSystem（`.tab-bar`）→ 受信箱（`.inbox-full-tab-bar` 6タブ）
 3. 共存期: `comp-tabs` と既存クラスが並存。Task 5E 完了後に既存クラスを非推奨化
+
+---
+
+## SubMenu（Task 6C）
+
+縦型サイドナビゲーション。`hub-subnav` 系を将来統合する標準金型。
+
+### 既存3系統との対応
+
+| 既存実装 | 場所 | 置き換え先 |
+|---------|------|-----------|
+| ManagementCenterPage subnav | `.hub-subnav` grouped | `<SubMenu variant="grouped">` |
+| CustomerHubPage subnav | `.hub-subnav` grouped | `<SubMenu variant="grouped">` |
+| OrdersPage status filter | `.hub-subnav` flat | `<SubMenu variant="flat">` |
+
+### 採用トークン
+
+| トークン | 値 | 用途 |
+|---------|---|------|
+| `--comp-subnav-w` | `var(--mc-subnav-width)` = 200px | サブメニュー幅 |
+| `--comp-subnav-item-h` | `var(--height-tab-item)` = 36px | アイテム最小高 |
+| `--comp-subnav-px` | `var(--space-4)` = 16px | アイテム横パディング |
+| `--comp-subnav-group-title-fs` | `var(--font-xs)` = 12px | グループ見出しフォントサイズ |
+
+既存色トークン（新規追加なし）:
+- アクティブ背景: `--sidebar-item-active-bg`
+- アクティブ文字: `--accent`
+- ホバー背景: `--bg-hover`
+- グループ区切り: `--border`
+- グループ見出し: `--text-muted`
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `variant` | `'grouped' \| 'flat'` | `'grouped'` | grouped = グループ見出し付き / flat = フラット |
+| `groups` | `SubMenuGroup<K>[]` | — | グループ定義。両バリアントで共通（flat はグループ title 無視） |
+| `activeKey` | `K` | — | アクティブ項目の key（groups[].items[].key に型で限定） |
+| `onChange` | `(key: K) => void` | — | 項目クリック時のコールバック |
+| `className` | string | — | 外部クラス追加用 |
+
+#### SubMenuGroup
+
+| prop | 型 | 説明 |
+|---|---|---|
+| `title` | `string?` | グループ見出し（grouped のみ表示） |
+| `items` | `SubMenuItem<K>[]` | 項目配列 |
+
+#### SubMenuItem
+
+| prop | 型 | 説明 |
+|---|---|---|
+| `key` | `K` | 一意識別子 |
+| `label` | `string` | 表示ラベル |
+| `icon` | `ReactNode?` | 先頭アイコン（任意） |
+| `badge` | `number?` | 件数バッジ（任意） |
+| `disabled` | `boolean?` | 無効化フラグ |
+
+### 設計方針
+
+- `activeKey` の型 `K` は `groups[].items[].key` の型から推論されるため、規格外の key を渡すと TypeScript エラーになる。
+- 右側のみ border-radius（`0 var(--radius-md) var(--radius-md) 0`）+ `margin-right` でインセットタブ効果。コンテナは左パディングなしで配置すること。
+- アクティブ×ホバー時はアクティブ背景を維持（ホバー背景で上書きしない）。
+- 実画面への移行は Task 6E で行う（現在は金型のみ・既存 hub-subnav は変更しない）。
+
+### DesignPreviewPage との連携
+
+`DesignPreviewPage` が SubMenu 金型をドッグフーディングしている。`sections/registry.ts` に `SectionEntry`（key / label / group / component）を追加するだけでサイドメニュー項目とルームが自動で増える。
+
+### Task 6E への引き継ぎ事項
+
+1. 実画面への展開: ManagementCenterPage・CustomerHubPage・OrdersPage の hub-subnav を `<SubMenu>` に順次置き換え
+2. 移行順序: OrdersPage（flat）→ CustomerHubPage（grouped）→ ManagementCenterPage（grouped）
+3. 共存期: `comp-subnav` と `.hub-subnav` が並存。Task 6E 完了後に `.hub-subnav` を非推奨化
