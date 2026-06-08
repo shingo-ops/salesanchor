@@ -1,0 +1,108 @@
+/**
+ * Modal 金型スタイル（Task 7C）
+ *
+ * 名前空間: .comp-modal-* （既存 .modal-* と衝突しない）
+ * ADR-067: 全カラー・サイズは CSS 変数参照のみ（hex / px ハードコード禁止）
+ */
+
+/* ----------------------------------------------------------------
+   オーバーレイ（背景暗幕）
+   ---------------------------------------------------------------- */
+
+.comp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: var(--z-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+/* ----------------------------------------------------------------
+   ダイアログ本体
+   ---------------------------------------------------------------- */
+
+.comp-modal-dialog {
+  position: relative;
+  background: var(--surface-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - var(--space-8));
+  overflow: hidden;
+}
+
+/* サイズ修飾子 */
+.comp-modal-dialog--sm { max-width: var(--modal-max-w-sm); }
+.comp-modal-dialog--md { max-width: var(--modal-max-w-md); }
+.comp-modal-dialog--lg { max-width: var(--modal-max-w-lg); }
+
+/* ----------------------------------------------------------------
+   ヘッダ
+   ---------------------------------------------------------------- */
+
+.comp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.comp-modal-title {
+  margin: 0;
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+}
+
+/* ----------------------------------------------------------------
+   本体（スクロール可）
+   ---------------------------------------------------------------- */
+
+.comp-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+/* ----------------------------------------------------------------
+   フッタ
+   ---------------------------------------------------------------- */
+
+.comp-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------
+   モバイル（近全幅）
+   ---------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .comp-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .comp-modal-dialog {
+    width: 100%;
+    max-width: 100% !important;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-height: 90vh;
+  }
+}

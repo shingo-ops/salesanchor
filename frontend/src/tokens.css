@@ -250,7 +250,10 @@
 
   /* ---- Modal sizes ---- */
   --max-width-modal-sm:      420px;  /* 確認モーダル・小型ダイアログ最大幅 */
-  --modal-max-w:             500px;  /* 標準モーダル最大幅 */
+  --modal-max-w:             500px;  /* 標準モーダル最大幅（旧）*/
+  --modal-max-w-sm:          420px;  /* Modal 金型 sm */
+  --modal-max-w-md:          600px;  /* Modal 金型 md */
+  --modal-max-w-lg:          800px;  /* Modal 金型 lg */
   --modal-profile-min-w:     480px;  /* プロフィールモーダル最小幅 */
   --max-width-form:          560px;  /* フォームレイアウト最大幅（アカウント設定等） */
   --modal-profile-max-w:     640px;  /* プロフィールモーダル最大幅 */
