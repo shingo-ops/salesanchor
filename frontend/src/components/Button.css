@@ -49,8 +49,10 @@
 
 /* アイコンのみ: 固定正方形（実物基準: .icon-btn 36×36px / Task 7C）
    padding を 0 にして width/height で制御。
-   btn-* が持つ font-size は文字レイアウト目的なので残す（アイコンには影響しない）。 */
-.comp-btn--icon-only {
+   btn-* が持つ font-size は文字レイアウト目的なので残す（アイコンには影響しない）。
+   NOTE: `button` 要素型を付与して specificity (0,1,1) に昇格。
+   components.css の .btn-ghost など (0,1,0) が CSS カスケード順に関係なく上書きされる問題を防止。 */
+button.comp-btn--icon-only {
   padding: 0;
   width: var(--size-icon-btn);       /* 36px — ヘッダーアクション基準 */
   height: var(--size-icon-btn);      /* 36px */
@@ -61,6 +63,7 @@
 }
 
 /* sm: 28px — 送信エリア内インラインボタン基準 */
+/* specificity (0,2,0) — button.comp-btn--icon-only の width/height を上書き */
 .comp-btn--sm.comp-btn--icon-only {
   width: var(--size-icon-btn-sm);    /* 28px */
   height: var(--size-icon-btn-sm);   /* 28px */
