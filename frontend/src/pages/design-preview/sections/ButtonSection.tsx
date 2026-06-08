@@ -11,6 +11,7 @@ const VARIANT_LABEL: Record<string, string> = {
   secondary: "補助 (secondary)",
   ghost:     "控えめ (ghost)",
   danger:    "破壊的 (danger)",
+  outline:   "枠線 (outline)",
 };
 
 export function ButtonSection() {
@@ -22,7 +23,7 @@ export function ButtonSection() {
           title="2. ボタン — 種類 × サイズ (variant x size)"
           desc="主要＝その画面で一番押してほしい操作 / 補助＝その次 / 控えめ＝軽い操作 / 破壊的＝削除など取り消せない操作"
         />
-        {(["primary", "secondary", "ghost", "danger"] as const).map((variant) => (
+        {(["primary", "secondary", "ghost", "danger", "outline"] as const).map((variant) => (
           <div key={variant} className="dp-row">
             <span className="dp-row-label">{VARIANT_LABEL[variant]}</span>
             <div className="dp-row-items">
@@ -32,6 +33,15 @@ export function ButtonSection() {
             </div>
           </div>
         ))}
+        {/* outline 透過デモ: 色背景の上でのみ意図が伝わる */}
+        <div className="dp-row">
+          <span className="dp-row-label">透過デモ</span>
+          <div className="dp-row-items dp-colored-bg-demo">
+            <Button variant="outline" size="sm">小 (sm)</Button>
+            <Button variant="outline" size="md">中 (md)</Button>
+            <Button variant="outline" size="lg">大 (lg)</Button>
+          </div>
+        </div>
       </section>
 
       {/* §3: 状態 */}

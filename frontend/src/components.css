@@ -121,6 +121,27 @@
 
 .btn-danger:hover { background: var(--danger-bg); }
 
+/* --- Outline Button (透過背景 + 枠線 / Task 6E) ---
+   背景は透過、枠線のみ。色・画像の背景の上で使う。
+   白背景では secondary と見た目がほぼ同じになる（意図的）。 */
+.btn-outline {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--comp-btn-radius);
+  font-size: var(--font-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn-outline:hover { background: var(--bg-subtle); border-color: var(--text-secondary); }
+.btn-outline:active { background: var(--bg-hover); }
+.btn-outline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-outline:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+
 /* 行内アクション列でのボタン高さ不揃い対策:
    btn-danger は btn-sm より後に定義されサイズ(padding/font-size)を上書きするため、
    btn-sm を色バリアントと併用したとき高さがバラつく。複合セレクタ(0,2,0)で

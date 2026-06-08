@@ -221,6 +221,13 @@
   width: 100%;
 }
 
+/* outline バリアント透過デモ: アクセントカラー背景で透過を可視化 */
+.dp-colored-bg-demo {
+  background: var(--accent-bg-subtle);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
 /* ── 部品別ルーム: 左サイドメニュー＋右コンテンツ レイアウト ── */
 .dp-shell {
   display: flex;
