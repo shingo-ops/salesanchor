@@ -353,7 +353,8 @@ function AddressFields({
             type="text"
             className="input"
             value={address.country_code}
-            onChange={(e) => onChange("country_code", e.target.value)}
+            maxLength={2}
+            onChange={(e) => onChange("country_code", e.target.value.toUpperCase())}
           />
         </label>
       </div>
