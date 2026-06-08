@@ -415,6 +415,21 @@
 
   /* DataTable 最小幅（横スクロール開始点） */
   --comp-table-min-width:  480px;
+
+  /* ── Tabs コンポーネント ─────────────────────────────────────────────────── */
+  /* 高さ */
+  --comp-tab-h-sm:  28px;                    /* sm — KartePanel 系（font-xs） */
+  --comp-tab-h-md:  var(--height-tab-item);  /* md — 標準（36px） */
+
+  /* 横パディング */
+  --comp-tab-px-sm: var(--space-3);   /* 12px */
+  --comp-tab-px-md: var(--space-4);   /* 16px */
+
+  /* アクティブ下線 */
+  --comp-tab-underline-w: 2px;
+
+  /* ピル角丸 */
+  --comp-tab-pill-radius: var(--radius-md);   /* 6px */
 }
 
 /* ============================================================
