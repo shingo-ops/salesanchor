@@ -37,12 +37,14 @@ describe("getStatusPresentation — 正常系", () => {
     expect(getStatusPresentation("invoice", "paid").bucket).toBe("success");
   });
 
-  it("staff.pending → warning（フロント処理漏れ修正確認）", () => {
-    expect(getStatusPresentation("staff", "pending").bucket).toBe("warning");
+  it("staff.pending → danger（現状維持: 将来 warning に昇格可）", () => {
+    expect(getStatusPresentation("staff", "pending").bucket).toBe("danger");
+    expect(getStatusPresentation("staff", "pending").badgeVariant).toBe("lost");
   });
 
-  it("bot.maintenance → warning（フロント処理漏れ修正確認）", () => {
-    expect(getStatusPresentation("bot", "maintenance").bucket).toBe("warning");
+  it("bot.maintenance → danger（現状維持: 将来 warning に昇格可）", () => {
+    expect(getStatusPresentation("bot", "maintenance").bucket).toBe("danger");
+    expect(getStatusPresentation("bot", "maintenance").badgeVariant).toBe("lost");
   });
 
   it("deal.open → neutral", () => {
