@@ -101,6 +101,17 @@
   --info-bg: #bee3f8;
   --info-text: #2b6cb0;
 
+  /* neutral / semantic solid トークン（Task 3C — Badge 金型用） */
+  --neutral-bg:   #e2e8f0;   /* soft neutral 背景 */
+  --neutral-text: #4a5568;   /* soft neutral 文字 */
+  --neutral:      #718096;   /* solid neutral */
+  --info:         #2563eb;   /* solid info（soft は --info-bg/--info-text） */
+  --warning:      #d97706;   /* solid warning（soft は --warning-bg/--warning-text） */
+  /* success solid: ライトは --success(#2e7d32)で流用 */
+  --comp-badge-success-solid: var(--success);
+  /* danger solid: ライトは --danger(#e53e3e)で流用 */
+  --comp-badge-danger-solid:  var(--danger);
+
   /* purple バッジ（保留・発送済み） */
   --purple-bg: #e9d8fd;
   --purple-text: #553c9a;
@@ -249,6 +260,17 @@
   /* info バッジ（ダーク） */
   --info-bg: #1e3a5f;
   --info-text: #93c5fd;
+
+  /* neutral / semantic solid トークン（Task 3C — Badge 金型用 ダーク） */
+  --neutral-bg:   #334155;   /* slate-700 */
+  --neutral-text: #94a3b8;   /* slate-400 */
+  --neutral:      #64748b;   /* slate-500 */
+  --info:         #3b82f6;   /* blue-500 */
+  --warning:      #d97706;   /* amber-600 — 白文字と十分なコントラスト */
+  /* success solid ダーク: --success=#4ade80 は白文字と低コントラストのため別値 */
+  --comp-badge-success-solid: #15803d;   /* green-700 */
+  /* danger solid ダーク: --danger=#f87171 は白文字と低コントラストのため別値 */
+  --comp-badge-danger-solid:  #dc2626;   /* red-600 */
 
   /* purple バッジ（ダーク） */
   --purple-bg: #3b1f6e;

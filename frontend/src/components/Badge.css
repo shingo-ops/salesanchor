@@ -1,0 +1,68 @@
+/**
+ * Badge — ステータス・ラベルバッジ（Task 3C）
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ *
+ * セレクタ順序（specificity 昇順）:
+ *   1. ベース (0,1,0)
+ *   2. サイズ (0,2,0)
+ *   3. soft バリアント (0,2,0)
+ *   4. solid バリアント (0,2,0)
+ */
+
+/* ── 1. ベース (0,1,0) ── */
+.comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--comp-badge-radius);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  /* デフォルトは neutral soft */
+  background: var(--neutral-bg);
+  color: var(--neutral-text);
+}
+
+/* ── ドット ── */
+.comp-badge__dot {
+  display: block;
+  width: var(--comp-badge-dot-size);
+  height: var(--comp-badge-dot-size);
+  border-radius: var(--radius-full);
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ── アイコン ── */
+.comp-badge__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── 2. サイズ (0,2,0) ── */
+.comp-badge--sm {
+  padding: var(--space-2px) var(--space-2);
+  min-height: var(--comp-badge-height-sm);
+}
+
+.comp-badge--md {
+  padding: var(--space-2px) var(--space-3);
+  min-height: var(--comp-badge-height-md);
+}
+
+/* ── 3. soft バリアント (0,2,0) ── */
+.comp-badge--soft.comp-badge--neutral { background: var(--neutral-bg); color: var(--neutral-text); }
+.comp-badge--soft.comp-badge--info    { background: var(--info-bg);    color: var(--info-text); }
+.comp-badge--soft.comp-badge--success { background: var(--success-bg); color: var(--success-text); }
+.comp-badge--soft.comp-badge--warning { background: var(--warning-bg); color: var(--warning-text); }
+.comp-badge--soft.comp-badge--danger  { background: var(--danger-bg);  color: var(--danger-text); }
+
+/* ── 4. solid バリアント (0,2,0) ── */
+.comp-badge--solid.comp-badge--neutral { background: var(--neutral);                   color: var(--on-solid); }
+.comp-badge--solid.comp-badge--info    { background: var(--info);                      color: var(--on-solid); }
+.comp-badge--solid.comp-badge--success { background: var(--comp-badge-success-solid);  color: var(--on-solid); }
+.comp-badge--solid.comp-badge--warning { background: var(--warning);                   color: var(--on-solid); }
+.comp-badge--solid.comp-badge--danger  { background: var(--comp-badge-danger-solid);   color: var(--on-solid); }
