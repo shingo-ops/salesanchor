@@ -430,6 +430,19 @@
 
   /* ピル角丸 */
   --comp-tab-pill-radius: var(--radius-md);   /* 6px */
+
+  /* ── SubMenu コンポーネント（Task 6C — 2026-06-08 追加） ─────────────────── */
+  /* パネル幅（--mc-subnav-width の component 標準トークン） */
+  --comp-subnav-w:              var(--mc-subnav-width);  /* 200px */
+
+  /* アイテム最小高（タブと同一スケール） */
+  --comp-subnav-item-h:         var(--height-tab-item);  /* 36px */
+
+  /* アイテム横パディング */
+  --comp-subnav-px:             var(--space-4);           /* 16px */
+
+  /* グループ見出しフォントサイズ */
+  --comp-subnav-group-title-fs: var(--font-xs);           /* 12px */
 }
 
 /* ============================================================

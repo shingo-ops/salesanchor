@@ -22,6 +22,10 @@ const TOKEN_SUMMARY = [
   { token: "--comp-tab-h-md",             desc: "タブ高さ md",              expected: "36px (height-tab-item)" },
   { token: "--comp-tab-underline-w",      desc: "アクティブ下線幅",          expected: "2px"                },
   { token: "--comp-tab-pill-radius",      desc: "ピルタブ角丸",              expected: "6px (radius-md)"    },
+  { token: "--comp-subnav-w",             desc: "サブメニュー幅",            expected: "200px (mc-subnav-width)" },
+  { token: "--comp-subnav-item-h",        desc: "サブメニュー アイテム最小高", expected: "36px (height-tab-item)" },
+  { token: "--comp-subnav-px",            desc: "サブメニュー 横パディング",  expected: "16px (space-4)"     },
+  { token: "--comp-subnav-group-title-fs", desc: "グループ見出しフォントサイズ", expected: "12px (font-xs)"  },
 ];
 
 export function TokenSection() {
