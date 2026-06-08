@@ -375,6 +375,24 @@
   /* 入力コントロール サイズ（高さ） */
   --comp-input-height-sm:      28px;                   /* small バリアント最小高 */
   --comp-input-height-mobile:  44px;                   /* WCAG 2.5.5 タッチターゲット最小高 */
+
+  /* ================================================================
+     標準コンポーネントトークン（Task 3C — 2026-06-08 追加）
+     Badge: ステータス・ラベルバッジ
+     ================================================================ */
+
+  /* 塗りつぶし系背景での文字色（solid appearance 共通） */
+  --on-solid:              #ffffff;
+
+  /* Badge 形状 */
+  --comp-badge-radius:     var(--radius-full);         /* 丸ピル型 */
+
+  /* Badge サイズ（min-height） */
+  --comp-badge-height-sm:  20px;                       /* small */
+  --comp-badge-height-md:  24px;                       /* medium */
+
+  /* Badge ドットインジケーター */
+  --comp-badge-dot-size:   var(--space-6px);           /* 6px */
 }
 
 /* ============================================================

@@ -181,3 +181,56 @@ npm run dev
 1. 実画面への展開: `<input>` / `<select>` / `<textarea>` を上記金型へ順次置き換え（206か所）
 2. バリデーション統合: React Hook Form 等との接続パターンを確立してから展開
 3. `form-group` クラスとの共存ルール: 移行期は `comp-field` と `form-group` が並存。Task 2E 完了後に `form-group` を非推奨化
+
+---
+
+## Badge 金型仕様（Task 3C 追加）
+
+**確定日**: 2026-06-08
+
+### 採用トークン
+
+| トークン | 値 | 説明 |
+|---|---|---|
+| `--comp-badge-radius` | `var(--radius-full)` = 9999px | 丸ピル型 |
+| `--comp-badge-height-sm` | 20px | sm 最小高 |
+| `--comp-badge-height-md` | 24px | md 最小高 |
+| `--comp-badge-dot-size` | `var(--space-6px)` = 6px | ドットインジケーター径 |
+| `--on-solid` | `#ffffff` | 塗りつぶし背景での文字色 |
+
+### 新規追加カラートークン（index.css）
+
+| トークン | ライト | ダーク | 用途 |
+|---|---|---|---|
+| `--neutral-bg` | `#e2e8f0` | `#334155` | neutral soft 背景 |
+| `--neutral-text` | `#4a5568` | `#94a3b8` | neutral soft 文字 |
+| `--neutral` | `#718096` | `#64748b` | neutral solid 背景 |
+| `--info` | `#2563eb` | `#3b82f6` | info solid 背景 |
+| `--warning` | `#d97706` | `#d97706` | warning solid 背景 |
+| `--comp-badge-success-solid` | `var(--success)` | `#15803d` | success solid 背景（ダーク: --success が白文字と低コントラストのため別値） |
+| `--comp-badge-danger-solid` | `var(--danger)` | `#dc2626` | danger solid 背景（ダーク: --danger が白文字と低コントラストのため別値） |
+
+既存トークン委譲:
+- soft neutral 以外: `--*-bg` / `--*-text` はすべて既存トークンを委譲
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `variant` | `'neutral' \| 'info' \| 'success' \| 'warning' \| 'danger'` | `'neutral'` | 見た目の意味（色） |
+| `appearance` | `'soft' \| 'solid'` | `'soft'` | soft = 淡い背景＋色文字 / solid = 塗り |
+| `size` | `'sm' \| 'md'` | `'md'` | sm = 20px 最小高 / md = 24px 最小高 |
+| `dot` | boolean | false | 先頭ドットインジケーター |
+| `icon` | ReactNode | — | 先頭アイコン |
+| `children` | ReactNode | — | ラベル文字列 |
+
+### 設計方針
+
+- wrapper は「見た目の variant」のみを持つ。業務ステータス名（新規・対応中・完了 等）はラベルとして children で渡す。
+- ステータス値 → variant のマッピングは呼び出し側で定義する（BadgeMap パターン）。
+
+### Task 3E への引き継ぎ事項
+
+1. 実画面への展開: `.badge-open` / `.badge-pending` 等の 118 か所を `<Badge>` に順次置き換え
+2. ステータスマッピング: `constants/badgeVariants.ts` 等でステータス値 → variant の SSoT を用意してから展開
+3. `.status-badge` クラスとの共存: 移行期は `comp-badge` と `.badge` / `.status-badge` が並存。Task 3E 完了後に既存クラスを非推奨化
