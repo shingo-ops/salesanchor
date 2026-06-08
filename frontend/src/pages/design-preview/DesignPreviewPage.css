@@ -96,6 +96,10 @@
   align-items: stretch;
 }
 
+.dp-row--top {
+  align-items: flex-start;
+}
+
 /* ── Card 確認行 ── */
 .dp-card-row {
   display: grid;
@@ -215,4 +219,57 @@
   max-width: var(--dp-mobile-demo-w);
   overflow: hidden;
   width: 100%;
+}
+
+/* ── 部品別ルーム: 左サイドメニュー＋右コンテンツ レイアウト ── */
+.dp-shell {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dp-sidebar {
+  width: var(--comp-subnav-w);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  height: 100%;
+  scrollbar-width: none;
+  padding: var(--space-2) 0;
+}
+
+.dp-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.dp-room {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+/* サブメニュー幅制約デモ（SubMenuSection 専用） */
+.dp-subnav-demo {
+  width: var(--comp-subnav-w);
+}
+
+@media (max-width: 767px) {
+  .dp-shell {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .dp-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+    padding: var(--space-2) 0;
+  }
+
+  .dp-room {
+    padding: var(--space-4);
+  }
 }

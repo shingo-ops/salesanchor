@@ -1,0 +1,123 @@
+/**
+ * SubMenu — ADR-067: 全カラーは CSS 変数参照のみ（Task 6C）
+ *
+ * variant:
+ *   grouped — グループ見出し付き縦型（hub-subnav 系）
+ *   flat    — フラット縦型（グループ見出しなし）
+ *
+ * セレクタ詳細度順（no-descending-specificity 対策）:
+ *   (0,1,0) 基本クラス・隣接兄弟
+ *   (0,2,0) 状態・バリアント複合クラス（BEFORE 疑似クラス）
+ *   (0,3,0) 疑似クラス（AFTER (0,2,0)）
+ *   (0,4,0) 状態 × 疑似クラス（LAST）
+ */
+
+/* ── コンテナ (0,1,0) ── */
+.comp-subnav {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── グループ (0,1,0) ── */
+.comp-subnav__group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── グループ間区切り（隣接兄弟 / 0,1,0） ── */
+.comp-subnav__group + .comp-subnav__group {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+/* ── グループ見出し (0,1,0) ── */
+.comp-subnav__group-title {
+  display: block;
+  padding: var(--space-1) var(--comp-subnav-px);
+  font-size: var(--comp-subnav-group-title-fs);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  user-select: none;
+  margin-bottom: var(--space-1);
+}
+
+/* ── アイコン (0,1,0) ── */
+.comp-subnav__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* ── ラベル (0,1,0) ── */
+.comp-subnav__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* ── バッジ（件数）(0,1,0) ── */
+.comp-subnav__badge {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── アイテムボタン基本 (0,1,0) ── */
+.comp-subnav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--comp-subnav-item-h);
+  padding: var(--space-2) var(--comp-subnav-px);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin-right: var(--space-2);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+/* ── アクティブ状態 (0,2,0) — hover (0,3,0) の前に配置 ── */
+.comp-subnav__item--active {
+  background: var(--sidebar-item-active-bg);
+  color: var(--accent);
+  font-weight: var(--font-weight-semi);
+}
+
+/* ── disabled 状態 (0,2,0) ── */
+.comp-subnav__item--disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+/* ── flat バリアント: グループ間区切りなし (0,2,0) ── */
+.comp-subnav--flat .comp-subnav__group + .comp-subnav__group {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* ── ホバー (0,3,0) — (0,2,0) の後に配置 ── */
+.comp-subnav__item:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── アクティブ × ホバー (0,4,0) — アクティブ背景を維持 ── */
+.comp-subnav__item--active:hover:not(:disabled) {
+  background: var(--sidebar-item-active-bg);
+  color: var(--accent);
+}
