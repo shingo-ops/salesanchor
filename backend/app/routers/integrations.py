@@ -32,10 +32,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    require_permission,
     reset_tenant_context,
 )
 from app.database import get_db
 from app.models import User
+from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services.test_pdf import render_test_pdf
 
@@ -257,3 +259,123 @@ async def test_upload(
         file_name=result["name"],
         web_view_link=result.get("web_view_link"),
     )
+
+
+# ===========================================================================
+# 配送キャリア（FedEx / DHL / UPS）接続テスト — テナント別認証情報
+# ===========================================================================
+
+
+class CarrierStatus(BaseModel):
+    carrier: str
+    configured: bool
+    environment: str
+
+
+class CarrierCredentialsRequest(BaseModel):
+    client_id: str  # FedEx/UPS=Client ID, DHL=API Key
+    client_secret: str  # FedEx/UPS=Client Secret, DHL=API Secret
+    environment: str = "sandbox"
+
+
+class CarrierTestResponse(BaseModel):
+    ok: bool
+    status_code: int | None = None
+    message: str
+
+
+def _validate_carrier(carrier: str) -> None:
+    if not carriers.is_valid_carrier(carrier):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未対応のキャリアです")
+
+
+@router.get(
+    "/integrations/carriers/{carrier}/status",
+    response_model=CarrierStatus,
+    dependencies=[Depends(require_permission("erp.view"))],
+)
+async def carrier_status(
+    carrier: str,
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> CarrierStatus:
+    """キャリアの認証情報の設定状況（シークレットは返さない）。"""
+    _validate_carrier(carrier)
+    st = await carriers.get_status(db, tenant_id, carrier)
+    return CarrierStatus(carrier=carrier, configured=st["configured"], environment=st["environment"])
+
+
+@router.put(
+    "/integrations/carriers/{carrier}/credentials",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def save_carrier_credentials(
+    carrier: str,
+    payload: CarrierCredentialsRequest,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """キャリア認証情報を保存（暗号化）。admin 専用。"""
+    _validate_carrier(carrier)
+    _require_admin(user)
+    if not payload.client_id or not payload.client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="認証ID・シークレットの両方を入力してください。",
+        )
+    await carriers.save_credentials(
+        db,
+        tenant_id,
+        carrier,
+        payload.client_id,
+        payload.client_secret,
+        payload.environment,
+        user.id,
+    )
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+
+@router.delete(
+    "/integrations/carriers/{carrier}/credentials",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_carrier_credentials(
+    carrier: str,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """キャリア認証情報を削除。admin 専用。"""
+    _validate_carrier(carrier)
+    _require_admin(user)
+    await carriers.delete_credentials(db, tenant_id, carrier)
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+
+@router.post(
+    "/integrations/carriers/{carrier}/test-connection",
+    response_model=CarrierTestResponse,
+    dependencies=[Depends(require_permission("erp.view"))],
+)
+async def carrier_test_connection(
+    carrier: str,
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> CarrierTestResponse:
+    """保存済みの認証情報で各社 API への疎通（認証）を確認する。"""
+    _validate_carrier(carrier)
+    creds = await carriers.get_credentials(db, tenant_id, carrier)
+    if creds is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="認証情報が未設定です。先に保存してください。",
+        )
+    result = await run_in_threadpool(
+        carriers.test_connection,
+        carrier,
+        creds["environment"],
+        creds["client_id"],
+        creds["client_secret"],
+    )
+    return CarrierTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
