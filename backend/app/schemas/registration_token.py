@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.base import validate_email_loose, validate_phone
 
@@ -109,6 +109,15 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_tel(cls, v: Optional[str]) -> Optional[str]:
         return validate_phone(v)
+
+    @model_validator(mode="after")
+    def validate_contact_required(self) -> "RegisterRequest":
+        """初回登録は担当者名 + (メール or 電話) が必須（スコープ: /public/register のみ）。"""
+        if not self.contact_name or not self.contact_name.strip():
+            raise ValueError("担当者名は必須です")
+        if not self.contact_email and not self.contact_telephone:
+            raise ValueError("担当者のメールアドレスまたは電話番号を入力してください")
+        return self
 
 
 class AddAddressRequest(BaseModel):
