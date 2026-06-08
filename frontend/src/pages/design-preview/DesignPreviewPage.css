@@ -221,6 +221,23 @@
   width: 100%;
 }
 
+/* アイコンボタン実例デモ: ツールバー風コンテナ */
+.dp-icon-btn-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+/* インライン（ピル型）コンテナ */
+.dp-icon-btn-bar--pill {
+  border-radius: var(--radius-full);
+  padding: var(--space-1);
+}
+
 /* outline バリアント透過デモ: アクセントカラー背景で透過を可視化 */
 .dp-colored-bg-demo {
   background: var(--accent-bg-subtle);
