@@ -201,6 +201,8 @@ class TestGetAuthUrl:
                 url = await get_auth_url(tenant_id=1, user_id=2)
 
         assert url.startswith("https://accounts.google.com")
+        # PKCE 無効化（"Missing code verifier" 回帰防止）
+        assert mock_flow.autogenerate_code_verifier is False
 
 
 # ---------------------------------------------------------------------------
