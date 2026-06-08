@@ -32,7 +32,8 @@
   .btn-primary,
   .btn-secondary,
   .btn-ghost,
-  .btn-danger {
+  .btn-danger,
+  .btn-outline {
     min-height: var(--btn-min-height-mobile, 44px);
   }
 }

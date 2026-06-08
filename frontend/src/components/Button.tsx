@@ -14,7 +14,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import "./Button.css";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 export type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonOwnProps {
@@ -34,6 +34,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   secondary: "btn-secondary",
   ghost:     "btn-ghost",
   danger:    "btn-danger",
+  outline:   "btn-outline",
 };
 
 export function Button({

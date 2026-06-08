@@ -77,3 +77,32 @@ export const FullWidth: Story = {
     </div>
   ),
 }
+
+export const Outline: Story = {
+  name: 'outline — 透過枠線（色背景用）',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', margin: 0 }}>
+        白背景（secondary と似た見た目・意図的）
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <Button variant="outline" size="sm">Small</Button>
+        <Button variant="outline" size="md">Medium</Button>
+        <Button variant="outline" size="lg">Large</Button>
+      </div>
+      <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', margin: 0, marginTop: 'var(--space-2)' }}>
+        色背景（透過背景が機能する用途）
+      </p>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+        background: 'var(--accent-bg-subtle)',
+        padding: 'var(--space-3) var(--space-4)',
+        borderRadius: 'var(--radius-md)',
+      }}>
+        <Button variant="outline" size="sm">Small</Button>
+        <Button variant="outline" size="md">Medium</Button>
+        <Button variant="outline" size="lg">Large</Button>
+      </div>
+    </div>
+  ),
+}
