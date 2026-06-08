@@ -68,8 +68,8 @@
 
 /* lg: 44px — モバイルタッチターゲット基準（WCAG 2.5.5） */
 .comp-btn--lg.comp-btn--icon-only {
-  width: 44px;
-  height: 44px;
+  width: var(--size-icon-btn-lg);    /* 44px */
+  height: var(--size-icon-btn-lg);   /* 44px */
 }
 
 /* ----------------------------------------------------------------
