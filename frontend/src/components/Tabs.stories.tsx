@@ -7,6 +7,10 @@ const meta = {
   title: 'Components/Tabs',
   component: Tabs,
   tags: ['autodocs'],
+  args: {
+    // render 関数で useState に上書きされるため no-op で OK
+    onChange: () => {},
+  },
 } satisfies Meta<typeof Tabs>;
 
 export default meta;
