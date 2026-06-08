@@ -166,6 +166,7 @@ const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
+const ChatBubbleOutline   = hi(ChatBubbleOvalLeftOutlineIcon); /* 空状態 outline 版 */
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -195,10 +196,11 @@ export const CATEGORY_ICONS: Record<string, Icon> = {
 
 // ページ用（🚧 💬 の代替）
 export const PAGE_ICONS = {
-  comingSoon:    HardHat,
-  inboxEmpty:    Chat,
-  kartePanel:    ClipboardText, // 受信箱モバイルドロワー「カルテ」ボタン用
-  settingsSolid: GearEight,     // 受信箱ヘッダー設定ボタン（solid）
+  comingSoon:         HardHat,
+  inboxEmpty:         Chat,             // solid — InboxMessageThread アクティブ表示用
+  inboxEmptyOutline:  ChatBubbleOutline, // outline — 空状態プレビュー等の既定
+  kartePanel:         ClipboardText,    // 受信箱モバイルドロワー「カルテ」ボタン用
+  settingsSolid:      GearEight,        // 受信箱ヘッダー設定ボタン（solid）
 } satisfies Record<string, Icon>;
 
 // テーブル用アイコン（DataTable ソートインジケーター）
