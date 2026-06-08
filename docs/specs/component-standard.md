@@ -45,6 +45,21 @@
 | `danger` | `btn-danger` | 削除など取り消せない操作 |
 | `outline` | `btn-outline` | 色・画像背景の上に重ねるボタン（透過背景 + 枠線） |
 
+#### アイコンボタン（iconOnly）サイズ仕様（Task 7C）
+
+実物基準: `.icon-btn`（36×36px / `--size-icon-btn`）・`.send-attach-btn`（28×28px / `--size-icon-btn-sm`）
+
+| size | 幅×高さ | アイコン推奨サイズ | 用途 |
+|---|---|---|---|
+| `sm` | 28×28px (`--size-icon-btn-sm`) | `ICON.sm` = 14px | 送信エリア内・インラインボタン |
+| `md` | 36×36px (`--size-icon-btn`) | `ICON.md` = 16px | ヘッダーアクション・ツールバー |
+| `lg` | 44×44px | `ICON.base` = 20px | モバイルタッチターゲット必須箇所 |
+
+- `padding: 0` / `width`・`height` 固定（`aspect-ratio` で制御しない）
+- `aria-label` 必須（ラベルなし操作のアクセシビリティ確保）
+- 色・背景・hover は `variant` に委ねる（ghost が最多用途）
+- **IconButton コンポーネントは作らない**: `<Button variant="ghost" size="md" iconOnly>` で十分
+
 #### `secondary` vs `outline` 使い分け
 
 | | `secondary` | `outline` |

@@ -1,9 +1,11 @@
 /**
  * §2 ボタン — 種類 × サイズ
  * §3 ボタン — 状態
+ * §4 アイコンボタン — 実例
  */
 import { Button } from "../../../components/Button";
-import { X, PAGE_ICONS } from "../../../constants/icons";
+import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from "../../../constants/icons";
+import { ICON } from "../../../constants/iconSizes";
 import { SectionHeader } from "./_shared";
 
 const VARIANT_LABEL: Record<string, string> = {
@@ -79,14 +81,97 @@ export function ButtonSection() {
           </div>
         </div>
         <div className="dp-row">
-          <span className="dp-row-label">アイコンのみ (icon only)</span>
+          <span className="dp-row-label">アイコン sm</span>
           <div className="dp-row-items">
-            <Button variant="primary" iconOnly aria-label="追加">+</Button>
-            <Button variant="ghost" iconOnly aria-label="閉じる">
-              <X size={16} aria-hidden="true" />
+            <Button variant="ghost" size="sm" iconOnly aria-label="閉じる (sm)">
+              <X size={ICON.sm} aria-hidden="true" />
             </Button>
-            <Button variant="secondary" iconOnly aria-label="設定">
-              <PAGE_ICONS.settingsSolid size={16} aria-hidden="true" />
+            <Button variant="primary" size="sm" iconOnly aria-label="追加 (sm)">
+              <X size={ICON.sm} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="sm" iconOnly aria-label="添付 (sm)" disabled>
+              <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+        <div className="dp-row">
+          <span className="dp-row-label">アイコン md</span>
+          <div className="dp-row-items">
+            <Button variant="ghost" size="md" iconOnly aria-label="閉じる (md)">
+              <X size={ICON.md} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="md" iconOnly aria-label="設定 (md)">
+              <PAGE_ICONS.settingsSolid size={ICON.md} aria-hidden="true" />
+            </Button>
+            <Button variant="danger" size="md" iconOnly aria-label="削除 (md)">
+              <INBOX_ACTION_ICONS.delete size={ICON.md} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+        <div className="dp-row">
+          <span className="dp-row-label">アイコン lg</span>
+          <div className="dp-row-items">
+            <Button variant="ghost" size="lg" iconOnly aria-label="閉じる (lg)">
+              <X size={ICON.base} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="lg" iconOnly aria-label="設定 (lg)" disabled>
+              <PAGE_ICONS.settingsSolid size={ICON.base} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* §4: アイコンボタン実例 */}
+      <section className="dp-section">
+        <SectionHeader
+          title="4. アイコンボタン — 実例 (usage patterns)"
+          desc="実物基準: .icon-btn（36×36px）/ .send-attach-btn（28×28px）。ヘッダー・スレッド・インラインの3パターン。"
+        />
+
+        {/* 受信箱ヘッダー風 */}
+        <div className="dp-row dp-row--top">
+          <span className="dp-row-label">ヘッダー風</span>
+          <div className="dp-icon-btn-bar">
+            <Button variant="ghost" size="md" iconOnly aria-label="設定">
+              <PAGE_ICONS.settingsSolid size={ICON.md} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="md" iconOnly aria-label="その他のアクション">
+              <NAV_ICONS.more size={ICON.md} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="md" iconOnly aria-label="閉じる">
+              <NAV_ICONS.close size={ICON.md} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+
+        {/* スレッドヘッダー風 */}
+        <div className="dp-row dp-row--top">
+          <span className="dp-row-label">スレッド風</span>
+          <div className="dp-icon-btn-bar">
+            <Button variant="ghost" size="md" iconOnly aria-label="未読にする">
+              <INBOX_ACTION_ICONS.markUnread size={ICON.base} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="md" iconOnly aria-label="アーカイブ">
+              <INBOX_ACTION_ICONS.exclude size={ICON.base} aria-hidden="true" />
+            </Button>
+            <Button variant="danger" size="md" iconOnly aria-label="削除">
+              <INBOX_ACTION_ICONS.delete size={ICON.base} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+
+        {/* 送信エリア内インライン（28px小） */}
+        <div className="dp-row dp-row--top">
+          <span className="dp-row-label">インライン</span>
+          <div className="dp-icon-btn-bar dp-icon-btn-bar--pill">
+            <Button variant="ghost" size="sm" iconOnly aria-label="画像を添付">
+              <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="sm" iconOnly aria-label="翻訳">
+              <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="sm" iconOnly aria-label="送信">
+              <INBOX_ACTION_ICONS.send size={ICON.sm} aria-hidden="true" />
             </Button>
           </div>
         </div>
