@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=121
+TOTAL=120
 
 run_py() {
   local script="$1"
@@ -309,6 +309,9 @@ run_sql migrations/20260607_120000_create_lead_channels.sql
 
 # ADR-119: lead_channels バックフィル（leads.source / discord_user_id → lead_channels）
 run_py  scripts/migrate_adr119_lead_channels_backfill.py
+
+# API連携: テナント別 配送キャリア(FedEx/DHL/UPS) 認証情報テーブル
+run_sql migrations/20260608_080000_add_carrier_credentials.sql
 
 echo ""
 echo "============================================"
