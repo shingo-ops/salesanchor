@@ -72,8 +72,8 @@ export const WithSort: Story = {
     const [sortDir, setSortDir] = useState<SortDir>('asc');
 
     const sorted = [...SAMPLE_LEADS].sort((a, b) => {
-      const av = (a as Record<string, unknown>)[sortKey];
-      const bv = (b as Record<string, unknown>)[sortKey];
+      const av = (a as unknown as Record<string, unknown>)[sortKey];
+      const bv = (b as unknown as Record<string, unknown>)[sortKey];
       const cmp = String(av).localeCompare(String(bv), 'ja');
       return sortDir === 'asc' ? cmp : -cmp;
     });
