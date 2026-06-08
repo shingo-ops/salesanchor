@@ -18,6 +18,10 @@ const TOKEN_SUMMARY = [
   { token: "--comp-table-row-h-compact",  desc: "テーブル行高 compact",     expected: "32px"               },
   { token: "--comp-table-row-h-default",  desc: "テーブル行高 default",     expected: "44px"               },
   { token: "--comp-table-row-h-relaxed",  desc: "テーブル行高 relaxed",     expected: "56px"               },
+  { token: "--comp-tab-h-sm",             desc: "タブ高さ sm",              expected: "28px"               },
+  { token: "--comp-tab-h-md",             desc: "タブ高さ md",              expected: "36px (height-tab-item)" },
+  { token: "--comp-tab-underline-w",      desc: "アクティブ下線幅",          expected: "2px"                },
+  { token: "--comp-tab-pill-radius",      desc: "ピルタブ角丸",              expected: "6px (radius-md)"    },
 ];
 
 export function TokenSection() {

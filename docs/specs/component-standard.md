@@ -234,3 +234,60 @@ npm run dev
 1. 実画面への展開: `.badge-open` / `.badge-pending` 等の 118 か所を `<Badge>` に順次置き換え
 2. ステータスマッピング: `constants/badgeVariants.ts` 等でステータス値 → variant の SSoT を用意してから展開
 3. `.status-badge` クラスとの共存: 移行期は `comp-badge` と `.badge` / `.status-badge` が並存。Task 3E 完了後に既存クラスを非推奨化
+
+---
+
+## Tabs（Task 5C）
+
+**確定日**: 2026-06-08
+
+### 既存3系統との対応
+
+| 既存実装 | CSS クラス | 置き換え先 |
+|---------|-----------|-----------|
+| 受信箱タブバー | `.inbox-full-tab-bar` / `.inbox-full-tab` | `<Tabs variant="pill" size="md">` |
+| KartePanel タブ | `.right-panel-tabs` / `.right-panel-tab` | `<Tabs variant="underline" size="sm">` |
+| DesignSystem タブ | `.tab-bar` / `.tab-item` | `<Tabs variant="pill" size="md">` |
+
+### 採用トークン
+
+| トークン | 値 | 用途 |
+|---------|---|------|
+| `--comp-tab-h-sm` | 28px | sm タブ高さ |
+| `--comp-tab-h-md` | `var(--height-tab-item)` = 36px | md タブ高さ |
+| `--comp-tab-px-sm` | `var(--space-3)` = 12px | sm 横パディング |
+| `--comp-tab-px-md` | `var(--space-4)` = 16px | md 横パディング |
+| `--comp-tab-underline-w` | 2px | アクティブ下線幅 |
+| `--comp-tab-pill-radius` | `var(--radius-md)` = 6px | ピルタブ角丸 |
+
+既存色トークン（新規追加なし）:
+- アクティブ文字/下線: `--accent`
+- 非アクティブ文字: `--text-secondary`
+- アクティブ文字 (pill): `--text-primary`
+- pill アクティブ背景: `--link-active-bg`
+- pill ホバー背景: `--bg-subtle`
+- コンテナ下線 (underline): `--border`
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `items` | `TabItem<K>[]` | — | タブ定義。`key` / `label` 必須、`count` / `icon` / `disabled` 任意 |
+| `activeKey` | `K` | — | 現在アクティブなタブの key（items の key に型で限定） |
+| `onChange` | `(key: K) => void` | — | タブ切り替え時のコールバック |
+| `variant` | `'underline' \| 'pill'` | `'underline'` | underline = 下線型 / pill = ピル背景型 |
+| `size` | `'sm' \| 'md'` | `'md'` | sm = 28px / md = 36px |
+| `className` | string | — | 外部クラス追加用 |
+
+### 設計方針
+
+- `activeKey` の型 `K` は `items[].key` の型から推論されるため、規格外の key を渡すと TypeScript エラーになる。
+- 件数バッジは既存 `Badge` コンポーネントを再利用（`variant="neutral" appearance="soft" size="sm"`）。
+- モバイルでタブがはみ出す場合は横スクロール（スクロールバー非表示）。
+- 実画面への移行は Task 5E で行う（現在は金型のみ・既存実装は変更しない）。
+
+### Task 5E への引き継ぎ事項
+
+1. 実画面への展開: 受信箱・KartePanel・DesignSystem の3系統を `<Tabs>` に順次置き換え
+2. 移行順序: KartePanel（`.right-panel-tab` 3タブ）→ DesignSystem（`.tab-bar`）→ 受信箱（`.inbox-full-tab-bar` 6タブ）
+3. 共存期: `comp-tabs` と既存クラスが並存。Task 5E 完了後に既存クラスを非推奨化
