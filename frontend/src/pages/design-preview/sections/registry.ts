@@ -12,6 +12,7 @@ import { CardSection }      from "./CardSection";
 import { FormSection }      from "./FormSection";
 import { BadgeSection }     from "./BadgeSection";
 import { DataTableSection } from "./DataTableSection";
+import { TabsSection }     from "./TabsSection";
 
 export const SECTION_REGISTRY = [
   TokenSection,
@@ -20,4 +21,5 @@ export const SECTION_REGISTRY = [
   FormSection,
   BadgeSection,
   DataTableSection,
+  TabsSection,
 ] as const;

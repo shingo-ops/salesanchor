@@ -1,0 +1,121 @@
+/**
+ * Tabs — ADR-067: 全カラーは CSS 変数参照のみ（Task 5C）
+ *
+ * variant:
+ *   underline — アクティブ下線型（right-panel-tab 系）
+ *   pill      — ピル背景型（inbox-full-tab-bar / .tab-bar 系）
+ *
+ * size:
+ *   sm — 28px / font-xs（KartePanel 向け）
+ *   md — 36px / font-sm（標準）
+ */
+
+/* ── コンテナ (0,1,0) ── */
+.comp-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  /* スクロールバー非表示 */
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.comp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── underline バリアント: コンテナ下線 (0,2,0) ── */
+.comp-tabs--underline {
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+}
+
+/* ── ピル: コンテナ余白 (0,2,0) ── */
+.comp-tabs--pill {
+  padding: var(--space-1) 0;
+}
+
+/* ── タブボタン共通 (0,1,0) ── */
+.comp-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-normal);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+/* md サイズ (0,2,0) */
+.comp-tabs--md .comp-tabs__tab {
+  height: var(--comp-tab-h-md);
+  padding: 0 var(--comp-tab-px-md);
+  font-size: var(--font-sm);
+}
+
+/* sm サイズ (0,2,0) */
+.comp-tabs--sm .comp-tabs__tab {
+  height: var(--comp-tab-h-sm);
+  padding: 0 var(--comp-tab-px-sm);
+  font-size: var(--font-xs);
+}
+
+/* ── タブボタン: ホバー (0,1,0) ── */
+.comp-tabs__tab:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+/* ── アクティブ共通 (0,2,0) ── */
+.comp-tabs__tab--active {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semi);
+}
+
+/* ── disabled (0,2,0) ── */
+.comp-tabs__tab--disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+/* ── underline: アクティブ下線 (0,3,0) ── */
+.comp-tabs--underline .comp-tabs__tab {
+  border-bottom: var(--comp-tab-underline-w) solid transparent;
+  margin-bottom: -1px; /* コンテナ下線と重ねる */
+}
+
+.comp-tabs--underline .comp-tabs__tab--active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.comp-tabs--underline .comp-tabs__tab:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+/* ── pill: ホバー背景 (0,3,0) ── */
+.comp-tabs--pill .comp-tabs__tab {
+  border-radius: var(--comp-tab-pill-radius);
+}
+
+.comp-tabs--pill .comp-tabs__tab:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+
+/* ── pill: アクティブ背景 (0,3,0) ── */
+.comp-tabs--pill .comp-tabs__tab--active {
+  background: var(--link-active-bg);
+}
+
+/* ── アイコン / ラベル ── */
+.comp-tabs__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
