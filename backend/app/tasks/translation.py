@@ -53,15 +53,17 @@ async def _run_batch() -> dict:
         # テナント一覧
         tenants_result = await db.execute(
             text(
-                "SELECT t.id, t.schema_name "
+                "SELECT t.id "
                 "FROM public.tenants t "
+                "WHERE t.is_active = true "
                 "ORDER BY t.id"
             )
         )
         tenants = tenants_result.fetchall()
 
         for tenant_row in tenants:
-            tenant_id, schema_name = int(tenant_row[0]), str(tenant_row[1])
+            tenant_id = int(tenant_row[0])
+            schema_name = f"tenant_{tenant_id:03d}"
             meta_t = f"{schema_name}.meta_messages"
             trans_t = f"{schema_name}.message_translations"
 
@@ -149,8 +151,9 @@ async def _run_health_check() -> dict:
     async with AsyncSessionLocal() as db:
         tenants_result = await db.execute(
             text(
-                "SELECT t.id, t.schema_name, t.tenant_code "
+                "SELECT t.id, t.tenant_code "
                 "FROM public.tenants t "
+                "WHERE t.is_active = true "
                 "ORDER BY t.id"
             )
         )
@@ -158,8 +161,8 @@ async def _run_health_check() -> dict:
 
         for tenant_row in tenants:
             tenant_id = int(tenant_row[0])
-            schema_name = str(tenant_row[1])
-            tenant_code = str(tenant_row[2]) if tenant_row[2] else "unknown"
+            schema_name = f"tenant_{tenant_id:03d}"
+            tenant_code = str(tenant_row[1]) if tenant_row[1] else "unknown"
             trans_t = f"{schema_name}.message_translations"
             meta_t = f"{schema_name}.meta_messages"
 

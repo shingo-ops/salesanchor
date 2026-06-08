@@ -215,4 +215,11 @@ export default [{
     'local/no-japanese-literal': 'off',
     'no-restricted-syntax': 'off', // ストーリーはデモ用途のため寸法ハードコードを許容
   },
+}, // i18n ルール除外: デザインプレビューページ（dev-only preview: 日本語表記を許可）
+// /design-preview はオーナー専用の目視確認ページ。製品本体のルールとは独立した例外。
+{
+  files: ['src/pages/design-preview/**/*.{ts,tsx}'],
+  rules: {
+    'local/no-japanese-literal': 'off',
+  },
 }, ...storybook.configs["flat/recommended"]];
