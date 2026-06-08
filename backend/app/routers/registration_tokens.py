@@ -127,14 +127,10 @@ async def verify_registration_token(
     await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社名を取得（存在しない場合もある）
+    # companies.lead_id が SSOT（leads に company_id 列はない）
     company_name = None
     result = await db.execute(
-        text("""
-            SELECT c.name
-            FROM companies c
-            JOIN leads l ON l.company_id = c.id
-            WHERE l.id = :lead_id
-        """),
+        text("SELECT name FROM companies WHERE lead_id = :lead_id"),
         {"lead_id": lead_id},
     )
     row = result.first()
@@ -180,8 +176,9 @@ async def register_customer(
     await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社 ID を取得
+    # companies.lead_id が SSOT（leads に company_id 列はない）
     result = await db.execute(
-        text("SELECT company_id FROM leads WHERE id = :lead_id"),
+        text("SELECT id FROM companies WHERE lead_id = :lead_id"),
         {"lead_id": lead_id},
     )
     row = result.first()
@@ -300,8 +297,9 @@ async def add_address(
     await set_tenant_context(db, tenant_id)
 
     # リードに紐づく会社 ID を取得
+    # companies.lead_id が SSOT（leads に company_id 列はない）
     result = await db.execute(
-        text("SELECT company_id FROM leads WHERE id = :lead_id"),
+        text("SELECT id FROM companies WHERE lead_id = :lead_id"),
         {"lead_id": lead_id},
     )
     row = result.first()
