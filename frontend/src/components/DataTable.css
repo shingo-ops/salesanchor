@@ -87,7 +87,7 @@
 .comp-table__sort-icon {
   display: flex;
   align-items: center;
-  opacity: 0.4;
+  opacity: var(--opacity-skipped);
 }
 
 .comp-table__sort-btn--active .comp-table__sort-icon {
