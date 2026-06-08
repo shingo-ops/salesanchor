@@ -47,13 +47,16 @@
 
 #### アイコンボタン（iconOnly）サイズ仕様（Task 7C）
 
-実物基準: `.icon-btn`（36×36px / `--size-icon-btn`）・`.send-attach-btn`（28×28px / `--size-icon-btn-sm`）
+実物基準:
+- `.send-attach-btn`（28px箱）→ `ICON.md` = 16px のアイコン
+- `.inbox-thread-action-btn`（36px箱）→ `ICON.base` = 20px のアイコン
+- `.icon-btn`（36px箱・ページヘッダー）→ `ICON.md` = 16px のアイコン（軽量ヘッダー用途）
 
 | size | 幅×高さ | アイコン推奨サイズ | 用途 |
 |---|---|---|---|
-| `sm` | 28×28px (`--size-icon-btn-sm`) | `ICON.sm` = 14px | 送信エリア内・インラインボタン |
-| `md` | 36×36px (`--size-icon-btn`) | `ICON.md` = 16px | ヘッダーアクション・ツールバー |
-| `lg` | 44×44px | `ICON.base` = 20px | モバイルタッチターゲット必須箇所 |
+| `sm` | 28×28px (`--size-icon-btn-sm`) | `ICON.md` = 16px | 送信エリア内・インラインボタン |
+| `md` | 36×36px (`--size-icon-btn`) | `ICON.base` = 20px | スレッドヘッダー・ツールバー |
+| `lg` | 44×44px (`--size-icon-btn-lg`) | `ICON.lg` = 24px | モバイルタッチターゲット必須箇所 |
 
 - `padding: 0` / `width`・`height` 固定（`aspect-ratio` で制御しない）
 - `aria-label` 必須（ラベルなし操作のアクセシビリティ確保）
