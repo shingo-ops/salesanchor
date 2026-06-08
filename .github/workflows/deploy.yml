@@ -75,6 +75,32 @@ jobs:
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/salesanchor/
 
       # ============================================
+      # デプロイ前 DB バックアップ
+      # git pull / docker compose の前に取得して万一のロールバック保険とする。
+      # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
+      # ============================================
+      - name: Pre-deploy DB backup
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "============================================"
+            echo "Pre-deploy DB backup..."
+            echo "============================================"
+            cd /home/ubuntu/salesanchor
+            bash scripts/backup.sh
+            LATEST=$(ls -t /home/ubuntu/backups/postgres/salesanchor_db_*.sql.gz 2>/dev/null | head -1)
+            if [ -z "${LATEST}" ]; then
+              echo "❌ Backup file not found after backup.sh"
+              exit 1
+            fi
+            SIZE=$(du -h "${LATEST}" | cut -f1)
+            echo "✅ Backup: ${LATEST} (${SIZE})"
+
+      # ============================================
       # 既存: VPS 上で git pull + docker compose up + migrations
       #
       # 2026-05-22 hotfix: 旧 migration ステップを part 1 / part 2 に分割（expression length 上限回避）
