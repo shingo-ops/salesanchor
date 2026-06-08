@@ -1,0 +1,110 @@
+name: ADR-119 Post-deploy Verification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ADR-119 DB Verification (lead_channels / leads source counts)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "========================================================"
+            echo "ADR-119 検証: leads source カウント + lead_channels 件数"
+            echo "========================================================"
+
+            docker exec -i astro-webapp-postgres-1 psql -U jarvis -d jarvis_db <<'SQL'
+
+            DO $$
+            DECLARE
+                r RECORD;
+                schema TEXT;
+                cnt_discord INT;
+                cnt_messenger INT;
+                cnt_instagram INT;
+                cnt_discord_uid INT;
+                cnt_lc_discord INT;
+                cnt_lc_messenger INT;
+                cnt_lc_instagram INT;
+                cnt_lc_total INT;
+                cnt_leads_total INT;
+            BEGIN
+                RAISE NOTICE '%-12s | %-12s | %-12s | %-12s | %-12s | lc_discord | lc_messenger | lc_instagram | lc_total | leads_total',
+                    'schema', 'discord_src', 'messenger', 'instagram', 'discord_uid';
+                RAISE NOTICE '%-12s-+-%-12s-+-%-12s-+-%-12s-+-%-12s-+------------+--------------+--------------+----------+------------',
+                    '------------','------------','------------','------------','------------';
+
+                FOR r IN
+                    SELECT id, tenant_code,
+                           format('tenant_%s', lpad(id::text, 3, '0')) AS sc
+                    FROM public.tenants
+                    WHERE is_active = true
+                    ORDER BY id
+                LOOP
+                    schema := r.sc;
+
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.tables
+                                   WHERE table_schema = schema AND table_name = 'leads') THEN
+                        RAISE NOTICE '% — leads table missing, skip', schema;
+                        CONTINUE;
+                    END IF;
+
+                    EXECUTE format(
+                        'SELECT COUNT(*) FROM %I.leads WHERE source LIKE ''discord:%%''', schema
+                    ) INTO cnt_discord;
+                    EXECUTE format(
+                        'SELECT COUNT(*) FROM %I.leads WHERE source LIKE ''messenger:%%''', schema
+                    ) INTO cnt_messenger;
+                    EXECUTE format(
+                        'SELECT COUNT(*) FROM %I.leads WHERE source LIKE ''instagram:%%''', schema
+                    ) INTO cnt_instagram;
+                    EXECUTE format(
+                        'SELECT COUNT(*) FROM %I.leads WHERE discord_user_id IS NOT NULL AND (source IS NULL OR source NOT LIKE ''discord:%%'')', schema
+                    ) INTO cnt_discord_uid;
+                    EXECUTE format(
+                        'SELECT COUNT(*) FROM %I.leads', schema
+                    ) INTO cnt_leads_total;
+
+                    IF EXISTS (SELECT 1 FROM information_schema.tables
+                                WHERE table_schema = schema AND table_name = 'lead_channels') THEN
+                        EXECUTE format(
+                            'SELECT COUNT(*) FROM %I.lead_channels WHERE platform = ''discord''', schema
+                        ) INTO cnt_lc_discord;
+                        EXECUTE format(
+                            'SELECT COUNT(*) FROM %I.lead_channels WHERE platform = ''messenger''', schema
+                        ) INTO cnt_lc_messenger;
+                        EXECUTE format(
+                            'SELECT COUNT(*) FROM %I.lead_channels WHERE platform = ''instagram''', schema
+                        ) INTO cnt_lc_instagram;
+                        EXECUTE format(
+                            'SELECT COUNT(*) FROM %I.lead_channels', schema
+                        ) INTO cnt_lc_total;
+                    ELSE
+                        cnt_lc_discord := -1;
+                        cnt_lc_messenger := -1;
+                        cnt_lc_instagram := -1;
+                        cnt_lc_total := -1;
+                    END IF;
+
+                    RAISE NOTICE '%-12s | %-12s | %-12s | %-12s | %-12s | %-10s | %-12s | %-12s | %-8s | %s',
+                        schema,
+                        cnt_discord, cnt_messenger, cnt_instagram, cnt_discord_uid,
+                        cnt_lc_discord, cnt_lc_messenger, cnt_lc_instagram,
+                        cnt_lc_total, cnt_leads_total;
+                END LOOP;
+
+                RAISE NOTICE '';
+                RAISE NOTICE '確認完了';
+            END
+            $$;
+            SQL
+
+            echo "========================================================"
+            echo "ADR-119 DB 検証完了"
+            echo "========================================================"
