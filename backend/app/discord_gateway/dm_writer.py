@@ -32,6 +32,7 @@ import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
@@ -41,24 +42,6 @@ logger = logging.getLogger(__name__)
 
 def _schema(tenant_id: int) -> str:
     return f"tenant_{tenant_id:03d}"
-
-
-async def _ensure_lead_channel(
-    db: AsyncSession,
-    schema: str,
-    lead_id: int,
-    discord_user_id: str,
-    display_name: str,
-) -> None:
-    """lead_channels に discord チャンネル行が無ければ補完する（冪等）。"""
-    await db.execute(
-        text(f"""
-            INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
-            VALUES (:lead_id, 'discord', :external_id, :name)
-            ON CONFLICT (platform, external_id) DO NOTHING
-        """),
-        {"lead_id": lead_id, "external_id": discord_user_id, "name": display_name},
-    )
 
 
 async def _ensure_lead_channel(
@@ -120,17 +103,36 @@ async def upsert_lead_and_message(
     # --- 1. Lead の検索または新規作成（ADR-119 二段 lookup） ---
 
     # Stage 1: lead_channels を一次権威として検索
-    lc_row = await db.execute(
-        text(f"""
-            SELECT l.id, l.discord_dm_channel_id
-            FROM {schema}.leads l
-            JOIN {schema}.lead_channels lc ON lc.lead_id = l.id
-            WHERE lc.platform = 'discord' AND lc.external_id = :external_id
-            LIMIT 1
-        """),
-        {"external_id": discord_user_id},
-    )
-    lead = lc_row.first()
+    # ProgrammingError ガード: デプロイ直後に migration が未完了で lead_channels が
+    # まだ存在しない場合（コード起動〜migration 完了の数秒〜数分間）、
+    # Stage 1 が UndefinedTableError を投げて Stage 2 フォールバックに届かない。
+    # キャッチして rollback + search_path 再設定後に Stage 2 へ進む（メッセージ損失防止）。
+    lead = None
+    try:
+        lc_row = await db.execute(
+            text(f"""
+                SELECT l.id, l.discord_dm_channel_id
+                FROM {schema}.leads l
+                JOIN {schema}.lead_channels lc ON lc.lead_id = l.id
+                WHERE lc.platform = 'discord' AND lc.external_id = :external_id
+                LIMIT 1
+            """),
+            {"external_id": discord_user_id},
+        )
+        lead = lc_row.first()
+    except ProgrammingError as exc:
+        if "lead_channels" in str(exc):
+            logger.warning(
+                "[dm_writer] lead_channels 未存在（migration 窓）— Stage 2 へフォールバック "
+                "tenant=%d discord_user=%s",
+                tenant_id, discord_user_id,
+            )
+            # ProgrammingError でトランザクションが abort 状態になるため rollback が必要
+            await db.rollback()
+            # rollback 後は search_path がリセットされるため再設定する
+            await set_tenant_context(db, tenant_id)
+        else:
+            raise
 
     # Stage 2: source フォールバック（既存行／backfill 後の補完）
     if lead is None:
