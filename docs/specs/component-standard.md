@@ -468,3 +468,90 @@ npm run dev
 1. 実画面への展開: `ConfirmModal` 等を新 `Modal` 金型ベースに順次移行
 2. アニメーション: フェードイン / スライドアップは Task 7E で検討（金型には含めない）
 3. ドラッグ移動・リサイズ: 必要になった時点で拡張
+
+---
+
+## EmptyState 金型仕様（Task 8C 追加）
+
+**確定日**: 2026-06-08
+
+### 既存空状態との対応
+
+| 既存実装 | 場所 | 状態 |
+|---------|------|------|
+| `.empty`（テーブル行） | `DataTable.css` / 各ページインライン | 変更なし |
+| `.db-empty` | `DashboardPage.css` | 変更なし |
+| `.right-panel-empty` | `InboxPage.css` | 変更なし |
+| `emptyState` prop（テキスト渡し） | `DataTable.tsx` | 変更なし |
+
+新 `EmptyState` 金型は **ゼロ置き換え**。既存実装には一切触れない。
+
+### 採用トークン
+
+| トークン | 値 | 説明 |
+|---------|---|------|
+| `--icon-xl` | 48px | default サイズ推奨アイコン径（ICON.xl） |
+| `--icon-lg` | 24px | compact サイズ推奨アイコン径（ICON.lg） |
+| `--space-12` | 48px | default 縦パディング |
+| `--space-6` | 24px | compact 縦パディング |
+| `--font-md` | 16px | default 見出しフォントサイズ |
+| `--font-sm` | 13.6px | compact 見出し / default 説明文 |
+| `--font-xs` | 12px | compact 説明文 |
+| `--font-weight-medium` | 500 | 見出しウェイト |
+| `--text-secondary` | — | 見出し文字色 |
+| `--text-muted` | — | アイコン・説明文字色 |
+
+新規追加トークンなし。すべて既存トークンを参照。
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `title` | string | — | 見出し（**必須**） |
+| `icon` | ReactNode | — | アイコン要素（任意）。default → `ICON.xl`(48px) / compact → `ICON.lg`(24px) 推奨 |
+| `description` | string | — | 説明文（任意） |
+| `action` | ReactNode | — | アクション（任意）— `<Button>` を渡す |
+| `size` | `'default' \| 'compact'` | `'default'` | default = 全画面 / compact = テーブル・カード内 |
+| `className` | string | — | 追加クラス |
+
+### サイズ比較
+
+| | default | compact |
+|---|---|---|
+| padding | 48px 24px | 24px 16px |
+| 推奨アイコン径 | `ICON.xl` = 48px | `ICON.lg` = 24px |
+| 見出し | `font-md` (16px) + medium | `font-sm` (13.6px) + medium |
+| 説明文 | `font-sm` (13.6px) | `font-xs` (12px) |
+| 用途 | ページ全体・リスト | テーブル内・カード内 |
+
+### DataTable との連携
+
+`DataTable` の `emptyState` prop（`ReactNode`）に `<EmptyState size="compact">` を渡す:
+
+```tsx
+<DataTable
+  columns={columns}
+  data={[]}
+  emptyState={
+    <EmptyState
+      size="compact"
+      icon={<NAV_ICONS.leads size={ICON.lg} />}
+      title="リードがありません"
+      action={<Button variant="primary" size="sm">リードを追加</Button>}
+    />
+  }
+/>
+```
+
+### 設計方針
+
+- `title` は `<p>` タグ（見出しレベルは呼び出し側のコンテキストに委ねる）
+- アイコンサイズは呼び出し側で決める（`icon` は ReactNode）
+- `action` に渡すのは `<Button>` のみ（raw `<button>` 禁止）
+- CSS 名前空間 `.comp-empty-*`（既存 `.empty` / `.db-empty` と独立）
+
+### Task 8E への引き継ぎ事項
+
+1. 実画面への展開: 32 件の既存空状態を `<EmptyState>` に順次置き換え
+2. 展開優先順位: DataTable の `emptyState` prop（テキスト渡し）→ インライン `.empty` → `.db-empty`
+3. 共存期: `comp-empty` と `.empty` / `.db-empty` が並存。Task 8E 完了後に既存クラスを非推奨化
