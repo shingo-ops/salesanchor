@@ -234,3 +234,52 @@ npm run dev
 1. 実画面への展開: `.badge-open` / `.badge-pending` 等の 118 か所を `<Badge>` に順次置き換え
 2. ステータスマッピング: `constants/badgeVariants.ts` 等でステータス値 → variant の SSoT を用意してから展開
 3. `.status-badge` クラスとの共存: 移行期は `comp-badge` と `.badge` / `.status-badge` が並存。Task 3E 完了後に既存クラスを非推奨化
+
+---
+
+## §9 DataTable（Task 4C）
+
+汎用データテーブル。ソート・行選択・density・空状態を制御型（controlled）で持つ。
+
+### トークン（非色: tokens.css のみ）
+
+| トークン | 値 | 説明 |
+|---|---|---|
+| `--comp-table-row-h-compact` | `32px` | compact 行高さ |
+| `--comp-table-row-h-default` | `44px` | default 行高さ（WCAG 2.5.5 タッチ最小 44px） |
+| `--comp-table-row-h-relaxed` | `56px` | relaxed 行高さ |
+| `--comp-table-cell-px` | `var(--space-4)` = 16px | セル横余白 |
+| `--comp-table-check-col-w` | `var(--col-width-checkbox)` = 40px | チェックボックス列幅 |
+| `--comp-table-radius` | `var(--radius-lg)` = 8px | 外周角丸 |
+| `--comp-table-min-width` | `480px` | 横スクロール開始幅 |
+
+色は既存トークン委譲（`--bg-subtle` / `--bg-hover` / `--info-bg` / `--border` 等）。新規カラートークン追加なし。
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `columns` | `DataTableColumn<T>[]` | — | 列定義（key / header / width / sortable / renderCell） |
+| `data` | `T[]` | — | 表示データ行 |
+| `rowKey` | `(row: T) => string` | — | 行識別子ファクトリ |
+| `sortKey` | string | — | 現在ソート中の列 key |
+| `sortDir` | `'asc' \| 'desc'` | `'asc'` | ソート方向 |
+| `onSort` | `(key, dir) => void` | — | ソートクリック時コールバック |
+| `selectable` | boolean | false | チェックボックス列を表示 |
+| `selectedKeys` | `Set<string>` | — | 選択済み rowKey 集合 |
+| `onSelectChange` | `(keys) => void` | — | 選択変更コールバック |
+| `density` | `'compact' \| 'default' \| 'relaxed'` | `'default'` | 行高さバリアント |
+| `emptyState` | ReactNode | `'No data'` | データ 0 件時の表示スロット |
+
+### 設計方針
+
+- 全ての状態（sort/selection）は controlled（呼び出し側が管理）。
+- 水平スクロールはラッパー `.comp-table` が担当。モバイルで `min-width` を超えた場合に自動で横スクロール。
+- `density` でリスト・フォーム・詳細画面の用途に対応（compact=一覧/compact、relaxed=詳細/大画面）。
+- セル内に業務固有の日本語を埋め込まない。`header` プロップ・`renderCell` で渡す。
+
+### Task 4E への引き継ぎ事項
+
+1. リード一覧・会社一覧・注文一覧への DataTable 適用
+2. 列固定（sticky ヘッダー / sticky チェックボックス列）の検討
+3. ページネーション連携（`page` / `totalCount` props 追加）

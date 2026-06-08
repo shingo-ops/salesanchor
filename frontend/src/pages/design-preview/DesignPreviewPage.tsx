@@ -13,8 +13,49 @@ import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
 import { Textarea } from "../../components/Textarea";
 import { Badge } from "../../components/Badge";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn, SortDir } from "../../components/DataTable";
 import { X, PAGE_ICONS } from "../../constants/icons";
 import "./DesignPreviewPage.css";
+
+// -- §9 DataTable デモデータ --------------------------------------------------
+interface DemoLead {
+  id: string;
+  name: string;
+  company: string;
+  status: string;
+  score: number;
+}
+
+const DEMO_LEADS: DemoLead[] = [
+  { id: "1", name: "田中 一郎",   company: "株式会社A商事",     status: "対応済み",  score: 92 },
+  { id: "2", name: "鈴木 花子",   company: "B株式会社",         status: "保留中",    score: 75 },
+  { id: "3", name: "佐藤 次郎",   company: "Cコーポレーション", status: "未対応",    score: 40 },
+  { id: "4", name: "伊藤 三郎",   company: "D合同会社",         status: "対応済み",  score: 88 },
+  { id: "5", name: "山田 美咲",   company: "E株式会社",         status: "保留中",    score: 61 },
+];
+
+const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+  "対応済み": "success",
+  "保留中":   "warning",
+  "未対応":   "danger",
+};
+
+const DEMO_LEAD_COLUMNS: DataTableColumn<DemoLead>[] = [
+  { key: "name",    header: "名前",     width: "140px", sortable: true },
+  { key: "company", header: "会社名",   sortable: true },
+  {
+    key: "status",
+    header: "ステータス",
+    width: "120px",
+    renderCell: (row) => (
+      <Badge variant={STATUS_VARIANT[row.status] ?? "neutral"} appearance="soft" size="sm">
+        {row.status}
+      </Badge>
+    ),
+  },
+  { key: "score", header: "スコア", width: "72px", sortable: true },
+];
 
 // -- 幅セレクタの選択肢 -------------------------------------------------------
 const WIDTH_BANDS = [
@@ -64,6 +105,19 @@ const VARIANT_LABEL: Record<string, string> = {
 
 export default function DesignPreviewPage() {
   const [bandWidth, setBandWidth] = useState<BandValue>(null);
+
+  // §9 DataTable 状態
+  const [tableSortKey, setTableSortKey]   = useState<string>("name");
+  const [tableSortDir, setTableSortDir]   = useState<SortDir>("asc");
+  const [tableSelected, setTableSelected] = useState<Set<string>>(new Set());
+  const [tableDensity,  setTableDensity]  = useState<"compact" | "default" | "relaxed">("default");
+
+  const sortedLeads = [...DEMO_LEADS].sort((a, b) => {
+    const av = (a as Record<string, unknown>)[tableSortKey];
+    const bv = (b as Record<string, unknown>)[tableSortKey];
+    const cmp = String(av).localeCompare(String(bv), "ja");
+    return tableSortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <PageLayout navKey="nav.designPreview" subtitleKey="designPreview.subtitle">
@@ -383,6 +437,59 @@ export default function DesignPreviewPage() {
             <div className="dp-row-items">
               <Badge variant="success" icon={<PAGE_ICONS.settingsSolid size={10} />}>設定済み</Badge>
               <Badge variant="danger"  icon={<X size={10} />}>エラー</Badge>
+            </div>
+          </div>
+        </section>
+
+        {/* [9] データテーブル */}
+        <section className="dp-section">
+          <SectionHeader
+            title="9. データテーブル (DataTable)"
+            desc="ソート・行選択・density 3種・空状態の目視確認。"
+          />
+
+          {/* density セレクタ */}
+          <div className="dp-row">
+            <span className="dp-row-label">density</span>
+            <div className="dp-row-items">
+              {(["compact", "default", "relaxed"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`dp-band-btn${tableDensity === d ? " dp-band-btn--active" : ""}`}
+                  onClick={() => setTableDensity(d)}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* テーブル本体 */}
+          <DataTable<DemoLead>
+            columns={DEMO_LEAD_COLUMNS}
+            data={sortedLeads}
+            rowKey={(r) => r.id}
+            sortKey={tableSortKey}
+            sortDir={tableSortDir}
+            onSort={(k, d) => { setTableSortKey(k); setTableSortDir(d); }}
+            selectable
+            selectedKeys={tableSelected}
+            onSelectChange={setTableSelected}
+            density={tableDensity}
+            emptyState={<span>データがありません</span>}
+          />
+
+          {/* 空状態 */}
+          <div className="dp-row">
+            <span className="dp-row-label">empty</span>
+            <div style={{ width: "100%" }}>
+              <DataTable<DemoLead>
+                columns={DEMO_LEAD_COLUMNS}
+                data={[]}
+                rowKey={(r) => r.id}
+                emptyState={<span>該当するデータがありません</span>}
+              />
             </div>
           </div>
         </section>

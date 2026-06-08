@@ -71,6 +71,7 @@
 | feature/morimoto/sa-18-phase2-auto-url | SA-18 Bootstrap auto-URL（SA18_PHASE2_ENABLED → salesanchor_app URL 自動組み立て） | 2026-06-07 10:35 | IN_PROGRESS | #1716 | |
 | feature/morimoto/adr-116-deploy-rollback | ADR-118 ロールバック堅牢化（deploy_rollback.sh 共有・LAST_GOOD_SHA）棚上げ中 | 2026-06-07 | IN_PROGRESS | #1713 | 棚上げ中 |
 | feature/morimoto/fix-rls-policy-variable-name | RLS ポリシー変数名修正（Phase2 前提条件） | 2026-06-07 | DONE | #1730 | |
+| feature/morimoto/datatable-preview | DataTable 金型 + デザインプレビュー §9 追加（Task 4C+4D） | 2026-06-08 | IN_PROGRESS | | |
 ---
 
 ## 記入例
