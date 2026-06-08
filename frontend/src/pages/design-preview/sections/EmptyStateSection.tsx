@@ -21,7 +21,7 @@ export function EmptyStateSection() {
         {/* アイコン + 見出し + 説明 + アクション */}
         <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-lg)" }}>
           <EmptyState
-            icon={<PAGE_ICONS.inboxEmpty size={ICON.xl} />}
+            icon={<PAGE_ICONS.inboxEmptyOutline size={ICON.xl} />}
             title="受信箱は空です"
             description="新しいメッセージが届くとここに表示されます。チャンネルを追加して会話を開始しましょう。"
             action={<Button variant="secondary">チャンネルを追加</Button>}
