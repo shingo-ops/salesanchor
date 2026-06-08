@@ -37,8 +37,8 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
-from app.services import shipping_carriers
 from app.services.test_pdf import render_test_pdf
 
 logger = logging.getLogger(__name__)
@@ -285,7 +285,7 @@ class CarrierTestResponse(BaseModel):
 
 
 def _validate_carrier(carrier: str) -> None:
-    if not shipping_carriers.is_valid_carrier(carrier):
+    if not carriers.is_valid_carrier(carrier):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未対応のキャリアです")
 
 
@@ -301,7 +301,7 @@ async def carrier_status(
 ) -> CarrierStatus:
     """キャリアの認証情報の設定状況（シークレットは返さない）。"""
     _validate_carrier(carrier)
-    st = await shipping_carriers.get_status(db, tenant_id, carrier)
+    st = await carriers.get_status(db, tenant_id, carrier)
     return CarrierStatus(carrier=carrier, configured=st["configured"], environment=st["environment"])
 
 
@@ -324,7 +324,7 @@ async def save_carrier_credentials(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="認証ID・シークレットの両方を入力してください。",
         )
-    await shipping_carriers.save_credentials(
+    await carriers.save_credentials(
         db,
         tenant_id,
         carrier,
@@ -349,7 +349,7 @@ async def delete_carrier_credentials(
     """キャリア認証情報を削除。admin 専用。"""
     _validate_carrier(carrier)
     _require_admin(user)
-    await shipping_carriers.delete_credentials(db, tenant_id, carrier)
+    await carriers.delete_credentials(db, tenant_id, carrier)
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
 
@@ -365,14 +365,14 @@ async def carrier_test_connection(
 ) -> CarrierTestResponse:
     """保存済みの認証情報で各社 API への疎通（認証）を確認する。"""
     _validate_carrier(carrier)
-    creds = await shipping_carriers.get_credentials(db, tenant_id, carrier)
+    creds = await carriers.get_credentials(db, tenant_id, carrier)
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="認証情報が未設定です。先に保存してください。",
         )
     result = await run_in_threadpool(
-        shipping_carriers.test_connection,
+        carriers.test_connection,
         carrier,
         creds["environment"],
         creds["client_id"],

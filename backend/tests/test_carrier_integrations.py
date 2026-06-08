@@ -1,4 +1,4 @@
-"""配送キャリア接続テスト（shipping_carriers サービス + integrations ルーター）のテスト。
+"""配送キャリア接続テスト（carrier_credentials サービス + integrations ルーター）のテスト。
 
 httpx と DB アクセスはモックする。
 """
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services import shipping_carriers as svc
+from app.services import carrier_credentials as svc
 
 
 # ─────────────────────────────────────────────────────────────
