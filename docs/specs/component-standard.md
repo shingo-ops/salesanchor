@@ -393,3 +393,78 @@ npm run dev
 1. 実画面への展開: ManagementCenterPage・CustomerHubPage・OrdersPage の hub-subnav を `<SubMenu>` に順次置き換え
 2. 移行順序: OrdersPage（flat）→ CustomerHubPage（grouped）→ ManagementCenterPage（grouped）
 3. 共存期: `comp-subnav` と `.hub-subnav` が並存。Task 6E 完了後に `.hub-subnav` を非推奨化
+
+---
+
+## Modal 金型仕様（Task 7C 追加）
+
+**確定日**: 2026-06-08
+
+### 既存モーダルとの対応
+
+| 既存実装 | 場所 | 状態 |
+|---------|------|------|
+| `ConfirmModal` | `components/ConfirmModal.tsx` | 変更なし（既存のまま） |
+| `ProfileModal` | `components/ProfileModal.tsx` | 変更なし |
+| `InboxSettingsModal` | `pages/inbox/` | 変更なし |
+| その他 | 各ページ内 modal | 変更なし |
+
+新 `Modal` 金型は **ゼロ置き換え**。既存実装には一切触れない。
+
+### 採用トークン
+
+| トークン | 値 | 説明 |
+|---------|---|------|
+| `--modal-max-w-sm` | 420px | sm 最大幅（確認・アラート） |
+| `--modal-max-w-md` | 600px | md 最大幅（標準フォーム） |
+| `--modal-max-w-lg` | 800px | lg 最大幅（詳細・テーブル） |
+| `--z-backdrop` | 298 | 背景暗幕レイヤー |
+| `--z-modal` | 400 | ダイアログレイヤー |
+| `--shadow-modal` | (既存) | ダイアログ影 |
+| `--radius-lg` | 8px | ダイアログ角丸 |
+| `--overlay-bg` | rgba(0,0,0,0.5) | 背景暗幕色 |
+
+### Props
+
+| prop | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `open` | boolean | — | 表示 / 非表示 |
+| `onClose` | `() => void` | — | 閉じる時のコールバック（Esc / ×ボタン / 背景クリック） |
+| `title` | string | — | ダイアログタイトル（`aria-labelledby` で参照） |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | 最大幅の選択 |
+| `dismissOnOverlay` | boolean | `true` | 背景クリックで閉じる |
+| `children` | ReactNode | — | 本体コンテンツ（スクロール可） |
+| `footer` | ReactNode | — | フッタアクション（省略可） |
+
+### アクセシビリティ
+
+- `role="dialog"` + `aria-modal="true"` + `aria-labelledby={titleId}`
+- Esc キーで閉じる（`document` の `keydown` リスナー）
+- フォーカストラップ: Tab / Shift+Tab がダイアログ内の focusable 要素を循環
+- 閉じたら `open` が `true` になる直前の `activeElement` へフォーカス復帰
+- 開いた直後はダイアログ内の最初の focusable 要素へ自動フォーカス
+- ×ボタンは `<Button variant="ghost" size="md" iconOnly aria-label={t("common.close")}>`
+- `ReactDOM.createPortal` で `document.body` にマウント（z-index 衝突を防止）
+
+### モバイル対応
+
+- ≤640px: `align-items: flex-end` + `width: 100%` のボトムシート形式
+- `border-bottom-left-radius: 0 / border-bottom-right-radius: 0`
+- `max-height: 90vh`
+
+### CSS 名前空間
+
+`.comp-modal-*`（既存 `.modal-*` / `.modal-overlay` とは完全に独立）
+
+### 設計方針
+
+- 本体スクロール: `overflow-y: auto` は `.comp-modal-body` のみ。ヘッダ・フッタは `flex-shrink: 0` で固定。
+- ×ボタンは `Button` 金型を再利用（`variant="ghost" size="md" iconOnly`）。
+- フッタは `footer` prop に `<Button>` を並べるだけ。右寄せは CSS 側で制御。
+- 閉じるラベルは `t("common.close")`（ADR-027 準拠）。
+
+### Task 7E への引き継ぎ事項
+
+1. 実画面への展開: `ConfirmModal` 等を新 `Modal` 金型ベースに順次移行
+2. アニメーション: フェードイン / スライドアップは Task 7E で検討（金型には含めない）
+3. ドラッグ移動・リサイズ: 必要になった時点で拡張

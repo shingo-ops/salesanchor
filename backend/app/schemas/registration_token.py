@@ -73,11 +73,15 @@ class AddressInput(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
         return validate_email_loose(v)
 
     @field_validator("telephone")
     @classmethod
     def validate_tel(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
         return validate_phone(v)
 
     @field_validator("country_code")
