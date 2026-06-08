@@ -486,6 +486,17 @@ npm run dev
 
 新 `EmptyState` 金型は **ゼロ置き換え**。既存実装には一切触れない。
 
+### アイコン line / solid 使い分けルール（Task 8C+確定）
+
+| 種別 | 使用場面 | 例 |
+|------|---------|---|
+| **line（outline）** | **既定**。空状態・ナビ・ラベル・説明的な文脈 | `inboxEmptyOutline`、`NAV_ICONS.*` |
+| **solid（塗り）** | 選択中・アクティブ・強調用途のみ | `PAGE_ICONS.inboxEmpty`（InboxMessageThread アクティブ表示） |
+
+- 空状態のアイコンは必ず **outline** を使う（`PAGE_ICONS.inboxEmptyOutline` 等）。
+- `PAGE_ICONS.inboxEmpty`（solid）は `InboxMessageThread` の "スレッド未選択" アクティブ表示専用。他では使わない。
+- 同一グリフの solid / outline 両方が必要な場合は `icons.tsx` に `XxxOutline` を追加して区別する。
+
 ### 採用トークン
 
 | トークン | 値 | 説明 |
