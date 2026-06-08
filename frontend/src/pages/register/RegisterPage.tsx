@@ -198,7 +198,6 @@ export default function RegisterPage() {
                 className="input"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
-                required
               />
             </label>
             <label>
