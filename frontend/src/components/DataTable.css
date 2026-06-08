@@ -1,0 +1,149 @@
+/**
+ * DataTable — ADR-067: 全カラーは CSS 変数参照のみ（Task 4C）
+ *
+ * セレクタ順序（specificity 昇順）:
+ *   1. ラッパー / テーブル本体 (0,1,0)
+ *   2. 密度バリアント (0,2,0)
+ *   3. ヘッダー / セル (0,2,0)
+ *   4. 選択状態 (0,2,0)
+ */
+
+/* ── 1. ラッパー（横スクロール担当） (0,1,0) ── */
+.comp-table {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--comp-table-radius);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+/* ── テーブル本体 ── */
+.comp-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: var(--comp-table-min-width);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+/* ── 2. 密度バリアント (0,2,0) ── */
+.comp-table--compact .comp-table__th,
+.comp-table--compact .comp-table__td {
+  height: var(--comp-table-row-h-compact);
+}
+
+.comp-table--relaxed .comp-table__th,
+.comp-table--relaxed .comp-table__td {
+  height: var(--comp-table-row-h-relaxed);
+}
+
+/* ── 3. ヘッダー行 (0,2,0) ── */
+.comp-table__head-row {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.comp-table__th {
+  height: var(--comp-table-row-h-default);
+  padding: 0 var(--comp-table-cell-px);
+  text-align: left;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-muted);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.comp-table__th--check {
+  width: var(--comp-table-check-col-w);
+  padding: 0 var(--space-3);
+}
+
+/* ── ソートボタン (0,2,0) ── */
+.comp-table__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.comp-table__sort-btn:hover {
+  color: var(--text-primary);
+}
+
+.comp-table__sort-btn--active {
+  color: var(--text-primary);
+}
+
+.comp-table__sort-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.4;
+}
+
+.comp-table__sort-btn--active .comp-table__sort-icon {
+  opacity: 1;
+  color: var(--primary);
+}
+
+/* ── データ行 (0,1,0) ── */
+.comp-table__row {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast);
+}
+
+.comp-table__row:last-child {
+  border-bottom: none;
+}
+
+.comp-table__row:hover {
+  background: var(--bg-hover);
+}
+
+/* ── 4. 選択状態 (0,2,0) ── */
+.comp-table__row--selected {
+  background: var(--info-bg);
+}
+
+.comp-table__row--selected:hover {
+  background: var(--info-bg);
+  filter: brightness(0.97);
+}
+
+/* ── データセル (0,2,0) ── */
+.comp-table__td {
+  height: var(--comp-table-row-h-default);
+  padding: 0 var(--comp-table-cell-px);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.comp-table__td--check {
+  width: var(--comp-table-check-col-w);
+  padding: 0 var(--space-3);
+}
+
+/* ── チェックボックス ── */
+.comp-table__check {
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+/* ── 空状態 ── */
+.comp-table__empty {
+  padding: var(--space-8) var(--comp-table-cell-px);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
