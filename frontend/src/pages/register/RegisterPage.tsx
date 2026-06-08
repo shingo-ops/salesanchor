@@ -95,8 +95,19 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setError("");
+
+    // フロント必須バリデーション: 担当者名 + (メール or 電話)
+    if (!contactName.trim()) {
+      setError(t("registration.contactNameRequired"));
+      return;
+    }
+    if (!contactEmail.trim() && !contactTelephone.trim()) {
+      setError(t("registration.contactContactRequired"));
+      return;
+    }
+
+    setSubmitting(true);
 
     const addresses = [billingAddress, deliveryAddress].filter(
       (a) => a.address_line_1 || a.city || a.name
@@ -170,35 +181,24 @@ export default function RegisterPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        {/* Billing Address */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend>{t("registration.billingAddress")}</legend>
-          <AddressFields
-            address={billingAddress}
-            onChange={updateBilling}
-          />
-        </fieldset>
-
-        {/* Delivery Address */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend>{t("registration.deliveryAddress")}</legend>
-          <AddressFields
-            address={deliveryAddress}
-            onChange={updateDelivery}
-          />
-        </fieldset>
-
-        {/* Contact Info */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend>{t("registration.contactInfo")}</legend>
+        {/* Contact Info — 最上部（担当者は窓口として最重要） */}
+        <fieldset style={{ border: "2px solid var(--color-primary)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+          <legend style={{ fontWeight: "var(--font-weight-bold)", padding: "0 var(--spacing-2)" }}>
+            {t("registration.contactInfo")}
+          </legend>
+          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-3)" }}>
+            {t("registration.contactHint")}
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
             <label>
-              {t("registration.contactName")}
+              {t("registration.contactName")}{" "}
+              <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
               <input
                 type="text"
                 className="input"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
+                required
               />
             </label>
             <label>
@@ -222,6 +222,26 @@ export default function RegisterPage() {
           </div>
         </fieldset>
 
+        {/* Billing Address */}
+        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+          <legend>{t("registration.billingAddress")}</legend>
+          <AddressFields
+            address={billingAddress}
+            onChange={updateBilling}
+            section="billing"
+          />
+        </fieldset>
+
+        {/* Delivery Address */}
+        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+          <legend>{t("registration.deliveryAddress")}</legend>
+          <AddressFields
+            address={deliveryAddress}
+            onChange={updateDelivery}
+            section="delivery"
+          />
+        </fieldset>
+
         <button
           type="submit"
           className="btn btn-primary"
@@ -238,11 +258,14 @@ export default function RegisterPage() {
 function AddressFields({
   address,
   onChange,
+  section,
 }: {
   address: AddressForm;
   onChange: (field: keyof AddressForm, value: string | boolean) => void;
+  section: "billing" | "delivery";
 }) {
   const { t } = useTranslation();
+  const nameKey = section === "billing" ? "registration.billingName" : "registration.deliveryName";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
       <label>
@@ -255,7 +278,7 @@ function AddressFields({
         />
       </label>
       <label>
-        {t("registration.name")}
+        {t(nameKey)}
         <input
           type="text"
           className="input"
@@ -317,26 +340,25 @@ function AddressFields({
           onChange={(e) => onChange("address_line_3", e.target.value)}
         />
       </label>
-      <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
-        <label style={{ flex: 1 }}>
-          {t("registration.city")}
-          <input
-            type="text"
-            className="input"
-            value={address.city}
-            onChange={(e) => onChange("city", e.target.value)}
-          />
-        </label>
-        <label style={{ flex: 1 }}>
-          {t("registration.state")}
-          <input
-            type="text"
-            className="input"
-            value={address.state}
-            onChange={(e) => onChange("state", e.target.value)}
-          />
-        </label>
-      </div>
+      {/* 縦並び: 都道府県→市区町村（日本慣習順） */}
+      <label>
+        {t("registration.state")}
+        <input
+          type="text"
+          className="input"
+          value={address.state}
+          onChange={(e) => onChange("state", e.target.value)}
+        />
+      </label>
+      <label>
+        {t("registration.city")}
+        <input
+          type="text"
+          className="input"
+          value={address.city}
+          onChange={(e) => onChange("city", e.target.value)}
+        />
+      </label>
       <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
         <label style={{ flex: 1 }}>
           {t("registration.zip")}

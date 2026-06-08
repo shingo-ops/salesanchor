@@ -243,26 +243,25 @@ export default function RegisterAddressPage() {
                 onChange={(e) => updateField("address_line_3", e.target.value)}
               />
             </label>
-            <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
-              <label style={{ flex: 1 }}>
-                {t("registration.city")}
-                <input
-                  type="text"
-                  className="input"
-                  value={address.city}
-                  onChange={(e) => updateField("city", e.target.value)}
-                />
-              </label>
-              <label style={{ flex: 1 }}>
-                {t("registration.state")}
-                <input
-                  type="text"
-                  className="input"
-                  value={address.state}
-                  onChange={(e) => updateField("state", e.target.value)}
-                />
-              </label>
-            </div>
+            {/* 縦並び: 都道府県→市区町村（日本慣習順） */}
+            <label>
+              {t("registration.state")}
+              <input
+                type="text"
+                className="input"
+                value={address.state}
+                onChange={(e) => updateField("state", e.target.value)}
+              />
+            </label>
+            <label>
+              {t("registration.city")}
+              <input
+                type="text"
+                className="input"
+                value={address.city}
+                onChange={(e) => updateField("city", e.target.value)}
+              />
+            </label>
             <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
               <label style={{ flex: 1 }}>
                 {t("registration.zip")}
