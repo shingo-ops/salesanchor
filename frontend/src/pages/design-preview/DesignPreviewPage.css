@@ -208,3 +208,10 @@
   font-family: var(--font-mono, monospace);
   font-size: var(--font-xs);
 }
+
+/* モバイル幅デモ用コンテナ（375px クリップ） */
+.dp-mobile-demo {
+  max-width: 375px;
+  overflow: hidden;
+  width: 100%;
+}

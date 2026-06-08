@@ -116,7 +116,7 @@ export function TabsSection() {
       <div className="dp-row">
         <span className="dp-row-label">横スクロール (375px)</span>
         <div className="dp-row-items">
-          <div style={{ maxWidth: 375, overflow: "hidden", width: "100%" }}>
+          <div className="dp-mobile-demo">
             <Tabs
               items={SIX_TABS}
               activeKey={pillMd6}
