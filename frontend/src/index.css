@@ -142,6 +142,17 @@
   --accent-bg: #2d6cdf;
   --bg-badge: #eeeeff;
 
+  /* FedEx レート比較モーダル バッジカラー（ADR-124） */
+  --color-blue-100:      #dbeafe;  /* ライブバッジ背景 */
+  --color-blue-700:      #1d4ed8;  /* ライブバッジ文字 */
+  --color-gray-100:      #f3f4f6;  /* 静的バッジ背景 */
+  --color-gray-600:      #4b5563;  /* 静的バッジ文字 */
+  --color-red-50:        #fef2f2;  /* エラーバナー背景 */
+  --color-red-700:       #b91c1c;  /* エラーバナー文字 */
+  --color-amber-50:      #fffbeb;  /* 警告バナー背景 */
+  --color-amber-800:     #92400e;  /* 警告バナー文字 */
+  --color-border-subtle: #f3f4f6;  /* テーブル行区切り */
+
   /* PlatformIcon ブランドカラー（固定値 — ダークモードでも変更なし） */
   --platform-mail-bg: #ea4335;
   --platform-unknown-bg: #999999;
@@ -312,6 +323,17 @@
   --border-light: #334155;
   --accent-bg: #818cf8;
   --bg-badge: #3b2d5c;
+
+  /* FedEx レート比較モーダル バッジカラー（ADR-124 ダーク） */
+  --color-blue-100:      #1e3a5f;  /* ライブバッジ背景 */
+  --color-blue-700:      #93c5fd;  /* ライブバッジ文字 */
+  --color-gray-100:      #1f2937;  /* 静的バッジ背景 */
+  --color-gray-600:      #9ca3af;  /* 静的バッジ文字 */
+  --color-red-50:        #450a0a;  /* エラーバナー背景 */
+  --color-red-700:       #fca5a5;  /* エラーバナー文字 */
+  --color-amber-50:      #431407;  /* 警告バナー背景 */
+  --color-amber-800:     #fcd34d;  /* 警告バナー文字 */
+  --color-border-subtle: #374151;  /* テーブル行区切り */
 
   /* PlatformIcon ブランドカラー（固定値 — ダークモードでも変更なし） */
   --platform-mail-bg: #ea4335;

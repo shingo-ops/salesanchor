@@ -70,8 +70,8 @@ function SourceBadge({ source }: { source: "static" | "fedex_live" }) {
           borderRadius: "4px",
           fontSize: "11px",
           fontWeight: 600,
-          backgroundColor: "var(--color-blue-100, #dbeafe)",
-          color: "var(--color-blue-700, #1d4ed8)",
+          backgroundColor: "var(--color-blue-100)",
+          color: "var(--color-blue-700)",
         }}
       >
         {t("fedexRateModal.sourceLive")}
@@ -86,8 +86,8 @@ function SourceBadge({ source }: { source: "static" | "fedex_live" }) {
         borderRadius: "4px",
         fontSize: "11px",
         fontWeight: 600,
-        backgroundColor: "var(--color-gray-100, #f3f4f6)",
-        color: "var(--color-gray-600, #4b5563)",
+        backgroundColor: "var(--color-gray-100)",
+        color: "var(--color-gray-600)",
       }}
     >
       {t("fedexRateModal.sourceStatic")}
@@ -139,10 +139,14 @@ export function FedExRateModal({
   };
 
   // エラーメッセージの整形（ADR-124 D5）
+  // 未連携 / アカウント番号未設定 / API エラーの3種を区別して表示
+  const isNotConnected = response?.live_error?.includes("未連携") ?? false;
   const liveErrorMessage = response?.live_error
-    ? response.live_error.includes("アカウント番号")
-      ? t("fedexRateModal.errorAccountNumber")
-      : `${t("fedexRateModal.errorApiFailure")}: ${response.live_error}`
+    ? isNotConnected
+      ? t("fedexRateModal.errorNotConnected")
+      : response.live_error.includes("アカウント番号")
+        ? t("fedexRateModal.errorAccountNumber")
+        : `${t("fedexRateModal.errorApiFailure")}: ${response.live_error}`
     : null;
 
   return (
@@ -188,8 +192,8 @@ export function FedExRateModal({
           style={{
             padding: "12px",
             borderRadius: "6px",
-            backgroundColor: "var(--color-red-50, #fef2f2)",
-            color: "var(--color-red-700, #b91c1c)",
+            backgroundColor: "var(--color-red-50)",
+            color: "var(--color-red-700)",
             marginBottom: "12px",
           }}
         >
@@ -197,15 +201,37 @@ export function FedExRateModal({
         </div>
       )}
 
-      {/* live_error（ADR-124 D5: 暗黙フォールバック禁止 — 明示エラー） */}
-      {liveErrorMessage && (
+      {/* 未連携状態（ADR-124 D5 + PO C1判断: FedEx 未連携時は設定ページへ誘導） */}
+      {isNotConnected && (
+        <div
+          role="alert"
+          style={{
+            padding: "16px",
+            borderRadius: "6px",
+            backgroundColor: "var(--color-amber-50)",
+            color: "var(--color-amber-800)",
+            marginBottom: "12px",
+          }}
+        >
+          <p style={{ marginBottom: "8px" }}>{t("fedexRateModal.errorNotConnected")}</p>
+          <a
+            href="/integrations/fedex"
+            style={{ color: "var(--color-blue-700)", textDecoration: "underline", fontSize: "14px" }}
+          >
+            {t("fedexRateModal.goToIntegrationSettings")}
+          </a>
+        </div>
+      )}
+
+      {/* live_error（未連携以外: アカウント番号未設定 / API エラー） */}
+      {liveErrorMessage && !isNotConnected && (
         <div
           role="alert"
           style={{
             padding: "12px",
             borderRadius: "6px",
-            backgroundColor: "var(--color-amber-50, #fffbeb)",
-            color: "var(--color-amber-800, #92400e)",
+            backgroundColor: "var(--color-amber-50)",
+            color: "var(--color-amber-800)",
             marginBottom: "12px",
           }}
         >
@@ -234,7 +260,7 @@ export function FedExRateModal({
                 {response.results.map((r, i) => (
                   <tr
                     key={i}
-                    style={{ borderBottom: "1px solid var(--color-border-subtle, #f3f4f6)" }}
+                    style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                   >
                     <td style={{ padding: "8px 4px" }}>
                       <SourceBadge source={r.source} />
