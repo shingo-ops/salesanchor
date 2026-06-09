@@ -9,7 +9,8 @@
     { "title": "サービス稼働",   "icon": "🟢", "url": "/grafana/d/uptime-kuma-monitors",                   "uid": "uptime-kuma-monitors" },
     { "title": "バックエンド",   "icon": "🔧", "url": "/grafana/d/backend-api-metrics",                    "uid": "backend-api-metrics" },
     { "title": "コンテナ詳細",  "icon": "📦", "url": "/grafana/d/container-detail",                       "uid": "container-detail" },
-    { "title": "DB詳細",        "icon": "🗄️", "url": "/grafana/d/db-connection-detail",                   "uid": "db-connection-detail" }
+    { "title": "DB詳細",        "icon": "🗄️", "url": "/grafana/d/db-connection-detail",                   "uid": "db-connection-detail" },
+    { "title": "SOP ヘルス",   "icon": "📋", "url": "/grafana/d/sop-health-reporter",                    "uid": "sop-health-reporter" }
   ],
   "dashboards": {
     "monitoring-main": {
@@ -66,6 +67,13 @@
       "header": {
         "title": "DB接続詳細",
         "subtitle": "DB接続数の状態別内訳・トランザクション数・タプル操作量を詳細に確認します。"
+      }
+    },
+    "sop-health-reporter": {
+      "description": "ADR-121 process-artifacts gate の遵守指標を週次集計し可視化します。5 指標（免除PR・危険PR・緊急PR累計・宿題超過・ゲート摩擦率）でプロセス定着度を計測します。",
+      "header": {
+        "title": "SOP ヘルスレポーター",
+        "subtitle": "ADR-121 の定着指標を週次モニタリングします。宿題超過が 1 件以上で Discord アラート発火（ゼロ許容）。"
       }
     }
   }

@@ -67,6 +67,14 @@ scrape_configs:
       - targets: ["github-collector:8000"]
     scrape_interval: 300s
 
+  # Prometheus Pushgateway（sop-health-reporter など週次バッチ指標を受け取る）
+  # ADR-124: GitHub Actions が週次で SOP 遵守指標 5 件を push する
+  - job_name: "pushgateway"
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+    scrape_interval: 60s
+
   # cAdvisor: 無効化済み（VPS cgroup 名前空間制限により取得不可 ADR-079）
   # - job_name: "cadvisor"
   #   static_configs:
