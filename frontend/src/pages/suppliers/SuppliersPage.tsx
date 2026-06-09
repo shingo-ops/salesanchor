@@ -1,5 +1,6 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal } from "../../components/Modal";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -77,25 +78,25 @@ export default function SuppliersPage() {
       ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{editId ? t("suppliers.editSupplier") : t("suppliers.newSupplier")}</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("suppliers.supplierName")} *</label><input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-              <div className="form-group"><label>{t("suppliers.contactName")}</label><input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.email")}</label><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.phone")}</label><input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-              <div className="form-group"><label>{t("suppliers.address")}</label><textarea value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("suppliers.editSupplier") : t("suppliers.newSupplier")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-group"><label>{t("suppliers.supplierName")} *</label><input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="form-group"><label>{t("suppliers.contactName")}</label><input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.email")}</label><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.phone")}</label><input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+          <div className="form-group"><label>{t("suppliers.address")}</label><textarea value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
       {loading ? <div className="loading">{t("common.loading")}</div> : (
         <table className="data-table">
           <thead><tr><th>{t("common.code")}</th><th>{t("suppliers.supplierName")}</th><th>{t("suppliers.colContact")}</th><th>{t("common.email")}</th><th>{t("common.phone")}</th><th>{t("common.actions")}</th></tr></thead>
