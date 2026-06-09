@@ -2,7 +2,7 @@
 
 - 作成日: 2026-06-09
 - 目的: salesanchor を外部企業へ販売する前提で、各導入企業が「自社の FedEx アカウント」を連携して送料見積・送り状・インボイス・追跡を行えるようにする。そのための **FedEx Integrator Provider / FedEx Compatible 認定**の申請手順・問い合わせ文面・スケジュールをまとめる。
-- 関連: ADR-122（配送キャリア Integrator 連携アーキ）、[配送キャリア接続テスト（実装済）](../../README.md)
+- 関連: ADR-123（配送キャリア Integrator 連携アーキ）、[配送キャリア接続テスト（実装済）](../../README.md)
 
 ---
 
@@ -108,7 +108,7 @@ FedEx ご担当者さま
 4. しんごさんの登録/Agreement/承認
 
 ### 必要工数（Claude フル稼働で大幅圧縮可。律速は上記外部要因）
-Rate / Ship+ラベル(PDF/PNG/ZPL・600DPI・国際AWB・複数個口) / インボイス / Track / エンドカスタマー登録+MFA / EULA・disclaimer。詳細は ADR-122。
+Rate / Ship+ラベル(PDF/PNG/ZPL・600DPI・国際AWB・複数個口) / インボイス / Track / エンドカスタマー登録+MFA / EULA・disclaimer。詳細は ADR-123。
 
 ---
 
@@ -128,4 +128,4 @@ Rate / Ship+ラベル(PDF/PNG/ZPL・600DPI・国際AWB・複数個口) / イン�
 
 1. **【最優先】FedEx Japan へ §1 の問い合わせを送付**（外部依存を即始動・全体の律速）
 2. **§2 の登録**（しんごさん操作・私が逐次案内）→ テストキー取得
-3. ADR-122 の実装計画に沿って Phase B（Rate/Ship/ラベル/インボイス）着手（テストキー到着後）
+3. ADR-123 の実装計画に沿って Phase B（Rate/Ship/ラベル/インボイス）着手（テストキー到着後）
