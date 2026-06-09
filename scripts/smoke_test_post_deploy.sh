@@ -157,6 +157,27 @@ else
   echo "[7] INFO: SA18_PHASE2_ENABLED 未設定 — jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ"
 fi
 
+# [8] ADR-124: tenant_carrier_credentials に RLS ポリシーが存在することを確認
+# PR-A の本番適用確認（DB レイヤのテナント分離）
+RLS_ENABLED=$(docker exec "${POSTGRES}" ${ADMIN_PSQL} -t -c "
+  SELECT count(*) FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'tenant_carrier_credentials'
+    AND c.relrowsecurity;" | tr -d ' \n')
+[ "${RLS_ENABLED}" = "1" ] \
+  && echo "[8a] PASS: tenant_carrier_credentials RLS enabled" \
+  || { echo "[8a] FAIL: tenant_carrier_credentials RLS not enabled"; exit 1; }
+
+POLICY_EXISTS=$(docker exec "${POSTGRES}" ${ADMIN_PSQL} -t -c "
+  SELECT count(*) FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename = 'tenant_carrier_credentials'
+    AND policyname = 'tenant_isolation_carrier_credentials';" | tr -d ' \n')
+[ "${POLICY_EXISTS}" = "1" ] \
+  && echo "[8b] PASS: tenant_isolation_carrier_credentials policy found" \
+  || { echo "[8b] FAIL: tenant_isolation_carrier_credentials policy missing"; exit 1; }
+
 echo ""
 echo "============================================"
 echo "All SA-19 smoke tests passed"
