@@ -1,6 +1,6 @@
 # Phase 3 設計 — FedEx Rates連携 第1段
 
-**対象ADR**: ADR-125  
+**対象ADR**: ADR-124  
 **recon**: docs/handoff/fedex-rates-stage1/recon.md  
 **日付**: 2026-06-09  
 **担当**: architect → Generator

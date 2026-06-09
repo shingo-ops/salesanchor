@@ -5,10 +5,14 @@ from __future__ import annotations
 
 変更履歴:
   2026-04-17: 初版作成（Phase 2）
+  2026-06-09: ADR-124 — FedEx ライブ見積もり対応
+                source / transit_days / live_error フィールド追加
+                ShippingCalcRequest に origin_country_code を追加
 """
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -57,7 +61,14 @@ class ShippingRateResponse(BaseModel):
 class ShippingCalcRequest(BaseModel):
     country_code: str = Field(min_length=2, max_length=3)
     weight_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=3)
-    carrier: str | None = Field(default=None, max_length=50)
+    carrier: Optional[str] = Field(default=None, max_length=50)
+    # ADR-124: FedEx ライブ見積もり時の発送元国コード（FedEx 選択時に必須）
+    origin_country_code: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=3,
+        description="FedEx ライブ見積もり時の発送元国コード。carrier='fedex' 指定時に必須。",
+    )
 
 
 class ShippingCalcResult(BaseModel):
@@ -65,8 +76,19 @@ class ShippingCalcResult(BaseModel):
     zone: str
     fee: Decimal
     currency: str
+    # ADR-124: 見積もりの出所（D5 — 暗黙フォールバック禁止）
+    source: Literal["static", "fedex_live"] = "static"
+    # ADR-124: FedEx ライブ見積もり時の追加フィールド
+    service_type: Optional[str] = None      # 例: FEDEX_INTERNATIONAL_PRIORITY
+    service_name: Optional[str] = None      # 例: FedEx International Priority
+    transit_days: Optional[int] = None      # 配達日数
+    delivery_timestamp: Optional[str] = None  # ISO 8601 配達予定
 
 
 class ShippingCalcResponse(BaseModel):
     results: list[ShippingCalcResult]
-    cheapest: ShippingCalcResult | None
+    cheapest: Optional[ShippingCalcResult]
+    # ADR-124 D5: FedEx ライブAPI呼び出しに失敗した場合の明示エラー
+    # None = 成功または FedEx 非選択
+    # 文字列 = エラーメッセージ（この場合 results は空または静的データ）
+    live_error: Optional[str] = None

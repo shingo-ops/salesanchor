@@ -317,6 +317,9 @@ run_sql migrations/20260608_080000_add_carrier_credentials.sql
 run_sql migrations/20260609_090000_add_carrier_credentials_rls.sql
 # ADR-125 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20260609_090001_add_carrier_credentials_rls_down.sql
 
+# ADR-125 D2: tenant_carrier_credentials に account_number_encrypted カラム追加
+run_sql migrations/20260609_100000_add_carrier_account_number.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

@@ -77,10 +77,20 @@ async def get_status(db, tenant_id: int, carrier: str) -> dict:
 
 
 async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
-    """復号した認証情報を返す（未設定なら None）。{"client_id", "client_secret", "environment"}。"""
+    """復号した認証情報を返す（未設定なら None）。
+
+    Returns:
+        {
+            "client_id": str,
+            "client_secret": str,
+            "environment": str,
+            "account_number": str | None,  # ADR-124 D2 追加（NULL = 未設定）
+        }
+    """
     row = await db.execute(
         text(
-            "SELECT client_id_encrypted, client_secret_encrypted, environment"
+            "SELECT client_id_encrypted, client_secret_encrypted, environment,"
+            "       account_number_encrypted"
             " FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"
         ),
         {"tid": tenant_id, "c": carrier},
@@ -88,10 +98,14 @@ async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
     rec = row.first()
     if rec is None:
         return None
+    account_number: Optional[str] = (
+        encryption.decrypt(rec[3]) if rec[3] is not None else None
+    )
     return {
         "client_id": encryption.decrypt(rec[0]),
         "client_secret": encryption.decrypt(rec[1]),
         "environment": rec[2] or "sandbox",
+        "account_number": account_number,
     }
 
 
@@ -103,21 +117,25 @@ async def save_credentials(
     client_secret: str,
     environment: str,
     user_id: int,
+    account_number: Optional[str] = None,
 ) -> None:
-    """認証情報を暗号化して upsert する。"""
+    """認証情報を暗号化して upsert する。account_number は Optional（未入力時は変更なし）。"""
+    enc_account: Optional[str] = encryption.encrypt(account_number) if account_number else None
     await db.execute(
         text(
             """
             INSERT INTO tenant_carrier_credentials
               (tenant_id, carrier, client_id_encrypted, client_secret_encrypted,
-               environment, updated_by_user_id, created_at, updated_at)
-            VALUES (:tid, :c, :cid, :csec, :env, :uid, NOW(), NOW())
+               environment, account_number_encrypted, updated_by_user_id, created_at, updated_at)
+            VALUES (:tid, :c, :cid, :csec, :env, :acct, :uid, NOW(), NOW())
             ON CONFLICT (tenant_id, carrier) DO UPDATE SET
-              client_id_encrypted     = EXCLUDED.client_id_encrypted,
-              client_secret_encrypted = EXCLUDED.client_secret_encrypted,
-              environment             = EXCLUDED.environment,
-              updated_by_user_id      = EXCLUDED.updated_by_user_id,
-              updated_at              = NOW()
+              client_id_encrypted      = EXCLUDED.client_id_encrypted,
+              client_secret_encrypted  = EXCLUDED.client_secret_encrypted,
+              environment              = EXCLUDED.environment,
+              account_number_encrypted = COALESCE(EXCLUDED.account_number_encrypted,
+                                                  tenant_carrier_credentials.account_number_encrypted),
+              updated_by_user_id       = EXCLUDED.updated_by_user_id,
+              updated_at               = NOW()
             """
         ),
         {
@@ -126,6 +144,7 @@ async def save_credentials(
             "cid": encryption.encrypt(client_id),
             "csec": encryption.encrypt(client_secret),
             "env": _norm_env(environment),
+            "acct": enc_account,
             "uid": user_id,
         },
     )
