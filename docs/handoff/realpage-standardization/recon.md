@@ -296,7 +296,7 @@ DataTable の column-definition API は既存の `<th>/<td>` 直書きより ver
 |------|------|----------------|--------|
 | rem/px 直書き inline style | **~33件** | `frontend/src/pages/super-admin/ParseReviewPage.tsx:560` | CSS クラス化またはトークン変数化 |
 | hex 直書き（RolesPage カラーピッカー配列） | **12件** | `frontend/src/pages/roles/RolesPage.tsx:74–85` | ユーザー選択値なので (c) 扱いも可能（後述） |
-| hex フォールバック（#1877F2, #6c757d） | **2件** | `frontend/src/pages/dashboard/DashboardPage.tsx:180`、`roles/RolesPage.tsx:249` | `var(--accent)` / `var(--text-muted)` に統一 |
+| hex フォールバック（#1877F2, #6c757d） | **2件** | `frontend/src/pages/dashboard/DashboardPage.tsx:180`、`frontend/src/pages/roles/RolesPage.tsx:249` | `var(--accent)` / `var(--text-muted)` に統一 |
 | `var()` 使用の inline style（形式問題のみ） | **~330件** | `frontend/src/pages/channels/ChannelsPage.tsx:337` | CSS クラスに移行（優先度低・視覚変更なし） |
 
 ### (c) ページ固有で残してよいレイアウト
