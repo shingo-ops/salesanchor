@@ -1,4 +1,4 @@
-# ADR-122: 配送キャリア連携 — 外部販売を見据えた Integrator Provider 対応アーキテクチャ
+# ADR-123: 配送キャリア連携 — 外部販売を見据えた Integrator Provider 対応アーキテクチャ
 
 - **Status**: Proposed
 - **Date**: 2026-06-09
