@@ -268,31 +268,36 @@ class TestShippingCalculateEndpoint:
     def mock_tenant_id(self):
         return 1
 
-    async def test_no_credentials_returns_static(self, mock_db):
-        """FedEx 未連携（credentials なし）なら静的計算を返す（source='static'）。
+    async def test_no_credentials_returns_live_error_not_static(self):
+        """FedEx 未連携（credentials なし）は static に落ちず live_error を返す。
 
-        ADR-124 D5: 静的値をライブと偽らない。
-        credentials なしの場合は live_error も返さない（単に静的計算）。
+        ADR-124 D5 + PO C1判断:
+        - results は空（静的早見表 FedEx 行を返さない）
+        - live_error に「未連携」メッセージが入る
+        - calculate_shipping_fee は呼ばれない（FedEx 専用 early return）
         """
         from app.routers.shipping import calc_shipping
         from app.schemas.shipping import ShippingCalcRequest
 
         with patch("app.services.carrier_credentials.get_credentials", return_value=None), \
              patch("app.routers.shipping.calculate_shipping_fee", new_callable=AsyncMock) as mock_calc:
-            from app.schemas.shipping import ShippingCalcResult
-            mock_calc.return_value = [
-                ShippingCalcResult(carrier="fedex", zone="E", fee=Decimal("1000"), currency="JPY", source="static")
-            ]
             data = ShippingCalcRequest(
                 country_code="US",
                 weight_kg=Decimal("1.0"),
                 carrier="fedex",
                 origin_country_code="JP",
             )
-            # get_current_tenant / get_current_user は依存注入で注入されるため
-            # 実際のエンドポイントはDI込みでテストするため、ここでは関数を直接テスト
-            # (calculate_shipping_fee が呼ばれることを確認)
-            mock_calc.assert_not_called()  # 前提確認: まだ呼ばれていない
+            resp = await calc_shipping(
+                data=data,
+                db=AsyncMock(),
+                tenant_id=1,
+                current_user=MagicMock(),
+            )
+
+        assert resp.results == [], f"未連携時に静的結果が混入: {resp.results}"
+        assert resp.live_error is not None, "未連携時に live_error が None"
+        assert "未連携" in resp.live_error, f"live_error に「未連携」文言なし: {resp.live_error}"
+        mock_calc.assert_not_called()  # calculate_shipping_fee が呼ばれないこと
 
     async def test_live_error_explicit_on_api_failure(self):
         """FedEx API エラー時に live_error を明示返却し、results は空。

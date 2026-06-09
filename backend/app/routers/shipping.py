@@ -400,8 +400,13 @@ async def calc_shipping(
                 cheapest=live_results[0] if live_results else None,
                 live_error=live_error,
             )
-        # FedEx 未連携 → source='static' で静的計算（live_error なし）
-        # 呼び出し元は source='static' を確認して UI で適切に表示する
+        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-124 D5 + PO C1判断）
+        # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-124 D4）
+        return ShippingCalcResponse(
+            results=[],
+            cheapest=None,
+            live_error="FedEx が未連携です。キャリア連携設定でアカウントを接続してください",
+        )
 
     results = await calculate_shipping_fee(db, data.country_code, data.weight_kg, data.carrier)
     cheapest = results[0] if results else None
