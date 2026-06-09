@@ -127,7 +127,7 @@ const DANGEROUS_PATTERNS = [
 **付いていない。**
 
 - `check-process-artifacts.js` 全体を調査: `gh label create` / `gh pr edit --add-label` の呼び出しなし
-- `sop-followup-monitor.yml:15` の permissions は `issues: read`（PR write権限なし）
+- `.github/workflows/sop-followup-monitor.yml:15` の permissions は `issues: read`（PR write権限なし）
 - 既存ラベル確認: `gh api repos/.../labels` で `sop`/`emergency`/`exempt`/`danger` 系ラベルは0件
 - 既マージPR（#1802, #1812）のラベルを実確認: `{"labels": []}` 両件とも空
 
@@ -195,7 +195,7 @@ gh api "repos/{owner}/{repo}/actions/runs?workflow_id=process-artifacts-gate.yml
 
 ### 通知の出し先
 
-- `sop-followup-monitor.yml:60`: `bash scripts/notify/discord-owner-ping.sh "$MSG"` で Discord 送信
+- `.github/workflows/sop-followup-monitor.yml:60`: `bash scripts/notify/discord-owner-ping.sh "$MSG"` で Discord 送信
 - `secrets.DISCORD_WEBHOOK_SCHEDULED_REPORT` が環境変数として利用可能（monitor/zombie/stale-prで共通）
 - → **新規測定スクリプトも同 webhook + 同シェル関数で通知できる**
 
