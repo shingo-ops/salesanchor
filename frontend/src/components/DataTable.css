@@ -147,3 +147,30 @@
   color: var(--text-muted);
   font-size: var(--font-sm);
 }
+
+/* ── クリック可能行 (0,2,0) ── */
+.comp-table__row--clickable {
+  cursor: pointer;
+}
+
+.comp-table__row--clickable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* ── ページ送りコントロール ── */
+.comp-table__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--comp-table-cell-px);
+  border-top: 1px solid var(--border);
+}
+
+.comp-table__page-info {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  min-width: 4ch;
+  text-align: center;
+}
