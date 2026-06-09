@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { Modal } from "./Modal";
 
 interface CompanyOption {
   id: number;
@@ -138,16 +139,9 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className="modal-content-wide"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-profile-max-w)' }}
-      >
-        <h2>{t("mergeCompany.title")}</h2>
+    <Modal open={open} onClose={onCancel} title={t("mergeCompany.title")} size="md">
+      <div className="modal-content-wide">
         <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
           {t("mergeCompany.sourceDesc", { name: source.name, code: source.company_code })}
         </p>
@@ -338,6 +332,6 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
           </form>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

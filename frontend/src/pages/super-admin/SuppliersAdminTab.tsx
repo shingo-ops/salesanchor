@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 
 interface CentralSupplier {
@@ -277,11 +278,13 @@ export default function SuppliersAdminTab() {
       </div>
 
       {/* 編集/新規 ポップアップ */}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 720px)" }}>
-            <h3>{editId ? t("common.edit") : t("common.create")}</h3>
-            <form onSubmit={submit}>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("common.edit") : t("common.create")}
+        size="lg"
+      >
+        <form onSubmit={submit}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}><label>{t(`${f}.name`)} *</label>
                   <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -327,16 +330,16 @@ export default function SuppliersAdminTab() {
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.create")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* Discord routing モーダル（編集ポップアップから開く・従来の紐付けUI） */}
-      {routingFor && (
-        <div className="modal-overlay" onClick={() => setRoutingFor(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ minWidth: "600px", maxWidth: "90%" }}>
-            <h4>{t("superAdmin.suppliersAdmin.discordRouting")} — {routingFor.name}</h4>
+      <Modal
+        open={!!routingFor}
+        onClose={() => setRoutingFor(null)}
+        title={routingFor ? `${t("superAdmin.suppliersAdmin.discordRouting")} — ${routingFor.name}` : ""}
+        size="md"
+      >
             <form onSubmit={addRouting} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)", margin: "var(--space-2) 0" }}>
               <input placeholder={t("superAdmin.suppliersAdmin.guildId")} value={routingForm.discord_guild_id} onChange={(e) => setRoutingForm({ ...routingForm, discord_guild_id: e.target.value })} required />
               <input placeholder={t("superAdmin.suppliersAdmin.channelId")} value={routingForm.discord_channel_id} onChange={(e) => setRoutingForm({ ...routingForm, discord_channel_id: e.target.value })} required />
@@ -366,9 +369,7 @@ export default function SuppliersAdminTab() {
             <div style={{ marginTop: "var(--space-2)", textAlign: "right" }}>
               <button type="button" onClick={() => setRoutingFor(null)} className="btn-secondary">{t("common.close")}</button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <ConfirmModal
         open={confirmDelete}

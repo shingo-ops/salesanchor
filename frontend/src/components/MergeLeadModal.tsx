@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { getStatusPresentation } from "../utils/statusPresentation";
+import { Modal } from "./Modal";
 
 interface LeadOption {
   id: number;
@@ -127,16 +128,9 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className="modal-content-wide"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-profile-max-w)' }}
-      >
-        <h2>{t("mergeLead.title")}</h2>
+    <Modal open={open} onClose={onCancel} title={t("mergeLead.title")} size="md">
+      <div className="modal-content-wide">
         <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
           {t("mergeLead.sourceDesc", { name: source.customer_name, code: sourceCode })}
         </p>
@@ -325,6 +319,6 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
           </form>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }
