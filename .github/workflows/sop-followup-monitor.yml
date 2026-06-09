@@ -1,0 +1,60 @@
+name: SOP Followup Monitor
+
+# 緊急承認PRの宿題（sop-followup）期限切れを週次チェックし Discord 通知する（ADR-119 KPI2 Step 3）
+
+on:
+  schedule:
+    - cron: '0 4 * * 4'  # 毎週木曜 13:00 JST
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect overdue sop-followup issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_SCHEDULED_REPORT }}
+          REPO: ${{ github.repository }}
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          TODAY_S=$(date -u +%s)
+
+          OVERDUE_LIST=""
+          OVERDUE_COUNT=0
+
+          while IFS= read -r LINE; do
+            NUMBER=$(echo "$LINE" | jq -r '.number')
+            TITLE=$(echo "$LINE"  | jq -r '.title')
+
+            # タイトルから期限を抽出（例: "宿題期限: 2026-06-10"）
+            DEADLINE=$(echo "$TITLE" | grep -oP '(?<=宿題期限: )\d{4}-\d{2}-\d{2}' || true)
+            [ -z "$DEADLINE" ] && continue
+
+            DEADLINE_S=$(date -d "$DEADLINE" +%s 2>/dev/null) || continue
+            DIFF_DAYS=$(( (TODAY_S - DEADLINE_S) / 86400 ))
+
+            if [ "$DIFF_DAYS" -ge 0 ]; then
+              OVERDUE_LIST="${OVERDUE_LIST}"$'\n'"- #${NUMBER} ${TITLE} (${DIFF_DAYS}日超過)"
+              OVERDUE_COUNT=$((OVERDUE_COUNT + 1))
+            fi
+          done < <(gh issue list --label "sop-followup" --state open --json number,title --repo "$REPO" | jq -c '.[]')
+
+          if [ "$OVERDUE_COUNT" -eq 0 ]; then
+            echo "✅ 期限切れ sop-followup なし"
+            exit 0
+          fi
+
+          echo "⚠️  期限切れ sop-followup ${OVERDUE_COUNT} 件"
+
+          MSG="⚠️ **SOP宿題の期限切れが ${OVERDUE_COUNT} 件あります**
+          ${OVERDUE_LIST}
+
+          recon.md + 設計doc を揃えて後追いPRを作成してください。"
+
+          bash scripts/notify/discord-owner-ping.sh "$MSG"
