@@ -306,6 +306,28 @@ test('免除宣言のある低リスクPRはpass', () => {
   assert.ok(result.stdout.includes('免除'));
 });
 
+// ── develop→main リリースPR スキップ ─────────────────────────────────────────
+test('develop→main リリースPR は自動スキップ（pass）', () => {
+  const result = runScript({
+    CHANGED_FILES: 'frontend/src/App.tsx',
+    MOCK_PR_BODY: '',
+    MOCK_HEAD_REF: 'develop',
+    MOCK_BASE_REF: 'main',
+  });
+  assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+  assert.ok(result.stdout.includes('リリースPR') || result.stdout.includes('スキップ'));
+});
+
+test('hotfix→main は通常検査（スキップしない）', () => {
+  const result = runScript({
+    CHANGED_FILES: 'frontend/src/App.tsx',
+    MOCK_PR_BODY: '',
+    MOCK_HEAD_REF: 'hotfix/fix-something',
+    MOCK_BASE_REF: 'main',
+  });
+  assert.notStrictEqual(result.code, 0, 'hotfix→main は検査でfailするべき');
+});
+
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`\n${'='.repeat(50)}`);
 console.log(`テスト結果: ✅ ${passed} PASS / ❌ ${failed} FAIL`);

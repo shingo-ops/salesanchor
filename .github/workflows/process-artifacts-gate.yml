@@ -3,11 +3,11 @@ name: Process Artifacts Gate
 # 標準ワークフロー遵守チェック（ADR-121）
 # paths / paths-ignore を使わず常時実行し、内部でパス区分を判定する。
 # ※ 必須ではない（non-mandatory）。Step 5 でしんごさんが Ruleset 追加を判断する。
-# develop のみ対象: develop→main リリースPRは各featureがdevelop段階で通過済み → 誤検知防止。
+# main/develop 両方対象。develop→main リリースPRのみスクリプト内でスキップ（他の→main は検査）。
 
 on:
   pull_request:
-    branches: [develop]
+    branches: [main, develop]
 
 jobs:
   gate:
@@ -34,4 +34,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: node scripts/check-process-artifacts.js
