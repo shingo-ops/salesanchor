@@ -131,14 +131,11 @@ async function countExemptPRs(prs) {
 
 /**
  * 指標2: 危険パス変更 PR 件数（週次）
+ * 並列フェッチで高速化（sequential → Promise.all）
  */
 async function countDangerousApprovedPRs(prs) {
-  let count = 0;
-  for (const pr of prs) {
-    const isDangerous = await prTouchesDangerousPath(pr.number);
-    if (isDangerous) count++;
-  }
-  return count;
+  const results = await Promise.all(prs.map((pr) => prTouchesDangerousPath(pr.number)));
+  return results.filter(Boolean).length;
 }
 
 /**
@@ -204,8 +201,10 @@ async function ghGetAllRuns(params = new URLSearchParams()) {
 async function calcGateFrictionRate(prs) {
   if (prs.length === 0) return 0;
 
+  // 直近 LOOKBACK_DAYS 日のみ取得（全件取得を避けるため created フィルタ追加）
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 86400 * 1000).toISOString();
   const workflowRuns = await ghGetAllRuns(
-    new URLSearchParams({ workflow_id: 'process-artifacts-gate.yml' }),
+    new URLSearchParams({ workflow_id: 'process-artifacts-gate.yml', created: `>=${since}` }),
   );
 
   // 失敗 run と紐づく PR 番号を収集
