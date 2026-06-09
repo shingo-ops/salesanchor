@@ -1,7 +1,7 @@
 /**
  * §13 ステータス対応表 — 決定レイヤー 1 SSoT
  *
- * 全 10 ドメイン × 全ステータスを getStatusPresentation() 経由で一覧表示する。
+ * 全 11 ドメイン × 全ステータスを getStatusPresentation() 経由で一覧表示する。
  * この見た目が実画面の正解（設計§3 のバケット規則に基づく）。
  *
  * 参照: docs/adr/ADR-120-status-presentation-ssot.md
@@ -20,6 +20,7 @@ const DOMAIN_LABELS: Record<StatusDomain, string> = {
   staff:         "スタッフ (StaffStatus)",
   bot:           "ボット (BotStatus)",
   prospectRank:  "商談ランク (ProspectRank)",
+  erpJobStatus:  "ERP同期ジョブ (ErpJobStatus)",
 };
 
 const BUCKET_ORDER = ["success", "danger", "warning", "info", "neutral"] as const;

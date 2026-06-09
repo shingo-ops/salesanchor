@@ -73,6 +73,7 @@ export default function NotificationsPage() {
               <tr key={ch.id}>
                 <td>{ch.channel_name}</td>
                 <td className="mono" style={{ maxWidth: 'var(--col-width-url)', overflow: "hidden", textOverflow: "ellipsis" }}>{ch.webhook_url}</td>
+                {/* status-ssot-exempt: is_active boolean (status ドメインではなく boolean flag) */}
                 <td><span className={`badge badge-${ch.is_active ? "won" : "lost"}`}>{ch.is_active ? t("common.active") : t("common.inactive")}</span></td>
                 <td className="actions">
                   {hasPermission("notifications.manage") && <button className="btn-sm btn-danger" onClick={() => handleDelete(ch.id)}>{t("common.delete")}</button>}

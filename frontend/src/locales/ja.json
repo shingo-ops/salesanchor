@@ -1437,7 +1437,11 @@
     "colCompletedAt": "完了日時",
     "directionExport": "エクスポート",
     "directionImport": "インポート",
-    "noLogs": "同期ログがありません"
+    "noLogs": "同期ログがありません",
+    "jobStatus_completed": "完了",
+    "jobStatus_failed": "失敗",
+    "jobStatus_running": "実行中",
+    "jobStatus_pending": "待機中"
   },
   "commissions": {
     "title": "報酬設定",
