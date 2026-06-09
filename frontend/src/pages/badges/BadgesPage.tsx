@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Modal } from "../../components/Modal";
 
 interface Badge { id: number; name: string; description: string | null; icon: string | null; criteria: string | null; points: number; is_active: boolean; created_at: string; }
 interface LeaderEntry { user_id: number; username: string | null; badge_count: number; total_points: number; }
@@ -46,26 +47,26 @@ export default function BadgesPage() {
       ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{t("badges.newBadge")}</h3>
-            <form onSubmit={handleSubmit}>
-              {/* eslint-disable local/no-japanese-literal -- TODO: placeholder を翻訳キーに統合（ADR-027 既知負債） */}
-              <div className="form-group"><label>{t("badges.badgeName")} *</label><input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例: 初成約" /></div>
-              <div className="form-group"><label>{t("badges.icon")}</label><input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="例: 🏆" /></div>
-              <div className="form-group"><label>{t("common.description")}</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-              <div className="form-group"><label>{t("badges.criteria")}</label><input value={form.criteria} onChange={e => setForm({ ...form, criteria: e.target.value })} placeholder="例: 初めて案件を成約" /></div>
-              {/* eslint-enable local/no-japanese-literal */}
-              <div className="form-group"><label>{t("badges.points")}</label><input type="number" min="0" value={form.points} onChange={e => setForm({ ...form, points: e.target.value })} /></div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{t("common.create")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={t("badges.newBadge")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          {/* eslint-disable local/no-japanese-literal -- TODO: placeholder を翻訳キーに統合（ADR-027 既知負債） */}
+          <div className="form-group"><label>{t("badges.badgeName")} *</label><input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例: 初成約" /></div>
+          <div className="form-group"><label>{t("badges.icon")}</label><input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="例: 🏆" /></div>
+          <div className="form-group"><label>{t("common.description")}</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+          <div className="form-group"><label>{t("badges.criteria")}</label><input value={form.criteria} onChange={e => setForm({ ...form, criteria: e.target.value })} placeholder="例: 初めて案件を成約" /></div>
+          {/* eslint-enable local/no-japanese-literal */}
+          <div className="form-group"><label>{t("badges.points")}</label><input type="number" min="0" value={form.points} onChange={e => setForm({ ...form, points: e.target.value })} /></div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.create")}</button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
       {loading ? <div className="loading">{t("common.loading")}</div> : (
         <>
           {leaderboard.length > 0 && (

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Modal } from "../../components/Modal";
 
 interface StaffReport {
   id: number; report_code: string | null; report_type: string; user_id: number; period: string;
@@ -60,28 +61,28 @@ export default function StaffReportsPage() {
         </select>
       </div>
       {error && <div className="error-message">{error}</div>}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{t("common.add")}</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("common.type")} *</label>
-                <select value={form.report_type} onChange={e => setForm({ ...form, report_type: e.target.value })}>
-                  {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-              <div className="form-group"><label>{t("common.date")} *</label><input required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.description")} *</label><textarea required value={form.review} onChange={e => setForm({ ...form, review: e.target.value })} style={{ minHeight: 'var(--textarea-min-h-lg)' }} /></div>
-              <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.challenges} onChange={e => setForm({ ...form, challenges: e.target.value })} /></div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{t("common.add")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={t("common.add")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-group"><label>{t("common.type")} *</label>
+            <select value={form.report_type} onChange={e => setForm({ ...form, report_type: e.target.value })}>
+              {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
           </div>
-        </div>
-      )}
+          <div className="form-group"><label>{t("common.date")} *</label><input required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.description")} *</label><textarea required value={form.review} onChange={e => setForm({ ...form, review: e.target.value })} style={{ minHeight: 'var(--textarea-min-h-lg)' }} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.challenges} onChange={e => setForm({ ...form, challenges: e.target.value })} /></div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.add")}</button>
+          </div>
+        </form>
+      </Modal>
       {loading ? <div className="loading">{t("common.loading")}</div> : (
         <table className="data-table">
           <thead><tr><th>{t("common.code")}</th><th>{t("common.type")}</th><th>{t("common.date")}</th><th>{t("common.createdAt")}</th><th>{t("common.status")}</th></tr></thead>
