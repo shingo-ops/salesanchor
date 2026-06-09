@@ -1,0 +1,168 @@
+name: Setup Pushgateway (one-time)
+
+# ADR-124: Pushgateway を MGMT VPS で起動し、APP VPS nginx に /pushgateway/ プロキシを追加する。
+# 実行後このファイルは削除してよい（一回限りセットアップ）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Run Pushgateway setup? (yes)'
+        required: false
+        default: 'yes'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # ─── Step 1: MGMT VPS で Pushgateway コンテナ起動 ───────────────────────
+      - name: Start Pushgateway on MGMT VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 49.212.160.98
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "=== Pushgateway セットアップ ==="
+
+            # docker-compose.monitoring.yml を含むディレクトリを探す
+            COMPOSE_DIR=""
+            for DIR in ~/salesanchor /home/ubuntu/salesanchor /opt/salesanchor; do
+              if [ -f "$DIR/docker-compose.monitoring.yml" ]; then
+                COMPOSE_DIR="$DIR"
+                break
+              fi
+            done
+
+            if [ -z "$COMPOSE_DIR" ]; then
+              echo "❌ docker-compose.monitoring.yml が見つかりません"
+              exit 1
+            fi
+
+            echo "✅ Compose ディレクトリ: $COMPOSE_DIR"
+            cd "$COMPOSE_DIR"
+
+            # 最新の docker-compose.monitoring.yml を取得（pushgateway サービスが追加済みのはず）
+            git pull origin develop 2>/dev/null || true
+
+            # Pushgateway 起動（既に起動済みなら --no-recreate でスキップ）
+            docker compose -f docker-compose.monitoring.yml up -d --no-recreate pushgateway
+            echo "✅ Pushgateway コンテナ起動完了"
+
+            # ヘルスチェック（最大 30s）
+            for i in $(seq 1 6); do
+              CONTAINER_ID=$(docker compose -f docker-compose.monitoring.yml ps -q pushgateway 2>/dev/null || true)
+              if [ -n "$CONTAINER_ID" ] && docker exec "$CONTAINER_ID" \
+                wget -qO /dev/null http://127.0.0.1:9091/-/healthy 2>/dev/null; then
+                echo "✅ Pushgateway healthy"
+                break
+              fi
+              echo "  ...待機中 (${i}/6)..."
+              sleep 5
+            done
+
+      # ─── Step 2: APP VPS nginx に /pushgateway/ プロキシ追加 ─────────────────
+      - name: Add /pushgateway/ proxy to APP VPS nginx
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "=== nginx /pushgateway/ プロキシ設定 ==="
+
+            MGMT_VPS_IP="49.212.160.98"
+
+            # grafana プロキシを含む設定ファイルを特定
+            CONF_FILE=$(grep -rl "grafana" /etc/nginx/ 2>/dev/null | grep -v ".bak" | head -1)
+            if [ -z "$CONF_FILE" ]; then
+              echo "❌ nginx 設定ファイルが見つかりません"
+              exit 1
+            fi
+            echo "✅ nginx 設定: $CONF_FILE"
+
+            # 既に pushgateway プロキシが存在すればスキップ
+            if grep -q "pushgateway" "$CONF_FILE" 2>/dev/null; then
+              echo "✅ /pushgateway/ プロキシ設定済み（スキップ）"
+            else
+              # バックアップ
+              sudo cp "$CONF_FILE" "${CONF_FILE}.bak.$(date +%Y%m%d%H%M%S)"
+
+              # grafana location ブロックの直後に pushgateway ブロックを追記（Python で安全に処理）
+              sudo python3 - "$CONF_FILE" "$MGMT_VPS_IP" << 'PYEOF'
+            import sys, re
+
+            conf_file = sys.argv[1]
+            mgmt_ip = sys.argv[2]
+
+            block = f"""
+            location /pushgateway/ {{
+                proxy_pass http://{mgmt_ip}:9091/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }}"""
+
+            with open(conf_file, 'r') as f:
+                content = f.read()
+
+            # /grafana/ location ブロックの末尾（}）の後に挿入
+            pattern = r'(location\s+/grafana/[^{]*\{[^}]*\})'
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                insert_pos = match.end()
+                content = content[:insert_pos] + '\n' + block + content[insert_pos:]
+                with open(conf_file, 'w') as f:
+                    f.write(content)
+                print("✅ /pushgateway/ ブロックを挿入しました")
+            else:
+                print("⚠️  /grafana/ location が見つからないため server ブロック末尾に追記します")
+                last_brace = content.rfind('}')
+                if last_brace >= 0:
+                    content = content[:last_brace] + block + '\n}\n'
+                    with open(conf_file, 'w') as f:
+                        f.write(content)
+                    print("✅ server ブロック末尾に追記しました")
+                else:
+                    print("❌ nginx 設定の末尾 } が見つかりません")
+                    sys.exit(1)
+            PYEOF
+
+              echo "✅ nginx 設定を更新しました"
+            fi
+
+            # 設定テスト
+            sudo nginx -t
+            echo "✅ nginx 設定テスト PASS"
+
+            # リロード
+            sudo systemctl reload nginx
+            echo "✅ nginx リロード完了"
+
+      # ─── Step 3: 疎通確認 ────────────────────────────────────────────────────
+      - name: Verify Pushgateway is accessible
+        run: |
+          echo "=== 疎通確認 ==="
+          sleep 5
+
+          HTTP_STATUS=$(curl -sf --max-time 10 -w "%{http_code}" -o /tmp/pg_health \
+            "https://app.salesanchor.jp/pushgateway/-/healthy" 2>/dev/null || echo "000")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Pushgateway 疎通確認 OK (HTTP 200)"
+            cat /tmp/pg_health
+          else
+            echo "⚠️  HTTP $HTTP_STATUS"
+            echo "nginx プロキシ設定を手動確認してください"
+            echo "PUSHGATEWAY_URL: https://app.salesanchor.jp/pushgateway"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== セットアップ完了 ==="
+          echo "次: sop-health-reporter.yml を workflow_dispatch で実行"
