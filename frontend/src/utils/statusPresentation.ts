@@ -64,7 +64,7 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     follow_up_short:   { bucket: "warning", badgeVariant: "pending",     labelKey: "leads.statusCode.follow_up_short" },
     follow_up_long:    { bucket: "warning", badgeVariant: "pending",     labelKey: "leads.statusCode.follow_up_long" },
     lost:              { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.lost" },
-    out_of_scope:      { bucket: "neutral", badgeVariant: "neutral",     labelKey: "leads.statusCode.out_of_scope" },
+    out_of_scope:      { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.out_of_scope" },
   },
 
   quote: {

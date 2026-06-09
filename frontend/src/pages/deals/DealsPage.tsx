@@ -24,6 +24,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface Deal {
   id: number;
@@ -355,7 +356,7 @@ export default function DealsPage() {
                 <td>{d.amount ? fmt(d.amount, d.currency) : "-"}</td>
                 <td>{d.stage ? (t(`deals.stage_${d.stage}`) || d.stage) : "-"}</td>
                 <td>{d.probability != null ? `${d.probability}%` : "-"}</td>
-                <td><span className={`badge badge-${d.status}`}>{t(`deals.status_${d.status}`) || d.status}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("deal", d.status).badgeVariant}`}>{t(`deals.status_${d.status}`) || d.status}</span></td>
                 <td className="actions">
                   {hasPermission("deals.update") && <button className="btn-sm" onClick={() => handleEdit(d)}>{t("common.edit")}</button>}
                   {hasPermission("deals.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(d)}>{t("common.delete")}</button>}
