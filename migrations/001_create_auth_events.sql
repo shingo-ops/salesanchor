@@ -1,5 +1,6 @@
 -- 認証イベント記録テーブル（public スキーマ）
 -- ミドルウェアが認証成功/失敗を自動記録する
+-- smoke test（close予定）
 --
 -- 使い方: docker compose exec postgres psql -U myapp_user -d myapp_db -f /migrations/001_create_auth_events.sql
 
