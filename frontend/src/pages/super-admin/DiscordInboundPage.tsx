@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface InboundListItem {
   id: number;
@@ -62,26 +63,6 @@ const PARSE_STATUS_VALUES = [
 ] as const;
 
 type ParseStatus = (typeof PARSE_STATUS_VALUES)[number];
-
-function statusBadgeClass(status: string): string {
-  switch (status) {
-    case "approved":
-    case "parsed":
-    case "parsed_rule_only":
-    case "parsed_llm":
-      return "badge badge-success";
-    case "rejected":
-    case "unparsed":
-      return "badge badge-danger";
-    case "budget_exhausted":
-    case "ignored_routing":
-      return "badge badge-warning";
-    case "pending":
-    case "parsing":
-    default:
-      return "badge badge-secondary";
-  }
-}
 
 export default function DiscordInboundPage() {
   const { t } = useTranslation();
@@ -446,7 +427,7 @@ export default function DiscordInboundPage() {
                 <td>{m.supplier_name ?? "—"}</td>
                 <td>
                   <span
-                    className={statusBadgeClass(m.parse_status)}
+                    className={`badge badge-${getStatusPresentation("parseStatus", m.parse_status).badgeVariant}`}
                     data-testid={`status-${m.id}`}
                   >
                     {t(

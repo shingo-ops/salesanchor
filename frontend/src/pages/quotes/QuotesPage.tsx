@@ -12,7 +12,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
-import { badgeVariant, sortQuotes } from "./quotesSort";
+import { sortQuotes } from "./quotesSort";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface Quote {
   id: number;
@@ -146,7 +147,7 @@ export default function QuotesPage() {
                 borderRadius: "var(--radius-pill)",
               }}
             >
-              <span className={`badge badge-${badgeVariant(s)}`}>{t(`quotes.status_${s}`)}</span>
+              <span className={`badge badge-${getStatusPresentation("quote", s).badgeVariant}`}>{t(`quotes.status_${s}`)}</span>
             </button>
           );
         })}
@@ -184,7 +185,7 @@ export default function QuotesPage() {
                 <td>{q.created_by_name || "-"}</td>
                 <td>{q.currency}</td>
                 <td>{fmt(q.total_amount, q.currency)}</td>
-                <td><span className={`badge badge-${badgeVariant(q.status)}`}>
+                <td><span className={`badge badge-${getStatusPresentation("quote", q.status).badgeVariant}`}>
                   {t(`quotes.status_${q.status}`) || q.status}
                 </span></td>
                 <td>{q.validity_date || "-"}</td>

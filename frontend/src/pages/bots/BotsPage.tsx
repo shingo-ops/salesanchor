@@ -12,6 +12,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface Bot {
   id: number;
@@ -259,7 +260,7 @@ export default function BotsPage() {
               <tr key={b.id}>
                 <td>{b.display_name}</td>
                 <td>{purposeLabel(b.purpose)}</td>
-                <td><span className={`badge badge-${b.status === "active" ? "won" : "lost"}`}>{statusLabel(b.status)}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("bot", b.status).badgeVariant}`}>{statusLabel(b.status)}</span></td>
                 <td>{b.owner_staff_name || "-"}</td>
                 <td>{b.execution_count.toLocaleString("ja-JP")}</td>
                 <td>{b.last_executed_at ? new Date(b.last_executed_at).toLocaleDateString("ja-JP") : "-"}</td>

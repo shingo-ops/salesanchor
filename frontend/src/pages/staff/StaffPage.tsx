@@ -12,6 +12,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -306,7 +307,7 @@ export default function StaffPage() {
                   {s.emails.length > 0 && <span style={{ fontSize: "0.8em", color: "var(--text-muted)" }}> (+{s.emails.length})</span>}
                 </td>
                 <td>{s.role_name || "-"}</td>
-                <td><span className={`badge badge-${s.status === "active" ? "won" : "lost"}`}>{s.status === "active" ? t("staff.status_active") : s.status === "inactive" ? t("staff.status_inactive") : s.status}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("staff", s.status).badgeVariant}`}>{t(getStatusPresentation("staff", s.status).labelKey ?? `staff.status_${s.status}`)}</span></td>
                 <td className="actions">
                   {hasPermission("staff.update") && <button className="btn-sm" onClick={() => handleEdit(s)}>{t("common.edit")}</button>}
                   {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>{t("common.delete")}</button>}

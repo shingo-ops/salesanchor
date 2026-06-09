@@ -11,6 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface InvoiceItem {
   id: number;
@@ -100,6 +101,7 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [id]);
 
   const doAction = async (action: string, body: unknown = {}) => {
@@ -188,7 +190,7 @@ export default function InvoiceDetailPage() {
 
       <div style={{ background: "var(--bg-surface)", padding: "var(--space-6)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-6)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>
-          <div><strong>{t("common.status")}:</strong> <span className={`badge badge-${invoice.status === "paid" ? "won" : invoice.status === "voided" ? "lost" : "pending"}`}>{t(`invoices.status_${invoice.status}`)}</span></div>
+          <div><strong>{t("common.status")}:</strong> <span className={`badge badge-${getStatusPresentation("invoice", invoice.status).badgeVariant}`}>{t(`invoices.status_${invoice.status}`)}</span></div>
           <div><strong>{t("common.currency")}:</strong> {invoice.currency}</div>
           <div><strong>{t("invoices.paymentMethod")}:</strong> {invoice.payment_method || "-"}</div>
           <div><strong>{t("invoices.issuedAt")}:</strong> {invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString() : "-"}</div>

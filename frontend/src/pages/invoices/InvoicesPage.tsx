@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface Invoice {
   id: number;
@@ -107,7 +108,7 @@ export default function InvoicesPage() {
                 <td>{inv.currency}</td>
                 <td>{fmt(inv.total_amount, inv.currency)}</td>
                 <td>{inv.amount_jpy != null ? `¥${inv.amount_jpy.toLocaleString()}` : "-"}</td>
-                <td><span className={`badge badge-${inv.status === "paid" ? "won" : inv.status === "voided" ? "lost" : inv.status === "overdue" ? "cancelled" : inv.status === "issued" ? "negotiating" : "pending"}`}>
+                <td><span className={`badge badge-${getStatusPresentation("invoice", inv.status).badgeVariant}`}>
                   {t(`invoices.status_${inv.status}`) || inv.status}
                 </span></td>
                 <td>{inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : "-"}</td>
