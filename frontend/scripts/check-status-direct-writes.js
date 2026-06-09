@@ -4,11 +4,12 @@
  *
  * ページ側で status → badge クラスを直書きしている箇所を検出する。
  *
- * Step 1（現在）: WARN_ONLY = true — 既存違反を警告のみで報告。ビルドは緑。
- * Step 3:         WARN_ONLY = false へ変更 — 違反がある場合は exit 1。
+ * Step 1（完了）: WARN_ONLY = true — 既存違反を警告のみで報告。ビルドは緑。
+ * Step 3（現在）: WARN_ONLY = false — 違反がある場合は exit 1 で CI を止める。
  *
  * 検出パターン:
- *   1. テンプレートリテラル内の `badge-${`（直接 status/phase をクラスに注入）
+ *   1. テンプレートリテラル内の `badge-${` かつ `.badgeVariant` を含まない行
+ *      （getStatusPresentation().badgeVariant 経由であれば除外される）
  *   2. `badgeVariant(` の呼び出し（非推奨集約関数）
  *   3. `getStageBadge(` の呼び出し（非推奨集約関数）
  *
@@ -18,6 +19,13 @@
  *
  * 除外ファイル:
  *   - *.test.tsx (テストファイル)
+ *
+ * 明示的な例外:
+ *   違反行の直前行に `status-ssot-exempt:` コメントを置くと、その行をスキップする。
+ *   用途: boolean flag (is_active, feedback_type) など、status ドメインではない箇所。
+ *   例 (TSX の場合):
+ *     // status-ssot-exempt: is_active boolean
+ *     <span className={`badge badge-${p.is_active ? "won" : "lost"}`} ... />
  *
  * 使用方法: node scripts/check-status-direct-writes.js
  * CI: npm run check:status-direct-writes
@@ -30,18 +38,28 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, '../src');
 
-/**
- * Step 1: WARN_ONLY = true（ビルド緑・警告のみ）
- * Step 3: false に変更して exit 1 で止める
- */
-const WARN_ONLY = true;
+const WARN_ONLY = false;
 
 const EXCLUDE_DIRS = new Set(['design-preview', 'design-system']);
 
+/**
+ * 検出パターン定義。
+ * safeguard が指定されている場合、同一行に safeguard がマッチすれば違反とみなさない。
+ */
 const PATTERNS = [
-  { re: /badge-\$\{/, label: 'badge-${...} 直書き (getStatusPresentation() を使用)' },
-  { re: /\bbadgeVariant\s*\(/, label: 'badgeVariant() 非推奨 (getStatusPresentation("quote", status) を使用)' },
-  { re: /\bgetStageBadge\s*\(/, label: 'getStageBadge() 非推奨 (getStatusPresentation("lead", status) を使用)' },
+  {
+    re: /badge-\$\{/,
+    safeguard: /\.badgeVariant\b/,
+    label: 'badge-${...} 直書き (getStatusPresentation().badgeVariant を使用)',
+  },
+  {
+    re: /\bbadgeVariant\s*\(/,
+    label: 'badgeVariant() 非推奨 (getStatusPresentation("quote", status) を使用)',
+  },
+  {
+    re: /\bgetStageBadge\s*\(/,
+    label: 'getStageBadge() 非推奨 (getStatusPresentation("lead", status) を使用)',
+  },
 ];
 
 function collectTsxFiles(dir) {
@@ -67,8 +85,12 @@ for (const file of files) {
   const rel = relative(SRC_DIR, file);
   const lines = readFileSync(file, 'utf8').split('\n');
   lines.forEach((line, i) => {
-    for (const { re, label } of PATTERNS) {
-      if (re.test(line)) {
+    const prevLine = i > 0 ? lines[i - 1] : '';
+    const isExempt = prevLine.includes('status-ssot-exempt') || line.includes('status-ssot-exempt');
+    if (isExempt) return;
+
+    for (const { re, safeguard, label } of PATTERNS) {
+      if (re.test(line) && (!safeguard || !safeguard.test(line))) {
         violations.push({ rel, line: i + 1, content: line.trim(), label });
         break; // 1行につき1違反
       }
@@ -89,11 +111,11 @@ for (const v of violations) {
 }
 
 if (WARN_ONLY) {
-  console.log(`\n⚠️  status-direct-writes: ${violations.length} 件の既存違反（Step1 警告モード・ビルド継続）`);
-  console.log('   Step 2 で getStatusPresentation() へ移行後、WARN_ONLY = false に変更してください。');
+  console.log(`\n⚠️  status-direct-writes: ${violations.length} 件の既存違反（警告モード・ビルド継続）`);
   process.exit(0);
 } else {
   console.log(`\n❌ status-direct-writes: ${violations.length} 件の違反`);
   console.log('   getStatusPresentation() を使用してください（docs/handoff/decision-layer-01/design.md 参照）。');
+  console.log('   boolean flag など status ドメイン外の場合は直前行に status-ssot-exempt: コメントを追加してください。');
   process.exit(1);
 }

@@ -29,7 +29,7 @@
 | 4 | DealStatus | インライン (`DealsPage.tsx`) | CSS直注入（`badge-${d.status}`） |
 | 5 | OrderStatus | インライン (`OrdersTable.tsx`) | `awaiting_payment`, `sourcing`, `awaiting_shipping`, `completed`, `trouble`, `cancelled` |
 | 6 | PurchaseOrderStatus | インライン (`PurchaseOrdersPage.tsx`) | `draft`, `ordered`, `received`, `cancelled`, `error` |
-| 7 | ParseStatus (Discord) | `DiscordInboundPage.tsx:64` | `approved`, `parsed`, `parsed_rule_only`, `parsed_llm`, `rejected`, `unparsed`, `budget_exhausted`, `ignored_routing`, `pending`, `parsing` |
+| 7 | ParseStatus (Discord) | `frontend/src/pages/super-admin/DiscordInboundPage.tsx:65` | `approved`, `parsed`, `parsed_rule_only`, `parsed_llm`, `rejected`, `unparsed`, `budget_exhausted`, `ignored_routing`, `pending`, `parsing` |
 | 8 | StaffStatus | インライン (`StaffPage.tsx`) | `active`, その他 |
 | 9 | BotStatus | インライン (`BotsPage.tsx`) | `active`, その他 |
 | 10 | ProspectRank | インライン (`LeadsPage.tsx`) | `A`, `B+`, `B`, `B-`, `仮C`, `確定C` |
@@ -105,7 +105,7 @@ export const badgeVariant = (status: string): string =>
 | `"sent"` | `badge-negotiating` | `--info-bg` |
 | default | `badge-pending` | `--warning-bg` |
 
-**使用箇所**: `QuotesPage.tsx:149`, `QuotesPage.tsx:187`
+**使用箇所**: `frontend/src/pages/quotes/QuotesPage.tsx:150`, `frontend/src/pages/quotes/QuotesPage.tsx:188`
 
 ---
 
@@ -136,8 +136,8 @@ function getStageBadge(status: string): { labelKey: string; variant: string } {
 | `"follow_up_short"` / `"follow_up_long"` | `followup` | `karte-stage-badge--followup` | `--bg-subtle` |
 | `"lost"` / `"out_of_scope"` | `default` | `karte-stage-badge--default` | `--bg-subtle` |
 
-**CSS定義**: `frontend/src/pages/inbox/InboxPage.css:1301–1305`  
-**使用箇所**: `InboxKartePanel.tsx:115`
+**CSS定義**: `frontend/src/pages/inbox/InboxPage.css:1301`  
+**使用箇所**: `frontend/src/pages/inbox/InboxKartePanel.tsx:152`
 
 ---
 
@@ -165,7 +165,7 @@ const statusBadgeClass = (status: string): string => {
 | `"error"` | `badge-lost` | `--danger-bg` |
 | default | `badge-pending` | `--warning-bg` |
 
-**使用箇所**: `PurchaseOrdersPage.tsx:234`
+**使用箇所**: `frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx:220`
 
 ---
 
@@ -196,7 +196,7 @@ function statusBadgeClass(status: string): string {
 | `"budget_exhausted"` / `"ignored_routing"` | `badge badge-warning` |
 | `"pending"` / `"parsing"` / default | `badge badge-secondary` |
 
-**使用箇所**: `DiscordInboundPage.tsx:449`
+**使用箇所**: `frontend/src/pages/super-admin/DiscordInboundPage.tsx:430`
 
 ---
 
@@ -227,7 +227,7 @@ const rankBadge = (rank: string | null) => {
 | `仮C` | `badge-pending` | `--warning-bg` |
 | `確定C` | `badge-lost` | `--danger-bg` |
 
-**使用箇所**: `LeadsPage.tsx:391`
+**使用箇所**: `frontend/src/pages/leads/LeadsPage.tsx:381`
 
 ---
 
@@ -257,7 +257,7 @@ const rankBadge = (rank: string | null) => {
 
 #### B-2: QuotesPage — フィルターボタン
 
-**ファイル**: `frontend/src/pages/quotes/QuotesPage.tsx:149`
+**ファイル**: `frontend/src/pages/quotes/QuotesPage.tsx:150`
 
 ```tsx
 <span className={`badge badge-${badgeVariant(s)}`}>
@@ -268,7 +268,7 @@ const rankBadge = (rank: string | null) => {
 
 #### B-3: QuotesPage — テーブル行
 
-**ファイル**: `frontend/src/pages/quotes/QuotesPage.tsx:187`
+**ファイル**: `frontend/src/pages/quotes/QuotesPage.tsx:188`
 
 ```tsx
 <span className={`badge badge-${badgeVariant(q.status)}`}>
@@ -336,7 +336,7 @@ B-5 と同一ロジックが copy-paste されている。
 
 #### B-8: PurchaseOrdersPage — statusBadgeClass 呼び出し
 
-**ファイル**: `frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx:234`
+**ファイル**: `frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx:220`
 
 ```tsx
 <span className={`badge ${statusBadgeClass(p.status)}`}>
@@ -347,7 +347,7 @@ B-5 と同一ロジックが copy-paste されている。
 
 #### B-9: DiscordInboundPage — statusBadgeClass 呼び出し
 
-**ファイル**: `frontend/src/pages/super-admin/DiscordInboundPage.tsx:449`
+**ファイル**: `frontend/src/pages/super-admin/DiscordInboundPage.tsx:430`
 
 ```tsx
 className={statusBadgeClass(m.parse_status)}

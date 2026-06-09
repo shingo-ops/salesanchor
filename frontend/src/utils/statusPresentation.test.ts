@@ -92,10 +92,10 @@ describe("STATUS_PRESENTATION_MAP — 網羅性", () => {
     "success", "danger", "warning", "info", "neutral",
   ]);
 
-  it("全10ドメインが存在する", () => {
+  it("全11ドメインが存在する", () => {
     const expected: StatusDomain[] = [
       "lead", "quote", "invoice", "deal", "order",
-      "purchaseOrder", "parseStatus", "staff", "bot", "prospectRank",
+      "purchaseOrder", "parseStatus", "staff", "bot", "prospectRank", "erpJobStatus",
     ];
     for (const d of expected) {
       expect(STATUS_PRESENTATION_MAP[d], `domain "${d}" が存在しない`).toBeDefined();
