@@ -300,6 +300,15 @@ function runFullCheck(declaration) {
 
 // ─── メイン ──────────────────────────────────────────────────────────────────
 function main() {
+  // develop→main リリースPR は develop 段階で通過済み → スキップ
+  // その他の →main PR（hotfix 等）は通常どおり検査
+  const headRef = process.env.MOCK_HEAD_REF !== undefined ? process.env.MOCK_HEAD_REF : (process.env.HEAD_REF || '');
+  const baseRef = process.env.MOCK_BASE_REF !== undefined ? process.env.MOCK_BASE_REF : (process.env.BASE_REF || '');
+  if (baseRef === 'main' && headRef === 'develop') {
+    console.log('✅ develop→main リリースPR — スキップ（develop段階で通過済み）');
+    process.exit(0);
+  }
+
   // 変更ファイルリストを取得
   let changedFiles;
   if (process.env.CHANGED_FILES !== undefined) {
