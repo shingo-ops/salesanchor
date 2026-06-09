@@ -54,6 +54,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - recon.md: フルパス:行番号 で引用（例: `.github/workflows/x.yml:15`）。短縮禁止。
 - design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
 - PR本文: `### 標準ワークフロー確認` セクション必須。
+- recon.md と design.md は必ず git add してからコミットすること。
 
 ---
 
