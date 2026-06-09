@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -240,11 +241,13 @@ export default function DiscordInboundPage() {
 
       {importDone && <div className="success-message" data-testid="import-done">{importDone}</div>}
 
-      {showImport && (
-        <div className="modal-overlay" onClick={() => !importApplying && setShowImport(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("products.importFromInbound")}</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-sm)", marginTop: 0 }}>
+      <Modal
+        open={showImport}
+        onClose={() => { if (!importApplying) setShowImport(false); }}
+        title={t("products.importFromInbound")}
+        size="md"
+      >
+        <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-sm)", marginTop: 0 }}>
               {t("products.importFromInboundHint")}
             </p>
             {importError && <div className="error-message">{importError}</div>}
@@ -331,10 +334,8 @@ export default function DiscordInboundPage() {
               >
                 {importApplying ? t("common.loading") : t("products.importApply", { count: importSelected.size })}
               </button>
-            </div>
-          </div>
         </div>
-      )}
+      </Modal>
 
       <div
         className="filter-bar"

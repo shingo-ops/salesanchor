@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import type { LucideIcon } from "../../constants/icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
@@ -469,11 +470,13 @@ export default function RolesPage() {
       </div>
 
       {/* === ロール作成/編集モーダル === */}
-      {showRoleForm && (
-        <div className="modal-overlay" onClick={() => setShowRoleForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editingRoleId ? t("roles.editRole") : t("roles.newRole")}</h3>
-            <form onSubmit={submitRoleForm}>
+      <Modal
+        open={showRoleForm}
+        onClose={() => setShowRoleForm(false)}
+        title={editingRoleId ? t("roles.editRole") : t("roles.newRole")}
+        size="md"
+      >
+        <form onSubmit={submitRoleForm}>
               <div className="form-group"><label>{t("roles.roleName")} *</label>
                 <input required value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
               </div>
@@ -533,35 +536,33 @@ export default function RolesPage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary">{editingRoleId ? t("common.update") : t("common.create")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* === ユーザー割当モーダル === */}
-      {userAssignOpen && (
-        <div className="modal-overlay" onClick={closeUserAssign}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("roles.assignUsers")}</h3>
-            <div className="form-group"><label>{t("roles.targetUserId")} *</label>
-              <input type="number" min="1" required value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} />
-            </div>
-            <div className="form-group"><label>{t("roles.grantRoles")}</label>
-              {roles.map((r) => (
-                <label key={r.id} style={{ display: "block", padding: "var(--space-1)" }}>
-                  <input type="checkbox" checked={selectedRoleIds.has(r.id)} onChange={() => toggleUserRole(r.id)} />{" "}
-                  <span className="badge" style={{ background: r.color || "var(--bg-hover)", color: "var(--on-accent)" }}>{r.name}</span>
-                  <small style={{ marginLeft: "var(--space-2)", color: "var(--text-muted)" }}>priority: {r.priority}</small>
-                </label>
-              ))}
-            </div>
-            <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={closeUserAssign}>{t("common.cancel")}</button>
-              <button type="button" className="btn-primary" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</button>
-            </div>
-          </div>
+      <Modal
+        open={userAssignOpen}
+        onClose={closeUserAssign}
+        title={t("roles.assignUsers")}
+        size="md"
+      >
+        <div className="form-group"><label>{t("roles.targetUserId")} *</label>
+          <input type="number" min="1" required value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} />
         </div>
-      )}
+        <div className="form-group"><label>{t("roles.grantRoles")}</label>
+          {roles.map((r) => (
+            <label key={r.id} style={{ display: "block", padding: "var(--space-1)" }}>
+              <input type="checkbox" checked={selectedRoleIds.has(r.id)} onChange={() => toggleUserRole(r.id)} />{" "}
+              <span className="badge" style={{ background: r.color || "var(--bg-hover)", color: "var(--on-accent)" }}>{r.name}</span>
+              <small style={{ marginLeft: "var(--space-2)", color: "var(--text-muted)" }}>priority: {r.priority}</small>
+            </label>
+          ))}
+        </div>
+        <div className="form-actions">
+          <button type="button" className="btn-secondary" onClick={closeUserAssign}>{t("common.cancel")}</button>
+          <button type="button" className="btn-primary" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</button>
+        </div>
+      </Modal>
 
       {/* === 削除確認 === */}
       <ConfirmModal

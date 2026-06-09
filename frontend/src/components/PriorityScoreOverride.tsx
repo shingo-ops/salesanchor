@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { usePermissions } from "../hooks/usePermissions";
 import type { CustomerScoreData } from "./PriorityScoreBadge";
+import { Modal } from "./Modal";
 
 interface Props {
   leadId: number;
@@ -66,10 +67,7 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
         {t("priority.overrideTitle")}
       </button>
 
-      {open && (
-        <div className="modal-overlay" onClick={() => setOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("priority.overrideTitle")}</h3>
+      <Modal open={open} onClose={() => setOpen(false)} title={t("priority.overrideTitle")} size="md">
             <p className="text-muted">{t("priority.overrideWarning")}</p>
 
             <form onSubmit={handleSubmit}>
@@ -112,9 +110,7 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }

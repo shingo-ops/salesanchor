@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { Modal } from "./Modal";
 
 const ROLES: { key: RoleKey; labelKey: string }[] = [
   { key: "sales", labelKey: "commissions.role_sales" },
@@ -176,15 +177,7 @@ export default function CommissionPanel({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-commission-w)', maxHeight: "90vh", overflowY: "auto" }}
-        role="dialog"
-        aria-label={t("commission.assignedStaff")}
-      >
-        <h3>{t("commission.assignedStaff")} — {orderNumber}</h3>
+    <Modal open={true} onClose={onClose} title={`${t("commission.assignedStaff")} — ${orderNumber}`} size="lg">
         {loading ? (
           <div className="loading">{t("common.loading")}</div>
         ) : (
@@ -277,7 +270,6 @@ export default function CommissionPanel({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

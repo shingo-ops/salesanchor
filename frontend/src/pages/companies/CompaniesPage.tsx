@@ -10,6 +10,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -438,17 +439,18 @@ export default function CompaniesPage() {
         </table>
       )}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-content-wide" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line no-restricted-syntax */}
-            <h2>{editId ? t("companies.editCompany") : t("companies.newCompany")}</h2>
-
-            <div className="tabs">
-              <button className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>{t("companies.basicInfo")}</button>
-              <button className={`tab ${activeTab === "billing" ? "active" : ""}`} onClick={() => setActiveTab("billing")}>{t("companies.billing")}</button>
-              <button className={`tab ${activeTab === "delivery" ? "active" : ""}`} onClick={() => setActiveTab("delivery")}>{t("companies.delivery")}</button>
-            </div>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("companies.editCompany") : t("companies.newCompany")}
+        size="lg"
+      >
+        <div className="modal-content-wide">
+          <div className="tabs">
+            <button className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>{t("companies.basicInfo")}</button>
+            <button className={`tab ${activeTab === "billing" ? "active" : ""}`} onClick={() => setActiveTab("billing")}>{t("companies.billing")}</button>
+            <button className={`tab ${activeTab === "delivery" ? "active" : ""}`} onClick={() => setActiveTab("delivery")}>{t("companies.delivery")}</button>
+          </div>
 
             <form onSubmit={handleSubmit} className="form-grid">
               {activeTab === "basic" && (
@@ -570,9 +572,8 @@ export default function CompaniesPage() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </Modal>
 
       <ConfirmModal
         open={deleteTarget !== null}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Modal } from "../../components/Modal";
 
 interface Pair { id: number; coach_user_id: number; mentee_user_id: number; is_active: boolean; started_at: string; ended_at: string | null; notes: string | null; }
 interface Feedback { id: number; pair_id: number; feedback_type: string; reason: string | null; created_by: number; created_at: string; }
@@ -51,22 +52,22 @@ export default function BuddyPage() {
       ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{t("buddy.newPair")}</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("buddy.coachUserId")} *</label><input type="number" min="1" required value={form.coach_user_id} onChange={e => setForm({ ...form, coach_user_id: e.target.value })} /></div>
-              <div className="form-group"><label>{t("buddy.menteeUserId")} *</label><input type="number" min="1" required value={form.mentee_user_id} onChange={e => setForm({ ...form, mentee_user_id: e.target.value })} /></div>
-              <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{t("common.create")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={t("buddy.newPair")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-group"><label>{t("buddy.coachUserId")} *</label><input type="number" min="1" required value={form.coach_user_id} onChange={e => setForm({ ...form, coach_user_id: e.target.value })} /></div>
+          <div className="form-group"><label>{t("buddy.menteeUserId")} *</label><input type="number" min="1" required value={form.mentee_user_id} onChange={e => setForm({ ...form, mentee_user_id: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.create")}</button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
       {loading ? <div className="loading">{t("common.loading")}</div> : (
         <>
           <h3 style={{ marginBottom: "var(--space-3)" }}>{t("buddy.pairsTitle")}</h3>

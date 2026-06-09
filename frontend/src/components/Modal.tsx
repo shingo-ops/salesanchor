@@ -115,7 +115,6 @@ export function Modal({
     <div
       className="comp-modal-overlay"
       onClick={dismissOnOverlay ? onClose : undefined}
-      aria-hidden="true"
     >
       <div
         ref={dialogRef}
@@ -124,7 +123,6 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
-        aria-hidden={undefined}
       >
         {/* ヘッダ */}
         <div className="comp-modal-header">

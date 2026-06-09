@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { Modal } from "../../components/Modal";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 
@@ -49,22 +50,22 @@ export default function NotificationsPage() {
       }
     >
       {error && <div className="error-message">{error}</div>}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{t("settings.addDiscordWebhook")}</h3>
-            <form onSubmit={handleSubmit}>
-              {/* eslint-disable-next-line local/no-japanese-literal -- TODO: placeholder を翻訳キーに統合（ADR-027 既知負債） */}
-              <div className="form-group"><label>{t("settings.channelName")} *</label><input required value={form.channel_name} onChange={e => setForm({ ...form, channel_name: e.target.value })} placeholder="例: #crm-activity" /></div>
-              <div className="form-group"><label>Webhook URL *</label><input required value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." /></div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{t("common.add")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={t("settings.addDiscordWebhook")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          {/* eslint-disable-next-line local/no-japanese-literal -- TODO: placeholder を翻訳キーに統合（ADR-027 既知負債） */}
+          <div className="form-group"><label>{t("settings.channelName")} *</label><input required value={form.channel_name} onChange={e => setForm({ ...form, channel_name: e.target.value })} placeholder="例: #crm-activity" /></div>
+          <div className="form-group"><label>Webhook URL *</label><input required value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." /></div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.add")}</button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
       {loading ? <div className="loading">{t("common.loading")}</div> : (
         <table className="data-table">
           <thead><tr><th>{t("settings.channelName")}</th><th>Webhook URL</th><th>{t("common.status")}</th><th>{t("common.actions")}</th></tr></thead>
