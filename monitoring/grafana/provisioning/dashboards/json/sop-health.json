@@ -1,0 +1,397 @@
+{
+  "uid": "sop-health-reporter",
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "title": "SOP ヘルスレポーター",
+  "description": "ADR-121 process-artifacts gate の遵守指標を週次集計し可視化します。5 指標（免除PR・危険PR・緊急PR累計・宿題超過・ゲート摩擦率）でプロセス定着度を計測します。",
+  "tags": [
+    "sop",
+    "process",
+    "adr-121"
+  ],
+  "timezone": "Asia/Tokyo",
+  "refresh": "1h",
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 9999,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 60,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"display:flex;flex-direction:column;height:100%;font-family:sans-serif;box-sizing:border-box;padding:0\"><div style=\"padding:10px 8px 8px;border-bottom:1px solid rgba(204,204,220,0.12)\"><p style=\"margin:0;font-size:11px;font-weight:700;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">SOP ヘルスレポーター</p></div><div style=\"flex:1;padding:8px 4px;display:flex;flex-direction:column;gap:2px\"><a href=\"/grafana/d/monitoring-main\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📊&nbsp;メイン</a><a href=\"/grafana/d/jarvis-system-overview\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🖥️&nbsp;システム</a><a href=\"/grafana/d/ea99fc9c-32f6-4678-9f45-ab1421a94206\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">⚙️&nbsp;CI / GitHub</a><a href=\"/grafana/d/loki-error-logs\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🚨&nbsp;エラーログ</a><a href=\"/grafana/d/uptime-kuma-monitors\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🟢&nbsp;サービス稼働</a><a href=\"/grafana/d/backend-api-metrics\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🔧&nbsp;バックエンド</a><a href=\"/grafana/d/container-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">📦&nbsp;コンテナ詳細</a><a href=\"/grafana/d/db-connection-detail\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(204,204,220,0.75)\">🗄️&nbsp;DB詳細</a><a href=\"/grafana/d/sop-health-reporter\" style=\"display:flex;align-items:center;gap:6px;padding:5px 8px;text-decoration:none;border-radius:4px;font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;background:rgba(255,152,0,0.28);font-weight:600\">📋&nbsp;SOP ヘルス</a></div></div>"
+      },
+      "transparent": true
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "SOP 遵守サマリー（直近 7 日 + 累計）",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 20,
+        "x": 4,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "免除 PR 件数（週次）",
+      "description": "直近 7 日でマージされた PR のうち「免除」宣言を含む件数。件数が多い場合は ADR-121 遵守の弱体化を示す可能性があります。",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sop_exempt_pr_total{repo=\"shingo-ops/salesanchor\"}",
+          "legendFormat": "免除 PR",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "危険パス変更 PR（週次）",
+      "description": "直近 7 日で migrations/ / deploy.yml / 本番スクリプト等の危険パスに変更を加えた PR 件数。",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 9,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sop_dangerous_approved_total{repo=\"shingo-ops/salesanchor\"}",
+          "legendFormat": "危険 PR",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "緊急 PR 累計（sop-followup）",
+      "description": "緊急モードで処理された PR の alltime 累計件数（sop-followup ラベル Issue 総数）。",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 14,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sop_emergency_total{repo=\"shingo-ops/salesanchor\"}",
+          "legendFormat": "緊急 PR 累計",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "宿題期限超過 🚨",
+      "description": "sop-followup open Issue のうち期限が過ぎた件数。1 件以上で Discord アラート発火（ゼロ許容）。",
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 19,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sop_overdue_homework_count{repo=\"shingo-ops/salesanchor\"}",
+          "legendFormat": "宿題超過",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "ゲート摩擦率（週次推移）",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 20,
+        "x": 4,
+        "y": 6
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "ゲート摩擦率（週次 %）",
+      "description": "process-artifacts-gate で 1 回以上 failure run が発生した PR の割合。高いほど「書いてから直す」パターンが多い。",
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 4,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sop_gate_friction_rate{repo=\"shingo-ops/salesanchor\"} * 100",
+          "legendFormat": "摩擦率 (%)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 40
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "pointSize": 8
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {}
+}
