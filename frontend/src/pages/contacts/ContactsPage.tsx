@@ -11,6 +11,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -381,12 +382,14 @@ export default function ContactsPage() {
         </table>
       )}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-content-wide" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line no-restricted-syntax */}
-            <h2>{editId ? t("contacts.editContact") : t("contacts.newContact")}</h2>
-            <form onSubmit={handleSubmit} className="form-grid">
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("contacts.editContact") : t("contacts.newContact")}
+        size="lg"
+      >
+        <div className="modal-content-wide">
+          <form onSubmit={handleSubmit} className="form-grid">
               {!editId && (
                 <div className="form-row">
                   <label>{t("contacts.contactCodeLabel")}</label>
@@ -495,10 +498,9 @@ export default function ContactsPage() {
                   {submitting ? t("common.saving") : editId ? t("common.update") : t("common.register")}
                 </button>
               </div>
-            </form>
-          </div>
+          </form>
         </div>
-      )}
+      </Modal>
 
       <ConfirmModal
         open={deleteTarget !== null}
