@@ -183,6 +183,8 @@ getStatusPresentation(domain: StatusDomain, status: string): StatusPresentation
 
 ## 外部・過去事例の参照と我々への応用
 
+Tailwind UI/shadcn の Badge variant パターン（DB値と表示色の分離）と React Hook Form/Zod の centralized validation パターン（ルールを1ヶ所に集約）を参照。negotiating 3色分裂問題（过去の DB値＝CSSクラス直書き設計の失敗）を教訓に中間マッピング層を導入。
+
 ### 参照パターン
 
 **Tailwind UI / shadcn/ui の Badge variant パターン**:  
