@@ -1,8 +1,8 @@
 # 決定レイヤー① — ステータス見た目の対応表（SSoT）設計
 
 > **作成日**: 2026-06-09  
-> **ステータス**: 確定（Phase 4 実装中）  
-> **参照**: recon = `recon.md` / 実装 = ADR-120
+> **ステータス**: 完了（Step 3 lint error 昇格済み）  
+> **参照**: recon = `docs/handoff/decision-layer-01/recon.md` / 実装 = ADR-120
 
 ---
 
@@ -174,7 +174,24 @@ getStatusPresentation(domain: StatusDomain, status: string): StatusPresentation
 
 ---
 
-## ⚠️ PO 確認中の残件
+## ⚠️ PO 確認中の残件（完了）
 
-1. **purchaseOrder.error**: DB 値として実際に存在するか。Pydantic Enum への追加要否。
-2. **staff.pending / bot.maintenance を warning**: 現状は danger なので Step2 で視覚変更が発生する。
+1. **purchaseOrder.error**: DB 値として実在を確認（purchase_orders.py:449 で status='error' SET）→ SSoT に追加済み。
+2. **staff.pending / bot.maintenance**: 現行 danger のまま維持（Step 2a PO 決定 PR #1801）。
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+### 参照パターン
+
+**Tailwind UI / shadcn/ui の Badge variant パターン**:  
+UI ライブラリは `variant="success" | "danger" | "warning"` のように「意味バケット」で分類し、実値（DB ステータス）と表示色を切り離す。本設計の `bucket` 5分類はこれに倣い、DB 値 → 意味バケット → CSS クラスの2段変換を採用。
+
+**React Hook Form / Zod の centralized validation**:  
+バリデーションルールを各フォームに分散させず1ヶ所（スキーマ）に集約するパターンと同じ発想。ステータス → 見た目の決定を `statusPresentation.ts` 1ファイルに集約。
+
+### 過去の失敗と修正
+
+ADR-120 の出発点は recon で検出した「negotiating が3色に分裂」問題（`recon.md` §不整合①）。  
+LeadStatus / DealStatus / Quote で同一概念が `--lead-contact-bg` / `--warning-bg` / `--info-bg` の3色になっていた。中間マッピング層なしに DB 値 = CSS クラス名を前提にした実装の限界。
