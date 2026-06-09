@@ -73,6 +73,26 @@
 | feature/morimoto/fix-rls-policy-variable-name | RLS ポリシー変数名修正（Phase2 前提条件） | 2026-06-07 | DONE | #1730 | |
 | feature/morimoto/preview-section-split | DesignPreview セクション分割（衝突防止）+ §9 DataTable（PR#1759/#1761 解消） | 2026-06-08 | IN_PROGRESS | | |
 | feature/morimoto/status-ssot-step2b | 決定レイヤー 1 ステップ2b — 全ドメイン getStatusPresentation() 置換 | 2026-06-09 10:00 | IN_PROGRESS | | |
+| release/main-0608 | （記入してください） | 2026-06-08 12:00 | IN_PROGRESS | | |
+| feature/morimoto/tabs-component | Tabs 金型 + デザインプレビュー §10（Task 5C+5D） | 2026-06-08 | DONE | #1772 | |
+| feature/morimoto/fix-register-company-lookup | （記入してください） | 2026-06-08 12:11 | IN_PROGRESS | | |
+| feature/morimoto/submenu-and-preview-rooms | SubMenu 金型 ＋ デザインプレビュー部品別ルーム再構成（Task 6C+6D） | 2026-06-08 12:42 | DONE | #1776 | |
+| feature/morimoto/button-outline-variant | Button outline バリアント追加 | 2026-06-08 13:18 | DONE | #1779 | |
+| feature/morimoto/icon-button-recon-and-standard | アイコンボタン実物基準作り直し＋プレビュー更新 | 2026-06-08 14:19 | DONE | #1780 | |
+| feature/morimoto/fix-register-form-ux | （記入してください） | 2026-06-08 14:28 | IN_PROGRESS | | |
+| feature/morimoto/icon-btn-size-fix | （記入してください） | 2026-06-08 14:44 | IN_PROGRESS | | |
+| feature/morimoto/icon-btn-root-cause-fix | （記入してください） | 2026-06-08 15:09 | IN_PROGRESS | | |
+| feature/morimoto/fix-address-empty-str-422 | （記入してください） | 2026-06-08 15:27 | IN_PROGRESS | | |
+| feature/morimoto/caffeinate-failure-visibility | （記入してください） | 2026-06-08 15:35 | IN_PROGRESS | | |
+| feature/morimoto/register-form-input-contract | （記入してください） | 2026-06-08 15:57 | IN_PROGRESS | | |
+| feature/morimoto/modal-component | （記入してください） | 2026-06-08 15:57 | IN_PROGRESS | | |
+| feature/morimoto/empty-state-component | （記入してください） | 2026-06-08 16:56 | IN_PROGRESS | | |
+| feature/morimoto/empty-state-icon-fix | （記入してください） | 2026-06-08 20:57 | IN_PROGRESS | | |
+| feature/morimoto/definition-audit-2026-06-08 | （記入してください） | 2026-06-08 22:10 | IN_PROGRESS | | |
+| feature/morimoto/decision-layer-01-recon | （記入してください） | 2026-06-09 00:17 | IN_PROGRESS | | |
+| feature/morimoto/status-presentation-ssot | （記入してください） | 2026-06-09 01:30 | IN_PROGRESS | | |
+| feature/morimoto/status-ssot-step2a | （記入してください） | 2026-06-09 08:22 | IN_PROGRESS | | |
+| feature/morimoto/sop-kpi2-impl | SOPコンプライアンス保証機構（ADR-119 KPI2）— process-artifacts gate | 2026-06-08 | IN_PROGRESS | | |
 ---
 
 ## 記入例
