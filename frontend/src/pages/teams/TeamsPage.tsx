@@ -10,8 +10,10 @@ import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Modal } from "../../components/Modal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import "./TeamsPage.css";
 
 interface Team {
   id: number;
@@ -156,35 +158,39 @@ export default function TeamsPage() {
     >
       {error && <div className="error-message">{error}</div>}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editId ? t("teams.editTeam") : t("teams.newTeam")}</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("teams.teamName")} *</label>
-                <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("teams.leaderUserIdLabel")}</label>
-                <input type="number" min="1" value={form.leader_id} onChange={(e) => setForm({ ...form, leader_id: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("common.description")}</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.create")}</button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => { setShowForm(false); setEditId(null); setForm(emptyForm); }}
+        title={editId ? t("teams.editTeam") : t("teams.newTeam")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="form-group"><label>{t("teams.teamName")} *</label>
+            <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
-        </div>
-      )}
+          <div className="form-group"><label>{t("teams.leaderUserIdLabel")}</label>
+            <input type="number" min="1" value={form.leader_id} onChange={(e) => setForm({ ...form, leader_id: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("common.description")}</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm); }}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.create")}</button>
+          </div>
+        </form>
+      </Modal>
 
-      {membersPanel && (
-        <div className="modal-overlay" onClick={() => setMembersPanel(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("teams.manageMembersTitle", { name: membersPanel.name })}</h3>
+      <Modal
+        open={!!membersPanel}
+        onClose={() => setMembersPanel(null)}
+        title={membersPanel ? t("teams.manageMembersTitle", { name: membersPanel.name }) : ""}
+        size="md"
+      >
+        {membersPanel && (
+          <>
             {hasPermission("teams.manage_members") && (
-              <form onSubmit={addMember} style={{ marginBottom: "var(--space-4)" }}>
+              <form onSubmit={addMember} className="teams-add-member-form">
                 <div className="form-group"><label>{t("teams.addUserIdLabel")}</label>
                   <input type="number" min="1" required value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} />
                 </div>
@@ -209,12 +215,9 @@ export default function TeamsPage() {
                 {members.length === 0 && <tr><td colSpan={4} className="empty">{t("teams.noMembers")}</td></tr>}
               </tbody>
             </table>
-            <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={() => setMembersPanel(null)}>{t("common.close")}</button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
