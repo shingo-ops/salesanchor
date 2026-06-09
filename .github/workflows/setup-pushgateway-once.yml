@@ -89,23 +89,21 @@ jobs:
               # バックアップ
               sudo cp "$CONF_FILE" "${CONF_FILE}.bak.$(date +%Y%m%d%H%M%S)"
 
-              # grafana location ブロックの直後に pushgateway ブロックを追記
-              # grafana の location 終端（"}" がある行）を見つけて、その後に挿入
-              PUSHGATEWAY_BLOCK="
-        location /pushgateway/ {
-            proxy_pass http://${MGMT_VPS_IP}:9091/;
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }"
-
-              # grafana location ブロック末尾の後に挿入（Pythonで安全に処理）
-              sudo python3 - "$CONF_FILE" "$PUSHGATEWAY_BLOCK" << 'PYEOF'
+              # grafana location ブロック末尾の後に pushgateway ブロックを挿入（Pythonで安全に処理）
+              sudo python3 - "$CONF_FILE" "$MGMT_VPS_IP" << 'PYEOF'
             import sys, re
 
             conf_file = sys.argv[1]
-            block = sys.argv[2]
+            mgmt_ip = sys.argv[2]
+            block = (
+                "\n        location /pushgateway/ {\n"
+                "            proxy_pass http://" + mgmt_ip + ":9091/;\n"
+                "            proxy_set_header Host $host;\n"
+                "            proxy_set_header X-Real-IP $remote_addr;\n"
+                "            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n"
+                "            proxy_set_header X-Forwarded-Proto $scheme;\n"
+                "        }"
+            )
 
             with open(conf_file, 'r') as f:
                 content = f.read()
