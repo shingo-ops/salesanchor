@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-09 / ADR 総数: 111 件
+最終更新: 2026-06-09 / ADR 総数: 112 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -129,6 +129,7 @@
 | [ADR-119](./ADR-119-lead-channels-and-lead-merge.md) | ADR-119: lead_channels テーブル + リード統合エンドポイント | Accepted | — | — |
 | [ADR-120](./ADR-120-status-presentation-ssot.md) | ADR-120: ステータス → 見た目の SSoT（決定レイヤー① 中央対応表） | Completed | — | — |
 | [ADR-121](./ADR-121-sop-process-artifacts-gate.md) | ADR-121: 標準ワークフローの強制（process-artifacts gate ＋ 単一の正SOP） | Accepted | — | — |
+| [ADR-122](./ADR-122-realpage-modal-standardization.md) | ADR-122: 実ページ標準部品化（Modal コンポーネントへの移行） | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
