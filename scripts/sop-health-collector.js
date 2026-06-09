@@ -79,14 +79,36 @@ async function ghGetAll(path, params = new URLSearchParams()) {
 
 /**
  * 直近 LOOKBACK_DAYS 日の closed PR を取得
+ * updated_at が since より古いページが来た時点でページネーションを打ち切る
+ * （sort=updated desc のため、そのページ以降は必ず since より古い）
  */
 async function fetchRecentClosedPRs() {
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400 * 1000).toISOString();
-  const params = new URLSearchParams({ state: 'closed', sort: 'updated', direction: 'desc' });
-  const allPRs = await ghGetAll(`/repos/${REPO}/pulls`, params);
-  return allPRs.filter((pr) => {
+  const sinceMs = new Date(since).getTime();
+  const results = [];
+  let page = 1;
+  while (true) {
+    const params = new URLSearchParams({
+      state: 'closed', sort: 'updated', direction: 'desc',
+      page: String(page), per_page: '100',
+    });
+    const url = `${API_BASE}/repos/${REPO}/pulls?${params}`;
+    const res = await fetch(url, { headers: HEADERS });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`gh API ${url} → ${res.status}: ${text}`);
+    }
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) break;
+    results.push(...data);
+    // ページ内の最も古い updated_at が since より前なら以降のページは不要
+    const oldestUpdated = Math.min(...data.map((pr) => new Date(pr.updated_at).getTime()));
+    if (oldestUpdated < sinceMs || data.length < 100) break;
+    page++;
+  }
+  return results.filter((pr) => {
     if (!pr.merged_at) return false;
-    return new Date(pr.merged_at) >= new Date(since);
+    return new Date(pr.merged_at).getTime() >= sinceMs;
   });
 }
 
@@ -109,14 +131,11 @@ async function countExemptPRs(prs) {
 
 /**
  * 指標2: 危険パス変更 PR 件数（週次）
+ * 並列フェッチで高速化（sequential → Promise.all）
  */
 async function countDangerousApprovedPRs(prs) {
-  let count = 0;
-  for (const pr of prs) {
-    const isDangerous = await prTouchesDangerousPath(pr.number);
-    if (isDangerous) count++;
-  }
-  return count;
+  const results = await Promise.all(prs.map((pr) => prTouchesDangerousPath(pr.number)));
+  return results.filter(Boolean).length;
 }
 
 /**
@@ -182,8 +201,10 @@ async function ghGetAllRuns(params = new URLSearchParams()) {
 async function calcGateFrictionRate(prs) {
   if (prs.length === 0) return 0;
 
+  // 直近 LOOKBACK_DAYS 日のみ取得（全件取得を避けるため created フィルタ追加）
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 86400 * 1000).toISOString();
   const workflowRuns = await ghGetAllRuns(
-    new URLSearchParams({ workflow_id: 'process-artifacts-gate.yml' }),
+    new URLSearchParams({ workflow_id: 'process-artifacts-gate.yml', created: `>=${since}` }),
   );
 
   // 失敗 run と紐づく PR 番号を収集
