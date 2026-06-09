@@ -1,12 +1,13 @@
 # ADR-120: ステータス → 見た目の SSoT（決定レイヤー① 中央対応表）
 
-- **Status**: Accepted
+- **Status**: Completed
 - **Date**: 2026-06-09
 - **Deciders**: shingo-ops（PO）, Hikky-dev（Dev）
+- **Completed**: 2026-06-09（Step 3 lint error 昇格・全 11ドメイン・直書き 0 確認）
 
 ## Context
 
-ステータス値 → バッジ色 / CSS クラスの決定ロジックが 29サイト（10ドメイン・約44分岐）に散在していた（recon: `docs/handoff/decision-layer-01/recon.md`）。
+ステータス値 → バッジ色 / CSS クラスの決定ロジックが 29サイト（当初10ドメイン・約44分岐）に散在していた（recon: `docs/handoff/decision-layer-01/recon.md`）。
 
 主要な問題:
 1. **同一概念が3色に分裂**: LeadStatus "negotiating" が画面ごとに `--lead-contact-bg`（オレンジ）/ `--warning-bg`（黄）/ `--info-bg`（青）の3色で表示される
@@ -58,10 +59,12 @@ getStatusPresentation("lead", lead.status)
 - DealsPage の視覚変更を伴う（現行と異なる可能性）
 - staff.pending / bot.maintenance の色変更（danger → warning）はユーザーへの視覚変更
 
-### Migration Plan
-- Step 1: 中央対応表 + 補助関数 + プレビュー + lint(warn) を追加（追加のみ・この ADR）
-- Step 2: 24インライン + 集約5 を補助関数へ置換（各 PR でロールバック可）
-- Step 3: lint を warn → error へ昇格（止血完了）
+### Migration Plan（完了）
+- Step 1 ✅: 中央対応表 + 補助関数 + プレビュー + lint(warn) を追加（PR #1800）
+- Step 2 ✅: 24インライン + 集約5 を補助関数へ置換（Step 2a: PR #1801 / Step 2b: PR #1803）
+  - erpJobStatus ドメイン追加（ERP同期ログ: completed/failed/pending）
+  - BuddyPage / NotificationsPage の is_active boolean は `status-ssot-exempt` で明示除外
+- Step 3 ✅: lint を warn → error へ昇格（直書き 0 確認・止血完了）（本 PR）
 
 ## References
 - recon: `docs/handoff/decision-layer-01/recon.md`

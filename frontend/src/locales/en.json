@@ -1437,7 +1437,11 @@
     "colCompletedAt": "Completed at",
     "directionExport": "Export",
     "directionImport": "Import",
-    "noLogs": "No sync logs"
+    "noLogs": "No sync logs",
+    "jobStatus_completed": "Completed",
+    "jobStatus_failed": "Failed",
+    "jobStatus_running": "Running",
+    "jobStatus_pending": "Pending"
   },
   "commissions": {
     "title": "Commission Settings",

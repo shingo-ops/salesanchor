@@ -76,6 +76,7 @@ export default function BuddyPage() {
               {pairs.map(p => (
                 <tr key={p.id}>
                   <td>{p.coach_user_id}</td><td>{p.mentee_user_id}</td>
+                  {/* status-ssot-exempt: is_active boolean (status ドメインではなく boolean flag) */}
                   <td><span className={`badge badge-${p.is_active ? "won" : "lost"}`}>{p.is_active ? t("common.active") : t("buddy.ended")}</span></td>
                   <td>{new Date(p.started_at).toLocaleDateString()}</td>
                   <td className="actions">{p.is_active && hasPermission("buddy.manage") && <button className="btn-sm btn-danger" onClick={() => endPair(p.id)}>{t("buddy.end")}</button>}</td>
@@ -91,6 +92,7 @@ export default function BuddyPage() {
               {feedbacks.map(f => (
                 <tr key={f.id}>
                   <td>{f.pair_id}</td>
+                  {/* status-ssot-exempt: feedback_type Good/Bad binary (status ドメインではなく boolean 分類) */}
                   <td><span className={`badge badge-${f.feedback_type === "Good" ? "won" : "lost"}`}>{f.feedback_type}</span></td>
                   <td>{f.reason || "-"}</td><td>{new Date(f.created_at).toLocaleDateString()}</td>
                 </tr>

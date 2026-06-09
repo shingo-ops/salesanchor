@@ -1,7 +1,7 @@
 /**
  * ステータス → 見た目の SSoT（決定レイヤー①）
  *
- * 全 10 ステータスドメインを (domain, status) → { bucket, badgeVariant, labelKey }
+ * 全 11 ステータスドメインを (domain, status) → { bucket, badgeVariant, labelKey }
  * の形式で一元管理する。ページ側は自前で色・クラスを決定しないこと。
  *
  * 参照: docs/handoff/decision-layer-01/design.md
@@ -23,7 +23,7 @@ export interface StatusPresentation {
   labelKey?: string;
 }
 
-/** 10 ステータスドメイン */
+/** 11 ステータスドメイン */
 export type StatusDomain =
   | "lead"
   | "quote"
@@ -34,7 +34,8 @@ export type StatusDomain =
   | "parseStatus"
   | "staff"
   | "bot"
-  | "prospectRank";
+  | "prospectRank"
+  | "erpJobStatus";
 
 const NEUTRAL_FALLBACK: StatusPresentation = {
   bucket: "neutral",
@@ -149,6 +150,13 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     "仮C":  { bucket: "neutral", badgeVariant: "pending",     labelKey: "leads.prospectRank_tentativeC" },
     /* eslint-disable-next-line local/no-japanese-literal -- DB 定義の商談ランクコード */
     "確定C": { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.prospectRank_confirmedC" },
+  },
+
+  erpJobStatus: {
+    completed: { bucket: "success", badgeVariant: "won",  labelKey: "erp.jobStatus_completed" },
+    failed:    { bucket: "danger",  badgeVariant: "lost", labelKey: "erp.jobStatus_failed" },
+    running:   { bucket: "info",    badgeVariant: "negotiating", labelKey: "erp.jobStatus_running" },
+    pending:   { bucket: "neutral", badgeVariant: "neutral",     labelKey: "erp.jobStatus_pending" },
   },
 };
 

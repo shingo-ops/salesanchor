@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface SyncLog { id: number; sync_type: string; direction: string; record_count: number; status: string; error_message: string | null; started_at: string; completed_at: string | null; }
 
@@ -62,7 +63,7 @@ export default function ERPPage() {
                 <td>{l.sync_type}</td>
                 <td>{l.direction === "export" ? t("erp.directionExport") : t("erp.directionImport")}</td>
                 <td>{l.record_count}</td>
-                <td><span className={`badge badge-${l.status === "completed" ? "won" : l.status === "failed" ? "lost" : "pending"}`}>{l.status}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("erpJobStatus", l.status).badgeVariant}`}>{l.status}</span></td>
                 <td>{new Date(l.started_at).toLocaleString()}</td>
                 <td>{l.completed_at ? new Date(l.completed_at).toLocaleString() : "-"}</td>
                 <td style={{ color: "var(--danger)", maxWidth: 'var(--col-width-medium)', overflow: "hidden", textOverflow: "ellipsis" }}>{l.error_message || "-"}</td>
