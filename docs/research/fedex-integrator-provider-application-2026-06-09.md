@@ -1,7 +1,8 @@
-# FedEx Integrator Provider 申請ガイド（salesanchor 外部販売向け）
+# 配送キャリア連携 申請ガイド（FedEx / DHL・salesanchor 外部販売向け）
 
-- 作成日: 2026-06-09
-- 目的: salesanchor を外部企業へ販売する前提で、各導入企業が「自社の FedEx アカウント」を連携して送料見積・送り状・インボイス・追跡を行えるようにする。そのための **FedEx Integrator Provider / FedEx Compatible 認定**の申請手順・問い合わせ文面・スケジュールをまとめる。
+- 作成日: 2026-06-09（DHL セクション追記: 2026-06-09）
+- 目的: salesanchor を外部企業へ販売する前提で、各導入企業が「自社のキャリアアカウント」を連携して送料見積・送り状・インボイス・追跡を行えるようにする。そのための申請手順・問い合わせ文面・スケジュールをまとめる。
+- 構成: §0–§5 = **FedEx**（Integrator Provider / Compatible 認定）。§6 = **DHL**（MyDHL API・FedEx より大幅に軽い）。
 - 関連: ADR-123（配送キャリア Integrator 連携アーキ）、[配送キャリア接続テスト（実装済）](../../README.md)
 
 ---
@@ -124,8 +125,48 @@ Rate / Ship+ラベル(PDF/PNG/ZPL・600DPI・国際AWB・複数個口) / イン�
 
 ---
 
-## 5. 次アクション
+## 5. 次アクション（FedEx）
 
 1. **【最優先】FedEx Japan へ §1 の問い合わせを送付**（外部依存を即始動・全体の律速）
 2. **§2 の登録**（しんごさん操作・私が逐次案内）→ テストキー取得
 3. ADR-123 の実装計画に沿って Phase B（Rate/Ship/ラベル/インボイス）着手（テストキー到着後）
+
+---
+
+# 6. DHL（MyDHL API）— FedEx より大幅に軽い経路
+
+## 6.1 結論
+DHL は **SaaS 側の重い認定が不要**。各テナントが**自分で DHL の API キーを取得**して salesanchor に入力すれば動く（既存の接続テストページで土台は対応済み）。FedEx の Integrator Validation（PIW / Cover Sheet / ラベル3形式 / MFA登録フロー / スクショ提出）に相当するものは **DHL では不要**。
+
+## 6.2 仕組み（per-customer モデル）
+- 各顧客が**自社の DHL Express 口座（9桁）**を前提に、developer.dhl.com（**日本語対応**）で登録 →「Get Access」→ **「既存のプラグイン/EC/サードパーティ製ソリューション用に認証情報が必要」オプションを選択**（third-party ツール利用を DHL が公式に想定）→ **通常 翌営業日に承認**（「Test Access Approved」＋「Production Access Approved」の2通）→ **自分の API Key / Secret** を取得 → salesanchor に入力。
+- **日本公式対応・日本の DHL 口座でOK**（米国アカウント不要）。
+- 責任分界: third-party ツールに使わせても**口座保有者（顧客）が責任**を負う＝顧客が自分のキーで使う前提。
+- 実例: Ship&co / AnyLogi / ShipStation 等が「複数の DHL アカウントを各キーで接続」運用。
+
+## 6.3 FedEx との比較
+| 項目 | FedEx Integrator Provider | DHL Express MyDHL API |
+|---|---|---|
+| SaaS側の認定 | 重い（Validation 提出→審査） | **ほぼ不要**（各顧客が自分でキー取得・third-party用オプションあり） |
+| 各顧客の手続き | 自社FedEx＋テストキー | DHL口座＋申請→**翌営業日承認**（test＋prod両方） |
+| 本番移行 | Validation 承認 | DHLコンサル/ポータル経由（軽い） |
+| パートナー認定 | FedEx Compatible（任意・年次再認定） | DHL eCommerce Certified Partner（任意・メール申請） |
+| 日本 | 非US経路で可（要確認） | **日本公式対応・JP口座OK** |
+
+## 6.4 要件
+- **SaaS（salesanchor）側**: 特別な認定は不要。テナント別に DHL の API Key/Secret を暗号化保存（**実装済み**）。Rate/Ship/ラベル/追跡は MyDHL API を実装（Phase B・FedEx と並行）。
+- **各導入企業側**: 有効な DHL Express 口座 → developer.dhl.com で「third-party solution 用」を選んで申請 → 翌営業日承認 → 自分のキーを salesanchor に入力。
+- **任意（推奨・パートナー化）**: DHL eCommerce **Certified Partner** にメール申請（ディレクトリ掲載・共同マーケ。FedEx Compatible 相当）。市場投入後。
+
+## 6.5 すべきこと
+1. **REST 版キーで接続テスト**: 以前見つかった顧客の古いキーは **MyDHL API XML 版**＝REST 版とは別物。developer.dhl.com で **REST 版**のアプリ/キー（「third-party solution 用」を選択）を取得 → salesanchor の DHL ページで接続テスト。
+2. **Phase B 実装**: MyDHL API の Rate / Shipment（送り状・ラベル）/ Tracking を実装（FedEx と同時）。
+3. **任意**: DHL Japan / DHL eCommerce のパートナー窓口へ certified partner 申請（市場投入後）。
+4. **DHL への確認（軽め）**: ①各顧客が「third-party solution 用」キーで salesanchor を使う運用で問題ないか ②Express の partner certification の日本窓口・要件。
+
+## 6.6 出典（DHL）
+- DHL Developer Portal（日本語）: https://developer.dhl.com/?lang=ja
+- MyDHL API (DHL Express) リファレンス: https://developer.dhl.com/api-reference/mydhl-api-dhl-express
+- Test→Production 移行: https://support-developer.dhl.com/support/solutions/articles/47001224426-i-have-access-to-mydhl-express-test-api-how-can-i-move-to-production-
+- DHL eCommerce Certified Partner Program: https://www.dhl.com/us-en/home/ecommerce/business-help-center/partner-program.html
+- Ship&co：DHL REST API キー取得手順（per-customer 例）: https://support.shipandco.com/hc/en-us/articles/38801071543449-How-to-Obtain-DHL-Express-REST-API-Key-and-Secret-for-Ship-co-Integration
