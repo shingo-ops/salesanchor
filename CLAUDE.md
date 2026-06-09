@@ -47,27 +47,10 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## 実装フロー（ADR-012 / ADR-113: 2モード運用）
+## 標準開発フロー（正本: docs/STANDARD-WORKFLOW.md）
 
-実装の起動トリガーは **設計のハンドオフ**。ADR の push では発火しない。確実性は検証ゲート（CI / Evaluator ビジュアル差分 / スモーク / ステージング）が担保する。
-
-| 担当 | 役割 |
-|------|------|
-| **Shingo（PO）** | What/Why の定義、事業判断、優先順位、逸脱時の最終判断 |
-| **Web Claude（Planner）** | 壁打ち→設計。pattern 2 では How（契約・データ形・API 契約・視覚参照）まで設計する |
-| **architect（専用 agent）** | 設計確定の "前" に実機 recon（file:line 突合）を行い整合エビデンスを返す。pattern 2 では整合検査と差し戻しのみ（再著述禁止） |
-| **Generator（Claude Code）** | レビュー済み設計から実装し PR 作成 |
-| **検証ゲート** | Reviewer（コード）＋ Evaluator（UI）＋ テスト/CI/スモーク。二者 APPROVE で develop マージ |
-
-**pattern 1**（`mode: terminal`・既定）: ADR は What/Why/Scope のみ。How は Generator が自律設計。詳細: `docs/adr/ADR-012-what-how-separation.md`
-
-**pattern 2**（`mode: handoff`・設計持ち込み）: PO＋Web Claude が How まで合意。Generator は **忠実実装**。  
-**【MUST】設計確定の前に architect の実機 recon を必ず行う。** recon エビデンスのない設計は Generator に渡さない。  
-フィデリティ規律: 契約・不変条件・受け入れ条件・フロント視覚は変えない。逸脱は PR body 報告 → PO 判断。詳細: `docs/adr/ADR-113-two-mode-dev-flow.md`
-
-**共通原則**: レビューは原則 1 回に収束。ゲートが拾える指摘で往復しない。やり取りは差分で行う。不可逆操作は PO 確認必須。
-
-**自律クラフト（設計不要）**: バグ修正・CI 修復・リファクタに限定（機能追加・フロント視覚変更は対象外）。
+全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。
+成果物は中身が揃って初めて成果物（在るだけ不可）。完了定義・免除/特例・関所の詳細は正本 `docs/STANDARD-WORKFLOW.md` を参照（これが権威）。
 
 ---
 

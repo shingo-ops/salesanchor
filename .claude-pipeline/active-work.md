@@ -72,7 +72,6 @@
 | feature/morimoto/adr-116-deploy-rollback | ADR-118 ロールバック堅牢化（deploy_rollback.sh 共有・LAST_GOOD_SHA）棚上げ中 | 2026-06-07 | IN_PROGRESS | #1713 | 棚上げ中 |
 | feature/morimoto/fix-rls-policy-variable-name | RLS ポリシー変数名修正（Phase2 前提条件） | 2026-06-07 | DONE | #1730 | |
 | feature/morimoto/preview-section-split | DesignPreview セクション分割（衝突防止）+ §9 DataTable（PR#1759/#1761 解消） | 2026-06-08 | IN_PROGRESS | | |
-| feature/morimoto/status-ssot-step2b | 決定レイヤー 1 ステップ2b — 全ドメイン getStatusPresentation() 置換 | 2026-06-09 10:00 | IN_PROGRESS | | |
 | release/main-0608 | （記入してください） | 2026-06-08 12:00 | IN_PROGRESS | | |
 | feature/morimoto/tabs-component | Tabs 金型 + デザインプレビュー §10（Task 5C+5D） | 2026-06-08 | DONE | #1772 | |
 | feature/morimoto/fix-register-company-lookup | （記入してください） | 2026-06-08 12:11 | IN_PROGRESS | | |
@@ -89,10 +88,13 @@
 | feature/morimoto/empty-state-component | （記入してください） | 2026-06-08 16:56 | IN_PROGRESS | | |
 | feature/morimoto/empty-state-icon-fix | （記入してください） | 2026-06-08 20:57 | IN_PROGRESS | | |
 | feature/morimoto/definition-audit-2026-06-08 | （記入してください） | 2026-06-08 22:10 | IN_PROGRESS | | |
-| feature/morimoto/decision-layer-01-recon | （記入してください） | 2026-06-09 00:17 | IN_PROGRESS | | |
-| feature/morimoto/status-presentation-ssot | （記入してください） | 2026-06-09 01:30 | IN_PROGRESS | | |
-| feature/morimoto/status-ssot-step2a | （記入してください） | 2026-06-09 08:22 | IN_PROGRESS | | |
+| feature/morimoto/decision-layer-01-recon | 決定レイヤー① recon 差分可視化 | 2026-06-09 00:17 | DONE | #1799 | |
+| feature/morimoto/status-presentation-ssot | 決定レイヤー 1 ステップ1 — SSoT中央表・補助関数 | 2026-06-09 01:30 | DONE | #1800 | |
+| feature/morimoto/status-ssot-step2a | 決定レイヤー 1 ステップ2a — 差分可視化 + staff/bot 現状維持 | 2026-06-09 08:22 | DONE | #1801 | |
+| feature/morimoto/status-ssot-step2b | 決定レイヤー 1 ステップ2b — 全29サイト getStatusPresentation() 置換 | 2026-06-09 10:00 | DONE | #1803 | |
 | feature/morimoto/sop-kpi2-impl | SOPコンプライアンス保証機構（ADR-119 KPI2）— process-artifacts gate | 2026-06-08 | IN_PROGRESS | | |
+| hotfix/back-merge-main-into-develop-2 | （記入してください） | 2026-06-09 10:34 | IN_PROGRESS | | |
+| feature/morimoto/claude-md-sop-update | CLAUDE.md 標準開発フロー節を新SOPに差し替え（ADR-121） | 2026-06-09 | IN_PROGRESS | | |
 ---
 
 ## 記入例
