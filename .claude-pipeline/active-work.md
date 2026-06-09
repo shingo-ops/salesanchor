@@ -93,6 +93,7 @@
 | feature/morimoto/status-presentation-ssot | （記入してください） | 2026-06-09 01:30 | IN_PROGRESS | | |
 | feature/morimoto/status-ssot-step2a | （記入してください） | 2026-06-09 08:22 | IN_PROGRESS | | |
 | feature/morimoto/sop-kpi2-impl | SOPコンプライアンス保証機構（ADR-119 KPI2）— process-artifacts gate | 2026-06-08 | IN_PROGRESS | | |
+| feature/morimoto/claude-md-sop-update | CLAUDE.md 標準開発フロー節を新SOPに差し替え（ADR-121） | 2026-06-09 | IN_PROGRESS | | |
 ---
 
 ## 記入例
