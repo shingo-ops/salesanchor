@@ -12,6 +12,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
+import { Modal } from "../../components/Modal";
 
 interface Supplier {
   id: number;
@@ -125,84 +126,95 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
     }
   };
 
+  const footer = (
+    <>
+      <span style={{ marginRight: "auto" }}>
+        {t("common.amount")}: <strong>¥{total.toLocaleString()}</strong>
+      </span>
+      <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
+        {t("common.cancel")}
+      </button>
+      <button form="po-form" type="submit" className="btn-primary" disabled={saving}>
+        {saving ? t("common.saving") : t("common.save")}
+      </button>
+    </>
+  );
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "var(--modal-wide-w)" }}>
-        <h3>{t("purchaseOrders.newPO")}</h3>
-        {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>{t("purchaseOrders.supplier")} *</label>
-            <select required value={supplierId} onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : "")}>
-              <option value="">{t("common.pleaseSelect")}</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t("purchaseOrders.newPO")}
+      size="xl"
+      footer={footer}
+    >
+      {error && <div className="error-message">{error}</div>}
+      <form id="po-form" onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>{t("purchaseOrders.supplier")} *</label>
+          <select required value={supplierId} onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : "")}>
+            <option value="">{t("common.pleaseSelect")}</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
 
-          <div className="form-group">
-            <label>{t("quotes.items")} *</label>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  {!pickerless && <th style={{ minWidth: "var(--table-col-min-width)" }}>{t("quotes.selectProduct")}</th>}
-                  <th>{t("quotes.product")}</th>
-                  <th>{t("quotes.quantity")}</th>
-                  <th>{t("products.unitPrice")}</th>
-                  <th>{t("quotes.subtotal")}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr key={i} data-testid={`po-item-row-${i}`}>
-                    {!pickerless && (
-                      <td style={{ minWidth: "var(--table-col-min-width)" }}>
-                        <InventoryPicker
-                          onSelect={(c) => onPickProduct(i, c)}
-                          testIdPrefix={`po-inventory-search-${i}`}
-                        />
-                      </td>
+        <div className="form-group">
+          <label>{t("quotes.items")} *</label>
+          <table className="data-table">
+            <thead>
+              <tr>
+                {!pickerless && <th style={{ minWidth: "var(--table-col-min-width)" }}>{t("quotes.selectProduct")}</th>}
+                <th>{t("quotes.product")}</th>
+                <th>{t("quotes.quantity")}</th>
+                <th>{t("products.unitPrice")}</th>
+                <th>{t("quotes.subtotal")}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={i} data-testid={`po-item-row-${i}`}>
+                  {!pickerless && (
+                    <td style={{ minWidth: "var(--table-col-min-width)" }}>
+                      <InventoryPicker
+                        onSelect={(c) => onPickProduct(i, c)}
+                        testIdPrefix={`po-inventory-search-${i}`}
+                      />
+                    </td>
+                  )}
+                  <td>
+                    <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} readOnly style={{ minWidth: "var(--min-width-input-sm)" }} />
+                  </td>
+                  <td>
+                    <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} />
+                  </td>
+                  <td>
+                    <input type="number" min="0" step="0.01" value={item.unit_cost} onChange={(e) => updateItem(i, "unit_cost", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
+                  </td>
+                  <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>
+                    ¥{(item.quantity * item.unit_cost).toLocaleString()}
+                  </td>
+                  <td>
+                    {items.length > 1 && (
+                      <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
                     )}
-                    <td>
-                      <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} readOnly style={{ minWidth: "var(--min-width-input-sm)" }} />
-                    </td>
-                    <td>
-                      <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} />
-                    </td>
-                    <td>
-                      <input type="number" min="0" step="0.01" value={item.unit_cost} onChange={(e) => updateItem(i, "unit_cost", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
-                    </td>
-                    <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>
-                      ¥{(item.quantity * item.unit_cost).toLocaleString()}
-                    </td>
-                    <td>
-                      {items.length > 1 && (
-                        <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!pickerless && (
-              <button type="button" className="btn-secondary" onClick={addItem} style={{ marginTop: "var(--space-2)" }}>{t("quotes.addItem")}</button>
-            )}
-          </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!pickerless && (
+            <button type="button" className="btn-secondary" onClick={addItem} style={{ marginTop: "var(--space-2)" }}>{t("quotes.addItem")}</button>
+          )}
+        </div>
 
-          <div className="form-group">
-            <label>{t("common.notes")}</label>
-            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "var(--space-3)" }}>
-            <span>{t("common.amount")}: <strong>¥{total.toLocaleString()}</strong></span>
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("common.save")}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="form-group">
+          <label>{t("common.notes")}</label>
+          <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </form>
+    </Modal>
   );
 }
