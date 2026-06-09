@@ -28,7 +28,8 @@ import "../schedule.css";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { GoogleCalendarStatusBar, type SyncStatus } from "../../components/GoogleCalendarStatusBar";
-import { X, INBOX_ACTION_ICONS, SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
+import { INBOX_ACTION_ICONS, SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
+import { Modal } from "../../components/Modal";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -165,37 +166,24 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
   const TrashIcon = INBOX_ACTION_ICONS.delete;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        {/* Google Calendar 準拠ヘッダー: タイトル + 右端アクションアイコン群 */}
-        <div className="modal-header">
-          <h3 className="modal-header__title">
-            {isNew
-              ? t("schedule.addEvent")
-              : editable
-              ? t("schedule.editEvent")
-              : (event?.title ?? t("schedule.noTitle"))}
-          </h3>
-          <div className="modal-header__actions">
-            {editable && !isNew && !confirmDelete && (
-              <button
-                className="modal-icon-btn modal-icon-btn--danger"
-                onClick={() => setConfirmDelete(true)}
-                aria-label={t("schedule.deleteEvent")}
-                title={t("schedule.deleteEvent")}
-              >
-                <TrashIcon size={18} />
-              </button>
-            )}
-            <button
-              className="modal-icon-btn"
-              onClick={onClose}
-              aria-label={t("common.close")}
-            >
-              <X size={18} />
-            </button>
-          </div>
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={isNew ? t("schedule.addEvent") : editable ? t("schedule.editEvent") : (event?.title ?? t("schedule.noTitle"))}
+      size="md"
+    >
+      {editable && !isNew && !confirmDelete && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-2)" }}>
+          <button
+            className="modal-icon-btn modal-icon-btn--danger"
+            onClick={() => setConfirmDelete(true)}
+            aria-label={t("schedule.deleteEvent")}
+            title={t("schedule.deleteEvent")}
+          >
+            <TrashIcon size={18} />
+          </button>
         </div>
+      )}
 
         {editable ? (
           <>
@@ -284,8 +272,7 @@ function EventModal({ event, isNew, initialSlot, canEdit, onClose, onSave, onDel
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 
