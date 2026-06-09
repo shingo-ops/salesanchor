@@ -22,6 +22,7 @@ import type { OrderListItem } from "./orders.types";
 import type { ShippingDetailDto } from "../../components/ShippingDetailPanel";
 import type { PurchaseDetailDto } from "../../components/PurchaseDetailPanel";
 import { fmtCurrency, orderPhase } from "./useOrdersState";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface PanelOpeners {
   setShippingTarget: (o: OrderListItem) => void;
@@ -99,10 +100,10 @@ export function OrdersTable({
               <td>{o.currency ?? "-"}</td>
               <td>{o.total_amount !== null ? fmtCurrency(o.total_amount, o.currency) : "-"}</td>
               <td data-testid={`flow-cell-${o.id}`}>
-                <span className={`badge badge-${phase}`}>{PHASE_LABELS[phase] ?? phase}</span>
+                <span className={`badge badge-${getStatusPresentation("order", phase).badgeVariant}`}>{PHASE_LABELS[phase] ?? phase}</span>
               </td>
               <td>
-                <span className={`badge badge-${o.status}`}>
+                <span className={`badge badge-${getStatusPresentation("order", o.status).badgeVariant}`}>
                   {STATUS_LABELS[o.status] || o.status}
                 </span>
               </td>

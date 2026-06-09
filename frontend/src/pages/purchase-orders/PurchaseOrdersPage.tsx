@@ -7,6 +7,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
 import PurchaseOrdersFormModal, { POLineItem } from "./PurchaseOrdersFormModal";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 // 在庫表（InventoryPage）の複数選択から渡される商品（ADR-093 Phase 2b）。
 interface SelectedProduct {
@@ -170,21 +171,6 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const statusBadgeClass = (status: string): string => {
-    switch (status) {
-      case "received":
-        return "badge-won";
-      case "cancelled":
-        return "badge-lost";
-      case "ordered":
-        return "badge-negotiating";
-      case "error":
-        return "badge-lost"; // 失敗は赤系で目立たせる
-      default:
-        return "badge-pending";
-    }
-  };
-
   return (
     <PageLayout
       navKey="nav.purchaseOrders"
@@ -231,7 +217,7 @@ export default function PurchaseOrdersPage() {
                 <td className="mono">{p.po_number || "-"}</td>
                 <td>{p.total_amount != null ? `¥${Number(p.total_amount).toLocaleString()}` : "-"}</td>
                 <td>
-                  <span className={`badge ${statusBadgeClass(p.status)}`} data-testid={`po-status-${p.id}`}>
+                  <span className={`badge badge-${getStatusPresentation("purchaseOrder", p.status).badgeVariant}`} data-testid={`po-status-${p.id}`}>
                     {STATUS_LABELS[p.status] || p.status}
                   </span>
                 </td>

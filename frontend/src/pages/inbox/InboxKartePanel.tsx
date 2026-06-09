@@ -4,6 +4,7 @@ import { ACCOUNT_ICONS, NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 import type { LeadDetail, KarteTabKey } from "./inbox.types";
 
 interface CardForm {
@@ -65,18 +66,6 @@ interface Props {
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
 
-function getStageBadge(status: string): { labelKey: string; variant: string } {
-  switch (status) {
-    case "lead":              return { labelKey: "leads.statusCode.lead",              variant: "lead" };
-    case "negotiating":       return { labelKey: "leads.statusCode.negotiating",       variant: "deal" };
-    case "existing_customer": return { labelKey: "leads.statusCode.existing_customer", variant: "existing" };
-    case "follow_up_short":   return { labelKey: "leads.statusCode.follow_up_short",   variant: "followup" };
-    case "follow_up_long":    return { labelKey: "leads.statusCode.follow_up_long",    variant: "followup" };
-    case "lost":              return { labelKey: "leads.statusCode.lost",              variant: "default" };
-    case "out_of_scope":      return { labelKey: "leads.statusCode.out_of_scope",      variant: "default" };
-    default:                  return { labelKey: `leads.statusCode.${status}`,         variant: "default" };
-  }
-}
 
 function elapsedLabel(iso: string | null, t: TFn): string {
   const d = parseDate(iso);
@@ -112,7 +101,7 @@ export function InboxKartePanel({
       .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
 
-  const stageBadge = leadDetail ? getStageBadge(leadDetail.status) : null;
+  const stagePresentation = leadDetail ? getStatusPresentation("lead", leadDetail.status) : null;
   const subParts = leadDetail
     ? [leadDetail.country, leadDetail.customer_type].filter(Boolean)
     : [];
@@ -159,9 +148,9 @@ export function InboxKartePanel({
                 <span className="right-panel-sub">{subParts.join("・")}</span>
               )}
               <div className="karte-header-meta">
-                {stageBadge && (
-                  <span className={`karte-stage-badge karte-stage-badge--${stageBadge.variant}`} data-testid="karte-stage-badge">
-                    {t(stageBadge.labelKey)}
+                {stagePresentation && leadDetail && (
+                  <span className={`badge badge-${stagePresentation.badgeVariant}`} data-testid="karte-stage-badge">
+                    {t(stagePresentation.labelKey ?? leadDetail.status)}
                   </span>
                 )}
                 {selectedConversation?.last_message_at && (

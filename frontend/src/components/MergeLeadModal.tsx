@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { getStatusPresentation } from "../utils/statusPresentation";
 
 interface LeadOption {
   id: number;
@@ -222,7 +223,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
                         <td>{c.lead_code ?? `#${c.id}`}</td>
                         <td>{c.customer_name}</td>
                         <td>
-                          <span className={`badge lead-badge-${c.status}`}>
+                          <span className={`badge badge-${getStatusPresentation("lead", c.status).badgeVariant}`}>
                             {t(`leads.statusCode.${c.status}`, { defaultValue: c.status })}
                           </span>
                         </td>

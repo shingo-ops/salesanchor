@@ -18,6 +18,7 @@ import PriorityScoreBadge, { type CustomerScoreData } from "../../components/Pri
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
 /* ------------------------------------------------------------------ */
@@ -223,17 +224,8 @@ export default function LeadsPage() {
 
   const rankBadge = (rank: string | null) => {
     if (!rank) return "-";
-    const colorMap: Record<string, string> = {
-      "A": "badge-won",
-      "B+": "badge-confirmed",
-      "B": "badge-negotiating",
-      "B-": "badge-on_hold",
-      /* eslint-disable-next-line local/no-japanese-literal -- DB 定義の商談ランクコード */
-      "仮C": "badge-pending",
-      /* eslint-disable-next-line local/no-japanese-literal -- DB 定義の商談ランクコード */
-      "確定C": "badge-lost",
-    };
-    return <span className={`badge ${colorMap[rank] || ""}`}>{rank}</span>;
+    const p = getStatusPresentation("prospectRank", rank);
+    return <span className={`badge badge-${p.badgeVariant}`}>{rank}</span>;
   };
 
   return (
@@ -386,7 +378,7 @@ export default function LeadsPage() {
               <tr key={l.id}>
                 <td>{l.customer_name}</td>
                 <td>{l.company_name || "-"}</td>
-                <td><span className={`badge lead-badge-${l.status}`}>{translateLeadStatus(l.status)}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("lead", l.status).badgeVariant}`}>{translateLeadStatus(l.status)}</span></td>
                 <td>{l.temperature || "-"}</td>
                 <td>{rankBadge(l.prospect_rank)}</td>
                 {hasPermission("analytics.customer_priority.view") && (

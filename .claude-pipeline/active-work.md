@@ -72,6 +72,7 @@
 | feature/morimoto/adr-116-deploy-rollback | ADR-118 ロールバック堅牢化（deploy_rollback.sh 共有・LAST_GOOD_SHA）棚上げ中 | 2026-06-07 | IN_PROGRESS | #1713 | 棚上げ中 |
 | feature/morimoto/fix-rls-policy-variable-name | RLS ポリシー変数名修正（Phase2 前提条件） | 2026-06-07 | DONE | #1730 | |
 | feature/morimoto/preview-section-split | DesignPreview セクション分割（衝突防止）+ §9 DataTable（PR#1759/#1761 解消） | 2026-06-08 | IN_PROGRESS | | |
+| feature/morimoto/status-ssot-step2b | 決定レイヤー 1 ステップ2b — 全ドメイン getStatusPresentation() 置換 | 2026-06-09 10:00 | IN_PROGRESS | | |
 ---
 
 ## 記入例

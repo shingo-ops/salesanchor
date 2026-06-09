@@ -11,6 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface FxRateResult {
   currency: string;
@@ -70,6 +71,7 @@ export default function QuoteDetailPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [id]);
 
   const doAction = async (action: string) => {
@@ -158,7 +160,7 @@ export default function QuoteDetailPage() {
 
       <div style={{ background: "var(--bg-surface)", padding: "var(--space-6)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-sm)", marginBottom: "var(--space-6)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>
-          <div><strong>{t("common.status")}:</strong> <span className={`badge badge-${quote.status === "approved" ? "won" : quote.status === "rejected" ? "lost" : "pending"}`}>{t(`quotes.status_${quote.status}`)}</span></div>
+          <div><strong>{t("common.status")}:</strong> <span className={`badge badge-${getStatusPresentation("quote", quote.status).badgeVariant}`}>{t(`quotes.status_${quote.status}`)}</span></div>
           <div><strong>{t("common.currency")}:</strong> {quote.currency}</div>
           <div><strong>{t("quotes.validityDate")}:</strong> {quote.validity_date || "-"}</div>
           <div><strong>{t("common.createdAt")}:</strong> {new Date(quote.created_at).toLocaleDateString()}</div>
