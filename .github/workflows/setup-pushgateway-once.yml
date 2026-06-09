@@ -5,6 +5,11 @@ name: Setup Pushgateway (one-time)
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Run Pushgateway setup? (yes)'
+        required: false
+        default: 'yes'
 
 jobs:
   setup:
