@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { badgeVariant, SORT_VALUE, sortQuotes, type SortableQuote } from "./quotesSort";
+import { SORT_VALUE, sortQuotes, type SortableQuote } from "./quotesSort";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 const mk = (over: Partial<SortableQuote>): SortableQuote => ({
   quote_code: null,
@@ -14,14 +15,14 @@ const mk = (over: Partial<SortableQuote>): SortableQuote => ({
   ...over,
 });
 
-describe("badgeVariant", () => {
-  it("maps each status to the table badge variant", () => {
-    expect(badgeVariant("approved")).toBe("won");
-    expect(badgeVariant("rejected")).toBe("lost");
-    expect(badgeVariant("expired")).toBe("cancelled");
-    expect(badgeVariant("sent")).toBe("negotiating");
-    expect(badgeVariant("draft")).toBe("pending");
-    expect(badgeVariant("unknown")).toBe("pending");
+describe("getStatusPresentation — quote domain", () => {
+  it("maps each status to the SSoT badge variant", () => {
+    expect(getStatusPresentation("quote", "approved").badgeVariant).toBe("won");
+    expect(getStatusPresentation("quote", "rejected").badgeVariant).toBe("lost");
+    expect(getStatusPresentation("quote", "expired").badgeVariant).toBe("cancelled");
+    expect(getStatusPresentation("quote", "sent").badgeVariant).toBe("negotiating");
+    expect(getStatusPresentation("quote", "draft").badgeVariant).toBe("neutral");
+    expect(getStatusPresentation("quote", "unknown").badgeVariant).toBe("neutral");
   });
 });
 

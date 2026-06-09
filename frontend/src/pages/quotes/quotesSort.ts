@@ -16,14 +16,6 @@ export interface SortableQuote {
   created_at: string;
 }
 
-/** テーブルのステータスバッジと同じ配色クラス名（フィルタボタンと共用）。 */
-export const badgeVariant = (status: string): string =>
-  status === "approved" ? "won"
-    : status === "rejected" ? "lost"
-      : status === "expired" ? "cancelled"
-        : status === "sent" ? "negotiating"
-          : "pending";
-
 /** 各列ソート用の値抽出（クライアントサイド）。文字列 or 数値を返す。 */
 export const SORT_VALUE: Record<string, (q: SortableQuote) => string | number> = {
   quote_code: (q) => q.quote_code ?? "",
