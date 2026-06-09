@@ -131,3 +131,18 @@ test("C-5: API 422 レスポンス → エラーバナー表示（500 でない�
   // 500 エラーは表示されない
   await expect(banner).not.toContainText("500");
 });
+
+test("C-6: API 422 detail が配列でも [object Object] にならず可読テキストになる", async ({ page }) => {
+  await setupPage(page, {
+    status: 422,
+    body: { detail: [{ msg: "担当者名は必須です" }, { msg: "メールアドレスが不正です" }] },
+  });
+  const contactFieldset = page.locator("fieldset").first();
+  await contactFieldset.locator("label", { hasText: "担当者名" }).locator("input").fill("テスト");
+  await contactFieldset.locator("input[type=email]").fill("t@example.com");
+  await page.locator("button[type=submit]").click();
+  const banner = page.locator(".error-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner).not.toContainText("[object Object]");
+  await expect(banner).toContainText("担当者名");
+});

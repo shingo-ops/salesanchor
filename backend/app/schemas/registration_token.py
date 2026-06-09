@@ -15,6 +15,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.base import validate_email_loose, validate_phone
 
+# AddressInput の Optional[str] フィールド一覧（空文字列 → None 正規化対象）
+_ADDRESS_OPTIONAL_STR_FIELDS = frozenset({
+    "branch_name", "name", "email", "telephone", "tax_id",
+    "address_line_1", "address_line_2", "address_line_3",
+    "city", "state", "zip", "country_code",
+})
+
 
 class TokenType(str, Enum):
     register = "register"
@@ -70,6 +77,16 @@ class AddressInput(BaseModel):
     country_code: Optional[str] = Field(None, max_length=2)
     is_default: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_empty_strings(cls, values: object) -> object:
+        """全 Optional[str] フィールドの空文字列を None に正規化する（入力契約: 空欄 → null）。"""
+        if isinstance(values, dict):
+            for field in _ADDRESS_OPTIONAL_STR_FIELDS:
+                if values.get(field) == "":
+                    values[field] = None
+        return values
+
     @field_validator("email")
     @classmethod
     def validate_email(cls, v: Optional[str]) -> Optional[str]:
@@ -87,8 +104,8 @@ class AddressInput(BaseModel):
     @field_validator("country_code")
     @classmethod
     def validate_country_code(cls, v: Optional[str]) -> Optional[str]:
-        """ISO 3166-1 alpha-2: 2文字英大文字に正規化。3文字以上は 422。"""
-        if v is None:
+        """ISO 3166-1 alpha-2: 2文字英大文字に正規化。空欄は None、3文字以上は 422。"""
+        if not v:
             return None
         upper = v.strip().upper()
         if len(upper) != 2 or not upper.isalpha():
@@ -107,11 +124,15 @@ class RegisterRequest(BaseModel):
     @field_validator("contact_email")
     @classmethod
     def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
         return validate_email_loose(v)
 
     @field_validator("contact_telephone")
     @classmethod
     def validate_tel(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
         return validate_phone(v)
 
     @model_validator(mode="after")

@@ -130,6 +130,7 @@
 | [ADR-120](./ADR-120-status-presentation-ssot.md) | ADR-120: ステータス → 見た目の SSoT（決定レイヤー① 中央対応表） | Completed | — | — |
 | [ADR-121](./ADR-121-sop-process-artifacts-gate.md) | ADR-121: 標準ワークフローの強制（process-artifacts gate ＋ 単一の正SOP） | Accepted | — | — |
 | [ADR-122](./ADR-122-realpage-modal-standardization.md) | ADR-122: 実ページ標準部品化（Modal コンポーネントへの移行） | Accepted | — | — |
+| [ADR-123](./ADR-123-carrier-integrator-provider.md) | ADR-123: 配送キャリア連携 — 外部販売を見据えた Integrator Provider 対応アーキテクチャ | Proposed | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
