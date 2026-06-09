@@ -1,4 +1,4 @@
-# ADR-120: 標準ワークフローの強制（process-artifacts gate ＋ 単一の正SOP）
+# ADR-121: 標準ワークフローの強制（process-artifacts gate ＋ 単一の正SOP）
 
 ## ステータス
 採択（提案日: 2026-06-09）
