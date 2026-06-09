@@ -136,8 +136,18 @@ sop_dangerous_approved_total{repo="shingo-ops/salesanchor"} 1
 
 ---
 
-## 8. KPI 完了確認（受入基準）
+## 8. 外部・過去事例の参照と我々への応用
 
-- [ ] 5 指標が Grafana `sop-health-reporter` ダッシュボードに表示される
-- [ ] `sop_overdue_homework_count > 0` 時に Discord アラートが発火する
-- [ ] `sop-health-reporter.yml` を `workflow_dispatch` で手動実行してエラーなし
+- 事例1: Prometheus Pushgateway 公式ドキュメント（[https://prometheus.io/docs/practices/pushing/](https://prometheus.io/docs/practices/pushing/)）→ 短命ジョブ・バッチジョブのメトリクス収集に Pushgateway を使うパターンは公式推奨。週次 cron の SOP 指標収集に適用。
+- 事例2: GitHub Actions × Prometheus の既存パターン（本リポジトリ `monitoring/github-collector/collector.py`）→ 同様の GitHub API 収集スクリプトが実績あり。Node.js + fetch で同等実装。
+- 事例3: 「改善活動 7 割が持続しない」実態（ADR-121 参照）→ 可視化ダッシュボードと自動アラートで人依存の定着を仕組みに置換。
+
+---
+
+## 9. 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| 5 指標が Grafana `sop-health-reporter` ダッシュボードに表示される | Pushgateway 起動後 → workflow_dispatch 実行 → Grafana で 5 パネル確認 |
+| `sop_overdue_homework_count > 0` 時に Discord アラートが発火する | sop-followup issue を期限過去日付で作成 → workflow_dispatch → Discord 着信確認 |
+| `sop-health-reporter.yml` を `workflow_dispatch` で手動実行してエラーなし | Actions タブで run が success (green) であること |
