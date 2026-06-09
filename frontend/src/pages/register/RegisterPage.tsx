@@ -128,7 +128,11 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.detail || t("registration.submitError"));
+        const rawDetail = body?.detail;
+        const msg = Array.isArray(rawDetail)
+          ? rawDetail.map((e: { msg?: string; message?: string }) => e.msg ?? e.message ?? t("registration.submitError")).join("、")
+          : rawDetail ?? t("registration.submitError");
+        throw new Error(msg);
       }
 
       setSubmitted(true);
