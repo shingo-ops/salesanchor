@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { Company, Contact, ContactFormState } from "./company-detail.types";
+import { Modal } from "../../components/Modal";
 
 interface Props {
   company: Company;
@@ -87,10 +88,12 @@ export function CompanyContactsTab({
       )}
 
       {/* 追加・編集モーダル */}
-      {contactModalOpen && (
-        <div className="modal-overlay" onClick={onCloseModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>{contactForm.id === null ? t("contacts.newContact") : t("contacts.editContact")}</h3>
+      <Modal
+        open={contactModalOpen}
+        onClose={onCloseModal}
+        title={contactForm.id === null ? t("contacts.newContact") : t("contacts.editContact")}
+        size="md"
+      >
             <form onSubmit={handleContactSubmit}>
               <div className="form-grid">
                 <div className="form-row">
@@ -165,7 +168,7 @@ export function CompanyContactsTab({
                   </label>
                 </div>
               </div>
-              <div className="modal-actions">
+              <div className="form-actions">
                 <button type="button" className="btn-sm" onClick={onCloseModal}>
                   {t("common.cancel")}
                 </button>
@@ -174,9 +177,7 @@ export function CompanyContactsTab({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

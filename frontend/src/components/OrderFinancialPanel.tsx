@@ -11,6 +11,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
+import { Modal } from "./Modal";
 
 export interface OrderFinancialDto {
   id: number;
@@ -201,15 +202,7 @@ export default function OrderFinancialPanel({
   }, [form]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-detail-max-w)' }}
-        role="dialog"
-        aria-label={t("financial.revenue_amount")}
-      >
-        <h3>{t("orders.financial")} — {orderNumber}</h3>
+    <Modal open={true} onClose={onClose} title={`${t("orders.financial")} — ${orderNumber}`} size="lg">
         {loading ? (
           <div className="loading">{t("common.loading")}</div>
         ) : (
@@ -299,7 +292,6 @@ export default function OrderFinancialPanel({
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
