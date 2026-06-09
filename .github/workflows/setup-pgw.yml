@@ -1,0 +1,84 @@
+name: Setup Pushgateway
+
+# ADR-124: MGMT VPS で Pushgateway 起動 + APP VPS nginx に /pushgateway/ プロキシ追加
+# 実行後このファイルは削除してよい（一回限りセットアップ）
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Start Pushgateway on MGMT VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 49.212.160.98
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            COMPOSE_DIR=""
+            for DIR in ~/salesanchor /home/ubuntu/salesanchor /opt/salesanchor; do
+              if [ -f "$DIR/docker-compose.monitoring.yml" ]; then
+                COMPOSE_DIR="$DIR"; break
+              fi
+            done
+            if [ -z "$COMPOSE_DIR" ]; then echo "ERROR: docker-compose.monitoring.yml not found"; exit 1; fi
+            cd "$COMPOSE_DIR"
+            git pull origin develop 2>/dev/null || true
+            docker compose -f docker-compose.monitoring.yml up -d --no-recreate pushgateway
+            echo "Pushgateway started"
+            for i in 1 2 3 4 5 6; do
+              CID=$(docker compose -f docker-compose.monitoring.yml ps -q pushgateway 2>/dev/null || true)
+              if [ -n "$CID" ] && docker exec "$CID" wget -qO /dev/null http://127.0.0.1:9091/-/healthy 2>/dev/null; then
+                echo "Pushgateway healthy"; break
+              fi
+              sleep 5
+            done
+
+      - name: Add nginx proxy on APP VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            MGMT_IP="49.212.160.98"
+            CONF=$(grep -rl "grafana" /etc/nginx/ 2>/dev/null | grep -v ".bak" | head -1)
+            if [ -z "$CONF" ]; then echo "ERROR: nginx config not found"; exit 1; fi
+            echo "nginx config: $CONF"
+            if grep -q "pushgateway" "$CONF" 2>/dev/null; then
+              echo "pushgateway proxy already configured (skip)"
+            else
+              sudo cp "$CONF" "${CONF}.bak.$(date +%Y%m%d%H%M%S)"
+              sudo tee -a "$CONF" > /dev/null << NGINXEOF
+
+            location /pushgateway/ {
+                proxy_pass http://${MGMT_IP}:9091/;
+                proxy_set_header Host \$host;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+            }
+            NGINXEOF
+              echo "nginx config updated"
+            fi
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo "nginx reloaded"
+
+      - name: Verify Pushgateway accessible
+        run: |
+          sleep 5
+          STATUS=$(curl -sf --max-time 10 -w "%{http_code}" -o /dev/null \
+            "https://app.salesanchor.jp/pushgateway/-/healthy" || echo "000")
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "Pushgateway OK"
+          else
+            echo "WARNING: HTTP $STATUS — check nginx manually"
+          fi
+          echo "Setup done. Next: run sop-health-reporter.yml"
