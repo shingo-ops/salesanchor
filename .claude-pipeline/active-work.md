@@ -97,6 +97,7 @@
 | feature/morimoto/claude-md-sop-update | CLAUDE.md 標準開発フロー節を新SOPに差し替え（ADR-121） | 2026-06-09 | IN_PROGRESS | | |
 | feature/morimoto/status-ssot-step3-lint-error | （記入してください） | 2026-06-09 11:01 | IN_PROGRESS | | |
 | feature/morimoto/sop-dedup-fix | sop-followup重複ガード PR番号単位修正（Reviewer指摘）| 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/gate-trigger-fix | process-artifacts gate trigger develop のみに修正（リリースPR誤検知解消） | 2026-06-09 | IN_PROGRESS | | |
 ---
 
 ## 記入例

@@ -1,12 +1,13 @@
 name: Process Artifacts Gate
 
-# 標準ワークフロー遵守チェック（ADR-119 KPI2）
+# 標準ワークフロー遵守チェック（ADR-121）
 # paths / paths-ignore を使わず常時実行し、内部でパス区分を判定する。
 # ※ 必須ではない（non-mandatory）。Step 5 でしんごさんが Ruleset 追加を判断する。
+# develop のみ対象: develop→main リリースPRは各featureがdevelop段階で通過済み → 誤検知防止。
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [develop]
 
 jobs:
   gate:
