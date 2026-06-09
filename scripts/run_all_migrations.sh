@@ -313,6 +313,9 @@ run_py  scripts/migrate_adr119_lead_channels_backfill.py
 # API連携: テナント別 配送キャリア(FedEx/DHL/UPS) 認証情報テーブル
 run_sql migrations/20260608_080000_add_carrier_credentials.sql
 
+# ADR-124: tenant_carrier_credentials に RLS ポリシー追加（テナント分離強化）
+run_sql migrations/20260609_090000_add_carrier_credentials_rls.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
