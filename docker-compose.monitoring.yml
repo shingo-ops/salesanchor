@@ -130,6 +130,23 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  pushgateway:
+    image: prom/pushgateway:v1.10.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:9091/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+    security_opt:
+      - no-new-privileges:true
+
   github-collector:
     build:
       context: ./monitoring/github-collector
