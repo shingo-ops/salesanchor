@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { StatusTabKey } from "./inbox.types";
+import { Modal } from "../../components/Modal";
 
 interface InboxSettings {
   showRightPanel: boolean;
@@ -19,10 +20,7 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
   const { t } = useTranslation();
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="inbox-settings-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="inbox-settings-modal-title">{t("inbox.settings.title")}</h3>
-
+    <Modal open={true} onClose={onClose} title={t("inbox.settings.title")} size="sm">
         <div className="inbox-settings-section-title">{t("inbox.settings.display")}</div>
 
         <div className="inbox-settings-row">
@@ -88,10 +86,6 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
           </label>
         </div>
 
-        <button type="button" className="inbox-settings-close-btn" onClick={onClose}>
-          {t("common.close")}
-        </button>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 
 interface KnowledgeRule {
@@ -528,11 +529,13 @@ export default function KnowledgeAliasesTab() {
       </section>
 
       {/* ============ 正規化ルール 編集/新規 ポップアップ ============ */}
-      {showRuleForm && (
-        <div className="modal-overlay" onClick={() => setShowRuleForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 640px)" }}>
-            <h3>{ruleEditId !== null ? t("common.edit") : t("superAdmin.knowledge.newRule")}</h3>
-            <form onSubmit={submitRule}>
+      <Modal
+        open={showRuleForm}
+        onClose={() => setShowRuleForm(false)}
+        title={ruleEditId !== null ? t("common.edit") : t("superAdmin.knowledge.newRule")}
+        size="md"
+      >
+        <form onSubmit={submitRule}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
                 <div className="form-group"><label>{t(`${f}.category`)} *</label>
                   <select required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>
@@ -575,17 +578,17 @@ export default function KnowledgeAliasesTab() {
                 <button type="button" className="btn-secondary" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary" data-testid="rule-save">{ruleEditId !== null ? t("common.update") : t("common.create")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* ============ 仕入元個別ルール 編集/新規 ポップアップ ============ */}
-      {showAliasForm && (
-        <div className="modal-overlay" onClick={() => setShowAliasForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 560px)" }}>
-            <h3>{aliasEditId !== null ? t("common.edit") : t("superAdmin.knowledge.newAlias")}</h3>
-            <form onSubmit={submitAlias}>
+      <Modal
+        open={showAliasForm}
+        onClose={() => setShowAliasForm(false)}
+        title={aliasEditId !== null ? t("common.edit") : t("superAdmin.knowledge.newAlias")}
+        size="md"
+      >
+        <form onSubmit={submitAlias}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-3)" }}>
                 {/* 仕入元（解析対象の絞り込み）を最初に選ぶ */}
                 <div className="form-group"><label>{t(`${f}.supplierName`)} *</label>
@@ -628,10 +631,8 @@ export default function KnowledgeAliasesTab() {
                 <button type="button" className="btn-secondary" onClick={() => setShowAliasForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary" data-testid="alias-save">{aliasEditId !== null ? t("common.update") : t("common.create")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       <ConfirmModal
         open={ruleConfirmDelete}

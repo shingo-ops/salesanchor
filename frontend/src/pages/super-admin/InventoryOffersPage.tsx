@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -500,10 +501,14 @@ export default function InventoryOffersPage() {
       </section>
 
       {/* 編集ポップアップ */}
-      {editing && draft && (
-        <div className="modal-overlay" onClick={cancelEdit}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "min(96vw, 560px)" }}>
-            <h3>{t("common.edit")}</h3>
+      <Modal
+        open={!!(editing && draft)}
+        onClose={cancelEdit}
+        title={t("common.edit")}
+        size="md"
+      >
+        {editing && draft && (
+          <>
             <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-3)" }}>
               {editing.product_name ?? `#${editing.product_id}`}
               {" / "}
@@ -586,10 +591,10 @@ export default function InventoryOffersPage() {
                   {t("common.save")}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+          </>
+        )}
+      </Modal>
 
       <ConfirmModal
         open={confirmDelete}

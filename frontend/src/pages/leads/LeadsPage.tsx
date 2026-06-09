@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import MergeLeadModal from "../../components/MergeLeadModal";
@@ -247,11 +248,13 @@ export default function LeadsPage() {
 
       {error && <div className="error-message">{error}</div>}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editId ? t("leads.editLead") : t("leads.newLeadTitle")}</h3>
-            <form onSubmit={handleSubmit}>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("leads.editLead") : t("leads.newLeadTitle")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
               <div className="form-group"><label>{t("leads.customerName")} *</label>
                 <input required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
               </div>
@@ -320,40 +323,38 @@ export default function LeadsPage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
-      {convertTarget && (
-        <div className="modal-overlay" onClick={closeConvert}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{t("leads.convertLead")}</h3>
-            <p>{t("leads.title")} <strong>{convertTarget.customer_name}</strong> {t("leads.convertConfirm")}</p>
-            <form onSubmit={performConvert}>
-              <CompanyContactSelector
-                value={{ companyId: convertCompanyId, contactId: convertContactId }}
-                onChange={({ companyId, contactId }) => {
-                  setConvertCompanyId(companyId);
-                  setConvertContactId(contactId);
-                }}
-                required
-                error={convertSelectorError}
-              />
-              <div className="form-group"><label>{t("leads.dealTitle")} *</label>
-                <input required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.dealAmount")}</label>
-                <input type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={closeConvert}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{t("leads.convert")}</button>
-              </div>
-            </form>
+      <Modal
+        open={!!convertTarget}
+        onClose={closeConvert}
+        title={t("leads.convertLead")}
+        size="md"
+      >
+        <p>{t("leads.title")} <strong>{convertTarget?.customer_name}</strong> {t("leads.convertConfirm")}</p>
+        <form onSubmit={performConvert}>
+          <CompanyContactSelector
+            value={{ companyId: convertCompanyId, contactId: convertContactId }}
+            onChange={({ companyId, contactId }) => {
+              setConvertCompanyId(companyId);
+              setConvertContactId(contactId);
+            }}
+            required
+            error={convertSelectorError}
+          />
+          <div className="form-group"><label>{t("leads.dealTitle")} *</label>
+            <input required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
           </div>
-        </div>
-      )}
+          <div className="form-group"><label>{t("leads.dealAmount")}</label>
+            <input type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={closeConvert}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("leads.convert")}</button>
+          </div>
+        </form>
+      </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>

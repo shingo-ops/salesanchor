@@ -5,6 +5,7 @@
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
+import { Modal } from "../../components/Modal";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
 
@@ -40,67 +41,67 @@ export function OrdersFormModal({
 }: Props) {
   const { t } = useTranslation();
 
-  if (!showForm) return null;
-
   return (
-    <div className="modal-overlay" onClick={() => setShowForm(false)}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{editId ? t("orders.editOrder") : t("orders.newOrder")}</h3>
-        <form onSubmit={handleSubmit}>
-          <CompanyContactSelector
-            value={{ companyId, contactId }}
-            onChange={({ companyId: c, contactId: ct }) => {
-              setCompanyId(c);
-              setContactId(ct);
-            }}
-            required={!editId}
-            disabled={editId !== null}
-            error={selectorError}
-            companies={companies}
+    <Modal
+      open={showForm}
+      onClose={() => setShowForm(false)}
+      title={editId ? t("orders.editOrder") : t("orders.newOrder")}
+      size="md"
+    >
+      <form onSubmit={handleSubmit}>
+        <CompanyContactSelector
+          value={{ companyId, contactId }}
+          onChange={({ companyId: c, contactId: ct }) => {
+            setCompanyId(c);
+            setContactId(ct);
+          }}
+          required={!editId}
+          disabled={editId !== null}
+          error={selectorError}
+          companies={companies}
+        />
+        {editId && (
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginTop: -8 }}>
+            {t("common.irreversible")}
+          </p>
+        )}
+        <div className="form-group">
+          <label>{t("orders.orderNumber")} *</label>
+          <input
+            required
+            value={form.order_number}
+            onChange={(e) => setForm({ ...form, order_number: e.target.value })}
           />
-          {editId && (
-            <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginTop: -8 }}>
-              {t("common.irreversible")}
-            </p>
-          )}
-          <div className="form-group">
-            <label>{t("orders.orderNumber")} *</label>
-            <input
-              required
-              value={form.order_number}
-              onChange={(e) => setForm({ ...form, order_number: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label>{t("common.amount")}</label>
-            <input
-              type="number" min="0" step="1"
-              value={form.total_amount}
-              onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label>{t("common.status")}</label>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>{t("common.notes")}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-          <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-              {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">
-              {editId ? t("common.update") : t("common.register")}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div className="form-group">
+          <label>{t("common.amount")}</label>
+          <input
+            type="number" min="0" step="1"
+            value={form.total_amount}
+            onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
+          />
+        </div>
+        <div className="form-group">
+          <label>{t("common.status")}</label>
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>{t("common.notes")}</label>
+          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </div>
+        <div className="form-actions">
+          <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+            {t("common.cancel")}
+          </button>
+          <button type="submit" className="btn-primary">
+            {editId ? t("common.update") : t("common.register")}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

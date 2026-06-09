@@ -20,6 +20,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -240,11 +241,13 @@ export default function DealsPage() {
 
       {error && <div className="error-message">{error}</div>}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editId ? t("deals.editDeal") : t("deals.newDeal")}</h3>
-            <form onSubmit={handleSubmit}>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("deals.editDeal") : t("deals.newDeal")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
               <CompanyContactSelector
                 value={{ companyId, contactId }}
                 onChange={({ companyId: c, contactId: ct }) => {
@@ -326,10 +329,8 @@ export default function DealsPage() {
                 <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>

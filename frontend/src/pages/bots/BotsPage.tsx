@@ -6,6 +6,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal } from "../../components/Modal";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -188,57 +189,57 @@ export default function BotsPage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editId ? t("bots.editBot") : t("bots.newBot")}</h3>
-            <form onSubmit={handleSubmit}>
-              {!editId && (
-                <div className="form-group">
-                  <label>{t("bots.botCodeLabel")}</label>
-                  <input value={form.bot_code} placeholder={t("bots.botCodePlaceholder")} onChange={(e) => setForm({ ...form, bot_code: e.target.value })} />
-                </div>
-              )}
-              <div className="form-group"><label>{t("bots.displayName")} *</label>
-                <input required value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("bots.purposeLabel")} *</label>
-                <select required value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}>
-                  <option value="invoice">{t("bots.purposeInvoice")}</option>
-                  <option value="shipment">{t("bots.purposeShipment")}</option>
-                  <option value="notification">{t("bots.purposeNotification")}</option>
-                  <option value="custom">{t("bots.purposeCustom")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("common.status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  <option value="active">{t("bots.statusActive")}</option>
-                  <option value="inactive">{t("bots.statusInactive")}</option>
-                  <option value="maintenance">{t("bots.statusMaintenance")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("bots.ownerStaff")} *</label>
-                <select required value={form.owner_staff_id} onChange={(e) => setForm({ ...form, owner_staff_id: e.target.value })}>
-                  <option value="">{t("common.pleaseSelect")}</option>
-                  {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}
-                </select>
-              </div>
-              <div className="form-group"><label>Discord Bot ID</label>
-                <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("bots.senderEmail")}</label>
-                <input type="email" value={form.sender_email} onChange={(e) => setForm({ ...form, sender_email: e.target.value })} />
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? t("common.submitting") : editId ? t("common.update") : t("bots.registerIssueKey")}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("bots.editBot") : t("bots.newBot")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          {!editId && (
+            <div className="form-group">
+              <label>{t("bots.botCodeLabel")}</label>
+              <input value={form.bot_code} placeholder={t("bots.botCodePlaceholder")} onChange={(e) => setForm({ ...form, bot_code: e.target.value })} />
+            </div>
+          )}
+          <div className="form-group"><label>{t("bots.displayName")} *</label>
+            <input required value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
           </div>
-        </div>
-      )}
+          <div className="form-group"><label>{t("bots.purposeLabel")} *</label>
+            <select required value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}>
+              <option value="invoice">{t("bots.purposeInvoice")}</option>
+              <option value="shipment">{t("bots.purposeShipment")}</option>
+              <option value="notification">{t("bots.purposeNotification")}</option>
+              <option value="custom">{t("bots.purposeCustom")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("common.status")}</label>
+            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option value="active">{t("bots.statusActive")}</option>
+              <option value="inactive">{t("bots.statusInactive")}</option>
+              <option value="maintenance">{t("bots.statusMaintenance")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("bots.ownerStaff")} *</label>
+            <select required value={form.owner_staff_id} onChange={(e) => setForm({ ...form, owner_staff_id: e.target.value })}>
+              <option value="">{t("common.pleaseSelect")}</option>
+              {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}
+            </select>
+          </div>
+          <div className="form-group"><label>Discord Bot ID</label>
+            <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("bots.senderEmail")}</label>
+            <input type="email" value={form.sender_email} onChange={(e) => setForm({ ...form, sender_email: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? t("common.submitting") : editId ? t("common.update") : t("bots.registerIssueKey")}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>

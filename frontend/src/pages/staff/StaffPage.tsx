@@ -7,6 +7,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Modal } from "../../components/Modal";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -205,85 +206,85 @@ export default function StaffPage() {
     >
       {error && <div className="error-message">{error}</div>}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editId ? t("staff.editStaff") : t("staff.newStaff")}</h3>
-            <form onSubmit={handleSubmit}>
-              {!editId && (
-                <div className="form-group">
-                  <label>{t("staff.staffCodeLabel")}</label>
-                  <input value={form.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setForm({ ...form, staff_code: e.target.value })} />
-                </div>
-              )}
-              <div className="form-group"><label>{t("staff.surnameJp")} *</label>
-                <input required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
-                <input required value={form.given_name_jp} onChange={(e) => setForm({ ...form, given_name_jp: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.surnameKana")}</label>
-                <input value={form.surname_kana} onChange={(e) => setForm({ ...form, surname_kana: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.givenNameKana")}</label>
-                <input value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.surnameEn")}</label>
-                <input value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.givenNameEn")}</label>
-                <input value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-                <input required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
-              </div>
-              <div className="form-group"><label>Discord ID</label>
-                <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("staff.role")} *</label>
-                <select required value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
-                  <option value="">{t("common.pleaseSelect")}</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group"><label>{t("staff.status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  <option value="active">{t("staff.status_active")}</option>
-                  <option value="inactive">{t("staff.status_inactive")}</option>
-                  <option value="pending">{t("staff.status_pending")}</option>
-                </select>
-              </div>
-              <h4>{t("staff.uiPreferences")}</h4>
-              {(() => {
-                // Record<keyof StaffUIPreferences, string> で網羅性を型保証。
-                // StaffUIPreferences にフィールド追加した時にコンパイル時エラーで検知できる。
-                const labels: Record<keyof StaffUIPreferences, string> = {
-                  dark_mode: t("staff.darkMode"),
-                  show_chat_menu: t("staff.showChatMenu"),
-                  show_sales_menu: t("staff.showSalesMenu"),
-                  show_settings_menu: t("staff.showSettingsMenu"),
-                  show_admin_menu: t("staff.showAdminMenu"),
-                  show_sidebar: t("staff.showSidebar"),
-                };
-                return (Object.entries(labels) as Array<[keyof StaffUIPreferences, string]>).map(([k, label]) => (
-                  <div className="form-group" key={k}>
-                    <label>
-                      <input type="checkbox" checked={form.ui_preferences[k]} onChange={(e) => setForm({ ...form, ui_preferences: { ...form.ui_preferences, [k]: e.target.checked } })} />
-                      {" "}{label}
-                    </label>
-                  </div>
-                ));
-              })()}
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? t("common.submitting") : editId ? t("common.update") : t("common.register")}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={editId ? t("staff.editStaff") : t("staff.newStaff")}
+        size="md"
+      >
+        <form onSubmit={handleSubmit}>
+          {!editId && (
+            <div className="form-group">
+              <label>{t("staff.staffCodeLabel")}</label>
+              <input value={form.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setForm({ ...form, staff_code: e.target.value })} />
+            </div>
+          )}
+          <div className="form-group"><label>{t("staff.surnameJp")} *</label>
+            <input required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />
           </div>
-        </div>
-      )}
+          <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
+            <input required value={form.given_name_jp} onChange={(e) => setForm({ ...form, given_name_jp: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.surnameKana")}</label>
+            <input value={form.surname_kana} onChange={(e) => setForm({ ...form, surname_kana: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.givenNameKana")}</label>
+            <input value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.surnameEn")}</label>
+            <input value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.givenNameEn")}</label>
+            <input value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
+            <input required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
+          </div>
+          <div className="form-group"><label>Discord ID</label>
+            <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("staff.role")} *</label>
+            <select required value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
+              <option value="">{t("common.pleaseSelect")}</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group"><label>{t("staff.status")}</label>
+            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option value="active">{t("staff.status_active")}</option>
+              <option value="inactive">{t("staff.status_inactive")}</option>
+              <option value="pending">{t("staff.status_pending")}</option>
+            </select>
+          </div>
+          <h4>{t("staff.uiPreferences")}</h4>
+          {(() => {
+            // Record<keyof StaffUIPreferences, string> で網羅性を型保証。
+            // StaffUIPreferences にフィールド追加した時にコンパイル時エラーで検知できる。
+            const labels: Record<keyof StaffUIPreferences, string> = {
+              dark_mode: t("staff.darkMode"),
+              show_chat_menu: t("staff.showChatMenu"),
+              show_sales_menu: t("staff.showSalesMenu"),
+              show_settings_menu: t("staff.showSettingsMenu"),
+              show_admin_menu: t("staff.showAdminMenu"),
+              show_sidebar: t("staff.showSidebar"),
+            };
+            return (Object.entries(labels) as Array<[keyof StaffUIPreferences, string]>).map(([k, label]) => (
+              <div className="form-group" key={k}>
+                <label>
+                  <input type="checkbox" checked={form.ui_preferences[k]} onChange={(e) => setForm({ ...form, ui_preferences: { ...form.ui_preferences, [k]: e.target.checked } })} />
+                  {" "}{label}
+                </label>
+              </div>
+            ));
+          })()}
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? t("common.submitting") : editId ? t("common.update") : t("common.register")}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
