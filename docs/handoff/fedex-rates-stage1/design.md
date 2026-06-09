@@ -1,6 +1,6 @@
 # Phase 3 設計 — FedEx Rates連携 第1段
 
-**対象ADR**: ADR-125  
+**対象ADR**: ADR-124  
 **recon**: docs/handoff/fedex-rates-stage1/recon.md  
 **日付**: 2026-06-09  
 **担当**: architect → Generator
@@ -53,7 +53,6 @@ FedEx OAuth の有効期限は3600秒。毎リクエストでトークン取得�
 - インメモリキャッシュ: `{(tenant_id, env): (token, expires_at)}` の dict
 - 有効期限5分前にリフレッシュ
 - キャッシュが複数プロセス間で共有されない問題: 許容（FedEx API は1時間ごと1リクエスト程度で済む）
-- **リトライポリシー（2026-06-09確定）**: Rates API 401 はキャッシュをクリアして `FedExAuthError` を raise するのみ。同一リクエスト内での自動再試行は行わない。次回リクエストで新トークンが自動取得される設計で許容（PO判断）。
 
 **D. Rates API 呼び出し設計（PR-B）**  
 エンドポイント: `POST /rate/v1/rates/quotes`  
