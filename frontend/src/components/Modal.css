@@ -26,7 +26,7 @@
 
 .comp-modal-dialog {
   position: relative;
-  background: var(--surface-primary);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-modal);
   z-index: var(--z-modal);

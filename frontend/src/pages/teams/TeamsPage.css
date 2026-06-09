@@ -1,0 +1,5 @@
+/* TeamsPage 専用スタイル */
+
+.teams-add-member-form {
+  margin-bottom: var(--space-4);
+}
