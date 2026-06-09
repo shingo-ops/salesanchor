@@ -24,6 +24,13 @@ salesanchor を外部企業へ販売する B2B SaaS として展開する方針�
 ### D2. FedEx 区分: Integrator Provider
 developer.fedex.com の組織タイプは **Integrator Provider**（ソフトを顧客に提供）で登録。本番キーは Integrator Provider Validation の承認を条件に取得。FedEx Compatible 認定（事業提携）は市場投入後に取得。
 
+### D2b. キャリア別の重さ（DHL は軽量経路）
+本 ADR の per-tenant モデルは全キャリア共通だが、**SaaS 側に課される認定の重さはキャリアで異なる**。
+- **FedEx**: 重い。Integrator Provider Validation（PIW / Cover Sheet / ラベル3形式 / エンドカスタマー登録+MFA / スクショ）→ FedEx 審査が必要。
+- **DHL（MyDHL API）**: **軽い。SaaS 側の重い認定は不要。** 各テナントが自社 DHL Express 口座で developer.dhl.com 登録→「third-party solution 用」オプション選択→翌営業日承認→自分の API Key/Secret を取得して入力（**既存 per-tenant 接続テストページで対応済み**）。日本公式対応・日本口座OK。残作業は Rate/Ship/ラベル/追跡の MyDHL API 実装（Phase B・FedEx と並行）。DHL eCommerce Certified Partner（任意・メール申請）は FedEx Compatible 相当。
+- 詳細・出典は `docs/research/fedex-integrator-provider-application-2026-06-09.md` §6。
+- UPS は今回保留（別途調査）。
+
 ### D3. データモデル（拡張）
 - `tenant_carrier_credentials` に **account_number_encrypted**（配送アカウント番号・Rate/Ship に必須）を追加。
 - 新規 `tenant_shipments`（テナント別の出荷記録・ラベル/トラッキング/ステータス保管。受注 order との関連は nullable）。
