@@ -13,7 +13,7 @@
 - 両社とも「各導入企業が自社 FedEx アカウントを接続 → SaaS が送り状/インボイス自動発行」モデル＝salesanchor が既に実装した **テナント別・暗号化認証情報モデル**と同型。
 - 「申請」は2段階: **(1) 入口**（Integrator 登録＋Agreement）と **(2) Integrator Provider Validation 本提出**（本番キーの関門。ラベル等の実装エビデンス提出が必要）。
 - 本番キーは FedEx 検証チームの承認が条件（`validationmtp@fedex.com` 提出）。テストキーは口座不要で即取得可。
-- 日本は非 US 経路（US/Canada 手順は対象外、API Validation サポート経由）。本番の配送アカウントは日本の FedEx アカウントで可の見込み（要・FedEx Japan 確認）。
+- 日本は非 US 経路（US/Canada 手順は対象外、API Validation サポート経由）。本番の配送アカウントは日本の FedEx アカウントで可の見込み（要・APAC FedEx API チーム確認）。
 
 出典:
 - FedEx Integrator Provider Validation: https://developer.fedex.com/api/en-us/certification/integrator-provider.html
@@ -23,52 +23,55 @@
 
 ---
 
-## 1. FedEx Japan への問い合わせ文面（テンプレート）
+## 1. FedEx API チーム（APAC）への問い合わせ文面
 
-送り先（おすすめ順）: ① 既存の FedEx 営業/アカウント担当者 ② developer.fedex.com（ja-jp）のサポート ③ FedEx Compatible 窓口（営業経由）。【　】を埋めて使用。
+⚠️ **FedEx Japan は FedEx API の案内を行っていない**（2026-06-09 FedEx Japan 回答）。
+**問い合わせ先＝APAC FedEx API チーム：`apacfedexapi@fedex.com`**。
+参考: 越境EC向け Web Services https://www.fedex.com/ja-jp/shipping/industry-solutions/ecommerce/webservices.html ／ 開発者ポータル(日本語) https://developer.fedex.com/wirc/browser/#/ja-jp/home
 
-**件名:** FedEx Integrator Provider / Compatible 認定について（日本法人・自社SaaSへのAPI組込のご相談）
+APAC 窓口のため**英語**で送るのが確実です（下記 英語版）。【　】を埋めて使用。日本語版が必要なら別途用意可。
+
+**To:** apacfedexapi@fedex.com
+**Subject:** FedEx API Integrator Provider — eligibility & process for a Japan-based SaaS
 
 ```
-FedEx ご担当者さま
+Dear FedEx API Team,
 
-お世話になっております。【会社名】の【担当者名・役職】と申します。
-（弊社 FedEx アカウント番号：【あれば記載／9桁】）
+We are [Company name], based in Japan. (FedEx account number: [9-digit, if any])
 
-弊社では自社開発の B2B SaaS「Sales Anchor」を提供しており、今後この製品を
-外部企業へ販売・提供する予定です。各導入企業が「自社の FedEx アカウント」を
-本製品に連携し、送料見積・送り状(ラベル)・インボイス発行・追跡を行えるように
-したいと考えています（Ship&co 様や AnyLogi 様と同様のモデルです）。
+We develop a B2B SaaS product, "Sales Anchor," which we plan to sell to other
+businesses. Each of our clients would connect their OWN FedEx account to our
+product to perform rating, label (shipping) creation, commercial invoice
+generation, and tracking — similar to providers such as Ship&co and AnyLogi.
 
-つきましては、以下についてご教示いただけますでしょうか。
+We would appreciate your guidance on the following:
 
-【A. 区分・手続き】
-1. 上記モデルの場合、developer.fedex.com の組織タイプは
-   「Integrator Provider（ソフトウェアを顧客に提供）」で正しいでしょうか。
-2. 日本法人として Integrator Provider 登録・FedEx Compatible 認定を取得する
-   際の、日本での申請手順・必要書類・標準的な所要期間をご教示ください。
-3. FedEx Compatible 認定の日本窓口（Channel Manager 等）と、費用の有無を
-   ご教示ください。
+[A. Category & process]
+1. For this model, is the correct organization type "Integrator Provider"
+   (a company that sells/provides software using FedEx technology)?
+2. As a Japan-based company, what are the steps, required documents, and typical
+   timeline to register as an Integrator Provider and complete validation?
+   (The developer portal notes the US/Canada steps do not apply outside those
+   countries.)
 
-【B. アカウント要件】
-4. 本番（production）移行に必要な配送/請求アカウントは、
-   「日本の FedEx アカウント」で問題ありませんか。
-   （米国アカウントが必須でないことの確認です）
+[B. Account requirement]
+3. For production, can we and our clients use Japan-based FedEx accounts
+   (i.e., a US-based account is not required)?
 
-【C. 検証(Validation)】
-5. Integrator Provider Validation の提出物（PIW / Integrator Validation
-   Cover Sheet 等）の入手先と提出先（validationmtp@fedex.com で良いか）を
-   ご教示ください。
-6. まず「限定 Validation（Authorization / 住所検証 等＝PIW・Cover Sheet のみ）」を
-   先行して申請し、その後に出荷(Ship)・ラベルの Validation を行う進め方は
-   可能でしょうか。
+[C. Validation]
+4. Where do we obtain the PIW and the Integrator Validation Cover Sheet, and is
+   validationmtp@fedex.com the correct submission address?
+5. May we submit the Limited Validation APIs (e.g., Authorization, Address
+   Validation) first, and complete the Ship/Rate validation afterwards?
+6. Can the "Comprehensive Rates & Transit Times" (rating) API be validated and
+   moved to production INDEPENDENTLY of the Ship API? (We understand the label
+   format requirements apply only to label-generating APIs.)
 
-弊社としては可能な限り早期の申請・本番化を目指しております。
-お忙しいところ恐縮ですが、ご回答のほどよろしくお願いいたします。
+We aim to apply and go live as early as possible. Thank you for your help.
 
-【会社名】
-【担当者名・役職】
-【メール】／【電話】
+[Company name]
+[Name / title]
+[Email] / [Phone]
 ```
 
 ---
@@ -96,14 +99,14 @@ FedEx ご担当者さま
 
 | マイルストーン | 最短 | 安全側 |
 |---|---|---|
-| 入口申請（登録＋Agreement＋テストキー＋FedEx Japan 問い合わせ送付） | 今週中（〜6/13） | 6/16 |
+| 入口申請（登録＋Agreement＋テストキー＋APAC FedEx API 問い合わせ送付） | 今週中（〜6/13） | 6/16 |
 | 限定 Validation 申請（Auth＋住所検証＝PIW+Cover Sheet のみ） | 6/16〜6/20 | 6/23 |
 | Ship/ラベル本 Validation 提出（本番キーの本申請） | 6月末〜7月初 | 7月中旬 |
 | FedEx 審査通過 → 本番キー | 7月中旬 | 7月下旬〜8月 |
 | FedEx Compatible 認定（市場販売・ベータ脱却後） | 製品リリース後 | — |
 
 ### 律速（Claude では縮まない外部要因）
-1. FedEx Japan 問い合わせ応答（日数非公開）
+1. APAC FedEx API 問い合わせ応答（apacfedexapi@fedex.com・日数非公開）
 2. FedEx 検証チームの審査時間（提出後・数日〜数週・差戻しリスク）
 3. **600DPI ラベルの物理「印刷＋スキャン」**（実機が必要）
 4. しんごさんの登録/Agreement/承認
@@ -127,7 +130,7 @@ Rate / Ship+ラベル(PDF/PNG/ZPL・600DPI・国際AWB・複数個口) / イン�
 
 ## 5. 次アクション（FedEx）
 
-1. **【最優先】FedEx Japan へ §1 の問い合わせを送付**（外部依存を即始動・全体の律速）
+1. **【最優先】APAC FedEx API チーム（apacfedexapi@fedex.com）へ §1 の問い合わせを送付**（外部依存を即始動・全体の律速）
 2. **§2 の登録**（しんごさん操作・私が逐次案内）→ テストキー取得
 3. ADR-123 の実装計画に沿って Phase B（Rate/Ship/ラベル/インボイス）着手（テストキー到着後）
 
