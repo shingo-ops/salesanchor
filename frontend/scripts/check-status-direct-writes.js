@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+/**
+ * check-status-direct-writes.js (ADR-120)
+ *
+ * ページ側で status → badge クラスを直書きしている箇所を検出する。
+ *
+ * Step 1（現在）: WARN_ONLY = true — 既存違反を警告のみで報告。ビルドは緑。
+ * Step 3:         WARN_ONLY = false へ変更 — 違反がある場合は exit 1。
+ *
+ * 検出パターン:
+ *   1. テンプレートリテラル内の `badge-${`（直接 status/phase をクラスに注入）
+ *   2. `badgeVariant(` の呼び出し（非推奨集約関数）
+ *   3. `getStageBadge(` の呼び出し（非推奨集約関数）
+ *
+ * 除外ディレクトリ:
+ *   - design-preview/  (デザインプレビュー — getStatusPresentation() 使用が許可済み)
+ *   - design-system/   (旧デザインシステムページ — ショーケース用ハードコード)
+ *
+ * 除外ファイル:
+ *   - *.test.tsx (テストファイル)
+ *
+ * 使用方法: node scripts/check-status-direct-writes.js
+ * CI: npm run check:status-direct-writes
+ */
+
+import { readFileSync, readdirSync, statSync } from 'fs';
+import { join, extname, relative, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SRC_DIR = join(__dirname, '../src');
+
+/**
+ * Step 1: WARN_ONLY = true（ビルド緑・警告のみ）
+ * Step 3: false に変更して exit 1 で止める
+ */
+const WARN_ONLY = true;
+
+const EXCLUDE_DIRS = new Set(['design-preview', 'design-system']);
+
+const PATTERNS = [
+  { re: /badge-\$\{/, label: 'badge-${...} 直書き (getStatusPresentation() を使用)' },
+  { re: /\bbadgeVariant\s*\(/, label: 'badgeVariant() 非推奨 (getStatusPresentation("quote", status) を使用)' },
+  { re: /\bgetStageBadge\s*\(/, label: 'getStageBadge() 非推奨 (getStatusPresentation("lead", status) を使用)' },
+];
+
+function collectTsxFiles(dir) {
+  const results = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) {
+      if (!EXCLUDE_DIRS.has(entry)) {
+        results.push(...collectTsxFiles(full));
+      }
+    } else if (extname(entry) === '.tsx' && !entry.endsWith('.test.tsx')) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+const files = collectTsxFiles(SRC_DIR);
+const violations = [];
+
+for (const file of files) {
+  const rel = relative(SRC_DIR, file);
+  const lines = readFileSync(file, 'utf8').split('\n');
+  lines.forEach((line, i) => {
+    for (const { re, label } of PATTERNS) {
+      if (re.test(line)) {
+        violations.push({ rel, line: i + 1, content: line.trim(), label });
+        break; // 1行につき1違反
+      }
+    }
+  });
+}
+
+if (violations.length === 0) {
+  console.log('✅ status-direct-writes: 違反なし');
+  process.exit(0);
+}
+
+const icon = WARN_ONLY ? '⚠️' : '❌';
+for (const v of violations) {
+  console.log(`${icon} src/${v.rel}:${v.line}`);
+  console.log(`   [${v.label}]`);
+  console.log(`   ${v.content.slice(0, 120)}`);
+}
+
+if (WARN_ONLY) {
+  console.log(`\n⚠️  status-direct-writes: ${violations.length} 件の既存違反（Step1 警告モード・ビルド継続）`);
+  console.log('   Step 2 で getStatusPresentation() へ移行後、WARN_ONLY = false に変更してください。');
+  process.exit(0);
+} else {
+  console.log(`\n❌ status-direct-writes: ${violations.length} 件の違反`);
+  console.log('   getStatusPresentation() を使用してください（docs/handoff/decision-layer-01/design.md 参照）。');
+  process.exit(1);
+}
