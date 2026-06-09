@@ -106,7 +106,8 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     ordered:   { bucket: "info",    badgeVariant: "negotiating", labelKey: "purchaseOrders.status_ordered" },
     received:  { bucket: "success", badgeVariant: "won",         labelKey: "purchaseOrders.status_received" },
     cancelled: { bucket: "danger",  badgeVariant: "lost",        labelKey: "purchaseOrders.status_cancelled" },
-    // ⚠️ "error": DB 値の存在を PO に確認中。暫定 danger でカバー。
+    // DB 確認済み: purchase_orders.py:449 で status='error' を SET する実処理が存在する。
+    // Pydantic Enum に未追加（スキーマ側の todo）だが DB 値としては実在する。
     error:     { bucket: "danger",  badgeVariant: "lost",        labelKey: "purchaseOrders.status_error" },
   },
 
@@ -126,15 +127,17 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
   staff: {
     active:   { bucket: "success", badgeVariant: "won",     labelKey: "staff.status_active" },
     inactive: { bucket: "neutral", badgeVariant: "neutral", labelKey: "staff.status_inactive" },
-    // ⚠️ pending: 現行フロントは active/else の2分岐のため danger になっている。Step2 で修正。
-    pending:  { bucket: "warning", badgeVariant: "pending", labelKey: "staff.status_pending" },
+    // 現行フロントは active/else の2分岐のため danger（badge-lost）になっている。
+    // 現状維持: danger に合わせる。将来 warning にする場合は bucket:"warning", badgeVariant:"pending" に変更可。
+    pending:  { bucket: "danger", badgeVariant: "lost", labelKey: "staff.status_pending" },
   },
 
   bot: {
     active:   { bucket: "success", badgeVariant: "won",     labelKey: "bots.status_active" },
     inactive: { bucket: "neutral", badgeVariant: "neutral", labelKey: "bots.status_inactive" },
-    // ⚠️ maintenance: 現行フロントは active/else の2分岐のため danger になっている。Step2 で修正。
-    maintenance: { bucket: "warning", badgeVariant: "pending", labelKey: "bots.status_maintenance" },
+    // 現行フロントは active/else の2分岐のため danger（badge-lost）になっている。
+    // 現状維持: danger に合わせる。将来 warning にする場合は bucket:"warning", badgeVariant:"pending" に変更可。
+    maintenance: { bucket: "danger", badgeVariant: "lost", labelKey: "bots.status_maintenance" },
   },
 
   prospectRank: {
