@@ -14,12 +14,12 @@
 
 ### 標準ワークフロー確認
 
+- [ ] 免除（自律クラフト：<理由>）
 - recon: <!-- docs/handoff/<task>/recon.md -->
 - 設計: <!-- docs/handoff/<task>/design.md -->
 - 対象ADR: <!-- ADR-XXX -->
 
 <!-- 書類のみのPRは「書類のみ」と記入してスキップ可 -->
-<!-- 小変更は「自律クラフト免除：<理由>」と記入してスキップ可 -->
 <!-- 危険変更（migrations/deploy.yml/本番scripts）は認可承認者のApproveが別途必要 -->
 
 ### 共通
