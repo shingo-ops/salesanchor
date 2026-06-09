@@ -196,14 +196,14 @@ function createFollowupIssue(prNumber, repo) {
     ].join('\n');
 
     // 重複起票防止（同PR番号のopenイシューがあればスキップ）
-    const existing = JSON.parse(
+    const existingIssues = JSON.parse(
       execSync(
-        `gh issue list --label "sop-followup" --state open --json number --jq 'length' --repo "${repo}"`,
+        `gh issue list --label "sop-followup" --state open --json number,title --repo "${repo}"`,
         { encoding: 'utf8' }
       ).trim()
     );
-    if (existing > 0) {
-      console.log('  ℹ️  既存の sop-followup issue が open のため重複起票をスキップ');
+    if (existingIssues.some(i => i.title.includes(`PR #${prNumber}`))) {
+      console.log(`  ℹ️  PR #${prNumber} の sop-followup issue が既にあるためスキップ`);
       return;
     }
 
