@@ -152,15 +152,38 @@ async function countFollowupIssues() {
  * 指標5: ゲート摩擦率（週次）
  * process-artifacts-gate.yml で failure run を持つ PR 数 / 全 closed PR 数
  */
+/**
+ * GitHub Actions runs 専用ページネーション取得。
+ * `/actions/runs` は `{ total_count, workflow_runs: [...] }` のラップオブジェクトを返すため
+ * 汎用の ghGetAll（配列前提）を使えない。
+ */
+async function ghGetAllRuns(params = new URLSearchParams()) {
+  const results = [];
+  let page = 1;
+  while (true) {
+    params.set('page', String(page));
+    params.set('per_page', '100');
+    const url = `${API_BASE}/repos/${REPO}/actions/runs?${params}`;
+    const res = await fetch(url, { headers: HEADERS });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`gh API ${url} → ${res.status}: ${text}`);
+    }
+    const data = await res.json();
+    const runs = data.workflow_runs || [];
+    if (runs.length === 0) break;
+    results.push(...runs);
+    if (runs.length < 100) break;
+    page++;
+  }
+  return results;
+}
+
 async function calcGateFrictionRate(prs) {
   if (prs.length === 0) return 0;
 
-  const workflowRuns = await ghGetAll(
-    `/repos/${REPO}/actions/runs`,
-    new URLSearchParams({
-      workflow_id: 'process-artifacts-gate.yml',
-      per_page: '100',
-    }),
+  const workflowRuns = await ghGetAllRuns(
+    new URLSearchParams({ workflow_id: 'process-artifacts-gate.yml' }),
   );
 
   // 失敗 run と紐づく PR 番号を収集

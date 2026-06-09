@@ -93,11 +93,11 @@ sop_dangerous_approved_total{repo="shingo-ops/salesanchor"} 1
 
 | Panel | 種別 | クエリ |
 |-------|------|--------|
-| 免除PR件数（週次） | bar chart | `sop_exempt_pr_total` |
-| 危険PR承認（週次） | stat（赤 if >0） | `sop_dangerous_approved_total` |
-| 緊急PR累計 / 宿題超過 | stat x2 | `sop_emergency_total` / `sop_overdue_homework_count` |
+| 免除PR件数（週次） | stat（緑/黄/赤閾値） | `sop_exempt_pr_total` |
+| 危険パス変更PR（週次） | stat（緑/黄/赤閾値） | `sop_dangerous_approved_total` |
+| 緊急PR累計 | stat | `sop_emergency_total` |
+| 宿題期限超過 | stat（赤 if >0） | `sop_overdue_homework_count` |
 | ゲート摩擦率 | time series（%） | `sop_gate_friction_rate * 100` |
-| SOP ヘルスサマリー | table | 5 指標の最新値 + 閾値 |
 
 ---
 
