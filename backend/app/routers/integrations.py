@@ -39,6 +39,7 @@ from app.database import get_db
 from app.models import User
 from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
+from app.services import paypal_payments
 from app.services.test_pdf import render_test_pdf
 
 logger = logging.getLogger(__name__)
@@ -396,3 +397,102 @@ async def carrier_test_connection(
         creds["client_secret"],
     )
     return CarrierTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
+
+
+# ===========================================================================
+# PayPal 決済連携（テナント別認証情報・Model A）
+# ===========================================================================
+
+
+class PaypalStatus(BaseModel):
+    configured: bool
+    environment: str
+
+
+class PaypalCredentialsRequest(BaseModel):
+    client_id: str
+    client_secret: str
+    environment: str = "sandbox"
+
+
+class PaypalTestResponse(BaseModel):
+    ok: bool
+    status_code: int | None = None
+    message: str
+
+
+@router.get(
+    "/integrations/paypal/status",
+    response_model=PaypalStatus,
+    dependencies=[Depends(require_permission("erp.view"))],
+)
+async def paypal_status(
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> PaypalStatus:
+    """PayPal 認証情報の設定状況（シークレットは返さない）。"""
+    st = await paypal_payments.get_status(db, tenant_id)
+    return PaypalStatus(configured=st["configured"], environment=st["environment"])
+
+
+@router.put(
+    "/integrations/paypal/credentials",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def save_paypal_credentials(
+    payload: PaypalCredentialsRequest,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """PayPal 認証情報を保存（暗号化）。admin 専用。"""
+    _require_admin(user)
+    if not payload.client_id or not payload.client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Client ID・Client Secret の両方を入力してください。",
+        )
+    await paypal_payments.save_credentials(
+        db, tenant_id, payload.client_id, payload.client_secret, payload.environment, user.id
+    )
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+
+@router.delete(
+    "/integrations/paypal/credentials",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_paypal_credentials(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """PayPal 認証情報を削除。admin 専用。"""
+    _require_admin(user)
+    await paypal_payments.delete_credentials(db, tenant_id)
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+
+@router.post(
+    "/integrations/paypal/test-connection",
+    response_model=PaypalTestResponse,
+    dependencies=[Depends(require_permission("erp.view"))],
+)
+async def paypal_test_connection(
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> PaypalTestResponse:
+    """保存済みの認証情報で PayPal API への疎通（認証）を確認する。"""
+    creds = await paypal_payments.get_credentials(db, tenant_id)
+    if creds is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="認証情報が未設定です。先に保存してください。",
+        )
+    result = await run_in_threadpool(
+        paypal_payments.test_connection,
+        creds["environment"],
+        creds["client_id"],
+        creds["client_secret"],
+    )
+    return PaypalTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
