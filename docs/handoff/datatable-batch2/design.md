@@ -10,7 +10,7 @@
 
 | 基準 | 検証方法 |
 |------|---------|
-| 対象5ファイルの `<table className="data-table">` が0件になること | `grep -r 'class.*data-table' frontend/src/pages/{purchase-orders,sales,inventory,notifications,erp}/` で0件確認 |
+| 対象5ファイルの `<table className="data-table">` が0件になること | `grep -r 'class.*data-table' frontend/src/pages/purchase-orders/ frontend/src/pages/sales/ frontend/src/pages/inventory/OwnInventoryPage.tsx frontend/src/pages/notifications/ frontend/src/pages/erp/` で0件確認（`InventoryPage.tsx` は DataTable 未対応の確定例外: 列非表示・独自チェック複合） |
 | TypeScript エラー 0件 | `./node_modules/.bin/tsc --noEmit` でエラーなし |
 | 既存 data-testid（po-unreceive-*, po-pdf-*, po-send-email-*, po-resend-email-*, sales-revenue-*, sales-gross-*, sales-rate-*, sales-edit-*）が保持されること | コード差分の目視確認 |
 | OwnInventoryPage の pagination UI が未変更であること | `<div className="pagination">` が残存することを確認 |
