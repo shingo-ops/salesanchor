@@ -267,7 +267,10 @@
     "days": "日",
     "postalCodeLabel": "宛先郵便番号（任意）",
     "postalCodePlaceholder": "例: 100-0001",
-    "badgeApproximate": "概算（郵便番号未指定）"
+    "badgeApproximate": "概算（郵便番号未指定）",
+    "destinationLabel": "宛先国コード",
+    "destinationPlaceholder": "例: US",
+    "weightLabel": "重量 (kg)"
   },
   "login": {
     "email": "メールアドレス",
@@ -1058,6 +1061,7 @@
     "status_rejected": "却下",
     "status_expired": "期限切れ",
     "itemsRequired": "各明細行に商品名と単価を入力してください",
+    "fedexEstimate": "FedEx見積もり",
     "subtitle": "見積書を作成・送付・状況管理できます。",
     "fx": {
       "fetchRate": "為替レートを取得",
