@@ -10,7 +10,10 @@ import { Drawer } from './Drawer'
 const meta: Meta<typeof Drawer> = {
   title: 'Components/Drawer',
   component: Drawer,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    docs: { disable: true },
+  },
   tags: [],
 }
 export default meta
