@@ -270,12 +270,18 @@ class CarrierStatus(BaseModel):
     carrier: str
     configured: bool
     environment: str
+    # ADR-125 UX: フィールド別登録ヒント（シークレット平文は返さない）
+    client_id_hint: str | None = None
+    secret_configured: bool = False
+    account_number_hint: str | None = None  # 例: "******011"
 
 
 class CarrierCredentialsRequest(BaseModel):
-    client_id: str  # FedEx/UPS=Client ID, DHL=API Key
-    client_secret: str  # FedEx/UPS=Client Secret, DHL=API Secret
-    environment: str = "sandbox"
+    client_id: str  # FedEx/UPS=APIキー, DHL=API Key
+    client_secret: str  # FedEx/UPS=シークレットキー, DHL=API Secret
+    # ADR-125 UX: environment は顧客UIから受け取らず production 固定（フィールド削除）
+    # 内部テスト用に受け取ってもサーバー側で上書きする
+    environment: str = "production"
     # ADR-125 D2: FedEx / UPS 配送アカウント番号（Rates/Ship API に必須）
     # None = 未入力（既存値を保持する）
     account_number: str | None = None
@@ -302,10 +308,17 @@ async def carrier_status(
     tenant_id: int = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ) -> CarrierStatus:
-    """キャリアの認証情報の設定状況（シークレットは返さない）。"""
+    """キャリアの認証情報の設定状況とフィールド別登録ヒント（シークレット平文は返さない）。"""
     _validate_carrier(carrier)
     st = await carriers.get_status(db, tenant_id, carrier)
-    return CarrierStatus(carrier=carrier, configured=st["configured"], environment=st["environment"])
+    return CarrierStatus(
+        carrier=carrier,
+        configured=st["configured"],
+        environment=st["environment"],
+        client_id_hint=st["client_id_hint"],
+        secret_configured=st["secret_configured"],
+        account_number_hint=st["account_number_hint"],
+    )
 
 
 @router.put(
@@ -333,7 +346,7 @@ async def save_carrier_credentials(
         carrier,
         payload.client_id,
         payload.client_secret,
-        payload.environment,
+        "production",  # ADR-125 UX: 顧客UIは production 固定（dropdown 廃止）
         user.id,
         account_number=payload.account_number,
     )

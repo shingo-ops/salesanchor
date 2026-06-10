@@ -65,15 +65,46 @@ def _norm_env(env: Optional[str]) -> str:
 
 
 async def get_status(db, tenant_id: int, carrier: str) -> dict:
-    """設定状況を返す（シークレットは返さない）。{"configured", "environment"}。"""
+    """設定状況とフィールド別登録ヒントを返す（シークレット平文は返さない）。
+
+    Returns:
+        configured: bool
+        environment: str
+        client_id_hint: str | None  -- client_id 全体（秘密度低・FedEx portal でも常時表示）
+        secret_configured: bool     -- シークレット登録済みか
+        account_number_hint: str | None  -- 末尾3桁マスク（例: ******011）
+    """
     row = await db.execute(
-        text("SELECT environment FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"),
+        text(
+            "SELECT client_id_encrypted, environment, account_number_encrypted"
+            " FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"
+        ),
         {"tid": tenant_id, "c": carrier},
     )
     rec = row.first()
     if rec is None:
-        return {"configured": False, "environment": "sandbox"}
-    return {"configured": True, "environment": rec[0] or "sandbox"}
+        return {
+            "configured": False,
+            "environment": "production",
+            "client_id_hint": None,
+            "secret_configured": False,
+            "account_number_hint": None,
+        }
+    client_id = encryption.decrypt(rec[0])
+    account_number: Optional[str] = (
+        encryption.decrypt(rec[2]) if rec[2] is not None else None
+    )
+    account_number_hint: Optional[str] = None
+    if account_number:
+        suffix = account_number[-3:] if len(account_number) >= 3 else account_number
+        account_number_hint = f"******{suffix}"
+    return {
+        "configured": True,
+        "environment": rec[1] or "production",
+        "client_id_hint": client_id,
+        "secret_configured": True,
+        "account_number_hint": account_number_hint,
+    }
 
 
 async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
