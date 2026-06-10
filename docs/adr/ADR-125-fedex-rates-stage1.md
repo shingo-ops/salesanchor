@@ -1,8 +1,16 @@
 # ADR-125: FedEx Rates連携 第1段 — テナント別ライブ見積もり取得
 
-- **Status**: Proposed
+- **Status**: Accepted（Stage 1 完了 — 2026-06-10）
 - **Date**: 2026-06-09
+- **Closed**: 2026-06-10
 - **Deciders**: shingo-ops（PO）, Hikky-dev（Dev）
+
+## Stage 1 完了記録
+
+- **完了日**: 2026-06-10
+- **完了条件**: FedEx live smoke PASS（`external-fedex.sh --live`）
+- **検証結果**: deploy run 27282070480 — `PASS: live smoke OK (fedex_live quotes=4)`
+- **関連PR**: #1882（FedExRateModal接続）/ #1892（SMOKE_SERVICE_TOKEN バイパス）/ #1894（APIパス修正）/ #1897（docker-compose env passthrough）
 
 ## Context
 
