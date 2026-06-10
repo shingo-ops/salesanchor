@@ -28,6 +28,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
@@ -99,6 +100,7 @@ _REPRESENTATIVE_POSTAL_CODES: dict[str, str] = {
 _TOKEN_REFRESH_BUFFER_SECS = 300
 
 _TIMEOUT = httpx.Timeout(connect=3.0, read=7.0, write=5.0, pool=5.0)
+_SA_TRANSIT_TIMEOUT = httpx.Timeout(connect=3.0, read=5.0, write=5.0, pool=5.0)
 
 # ---------------------------------------------------------------------------
 # 例外
@@ -349,7 +351,116 @@ def get_rates(
             status_code=resp.status_code,
         )
 
-    return _parse_rate_replies(resp.json())
+    # SA API で配達日数を取得（best-effort: 失敗しても Rates 結果は返す）
+    transit_map = _fetch_transit_days(
+        base_url=base_url,
+        token=token,
+        origin_cc=origin_cc,
+        origin_zip=origin_zip,
+        dest_cc=dest_cc,
+        dest_zip=dest_zip,
+        weight_kg=weight_kg,
+    )
+    return _parse_rate_replies(resp.json(), transit_map)
+
+
+def _fetch_transit_days(
+    base_url: str,
+    token: str,
+    origin_cc: str,
+    origin_zip: str,
+    dest_cc: str,
+    dest_zip: str,
+    weight_kg: Decimal,
+) -> dict[str, int]:
+    """FedEx Service Availability API で配達日数を取得（best-effort）。
+
+    取得失敗時は空 dict を返す（呼び出し元の Rates 結果には影響しない）。
+
+    レスポンス構造（2026-06-10 本番確認済）:
+      output.transitTimes[0].transitTimeDetails[*].{serviceType, commit.dateDetail.day}
+      day format: "Jun-11-2026"
+
+    Payload の注意点:
+      - packagingType が必須（省略すると PACKAGE.NULLOREMPTY.REQUIRED）
+      - recipients（複数形配列）を使用（Rates API の recipient 単数形とは異なる）
+      - customsClearanceDetail が国際配送で必須（dutiesPayment + commodities）
+      - accountNumber 不要
+
+    Returns:
+        {serviceType: transit_days} — transit_days = (delivery_date - today).days
+    """
+    today = date.today()
+    ship_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+    weight_val = float(weight_kg)
+
+    payload = {
+        "requestedShipment": {
+            "shipper": {"address": {"postalCode": origin_zip, "countryCode": origin_cc}},
+            "recipients": [{"address": {"postalCode": dest_zip, "countryCode": dest_cc}}],
+            "pickupType": "DROPOFF_AT_FEDEX_LOCATION",
+            "shipDateStamp": ship_date,
+            "packagingType": "YOUR_PACKAGING",
+            "requestedPackageLineItems": [{"weight": {"units": "KG", "value": weight_val}}],
+            "customsClearanceDetail": {
+                "dutiesPayment": {"paymentType": "SENDER"},
+                "commodities": [{
+                    "numberOfPieces": 1,
+                    "description": "General merchandise",
+                    "countryOfManufacture": origin_cc,
+                    "quantity": 1,
+                    "quantityUnits": "PCS",
+                    "weight": {"units": "KG", "value": weight_val},
+                    "unitPrice": {"currency": "USD", "amount": 10},
+                    "customsValue": {"currency": "USD", "amount": 10},
+                }],
+            },
+        },
+        "carrierCodes": ["FDXE"],
+    }
+
+    try:
+        resp = httpx.post(
+            f"{base_url}/availability/v1/transittimes",
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "X-locale": "en_US",
+            },
+            timeout=_SA_TRANSIT_TIMEOUT,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.debug("[fedex_rates] SA API 通信失敗（配達日数スキップ）: %s", e)
+        return {}
+
+    if resp.status_code != 200:
+        logger.debug("[fedex_rates] SA API HTTP %d（配達日数スキップ）", resp.status_code)
+        return {}
+
+    try:
+        body = resp.json()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("[fedex_rates] SA API レスポンス解析失敗: %s", e)
+        return {}
+
+    transit_map: dict[str, int] = {}
+    for tt in body.get("output", {}).get("transitTimes", []):
+        for detail in tt.get("transitTimeDetails", []):
+            svc = detail.get("serviceType")
+            day_str = detail.get("commit", {}).get("dateDetail", {}).get("day")
+            if not svc or not day_str:
+                continue
+            try:
+                delivery_date = datetime.strptime(day_str, "%b-%d-%Y").date()
+                days = (delivery_date - today).days
+                if days >= 0:
+                    transit_map[svc] = days
+            except (ValueError, TypeError):
+                pass
+
+    logger.debug("[fedex_rates] SA API 配達日数取得: %s", transit_map)
+    return transit_map
 
 
 def _log_api_error(resp: httpx.Response) -> None:
@@ -362,11 +473,18 @@ def _log_api_error(resp: httpx.Response) -> None:
         logger.warning("[fedex_rates] Rates API エラー: HTTP %d (レスポンス解析失敗)", resp.status_code)
 
 
-def _parse_rate_replies(body: dict) -> list[FedExRateQuote]:
+def _parse_rate_replies(
+    body: dict,
+    transit_map: Optional[dict[str, int]] = None,
+) -> list[FedExRateQuote]:
     """Rates API レスポンスを FedExRateQuote リストに変換。料金昇順でソート。
 
     TARGET_INTERNATIONAL_SERVICE_TYPES に含まれないサービスタイプは除外する。
     経路で返ってこないサービスは単に結果に含まれない（D5 方針）。
+
+    Args:
+        body: Rates API レスポンスボディ
+        transit_map: SA API から取得した {serviceType: transit_days}（省略可・best-effort）
     """
     output = body.get("output", {})
     rate_reply_details = output.get("rateReplyDetails", [])
@@ -408,18 +526,20 @@ def _parse_rate_replies(body: dict) -> list[FedExRateQuote]:
             logger.debug("[fedex_rates] サービス %s の料金が取得できません", service_type)
             continue
 
-        # 配達日数・タイムスタンプ
+        # 配達日数: SA API transit_map を優先、フォールバックは Rates API operationalDetail
         transit_days: Optional[int] = None
-        delivery_ts: Optional[str] = None
-        commit_detail = detail.get("operationalDetail", {})
-        transit_val = commit_detail.get("transitTime")
-        if isinstance(transit_val, str) and transit_val.endswith("_DAYS"):
-            try:
-                transit_days = int(transit_val.split("_")[0])
-            except ValueError:
-                pass
+        if transit_map:
+            transit_days = transit_map.get(service_type)
+        if transit_days is None:
+            commit_detail = detail.get("operationalDetail", {})
+            transit_val = commit_detail.get("transitTime")
+            if isinstance(transit_val, str) and transit_val.endswith("_DAYS"):
+                try:
+                    transit_days = int(transit_val.split("_")[0])
+                except ValueError:
+                    pass
 
-        delivery_ts = detail.get("commit", {}).get("dateDetail", {}).get("dayFormat")
+        delivery_ts: Optional[str] = detail.get("commit", {}).get("dateDetail", {}).get("dayFormat")
 
         quotes.append(FedExRateQuote(
             service_type=service_type,
@@ -452,5 +572,6 @@ __all__ = [
     "FedExRateQuote",
     "get_or_refresh_token",
     "get_rates",
+    "_fetch_transit_days",
     "clear_token_cache",
 ]
