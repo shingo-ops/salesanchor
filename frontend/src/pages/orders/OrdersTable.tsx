@@ -23,6 +23,8 @@ import type { ShippingDetailDto } from "../../components/ShippingDetailPanel";
 import type { PurchaseDetailDto } from "../../components/PurchaseDetailPanel";
 import { fmtCurrency, orderPhase } from "./useOrdersState";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface PanelOpeners {
   setShippingTarget: (o: OrderListItem) => void;
@@ -65,111 +67,138 @@ export function OrdersTable({
     unknown: t("orders.phaseUnknown"),
   };
 
+  const columns: DataTableColumn<OrderListItem>[] = [
+    {
+      key: "order_number",
+      header: t("orders.orderNumber"),
+    },
+    {
+      key: "name",
+      header: t("common.name"),
+      renderCell: (o) => {
+        const name = o.contact_display_name ?? o.company_name ?? `#${o.company_id}`;
+        return canLinkCustomer ? (
+          <NavLink to={`/crm/companies/${o.company_id}`}>{name}</NavLink>
+        ) : (
+          name
+        );
+      },
+    },
+    {
+      key: "shippingTo",
+      header: t("orders.shippingTo"),
+      renderCell: (o) => <span data-testid={`ship-cell-to-${o.id}`}>{shippingTo(o)}</span>,
+    },
+    {
+      key: "currency",
+      header: t("common.currency"),
+      renderCell: (o) => o.currency ?? "-",
+    },
+    {
+      key: "total_amount",
+      header: t("common.amount"),
+      renderCell: (o) => o.total_amount !== null ? fmtCurrency(o.total_amount, o.currency) : "-",
+    },
+    {
+      key: "phase",
+      header: t("orders.flowColumn"),
+      renderCell: (o) => {
+        const ship = shippings[o.id] ?? null;
+        const pur = purchases[o.id] ?? null;
+        const phase = orderPhase(o, pur, ship);
+        return (
+          <span data-testid={`flow-cell-${o.id}`}>
+            <span className={`badge badge-${getStatusPresentation("order", phase).badgeVariant}`}>{PHASE_LABELS[phase] ?? phase}</span>
+          </span>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: t("common.status"),
+      renderCell: (o) => (
+        <span className={`badge badge-${getStatusPresentation("order", o.status).badgeVariant}`}>
+          {STATUS_LABELS[o.status] || o.status}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      header: t("common.createdAt"),
+      renderCell: (o) => new Date(o.created_at).toLocaleDateString("ja-JP"),
+    },
+    {
+      key: "actions",
+      header: t("common.actions"),
+      renderCell: (o) => {
+        const ship = shippings[o.id] ?? null;
+        const pur = purchases[o.id] ?? null;
+        const phase = orderPhase(o, pur, ship);
+        return (
+          <span className="actions">
+            <button className="btn-sm" onClick={() => handleEdit(o)}>{t("common.edit")}</button>
+
+            {/* フェーズ別の主要操作 */}
+            {phase === "awaiting_payment" && (
+              <button
+                className="btn-sm"
+                onClick={() => setPaidOrder(o, true)}
+                data-testid={`mark-paid-${o.id}`}
+              >
+                {t("orders.markPaid")}
+              </button>
+            )}
+            {phase === "sourcing" && (
+              <button
+                className="btn-sm"
+                onClick={() => setPurchaseTarget(o)}
+                data-testid={`mark-purchased-${o.id}`}
+              >
+                {t("orders.markPurchased")}
+              </button>
+            )}
+            {phase === "awaiting_shipping" && (
+              <button
+                className="btn-sm"
+                onClick={() => setShippingTarget(o)}
+                data-testid={`issue-label-${o.id}`}
+              >
+                {t("orders.issueLabel")}
+              </button>
+            )}
+            {/* 支払済を取り消したい場合（支払い待ち以外で paid_at 有） */}
+            {o.paid_at && phase !== "completed" && phase !== "cancelled" && phase !== "trouble" && (
+              <button
+                className="btn-sm"
+                onClick={() => setPaidOrder(o, false)}
+                data-testid={`mark-unpaid-${o.id}`}
+              >
+                {t("orders.markUnpaid")}
+              </button>
+            )}
+
+            {/* 補助操作（発送 / 仕入 詳細パネル）は常時参照可 */}
+            <button className="btn-sm" onClick={() => setShippingTarget(o)} data-testid={`open-shipping-${o.id}`}>
+              {t("orders.shipping")}
+            </button>
+            <button className="btn-sm" onClick={() => setPurchaseTarget(o)} data-testid={`open-purchase-${o.id}`}>
+              {t("orders.purchase")}
+            </button>
+            <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(o)}>
+              {t("common.delete")}
+            </button>
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th>{t("orders.orderNumber")}</th>
-          <th>{t("common.name")}</th>
-          <th>{t("orders.shippingTo")}</th>
-          <th>{t("common.currency")}</th>
-          <th>{t("common.amount")}</th>
-          <th>{t("orders.flowColumn")}</th>
-          <th>{t("common.status")}</th>
-          <th>{t("common.createdAt")}</th>
-          <th>{t("common.actions")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {orders.map((o) => {
-          const ship = shippings[o.id] ?? null;
-          const pur = purchases[o.id] ?? null;
-          const phase = orderPhase(o, pur, ship);
-          const name = o.contact_display_name ?? o.company_name ?? `#${o.company_id}`;
-          return (
-            <tr key={o.id}>
-              <td>{o.order_number}</td>
-              <td>
-                {canLinkCustomer ? (
-                  <NavLink to={`/crm/companies/${o.company_id}`}>{name}</NavLink>
-                ) : (
-                  name
-                )}
-              </td>
-              <td data-testid={`ship-cell-to-${o.id}`}>{shippingTo(o)}</td>
-              <td>{o.currency ?? "-"}</td>
-              <td>{o.total_amount !== null ? fmtCurrency(o.total_amount, o.currency) : "-"}</td>
-              <td data-testid={`flow-cell-${o.id}`}>
-                <span className={`badge badge-${getStatusPresentation("order", phase).badgeVariant}`}>{PHASE_LABELS[phase] ?? phase}</span>
-              </td>
-              <td>
-                <span className={`badge badge-${getStatusPresentation("order", o.status).badgeVariant}`}>
-                  {STATUS_LABELS[o.status] || o.status}
-                </span>
-              </td>
-              <td>{new Date(o.created_at).toLocaleDateString("ja-JP")}</td>
-              <td className="actions">
-                <button className="btn-sm" onClick={() => handleEdit(o)}>{t("common.edit")}</button>
-
-                {/* フェーズ別の主要操作 */}
-                {phase === "awaiting_payment" && (
-                  <button
-                    className="btn-sm"
-                    onClick={() => setPaidOrder(o, true)}
-                    data-testid={`mark-paid-${o.id}`}
-                  >
-                    {t("orders.markPaid")}
-                  </button>
-                )}
-                {phase === "sourcing" && (
-                  <button
-                    className="btn-sm"
-                    onClick={() => setPurchaseTarget(o)}
-                    data-testid={`mark-purchased-${o.id}`}
-                  >
-                    {t("orders.markPurchased")}
-                  </button>
-                )}
-                {phase === "awaiting_shipping" && (
-                  <button
-                    className="btn-sm"
-                    onClick={() => setShippingTarget(o)}
-                    data-testid={`issue-label-${o.id}`}
-                  >
-                    {t("orders.issueLabel")}
-                  </button>
-                )}
-                {/* 支払済を取り消したい場合（支払い待ち以外で paid_at 有） */}
-                {o.paid_at && phase !== "completed" && phase !== "cancelled" && phase !== "trouble" && (
-                  <button
-                    className="btn-sm"
-                    onClick={() => setPaidOrder(o, false)}
-                    data-testid={`mark-unpaid-${o.id}`}
-                  >
-                    {t("orders.markUnpaid")}
-                  </button>
-                )}
-
-                {/* 補助操作（発送 / 仕入 詳細パネル）は常時参照可 */}
-                <button className="btn-sm" onClick={() => setShippingTarget(o)} data-testid={`open-shipping-${o.id}`}>
-                  {t("orders.shipping")}
-                </button>
-                <button className="btn-sm" onClick={() => setPurchaseTarget(o)} data-testid={`open-purchase-${o.id}`}>
-                  {t("orders.purchase")}
-                </button>
-                <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(o)}>
-                  {t("common.delete")}
-                </button>
-              </td>
-            </tr>
-          );
-        })}
-        {orders.length === 0 && (
-          <tr>
-            <td colSpan={9} className="empty">{t("orders.noOrders")}</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+    <DataTable
+      columns={columns}
+      data={orders}
+      rowKey={(o) => String(o.id)}
+      emptyState={<span className="empty">{t("orders.noOrders")}</span>}
+    />
   );
 }

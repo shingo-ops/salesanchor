@@ -9,6 +9,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface OwnInventoryRow {
   id: number;
@@ -117,79 +119,89 @@ export default function OwnInventoryPage() {
       ) : (
         <>
           <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>{t("ownInventory.col.productId")}</th>
-                  <th>{t("ownInventory.col.condition")}</th>
-                  <th>{t("ownInventory.physicalQty")}</th>
-                  <th>{t("ownInventory.reservedQty")}</th>
-                  <th>{t("ownInventory.availableQty")}</th>
-                  <th>{t("ownInventory.col.unitPrice")}</th>
-                  <th>{t("ownInventory.col.status")}</th>
-                  <th>{t("ownInventory.col.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="empty-cell">
-                      {t("ownInventory.noResults")}
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.product_id}</td>
-                      <td>{row.condition ?? "-"}</td>
-                      <td className="qty-cell">{row.physical_qty}</td>
-                      <td className="qty-cell">{row.reserved_qty}</td>
-                      <td className="qty-cell qty-available">
-                        {availableQty(row)}
-                      </td>
-                      <td>
-                        {row.unit_price != null
-                          ? row.unit_price.toLocaleString()
-                          : "-"}
-                      </td>
-                      <td>
-                        <span className={`status-badge status-${row.status}`}>
-                          {t(`ownInventory.status.${row.status}`, {
-                            defaultValue: row.status,
-                          })}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-primary"
-                          onClick={() => openAction(row, "reserve")}
-                          aria-label={t("ownInventory.reserve")}
-                        >
-                          {t("ownInventory.reserve")}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => openAction(row, "release")}
-                          aria-label={t("ownInventory.release")}
-                        >
-                          {t("ownInventory.release")}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger"
-                          onClick={() => openAction(row, "ship")}
-                          aria-label={t("ownInventory.ship")}
-                        >
-                          {t("ownInventory.ship")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            {(() => {
+              const columns: DataTableColumn<OwnInventoryRow>[] = [
+                {
+                  key: "product_id",
+                  header: t("ownInventory.col.productId"),
+                  renderCell: (row) => <>{row.product_id}</>,
+                },
+                {
+                  key: "condition",
+                  header: t("ownInventory.col.condition"),
+                  renderCell: (row) => <>{row.condition ?? "-"}</>,
+                },
+                {
+                  key: "physical_qty",
+                  header: t("ownInventory.physicalQty"),
+                  renderCell: (row) => <span className="qty-cell">{row.physical_qty}</span>,
+                },
+                {
+                  key: "reserved_qty",
+                  header: t("ownInventory.reservedQty"),
+                  renderCell: (row) => <span className="qty-cell">{row.reserved_qty}</span>,
+                },
+                {
+                  key: "available_qty",
+                  header: t("ownInventory.availableQty"),
+                  renderCell: (row) => <span className="qty-cell qty-available">{availableQty(row)}</span>,
+                },
+                {
+                  key: "unit_price",
+                  header: t("ownInventory.col.unitPrice"),
+                  renderCell: (row) => <>{row.unit_price != null ? row.unit_price.toLocaleString() : "-"}</>,
+                },
+                {
+                  key: "status",
+                  header: t("ownInventory.col.status"),
+                  renderCell: (row) => (
+                    <span className={`status-badge status-${row.status}`}>
+                      {t(`ownInventory.status.${row.status}`, { defaultValue: row.status })}
+                    </span>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: t("ownInventory.col.actions"),
+                  renderCell: (row) => (
+                    <span className="actions-cell">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => openAction(row, "reserve")}
+                        aria-label={t("ownInventory.reserve")}
+                      >
+                        {t("ownInventory.reserve")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => openAction(row, "release")}
+                        aria-label={t("ownInventory.release")}
+                      >
+                        {t("ownInventory.release")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => openAction(row, "ship")}
+                        aria-label={t("ownInventory.ship")}
+                      >
+                        {t("ownInventory.ship")}
+                      </button>
+                    </span>
+                  ),
+                },
+              ];
+              return (
+                <DataTable<OwnInventoryRow>
+                  columns={columns}
+                  data={items}
+                  rowKey={(r) => String(r.id)}
+                  emptyState={<span>{t("ownInventory.noResults")}</span>}
+                />
+              );
+            })()}
           </div>
 
           {/* ページング */}

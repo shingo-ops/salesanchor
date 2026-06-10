@@ -14,6 +14,8 @@ import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -394,50 +396,38 @@ export default function CompaniesPage() {
 
       {loading ? (
         <p>{t("common.loading")}</p>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("common.name")}</th>
-              <th>{t("companies.industry")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("companies.billing")}</th>
-              <th>{t("companies.delivery")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: "center", padding: "var(--space-4)" }}>{t("companies.noCompanies")}</td></tr>
-            ) : (
-              companies.map((c) => (
-                <tr
-                  key={c.id}
-                  className={c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
-                >
-                  <td>
-                    {/* 詳細ページへ: multi_branch 住所編集 / 担当者タブ / 販売チャネル */}
-                    <Link to={`/companies/${c.id}`}>{companyDisplayName(c)}</Link>
-                  </td>
-                  <td>{c.industry || "-"}</td>
-                  <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
-                  <td>{addressDisplay(defaultAddress(c, "billing"))}</td>
-                  <td>{addressDisplay(defaultAddress(c, "delivery"))}</td>
-                  <td>
-                    <Link to={`/companies/${c.id}`} className="btn-sm">{t("companies.viewDetail")}</Link>
-                    {hasPermission("customers.update") && (
-                      <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
-                    )}
-                    {hasPermission("customers.delete") && (
-                      <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Company>[] = [
+          { key: "name", header: t("common.name"), renderCell: (c) => (
+            /* 詳細ページへ: multi_branch 住所編集 / 担当者タブ / 販売チャネル */
+            <Link to={`/companies/${c.id}`}>{companyDisplayName(c)}</Link>
+          )},
+          { key: "industry", header: t("companies.industry"), renderCell: (c) => c.industry || "-" },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
+          { key: "billing", header: t("companies.billing"), renderCell: (c) => addressDisplay(defaultAddress(c, "billing")) },
+          { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
+          { key: "actions", header: t("common.actions"), renderCell: (c) => (
+            <>
+              <Link to={`/companies/${c.id}`} className="btn-sm">{t("companies.viewDetail")}</Link>
+              {hasPermission("customers.update") && (
+                <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
+              )}
+              {hasPermission("customers.delete") && (
+                <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
+              )}
+            </>
+          )},
+        ];
+        return (
+          <DataTable<Company>
+            columns={columns}
+            data={companies}
+            rowKey={(c) => String(c.id)}
+            rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            emptyState={t("companies.noCompanies")}
+          />
+        );
+      })()}
 
       <Modal
         open={showForm}

@@ -26,6 +26,8 @@ import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Deal {
   id: number;
@@ -334,42 +336,31 @@ export default function DealsPage() {
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("deals.dealTitle")}</th>
-              <th>{t("common.company")}</th>
-              <th>{t("deals.leadSource")}</th>
-              <th>{t("deals.amount")}</th>
-              <th>{t("dashboard.stage")}</th>
-              <th>{t("deals.probability")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((d) => (
-              <tr key={d.id}>
-                <td>{d.title}</td>
-                <td>{companyName(d.company_id)}</td>
-                <td>{d.lead_source || "-"}</td>
-                <td>{d.amount ? fmt(d.amount, d.currency) : "-"}</td>
-                <td>{d.stage ? (t(`deals.stage_${d.stage}`) || d.stage) : "-"}</td>
-                <td>{d.probability != null ? `${d.probability}%` : "-"}</td>
-                <td><span className={`badge badge-${getStatusPresentation("deal", d.status).badgeVariant}`}>{t(`deals.status_${d.status}`) || d.status}</span></td>
-                <td className="actions">
-                  {hasPermission("deals.update") && <button className="btn-sm" onClick={() => handleEdit(d)}>{t("common.edit")}</button>}
-                  {hasPermission("deals.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(d)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {deals.length === 0 && (
-              <tr><td colSpan={9} className="empty">{t("deals.noDeals")}</td></tr>
-            )}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Deal>[] = [
+          { key: "title", header: t("deals.dealTitle") },
+          { key: "company_id", header: t("common.company"), renderCell: (d) => companyName(d.company_id) },
+          { key: "lead_source", header: t("deals.leadSource"), renderCell: (d) => d.lead_source || "-" },
+          { key: "amount", header: t("deals.amount"), renderCell: (d) => d.amount ? fmt(d.amount, d.currency) : "-" },
+          { key: "stage", header: t("dashboard.stage"), renderCell: (d) => d.stage ? (t(`deals.stage_${d.stage}`) || d.stage) : "-" },
+          { key: "probability", header: t("deals.probability"), renderCell: (d) => d.probability != null ? `${d.probability}%` : "-" },
+          { key: "status", header: t("common.status"), renderCell: (d) => <span className={`badge badge-${getStatusPresentation("deal", d.status).badgeVariant}`}>{t(`deals.status_${d.status}`) || d.status}</span> },
+          { key: "actions", header: t("common.actions"), renderCell: (d) => (
+            <span className="actions">
+              {hasPermission("deals.update") && <button className="btn-sm" onClick={() => handleEdit(d)}>{t("common.edit")}</button>}
+              {hasPermission("deals.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(d)}>{t("common.delete")}</button>}
+            </span>
+          )},
+        ];
+        return (
+          <DataTable<Deal>
+            columns={columns}
+            data={deals}
+            rowKey={(d) => String(d.id)}
+            emptyState={t("deals.noDeals")}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={!!deleteTarget}

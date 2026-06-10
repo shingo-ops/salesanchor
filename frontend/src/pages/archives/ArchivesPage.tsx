@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Archive { id: number; source_table: string; source_id: number; archived_by: number | null; archived_at: string; restored_at: string | null; }
 
@@ -29,25 +31,47 @@ export default function ArchivesPage() {
   return (
     <PageLayout navKey="nav.archive" subtitleKey="archives.subtitle">
       {error && <div className="error-message">{error}</div>}
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
-        <table className="data-table">
-          <thead><tr><th>{t("common.type")}</th><th>{t("archives.sourceId")}</th><th>{t("common.date")}</th><th>{t("archives.restoredAt")}</th><th>{t("common.actions")}</th></tr></thead>
-          <tbody>
-            {archives.map(a => (
-              <tr key={a.id}>
-                <td>{a.source_table}</td><td>{a.source_id}</td>
-                <td>{new Date(a.archived_at).toLocaleDateString()}</td>
-                <td>{a.restored_at ? new Date(a.restored_at).toLocaleDateString() : "-"}</td>
-                <td className="actions">
-                  {!a.restored_at && hasPermission("archive.manage") && <button className="btn-sm btn-primary" onClick={() => restore(a.id)}>{t("archives.restore")}</button>}
-                  {a.restored_at && <span className="badge badge-won">{t("archives.restored")}</span>}
-                </td>
-              </tr>
-            ))}
-            {archives.length === 0 && <tr><td colSpan={5} className="empty">{t("common.noData")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+        const columns: DataTableColumn<Archive>[] = [
+          {
+            key: "source_table",
+            header: t("common.type"),
+          },
+          {
+            key: "source_id",
+            header: t("archives.sourceId"),
+            renderCell: (a) => String(a.source_id),
+          },
+          {
+            key: "archived_at",
+            header: t("common.date"),
+            renderCell: (a) => new Date(a.archived_at).toLocaleDateString(),
+          },
+          {
+            key: "restored_at",
+            header: t("archives.restoredAt"),
+            renderCell: (a) => a.restored_at ? new Date(a.restored_at).toLocaleDateString() : "-",
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (a) => (
+              <span className="actions">
+                {!a.restored_at && hasPermission("archive.manage") && <button className="btn-sm btn-primary" onClick={() => restore(a.id)}>{t("archives.restore")}</button>}
+                {a.restored_at && <span className="badge badge-won">{t("archives.restored")}</span>}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable
+            columns={columns}
+            data={archives}
+            rowKey={(a) => String(a.id)}
+            emptyState={<span>{t("common.noData")}</span>}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }

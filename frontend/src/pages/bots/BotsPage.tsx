@@ -14,6 +14,8 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Bot {
   id: number;
@@ -243,39 +245,62 @@ export default function BotsPage() {
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("common.name")}</th>
-              <th>{t("bots.purposeLabel")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("bots.ownerStaff")}</th>
-              <th>{t("bots.executionCount")}</th>
-              <th>{t("bots.lastExecuted")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bots.map((b) => (
-              <tr key={b.id}>
-                <td>{b.display_name}</td>
-                <td>{purposeLabel(b.purpose)}</td>
-                <td><span className={`badge badge-${getStatusPresentation("bot", b.status).badgeVariant}`}>{statusLabel(b.status)}</span></td>
-                <td>{b.owner_staff_name || "-"}</td>
-                <td>{b.execution_count.toLocaleString("ja-JP")}</td>
-                <td>{b.last_executed_at ? new Date(b.last_executed_at).toLocaleDateString("ja-JP") : "-"}</td>
-                <td className="actions">
-                  {hasPermission("bots.update") && <button className="btn-sm" onClick={() => handleEdit(b)}>{t("common.edit")}</button>}
-                  {hasPermission("bots.update") && <button className="btn-sm" onClick={() => setRotateTarget(b)}>{t("bots.rotateKey")}</button>}
-                  {hasPermission("bots.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(b)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {bots.length === 0 && <tr><td colSpan={8} className="empty">{t("bots.noB")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Bot>[] = [
+          {
+            key: "display_name",
+            header: t("common.name"),
+          },
+          {
+            key: "purpose",
+            header: t("bots.purposeLabel"),
+            renderCell: (b) => purposeLabel(b.purpose),
+          },
+          {
+            key: "status",
+            header: t("common.status"),
+            renderCell: (b) => (
+              <span className={`badge badge-${getStatusPresentation("bot", b.status).badgeVariant}`}>
+                {statusLabel(b.status)}
+              </span>
+            ),
+          },
+          {
+            key: "owner_staff_name",
+            header: t("bots.ownerStaff"),
+            renderCell: (b) => b.owner_staff_name || "-",
+          },
+          {
+            key: "execution_count",
+            header: t("bots.executionCount"),
+            renderCell: (b) => b.execution_count.toLocaleString("ja-JP"),
+          },
+          {
+            key: "last_executed_at",
+            header: t("bots.lastExecuted"),
+            renderCell: (b) => b.last_executed_at ? new Date(b.last_executed_at).toLocaleDateString("ja-JP") : "-",
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (b) => (
+              <span className="actions">
+                {hasPermission("bots.update") && <button className="btn-sm" onClick={() => handleEdit(b)}>{t("common.edit")}</button>}
+                {hasPermission("bots.update") && <button className="btn-sm" onClick={() => setRotateTarget(b)}>{t("bots.rotateKey")}</button>}
+                {hasPermission("bots.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(b)}>{t("common.delete")}</button>}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable
+            columns={columns}
+            data={bots}
+            rowKey={(b) => String(b.id)}
+            emptyState={<span>{t("bots.noB")}</span>}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={!!deleteTarget}
