@@ -51,18 +51,21 @@ _BASE_URLS = {
 # 「全取得→フィルタ」方式（serviceType 指定は使わない）。
 # 経路で返ってこないサービスは単にリストに載らない（D5 方針）。
 #
-# 確認状況（JP→US sandbox 2026-06-10）:
-#   - INTERNATIONAL_PRIORITY              : ✅ sandbox 確認済
-#   - INTERNATIONAL_ECONOMY               : ✅ sandbox 確認済
-#   - INTERNATIONAL_PRIORITY_EXPRESS      : ⚠️ SERVICETYPE.NOT.ALLOWED（本番確認要）
-#   - FEDEX_INTERNATIONAL_CONNECT_PLUS    : ⚠️ HTTP 500（APAC 限定・本番確認要）
+# 確認状況（JP→US 本番 2026-06-10）:
+#   - FEDEX_INTERNATIONAL_PRIORITY        : ✅ 本番確認済（sandbox は "INTERNATIONAL_PRIORITY"）
+#   - INTERNATIONAL_ECONOMY               : ✅ sandbox/本番ともに確認済
+#   - FEDEX_INTERNATIONAL_PRIORITY_EXPRESS: ✅ 本番確認済（sandbox は "INTERNATIONAL_PRIORITY_EXPRESS"）
+#   - FEDEX_INTERNATIONAL_CONNECT_PLUS    : ✅ 本番確認済
+#
+# 注意: サービスタイプ名は sandbox と production で異なる（FEDEX_ プレフィックスの有無）。
+#       このリストは本番APIの返値に合わせる（sandbox テストは名前を直接モックして対応）。
 #
 # 変更方法: このリストの追加/削除で対象サービスを管理する。コードに散らさない。
 TARGET_INTERNATIONAL_SERVICE_TYPES: list[str] = [
-    "INTERNATIONAL_PRIORITY",              # IP  — FedEx International Priority®
-    "INTERNATIONAL_ECONOMY",               # IE  — FedEx International Economy®
-    "INTERNATIONAL_PRIORITY_EXPRESS",      # IPE — FedEx International Priority Express® ※本番確認要
-    "FEDEX_INTERNATIONAL_CONNECT_PLUS",    # FICP — FedEx International Connect Plus® ※本番確認要
+    "FEDEX_INTERNATIONAL_PRIORITY",         # IP  — FedEx International Priority®
+    "INTERNATIONAL_ECONOMY",                # IE  — FedEx International Economy®
+    "FEDEX_INTERNATIONAL_PRIORITY_EXPRESS", # IPE — FedEx International Priority Express®
+    "FEDEX_INTERNATIONAL_CONNECT_PLUS",     # FICP — FedEx International Connect Plus®
 ]
 
 # FedEx Rates API は postalCode を必須とする。
