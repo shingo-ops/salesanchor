@@ -204,6 +204,82 @@ class TestAuthDependency429:
         assert resp.status_code == 401
         mock_record.assert_called_once()
 
+    async def test_cached_jwt_user_bypasses_ip_lockout(self):
+        """
+        巻き添え再現テスト（2026-06 shingo事故の根本）。
+
+        前提: 同一IPで他ユーザーが AUTH_FAIL_MAX 回 Firebase検証失敗 → IPロック成立。
+        期待: そのIPで JWTキャッシュ済みの有効トークンを持つユーザーは 200 で通過する。
+        修正前: check_auth_rate_limit が get_cached_jwt より先に走るため 429 になる（赤）。
+        修正後: キャッシュヒット時はロック判定をスキップするため 200 になる（緑）。
+        """
+        from app.main import app
+        from sqlalchemy.engine import Result
+
+        cached_user_data = {"email": "shingo@example.com"}
+
+        mock_user = MagicMock()
+        mock_user.email = "shingo@example.com"
+        mock_user.tenant_id = 1
+        mock_user.is_active = True
+        mock_user.role = "admin"
+
+        mock_result = MagicMock(spec=Result)
+        mock_result.scalar_one_or_none.return_value = mock_user
+
+        with patch("app.auth.dependencies.is_token_blacklisted", new_callable=AsyncMock) as mock_bl, \
+             patch("app.auth.dependencies.check_auth_rate_limit", new_callable=AsyncMock) as mock_check, \
+             patch("app.auth.dependencies.get_cached_jwt", new_callable=AsyncMock) as mock_cache, \
+             patch("app.auth.dependencies.get_db") as mock_get_db:
+            mock_bl.return_value = False
+            mock_check.return_value = True   # IPロック中（攻撃者による巻き添え状態）
+            mock_cache.return_value = cached_user_data  # shingo のトークンはキャッシュ済み
+
+            mock_db = AsyncMock()
+            mock_db.execute = AsyncMock(return_value=mock_result)
+            mock_db.close = AsyncMock()
+            mock_get_db.return_value.__aenter__ = AsyncMock(return_value=mock_db)
+            mock_get_db.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get(
+                    "/api/v1/companies",
+                    headers={"Authorization": f"Bearer {_make_jwt('shingo@example.com')}"},
+                )
+
+        # キャッシュヒット → IPロックをスキップ → 200（または 403/404 だが 429 ではない）
+        assert resp.status_code != 429, (
+            f"巻き添え発生: IPロック中にキャッシュ済み正規ユーザーが {resp.status_code} で遮断された。"
+            "get_cached_jwt を check_auth_rate_limit より前に実行するよう修正が必要。"
+        )
+
+    async def test_cache_miss_still_blocked_by_ip_lock(self):
+        """
+        防御維持テスト: キャッシュミス時は従来どおりIPロックで429になること。
+
+        キャッシュヒット時の免除はキャッシュミス時の防御を弱めてはいけない。
+        """
+        from app.main import app
+
+        with patch("app.auth.dependencies.is_token_blacklisted", new_callable=AsyncMock) as mock_bl, \
+             patch("app.auth.dependencies.check_auth_rate_limit", new_callable=AsyncMock) as mock_check, \
+             patch("app.auth.dependencies.get_cached_jwt", new_callable=AsyncMock) as mock_cache:
+            mock_bl.return_value = False
+            mock_check.return_value = True   # IPロック中
+            mock_cache.return_value = None   # キャッシュミス（未ログインまたは期限切れ）
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get(
+                    "/api/v1/companies",
+                    headers={"Authorization": "Bearer unknown-token"},
+                )
+
+        assert resp.status_code == 429, (
+            f"防御後退: キャッシュミス時にIPロックが機能していない（{resp.status_code}）。"
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # P2-2: RateLimitMiddleware

@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-10 / ADR 総数: 116 件
+最終更新: 2026-06-10 / ADR 総数: 117 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -134,6 +134,7 @@
 | [ADR-124](./ADR-124-sop-health-reporter.md) | ADR-124: SOP ヘルスレポーター（定量監視ダッシュボード） | Accepted | — | — |
 | [ADR-125](./ADR-125-fedex-rates-stage1.md) | ADR-125: FedEx Rates連携 第1段 — テナント別ライブ見積もり取得 | Proposed | — | — |
 | [ADR-126](./ADR-126-registration-form-input-contract-v2.md) | ADR-126: 顧客登録フォーム 入力契約v2（旧Googleフォーム互換・英語デフォルトi18n・改善5点） | Proposed | — | — |
+| [ADR-127](./ADR-127-auth-lockout-bystander-fix.md) | ADR-127: 認証ロック巻き添え遮断の解消（JWT キャッシュ優先実行） | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
