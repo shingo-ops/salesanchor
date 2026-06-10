@@ -121,7 +121,7 @@ function CountryCombobox({
           style={{
             position: "absolute",
             zIndex: 10,
-            background: "var(--bg-surface, #fff)",
+            background: "var(--bg-surface)",
             border: "1px solid var(--border-default)",
             borderRadius: "var(--radius-sm)",
             maxHeight: "200px",
