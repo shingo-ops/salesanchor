@@ -14,6 +14,7 @@ import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
 import ContactsPage from "./pages/contacts/ContactsPage";
 import ContactEditPage from "./pages/contacts/ContactEditPage";
 import DealsPage from "./pages/deals/DealsPage";
+import DealEditPage from "./pages/deals/DealEditPage";
 import OrdersPage from "./pages/orders/OrdersPage";
 // 区切り4 (ADR-021 改修): 売上管理 / 報酬管理 メニュー分離
 import SalesPage from "./pages/sales/SalesPage";
@@ -180,6 +181,7 @@ function App() {
 
                   {/* 管理 */}
                   <Route path="/deals" element={<DealsPage />} />
+                  <Route path="/deals/:id/edit" element={<DealEditPage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
                   <Route path="/sales" element={<SalesPage />} />
