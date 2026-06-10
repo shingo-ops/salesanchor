@@ -147,14 +147,13 @@ const emptyForm: FormState = {
 };
 
 const emptyEditForm: CompanyFormState = {
-  name: "", status: "active", industry: "", trust_level: "", priority_focus: "", notes: "",
+  name: "", status: "active", industry: "", priority_focus: "", notes: "",
 };
 
 const toForm = (c: Company): CompanyFormState => ({
   name: c.name || "",
   status: c.status,
   industry: c.industry || "",
-  trust_level: c.trust_level !== null ? String(c.trust_level) : "",
   priority_focus: c.priority_focus || "",
   notes: c.notes || "",
 });
@@ -322,7 +321,6 @@ export default function CompaniesPage() {
         name: editForm.name,
         status: editForm.status,
         industry: toNull(editForm.industry),
-        trust_level: editForm.trust_level ? parseInt(editForm.trust_level, 10) : null,
         priority_focus: toNull(editForm.priority_focus),
         notes: toNull(editForm.notes),
       });

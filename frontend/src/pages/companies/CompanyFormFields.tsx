@@ -11,7 +11,6 @@ export interface CompanyFormState {
   name: string;
   status: string;
   industry: string;
-  trust_level: string;
   priority_focus: string;
   notes: string;
 }
@@ -50,16 +49,6 @@ export function CompanyFormFields({ form, onChange }: Props) {
         <input
           value={form.industry}
           onChange={(e) => onChange("industry", e.target.value)}
-        />
-      </div>
-      <div className="form-group">
-        <label>{t("companies.trustLevel")}</label>
-        <input
-          type="number"
-          min="0"
-          max="5"
-          value={form.trust_level}
-          onChange={(e) => onChange("trust_level", e.target.value)}
         />
       </div>
       <div className="form-group">
