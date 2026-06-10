@@ -103,7 +103,8 @@
 | feature/morimoto/modal-xl-replacements | OrdersPage modal-overlay 3件→Modal(xl)置換（ADR-122） | 2026-06-09 | DONE | #1827 | |
 | feature/morimoto/datatable-invoices-pilot | InvoicesPage DataTable パイロット（ADR-067） | 2026-06-09 | DONE | #1841 | |
 | feature/morimoto/datatable-preview | DataTable 金型 + onRowClick + 制御型ページ送り（Task 4C+4D+step2） | 2026-06-08 | DONE | #1847 | |
-| feature/morimoto/fedex-smoke-switch | FedEx live smoke スイッチ ON（SMOKE_SERVICE_TOKEN + deploy.yml 修正） | 2026-06-10 | IN_PROGRESS | | |
+| feature/morimoto/fedex-smoke-switch | FedEx live smoke スイッチ ON（SMOKE_SERVICE_TOKEN + deploy.yml 修正） | 2026-06-10 | DONE | #1892 | |
+| feature/morimoto/fedex-smoke-path-fix | FedEx smoke スクリプト API パス修正（/api/v1/shipping/calculate） | 2026-06-10 | IN_PROGRESS | | |
 ---
 
 ## 記入例
