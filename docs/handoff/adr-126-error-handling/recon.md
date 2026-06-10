@@ -30,7 +30,7 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | グローバルハンドラー変更でスタッフUIへの影響 | `api.ts:90` `err.message = detail` 経由で ~16画面に漏れる。公開エンドポイント内捕捉のみとし、グローバルハンドラーは不変 | ✅ 解消済み |
+| 1 | グローバルハンドラー変更でスタッフUIへの影響 | `frontend/src/lib/api.ts:90` `err.message = detail` 経由で ~16画面に漏れる。公開エンドポイント内捕捉のみとし、グローバルハンドラーは不変 | ✅ 解消済み |
 | 2 | `IntegrityError` vs `SQLAlchemyError` の捕捉型 | `asyncpg.UniqueViolationError` は `IntegrityError`（`SQLAlchemyError` のサブクラス）経由で `e.orig` にセット。`SQLAlchemyError` で捕捉後 `str(orig)` にインデックス名を検出 | ✅ 解消済み |
 | 3 | トークン消費タイミング | `mark_token_used` は `db.commit()` 直前。409 例外は commit 前に発生するためトークンは消費されない | ✅ 解消済み |
 
