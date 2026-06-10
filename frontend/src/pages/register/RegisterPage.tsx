@@ -1,14 +1,18 @@
 /**
- * 顧客登録ページ（公開・認証不要）。ADR-SA-03。
+ * Customer Registration Page (public, no auth). ADR-SA-03 + ADR-126 v2.
  *
  * URL: /register?token=...
- * 担当者が発行したトークンで顧客が住所・連絡先を自分で登録する。
- * テナントはトークンから確定（フォーム入力ではなく構造で分離）。
+ * Displays in English by default (ADR-126 Section 4) with language toggle.
+ * Section 1: Billing Address Registration
+ * Section 2: Shipping Address Registration (hidden when "Ship to the same address.")
+ * Contact person section at bottom.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
+import { COUNTRIES, type CountryEntry } from "../../constants/countries";
 
 interface TokenInfo {
   valid: boolean;
@@ -19,10 +23,11 @@ interface TokenInfo {
 
 interface AddressForm {
   address_type: string;
-  branch_name: string;
   name: string;
   email: string;
   telephone: string;
+  telephone_dial: string;
+  telephone_number: string;
   tax_id: string;
   address_line_1: string;
   address_line_2: string;
@@ -36,10 +41,11 @@ interface AddressForm {
 
 const emptyAddress = (type: string): AddressForm => ({
   address_type: type,
-  branch_name: "",
   name: "",
   email: "",
   telephone: "",
+  telephone_dial: "+1",
+  telephone_number: "",
   tax_id: "",
   address_line_1: "",
   address_line_2: "",
@@ -47,14 +53,122 @@ const emptyAddress = (type: string): AddressForm => ({
   city: "",
   state: "",
   zip: "",
-  country_code: "JP",
-  is_default: false,
+  country_code: "US",
+  is_default: type === "billing",
 });
+
+type ShippingChoice = "proceed" | "same";
+
+/** Combobox with search filtering for country / dial code selection. */
+function CountryCombobox({
+  entries,
+  value,
+  onChange,
+  displayFn,
+  filterFn,
+  id,
+}: {
+  entries: readonly CountryEntry[];
+  value: string;
+  onChange: (val: string) => void;
+  displayFn: (c: CountryEntry) => string;
+  filterFn: (c: CountryEntry, q: string) => boolean;
+  id: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(
+    () => (query ? entries.filter((c) => filterFn(c, query.toLowerCase())) : entries),
+    [entries, query, filterFn],
+  );
+
+  const selectedDisplay = useMemo(() => {
+    const found = entries.find((c) => displayFn(c) === value || c.code === value || c.dial === value);
+    return found ? displayFn(found) : value;
+  }, [entries, value, displayFn]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <input
+        id={id}
+        type="text"
+        className="input"
+        value={open ? query : selectedDisplay}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) setOpen(true);
+        }}
+        onFocus={() => {
+          setOpen(true);
+          setQuery("");
+        }}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <ul
+          style={{
+            position: "absolute",
+            zIndex: 10,
+            background: "var(--bg-surface, #fff)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "var(--radius-sm)",
+            maxHeight: "200px",
+            overflow: "auto",
+            width: "100%",
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+          }}
+        >
+          {filtered.map((c) => (
+            <li
+              key={c.code + c.dial}
+              style={{
+                padding: "var(--spacing-2) var(--spacing-3)",
+                cursor: "pointer",
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(displayFn(c));
+                setOpen(false);
+                setQuery("");
+              }}
+            >
+              {displayFn(c)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
+
+  // ADR-126: English default for public form, but don't change global fallbackLng
+  useEffect(() => {
+    const lang = searchParams.get("lang") || "en";
+    i18n.changeLanguage(lang);
+    return () => {
+      // Restore default language when leaving page
+      i18n.changeLanguage("ja");
+    };
+  }, [searchParams]);
 
   const [loading, setLoading] = useState(true);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
@@ -63,8 +177,11 @@ export default function RegisterPage() {
   const [submitted, setSubmitted] = useState(false);
 
   // Form state
+  const [billingDisplayName, setBillingDisplayName] = useState("");
+  const [paymentRecipientName, setPaymentRecipientName] = useState("");
   const [billingAddress, setBillingAddress] = useState<AddressForm>(emptyAddress("billing"));
   const [deliveryAddress, setDeliveryAddress] = useState<AddressForm>(emptyAddress("delivery"));
+  const [shippingChoice, setShippingChoice] = useState<ShippingChoice>("same");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactTelephone, setContactTelephone] = useState("");
@@ -93,11 +210,37 @@ export default function RegisterPage() {
       });
   }, [token, t]);
 
+  /** Combine dial code + number into a single international phone string. */
+  const combinePhone = (addr: AddressForm): string => {
+    if (!addr.telephone_number) return "";
+    return `${addr.telephone_dial}${addr.telephone_number.replace(/^0+/, "")}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // フロント必須バリデーション: 担当者名 + (メール or 電話)
+    // Front-end required field validation
+    if (!billingDisplayName.trim()) {
+      setError(t("registration.billingNameRequired"));
+      return;
+    }
+    if (!billingAddress.telephone_number.trim()) {
+      setError(t("registration.telephoneRequired"));
+      return;
+    }
+    if (!billingAddress.email.trim()) {
+      setError(t("registration.emailRequired"));
+      return;
+    }
+    if (!billingAddress.address_line_1.trim()) {
+      setError(t("registration.addressLine1Required"));
+      return;
+    }
+    if (!billingAddress.country_code.trim()) {
+      setError(t("registration.countryRequired"));
+      return;
+    }
     if (!contactName.trim()) {
       setError(t("registration.contactNameRequired"));
       return;
@@ -109,9 +252,45 @@ export default function RegisterPage() {
 
     setSubmitting(true);
 
-    const addresses = [billingAddress, deliveryAddress].filter(
-      (a) => a.address_line_1 || a.city || a.name
-    );
+    // Prepare billing address with combined phone
+    const billingData = {
+      ...billingAddress,
+      name: billingDisplayName,
+      telephone: combinePhone(billingAddress),
+    };
+
+    // Build addresses array
+    const addresses = [billingData];
+
+    if (shippingChoice === "proceed") {
+      // Shipping address validation
+      if (!deliveryAddress.name.trim()) {
+        setError(t("registration.recipientNameRequired"));
+        setSubmitting(false);
+        return;
+      }
+      if (!deliveryAddress.address_line_1.trim()) {
+        setError(t("registration.shippingAddressLine1Required"));
+        setSubmitting(false);
+        return;
+      }
+      if (!deliveryAddress.country_code.trim()) {
+        setError(t("registration.shippingCountryRequired"));
+        setSubmitting(false);
+        return;
+      }
+      addresses.push({
+        ...deliveryAddress,
+        telephone: combinePhone(deliveryAddress),
+      });
+    } else {
+      // "Ship to the same address." -> duplicate billing as delivery
+      addresses.push({
+        ...billingData,
+        address_type: "delivery",
+        is_default: true,
+      });
+    }
 
     try {
       const res = await fetch("/api/v1/public/register", {
@@ -123,6 +302,8 @@ export default function RegisterPage() {
           contact_name: contactName || undefined,
           contact_email: contactEmail || undefined,
           contact_telephone: contactTelephone || undefined,
+          billing_display_name: billingDisplayName || undefined,
+          payment_recipient_name: paymentRecipientName || undefined,
         }),
       });
 
@@ -130,7 +311,7 @@ export default function RegisterPage() {
         const body = await res.json().catch(() => null);
         const rawDetail = body?.detail;
         const msg = Array.isArray(rawDetail)
-          ? rawDetail.map((e: { msg?: string; message?: string }) => e.msg ?? e.message ?? t("registration.submitError")).join("、")
+          ? rawDetail.map((d: { msg?: string; message?: string }) => d.msg ?? d.message ?? t("registration.submitError")).join(", ")
           : rawDetail ?? t("registration.submitError");
         throw new Error(msg);
       }
@@ -141,6 +322,12 @@ export default function RegisterPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const currentLang = i18n.language;
+  const toggleLang = () => {
+    const next = currentLang === "en" ? "ja" : "en";
+    i18n.changeLanguage(next);
   };
 
   if (loading) {
@@ -173,8 +360,17 @@ export default function RegisterPage() {
   const updateDelivery = (field: keyof AddressForm, value: string | boolean) =>
     setDeliveryAddress((prev) => ({ ...prev, [field]: value }));
 
+  const requiredMark = <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>;
+
   return (
     <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      {/* Language toggle */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--spacing-3)" }}>
+        <button type="button" className="btn btn-ghost" onClick={toggleLang} style={{ fontSize: "var(--font-size-sm)" }}>
+          {currentLang === "en" ? t("registration.switchToJapanese") : t("registration.switchToEnglish")}
+        </button>
+      </div>
+
       <h1>{t("registration.title")}</h1>
       {tokenInfo?.company_name && (
         <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-4)" }}>
@@ -185,7 +381,212 @@ export default function RegisterPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        {/* Contact Info — 最上部（担当者は窓口として最重要） */}
+        {/* Section 1: Billing Address Registration */}
+        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+          <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.section1Title")}</legend>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+            {/* 1. Billing Name */}
+            <label>
+              {t("registration.billingName")} {requiredMark}
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
+                {t("registration.billingNameHint")}
+              </p>
+              <input
+                type="text"
+                className="input"
+                value={billingDisplayName}
+                onChange={(e) => setBillingDisplayName(e.target.value)}
+                required
+              />
+            </label>
+
+            {/* 2. Telephone Number (dial code combo + number) */}
+            <label>
+              {t("registration.telephone")} {requiredMark}
+            </label>
+            <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
+              <div style={{ width: "140px", flexShrink: 0 }}>
+                <CountryCombobox
+                  entries={COUNTRIES}
+                  value={billingAddress.telephone_dial}
+                  onChange={(val) => {
+                    const found = COUNTRIES.find((c) => `${c.dial} ${c.code}` === val);
+                    updateBilling("telephone_dial", found ? found.dial : val);
+                  }}
+                  displayFn={(c) => `${c.dial} ${c.code}`}
+                  filterFn={(c, q) =>
+                    c.name.toLowerCase().includes(q) ||
+                    c.code.toLowerCase().includes(q) ||
+                    c.dial.includes(q)
+                  }
+                  id="billing-dial"
+                />
+              </div>
+              <input
+                type="tel"
+                className="input"
+                style={{ flex: 1 }}
+                value={billingAddress.telephone_number}
+                onChange={(e) => updateBilling("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
+                placeholder="1234567890"
+                required
+              />
+            </div>
+
+            {/* 3. Email Address */}
+            <label>
+              {t("registration.emailAddress")} {requiredMark}
+              <input
+                type="email"
+                className="input"
+                value={billingAddress.email}
+                onChange={(e) => updateBilling("email", e.target.value)}
+                required
+              />
+            </label>
+
+            {/* 4. Payment Account Name (optional) */}
+            <label>
+              {t("registration.paymentRecipientName")}
+              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
+                {t("registration.paymentRecipientNameHint")}
+              </p>
+              <input
+                type="text"
+                className="input"
+                value={paymentRecipientName}
+                onChange={(e) => setPaymentRecipientName(e.target.value)}
+              />
+            </label>
+
+            {/* 5. Tax ID (optional) */}
+            <label>
+              {t("registration.taxIdFull")}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.tax_id}
+                onChange={(e) => updateBilling("tax_id", e.target.value)}
+              />
+            </label>
+
+            {/* 6. Address Line 1 */}
+            <label>
+              {t("registration.addressLine1")} {requiredMark}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.address_line_1}
+                onChange={(e) => updateBilling("address_line_1", e.target.value)}
+                required
+              />
+            </label>
+
+            {/* 7. Address Line 2 */}
+            <label>
+              {t("registration.addressLine2Hint")}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.address_line_2}
+                onChange={(e) => updateBilling("address_line_2", e.target.value)}
+              />
+            </label>
+
+            {/* 8. City */}
+            <label>
+              {t("registration.city")}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.city}
+                onChange={(e) => updateBilling("city", e.target.value)}
+              />
+            </label>
+
+            {/* 9. State */}
+            <label>
+              {t("registration.state")}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.state}
+                onChange={(e) => updateBilling("state", e.target.value)}
+              />
+            </label>
+
+            {/* 10. ZIP */}
+            <label>
+              {t("registration.zip")}
+              <input
+                type="text"
+                className="input"
+                value={billingAddress.zip}
+                onChange={(e) => updateBilling("zip", e.target.value)}
+              />
+            </label>
+
+            {/* 11. Country */}
+            <label>
+              {t("registration.country")} {requiredMark}
+            </label>
+            <CountryCombobox
+              entries={COUNTRIES}
+              value={billingAddress.country_code}
+              onChange={(val) => {
+                // Extract alpha-2 code from display string or use directly
+                const found = COUNTRIES.find((c) => `${c.name} (${c.code})` === val);
+                updateBilling("country_code", found ? found.code : val);
+              }}
+              displayFn={(c) => `${c.name} (${c.code})`}
+              filterFn={(c, q) =>
+                c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+              }
+              id="billing-country"
+            />
+
+            {/* 12. Shipping question */}
+            <div style={{ marginTop: "var(--spacing-3)" }}>
+              <p style={{ fontWeight: "var(--font-weight-bold)", marginBottom: "var(--spacing-2)" }}>
+                {t("registration.shippingQuestion")} {requiredMark}
+              </p>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="shipping_choice"
+                  value="proceed"
+                  checked={shippingChoice === "proceed"}
+                  onChange={() => setShippingChoice("proceed")}
+                />
+                {t("registration.proceedToRegister")}
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", cursor: "pointer", marginTop: "var(--spacing-1)" }}>
+                <input
+                  type="radio"
+                  name="shipping_choice"
+                  value="same"
+                  checked={shippingChoice === "same"}
+                  onChange={() => setShippingChoice("same")}
+                />
+                {t("registration.shipToSameAddress")}
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        {/* Section 2: Shipping Address Registration (hidden when "same") */}
+        {shippingChoice === "proceed" && (
+          <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+            <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.section2Title")}</legend>
+            <ShippingAddressFields
+              address={deliveryAddress}
+              onChange={updateDelivery}
+            />
+          </fieldset>
+        )}
+
+        {/* Contact Info */}
         <fieldset style={{ border: "2px solid var(--color-primary)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
           <legend style={{ fontWeight: "var(--font-weight-bold)", padding: "0 var(--spacing-2)" }}>
             {t("registration.contactInfo")}
@@ -195,8 +596,7 @@ export default function RegisterPage() {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
             <label>
-              {t("registration.contactName")}{" "}
-              <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
+              {t("registration.contactName")} {requiredMark}
               <input
                 type="text"
                 className="input"
@@ -225,26 +625,6 @@ export default function RegisterPage() {
           </div>
         </fieldset>
 
-        {/* Billing Address */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend>{t("registration.billingAddress")}</legend>
-          <AddressFields
-            address={billingAddress}
-            onChange={updateBilling}
-            section="billing"
-          />
-        </fieldset>
-
-        {/* Delivery Address */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend>{t("registration.deliveryAddress")}</legend>
-          <AddressFields
-            address={deliveryAddress}
-            onChange={updateDelivery}
-            section="delivery"
-          />
-        </fieldset>
-
         <button
           type="submit"
           className="btn btn-primary"
@@ -258,39 +638,63 @@ export default function RegisterPage() {
   );
 }
 
-function AddressFields({
+/** Section 2 fields for shipping address (ADR-126 Section 2). */
+function ShippingAddressFields({
   address,
   onChange,
-  section,
 }: {
   address: AddressForm;
   onChange: (field: keyof AddressForm, value: string | boolean) => void;
-  section: "billing" | "delivery";
 }) {
   const { t } = useTranslation();
-  const nameKey = section === "billing" ? "registration.billingName" : "registration.deliveryName";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+      {/* 1. Recipient Name */}
       <label>
-        {t("registration.branchName")}
-        <input
-          type="text"
-          className="input"
-          value={address.branch_name}
-          onChange={(e) => onChange("branch_name", e.target.value)}
-        />
-      </label>
-      <label>
-        {t(nameKey)}
+        {t("registration.recipientName")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
         <input
           type="text"
           className="input"
           value={address.name}
           onChange={(e) => onChange("name", e.target.value)}
+          required
         />
       </label>
+
+      {/* 2. Telephone Number (optional for shipping) */}
+      <label>{t("registration.telephone")}</label>
+      <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
+        <div style={{ width: "140px", flexShrink: 0 }}>
+          <CountryCombobox
+            entries={COUNTRIES}
+            value={address.telephone_dial}
+            onChange={(val) => {
+              const found = COUNTRIES.find((c) => `${c.dial} ${c.code}` === val);
+              onChange("telephone_dial", found ? found.dial : val);
+            }}
+            displayFn={(c) => `${c.dial} ${c.code}`}
+            filterFn={(c, q) =>
+              c.name.toLowerCase().includes(q) ||
+              c.code.toLowerCase().includes(q) ||
+              c.dial.includes(q)
+            }
+            id="shipping-dial"
+          />
+        </div>
+        <input
+          type="tel"
+          className="input"
+          style={{ flex: 1 }}
+          value={address.telephone_number}
+          onChange={(e) => onChange("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
+          placeholder="1234567890"
+        />
+      </div>
+
+      {/* 3. Email Address (optional for shipping) */}
       <label>
-        {t("registration.email")}
+        {t("registration.shippingEmail")}
         <input
           type="email"
           className="input"
@@ -298,17 +702,10 @@ function AddressFields({
           onChange={(e) => onChange("email", e.target.value)}
         />
       </label>
+
+      {/* 4. Tax ID (optional) */}
       <label>
-        {t("registration.telephone")}
-        <input
-          type="tel"
-          className="input"
-          value={address.telephone}
-          onChange={(e) => onChange("telephone", e.target.value)}
-        />
-      </label>
-      <label>
-        {t("registration.taxId")}
+        {t("registration.taxIdFull")}
         <input
           type="text"
           className="input"
@@ -316,15 +713,20 @@ function AddressFields({
           onChange={(e) => onChange("tax_id", e.target.value)}
         />
       </label>
+
+      {/* 5. Address Line 1 */}
       <label>
-        {t("registration.addressLine1")}
+        {t("registration.addressLine1")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
         <input
           type="text"
           className="input"
           value={address.address_line_1}
           onChange={(e) => onChange("address_line_1", e.target.value)}
+          required
         />
       </label>
+
+      {/* 6. Address Line 2 */}
       <label>
         {t("registration.addressLine2")}
         <input
@@ -334,6 +736,8 @@ function AddressFields({
           onChange={(e) => onChange("address_line_2", e.target.value)}
         />
       </label>
+
+      {/* 7. Address Line 3 (shipping only, ADR-126) */}
       <label>
         {t("registration.addressLine3")}
         <input
@@ -343,16 +747,8 @@ function AddressFields({
           onChange={(e) => onChange("address_line_3", e.target.value)}
         />
       </label>
-      {/* 縦並び: 都道府県→市区町村（日本慣習順） */}
-      <label>
-        {t("registration.state")}
-        <input
-          type="text"
-          className="input"
-          value={address.state}
-          onChange={(e) => onChange("state", e.target.value)}
-        />
-      </label>
+
+      {/* 8. City */}
       <label>
         {t("registration.city")}
         <input
@@ -362,27 +758,46 @@ function AddressFields({
           onChange={(e) => onChange("city", e.target.value)}
         />
       </label>
-      <div style={{ display: "flex", gap: "var(--spacing-3)" }}>
-        <label style={{ flex: 1 }}>
-          {t("registration.zip")}
-          <input
-            type="text"
-            className="input"
-            value={address.zip}
-            onChange={(e) => onChange("zip", e.target.value)}
-          />
-        </label>
-        <label style={{ flex: 1 }}>
-          {t("registration.countryCode")}
-          <input
-            type="text"
-            className="input"
-            value={address.country_code}
-            maxLength={2}
-            onChange={(e) => onChange("country_code", e.target.value.toUpperCase())}
-          />
-        </label>
-      </div>
+
+      {/* 9. State */}
+      <label>
+        {t("registration.state")}
+        <input
+          type="text"
+          className="input"
+          value={address.state}
+          onChange={(e) => onChange("state", e.target.value)}
+        />
+      </label>
+
+      {/* 10. ZIP */}
+      <label>
+        {t("registration.zip")}
+        <input
+          type="text"
+          className="input"
+          value={address.zip}
+          onChange={(e) => onChange("zip", e.target.value)}
+        />
+      </label>
+
+      {/* 11. Country */}
+      <label>
+        {t("registration.country")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
+      </label>
+      <CountryCombobox
+        entries={COUNTRIES}
+        value={address.country_code}
+        onChange={(val) => {
+          const found = COUNTRIES.find((c) => `${c.name} (${c.code})` === val);
+          onChange("country_code", found ? found.code : val);
+        }}
+        displayFn={(c) => `${c.name} (${c.code})`}
+        filterFn={(c, q) =>
+          c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+        }
+        id="shipping-country"
+      />
     </div>
   );
 }
