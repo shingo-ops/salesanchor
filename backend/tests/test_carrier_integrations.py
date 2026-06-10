@@ -79,11 +79,38 @@ def test_connection_network_error():
 
 
 # ─────────────────────────────────────────────────────────────
+# get_status: フィールド別登録ヒント
+# ─────────────────────────────────────────────────────────────
+def test_account_number_hint_masking():
+    """末尾3桁マスクが正しく生成される。"""
+    # 6桁以上のアカウント番号 → ******XXX
+    acct = "123456789"
+    suffix = acct[-3:]
+    hint = f"******{suffix}"
+    assert hint == "******789"
+
+
+def test_account_number_hint_short():
+    """短いアカウント番号でも末尾3桁を返す（存在する分だけ）。"""
+    acct = "01"
+    suffix = acct[-3:]  # 全体
+    hint = f"******{suffix}"
+    assert hint == "******01"
+
+
+# ─────────────────────────────────────────────────────────────
 # エンドポイント（DB/HTTP はモック）
 # ─────────────────────────────────────────────────────────────
-async def test_status_endpoint(client, monkeypatch):
+async def test_status_endpoint_configured(client, monkeypatch):
+    """登録済み時: フィールド別ヒントが含まれる。"""
     async def _status(db, tid, carrier):
-        return {"configured": True, "environment": "sandbox"}
+        return {
+            "configured": True,
+            "environment": "production",
+            "client_id_hint": "test-api-key-id",
+            "secret_configured": True,
+            "account_number_hint": "******011",
+        }
 
     monkeypatch.setattr(svc, "get_status", _status)
     resp = await client.get("/api/v1/integrations/carriers/fedex/status")
@@ -91,6 +118,30 @@ async def test_status_endpoint(client, monkeypatch):
     body = resp.json()
     assert body["carrier"] == "fedex"
     assert body["configured"] is True
+    assert body["client_id_hint"] == "test-api-key-id"
+    assert body["secret_configured"] is True
+    assert body["account_number_hint"] == "******011"
+
+
+async def test_status_endpoint_not_configured(client, monkeypatch):
+    """未登録時: ヒントは None / False。"""
+    async def _status(db, tid, carrier):
+        return {
+            "configured": False,
+            "environment": "production",
+            "client_id_hint": None,
+            "secret_configured": False,
+            "account_number_hint": None,
+        }
+
+    monkeypatch.setattr(svc, "get_status", _status)
+    resp = await client.get("/api/v1/integrations/carriers/dhl/status")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["configured"] is False
+    assert body["client_id_hint"] is None
+    assert body["secret_configured"] is False
+    assert body["account_number_hint"] is None
 
 
 async def test_status_invalid_carrier_404(client):
@@ -103,16 +154,33 @@ async def test_save_credentials(client, monkeypatch):
 
     async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
         calls["carrier"] = carrier
+        calls["env"] = env
         calls["account_number"] = account_number
 
     monkeypatch.setattr(svc, "save_credentials", _save)
     resp = await client.put(
         "/api/v1/integrations/carriers/ups/credentials",
-        json={"client_id": "x", "client_secret": "y", "environment": "sandbox"},
+        json={"client_id": "x", "client_secret": "y"},
     )
     assert resp.status_code == 204
     assert calls["carrier"] == "ups"
     assert calls["account_number"] is None  # 未指定時は None
+
+
+async def test_save_forces_production_environment(client, monkeypatch):
+    """リクエストの environment フィールドを無視し、常に production で保存する。"""
+    calls = {}
+
+    async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
+        calls["env"] = env
+
+    monkeypatch.setattr(svc, "save_credentials", _save)
+    resp = await client.put(
+        "/api/v1/integrations/carriers/fedex/credentials",
+        json={"client_id": "x", "client_secret": "y", "environment": "sandbox"},
+    )
+    assert resp.status_code == 204
+    assert calls["env"] == "production"  # sandbox を渡しても production に上書きされる
 
 
 async def test_save_credentials_missing_fields(client):
@@ -121,6 +189,22 @@ async def test_save_credentials_missing_fields(client):
         json={"client_id": "", "client_secret": "", "environment": "sandbox"},
     )
     assert resp.status_code == 400
+
+
+async def test_save_with_account_number(client, monkeypatch):
+    """account_number が指定された場合は保存されること。"""
+    calls = {}
+
+    async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
+        calls["account_number"] = account_number
+
+    monkeypatch.setattr(svc, "save_credentials", _save)
+    resp = await client.put(
+        "/api/v1/integrations/carriers/fedex/credentials",
+        json={"client_id": "id", "client_secret": "sec", "account_number": "123456011"},
+    )
+    assert resp.status_code == 204
+    assert calls["account_number"] == "123456011"
 
 
 async def test_test_connection_endpoint(client, monkeypatch):

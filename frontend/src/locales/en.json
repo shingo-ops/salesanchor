@@ -212,7 +212,12 @@
     "failMsg": "Connection failed",
     "labelAccountNumber": "Account number",
     "accountNumberHint": "FedEx / UPS: Shipping account number (required for rate quotes and label printing)",
-    "accountNumberPlaceholder": "Re-enter to update (hidden if already saved)"
+    "accountNumberPlaceholder": "Re-enter to update (hidden if already saved)",
+    "registeredInfoTitle": "Registered credentials",
+    "secretRegistered": "Registered (enter only when changing)",
+    "accountNumberNotSet": "Not set (please enter)",
+    "updateSectionTitle": "Enter all fields to update",
+    "productionFixed": "Production (fixed)"
   },
   "fedexRateModal": {
     "title": "FedEx Live Rate Quote",
