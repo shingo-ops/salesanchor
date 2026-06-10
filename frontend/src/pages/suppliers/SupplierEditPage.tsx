@@ -73,7 +73,7 @@ export default function SupplierEditPage() {
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
+        <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <SupplierFormFields form={form} onChange={handleChange} />
           <div className="form-actions">
             <button
