@@ -160,16 +160,16 @@ grep -rn "<DataTable" frontend/src/pages → 0件（design-preview のデモの�
 
 | ページ | 理由 |
 |--------|------|
-| `inventory/InventoryPage.tsx:617` | 列非表示トグル（hiddenColumns）/ ページネーション / 独自チェックボックス複合。DataTable に「列非表示」機能が未実装 |
-| `products/ProductsPage.tsx:562` | 2段ヘッダー（rowSpan/colSpan 必須）/ 行ドラッグ並び替え（drag events）。DataTable では構造的に実装不可 |
+| `frontend/src/pages/inventory/InventoryPage.tsx:617` | 列非表示トグル（hiddenColumns）/ ページネーション / 独自チェックボックス複合。DataTable に「列非表示」機能が未実装 |
+| `frontend/src/pages/products/ProductsPage.tsx:562` | 2段ヘッダー（rowSpan/colSpan 必須）/ 行ドラッグ並び替え（drag events）。DataTable では構造的に実装不可 |
 
 ### 5-B. 慎重扱い（機能追加が必要なもの）
 
 | ページ | 追加必要な DataTable 機能 |
 |--------|--------------------------|
-| `leads/LeadsPage.tsx:362` | 行クリック（`onRowClick`）— DataTable に未実装。renderCell のボタンで代替も可だが UX 変化あり |
-| `suppliers/SuppliersPage.tsx:101` | 行クリック（`onRowClick`）— 同上 |
-| `contacts/ContactsPage.tsx:325` | 行クリック（`onRowClick`）— 同上 |
+| `frontend/src/pages/leads/LeadsPage.tsx:362` | 行クリック（`onRowClick`）— DataTable に未実装。renderCell のボタンで代替も可だが UX 変化あり |
+| `frontend/src/pages/suppliers/SuppliersPage.tsx:101` | 行クリック（`onRowClick`）— 同上 |
+| `frontend/src/pages/contacts/ContactsPage.tsx:325` | 行クリック（`onRowClick`）— 同上 |
 | `commissions/CommissionsPage.tsx:172,193,224` | 3テーブルが集計ロジックと一体化。置換よりも集計ロジックの整理が先決 |
 
 ### 5-C. フォーム内明細テーブル
@@ -182,10 +182,10 @@ grep -rn "<DataTable" frontend/src/pages → 0件（design-preview のデモの�
 
 | 項目 | 状況 |
 |------|------|
-| `shifts/ShiftsPage.tsx:74` の列数・機能 | ファイル未精読（単純テーブルと推定するが未確認） |
-| `notifications/NotificationsPage.tsx:70` の列数・機能 | 同上 |
-| `archives/ArchivesPage.tsx:33` の列数・機能 | 同上 |
-| `erp/ERPPage.tsx:58` の列数・機能 | 同上 |
+| `frontend/src/pages/shifts/ShiftsPage.tsx:74` の列数・機能 | ファイル未精読（単純テーブルと推定するが未確認） |
+| `frontend/src/pages/notifications/NotificationsPage.tsx:70` の列数・機能 | 同上 |
+| `frontend/src/pages/archives/ArchivesPage.tsx:33` の列数・機能 | 同上 |
+| `frontend/src/pages/erp/ERPPage.tsx:58` の列数・機能 | 同上 |
 | DataTable に `onRowClick` を追加するか / renderCell ボタンで代替するか | PO 判断待ち（UX トレードオフあり） |
 
 ---
