@@ -19,6 +19,7 @@ import SalesPage from "./pages/sales/SalesPage";
 import CommissionsPage from "./pages/commissions/CommissionsPage";
 import LeadsPage from "./pages/leads/LeadsPage";
 import TeamsPage from "./pages/teams/TeamsPage";
+import TeamEditPage from "./pages/teams/TeamEditPage";
 import RolesPage from "./pages/roles/RolesPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import ProductEditPage from "./pages/products/ProductEditPage";
@@ -41,6 +42,7 @@ import SchedulePage from "./pages/schedule/SchedulePage";
 import ERPPage from "./pages/erp/ERPPage";
 import StaffPage from "./pages/staff/StaffPage";
 import BotsPage from "./pages/bots/BotsPage";
+import BotEditPage from "./pages/bots/BotEditPage";
 import ChannelsPage from "./pages/channels/ChannelsPage";
 import OAuthCallbackPage from "./pages/oauth-callback/OAuthCallbackPage";
 import InboxPage from "./pages/inbox/InboxPage";
@@ -186,7 +188,9 @@ function App() {
                   />
                   <Route path="/staff" element={<StaffPage />} />
                   <Route path="/bots" element={<BotsPage />} />
+                  <Route path="/bots/:id/edit" element={<BotEditPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
+                  <Route path="/teams/:id/edit" element={<TeamEditPage />} />
                   <Route path="/roles" element={<RolesPage />} />
                   <Route path="/data" element={<ERPPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
