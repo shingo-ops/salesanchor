@@ -7,9 +7,9 @@
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-Firebase MFA 必須環境での CI/CD smoke は「サービスアカウントトークン bypass」が標準パターン（GitHub Actions → secrets に pre-shared token → backend でリテラル照合）。今回も同方式を採用。
+Firebase MFA 必須環境での CI/CD smoke は「サービスアカウントトークン bypass」が標準パターン（GitHub Actions → secrets に pre-shared token → backend でリテラル照合）。今回も同方式を採用。`secrets.compare_digest` によるタイミング攻撃防止は Python 標準ライブラリの推奨実装。
 
 ---
 
