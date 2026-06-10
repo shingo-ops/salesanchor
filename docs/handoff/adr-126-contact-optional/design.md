@@ -42,7 +42,8 @@ ZIP/メールの「出口補完（DBは空）」と異なり、担当者名は�
 
 ---
 
-## 外部事例・ADR参照
+## 外部・過去事例の参照と我々への応用
 
-- ADR-126 §5「偽データをDBに入れない」との非対称性: 担当者名のフォールバックはDBに保存してよい（窓口の実体確定が目的）
-- ADR-126 追補 Section 0 に設計根拠を追記済み
+- **ADR-126 §5「偽データをDBに入れない」との非対称性**: ZIP/メールは「出口補完（DBは空）」だが、担当者名は「窓口の実体確定」のため登録時にDBへ保存する設計とした（ADR-126 追補 Section 0 に根拠記載）。参照: `docs/handoff/adr-126-contact-optional/recon.md`
+- **社内過去事例（SA-18 Phase2）**: 確実性はゲートで担保するアプローチを踏襲。バリデーション緩和は受け入れ条件＋Evaluator で担保。
+- **Pydantic field_validator パターン**: `Optional[str]` フィールドの空文字列 → None 正規化は既存の `validate_email` / `validate_tel` と同パターン。`contact_name` も同様に実装し一貫性を維持。
