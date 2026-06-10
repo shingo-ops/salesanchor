@@ -958,6 +958,39 @@ async def setup_test_db(test_engine):
             INSERT OR IGNORE INTO users (id, tenant_id, username, email, role, is_active, locale, theme)
             VALUES (999, 999, 'testuser', 'test@example.com', 'admin', TRUE, 'ja', 'light')
         """))
+        # 配送キャリア認証情報テーブル（migration 20260608 相当: SQLite 互換版）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_carrier_credentials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                carrier TEXT NOT NULL,
+                client_id_encrypted TEXT NOT NULL DEFAULT '',
+                client_secret_encrypted TEXT NOT NULL DEFAULT '',
+                environment TEXT NOT NULL DEFAULT 'production',
+                account_number_encrypted TEXT,
+                updated_by_user_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (tenant_id, carrier)
+            )
+        """))
+        # 目標テーブル（migration 075 相当: SQLite 互換版）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                team_id INTEGER,
+                period_type VARCHAR(10) NOT NULL,
+                period_year INTEGER NOT NULL,
+                period_num INTEGER NOT NULL,
+                kpi_type VARCHAR(30) NOT NULL,
+                target_value REAL NOT NULL,
+                created_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, team_id, period_type, period_year, period_num, kpi_type)
+            )
+        """))
     yield
 
 
@@ -972,6 +1005,8 @@ async def db_session(test_engine, setup_test_db):
     # テスト後にデータを全削除（FK制約順）
     async with test_engine.begin() as conn:
         await conn.execute(text("DELETE FROM audit_logs"))
+        await conn.execute(text("DELETE FROM goals"))
+        await conn.execute(text("DELETE FROM tenant_carrier_credentials"))
         await conn.execute(text("DELETE FROM invoice_items"))
         await conn.execute(text("DELETE FROM invoices"))
         await conn.execute(text("DELETE FROM quote_items"))
@@ -1086,6 +1121,14 @@ ALL_TEST_PERMISSIONS = {
     "bots.view", "bots.create", "bots.update", "bots.delete",
     # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人)
     "tenant.profile.view", "tenant.profile.edit",
+    # 目標管理
+    "goals.view", "goals.edit",
+    # 顧客優先度スコア
+    "analytics.customer_priority.view", "analytics.customer_priority.override",
+    # 在庫可視性設定
+    "tenant.inventory_visibility.edit",
+    # メッセージング
+    "messaging.view", "messaging.send",
 }
 
 
@@ -1164,6 +1207,9 @@ async def client(db_session):
         "app.routers.tenant_profile",
         # Sprint D2: Discord Guild 設定
         "app.routers.discord_guild_config",
+        # 監査ログ補完（高重要度2系統）
+        "app.routers.goals",
+        "app.routers.integrations",
     ]
     with ExitStack() as stack:
         for target in _audit_targets:
