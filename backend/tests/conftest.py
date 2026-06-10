@@ -77,6 +77,8 @@ async def test_engine():
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
             statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
+        if "public.registration_tokens" in statement:
+            statement = statement.replace("public.registration_tokens", "registration_tokens")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -991,6 +993,52 @@ async def setup_test_db(test_engine):
                 UNIQUE (user_id, team_id, period_type, period_year, period_num, kpi_type)
             )
         """))
+        # Google Drive 連携設定テーブル（中重要度 audit テスト用）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_google_drive_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                access_token_encrypted TEXT NOT NULL DEFAULT 'enc_dummy',
+                refresh_token_encrypted TEXT NOT NULL DEFAULT 'enc_dummy',
+                token_expiry TEXT,
+                account_email TEXT,
+                folder_id TEXT,
+                connected_by_user_id INTEGER,
+                connected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # 顧客優先度スコアテーブル（中重要度 audit テスト用）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS customer_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lead_id INTEGER NOT NULL UNIQUE,
+                score REAL,
+                tier TEXT,
+                confidence REAL,
+                signal_summary TEXT,
+                override_score REAL,
+                override_note TEXT,
+                override_by INTEGER,
+                override_at TEXT,
+                computed_at TEXT,
+                manually_overridden INTEGER DEFAULT 0
+            )
+        """))
+        # 登録トークンテーブル（中重要度 audit テスト用）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS registration_tokens (
+                id TEXT PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                lead_id INTEGER NOT NULL,
+                token_hash TEXT NOT NULL,
+                type TEXT NOT NULL DEFAULT 'register',
+                expires_at TEXT NOT NULL,
+                created_by INTEGER,
+                used_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield
 
 
@@ -1006,6 +1054,9 @@ async def db_session(test_engine, setup_test_db):
     async with test_engine.begin() as conn:
         await conn.execute(text("DELETE FROM audit_logs"))
         await conn.execute(text("DELETE FROM goals"))
+        await conn.execute(text("DELETE FROM tenant_google_drive_config"))
+        await conn.execute(text("DELETE FROM customer_scores"))
+        await conn.execute(text("DELETE FROM registration_tokens"))
         await conn.execute(text("DELETE FROM tenant_carrier_credentials"))
         await conn.execute(text("DELETE FROM invoice_items"))
         await conn.execute(text("DELETE FROM invoices"))
@@ -1210,6 +1261,10 @@ async def client(db_session):
         # 監査ログ補完（高重要度2系統）
         "app.routers.goals",
         "app.routers.integrations",
+        # 監査ログ補完（中重要度4系統）
+        "app.routers.customer_priority",
+        "app.routers.registration_tokens",
+        "app.routers.tenant_admin_inventory_visibility",
     ]
     with ExitStack() as stack:
         for target in _audit_targets:

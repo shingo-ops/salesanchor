@@ -42,6 +42,7 @@ from app.schemas.registration_token import (
     RegisterResponse,
     TokenVerifyResponse,
 )
+from app.services.audit import record_audit_log
 from app.services.registration_token import (
     create_registration_token,
     mark_token_used,
@@ -81,6 +82,19 @@ async def create_token(
         lead_id=data.lead_id,
         created_by=current_user.id,
         token_type=data.type.value,
+    )
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="create", table_name="registration_tokens",
+        record_id=None,
+        old_data=None,
+        new_data={
+            "tenant_id": tenant_id,
+            "lead_id": data.lead_id,
+            "type": data.type.value,
+            "expires_at": expires_at.isoformat(),
+            "created_by": current_user.id,
+        },
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
