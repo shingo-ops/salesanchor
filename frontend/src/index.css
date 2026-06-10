@@ -142,7 +142,7 @@
   --accent-bg: #2d6cdf;
   --bg-badge: #eeeeff;
 
-  /* FedEx レート比較モーダル バッジカラー（ADR-124） */
+  /* FedEx レート比較モーダル バッジカラー（ADR-125） */
   --color-blue-100:      #dbeafe;  /* ライブバッジ背景 */
   --color-blue-700:      #1d4ed8;  /* ライブバッジ文字 */
   --color-gray-100:      #f3f4f6;  /* 静的バッジ背景 */
@@ -324,7 +324,7 @@
   --accent-bg: #818cf8;
   --bg-badge: #3b2d5c;
 
-  /* FedEx レート比較モーダル バッジカラー（ADR-124 ダーク） */
+  /* FedEx レート比較モーダル バッジカラー（ADR-125 ダーク） */
   --color-blue-100:      #1e3a5f;  /* ライブバッジ背景 */
   --color-blue-700:      #93c5fd;  /* ライブバッジ文字 */
   --color-gray-100:      #1f2937;  /* 静的バッジ背景 */
