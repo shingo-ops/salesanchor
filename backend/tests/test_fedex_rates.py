@@ -59,12 +59,12 @@ def _mock_token_resp(token: str = "test-token", expires_in: int = 3600):
 def _mock_rates_resp(quotes: list[dict] | None = None):
     """Rates API レスポンスモック。
 
-    デフォルトは INTERNATIONAL_PRIORITY（TARGET_INTERNATIONAL_SERVICE_TYPES の確認済みコード）。
+    デフォルトは FEDEX_INTERNATIONAL_PRIORITY（本番 API の正しい名称）。
     """
     if quotes is None:
         quotes = [
             {
-                "serviceType": "INTERNATIONAL_PRIORITY",
+                "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
                 "serviceName": "FedEx International Priority®",
                 "ratedShipmentDetails": [
                     {
@@ -165,7 +165,7 @@ class TestGetRates:
             )
 
         assert len(quotes) == 1
-        assert quotes[0].service_type == "INTERNATIONAL_PRIORITY"
+        assert quotes[0].service_type == "FEDEX_INTERNATIONAL_PRIORITY"
         assert quotes[0].total_net_charge == Decimal("12500")
         assert quotes[0].currency == "JPY"
         assert quotes[0].transit_days == 2
@@ -181,7 +181,7 @@ class TestGetRates:
                 ],
             },
             {
-                "serviceType": "INTERNATIONAL_PRIORITY",  # 対象内
+                "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",  # 対象内（本番の正しい名称）
                 "serviceName": "FedEx International Priority®",
                 "ratedShipmentDetails": [
                     {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 12500, "currency": "JPY"}
@@ -212,7 +212,7 @@ class TestGetRates:
             )
 
         assert len(quotes) == 1, "対象外サービスがフィルタされず残っている"
-        assert quotes[0].service_type == "INTERNATIONAL_PRIORITY"
+        assert quotes[0].service_type == "FEDEX_INTERNATIONAL_PRIORITY"
 
     def test_rates_api_401_clears_cache_and_raises_auth_error(self):
         """Rates API 401 はキャッシュをクリアして FedExAuthError を raise。"""
@@ -273,7 +273,7 @@ class TestGetRates:
                 ],
             },
             {
-                "serviceType": "INTERNATIONAL_PRIORITY",
+                "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
                 "serviceName": "FedEx International Priority®",
                 "ratedShipmentDetails": [
                     {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 12500, "currency": "JPY"}
@@ -412,7 +412,7 @@ class TestShippingCalculateEndpoint:
         }
         mock_quotes = [
             FedExRateQuote(
-                service_type="INTERNATIONAL_PRIORITY",
+                service_type="FEDEX_INTERNATIONAL_PRIORITY",
                 service_name="FedEx International Priority®",
                 total_net_charge=Decimal("12500"),
                 currency="JPY",
@@ -444,7 +444,7 @@ class TestShippingCalculateEndpoint:
         }
         mock_quotes = [
             FedExRateQuote(
-                service_type="INTERNATIONAL_PRIORITY",
+                service_type="FEDEX_INTERNATIONAL_PRIORITY",
                 service_name="FedEx International Priority®",
                 total_net_charge=Decimal("12500"),
                 currency="JPY",
