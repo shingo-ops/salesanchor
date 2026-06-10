@@ -1,4 +1,5 @@
 import os
+import secrets
 
 import firebase_admin
 from fastapi import Depends, HTTPException, Request, status
@@ -27,6 +28,13 @@ security = HTTPBearer()
 
 # MFA強制フラグ（本番では必ずTrue）
 MFA_REQUIRED = os.getenv("MFA_REQUIRED", "true").lower() == "true"
+
+# CI/CD スモークテスト用サービスアカウント設定
+# SMOKE_SERVICE_TOKEN: 256-bit ランダムトークン（secrets.token_urlsafe(32)）。
+# 一致した場合は Firebase 検証・MFA チェックをスキップし SMOKE_SERVICE_EMAIL のユーザーを返す。
+# どちらも未設定（空文字）の場合はこのパスは完全に不活性。
+_SMOKE_SERVICE_TOKEN: str = os.getenv("SMOKE_SERVICE_TOKEN", "")
+_SMOKE_SERVICE_EMAIL: str = os.getenv("SMOKE_SERVICE_EMAIL", "")
 
 # Firebase Admin SDK の初期化（スレッドセーフ）
 import threading
@@ -81,6 +89,26 @@ async def get_current_user(
 
     token = cred.credentials
     client_ip = _get_client_ip(request)
+
+    # サービスアカウントバイパス（CI/CD スモークテスト専用）
+    # SMOKE_SERVICE_TOKEN が設定されており Bearer トークンと一致する場合、
+    # Firebase 検証・MFA チェックをスキップして SMOKE_SERVICE_EMAIL のユーザーを返す。
+    # secrets.compare_digest でタイミング攻撃を防ぐ。
+    if (
+        _SMOKE_SERVICE_TOKEN
+        and _SMOKE_SERVICE_EMAIL
+        and secrets.compare_digest(token, _SMOKE_SERVICE_TOKEN)
+    ):
+        _sa_result = await db.execute(
+            select(User).where(User.email == _SMOKE_SERVICE_EMAIL, User.is_active == True)
+        )
+        _sa_user = _sa_result.scalar_one_or_none()
+        if _sa_user:
+            return _sa_user
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="smoke service user not found",
+        )
 
     # ① ブラックリスト確認（ログアウト済みトークンを拒否・免除ルートより必ず前）
     if await is_token_blacklisted(token):

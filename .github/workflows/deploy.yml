@@ -173,6 +173,8 @@ jobs:
               -e '/^GOOGLE_DRIVE_CLIENT_ID=/d' \
               -e '/^GOOGLE_DRIVE_CLIENT_SECRET=/d' \
               -e '/^GOOGLE_DRIVE_REDIRECT_URI=/d' \
+              -e '/^SMOKE_SERVICE_TOKEN=/d' \
+              -e '/^SMOKE_SERVICE_EMAIL=/d' \
               .env
             rm -f .env.bak
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -196,6 +198,8 @@ jobs:
             GOOGLE_DRIVE_CLIENT_ID=${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}
             GOOGLE_DRIVE_CLIENT_SECRET=${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
             GOOGLE_DRIVE_REDIRECT_URI=${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}
+            SMOKE_SERVICE_TOKEN=${{ secrets.FEDEX_SMOKE_API_TOKEN }}
+            SMOKE_SERVICE_EMAIL=${{ secrets.FEDEX_SMOKE_USER_EMAIL }}
             ENV_EOF
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
@@ -387,7 +391,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: SALESANCHOR_API_TOKEN,ROLLBACK_DISCORD_WEBHOOK,PO_LIVE_OK,FEDEX_SMOKE_ENABLED
+          envs: SALESANCHOR_API_TOKEN,SALESANCHOR_API_URL,ROLLBACK_DISCORD_WEBHOOK,PO_LIVE_OK,FEDEX_SMOKE_ENABLED
           script: |
             set -e
             cd /home/ubuntu/salesanchor
@@ -416,6 +420,7 @@ jobs:
             echo "✅ FedEx live smoke passed"
         env:
           SALESANCHOR_API_TOKEN: ${{ secrets.FEDEX_SMOKE_API_TOKEN }}
+          SALESANCHOR_API_URL: https://api.salesanchor.jp
           ROLLBACK_DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
           PO_LIVE_OK: "yes"
           FEDEX_SMOKE_ENABLED: ${{ secrets.FEDEX_SMOKE_ENABLED }}
