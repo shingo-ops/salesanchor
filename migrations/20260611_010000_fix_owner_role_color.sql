@@ -21,7 +21,7 @@
 --   初回実行後 color が #6366f1 になるため、2回目以降は WHERE に一致する行なし → no-op。
 --
 -- ロールバック（手動実行のみ・本番デプロイでは実行しない）:
---   UPDATE {schema}.roles SET color = '#ef4444', updated_at = NOW()
+--   UPDATE tenant_NNN.roles SET color = '#ef4444', updated_at = NOW()
 --   WHERE is_system = TRUE AND color = '#6366f1' AND priority = 1000;
 
 DO $$
