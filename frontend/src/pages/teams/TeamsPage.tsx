@@ -13,6 +13,8 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { Modal } from "../../components/Modal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 import "./TeamsPage.css";
 
 interface Team {
@@ -197,53 +199,55 @@ export default function TeamsPage() {
                 <button type="submit" className="btn-primary">{t("common.add")}</button>
               </form>
             )}
-            <table className="data-table">
-              <thead><tr><th>{t("teams.colUsername")}</th><th>{t("common.email")}</th><th>{t("teams.colJoinedAt")}</th><th>{t("common.actions")}</th></tr></thead>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.user_id}>
-                    <td>{m.username || "-"}</td>
-                    <td>{m.email || "-"}</td>
-                    <td>{new Date(m.joined_at).toLocaleDateString()}</td>
-                    <td>
-                      {hasPermission("teams.manage_members") && (
-                        <button className="btn-sm btn-danger" onClick={() => removeMember(m.user_id)}>{t("common.remove")}</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {members.length === 0 && <tr><td colSpan={4} className="empty">{t("teams.noMembers")}</td></tr>}
-              </tbody>
-            </table>
+            {(() => {
+              const memberColumns: DataTableColumn<TeamMember>[] = [
+                { key: "username", header: t("teams.colUsername"), renderCell: (m) => m.username || "-" },
+                { key: "email", header: t("common.email"), renderCell: (m) => m.email || "-" },
+                { key: "joined_at", header: t("teams.colJoinedAt"), renderCell: (m) => new Date(m.joined_at).toLocaleDateString() },
+                { key: "actions", header: t("common.actions"), renderCell: (m) => (
+                  hasPermission("teams.manage_members")
+                    ? <button className="btn-sm btn-danger" onClick={() => removeMember(m.user_id)}>{t("common.remove")}</button>
+                    : null
+                )},
+              ];
+              return (
+                <DataTable<TeamMember>
+                  columns={memberColumns}
+                  data={members}
+                  rowKey={(m) => String(m.user_id)}
+                  emptyState={t("teams.noMembers")}
+                />
+              );
+            })()}
           </>
         )}
       </Modal>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr><th>{t("teams.teamName")}</th><th>{t("common.description")}</th><th>{t("teams.colMemberCount")}</th><th>{t("teams.colLeaderId")}</th><th>{t("common.actions")}</th></tr>
-          </thead>
-          <tbody>
-            {teams.map((team) => (
-              <tr key={team.id}>
-                <td>{team.name}</td>
-                <td>{team.description || "-"}</td>
-                <td>{team.member_count ?? 0}</td>
-                <td>{team.leader_id ?? "-"}</td>
-                <td className="actions">
-                  <button className="btn-sm" onClick={() => openMembers(team)}>{t("teams.membersBtn")}</button>
-                  {hasPermission("teams.update") && <button className="btn-sm" onClick={() => handleEdit(team)}>{t("common.edit")}</button>}
-                  {hasPermission("teams.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(team)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {teams.length === 0 && <tr><td colSpan={5} className="empty">{t("teams.noTeams")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const teamColumns: DataTableColumn<Team>[] = [
+          { key: "name", header: t("teams.teamName") },
+          { key: "description", header: t("common.description"), renderCell: (team) => team.description || "-" },
+          { key: "member_count", header: t("teams.colMemberCount"), renderCell: (team) => String(team.member_count ?? 0) },
+          { key: "leader_id", header: t("teams.colLeaderId"), renderCell: (team) => String(team.leader_id ?? "-") },
+          { key: "actions", header: t("common.actions"), renderCell: (team) => (
+            <span className="actions">
+              <button className="btn-sm" onClick={() => openMembers(team)}>{t("teams.membersBtn")}</button>
+              {hasPermission("teams.update") && <button className="btn-sm" onClick={() => handleEdit(team)}>{t("common.edit")}</button>}
+              {hasPermission("teams.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(team)}>{t("common.delete")}</button>}
+            </span>
+          )},
+        ];
+        return (
+          <DataTable<Team>
+            columns={teamColumns}
+            data={teams}
+            rowKey={(team) => String(team.id)}
+            emptyState={t("teams.noTeams")}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={!!deleteTarget}
