@@ -41,6 +41,7 @@
 .comp-modal-dialog--sm { max-width: var(--modal-max-w-sm); }
 .comp-modal-dialog--md { max-width: var(--modal-max-w-md); }
 .comp-modal-dialog--lg { max-width: var(--modal-max-w-lg); }
+.comp-modal-dialog--xl { max-width: var(--modal-wide-w); }
 
 /* ----------------------------------------------------------------
    ヘッダ

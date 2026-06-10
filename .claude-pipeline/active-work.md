@@ -99,6 +99,10 @@
 | feature/morimoto/sop-dedup-fix | sop-followup重複ガード PR番号単位修正（Reviewer指摘）| 2026-06-09 | IN_PROGRESS | | |
 | feature/morimoto/gate-trigger-fix | process-artifacts gate trigger develop のみに修正（リリースPR誤検知解消） | 2026-06-09 | IN_PROGRESS | | |
 | feature/morimoto/gate-release-skip | process-artifacts gate リリースPRスキップ修正（#1811誤修正の正確な対処） | 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/products-page-edit | ProductsPage モーダル→専用ページ化（ADR-122 Phase D） | 2026-06-09 | DONE | #1828 | |
+| feature/morimoto/modal-xl-replacements | OrdersPage modal-overlay 3件→Modal(xl)置換（ADR-122） | 2026-06-09 | DONE | #1827 | |
+| feature/morimoto/datatable-invoices-pilot | InvoicesPage DataTable パイロット（ADR-067） | 2026-06-09 | DONE | #1841 | |
+| feature/morimoto/datatable-preview | DataTable 金型 + onRowClick + 制御型ページ送り（Task 4C+4D+step2） | 2026-06-08 | DONE | #1847 | |
 ---
 
 ## 記入例

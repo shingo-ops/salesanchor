@@ -9,9 +9,13 @@ from __future__ import annotations
 
 変更履歴:
   2026-04-17: 初版作成（Phase 2）
+  2026-06-09: ADR-125 — FedEx ライブ見積もり分岐追加
 """
 
+import asyncio
+import logging
 from decimal import Decimal
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -35,7 +39,11 @@ from app.schemas.shipping import (
     ShippingZoneCreate,
     ShippingZoneResponse,
 )
+from app.services import carrier_credentials, fedex_rates
 from app.services.audit import record_audit_log
+from app.services.fedex_rates import FedExAPIError, FedExAuthError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -253,8 +261,9 @@ async def calculate_shipping_fee(
     carrier: str | None = None,
 ) -> list[ShippingCalcResult]:
     """
-    国コード＋重量から配送料を計算する。
+    国コード＋重量から静的テーブルで配送料を計算する。
     carrier指定時はそのキャリアのみ、未指定時はFedEx/DHL/UPS全社を返す。
+    source は常に 'static'。
     """
     conditions = ["sz.country_code = :cc"]
     params: dict = {"cc": country_code.upper(), "weight": weight_kg}
@@ -280,9 +289,80 @@ async def calculate_shipping_fee(
     )
     rows = result.mappings().all()
     return [
-        ShippingCalcResult(carrier=r["carrier"], zone=r["zone"], fee=r["price"], currency=r["currency"])
+        ShippingCalcResult(
+            carrier=r["carrier"],
+            zone=r["zone"],
+            fee=r["price"],
+            currency=r["currency"],
+            source="static",
+        )
         for r in rows
     ]
+
+
+async def _try_fedex_live(
+    creds: dict,
+    tenant_id: int,
+    destination_country_code: str,
+    origin_country_code: str,
+    weight_kg: Decimal,
+    origin_postal_code: Optional[str] = None,
+    destination_postal_code: Optional[str] = None,
+) -> tuple[list[ShippingCalcResult], Optional[str], Optional[str]]:
+    """FedEx Rates API を呼び出し、結果・live_error・rate_precision を返す。
+
+    ADR-125 D5（暗黙フォールバック禁止）:
+      - account_number が未設定 → live_error を返す（空リスト + エラー文字列）
+      - API エラー → live_error を返す
+      - 成功 → (results, None, precision)
+
+    Returns:
+        (results, live_error, rate_precision)
+        rate_precision: 'exact'（郵便番号指定あり）または 'approximate'（代表値で補完）
+    """
+    account_number = creds.get("account_number")
+    if not account_number:
+        return [], "FedEx アカウント番号が未設定です（キャリア連携設定で登録してください）", None
+
+    # 郵便番号の有無で精度を判定
+    precision = "exact" if destination_postal_code else "approximate"
+
+    try:
+        quotes = await asyncio.to_thread(
+            fedex_rates.get_rates,
+            tenant_id=tenant_id,
+            environment=creds["environment"],
+            client_id=creds["client_id"],
+            client_secret=creds["client_secret"],
+            account_number=account_number,
+            origin_country_code=origin_country_code,
+            destination_country_code=destination_country_code,
+            weight_kg=weight_kg,
+            origin_postal_code=origin_postal_code,
+            destination_postal_code=destination_postal_code,
+        )
+    except FedExAuthError as e:
+        logger.warning("[shipping] tenant=%d FedEx 認証エラー: %s", tenant_id, e)
+        return [], f"FedEx 認証エラー: {e}", None
+    except FedExAPIError as e:
+        logger.warning("[shipping] tenant=%d FedEx API エラー: %s", tenant_id, e)
+        return [], f"FedEx 見積もり取得失敗: {e}", None
+
+    results = [
+        ShippingCalcResult(
+            carrier="fedex",
+            zone=q.service_type,         # zone フィールドにサービスタイプを格納
+            fee=q.total_net_charge,
+            currency=q.currency,
+            source="fedex_live",
+            service_type=q.service_type,
+            service_name=q.service_name,
+            transit_days=q.transit_days,
+            delivery_timestamp=q.delivery_timestamp,
+        )
+        for q in quotes
+    ]
+    return results, None, precision
 
 
 @router.post(
@@ -296,7 +376,49 @@ async def calc_shipping(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """配送料を自動計算する。キャリア未指定時は3社比較で最安値も返す。"""
+    """配送料を計算する。
+
+    carrier='fedex' 指定時:
+      - FedEx 認証情報が設定済みかつ origin_country_code が指定されていれば
+        FedEx Rates API からライブ見積もりを取得（source='fedex_live'）
+      - 未設定または API エラーの場合は live_error に明示エラーを返す
+        （ADR-125 D5: 暗黙フォールバック禁止 — 静的値をライブと偽らない）
+
+    carrier 未指定または fedex 以外:
+      - 静的テーブルから計算（source='static'）
+    """
+    # ADR-125: FedEx ライブ見積もり分岐
+    if data.carrier == "fedex":
+        if not data.origin_country_code:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="carrier='fedex' 指定時は origin_country_code が必須です",
+            )
+        creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex")
+        if creds:
+            live_results, live_error, rate_precision = await _try_fedex_live(
+                creds=creds,
+                tenant_id=tenant_id,
+                destination_country_code=data.country_code,
+                origin_country_code=data.origin_country_code,
+                weight_kg=data.weight_kg,
+                origin_postal_code=data.origin_postal_code,
+                destination_postal_code=data.destination_postal_code,
+            )
+            return ShippingCalcResponse(
+                results=live_results,
+                cheapest=live_results[0] if live_results else None,
+                live_error=live_error,
+                rate_precision=rate_precision,
+            )
+        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-125 D5 + PO C1判断）
+        # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-125 D4）
+        return ShippingCalcResponse(
+            results=[],
+            cheapest=None,
+            live_error="FedEx が未連携です。キャリア連携設定でアカウントを接続してください",
+        )
+
     results = await calculate_shipping_fee(db, data.country_code, data.weight_kg, data.carrier)
     cheapest = results[0] if results else None
     return ShippingCalcResponse(results=results, cheapest=cheapest)

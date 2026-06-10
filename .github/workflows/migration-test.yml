@@ -378,6 +378,21 @@ jobs:
           --   ただし v_supplier_parse_stats VIEW が parse_logs を参照するため、
           --   migration 実行順（20260604_110000 → 20260604_120000 → 20260604_130000）が
           --   CI の changed_sql ソート順と一致することを確認済み。
+
+          -- tenant_carrier_credentials: ADR-125 RLS + account_number migration の前提テーブル
+          --   20260608_080000_add_carrier_credentials.sql で本番作成済み。
+          CREATE TABLE IF NOT EXISTS public.tenant_carrier_credentials (
+              id                      SERIAL PRIMARY KEY,
+              tenant_id               INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              carrier                 TEXT    NOT NULL,
+              client_id_encrypted     TEXT    NOT NULL DEFAULT '',
+              client_secret_encrypted TEXT    NOT NULL DEFAULT '',
+              environment             TEXT    NOT NULL DEFAULT 'sandbox',
+              updated_by_user_id      INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at              TIMESTAMPTZ DEFAULT NOW(),
+              updated_at              TIMESTAMPTZ DEFAULT NOW(),
+              UNIQUE (tenant_id, carrier)
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────

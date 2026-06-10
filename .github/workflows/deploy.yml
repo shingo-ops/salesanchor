@@ -373,6 +373,53 @@ jobs:
         env:
           SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
 
+      # ADR-124: FedEx Rates live smoke（第1段完了条件）
+      # FEDEX_SMOKE_ENABLED=true になるまで休眠（スイッチOFF = 常時 skip）。
+      # 失敗はジョブ失敗（continue-on-error: false）だがロールバック非連動。
+      # FedEx障害／credential未登録は自動ロールバック対象外（R4判断）。
+      # FedEx live smoke が壊れた版を本番に残さない保証は:
+      #   ①コードバグ → /api/health が落ちる → 既存ロールバックが捕捉
+      #   ②FedEx側障害・credential未登録 → Discord 即時通知 → 人が確認
+      - name: FedEx Rates live smoke (ADR-124 D2)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: SALESANCHOR_API_TOKEN,ROLLBACK_DISCORD_WEBHOOK,PO_LIVE_OK,FEDEX_SMOKE_ENABLED
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+
+            if [ "${FEDEX_SMOKE_ENABLED:-false}" != "true" ]; then
+              echo "ℹ️  FEDEX_SMOKE_ENABLED が 'true' でないため FedEx live smoke をスキップ（ADR-124 D2）"
+              exit 0
+            fi
+
+            set +e
+            bash scripts/smoke/external-fedex.sh --live
+            _fedex_exit=$?
+            set -e
+
+            if [ "${_fedex_exit}" -ne 0 ]; then
+              _webhook="${ROLLBACK_DISCORD_WEBHOOK:-}"
+              if [ -n "${_webhook}" ]; then
+                curl -s -X POST "${_webhook}" \
+                  -H "Content-Type: application/json" \
+                  -d '{"content":"🚨 **FedEx live smoke 失敗** — アプリ稼働中ですが本番 FedEx ライブ見積もりが取得できません。FedEx 障害／認証情報未登録／コードバグを確認してください（ADR-124 D2）。","username":"Deploy Bot"}' \
+                  || true
+              fi
+              exit 1
+            fi
+
+            echo "✅ FedEx live smoke passed"
+        env:
+          SALESANCHOR_API_TOKEN: ${{ secrets.FEDEX_SMOKE_API_TOKEN }}
+          ROLLBACK_DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
+          PO_LIVE_OK: "yes"
+          FEDEX_SMOKE_ENABLED: ${{ secrets.FEDEX_SMOKE_ENABLED }}
+
       # ADR-082: ヘルスチェック・監視確認・イメージ prune はマイグレーション skip 時も
       # 必ず走らせる必要があるため、マイグレーションから分離して常時実行する。
       # （フロントのみのデプロイでも本番の健全性検証が抜けない）

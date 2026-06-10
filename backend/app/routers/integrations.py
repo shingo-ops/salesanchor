@@ -276,6 +276,9 @@ class CarrierCredentialsRequest(BaseModel):
     client_id: str  # FedEx/UPS=Client ID, DHL=API Key
     client_secret: str  # FedEx/UPS=Client Secret, DHL=API Secret
     environment: str = "sandbox"
+    # ADR-125 D2: FedEx / UPS 配送アカウント番号（Rates/Ship API に必須）
+    # None = 未入力（既存値を保持する）
+    account_number: str | None = None
 
 
 class CarrierTestResponse(BaseModel):
@@ -332,6 +335,7 @@ async def save_carrier_credentials(
         payload.client_secret,
         payload.environment,
         user.id,
+        account_number=payload.account_number,
     )
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 

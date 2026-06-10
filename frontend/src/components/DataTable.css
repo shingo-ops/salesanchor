@@ -1,11 +1,11 @@
 /**
  * DataTable — ADR-067: 全カラーは CSS 変数参照のみ（Task 4C）
  *
- * セレクタ順序（specificity 昇順）:
+ * セレクタ順序（specificity 昇順 — no-descending-specificity 順守）:
  *   1. ラッパー / テーブル本体 (0,1,0)
- *   2. 密度バリアント (0,2,0)
- *   3. ヘッダー / セル (0,2,0)
- *   4. 選択状態 (0,2,0)
+ *   2. ベースセル (0,1,0) — 密度バリアントより前に配置必須
+ *   3. 密度バリアント (0,2,0)
+ *   4. ヘッダー行 / データ行 / 選択状態 etc. (0,2,0)
  */
 
 /* ── 1. ラッパー（横スクロール担当） (0,1,0) ── */
@@ -26,12 +26,7 @@
   color: var(--text-primary);
 }
 
-/* ── 3. ヘッダー行 (0,2,0) ── */
-.comp-table__head-row {
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--border);
-}
-
+/* ── 2. ベースセル（密度バリアントより前 — no-descending-specificity） ── */
 .comp-table__th {
   height: var(--comp-table-row-h-default);
   padding: 0 var(--comp-table-cell-px);
@@ -46,6 +41,35 @@
 .comp-table__th--check {
   width: var(--comp-table-check-col-w);
   padding: 0 var(--space-3);
+}
+
+.comp-table__td {
+  height: var(--comp-table-row-h-default);
+  padding: 0 var(--comp-table-cell-px);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.comp-table__td--check {
+  width: var(--comp-table-check-col-w);
+  padding: 0 var(--space-3);
+}
+
+/* ── 3. 密度バリアント (0,2,0) ── */
+.comp-table--compact .comp-table__th,
+.comp-table--compact .comp-table__td {
+  height: var(--comp-table-row-h-compact);
+}
+
+.comp-table--relaxed .comp-table__th,
+.comp-table--relaxed .comp-table__td {
+  height: var(--comp-table-row-h-relaxed);
+}
+
+/* ── 4. ヘッダー行 (0,2,0) ── */
+.comp-table__head-row {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── ソートボタン (0,2,0) ── */
@@ -76,11 +100,11 @@
 .comp-table__sort-icon {
   display: flex;
   align-items: center;
-  opacity: var(--opacity-skipped);
+  opacity: var(--opacity-archived);
 }
 
 .comp-table__sort-btn--active .comp-table__sort-icon {
-  opacity: 1;
+  opacity: var(--opacity-full);
   color: var(--primary);
 }
 
@@ -98,7 +122,7 @@
   background: var(--bg-hover);
 }
 
-/* ── 4. 選択状態 (0,2,0) ── */
+/* ── 選択状態 (0,2,0) ── */
 .comp-table__row--selected {
   background: var(--info-bg);
 }
@@ -106,30 +130,6 @@
 .comp-table__row--selected:hover {
   background: var(--info-bg);
   filter: brightness(0.97);
-}
-
-/* ── データセル (0,2,0) ── */
-.comp-table__td {
-  height: var(--comp-table-row-h-default);
-  padding: 0 var(--comp-table-cell-px);
-  color: var(--text-secondary);
-  vertical-align: middle;
-}
-
-.comp-table__td--check {
-  width: var(--comp-table-check-col-w);
-  padding: 0 var(--space-3);
-}
-
-/* ── 密度バリアント (0,2,0) — __th/__td の後ろに置く（no-descending-specificity 対策） ── */
-.comp-table--compact .comp-table__th,
-.comp-table--compact .comp-table__td {
-  height: var(--comp-table-row-h-compact);
-}
-
-.comp-table--relaxed .comp-table__th,
-.comp-table--relaxed .comp-table__td {
-  height: var(--comp-table-row-h-relaxed);
 }
 
 /* ── チェックボックス ── */
@@ -146,4 +146,31 @@
   text-align: center;
   color: var(--text-muted);
   font-size: var(--font-sm);
+}
+
+/* ── クリック可能行 (0,2,0) ── */
+.comp-table__row--clickable {
+  cursor: pointer;
+}
+
+.comp-table__row--clickable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* ── ページ送りコントロール ── */
+.comp-table__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--comp-table-cell-px);
+  border-top: 1px solid var(--border);
+}
+
+.comp-table__page-info {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  min-width: 4ch;
+  text-align: center;
 }
