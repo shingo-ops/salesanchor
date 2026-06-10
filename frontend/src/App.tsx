@@ -47,6 +47,7 @@ import ComingSoonPage from "./pages/coming-soon/ComingSoonPage";
 import IntegrationPlaceholderPage from "./pages/integrations/IntegrationPlaceholderPage";
 import GoogleDriveIntegrationPage from "./pages/integrations/GoogleDriveIntegrationPage";
 import CarrierIntegrationPage from "./pages/integrations/CarrierIntegrationPage";
+import PaypalIntegrationPage from "./pages/integrations/PaypalIntegrationPage";
 // ADR-021 Phase 5 / Sprint 5: 担当者報酬計算 MVP
 import CommissionSettingsPage from "./pages/commission-settings/CommissionSettingsPage";
 // spec.md v1.1 F2 (Sprint 2): マスタ編集 UI（中央 admin + テナント admin の二層）
@@ -290,6 +291,7 @@ function App() {
                     <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
                     <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
+                    <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />
                     <Route path="super-admin/masters" element={<SuperAdminMastersPage />} />
