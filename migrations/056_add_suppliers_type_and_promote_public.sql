@@ -10,8 +10,10 @@
 --   047〜055 が既に他 ADR で使用済みのため 056 から付番し直し（spec.md 注記参照）。
 --
 -- 変更内容:
---   1. public.suppliers テーブル新規作成（{tenant_xxx}.suppliers と並存、Phase C で
---      旧テーブルは VIEW 化または DROP の判断。Sprint 1 では並存のみ）
+--   1. public.suppliers テーブル新規作成（{tenant_xxx}.suppliers と並存）
+--      PO決定 2026-06-10: 両系統を役割別の正として維持。
+--        - public.suppliers  : B在庫フィード・取り込みジョブ・解析ログの全テナント共有仕入元マスタ
+--        - {schema}.suppliers: テナント専用の商品デフォルト仕入先・発注先管理（RLS有効、FK対象）
 --   2. supplier_type CHECK 制約: ('individual','corporate')
 --   3. default_language CHAR(2) DEFAULT 'ja'
 --   4. 既存 tenant_004.suppliers のデータを public.suppliers へ INITIAL コピー
@@ -20,8 +22,8 @@
 --
 -- マーケットプレイス型の含意:
 --   - public.suppliers には tenant_id 列を **持たない**（中央共有マスタ）
---   - 既存 {tenant_xxx}.suppliers は Sprint 1 では **温存**（destructive 操作禁止）
---   - F8 (Sprint 8) で PO PDF が public.suppliers を参照するように切替時に旧テーブル評価
+--   - 既存 {tenant_xxx}.suppliers は **正式維持**（PO決定 2026-06-10）
+--   - {schema}.suppliers は products.supplier_default_id / purchase_orders.supplier_id の FK 対象として現役
 --
 -- ADR-034 観点:
 --   public schema migration のため deploy.yml では **1 回のみ実行**。

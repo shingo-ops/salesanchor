@@ -107,6 +107,7 @@
 | feature/morimoto/fedex-smoke-path-fix | FedEx smoke スクリプト API パス修正（/api/v1/shipping/calculate） | 2026-06-10 | IN_PROGRESS | | |
 | feature/morimoto/audit-log-coverage-medium | 監査ログ中重要度4系統 | 2026-06-11 | DONE | #1916 | |
 | feature/morimoto/adr-129-backlog-notes | ADR-129 未対応バックログ記録 | 2026-06-11 | IN_PROGRESS | | |
+| docs/morimoto/sa-foundation-recon-audit | SA土台バッチ全体監査レポート（ADR-095〜106 適合確認） | 2026-06-10 | IN_PROGRESS | | |
 ---
 
 ## 記入例

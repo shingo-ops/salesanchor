@@ -53,6 +53,12 @@ async def get_db():
             # 返却され、次のリクエストで別の SQLAlchemyError が発生することがある。
             await session.rollback()
             raise
+        finally:
+            # ADR-131: コネクションプール返却前にテナント文脈を必ずクリアする。
+            # session-level SET は接続に残留するため、finally で空にしてから返却する。
+            # 循環 import（database ← dependencies ← database）回避のためローカル import。
+            from app.auth.dependencies import clear_tenant_context  # noqa: PLC0415
+            await clear_tenant_context(session)
 
 
 # ─── SA-18 Phase2: 管理者用（jarvis）engine ─────────────────────────

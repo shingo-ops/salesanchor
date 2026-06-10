@@ -1,12 +1,16 @@
-"""ADR-072 Phase 2: 残 router の `reset_tenant_context()` 呼び出し導入を回帰保護する。
+"""ADR-072 / ADR-131 / ADR-132: テナントコンテキスト管理の回帰保護。
 
-PR #780 (Phase 1) で `app.auth.dependencies` に公開された `reset_tenant_context`
-を、Phase 2 で `shifts.py` / `suppliers.py` / `staff.py` / `roles.py` の
-write endpoint に展開した。本ファイルは「各 router で reset_tenant_context が
-import されている」「`await db.commit()` 後の呼び出し数が期待値と一致する」を
-ソース解析で確認する。
+ADR-072 Phase 2 (PR #780):
+  `reset_tenant_context` を shifts / suppliers / staff / roles の write endpoint に展開。
+  各 router でのコール数を固定してリグレッションを防ぐ。
 
-dashboard.py は read-only (`commit()` ゼロ件) のため Phase 2 対象外。
+ADR-131 (PR #1900):
+  `get_db` の finally ブロックで `clear_tenant_context` を呼び、コネクションプール返却前に
+  テナント文脈を必ずクリアする。ソース検査 + 動作テスト（success/exception パス）で保証。
+
+ADR-132 最小修正 (PR #1900):
+  `process_messenger_event` の `async with AsyncSessionLocal()` ブロックを try/finally で
+  ラップし、正常・例外・continue のすべてのパスで `clear_tenant_context` を呼ぶ。
 """
 from __future__ import annotations
 
@@ -16,6 +20,10 @@ import pytest
 
 from app.routers import roles, shifts, staff, suppliers
 
+
+# ─────────────────────────────────────────────────────────
+# ADR-072 Phase 2: 既存 reset_tenant_context ロールアウト保護
+# ─────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("module", [shifts, suppliers, staff, roles])
 def test_phase_2_routers_import_reset_tenant_context(module):
@@ -64,4 +72,125 @@ def test_dashboard_router_is_read_only():
     assert "await db.commit()" not in src, (
         "dashboard.py is expected to be read-only (no commit). "
         "もし commit が追加されたなら ADR-072 Phase 2 の判定を更新すること。"
+    )
+
+
+# ─────────────────────────────────────────────────────────
+# ADR-131: get_db finally による自動クリア（AC-1〜AC-5）
+# ─────────────────────────────────────────────────────────
+
+def test_get_db_has_clear_tenant_context_in_finally():
+    """AC-5: get_db のソースに clear_tenant_context と finally が存在すること。
+
+    このテストが CI で green であり続ける限り、get_db から
+    clear_tenant_context を除去するとこのテストが red になる（AC-5）。
+    """
+    from app.database import get_db
+
+    src = inspect.getsource(get_db)
+    assert "clear_tenant_context" in src, (
+        "get_db must call clear_tenant_context (ADR-131). "
+        "database.py の get_db に finally ブロックがない。"
+    )
+    assert "finally" in src, (
+        "get_db must have a finally block to guarantee cleanup (ADR-131)."
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_db_clears_context_on_success():
+    """AC-1: 正常終了後に clear_tenant_context が呼ばれること。"""
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock, patch
+
+    mock_session = AsyncMock()
+    cleared: list = []
+
+    async def fake_clear(db):
+        cleared.append(db)
+
+    @asynccontextmanager
+    async def fake_session_factory():
+        yield mock_session
+
+    with patch("app.database.AsyncSessionLocal", fake_session_factory), \
+         patch("app.auth.dependencies.clear_tenant_context", side_effect=fake_clear):
+        from app.database import get_db
+        async for session in get_db():
+            assert session is mock_session
+
+    assert len(cleared) == 1, "clear_tenant_context should be called exactly once on success"
+    assert cleared[0] is mock_session
+
+
+@pytest.mark.asyncio
+async def test_get_db_clears_context_on_exception():
+    """AC-2: 例外が発生した後も clear_tenant_context が呼ばれること。"""
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock, patch
+
+    mock_session = AsyncMock()
+    cleared: list = []
+
+    async def fake_clear(db):
+        cleared.append(db)
+
+    @asynccontextmanager
+    async def fake_session_factory():
+        yield mock_session
+
+    with patch("app.database.AsyncSessionLocal", fake_session_factory), \
+         patch("app.auth.dependencies.clear_tenant_context", side_effect=fake_clear):
+        from app.database import get_db
+        with pytest.raises(ValueError):
+            async for session in get_db():
+                raise ValueError("simulated endpoint error")
+
+    assert len(cleared) == 1, "clear_tenant_context should be called even when exception raised"
+    assert cleared[0] is mock_session
+
+
+def test_get_db_no_op_without_tenant_context():
+    """AC-3: テナントコンテキスト未設定リクエストで clear_tenant_context を呼んでも
+    500 にならないこと（SQLite では no-op）。
+
+    clear_tenant_context は _dialect_supports_search_path で SQLite を検出し
+    no-op になるため、テスト環境で例外を投げないことを確認する。
+    """
+    import asyncio
+    from unittest.mock import MagicMock
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    mock_db = MagicMock(spec=AsyncSession)
+    # SQLite dialect を模擬: get_bind() → bind.dialect.name = "sqlite"
+    mock_bind = MagicMock()
+    mock_bind.dialect.name = "sqlite"
+    mock_db.get_bind.return_value = mock_bind
+
+    from app.auth.dependencies import clear_tenant_context
+    # no-op パスは同期的に返る（SET を実行しない）ため awaitable ではないが
+    # asyncio.run で呼んでも例外が出ないことを確認する
+    asyncio.run(clear_tenant_context(mock_db))
+
+
+# ─────────────────────────────────────────────────────────
+# ADR-132 最小修正: process_messenger_event finally クリア（AC-8）
+# ─────────────────────────────────────────────────────────
+
+def test_process_messenger_event_has_clear_tenant_context_in_finally():
+    """AC-8: process_messenger_event の async with ブロックが finally で
+    clear_tenant_context を呼ぶこと（正常・例外・continue のすべてのパスを保護）。
+
+    このテストが CI で green であり続ける限り、finally 削除で red になる（AC-8 自己検証）。
+    """
+    from app.routers.webhook import process_messenger_event
+
+    src = inspect.getsource(process_messenger_event)
+    assert "clear_tenant_context" in src, (
+        "process_messenger_event must call clear_tenant_context (ADR-132). "
+        "webhook.py の async with ブロックに finally がない。"
+    )
+    assert "finally" in src, (
+        "process_messenger_event must have a finally block for clear_tenant_context (ADR-132)."
     )
