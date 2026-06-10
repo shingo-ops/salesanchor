@@ -48,8 +48,8 @@ interface Props {
   /** モーダルの開閉 */
   open: boolean;
   onClose: () => void;
-  /** 宛先国コード（受注情報から渡す）*/
-  destinationCountryCode: string;
+  /** 宛先国コード（省略時はモーダル内で入力）*/
+  destinationCountryCode?: string;
   /** 重量（kg）*/
   weightKg: number;
   /** 選択した料金を受け取るコールバック */
@@ -103,12 +103,13 @@ function SourceBadge({ source }: { source: "static" | "fedex_live" }) {
 export function FedExRateModal({
   open,
   onClose,
-  destinationCountryCode,
+  destinationCountryCode: destinationCountryCodeProp,
   weightKg,
   onSelectRate,
 }: Props) {
   const { t } = useTranslation();
   const [originCountryCode, setOriginCountryCode] = useState("JP");
+  const [destCC, setDestCC] = useState(destinationCountryCodeProp ?? "");
   const [destinationPostalCode, setDestinationPostalCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ShippingCalcResponse | null>(null);
@@ -121,7 +122,7 @@ export function FedExRateModal({
 
     try {
       const data = await api.post<ShippingCalcResponse>("/shipping/calculate", {
-        country_code: destinationCountryCode,
+        country_code: destCC,
         weight_kg: weightKg,
         carrier: "fedex",
         origin_country_code: originCountryCode || "JP",
@@ -159,33 +160,52 @@ export function FedExRateModal({
       title={t("fedexRateModal.title")}
       size="lg"
     >
-      {/* 発送元国コード入力 */}
+      {/* 発送元 / 宛先 国コード入力 */}
       <div style={{ marginBottom: "12px" }}>
-        <label
-          htmlFor="fedex-origin"
-          style={{ display: "block", marginBottom: "4px", fontWeight: 500 }}
-        >
-          {t("fedexRateModal.originLabel")}
-        </label>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <input
-            id="fedex-origin"
-            type="text"
-            value={originCountryCode}
-            maxLength={3}
-            placeholder={t("fedexRateModal.originPlaceholder")}
-            onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
-            style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px" }}
-          />
-          <Button
-            variant="primary"
-            loading={loading}
-            onClick={handleGetQuote}
-            disabled={loading || !originCountryCode || !destinationCountryCode}
-          >
-            {loading ? t("fedexRateModal.loading") : t("fedexRateModal.getQuote")}
-          </Button>
+        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "8px" }}>
+          <div>
+            <label
+              htmlFor="fedex-origin"
+              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+            >
+              {t("fedexRateModal.originLabel")}
+            </label>
+            <input
+              id="fedex-origin"
+              type="text"
+              value={originCountryCode}
+              maxLength={3}
+              placeholder={t("fedexRateModal.originPlaceholder")}
+              onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
+              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="fedex-dest-cc"
+              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+            >
+              {t("fedexRateModal.destinationLabel")}
+            </label>
+            <input
+              id="fedex-dest-cc"
+              type="text"
+              value={destCC}
+              maxLength={3}
+              placeholder={t("fedexRateModal.destinationPlaceholder")}
+              onChange={(e) => setDestCC(e.target.value.toUpperCase())}
+              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+            />
+          </div>
         </div>
+        <Button
+          variant="primary"
+          loading={loading}
+          onClick={handleGetQuote}
+          disabled={loading || !originCountryCode || !destCC}
+        >
+          {loading ? t("fedexRateModal.loading") : t("fedexRateModal.getQuote")}
+        </Button>
       </div>
 
       {/* 宛先郵便番号（任意）— rate_precision 制御用 */}

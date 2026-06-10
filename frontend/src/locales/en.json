@@ -267,7 +267,9 @@
     "days": "d",
     "postalCodeLabel": "Destination postal code (optional)",
     "postalCodePlaceholder": "e.g. 10001",
-    "badgeApproximate": "Approximate (no postal code)"
+    "badgeApproximate": "Approximate (no postal code)",
+    "destinationLabel": "Destination country code",
+    "destinationPlaceholder": "e.g. US"
   },
   "login": {
     "email": "Email address",
@@ -1058,6 +1060,7 @@
     "status_rejected": "Rejected",
     "status_expired": "Expired",
     "itemsRequired": "Please enter product name and unit price for each line item",
+    "fedexEstimate": "FedEx estimate",
     "subtitle": "Create, send, and track quotes.",
     "fx": {
       "fetchRate": "Fetch exchange rate",

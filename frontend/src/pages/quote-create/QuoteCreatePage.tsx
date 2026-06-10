@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
+import { FedExRateModal } from "../../components/FedExRateModal";
 import {
   type LineItem,
   type QuoteDraft,
@@ -53,6 +54,7 @@ export default function QuoteCreatePage() {
   const [addMode, setAddMode] = useState<"inventory" | "search">("search");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showFedExModal, setShowFedExModal] = useState(false);
 
   // 自由記入の空行を追加（マスタに無い商品も入力できる）。
   const addItem = () => {
@@ -308,7 +310,10 @@ export default function QuoteCreatePage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("quotes.shippingFee")}</label>
-            <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
+              <button type="button" className="btn-sm btn-secondary" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</button>
+            </div>
           </div>
           <div className="form-group"><label>{t("quotes.tax")}</label>
             <input type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
@@ -327,6 +332,12 @@ export default function QuoteCreatePage() {
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</button>
         </div>
       </form>
+      <FedExRateModal
+        open={showFedExModal}
+        onClose={() => setShowFedExModal(false)}
+        weightKg={totalWeight}
+        onSelectRate={(fee) => setShippingFee(String(Math.round(fee)))}
+      />
     </div>
   );
 }
