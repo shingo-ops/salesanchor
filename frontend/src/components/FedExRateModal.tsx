@@ -1,10 +1,10 @@
 /**
- * FedEx ライブ見積もり比較モーダル（ADR-124 D6）
+ * FedEx ライブ見積もり比較モーダル（ADR-125 D6）
  *
  * FedEx Rates and Transit Times API から取得したリアルタイム送料を表示し、
  * テナントが希望のサービスタイプを選択できる。
  *
- * ADR-124 D5（暗黙フォールバック禁止）:
+ * ADR-125 D5（暗黙フォールバック禁止）:
  * - ライブ取得に成功した場合のみ「ライブ」バッジを表示
  * - live_error が返ってきた場合は明示的なエラーメッセージを表示
  * - FedEx 未連携の場合は連携設定ページへの導線を提供
@@ -12,7 +12,7 @@
  * ADR-027: 全文字列は t("key") 経由
  *
  * 変更履歴:
- *   2026-06-09: 初版（ADR-124 Phase C）
+ *   2026-06-09: 初版（ADR-125 Phase C）
  */
 
 import { useState } from "react";
@@ -141,7 +141,7 @@ export function FedExRateModal({
     onClose();
   };
 
-  // エラーメッセージの整形（ADR-124 D5）
+  // エラーメッセージの整形（ADR-125 D5）
   // 未連携 / アカウント番号未設定 / API エラーの3種を区別して表示
   const isNotConnected = response?.live_error?.includes("未連携") ?? false;
   const liveErrorMessage = response?.live_error
@@ -223,7 +223,7 @@ export function FedExRateModal({
         </div>
       )}
 
-      {/* 未連携状態（ADR-124 D5 + PO C1判断: FedEx 未連携時は設定ページへ誘導） */}
+      {/* 未連携状態（ADR-125 D5 + PO C1判断: FedEx 未連携時は設定ページへ誘導） */}
       {isNotConnected && (
         <div
           role="alert"
@@ -264,7 +264,7 @@ export function FedExRateModal({
       {/* 見積もり結果テーブル */}
       {response && !liveErrorMessage && (
         <>
-          {/* 概算バッジ（郵便番号未指定時）— ADR-124 仕様追補 2026-06-10 */}
+          {/* 概算バッジ（郵便番号未指定時）— ADR-125 仕様追補 2026-06-10 */}
           {response.rate_precision === "approximate" && (
             <div
               role="note"

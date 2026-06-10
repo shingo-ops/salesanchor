@@ -1,7 +1,7 @@
 # Phase 2 Recon — FedEx Rates連携 第1段
 
 **実施日**: 2026-06-09  
-**対象ADR**: ADR-124  
+**対象ADR**: ADR-125  
 **担当**: architect recon
 
 ---

@@ -2,14 +2,14 @@
  * API連携 > 配送キャリア（FedEx / DHL / UPS）接続テストページ（共通コンポーネント）
  *
  * 各テナントが自社の配送キャリア API 認証情報を入力・保存し、接続(認証)テストを行う。
- * - FedEx/UPS: Client ID / Client Secret（OAuth2）+ Account Number（ADR-124 D2 追加）
+ * - FedEx/UPS: Client ID / Client Secret（OAuth2）+ Account Number（ADR-125 D2 追加）
  * - DHL: API Key / API Secret（MyDHL API Basic 認証）
  * 認証情報はテナント別に暗号化保存（シークレットは画面に表示しない）。
- * Account Number は FedEx Rates / Ship API に必須（ADR-124）。
+ * Account Number は FedEx Rates / Ship API に必須（ADR-125）。
  *
  * 変更履歴:
  *   2026-06-08: 初版（接続テストページ）
- *   2026-06-09: ADR-124 — FedEx/UPS に Account Number フィールド追加
+ *   2026-06-09: ADR-125 — FedEx/UPS に Account Number フィールド追加
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -44,7 +44,7 @@ interface TestResult {
   message: string;
 }
 
-// FedEx / UPS はアカウント番号が必要（ADR-124 D2）
+// FedEx / UPS はアカウント番号が必要（ADR-125 D2）
 const SHOWS_ACCOUNT_NUMBER: ReadonlySet<Carrier> = new Set(["fedex", "ups"]);
 
 export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }) {
@@ -170,7 +170,7 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
             onChange={(e) => setClientSecret(e.target.value)}
           />
         </div>
-        {/* ADR-124 D2: FedEx / UPS のみアカウント番号フィールドを表示 */}
+        {/* ADR-125 D2: FedEx / UPS のみアカウント番号フィールドを表示 */}
         {SHOWS_ACCOUNT_NUMBER.has(carrier) && (
           <div className="form-group">
             <label htmlFor="cred-account">{t("carrierIntegration.labelAccountNumber")}</label>
