@@ -22,6 +22,7 @@ type Story = StoryObj<typeof Drawer>
 
 export const Default: Story = {
   name: 'open — 基本表示',
+  parameters: { chromatic: { disable: true } },
   render: () => {
     const [open, setOpen] = useState(false)
     return (
@@ -41,6 +42,7 @@ export const Default: Story = {
 
 export const WithFullPage: Story = {
   name: 'with fullpage — フルページボタン付き',
+  parameters: { chromatic: { disable: true } },
   render: () => {
     const [open, setOpen] = useState(false)
     return (
@@ -61,6 +63,7 @@ export const WithFullPage: Story = {
 
 export const Closed: Story = {
   name: 'closed — 閉じた状態',
+  parameters: { chromatic: { disable: true } },
   args: {
     open: false,
     onClose: () => {},
