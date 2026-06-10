@@ -1,6 +1,6 @@
 /**
  * §9 データテーブル (DataTable)
- * ソート・行選択・density 3種・空状態の目視確認。
+ * ソート・行選択・density 3種・空状態・onRowClick・ページ送りの目視確認。
  */
 import { useState } from "react";
 import { DataTable } from "../../../components/DataTable";
@@ -46,11 +46,21 @@ const DEMO_COLUMNS: DataTableColumn<DemoLead>[] = [
   { key: "score", header: "スコア", width: "72px", sortable: true },
 ];
 
+const DEMO_PAGE_SIZE = 2;
+
 export function DataTableSection() {
   const [sortKey,  setSortKey]  = useState<string>("name");
   const [sortDir,  setSortDir]  = useState<SortDir>("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [density,  setDensity]  = useState<"compact" | "default" | "relaxed">("default");
+
+  // step-2: onRowClick
+  const [lastClicked, setLastClicked] = useState<DemoLead | null>(null);
+
+  // step-2: 制御型ページ送り
+  const [demoPage, setDemoPage] = useState(1);
+  const demoPageData = DEMO_LEADS.slice((demoPage - 1) * DEMO_PAGE_SIZE, demoPage * DEMO_PAGE_SIZE);
+  const demoHasNext = demoPage * DEMO_PAGE_SIZE < DEMO_LEADS.length;
 
   const sorted = [...DEMO_LEADS].sort((a, b) => {
     const av = (a as unknown as Record<string, unknown>)[sortKey];
@@ -107,6 +117,41 @@ export function DataTableSection() {
             data={[]}
             rowKey={(r) => r.id}
             emptyState={<span>該当するデータがありません</span>}
+          />
+        </div>
+      </div>
+
+      {/* step-2: onRowClick */}
+      <div className="dp-row">
+        <span className="dp-row-label">onRowClick</span>
+        <div className="dp-row-items dp-row-items--full">
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-2)" }}>
+            最後にクリック:{" "}
+            <strong>{lastClicked ? lastClicked.name : "（なし）"}</strong>
+          </p>
+          <DataTable<DemoLead>
+            columns={DEMO_COLUMNS}
+            data={DEMO_LEADS}
+            rowKey={(r) => r.id}
+            onRowClick={(row) => setLastClicked(row)}
+          />
+        </div>
+      </div>
+
+      {/* step-2: 制御型ページ送り */}
+      <div className="dp-row">
+        <span className="dp-row-label">pagination</span>
+        <div className="dp-row-items dp-row-items--full">
+          <DataTable<DemoLead>
+            columns={DEMO_COLUMNS}
+            data={demoPageData}
+            rowKey={(r) => r.id}
+            page={demoPage}
+            hasNextPage={demoHasNext}
+            onPageChange={setDemoPage}
+            prevPageLabel="前へ"
+            nextPageLabel="次へ"
+            pageInfo={`${demoPage} / ${Math.ceil(DEMO_LEADS.length / DEMO_PAGE_SIZE)}`}
           />
         </div>
       </div>

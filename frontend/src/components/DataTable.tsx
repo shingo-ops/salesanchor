@@ -2,20 +2,22 @@
  * DataTable — 汎用データテーブル（Task 4C）
  *
  * 機能:
- *   columns   : 型付き列定義（key / header / width / sortable / renderCell）
- *   data      : 表示行データ
- *   rowKey    : 行識別子ファクトリ（string 返却）
- *   sort      : 制御型ソート（sortKey + sortDir + onSort コールバック）
- *   selectable: 行チェックボックス選択（selectedKeys Set + onSelectChange）
- *   density   : compact / default / relaxed — 行高さを切り替え
- *   emptyState: データ 0 件時のカスタム表示スロット
+ *   columns     : 型付き列定義（key / header / width / sortable / renderCell）
+ *   data        : 表示行データ
+ *   rowKey      : 行識別子ファクトリ（string 返却）
+ *   sort        : 制御型ソート（sortKey + sortDir + onSort コールバック）
+ *   selectable  : 行チェックボックス選択（selectedKeys Set + onSelectChange）
+ *   density     : compact / default / relaxed — 行高さを切り替え
+ *   emptyState  : データ 0 件時のカスタム表示スロット
+ *   onRowClick  : 行クリックコールバック（Enter/Space キー操作可・セル内ボタンで非発火）
+ *   pagination  : 制御型ページ送り（page + hasNextPage + onPageChange）
  *
  * 使用方針:
- *   - ソート・選択は呼び出し側 (controlled) で管理する。
+ *   - ソート・選択・ページ送りは呼び出し側 (controlled) で管理する。
  *   - セル内に日本語ラベルを埋め込まない（columns.header / emptyState を通じて渡す）。
  *   - 水平スクロールはラッパー (.comp-table) が担当。
  */
-import type { ReactNode } from 'react';
+import type { ReactNode, KeyboardEvent, MouseEvent } from 'react';
 import { TABLE_ICONS } from '../constants/icons';
 import './DataTable.css';
 
@@ -61,6 +63,35 @@ export interface DataTableProps<T = Record<string, unknown>> {
   /** データが 0 件の場合に表示するノード */
   emptyState?: ReactNode;
   className?: string;
+  /**
+   * 行クリックコールバック。
+   * - 指定時は tr が tabIndex=0 になりキーボード（Enter / Space）でも発火。
+   * - セル内の button / a / input / select / textarea / label は二重発火しない。
+   */
+  onRowClick?: (row: T) => void;
+  /** 現在のページ番号（1-indexed）。onPageChange とセットで指定する。 */
+  page?: number;
+  /** 次のページが存在するか */
+  hasNextPage?: boolean;
+  /** ページ変更コールバック。指定するとページ送りコントロールが表示される。 */
+  onPageChange?: (page: number) => void;
+  /** 「前へ」ボタンのラベル（省略時: "‹"） */
+  prevPageLabel?: string;
+  /** 「次へ」ボタンのラベル（省略時: "›"） */
+  nextPageLabel?: string;
+  /** ページ番号表示部に挿入する ReactNode（省略時はページ番号のみ表示） */
+  pageInfo?: ReactNode;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ユーティリティ
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** セル内のインタラクティブ要素か判定（行クリックの二重発火防止） */
+function isInteractiveTarget(e: MouseEvent | KeyboardEvent): boolean {
+  return !!(e.target as HTMLElement).closest(
+    'button, a, input, select, textarea, label',
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -80,6 +111,13 @@ export function DataTable<T = Record<string, unknown>>({
   density = 'default',
   emptyState,
   className = '',
+  onRowClick,
+  page = 1,
+  hasNextPage = false,
+  onPageChange,
+  prevPageLabel = '‹',
+  nextPageLabel = '›',
+  pageInfo,
 }: DataTableProps<T>) {
   const allKeys = data.map(rowKey);
   const selected = selectedKeys ?? new Set<string>();
@@ -119,6 +157,8 @@ export function DataTable<T = Record<string, unknown>>({
     `comp-table--${density}`,
     className,
   ].filter(Boolean).join(' ');
+
+  const showPagination = !!onPageChange;
 
   return (
     <div className={wrapperCls} role="region" aria-label="data table">
@@ -191,13 +231,26 @@ export function DataTable<T = Record<string, unknown>>({
             data.map((row) => {
               const key = rowKey(row);
               const isSelected = selected.has(key);
+              const clickable = !!onRowClick;
               return (
                 <tr
                   key={key}
                   className={[
                     'comp-table__row',
                     isSelected ? 'comp-table__row--selected' : '',
+                    clickable ? 'comp-table__row--clickable' : '',
                   ].filter(Boolean).join(' ')}
+                  tabIndex={clickable ? 0 : undefined}
+                  onClick={clickable ? (e: MouseEvent<HTMLTableRowElement>) => {
+                    if (isInteractiveTarget(e)) return;
+                    onRowClick(row);
+                  } : undefined}
+                  onKeyDown={clickable ? (e: KeyboardEvent<HTMLTableRowElement>) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    if (isInteractiveTarget(e)) return;
+                    e.preventDefault();
+                    onRowClick(row);
+                  } : undefined}
                 >
                   {selectable && (
                     <td className="comp-table__td comp-table__td--check">
@@ -223,6 +276,32 @@ export function DataTable<T = Record<string, unknown>>({
           )}
         </tbody>
       </table>
+
+      {showPagination && (
+        <div className="comp-table__pagination">
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            aria-label="previous page"
+          >
+            {prevPageLabel}
+          </button>
+          <span className="comp-table__page-info">
+            {pageInfo ?? page}
+          </span>
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={() => onPageChange(page + 1)}
+            disabled={!hasNextPage}
+            aria-label="next page"
+          >
+            {nextPageLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
