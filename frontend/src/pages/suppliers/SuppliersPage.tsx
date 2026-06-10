@@ -6,6 +6,7 @@ import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -21,6 +22,15 @@ const emptyForm: SupplierFormState = {
   name: "", contact_name: "", email: "", phone: "", address: "", notes: "",
 };
 
+const toForm = (s: Supplier): SupplierFormState => ({
+  name: s.name,
+  contact_name: s.contact_name ?? "",
+  email: s.email ?? "",
+  phone: s.phone ?? "",
+  address: s.address ?? "",
+  notes: s.notes ?? "",
+});
+
 export default function SuppliersPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
@@ -29,10 +39,9 @@ export default function SuppliersPage() {
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<SupplierFormState>(emptyForm);
-  // 編集ドロワー
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<SupplierFormState>(emptyForm);
+  // 編集ドロワー（useRecordDrawer フック）
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Supplier, SupplierFormState>({ toForm, emptyForm });
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -67,13 +76,6 @@ export default function SuppliersPage() {
     } catch (e) { setError(e instanceof Error ? e.message : t("common.saveError")); }
   };
 
-  /* ── 行クリック → 編集ドロワー ── */
-  const handleRowClick = (s: Supplier) => {
-    setEditId(s.id);
-    setEditForm({ name: s.name, contact_name: s.contact_name ?? "", email: s.email ?? "", phone: s.phone ?? "", address: s.address ?? "", notes: s.notes ?? "" });
-    setDrawerOpen(true);
-  };
-
   /* ── ドロワー内編集保存 ── */
   const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError("");
@@ -82,7 +84,7 @@ export default function SuppliersPage() {
     const payload = { name: editForm.name, contact_name: toNull(editForm.contact_name), email: toNull(editForm.email), phone: toNull(editForm.phone), address: toNull(editForm.address), notes: toNull(editForm.notes) };
     try {
       await api.patch(`/suppliers/${editId}`, payload);
-      setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); load();
+      closeDrawer(); load();
     } catch (e) { setError(e instanceof Error ? e.message : t("common.saveError")); }
   };
 
@@ -124,12 +126,12 @@ export default function SuppliersPage() {
         </form>
       </Modal>
 
-      {/* 編集 Drawer（行クリックで開く） */}
+      {/* 編集 Drawer（行クリックで開く・useRecordDrawer フック） */}
       <Drawer
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); }}
+        onClose={closeDrawer}
         title={t("suppliers.editSupplier")}
-        onOpenFullPage={editId ? () => { setDrawerOpen(false); navigate(`/suppliers/${editId}/edit`); } : undefined}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/suppliers/${editId}/edit`); } : undefined}
       >
         <form onSubmit={handleEditSubmit}>
           <SupplierFormFields
@@ -137,7 +139,7 @@ export default function SuppliersPage() {
             onChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => { setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); }}>{t("common.cancel")}</button>
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
             <button type="submit" className="btn-primary">{t("common.update")}</button>
           </div>
         </form>
