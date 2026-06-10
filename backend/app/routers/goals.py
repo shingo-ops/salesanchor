@@ -24,6 +24,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.services.audit import record_audit_log
 from app.schemas.goal import (
     GoalCreate,
     GoalResponse,
@@ -112,6 +113,28 @@ async def create_goal(
             detail="user_id か team_id のどちらか一方のみ指定してください",
         )
 
+    # upsert 判別: 既存行があれば action="update"、なければ "create"
+    owner_where = "user_id = :user_id AND team_id IS NULL" if body.user_id is not None \
+        else "user_id IS NULL AND team_id = :team_id"
+    existing = await db.execute(
+        text(f"""
+            SELECT id, target_value FROM goals
+            WHERE {owner_where}
+              AND period_type = :period_type
+              AND period_year = :period_year
+              AND period_num  = :period_num
+              AND kpi_type    = :kpi_type
+        """),
+        {
+            "user_id": body.user_id, "team_id": body.team_id,
+            "period_type": body.period_type, "period_year": body.period_year,
+            "period_num": body.period_num, "kpi_type": body.kpi_type,
+        },
+    )
+    old_row = existing.mappings().first()
+    audit_action = "update" if old_row else "create"
+    old_audit = dict(old_row) if old_row else None
+
     result = await db.execute(
         text("""
             INSERT INTO goals
@@ -137,9 +160,14 @@ async def create_goal(
             "created_by": current_user.id,
         },
     )
+    row = result.mappings().first()
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action=audit_action, table_name="goals", record_id=row["id"],
+        old_data=old_audit, new_data=dict(row),
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
-    row = result.mappings().first()
     return GoalResponse(**dict(row))
 
 
@@ -156,6 +184,14 @@ async def update_goal(
     current_user: User = Depends(get_current_user),
 ):
     """目標更新（target_value のみ）"""
+    old_result = await db.execute(
+        text("SELECT * FROM goals WHERE id = :id"),
+        {"id": goal_id},
+    )
+    old_row = old_result.mappings().first()
+    if not old_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="目標が見つかりません")
+
     result = await db.execute(
         text("""
             UPDATE goals
@@ -165,11 +201,14 @@ async def update_goal(
         """),
         {"target_value": body.target_value, "id": goal_id},
     )
+    row = result.mappings().first()
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="update", table_name="goals", record_id=goal_id,
+        old_data=dict(old_row), new_data=dict(row),
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
-    row = result.mappings().first()
-    if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="目標が見つかりません")
     return GoalResponse(**dict(row))
 
 
@@ -185,14 +224,25 @@ async def delete_goal(
     current_user: User = Depends(get_current_user),
 ):
     """目標削除"""
-    result = await db.execute(
-        text("DELETE FROM goals WHERE id = :id RETURNING id"),
+    old_result = await db.execute(
+        text("SELECT * FROM goals WHERE id = :id"),
         {"id": goal_id},
+    )
+    old_row = old_result.mappings().first()
+    if not old_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="目標が見つかりません")
+
+    await db.execute(
+        text("DELETE FROM goals WHERE id = :id"),
+        {"id": goal_id},
+    )
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="delete", table_name="goals", record_id=goal_id,
+        old_data=dict(old_row), new_data=None,
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
-    if not result.mappings().first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="目標が見つかりません")
 
 
 # ─────────────────────────────────────────────
