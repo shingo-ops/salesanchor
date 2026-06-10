@@ -2324,6 +2324,12 @@
     "copyLink": "コピー",
     "invalidToken": "無効または期限切れのリンクです",
     "submitError": "登録に失敗しました",
+    "error": {
+      "already_registered": "この住所はすでに登録されています。担当者にお問い合わせください。",
+      "invalid_token": "登録リンクが無効または期限切れです。担当者から新しいリンクを受け取ってください。",
+      "company_not_found": "会社情報が見つかりません。担当者にお問い合わせください。",
+      "unexpected_error": "予期しないエラーが発生しました。しばらくしてから再度お試しください。"
+    },
     "companyLabel": "会社名",
     "billingAddress": "請求先住所",
     "deliveryAddress": "配送先住所",
