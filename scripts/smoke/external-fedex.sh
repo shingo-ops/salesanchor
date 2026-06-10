@@ -19,8 +19,8 @@
 #
 #   --live mode:
 #     SALESANCHOR_API_URL   本番 API の base URL (例: https://api.salesanchor.jp)
-#     SALESANCHOR_API_TOKEN Bearer token（Service Account or test tenant）
-#     FEDEX_SMOKE_TENANT_ID テナント ID（FedEx 連携済み）
+#     SALESANCHOR_API_TOKEN Bearer token（SMOKE_SERVICE_TOKEN — サービスアカウント）
+#     FEDEX_SMOKE_TENANT_ID テナント ID（FedEx 連携済み）（SMOKE_SERVICE_EMAIL のテナント）
 #     PO_LIVE_OK=yes
 #
 # 使い方:
@@ -136,8 +136,8 @@ print(len(quotes))
     require_env SALESANCHOR_API_TOKEN
 
     # バックエンド経由で見積もり取得（FedEx 連携済みテナントが必要）
-    log "Calling /shipping/calculate via backend (FedEx live)..."
-    CALC_RESP=$(curl -fsS -X POST "${SALESANCHOR_API_URL}/api/shipping/calculate" \
+    log "Calling /api/v1/shipping/calculate via backend (FedEx live)..."
+    CALC_RESP=$(curl -fsS -X POST "${SALESANCHOR_API_URL}/api/v1/shipping/calculate" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${SALESANCHOR_API_TOKEN}" \
         -d "{
