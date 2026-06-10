@@ -40,6 +40,7 @@ from app.models import User
 from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services import paypal_payments
+from app.services.audit import record_audit_log
 from app.services.test_pdf import render_test_pdf
 
 logger = logging.getLogger(__name__)
@@ -341,6 +342,15 @@ async def save_carrier_credentials(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="認証ID・シークレットの両方を入力してください。",
         )
+    # 変更前の非機密情報を取得（機密値は記録しない）
+    old_status = await carriers.get_status(db, tenant_id, carrier)
+    audit_action = "update" if old_status["configured"] else "create"
+    old_audit = {
+        "carrier": carrier,
+        "environment": old_status["environment"],
+        "account_number_hint": old_status["account_number_hint"],
+    } if old_status["configured"] else None
+
     await carriers.save_credentials(
         db,
         tenant_id,
@@ -351,6 +361,20 @@ async def save_carrier_credentials(
         user.id,
         account_number=payload.account_number,
     )
+    # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:182）。
+    # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
+    new_status = await carriers.get_status(db, tenant_id, carrier)
+    new_audit = {
+        "carrier": carrier,
+        "environment": new_status["environment"],
+        "account_number_hint": new_status["account_number_hint"],
+    }
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=user.id,
+        action=audit_action, table_name="tenant_carrier_credentials",
+        record_id=None, old_data=old_audit, new_data=new_audit,
+    )
+    await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
 
@@ -367,7 +391,23 @@ async def delete_carrier_credentials(
     """キャリア認証情報を削除。admin 専用。"""
     _validate_carrier(carrier)
     _require_admin(user)
+    # 削除前の非機密情報を取得（機密値は記録しない）
+    old_status = await carriers.get_status(db, tenant_id, carrier)
+    old_audit = {
+        "carrier": carrier,
+        "environment": old_status["environment"],
+        "account_number_hint": old_status["account_number_hint"],
+    } if old_status["configured"] else None
+
     await carriers.delete_credentials(db, tenant_id, carrier)
+    # NOTE: delete_credentials は内部で db.commit() 済み（carrier_credentials.py:190）。
+    # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=user.id,
+        action="delete", table_name="tenant_carrier_credentials",
+        record_id=None, old_data=old_audit, new_data=None,
+    )
+    await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
 
