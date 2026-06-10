@@ -9,7 +9,7 @@ from __future__ import annotations
 
 変更履歴:
   2026-04-17: 初版作成（Phase 2）
-  2026-06-09: ADR-124 — FedEx ライブ見積もり分岐追加
+  2026-06-09: ADR-125 — FedEx ライブ見積もり分岐追加
 """
 
 import asyncio
@@ -311,7 +311,7 @@ async def _try_fedex_live(
 ) -> tuple[list[ShippingCalcResult], Optional[str], Optional[str]]:
     """FedEx Rates API を呼び出し、結果・live_error・rate_precision を返す。
 
-    ADR-124 D5（暗黙フォールバック禁止）:
+    ADR-125 D5（暗黙フォールバック禁止）:
       - account_number が未設定 → live_error を返す（空リスト + エラー文字列）
       - API エラー → live_error を返す
       - 成功 → (results, None, precision)
@@ -382,12 +382,12 @@ async def calc_shipping(
       - FedEx 認証情報が設定済みかつ origin_country_code が指定されていれば
         FedEx Rates API からライブ見積もりを取得（source='fedex_live'）
       - 未設定または API エラーの場合は live_error に明示エラーを返す
-        （ADR-124 D5: 暗黙フォールバック禁止 — 静的値をライブと偽らない）
+        （ADR-125 D5: 暗黙フォールバック禁止 — 静的値をライブと偽らない）
 
     carrier 未指定または fedex 以外:
       - 静的テーブルから計算（source='static'）
     """
-    # ADR-124: FedEx ライブ見積もり分岐
+    # ADR-125: FedEx ライブ見積もり分岐
     if data.carrier == "fedex":
         if not data.origin_country_code:
             raise HTTPException(
@@ -411,8 +411,8 @@ async def calc_shipping(
                 live_error=live_error,
                 rate_precision=rate_precision,
             )
-        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-124 D5 + PO C1判断）
-        # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-124 D4）
+        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-125 D5 + PO C1判断）
+        # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-125 D4）
         return ShippingCalcResponse(
             results=[],
             cheapest=None,

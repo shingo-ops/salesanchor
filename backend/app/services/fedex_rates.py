@@ -1,26 +1,26 @@
-"""FedEx Rates and Transit Times API クライアント（ADR-124 D3-D4）。
+"""FedEx Rates and Transit Times API クライアント（ADR-125 D3-D4）。
 
 テナントが自社の FedEx アカウントを連携した上で、リアルタイムの送料見積もりと
 配達日数を取得するサービス。
 
-設計方針（ADR-124 D3）:
+設計方針（ADR-125 D3）:
   - OAuth トークンはインメモリキャッシュで管理（有効期限 3600 秒・5 分バッファ）
   - プロセスをまたいだ共有はしない（許容コスト: 1時間に1回の再取得）
   - キャッシュキー: (tenant_id, environment) のタプル
 
-設計方針（ADR-124 D4）:
+設計方針（ADR-125 D4）:
   - エンドポイント: POST /rate/v1/rates/quotes
   - origin_country_code はリクエストパラメータで明示（ハードコードなし）
   - rateRequestType: ["LIST"]（アカウント料金取得）
   - timeout: httpx.Timeout(connect=3.0, read=7.0, write=5.0, pool=5.0)
 
-設計方針（ADR-124 D5 — 暗黙フォールバック禁止）:
+設計方針（ADR-125 D5 — 暗黙フォールバック禁止）:
   - account_number が未設定なら FedExNotConfiguredError を raise
   - API エラーは FedExAPIError を raise（呼び出し元が live_error に変換）
   - 静的フォールバックはこのモジュールでは行わない（呼び出し元の責務）
 
 変更履歴:
-  2026-06-09: 初版（ADR-124 Phase B）
+  2026-06-09: 初版（ADR-125 Phase B）
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ _BASE_URLS = {
 }
 
 # ---------------------------------------------------------------------------
-# 取得対象サービスタイプ（設定値）ADR-124 仕様追補 2026-06-10
+# 取得対象サービスタイプ（設定値）ADR-125 仕様追補 2026-06-10
 # ---------------------------------------------------------------------------
 # 見積もりで取得・表示する国際サービスを4種に限定する。
 # 「全取得→フィルタ」方式（serviceType 指定は使わない）。

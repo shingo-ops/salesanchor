@@ -84,7 +84,7 @@ async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
             "client_id": str,
             "client_secret": str,
             "environment": str,
-            "account_number": str | None,  # ADR-124 D2 追加（NULL = 未設定）
+            "account_number": str | None,  # ADR-125 D2 追加（NULL = 未設定）
         }
     """
     row = await db.execute(

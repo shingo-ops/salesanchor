@@ -1,5 +1,5 @@
 """
-FedEx Rates API クライアントのユニットテスト（ADR-124）。
+FedEx Rates API クライアントのユニットテスト（ADR-125）。
 
 実際の FedEx API は呼び出さず、httpx をモックして動作を検証する。
 
@@ -11,7 +11,7 @@ FedEx Rates API クライアントのユニットテスト（ADR-124）。
                                          rate_precision exact/approximate（仕様追補 2026-06-10）
 
 変更履歴:
-  2026-06-09: 初版（ADR-124 Phase B）
+  2026-06-09: 初版（ADR-125 Phase B）
   2026-06-10: TARGET_INTERNATIONAL_SERVICE_TYPES フィルタ対応
               rate_precision (exact/approximate) テスト追加
               _try_fedex_live の 3-tuple 戻り値に対応
@@ -301,7 +301,7 @@ class TestGetRates:
 
 
 # ---------------------------------------------------------------------------
-# /shipping/calculate エンドポイント テスト（ADR-124 D5 — 暗黙フォールバック禁止）
+# /shipping/calculate エンドポイント テスト（ADR-125 D5 — 暗黙フォールバック禁止）
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -321,7 +321,7 @@ class TestShippingCalculateEndpoint:
     async def test_no_credentials_returns_live_error_not_static(self):
         """FedEx 未連携（credentials なし）は static に落ちず live_error を返す。
 
-        ADR-124 D5 + PO C1判断:
+        ADR-125 D5 + PO C1判断:
         - results は空（静的早見表 FedEx 行を返さない）
         - live_error に「未連携」メッセージが入る
         - calculate_shipping_fee は呼ばれない（FedEx 専用 early return）
@@ -352,7 +352,7 @@ class TestShippingCalculateEndpoint:
     async def test_live_error_explicit_on_api_failure(self):
         """FedEx API エラー時に live_error を明示返却し、results は空。
 
-        ADR-124 D5: 暗黙フォールバック禁止。
+        ADR-125 D5: 暗黙フォールバック禁止。
         """
         from app.routers.shipping import _try_fedex_live
 
