@@ -124,6 +124,14 @@ class RegisterRequest(BaseModel):
     billing_display_name: Optional[str] = Field(None, max_length=200, description="請求先表示名（Billing Name）")
     payment_recipient_name: Optional[str] = Field(None, max_length=200, description="支払い名義（送金名義が異なる場合）")
 
+    @field_validator("contact_name")
+    @classmethod
+    def normalize_contact_name(cls, v: Optional[str]) -> Optional[str]:
+        """空文字列は None に正規化（ADR-126 追補: 担当者名は任意）。"""
+        if not v or not v.strip():
+            return None
+        return v.strip()
+
     @field_validator("contact_email")
     @classmethod
     def validate_email(cls, v: Optional[str]) -> Optional[str]:
@@ -137,15 +145,6 @@ class RegisterRequest(BaseModel):
         if not v:
             return None
         return validate_phone(v)
-
-    @model_validator(mode="after")
-    def validate_contact_required(self) -> "RegisterRequest":
-        """初回登録は担当者名 + (メール or 電話) が必須（スコープ: /public/register のみ）。"""
-        if not self.contact_name or not self.contact_name.strip():
-            raise ValueError("担当者名は必須です")
-        if not self.contact_email and not self.contact_telephone:
-            raise ValueError("担当者のメールアドレスまたは電話番号を入力してください")
-        return self
 
 
 class AddAddressRequest(BaseModel):
