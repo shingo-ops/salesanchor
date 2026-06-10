@@ -48,7 +48,7 @@
 | `frontend/src/sidebar.css:245` | `.app-body { background-image: var(--inbox-bg-gradient) }` | 白ベースの上に乗るグラデーション |
 | `frontend/src/index.css:160–166` | `--inbox-bg-gradient: radial-gradient(...)` | Meta Business Suite 実測値のグラデーション（緑・ピンク・薄紫・淡青） |
 
-### グラデーションの正確な定義（`index.css:160–166`）
+### グラデーションの正確な定義（`frontend/src/index.css:160–166`）
 
 ```css
 --inbox-bg-gradient:
@@ -76,18 +76,18 @@
 
 | 役割 | CSS 変数 | 定義場所 `path:line` | 現行値 |
 |------|---------|---------------------|--------|
-| サイドバー背景 | `--sidebar-bg` | `index.css:34` | `#ffffff` |
-| サイドバーボーダー | `--sidebar-border` | `index.css:35` | `#E4E4E7` |
-| 通常項目テキスト | `color: var(--text-secondary)` | `sidebar.css:119` | `#4a5568` |
-| ホバー背景 | `--sidebar-item-hover-bg` | `index.css:36` | `#E7F3FF`（Meta青薄め） |
-| アクティブ背景 | `--sidebar-item-active-bg` | `index.css:37` | `#E7F3FF` |
-| アクティブテキスト | `--sidebar-item-active-color` | `index.css:38` | `#1877F2`（Meta青） |
-| アクティブ左ボーダー | `--sidebar-item-active-border` | `index.css:39` | `#1877F2` |
-| ブランド文字（expanded）| `color: var(--accent)` | `sidebar.css:73` | `#1877F2` |
-| アコーディオン内背景 | `background: var(--bg-subtle)` | `sidebar.css:190` | `#f7fafc` |
-| サブ項目アクティブ背景 | `var(--link-active-bg)` | `sidebar.css:213` | `#E7F3FF` |
+| サイドバー背景 | `--sidebar-bg` | `frontend/src/index.css:34` | `#ffffff` |
+| サイドバーボーダー | `--sidebar-border` | `frontend/src/index.css:35` | `#E4E4E7` |
+| 通常項目テキスト | `color: var(--text-secondary)` | `frontend/src/sidebar.css:119` | `#4a5568` |
+| ホバー背景 | `--sidebar-item-hover-bg` | `frontend/src/index.css:36` | `#E7F3FF`（Meta青薄め） |
+| アクティブ背景 | `--sidebar-item-active-bg` | `frontend/src/index.css:37` | `#E7F3FF` |
+| アクティブテキスト | `--sidebar-item-active-color` | `frontend/src/index.css:38` | `#1877F2`（Meta青） |
+| アクティブ左ボーダー | `--sidebar-item-active-border` | `frontend/src/index.css:39` | `#1877F2` |
+| ブランド文字（expanded）| `color: var(--accent)` | `frontend/src/sidebar.css:73` | `#1877F2` |
+| アコーディオン内背景 | `background: var(--bg-subtle)` | `frontend/src/sidebar.css:190` | `#f7fafc` |
+| サブ項目アクティブ背景 | `var(--link-active-bg)` | `frontend/src/sidebar.css:213` | `#E7F3FF` |
 
-### アクティブ項目の表示方法（`sidebar.css:137–143`）
+### アクティブ項目の表示方法（`frontend/src/sidebar.css:137–143`）
 
 ```css
 .sidebar-item.active {
@@ -117,24 +117,24 @@
 
 | トークン名 | 現行値 `path:line` | A方向での変更理由 |
 |-----------|-------------------|------------------|
-| `--accent` | `#1877F2` `index.css:26` | Meta青 → SalesAnchor ネイビー差し替え |
-| `--accent-hover` | `#166FE5` `index.css:27` | 同上（ホバー） |
-| `--link` | `#1877F2` `index.css:28` | 同上（リンク色） |
-| `--link-active-bg` | `#E7F3FF` `index.css:29` | SalesAnchor ネイビー系の薄い背景へ |
-| `--sidebar-item-hover-bg` | `#E7F3FF` `index.css:36` | 同上（ホバー背景） |
-| `--sidebar-item-active-bg` | `#E7F3FF` `index.css:37` | 同上（アクティブ背景） |
-| `--sidebar-item-active-color` | `#1877F2` `index.css:38` | SalesAnchor ネイビーへ |
-| `--sidebar-item-active-border` | `#1877F2` `index.css:39` | 同上（左ライン） |
+| `--accent` | `#1877F2` `frontend/src/index.css:26` | Meta青 → SalesAnchor ネイビー差し替え |
+| `--accent-hover` | `#166FE5` `frontend/src/index.css:27` | 同上（ホバー） |
+| `--link` | `#1877F2` `frontend/src/index.css:28` | 同上（リンク色） |
+| `--link-active-bg` | `#E7F3FF` `frontend/src/index.css:29` | SalesAnchor ネイビー系の薄い背景へ |
+| `--sidebar-item-hover-bg` | `#E7F3FF` `frontend/src/index.css:36` | 同上（ホバー背景） |
+| `--sidebar-item-active-bg` | `#E7F3FF` `frontend/src/index.css:37` | 同上（アクティブ背景） |
+| `--sidebar-item-active-color` | `#1877F2` `frontend/src/index.css:38` | SalesAnchor ネイビーへ |
+| `--sidebar-item-active-border` | `#1877F2` `frontend/src/index.css:39` | 同上（左ライン） |
 
 ### 変更しないトークン（確認済み）
 
 | トークン名 | 値 | 変更しない理由 |
 |-----------|-----|--------------|
-| `--bg-primary` | `#f5f7fa` `index.css:9` | ページ背景（PO決定：現行維持） |
-| `--bg-surface` | `#ffffff` `index.css:10` | カード白背景（クリーン方向と一致） |
-| `--inbox-bg-gradient` | radial-gradient `index.css:160` | Meta風グラデーション（PO決定：維持） |
-| `--danger` | `#e53e3e` `index.css:44` | ステータス色（意味予約済み） |
-| `--sidebar-bg` | `#ffffff` `index.css:34` | 白基調サイドバー（A方向と一致） |
+| `--bg-primary` | `#f5f7fa` `frontend/src/index.css:9` | ページ背景（PO決定：現行維持） |
+| `--bg-surface` | `#ffffff` `frontend/src/index.css:10` | カード白背景（クリーン方向と一致） |
+| `--inbox-bg-gradient` | radial-gradient `frontend/src/index.css:160` | Meta風グラデーション（PO決定：維持） |
+| `--danger` | `#e53e3e` `frontend/src/index.css:44` | ステータス色（意味予約済み） |
+| `--sidebar-bg` | `#ffffff` `frontend/src/index.css:34` | 白基調サイドバー（A方向と一致） |
 
 ---
 
@@ -142,7 +142,7 @@
 
 上記変更対象トークンはすべて `frontend/src/index.css` の `:root.force-dark` ブロックにも対応値が定義されている。A方向実装時は light/dark 両方を同時変更すること（片方のみ禁止: `frontend/CLAUDE.md` ルール）。
 
-現行ダークモードのアクセント: `--accent: #818cf8` `index.css:212`（インディゴ系。SalesAnchorネイビーをダーク用に明るくした値への変更が必要）
+現行ダークモードのアクセント: `--accent: #818cf8` `frontend/src/index.css:212`（インディゴ系。SalesAnchorネイビーをダーク用に明るくした値への変更が必要）
 
 ---
 
@@ -181,7 +181,7 @@
 
 ## 補足
 
-- `--shadow-accent-hover: 0 2px 6px rgba(24, 119, 242, 0.15)` (`index.css:69`) は `--accent` の hex 埋め込みコメントで定義。`--accent` 変更時はこの rgba 値も合わせて更新すること（トークン参照でなく固定 rgba のため）。
-- `--focus-ring-shadow: 0 0 0 3px rgba(24, 119, 242, 0.15)` (`index.css:85`) 同様。
-- `--search-focus-glow` (`index.css:87`) 同様。
-- ダークモードの focus ring は `rgba(129, 140, 248, 0.3)` (`index.css:258`)（インディゴ系）— こちらも一緒に変更対象。
+- `--shadow-accent-hover: 0 2px 6px rgba(24, 119, 242, 0.15)` (`frontend/src/index.css:69`) は `--accent` の hex 埋め込みコメントで定義。`--accent` 変更時はこの rgba 値も合わせて更新すること（トークン参照でなく固定 rgba のため）。
+- `--focus-ring-shadow: 0 0 0 3px rgba(24, 119, 242, 0.15)` (`frontend/src/index.css:85`) 同様。
+- `--search-focus-glow` (`frontend/src/index.css:87`) 同様。
+- ダークモードの focus ring は `rgba(129, 140, 248, 0.3)` (`frontend/src/index.css:258`)（インディゴ系）— こちらも一緒に変更対象。
