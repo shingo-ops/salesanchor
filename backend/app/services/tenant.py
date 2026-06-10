@@ -41,7 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 DEFAULT_ROLES = [
     {
         "name": "オーナー",
-        "color": "#ef4444",  # 赤
+        "color": "#6366f1",  # インディゴ（最高権限レベル）
         "priority": 1000,
         "is_system": True,
         "permissions": "ALL",
