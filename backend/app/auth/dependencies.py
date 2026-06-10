@@ -69,10 +69,12 @@ async def get_current_user(
     全認証付きエンドポイントの共通Dependency。
 
     フロー:
-      ① ブラックリスト確認（ログアウト済みトークンを拒否）
-      ② IPブルートフォース確認（過去の認証失敗が上限に達していれば429）
-      ③ Redisキャッシュからユーザー情報を取得（キャッシュヒット時はFirebase検証スキップ）
-      ④ キャッシュミス時: Firebase検証 → MFAチェック → DB検索 → 結果をキャッシュ
+      ① ブラックリスト確認（ログアウト済みトークンを拒否・免除ルートより必ず前）
+      ② Redisキャッシュからユーザー情報を取得
+         ヒット → IPロック判定をスキップして通過（巻き添え防止）
+         ミス   → ③へ
+      ③ IPブルートフォース確認（キャッシュミス時のみ）
+      ④ Firebase検証 → MFAチェック → DB検索 → 結果をキャッシュ
          Firebase検証失敗時: IPに失敗記録を追加
     """
     _init_firebase()
@@ -80,21 +82,16 @@ async def get_current_user(
     token = cred.credentials
     client_ip = _get_client_ip(request)
 
-    # ブラックリスト確認（ログアウト済みトークンを拒否）
+    # ① ブラックリスト確認（ログアウト済みトークンを拒否・免除ルートより必ず前）
     if await is_token_blacklisted(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="このトークンは無効化されています",
         )
 
-    # IPブルートフォース確認（認証失敗が上限に達していれば即429）
-    if await check_auth_rate_limit(client_ip):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="認証試行が上限に達しました。しばらく時間をおいてから再試行してください",
-        )
-
-    # Redisキャッシュからユーザー情報を取得
+    # ② Redisキャッシュからユーザー情報を取得
+    # キャッシュヒット: ブラックリスト未登録 & 既存セッション確認済み → IPロックをスキップ
+    # 同一IPの他ユーザーによる攻撃でロックされても、正規ユーザーの操作を巻き添え遮断しない。
     cached = await get_cached_jwt(token)
     if cached:
         email = cached["email"]
@@ -105,7 +102,14 @@ async def get_current_user(
         if user:
             return user
 
-    # キャッシュミス: Firebase検証
+    # ③ キャッシュミス時のみIPブルートフォース確認（Firebase検証前のゲート）
+    if await check_auth_rate_limit(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="認証試行が上限に達しました。しばらく時間をおいてから再試行してください",
+        )
+
+    # ④ キャッシュミス: Firebase検証
     try:
         decoded = firebase_auth.verify_id_token(token)
     except Exception:
