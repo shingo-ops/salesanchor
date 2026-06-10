@@ -157,7 +157,7 @@ else
   echo "[7] INFO: SA18_PHASE2_ENABLED 未設定 — jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ"
 fi
 
-# [8] ADR-124: tenant_carrier_credentials に RLS ポリシーが存在することを確認
+# [8] ADR-125: tenant_carrier_credentials に RLS ポリシーが存在することを確認
 # PR-A の本番適用確認（DB レイヤのテナント分離）
 RLS_ENABLED=$(docker exec "${POSTGRES}" ${ADMIN_PSQL} -t -c "
   SELECT count(*) FROM pg_class c

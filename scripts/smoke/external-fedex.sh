@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ADR-124: External State Verification — L2 Smoke: FedEx Rates API
+# ADR-125: External State Verification — L2 Smoke: FedEx Rates API
 #
 # 目的:
-#   FedEx Rates and Transit Times API の疎通確認（ADR-124 D2 第1段完了条件）。
+#   FedEx Rates and Transit Times API の疎通確認（ADR-125 D2 第1段完了条件）。
 #   sandbox / live の 2 mode に対応。
 #
 # Mode:
@@ -27,7 +27,7 @@
 #   bash scripts/smoke/external-fedex.sh [--dry-run|--sandbox|--live]
 #
 # 関連:
-#   docs/adr/ADR-124-fedex-rates-stage1.md
+#   docs/adr/ADR-125-fedex-rates-stage1.md
 #   backend/app/services/fedex_rates.py
 #   scripts/smoke_test_post_deploy.sh ([8a],[8b])
 # =============================================================================

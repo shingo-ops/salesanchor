@@ -1,5 +1,5 @@
 """
-FedEx Rates API サンドボックス疎通テスト（ADR-124 D4）
+FedEx Rates API サンドボックス疎通テスト（ADR-125 D4）
 
 実際の FedEx Sandbox API に接続してトークン取得・見積もり取得が機能することを確認する。
 環境変数が未設定の場合は自動的にスキップされる（CI/CD での必須化は任意）。
@@ -20,7 +20,7 @@ FedEx Rates API サンドボックス疎通テスト（ADR-124 D4）
   cd backend && pytest tests/test_fedex_sandbox.py -v
 
 変更履歴:
-  2026-06-09: 初版（ADR-124 Phase D）
+  2026-06-09: 初版（ADR-125 Phase D）
 """
 
 from __future__ import annotations
@@ -79,7 +79,7 @@ def reset_cache():
 def test_sandbox_oauth_token_obtained():
     """FedEx Sandbox OAuth エンドポイントからトークンを取得できる。
 
-    ADR-124 D3: トークンキャッシュの動作も併せて検証する。
+    ADR-125 D3: トークンキャッシュの動作も併せて検証する。
     """
     # 1回目: API 呼び出し
     token1 = get_or_refresh_token(_TENANT_ID, _ENV, _CLIENT_ID, _CLIENT_SECRET)
@@ -101,7 +101,7 @@ def test_sandbox_oauth_token_obtained():
 def test_sandbox_rates_returns_quotes():
     """FedEx Sandbox Rates API から見積もりリストを取得できる。
 
-    ADR-124 D4: 以下をアサート
+    ADR-125 D4: 以下をアサート
     - 空でないリストが返ること
     - 各要素が FedExRateQuote であること
     - service_type が非空文字列であること
@@ -129,7 +129,7 @@ def test_sandbox_rates_returns_quotes():
         assert q.total_net_charge > 0, f"total_net_charge が 0 以下: {q}"
         assert q.currency, f"currency が空: {q}"
 
-    # 料金昇順であることを確認（ADR-124 D4 — ソート要件）
+    # 料金昇順であることを確認（ADR-125 D4 — ソート要件）
     charges = [q.total_net_charge for q in quotes]
     assert charges == sorted(charges), f"料金昇順でない: {charges}"
 
