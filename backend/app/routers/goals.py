@@ -24,7 +24,6 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
-from app.services.audit import record_audit_log
 from app.schemas.goal import (
     GoalCreate,
     GoalResponse,
@@ -32,6 +31,7 @@ from app.schemas.goal import (
     GoalUpdate,
     GoalWithActual,
 )
+from app.services.audit import record_audit_log
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
