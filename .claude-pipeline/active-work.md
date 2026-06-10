@@ -125,3 +125,4 @@
 | `REVIEW` | PR 提出済み・Reviewer/Evaluator 待ち |
 | `BLOCKED` | 問題があり停止中（しんごさん確認待ち） |
 | `DONE` | PR マージ完了（ログとして永続保持） |
+| feature/morimoto/adr126-error-handling | ADR-126 公開フォームエラーハンドリング（409 already_registered + i18n） | 2026-06-11 | IN_PROGRESS | #1918 | |

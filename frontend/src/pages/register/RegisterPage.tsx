@@ -60,6 +60,20 @@ const emptyAddress = (type: string): AddressForm => ({
 
 type ShippingChoice = "proceed" | "same";
 
+const KNOWN_ERROR_CODES = new Set([
+  "already_registered",
+  "invalid_token",
+  "company_not_found",
+  "unexpected_error",
+]);
+
+function resolveErrorCode(code: unknown, t: (key: string) => string): string {
+  if (typeof code === "string" && KNOWN_ERROR_CODES.has(code)) {
+    return t(`registration.error.${code}`);
+  }
+  return t("registration.submitError");
+}
+
 export default function RegisterPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -208,7 +222,7 @@ export default function RegisterPage() {
         const rawDetail = body?.detail;
         const msg = Array.isArray(rawDetail)
           ? rawDetail.map((d: { msg?: string; message?: string }) => d.msg ?? d.message ?? t("registration.submitError")).join(", ")
-          : rawDetail ?? t("registration.submitError");
+          : resolveErrorCode(rawDetail, t);
         throw new Error(msg);
       }
 

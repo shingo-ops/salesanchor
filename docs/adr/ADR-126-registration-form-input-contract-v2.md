@@ -145,3 +145,32 @@
 - [ ] 送信されたデータが正しいテナントの companies / company_addresses（address_type別）に保存される（トークン検証経由・他テナント混入なし）。
 - [ ] 全文言が en.json / ja.json のキーで管理され、ESLint local/no-japanese-literal を通る。
 - [ ] 担当者名を空欄で送信すると、請求先名（billing_display_name）を担当者名とする contacts レコードが1件作成される。
+- [ ] 既登録住所（`idx_company_addresses_one_default` 制約違反）で登録試行 → 409 + `{"detail": "already_registered"}` が返り、フォームに「この住所はすでに登録されています」と表示される。
+- [ ] 409 時にトークンは消費されず、再送が可能である。
+- [ ] 公開フォームの全エラーメッセージが i18n キー（`registration.error.*`）経由で表示され、内部コード・日本語ハードコードが顧客に露出しない。
+
+---
+
+## 追補: 公開フォームエラーハンドリング（2026-06-11）
+
+### 背景
+
+カナリーテストで `POST /public/register` が `UniqueViolationError`（既登録住所）時に「データベースエラーが発生しました」を顧客に露出することを検出。
+
+### 決定
+
+**Case イ: 公開エンドポイント内捕捉**（グローバルハンドラー不変）
+
+- `register_customer` エンドポイント内の address INSERT ループを `try/except SQLAlchemyError` で囲み、`idx_company_addresses_one_default` 制約違反を検知したら 409 + `"already_registered"` を返す。
+- 全 `detail` 文字列を機械読み取り可能コード（`invalid_token` / `company_not_found` / `already_registered`）に統一。
+- フロントエンド（`RegisterPage.tsx` / `RegisterAddressPage.tsx`）は `resolveErrorCode()` で既知コードを `registration.error.*` i18n キーに変換。未知コードは `registration.submitError` にフォールバック。
+- `main.py` グローバルハンドラーは変更しない（スタッフUI ~16画面保護のため）。
+
+### 追加 i18n キー
+
+| キー | en | ja |
+|------|----|----|
+| `registration.error.already_registered` | This address has already been registered... | この住所はすでに登録されています... |
+| `registration.error.invalid_token` | Invalid or expired registration link... | 登録リンクが無効または期限切れです... |
+| `registration.error.company_not_found` | Company information not found... | 会社情報が見つかりません... |
+| `registration.error.unexpected_error` | An unexpected error occurred... | 予期しないエラーが発生しました... |
