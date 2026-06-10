@@ -146,15 +146,6 @@ export default function RegisterPage() {
       setError(t("registration.countryRequired"));
       return;
     }
-    if (!contactName.trim()) {
-      setError(t("registration.contactNameRequired"));
-      return;
-    }
-    if (!contactEmail.trim() && !contactTelephone.trim()) {
-      setError(t("registration.contactContactRequired"));
-      return;
-    }
-
     setSubmitting(true);
 
     // Prepare billing address with combined phone
@@ -501,7 +492,7 @@ export default function RegisterPage() {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
             <label>
-              {t("registration.contactName")} {requiredMark}
+              {t("registration.contactName")}
               <input
                 type="text"
                 className="input"
