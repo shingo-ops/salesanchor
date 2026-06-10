@@ -93,7 +93,7 @@ grep -rn "<DataTable" frontend/src/pages → 0件（design-preview のデモの�
 | ページ | file:line | 理由 |
 |--------|-----------|------|
 | `inventory/InventoryPage.tsx` | `frontend/src/pages/inventory/InventoryPage.tsx:617` | 列非表示・独自選択・ページネ・ソート複合→置換困難 |
-| `products/ProductsPage.tsx` | `frontend/src/pages/products/ProductsPage.tsx:562` | 2段ヘッダー・行ドラッグ並び替え・独自選択→DataTable 改修必要 |
+| `products/ProductsPage.tsx` | `frontend/src/pages/products/ProductsPage.tsx:281` | 2段ヘッダー・行ドラッグ並び替え・独自選択→DataTable 改修必要 |
 
 ### 3-C. フォーム内明細テーブル（置換対象外）
 
@@ -161,7 +161,7 @@ grep -rn "<DataTable" frontend/src/pages → 0件（design-preview のデモの�
 | ページ | 理由 |
 |--------|------|
 | `frontend/src/pages/inventory/InventoryPage.tsx:617` | 列非表示トグル（hiddenColumns）/ ページネーション / 独自チェックボックス複合。DataTable に「列非表示」機能が未実装 |
-| `frontend/src/pages/products/ProductsPage.tsx:562` | 2段ヘッダー（rowSpan/colSpan 必須）/ 行ドラッグ並び替え（drag events）。DataTable では構造的に実装不可 |
+| `frontend/src/pages/products/ProductsPage.tsx:281` | 2段ヘッダー（rowSpan/colSpan 必須）/ 行ドラッグ並び替え（drag events）。DataTable では構造的に実装不可 |
 
 ### 5-B. 慎重扱い（機能追加が必要なもの）
 

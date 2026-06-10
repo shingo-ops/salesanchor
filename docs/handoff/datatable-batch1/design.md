@@ -1,15 +1,21 @@
 # DataTable 標準化 バッチ1 — 設計
 
-## ADR 参照
+> **作成日**: 2026-06-10
+> **ステータス**: Accepted
+> **参照**: recon = `docs/handoff/datatable-standardization/recon.md` / ADR-067
 
-- **ADR-122**: DataTable 標準化（Phase E）— `docs/adr/ADR-122-datatable-standardization.md`
-- **ADR-067**: デザイントークン強制 — `docs/adr/ADR-067-design-tokens.md`
+---
 
-## Recon 参照
+## KGI
 
-`docs/handoff/datatable-batch1/recon.md`
+| | before | after |
+|--|--------|-------|
+| バッチ1対象5ページの raw `<table>` | **5件** | **0件** |
+| 標準 `DataTable` 採用（実ページ） | 1件（InvoicesPage） | 6件 |
 
-## 設計方針
+---
+
+## 技術 How
 
 ### 置換パターン
 
@@ -17,40 +23,40 @@
 raw <table className="data-table"> → <DataTable columns={columns} data={...} rowKey={(r) => String(r.id)} emptyState={...} />
 ```
 
-- columns 定義は component 関数内（closures over props/state が必要なため）
-- loading 分岐内 (`loading ? ... : (...)`) で IIFE `(() => { const columns = ...; return <DataTable .../>; })()` パターンを採用
+- columns 定義は component 関数内（props/state へのクロージャが必要なため）
+- loading 分岐内で columns を定義し DataTable を返す
 
-### emptyState
+### 対象ファイル（バッチ1）
 
-各ファイルの既存 `<td colSpan={N} className="empty">` を `emptyState` prop へ移行。
-DataTable が内部で `colSpan={columns.length}` を自動計算するため colSpan は不要。
+| ファイル | 列数 | 特記 |
+|---------|------|------|
+| `orders/OrdersTable.tsx:69` | 9 | shippings/purchases クロージャ・phase badge・NavLink・data-testid |
+| `staff/StaffPage.tsx:292` | 5 | status badge・permission-gated buttons・emails +N |
+| `bots/BotsPage.tsx:247` | 7 | purposeLabel/statusLabel・permission-gated buttons |
+| `shifts/ShiftsPage.tsx:74` | 6 | shift_type badge（badge-negotiating） |
+| `archives/ArchivesPage.tsx:33` | 5 | restored_at 条件分岐（restore button or restored badge） |
 
 ### data-testid 保持
 
-OrdersTable の `data-testid` 属性（8種）はすべて renderCell 内の要素に移動して保持。
+OrdersTable の data-testid 属性（8種: ship-cell-to-\*, flow-cell-\*, mark-paid-\*, mark-purchased-\*, issue-label-\*, mark-unpaid-\*, open-shipping-\*, open-purchase-\*）はすべて renderCell 内の要素に移動して保持。
+
+---
+
+## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
-| raw `<table>` が残存しない | `grep -r "data-table" src/pages/` で 0件 |
-| TypeScript エラーがない | `tsc --noEmit` — 既存エラーなし（worktree は node_modules 非共有のため main repo で確認） |
-| lint エラーがない | `eslint` — 0 errors |
-| data-testid 保持 | grep で全 testid が存在 |
+| 5ページの raw `<table className="data-table">` が残存しない | `grep "data-table" src/pages/{orders,staff,bots,shifts,archives}` → 0件 |
+| TypeScript エラーなし | `tsc --noEmit` — 0件 |
+| ESLint エラーなし | `npm run lint` — 0 errors |
+| data-testid 属性すべて保持 | grep で全 testid 確認 |
+| 表示・列・値が現状と parity | Evaluator 視覚差分確認 |
+| `git revert HEAD` で元に戻る | revert 後 build が通る |
 
-## 外部事例
+---
 
-- InvoicesPage（PR #1841）: パイロット実装。columns を component body 内で定義し、`DataTable` へ渡すパターンを確立。本バッチはこのパターンをそのまま踏襲。
+## 外部・過去事例の参照と我々への応用
 
-## 弊害・リスク
+shadcn/ui・Mantine・Ant Design Table など主要 UI ライブラリはすべて「列定義（columns）+ データ（data）+ rowKey」の分離パターンを採用している。raw `<table>` から columns 定義モデルへの段階移行は React エコシステムで確立されたパターン。
 
-- IIFE パターンは readable だが、loading/error 分岐がさらに増える場合は専用サブコンポーネントへの切り出しを検討する（YAGNI: 現時点では不要）
-- API 呼び出し・状態管理は一切変更なし → 動作影響なし
-
-## 変更サマリ
-
-| ファイル | 変更内容 |
-|---------|---------|
-| `orders/OrdersTable.tsx` | 9列 DataTable へ置換（phase/status badge, NavLink, fmtCurrency, conditional actions） |
-| `staff/StaffPage.tsx` | 5列 DataTable へ置換（status badge, permission-gated buttons） |
-| `bots/BotsPage.tsx` | 7列 DataTable へ置換（status badge, permission-gated buttons, rotateKey） |
-| `shifts/ShiftsPage.tsx` | 6列 DataTable へ置換（shift_type badge） |
-| `archives/ArchivesPage.tsx` | 5列 DataTable へ置換（conditional restore） |
+InvoicesPage（PR #1841）をパイロットとして型を確立した。本バッチ（BatchF1）はそのテンプレを OrdersTable/StaffPage/BotsPage/ShiftsPage/ArchivesPage の5ページへ横展開する。renderCell クロージャで props/state を参照するパターン（OrdersTable の shippings/purchases）も、React のコンポーネント設計原則に合致する確立済み手法。
