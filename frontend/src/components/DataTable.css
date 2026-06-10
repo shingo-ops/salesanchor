@@ -148,6 +148,10 @@
   font-size: var(--font-sm);
 }
 
+/* ── 行ハイライト — rowClassName 用（0,2,0） ── */
+.comp-table__row--danger  { background: var(--danger-bg); }
+.comp-table__row--warning { background: var(--warning-bg); }
+
 /* ── クリック可能行 (0,2,0) ── */
 .comp-table__row--clickable {
   cursor: pointer;

@@ -6,6 +6,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Supplier {
   id: number;
@@ -27,17 +29,14 @@ interface ParseStatRow {
 const EXCLUDE_RATE_THRESHOLD = 30;
 const CONFIDENCE_THRESHOLD = 0.5;
 
-function rowStyle(row: ParseStatRow): React.CSSProperties {
-  const highExclude = (row.exclude_rate_pct ?? 0) > EXCLUDE_RATE_THRESHOLD;
-  const lowConfidence =
-    row.avg_confidence !== null && row.avg_confidence < CONFIDENCE_THRESHOLD;
-  if (highExclude) {
-    return { background: "var(--danger-bg)" };
-  }
-  if (lowConfidence) {
-    return { background: "var(--warning-bg)" };
-  }
-  return {};
+const numCell = (n: number) => (
+  <span style={{ display: "block", textAlign: "right" }}>{n.toLocaleString()}</span>
+);
+
+function rowClassName(row: ParseStatRow): string {
+  if ((row.exclude_rate_pct ?? 0) > EXCLUDE_RATE_THRESHOLD) return "comp-table__row--danger";
+  if (row.avg_confidence !== null && row.avg_confidence < CONFIDENCE_THRESHOLD) return "comp-table__row--warning";
+  return "";
 }
 
 export default function SupplierParseStatsTab() {
@@ -79,6 +78,32 @@ export default function SupplierParseStatsTab() {
 
   const f = "supplier.parseStats";
 
+  const columns: DataTableColumn<ParseStatRow>[] = [
+    { key: "day",            header: t(`${f}.columns.day`) },
+    { key: "total_lines",    header: t(`${f}.columns.totalLines`),    renderCell: (r) => numCell(r.total_lines) },
+    { key: "parsed_count",   header: t(`${f}.columns.parsedCount`),   renderCell: (r) => numCell(r.parsed_count) },
+    { key: "excluded_count", header: t(`${f}.columns.excludedCount`), renderCell: (r) => numCell(r.excluded_count) },
+    { key: "unparsed_count", header: t(`${f}.columns.unparsedCount`), renderCell: (r) => numCell(r.unparsed_count) },
+    {
+      key: "exclude_rate_pct",
+      header: t(`${f}.columns.excludeRate`),
+      renderCell: (r) => (
+        <span style={{ display: "block", textAlign: "right" }}>
+          {r.exclude_rate_pct !== null ? `${r.exclude_rate_pct.toFixed(1)}%` : "-"}
+        </span>
+      ),
+    },
+    {
+      key: "avg_confidence",
+      header: t(`${f}.columns.avgConfidence`),
+      renderCell: (r) => (
+        <span style={{ display: "block", textAlign: "right" }}>
+          {r.avg_confidence !== null ? r.avg_confidence.toFixed(3) : "-"}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="supplier-parse-stats-tab">
       {error && <div className="error-message">{error}</div>}
@@ -102,35 +127,13 @@ export default function SupplierParseStatsTab() {
       {loading && <div>{t("common.loading")}</div>}
 
       {!loading && selectedId !== null && (
-        <table className="data-table" data-testid="parse-stats-table">
-          <thead>
-            <tr>
-              <th>{t(`${f}.columns.day`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.totalLines`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.parsedCount`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.excludedCount`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.unparsedCount`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.excludeRate`)}</th>
-              <th style={{ textAlign: "right" }}>{t(`${f}.columns.avgConfidence`)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.day} style={rowStyle(row)} data-testid={`parse-stats-row-${row.day}`}>
-                <td>{row.day}</td>
-                <td style={{ textAlign: "right" }}>{row.total_lines.toLocaleString()}</td>
-                <td style={{ textAlign: "right" }}>{row.parsed_count.toLocaleString()}</td>
-                <td style={{ textAlign: "right" }}>{row.excluded_count.toLocaleString()}</td>
-                <td style={{ textAlign: "right" }}>{row.unparsed_count.toLocaleString()}</td>
-                <td style={{ textAlign: "right" }}>{row.exclude_rate_pct !== null ? `${row.exclude_rate_pct.toFixed(1)}%` : "-"}</td>
-                <td style={{ textAlign: "right" }}>{row.avg_confidence !== null ? row.avg_confidence.toFixed(3) : "-"}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={7} className="empty">{t(`${f}.noData`)}</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable<ParseStatRow>
+          columns={columns}
+          data={rows}
+          rowKey={(r) => r.day}
+          emptyState={t(`${f}.noData`)}
+          rowClassName={rowClassName}
+        />
       )}
 
       {!loading && rows.length > 0 && (
