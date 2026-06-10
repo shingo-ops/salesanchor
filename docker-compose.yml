@@ -97,6 +97,10 @@ services:
       - GOOGLE_DRIVE_CLIENT_ID=${GOOGLE_DRIVE_CLIENT_ID:-}
       - GOOGLE_DRIVE_CLIENT_SECRET=${GOOGLE_DRIVE_CLIENT_SECRET:-}
       - GOOGLE_DRIVE_REDIRECT_URI=${GOOGLE_DRIVE_REDIRECT_URI:-}
+      # ADR-125: FedEx live smoke — サービスアカウントバイパス用トークン。
+      # この2行が無いと .env に値があっても os.getenv が空になりバイパスが不活性になる。
+      - SMOKE_SERVICE_TOKEN=${SMOKE_SERVICE_TOKEN:-}
+      - SMOKE_SERVICE_EMAIL=${SMOKE_SERVICE_EMAIL:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
