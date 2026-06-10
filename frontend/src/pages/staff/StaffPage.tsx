@@ -3,19 +3,26 @@
  *
  * staff テーブル + staff_emails + staff_ui_preferences の CRUD。
  * UI設定はネストでまとめて編集可能。
+ *
+ * 変更履歴:
+ *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチB）
  */
 
 import { useEffect, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { StaffFormFields, type StaffFormState, type StaffRole } from "./StaffFormFields";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -49,11 +56,6 @@ interface Staff {
   updated_at: string;
 }
 
-interface Role {
-  id: number;
-  name: string;
-}
-
 const emptyPrefs: StaffUIPreferences = {
   dark_mode: false,
   show_chat_menu: true,
@@ -63,7 +65,7 @@ const emptyPrefs: StaffUIPreferences = {
   show_sidebar: true,
 };
 
-type FormState = {
+type CreateFormState = {
   staff_code: string;
   surname_jp: string;
   given_name_jp: string;
@@ -79,22 +81,41 @@ type FormState = {
   ui_preferences: StaffUIPreferences;
 };
 
-const emptyForm: FormState = {
+const emptyCreateForm: CreateFormState = {
   staff_code: "", surname_jp: "", given_name_jp: "",
   surname_kana: "", given_name_kana: "", surname_en: "", given_name_en: "",
   primary_email: "", discord_user_id: "", role_id: "", status: "active",
   firebase_uid: "", ui_preferences: { ...emptyPrefs },
 };
 
+const emptyEditForm: StaffFormState = {
+  surname_jp: "", given_name_jp: "",
+  primary_email: "", role_id: "", status: "active", discord_user_id: "",
+};
+
+const toForm = (s: Staff): StaffFormState => ({
+  surname_jp: s.surname_jp,
+  given_name_jp: s.given_name_jp,
+  primary_email: s.primary_email,
+  role_id: String(s.role_id),
+  status: s.status,
+  discord_user_id: s.discord_user_id ?? "",
+});
+
 export default function StaffPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const { refresh: refreshUiPrefs, selfStaffId } = useUiPrefs();
+  const navigate = useNavigate();
+  const { selfStaffId } = useUiPrefs();
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [roles, setRoles] = useState<StaffRole[]>([]);
+  // 新規作成モーダル
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
+  // 編集ドロワー
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Staff, StaffFormState>({ toForm, emptyForm: emptyEditForm });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -104,7 +125,7 @@ export default function StaffPage() {
     try {
       const [s, r] = await Promise.all([
         api.get<Staff[]>("/staff"),
-        api.get<Role[]>("/roles"),
+        api.get<StaffRole[]>("/roles"),
       ]);
       setStaff(s);
       setRoles(r);
@@ -119,42 +140,32 @@ export default function StaffPage() {
 
   const toNull = (v: string) => (v ? v : null);
 
-  const handleSubmit = async (e: FormEvent) => {
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     if (submitting) return;
     setSubmitting(true);
     const payload: Record<string, unknown> = {
-      surname_jp: form.surname_jp,
-      given_name_jp: form.given_name_jp,
-      surname_kana: toNull(form.surname_kana),
-      given_name_kana: toNull(form.given_name_kana),
-      surname_en: toNull(form.surname_en),
-      given_name_en: toNull(form.given_name_en),
-      primary_email: form.primary_email,
-      discord_user_id: toNull(form.discord_user_id),
-      role_id: parseInt(form.role_id, 10),
-      status: form.status,
-      firebase_uid: toNull(form.firebase_uid),
-      ui_preferences: form.ui_preferences,
+      surname_jp: createForm.surname_jp,
+      given_name_jp: createForm.given_name_jp,
+      surname_kana: toNull(createForm.surname_kana),
+      given_name_kana: toNull(createForm.given_name_kana),
+      surname_en: toNull(createForm.surname_en),
+      given_name_en: toNull(createForm.given_name_en),
+      primary_email: createForm.primary_email,
+      discord_user_id: toNull(createForm.discord_user_id),
+      role_id: parseInt(createForm.role_id, 10),
+      status: createForm.status,
+      firebase_uid: toNull(createForm.firebase_uid),
+      ui_preferences: createForm.ui_preferences,
     };
-    if (!editId && form.staff_code.trim()) {
-      payload.staff_code = form.staff_code.trim();
-    }
+    if (createForm.staff_code.trim()) payload.staff_code = createForm.staff_code.trim();
     try {
-      if (editId) await api.patch(`/staff/${editId}`, payload);
-      else await api.post("/staff", payload);
-      // PR #166 F4: 自分の staff レコードを編集した時のみ UI prefs を refresh する。
-      // 他人を編集したケースでの不要な /staff/me 呼び出しを抑制し、かつ
-      // loadAll() と refreshUiPrefs() をシーケンシャル await にしてレースを防ぐ。
-      const editedSelf = editId !== null && selfStaffId !== null && editId === selfStaffId;
-      setShowForm(false);
-      setEditId(null);
-      setForm(emptyForm);
-      await loadAll();
-      if (editedSelf) {
-        await refreshUiPrefs();
-      }
+      await api.post("/staff", payload);
+      setShowCreate(false);
+      setCreateForm(emptyCreateForm);
+      loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
     } finally {
@@ -162,24 +173,25 @@ export default function StaffPage() {
     }
   };
 
-  const handleEdit = (s: Staff) => {
-    setEditId(s.id);
-    setForm({
-      staff_code: s.staff_code,
-      surname_jp: s.surname_jp,
-      given_name_jp: s.given_name_jp,
-      surname_kana: s.surname_kana || "",
-      given_name_kana: s.given_name_kana || "",
-      surname_en: s.surname_en || "",
-      given_name_en: s.given_name_en || "",
-      primary_email: s.primary_email,
-      discord_user_id: s.discord_user_id || "",
-      role_id: String(s.role_id),
-      status: s.status,
-      firebase_uid: s.firebase_uid || "",
-      ui_preferences: s.ui_preferences || { ...emptyPrefs },
-    });
-    setShowForm(true);
+  /* ── ドロワー内編集保存（6 要点フィールド） ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!editId) return;
+    try {
+      await api.patch(`/staff/${editId}`, {
+        surname_jp: editForm.surname_jp,
+        given_name_jp: editForm.given_name_jp,
+        primary_email: editForm.primary_email,
+        role_id: parseInt(editForm.role_id, 10),
+        status: editForm.status,
+        discord_user_id: toNull(editForm.discord_user_id),
+      });
+      closeDrawer();
+      loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.saveError"));
+    }
   };
 
   const performDelete = async () => {
@@ -200,7 +212,7 @@ export default function StaffPage() {
       subtitleKey="staff.subtitle"
       headerAction={hasPermission("staff.create") ? (
         <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}>
+          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
             {t("staff.newStaff")}
           </button>
         </div>
@@ -208,51 +220,50 @@ export default function StaffPage() {
     >
       {error && <div className="error-message">{error}</div>}
 
+      {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={editId ? t("staff.editStaff") : t("staff.newStaff")}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("staff.newStaff")}
         size="md"
       >
-        <form onSubmit={handleSubmit}>
-          {!editId && (
-            <div className="form-group">
-              <label>{t("staff.staffCodeLabel")}</label>
-              <input value={form.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setForm({ ...form, staff_code: e.target.value })} />
-            </div>
-          )}
+        <form onSubmit={handleCreateSubmit}>
+          <div className="form-group">
+            <label>{t("staff.staffCodeLabel")}</label>
+            <input value={createForm.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setCreateForm({ ...createForm, staff_code: e.target.value })} />
+          </div>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
-            <input required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />
+            <input required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
-            <input required value={form.given_name_jp} onChange={(e) => setForm({ ...form, given_name_jp: e.target.value })} />
+            <input required value={createForm.given_name_jp} onChange={(e) => setCreateForm({ ...createForm, given_name_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameKana")}</label>
-            <input value={form.surname_kana} onChange={(e) => setForm({ ...form, surname_kana: e.target.value })} />
+            <input value={createForm.surname_kana} onChange={(e) => setCreateForm({ ...createForm, surname_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameKana")}</label>
-            <input value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
+            <input value={createForm.given_name_kana} onChange={(e) => setCreateForm({ ...createForm, given_name_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameEn")}</label>
-            <input value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
+            <input value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameEn")}</label>
-            <input value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
+            <input value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-            <input required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
+            <input required type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
           </div>
           <div className="form-group"><label>Discord ID</label>
-            <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
+            <input value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.role")} *</label>
-            <select required value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
+            <select required value={createForm.role_id} onChange={(e) => setCreateForm({ ...createForm, role_id: e.target.value })}>
               <option value="">{t("common.pleaseSelect")}</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
           <div className="form-group"><label>{t("staff.status")}</label>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
               <option value="active">{t("staff.status_active")}</option>
               <option value="inactive">{t("staff.status_inactive")}</option>
               <option value="pending">{t("staff.status_pending")}</option>
@@ -260,8 +271,6 @@ export default function StaffPage() {
           </div>
           <h4>{t("staff.uiPreferences")}</h4>
           {(() => {
-            // Record<keyof StaffUIPreferences, string> で網羅性を型保証。
-            // StaffUIPreferences にフィールド追加した時にコンパイル時エラーで検知できる。
             const labels: Record<keyof StaffUIPreferences, string> = {
               dark_mode: t("staff.darkMode"),
               show_chat_menu: t("staff.showChatMenu"),
@@ -273,20 +282,40 @@ export default function StaffPage() {
             return (Object.entries(labels) as Array<[keyof StaffUIPreferences, string]>).map(([k, label]) => (
               <div className="form-group" key={k}>
                 <label>
-                  <input type="checkbox" checked={form.ui_preferences[k]} onChange={(e) => setForm({ ...form, ui_preferences: { ...form.ui_preferences, [k]: e.target.checked } })} />
+                  <input type="checkbox" checked={createForm.ui_preferences[k as keyof StaffUIPreferences]} onChange={(e) => setCreateForm({ ...createForm, ui_preferences: { ...createForm.ui_preferences, [k]: e.target.checked } })} />
                   {" "}{label}
                 </label>
               </div>
             ));
           })()}
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
+            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
             <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? t("common.submitting") : editId ? t("common.update") : t("common.register")}
+              {submitting ? t("common.submitting") : t("common.register")}
             </button>
           </div>
         </form>
       </Modal>
+
+      {/* 編集 Drawer（行クリックで開く・6 要点フィールド） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={t("staff.editStaff")}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/staff/${editId}/edit`); } : undefined}
+      >
+        <form onSubmit={handleEditSubmit}>
+          <StaffFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
+            roles={roles}
+          />
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.update")}</button>
+          </div>
+        </form>
+      </Drawer>
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
@@ -326,8 +355,8 @@ export default function StaffPage() {
             header: t("common.actions"),
             renderCell: (s) => (
               <span className="actions">
-                {hasPermission("staff.update") && <button className="btn-sm" onClick={() => handleEdit(s)}>{t("common.edit")}</button>}
-                {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>{t("common.delete")}</button>}
+                {hasPermission("staff.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</button>}
+                {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("common.delete")}</button>}
               </span>
             ),
           },
@@ -337,6 +366,7 @@ export default function StaffPage() {
             columns={columns}
             data={staff}
             rowKey={(s) => String(s.id)}
+            onRowClick={hasPermission("staff.update") ? handleRowClick : undefined}
             emptyState={<span>{t("staff.noStaff")}</span>}
           />
         );
