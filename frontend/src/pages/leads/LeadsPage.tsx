@@ -6,12 +6,15 @@
  *   2026-04-16: 初版作成（Phase 1）
  *   2026-04-25: Phase 1-B-2 Step 5c-3 — 案件化モーダルの顧客セレクタを
  *     CompanyContactSelector（company + contact）に置換。
+ *   2026-06-11: ADR-122 バッチC3 — 新規作成は Modal のまま、編集を Drawer 化。
  */
 
 import { useCallback, useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import MergeLeadModal from "../../components/MergeLeadModal";
@@ -23,6 +26,9 @@ import { getStatusPresentation } from "../../utils/statusPresentation";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
+import { LeadFormFields } from "./LeadFormFields";
+import type { LeadFormState } from "./LeadFormFields";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -55,7 +61,7 @@ interface Lead {
   priority_score?: CustomerScoreData | null;
 }
 
-type FormState = {
+type CreateFormState = {
   customer_name: string;
   company_name: string;
   email: string;
@@ -71,12 +77,26 @@ type FormState = {
   notes: string;
 };
 
-const emptyForm: FormState = {
+const emptyCreateForm: CreateFormState = {
   customer_name: "", company_name: "", email: "", phone: "",
   source: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
   monthly_forecast: "", notes: "",
 };
+
+const emptyEditForm: LeadFormState = {
+  customer_name: "", email: "", phone: "",
+  status: "lead", type: "", notes: "",
+};
+
+const toForm = (l: Lead): LeadFormState => ({
+  customer_name: l.customer_name,
+  email: l.email || "",
+  phone: l.phone || "",
+  status: l.status,
+  type: l.type || "",
+  notes: l.notes || "",
+});
 
 /* ------------------------------------------------------------------ */
 /* Main LeadsPage                                                       */
@@ -85,12 +105,16 @@ const emptyForm: FormState = {
 export default function LeadsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  // 新規作成 Modal
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
+  // 編集 Drawer
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Lead, LeadFormState>({ toForm, emptyForm: emptyEditForm });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
@@ -129,58 +153,55 @@ export default function LeadsPage() {
     onUpdate: useCallback(() => { loadLeads(); }, [loadLeads]),
   });
 
-  const handleSubmit = async (e: FormEvent) => {
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     const toNull = (v: string) => (v ? v : null);
-    const payload = {
-      customer_name: form.customer_name,
-      company_name: toNull(form.company_name),
-      email: toNull(form.email),
-      phone: toNull(form.phone),
-      source: toNull(form.source),
-      type: toNull(form.type),
-      status: form.status,
-      temperature: toNull(form.temperature),
-      estimated_scale: toNull(form.estimated_scale),
-      customer_type: toNull(form.customer_type),
-      response_speed: toNull(form.response_speed),
-      monthly_forecast: form.monthly_forecast ? Number(form.monthly_forecast) : null,
-      notes: toNull(form.notes),
-    };
     try {
-      if (editId) {
-        await api.patch(`/leads/${editId}`, payload);
-      } else {
-        await api.post("/leads", payload);
-      }
-      setShowForm(false);
-      setEditId(null);
-      setForm(emptyForm);
+      await api.post("/leads", {
+        customer_name: createForm.customer_name,
+        company_name: toNull(createForm.company_name),
+        email: toNull(createForm.email),
+        phone: toNull(createForm.phone),
+        source: toNull(createForm.source),
+        type: toNull(createForm.type),
+        status: createForm.status,
+        temperature: toNull(createForm.temperature),
+        estimated_scale: toNull(createForm.estimated_scale),
+        customer_type: toNull(createForm.customer_type),
+        response_speed: toNull(createForm.response_speed),
+        monthly_forecast: createForm.monthly_forecast ? Number(createForm.monthly_forecast) : null,
+        notes: toNull(createForm.notes),
+      });
+      setShowCreate(false);
+      setCreateForm(emptyCreateForm);
       loadLeads();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     }
   };
 
-  const handleEdit = (l: Lead) => {
-    setEditId(l.id);
-    setForm({
-      customer_name: l.customer_name,
-      company_name: l.company_name || "",
-      email: l.email || "",
-      phone: l.phone || "",
-      source: l.source || "",
-      type: l.type || "",
-      status: l.status,
-      temperature: l.temperature || "",
-      estimated_scale: l.estimated_scale || "",
-      customer_type: l.customer_type || "",
-      response_speed: l.response_speed || "",
-      monthly_forecast: l.monthly_forecast != null ? String(l.monthly_forecast) : "",
-      notes: l.notes || "",
-    });
-    setShowForm(true);
+  /* ── Drawer 編集（6項目） ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editId || !editForm) return;
+    setError("");
+    const toNull = (v: string) => (v ? v : null);
+    try {
+      await api.patch(`/leads/${editId}`, {
+        customer_name: editForm.customer_name,
+        email: toNull(editForm.email),
+        phone: toNull(editForm.phone),
+        status: editForm.status,
+        type: toNull(editForm.type),
+        notes: toNull(editForm.notes),
+      });
+      closeDrawer();
+      loadLeads();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
   };
 
   const performDelete = async () => {
@@ -237,7 +258,7 @@ export default function LeadsPage() {
       subtitleKey="leads.subtitle"
       headerAction={hasPermission("leads.create") ? (
         <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}>{t("leads.newLead")}</button>
+          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
         </div>
       ) : undefined}
     >
@@ -250,81 +271,82 @@ export default function LeadsPage() {
 
       {error && <div className="error-message">{error}</div>}
 
+      {/* 新規作成 Modal（全項目）*/}
       <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={editId ? t("leads.editLead") : t("leads.newLeadTitle")}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("leads.newLeadTitle")}
         size="md"
       >
-        <form onSubmit={handleSubmit}>
-              <div className="form-group"><label>{t("leads.customerName")} *</label>
-                <input required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.companyName")}</label>
-                <input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.email")}</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.phone")}</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.source")}</label>
-                <input placeholder={t("leads.sourcePlaceholder")} value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.type")}</label>
-                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                  <option value="">{t("common.notSet")}</option>
-                  <option value="Inbound">{t("leads.type_inbound")}</option>
-                  <option value="Outbound">{t("leads.type_outbound")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.temperature")}</label>
-                <select value={form.temperature} onChange={(e) => setForm({ ...form, temperature: e.target.value })}>
-                  <option value="">{t("common.notSet")}</option>
-                  <option value="Hot">{t("leads.temp_hot")}</option>
-                  <option value="Warm">{t("leads.temp_warm")}</option>
-                  <option value="Cold">{t("leads.temp_cold")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.estimatedScale")}</label>
-                <select value={form.estimated_scale} onChange={(e) => setForm({ ...form, estimated_scale: e.target.value })}>
-                  <option value="">{t("common.notSet")}</option>
-                  <option value="Small">{t("leads.scale_small")}</option>
-                  <option value="Medium">{t("leads.scale_medium")}</option>
-                  <option value="Large">{t("leads.scale_large")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.customerType")}</label>
-                <select value={form.customer_type} onChange={(e) => setForm({ ...form, customer_type: e.target.value })}>
-                  <option value="">{t("common.notSet")}</option>
-                  <option value="信頼重視">{t("leads.customerType_trust")}</option>
-                  <option value="価格重視">{t("leads.customerType_price")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.responseSpeed")}</label>
-                <select value={form.response_speed} onChange={(e) => setForm({ ...form, response_speed: e.target.value })}>
-                  <option value="">{t("common.notSet")}</option>
-                  <option value="24h以内">{t("leads.responseSpeed_24h")}</option>
-                  <option value="3日以内">{t("leads.responseSpeed_3days")}</option>
-                  <option value="3日超">{t("leads.responseSpeed_over3days")}</option>
-                </select>
-              </div>
-              <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
-                <input type="number" min="0" step="1" value={form.monthly_forecast} onChange={(e) => setForm({ ...form, monthly_forecast: e.target.value })} />
-              </div>
-              <div className="form-group"><label>{t("leads.notes")}</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
-              </div>
+        <form onSubmit={handleCreateSubmit}>
+          <div className="form-group"><label>{t("leads.customerName")} *</label>
+            <input required value={createForm.customer_name} onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.companyName")}</label>
+            <input value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.email")}</label>
+            <input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.phone")}</label>
+            <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.source")}</label>
+            <input placeholder={t("leads.sourcePlaceholder")} value={createForm.source} onChange={(e) => setCreateForm({ ...createForm, source: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.type")}</label>
+            <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="Inbound">{t("leads.type_inbound")}</option>
+              <option value="Outbound">{t("leads.type_outbound")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.status")}</label>
+            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
+              {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.temperature")}</label>
+            <select value={createForm.temperature} onChange={(e) => setCreateForm({ ...createForm, temperature: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="Hot">{t("leads.temp_hot")}</option>
+              <option value="Warm">{t("leads.temp_warm")}</option>
+              <option value="Cold">{t("leads.temp_cold")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.estimatedScale")}</label>
+            <select value={createForm.estimated_scale} onChange={(e) => setCreateForm({ ...createForm, estimated_scale: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="Small">{t("leads.scale_small")}</option>
+              <option value="Medium">{t("leads.scale_medium")}</option>
+              <option value="Large">{t("leads.scale_large")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.customerType")}</label>
+            <select value={createForm.customer_type} onChange={(e) => setCreateForm({ ...createForm, customer_type: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="信頼重視">{t("leads.customerType_trust")}</option>
+              <option value="価格重視">{t("leads.customerType_price")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.responseSpeed")}</label>
+            <select value={createForm.response_speed} onChange={(e) => setCreateForm({ ...createForm, response_speed: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="24h以内">{t("leads.responseSpeed_24h")}</option>
+              <option value="3日以内">{t("leads.responseSpeed_3days")}</option>
+              <option value="3日超">{t("leads.responseSpeed_over3days")}</option>
+            </select>
+          </div>
+          <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
+            <input type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.notes")}</label>
+            <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+          </div>
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.register")}</button>
+          </div>
         </form>
       </Modal>
 
@@ -381,15 +403,14 @@ export default function LeadsPage() {
             ) : null
           )},
           { key: "actions", header: t("leads.actions"), renderCell: (l) => (
-            <span className="actions">
-              {hasPermission("leads.update") && <button className="btn-sm" onClick={() => handleEdit(l)}>{t("common.edit")}</button>}
+            <span className="actions" onClick={(e) => e.stopPropagation()}>
               {hasPermission("leads.convert") && !l.converted_deal_id && (
-                <button className="btn-sm btn-primary" onClick={() => setConvertTarget(l)}>{t("leads.convert")}</button>
+                <button className="btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</button>
               )}
               {hasPermission("leads.delete") && !l.converted_deal_id && (
-                <button className="btn-sm" onClick={() => setMergeSource(l)}>{t("leads.merge")}</button>
+                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</button>
               )}
-              {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(l)}>{t("common.delete")}</button>}
+              {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</button>}
             </span>
           )},
         ];
@@ -404,9 +425,31 @@ export default function LeadsPage() {
             data={leads}
             rowKey={(l) => String(l.id)}
             emptyState={t("leads.noLeads")}
+            onRowClick={hasPermission("leads.update") ? handleRowClick : undefined}
           />
         );
       })()}
+
+      {/* 編集 Drawer（行クリックで開く・useRecordDrawer フック） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={t("leads.editLead")}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/crm/leads/${editId}/edit`); } : undefined}
+      >
+        {editForm && (
+          <form onSubmit={handleEditSubmit}>
+            <LeadFormFields
+              form={editForm}
+              onChange={(field, value) => setEditForm({ ...editForm, [field]: value })}
+            />
+            <div className="form-actions">
+              <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
+              <button type="submit" className="btn-primary">{t("common.update")}</button>
+            </div>
+          </form>
+        )}
+      </Drawer>
 
       <MergeLeadModal
         open={!!mergeSource}

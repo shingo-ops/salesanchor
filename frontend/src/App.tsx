@@ -20,6 +20,7 @@ import OrdersPage from "./pages/orders/OrdersPage";
 import SalesPage from "./pages/sales/SalesPage";
 import CommissionsPage from "./pages/commissions/CommissionsPage";
 import LeadsPage from "./pages/leads/LeadsPage";
+import LeadEditPage from "./pages/leads/LeadEditPage";
 import TeamsPage from "./pages/teams/TeamsPage";
 import TeamEditPage from "./pages/teams/TeamEditPage";
 import RolesPage from "./pages/roles/RolesPage";
@@ -126,6 +127,7 @@ function App() {
 
                   {/* 旧ルート後方互換リダイレクト（/crm/* ハブへ転送） */}
                   <Route path="/leads"         element={<Navigate to="/crm/leads"     replace />} />
+                  <Route path="/crm/leads/:id/edit" element={<LeadEditPage />} />
                   <Route path="/customers"     element={<Navigate to="/crm/companies"  replace />} />
                   <Route path="/companies"     element={<Navigate to="/crm/companies"  replace />} />
                   <Route path="/companies/:id" element={<CompanyIdRedirect />} />
