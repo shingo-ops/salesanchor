@@ -277,7 +277,6 @@ export default function CompaniesPage() {
       name_en: toNull(createForm.name_en),
       industry: toNull(createForm.industry),
       website: toNull(createForm.website),
-      trust_level: createForm.trust_level ? parseInt(createForm.trust_level, 10) : null,
       priority_focus: toNull(createForm.priority_focus),
       per_order_amount: createForm.per_order_amount || null,
       monthly_frequency: createForm.monthly_frequency ? parseInt(createForm.monthly_frequency, 10) : null,
@@ -456,10 +455,6 @@ export default function CompaniesPage() {
                   <div className="form-row">
                     <label>{t("companies.website")}</label>
                     <input value={createForm.website} onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.trustLevel")}</label>
-                    <input type="number" min="1" max="5" value={createForm.trust_level} onChange={(e) => setCreateForm({ ...createForm, trust_level: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.priorityFocus")}</label>
