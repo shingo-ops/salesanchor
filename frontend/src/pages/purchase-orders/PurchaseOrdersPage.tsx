@@ -8,6 +8,8 @@ import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
 import PurchaseOrdersFormModal, { POLineItem } from "./PurchaseOrdersFormModal";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 // 在庫表（InventoryPage）の複数選択から渡される商品（ADR-093 Phase 2b）。
 interface SelectedProduct {
@@ -199,82 +201,99 @@ export default function PurchaseOrdersPage() {
       </div>
       {error && <div className="error-message">{error}</div>}
       {info && <div className="info-message" data-testid="po-info">{info}</div>}
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
-        <table className="data-table" data-testid="purchase-orders-table">
-          <thead>
-            <tr>
-              <th>{t("purchaseOrders.poNumber")}</th>
-              <th>{t("common.amount")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("purchaseOrders.orderedAt")}</th>
-              <th>{t("purchaseOrders.receivedAt")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pos.map(p => (
-              <tr key={p.id} data-testid={`po-row-${p.id}`}>
-                <td className="mono">{p.po_number || "-"}</td>
-                <td>{p.total_amount != null ? `¥${Number(p.total_amount).toLocaleString()}` : "-"}</td>
-                <td>
-                  <span className={`badge badge-${getStatusPresentation("purchaseOrder", p.status).badgeVariant}`} data-testid={`po-status-${p.id}`}>
-                    {STATUS_LABELS[p.status] || p.status}
-                  </span>
-                </td>
-                <td>{p.ordered_at ? new Date(p.ordered_at).toLocaleDateString() : "-"}</td>
-                <td>{p.received_at ? new Date(p.received_at).toLocaleDateString() : "-"}</td>
-                <td className="actions">
-                  {p.status === "ordered" && hasPermission("purchase_orders.receive") && (
-                    <button className="btn-sm btn-primary" onClick={() => doAction(p.id, "receive")}>{t("purchaseOrders.actionReceive")}</button>
-                  )}
-                  {/* P5: 入荷取消（received → ordered、在庫加算を巻き戻す） */}
-                  {p.status === "received" && hasPermission("purchase_orders.receive") && (
-                    <button
-                      className="btn-sm btn-secondary"
-                      data-testid={`po-unreceive-${p.id}`}
-                      onClick={() => doAction(p.id, "unreceive")}
-                    >
-                      {t("purchaseOrders.actionUnreceive")}
-                    </button>
-                  )}
-                  {(p.status === "draft" || p.status === "ordered") && (
-                    <button className="btn-sm btn-danger" onClick={() => doAction(p.id, "cancel")}>{t("purchaseOrders.actionCancel")}</button>
-                  )}
-                  {/* P3 / Sprint 8: PDF（draft でも作成可。draft は作成後に発注済み確認） */}
-                  {(p.status === "draft" || p.status === "ordered" || p.status === "received" || p.status === "error") && hasPermission("purchase_orders.view") && (
-                    <button
-                      className="btn-sm btn-secondary"
-                      data-testid={`po-pdf-${p.id}`}
-                      onClick={() => downloadPdf(p.id, p.po_number, p.status)}
-                    >
-                      {t("purchaseOrders.actionDownloadPdf")}
-                    </button>
-                  )}
-                  {(p.status === "ordered" || p.status === "received") && hasPermission("purchase_orders.update") && (
-                    <button
-                      className="btn-sm btn-secondary"
-                      data-testid={`po-send-email-${p.id}`}
-                      onClick={() => sendEmail(p.id)}
-                    >
-                      {t("purchaseOrders.actionSendEmail")}
-                    </button>
-                  )}
-                  {p.status === "error" && hasPermission("purchase_orders.update") && (
-                    <button
-                      className="btn-sm btn-primary"
-                      data-testid={`po-resend-email-${p.id}`}
-                      onClick={() => resendEmail(p.id)}
-                    >
-                      {t("purchaseOrders.actionResendEmail")}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {pos.length === 0 && <tr><td colSpan={6} className="empty">{t("purchaseOrders.noPos")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+        const columns: DataTableColumn<PO>[] = [
+          {
+            key: "po_number",
+            header: t("purchaseOrders.poNumber"),
+            renderCell: (p) => <span className="mono">{p.po_number || "-"}</span>,
+          },
+          {
+            key: "total_amount",
+            header: t("common.amount"),
+            renderCell: (p) => <>{p.total_amount != null ? `¥${Number(p.total_amount).toLocaleString()}` : "-"}</>,
+          },
+          {
+            key: "status",
+            header: t("common.status"),
+            renderCell: (p) => (
+              <span className={`badge badge-${getStatusPresentation("purchaseOrder", p.status).badgeVariant}`} data-testid={`po-status-${p.id}`}>
+                {STATUS_LABELS[p.status] || p.status}
+              </span>
+            ),
+          },
+          {
+            key: "ordered_at",
+            header: t("purchaseOrders.orderedAt"),
+            renderCell: (p) => <>{p.ordered_at ? new Date(p.ordered_at).toLocaleDateString() : "-"}</>,
+          },
+          {
+            key: "received_at",
+            header: t("purchaseOrders.receivedAt"),
+            renderCell: (p) => <>{p.received_at ? new Date(p.received_at).toLocaleDateString() : "-"}</>,
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (p) => (
+              <span className="actions">
+                {p.status === "ordered" && hasPermission("purchase_orders.receive") && (
+                  <button className="btn-sm btn-primary" onClick={() => doAction(p.id, "receive")}>{t("purchaseOrders.actionReceive")}</button>
+                )}
+                {/* P5: 入荷取消（received → ordered、在庫加算を巻き戻す） */}
+                {p.status === "received" && hasPermission("purchase_orders.receive") && (
+                  <button
+                    className="btn-sm btn-secondary"
+                    data-testid={`po-unreceive-${p.id}`}
+                    onClick={() => doAction(p.id, "unreceive")}
+                  >
+                    {t("purchaseOrders.actionUnreceive")}
+                  </button>
+                )}
+                {(p.status === "draft" || p.status === "ordered") && (
+                  <button className="btn-sm btn-danger" onClick={() => doAction(p.id, "cancel")}>{t("purchaseOrders.actionCancel")}</button>
+                )}
+                {/* P3 / Sprint 8: PDF（draft でも作成可。draft は作成後に発注済み確認） */}
+                {(p.status === "draft" || p.status === "ordered" || p.status === "received" || p.status === "error") && hasPermission("purchase_orders.view") && (
+                  <button
+                    className="btn-sm btn-secondary"
+                    data-testid={`po-pdf-${p.id}`}
+                    onClick={() => downloadPdf(p.id, p.po_number, p.status)}
+                  >
+                    {t("purchaseOrders.actionDownloadPdf")}
+                  </button>
+                )}
+                {(p.status === "ordered" || p.status === "received") && hasPermission("purchase_orders.update") && (
+                  <button
+                    className="btn-sm btn-secondary"
+                    data-testid={`po-send-email-${p.id}`}
+                    onClick={() => sendEmail(p.id)}
+                  >
+                    {t("purchaseOrders.actionSendEmail")}
+                  </button>
+                )}
+                {p.status === "error" && hasPermission("purchase_orders.update") && (
+                  <button
+                    className="btn-sm btn-primary"
+                    data-testid={`po-resend-email-${p.id}`}
+                    onClick={() => resendEmail(p.id)}
+                  >
+                    {t("purchaseOrders.actionResendEmail")}
+                  </button>
+                )}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable<PO>
+            columns={columns}
+            data={pos}
+            rowKey={(p) => String(p.id)}
+            emptyState={<span>{t("purchaseOrders.noPos")}</span>}
+          />
+        );
+      })()}
       {/* P3: PDF 作成後に発注済みへ進めるか確認 */}
       <ConfirmModal
         open={pendingOrderId != null}
