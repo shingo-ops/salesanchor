@@ -56,7 +56,7 @@
 | `own_inventory` tenant_id NOT NULL + RLS有効 | **適合** | `migrations/20260604_140000_create_own_inventory.sql:30`（NOT NULL）/ `migrations/20260604_140000_create_own_inventory.sql:58`（ENABLE ROW LEVEL SECURITY）/ `migrations/20260604_140000_create_own_inventory.sql:70-73`（RLS POLICY）| 変数名バグは `migrations/20260607_000000_fix_rls_policy_variable_name.sql:59-85` で修正済み |
 | `public.inventory` にB専用CHECK制約、かつown_inventory作成**後**に適用 | **適合** | `migrations/20260604_150000_add_inventory_source_kind.sql:13-15`（`CHECK (source_kind IN ('B_feed'))`）<br>ファイル名タイムスタンプ: `20260604_140000`（own_inventory） < `20260604_150000`（B_feed CHECK）| 順序逆転なし。コメント行「前提条件: own_inventory (20260604_140000) 適用済み」（`migrations/20260604_150000_add_inventory_source_kind.sql:4`）で明示 |
 | `public.inventory` にRLSが**ない**こと（共有テーブル設計） | **適合** | `migrations/081_create_inventory.sql` 全体を確認。ENABLE ROW LEVEL SECURITY の記述なし。tenant_id列なし（supplier_id/product_id/conditionのUNIQUE） | 意図的未設定。共有フィードとして正しい |
-| 販売可能在庫ビュー（A∪B合算、引当考慮） | **未実装（保留）** | migrations/ 全101ファイルで `v_available_inventory` / `sellable_inventory` / `available_inventory` を検索。未発見 | **PO決定（2026-06-10）**: A在庫運用開始時にA+B価格ルール（ADR-095付録1）の確定とセットで実装。それまで保留。own_inventory UIは稼働中（`frontend/src/pages/inventory/OwnInventoryPage.tsx` / `GET /own-inventory` ルート / `backend/app/routers/own_inventory.py`） |
+| 販売可能在庫ビュー（A∪B合算、引当考慮） | **未実装（保留）** | migrations/ 全101ファイルで `v_available_inventory` / `sellable_inventory` / `available_inventory` を検索。未発見 | **PO決定（2026-06-10）**: A在庫運用開始時にA+B価格ルール（ADR-095付録1）の確定とセットで実装。それまで保留。own_inventory UIは稼働中（`frontend/src/pages/inventory/OwnInventoryPage.tsx` / `GET /own-inventory` / `backend/app/routers/own_inventory.py`）。**本番行数（2026-06-11確認）**: 全5テナント（tenant_001/003/004/005/006）とも 0行・last_updated=NULL（A在庫運用未開始）。 |
 
 ---
 
