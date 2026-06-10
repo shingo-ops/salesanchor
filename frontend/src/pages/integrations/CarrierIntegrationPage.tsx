@@ -25,9 +25,9 @@ const NAV_KEY: Record<Carrier, `nav.${string}`> = {
   ups: "nav.integrationUps",
 };
 
-// 認証情報の表示ラベル（FedEx/UPS=Client ID/Secret、DHL=API Key/Secret）
+// 認証情報の表示ラベル（FedEx=APIキー/シークレットキー、UPS=Client ID/Secret、DHL=API Key/Secret）
 const CRED_LABEL: Record<Carrier, { id: string; secret: string }> = {
-  fedex: { id: "carrierIntegration.labelClientId", secret: "carrierIntegration.labelClientSecret" },
+  fedex: { id: "carrierIntegration.labelFedExApiKey", secret: "carrierIntegration.labelFedExSecretKey" },
   ups: { id: "carrierIntegration.labelClientId", secret: "carrierIntegration.labelClientSecret" },
   dhl: { id: "carrierIntegration.labelApiKey", secret: "carrierIntegration.labelApiSecret" },
 };

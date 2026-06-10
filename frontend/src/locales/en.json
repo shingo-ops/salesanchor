@@ -192,6 +192,8 @@
     "labelClientSecret": "Client Secret",
     "labelApiKey": "API Key",
     "labelApiSecret": "API Secret",
+    "labelFedExApiKey": "API Key",
+    "labelFedExSecretKey": "Secret Key",
     "envLabel": "Environment",
     "envSandbox": "Sandbox",
     "envProduction": "Production",
