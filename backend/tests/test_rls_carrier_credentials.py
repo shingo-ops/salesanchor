@@ -1,7 +1,7 @@
 """
 public.tenant_carrier_credentials の RLS（Row Level Security）テスト。
 
-ADR-124 D1: RLS ポリシー `tenant_isolation_carrier_credentials` が
+ADR-125 D1: RLS ポリシー `tenant_isolation_carrier_credentials` が
 別テナントのキャリア認証情報を隠蔽することを検証する。
 
 PostgreSQL 専用テスト。ローカル pytest（SQLite）では自動的に skip する。
@@ -19,7 +19,7 @@ CI 実行例:
         pytest backend/tests/test_rls_carrier_credentials.py -v
 
 変更履歴:
-    2026-06-09: ADR-124 Phase A 初版
+    2026-06-09: ADR-125 Phase A 初版
 """
 
 from __future__ import annotations

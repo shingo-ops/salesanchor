@@ -1,4 +1,4 @@
-# ADR-124: FedEx Rates連携 第1段 — テナント別ライブ見積もり取得
+# ADR-125: FedEx Rates連携 第1段 — テナント別ライブ見積もり取得
 
 - **Status**: Proposed
 - **Date**: 2026-06-09

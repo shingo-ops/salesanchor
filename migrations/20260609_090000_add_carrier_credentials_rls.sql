@@ -9,7 +9,7 @@
 --     - FORCE ROW LEVEL SECURITY でテーブル所有者（superuser を除く）にも適用
 --     - superuser は FORCE でもバイパスされるため CI で salesanchor_app（NOBYPASSRLS）を使用
 --
---   ADR-124: docs/adr/ADR-124-fedex-rates-stage1.md D1
+--   ADR-125: docs/adr/ADR-125-fedex-rates-stage1.md D1
 --   パターン参考: migrations/040_create_tenant_meta_config.sql:54-67
 --                 migrations/20260605_010000_rls_translation_glossary.sql
 --
