@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '0 0 * * 1'  # 毎週月曜 00:00 UTC = JST 09:00
   workflow_dispatch:      # 手動実行（KPI テスト用）
+    inputs:
+      test_alert:
+        description: 'Discord アラートテスト（GitHub API / Pushgateway スキップ）'
+        type: boolean
+        default: false
 
 jobs:
   collect:
@@ -31,4 +36,5 @@ jobs:
           PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_SCHEDULED_REPORT }}
           REPO: ${{ github.repository }}
+          TEST_ALERT: ${{ inputs.test_alert }}
         run: node scripts/sop-health-collector.js

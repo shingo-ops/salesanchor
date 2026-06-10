@@ -24,6 +24,7 @@ const PUSHGATEWAY_URL = process.env.PUSHGATEWAY_URL;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const REPO = process.env.REPO || 'shingo-ops/salesanchor';
 const LOOKBACK_DAYS = parseInt(process.env.LOOKBACK_DAYS || '7', 10);
+const TEST_ALERT = process.env.TEST_ALERT === 'true';
 
 const API_BASE = 'https://api.github.com';
 const HEADERS = {
@@ -291,6 +292,20 @@ async function notifyDiscord(message) {
 }
 
 async function main() {
+  // テストモード: GitHub API / Pushgateway を呼ばず Discord アラートロジックのみ検証
+  if (TEST_ALERT) {
+    log('🧪 TEST_ALERT モード: GitHub API / Pushgateway スキップ');
+    const msg = [
+      '⚠️ **SOP 宿題の期限切れが 1 件あります**（sop-health-reporter 週次チェック）【テスト発火】',
+      '- #9999 宿題期限: 2026-06-01 テストアラート',
+      '',
+      'recon.md + 設計 doc を揃えて後追い PR を作成してください。',
+    ].join('\n');
+    await notifyDiscord(msg);
+    log('🧪 TEST_ALERT 完了');
+    return;
+  }
+
   if (!GH_TOKEN) throw new Error('GH_TOKEN が未設定です');
   if (!PUSHGATEWAY_URL) throw new Error('PUSHGATEWAY_URL が未設定です');
 
