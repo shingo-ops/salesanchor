@@ -87,11 +87,11 @@
 .comp-table__sort-icon {
   display: flex;
   align-items: center;
-  opacity: 0.4;
+  opacity: var(--opacity-archived);
 }
 
 .comp-table__sort-btn--active .comp-table__sort-icon {
-  opacity: 1;
+  opacity: var(--opacity-full);
   color: var(--primary);
 }
 
