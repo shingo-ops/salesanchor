@@ -36,18 +36,25 @@ BEGIN
     WHERE nspname ~ '^tenant_[0-9]+$'
     ORDER BY nspname
   LOOP
-    EXECUTE format(
-      'UPDATE %I.roles
-         SET color = ''#6366f1'', updated_at = NOW()
-       WHERE is_system = TRUE
-         AND color     = ''#ef4444''
-         AND priority  = 1000',
-      r.nspname
-    );
-    GET DIAGNOSTICS updated_count = ROW_COUNT;
-    IF updated_count > 0 THEN
-      RAISE NOTICE 'schema=%: owner role color updated (#ef4444 → #6366f1)', r.nspname;
-      total_updated := total_updated + updated_count;
+    -- roles テーブルが存在するスキーマのみ更新（CI テスト DB 等の空スキーマをスキップ）
+    IF EXISTS (
+      SELECT 1 FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = r.nspname AND c.relname = 'roles'
+    ) THEN
+      EXECUTE format(
+        'UPDATE %I.roles
+           SET color = ''#6366f1'', updated_at = NOW()
+         WHERE is_system = TRUE
+           AND color     = ''#ef4444''
+           AND priority  = 1000',
+        r.nspname
+      );
+      GET DIAGNOSTICS updated_count = ROW_COUNT;
+      IF updated_count > 0 THEN
+        RAISE NOTICE 'schema=%: owner role color updated (#ef4444 → #6366f1)', r.nspname;
+        total_updated := total_updated + updated_count;
+      END IF;
     END IF;
   END LOOP;
 
