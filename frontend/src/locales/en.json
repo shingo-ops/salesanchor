@@ -2324,6 +2324,12 @@
     "copyLink": "Copy",
     "invalidToken": "Invalid or expired link",
     "submitError": "Registration failed",
+    "error": {
+      "already_registered": "This address has already been registered. Please contact the person in charge.",
+      "invalid_token": "Invalid or expired registration link. Please request a new link.",
+      "company_not_found": "Company information not found. Please contact the person in charge.",
+      "unexpected_error": "An unexpected error occurred. Please try again later."
+    },
     "companyLabel": "Company",
     "billingAddress": "Billing Address",
     "deliveryAddress": "Shipping Address",

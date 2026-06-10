@@ -55,6 +55,20 @@ const emptyAddress = (): AddressForm => ({
   is_default: false,
 });
 
+const KNOWN_ERROR_CODES = new Set([
+  "already_registered",
+  "invalid_token",
+  "company_not_found",
+  "unexpected_error",
+]);
+
+function resolveErrorCode(code: unknown, t: (key: string) => string): string {
+  if (typeof code === "string" && KNOWN_ERROR_CODES.has(code)) {
+    return t(`registration.error.${code}`);
+  }
+  return t("registration.submitError");
+}
+
 /** Combobox with search filtering for country / dial code selection. */
 function CountryCombobox({
   entries,
@@ -222,7 +236,11 @@ export default function RegisterAddressPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.detail || t("registration.submitError"));
+        const rawDetail = body?.detail;
+        const msg = Array.isArray(rawDetail)
+          ? rawDetail.map((d: { msg?: string; message?: string }) => d.msg ?? d.message ?? t("registration.submitError")).join(", ")
+          : resolveErrorCode(rawDetail, t);
+        throw new Error(msg);
       }
 
       setSubmitted(true);
