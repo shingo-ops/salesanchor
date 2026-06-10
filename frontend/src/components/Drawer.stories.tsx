@@ -10,8 +10,12 @@ import { Drawer } from './Drawer'
 const meta: Meta<typeof Drawer> = {
   title: 'Components/Drawer',
   component: Drawer,
-  parameters: { layout: 'fullscreen' },
-  tags: ['autodocs'],
+  parameters: {
+    layout: 'fullscreen',
+    docs: { disable: true },
+    chromatic: { disable: true },
+  },
+  tags: [],
 }
 export default meta
 
@@ -20,7 +24,7 @@ type Story = StoryObj<typeof Drawer>
 export const Default: Story = {
   name: 'open — 基本表示',
   render: () => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(false)
     return (
       <div style={{ height: '100vh', background: 'var(--bg-canvas)', padding: '2rem' }}>
         <button onClick={() => setOpen(true)}>Drawer を開く</button>
@@ -39,7 +43,7 @@ export const Default: Story = {
 export const WithFullPage: Story = {
   name: 'with fullpage — フルページボタン付き',
   render: () => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(false)
     return (
       <div style={{ height: '100vh', background: 'var(--bg-canvas)', padding: '2rem' }}>
         <button onClick={() => setOpen(true)}>Drawer を開く</button>

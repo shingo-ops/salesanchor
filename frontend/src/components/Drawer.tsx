@@ -12,7 +12,7 @@
  * - z-index: --z-drawer (299) — Modal (400) より下
  */
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
@@ -41,6 +41,10 @@ export function Drawer({
   const titleId   = useId();
   const panelRef  = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<Element | null>(null);
+
+  /* ポータル対象を useEffect で取得（Storybook/SSR 環境での document アクセス回避） */
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => { setPortalTarget(document.body); }, []);
 
   /* フォーカス復帰: open 直前の activeElement を保持 */
   useEffect(() => {
@@ -105,6 +109,8 @@ export function Drawer({
     return () => document.removeEventListener("keydown", handleTab);
   }, [open]);
 
+  if (!portalTarget) return null;
+
   return ReactDOM.createPortal(
     <>
       {/* オーバーレイ */}
@@ -163,7 +169,7 @@ export function Drawer({
         )}
       </div>
     </>,
-    document.body,
+    portalTarget,
   );
 }
 
