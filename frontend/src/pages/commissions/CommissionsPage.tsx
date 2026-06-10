@@ -18,6 +18,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import CommissionPanel from "../../components/CommissionPanel";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Card } from "../../components/Card";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -131,8 +132,8 @@ export default function CommissionsPage() {
     <PageLayout navKey="nav.commissions" subtitleKey="commissions.listSubtitle">
       {error && <div className="error-message">{error}</div>}
 
-      <fieldset>
-        <legend>{t("commissions.monthlyLegend")}</legend>
+      <Card variant="container" style={{ marginBottom: "var(--space-4)" }}>
+        <h3 style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-muted)", margin: "0 0 var(--space-3)" }}>{t("commissions.monthlyLegend")}</h3>
         <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
           <label>
             {t("commissions.year")}:
@@ -211,12 +212,12 @@ export default function CommissionsPage() {
             {t("commissions.monthlyError")}
           </p>
         )}
-      </fieldset>
+      </Card>
 
       {/* 担当者割当・再計算（orders.update 保持時のみ）。受注を選んで CommissionPanel を開く。 */}
       {canEdit && (
-        <fieldset style={{ marginTop: "var(--space-4)" }}>
-          <legend>{t("commissions.manageLegend")}</legend>
+        <Card variant="container">
+          <h3 style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-muted)", margin: "0 0 var(--space-3)" }}>{t("commissions.manageLegend")}</h3>
           {(() => {
             const orderColumns: DataTableColumn<CommissionOrderItem>[] = [
               { key: "order_number", header: t("commissions.colOrder") },
@@ -243,7 +244,7 @@ export default function CommissionsPage() {
               </div>
             );
           })()}
-        </fieldset>
+        </Card>
       )}
 
       {assigning && (
