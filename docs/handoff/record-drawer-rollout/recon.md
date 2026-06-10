@@ -18,25 +18,25 @@
 
 ### 1-2. 共通化できる部分（全ページ同一ロジック）
 
+S0 リファクタ後の現行実装（`useRecordDrawer` フック利用済み）。
+
 | 役割 | file:line | 実装内容 |
 |------|-----------|---------|
-| Drawer 開閉状態 | `SuppliersPage.tsx:33` | `useState(false)` → `drawerOpen` |
-| 編集対象 ID 保持 | `SuppliersPage.tsx:34` | `useState<number \| null>(null)` → `editId` |
-| 行クリック → Drawer 開く | `SuppliersPage.tsx:71-75` | `handleRowClick`: record → setEditId/setEditForm/setDrawerOpen(true) |
-| `<Drawer>` マウント | `SuppliersPage.tsx:128-144` | `open` / `onClose` / `title` / `onOpenFullPage` |
-| フルページ遷移 | `SuppliersPage.tsx:132` | `onOpenFullPage={() => { setDrawerOpen(false); navigate(\`/suppliers/${editId}/edit\`); }}` |
-| 権限ガード (行クリック) | `SuppliersPage.tsx:165` | `onRowClick={hasPermission("suppliers.update") ? (s) => handleRowClick(s) : undefined}` |
-| 権限ガード (編集ボタン) | `SuppliersPage.tsx:155` | `hasPermission("suppliers.update") &&` |
-| `<DataTable>` との連携 | `SuppliersPage.tsx:161-168` | `onRowClick` prop に渡すだけ |
+| フック呼び出し（開閉＋ID＋フォーム） | `frontend/src/pages/suppliers/SuppliersPage.tsx:43` | `useRecordDrawer<Supplier, SupplierFormState>({ toForm, emptyForm })` |
+| `<Drawer>` マウント | `frontend/src/pages/suppliers/SuppliersPage.tsx:129` | `open` / `onClose` / `title` / `onOpenFullPage` |
+| フルページ遷移 | `frontend/src/pages/suppliers/SuppliersPage.tsx:134` | `onOpenFullPage: closeDrawer + navigate` |
+| 権限ガード (行クリック) | `frontend/src/pages/suppliers/SuppliersPage.tsx:167` | `onRowClick={hasPermission("suppliers.update") ? handleRowClick : undefined}` |
+| 権限ガード (編集ボタン) | `frontend/src/pages/suppliers/SuppliersPage.tsx:157` | `hasPermission("suppliers.update") &&` |
+| フック本体（共通ロジック） | `frontend/src/hooks/useRecordDrawer.ts:1` | `drawerOpen` / `editId` / `editForm` / `handleRowClick` / `closeDrawer` |
 
 ### 1-3. ページ固有部分（各ページが差し込む）
 
 | 役割 | Suppliers での実装 | 他ページでの必要作業 |
 |------|-----------------|-----------------|
-| フォーム状態型 | `SupplierFormState` (`SupplierFormFields.tsx:10`) | `*FormState` 型を定義 |
+| フォーム状態型 | `SupplierFormState` (`frontend/src/pages/suppliers/SupplierFormFields.tsx:10`) | `*FormState` 型を定義 |
 | フォームフィールド UI | `<SupplierFormFields>` | `*FormFields` コンポーネント作成 or インライン |
 | API パス | `/suppliers`, `/suppliers/:id` | エンティティ別パス |
-| 保存後コールバック | `SuppliersPage.tsx:85` | `setDrawerOpen(false); setEditId(null); load();` |
+| 保存後コールバック | `frontend/src/pages/suppliers/SuppliersPage.tsx:87` | `closeDrawer(); load();` |
 | Drawer タイトル | `t("suppliers.editSupplier")` | i18n キー追加 |
 | フルページ route | `/suppliers/:id/edit` | 各エンティティで追加 |
 | EditPage コンポーネント | `SupplierEditPage.tsx` | `*EditPage` 作成（FormFields 再利用） |

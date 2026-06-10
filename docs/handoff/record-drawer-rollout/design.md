@@ -22,6 +22,8 @@
 
 ## 2. 外部・過去事例の参照と応用
 
+外部 SaaS 製品（HubSpot・Salesforce・Notion・Linear）と社内経緯（ADR-122・Suppliers パイロット PR #1877）を参照し、設計判断の根拠とした。
+
 ### 外部事例
 
 | 製品 | パターン | 応用 |
