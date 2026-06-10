@@ -1252,7 +1252,8 @@
     "disableLabel": "Delete",
     "subtitle": "Manage supplier information and contacts.",
     "openDetail": "Click to view or edit",
-    "pageLabel": "Page {{page}} ({{count}} items)"
+    "pageLabel": "Page {{page}} ({{count}} items)",
+    "openFullPage": "Open full page"
   },
   "purchaseOrders": {
     "title": "Purchase Orders",
