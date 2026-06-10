@@ -42,6 +42,7 @@ vi.mock("react-i18next", () => ({
         "fedexRateModal.postalCodeLabel": "Destination postal code (optional)",
         "fedexRateModal.postalCodePlaceholder": "e.g. 10001",
         "fedexRateModal.badgeApproximate": "Approximate",
+        "fedexRateModal.weightLabel": "Weight (kg)",
         "common.close": "Close",
       };
       return map[key] ?? key;
@@ -116,6 +117,29 @@ describe("FedExRateModal", () => {
     fireEvent.click(screen.getByText("Use this rate"));
 
     expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP");
+  });
+
+  it("weightKg prop is used as initial weight value", () => {
+    render(<FedExRateModal {...defaultProps} weightKg={3.5} destinationCountryCode="US" />);
+    const input = screen.getByLabelText("Weight (kg)") as HTMLInputElement;
+    expect(Number(input.value)).toBe(3.5);
+  });
+
+  it("edited weight is sent to the API, not the original prop", async () => {
+    const mockPost = vi.mocked(api.post);
+    mockPost.mockResolvedValueOnce({ results: [], cheapest: null, live_error: null, rate_precision: null });
+
+    render(<FedExRateModal {...defaultProps} weightKg={0} destinationCountryCode="US" />);
+
+    const weightInput = screen.getByLabelText("Weight (kg)");
+    fireEvent.change(weightInput, { target: { value: "2.5" } });
+    fireEvent.click(screen.getByText("Get quote"));
+
+    await waitFor(() => expect(mockPost).toHaveBeenCalled());
+    expect(mockPost).toHaveBeenCalledWith(
+      "/shipping/calculate",
+      expect.objectContaining({ weight_kg: 2.5 }),
+    );
   });
 
   it("shows settings link when live_error includes the not-connected marker", async () => {

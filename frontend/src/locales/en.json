@@ -269,7 +269,8 @@
     "postalCodePlaceholder": "e.g. 10001",
     "badgeApproximate": "Approximate (no postal code)",
     "destinationLabel": "Destination country code",
-    "destinationPlaceholder": "e.g. US"
+    "destinationPlaceholder": "e.g. US",
+    "weightLabel": "Weight (kg)"
   },
   "login": {
     "email": "Email address",

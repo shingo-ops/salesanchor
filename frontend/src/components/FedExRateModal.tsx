@@ -110,6 +110,7 @@ export function FedExRateModal({
   const { t } = useTranslation();
   const [originCountryCode, setOriginCountryCode] = useState("JP");
   const [destCC, setDestCC] = useState(destinationCountryCodeProp ?? "");
+  const [internalWeightKg, setInternalWeightKg] = useState(weightKg);
   const [destinationPostalCode, setDestinationPostalCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ShippingCalcResponse | null>(null);
@@ -123,7 +124,7 @@ export function FedExRateModal({
     try {
       const data = await api.post<ShippingCalcResponse>("/shipping/calculate", {
         country_code: destCC,
-        weight_kg: weightKg,
+        weight_kg: internalWeightKg,
         carrier: "fedex",
         origin_country_code: originCountryCode || "JP",
         ...(destinationPostalCode ? { destination_postal_code: destinationPostalCode } : {}),
@@ -195,6 +196,23 @@ export function FedExRateModal({
               placeholder={t("fedexRateModal.destinationPlaceholder")}
               onChange={(e) => setDestCC(e.target.value.toUpperCase())}
               style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="fedex-weight"
+              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+            >
+              {t("fedexRateModal.weightLabel")}
+            </label>
+            <input
+              id="fedex-weight"
+              type="number"
+              min="0"
+              step="0.001"
+              value={internalWeightKg}
+              onChange={(e) => setInternalWeightKg(Number(e.target.value))}
+              style={{ width: "100px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
             />
           </div>
         </div>
