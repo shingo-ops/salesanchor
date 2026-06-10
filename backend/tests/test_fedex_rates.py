@@ -6,6 +6,7 @@ FedEx Rates API クライアントのユニットテスト（ADR-125）。
 テスト対象:
   - get_or_refresh_token: キャッシュヒット / ミス / 期限切れ
   - get_rates: 正常系 / 認証エラー / API エラー / タイムアウト / サービスフィルタ
+  - _fetch_transit_days: SA API 正常系 / 失敗時の空 dict フォールバック
   - /shipping/calculate エンドポイント: FedEx ライブ分岐 / 静的フォールバック /
                                          未連携時の live_error 明示返却 /
                                          rate_precision exact/approximate（仕様追補 2026-06-10）
@@ -15,11 +16,13 @@ FedEx Rates API クライアントのユニットテスト（ADR-125）。
   2026-06-10: TARGET_INTERNATIONAL_SERVICE_TYPES フィルタ対応
               rate_precision (exact/approximate) テスト追加
               _try_fedex_live の 3-tuple 戻り値に対応
+  2026-06-10: SA API transit days 統合テスト追加（_fetch_transit_days）
 """
 
 from __future__ import annotations
 
 import time
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -30,6 +33,7 @@ from app.services.fedex_rates import (
     FedExAPIError,
     FedExAuthError,
     FedExRateQuote,
+    _fetch_transit_days,
     clear_token_cache,
     get_or_refresh_token,
     get_rates,
@@ -298,6 +302,136 @@ class TestGetRates:
 
         assert len(quotes) == 2
         assert quotes[0].total_net_charge < quotes[1].total_net_charge
+
+
+# ---------------------------------------------------------------------------
+# _fetch_transit_days テスト（SA API）
+# ---------------------------------------------------------------------------
+
+class TestFetchTransitDays:
+    """SA API（/availability/v1/transittimes）配達日数取得テスト。"""
+
+    def _make_sa_resp(self, details: list[dict]):
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "output": {
+                "transitTimes": [{"transitTimeDetails": details}]
+            }
+        }
+        return resp
+
+    def test_returns_transit_days_from_sa_api(self):
+        """SA API 正常系: serviceType → transit_days を返す。"""
+        today = date.today()
+        delivery = today + timedelta(days=2)
+        day_str = delivery.strftime("%b-%d-%Y")  # e.g. "Jun-12-2026"
+
+        sa_resp = self._make_sa_resp([{
+            "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
+            "commit": {"dateDetail": {"day": day_str}},
+        }])
+
+        with patch("httpx.post", return_value=sa_resp):
+            result = _fetch_transit_days(
+                base_url="https://apis.fedex.com",
+                token="test-token",
+                origin_cc="JP",
+                origin_zip="1000001",
+                dest_cc="US",
+                dest_zip="10001",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert result.get("FEDEX_INTERNATIONAL_PRIORITY") == 2
+
+    def test_returns_empty_dict_on_http_error(self):
+        """SA API エラー時は空 dict を返し例外を伝播しない。"""
+        error_resp = MagicMock()
+        error_resp.status_code = 400
+        error_resp.json.return_value = {"errors": [{"code": "PACKAGE.NULLOREMPTY.REQUIRED"}]}
+
+        with patch("httpx.post", return_value=error_resp):
+            result = _fetch_transit_days(
+                base_url="https://apis.fedex.com",
+                token="test-token",
+                origin_cc="JP",
+                origin_zip="1000001",
+                dest_cc="US",
+                dest_zip="10001",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert result == {}
+
+    def test_returns_empty_dict_on_network_exception(self):
+        """SA API 通信例外でも空 dict を返す（best-effort）。"""
+        import httpx as _httpx
+
+        with patch("httpx.post", side_effect=_httpx.TimeoutException("timeout")):
+            result = _fetch_transit_days(
+                base_url="https://apis.fedex.com",
+                token="test-token",
+                origin_cc="JP",
+                origin_zip="1000001",
+                dest_cc="US",
+                dest_zip="10001",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert result == {}
+
+    def test_transit_map_used_in_get_rates(self):
+        """get_rates が SA API の transit_days を FedExRateQuote に反映する。"""
+        today = date.today()
+        delivery = today + timedelta(days=3)
+        day_str = delivery.strftime("%b-%d-%Y")
+
+        sa_resp = self._make_sa_resp([{
+            "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
+            "commit": {"dateDetail": {"day": day_str}},
+        }])
+
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_rates_resp(),  # rates レスポンス（operationalDetail: 2_DAYS）
+            sa_resp,             # SA API レスポンス（3日後配達）
+        ]):
+            quotes = get_rates(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                origin_country_code="JP",
+                destination_country_code="US",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert len(quotes) == 1
+        # SA API の値（3日）が operationalDetail の値（2日）を上書きする
+        assert quotes[0].transit_days == 3
+
+    def test_operationaldetail_fallback_when_sa_api_fails(self):
+        """SA API 失敗時は operationalDetail.transitTime にフォールバック。"""
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_rates_resp(),  # operationalDetail: "2_DAYS"
+            # SA API call → side_effect exhausted → StopIteration → caught internally
+        ]):
+            quotes = get_rates(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                origin_country_code="JP",
+                destination_country_code="US",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert len(quotes) == 1
+        assert quotes[0].transit_days == 2  # operationalDetail フォールバック
 
 
 # ---------------------------------------------------------------------------
