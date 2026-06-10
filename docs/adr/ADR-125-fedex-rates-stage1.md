@@ -39,6 +39,8 @@ USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER)
 
 FedEx OAuth（client_credentials フロー）トークンをインメモリキャッシュで管理。`{(tenant_id, env): (token, expires_at)}` の dict。有効期限5分前にリフレッシュ（`google_drive_oauth.py:277-316` パターン転用）。
 
+**リトライポリシー（2026-06-09確定）**: Rates API 401 はキャッシュをクリアして `FedExAuthError` を raise するのみ。同一リクエスト内での自動再試行は行わない。次回リクエストで新トークンが自動取得される設計で許容（PO判断）。
+
 ### D4. Rates API 呼び出し（PR-B）
 
 新規 `backend/app/services/fedex_rates.py` に実装:
@@ -47,11 +49,14 @@ FedEx OAuth（client_credentials フロー）トークンをインメモリキ�
 - `rateRequestType: ["LIST"]`（アカウント料金取得）
 - timeout: 10秒（connect=3s + read=7s）
 
-### D5. 暗黙フォールバック禁止（D2）
+### D5. 暗黙フォールバック禁止（PO C1判断含む・2026-06-09確定）
 
 FedEx クレデンシャルが未設定またはAPIエラーの場合、静的値を「ライブ」と偽らない:
-- credentials なし → `source='static'` で通常計算
-- credentials あり + APIエラー → `live_error` フィールドに明示エラー、`source` なし
+- credentials なし（未連携） → `live_error="FedEx が未連携です..."` を返す。static早見表には落ちない（PO C1判断）
+- credentials あり + account_number なし → `live_error="アカウント番号が未設定..."` を返す
+- credentials あり + APIエラー → `live_error` フィールドに明示エラー
+
+静的早見表（`shipping_zones` / `shipping_rates`）は FedEx 以外のキャリア（DHL・ヤマト等）専用として維持する。
 
 `ShippingCalcResponse` に `source: 'static' | 'fedex_live'` と `live_error: str | None` を追加。
 

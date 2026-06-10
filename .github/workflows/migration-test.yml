@@ -379,7 +379,7 @@ jobs:
           --   migration 実行順（20260604_110000 → 20260604_120000 → 20260604_130000）が
           --   CI の changed_sql ソート順と一致することを確認済み。
 
-          -- tenant_carrier_credentials: ADR-125 RLS 追加 migration の前提テーブル
+          -- tenant_carrier_credentials: ADR-125 RLS + account_number migration の前提テーブル
           --   20260608_080000_add_carrier_credentials.sql で本番作成済み。
           CREATE TABLE IF NOT EXISTS public.tenant_carrier_credentials (
               id                      SERIAL PRIMARY KEY,

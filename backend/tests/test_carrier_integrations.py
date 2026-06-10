@@ -101,8 +101,9 @@ async def test_status_invalid_carrier_404(client):
 async def test_save_credentials(client, monkeypatch):
     calls = {}
 
-    async def _save(db, tid, carrier, cid, csec, env, uid):
+    async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
         calls["carrier"] = carrier
+        calls["account_number"] = account_number
 
     monkeypatch.setattr(svc, "save_credentials", _save)
     resp = await client.put(
@@ -111,6 +112,7 @@ async def test_save_credentials(client, monkeypatch):
     )
     assert resp.status_code == 204
     assert calls["carrier"] == "ups"
+    assert calls["account_number"] is None  # 未指定時は None
 
 
 async def test_save_credentials_missing_fields(client):
