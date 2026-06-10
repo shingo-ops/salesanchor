@@ -4,17 +4,22 @@
  *
  * 変更履歴:
  *   2026-04-16: 初版作成（Phase 1）
+ *   2026-06-10: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチA）
  */
 
 import { useEffect, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
 import "./TeamsPage.css";
 
 interface Team {
@@ -35,15 +40,26 @@ interface TeamMember {
   joined_at: string;
 }
 
-const emptyForm = { name: "", leader_id: "", description: "" };
+const emptyForm: TeamFormState = { name: "", leader_id: "", description: "" };
+
+const toForm = (team: Team): TeamFormState => ({
+  name: team.name,
+  leader_id: team.leader_id != null ? String(team.leader_id) : "",
+  description: team.description ?? "",
+});
 
 export default function TeamsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  // 新規作成モーダル
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<TeamFormState>(emptyForm);
+  // 編集ドロワー
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Team, TeamFormState>({ toForm, emptyForm });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
@@ -74,37 +90,40 @@ export default function TeamsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadTeams(); }, []);
 
-  const handleSubmit = async (e: FormEvent) => {
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    const payload = {
-      name: form.name,
-      leader_id: form.leader_id ? Number(form.leader_id) : null,
-      description: form.description || null,
-    };
     try {
-      if (editId) {
-        await api.patch(`/teams/${editId}`, payload);
-      } else {
-        await api.post("/teams", payload);
-      }
-      setShowForm(false);
-      setEditId(null);
-      setForm(emptyForm);
+      await api.post("/teams", {
+        name: createForm.name,
+        leader_id: createForm.leader_id ? Number(createForm.leader_id) : null,
+        description: createForm.description || null,
+      });
+      setShowCreate(false);
+      setCreateForm(emptyForm);
       loadTeams();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     }
   };
 
-  const handleEdit = (t: Team) => {
-    setEditId(t.id);
-    setForm({
-      name: t.name,
-      leader_id: t.leader_id != null ? String(t.leader_id) : "",
-      description: t.description || "",
-    });
-    setShowForm(true);
+  /* ── ドロワー内編集保存 ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!editId) return;
+    try {
+      await api.patch(`/teams/${editId}`, {
+        name: editForm.name,
+        leader_id: editForm.leader_id ? Number(editForm.leader_id) : null,
+        description: editForm.description || null,
+      });
+      closeDrawer();
+      loadTeams();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
   };
 
   const performDelete = async () => {
@@ -154,35 +173,57 @@ export default function TeamsPage() {
       subtitleKey="teams.subtitle"
       headerAction={hasPermission("teams.create") ? (
         <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}>{t("teams.newTeam")}</button>
+          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
+            {t("teams.newTeam")}
+          </button>
         </div>
       ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
 
+      {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal
-        open={showForm}
-        onClose={() => { setShowForm(false); setEditId(null); setForm(emptyForm); }}
-        title={editId ? t("teams.editTeam") : t("teams.newTeam")}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("teams.newTeam")}
         size="md"
       >
-        <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>{t("teams.teamName")} *</label>
-            <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("teams.leaderUserIdLabel")}</label>
-            <input type="number" min="1" value={form.leader_id} onChange={(e) => setForm({ ...form, leader_id: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("common.description")}</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
+        <form onSubmit={handleCreateSubmit}>
+          <TeamFormFields
+            form={createForm}
+            onChange={(field, value) => setCreateForm((prev) => ({ ...prev, [field]: value }))}
+          />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm); }}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.create")}</button>
+            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" className="btn-primary">{t("common.create")}</button>
           </div>
         </form>
       </Modal>
 
+      {/* 編集 Drawer（行クリックで開く・useRecordDrawer フック） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={t("teams.editTeam")}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/teams/${editId}/edit`); } : undefined}
+      >
+        <form onSubmit={handleEditSubmit}>
+          <TeamFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
+          />
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" className="btn-primary">{t("common.update")}</button>
+          </div>
+        </form>
+      </Drawer>
+
+      {/* メンバー管理 Modal（既存 UX 保持） */}
       <Modal
         open={!!membersPanel}
         onClose={() => setMembersPanel(null)}
@@ -233,9 +274,13 @@ export default function TeamsPage() {
           { key: "leader_id", header: t("teams.colLeaderId"), renderCell: (team) => String(team.leader_id ?? "-") },
           { key: "actions", header: t("common.actions"), renderCell: (team) => (
             <span className="actions">
-              <button className="btn-sm" onClick={() => openMembers(team)}>{t("teams.membersBtn")}</button>
-              {hasPermission("teams.update") && <button className="btn-sm" onClick={() => handleEdit(team)}>{t("common.edit")}</button>}
-              {hasPermission("teams.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(team)}>{t("common.delete")}</button>}
+              <button className="btn-sm" onClick={(e) => { e.stopPropagation(); openMembers(team); }}>{t("teams.membersBtn")}</button>
+              {hasPermission("teams.update") && (
+                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(team); }}>{t("common.edit")}</button>
+              )}
+              {hasPermission("teams.delete") && (
+                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(team); }}>{t("common.delete")}</button>
+              )}
             </span>
           )},
         ];
@@ -244,6 +289,7 @@ export default function TeamsPage() {
             columns={teamColumns}
             data={teams}
             rowKey={(team) => String(team.id)}
+            onRowClick={hasPermission("teams.update") ? handleRowClick : undefined}
             emptyState={t("teams.noTeams")}
           />
         );
