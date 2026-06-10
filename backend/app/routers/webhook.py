@@ -46,7 +46,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import reset_tenant_context, set_tenant_context
+from app.auth.dependencies import clear_tenant_context, reset_tenant_context, set_tenant_context
 from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
@@ -678,96 +678,101 @@ async def process_messenger_event(body: dict) -> None:
                 continue
 
             async with AsyncSessionLocal() as db:
-                # テナント特定: entry.id を Messenger は page_id、IG は ig_business_account_id として解釈
-                if platform == "messenger":
-                    tenant_id = await _get_tenant_id_by_page(db, entry_id)
-                else:
-                    tenant_id = await _get_tenant_id_by_ig_account(db, entry_id)
-                    # IG webhook が page_id 由来で発火するケースがあるため、
-                    # IG account 検索で見つからなければ Page ID としても引いてみる。
-                    if tenant_id is None:
+                try:
+                    # テナント特定: entry.id を Messenger は page_id、IG は ig_business_account_id として解釈
+                    if platform == "messenger":
                         tenant_id = await _get_tenant_id_by_page(db, entry_id)
+                    else:
+                        tenant_id = await _get_tenant_id_by_ig_account(db, entry_id)
+                        # IG webhook が page_id 由来で発火するケースがあるため、
+                        # IG account 検索で見つからなければ Page ID としても引いてみる。
+                        if tenant_id is None:
+                            tenant_id = await _get_tenant_id_by_page(db, entry_id)
 
-                if tenant_id is None:
-                    logging.warning(
-                        "[Meta] テナント特定失敗: object=%s entry_id=%s",
-                        object_type, entry_id,
-                    )
-                    continue
-
-                # Phase 1-E F14-S5 + F14-FU1: meta_messages.page_id を埋める
-                # Messenger: entry.id = Page ID をそのまま使う
-                # Instagram: entry.id = IG Business Account ID なので tenant_meta_config
-                #            経由で親 Page ID を逆引き（search_path 切替前に実施）
-                if platform == "messenger":
-                    page_id_for_message: Optional[str] = entry_id
-                else:
-                    page_id_for_message = await _resolve_page_id_for_ig(db, entry_id)
-
-                await set_tenant_context(db, tenant_id)
-
-                for m in messages:
-                    msg_id, lead_id = await _persist_meta_message(
-                        db,
-                        tenant_id=tenant_id,
-                        platform=platform,
-                        sender_id=m["sender_id"],
-                        message_text=m["message_text"],
-                        message_id=m["message_id"],
-                        timestamp=m["timestamp"],
-                        has_attachments=m["has_attachments"],
-                        page_id=page_id_for_message,
-                    )
-                    if msg_id is None:
-                        logging.info(
-                            "[Meta] Duplicate message_id skipped: %s",
-                            m["message_id"],
+                    if tenant_id is None:
+                        logging.warning(
+                            "[Meta] テナント特定失敗: object=%s entry_id=%s",
+                            object_type, entry_id,
                         )
                         continue
 
-                    # アバター画像URLをバックグラウンドで取得・キャッシュ
-                    # 例外は握り潰してWebhook処理本体に影響させない
-                    try:
-                        from app.tasks.avatar import fetch_avatar_for_lead
-                        fetch_avatar_for_lead.delay(
-                            lead_id=lead_id,
+                    # Phase 1-E F14-S5 + F14-FU1: meta_messages.page_id を埋める
+                    # Messenger: entry.id = Page ID をそのまま使う
+                    # Instagram: entry.id = IG Business Account ID なので tenant_meta_config
+                    #            経由で親 Page ID を逆引き（search_path 切替前に実施）
+                    if platform == "messenger":
+                        page_id_for_message: Optional[str] = entry_id
+                    else:
+                        page_id_for_message = await _resolve_page_id_for_ig(db, entry_id)
+
+                    await set_tenant_context(db, tenant_id)
+
+                    for m in messages:
+                        msg_id, lead_id = await _persist_meta_message(
+                            db,
+                            tenant_id=tenant_id,
                             platform=platform,
                             sender_id=m["sender_id"],
-                            page_id=page_id_for_message or "",
+                            message_text=m["message_text"],
+                            message_id=m["message_id"],
+                            timestamp=m["timestamp"],
+                            has_attachments=m["has_attachments"],
+                            page_id=page_id_for_message,
+                        )
+                        if msg_id is None:
+                            logging.info(
+                                "[Meta] Duplicate message_id skipped: %s",
+                                m["message_id"],
+                            )
+                            continue
+
+                        # アバター画像URLをバックグラウンドで取得・キャッシュ
+                        # 例外は握り潰してWebhook処理本体に影響させない
+                        try:
+                            from app.tasks.avatar import fetch_avatar_for_lead
+                            fetch_avatar_for_lead.delay(
+                                lead_id=lead_id,
+                                platform=platform,
+                                sender_id=m["sender_id"],
+                                page_id=page_id_for_message or "",
+                                tenant_id=tenant_id,
+                            )
+                        except Exception:
+                            logging.warning(
+                                "[Meta] avatar fetch タスク投入失敗（Webhook処理は継続）"
+                            )
+
+                        # Phase 2 SSE: DB 保存成功時のみ publish（重複スキップ時は送らない）
+                        try:
+                            from app.services.sse_pubsub import publish_inbox_update
+                            await publish_inbox_update(tenant_id)
+                        except Exception:
+                            logging.warning(
+                                "[Meta] SSE publish 失敗（Webhook 処理は継続）: tenant_id=%s",
+                                tenant_id,
+                            )
+
+                        # Discord 通知（個人情報を載せない: 送信者 ID は先頭 8 文字 + ***）
+                        sender_id = m["sender_id"]
+                        title = (
+                            "📩 新着Messengerメッセージ"
+                            if platform == "messenger"
+                            else "📩 新着Instagram DM"
+                        )
+                        await send_discord_notification(
+                            db=db,
                             tenant_id=tenant_id,
+                            event_type="meta_message_received",
+                            title=title,
+                            message=(
+                                f"送信者ID: {sender_id[:8]}***\n"
+                                f"プラットフォーム: {platform}"
+                            ),
                         )
-                    except Exception:
-                        logging.warning(
-                            "[Meta] avatar fetch タスク投入失敗（Webhook処理は継続）"
-                        )
-
-                    # Phase 2 SSE: DB 保存成功時のみ publish（重複スキップ時は送らない）
-                    try:
-                        from app.services.sse_pubsub import publish_inbox_update
-                        await publish_inbox_update(tenant_id)
-                    except Exception:
-                        logging.warning(
-                            "[Meta] SSE publish 失敗（Webhook 処理は継続）: tenant_id=%s",
-                            tenant_id,
-                        )
-
-                    # Discord 通知（個人情報を載せない: 送信者 ID は先頭 8 文字 + ***）
-                    sender_id = m["sender_id"]
-                    title = (
-                        "📩 新着Messengerメッセージ"
-                        if platform == "messenger"
-                        else "📩 新着Instagram DM"
-                    )
-                    await send_discord_notification(
-                        db=db,
-                        tenant_id=tenant_id,
-                        event_type="meta_message_received",
-                        title=title,
-                        message=(
-                            f"送信者ID: {sender_id[:8]}***\n"
-                            f"プラットフォーム: {platform}"
-                        ),
-                    )
+                finally:
+                    # ADR-131/130: コネクションプール返却前にテナント文脈をクリア。
+                    # continue（テナント特定失敗）・例外・正常終了のすべてのパスで実行される。
+                    await clear_tenant_context(db)
 
         logging.info(
             "[Meta] 処理完了: object=%s, entry_count=%d",
