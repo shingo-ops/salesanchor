@@ -1,6 +1,7 @@
 # Drawer パイロット design
 
 > 作成: 2026-06-10 | 担当: architect | パイロット: SuppliersPage のみ
+> recon: docs/handoff/drawer-pilot/recon.md | ADR: ADR-122（Modal パターン踏襲）/ ADR-027（i18n）
 
 ---
 
