@@ -233,7 +233,10 @@
     "errorApiFailure": "FedEx API error",
     "selectRate": "Use this rate",
     "cancel": "Cancel",
-    "days": "d"
+    "days": "d",
+    "postalCodeLabel": "Destination postal code (optional)",
+    "postalCodePlaceholder": "e.g. 10001",
+    "badgeApproximate": "Approximate (no postal code)"
   },
   "login": {
     "email": "Email address",

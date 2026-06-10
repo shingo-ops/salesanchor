@@ -41,6 +41,7 @@ interface ShippingCalcResponse {
   results: FedExRateResult[];
   cheapest: FedExRateResult | null;
   live_error: string | null;
+  rate_precision: "exact" | "approximate" | null;
 }
 
 interface Props {
@@ -108,6 +109,7 @@ export function FedExRateModal({
 }: Props) {
   const { t } = useTranslation();
   const [originCountryCode, setOriginCountryCode] = useState("JP");
+  const [destinationPostalCode, setDestinationPostalCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ShippingCalcResponse | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export function FedExRateModal({
         weight_kg: weightKg,
         carrier: "fedex",
         origin_country_code: originCountryCode || "JP",
+        ...(destinationPostalCode ? { destination_postal_code: destinationPostalCode } : {}),
       });
       setResponse(data);
     } catch (e) {
@@ -185,6 +188,25 @@ export function FedExRateModal({
         </div>
       </div>
 
+      {/* 宛先郵便番号（任意）— rate_precision 制御用 */}
+      <div style={{ marginBottom: "16px" }}>
+        <label
+          htmlFor="fedex-dest-postal"
+          style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+        >
+          {t("fedexRateModal.postalCodeLabel")}
+        </label>
+        <input
+          id="fedex-dest-postal"
+          type="text"
+          value={destinationPostalCode}
+          maxLength={20}
+          placeholder={t("fedexRateModal.postalCodePlaceholder")}
+          onChange={(e) => setDestinationPostalCode(e.target.value)}
+          style={{ width: "160px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+        />
+      </div>
+
       {/* API エラー（fetch 自体の失敗） */}
       {fetchError && (
         <div
@@ -242,6 +264,25 @@ export function FedExRateModal({
       {/* 見積もり結果テーブル */}
       {response && !liveErrorMessage && (
         <>
+          {/* 概算バッジ（郵便番号未指定時）— ADR-124 仕様追補 2026-06-10 */}
+          {response.rate_precision === "approximate" && (
+            <div
+              role="note"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                backgroundColor: "var(--color-amber-50)",
+                color: "var(--color-amber-800)",
+                fontSize: "12px",
+                marginBottom: "10px",
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>{t("fedexRateModal.badgeApproximate")}</span>
+            </div>
+          )}
           {response.results.length === 0 ? (
             <p style={{ color: "var(--color-text-secondary)" }}>{t("fedexRateModal.noResults")}</p>
           ) : (

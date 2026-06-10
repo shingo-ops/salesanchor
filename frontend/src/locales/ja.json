@@ -233,7 +233,10 @@
     "errorApiFailure": "FedEx API エラー",
     "selectRate": "この料金を使用",
     "cancel": "キャンセル",
-    "days": "日"
+    "days": "日",
+    "postalCodeLabel": "宛先郵便番号（任意）",
+    "postalCodePlaceholder": "例: 100-0001",
+    "badgeApproximate": "概算（郵便番号未指定）"
   },
   "login": {
     "email": "メールアドレス",
