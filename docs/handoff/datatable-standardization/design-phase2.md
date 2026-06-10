@@ -1,8 +1,17 @@
 # 設計: DataTable 標準化 フェーズ2 — 管理系テーブルロールアウト
 
-> **作成日**: 2026-06-10
-> **ステータス**: In Progress
-> **参照**: recon = `docs/handoff/datatable-standardization/recon-phase2.md`
+**対象ADR**: ADR-067  
+**recon**: docs/handoff/datatable-standardization/recon-phase2.md  
+**作成日**: 2026-06-11  
+**ステータス**: In Progress
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+- 事例1: Shopify Polaris DataTable（[polaris.shopify.com](https://polaris.shopify.com/components/tables/data-table)）— `rowStatus` prop でハイライト色を返す設計。我々の `rowClassName` は同パターンを採用。CSS クラス返しにすることでデザイントークン変更に強くなる。
+- 事例2: フェーズ1（顧客向けページ 9件）— raw `<table>` → `<DataTable>` 変換実績あり。同じ `renderCell` テンプレートを管理系にも適用できることをパイロットで実証。
+- 事例3: Tanstack Table v8（OSS）— 複合機能（drag, hidden columns, dynamic columns）は独自 prop 追加より専用ライブラリが適切という知見 → 今回の例外 4件の理由と合致。
 
 ---
 
