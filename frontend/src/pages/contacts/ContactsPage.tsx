@@ -18,6 +18,8 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import ContactChannelLinks from "../../components/ContactChannelLinks";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface CompanyMini {
   id: number;
@@ -321,66 +323,46 @@ export default function ContactsPage() {
 
       {loading ? (
         <p>{t("common.loading")}</p>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("common.name")}</th>
-              <th>{t("common.company")}</th>
-              <th>{t("contacts.position")}</th>
-              <th>{t("common.email")}</th>
-              <th>{t("common.phone")}</th>
-              <th>{t("contacts.isPrimary")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("nav.channels")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: "var(--space-4)" }}>{t("contacts.noContacts")}</td></tr>
-            ) : (
-              contacts.map((c) => (
-                <tr
-                  key={c.id}
-                  className={c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
-                >
-                  <td>{contactDisplayName(c)}</td>
-                  <td>{companyName(c.company_id)}</td>
-                  <td>{c.job_title || "-"}</td>
-                  <td>{c.primary_email || "-"}</td>
-                  <td>{c.primary_phone || "-"}</td>
-                  <td>{c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : ""}</td>
-                  <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
-                  <td>
-                    {/* SA-05: チャンネルリンク（link_templates SSOT 経由） */}
-                    {c.contact_channels.length > 0 && (
-                      <ContactChannelLinks contactId={c.id} />
-                    )}
-                  </td>
-                  <td>
-                    {hasPermission("customers.update") && (
-                      <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
-                    )}
-                    {/* PR #145 Q2: 一覧から直接解消できるショートカット（編集モーダル経由でも可） */}
-                    {hasPermission("customers.update") && c.status === "pending_dedup_review" && (
-                      <button
-                        className="btn-sm"
-                        onClick={() => setDedupConfirmTarget(c)}
-                      >
-                        {t("contacts.confirmAsDistinct")}
-                      </button>
-                    )}
-                    {hasPermission("customers.delete") && (
-                      <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Contact>[] = [
+          { key: "name", header: t("common.name"), renderCell: (c) => contactDisplayName(c) },
+          { key: "company_id", header: t("common.company"), renderCell: (c) => companyName(c.company_id) },
+          { key: "job_title", header: t("contacts.position"), renderCell: (c) => c.job_title || "-" },
+          { key: "primary_email", header: t("common.email"), renderCell: (c) => c.primary_email || "-" },
+          { key: "primary_phone", header: t("common.phone"), renderCell: (c) => c.primary_phone || "-" },
+          { key: "is_primary_contact", header: t("contacts.isPrimary"), renderCell: (c) => c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "" },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
+          { key: "channels", header: t("nav.channels"), renderCell: (c) => (
+            /* SA-05: チャンネルリンク（link_templates SSOT 経由） */
+            c.contact_channels.length > 0 ? <ContactChannelLinks contactId={c.id} /> : null
+          )},
+          { key: "actions", header: t("common.actions"), renderCell: (c) => (
+            <>
+              {hasPermission("customers.update") && (
+                <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
+              )}
+              {/* PR #145 Q2: 一覧から直接解消できるショートカット（編集モーダル経由でも可） */}
+              {hasPermission("customers.update") && c.status === "pending_dedup_review" && (
+                <button className="btn-sm" onClick={() => setDedupConfirmTarget(c)}>
+                  {t("contacts.confirmAsDistinct")}
+                </button>
+              )}
+              {hasPermission("customers.delete") && (
+                <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
+              )}
+            </>
+          )},
+        ];
+        return (
+          <DataTable<Contact>
+            columns={columns}
+            data={contacts}
+            rowKey={(c) => String(c.id)}
+            rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            emptyState={t("contacts.noContacts")}
+          />
+        );
+      })()}
 
       <Modal
         open={showForm}

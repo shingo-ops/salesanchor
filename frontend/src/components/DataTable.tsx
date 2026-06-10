@@ -81,6 +81,8 @@ export interface DataTableProps<T = Record<string, unknown>> {
   nextPageLabel?: string;
   /** ページ番号表示部に挿入する ReactNode（省略時はページ番号のみ表示） */
   pageInfo?: ReactNode;
+  /** 行ごとに追加する CSS クラス名を返すファクトリ（例: pending-dedup ハイライト） */
+  rowClassName?: (row: T) => string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -118,6 +120,7 @@ export function DataTable<T = Record<string, unknown>>({
   prevPageLabel = '‹',
   nextPageLabel = '›',
   pageInfo,
+  rowClassName,
 }: DataTableProps<T>) {
   const allKeys = data.map(rowKey);
   const selected = selectedKeys ?? new Set<string>();
@@ -239,6 +242,7 @@ export function DataTable<T = Record<string, unknown>>({
                     'comp-table__row',
                     isSelected ? 'comp-table__row--selected' : '',
                     clickable ? 'comp-table__row--clickable' : '',
+                    rowClassName ? rowClassName(row) : '',
                   ].filter(Boolean).join(' ')}
                   tabIndex={clickable ? 0 : undefined}
                   onClick={clickable ? (e: MouseEvent<HTMLTableRowElement>) => {

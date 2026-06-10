@@ -421,7 +421,8 @@
   background: var(--warning-bg);
   border-left: 3px solid var(--warning-text);
 }
-.data-table tr.row-pending-dedup:hover td {
+.data-table tr.row-pending-dedup:hover td,
+.comp-table__row.row-pending-dedup:hover .comp-table__td {
   background: var(--row-hover);
 }
 
