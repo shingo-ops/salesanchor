@@ -1,6 +1,6 @@
 # DataTable 標準化 バッチ3 設計書
 
-> **参照: recon = docs/handoff/datatable-standardization/recon.md / ADR-067**
+> **参照: recon = docs/handoff/datatable-batch3/recon.md / docs/handoff/datatable-standardization/recon.md / ADR-067**
 > **作成日**: 2026-06-10
 > **担当**: Hikky-dev
 
