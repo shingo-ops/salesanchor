@@ -270,6 +270,13 @@ npm run dev
 | `onSelectChange` | `(keys) => void` | — | 選択変更コールバック |
 | `density` | `'compact' \| 'default' \| 'relaxed'` | `'default'` | 行高さバリアント |
 | `emptyState` | ReactNode | `'No data'` | データ 0 件時の表示スロット |
+| `onRowClick` | `(row: T) => void` | — | 行クリック時コールバック（指定時のみ行がクリック可能になる） |
+| `page` | number | — | 現在ページ番号（1始まり） |
+| `hasNextPage` | boolean | — | 次ページ存在フラグ |
+| `onPageChange` | `(page: number) => void` | — | ページ変更コールバック（指定時のみページネーション UI が表示） |
+| `prevPageLabel` | string | `'<'` | 前ページボタンラベル |
+| `nextPageLabel` | string | `'>'` | 次ページボタンラベル |
+| `pageInfo` | string | — | ページ情報テキスト（例: `'1 / 3'`） |
 
 ### 設計方針
 
@@ -282,4 +289,4 @@ npm run dev
 
 1. リード一覧・会社一覧・注文一覧への DataTable 適用
 2. 列固定（sticky ヘッダー / sticky チェックボックス列）の検討
-3. ページネーション連携（`page` / `totalCount` props 追加）
+3. ページネーション連携（`page` / `hasNextPage` / `onPageChange` props — step-2 で実装済み）
