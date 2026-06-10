@@ -192,6 +192,8 @@
     "labelClientSecret": "Client Secret",
     "labelApiKey": "API Key",
     "labelApiSecret": "API Secret",
+    "labelFedExApiKey": "APIキー",
+    "labelFedExSecretKey": "シークレットキー",
     "envLabel": "環境",
     "envSandbox": "sandbox（練習用）",
     "envProduction": "production（本番）",
