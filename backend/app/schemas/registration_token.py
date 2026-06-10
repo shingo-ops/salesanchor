@@ -114,12 +114,15 @@ class AddressInput(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """顧客登録リクエスト（公開フォームから送信）。"""
+    """顧客登録リクエスト（公開フォームから送信）。ADR-126 v2。"""
     token: str = Field(..., description="raw token")
     addresses: list[AddressInput] = Field(default_factory=list, description="住所リスト")
     contact_name: Optional[str] = Field(None, max_length=200, description="担当者名")
     contact_email: Optional[str] = Field(None, max_length=255, description="担当者メール")
     contact_telephone: Optional[str] = Field(None, max_length=30, description="担当者電話")
+    # ADR-126: companies テーブルに保存する追加フィールド
+    billing_display_name: Optional[str] = Field(None, max_length=200, description="請求先表示名（Billing Name）")
+    payment_recipient_name: Optional[str] = Field(None, max_length=200, description="支払い名義（送金名義が異なる場合）")
 
     @field_validator("contact_email")
     @classmethod

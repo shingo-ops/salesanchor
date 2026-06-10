@@ -189,6 +189,21 @@ async def register_customer(
         )
     company_id = row[0]
 
+    # ADR-126: billing_display_name / payment_recipient_name を companies に保存
+    if data.billing_display_name or data.payment_recipient_name:
+        update_parts: list[str] = []
+        update_params: dict = {"cid": company_id}
+        if data.billing_display_name:
+            update_parts.append("billing_display_name = :bdn")
+            update_params["bdn"] = data.billing_display_name
+        if data.payment_recipient_name:
+            update_parts.append("payment_recipient_name = :prn")
+            update_params["prn"] = data.payment_recipient_name
+        await db.execute(
+            text(f"UPDATE companies SET {', '.join(update_parts)} WHERE id = :cid"),
+            update_params,
+        )
+
     # 住所を登録
     for addr in data.addresses:
         await db.execute(
