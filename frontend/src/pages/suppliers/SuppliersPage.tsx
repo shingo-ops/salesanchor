@@ -1,12 +1,15 @@
 import { useEffect, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
 
 interface Supplier {
   id: number; supplier_code: string | null; name: string; contact_name: string | null;
@@ -14,15 +17,23 @@ interface Supplier {
   notes: string | null; is_active: boolean; created_at: string;
 }
 
-const emptyForm = { name: "", contact_name: "", email: "", phone: "", address: "", notes: "" };
+const emptyForm: SupplierFormState = {
+  name: "", contact_name: "", email: "", phone: "", address: "", notes: "",
+};
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  // 新規作成モーダル
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<SupplierFormState>(emptyForm);
+  // 編集ドロワー
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [editForm, setEditForm] = useState<SupplierFormState>(emptyForm);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
@@ -45,21 +56,34 @@ export default function SuppliersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [page]);
 
-  const handleSubmit = async (e: FormEvent) => {
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError("");
     const toNull = (v: string) => v || null;
-    const payload = { name: form.name, contact_name: toNull(form.contact_name), email: toNull(form.email), phone: toNull(form.phone), address: toNull(form.address), notes: toNull(form.notes) };
+    const payload = { name: createForm.name, contact_name: toNull(createForm.contact_name), email: toNull(createForm.email), phone: toNull(createForm.phone), address: toNull(createForm.address), notes: toNull(createForm.notes) };
     try {
-      if (editId) await api.patch(`/suppliers/${editId}`, payload);
-      else await api.post("/suppliers", payload);
-      setShowForm(false); setEditId(null); setForm(emptyForm); load();
+      await api.post("/suppliers", payload);
+      setShowCreate(false); setCreateForm(emptyForm); load();
     } catch (e) { setError(e instanceof Error ? e.message : t("common.saveError")); }
   };
 
-  const handleEdit = (s: Supplier) => {
+  /* ── 行クリック → 編集ドロワー ── */
+  const handleRowClick = (s: Supplier) => {
     setEditId(s.id);
-    setForm({ name: s.name, contact_name: s.contact_name || "", email: s.email || "", phone: s.phone || "", address: s.address || "", notes: s.notes || "" });
-    setShowForm(true);
+    setEditForm({ name: s.name, contact_name: s.contact_name ?? "", email: s.email ?? "", phone: s.phone ?? "", address: s.address ?? "", notes: s.notes ?? "" });
+    setDrawerOpen(true);
+  };
+
+  /* ── ドロワー内編集保存 ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault(); setError("");
+    if (!editId) return;
+    const toNull = (v: string) => v || null;
+    const payload = { name: editForm.name, contact_name: toNull(editForm.contact_name), email: toNull(editForm.email), phone: toNull(editForm.phone), address: toNull(editForm.address), notes: toNull(editForm.notes) };
+    try {
+      await api.patch(`/suppliers/${editId}`, payload);
+      setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); load();
+    } catch (e) { setError(e instanceof Error ? e.message : t("common.saveError")); }
   };
 
   const performDelete = async () => {
@@ -75,30 +99,50 @@ export default function SuppliersPage() {
       subtitleKey="suppliers.subtitle"
       headerAction={hasPermission("suppliers.create") ? (
         <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
+          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
         </div>
       ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+
+      {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={editId ? t("suppliers.editSupplier") : t("suppliers.newSupplier")}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("suppliers.newSupplier")}
         size="md"
       >
-        <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>{t("suppliers.supplierName")} *</label><input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="form-group"><label>{t("suppliers.contactName")}</label><input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.email")}</label><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.phone")}</label><input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-          <div className="form-group"><label>{t("suppliers.address")}</label><textarea value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+        <form onSubmit={handleCreateSubmit}>
+          <SupplierFormFields
+            form={createForm}
+            onChange={(field, value) => setCreateForm(prev => ({ ...prev, [field]: value }))}
+          />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{editId ? t("common.update") : t("common.register")}</button>
+            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.register")}</button>
           </div>
         </form>
       </Modal>
+
+      {/* 編集 Drawer（行クリックで開く） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); }}
+        title={t("suppliers.editSupplier")}
+        onOpenFullPage={editId ? () => { setDrawerOpen(false); navigate(`/suppliers/${editId}/edit`); } : undefined}
+      >
+        <form onSubmit={handleEditSubmit}>
+          <SupplierFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
+          />
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => { setDrawerOpen(false); setEditId(null); setEditForm(emptyForm); }}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.update")}</button>
+          </div>
+        </form>
+      </Drawer>
+
       {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
         const columns: DataTableColumn<Supplier>[] = [
           { key: "supplier_code", header: t("common.code"), renderCell: (s) => <span className="mono">{s.supplier_code || "-"}</span> },
@@ -108,8 +152,8 @@ export default function SuppliersPage() {
           { key: "phone", header: t("common.phone"), renderCell: (s) => s.phone || "-" },
           { key: "actions", header: t("common.actions"), renderCell: (s) => (
             <span className="actions">
-              {hasPermission("suppliers.update") && <button className="btn-sm" onClick={() => handleEdit(s)}>{t("common.edit")}</button>}
-              {hasPermission("suppliers.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>{t("suppliers.deleteSupplier")}</button>}
+              {hasPermission("suppliers.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</button>}
+              {hasPermission("suppliers.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("suppliers.deleteSupplier")}</button>}
             </span>
           )},
         ];
@@ -118,7 +162,7 @@ export default function SuppliersPage() {
             columns={columns}
             data={suppliers}
             rowKey={(s) => String(s.id)}
-            onRowClick={hasPermission("suppliers.update") ? (s) => handleEdit(s) : undefined}
+            onRowClick={hasPermission("suppliers.update") ? (s) => handleRowClick(s) : undefined}
             emptyState={t("suppliers.noSuppliers")}
           />
         );

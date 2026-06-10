@@ -1,0 +1,108 @@
+/**
+ * Drawer — 右スライドパネル
+ *
+ * 名前空間: .comp-drawer-*
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ * z-index: --z-drawer (299) で Modal (400) より下
+ * transition: user-drawer パターン踏襲（topbar.css:151-169）
+ */
+
+/* ----------------------------------------------------------------
+   オーバーレイ（背景暗幕）
+   ---------------------------------------------------------------- */
+
+.comp-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: var(--z-backdrop);
+}
+
+/* ----------------------------------------------------------------
+   パネル本体
+   ---------------------------------------------------------------- */
+
+.comp-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: var(--drawer-panel-width, 480px);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* スライドインアニメーション（user-drawer パターン踏襲） */
+  transform: translateX(100%);
+  transition: transform var(--transition-slow);
+}
+
+.comp-drawer-panel--open {
+  transform: translateX(0);
+}
+
+/* ----------------------------------------------------------------
+   ヘッダ
+   ---------------------------------------------------------------- */
+
+.comp-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.comp-drawer-title {
+  margin: 0;
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+  flex: 1;
+}
+
+.comp-drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ----------------------------------------------------------------
+   本体（スクロール可）
+   ---------------------------------------------------------------- */
+
+.comp-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+/* ----------------------------------------------------------------
+   フッタ（省略可）
+   ---------------------------------------------------------------- */
+
+.comp-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------------------------------
+   モバイル（全画面）
+   ---------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .comp-drawer-panel {
+    width: 100%;
+  }
+}
