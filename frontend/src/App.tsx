@@ -42,6 +42,7 @@ import ShiftsPage from "./pages/shifts/ShiftsPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
 import ERPPage from "./pages/erp/ERPPage";
 import StaffPage from "./pages/staff/StaffPage";
+import StaffEditPage from "./pages/staff/StaffEditPage";
 import BotsPage from "./pages/bots/BotsPage";
 import BotEditPage from "./pages/bots/BotEditPage";
 import ChannelsPage from "./pages/channels/ChannelsPage";
@@ -189,6 +190,7 @@ function App() {
                     element={<CommissionSettingsPage />}
                   />
                   <Route path="/staff" element={<StaffPage />} />
+                  <Route path="/staff/:id/edit" element={<StaffEditPage />} />
                   <Route path="/bots" element={<BotsPage />} />
                   <Route path="/bots/:id/edit" element={<BotEditPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
