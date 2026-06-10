@@ -101,13 +101,31 @@ async def _fetch_order_for_csv(db: AsyncSession, order_id: int, tenant_id: int) 
     res = await db.execute(
         text(f"""
             SELECT id, order_number, total_amount, currency, status,
-                   notes, created_at, updated_at
+                   notes, created_at, updated_at, company_id
             FROM {orders_t} WHERE id = :id
         """),
         {"id": order_id},
     )
     row = res.mappings().first()
     return dict(row) if row else None
+
+
+async def _fetch_billing_email(db: AsyncSession, company_id: int | None, tenant_id: int) -> str | None:
+    """ADR-126 出口補完: 請求先住所の email を取得する。配送先Email空欄時のフォールバック用。"""
+    if company_id is None:
+        return None
+    ca_t = tenant_table_ref(db, tenant_id, "company_addresses")
+    res = await db.execute(
+        text(f"""
+            SELECT email FROM {ca_t}
+            WHERE company_id = :cid AND address_type = 'billing' AND email IS NOT NULL
+            ORDER BY is_default DESC, id ASC
+            LIMIT 1
+        """),
+        {"cid": company_id},
+    )
+    row = res.first()
+    return row[0] if row else None
 
 
 @router.post(
@@ -289,15 +307,33 @@ async def delete_order_shipping(
 # ---------------------------------------------------------------------------
 
 
-def _build_csv_entry(order_row: dict, shipping_row: dict | None) -> dict:
+def _build_csv_entry(
+    order_row: dict,
+    shipping_row: dict | None,
+    billing_email: str | None = None,
+) -> dict:
     """eLogi adapter に渡す entry dict を組み立てる。
 
     本 Sprint では SKU / 画像URL / 商品タイトル / 数量 / USD単価 を持つ列が
     DB にまだ無いため空文字を入れる（eLogi 側で補完する運用）。
+
+    ADR-126 出口補完:
+      - ZIP 埋め値: shipping_row.zip_code が空なら "0000000" を挿入（DB は変更しない）
+      - Email フォールバック: shipping_row.email が空なら billing_email を参照
     """
+    shipping = dict(shipping_row) if shipping_row else {}
+
+    # ADR-126 出口補完: ZIP 埋め値
+    if not shipping.get("zip_code"):
+        shipping["zip_code"] = "0000000"
+
+    # ADR-126 出口補完: 配送先 Email フォールバック
+    if not shipping.get("email") and billing_email:
+        shipping["email"] = billing_email
+
     return {
         "order": order_row,
-        "shipping": shipping_row or {},
+        "shipping": shipping,
         "extras": {
             # 本 Sprint で持っていない列は空のまま（adapter が空文字に丸める）
             "ship_staff": None,
@@ -306,7 +342,7 @@ def _build_csv_entry(order_row: dict, shipping_row: dict | None) -> dict:
             "image_url": None,
             "product_title": None,
             "qty": None,
-            "usd_price": shipping_row.get("item_price_usd") if shipping_row else None,
+            "usd_price": shipping.get("item_price_usd"),
             "buyer_id": None,
             "timestamp": None,  # adapter 側で now() に丸める
         },
@@ -334,8 +370,11 @@ async def get_order_shipping_elogi_csv(
     # 発送情報が無くても CSV 自体は出す（一部列が空で出るだけ）。
     # eLogi 側で「最小の order_number だけ」も取り込めるユースケースに対応。
 
+    # ADR-126: 配送先Email空欄時の請求先メールフォールバック
+    billing_email = await _fetch_billing_email(db, order_row.get("company_id"), tenant_id)
+
     adapter = get_adapter("elogi")
-    csv_text = adapter.to_csv_text([_build_csv_entry(order_row, shipping_row)])
+    csv_text = adapter.to_csv_text([_build_csv_entry(order_row, shipping_row, billing_email)])
 
     filename = f"elogi-{order_row['order_number']}.csv"
     return Response(
@@ -408,7 +447,9 @@ async def bulk_export_elogi_csv(
         if not order_row:
             continue  # 存在しない id はスキップ
         shipping_row = await _fetch_shipping_row(db, oid, tenant_id)
-        entries.append(_build_csv_entry(order_row, shipping_row))
+        # ADR-126: 配送先Email空欄時の請求先メールフォールバック
+        billing_email = await _fetch_billing_email(db, order_row.get("company_id"), tenant_id)
+        entries.append(_build_csv_entry(order_row, shipping_row, billing_email))
 
     if not entries:
         raise HTTPException(

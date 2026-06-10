@@ -52,6 +52,7 @@ import {
   LanguageIcon,
   PaperAirplaneIcon,
   PaperClipIcon,
+  ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/solid";
 
 // ── outline: サイドバーナビゲーション専用 ────────────────────────────────
@@ -142,6 +143,7 @@ const ArchiveBox    = hi(ArchiveBoxIcon);
 const Languages     = hi(LanguageIcon);
 const PaperAirplane = hi(PaperAirplaneIcon);
 const Paperclip     = hi(PaperClipIcon);
+const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
@@ -370,6 +372,9 @@ export const ADMIN_HUB_ICONS = {
   discordAnnounce:     PaperAirplane,    // PaperAirplaneIcon solid — アナウンス投稿
   inventoryVisibility: PackageOutline,   // CubeIcon outline — 在庫表示権限
 } satisfies Record<string, Icon>;
+
+// Drawer フルページ展開ボタン用
+export { ArrowTopRight };
 
 // Layout.tsx の /lead-chat ナビアイテム用（outline バリアント — サイドバー統一仕様）
 export function LeadChatIcon({ size = 20, className }: { size?: number; className?: string }) {
