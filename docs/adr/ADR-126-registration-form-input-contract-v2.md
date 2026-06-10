@@ -21,6 +21,16 @@
 
 ### 1. 入力契約テーブルv2
 
+**Section 0 — Contact Person（担当者・やり取りの窓口）**
+
+| # | 項目（EN） | 必須 | 形式・ルール | 保存先 |
+|---|---|---|---|---|
+| 1 | Contact Name | 任意 | テキスト。**空欄時は `companies.billing_display_name` をフォールバックとして担当者レコードを必ず1件作成**。出口補完ではなく登録時確定（担当者は窓口の実体なので空のままにしない）。注記文: 「お一人で運営の場合は空欄で結構です（ご自身が窓口として登録されます）」| contacts.display_name |
+| 2 | Contact Email | 任意 | メール形式 | contacts.primary_email |
+| 3 | Contact Telephone | 任意 | テキスト | contacts.primary_phone |
+
+> Section 0 はフォームの最上部に配置。Contact Name・Contact Email・Contact Telephone は全項目任意。空欄で送信した場合は請求先名が担当者名として contacts に保存される。
+
 **Section 1 — Billing Address Registration**
 
 | # | 項目（EN） | 必須 | 形式・ルール | 保存先 |
@@ -97,6 +107,7 @@
 ## 実装上の注意（誤実装防止）
 
 - **偽データをDBに入れない。** ZIPの `0000000` はラベル生成時のみ。配送先メールのフォールバック値も保存しない（参照のみ）。
+- **Contact Name のフォールバックはDBに保存してよい。** ZIPやメールの「出口補完（DBは空）」と異なり、担当者名は「この取引の窓口は誰か」という関係の記録。空のまま残すと後工程（連絡時の宛先）が機能しないため、登録の瞬間に `billing_display_name` で確定させる。実装: `/public/register` エンドポイントで `data.contact_name.strip() or billing_display_name` を `contacts.display_name` に保存。
 - **fallbackLng のグローバル変更禁止。** 英語デフォルトは公開フォームページのスコープに限定する。
 - **payment_recipient_name は業務語彙「支払い名義（送金者の名義）」として使う。** カラム名（recipient）と語彙にズレがあるが、改名（migration追加）はしない。本ADRを語彙の正とする。
 - **v1からの差分のみ変更する。** `RegisterRequest`（`backend/app/schemas/registration_token.py:116`）に `billing_display_name` / `payment_recipient_name` 等の不足フィールドを追加する形。トークン検証・テナント決定・住所帳の既存ロジックには触れない。
@@ -133,3 +144,4 @@
 - [ ] 配送先Email空欄の注文の eLogi CSV に請求先メールが出力される。
 - [ ] 送信されたデータが正しいテナントの companies / company_addresses（address_type別）に保存される（トークン検証経由・他テナント混入なし）。
 - [ ] 全文言が en.json / ja.json のキーで管理され、ESLint local/no-japanese-literal を通る。
+- [ ] 担当者名を空欄で送信すると、請求先名（billing_display_name）を担当者名とする contacts レコードが1件作成される。

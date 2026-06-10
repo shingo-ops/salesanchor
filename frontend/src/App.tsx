@@ -12,6 +12,7 @@ import GoalSettingPage from "./pages/goal-setting/GoalSettingPage";
 import CompaniesPage from "./pages/companies/CompaniesPage";
 import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
 import ContactsPage from "./pages/contacts/ContactsPage";
+import ContactEditPage from "./pages/contacts/ContactEditPage";
 import DealsPage from "./pages/deals/DealsPage";
 import OrdersPage from "./pages/orders/OrdersPage";
 // 区切り4 (ADR-021 改修): 売上管理 / 報酬管理 メニュー分離
@@ -41,6 +42,7 @@ import ShiftsPage from "./pages/shifts/ShiftsPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
 import ERPPage from "./pages/erp/ERPPage";
 import StaffPage from "./pages/staff/StaffPage";
+import StaffEditPage from "./pages/staff/StaffEditPage";
 import BotsPage from "./pages/bots/BotsPage";
 import BotEditPage from "./pages/bots/BotEditPage";
 import ChannelsPage from "./pages/channels/ChannelsPage";
@@ -127,6 +129,7 @@ function App() {
                   <Route path="/companies"     element={<Navigate to="/crm/companies"  replace />} />
                   <Route path="/companies/:id" element={<CompanyIdRedirect />} />
                   <Route path="/contacts"      element={<Navigate to="/crm/contacts"   replace />} />
+                  <Route path="/contacts/:id/edit" element={<ContactEditPage />} />
                   <Route path="/archive"       element={<Navigate to="/crm/archive"    replace />} />
 
                   {/* Phase 1-D Sprint 4: Meta Inbox UI（左ペイン会話 + 右ペインメッセージ） */}
@@ -187,6 +190,7 @@ function App() {
                     element={<CommissionSettingsPage />}
                   />
                   <Route path="/staff" element={<StaffPage />} />
+                  <Route path="/staff/:id/edit" element={<StaffEditPage />} />
                   <Route path="/bots" element={<BotsPage />} />
                   <Route path="/bots/:id/edit" element={<BotEditPage />} />
                   <Route path="/teams" element={<TeamsPage />} />

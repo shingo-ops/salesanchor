@@ -175,10 +175,11 @@ async def register_customer(
     # テナントスキーマ・RLS コンテキストを設定
     await set_tenant_context(db, tenant_id)
 
-    # リードに紐づく会社 ID を取得
+    # リードに紐づく会社 ID・請求先名を取得
     # companies.lead_id が SSOT（leads に company_id 列はない）
+    # billing_display_name は担当者名フォールバック用（ADR-126 §0）
     result = await db.execute(
-        text("SELECT id FROM companies WHERE lead_id = :lead_id"),
+        text("SELECT id, billing_display_name FROM companies WHERE lead_id = :lead_id"),
         {"lead_id": lead_id},
     )
     row = result.first()
@@ -188,6 +189,7 @@ async def register_customer(
             detail="リードに紐づく会社が見つかりません",
         )
     company_id = row[0]
+    billing_display_name_fallback: str = row[1] or ""
 
     # ADR-126: billing_display_name / payment_recipient_name を companies に保存
     if data.billing_display_name or data.payment_recipient_name:
@@ -238,7 +240,13 @@ async def register_customer(
             },
         )
 
-    # 担当者情報を contacts に登録（schema バリデーション済み: contact_name 必須）
+    # 担当者情報を contacts に登録
+    # contact_name が空の場合は billing_display_name をフォールバックとして使用（ADR-126 §0）
+    contact_display_name = (
+        data.contact_name.strip()
+        if data.contact_name and data.contact_name.strip()
+        else billing_display_name_fallback
+    )
     contact_code = f"CT-PEND-{uuid.uuid4().hex[:8]}"
     r = await db.execute(
         text("""
@@ -257,7 +265,7 @@ async def register_customer(
             "tenant_id": tenant_id,
             "cid": company_id,
             "contact_code": contact_code,
-            "display_name": data.contact_name or "",
+            "display_name": contact_display_name,
             "primary_email": data.contact_email,
             "primary_phone": data.contact_telephone,
         },

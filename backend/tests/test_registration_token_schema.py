@@ -5,7 +5,7 @@
   A. AddressInput 空文字列 → None 正規化（全 Optional[str] フィールド共通）
   B. AddressInput email / telephone 形式バリデーション（値あり）
   C. AddressInput country_code 正規化・バリデーション
-  D. RegisterRequest contact 必須バリデーション
+  D. RegisterRequest contact — ADR-126 追補: 担当者名は任意（空欄OK）
 """
 
 import pytest
@@ -135,9 +135,14 @@ class TestAddressInputCountryCode:
             AddressInput(**self._base(country_code="12"))
 
 
-# --- D. RegisterRequest contact 必須バリデーション ---
+# --- D. RegisterRequest contact — ADR-126 追補: 担当者名は任意 ---
 
-class TestRegisterRequestContactRequired:
+class TestRegisterRequestContact:
+    """ADR-126 追補: Contact Name は任意。空欄での送信は 422 にならない。
+    フォールバック（billing_display_name → display_name）はルーター層で行うため
+    スキーマ単体テストでは contact_name=None/空 が通ることのみ検証する。
+    """
+
     def _base(self, **kwargs) -> dict:
         return {"token": "tok", "addresses": [], **kwargs}
 
@@ -149,20 +154,25 @@ class TestRegisterRequestContactRequired:
         r = RegisterRequest(**self._base(contact_name="田中", contact_telephone="09012345678"))
         assert r.contact_telephone == "09012345678"
 
-    def test_missing_name_raises(self):
-        with pytest.raises(ValidationError, match="担当者名"):
-            RegisterRequest(**self._base(contact_email="t@example.com"))
+    def test_all_contact_fields_empty_accepted(self):
+        """全担当者フィールド未入力でバリデーションエラーにならない（ADR-126 追補）"""
+        r = RegisterRequest(**self._base())
+        assert r.contact_name is None
+        assert r.contact_email is None
+        assert r.contact_telephone is None
 
-    def test_empty_name_raises(self):
-        with pytest.raises(ValidationError, match="担当者名"):
-            RegisterRequest(**self._base(contact_name="", contact_email="t@example.com"))
+    def test_empty_name_accepted(self):
+        """contact_name="" も None として扱われ、エラーにならない"""
+        r = RegisterRequest(**self._base(contact_name="", contact_email="t@example.com"))
+        assert r.contact_name is None
 
-    def test_name_only_no_contact_raises(self):
-        with pytest.raises(ValidationError, match="メールアドレスまたは電話番号"):
-            RegisterRequest(**self._base(contact_name="田中"))
+    def test_name_only_no_email_accepted(self):
+        """担当者名のみ（メール・電話なし）でもエラーにならない"""
+        r = RegisterRequest(**self._base(contact_name="田中"))
+        assert r.contact_name == "田中"
 
     def test_contact_email_empty_str_becomes_none(self):
-        """contact_email="" は None として扱い、telephone があれば OK"""
+        """contact_email="" は None として扱われる"""
         r = RegisterRequest(**self._base(
             contact_name="田中", contact_email="", contact_telephone="09012345678"
         ))
