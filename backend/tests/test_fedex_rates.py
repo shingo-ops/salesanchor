@@ -5,13 +5,16 @@ FedEx Rates API クライアントのユニットテスト（ADR-124）。
 
 テスト対象:
   - get_or_refresh_token: キャッシュヒット / ミス / 期限切れ
-  - get_rates: 正常系 / 認証エラー / API エラー / タイムアウト
+  - get_rates: 正常系 / 認証エラー / API エラー / タイムアウト / サービスフィルタ
   - /shipping/calculate エンドポイント: FedEx ライブ分岐 / 静的フォールバック /
-                                         未連携時の source='static' /
-                                         live_error 明示返却（D5 検証）
+                                         未連携時の live_error 明示返却 /
+                                         rate_precision exact/approximate（仕様追補 2026-06-10）
 
 変更履歴:
   2026-06-09: 初版（ADR-124 Phase B）
+  2026-06-10: TARGET_INTERNATIONAL_SERVICE_TYPES フィルタ対応
+              rate_precision (exact/approximate) テスト追加
+              _try_fedex_live の 3-tuple 戻り値に対応
 """
 
 from __future__ import annotations
@@ -54,12 +57,15 @@ def _mock_token_resp(token: str = "test-token", expires_in: int = 3600):
 
 
 def _mock_rates_resp(quotes: list[dict] | None = None):
-    """Rates API レスポンスモック。"""
+    """Rates API レスポンスモック。
+
+    デフォルトは INTERNATIONAL_PRIORITY（TARGET_INTERNATIONAL_SERVICE_TYPES の確認済みコード）。
+    """
     if quotes is None:
         quotes = [
             {
-                "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
-                "serviceName": "FedEx International Priority",
+                "serviceType": "INTERNATIONAL_PRIORITY",
+                "serviceName": "FedEx International Priority®",
                 "ratedShipmentDetails": [
                     {
                         "rateType": "PAYOR_LIST_SHIPMENT",
@@ -159,10 +165,54 @@ class TestGetRates:
             )
 
         assert len(quotes) == 1
-        assert quotes[0].service_type == "FEDEX_INTERNATIONAL_PRIORITY"
+        assert quotes[0].service_type == "INTERNATIONAL_PRIORITY"
         assert quotes[0].total_net_charge == Decimal("12500")
         assert quotes[0].currency == "JPY"
         assert quotes[0].transit_days == 2
+
+    def test_non_target_service_types_filtered_out(self):
+        """TARGET_INTERNATIONAL_SERVICE_TYPES 以外のサービスはフィルタされる。"""
+        quotes_data = [
+            {
+                "serviceType": "FEDEX_GROUND",       # 対象外
+                "serviceName": "FedEx Ground®",
+                "ratedShipmentDetails": [
+                    {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 5000, "currency": "JPY"}
+                ],
+            },
+            {
+                "serviceType": "INTERNATIONAL_PRIORITY",  # 対象内
+                "serviceName": "FedEx International Priority®",
+                "ratedShipmentDetails": [
+                    {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 12500, "currency": "JPY"}
+                ],
+            },
+            {
+                "serviceType": "FIRST_OVERNIGHT",    # 対象外
+                "serviceName": "FedEx First Overnight®",
+                "ratedShipmentDetails": [
+                    {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 20000, "currency": "JPY"}
+                ],
+            },
+        ]
+
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_rates_resp(quotes_data),
+        ]):
+            quotes = get_rates(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                origin_country_code="JP",
+                destination_country_code="US",
+                weight_kg=Decimal("1.0"),
+            )
+
+        assert len(quotes) == 1, "対象外サービスがフィルタされず残っている"
+        assert quotes[0].service_type == "INTERNATIONAL_PRIORITY"
 
     def test_rates_api_401_clears_cache_and_raises_auth_error(self):
         """Rates API 401 はキャッシュをクリアして FedExAuthError を raise。"""
@@ -216,15 +266,15 @@ class TestGetRates:
         """複数サービスタイプは料金昇順で返す。"""
         quotes_data = [
             {
-                "serviceType": "FEDEX_INTERNATIONAL_ECONOMY",
-                "serviceName": "FedEx International Economy",
+                "serviceType": "INTERNATIONAL_ECONOMY",
+                "serviceName": "FedEx International Economy®",
                 "ratedShipmentDetails": [
                     {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 8000, "currency": "JPY"}
                 ],
             },
             {
-                "serviceType": "FEDEX_INTERNATIONAL_PRIORITY",
-                "serviceName": "FedEx International Priority",
+                "serviceType": "INTERNATIONAL_PRIORITY",
+                "serviceName": "FedEx International Priority®",
                 "ratedShipmentDetails": [
                     {"rateType": "PAYOR_LIST_SHIPMENT", "totalNetCharge": 12500, "currency": "JPY"}
                 ],
@@ -314,7 +364,7 @@ class TestShippingCalculateEndpoint:
         }
 
         with patch("app.services.fedex_rates.get_rates", side_effect=FedExAPIError("タイムアウト")):
-            results, live_error = await _try_fedex_live(
+            results, live_error, rate_precision = await _try_fedex_live(
                 creds=creds,
                 tenant_id=1,
                 destination_country_code="US",
@@ -325,6 +375,7 @@ class TestShippingCalculateEndpoint:
         assert results == []
         assert live_error is not None
         assert "タイムアウト" in live_error
+        assert rate_precision is None  # API エラー時は精度フラグなし
 
     async def test_no_account_number_returns_live_error(self):
         """account_number 未設定時に live_error を返す（D5）。"""
@@ -337,7 +388,7 @@ class TestShippingCalculateEndpoint:
             "account_number": None,  # 未設定
         }
 
-        results, live_error = await _try_fedex_live(
+        results, live_error, rate_precision = await _try_fedex_live(
             creds=creds,
             tenant_id=1,
             destination_country_code="US",
@@ -347,4 +398,68 @@ class TestShippingCalculateEndpoint:
 
         assert results == []
         assert live_error is not None
-        assert "アカウント番号" in live_error
+        assert rate_precision is None  # account_number 未設定時は精度フラグなし
+
+    async def test_rate_precision_exact_when_postal_code_provided(self):
+        """郵便番号指定ありで rate_precision='exact' を返す（仕様追補 2026-06-10）。"""
+        from app.routers.shipping import _try_fedex_live
+
+        creds = {
+            "client_id": "cid",
+            "client_secret": "csec",
+            "environment": "sandbox",
+            "account_number": "740561073",
+        }
+        mock_quotes = [
+            FedExRateQuote(
+                service_type="INTERNATIONAL_PRIORITY",
+                service_name="FedEx International Priority®",
+                total_net_charge=Decimal("12500"),
+                currency="JPY",
+            )
+        ]
+
+        with patch("app.services.fedex_rates.get_rates", return_value=mock_quotes):
+            results, live_error, rate_precision = await _try_fedex_live(
+                creds=creds,
+                tenant_id=1,
+                destination_country_code="US",
+                origin_country_code="JP",
+                weight_kg=Decimal("1.0"),
+                destination_postal_code="10001",  # 郵便番号あり
+            )
+
+        assert live_error is None
+        assert rate_precision == "exact"
+
+    async def test_rate_precision_approximate_when_no_postal_code(self):
+        """郵便番号未指定で rate_precision='approximate' を返す（仕様追補 2026-06-10）。"""
+        from app.routers.shipping import _try_fedex_live
+
+        creds = {
+            "client_id": "cid",
+            "client_secret": "csec",
+            "environment": "sandbox",
+            "account_number": "740561073",
+        }
+        mock_quotes = [
+            FedExRateQuote(
+                service_type="INTERNATIONAL_PRIORITY",
+                service_name="FedEx International Priority®",
+                total_net_charge=Decimal("12500"),
+                currency="JPY",
+            )
+        ]
+
+        with patch("app.services.fedex_rates.get_rates", return_value=mock_quotes):
+            results, live_error, rate_precision = await _try_fedex_live(
+                creds=creds,
+                tenant_id=1,
+                destination_country_code="US",
+                origin_country_code="JP",
+                weight_kg=Decimal("1.0"),
+                # destination_postal_code 未指定
+            )
+
+        assert live_error is None
+        assert rate_precision == "approximate"

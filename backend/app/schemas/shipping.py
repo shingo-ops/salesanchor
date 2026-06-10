@@ -8,6 +8,7 @@ from __future__ import annotations
   2026-06-09: ADR-124 — FedEx ライブ見積もり対応
                 source / transit_days / live_error フィールド追加
                 ShippingCalcRequest に origin_country_code を追加
+  2026-06-10: ADR-124 仕様追補 — 郵便番号（任意）+ rate_precision フラグ追加
 """
 
 from datetime import datetime
@@ -69,6 +70,18 @@ class ShippingCalcRequest(BaseModel):
         max_length=3,
         description="FedEx ライブ見積もり時の発送元国コード。carrier='fedex' 指定時に必須。",
     )
+    # ADR-124 仕様追補 2026-06-10: 郵便番号（任意）
+    # 指定あり → rate_precision='exact'、未指定 → 代表値で補完 + rate_precision='approximate'
+    origin_postal_code: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="発送元郵便番号（任意）。未指定時は国コードから代表値を補完し rate_precision='approximate' を返す。",
+    )
+    destination_postal_code: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="届け先郵便番号（任意）。未指定時は国コードから代表値を補完し rate_precision='approximate' を返す。",
+    )
 
 
 class ShippingCalcResult(BaseModel):
@@ -92,3 +105,8 @@ class ShippingCalcResponse(BaseModel):
     # None = 成功または FedEx 非選択
     # 文字列 = エラーメッセージ（この場合 results は空または静的データ）
     live_error: Optional[str] = None
+    # ADR-124 仕様追補 2026-06-10: 見積もり精度フラグ
+    # 'exact'       : 届け先郵便番号を指定して取得した正確な見積もり
+    # 'approximate' : 郵便番号未指定・代表値で補完した概算見積もり
+    # None          : FedEx ライブ見積もり以外（static / 未連携エラー等）
+    rate_precision: Optional[Literal["exact", "approximate"]] = None

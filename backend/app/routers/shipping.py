@@ -306,20 +306,26 @@ async def _try_fedex_live(
     destination_country_code: str,
     origin_country_code: str,
     weight_kg: Decimal,
-) -> tuple[list[ShippingCalcResult], Optional[str]]:
-    """FedEx Rates API を呼び出し、結果と live_error を返す。
+    origin_postal_code: Optional[str] = None,
+    destination_postal_code: Optional[str] = None,
+) -> tuple[list[ShippingCalcResult], Optional[str], Optional[str]]:
+    """FedEx Rates API を呼び出し、結果・live_error・rate_precision を返す。
 
     ADR-124 D5（暗黙フォールバック禁止）:
       - account_number が未設定 → live_error を返す（空リスト + エラー文字列）
       - API エラー → live_error を返す
-      - 成功 → (results, None)
+      - 成功 → (results, None, precision)
 
     Returns:
-        (results, live_error): results が空かつ live_error が None なら空の結果（サービスなし）
+        (results, live_error, rate_precision)
+        rate_precision: 'exact'（郵便番号指定あり）または 'approximate'（代表値で補完）
     """
     account_number = creds.get("account_number")
     if not account_number:
-        return [], "FedEx アカウント番号が未設定です（キャリア連携設定で登録してください）"
+        return [], "FedEx アカウント番号が未設定です（キャリア連携設定で登録してください）", None
+
+    # 郵便番号の有無で精度を判定
+    precision = "exact" if destination_postal_code else "approximate"
 
     try:
         quotes = await asyncio.to_thread(
@@ -332,13 +338,15 @@ async def _try_fedex_live(
             origin_country_code=origin_country_code,
             destination_country_code=destination_country_code,
             weight_kg=weight_kg,
+            origin_postal_code=origin_postal_code,
+            destination_postal_code=destination_postal_code,
         )
     except FedExAuthError as e:
         logger.warning("[shipping] tenant=%d FedEx 認証エラー: %s", tenant_id, e)
-        return [], f"FedEx 認証エラー: {e}"
+        return [], f"FedEx 認証エラー: {e}", None
     except FedExAPIError as e:
         logger.warning("[shipping] tenant=%d FedEx API エラー: %s", tenant_id, e)
-        return [], f"FedEx 見積もり取得失敗: {e}"
+        return [], f"FedEx 見積もり取得失敗: {e}", None
 
     results = [
         ShippingCalcResult(
@@ -354,7 +362,7 @@ async def _try_fedex_live(
         )
         for q in quotes
     ]
-    return results, None
+    return results, None, precision
 
 
 @router.post(
@@ -388,17 +396,20 @@ async def calc_shipping(
             )
         creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex")
         if creds:
-            live_results, live_error = await _try_fedex_live(
+            live_results, live_error, rate_precision = await _try_fedex_live(
                 creds=creds,
                 tenant_id=tenant_id,
                 destination_country_code=data.country_code,
                 origin_country_code=data.origin_country_code,
                 weight_kg=data.weight_kg,
+                origin_postal_code=data.origin_postal_code,
+                destination_postal_code=data.destination_postal_code,
             )
             return ShippingCalcResponse(
                 results=live_results,
                 cheapest=live_results[0] if live_results else None,
                 live_error=live_error,
+                rate_precision=rate_precision,
             )
         # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-124 D5 + PO C1判断）
         # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-124 D4）

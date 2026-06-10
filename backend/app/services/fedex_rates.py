@@ -44,6 +44,27 @@ _BASE_URLS = {
     "production": "https://apis.fedex.com",
 }
 
+# ---------------------------------------------------------------------------
+# 取得対象サービスタイプ（設定値）ADR-124 仕様追補 2026-06-10
+# ---------------------------------------------------------------------------
+# 見積もりで取得・表示する国際サービスを4種に限定する。
+# 「全取得→フィルタ」方式（serviceType 指定は使わない）。
+# 経路で返ってこないサービスは単にリストに載らない（D5 方針）。
+#
+# 確認状況（JP→US sandbox 2026-06-10）:
+#   - INTERNATIONAL_PRIORITY              : ✅ sandbox 確認済
+#   - INTERNATIONAL_ECONOMY               : ✅ sandbox 確認済
+#   - INTERNATIONAL_PRIORITY_EXPRESS      : ⚠️ SERVICETYPE.NOT.ALLOWED（本番確認要）
+#   - FEDEX_INTERNATIONAL_CONNECT_PLUS    : ⚠️ HTTP 500（APAC 限定・本番確認要）
+#
+# 変更方法: このリストの追加/削除で対象サービスを管理する。コードに散らさない。
+TARGET_INTERNATIONAL_SERVICE_TYPES: list[str] = [
+    "INTERNATIONAL_PRIORITY",              # IP  — FedEx International Priority®
+    "INTERNATIONAL_ECONOMY",               # IE  — FedEx International Economy®
+    "INTERNATIONAL_PRIORITY_EXPRESS",      # IPE — FedEx International Priority Express® ※本番確認要
+    "FEDEX_INTERNATIONAL_CONNECT_PLUS",    # FICP — FedEx International Connect Plus® ※本番確認要
+]
+
 # FedEx Rates API は postalCode を必須とする。
 # 発送元/届け先のどちらも未指定の場合は国コードから代表郵便番号を補完する。
 # 国際配送の概算料金計算では都市レベルの精度で十分（郵便番号の違いによる料金差は軽微）。
@@ -339,7 +360,11 @@ def _log_api_error(resp: httpx.Response) -> None:
 
 
 def _parse_rate_replies(body: dict) -> list[FedExRateQuote]:
-    """Rates API レスポンスを FedExRateQuote リストに変換。料金昇順でソート。"""
+    """Rates API レスポンスを FedExRateQuote リストに変換。料金昇順でソート。
+
+    TARGET_INTERNATIONAL_SERVICE_TYPES に含まれないサービスタイプは除外する。
+    経路で返ってこないサービスは単に結果に含まれない（D5 方針）。
+    """
     output = body.get("output", {})
     rate_reply_details = output.get("rateReplyDetails", [])
 
@@ -347,6 +372,11 @@ def _parse_rate_replies(body: dict) -> list[FedExRateQuote]:
     for detail in rate_reply_details:
         service_type: str = detail.get("serviceType", "")
         service_name: str = detail.get("serviceName", service_type)
+
+        # 対象4サービス以外はスキップ
+        if service_type not in TARGET_INTERNATIONAL_SERVICE_TYPES:
+            logger.debug("[fedex_rates] サービス %s はフィルタ対象外 — スキップ", service_type)
+            continue
 
         # 料金情報（ratedShipmentDetails から LIST 料金を取得）
         shipment_details = detail.get("ratedShipmentDetails", [])
