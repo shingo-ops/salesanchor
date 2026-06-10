@@ -44,6 +44,33 @@ _BASE_URLS = {
     "production": "https://apis.fedex.com",
 }
 
+# FedEx Rates API は postalCode を必須とする。
+# 発送元/届け先のどちらも未指定の場合は国コードから代表郵便番号を補完する。
+# 国際配送の概算料金計算では都市レベルの精度で十分（郵便番号の違いによる料金差は軽微）。
+_REPRESENTATIVE_POSTAL_CODES: dict[str, str] = {
+    "JP": "1000001",   # 東京都千代田区
+    "US": "10001",     # New York, NY
+    "CN": "100000",    # 北京
+    "GB": "EC1A1BB",   # London
+    "DE": "10115",     # Berlin
+    "FR": "75001",     # Paris
+    "AU": "2000",      # Sydney
+    "CA": "M5V3L9",    # Toronto
+    "HK": "999077",    # Hong Kong (postal code not used)
+    "TW": "100",       # Taipei
+    "KR": "04524",     # Seoul
+    "SG": "238823",    # Singapore
+    "NL": "1011AB",    # Amsterdam
+    "IT": "00187",     # Rome
+    "ES": "28001",     # Madrid
+    "TH": "10330",     # Bangkok
+    "MY": "50480",     # Kuala Lumpur
+    "ID": "10110",     # Jakarta
+    "VN": "100000",    # Hanoi
+    "PH": "1000",      # Manila
+    "IN": "110001",    # New Delhi
+}
+
 # OAuth token refresh buffer (5 minutes)
 _TOKEN_REFRESH_BUFFER_SECS = 300
 
@@ -209,6 +236,8 @@ def get_rates(
     origin_country_code: str,
     destination_country_code: str,
     weight_kg: Decimal,
+    origin_postal_code: Optional[str] = None,
+    destination_postal_code: Optional[str] = None,
 ) -> list[FedExRateQuote]:
     """FedEx Rates and Transit Times API を呼び出し、見積もりリストを返す。
 
@@ -221,6 +250,8 @@ def get_rates(
         origin_country_code: 発送元国コード（例: "JP"）
         destination_country_code: 届け先国コード（例: "US"）
         weight_kg: 重量（kg）
+        origin_postal_code: 発送元郵便番号（省略時は国コードから代表値を補完）
+        destination_postal_code: 届け先郵便番号（省略時は国コードから代表値を補完）
 
     Returns:
         見積もりリスト（サービスタイプ別・料金昇順）
@@ -232,17 +263,25 @@ def get_rates(
     base_url = _BASE_URLS.get(environment, _BASE_URLS["sandbox"])
     token = get_or_refresh_token(tenant_id, environment, client_id, client_secret)
 
+    origin_cc = origin_country_code.upper()
+    dest_cc = destination_country_code.upper()
+    # FedEx Rates API は postalCode を必須とする。未指定時は代表郵便番号で補完。
+    origin_zip = origin_postal_code or _REPRESENTATIVE_POSTAL_CODES.get(origin_cc, "000000")
+    dest_zip = destination_postal_code or _REPRESENTATIVE_POSTAL_CODES.get(dest_cc, "000000")
+
     payload = {
         "accountNumber": {"value": account_number},
         "requestedShipment": {
             "shipper": {
                 "address": {
-                    "countryCode": origin_country_code.upper(),
+                    "countryCode": origin_cc,
+                    "postalCode": origin_zip,
                 }
             },
             "recipient": {
                 "address": {
-                    "countryCode": destination_country_code.upper(),
+                    "countryCode": dest_cc,
+                    "postalCode": dest_zip,
                 }
             },
             "pickupType": "DROPOFF_AT_FEDEX_LOCATION",
