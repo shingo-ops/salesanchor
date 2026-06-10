@@ -6,22 +6,23 @@
 --   「最高権限」を表すオーナーに赤を使うのは意味的誤用。
 --   インディゴ #6366f1 は権限レベルを表す意味ニュートラルな色。
 --
--- 対象:
---   全テナントスキーマ（tenant_NNN）の roles テーブル
---   条件: is_system = TRUE かつ color = '#ef4444'（旧既定値のまま変更されていない行のみ）
+-- 対象行の特定（3条件の AND）:
+--   1. is_system = TRUE   — システムロールのみ
+--   2. color = '#ef4444'  — 旧既定値のまま変更されていない行のみ（カスタム色は保護）
+--   3. priority = 1000    — オーナー固有の優先度（tenant.py:45 のみで定義。他ロールは900以下）
 --
--- 安全性:
---   - is_system = TRUE: オーナー固有のフラグ（コメント tenant.py:39 参照）
---   - color = '#ef4444': 旧既定値のままのテナントのみ対象（カスタム色は保護）
---   - 冪等: 2回目以降は WHERE 条件に一致する行がないため no-op
---   - 自由入力の表示名（name）では絞り込まない
+-- 補足（is_system だけでは不十分な理由）:
+--   migration 021:42 / 023:42 で「システム管理者」にも is_system=TRUE が付与されている。
+--   ただしシステム管理者の color は #9b59b6 / #a855f7（紫系）であり #ef4444 には一致しない。
+--   priority 1000 はオーナーのみ（migration SQL での付与なし・tenant.py:45 のみ）。
+--   3条件の AND により「オーナー、かつ旧赤のまま」の行にのみ一致することを保証する。
 --
--- ロールバック:
---   同型の UPDATE で '#6366f1' → '#ef4444' に戻すこと（下記 DOWN コメント参照）
+-- 冪等性:
+--   初回実行後 color が #6366f1 になるため、2回目以降は WHERE に一致する行なし → no-op。
 --
--- DOWN（ロールバック用・手動実行のみ・本番デプロイでは実行しない）:
+-- ロールバック（手動実行のみ・本番デプロイでは実行しない）:
 --   UPDATE {schema}.roles SET color = '#ef4444', updated_at = NOW()
---   WHERE is_system = TRUE AND color = '#6366f1';
+--   WHERE is_system = TRUE AND color = '#6366f1' AND priority = 1000;
 
 DO $$
 DECLARE
@@ -38,7 +39,9 @@ BEGIN
     EXECUTE format(
       'UPDATE %I.roles
          SET color = ''#6366f1'', updated_at = NOW()
-       WHERE is_system = TRUE AND color = ''#ef4444''',
+       WHERE is_system = TRUE
+         AND color     = ''#ef4444''
+         AND priority  = 1000',
       r.nspname
     );
     GET DIAGNOSTICS updated_count = ROW_COUNT;
