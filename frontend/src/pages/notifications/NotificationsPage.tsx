@@ -4,6 +4,8 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import { Modal } from "../../components/Modal";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 
@@ -66,25 +68,49 @@ export default function NotificationsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
-        <table className="data-table">
-          <thead><tr><th>{t("settings.channelName")}</th><th>Webhook URL</th><th>{t("common.status")}</th><th>{t("common.actions")}</th></tr></thead>
-          <tbody>
-            {channels.map(ch => (
-              <tr key={ch.id}>
-                <td>{ch.channel_name}</td>
-                <td className="mono" style={{ maxWidth: 'var(--col-width-url)', overflow: "hidden", textOverflow: "ellipsis" }}>{ch.webhook_url}</td>
-                {/* status-ssot-exempt: is_active boolean (status ドメインではなく boolean flag) */}
-                <td><span className={`badge badge-${ch.is_active ? "won" : "lost"}`}>{ch.is_active ? t("common.active") : t("common.inactive")}</span></td>
-                <td className="actions">
-                  {hasPermission("notifications.manage") && <button className="btn-sm btn-danger" onClick={() => handleDelete(ch.id)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {channels.length === 0 && <tr><td colSpan={4} className="empty">{t("settings.noChannels")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+        const columns: DataTableColumn<Channel>[] = [
+          {
+            key: "channel_name",
+            header: t("settings.channelName"),
+            renderCell: (ch) => <>{ch.channel_name}</>,
+          },
+          {
+            key: "webhook_url",
+            header: "Webhook URL",
+            renderCell: (ch) => (
+              <span className="mono" style={{ maxWidth: 'var(--col-width-url)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.webhook_url}</span>
+            ),
+          },
+          {
+            key: "status",
+            header: t("common.status"),
+            renderCell: (ch) => (
+              /* status-ssot-exempt: is_active boolean (status ドメインではなく boolean flag) */
+              <span className={`badge badge-${ch.is_active ? "won" : "lost"}`}>{ch.is_active ? t("common.active") : t("common.inactive")}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (ch) => (
+              <span className="actions">
+                {hasPermission("notifications.manage") && (
+                  <button className="btn-sm btn-danger" onClick={() => handleDelete(ch.id)}>{t("common.delete")}</button>
+                )}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable<Channel>
+            columns={columns}
+            data={channels}
+            rowKey={(ch) => String(ch.id)}
+            emptyState={<span>{t("settings.noChannels")}</span>}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }

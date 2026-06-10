@@ -15,6 +15,8 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import OrderFinancialPanel from "../../components/OrderFinancialPanel";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface SalesOrderItem {
   order_id: number;
@@ -107,56 +109,80 @@ export default function SalesPage() {
             </fieldset>
           )}
 
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>{t("orders.orderNumber")}</th>
-                <th>{t("common.name")}</th>
-                <th>{t("sales.revenue")}</th>
-                <th>{t("sales.cost")}</th>
-                <th>{t("sales.grossProfit")}</th>
-                <th>{t("sales.grossProfitRate")}</th>
-                <th>{t("common.createdAt")}</th>
-                {canEdit && <th>{t("common.actions")}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.items ?? []).map((o) => (
-                <tr key={o.order_id}>
-                  <td>{o.order_number}</td>
-                  <td>{o.contact_display_name ?? o.company_name ?? "-"}</td>
-                  <td data-testid={`sales-revenue-${o.order_id}`}>
+          {(() => {
+            const baseColumns: DataTableColumn<SalesOrderItem>[] = [
+              {
+                key: "order_number",
+                header: t("orders.orderNumber"),
+                renderCell: (o) => <>{o.order_number}</>,
+              },
+              {
+                key: "name",
+                header: t("common.name"),
+                renderCell: (o) => <>{o.contact_display_name ?? o.company_name ?? "-"}</>,
+              },
+              {
+                key: "revenue_amount",
+                header: t("sales.revenue"),
+                renderCell: (o) => (
+                  <span data-testid={`sales-revenue-${o.order_id}`}>
                     {o.revenue_amount !== null ? fmt(o.revenue_amount) : "-"}
-                  </td>
-                  <td>{o.cost_total !== null ? fmt(o.cost_total) : "-"}</td>
-                  <td data-testid={`sales-gross-${o.order_id}`}>
+                  </span>
+                ),
+              },
+              {
+                key: "cost_total",
+                header: t("sales.cost"),
+                renderCell: (o) => <>{o.cost_total !== null ? fmt(o.cost_total) : "-"}</>,
+              },
+              {
+                key: "gross_profit",
+                header: t("sales.grossProfit"),
+                renderCell: (o) => (
+                  <span data-testid={`sales-gross-${o.order_id}`}>
                     {o.gross_profit !== null ? fmt(o.gross_profit) : "-"}
-                  </td>
-                  <td data-testid={`sales-rate-${o.order_id}`}>
+                  </span>
+                ),
+              },
+              {
+                key: "gross_profit_rate",
+                header: t("sales.grossProfitRate"),
+                renderCell: (o) => (
+                  <span data-testid={`sales-rate-${o.order_id}`}>
                     {fmtRate(o.gross_profit_rate)}
-                  </td>
-                  <td>{new Date(o.created_at).toLocaleDateString("ja-JP")}</td>
-                  {canEdit && (
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-sm"
-                        data-testid={`sales-edit-${o.order_id}`}
-                        onClick={() => setEditing(o)}
-                      >
-                        {t("sales.editFinancial")}
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {(!data || data.items.length === 0) && (
-                <tr>
-                  <td colSpan={canEdit ? 8 : 7} className="empty">{t("sales.noData")}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  </span>
+                ),
+              },
+              {
+                key: "created_at",
+                header: t("common.createdAt"),
+                renderCell: (o) => <>{new Date(o.created_at).toLocaleDateString("ja-JP")}</>,
+              },
+            ];
+            const actionsCol: DataTableColumn<SalesOrderItem> = {
+              key: "actions",
+              header: t("common.actions"),
+              renderCell: (o) => (
+                <button
+                  type="button"
+                  className="btn-sm"
+                  data-testid={`sales-edit-${o.order_id}`}
+                  onClick={() => setEditing(o)}
+                >
+                  {t("sales.editFinancial")}
+                </button>
+              ),
+            };
+            const columns = [...baseColumns, ...(canEdit ? [actionsCol] : [])];
+            return (
+              <DataTable<SalesOrderItem>
+                columns={columns}
+                data={data?.items ?? []}
+                rowKey={(o) => String(o.order_id)}
+                emptyState={<span>{t("sales.noData")}</span>}
+              />
+            );
+          })()}
         </>
       )}
 

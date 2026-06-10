@@ -4,6 +4,8 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface SyncLog { id: number; sync_type: string; direction: string; record_count: number; status: string; error_message: string | null; started_at: string; completed_at: string | null; }
 
@@ -54,25 +56,59 @@ export default function ERPPage() {
     >
       {error && <div className="error-message">{error}</div>}
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("erp.syncLogs")}</h3>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
-        <table className="data-table">
-          <thead><tr><th>{t("erp.colType")}</th><th>{t("erp.colDirection")}</th><th>{t("erp.colCount")}</th><th>{t("common.status")}</th><th>{t("erp.colStartedAt")}</th><th>{t("erp.colCompletedAt")}</th><th>{t("common.error")}</th></tr></thead>
-          <tbody>
-            {logs.map(l => (
-              <tr key={l.id}>
-                <td>{l.sync_type}</td>
-                <td>{l.direction === "export" ? t("erp.directionExport") : t("erp.directionImport")}</td>
-                <td>{l.record_count}</td>
-                <td><span className={`badge badge-${getStatusPresentation("erpJobStatus", l.status).badgeVariant}`}>{l.status}</span></td>
-                <td>{new Date(l.started_at).toLocaleString()}</td>
-                <td>{l.completed_at ? new Date(l.completed_at).toLocaleString() : "-"}</td>
-                <td style={{ color: "var(--danger)", maxWidth: 'var(--col-width-medium)', overflow: "hidden", textOverflow: "ellipsis" }}>{l.error_message || "-"}</td>
-              </tr>
-            ))}
-            {logs.length === 0 && <tr><td colSpan={7} className="empty">{t("erp.noLogs")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+        const columns: DataTableColumn<SyncLog>[] = [
+          {
+            key: "sync_type",
+            header: t("erp.colType"),
+            renderCell: (l) => <>{l.sync_type}</>,
+          },
+          {
+            key: "direction",
+            header: t("erp.colDirection"),
+            renderCell: (l) => <>{l.direction === "export" ? t("erp.directionExport") : t("erp.directionImport")}</>,
+          },
+          {
+            key: "record_count",
+            header: t("erp.colCount"),
+            renderCell: (l) => <>{l.record_count}</>,
+          },
+          {
+            key: "status",
+            header: t("common.status"),
+            renderCell: (l) => (
+              <span className={`badge badge-${getStatusPresentation("erpJobStatus", l.status).badgeVariant}`}>{l.status}</span>
+            ),
+          },
+          {
+            key: "started_at",
+            header: t("erp.colStartedAt"),
+            renderCell: (l) => <>{new Date(l.started_at).toLocaleString()}</>,
+          },
+          {
+            key: "completed_at",
+            header: t("erp.colCompletedAt"),
+            renderCell: (l) => <>{l.completed_at ? new Date(l.completed_at).toLocaleString() : "-"}</>,
+          },
+          {
+            key: "error_message",
+            header: t("common.error"),
+            renderCell: (l) => (
+              <span style={{ color: "var(--danger)", maxWidth: 'var(--col-width-medium)', overflow: "hidden", textOverflow: "ellipsis" }}>
+                {l.error_message || "-"}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable<SyncLog>
+            columns={columns}
+            data={logs}
+            rowKey={(l) => String(l.id)}
+            emptyState={<span>{t("erp.noLogs")}</span>}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }
