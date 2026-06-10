@@ -336,6 +336,28 @@ async def reset_tenant_context(db: AsyncSession, tenant_id: int) -> None:
     await set_tenant_context(db, tenant_id)
 
 
+async def clear_tenant_context(db: AsyncSession) -> None:
+    """コネクションプール返却前にテナントコンテキストを安全な初期状態に戻す（ADR-131）。
+
+    SET（セッションレベル）で設定した app.tenant_id / app.is_operator / search_path は
+    コネクション返却後も PostgreSQL セッションに残る。次リクエストへの汚染を防ぐため、
+    `get_db` の finally ブロックおよび BackgroundTasks の async with ブロック末尾から
+    必ず呼び出す。
+
+    - search_path を public のみに戻す（テナントスキーマへのアクセス不能化）
+    - app.tenant_id を空文字に（current_setting(..., true)::INTEGER が NULL を返す → RLS全行拒否）
+    - app.is_operator を空文字に（フェイルクローズ維持）
+
+    引数に tenant_id を取らないため、テナントコンテキストを知らない呼び出し元（get_db 等）
+    から安全に呼べる。SQLite (pytest) は no-op。
+    """
+    if not _dialect_supports_search_path(db):
+        return
+    await db.execute(text("SET search_path = public"))
+    await db.execute(text("SET app.tenant_id = ''"))
+    await db.execute(text("SET app.is_operator = ''"))
+
+
 # ---------------------------------------------------------------------------
 # ADR-072 Phase 1: tenant schema 修飾の公開 helper
 # ---------------------------------------------------------------------------
