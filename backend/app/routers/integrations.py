@@ -198,10 +198,26 @@ async def disconnect(
 ):
     """Google ドライブ接続を解除する（admin 専用）。"""
     _require_admin(user)
+    old_result = await db.execute(
+        text("""
+            SELECT id, tenant_id, account_email, folder_id,
+                   connected_by_user_id, connected_at
+            FROM tenant_google_drive_config
+            WHERE tenant_id = :tid
+        """),
+        {"tid": tenant_id},
+    )
+    old_row = old_result.mappings().first()
     await db.execute(
         text("DELETE FROM tenant_google_drive_config WHERE tenant_id = :tid"),
         {"tid": tenant_id},
     )
+    if old_row:
+        await record_audit_log(
+            db=db, tenant_id=tenant_id, user_id=user.id,
+            action="delete", table_name="tenant_google_drive_config",
+            record_id=old_row["id"], old_data=dict(old_row), new_data=None,
+        )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
