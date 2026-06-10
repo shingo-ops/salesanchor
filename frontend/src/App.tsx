@@ -14,11 +14,13 @@ import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
 import ContactsPage from "./pages/contacts/ContactsPage";
 import ContactEditPage from "./pages/contacts/ContactEditPage";
 import DealsPage from "./pages/deals/DealsPage";
+import DealEditPage from "./pages/deals/DealEditPage";
 import OrdersPage from "./pages/orders/OrdersPage";
 // 区切り4 (ADR-021 改修): 売上管理 / 報酬管理 メニュー分離
 import SalesPage from "./pages/sales/SalesPage";
 import CommissionsPage from "./pages/commissions/CommissionsPage";
 import LeadsPage from "./pages/leads/LeadsPage";
+import LeadEditPage from "./pages/leads/LeadEditPage";
 import TeamsPage from "./pages/teams/TeamsPage";
 import TeamEditPage from "./pages/teams/TeamEditPage";
 import RolesPage from "./pages/roles/RolesPage";
@@ -125,6 +127,7 @@ function App() {
 
                   {/* 旧ルート後方互換リダイレクト（/crm/* ハブへ転送） */}
                   <Route path="/leads"         element={<Navigate to="/crm/leads"     replace />} />
+                  <Route path="/crm/leads/:id/edit" element={<LeadEditPage />} />
                   <Route path="/customers"     element={<Navigate to="/crm/companies"  replace />} />
                   <Route path="/companies"     element={<Navigate to="/crm/companies"  replace />} />
                   <Route path="/companies/:id" element={<CompanyIdRedirect />} />
@@ -180,6 +183,7 @@ function App() {
 
                   {/* 管理 */}
                   <Route path="/deals" element={<DealsPage />} />
+                  <Route path="/deals/:id/edit" element={<DealEditPage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
                   <Route path="/sales" element={<SalesPage />} />

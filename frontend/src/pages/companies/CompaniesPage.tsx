@@ -2,20 +2,26 @@
  * 会社管理ページ。Phase 1-B-2 Step 5c-1 で新設。
  *
  * 新 B2B モデルの会社一覧・CRUD。既存 CustomersPage と並存する（Step 5d まで）。
- * 担当者は ContactsPage で別管理、複数支店対応や詳細編集は将来の CompanyDetailPage で。
+ * 担当者は ContactsPage で別管理、複数支店対応や詳細編集は CompanyDetailPage で。
  * 本ページは一覧 + 基本属性 + billing/delivery 1 件ずつの住所を管理する最小構成。
+ *
+ * 変更履歴:
+ *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチC）
  */
 
 import { useEffect, useState, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -140,6 +146,18 @@ const emptyForm: FormState = {
   sales_channels: "",
 };
 
+const emptyEditForm: CompanyFormState = {
+  name: "", status: "active", industry: "", priority_focus: "", notes: "",
+};
+
+const toForm = (c: Company): CompanyFormState => ({
+  name: c.name || "",
+  status: c.status,
+  industry: c.industry || "",
+  priority_focus: c.priority_focus || "",
+  notes: c.notes || "",
+});
+
 type Tab = "basic" | "billing" | "delivery";
 
 const companyDisplayName = (c: Company): string => {
@@ -159,21 +177,23 @@ const addressDisplay = (a: CompanyAddress | undefined): string => {
 export default function CompaniesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  // 新規作成モーダル
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<FormState>(emptyForm);
   const [activeTab, setActiveTab] = useState<Tab>("basic");
-  const [error, setError] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [addressesDirty, setAddressesDirty] = useState(false);
+  // 編集ドロワー
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Company, CompanyFormState>({ toForm, emptyForm: emptyEditForm });
+
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
-  // billing/delivery タブを触ったかどうか。編集時に触っていない場合 payload から
-  // addresses を omit することで、本ページ非対応の multi_branch 住所を保護する
-  // （backend の _replace_addresses は配列受取時に DELETE+INSERT で全置換するため）
-  const [addressesDirty, setAddressesDirty] = useState(false);
 
   const loadCompanies = async () => {
     try {
@@ -192,10 +212,13 @@ export default function CompaniesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadCompanies(); }, [search]);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const toNull = (v: string) => (v ? v : null);
+
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    const phoneErr = validatePhoneClient(form.billing.telephone);
+    const phoneErr = validatePhoneClient(createForm.billing.telephone);
     if (phoneErr) {
       setPhoneError(phoneErr);
       setActiveTab("billing");
@@ -203,91 +226,80 @@ export default function CompaniesPage() {
     }
     setPhoneError(null);
 
-    const toNull = (v: string) => (v ? v : null);
     const addressHasAnyValue = (a: AddressFormState) =>
       a.branch_name || a.name || a.email || a.telephone || a.tax_id ||
       a.address_line_1 || a.address_line_2 ||
       a.city || a.state || a.zip || a.country_code;
 
     const addresses: Record<string, unknown>[] = [];
-    if (addressHasAnyValue(form.billing)) {
+    if (addressHasAnyValue(createForm.billing)) {
       addresses.push({
         address_type: "billing",
-        branch_name: toNull(form.billing.branch_name),
-        name: toNull(form.billing.name),
-        email: toNull(form.billing.email),
-        telephone: toNull(form.billing.telephone),
-        tax_id: toNull(form.billing.tax_id),
-        address_line_1: toNull(form.billing.address_line_1),
-        address_line_2: toNull(form.billing.address_line_2),
-        city: toNull(form.billing.city),
-        state: toNull(form.billing.state),
-        zip: toNull(form.billing.zip),
-        country_code: toNull(form.billing.country_code),
+        branch_name: toNull(createForm.billing.branch_name),
+        name: toNull(createForm.billing.name),
+        email: toNull(createForm.billing.email),
+        telephone: toNull(createForm.billing.telephone),
+        tax_id: toNull(createForm.billing.tax_id),
+        address_line_1: toNull(createForm.billing.address_line_1),
+        address_line_2: toNull(createForm.billing.address_line_2),
+        city: toNull(createForm.billing.city),
+        state: toNull(createForm.billing.state),
+        zip: toNull(createForm.billing.zip),
+        country_code: toNull(createForm.billing.country_code),
         is_default: true,
       });
     }
-    if (addressHasAnyValue(form.delivery)) {
+    if (addressHasAnyValue(createForm.delivery)) {
       addresses.push({
         address_type: "delivery",
-        branch_name: toNull(form.delivery.branch_name),
-        name: toNull(form.delivery.name),
-        email: toNull(form.delivery.email),
-        telephone: toNull(form.delivery.telephone),
-        tax_id: toNull(form.delivery.tax_id),
-        address_line_1: toNull(form.delivery.address_line_1),
-        address_line_2: toNull(form.delivery.address_line_2),
-        city: toNull(form.delivery.city),
-        state: toNull(form.delivery.state),
-        zip: toNull(form.delivery.zip),
-        country_code: toNull(form.delivery.country_code),
+        branch_name: toNull(createForm.delivery.branch_name),
+        name: toNull(createForm.delivery.name),
+        email: toNull(createForm.delivery.email),
+        telephone: toNull(createForm.delivery.telephone),
+        tax_id: toNull(createForm.delivery.tax_id),
+        address_line_1: toNull(createForm.delivery.address_line_1),
+        address_line_2: toNull(createForm.delivery.address_line_2),
+        city: toNull(createForm.delivery.city),
+        state: toNull(createForm.delivery.state),
+        zip: toNull(createForm.delivery.zip),
+        country_code: toNull(createForm.delivery.country_code),
         is_default: true,
       });
     }
 
-    const salesChannels = form.sales_channels
+    const salesChannels = createForm.sales_channels
       .split(/[,、，]/)
       .map((s) => s.trim())
       .filter(Boolean);
 
     const payload: Record<string, unknown> = {
-      name: form.name.trim(),
-      name_en: toNull(form.name_en),
-      industry: toNull(form.industry),
-      website: toNull(form.website),
-      trust_level: form.trust_level ? parseInt(form.trust_level, 10) : null,
-      priority_focus: toNull(form.priority_focus),
-      per_order_amount: form.per_order_amount || null,
-      monthly_frequency: form.monthly_frequency ? parseInt(form.monthly_frequency, 10) : null,
-      monthly_forecast: form.monthly_forecast || null,
-      billing_display_name: toNull(form.billing_display_name),
-      payment_recipient_name: toNull(form.payment_recipient_name),
-      fedex_account: toNull(form.fedex_account),
-      shipping_note: toNull(form.shipping_note),
-      status: form.status || "active",
-      notes: toNull(form.notes),
+      name: createForm.name.trim(),
+      name_en: toNull(createForm.name_en),
+      industry: toNull(createForm.industry),
+      website: toNull(createForm.website),
+      priority_focus: toNull(createForm.priority_focus),
+      per_order_amount: createForm.per_order_amount || null,
+      monthly_frequency: createForm.monthly_frequency ? parseInt(createForm.monthly_frequency, 10) : null,
+      monthly_forecast: createForm.monthly_forecast || null,
+      billing_display_name: toNull(createForm.billing_display_name),
+      payment_recipient_name: toNull(createForm.payment_recipient_name),
+      fedex_account: toNull(createForm.fedex_account),
+      shipping_note: toNull(createForm.shipping_note),
+      status: createForm.status || "active",
+      notes: toNull(createForm.notes),
       sales_channels: salesChannels,
+      addresses,
     };
-    // 新規作成時は addresses を常に送る。編集時は billing/delivery タブを
-    // 実際に触った時のみ送る（multi_branch で管理されている住所の誤削除を防ぐ）
-    if (!editId || addressesDirty) {
-      payload.addresses = addresses;
-    }
-    if (!editId && form.company_code.trim()) {
-      payload.company_code = form.company_code.trim();
+    if (createForm.company_code.trim()) {
+      payload.company_code = createForm.company_code.trim();
     }
 
     if (submitting) return;
     setSubmitting(true);
     try {
-      if (editId) {
-        await api.patch(`/companies/${editId}`, payload);
-      } else {
-        await api.post("/companies", payload);
-      }
-      setShowForm(false);
-      setEditId(null);
-      setForm(emptyForm);
+      await api.post("/companies", payload);
+      setShowCreate(false);
+      setCreateForm(emptyForm);
       setActiveTab("basic");
       setAddressesDirty(false);
       loadCompanies();
@@ -298,46 +310,24 @@ export default function CompaniesPage() {
     }
   };
 
-  const handleEdit = (c: Company) => {
-    const b = defaultAddress(c, "billing");
-    const d = defaultAddress(c, "delivery");
-    const mk = (a: CompanyAddress | undefined, def: AddressFormState): AddressFormState =>
-      a ? {
-        address_type: a.address_type,
-        branch_name: a.branch_name || "",
-        name: a.name || "", email: a.email || "", telephone: a.telephone || "",
-        tax_id: a.tax_id || "",
-        address_line_1: a.address_line_1 || "", address_line_2: a.address_line_2 || "",
-        city: a.city || "", state: a.state || "", zip: a.zip || "",
-        country_code: a.country_code || "",
-      } : def;
-
-    setEditId(c.id);
-    setForm({
-      company_code: c.company_code,
-      name: c.name || "",
-      name_en: c.name_en || "",
-      industry: c.industry || "",
-      website: c.website || "",
-      trust_level: c.trust_level !== null ? String(c.trust_level) : "",
-      priority_focus: c.priority_focus || "",
-      per_order_amount: c.per_order_amount || "",
-      monthly_frequency: c.monthly_frequency !== null ? String(c.monthly_frequency) : "",
-      monthly_forecast: c.monthly_forecast || "",
-      billing_display_name: c.billing_display_name || "",
-      payment_recipient_name: c.payment_recipient_name || "",
-      fedex_account: c.fedex_account || "",
-      shipping_note: c.shipping_note || "",
-      status: c.status || "active",
-      notes: c.notes || "",
-      billing: mk(b, { ...emptyBilling }),
-      delivery: mk(d, { ...emptyDelivery }),
-      sales_channels: c.sales_channels.join(", "),
-    });
-    setPhoneError(null);
-    setActiveTab("basic");
-    setAddressesDirty(false); // 編集開始時は clean、タブで編集したら dirty に
-    setShowForm(true);
+  /* ── ドロワー内編集保存（6 要点フィールド） ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!editId) return;
+    try {
+      await api.patch(`/companies/${editId}`, {
+        name: editForm.name,
+        status: editForm.status,
+        industry: toNull(editForm.industry),
+        priority_focus: toNull(editForm.priority_focus),
+        notes: toNull(editForm.notes),
+      });
+      closeDrawer();
+      loadCompanies();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
   };
 
   const handleDelete = async () => {
@@ -377,12 +367,11 @@ export default function CompaniesPage() {
             <button
               className="btn-primary"
               onClick={() => {
-                setEditId(null);
-                setForm(emptyForm);
+                setCreateForm(emptyForm);
                 setActiveTab("basic");
                 setPhoneError(null);
                 setAddressesDirty(false);
-                setShowForm(true);
+                setShowCreate(true);
               }}
             >
               + {t("companies.newCompany")}
@@ -408,12 +397,12 @@ export default function CompaniesPage() {
           { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
             <>
-              <Link to={`/companies/${c.id}`} className="btn-sm">{t("companies.viewDetail")}</Link>
+              <Link to={`/companies/${c.id}`} className="btn-sm" onClick={(e) => e.stopPropagation()}>{t("companies.viewDetail")}</Link>
               {hasPermission("customers.update") && (
-                <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
+                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</button>
               )}
               {hasPermission("customers.delete") && (
-                <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
+                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</button>
               )}
             </>
           )},
@@ -424,15 +413,17 @@ export default function CompaniesPage() {
             data={companies}
             rowKey={(c) => String(c.id)}
             rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            onRowClick={hasPermission("customers.update") ? handleRowClick : undefined}
             emptyState={t("companies.noCompanies")}
           />
         );
       })()}
 
+      {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={editId ? t("companies.editCompany") : t("companies.newCompany")}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("companies.newCompany")}
         size="lg"
       >
         <div className="modal-content-wide">
@@ -442,74 +433,68 @@ export default function CompaniesPage() {
             <button className={`tab ${activeTab === "delivery" ? "active" : ""}`} onClick={() => setActiveTab("delivery")}>{t("companies.delivery")}</button>
           </div>
 
-            <form onSubmit={handleSubmit} className="form-grid">
+            <form onSubmit={handleCreateSubmit} className="form-grid">
               {activeTab === "basic" && (
                 <>
-                  {!editId && (
-                    <div className="form-row">
-                      <label>{t("companies.companyCodeLabel")}</label>
-                      <input value={form.company_code} onChange={(e) => setForm({ ...form, company_code: e.target.value })} />
-                    </div>
-                  )}
+                  <div className="form-row">
+                    <label>{t("companies.companyCodeLabel")}</label>
+                    <input value={createForm.company_code} onChange={(e) => setCreateForm({ ...createForm, company_code: e.target.value })} />
+                  </div>
                   <div className="form-row">
                     <label>{t("companies.nameLabel")}</label>
-                    <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    <input required value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.nameEn")}</label>
-                    <input value={form.name_en} onChange={(e) => setForm({ ...form, name_en: e.target.value })} />
+                    <input value={createForm.name_en} onChange={(e) => setCreateForm({ ...createForm, name_en: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.industry")}</label>
-                    <input value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} />
+                    <input value={createForm.industry} onChange={(e) => setCreateForm({ ...createForm, industry: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.website")}</label>
-                    <input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.trustLevel")}</label>
-                    <input type="number" min="1" max="5" value={form.trust_level} onChange={(e) => setForm({ ...form, trust_level: e.target.value })} />
+                    <input value={createForm.website} onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.priorityFocus")}</label>
-                    <input value={form.priority_focus} onChange={(e) => setForm({ ...form, priority_focus: e.target.value })} />
+                    <input value={createForm.priority_focus} onChange={(e) => setCreateForm({ ...createForm, priority_focus: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.perOrderAmount")}</label>
-                    <input value={form.per_order_amount} onChange={(e) => setForm({ ...form, per_order_amount: e.target.value })} />
+                    <input value={createForm.per_order_amount} onChange={(e) => setCreateForm({ ...createForm, per_order_amount: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.monthlyFrequency")}</label>
-                    <input type="number" min="0" value={form.monthly_frequency} onChange={(e) => setForm({ ...form, monthly_frequency: e.target.value })} />
+                    <input type="number" min="0" value={createForm.monthly_frequency} onChange={(e) => setCreateForm({ ...createForm, monthly_frequency: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.monthlyForecast")}</label>
-                    <input value={form.monthly_forecast} onChange={(e) => setForm({ ...form, monthly_forecast: e.target.value })} />
+                    <input value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.billingDisplayName")}</label>
-                    <input value={form.billing_display_name} onChange={(e) => setForm({ ...form, billing_display_name: e.target.value })} />
+                    <input value={createForm.billing_display_name} onChange={(e) => setCreateForm({ ...createForm, billing_display_name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.paymentRecipientName")}</label>
-                    <input value={form.payment_recipient_name} onChange={(e) => setForm({ ...form, payment_recipient_name: e.target.value })} />
+                    <input value={createForm.payment_recipient_name} onChange={(e) => setCreateForm({ ...createForm, payment_recipient_name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.fedexAccount")}</label>
-                    <input value={form.fedex_account} onChange={(e) => setForm({ ...form, fedex_account: e.target.value })} />
+                    <input value={createForm.fedex_account} onChange={(e) => setCreateForm({ ...createForm, fedex_account: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.shippingNote")}</label>
-                    <textarea value={form.shipping_note} onChange={(e) => setForm({ ...form, shipping_note: e.target.value })} />
+                    <textarea value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.salesChannelsLabel")}</label>
-                    <input value={form.sales_channels} onChange={(e) => setForm({ ...form, sales_channels: e.target.value })} />
+                    <input value={createForm.sales_channels} onChange={(e) => setCreateForm({ ...createForm, sales_channels: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("common.status")}</label>
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
                       <option value="active">active</option>
                       <option value="inactive">inactive</option>
                       <option value="archived">archived</option>
@@ -518,18 +503,17 @@ export default function CompaniesPage() {
                   </div>
                   <div className="form-row">
                     <label>{t("common.notes")}</label>
-                    <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                    <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
                   </div>
                 </>
               )}
 
               {(activeTab === "billing" || activeTab === "delivery") && (() => {
                 const key = activeTab;
-                const addr = form[key];
+                const addr = createForm[key];
                 const setAddr = (patch: Partial<AddressFormState>) => {
-                  // 住所タブを触った瞬間に dirty フラグを立てて PATCH に含める
                   setAddressesDirty(true);
-                  setForm({ ...form, [key]: { ...addr, ...patch } });
+                  setCreateForm({ ...createForm, [key]: { ...addr, ...patch } });
                 };
                 return (
                   <>
@@ -556,14 +540,33 @@ export default function CompaniesPage() {
               })()}
 
               <div className="form-actions">
-                <button type="button" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
+                <button type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
                 <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? t("common.saving") : editId ? t("common.update") : t("common.register")}
+                  {submitting ? t("common.saving") : t("common.register")}
                 </button>
               </div>
             </form>
         </div>
       </Modal>
+
+      {/* 編集 Drawer（行クリックで開く・6 要点フィールド） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={t("companies.editCompany")}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/crm/companies/${editId}`); } : undefined}
+      >
+        <form onSubmit={handleEditSubmit}>
+          <CompanyFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
+          />
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.update")}</button>
+          </div>
+        </form>
+      </Drawer>
 
       <ConfirmModal
         open={deleteTarget !== null}
