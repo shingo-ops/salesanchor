@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-09 / ADR 総数: 114 件
+最終更新: 2026-06-10 / ADR 総数: 115 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -132,6 +132,7 @@
 | [ADR-122](./ADR-122-realpage-modal-standardization.md) | ADR-122: 実ページ標準部品化（Modal コンポーネントへの移行） | Accepted | — | — |
 | [ADR-123](./ADR-123-carrier-integrator-provider.md) | ADR-123: 配送キャリア連携 — 外部販売を見据えた Integrator Provider 対応アーキテクチャ | Proposed | — | — |
 | [ADR-124](./ADR-124-sop-health-reporter.md) | ADR-124: SOP ヘルスレポーター（定量監視ダッシュボード） | Accepted | — | — |
+| [ADR-125](./ADR-125-fedex-rates-stage1.md) | ADR-125: FedEx Rates連携 第1段 — テナント別ライブ見積もり取得 | Proposed | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
