@@ -75,24 +75,54 @@
 
 | 観点 | 現状（file:line） | ADR-096の理想 | 差分 |
 |------|-------------------|---------------|------|
-| 会話ログの保存先テーブルと構造（原文・言語・翻訳・解析の各列） | （recon待ち） | 会話ログ正規化テーブル（ログID/日時/送受信/発言者/原文/原文言語/翻訳文/商談解析） | |
-| 受信チャネル→会話ログへの取り込み経路（チャネル別の網羅率） | （recon待ち） | 全連携チャネルの受信が会話ログに入る | |
-| 会話数・最終会話日時・会話要約の算出方法 | （recon待ち） | 注文・会話ログからの集計（書き込み可能カラム禁止） | |
-| 派生値への手入力経路の有無（UI・API・DB権限） | （recon待ち） | 0箇所 | |
-| 会社（companies）と連絡先（contact）の紐づけ構造 | （recon待ち） | 会社集計はcontact粒度の会話を集約 | |
-| カルテUI（受信箱）での会話表示の現状 | （recon待ち） | 会社→contact→原文＋訳文へ3クリック以内 | |
-| 既知関連実装の被覆率: カルテ再編（ADR-108/110）／翻訳（ADR-088/110/SA-17）／lead_channels（ADR-119） | （recon待ち） | — | 流用できる部分と不足部分を分ける |
-| 編集履歴（監査ログ）の既存パターンの有無 | （recon待ち） | 手動記録の編集履歴を残せる土台 | |
-| 手動メッセージを翻訳・解析パイプラインに乗せる経路（即時翻訳発火の流用可否） | （recon待ち） | 手動も自動と同じ翻訳/解析が走る | |
-| チャネル定義の現状（「電話」「対面」等の手動チャネルを追加できる構造か） | （recon待ち） | 手動チャネルをマスタで追加可能 | |
-| スレッド欄の描画構造（手動メッセージの混在表示・手動バッジ・入力ボックス常設に対応できるか） | （recon待ち） | 手動／自動が時系列で1本のスレッドに混在表示 | |
-| 連携済みチャネルで「アプリ外から送った送信分」がwebhookで自動取得できる範囲（チャネル別） | （recon待ち） | 取得できない分の扱いを設計時にShingo判断 | |
+| 会話ログの保存先テーブルと構造（原文・言語・翻訳・解析の各列） | **2テーブル混在**。①旧: `meta_messages`（`migrations/041_extend_meta_messages.sql`, test定義 `backend/tests/test_messages.py:111`）— `original_language` / `translated_text` / `analysis` 列なし。②新: `migrations/20260604_090000_create_conversation_logs.sql:34` — `conversation_logs`（id/tenant_id/lead_id/contact_id/company_id/deal_id/channel_type/channel_identity/direction/sender/content_text/original_language/external_message_id/raw_payload/status/translated_text/analysis JSONB/occurred_at/created_at）RLS適用済み。③翻訳キャッシュ: `migrations/094_create_message_translations.sql:26` — `message_translations`（message_id/target_language/translated_text/engine） | 1テーブルに原文・言語・翻訳・解析を全て持つ | `conversation_logs` はスキーマ完備だが**実データは0件**。`meta_messages` から `conversation_logs` への移行パイプラインが未実装 |
+| 受信チャネル→会話ログへの取り込み経路（チャネル別の網羅率） | Messenger/Instagram: `backend/app/routers/webhook.py:665-758` → `meta_messages` に保存。Discord: `backend/app/discord_gateway/dm_writer.py:225` → `meta_messages` に保存。WhatsApp/Telegram/Email: 未実装。**全チャネルとも `conversation_logs` への書き込みは未実装** | 全連携チャネルの受信が `conversation_logs` に入る | `conversation_logs` への取り込みルート（webhook→conv_logs）が全チャネル未配線。既存は全て `meta_messages` 止まり |
+| 会話数・最終会話日時・会話要約の算出方法 | `migrations/20260604_100000_create_company_stats_view.sql:39` — `v_company_stats` VIEW作成済み（`SELECT COUNT(DISTINCT cl.id), MAX(cl.occurred_at) FROM conversation_logs`）。`backend/app/routers/companies.py:188` — `_fetch_company_stats()` がビューを参照してレスポンスに含める。**会話要約は `conversation_logs.analysis` JSONB内だが集計ビューに未含有** | 集計ビューのみ（書き込み可能カラム禁止） | ビューは実装済み・APIも接続済みだが、`conversation_logs` に実データがないため `conversation_count=0` / `last_conversation_at=NULL` が返る。会話要約の集計定義は未設計 |
+| 派生値への手入力経路の有無（UI・API・DB権限） | `v_company_stats` はVIEW（SELECT専用）。`backend/app/routers/companies.py` のPATCH/POST に `conversation_count` / `last_conversation_at` フィールドなし。`backend/app/schemas/company.py` にも該当フィールドなし | 手入力経路 0箇所 | **現状で手入力経路なし**（G2に対してOK）。`conversation_logs.analysis` フィールドへの書き込みAPIは未実装のため同様に問題なし |
+| 会社（companies）と連絡先（contact）の紐づけ構造 | `backend/app/schemas/contact.py:95` — `company_id: int`（必須）。`contacts` テーブルは `company_id` で親会社に紐づく。`conversation_logs` は `company_id` と `contact_id` を直接持つ（`migrations/20260604_090000_create_conversation_logs.sql:39`）。`v_company_stats` は `company_id` で集計（contact経由なし） | 会社集計はcontact粒度の会話を集約 | 構造上は `contact_id` で会話を絞り込んで会社に集約できる。ただし `v_company_stats` は `company_id` 直接集計のみ（contact_id粒度の内訳表示は未実装） |
+| カルテUI（受信箱）での会話表示の現状 | `frontend/src/pages/inbox/InboxKartePanel.tsx:1` — 存在するがADR-108の3タブ再編は Status=Proposed（未実装）。`frontend/src/pages/inbox/InboxMessageThread.tsx:1` — スレッド表示コンポーネント存在（`meta_messages` ベース）。**会社→contact→会話への階層ナビなし。手動メッセージ入力UI・手動バッジ・チャネル選択なし** | 会社→contact→原文＋訳文へ3クリック以内 | G3 未達。company画面→contact粒度の会話集約ページが存在しない。スレッド欄は `lead_id` ベースで会社横断表示不可 |
+| 既知関連実装の被覆率: カルテ再編（ADR-108/110）／翻訳（ADR-088/110/SA-17）／lead_channels（ADR-119） | ADR-108: Status=Proposed・未実装。翻訳基盤: `backend/app/services/message_translator.py:1`（グロッサリ適用・確信度スコアリング・`translate_inbound()`実装済み）。即時翻訳未実装（Celeryバッチのみ: `backend/app/tasks/translation.py:29`）。sweeper: `backend/app/services/translation_monitor.py:1` 実装済み。lead_channels: `migrations/20260607_120000_create_lead_channels.sql` + `webhook.py:489` で活用中 | — | 翻訳コア関数（`translate_inbound()`）・sweeper・lead_channels は流用可能。即時翻訳発火の配線未実装。`conversation_logs` への翻訳結果書き込みパスなし |
+| 編集履歴（監査ログ）の既存パターンの有無 | `backend/app/services/audit.py:1` — `record_audit_log(db, tenant_id, user_id, action, table_name, record_id, old_data, new_data)` 実装済み。副テーブル差分（`build_subtable_diff`）も実装済み。`contacts.py:458`、`deals.py:217` などで利用中 | 手動記録の編集履歴を残せる土台 | **流用可能なパターン存在**。`audit_logs` テーブルに旧値/新値JSONを記録する仕組みは既存。`conversation_logs` の手動記録編集時にこれを呼べる |
+| 手動メッセージを翻訳・解析パイプラインに乗せる経路（即時翻訳発火の流用可否） | `backend/app/services/message_translator.py` の `translate_inbound()` 関数が存在。現在は `backend/app/tasks/translation.py:72-80` のバッチが `meta_messages` を対象に呼ぶ設計。**手動保存時の即時発火配線なし** | 手動も自動と同じ翻訳/解析が走る | `translate_inbound()` 自体は流用可。手動メッセージ保存APIに翻訳タスクをenqueueするhookを追加すれば実現可能。`conversation_logs` を対象とした翻訳バッチの再配線も必要 |
+| チャネル定義の現状（「電話」「対面」等の手動チャネルを追加できる構造か） | `lead_channels.platform` は `VARCHAR(30)` 文字列型（`migrations/20260607_120000_create_lead_channels.sql:19`）。ENUMではない。`conversation_logs.channel_type` も `VARCHAR(30)`（`migrations/20260604_090000_create_conversation_logs.sql:41`）。現状値は 'messenger'/'instagram'（`webhook.py:481`）。**チャネルマスタテーブルは存在しない** | 手動チャネルをマスタで追加可能 | VARCHAR自由値のためアプリ制御で追加可能。ただし**チャネルマスタテーブルがない**ため許可値の管理・UI選択肢の提供には別途テーブル or 定数リストが必要 |
+| スレッド欄の描画構造（手動メッセージの混在表示・手動バッジ・入力ボックス常設に対応できるか） | `frontend/src/pages/inbox/InboxMessageThread.tsx:1` — `MessagesResponse` 型を受け取りメッセージ一覧を描画。現状は `meta_messages` ベースの自動取り込みのみ。**`is_manual` フラグ対応なし・手動バッジなし・チャネル選択UIなし・手動用入力常設なし** | 手動／自動が時系列で1本のスレッドに混在表示 | コンポーネント自体は存在するが手動記録の混在表示には**大幅改修が必要**。`is_manual`フラグ・バッジ・入力ボックス常設・チャネル選択を追加実装する必要あり |
+| 連携済みチャネルで「アプリ外から送った送信分」がwebhookで自動取得できる範囲（チャネル別） | Messenger/Instagram: Meta webhook は受信（inbound）を処理（`webhook.py:655`）。スタッフが外部から送った送信分（echo）はMeta側でエコー設定が必要で現状未設定。Discord: `dm_writer.py` でoutbound送信をmeta_messagesに記録あり。WhatsApp/Telegram: webhook未実装 | 取得できない分の扱いをShingo判断 | **Messenger/Instagram のエコー受信は未設定**。取得できない送信分が会話ログに欠落するか、手動補完の対象か → Shingo判断が必要 |
 
-### recon結論（Terminal CC記入）
+### recon結論（2026-06-11 Terminal CC記入）
 
-- 流用できるもの:
-- 不足しているもの（＝今回作るもの）:
-- 設計前にShingo判断が必要な事項:
+#### 流用できるもの（file:line付き）
+
+| 資産 | 場所 | 流用内容 |
+|------|------|---------|
+| `conversation_logs` テーブル | `migrations/20260604_090000_create_conversation_logs.sql:34` | ADR-096が求める全列を持つ。RLS済み。**このテーブルが目標の保存先** |
+| `v_company_stats` ビュー | `migrations/20260604_100000_create_company_stats_view.sql:39` | 会話数・最終会話日時の自動集計。APIも接続済み（`companies.py:188`） |
+| `translate_inbound()` 関数 | `backend/app/services/message_translator.py` | 手動メッセージの翻訳に流用可（グロッサリ・確信度スコア込み） |
+| sweeper（翻訳取りこぼし拾い） | `backend/app/services/translation_monitor.py:1` | 手動記録の翻訳失敗検知にも流用可 |
+| `lead_channels` テーブル | `migrations/20260607_120000_create_lead_channels.sql` + `webhook.py:489` | チャネル識別・名寄せ基盤として流用可 |
+| `record_audit_log()` | `backend/app/services/audit.py:1` | 手動記録の編集履歴に流用可 |
+| `InboxMessageThread.tsx` | `frontend/src/pages/inbox/InboxMessageThread.tsx:1` | 改修ベースとして流用可 |
+
+#### 不足しているもの（＝今回作るもの）
+
+1. **webhook → `conversation_logs` 取り込みパイプライン**（Messenger/Instagram/Discord の受信を `meta_messages` ではなく `conversation_logs` に書く、または両方に書いて移行）
+2. **手動メッセージ保存API**（`POST /conversation_logs`・`is_manual=true`・チャネル選択）
+3. **手動メッセージ編集API + 編集履歴**（`PATCH /conversation_logs/{id}`・audit_log連携・翻訳再実行hook）
+4. **即時翻訳発火の配線**（保存API → Celeryタスクenqueue。`conversation_logs` を対象とした翻訳バッチ再配線）
+5. **チャネルマスタテーブル or 定数リスト**（手動チャネル（電話・対面等）の許可値管理）
+6. **重複ガード**（同一チャネル・近接日時・同一本文の警告）
+7. **会社→contact粒度の会話集約ページ**（G3: 3クリック以内達成）
+8. **`InboxMessageThread.tsx` 改修**（`is_manual` バッジ・入力ボックス常設・チャネル選択）
+9. **会話要約の集計定義**（`conversation_logs.analysis` からの要約抽出仕様）
+10. **受信取りこぼし検知**（sweeper が `conversation_logs` を対象に欠落を検知・通知）
+
+#### 設計前にShingo判断が必要な事項
+
+| # | 論点 | 事実 |
+|---|------|------|
+| J1 | Messenger/Instagramのエコー受信（アプリ外から送った送信分）を取得するか | Meta側でエコー設定が必要。現状未設定（`webhook.py:655`参照）。設定すると全送信メッセージがwebhookに届くがMeta申請が必要な可能性あり |
+| J2 | `meta_messages` から `conversation_logs` への移行方針 | 既存データ（highlife-jpn本番の `meta_messages` 蓄積分）をconversation_logsに移行するか、移行せず新規取り込みからconversation_logsに切り替えるか |
+| J3 | 手動記録の削除を許可するか | ADR-096・G1bには削除可否の定義なし。削除可なら論理削除（`deleted_at`）か物理削除か |
+| J4 | 会話要約の集計仕様 | `analysis` JSONB内の要約フィールドをどう集約するか（最新N件の要約、全件、AIでまとめ直すか）|
 
 ---
 
@@ -102,10 +132,11 @@
 
 | # | KPI候補 | 目標 | 測り方（recon後確定） |
 |---|---------|------|----------------------|
-| K1 | 会話ログ取り込み率（受信数に対する保存数） | 100% | |
-| K2 | 派生値への手入力上書き件数 | 0件 | ADR-095 KPI#5と同一 |
-| K3 | 会社集計ビューの到達クリック数 | 3以内 | |
-| K4 | 取りこぼし検知→通知までの時間 | （recon後設定） | |
+| K1 | 会話ログ取り込み率（受信数に対する保存数） | 100% | `meta_messages`の受信件数 vs `conversation_logs`の件数を突合（移行完了後）。sweeper検知で欠落をアラート |
+| K2 | 派生値（conversation_count/last_conversation_at）への手入力上書き件数 | 0件 | `v_company_stats` がVIEWのためDB層で保証。PATCH APIにフィールドなし（`companies.py`スキーマ確認）|
+| K3 | 会社集計ビューの到達クリック数 | 3以内 | Playwright E2E: 会社ページ→会話表示→原文+訳文 のクリック数計測 |
+| K4 | 取りこぼし検知→通知までの時間 | ≤15分（sweeper周期内） | sweeper実行→Discord通知までの時刻差（`translation_monitor.py` 参考に実装） |
+| K5 | 手動記録の翻訳自動適用率 | 100% | 手動保存後の `conversation_logs.translated_text` がNULLの件数（sweeper周期内でゼロ） |
 
 ---
 
@@ -120,7 +151,7 @@
 ## 6. チェックシート（完了条件）
 
 - [x] ① KGI承認（Shingo 2026-06-11）
-- [ ] ② recon完了（差分表が file:line で埋まっている）
+- [x] ② recon完了（差分表が file:line で埋まっている）— 2026-06-11 Terminal CC
 - [ ] ③ 設計doc完成（reconとADR-096を相互参照・外部事例欄記入）
 - [ ] ④ 実装PRマージ（process-artifactsゲート通過）
 - [ ] ⑤ 本番反映（CI緑＋smoke通過）
