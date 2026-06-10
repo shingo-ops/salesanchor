@@ -125,7 +125,13 @@ async def test_get_db_clears_context_on_success():
 
 @pytest.mark.asyncio
 async def test_get_db_clears_context_on_exception():
-    """AC-2: 例外が発生した後も clear_tenant_context が呼ばれること。"""
+    """AC-2: 例外が発生した後も clear_tenant_context が呼ばれること。
+
+    Python の async for はループ本体の例外でジェネレータを close しない（PEP 525: 非同期
+    ジェネレータの finalize は GC / イベントループフックに委ねられる）。FastAPI は
+    Depends で解決した generator を request 終了時に aclose() し、finally を保証する。
+    このテストも明示的に gen.aclose() を呼んで FastAPI の動作を模倣する。
+    """
     from contextlib import asynccontextmanager
     from unittest.mock import AsyncMock, patch
 
@@ -142,9 +148,16 @@ async def test_get_db_clears_context_on_exception():
     with patch("app.database.AsyncSessionLocal", fake_session_factory), \
          patch("app.auth.dependencies.clear_tenant_context", side_effect=fake_clear):
         from app.database import get_db
-        with pytest.raises(ValueError):
-            async for session in get_db():
+        gen = get_db()
+        try:
+            async for session in gen:
                 raise ValueError("simulated endpoint error")
+        except ValueError:
+            pass
+        finally:
+            # FastAPI が request 後に aclose() を呼ぶ動作を再現。
+            # これにより get_db の finally ブロック（clear_tenant_context）が実行される。
+            await gen.aclose()
 
     assert len(cleared) == 1, "clear_tenant_context should be called even when exception raised"
     assert cleared[0] is mock_session
