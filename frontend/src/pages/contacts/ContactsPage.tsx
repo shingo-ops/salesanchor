@@ -5,27 +5,27 @@
  * 担当者は必ず 1 つの会社に紐付く（company_id 必須）。
  * 会社別絞り込みフィルタあり。
  * Step 5c-2 で CompanyDetailPage からネスト編集できるようになる予定。
+ *
+ * 変更履歴:
+ *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチB）
  */
 
 import { useEffect, useState, FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import ContactChannelLinks from "../../components/ContactChannelLinks";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
-
-interface CompanyMini {
-  id: number;
-  company_code: string;
-  name: string;
-}
+import { ContactFormFields, type ContactFormState, type ContactCompany } from "./ContactFormFields";
 
 interface Contact {
   id: number;
@@ -56,7 +56,7 @@ interface Contact {
   updated_at: string;
 }
 
-type FormState = {
+type CreateFormState = {
   contact_code: string;
   company_id: string;
   surname: string;
@@ -71,20 +71,25 @@ type FormState = {
   notes: string;
 };
 
-const emptyForm: FormState = {
-  contact_code: "",
-  company_id: "",
-  surname: "",
-  given_name: "",
-  display_name: "",
-  job_title: "",
-  department: "",
-  is_primary_contact: false,
-  primary_email: "",
-  primary_phone: "",
-  status: "active",
-  notes: "",
+const emptyCreateForm: CreateFormState = {
+  contact_code: "", company_id: "", surname: "", given_name: "",
+  display_name: "", job_title: "", department: "", is_primary_contact: false,
+  primary_email: "", primary_phone: "", status: "active", notes: "",
 };
+
+const emptyEditForm: ContactFormState = {
+  company_id: "", surname: "", given_name: "",
+  primary_email: "", primary_phone: "", status: "active",
+};
+
+const toForm = (c: Contact): ContactFormState => ({
+  company_id: String(c.company_id),
+  surname: c.surname ?? "",
+  given_name: c.given_name ?? "",
+  primary_email: c.primary_email ?? "",
+  primary_phone: c.primary_phone ?? "",
+  status: c.status,
+});
 
 const contactDisplayName = (c: Contact): string => {
   if (c.display_name) return c.display_name;
@@ -95,21 +100,23 @@ const contactDisplayName = (c: Contact): string => {
 export default function ContactsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  // Step 5c-2: /contacts?company_id=N の URL クエリから初期フィルタを復元
-  // （CompanyDetailPage の担当者タブからの導線で会社別絞り込みを有効化）
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<CompanyMini[]>([]);
+  const [companies, setCompanies] = useState<ContactCompany[]>([]);
   const [companyFilter, setCompanyFilter] = useState(searchParams.get("company_id") || "");
   const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  // 新規作成モーダル
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
+  // 編集ドロワー
+  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+    useRecordDrawer<Contact, ContactFormState>({ toForm, emptyForm: emptyEditForm });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
-  // PR #145 Q2: pending_dedup_review 解消フロー
   const [dedupConfirmTarget, setDedupConfirmTarget] = useState<Contact | null>(null);
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
 
@@ -119,8 +126,7 @@ export default function ContactsPage() {
       if (search) parts.push(`search=${encodeURIComponent(search)}`);
       if (companyFilter) parts.push(`company_id=${encodeURIComponent(companyFilter)}`);
       parts.push("per_page=100");
-      const qs = parts.join("&");
-      const data = await api.get<Contact[]>(`/contacts?${qs}`);
+      const data = await api.get<Contact[]>(`/contacts?${parts.join("&")}`);
       setContacts(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
@@ -131,12 +137,10 @@ export default function ContactsPage() {
 
   const loadCompanies = async () => {
     try {
-      const data = await api.get<CompanyMini[]>("/companies?per_page=100");
-      setCompanies(
-        data.map((c: CompanyMini) => ({ id: c.id, company_code: c.company_code, name: c.name })),
-      );
+      const data = await api.get<ContactCompany[]>("/companies?per_page=100");
+      setCompanies(data.map((c) => ({ id: c.id, company_code: c.company_code, name: c.name })));
     } catch {
-      // 静かに無視（フィルタ/セレクタが空になるだけ）
+      // 静かに無視
     }
   };
 
@@ -149,44 +153,33 @@ export default function ContactsPage() {
     return c ? `${c.name}（${c.company_code}）` : `#${company_id}`;
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const toNull = (v: string) => (v ? v : null);
+
+  /* ── 新規作成（Modal） ── */
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!form.company_id) {
-      setError(t("contacts.companyRequired"));
-      return;
-    }
-    const toNull = (v: string) => (v ? v : null);
-    const payload: Record<string, unknown> = {
-      company_id: parseInt(form.company_id, 10),
-      surname: toNull(form.surname),
-      given_name: toNull(form.given_name),
-      display_name: toNull(form.display_name),
-      job_title: toNull(form.job_title),
-      department: toNull(form.department),
-      is_primary_contact: form.is_primary_contact,
-      primary_email: toNull(form.primary_email),
-      primary_phone: toNull(form.primary_phone),
-      status: form.status || "active",
-      notes: toNull(form.notes),
-    };
-    if (!editId && form.contact_code.trim()) {
-      payload.contact_code = form.contact_code.trim();
-    }
-    // Note: edit 時に company_id 移動を行うと migration 032 の所属整合性制約に
-    // 引っかかる可能性があるため、一旦そのまま送る（backend 側で 400 検出）
-
+    if (!createForm.company_id) { setError(t("contacts.companyRequired")); return; }
     if (submitting) return;
     setSubmitting(true);
+    const payload: Record<string, unknown> = {
+      company_id: parseInt(createForm.company_id, 10),
+      surname: toNull(createForm.surname),
+      given_name: toNull(createForm.given_name),
+      display_name: toNull(createForm.display_name),
+      job_title: toNull(createForm.job_title),
+      department: toNull(createForm.department),
+      is_primary_contact: createForm.is_primary_contact,
+      primary_email: toNull(createForm.primary_email),
+      primary_phone: toNull(createForm.primary_phone),
+      status: createForm.status || "active",
+      notes: toNull(createForm.notes),
+    };
+    if (createForm.contact_code.trim()) payload.contact_code = createForm.contact_code.trim();
     try {
-      if (editId) {
-        await api.patch(`/contacts/${editId}`, payload);
-      } else {
-        await api.post("/contacts", payload);
-      }
-      setShowForm(false);
-      setEditId(null);
-      setForm(emptyForm);
+      await api.post("/contacts", payload);
+      setShowCreate(false);
+      setCreateForm(emptyCreateForm);
       loadContacts();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -195,23 +188,25 @@ export default function ContactsPage() {
     }
   };
 
-  const handleEdit = (c: Contact) => {
-    setEditId(c.id);
-    setForm({
-      contact_code: c.contact_code,
-      company_id: String(c.company_id),
-      surname: c.surname || "",
-      given_name: c.given_name || "",
-      display_name: c.display_name || "",
-      job_title: c.job_title || "",
-      department: c.department || "",
-      is_primary_contact: c.is_primary_contact,
-      primary_email: c.primary_email || "",
-      primary_phone: c.primary_phone || "",
-      status: c.status || "active",
-      notes: c.notes || "",
-    });
-    setShowForm(true);
+  /* ── ドロワー内編集保存（6 要点フィールド） ── */
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!editId) return;
+    try {
+      await api.patch(`/contacts/${editId}`, {
+        company_id: parseInt(editForm.company_id, 10),
+        surname: toNull(editForm.surname),
+        given_name: toNull(editForm.given_name),
+        primary_email: toNull(editForm.primary_email),
+        primary_phone: toNull(editForm.primary_phone),
+        status: editForm.status,
+      });
+      closeDrawer();
+      loadContacts();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
   };
 
   const handleDelete = async () => {
@@ -226,9 +221,6 @@ export default function ContactsPage() {
     }
   };
 
-  // PR #145 Q2: 「別人として確定」 — status を pending_dedup_review → active に戻す。
-  // companies 側と同じく、A-4 のマージ機能とは別経路で独立した担当者として承認する。
-  // 現状 ContactStatus enum に pending_dedup_review を追加したため backend は受領できる。
   const handleResolveAsDistinct = async () => {
     if (!dedupConfirmTarget) return;
     setError("");
@@ -236,11 +228,6 @@ export default function ContactsPage() {
     try {
       await api.patch(`/contacts/${dedupConfirmTarget.id}`, { status: "active" });
       setDedupConfirmTarget(null);
-      // PR #163 Reviewer round 1 Minor 2: 一覧再読込を await してから
-      // dedupSubmitting を解除する（companies 側 CompanyDetailPage と統一）。
-      // 旧コード `loadContacts()` は floating promise になっており、再読込中に
-      // 再度ボタンを押されたり画面遷移されたりするとタイミング依存で
-      // 件数バッジが古いままになることがあった。
       await loadContacts();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
@@ -250,32 +237,7 @@ export default function ContactsPage() {
     }
   };
 
-  // pending_dedup_review の件数（フィルタ済み一覧内）
   const pendingDedupCount = contacts.filter((c) => c.status === "pending_dedup_review").length;
-
-  // PR #163 Reviewer round 1 Minor 3: 編集モーダル内の dedup 解消ボタンの dirty 検知。
-  // companies 側 CompanyDetailPage:574 の `disabled={dedupSubmitting || basicDirty}` と同じく、
-  // フォームに未保存の変更があるときは「別人として確定」ボタンを disabled + tooltip で
-  // 明示的に防ぐ。ベースラインは「現在編集中の contact 行」の値、差分は status 以外の
-  // 編集可能フィールド（解消ボタンを押すと status は別 PATCH で active になるため
-  // status 自体は dirty 比較に含めない）。
-  const editingContact = editId !== null ? contacts.find((c) => c.id === editId) || null : null;
-  const formDirtyExceptStatus = (() => {
-    if (!editingContact) return false;
-    const norm = (v: string | null | undefined) => (v ?? "").trim();
-    return (
-      String(editingContact.company_id) !== form.company_id ||
-      norm(editingContact.surname) !== norm(form.surname) ||
-      norm(editingContact.given_name) !== norm(form.given_name) ||
-      norm(editingContact.display_name) !== norm(form.display_name) ||
-      norm(editingContact.job_title) !== norm(form.job_title) ||
-      norm(editingContact.department) !== norm(form.department) ||
-      Boolean(editingContact.is_primary_contact) !== form.is_primary_contact ||
-      norm(editingContact.primary_email) !== norm(form.primary_email) ||
-      norm(editingContact.primary_phone) !== norm(form.primary_phone) ||
-      norm(editingContact.notes) !== norm(form.notes)
-    );
-  })();
 
   return (
     <PageLayout
@@ -292,9 +254,8 @@ export default function ContactsPage() {
             <button
               className="btn-primary"
               onClick={() => {
-                setEditId(null);
-                setForm({ ...emptyForm, company_id: companyFilter });
-                setShowForm(true);
+                setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
+                setShowCreate(true);
               }}
             >
               + {t("contacts.newContact")}
@@ -321,6 +282,93 @@ export default function ContactsPage() {
 
       {error && <div className="error-banner">{error}</div>}
 
+      {/* 新規作成 Modal（全項目・既存 UX 保持） */}
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={t("contacts.newContact")}
+        size="lg"
+      >
+        <div className="modal-content-wide">
+          <form onSubmit={handleCreateSubmit} className="form-grid">
+            <div className="form-row">
+              <label>{t("contacts.contactCodeLabel")}</label>
+              <input value={createForm.contact_code} onChange={(e) => setCreateForm({ ...createForm, contact_code: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>{t("contacts.companyLabel")}</label>
+              <select required value={createForm.company_id} onChange={(e) => setCreateForm({ ...createForm, company_id: e.target.value })}>
+                <option value="">{t("common.pleaseSelect")}</option>
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}
+              </select>
+            </div>
+            <div className="form-row"><label>{t("contacts.surname")}</label>
+              <input value={createForm.surname} onChange={(e) => setCreateForm({ ...createForm, surname: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("contacts.givenName")}</label>
+              <input value={createForm.given_name} onChange={(e) => setCreateForm({ ...createForm, given_name: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("contacts.displayName")}</label>
+              <input value={createForm.display_name} onChange={(e) => setCreateForm({ ...createForm, display_name: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("contacts.position")}</label>
+              <input value={createForm.job_title} onChange={(e) => setCreateForm({ ...createForm, job_title: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("contacts.department")}</label>
+              <input value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>
+                <input type="checkbox" checked={createForm.is_primary_contact} onChange={(e) => setCreateForm({ ...createForm, is_primary_contact: e.target.checked })} />
+                {" "}{t("contacts.primaryContactHint")}
+              </label>
+            </div>
+            <div className="form-row"><label>{t("common.email")}</label>
+              <input type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("common.phone")}</label>
+              <input value={createForm.primary_phone} onChange={(e) => setCreateForm({ ...createForm, primary_phone: e.target.value })} />
+            </div>
+            <div className="form-row"><label>{t("common.status")}</label>
+              <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+                <option value="archived">archived</option>
+              </select>
+            </div>
+            <div className="form-row"><label>{t("common.notes")}</label>
+              <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+            </div>
+            <div className="form-actions">
+              <button type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? t("common.saving") : t("common.register")}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* 編集 Drawer（行クリックで開く・6 要点フィールド） */}
+      <Drawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={t("contacts.editContact")}
+        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/contacts/${editId}/edit`); } : undefined}
+      >
+        <form onSubmit={handleEditSubmit}>
+          <ContactFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
+            companies={companies}
+          />
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
+            <button type="submit" className="btn-primary">{t("common.update")}</button>
+          </div>
+        </form>
+      </Drawer>
+
       {loading ? (
         <p>{t("common.loading")}</p>
       ) : (() => {
@@ -332,23 +380,21 @@ export default function ContactsPage() {
           { key: "primary_phone", header: t("common.phone"), renderCell: (c) => c.primary_phone || "-" },
           { key: "is_primary_contact", header: t("contacts.isPrimary"), renderCell: (c) => c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "" },
           { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
-          { key: "channels", header: t("nav.channels"), renderCell: (c) => (
-            /* SA-05: チャンネルリンク（link_templates SSOT 経由） */
+          { key: "channels", header: t("nav.channels"), renderCell: (c) =>
             c.contact_channels.length > 0 ? <ContactChannelLinks contactId={c.id} /> : null
-          )},
+          },
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
             <>
               {hasPermission("customers.update") && (
-                <button className="btn-sm" onClick={() => handleEdit(c)}>{t("common.edit")}</button>
+                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</button>
               )}
-              {/* PR #145 Q2: 一覧から直接解消できるショートカット（編集モーダル経由でも可） */}
               {hasPermission("customers.update") && c.status === "pending_dedup_review" && (
-                <button className="btn-sm" onClick={() => setDedupConfirmTarget(c)}>
+                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}>
                   {t("contacts.confirmAsDistinct")}
                 </button>
               )}
               {hasPermission("customers.delete") && (
-                <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(c)}>{t("common.delete")}</button>
+                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</button>
               )}
             </>
           )},
@@ -359,162 +405,28 @@ export default function ContactsPage() {
             data={contacts}
             rowKey={(c) => String(c.id)}
             rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            onRowClick={hasPermission("customers.update") ? handleRowClick : undefined}
             emptyState={t("contacts.noContacts")}
           />
         );
       })()}
 
-      <Modal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        title={editId ? t("contacts.editContact") : t("contacts.newContact")}
-        size="lg"
-      >
-        <div className="modal-content-wide">
-          <form onSubmit={handleSubmit} className="form-grid">
-              {!editId && (
-                <div className="form-row">
-                  <label>{t("contacts.contactCodeLabel")}</label>
-                  <input value={form.contact_code} onChange={(e) => setForm({ ...form, contact_code: e.target.value })} />
-                </div>
-              )}
-              <div className="form-row">
-                <label>{t("contacts.companyLabel")}</label>
-                <select required value={form.company_id} onChange={(e) => setForm({ ...form, company_id: e.target.value })}>
-                  <option value="">{t("common.pleaseSelect")}</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-row">
-                <label>{t("contacts.surname")}</label>
-                <input value={form.surname} onChange={(e) => setForm({ ...form, surname: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("contacts.givenName")}</label>
-                <input value={form.given_name} onChange={(e) => setForm({ ...form, given_name: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("contacts.displayName")}</label>
-                <input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("contacts.position")}</label>
-                <input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("contacts.department")}</label>
-                <input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={form.is_primary_contact}
-                    onChange={(e) => setForm({ ...form, is_primary_contact: e.target.checked })}
-                  />
-                  {" "}{t("contacts.primaryContactHint")}
-                </label>
-              </div>
-              <div className="form-row">
-                <label>{t("common.email")}</label>
-                <input type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("common.phone")}</label>
-                <input value={form.primary_phone} onChange={(e) => setForm({ ...form, primary_phone: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <label>{t("common.status")}</label>
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  <option value="active">active</option>
-                  <option value="inactive">inactive</option>
-                  <option value="archived">archived</option>
-                  {/* PR #145 Q2: pending_dedup_review を表示・選択可能に。
-                      新規付与は通常データ移行スクリプト由来だが、既存データから抜け出す道を確保 */}
-                  <option value="pending_dedup_review">{t("contacts.statusPendingDedupOption")}</option>
-                </select>
-              </div>
-              <div className="form-row">
-                <label>{t("common.notes")}</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
-
-              {/* PR #145 Q2: 編集中の担当者が pending_dedup_review なら解消セクションを表示 */}
-              {editId && form.status === "pending_dedup_review" && (
-                <div className="dedup-resolve-section">
-                  <h3>{t("contacts.dedupResolveTitle")}</h3>
-                  <p>{t("contacts.dedupResolveDesc")}</p>
-                  <div className="dedup-resolve-actions">
-                    {/* PR #163 Reviewer round 1 Minor 3: 編集モーダル内のフォームに
-                        未保存変更がある状態で「別人として確定」ボタンを押すと、解消 PATCH
-                        と未保存変更の関係が混乱するため、companies 側 CompanyDetailPage と
-                        同じく dirty 状態のときは disabled で明示的に防ぐ。 */}
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => {
-                        const target = contacts.find((c) => c.id === editId) || null;
-                        if (!target) return;
-                        setDedupConfirmTarget(target);
-                      }}
-                      disabled={dedupSubmitting || formDirtyExceptStatus}
-                    >
-                      {t("contacts.confirmAsDistinctFull")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      style={{ opacity: "var(--opacity-disabled)", cursor: "not-allowed" }}
-                    >
-                      {t("contacts.mergeAsDuplicate")}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="form-actions">
-                <button type="button" onClick={() => setShowForm(false)} disabled={submitting}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? t("common.saving") : editId ? t("common.update") : t("common.register")}
-                </button>
-              </div>
-          </form>
-        </div>
-      </Modal>
-
       <ConfirmModal
         open={deleteTarget !== null}
         title={t("contacts.deleteContact")}
-        message={
-          deleteTarget
-            ? t("contacts.deleteConfirmMessage", {
-                name: contactDisplayName(deleteTarget),
-                code: deleteTarget.contact_code,
-              })
-            : ""
-        }
+        message={deleteTarget ? t("contacts.deleteConfirmMessage", { name: contactDisplayName(deleteTarget), code: deleteTarget.contact_code }) : ""}
         confirmLabel={t("common.delete")}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-
-      {/* PR #145 Q2: 別人として確定の確認ダイアログ */}
       <ConfirmModal
         open={dedupConfirmTarget !== null}
         title={t("contacts.dedupConfirmTitle")}
-        message={
-          dedupConfirmTarget
-            ? t("contacts.dedupConfirmMessage", {
-                name: contactDisplayName(dedupConfirmTarget),
-                code: dedupConfirmTarget.contact_code,
-              })
-            : ""
-        }
+        message={dedupConfirmTarget ? t("contacts.dedupConfirmMessage", { name: contactDisplayName(dedupConfirmTarget), code: dedupConfirmTarget.contact_code }) : ""}
         confirmLabel={t("contacts.changeToActive")}
         onConfirm={handleResolveAsDistinct}
         onCancel={() => setDedupConfirmTarget(null)}
+        danger={false}
       />
     </PageLayout>
   );
