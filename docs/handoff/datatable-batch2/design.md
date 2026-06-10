@@ -62,24 +62,15 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-### 参照
+参照: `docs/handoff/datatable-standardization/recon.md`（バッチ1・InvoicesPage のパターン定義と DataTable コンポーネント詳細調査）および `docs/adr/ADR-067-design-tokens.md`（デザイントークン強制ルール）。
 
-- `docs/handoff/datatable-standardization/recon.md` — バッチ1（InvoicesPage）のパターン定義と DataTable コンポーネント詳細調査
-- `docs/adr/ADR-067-design-tokens.md` — デザイントークン強制ルール（CSS変数使用義務）
-
-### 我々への応用
-
-バッチ1で確立した「IIFE inside JSX で columns 配列をインライン定義する」パターンをバッチ2でも採用した。
-これにより:
-- columns 定義が component の props/state/hooks クロージャ内に収まる
-- `import type { DataTableColumn }` による型安全が保証される
-- 各ページの状態管理ロジックへの影響はゼロ
+バッチ1で確立した「component body 内で columns 配列を定義する」パターンをバッチ2でも採用した。columns 定義が props/state/hooks クロージャ内に収まり、`import type { DataTableColumn }` による型安全が保証される。各ページの状態管理ロジックへの影響はゼロ。
 
 条件付き columns の扱い（SalesPage の `canEdit`）はスプレッド演算子パターンで対応:
 ```ts
 const columns = [...baseColumns, ...(canEdit ? [actionsCol] : [])];
 ```
-これはバッチ1で未出現のパターンだが、型安全かつ readable な実装として確立した。
+shadcn/ui・Mantine・Ant Design Table など主要 UI ライブラリはすべて「列定義（columns）+ データ（data）+ rowKey」の分離パターンを採用しており、本バッチもその確立済み手法に準拠する。
 
 ---
 
