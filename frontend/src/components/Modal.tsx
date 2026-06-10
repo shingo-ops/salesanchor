@@ -19,7 +19,7 @@ import { Button }         from "./Button";
 import { X }              from "../constants/icons";
 import "./Modal.css";
 
-export type ModalSize = "sm" | "md" | "lg";
+export type ModalSize = "sm" | "md" | "lg" | "xl";
 
 interface ModalProps {
   open: boolean;

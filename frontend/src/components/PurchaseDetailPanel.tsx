@@ -22,6 +22,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
+import { Modal } from "./Modal";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -258,209 +259,191 @@ export default function PurchaseDetailPanel({
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-wide-w)', maxHeight: "90vh", overflowY: "auto" }}
-        role="dialog"
-        aria-label={t("purchase.modalAriaLabel")}
+  const footer = (
+    <>
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={handleConfirm}
+        disabled={!existing || confirming}
+        data-testid="pur-confirm"
+        title={
+          existing
+            ? t("purchase.confirmTitle")
+            : t("purchase.confirmTitleDisabled")
+        }
       >
-        <h3>{t("purchase.sectionStaffTx")} — {orderNumber}</h3>
-        {loading ? (
-          <div className="loading">{t("common.loading")}</div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            {error && <div className="error-message">{error}</div>}
+        {confirming ? t("purchase.confirming") : t("purchase.confirm")}
+      </button>
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={onClose}
+        disabled={saving}
+      >
+        {t("common.cancel")}
+      </button>
+      <button
+        form="purchase-detail-form"
+        type="submit"
+        className="btn-primary"
+        disabled={saving}
+        data-testid="pur-save"
+      >
+        {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
+      </button>
+    </>
+  );
 
-            {/* セクション: 仕入担当・取引 */}
-            <fieldset>
-              <legend>{t("purchase.sectionStaffTx")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.staffTx.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="text"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`pur-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-                <div className="form-group">
-                  <label>{t("purchase.purchaseDate")}</label>
-                  <input
-                    type="date"
-                    value={form.purchase_date}
-                    onChange={(ev) => setField("purchase_date", ev.target.value)}
-                    data-testid="pur-input-purchase_date"
-                  />
-                </div>
-              </div>
-            </fieldset>
+  return (
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={`${t("purchase.sectionStaffTx")} — ${orderNumber}`}
+      size="xl"
+      footer={footer}
+    >
+      {loading ? (
+        <div className="loading">{t("common.loading")}</div>
+      ) : (
+        <form id="purchase-detail-form" onSubmit={handleSubmit}>
+          {error && <div className="error-message">{error}</div>}
 
-            {/* セクション: 仕入元 */}
-            <fieldset>
-              <legend>{t("purchase.sectionSupplier")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.supplier.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type={f.key === "supplier_url" ? "url" : "text"}
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`pur-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: 金額・数量 */}
-            <fieldset>
-              <legend>{t("purchase.sectionAmounts")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {NUMBER_FIELDS.amounts.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step={f.step}
-                      inputMode="decimal"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`pur-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: 配送 */}
-            <fieldset>
-              <legend>{t("purchase.sectionShipping")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.shipping.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="text"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`pur-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: ステータス */}
+          {/* セクション: 仕入担当・取引 */}
+          <fieldset>
+            <legend>{t("purchase.sectionStaffTx")}</legend>
             <div
-              className="form-group"
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: "var(--space-2)",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
               }}
             >
-              <label>{t("common.status")}</label>
-              <select
-                value={form.purchase_status}
-                onChange={(ev) => setField("purchase_status", ev.target.value)}
-                data-testid="pur-input-purchase_status"
-              >
-                {STATUS_OPTION_KEYS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* メモ */}
-            <div className="form-group">
-              <label>{t("purchase.purchaseNote")}</label>
-              <textarea
-                value={form.purchase_note}
-                onChange={(ev) => setField("purchase_note", ev.target.value)}
-                data-testid="pur-input-purchase_note"
-              />
-            </div>
-
-            <div
-              className="form-actions"
-              style={{
-                marginTop: "var(--space-4)",
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "var(--space-2)",
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleConfirm}
-                disabled={!existing || confirming}
-                data-testid="pur-confirm"
-                title={
-                  existing
-                    ? t("purchase.confirmTitle")
-                    : t("purchase.confirmTitleDisabled")
-                }
-              >
-                {confirming ? t("purchase.confirming") : t("purchase.confirm")}
-              </button>
-              <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={onClose}
-                  disabled={saving}
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={saving}
-                  data-testid="pur-save"
-                >
-                  {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
-                </button>
+              {TEXT_FIELDS.staffTx.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="text"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`pur-input-${f.key}`}
+                  />
+                </div>
+              ))}
+              <div className="form-group">
+                <label>{t("purchase.purchaseDate")}</label>
+                <input
+                  type="date"
+                  value={form.purchase_date}
+                  onChange={(ev) => setField("purchase_date", ev.target.value)}
+                  data-testid="pur-input-purchase_date"
+                />
               </div>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </fieldset>
+
+          {/* セクション: 仕入元 */}
+          <fieldset>
+            <legend>{t("purchase.sectionSupplier")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {TEXT_FIELDS.supplier.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type={f.key === "supplier_url" ? "url" : "text"}
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`pur-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 金額・数量 */}
+          <fieldset>
+            <legend>{t("purchase.sectionAmounts")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {NUMBER_FIELDS.amounts.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step={f.step}
+                    inputMode="decimal"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`pur-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 配送 */}
+          <fieldset>
+            <legend>{t("purchase.sectionShipping")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {TEXT_FIELDS.shipping.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="text"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`pur-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: ステータス */}
+          <div className="form-group">
+            <label>{t("common.status")}</label>
+            <select
+              value={form.purchase_status}
+              onChange={(ev) => setField("purchase_status", ev.target.value)}
+              data-testid="pur-input-purchase_status"
+            >
+              {STATUS_OPTION_KEYS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* メモ */}
+          <div className="form-group">
+            <label>{t("purchase.purchaseNote")}</label>
+            <textarea
+              value={form.purchase_note}
+              onChange={(ev) => setField("purchase_note", ev.target.value)}
+              data-testid="pur-input-purchase_note"
+            />
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }
