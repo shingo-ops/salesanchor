@@ -23,6 +23,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { auth } from "../lib/firebase";
+import { Modal } from "./Modal";
 
 export interface ShippingDetailDto {
   id: number;
@@ -331,238 +332,227 @@ export default function ShippingDetailPanel({
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'var(--modal-wide-w)', maxHeight: "90vh", overflowY: "auto" }}
-        role="dialog"
-        aria-label={t("shipping.sectionShipping")}
+  const footer = (
+    <>
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={handleDownloadCsv}
+        disabled={!existing || downloading}
+        data-testid="ship-download-csv"
+        title={
+          existing
+            ? t("shipping.downloadCsvTitle")
+            : t("shipping.downloadCsvTitleDisabled")
+        }
       >
-        <h3>{t("shipping.sectionShipping")} — {orderNumber}</h3>
-        {loading ? (
-          <div className="loading">{t("common.loading")}</div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            {error && <div className="error-message">{error}</div>}
+        {downloading ? t("shipping.downloading") : t("shipping.downloadCsv")}
+      </button>
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={onClose}
+        disabled={saving}
+      >
+        {t("common.cancel")}
+      </button>
+      <button
+        form="shipping-detail-form"
+        type="submit"
+        className="btn-primary"
+        disabled={saving}
+        data-testid="ship-save"
+      >
+        {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
+      </button>
+    </>
+  );
 
-            {/* セクション: 受取人 */}
-            <fieldset>
-              <legend>{t("shipping.sectionRecipient")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.recipient.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type={f.key === "email" ? "email" : "text"}
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
+  return (
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={`${t("shipping.sectionShipping")} — ${orderNumber}`}
+      size="xl"
+      footer={footer}
+    >
+      {loading ? (
+        <div className="loading">{t("common.loading")}</div>
+      ) : (
+        <form id="shipping-detail-form" onSubmit={handleSubmit}>
+          {error && <div className="error-message">{error}</div>}
 
-            {/* セクション: 住所 */}
-            <fieldset>
-              <legend>{t("companies.address")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.address.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="text"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: 寸法・重量 */}
-            <fieldset>
-              <legend>{t("shipping.sectionDimensions")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {NUMBER_FIELDS.dimensions.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step={f.step}
-                      inputMode="decimal"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: 梱包・品目 */}
-            <fieldset>
-              <legend>{t("shipping.sectionPackingItem")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                {TEXT_FIELDS.packingItem.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="text"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-                {NUMBER_FIELDS.itemPrice.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step={f.step}
-                      inputMode="decimal"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </fieldset>
-
-            {/* セクション: 配送 */}
-            <fieldset>
-              <legend>{t("shipping.sectionShipping")}</legend>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "var(--space-2) var(--space-4)",
-                }}
-              >
-                <div className="form-group">
-                  <label>{t("shipping.carrier")}</label>
-                  <select
-                    value={form.carrier}
-                    onChange={(ev) => setField("carrier", ev.target.value)}
-                    data-testid="ship-input-carrier"
-                  >
-                    {CARRIER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {t(opt.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {TEXT_FIELDS.shippingExtras.map((f) => (
-                  <div className="form-group" key={f.key}>
-                    <label>{t(f.labelKey)}</label>
-                    <input
-                      type="text"
-                      value={form[f.key]}
-                      onChange={(ev) => setField(f.key, ev.target.value)}
-                      data-testid={`ship-input-${f.key}`}
-                    />
-                  </div>
-                ))}
-                <div className="form-group">
-                  <label>{t("shipping.shipDate")}</label>
-                  <input
-                    type="date"
-                    value={form.ship_date}
-                    onChange={(ev) => setField("ship_date", ev.target.value)}
-                    data-testid="ship-input-ship_date"
-                  />
-                </div>
-              </div>
-            </fieldset>
-
-            {/* メモ */}
-            <div className="form-group">
-              <label>{t("shipping.shipMemo")}</label>
-              <textarea
-                value={form.ship_memo}
-                onChange={(ev) => setField("ship_memo", ev.target.value)}
-                data-testid="ship-input-ship_memo"
-              />
-            </div>
-
+          {/* セクション: 受取人 */}
+          <fieldset>
+            <legend>{t("shipping.sectionRecipient")}</legend>
             <div
-              className="form-actions"
               style={{
-                marginTop: "var(--space-4)",
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "var(--space-2)",
-                flexWrap: "wrap",
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
               }}
             >
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleDownloadCsv}
-                disabled={!existing || downloading}
-                data-testid="ship-download-csv"
-                title={
-                  existing
-                    ? t("shipping.downloadCsvTitle")
-                    : t("shipping.downloadCsvTitleDisabled")
-                }
-              >
-                {downloading ? t("shipping.downloading") : t("shipping.downloadCsv")}
-              </button>
-              <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={onClose}
-                  disabled={saving}
+              {TEXT_FIELDS.recipient.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type={f.key === "email" ? "email" : "text"}
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 住所 */}
+          <fieldset>
+            <legend>{t("companies.address")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {TEXT_FIELDS.address.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="text"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 寸法・重量 */}
+          <fieldset>
+            <legend>{t("shipping.sectionDimensions")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {NUMBER_FIELDS.dimensions.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step={f.step}
+                    inputMode="decimal"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 梱包・品目 */}
+          <fieldset>
+            <legend>{t("shipping.sectionPackingItem")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              {TEXT_FIELDS.packingItem.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="text"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+              {NUMBER_FIELDS.itemPrice.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step={f.step}
+                    inputMode="decimal"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* セクション: 配送 */}
+          <fieldset>
+            <legend>{t("shipping.sectionShipping")}</legend>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "var(--space-2) var(--space-4)",
+              }}
+            >
+              <div className="form-group">
+                <label>{t("shipping.carrier")}</label>
+                <select
+                  value={form.carrier}
+                  onChange={(ev) => setField("carrier", ev.target.value)}
+                  data-testid="ship-input-carrier"
                 >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={saving}
-                  data-testid="ship-save"
-                >
-                  {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
-                </button>
+                  {CARRIER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {t(opt.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {TEXT_FIELDS.shippingExtras.map((f) => (
+                <div className="form-group" key={f.key}>
+                  <label>{t(f.labelKey)}</label>
+                  <input
+                    type="text"
+                    value={form[f.key]}
+                    onChange={(ev) => setField(f.key, ev.target.value)}
+                    data-testid={`ship-input-${f.key}`}
+                  />
+                </div>
+              ))}
+              <div className="form-group">
+                <label>{t("shipping.shipDate")}</label>
+                <input
+                  type="date"
+                  value={form.ship_date}
+                  onChange={(ev) => setField("ship_date", ev.target.value)}
+                  data-testid="ship-input-ship_date"
+                />
               </div>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </fieldset>
+
+          {/* メモ */}
+          <div className="form-group">
+            <label>{t("shipping.shipMemo")}</label>
+            <textarea
+              value={form.ship_memo}
+              onChange={(ev) => setField("ship_memo", ev.target.value)}
+              data-testid="ship-input-ship_memo"
+            />
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }

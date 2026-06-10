@@ -3,12 +3,14 @@
  *
  * 変更履歴:
  *   2026-04-17: 初版作成（Phase 2）
+ *   2026-06-09: 独自テーブルを標準 DataTable へ置換（ADR-122 Phase E パイロット）
  */
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { DataTable, DataTableColumn } from "../../components/DataTable";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 
@@ -28,6 +30,12 @@ interface Invoice {
 }
 
 const INVOICE_STATUSES = ["draft", "sent", "paid", "overdue", "cancelled"];
+
+const fmt = (n: number | null, ccy: string) => {
+  if (n == null) return "-";
+  try { return n.toLocaleString("ja-JP", { style: "currency", currency: ccy }); }
+  catch { return `${ccy} ${n.toLocaleString()}`; }
+};
 
 export default function InvoicesPage() {
   const { t } = useTranslation();
@@ -52,11 +60,60 @@ export default function InvoicesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [statusFilter]);
 
-  const fmt = (n: number | null, ccy: string) => {
-    if (n == null) return "-";
-    try { return n.toLocaleString("ja-JP", { style: "currency", currency: ccy }); }
-    catch { return `${ccy} ${n.toLocaleString()}`; }
-  };
+  const columns: DataTableColumn<Invoice>[] = [
+    {
+      key: "invoice_number",
+      header: t("invoices.invoiceCode"),
+      renderCell: (inv) => <span className="mono">{inv.invoice_number || "-"}</span>,
+    },
+    {
+      key: "currency",
+      header: t("common.currency"),
+    },
+    {
+      key: "total_amount",
+      header: t("common.amount"),
+      renderCell: (inv) => fmt(inv.total_amount, inv.currency),
+    },
+    {
+      key: "amount_jpy",
+      header: t("invoices.jpyEquiv"),
+      renderCell: (inv) => inv.amount_jpy != null ? `¥${inv.amount_jpy.toLocaleString()}` : "-",
+    },
+    {
+      key: "status",
+      header: t("common.status"),
+      renderCell: (inv) => (
+        <span className={`badge badge-${getStatusPresentation("invoice", inv.status).badgeVariant}`}>
+          {t(`invoices.status_${inv.status}`) || inv.status}
+        </span>
+      ),
+    },
+    {
+      key: "issued_at",
+      header: t("invoices.issuedAt"),
+      renderCell: (inv) => inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : "-",
+    },
+    {
+      key: "due_date",
+      header: t("invoices.dueDate"),
+      renderCell: (inv) => inv.due_date || "-",
+    },
+    {
+      key: "paid_at",
+      header: t("invoices.paidAt"),
+      renderCell: (inv) => inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : "-",
+    },
+    {
+      key: "actions",
+      header: t("common.actions"),
+      renderCell: (inv) => (
+        <button className="btn-sm" onClick={() => navigate(`/invoices/${inv.id}`)}>
+          {t("common.detail")}
+        </button>
+      ),
+    },
+  ];
 
   return (
     <PageLayout
@@ -87,41 +144,12 @@ export default function InvoicesPage() {
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("invoices.invoiceCode")}</th>
-              <th>{t("common.currency")}</th>
-              <th>{t("common.amount")}</th>
-              <th>{t("invoices.jpyEquiv")}</th>
-              <th>{t("common.status")}</th>
-              <th>{t("invoices.issuedAt")}</th>
-              <th>{t("invoices.dueDate")}</th>
-              <th>{t("invoices.paidAt")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td className="mono">{inv.invoice_number || "-"}</td>
-                <td>{inv.currency}</td>
-                <td>{fmt(inv.total_amount, inv.currency)}</td>
-                <td>{inv.amount_jpy != null ? `¥${inv.amount_jpy.toLocaleString()}` : "-"}</td>
-                <td><span className={`badge badge-${getStatusPresentation("invoice", inv.status).badgeVariant}`}>
-                  {t(`invoices.status_${inv.status}`) || inv.status}
-                </span></td>
-                <td>{inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : "-"}</td>
-                <td>{inv.due_date || "-"}</td>
-                <td>{inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : "-"}</td>
-                <td className="actions">
-                  <button className="btn-sm" onClick={() => navigate(`/invoices/${inv.id}`)}>{t("common.detail")}</button>
-                </td>
-              </tr>
-            ))}
-            {invoices.length === 0 && <tr><td colSpan={9} className="empty">{t("invoices.noInvoices")}</td></tr>}
-          </tbody>
-        </table>
+        <DataTable<Invoice>
+          columns={columns}
+          data={invoices}
+          rowKey={(inv) => String(inv.id)}
+          emptyState={<span className="empty">{t("invoices.noInvoices")}</span>}
+        />
       )}
     </PageLayout>
   );

@@ -71,7 +71,38 @@
 | feature/morimoto/sa-18-phase2-auto-url | SA-18 Bootstrap auto-URL（SA18_PHASE2_ENABLED → salesanchor_app URL 自動組み立て） | 2026-06-07 10:35 | IN_PROGRESS | #1716 | |
 | feature/morimoto/adr-116-deploy-rollback | ADR-118 ロールバック堅牢化（deploy_rollback.sh 共有・LAST_GOOD_SHA）棚上げ中 | 2026-06-07 | IN_PROGRESS | #1713 | 棚上げ中 |
 | feature/morimoto/fix-rls-policy-variable-name | RLS ポリシー変数名修正（Phase2 前提条件） | 2026-06-07 | DONE | #1730 | |
-| feature/morimoto/datatable-preview | DataTable 金型 + デザインプレビュー §9 追加（Task 4C+4D） | 2026-06-08 | IN_PROGRESS | | |
+| feature/morimoto/preview-section-split | DesignPreview セクション分割（衝突防止）+ §9 DataTable（PR#1759/#1761 解消） | 2026-06-08 | IN_PROGRESS | | |
+| release/main-0608 | （記入してください） | 2026-06-08 12:00 | IN_PROGRESS | | |
+| feature/morimoto/tabs-component | Tabs 金型 + デザインプレビュー §10（Task 5C+5D） | 2026-06-08 | DONE | #1772 | |
+| feature/morimoto/fix-register-company-lookup | （記入してください） | 2026-06-08 12:11 | IN_PROGRESS | | |
+| feature/morimoto/submenu-and-preview-rooms | SubMenu 金型 ＋ デザインプレビュー部品別ルーム再構成（Task 6C+6D） | 2026-06-08 12:42 | DONE | #1776 | |
+| feature/morimoto/button-outline-variant | Button outline バリアント追加 | 2026-06-08 13:18 | DONE | #1779 | |
+| feature/morimoto/icon-button-recon-and-standard | アイコンボタン実物基準作り直し＋プレビュー更新 | 2026-06-08 14:19 | DONE | #1780 | |
+| feature/morimoto/fix-register-form-ux | （記入してください） | 2026-06-08 14:28 | IN_PROGRESS | | |
+| feature/morimoto/icon-btn-size-fix | （記入してください） | 2026-06-08 14:44 | IN_PROGRESS | | |
+| feature/morimoto/icon-btn-root-cause-fix | （記入してください） | 2026-06-08 15:09 | IN_PROGRESS | | |
+| feature/morimoto/fix-address-empty-str-422 | （記入してください） | 2026-06-08 15:27 | IN_PROGRESS | | |
+| feature/morimoto/caffeinate-failure-visibility | （記入してください） | 2026-06-08 15:35 | IN_PROGRESS | | |
+| feature/morimoto/register-form-input-contract | （記入してください） | 2026-06-08 15:57 | IN_PROGRESS | | |
+| feature/morimoto/modal-component | （記入してください） | 2026-06-08 15:57 | IN_PROGRESS | | |
+| feature/morimoto/empty-state-component | （記入してください） | 2026-06-08 16:56 | IN_PROGRESS | | |
+| feature/morimoto/empty-state-icon-fix | （記入してください） | 2026-06-08 20:57 | IN_PROGRESS | | |
+| feature/morimoto/definition-audit-2026-06-08 | （記入してください） | 2026-06-08 22:10 | IN_PROGRESS | | |
+| feature/morimoto/decision-layer-01-recon | 決定レイヤー① recon 差分可視化 | 2026-06-09 00:17 | DONE | #1799 | |
+| feature/morimoto/status-presentation-ssot | 決定レイヤー 1 ステップ1 — SSoT中央表・補助関数 | 2026-06-09 01:30 | DONE | #1800 | |
+| feature/morimoto/status-ssot-step2a | 決定レイヤー 1 ステップ2a — 差分可視化 + staff/bot 現状維持 | 2026-06-09 08:22 | DONE | #1801 | |
+| feature/morimoto/status-ssot-step2b | 決定レイヤー 1 ステップ2b — 全29サイト getStatusPresentation() 置換 | 2026-06-09 10:00 | DONE | #1803 | |
+| feature/morimoto/sop-kpi2-impl | SOPコンプライアンス保証機構（ADR-119 KPI2）— process-artifacts gate | 2026-06-08 | IN_PROGRESS | | |
+| hotfix/back-merge-main-into-develop-2 | （記入してください） | 2026-06-09 10:34 | IN_PROGRESS | | |
+| feature/morimoto/claude-md-sop-update | CLAUDE.md 標準開発フロー節を新SOPに差し替え（ADR-121） | 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/status-ssot-step3-lint-error | （記入してください） | 2026-06-09 11:01 | IN_PROGRESS | | |
+| feature/morimoto/sop-dedup-fix | sop-followup重複ガード PR番号単位修正（Reviewer指摘）| 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/gate-trigger-fix | process-artifacts gate trigger develop のみに修正（リリースPR誤検知解消） | 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/gate-release-skip | process-artifacts gate リリースPRスキップ修正（#1811誤修正の正確な対処） | 2026-06-09 | IN_PROGRESS | | |
+| feature/morimoto/products-page-edit | ProductsPage モーダル→専用ページ化（ADR-122 Phase D） | 2026-06-09 | DONE | #1828 | |
+| feature/morimoto/modal-xl-replacements | OrdersPage modal-overlay 3件→Modal(xl)置換（ADR-122） | 2026-06-09 | DONE | #1827 | |
+| feature/morimoto/datatable-invoices-pilot | InvoicesPage DataTable パイロット（ADR-067） | 2026-06-09 | DONE | #1841 | |
+| feature/morimoto/datatable-preview | DataTable 金型 + onRowClick + 制御型ページ送り（Task 4C+4D+step2） | 2026-06-08 | DONE | #1847 | |
 ---
 
 ## 記入例
