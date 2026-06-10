@@ -26,7 +26,7 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | `rowClassName` prop が DataTable に存在するか | `DataTable.tsx:85` で確認 | ✅ 解消済み |
+| 1 | `rowClassName` prop が DataTable に存在するか | `frontend/src/components/DataTable.tsx:85` で確認 | ✅ 解消済み |
 | 2 | `--danger-bg` / `--warning-bg` CSS 変数が定義済みか | `index.css:45,47` で確認 | ✅ 解消済み |
 | 3 | パイロット対象以外で `rowClassName` 未対応テーブルがあるか | Batch 1〜3 は rowClassName 不要（ハイライトなし） | ✅ 解消済み |
 
