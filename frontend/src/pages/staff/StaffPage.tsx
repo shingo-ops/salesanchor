@@ -14,6 +14,8 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -288,37 +290,57 @@ export default function StaffPage() {
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("staff.fullName")}</th>
-              <th>{t("common.email")}</th>
-              <th>{t("staff.role")}</th>
-              <th>{t("staff.status")}</th>
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.map((s) => (
-              <tr key={s.id}>
-                <td>{s.surname_jp} {s.given_name_jp}</td>
-                <td>
-                  {s.primary_email}
-                  {s.emails.length > 0 && <span style={{ fontSize: "0.8em", color: "var(--text-muted)" }}> (+{s.emails.length})</span>}
-                </td>
-                <td>{s.role_name || "-"}</td>
-                <td><span className={`badge badge-${getStatusPresentation("staff", s.status).badgeVariant}`}>{t(getStatusPresentation("staff", s.status).labelKey ?? `staff.status_${s.status}`)}</span></td>
-                <td className="actions">
-                  {hasPermission("staff.update") && <button className="btn-sm" onClick={() => handleEdit(s)}>{t("common.edit")}</button>}
-                  {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {staff.length === 0 && <tr><td colSpan={6} className="empty">{t("staff.noStaff")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Staff>[] = [
+          {
+            key: "fullName",
+            header: t("staff.fullName"),
+            renderCell: (s) => `${s.surname_jp} ${s.given_name_jp}`,
+          },
+          {
+            key: "email",
+            header: t("common.email"),
+            renderCell: (s) => (
+              <>
+                {s.primary_email}
+                {s.emails.length > 0 && <span style={{ fontSize: "0.8em", color: "var(--text-muted)" }}> (+{s.emails.length})</span>}
+              </>
+            ),
+          },
+          {
+            key: "role_name",
+            header: t("staff.role"),
+            renderCell: (s) => s.role_name || "-",
+          },
+          {
+            key: "status",
+            header: t("staff.status"),
+            renderCell: (s) => (
+              <span className={`badge badge-${getStatusPresentation("staff", s.status).badgeVariant}`}>
+                {t(getStatusPresentation("staff", s.status).labelKey ?? `staff.status_${s.status}`)}
+              </span>
+            ),
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (s) => (
+              <span className="actions">
+                {hasPermission("staff.update") && <button className="btn-sm" onClick={() => handleEdit(s)}>{t("common.edit")}</button>}
+                {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(s)}>{t("common.delete")}</button>}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable
+            columns={columns}
+            data={staff}
+            rowKey={(s) => String(s.id)}
+            emptyState={<span>{t("staff.noStaff")}</span>}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={!!deleteTarget}

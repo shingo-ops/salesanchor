@@ -4,6 +4,8 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Modal } from "../../components/Modal";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 interface Shift { id: number; user_id: number; shift_date: string; start_time: string; end_time: string; shift_type: string; notes: string | null; created_at: string; }
 
@@ -70,21 +72,49 @@ export default function ShiftsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
-        <table className="data-table">
-          <thead><tr><th>{t("common.date")}</th><th>{t("shifts.userId")}</th><th>{t("shifts.colStart")}</th><th>{t("shifts.colEnd")}</th><th>{t("shifts.shiftType")}</th><th>{t("common.actions")}</th></tr></thead>
-          <tbody>
-            {shifts.map(s => (
-              <tr key={s.id}>
-                <td>{s.shift_date}</td><td>{s.user_id}</td><td>{s.start_time}</td><td>{s.end_time}</td>
-                <td><span className="badge badge-negotiating">{s.shift_type}</span></td>
-                <td className="actions">{hasPermission("shifts.manage") && <button className="btn-sm btn-danger" onClick={() => handleDelete(s.id)}>{t("common.delete")}</button>}</td>
-              </tr>
-            ))}
-            {shifts.length === 0 && <tr><td colSpan={6} className="empty">{t("shifts.noShifts")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+        const columns: DataTableColumn<Shift>[] = [
+          {
+            key: "shift_date",
+            header: t("common.date"),
+          },
+          {
+            key: "user_id",
+            header: t("shifts.userId"),
+            renderCell: (s) => String(s.user_id),
+          },
+          {
+            key: "start_time",
+            header: t("shifts.colStart"),
+          },
+          {
+            key: "end_time",
+            header: t("shifts.colEnd"),
+          },
+          {
+            key: "shift_type",
+            header: t("shifts.shiftType"),
+            renderCell: (s) => <span className="badge badge-negotiating">{s.shift_type}</span>,
+          },
+          {
+            key: "actions",
+            header: t("common.actions"),
+            renderCell: (s) => (
+              <span className="actions">
+                {hasPermission("shifts.manage") && <button className="btn-sm btn-danger" onClick={() => handleDelete(s.id)}>{t("common.delete")}</button>}
+              </span>
+            ),
+          },
+        ];
+        return (
+          <DataTable
+            columns={columns}
+            data={shifts}
+            rowKey={(s) => String(s.id)}
+            emptyState={<span>{t("shifts.noShifts")}</span>}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }
