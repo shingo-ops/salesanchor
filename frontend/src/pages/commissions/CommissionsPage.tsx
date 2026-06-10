@@ -16,6 +16,8 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import CommissionPanel from "../../components/CommissionPanel";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -169,46 +171,40 @@ export default function CommissionsPage() {
             </p>
 
             <h4>{t("commissions.byStaff")}</h4>
-            <table className="data-table" data-testid="commissions-by-staff">
-              <thead>
-                <tr>
-                  <th>{t("commissions.colStaff")}</th>
-                  <th>{t("commissions.total")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthly.by_staff.length === 0 && (
-                  <tr><td colSpan={2} className="empty">{t("commissions.noData")}</td></tr>
-                )}
-                {monthly.by_staff.map((it) => (
-                  <tr key={`${it.staff_id ?? "null"}`}>
-                    <td>{it.staff_name ?? t("commissions.unassigned")}</td>
-                    <td>{fmt(it.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {(() => {
+              const staffColumns: DataTableColumn<MonthlyByStaff>[] = [
+                { key: "staff_name", header: t("commissions.colStaff"), renderCell: (it) => it.staff_name ?? t("commissions.unassigned") },
+                { key: "total", header: t("commissions.total"), renderCell: (it) => fmt(it.total) },
+              ];
+              return (
+                <div data-testid="commissions-by-staff">
+                  <DataTable<MonthlyByStaff>
+                    columns={staffColumns}
+                    data={monthly.by_staff}
+                    rowKey={(it) => String(it.staff_id ?? "null")}
+                    emptyState={t("commissions.noData")}
+                  />
+                </div>
+              );
+            })()}
 
             <h4>{t("commissions.byRole")}</h4>
-            <table className="data-table" data-testid="commissions-by-role">
-              <thead>
-                <tr>
-                  <th>{t("commissions.colRole")}</th>
-                  <th>{t("commissions.total")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthly.by_role.length === 0 && (
-                  <tr><td colSpan={2} className="empty">{t("commissions.noData")}</td></tr>
-                )}
-                {monthly.by_role.map((it) => (
-                  <tr key={it.role}>
-                    <td>{ROLE_LABELS[it.role as RoleKey] ?? it.role}</td>
-                    <td>{fmt(it.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {(() => {
+              const roleColumns: DataTableColumn<MonthlyByRole>[] = [
+                { key: "role", header: t("commissions.colRole"), renderCell: (it) => ROLE_LABELS[it.role as RoleKey] ?? it.role },
+                { key: "total", header: t("commissions.total"), renderCell: (it) => fmt(it.total) },
+              ];
+              return (
+                <div data-testid="commissions-by-role">
+                  <DataTable<MonthlyByRole>
+                    columns={roleColumns}
+                    data={monthly.by_role}
+                    rowKey={(it) => it.role}
+                    emptyState={t("commissions.noData")}
+                  />
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <p className="text-muted" style={{ marginTop: "var(--space-4)" }}>
@@ -221,38 +217,32 @@ export default function CommissionsPage() {
       {canEdit && (
         <fieldset style={{ marginTop: "var(--space-4)" }}>
           <legend>{t("commissions.manageLegend")}</legend>
-          <table className="data-table" data-testid="commissions-manage-orders">
-            <thead>
-              <tr>
-                <th>{t("commissions.colOrder")}</th>
-                <th>{t("common.name")}</th>
-                <th>{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="empty">{t("commissions.noData")}</td>
-                </tr>
-              )}
-              {orders.map((o) => (
-                <tr key={o.order_id}>
-                  <td>{o.order_number}</td>
-                  <td>{o.contact_display_name ?? o.company_name ?? "-"}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn-sm"
-                      data-testid={`commissions-assign-${o.order_id}`}
-                      onClick={() => setAssigning(o)}
-                    >
-                      {t("commissions.assignStaff")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {(() => {
+            const orderColumns: DataTableColumn<CommissionOrderItem>[] = [
+              { key: "order_number", header: t("commissions.colOrder") },
+              { key: "name", header: t("common.name"), renderCell: (o) => o.contact_display_name ?? o.company_name ?? "-" },
+              { key: "actions", header: t("common.actions"), renderCell: (o) => (
+                <button
+                  type="button"
+                  className="btn-sm"
+                  data-testid={`commissions-assign-${o.order_id}`}
+                  onClick={() => setAssigning(o)}
+                >
+                  {t("commissions.assignStaff")}
+                </button>
+              )},
+            ];
+            return (
+              <div data-testid="commissions-manage-orders">
+                <DataTable<CommissionOrderItem>
+                  columns={orderColumns}
+                  data={orders}
+                  rowKey={(o) => String(o.order_id)}
+                  emptyState={t("commissions.noData")}
+                />
+              </div>
+            );
+          })()}
         </fieldset>
       )}
 

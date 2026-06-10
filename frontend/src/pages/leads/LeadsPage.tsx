@@ -21,6 +21,8 @@ import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -358,57 +360,53 @@ export default function LeadsPage() {
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("leads.customerName")}</th>
-              <th>{t("leads.companyName")}</th>
-              <th>{t("leads.status")}</th>
-              <th>{t("leads.temperature")}</th>
-              <th>{t("leads.prospectRank")}</th>
-              {hasPermission("analytics.customer_priority.view") && (
-                <th>{t("priority.sectionTitle")}</th>
+      ) : (() => {
+        const baseColumns: DataTableColumn<Lead>[] = [
+          { key: "customer_name", header: t("leads.customerName") },
+          { key: "company_name", header: t("leads.companyName"), renderCell: (l) => l.company_name || "-" },
+          { key: "status", header: t("leads.status"), renderCell: (l) => <span className={`badge badge-${getStatusPresentation("lead", l.status).badgeVariant}`}>{translateLeadStatus(l.status)}</span> },
+          { key: "temperature", header: t("leads.temperature"), renderCell: (l) => l.temperature || "-" },
+          { key: "prospect_rank", header: t("leads.prospectRank"), renderCell: (l) => rankBadge(l.prospect_rank) },
+        ];
+        const priorityCol: DataTableColumn<Lead> = {
+          key: "priority_score", header: t("priority.sectionTitle"), renderCell: (l) => <PriorityScoreBadge score={l.priority_score} />,
+        };
+        const trailingColumns: DataTableColumn<Lead>[] = [
+          { key: "discord", header: "Discord", renderCell: (l) => (
+            l.discord_user_id ? (
+              <span className={`badge badge-sm discord-sync-${l.discord_role_sync_status ?? "not_linked"}`}
+                    title={t(`discordConfig.syncStatus.${l.discord_role_sync_status ?? "not_linked"}`)}>
+                D
+              </span>
+            ) : null
+          )},
+          { key: "actions", header: t("leads.actions"), renderCell: (l) => (
+            <span className="actions">
+              {hasPermission("leads.update") && <button className="btn-sm" onClick={() => handleEdit(l)}>{t("common.edit")}</button>}
+              {hasPermission("leads.convert") && !l.converted_deal_id && (
+                <button className="btn-sm btn-primary" onClick={() => setConvertTarget(l)}>{t("leads.convert")}</button>
               )}
-              <th>Discord</th>
-              <th>{t("leads.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((l) => (
-              <tr key={l.id}>
-                <td>{l.customer_name}</td>
-                <td>{l.company_name || "-"}</td>
-                <td><span className={`badge badge-${getStatusPresentation("lead", l.status).badgeVariant}`}>{translateLeadStatus(l.status)}</span></td>
-                <td>{l.temperature || "-"}</td>
-                <td>{rankBadge(l.prospect_rank)}</td>
-                {hasPermission("analytics.customer_priority.view") && (
-                  <td><PriorityScoreBadge score={l.priority_score} /></td>
-                )}
-                <td>
-                  {l.discord_user_id && (
-                    <span className={`badge badge-sm discord-sync-${l.discord_role_sync_status ?? "not_linked"}`}
-                          title={t(`discordConfig.syncStatus.${l.discord_role_sync_status ?? "not_linked"}`)}>
-                      D
-                    </span>
-                  )}
-                </td>
-                <td className="actions">
-                  {hasPermission("leads.update") && <button className="btn-sm" onClick={() => handleEdit(l)}>{t("common.edit")}</button>}
-                  {hasPermission("leads.convert") && !l.converted_deal_id && (
-                    <button className="btn-sm btn-primary" onClick={() => setConvertTarget(l)}>{t("leads.convert")}</button>
-                  )}
-                  {hasPermission("leads.delete") && !l.converted_deal_id && (
-                    <button className="btn-sm" onClick={() => setMergeSource(l)}>{t("leads.merge")}</button>
-                  )}
-                  {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(l)}>{t("common.delete")}</button>}
-                </td>
-              </tr>
-            ))}
-            {leads.length === 0 && <tr><td colSpan={8} className="empty">{t("leads.noLeads")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+              {hasPermission("leads.delete") && !l.converted_deal_id && (
+                <button className="btn-sm" onClick={() => setMergeSource(l)}>{t("leads.merge")}</button>
+              )}
+              {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(l)}>{t("common.delete")}</button>}
+            </span>
+          )},
+        ];
+        const columns = [
+          ...baseColumns,
+          ...(hasPermission("analytics.customer_priority.view") ? [priorityCol] : []),
+          ...trailingColumns,
+        ];
+        return (
+          <DataTable<Lead>
+            columns={columns}
+            data={leads}
+            rowKey={(l) => String(l.id)}
+            emptyState={t("leads.noLeads")}
+          />
+        );
+      })()}
 
       <MergeLeadModal
         open={!!mergeSource}

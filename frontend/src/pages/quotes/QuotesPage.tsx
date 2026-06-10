@@ -14,6 +14,8 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { sortQuotes } from "./quotesSort";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn, SortDir } from "../../components/DataTable";
 
 interface Quote {
   id: number;
@@ -71,32 +73,13 @@ export default function QuotesPage() {
   };
 
   // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。表示中の一覧を並べ替える。
-  const onSort = (field: string) => {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(field); setSortDir("asc"); }
+  const handleSort = (field: string, dir: SortDir) => {
+    setSortField(field);
+    setSortDir(dir);
   };
-  const sortArrow = (field: string) =>
-    sortField === field ? (sortDir === "asc" ? t("common.sortAsc") : t("common.sortDesc")) : t("common.sortNone");
   const sortedQuotes = useMemo(
     () => sortQuotes(quotes, sortField, sortDir),
     [quotes, sortField, sortDir],
-  );
-
-  // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
-  const sortTh = (labelKey: string, field: string) => (
-    <th>
-      <button
-        type="button"
-        onClick={() => onSort(field)}
-        data-testid={`quotes-sort-${field}`}
-        style={{ background: "none", border: "none", cursor: "pointer", font: "inherit", fontWeight: "var(--font-weight-semi)", color: "inherit", display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}
-      >
-        {t(labelKey)}
-        <span aria-hidden="true" style={{ fontSize: "var(--font-xs)", color: sortField === field ? "var(--accent)" : "var(--text-muted)" }}>
-          {sortArrow(field)}
-        </span>
-      </button>
-    </th>
   );
 
   return (
@@ -157,48 +140,43 @@ export default function QuotesPage() {
 
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              {sortTh("quotes.quoteCode", "quote_code")}
-              {sortTh("quotes.customer", "customer")}
-              {sortTh("quotes.salesRep", "sales_rep")}
-              {sortTh("common.currency", "currency")}
-              {sortTh("quotes.total", "total")}
-              {sortTh("common.status", "status")}
-              {sortTh("quotes.validityDate", "validity_date")}
-              {sortTh("common.createdAt", "created_at")}
-              <th>{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedQuotes.map((q) => (
-              <tr key={q.id}>
-                <td className="mono">{q.quote_code || "-"}</td>
-                <td>
-                  <div>{q.company_name || "-"}</div>
-                  {q.contact_name && (
-                    <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{q.contact_name}</div>
-                  )}
-                </td>
-                <td>{q.created_by_name || "-"}</td>
-                <td>{q.currency}</td>
-                <td>{fmt(q.total_amount, q.currency)}</td>
-                <td><span className={`badge badge-${getStatusPresentation("quote", q.status).badgeVariant}`}>
-                  {t(`quotes.status_${q.status}`) || q.status}
-                </span></td>
-                <td>{q.validity_date || "-"}</td>
-                <td>{new Date(q.created_at).toLocaleDateString()}</td>
-                <td className="actions">
-                  <button className="btn-sm" onClick={() => navigate(`/quotes/${q.id}`)}>{t("common.detail")}</button>
-                </td>
-              </tr>
-            ))}
-            {sortedQuotes.length === 0 && <tr><td colSpan={9} className="empty">{t("quotes.noQuotes")}</td></tr>}
-          </tbody>
-        </table>
-      )}
+      ) : (() => {
+        const columns: DataTableColumn<Quote>[] = [
+          { key: "quote_code", header: t("quotes.quoteCode"), sortable: true, renderCell: (q) => <span className="mono">{q.quote_code || "-"}</span> },
+          { key: "customer", header: t("quotes.customer"), sortable: true, renderCell: (q) => (
+            <>
+              <div>{q.company_name || "-"}</div>
+              {q.contact_name && (
+                <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{q.contact_name}</div>
+              )}
+            </>
+          )},
+          { key: "sales_rep", header: t("quotes.salesRep"), sortable: true, renderCell: (q) => q.created_by_name || "-" },
+          { key: "currency", header: t("common.currency"), sortable: true },
+          { key: "total", header: t("quotes.total"), sortable: true, renderCell: (q) => fmt(q.total_amount, q.currency) },
+          { key: "status", header: t("common.status"), sortable: true, renderCell: (q) => (
+            <span className={`badge badge-${getStatusPresentation("quote", q.status).badgeVariant}`}>
+              {t(`quotes.status_${q.status}`) || q.status}
+            </span>
+          )},
+          { key: "validity_date", header: t("quotes.validityDate"), sortable: true, renderCell: (q) => q.validity_date || "-" },
+          { key: "created_at", header: t("common.createdAt"), sortable: true, renderCell: (q) => new Date(q.created_at).toLocaleDateString() },
+          { key: "actions", header: t("common.actions"), renderCell: (q) => (
+            <button className="btn-sm" onClick={() => navigate(`/quotes/${q.id}`)}>{t("common.detail")}</button>
+          )},
+        ];
+        return (
+          <DataTable<Quote>
+            columns={columns}
+            data={sortedQuotes}
+            rowKey={(q) => String(q.id)}
+            sortKey={sortField}
+            sortDir={sortDir}
+            onSort={handleSort}
+            emptyState={t("quotes.noQuotes")}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }
