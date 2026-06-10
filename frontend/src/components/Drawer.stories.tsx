@@ -63,7 +63,6 @@ export const WithFullPage: Story = {
 
 export const Closed: Story = {
   name: 'closed — 閉じた状態',
-  parameters: { chromatic: { disable: true } },
   args: {
     open: false,
     onClose: () => {},
