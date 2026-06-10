@@ -30,6 +30,7 @@ from app.schemas.customer_priority import (
     ScoreOverrideRequest,
 )
 from app.services import priority_scoring
+from app.services.audit import record_audit_log
 from app.services.discord_notifier import notify_priority_score_sudden_change
 
 router = APIRouter()
@@ -73,26 +74,38 @@ async def override_priority_score(
     """
     existing = await db.execute(
         text(
-            "SELECT score, tier FROM customer_scores WHERE lead_id = :lid"
+            """
+            SELECT id, lead_id, score, tier, confidence, signal_summary,
+                   override_score, override_note, override_by, override_at,
+                   computed_at, manually_overridden
+            FROM customer_scores WHERE lead_id = :lid
+            """
         ),
         {"lid": lead_id},
     )
-    row = existing.fetchone()
-    if row is None:
+    old_row = existing.mappings().first()
+    if old_row is None:
         # スコア未計算の場合は先に計算
         await priority_scoring.get_or_compute_score(db, tenant_id, lead_id)
         existing = await db.execute(
-            text("SELECT score, tier FROM customer_scores WHERE lead_id = :lid"),
+            text(
+                """
+                SELECT id, lead_id, score, tier, confidence, signal_summary,
+                       override_score, override_note, override_by, override_at,
+                       computed_at, manually_overridden
+                FROM customer_scores WHERE lead_id = :lid
+                """
+            ),
             {"lid": lead_id},
         )
-        row = existing.fetchone()
-        if row is None:
+        old_row = existing.mappings().first()
+        if old_row is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail="リードが見つかりません")
 
-    old_tier = row.tier
+    old_tier = old_row["tier"]
 
-    await db.execute(
+    result = await db.execute(
         text(
             """
             UPDATE customer_scores
@@ -101,6 +114,9 @@ async def override_priority_score(
                    override_by    = :uid,
                    override_at    = :now
              WHERE lead_id = :lid
+             RETURNING id, lead_id, score, tier, confidence, signal_summary,
+                       override_score, override_note, override_by, override_at,
+                       computed_at, manually_overridden
             """
         ),
         {
@@ -110,6 +126,16 @@ async def override_priority_score(
             "now": datetime.utcnow(),
             "lid": lead_id,
         },
+    )
+    new_row = result.mappings().first()
+
+    audit_action = "update" if (old_row and old_row["override_score"] is not None) else "create"
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action=audit_action, table_name="customer_scores",
+        record_id=old_row["id"] if old_row else None,
+        old_data=dict(old_row) if old_row else None,
+        new_data=dict(new_row) if new_row else None,
     )
     await db.commit()
     # ADR-072: commit 直後にテナントコンテキスト再設定

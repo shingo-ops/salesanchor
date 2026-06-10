@@ -32,6 +32,7 @@ from app.schemas.central_masters import (
     RoleVisibilityMatrixResponse,
     RoleVisibilityPermission,
 )
+from app.services.audit import record_audit_log
 
 router = APIRouter()
 
@@ -153,6 +154,18 @@ async def set_role_visibility(
     key_to_id = {row["key"]: row["id"] for row in perms.mappings().all()}
     target_ids = [key_to_id[k] for k in data.visibility_keys if k in key_to_id]
 
+    # 変更前の visibility キーを取得
+    old_perms = await db.execute(
+        text("""
+            SELECT key FROM public.permissions
+            WHERE id IN (
+                SELECT permission_id FROM role_permissions WHERE role_id = :rid
+            ) AND key = ANY(:keys)
+        """),
+        {"rid": role_id, "keys": list(_VISIBILITY_KEYS)},
+    )
+    old_keys = [r["key"] for r in old_perms.mappings().all()]
+
     # 既存の visibility 系割当を一旦削除（差分計算のシンプル化）
     await db.execute(
         text("""
@@ -170,6 +183,13 @@ async def set_role_visibility(
             {"rid": role_id, "pid": pid},
         )
 
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="update", table_name="role_permissions",
+        record_id=role_id,
+        old_data={"visibility_keys": old_keys},
+        new_data={"visibility_keys": list(data.visibility_keys)},
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     # ロール所持者全員の権限キャッシュをパージ

@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=123
+TOTAL=124
 
 run_py() {
   local script="$1"
@@ -322,6 +322,9 @@ run_sql migrations/20260609_100000_add_carrier_account_number.sql
 
 # API連携: テナント別 PayPal 決済連携 認証情報テーブル（Model A）
 run_sql migrations/20260610_071110_add_paypal_config.sql
+
+# オーナーロール色修正: 赤（危険予約色）→ インディゴ（権限レベル色）— 全テナント冪等適用
+run_sql migrations/20260611_010000_fix_owner_role_color.sql
 
 echo ""
 echo "============================================"

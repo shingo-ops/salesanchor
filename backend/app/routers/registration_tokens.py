@@ -24,6 +24,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
@@ -42,6 +43,7 @@ from app.schemas.registration_token import (
     RegisterResponse,
     TokenVerifyResponse,
 )
+from app.services.audit import record_audit_log
 from app.services.registration_token import (
     create_registration_token,
     mark_token_used,
@@ -82,6 +84,19 @@ async def create_token(
         created_by=current_user.id,
         token_type=data.type.value,
     )
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="create", table_name="registration_tokens",
+        record_id=None,
+        old_data=None,
+        new_data={
+            "tenant_id": tenant_id,
+            "lead_id": data.lead_id,
+            "type": data.type.value,
+            "expires_at": expires_at.isoformat(),
+            "created_by": current_user.id,
+        },
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
 
@@ -118,7 +133,7 @@ async def verify_registration_token(
     if not token_info:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="無効または期限切れのトークンです",
+            detail="invalid_token",
         )
 
     # テナントスキーマに切り替えてリード情報を取得
@@ -165,7 +180,7 @@ async def register_customer(
     if not token_info:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="無効または期限切れのトークンです",
+            detail="invalid_token",
         )
 
     tenant_id = token_info["tenant_id"]
@@ -186,7 +201,7 @@ async def register_customer(
     if not row or not row[0]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードに紐づく会社が見つかりません",
+            detail="company_not_found",
         )
     company_id = row[0]
     billing_display_name_fallback: str = row[1] or ""
@@ -207,38 +222,48 @@ async def register_customer(
         )
 
     # 住所を登録
+    # ADR-126 追補: is_default=true の重複（既登録）は 409 + "already_registered" を返す
     for addr in data.addresses:
-        await db.execute(
-            text("""
-                INSERT INTO company_addresses (
-                    company_id, address_type, branch_name,
-                    name, email, telephone, tax_id,
-                    address_line_1, address_line_2, address_line_3,
-                    city, state, zip, country_code, is_default
-                ) VALUES (
-                    :cid, :atype, :branch,
-                    :name, :email, :telephone, :tax_id,
-                    :l1, :l2, :l3, :city, :state, :zip, :country, :is_default
-                )
-            """),
-            {
-                "cid": company_id,
-                "atype": addr.address_type,
-                "branch": addr.branch_name,
-                "name": addr.name,
-                "email": addr.email,
-                "telephone": addr.telephone,
-                "tax_id": addr.tax_id,
-                "l1": addr.address_line_1,
-                "l2": addr.address_line_2,
-                "l3": addr.address_line_3,
-                "city": addr.city,
-                "state": addr.state,
-                "zip": addr.zip,
-                "country": addr.country_code,
-                "is_default": addr.is_default,
-            },
-        )
+        try:
+            await db.execute(
+                text("""
+                    INSERT INTO company_addresses (
+                        company_id, address_type, branch_name,
+                        name, email, telephone, tax_id,
+                        address_line_1, address_line_2, address_line_3,
+                        city, state, zip, country_code, is_default
+                    ) VALUES (
+                        :cid, :atype, :branch,
+                        :name, :email, :telephone, :tax_id,
+                        :l1, :l2, :l3, :city, :state, :zip, :country, :is_default
+                    )
+                """),
+                {
+                    "cid": company_id,
+                    "atype": addr.address_type,
+                    "branch": addr.branch_name,
+                    "name": addr.name,
+                    "email": addr.email,
+                    "telephone": addr.telephone,
+                    "tax_id": addr.tax_id,
+                    "l1": addr.address_line_1,
+                    "l2": addr.address_line_2,
+                    "l3": addr.address_line_3,
+                    "city": addr.city,
+                    "state": addr.state,
+                    "zip": addr.zip,
+                    "country": addr.country_code,
+                    "is_default": addr.is_default,
+                },
+            )
+        except SQLAlchemyError as e:
+            orig = getattr(e, "orig", None)
+            if orig and "idx_company_addresses_one_default" in str(orig):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="already_registered",
+                ) from e
+            raise
 
     # 担当者情報を contacts に登録
     # contact_name が空の場合は billing_display_name をフォールバックとして使用（ADR-126 §0）
@@ -308,7 +333,7 @@ async def add_address(
     if not token_info:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="無効または期限切れのトークンです",
+            detail="invalid_token",
         )
 
     tenant_id = token_info["tenant_id"]
@@ -328,7 +353,7 @@ async def add_address(
     if not row or not row[0]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードに紐づく会社が見つかりません",
+            detail="company_not_found",
         )
     company_id = row[0]
 

@@ -17,6 +17,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import OrderFinancialPanel from "../../components/OrderFinancialPanel";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Card } from "../../components/Card";
 
 interface SalesOrderItem {
   order_id: number;
@@ -87,8 +88,8 @@ export default function SalesPage() {
         <>
           {/* 集計サマリー */}
           {data && (
-            <fieldset style={{ marginBottom: "var(--space-4)" }}>
-              <legend>{t("sales.summaryLegend")}</legend>
+            <Card variant="metric" style={{ marginBottom: "var(--space-4)" }}>
+              <h3 style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-muted)", margin: "0 0 var(--space-3)" }}>{t("sales.summaryLegend")}</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-6)" }}>
                 <span data-testid="sales-count">
                   {t("sales.count")}: <strong>{data.count}</strong>
@@ -106,7 +107,7 @@ export default function SalesPage() {
                   {t("sales.grossProfitRate")}: <strong>{fmtRate(data.gross_profit_rate)}</strong>
                 </span>
               </div>
-            </fieldset>
+            </Card>
           )}
 
           {(() => {
