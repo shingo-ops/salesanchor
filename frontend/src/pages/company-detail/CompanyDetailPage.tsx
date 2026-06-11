@@ -89,6 +89,8 @@ export default function CompanyDetailPage() {
 
   const billingAddresses = company.addresses.filter((a) => a.address_type === "billing");
   const deliveryAddresses = company.addresses.filter((a) => a.address_type === "delivery");
+  // ADR-127 §4: 第1層ゲート — 登録済み（billing is_default=true が存在）なら register 発行を無効化
+  const isAlreadyRegistered = billingAddresses.some((a) => a.is_default);
 
   const switchTab = (tab: typeof activeTab) => {
     if ((basicDirty || channelsDirty) && tab !== activeTab) {
@@ -113,7 +115,8 @@ export default function CompanyDetailPage() {
             <button
               className="btn-sm"
               onClick={handleGenerateRegLink}
-              disabled={regLinkLoading}
+              disabled={regLinkLoading || isAlreadyRegistered}
+              title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
             >
               {regLinkLoading ? t("common.loading") : t("registration.generateLink")}
             </button>
