@@ -30,7 +30,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -139,7 +139,7 @@ class FedExRateQuote:
     transit_days: Optional[int] = None  # 配達日数（取得できない場合あり）
     delivery_timestamp: Optional[str] = None  # ISO 8601 文字列（取得できない場合あり）
     # ADR-128: 追加料金内訳（frozen=True のため field を使用）
-    surcharges: list = field(default_factory=list)
+    surcharges: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -550,7 +550,7 @@ def _parse_rate_replies(
             continue
 
         # ADR-128: surcharges の抽出（LIST 料金と同じ ratedShipmentDetails から取得）
-        surcharges: list = []
+        surcharges: list[dict[str, Any]] = []
         for sd in shipment_details:
             rate_type = sd.get("rateType", "")
             if rate_type in ("PAYOR_LIST_PACKAGE", "PAYOR_LIST_SHIPMENT", "LIST"):

@@ -164,6 +164,12 @@ def create_shipment(
         tracking_number: str = txn["masterTrackingNumber"]
 
         encoded_label: str = txn["pieceResponses"][0]["packageDocuments"][0]["encodedLabel"]
+        # サイズ上限チェック（Base64 で 10MB ≒ 実データ約 7.5MB が上限）
+        _MAX_LABEL_B64_BYTES = 10 * 1024 * 1024
+        if len(encoded_label) > _MAX_LABEL_B64_BYTES:
+            raise FedExAPIError(
+                f"ラベルサイズが上限（10MB）を超えています: {len(encoded_label)} bytes"
+            )
         label_bytes = base64.b64decode(encoded_label)
 
         rate_details = txn.get("shipmentRating", {}).get("shipmentRateDetails", [])
