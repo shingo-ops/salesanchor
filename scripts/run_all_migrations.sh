@@ -333,7 +333,7 @@ run_sql migrations/20260611_020000_add_invoice_paypal_columns.sql
 run_sql migrations/20260611_100000_create_channel_masters.sql
 
 # ADR-128: order_shipping_details に Ship/Pickup 用カラム追加
-run_py scripts/migrate_adr128_extend_order_shipping.py
+run_sql migrations/20260611_110000_extend_order_shipping_for_ship_api.sql
 
 echo ""
 echo "============================================"
