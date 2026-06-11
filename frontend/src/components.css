@@ -146,12 +146,21 @@
    btn-danger は btn-sm より後に定義されサイズ(padding/font-size)を上書きするため、
    btn-sm を色バリアントと併用したとき高さがバラつく。複合セレクタ(0,2,0)で
    サイズ系を btn-sm に明示的に揃える。 */
-.btn-sm.btn-primary,
 .btn-sm.btn-secondary,
 .btn-sm.btn-danger {
   padding: var(--space-1) var(--space-10px);
   font-size: var(--font-xs);
 }
+
+/* btn-sm.btn-primary: btn-sm の background(bg-hover) が btn-primary の accent を
+   上書きするため、複合セレクタ(0,2,0)で色を明示的に復元する。 */
+.btn-sm.btn-primary {
+  padding: var(--space-1) var(--space-10px);
+  font-size: var(--font-xs);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn-sm.btn-primary:hover { background: var(--accent-hover); }
 
 /* --- Search / Filter --- */
 .search-bar,
