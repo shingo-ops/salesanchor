@@ -581,6 +581,8 @@ async def void_invoice(
 
 # 顧客が承認後に戻る URL。Increment 1 は手動 capture のため導線確認用（env で上書き可）。
 _APP_BASE_URL = os.getenv("APP_BASE_URL", "https://app.salesanchor.jp").rstrip("/")
+# Increment 2: 顧客が PayPal 承認後に戻る公開エンドポイント（API 側）のベース。
+_API_BASE_URL = os.getenv("API_BASE_URL", "https://api.salesanchor.jp").rstrip("/")
 
 
 async def _require_paypal_creds(db: AsyncSession, tenant_id: int) -> dict:
@@ -618,12 +620,15 @@ async def issue_paypal_link(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="請求金額が未確定です")
 
     creds = await _require_paypal_creds(db, tenant_id)
-    return_url = f"{_APP_BASE_URL}/invoices/{invoice_id}"
+    # Increment 2: 顧客が支払い後に戻る公開 return エンドポイント（署名トークン付き）で自動 capture。
+    return_token = paypal_payments.make_return_token(tenant_id, invoice_id)
+    return_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/return?t={return_token}"
+    cancel_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/cancel"
     result = await run_in_threadpool(
         paypal_payments.create_order,
         creds["environment"], creds["client_id"], creds["client_secret"],
         inv_row["total_amount"], inv_row["currency"], inv_row["invoice_number"],
-        return_url, return_url,
+        return_url, cancel_url,
     )
     if not result.get("ok"):
         raise HTTPException(
@@ -709,6 +714,12 @@ async def confirm_paypal_payment(
     row = upd.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみ入金確認できます")
+    # ADR-104: 入金確認で紐づく受注を「支払い待ち→仕入れ中」へ自動遷移（awaiting_payment のみ）
+    await db.execute(
+        text("UPDATE orders SET status = 'sourcing', paid_at = NOW(), updated_at = NOW() "
+             "WHERE invoice_id = :iid AND status = 'awaiting_payment'"),
+        {"iid": invoice_id},
+    )
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_confirm", table_name="invoices", record_id=invoice_id,
                            new_data={"status": "paid", "payment_fee": result.get("fee")})
