@@ -308,19 +308,6 @@ export default function RegisterAddressPage() {
       <form onSubmit={handleSubmit}>
         <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
           <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.addressDetails")}</legend>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)", marginBottom: "var(--spacing-3)" }}>
-            <label>
-              {t("registration.addressType")}
-              <select
-                className="input"
-                value={address.address_type}
-                onChange={(e) => updateField("address_type", e.target.value)}
-              >
-                <option value="billing">{t("registration.billingAddress")}</option>
-                <option value="delivery">{t("registration.deliveryAddress")}</option>
-              </select>
-            </label>
-          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
             {/* Recipient Name */}
             <label>

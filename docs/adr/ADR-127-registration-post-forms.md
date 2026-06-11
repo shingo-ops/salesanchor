@@ -44,10 +44,10 @@ recon確定事実（要点）：
 
 ### 3. 配送先追加フォーム（既存RegisterAddressPageを整備）
 
-3点を整備（新規ではなくRegisterPageからの横展開）：
-- **address_type選択を削除**し `delivery` 固定・`is_default=false` 固定（`frontend/src/pages/register/RegisterAddressPage.tsx:163-171` の select 撤去）。「配送先追加専用」とする。
-- **言語切替を追加**（RegisterPageと同等。`RegisterAddressPage.tsx:8-10` に `useEffect` 等）。
-- **電話 dial code 分割**（国番号コンボ＋番号欄。RegisterPageと同仕様、保存は結合した国際形式）。
+実装状況（#1934 完了時点）:
+- **address_type選択を削除**し `delivery` 固定・`is_default=false` 固定（`frontend/src/pages/register/RegisterAddressPage.tsx` の select 撤去）。✅ #1934 で対応済み。
+- **言語切替**（RegisterPageと同等）— ✅ #1881（ADR-126実装）で対応済み。
+- **電話 dial code 分割**（国番号コンボ＋番号欄）— ✅ #1881（ADR-126実装）で対応済み。
 - append-only（INSERT のみ）は現状維持。#1918のエラーコード方式は適用済み（本番反映済み）。
 
 ### 4. 新規登録の二重発行防止（第1層ゲート）

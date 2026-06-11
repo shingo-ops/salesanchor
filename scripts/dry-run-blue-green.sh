@@ -78,7 +78,7 @@ MONITOR_PID_FILE=$(mktemp /tmp/bg-monitor-pid-XXXXXX)
     #   nginx -s reload 後に新コンテナへ向いているかを確認できる
     # ※ http://localhost:80 は HTTP→HTTPS 301 redirect のため不適切
     _status=$(docker exec "${COMPOSE_PROJECT}-nginx-1" \
-      curl -s -o /dev/null -w "%{http_code}" \
+      curl -s --max-time 5 -o /dev/null -w "%{http_code}" \
       "http://backend:8000/api/health" 2>/dev/null || echo "err")
     if [ "${_status}" = "200" ]; then
       _success=$((_success + 1))
