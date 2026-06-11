@@ -335,6 +335,11 @@ jobs:
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
             echo "ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL}" >> .env
+            # ADR-130: Bootstrap 完了後に nginx reload（belt-and-suspenders）
+            # blue-green cutover 内で既に reload 済みだが、将来の Bootstrap 変更でも
+            # 確実に nginx DNS キャッシュがリフレッシュされるよう明示的に追加する。
+            docker exec astro-webapp-nginx-1 nginx -s reload
+            echo "nginx reload done (bootstrap post, ADR-130)."
         env:
           SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
           ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
