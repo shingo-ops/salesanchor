@@ -5,10 +5,11 @@
 テナントはトークン（HMAC-SHA256 署名）が決める——フォーム入力ではなく構造で分離。
 
 エンドポイント:
-  POST /api/v1/registration-tokens       — 認証必須。担当者がリンク発行
-  GET  /api/v1/public/register           — 公開。トークン検証してフォーム用データ返却
-  POST /api/v1/public/register           — 公開。顧客入力を登録
-  POST /api/v1/public/register/address   — 公開。住所追加（append、上書きしない）
+  POST /api/v1/registration-tokens              — 認証必須。担当者がリンク発行
+  GET  /api/v1/public/register                  — 公開。トークン検証してフォーム用データ返却
+  POST /api/v1/public/register                  — 公開。顧客入力を登録
+  POST /api/v1/public/register/address          — 公開。住所追加（append、上書きしない）
+  POST /api/v1/public/register/change-billing   — 公開。請求先変更（案B: 旧行降格＋新行INSERT）
 
 セキュリティ:
   - /public/ エンドポイントは JWT 認証不要
@@ -37,6 +38,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas.registration_token import (
     AddAddressRequest,
+    ChangeBillingRequest,
     CreateTokenRequest,
     CreateTokenResponse,
     RegisterRequest,
@@ -124,6 +126,8 @@ async def create_token(
     base_url = os.getenv("FRONTEND_URL", "https://app.salesanchor.jp").rstrip("/")
     if data.type.value == "add_address":
         registration_url = f"{base_url}/register/address?token={raw_token}"
+    elif data.type.value == "change_billing":
+        registration_url = f"{base_url}/register/change-billing?token={raw_token}"
     else:
         registration_url = f"{base_url}/register?token={raw_token}"
 
@@ -419,4 +423,126 @@ async def add_address(
     return RegisterResponse(
         success=True,
         message="住所を追加しました",
+    )
+
+
+# --- 公開: 請求先変更（ADR-127 案B） ---
+
+
+@public_router.post(
+    "/public/register/change-billing",
+    response_model=RegisterResponse,
+)
+async def change_billing(
+    data: ChangeBillingRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """請求先住所を変更する（案B: 旧行降格＋新行INSERT）。
+
+    テナント ID・リード ID はトークンから確定（ボディから受け付けない）。
+    トークン改ざん・期限切れ・使用済みの場合は 403。
+
+    案B の操作（同一トランザクション内）:
+      1. 既存 billing 行（is_default=true）を is_default=false に降格
+      2. 新しい billing 行を is_default=true で INSERT
+    これにより過去の請求先履歴が残る（上書きしない）。
+    過去の請求書は bill_to_snapshot で保護済み（ADR-101）。
+    """
+    token_info = await verify_token(db, data.token)
+    if not token_info:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="invalid_token",
+        )
+
+    tenant_id = token_info["tenant_id"]
+    lead_id = token_info["lead_id"]
+    token_id = token_info["id"]
+
+    # テナントスキーマ・RLS コンテキストを設定
+    await set_tenant_context(db, tenant_id)
+
+    # リードに紐づく会社 ID を取得
+    # companies.lead_id が SSOT（leads に company_id 列はない）
+    result = await db.execute(
+        text("SELECT id FROM companies WHERE lead_id = :lead_id"),
+        {"lead_id": lead_id},
+    )
+    row = result.first()
+    if not row or not row[0]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="company_not_found",
+        )
+    company_id = row[0]
+
+    addr = data.address
+
+    # 案B Step 1: 既存 billing is_default=true 行を降格
+    await db.execute(
+        text("""
+            UPDATE company_addresses
+            SET is_default = FALSE
+            WHERE company_id = :cid
+              AND address_type = 'billing'
+              AND is_default = TRUE
+        """),
+        {"cid": company_id},
+    )
+
+    # 案B Step 2: 新しい billing 行を is_default=true で INSERT
+    await db.execute(
+        text("""
+            INSERT INTO company_addresses (
+                company_id, address_type, branch_name,
+                name, email, telephone, tax_id,
+                address_line_1, address_line_2, address_line_3,
+                city, state, zip, country_code, is_default
+            ) VALUES (
+                :cid, 'billing', :branch,
+                :name, :email, :telephone, :tax_id,
+                :l1, :l2, :l3, :city, :state, :zip, :country, TRUE
+            )
+        """),
+        {
+            "cid": company_id,
+            "branch": addr.branch_name,
+            "name": addr.name,
+            "email": addr.email,
+            "telephone": addr.telephone,
+            "tax_id": addr.tax_id,
+            "l1": addr.address_line_1,
+            "l2": addr.address_line_2,
+            "l3": addr.address_line_3,
+            "city": addr.city,
+            "state": addr.state,
+            "zip": addr.zip,
+            "country": addr.country_code,
+        },
+    )
+
+    # billing_display_name / payment_recipient_name を更新（指定があれば）
+    if data.billing_display_name or data.payment_recipient_name:
+        update_parts = []
+        update_params: dict = {"cid": company_id}
+        if data.billing_display_name:
+            update_parts.append("billing_display_name = :bdn")
+            update_params["bdn"] = data.billing_display_name
+        if data.payment_recipient_name:
+            update_parts.append("payment_recipient_name = :prn")
+            update_params["prn"] = data.payment_recipient_name
+        await db.execute(
+            text(f"UPDATE companies SET {', '.join(update_parts)} WHERE id = :cid"),
+            update_params,
+        )
+
+    # トークンを使用済みにマーク
+    await mark_token_used(db, str(token_id))
+
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+    return RegisterResponse(
+        success=True,
+        message="請求先を変更しました",
     )

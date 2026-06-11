@@ -3,9 +3,9 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-097（トークン基盤）、ADR-126（入力契約v2）、ADR-127（change_billing追加・二重発行防止） |
-| ステータス | ② recon完了（進捗 35%）|
-| 担当 | PO: Shingo ／ recon: Terminal CC |
-| 最終更新 | 2026-06-11（Terminal CC recon） |
+| ステータス | ④ 実装中（進捗 60%）|
+| 担当 | PO: Shingo ／ Dev: Terminal CC |
+| 最終更新 | 2026-06-12（Terminal CC 実装） |
 
 ---
 
@@ -13,10 +13,10 @@
 
 | # | ステップ | 担当 | 状態 | 完了日 |
 |---|---------|------|------|--------|
-| 1 | KGI承認 | Shingo | ⏳ 未承認（本計画票で初定義） | — |
+| 1 | KGI承認 | Shingo | ✅ 承認済み（G1〜G4、ソフトオープン含む） | 2026-06-11 |
 | 2 | recon完了（file:line差分表の記入） | Terminal CC | ✅ 完了 | 2026-06-11 |
-| 3 | 差分レビュー＋KPI数値確定 | Shingo＋Planner | 未 | |
-| 4 | 残作業（change_billing フォーム・3種発行UI・受信箱ボタン）実装 | Generator | 未 | |
+| 3 | 差分レビュー＋KPI数値確定 | Shingo＋Planner | ✅ ADR-127 PO承認済み → GO | 2026-06-11 |
+| 4 | 残作業（change_billing フォーム・3種発行UI・受信箱ボタン）実装 | Terminal CC | ⏳ 実装中（PR作成待ち・マージ=本番反映のためShingo GO必須） | 2026-06-12 |
 | 5 | 検証ゲート（CI・E2E・process-artifacts） | 自動＋Reviewer | 未 | |
 | 6 | 本番反映＋KGI実測＋SA-01横断チェック | Terminal CC／Shingo | 未 | |
 
@@ -36,7 +36,7 @@
 | G3 | 登録フォーム送信 → 会社マスタ（`companies`・`company_addresses`・`contacts`）への直行で、担当者の手転記が**0件**。住所は上書き（UPDATE）でなく住所帳追加（INSERT only）。請求先変更は旧行降格＋新行INSERT（履歴保持） | データフロー・SSOT |
 | G4 | 旧Googleフォームの廃止・実テナント登録の新フォーム切替（ソフトオープン）の状況（事実の把握のみ） | 運用切替 |
 
-**承認欄**: ☐ 承認待ち（Shingo確認後に記入）
+**承認欄**: ✅ 承認済み（Shingo 2026-06-11）— G1〜G4 + ソフトオープン含む
 
 ---
 
@@ -149,15 +149,17 @@
 | 2026-06-11 | #1934 | ADR-127 Phase1: RegisterAddressPage — delivery 固定・言語切替・dial code | マージ・本番反映済み |
 | 2026-06-11 | #1936 | ADR-127 Phase2: 第1層ゲート（フロント disabled + バックエンド 409） | マージ・本番反映済み |
 | 2026-06-11 | #1942/#1950/#1966 | ADR-127 Phase2b/2c: 登録済みラベル UX + ボタン色修正 | マージ・本番反映済み |
+| 2026-06-11 | #1975 | SA-03 recon（差分確認・SA-03-plan.md §3 記入） | マージ済み |
+| 2026-06-12 | — | ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2 実装（change_billing 一式 + 発行UI + 受信箱 overflow menu） | PR作成中・マージ前（Shingo GO待ち） |
 
 ---
 
 ## 6. チェックシート（完了条件）
 
-- [ ] ① KGI承認（Shingo確認待ち）
+- [x] ① KGI承認（Shingo 2026-06-11 承認済み・G1〜G4）
 - [x] ② recon完了（差分表が file:line で埋まっている）— 2026-06-11 Terminal CC
-- [ ] ③ 設計doc完成（reconとADRを相互参照・外部事例欄記入）
-- [ ] ④ 残作業 PR マージ（change_billing フォーム・3種発行UI）
+- [x] ③ 設計確定（ADR-127 PO承認済み → 実装 GO）
+- [ ] ④ 残作業 PR マージ（change_billing フォーム・3種発行UI）— PR作成・Shingo GO待ち
 - [ ] ⑤ 本番反映（CI緑＋smoke通過）
 - [ ] ⑥ KGI G1〜G4を本番で実測確認
 - [ ] SA-01横断チェックシート記入

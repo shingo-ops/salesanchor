@@ -2428,7 +2428,15 @@
     "completeTitle": "Registration Complete",
     "completeMessage": "Thank you for registering. Your information has been saved.",
     "addressAddedTitle": "Address Added",
-    "addressAddedMessage": "The address has been successfully added."
+    "addressAddedMessage": "The address has been successfully added.",
+    "generateAddressLink": "Add Address",
+    "addressLinkGenerated": "Address Registration Link",
+    "generateChangeBillingLink": "Change Billing",
+    "changeBillingLinkGenerated": "Billing Change Link",
+    "changeBillingTitle": "Change Billing Address",
+    "changeBillingSubmit": "Update Billing Address",
+    "changeBillingCompleteTitle": "Billing Address Updated",
+    "changeBillingCompleteMessage": "Your billing address has been successfully updated."
   },
   "ownInventory": {
     "title": "Own Inventory",

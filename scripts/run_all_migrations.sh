@@ -348,6 +348,9 @@ run_sql migrations/20260611_140000_add_conv_log_is_manual.sql
 # ADR-101 PayPal webhook (Increment 2.5): tenant_paypal_config に webhook_id 追加 — public 単一・nullable
 run_sql migrations/20260611_150000_add_paypal_webhook_id.sql
 
+# ADR-127: registration_tokens.type CHECK 制約に change_billing を追加
+run_sql migrations/20260612_090000_extend_registration_tokens_change_billing.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

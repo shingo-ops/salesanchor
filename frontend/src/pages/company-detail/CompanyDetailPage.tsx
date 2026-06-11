@@ -33,9 +33,13 @@ export default function CompanyDetailPage() {
   const canEdit = hasPermission("customers.update");
   // A-4: 会社マージは customers.delete 権限相当
   const canMerge = hasPermission("customers.delete");
-  // ADR-SA-03: 登録リンク発行
+  // ADR-SA-03 + ADR-127: 登録リンク発行（register / add_address / change_billing）
   const [regLinkUrl, setRegLinkUrl] = useState<string | null>(null);
   const [regLinkLoading, setRegLinkLoading] = useState(false);
+  const [addrLinkUrl, setAddrLinkUrl] = useState<string | null>(null);
+  const [addrLinkLoading, setAddrLinkLoading] = useState(false);
+  const [changeBillingLinkUrl, setChangeBillingLinkUrl] = useState<string | null>(null);
+  const [changeBillingLinkLoading, setChangeBillingLinkLoading] = useState(false);
 
   const state = useCompanyDetail(id);
   const {
@@ -88,6 +92,38 @@ export default function CompanyDetailPage() {
     }
   };
 
+  const handleGenerateAddrLink = async () => {
+    if (!company.lead_id) return;
+    setAddrLinkLoading(true);
+    try {
+      const res = await api.post("/registration-tokens", {
+        lead_id: company.lead_id,
+        type: "add_address",
+      }) as { registration_url: string };
+      setAddrLinkUrl(res.registration_url);
+    } catch {
+      // noop
+    } finally {
+      setAddrLinkLoading(false);
+    }
+  };
+
+  const handleGenerateChangeBillingLink = async () => {
+    if (!company.lead_id) return;
+    setChangeBillingLinkLoading(true);
+    try {
+      const res = await api.post("/registration-tokens", {
+        lead_id: company.lead_id,
+        type: "change_billing",
+      }) as { registration_url: string };
+      setChangeBillingLinkUrl(res.registration_url);
+    } catch {
+      // noop
+    } finally {
+      setChangeBillingLinkLoading(false);
+    }
+  };
+
   const billingAddresses = company.addresses.filter((a) => a.address_type === "billing");
   const deliveryAddresses = company.addresses.filter((a) => a.address_type === "delivery");
   // ADR-127 §4: 第1層ゲート — 登録済み（billing is_default=true が存在）なら register 発行を無効化
@@ -113,14 +149,34 @@ export default function CompanyDetailPage() {
         </div>
         <div className="page-header-actions">
           {canEdit && company.lead_id && (
-            <button
-              className="btn-sm btn-primary"
-              onClick={handleGenerateRegLink}
-              disabled={regLinkLoading || isAlreadyRegistered}
-              title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
-            >
-              {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
-            </button>
+            <>
+              <button
+                className="btn-sm btn-primary"
+                onClick={handleGenerateRegLink}
+                disabled={regLinkLoading || isAlreadyRegistered}
+                title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
+              >
+                {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
+              </button>
+              {isAlreadyRegistered && (
+                <>
+                  <button
+                    className="btn-sm"
+                    onClick={handleGenerateAddrLink}
+                    disabled={addrLinkLoading}
+                  >
+                    {addrLinkLoading ? t("common.loading") : t("registration.generateAddressLink")}
+                  </button>
+                  <button
+                    className="btn-sm"
+                    onClick={handleGenerateChangeBillingLink}
+                    disabled={changeBillingLinkLoading}
+                  >
+                    {changeBillingLinkLoading ? t("common.loading") : t("registration.generateChangeBillingLink")}
+                  </button>
+                </>
+              )}
+            </>
           )}
           <span className={`status-badge status-${company.status}`}>{company.status}</span>
         </div>
@@ -129,11 +185,26 @@ export default function CompanyDetailPage() {
       {regLinkUrl && (
         <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
           {t("registration.linkGenerated")}: <a href={regLinkUrl} target="_blank" rel="noopener noreferrer">{regLinkUrl}</a>
-          <button
-            className="btn-sm"
-            style={{ marginLeft: "var(--spacing-2)" }}
-            onClick={() => { navigator.clipboard.writeText(regLinkUrl); }}
-          >
+          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+            onClick={() => { navigator.clipboard.writeText(regLinkUrl); }}>
+            {t("registration.copyLink")}
+          </button>
+        </div>
+      )}
+      {addrLinkUrl && (
+        <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
+          {t("registration.addressLinkGenerated")}: <a href={addrLinkUrl} target="_blank" rel="noopener noreferrer">{addrLinkUrl}</a>
+          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+            onClick={() => { navigator.clipboard.writeText(addrLinkUrl); }}>
+            {t("registration.copyLink")}
+          </button>
+        </div>
+      )}
+      {changeBillingLinkUrl && (
+        <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
+          {t("registration.changeBillingLinkGenerated")}: <a href={changeBillingLinkUrl} target="_blank" rel="noopener noreferrer">{changeBillingLinkUrl}</a>
+          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+            onClick={() => { navigator.clipboard.writeText(changeBillingLinkUrl); }}>
             {t("registration.copyLink")}
           </button>
         </div>
