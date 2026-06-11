@@ -456,9 +456,16 @@ jobs:
             echo "Step 6: Health check (with auto-rollback)..."
             # ADR-115: ヘルスチェック失敗時は PREV_SHA に自動ロールバックする。
             # set -e を一時解除してヘルスチェックの非0 exit を捕捉する。
+            # backend は起動まで最大 ~120s かかるため 36×5s=180s でリトライする（単発チェック廃止）。
             set +e
-            docker exec astro-webapp-backend-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
-            _health_exit=$?
+            _health_exit=1
+            for _hc_i in $(seq 1 36); do
+              docker exec astro-webapp-backend-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" 2>/dev/null
+              _health_exit=$?
+              [ "${_health_exit}" -eq 0 ] && break
+              echo "  ...waiting (${_hc_i}/36)..."
+              sleep 5
+            done
             set -e
 
             if [ "${_health_exit}" -ne 0 ]; then
@@ -500,9 +507,9 @@ jobs:
                   done
                   docker compose up -d --remove-orphans
 
-                  # 旧コンテナが healthy になるまで最大 60s 待つ
-                  echo "Waiting for rollback to stabilize (max 60s)..."
-                  for _i in $(seq 1 12); do
+                  # 旧コンテナが healthy になるまで最大 180s 待つ（backend 起動 ~120s + 60s margin）
+                  echo "Waiting for rollback to stabilize (max 180s)..."
+                  for _i in $(seq 1 36); do
                     sleep 5
                     if docker exec astro-webapp-backend-1 \
                         python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" \
@@ -510,7 +517,7 @@ jobs:
                       _rollback_result="success"
                       break
                     fi
-                    echo "  ...waiting (${_i}/12)..."
+                    echo "  ...waiting (${_i}/36)..."
                   done
                 fi
               fi
@@ -650,7 +657,8 @@ jobs:
         env:
           PIPELINE_PAT: ${{ secrets.PIPELINE_PAT }}
         run: |
-          export DEPLOY_DATE=$(date -u +%Y-%m-%d)
+          DEPLOY_DATE=$(date -u +%Y-%m-%d)
+          export DEPLOY_DATE
           git fetch origin develop
           git checkout -b "stamp-develop-${{ github.run_id }}" origin/develop
           python3 - <<'PYEOF'
