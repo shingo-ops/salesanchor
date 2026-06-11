@@ -242,7 +242,15 @@
     "testing": "Testing...",
     "testNeedsSave": "Please save credentials first.",
     "successMsg": "Connection succeeded",
-    "failMsg": "Connection failed"
+    "failMsg": "Connection failed",
+    "payTestTitle": "Payment Test",
+    "payTestHint": "Create a test invoice (100 JPY) and a PayPal payment link in one click (sandbox only).",
+    "payTestButton": "Create Test Invoice",
+    "payTestRunning": "Creating...",
+    "payTestCreated": "Test invoice created",
+    "payTestSteps": "Click Pay with PayPal to pay in sandbox; payment is confirmed automatically (or click Confirm PayPal Payment on the invoice).",
+    "payTestPay": "Pay with PayPal",
+    "payTestOpenInvoice": "Open Test Invoice"
   },
   "fedexRateModal": {
     "title": "FedEx Live Rate Quote",
