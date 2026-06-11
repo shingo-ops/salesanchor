@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=124
+TOTAL=125
 
 run_py() {
   local script="$1"
@@ -325,6 +325,9 @@ run_sql migrations/20260610_071110_add_paypal_config.sql
 
 # オーナーロール色修正: 赤（危険予約色）→ インディゴ（権限レベル色）— 全テナント冪等適用
 run_sql migrations/20260611_010000_fix_owner_role_color.sql
+
+# ADR-101 PayPal mode1: invoices に決済リンク列（order_id/approval_url/fee）追加 — 全テナント冪等・nullable
+run_sql migrations/20260611_020000_add_invoice_paypal_columns.sql
 
 echo ""
 echo "============================================"

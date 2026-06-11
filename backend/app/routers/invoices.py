@@ -13,10 +13,12 @@ from __future__ import annotations
 """
 
 import json
+import os
 import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +40,7 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     VoidRequest,
 )
+from app.services import paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_rate import get_fx_rate
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
@@ -122,7 +125,8 @@ _INVOICE_COLUMNS = """
     issued_at, due_date, paid_at, voided_at, void_reason,
     notes, created_by, created_at, updated_at,
     ship_to_snapshot, bill_to_snapshot, issue_mode,
-    duty_amount, duty_policy_snapshot, fx_rate_snapshot
+    duty_amount, duty_policy_snapshot, fx_rate_snapshot,
+    paypal_order_id, paypal_approval_url, payment_fee
 """
 
 _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}
@@ -565,6 +569,142 @@ async def void_invoice(
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="void", table_name="invoices", record_id=invoice_id,
                            old_data=dict(old_row), new_data={"status": "voided", "reason": data.reason})
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    await invalidate_dashboard_cache(tenant_id)
+    return InvoiceResponse(**dict(row))
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ADR-101 §6 PayPal mode1 (Increment 1): 決済リンク発行 / 入金確認
+# ──────────────────────────────────────────────────────────────────────
+
+# 顧客が承認後に戻る URL。Increment 1 は手動 capture のため導線確認用（env で上書き可）。
+_APP_BASE_URL = os.getenv("APP_BASE_URL", "https://app.salesanchor.jp").rstrip("/")
+
+
+async def _require_paypal_creds(db: AsyncSession, tenant_id: int) -> dict:
+    creds = await paypal_payments.get_credentials(db, tenant_id)
+    if not creds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PayPal が未接続です（管理センター > API連携 > PayPal で認証情報を登録してください）",
+        )
+    return creds
+
+
+@router.post(
+    "/invoices/{invoice_id}/paypal-link",
+    response_model=InvoiceResponse,
+    dependencies=[Depends(require_permission("invoices.update"))],
+)
+async def issue_paypal_link(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """請求書から PayPal 決済リンクを発行する（issued/overdue のみ）。"""
+    inv = await db.execute(
+        text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"),
+        {"id": invoice_id},
+    )
+    inv_row = inv.mappings().first()
+    if not inv_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+    if inv_row["status"] not in ("issued", "overdue"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
+    if inv_row["total_amount"] is None or Decimal(inv_row["total_amount"]) <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="請求金額が未確定です")
+
+    creds = await _require_paypal_creds(db, tenant_id)
+    return_url = f"{_APP_BASE_URL}/invoices/{invoice_id}"
+    result = await run_in_threadpool(
+        paypal_payments.create_order,
+        creds["environment"], creds["client_id"], creds["client_secret"],
+        inv_row["total_amount"], inv_row["currency"], inv_row["invoice_number"],
+        return_url, return_url,
+    )
+    if not result.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=result.get("message", "PayPal 決済リンクの発行に失敗しました"),
+        )
+
+    upd = await db.execute(
+        text(f"""
+            UPDATE invoices
+            SET paypal_order_id = :oid, paypal_approval_url = :url,
+                payment_method = COALESCE(payment_method, 'paypal'), updated_at = NOW()
+            WHERE id = :id
+            RETURNING {_INVOICE_COLUMNS}
+        """),
+        {"id": invoice_id, "oid": result["order_id"], "url": result["approval_url"]},
+    )
+    row = upd.mappings().first()
+    await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
+                           action="paypal_link", table_name="invoices", record_id=invoice_id,
+                           new_data={"paypal_order_id": result["order_id"]})
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    return InvoiceResponse(**dict(row))
+
+
+@router.post(
+    "/invoices/{invoice_id}/paypal-confirm",
+    response_model=InvoiceResponse,
+    dependencies=[Depends(require_permission("invoices.update"))],
+)
+async def confirm_paypal_payment(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """PayPal の入金を確認（capture）して請求書を paid にする（issued/overdue のみ）。"""
+    inv = await db.execute(
+        text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"),
+        {"id": invoice_id},
+    )
+    inv_row = inv.mappings().first()
+    if not inv_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+    if not inv_row["paypal_order_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="先に PayPal 決済リンクを発行してください")
+    if inv_row["status"] not in ("issued", "overdue"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみ入金確認できます")
+
+    creds = await _require_paypal_creds(db, tenant_id)
+    result = await run_in_threadpool(
+        paypal_payments.capture_order,
+        creds["environment"], creds["client_id"], creds["client_secret"],
+        inv_row["paypal_order_id"],
+    )
+    if not result.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=result.get("message", "PayPal 入金確認に失敗しました"),
+        )
+    if not result.get("captured"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=result.get("message", "まだ入金が確認できません"),
+        )
+
+    upd = await db.execute(
+        text(f"""
+            UPDATE invoices
+            SET status = 'paid', paid_at = NOW(), payment_fee = :fee,
+                payment_method = 'paypal', updated_at = NOW()
+            WHERE id = :id
+            RETURNING {_INVOICE_COLUMNS}
+        """),
+        {"id": invoice_id, "fee": result.get("fee")},
+    )
+    row = upd.mappings().first()
+    await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
+                           action="paypal_confirm", table_name="invoices", record_id=invoice_id,
+                           new_data={"status": "paid", "payment_fee": result.get("fee")})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
