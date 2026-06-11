@@ -167,7 +167,8 @@ async def migrate_tenant(
                             :tenant_id, :lead_id, NULL, :company_id, NULL,
                             :channel_type, :channel_identity, :direction, :sender,
                             :content_text, NULL, :external_message_id,
-                            :raw_payload, 'sent', :translated_text, NULL,
+                            :raw_payload, 'sent', :translated_text,
+                            '{"_source": "sa02_stage2_migration"}'::jsonb,
                             :occurred_at, :created_at,
                             false, NULL, NULL
                         )

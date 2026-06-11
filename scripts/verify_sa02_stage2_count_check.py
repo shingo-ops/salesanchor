@@ -87,28 +87,22 @@ async def check_tenant(
             ))
             result["conv_total"] = r.scalar() or 0
 
-            # conversation_logs の内、meta_messages から移行した件数を推定
-            # 手法: external_message_id が 'meta_legacy:' で始まるもの（message_id なし）
+            # 移行マーカーで正確に移行行を特定
+            # analysis->>'_source' = 'sa02_stage2_migration' が移行スクリプトの識別子
             r = await conn.execute(text(
                 f"SELECT COUNT(*) FROM {schema}.conversation_logs "
-                f"WHERE external_message_id LIKE 'meta_legacy:%'"
+                f"WHERE analysis->>'_source' = 'sa02_stage2_migration'"
+            ))
+            result["conv_from_meta_total"] = r.scalar() or 0
+
+            # 内訳: meta_legacy キーのもの（message_id なし行）
+            r = await conn.execute(text(
+                f"SELECT COUNT(*) FROM {schema}.conversation_logs "
+                f"WHERE analysis->>'_source' = 'sa02_stage2_migration' "
+                f"  AND external_message_id LIKE 'meta_legacy:%'"
             ))
             result["conv_from_legacy"] = r.scalar() or 0
-
-            # meta_messages.message_id を持つ行が conversation_logs に存在するか確認
-            r = await conn.execute(text(f"""
-                SELECT COUNT(*) FROM {schema}.meta_messages mm
-                WHERE mm.message_id IS NOT NULL
-                  AND EXISTS (
-                    SELECT 1 FROM {schema}.conversation_logs cl
-                    WHERE cl.external_message_id = mm.message_id
-                  )
-            """))
-            result["conv_from_meta_mid"] = r.scalar() or 0
-
-            result["conv_from_meta_total"] = (
-                result["conv_from_meta_mid"] + result["conv_from_legacy"]
-            )
+            result["conv_from_meta_mid"] = result["conv_from_meta_total"] - result["conv_from_legacy"]
 
             if result["meta_total"] > 0:
                 result["coverage_pct"] = round(
