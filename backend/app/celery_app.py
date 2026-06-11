@@ -29,6 +29,7 @@ celery_app = Celery(
         "app.tasks.verify_meta_subscriptions",
         "app.tasks.priority_scoring_check",
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
+        "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
     ],
 )
 
@@ -113,5 +114,12 @@ celery_app.conf.beat_schedule = {
     "check-translation-health": {
         "task": "app.tasks.translation.check_translation_health",
         "schedule": crontab(minute=0),  # 毎時0分
+    },
+    # SA-02 §10: 並走期間 日次突合（meta_messages vs conversation_logs）毎日 AM8:00 JST
+    # 差異あり → Discord 通知。差異ゼロ → INFO ログのみ。
+    # 並走終了（段階2移行完了 + 読み取り切替後14日）後にこのエントリを削除すること。
+    "sa02-daily-recon": {
+        "task": "app.tasks.sa02_recon_monitor.run_sa02_daily_recon",
+        "schedule": crontab(hour=8, minute=0),  # JST 8:00（timezone=Asia/Tokyo が適用済み）
     },
 }

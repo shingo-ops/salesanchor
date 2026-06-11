@@ -36,6 +36,7 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
+from app.services.conv_log_writer import write_conversation_log
 
 logger = logging.getLogger(__name__)
 
@@ -255,5 +256,27 @@ async def upsert_lead_and_message(
             "[dm_writer] inbound 記録 tenant=%d lead=%d msg_id=%s",
             tenant_id, lead_id, discord_message_id,
         )
+
+    # SA-02 Stage 1: conversation_logs にも書く（meta_messages と同一冪等キーで重複排除）
+    if msg_row is not None:
+        try:
+            await write_conversation_log(
+                db,
+                tenant_id=tenant_id,
+                lead_id=lead_id,
+                channel_type="discord",
+                channel_identity=discord_user_id,
+                direction="inbound",
+                sender=discord_user_id,
+                content_text=message_text,
+                external_message_id=discord_message_id,
+                occurred_at=received_at,
+            )
+        except Exception:
+            logger.warning(
+                "[dm_writer] conv_log write failed channel=discord ext_id=%s（処理は継続）",
+                discord_message_id,
+                exc_info=True,
+            )
 
     await db.commit()

@@ -4,7 +4,7 @@
 |------|------|
 | 発行日 | 2026-06-11（Planner: Web Claude） |
 | 状態 | 設計確定（KGI承認 2026-06-11／J1〜J4判断 2026-06-11 すべてShingo決定済み） |
-| 相互参照 | ADR-096（対象）・ADR-095（原則）・**recon: PR #1929**（file:line差分表＝`docs/plans/sa-progress/SA-02-plan.md` §3）・ADR-088/110/ADR-SA-17（翻訳）・ADR-119（lead_channels） |
+| 相互参照 | ADR-096（対象）・ADR-095（原則）・**recon**: `docs/handoff/sa-02-stage1/recon.md`（file:line差分表＝`docs/plans/sa-progress/SA-02-plan.md` §3）・ADR-088/110/ADR-SA-17（翻訳）・ADR-119（lead_channels） |
 
 ---
 
@@ -50,6 +50,17 @@
 | K4 | 取りこぼしの自動回収 | sweeper周期内に回収 | 既存sweeperの周期・ログを流用（周期値は実装時に既存設定へ合わせる） |
 | K5 | 手動記録の所要 | 1メッセージ1分以内 | 検証ゲートでの実測 |
 
+## 5b. 受け入れ基準（process-artifacts gate 用）
+
+| 基準 | 検証方法 |
+|------|---------|
+| Meta Messenger/Instagram の受信が conversation_logs に保存される | `pytest backend/tests/test_conv_log_writer.py` + CI pytest-run-internal |
+| Discord DM の受信が conversation_logs に保存される | `pytest backend/tests/test_discord_inbox.py::test_dm_writer_creates_new_lead` |
+| external_message_id 重複で ON CONFLICT DO NOTHING が動作する | `pytest backend/tests/test_conv_log_writer.py::test_write_conversation_log_duplicate_returns_none` |
+| エコー受信（is_echo=True）が direction='outbound' で conv_logs に保存される | webhook.py `_iter_inbound_messages` のエコー分岐確認 + CI |
+| channel_masters テーブルが作成され RLS が適用される | `マイグレーションSQL 実行テスト（実DB）` CI ジョブ |
+| 失敗時にチャネル・ext_id 付きエラーログが出力される | `pytest backend/tests/test_conv_log_writer.py::test_direction_values_in_callers` |
+
 ## 6. 実装の段階分け（提案。PR分割はGenerator裁量、ゲートは各PRで通す）
 
 | 段階 | 内容 | 本番適用条件 |
@@ -75,3 +86,44 @@
 - 通常のUI・ロジックPR：CI緑→マージ→本番デプロイまで進行可（2026-06-10合意の線引き）。
 - **migrations（段階2の本番適用）のみShingo明示GO必須**。
 - 全段階完了後：KGI実測＋SA-01横断チェック→進捗100%。
+
+## 10. 並走期間の定義（meta_messages と conversation_logs の二重書き）
+
+段階1デプロイ〜段階2移行完了・読み取り切替までの間、両テーブルに同じ受信データが書かれる。
+この「並走期間」の管理基準を以下に定める。
+
+### 日程表
+
+| マイルストーン | 日付 | 備考 |
+|--------------|------|------|
+| **並走開始** = 段階1本番デプロイ日 | **2026-06-11** | PR #1932 本番反映日 |
+| 段階2引っ越し完了（全件移行＋検証一致） | _(予定未定)_ | Shingo 明示 GO 後に実行 |
+| 読み取り切替完了（inbox/API が conv_logs を参照） | _(予定未定)_ | 段階4完了時 |
+| **廃止判断日** = 読み取り切替日 ＋ 14日 | _(自動算出)_ | 14日連続で不一致0を確認後 |
+| 廃止実行（meta_messages DROP / 旧パス削除） | _(予定未定)_ | PR起案→Shingo GO で実行 |
+
+### 日次自動突合
+
+- **内容**: meta_messages と conversation_logs の当日新規件数を毎日突合し、差異があれば Discord 通知する。
+- **実装**: 既存の `translation_monitor.py` sweeper 型の軽量 Celery beat タスク（または cron ジョブ）。本 PR への同梱または別 PR は Generator 裁量。
+- **通知フォーマット（例）**:
+  ```
+  [SA-02 並走監視] 2026-06-12
+  meta_messages 当日新規: 42件
+  conversation_logs 当日新規: 42件
+  差異: 0件 ✅
+  ```
+- **差異検知時**: WARNING ログ + Discord 通知（`send_discord_notification` 既存パターン流用）。差異件数・チャネル別内訳を含める。
+
+### 終了条件（3つすべてを満たすと並走終了）
+
+1. 段階2（meta_messages→conversation_logs 全件移行）完了 + 件数突合一致
+2. 読み取り切替完了（受信箱・API が conv_logs のみを参照）
+3. 切替後14日連続で日次突合の差異が0件
+
+### 廃止手順
+
+1. 終了条件3つが揃ったら廃止判断日を記録
+2. PR 起案: `meta_messages` DROP migration + webhook/dm_writer からの二重書きコード削除
+3. Shingo GO → マージ → 本番デプロイ
+4. 物理削除後は本ファイルの日程表に「廃止実行」日を記入してクローズ
