@@ -312,17 +312,25 @@ jobs:
               _sa_url=$(python3 -c \
                 "import urllib.parse,sys;p,d=sys.argv[1],sys.argv[2];print('postgresql+asyncpg://salesanchor_app:{}@postgres:5432/{}'.format(urllib.parse.quote(p,safe=''),urllib.parse.quote(d,safe='')))" \
                 "${SALESANCHOR_APP_PASSWORD}" "${_pgdb}")
+              # SA-18: 二重 blue-green 排除 — URL が実際に変わった場合のみ実行
+              _old_url=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
               sed -i '/^DATABASE_URL=/d' .env
               echo "DATABASE_URL=${_sa_url}" >> .env
               echo "ℹ️  SA18_PHASE2_ENABLED=1 → DATABASE_URL を salesanchor_app@postgres:5432 に設定しました"
-              unset _sa_url  # URL(パスワード含)を環境変数から即削除
-              # SA-18: DATABASE_URL が salesanchor_app に更新されたため backend を再起動する。
-              # --force-recreate ではなく blue-green で無停止切替する（ダウンタイム排除）。
-              # celery/discord は非同期・非ユーザー向けのため従来の force-recreate を維持。
-              echo "ℹ️  SA18: blue-green で backend を salesanchor_app DATABASE_URL に切替..."
-              BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh
-              echo "ℹ️  SA18: celery/discord を --force-recreate で切替..."
-              docker compose up -d --force-recreate celery-worker celery-beat discord-gateway
+              _url_changed="false"
+              [ "${_old_url}" != "${_sa_url}" ] && _url_changed="true"
+              unset _sa_url _old_url  # URL(パスワード含)を環境変数から即削除
+              if [ "${_url_changed}" = "true" ]; then
+                # DATABASE_URL が変更 → backend/celery/discord を再起動する。
+                # --force-recreate ではなく blue-green で無停止切替する（ダウンタイム排除）。
+                # celery/discord は非同期・非ユーザー向けのため従来の force-recreate を維持。
+                echo "ℹ️  SA18: DATABASE_URL が変更 → blue-green で backend を再起動します..."
+                BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh
+                echo "ℹ️  SA18: celery/discord を --force-recreate で切替..."
+                docker compose up -d --force-recreate celery-worker celery-beat discord-gateway
+              else
+                echo "ℹ️  SA18: DATABASE_URL 変更なし → blue-green をスキップ（切替1回のみ）"
+              fi
             fi
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
