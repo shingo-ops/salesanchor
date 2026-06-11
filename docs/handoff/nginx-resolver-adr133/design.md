@@ -88,6 +88,8 @@ SSE 専用 location 4 箇所（`nginx.conf:108, 128, 268, 288`）の `proxy_buff
 
 ## 3. 外部・過去事例の参照と我々への応用
 
+OSS nginx + Docker 環境での IP 固着 502 対策として、resolver + proxy_pass 変数化パターンは業界標準の確立済み手法。nginx-plus の `resolve` フラグ相当の効果を OSS で実現する唯一の方法として広く採用されている。
+
 ### OSS nginx + Docker 動的 IP の定石: resolver + 変数化
 
 - nginx は起動時に DNS を解決し以降キャッシュする（NGINX OSS 仕様）
