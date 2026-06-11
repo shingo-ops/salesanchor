@@ -1,7 +1,9 @@
 # ADR-101: 見積・請求の生成（正規化2テーブル・テンプレSSOT・関税ポリシー・スナップショット・発行モード）（ADR-SA-07）
 
 ## Status
-Accepted（送料/関税の数式・Wise APIは未決＝ADR-095付録1）／**2026-06-12 改訂: §6 PayPal を Invoicing 方式へ（後述「改訂」節）**
+Accepted（送料/関税の数式・Wise APIは未決＝ADR-095付録1）
+
+> **2026-06-12 改訂**: §6 PayPal を Invoicing 方式へ（下記「改訂」節）。
 
 ## Date
 2026-06-04（起案: Hikky-dev / PO: shingo-ops）／改訂 2026-06-12（Hikky-dev・しんごさん事前了承の上 Hitoshi 判断で実施）
