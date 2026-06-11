@@ -36,10 +36,12 @@
 | ロールバック可能 | `is_manual=false AND external_message_id LIKE 'meta_legacy:%' OR IN (mm.message_id)` で特定・削除できる |
 | 冪等 | 再実行後も件数が変わらない（ON CONFLICT DO NOTHING） |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-- Stripe の `charges` → `payment_intents` 移行: 旧テーブルを削除せず新テーブルにコピー、IDマッピングで冪等性確保（同パターン）
-- GitHub issues → discussions 移行: 合成IDで重複防止
+- **Stripe `charges` → `payment_intents`**: 旧テーブル削除せずコピー + IDマッピングで冪等性確保 → 我々も `meta_messages` を削除せず `conversation_logs` にコピーし、`external_message_id` UNIQUE で冪等にする（同一パターン）
+- **GitHub issues → discussions**: 合成IDで重複防止 → 我々も `message_id=NULL` 行に `meta_legacy:{id}` 合成キーを採用（同一パターン）
+
+> 参照: `docs/handoff/sa-02-stage2-migration/recon.md`
 
 ## 本番実行チェックリスト（Shingo GO後）
 

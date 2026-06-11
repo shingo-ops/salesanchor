@@ -6,7 +6,7 @@
 
 | 調査観点 | 現状（file:line） | 備考 |
 |----------|-----------------|------|
-| meta_messages スキーマ | `migrations/012_add_meta_tenant_tables.sql:8-11` — id/tenant_id/lead_id/platform/sender_id/sender_name/message_text/direction/raw_payload/created_at | 拡張列: `041_extend_meta_messages.sql:38` — message_id/seen_at 等 |
+| meta_messages スキーマ | `migrations/012_add_meta_tenant_tables.sql:8-11` — id/tenant_id/lead_id/platform/sender_id/sender_name/message_text/direction/raw_payload/created_at | 拡張列: `migrations/041_extend_meta_messages.sql:38` — message_id/seen_at 等 |
 | meta_messages への書き込み経路 | `backend/app/routers/webhook.py:665-758` — Messenger/Instagram受信をmeta_messagesに保存 | Discord: `backend/app/discord_gateway/dm_writer.py:225` |
 | conversation_logs スキーマ | `migrations/20260604_090000_create_conversation_logs.sql:34-54` | is_manual/recorded_by_user_id/deleted_at: `migrations/20260611_120000_add_conv_log_manual_columns.sql` |
 | conversation_logs の external_message_id UNIQUE 制約 | `migrations/20260604_090000_create_conversation_logs.sql:48` — `VARCHAR(255) UNIQUE` | 冪等性の根拠。ON CONFLICT DO NOTHING で再実行可 |

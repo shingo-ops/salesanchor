@@ -342,6 +342,9 @@ run_sql migrations/20260611_120000_add_conv_log_manual_columns.sql
 # 依存: 20260611_120000 で deleted_at カラムが追加済みであること
 run_sql migrations/20260611_130000_fix_v_company_stats_deleted_at.sql
 
+# SA-02 Stage 2 前提: conversation_logs に is_manual カラム追加（Stage 2 移行スクリプトが参照）
+run_sql migrations/20260611_140000_add_conv_log_is_manual.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
