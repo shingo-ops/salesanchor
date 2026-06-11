@@ -631,22 +631,26 @@ async def issue_paypal_link(
             detail=result.get("message", "PayPal 決済リンクの発行に失敗しました"),
         )
 
+    # status ガードを UPDATE にも入れる（事前 SELECT 後に void 等された TOCTOU 防御）
     upd = await db.execute(
         text(f"""
             UPDATE invoices
             SET paypal_order_id = :oid, paypal_approval_url = :url,
                 payment_method = COALESCE(payment_method, 'paypal'), updated_at = NOW()
-            WHERE id = :id
+            WHERE id = :id AND status IN ('issued', 'overdue')
             RETURNING {_INVOICE_COLUMNS}
         """),
         {"id": invoice_id, "oid": result["order_id"], "url": result["approval_url"]},
     )
     row = upd.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_link", table_name="invoices", record_id=invoice_id,
                            new_data={"paypal_order_id": result["order_id"]})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    await invalidate_dashboard_cache(tenant_id)
     return InvoiceResponse(**dict(row))
 
 
@@ -691,17 +695,20 @@ async def confirm_paypal_payment(
             detail=result.get("message", "まだ入金が確認できません"),
         )
 
+    # status ガードを UPDATE にも入れる（既に paid/voided への二重適用を atomic に防ぐ TOCTOU 防御）
     upd = await db.execute(
         text(f"""
             UPDATE invoices
             SET status = 'paid', paid_at = NOW(), payment_fee = :fee,
                 payment_method = 'paypal', updated_at = NOW()
-            WHERE id = :id
+            WHERE id = :id AND status IN ('issued', 'overdue')
             RETURNING {_INVOICE_COLUMNS}
         """),
         {"id": invoice_id, "fee": result.get("fee")},
     )
     row = upd.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみ入金確認できます")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_confirm", table_name="invoices", record_id=invoice_id,
                            new_data={"status": "paid", "payment_fee": result.get("fee")})

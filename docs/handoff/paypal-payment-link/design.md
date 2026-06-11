@@ -51,7 +51,7 @@
 | # | 基準 | 検証方法 |
 |---|---|---|
 | 1 | issued/overdue の請求書で「PayPalリンク発行」すると Orders API が呼ばれ、`paypal_order_id`/`paypal_approval_url` が保存される | backend pytest: `create_order` を httpx mock（200＋links）→ エンドポイントが列更新を返すことを assert（`backend/tests/test_paypal_payment_link.py`） |
-| 2 | PayPal 未接続テナントでリンク発行すると 400 | pytest: `get_credentials`→None で 400 |
+| 2 | PayPal 未接続テナントでリンク発行すると 400 | コードレビュー: `invoices.py _require_paypal_creds`（`get_credentials` None→HTTPException 400）。ガードが自明なため router+DB テストは過剰、sandbox 実機(Evaluator)で最終確認 |
 | 3 | 「PayPal入金確認」で capture が COMPLETED なら請求書が `paid`＋`paid_at`＋`payment_fee` 記録 | pytest: `capture_order` mock（COMPLETED＋fee）→ status=paid・payment_fee 検証 |
 | 4 | capture 未確定（APPROVED 等）なら 409 で `paid` にしない | pytest: capture mock（not completed）→ 409・status 不変 |
 | 5 | 書き込み後に `reset_tenant_context` が呼ばれる（ADR-072） | コードレビュー＋ pytest で reset 呼び出し（既存 `pay_invoice` と同型）／Reviewer 確認 |
