@@ -23,7 +23,7 @@
 | スタンプが DONE 行の main 列のみ更新する | Python スクリプトのロジックで `DONE` かつ `cols[5].strip() == ""` の条件確認 |
 | stamp 失敗でデプロイがブロックされない | `continue-on-error: true` の設定確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - **GitHub Actions / auto-commit pattern**: `stefanzweifel/git-auto-commit-action` — CI 実行後に自動コミットするパターンの標準実装。`GITHUB_TOKEN` ではなく PAT を使う理由は branch protection bypass のため（本実装と同じアプローチ）
 - **Heroku release tracking**: デプロイ成功後にメタデータ（リビジョン番号・日時）を専用ファイルに記録し、ロールバック判断に活用するパターン。本実装の `main` 列はこれに相当
