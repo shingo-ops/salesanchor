@@ -788,7 +788,8 @@ async def process_messenger_event(body: dict) -> None:
                                 await reset_tenant_context(db, tenant_id)
                             except Exception:
                                 logging.warning(
-                                    "[Meta] echo conv_log write failed（Webhook処理は継続）",
+                                    "[Meta] echo conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
+                                    platform, m.get("message_id"),
                                     exc_info=True,
                                 )
                             continue
@@ -830,7 +831,8 @@ async def process_messenger_event(body: dict) -> None:
                             await reset_tenant_context(db, tenant_id)
                         except Exception:
                             logging.warning(
-                                "[Meta] inbound conv_log write failed（Webhook処理は継続）",
+                                "[Meta] inbound conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
+                                platform, m.get("message_id"),
                                 exc_info=True,
                             )
 

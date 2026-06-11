@@ -274,7 +274,8 @@ async def upsert_lead_and_message(
             )
         except Exception:
             logger.warning(
-                "[dm_writer] conv_log write failed（処理は継続）",
+                "[dm_writer] conv_log write failed channel=discord ext_id=%s（処理は継続）",
+                discord_message_id,
                 exc_info=True,
             )
 
