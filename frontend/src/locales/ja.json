@@ -2320,6 +2320,7 @@
   "registration": {
     "title": "顧客情報登録",
     "generateLink": "登録リンクを発行",
+    "alreadyRegisteredGate": "登録済みのため新規登録リンクは発行できません。",
     "linkGenerated": "登録リンク",
     "copyLink": "コピー",
     "invalidToken": "無効または期限切れのリンクです",

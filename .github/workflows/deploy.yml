@@ -255,28 +255,26 @@ jobs:
               echo "docker compose build が3回失敗しました"
               exit 1
             fi
-            # build 完了後・up 直前に、graceful stop に失敗した/ハッシュ付き重複の
-            # app 系コンテナを force 削除し、単一・クリーンな状態を保証する。
-            #  - 名前衝突による compose up 失敗を防ぐ（2026-05-30 frontend / 2026-06-02 backend で 502 障害）
-            #  - discord-gateway の重複起動による Discord 再接続storm→token reset を防ぐ
-            # build 後に置くことで削除→up の間（数秒）のみのダウンタイムに抑える。
-            # postgres / redis / nginx / certbot は状態を持つため対象外。
-            for _svc in backend frontend celery-worker celery-beat discord-gateway; do
+            # blue-green: backend を無停止で切替（scripts/blue-green-cutover.sh）
+            #   旧コンテナを先に削除しないことで、Python 初期化 (~22s) 中の 502 を排除する。
+            #   [before] docker rm -f backend → up → 22s 502 → healthy
+            #   [after]  green 起動 → health 確認 → nginx 切替 → 旧停止 → 502 ゼロ
+            echo "Step 3b: Blue-green backend cutover..."
+            bash scripts/blue-green-cutover.sh
+
+            # backend 以外（frontend/celery/discord）は従来の force-rm + up で切替。
+            # これらは nginx 経由の同期 API のリクエストパスに関与しないため
+            # 数秒のダウンは発生しない（frontend は静的配信、celery/discord は非同期）。
+            # discord-gateway: 重複起動による Discord 再接続storm→token reset を防ぐため
+            # 旧コンテナを先に削除してから起動する（従来動作を維持）。
+            echo "Step 3c: Updating non-backend services (frontend/celery/discord)..."
+            for _svc in frontend celery-worker celery-beat discord-gateway; do
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
-            docker compose up -d --remove-orphans
+            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway
 
-            echo "Step 4: Waiting for backend to become healthy (max 120s)..."
-            timeout 120 bash -c '
-              until docker inspect --format="{{.State.Health.Status}}" astro-webapp-backend-1 2>/dev/null | grep -q "healthy"; do
-                sleep 5
-                echo "  ...waiting for backend healthcheck..."
-              done
-            ' || echo "Backend health wait timed out after 120s, proceeding with migrations..."
-
-            echo "Step 4b: Reloading nginx to refresh DNS resolution (zero-downtime)..."
-            docker exec astro-webapp-nginx-1 nginx -s reload
-            echo "nginx reload done."
+            echo "Step 4: Backend is already healthy (confirmed by blue-green cutover)."
+            echo "Step 4b: nginx reload already done inside blue-green-cutover.sh."
 
             echo "============================================"
             echo "Code + env + docker compose phase done."
@@ -318,19 +316,13 @@ jobs:
               echo "DATABASE_URL=${_sa_url}" >> .env
               echo "ℹ️  SA18_PHASE2_ENABLED=1 → DATABASE_URL を salesanchor_app@postgres:5432 に設定しました"
               unset _sa_url  # URL(パスワード含)を環境変数から即削除
-              # deploy step では docker compose up -d 後に DATABASE_URL を書き換えた。
-              # 既に起動済みのコンテナは旧 jarvis URL を掴んでいるため、
-              # --force-recreate で再作成して salesanchor_app DATABASE_URL を反映する。
-              echo "ℹ️  backend/worker 系を --force-recreate して salesanchor_app DATABASE_URL を反映します..."
-              docker compose up -d --force-recreate backend celery-worker celery-beat discord-gateway
-              # 再作成後 backend が healthy になるまで最大 90s 待つ（smoke test の前提条件）
-              echo "ℹ️  backend の healthy 待ち (最大90s)..."
-              timeout 90 bash -c '
-                until docker inspect --format="{{.State.Health.Status}}" astro-webapp-backend-1 2>/dev/null | grep -q "healthy"; do
-                  sleep 5
-                  echo "  ...backend 起動待ち..."
-                done
-              ' || echo "⚠️  backend health wait timed out after 90s, proceeding..."
+              # SA-18: DATABASE_URL が salesanchor_app に更新されたため backend を再起動する。
+              # --force-recreate ではなく blue-green で無停止切替する（ダウンタイム排除）。
+              # celery/discord は非同期・非ユーザー向けのため従来の force-recreate を維持。
+              echo "ℹ️  SA18: blue-green で backend を salesanchor_app DATABASE_URL に切替..."
+              BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh
+              echo "ℹ️  SA18: celery/discord を --force-recreate で切替..."
+              docker compose up -d --force-recreate celery-worker celery-beat discord-gateway
             fi
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
@@ -636,6 +628,58 @@ jobs:
             END
             $$;
             VERIFY_EOF
+
+      # ADR-116: main デプロイ成功スタンプ
+      # smoke/health 200 + Verify deployment が全通過した"成功側"のみ実行する。
+      - name: Stamp main deploy date in active-work.md
+        if: success()
+        continue-on-error: true
+        env:
+          PIPELINE_PAT: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          export DEPLOY_DATE=$(date -u +%Y-%m-%d)
+          git fetch origin develop
+          git checkout -b "stamp-develop-${{ github.run_id }}" origin/develop
+          python3 - <<'PYEOF'
+          import os
+          deploy_date = os.environ["DEPLOY_DATE"]
+          filepath = ".claude-pipeline/active-work.md"
+          with open(filepath, encoding="utf-8") as f:
+              content = f.read()
+          lines = content.splitlines(keepends=True)
+          new_lines = []
+          updated = 0
+          for line in lines:
+              if line.strip().startswith("|"):
+                  parts = line.rstrip("\n").split("|")
+                  cols = parts[1:-1]
+                  is_sep = all(c.strip().replace("-", "") == "" for c in cols if c.strip())
+                  if (len(cols) == 7 and not is_sep and
+                          "DONE" in cols[3] and cols[5].strip() == ""):
+                      cols[5] = f" {deploy_date} "
+                      eol = "\n" if line.endswith("\n") else ""
+                      line = "|".join([""] + cols + [""]) + eol
+                      updated += 1
+              new_lines.append(line)
+          if updated:
+              with open(filepath, "w", encoding="utf-8") as f:
+                  f.write("".join(new_lines))
+              print(f"STAMPED {updated} rows with main:{deploy_date}")
+          else:
+              print("No rows to stamp")
+          PYEOF
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet .claude-pipeline/active-work.md; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git add .claude-pipeline/active-work.md
+          git commit -m "chore: active-work.md — main deploy stamp ${DEPLOY_DATE}（自動）"
+          git pull --rebase origin develop
+          git push \
+            "https://x-access-token:${PIPELINE_PAT}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/develop
 
       - name: Deployment Failure Notification
         if: failure()
