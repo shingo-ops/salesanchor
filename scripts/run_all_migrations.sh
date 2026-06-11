@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=128
+TOTAL=130
 
 run_py() {
   local script="$1"
@@ -334,6 +334,13 @@ run_sql migrations/20260611_100000_create_channel_masters.sql
 
 # ADR-128: order_shipping_details に Ship/Pickup 用カラム追加
 run_sql migrations/20260611_110000_extend_order_shipping_for_ship_api.sql
+
+# SA-02 Stage 3: conversation_logs に手動記録用カラム追加（deleted_at + recorded_by_user_id）
+run_sql migrations/20260611_120000_add_conv_log_manual_columns.sql
+
+# SA-02 Stage 3: v_company_stats に論理削除除外フィルタ追加（deleted_at IS NULL）
+# 依存: 20260611_120000 で deleted_at カラムが追加済みであること
+run_sql migrations/20260611_130000_fix_v_company_stats_deleted_at.sql
 
 echo ""
 echo "============================================"
