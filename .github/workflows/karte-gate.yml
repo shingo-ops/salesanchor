@@ -5,10 +5,17 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    # 手動実行: ベースライン更新（--update-snapshots）用
+    # 使用方法: Actions タブ → Karte Visual Gate → Run workflow → 対象ブランチを選択
 
 # NOTE: paths filter omitted (ADR-067 deadlock lesson: #523 (2)).
 # When frontend is unchanged, detect-changes -> skipped -> aggregator reports success.
 # Same design as e2e.yml lint-run detect-changes pattern.
+
+permissions:
+  contents: write      # ベースライン画像の自動コミット（workflow_dispatch のみ）
+  pull-requests: write # PR コメント投稿（Phase 5a 比較、将来の通知）
 
 jobs:
   detect-changes:
@@ -26,9 +33,9 @@ jobs:
 
   karte-gate-run:
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend == 'true'
+    if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -56,7 +63,10 @@ jobs:
       - name: Install system deps (chromium)
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+
+      # ── pull_request: 通常実行（ベースラインと比較） ──────────────────────────
       - name: Run Karte Visual Gate
+        if: github.event_name != 'workflow_dispatch'
         env:
           CI: 'true'
           VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
@@ -64,8 +74,33 @@ jobs:
           VITE_GCP_PROJECT_ID: e2e-fixture
         run: npx playwright test karte-visual-gate.spec.ts --project=chromium
 
-      - name: Generate comparison screenshots (Phase 5a review)
-        if: always() && github.event_name == 'pull_request'
+      # ── workflow_dispatch: ベースライン更新（--update-snapshots） ──────────────
+      - name: Update baseline snapshots
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CI: 'true'
+          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
+          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
+          VITE_GCP_PROJECT_ID: e2e-fixture
+        run: npx playwright test karte-visual-gate.spec.ts --project=chromium --update-snapshots
+
+      - name: Commit baseline snapshots
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/tests-e2e/__snapshots__/
+          if git diff --cached --quiet; then
+            echo "スナップショットに変更なし — コミットをスキップ"
+          else
+            git commit -m "chore(karte): ベースライン更新（ubuntu-latest chromium）[skip ci]"
+            git push
+          fi
+
+      # ── workflow_dispatch のみ: app vs 見本 HTML 比較スクリーンショット（手動レビュー用）
+      - name: Generate comparison screenshots
+        if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         env:
           CI: 'true'
@@ -75,39 +110,13 @@ jobs:
         run: npx playwright test karte-screenshot-compare.spec.ts --project=chromium
 
       - name: Upload comparison screenshots
-        if: always() && github.event_name == 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: karte-compare-screenshots
           path: frontend/screenshots/compare/
           retention-days: 14
           if-no-files-found: warn
-
-      - name: Post comparison comment to PR
-        if: always() && github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          RUN_ID: ${{ github.run_id }}
-          REPO: ${{ github.repository }}
-        run: |
-          RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          {
-            echo "## Phase 5a 比較スクリーンショット（候補）"
-            echo ""
-            echo "CI が生成した比較画像を [こちらの Artifacts](${RUN_URL}) からダウンロードして目視確認してください。"
-            echo "→ \`karte-compare-screenshots\` を展開"
-            echo ""
-            echo "| ファイル | 内容 |"
-            echo "|---------|------|"
-            echo "| \`app-lead-deal.png\` | アプリ描画 — リード ＋ 商談タブ |"
-            echo "| \`app-customer-company.png\` | アプリ描画 — 既存顧客 ＋ 顧客タブ |"
-            echo "| \`ref-lead-deal.png\` | 見本 HTML — リード ＋ 商談タブ |"
-            echo "| \`ref-customer-company.png\` | 見本 HTML — 既存顧客 ＋ 顧客タブ |"
-            echo ""
-            echo "> 「**見本どおり**」承認後に Phase 5b（\`toHaveScreenshot()\` ベースライン固定）に進みます。"
-          } | gh pr comment "${PR_NUMBER}" --body-file -
 
       - name: Upload report
         if: always()

@@ -374,3 +374,31 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 5b — 視覚回帰ゲート（toHaveScreenshot）
+// ---------------------------------------------------------------------------
+// ベースラインは ubuntu-latest で workflow_dispatch --update-snapshots を使って生成する。
+// Mac 差によるフォント描画ズレで誤検知しないよう、ローカル生成は禁止。
+// ---------------------------------------------------------------------------
+
+test.describe("Visual regression — Phase 5b", () => {
+
+  // 1280×900: デスクトップ幅（カルテ常時表示）＋パネル全体が見えるだけの高さ
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test("[visual] karte-lead-deal: Phase 5a 承認済み描画と一致", async ({ page }) => {
+    await renderKarte(page, leadShinki, invoicesPaid);
+    await page.locator('[data-testid="karte-tab-deal"]').click();
+    await page.waitForTimeout(300);
+    await expect(page.locator(".inbox-right-panel")).toHaveScreenshot("karte-lead-deal.png");
+  });
+
+  test("[visual] karte-customer-company: Phase 5a 承認済み描画と一致", async ({ page }) => {
+    await renderKarte(page, leadKisonkosaku, invoicesPaid);
+    await page.locator('[data-testid="karte-tab-company"]').click();
+    await page.waitForTimeout(300);
+    await expect(page.locator(".inbox-right-panel")).toHaveScreenshot("karte-customer-company.png");
+  });
+
+});
