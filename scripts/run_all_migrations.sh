@@ -326,6 +326,9 @@ run_sql migrations/20260610_071110_add_paypal_config.sql
 # オーナーロール色修正: 赤（危険予約色）→ インディゴ（権限レベル色）— 全テナント冪等適用
 run_sql migrations/20260611_010000_fix_owner_role_color.sql
 
+# SA-02 Stage 1: channel_masters テーブル作成（手動チャネルマスタ＋デフォルトシード）
+run_sql migrations/20260611_100000_create_channel_masters.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
