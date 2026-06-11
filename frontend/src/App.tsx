@@ -70,6 +70,8 @@ import DiscordConfigPage from "./pages/admin/DiscordConfigPage";
 import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
 // SaaS 管理者ハブ（ボトムタブシェル）
 import AdminHubPage from "./pages/admin/AdminHubPage";
+// SA-02 Stage 3: チャネルマスタ管理
+import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 // spec.md v1.1 F5 (Sprint 5): Discord Inbound 受信メッセージ一覧（中央 admin）
 import DiscordInboundPage from "./pages/super-admin/DiscordInboundPage";
 import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
@@ -273,6 +275,8 @@ function App() {
                     <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
                     {/* テナント admin（tenant.inventory_visibility.edit 権限が必要、Page 内で 403 ガード） */}
                     <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
+                    {/* SA-02 Stage 3: 手動チャネル管理 */}
+                    <Route path="channel-masters" element={<ChannelMastersPage />} />
                   </Route>
 
                   {/* ADR-069: デザインシステム パーツ保管庫（開発環境専用） */}

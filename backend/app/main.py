@@ -32,6 +32,7 @@ from app.routers import (
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
+    conv_logs,  # SA-02 Stage 3: 手動会話ログ CRUD
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
     deals,
@@ -508,6 +509,12 @@ app.include_router(
 # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳生成・確認）
 app.include_router(
     translation.router, prefix="/api/v1", tags=["translation"],
+    dependencies=[Depends(get_current_tenant)],
+)
+
+# SA-02 Stage 3: 手動会話ログ CRUD
+app.include_router(
+    conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
 )
 
