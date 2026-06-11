@@ -2,7 +2,7 @@
 # check-active-work-format.sh — active-work.md テーブルフォーマット検証
 #
 # 目的: active-work.md の「現在進行中の作業」テーブルの列数不一致を早期検出する
-#       PR#列追加(6列化)後に旧形式(5列)のエントリが混入していないかチェックする
+#       main 列追加(7列化)後に旧形式(6列以下)のエントリが混入していないかチェックする
 #
 # 呼び出し元:
 #   - .github/workflows/active-work-lint.yml (CI)
@@ -23,7 +23,7 @@ else
 fi
 
 ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md"
-EXPECTED_COLS=6
+EXPECTED_COLS=7
 ERRORS=0
 
 if [ ! -f "${ACTIVE_WORK_FILE}" ]; then

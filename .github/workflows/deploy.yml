@@ -637,6 +637,58 @@ jobs:
             $$;
             VERIFY_EOF
 
+      # ADR-116: main デプロイ成功スタンプ
+      # smoke/health 200 + Verify deployment が全通過した"成功側"のみ実行する。
+      - name: Stamp main deploy date in active-work.md
+        if: success()
+        continue-on-error: true
+        env:
+          PIPELINE_PAT: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          export DEPLOY_DATE=$(date -u +%Y-%m-%d)
+          git fetch origin develop
+          git checkout -b "stamp-develop-${{ github.run_id }}" origin/develop
+          python3 - <<'PYEOF'
+          import os
+          deploy_date = os.environ["DEPLOY_DATE"]
+          filepath = ".claude-pipeline/active-work.md"
+          with open(filepath, encoding="utf-8") as f:
+              content = f.read()
+          lines = content.splitlines(keepends=True)
+          new_lines = []
+          updated = 0
+          for line in lines:
+              if line.strip().startswith("|"):
+                  parts = line.rstrip("\n").split("|")
+                  cols = parts[1:-1]
+                  is_sep = all(c.strip().replace("-", "") == "" for c in cols if c.strip())
+                  if (len(cols) == 7 and not is_sep and
+                          "DONE" in cols[3] and cols[5].strip() == ""):
+                      cols[5] = f" {deploy_date} "
+                      eol = "\n" if line.endswith("\n") else ""
+                      line = "|".join([""] + cols + [""]) + eol
+                      updated += 1
+              new_lines.append(line)
+          if updated:
+              with open(filepath, "w", encoding="utf-8") as f:
+                  f.write("".join(new_lines))
+              print(f"STAMPED {updated} rows with main:{deploy_date}")
+          else:
+              print("No rows to stamp")
+          PYEOF
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet .claude-pipeline/active-work.md; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git add .claude-pipeline/active-work.md
+          git commit -m "chore: active-work.md — main deploy stamp ${DEPLOY_DATE}（自動）"
+          git pull --rebase origin develop
+          git push \
+            "https://x-access-token:${PIPELINE_PAT}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/develop
+
       - name: Deployment Failure Notification
         if: failure()
         run: |
