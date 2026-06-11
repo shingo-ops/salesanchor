@@ -110,7 +110,7 @@
 | [ADR-098](./ADR-098-sa-multi-channel-identity-resolution.md) | ADR-098: 多チャネル名寄せ＋直リンクテンプレSSOT（ADR-SA-04） | Accepted | — | — |
 | [ADR-099](./ADR-099-sa-inventory-model.md) | ADR-099: 在庫モデル（商品/在庫マスタ分離・在庫ソースA/B・集計フィルタ・在庫イベント）（ADR-SA-05） | Accepted | — | — |
 | [ADR-100](./ADR-100-sa-ingestion-analysis-pipeline.md) | ADR-100: 取り込み・解析パイプライン（提供元メッセージ→生オファー）（ADR-SA-06） | Accepted | — | — |
-| [ADR-101](./ADR-101-sa-quotation-invoice-generation.md) | ADR-101: 見積・請求の生成（正規化2テーブル・テンプレSSOT・関税ポリシー・スナップショット・発行モード）（ADR-SA-07） | Accepted | — | — |
+| [ADR-101](./ADR-101-sa-quotation-invoice-generation.md) | ADR-101: 見積・請求の生成（正規化2テーブル・テンプレSSOT・関税ポリシー・スナップショット・発行モード）（ADR-SA-07） | ## Date | — | — |
 | [ADR-102](./ADR-102-sa-order-management.md) | ADR-102: 受注管理（引当・複数提供元分割・発注ステータス・発注最適化Lv2）（ADR-SA-08） | Accepted | — | — |
 | [ADR-103](./ADR-103-sa-shipping-dispatch-timing.md) | ADR-103: 発送・出荷タイミング（同梱既定／分割オプトイン・出荷予定計算・発送元マスタ）（ADR-SA-09） | Accepted | — | — |
 | [ADR-104](./ADR-104-sa-payment-confirmation-status-pnl.md) | ADR-104: 入金確認・受注ステータスライフサイクル・完了・売上P&L（ADR-SA-10） | Accepted | — | — |
