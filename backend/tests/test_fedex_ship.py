@@ -409,13 +409,50 @@ class TestCreatePickup:
         assert result.confirmation_code == "PU999888"
         assert result.location_code == "JPOSA"
 
-        # carrierCode はトップレベルに配置されること（FedEx API 仕様）
-        # pickupRequestDetail 内に置くと INVALID.INPUT.EXCEPTION になる
+        # FedEx Pickup API v1 ペイロード構造の検証（Sandbox 実機確認 2026-06-11）
         pickup_call_kwargs = mock_post.call_args_list[1].kwargs
         payload = pickup_call_kwargs["json"]
-        assert "carrierCode" in payload, "carrierCode must be top-level in payload"
-        assert "carrierCode" not in payload.get("pickupRequestDetail", {}), \
-            "carrierCode must NOT be inside pickupRequestDetail"
+
+        # carrierCode / totalWeight / packageCount はトップレベル
+        assert "carrierCode" in payload, "carrierCode must be top-level"
+        assert "totalWeight" in payload, "totalWeight must be top-level"
+        assert "packageCount" in payload, "packageCount must be top-level"
+        assert "associatedAccountNumberType" in payload, "associatedAccountNumberType must be top-level"
+
+        # originDetail を使用すること（pickupRequestDetail は不可）
+        assert "originDetail" in payload, "must use originDetail (not pickupRequestDetail)"
+        assert "pickupRequestDetail" not in payload, "pickupRequestDetail is incorrect structure"
+
+        # totalWeight / packageCount は originDetail の外
+        assert "totalWeight" not in payload.get("originDetail", {}), \
+            "totalWeight must NOT be inside originDetail"
+        assert "packageCount" not in payload.get("originDetail", {}), \
+            "packageCount must NOT be inside originDetail"
+
+        # customerCloseTime は HH:MM:SS 形式
+        close_time = payload["originDetail"]["customerCloseTime"]
+        assert len(close_time) == 8 and close_time.count(":") == 2, \
+            f"customerCloseTime must be HH:MM:SS, got: {close_time}"
+
+    def test_close_time_hhmmss_padding(self):
+        """company_close_time が HH:MM 入力でも HH:MM:SS に正規化されること。"""
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_pickup_resp(),
+        ]) as mock_post:
+            create_pickup(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                pickup_address=self._sample_pickup_address(),
+                ready_datetime="2026-06-12T10:00:00+09:00",
+                company_close_time="19:00",  # HH:MM 形式で入力
+            )
+
+        payload = mock_post.call_args_list[1].kwargs["json"]
+        assert payload["originDetail"]["customerCloseTime"] == "19:00:00"
 
     def test_api_error_raises_fedex_api_error(self):
         """Pickup API エラーは FedExAPIError を raise する。"""
