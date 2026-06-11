@@ -345,6 +345,9 @@ run_sql migrations/20260611_130000_fix_v_company_stats_deleted_at.sql
 # SA-02 Stage 2 前提: conversation_logs に is_manual カラム追加（Stage 2 移行スクリプトが参照）
 run_sql migrations/20260611_140000_add_conv_log_is_manual.sql
 
+# ADR-101 PayPal webhook (Increment 2.5): tenant_paypal_config に webhook_id 追加 — public 単一・nullable
+run_sql migrations/20260611_150000_add_paypal_webhook_id.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
