@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-096（顧客マスタ／CRMデータモデル）、前提: ADR-095 |
-| ステータス | ② recon（進捗 15%・KGI承認済み 2026-06-11） |
+| ステータス | ③ 設計確定（進捗 50%・KGI承認済み 2026-06-11） |
 | 担当 | PO: Shingo ／ Planner: Web Claude ／ recon・実装: Terminal CC |
 | 最終更新 | 2026-06-11（Planner） |
 
@@ -152,7 +152,7 @@
 
 - [x] ① KGI承認（Shingo 2026-06-11）
 - [x] ② recon完了（差分表が file:line で埋まっている）— 2026-06-11 Terminal CC
-- [ ] ③ 設計doc完成（reconとADR-096を相互参照・外部事例欄記入）
+- [x] ③ 設計doc完成（reconとADR-096を相互参照・外部事例欄記入）— 2026-06-11 Planner
 - [ ] ④ 実装PRマージ（process-artifactsゲート通過）
 - [ ] ⑤ 本番反映（CI緑＋smoke通過）
 - [ ] ⑥ KGI G1〜G4を本番で実測確認
