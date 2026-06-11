@@ -15,39 +15,27 @@
 | 移行後に業務影響が判明した | Shingoに相談の上、ロールバックSQLを実行 |
 | 検証スクリプトでgapが解消しない | 原因調査（ロールバック不要）→ 修正後に再実行 |
 
+## ロールバック判定条件の設計
+
+移行スクリプトは挿入する全行に `analysis = '{"_source": "sa02_stage2_migration"}'` を付与する。
+これにより **移行スクリプトが入れた行だけ** を正確に特定でき、以下の巻き添えを防ぐ:
+
+| ケース | 旧条件（`external_message_id IN ...`） | 新条件（`analysis._source`）|
+|--------|---------------------------------------|-----------------------------|
+| 段階2移行行 | ✅ 削除対象 | ✅ 削除対象 |
+| 段階1 webhook 新規受信（Meta） | ⚠️ 同一 message_id で巻き添え削除 | ✅ 削除しない |
+| 段階1 Discord 新規受信 | ✅ 削除しない | ✅ 削除しない |
+| 手動記録（is_manual=true） | ✅ 削除しない | ✅ 削除しない |
+
 ## ロールバック手順
 
-### Step 1: 移行ID範囲を確認
+### Step 1: 移行件数を確認
 
-```bash
-# VPS上で実行
-docker compose exec backend psql "${DATABASE_URL}" -c "
-SELECT
-    s.nspname AS schema,
-    COUNT(*) AS migrated_rows,
-    MIN(cl.id) AS min_id,
-    MAX(cl.id) AS max_id
-FROM information_schema.schemata s
-CROSS JOIN LATERAL (
-    SELECT id FROM \${schema}.conversation_logs
-    WHERE external_message_id LIKE 'meta_legacy:%'
-       OR external_message_id IN (
-           SELECT message_id FROM \${schema}.meta_messages WHERE message_id IS NOT NULL
-       )
-) cl
-WHERE s.schema_name ~ '^tenant_[0-9]+$'
-GROUP BY s.nspname
-ORDER BY s.nspname;
-"
-```
-
-実際にはテナントごとに個別で確認する:
 ```bash
 docker compose exec -T postgres psql -U jarvis -d jarvis_db -c "
 SELECT COUNT(*), MIN(id), MAX(id)
 FROM tenant_001.conversation_logs
-WHERE external_message_id LIKE 'meta_legacy:%'
-   OR external_message_id IN (SELECT message_id FROM tenant_001.meta_messages WHERE message_id IS NOT NULL);
+WHERE analysis->>'_source' = 'sa02_stage2_migration';
 "
 ```
 
@@ -57,31 +45,16 @@ WHERE external_message_id LIKE 'meta_legacy:%'
 -- 確認用（先に SELECT で件数確認）
 SELECT COUNT(*)
 FROM tenant_001.conversation_logs
-WHERE is_manual = false
-  AND (
-    external_message_id LIKE 'meta_legacy:%'
-    OR external_message_id IN (
-        SELECT message_id FROM tenant_001.meta_messages WHERE message_id IS NOT NULL
-    )
-  );
+WHERE analysis->>'_source' = 'sa02_stage2_migration';
 
 -- 実行（DELETE）
 DELETE FROM tenant_001.conversation_logs
-WHERE is_manual = false
-  AND (
-    external_message_id LIKE 'meta_legacy:%'
-    OR external_message_id IN (
-        SELECT message_id FROM tenant_001.meta_messages WHERE message_id IS NOT NULL
-    )
-  );
+WHERE analysis->>'_source' = 'sa02_stage2_migration';
 ```
-
-**注意**: `is_manual = false` 条件で手動記録（`is_manual = true`）を誤って削除しない。
 
 ### Step 3: 全テナントへの適用（スクリプト）
 
 ```bash
-# VPS上のコンテナ内で実行
 docker compose exec -T postgres psql -U jarvis -d jarvis_db << 'SQL'
 DO $$
 DECLARE
@@ -96,15 +69,9 @@ BEGIN
             EXECUTE format(
                 $q$
                 DELETE FROM %I.conversation_logs
-                WHERE is_manual = false
-                  AND (
-                    external_message_id LIKE 'meta_legacy:%%'
-                    OR external_message_id IN (
-                        SELECT message_id FROM %I.meta_messages WHERE message_id IS NOT NULL
-                    )
-                  )
+                WHERE analysis->>'_source' = 'sa02_stage2_migration'
                 $q$,
-                schema, schema
+                schema
             );
             GET DIAGNOSTICS deleted_count = ROW_COUNT;
             RAISE NOTICE '% ロールバック: % 件削除', schema, deleted_count;
