@@ -358,4 +358,26 @@ __all__ = [
     "test_connection",
     "create_order",
     "capture_order",
+    "make_return_token",
+    "parse_return_token",
 ]
+
+
+# ---------------------------------------------------------------------------
+# 戻りURL用の改ざん防止トークン（Fernet 流用）— Increment 2
+# ---------------------------------------------------------------------------
+
+
+def make_return_token(tenant_id: int, invoice_id: int) -> str:
+    """戻りURLに載せる改ざん防止トークン（Fernet 暗号＝URLセーフ・改ざん不可）。"""
+    return encryption.encrypt(f"{tenant_id}:{invoice_id}")
+
+
+def parse_return_token(token: str) -> Optional[tuple[int, int]]:
+    """戻りトークンを検証し (tenant_id, invoice_id) を返す。改ざん/不正は None。"""
+    try:
+        raw = encryption.decrypt(token)
+        tid_s, iid_s = raw.split(":", 1)
+        return int(tid_s), int(iid_s)
+    except Exception:  # noqa: BLE001
+        return None
