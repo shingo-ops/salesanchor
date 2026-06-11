@@ -63,6 +63,52 @@ jobs:
           VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
           VITE_GCP_PROJECT_ID: e2e-fixture
         run: npx playwright test karte-visual-gate.spec.ts --project=chromium
+
+      - name: Generate comparison screenshots (Phase 5a review)
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          CI: 'true'
+          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
+          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
+          VITE_GCP_PROJECT_ID: e2e-fixture
+        run: npx playwright test karte-screenshot-compare.spec.ts --project=chromium
+
+      - name: Upload comparison screenshots
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: karte-compare-screenshots
+          path: frontend/screenshots/compare/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Post comparison comment to PR
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          {
+            echo "## Phase 5a 比較スクリーンショット（候補）"
+            echo ""
+            echo "CI が生成した比較画像を [こちらの Artifacts](${RUN_URL}) からダウンロードして目視確認してください。"
+            echo "→ \`karte-compare-screenshots\` を展開"
+            echo ""
+            echo "| ファイル | 内容 |"
+            echo "|---------|------|"
+            echo "| \`app-lead-deal.png\` | アプリ描画 — リード ＋ 商談タブ |"
+            echo "| \`app-customer-company.png\` | アプリ描画 — 既存顧客 ＋ 顧客タブ |"
+            echo "| \`ref-lead-deal.png\` | 見本 HTML — リード ＋ 商談タブ |"
+            echo "| \`ref-customer-company.png\` | 見本 HTML — 既存顧客 ＋ 顧客タブ |"
+            echo ""
+            echo "> 「**見本どおり**」承認後に Phase 5b（\`toHaveScreenshot()\` ベースライン固定）に進みます。"
+          } | gh pr comment "${PR_NUMBER}" --body-file -
+
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
