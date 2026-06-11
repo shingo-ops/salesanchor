@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-11 / ADR 総数: 124 件
+最終更新: 2026-06-11 / ADR 総数: 125 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -142,6 +142,7 @@
 | [ADR-130](./ADR-130-nginx-reload-policy.md) | ADR-130: nginx reload ポリシー（案B）+ migration TOTAL 自動カウント | Accepted | — | — |
 | [ADR-131](./ADR-131-tenant-context-auto-reset.md) | ADR-131: テナントコンテキスト 自動クリア（get_db finally ブロック） | Accepted | — | — |
 | [ADR-132](./ADR-132-background-tasks-tenant-context.md) | ADR-132: BackgroundTasks テナントコンテキスト保護 | Accepted | — | — |
+| [ADR-133](./ADR-133-nginx-resolver-proxy-pass-variable.md) | ADR-133: nginx resolver + proxy_pass 変数化による IP 固着 502 恒久解 | Accepted | — | 2026-06-11 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
