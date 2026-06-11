@@ -131,3 +131,4 @@
 | feature/morimoto/adr126-error-handling | ADR-126 公開フォームエラーハンドリング（409 already_registered + i18n） | 2026-06-11 | IN_PROGRESS | #1918 | | |
 | feature/morimoto/ui-consistency-a | 集計枠 fieldset → Card 統一（SalesPage + CommissionsPage） | 2026-06-10 | DONE | #1919 | | |
 | feature/morimoto/datatable-p2-pilot | DataTable標準化フェーズ2 Pilot（SupplierParseStatsTab） | 2026-06-10 | DONE | #1915 | | |
+| feature/morimoto/fedex-ship-stage2 | ADR-128 FedEx ラベル発行・集荷予約 Stage 2 実装 | 2026-06-11 | IN_PROGRESS | | | |

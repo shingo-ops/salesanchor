@@ -9,6 +9,9 @@ from __future__ import annotations
                 source / transit_days / live_error フィールド追加
                 ShippingCalcRequest に origin_country_code を追加
   2026-06-10: ADR-125 仕様追補 — 郵便番号（任意）+ rate_precision フラグ追加
+  2026-06-11: ADR-128 — Ship API / Pickup API 用スキーマ追加
+                SurchargeDetail, CreateShipmentRequest/Response,
+                CreatePickupRequest/Response, ShipPartyInfo 等
 """
 
 from datetime import datetime
@@ -59,6 +62,14 @@ class ShippingRateResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SurchargeDetail(BaseModel):
+    """追加料金の内訳（ADR-128）。"""
+
+    description: str
+    amount: Decimal
+    currency: str
+
+
 class ShippingCalcRequest(BaseModel):
     country_code: str = Field(min_length=2, max_length=3)
     weight_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=3)
@@ -82,6 +93,15 @@ class ShippingCalcRequest(BaseModel):
         max_length=20,
         description="届け先郵便番号（任意）。未指定時は国コードから代表値を補完し rate_precision='approximate' を返す。",
     )
+    # ADR-128: 見積もり精度向上のための寸法・住所タイプ・受注ID
+    length_cm: Optional[Decimal] = Field(default=None, gt=0, max_digits=8, decimal_places=2)
+    width_cm: Optional[Decimal] = Field(default=None, gt=0, max_digits=8, decimal_places=2)
+    height_cm: Optional[Decimal] = Field(default=None, gt=0, max_digits=8, decimal_places=2)
+    address_type: Optional[Literal["RESIDENTIAL", "BUSINESS"]] = Field(default=None)
+    order_id: Optional[int] = Field(
+        default=None,
+        description="指定時は商品マスタから重量を自動計算",
+    )
 
 
 class ShippingCalcResult(BaseModel):
@@ -96,6 +116,8 @@ class ShippingCalcResult(BaseModel):
     service_name: Optional[str] = None      # 例: FedEx International Priority
     transit_days: Optional[int] = None      # 配達日数
     delivery_timestamp: Optional[str] = None  # ISO 8601 配達予定
+    # ADR-128: 追加料金内訳
+    surcharges: list[SurchargeDetail] = Field(default_factory=list)
 
 
 class ShippingCalcResponse(BaseModel):
@@ -110,3 +132,81 @@ class ShippingCalcResponse(BaseModel):
     # 'approximate' : 郵便番号未指定・代表値で補完した概算見積もり
     # None          : FedEx ライブ見積もり以外（static / 未連携エラー等）
     rate_precision: Optional[Literal["exact", "approximate"]] = None
+
+
+# =========================================================================
+# ADR-128: FedEx ラベル発行 / 集荷予約 スキーマ
+# =========================================================================
+
+
+class ShipContactInfo(BaseModel):
+    """配送先・発送元の連絡先情報。"""
+
+    personName: str
+    phoneNumber: str
+    companyName: Optional[str] = None
+    emailAddress: Optional[str] = None
+
+
+class ShipAddressInfo(BaseModel):
+    """配送先・発送元の住所情報。"""
+
+    streetLines: list[str]
+    city: str
+    stateOrProvinceCode: Optional[str] = None
+    postalCode: str
+    countryCode: str
+    residential: bool = False
+
+
+class ShipPartyInfo(BaseModel):
+    """発送者・受取人の情報（連絡先＋住所）。"""
+
+    contact: ShipContactInfo
+    address: ShipAddressInfo
+
+
+class CreateShipmentRequest(BaseModel):
+    """FedEx ラベル発行リクエスト（ADR-128）。"""
+
+    order_id: int
+    service_type: str = Field(description="例: FEDEX_INTERNATIONAL_PRIORITY")
+    shipper: ShipPartyInfo
+    recipient: ShipPartyInfo
+    weight_kg: Decimal = Field(gt=0)
+    length_cm: Optional[Decimal] = None
+    width_cm: Optional[Decimal] = None
+    height_cm: Optional[Decimal] = None
+    label_image_type: str = "PDF"
+    customs_clearance: Optional[dict] = None
+
+
+class CreateShipmentResponse(BaseModel):
+    """FedEx ラベル発行レスポンス（ADR-128）。"""
+
+    order_id: int
+    tracking_number: str
+    label_drive_url: str
+    confirmed_shipping_fee: Decimal
+    confirmed_currency: str
+    surcharges: list[SurchargeDetail] = []
+
+
+class CreatePickupRequest(BaseModel):
+    """FedEx 集荷予約リクエスト（ADR-128）。"""
+
+    order_id: int
+    pickup_address: dict
+    ready_datetime: str = Field(description="ISO 8601 形式の集荷準備完了日時")
+    company_close_time: str = Field(description="会社の営業終了時刻（HH:MM 形式）")
+    carrier_code: str = "FDXE"
+    package_count: int = 1
+    total_weight_kg: Decimal = Decimal("1.0")
+
+
+class CreatePickupResponse(BaseModel):
+    """FedEx 集荷予約レスポンス（ADR-128）。"""
+
+    order_id: int
+    pickup_confirmation_code: str
+    location_code: Optional[str] = None
