@@ -198,6 +198,7 @@ export function InboxKartePanel({
           {/* Fixed action bar with overflow */}
           <ActionBar
             status={leadDetail.status}
+            leadId={leadDetail.id}
             onConvertLead={handleConvertLead}
             onCreateInvoice={handleCreateInvoice}
           />
@@ -216,14 +217,17 @@ export function InboxKartePanel({
 // ---------------------------------------------------------------------------
 
 function ActionBar({
-  status, onConvertLead, onCreateInvoice,
+  status, leadId, onConvertLead, onCreateInvoice,
 }: {
   status: string;
+  leadId: number;
   onConvertLead: () => void;
   onCreateInvoice: () => void;
 }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [regLink, setRegLink] = useState<string | null>(null);
+  const [regLinkLoading, setRegLinkLoading] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -236,6 +240,19 @@ function ActionBar({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
+
+  const generateLink = async (type: "register" | "add_address" | "change_billing") => {
+    setRegLinkLoading(true);
+    setRegLink(null);
+    try {
+      const res = await api.post("/registration-tokens", { lead_id: leadId, type }) as { registration_url: string };
+      setRegLink(res.registration_url);
+    } catch {
+      // noop: keep menu open so user can retry
+    } finally {
+      setRegLinkLoading(false);
+    }
+  };
 
   let primaryLabel: string | null = null;
   let primaryOnClick: (() => void) | null = null;
@@ -261,7 +278,47 @@ function ActionBar({
       </button>
       {menuOpen && (
         <div className="karte-overflow-menu" role="menu">
-          {/* No implemented overflow items currently — will be added per each sub-ADR */}
+          {/* ADR-127 E-2: Registration link generation */}
+          <button
+            type="button"
+            role="menuitem"
+            className="karte-overflow-item"
+            disabled={regLinkLoading}
+            onClick={() => generateLink("register")}
+          >
+            {t("registration.generateLink")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="karte-overflow-item"
+            disabled={regLinkLoading}
+            onClick={() => generateLink("add_address")}
+          >
+            {t("registration.generateAddressLink")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="karte-overflow-item"
+            disabled={regLinkLoading}
+            onClick={() => generateLink("change_billing")}
+          >
+            {t("registration.generateChangeBillingLink")}
+          </button>
+          {regLink && (
+            <div className="karte-overflow-link" style={{ padding: "var(--spacing-2)", wordBreak: "break-all", fontSize: "var(--font-size-xs)" }}>
+              <a href={regLink} target="_blank" rel="noopener noreferrer">{regLink}</a>
+              <button
+                type="button"
+                className="btn-sm"
+                style={{ marginLeft: "var(--spacing-1)" }}
+                onClick={() => { navigator.clipboard.writeText(regLink); }}
+              >
+                {t("registration.copyLink")}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

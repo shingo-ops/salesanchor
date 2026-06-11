@@ -2428,7 +2428,15 @@
     "completeTitle": "登録完了",
     "completeMessage": "ご登録ありがとうございます。情報が保存されました。",
     "addressAddedTitle": "住所追加完了",
-    "addressAddedMessage": "住所が正常に追加されました。"
+    "addressAddedMessage": "住所が正常に追加されました。",
+    "generateAddressLink": "住所を追加",
+    "addressLinkGenerated": "住所追加リンク",
+    "generateChangeBillingLink": "請求先を変更",
+    "changeBillingLinkGenerated": "請求先変更リンク",
+    "changeBillingTitle": "請求先住所の変更",
+    "changeBillingSubmit": "請求先住所を更新",
+    "changeBillingCompleteTitle": "請求先住所を更新しました",
+    "changeBillingCompleteMessage": "請求先住所が正常に更新されました。"
   },
   "ownInventory": {
     "title": "自社在庫",
