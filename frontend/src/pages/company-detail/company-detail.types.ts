@@ -80,7 +80,7 @@ export interface Contact {
   status: string;
 }
 
-export type Tab = "basic" | "addresses" | "contacts" | "channels" | "discord";
+export type Tab = "basic" | "addresses" | "contacts" | "channels" | "discord" | "convHistory";
 
 export type DiscordFormState = {
   is_joined: boolean;

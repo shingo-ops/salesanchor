@@ -21,6 +21,7 @@ import { CompanyAddressesTab } from "./CompanyAddressesTab";
 import { CompanyContactsTab } from "./CompanyContactsTab";
 import { CompanyChannelsTab } from "./CompanyChannelsTab";
 import { CompanyDiscordTab } from "./CompanyDiscordTab";
+import { CompanyConvLogsTab } from "./CompanyConvLogsTab";
 import { CompanyAddressModal } from "./CompanyAddressModal";
 import { typeLabel } from "./company-detail.types";
 
@@ -156,6 +157,9 @@ export default function CompanyDetailPage() {
         <button className={`tab ${activeTab === "discord" ? "active" : ""}`} onClick={() => switchTab("discord")}>
           {t("discord.title")}
         </button>
+        <button className={`tab ${activeTab === "convHistory" ? "active" : ""}`} onClick={() => switchTab("convHistory")}>
+          {t("companies.convHistory.tabLabel")}
+        </button>
       </div>
 
       {activeTab === "basic" && basicForm && (
@@ -226,6 +230,13 @@ export default function CompanyDetailPage() {
           handleDiscordSubmit={handleDiscordSubmit}
           handleDiscordDelete={handleDiscordDelete}
           canEdit={canEdit}
+        />
+      )}
+
+      {activeTab === "convHistory" && (
+        <CompanyConvLogsTab
+          companyId={company.id}
+          contacts={contacts}
         />
       )}
 

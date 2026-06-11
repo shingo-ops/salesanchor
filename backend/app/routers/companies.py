@@ -24,6 +24,7 @@ from app.auth.dependencies import (
     get_current_user,
     require_permission,
     reset_tenant_context,
+    set_tenant_context,
 )
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
@@ -1020,3 +1021,73 @@ async def merge_companies(
     )
     row = fetched.mappings().first()
     return await _compose_response(db, dict(row))
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/companies/{company_id}/conv-logs — 会社別会話ログ一覧（SA-02 Stage 4）
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/{company_id}/conv-logs",
+    summary="会社別会話ログ一覧（contact粒度・SA-02 Stage 4）",
+    tags=["companies"],
+)
+async def list_company_conv_logs(
+    company_id: int,
+    contact_id: int | None = None,
+    limit: int = 200,
+    current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """
+    会社の全 conversation_logs を時系列で返す。
+    contact_id で絞り込み可（省略時は全 contact の混在表示）。
+    論理削除済み（deleted_at IS NOT NULL）は除外。
+    """
+    await set_tenant_context(db, tenant_id)
+    schema = f"tenant_{tenant_id:03d}"
+
+    params: dict = {
+        "company_id": company_id,
+        "limit": min(limit, 500),
+    }
+    contact_filter = ""
+    if contact_id is not None:
+        contact_filter = "AND cl.contact_id = :contact_id"
+        params["contact_id"] = contact_id
+
+    result = await db.execute(
+        text(
+            f"SELECT cl.id, cl.contact_id, cl.lead_id, cl.channel_type, cl.direction, "
+            f"       cl.content_text, cl.translated_text, cl.occurred_at, "
+            f"       cl.recorded_by_user_id, "
+            f"       co.display_name AS contact_display_name "
+            f"FROM {schema}.conversation_logs cl "
+            f"LEFT JOIN {schema}.contacts co ON co.id = cl.contact_id "
+            f"WHERE cl.company_id = :company_id "
+            f"  AND cl.deleted_at IS NULL "
+            f"  {contact_filter} "
+            f"ORDER BY cl.occurred_at DESC "
+            f"LIMIT :limit"
+        ),
+        params,
+    )
+    rows = result.fetchall()
+    await reset_tenant_context(db, tenant_id)
+
+    return [
+        {
+            "id": r[0],
+            "contact_id": r[1],
+            "lead_id": r[2],
+            "channel_type": r[3],
+            "direction": r[4],
+            "content_text": r[5],
+            "translated_text": r[6],
+            "occurred_at": r[7].isoformat() if r[7] else None,
+            "recorded_by_user_id": r[8],
+            "contact_display_name": r[9],
+        }
+        for r in rows
+    ]
