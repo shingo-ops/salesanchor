@@ -2327,6 +2327,7 @@
   "registration": {
     "title": "顧客情報登録",
     "generateLink": "登録リンクを発行",
+    "registeredLabel": "登録済み",
     "alreadyRegisteredGate": "登録済みのため新規登録リンクは発行できません。",
     "linkGenerated": "登録リンク",
     "copyLink": "コピー",
