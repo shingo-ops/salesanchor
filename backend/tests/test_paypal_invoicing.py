@@ -1,0 +1,197 @@
+"""PayPal Invoicing 方式（ADR-101 改訂 2026-06-12）のテスト。
+
+service 層（create_and_send_invoice / get_invoice_status）は httpx をモックして単離検証。
+router 層（issue_paypal_link）は client + DB（SQLite）で email 必須・成功経路を検証。
+対応 AC: design.md #1（create→send→recipient_view_url）/#2（status=PAID 判定）/#3（email無し400）。
+"""
+
+from unittest.mock import MagicMock, patch
+
+from app.services import paypal_payments as svc
+
+
+def _resp(status_code, json_body=None):
+    r = MagicMock()
+    r.status_code = status_code
+    r.json = MagicMock(return_value=json_body or {})
+    return r
+
+
+# ── create_and_send_invoice ────────────────────────────────────
+_CREATE_OK = {"id": "INV2-AAAA-BBBB-CCCC-DDDD"}
+_SEND_OK = {"links": [
+    {"rel": "self", "href": "https://x/self"},
+    {"rel": "recipient-view", "href": "https://www.sandbox.paypal.com/invoice/p/#INV2"},
+]}
+
+
+def test_create_and_send_invoice_success():
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "post", side_effect=[_resp(201, _CREATE_OK), _resp(200, _SEND_OK)]) as p:
+        out = svc.create_and_send_invoice(
+            "sandbox", "id", "sec",
+            invoice_number="IN-0001-01", currency="JPY", amount=1000,
+            recipient_email="buyer@example.com", reference="4:123",
+        )
+    assert out["ok"] is True
+    assert out["paypal_invoice_id"] == "INV2-AAAA-BBBB-CCCC-DDDD"
+    assert out["recipient_view_url"] == "https://www.sandbox.paypal.com/invoice/p/#INV2"
+    # create body: reference / invoice_number / 送付先 email / JPY 整数値
+    create_kwargs = p.call_args_list[0].kwargs["json"]
+    assert create_kwargs["detail"]["reference"] == "4:123"
+    assert create_kwargs["detail"]["invoice_number"] == "IN-0001-01"
+    assert create_kwargs["primary_recipients"][0]["billing_info"]["email_address"] == "buyer@example.com"
+    assert create_kwargs["items"][0]["unit_amount"]["value"] == "1000"
+    # 2 番目の呼び出しは send（send_to_recipient=True）
+    send_kwargs = p.call_args_list[1].kwargs["json"]
+    assert send_kwargs["send_to_recipient"] is True
+
+
+def test_create_and_send_invoice_recipient_view_via_get_fallback():
+    """send レスポンスに recipient-view が無ければ GET の metadata から取得する。"""
+    get_body = {"detail": {"metadata": {"recipient_view_url": "https://pay/from-get"}}}
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "post", side_effect=[_resp(201, _CREATE_OK), _resp(202, {})]), \
+         patch.object(svc.httpx, "get", return_value=_resp(200, get_body)):
+        out = svc.create_and_send_invoice(
+            "sandbox", "id", "sec",
+            invoice_number="IN-0002-01", currency="USD", amount=10,
+            recipient_email="b@example.com", reference="4:9",
+        )
+    assert out["ok"] is True
+    assert out["recipient_view_url"] == "https://pay/from-get"
+
+
+def test_create_and_send_invoice_create_http_error():
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "post", return_value=_resp(400, {"name": "VALIDATION_ERROR"})):
+        out = svc.create_and_send_invoice(
+            "sandbox", "id", "sec",
+            invoice_number="IN-1", currency="JPY", amount=1000,
+            recipient_email="b@example.com", reference="4:1",
+        )
+    assert out["ok"] is False
+    assert out["status_code"] == 400
+    assert out["paypal_invoice_id"] is None
+
+
+def test_create_and_send_invoice_send_http_error():
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "post", side_effect=[_resp(201, _CREATE_OK), _resp(422, {})]):
+        out = svc.create_and_send_invoice(
+            "sandbox", "id", "sec",
+            invoice_number="IN-1", currency="JPY", amount=1000,
+            recipient_email="b@example.com", reference="4:1",
+        )
+    assert out["ok"] is False
+    assert out["status_code"] == 422
+    # 作成はできているので id は返る（送付のみ失敗）
+    assert out["paypal_invoice_id"] == "INV2-AAAA-BBBB-CCCC-DDDD"
+
+
+def test_create_and_send_invoice_token_fail_401():
+    with patch.object(svc, "_get_token", return_value=None):
+        out = svc.create_and_send_invoice(
+            "sandbox", "id", "bad",
+            invoice_number="IN-1", currency="JPY", amount=1000,
+            recipient_email="b@example.com", reference="4:1",
+        )
+    assert out["ok"] is False
+    assert out["status_code"] == 401
+
+
+# ── get_invoice_status ─────────────────────────────────────────
+def test_get_invoice_status_paid_extracts_fee():
+    body = {
+        "status": "PAID",
+        "payments": {"transactions": [{"paypal_fee": {"value": "3.30"}}]},
+    }
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "get", return_value=_resp(200, body)):
+        out = svc.get_invoice_status("sandbox", "id", "sec", "INV2-1")
+    assert out["ok"] is True
+    assert out["paid"] is True
+    assert out["fee"] == "3.30"
+
+
+def test_get_invoice_status_sent_not_paid():
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "get", return_value=_resp(200, {"status": "SENT"})):
+        out = svc.get_invoice_status("sandbox", "id", "sec", "INV2-1")
+    assert out["ok"] is True
+    assert out["paid"] is False
+
+
+def test_get_invoice_status_http_error():
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "get", return_value=_resp(404, {})):
+        out = svc.get_invoice_status("sandbox", "id", "sec", "INV2-1")
+    assert out["ok"] is False
+    assert out["status_code"] == 404
+
+
+# ── register_webhook が INVOICING.INVOICE.PAID を購読 ──────────
+def test_register_webhook_subscribes_invoicing_paid():
+    created = {"id": "WH-1", "event_types": [{"name": "INVOICING.INVOICE.PAID"}]}
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc, "_find_existing_webhook", return_value=None), \
+         patch.object(svc.httpx, "post", return_value=_resp(201, created)) as p:
+        out = svc.register_webhook("sandbox", "id", "sec", "https://api/webhook")
+    assert out["ok"] is True
+    assert out["webhook_id"] == "WH-1"
+    body = p.call_args.kwargs["json"]
+    assert body["event_types"] == [{"name": "INVOICING.INVOICE.PAID"}]
+
+
+# ── router: issue_paypal_link（email 必須・成功経路） ───────────
+async def _company_contact(client, *, email=None):
+    co = await client.post("/api/v1/companies", json={"name": "Invoicingテスト会社"})
+    assert co.status_code == 201, co.text
+    company_id = co.json()["id"]
+    payload = {"company_id": company_id, "display_name": "担当"}
+    if email is not None:
+        payload["primary_email"] = email
+    ct = await client.post("/api/v1/contacts", json=payload)
+    assert ct.status_code == 201, ct.text
+    return company_id, ct.json()["id"]
+
+
+async def _issued_invoice(client, company_id, contact_id):
+    inv = await client.post("/api/v1/invoices", json={
+        "company_id": company_id, "contact_id": contact_id,
+        "items": [{"product_name": "商品", "quantity": 1, "unit_price": "1000.00"}],
+    })
+    assert inv.status_code == 201, inv.text
+    invoice_id = inv.json()["id"]
+    issued = await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+    assert issued.status_code == 200, issued.text
+    return invoice_id
+
+
+async def test_issue_paypal_link_requires_email(client):
+    """email 未登録 contact の請求書は PayPal 請求書を発行できない（400）。"""
+    company_id, contact_id = await _company_contact(client, email=None)
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
+    assert resp.status_code == 400
+    assert "メールアドレス" in resp.json()["detail"]
+
+
+async def test_issue_paypal_link_success(client, monkeypatch):
+    """email 有り＋creds 有りで Invoicing を発行し paypal_order_id/approval_url を保存。"""
+    company_id, contact_id = await _company_contact(client, email="buyer@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+
+    async def _creds(db, tid):
+        return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+    monkeypatch.setattr(svc, "get_credentials", _creds)
+    monkeypatch.setattr(svc, "create_and_send_invoice", lambda *a, **k: {
+        "ok": True, "paypal_invoice_id": "INV2-ZZZZ", "recipient_view_url": "https://pay/zzz",
+        "status_code": 200, "message": "OK",
+    })
+    resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["paypal_order_id"] == "INV2-ZZZZ"
+    assert body["paypal_approval_url"] == "https://pay/zzz"

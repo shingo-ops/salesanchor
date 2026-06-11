@@ -244,12 +244,12 @@
     "successMsg": "Connection succeeded",
     "failMsg": "Connection failed",
     "payTestTitle": "Payment Test",
-    "payTestHint": "Create a test invoice (100 JPY) and a PayPal payment link in one click (sandbox only).",
+    "payTestHint": "Create a test invoice (100 JPY) and send a PayPal invoice in one click (sandbox only).",
     "payTestButton": "Create Test Invoice",
     "payTestRunning": "Creating...",
     "payTestCreated": "Test invoice created",
-    "payTestSteps": "Click Pay with PayPal to pay in sandbox; payment is confirmed automatically (or click Confirm PayPal Payment on the invoice).",
-    "payTestPay": "Pay with PayPal",
+    "payTestSteps": "Pay in sandbox from the customer payment page (or the PayPal email); the webhook confirms payment automatically (or click Check Payment Status on the invoice).",
+    "payTestPay": "Open Payment Page",
     "payTestOpenInvoice": "Open Test Invoice"
   },
   "fedexRateModal": {
@@ -1131,10 +1131,10 @@
     "payAction": "Record Payment",
     "voidAction": "Void",
     "paypal": {
-      "issueLink": "Issue PayPal Link",
-      "confirm": "Confirm PayPal Payment",
-      "linkTitle": "PayPal payment link to send to the customer",
-      "linkHint": "Send this link to the customer. Payment is confirmed automatically once they pay (if not, click Confirm PayPal Payment).",
+      "issueLink": "Send PayPal Invoice",
+      "confirm": "Check Payment Status",
+      "linkTitle": "PayPal invoice (customer payment page)",
+      "linkHint": "PayPal has emailed the invoice to the customer. Below is the customer payment page. Payment is confirmed automatically once they pay (if not, click Check Payment Status).",
       "openLink": "Open Link"
     },
     "voidReasonLabel": "Void Reason",
@@ -2428,7 +2428,15 @@
     "completeTitle": "Registration Complete",
     "completeMessage": "Thank you for registering. Your information has been saved.",
     "addressAddedTitle": "Address Added",
-    "addressAddedMessage": "The address has been successfully added."
+    "addressAddedMessage": "The address has been successfully added.",
+    "generateAddressLink": "Add Address",
+    "addressLinkGenerated": "Address Registration Link",
+    "generateChangeBillingLink": "Change Billing",
+    "changeBillingLinkGenerated": "Billing Change Link",
+    "changeBillingTitle": "Change Billing Address",
+    "changeBillingSubmit": "Update Billing Address",
+    "changeBillingCompleteTitle": "Billing Address Updated",
+    "changeBillingCompleteMessage": "Your billing address has been successfully updated."
   },
   "ownInventory": {
     "title": "Own Inventory",

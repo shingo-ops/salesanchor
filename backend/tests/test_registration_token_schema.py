@@ -11,7 +11,12 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.registration_token import AddressInput, RegisterRequest
+from app.schemas.registration_token import (
+    AddressInput,
+    ChangeBillingRequest,
+    RegisterRequest,
+    TokenType,
+)
 
 
 # --- A. 空文字列 → None 正規化 ---
@@ -178,3 +183,91 @@ class TestRegisterRequestContact:
         ))
         assert r.contact_email is None
         assert r.contact_telephone == "09012345678"
+
+
+# --- E. TokenType — ADR-127: change_billing 追加 ---
+
+class TestTokenTypeEnum:
+    """ADR-127: TokenType Enum に change_billing が含まれること。"""
+
+    def test_register_valid(self):
+        assert TokenType.register.value == "register"
+
+    def test_add_address_valid(self):
+        assert TokenType.add_address.value == "add_address"
+
+    def test_change_billing_valid(self):
+        assert TokenType.change_billing.value == "change_billing"
+
+    def test_all_three_types_present(self):
+        values = {t.value for t in TokenType}
+        assert values == {"register", "add_address", "change_billing"}
+
+
+# --- F. ChangeBillingRequest スキーマ — ADR-127 §2 ---
+
+class TestChangeBillingRequest:
+    """ADR-127 B-2: ChangeBillingRequest の入力契約を検証する。"""
+
+    def _base_address(self, **kwargs) -> dict:
+        return {"address_type": "billing", **kwargs}
+
+    def _base(self, **kwargs) -> dict:
+        return {
+            "token": "tok",
+            "address": self._base_address(**kwargs),
+        }
+
+    def test_minimal_valid(self):
+        """token + billing address だけで ValidationError にならない"""
+        req = ChangeBillingRequest(**self._base())
+        assert req.token == "tok"
+        assert req.address.address_type == "billing"
+
+    def test_billing_display_name_optional(self):
+        req = ChangeBillingRequest(**self._base(name="ACME"))
+        assert req.billing_display_name is None
+
+    def test_billing_display_name_set(self):
+        req = ChangeBillingRequest(
+            token="tok",
+            address=self._base_address(),
+            billing_display_name="ACME Inc.",
+        )
+        assert req.billing_display_name == "ACME Inc."
+
+    def test_payment_recipient_name_optional(self):
+        req = ChangeBillingRequest(**self._base())
+        assert req.payment_recipient_name is None
+
+    def test_payment_recipient_name_set(self):
+        req = ChangeBillingRequest(
+            token="tok",
+            address=self._base_address(),
+            payment_recipient_name="ACME TRADING",
+        )
+        assert req.payment_recipient_name == "ACME TRADING"
+
+    def test_address_email_validated(self):
+        """AddressInput の email バリデーションが ChangeBillingRequest 内でも機能する"""
+        with pytest.raises(ValidationError, match="メールアドレス"):
+            ChangeBillingRequest(**self._base(email="not-an-email"))
+
+    def test_address_country_code_normalized(self):
+        req = ChangeBillingRequest(**self._base(country_code="jp"))
+        assert req.address.country_code == "JP"
+
+    def test_address_empty_strings_normalized_to_none(self):
+        req = ChangeBillingRequest(**self._base(email="", city="", zip=""))
+        assert req.address.email is None
+        assert req.address.city is None
+        assert req.address.zip is None
+
+    def test_delivery_address_type_rejected(self):
+        """change_billing は address_type='billing' 以外が渡されても Pydantic は通す (ルーター層でチェック)。
+        ここではスキーマが delivery を受け付けることの確認のみ（意図的な設計）。"""
+        req = ChangeBillingRequest(
+            token="tok",
+            address={"address_type": "delivery"},
+        )
+        assert req.address.address_type == "delivery"

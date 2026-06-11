@@ -26,6 +26,7 @@ _ADDRESS_OPTIONAL_STR_FIELDS = frozenset({
 class TokenType(str, Enum):
     register = "register"
     add_address = "add_address"
+    change_billing = "change_billing"
 
 
 # --- 担当者がトークン発行する際のスキーマ ---
@@ -151,6 +152,14 @@ class AddAddressRequest(BaseModel):
     """住所追加リクエスト（公開フォームから送信）。既存の住所を上書きしない。"""
     token: str = Field(..., description="raw token")
     address: AddressInput = Field(..., description="追加する住所")
+
+
+class ChangeBillingRequest(BaseModel):
+    """請求先変更リクエスト（公開フォームから送信）。案B: 旧行降格＋新行INSERT。"""
+    token: str = Field(..., description="raw token")
+    address: AddressInput = Field(..., description="新しい請求先住所（address_type='billing' 固定）")
+    billing_display_name: Optional[str] = Field(None, max_length=200, description="請求先表示名（Billing Name）")
+    payment_recipient_name: Optional[str] = Field(None, max_length=200, description="支払い名義（送金名義が異なる場合）")
 
 
 class RegisterResponse(BaseModel):

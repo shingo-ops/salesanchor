@@ -88,6 +88,7 @@ import DesignPreviewPage from "./pages/design-preview/DesignPreviewPage";
 // ADR-SA-03: 顧客登録トークン基盤（公開・認証不要）
 import RegisterPage from "./pages/register/RegisterPage";
 import RegisterAddressPage from "./pages/register/RegisterAddressPage";
+import RegisterChangeBillingPage from "./pages/register/RegisterChangeBillingPage";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -117,6 +118,7 @@ function App() {
                 {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/register/address" element={<RegisterAddressPage />} />
+                <Route path="/register/change-billing" element={<RegisterChangeBillingPage />} />
                 <Route
                   element={
                     <ProtectedRoute>
