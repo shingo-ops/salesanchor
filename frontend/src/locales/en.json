@@ -630,7 +630,19 @@
     "branchNameLabel": "Branch name (if multiple locations)",
     "countryCodeWithHint": "Country code (ISO 2-letter)",
     "deleteConfirmMessage": "Delete \"{{name}}\" ({{code}})? Cannot delete if related deals, orders, quotes, invoices, or contacts exist.",
-    "subtitle": "Manage client information and addresses."
+    "subtitle": "Manage client information and addresses.",
+    "convHistory": {
+      "tabLabel": "Conversation History",
+      "loadError": "Failed to load conversation logs",
+      "filterByContact": "Filter by contact",
+      "allContacts": "All contacts",
+      "noContact": "No contact",
+      "empty": "No conversation logs found",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "manual": "Manual",
+      "translation": "Translation"
+    }
   },
   "contacts": {
     "title": "Contacts",
