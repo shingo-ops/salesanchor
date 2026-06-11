@@ -772,6 +772,18 @@
     "translationBudgetExceeded": "今月の翻訳上限に達しました",
     "showOriginal": "原文を見る",
     "translatedBy": "AI翻訳",
+    "manualRecord": {
+      "sectionTitle": "手動記録",
+      "channelLabel": "チャネル",
+      "contentPlaceholder": "会話内容を入力...",
+      "occurredAtLabel": "日時",
+      "save": "記録を保存",
+      "saving": "保存中...",
+      "savedBadge": "手動記録",
+      "saveError": "保存に失敗しました",
+      "deleteConfirm": "この記録を削除しますか？",
+      "deleted": "削除しました"
+    },
     "settings": {
       "title": "受信箱の設定",
       "display": "表示カスタマイズ",

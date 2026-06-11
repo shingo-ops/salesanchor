@@ -772,6 +772,18 @@
     "translationBudgetExceeded": "Monthly translation limit reached",
     "showOriginal": "Show original",
     "translatedBy": "AI Translation",
+    "manualRecord": {
+      "sectionTitle": "Manual Record",
+      "channelLabel": "Channel",
+      "contentPlaceholder": "Enter conversation content...",
+      "occurredAtLabel": "Date & Time",
+      "save": "Save Record",
+      "saving": "Saving...",
+      "savedBadge": "Manual",
+      "saveError": "Failed to save",
+      "deleteConfirm": "Delete this record?",
+      "deleted": "Deleted"
+    },
     "settings": {
       "title": "Inbox Settings",
       "display": "Display Customization",

@@ -5,6 +5,7 @@ import { ICON } from "../../constants/iconSizes";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { translateMessage } from "../../lib/messages";
 import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
+import { ManualRecordSection } from "./ManualRecordSection";
 import { formatAbsolute, getInitials, relativeTime } from "./inbox.types";
 import type { LeadDetail } from "./inbox.types";
 
@@ -471,6 +472,14 @@ export function InboxMessageThread({
           </div>
         </div>
       </div>
+
+      {/* SA-02 Stage 3: 手動記録入力（manual チャネルのみ表示） */}
+      {selectedLeadId != null && (
+        <ManualRecordSection
+          leadId={selectedLeadId}
+          currentPlatform={selectedConversation?.platform ?? null}
+        />
+      )}
     </main>
   );
 }
