@@ -86,7 +86,7 @@ SSE 専用 location 4 箇所（`nginx.conf:108, 128, 268, 288`）の `proxy_buff
 
 ---
 
-## 3. 外部事例（ADR-133 外部事例欄と共通）
+## 3. 外部・過去事例の参照と我々への応用
 
 ### OSS nginx + Docker 動的 IP の定石: resolver + 変数化
 
