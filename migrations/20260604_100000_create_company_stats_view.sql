@@ -49,7 +49,7 @@ BEGIN
             LEFT JOIN %I.deals d
                 ON d.company_id = c.id
             LEFT JOIN %I.conversation_logs cl
-                ON cl.company_id = c.id AND cl.deleted_at IS NULL
+                ON cl.company_id = c.id
             GROUP BY c.id
         $q$,
             schema_rec.nspname,
