@@ -77,6 +77,26 @@ async def create_token(
 
     期限 7 日・単回使用。顧客に raw_token を含む URL を送付する。
     """
+    # ADR-127 §4 第1層ゲート: type=register かつ登録済みなら 409
+    if data.type.value == "register":
+        already: bool = bool(await db.scalar(
+            text(
+                "SELECT EXISTS("
+                "  SELECT 1 FROM company_addresses ca"
+                "  JOIN companies c ON c.id = ca.company_id"
+                "  WHERE c.lead_id = :lead_id"
+                "  AND ca.address_type = 'billing'"
+                "  AND ca.is_default = TRUE"
+                ")"
+            ),
+            {"lead_id": data.lead_id},
+        ))
+        if already:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="already_registered",
+            )
+
     raw_token, expires_at = await create_registration_token(
         db,
         tenant_id=tenant_id,
