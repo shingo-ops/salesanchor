@@ -43,7 +43,7 @@ Step 2 がすでに salesanchor_app URL を保持するため、Step 3b（1回�
 
 ### 二重になる根本原因
 
-`deploy.yml:323` の blue-green 実行前に **「DATABASE_URL が実際に変わったか」の確認がない**。
+`.github/workflows/deploy.yml:323` の blue-green 実行前に **「DATABASE_URL が実際に変わったか」の確認がない**。
 
 ### 安全なスキップ条件（設計フェーズで実装）
 
@@ -112,32 +112,32 @@ nginx/nginx.conf:318   proxy_read_timeout    120s;  ← HTTPS /api/（汎用）
 
 | 行番号 | location | proxy_pass |
 |-------|---------|------------|
-| `nginx.conf:95` | `/api/v1/auth/` | `http://backend:8000/api/v1/auth/` |
-| `nginx.conf:108` | `= /api/v1/conversations/stream` | `http://backend:8000/api/v1/conversations/stream` |
-| `nginx.conf:128` | `= /api/v1/leads/stream` | `http://backend:8000/api/v1/leads/stream` |
-| `nginx.conf:150` | `/api/` | `http://backend:8000/api/` |
-| `nginx.conf:192` | `= /metrics` | `http://backend:8000/metrics` |
+| `nginx/nginx.conf:95` | `/api/v1/auth/` | `http://backend:8000/api/v1/auth/` |
+| `nginx/nginx.conf:108` | `= /api/v1/conversations/stream` | `http://backend:8000/api/v1/conversations/stream` |
+| `nginx/nginx.conf:128` | `= /api/v1/leads/stream` | `http://backend:8000/api/v1/leads/stream` |
+| `nginx/nginx.conf:150` | `/api/` | `http://backend:8000/api/` |
+| `nginx/nginx.conf:192` | `= /metrics` | `http://backend:8000/metrics` |
 
 **api.salesanchor.jp（HTTPS、`nginx/nginx.conf:228` server block）:**
 
 | 行番号 | location | proxy_pass |
 |-------|---------|------------|
-| `nginx.conf:255` | `/api/v1/auth/` | `http://backend:8000/api/v1/auth/` |
-| `nginx.conf:268` | `= /api/v1/conversations/stream` | `http://backend:8000/api/v1/conversations/stream` |
-| `nginx.conf:288` | `= /api/v1/leads/stream` | `http://backend:8000/api/v1/leads/stream` |
-| `nginx.conf:310` | `/api/` | `http://backend:8000/api/` |
+| `nginx/nginx.conf:255` | `/api/v1/auth/` | `http://backend:8000/api/v1/auth/` |
+| `nginx/nginx.conf:268` | `= /api/v1/conversations/stream` | `http://backend:8000/api/v1/conversations/stream` |
+| `nginx/nginx.conf:288` | `= /api/v1/leads/stream` | `http://backend:8000/api/v1/leads/stream` |
+| `nginx/nginx.conf:310` | `/api/` | `http://backend:8000/api/` |
 
 **対象外（IP アドレス直指定 / frontend）:**
-- `nginx.conf:162`: `http://49.212.160.98:3000/grafana/` — DNS 不使用・変更不要
-- `nginx.conf:179`: `http://49.212.160.98:3001/` — DNS 不使用・変更不要
-- `nginx.conf:201`: `http://frontend:8080/` — blue-green 対象外・変更不要
+- `nginx/nginx.conf:162`: `http://49.212.160.98:3000/grafana/` — DNS 不使用・変更不要
+- `nginx/nginx.conf:179`: `http://49.212.160.98:3001/` — DNS 不使用・変更不要
+- `nginx/nginx.conf:201`: `http://frontend:8080/` — blue-green 対象外・変更不要
 
 ### 変更方針
 
 `resolver` は `server` ブロックに1箇所置くと配下の全 `location` に適用される。
 
-**app.salesanchor.jp（`nginx.conf:67-213`）**: 1つ追加  
-**api.salesanchor.jp（`nginx.conf:228-325`）**: 1つ追加
+**app.salesanchor.jp（`nginx/nginx.conf:67-213`）**: 1つ追加  
+**api.salesanchor.jp（`nginx/nginx.conf:228-325`）**: 1つ追加
 
 各 `proxy_pass http://backend:8000/...` を変数経由に変更：
 ```nginx
@@ -160,7 +160,7 @@ SSE は長時間接続。切替後の **新規** SSE 接続は即座に green �
 
 変数 proxy_pass + resolver により nginx は各リクエスト時に Docker DNS を参照（TTL=5s）。  
 エイリアス切替後 **最大 5s** で全リクエストが green に向く。理論上は `nginx -s reload` 不要になるが、  
-`blue-green-cutover.sh:144` の reload は念押しとして残して問題なし（ゼロコスト）。
+`scripts/blue-green-cutover.sh:144` の reload は念押しとして残して問題なし（ゼロコスト）。
 
 ---
 
@@ -214,8 +214,8 @@ _status=$(docker exec "${COMPOSE_PROJECT}-nginx-1" \
 
 ## 5. 設計フェーズへの示唆
 
-1. **優先度高**: `deploy.yml:314`〜`deploy.yml:323` の URL 比較 + スキップ（デプロイ時間半減、監視ブラインド解消）
+1. **優先度高**: `.github/workflows/deploy.yml:314`〜`.github/workflows/deploy.yml:323` の URL 比較 + スキップ（デプロイ時間半減、監視ブラインド解消）
 2. **優先度中**: `nginx.conf` 全9箇所の resolver + 変数 proxy_pass（504 完全排除）
-3. **優先度低**: `dry-run-blue-green.sh:81` の `--max-time 5`（素振り監視の精度向上）
+3. **優先度低**: `scripts/dry-run-blue-green.sh:81` の `--max-time 5`（素振り監視の精度向上）
 
 変更順序の推奨: (1) → (3) → (2) の順に PR 分割。nginx.conf 変更は本番反映に `nginx -t` + VPS 素振り必須。

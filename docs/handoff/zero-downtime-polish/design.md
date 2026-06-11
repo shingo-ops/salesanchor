@@ -56,7 +56,7 @@ fi
 proxy_pass http://backend:8000/api/;  # worker 起動時の IP をキャッシュ → 切替後120s 504
 ```
 
-**変更後**（app.salesanchor.jp `nginx.conf:67` および api.salesanchor.jp `nginx.conf:228` 各 server ブロックに追加）:
+**変更後**（app.salesanchor.jp `nginx/nginx.conf:67` および api.salesanchor.jp `nginx/nginx.conf:228` 各 server ブロックに追加）:
 ```nginx
 resolver 127.0.0.11 valid=5s;        # Docker 内部 DNS、TTL=5s
 set $backend_upstream "backend:8000"; # 変数化 → リクエストごとに解決
@@ -76,9 +76,9 @@ proxy_pass http://$backend_upstream/api/;  # 各 location を変数経由に
 - 新規 SSE 接続は切替後5秒以内に green に向く → 改善
 
 **対象外（変更しない）**:
-- `nginx.conf:162` `/grafana/` → `http://49.212.160.98:3000/grafana/`（IP 直指定）
-- `nginx.conf:179` `/status/` → `http://49.212.160.98:3001/`（IP 直指定）
-- `nginx.conf:201` `/` → `http://frontend:8080/`（blue-green 対象外）
+- `nginx/nginx.conf:162` `/grafana/` → `http://49.212.160.98:3000/grafana/`（IP 直指定）
+- `nginx/nginx.conf:179` `/status/` → `http://49.212.160.98:3001/`（IP 直指定）
+- `nginx/nginx.conf:201` `/` → `http://frontend:8080/`（blue-green 対象外）
 
 ### Fix 3: 監視スクリプトの `--max-time` 追加（`scripts/dry-run-blue-green.sh:81`）
 
