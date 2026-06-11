@@ -8,25 +8,25 @@
 
 ### GitHub Actions トリガー
 
-`.github/workflows/deploy.yml:3-6`  
-`main` ブランチへの push で起動。`concurrency: group: deploy-production, cancel-in-progress: false` により直列実行保証（`.github/workflows/deploy.yml:14-16`）。
+`.github/workflows/deploy.yml:3`  
+`main` ブランチへの push で起動。`concurrency: group: deploy-production, cancel-in-progress: false` により直列実行保証（`.github/workflows/deploy.yml:14`）。
 
 ### ステップ順序
 
 | # | ステップ名 | file:line | 内容 |
 |---|-----------|-----------|------|
-| 0 | PREV_SHA 保存 | `deploy.yml:130-134` | ロールバック用に現 HEAD を `.deploy_prev_sha` に保存 |
-| 1 | git pull | `deploy.yml:137-139` | `git fetch origin main && git reset --hard origin/main` |
-| 2 | .env 更新 | `deploy.yml:141-229` | GitHub Secrets を sed 削除 → append で注入 |
-| 3a | `docker compose build` | `deploy.yml:241-253` | 最大3リトライ。**旧コンテナは生存したまま新イメージをビルド** |
-| 3b | コンテナ force-rm | `deploy.yml:260-262` | `docker rm -f` で backend/frontend/celery系を削除 ← **ダウン開始点** |
-| 3c | `docker compose up -d` | `deploy.yml:263` | 新コンテナ起動 |
-| 4 | backend healthy 待ち | `deploy.yml:265-271` | `docker inspect Health.Status == "healthy"` を最大120s |
-| 4b | `nginx -s reload` | `deploy.yml:273-275` | Docker 内部 DNS キャッシュリフレッシュ |
-| 5 | SA-18 bootstrap | `deploy.yml:283-336` | salesanchor_app ロール設定（冪等） |
-| 6 | migrations | `deploy.yml:341-359` | `bash scripts/run_all_migrations.sh`（backend/migration変更時のみ） |
-| 7 | smoke tests | `deploy.yml:362-373` | migration があった場合のみ |
-| 8 | health check + auto-rollback | `deploy.yml:449-528` | `/api/health` 失敗時 PREV_SHA に戻す |
+| 0 | PREV_SHA 保存 | `.github/workflows/deploy.yml:130` | ロールバック用に現 HEAD を `.deploy_prev_sha` に保存 |
+| 1 | git pull | `.github/workflows/deploy.yml:137` | `git fetch origin main && git reset --hard origin/main` |
+| 2 | .env 更新 | `.github/workflows/deploy.yml:141` | GitHub Secrets を sed 削除 → append で注入 |
+| 3a | `docker compose build` | `.github/workflows/deploy.yml:241` | 最大3リトライ。**旧コンテナは生存したまま新イメージをビルド** |
+| 3b | コンテナ force-rm | `.github/workflows/deploy.yml:260` | `docker rm -f` で backend/frontend/celery系を削除 ← **ダウン開始点** |
+| 3c | `docker compose up -d` | `.github/workflows/deploy.yml:263` | 新コンテナ起動 |
+| 4 | backend healthy 待ち | `.github/workflows/deploy.yml:265` | `docker inspect Health.Status == "healthy"` を最大120s |
+| 4b | `nginx -s reload` | `.github/workflows/deploy.yml:273` | Docker 内部 DNS キャッシュリフレッシュ |
+| 5 | SA-18 bootstrap | `.github/workflows/deploy.yml:283` | salesanchor_app ロール設定（冪等） |
+| 6 | migrations | `.github/workflows/deploy.yml:341` | `bash scripts/run_all_migrations.sh`（backend/migration変更時のみ） |
+| 7 | smoke tests | `.github/workflows/deploy.yml:362` | migration があった場合のみ |
+| 8 | health check + auto-rollback | `.github/workflows/deploy.yml:449` | `/api/health` 失敗時 PREV_SHA に戻す |
 
 ---
 
@@ -47,17 +47,17 @@
 
 ### ダウン時間を生む構造的原因
 
-1. **コンテナ削除から起動まで連続的に空白が生まれる**（`deploy.yml:260-263`）  
+1. **コンテナ削除から起動まで連続的に空白が生まれる**（`.github/workflows/deploy.yml:260`）  
    force-rm → `up -d` の間、`backend` という名前のコンテナが存在しない。
 
-2. **nginx は Docker 内部 DNS でプロキシ解決する**（`nginx.conf:150`）  
+2. **nginx は Docker 内部 DNS でプロキシ解決する**（`nginx/nginx.conf:150`）  
    `proxy_pass http://backend:8000/api/` — コンテナ不在 = DNS NXDOMAIN → 502。
 
 3. **healthcheck の start_period が15秒**（`docker-compose.yml:115`）  
    `start_period: 15s, interval: 30s, retries: 3` → 最短15秒後に初回チェック。  
-   nginx reload はその後（`deploy.yml:274`）→ 合計15〜45秒の窓。
+   nginx reload はその後（`.github/workflows/deploy.yml:274`）→ 合計15〜45秒の窓。
 
-4. **migration は `up -d` の後に走る**（`deploy.yml:355`）  
+4. **migration は `up -d` の後に走る**（`.github/workflows/deploy.yml:355`）  
    起動済み新コンテナ1台のみの状態で migration を実行 → 並走コンテナへの双方向互換が必要な構造。
 
 ---
@@ -78,9 +78,9 @@ Internet (443/80)
 
 ### nginx 設定の重要点
 
-- **プロキシはホスト名ベース**（`http://backend:8000`）— コンテナ名が Docker DNS で解決される
+- **プロキシはホスト名ベース**（http://backend:8000）— コンテナ名が Docker DNS で解決される
 - nginx は `restart: unless-stopped`（`docker-compose.yml:16`）— 常時稼働、コンテナ再作成不要
-- `proxy_connect_timeout 10s`（`nginx.conf:102`）— コンテナ不在時は10秒後にタイムアウト → 502
+- `proxy_connect_timeout 10s`（`nginx/nginx.conf:102`）— コンテナ不在時は10秒後にタイムアウト → 502
 - nginx ネットワーク: `frontnet` のみ（`docker-compose.yml:35`）— backend も frontnet に属す（`docker-compose.yml:131`）
 
 ### blue-green 可能性への影響
@@ -103,23 +103,23 @@ Internet (443/80)
 | DB 接続（必須） | 正常 | 200 |
 | Redis / Celery | 失敗 | 200 degraded |
 
-DB 接続チェック: `SELECT 1`（`health.py:29`）
+DB 接続チェック: `SELECT 1`（`backend/app/routers/health.py:29`）
 
 ### Docker healthcheck 設定
 
 | サービス | 設定 | file:line |
 |--------|------|-----------|
 | backend | `python -c "urllib.request.urlopen('http://localhost:8000/api/health')"` | `docker-compose.yml:111` |
-|  | `start_period: 15s, interval: 30s, timeout: 10s, retries: 3` | `docker-compose.yml:112-115` |
+|  | `start_period: 15s, interval: 30s, timeout: 10s, retries: 3` | `docker-compose.yml:112` |
 | frontend | `wget --spider http://127.0.0.1:8080/` | `docker-compose.yml:147` |
-|  | `start_period: 15s, interval: 30s` | `docker-compose.yml:149-151` |
+|  | `start_period: 15s, interval: 30s` | `docker-compose.yml:149` |
 | nginx | `curl -f http://localhost:80/nginx_status` | `docker-compose.yml:18` |
 | postgres | `pg_isready -U ${POSTGRES_USER}` | `docker-compose.yml:315` |
 
 ### deploy.yml でのヘルス確認箇所
 
-- Step 4: `docker inspect Health.Status == "healthy"` 最大120s待ち（`deploy.yml:265-271`）
-- Finalize: `urllib.request.urlopen('http://localhost:8000/api/health')` で最終確認（`deploy.yml:450`）
+- Step 4: `docker inspect Health.Status == "healthy"` 最大120s待ち（`.github/workflows/deploy.yml:265`）
+- Finalize: `urllib.request.urlopen('http://localhost:8000/api/health')` で最終確認（`.github/workflows/deploy.yml:450`）
 
 ---
 
@@ -138,14 +138,14 @@ DB 接続チェック: `SELECT 1`（`health.py:29`）
 | redis | なし | backnet | 320M（maxmemory 256mb） / 0.5cpu |
 | postgres | なし | backnet | 1G / 1.0cpu |
 
-`docker-compose.yml:116-131`（backend）、`docker-compose.yml:4-35`（nginx）
+`docker-compose.yml:116`（backend）、`docker-compose.yml:4`（nginx）
 
 ### 第2インスタンス並走の余地
 
 - **backend/frontend にはポートマッピングなし** → blue インスタンスと green インスタンスを異なるコンテナ名で起動しても、ポート競合は起きない
 - **nginx が upstream をコンテナ名で直指定** → `backend-blue` / `backend-green` を nginx.conf に追記し reload すれば切り替え可能
 - **VPS リソース制約**: backend が512M/1cpu × 2台 = 計1024M/2cpu。VPS 総メモリ次第（現状未確認 → 設計フェーズで要確認）
-- postgres / redis は状態を持つため再作成対象外（`deploy.yml:259-262` でも除外済み）
+- postgres / redis は状態を持つため再作成対象外（`.github/workflows/deploy.yml:259` でも除外済み）
 
 ---
 
@@ -153,20 +153,20 @@ DB 接続チェック: `SELECT 1`（`health.py:29`）
 
 ### 実行タイミング
 
-`deploy.yml:341-359`: `steps.changes.outputs.migrations == 'true'` の場合のみ実行。  
-`backend/**`, `migrations/**`, `scripts/**`, `docker-compose.yml`, `deploy.yml` のいずれかが変更された場合に該当（`deploy.yml:37-43`）。
+`.github/workflows/deploy.yml:341`: `steps.changes.outputs.migrations == 'true'` の場合のみ実行。  
+`backend/**`, `migrations/**`, `scripts/**`, `docker-compose.yml`, `deploy.yml` のいずれかが変更された場合に該当（`.github/workflows/deploy.yml:37`）。
 
 ### run_all_migrations.sh の動作
 
-`scripts/run_all_migrations.sh:1-80`  
+`scripts/run_all_migrations.sh:1`  
 - `docker cp scripts ${BACKEND}:/app/` と `docker cp migrations ${BACKEND}:/app/` でファイルをコンテナにコピー
 - `run_py` ヘルパー: `docker exec -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" ${BACKEND} python <script>`
 - `run_sql` ヘルパー: `docker exec -i ${POSTGRES} psql -U jarvis -d jarvis_db < <file>`
-- TOTAL=120 ステップ（`run_all_migrations.sh:63`）
+- TOTAL=120 ステップ（`scripts/run_all_migrations.sh:63`）
 
 ### migration 実行時の状態
 
-- `docker compose up -d` 後（`deploy.yml:263`）に migration が実行される
+- `docker compose up -d` 後（`.github/workflows/deploy.yml:263`）に migration が実行される
 - 実行時点では **新コンテナ1台のみ**稼働している（旧コンテナは force-rm 済み）
 - migration は **新コンテナ上で実行** されるため、新旧コンテナ並走中のスキーマ変更は現構成では発生しない
 - **後方互換（backward-compatible）スキーマ変更**は `backend/CLAUDE.md` で強制：`additive-only`（カラム追加のみ許可、削除禁止）
@@ -226,11 +226,11 @@ blue コンテナ（旧コード）が稼働中に migration（スキーマ変�
 
 | 制約 | 詳細 | file:line |
 |-----|------|-----------|
-| nginx upstream がコンテナ名固定 | `http://backend:8000` — blue/green切替には設定変更が必要 | `nginx.conf:150` |
+| nginx upstream がコンテナ名固定 | http://backend:8000 — blue/green切替には設定変更が必要 | `nginx/nginx.conf:150` |
 | healthcheck start_period が15s | 最短でも15秒後まで healthy 判定が出ない | `docker-compose.yml:115` |
 | VPS リソース | backend×2台並走は512M×2=1024M必要。VPS 総メモリ要確認 | — |
-| migration タイミング | 現在は `up -d` 後・単一コンテナで実行。blue-green 並走中の実行順序設計が必要 | `deploy.yml:355` |
-| nginx `proxy_pass` DNS解決 | nginx は起動時に名前解決し、コンテナ再起動でDNSが変わっても古いIPをキャッシュする可能性あり。`resolver` 設定 or `nginx -s reload` で対処可能 | `nginx.conf:95` |
+| migration タイミング | 現在は `up -d` 後・単一コンテナで実行。blue-green 並走中の実行順序設計が必要 | `.github/workflows/deploy.yml:355` |
+| nginx `proxy_pass` DNS解決 | nginx は起動時に名前解決し、コンテナ再起動でDNSが変わっても古いIPをキャッシュする可能性あり。`resolver` 設定 or `nginx -s reload` で対処可能 | `nginx/nginx.conf:95` |
 | `stop_grace_period: 40s` | backend コンテナは SIGTERM 後40秒間は応答を試みる | `docker-compose.yml:109` |
 
 ---
@@ -241,11 +241,11 @@ blue コンテナ（旧コード）が稼働中に migration（スキーマ変�
 
 1. **nginx upstream 切替方式が現実的**:  
    - nginx は常時稼働（コンテナ再作成不要）
-   - `nginx -s reload` で設定変更が無停止で反映される（`deploy.yml:274` に実績あり）
+   - `nginx -s reload` で設定変更が無停止で反映される（`.github/workflows/deploy.yml:274` に実績あり）
    - `resolver 127.0.0.11 valid=5s` を追加すれば Docker 内部 DNS を動的解決できる
 
 2. **healthcheck 完了後に切替**:  
-   - `docker inspect Health.Status` で healthy 確認済みのインスタンスへ切替（`deploy.yml:266-270` に実績あり）
+   - `docker inspect Health.Status` で healthy 確認済みのインスタンスへ切替（`.github/workflows/deploy.yml:266` に実績あり）
 
 3. **migration の実行タイミング**:  
    - additive-only 原則により、新コンテナ起動 → migration → 旧コンテナ停止 の順序でも旧コードは動作可能

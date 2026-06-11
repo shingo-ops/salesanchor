@@ -36,7 +36,7 @@ docker compose up -d  ← 22s 後に ready → nginx 502 終了
 
 ### nginx 設定の変更点
 
-**現状** (`nginx.conf:150`):
+**現状** (`nginx/nginx.conf:150`):
 ```nginx
 proxy_pass http://backend:8000/api/;
 ```
