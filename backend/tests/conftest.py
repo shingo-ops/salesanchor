@@ -776,7 +776,10 @@ async def setup_test_db(test_engine):
                 duty_amount NUMERIC(15, 2),
                 duty_policy_snapshot TEXT,
                 fx_rate_snapshot TEXT,
-                issue_mode VARCHAR(20)
+                issue_mode VARCHAR(20),
+                paypal_order_id TEXT,
+                paypal_approval_url TEXT,
+                payment_fee NUMERIC(15, 2)
             )
         """))
         await conn.execute(text("""

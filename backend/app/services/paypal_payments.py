@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import logging
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 import httpx
@@ -169,10 +170,192 @@ def test_connection(env: str, client_id: str, client_secret: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Orders API（決済リンク発行・入金確認）— ADR-101 §6 PayPal mode1
+# httpx 同期・呼び出し側で run_in_threadpool 推奨
+# ---------------------------------------------------------------------------
+
+# PayPal のゼロ小数通貨（value は整数文字列で送る。JPY に "1000.00" を送ると 400）
+_ZERO_DECIMAL_CCY = {"JPY", "HUF", "TWD"}
+
+
+def _fmt_amount(amount, currency: str) -> str:
+    """PayPal の amount.value 文字列を通貨の小数桁に合わせて整形する。"""
+    dec = Decimal(str(amount))
+    if (currency or "").upper() in _ZERO_DECIMAL_CCY:
+        return str(int(dec.quantize(Decimal("1"), rounding=ROUND_HALF_UP)))
+    return str(dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _get_token(env: str, client_id: str, client_secret: str) -> Optional[str]:
+    """OAuth2 client_credentials でアクセストークンを取得（失敗時 None）。"""
+    base = _BASE_URLS[_norm_env(env)]
+    basic = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    try:
+        resp = httpx.post(
+            f"{base}/v1/oauth2/token",
+            data={"grant_type": "client_credentials"},
+            headers={
+                "Authorization": f"Basic {basic}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] token 取得通信エラー: %s", e)
+        return None
+    if resp.status_code == 200:
+        return _access_token(resp)
+    logger.warning("[paypal] token 取得失敗: HTTP %s", resp.status_code)
+    return None
+
+
+def create_order(
+    env: str,
+    client_id: str,
+    client_secret: str,
+    amount,
+    currency: str,
+    invoice_number: Optional[str],
+    return_url: str,
+    cancel_url: str,
+) -> dict:
+    """請求書金額で PayPal 注文を作成し、顧客が支払う承認 URL を返す。
+
+    Returns: {"ok", "order_id", "approval_url", "status_code", "message"}
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return {
+            "ok": False, "order_id": None, "approval_url": None,
+            "status_code": 401, "message": "PayPal 認証に失敗しました（認証情報を確認）",
+        }
+
+    purchase_unit = {
+        "amount": {
+            "currency_code": (currency or "JPY").upper(),
+            "value": _fmt_amount(amount, currency),
+        },
+    }
+    if invoice_number:
+        purchase_unit["invoice_id"] = invoice_number
+
+    body = {
+        "intent": "CAPTURE",
+        "purchase_units": [purchase_unit],
+        "application_context": {
+            "return_url": return_url,
+            "cancel_url": cancel_url,
+            "shipping_preference": "NO_SHIPPING",
+            "user_action": "PAY_NOW",
+        },
+    }
+    try:
+        resp = httpx.post(
+            f"{base}/v2/checkout/orders",
+            json=body,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] 注文作成通信エラー: %s", e)
+        return {
+            "ok": False, "order_id": None, "approval_url": None,
+            "status_code": None, "message": "通信エラー（ネットワーク/URL を確認）",
+        }
+
+    if resp.status_code in (200, 201):
+        try:
+            data = resp.json()
+        except Exception:  # noqa: BLE001
+            data = {}
+        order_id = data.get("id")
+        approval = next(
+            (link.get("href") for link in data.get("links", []) if link.get("rel") == "approve"),
+            None,
+        )
+        if order_id and approval:
+            return {
+                "ok": True, "order_id": order_id, "approval_url": approval,
+                "status_code": resp.status_code, "message": "決済リンクを発行しました",
+            }
+    return {
+        "ok": False, "order_id": None, "approval_url": None,
+        "status_code": resp.status_code,
+        "message": f"PayPal 注文作成に失敗（HTTP {resp.status_code}）",
+    }
+
+
+def _extract_fee(data: dict) -> Optional[str]:
+    """capture レスポンスから PayPal 手数料（paypal_fee.value）を取り出す。"""
+    try:
+        cap = data["purchase_units"][0]["payments"]["captures"][0]
+        return cap.get("seller_receivable_breakdown", {}).get("paypal_fee", {}).get("value")
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
+def capture_order(env: str, client_id: str, client_secret: str, order_id: str) -> dict:
+    """承認済みの PayPal 注文を capture（確定）する。
+
+    Returns: {"ok", "captured", "fee", "status_code", "message"}
+    captured=True は status==COMPLETED。未承認(422)は captured=False。
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return {
+            "ok": False, "captured": False, "fee": None,
+            "status_code": 401, "message": "PayPal 認証に失敗しました（認証情報を確認）",
+        }
+    try:
+        resp = httpx.post(
+            f"{base}/v2/checkout/orders/{order_id}/capture",
+            json={},
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] capture 通信エラー: %s", e)
+        return {
+            "ok": False, "captured": False, "fee": None,
+            "status_code": None, "message": "通信エラー（ネットワーク/URL を確認）",
+        }
+
+    if resp.status_code in (200, 201):
+        try:
+            data = resp.json()
+        except Exception:  # noqa: BLE001
+            data = {}
+        if data.get("status") == "COMPLETED":
+            return {
+                "ok": True, "captured": True, "fee": _extract_fee(data),
+                "status_code": resp.status_code, "message": "入金を確認しました",
+            }
+        return {
+            "ok": True, "captured": False, "fee": None,
+            "status_code": resp.status_code,
+            "message": "まだ入金が確認できません（顧客の支払い完了待ち）",
+        }
+    if resp.status_code == 422:  # ORDER_NOT_APPROVED 等
+        return {
+            "ok": True, "captured": False, "fee": None,
+            "status_code": 422, "message": "まだ顧客が支払いを承認していません",
+        }
+    return {
+        "ok": False, "captured": False, "fee": None,
+        "status_code": resp.status_code,
+        "message": f"PayPal 入金確認に失敗（HTTP {resp.status_code}）",
+    }
+
+
 __all__ = [
     "get_status",
     "get_credentials",
     "save_credentials",
     "delete_credentials",
     "test_connection",
+    "create_order",
+    "capture_order",
 ]
