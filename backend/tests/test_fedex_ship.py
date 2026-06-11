@@ -393,7 +393,7 @@ class TestCreatePickup:
         with patch("httpx.post", side_effect=[
             _mock_token_resp(),
             _mock_pickup_resp(confirmation_code="PU999888", location="JPOSA"),
-        ]):
+        ]) as mock_post:
             result = create_pickup(
                 tenant_id=1,
                 environment="sandbox",
@@ -408,6 +408,14 @@ class TestCreatePickup:
         assert isinstance(result, PickupResult)
         assert result.confirmation_code == "PU999888"
         assert result.location_code == "JPOSA"
+
+        # carrierCode はトップレベルに配置されること（FedEx API 仕様）
+        # pickupRequestDetail 内に置くと INVALID.INPUT.EXCEPTION になる
+        pickup_call_kwargs = mock_post.call_args_list[1].kwargs
+        payload = pickup_call_kwargs["json"]
+        assert "carrierCode" in payload, "carrierCode must be top-level in payload"
+        assert "carrierCode" not in payload.get("pickupRequestDetail", {}), \
+            "carrierCode must NOT be inside pickupRequestDetail"
 
     def test_api_error_raises_fedex_api_error(self):
         """Pickup API エラーは FedExAPIError を raise する。"""

@@ -237,6 +237,7 @@ def create_pickup(
 
     payload: dict = {
         "associatedAccountNumber": {"value": account_number},
+        "carrierCode": carrier_code,
         "pickupRequestDetail": {
             "pickupAddressType": "ACCOUNT",
             "pickupLocation": {
@@ -248,7 +249,6 @@ def create_pickup(
             "requestType": "SAME_DAY",
             "packageCount": package_count,
             "totalWeight": {"units": "KG", "value": float(total_weight_kg)},
-            "carrierCode": carrier_code,
             "readyDateTimestamp": ready_datetime,
             "customerCloseTime": company_close_time,
         },
