@@ -1110,6 +1110,13 @@
     "issueAction": "Issue",
     "payAction": "Record Payment",
     "voidAction": "Void",
+    "paypal": {
+      "issueLink": "Issue PayPal Link",
+      "confirm": "Confirm PayPal Payment",
+      "linkTitle": "PayPal payment link to send to the customer",
+      "linkHint": "Send this link to the customer. After they pay, click Confirm PayPal Payment to finalize the payment.",
+      "openLink": "Open Link"
+    },
     "voidReasonLabel": "Void Reason",
     "voidReasonPlaceholder": "Enter reason for voiding...",
     "voidExecute": "Execute Void",
@@ -2335,6 +2342,7 @@
   "registration": {
     "title": "Customer Registration",
     "generateLink": "Generate Registration Link",
+    "registeredLabel": "Registered",
     "alreadyRegisteredGate": "Already registered. Cannot issue a new registration link.",
     "linkGenerated": "Registration Link",
     "copyLink": "Copy",

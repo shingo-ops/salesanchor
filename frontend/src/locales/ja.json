@@ -1110,6 +1110,13 @@
     "issueAction": "発行する",
     "payAction": "入金登録",
     "voidAction": "無効化",
+    "paypal": {
+      "issueLink": "PayPalリンク発行",
+      "confirm": "PayPal入金確認",
+      "linkTitle": "顧客に送る PayPal 決済リンク",
+      "linkHint": "このリンクを顧客に送ってください。顧客の支払い後に「PayPal入金確認」を押すと入金が確定します。",
+      "openLink": "リンクを開く"
+    },
     "voidReasonLabel": "無効化理由",
     "voidReasonPlaceholder": "無効化の理由を入力...",
     "voidExecute": "無効化実行",
@@ -2335,6 +2342,7 @@
   "registration": {
     "title": "顧客情報登録",
     "generateLink": "登録リンクを発行",
+    "registeredLabel": "登録済み",
     "alreadyRegisteredGate": "登録済みのため新規登録リンクは発行できません。",
     "linkGenerated": "登録リンク",
     "copyLink": "コピー",

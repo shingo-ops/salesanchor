@@ -126,6 +126,10 @@ class InvoiceResponse(BaseModel):
     duty_amount: Decimal | None = None
     duty_policy_snapshot: dict | None = None
     fx_rate_snapshot: dict | None = None
+    # ADR-101 PayPal mode1: 決済リンク（リンク発行で order_id/approval_url、capture で fee 記録）
+    paypal_order_id: str | None = None
+    paypal_approval_url: str | None = None
+    payment_fee: Decimal | None = None
 
     model_config = {"from_attributes": True}
 

@@ -77,6 +77,10 @@ interface InvoiceDetail {
   bill_to_snapshot: AddressSnapshot | null;
   duty_amount: number | null;
   fx_rate_snapshot: FxRateSnapshot | null;
+  // ADR-101 PayPal mode1: 決済リンク
+  paypal_order_id: string | null;
+  paypal_approval_url: string | null;
+  payment_fee: number | null;
 }
 
 export default function InvoiceDetailPage() {
@@ -166,6 +170,12 @@ export default function InvoiceDetailPage() {
           {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && (
             <button className="btn-primary" onClick={() => doAction("pay")}>{t("invoices.payAction")}</button>
           )}
+          {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
+            <button className="btn-secondary" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</button>
+          )}
+          {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && invoice.paypal_approval_url && (
+            <button className="btn-primary" onClick={() => doAction("paypal-confirm")}>{t("invoices.paypal.confirm")}</button>
+          )}
           {invoice.status !== "voided" && hasPermission("invoices.void") && (
             <button className="btn-danger" onClick={() => setShowVoidForm(true)}>{t("invoices.voidAction")}</button>
           )}
@@ -175,6 +185,17 @@ export default function InvoiceDetailPage() {
       </div>
 
       {error && <div className="error-message">{error}</div>}
+
+      {invoice.paypal_approval_url && invoice.status !== "paid" && (
+        <div style={{ border: "1px solid var(--border)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>
+          <div style={{ fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-1)" }}>{t("invoices.paypal.linkTitle")}</div>
+          <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-2)" }}>{t("invoices.paypal.linkHint")}</div>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <input readOnly value={invoice.paypal_approval_url} style={{ flex: 1, padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }} />
+            <a className="btn-secondary" href={invoice.paypal_approval_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openLink")}</a>
+          </div>
+        </div>
+      )}
 
       {showVoidForm && (
         <div style={{ background: "var(--danger-bg)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>

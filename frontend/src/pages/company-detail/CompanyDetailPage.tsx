@@ -118,7 +118,7 @@ export default function CompanyDetailPage() {
               disabled={regLinkLoading || isAlreadyRegistered}
               title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
             >
-              {regLinkLoading ? t("common.loading") : t("registration.generateLink")}
+              {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
             </button>
           )}
           <span className={`status-badge status-${company.status}`}>{company.status}</span>
