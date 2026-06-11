@@ -5,27 +5,31 @@
 **対象ADR**: ADR-127 §3
 **担当**: generator
 
-## file:line 引用表
+## 削除根拠の確認
 
-| 引用先 `path:line` | 確認内容 |
-|-------------------|---------|
-| `frontend/src/pages/register/RegisterAddressPage.tsx:40-56` | `emptyAddress()`: `address_type: "delivery"`, `is_default: false` が既に固定 |
-| `frontend/src/pages/register/RegisterAddressPage.tsx:312-323` | address_type select が露出（billing も選択可）— 削除対象 |
-| `frontend/src/pages/register/RegisterAddressPage.tsx:254-258` | `toggleLang()` 関数: 言語切り替え実装済み |
-| `frontend/src/pages/register/RegisterAddressPage.tsx:292-297` | 言語切り替えボタン: JSX に実装済み |
-| `frontend/src/pages/register/RegisterAddressPage.tsx:337-364` | 電話番号 dial code コンボ + 番号欄: 実装済み |
-| `frontend/src/pages/register/RegisterAddressPage.tsx:173-180` | `useEffect` で `searchParams.get("lang") || "en"` — 英語デフォルト実装済み |
+| 確認事項 | 引用 |
+|---------|------|
+| `emptyAddress()` が `address_type: "delivery"` 固定 | `frontend/src/pages/register/RegisterAddressPage.tsx:41` |
+| `emptyAddress()` が `is_default: false` 固定 | `frontend/src/pages/register/RegisterAddressPage.tsx:55` |
+| 言語切り替え（`toggleLang`）実装済み | `frontend/src/pages/register/RegisterAddressPage.tsx:255` |
+| `searchParams.get("lang")` で英語デフォルト実装済み | `frontend/src/pages/register/RegisterAddressPage.tsx:175` |
+| `emptyAddress()` を初期値として使用（delivery 固定が起動時から適用） | `frontend/src/pages/register/RegisterAddressPage.tsx:188` |
 
-## 変更概要
+## 変更内容と根拠
 
-ADR-127 §3 で要求された配送先追加フォームの整備:
-- **言語切り替え**: 実装済み（既存コードで対応完了）
-- **電話 dial code 分割**: 実装済み（既存コードで対応完了）
-- **address_type 選択削除**: billing / delivery を選べる select を削除し delivery 固定にする（今回の変更）
+`frontend/src/pages/register/RegisterAddressPage.tsx` の develop 版 L308-L320 に存在していた address_type select（billing / delivery を選べる UI）を削除する。
 
-`emptyAddress()` が既に `address_type: "delivery"`, `is_default: false` 固定のため、
-UI select を削除するだけで ADR-127 §3 の意図が完全に満たされる。
+- `emptyAddress():41` が `address_type: "delivery"` を固定しているため、UI select は不要
+- `is_default: false`:55 も固定済みで、billing 行が重複生成される余地をなくす
+- 言語切り替え（`toggleLang`:255）・電話 dial code は PR #1881（コミット 6e376491）で実装済み
+- Phase 1 の残作業は select 削除のみ（ADR-127 §3）
+
+## 既実装（変更不要）
+
+- `toggleLang():255` — 言語切り替えボタン実装済み
+- `searchParams.get("lang"):175` — 英語デフォルト実装済み
+- 電話 dial code Combobox — 実装済み
 
 ## 不明点リスト
 
-未解決なし。
+なし。
