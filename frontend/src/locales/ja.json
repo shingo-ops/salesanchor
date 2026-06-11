@@ -242,7 +242,15 @@
     "testing": "テスト中...",
     "testNeedsSave": "先に認証情報を保存してください。",
     "successMsg": "接続成功",
-    "failMsg": "接続失敗"
+    "failMsg": "接続失敗",
+    "payTestTitle": "決済テスト",
+    "payTestHint": "テスト用の請求書（¥100）と PayPal 決済リンクをワンクリックで発行します（sandbox 環境限定）。",
+    "payTestButton": "テスト請求書を発行",
+    "payTestRunning": "作成中...",
+    "payTestCreated": "テスト請求書を作成しました",
+    "payTestSteps": "「PayPalで支払う」で sandbox 購入すると自動で入金確定します（または請求書詳細の「PayPal入金確認」で手動確定）。",
+    "payTestPay": "PayPalで支払う",
+    "payTestOpenInvoice": "テスト請求書を開く"
   },
   "fedexRateModal": {
     "title": "FedEx ライブ見積もり",

@@ -26,6 +26,14 @@ interface TestResult {
   message: string;
 }
 
+interface PaymentTestResult {
+  invoice_id: number;
+  invoice_number: string;
+  amount: number;
+  currency: string;
+  approval_url: string;
+}
+
 export default function PaypalIntegrationPage() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<PaypalStatus | null>(null);
@@ -35,6 +43,7 @@ export default function PaypalIntegrationPage() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
+  const [payTest, setPayTest] = useState<PaymentTestResult | null>(null);
   const [error, setError] = useState("");
 
   const loadStatus = useCallback(() => {
@@ -80,6 +89,20 @@ export default function PaypalIntegrationPage() {
     try {
       const res = await api.post<TestResult>("/integrations/paypal/test-connection", {});
       setResult(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.operationError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePaymentTest = async () => {
+    setBusy(true);
+    setError("");
+    setPayTest(null);
+    try {
+      const res = await api.post<PaymentTestResult>("/integrations/paypal/test-invoice", {});
+      setPayTest(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
     } finally {
@@ -187,6 +210,35 @@ export default function PaypalIntegrationPage() {
           </p>
         )}
       </section>
+
+      {/* 決済テスト（sandbox 限定） */}
+      {status?.configured && status?.environment === "sandbox" && (
+        <section className="card">
+          <h3>{t("paypalIntegration.payTestTitle")}</h3>
+          <p className="form-hint">{t("paypalIntegration.payTestHint")}</p>
+          <div className="form-actions">
+            <button className="btn-primary" disabled={busy} onClick={handlePaymentTest}>
+              {busy ? t("paypalIntegration.payTestRunning") : t("paypalIntegration.payTestButton")}
+            </button>
+          </div>
+          {payTest && (
+            <div style={{ marginTop: "var(--space-3)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)" }}>
+              <p style={{ fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-1)" }}>
+                {t("paypalIntegration.payTestCreated")}（{payTest.invoice_number} / {payTest.amount} {payTest.currency}）
+              </p>
+              <p className="form-hint">{t("paypalIntegration.payTestSteps")}</p>
+              <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-2)" }}>
+                <a className="btn-primary" href={payTest.approval_url} target="_blank" rel="noopener noreferrer">
+                  {t("paypalIntegration.payTestPay")}
+                </a>
+                <a className="btn-secondary" href={`/invoices/${payTest.invoice_id}`} target="_blank" rel="noopener noreferrer">
+                  {t("paypalIntegration.payTestOpenInvoice")}
+                </a>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {error && <p className="error-message">{error}</p>}
     </PageLayout>

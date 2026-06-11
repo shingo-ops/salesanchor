@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
@@ -569,6 +570,124 @@ async def paypal_test_connection(
         creds["client_secret"],
     )
     return PaypalTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
+
+
+class PaypalTestInvoiceResponse(BaseModel):
+    invoice_id: int
+    invoice_number: str
+    amount: float
+    currency: str
+    approval_url: str
+
+
+@router.post(
+    "/integrations/paypal/test-invoice",
+    response_model=PaypalTestInvoiceResponse,
+    dependencies=[Depends(require_permission("erp.view"))],
+)
+async def paypal_test_invoice(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaypalTestInvoiceResponse:
+    """決済テスト用: sandbox 限定でテスト請求書を作成し PayPal リンクを発行する。admin 専用。
+
+    専用「PayPalテスト」会社/担当者を find-or-create し、¥100 のテスト請求書(issued)を作成→
+    PayPal 決済リンクを発行する。戻りURL自動/webhook自動/手動 の3方式を実機確認できる。
+    """
+    _require_admin(user)
+    creds = await paypal_payments.get_credentials(db, tenant_id)
+    if not creds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PayPal が未接続です（先に認証情報を登録してください）",
+        )
+    if creds["environment"] != "sandbox":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="決済テストは sandbox 環境でのみ実行できます（本番では実課金になります）",
+        )
+
+    # 1. 「PayPalテスト」会社 find-or-create（company_code で一意）
+    comp_row = (await db.execute(
+        text("SELECT id FROM companies WHERE company_code = 'PAYPAL-TEST'")
+    )).first()
+    if comp_row:
+        company_id = comp_row[0]
+    else:
+        company_id = (await db.execute(
+            text("INSERT INTO companies (tenant_id, company_code, name) "
+                 "VALUES (:tid, 'PAYPAL-TEST', 'PayPal決済テスト') RETURNING id"),
+            {"tid": tenant_id},
+        )).scalar_one()
+
+    # 2. テスト担当者 find-or-create（contact_code で一意）
+    cont_row = (await db.execute(
+        text("SELECT id FROM contacts WHERE contact_code = 'PAYPAL-TEST'")
+    )).first()
+    if cont_row:
+        contact_id = cont_row[0]
+    else:
+        contact_id = (await db.execute(
+            text("INSERT INTO contacts (tenant_id, company_id, contact_code, display_name) "
+                 "VALUES (:tid, :cid, 'PAYPAL-TEST', 'PayPal Test') RETURNING id"),
+            {"tid": tenant_id, "cid": company_id},
+        )).scalar_one()
+
+    # 3. ¥100 テスト請求書を issued で作成
+    next_id = (await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM invoices"))).scalar()
+    invoice_number = f"IN-{next_id:04d}-01"
+    erp_key = str(uuid.uuid4())[:8].upper()
+    invoice_id = (await db.execute(
+        text("""
+            INSERT INTO invoices (
+                tenant_id, invoice_number, company_id, contact_id, currency,
+                subtotal, shipping_fee, tax_amount, total_amount,
+                payment_method, status, branch_number, erp_key, issued_at, created_by
+            ) VALUES (
+                :tid, :num, :cid, :coid, 'JPY',
+                100, 0, 0, 100,
+                'paypal', 'issued', 1, :erp, NOW(), :uid
+            ) RETURNING id
+        """),
+        {"tid": tenant_id, "num": invoice_number, "cid": company_id,
+         "coid": contact_id, "erp": erp_key, "uid": user.id},
+    )).scalar_one()
+    await db.execute(
+        text("INSERT INTO invoice_items "
+             "(invoice_id, product_name, quantity, unit_price, subtotal, sort_order) "
+             "VALUES (:iid, 'PayPal決済テスト', 1, 100, 100, 0)"),
+        {"iid": invoice_id},
+    )
+
+    # 4. PayPal 決済リンク発行（本番 issue_paypal_link と同じ create_order を使用）
+    token = paypal_payments.make_return_token(tenant_id, invoice_id)
+    return_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/return?t={token}"
+    cancel_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/cancel"
+    result = await run_in_threadpool(
+        paypal_payments.create_order,
+        creds["environment"], creds["client_id"], creds["client_secret"],
+        100, "JPY", invoice_number, return_url, cancel_url, f"{tenant_id}:{invoice_id}",
+    )
+    if not result.get("ok"):
+        await db.rollback()  # 請求書を中途半端に残さない（atomic）
+        await reset_tenant_context(db, tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=result.get("message", "PayPal 決済リンクの発行に失敗しました"),
+        )
+
+    await db.execute(
+        text("UPDATE invoices SET paypal_order_id = :oid, paypal_approval_url = :url, "
+             "updated_at = NOW() WHERE id = :id"),
+        {"id": invoice_id, "oid": result["order_id"], "url": result["approval_url"]},
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    return PaypalTestInvoiceResponse(
+        invoice_id=invoice_id, invoice_number=invoice_number,
+        amount=100, currency="JPY", approval_url=result["approval_url"],
+    )
 
 
 # ---------------------------------------------------------------------------
