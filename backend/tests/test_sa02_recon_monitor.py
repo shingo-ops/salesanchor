@@ -1,8 +1,8 @@
 """SA-02 §10 日次突合タスクの単体テスト。
 
 検証項目:
-  1. 差異ゼロ時は Discord 通知しない（diff=0）
-  2. 差異あり時は Discord 通知する（diff!=0）
+  1. 差異ゼロ時も Discord に通知する（監視停止と区別するため毎日1行通知）
+  2. 差異あり時は ⚠ 強調付きで Discord 通知する（diff!=0）
   3. タスクが celery_app の beat_schedule に登録されている
 """
 from __future__ import annotations
@@ -12,11 +12,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
-# 1. 差異ゼロ → Discord 通知しない
+# 1. 差異ゼロ → Discord に1行通知する（監視稼働の証跡）
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_no_discord_when_diff_zero():
-    """meta と conv が同数なら _post_discord を呼ばない。"""
+async def test_discord_called_even_when_diff_zero():
+    """meta と conv が同数でも毎日 _post_discord を呼ぶ（監視停止と区別）。"""
     from app.tasks.sa02_recon_monitor import _run_daily_recon
 
     mock_result = MagicMock()
@@ -38,7 +38,11 @@ async def test_no_discord_when_diff_zero():
         result = await _run_daily_recon()
 
     assert result["diff"] == 0
-    mock_discord.assert_not_called()
+    mock_discord.assert_called_once()
+    # 差異ゼロ時は1行サマリー（⚠なし）
+    notif_text = mock_discord.call_args[0][0]
+    assert "一致 ✅" in notif_text
+    assert "⚠️" not in notif_text
 
 
 # ---------------------------------------------------------------------------

@@ -91,27 +91,32 @@ async def _run_daily_recon() -> dict:
                 )
 
     diff_total = meta_total - conv_total
-    status_emoji = "✅" if diff_total == 0 else "⚠️"
 
-    summary_lines = [
-        f"[SA-02 並走監視] {today.isoformat()}",
-        f"meta_messages 当日新規(inbound換算): {meta_total}件",
-        f"conversation_logs 当日新規(inbound): {conv_total}件",
-        f"差異: {diff_total}件 {status_emoji}",
-    ]
-    if tenant_details:
-        summary_lines.append("チャネル別内訳:")
-        summary_lines.extend(tenant_details)
+    if diff_total == 0:
+        # 正常: 1行サマリー通知（監視が稼働中であることを毎日確認できる）
+        summary_lines = [
+            f"[SA-02 並走監視] {today.isoformat()}  旧 {meta_total}件 / 新 {conv_total}件  一致 ✅",
+        ]
+    else:
+        # 差異あり: ⚠ 強調 + 内訳付き通知
+        summary_lines = [
+            f"⚠️ **[SA-02 並走監視] {today.isoformat()}  差異 {diff_total:+d}件**",
+            f"meta_messages 当日新規(inbound換算): {meta_total}件",
+            f"conversation_logs 当日新規(inbound): {conv_total}件",
+        ]
+        if tenant_details:
+            summary_lines.append("テナント別内訳:")
+            summary_lines.extend(tenant_details)
 
     message = "\n".join(summary_lines)
-    logger.info("[sa02_recon] %s", message)
 
     if diff_total != 0:
         logger.warning("[sa02_recon] 突合差異あり diff=%d", diff_total)
-        await _post_discord(message)
     else:
-        # 差異ゼロでも週次確認用に毎日ログ（Discord 通知はしない）
-        pass
+        logger.info("[sa02_recon] %s", message)
+
+    # 差異ゼロ・差異あり問わず毎日 Discord に通知（通知ゼロ＝監視停止を区別するため）
+    await _post_discord(message)
 
     return {
         "date": today.isoformat(),
