@@ -12,8 +12,8 @@
 | nginx IP キャッシュ挙動 | nginx worker 起動時に DNS 解決しワーカー存続中は再解決しない | `nginx -s reload` = worker 再起動 = DNS 再解決 ✅ |
 | Docker network | `docker-compose.yml:379` — `frontnet: {}` (driver: bridge, IPAMなし) | IP は Docker が動的割り当て |
 | blue-green nginx reload | `scripts/blue-green-cutover.sh:139-141` — `docker exec nginx nginx -s reload` | CI/CD経由の backend 再起動はすべてここで網羅 |
-| deploy.yml step 4b | `deploy.yml:276-277` — "nginx reload already done inside blue-green-cutover.sh." | 明示的なコメント記載済み |
-| Bootstrap SA18 path | `deploy.yml:328` — `BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh` | SA18 経由も blue-green で nginx reload 済み |
+| deploy.yml step 4b | `.github/workflows/deploy.yml:276` — "nginx reload already done inside blue-green-cutover.sh." | 明示的なコメント記載済み |
+| Bootstrap SA18 path | `.github/workflows/deploy.yml:328` — `BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh` | SA18 経由も blue-green で nginx reload 済み |
 
 **今回の502の真因（調査結果）**:
 - SA-02 Stage 4 デプロイ（04:38 JST）後、`nginx -s reload` は正常実行
@@ -31,6 +31,6 @@
 | 調査観点 | 現状（file:line） | 備考 |
 |----------|-----------------|------|
 | TOTAL 定義 | `scripts/run_all_migrations.sh:47` — `TOTAL=130`（ハードコード） | migration 追加時に手動更新必須 |
-| 実際の run_sql/run_py 件数 | `grep -cE '^run_(sql|py)[[:space:]]' scripts/run_all_migrations.sh` = **130** | 現在は一致しているが手動管理 |
-| TOTAL 用途 | `run_all_migrations.sh:53-54` — `echo ">>> [${STEP}/${TOTAL}]"` | 進捗表示のみ。不一致でも機能的影響なし |
+| 実際の run_sql/run_py 件数 | `scripts/run_all_migrations.sh:47` を参照 = **130** | 現在は一致しているが手動管理 |
+| TOTAL 用途 | `scripts/run_all_migrations.sh:53` — `echo ">>> [${STEP}/${TOTAL}]"` | 進捗表示のみ。不一致でも機能的影響なし |
 | 自動カウント手法 | `grep -cE '^run_(sql|py)[[:space:]]' "$0"` で self-referential カウント可能 | コメント行（`#`）は対象外 |
