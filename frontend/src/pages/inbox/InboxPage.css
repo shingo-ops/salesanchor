@@ -744,7 +744,7 @@
 
 /* ---- 右パネル ---- */
 .inbox-right-panel {
-  width: 396px; /* カルテ専用幅（見本 396px）— --drawer-width: 300px は topbar ドロワー用で流用不可 */
+  width: var(--karte-panel-width); /* カルテ専用幅（見本 396px）— --drawer-width: 300px は topbar ドロワー用で流用不可 */
   flex-shrink: 0;
   flex-grow: 0;
   background: var(--bg-surface);
@@ -865,7 +865,7 @@
   flex-direction: row;
   align-items: center;
   gap: var(--space-3);
-  padding: 16px 18px 14px; /* 見本 .hd: 16px 18px 14px */
+  padding: var(--space-4) var(--karte-h-pad) var(--space-14px); /* 見本 .hd: 16px 18px 14px */
   border-bottom: 0.5px solid var(--border);
   box-sizing: border-box;
 }
@@ -993,7 +993,7 @@
   .inbox-right-panel {
     position: fixed !important; /* fixed-ok: responsive-right-panel-overlay */
     top: 0; right: 0; bottom: 0;
-    width: 396px !important; max-width: 92vw !important; /* カルテ専用幅（見本準拠） */
+    width: var(--karte-panel-width) !important; max-width: 92vw !important; /* カルテ専用幅（見本準拠） */
     max-height: none !important;
     margin: 0 !important;
     border-left: 1px solid var(--border) !important;
@@ -1133,7 +1133,7 @@
 .right-panel-field {
   width: 100%; box-sizing: border-box;
   background: var(--bg-primary); border: 0.5px solid var(--border);
-  border-radius: 6px; padding: 7px 9px; /* 見本 .fbox: 7px 9px, radius 6px */
+  border-radius: var(--radius-md); padding: var(--karte-field-py) var(--karte-field-px); /* 見本 .fbox: 7px 9px, radius 6px */
   font-size: var(--font-sm); color: var(--text-primary);
   font-family: inherit;
   transition: border-color var(--transition-micro);
@@ -1157,9 +1157,9 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   border-bottom: 0.5px solid var(--border);
 }
 .right-panel-tab {
-  flex: 1; padding: 11px 4px; /* 見本 .tab: 11px 4px */
+  flex: 1; padding: var(--karte-tab-py) var(--space-1); /* 見本 .tab: 11px 4px */
   background: none; border: none; border-bottom: 2px solid transparent;
-  cursor: pointer; font-size: 13px; /* 見本: 13px */
+  cursor: pointer; font-size: var(--karte-font-tab); /* 見本: 13px */
   font-weight: var(--font-weight-semi); color: var(--text-secondary);
   transition: color var(--transition-micro), border-color var(--transition-micro);
   margin-bottom: -1px;
@@ -1169,11 +1169,11 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 .right-panel-tab-content { flex: 1; overflow-y: auto; width: 100%; }
 .right-panel-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 .right-panel-group-heading {
-  font-size: 11px; /* 見本 .sec: 11px */
+  font-size: var(--karte-font-sec); /* 見本 .sec: 11px */
   font-weight: 500; /* 見本: 500（bold→medium） */
   color: var(--text-muted);
   border-top: 0.5px solid var(--border);
-  padding: 14px 0 7px; /* 見本 .sec: margin 14px 0 7px */
+  padding: var(--space-14px) 0 var(--karte-section-pb); /* 見本 .sec: margin 14px 0 7px */
   margin-top: 0;
 }
 .right-panel-group-heading:first-child {
@@ -1194,7 +1194,7 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 12px 18px; /* 見本 .bar: 12px 18px */
+  padding: var(--space-3) var(--karte-h-pad); /* 見本 .bar: 12px 18px */
   border-top: 0.5px solid var(--border);
   flex-shrink: 0;
   width: 100%;
@@ -1203,11 +1203,11 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 }
 .karte-action-primary {
   flex: 1;
-  padding: 10px; /* 見本 .primary: 10px */
+  padding: var(--space-10px); /* 見本 .primary: 10px */
   background: var(--accent);
   color: var(--on-accent);
   border: none;
-  border-radius: 8px; /* 見本 .primary: radius 8px */
+  border-radius: var(--radius-lg); /* 見本 .primary: radius 8px */
   font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;
@@ -1219,10 +1219,10 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 /* ADR-110: "…" overflow button */
 .karte-action-overflow {
   flex-shrink: 0;
-  padding: 10px 13px; /* 見本 .more: 10px 13px */
+  padding: var(--space-10px) var(--karte-overflow-px); /* 見本 .more: 10px 13px */
   background: var(--bg-surface);
   border: 0.5px solid var(--border);
-  border-radius: 8px; /* 見本 .more: radius 8px */
+  border-radius: var(--radius-lg); /* 見本 .more: radius 8px */
   font-size: var(--font-md);
   cursor: pointer;
   color: var(--text-secondary);

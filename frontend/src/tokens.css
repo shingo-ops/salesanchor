@@ -270,6 +270,17 @@
   --inbox-center-min-h:      300px;  /* 受信箱中央パネル最小高（モバイル） */
   --inbox-textarea-min-h:    60px;   /* カルテメモフィールド最小高 */
 
+  /* ---- カルテパネル専用値（見本 karte_reference.html 準拠・4pxグリッド非準拠例外） ---- */
+  --karte-panel-width: 396px;  /* カルテパネル幅（見本 .panel） */
+  --karte-h-pad:        18px;  /* カルテ共通横余白（ヘッダー・アクションバー） */
+  --karte-field-py:      7px;  /* カルテフィールド縦padding（見本 .fbox） */
+  --karte-field-px:      9px;  /* カルテフィールド横padding（見本 .fbox） */
+  --karte-tab-py:       11px;  /* カルテタブ縦padding（見本 .tab） */
+  --karte-section-pb:    7px;  /* カルテセクション見出し下padding（見本 .sec） */
+  --karte-font-tab:     13px;  /* カルテタブ文字サイズ（見本 .tab / .fbox） */
+  --karte-font-sec:     11px;  /* カルテセクション見出し文字サイズ（見本 .sec） */
+  --karte-overflow-px:  13px;  /* カルテoverflowボタン横padding（見本 .more） */
+
   /* ---- Sidebar ---- */
   --sidebar-logo-h:          64px;   /* サイドバーロゴエリア高さ */
   --sidebar-logo-text-h:     28px;   /* サイドバーロゴテキスト画像高さ */
