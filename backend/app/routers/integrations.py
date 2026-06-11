@@ -590,10 +590,10 @@ async def paypal_test_invoice(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PaypalTestInvoiceResponse:
-    """決済テスト用: sandbox 限定でテスト請求書を作成し PayPal リンクを発行する。admin 専用。
+    """決済テスト用: sandbox 限定でテスト請求書を作成し PayPal 請求書を送付する。admin 専用。
 
     専用「PayPalテスト」会社/担当者を find-or-create し、¥100 のテスト請求書(issued)を作成→
-    PayPal 決済リンクを発行する。戻りURL自動/webhook自動/手動 の3方式を実機確認できる。
+    PayPal Invoicing で請求書を送付する（ADR-101 改訂 2026-06-12）。webhook自動/手動 の確認用。
     """
     _require_admin(user)
     creds = await paypal_payments.get_credentials(db, tenant_id)
@@ -621,17 +621,22 @@ async def paypal_test_invoice(
             {"tid": tenant_id},
         )).scalar_one()
 
-    # 2. テスト担当者 find-or-create（contact_code で一意）
+    # 2. テスト担当者 find-or-create（contact_code で一意）。Invoicing は email 必須なので placeholder を設定。
+    test_email = "paypal-test@example.com"
     cont_row = (await db.execute(
         text("SELECT id FROM contacts WHERE contact_code = 'PAYPAL-TEST'")
     )).first()
     if cont_row:
         contact_id = cont_row[0]
+        await db.execute(
+            text("UPDATE contacts SET primary_email = COALESCE(primary_email, :em) WHERE id = :id"),
+            {"id": contact_id, "em": test_email},
+        )
     else:
         contact_id = (await db.execute(
-            text("INSERT INTO contacts (tenant_id, company_id, contact_code, display_name) "
-                 "VALUES (:tid, :cid, 'PAYPAL-TEST', 'PayPal Test') RETURNING id"),
-            {"tid": tenant_id, "cid": company_id},
+            text("INSERT INTO contacts (tenant_id, company_id, contact_code, display_name, primary_email) "
+                 "VALUES (:tid, :cid, 'PAYPAL-TEST', 'PayPal Test', :em) RETURNING id"),
+            {"tid": tenant_id, "cid": company_id, "em": test_email},
         )).scalar_one()
 
     # 3. ¥100 テスト請求書を issued で作成
@@ -660,33 +665,34 @@ async def paypal_test_invoice(
         {"iid": invoice_id},
     )
 
-    # 4. PayPal 決済リンク発行（本番 issue_paypal_link と同じ create_order を使用）
-    token = paypal_payments.make_return_token(tenant_id, invoice_id)
-    return_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/return?t={token}"
-    cancel_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/cancel"
+    # 4. PayPal 請求書を送付（本番 issue_paypal_link と同じ Invoicing フローを使用）
     result = await run_in_threadpool(
-        paypal_payments.create_order,
+        paypal_payments.create_and_send_invoice,
         creds["environment"], creds["client_id"], creds["client_secret"],
-        100, "JPY", invoice_number, return_url, cancel_url, f"{tenant_id}:{invoice_id}",
+        invoice_number=invoice_number,
+        currency="JPY",
+        amount=100,
+        recipient_email=test_email,
+        reference=f"{tenant_id}:{invoice_id}",
     )
     if not result.get("ok"):
         await db.rollback()  # 請求書を中途半端に残さない（atomic）
         await reset_tenant_context(db, tenant_id)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=result.get("message", "PayPal 決済リンクの発行に失敗しました"),
+            detail=result.get("message", "PayPal 請求書の発行に失敗しました"),
         )
 
     await db.execute(
         text("UPDATE invoices SET paypal_order_id = :oid, paypal_approval_url = :url, "
              "updated_at = NOW() WHERE id = :id"),
-        {"id": invoice_id, "oid": result["order_id"], "url": result["approval_url"]},
+        {"id": invoice_id, "oid": result["paypal_invoice_id"], "url": result["recipient_view_url"]},
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return PaypalTestInvoiceResponse(
         invoice_id=invoice_id, invoice_number=invoice_number,
-        amount=100, currency="JPY", approval_url=result["approval_url"],
+        amount=100, currency="JPY", approval_url=result["recipient_view_url"],
     )
 
 
@@ -797,24 +803,41 @@ def _parse_custom_id(custom_id) -> tuple[int, int] | None:
         return None
 
 
+def _parse_invoicing_paid(resource: dict) -> tuple[int, int, str] | None:
+    """INVOICING.INVOICE.PAID の resource から (tenant_id, invoice_id, PayPal Invoice ID) を取り出す。
+
+    resource 構造は `resource.invoice.{id,detail.reference}` または `resource.{id,detail.reference}`
+    の両方に防御的に対応する（PayPal の payload 差異吸収）。
+    """
+    if not isinstance(resource, dict):
+        return None
+    inv_obj = resource.get("invoice") if isinstance(resource.get("invoice"), dict) else resource
+    detail = inv_obj.get("detail") or {}
+    reference = detail.get("reference")
+    pp_invoice_id = inv_obj.get("id")
+    parsed = _parse_custom_id(reference)  # "tenant_id:invoice_id"（custom_id と同形式）
+    if not parsed or not pp_invoice_id:
+        return None
+    return parsed[0], parsed[1], pp_invoice_id
+
+
 @public_router.post("/integrations/paypal/webhook", include_in_schema=False)
 async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """PayPal webhook（CHECKOUT.ORDER.APPROVED）。署名検証→capture→請求書 paid＋受注 sourcing。"""
+    """PayPal webhook（INVOICING.INVOICE.PAID）。署名検証→status再取得→請求書 paid＋受注 sourcing。
+
+    ADR-101 改訂 2026-06-12: Invoicing 方式。detail.reference("tenant:invoice") でルーティング。
+    """
     try:
         event = await request.json()
     except Exception:  # noqa: BLE001
         return Response(status_code=400)
-    if not isinstance(event, dict) or event.get("event_type") != "CHECKOUT.ORDER.APPROVED":
+    if not isinstance(event, dict) or event.get("event_type") != "INVOICING.INVOICE.PAID":
         return Response(status_code=200)  # 対象外イベントは無視
 
-    resource = event.get("resource") or {}
-    order_id = resource.get("id")
-    units = resource.get("purchase_units") or []
-    custom_id = units[0].get("custom_id") if units else None
-    parsed = _parse_custom_id(custom_id)
-    if not parsed or not order_id:
+    parsed = _parse_invoicing_paid(event.get("resource") or {})
+    if not parsed:
         return Response(status_code=200)  # ルーティング不能は無視（PayPal 再送防止）
-    tenant_id, invoice_id = parsed
+    tenant_id, invoice_id, pp_invoice_id = parsed
 
     # creds / webhook_id は public.tenant_paypal_config（テナント文脈不要）
     creds = await paypal_payments.get_credentials(db, tenant_id)
@@ -844,18 +867,19 @@ async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             {"id": invoice_id},
         )
         row = inv.mappings().first()
-        if not row or row["paypal_order_id"] != order_id:
+        if not row or row["paypal_order_id"] != pp_invoice_id:
             return Response(status_code=200)  # 不一致は無視
         if row["status"] == "paid":
             return Response(status_code=200)  # 冪等（既に確定）
         if row["status"] not in ("issued", "overdue"):
             return Response(status_code=200)
 
+        # webhook body だけを信用せず、PayPal に status を再確認（防御）。PAID のみ確定。
         result = await run_in_threadpool(
-            paypal_payments.capture_order,
-            creds["environment"], creds["client_id"], creds["client_secret"], order_id,
+            paypal_payments.get_invoice_status,
+            creds["environment"], creds["client_id"], creds["client_secret"], pp_invoice_id,
         )
-        if result.get("captured"):
+        if result.get("paid"):
             await db.execute(
                 text("UPDATE invoices SET status='paid', paid_at=NOW(), payment_fee=:fee, "
                      "payment_method='paypal', updated_at=NOW() "

@@ -244,12 +244,12 @@
     "successMsg": "接続成功",
     "failMsg": "接続失敗",
     "payTestTitle": "決済テスト",
-    "payTestHint": "テスト用の請求書（¥100）と PayPal 決済リンクをワンクリックで発行します（sandbox 環境限定）。",
+    "payTestHint": "テスト用の請求書（¥100）を作成し、PayPal 請求書を送付します（sandbox 環境限定）。",
     "payTestButton": "テスト請求書を発行",
     "payTestRunning": "作成中...",
     "payTestCreated": "テスト請求書を作成しました",
-    "payTestSteps": "「PayPalで支払う」で sandbox 購入すると自動で入金確定します（または請求書詳細の「PayPal入金確認」で手動確定）。",
-    "payTestPay": "PayPalで支払う",
+    "payTestSteps": "顧客の支払いページ（または PayPal メール）から sandbox 購入すると、webhook で自動入金確定します（または請求書詳細の「支払い状況を確認」で手動確定）。",
+    "payTestPay": "支払いページを開く",
     "payTestOpenInvoice": "テスト請求書を開く"
   },
   "fedexRateModal": {
@@ -1131,10 +1131,10 @@
     "payAction": "入金登録",
     "voidAction": "無効化",
     "paypal": {
-      "issueLink": "PayPalリンク発行",
-      "confirm": "PayPal入金確認",
-      "linkTitle": "顧客に送る PayPal 決済リンク",
-      "linkHint": "このリンクを顧客に送ってください。顧客が支払いを完了すると自動で入金が確定します（確定しない場合は「PayPal入金確認」を押してください）。",
+      "issueLink": "PayPal請求書を送付",
+      "confirm": "支払い状況を確認",
+      "linkTitle": "PayPal 請求書（顧客の支払いページ）",
+      "linkHint": "PayPal から顧客にメールで請求書が送付されました。下記は顧客の支払いページです。支払いが完了すると自動で入金が確定します（確定しない場合は「支払い状況を確認」を押してください）。",
       "openLink": "リンクを開く"
     },
     "voidReasonLabel": "無効化理由",

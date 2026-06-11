@@ -606,7 +606,11 @@ async def issue_paypal_link(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """請求書から PayPal 決済リンクを発行する（issued/overdue のみ）。"""
+    """請求書から PayPal 請求書を発行・送付する（issued/overdue のみ）。
+
+    ADR-101 改訂 2026-06-12: PayPal Invoicing 方式。自社請求書のデータから PayPal Invoice を
+    生成し、PayPal が顧客にメール送付＋ホスト決済ページを提供する。送付先 email 必須。
+    """
     inv = await db.execute(
         text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"),
         {"id": invoice_id},
@@ -619,24 +623,38 @@ async def issue_paypal_link(
     if inv_row["total_amount"] is None or Decimal(inv_row["total_amount"]) <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="請求金額が未確定です")
 
+    # Invoicing 方式は送付先 email 必須（PayPal が顧客にメール送付するため）
+    if inv_row["contact_id"] is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="請求書に担当者（contact）が紐づいていません")
+    email_row = (await db.execute(
+        text("SELECT primary_email FROM contacts WHERE id = :cid"),
+        {"cid": inv_row["contact_id"]},
+    )).mappings().first()
+    recipient_email = (email_row or {}).get("primary_email")
+    if not recipient_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="送付先メールアドレスが未登録のため PayPal 請求書を発行できません",
+        )
+
     creds = await _require_paypal_creds(db, tenant_id)
-    # Increment 2: 顧客が支払い後に戻る公開 return エンドポイント（署名トークン付き）で自動 capture。
-    return_token = paypal_payments.make_return_token(tenant_id, invoice_id)
-    return_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/return?t={return_token}"
-    cancel_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/cancel"
     result = await run_in_threadpool(
-        paypal_payments.create_order,
+        paypal_payments.create_and_send_invoice,
         creds["environment"], creds["client_id"], creds["client_secret"],
-        inv_row["total_amount"], inv_row["currency"], inv_row["invoice_number"],
-        return_url, cancel_url, f"{tenant_id}:{invoice_id}",  # custom_id（webhook ルーティング用）
+        invoice_number=inv_row["invoice_number"],
+        currency=inv_row["currency"],
+        amount=inv_row["total_amount"],
+        recipient_email=recipient_email,
+        reference=f"{tenant_id}:{invoice_id}",  # webhook ルーティング用（detail.reference）
     )
     if not result.get("ok"):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=result.get("message", "PayPal 決済リンクの発行に失敗しました"),
+            detail=result.get("message", "PayPal 請求書の発行に失敗しました"),
         )
 
-    # status ガードを UPDATE にも入れる（事前 SELECT 後に void 等された TOCTOU 防御）
+    # status ガードを UPDATE にも入れる（事前 SELECT 後に void 等された TOCTOU 防御）。
+    # paypal_order_id=PayPal Invoice ID, paypal_approval_url=recipient_view_url を流用（migration 不要）。
     upd = await db.execute(
         text(f"""
             UPDATE invoices
@@ -645,14 +663,14 @@ async def issue_paypal_link(
             WHERE id = :id AND status IN ('issued', 'overdue')
             RETURNING {_INVOICE_COLUMNS}
         """),
-        {"id": invoice_id, "oid": result["order_id"], "url": result["approval_url"]},
+        {"id": invoice_id, "oid": result["paypal_invoice_id"], "url": result["recipient_view_url"]},
     )
     row = upd.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_link", table_name="invoices", record_id=invoice_id,
-                           new_data={"paypal_order_id": result["order_id"]})
+                           new_data={"paypal_invoice_id": result["paypal_invoice_id"]})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
@@ -670,7 +688,11 @@ async def confirm_paypal_payment(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """PayPal の入金を確認（capture）して請求書を paid にする（issued/overdue のみ）。"""
+    """PayPal 請求書の支払い状況を取得し、PAID なら請求書を paid にする（issued/overdue のみ）。
+
+    ADR-101 改訂 2026-06-12: Invoicing 方式。paypal_order_id=PayPal Invoice ID で
+    GET /v2/invoicing/invoices/{id} を引き、status=PAID を確認する。
+    """
     inv = await db.execute(
         text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"),
         {"id": invoice_id},
@@ -679,13 +701,13 @@ async def confirm_paypal_payment(
     if not inv_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
     if not inv_row["paypal_order_id"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="先に PayPal 決済リンクを発行してください")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="先に PayPal 請求書を発行してください")
     if inv_row["status"] not in ("issued", "overdue"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみ入金確認できます")
 
     creds = await _require_paypal_creds(db, tenant_id)
     result = await run_in_threadpool(
-        paypal_payments.capture_order,
+        paypal_payments.get_invoice_status,
         creds["environment"], creds["client_id"], creds["client_secret"],
         inv_row["paypal_order_id"],
     )
@@ -694,7 +716,7 @@ async def confirm_paypal_payment(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=result.get("message", "PayPal 入金確認に失敗しました"),
         )
-    if not result.get("captured"):
+    if not result.get("paid"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=result.get("message", "まだ入金が確認できません"),
