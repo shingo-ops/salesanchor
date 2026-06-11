@@ -44,7 +44,7 @@ docker cp migrations "${BACKEND}:/app/"
 STEP=0
 
 
-TOTAL=130
+TOTAL=$(grep -cE '^run_(sql|py)[[:space:]]' "$0" 2>/dev/null || echo 0)
 
 run_py() {
   local script="$1"
@@ -341,6 +341,9 @@ run_sql migrations/20260611_120000_add_conv_log_manual_columns.sql
 # SA-02 Stage 3: v_company_stats に論理削除除外フィルタ追加（deleted_at IS NULL）
 # 依存: 20260611_120000 で deleted_at カラムが追加済みであること
 run_sql migrations/20260611_130000_fix_v_company_stats_deleted_at.sql
+
+# SA-02 Stage 2 前提: conversation_logs に is_manual カラム追加（Stage 2 移行スクリプトが参照）
+run_sql migrations/20260611_140000_add_conv_log_is_manual.sql
 
 echo ""
 echo "============================================"
