@@ -2327,6 +2327,7 @@
   "registration": {
     "title": "Customer Registration",
     "generateLink": "Generate Registration Link",
+    "alreadyRegisteredGate": "Already registered. Cannot issue a new registration link.",
     "linkGenerated": "Registration Link",
     "copyLink": "Copy",
     "invalidToken": "Invalid or expired link",

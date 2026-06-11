@@ -39,6 +39,7 @@ import hmac
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
@@ -50,6 +51,7 @@ from app.auth.dependencies import clear_tenant_context, reset_tenant_context, se
 from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
+from app.services.conv_log_writer import write_conversation_log
 
 router = APIRouter()
 
@@ -335,8 +337,23 @@ def _iter_inbound_messages(
         msg = messaging.get("message")
         if not msg or not isinstance(msg, dict):
             continue
-        # echo（自分が送ったメッセージ）はスキップ（is_echo=True）
+        # J1 エコー受信 ON: アプリ外から送った送信メッセージを outbound として yield する
         if msg.get("is_echo"):
+            recipient = messaging.get("recipient") or {}
+            customer_psid = (
+                str(recipient.get("id", ""))
+                if recipient.get("id") is not None
+                else ""
+            )
+            if customer_psid:
+                yield {
+                    "sender_id": customer_psid,  # 顧客 PSID（lead 検索に使用）
+                    "message_text": msg.get("text", "") or "",
+                    "message_id": msg.get("mid"),
+                    "timestamp": messaging.get("timestamp"),
+                    "has_attachments": bool(msg.get("attachments")),
+                    "is_echo": True,
+                }
             continue
         sender = messaging.get("sender", {}) or {}
         sender_id = str(sender.get("id", "")) if sender.get("id") is not None else ""
@@ -348,6 +365,7 @@ def _iter_inbound_messages(
             "message_id": msg.get("mid"),
             "timestamp": messaging.get("timestamp"),
             "has_attachments": bool(msg.get("attachments")),
+            "is_echo": False,
         }
 
     # ─── B) changes[] 形式（Instagram の field=messages） ───
@@ -456,6 +474,38 @@ async def _resolve_lead_name_via_graph(
     except Exception:
         logging.debug("[Meta] Graph API user name 取得失敗", exc_info=True)
         return None
+
+
+async def _find_lead_id_for_psid(
+    db: AsyncSession,
+    platform: str,
+    psid: str,
+) -> Optional[int]:
+    """PSID から lead_id を検索する（ADR-119 二段 lookup・作成なし）。
+
+    エコー受信（outbound）で顧客の lead を特定するために使用する。
+    lead が存在しない場合は None を返す（NULL safe）。
+    """
+    # Stage 1: lead_channels を一次権威として検索
+    result = await db.execute(
+        text("""
+            SELECT l.id FROM leads l
+            JOIN lead_channels lc ON lc.lead_id = l.id
+            WHERE lc.platform = :platform AND lc.external_id = :psid
+            LIMIT 1
+        """),
+        {"platform": platform, "psid": psid},
+    )
+    row = result.first()
+    if row:
+        return int(row[0])
+    # Stage 2: source フォールバック
+    result = await db.execute(
+        text("SELECT id FROM leads WHERE source = :source LIMIT 1"),
+        {"source": f"{platform}:{psid}"},
+    )
+    row = result.first()
+    return int(row[0]) if row else None
 
 
 async def _persist_meta_message(
@@ -708,6 +758,43 @@ async def process_messenger_event(body: dict) -> None:
                     await set_tenant_context(db, tenant_id)
 
                     for m in messages:
+                        _occurred = (
+                            datetime.fromtimestamp(
+                                int(m["timestamp"]) / 1000, tz=timezone.utc
+                            )
+                            if m.get("timestamp")
+                            else datetime.now(tz=timezone.utc)
+                        )
+
+                        # ── J1 エコー受信（アプリ外送信）: conv_logs のみ書く ──
+                        if m.get("is_echo"):
+                            echo_lead_id = await _find_lead_id_for_psid(
+                                db, platform, m["sender_id"]
+                            )
+                            try:
+                                await write_conversation_log(
+                                    db,
+                                    tenant_id=tenant_id,
+                                    lead_id=echo_lead_id,
+                                    channel_type=platform,
+                                    channel_identity=m["sender_id"],
+                                    direction="outbound",
+                                    sender=page_id_for_message,
+                                    content_text=m["message_text"],
+                                    external_message_id=m["message_id"],
+                                    occurred_at=_occurred,
+                                )
+                                await db.commit()
+                                await reset_tenant_context(db, tenant_id)
+                            except Exception:
+                                logging.warning(
+                                    "[Meta] echo conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
+                                    platform, m.get("message_id"),
+                                    exc_info=True,
+                                )
+                            continue
+
+                        # ── inbound: meta_messages + conv_logs に書く ──
                         msg_id, lead_id = await _persist_meta_message(
                             db,
                             tenant_id=tenant_id,
@@ -725,6 +812,29 @@ async def process_messenger_event(body: dict) -> None:
                                 m["message_id"],
                             )
                             continue
+
+                        # SA-02 Stage 1: inbound を conv_logs にも書く
+                        try:
+                            await write_conversation_log(
+                                db,
+                                tenant_id=tenant_id,
+                                lead_id=lead_id,
+                                channel_type=platform,
+                                channel_identity=m["sender_id"],
+                                direction="inbound",
+                                sender=m["sender_id"],
+                                content_text=m["message_text"],
+                                external_message_id=m["message_id"],
+                                occurred_at=_occurred,
+                            )
+                            await db.commit()
+                            await reset_tenant_context(db, tenant_id)
+                        except Exception:
+                            logging.warning(
+                                "[Meta] inbound conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
+                                platform, m.get("message_id"),
+                                exc_info=True,
+                            )
 
                         # アバター画像URLをバックグラウンドで取得・キャッシュ
                         # 例外は握り潰してWebhook処理本体に影響させない
