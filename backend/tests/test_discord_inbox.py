@@ -483,15 +483,22 @@ async def test_get_messages_discord_messaging_window_can_send(app_client, db_ses
 
 
 def _mock_result(first_value):
-    """db.execute() の戻り値を模倣するモック。"""
+    """db.execute() の戻り値を模倣するモック（.first() 用）。"""
     r = MagicMock()
     r.first.return_value = first_value
     return r
 
 
+def _mock_scalar(scalar_value):
+    """db.execute() の戻り値を模倣するモック（.scalar_one_or_none() 用）。"""
+    r = MagicMock()
+    r.scalar_one_or_none.return_value = scalar_value
+    return r
+
+
 @pytest.mark.asyncio
 async def test_dm_writer_creates_new_lead():
-    """初回 DM 受信 → lead が新規作成され、meta_messages に inbound 行が INSERT される。
+    """初回 DM 受信 → lead が新規作成され、meta_messages + conversation_logs に inbound 行が INSERT される。
 
     実行シーケンス（ADR-119 二段 lookup、set_tenant_context は AsyncMock の dialect guard で no-op）:
       1. Stage 1: SELECT leads JOIN lead_channels → None（未登録）
@@ -500,18 +507,22 @@ async def test_dm_writer_creates_new_lead():
       4. INSERT lead_channels（_ensure_lead_channel）
       5. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
       6. INSERT meta_messages RETURNING id（→ id=10）
-      7. commit
+      7. [SA-02] SELECT deals WHERE lead_id → None（案件なし: company_id=None）
+      8. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
+      9. commit
     """
     from app.discord_gateway.dm_writer import upsert_lead_and_message
 
     mock_session = AsyncMock()
     mock_session.execute.side_effect = [
-        _mock_result(None),     # (1) Stage 1 SELECT lead_channels JOIN → 未登録
-        _mock_result(None),     # (2) Stage 2 SELECT leads WHERE source → 未登録
-        _mock_result((1,)),     # (3) INSERT leads RETURNING id=1
-        _mock_result(None),     # (4) INSERT lead_channels (_ensure_lead_channel)
-        _mock_result(None),     # (5) UPDATE discord_dm_channel_id
-        _mock_result((10,)),    # (6) INSERT meta_messages RETURNING id=10
+        _mock_result(None),      # (1) Stage 1 SELECT lead_channels JOIN → 未登録
+        _mock_result(None),      # (2) Stage 2 SELECT leads WHERE source → 未登録
+        _mock_result((1,)),      # (3) INSERT leads RETURNING id=1
+        _mock_result(None),      # (4) INSERT lead_channels (_ensure_lead_channel)
+        _mock_result(None),      # (5) UPDATE discord_dm_channel_id
+        _mock_result((10,)),     # (6) INSERT meta_messages RETURNING id=10
+        _mock_result(None),      # (7) SA-02: SELECT deals → 案件なし
+        _mock_scalar(42),        # (8) SA-02: INSERT conversation_logs RETURNING id=42
     ]
 
     await upsert_lead_and_message(
@@ -525,8 +536,8 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 6回の execute + 1回の commit
-    assert mock_session.execute.call_count == 6
+    # 8回の execute + 1回の commit（SA-02 Stage 1: conv_logs 書き込み分2件追加）
+    assert mock_session.execute.call_count == 8
     assert mock_session.commit.call_count == 1
 
 
