@@ -4,7 +4,7 @@
 |------|------|
 | 発行日 | 2026-06-11（Planner: Web Claude） |
 | 状態 | 設計確定（KGI承認 2026-06-11／J1〜J4判断 2026-06-11 すべてShingo決定済み） |
-| 相互参照 | ADR-096（対象）・ADR-095（原則）・**recon: PR #1929**（file:line差分表＝`docs/plans/sa-progress/SA-02-plan.md` §3）・ADR-088/110/ADR-SA-17（翻訳）・ADR-119（lead_channels） |
+| 相互参照 | ADR-096（対象）・ADR-095（原則）・**recon**: `docs/handoff/sa-02-stage1/recon.md`（file:line差分表＝`docs/plans/sa-progress/SA-02-plan.md` §3）・ADR-088/110/ADR-SA-17（翻訳）・ADR-119（lead_channels） |
 
 ---
 
@@ -49,6 +49,17 @@
 | K3 | 会社→原文＋訳文の到達 | 3クリック以内 | UIレビュー（検証ゲート） |
 | K4 | 取りこぼしの自動回収 | sweeper周期内に回収 | 既存sweeperの周期・ログを流用（周期値は実装時に既存設定へ合わせる） |
 | K5 | 手動記録の所要 | 1メッセージ1分以内 | 検証ゲートでの実測 |
+
+## 5b. 受け入れ基準（process-artifacts gate 用）
+
+| 基準 | 検証方法 |
+|------|---------|
+| Meta Messenger/Instagram の受信が conversation_logs に保存される | `pytest backend/tests/test_conv_log_writer.py` + CI pytest-run-internal |
+| Discord DM の受信が conversation_logs に保存される | `pytest backend/tests/test_discord_inbox.py::test_dm_writer_creates_new_lead` |
+| external_message_id 重複で ON CONFLICT DO NOTHING が動作する | `pytest backend/tests/test_conv_log_writer.py::test_write_conversation_log_duplicate_returns_none` |
+| エコー受信（is_echo=True）が direction='outbound' で conv_logs に保存される | webhook.py `_iter_inbound_messages` のエコー分岐確認 + CI |
+| channel_masters テーブルが作成され RLS が適用される | `マイグレーションSQL 実行テスト（実DB）` CI ジョブ |
+| 失敗時にチャネル・ext_id 付きエラーログが出力される | `pytest backend/tests/test_conv_log_writer.py::test_direction_values_in_callers` |
 
 ## 6. 実装の段階分け（提案。PR分割はGenerator裁量、ゲートは各PRで通す）
 
