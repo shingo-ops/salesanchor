@@ -199,3 +199,134 @@ async def test_delete_conv_log_sets_deleted_at():
     call_kwargs = mock_db.execute.call_args[0][1]  # positional second arg = params dict
     assert "now" in call_kwargs  # deleted_at = :now で渡される
     assert "id" in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_create_conv_log_duplicate_returns_409():
+    """重複チェック: 同一内容が近接日時に存在する場合 409 を返す。"""
+    from fastapi import HTTPException
+    from app.routers.conv_logs import create_conv_log, ConvLogCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    # 重複行を返す mock: first() が (existing_id, existing_occurred_at) を返す
+    dup_occurred = datetime(2026, 6, 11, 10, 0, tzinfo=timezone.utc)
+    mock_dup_result = _make_mock_result([], first_value=(42, dup_occurred))
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_dup_result)
+
+    body = ConvLogCreate(
+        channel_type="phone",
+        content_text="重複テスト内容",
+        occurred_at=datetime(2026, 6, 11, 10, 30, tzinfo=timezone.utc),
+    )
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs._get_channel_master", new=AsyncMock(
+            return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
+        )),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await create_conv_log(
+                lead_id=10, body=body,
+                current_user=mock_user, tenant_id=1, db=mock_db,
+            )
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["code"] == "DUPLICATE_CONV_LOG"
+    assert exc_info.value.detail["existing_id"] == 42
+
+
+@pytest.mark.asyncio
+async def test_create_conv_log_force_skips_duplicate_check():
+    """allow_duplicate=True の場合、重複チェックをスキップして 201 を返す。"""
+    from app.routers.conv_logs import create_conv_log, ConvLogCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    mock_result = _make_mock_result([], scalar_value=100)
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+
+    body = ConvLogCreate(
+        channel_type="phone",
+        content_text="強制保存テスト",
+        occurred_at=datetime(2026, 6, 11, 10, 30, tzinfo=timezone.utc),
+        allow_duplicate=True,
+    )
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs.reset_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs._get_channel_master", new=AsyncMock(
+            return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
+        )),
+        patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
+        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+    ):
+        result = await create_conv_log(
+            lead_id=10, body=body,
+            current_user=mock_user, tenant_id=1, db=mock_db,
+        )
+
+    # 重複チェックをスキップして INSERT が実行され 201 が返る
+    assert result == {"id": 100}
+    # execute は INSERT のみ（重複チェック SELECT なし）
+    mock_db.execute.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_channel_master_creates_manual_channel():
+    """POST /admin/channel-masters: 手動チャネルが追加される。"""
+    from app.routers.conv_logs import create_channel_master, ChannelMasterCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    mock_result = _make_mock_result([], scalar_value=77)
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+
+    body = ChannelMasterCreate(platform="whatsapp_personal", display_name="WhatsApp（個人）")
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs.reset_tenant_context", new=AsyncMock()),
+    ):
+        result = await create_channel_master(
+            body=body,
+            current_user=mock_user, tenant_id=1, db=mock_db,
+        )
+
+    assert result == {"id": 77}
+    mock_db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_auto_channel_returns_400():
+    """DELETE /admin/channel-masters/{id}: auto チャネルは削除不可（400）。"""
+    from fastapi import HTTPException
+    from app.routers.conv_logs import deactivate_channel_master
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    # auto チャネルを返す mock
+    mock_result = _make_mock_result([], first_value=(3, "auto"))
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await deactivate_channel_master(
+                master_id=3,
+                current_user=mock_user, tenant_id=1, db=mock_db,
+            )
+    assert exc_info.value.status_code == 400
+    assert "自動連携チャネル" in str(exc_info.value.detail)

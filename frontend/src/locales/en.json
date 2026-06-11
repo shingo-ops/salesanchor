@@ -148,7 +148,8 @@
     "designPreview": "Design Preview",
     "accountSettings": "Account Settings",
     "sales": "Sales",
-    "commissions": "Commissions"
+    "commissions": "Commissions",
+    "channelMasters": "Channel Management"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -781,6 +782,8 @@
       "saving": "Saving...",
       "savedBadge": "Manual",
       "saveError": "Failed to save",
+      "dupWarning": "A similar record exists within 1 hour. This may be a duplicate.",
+      "saveAnyway": "Save anyway",
       "deleteConfirm": "Delete this record?",
       "deleted": "Deleted"
     },
@@ -2508,5 +2511,24 @@
   },
   "designPreview": {
     "subtitle": "Visual review of component standards (dev only)"
+  },
+  "channelMasters": {
+    "loading": "Loading...",
+    "loadError": "Failed to load channel list",
+    "platform": "Platform ID",
+    "displayName": "Display Name",
+    "type": "Type",
+    "typeAuto": "Auto Integration",
+    "typeManual": "Manual",
+    "actions": "Actions",
+    "delete": "Delete",
+    "deleteAriaLabel": "Delete {{name}}",
+    "deleteError": "Failed to delete",
+    "addTitle": "Add Channel",
+    "platformPlaceholder": "e.g. whatsapp_personal",
+    "displayNamePlaceholder": "e.g. WhatsApp (Personal)",
+    "add": "Add",
+    "saving": "Adding...",
+    "saveError": "Failed to add"
   }
 }

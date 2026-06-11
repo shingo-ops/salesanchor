@@ -44,6 +44,11 @@ const TABS = [
     labelKey: "nav.inventoryVisibility",
     Icon:     ADMIN_HUB_ICONS.inventoryVisibility,
   },
+  {
+    to:       "channel-masters",
+    labelKey: "nav.channelMasters",
+    Icon:     ADMIN_HUB_ICONS.channelMasters,
+  },
 ] as const;
 
 export default function AdminHubPage() {

@@ -371,6 +371,7 @@ export const ADMIN_HUB_ICONS = {
   discordConfig:       GearEightOutline, // Cog8ToothIcon outline — Discord設定
   discordAnnounce:     PaperAirplane,    // PaperAirplaneIcon solid — アナウンス投稿
   inventoryVisibility: PackageOutline,   // CubeIcon outline — 在庫表示権限
+  channelMasters:      SlidersHorizontal, // AdjustmentsHorizontalIcon outline — チャネル管理
 } satisfies Record<string, Icon>;
 
 // Drawer フルページ展開ボタン用

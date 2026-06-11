@@ -34,6 +34,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
 
   // チャネルマスタを取得して手動チャネル判定
@@ -63,22 +64,29 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
       });
   }, [currentPlatform]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (allowDuplicate = false) => {
     if (!contentText.trim() || !channelType) return;
     setSaving(true);
     setSaveError(null);
+    setDupWarning(null);
     try {
       await api.post(`/api/v1/leads/${leadId}/conv-logs`, {
         channel_type: channelType,
         direction: "inbound",
         content_text: contentText.trim(),
         occurred_at: new Date(occurredAt).toISOString(),
+        allow_duplicate: allowDuplicate,
       });
       setContentText("");
       setOccurredAt(new Date().toISOString().slice(0, 16));
       setSavedCount((c) => c + 1);
-    } catch {
-      setSaveError(t("inbox.manualRecord.saveError"));
+    } catch (err: unknown) {
+      const httpStatus = (err as { response?: { status?: number } }).response?.status;
+      if (httpStatus === 409) {
+        setDupWarning(t("inbox.manualRecord.dupWarning"));
+      } else {
+        setSaveError(t("inbox.manualRecord.saveError"));
+      }
     } finally {
       setSaving(false);
     }
@@ -88,7 +96,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        handleSave();
+        handleSave(false);
       }
     },
     [handleSave]
@@ -165,10 +173,24 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
         </div>
       )}
 
+      {dupWarning && (
+        <div className="manual-record-dup-warning" role="alert">
+          {dupWarning}
+          <button
+            type="button"
+            className="manual-record-dup-force-btn"
+            onClick={() => handleSave(true)}
+            disabled={saving}
+          >
+            {t("inbox.manualRecord.saveAnyway")}
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
         className="manual-record-save-btn"
-        onClick={handleSave}
+        onClick={() => handleSave(false)}
         disabled={saving || !contentText.trim()}
         aria-label={t("inbox.manualRecord.save")}
       >

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -47,6 +47,7 @@ class ConvLogCreate(BaseModel):
     direction: str = "inbound"
     content_text: str
     occurred_at: datetime
+    allow_duplicate: bool = False  # 重複確認後の強制保存用
 
     @field_validator("direction")
     @classmethod
@@ -59,6 +60,11 @@ class ConvLogCreate(BaseModel):
 class ConvLogUpdate(BaseModel):
     content_text: str | None = None
     occurred_at: datetime | None = None
+
+
+class ChannelMasterCreate(BaseModel):
+    platform: str  # 例: "whatsapp_personal"
+    display_name: str  # 例: "WhatsApp（個人）"
 
 
 # ---------------------------------------------------------------------------
@@ -185,17 +191,18 @@ async def list_channel_masters(
     schema = f"tenant_{tenant_id:03d}"
     result = await db.execute(
         text(
-            f"SELECT platform, display_name, connection_type, is_active "
+            f"SELECT id, platform, display_name, connection_type, is_active "
             f"FROM {schema}.channel_masters "
             f"WHERE is_active = true ORDER BY platform"
         )
     )
     return [
         {
-            "platform": r[0],
-            "display_name": r[1],
-            "connection_type": r[2],
-            "is_active": r[3],
+            "id": r[0],
+            "platform": r[1],
+            "display_name": r[2],
+            "connection_type": r[3],
+            "is_active": r[4],
         }
         for r in result.fetchall()
     ]
@@ -235,6 +242,39 @@ async def create_conv_log(
         )
 
     schema = f"tenant_{tenant_id:03d}"
+
+    # 重複チェック: 同一 lead_id + channel_type + content_text + occurred_at ±1h + deleted_at IS NULL
+    if not body.allow_duplicate:
+        dup_result = await db.execute(
+            text(
+                f"SELECT id, occurred_at FROM {schema}.conversation_logs "
+                f"WHERE lead_id = :lead_id "
+                f"  AND channel_type = :channel_type "
+                f"  AND content_text = :content_text "
+                f"  AND deleted_at IS NULL "
+                f"  AND occurred_at BETWEEN :oc_min AND :oc_max "
+                f"LIMIT 1"
+            ),
+            {
+                "lead_id": lead_id,
+                "channel_type": body.channel_type,
+                "content_text": body.content_text.strip(),
+                "oc_min": body.occurred_at - timedelta(hours=1),
+                "oc_max": body.occurred_at + timedelta(hours=1),
+            },
+        )
+        dup_row = dup_result.first()
+        if dup_row is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "DUPLICATE_CONV_LOG",
+                    "existing_id": dup_row[0],
+                    "existing_occurred_at": dup_row[1].isoformat() if dup_row[1] else None,
+                    "message": "同一内容の会話ログが近接日時に既に存在します（重複登録防止）",
+                },
+            )
+
     result = await db.execute(
         text(
             f"INSERT INTO {schema}.conversation_logs "
@@ -426,6 +466,79 @@ async def delete_conv_log(
             "channel_type": existing["channel_type"],
             "occurred_at": existing["occurred_at"].isoformat() if existing["occurred_at"] else None,
         },
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/admin/channel-masters — チャネルマスタ追加
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/admin/channel-masters",
+    status_code=status.HTTP_201_CREATED,
+    summary="手動チャネルの追加（テナント管理者）",
+    tags=["conv-logs"],
+)
+async def create_channel_master(
+    body: ChannelMasterCreate,
+    current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    await set_tenant_context(db, tenant_id)
+    schema = f"tenant_{tenant_id:03d}"
+    result = await db.execute(
+        text(
+            f"INSERT INTO {schema}.channel_masters "
+            f"(platform, display_name, connection_type, is_active) "
+            f"VALUES (:platform, :display_name, 'manual', true) "
+            f"RETURNING id"
+        ),
+        {"platform": body.platform, "display_name": body.display_name},
+    )
+    new_id = result.scalar_one()
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return {"id": new_id}
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v1/admin/channel-masters/{master_id} — チャネル無効化
+# ---------------------------------------------------------------------------
+
+
+@router.delete(
+    "/admin/channel-masters/{master_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="チャネルの無効化（テナント管理者）",
+    tags=["conv-logs"],
+)
+async def deactivate_channel_master(
+    master_id: int,
+    current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await set_tenant_context(db, tenant_id)
+    schema = f"tenant_{tenant_id:03d}"
+    result = await db.execute(
+        text(f"SELECT id, connection_type FROM {schema}.channel_masters WHERE id = :id"),
+        {"id": master_id},
+    )
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チャネルが見つかりません")
+    if row[1] == "auto":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="自動連携チャネルは削除できません（SA-02-design §4）",
+        )
+    await db.execute(
+        text(f"UPDATE {schema}.channel_masters SET is_active = false WHERE id = :id"),
+        {"id": master_id},
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
