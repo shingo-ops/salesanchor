@@ -99,6 +99,30 @@ PRに「申告書」を付け、点検プログラムが「成果物が揃って
 
 ---
 
+## 8-B. gate 精度改善バックログ（ADR-133 実運用で判明した既知バグ）
+
+### Bug-1: `/\n##/` が `\n###` にも一致 → 外部事例セクション内容が空判定される
+
+**発見経緯**: ADR-133 PR（#1970）で `## 3. 外部・過去事例の参照と我々への応用` の直後に `### サブ見出し` があったところ、`validateDesignDoc` が section content を長さ 0 と判定し FAIL した。
+
+**根本原因**: `check-process-artifacts.js` の next-section 検索 `/\n##/` が H3 (`###`) にも一致する。`afterHeading.match(/\n##/)` が `\n###` の位置でマッチし、section content が `\n` のみになる。
+
+**暫定回避策**: セクション見出し直下に `###` でなく平文（1行以上）を置く。ADR-133 ではこの方法で通過済み。
+
+**恒久修正案**: `/\n##/` → `/\n## /`（スペース付き）または `/\n##[^#]/`（三連シャープを除外）に変更する。修正行: `scripts/check-process-artifacts.js` の `afterHeading.match(/\n##/)` 部分。
+
+---
+
+### Bug-2: `file:line` 引用でディレクトリパスが EISDIR クラッシュを起こす
+
+**発見経緯**: ADR-133 PR の recon.md に `` `frontend:8080` `` が含まれていたため、`validateFileCitations` が `frontend/` ディレクトリを `readFileSync` しようとして EISDIR 例外が uncaught のまま CI をクラッシュさせた。
+
+**根本原因**: `existsSync(fullPath)` はディレクトリに対しても `true` を返す。その後 `readFileSync(fullPath, 'utf8')` がディレクトリに対して EISDIR をスローするが、try-catch がないため unhandled exception になる。
+
+**恒久修正案**: `existsSync` の後に `statSync(fullPath).isDirectory()` チェックを追加し、ディレクトリなら `errors.push('ディレクトリパス')` として continue する。修正行: `scripts/check-process-artifacts.js` の `validateFileCitations` 関数内 `existsSync` ブロック（現行 line 117-119 付近）。
+
+---
+
 ## 9. 不明ゼロ確認
 - 承認primitive：PR Reviews API（§7 recon 確定）。
 - 自動起票/期限：既存パターン（§7 recon 確定）。
