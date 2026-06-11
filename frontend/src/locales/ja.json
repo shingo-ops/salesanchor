@@ -630,7 +630,19 @@
     "branchNameLabel": "支店名（複数拠点がある場合）",
     "countryCodeWithHint": "国コード（ISO 2文字）",
     "deleteConfirmMessage": "「{{name}}」({{code}}) を削除しますか？ 関連する商談・注文・見積・請求書・担当者がある場合は削除できません。",
-    "subtitle": "クライアントの基本情報と住所を管理します。"
+    "subtitle": "クライアントの基本情報と住所を管理します。",
+    "convHistory": {
+      "tabLabel": "会話履歴",
+      "loadError": "会話ログの取得に失敗しました",
+      "filterByContact": "担当者で絞り込み",
+      "allContacts": "全担当者",
+      "noContact": "担当者なし",
+      "empty": "会話ログがありません",
+      "inbound": "受信",
+      "outbound": "送信",
+      "manual": "手動記録",
+      "translation": "翻訳"
+    }
   },
   "contacts": {
     "title": "担当者管理",
