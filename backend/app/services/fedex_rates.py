@@ -27,10 +27,10 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -138,6 +138,8 @@ class FedExRateQuote:
     currency: str              # 通貨コード (例: JPY, USD)
     transit_days: Optional[int] = None  # 配達日数（取得できない場合あり）
     delivery_timestamp: Optional[str] = None  # ISO 8601 文字列（取得できない場合あり）
+    # ADR-128: 追加料金内訳（frozen=True のため field を使用）
+    surcharges: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +266,10 @@ def get_rates(
     weight_kg: Decimal,
     origin_postal_code: Optional[str] = None,
     destination_postal_code: Optional[str] = None,
+    length_cm: Optional[Decimal] = None,
+    width_cm: Optional[Decimal] = None,
+    height_cm: Optional[Decimal] = None,
+    address_type: Optional[str] = None,
 ) -> list[FedExRateQuote]:
     """FedEx Rates and Transit Times API を呼び出し、見積もりリストを返す。
 
@@ -278,6 +284,10 @@ def get_rates(
         weight_kg: 重量（kg）
         origin_postal_code: 発送元郵便番号（省略時は国コードから代表値を補完）
         destination_postal_code: 届け先郵便番号（省略時は国コードから代表値を補完）
+        length_cm: 梱包の長さ（cm、任意・ADR-128 見積もり精度向上）
+        width_cm: 梱包の幅（cm、任意・ADR-128 見積もり精度向上）
+        height_cm: 梱包の高さ（cm、任意・ADR-128 見積もり精度向上）
+        address_type: "RESIDENTIAL" / "BUSINESS"（任意・ADR-128）
 
     Returns:
         見積もりリスト（サービスタイプ別・料金昇順）
@@ -295,6 +305,29 @@ def get_rates(
     origin_zip = origin_postal_code or _REPRESENTATIVE_POSTAL_CODES.get(origin_cc, "000000")
     dest_zip = destination_postal_code or _REPRESENTATIVE_POSTAL_CODES.get(dest_cc, "000000")
 
+    pkg_item: dict = {
+        "weight": {
+            "units": "KG",
+            "value": float(weight_kg),
+        }
+    }
+    # ADR-128: 寸法指定がある場合は追加
+    if length_cm and width_cm and height_cm:
+        pkg_item["dimensions"] = {
+            "length": float(length_cm),
+            "width": float(width_cm),
+            "height": float(height_cm),
+            "units": "CM",
+        }
+
+    recipient_address: dict = {
+        "countryCode": dest_cc,
+        "postalCode": dest_zip,
+    }
+    # ADR-128: 住宅宛の場合は residential フラグを設定
+    if address_type == "RESIDENTIAL":
+        recipient_address["residential"] = True
+
     payload = {
         "accountNumber": {"value": account_number},
         "requestedShipment": {
@@ -305,21 +338,11 @@ def get_rates(
                 }
             },
             "recipient": {
-                "address": {
-                    "countryCode": dest_cc,
-                    "postalCode": dest_zip,
-                }
+                "address": recipient_address,
             },
             "pickupType": "DROPOFF_AT_FEDEX_LOCATION",
             "rateRequestType": ["LIST"],
-            "requestedPackageLineItems": [
-                {
-                    "weight": {
-                        "units": "KG",
-                        "value": float(weight_kg),
-                    }
-                }
-            ],
+            "requestedPackageLineItems": [pkg_item],
         },
     }
 
@@ -526,6 +549,20 @@ def _parse_rate_replies(
             logger.debug("[fedex_rates] サービス %s の料金が取得できません", service_type)
             continue
 
+        # ADR-128: surcharges の抽出（LIST 料金と同じ ratedShipmentDetails から取得）
+        surcharges: list[dict[str, Any]] = []
+        for sd in shipment_details:
+            rate_type = sd.get("rateType", "")
+            if rate_type in ("PAYOR_LIST_PACKAGE", "PAYOR_LIST_SHIPMENT", "LIST"):
+                raw_surcharges = sd.get("surCharges", [])
+                for s in raw_surcharges:
+                    surcharges.append({
+                        "description": s.get("description") or s.get("surchargeKey", ""),
+                        "amount": s.get("amount"),
+                        "currency": sd.get("currency", "USD"),
+                    })
+                break
+
         # 配達日数: SA API transit_map を優先、フォールバックは Rates API operationalDetail
         transit_days: Optional[int] = None
         if transit_map:
@@ -548,6 +585,7 @@ def _parse_rate_replies(
             currency=currency,
             transit_days=transit_days,
             delivery_timestamp=delivery_ts,
+            surcharges=surcharges,
         ))
 
     # 料金昇順でソート
