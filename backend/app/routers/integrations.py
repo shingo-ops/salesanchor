@@ -24,7 +24,7 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +34,7 @@ from app.auth.dependencies import (
     get_current_user,
     require_permission,
     reset_tenant_context,
+    set_tenant_context,
 )
 from app.database import get_db
 from app.models import User
@@ -552,3 +553,92 @@ async def paypal_test_connection(
         creds["client_secret"],
     )
     return PaypalTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
+
+
+# ---------------------------------------------------------------------------
+# Public: PayPal 戻りURL自動 capture（Increment 2・Bearer 不要）
+# 顧客が決済リンクで支払い→承認後ここへ戻る→自動 capture→請求書 paid＋受注 sourcing。
+# 多重防御: ①Fernet 署名トークン ②PayPal token と保存 order_id の一致 ③capture は承認済のみ成功 ④冪等。
+# ---------------------------------------------------------------------------
+
+
+def _paypal_html(title_ja: str, title_en: str, status_code: int = 200) -> HTMLResponse:
+    """顧客向けの最小 HTML（React 外＝i18n 対象外。ADR-101 に従い英語併記）。"""
+    body = (
+        '<!doctype html><html lang="ja"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f"<title>{title_en}</title></head>"
+        '<body style="font-family:sans-serif;max-width:480px;margin:64px auto;'
+        'padding:0 24px;text-align:center;color:#2b2b2b">'
+        f'<h2 style="margin-bottom:8px">{title_ja}</h2>'
+        f'<p style="color:#6b6b6b">{title_en}</p>'
+        "</body></html>"
+    )
+    return HTMLResponse(content=body, status_code=status_code)
+
+
+@public_router.get("/integrations/paypal/return", include_in_schema=False)
+async def paypal_return(
+    t: str = Query(...),
+    token: str = Query(default=""),
+    db: AsyncSession = Depends(get_db),
+):
+    """顧客が PayPal で支払い後に戻る公開エンドポイント。自動 capture して請求書を paid にする。"""
+    parsed = paypal_payments.parse_return_token(t)
+    if not parsed:
+        return _paypal_html("リンクが無効です", "Invalid or expired link", status_code=400)
+    tenant_id, invoice_id = parsed
+
+    await set_tenant_context(db, tenant_id)
+    try:
+        inv = await db.execute(
+            text("SELECT id, status, paypal_order_id FROM invoices WHERE id = :id"),
+            {"id": invoice_id},
+        )
+        row = inv.mappings().first()
+        if not row or not row["paypal_order_id"] or (token and row["paypal_order_id"] != token):
+            return _paypal_html("注文が見つかりません", "Order not found", status_code=404)
+        if row["status"] == "paid":
+            return _paypal_html("お支払いは完了しています", "Payment already completed")
+        if row["status"] not in ("issued", "overdue"):
+            return _paypal_html("この請求書は支払い対象外です", "This invoice is not payable", status_code=400)
+
+        creds = await paypal_payments.get_credentials(db, tenant_id)
+        if not creds:
+            return _paypal_html("決済設定が見つかりません", "Payment configuration not found", status_code=400)
+
+        result = await run_in_threadpool(
+            paypal_payments.capture_order,
+            creds["environment"], creds["client_id"], creds["client_secret"],
+            row["paypal_order_id"],
+        )
+        if not result.get("captured"):
+            return _paypal_html("お支払いを確認できませんでした", "Payment could not be confirmed", status_code=409)
+
+        await db.execute(
+            text("UPDATE invoices SET status='paid', paid_at=NOW(), payment_fee=:fee, "
+                 "payment_method='paypal', updated_at=NOW() "
+                 "WHERE id=:id AND status IN ('issued','overdue')"),
+            {"id": invoice_id, "fee": result.get("fee")},
+        )
+        # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移（awaiting_payment のみ）
+        await db.execute(
+            text("UPDATE orders SET status='sourcing', paid_at=NOW(), updated_at=NOW() "
+                 "WHERE invoice_id=:iid AND status='awaiting_payment'"),
+            {"iid": invoice_id},
+        )
+        await db.commit()
+    except Exception as e:  # noqa: BLE001
+        await db.rollback()
+        logger.error("[paypal] return capture 失敗: %s", e)
+        return _paypal_html("処理中にエラーが発生しました", "An error occurred", status_code=500)
+    finally:
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+    return _paypal_html("お支払いありがとうございました", "Thank you, your payment was received")
+
+
+@public_router.get("/integrations/paypal/cancel", include_in_schema=False)
+async def paypal_cancel():
+    """顧客が PayPal でキャンセルしたときの公開戻り先。"""
+    return _paypal_html("お支払いはキャンセルされました", "Payment was cancelled")

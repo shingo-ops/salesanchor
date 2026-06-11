@@ -1126,7 +1126,7 @@
       "issueLink": "PayPalリンク発行",
       "confirm": "PayPal入金確認",
       "linkTitle": "顧客に送る PayPal 決済リンク",
-      "linkHint": "このリンクを顧客に送ってください。顧客の支払い後に「PayPal入金確認」を押すと入金が確定します。",
+      "linkHint": "このリンクを顧客に送ってください。顧客が支払いを完了すると自動で入金が確定します（確定しない場合は「PayPal入金確認」を押してください）。",
       "openLink": "リンクを開く"
     },
     "voidReasonLabel": "無効化理由",
