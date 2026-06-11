@@ -368,6 +368,8 @@ __all__ = [
     "verify_webhook",
     "get_webhook_id",
     "save_webhook_id",
+    "create_and_send_invoice",
+    "get_invoice_status",
 ]
 
 
@@ -430,7 +432,7 @@ def _find_existing_webhook(base: str, headers: dict, webhook_url: str) -> Option
 
 
 def register_webhook(env: str, client_id: str, client_secret: str, webhook_url: str) -> dict:
-    """テナントの PayPal アプリに webhook を作成し webhook_id を返す（CHECKOUT.ORDER.APPROVED 購読）。
+    """テナントの PayPal アプリに webhook を作成し webhook_id を返す（INVOICING.INVOICE.PAID 購読）。
 
     既存 URL（既登録）は既存 webhook の id を返す。Returns: {"ok", "webhook_id", "message"}。
     """
@@ -439,7 +441,7 @@ def register_webhook(env: str, client_id: str, client_secret: str, webhook_url: 
     if not token:
         return {"ok": False, "webhook_id": None, "message": "PayPal 認証に失敗しました"}
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    body = {"url": webhook_url, "event_types": [{"name": "CHECKOUT.ORDER.APPROVED"}]}
+    body = {"url": webhook_url, "event_types": [{"name": "INVOICING.INVOICE.PAID"}]}
     try:
         resp = httpx.post(
             f"{base}/v1/notifications/webhooks", json=body, headers=headers, timeout=_TIMEOUT
@@ -503,3 +505,150 @@ def verify_webhook(
         except Exception:  # noqa: BLE001
             return False
     return False
+
+
+# ---------------------------------------------------------------------------
+# Invoicing API（PayPal が請求書をメール送付＋ホスト決済）— ADR-101 改訂 2026-06-12
+# ---------------------------------------------------------------------------
+
+
+def _fetch_recipient_view_url(base: str, headers: dict, pp_invoice_id: str, send_resp) -> Optional[str]:
+    """send レスポンス or GET から顧客の支払いページ URL(recipient_view_url)を取り出す。"""
+    try:
+        for link in send_resp.json().get("links", []):
+            if link.get("rel") in ("recipient-view", "payer-view"):
+                return link.get("href")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        g = httpx.get(
+            f"{base}/v2/invoicing/invoices/{pp_invoice_id}",
+            headers={"Authorization": headers["Authorization"]},
+            timeout=_TIMEOUT,
+        )
+        if g.status_code == 200:
+            return g.json().get("detail", {}).get("metadata", {}).get("recipient_view_url")
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def create_and_send_invoice(
+    env: str,
+    client_id: str,
+    client_secret: str,
+    *,
+    invoice_number: str,
+    currency: str,
+    amount,
+    recipient_email: str,
+    reference: str,
+    item_name: str = "Sales Anchor Invoice",
+) -> dict:
+    """PayPal Invoice を作成・送付し、顧客が支払うホストURL(recipient_view_url)を返す。
+
+    invoicer は接続済アカウントの事業者情報が使われるため省略。
+    Returns: {"ok", "paypal_invoice_id", "recipient_view_url", "status_code", "message"}
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
+                "status_code": 401, "message": "PayPal 認証に失敗しました（認証情報を確認）"}
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    ccy = (currency or "JPY").upper()
+    body = {
+        "detail": {
+            "currency_code": ccy,
+            "invoice_number": invoice_number,
+            "reference": reference,
+        },
+        "primary_recipients": [
+            {"billing_info": {"email_address": recipient_email}}
+        ],
+        "items": [
+            {
+                "name": item_name,
+                "quantity": "1",
+                "unit_amount": {"currency_code": ccy, "value": _fmt_amount(amount, currency)},
+            }
+        ],
+    }
+    # 1. 作成（draft）
+    try:
+        resp = httpx.post(f"{base}/v2/invoicing/invoices", json=body, headers=headers, timeout=_TIMEOUT)
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] invoice 作成通信エラー: %s", e)
+        return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
+                "status_code": None, "message": "通信エラー（ネットワーク/URL を確認）"}
+    if resp.status_code not in (200, 201):
+        return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
+                "status_code": resp.status_code,
+                "message": f"PayPal 請求書作成に失敗（HTTP {resp.status_code}）"}
+    try:
+        pp_invoice_id = resp.json().get("id")
+    except Exception:  # noqa: BLE001
+        pp_invoice_id = None
+    if not pp_invoice_id:
+        return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
+                "status_code": resp.status_code, "message": "PayPal 請求書 ID を取得できませんでした"}
+
+    # 2. 送付（顧客にメール＋決済リンク）
+    try:
+        send_resp = httpx.post(
+            f"{base}/v2/invoicing/invoices/{pp_invoice_id}/send",
+            json={"send_to_recipient": True},
+            headers=headers, timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] invoice 送付通信エラー: %s", e)
+        return {"ok": False, "paypal_invoice_id": pp_invoice_id, "recipient_view_url": None,
+                "status_code": None, "message": "通信エラー（送付）"}
+    if send_resp.status_code not in (200, 201, 202):
+        return {"ok": False, "paypal_invoice_id": pp_invoice_id, "recipient_view_url": None,
+                "status_code": send_resp.status_code,
+                "message": f"PayPal 請求書送付に失敗（HTTP {send_resp.status_code}）"}
+
+    recipient_view_url = _fetch_recipient_view_url(base, headers, pp_invoice_id, send_resp)
+    return {"ok": True, "paypal_invoice_id": pp_invoice_id,
+            "recipient_view_url": recipient_view_url,
+            "status_code": send_resp.status_code, "message": "PayPal 請求書を送付しました"}
+
+
+def get_invoice_status(env: str, client_id: str, client_secret: str, paypal_invoice_id: str) -> dict:
+    """PayPal Invoice のステータスを取得（PAID なら paid=True）。
+
+    Returns: {"ok", "status", "paid", "fee", "status_code", "message"}
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return {"ok": False, "status": None, "paid": False, "fee": None,
+                "status_code": 401, "message": "PayPal 認証に失敗しました"}
+    try:
+        resp = httpx.get(
+            f"{base}/v2/invoicing/invoices/{paypal_invoice_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] invoice status 通信エラー: %s", e)
+        return {"ok": False, "status": None, "paid": False, "fee": None,
+                "status_code": None, "message": "通信エラー"}
+    if resp.status_code != 200:
+        return {"ok": False, "status": None, "paid": False, "fee": None,
+                "status_code": resp.status_code,
+                "message": f"PayPal 請求書取得に失敗（HTTP {resp.status_code}）"}
+    try:
+        data = resp.json()
+    except Exception:  # noqa: BLE001
+        data = {}
+    st = data.get("status")
+    fee = None
+    try:
+        fee = (data.get("payments", {}).get("transactions", [{}])[0]
+               .get("paypal_fee", {}).get("value"))
+    except (KeyError, IndexError, TypeError):
+        fee = None
+    return {"ok": True, "status": st, "paid": st == "PAID", "fee": fee,
+            "status_code": 200, "message": "OK"}

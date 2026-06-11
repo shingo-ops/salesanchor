@@ -3,8 +3,35 @@
 ## Status
 Accepted（送料/関税の数式・Wise APIは未決＝ADR-095付録1）
 
+> **2026-06-12 改訂**: §6 PayPal を Invoicing 方式へ（下記「改訂」節）。
+
 ## Date
-2026-06-04（起案: Hikky-dev / PO: shingo-ops）
+2026-06-04（起案: Hikky-dev / PO: shingo-ops）／改訂 2026-06-12（Hikky-dev・しんごさん事前了承の上 Hitoshi 判断で実施）
+
+---
+
+## 改訂 2026-06-12: PayPal 決済を「Invoicing 方式」へ（§6 PayPal (1) を上書き）
+
+### 背景・決定
+当初 §6 の PayPal「(1) API自動（リンク自動発行＋入金自動確認）」は **PayPal Checkout/Orders API（決済リンク）** で実装した（Increment 1/2/2.5）。しかし PayPal が**請求書をメール送付し、PayPal 上のページで支払い・ステータス管理する「Invoicing 方式（`/v2/invoicing/invoices`）」**に切り替える（しんごさん事前了承・Hitoshi 判断 GO）。
+
+### 案Y（併存）を採用 — SSOT は維持
+- **自社請求書（正規化2テーブル＋自社ブランドPDF）は引き続き SSOT のまま維持**（Wise 等 他決済でも流用するため）。
+- **PayPal 決済時のみ**、自社請求書のデータから **PayPal Invoice を生成・送付**し、PayPal を「メール送付＋ホスト決済ページ＋ステータス管理」のチャネルとして使う。
+- つまり「請求書の正本＝自社／PayPal は支払いチャネル」は不変。PayPal の請求書は**支払い導線**として併存。
+
+### 新フロー
+1. 請求書(issued) → PayPal 決済を選択 → `POST /v2/invoicing/invoices`（`detail.invoice_number`=自社IN-NNNN、`detail.reference`="tenant_id:invoice_id"、`primary_recipients[].billing_info.email_address`=contact.primary_email、items=自社明細）→ `POST .../{id}/send`（PayPal が顧客にメール＋`detail.metadata.recipient_view_url` ホスト決済ページ）。
+2. 入金確認: webhook **`INVOICING.INVOICE.PAID`**（`detail.reference` で自社請求書にルーティング）→ 自社請求書 paid＋受注 sourcing。手動は `GET /v2/invoicing/invoices/{id}` の status=PAID で確認。
+3. **PDF**: PayPal は API で PDF を返さない（確認済）ため、記録用 PDF は**自社生成のまま**（ADR-101 本文の自社PDF）。
+
+### 旧 Orders 方式の扱い
+PayPal の支払い導線は Invoicing に一本化。旧 Checkout/Orders 経路（決済リンク発行・戻りURL capture・CHECKOUT.ORDER.APPROVED webhook）は本改訂で置換（コードは段階的に整理）。`payment_fee` 等の列は流用（`paypal_order_id`=PayPal Invoice ID, `paypal_approval_url`=recipient_view_url を格納・migration 不要）。
+
+### 制約
+PayPal Invoicing は**送付先 email 必須**（PayPal がメール送付するため）。email 未登録の contact では発行不可（400）。
+
+---
 
 ## Context（背景）
 
