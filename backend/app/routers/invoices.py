@@ -628,7 +628,7 @@ async def issue_paypal_link(
         paypal_payments.create_order,
         creds["environment"], creds["client_id"], creds["client_secret"],
         inv_row["total_amount"], inv_row["currency"], inv_row["invoice_number"],
-        return_url, cancel_url,
+        return_url, cancel_url, f"{tenant_id}:{invoice_id}",  # custom_id（webhook ルーティング用）
     )
     if not result.get("ok"):
         raise HTTPException(
