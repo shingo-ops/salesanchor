@@ -219,9 +219,11 @@ def create_order(
     invoice_number: Optional[str],
     return_url: str,
     cancel_url: str,
+    custom_id: Optional[str] = None,
 ) -> dict:
     """請求書金額で PayPal 注文を作成し、顧客が支払う承認 URL を返す。
 
+    custom_id は webhook ルーティング用（"tenant_id:invoice_id"）。
     Returns: {"ok", "order_id", "approval_url", "status_code", "message"}
     """
     base = _BASE_URLS[_norm_env(env)]
@@ -240,6 +242,8 @@ def create_order(
     }
     if invoice_number:
         purchase_unit["invoice_id"] = invoice_number
+    if custom_id:
+        purchase_unit["custom_id"] = custom_id
 
     body = {
         "intent": "CAPTURE",
@@ -360,6 +364,10 @@ __all__ = [
     "capture_order",
     "make_return_token",
     "parse_return_token",
+    "register_webhook",
+    "verify_webhook",
+    "get_webhook_id",
+    "save_webhook_id",
 ]
 
 
@@ -381,3 +389,117 @@ def parse_return_token(token: str) -> Optional[tuple[int, int]]:
         return int(tid_s), int(iid_s)
     except Exception:  # noqa: BLE001
         return None
+
+
+# ---------------------------------------------------------------------------
+# Webhook（テナント毎に自動登録＋署名検証）— Increment 2.5
+# ---------------------------------------------------------------------------
+
+
+async def get_webhook_id(db, tenant_id: int) -> Optional[str]:
+    """テナントの保存済 webhook_id を返す（未登録なら None）。"""
+    row = await db.execute(
+        text("SELECT webhook_id FROM tenant_paypal_config WHERE tenant_id = :tid"),
+        {"tid": tenant_id},
+    )
+    rec = row.first()
+    return rec[0] if rec and rec[0] else None
+
+
+async def save_webhook_id(db, tenant_id: int, webhook_id: str) -> None:
+    """webhook_id を保存する。"""
+    await db.execute(
+        text("UPDATE tenant_paypal_config SET webhook_id = :wid, updated_at = NOW() "
+             "WHERE tenant_id = :tid"),
+        {"tid": tenant_id, "wid": webhook_id},
+    )
+    await db.commit()
+
+
+def _find_existing_webhook(base: str, headers: dict, webhook_url: str) -> Optional[str]:
+    """既存 webhook 一覧から URL 一致の id を探す。"""
+    try:
+        resp = httpx.get(f"{base}/v1/notifications/webhooks", headers=headers, timeout=_TIMEOUT)
+        if resp.status_code == 200:
+            for wh in resp.json().get("webhooks", []):
+                if wh.get("url") == webhook_url:
+                    return wh.get("id")
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def register_webhook(env: str, client_id: str, client_secret: str, webhook_url: str) -> dict:
+    """テナントの PayPal アプリに webhook を作成し webhook_id を返す（CHECKOUT.ORDER.APPROVED 購読）。
+
+    既存 URL（既登録）は既存 webhook の id を返す。Returns: {"ok", "webhook_id", "message"}。
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return {"ok": False, "webhook_id": None, "message": "PayPal 認証に失敗しました"}
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    body = {"url": webhook_url, "event_types": [{"name": "CHECKOUT.ORDER.APPROVED"}]}
+    try:
+        resp = httpx.post(
+            f"{base}/v1/notifications/webhooks", json=body, headers=headers, timeout=_TIMEOUT
+        )
+    except httpx.HTTPError as e:
+        logger.warning("[paypal] webhook 登録通信エラー: %s", e)
+        return {"ok": False, "webhook_id": None, "message": "通信エラー"}
+
+    if resp.status_code in (200, 201):
+        try:
+            wid = resp.json().get("id")
+        except Exception:  # noqa: BLE001
+            wid = None
+        if wid:
+            return {"ok": True, "webhook_id": wid, "message": "webhook を登録しました"}
+    if resp.status_code in (400, 409):  # WEBHOOK_URL_ALREADY_EXISTS 等
+        existing = _find_existing_webhook(base, headers, webhook_url)
+        if existing:
+            return {"ok": True, "webhook_id": existing, "message": "既存 webhook を再利用しました"}
+    return {"ok": False, "webhook_id": None, "message": f"webhook 登録失敗（HTTP {resp.status_code}）"}
+
+
+def verify_webhook(
+    env: str,
+    client_id: str,
+    client_secret: str,
+    webhook_id: str,
+    transmission_id: str,
+    transmission_time: str,
+    cert_url: str,
+    auth_algo: str,
+    transmission_sig: str,
+    webhook_event: dict,
+) -> bool:
+    """受信 webhook の署名を verify-webhook-signature API で検証（SUCCESS で True）。
+
+    通信エラー（検証不能）は例外を送出 → 呼び出し側で 500（PayPal 再送）にする。
+    """
+    base = _BASE_URLS[_norm_env(env)]
+    token = _get_token(env, client_id, client_secret)
+    if not token:
+        return False
+    body = {
+        "auth_algo": auth_algo,
+        "cert_url": cert_url,
+        "transmission_id": transmission_id,
+        "transmission_sig": transmission_sig,
+        "transmission_time": transmission_time,
+        "webhook_id": webhook_id,
+        "webhook_event": webhook_event,
+    }
+    resp = httpx.post(
+        f"{base}/v1/notifications/verify-webhook-signature",
+        json=body,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        timeout=_TIMEOUT,
+    )
+    if resp.status_code == 200:
+        try:
+            return resp.json().get("verification_status") == "SUCCESS"
+        except Exception:  # noqa: BLE001
+            return False
+    return False

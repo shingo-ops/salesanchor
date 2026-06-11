@@ -22,9 +22,9 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,6 +48,9 @@ logger = logging.getLogger(__name__)
 
 # Public ルーター（main.py で認証なしに登録）
 public_router = APIRouter()
+
+# Increment 2.5: 公開 webhook/return の本番ベース URL（env で上書き可）。
+_API_BASE_URL = os.getenv("API_BASE_URL", "https://api.salesanchor.jp").rstrip("/")
 # 認証必須ルーター（main.py で get_current_tenant 付きに登録）
 router = APIRouter()
 
@@ -512,6 +515,19 @@ async def save_paypal_credentials(
     await paypal_payments.save_credentials(
         db, tenant_id, payload.client_id, payload.client_secret, payload.environment, user.id
     )
+    # Increment 2.5: PayPal webhook を自動登録（best-effort・失敗しても接続は成功させる）。
+    webhook_url = f"{_API_BASE_URL}/api/v1/integrations/paypal/webhook"
+    try:
+        reg = await run_in_threadpool(
+            paypal_payments.register_webhook,
+            payload.environment, payload.client_id, payload.client_secret, webhook_url,
+        )
+        if reg.get("ok") and reg.get("webhook_id"):
+            await paypal_payments.save_webhook_id(db, tenant_id, reg["webhook_id"])
+        else:
+            logger.warning("[paypal] webhook 自動登録できず（接続は継続）: %s", reg.get("message"))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[paypal] webhook 自動登録に失敗（接続は継続）: %s", e)
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
 
@@ -642,3 +658,103 @@ async def paypal_return(
 async def paypal_cancel():
     """顧客が PayPal でキャンセルしたときの公開戻り先。"""
     return _paypal_html("お支払いはキャンセルされました", "Payment was cancelled")
+
+
+# ---------------------------------------------------------------------------
+# Public: PayPal Webhook（Increment 2.5・Bearer 不要）
+# 顧客が戻らなくても CHECKOUT.ORDER.APPROVED 受信で当方 capture→請求書 paid＋受注 sourcing。
+# 防御: 署名検証（verify-webhook-signature）／custom_id でテナント固定／order_id 一致／冪等。
+# ---------------------------------------------------------------------------
+
+
+def _parse_custom_id(custom_id) -> tuple[int, int] | None:
+    """create_order で埋めた custom_id "tenant_id:invoice_id" を解析する。"""
+    if not custom_id or ":" not in str(custom_id):
+        return None
+    try:
+        tid_s, iid_s = str(custom_id).split(":", 1)
+        return int(tid_s), int(iid_s)
+    except (ValueError, TypeError):
+        return None
+
+
+@public_router.post("/integrations/paypal/webhook", include_in_schema=False)
+async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """PayPal webhook（CHECKOUT.ORDER.APPROVED）。署名検証→capture→請求書 paid＋受注 sourcing。"""
+    try:
+        event = await request.json()
+    except Exception:  # noqa: BLE001
+        return Response(status_code=400)
+    if not isinstance(event, dict) or event.get("event_type") != "CHECKOUT.ORDER.APPROVED":
+        return Response(status_code=200)  # 対象外イベントは無視
+
+    resource = event.get("resource") or {}
+    order_id = resource.get("id")
+    units = resource.get("purchase_units") or []
+    custom_id = units[0].get("custom_id") if units else None
+    parsed = _parse_custom_id(custom_id)
+    if not parsed or not order_id:
+        return Response(status_code=200)  # ルーティング不能は無視（PayPal 再送防止）
+    tenant_id, invoice_id = parsed
+
+    # creds / webhook_id は public.tenant_paypal_config（テナント文脈不要）
+    creds = await paypal_payments.get_credentials(db, tenant_id)
+    webhook_id = await paypal_payments.get_webhook_id(db, tenant_id)
+    if not creds or not webhook_id:
+        return Response(status_code=200)  # 未設定テナントは無視
+
+    h = request.headers
+    try:
+        valid = await run_in_threadpool(
+            paypal_payments.verify_webhook,
+            creds["environment"], creds["client_id"], creds["client_secret"], webhook_id,
+            h.get("paypal-transmission-id", ""), h.get("paypal-transmission-time", ""),
+            h.get("paypal-cert-url", ""), h.get("paypal-auth-algo", ""),
+            h.get("paypal-transmission-sig", ""), event,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[paypal] webhook 署名検証不能: %s", e)
+        return Response(status_code=500)  # 検証不能 → PayPal 再送
+    if not valid:
+        return Response(status_code=400)  # 不正署名
+
+    await set_tenant_context(db, tenant_id)
+    try:
+        inv = await db.execute(
+            text("SELECT id, status, paypal_order_id FROM invoices WHERE id = :id"),
+            {"id": invoice_id},
+        )
+        row = inv.mappings().first()
+        if not row or row["paypal_order_id"] != order_id:
+            return Response(status_code=200)  # 不一致は無視
+        if row["status"] == "paid":
+            return Response(status_code=200)  # 冪等（既に確定）
+        if row["status"] not in ("issued", "overdue"):
+            return Response(status_code=200)
+
+        result = await run_in_threadpool(
+            paypal_payments.capture_order,
+            creds["environment"], creds["client_id"], creds["client_secret"], order_id,
+        )
+        if result.get("captured"):
+            await db.execute(
+                text("UPDATE invoices SET status='paid', paid_at=NOW(), payment_fee=:fee, "
+                     "payment_method='paypal', updated_at=NOW() "
+                     "WHERE id=:id AND status IN ('issued','overdue')"),
+                {"id": invoice_id, "fee": result.get("fee")},
+            )
+            # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移
+            await db.execute(
+                text("UPDATE orders SET status='sourcing', paid_at=NOW(), updated_at=NOW() "
+                     "WHERE invoice_id=:iid AND status='awaiting_payment'"),
+                {"iid": invoice_id},
+            )
+            await db.commit()
+    except Exception as e:  # noqa: BLE001
+        await db.rollback()
+        logger.error("[paypal] webhook 処理失敗: %s", e)
+        return Response(status_code=500)
+    finally:
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+    return Response(status_code=200)
