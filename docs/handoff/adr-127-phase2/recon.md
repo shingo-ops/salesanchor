@@ -2,7 +2,7 @@
 
 **仕事名**: adr127-phase2-dual-gate
 **日付**: 2026-06-11
-**対象ADR**: ADR-127 §4
+**対象ADR**: ADR-127
 **担当**: generator
 
 ## file:line 引用表
@@ -21,5 +21,5 @@
 ## 不明点リスト
 
 未解決なし。
-- companies テーブルは `lead_id` を SSOT として持つ（`leads に company_id 列はない`、`registration_tokens.py:145` コメント）
+- companies テーブルは `lead_id` を SSOT として持つ（`backend/app/routers/registration_tokens.py` コメント参照）
 - `company_addresses.is_default` + `address_type='billing'` で登録済み判定可能（ADR-127 §4 方針と一致）

@@ -2,7 +2,7 @@
 
 **仕事名**: adr127-phase2-dual-gate
 **日付**: 2026-06-11
-**対象ADR**: ADR-127 §4
+**対象ADR**: ADR-127
 **担当**: generator
 
 参照: `docs/handoff/adr-127-phase2/recon.md`
