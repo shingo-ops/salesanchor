@@ -114,7 +114,7 @@ export default function CompanyDetailPage() {
         <div className="page-header-actions">
           {canEdit && company.lead_id && (
             <button
-              className="btn-sm"
+              className="btn-sm btn-primary"
               onClick={handleGenerateRegLink}
               disabled={regLinkLoading || isAlreadyRegistered}
               title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
