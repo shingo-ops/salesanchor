@@ -77,7 +77,9 @@
     "unitMan": "万",
     "unitOku": "億",
     "unitMonth": "月",
-    "colon": "："
+    "colon": "：",
+    "unitYear": "年",
+    "errorLoad": "読み込みに失敗しました"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -2700,5 +2702,46 @@
     "add": "追加",
     "saving": "追加中...",
     "saveError": "追加に失敗しました"
+  },
+  "funnel": {
+    "sectionTitle": "ファネルダッシュボード",
+    "monthLabel": "対象月",
+    "viewManagement": "マネジメント",
+    "viewPlayer": "プレイヤー",
+    "leads": "リード獲得",
+    "conversion": "商談化率",
+    "active": "進行中商談",
+    "closed": "成約・失注",
+    "target": "目標",
+    "actual": "実績",
+    "bottleneck": "ボトルネック",
+    "converted": "商談化",
+    "wonRate": "成約率",
+    "won": "成約",
+    "lost": "失注",
+    "unitDeal": "件",
+    "unitCompany": "社",
+    "coverageOfRemaining": "残り目標カバー率",
+    "revenueTitle": "売上目標対比",
+    "pace_ahead": "ペース良好",
+    "pace_on_track": "ペース正常",
+    "pace_behind": "ペース遅延",
+    "newRevenue": "新規",
+    "repeatRevenue": "リピート",
+    "grossMargin": "粗利",
+    "uncostedNote": "{{count}}件 仕入コスト未入力",
+    "newCustomers": "新規顧客獲得",
+    "activeExisting": "アクティブ既存顧客",
+    "followUpTitle": "要フォロー顧客",
+    "viewAll": "詳細を見る",
+    "segOrderStopped": "発注停止",
+    "segNoRepeat": "初回後未フォロー",
+    "segWonNoOrder": "成約後未発注"
+  },
+  "initiative": {
+    "inbound": "お客様から問い合わせ",
+    "outbound": "こちらから営業",
+    "inbound_short": "顧客起点",
+    "outbound_short": "自社起点"
   }
 }

@@ -1,0 +1,410 @@
+/* ============================================================
+   FunnelSection — ファネルダッシュボード 第1層スタイル
+   Design tokens: var(--*) from tokens.css / index.css のみ使用
+   Dark mode: :root.force-dark で同名トークンが上書き済み
+   ============================================================ */
+
+/* ── セクション ── */
+.fn-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fn-loading,
+.fn-error {
+  padding: var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.fn-error {
+  color: var(--danger);
+}
+
+/* ── ファネル4カード行 ── */
+.fn-funnel-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .fn-funnel-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .fn-funnel-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 売上カード行 ── */
+.fn-revenue-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(160px, 200px);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .fn-revenue-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 汎用カード基底 ── */
+.fn-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.fn-card--bottleneck {
+  border-color: var(--warning);
+}
+
+.fn-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  min-height: 24px;
+}
+
+.fn-card-title {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── ボトルネックバッジ ── */
+.fn-bottleneck-badge {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── カード数値 ── */
+.fn-card-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.fn-card-value {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.fn-card-target {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.fn-card-unit {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.fn-card-sub {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.fn-card-rate {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.fn-card-coverage {
+  font-size: var(--font-xs);
+  color: var(--success);
+  font-weight: var(--font-weight-semi);
+  margin-top: var(--space-2);
+}
+
+/* ── 進捗バー ── */
+.fn-progress-wrap {
+  height: var(--progress-bar-h, 4px);
+  background: var(--bg-primary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: var(--space-2) 0;
+}
+
+.fn-progress-bar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+  max-width: 100%;
+}
+
+/* ── 売上カード（大） ── */
+.fn-revenue-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.fn-revenue-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.fn-revenue-actual {
+  font-size: var(--font-3xl, 1.875rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.fn-revenue-target {
+  font-size: var(--font-base);
+  color: var(--text-muted);
+}
+
+.fn-revenue-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.fn-revenue-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.fn-revenue-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.fn-revenue-rate {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ペースバッジ */
+.fn-pace-badge {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-badge);
+  white-space: nowrap;
+}
+
+.fn-pace--ahead {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.fn-pace--on-track {
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+}
+
+.fn-pace--behind {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+/* 新規・リピート分割バー */
+.fn-split-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.fn-split-bar-track {
+  display: flex;
+  height: 8px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.fn-split-new {
+  background: var(--accent);
+  height: 100%;
+  min-width: 4px;
+}
+
+.fn-split-repeat {
+  background: var(--accent);
+  opacity: 0.35;
+  height: 100%;
+  min-width: 4px;
+}
+
+.fn-split-labels {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.fn-split-label {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.fn-split-label--new {
+  color: var(--accent);
+  font-weight: var(--font-weight-semi);
+}
+
+/* 粗利行 */
+.fn-gross-margin-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-muted);
+}
+
+.fn-gross-label {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.fn-gross-value {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.fn-gross-note {
+  font-size: var(--font-xs);
+  color: var(--warning-text);
+}
+
+/* ── サイドカード群 ── */
+.fn-side-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fn-side-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── 要フォロー顧客カード ── */
+.fn-followup-summary-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.fn-followup-total {
+  font-size: var(--font-3xl, 1.875rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.fn-followup-segments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fn-segment-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fn-segment-badge {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fn-segment--stopped {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.fn-segment--no-repeat {
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+}
+
+.fn-segment--won {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.fn-segment-count {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+/* ── リンクボタン ── */
+.fn-link-btn {
+  background: none;
+  border: none;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fn-link-btn:hover {
+  text-decoration: underline;
+}
+
+.fn-link-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

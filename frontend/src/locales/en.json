@@ -77,7 +77,9 @@
     "unitMan": "万",
     "unitOku": "億",
     "unitMonth": "",
-    "colon": ": "
+    "colon": ": ",
+    "unitYear": "",
+    "errorLoad": "Failed to load data"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -2700,5 +2702,46 @@
     "add": "Add",
     "saving": "Adding...",
     "saveError": "Failed to add"
+  },
+  "funnel": {
+    "sectionTitle": "Funnel Dashboard",
+    "monthLabel": "Month",
+    "viewManagement": "Management",
+    "viewPlayer": "Player",
+    "leads": "Lead Acquisition",
+    "conversion": "Conversion Rate",
+    "active": "Active Deals",
+    "closed": "Won / Lost",
+    "target": "Target",
+    "actual": "Actual",
+    "bottleneck": "Bottleneck",
+    "converted": "Converted",
+    "wonRate": "Win Rate",
+    "won": "Won",
+    "lost": "Lost",
+    "unitDeal": " deals",
+    "unitCompany": " companies",
+    "coverageOfRemaining": "Coverage of Remaining",
+    "revenueTitle": "Revenue vs Target",
+    "pace_ahead": "Ahead of Pace",
+    "pace_on_track": "On Track",
+    "pace_behind": "Behind Pace",
+    "newRevenue": "New",
+    "repeatRevenue": "Repeat",
+    "grossMargin": "Gross Margin",
+    "uncostedNote": "{{count}} orders missing cost",
+    "newCustomers": "New Customers",
+    "activeExisting": "Active Existing",
+    "followUpTitle": "Follow-up Required",
+    "viewAll": "View Details",
+    "segOrderStopped": "Order Stopped",
+    "segNoRepeat": "No Repeat After First",
+    "segWonNoOrder": "Won, No Order"
+  },
+  "initiative": {
+    "inbound": "Inbound Inquiry",
+    "outbound": "Outbound Sales",
+    "inbound_short": "Customer-led",
+    "outbound_short": "Company-led"
   }
 }
