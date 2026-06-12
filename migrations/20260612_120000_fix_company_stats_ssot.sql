@@ -23,10 +23,13 @@ BEGIN
             CONTINUE;
         END IF;
 
-        -- v_company_stats ビュー再作成（CREATE OR REPLACE で冪等）
+        -- v_company_stats ビュー再作成（DROP → CREATE で冪等）
+        -- CREATE OR REPLACE はカラム名変更不可のため DROP を先行する（ADR-136）
         -- フィルタを paid_at IS NOT NULL AND voided_at IS NULL に変更
+        EXECUTE format('DROP VIEW IF EXISTS %I.v_company_stats CASCADE', schema_rec.nspname);
+
         EXECUTE format($q$
-            CREATE OR REPLACE VIEW %I.v_company_stats AS
+            CREATE VIEW %I.v_company_stats AS
             SELECT
                 c.id AS company_id,
                 COALESCE(SUM(i.total_amount), 0)                       AS total_deal_amount,
