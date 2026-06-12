@@ -127,7 +127,30 @@ gh pr create --base develop --head feature/morimoto/redo-business-address --titl
 
 ## 4. 緊急時の admin bypass 記録
 
-Ruleset の bypass を使った場合、以下にログを残す:
+### 4-A. break-glass マージ手順（通常 Approve なしで緊急マージが必要な場合）
+
+**適用条件**: 本番障害の復旧のみ（機能追加・通常 hotfix には使わない）
+
+| 手順 | 内容 |
+|------|------|
+| ① | PR タイトルの先頭に `EMERGENCY:` と理由を明記（例: `EMERGENCY: cannot drop columns from view 本番障害`） |
+| ② | Shingo（PO）に即時報告（Slack / 口頭）— 承認前でも後でも構わないが報告は必須 |
+| ③ | マージ後 24 時間以内に事後 Approve（Shingo `shingo-ops` が当該 PR を GitHub 上で Approve）を取得 |
+| ④ | 下記「4-B. 緊急マージ（0-Approve）ログ」に1行追記 |
+
+**このルールは CLAUDE.md ブランチ運用ルール§緊急 break-glass に同期記載。**
+
+### 4-B. 緊急マージ（0-Approve）ログ
+
+通常 Approve なしでマージされた PR の記録:
+
+| 日時 | PR | 内容 | 承認状況 | 事後Approve |
+|------|----|----|---------|------------|
+| 2026-06-12 14:53 JST | #2063 | hotfix: v_company_stats migration スキップガード追加（再デプロイ安全） | 0 Approve（shingo-cc がマージ） | ✅ 済み（[shingo-ops コメント](https://github.com/shingo-ops/salesanchor/pull/2063#issuecomment-4692791190) 2026-06-12） |
+
+### 4-C. Ruleset bypass ログ（CI Required Check をスキップした場合）
+
+Ruleset の bypass actor 権限を使って Required Status Check をスキップした場合、以下にログを残す:
 
 | 日時 | 緊急度 | 内容 | bypass 理由 | commit |
 |---|---|---|---|---|
@@ -178,7 +201,7 @@ Ruleset の bypass actor（GitHub UI: Settings → Rules → Rulesets → Protec
 2. **防御層の責任分担を間違えた**: Claude Code の振る舞い違反は **Claude Code 側 (memory + lessons.md)** で防御するのが本筋。Ruleset で人間を縛るのは過剰防御
 3. **2 人体制という現実を無視した**: Required approvals=1 は「PR 作者 ≠ approver」が常に成立する 3 人以上のチーム前提。2 人 admin では機能しない
 
-### 正しい設計 (採用)
+### 正しい設計 (採用) ← 2026-05-20 時点
 
 Required approvals: **0** に戻す。防御は次の通り分業:
 
@@ -194,6 +217,19 @@ Required approvals: **0** に戻す。防御は次の通り分業:
 - **Claude Code の振る舞いバグを Ruleset で塞ぐのは原則 NG** → Claude Code 側 memory + lessons で塞ぐべし
 - **少人数チームでは Required approvals=1 が機能しない** → self-approve 不可で相互依頼地獄になる
 - **「Claude Code は memory で物理的に止まる」と「人間は手で merge ボタンを押せる」の二層防御** が現実解
+
+### 5月20日摩擦が再発しない根拠（2026-06-12 ADR-136 導入後）
+
+2026-06-12 の ADR-136 導入により PR 作者が **`shingo-cc`（bot）に固定**された。これにより摩擦の構造的原因が解消された:
+
+| 5月20日の摩擦原因 | ADR-136 後の構造 |
+|-----------------|----------------|
+| PR 作者 = `Hikky-dev`（Claude Code）= Admin の一人 | PR 作者 = `shingo-cc`（bot、非Admin） |
+| `shingo-ops` / `Hikky-dev` のどちらかが作者 → self-approve 不可 | `shingo-cc` は `AUTHORIZED_APPROVERS` に含まれない → self-approve 構造的に不可能 |
+| Approve しようとすると「もう一方の Admin に依頼」が必要 | `shingo-ops` は常に `shingo-cc` PR を Approve 可能（自己 PR ではない） |
+| 全 PR に必須 Approve → 通常の docs や CI 修正も重い | 危険変更（migrations/deploy.yml/本番スクリプト）のみ Approve 必須。通常 PR は process-artifacts gate（成果物チェック）のみ |
+
+**結論**: ADR-136 ＋ process-artifacts gate の組み合わせで「危険変更のみ人間承認必須・通常 PR は CI 緑で自動マージ」が実現。5月20日型の相互依頼摩擦は発生しない。
 
 ---
 
