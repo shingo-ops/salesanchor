@@ -44,13 +44,9 @@ const DOCS_PATTERNS = [
 ];
 
 const DANGEROUS_PATTERNS = [
-  /^migrations\//,
-  /^\.github\/workflows\/deploy\.yml$/,
-  /^scripts\/.*migrat/i,
-  /^scripts\/.*deploy/i,
-  /^scripts\/aeon-dispatch\.sh$/,
-  /^scripts\/run_all_migrations\.sh$/,
-  /^scripts\/smoke_test_post_deploy\.sh$/,
+  /^migrations\//,                       // DBマイグレーション（ADR-135）
+  /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
+  /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
 ];
 
 const REAL_CODE_PATTERNS = [

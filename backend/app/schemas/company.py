@@ -195,6 +195,8 @@ class CompanyResponse(BaseModel):
     updated_at: datetime
     # 読み取り専用集計（v_company_stats から JOIN。ビューが存在しない環境では None）
     total_deal_amount: Optional[Decimal] = None
+    paid_invoice_count: Optional[int] = None
+    last_paid_at: Optional[datetime] = None
     deal_count: Optional[int] = None
     conversation_count: Optional[int] = None
     last_conversation_at: Optional[datetime] = None

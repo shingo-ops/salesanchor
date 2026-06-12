@@ -122,6 +122,8 @@
 | feature/morimoto/sa-02-stage2-migration-prep | （記入してください） | 2026-06-11 13:58 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-develop-adr128 | main/develop 同期（ADR-128 migration 競合解消） | 2026-06-11 14:07 | DONE | #1953 | | |
 | feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
+| feature/morimoto/design-site-auth-postapproval | （記入してください） | 2026-06-12 18:22 | IN_PROGRESS | | | |
+| feature/morimoto/nginx-force-recreate | （記入してください） | 2026-06-12 18:23 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
@@ -147,8 +149,12 @@
 | feature/morimoto/ui-consistency-a | 集計枠 fieldset → Card 統一（SalesPage + CommissionsPage） | 2026-06-10 | DONE | #1919 | | |
 | feature/morimoto/datatable-p2-pilot | DataTable標準化フェーズ2 Pilot（SupplierParseStatsTab） | 2026-06-10 | DONE | #1915 | | |
 | feature/morimoto/fedex-ship-stage2 | ADR-128 FedEx ラベル発行・集荷予約 Stage 2 実装 | 2026-06-11 | IN_PROGRESS | | | |
-| feature/morimoto/back-merge-main-for-adr128 | main → develop バックマージ（SA-02 Stage 3 migration 取り込み） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/back-merge-main-for-adr128 | main → develop バックマージ（SA-02 Stage 3 migration 取り込み） | 2026-06-11 | DONE | | | |
 | feature/morimoto/fix-develop-migration-order | develop migration 順序修正（SA-02 Stage 3 追加） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-to-develop-3 | main → develop フルマージ（SA-02 Stage 3 コード取り込み） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/release-fix | develop → main リリース競合解消（run_all_migrations.sh ADR-128挿入） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/fix-htpasswd-openssl | deploy.yml htpasswd → openssl 修正 | 2026-06-12 | IN_PROGRESS | | | |
+| feature/morimoto/design-site-smoke-autoblock | smoke④ FAIL 時 /design/ 自動遮断（ADR-134 D） | 2026-06-12 | IN_PROGRESS | | | |
+| feature/morimoto/back-merge-main-for-2032 | main → develop バックマージ（hotfix f2a33605 取り込み・PR #2032 競合解消） | 2026-06-12 | DONE | | | |
+| feature/morimoto/adr-135-final-checkboxes | ADR-135 受け入れ条件チェックボックス更新 + 経緯記録 | 2026-06-12 | IN_PROGRESS | #2033 | | |
+| feature/morimoto/adr-135-cleanup-approvers | ADR-135 AUTHORIZED_APPROVERS/AUTHORS 一時追加削除 | 2026-06-12 | IN_PROGRESS | #2034 | | |

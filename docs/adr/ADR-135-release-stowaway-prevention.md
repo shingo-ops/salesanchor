@@ -29,17 +29,25 @@ recon確定事実（5つの穴、2026-06-12 architect 確認）：
 - `.github/workflows/` → @shingo-ops
 - `scripts/` → @shingo-ops
 
-### B. develop 入口関所（Code Owner レビュー必須）— PO GO 後に実施
+### B. develop 入口関所 — 当初案 Ruleset 方式は不成立・B-2 に変更（実施済み）
 
-develop 向け PR で危険パスを触る場合のみ Code Owner（Shingo）の承認を必須にする。
-**通常の PR（フロント・通常ロジック）は従来どおり承認なしでCI緑のみでマージ可**。
+**2026-06-12 実機検証で判明した事実**：
+GitHub Ruleset の `require_code_owner_review=true` は `required_approving_review_count=0` の場合 review 要求を生成しない。
+API 応答の `reviewDecision` が `''`（空）のままで、CODEOWNERS 対象パス（migrations/）のPR もブロックされなかった。
+2本のテストPR（#2010/#2011）で確認済み。この組み合わせは GitHub の仕様上無効。
 
-実現手段：GitHub Ruleset（require_code_owner_review 有効化）。
-**実機検証先行必須**：「危険パス PR が承認なしでブロック」「通常 PR は従来どおり通過」をテスト PR で確認してから適用。
+**B-2 採用（PO GO 済み）**：`process-artifacts gate` の DANGEROUS_PATTERNS に `scripts/` 全体を追加。
+- `migrations/` は既に DANGEROUS_PATTERNS 対象（変更なし）
+- `scripts/` を `/^scripts\//` パターンで追加（従来は個別スクリプトのみ）
+- 自己申告免除不可・認可承認者（shingo-ops / Hikky-dev）の PR Approve 必須（既存ロジック）
+- 通常の PR（フロント・通常ロジック）は従来どおり影響なし
+- この変更 PR 自体が `scripts/` を触るため gate の承認要求が発火 → Shingo Approve で通す
 
-### C. main 必須チェックへの process-artifacts gate 追加 — PO GO 後に実施
+CODEOWNERS（A）は危険パスの責任者明示として維持するが、Ruleset 強制には使わない。
 
-Ruleset 15777895 の required_status_checks に process-artifacts gate を登録。
+### C. main 必須チェックへの process-artifacts gate 追加（実施済み）
+
+Ruleset 15777895 の required_status_checks に `process-artifacts gate` を登録（10件→11件）。
 リリース PR で gate が FAIL した場合、機械的にマージ不可とする。
 
 ### D. リリース PR テンプレートに相乗り確認欄を追加（実施済み）
@@ -59,17 +67,23 @@ STANDARD-WORKFLOW.md と CLAUDE.md に以下をインラインで記載：
 
 ## 実装上の注意
 
-- B・C（Ruleset変更）はガバナンス設定の変更 → 不可逆操作扱い → **PO の明示 GO で適用**。
-- B の設定可否は実機検証が先（GitHub Ruleset の組み合わせ動作を机上で確定しない）。
-- 既存 CI チェック 11 件（develop）/ 10 件（main）は変更しない（追加のみ）。
+- C（Ruleset変更）はガバナンス設定の変更 → 不可逆操作扱い → PO の明示 GO で適用（2026-06-12 GO 済み）。
+- 既存 CI チェックは削除せず、process-artifacts gate を追加（10件→11件）。
+- B-2 変更 PR 自体が `scripts/` を触るため gate の承認要求が発火する（設計どおり）。
+
+### B-2 gate PR（#2013）導入時のブートストラップ経緯（2026-06-12）
+
+B-2 の実装 PR #2013 は作者が `shingo-ops`（PO）であり、GitHub の自己承認禁止仕様により `shingo-ops` が Approve できなかった。また既存の `AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev']` には `shingo-cc`（Claude Code 機械アカウント）が未登録のため、承認しても gate が通過しない状況だった。PO 判断として、PO 権限で `shingo-cc` を `AUTHORIZED_APPROVERS` に、`shingo-ops` を `AUTHORIZED_AUTHORS` に一時追加し、`shingo-cc` が Approve することで gate を通過させた。この操作は CC バイパスではなく PO の明示的ガバナンス判断によるものであり、マージ直後に PR #2034 で両アカウントを即時削除して当初想定（`shingo-ops / Hikky-dev`）に復元した。
 
 ## Consequences
 
 ### 受け入れ条件
 
-- [ ] `migrations/` を触るテスト PR が Shingo の承認なしでは develop にマージできない（B 適用後）
-- [ ] 通常フロントエンドのみの PR が承認なし・CI 緑のみで develop にマージできる（B 適用後）
-- [ ] develop→main の リリース PR で process-artifacts gate が FAIL の場合マージできない（C 適用後）
+- [x] `migrations/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：DANGEROUS_PATTERNS で既に対応）
+- [x] `scripts/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：ADR-135 で追加・PR #2013 で確認）
+- [x] 認可承認者が Approve した後 gate が PASS する（B-2 受け入れテスト：PR #2013 で shingo-cc 承認→SUCCESS 確認 2026-06-12）
+- [x] 通常フロントエンドのみの PR が承認なし・CI 緑のみでマージできる（B-2 受け入れテスト：PR #2015 で確認済み）
+- [x] develop→main のリリース PR で process-artifacts gate が FAIL の場合マージできない（C 適用済み）
 - [x] PR テンプレートにリリース PR 用の相乗り確認欄が存在し変更ファイル一覧の報告が行われる（D）
 - [x] STANDARD-WORKFLOW と CLAUDE.md に E のルールがインラインで存在する
-- [ ] 上記をすべて満たした状態で通常リリース（develop→main）が 1 回問題なく完了する（B・C 適用後）
+- [ ] 上記をすべて満たした状態で通常リリース（develop→main）が 1 回問題なく完了する

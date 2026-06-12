@@ -366,6 +366,12 @@ run_sql migrations/20260612_110000_add_company_discord_guild_id.sql
 # ADR-101 改訂(2) Inc4 Step A: paypal_disputes テーブル作成
 run_sql migrations/20260612_154322_create_paypal_disputes.sql
 
+# ADR-136 前提: paid_at / voided_at バックフィル（必ず view 変更より前に実行）
+run_sql migrations/20260612_050000_backfill_invoice_timestamps.sql
+
+# ADR-136: v_company_stats SSOT 修正（フィルタを paid_at IS NOT NULL AND voided_at IS NULL に変更）
+run_sql migrations/20260612_120000_fix_company_stats_ssot.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
