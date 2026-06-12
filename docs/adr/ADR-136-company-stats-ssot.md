@@ -1,7 +1,10 @@
 # ADR-136: 取引額集計の SSOT — v_company_stats（公式定義: 入金済み・取消なし）
 
-**Status**: Accepted  
+**Status**: Completed  
 **日付**: 2026-06-12  
+**完了日**: 2026-06-12  
+**実装PR**: #2020（v_company_stats SSOT化）/ #2044（migration DROP+CREATE 修正）  
+**handoff**: `docs/handoff/company-stats-ssot/`  
 **関連**: ADR-108（カルテ受け入れ基準）/ ADR-109（status SSOT）/ ADR-120  
 **配置先**: `docs/adr/`
 
