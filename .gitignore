@@ -112,3 +112,4 @@ storybook-static
 
 # Prometheus secrets（VPS上のみ存在・gitに含めない）
 monitoring/prometheus/secrets/
+
