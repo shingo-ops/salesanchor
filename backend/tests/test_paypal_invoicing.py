@@ -26,8 +26,14 @@ _SEND_OK = {"links": [
 
 
 def test_create_and_send_invoice_success():
+    # GET 詳細から invoicer_view_url（発行者ビュー・原本ワンクリック用）を取得する
+    get_body = {"detail": {"metadata": {
+        "recipient_view_url": "https://www.sandbox.paypal.com/invoice/p/#INV2",
+        "invoicer_view_url": "https://www.sandbox.paypal.com/invoice/s/#INV2",
+    }}}
     with patch.object(svc, "_get_token", return_value="tok"), \
-         patch.object(svc.httpx, "post", side_effect=[_resp(201, _CREATE_OK), _resp(200, _SEND_OK)]) as p:
+         patch.object(svc.httpx, "post", side_effect=[_resp(201, _CREATE_OK), _resp(200, _SEND_OK)]) as p, \
+         patch.object(svc.httpx, "get", return_value=_resp(200, get_body)):
         out = svc.create_and_send_invoice(
             "sandbox", "id", "sec",
             invoice_number="IN-0001-01", currency="JPY", amount=1000,
@@ -36,6 +42,7 @@ def test_create_and_send_invoice_success():
     assert out["ok"] is True
     assert out["paypal_invoice_id"] == "INV2-AAAA-BBBB-CCCC-DDDD"
     assert out["recipient_view_url"] == "https://www.sandbox.paypal.com/invoice/p/#INV2"
+    assert out["invoicer_view_url"] == "https://www.sandbox.paypal.com/invoice/s/#INV2"
     # create body: reference / invoice_number / 送付先 email / JPY 整数値
     create_kwargs = p.call_args_list[0].kwargs["json"]
     assert create_kwargs["detail"]["reference"] == "4:123"
@@ -188,10 +195,74 @@ async def test_issue_paypal_link_success(client, monkeypatch):
     monkeypatch.setattr(svc, "get_credentials", _creds)
     monkeypatch.setattr(svc, "create_and_send_invoice", lambda *a, **k: {
         "ok": True, "paypal_invoice_id": "INV2-ZZZZ", "recipient_view_url": "https://pay/zzz",
+        "invoicer_view_url": "https://merchant/zzz",
         "status_code": 200, "message": "OK",
     })
+    # 写しPDF 生成は別テストで検証済み。ここでは保存→取得経路を検証するため bytes を返すよう mock。
+    import app.routers.invoices as inv_mod
+
+    async def _fake_copy(*a, **k):
+        return b"%PDF-1.4 paypal copy"
+    monkeypatch.setattr(inv_mod, "_render_paypal_copy_pdf", _fake_copy)
     resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["paypal_order_id"] == "INV2-ZZZZ"
     assert body["paypal_approval_url"] == "https://pay/zzz"
+    # ADR-101改訂(2) Inc1: 発行者ビューURLが保存される
+    assert body["paypal_invoicer_view_url"] == "https://merchant/zzz"
+    # 写しPDF が自動保存され、専用 endpoint で取得できる（reportlab 生成）
+    pdf = await client.get(f"/api/v1/invoices/{invoice_id}/paypal-copy-pdf")
+    assert pdf.status_code == 200, pdf.text
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content[:4] == b"%PDF"
+
+
+async def test_paypal_copy_pdf_404_when_not_issued(client):
+    """PayPal 未発行の請求書は写しPDFが無いので 404。"""
+    company_id, contact_id = await _company_contact(client, email="buyer@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    resp = await client.get(f"/api/v1/invoices/{invoice_id}/paypal-copy-pdf")
+    assert resp.status_code == 404
+
+
+async def test_issue_paypal_link_copy_pdf_failure_non_fatal(client, monkeypatch):
+    """写しPDF 生成が失敗してもリンク発行は成功する（致命にしない）。"""
+    company_id, contact_id = await _company_contact(client, email="buyer@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+
+    async def _creds(db, tid):
+        return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+    monkeypatch.setattr(svc, "get_credentials", _creds)
+    monkeypatch.setattr(svc, "create_and_send_invoice", lambda *a, **k: {
+        "ok": True, "paypal_invoice_id": "INV2-ERR", "recipient_view_url": "https://pay/e",
+        "invoicer_view_url": "https://merchant/e", "status_code": 200, "message": "OK",
+    })
+    # 写しPDF レンダリングを例外化
+    import app.routers.invoices as inv_mod
+    monkeypatch.setattr(inv_mod, "render_invoice_pdf",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("render boom")))
+    resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["paypal_order_id"] == "INV2-ERR"
+    # 写しPDF は保存されていない → 404
+    pdf = await client.get(f"/api/v1/invoices/{invoice_id}/paypal-copy-pdf")
+    assert pdf.status_code == 404
+
+
+# ── renderer: 写しPDF（PayPal 写し注記＋QR）────────────────────────
+def test_render_invoice_pdf_with_paypal_copy():
+    from app.services.invoice_renderer import render_invoice_pdf
+
+    invoice_data = {
+        "invoice_code": "IN-0001-01", "issued_at": None,
+        "items": [{"product_name": "X", "quantity": 1, "unit_price": 1000, "subtotal": 1000}],
+        "subtotal": 1000, "shipping_fee": 0, "tax_amount": 0, "total_amount": 1000,
+        "currency": "JPY",
+    }
+    out = render_invoice_pdf(invoice_data, {"name": "T"},
+                             paypal_copy={"pp_invoice_number": "INV2-1",
+                                          "original_url": "https://pay/x"})
+    assert isinstance(out, (bytes, bytearray))
+    assert out[:4] == b"%PDF"

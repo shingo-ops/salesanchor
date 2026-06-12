@@ -150,6 +150,9 @@ class InvoiceRenderData:
     tenant_phone: Optional[str] = None
     tenant_email: Optional[str] = None
     tenant_website: Optional[str] = None
+    # ADR-101改訂(2): PayPal 請求書の写し注記（{"pp_invoice_number", "original_url"}）。
+    # 指定時はフッターに「写し」帯＋原本リンク＋QR を描画する。
+    paypal_copy: Optional[dict] = None
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -387,17 +390,55 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
             c.drawString(22 * mm, y, line[:90])
             y -= 4 * mm
 
+    # ── 9. PayPal 写し注記（ADR-101改訂(2)）─────────────────────────────
+    if data.paypal_copy:
+        _draw_paypal_copy_footer(c, font, width, data.paypal_copy)
+
     c.save()
     return buf.getvalue()
+
+
+def _draw_paypal_copy_footer(c, font: str, width: float, paypal_copy: dict) -> None:
+    """ページ下部に「PayPal 請求書の写し」帯＋原本リンク＋QR を描画する。"""
+    pp_no = paypal_copy.get("pp_invoice_number") or ""
+    url = paypal_copy.get("original_url") or ""
+    base_y = 14 * mm
+    c.setFont(font, 8)
+    c.setFillColorRGB(0.30, 0.36, 0.55)
+    c.drawString(20 * mm, base_y + 6 * mm,
+                 f"PayPal 請求書の写し / Copy of PayPal invoice {pp_no}".strip())
+    if url:
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawString(20 * mm, base_y + 2 * mm, f"原本 / Original: {url[:88]}")
+        # QR（原本URL）。reportlab 同梱（新規依存なし）。失敗しても致命にしない。
+        try:
+            from reportlab.graphics import renderPDF
+            from reportlab.graphics.barcode import qr
+            from reportlab.graphics.shapes import Drawing
+
+            widget = qr.QrCodeWidget(url)
+            b = widget.getBounds()
+            size = 16 * mm
+            d = Drawing(size, size, transform=[size / (b[2] - b[0]), 0, 0,
+                                               size / (b[3] - b[1]), 0, 0])
+            d.add(widget)
+            renderPDF.draw(d, c, width - 36 * mm, base_y - 2 * mm)
+        except Exception:  # noqa: BLE001
+            pass
+    c.setFillColorRGB(0, 0, 0)
 
 
 # ─────────────────────────────────────────────────────────────────────
 # 公開インタフェース
 # ─────────────────────────────────────────────────────────────────────
 
-def render_invoice_pdf(invoice_data: dict, tenant_profile: dict) -> bytes:
+def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
+                       paypal_copy: dict | None = None) -> bytes:
     """
     請求書 PDF を生成して bytes で返す。
+
+    paypal_copy: ADR-101改訂(2) の写しPDF用。{"pp_invoice_number", "original_url"} を渡すと
+        フッターに「PayPal 請求書の写し」帯＋原本リンク＋QR を描画する（None なら従来通り）。
 
     invoice_data キー:
         invoice_code: str
@@ -470,6 +511,7 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict) -> bytes:
         tenant_phone=tenant_profile.get("phone"),
         tenant_email=tenant_profile.get("email"),
         tenant_website=tenant_profile.get("website"),
+        paypal_copy=paypal_copy,
     )
 
     return _render_doc_pdf(data)

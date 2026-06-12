@@ -779,7 +779,10 @@ async def setup_test_db(test_engine):
                 issue_mode VARCHAR(20),
                 paypal_order_id TEXT,
                 paypal_approval_url TEXT,
-                payment_fee NUMERIC(15, 2)
+                payment_fee NUMERIC(15, 2),
+                paypal_invoicer_view_url TEXT,
+                paypal_copy_pdf BLOB,
+                paypal_copy_pdf_at TIMESTAMP
             )
         """))
         await conn.execute(text("""

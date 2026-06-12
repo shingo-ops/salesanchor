@@ -512,14 +512,19 @@ def verify_webhook(
 # ---------------------------------------------------------------------------
 
 
-def _fetch_recipient_view_url(base: str, headers: dict, pp_invoice_id: str, send_resp) -> Optional[str]:
-    """send レスポンス or GET から顧客の支払いページ URL(recipient_view_url)を取り出す。"""
+def _fetch_view_urls(base: str, headers: dict, pp_invoice_id: str, send_resp) -> dict:
+    """send レスポンス or GET から顧客支払いページ(recipient_view_url)と
+    発行者ビュー(invoicer_view_url)を取り出す。{"recipient_view_url", "invoicer_view_url"}。"""
+    recipient = None
+    invoicer = None
+    # send レスポンスの links から recipient-view を拾える場合がある
     try:
         for link in send_resp.json().get("links", []):
             if link.get("rel") in ("recipient-view", "payer-view"):
-                return link.get("href")
+                recipient = link.get("href")
     except Exception:  # noqa: BLE001
         pass
+    # GET 詳細の detail.metadata から両 URL を取得（invoicer_view_url はここにしか無い）
     try:
         g = httpx.get(
             f"{base}/v2/invoicing/invoices/{pp_invoice_id}",
@@ -527,10 +532,12 @@ def _fetch_recipient_view_url(base: str, headers: dict, pp_invoice_id: str, send
             timeout=_TIMEOUT,
         )
         if g.status_code == 200:
-            return g.json().get("detail", {}).get("metadata", {}).get("recipient_view_url")
+            meta = g.json().get("detail", {}).get("metadata", {})
+            recipient = recipient or meta.get("recipient_view_url")
+            invoicer = meta.get("invoicer_view_url")
     except Exception:  # noqa: BLE001
-        return None
-    return None
+        pass
+    return {"recipient_view_url": recipient, "invoicer_view_url": invoicer}
 
 
 def create_and_send_invoice(
@@ -609,9 +616,10 @@ def create_and_send_invoice(
                 "status_code": send_resp.status_code,
                 "message": f"PayPal 請求書送付に失敗（HTTP {send_resp.status_code}）"}
 
-    recipient_view_url = _fetch_recipient_view_url(base, headers, pp_invoice_id, send_resp)
+    views = _fetch_view_urls(base, headers, pp_invoice_id, send_resp)
     return {"ok": True, "paypal_invoice_id": pp_invoice_id,
-            "recipient_view_url": recipient_view_url,
+            "recipient_view_url": views["recipient_view_url"],
+            "invoicer_view_url": views["invoicer_view_url"],
             "status_code": send_resp.status_code, "message": "PayPal 請求書を送付しました"}
 
 
