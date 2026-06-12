@@ -79,6 +79,7 @@
 
   /* ホバー・選択状態の薄い背景オーバーレイ */
   --color-hover-overlay:    rgba(0, 0, 0, 0.05);   /* リスト行 hover/selected */
+  --color-chip-count-bg:    rgba(255, 255, 255, 0.25); /* チップ件数バッジ背景（colored chip 上） */
   --color-separator-subtle: rgba(203, 210, 217, 0.6); /* 薄いボーダー区切り線 */
 
   /* フォーカスリング（--accent 色依存のため index.css に定義 / ダークも上書き要） */

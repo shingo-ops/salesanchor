@@ -77,7 +77,7 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
-  min-height: 24px;
+  min-height: var(--space-6);
 }
 
 .fn-card-title {
@@ -198,7 +198,7 @@
 
 .fn-revenue-bar-track {
   flex: 1;
-  height: 8px;
+  height: var(--space-2);
   background: var(--bg-primary);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -216,7 +216,7 @@
   font-weight: var(--font-weight-semi);
   color: var(--text-primary);
   white-space: nowrap;
-  min-width: 40px;
+  min-width: var(--space-10);
   text-align: right;
 }
 
@@ -254,7 +254,7 @@
 
 .fn-split-bar-track {
   display: flex;
-  height: 8px;
+  height: var(--space-2);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -262,14 +262,14 @@
 .fn-split-new {
   background: var(--accent);
   height: 100%;
-  min-width: 4px;
+  min-width: var(--space-1);
 }
 
 .fn-split-repeat {
   background: var(--accent);
-  opacity: 0.35;
+  opacity: var(--opacity-faint);
   height: 100%;
-  min-width: 4px;
+  min-width: var(--space-1);
 }
 
 .fn-split-labels {

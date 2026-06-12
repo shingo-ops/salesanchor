@@ -103,8 +103,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   background: var(--bg-primary);
   border-radius: var(--radius-full);
   font-size: var(--font-xs);

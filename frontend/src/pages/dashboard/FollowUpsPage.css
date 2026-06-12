@@ -59,7 +59,7 @@
   padding: 1px var(--space-2);
   background: var(--color-chip-count-bg);
   border-radius: var(--radius-full);
-  min-width: 20px;
+  min-width: var(--space-5);
   text-align: center;
 }
 
@@ -124,6 +124,6 @@
 .fu-drawer-label {
   font-size: var(--font-sm);
   color: var(--text-secondary);
-  min-width: 100px;
+  min-width: var(--size-drawer-label-min);
   flex-shrink: 0;
 }
