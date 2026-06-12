@@ -586,14 +586,16 @@ function KarteTabContent({
 }
 
 // ---------------------------------------------------------------------------
-// ADR-110: Performance Summary — read-only, 3 rows with order + message data
+// ADR-110/136: Performance Summary — read-only, 3 rows with order + message data
+// 取引額は v_company_stats 経由（ADR-136）。クライアント側集計は撤去済み。
 // ---------------------------------------------------------------------------
 
-interface InvoiceSummary {
-  id: number;
-  total_amount: number | string | null;
-  paid_at: string | null;
-  voided_at: string | null;
+interface LeadStats {
+  total_deal_amount: number;
+  paid_invoice_count: number;
+  last_paid_at: string | null;
+  conversation_count: number;
+  last_conversation_at: string | null;
 }
 
 function PerformanceSummary({ leadId }: { leadId: number }) {
@@ -624,24 +626,14 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
         if (!cancelled) { setMessageCount(0); setLastMessageDate(null); }
       }
 
-      // Fetch invoices for total revenue + order count + last order date
+      // Fetch v_company_stats 由来の取引実績（ADR-136）
       try {
-        const invoiceData = await api.get<{ invoices: InvoiceSummary[] } | InvoiceSummary[]>(
-          `/invoices?lead_id=${leadId}`
-        );
+        const stats = await api.get<LeadStats>(`/leads/${leadId}/stats`);
         if (!cancelled) {
-          const invoices = Array.isArray(invoiceData) ? invoiceData : (invoiceData.invoices ?? []);
-          const paid = invoices.filter((inv) => inv.paid_at != null && inv.voided_at == null);
-          if (paid.length > 0) {
-            const total = paid.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
-            setTotalRevenue(total);
-            setOrderCount(paid.length);
-            const sorted = [...paid].sort((a, b) => {
-              const da = new Date((a.paid_at!).replace(" ", "T")).getTime();
-              const db = new Date((b.paid_at!).replace(" ", "T")).getTime();
-              return db - da;
-            });
-            setLastOrderDate(sorted[0].paid_at ?? null);
+          if (stats.paid_invoice_count > 0) {
+            setTotalRevenue(Number(stats.total_deal_amount));
+            setOrderCount(stats.paid_invoice_count);
+            setLastOrderDate(stats.last_paid_at);
           } else {
             setTotalRevenue(null);
             setOrderCount(0);

@@ -119,9 +119,24 @@
 | feature/morimoto/sa-02-stage4-company-conv-logs | SA-02 段階4: 会社詳細会話履歴タブ | 2026-06-11 13:09 | DONE | #1945 | ✅ | |
 | feature/morimoto/sa-02-stage4-docs | SA-02 進捗ドキュメント更新 | 2026-06-11 13:15 | IN_PROGRESS | | | |
 | feature/morimoto/adr127-phase2c-button-color | （記入してください） | 2026-06-11 13:50 | IN_PROGRESS | | | |
-| feature/morimoto/sa-02-stage2-migration-prep | （記入してください） | 2026-06-11 13:58 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage2-migration-prep | SA-02 段階2 移行スクリプト準備 | 2026-06-11 13:58 | DONE | #1952 | | |
+| feature/morimoto/sa-02-stage2-rollback-fix | SA-02 段階2 rollback条件修正 | 2026-06-11 16:50 | DONE | #1965 | | |
+| feature/morimoto/sa-02-stage2-plan-update | SA-02 段階2 plan記録更新 | 2026-06-11 17:00 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-develop-adr128 | main/develop 同期（ADR-128 migration 競合解消） | 2026-06-11 14:07 | DONE | #1953 | | |
 | feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
+| feature/morimoto/nginx-reload-migration-total | （記入してください） | 2026-06-11 15:54 | IN_PROGRESS | | | |
+| feature/morimoto/adr127-phase2c-css-fix | （記入してください） | 2026-06-11 16:45 | IN_PROGRESS | | | |
+| feature/morimoto/gate-bug-note | （記入してください） | 2026-06-11 18:12 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-recon | （記入してください） | 2026-06-11 18:18 | IN_PROGRESS | | | |
+| feature/morimoto/deploy-timeout-fix | （記入してください） | 2026-06-11 20:58 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-pickup-carriercod-fix | （記入してください） | 2026-06-11 20:59 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-change-billing | SA-03 change_billing一式（ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2）+ migration | 2026-06-12 04:00 | IN_PROGRESS | | | |
+| feature/morimoto/adr109-db-migration | （記入してください） | 2026-06-12 12:09 | IN_PROGRESS | | | |
+| feature/morimoto/sa02-daily-recon-notify | （記入してください） | 2026-06-12 12:17 | IN_PROGRESS | | | |
+| feature/morimoto/remove-review-locale-en | （記入してください） | 2026-06-12 12:53 | IN_PROGRESS | | | |
+| feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | | |
+| feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | | |
+| feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | #2020 | | |
 ---
 
 ## 記入例
@@ -151,3 +166,6 @@
 | feature/morimoto/fix-develop-migration-order | develop migration 順序修正（SA-02 Stage 3 追加） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-to-develop-3 | main → develop フルマージ（SA-02 Stage 3 コード取り込み） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/release-fix | develop → main リリース競合解消（run_all_migrations.sh ADR-128挿入） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/nginx-resolver-adr133 | ADR-133 nginx resolver+proxy_pass変数化 IP固着502恒久解 | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/karte-visual-gate | カルテ見た目忠実度ゲート⑤（Phase 5a CSS 寸法是正 + 5b 視覚ゲート） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-label-validation-wizard | ADR-129 FedEx Label Validation 申請支援ウィザード | 2026-06-12 | IN_PROGRESS | #1993 | | |
