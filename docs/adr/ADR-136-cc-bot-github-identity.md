@@ -17,6 +17,7 @@ Claude Code（CC）が GitHub 上で行う操作（PR 作成・branch push・iss
 - CC ローカルの `gh auth` を `shingo-cc` の Fine-grained PAT に変更
 - PAT は `~/.claude-access.env` に保管（git 追跡禁止・B-11 準拠）
 - `shingo-cc` は salesanchor リポジトリ限定・最小権限（Contents Write / Pull requests Write / Metadata Read / Actions Read / Issues Write）
+- `scripts/check-process-artifacts.js` に PR 作者チェックを追加：コード変更を含む PR の作者が `AUTHORIZED_AUTHORS`（`shingo-cc` / `Hikky-dev`）以外の場合は fail させ、shingo-cc 名義での再作成を要求する（docs-only PR は対象外）
 
 ## Why（なぜ変えるか）
 
@@ -34,6 +35,7 @@ CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が�
 - **対象**: CC が `gh` CLI で行う全操作（PR create / branch push / issue create 等）
 - **除外**: 本番サーバー SSH 操作（既存鍵管理は変更なし）
 - **除外**: GitHub Actions 内の GITHUB_TOKEN（ワークフロー内部は変更なし）
+- **スコープ外（意図的）**: Suttan 側の Claude Code 利用分は `Hikky-dev` 名義のままでよい（2026-06-12 Shingo 決定）
 
 ## セットアップ手順
 
@@ -42,5 +44,6 @@ CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が�
 ## ガードレール
 
 - PAT は `~/.claude-access.env` に `SHINGO_CC_PAT` として保管（git 追跡禁止・B-11 準拠）
-- `shingo-cc` は `scripts/check-process-artifacts.js:29` の `AUTHORIZED_APPROVERS` に**含まない**（`shingo-ops` / `Hikky-dev` のみ）
+- `shingo-cc` は `scripts/check-process-artifacts.js` の `AUTHORIZED_APPROVERS` に**含まない**（`shingo-ops` / `Hikky-dev` のみ）
 - 危険変更（`deploy.yml`・`migrations/`・本番スクリプト）の承認者は人間のみを維持し、AI による自己承認を構造的に不可能にする
+- 作者チェック（`AUTHORIZED_AUTHORS`）の取得失敗時は warn のみでスキップ（fail-open）。可用性とのバランスとして許容。安全性は「自己承認禁止 + 承認必須」が別レイヤーで担保する（2026-06-12 Shingo 評価）
