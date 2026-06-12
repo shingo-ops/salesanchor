@@ -150,7 +150,7 @@
 | [ADR-135](./ADR-135-release-stowaway-prevention.md) | ADR-135: リリース相乗り防止 — develop を常に出荷可能に保つ | Accepted | — | — |
 | [ADR-136](./ADR-136-cc-bot-github-identity.md) | ADR-136: CC ボットアカウント GitHub Identity 分離 | Accepted | — | — |
 | [ADR-136](./ADR-136-company-stats-ssot.md) | ADR-136: 取引額集計の SSOT — v_company_stats（公式定義: 入金済み・取消なし） | Completed | — | — |
-| [ADR-137](./ADR-137-nginx-config-deploy-reliability.md) | ADR-137: nginx 反映の確実化（inode ズレ対策 + 502 再発防止） | Accepted | — | — |
+| [ADR-137](./ADR-137-nginx-config-deploy-reliability.md) | ADR-137: nginx 反映の確実化（inode ズレ対策 + 502 再発防止） | Completed（PR-A・PR-B 両問題とも解消済み） | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
