@@ -858,16 +858,21 @@ jobs:
           fi
 
       - name: 全タイムスタンプ SQL マイグレーションを順次実行（run_all_migrations.sh の記載順）
-        # 対象: migrations/20XXXXXX_*.sql（タイムスタンプ形式）のみ
-        # 番号付き migration（013-100）は Python migration が作るテーブルに依存するため除外。
-        # それらは既存の migration-test-run ジョブで変更時のみ検証される。
+        # 対象: migrations/20260604_*.sql 以降（タイムスタンプ形式）のみ
+        # 番号付き migration（013-100）と初期タイムスタンプ（20260601-20260603）は
+        # Python migration や numbered migration が作るカラムに依存するため除外。
+        # 20260604 以降は本 CI の base schema + Sprint 1 でカバーされる。
+        # これらは既存の migration-test-run ジョブで変更時のみ検証される。
         run: |
-          echo "🔍 run_all_migrations.sh からタイムスタンプ形式 SQL の順序を取得..."
-          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/20' || echo 0)
-          echo "対象 SQL ファイル数（20XXXXXX形式）: ${TOTAL}"
+          echo "🔍 run_all_migrations.sh から 20260604 以降のタイムスタンプ SQL の順序を取得..."
+          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026060[4-9]' || echo 0)
+          TOTAL2=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026061' || echo 0)
+          TOTAL2b=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026062' || echo 0)
+          TOTAL=$((TOTAL + TOTAL2 + TOTAL2b))
+          echo "対象 SQL ファイル数（20260604〜形式）: ${TOTAL}"
           STEP=0
 
-          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep '^migrations/20' | while read sqlfile; do
+          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' | while read sqlfile; do
             [ -z "$sqlfile" ] && continue
             STEP=$((STEP + 1))
             if [ ! -f "$sqlfile" ]; then
