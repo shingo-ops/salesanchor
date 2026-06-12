@@ -222,19 +222,48 @@ test('AC3: 検証方法が空の受け入れ基準はfail', () => {
   assert.ok(errors.some(e => e.includes('検証方法が空')));
 });
 
-// ── §7 AC4: 危ない変更で承認なしは本検査を要求 ───────────────────────────────
-test('AC4: 危ない変更＋承認なし → 本検査（fail with missing artifacts）', () => {
+// ── §7 AC4: 危ない変更で承認なしは即 fail ────────────────────────────────────
+test('AC4: 危ない変更＋承認なし → 承認必須メッセージで即fail', () => {
   const result = runScript({
     CHANGED_FILES: 'migrations/001_test.sql',
     MOCK_APPROVALS: '',
     MOCK_PR_BODY: '',
   });
-  assert.notStrictEqual(result.code, 0, '本検査でfailするべき（exit != 0）');
+  assert.notStrictEqual(result.code, 0, '承認なしでfailするべき（exit != 0）');
   assert.ok(
-    result.stderr.includes('PROCESS ARTIFACTS GATE FAILED') ||
-    result.stderr.includes('標準ワークフロー確認'),
-    '本検査のfailメッセージが出るべき'
+    result.stderr.includes('PROCESS ARTIFACTS GATE FAILED'),
+    'GATE FAILED メッセージが出るべき'
   );
+  assert.ok(
+    result.stderr.includes('Approve') || result.stderr.includes('承認者'),
+    '承認要求メッセージが出るべき'
+  );
+});
+
+test('AC4-edge: 危ない変更＋承認なし＋成果物が完全に揃っていても fail（PR #2063 再発防止）', () => {
+  // PR #2063 で発覚したバグ: artifacts 完備でも承認なしは通らない
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('danger-no-approve/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('danger-no-approve/design.md', designContent);
+    const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+
+    const result = runScript({
+      CHANGED_FILES: 'migrations/001_test.sql',
+      MOCK_APPROVALS: '',
+      MOCK_PR_BODY: body,
+    });
+    assert.notStrictEqual(result.code, 0, '成果物完備でも承認なしはfailするべき（PR #2063 再発防止）');
+    assert.ok(
+      result.stderr.includes('Approve') || result.stderr.includes('承認者'),
+      '承認要求メッセージが出るべき'
+    );
+  } finally {
+    cleanupTmp();
+  }
 });
 
 test('AC4: 危ない変更で自己申告免除"だけ"はfail', () => {
@@ -244,7 +273,6 @@ test('AC4: 危ない変更で自己申告免除"だけ"はfail', () => {
     MOCK_APPROVALS: '',
     MOCK_PR_BODY: body,
   });
-  // 免除は honorされず本検査になる → PR本文が不完全でfail
   assert.notStrictEqual(result.code, 0);
 });
 

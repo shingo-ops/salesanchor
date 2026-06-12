@@ -178,7 +178,7 @@ Ruleset の bypass actor（GitHub UI: Settings → Rules → Rulesets → Protec
 2. **防御層の責任分担を間違えた**: Claude Code の振る舞い違反は **Claude Code 側 (memory + lessons.md)** で防御するのが本筋。Ruleset で人間を縛るのは過剰防御
 3. **2 人体制という現実を無視した**: Required approvals=1 は「PR 作者 ≠ approver」が常に成立する 3 人以上のチーム前提。2 人 admin では機能しない
 
-### 正しい設計 (採用)
+### 正しい設計 (採用) ← 2026-05-20 時点
 
 Required approvals: **0** に戻す。防御は次の通り分業:
 
@@ -194,6 +194,19 @@ Required approvals: **0** に戻す。防御は次の通り分業:
 - **Claude Code の振る舞いバグを Ruleset で塞ぐのは原則 NG** → Claude Code 側 memory + lessons で塞ぐべし
 - **少人数チームでは Required approvals=1 が機能しない** → self-approve 不可で相互依頼地獄になる
 - **「Claude Code は memory で物理的に止まる」と「人間は手で merge ボタンを押せる」の二層防御** が現実解
+
+### 5月20日摩擦が再発しない根拠（2026-06-12 ADR-136 導入後）
+
+2026-06-12 の ADR-136 導入により PR 作者が **`shingo-cc`（bot）に固定**された。これにより摩擦の構造的原因が解消された:
+
+| 5月20日の摩擦原因 | ADR-136 後の構造 |
+|-----------------|----------------|
+| PR 作者 = `Hikky-dev`（Claude Code）= Admin の一人 | PR 作者 = `shingo-cc`（bot、非Admin） |
+| `shingo-ops` / `Hikky-dev` のどちらかが作者 → self-approve 不可 | `shingo-cc` は `AUTHORIZED_APPROVERS` に含まれない → self-approve 構造的に不可能 |
+| Approve しようとすると「もう一方の Admin に依頼」が必要 | `shingo-ops` は常に `shingo-cc` PR を Approve 可能（自己 PR ではない） |
+| 全 PR に必須 Approve → 通常の docs や CI 修正も重い | 危険変更（migrations/deploy.yml/本番スクリプト）のみ Approve 必須。通常 PR は process-artifacts gate（成果物チェック）のみ |
+
+**結論**: ADR-136 ＋ process-artifacts gate の組み合わせで「危険変更のみ人間承認必須・通常 PR は CI 緑で自動マージ」が実現。5月20日型の相互依頼摩擦は発生しない。
 
 ---
 

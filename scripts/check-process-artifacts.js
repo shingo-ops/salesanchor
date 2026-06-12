@@ -396,10 +396,13 @@ function main() {
     const hasAuth = approvals.some(a => AUTHORIZED_APPROVERS.includes(a));
 
     if (!hasAuth) {
-      console.log('⚠️  危ない変更を検出（migrations/deploy.yml/本番スクリプト等）');
-      console.log('   自己申告免除は不可。認可された承認者（shingo-ops / Hikky-dev）の PR Approve が必要です。');
-      console.log('   承認が無い場合は通常の本検査（成果物の揃い）が必要です。');
-      return runFullCheck(declaration);
+      printFailure([
+        `❌ 危険変更（migrations/ / deploy.yml / 本番スクリプト等）には`,
+        `   認可された承認者（${AUTHORIZED_APPROVERS.join(' / ')}）の PR Approve が必要です。`,
+        `   現在の承認者: ${approvals.length > 0 ? approvals.join(', ') : 'なし'}`,
+        `   → shingo-ops に PR の Approve を依頼してください。`,
+        `   ※ 本番障害の緊急対応は EMERGENCY: をPRタイトルに明記し、Shingo承認後にマージしてください。`,
+      ]);
     }
 
     const mode = declaration ? declaration.mode : null;
