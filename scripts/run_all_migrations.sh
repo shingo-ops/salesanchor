@@ -351,6 +351,9 @@ run_sql migrations/20260611_150000_add_paypal_webhook_id.sql
 # ADR-127: registration_tokens.type CHECK 制約に change_billing を追加
 run_sql migrations/20260612_090000_extend_registration_tokens_change_billing.sql
 
+# ADR-101 改訂(2) Inc1: invoices に PayPal 写しPDF 関連列を追加
+run_sql migrations/20260612_131520_add_invoice_copypdf.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
