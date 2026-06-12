@@ -3,9 +3,9 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-098（正本）、関連: ADR-119（lead_channels）、ADR-091（Discord Bot）、前提: ADR-095/096 |
-| ステータス | ④ 実装中（KGI承認済み・recon完了・Shingo判断J1〜J4確定 2026-06-12） |
+| ステータス | ⑤ 本番反映（PR #2008 develop マージ済み 2026-06-12・本番デプロイ待ち） |
 | 担当 | PO: Shingo ／ Planner: Web Claude ／ recon・実装: Terminal CC |
-| 最終更新 | 2026-06-12（Terminal CC・実装開始・判断J1〜J4確定） |
+| 最終更新 | 2026-06-12（Terminal CC・PR #2008 マージ済み・ステータス更新） |
 
 ---
 
@@ -18,9 +18,9 @@
 | 3 | architect recon（file:line差分表） | Terminal CC | ✅ 完了 | 2026-06-12 |
 | 4 | 差分レビュー＋残作業確定 | Shingo＋Planner | ✅ 完了（判断J1〜J4確定） | 2026-06-12 |
 | 5 | 設計確定（残作業分） | Planner | ✅ 完了（design.md作成） | 2026-06-12 |
-| 6 | 実装 | Generator（Terminal CC） | 🔄 進行中 | |
-| 7 | 検証ゲート | 自動＋Reviewer | 未 | |
-| 8 | KGI実測＋SA-01横断チェック | Shingo | 未 | |
+| 6 | 実装 | Generator（Terminal CC） | ✅ 完了（PR #2008） | 2026-06-12 |
+| 7 | 検証ゲート | 自動＋Reviewer | ✅ 完了（CI全PASS・Shingo GO取得） | 2026-06-12 |
+| 8 | KGI実測＋SA-01横断チェック | Shingo | 🔄 次のアクション | |
 
 ---
 
@@ -95,7 +95,7 @@
 
 | 日付 | PR | 内容 | 状態 |
 |------|----|------|------|
-| 2026-06-12 | TBD | ADR-119 PR-D 既実装確認・migration（UNIQUE制約+guild_id）・contact merge API・チャンネルフォームUI | 実装中 |
+| 2026-06-12 | [#2008](https://github.com/shingo-ops/salesanchor/pull/2008) | ADR-119 PR-D 既実装確認・migration（UNIQUE制約+guild_id）・contact merge API・チャンネルフォームUI・2択警告UI・`contact` status domain追加 | ✅ develop マージ済み |
 
 ---
 
@@ -103,8 +103,8 @@
 
 - [x] ① KGI承認（Shingo 2026-06-12）
 - [x] ② recon完了（file:line差分表 2026-06-12）
-- [ ] ③ 設計確定（残作業分）
-- [ ] ④ 実装PRマージ
-- [ ] ⑤ 本番反映
+- [x] ③ 設計確定（残作業分）（design.md作成 2026-06-12）
+- [x] ④ 実装PRマージ（PR #2008 develop マージ済み 2026-06-12）
+- [ ] ⑤ 本番反映（PR #2019 develop→main マージ待ち）
 - [ ] ⑥ KGI G1〜G4実測＋SA-01横断チェック
 - [ ] 総合進捗表の更新
