@@ -71,6 +71,10 @@ STANDARD-WORKFLOW.md と CLAUDE.md に以下をインラインで記載：
 - 既存 CI チェックは削除せず、process-artifacts gate を追加（10件→11件）。
 - B-2 変更 PR 自体が `scripts/` を触るため gate の承認要求が発火する（設計どおり）。
 
+### B-2 gate PR（#2013）導入時のブートストラップ経緯（2026-06-12）
+
+B-2 の実装 PR #2013 は作者が `shingo-ops`（PO）であり、GitHub の自己承認禁止仕様により `shingo-ops` が Approve できなかった。また既存の `AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev']` には `shingo-cc`（Claude Code 機械アカウント）が未登録のため、承認しても gate が通過しない状況だった。PO 判断として、PO 権限で `shingo-cc` を `AUTHORIZED_APPROVERS` に、`shingo-ops` を `AUTHORIZED_AUTHORS` に一時追加し、`shingo-cc` が Approve することで gate を通過させた。この操作は CC バイパスではなく PO の明示的ガバナンス判断によるものであり、マージ直後に PR #2034 で両アカウントを即時削除して当初想定（`shingo-ops / Hikky-dev`）に復元した。
+
 ## Consequences
 
 ### 受け入れ条件
