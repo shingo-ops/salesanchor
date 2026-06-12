@@ -112,3 +112,6 @@ storybook-static
 
 # Prometheus secrets（VPS上のみ存在・gitに含めない）
 monitoring/prometheus/secrets/
+
+# SA設計図書サイト Basic認証ファイル（ADR-134 / B-11: git追跡禁止）
+nginx/htpasswd.d/

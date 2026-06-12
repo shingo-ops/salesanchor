@@ -74,6 +74,49 @@ jobs:
             lp/dist/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/salesanchor/
 
+      # ============================================================
+      # SA設計図書サイト デプロイ（ADR-134）
+      # ① 進捗表 → progress.json 変換（失敗=デプロイ停止）
+      # ② htpasswd 自動セットアップ（idempotent・2ユーザー）
+      # ③ docs/design-site/ を www/design-site/ に同期
+      # ============================================================
+      - name: Generate progress.json from SA-OVERVIEW
+        run: |
+          python3 scripts/design-site/generate-progress-json.py \
+            docs/plans/sa-progress/00-SA-OVERVIEW.md \
+            /tmp/design-site-progress.json
+
+      - name: Setup design-site htpasswd (idempotent)
+        uses: appleboy/ssh-action@v1
+        env:
+          VIEWER_CRED: ${{ secrets.DESIGN_SITE_VIEWER_CRED }}
+          SMOKE_CRED: ${{ secrets.DESIGN_SITE_SMOKE_CRED }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: VIEWER_CRED,SMOKE_CRED
+          script: |
+            set -e
+            HTPASSWD=/home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
+            mkdir -p "$(dirname "${HTPASSWD}")"
+            which htpasswd || sudo apt-get install -y apache2-utils
+            touch "${HTPASSWD}"
+            IFS=: read -r v_user v_pass <<< "${VIEWER_CRED}"
+            printf '%s\n' "${v_pass}" | htpasswd -Bi "${HTPASSWD}" "${v_user}"
+            IFS=: read -r s_user s_pass <<< "${SMOKE_CRED}"
+            printf '%s\n' "${s_pass}" | htpasswd -Bi "${HTPASSWD}" "${s_user}"
+            echo "htpasswd users: $(cut -d: -f1 "${HTPASSWD}" | tr '\n' ' ')"
+
+      - name: Rsync design-site to VPS
+        run: |
+          rsync -avz --delete \
+            docs/design-site/ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/design-site/
+          rsync -avz \
+            /tmp/design-site-progress.json \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/design-site/progress.json
+
       # ============================================
       # デプロイ前 DB バックアップ
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
@@ -576,10 +619,13 @@ jobs:
       - name: Verify deployment
         if: success()
         uses: appleboy/ssh-action@v1
+        env:
+          DESIGN_SITE_SMOKE_CRED: ${{ secrets.DESIGN_SITE_SMOKE_CRED }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DESIGN_SITE_SMOKE_CRED
           script: |
             set -e
             curl -sf https://jarvis-claude.uk/api/health || echo "External health check warning"
@@ -648,6 +694,20 @@ jobs:
             END
             $$;
             VERIFY_EOF
+
+            # ── SA設計図書サイト smoke（ADR-134）────────────────────
+            echo "Design-site smoke: 認証なし=401 チェック..."
+            _ds_401=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 https://app.salesanchor.jp/design/ 2>/dev/null || echo "FAIL")
+            if [ "$_ds_401" != "401" ]; then
+              echo "❌ Design-site smoke FAIL: expected 401 without auth, got ${_ds_401}"
+              exit 1
+            fi
+            echo "✅ Design-site: 認証なし → 401 確認"
+
+            echo "Design-site smoke: 認証あり=200 + progress.json チェック..."
+            DESIGN_SMOKE_CRED="${DESIGN_SITE_SMOKE_CRED}" \
+              bash /home/ubuntu/salesanchor/scripts/smoke/design-site-smoke.sh
 
       # ADR-116: main デプロイ成功スタンプ
       # smoke/health 200 + Verify deployment が全通過した"成功側"のみ実行する。
