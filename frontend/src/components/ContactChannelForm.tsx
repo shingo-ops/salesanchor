@@ -4,10 +4,10 @@
  * 役割:
  *   contact_contact_channels にチャンネルを追加または編集する。
  *   - ID 単位で保存（URL 入力欄なし・G1 SSOT 維持）
- *   - 保存前に重複チェック（同一 channel + purpose が別担当者に存在 → 警告 + 統合ボタン）
+ *   - 保存前に重複チェック（同一 channel + purpose が別担当者に存在 → 警告 + 2択）
+ *     ① 統合する    → MergeContactModal へ遷移
+ *     ② 別人として保存（監査ログ記録） → 保存 + audit log エントリ追記
  *   - Discord のみ guild_id 入力欄を追加で表示
- *
- * 対応チャンネル: whatsapp / telegram / discord / instagram / messenger / phone / email / other
  */
 
 import { useEffect, useState, FormEvent } from "react";
@@ -53,7 +53,7 @@ const KNOWN_CHANNELS = [
 ] as const;
 
 export default function ContactChannelForm({
-  open, contactId, companyId, initial, onSaved, onCancel, onRequestMerge,
+  open, contactId, initial, onSaved, onCancel, onRequestMerge,
 }: Props) {
   const { t } = useTranslation();
   const [channel, setChannel] = useState("whatsapp");
@@ -63,6 +63,8 @@ export default function ContactChannelForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
+  /** true = ユーザーが「別人として保存」を選択した後 */
+  const [forceWithAudit, setForceWithAudit] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -79,21 +81,26 @@ export default function ContactChannelForm({
     }
     setError(null);
     setDuplicate(null);
+    setForceWithAudit(false);
   }, [open, initial]);
 
-  // purposeまたはchannel変更時に重複チェック（新規のみ）
+  // purpose / channel 変更時に重複チェック（新規のみ）
   useEffect(() => {
     if (!open || initial || !purpose.trim() || !channel) {
       setDuplicate(null);
+      setForceWithAudit(false);
       return;
     }
     let cancelled = false;
     const handle = window.setTimeout(async () => {
       try {
         const res = await api.get<DuplicateInfo | null>(
-          `/companies/${companyId}/contacts/channel-duplicate?channel=${encodeURIComponent(channel)}&purpose=${encodeURIComponent(purpose.trim())}&exclude_contact_id=${contactId}`
+          `/contacts/channel-duplicate?channel=${encodeURIComponent(channel)}&purpose=${encodeURIComponent(purpose.trim())}&exclude_contact_id=${contactId}`
         );
-        if (!cancelled) setDuplicate(res);
+        if (!cancelled) {
+          setDuplicate(res);
+          if (res) setForceWithAudit(false); // 新たな重複が見つかったらリセット
+        }
       } catch {
         // 重複チェックは best-effort — エラーは無視
       }
@@ -102,7 +109,7 @@ export default function ContactChannelForm({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [open, initial, channel, purpose, contactId, companyId]);
+  }, [open, initial, channel, purpose, contactId]);
 
   const idPlaceholder = (() => {
     const key = `contactChannel.idPlaceholder.${channel}` as const;
@@ -112,6 +119,13 @@ export default function ContactChannelForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // 重複がある場合、「別人として保存」が選択されていない限りブロック
+    if (duplicate && !forceWithAudit) {
+      // フォームの submit は 2択ボタン経由で行われるため、ここには通常到達しない
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -123,12 +137,7 @@ export default function ContactChannelForm({
       };
 
       if (initial?.id != null) {
-        // 編集: PATCH /contacts/{id} に contact_channels 差分を送る
-        // 既存 API は PATCH で contact_channels リスト全体を置換するため、
-        // 呼び出し元の onSaved で再取得して上位で管理する。
-        // ここでは 1 行分だけ送れる簡易エンドポイントがないため、
-        // 上位コンポーネントへの委任として onSaved を呼ぶ。
-        // 実際には呼び出し元が全チャンネルリストを保持して PATCH を呼ぶ。
+        // 編集: 呼び出し元が全リストを管理するため、ここでは onSaved を呼ぶだけ
         onSaved();
         return;
       }
@@ -141,6 +150,21 @@ export default function ContactChannelForm({
       await api.patch(`/contacts/${contactId}`, {
         contact_channels: [...channels, payload],
       });
+
+      // 「別人として保存」の場合は監査ログエントリを追記
+      if (forceWithAudit && duplicate) {
+        try {
+          await api.post(`/contacts/${contactId}/channel-acknowledge-duplicate`, {
+            channel,
+            purpose: purpose.trim() || null,
+            duplicate_contact_id: duplicate.contact_id,
+          });
+        } catch {
+          // 監査ログ書き込み失敗は非致命的 — 保存自体は成功済み
+          logger.warn("[ContactChannelForm] audit log for duplicate acknowledge failed");
+        }
+      }
+
       onSaved();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
@@ -213,47 +237,91 @@ export default function ContactChannelForm({
           </div>
         </div>
 
-        {duplicate && (
+        {/* 重複警告（2択） */}
+        {duplicate && !forceWithAudit && (
           <div
             style={{
               background: "var(--warning-bg)",
               border: "1px solid var(--warning-text)",
-              padding: "var(--space-2)",
+              padding: "var(--space-3)",
               borderRadius: "var(--radius-sm)",
-              marginTop: "var(--space-2)",
+              marginTop: "var(--space-3)",
               fontSize: "var(--font-sm)",
               color: "var(--warning-text)",
             }}
           >
-            {t("contactChannel.duplicateWarning")}
-            {onRequestMerge && (
+            <p style={{ margin: 0, marginBottom: "var(--space-2)" }}>
+              {t("contactChannel.duplicateWarning", {
+                name: duplicate.display_name || duplicate.contact_code,
+              })}
+            </p>
+            <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+              {onRequestMerge && (
+                <button
+                  type="button"
+                  className="btn-sm btn-warning"
+                  onClick={() => onRequestMerge(duplicate.contact_id)}
+                >
+                  {t("contactChannel.mergeButton")}
+                </button>
+              )}
               <button
                 type="button"
-                className="btn-sm btn-warning"
-                style={{ marginLeft: "var(--space-2)" }}
-                onClick={() => onRequestMerge(duplicate.contact_id)}
+                className="btn-sm"
+                onClick={() => setForceWithAudit(true)}
               >
-                {t("contactChannel.mergeButton")}
+                {t("contactChannel.saveAsDistinct")}
               </button>
-            )}
+            </div>
+          </div>
+        )}
+
+        {/* 「別人として保存」選択後の確認バナー */}
+        {duplicate && forceWithAudit && (
+          <div
+            style={{
+              background: "var(--bg-subtle)",
+              border: "1px solid var(--border)",
+              padding: "var(--space-2)",
+              borderRadius: "var(--radius-sm)",
+              marginTop: "var(--space-2)",
+              fontSize: "var(--font-sm)",
+            }}
+          >
+            {t("contactChannel.saveAsDistinctConfirmed")}
           </div>
         )}
 
         {error && <div className="error-banner" style={{ marginTop: "var(--space-2)" }}>{error}</div>}
 
-        <div className="form-actions">
-          <button type="button" onClick={onCancel}>
-            {t("contactChannel.cancel")}
-          </button>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={submitting || !channel}
-          >
-            {submitting ? t("common.saving") : t("contactChannel.save")}
-          </button>
-        </div>
+        {/* 重複あり・選択前は保存ボタン非表示（2択ボタンでのみ進める） */}
+        {(!duplicate || forceWithAudit) && (
+          <div className="form-actions">
+            <button type="button" onClick={onCancel}>
+              {t("contactChannel.cancel")}
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={submitting || !channel}
+            >
+              {submitting ? t("common.saving") : t("contactChannel.save")}
+            </button>
+          </div>
+        )}
+
+        {/* 重複あり・選択前はキャンセルのみ */}
+        {duplicate && !forceWithAudit && (
+          <div className="form-actions">
+            <button type="button" onClick={onCancel}>
+              {t("contactChannel.cancel")}
+            </button>
+          </div>
+        )}
       </form>
     </Modal>
   );
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const logger = { warn: (msg: string) => console.warn(msg) };

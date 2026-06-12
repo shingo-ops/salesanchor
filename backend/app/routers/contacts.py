@@ -343,6 +343,46 @@ async def list_company_contacts(
 
 
 @router.get(
+    "/contacts/channel-duplicate",
+    dependencies=[Depends(require_permission("customers.view"))],
+    summary="テナント内の同一チャンネルID重複チェック（保存前 best-effort 警告用）",
+    tags=["contacts"],
+)
+async def check_channel_duplicate(
+    channel: str = Query(..., max_length=30),
+    purpose: str = Query(..., max_length=50),
+    exclude_contact_id: int = Query(..., description="チェック対象外にする自分自身の contact_id"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """同一テナント内で channel + purpose が一致する別担当者を返す。
+
+    戻り値: { contact_id, contact_code, display_name } または null（重複なし）。
+    保存前の警告用途のため、結果は best-effort（ロックなし）。
+    パスパラメータ競合を避けるため GET /contacts/{contact_id} より先に定義すること。
+    """
+    ccc_t = tenant_table_ref(db, tenant_id, "contact_contact_channels")
+    ct_t = tenant_table_ref(db, tenant_id, "contacts")
+
+    res = await db.execute(
+        text(f"""
+            SELECT c.id AS contact_id, c.contact_code, c.display_name
+            FROM {ccc_t} ccc
+            JOIN {ct_t} c ON c.id = ccc.contact_id
+            WHERE ccc.channel = :channel
+              AND COALESCE(ccc.purpose, '') = COALESCE(:purpose, '')
+              AND ccc.contact_id != :exclude_id
+            LIMIT 1
+        """),
+        {"channel": channel, "purpose": purpose, "exclude_id": exclude_contact_id},
+    )
+    row = res.mappings().first()
+    if row is None:
+        return None
+    return dict(row)
+
+
+@router.get(
     "/contacts/{contact_id}",
     response_model=ContactResponse,
     dependencies=[Depends(require_permission("customers.view"))],
@@ -611,6 +651,42 @@ async def delete_contact(
             detail="この担当者には関連する商談・注文・見積・請求書があるため削除できません。先に関連データを削除してください。",
         )
     await invalidate_dashboard_cache(tenant_id)
+
+
+@router.post(
+    "/contacts/{contact_id}/channel-acknowledge-duplicate",
+    status_code=204,
+    dependencies=[Depends(require_permission("customers.edit"))],
+    summary="重複IDを認識した上で別人として保存した旨を監査ログに記録",
+    tags=["contacts"],
+)
+async def acknowledge_channel_duplicate(
+    contact_id: int,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """保存前の重複チェックで他担当者とIDが一致したが、別人として保存することを
+    操作者が明示的に選択したときの監査ログエントリを記録する。
+
+    Body: { channel, purpose, duplicate_contact_id }
+    """
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="channel_duplicate_acknowledged",
+        table_name="contacts",
+        record_id=contact_id,
+        old_data=None,
+        new_data={
+            "channel": body.get("channel"),
+            "purpose": body.get("purpose"),
+            "duplicate_contact_id": body.get("duplicate_contact_id"),
+            "decision": "save_as_distinct",
+        },
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
 
 @router.post(
