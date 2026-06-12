@@ -93,3 +93,36 @@ chmod 600 ~/.ssh/id_ed25519
 # 3. 疎通確認
 ssh ubuntu@49.212.137.46 "echo OK"
 ```
+
+---
+
+## 方針変更（2026-06-13 PO 決定）
+
+初期設計では VPS 側 `authorized_keys` の人間鍵（`hitoshi@Hs-MacBook-Pro.local`）にも
+ForceCommand を追加する案を提案したが、PO 判断により**採用しない**。
+
+**確定方針**:
+- 人間の鍵（`hitoshi@...`、`shingo-macbook-primary` 等）は VPS 側で変更しない。無制限のまま温存。
+- エージェントの制限はマシン側（`~/.ssh/config` + 無制限鍵の退避）で完結させる。
+- エージェントが無制限鍵を使えるのは、人間の明示許可（都度・タスク単位）がある場合のみ。
+
+**Hikky-dev Mac（`hitoshi@Hs-MacBook-Pro.local`）への対応**:
+- VPS 側 authorized_keys は変更しない
+- Suttan 本人に自マシンでの鍵隔離を依頼（本ドキュメントの「Suttan 依頼文」参照）
+- Suttan が作成したエージェント用制限付き鍵（例: `hikky-claude-restricted`）の公開鍵を
+  受領後、VPS `authorized_keys` に ForceCommand 付きで**追記のみ**（既存行を変更しない）
+
+**Suttan への依頼手順（b: 公開鍵を受領後の VPS 側作業）**:
+```bash
+# バックアップ
+ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 \
+  "cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys.bak.$(date +%Y%m%d%H%M%S)"
+
+# 追記（<PUBLIC_KEY> を実際の公開鍵バイトに置換）
+ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 \
+  "echo 'command=\"docker stats --no-stream; free -h; df -h; uptime\",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty <PUBLIC_KEY> hikky-claude-restricted' >> ~/.ssh/authorized_keys"
+
+# 追記後の該当行を表示して実証
+ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 \
+  "grep 'hikky-claude-restricted' ~/.ssh/authorized_keys"
+```

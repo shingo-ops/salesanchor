@@ -25,10 +25,11 @@
 
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
-エージェントの本番 VPS への SSH は `salesanchor-claude`（ForceCommand 制限付き）に一本化済み。  
-無制限鍵 (`id_ed25519`) は `~/.ssh/manual-only/` に退避済み。  
-**緊急時の人間用アクセス**: `ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46`  
-詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
+- **エージェントは制限付き鍵のみ使用**（`salesanchor-claude`、ForceCommand 制限）
+- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）は人間の明示許可があるタスクでのみ使用可**
+  - 許可は都度・タスク単位。`permit-danger.sh` 相当の明示承認が必要
+  - 人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない（人間用として温存）
+- 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
 
 ---
 
