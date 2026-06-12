@@ -49,34 +49,54 @@ BEGIN
         -- ============================================================
         -- C1: leads(source) に UNIQUE 部分インデックスを追加
         --     既存重複がある場合はスキップしてWARNINGを出す（原則4）
+        --
+        -- ADR-036 整合: 部分テナント（過去 migration 未遡及で leads.source 列が
+        -- 欠落しているスキーマ）でも deploy パイプライン全体を止めないため、
+        -- 列の存在を確認してからインデックス処理を行う。欠落時は WARNING を
+        -- 出して loud-skip（silent ではない）。スキーマ整合性の正本ゲートは
+        -- schema-check.yml / lint-tenant-schema（ADR-036 L3）に委ねる。
+        -- 恒久対応はテナント側を baseline に揃えること（sync_tenant_schema.py）。
         -- ============================================================
-        EXECUTE format(
-            'SELECT COUNT(*) FROM (
-                SELECT source
-                FROM %I.leads
-                WHERE source LIKE ''messenger:%%''
-                   OR source LIKE ''instagram:%%''
-                GROUP BY source
-                HAVING COUNT(*) > 1
-            ) dup',
-            schema_record.schema_name
-        ) INTO duplicate_count;
-
-        IF duplicate_count > 0 THEN
-            RAISE WARNING
-                'Schema % has % duplicate leads with meta source. '
-                'UNIQUE index idx_leads_meta_source_unique creation SKIPPED. '
-                'Manually deduplicate before re-running.',
-                schema_record.schema_name, duplicate_count;
-        ELSE
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_record.schema_name
+              AND table_name = 'leads'
+              AND column_name = 'source'
+        ) THEN
             EXECUTE format(
-                'CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_meta_source_unique
-                 ON %I.leads (source)
-                 WHERE source LIKE ''messenger:%%''
-                    OR source LIKE ''instagram:%%''',
+                'SELECT COUNT(*) FROM (
+                    SELECT source
+                    FROM %I.leads
+                    WHERE source LIKE ''messenger:%%''
+                       OR source LIKE ''instagram:%%''
+                    GROUP BY source
+                    HAVING COUNT(*) > 1
+                ) dup',
                 schema_record.schema_name
-            );
-            RAISE NOTICE 'leads: UNIQUE index idx_leads_meta_source_unique created for %',
+            ) INTO duplicate_count;
+
+            IF duplicate_count > 0 THEN
+                RAISE WARNING
+                    'Schema % has % duplicate leads with meta source. '
+                    'UNIQUE index idx_leads_meta_source_unique creation SKIPPED. '
+                    'Manually deduplicate before re-running.',
+                    schema_record.schema_name, duplicate_count;
+            ELSE
+                EXECUTE format(
+                    'CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_meta_source_unique
+                     ON %I.leads (source)
+                     WHERE source LIKE ''messenger:%%''
+                        OR source LIKE ''instagram:%%''',
+                    schema_record.schema_name
+                );
+                RAISE NOTICE 'leads: UNIQUE index idx_leads_meta_source_unique created for %',
+                    schema_record.schema_name;
+            END IF;
+        ELSE
+            RAISE WARNING
+                'Schema %: leads.source 列が存在しないため meta-source UNIQUE index を '
+                'スキップしました。テナントスキーマ未整合の可能性があります（ADR-036）。'
+                'scripts/db/sync_tenant_schema.py で baseline に整合させてください。',
                 schema_record.schema_name;
         END IF;
 
