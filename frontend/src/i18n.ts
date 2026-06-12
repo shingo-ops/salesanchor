@@ -48,3 +48,4 @@ i18n.use(initReactI18next).init({
 });
 
 export default i18n;
+// ADR-135 B-2 受け入れテスト（マージしない・テスト後削除）
