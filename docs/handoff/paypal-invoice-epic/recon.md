@@ -48,22 +48,22 @@
 
 ### 6. webhook 受信基盤と署名検証
 - `backend/app/routers/integrations.py:51` `public_router`（Bearer 不要）。`:824` `@public_router.post("/integrations/paypal/webhook")` `paypal_webhook`（`:825`）。
-- **署名検証は実装済み（PR #1980）**: `paypal_webhook` は `verify_webhook`（`paypal_payments.py:467`・`/v2/notifications/verify-webhook-signature`）で transmission 署名を検証 → `set_tenant_context` → status 再取得 → 請求書 paid＋受注 sourcing（ADR-072 reset 込み）。`:807` `_parse_invoicing_paid` が `INVOICING.INVOICE.PAID` の `resource.detail.reference`("tenant:invoice") でルーティング。
-- **結論**: Inc4（Disputes webhook）は**この基盤をそのまま流用**できる（署名検証・public_router・tenant_context は完成済み）。追加は「`CUSTOMER.DISPUTE.CREATED/UPDATED/RESOLVED` の event_type 分岐＋dispute→invoice/order 紐づけ UPDATE」。webhook 購読イベント（`register_webhook:444` は現状 `INVOICING.INVOICE.PAID` のみ）に dispute イベントを追加する必要あり。
+- **署名検証は実装済み（PR #1980）**: `paypal_webhook` は `verify_webhook`（`backend/app/services/paypal_payments.py:467`・`/v2/notifications/verify-webhook-signature`）で transmission 署名を検証 → `set_tenant_context` → status 再取得 → 請求書 paid＋受注 sourcing（ADR-072 reset 込み）。`:807` `_parse_invoicing_paid` が `INVOICING.INVOICE.PAID` の `resource.detail.reference`("tenant:invoice") でルーティング。
+- **結論**: Inc4（Disputes webhook）は**この基盤をそのまま流用**できる（署名検証・public_router・tenant_context は完成済み）。追加は「`CUSTOMER.DISPUTE.CREATED/UPDATED/RESOLVED` の event_type 分岐＋dispute→invoice/order 紐づけ UPDATE」。webhook 購読イベント（`backend/app/services/paypal_payments.py:444` は現状 `INVOICING.INVOICE.PAID` のみ）に dispute イベントを追加する必要あり。
 
 ### 7. Invoicing/Disputes webhook イベント名（公式確定）
-- 入金: **`INVOICING.INVOICE.PAID`**（実装済・`register_webhook:444` で購読）。他に `INVOICING.INVOICE.CANCELLED` / `REFUNDED` / `UPDATED` あり（出典: developer.paypal.com/docs/api/notifications/webhooks/event-names）。
+- 入金: **`INVOICING.INVOICE.PAID`**（実装済・`backend/app/services/paypal_payments.py:444` で購読）。他に `INVOICING.INVOICE.CANCELLED` / `REFUNDED` / `UPDATED` あり（出典: developer.paypal.com/docs/api/notifications/webhooks/event-names）。
 - ケース: **`CUSTOMER.DISPUTE.CREATED` / `CUSTOMER.DISPUTE.UPDATED` / `CUSTOMER.DISPUTE.RESOLVED`**（出典: developer.paypal.com/docs/disputes/webhooks/、ブリーフ §2）。
 - → recon 出典 URL を残す（公式）。Inc4 で `register_webhook` の event_types に dispute 3種を追加。
 
 ### 8. 追跡番号の置き場所 ＋ transaction_id（capture ID）
-- **追跡番号フィールドは既存**: `backend/app/routers/orders.py:112` `tracking_number`（`shipping_carrier` 等と同列）。ADR-104 でも「発送通知（追跡番号付き）」を規定（`ADR-104:36`）。
+- **追跡番号フィールドは既存**: `backend/app/routers/orders.py:112` `tracking_number`（`shipping_carrier` 等と同列）。ADR-104 でも「発送通知（追跡番号付き）」を規定（`docs/adr/ADR-104-sa-payment-confirmation-status-pnl.md:36`）。
 - **PayPal への追跡登録（Add Tracking）は未実装**（`grep trackers-batch` ヒットなし＝新規）。
 - **transaction_id（capture ID）が未取得**: `paypal_payments.py:642-654` `get_invoice_status` は `payments.transactions[0].paypal_fee` から **fee のみ**抽出し、**transaction id は取っていない**。Add Tracking は transaction_id 必須（ブリーフ §2）→ **Inc3 で get_invoice_status / webhook 時に transaction id を取得・`paypal_capture_id` に保存**する追加が必要。
 - FedEx Stage 2（別案件・追跡別系統）との重複: PayPal への追跡“登録”は資金保留解除/セラープロテクション目的で、配送キャリア追跡とは別レイヤ。`tracking_number` は共用、push 先（PayPal/キャリア）が別。
 
 ### 9. ケース（dispute）の紐づけ先
-- `orders.invoice_id`（`orders.py:110`）で受注↔請求書が連結。dispute は PayPal の invoice/transaction に紐づくため、**`paypal_invoice_id`（=invoices.paypal_order_id）or `paypal_capture_id` 経由で invoice にルーティング → invoice→order を辿れる**。
+- `orders.invoice_id`（`backend/app/routers/orders.py:110`）で受注↔請求書が連結。dispute は PayPal の invoice/transaction に紐づくため、**`paypal_invoice_id`（=invoices.paypal_order_id）or `paypal_capture_id` 経由で invoice にルーティング → invoice→order を辿れる**。
 - **dispute 保存先は新規**（既存 dispute テーブル/列なし）。新テーブル `paypal_disputes`（dispute_id / invoice_id / status / reason / amount / raw / updated_at）を Inc4 で追加し、請求書詳細・受注詳細に表示。
 - UI 挿し込み点: `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx`（PayPal セクション）／受注詳細ページ。
 
@@ -71,10 +71,10 @@
 
 ## 確認済み事実（recon 根拠つき）
 1. 認証（OAuth）は Invoicing/Tracking/Disputes 全てに流用可。追加認証経路は不要（`paypal_payments.py:62,190,536`）。
-2. Invoicing 作成・送信・入金 webhook・**署名検証**は実装済み（PR #1980・`integrations.py:824`, `paypal_payments.py:467`）。Inc4 はこの基盤を流用可能。
-3. PDF は reportlab で都度生成・**未永続**（`invoices.py:807`）。`pdf_url` 列はあるが未使用。写しPDF 自動保存＝新規（DB bytea 推奨）。QR 描画も新規。
+2. Invoicing 作成・送信・入金 webhook・**署名検証**は実装済み（PR #1980・`backend/app/routers/integrations.py:824`, `backend/app/services/paypal_payments.py:467`）。Inc4 はこの基盤を流用可能。
+3. PDF は reportlab で都度生成・**未永続**（`backend/app/routers/invoices.py:807`）。`pdf_url` 列はあるが未使用。写しPDF 自動保存＝新規（DB bytea 推奨）。QR 描画も新規。
 4. `invoicer_view_url` / `paypal_capture_id`(transaction_id) / `paypal_invoice_status` / 写しPDF は**現状未取得・未保持**＝新列 migration が要る。
-5. `tracking_number` は orders に既存（`orders.py:112`）。PayPal への Add Tracking push は新規・transaction_id 必須。
+5. `tracking_number` は orders に既存（`backend/app/routers/orders.py:112`）。PayPal への Add Tracking push は新規・transaction_id 必須。
 6. dispute の保存先・UI は新規。`orders.invoice_id` で受注↔請求書を辿れる。
 
 ## Shingo 判断が必要な事項

@@ -1213,7 +1213,12 @@
       "openLink": "Open Link",
       "recordTitle": "PayPal invoice (record)",
       "openOriginal": "Open Original",
-      "downloadCopyPdf": "Download Copy PDF"
+      "downloadCopyPdf": "Download Copy PDF",
+      "disputeTitle": "PayPal Cases (Disputes)",
+      "disputeStatus": "Status",
+      "disputeReason": "Reason",
+      "disputeAmount": "Amount",
+      "disputeUpdated": "Updated"
     },
     "voidReasonLabel": "Void Reason",
     "voidReasonPlaceholder": "Enter reason for voiding...",
