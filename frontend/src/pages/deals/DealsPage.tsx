@@ -47,8 +47,6 @@ interface Deal {
   status: string;
   stage: string | null;
   probability: number | null;
-  lost_reason: string | null;
-  lost_reason_code: string | null;
   assigned_to: number | null;
   expected_close_date: string | null;
   notes: string | null;
@@ -56,16 +54,6 @@ interface Deal {
   created_at: string;
   updated_at: string;
 }
-
-const LOST_REASON_CODES = [
-  "price",
-  "lead_time",
-  "competitor",
-  "spec_condition",
-  "payment_terms",
-  "no_response",
-  "other",
-] as const;
 
 interface CompanyMini {
   id: number;
@@ -79,7 +67,6 @@ const STAGES = ["open", "negotiating", "proposal", "won", "lost", "on_hold"];
 const emptyCreateForm = {
   title: "", amount: "", currency: "JPY",
   status: "open", stage: "open", probability: "10",
-  lost_reason_code: "", lost_reason: "",
   assigned_to: "", expected_close_date: "", notes: "", lead_source: "",
 };
 
@@ -165,8 +152,6 @@ export default function DealsPage() {
         status: createForm.status,
         stage: createForm.stage,
         probability: createForm.probability ? Number(createForm.probability) : null,
-        lost_reason_code: createForm.lost_reason_code || null,
-        lost_reason: createForm.lost_reason_code === "other" ? (createForm.lost_reason || null) : null,
         assigned_to: createForm.assigned_to ? Number(createForm.assigned_to) : null,
         expected_close_date: createForm.expected_close_date || null,
         notes: createForm.notes || null,
@@ -314,30 +299,6 @@ export default function DealsPage() {
           <div className="form-group"><label>{t("deals.expectedCloseDate")}</label>
             <input type="date" value={createForm.expected_close_date} onChange={(e) => setCreateForm({ ...createForm, expected_close_date: e.target.value })} />
           </div>
-          {createForm.status === "lost" && (
-            <>
-              <div className="form-group"><label>{t("deals.lostReasonCode")}</label>
-                <select
-                  value={createForm.lost_reason_code}
-                  onChange={(e) => setCreateForm({ ...createForm, lost_reason_code: e.target.value })}
-                >
-                  <option value="">{t("deals.lostReasonCodePlaceholder")}</option>
-                  {LOST_REASON_CODES.map((code) => (
-                    <option key={code} value={code}>{t(`deals.lostReasonCode_${code}`)}</option>
-                  ))}
-                </select>
-              </div>
-              {createForm.lost_reason_code === "other" && (
-                <div className="form-group"><label>{t("deals.lostReason")}</label>
-                  <textarea
-                    value={createForm.lost_reason}
-                    placeholder={t("deals.lostReasonPlaceholder")}
-                    onChange={(e) => setCreateForm({ ...createForm, lost_reason: e.target.value })}
-                  />
-                </div>
-              )}
-            </>
-          )}
           <div className="form-group"><label>{t("common.notes")}</label>
             <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
           </div>

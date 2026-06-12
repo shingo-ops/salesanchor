@@ -23,8 +23,6 @@ interface Deal {
   status: string;
   stage: string | null;
   probability: number | null;
-  lost_reason: string | null;
-  lost_reason_code: string | null;
   assigned_to: number | null;
   expected_close_date: string | null;
   notes: string | null;
@@ -39,10 +37,6 @@ interface CompanyMini {
 
 const STATUSES = ["open", "negotiating", "won", "lost", "on_hold"];
 const STAGES = ["open", "negotiating", "proposal", "won", "lost", "on_hold"];
-const LOST_REASON_CODES = [
-  "price", "lead_time", "competitor", "spec_condition",
-  "payment_terms", "no_response", "other",
-] as const;
 
 type FormState = {
   title: string;
@@ -51,8 +45,6 @@ type FormState = {
   status: string;
   stage: string;
   probability: string;
-  lost_reason_code: string;
-  lost_reason: string;
   assigned_to: string;
   expected_close_date: string;
   notes: string;
@@ -62,7 +54,6 @@ type FormState = {
 const emptyForm: FormState = {
   title: "", amount: "", currency: "JPY",
   status: "open", stage: "open", probability: "10",
-  lost_reason_code: "", lost_reason: "",
   assigned_to: "", expected_close_date: "", notes: "", lead_source: "",
 };
 
@@ -92,8 +83,6 @@ export default function DealEditPage() {
           status: deal.status,
           stage: deal.stage || "open",
           probability: deal.probability != null ? String(deal.probability) : "10",
-          lost_reason_code: deal.lost_reason_code || "",
-          lost_reason: deal.lost_reason || "",
           assigned_to: deal.assigned_to != null ? String(deal.assigned_to) : "",
           expected_close_date: deal.expected_close_date || "",
           notes: deal.notes || "",
@@ -125,8 +114,6 @@ export default function DealEditPage() {
         status: form.status,
         stage: form.stage,
         probability: form.probability ? Number(form.probability) : null,
-        lost_reason_code: form.lost_reason_code || null,
-        lost_reason: form.lost_reason_code === "other" ? (form.lost_reason || null) : null,
         assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
         expected_close_date: form.expected_close_date || null,
         notes: form.notes || null,
@@ -195,30 +182,6 @@ export default function DealEditPage() {
           <div className="form-group"><label>{t("deals.expectedCloseDate")}</label>
             <input type="date" value={form.expected_close_date} onChange={(e) => setForm({ ...form, expected_close_date: e.target.value })} />
           </div>
-          {form.status === "lost" && (
-            <>
-              <div className="form-group"><label>{t("deals.lostReasonCode")}</label>
-                <select
-                  value={form.lost_reason_code}
-                  onChange={(e) => setForm({ ...form, lost_reason_code: e.target.value })}
-                >
-                  <option value="">{t("deals.lostReasonCodePlaceholder")}</option>
-                  {LOST_REASON_CODES.map((code) => (
-                    <option key={code} value={code}>{t(`deals.lostReasonCode_${code}`)}</option>
-                  ))}
-                </select>
-              </div>
-              {form.lost_reason_code === "other" && (
-                <div className="form-group"><label>{t("deals.lostReason")}</label>
-                  <textarea
-                    value={form.lost_reason}
-                    placeholder={t("deals.lostReasonPlaceholder")}
-                    onChange={(e) => setForm({ ...form, lost_reason: e.target.value })}
-                  />
-                </div>
-              )}
-            </>
-          )}
           <div className="form-group"><label>{t("common.notes")}</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>

@@ -497,14 +497,6 @@ async def _find_lead_id_for_psid(
         {"platform": platform, "psid": psid},
     )
     row = result.first()
-    if row:
-        return int(row[0])
-    # Stage 2: source フォールバック
-    result = await db.execute(
-        text("SELECT id FROM leads WHERE source = :source LIMIT 1"),
-        {"source": f"{platform}:{psid}"},
-    )
-    row = result.first()
     return int(row[0]) if row else None
 
 
@@ -531,10 +523,7 @@ async def _persist_meta_message(
     if platform not in ("messenger", "instagram"):
         raise ValueError(f"unsupported platform: {platform}")
 
-    # source_key: spec §3-1 の `messenger:<PSID>` / `instagram:<IGSID>` 形式
-    source_key = f"{platform}:{sender_id}"
-
-    # 1) leads 検索 → 無ければ自動作成（ADR-119 二段 lookup）
+    # 1) leads 検索 → 無ければ自動作成（ADR-119 lead_channels 一次権威）
 
     # Stage 1: lead_channels を一次権威として検索
     lc_result = await db.execute(
@@ -548,26 +537,6 @@ async def _persist_meta_message(
         {"platform": platform, "external_id": sender_id},
     )
     row = lc_result.mappings().first()
-
-    # Stage 2: source フォールバック（既存行／backfill 後の補完）
-    if row is None:
-        fb_result = await db.execute(
-            text("SELECT id, customer_name FROM leads WHERE source = :source LIMIT 1"),
-            {"source": source_key},
-        )
-        row = fb_result.mappings().first()
-        if row is not None:
-            # self-heal: lead_channels に補完して次回から Stage 1 でヒットする
-            await db.execute(
-                text("""
-                    INSERT INTO lead_channels (lead_id, platform, external_id)
-                    VALUES (:lead_id, :platform, :external_id)
-                    ON CONFLICT (platform, external_id) DO NOTHING
-                """),
-                {"lead_id": row["id"], "platform": platform, "external_id": sender_id},
-            )
-            await db.commit()
-            await reset_tenant_context(db, tenant_id)
 
     lead_id = row["id"] if row else None
     existing_name = row["customer_name"] if row else None
@@ -593,60 +562,50 @@ async def _persist_meta_message(
         ins = await db.execute(
             text("""
                 INSERT INTO leads (
-                    tenant_id, customer_name, source, type, status
+                    tenant_id, customer_name, channel_type, initiative, type, status
                 )
-                VALUES (:tenant_id, :customer_name, :source, :type, :status)
-                ON CONFLICT (source)
-                    WHERE source LIKE 'messenger:%' OR source LIKE 'instagram:%'
-                DO NOTHING
+                VALUES (:tenant_id, :customer_name, :channel_type, 'inbound', :type, :status)
                 RETURNING id
             """),
             {
                 "tenant_id": tenant_id,
                 "customer_name": customer_name,
-                "source": source_key,
+                "channel_type": platform,
                 "type": "Inbound",
                 "status": "lead",
             },
         )
-        new_lead_id = ins.scalar_one_or_none()
-        if new_lead_id is not None:
-            lead_id = new_lead_id
-            # lead_channels に登録（ADR-119）
+        new_lead_id = ins.scalar_one()
+        lead_id = new_lead_id
+        # lead_channels に登録（ADR-119）
+        await db.execute(
+            text("""
+                INSERT INTO lead_channels (lead_id, platform, external_id)
+                VALUES (:lead_id, :platform, :external_id)
+                ON CONFLICT (platform, external_id) DO NOTHING
+            """),
+            {"lead_id": lead_id, "platform": platform, "external_id": sender_id},
+        )
+        await db.execute(
+            text("UPDATE leads SET lead_code = :code WHERE id = :id"),
+            {"code": f"LD-{lead_id:05d}", "id": lead_id},
+        )
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)
+
+        # Phase 1-E F15-S6 + F15-FU1: 新規 lead の customer_name を Graph API 由来の
+        # 実名で更新。複数 Page 接続テナントで token を取り違えないよう page_id を渡す。
+        # 失敗時はデフォルト名（"Messenger User" / "Instagram User"）のまま続行。
+        resolved_name = await _resolve_lead_name_via_graph(
+            db, sender_id, page_id=page_id,
+        )
+        if resolved_name:
             await db.execute(
-                text("""
-                    INSERT INTO lead_channels (lead_id, platform, external_id)
-                    VALUES (:lead_id, :platform, :external_id)
-                    ON CONFLICT (platform, external_id) DO NOTHING
-                """),
-                {"lead_id": lead_id, "platform": platform, "external_id": sender_id},
-            )
-            await db.execute(
-                text("UPDATE leads SET lead_code = :code WHERE id = :id"),
-                {"code": f"LD-{lead_id:05d}", "id": lead_id},
+                text("UPDATE leads SET customer_name = :name WHERE id = :id"),
+                {"name": resolved_name, "id": lead_id},
             )
             await db.commit()
             await reset_tenant_context(db, tenant_id)
-
-            # Phase 1-E F15-S6 + F15-FU1: 新規 lead の customer_name を Graph API 由来の
-            # 実名で更新。複数 Page 接続テナントで token を取り違えないよう page_id を渡す。
-            # 失敗時はデフォルト名（"Messenger User" / "Instagram User"）のまま続行。
-            resolved_name = await _resolve_lead_name_via_graph(
-                db, sender_id, page_id=page_id,
-            )
-            if resolved_name:
-                await db.execute(
-                    text("UPDATE leads SET customer_name = :name WHERE id = :id"),
-                    {"name": resolved_name, "id": lead_id},
-                )
-                await db.commit()
-                await reset_tenant_context(db, tenant_id)
-        else:
-            sel = await db.execute(
-                text("SELECT id FROM leads WHERE source = :source LIMIT 1"),
-                {"source": source_key},
-            )
-            lead_id = sel.scalar_one()
             # ON CONFLICT で既存行に負けた場合も lead_channels を補完
             await db.execute(
                 text("""

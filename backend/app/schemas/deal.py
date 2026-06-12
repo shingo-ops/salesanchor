@@ -5,16 +5,16 @@ from __future__ import annotations
 
 テナントスキーマの deals テーブル定義:
   id, tenant_id, deal_code, company_id, contact_id, lead_id, title, amount,
-  currency, status, stage, probability, lost_reason, lost_reason_code,
+  currency, status, stage, probability,
   assigned_to, expected_close_date, notes, lead_source, created_at, updated_at
 
 変更履歴:
   2026-04-16: Phase 1拡張（deal_code, lead_id, assigned_to, stage,
-    probability, lost_reason, currency を追加）
+    probability, currency を追加）
   2026-04-27: Phase 1-B-2 Step 5d — 旧 customer_id を撤去し、
     company_id / contact_id を必須化（新 B2B モデル唯一の正）
   2026-06-01: migration 096 — lead_source（流入元）追加
-  2026-06-04: C-1 — lost_reason_code（選択式失注理由）追加
+  2026-06-12: PR1 — lost_reason / lost_reason_code 廃止（migration 102）
 """
 
 from datetime import date, datetime
@@ -49,16 +49,6 @@ class Currency(str, Enum):
     EUR = "EUR"
 
 
-class LostReasonCode(str, Enum):
-    """C-1: 選択式失注理由"""
-    price = "price"
-    lead_time = "lead_time"
-    competitor = "competitor"
-    spec_condition = "spec_condition"
-    payment_terms = "payment_terms"
-    no_response = "no_response"
-    other = "other"
-
 
 class DealCreate(BaseModel):
     """商談登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
@@ -71,10 +61,6 @@ class DealCreate(BaseModel):
     status: DealStatus = Field(default=DealStatus.open, description="ステータス")
     stage: DealStage = Field(default=DealStage.open, description="ステージ")
     probability: int | None = Field(default=None, ge=0, le=100, description="成約確率(%)")
-    lost_reason: str | None = Field(default=None, max_length=255)
-    lost_reason_code: LostReasonCode | None = Field(
-        default=None, description="選択式失注理由 C-1"
-    )
     assigned_to: int | None = Field(default=None, ge=1, description="担当者ユーザーID")
     expected_close_date: date | None = Field(default=None, description="成約予定日")
     notes: str | None = Field(default=None, max_length=5000, description="備考")
@@ -92,10 +78,6 @@ class DealUpdate(BaseModel):
     status: DealStatus | None = None
     stage: DealStage | None = None
     probability: int | None = Field(default=None, ge=0, le=100)
-    lost_reason: str | None = Field(default=None, max_length=255)
-    lost_reason_code: LostReasonCode | None = Field(
-        default=None, description="選択式失注理由 C-1"
-    )
     assigned_to: int | None = Field(default=None, ge=1)
     expected_close_date: date | None = None
     notes: str | None = Field(default=None, max_length=5000)
@@ -122,8 +104,6 @@ class DealResponse(BaseModel):
     status: str
     stage: str | None
     probability: int | None
-    lost_reason: str | None
-    lost_reason_code: str | None = None
     assigned_to: int | None
     expected_close_date: date | None
     notes: str | None

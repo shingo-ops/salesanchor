@@ -41,7 +41,8 @@ interface Lead {
   company_name: string | null;
   email: string | null;
   phone: string | null;
-  source: string | null;
+  channel_type: string | null;
+  initiative: string | null;
   type: string | null;
   status: string;
   temperature: string | null;
@@ -66,7 +67,8 @@ type CreateFormState = {
   company_name: string;
   email: string;
   phone: string;
-  source: string;
+  channel_type: string;
+  initiative: string;
   type: string;
   status: string;
   temperature: string;
@@ -79,7 +81,7 @@ type CreateFormState = {
 
 const emptyCreateForm: CreateFormState = {
   customer_name: "", company_name: "", email: "", phone: "",
-  source: "", type: "", status: "lead", temperature: "",
+  channel_type: "", initiative: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
   monthly_forecast: "", notes: "",
 };
@@ -164,7 +166,8 @@ export default function LeadsPage() {
         company_name: toNull(createForm.company_name),
         email: toNull(createForm.email),
         phone: toNull(createForm.phone),
-        source: toNull(createForm.source),
+        channel_type: toNull(createForm.channel_type),
+        initiative: toNull(createForm.initiative),
         type: toNull(createForm.type),
         status: createForm.status,
         temperature: toNull(createForm.temperature),
@@ -291,8 +294,15 @@ export default function LeadsPage() {
           <div className="form-group"><label>{t("leads.phone")}</label>
             <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("leads.source")}</label>
-            <input placeholder={t("leads.sourcePlaceholder")} value={createForm.source} onChange={(e) => setCreateForm({ ...createForm, source: e.target.value })} />
+          <div className="form-group"><label>{t("leads.channelType")}</label>
+            <input placeholder={t("leads.channelTypePlaceholder")} value={createForm.channel_type} onChange={(e) => setCreateForm({ ...createForm, channel_type: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.initiative")}</label>
+            <select value={createForm.initiative} onChange={(e) => setCreateForm({ ...createForm, initiative: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="inbound">{t("leads.initiative_inbound")}</option>
+              <option value="outbound">{t("leads.initiative_outbound")}</option>
+            </select>
           </div>
           <div className="form-group"><label>{t("leads.type")}</label>
             <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}>

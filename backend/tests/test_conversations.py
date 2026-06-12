@@ -75,7 +75,8 @@ async def engine():
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 lead_code VARCHAR(20),
                 customer_name VARCHAR(200),
-                source VARCHAR(100),
+                channel_type VARCHAR(30),
+                initiative VARCHAR(10),
                 status VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -200,14 +201,14 @@ async def app_client_no_view(db_session):
 
 async def _insert_lead(db_session, *, lead_id: int, tenant_id: int = 999,
                        lead_code: str | None = None, customer_name: str = "John Doe",
-                       source: str | None = None):
+                       channel_type: str | None = None):
     await db_session.execute(text("""
-        INSERT INTO leads (id, tenant_id, lead_code, customer_name, source)
-        VALUES (:id, :tenant_id, :code, :name, :source)
+        INSERT INTO leads (id, tenant_id, lead_code, customer_name, channel_type)
+        VALUES (:id, :tenant_id, :code, :name, :channel_type)
     """), {
         "id": lead_id, "tenant_id": tenant_id,
         "code": lead_code or f"LD-{lead_id:05d}",
-        "name": customer_name, "source": source,
+        "name": customer_name, "channel_type": channel_type,
     })
     await db_session.commit()
 

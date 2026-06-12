@@ -205,7 +205,7 @@ async def calibrate_tenant_weights(
             JOIN leads l ON l.id = ml.lead_id
             JOIN deals d ON d.lead_id = l.id
             WHERE ml.direction = 'inbound'
-              AND (d.status = 'lost' OR d.lost_reason IS NOT NULL)
+              AND d.status = 'lost'
             """
         )
     )

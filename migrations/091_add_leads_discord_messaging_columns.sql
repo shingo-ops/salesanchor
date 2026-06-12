@@ -41,12 +41,21 @@ BEGIN
         );
 
         -- source = ''discord:<user_id>'' で一意にする Partial Unique Index
-        EXECUTE format(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_discord_source_unique
-             ON %I.leads (source)
-             WHERE source LIKE ''discord:%%''',
-            schema_record.schema_name
-        );
+        -- NOTE: migration 103 で source カラムは廃止される。
+        --       新テナントはベースライン時点で source が存在しないため IF EXISTS で保護。
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_record.schema_name
+              AND table_name   = 'leads'
+              AND column_name  = 'source'
+        ) THEN
+            EXECUTE format(
+                'CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_discord_source_unique
+                 ON %I.leads (source)
+                 WHERE source LIKE ''discord:%%''',
+                schema_record.schema_name
+            );
+        END IF;
     END LOOP;
 END
 $$;

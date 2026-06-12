@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA-05 在庫 A/B 区分＋2段階引当 — SA設計図書</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/">全体地図</a>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html" class="active">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
+  </nav>
+</header>
+
+<div class="page-container">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <span style="font-size:12px;font-weight:700;color:var(--c-inventory);background:var(--c-inventory-bg);padding:3px 10px;border-radius:12px;">SA-05</span>
+    <span class="badge badge--todo" data-sa="SA-05">未着手</span>
+  </div>
+  <h1 class="page-title">在庫 A/B 区分＋2段階引当</h1>
+  <p class="page-subtitle">
+    商品マスタ・在庫マスタの分離 — 自社在庫（A）と仕入元フィード（B）を区別し、二重売りを構造で防ぐ。
+  </p>
+
+  <!-- ① 一言でいうと -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">①</span>
+      <span class="template-section__title">一言でいうと</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:15px;line-height:1.8;">
+        <strong>「商品カタログ（何を売るか）と在庫数（どこにいくつあるか）は別のテーブル。自社在庫（A）は引当で確保し、仕入元フィード（B）は取り寄せが走る。」</strong>
+      </p>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-sub);">
+        同じ商品が複数の提供元からの在庫と価格で存在します。
+        SA-05 では、「商品の identity（カタログ情報）」と「誰がいくつ持っているか（在庫レコード）」を分離します。
+        在庫ソースを A（自社）/ B（仕入元）で明示することで、
+        <strong>納期の約束を正確に伝えられる</strong>（A = 即日、B = 取り寄せリードタイム）設計になります。
+      </p>
+    </div>
+  </div>
+
+  <!-- ② Before→After -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">②</span>
+      <span class="template-section__title">困りごと Before → After</span>
+    </div>
+    <div class="template-section__body">
+      <div class="before-after">
+        <div class="before-after__box before-after__box--before">
+          <div class="before-after__label">Before（現状の問題）</div>
+          <div class="before-after__item">
+            <p>📦 A（自社在庫）と B（仕入元フィード）が<strong>混在・区別なし</strong></p>
+            <p style="margin-top:6px;">⚠️ 同じ商品を複数の注文が同時に取ると<strong>オーバーセル（二重売り）</strong>発生</p>
+            <p style="margin-top:6px;">😕 即日発送できるかどうかが<strong>注文前に分からない</strong></p>
+            <p style="margin-top:6px;">💸 単価・在庫数が商品と一体で管理→複数提供元の<strong>比較ができない</strong></p>
+          </div>
+        </div>
+        <div class="before-after__arrow">→</div>
+        <div class="before-after__box before-after__box--after">
+          <div class="before-after__label">After（SA-05 設計）</div>
+          <div class="before-after__item">
+            <p>📋 <strong>商品マスタ</strong>（カタログ・価格・数量を持たない）と<strong>在庫マスタ</strong>（提供元×数量・単価）を分離</p>
+            <p style="margin-top:6px;">🔒 A 在庫は「引当」で確保してから発送時に実減算 → <strong>二重売り防止</strong></p>
+            <p style="margin-top:6px;">🚚 A = 自社即日 / B = 取り寄せリードタイム を<strong>自動表示</strong></p>
+            <p style="margin-top:6px;">💡 複数提供元を横並び比較し<strong>発注最適化を自動提案</strong>（担当者が承認）</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 仕組みの図解 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">③</span>
+      <span class="template-section__title">仕組みの図解 — A/B 区分と 2 段階引当</span>
+    </div>
+    <div class="template-section__body">
+      <div class="architecture-diagram">
+        <svg viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+             role="img" aria-label="SA-05 在庫A/B区分と2段階引当図">
+          <defs>
+            <marker id="arr05" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+            </marker>
+          </defs>
+
+          <!-- 商品マスタ -->
+          <rect x="10" y="30" width="150" height="80" rx="8" fill="#dcfce7" stroke="#2d8a4e" stroke-width="2"/>
+          <text x="85" y="52" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">商品マスタ（カタログ）</text>
+          <text x="85" y="70" text-anchor="middle" font-size="10" fill="#2d8a4e">商品名 / HSコード / 梱包</text>
+          <text x="85" y="84" text-anchor="middle" font-size="10" fill="#2d8a4e">重量 / MOQ / 素材…</text>
+          <text x="85" y="100" text-anchor="middle" font-size="9" fill="#16a34a">※ 価格・数量は持たない</text>
+
+          <!-- 在庫マスタ A -->
+          <rect x="200" y="10" width="160" height="90" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+          <text x="280" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">在庫マスタ A（自社）</text>
+          <text x="280" y="48" text-anchor="middle" font-size="10" fill="#1a6fc4">商品ID / 提供元ID</text>
+          <text x="280" y="62" text-anchor="middle" font-size="10" fill="#1a6fc4">物理数 / 引当済数</text>
+          <text x="280" y="76" text-anchor="middle" font-size="10" fill="#1a6fc4">利用可＝物理−引当済</text>
+          <text x="280" y="90" text-anchor="middle" font-size="9" fill="#3b82f6">古物台帳で入庫管理</text>
+
+          <!-- 在庫マスタ B -->
+          <rect x="200" y="120" width="160" height="80" rx="8" fill="#fff7ed" stroke="#c05621" stroke-width="1.5"/>
+          <text x="280" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#c05621">在庫マスタ B（仕入元）</text>
+          <text x="280" y="158" text-anchor="middle" font-size="10" fill="#c05621">フィードで数量・単価を更新</text>
+          <text x="280" y="172" text-anchor="middle" font-size="10" fill="#c05621">注文したら取り寄せが走る</text>
+          <text x="280" y="186" text-anchor="middle" font-size="9" fill="#d97706">引当の概念なし</text>
+
+          <!-- 矢印: 商品マスタ → 在庫 -->
+          <line x1="160" y1="60" x2="195" y2="55" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr05)"/>
+          <line x1="160" y1="80" x2="195" y2="160" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr05)"/>
+
+          <!-- 注文（交差点） -->
+          <rect x="430" y="80" width="140" height="60" rx="8" fill="#ffedd5" stroke="#c05621" stroke-width="2"/>
+          <text x="500" y="104" text-anchor="middle" font-size="13" font-weight="700" fill="#c05621">注文（交差点）</text>
+          <text x="500" y="122" text-anchor="middle" font-size="10" fill="#c05621">顧客 ID ＋ 在庫レコード ID</text>
+
+          <!-- 矢印: A → 注文 -->
+          <line x1="360" y1="55" x2="425" y2="100" stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr05)"/>
+          <text x="393" y="68" font-size="9" fill="#1a6fc4">引当（確保）</text>
+
+          <!-- 矢印: B → 注文 -->
+          <line x1="360" y1="160" x2="425" y2="120" stroke="#c05621" stroke-width="1.5" marker-end="url(#arr05)"/>
+          <text x="385" y="155" font-size="9" fill="#c05621">発注トリガ</text>
+
+          <!-- A の 2 段階フロー -->
+          <rect x="430" y="165" width="240" height="60" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="550" y="185" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">A 在庫 2 段階管理</text>
+          <text x="550" y="201" text-anchor="middle" font-size="11" fill="#4b5563">①引当時: 利用可から除く（物理は減らさない）</text>
+          <text x="550" y="215" text-anchor="middle" font-size="11" fill="#4b5563">②発送時: 物理を実減算</text>
+
+          <line x1="500" y1="140" x2="500" y2="160" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr05)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 4原則との対応表 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">④</span>
+      <span class="template-section__title">4原則との対応表</span>
+    </div>
+    <div class="template-section__body">
+      <table class="data-table">
+        <thead>
+          <tr><th>原則</th><th>SA-05での実現方法</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>商品の identity（名称・HSコード等）は商品マスタのみ。在庫数・単価は在庫マスタのみ。同じ情報が 2 か所に保存されない。集計フィルタは動的ビュー（実テーブルに保存しない）。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>在庫マスタは背骨②（商品・在庫マスタ）の具体実装。注文は背骨①（顧客）× 背骨②（在庫レコード）の交差点。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>「利用可能数」は「物理数 − 引当済数」の計算値（保存しない）。集計フィルタ（最安値順など）も保存せず毎回動的計算。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>A 在庫は引当で「確保済み」を管理 → 同時注文でも二重売りが起きない。B 在庫は引当概念なし（取り寄せが走るだけ）。納期はシステムが A/B を見て自動表示。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑤ 用語ミニ辞典 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑤</span>
+      <span class="template-section__title">用語ミニ辞典</span>
+    </div>
+    <div class="template-section__body">
+      <dl class="glossary">
+        <dt>A 在庫（自社在庫）</dt>
+        <dd>実物を自社が保有する在庫。アプリが数量を管理し、引当で「確保中」と「空き」を区別する。</dd>
+
+        <dt>B 在庫（仕入元フィード）</dt>
+        <dd>仕入元が保有し、フィードで価格と在庫が届く在庫。注文が入ったら取り寄せが走る。アプリは数量を直接触らない。</dd>
+
+        <dt>引当</dt>
+        <dd>「注文明細をどの提供元から何個取るか」を決める操作。引当した分は「利用可能」から除かれるが物理在庫は減らない。発送時に初めて物理減算が走る。</dd>
+
+        <dt>集計フィルタ</dt>
+        <dd>複数提供元の在庫を「どのルールで優先するか」のテナント設定。①全提供元表示 ②最安値優先 ③バランス（価格差・在庫差による優先）の 3 種類。</td>
+
+        <dt>利用可能数</dt>
+        <dd>物理在庫数 − 引当済数。「まだ売れる数」を示す派生値（保存しない）。</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ⑥ 決定済み／未決 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑥</span>
+      <span class="template-section__title">決定済み／未決 一覧</span>
+    </div>
+    <div class="template-section__body">
+      <ul class="decision-list">
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>商品マスタ / 在庫マスタ 分離の設計確定</strong>（ADR-099 Accepted・2026-06-04）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>A/B 区分・2段階引当の設計確定</strong>（ADR-099）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>集計フィルタ 3 種類の仕様確定</strong>（ADR-099）</span>
+        </li>
+      </ul>
+      <div class="decision-undecided" style="margin-top:12px;">
+        <strong>⬜ 未決</strong>: A+B 混合時の価格採用ルール（ADR-095 付録 1 で後日決定）/ KGI 承認（未着手）
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <div class="kgi-unset">
+        <strong>⬜ KGI 未設定</strong>: SA-05 はフェーズ①（KGI 承認）に未着手です。<br>
+        着手前に Shingo が「本番で何が観測できたら成功か」を定量的に定義・承認します。<br>
+        <span style="color:var(--text-sub);">設計上の候補: ①A/B 区分が全在庫レコードに付与されている ②二重売り件数 0 ③引当キャンセル成功率 100%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 正本ADRリンク -->
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ 正本</span>
+    <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-099-sa-inventory-model.md"
+       target="_blank" rel="noopener">ADR-099-sa-inventory-model.md</a>
+    <span>最終更新: 2026-06-13</span>
+    <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <p><a href="/design/sa-04.html">← SA-04 チャネル</a> ／ <a href="/design/sa-06.html">SA-06 解析 →</a></p>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>

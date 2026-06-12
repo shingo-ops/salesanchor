@@ -52,7 +52,7 @@ router = APIRouter()
 
 _LEAD_COLUMNS = """
     id, lead_code, customer_name, company_name, email, phone,
-    source, type, status, temperature, estimated_scale, customer_type,
+    channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
     response_speed, monthly_forecast, prospect_rank, assigned_to,
     converted_deal_id, notes, created_at, updated_at,
     next_action, next_action_date, challenge, meeting_memo, meeting_impression,
@@ -67,7 +67,7 @@ _LEAD_COLUMNS = """
 
 _UPDATABLE_COLUMNS = {
     "customer_name", "company_name", "email", "phone",
-    "source", "type", "status", "temperature", "estimated_scale",
+    "channel_type", "initiative", "type", "status", "temperature", "estimated_scale",
     "customer_type", "response_speed", "monthly_forecast",
     "prospect_rank", "assigned_to", "notes",
     # ADR-015 商談カルテフィールド
@@ -274,12 +274,12 @@ async def create_lead(
         text(f"""
             INSERT INTO {leads_t} (
                 tenant_id, customer_name, company_name, email, phone,
-                source, type, status, temperature, estimated_scale, customer_type,
+                channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
                 response_speed, monthly_forecast, prospect_rank, assigned_to, notes
             )
             VALUES (
                 :tenant_id, :customer_name, :company_name, :email, :phone,
-                :source, :type, :status, :temperature, :estimated_scale, :customer_type,
+                :channel_type, :initiative, :type, :status, :temperature, :estimated_scale, :customer_type,
                 :response_speed, :monthly_forecast, :prospect_rank, :assigned_to, :notes
             )
             RETURNING id
@@ -290,7 +290,8 @@ async def create_lead(
             "company_name": data.company_name,
             "email": data.email,
             "phone": data.phone,
-            "source": data.source,
+            "channel_type": data.channel_type,
+            "initiative": data.initiative,
             "type": _enum_to_str(data.type),
             "status": _enum_to_str(data.status),
             "temperature": _enum_to_str(data.temperature),
@@ -808,7 +809,7 @@ async def list_lead_messages(
             "lead_code": lead_row["lead_code"],
             "customer_name": lead_row["customer_name"],
             "platform": latest_platform,
-            "source": lead_row["source"],
+            "channel_type": lead_row["channel_type"],
         },
         "messaging_window": messaging_window,
     }
@@ -1048,22 +1049,9 @@ class _SendMessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=_MESSAGE_TEXT_MAX_LEN)
 
 
-def _extract_recipient_id(source: Optional[str], inbound_sender_id: Optional[str]) -> Optional[str]:
-    """送信先 PSID / IGSID を決める。
-
-    優先順:
-      1) leads.source が `messenger:PSID` / `instagram:IGSID` 形式ならコロン後を採用
-      2) 直近 inbound メッセージの sender_id を fallback で使用
-
-    inbound 履歴ベースが最も堅牢（OAuth 接続前の旧 lead でも source が空のケースに対応）。
-    """
-    if source and ":" in source:
-        prefix, _, value = source.partition(":")
-        if prefix in ("messenger", "instagram") and value:
-            return value
-    if inbound_sender_id:
-        return inbound_sender_id
-    return None
+def _extract_recipient_id(inbound_sender_id: Optional[str]) -> Optional[str]:
+    """送信先 PSID / IGSID を決める。直近 inbound メッセージの sender_id を使用。"""
+    return inbound_sender_id or None
 
 
 def _decode_token_blob(value) -> str:
@@ -1148,14 +1136,11 @@ async def send_lead_message(
         inbound_sender_id = inbound_row[1]
         inbound_platform = inbound_row[2]
 
-    # platform 推論: 直近 inbound > leads.source プレフィクス > エラー
+    # platform 推論: 直近 inbound > leads.channel_type > エラー
     platform = inbound_platform
-    source_str = lead_row.get("source") if hasattr(lead_row, "get") else lead_row["source"]
-    if not platform and source_str:
-        if isinstance(source_str, str) and ":" in source_str:
-            prefix = source_str.split(":", 1)[0]
-            if prefix in ("messenger", "instagram", "discord"):
-                platform = prefix
+    channel_type_str = lead_row.get("channel_type") if hasattr(lead_row, "get") else lead_row["channel_type"]
+    if not platform and channel_type_str and channel_type_str in ("messenger", "instagram", "discord"):
+        platform = channel_type_str
     if platform not in ("messenger", "instagram", "discord"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1188,11 +1173,11 @@ async def send_lead_message(
         )
 
     # ----- (4) recipient_id 解決 -----
-    recipient_id = _extract_recipient_id(source_str, inbound_sender_id)
+    recipient_id = _extract_recipient_id(inbound_sender_id)
     if not recipient_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="送信先 ID が解決できません（lead.source / 受信履歴がいずれも未設定）",
+            detail="送信先 ID が解決できません（受信履歴がありません）",
         )
 
     # ----- (5) tenant_meta_config から Page Access Token を復号 -----
@@ -1671,13 +1656,10 @@ async def send_lead_image_message(
         inbound_sender_id = inbound_row[1]
         inbound_platform = inbound_row[2]
 
-    source_str = lead_row.get("source") if hasattr(lead_row, "get") else lead_row["source"]
+    channel_type_str = lead_row.get("channel_type") if hasattr(lead_row, "get") else lead_row["channel_type"]
     platform = inbound_platform
-    if not platform and source_str:
-        if isinstance(source_str, str) and ":" in source_str:
-            prefix = source_str.split(":", 1)[0]
-            if prefix in ("messenger", "instagram", "discord"):
-                platform = prefix
+    if not platform and channel_type_str and channel_type_str in ("messenger", "instagram", "discord"):
+        platform = channel_type_str
 
     if platform == "discord":
         raise HTTPException(
@@ -1701,7 +1683,7 @@ async def send_lead_image_message(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
     # ----- (5) recipient_id 解決 -----
-    recipient_id = _extract_recipient_id(source_str, inbound_sender_id)
+    recipient_id = _extract_recipient_id(inbound_sender_id)
     if not recipient_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2025,7 +2007,7 @@ async def merge_leads(
     処理順序（同一トランザクション）:
       1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
       2. guard チェック
-      3. loser の lead_channels 行を補完（source から gap 分を拾う）
+      3. loser の lead_channels 行を補完（lead_channels から gap 分を拾う）
       4. FK 付け替え: companies / contacts / deals の lead_id → master
       5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）
       6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）
@@ -2087,27 +2069,7 @@ async def merge_leads(
             ),
         )
 
-    # 3) loser の lead_channels 行を補完（gap 由来の取りこぼし防止）
-    loser_source: Optional[str] = loser_row.get("source")
-    if loser_source:
-        for prefix, plat in (
-            ("messenger:", "messenger"),
-            ("instagram:", "instagram"),
-            ("discord:", "discord"),
-        ):
-            if loser_source.startswith(prefix):
-                ext_id = loser_source[len(prefix):]
-                await db.execute(
-                    text(f"""
-                        INSERT INTO {lc_t} (lead_id, platform, external_id)
-                        VALUES (:lead_id, :platform, :external_id)
-                        ON CONFLICT (platform, external_id) DO NOTHING
-                    """),
-                    {"lead_id": loser_id, "platform": plat, "external_id": ext_id},
-                )
-                break
-
-    # 4) FK 付け替え: companies / contacts / deals（NO ON DELETE のため先に付け替え）
+    # 3) FK 付け替え: companies / contacts / deals（NO ON DELETE のため先に付け替え）
     reassigned_companies = (await db.execute(
         text(f"UPDATE {co_t} SET lead_id = :master WHERE lead_id = :loser"),
         {"master": master_id, "loser": loser_id},
