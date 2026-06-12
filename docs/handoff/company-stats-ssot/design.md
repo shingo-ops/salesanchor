@@ -76,3 +76,12 @@
 
 - ADR-136: `docs/adr/ADR-136-company-stats-ssot.md`（本 PR で新規作成）
 - 参照: `docs/handoff/company-stats-ssot/recon.md`、PR #2020
+
+## PO 承認記録
+
+| 項目 | 内容 |
+|------|------|
+| GO 承認 | **GO: Shingo（別セッション・2026-06-12確認）** |
+| 承認対象 | PR #2032（migration 2本 + backend/frontend 変更）の本番投入 |
+| 確認方法 | Shingo が別セッションでPRをレビュー・GO済みと事後確認 |
+| 本番デプロイ | 2026-06-12 10:46 JST マージ完了・同日デプロイ確認済み |
