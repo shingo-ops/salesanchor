@@ -261,7 +261,13 @@
     "lvStep8MailtoButton": "Open in mail app",
     "lvStep9Title": "Step 9: Application submitted",
     "lvStep9Desc": "Once FedEx approves your application, international shipping will be available on your production account. Approval typically takes 2-5 business days.",
-    "lvCheckDone": "Done"
+    "lvCheckDone": "Done",
+    "lvContactName": "Contact Name",
+    "lvContactNamePlaceholder": "e.g. Taro Yamada",
+    "lvPrinterModel": "Printer Model",
+    "lvPrinterModelPlaceholder": "e.g. Zebra ZT230, Brother QL-820NWB",
+    "lvPrinterCount": "Number of Printers",
+    "lvPrinterCountPlaceholder": "e.g. 1"
   },
   "paypalIntegration": {
     "subtitle": "Register your PayPal API credentials and run a connection test.",

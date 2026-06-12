@@ -261,7 +261,13 @@
     "lvStep8MailtoButton": "メールアプリで開く",
     "lvStep9Title": "Step 9: 申請完了",
     "lvStep9Desc": "FedExから承認通知が届いたら、本番アカウントで国際配送が利用できるようになります。通常2〜5営業日で審査結果が届きます。",
-    "lvCheckDone": "完了済み"
+    "lvCheckDone": "完了済み",
+    "lvContactName": "担当者名",
+    "lvContactNamePlaceholder": "例: 山田 太郎",
+    "lvPrinterModel": "プリンターモデル",
+    "lvPrinterModelPlaceholder": "例: Zebra ZT230, Brother QL-820NWB",
+    "lvPrinterCount": "プリンター台数",
+    "lvPrinterCountPlaceholder": "例: 1"
   },
   "paypalIntegration": {
     "subtitle": "PayPal の API 認証情報を登録し、連携の接続テストを行います。",

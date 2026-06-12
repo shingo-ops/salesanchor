@@ -75,8 +75,18 @@ def generate_cover_sheet_pdf(
     phone: Optional[str],
     email: Optional[str],
     account_number: Optional[str],
+    production_api_key: Optional[str],
+    contact_name: Optional[str],
+    printer_model: Optional[str],
+    printer_count: Optional[str],
 ) -> bytes:
     """FedEx Label Validation 申請用カバーシート PDF（A4）を生成する。
+
+    Args:
+        production_api_key: 本番 API Key（FedEx Portal の Client ID）
+        contact_name: 担当者名（フォーム入力）
+        printer_model: プリンターモデル名（フォーム入力）
+        printer_count: プリンター台数（フォーム入力）
 
     Returns:
         PDF バイト列（Content-Disposition: attachment でブラウザ直接ダウンロード用）
@@ -90,10 +100,6 @@ def generate_cover_sheet_pdf(
     margin_r = w - 20 * mm
     y = h - 20 * mm
 
-    def text_line(text_str: str, x: float, y_pos: float, size: int = 11) -> None:
-        c.setFont(font, size)
-        c.drawString(x, y_pos, text_str)
-
     def section_title(text_str: str, y_pos: float) -> float:
         c.setFont(font, 13)
         c.setFillColorRGB(0.1, 0.3, 0.7)
@@ -104,13 +110,13 @@ def generate_cover_sheet_pdf(
         c.setStrokeColorRGB(0, 0, 0)
         return y_pos - 8 * mm
 
-    def labeled_field(label: str, value: Optional[str], y_pos: float) -> float:
+    def labeled_field(label: str, value: Optional[str], y_pos: float, label_w: float = 55 * mm) -> float:
         c.setFont(font, 9)
         c.setFillColorRGB(0.4, 0.4, 0.4)
         c.drawString(margin_l, y_pos, label)
         c.setFillColorRGB(0, 0, 0)
         c.setFont(font, 11)
-        c.drawString(margin_l + 50 * mm, y_pos, value or "—")
+        c.drawString(margin_l + label_w, y_pos, value or "—")
         return y_pos - 7 * mm
 
     # ── タイトル ────────────────────────────────────────────────────
@@ -136,19 +142,34 @@ def generate_cover_sheet_pdf(
     y = section_title("Applicant Information（申請者情報）", y)
     y = labeled_field("Company (JA):", company_name, y)
     y = labeled_field("Company (EN):", company_name_en, y)
+    y = labeled_field("Contact Name:", contact_name, y)
     y = labeled_field("Address:", address, y)
     y = labeled_field("Phone:", phone, y)
     y = labeled_field("Email:", email, y)
     y -= 5 * mm
 
-    # ── FedEx アカウント ─────────────────────────────────────────────
+    # ── FedEx アカウント情報 ─────────────────────────────────────────
     y = section_title("FedEx Account Information（FedExアカウント情報）", y)
     y = labeled_field("Account Number:", account_number, y)
+    y = labeled_field("API Key (Production):", production_api_key, y)
     c.setFont(font, 8)
     c.setFillColorRGB(0.5, 0.5, 0.5)
-    c.drawString(margin_l, y, "（Note: Account number registered in Sandbox environment for Label Validation）")
+    c.drawString(margin_l, y,
+                 "Account Number and API Key are for the production project used for Label Validation.")
     c.setFillColorRGB(0, 0, 0)
-    y -= 12 * mm
+    y -= 10 * mm
+
+    # ── プリンター情報 ───────────────────────────────────────────────
+    y = section_title("Printer Information（プリンター情報）", y)
+    y = labeled_field("Printer Model:", printer_model, y)
+    y = labeled_field("Number of Printers:", printer_count, y)
+    y -= 5 * mm
+
+    # ── 技術仕様 ────────────────────────────────────────────────────
+    y = section_title("Technical Specifications（技術仕様）", y)
+    y = labeled_field("Label Image Type:", "PDF", y)
+    y = labeled_field("Services Requested:", "FedEx Express", y)
+    y -= 5 * mm
 
     # ── 申請サービス一覧 ────────────────────────────────────────────
     y = section_title("Services for Validation（申請サービス一覧）", y)
@@ -165,7 +186,7 @@ def generate_cover_sheet_pdf(
     # ── 添付物 ──────────────────────────────────────────────────────
     y = section_title("Attachments（添付物）", y)
     for item in [
-        "Test shipping labels — 4 services (PDF, printed & scanned)",
+        "Test shipping labels — 4 services (PDF, printed & scanned, 3 pages each incl. AWB)",
         "This cover sheet",
     ]:
         c.setFont(font, 11)
@@ -175,12 +196,11 @@ def generate_cover_sheet_pdf(
 
     # ── 備考 ────────────────────────────────────────────────────────
     y = section_title("Notes（備考）", y)
-    notes = [
+    for note in [
         "Test labels were generated using the FedEx Sandbox environment.",
         "All labels include AWB (Air Waybill) copies (3 pages each).",
         "Please validate each service type and provide feedback.",
-    ]
-    for note in notes:
+    ]:
         c.setFont(font, 10)
         c.drawString(margin_l + 5 * mm, y, f"• {note}")
         y -= 6 * mm

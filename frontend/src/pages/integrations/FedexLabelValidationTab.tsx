@@ -59,7 +59,10 @@ export function FedexLabelValidationTab() {
   const [step4Done, setStep4Done] = useState(false);
   const [step5Done, setStep5Done] = useState(false);
 
-  // Step 6: cover sheet
+  // Step 6: cover sheet form inputs + download state
+  const [contactName, setContactName] = useState("");
+  const [printerModel, setPrinterModel] = useState("");
+  const [printerCount, setPrinterCount] = useState("");
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState("");
 
@@ -101,7 +104,12 @@ export function FedexLabelValidationTab() {
     setCoverBusy(true);
     setCoverError("");
     try {
-      const blob = await api.getBlob("/shipping/label-validation/cover-sheet");
+      const params = new URLSearchParams({
+        contact_name: contactName,
+        printer_model: printerModel,
+        printer_count: printerCount,
+      });
+      const blob = await api.getBlob(`/shipping/label-validation/cover-sheet?${params.toString()}`);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -231,10 +239,48 @@ export function FedexLabelValidationTab() {
       <section className="lv-step card">
         <StepHeader num={6} title={t("carrierIntegration.lvStep6Title")} />
         <p className="form-hint">{t("carrierIntegration.lvStep6Desc")}</p>
+
+        {/* カバーシート生成フォーム（担当者名・プリンター情報） */}
+        <div className="update-form">
+          <div className="form-group">
+            <label htmlFor="lv-contact-name">{t("carrierIntegration.lvContactName")}</label>
+            <input
+              id="lv-contact-name"
+              type="text"
+              value={contactName}
+              autoComplete="name"
+              placeholder={t("carrierIntegration.lvContactNamePlaceholder")}
+              onChange={(e) => setContactName(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="lv-printer-model">{t("carrierIntegration.lvPrinterModel")}</label>
+            <input
+              id="lv-printer-model"
+              type="text"
+              value={printerModel}
+              autoComplete="off"
+              placeholder={t("carrierIntegration.lvPrinterModelPlaceholder")}
+              onChange={(e) => setPrinterModel(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="lv-printer-count">{t("carrierIntegration.lvPrinterCount")}</label>
+            <input
+              id="lv-printer-count"
+              type="text"
+              value={printerCount}
+              autoComplete="off"
+              placeholder={t("carrierIntegration.lvPrinterCountPlaceholder")}
+              onChange={(e) => setPrinterCount(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="form-actions">
           <button
             className="btn-secondary"
-            disabled={coverBusy}
+            disabled={coverBusy || !contactName || !printerModel || !printerCount}
             onClick={handleDownloadCoverSheet}
           >
             {coverBusy ? t("carrierIntegration.lvStep6Downloading") : t("carrierIntegration.lvStep6Button")}

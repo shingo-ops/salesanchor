@@ -751,22 +751,35 @@ async def lv_issue_sample_labels(
     dependencies=[Depends(require_permission("shipping.manage"))],
 )
 async def lv_download_cover_sheet(
+    contact_name: str = Query(..., description="担当者名（フォーム入力）"),
+    printer_model: str = Query(..., description="プリンターモデル名（フォーム入力）"),
+    printer_count: str = Query(..., description="プリンター台数（フォーム入力）"),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
 ):
     """FedEx Label Validation 申請用カバーシート PDF を生成してブラウザ直接ダウンロードする（ADR-129）。
 
-    J3 決定: Google Drive には保存しない（ブラウザ直接ダウンロード）。
+    - 本番 API Key（production の client_id）が未登録の場合は 422 で誘導する（設計 §3.3）。
+    - J3 決定: Google Drive には保存しない（ブラウザ直接ダウンロード）。
     """
     from fastapi.responses import Response as _Response
 
     from app.services import label_validation as lv
 
-    profile = await lv.get_tenant_profile(db, tenant_id)
-    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
-    account_number = creds["account_number"] if creds else None
+    # 本番鍵の存在チェック（未登録なら 422）
+    prod_creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="production")
+    if not prod_creds:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="FedEx 本番 API Key が未登録です。先に本番タブで認証情報を登録してください。",
+        )
 
-    # M1: reportlab は CPU バウンド処理のためスレッドプールで実行
+    sandbox_creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
+    account_number = sandbox_creds["account_number"] if sandbox_creds else None
+
+    profile = await lv.get_tenant_profile(db, tenant_id)
+
+    # reportlab は CPU バウンド処理のためスレッドプールで実行
     pdf_bytes = await asyncio.to_thread(
         lv.generate_cover_sheet_pdf,
         company_name=profile.get("company_name"),
@@ -775,6 +788,10 @@ async def lv_download_cover_sheet(
         phone=profile.get("phone"),
         email=profile.get("email"),
         account_number=account_number,
+        production_api_key=prod_creds["client_id"],
+        contact_name=contact_name,
+        printer_model=printer_model,
+        printer_count=printer_count,
     )
 
     return _Response(
