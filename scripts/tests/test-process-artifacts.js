@@ -24,6 +24,8 @@ const {
   classifyFile,
   classifyChanges,
   parseSOPDeclaration,
+  normalizeCitationPath,
+  extractFileCitations,
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
@@ -193,13 +195,87 @@ test('AC1: 偽のfile:line（存在しないファイル）を含むreconはfail
   assert.ok(errors[0].includes('存在しません'));
 });
 
-test('AC1: 偽のfile:line（存在しない行番号）を含むreconはfail', () => {
-  // 存在するファイルだが行番号が明らかに大きすぎる
+// ── 書式バリエーションテスト（パス正規化改善） ──────────────────────────────
+console.log('\n【書式バリエーションテスト（パス正規化）】');
+
+test('normalizeCitationPath: ./path を path に正規化', () => {
+  assert.strictEqual(normalizeCitationPath('./scripts/foo.js'), 'scripts/foo.js');
+  assert.strictEqual(normalizeCitationPath('scripts/foo.js'), 'scripts/foo.js');
+  assert.strictEqual(normalizeCitationPath('./frontend/src/App.tsx'), 'frontend/src/App.tsx');
+});
+
+test('バッククォートあり・行番号なしでも hasFileCitations=true', () => {
+  const content = '| `backend/app/main.py` | 確認済み |';
+  assert.ok(hasFileCitations(content));
+});
+
+test('バッククォートなし・スラッシュ入りパス・行番号ありでも hasFileCitations=true', () => {
+  const content = '- frontend/src/App.tsx:42 の useEffect を確認';
+  assert.ok(hasFileCitations(content));
+});
+
+test('バッククォートなし・相対パス（./）でも hasFileCitations=true', () => {
+  const content = '- ./scripts/check-process-artifacts.js:10 の実装';
+  assert.ok(hasFileCitations(content));
+});
+
+test('テーブルセル内の行番号範囲（N-M）でも hasFileCitations=true', () => {
+  const content = '| backend/app/routers/foo.py:100-200 | 確認済み |';
+  assert.ok(hasFileCitations(content));
+});
+
+test('行番号なし・スラッシュなし（単純な識別子）は hasFileCitations=false', () => {
+  const content = '# ADR-121 説明テキスト。function_name を確認した。';
+  assert.ok(!hasFileCitations(content));
+});
+
+test('バッククォート付き・行番号超過でもエラーなし（行番号チェック廃止）', () => {
   const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
-  const content = `| \`${scriptRelPath}:999999\` | テスト |`;
+  const content = `\`${scriptRelPath}:999999\` の行`;
+  const errors = validateFileCitations(content);
+  assert.deepStrictEqual(errors, [], '行番号範囲外はエラーにならない（廃止済み）');
+});
+
+test('バッククォート付き・行番号範囲（N-M）超過でもエラーなし（行番号チェック廃止）', () => {
+  const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+  const content = `\`${scriptRelPath}:999999-1000000\` の範囲`;
+  const errors = validateFileCitations(content);
+  assert.deepStrictEqual(errors, [], '行番号範囲外はエラーにならない（廃止済み）');
+});
+
+test('バッククォートなし・行番号あり・実在ファイル → エラーなし', () => {
+  const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+  const content = `- ${scriptRelPath}:42 の実装を確認`;
+  const errors = validateFileCitations(content);
+  assert.deepStrictEqual(errors, [], 'バッククォートなしでも実在ファイルはエラーなし');
+});
+
+test('相対パス（./）の実在ファイル → エラーなし（正規化後に実在チェック）', () => {
+  const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+  const content = `- ./${scriptRelPath}:10 の確認`;
+  const errors = validateFileCitations(content);
+  assert.deepStrictEqual(errors, [], '相対パスも正規化後に実在確認される');
+});
+
+test('バッククォートなし・存在しないファイル → エラー検出', () => {
+  const content = '- nonexistent/path/file.py:42 の関数';
   const errors = validateFileCitations(content);
   assert.ok(errors.length > 0, 'エラーが返るべき');
-  assert.ok(errors[0].includes('範囲外'));
+  assert.ok(errors[0].includes('存在しません'));
+});
+
+test('URL は引用として扱わない', () => {
+  const content = '参考: https://github.com/owner/repo:42 を参照';
+  // URL 形式はスキップされるので引用なしと同等
+  const errors = validateFileCitations(content);
+  assert.deepStrictEqual(errors, [], 'URL はファイル引用としてチェックしない');
+});
+
+test('extractFileCitations: 重複パスはまとめられる', () => {
+  const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+  const content = `\`${scriptRelPath}:1\` と \`${scriptRelPath}:2\` は同一ファイル`;
+  const citations = extractFileCitations(content);
+  assert.strictEqual(citations.filter(p => p === scriptRelPath).length, 1, '重複排除されている');
 });
 
 // ── §7 AC2: 外部・過去事例欄が空欄の設計はfail ──────────────────────────────
