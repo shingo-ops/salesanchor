@@ -28,12 +28,14 @@ BEGIN
         -- ============================================================
         -- C2: meta_messages に message_id 列を追加
         --     NULL許可（既存行・mid未取得メッセージへの影響なし）
-        --     meta_messages テーブルが存在する場合のみ実行（migrate_meta.py依存）
+        --     meta_messages テーブルが存在する場合のみ実行（migrate_meta.py依存）。
+        -- ADR-036 整合: 部分テナントや migration 単体検証で meta_messages が無い
+        --     場合でも abort せず WARNING で loud-skip する（C1 と同方針）。
         -- ============================================================
         IF EXISTS (
             SELECT 1 FROM information_schema.tables
             WHERE table_schema = schema_record.schema_name
-              AND table_name   = 'meta_messages'
+              AND table_name = 'meta_messages'
         ) THEN
             EXECUTE format(
                 'ALTER TABLE %I.meta_messages
@@ -52,7 +54,9 @@ BEGIN
             RAISE NOTICE 'meta_messages: message_id column and unique index applied for %',
                 schema_record.schema_name;
         ELSE
-            RAISE NOTICE 'meta_messages: table not found, C2 skipped for %',
+            RAISE WARNING
+                'Schema %: meta_messages テーブルが存在しないため message_id 列追加を '
+                'スキップしました（ADR-036: loud-skip）。',
                 schema_record.schema_name;
         END IF;
 
