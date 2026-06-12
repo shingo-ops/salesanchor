@@ -227,10 +227,6 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
   const renderCard = (env: Env, data: EnvData) => {
     const configured = data.status?.configured ?? false;
     const isEditing = editingEnv === env;
-    const envName =
-      env === "production"
-        ? t("carrierIntegration.envProduction")
-        : t("carrierIntegration.envSandbox");
     const cardTitle =
       env === "production"
         ? t("carrierIntegration.envCardTitleProd")
@@ -242,7 +238,7 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
         <section key={`${env}-edit`} className="card carrier-env-card carrier-env-card--editing">
           <div className="carrier-env-card__header">
             <h3 className="carrier-env-card__title">
-              {t("carrierIntegration.editFormTitle", { env: envName })}
+              {t("carrierIntegration.editFormTitle", { env: cardTitle })}
             </h3>
           </div>
           <p className="carrier-env-card__hint">{t("carrierIntegration.editFormHint")}</p>
