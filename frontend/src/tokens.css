@@ -281,7 +281,7 @@
   --karte-font-sec:     11px;  /* カルテセクション見出し文字サイズ（見本 .sec） */
   --karte-overflow-px:  13px;  /* カルテoverflowボタン横padding（見本 .more） */
   --karte-hd-gap:       11px;  /* カルテヘッダー hd-top gap / hd-meta margin-top（見本） */
-  --karte-blue:    #1877F2;    /* カルテアクセント色 Meta blue（見本 --pri） */
+  /* --karte-blue 廃止（方向A/8d411bee）— アプリ共通 --accent を使用 */
   --karte-field-bg: #fafbfc;  /* カルテフィールド背景（見本 .fbox） */
   --karte-field-bd: #dde0e4;  /* カルテフィールド枠線色（見本 --bd2） */
   --karte-ok:      #0f9d77;   /* カルテ実績値色（見本 --ok: teal green）*/

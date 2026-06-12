@@ -897,7 +897,7 @@
   border: none;
   cursor: pointer;
   background: transparent;
-  color: var(--karte-blue);
+  color: var(--accent);
   font-size: var(--font-xs); /* 見本: 12px */
   font-weight: 500;
   text-decoration: none;
@@ -1167,7 +1167,7 @@
 .right-panel-field::placeholder { color: var(--text-muted); }
 /* 見本: select はネイティブ▼なしのプレーン箱 */
 select.right-panel-field { appearance: none; -webkit-appearance: none; }
-.right-panel-field:focus { outline: none; border-color: var(--karte-blue); }
+.right-panel-field:focus { outline: none; border-color: var(--accent); }
 textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
@@ -1194,7 +1194,7 @@ textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-
   margin-bottom: -1px;
 }
 .right-panel-tab:hover { color: var(--text-primary); }
-.right-panel-tab.active { color: var(--karte-blue); border-bottom-color: var(--karte-blue); font-weight: 600; } /* 見本 .tab.on: color/border --pri */
+.right-panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; } /* 方向A: --accent = ブランドネイビー */
 .right-panel-tab-content { flex: 1; overflow-y: auto; width: 100%; }
 .right-panel-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 .right-panel-group-heading {
@@ -1233,7 +1233,7 @@ textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-
 .karte-action-primary {
   flex: 1;
   padding: var(--space-10px); /* 見本 .primary: 10px */
-  background: var(--karte-blue); /* 見本 .primary: background --pri */
+  background: var(--accent); /* 方向A: --accent = ブランドネイビー */
   color: var(--on-solid);
   border: none;
   border-radius: var(--radius-lg); /* 見本 .primary: radius 8px */
@@ -1243,7 +1243,7 @@ textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-
   transition: filter var(--transition-micro);
   font-family: inherit;
 }
-.karte-action-primary:hover { filter: brightness(1.07); } /* 見本 .primary:hover */
+.karte-action-primary:hover { background: var(--accent-hover); } /* 方向A: --accent-hover */
 
 /* ADR-110: "…" overflow button */
 .karte-action-overflow {
