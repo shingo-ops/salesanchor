@@ -126,17 +126,17 @@
 | feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
 | feature/morimoto/nginx-reload-migration-total | （記入してください） | 2026-06-11 15:54 | IN_PROGRESS | | | |
 | feature/morimoto/adr127-phase2c-css-fix | （記入してください） | 2026-06-11 16:45 | IN_PROGRESS | | | |
-| feature/morimoto/gate-bug-note | （記入してください） | 2026-06-11 18:12 | IN_PROGRESS | | |
-| feature/morimoto/sa-03-recon | （記入してください） | 2026-06-11 18:18 | IN_PROGRESS | | |
-| feature/morimoto/deploy-timeout-fix | （記入してください） | 2026-06-11 20:58 | IN_PROGRESS | | |
-| feature/morimoto/fedex-pickup-carriercod-fix | （記入してください） | 2026-06-11 20:59 | IN_PROGRESS | | |
-| feature/morimoto/sa-03-change-billing | SA-03 change_billing一式（ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2）+ migration | 2026-06-12 04:00 | IN_PROGRESS | | |
-| feature/morimoto/adr109-db-migration | （記入してください） | 2026-06-12 12:09 | IN_PROGRESS | | |
-| feature/morimoto/sa02-daily-recon-notify | （記入してください） | 2026-06-12 12:17 | IN_PROGRESS | | |
-| feature/morimoto/remove-review-locale-en | （記入してください） | 2026-06-12 12:53 | IN_PROGRESS | | |
-| feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | |
-| feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | |
-| feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | | |
+| feature/morimoto/gate-bug-note | （記入してください） | 2026-06-11 18:12 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-recon | （記入してください） | 2026-06-11 18:18 | IN_PROGRESS | | | |
+| feature/morimoto/deploy-timeout-fix | （記入してください） | 2026-06-11 20:58 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-pickup-carriercod-fix | （記入してください） | 2026-06-11 20:59 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-change-billing | SA-03 change_billing一式（ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2）+ migration | 2026-06-12 04:00 | IN_PROGRESS | | | |
+| feature/morimoto/adr109-db-migration | （記入してください） | 2026-06-12 12:09 | IN_PROGRESS | | | |
+| feature/morimoto/sa02-daily-recon-notify | （記入してください） | 2026-06-12 12:17 | IN_PROGRESS | | | |
+| feature/morimoto/remove-review-locale-en | （記入してください） | 2026-06-12 12:53 | IN_PROGRESS | | | |
+| feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | | |
+| feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | | |
+| feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | #2020 | | |
 ---
 
 ## 記入例
