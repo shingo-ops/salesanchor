@@ -105,7 +105,7 @@ function parseSOPDeclaration(prBody) {
  *   - GO発行者: Shingo（shingo-ops）
  *   - 日時: 2026-06-13 10:00 JST
  *   - GO原文: GO #<PR番号>
- *   - バックアップ確認: あり
+ *   - バックアップ確認: あり  ← DB変更なしの危険変更は「該当なし」も可
  */
 function parseGORecord(prBody) {
   if (!prBody) return null;
@@ -132,6 +132,7 @@ function parseGORecord(prBody) {
 /**
  * GO記録の必須要素を検証する。
  * 必須: GO発行者（PO）・日時・GO #<PR番号>原文・バックアップ確認の有無
+ * バックアップ確認: 「あり」「なし」「該当なし」いずれも可（DB非接触の危険変更は「該当なし」でよい）
  * GOの正式書式: 「GO #<PR番号>」（番号必須。番号のない曖昧な肯定はGOとみなさない）
  */
 function validateGORecord(goRecord, prNumber) {
@@ -168,7 +169,7 @@ function validateGORecord(goRecord, prNumber) {
   }
 
   if (!goRecord.backup || goRecord.backup.trim().length < 2) {
-    errors.push('❌ バックアップ確認が記入されていません（「バックアップ確認: あり/なし」）');
+    errors.push('❌ バックアップ確認が記入されていません（「バックアップ確認: あり/なし/該当なし」）');
   }
 
   return errors;

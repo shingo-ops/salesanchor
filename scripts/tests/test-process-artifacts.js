@@ -255,6 +255,13 @@ test('バックアップ確認未記入 → バックアップエラー', () => 
   assert.ok(errors.some(e => e.includes('バックアップ')));
 });
 
+test('バックアップ確認「該当なし」→ エラーなし（DB非接触の危険変更向け）', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: 該当なし\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.deepStrictEqual(errors, [], '「該当なし」はバックアップ確認として有効');
+});
+
 test('PR番号未指定時は番号一致チェックをスキップ', () => {
   const r = parseGORecord(validGORecordSection(9999));
   const errors = validateGORecord(r, null); // prNumber=null → スキップ
