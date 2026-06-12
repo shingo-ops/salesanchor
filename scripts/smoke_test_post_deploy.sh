@@ -94,9 +94,20 @@ docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
 
 # [7] アプリ接続ユーザー確認（SA18_PHASE2_ENABLED フラグで Phase2 意図を判定）
 # まずヘルスチェックでプールを暖機（接続 0 のまま確認すると偽陽性になる）
-docker exec -e PGPASSWORD="${APP_PASS}" "${BACKEND}" \
-  python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" \
-  || { echo "[7] FAIL: backend health check failed (app is down)"; exit 1; }
+# blue-green cutover 直後のコンテナ名変更に伴う一時的な接続断をリトライで吸収する。
+# 最大3回・5秒間隔。本物の障害は3回連続で失敗するため見逃さない。
+_HEALTH_OK=false
+for _attempt in 1 2 3; do
+  if docker exec -e PGPASSWORD="${APP_PASS}" "${BACKEND}" \
+      python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" \
+      2>/dev/null; then
+    _HEALTH_OK=true
+    break
+  fi
+  [ "${_attempt}" -lt 3 ] && echo "[7] health check attempt ${_attempt}/3 failed, retrying in 5s..." && sleep 5
+done
+[ "${_HEALTH_OK}" = "true" ] \
+  || { echo "[7] FAIL: backend health check failed after 3 attempts (app is down)"; exit 1; }
 sleep 2  # pool warmup
 
 # SA18_PHASE2_ENABLED=1 が .env に在るかどうかで Phase2 意図を判定する。
