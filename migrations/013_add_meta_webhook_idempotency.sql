@@ -50,6 +50,22 @@ BEGIN
         -- C1: leads(source) に UNIQUE 部分インデックスを追加
         --     既存重複がある場合はスキップしてWARNINGを出す（原則4）
         -- ============================================================
+
+        -- source 列が無い場合は migration 003 の定義に合わせて追加する（スキーマ修復）
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_record.schema_name
+              AND table_name   = 'leads'
+              AND column_name  = 'source'
+        ) THEN
+            EXECUTE format(
+                'ALTER TABLE %I.leads ADD COLUMN IF NOT EXISTS source VARCHAR(50)',
+                schema_record.schema_name
+            );
+            RAISE NOTICE 'leads: source column was missing, restored for %',
+                schema_record.schema_name;
+        END IF;
+
         EXECUTE format(
             'SELECT COUNT(*) FROM (
                 SELECT source
