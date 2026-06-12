@@ -16,10 +16,10 @@ class UserRegister(BaseModel):
 
     email は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。
     .local 等のRFC予約TLDも識別子として許容するため。実在性チェックは
-    上流のFirebase Auth側で担保される。
+    上流のFirebase Auth側で担保される。認証は Firebase が担当するため
+    パスワードフィールドは持たない。
     """
     email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=8, max_length=72)
     username: str = Field(min_length=1, max_length=255)
     full_name: str | None = None
     tenant_code: str = Field(min_length=1, max_length=50)

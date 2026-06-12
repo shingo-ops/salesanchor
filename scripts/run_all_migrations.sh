@@ -372,6 +372,9 @@ run_sql migrations/20260612_050000_backfill_invoice_timestamps.sql
 # ADR-136: v_company_stats SSOT 修正（フィルタを paid_at IS NOT NULL AND voided_at IS NULL に変更）
 run_sql migrations/20260612_120000_fix_company_stats_ssot.sql
 
+# password_hash 列廃止（PO決定 2026-06-12: 認証は Firebase 担当、DB への保存不要）
+run_sql migrations/20260612_150000_drop_password_hash.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
