@@ -812,6 +812,31 @@ jobs:
             "https://x-access-token:${PIPELINE_PAT}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:refs/heads/develop
 
+      # ============================================
+      # ADR-134 D: smoke④ FAIL 時の自動 /design/ 遮断
+      # Verify deployment（design-site smoke を含む）が失敗した場合、
+      # htpasswd ファイルを削除して nginx を再作成する。
+      # nginx は auth_basic_user_file が存在しない場合 500 を返す（fail-closed）。
+      # 次回 deploy 成功時に htpasswd が再生成されて自動復旧する。
+      # ============================================
+      - name: Emergency block /design/ on smoke FAIL (ADR-134 D)
+        if: failure()
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            HTPASSWD=/home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
+            echo "🚨 Smoke FAIL検出 — /design/ を緊急遮断します"
+            rm -f "${HTPASSWD}"
+            cd /home/ubuntu/salesanchor
+            docker compose up -d --no-deps --force-recreate nginx
+            sleep 3
+            _block=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 https://app.salesanchor.jp/design/ 2>/dev/null || echo "FAIL")
+            echo "✅ /design/ 遮断後ステータス: ${_block}（期待値: 500 または 401）"
+
       - name: Deployment Failure Notification
         if: failure()
         run: |
