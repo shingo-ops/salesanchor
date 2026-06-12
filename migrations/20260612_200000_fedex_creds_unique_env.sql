@@ -9,7 +9,7 @@
 --   のため、新制約への変更後もデータの重複は発生しない。
 --
 -- 不可逆操作: 本番デプロイ前に必ず適用すること（ADR-025 確認済み）
--- 冪等チェック: DROP CONSTRAINT IF EXISTS で再実行 no-op
+-- 冪等チェック: DROP/ADD ともに IF EXISTS / DO$$ ガード付きで再実行 no-op
 
 -- 1. environment が NULL の既存行を production に正規化（念のため）
 UPDATE public.tenant_carrier_credentials
@@ -20,7 +20,15 @@ UPDATE public.tenant_carrier_credentials
 ALTER TABLE public.tenant_carrier_credentials
   DROP CONSTRAINT IF EXISTS tenant_carrier_credentials_tenant_id_carrier_key;
 
--- 3. 新制約を追加
-ALTER TABLE public.tenant_carrier_credentials
-  ADD CONSTRAINT tenant_carrier_credentials_tenant_id_carrier_env_key
-  UNIQUE (tenant_id, carrier, environment);
+-- 3. 新制約を追加（既存の場合はスキップ — 冪等）
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'tenant_carrier_credentials_tenant_id_carrier_env_key'
+  ) THEN
+    ALTER TABLE public.tenant_carrier_credentials
+      ADD CONSTRAINT tenant_carrier_credentials_tenant_id_carrier_env_key
+      UNIQUE (tenant_id, carrier, environment);
+  END IF;
+END $$;
