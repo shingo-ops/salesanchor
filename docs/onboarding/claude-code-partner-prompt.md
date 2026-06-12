@@ -16,6 +16,19 @@
 2. 下の「━━ コピー範囲 ここから ━━」〜「━━ ここまで ━━」を**そのまま貼り付けて送信**。
 3. 以降、Claude はこの作業合意に沿って動く。タスクの本文（やりたいこと）はその後に伝える。
 
+## 最新ルールの取り込み（重要・自動ではない）
+ルール本体（`CLAUDE.md` / `docs/STANDARD-WORKFLOW.md` / `docs/adr/FEATURE-INDEX.md` / SessionStart フック）は repo の中にあるため、**手元へは `git pull` で取り込む**。自動 pull の仕組みは無い（SessionStart フックは「fetch して遅れを警告するだけ・pull はしない」安全設計）。
+
+- **初回だけ手動 pull が必要**（母艦＝Claude Code を起動するディレクトリ）。これでルール本体とフックが入る:
+  ```bash
+  cd <salesanchor の母艦ディレクトリ>
+  git checkout develop          # develop にいることを確認
+  git pull --ff-only origin develop
+  ```
+- **以後のタスクは worktree で作れば自動的に最新**。`bash scripts/new-worktree.sh feature/morimoto/<topic>` は毎回 origin/develop を fetch して最新から枝を切るため、worktree 内の CLAUDE.md/SOP/FEATURE-INDEX/フックは常に最新。
+- **母艦が遅れたら SessionStart フックが起動時に警告**する。出たら上の pull を再実行する（フックは自動では更新しない）。
+- ※ `--ff-only` は安全側（履歴が分岐していたら merge せず止めて知らせる）。ローカルに未コミット変更があると pull が止まることがある＝先に commit / stash する。
+
 ---
 
 ━━━━━━━━━━ コピー範囲 ここから ━━━━━━━━━━
@@ -23,8 +36,12 @@
 あなたは salesanchor リポジトリの開発パートナー（Claude Code）です。以下のチーム作業合意に**例外なく**従ってください。
 
 # 0. 最初にやること（毎セッション）
-- **最新を取り込む**: `git fetch origin develop` し、ローカルの `CLAUDE.md` / `docs/STANDARD-WORKFLOW.md` が遅れていないか確認。遅れていれば先に取り込む（SessionStart フックが自動で警告します）。古いルールのまま作業を始めない。
-- **作業は必ず worktree で**: `bash scripts/new-worktree.sh feature/morimoto/<topic>` で独立ディレクトリを作ってから着手。`develop` / `main` に直接コミット・push しない。
+- **最新ルールを取り込む（pull は手動・自動ではない）**: 母艦ディレクトリで以下を実行してから着手する。古いルールのまま作業を始めない（SessionStart フックは遅れを警告するが pull はしない）。
+  ```bash
+  git checkout develop && git pull --ff-only origin develop
+  ```
+  （未コミット変更で pull が止まる場合は先に commit / stash する。）
+- **作業は必ず worktree で**: `bash scripts/new-worktree.sh feature/morimoto/<topic>` で独立ディレクトリを作ってから着手（毎回最新 origin/develop から枝が切られる＝中身は自動で最新）。`develop` / `main` に直接コミット・push しない。
 - まず `CLAUDE.md` と `docs/STANDARD-WORKFLOW.md` を read して、その時点の正本ルールを把握する。
 
 # 1. 標準ワークフロー（全タスク・例外なし）
