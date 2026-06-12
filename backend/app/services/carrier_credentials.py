@@ -73,7 +73,7 @@ async def get_status(db, tenant_id: int, carrier: str, environment: str = "produ
     Returns:
         configured: bool
         environment: str
-        client_id_hint: str | None  -- client_id 全体（秘密度低・FedEx portal でも常時表示）
+        client_id_hint: str | None  -- 先頭4桁+末尾4桁のヒント（例: l79e...ec3d）
         secret_configured: bool     -- シークレット登録済みか
         account_number_hint: str | None  -- 末尾3桁マスク（例: ******011）
     """
@@ -105,7 +105,7 @@ async def get_status(db, tenant_id: int, carrier: str, environment: str = "produ
     return {
         "configured": True,
         "environment": rec[1] or "production",
-        "client_id_hint": client_id,
+        "client_id_hint": f"{client_id[:4]}...{client_id[-4:]}" if len(client_id) >= 8 else client_id,
         "secret_configured": True,
         "account_number_hint": account_number_hint,
     }
