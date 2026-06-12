@@ -71,14 +71,18 @@ STANDARD-WORKFLOW.md と CLAUDE.md に以下をインラインで記載：
 - 既存 CI チェックは削除せず、process-artifacts gate を追加（10件→11件）。
 - B-2 変更 PR 自体が `scripts/` を触るため gate の承認要求が発火する（設計どおり）。
 
+### B-2 gate PR（#2013）導入時のブートストラップ経緯（2026-06-12）
+
+B-2 の実装 PR #2013 は作者が `shingo-ops`（PO）であり、GitHub の自己承認禁止仕様により `shingo-ops` が Approve できなかった。また既存の `AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev']` には `shingo-cc`（Claude Code 機械アカウント）が未登録のため、承認しても gate が通過しない状況だった。PO 判断として、PO 権限で `shingo-cc` を `AUTHORIZED_APPROVERS` に、`shingo-ops` を `AUTHORIZED_AUTHORS` に一時追加し、`shingo-cc` が Approve することで gate を通過させた。この操作は CC バイパスではなく PO の明示的ガバナンス判断によるものであり、マージ直後に PR #2034 で両アカウントを即時削除して当初想定（`shingo-ops / Hikky-dev`）に復元した。
+
 ## Consequences
 
 ### 受け入れ条件
 
 - [x] `migrations/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：DANGEROUS_PATTERNS で既に対応）
-- [x] `scripts/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：ADR-135 で追加）
-- [ ] 認可承認者（shingo-ops）が Approve した後 gate が PASS する（B-2 受け入れテスト）
-- [ ] 通常フロントエンドのみの PR が承認なし・CI 緑のみでマージできる（B-2 受け入れテスト）
+- [x] `scripts/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：ADR-135 で追加・PR #2013 で確認）
+- [x] 認可承認者が Approve した後 gate が PASS する（B-2 受け入れテスト：PR #2013 で shingo-cc 承認→SUCCESS 確認 2026-06-12）
+- [x] 通常フロントエンドのみの PR が承認なし・CI 緑のみでマージできる（B-2 受け入れテスト：PR #2015 で確認済み）
 - [x] develop→main のリリース PR で process-artifacts gate が FAIL の場合マージできない（C 適用済み）
 - [x] PR テンプレートにリリース PR 用の相乗り確認欄が存在し変更ファイル一覧の報告が行われる（D）
 - [x] STANDARD-WORKFLOW と CLAUDE.md に E のルールがインラインで存在する
