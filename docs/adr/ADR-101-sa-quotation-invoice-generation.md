@@ -3,10 +3,10 @@
 ## Status
 Accepted（送料/関税の数式・Wise APIは未決＝ADR-095付録1）
 
-> **2026-06-12 改訂**: §6 PayPal を Invoicing 方式へ（下記「改訂」節）。
+> **2026-06-12 改訂**: §6 PayPal を Invoicing 方式へ／さらに 写しPDF自動保存＋追跡＋ケース管理を追加（下記「改訂」「改訂(2)」節）。
 
 ## Date
-2026-06-04（起案: Hikky-dev / PO: shingo-ops）／改訂 2026-06-12（Hikky-dev・しんごさん事前了承の上 Hitoshi 判断で実施）
+2026-06-04（起案: Hikky-dev / PO: shingo-ops）／改訂 2026-06-12（Invoicing 方式＋写しPDF/追跡/ケース拡張・PO 承認）
 
 ---
 
@@ -30,6 +30,35 @@ PayPal の支払い導線は Invoicing に一本化。旧 Checkout/Orders 経路
 
 ### 制約
 PayPal Invoicing は**送付先 email 必須**（PayPal がメール送付するため）。email 未登録の contact では発行不可（400）。
+
+---
+
+## 改訂 2026-06-12 (2): 写しPDF自動保存＋追跡＋ケース管理（KGI 4点・PO 承認）
+
+参照: recon = `docs/handoff/paypal-invoice-epic/recon.md`。前項「Invoicing 方式」(PR #1980) の上に積む拡張。
+
+### 背景・決定（What / Why）
+PayPal 正規請求書（Invoicing）の運用を、取引の証明・手間削減・トラブル対応まで広げる。**KGI（PO 承認 2026-06-12）**:
+1. アプリの請求書から PayPal 正規請求書を作成・送信でき、顧客が支払える（**PR #1980 実装済み**）。
+2. **送信成功時に写しPDFを自動生成・保存**。原本画面（invoicer_view_url）をワンクリックで開けるリンクも取得。
+3. 発送時に**追跡番号を PayPal へ登録**（Add Tracking API）。
+4. **ケース（dispute）の発生/更新/解決を webhook で受信**し、請求書/受注に紐づけ表示。
+
+### PDF の整理（前項 §3「自社生成のまま」を具体化）
+- PayPal 描画 PDF の自動取得は**公式 API が存在しない**（OpenAPI 仕様で全 endpoint 確認）ため**追わない**。非公式手段（内部URL叩き・ヘッドレス）は規約/破損リスクで**不採用**。
+- 代わりに、原本レコード（PayPal Invoice 番号 INV2-…・金額・明細が自社レコードと一致）から **写しPDF を自社生成（reportlab・ADR-101 テンプレ SSOT）して自動保存**。写しPDF には「PayPal 請求書の写し」表記＋**原本リンク＋QR**を含める。
+- **証明力の源泉は PayPal 側レコード**であり、写しPDF はその印刷物。原本が要る稀なケースは保存済み `invoicer_view_url` から手動 DL で運用（PO 合意）。
+
+### スコープ（インクリメント）
+- Inc1: 写しPDF 自動保存＋ `invoicer_view_url` 取得・ワンクリック導線（保存方式は DB 保存を既定・recon §5）。
+- Inc2: 入金自動確認（`INVOICING.INVOICE.PAID` webhook）＝**PR #1980 実装済み**。
+- Inc3: 追跡番号登録（`POST /v1/shipping/trackers-batch`・**transaction_id 必須**＝Inc3 で capture id 取得・保存）。
+- Inc4: ケース管理（`CUSTOMER.DISPUTE.CREATED/UPDATED/RESOLVED` webhook → 既存署名検証基盤を流用 → dispute↔invoice/order 紐づけ表示）。
+
+### 危ない変更・PO 依頼事項
+- 新列・写しPDF 保存テーブルの **migration は本番投入前に Shingo の明示 GO 必須**。
+- webhook 公開エンドポイント拡張は**署名検証を必須要件**（既存基盤あり）。
+- **PayPal アカウント作業（Shingo 領域）**: REST アプリで Invoicing/Disputes 機能の有効化、webhook の dispute イベント本番登録、Add Tracking 利用可否確認。
 
 ---
 

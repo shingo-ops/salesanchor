@@ -1185,7 +1185,10 @@
       "confirm": "支払い状況を確認",
       "linkTitle": "PayPal 請求書（顧客の支払いページ）",
       "linkHint": "PayPal から顧客にメールで請求書が送付されました。下記は顧客の支払いページです。支払いが完了すると自動で入金が確定します（確定しない場合は「支払い状況を確認」を押してください）。",
-      "openLink": "リンクを開く"
+      "openLink": "リンクを開く",
+      "recordTitle": "PayPal 請求書（記録）",
+      "openOriginal": "原本を開く",
+      "downloadCopyPdf": "写しPDFをダウンロード"
     },
     "voidReasonLabel": "無効化理由",
     "voidReasonPlaceholder": "無効化の理由を入力...",

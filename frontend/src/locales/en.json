@@ -1185,7 +1185,10 @@
       "confirm": "Check Payment Status",
       "linkTitle": "PayPal invoice (customer payment page)",
       "linkHint": "PayPal has emailed the invoice to the customer. Below is the customer payment page. Payment is confirmed automatically once they pay (if not, click Check Payment Status).",
-      "openLink": "Open Link"
+      "openLink": "Open Link",
+      "recordTitle": "PayPal invoice (record)",
+      "openOriginal": "Open Original",
+      "downloadCopyPdf": "Download Copy PDF"
     },
     "voidReasonLabel": "Void Reason",
     "voidReasonPlaceholder": "Enter reason for voiding...",
