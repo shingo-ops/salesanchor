@@ -41,7 +41,7 @@
 - `leads.converted_deal_id`: `backend/app/schemas/lead.py:156` — `converted_deal_id: int | None`
 
 **商談化率の計算可否**
-- ✅ `COUNT(l.converted_deal_id) / COUNT(*)`で商談化率は計算可能（既存: `analytics.py:93`）
+- ✅ `COUNT(l.converted_deal_id) / COUNT(*)`で商談化率は計算可能（既存: `backend/app/routers/analytics.py:93`）
 - ❌ **変換日時（converted_at）は存在しない**。`migrations/003_add_phase1_tenant_tables.sql:148-156` の deals 追加カラムに converted_at なし
 - 変換タイミングの代替案: `deals.created_at` を商談化日時として近似することは可能（設計フェーズで検討）
 
@@ -83,7 +83,7 @@
 ### A-5. 接触履歴
 
 **利用可能なデータ**
-- `meta_inbox.py:983`: `lat.created_at AS last_message_at`（Inbox メッセージの最終日時）
+- `backend/app/routers/meta_inbox.py:983`: `lat.created_at AS last_message_at`（Inbox メッセージの最終日時）
   - **ただし**: `meta_messages` テーブルは `lead_id` でリードに紐付き（`migrations/012_add_meta_tenant_tables.sql:8-22`）、company_id/contact_id は**直接紐付かない**
 - `analytics.py:249-252`: `leads.next_action_date`（手動設定の次アクション日）— 実際の接触日時ではない
 
@@ -223,7 +223,7 @@ await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
 
 **DashboardPage からの既存 navigate**
 - `DashboardPage.tsx:467, 482, 510`: `navigate("/crm/companies")`
-- `DashboardPage.tsx:496`: `navigate("/deals")`
+- `frontend/src/pages/dashboard/DashboardPage.tsx:543`: `navigate("/deals")`
 
 **PO決定「下層ページ方式（メニューなし）」への対応**
 カード/行クリック → `navigate("/dashboard/funnel/:section")` 等の新ルートを App.tsx に追加する方式が既存パターンと整合。
@@ -242,7 +242,7 @@ await db.execute(text(f"SET app.tenant_id = '{safe_id}'"))
       assign_filter_deals = "AND assigned_to = :uid"
       params = {"start": ..., "end": ..., "uid": target_user_id}
   ```
-- `assigned_to` 型: `int` (deals/leads 共通, `deal.py:78`, `lead.py:78`)
+- `assigned_to` 型: `int` (deals/leads 共通, `backend/app/schemas/deal.py:64`, `backend/app/schemas/lead.py:79`)
 
 **マネジメント/プレイヤービュー切り替えの実装コスト**
 既存の `tab: "sales" | "lead" | "team"` に "manager"/"player" を追加するか、ロール判定で `toApiTab()` を拡張するパターンが最小コスト（設計フェーズで決定）。
