@@ -151,3 +151,4 @@
 | feature/morimoto/fix-develop-migration-order | develop migration 順序修正（SA-02 Stage 3 追加） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-to-develop-3 | main → develop フルマージ（SA-02 Stage 3 コード取り込み） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/release-fix | develop → main リリース競合解消（run_all_migrations.sh ADR-128挿入） | 2026-06-11 | IN_PROGRESS | | | |
+| test/shingo-cc-auth-check | shingo-cc 認証確認テストPR（クローズ予定） | 2026-06-12 | IN_PROGRESS | | | |
