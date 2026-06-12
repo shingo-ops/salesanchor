@@ -549,23 +549,366 @@ jobs:
             echo "✅ $sqlfile 再実行成功（冪等性 OK）"
           done
 
+  # ── 全件ドライラン: 既存マイグレーション全部を順に適用し組み合わせ問題を検知 ─
+  # migration 変更がある PR でのみ起動。run_all_migrations.sh の run_sql 記載順を SSoT とする。
+  migration-full-dryrun:
+    name: マイグレーション全件ドライラン（実DB）
+    needs: detect-changes
+    if: needs.detect-changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: jarvis_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jarvis -d jarvis_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://jarvis:testpass@localhost:5432/jarvis_db
+      PGPASSWORD: testpass
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt
+
+      - name: PostgreSQL 待機
+        run: |
+          for i in $(seq 1 10); do
+            pg_isready -h localhost -U jarvis -d jarvis_db && exit 0
+            sleep 2
+          done
+          echo "PostgreSQL が起動しませんでした" && exit 1
+
+      - name: ベーススキーマを作成（全件ドライラン用）
+        run: |
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'SQL'
+          -- public.tenants
+          CREATE TABLE IF NOT EXISTS public.tenants (
+              id          SERIAL PRIMARY KEY,
+              tenant_name VARCHAR(255) NOT NULL UNIQUE,
+              tenant_code VARCHAR(50)  NOT NULL UNIQUE,
+              is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+              settings    JSONB                 DEFAULT '{}',
+              created_at  TIMESTAMPTZ           DEFAULT NOW(),
+              updated_at  TIMESTAMPTZ           DEFAULT NOW()
+          );
+
+          -- public.users
+          CREATE TABLE IF NOT EXISTS public.users (
+              id            SERIAL PRIMARY KEY,
+              tenant_id     INTEGER      NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              email         VARCHAR(255) NOT NULL UNIQUE,
+              password_hash VARCHAR(255) NOT NULL DEFAULT '',
+              full_name     VARCHAR(255),
+              role          VARCHAR(50)           DEFAULT 'user',
+              is_active     BOOLEAN               DEFAULT TRUE,
+              locale        VARCHAR(10)  NOT NULL DEFAULT 'ja',
+              theme         VARCHAR(10)  NOT NULL DEFAULT 'light',
+              created_at    TIMESTAMPTZ           DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ           DEFAULT NOW(),
+              last_login    TIMESTAMPTZ
+          );
+
+          -- public.permissions
+          CREATE TABLE IF NOT EXISTS public.permissions (
+              id          SERIAL PRIMARY KEY,
+              key         VARCHAR(100) NOT NULL UNIQUE,
+              resource    VARCHAR(50)  NOT NULL,
+              action      VARCHAR(50)  NOT NULL,
+              description VARCHAR(255) NOT NULL DEFAULT '',
+              category    VARCHAR(50)  NOT NULL DEFAULT ''
+          );
+
+          INSERT INTO public.tenants (tenant_name, tenant_code)
+          VALUES ('テストテナント', 'test-tenant') ON CONFLICT DO NOTHING;
+
+          INSERT INTO public.users (tenant_id, email, full_name)
+          VALUES (1, 'existing@example.com', '既存ユーザー') ON CONFLICT DO NOTHING;
+          SQL
+
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'TENANT_SQL'
+          CREATE SCHEMA IF NOT EXISTS tenant_001;
+
+          CREATE TABLE IF NOT EXISTS tenant_001.role_permissions (
+              id         SERIAL PRIMARY KEY,
+              role       VARCHAR(50) NOT NULL,
+              permission VARCHAR(100) NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.staff (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              user_id    INTEGER,
+              full_name  VARCHAR(255),
+              is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.leads (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              full_name  VARCHAR(255),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.deals (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              title      VARCHAR(255),
+              company_id INTEGER,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.companies (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL,
+              name       VARCHAR(255) NOT NULL,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.conversation_logs (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              lead_id             INTEGER,
+              contact_id          INTEGER,
+              company_id          INTEGER,
+              deal_id             INTEGER,
+              channel_type        VARCHAR(30) NOT NULL,
+              channel_identity    VARCHAR(255),
+              direction           VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+              sender              VARCHAR(100),
+              content_text        TEXT,
+              original_language   VARCHAR(10),
+              external_message_id VARCHAR(255) UNIQUE,
+              raw_payload         JSONB,
+              status              VARCHAR(20) DEFAULT 'sent',
+              translated_text     TEXT,
+              analysis            JSONB,
+              occurred_at         TIMESTAMPTZ NOT NULL,
+              created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.quotes (
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER NOT NULL,
+              quote_code      VARCHAR(50),
+              company_id      INTEGER,
+              contact_id      INTEGER,
+              currency        VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal        NUMERIC(15,2),
+              shipping_fee    NUMERIC(15,2),
+              tax_amount      NUMERIC(15,2),
+              total_amount    NUMERIC(15,2),
+              status          VARCHAR(30) NOT NULL DEFAULT 'draft',
+              validity_date   DATE,
+              notes           TEXT,
+              created_at      TIMESTAMPTZ DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.quote_items (
+              id              SERIAL PRIMARY KEY,
+              quote_id        INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.invoices (
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              invoice_number      VARCHAR(50),
+              quote_id            INTEGER,
+              company_id          INTEGER,
+              contact_id          INTEGER,
+              currency            VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal            NUMERIC(15,2),
+              shipping_fee        NUMERIC(15,2),
+              tax_amount          NUMERIC(15,2),
+              total_amount        NUMERIC(15,2),
+              exchange_rate_jpy   NUMERIC(15,4),
+              exchange_rate_usd   NUMERIC(15,4),
+              amount_jpy          NUMERIC(15,2),
+              amount_usd          NUMERIC(15,2),
+              payment_method      VARCHAR(50),
+              status              VARCHAR(30) NOT NULL DEFAULT 'draft',
+              branch_number       INTEGER NOT NULL DEFAULT 1,
+              pdf_url             TEXT,
+              erp_key             VARCHAR(20),
+              issued_at           TIMESTAMPTZ,
+              due_date            DATE,
+              paid_at             TIMESTAMPTZ,
+              voided_at           TIMESTAMPTZ,
+              void_reason         TEXT,
+              notes               TEXT,
+              created_by          INTEGER,
+              created_at          TIMESTAMPTZ DEFAULT NOW(),
+              updated_at          TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.invoice_items (
+              id              SERIAL PRIMARY KEY,
+              invoice_id      INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
+          );
+          TENANT_SQL
+
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'PUBLIC_SQL'
+          CREATE TABLE IF NOT EXISTS public.tenant_discord_config (
+              id         SERIAL PRIMARY KEY,
+              tenant_id  INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              guild_id   VARCHAR(32),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS public.tenant_settings (
+              tenant_id         INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+              spreadsheet_phase TEXT NOT NULL DEFAULT 'A',
+              created_at        TIMESTAMPTZ DEFAULT NOW(),
+              updated_at        TIMESTAMPTZ DEFAULT NOW()
+          );
+          INSERT INTO public.tenant_settings (tenant_id) VALUES (1) ON CONFLICT DO NOTHING;
+          CREATE TABLE IF NOT EXISTS public.inventory (
+              id          SERIAL PRIMARY KEY,
+              supplier_id INTEGER NOT NULL,
+              product_id  INTEGER NOT NULL,
+              condition   VARCHAR(50) NOT NULL,
+              quantity    INTEGER NOT NULL DEFAULT 0,
+              unit_price  INTEGER NOT NULL DEFAULT 0,
+              status      VARCHAR(20) NOT NULL DEFAULT 'in_stock',
+              notes_ja    TEXT,
+              notes_en    TEXT,
+              offered_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              expires_at  TIMESTAMPTZ,
+              source      VARCHAR(50) NOT NULL DEFAULT 'manual',
+              created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              UNIQUE (supplier_id, product_id, condition)
+          );
+          CREATE TABLE IF NOT EXISTS public.tenant_carrier_credentials (
+              id                      SERIAL PRIMARY KEY,
+              tenant_id               INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              carrier                 TEXT    NOT NULL,
+              client_id_encrypted     TEXT    NOT NULL DEFAULT '',
+              client_secret_encrypted TEXT    NOT NULL DEFAULT '',
+              environment             TEXT    NOT NULL DEFAULT 'sandbox',
+              updated_by_user_id      INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at              TIMESTAMPTZ DEFAULT NOW(),
+              updated_at              TIMESTAMPTZ DEFAULT NOW(),
+              UNIQUE (tenant_id, carrier)
+          );
+          CREATE TABLE IF NOT EXISTS public.registration_tokens (
+              id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+              tenant_id    INTEGER     NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+              lead_id      INTEGER     NOT NULL,
+              token_hash   VARCHAR(64) UNIQUE NOT NULL,
+              type         VARCHAR(20) NOT NULL CHECK (type IN ('register', 'add_address')),
+              expires_at   TIMESTAMPTZ NOT NULL,
+              used_at      TIMESTAMPTZ,
+              created_by   INTEGER     NOT NULL,
+              created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          PUBLIC_SQL
+
+      - name: Sprint 1 マイグレーションを適用（タイムスタンプ SQL の前提条件）
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          if [ -f scripts/migrate_inventory_sprint1.py ]; then
+            python scripts/migrate_inventory_sprint1.py
+            echo "✅ Sprint 1 完了"
+          else
+            echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
+          fi
+
+      - name: 全タイムスタンプ SQL マイグレーションを順次実行（run_all_migrations.sh の記載順）
+        # 対象: migrations/20260604_*.sql 以降（タイムスタンプ形式）のみ
+        # 番号付き migration（013-100）と初期タイムスタンプ（20260601-20260603）は
+        # Python migration や numbered migration が作るカラムに依存するため除外。
+        # 20260604 以降は本 CI の base schema + Sprint 1 でカバーされる。
+        # これらは既存の migration-test-run ジョブで変更時のみ検証される。
+        run: |
+          echo "🔍 run_all_migrations.sh から 20260604 以降のタイムスタンプ SQL の順序を取得..."
+          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026060[4-9]' || echo 0)
+          TOTAL2=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026061' || echo 0)
+          TOTAL2b=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026062' || echo 0)
+          TOTAL=$((TOTAL + TOTAL2 + TOTAL2b))
+          echo "対象 SQL ファイル数（20260604〜形式）: ${TOTAL}"
+          STEP=0
+
+          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' | while read sqlfile; do
+            [ -z "$sqlfile" ] && continue
+            STEP=$((STEP + 1))
+            if [ ! -f "$sqlfile" ]; then
+              echo "⚠️  [${STEP}/${TOTAL}] ファイルなし、スキップ: $sqlfile"
+              continue
+            fi
+            echo "▶ [${STEP}/${TOTAL}] $sqlfile..."
+            if ! psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"; then
+              echo "❌ [${STEP}/${TOTAL}] 失敗: $sqlfile"
+              exit 1
+            fi
+            echo "✅ [${STEP}/${TOTAL}] $sqlfile"
+          done
+
+          echo ""
+          echo "✅ タイムスタンプ形式全件ドライラン完了"
+
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
-  # - migration 変更あり: migration-test-run の結果を報告
-  # - migration 変更なし: migration-test-run が skipped → 成功として報告
+  # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
+  # - migration 変更なし: 両ジョブが skipped → 成功として報告
   migration-test:
     name: マイグレーションSQL 実行テスト（実DB）
-    needs: [detect-changes, migration-test-run]
+    needs: [detect-changes, migration-test-run, migration-full-dryrun]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Report results
         run: |
           r="${{ needs.migration-test-run.result }}"
+          d="${{ needs.migration-full-dryrun.result }}"
           echo "migration-test-run: $r"
-          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
-            echo "OK: migration test passed or no migration changes"
+          echo "migration-full-dryrun: $d"
+          if [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
+            echo "OK: all migration tests passed or no migration changes"
             exit 0
           else
-            echo "FAIL: migration-test-run=$r"
+            echo "FAIL: migration-test-run=$r, migration-full-dryrun=$d"
             exit 1
           fi

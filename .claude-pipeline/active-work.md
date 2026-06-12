@@ -159,3 +159,4 @@
 | feature/morimoto/back-merge-main-for-2032 | main → develop バックマージ（hotfix f2a33605 取り込み・PR #2032 競合解消） | 2026-06-12 | DONE | | | |
 | feature/morimoto/adr-135-final-checkboxes | ADR-135 受け入れ条件チェックボックス更新 + 経緯記録 | 2026-06-12 | IN_PROGRESS | #2033 | | |
 | feature/morimoto/adr-135-cleanup-approvers | ADR-135 AUTHORIZED_APPROVERS/AUTHORS 一時追加削除 | 2026-06-12 | IN_PROGRESS | #2034 | | |
+| feature/morimoto/migration-full-dryrun-ci | migration-test.yml 全件ドライランジョブ追加（ADR-135強化） | 2026-06-12 | IN_PROGRESS | #2051 | | |
