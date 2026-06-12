@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-12 / ADR 総数: 127 件
+最終更新: 2026-06-12 / ADR 総数: 129 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -139,12 +139,14 @@
 | [ADR-127](./ADR-127-registration-post-forms.md) | ADR-127: 登録後の変更・追加を専用フォーム化（請求先変更／配送先追加）＋新規登録の二重発行防止 | Proposed | — | — |
 | [ADR-128](./ADR-128-audit-log-coverage-high.md) | ADR-128: 監査ログ カバレッジ補完（高重要度2系統） | Accepted | — | — |
 | [ADR-129](./ADR-129-audit-log-coverage-medium.md) | ADR-129: 監査ログ カバレッジ補完（中重要度4系統） | Accepted | — | — |
+| [ADR-129](./ADR-129-fedex-label-validation-wizard.md) | ADR-129: テナント向け FedEx Label Validation 申請支援ウィザード | 採用 | — | — |
 | [ADR-129](./ADR-129-github-actions-node-version-tracking.md) | ADR-129: GitHub Actions ランタイムバージョン追従方針 | Accepted | — | — |
 | [ADR-130](./ADR-130-nginx-reload-policy.md) | ADR-130: nginx reload ポリシー（案B）+ migration TOTAL 自動カウント | Accepted | — | — |
 | [ADR-131](./ADR-131-tenant-context-auto-reset.md) | ADR-131: テナントコンテキスト 自動クリア（get_db finally ブロック） | Accepted | — | — |
 | [ADR-132](./ADR-132-background-tasks-tenant-context.md) | ADR-132: BackgroundTasks テナントコンテキスト保護 | Accepted | — | — |
 | [ADR-133](./ADR-133-nginx-resolver-proxy-pass-variable.md) | ADR-133: nginx resolver + proxy_pass 変数化による IP 固着 502 恒久解 | Accepted | — | 2026-06-11 |
 | [ADR-134](./ADR-134-invoice-billing-display-name.md) | ADR-134: 請求書PDFの宛名に billing_display_name を優先使用する | Accepted | — | — |
+| [ADR-135](./ADR-135-release-stowaway-prevention.md) | ADR-135: リリース相乗り防止 — develop を常に出荷可能に保つ | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例

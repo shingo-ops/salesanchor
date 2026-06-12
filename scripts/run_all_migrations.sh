@@ -354,6 +354,9 @@ run_sql migrations/20260612_090000_extend_registration_tokens_change_billing.sql
 # ADR-101 改訂(2) Inc1: invoices に PayPal 写しPDF 関連列を追加
 run_sql migrations/20260612_131520_add_invoice_copypdf.sql
 
+# ADR-129: tenant_carrier_credentials の UNIQUE 制約を (tenant_id, carrier, environment) に変更
+run_sql migrations/20260612_200000_fedex_creds_unique_env.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
