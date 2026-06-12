@@ -603,7 +603,34 @@
   font-size: var(--font-base);
 }
 
-/* ── キャリア連携: 環境カード（PR-A: view/edit 分離）──────────────────── */
+/* ── キャリア連携: ページタブ・フォーム共通（PR-A: view/edit 分離）─────── */
+
+/* ページ最上部のタブ（API連携設定 / 連携ガイド）下の余白 */
+.carrier-page-tabs {
+  margin-bottom: var(--space-4);
+}
+
+/* 編集フォームセクション（carrier-env-card--editing 内） */
+.update-form {
+  margin-bottom: var(--space-3);
+}
+
+/* ── キャリア連携: 環境カード ────────────────────────────────────────── */
+
+/* 環境カードベース（.card と併用）*/
+.carrier-env-card {
+  margin-bottom: var(--space-4);
+}
+
+/* 未登録状態: 背景を subtle に変えて「空」を伝える */
+.carrier-env-card--empty {
+  background: var(--bg-subtle);
+}
+
+/* 編集フォーム展開中 */
+.carrier-env-card--editing {
+  border-color: var(--accent);
+}
 
 .carrier-env-card__header {
   display: flex;
