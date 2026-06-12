@@ -108,6 +108,20 @@
 | feature/morimoto/adr-127-registration-post-forms | （記入してください） | 2026-06-11 04:46 | IN_PROGRESS | | | |
 | feature/morimoto/sa-02-stage1-channel-webhook | （記入してください） | 2026-06-11 10:29 | IN_PROGRESS | | | |
 | feature/morimoto/active-work-done-cleanup | （記入してください） | 2026-06-11 10:44 | IN_PROGRESS | | | |
+| feature/morimoto/adr127-phase1-address-form | （記入してください） | 2026-06-11 11:11 | IN_PROGRESS | | | |
+| feature/morimoto/zero-downtime-deploy | （記入してください） | 2026-06-11 11:25 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-post-deploy-docs | （記入してください） | 2026-06-11 11:27 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage3-manual-record | （記入してください） | 2026-06-11 11:33 | IN_PROGRESS | | | |
+| feature/morimoto/adr127-phase2-dual-gate | ADR-127 §4 第1層ゲート | 2026-06-11 11:35 | IN_PROGRESS | #1936 | | |
+| feature/morimoto/adr127-phase2b-registered-label | （記入してください） | 2026-06-11 12:51 | IN_PROGRESS | | | |
+| feature/morimoto/zero-downtime-polish | （記入してください） | 2026-06-11 12:53 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage3-plan-update | （記入してください） | 2026-06-11 13:06 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage4-company-conv-logs | SA-02 段階4: 会社詳細会話履歴タブ | 2026-06-11 13:09 | DONE | #1945 | ✅ | |
+| feature/morimoto/sa-02-stage4-docs | SA-02 進捗ドキュメント更新 | 2026-06-11 13:15 | IN_PROGRESS | | | |
+| feature/morimoto/adr127-phase2c-button-color | （記入してください） | 2026-06-11 13:50 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage2-migration-prep | （記入してください） | 2026-06-11 13:58 | IN_PROGRESS | | | |
+| feature/morimoto/sync-main-develop-adr128 | main/develop 同期（ADR-128 migration 競合解消） | 2026-06-11 14:07 | DONE | #1953 | | |
+| feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
 ---
 
 ## 記入例
@@ -129,6 +143,11 @@
 | feature/morimoto/role-badge-color | オーナーロール色 赤→インディゴ（全テナント冪等マイグレーション） | 2026-06-11 | IN_PROGRESS | #1920 | | |
 | docs/morimoto/sa-foundation-recon-audit | SA土台バッチ全体監査レポート（ADR-131/132 実装・監査文書クローズ） | 2026-06-10 | IN_PROGRESS | #1900 | | |
 | feature/morimoto/adr126-error-handling | ADR-126 公開フォームエラーハンドリング（409 already_registered + i18n） | 2026-06-11 | IN_PROGRESS | #1918 | | |
+| feature/morimoto/main-deploy-stamp | main デプロイ成功スタンプ（ADR-116） | 2026-06-07 | IN_PROGRESS | #1712 | | |
 | feature/morimoto/ui-consistency-a | 集計枠 fieldset → Card 統一（SalesPage + CommissionsPage） | 2026-06-10 | DONE | #1919 | | |
 | feature/morimoto/datatable-p2-pilot | DataTable標準化フェーズ2 Pilot（SupplierParseStatsTab） | 2026-06-10 | DONE | #1915 | | |
 | feature/morimoto/fedex-ship-stage2 | ADR-128 FedEx ラベル発行・集荷予約 Stage 2 実装 | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/back-merge-main-for-adr128 | main → develop バックマージ（SA-02 Stage 3 migration 取り込み） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/fix-develop-migration-order | develop migration 順序修正（SA-02 Stage 3 追加） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/sync-main-to-develop-3 | main → develop フルマージ（SA-02 Stage 3 コード取り込み） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/release-fix | develop → main リリース競合解消（run_all_migrations.sh ADR-128挿入） | 2026-06-11 | IN_PROGRESS | | | |
