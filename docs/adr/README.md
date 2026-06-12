@@ -139,6 +139,7 @@
 | [ADR-127](./ADR-127-registration-post-forms.md) | ADR-127: 登録後の変更・追加を専用フォーム化（請求先変更／配送先追加）＋新規登録の二重発行防止 | Proposed | — | — |
 | [ADR-128](./ADR-128-audit-log-coverage-high.md) | ADR-128: 監査ログ カバレッジ補完（高重要度2系統） | Accepted | — | — |
 | [ADR-129](./ADR-129-audit-log-coverage-medium.md) | ADR-129: 監査ログ カバレッジ補完（中重要度4系統） | Accepted | — | — |
+| [ADR-129](./ADR-129-fedex-label-validation-wizard.md) | ADR-129: テナント向け FedEx Label Validation 申請支援ウィザード | 採用 | — | — |
 | [ADR-129](./ADR-129-github-actions-node-version-tracking.md) | ADR-129: GitHub Actions ランタイムバージョン追従方針 | Accepted | — | — |
 | [ADR-130](./ADR-130-nginx-reload-policy.md) | ADR-130: nginx reload ポリシー（案B）+ migration TOTAL 自動カウント | Accepted | — | — |
 | [ADR-131](./ADR-131-tenant-context-auto-reset.md) | ADR-131: テナントコンテキスト 自動クリア（get_db finally ブロック） | Accepted | — | — |

@@ -328,12 +328,15 @@ def _validate_carrier(carrier: str) -> None:
 )
 async def carrier_status(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ) -> CarrierStatus:
-    """キャリアの認証情報の設定状況とフィールド別登録ヒント（シークレット平文は返さない）。"""
+    """キャリアの認証情報の設定状況とフィールド別登録ヒント（シークレット平文は返さない）。
+    ADR-129: environment クエリパラメータで本番/Sandbox を切り替え可能。
+    """
     _validate_carrier(carrier)
-    st = await carriers.get_status(db, tenant_id, carrier)
+    st = await carriers.get_status(db, tenant_id, carrier, environment=environment)
     return CarrierStatus(
         carrier=carrier,
         configured=st["configured"],
@@ -364,7 +367,8 @@ async def save_carrier_credentials(
             detail="認証ID・シークレットの両方を入力してください。",
         )
     # 変更前の非機密情報を取得（機密値は記録しない）
-    old_status = await carriers.get_status(db, tenant_id, carrier)
+    # ADR-129: payload.environment で本番/Sandbox を区別して保存
+    old_status = await carriers.get_status(db, tenant_id, carrier, environment=payload.environment)
     audit_action = "update" if old_status["configured"] else "create"
     old_audit = {
         "carrier": carrier,
@@ -378,13 +382,13 @@ async def save_carrier_credentials(
         carrier,
         payload.client_id,
         payload.client_secret,
-        "production",  # ADR-125 UX: 顧客UIは production 固定（dropdown 廃止）
+        payload.environment,  # ADR-129: 環境を受け取り（旧: production 固定）
         user.id,
         account_number=payload.account_number,
     )
     # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:182）。
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
-    new_status = await carriers.get_status(db, tenant_id, carrier)
+    new_status = await carriers.get_status(db, tenant_id, carrier, environment=payload.environment)
     new_audit = {
         "carrier": carrier,
         "environment": new_status["environment"],
@@ -405,22 +409,23 @@ async def save_carrier_credentials(
 )
 async def delete_carrier_credentials(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """キャリア認証情報を削除。admin 専用。"""
+    """キャリア認証情報を削除。admin 専用。ADR-129: environment クエリパラメータで本番/Sandbox を指定。"""
     _validate_carrier(carrier)
     _require_admin(user)
     # 削除前の非機密情報を取得（機密値は記録しない）
-    old_status = await carriers.get_status(db, tenant_id, carrier)
+    old_status = await carriers.get_status(db, tenant_id, carrier, environment=environment)
     old_audit = {
         "carrier": carrier,
         "environment": old_status["environment"],
         "account_number_hint": old_status["account_number_hint"],
     } if old_status["configured"] else None
 
-    await carriers.delete_credentials(db, tenant_id, carrier)
+    await carriers.delete_credentials(db, tenant_id, carrier, environment=environment)
     # NOTE: delete_credentials は内部で db.commit() 済み（carrier_credentials.py:190）。
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
     await record_audit_log(
@@ -439,12 +444,15 @@ async def delete_carrier_credentials(
 )
 async def carrier_test_connection(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ) -> CarrierTestResponse:
-    """保存済みの認証情報で各社 API への疎通（認証）を確認する。"""
+    """保存済みの認証情報で各社 API への疎通（認証）を確認する。
+    ADR-129: environment クエリパラメータで本番/Sandbox を切り替え可能。
+    """
     _validate_carrier(carrier)
-    creds = await carriers.get_credentials(db, tenant_id, carrier)
+    creds = await carriers.get_credentials(db, tenant_id, carrier, environment=environment)
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

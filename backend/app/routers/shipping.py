@@ -20,6 +20,7 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel as _BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -631,4 +632,174 @@ async def create_fedex_pickup(
         order_id=data.order_id,
         pickup_confirmation_code=result.confirmation_code,
         location_code=result.location_code,
+    )
+
+
+# =========================================================================
+# FedEx Label Validation 申請支援（ADR-129）
+# =========================================================================
+
+# テスト用固定データ（Sandbox ラベル発行用）
+_LV_SHIPPER = {
+    "contact": {"personName": "Taro Yamada", "companyName": "Label Validation Test", "phoneNumber": "0312345678"},
+    "address": {"streetLines": ["1-1 Minami Aoyama", "Minato-ku"], "city": "Tokyo", "postalCode": "1070062", "countryCode": "JP"},
+}
+_LV_RECIPIENT = {
+    "contact": {"personName": "Test Recipient", "companyName": "FedEx Recipient US", "phoneNumber": "9016836600"},
+    "address": {"streetLines": ["3875 Airways Blvd"], "city": "Memphis", "stateOrProvinceCode": "TN", "postalCode": "38116", "countryCode": "US"},
+}
+_LV_CUSTOMS = {
+    "dutiesPayment": {"paymentType": "SENDER"},
+    "commodities": [{
+        "description": "Sample Item for Label Validation",
+        "quantity": 1,
+        "quantityUnits": "PCS",
+        "weight": {"units": "KG", "value": 1.0},
+        "numberOfPieces": 1,
+        "countryOfManufacture": "JP",
+        "harmonizedCode": "000000",
+        "unitPrice": {"amount": 10, "currency": "USD"},
+        "customsValue": {"amount": 10, "currency": "USD"},
+    }],
+}
+_LV_SERVICES = [
+    ("IP",   "INTERNATIONAL_PRIORITY",               "FedEx International Priority"),
+    ("IE",   "INTERNATIONAL_ECONOMY",                "FedEx International Economy"),
+    ("IPE",  "FEDEX_INTERNATIONAL_PRIORITY_EXPRESS", "FedEx International Priority Express"),
+    ("FICP", "FEDEX_INTERNATIONAL_CONNECT_PLUS",     "FedEx International Connect Plus"),
+]
+
+
+class LVSampleResult(_BaseModel):
+    service_abbr: str
+    service_name: str
+    service_type: str
+    tracking_number: str
+    pdf_base64: str
+
+
+class LVSamplesResponse(_BaseModel):
+    labels: list[LVSampleResult]
+
+
+@router.post(
+    "/shipping/label-validation/samples",
+    response_model=LVSamplesResponse,
+    status_code=200,
+    dependencies=[Depends(require_permission("shipping.manage"))],
+)
+async def lv_issue_sample_labels(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """FedEx Label Validation 用サンプルラベルを Sandbox 環境で 4 サービス分発行する（ADR-129）。
+
+    - Sandbox 認証情報が必要（アカウント番号含む）
+    - 固定テスト住所を使用（日本→米国の国際便）
+    - カスタム通関情報（customs_clearance）を自動付与
+    """
+    import base64 as _b64
+    from decimal import Decimal
+
+    from app.services import fedex_ship
+
+    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
+    if not creds or not creds.get("account_number"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="FedEx Sandbox 認証情報またはアカウント番号が未設定です。先にSandbox認証情報を登録してください。",
+        )
+
+    labels: list[LVSampleResult] = []
+    for abbr, service_type, service_name in _LV_SERVICES:
+        try:
+            result = await asyncio.to_thread(
+                fedex_ship.create_shipment,
+                tenant_id=tenant_id,
+                environment="sandbox",
+                client_id=creds["client_id"],
+                client_secret=creds["client_secret"],
+                account_number=creds["account_number"],
+                shipper=_LV_SHIPPER,
+                recipient=_LV_RECIPIENT,
+                service_type=service_type,
+                weight_kg=Decimal("1.0"),
+                customs_clearance=_LV_CUSTOMS,
+            )
+        except FedExAuthError as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        except FedExAPIError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{service_name}({abbr}) ラベル発行失敗: {e}",
+            )
+
+        labels.append(LVSampleResult(
+            service_abbr=abbr,
+            service_name=service_name,
+            service_type=service_type,
+            tracking_number=result.tracking_number,
+            pdf_base64=_b64.b64encode(result.label_bytes).decode(),
+        ))
+
+    return LVSamplesResponse(labels=labels)
+
+
+@router.get(
+    "/shipping/label-validation/cover-sheet",
+    status_code=200,
+    dependencies=[Depends(require_permission("shipping.manage"))],
+)
+async def lv_download_cover_sheet(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """FedEx Label Validation 申請用カバーシート PDF を生成してブラウザ直接ダウンロードする（ADR-129）。
+
+    J3 決定: Google Drive には保存しない（ブラウザ直接ダウンロード）。
+    """
+    from fastapi.responses import Response as _Response
+
+    from app.services import label_validation as lv
+
+    profile = await lv.get_tenant_profile(db, tenant_id)
+    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
+    account_number = creds["account_number"] if creds else None
+
+    pdf_bytes = lv.generate_cover_sheet_pdf(
+        company_name=profile.get("company_name"),
+        company_name_en=profile.get("company_name_en"),
+        address=profile.get("address"),
+        phone=profile.get("phone"),
+        email=profile.get("email"),
+        account_number=account_number,
+    )
+
+    return _Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="fedex_label_validation_cover.pdf"'},
+    )
+
+
+@router.get(
+    "/shipping/label-validation/email-template",
+    dependencies=[Depends(require_permission("shipping.manage"))],
+)
+async def lv_get_email_template(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> dict:
+    """FedEx Label Validation 申請メール文面（英文）を返す（ADR-129）。"""
+    from app.services import label_validation as lv
+
+    profile = await lv.get_tenant_profile(db, tenant_id)
+    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
+    account_number = creds["account_number"] if creds else None
+
+    return lv.generate_email_template(
+        company_name_en=profile.get("company_name_en"),
+        email=profile.get("email"),
+        phone=profile.get("phone"),
+        account_number=account_number,
     )
