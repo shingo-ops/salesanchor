@@ -71,6 +71,10 @@ VALID_STATUS_CODES = frozenset([
     "out_of_scope",
 ])
 
+# All values recognised by this migration (old + new).
+# Any value outside this set is "unexpected" and must abort the migration.
+_ALL_KNOWN_VALS = VALID_STATUS_CODES | frozenset(old for old, _ in STATUS_MAP)
+
 
 async def main() -> None:
     url = os.getenv("DATABASE_URL")
@@ -90,6 +94,40 @@ async def main() -> None:
             )
             tenants = [(row.id, row.tenant_code) for row in r]
         logger.info("対象テナント: %d", len(tenants))
+
+        # ── 事前検証: 想定外の status 値があれば UPDATE なしで中断 ──────────────
+        logger.info("=== [Pre-check] 想定外ステータス値の確認 ===")
+        unknown_found = False
+        for tid, tc in tenants:
+            schema = f"tenant_{tid:03d}"
+            async with engine.connect() as pre_conn:
+                # status 列の存在チェック
+                col_check = await pre_conn.execute(
+                    text("""
+                        SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = :schema AND table_name = 'leads'
+                        AND column_name = 'status'
+                    """),
+                    {"schema": schema},
+                )
+                if not col_check.scalar():
+                    continue
+                # 全 status の distinct 値を取得
+                rows = await pre_conn.execute(
+                    text(f"SELECT DISTINCT status FROM {schema}.leads WHERE status IS NOT NULL")
+                )
+                for (val,) in rows:
+                    if val not in _ALL_KNOWN_VALS:
+                        logger.error(
+                            "[Pre-check] %s: 想定外の status 値 '%s' を検出。"
+                            "マッピングを定義せずに移行することはできません。",
+                            schema, val,
+                        )
+                        unknown_found = True
+        if unknown_found:
+            logger.error("=== 事前検証失敗: 想定外値が存在するため migration を中断します ===")
+            sys.exit(1)
+        logger.info("=== [Pre-check] 全テナント OK — migration を開始します ===")
 
         for tid, tc in tenants:
             schema = f"tenant_{tid:03d}"
