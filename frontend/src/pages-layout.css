@@ -602,3 +602,98 @@
   color: var(--warning-text);
   font-size: var(--font-base);
 }
+
+/* ── キャリア連携: 環境カード（PR-A: view/edit 分離）──────────────────── */
+
+.carrier-env-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.carrier-env-card__title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.carrier-env-card__last-tested {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.carrier-env-card__test-error {
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+}
+
+.carrier-env-card__hint {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+}
+
+.carrier-env-card--empty {
+  border: 2px dashed var(--border);
+  background: var(--bg-subtle);
+}
+
+.carrier-env-card__body {
+  margin-bottom: var(--space-3);
+}
+
+.carrier-env-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- intentional */
+.carrier-env-info-row:last-child {
+  border-bottom: none;
+}
+
+.carrier-env-info-label {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  min-width: var(--size-carrier-label-col);
+  flex-shrink: 0;
+}
+
+.carrier-env-info-value {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.carrier-env-info-value--masked {
+  letter-spacing: 0.04em;
+}
+
+.carrier-env-info-value--muted {
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: inherit;
+}
+
+.carrier-env-info-value--warn {
+  color: var(--warning-text);
+  font-family: inherit;
+}
+
+/* 削除ボタンを右端に寄せる */
+.carrier-env-card__delete-btn {
+  margin-left: auto;
+  color: var(--danger);
+}
+
+.carrier-env-card__delete-btn:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
