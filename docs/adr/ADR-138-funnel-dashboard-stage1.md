@@ -4,7 +4,8 @@
 **Date**: 2026-06-12  
 **Authors**: Hikky-dev (CC)  
 **PO Approval**: Shingo 2026-06-12〜13（全判断確定済み）  
-**Refs**: `docs/handoff/funnel-dashboard-stage1/recon.md`（15項目）/ `docs/handoff/funnel-dashboard-stage1/design.md`
+**Refs**: `docs/handoff/funnel-dashboard-stage1/recon.md`（15項目）/ `docs/handoff/funnel-dashboard-stage1/design.md`  
+**関連ADR**: ADR-139（フロントエンド実装 PR4+5: `docs/adr/ADR-139-funnel-kgi-dashboard-frontend.md`）
 
 ---
 

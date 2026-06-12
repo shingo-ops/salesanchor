@@ -1,5 +1,8 @@
 # Recon: ファネル型目標対比ダッシュボード（第1弾）
 
+> **⚠️ 正本は `docs/handoff/funnel-dashboard-stage1/recon.md`（15項目・全引用確認済み）を参照。**  
+> このファイルはフロントエンド PR4+5 実装時の補足 recon として保持（正本との重複あり）。
+
 **Phase**: 2 — 現在地把握  
 **作成**: 2026-06-12  
 **ブランチ**: 実装は `feature/morimoto/dashboard-funnel-kgi` で新規作成
