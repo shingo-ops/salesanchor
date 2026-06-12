@@ -29,6 +29,31 @@ jobs:
           OPEN=$(gh pr list --base main --head develop --state open --json number -q 'length')
           echo "open_count=$OPEN" >> "$GITHUB_OUTPUT"
 
+      - name: 同乗マイグレーションを検出
+        id: migrations
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # develop に存在するが main にまだない migration ファイルを列挙
+          # git diff で main..develop の変更ファイルのうち migrations/ と scripts/migrate_*.py を抽出
+          MIGRATION_FILES=$(git diff origin/main..HEAD --name-only -- 'migrations/**' 'scripts/migrate_*.py' 2>/dev/null | sort || true)
+
+          if [ -z "$MIGRATION_FILES" ]; then
+            echo "has_migrations=false" >> "$GITHUB_OUTPUT"
+            echo "migration_list=" >> "$GITHUB_OUTPUT"
+            echo "ℹ️  同乗 migration なし"
+          else
+            echo "has_migrations=true" >> "$GITHUB_OUTPUT"
+            # 改行をエスケープしてマルチライン出力
+            {
+              echo "migration_list<<MIGRATION_EOF"
+              echo "$MIGRATION_FILES"
+              echo "MIGRATION_EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "🔍 同乗 migration 検出:"
+            echo "$MIGRATION_FILES"
+          fi
+
       - name: リリース PR を起票
         if: steps.check.outputs.open_count == '0'
         env:
@@ -36,29 +61,51 @@ jobs:
           # 作成された PR で pull_request トリガーの workflow が一切起動せず、
           # 必須チェックが "Expected — Waiting" のまま永久に BLOCKED になるため）。
           GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
-          PR_BODY: |
-            ## リリース PR（自動起票）
-
-            develop ブランチが main より先行したため自動起票しました。
-
-            **しんごさん（PO）が内容確認後マージしてください。**
-
-            ## マージ前チェックリスト
-
-            - [ ] develop の変更内容をすべて確認した
-            - [ ] 本番デプロイの準備ができている
-            - [ ] DB マイグレーションがある場合は手順を確認済み
-            - [ ] 外部サービスの設定変更が不要であることを確認した
-
-            ---
-            *このPRは `develop` ブランチへのプッシュを検知して自動起票されました。*
-            *（必須チェックを起動させるため PIPELINE_PAT で起票しています）*
         run: |
+          HAS_MIGRATION="${{ steps.migrations.outputs.has_migrations }}"
+          MIGRATION_LIST="${{ steps.migrations.outputs.migration_list }}"
+
+          if [ "$HAS_MIGRATION" = "true" ]; then
+            MIGRATION_SECTION="## ⚠️ 同乗 migration（本番 DB 変更）— 明示 GO 必須
+
+          以下の migration が本リリースに含まれています。
+          **しんごさん（PO）が各 migration の内容を確認し、本番 DB 適用を明示的に承認してからマージしてください。**
+
+          \`\`\`
+          ${MIGRATION_LIST}
+          \`\`\`
+
+          > この migration は develop→main マージ直後の deploy.yml によって本番 DB に自動適用されます。
+          > 承認なしのマージ = 本番 DB の意図しない変更です。"
+          else
+            MIGRATION_SECTION="## migration 確認
+
+          ✅ 本リリースに migration は含まれていません。"
+          fi
+
           gh pr create \
             --base main \
             --head develop \
             --title "release: develop → main" \
-            --body "$PR_BODY"
+            --body "## リリース PR（自動起票）
+
+          develop ブランチが main より先行したため自動起票しました。
+
+          **しんごさん（PO）が内容確認後マージしてください。**
+
+          ${MIGRATION_SECTION}
+
+          ## マージ前チェックリスト
+
+          - [ ] develop の変更内容をすべて確認した
+          - [ ] 本番デプロイの準備ができている
+          - [ ] DB マイグレーションがある場合は上記バナーを確認し明示 GO した
+          - [ ] 外部サービスの設定変更が不要であることを確認した
+
+          ---
+          *このPRは \`develop\` ブランチへのプッシュを検知して自動起票されました。*
+          *（必須チェックを起動させるため PIPELINE_PAT で起票しています）*"
+
           echo "✅ release PR を自動起票しました"
 
       - name: スキップ通知
