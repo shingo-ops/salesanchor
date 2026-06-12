@@ -28,6 +28,9 @@ const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' })
 // ─── 認可された承認者 ─────────────────────────────────────────────────────────
 const AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev'];
 
+// ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
+const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
+
 // ─── パス区分定義（design.md §1） ────────────────────────────────────────────
 const DOCS_PATTERNS = [
   /^docs\//,
@@ -336,9 +339,31 @@ function main() {
     process.exit(0);
   }
 
-  // PR 本文取得
+  // PR 作者チェック（コード変更を含む PR のみ）
   const prNumber = process.env.PR_NUMBER;
   const repo = process.env.REPO;
+  let prAuthor = '';
+  if (process.env.MOCK_PR_AUTHOR !== undefined) {
+    prAuthor = process.env.MOCK_PR_AUTHOR;
+  } else if (prNumber && repo) {
+    try {
+      prAuthor = execSync(
+        `gh api "repos/${repo}/pulls/${prNumber}" --jq '.user.login'`,
+        { encoding: 'utf8' }
+      ).trim();
+    } catch {
+      console.warn('⚠️  PR作者の取得に失敗 — スキップ');
+    }
+  }
+
+  if (prAuthor && !AUTHORIZED_AUTHORS.includes(prAuthor)) {
+    console.error(`❌ PR作者 "${prAuthor}" はコード変更PRの作成を許可されていません。`);
+    console.error('   shingo-cc 名義で作り直してください（gh auth login で切り替え）。');
+    console.error(`   許容作者: ${AUTHORIZED_AUTHORS.join(', ')}`);
+    process.exit(1);
+  }
+
+  // PR 本文取得
   let prBody = '';
   if (process.env.MOCK_PR_BODY !== undefined) {
     prBody = process.env.MOCK_PR_BODY;

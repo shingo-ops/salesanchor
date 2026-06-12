@@ -40,6 +40,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
 - `develop` / `main` への直接コミット禁止
 - 完了後 `gh pr create` でPR作成 → レビュー後 `develop` へマージ
+- **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
 - **develop → main も PR 経由**（直push禁止・Branch Protection で強制）
   - `gh pr create --base main --head develop` を起票 → しんごさんがマージ
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
