@@ -51,16 +51,16 @@ class LeadStatus(str, Enum):
 #### backend/app/routers/leads.py — 日本語リテラル
 - ADR-109 記載の行番号 (257, 326-328, 515, 534) はすべて行番号ズレ済み。
 - **現在**:
-  - `leads.py:295`: `"status": _enum_to_str(data.status)` — Pydantic enum 経由（日本語リテラルなし） ✅
-  - `leads.py:553`: `SET status = 'negotiating'` — 英語コード ✅
+  - `backend/app/routers/leads.py:295`: `"status": _enum_to_str(data.status)` — Pydantic enum 経由（日本語リテラルなし） ✅
+  - `backend/app/routers/leads.py:553`: `SET status = 'negotiating'` — 英語コード ✅
 - **全文検索で日本語ステータスリテラルなし** ✅
 
 #### backend/app/routers/analytics.py:254, 450 — 日本語リテラル
-- `analytics.py:254`: `AND status NOT IN ('lost', 'out_of_scope', 'existing_customer')` — 英語コード ✅
-- `analytics.py:450`: `COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded` — 英語コード ✅
+- `backend/app/routers/analytics.py:254`: `AND status NOT IN ('lost', 'out_of_scope', 'existing_customer')` — 英語コード ✅
+- `backend/app/routers/analytics.py:450`: `COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded` — 英語コード ✅
 
 #### backend/app/routers/dashboard.py:109 — 日本語リテラル
-- `dashboard.py:109`:
+- `backend/app/routers/dashboard.py:109`:
   ```sql
   COUNT(*) FILTER (WHERE status NOT IN (
     'negotiating', 'existing_customer', 'lost',
@@ -70,18 +70,18 @@ class LeadStatus(str, Enum):
   → **✅ 完了**。英語コードに変換済み。
 
 #### backend/app/discord_gateway/dm_writer.py (旧: services/discord_gateway) — 初期値
-- `dm_writer.py:161`:
+- `backend/app/discord_gateway/dm_writer.py:161`:
   ```python
   VALUES (:tenant_id, :name, :source, 'Inbound', 'lead', ...)
   ```
   → **✅ 完了**。`'lead'`（英語コード）を使用。ファイルパスが変わっているため注意。
 
 #### backend/tests/conftest.py:314 — テスト DB DEFAULT
-- `conftest.py:314`: `status VARCHAR(50) DEFAULT 'lead'` → **✅ 完了**
+- `backend/tests/conftest.py:314`: `status VARCHAR(50) DEFAULT 'lead'` → **✅ 完了**
 
 #### frontend/src/pages/leads/LeadsPage.tsx (旧: pages/LeadsPage.tsx) — 旧値マップ
 - **旧 107-114 行の日本語マップ**: 完全に撤去済み
-- **現在の状態** (`LeadsPage.tsx:104-107`):
+- **現在の状態** (`frontend/src/pages/leads/LeadsPage.tsx:104`):
   ```tsx
   // ADR-109: status codes with i18n labels
   const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
@@ -94,7 +94,7 @@ class LeadStatus(str, Enum):
 - **LeadsPage.tsx:367**: `translateLeadStatus(l.status)` でステータス表示 → ✅
 
 #### frontend/src/pages/inbox/inbox.types.ts (旧: features/inbox) — STATUS_TABS, FOLLOWUP_EXCLUDED
-- `inbox.types.ts:20-27`: STATUS_TABS — 英語コード使用 ✅
+- `frontend/src/pages/inbox/inbox.types.ts:20`: STATUS_TABS — 英語コード使用 ✅
   ```tsx
   export const STATUS_TABS = [
     { key: "lead",     statuses: ["lead"] },
@@ -104,11 +104,11 @@ class LeadStatus(str, Enum):
     { key: "archive",  statuses: ["lost", "out_of_scope"] },
   ] as const;
   ```
-- `inbox.types.ts:37`: `FOLLOWUP_EXCLUDED = new Set(["lost", "out_of_scope"])` → ✅
+- `frontend/src/pages/inbox/inbox.types.ts:37`: `FOLLOWUP_EXCLUDED = new Set(["lost", "out_of_scope"])` → ✅
 
 #### frontend/src/pages/inbox/useInboxState.ts (旧: features/inbox)
 - ADR-109 記載の行番号 (664, 719) はズレ済み。
-- **現在の行** `useInboxState.ts:690`: `await api.patch<void>('/leads/${selectedLeadId}', { status: "out_of_scope" })` → ✅
+- **現在の行** `frontend/src/pages/inbox/useInboxState.ts:690`: `await api.patch<void>('/leads/${selectedLeadId}', { status: "out_of_scope" })` → ✅
 
 #### i18n（frontend/src/locales/ja.json + en.json）
 - `ja.json:470-478`:
@@ -164,10 +164,10 @@ t("leads.statusCode.negotiating") → "商談中"  (ja.json:472)
 
 | コンポーネント | パターン | defaultValue 有無 |
 |--------------|---------|-----------------|
-| `LeadsPage.tsx:367` | `translateLeadStatus(l.status)` → `t('leads.statusCode.${status}', { defaultValue: status })` | ✅ あり |
-| `InboxKartePanel.tsx:153` | `t(stagePresentation.labelKey ?? leadDetail.status)` | ✅ あり（statusCode キーが見つからない場合は status 直接） |
-| `MergeLeadModal.tsx:221` | `t('leads.statusCode.${c.status}', { defaultValue: c.status })` | ✅ あり |
-| `InboxConversationList.tsx:228` | `` t(`leads.statusCode.${conv.lead_status}`) `` | **⚠️ defaultValue なし** |
+| `frontend/src/pages/leads/LeadsPage.tsx:367` | `translateLeadStatus(l.status)` → `t('leads.statusCode.${status}', { defaultValue: status })` | ✅ あり |
+| `frontend/src/pages/inbox/InboxKartePanel.tsx:153` | `t(stagePresentation.labelKey ?? leadDetail.status)` | ✅ あり（statusCode キーが見つからない場合は status 直接） |
+| `frontend/src/components/MergeLeadModal.tsx:221` | `t('leads.statusCode.${c.status}', { defaultValue: c.status })` | ✅ あり |
+| `frontend/src/pages/inbox/InboxConversationList.tsx:228` | `` t(`leads.statusCode.${conv.lead_status}`) `` | **⚠️ defaultValue なし** |
 
 ---
 
@@ -180,7 +180,7 @@ t("leads.statusCode.negotiating") → "商談中"  (ja.json:472)
 
 ### dashboard.py:109 との関係
 
-`dashboard.py:109` は COUNT 集計クエリであり、ステータスラベルを画面に表示しない。「段階が英語のまま表示」の直接原因ではない。  
+`backend/app/routers/dashboard.py:109` は COUNT 集計クエリであり、ステータスラベルを画面に表示しない。「段階が英語のまま表示」の直接原因ではない。  
 ただし DB が日本語値のままの状態で英語コードでフィルタすると、全件が `open_count` に誤カウントされる副作用がある。
 
 ### 現在の懸念箇所（DB 未移行時）
