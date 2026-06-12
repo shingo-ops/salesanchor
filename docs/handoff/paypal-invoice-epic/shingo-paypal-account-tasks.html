@@ -56,31 +56,38 @@
 <p class="lead">PayPal 正規請求書（Invoicing）機能のうち、<b>Inc1（請求書発行＋写しPDF）は本番稼働済み</b>です。次の <b>Inc3（発送追跡を PayPal に登録）</b>と <b>Inc4（トラブル＝ケースの自動受信）</b>を動かすには、PayPal の開発者設定でいくつか有効化していただく必要があります。各項目に「なぜ必要か」「どこで」を添えています。</p>
 
 <div class="callout">
-  <b>全体像：</b> アプリのコードは「PayPal に命令を送る」側です。PayPal 側のアプリ（REST アプリ）が <b>その機能を許可されていないと命令が通りません</b>。下記はその「許可」と「通知の宛先設定」です。すべて <a href="https://developer.paypal.com/dashboard/" target="_blank" rel="noopener">developer.paypal.com/dashboard</a> 上の作業です。
+  <b>全体像：</b> SalesAnchor のコードは「PayPal に命令を送る」側です。PayPal 側に登録した <b>「PayPal 連携アプリ」</b>が <b>その機能を許可されていないと命令が通りません</b>。下記はその「許可」と「通知の宛先設定」です。すべて <a href="https://developer.paypal.com/dashboard/" target="_blank" rel="noopener">developer.paypal.com/dashboard</a> 上の作業です。
+</div>
+
+<div class="callout warn">
+  <b>用語：「PayPal 連携アプリ」とは</b><br>
+  SalesAnchor を PayPal につなぐために、<b>PayPal の開発者ダッシュボードで作成した登録</b>のことです（接続用の <code>client_id</code>／<code>secret</code> を持つ箱）。
+  <b>SalesAnchor 本体とは別物</b>で、PayPal 側にある「SalesAnchor 接続用のアプリ」と考えてください。
+  PayPal の画面では <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener"><b>Apps &amp; Credentials</b></a> メニューにある「App（アプリ）」がそれです（PayPal 公式の呼び方は "REST API app"）。SalesAnchor 連携開始時に既に1つ作成されています。
 </div>
 
 <!-- 1 -->
-<h2><span class="n">1</span>REST アプリで「請求書(Invoicing)」機能を有効化</h2>
+<h2><span class="n">1</span>PayPal 連携アプリで「請求書(Invoicing)」機能を有効化</h2>
 <div class="card">
   <p><span class="pill must">必須</span><span class="pill info">Inc1〜Inc4 共通</span></p>
   <p><b>なぜ：</b> 請求書の発行・送信・ステータス取得は Invoicing 機能の権限が要ります（無いと「送信」で失敗します）。</p>
   <h3>どこで（手順）</h3>
   <ol>
     <li><a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener">Dashboard → Apps & Credentials</a> を開く（本番は <b>Live</b>、テストは <b>Sandbox</b> タブ）。</li>
-    <li>当社が連携に使っている REST アプリを選ぶ。</li>
+    <li>当社が連携に使っている PayPal 連携アプリを選ぶ。</li>
     <li><b>Features</b>（機能）一覧で <b>「Invoicing」</b> にチェックが入っているか確認。無ければ有効化して保存。</li>
   </ol>
   <p class="small">※ すでに Inc1 が本番で動いているので Live 側は有効な可能性が高いですが、念のため確認をお願いします。</p>
 </div>
 
 <!-- 2 -->
-<h2><span class="n">2</span>REST アプリで「ケース管理(Disputes)」機能を有効化 — <span style="font-size:14px;color:var(--accent)">Inc4 用</span></h2>
+<h2><span class="n">2</span>PayPal 連携アプリで「ケース管理(Disputes)」機能を有効化 — <span style="font-size:14px;color:var(--accent)">Inc4 用</span></h2>
 <div class="card">
   <p><span class="pill must">必須（Inc4）</span></p>
-  <p><b>なぜ：</b> 顧客とのトラブル（ケース＝dispute）の発生・更新・解決を当社アプリが受け取るには、REST アプリで Disputes 機能が有効である必要があります（公式要件）。</p>
+  <p><b>なぜ：</b> 顧客とのトラブル（ケース＝dispute）の発生・更新・解決を当社アプリが受け取るには、PayPal 連携アプリで Disputes 機能が有効である必要があります（公式要件）。</p>
   <h3>どこで（手順）</h3>
   <ol>
-    <li>上記と同じ <b>Apps & Credentials</b> → 当社 REST アプリ → <b>Features</b>。</li>
+    <li>上記と同じ <b>Apps & Credentials</b> → 当社 PayPal 連携アプリ → <b>Features</b>。</li>
     <li><b>「Customer Disputes」（または Disputes）</b> を有効化して保存。</li>
   </ol>
 </div>
@@ -98,7 +105,7 @@
   </ul>
   <h3>どこで（2通り・どちらでも可）</h3>
   <ul>
-    <li><b>A. しんごさんが手動：</b> REST アプリの <b>Webhooks</b> で、通知先 URL <code>https://api.salesanchor.jp/api/v1/integrations/paypal/webhook</code> に上記3イベントを追加。</li>
+    <li><b>A. しんごさんが手動：</b> PayPal 連携アプリの <b>Webhooks</b> で、通知先 URL <code>https://api.salesanchor.jp/api/v1/integrations/paypal/webhook</code> に上記3イベントを追加。</li>
     <li><b>B. アプリに任せる：</b> 当社アプリの「PayPal 認証情報 保存」時に webhook を自動登録する仕組みがあります。Inc4 実装後、私の方で購読イベントに上記3種を加えるので、<b>管理センターで一度「保存」し直す</b>だけでもOK（手動が不要になります）。実装が出来たら案内します。</li>
   </ul>
   <p class="small">※ 入金通知 <code>INVOICING.INVOICE.PAID</code> は既に購読済み・本番稼働中です。</p>
@@ -111,7 +118,7 @@
   <p><b>なぜ：</b> 発送時に追跡番号を PayPal に登録すると、資金保留の解除が早まり・未着クレームの自動解決やセラープロテクション判定に使われます（公式の実益）。これには PayPal 側で追跡 API（Add Tracking）が使える状態である必要があります。</p>
   <h3>確認してほしいこと</h3>
   <ul>
-    <li>当社 REST アプリ／ビジネスアカウントで <b>Transaction Search / Tracking（trackers-batch）</b> が利用可能か（権限・本人確認の状況）。</li>
+    <li>当社 PayPal 連携アプリ／ビジネスアカウントで <b>Transaction Search / Tracking（trackers-batch）</b> が利用可能か（権限・本人確認の状況）。</li>
     <li>不明な場合は PayPal サポート／アカウントマネージャに「<code>POST /v1/shipping/trackers-batch</code> を使いたい」と確認。</li>
   </ul>
   <p class="callout warn small" style="margin-top:10px"><b>補足：</b> Inc3 は当社の「発送」処理に PayPal 追跡登録を差し込みます。現在 FedEx 連携（発送系）をしんごさんが実装中のため、<b>コード側はその発送フローと調整してから着手</b>します（衝突回避）。この項目はその前提確認です。</p>
@@ -133,8 +140,8 @@
 <h2><span class="n">✓</span>チェックリスト（この順でOK）</h2>
 <div class="card">
   <ul class="check">
-    <li><b>① Invoicing 機能</b>が REST アプリで有効（Inc1 稼働中なので Live はほぼ済のはず・要確認）</li>
-    <li><b>② Disputes（ケース）機能</b>を REST アプリで有効化（Inc4 必須）</li>
+    <li><b>① Invoicing 機能</b>が PayPal 連携アプリで有効（Inc1 稼働中なので Live はほぼ済のはず・要確認）</li>
+    <li><b>② Disputes（ケース）機能</b>を PayPal 連携アプリで有効化（Inc4 必須）</li>
     <li><b>③ Dispute webhook 3種</b>を購読 — 手動 or 「保存し直し」で自動（Inc4 必須）</li>
     <li><b>④ Add Tracking 利用可否</b>を確認（Inc3 必須・発送フロー調整後に着手）</li>
     <li><b>⑤ Sandbox 買い手アカウント</b>（任意・ケース実機確認用）</li>
