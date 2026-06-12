@@ -42,3 +42,54 @@
   ロールバック手順（退避した鍵と config を戻す）を design 内に明記してから着手。
 - 切替直後に本番障害対応が必要になった場合に備え、人間用の無制限鍵手順を先に文書化してから
   エージェント経路を切り替える（順序厳守）。
+
+---
+
+## 棚卸し結果（2026-06-13 実施）
+
+| 鍵ファイル | コメント | ubuntu アクセス | 制限 |
+|---|---|---|---|
+| `~/.ssh/id_ed25519` | tanizawashingo@sakura-vps | **可・無制限** | なし |
+| `~/.ssh/salesanchor-claude` | claude-code-reader | 可 | ForceCommand のみ |
+| `~/.ssh/salesanchor_vps` | claude-code | 不可（permission denied） | - |
+
+- `~/.ssh/config` は**存在しない**（SSH デフォルト動作で `id_ed25519` が優先使用される）
+- deploy.yml: `secrets.SSH_PRIVATE_KEY`（github-actions-deploy）を使用 → ローカル鍵変更の影響**なし**
+- ForceCommand 許可コマンド: `docker stats --no-stream; free -h; df -h; uptime`（監視のみ）
+  - エージェントが SSH 経由で必要とする正当な操作はすべて GitHub Actions 経由のため、
+    ForceCommand の追加拡張は不要
+
+---
+
+## 緊急時の人間用アクセス手順（ロールバック前提）
+
+本番障害対応など人間が無制限アクセスを必要とする場合:
+
+```bash
+# 退避先から id_ed25519 を指定して接続
+ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46
+
+# または一時的に config を上書きして接続
+ssh -o IdentityFile=~/.ssh/manual-only/id_ed25519 -o IdentitiesOnly=yes ubuntu@49.212.137.46
+```
+
+退避先: `~/.ssh/manual-only/id_ed25519`（鍵本体は削除しない）
+
+---
+
+## ロールバック手順
+
+変更後に問題が発生した場合:
+
+```bash
+# 1. config を削除（エージェント経路の制限解除）
+rm ~/.ssh/config
+
+# 2. 退避した鍵を元に戻す
+cp ~/.ssh/manual-only/id_ed25519 ~/.ssh/id_ed25519
+cp ~/.ssh/manual-only/id_ed25519.pub ~/.ssh/id_ed25519.pub
+chmod 600 ~/.ssh/id_ed25519
+
+# 3. 疎通確認
+ssh ubuntu@49.212.137.46 "echo OK"
+```
