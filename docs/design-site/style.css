@@ -376,6 +376,118 @@ a:hover { text-decoration: underline; }
   color: #dc2626;
 }
 
+/* ── フェーズ表示・次アクション（SA一覧カード内） ── */
+.sa-card__phase {
+  font-size: 11px;
+  color: var(--c-order);
+  font-weight: 600;
+}
+.sa-card__next {
+  font-size: 11px;
+  color: var(--text-sub);
+  border-left: 2px solid var(--border);
+  padding-left: 6px;
+  line-height: 1.5;
+}
+
+/* ── 6フェーズ凡例（トップ） ── */
+.phase-legend {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.phase-legend__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.phase-legend__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+}
+.phase-legend__step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.phase-legend__step:not(:last-child)::after {
+  content: '→';
+  color: var(--border);
+  margin: 0 6px;
+  font-size: 10px;
+}
+.phase-legend__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--c-customer-bg);
+  color: var(--c-customer);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.phase-legend__label { color: var(--text-sub); }
+.phase-legend__pct {
+  font-size: 10px;
+  color: var(--text-sub);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+/* ── 欠番ノート ── */
+.missing-note {
+  background: var(--c-undecided-bg);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 13px;
+  margin-top: 16px;
+}
+.missing-note__title {
+  font-weight: 700;
+  color: var(--c-undecided);
+  margin-bottom: 8px;
+}
+
+/* ── KGI/KPIテーブル ── */
+.kgi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.kgi-table th, .kgi-table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+.kgi-table th {
+  background: var(--bg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kgi-table td:first-child { font-weight: 700; white-space: nowrap; color: var(--c-customer); }
+.kgi-unset {
+  background: var(--c-undecided-bg);
+  border-left: 3px solid var(--c-undecided);
+  padding: 10px 14px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+}
+
 /* ── レスポンシブ ── */
 @media (max-width: 600px) {
   .before-after {
@@ -383,4 +495,6 @@ a:hover { text-decoration: underline; }
   }
   .before-after__arrow { display: none; }
   .principles-grid { grid-template-columns: 1fr 1fr; }
+  .phase-legend__steps { gap: 4px 0; }
+  .phase-legend__step:not(:last-child)::after { margin: 0 3px; }
 }

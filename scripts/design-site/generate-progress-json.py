@@ -18,30 +18,77 @@ from pathlib import Path
 
 EXPECTED_COLS = ['SA', 'ADR', 'テーマ', '現フェーズ', '進捗', '次のアクション', '担当', '更新日']
 
+# Unicode circled numbers ①〜⑥ → int 1〜6
+_CIRCLE_MAP = {chr(0x2460 + i): i + 1 for i in range(6)}
+
+
+def _parse_phase(phase_raw: str) -> int | None:
+    """現フェーズ列から数値フェーズを抽出する。
+    - '横断適用' → None
+    - '未着手'   → 0
+    - '④ ...'   → 4
+    """
+    stripped = phase_raw.strip()
+    if stripped in ('横断適用', '—'):
+        return None
+    if stripped.startswith('未着手'):
+        return 0
+    for ch, num in _CIRCLE_MAP.items():
+        if stripped.startswith(ch):
+            return num
+    return 0
+
+
+def _parse_progress(progress_raw: str) -> int | None:
+    """進捗列から整数(0-100)または None を返す。
+    - '80%' → 80
+    - '0%'  → 0
+    - '—'   → None
+    """
+    stripped = progress_raw.strip().rstrip('%')
+    if stripped in ('—', '', '-'):
+        return None
+    try:
+        return int(stripped)
+    except ValueError:
+        return None
+
+
+def _normalize_item(raw: dict) -> dict:
+    """生の日本語キー辞書を progress.js が期待する英語キー辞書に変換する。"""
+    phase = _parse_phase(raw['現フェーズ'])
+    return {
+        'id': raw['SA'].strip(),
+        'adr': raw['ADR'].strip(),
+        'theme': raw['テーマ'].strip(),
+        'phase': phase,
+        'phase_label': raw['現フェーズ'].strip(),
+        'progress': _parse_progress(raw['進捗']),
+        'next_action': raw['次のアクション'].strip(),
+        'owner': raw['担当'].strip(),
+        'updated': raw['更新日'].strip(),
+    }
+
 
 def parse_overview_table(md_path: Path) -> list[dict]:
-    """00-SA-OVERVIEW.md §1 テーブルをパースして行リストを返す。"""
+    """00-SA-OVERVIEW.md §1 テーブルをパースして正規化行リストを返す。"""
     text = md_path.read_text(encoding='utf-8')
 
-    # パイプ区切りテーブル行を抽出（区切り行を除く）
-    table_lines = []
+    table_lines: list[str] = []
     in_table = False
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith('|') and stripped.endswith('|'):
-            # 区切り行（|---|---|）はスキップ
             if re.match(r'^\|[\s\-|:]+\|$', stripped):
                 continue
             table_lines.append(stripped)
             in_table = True
         elif in_table:
-            # テーブルが終わったら停止
             break
 
     if not table_lines:
         raise ValueError(f"テーブルが見つかりません: {md_path}")
 
-    # ヘッダー行
     header_raw = [c.strip() for c in table_lines[0].strip('|').split('|')]
     if header_raw != EXPECTED_COLS:
         raise ValueError(
@@ -55,8 +102,8 @@ def parse_overview_table(md_path: Path) -> list[dict]:
             raise ValueError(
                 f"列数不一致 (期待 {len(EXPECTED_COLS)}, 実際 {len(cells)}): {row_line}"
             )
-        item = dict(zip(EXPECTED_COLS, cells))
-        items.append(item)
+        raw = dict(zip(EXPECTED_COLS, cells))
+        items.append(_normalize_item(raw))
 
     return items
 

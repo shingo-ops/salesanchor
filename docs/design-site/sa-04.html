@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA-04 チャネルリンクテンプレ SSOT — SA設計図書</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/">全体地図</a>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html" class="active">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
+  </nav>
+</header>
+
+<div class="page-container">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <span style="font-size:12px;font-weight:700;color:var(--c-customer);background:var(--c-customer-bg);padding:3px 10px;border-radius:12px;">SA-04</span>
+    <span class="badge badge--wip" data-sa="SA-04">④ 実装中 (35%)</span>
+  </div>
+  <h1 class="page-title">チャネルリンクテンプレ SSOT＋guild_id</h1>
+  <p class="page-subtitle">
+    多チャネル名寄せ — チャネル ID だけ保存し、リンクはテンプレ表から自動生成。手入力 URL を0にする。
+  </p>
+
+  <!-- ① 一言でいうと -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">①</span>
+      <span class="template-section__title">一言でいうと</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:15px;line-height:1.8;">
+        <strong>「連絡先タブには "ID" だけ保存する。リンクは1か所のテンプレ表から自動生成する。手入力 URL 欄をゼロにすることで、腐ったリンクが構造的に生まれない。」</strong>
+      </p>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-sub);">
+        現在の連絡先タブには「手入力した URL」が保存されており、Discord の旧 username 形式（廃止済）や
+        開けないリンクが混入しています。SA-04 では「ID だけ保存してリンクは都度生成」に変えることで、
+        チャネルの URL 形式が変わっても <strong>テンプレ表を 1 行直すだけ</strong>で全顧客に一斉反映します。
+      </p>
+    </div>
+  </div>
+
+  <!-- ② Before→After -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">②</span>
+      <span class="template-section__title">困りごと Before → After</span>
+    </div>
+    <div class="template-section__body">
+      <div class="before-after">
+        <div class="before-after__box before-after__box--before">
+          <div class="before-after__label">Before（現状の問題）</div>
+          <div class="before-after__item">
+            <p>🔗 連絡先に <strong>手入力 URL</strong> が保存されている</p>
+            <p style="margin-top:6px;">💀 Discord の旧 <code>username#0000</code> 形式（<strong>2023年廃止</strong>）が残存</p>
+            <p style="margin-top:6px;">🔒 <code>m.me</code>/<code>instagram.com</code> は担当者が顧客スレッドを<strong>開けない</strong></p>
+            <p style="margin-top:6px;">♻️ URL 形式が変わるたびに<strong>全顧客を手修正</strong></p>
+            <p style="margin-top:6px;">🔀 複数チャネルで同一人物かどうかの判定が<strong>目視頼み</strong></p>
+          </div>
+        </div>
+        <div class="before-after__arrow">→</div>
+        <div class="before-after__box before-after__box--after">
+          <div class="before-after__label">After（SA-04 設計）</div>
+          <div class="before-after__item">
+            <p>🪪 保存するのは<strong>チャネルID</strong>のみ（WhatsApp=電話番号、Discord=guild_id/channel_id 等）</p>
+            <p style="margin-top:6px;">📋 リンクは <strong>テンプレ表（1か所）</strong> から自動生成</p>
+            <p style="margin-top:6px;">🖱️ 連絡先タブで <strong>クリック1回</strong> で顧客スレッドを開ける</p>
+            <p style="margin-top:6px;">⚡ URL形式が変わっても <strong>テンプレ表を1行直すだけ</strong> で全顧客に即反映</p>
+            <p style="margin-top:6px;">🔍 統合は <strong>人が明示的に実行</strong>（自動同一判定なし・誤マージ防止）</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 仕組みの図解 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">③</span>
+      <span class="template-section__title">仕組みの図解 — ID 保存 → テンプレ → リンク生成</span>
+    </div>
+    <div class="template-section__body">
+      <div class="architecture-diagram">
+        <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+             role="img" aria-label="SA-04 チャネルリンク生成図">
+          <defs>
+            <marker id="arr04" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+            </marker>
+            <marker id="arr04b" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#1a6fc4"/>
+            </marker>
+          </defs>
+
+          <!-- 顧客マスタ（ID格納） -->
+          <rect x="10" y="60" width="150" height="110" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+          <text x="85" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">顧客マスタ（ID保存）</text>
+          <text x="85" y="100" text-anchor="middle" font-size="11" fill="#1a6fc4">WhatsApp: +8190…</text>
+          <text x="85" y="116" text-anchor="middle" font-size="11" fill="#1a6fc4">Telegram: @username</text>
+          <text x="85" y="132" text-anchor="middle" font-size="11" fill="#1a6fc4">Discord: guild/channel</text>
+          <text x="85" y="152" text-anchor="middle" font-size="10" fill="#3b82f6">※ URL 文字列は保存しない</text>
+
+          <!-- テンプレ表（SSOT） -->
+          <rect x="255" y="40" width="180" height="140" rx="8" fill="#f0fdf4" stroke="#2d8a4e" stroke-width="2"/>
+          <text x="345" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">テンプレ表（SSOT）</text>
+          <text x="345" y="80" text-anchor="middle" font-size="10" fill="#2d8a4e">WhatsApp → wa.me/{phone}</text>
+          <text x="345" y="96" text-anchor="middle" font-size="10" fill="#2d8a4e">Telegram → t.me/{username}</text>
+          <text x="345" y="112" text-anchor="middle" font-size="10" fill="#2d8a4e">Discord → discord.com/…</text>
+          <text x="345" y="128" text-anchor="middle" font-size="9" fill="#4b5563">Messenger → ※未文書化・隔離</text>
+          <text x="345" y="144" text-anchor="middle" font-size="9" fill="#4b5563">Instagram → ※未文書化・隔離</text>
+          <text x="345" y="165" text-anchor="middle" font-size="10" fill="#16a34a">1チャネル＝1行（変更は1行だけ）</text>
+
+          <!-- 矢印: ID → テンプレ参照 -->
+          <line x1="160" y1="115" x2="250" y2="115" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr04)"/>
+          <text x="205" y="109" text-anchor="middle" font-size="9" fill="#9ca3af">ID を渡す</text>
+
+          <!-- 矢印: テンプレ → リンク生成 -->
+          <line x1="435" y1="110" x2="480" y2="110" stroke="#2d8a4e" stroke-width="1.5" marker-end="url(#arr04)"/>
+          <text x="457" y="104" text-anchor="middle" font-size="9" fill="#2d8a4e">生成</text>
+
+          <!-- 生成されたリンク（クリック要素） -->
+          <rect x="480" y="60" width="185" height="100" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="572" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">連絡先タブ（表示）</text>
+          <text x="572" y="100" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ WhatsApp を開く</text>
+          <text x="572" y="116" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ Telegram を開く</text>
+          <text x="572" y="132" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ Discord を開く</text>
+          <text x="572" y="150" text-anchor="middle" font-size="9" fill="#9ca3af">※ URL 文字列は見せない</text>
+        </svg>
+      </div>
+      <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
+        ID だけ保存し、リンクはリクエストごとにテンプレ表から生成します。
+        担当者に URL を手入力させる画面は存在しません。
+      </p>
+    </div>
+  </div>
+
+  <!-- ④ 4原則との対応表 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">④</span>
+      <span class="template-section__title">4原則との対応表</span>
+    </div>
+    <div class="template-section__body">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>原則</th>
+            <th>SA-04での実現方法</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>
+              リンクの「URL の組み立て方」は <strong>link_templates テーブル（1か所）</strong> だけが持つ。
+              型の変更は 1 行の修正で全顧客に一斉反映。顧客マスタには ID のみを保存（URL は二重保存しない）。
+            </td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>
+              チャネル情報は背骨①（顧客マスタ）に紐づく属性。
+              複数チャネルから来た顧客でも「1顧客 1 カルテ」に統合される。
+            </td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>
+              クリック要素（リンク）は ID + テンプレートから都度計算して表示。
+              URL 文字列を DB に保存しないため、テンプレ変更で全顧客のリンクが自動で最新になる。
+            </td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>
+              担当者が URL を手入力する欄がない（腐ったリンクが入れない）。
+              重複 ID は保存前に警告・統合への導線を表示。
+              Meta 非公式 URL は link_templates の 1 行に隔離（壊れてもそこだけ修正可能）。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑤ 用語ミニ辞典 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑤</span>
+      <span class="template-section__title">用語ミニ辞典</span>
+    </div>
+    <div class="template-section__body">
+      <dl class="glossary">
+        <dt>チャネル ID</dt>
+        <dd>各プラットフォームでの識別子。WhatsApp = 電話番号（国際形式）、Telegram = username、Discord = guild_id / channel_id。保存するのはこれだけ。URL は保存しない。</dd>
+
+        <dt>テンプレ表（link_templates）</dt>
+        <dd>1 チャネル = 1 行。「ID をどう URL に変換するか」だけを持つ SSOT。変更は 1 行の修正で全顧客に反映される。</dd>
+
+        <dt>名寄せ</dt>
+        <dd>複数チャネルから来た発言を 1 人の顧客に束ねること。完全自動の同一人物判定はせず、担当者が UI から明示的に「これは同一人物」と決定する。</dd>
+
+        <dt>guild_id / channel_id（Discord）</dt>
+        <dd>Discord のサーバー（guild_id）とチャンネル（channel_id）の固定 ID。username より安定しており、リンク <code>discord.com/channels/{guild_id}/{channel_id}</code> は永続する。</dd>
+
+        <dt>Meta 内部 URL（Messenger / Instagram）</dt>
+        <dd>Meta が非公式の内部 URL 形式を使うチャネル。壊れる可能性があるため link_templates の 1 行に隔離し、壊れたときはその 1 行だけを修正する。</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ⑥ 決定済み／未決 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑥</span>
+      <span class="template-section__title">決定済み／未決 一覧</span>
+    </div>
+    <div class="template-section__body">
+      <ul class="decision-list">
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>link_templates SSOT 稼働中</strong>（WhatsApp / Telegram / Discord / Messenger / Instagram の 5 チャネル登録済み）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>ID 保存方式の確定</strong>（contact_contact_channels に guild_id 追加済み・URL 列なし）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>lead_channels テーブル実装済み</strong>（PR-A/B/C マージ済み・UNIQUE 制約あり）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>KGI G1〜G4 Shingo 承認済み</strong>（2026-06-12）</span>
+        </li>
+        <li>
+          <span class="status-icon">⏳</span>
+          <span><strong>PR-D（型統一）・新テナント setup 登録</strong> — 実装中</span>
+        </li>
+        <li>
+          <span class="status-icon">⏳</span>
+          <span><strong>チャネル追加・編集フォーム</strong>（ID 単位での追加 UI）</span>
+        </li>
+      </ul>
+      <div class="decision-undecided" style="margin-top:12px;">
+        <strong>⬜ 未決</strong>: WhatsApp / Telegram の channel_masters 統合方針（手動チャネルのまま vs 追加）— Shingo 判断
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">
+        KGI承認: ✅ <strong>Shingo 2026-06-12</strong>（G1〜G4 全承認）
+      </p>
+      <table class="kgi-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ゴール（KGI）— 本番で観測できたら成功</th>
+            <th>種別</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>G1</td>
+            <td>連絡先のチャネル情報は <strong>ID</strong>（WhatsApp = 電話番号、Discord = サーバー/チャンネル ID 等）で保存。<strong>手入力の URL 欄が 0 個</strong> = 腐ったリンクが構造的に発生しない</td>
+            <td>データ構造（SSOT）</td>
+          </tr>
+          <tr>
+            <td>G2</td>
+            <td>リンクの「URL の組み立て方」は <strong>テンプレ表 1 か所</strong>だけが持つ。型の変更は 1 行の修正で全顧客に一斉反映</td>
+            <td>SSOT</td>
+          </tr>
+          <tr>
+            <td>G3</td>
+            <td>連絡先タブで <strong>クリック 1 回</strong>で顧客スレッドを開ける。チャネルの追加・編集は同タブから ID 単位（URL 文字列は見せない・編集させない）。重複 ID は保存前に警告し、統合への導線を出す</td>
+            <td>UI/UX＋ポカヨケ</td>
+          </tr>
+          <tr>
+            <td>G4</td>
+            <td>複数チャネルから来ても <strong>1 顧客 1 カルテ</strong>。自動の同一人物判定は <strong>しない</strong>（誤マージ 0）。統合は人が UI から明示的に実行</td>
+            <td>名寄せ</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--text-sub);margin-top:8px;">
+        進捗詳細:
+        <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/SA-04-plan.md"
+           target="_blank" rel="noopener">SA-04-plan.md</a>（正本）
+      </p>
+    </div>
+  </div>
+
+  <!-- ⑧ 正本ADRリンク -->
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ 正本</span>
+    <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-098-sa-multi-channel-identity-resolution.md"
+       target="_blank" rel="noopener">ADR-098-sa-multi-channel-identity-resolution.md</a>
+    <span>最終更新: 2026-06-13</span>
+    <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <p><a href="/design/sa-03.html">← SA-03 登録</a> ／ <a href="/design/sa-05.html">SA-05 在庫 →</a></p>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>
