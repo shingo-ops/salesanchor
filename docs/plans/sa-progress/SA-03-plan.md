@@ -3,9 +3,9 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-097（トークン基盤）、ADR-126（入力契約v2）、ADR-127（change_billing追加・二重発行防止） |
-| ステータス | ④ 実装中（進捗 60%）|
+| ステータス | ⑤ 本番反映済み（進捗 90%）|
 | 担当 | PO: Shingo ／ Dev: Terminal CC |
-| 最終更新 | 2026-06-12（Terminal CC 実装） |
+| 最終更新 | 2026-06-12（本番デプロイ・smoke通過） |
 
 ---
 
@@ -150,7 +150,7 @@
 | 2026-06-11 | #1936 | ADR-127 Phase2: 第1層ゲート（フロント disabled + バックエンド 409） | マージ・本番反映済み |
 | 2026-06-11 | #1942/#1950/#1966 | ADR-127 Phase2b/2c: 登録済みラベル UX + ボタン色修正 | マージ・本番反映済み |
 | 2026-06-11 | #1975 | SA-03 recon（差分確認・SA-03-plan.md §3 記入） | マージ済み |
-| 2026-06-12 | — | ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2 実装（change_billing 一式 + 発行UI + 受信箱 overflow menu） | PR作成中・マージ前（Shingo GO待ち） |
+| 2026-06-12 | #1979 | ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2 実装（change_billing 一式 + 発行UI + 受信箱 overflow menu） | マージ・本番反映済み（smoke PASS） |
 
 ---
 
@@ -159,8 +159,8 @@
 - [x] ① KGI承認（Shingo 2026-06-11 承認済み・G1〜G4）
 - [x] ② recon完了（差分表が file:line で埋まっている）— 2026-06-11 Terminal CC
 - [x] ③ 設計確定（ADR-127 PO承認済み → 実装 GO）
-- [ ] ④ 残作業 PR マージ（change_billing フォーム・3種発行UI）— PR作成・Shingo GO待ち
-- [ ] ⑤ 本番反映（CI緑＋smoke通過）
+- [x] ④ 残作業 PR マージ（change_billing フォーム・3種発行UI）— PR #1979 マージ済み（2026-06-12）
+- [x] ⑤ 本番反映（CI緑＋smoke通過）— 2026-06-12 smoke PASS
 - [ ] ⑥ KGI G1〜G4を本番で実測確認
 - [ ] SA-01横断チェックシート記入
 - [ ] 総合進捗表（00-SA-OVERVIEW.md）の最終更新
