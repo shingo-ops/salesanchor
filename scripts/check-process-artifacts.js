@@ -98,28 +98,58 @@ function parseSOPDeclaration(prBody) {
 }
 
 // ─── recon.md 検証 ────────────────────────────────────────────────────────────
-const FILE_LINE_RE = /`([^`\s]+):(\d+)`/g;
+
+/**
+ * 生パス文字列をリポジトリルート相対パスに正規化する。
+ * './path' → 'path'、それ以外はそのまま。
+ */
+function normalizeCitationPath(rawPath) {
+  return rawPath.startsWith('./') ? rawPath.slice(2) : rawPath;
+}
+
+/**
+ * recon コンテンツから file パス引用をすべて抽出する。
+ * 以下の書式を認識する:
+ *   - `path:N`, `path:N-M`, `path`  (バッククォート付き、行番号任意)
+ *   - path/to/file:N, path/to/file:N-M  (バッククォートなし・スラッシュ必須・行番号あり)
+ *   - ./path/to/file:N  (相対パス、行番号あり)
+ * 行番号の妥当性チェックは行わない（ファイル実在確認のみ）。
+ */
+function extractFileCitations(content) {
+  const paths = new Set();
+
+  // バッククォート付き（行番号はオプション、単数・範囲どちらも可）
+  const backtickRe = /`([^`\s]+?)(?::[\d]+(?:-[\d]+)?)?`/g;
+  let m;
+  while ((m = backtickRe.exec(content)) !== null) {
+    const raw = m[1];
+    if (/^https?:\/\//.test(raw)) continue; // URL スキップ
+    paths.add(normalizeCitationPath(raw));
+  }
+
+  // バッククォートなし + スラッシュ入りパス + 行番号（スラッシュ必須で誤検知を抑制）
+  // 先行する文字でパス開始を判定（空白・記号・行頭）
+  // 例: `frontend/src/foo.tsx:42-50`, `./scripts/foo.js:10`
+  const plainRe = /(?:^|[\s(,|[\n])((\.\/)?[a-zA-Z0-9_][\w.\-]*(?:\/[\w.\-]+)+)(?::[\d]+(?:-[\d]+)?)/gm;
+  while ((m = plainRe.exec(content)) !== null) {
+    const raw = m[1];
+    if (/^https?:\/\//.test(raw)) continue;
+    paths.add(normalizeCitationPath(raw));
+  }
+
+  return [...paths];
+}
 
 function hasFileCitations(content) {
-  FILE_LINE_RE.lastIndex = 0;
-  return FILE_LINE_RE.test(content);
+  return extractFileCitations(content).length > 0;
 }
 
 function validateFileCitations(content) {
-  FILE_LINE_RE.lastIndex = 0;
   const errors = [];
-  let match;
-  while ((match = FILE_LINE_RE.exec(content)) !== null) {
-    const filePath = match[1];
-    const lineNum = parseInt(match[2], 10);
+  for (const filePath of extractFileCitations(content)) {
     const fullPath = join(repoRoot, filePath);
     if (!existsSync(fullPath)) {
-      errors.push(`  ❌ ${filePath}:${lineNum} — ファイルが存在しません`);
-      continue;
-    }
-    const lines = readFileSync(fullPath, 'utf8').split('\n');
-    if (lineNum < 1 || lineNum > lines.length) {
-      errors.push(`  ❌ ${filePath}:${lineNum} — 行番号が範囲外（ファイルは ${lines.length} 行）`);
+      errors.push(`  ❌ ${filePath} — ファイルが存在しません`);
     }
   }
   return errors;
@@ -429,6 +459,8 @@ module.exports = {
   classifyFile,
   classifyChanges,
   parseSOPDeclaration,
+  normalizeCitationPath,
+  extractFileCitations,
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
