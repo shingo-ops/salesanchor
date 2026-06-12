@@ -330,7 +330,7 @@ export default function DashboardPage() {
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const label = `${d.getFullYear()}${t("common.unitYear", { defaultValue: "年" })}${d.getMonth() + 1}${t("common.unitMonth")}`;
+      const label = `${d.getFullYear()}${t("common.unitYear")}${d.getMonth() + 1}${t("common.unitMonth")}`;
       opts.push({ value, label });
     }
     return opts;
