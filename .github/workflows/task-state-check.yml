@@ -18,7 +18,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: タスク台帳・スプリント状態の構造チェック
         run: |
           chmod +x scripts/check-task-state.sh

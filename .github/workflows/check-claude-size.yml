@@ -12,7 +12,7 @@ jobs:
     name: CLAUDE.md line count check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -29,7 +29,7 @@ jobs:
             echo "✅ CLAUDE.md に変更なし — サイズチェックをスキップします"
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: steps.changed.outputs.changed == 'true'
         with:
           node-version: '22'  # GHA Node.js 20 廃止対応 2026-06-16

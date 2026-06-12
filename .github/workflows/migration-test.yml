@@ -33,8 +33,8 @@ jobs:
     outputs:
       migrations: ${{ steps.filter.outputs.migrations }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -74,7 +74,7 @@ jobs:
       # fetch-depth: 0 必須。後段の detect step が PR base..head の git diff で
       # 変更 SQL を特定するため、base SHA を含む全履歴が必要（shallow=1 だと
       # `fatal: bad object` で diff が失敗し、変更検出が空＝SQL未実行の偽 green になる）。
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

@@ -1,0 +1,81 @@
+name: Auto Back-Merge
+
+# main への push（release マージ・main 直 hotfix）を検知して、develop が main に対して
+# コンテンツ的に遅れていれば main → develop の back-merge PR を自動起票する。
+# MTG決定 D / ADR-050（merge commit 化）の補完・安全網。詳細: docs/handoff/auto-back-merge/。
+#
+# クリーンな merge-commit リリース後は develop が遅れていないため起票しない（誤起票防止）。
+# 乖離源は主に「main 直 hotfix」「例外的な squash」。
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  open-back-merge-pr:
+    name: main → develop back-merge PR 自動起票
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: develop が main にコンテンツ的に遅れているか判定
+        id: diverge
+        run: |
+          git fetch origin main develop --quiet
+          BASE="$(git merge-base origin/develop origin/main)"
+          if git diff --quiet "$BASE" origin/main; then
+            echo "develop は main に遅れていない（クリーンリリース）→ back-merge 不要"
+            echo "needs_merge=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "main がコンテンツ前進（hotfix / 例外 squash）→ back-merge 必要"
+            echo "needs_merge=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: main → develop の open PR を確認
+        id: check
+        if: steps.diverge.outputs.needs_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OPEN=$(gh pr list --base develop --head main --state open --json number -q 'length')
+          echo "open_count=$OPEN" >> "$GITHUB_OUTPUT"
+
+      - name: back-merge PR を起票（＋ auto-merge 有効化）
+        if: steps.diverge.outputs.needs_merge == 'true' && steps.check.outputs.open_count == '0'
+        env:
+          # PIPELINE_PAT で起票する（GITHUB_TOKEN だと作成された PR で pull_request トリガーの
+          # workflow が起動せず必須チェックが永久 Waiting になるため。auto-release-pr.yml と同様）。
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          PR_BODY: |
+            ## back-merge PR（自動起票）
+
+            main が develop に対してコンテンツ的に先行したため自動起票しました
+            （release マージ後の残差 / main 直 hotfix / 例外的な squash）。
+
+            **内容を確認のうえ develop へ取り込んでください**（develop は自動 merge 対象）。
+            コンフリクトがある場合は GitHub が自動 merge せず、手動解決が必要です。
+
+            - 目的: develop↔main の恒常的乖離（手動 back-merge の繰り返し）を解消する安全網。
+            - 根本対策は ADR-050（main へは必ず merge commit）。本 PR はその補完です。
+
+            ---
+            *このPRは `main` への push を検知して自動起票されました（PIPELINE_PAT 起票）。*
+        run: |
+          PR_URL=$(gh pr create \
+            --base develop \
+            --head main \
+            --title "chore: back-merge main → develop" \
+            --body "$PR_BODY")
+          echo "✅ back-merge PR を自動起票しました: $PR_URL"
+          # 必須チェック通過後に GitHub 側で merge（auto-merge 無効/権限不足/コンフリクト時は人間 merge）。
+          gh pr merge --auto --merge "$PR_URL" || echo "ℹ️ auto-merge を有効化できませんでした（人間 merge に委ねます）"
+
+      - name: スキップ通知
+        if: steps.diverge.outputs.needs_merge != 'true' || steps.check.outputs.open_count != '0'
+        run: echo "ℹ️ back-merge 不要、または既に open の main → develop PR があるためスキップしました"
