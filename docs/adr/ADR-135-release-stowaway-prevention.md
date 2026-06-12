@@ -76,9 +76,9 @@ STANDARD-WORKFLOW.md と CLAUDE.md に以下をインラインで記載：
 ### 受け入れ条件
 
 - [x] `migrations/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：DANGEROUS_PATTERNS で既に対応）
-- [x] `scripts/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：ADR-135 で追加）
-- [ ] 認可承認者（shingo-ops）が Approve した後 gate が PASS する（B-2 受け入れテスト）
-- [ ] 通常フロントエンドのみの PR が承認なし・CI 緑のみでマージできる（B-2 受け入れテスト）
+- [x] `scripts/` を触るテスト PR が承認なしでは gate が FAIL する（B-2：ADR-135 で追加・PR #2013 で確認）
+- [x] 認可承認者が Approve した後 gate が PASS する（B-2 受け入れテスト：PR #2013 で shingo-cc 承認→SUCCESS 確認 2026-06-12）
+- [x] 通常フロントエンドのみの PR が承認なし・CI 緑のみでマージできる（B-2 受け入れテスト：PR #2015 で確認済み）
 - [x] develop→main のリリース PR で process-artifacts gate が FAIL の場合マージできない（C 適用済み）
 - [x] PR テンプレートにリリース PR 用の相乗り確認欄が存在し変更ファイル一覧の報告が行われる（D）
 - [x] STANDARD-WORKFLOW と CLAUDE.md に E のルールがインラインで存在する
