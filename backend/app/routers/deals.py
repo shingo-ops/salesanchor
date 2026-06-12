@@ -39,14 +39,14 @@ router = APIRouter()
 _DEAL_COLUMNS = """
     id, deal_code, company_id, contact_id, lead_id,
     title, amount, currency,
-    status, stage, probability, lost_reason, lost_reason_code, assigned_to,
+    status, stage, probability, assigned_to,
     expected_close_date, notes, lead_source, created_at, updated_at
 """
 
 _UPDATABLE_COLUMNS = {
     "company_id", "contact_id", "lead_id",
     "title", "amount", "currency",
-    "status", "stage", "probability", "lost_reason", "lost_reason_code",
+    "status", "stage", "probability",
     "assigned_to", "expected_close_date", "notes", "lead_source",
 }
 
@@ -170,13 +170,13 @@ async def create_deal(
             INSERT INTO {deals_t} (
                 tenant_id, company_id, contact_id, lead_id,
                 title, amount, currency,
-                status, stage, probability, lost_reason, lost_reason_code,
+                status, stage, probability,
                 assigned_to, expected_close_date, notes, lead_source
             )
             VALUES (
                 :tenant_id, :company_id, :contact_id, :lead_id,
                 :title, :amount, :currency,
-                :status, :stage, :probability, :lost_reason, :lost_reason_code,
+                :status, :stage, :probability,
                 :assigned_to, :expected_close_date, :notes, :lead_source
             )
             RETURNING id
@@ -192,8 +192,6 @@ async def create_deal(
             "status": data.status.value,
             "stage": data.stage.value,
             "probability": data.probability,
-            "lost_reason": data.lost_reason,
-            "lost_reason_code": data.lost_reason_code.value if data.lost_reason_code else None,
             "assigned_to": data.assigned_to,
             "expected_close_date": data.expected_close_date,
             "notes": data.notes,
@@ -308,7 +306,7 @@ async def update_deal(
             )
 
     # Enum型の値を文字列に変換
-    for key in ("status", "stage", "currency", "lost_reason_code"):
+    for key in ("status", "stage", "currency"):
         if key in update_data and update_data[key] is not None:
             update_data[key] = update_data[key].value
 

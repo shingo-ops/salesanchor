@@ -242,7 +242,6 @@ class TestDealResponseSchema:
             "status": "open",
             "stage": None,
             "probability": None,
-            "lost_reason": None,
             "assigned_to": None,
             "expected_close_date": None,
             "notes": None,
