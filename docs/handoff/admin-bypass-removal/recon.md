@@ -27,7 +27,67 @@ rules:
   - required_status_checks: [10件]
 ```
 
-バックアップ先: `/tmp/ruleset_15777895_backup.json`（セッション内保全）
+**変更前 Ruleset 全文（ロールバック材料）:**
+
+```json
+{
+  "name": "main branch protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": { "exclude": [], "include": ["~DEFAULT_BRANCH"] }
+  },
+  "bypass_actors": [
+    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }
+  ],
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "required_reviewers": [],
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false,
+        "allowed_merge_methods": ["merge"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          { "context": "pytest (SQLite + PostgreSQL RLS)", "integration_id": 15368 },
+          { "context": "テナントスキーマ整合性チェック", "integration_id": 15368 },
+          { "context": "マイグレーションSQL 実行テスト（実DB）", "integration_id": 15368 },
+          { "context": "models.py に新 Column → deploy.yml にマイグレーション追記必須", "integration_id": 15368 },
+          { "context": "ADR-072 tenant schema lint (strict mode)", "integration_id": 15368 },
+          { "context": "Lint & Dark Mode Check (ADR-067)", "integration_id": 15368 },
+          { "context": "Playwright E2E (chromium)", "integration_id": 15368 },
+          { "context": "gitleaks（シークレット漏洩検出）", "integration_id": 15368 },
+          { "context": "CLAUDE.md line count check", "integration_id": 15368 },
+          { "context": "ADR index is up to date", "integration_id": 15368 }
+        ]
+      }
+    }
+  ]
+}
+```
+
+復元コマンド（ロールバック時）:
+```bash
+TOKEN=$(gh auth token)
+curl -X PUT -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  -H "Content-Type: application/json" \
+  -d '上記JSONをbodyに' \
+  "https://api.github.com/repos/shingo-ops/salesanchor/rulesets/15777895"
+```
 
 ---
 
