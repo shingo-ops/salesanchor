@@ -251,6 +251,7 @@
   --success-bg-subtle: rgba(74, 222, 128, 0.10);   /* ダーク success 準拠 */
 
   --color-hover-overlay:    rgba(255, 255, 255, 0.06);
+  --color-chip-count-bg:    rgba(255, 255, 255, 0.25);
   --color-separator-subtle: rgba(148, 163, 184, 0.4);
 
   /* フォーカスリング（dark: --accent #5b8dd9 ネイビー系） */
