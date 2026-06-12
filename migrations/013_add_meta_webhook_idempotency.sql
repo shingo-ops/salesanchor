@@ -60,13 +60,14 @@ BEGIN
         -- C1: leads(source) に UNIQUE 部分インデックスを追加
         --     source 列が存在する場合のみ実行。
         --     ADR-138 §D1-3（クリーンスレート）により migration 20260613_030000 が
-        --     leads.source を廃止済みのため、列が無い場合はスキップする。
+        --     leads.source を廃止済みのため、列が無い場合はスキップする（loud-skip）。
+        -- ADR-036 整合: 欠落時は WARNING を出して loud-skip（silent ではない）。
         -- ============================================================
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = schema_record.schema_name
-              AND table_name   = 'leads'
-              AND column_name  = 'source'
+              AND table_name = 'leads'
+              AND column_name = 'source'
         ) THEN
             EXECUTE format(
                 'SELECT COUNT(*) FROM (
@@ -98,7 +99,9 @@ BEGIN
                     schema_record.schema_name;
             END IF;
         ELSE
-            RAISE NOTICE 'leads.source: column not found (廃止済み per ADR-138), C1 skipped for %',
+            RAISE WARNING
+                'Schema %: leads.source 列が存在しないため meta-source UNIQUE index を '
+                'スキップしました（migration 103 適用済み・ADR-138 §D1-3）。',
                 schema_record.schema_name;
         END IF;
 
