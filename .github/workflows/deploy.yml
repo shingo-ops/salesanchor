@@ -100,12 +100,11 @@ jobs:
             set -e
             HTPASSWD=/home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
             mkdir -p "$(dirname "${HTPASSWD}")"
-            which htpasswd || sudo apt-get install -y apache2-utils
-            touch "${HTPASSWD}"
             IFS=: read -r v_user v_pass <<< "${VIEWER_CRED}"
-            printf '%s\n' "${v_pass}" | htpasswd -Bi "${HTPASSWD}" "${v_user}"
             IFS=: read -r s_user s_pass <<< "${SMOKE_CRED}"
-            printf '%s\n' "${s_pass}" | htpasswd -Bi "${HTPASSWD}" "${s_user}"
+            # openssl passwd -apr1 を使用（apache2-utils 不要、sudo 不要）
+            printf '%s:%s\n' "${v_user}" "$(openssl passwd -apr1 "${v_pass}")" >  "${HTPASSWD}"
+            printf '%s:%s\n' "${s_user}" "$(openssl passwd -apr1 "${s_pass}")" >> "${HTPASSWD}"
             echo "htpasswd users: $(cut -d: -f1 "${HTPASSWD}" | tr '\n' ' ')"
 
       - name: Rsync design-site to VPS
