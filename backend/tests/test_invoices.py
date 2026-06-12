@@ -381,6 +381,7 @@ class TestInvoicesStatusTransitions:
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "voided"
+        assert data["voided_at"] is not None
         assert data["void_reason"] == "ミス入力のため"
         assert "[VOID]" in data["invoice_number"]
 
@@ -394,7 +395,9 @@ class TestInvoicesStatusTransitions:
         res = await client.post(f"/api/v1/invoices/{invoice_id}/void",
                                 json={"reason": "キャンセル"})
         assert res.status_code == 200
-        assert res.json()["status"] == "voided"
+        data = res.json()
+        assert data["status"] == "voided"
+        assert data["voided_at"] is not None
 
     async def test_cannot_void_paid_invoice(self, client):
         """paid 状態は void 不可（400）"""
