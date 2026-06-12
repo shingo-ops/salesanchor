@@ -28,7 +28,7 @@ jobs:
       telegram_current:       ${{ steps.telegram.outputs.current }}
       telegram_stored:        ${{ steps.telegram.outputs.stored }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # simple-icons 最新リリースタグ取得
       # API 失敗時は exit 1 で誤検知防止（"null" 文字列流入を防ぐ）
@@ -118,9 +118,9 @@ jobs:
       meta_blocked: ${{ steps.dl.outputs.meta_blocked }}
       branch:       ${{ steps.push.outputs.branch }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'  # GHA Node.js 20 廃止対応 2026-06-16
 

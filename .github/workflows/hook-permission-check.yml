@@ -30,7 +30,7 @@ jobs:
     runs-on: [self-hosted, macOS]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run check-hooks.sh
         id: check

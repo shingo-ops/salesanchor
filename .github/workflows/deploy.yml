@@ -25,13 +25,13 @@ jobs:
       # 静的サイト salesanchor.jp の本体（Astro 4 で 4 ページ生成）
       # ============================================
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ADR-082: フロントのみのデプロイでは DB マイグレーション（冪等・約60ステップ）を
       # スキップして所要時間を短縮する。backend/migrations/scripts/compose/deploy.yml の
       # いずれかが変わった場合のみ migrations を実行（保守的ゲート・判定不能時は安全側=実行）。
       - name: Detect backend / migration changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: |
@@ -43,7 +43,7 @@ jobs:
               - '.github/workflows/deploy.yml'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # Node.js 22 LTS（2027-04 EOL）。Astro 4.x は Node 18+ 対応のため互換。
           # 他ワークフロー（chromatic/e2e/frontend-check）と統一。
@@ -59,7 +59,7 @@ jobs:
           npm run build
 
       - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
