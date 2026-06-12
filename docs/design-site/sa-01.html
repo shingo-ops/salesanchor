@@ -12,8 +12,14 @@
   <span class="logo">SA設計図書</span>
   <nav>
     <a href="/design/">全体地図</a>
-    <a href="/design/sa-01.html" class="active">SA-01 原則</a>
-    <a href="/design/sa-02.html">SA-02 顧客</a>
+    <a href="/design/sa-01.html" class="active">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
   </nav>
 </header>
 
@@ -257,14 +263,64 @@
     </div>
   </div>
 
-  <!-- ⑦正本ADRリンク -->
+  <!-- ⑦ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">
+        SA-01 は「機能」ではなく<strong>全 SA 共通の合格基準</strong>です。
+        SA-01 自身に数値ゴールはなく、SA-02〜07・12 が完了するたびに下記 4 原則への適合を確認します。
+      </p>
+      <table class="kgi-table">
+        <thead>
+          <tr>
+            <th>原則</th>
+            <th>合格の確認方法</th>
+            <th>適用タイミング</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>同一事実がDBの複数テーブルに重複して書き込まれていないことを設計レビューで確認</td>
+            <td>各 SA の設計確定時（フェーズ③）</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>新規テーブル・カラムが顧客マスタか商品・在庫マスタのいずれかから派生していることを確認</td>
+            <td>各 SA の設計確定時（フェーズ③）</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>累計売上・LTV・在庫残数など「計算で出せる値」が DB 列として書き込まれていないことを確認</td>
+            <td>各 SA の実装マージ時（フェーズ④）</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>失注理由・対象外理由が選択式であること、バリデーション漏れがないことを確認</td>
+            <td>各 SA の実装マージ時（フェーズ④）</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--text-sub);margin-top:8px;">
+        正本チェックシート:
+        <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/SA-01-principles-checklist.md"
+           target="_blank" rel="noopener">SA-01-principles-checklist.md</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ⑧正本ADRリンク -->
   <div class="adr-ref">
     <span class="adr-ref__warn">⚠ 正本</span>
     <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md"
        target="_blank" rel="noopener">
       docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md
     </a>
-    <span>最終更新: 2026-06-12</span>
+    <span>最終更新: 2026-06-13</span>
     <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
   </div>
 

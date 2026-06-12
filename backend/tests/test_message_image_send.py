@@ -51,7 +51,8 @@ _LEAD_DDL = """
         company_name VARCHAR(200),
         email VARCHAR(255),
         phone VARCHAR(50),
-        source VARCHAR(100),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
         type VARCHAR(50),
         status VARCHAR(50),
         temperature VARCHAR(20),
@@ -274,7 +275,7 @@ async def _insert_config(db, tenant_id: int, page_id: str, fernet: Fernet, ig_id
 async def test_invalid_mime_type_returns_400(app_client):
     ac, db, _ = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await db.commit()
     resp = await ac.post(
@@ -289,7 +290,7 @@ async def test_invalid_mime_type_returns_400(app_client):
 async def test_file_too_large_returns_400(app_client):
     ac, db, _ = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await db.commit()
     big = b"\xff\xd8\xff\xe0" + b"x" * (9 * 1024 * 1024)
@@ -315,7 +316,7 @@ async def test_lead_not_found_returns_404(app_client):
 async def test_discord_platform_returns_400(app_client):
     ac, db, fernet = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'discord:user_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'discord', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "discord")
     resp = await ac.post(
@@ -330,7 +331,7 @@ async def test_discord_platform_returns_400(app_client):
 async def test_no_meta_config_returns_409(app_client):
     ac, db, _ = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "messenger")
     resp = await ac.post(
@@ -344,7 +345,7 @@ async def test_no_meta_config_returns_409(app_client):
 async def test_messaging_window_expired_returns_400(app_client):
     ac, db, fernet = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "messenger", delta_hours=-(8 * 24))
     await _insert_config(db, 999, "page_1", fernet)
@@ -360,7 +361,7 @@ async def test_messaging_window_expired_returns_400(app_client):
 async def test_upload_api_error_returns_502(app_client):
     ac, db, fernet = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "messenger")
     await _insert_config(db, 999, "page_1", fernet)
@@ -378,7 +379,7 @@ async def test_upload_api_error_returns_502(app_client):
 async def test_success_inserts_outbound_row(app_client):
     ac, db, fernet = app_client
     await db.execute(
-        text("INSERT INTO leads (id, tenant_id, source, customer_name) VALUES (1, 999, 'messenger:psid_1', 'Test')"),
+        text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'messenger', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "messenger")
     await _insert_config(db, 999, "page_1", fernet)

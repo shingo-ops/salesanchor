@@ -12,9 +12,14 @@
   <span class="logo">SA設計図書</span>
   <nav>
     <a href="/design/" class="active">全体地図</a>
-    <a href="/design/sa-01.html">SA-01 原則</a>
-    <a href="/design/sa-02.html">SA-02 顧客</a>
-    <span style="color:var(--border);font-size:12px">SA-03〜07・12（Stage 2）</span>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
   </nav>
 </header>
 
@@ -190,6 +195,49 @@
       <span id="progress-generated-at" style="color:var(--c-derived);">（進捗読み込み中…）</span>
     </p>
 
+    <!-- 6フェーズ物差し凡例 -->
+    <div class="phase-legend">
+      <div class="phase-legend__title">進捗フェーズの物差し</div>
+      <div class="phase-legend__steps">
+        <div class="phase-legend__step">
+          <span class="phase-legend__num">①</span>
+          <span class="phase-legend__label">KGI承認</span>
+          <span class="phase-legend__pct">15%</span>
+        </div>
+        <div class="phase-legend__arrow">→</div>
+        <div class="phase-legend__step">
+          <span class="phase-legend__num">②</span>
+          <span class="phase-legend__label">recon完了</span>
+          <span class="phase-legend__pct">35%</span>
+        </div>
+        <div class="phase-legend__arrow">→</div>
+        <div class="phase-legend__step">
+          <span class="phase-legend__num">③</span>
+          <span class="phase-legend__label">設計確定</span>
+          <span class="phase-legend__pct">50%</span>
+        </div>
+        <div class="phase-legend__arrow">→</div>
+        <div class="phase-legend__step">
+          <span class="phase-legend__num">④</span>
+          <span class="phase-legend__label">実装マージ</span>
+          <span class="phase-legend__pct">75%</span>
+        </div>
+        <div class="phase-legend__arrow">→</div>
+        <div class="phase-legend__step">
+          <span class="phase-legend__num">⑤</span>
+          <span class="phase-legend__label">本番反映</span>
+          <span class="phase-legend__pct">90%</span>
+        </div>
+        <div class="phase-legend__arrow">→</div>
+        <div class="phase-legend__step phase-legend__step--goal">
+          <span class="phase-legend__num">⑥</span>
+          <span class="phase-legend__label">KGI実測達成</span>
+          <span class="phase-legend__pct">100%</span>
+        </div>
+      </div>
+      <p class="phase-legend__note">正本: <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/00-SA-OVERVIEW.md" target="_blank" rel="noopener">00-SA-OVERVIEW.md §2</a></p>
+    </div>
+
     <div class="sa-grid">
 
       <a href="/design/sa-01.html" class="sa-card" data-sa="SA-01">
@@ -199,6 +247,8 @@
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="badge badge--cross">横断適用</span>
         </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
         <p style="font-size:12px;color:var(--text-sub);">全SAの合格基準。機能ではなく原則。</p>
       </a>
 
@@ -207,79 +257,134 @@
         <div class="sa-card__theme">会話ログ＋会社集計ビュー<br>（顧客マスタ／CRMデータモデル）</div>
         <div class="sa-card__adr">ADR-096</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--wip">進行中 80%</span>
+          <span class="badge badge--wip">⑤ 本番反映済み (80%)</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:80%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">顧客1人1枚のカルテ。取引・会話を正規化。</p>
+        <div class="sa-card__phase">⑤ 本番反映済み</div>
+        <div class="sa-card__next">次: KGI G1〜G4を本番で実測確認</div>
       </a>
 
-      <div class="sa-card" data-sa="SA-03" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-03.html" class="sa-card" data-sa="SA-03">
         <div class="sa-card__id">SA-03</div>
         <div class="sa-card__theme">顧客登録トークン基盤</div>
         <div class="sa-card__adr">ADR-097 / 126 / 127</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--wip">進行中 60%</span>
+          <span class="badge badge--wip">読み込み中…</span>
         </div>
-        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:60%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
-      <div class="sa-card" data-sa="SA-04" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-04.html" class="sa-card" data-sa="SA-04">
         <div class="sa-card__id">SA-04</div>
         <div class="sa-card__theme">チャネルリンクテンプレSSOT＋guild_id</div>
         <div class="sa-card__adr">ADR-098</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--todo">未着手</span>
+          <span class="badge badge--wip">読み込み中…</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
-      <div class="sa-card" data-sa="SA-05" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-05.html" class="sa-card" data-sa="SA-05">
         <div class="sa-card__id">SA-05</div>
         <div class="sa-card__theme">在庫A/B区分＋2段階引当</div>
         <div class="sa-card__adr">ADR-099</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--todo">未着手</span>
+          <span class="badge badge--todo">読み込み中…</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
-      <div class="sa-card" data-sa="SA-06" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-06.html" class="sa-card" data-sa="SA-06">
         <div class="sa-card__id">SA-06</div>
         <div class="sa-card__theme">解析ログ永続化＋ドリフト検知</div>
         <div class="sa-card__adr">ADR-100</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--todo">未着手</span>
+          <span class="badge badge--todo">読み込み中…</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
-      <div class="sa-card" data-sa="SA-07" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-07.html" class="sa-card" data-sa="SA-07">
         <div class="sa-card__id">SA-07</div>
         <div class="sa-card__theme">請求書スナップショット＋為替＋専用PDF</div>
         <div class="sa-card__adr">ADR-101</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--todo">未着手</span>
+          <span class="badge badge--todo">読み込み中…</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
-      <div class="sa-card" data-sa="SA-12" style="opacity:.7;cursor:default;">
+      <a href="/design/sa-12.html" class="sa-card" data-sa="SA-12">
         <div class="sa-card__id">SA-12</div>
         <div class="sa-card__theme">テナントポリシー基盤<br>（標準エンジン＋テナント変数）</div>
         <div class="sa-card__adr">ADR-106</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="badge badge--todo">未着手</span>
+          <span class="badge badge--todo">読み込み中…</span>
         </div>
         <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
-        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
-      </div>
+        <div class="sa-card__phase" style="display:none;"></div>
+        <div class="sa-card__next" style="display:none;"></div>
+      </a>
 
     </div>
+
+    <!-- SA-08〜11 欠番説明 -->
+    <div class="missing-note">
+      <div class="missing-note__title">SA-08〜11 について（なぜこのサイトにないのか）</div>
+      <p>
+        ADR-102〜105 として設計は存在しますが、
+        <strong>00-SA-OVERVIEW.md §1（正本スコープ表）に SA-08〜11 のエントリが存在しない</strong>ため、
+        このサイトの対象外となっています。
+        対象に加える場合は 00-SA-OVERVIEW.md §1 への追記と PO（しんごさん）の承認が必要です。
+      </p>
+      <table class="data-table" style="margin-top:12px;">
+        <thead>
+          <tr>
+            <th>SA</th>
+            <th>ADR</th>
+            <th>テーマ</th>
+            <th>対象外の根拠</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SA-08</td>
+            <td>ADR-102</td>
+            <td>受注管理</td>
+            <td>00-SA-OVERVIEW.md §1 にエントリなし</td>
+          </tr>
+          <tr>
+            <td>SA-09</td>
+            <td>ADR-103</td>
+            <td>発送・出荷タイミング</td>
+            <td>00-SA-OVERVIEW.md §1 にエントリなし</td>
+          </tr>
+          <tr>
+            <td>SA-10</td>
+            <td>ADR-104</td>
+            <td>入金確認・損益管理</td>
+            <td>00-SA-OVERVIEW.md §1 にエントリなし</td>
+          </tr>
+          <tr>
+            <td>SA-11</td>
+            <td>ADR-105</td>
+            <td>トラブル・返金対応</td>
+            <td>00-SA-OVERVIEW.md §1 にエントリなし</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
   </section>
 
 </div><!-- /page-container -->
@@ -290,7 +395,7 @@
     <span>矛盾があればADRが優先されます。</span>
     <a href="https://github.com/shingo-ops/salesanchor/tree/main/docs/adr"
        target="_blank" rel="noopener">正本: docs/adr/ → ADR-095〜106</a>
-    <span>最終更新: 2026-06-12</span>
+    <span>最終更新: 2026-06-13</span>
   </div>
 </footer>
 

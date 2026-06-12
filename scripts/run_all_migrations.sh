@@ -372,6 +372,26 @@ run_sql migrations/20260612_050000_backfill_invoice_timestamps.sql
 # ADR-136: v_company_stats SSOT 修正（フィルタを paid_at IS NOT NULL AND voided_at IS NULL に変更）
 run_sql migrations/20260612_120000_fix_company_stats_ssot.sql
 
+# password_hash 列廃止（PO決定 2026-06-12: 認証は Firebase 担当、DB への保存不要）
+run_sql migrations/20260612_150000_drop_password_hash.sql
+
+# ── ファネルダッシュボード PR1（ADR-138 §D1）─────────────────────────────────
+
+# ADR-138 §D1-1: deals.closed_at 追加（成約・失注の確定タイムスタンプ）
+run_sql migrations/20260613_010000_funnel_deals_closed_at.sql
+
+# ADR-138 §D1-2: close_reasons / deal_close_reasons 作成 + deals.lost_reason* 廃止
+run_sql migrations/20260613_020000_funnel_close_reasons.sql
+
+# ADR-138 §D1-3: leads.source 廃止 + channel_type / initiative 追加
+run_sql migrations/20260613_030000_funnel_leads_initiative_channel.sql
+
+# ADR-138 §D1-4: goals.kpi_type CHECK 制約拡張（won_count / gross_profit 追加）
+run_sql migrations/20260613_040000_funnel_goals_kpi_extend.sql
+
+# ADR-138: order_financials.purchase_cost を NULL 許容・DEFAULT 削除
+run_sql migrations/20260613_050000_funnel_purchase_cost_nullable.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

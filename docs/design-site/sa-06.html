@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA-06 解析ログ永続化＋ドリフト検知 — SA設計図書</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/">全体地図</a>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html" class="active">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
+  </nav>
+</header>
+
+<div class="page-container">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <span style="font-size:12px;font-weight:700;color:var(--c-inventory);background:var(--c-inventory-bg);padding:3px 10px;border-radius:12px;">SA-06</span>
+    <span class="badge badge--todo" data-sa="SA-06">未着手</span>
+  </div>
+  <h1 class="page-title">解析ログ永続化＋ドリフト検知</h1>
+  <p class="page-subtitle">
+    取り込み・解析パイプライン — 提供元メッセージを生オファーに変換する仕組みを VPS で安定稼働させる。
+  </p>
+
+  <!-- ① 一言でいうと -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">①</span>
+      <span class="template-section__title">一言でいうと</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:15px;line-height:1.8;">
+        <strong>「提供元から届くバラバラな商品メッセージを AI で解析して在庫マスタに変換する。ログを永続保存して精度を上げ続ける。」</strong>
+      </p>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-sub);">
+        各提供元は商品名・状態・価格・数量の書き方が全員バラバラです。
+        現在は GAS（Google Apps Script）+ Gemini で解析していますが、
+        ログが 18 時間で自動削除されるため改善材料が残りません。
+        SA-06 では解析ログを VPS で永続保存し、精度の低下を自動検知（<strong>ドリフト検知</strong>）して
+        人が承認する改善ループを作ります。
+      </p>
+    </div>
+  </div>
+
+  <!-- ② Before→After -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">②</span>
+      <span class="template-section__title">困りごと Before → After</span>
+    </div>
+    <div class="template-section__body">
+      <div class="before-after">
+        <div class="before-after__box before-after__box--before">
+          <div class="before-after__label">Before（現状の問題）</div>
+          <div class="before-after__item">
+            <p>🗑️ GAS でログが <strong>18 時間で自動削除</strong>される → 失敗例が残らない</p>
+            <p style="margin-top:6px;">❓ なぜ除外されたか分からない → <strong>改善できない</strong></p>
+            <p style="margin-top:6px;">😰 提供元が書き方を変えると<strong>気づかないまま精度が下がる</strong></p>
+            <p style="margin-top:6px;">🔧 ナレッジ（書き方の癖ルール）の管理がスプレッドシート</p>
+          </div>
+        </div>
+        <div class="before-after__arrow">→</div>
+        <div class="before-after__box before-after__box--after">
+          <div class="before-after__label">After（SA-06 設計）</div>
+          <div class="before-after__item">
+            <p>💾 解析ログを <strong>VPS で永続保存</strong>（原文・確信度・判断理由）</p>
+            <p style="margin-top:6px;">🔔 提供元ごとの除外率・確信度を監視 → <strong>悪化を自動フラグ</strong></p>
+            <p style="margin-top:6px;">💡 失敗例からナレッジ修正案を提案 → <strong>人が承認</strong> → 精度向上ループ</p>
+            <p style="margin-top:6px;">🗃️ ナレッジを <strong>DB ＋ 管理画面</strong>で管理</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 仕組みの図解 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">③</span>
+      <span class="template-section__title">仕組みの図解 — 解析パイプライン（v2 目標）</span>
+    </div>
+    <div class="template-section__body">
+      <div class="architecture-diagram">
+        <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+             role="img" aria-label="SA-06 解析パイプライン図">
+          <defs>
+            <marker id="arr06" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+            </marker>
+            <marker id="arr06g" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#2d8a4e"/>
+            </marker>
+          </defs>
+
+          <!-- 提供元メッセージ -->
+          <rect x="10" y="80" width="120" height="55" rx="8" fill="#fff7ed" stroke="#c05621" stroke-width="1.5"/>
+          <text x="70" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#c05621">提供元メッセージ</text>
+          <text x="70" y="116" text-anchor="middle" font-size="10" fill="#c05621">バラバラな書き方</text>
+          <text x="70" y="128" text-anchor="middle" font-size="9" fill="#d97706">（複数提供元）</text>
+
+          <!-- AI解析 -->
+          <rect x="175" y="60" width="145" height="95" rx="8" fill="#f0fdf4" stroke="#2d8a4e" stroke-width="2"/>
+          <text x="247" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">AI 解析</text>
+          <text x="247" y="98" text-anchor="middle" font-size="10" fill="#2d8a4e">参照1: 商品マスタ辞書</text>
+          <text x="247" y="112" text-anchor="middle" font-size="10" fill="#2d8a4e">参照2: 提供元ナレッジ</text>
+          <text x="247" y="126" text-anchor="middle" font-size="10" fill="#2d8a4e">→ 商品ID＋確信度＋判断理由</text>
+          <text x="247" y="140" text-anchor="middle" font-size="9" fill="#16a34a">（構造化出力・整形テキストのみ不可）</text>
+
+          <!-- 矢印1 -->
+          <line x1="130" y1="107" x2="170" y2="107" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr06)"/>
+
+          <!-- 矢印2（成功） -->
+          <line x1="320" y1="90" x2="365" y2="70" stroke="#2d8a4e" stroke-width="1.5" marker-end="url(#arr06g)"/>
+
+          <!-- 矢印2（失敗） -->
+          <line x1="320" y1="130" x2="365" y2="155" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr06)"/>
+
+          <!-- 生オファー（成功時） -->
+          <rect x="365" y="40" width="145" height="55" rx="8" fill="#dcfce7" stroke="#2d8a4e" stroke-width="2"/>
+          <text x="437" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">生オファー（SSOT）</text>
+          <text x="437" y="76" text-anchor="middle" font-size="10" fill="#2d8a4e">在庫マスタに反映</text>
+          <text x="437" y="88" text-anchor="middle" font-size="9" fill="#16a34a">（商品マスタが正）</text>
+
+          <!-- 除外リスト（失敗時） -->
+          <rect x="365" y="135" width="145" height="50" rx="8" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="437" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#dc2626">除外リスト（永続）</text>
+          <text x="437" y="171" text-anchor="middle" font-size="10" fill="#dc2626">失敗例・除外理由を保存</text>
+
+          <!-- ドリフト検知 -->
+          <rect x="540" y="80" width="130" height="60" rx="8" fill="#fef9c3" stroke="#b45309" stroke-width="1.5"/>
+          <text x="605" y="103" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309">ドリフト検知</text>
+          <text x="605" y="119" text-anchor="middle" font-size="10" fill="#b45309">除外率・確信度を監視</text>
+          <text x="605" y="131" text-anchor="middle" font-size="9" fill="#d97706">悪化 → 担当者へ通知</text>
+
+          <!-- 矢印: 除外リスト → ドリフト検知 -->
+          <line x1="510" y1="160" x2="540" y2="130" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arr06)"/>
+          <line x1="510" y1="68" x2="540" y2="95" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arr06)"/>
+
+          <!-- 解析ログ（永続） -->
+          <rect x="175" y="175" width="145" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="247" y="192" text-anchor="middle" font-size="10" font-weight="700" fill="#374151">解析ログ（永続保存）</text>
+          <text x="247" y="204" text-anchor="middle" font-size="9" fill="#9ca3af">原文・マッチ商品・確信度・ナレッジ版</text>
+
+          <!-- 矢印: 解析 → ログ -->
+          <line x1="247" y1="155" x2="247" y2="170" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr06)"/>
+        </svg>
+      </div>
+      <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
+        失敗例を捨てずに保存することで、なぜ解析が外れたかを後から確認でき、ナレッジを改善できます。
+        ドリフト検知は「精度が静かに落ちていく」問題を自動で見つけます。
+      </p>
+    </div>
+  </div>
+
+  <!-- ④ 4原則との対応表 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">④</span>
+      <span class="template-section__title">4原則との対応表</span>
+    </div>
+    <div class="template-section__body">
+      <table class="data-table">
+        <thead>
+          <tr><th>原則</th><th>SA-06での実現方法</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>在庫マスタ（生オファー）が最終的な真実の場所。解析ログは監査用であり在庫マスタと二重に持たない。商品の正規化は商品マスタが正（ADR-099 と整合）。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>解析パイプラインの最終出力は背骨②（在庫マスタ）への入力。解析が正確であることで在庫の SSoT が信頼できるものになる。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>解析ログの統計（除外率・確信度）は実ログから計算（保存しない）。ドリフト検知の「悪化」判定も閾値との比較で導出。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>ナレッジ修正案は AI が提案し<strong>人が承認</strong>（Lv3 完全自動は不採用）。誤った修正が自動適用されない構造。ドリフト検知による「静かな精度低下」への早期気づき。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑤ 用語ミニ辞典 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑤</span>
+      <span class="template-section__title">用語ミニ辞典</span>
+    </div>
+    <div class="template-section__body">
+      <dl class="glossary">
+        <dt>生オファー</dt>
+        <dd>全提供元の全在庫を統一フォーマットにした在庫マスタ。解析パイプラインの最終出力。</dd>
+
+        <dt>ドリフト検知</dt>
+        <dd>提供元ごとの除外率や確信度を継続監視し、「精度が悪化しているのに気づかない」状態を検知して担当者に通知する仕組み。</dd>
+
+        <dt>確信度</dt>
+        <dd>AI が「この原文はこの商品マスタのこれだ」と判断した確かさの度合い（0〜1）。低い場合は除外リストに入るか人が確認する。</dd>
+
+        <dt>提供元別ナレッジ</dt>
+        <dd>各提供元固有の書き方の癖ルール（「この提供元は "スライダー" と書いたら SA-05 のことだ」等）。AI がこれを参照して解析精度を高める。</dd>
+
+        <dt>構造化出力</dt>
+        <dd>AI の出力を「商品 ID：〇〇、確信度：0.9、除外理由：価格なし」のように機械が読める形にすること。整形されたテキストだけでは後から集計できない。</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ⑥ 決定済み／未決 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑥</span>
+      <span class="template-section__title">決定済み／未決 一覧</span>
+    </div>
+    <div class="template-section__body">
+      <ul class="decision-list">
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>現行 GAS 実装の仕様把握済み</strong>（ADR-100 v1 に記録）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>v2 VPS 版の方針確定</strong>（解析ログ永続化・ドリフト検知・人が承認する改善ループ）</span>
+        </li>
+      </ul>
+      <div class="decision-undecided" style="margin-top:12px;">
+        <strong>⬜ 未決</strong>: KGI 承認（未着手）/ SA-05 完了後に着手予定
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <div class="kgi-unset">
+        <strong>⬜ KGI 未設定</strong>: SA-06 はフェーズ①（KGI 承認）に未着手です。<br>
+        着手前に Shingo が定量的なゴールを承認します。<br>
+        <span style="color:var(--text-sub);">設計上の候補: ①解析成功率 X% ②ドリフト検知アラートの平均応答時間 Y 日以内 ③手動修正件数の月次削減 Z%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 正本ADRリンク -->
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ 正本</span>
+    <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-100-sa-ingestion-analysis-pipeline.md"
+       target="_blank" rel="noopener">ADR-100-sa-ingestion-analysis-pipeline.md</a>
+    <span>最終更新: 2026-06-13</span>
+    <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <p><a href="/design/sa-05.html">← SA-05 在庫</a> ／ <a href="/design/sa-07.html">SA-07 請求 →</a></p>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>

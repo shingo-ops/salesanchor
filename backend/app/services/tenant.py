@@ -307,7 +307,8 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     company_name VARCHAR(255),
     email VARCHAR(255),
     phone VARCHAR(50),
-    source VARCHAR(50),
+    channel_type VARCHAR(30),
+    initiative VARCHAR(10),
     type VARCHAR(50),
     status VARCHAR(50) DEFAULT 'lead',
     temperature VARCHAR(20),
@@ -391,7 +392,6 @@ CREATE TABLE IF NOT EXISTS {schema}.deals (
     status VARCHAR(50) DEFAULT 'open',
     stage VARCHAR(50) DEFAULT 'open',
     probability INTEGER DEFAULT 10,
-    lost_reason VARCHAR(255),
     assigned_to INTEGER,
     expected_close_date DATE,
     notes TEXT,
@@ -942,10 +942,6 @@ CREATE INDEX IF NOT EXISTS idx_meta_messages_ts     ON {schema}.meta_messages (c
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_messages_message_id_unique
     ON {schema}.meta_messages (message_id)
     WHERE message_id IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_meta_source_unique
-    ON {schema}.leads (source)
-    WHERE source LIKE 'messenger:%' OR source LIKE 'instagram:%';
-
 -- ADR-119: lead_channels — 1 lead : N platforms（クロスプラットフォーム名寄せ）
 -- webhook が source 文字列比較ではなくこのテーブルを lookup 権威として使う
 CREATE TABLE IF NOT EXISTS {schema}.lead_channels (

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA-12 テナントポリシー基盤 — SA設計図書</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/">全体地図</a>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html" class="active">SA-12</a>
+  </nav>
+</header>
+
+<div class="page-container">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <span style="font-size:12px;font-weight:700;color:var(--c-derived);background:var(--c-derived-bg);padding:3px 10px;border-radius:12px;">SA-12</span>
+    <span class="badge badge--todo" data-sa="SA-12">未着手</span>
+  </div>
+  <h1 class="page-title">テナントポリシー基盤</h1>
+  <p class="page-subtitle">
+    標準エンジン＋テナント別ポリシー — 計算ロジックは全社共通。違いはテナント設定（ポリシー）が吸収する。
+  </p>
+
+  <!-- ① 一言でいうと -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">①</span>
+      <span class="template-section__title">一言でいうと</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:15px;line-height:1.8;">
+        <strong>「コードは1つ。会社ごとの違いは "ポリシー（設定値）" で吸収する。在庫・発送・書類・報酬のルールが会社で違っても、同じエンジンで全社を動かす。」</strong>
+      </p>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-sub);">
+        A 専業・B 専業・A+B 混在、送料・関税・報酬・集計条件がテナントごとに違います。
+        SA-12 では、計算ロジック（エンジン）を全社で共通にし、
+        差異はテナント設定（ポリシー）として注入することで
+        <strong>コードを会社ごとに分岐させません</strong>。
+        さらにテナント間のデータは DB の RLS（行レベルセキュリティ）で完全分離します。
+      </p>
+    </div>
+  </div>
+
+  <!-- ② Before→After -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">②</span>
+      <span class="template-section__title">困りごと Before → After</span>
+    </div>
+    <div class="template-section__body">
+      <div class="before-after">
+        <div class="before-after__box before-after__box--before">
+          <div class="before-after__label">Before（現状の問題）</div>
+          <div class="before-after__item">
+            <p>🔀 「A社はこっち、B社はこっち」と<strong>if 文がコードに散在</strong></p>
+            <p style="margin-top:6px;">📄 テナントごとに似たような処理が<strong>重複</strong>している</p>
+            <p style="margin-top:6px;">🔒 テナント間データの混入を<strong>アプリ層だけで防いでいる</strong></p>
+            <p style="margin-top:6px;">⚙️ 新テナントを追加するとコードを変更する必要がある</p>
+          </div>
+        </div>
+        <div class="before-after__arrow">→</div>
+        <div class="before-after__box before-after__box--after">
+          <div class="before-after__label">After（SA-12 設計）</div>
+          <div class="before-after__item">
+            <p>⚙️ <strong>エンジンは全社共通</strong>。テナントによる if 文なし</p>
+            <p style="margin-top:6px;">📋 差異は<strong>テナント設定（ポリシー）を注入</strong>して吸収</p>
+            <p style="margin-top:6px;">🔒 <strong>RLS（行レベルセキュリティ）</strong>でデータ分離を DB 層で保証</p>
+            <p style="margin-top:6px;">➕ 新テナント追加はポリシー設定だけで完結（コード変更不要）</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 仕組みの図解 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">③</span>
+      <span class="template-section__title">仕組みの図解 — エンジン＋ポリシー注入モデル</span>
+    </div>
+    <div class="template-section__body">
+      <div class="architecture-diagram">
+        <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+             role="img" aria-label="SA-12 テナントポリシー注入モデル図">
+          <defs>
+            <marker id="arr12" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+            </marker>
+            <marker id="arr12b" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4b5563"/>
+            </marker>
+          </defs>
+
+          <!-- テナントA ポリシー -->
+          <rect x="10" y="30" width="155" height="80" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="1.5"/>
+          <text x="87" y="52" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">テナント A ポリシー</text>
+          <text x="87" y="68" text-anchor="middle" font-size="10" fill="#1a6fc4">在庫: A 専業</text>
+          <text x="87" y="82" text-anchor="middle" font-size="10" fill="#1a6fc4">発送: カットオフ 15:00</text>
+          <text x="87" y="96" text-anchor="middle" font-size="10" fill="#1a6fc4">書類: DDP（関税含む）</text>
+
+          <!-- テナントB ポリシー -->
+          <rect x="10" y="140" width="155" height="80" rx="8" fill="#dcfce7" stroke="#2d8a4e" stroke-width="1.5"/>
+          <text x="87" y="162" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">テナント B ポリシー</text>
+          <text x="87" y="178" text-anchor="middle" font-size="10" fill="#2d8a4e">在庫: B 専業</text>
+          <text x="87" y="192" text-anchor="middle" font-size="10" fill="#2d8a4e">発送: カットオフ 12:00</text>
+          <text x="87" y="206" text-anchor="middle" font-size="10" fill="#2d8a4e">書類: DDU（関税別途）</text>
+
+          <!-- 矢印 → エンジン -->
+          <line x1="165" y1="70" x2="250" y2="115" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr12)"/>
+          <line x1="165" y1="180" x2="250" y2="135" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr12)"/>
+          <text x="207" y="107" font-size="9" fill="#9ca3af">注入</text>
+
+          <!-- 共通エンジン -->
+          <rect x="250" y="75" width="170" height="100" rx="8" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
+          <text x="335" y="97" text-anchor="middle" font-size="12" font-weight="700" fill="#4b5563">共通エンジン</text>
+          <text x="335" y="113" text-anchor="middle" font-size="10" fill="#4b5563">在庫計算ロジック</text>
+          <text x="335" y="127" text-anchor="middle" font-size="10" fill="#4b5563">発送タイミング計算</text>
+          <text x="335" y="141" text-anchor="middle" font-size="10" fill="#4b5563">書類・金額計算</text>
+          <text x="335" y="155" text-anchor="middle" font-size="10" fill="#4b5563">報酬計算</text>
+          <text x="335" y="167" text-anchor="middle" font-size="9" fill="#9ca3af">テナント分岐 if 文なし</text>
+
+          <!-- RLS（DB分離） -->
+          <rect x="250" y="190" width="170" height="35" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="335" y="207" text-anchor="middle" font-size="11" font-weight="700" fill="#dc2626">RLS（行レベルセキュリティ）</text>
+          <text x="335" y="219" text-anchor="middle" font-size="9" fill="#9ca3af">DB 層でテナント間を完全分離</text>
+
+          <!-- 矢印 → 出力 -->
+          <line x1="420" y1="125" x2="475" y2="90" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr12b)"/>
+          <line x1="420" y1="130" x2="475" y2="160" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr12b)"/>
+
+          <!-- A の出力 -->
+          <rect x="475" y="55" width="190" height="50" rx="6" fill="#dbeafe" stroke="#1a6fc4" stroke-width="1.5"/>
+          <text x="570" y="75" text-anchor="middle" font-size="11" fill="#1a6fc4">テナント A の結果</text>
+          <text x="570" y="91" text-anchor="middle" font-size="10" fill="#1a6fc4">A 専業ルールで計算済み</text>
+
+          <!-- B の出力 -->
+          <rect x="475" y="140" width="190" height="50" rx="6" fill="#dcfce7" stroke="#2d8a4e" stroke-width="1.5"/>
+          <text x="570" y="160" text-anchor="middle" font-size="11" fill="#2d8a4e">テナント B の結果</text>
+          <text x="570" y="176" text-anchor="middle" font-size="10" fill="#2d8a4e">B 専業ルールで計算済み</text>
+        </svg>
+      </div>
+      <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
+        エンジンは何も変えず、ポリシーを差し替えるだけで全テナントに対応します。
+        データは RLS で物理的に分離されているため、アプリのバグでも混入が起きません。
+      </p>
+    </div>
+  </div>
+
+  <!-- ④ 4原則との対応表 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">④</span>
+      <span class="template-section__title">4原則との対応表</span>
+    </div>
+    <div class="template-section__body">
+      <table class="data-table">
+        <thead>
+          <tr><th>原則</th><th>SA-12での実現方法</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>各テナントのポリシーはテナント設定テーブルの 1 か所に集約。ロジック中に散在する if 文でテナント差異を持たない。テナントの SSOT 単位は会社ごと（RLS がテナント境界を保証）。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>SA-12 は横断的なインフラ。背骨①・②の計算（集計フィルタ・発送タイミング等）をエンジンが行い、ポリシーが各テナントの挙動を決める。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>テナントごとの在庫優先順位・発送タイミング・書類金額はポリシーと元データから計算（保存しない）。計算ルールの変更はポリシーの更新のみで反映される。</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>テナント ID を署名トークン経由でのみ確定（ADR-097 連動）。RLS で DB 層の誤混入を構造的に防止。ポリシー注入を if 文の代替とすることで「コード修正なし」の新テナント追加を実現。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑤ 用語ミニ辞典 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑤</span>
+      <span class="template-section__title">用語ミニ辞典</span>
+    </div>
+    <div class="template-section__body">
+      <dl class="glossary">
+        <dt>ポリシー（テナント設定）</dt>
+        <dd>在庫ソース・集計フィルタ・発送カットオフ・関税ポリシー・発行者情報など、テナントごとに異なる設定値の総称。エンジンに注入されて挙動を決める。</dd>
+
+        <dt>共通エンジン</dt>
+        <dd>在庫計算・発送タイミング・書類生成・報酬計算のロジック本体。ポリシーを引数として受け取り、テナント分岐の if 文を一切持たない。</dd>
+
+        <dt>RLS（行レベルセキュリティ）</dt>
+        <dd>PostgreSQL の機能。各行に「このテナントだけが読み書きできる」制約を DB 層で設定する。アプリがバグを持っていてもテナント間のデータ混入が起きない。</dd>
+
+        <dt>ポリシー注入</dt>
+        <dd>実行時にテナントの設定値をエンジンに渡す設計パターン。if 文でテナントを分岐させる代わりに「設定を変えるだけ」で挙動が変わる。</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ⑥ 決定済み／未決 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑥</span>
+      <span class="template-section__title">決定済み／未決 一覧</span>
+    </div>
+    <div class="template-section__body">
+      <ul class="decision-list">
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>「標準エンジン＋テナント別ポリシー」方針確定</strong>（ADR-106 Accepted・2026-06-04）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>テナント設定の対象項目確定</strong>（在庫・発送・書類・報酬の 9 項目）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>RLS によるデータ分離方針確定</strong>（ADR-106）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>テナント ID 確定方法</strong> — 署名トークン経由のみ（ADR-097 連動）</span>
+        </li>
+      </ul>
+      <div class="decision-undecided" style="margin-top:12px;">
+        <strong>⬜ 未決</strong>: KGI 承認（未着手）/ SA-02〜07 完了後に横断チェックとして適用
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <div class="kgi-unset">
+        <strong>⬜ KGI 未設定</strong>: SA-12 はフェーズ①（KGI 承認）に未着手です。<br>
+        SA-12 は SA-02〜07 全体に横断適用されるため、他の SA の完了に合わせて KGI を定義します。<br>
+        <span style="color:var(--text-sub);">設計上の候補: ①テナント分岐 if 文 0 件 ②RLS 境界テスト 100% PASS ③新テナント追加時のコード変更 0 件</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 正本ADRリンク -->
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ 正本</span>
+    <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-106-sa-multitenant-policy.md"
+       target="_blank" rel="noopener">ADR-106-sa-multitenant-policy.md</a>
+    <span>最終更新: 2026-06-13</span>
+    <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <p><a href="/design/sa-07.html">← SA-07 請求</a> ／ <a href="/design/">全体地図 →</a></p>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>

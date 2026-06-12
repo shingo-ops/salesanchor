@@ -1,4 +1,7 @@
-"""generate_password / hash_password / verify_password のユニットテスト。"""
+"""generate_password のユニットテスト。
+
+hash_password / verify_password は password_hash 列廃止に伴い削除済み（2026-06-12）。
+"""
 import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -10,8 +13,6 @@ import pytest
 from app.auth.utils import (
     PASSWORD_SYMBOLS,
     generate_password,
-    hash_password,
-    verify_password,
 )
 
 
@@ -47,19 +48,3 @@ class TestGeneratePassword:
         # 100回生成して全て異なる（暗号学的乱数なので衝突しないこと）
         passwords = {generate_password() for _ in range(100)}
         assert len(passwords) == 100
-
-
-class TestHashAndVerify:
-    def test_hash_then_verify_succeeds(self):
-        pw = generate_password()
-        hashed = hash_password(pw)
-        assert verify_password(pw, hashed) is True
-
-    def test_verify_with_wrong_password_fails(self):
-        hashed = hash_password("correct-password")
-        assert verify_password("wrong-password", hashed) is False
-
-    def test_hash_is_not_plaintext(self):
-        pw = "MyTestPassword123!"
-        hashed = hash_password(pw)
-        assert pw not in hashed

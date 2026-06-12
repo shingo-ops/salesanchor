@@ -195,21 +195,19 @@ async def _create_user_record(
     tenant_id: int,
     email: str,
     display_name: str,
-    password_hash: str,
 ) -> int:
     result = await conn.execute(
         text("""
             INSERT INTO public.users (
-                tenant_id, username, email, password_hash, full_name, role, is_active
+                tenant_id, username, email, full_name, role, is_active
             )
-            VALUES (:tid, :username, :email, :hash, :fullname, :role, TRUE)
+            VALUES (:tid, :username, :email, :fullname, :role, TRUE)
             RETURNING id
         """),
         {
             "tid": tenant_id,
             "username": display_name,
             "email": email,
-            "hash": password_hash,
             "fullname": display_name,
             "role": "user",
         },
@@ -392,8 +390,6 @@ async def _run_create() -> None:
     DB トランザクションは 1 つの `engine.begin()` ブロックで囲む（失敗時 rollback）。
     Firebase 失敗は補償削除をしないが、上記 #1 で重複チェックを通すため再実行で復旧可能。
     """
-    from app.auth.utils import hash_password
-
     email = _require_env("TEST_EMAIL")
     password = _require_env("TEST_PASSWORD")
     display_name = os.getenv("TEST_DISPLAY_NAME", "Test User")
@@ -465,8 +461,6 @@ async def _run_create() -> None:
                     )
                     sys.exit(1)
 
-        password_hash = hash_password(password)
-
         # ----- (2/3) Firebase 作成 (or 上書き) → DB INSERT 補償付き -----
         if firebase_existing_uid:
             _firebase_update_password(firebase_existing_uid, password)
@@ -486,10 +480,10 @@ async def _run_create() -> None:
                     )
                     await conn.execute(
                         text(
-                            "UPDATE public.users SET password_hash = :hash, is_active = TRUE "
+                            "UPDATE public.users SET is_active = TRUE "
                             "WHERE id = :id"
                         ),
-                        {"hash": password_hash, "id": user_id},
+                        {"id": user_id},
                     )
                 else:
                     user_id = await _create_user_record(
@@ -497,7 +491,6 @@ async def _run_create() -> None:
                         tenant_id=tenant_id,
                         email=email,
                         display_name=display_name,
-                        password_hash=password_hash,
                     )
                     # role 付与（_resolve_role_id で SET 済みだが新トランザクションのため再 SET）
                     await conn.execute(text(f"SET search_path = {schema_name}, public"))

@@ -69,7 +69,8 @@ _LEAD_DDL = """
         company_name VARCHAR(200),
         email VARCHAR(255),
         phone VARCHAR(50),
-        source VARCHAR(100),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
         type VARCHAR(50),
         status VARCHAR(50),
         temperature VARCHAR(20),
@@ -281,14 +282,14 @@ async def app_client_no_send(db_session, fernet_env):
 
 async def _insert_lead(
     db_session, *, lead_id: int, tenant_id: int = 999,
-    customer_name: str = "Alice", source: str | None = "messenger:PSID-1",
+    customer_name: str = "Alice", channel_type: str | None = "messenger",
 ):
     await db_session.execute(text("""
-        INSERT INTO leads (id, tenant_id, lead_code, customer_name, source, status)
-        VALUES (:id, :tenant_id, :code, :name, :source, 'lead')
+        INSERT INTO leads (id, tenant_id, lead_code, customer_name, channel_type, status)
+        VALUES (:id, :tenant_id, :code, :name, :channel_type, 'lead')
     """), {
         "id": lead_id, "tenant_id": tenant_id,
-        "code": f"LD-{lead_id:05d}", "name": customer_name, "source": source,
+        "code": f"LD-{lead_id:05d}", "name": customer_name, "channel_type": channel_type,
     })
     await db_session.commit()
 
@@ -511,7 +512,7 @@ async def test_send_beyond_7d_returns_400_and_does_not_call_send_api(app_client,
 @pytest.mark.asyncio
 async def test_send_no_inbound_history_returns_400(app_client, db_session):
     """inbound 履歴 0 件 → 送信不可（最初は顧客側からの仕様）。"""
-    await _insert_lead(db_session, lead_id=1, source="messenger:PSID-X")
+    await _insert_lead(db_session, lead_id=1, channel_type="messenger")
     await _insert_tenant_meta_config(db_session)
 
     with patch("app.routers.leads.meta_graph.send_messenger_message",
@@ -561,7 +562,7 @@ async def test_send_force_human_agent_within_24h_uses_message_tag(app_client, db
 
 @pytest.mark.asyncio
 async def test_send_instagram_calls_instagram_send_api(app_client, db_session):
-    await _insert_lead(db_session, lead_id=1, source="instagram:IGSID-1")
+    await _insert_lead(db_session, lead_id=1, channel_type="instagram")
     await _insert_inbound(db_session, lead_id=1, platform="instagram",
                           sender_id="IGSID-1", minutes_ago=30)
     await _insert_tenant_meta_config(db_session, ig_business_account_id="ig-biz-1")
@@ -591,7 +592,7 @@ async def test_send_instagram_calls_instagram_send_api(app_client, db_session):
 @pytest.mark.asyncio
 async def test_send_instagram_returns_409_when_no_ig_business_id(app_client, db_session):
     """tenant_meta_config に IG 接続情報がない場合は 409。"""
-    await _insert_lead(db_session, lead_id=1, source="instagram:IGSID-1")
+    await _insert_lead(db_session, lead_id=1, channel_type="instagram")
     await _insert_inbound(db_session, lead_id=1, platform="instagram",
                           sender_id="IGSID-1", minutes_ago=30)
     # ig_business_account_id を NULL のまま登録

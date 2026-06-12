@@ -67,7 +67,8 @@ _LEAD_DDL = """
         company_name VARCHAR(200),
         email VARCHAR(255),
         phone VARCHAR(50),
-        source VARCHAR(100),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
         type VARCHAR(50),
         status VARCHAR(50),
         temperature VARCHAR(20),
@@ -232,14 +233,14 @@ async def app_client_no_view(db_session):
 
 async def _insert_lead(db_session, *, lead_id: int, tenant_id: int = 999,
                        lead_code: str | None = None, customer_name: str = "Alice",
-                       source: str | None = "messenger:PSID-1"):
+                       channel_type: str | None = "messenger"):
     await db_session.execute(text("""
-        INSERT INTO leads (id, tenant_id, lead_code, customer_name, source, status)
-        VALUES (:id, :tenant_id, :code, :name, :source, 'lead')
+        INSERT INTO leads (id, tenant_id, lead_code, customer_name, channel_type, status)
+        VALUES (:id, :tenant_id, :code, :name, :channel_type, 'lead')
     """), {
         "id": lead_id, "tenant_id": tenant_id,
         "code": lead_code or f"LD-{lead_id:05d}",
-        "name": customer_name, "source": source,
+        "name": customer_name, "channel_type": channel_type,
     })
     await db_session.commit()
 
@@ -398,7 +399,7 @@ async def test_get_messages_messaging_window_beyond_7d(app_client, db_session):
 
 @pytest.mark.asyncio
 async def test_get_messages_lead_summary_includes_platform(app_client, db_session):
-    await _insert_lead(db_session, lead_id=1, customer_name="Alice", source="instagram:IG-1")
+    await _insert_lead(db_session, lead_id=1, customer_name="Alice", channel_type="instagram")
     await _insert_message(
         db_session, lead_id=1, platform="instagram",
         created_at="2026-04-30 10:00:00+00:00",
@@ -406,7 +407,7 @@ async def test_get_messages_lead_summary_includes_platform(app_client, db_sessio
     resp = await app_client.get("/api/v1/leads/1/messages")
     body = resp.json()
     assert body["lead"]["platform"] == "instagram"
-    assert body["lead"]["source"] == "instagram:IG-1"
+    assert body["lead"]["channel_type"] == "instagram"
 
 
 # ---------------------------------------------------------------------------

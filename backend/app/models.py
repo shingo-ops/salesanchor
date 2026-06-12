@@ -26,7 +26,6 @@ class User(Base):
     tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     username = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, unique=True, index=True)
-    password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255))
     role = Column(String(50), default="user")
     # spec.md v1.1 F2 (Sprint 2): マーケットプレイス中央 admin フラグ。

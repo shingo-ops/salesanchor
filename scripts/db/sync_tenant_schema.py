@@ -331,6 +331,16 @@ async def _apply_catchup_to_tenant(
         ("20260612_100000_add_contact_channel_unique.sql", "SA-04: contact_channel UNIQUE + guild_id"),
         # SA-04: company_discord.guild_id 追加
         ("20260612_110000_add_company_discord_guild_id.sql", "SA-04: company_discord.guild_id"),
+        # ADR-138 §D1-1: deals.closed_at 追加
+        ("20260613_010000_funnel_deals_closed_at.sql",         "ADR-138 D1-1: deals.closed_at"),
+        # ADR-138 §D1-2: close_reasons / deal_close_reasons + deals.lost_reason* 廃止
+        ("20260613_020000_funnel_close_reasons.sql",           "ADR-138 D1-2: close_reasons"),
+        # ADR-138 §D1-3: leads.source 廃止 + channel_type / initiative 追加
+        ("20260613_030000_funnel_leads_initiative_channel.sql","ADR-138 D1-3: leads channel_type"),
+        # ADR-138 §D1-4: goals.kpi_type CHECK 拡張
+        ("20260613_040000_funnel_goals_kpi_extend.sql",        "ADR-138 D1-4: goals kpi_type"),
+        # ADR-138: order_financials.purchase_cost NULL 許容
+        ("20260613_050000_funnel_purchase_cost_nullable.sql",  "ADR-138: purchase_cost nullable"),
     ]
     tenant_migrations: list[tuple[str, str]] = [
         ("040_create_tenant_meta_config.sql", "040: tenant_meta_config"),

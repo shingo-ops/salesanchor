@@ -26,6 +26,7 @@
 | リード / lead / lead_channels / 名寄せ | **ADR-015** ／ ADR-119 ／ ADR-098 | リード管理・チャネル・名寄せ |
 | テナント / RLS / schema prefix / tenant_context | **ADR-072** ／ ADR-034 ／ ADR-036 | 書込後 reset_tenant_context・新規テナント migration 自動化・整合性 |
 | 権限 / role / 認証 / Firebase | ADR-023 ／ ADR-032 | 認証3層同期・カスタム認証ドメイン |
+| password_hash / bcrypt / 認証情報 DB 保存 | **ADR-138** | password_hash 列廃止（Firebase 専一）。列削除 recon では ORM モデル定義確認必須 |
 
 ## 横断・運用・プロセス
 
@@ -41,3 +42,9 @@
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
 
 > **使い方（recon）**: ①この表で領域の正準 ADR を引く → ②`git grep -i "<keyword>" docs/adr/` で取りこぼしを確認 → ③該当 ADR を read してから設計に入る。該当が無ければ「既存設計なし（grep 済み）」と recon.md に明記する。
+
+## ADR 候補バックログ（未起案）
+
+| 課題 | 概要 | 起案優先度 |
+|---|---|---|
+| ADD 系 migration の expand-contract 運用 | `ADD COLUMN NOT NULL` など新列追加 migration は blue-green cutover **前**に実行される（deploy.yml 構造）。旧コンテナが新列を知らない状態で列が追加されると、RLS/VIEW/trigger 依存によっては旧コンテナが壊れる可能性がある。対策候補: ①cutover 前後で migration を pre/post に分割、②ADD 系は nullable で追加して NOT NULL は後 PR で付与、③新列は ORM 側でオプショナル定義してから追加。構造保証として ADR 化する | 中 |

@@ -12,8 +12,14 @@
   <span class="logo">SA設計図書</span>
   <nav>
     <a href="/design/">全体地図</a>
-    <a href="/design/sa-01.html">SA-01 原則</a>
-    <a href="/design/sa-02.html" class="active">SA-02 顧客</a>
+    <a href="/design/sa-01.html">SA-01</a>
+    <a href="/design/sa-02.html" class="active">SA-02</a>
+    <a href="/design/sa-03.html">SA-03</a>
+    <a href="/design/sa-04.html">SA-04</a>
+    <a href="/design/sa-05.html">SA-05</a>
+    <a href="/design/sa-06.html">SA-06</a>
+    <a href="/design/sa-07.html">SA-07</a>
+    <a href="/design/sa-12.html">SA-12</a>
   </nav>
 </header>
 
@@ -308,14 +314,83 @@
     </div>
   </div>
 
-  <!-- ⑦正本ADRリンク -->
+  <!-- ⑦ゴール（KGI）と測り方（KPI） -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑦</span>
+      <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">
+        Shingo 承認済み（2026-06-11）。正本:
+        <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/SA-02-plan.md"
+           target="_blank" rel="noopener">SA-02-plan.md §2</a>
+      </p>
+      <table class="kgi-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ゴール（KGI）— 本番でこれが観測できたら成功</th>
+            <th>種別</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>G1a</td>
+            <td>
+              API/Webhook 連携済みチャネルで受信したメッセージの <strong>100%</strong> が
+              自動で会話ログに保存され、1 人の連絡先（contact）に紐づく。
+              取りこぼしは自動検知（アラート）できる
+            </td>
+            <td>データフロー（自動）</td>
+          </tr>
+          <tr>
+            <td>G1b</td>
+            <td>
+              未連携チャネルのやり取りはスレッド欄から<strong>チャット感覚（1 分以内）</strong>で手動記録でき、
+              自動取り込みと<strong>同じログ・同じ集計・同じ翻訳/解析・同じスレッド表示</strong>に乗る
+            </td>
+            <td>データフロー（手動）</td>
+          </tr>
+          <tr>
+            <td>G2</td>
+            <td>
+              会話数・最終会話日時・会話要約は<strong>自動計算のみ</strong>。
+              手入力できる画面・カラムが <strong>0 箇所</strong>
+            </td>
+            <td>派生値（ADR-095 原則）</td>
+          </tr>
+          <tr>
+            <td>G3</td>
+            <td>
+              会社（company）を開くと、所属する各連絡先の会話が<strong>1 画面に集約表示</strong>され、
+              <strong>3 クリック以内</strong>で個別の原文＋訳文に到達できる
+            </td>
+            <td>UI/UX</td>
+          </tr>
+          <tr>
+            <td>G4</td>
+            <td>
+              会話に関する同じ事実（要約・最終会話日時など）を手入力で二重に持つ場所が <strong>0 箇所</strong>
+            </td>
+            <td>SSOT</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--text-sub);margin-top:10px;">
+        現在: フェーズ⑤ 本番反映済み（80%）。KGI G1〜G4 の本番実測でフェーズ⑥（100%）になります。
+      </p>
+    </div>
+  </div>
+
+  <!-- ⑧正本ADRリンク -->
   <div class="adr-ref">
     <span class="adr-ref__warn">⚠ 正本</span>
     <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-096-sa-customer-master-crm-data-model.md"
        target="_blank" rel="noopener">
       docs/adr/ADR-096-sa-customer-master-crm-data-model.md
     </a>
-    <span>最終更新: 2026-06-12</span>
+    <span>最終更新: 2026-06-13</span>
     <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
   </div>
 

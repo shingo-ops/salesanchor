@@ -46,8 +46,8 @@ if not DATABASE_URL:
     logger.error("DATABASE_URL not set")
     sys.exit(1)
 
-# 本番事故防止ガード：このスクリプトは email 一致で password_hash を強制上書きするため、
-# 本番運用後に誤って実行されると本番ユーザーのパスワードが破壊される。
+# 本番事故防止ガード：このスクリプトは Firebase ユーザーを作成・上書きするため、
+# 本番運用後に誤って実行されると本番ユーザーの Firebase アカウントが上書きされる。
 # 明示的に環境変数を立てない限り起動を拒否する。
 if os.getenv("ALLOW_TEST_USER_RESET") != "1":
     logger.error(
@@ -185,15 +185,13 @@ async def apply_tenant_schema(engine, tenant_id: int):
 
 
 async def register_user(engine, tenant_id: int, firebase_uid: str, user_data: dict, password: str):
-    """DB にユーザーを登録（既存なら password_hash を上書き）し、ロールを付与する。
+    """DB にユーザーを登録（既存なら is_active を確認）し、ロールを付与する。
 
+    認証は Firebase が担当するため password_hash は保存しない。
     既存ユーザーの tenant_id はテナント移動の可能性があるため UPDATE 対象から除外する。
     新規作成時のみ tenant_id を設定する。
     """
-    from app.auth.utils import hash_password
-
     schema_name = f"tenant_{tenant_id:03d}"
-    password_hash = hash_password(password)
 
     async with engine.begin() as conn:
         existing = await conn.execute(
@@ -205,34 +203,25 @@ async def register_user(engine, tenant_id: int, firebase_uid: str, user_data: di
             user_id, existing_tenant_id = existing_row
             if existing_tenant_id != tenant_id:
                 logger.warning(
-                    "  DB: %s は別テナント (id=%d) に存在するため tenant_id は変更しません（パスワード等のみ更新）",
+                    "  DB: %s は別テナント (id=%d) に存在するため tenant_id は変更しません",
                     user_data["email"], existing_tenant_id,
                 )
             await conn.execute(
-                text("""
-                    UPDATE public.users
-                    SET password_hash = :hash,
-                        is_active = TRUE
-                    WHERE id = :id
-                """),
-                {
-                    "hash": password_hash,
-                    "id": user_id,
-                },
+                text("UPDATE public.users SET is_active = TRUE WHERE id = :id"),
+                {"id": user_id},
             )
-            logger.info("  DB: 既存ユーザー %s のパスワードを更新 (id=%d)", user_data["email"], user_id)
+            logger.info("  DB: 既存ユーザー %s 確認 (id=%d)", user_data["email"], user_id)
         else:
             result = await conn.execute(
                 text("""
-                    INSERT INTO public.users (tenant_id, username, email, password_hash, full_name, role, is_active)
-                    VALUES (:tid, :username, :email, :hash, :fullname, :role, TRUE)
+                    INSERT INTO public.users (tenant_id, username, email, full_name, role, is_active)
+                    VALUES (:tid, :username, :email, :fullname, :role, TRUE)
                     RETURNING id
                 """),
                 {
                     "tid": tenant_id,
                     "username": user_data["username"],
                     "email": user_data["email"],
-                    "hash": password_hash,
                     "fullname": user_data["username"],
                     "role": user_data["role"],
                 },
