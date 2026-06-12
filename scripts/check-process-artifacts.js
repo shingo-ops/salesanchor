@@ -26,7 +26,8 @@ const { join } = require('path');
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
 // ─── 認可された承認者 ─────────────────────────────────────────────────────────
-const AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev'];
+// shingo-cc: ADR-135 B-2 受け入れテスト限定（一時追加・次PR #2013後継で削除）
+const AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev', 'shingo-cc'];
 
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
