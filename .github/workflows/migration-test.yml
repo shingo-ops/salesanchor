@@ -857,15 +857,17 @@ jobs:
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
 
-      - name: 全 SQL マイグレーションを順次実行（run_all_migrations.sh の記載順）
+      - name: 全タイムスタンプ SQL マイグレーションを順次実行（run_all_migrations.sh の記載順）
+        # 対象: migrations/20XXXXXX_*.sql（タイムスタンプ形式）のみ
+        # 番号付き migration（013-100）は Python migration が作るテーブルに依存するため除外。
+        # それらは既存の migration-test-run ジョブで変更時のみ検証される。
         run: |
-          echo "🔍 run_all_migrations.sh から SQL ファイルの順序を取得..."
-          TOTAL=$(grep -c '^run_sql' scripts/run_all_migrations.sh 2>/dev/null || echo 0)
-          echo "対象 SQL ファイル数: ${TOTAL}"
+          echo "🔍 run_all_migrations.sh からタイムスタンプ形式 SQL の順序を取得..."
+          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/20' || echo 0)
+          echo "対象 SQL ファイル数（20XXXXXX形式）: ${TOTAL}"
           STEP=0
-          FAILED=0
 
-          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | while read sqlfile; do
+          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep '^migrations/20' | while read sqlfile; do
             [ -z "$sqlfile" ] && continue
             STEP=$((STEP + 1))
             if [ ! -f "$sqlfile" ]; then
@@ -881,7 +883,7 @@ jobs:
           done
 
           echo ""
-          echo "✅ 全件ドライラン完了"
+          echo "✅ タイムスタンプ形式全件ドライラン完了"
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
