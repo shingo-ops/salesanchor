@@ -910,6 +910,41 @@ async def download_paypal_copy_pdf(
 
 
 @router.get(
+    "/invoices/{invoice_id}/paypal-disputes",
+    dependencies=[Depends(require_permission("invoices.view"))],
+)
+async def list_invoice_paypal_disputes(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),  # noqa: ARG001
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """請求書に紐づく PayPal ケース（dispute）一覧（ADR-101改訂(2) Inc4 Step B）。"""
+    res = await db.execute(
+        text("""
+            SELECT dispute_id, pp_status, reason, amount, currency, created_at, updated_at
+            FROM paypal_disputes WHERE invoice_id = :id ORDER BY created_at DESC
+        """),
+        {"id": invoice_id},
+    )
+    def _iso(v):
+        return v.isoformat() if hasattr(v, "isoformat") else v
+
+    return [
+        {
+            "dispute_id": r["dispute_id"],
+            "status": r["pp_status"],
+            "reason": r["reason"],
+            "amount": float(r["amount"]) if r["amount"] is not None else None,
+            "currency": r["currency"],
+            "created_at": _iso(r["created_at"]),
+            "updated_at": _iso(r["updated_at"]),
+        }
+        for r in res.mappings().all()
+    ]
+
+
+@router.get(
     "/quotes/{quote_id}/pdf",
     dependencies=[Depends(require_permission("invoices.view"))],
 )

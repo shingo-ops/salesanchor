@@ -19,6 +19,7 @@ from __future__ import annotations
   2026-06-06: OAuth ユーザー委任方式へ全面切替（旧サービスアカウント方式を置換）
 """
 
+import json
 import logging
 import os
 import uuid
@@ -849,30 +850,15 @@ def _parse_invoicing_paid(resource: dict) -> tuple[int, int, str] | None:
     return parsed[0], parsed[1], pp_invoice_id
 
 
-@public_router.post("/integrations/paypal/webhook", include_in_schema=False)
-async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """PayPal webhook（INVOICING.INVOICE.PAID）。署名検証→status再取得→請求書 paid＋受注 sourcing。
+_DISPUTE_EVENTS = (
+    "CUSTOMER.DISPUTE.CREATED",
+    "CUSTOMER.DISPUTE.UPDATED",
+    "CUSTOMER.DISPUTE.RESOLVED",
+)
 
-    ADR-101 改訂 2026-06-12: Invoicing 方式。detail.reference("tenant:invoice") でルーティング。
-    """
-    try:
-        event = await request.json()
-    except Exception:  # noqa: BLE001
-        return Response(status_code=400)
-    if not isinstance(event, dict) or event.get("event_type") != "INVOICING.INVOICE.PAID":
-        return Response(status_code=200)  # 対象外イベントは無視
 
-    parsed = _parse_invoicing_paid(event.get("resource") or {})
-    if not parsed:
-        return Response(status_code=200)  # ルーティング不能は無視（PayPal 再送防止）
-    tenant_id, invoice_id, pp_invoice_id = parsed
-
-    # creds / webhook_id は public.tenant_paypal_config（テナント文脈不要）
-    creds = await paypal_payments.get_credentials(db, tenant_id)
-    webhook_id = await paypal_payments.get_webhook_id(db, tenant_id)
-    if not creds or not webhook_id:
-        return Response(status_code=200)  # 未設定テナントは無視
-
+async def _verify_sig(request: Request, creds: dict, webhook_id: str, event: dict) -> str:
+    """PayPal webhook 署名検証。"ok"（正当）/ "invalid"（不正署名）/ "error"（検証不能）。"""
     h = request.headers
     try:
         valid = await run_in_threadpool(
@@ -884,8 +870,47 @@ async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("[paypal] webhook 署名検証不能: %s", e)
+        return "error"
+    return "ok" if valid else "invalid"
+
+
+@public_router.post("/integrations/paypal/webhook", include_in_schema=False)
+async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """PayPal webhook 受信口。入金（INVOICING.INVOICE.PAID）と ケース（CUSTOMER.DISPUTE.*）を振り分ける。
+
+    ADR-101 改訂 2026-06-12 / Inc4: 署名検証→ルーティング→処理。対象外イベントは 200 で無視。
+    """
+    try:
+        event = await request.json()
+    except Exception:  # noqa: BLE001
+        return Response(status_code=400)
+    if not isinstance(event, dict):
+        return Response(status_code=400)
+    event_type = event.get("event_type")
+    if event_type == "INVOICING.INVOICE.PAID":
+        return await _handle_invoice_paid(request, db, event)
+    if event_type in _DISPUTE_EVENTS:
+        return await _handle_dispute(request, db, event)
+    return Response(status_code=200)  # 対象外イベントは無視
+
+
+async def _handle_invoice_paid(request: Request, db: AsyncSession, event: dict) -> Response:
+    """INVOICING.INVOICE.PAID。署名検証→status再取得→請求書 paid＋受注 sourcing。"""
+    parsed = _parse_invoicing_paid(event.get("resource") or {})
+    if not parsed:
+        return Response(status_code=200)  # ルーティング不能は無視（PayPal 再送防止）
+    tenant_id, invoice_id, pp_invoice_id = parsed
+
+    # creds / webhook_id は public.tenant_paypal_config（テナント文脈不要）
+    creds = await paypal_payments.get_credentials(db, tenant_id)
+    webhook_id = await paypal_payments.get_webhook_id(db, tenant_id)
+    if not creds or not webhook_id:
+        return Response(status_code=200)  # 未設定テナントは無視
+
+    v = await _verify_sig(request, creds, webhook_id, event)
+    if v == "error":
         return Response(status_code=500)  # 検証不能 → PayPal 再送
-    if not valid:
+    if v == "invalid":
         return Response(status_code=400)  # 不正署名
 
     await set_tenant_context(db, tenant_id)
@@ -927,5 +952,88 @@ async def paypal_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         return Response(status_code=500)
     finally:
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+    return Response(status_code=200)
+
+
+async def _handle_dispute(request: Request, db: AsyncSession, event: dict) -> Response:
+    """CUSTOMER.DISPUTE.* を受信し paypal_disputes に upsert（請求書に紐づけ・ADR-101改訂(2) Inc4 Step B）。
+
+    dispute には当社 reference が無いため、webhook_id を持つ全テナントを順に試して署名が通る
+    テナントを特定する（マルチテナント振り分け）。紐づけは disputed_transactions[].invoice_number
+    （当社 IN-NNNN）で照合。冪等（dispute_id を一意キーに upsert）。
+    """
+    resource = event.get("resource") or {}
+    dispute_id = resource.get("dispute_id") or resource.get("id")
+    if not dispute_id:
+        return Response(status_code=200)  # ルーティング不能は無視（PayPal 再送防止）
+
+    # webhook_id を持つテナントを順に署名検証し、通ったテナントを特定
+    rows = (await db.execute(
+        text("SELECT tenant_id FROM tenant_paypal_config WHERE webhook_id IS NOT NULL ORDER BY tenant_id")
+    )).all()
+    matched_tenant: int | None = None
+    saw_error = False
+    for (tid,) in rows:
+        creds = await paypal_payments.get_credentials(db, tid)
+        webhook_id = await paypal_payments.get_webhook_id(db, tid)
+        if not creds or not webhook_id:
+            continue
+        v = await _verify_sig(request, creds, webhook_id, event)
+        if v == "ok":
+            matched_tenant = tid
+            break
+        if v == "error":
+            saw_error = True
+    if matched_tenant is None:
+        # 検証不能（通信エラー等）は PayPal 再送、純粋に不一致/不正は破棄
+        return Response(status_code=500 if saw_error else 400)
+
+    # dispute フィールド抽出（防御的・全て optional）
+    pp_status = resource.get("status")
+    reason = resource.get("reason")
+    amt = resource.get("dispute_amount") or {}
+    amount = amt.get("value")
+    currency = amt.get("currency_code")
+    invoice_number = None
+    for dt in (resource.get("disputed_transactions") or []):
+        if dt.get("invoice_number"):
+            invoice_number = dt.get("invoice_number")
+            break
+
+    await set_tenant_context(db, matched_tenant)
+    try:
+        invoice_id = None
+        if invoice_number:
+            r = (await db.execute(
+                text("SELECT id FROM invoices WHERE invoice_number = :n"),
+                {"n": invoice_number},
+            )).first()
+            if r:
+                invoice_id = r[0]
+        await db.execute(
+            text("""
+                INSERT INTO paypal_disputes
+                    (dispute_id, invoice_id, pp_status, reason, amount, currency, raw, updated_at)
+                VALUES (:did, :iid, :st, :rsn, :amt, :cur, CAST(:raw AS JSONB), NOW())
+                ON CONFLICT (dispute_id) DO UPDATE SET
+                    invoice_id = COALESCE(EXCLUDED.invoice_id, paypal_disputes.invoice_id),
+                    pp_status  = EXCLUDED.pp_status,
+                    reason     = EXCLUDED.reason,
+                    amount     = EXCLUDED.amount,
+                    currency   = EXCLUDED.currency,
+                    raw        = EXCLUDED.raw,
+                    updated_at = NOW()
+            """),
+            {"did": str(dispute_id), "iid": invoice_id, "st": pp_status, "rsn": reason,
+             "amt": amount, "cur": currency, "raw": json.dumps(resource)},
+        )
+        await db.commit()
+    except Exception as e:  # noqa: BLE001
+        await db.rollback()
+        logger.error("[paypal] dispute webhook 処理失敗 dispute=%s: %s", dispute_id, e)
+        return Response(status_code=500)
+    finally:
+        await reset_tenant_context(db, matched_tenant)  # ADR-072 Phase 2.5
 
     return Response(status_code=200)

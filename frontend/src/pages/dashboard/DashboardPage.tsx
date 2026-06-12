@@ -7,15 +7,17 @@
  * - 受注統合カード（営業/チームのみ）: 確定売上・件数・着地予測＋期間連動グラフ
  *   - 1w/1m → 日次棒グラフ、3m/6m/12m → 月次棒グラフ
  * - 期間連動エリア: リード / 商談（受注は統合カードに移動）
+ * - ファネルセクション（PR4）: 月次ファネル KPI + 売上サマリ + 要フォロー顧客
  *
  * 変更履歴:
  *   2026-04-17: Phase 3 拡張
  *   2026-05-25: ダッシュボード強化
  *   2026-05-31: Sprint 1–3 ロール別・グラフ・先月比
  *   2026-06-01: Sprint 4 受注統合カード＋期間連動グラフ
+ *   2026-06-13: PR4 ファネルセクション追加（モックデータ駆動）
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,6 +33,8 @@ import {
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { DashboardIcons } from "../../constants/icons";
+import { FunnelSection } from "./FunnelSection";
+import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
 
 const TrendUpIcon = DashboardIcons.forecast;
@@ -143,6 +147,16 @@ interface PeriodComparison {
   deals_win_rate: KpiChange;
   orders_revenue: KpiChange;
   orders_count: KpiChange;
+}
+
+// ─── 現在月をデフォルト値として生成（JST基準の YYYY-MM）─────────────────────
+
+function currentMonthJst(): string {
+  const now = new Date();
+  const jst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const y = jst.getFullYear();
+  const m = String(jst.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
 }
 
 // ─── 定数 ────────────────────────────────────────────────────
@@ -305,6 +319,23 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  // ファネルセクション: 月 + ビューモード（マネジメント/プレイヤー）
+  const [funnelMonth, setFunnelMonth] = useState<string>(currentMonthJst);
+  const [viewMode, setViewMode] = useState<"management" | "player">("management");
+
+  // 月セレクタ用: 過去12ヶ月のリストを生成
+  const monthOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = `${d.getFullYear()}${t("common.unitYear")}${d.getMonth() + 1}${t("common.unitMonth")}`;
+      opts.push({ value, label });
+    }
+    return opts;
+  }, [t]);
+
   // デフォルトは営業担当ビュー。
   // team タブには team_id 選択 UI が未実装のため graceful fallback は backend 側で対応済。
   const [tab, setTab] = useState<Tab>("sales");
@@ -398,29 +429,38 @@ export default function DashboardPage() {
       subtitleKey="dashboard.subtitle"
       headerAction={
         <div className="page-header-actions">
-          <div className="db-tabs">
-            <button
-              type="button"
-              className={`db-tab${tab === "sales" ? " active" : ""}`}
-              onClick={() => setTab("sales")}
-            >
-              {t("dashboard.tabSales")}
-            </button>
-            <button
-              type="button"
-              className={`db-tab${tab === "lead" ? " active" : ""}`}
-              onClick={() => setTab("lead")}
-            >
-              {t("dashboard.tabLead")}
-            </button>
-            <button
-              type="button"
-              className={`db-tab${tab === "team" ? " active" : ""}`}
-              onClick={() => setTab("team")}
-            >
-              {t("dashboard.tabTeam")}
-            </button>
-          </div>
+          {/* ファネルセクション用: 月セレクタ + ビュー切替（FUNNEL_MODE が off のとき非表示） */}
+          {FUNNEL_MODE !== "off" && (
+            <>
+              <select
+                className="page-header-select"
+                value={funnelMonth}
+                onChange={(e) => setFunnelMonth(e.target.value)}
+                aria-label={t("funnel.monthLabel")}
+              >
+                {monthOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <div className="db-tabs">
+                <button
+                  type="button"
+                  className={`db-tab${viewMode === "management" ? " active" : ""}`}
+                  onClick={() => setViewMode("management")}
+                >
+                  {t("funnel.viewManagement")}
+                </button>
+                <button
+                  type="button"
+                  className={`db-tab${viewMode === "player" ? " active" : ""}`}
+                  onClick={() => setViewMode("player")}
+                >
+                  {t("funnel.viewPlayer")}
+                </button>
+              </div>
+            </>
+          )}
+          {/* 既存期間セレクタ（下部エリア用） */}
           <select
             className="page-header-select"
             value={period}
@@ -438,6 +478,13 @@ export default function DashboardPage() {
     >
 
       <div className="db-content-stack">
+
+      {/* -------------------------------------------------
+          ファネルセクション（VITE_FUNNEL_DASHBOARD=mock/live のときのみ表示）
+      ------------------------------------------------- */}
+      {FUNNEL_MODE !== "off" && (
+        <FunnelSection month={funnelMonth} viewMode={viewMode} />
+      )}
 
       {/* -------------------------------------------------
           固定エリア（期間変更でも不変）

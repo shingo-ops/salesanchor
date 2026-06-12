@@ -1,0 +1,216 @@
+/* ============================================================
+   FunnelRevenuePage — 売上・粗利内訳
+   Design tokens only
+   ============================================================ */
+
+.frp-loading,
+.frp-error {
+  padding: var(--space-6) 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.frp-error { color: var(--danger); }
+
+.frp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.frp-back-btn:hover { background: var(--bg-hover); }
+
+/* ── グリッドレイアウト ── */
+.frp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.frp-card--large {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .frp-grid { grid-template-columns: 1fr; }
+  .frp-card--large { grid-column: 1; }
+}
+
+/* ── カード ── */
+.frp-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.frp-card-title {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-4);
+}
+
+/* ── 売上カード ── */
+.frp-revenue-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.frp-revenue-actual {
+  font-size: var(--font-3xl, 1.875rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.frp-revenue-target {
+  font-size: var(--font-base);
+  color: var(--text-muted);
+}
+
+.frp-pace-badge {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-badge);
+}
+
+.frp-pace--ahead { background: var(--success-bg); color: var(--success-text); }
+.frp-pace--on-track { background: var(--accent-bg-subtle); color: var(--accent); }
+.frp-pace--behind { background: var(--warning-bg); color: var(--warning-text); }
+
+.frp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.frp-bar-track {
+  flex: 1;
+  height: var(--space-2);
+  background: var(--bg-primary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.frp-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.frp-bar-pct {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  min-width: var(--space-10);
+  text-align: right;
+}
+
+/* ── 分割カード ── */
+.frp-split-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.frp-split-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.frp-split-label {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  min-width: var(--size-split-label-min);
+}
+
+.frp-split--new { color: var(--accent); }
+.frp-split--repeat { color: var(--text-secondary); }
+
+.frp-split-value {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.frp-split-pct {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.frp-split-bar {
+  display: flex;
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.frp-split-bar-new {
+  background: var(--accent);
+  height: 100%;
+  min-width: var(--space-1);
+}
+
+.frp-split-bar-repeat {
+  flex: 1;
+  background: var(--accent);
+  opacity: var(--opacity-faint);
+  height: 100%;
+  min-width: var(--space-1);
+}
+
+/* ── 顧客数カード ── */
+.frp-stat-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.frp-stat-value {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.frp-stat-target {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.frp-active-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+}
+
+.frp-active-label { color: var(--text-secondary); }
+.frp-active-value { font-weight: var(--font-weight-semi); color: var(--text-primary); }
+
+/* ── 粗利カード ── */
+.frp-gross-value { color: var(--success); }
+
+.frp-uncosted-note {
+  font-size: var(--font-xs);
+  color: var(--warning-text);
+  margin-top: var(--space-2);
+}

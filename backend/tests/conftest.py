@@ -785,6 +785,31 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS paypal_disputes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dispute_id TEXT NOT NULL UNIQUE,
+                invoice_id INTEGER,
+                pp_status TEXT,
+                reason TEXT,
+                amount NUMERIC(15, 2),
+                currency TEXT,
+                raw TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_paypal_config (
+                tenant_id INTEGER PRIMARY KEY,
+                client_id_encrypted TEXT NOT NULL DEFAULT '',
+                client_secret_encrypted TEXT NOT NULL DEFAULT '',
+                environment TEXT NOT NULL DEFAULT 'sandbox',
+                webhook_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS invoice_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,

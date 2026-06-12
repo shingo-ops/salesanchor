@@ -215,8 +215,10 @@
   --size-toggle-knob: 18px;  /* トグルつまみ直径 */
 
   /* ---- Form controls ---- */
-  --size-lang-select-min: 120px;  /* 言語選択プルダウン最小幅 */
-  --size-carrier-label-col: 120px; /* キャリア設定カード: ラベル列幅 */
+  --size-lang-select-min:    120px;  /* 言語選択プルダウン最小幅 */
+  --size-carrier-label-col:  120px;  /* キャリア設定カード: ラベル列幅 */
+  --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
+  --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
@@ -228,6 +230,7 @@
   --opacity-disabled:  0.6;   /* disabled 状態の入力・ボタン */
   --opacity-skipped:   0.55;  /* スキップ行・除外コンテンツ */
   --opacity-archived:  0.5;   /* アーカイブ行・非アクティブコンテンツ */
+  --opacity-faint:     0.35;  /* バーセグメント区切り（新規/リピート分割バー後半）*/
 
   /* ---- Inbox component sizes (Meta実測値) ---- */
   --height-tab-bar:        54px;   /* 受信箱タブバー高さ（36px × 1.5） */

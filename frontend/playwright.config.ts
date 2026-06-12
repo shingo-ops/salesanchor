@@ -73,6 +73,8 @@ export default defineConfig({
           VITE_FIREBASE_API_KEY: "AIzaSyE2E-dummy-api-key",
           VITE_FIREBASE_AUTH_DOMAIN: "e2e-fixture.firebaseapp.com",
           VITE_GCP_PROJECT_ID: "e2e-fixture",
+          // ファネルダッシュボード: E2E はモックデータで実行
+          VITE_FUNNEL_DASHBOARD: "mock",
         },
       },
 });
