@@ -138,16 +138,22 @@ def test_get_invoice_status_http_error():
 
 
 # ── register_webhook が INVOICING.INVOICE.PAID を購読 ──────────
-def test_register_webhook_subscribes_invoicing_paid():
-    created = {"id": "WH-1", "event_types": [{"name": "INVOICING.INVOICE.PAID"}]}
+def test_register_webhook_subscribes_invoicing_paid_and_disputes():
+    """入金（INVOICING.INVOICE.PAID）＋ケース3種（CUSTOMER.DISPUTE.*）を購読する（Inc4 Step A）。"""
+    created = {"id": "WH-1"}
     with patch.object(svc, "_get_token", return_value="tok"), \
          patch.object(svc, "_find_existing_webhook", return_value=None), \
          patch.object(svc.httpx, "post", return_value=_resp(201, created)) as p:
         out = svc.register_webhook("sandbox", "id", "sec", "https://api/webhook")
     assert out["ok"] is True
     assert out["webhook_id"] == "WH-1"
-    body = p.call_args.kwargs["json"]
-    assert body["event_types"] == [{"name": "INVOICING.INVOICE.PAID"}]
+    names = {e["name"] for e in p.call_args.kwargs["json"]["event_types"]}
+    assert names == {
+        "INVOICING.INVOICE.PAID",
+        "CUSTOMER.DISPUTE.CREATED",
+        "CUSTOMER.DISPUTE.UPDATED",
+        "CUSTOMER.DISPUTE.RESOLVED",
+    }
 
 
 # ── router: issue_paypal_link（email 必須・成功経路） ───────────
