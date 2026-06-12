@@ -103,10 +103,10 @@ def test_account_number_hint_short():
 # ─────────────────────────────────────────────────────────────
 async def test_status_endpoint_configured(client, monkeypatch):
     """登録済み時: フィールド別ヒントが含まれる。"""
-    async def _status(db, tid, carrier):
+    async def _status(db, tid, carrier, environment="production"):
         return {
             "configured": True,
-            "environment": "production",
+            "environment": environment,
             "client_id_hint": "test-api-key-id",
             "secret_configured": True,
             "account_number_hint": "******011",
@@ -125,10 +125,10 @@ async def test_status_endpoint_configured(client, monkeypatch):
 
 async def test_status_endpoint_not_configured(client, monkeypatch):
     """未登録時: ヒントは None / False。"""
-    async def _status(db, tid, carrier):
+    async def _status(db, tid, carrier, environment="production"):
         return {
             "configured": False,
-            "environment": "production",
+            "environment": environment,
             "client_id_hint": None,
             "secret_configured": False,
             "account_number_hint": None,
@@ -167,8 +167,24 @@ async def test_save_credentials(client, monkeypatch):
     assert calls["account_number"] is None  # 未指定時は None
 
 
-async def test_save_forces_production_environment(client, monkeypatch):
-    """リクエストの environment フィールドを無視し、常に production で保存する。"""
+async def test_save_forces_production_environment_for_non_fedex(client, monkeypatch):
+    """DHL/UPS は environment フィールドを無視し、常に production で保存する。"""
+    calls = {}
+
+    async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
+        calls["env"] = env
+
+    monkeypatch.setattr(svc, "save_credentials", _save)
+    resp = await client.put(
+        "/api/v1/integrations/carriers/dhl/credentials",
+        json={"client_id": "x", "client_secret": "y", "environment": "sandbox"},
+    )
+    assert resp.status_code == 204
+    assert calls["env"] == "production"  # DHL は sandbox 非対応 → production 固定
+
+
+async def test_save_fedex_sandbox_environment(client, monkeypatch):
+    """ADR-129: FedEx は environment: sandbox を指定して保存できる。"""
     calls = {}
 
     async def _save(db, tid, carrier, cid, csec, env, uid, account_number=None):
@@ -180,7 +196,7 @@ async def test_save_forces_production_environment(client, monkeypatch):
         json={"client_id": "x", "client_secret": "y", "environment": "sandbox"},
     )
     assert resp.status_code == 204
-    assert calls["env"] == "production"  # sandbox を渡しても production に上書きされる
+    assert calls["env"] == "sandbox"  # FedEx は sandbox もサポート（ADR-129）
 
 
 async def test_save_credentials_missing_fields(client):
@@ -208,7 +224,7 @@ async def test_save_with_account_number(client, monkeypatch):
 
 
 async def test_test_connection_endpoint(client, monkeypatch):
-    async def _creds(db, tid, carrier):
+    async def _creds(db, tid, carrier, environment="production"):
         return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
 
     monkeypatch.setattr(svc, "get_credentials", _creds)
@@ -219,7 +235,7 @@ async def test_test_connection_endpoint(client, monkeypatch):
 
 
 async def test_test_connection_not_configured(client, monkeypatch):
-    async def _none(db, tid, carrier):
+    async def _none(db, tid, carrier, environment="production"):
         return None
 
     monkeypatch.setattr(svc, "get_credentials", _none)

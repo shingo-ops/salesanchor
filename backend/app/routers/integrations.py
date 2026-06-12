@@ -26,7 +26,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -302,12 +302,18 @@ class CarrierStatus(BaseModel):
 class CarrierCredentialsRequest(BaseModel):
     client_id: str  # FedEx/UPS=APIキー, DHL=API Key
     client_secret: str  # FedEx/UPS=シークレットキー, DHL=API Secret
-    # ADR-125 UX: environment は顧客UIから受け取らず production 固定（フィールド削除）
-    # 内部テスト用に受け取ってもサーバー側で上書きする
+    # ADR-129: FedEx は "production" / "sandbox" を受け取る。それ以外は 422。
     environment: str = "production"
     # ADR-125 D2: FedEx / UPS 配送アカウント番号（Rates/Ship API に必須）
     # None = 未入力（既存値を保持する）
     account_number: str | None = None
+
+    @field_validator("environment")
+    @classmethod
+    def _validate_env(cls, v: str) -> str:
+        if v not in ("production", "sandbox"):
+            raise ValueError("environment は 'production' または 'sandbox' のみ指定可能です")
+        return v
 
 
 class CarrierTestResponse(BaseModel):
@@ -321,6 +327,16 @@ def _validate_carrier(carrier: str) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未対応のキャリアです")
 
 
+def _validate_environment(env: str) -> str:
+    """ADR-129: environment クエリパラメータを検証する（production / sandbox のみ許可）。"""
+    if env not in ("production", "sandbox"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="environment は 'production' または 'sandbox' のみ指定可能です",
+        )
+    return env
+
+
 @router.get(
     "/integrations/carriers/{carrier}/status",
     response_model=CarrierStatus,
@@ -328,12 +344,16 @@ def _validate_carrier(carrier: str) -> None:
 )
 async def carrier_status(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ) -> CarrierStatus:
-    """キャリアの認証情報の設定状況とフィールド別登録ヒント（シークレット平文は返さない）。"""
+    """キャリアの認証情報の設定状況とフィールド別登録ヒント（シークレット平文は返さない）。
+    ADR-129: environment クエリパラメータで本番/Sandbox を切り替え可能。
+    """
     _validate_carrier(carrier)
-    st = await carriers.get_status(db, tenant_id, carrier)
+    _validate_environment(environment)
+    st = await carriers.get_status(db, tenant_id, carrier, environment=environment)
     return CarrierStatus(
         carrier=carrier,
         configured=st["configured"],
@@ -363,8 +383,10 @@ async def save_carrier_credentials(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="認証ID・シークレットの両方を入力してください。",
         )
+    # ADR-129: FedEx のみ sandbox 対応。それ以外のキャリアは production 固定（バックエンド強制）。
+    effective_env = payload.environment if carrier == "fedex" else "production"
     # 変更前の非機密情報を取得（機密値は記録しない）
-    old_status = await carriers.get_status(db, tenant_id, carrier)
+    old_status = await carriers.get_status(db, tenant_id, carrier, environment=effective_env)
     audit_action = "update" if old_status["configured"] else "create"
     old_audit = {
         "carrier": carrier,
@@ -378,13 +400,13 @@ async def save_carrier_credentials(
         carrier,
         payload.client_id,
         payload.client_secret,
-        "production",  # ADR-125 UX: 顧客UIは production 固定（dropdown 廃止）
+        effective_env,  # ADR-129: FedEx=指定環境 / 他キャリア=production 強制
         user.id,
         account_number=payload.account_number,
     )
     # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:182）。
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
-    new_status = await carriers.get_status(db, tenant_id, carrier)
+    new_status = await carriers.get_status(db, tenant_id, carrier, environment=effective_env)
     new_audit = {
         "carrier": carrier,
         "environment": new_status["environment"],
@@ -405,22 +427,24 @@ async def save_carrier_credentials(
 )
 async def delete_carrier_credentials(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """キャリア認証情報を削除。admin 専用。"""
+    """キャリア認証情報を削除。admin 専用。ADR-129: environment クエリパラメータで本番/Sandbox を指定。"""
     _validate_carrier(carrier)
+    _validate_environment(environment)
     _require_admin(user)
     # 削除前の非機密情報を取得（機密値は記録しない）
-    old_status = await carriers.get_status(db, tenant_id, carrier)
+    old_status = await carriers.get_status(db, tenant_id, carrier, environment=environment)
     old_audit = {
         "carrier": carrier,
         "environment": old_status["environment"],
         "account_number_hint": old_status["account_number_hint"],
     } if old_status["configured"] else None
 
-    await carriers.delete_credentials(db, tenant_id, carrier)
+    await carriers.delete_credentials(db, tenant_id, carrier, environment=environment)
     # NOTE: delete_credentials は内部で db.commit() 済み（carrier_credentials.py:190）。
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
     await record_audit_log(
@@ -439,12 +463,16 @@ async def delete_carrier_credentials(
 )
 async def carrier_test_connection(
     carrier: str,
+    environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ) -> CarrierTestResponse:
-    """保存済みの認証情報で各社 API への疎通（認証）を確認する。"""
+    """保存済みの認証情報で各社 API への疎通（認証）を確認する。
+    ADR-129: environment クエリパラメータで本番/Sandbox を切り替え可能。
+    """
     _validate_carrier(carrier)
-    creds = await carriers.get_credentials(db, tenant_id, carrier)
+    _validate_environment(environment)
+    creds = await carriers.get_credentials(db, tenant_id, carrier, environment=environment)
     if creds is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -64,8 +64,11 @@ def _norm_env(env: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def get_status(db, tenant_id: int, carrier: str) -> dict:
+async def get_status(db, tenant_id: int, carrier: str, environment: str = "production") -> dict:
     """設定状況とフィールド別登録ヒントを返す（シークレット平文は返さない）。
+
+    Args:
+        environment: "production" または "sandbox"（ADR-129: 環境別レコード対応）
 
     Returns:
         configured: bool
@@ -77,9 +80,10 @@ async def get_status(db, tenant_id: int, carrier: str) -> dict:
     row = await db.execute(
         text(
             "SELECT client_id_encrypted, environment, account_number_encrypted"
-            " FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"
+            " FROM tenant_carrier_credentials"
+            " WHERE tenant_id = :tid AND carrier = :c AND environment = :env"
         ),
-        {"tid": tenant_id, "c": carrier},
+        {"tid": tenant_id, "c": carrier, "env": _norm_env(environment)},
     )
     rec = row.first()
     if rec is None:
@@ -107,8 +111,12 @@ async def get_status(db, tenant_id: int, carrier: str) -> dict:
     }
 
 
-async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
+async def get_credentials(db, tenant_id: int, carrier: str, environment: str = "production") -> Optional[dict]:
     """復号した認証情報を返す（未設定なら None）。
+
+    Args:
+        environment: "production" または "sandbox"（ADR-129: 環境別レコード対応）。
+                     デフォルト "production" — 既存の Ship/Pickup ルーターへの後方互換を保つ。
 
     Returns:
         {
@@ -122,9 +130,10 @@ async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
         text(
             "SELECT client_id_encrypted, client_secret_encrypted, environment,"
             "       account_number_encrypted"
-            " FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"
+            " FROM tenant_carrier_credentials"
+            " WHERE tenant_id = :tid AND carrier = :c AND environment = :env"
         ),
-        {"tid": tenant_id, "c": carrier},
+        {"tid": tenant_id, "c": carrier, "env": _norm_env(environment)},
     )
     rec = row.first()
     if rec is None:
@@ -135,7 +144,7 @@ async def get_credentials(db, tenant_id: int, carrier: str) -> Optional[dict]:
     return {
         "client_id": encryption.decrypt(rec[0]),
         "client_secret": encryption.decrypt(rec[1]),
-        "environment": rec[2] or "sandbox",
+        "environment": rec[2] or "production",  # NULL 安全フォールバック（ADR-125: 既存行は production）
         "account_number": account_number,
     }
 
@@ -159,7 +168,7 @@ async def save_credentials(
               (tenant_id, carrier, client_id_encrypted, client_secret_encrypted,
                environment, account_number_encrypted, updated_by_user_id, created_at, updated_at)
             VALUES (:tid, :c, :cid, :csec, :env, :acct, :uid, NOW(), NOW())
-            ON CONFLICT (tenant_id, carrier) DO UPDATE SET
+            ON CONFLICT (tenant_id, carrier, environment) DO UPDATE SET
               client_id_encrypted      = EXCLUDED.client_id_encrypted,
               client_secret_encrypted  = EXCLUDED.client_secret_encrypted,
               environment              = EXCLUDED.environment,
@@ -182,10 +191,14 @@ async def save_credentials(
     await db.commit()
 
 
-async def delete_credentials(db, tenant_id: int, carrier: str) -> None:
+async def delete_credentials(db, tenant_id: int, carrier: str, environment: str = "production") -> None:
+    """指定環境の認証情報を削除する（ADR-129: 環境別レコード対応）。"""
     await db.execute(
-        text("DELETE FROM tenant_carrier_credentials WHERE tenant_id = :tid AND carrier = :c"),
-        {"tid": tenant_id, "c": carrier},
+        text(
+            "DELETE FROM tenant_carrier_credentials"
+            " WHERE tenant_id = :tid AND carrier = :c AND environment = :env"
+        ),
+        {"tid": tenant_id, "c": carrier, "env": _norm_env(environment)},
     )
     await db.commit()
 

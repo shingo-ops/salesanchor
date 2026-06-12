@@ -225,7 +225,7 @@ export function InboxConversationList({
                       {conv.customer_name ?? `Lead #${conv.lead_id}`}
                     </span>
                     {conv.lead_status && (
-                      <span className="conv-status-badge">{t(`leads.statusCode.${conv.lead_status}`)}</span>
+                      <span className="conv-status-badge">{t(`leads.statusCode.${conv.lead_status}`, { defaultValue: conv.lead_status })}</span>
                     )}
                     <span className="conv-time">{relativeTime(conv.last_message_at)}</span>
                   </div>

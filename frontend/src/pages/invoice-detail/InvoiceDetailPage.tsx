@@ -81,6 +81,9 @@ interface InvoiceDetail {
   paypal_order_id: string | null;
   paypal_approval_url: string | null;
   payment_fee: number | null;
+  // ADR-101改訂(2) Inc1: 発行者ビュー（原本ワンクリック）＋写しPDF保存日時
+  paypal_invoicer_view_url: string | null;
+  paypal_copy_pdf_at: string | null;
 }
 
 export default function InvoiceDetailPage() {
@@ -126,6 +129,10 @@ export default function InvoiceDetailPage() {
 
   const handleDownloadPdf = () => {
     window.open(`/api/invoices/${id}/pdf`, "_blank");
+  };
+
+  const handleDownloadCopyPdf = () => {
+    window.open(`/api/invoices/${id}/paypal-copy-pdf`, "_blank");
   };
 
   const fmt = (n: number | null) => n != null ? n.toLocaleString() : "-";
@@ -193,6 +200,20 @@ export default function InvoiceDetailPage() {
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
             <input readOnly value={invoice.paypal_approval_url} style={{ flex: 1, padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }} />
             <a className="btn-secondary" href={invoice.paypal_approval_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openLink")}</a>
+          </div>
+        </div>
+      )}
+
+      {invoice.paypal_order_id && (
+        <div style={{ border: "1px solid var(--border)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>
+          <div style={{ fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-2)" }}>{t("invoices.paypal.recordTitle")}</div>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+            {invoice.paypal_invoicer_view_url && (
+              <a className="btn-secondary" href={invoice.paypal_invoicer_view_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openOriginal")}</a>
+            )}
+            {invoice.paypal_copy_pdf_at && (
+              <button className="btn-secondary" onClick={handleDownloadCopyPdf}>{t("invoices.paypal.downloadCopyPdf")}</button>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,7 @@ from __future__ import annotations
 """
 
 import json
+import logging
 import os
 import uuid
 from decimal import Decimal
@@ -46,6 +47,7 @@ from app.services.fx_rate import get_fx_rate
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 async def _get_tenant_schema(tenant_id: int) -> str:
@@ -127,7 +129,8 @@ _INVOICE_COLUMNS = """
     notes, created_by, created_at, updated_at,
     ship_to_snapshot, bill_to_snapshot, issue_mode,
     duty_amount, duty_policy_snapshot, fx_rate_snapshot,
-    paypal_order_id, paypal_approval_url, payment_fee
+    paypal_order_id, paypal_approval_url, payment_fee,
+    paypal_invoicer_view_url, paypal_copy_pdf_at
 """
 
 _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}
@@ -669,9 +672,34 @@ async def issue_paypal_link(
     row = upd.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
+
+    # ADR-101改訂(2) Inc1: 発行者ビューURLを保存し、写しPDFを自動生成・DB保存する。
+    # 写しPDF 生成失敗はリンク発行を失敗にしない（致命にしない・後で再生成可能）。
+    copy_pdf: bytes | None = None
+    try:
+        copy_pdf = await _render_paypal_copy_pdf(
+            db, tenant_id, row, invoice_id,
+            result["paypal_invoice_id"], result.get("recipient_view_url"),
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[paypal] 写しPDF 生成失敗 invoice=%s: %s", invoice_id, e)
+    upd2 = await db.execute(
+        text(f"""
+            UPDATE invoices
+            SET paypal_invoicer_view_url = :iv,
+                paypal_copy_pdf = COALESCE(:pdf, paypal_copy_pdf),
+                paypal_copy_pdf_at = CASE WHEN :pdf IS NULL THEN paypal_copy_pdf_at ELSE NOW() END,
+                updated_at = NOW()
+            WHERE id = :id
+            RETURNING {_INVOICE_COLUMNS}
+        """),
+        {"id": invoice_id, "iv": result.get("invoicer_view_url"), "pdf": copy_pdf},
+    )
+    row = upd2.mappings().first() or row
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_link", table_name="invoices", record_id=invoice_id,
-                           new_data={"paypal_invoice_id": result["paypal_invoice_id"]})
+                           new_data={"paypal_invoice_id": result["paypal_invoice_id"],
+                                     "copy_pdf_saved": copy_pdf is not None})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
@@ -809,6 +837,73 @@ async def download_invoice_pdf(
 
     return Response(
         content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ADR-101改訂(2) Inc1: PayPal 請求書の写しPDF（自動保存・取得）
+# ──────────────────────────────────────────────────────────────────────
+
+async def _render_paypal_copy_pdf(db: AsyncSession, tenant_id: int, row, invoice_id: int,
+                                  pp_invoice_number: str, original_url: str | None) -> bytes:
+    """請求書データ＋テナント情報から写しPDF（PayPal 請求書の写し注記＋原本リンク＋QR）を生成。"""
+    items = await _get_invoice_items(db, invoice_id)
+    tenant_schema = await _get_tenant_schema(tenant_id)
+    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+    invoice_data = {
+        "invoice_code": row["invoice_number"] or f"IN-{invoice_id:04d}-01",
+        "issued_at": row["issued_at"].isoformat() if row["issued_at"] else None,
+        "ship_to_snapshot": row["ship_to_snapshot"],
+        "bill_to_snapshot": row["bill_to_snapshot"],
+        "items": [
+            {
+                "name_en": it.get("name_en") or it.get("product_name") or "-",
+                "quantity": it["quantity"],
+                "unit_price": float(it["unit_price"] or 0),
+                "subtotal": float(it["subtotal"] or 0),
+                "hs_code": it.get("hs_code"),
+            }
+            for it in items
+        ],
+        "subtotal": float(row["subtotal"] or 0),
+        "shipping_fee": float(row["shipping_fee"] or 0),
+        "tax_amount": float(row["tax_amount"] or 0),
+        "total_amount": float(row["total_amount"] or 0),
+        "currency": row["currency"],
+        "duty_amount": float(row["duty_amount"]) if row["duty_amount"] is not None else None,
+        "fx_rate_snapshot": row["fx_rate_snapshot"],
+        "notes": row["notes"],
+    }
+    paypal_copy = {"pp_invoice_number": pp_invoice_number, "original_url": original_url}
+    return await run_in_threadpool(render_invoice_pdf, invoice_data, tenant_profile, paypal_copy)
+
+
+@router.get(
+    "/invoices/{invoice_id}/paypal-copy-pdf",
+    dependencies=[Depends(require_permission("invoices.view"))],
+)
+async def download_paypal_copy_pdf(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),  # noqa: ARG001
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """保存済みの PayPal 写しPDF（送信時に自動生成）を返す。未保存は 404。"""
+    res = await db.execute(
+        text("SELECT invoice_number, paypal_copy_pdf FROM invoices WHERE id = :id"),
+        {"id": invoice_id},
+    )
+    row = res.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+    pdf = row["paypal_copy_pdf"]
+    if not pdf:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="写しPDFはまだ生成されていません")
+    filename = f"{row['invoice_number'] or f'IN-{invoice_id:04d}-01'}-paypal-copy.pdf"
+    return Response(
+        content=bytes(pdf),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
