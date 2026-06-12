@@ -99,6 +99,26 @@ async def create_token(
                 detail="already_registered",
             )
 
+    # change_billing は未登録（billing is_default=true なし）の会社には発行不可
+    if data.type.value == "change_billing":
+        registered: bool = bool(await db.scalar(
+            text(
+                "SELECT EXISTS("
+                "  SELECT 1 FROM company_addresses ca"
+                "  JOIN companies c ON c.id = ca.company_id"
+                "  WHERE c.lead_id = :lead_id"
+                "  AND ca.address_type = 'billing'"
+                "  AND ca.is_default = TRUE"
+                ")"
+            ),
+            {"lead_id": data.lead_id},
+        ))
+        if not registered:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="not_registered",
+            )
+
     raw_token, expires_at = await create_registration_token(
         db,
         tenant_id=tenant_id,
@@ -507,7 +527,7 @@ async def change_billing(
         {
             "cid": company_id,
             "branch": addr.branch_name,
-            "name": addr.name,
+            "name": addr.name or data.billing_display_name or "",
             "email": addr.email,
             "telephone": addr.telephone,
             "tax_id": addr.tax_id,

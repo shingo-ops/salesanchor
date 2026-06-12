@@ -423,7 +423,7 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict) -> bytes:
         if not snap:
             return None
         return AddressSnapshot(
-            company_name=snap.get("company_name"),
+            company_name=snap.get("billing_display_name") or snap.get("company_name"),
             contact_name=snap.get("contact_name"),
             address=snap.get("address"),
             country=snap.get("country"),
@@ -501,7 +501,7 @@ def render_quote_pdf(quote_data: dict, tenant_profile: dict) -> bytes:
         if not snap:
             return None
         return AddressSnapshot(
-            company_name=snap.get("company_name"),
+            company_name=snap.get("billing_display_name") or snap.get("company_name"),
             contact_name=snap.get("contact_name"),
             address=snap.get("address"),
             country=snap.get("country"),
