@@ -23,7 +23,7 @@
 DO $$
 DECLARE
     schema_rec  RECORD;
-    is_nullable TEXT;
+    col_nullable TEXT;
     has_default BOOLEAN;
 BEGIN
     FOR schema_rec IN
@@ -45,7 +45,7 @@ BEGIN
         END IF;
 
         -- 現在の NULL 許容状態と DEFAULT の確認
-        SELECT is_nullable INTO is_nullable
+        SELECT is_nullable INTO col_nullable
         FROM information_schema.columns
         WHERE table_schema = schema_rec.schema_name
           AND table_name   = 'order_financials'
@@ -58,7 +58,7 @@ BEGIN
           AND column_name  = 'purchase_cost';
 
         -- NOT NULL 制約を DROP（NULL 許容化）
-        IF is_nullable = 'NO' THEN
+        IF col_nullable = 'NO' THEN
             EXECUTE format(
                 'ALTER TABLE %I.order_financials
                  ALTER COLUMN purchase_cost DROP NOT NULL',
