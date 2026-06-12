@@ -1,0 +1,386 @@
+/* =============================================================
+   SA設計図書サイト — 共通スタイル
+   色の意味ルール（全ページ統一・design.md §3参照）:
+     --c-customer  : 顧客（背骨①）= 青系
+     --c-inventory : 商品・在庫（背骨②）= 緑系
+     --c-order     : 注文（交差点）= オレンジ
+     --c-derived   : 自動生成・派生値 = グレー
+     --c-undecided : 未決事項 = 黄色
+   ============================================================= */
+
+:root {
+  --c-customer:  #1a6fc4;
+  --c-inventory: #2d8a4e;
+  --c-order:     #c05621;
+  --c-derived:   #4b5563;
+  --c-undecided: #b45309;
+
+  --c-customer-bg:  #dbeafe;
+  --c-inventory-bg: #dcfce7;
+  --c-order-bg:     #ffedd5;
+  --c-derived-bg:   #f3f4f6;
+  --c-undecided-bg: #fef9c3;
+
+  --text-main: #111827;
+  --text-sub:  #6b7280;
+  --border:    #e5e7eb;
+  --surface:   #ffffff;
+  --bg:        #f9fafb;
+
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP",
+               "Yu Gothic UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-main);
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+a { color: var(--c-customer); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── レイアウト ── */
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.site-header .logo {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+.site-header nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.site-header nav a {
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-sub);
+}
+.site-header nav a:hover,
+.site-header nav a.active {
+  background: var(--c-customer-bg);
+  color: var(--c-customer);
+  text-decoration: none;
+}
+
+.page-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin-bottom: 32px;
+}
+
+/* ── セクション ── */
+.section {
+  margin-bottom: 40px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  border-left: 4px solid var(--c-customer);
+  padding-left: 10px;
+  margin-bottom: 16px;
+}
+
+/* ── 4原則カード（トップ）── */
+.principles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.principle-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.principle-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.principle-card__name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.principle-card__body {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+.principle-card--ssot    .principle-card__label { color: var(--c-customer); }
+.principle-card--spine   .principle-card__label { color: var(--c-inventory); }
+.principle-card--derived .principle-card__label { color: var(--c-derived); }
+.principle-card--pokayoke .principle-card__label { color: var(--c-order); }
+
+/* ── 全体図（SVGラッパ）── */
+.architecture-diagram {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+  text-align: center;
+}
+.architecture-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── SA一覧カード ── */
+.sa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.sa-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow .15s;
+}
+.sa-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  text-decoration: none;
+}
+.sa-card__id {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-customer);
+  letter-spacing: .05em;
+}
+.sa-card__theme {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.sa-card__adr {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.sa-card__progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-inner {
+  height: 100%;
+  background: var(--c-inventory);
+  border-radius: 3px;
+  width: 0;
+  transition: width .3s;
+}
+
+/* ── バッジ ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.badge--todo     { background: var(--c-derived-bg); color: var(--c-derived); }
+.badge--wip      { background: var(--c-order-bg); color: var(--c-order); }
+.badge--done     { background: var(--c-inventory-bg); color: var(--c-inventory); }
+.badge--cross    { background: var(--c-customer-bg); color: var(--c-customer); }
+
+/* ── SAページ共通テンプレ ── */
+.template-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.template-section__head {
+  padding: 12px 18px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.template-section__num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.template-section__title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.template-section__body {
+  padding: 18px;
+}
+
+/* ── Before/After図 ── */
+.before-after {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.before-after__box {
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.before-after__box--before {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+.before-after__box--after {
+  background: var(--c-inventory-bg);
+  border: 1px solid #bbf7d0;
+}
+.before-after__label {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.before-after__box--before .before-after__label { color: #dc2626; }
+.before-after__box--after  .before-after__label { color: var(--c-inventory); }
+.before-after__arrow {
+  font-size: 24px;
+  color: var(--text-sub);
+}
+.before-after__item {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── テーブル ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th, .data-table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+.data-table th {
+  background: var(--bg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.data-table td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* ── 決定済み／未決リスト ── */
+.decision-list { list-style: none; }
+.decision-list li {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  align-items: flex-start;
+}
+.decision-list li:last-child { border-bottom: none; }
+.decision-list .status-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-top: 2px;
+}
+.decision-undecided {
+  background: var(--c-undecided-bg);
+  border-left: 3px solid var(--c-undecided);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+/* ── 用語辞典 ── */
+.glossary { font-size: 13px; }
+.glossary dt {
+  font-weight: 700;
+  color: var(--c-customer);
+  margin-top: 10px;
+}
+.glossary dd { margin-left: 12px; color: var(--text-sub); }
+
+/* ── フッター ── */
+.page-footer {
+  margin-top: 40px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.adr-ref {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.adr-ref__warn {
+  font-weight: 700;
+  color: #dc2626;
+}
+
+/* ── レスポンシブ ── */
+@media (max-width: 600px) {
+  .before-after {
+    grid-template-columns: 1fr;
+  }
+  .before-after__arrow { display: none; }
+  .principles-grid { grid-template-columns: 1fr 1fr; }
+}
