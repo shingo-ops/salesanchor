@@ -68,7 +68,7 @@ async def _fetch_address_snapshot(
         text("""
             SELECT a.branch_name, a.zip, a.address_line_1, a.address_line_2,
                    a.city, a.state, a.country_code, a.telephone,
-                   c.name AS company_name
+                   c.name AS company_name, c.billing_display_name
             FROM company_addresses a
             JOIN companies c ON c.id = a.company_id
             WHERE a.company_id = :cid
@@ -83,6 +83,7 @@ async def _fetch_address_snapshot(
         return None
     return {
         "company_name": row["company_name"],
+        "billing_display_name": row["billing_display_name"],
         "label": row["branch_name"],
         "postal_code": row["zip"],
         "address": " ".join(

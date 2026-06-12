@@ -126,41 +126,43 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* Header */}
+          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact+link */}
           <div className="right-panel-header">
-            <div className="right-panel-avatar">
-              {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
-                <img
-                  src={selectedConversation.profile_picture_url}
-                  alt={t("inbox.avatarAlt")}
-                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                  onError={() => handleAvatarError(selectedConversation.lead_id)}
-                />
-              ) : (
-                getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
-              )}
-            </div>
-            <div className="right-panel-header-info">
-              <span className="right-panel-display-name">
-                {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
-              </span>
-              {subParts.length > 0 && (
-                <span className="right-panel-sub">{subParts.join("・")}</span>
-              )}
-              <div className="karte-header-meta">
-                {stagePresentation && leadDetail && (
-                  <span className={`badge badge-${stagePresentation.badgeVariant}`} data-testid="karte-stage-badge">
-                    {t(stagePresentation.labelKey ?? leadDetail.status)}
-                  </span>
-                )}
-                {selectedConversation?.last_message_at && (
-                  <span className="karte-last-contact" data-testid="karte-last-contact">
-                    {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
-                  </span>
+            <div className="karte-hd-top">
+              <div className="right-panel-avatar">
+                {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
+                  <img
+                    src={selectedConversation.profile_picture_url}
+                    alt={t("inbox.avatarAlt")}
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                    onError={() => handleAvatarError(selectedConversation.lead_id)}
+                  />
+                ) : (
+                  getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
                 )}
               </div>
-              <button type="button" className="right-panel-link" onClick={() => setShowProfileModal(true)}>
-                {t("inbox.viewProfile")} →
+              <div className="karte-hd-name-block">
+                <span className="right-panel-display-name">
+                  {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
+                </span>
+                {subParts.length > 0 && (
+                  <span className="right-panel-sub">{subParts.join("・")}</span>
+                )}
+              </div>
+              {stagePresentation && leadDetail && (
+                <span className={`badge badge-${stagePresentation.badgeVariant}`} data-testid="karte-stage-badge">
+                  {t(stagePresentation.labelKey ?? leadDetail.status)}
+                </span>
+              )}
+            </div>
+            <div className="karte-hd-meta">
+              {selectedConversation?.last_message_at && (
+                <span className="karte-last-contact" data-testid="karte-last-contact">
+                  {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
+                </span>
+              )}
+              <button type="button" className="karte-open-link" onClick={() => setShowProfileModal(true)}>
+                {t("inbox.openCustomerPage")} →
               </button>
             </div>
           </div>
@@ -297,15 +299,17 @@ function ActionBar({
           >
             {t("registration.generateAddressLink")}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="karte-overflow-item"
-            disabled={regLinkLoading}
-            onClick={() => generateLink("change_billing")}
-          >
-            {t("registration.generateChangeBillingLink")}
-          </button>
+          {status === "existing_customer" && (
+            <button
+              type="button"
+              role="menuitem"
+              className="karte-overflow-item"
+              disabled={regLinkLoading}
+              onClick={() => generateLink("change_billing")}
+            >
+              {t("registration.generateChangeBillingLink")}
+            </button>
+          )}
           {regLink && (
             <div className="karte-overflow-link" style={{ padding: "var(--spacing-2)", wordBreak: "break-all", fontSize: "var(--font-size-xs)" }}>
               <a href={regLink} target="_blank" rel="noopener noreferrer">{regLink}</a>
@@ -370,14 +374,14 @@ function KarteTabContent({
           <input className="right-panel-field" type="email"
             value={cardForm.email ?? ""}
             onChange={(e) => handleCardFieldChange("email", e.target.value)}
-            onBlur={handleCardFieldBlur} />
+            onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.phone")}</span>
           <input className="right-panel-field" type="tel"
             value={cardForm.phone ?? ""}
             onChange={(e) => handleCardFieldChange("phone", e.target.value)}
-            onBlur={handleCardFieldBlur} />
+            onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
         </div>
 
         {/* Meta channels: "Not linked" badge */}
@@ -426,12 +430,14 @@ function KarteTabContent({
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.nickname")}</span>
           <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
-            onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
+            onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur}
+            placeholder={t("inbox.emptyField")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.country")}</span>
           <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
-            onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
+            onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur}
+            placeholder={t("inbox.emptyField")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.customerType")}</span>
@@ -454,7 +460,8 @@ function KarteTabContent({
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.salesForm")}</span>
           <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-            onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
+            onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur}
+            placeholder={t("inbox.emptyField")} />
         </div>
 
         {/* 実績サマリー (read-only) — ADR-110 */}
@@ -469,7 +476,7 @@ function KarteTabContent({
         <div className="right-panel-memo-label">{t("inbox.csRelationMemo")}</div>
         <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
           onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
-          onBlur={handleCardFieldBlur} placeholder={t("inbox.csRelationMemo")} />
+          onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       </div>
     );
   }
@@ -488,10 +495,12 @@ function KarteTabContent({
       <div className="right-panel-memo-label">{t("leads.nextAction")}</div>
       <textarea className="right-panel-field" rows={3} value={cardForm.next_action ?? ""}
         onChange={(e) => handleCardFieldChange("next_action", e.target.value)}
-        onBlur={handleCardFieldBlur} placeholder={t("leads.nextAction")} />
+        onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.nextActionDate")}</span>
-        <input className="right-panel-field" type="date" value={cardForm.next_action_date ?? ""}
+        <input
+          className={`right-panel-field${!cardForm.next_action_date ? " karte-field-empty" : ""}`}
+          type="date" value={cardForm.next_action_date ?? ""}
           onChange={(e) => handleCardFieldChange("next_action_date", e.target.value || null)} onBlur={handleCardFieldBlur} />
       </div>
       <div className="right-panel-row">
@@ -520,7 +529,7 @@ function KarteTabContent({
       <div className="right-panel-memo-label">{t("leads.challenge")}</div>
       <textarea className="right-panel-field" rows={3} value={cardForm.challenge ?? ""}
         onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
-        onBlur={handleCardFieldBlur} placeholder={t("leads.challenge")} />
+        onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.competitorCheck")}</span>
         <select className="right-panel-field" value={competitorValue}
@@ -550,17 +559,20 @@ function KarteTabContent({
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.monthlyForecast")}</span>
         <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_forecast ?? ""}
-          onChange={(e) => handleCardFieldChange("monthly_forecast", e.target.value || null)} onBlur={handleCardFieldBlur} />
+          onChange={(e) => handleCardFieldChange("monthly_forecast", e.target.value || null)} onBlur={handleCardFieldBlur}
+          placeholder={t("inbox.emptyField")} />
       </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.perOrderAmount")}</span>
         <input className="right-panel-field" type="number" min="0" value={cardForm.per_order_amount ?? ""}
-          onChange={(e) => handleCardFieldChange("per_order_amount", e.target.value || null)} onBlur={handleCardFieldBlur} />
+          onChange={(e) => handleCardFieldChange("per_order_amount", e.target.value || null)} onBlur={handleCardFieldBlur}
+          placeholder={t("inbox.emptyField")} />
       </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.monthlyFrequency")}</span>
         <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_frequency ?? ""}
-          onChange={(e) => handleCardFieldChange("monthly_frequency", e.target.value || null)} onBlur={handleCardFieldBlur} />
+          onChange={(e) => handleCardFieldChange("monthly_frequency", e.target.value || null)} onBlur={handleCardFieldBlur}
+          placeholder={t("inbox.emptyField")} />
       </div>
 
       {/* メモ */}
@@ -568,7 +580,7 @@ function KarteTabContent({
       <div className="right-panel-memo-label">{t("leads.meetingMemo")}</div>
       <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
         onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
-        onBlur={handleCardFieldBlur} placeholder={t("leads.meetingMemo")} />
+        onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
     </div>
   );
 }
