@@ -30,7 +30,8 @@ const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' })
 const AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev', 'shingo-cc'];
 
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
-const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
+// shingo-ops: ADR-135 B-2 受け入れテスト限定（一時追加・次PR #2013後継で削除）
+const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev', 'shingo-ops'];
 
 // ─── パス区分定義（design.md §1） ────────────────────────────────────────────
 const DOCS_PATTERNS = [
