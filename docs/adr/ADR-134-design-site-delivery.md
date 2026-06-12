@@ -93,6 +93,6 @@ PR #2068（ファネルダッシュボード PR1、merged 2026-06-12T15:00 UTC�
 
 **根本原因**: `run_all_migrations.sh` は毎デプロイ全 migration を最初から再実行するが、migration 状態テーブルを持たない。migration 013（step 2）は `leads.source` の存在を前提としていたが、後続の migration 20260613_030000（step ~100相当）が同列を DROP した結果、次のデプロイから 013 が常に失敗する構造になった。migration 順序の後ろ方向依存（early migration → column 存在前提、late migration → column 廃止）が顕在化したケース。
 
-**修正**: PR #2084 — `migrations/013_add_meta_webhook_idempotency.sql` に `information_schema` チェックを追加し、`source` 列が欠落している場合は `ADD COLUMN IF NOT EXISTS source VARCHAR(50)` でスキーマを修復してから続行するよう変更（`migrations/013_add_meta_webhook_idempotency.sql:53-70`）。後続の 20260613_030000 が引き続き同列を DROP するため、毎デプロイ「013 が source を復元 → 20260613_030000 が DROP」というサイクルになるが、動作は安全かつ冪等。
+**修正**: PR #2084 — `migrations/013_add_meta_webhook_idempotency.sql` の C1 セクション（`source` 列依存）に `information_schema` 存在チェックを追加し、列が無い場合はスキップ（NOTICE を出力のみ）するよう変更（`migrations/013_add_meta_webhook_idempotency.sql:65-103`）。ADR-138 §D1-3 クリーンスレート方針に則り列の再追加は行わない。あわせて C2 セクション（`meta_messages` 依存）にもテーブル存在ガードを追加し、CI テスト環境での実行可否チェックも通過させた。
 
 **自己修復の動作確認**: 次の成功デプロイで htpasswd が `Setup design-site htpasswd (idempotent)` ステップにより再生成、nginx 再起動後に `/design/` が 401 → 200 に復旧することで、fail-closed ブロックが自動解除される。
