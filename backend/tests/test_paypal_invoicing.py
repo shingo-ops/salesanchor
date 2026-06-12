@@ -272,3 +272,109 @@ def test_render_invoice_pdf_with_paypal_copy():
                                           "original_url": "https://pay/x"})
     assert isinstance(out, (bytes, bytearray))
     assert out[:4] == b"%PDF"
+
+
+# ── Inc4 Step B: dispute webhook 受信→紐づけ表示 ──────────────────
+async def _seed_paypal_config(db_session, tenant_id=999, webhook_id="WH-1"):
+    from sqlalchemy import text
+    # テスト DB は commit が永続するため冪等（OR REPLACE）にする
+    await db_session.execute(text(
+        "INSERT OR REPLACE INTO tenant_paypal_config "
+        "(tenant_id, client_id_encrypted, client_secret_encrypted, environment, webhook_id) "
+        "VALUES (:t, 'x', 'y', 'sandbox', :w)"
+    ), {"t": tenant_id, "w": webhook_id})
+    await db_session.commit()
+
+
+def _mock_paypal_creds(monkeypatch):
+    async def _creds(db, tid):
+        return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+    async def _wid(db, tid):
+        return "WH-1"
+
+    monkeypatch.setattr(svc, "get_credentials", _creds)
+    monkeypatch.setattr(svc, "get_webhook_id", _wid)
+
+
+def _dispute_event(invoice_number, dispute_id="PP-D-1", status="OPEN"):
+    return {
+        "event_type": "CUSTOMER.DISPUTE.CREATED",
+        "resource": {
+            "dispute_id": dispute_id,
+            "status": status,
+            "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+            "dispute_amount": {"value": "100.00", "currency_code": "USD"},
+            "disputed_transactions": [
+                {"invoice_number": invoice_number, "seller_transaction_id": "TXN-1"}
+            ],
+        },
+    }
+
+
+async def test_dispute_webhook_creates_and_links(client, db_session, monkeypatch):
+    """署名OK → paypal_disputes に upsert＋invoice_number で請求書に紐づけ→ endpoint で取得。"""
+    company_id, contact_id = await _company_contact(client, email="b@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    inv = (await client.get(f"/api/v1/invoices/{invoice_id}")).json()
+    invoice_number = inv["invoice_number"]
+
+    await _seed_paypal_config(db_session)
+    _mock_paypal_creds(monkeypatch)
+    monkeypatch.setattr(svc, "verify_webhook", lambda *a, **k: True)
+
+    resp = await client.post("/api/v1/integrations/paypal/webhook",
+                             json=_dispute_event(invoice_number, dispute_id="PP-D-CREATE"))
+    assert resp.status_code == 200, resp.text
+
+    got = (await client.get(f"/api/v1/invoices/{invoice_id}/paypal-disputes")).json()
+    assert len(got) == 1
+    assert got[0]["dispute_id"] == "PP-D-CREATE"
+    assert got[0]["status"] == "OPEN"
+    assert got[0]["amount"] == 100.0
+    assert got[0]["currency"] == "USD"
+
+
+async def test_dispute_webhook_idempotent_update(client, db_session, monkeypatch):
+    """同一 dispute_id の UPDATED は status を更新（冪等・二重作成しない）。"""
+    company_id, contact_id = await _company_contact(client, email="b@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_number = (await client.get(f"/api/v1/invoices/{invoice_id}")).json()["invoice_number"]
+    await _seed_paypal_config(db_session)
+    _mock_paypal_creds(monkeypatch)
+    monkeypatch.setattr(svc, "verify_webhook", lambda *a, **k: True)
+
+    await client.post("/api/v1/integrations/paypal/webhook",
+                      json=_dispute_event(invoice_number, dispute_id="PP-D-IDEM"))
+    ev = _dispute_event(invoice_number, dispute_id="PP-D-IDEM", status="RESOLVED")
+    ev["event_type"] = "CUSTOMER.DISPUTE.RESOLVED"
+    await client.post("/api/v1/integrations/paypal/webhook", json=ev)
+
+    got = (await client.get(f"/api/v1/invoices/{invoice_id}/paypal-disputes")).json()
+    assert len(got) == 1  # 二重作成されない
+    assert got[0]["status"] == "RESOLVED"
+
+
+async def test_dispute_webhook_invalid_signature_400(client, db_session, monkeypatch):
+    """どのテナントでも署名が通らない → 400（保存しない）。"""
+    await _seed_paypal_config(db_session)
+    _mock_paypal_creds(monkeypatch)
+    monkeypatch.setattr(svc, "verify_webhook", lambda *a, **k: False)
+    resp = await client.post("/api/v1/integrations/paypal/webhook",
+                             json=_dispute_event("IN-9999-01"))
+    assert resp.status_code == 400
+
+
+async def test_invoice_paid_webhook_still_works(client, monkeypatch):
+    """既存の INVOICING.INVOICE.PAID 経路がディスパッチャ化後も対象外でなく処理される（非破壊）。"""
+    # reference 解析不能（資料不足）でも 200（無視）で返ることを確認＝ディスパッチ自体は動く
+    resp = await client.post("/api/v1/integrations/paypal/webhook",
+                             json={"event_type": "INVOICING.INVOICE.PAID", "resource": {}})
+    assert resp.status_code == 200
+
+
+async def test_webhook_unknown_event_ignored(client):
+    """対象外イベントは 200 で無視。"""
+    resp = await client.post("/api/v1/integrations/paypal/webhook",
+                             json={"event_type": "SOME.OTHER.EVENT", "resource": {}})
+    assert resp.status_code == 200

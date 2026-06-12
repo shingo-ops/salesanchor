@@ -86,12 +86,24 @@ interface InvoiceDetail {
   paypal_copy_pdf_at: string | null;
 }
 
+// ADR-101改訂(2) Inc4: PayPal ケース（dispute）
+interface PaypalDispute {
+  dispute_id: string;
+  status: string | null;
+  reason: string | null;
+  amount: number | null;
+  currency: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export default function InvoiceDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [disputes, setDisputes] = useState<PaypalDispute[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [voidReason, setVoidReason] = useState("");
@@ -101,6 +113,10 @@ export default function InvoiceDetailPage() {
     try {
       const data = await api.get<InvoiceDetail>(`/invoices/${id}`);
       setInvoice(data);
+      // ADR-101改訂(2) Inc4: 紐づく PayPal ケース（失敗しても本体表示は妨げない）
+      try {
+        setDisputes(await api.get<PaypalDispute[]>(`/invoices/${id}/paypal-disputes`));
+      } catch { /* ケース取得失敗は無視 */ }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
@@ -215,6 +231,32 @@ export default function InvoiceDetailPage() {
               <button className="btn-secondary" onClick={handleDownloadCopyPdf}>{t("invoices.paypal.downloadCopyPdf")}</button>
             )}
           </div>
+        </div>
+      )}
+
+      {disputes.length > 0 && (
+        <div style={{ border: "1px solid var(--danger-border, var(--border))", background: "var(--danger-bg)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>
+          <div style={{ fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-2)", color: "var(--danger)" }}>{t("invoices.paypal.disputeTitle")}</div>
+          <table style={{ width: "100%", fontSize: "var(--font-sm)", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--text-secondary)" }}>
+                <th style={{ padding: "var(--space-1)" }}>{t("invoices.paypal.disputeStatus")}</th>
+                <th style={{ padding: "var(--space-1)" }}>{t("invoices.paypal.disputeReason")}</th>
+                <th style={{ padding: "var(--space-1)" }}>{t("invoices.paypal.disputeAmount")}</th>
+                <th style={{ padding: "var(--space-1)" }}>{t("invoices.paypal.disputeUpdated")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {disputes.map((d) => (
+                <tr key={d.dispute_id}>
+                  <td style={{ padding: "var(--space-1)" }}>{d.status || "-"}</td>
+                  <td style={{ padding: "var(--space-1)" }}>{d.reason || "-"}</td>
+                  <td style={{ padding: "var(--space-1)" }}>{d.amount != null ? `${d.currency || ""} ${d.amount.toLocaleString()}` : "-"}</td>
+                  <td style={{ padding: "var(--space-1)" }}>{d.updated_at ? new Date(d.updated_at).toLocaleString() : "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
