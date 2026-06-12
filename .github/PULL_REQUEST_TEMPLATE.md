@@ -12,6 +12,17 @@
 
 ## チェックリスト
 
+### リリース PR（develop→main）の相乗り確認（ADR-135）
+
+> このセクションは develop→main の PR のみ記入。feature→develop PR はスキップ可。
+
+- [ ] `git diff main...develop --name-only` で変更ファイル一覧を確認した
+- [ ] 上記一覧を PR 本文に貼り付けた（または「変更ファイル一覧: なし／全て意図済み」と明記）
+- [ ] `migrations/`・`.github/workflows/deploy.yml`・`scripts/` が含まれる場合、PO の GO を確認済み
+- [ ] 今回出荷するつもりがない変更が develop に混入していない（相乗り 0 確認）
+
+---
+
 ### 標準ワークフロー確認
 
 - [ ] 免除（自律クラフト：<理由>）

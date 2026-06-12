@@ -44,6 +44,8 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
   - `gh pr create --base main --head develop` を起票 → しんごさんがマージ
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
   - 緊急時は admin のみ bypass 可（`docs/BRANCH_PROTECTION_SETUP.md` §4 に記録）
+- **develop にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで feature ブランチで待機し develop にマージしない。develop は待合室ではない。
+- **リリース PR 作成時**は `git diff main...develop --name-only` で変更ファイル一覧を PR 本文に記載。危険パスが含まれたら停止して PO 確認。
 
 ---
 
