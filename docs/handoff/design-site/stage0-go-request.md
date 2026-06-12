@@ -118,31 +118,45 @@ URI プレフィックスが重複しない（recon.md §8で確認済み）。
             echo "✅ Design-site: 認証なし → 401 確認"
 ```
 
-（認証あり=200 の smoke は `DESIGN_SMOKE_CRED` Secret追加後に有効化。§5参照）
+（smoke②③は `DESIGN_SITE_SMOKE_CRED` Secret登録済み・htpasswdセットアップ後に有効化。§4参照）
 
 ---
 
-## §4 htpasswd 作成手順（VPS上で一度だけ実行）
+## §4 htpasswd 作成方法（CC責任・deploy.yml による自動セットアップ）
 
-Stage 0 GOが出た後、nginxコンテナ起動前にVPS上で以下を実行してください:
+**Shingoの手動操作は不要です。** deploy.yml に以下のステップを追加し、デプロイ時に自動でhtpasswdを作成します。
 
-```bash
-# APP VPS に SSH 接続
-ssh -i ~/.ssh/id_ed25519 ubuntu@49.212.137.46
+2ユーザー構成:
+- **viewer ユーザー** (`sa-design`): Shingoが設計図書サイトを閲覧するためのアカウント
+- **smoke ユーザー** (`sa-smoke`): CI/CD smoke テスト専用アカウント（Shingo非公開）
 
-# htpasswd ディレクトリ作成（gitignoreで追跡しない）
-mkdir -p /home/ubuntu/salesanchor/nginx/htpasswd.d
+**§3に追加するdeployステップ**（`Rsync design-site to VPS` の前に挿入）:
 
-# htpasswd ファイル作成（-B = bcrypt ハッシュ）
-# <USERNAME> と <PASSWORD> は Shingo が決めてください
-sudo apt-get install -y apache2-utils 2>/dev/null || true
-htpasswd -Bc /home/ubuntu/salesanchor/nginx/htpasswd.d/design-site <USERNAME>
-# → パスワード入力プロンプトが出る。ここで <PASSWORD> を入力
-
-# 確認
-cat /home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
-# → <USERNAME>:$2y$...（bcryptハッシュ）が表示されればOK
+```yaml
+      - name: Setup design-site htpasswd (idempotent)
+        uses: appleboy/ssh-action@v1
+        env:
+          VIEWER_CRED: ${{ secrets.DESIGN_SITE_VIEWER_CRED }}
+          SMOKE_CRED: ${{ secrets.DESIGN_SITE_SMOKE_CRED }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: VIEWER_CRED,SMOKE_CRED
+          script: |
+            set -e
+            HTPASSWD=/home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
+            mkdir -p "$(dirname "${HTPASSWD}")"
+            which htpasswd || sudo apt-get install -y apache2-utils
+            touch "${HTPASSWD}"
+            IFS=: read -r v_user v_pass <<< "${VIEWER_CRED}"
+            printf '%s\n' "${v_pass}" | htpasswd -Bi "${HTPASSWD}" "${v_user}"
+            IFS=: read -r s_user s_pass <<< "${SMOKE_CRED}"
+            printf '%s\n' "${s_pass}" | htpasswd -Bi "${HTPASSWD}" "${s_user}"
+            echo "htpasswd users: $(cut -d: -f1 "${HTPASSWD}" | tr '\n' ' ')"
 ```
+
+**htpasswd の耐久性**: bind mount（`nginx/htpasswd.d/:/etc/nginx/htpasswd.d:ro`）のため、`docker compose up --force-recreate` を含むデプロイでもホストのファイルは消えない。
 
 **gitignore への追加も必要です**（Stage 0 PR に含めます）:
 
@@ -153,26 +167,25 @@ nginx/htpasswd.d/
 
 ---
 
-## §5 GitHub Secretsへの追加（Shingo操作）
+## §5 GitHub Secrets（CC登録済み）
 
-smoke②③（認証ありアクセス確認）を有効化するために以下のSecretを追加してください:
+以下の2つの Secrets は CC が既に登録済みです（2026-06-12）:
 
-| Secret名 | 値 | 用途 |
-|---------|-----|------|
-| `DESIGN_SITE_SMOKE_CRED` | `user:password`（平文） | smoke②③でのBasic認証テスト |
+| Secret名 | 用途 | 状態 |
+|---------|------|------|
+| `DESIGN_SITE_VIEWER_CRED` | viewer ユーザーの `user:password`（htpasswd自動セットアップ用） | ✅ 登録済み |
+| `DESIGN_SITE_SMOKE_CRED` | smoke ユーザーの `user:password`（smoke②③テスト用） | ✅ 登録済み |
 
-設定場所: GitHub → Settings → Secrets and variables → Actions → New repository secret
+viewer の認証情報 (`sa-design`) はShingoに別途連絡済み。
 
 ---
 
 ## §6 適用手順（GO後の作業順序）
 
-1. **[Shingo] §4のhtpasswd作成コマンドをVPS上で実行**
-2. **[Hikky-dev] Stage 0変更PRを作成**（nginx.conf + docker-compose.yml + deploy.yml + .gitignore）
-3. **[Shingo] PRレビュー → Approve → develop マージ**
-4. **[Shingo] develop → main PR → マージ → 自動デプロイ**
-5. **デプロイ後: smoke① (401チェック) が自動実行**
-6. **[Shingo] §5のSecret追加後、smoke②③も有効になる**
+1. **[Hikky-dev] Stage 0変更PRを作成**（nginx.conf + docker-compose.yml + deploy.yml + .gitignore）
+2. **[Shingo] PRレビュー → Approve → develop マージ**
+3. **[Shingo] develop → main PR → マージ → 自動デプロイ**
+4. **デプロイ時: htpasswd自動セットアップ → design-site rsync → smoke①②③ 自動実行**
 
 ---
 
