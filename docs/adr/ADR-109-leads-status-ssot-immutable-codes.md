@@ -1,7 +1,10 @@
 # ADR-109: status の SSOT化（不変コード＋i18nラベル）
 
-**Status**: Accepted
+**Status**: Completed
 **日付**: 2026-06-04
+**完了日**: 2026-06-12
+**実装PR**: [#1726](https://github.com/shingo-ops/salesanchor/pull/1726)（コード・i18n・migration スクリプト）/ [#1994](https://github.com/shingo-ops/salesanchor/pull/1994)（migration 強化・表示フォールバック）
+**handoff**: `docs/handoff/status-ssot/recon.md` / `docs/handoff/status-ssot/design.md` / `docs/handoff/status-ssot/dryrun-report.md`
 **配置先**: `docs/adr/`
 **関連**: ADR-108（受信箱カルテ表示再編）/ ADR-012（What/How 分離）/ ADR-025 / デザイントークン・SSOT方針
 
