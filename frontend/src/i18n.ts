@@ -48,3 +48,4 @@ i18n.use(initReactI18next).init({
 });
 
 export default i18n;
+// ADR-135 CODEOWNER検証用ダミー（テスト後削除）
