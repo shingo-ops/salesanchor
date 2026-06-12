@@ -949,13 +949,13 @@
   margin-bottom: var(--space-6px);
 }
 
-/* メモ内サブラベル */
+/* メモ内サブラベル — right-panel-label と同一スタイルに統一（太字混在解消） */
 .right-panel-memo-label {
-  font-size: var(--font-2xs);
-  font-weight: 700;
+  font-size: var(--inbox-panel-label-size);
+  font-weight: 400;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   margin-top: var(--space-2);
 }
 
@@ -1165,8 +1165,10 @@
   transition: border-color var(--transition-micro);
 }
 .right-panel-field::placeholder { color: var(--text-muted); }
+/* 見本: select はネイティブ▼なしのプレーン箱 */
+select.right-panel-field { appearance: none; -webkit-appearance: none; }
 .right-panel-field:focus { outline: none; border-color: var(--karte-blue); }
-textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-min-h); }
+textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
   border: 1px solid transparent; background: transparent;
@@ -1335,6 +1337,9 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   color: var(--text-muted);
 }
 
+/* date入力: 未入力時のネイティブ mm/dd/yyyy を非表示（Chromium 向け）*/
+input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color: transparent; }
+
 /* ADR-110: Read-only section heading (with lock icon) */
 .karte-section-ro-heading {
   display: flex;
@@ -1350,15 +1355,15 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-6px) 0; /* 見本 .ro: 6px 0 */
+  border-bottom: 0.5px solid var(--border); /* 見本 .ro: 0.5px */
   font-size: var(--font-sm);
 }
 .karte-ro-row:last-child { border-bottom: none; }
 
-/* ADR-110: Read-only value (teal/green, bold) */
+/* ADR-110: Read-only value (teal/green, bold) — 見本 .ro-v */
 .karte-ro-value {
-  color: var(--success-text);
+  color: var(--karte-ok); /* 見本 --ok: tokens にて定義 */
   font-weight: 600;
   text-align: right;
 }

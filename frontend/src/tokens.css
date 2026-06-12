@@ -284,6 +284,8 @@
   --karte-blue:    #1877F2;    /* カルテアクセント色 Meta blue（見本 --pri） */
   --karte-field-bg: #fafbfc;  /* カルテフィールド背景（見本 .fbox） */
   --karte-field-bd: #dde0e4;  /* カルテフィールド枠線色（見本 --bd2） */
+  --karte-ok:      #0f9d77;   /* カルテ実績値色（見本 --ok: teal green）*/
+  --karte-ok-bg:   #e7f6f0;   /* カルテ実績値背景（見本 --ok-bg）*/
 
   /* ---- Sidebar ---- */
   --sidebar-logo-h:          64px;   /* サイドバーロゴエリア高さ */
