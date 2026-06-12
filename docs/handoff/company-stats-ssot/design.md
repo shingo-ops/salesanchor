@@ -55,10 +55,24 @@
 - develop マージは CI 緑で可。**本番適用（main→デプロイ）は Shingo の明示 GO 後**。
   素振り（本番相当環境で before/after の数値比較）を報告し GO を依頼すること。
 
-## 受け入れ条件
-- [ ] 取引額を表示する全画面（カルテ・会社詳細）が v_company_stats 経由で同一値
-- [ ] view の定義が公式定義（paid_at 非NULL かつ voided_at NULL）
-- [ ] カルテのクライアント側全件フェッチ集計が撤去されている
-- [ ] 集計テストが上記ケースを網羅して緑
-- [ ] カルテの見た目は不変（視覚ゲート緑）
-- [ ] ADR 起案済み・README 索引更新
+## 外部・過去事例の参照と我々への応用
+
+- 事例1: Django/Rails 系プロジェクトでの「集計ロジック散在」→「ビュー/スコープ一本化」  
+  → 我々への応用: v_company_stats を唯一の集計 SSOT とし、フロント側集計を廃止する
+- 事例2: ADR-108 でのカルテ再設計（paid_at IS NOT NULL AND voided_at IS NULL を公式定義化）  
+  → 我々への応用: ビュー定義をこの ADR に揃える（ADR-136 として記録）
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| v_company_stats フィルタが `paid_at IS NOT NULL AND voided_at IS NULL` に変更されている | DB で `pg_get_viewdef` 確認 |
+| カルテのクライアント側全件フェッチ集計が撤去されている | `InboxKartePanel.tsx` に `/invoices?lead_id=` が残っていないこと |
+| バックエンドに v_company_stats 集計テストが 8 シナリオ以上ある | `pytest backend/tests/test_company_stats.py` 全 PASS |
+| カルテの見た目が不変（視覚ゲート緑） | karte-visual-gate Playwright テスト PASS |
+| ADR-136 が作成済みで README 索引に反映されている | `docs/adr/ADR-136-company-stats-ssot.md` 存在確認 |
+
+## 実装 ADR
+
+- ADR-136: `docs/adr/ADR-136-company-stats-ssot.md`（本 PR で新規作成）
+- 参照: `docs/handoff/company-stats-ssot/recon.md`、PR #2020

@@ -187,7 +187,7 @@ WHERE status IN ('issued', 'overdue')
 ```
 - ソーステーブル: `invoices`
 - フィルタ: `status IN ('issued', 'overdue') AND due_date < CURRENT_DATE`
-- 合計は Python で後処理: `analytics.py:203`（`sum(i.total_amount or 0 for i in invoices)`）
+- 合計は Python で後処理: `backend/app/routers/analytics.py:203`（`sum(i.total_amount or 0 for i in invoices)`）
 - 用途: 延滞請求一覧の「合計」表示
 
 ---
@@ -203,7 +203,7 @@ FROM order_financials
 ```
 - ソーステーブル: `order_financials`（invoices でも orders でもない専用テーブル）
 - 用途: 財務管理ページの月次 P&L
-- `gross_profit = revenue_total - cost_total`（`order_financials.py:356`）
+- `gross_profit = revenue_total - cost_total`（`backend/app/routers/order_financials.py:356`）
 
 ---
 
@@ -297,9 +297,9 @@ frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:96
 
 | 箇所 | ADR-108 準拠 | 備考 |
 |------|-------------|------|
-| `InboxKartePanel.tsx:565` | **準拠** | `paid_at != null && voided_at == null` のフィルタを適用 |
+| `frontend/src/pages/inbox/InboxKartePanel.tsx:565` | **準拠** | `paid_at != null && voided_at == null` のフィルタを適用 |
 | `v_company_stats`（migrations:48） | **非準拠** | `status != 'cancelled'` のみ。paid_at/voided_at を無視 |
-| backend `companies.py:193` | **非準拠** | v_company_stats 経由のため同上 |
+| backend `backend/app/routers/companies.py:193` | **非準拠** | v_company_stats 経由のため同上 |
 
 **ADR-108 を正しく実装しているのはフロントエンドの InboxKartePanel のみ。**  
 バックエンドの SSOT（v_company_stats）は ADR-108 と矛盾した定義を持っている。
@@ -332,9 +332,9 @@ ADR-108 定義（`paid_at IS NOT NULL AND voided_at IS NULL`）を SSOT とし�
 
 | ファイル | 行番号 | 現在の「売上」定義 |
 |----------|--------|-----------------|
-| `analytics.py:486,542` | 分析KPI | orders.total_amount（全件・期間フィルタのみ） |
-| `analytics.py:663,708` | 月次グラフ | orders.total_amount（全件・期間フィルタのみ） |
-| `goals.py:322` | 目標KPI | orders.total_amount（全件・期間フィルタのみ） |
+| `backend/app/routers/analytics.py:486` | 分析KPI | orders.total_amount（全件・期間フィルタのみ） |
+| `backend/app/routers/analytics.py:663` | 月次グラフ | orders.total_amount（全件・期間フィルタのみ） |
+| `backend/app/routers/goals.py:322` | 目標KPI | orders.total_amount（全件・期間フィルタのみ） |
 
 #### フロントエンド変更
 
