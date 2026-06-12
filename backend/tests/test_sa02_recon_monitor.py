@@ -41,7 +41,7 @@ async def test_discord_called_even_when_diff_zero():
     mock_discord.assert_called_once()
     # 差異ゼロ時は1行サマリー（⚠なし）
     notif_text = mock_discord.call_args[0][0]
-    assert "一致 ✅" in notif_text
+    assert "一致✅" in notif_text
     assert "⚠️" not in notif_text
 
 
