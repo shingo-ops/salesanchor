@@ -39,3 +39,17 @@
 
 - `public.users`（マルチテナント共通テーブル）
 - tenant スキーマ側には password_hash 列なし
+
+## 今回の学び（ORM モデル定義経由の暗黙 SELECT）
+
+`models.py:29` に `password_hash = Column(String(255), nullable=False)` が定義されていた。  
+SQLAlchemy は ORM モデルを使う全クエリで定義済み列を自動的に SELECT に含める。  
+そのため「書き込みコードを全て除去した」だけでは不十分で、  
+**モデル定義が残っている限り全認証済みリクエストが `SELECT ... password_hash ...` を発行し続ける**。
+
+今回、migration（DROP COLUMN）を先行実行した状態で旧コード（モデル定義あり）が稼働し  
+`UndefinedColumnError: column users.password_hash does not exist` → 全エンドポイント 500 が発生した。
+
+**今後の列削除 recon における必須確認項目**:  
+`grep -rn "Column\|field\|column" backend/app/models.py` で ORM モデル定義を確認し、  
+書き込み箇所だけでなく **モデル定義の削除も変更リストに含める**こと。
