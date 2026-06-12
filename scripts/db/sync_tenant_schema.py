@@ -325,6 +325,12 @@ async def _apply_catchup_to_tenant(
         ("043_create_meta_page_routing.sql", "043: public.meta_page_routing 作成"),
         # ADR-089: customers テーブル廃止（全テナントループ形式・冪等）
         ("20260601_140000_drop_customers_tables.sql", "ADR-089: customers 関連テーブル DROP"),
+        # ADR-119: lead_channels テーブル（pg_namespace ループ形式）
+        ("20260607_120000_create_lead_channels.sql", "ADR-119: lead_channels テーブル"),
+        # SA-04: contact_contact_channels UNIQUE 制約 + guild_id catch-up
+        ("20260612_100000_add_contact_channel_unique.sql", "SA-04: contact_channel UNIQUE + guild_id"),
+        # SA-04: company_discord.guild_id 追加
+        ("20260612_110000_add_company_discord_guild_id.sql", "SA-04: company_discord.guild_id"),
     ]
     tenant_migrations: list[tuple[str, str]] = [
         ("040_create_tenant_meta_config.sql", "040: tenant_meta_config"),
