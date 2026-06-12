@@ -3,9 +3,9 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-097（トークン基盤）、ADR-126（入力契約v2）、ADR-127（change_billing追加・二重発行防止） |
-| ステータス | ⑤ 本番反映済み（進捗 90%・テスト発行検収待ち）|
+| ステータス | ⑥ **完了 100%**（Shingo検収OK 2026-06-12）|
 | 担当 | PO: Shingo ／ Dev: Terminal CC |
-| 最終更新 | 2026-06-12（Shingo完了条件確定）|
+| 最終更新 | 2026-06-12（Shingo検収OK・KGI G1〜G4全確認済み）|
 
 ---
 
@@ -165,9 +165,9 @@
 - [x] ③ 設計確定（ADR-127 PO承認済み → 実装 GO）
 - [x] ④ 残作業 PR マージ（change_billing フォーム・3種発行UI）— PR #1979 マージ済み（2026-06-12）
 - [x] ⑤ 本番反映（CI緑＋smoke通過）— 2026-06-12 smoke PASS
-- [ ] ⑥ **テスト発行検収（Shingo）**: CompanyDetailPage から `register` / `add_address` / `change_billing` を各1回発行 → フォーム送信 → カルテ反映確認 → 「検収OK」をCCに送信
-- [ ] ⑦ KGI G1〜G4 実測確認（⑥完了後にCCが記録）
-- [ ] ⑧ SA-01横断チェックシート記入＋総合進捗表（00-SA-OVERVIEW.md）100%更新
+- [x] ⑥ **テスト発行検収（Shingo）**: CompanyDetailPage から `register` / `add_address` / `change_billing` を各1回発行 → フォーム送信 → カルテ反映確認 — **Shingo検収OK 2026-06-12**
+- [x] ⑦ KGI G1〜G4 実測確認 — **2026-06-12 Shingo本番確認済み**（G1: tenant_id受付0確認・G2: 改ざんトークンで翻訳文表示確認・G3: register/add_address/change_billing本番台帳で直行・追加式・降格+INSERT確認・G4: 3種トークン実発行→カルテ反映全種完了・旧Googleフォーム告知対象外確定）
+- [x] ⑧ SA-01横断チェックシート記入（PR #2055）＋総合進捗表（00-SA-OVERVIEW.md）100%更新（本PR）
 
 > **バックログ（SA-03 100%達成後に別途対応）**:
 > - マニュアル作成: UIボタン配置最終確定後（デザイン改善イニシアチブと連動）
