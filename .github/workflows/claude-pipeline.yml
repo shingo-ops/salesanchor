@@ -202,7 +202,7 @@ jobs:
       completed: ${{ steps.run-researcher.outputs.completed }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -296,7 +296,7 @@ jobs:
       pr_head_ref: ${{ steps.create-pr.outputs.pr_head_ref }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # self-hosted runner の ~/.gitconfig credential helper へのフォールバック回避
           # ADR-056: PIPELINE_PAT は regenerate からの push が pull_request:synchronize を発火させるためにも必須
@@ -501,7 +501,7 @@ jobs:
       pr_head_ref: ${{ steps.resolve-pr.outputs.pr_head_ref }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.PIPELINE_PAT }}
 
@@ -619,7 +619,7 @@ jobs:
       skip: ${{ steps.check-method.outputs.skip }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.PIPELINE_PAT }}
 
@@ -793,7 +793,7 @@ jobs:
       pr_number: ${{ needs.reviewer.outputs.pr_number }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.PIPELINE_PAT }}
           fetch-depth: 0
@@ -1116,7 +1116,7 @@ jobs:
 
       - name: Checkout PR head branch
         if: steps.policy.outputs.halt == 'false'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.PIPELINE_PAT }}
           ref: ${{ needs.reviewer.outputs.pr_head_ref }}

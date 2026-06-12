@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # GOOGLE_APPLICATION_CREDENTIALS を JSON secret からファイルに書き出す
       # secret は env 経由で inject、printf で安全に書き出す (template injection 防止)
