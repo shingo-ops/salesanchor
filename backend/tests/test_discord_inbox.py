@@ -52,7 +52,8 @@ _LEAD_DDL = """
         company_name VARCHAR(200),
         email VARCHAR(255),
         phone VARCHAR(50),
-        source VARCHAR(100),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
         type VARCHAR(50),
         status VARCHAR(50),
         temperature VARCHAR(20),
@@ -223,20 +224,18 @@ async def _insert_discord_lead(
     tenant_id: int = 999,
     discord_user_id: str = "USER123",
     discord_dm_channel_id: str | None = "DM-CH-123",
-    source: str = "discord:USER123",
 ):
     await db_session.execute(text("""
         INSERT INTO leads
-            (id, tenant_id, lead_code, customer_name, source, type, status,
+            (id, tenant_id, lead_code, customer_name, channel_type, initiative, type, status,
              discord_user_id, discord_dm_channel_id)
         VALUES
-            (:id, :tenant_id, :code, 'Discord Customer', :source, 'prospect', 'lead',
+            (:id, :tenant_id, :code, 'Discord Customer', 'discord', 'inbound', 'prospect', 'lead',
              :discord_user_id, :discord_dm_channel_id)
     """), {
         "id": lead_id,
         "tenant_id": tenant_id,
         "code": f"LD-{lead_id:05d}",
-        "source": source,
         "discord_user_id": discord_user_id,
         "discord_dm_channel_id": discord_dm_channel_id,
     })
@@ -500,29 +499,27 @@ def _mock_scalar(scalar_value):
 async def test_dm_writer_creates_new_lead():
     """初回 DM 受信 → lead が新規作成され、meta_messages + conversation_logs に inbound 行が INSERT される。
 
-    実行シーケンス（ADR-119 二段 lookup、set_tenant_context は AsyncMock の dialect guard で no-op）:
+    実行シーケンス（ADR-119、set_tenant_context は AsyncMock の dialect guard で no-op）:
       1. Stage 1: SELECT leads JOIN lead_channels → None（未登録）
-      2. Stage 2: SELECT leads WHERE source → None（未登録）
-      3. INSERT leads RETURNING id（→ 新規 id=1）
-      4. INSERT lead_channels（_ensure_lead_channel）
-      5. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
-      6. INSERT meta_messages RETURNING id（→ id=10）
-      7. [SA-02] SELECT deals WHERE lead_id → None（案件なし: company_id=None）
-      8. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
-      9. commit
+      2. INSERT leads RETURNING id（→ 新規 id=1）
+      3. INSERT lead_channels（_ensure_lead_channel）
+      4. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
+      5. INSERT meta_messages RETURNING id（→ id=10）
+      6. [SA-02] SELECT deals WHERE lead_id → None（案件なし: company_id=None）
+      7. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
+      8. commit
     """
     from app.discord_gateway.dm_writer import upsert_lead_and_message
 
     mock_session = AsyncMock()
     mock_session.execute.side_effect = [
         _mock_result(None),      # (1) Stage 1 SELECT lead_channels JOIN → 未登録
-        _mock_result(None),      # (2) Stage 2 SELECT leads WHERE source → 未登録
-        _mock_result((1,)),      # (3) INSERT leads RETURNING id=1
-        _mock_result(None),      # (4) INSERT lead_channels (_ensure_lead_channel)
-        _mock_result(None),      # (5) UPDATE discord_dm_channel_id
-        _mock_result((10,)),     # (6) INSERT meta_messages RETURNING id=10
-        _mock_result(None),      # (7) SA-02: SELECT deals → 案件なし
-        _mock_scalar(42),        # (8) SA-02: INSERT conversation_logs RETURNING id=42
+        _mock_result((1,)),      # (2) INSERT leads RETURNING id=1
+        _mock_result(None),      # (3) INSERT lead_channels (_ensure_lead_channel)
+        _mock_result(None),      # (4) UPDATE discord_dm_channel_id
+        _mock_result((10,)),     # (5) INSERT meta_messages RETURNING id=10
+        _mock_result(None),      # (6) SA-02: SELECT deals → 案件なし
+        _mock_scalar(42),        # (7) SA-02: INSERT conversation_logs RETURNING id=42
     ]
 
     await upsert_lead_and_message(
@@ -536,8 +533,8 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 8回の execute + 1回の commit（SA-02 Stage 1: conv_logs 書き込み分2件追加）
-    assert mock_session.execute.call_count == 8
+    # 7回の execute + 1回の commit（Stage 2 source lookup 除去済み）
+    assert mock_session.execute.call_count == 7
     assert mock_session.commit.call_count == 1
 
 

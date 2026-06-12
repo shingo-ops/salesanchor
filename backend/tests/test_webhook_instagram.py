@@ -56,7 +56,8 @@ _LEADS_DDL = """
         company_name VARCHAR(255),
         email VARCHAR(255),
         phone VARCHAR(50),
-        source VARCHAR(100),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
         type VARCHAR(50),
         status VARCHAR(50) DEFAULT 'lead',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -144,13 +145,6 @@ _TENANTS_DDL = """
     )
 """
 
-# leads.source の部分 UNIQUE 制約（PostgreSQL の ON CONFLICT (source) WHERE ... を再現）
-_LEADS_SOURCE_UNIQUE_DDL = """
-    CREATE UNIQUE INDEX uq_leads_source_meta
-    ON leads (source)
-    WHERE source LIKE 'messenger:%' OR source LIKE 'instagram:%'
-"""
-
 # meta_messages.message_id の部分 UNIQUE（migration 013 を SQLite で再現）
 _META_MSG_ID_UNIQUE_DDL = """
     CREATE UNIQUE INDEX uq_meta_messages_message_id
@@ -191,7 +185,6 @@ async def engine():
         await conn.execute(text(_META_MESSAGES_DDL))
         await conn.execute(text(_TENANT_META_CONFIG_DDL))
         await conn.execute(text(_TENANTS_DDL))
-        await conn.execute(text(_LEADS_SOURCE_UNIQUE_DDL))
         await conn.execute(text(_META_MSG_ID_UNIQUE_DDL))
         await conn.execute(text(_LEAD_CHANNELS_DDL))
 
@@ -726,11 +719,11 @@ async def test_persist_meta_message_creates_lead_for_messenger(db_session, webho
 
     # leads 自動作成
     res = await db_session.execute(text(
-        "SELECT id, source, customer_name, lead_code FROM leads"
+        "SELECT id, channel_type, customer_name, lead_code FROM leads"
     ))
     rows = list(res.mappings())
     assert len(rows) == 1
-    assert rows[0]["source"] == "messenger:PSID-NEW"
+    assert rows[0]["channel_type"] == "messenger"
     assert rows[0]["customer_name"] == "Messenger User"
     assert rows[0]["lead_code"] == f"LD-{rows[0]['id']:05d}"
 
@@ -764,10 +757,10 @@ async def test_persist_meta_message_creates_lead_for_instagram(db_session, webho
     assert msg_id is not None
 
     res = await db_session.execute(text(
-        "SELECT source, customer_name FROM leads"
+        "SELECT channel_type, customer_name FROM leads"
     ))
     row = res.mappings().first()
-    assert row["source"] == "instagram:IGSID-1"
+    assert row["channel_type"] == "instagram"
     assert row["customer_name"] == "Instagram User"
 
     res = await db_session.execute(text(
@@ -813,13 +806,17 @@ async def test_persist_meta_message_skips_duplicate_message_id(
 
 @pytest.mark.asyncio
 async def test_persist_meta_message_reuses_existing_lead(db_session, webhook_env):
-    """同じ source の lead がすでにあれば再作成しない。"""
+    """同じ lead_channels の lead がすでにあれば再作成しない。"""
     from app.routers import webhook as wh
 
     # 既存 lead を投入
     await db_session.execute(text("""
-        INSERT INTO leads (id, tenant_id, lead_code, customer_name, source, status)
-        VALUES (42, 999, 'LD-00042', 'Existing', 'messenger:PSID-EX', 'lead')
+        INSERT INTO leads (id, tenant_id, lead_code, customer_name, channel_type, status)
+        VALUES (42, 999, 'LD-00042', 'Existing', 'messenger', 'lead')
+    """))
+    await db_session.execute(text("""
+        INSERT INTO lead_channels (lead_id, platform, external_id)
+        VALUES (42, 'messenger', 'PSID-EX')
     """))
     await db_session.commit()
 
@@ -899,9 +896,9 @@ async def test_process_event_messenger_inbound_persists_record(db_session, webho
     assert row["page_id"] == "PAGE-A"
 
     res = await db_session.execute(text(
-        "SELECT source FROM leads WHERE source = 'messenger:PSID-100'"
+        "SELECT channel_type FROM leads WHERE channel_type = 'messenger'"
     ))
-    assert res.scalar() == "messenger:PSID-100"
+    assert res.scalar() == "messenger"
 
 
 @pytest.mark.asyncio
@@ -1010,9 +1007,9 @@ async def test_process_event_instagram_messaging_persists_record(db_session, web
     assert row["sender_id"] == "IGSID-100"
 
     res = await db_session.execute(text(
-        "SELECT source FROM leads WHERE source = 'instagram:IGSID-100'"
+        "SELECT channel_type FROM leads WHERE channel_type = 'instagram'"
     ))
-    assert res.scalar() == "instagram:IGSID-100"
+    assert res.scalar() == "instagram"
 
 
 @pytest.mark.asyncio
@@ -1171,7 +1168,7 @@ async def test_new_lead_customer_name_updated_when_graph_api_returns_name(
     await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
-        "SELECT customer_name FROM leads WHERE source = 'messenger:PSID-NAME-1'"
+        "SELECT customer_name FROM leads WHERE channel_type = 'messenger' ORDER BY id DESC LIMIT 1"
     ))
     assert res.scalar() == "山田 太郎"
     # Phase 1-E F15-FU1: 受信元 Page ID が graph 解決に渡される
@@ -1208,7 +1205,7 @@ async def test_new_lead_keeps_default_name_when_graph_api_returns_none(
     await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
-        "SELECT customer_name FROM leads WHERE source = 'messenger:PSID-NONAME'"
+        "SELECT customer_name FROM leads WHERE channel_type = 'messenger' ORDER BY id DESC LIMIT 1"
     ))
     assert res.scalar() == "Messenger User"
 
@@ -1217,7 +1214,7 @@ async def test_new_lead_keeps_default_name_when_graph_api_returns_none(
 async def test_existing_lead_does_not_trigger_graph_api(
     db_session, webhook_env, monkeypatch,
 ):
-    """Phase 1-E F15-S6: 既存 lead（source 一致行が DB に存在）には Graph API を呼ばない。
+    """Phase 1-E F15-S6: 既存 lead（lead_channels で一致）には Graph API を呼ばない。
     （新規作成時のみ補完。再受信のたびに API を叩いて Rate Limit を浪費しない）"""
     from app.routers import webhook as wh
 
@@ -1226,8 +1223,12 @@ async def test_existing_lead_does_not_trigger_graph_api(
     )
     # 既存の lead を入れておく
     await db_session.execute(text("""
-        INSERT INTO leads (id, tenant_id, customer_name, source, type, status, lead_code)
-        VALUES (5001, 999, '既存さん', 'messenger:PSID-EXISTING', 'Inbound', 'lead', 'LD-05001')
+        INSERT INTO leads (id, tenant_id, customer_name, channel_type, type, status, lead_code)
+        VALUES (5001, 999, '既存さん', 'messenger', 'Inbound', 'lead', 'LD-05001')
+    """))
+    await db_session.execute(text("""
+        INSERT INTO lead_channels (lead_id, platform, external_id)
+        VALUES (5001, 'messenger', 'PSID-EXISTING')
     """))
     await db_session.commit()
 
@@ -1325,6 +1326,6 @@ async def test_long_message_id_persists(db_session, webhook_env):
 
     # leads も作成されている
     res = await db_session.execute(text(
-        "SELECT source FROM leads WHERE source = 'instagram:IGSID-LONG'"
+        "SELECT channel_type FROM leads WHERE channel_type = 'instagram'"
     ))
-    assert res.scalar() == "instagram:IGSID-LONG"
+    assert res.scalar() == "instagram"

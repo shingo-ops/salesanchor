@@ -10,11 +10,10 @@ Discord Bot が顧客からの DM を受信した際に呼ばれる。
    実行する。`tenant_id → schema = tenant_{id:03d}` の変換規則は `app.auth.dependencies`
    と同じ。
 
-2. **Lead lookup（ADR-119）**: `lead_channels` を一次権威として使用する二段 lookup。
-   Stage 1 で `lead_channels.platform='discord' AND external_id=<uid>` を引く。
-   Stage 2 では従来の `leads.source='discord:<uid>'` 比較にフォールバックし、
-   ヒット時は `lead_channels` 行を補完（self-heal）する。
-   どちらの経路でも自動作成時は必ず `lead_channels` に行を書く。
+2. **Lead lookup（ADR-119）**: `lead_channels` を一次権威として使用する。
+   `lead_channels.platform='discord' AND external_id=<uid>` を引く。
+   ヒットしなければ新規 lead を作成し、必ず `lead_channels` に行を書く。
+   新規 lead は `channel_type='discord', initiative='inbound'` で作成される。
 
 3. **meta_messages への格納**: `platform = 'discord'`, `direction = 'inbound'`。
    既存の `/conversations` API は `meta_messages` を検索するため追加変更不要。
@@ -98,7 +97,6 @@ async def upsert_lead_and_message(
     if received_at.tzinfo is None:
         received_at = received_at.replace(tzinfo=timezone.utc)
 
-    source = f"discord:{discord_user_id}"
     display = sender_name or f"Discord User {discord_user_id}"
 
     # --- 1. Lead の検索または新規作成（ADR-119 二段 lookup） ---
@@ -135,66 +133,36 @@ async def upsert_lead_and_message(
         else:
             raise
 
-    # Stage 2: source フォールバック（既存行／backfill 後の補完）
     if lead is None:
-        fallback_row = await db.execute(
-            text(f"SELECT id, discord_dm_channel_id FROM {schema}.leads "
-                 "WHERE source = :source AND tenant_id = :tenant_id LIMIT 1"),
-            {"source": source, "tenant_id": tenant_id},
-        )
-        lead = fallback_row.first()
-        if lead is not None:
-            # self-heal: lead_channels に補完して次回から Stage 1 でヒットする
-            await _ensure_lead_channel(db, schema, int(lead[0]), discord_user_id, display)
-            logger.info(
-                "[dm_writer] lead_channels self-heal tenant=%d lead_id=%d discord_user=%s",
-                tenant_id, int(lead[0]), discord_user_id,
-            )
-
-    if lead is None:
-        # 新規 lead 作成
+        # 新規 lead 作成（channel_type='discord', initiative='inbound'）
         insert_lead = await db.execute(
             text(f"""
                 INSERT INTO {schema}.leads
-                    (tenant_id, customer_name, source, type, status,
+                    (tenant_id, customer_name, channel_type, initiative, type, status,
                      discord_user_id, discord_dm_channel_id, created_at, updated_at)
                 VALUES
-                    (:tenant_id, :name, :source, 'Inbound', 'lead',
+                    (:tenant_id, :name, 'discord', 'inbound', 'Inbound', 'lead',
                      :discord_user_id, :dm_channel_id, NOW(), NOW())
-                ON CONFLICT (source) WHERE source LIKE 'discord:%'
-                DO NOTHING
                 RETURNING id
             """),
             {
                 "tenant_id": tenant_id,
                 "name": display,
-                "source": source,
                 "discord_user_id": discord_user_id,
                 "dm_channel_id": dm_channel_id,
             },
         )
         row = insert_lead.first()
         if row is None:
-            # ON CONFLICT で既存行に負けた場合は再検索
-            lead_row2 = await db.execute(
-                text(f"SELECT id, discord_dm_channel_id FROM {schema}.leads "
-                     "WHERE source = :source AND tenant_id = :tenant_id LIMIT 1"),
-                {"source": source, "tenant_id": tenant_id},
+            logger.error(
+                "[dm_writer] lead 取得失敗 tenant=%d user=%s", tenant_id, discord_user_id
             )
-            lead = lead_row2.first()
-            if lead is None:
-                logger.error(
-                    "[dm_writer] lead 取得失敗 tenant=%d user=%s", tenant_id, discord_user_id
-                )
-                await db.rollback()
-                return
-            lead_id = int(lead[0])
-            existing_dm_channel_id = lead[1]
-        else:
-            lead_id = int(row[0])
-            existing_dm_channel_id = None
+            await db.rollback()
+            return
+        lead_id = int(row[0])
+        existing_dm_channel_id = None
 
-        # lead_channels に登録（新規作成・競合再取得どちらも）
+        # lead_channels に登録
         await _ensure_lead_channel(db, schema, lead_id, discord_user_id, display)
 
         logger.info(

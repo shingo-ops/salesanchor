@@ -67,7 +67,8 @@ class LeadCreate(BaseModel):
     company_name: str | None = Field(default=None, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
-    source: str | None = Field(default=None, max_length=50)
+    channel_type: str | None = Field(default=None, max_length=30)
+    initiative: str | None = Field(default=None, max_length=10)
     type: LeadType | None = None
     status: LeadStatus = Field(default=LeadStatus.lead)
     temperature: LeadTemperature | None = None
@@ -95,7 +96,8 @@ class LeadUpdate(BaseModel):
     company_name: str | None = Field(default=None, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
-    source: str | None = Field(default=None, max_length=50)
+    channel_type: str | None = Field(default=None, max_length=30)
+    initiative: str | None = Field(default=None, max_length=10)
     type: LeadType | None = None
     status: LeadStatus | None = None
     temperature: LeadTemperature | None = None
@@ -143,7 +145,8 @@ class LeadResponse(BaseModel):
     company_name: str | None
     email: str | None
     phone: str | None
-    source: str | None
+    channel_type: str | None = None
+    initiative: str | None = None
     type: str | None
     status: str
     temperature: str | None

@@ -18,7 +18,8 @@ interface Lead {
   company_name: string | null;
   email: string | null;
   phone: string | null;
-  source: string | null;
+  channel_type: string | null;
+  initiative: string | null;
   type: string | null;
   status: string;
   temperature: string | null;
@@ -34,7 +35,8 @@ type FormState = {
   company_name: string;
   email: string;
   phone: string;
-  source: string;
+  channel_type: string;
+  initiative: string;
   type: string;
   status: string;
   temperature: string;
@@ -47,7 +49,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   customer_name: "", company_name: "", email: "", phone: "",
-  source: "", type: "", status: "lead", temperature: "",
+  channel_type: "", initiative: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
   monthly_forecast: "", notes: "",
 };
@@ -71,7 +73,8 @@ export default function LeadEditPage() {
           company_name: lead.company_name || "",
           email: lead.email || "",
           phone: lead.phone || "",
-          source: lead.source || "",
+          channel_type: lead.channel_type || "",
+          initiative: lead.initiative || "",
           type: lead.type || "",
           status: lead.status,
           temperature: lead.temperature || "",
@@ -97,7 +100,8 @@ export default function LeadEditPage() {
         company_name: toNull(form.company_name),
         email: toNull(form.email),
         phone: toNull(form.phone),
-        source: toNull(form.source),
+        channel_type: toNull(form.channel_type),
+        initiative: toNull(form.initiative),
         type: toNull(form.type),
         status: form.status,
         temperature: toNull(form.temperature),
@@ -132,8 +136,15 @@ export default function LeadEditPage() {
           <div className="form-group"><label>{t("leads.phone")}</label>
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("leads.source")}</label>
-            <input placeholder={t("leads.sourcePlaceholder")} value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} />
+          <div className="form-group"><label>{t("leads.channelType")}</label>
+            <input placeholder={t("leads.channelTypePlaceholder")} value={form.channel_type} onChange={(e) => setForm({ ...form, channel_type: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.initiative")}</label>
+            <select value={form.initiative} onChange={(e) => setForm({ ...form, initiative: e.target.value })}>
+              <option value="">{t("common.notSet")}</option>
+              <option value="inbound">{t("leads.initiative_inbound")}</option>
+              <option value="outbound">{t("leads.initiative_outbound")}</option>
+            </select>
           </div>
           <div className="form-group"><label>{t("leads.type")}</label>
             <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
