@@ -1,0 +1,129 @@
+/* ============================================================
+   FollowUpsPage — 要フォロー顧客 下層ページ
+   Design tokens: var(--*) only
+   ============================================================ */
+
+.fu-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.fu-back-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* ── フィルタチップ行 ── */
+.fu-filter-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.fu-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.fu-filter-chip:hover {
+  background: var(--bg-hover);
+}
+
+.fu-filter-chip.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.fu-chip-count {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: 1px var(--space-2);
+  background: var(--color-chip-count-bg);
+  border-radius: var(--radius-full);
+  min-width: var(--space-5);
+  text-align: center;
+}
+
+.fu-filter-chip:not(.active) .fu-chip-count {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+/* ── セグメントチップ（テーブル内・ドロワー内共通） ── */
+.fu-segment-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  white-space: nowrap;
+}
+
+.fu-segment--order_stopped {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.fu-segment--no_repeat_after_first {
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+}
+
+.fu-segment--won_no_order {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+/* ── テーブル ── */
+.fu-customer-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.fu-loading,
+.fu-empty {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  padding: var(--space-6) 0;
+  text-align: center;
+}
+
+/* ── ドロワー内 ── */
+.fu-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.fu-drawer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fu-drawer-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  min-width: var(--size-drawer-label-min);
+  flex-shrink: 0;
+}
