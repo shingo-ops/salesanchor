@@ -102,6 +102,8 @@ guard: `loser` が deals/orders/quotes/invoices を持つ場合は 400 ブロッ
 
 ---
 
-## 外部事例参照
+## 外部・過去事例の参照と我々への応用
 
-ADR-119 PR-C（`backend/app/routers/leads.py:2005-2212`）— 同一プロジェクト内の merge パターンを移植。実績 = 本番稼働中。
+- **調査ソース**: `docs/handoff/sa04-impl/recon.md` — 本ドキュメントの前段調査
+- **ADR-119 PR-C**（`backend/app/routers/leads.py:2005-2212`）— 同一プロジェクト内の merge パターンを移植。FOR UPDATE ロック・guard・FK 付け替え・audit 2件の実績 = 本番稼働中。
+- **ContactChannelForm**: `MergeLeadModal.tsx` の 2段階 UI 構造を担当者チャンネルフォームへ応用。`forceWithAudit` ステートで「統合 vs 別人保存」の 2 択フローを追加。
