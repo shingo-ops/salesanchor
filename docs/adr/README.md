@@ -118,7 +118,7 @@
 | [ADR-106](./ADR-106-sa-multitenant-policy.md) | ADR-106: マルチテナント＆「標準エンジン＋テナント別ポリシー」方針（ADR-SA-12） | Accepted | — | — |
 | [ADR-107](./ADR-107-sa-analytics-agent-a-customer-priority.md) | ADR-107 — 分析エージェント (A) 顧客優先度付け | Proposed | — | 2026-06-04 |
 | [ADR-108](./ADR-108-inbox-karte-panel-redesign.md) | ADR-108: 受信箱カルテの表示再編（商談／顧客／連絡先の再編・段階出し分け） | Proposed | — | — |
-| [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Accepted | — | — |
+| [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Completed | — | — |
 | [ADR-110](./ADR-110-karte-reference-alignment.md) | ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正） | Accepted | — | — |
 | [ADR-110](./ADR-110-sa-translation-subsystem.md) | ADR-110: 会話ログ翻訳サブシステム | — | — | — |
 | [ADR-111](./ADR-111-runner-label-isolation.md) | ADR-111: runner-label-isolation — Shingo-Mac-Temp 専用ラベルによる開発環境分離 | Accepted | — | — |
@@ -146,6 +146,7 @@
 | [ADR-132](./ADR-132-background-tasks-tenant-context.md) | ADR-132: BackgroundTasks テナントコンテキスト保護 | Accepted | — | — |
 | [ADR-133](./ADR-133-nginx-resolver-proxy-pass-variable.md) | ADR-133: nginx resolver + proxy_pass 変数化による IP 固着 502 恒久解 | Accepted | — | 2026-06-11 |
 | [ADR-134](./ADR-134-invoice-billing-display-name.md) | ADR-134: 請求書PDFの宛名に billing_display_name を優先使用する | Accepted | — | — |
+| [ADR-135](./ADR-135-release-stowaway-prevention.md) | ADR-135: リリース相乗り防止 — develop を常に出荷可能に保つ | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例

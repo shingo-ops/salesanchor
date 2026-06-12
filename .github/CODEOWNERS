@@ -15,3 +15,9 @@ frontend/src/pages/schedule.css            @shingo-ops
 
 # GitHub Actions ワークフロー（workflow-lint.yml は変更禁止）
 .github/workflows/workflow-lint.yml        @shingo-ops
+
+# 危険パス — ADR-135 リリース相乗り防止（develop入口関所）
+# これらのパスを触る PR は Code Owner（Shingo）の承認が必要
+migrations/                                @shingo-ops
+.github/workflows/                         @shingo-ops
+scripts/                                   @shingo-ops
