@@ -4,7 +4,7 @@ from __future__ import annotations
 SA-02 §10: 並走期間 日次突合タスク。
 
 meta_messages と conversation_logs の当日新規件数を全テナント合計で突合し、
-差異がある場合は Discord 通知する。差異ゼロの場合も記録用に INFO ログを出す。
+差異ゼロ・差異あり問わず毎日 Discord に通知する（通知ゼロ＝監視停止を区別するため）。
 
 スケジュール: 毎日 AM 8:00 JST（celery_app.py の beat_schedule に登録）。
 実行期間: 並走期間（段階1デプロイ〜段階2移行完了・読み取り切替完了）のみ。
@@ -95,7 +95,7 @@ async def _run_daily_recon() -> dict:
     if diff_total == 0:
         # 正常: 1行サマリー通知（監視が稼働中であることを毎日確認できる）
         summary_lines = [
-            f"[SA-02 並走監視] {today.isoformat()}  旧 {meta_total}件 / 新 {conv_total}件  一致 ✅",
+            f"📊 SA-02日次突合 {today.isoformat()}: 旧{meta_total}件/新{conv_total}件 一致✅",
         ]
     else:
         # 差異あり: ⚠ 強調 + 内訳付き通知
