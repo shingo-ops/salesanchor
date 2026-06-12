@@ -169,3 +169,4 @@
 | feature/morimoto/nginx-resolver-adr133 | ADR-133 nginx resolver+proxy_pass変数化 IP固着502恒久解 | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/karte-visual-gate | カルテ見た目忠実度ゲート⑤（Phase 5a CSS 寸法是正 + 5b 視覚ゲート） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/fedex-label-validation-wizard | ADR-129 FedEx Label Validation 申請支援ウィザード | 2026-06-12 | IN_PROGRESS | #1993 | | |
+| feature/morimoto/fix-htpasswd-openssl | deploy.yml htpasswd → openssl 修正 | 2026-06-12 | IN_PROGRESS | | | |

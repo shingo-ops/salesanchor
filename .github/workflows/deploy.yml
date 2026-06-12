@@ -100,12 +100,11 @@ jobs:
             set -e
             HTPASSWD=/home/ubuntu/salesanchor/nginx/htpasswd.d/design-site
             mkdir -p "$(dirname "${HTPASSWD}")"
-            which htpasswd || sudo apt-get install -y apache2-utils
-            touch "${HTPASSWD}"
             IFS=: read -r v_user v_pass <<< "${VIEWER_CRED}"
-            printf '%s\n' "${v_pass}" | htpasswd -Bi "${HTPASSWD}" "${v_user}"
             IFS=: read -r s_user s_pass <<< "${SMOKE_CRED}"
-            printf '%s\n' "${s_pass}" | htpasswd -Bi "${HTPASSWD}" "${s_user}"
+            # openssl passwd -apr1 を使用（apache2-utils 不要、sudo 不要）
+            printf '%s:%s\n' "${v_user}" "$(openssl passwd -apr1 "${v_pass}")" >  "${HTPASSWD}"
+            printf '%s:%s\n' "${s_user}" "$(openssl passwd -apr1 "${s_pass}")" >> "${HTPASSWD}"
             echo "htpasswd users: $(cut -d: -f1 "${HTPASSWD}" | tr '\n' ' ')"
 
       - name: Rsync design-site to VPS
@@ -116,6 +115,23 @@ jobs:
           rsync -avz \
             /tmp/design-site-progress.json \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/design-site/progress.json
+
+      # ============================================
+      # nginx コンテナ再作成（ADR-134 design-site ボリューム反映）
+      # htpasswd.d / www/design-site ボリュームは nginx 起動時にのみ
+      # マウントされるため、docker-compose.yml 変更後は明示的に再作成が必要。
+      # ============================================
+      - name: Recreate nginx (design-site volumes)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+            docker compose up -d --no-deps --force-recreate nginx
+            echo "✅ nginx 再作成完了（新ボリューム反映）"
 
       # ============================================
       # デプロイ前 DB バックアップ
