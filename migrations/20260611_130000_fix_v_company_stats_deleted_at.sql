@@ -42,6 +42,17 @@ BEGIN
             CONTINUE;
         END IF;
 
+        -- 新版（paid_invoice_count 列あり）が既に適用済みならスキップ
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_rec.nspname
+              AND table_name = 'v_company_stats'
+              AND column_name = 'paid_invoice_count'
+        ) THEN
+            RAISE NOTICE 'migration 20260611_130000: %.v_company_stats は新版（paid_invoice_count あり）のためスキップ', schema_rec.nspname;
+            CONTINUE;
+        END IF;
+
         -- v_company_stats ビューを論理削除除外版に更新（CREATE OR REPLACE で冪等）
         EXECUTE format($q$
             CREATE OR REPLACE VIEW %I.v_company_stats AS
