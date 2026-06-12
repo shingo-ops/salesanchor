@@ -1,6 +1,9 @@
 /**
  * ファネルダッシュボード API 薄い1枚
- * モック→実API 切替はこのファイルの MOCK_MODE 変更のみ
+ * 表示モードは VITE_FUNNEL_DASHBOARD 1本で制御:
+ *   unset / false → "off"  : セクション自体を非レンダリング（本番デフォルト）
+ *   "mock"        → "mock" : モックフィクスチャを返す（開発・E2E）
+ *   "live"        → "live" : 実APIを呼ぶ（バックエンドPR2/3マージ後）
  * API contract: docs/handoff/funnel-dashboard-stage1/api-contract.md
  */
 
@@ -14,8 +17,15 @@ import {
   MOCK_REASONS_LOST,
 } from "../mocks/funnelFixtures";
 
-// TODO: 実API結線時は false に変更（または VITE_MOCK_FUNNEL_API=false を.envに追加）
-const MOCK_MODE = (import.meta.env.VITE_MOCK_FUNNEL_API ?? "true") !== "false";
+type FunnelMode = "off" | "mock" | "live";
+
+export const FUNNEL_MODE: FunnelMode = (() => {
+  const v = import.meta.env.VITE_FUNNEL_DASHBOARD;
+  if (v === "mock" || v === "live") return v;
+  return "off";
+})();
+
+const MOCK_MODE = FUNNEL_MODE === "mock";
 
 // ─── 型定義（API contract と同形） ────────────────────────────────────
 

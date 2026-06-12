@@ -34,6 +34,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
+import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
 
 const TrendUpIcon = DashboardIcons.forecast;
@@ -428,33 +429,37 @@ export default function DashboardPage() {
       subtitleKey="dashboard.subtitle"
       headerAction={
         <div className="page-header-actions">
-          {/* ファネルセクション用: 月セレクタ + ビュー切替 */}
-          <select
-            className="page-header-select"
-            value={funnelMonth}
-            onChange={(e) => setFunnelMonth(e.target.value)}
-            aria-label={t("funnel.monthLabel")}
-          >
-            {monthOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <div className="db-tabs">
-            <button
-              type="button"
-              className={`db-tab${viewMode === "management" ? " active" : ""}`}
-              onClick={() => setViewMode("management")}
-            >
-              {t("funnel.viewManagement")}
-            </button>
-            <button
-              type="button"
-              className={`db-tab${viewMode === "player" ? " active" : ""}`}
-              onClick={() => setViewMode("player")}
-            >
-              {t("funnel.viewPlayer")}
-            </button>
-          </div>
+          {/* ファネルセクション用: 月セレクタ + ビュー切替（FUNNEL_MODE が off のとき非表示） */}
+          {FUNNEL_MODE !== "off" && (
+            <>
+              <select
+                className="page-header-select"
+                value={funnelMonth}
+                onChange={(e) => setFunnelMonth(e.target.value)}
+                aria-label={t("funnel.monthLabel")}
+              >
+                {monthOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <div className="db-tabs">
+                <button
+                  type="button"
+                  className={`db-tab${viewMode === "management" ? " active" : ""}`}
+                  onClick={() => setViewMode("management")}
+                >
+                  {t("funnel.viewManagement")}
+                </button>
+                <button
+                  type="button"
+                  className={`db-tab${viewMode === "player" ? " active" : ""}`}
+                  onClick={() => setViewMode("player")}
+                >
+                  {t("funnel.viewPlayer")}
+                </button>
+              </div>
+            </>
+          )}
           {/* 既存期間セレクタ（下部エリア用） */}
           <select
             className="page-header-select"
@@ -475,9 +480,11 @@ export default function DashboardPage() {
       <div className="db-content-stack">
 
       {/* -------------------------------------------------
-          ファネルセクション（PR4 モックデータ駆動）
+          ファネルセクション（VITE_FUNNEL_DASHBOARD=mock/live のときのみ表示）
       ------------------------------------------------- */}
-      <FunnelSection month={funnelMonth} viewMode={viewMode} />
+      {FUNNEL_MODE !== "off" && (
+        <FunnelSection month={funnelMonth} viewMode={viewMode} />
+      )}
 
       {/* -------------------------------------------------
           固定エリア（期間変更でも不変）

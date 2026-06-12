@@ -126,7 +126,7 @@ test.describe("/dashboard/follow-ups — 要フォロー顧客", () => {
     });
     await page.goto("/dashboard/follow-ups");
     await page.waitForLoadState("networkidle");
-    await page.screenshot({ path: "test-results/follow-ups-page.png" });
+    await expect(page).toHaveScreenshot("follow-ups-page.png", { fullPage: false });
   });
 });
 
@@ -155,8 +155,8 @@ test.describe("/dashboard/leads — リード流入分析", () => {
     await page.goto("/dashboard/leads");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByText("顧客起点")).toBeVisible();
-    await expect(page.getByText("自社起点")).toBeVisible();
+    await expect(page.getByText("顧客起点").first()).toBeVisible();
+    await expect(page.getByText("自社起点").first()).toBeVisible();
   });
 
   test("スクリーンショット", async ({ page }) => {
@@ -167,7 +167,7 @@ test.describe("/dashboard/leads — リード流入分析", () => {
     });
     await page.goto("/dashboard/leads");
     await page.waitForLoadState("networkidle");
-    await page.screenshot({ path: "test-results/leads-page.png" });
+    await expect(page).toHaveScreenshot("leads-page.png", { fullPage: false });
   });
 });
 
@@ -221,7 +221,7 @@ test.describe("/dashboard/revenue — 売上・粗利内訳", () => {
     });
     await page.goto("/dashboard/revenue");
     await page.waitForLoadState("networkidle");
-    await page.screenshot({ path: "test-results/revenue-page.png" });
+    await expect(page).toHaveScreenshot("revenue-page.png", { fullPage: false });
   });
 });
 
@@ -247,8 +247,9 @@ test.describe("/dashboard/reasons — 成約・失注理由", () => {
     await page.goto("/dashboard/reasons");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByText("在庫・品揃え")).toBeVisible();
-    await expect(page.getByText("価格")).toBeVisible();
+    // ランキングリスト内のラベルで確認（メモ内にも同テキストが出るため .frr-reason-label で絞る）
+    await expect(page.locator(".frr-reason-label", { hasText: "在庫・品揃え" })).toBeVisible();
+    await expect(page.locator(".frr-reason-label", { hasText: "価格" }).first()).toBeVisible();
   });
 
   test("失注タブに切り替えると失注理由が表示される", async ({ page }) => {
@@ -261,12 +262,11 @@ test.describe("/dashboard/reasons — 成約・失注理由", () => {
     await page.waitForLoadState("networkidle");
 
     // 初期表示: 成約ランキング
-    await expect(page.getByText("在庫・品揃え")).toBeVisible();
+    await expect(page.locator(".frr-reason-label", { hasText: "在庫・品揃え" })).toBeVisible();
 
-    // 失注タブをクリック
+    // 失注タブをクリック（MOCK_MODE: ネットワーク呼び出しなし → auto-wait で待つ）
     await page.click("button:has-text('失注')");
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByText("価格が合わなかった")).toBeVisible();
+    await expect(page.locator(".frr-reason-label", { hasText: "価格が合わなかった" })).toBeVisible();
   });
 
   test("メモ一覧に顧客の言葉が表示される", async ({ page }) => {
@@ -289,6 +289,6 @@ test.describe("/dashboard/reasons — 成約・失注理由", () => {
     });
     await page.goto("/dashboard/reasons");
     await page.waitForLoadState("networkidle");
-    await page.screenshot({ path: "test-results/reasons-page.png" });
+    await expect(page).toHaveScreenshot("reasons-page.png", { fullPage: false });
   });
 });

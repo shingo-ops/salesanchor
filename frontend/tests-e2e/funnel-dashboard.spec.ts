@@ -95,13 +95,13 @@ test.describe("ファネルダッシュボード 第1層", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // ファネルセクション確認
-    await expect(page.getByText("リード獲得")).toBeVisible();
-    await expect(page.getByText("商談化率")).toBeVisible();
-    await expect(page.getByText("進行中商談")).toBeVisible();
-    await expect(page.getByText("成約・失注")).toBeVisible();
+    // ファネルセクション確認（strict mode: 複数マッチを避けるため .first() または exact）
+    await expect(page.locator(".fn-card-title", { hasText: "リード獲得" }).first()).toBeVisible();
+    await expect(page.locator(".fn-card-title", { hasText: "商談化率" }).first()).toBeVisible();
+    await expect(page.locator(".fn-card-title", { hasText: "進行中商談" }).first()).toBeVisible();
+    await expect(page.locator(".fn-card-title", { hasText: "成約・失注" }).first()).toBeVisible();
 
-    await page.screenshot({ path: "test-results/funnel-dashboard-top.png" });
+    await expect(page).toHaveScreenshot("funnel-dashboard-top.png", { fullPage: false });
   });
 
   test("ボトルネックバッジが最低達成率カードに表示される", async ({ page }) => {
@@ -164,12 +164,9 @@ test.describe("ファネルダッシュボード 第1層", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // 遷移先のAPIモックも追加
-    await mockApi(page, {
-      "GET /analytics/follow-ups": mockFollowUps,
-    });
-
-    await page.click("button:has-text('詳細を見る')");
+    // FollowUpSummaryCard が描画されるまで待つ（MOCK_MODE = Promise.resolve → 非同期レンダリング）
+    await page.locator(".fn-followup-summary-card").waitFor({ state: "visible", timeout: 10000 });
+    await page.locator("button.fn-link-btn").click();
     await expect(page).toHaveURL(/\/dashboard\/follow-ups/);
   });
 
@@ -180,9 +177,6 @@ test.describe("ファネルダッシュボード 第1層", () => {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(300); // アニメーション完了待ち
 
-    await page.screenshot({
-      path: "test-results/funnel-dashboard-full.png",
-      fullPage: false,
-    });
+    await expect(page).toHaveScreenshot("funnel-dashboard-full.png", { fullPage: false });
   });
 });
