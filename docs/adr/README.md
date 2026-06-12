@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-12 / ADR 総数: 130 件
+最終更新: 2026-06-12 / ADR 総数: 131 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -148,6 +148,7 @@
 | [ADR-134](./ADR-134-design-site-delivery.md) | ADR-134: SA設計図書サイトの配信方式（アプリVPS静的配信＋Basic認証） | Proposed | — | — |
 | [ADR-134](./ADR-134-invoice-billing-display-name.md) | ADR-134: 請求書PDFの宛名に billing_display_name を優先使用する | Accepted | — | — |
 | [ADR-135](./ADR-135-release-stowaway-prevention.md) | ADR-135: リリース相乗り防止 — develop を常に出荷可能に保つ | Accepted | — | — |
+| [ADR-136](./ADR-136-cc-bot-github-identity.md) | ADR-136: CC ボットアカウント GitHub Identity 分離 | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
