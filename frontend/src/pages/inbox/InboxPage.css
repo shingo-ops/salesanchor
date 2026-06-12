@@ -762,6 +762,8 @@
 .right-panel-card {
   background: var(--bg-surface);
   width: 100%;
+  height: 100%;          /* アクションバーをパネル下端に固定するため */
+  overflow: hidden;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -858,26 +860,50 @@
   padding: var(--space-4);
 }
 
-/* ヘッダーラッパー（Metaスタイル: 横並びコンパクト） */
+/* ヘッダーラッパー（見本 .hd: 縦2行構成） */
 .right-panel-header {
   width: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
   padding: var(--space-4) var(--karte-h-pad) var(--space-14px); /* 見本 .hd: 16px 18px 14px */
   border-bottom: 0.5px solid var(--border);
   box-sizing: border-box;
 }
-/* ヘッダー右側: 名前 + リンクの縦並び */
-.right-panel-header-info {
+/* 見本 .hd-top: avatar + name-block(flex:1) + badge(right) */
+.karte-hd-top {
+  display: flex;
+  align-items: center;
+  gap: var(--karte-hd-gap); /* 見本: gap 11px */
+}
+/* 見本 name-block: flex:1 min-width:0 */
+.karte-hd-name-block {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  gap: var(--space-2px);
   min-width: 0;
   flex: 1;
 }
+/* 見本 .hd-meta: last-contact(left) + open-link(right) */
+.karte-hd-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--karte-hd-gap); /* 見本: margin-top 11px */
+}
+/* 見本 .open-link: 顧客ページを開く → */
+.karte-open-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--karte-blue);
+  font-size: var(--font-xs); /* 見本: 12px */
+  font-weight: 500;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.karte-open-link:hover { text-decoration: underline; }
 
 /* カード化により隣接セレクタ不要（削除済み） */
 
@@ -1132,13 +1158,14 @@
 /* ====== カルテ常時編集フィールド ====== */
 .right-panel-field {
   width: 100%; box-sizing: border-box;
-  background: var(--bg-primary); border: 0.5px solid var(--border);
+  background: var(--karte-field-bg); border: 0.5px solid var(--karte-field-bd); /* 見本 .fbox: #fafbfc / #dde0e4 */
   border-radius: var(--radius-md); padding: var(--karte-field-py) var(--karte-field-px); /* 見本 .fbox: 7px 9px, radius 6px */
   font-size: var(--font-sm); color: var(--text-primary);
   font-family: inherit;
   transition: border-color var(--transition-micro);
 }
-.right-panel-field:focus { outline: none; border-color: var(--accent); }
+.right-panel-field::placeholder { color: var(--text-muted); }
+.right-panel-field:focus { outline: none; border-color: var(--karte-blue); }
 textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-min-h); }
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
@@ -1165,7 +1192,7 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
   margin-bottom: -1px;
 }
 .right-panel-tab:hover { color: var(--text-primary); }
-.right-panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; } /* 見本 .tab.on: font-weight 600 */
+.right-panel-tab.active { color: var(--karte-blue); border-bottom-color: var(--karte-blue); font-weight: 600; } /* 見本 .tab.on: color/border --pri */
 .right-panel-tab-content { flex: 1; overflow-y: auto; width: 100%; }
 .right-panel-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 .right-panel-group-heading {
@@ -1204,17 +1231,17 @@ textarea.right-panel-field { resize: vertical; min-height: var(--inbox-textarea-
 .karte-action-primary {
   flex: 1;
   padding: var(--space-10px); /* 見本 .primary: 10px */
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--karte-blue); /* 見本 .primary: background --pri */
+  color: #fff;
   border: none;
   border-radius: var(--radius-lg); /* 見本 .primary: radius 8px */
   font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-micro);
+  transition: filter var(--transition-micro);
   font-family: inherit;
 }
-.karte-action-primary:hover { background: var(--accent-hover); }
+.karte-action-primary:hover { filter: brightness(1.07); } /* 見本 .primary:hover */
 
 /* ADR-110: "…" overflow button */
 .karte-action-overflow {

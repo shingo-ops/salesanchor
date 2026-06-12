@@ -280,6 +280,10 @@
   --karte-font-tab:     13px;  /* カルテタブ文字サイズ（見本 .tab / .fbox） */
   --karte-font-sec:     11px;  /* カルテセクション見出し文字サイズ（見本 .sec） */
   --karte-overflow-px:  13px;  /* カルテoverflowボタン横padding（見本 .more） */
+  --karte-hd-gap:       11px;  /* カルテヘッダー hd-top gap / hd-meta margin-top（見本） */
+  --karte-blue:    #1877F2;    /* カルテアクセント色 Meta blue（見本 --pri） */
+  --karte-field-bg: #fafbfc;  /* カルテフィールド背景（見本 .fbox） */
+  --karte-field-bd: #dde0e4;  /* カルテフィールド枠線色（見本 --bd2） */
 
   /* ---- Sidebar ---- */
   --sidebar-logo-h:          64px;   /* サイドバーロゴエリア高さ */

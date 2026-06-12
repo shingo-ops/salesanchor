@@ -81,7 +81,8 @@ const OUT_DIR  = path.join(process.cwd(), "screenshots", "compare");
 const REF_HTML = path.resolve(__dirname, "../../docs/adr/karte_reference.html");
 
 test.beforeAll(() => fs.mkdirSync(OUT_DIR, { recursive: true }));
-test.use({ viewport: { width: 1280, height: 900 } });
+// 1000px height: ヘッダー〜アクションバーが全て収まる高さ（パネル高 ≈ 940px）
+test.use({ viewport: { width: 1280, height: 1000 } });
 
 // ── capture tests ─────────────────────────────────────────────────────────────
 test.describe("Visual comparison — Phase 5a review", () => {
@@ -90,6 +91,9 @@ test.describe("Visual comparison — Phase 5a review", () => {
     await openKartePanel(page, leadShinki);
     // deal tab is default for shinki; click explicitly to be certain
     await page.locator('[data-testid="karte-tab-deal"]').click();
+    // アクションバー表示を確認してからスクロールをリセット
+    await page.locator('[data-testid="karte-action-bar"]').waitFor({ state: "visible", timeout: 5_000 });
+    await page.locator(".inbox-right-panel").evaluate((el) => { el.scrollTop = 0; });
     await page.waitForTimeout(300);
     await page.locator(".inbox-right-panel").screenshot({
       path: path.join(OUT_DIR, "app-lead-deal.png"),
@@ -100,6 +104,9 @@ test.describe("Visual comparison — Phase 5a review", () => {
     await openKartePanel(page, leadKisonkosaku);
     // company tab is default for kisonkosaku; click explicitly to be certain
     await page.locator('[data-testid="karte-tab-company"]').click();
+    // アクションバー表示を確認してからスクロールをリセット
+    await page.locator('[data-testid="karte-action-bar"]').waitFor({ state: "visible", timeout: 5_000 });
+    await page.locator(".inbox-right-panel").evaluate((el) => { el.scrollTop = 0; });
     await page.waitForTimeout(300);
     await page.locator(".inbox-right-panel").screenshot({
       path: path.join(OUT_DIR, "app-customer-company.png"),

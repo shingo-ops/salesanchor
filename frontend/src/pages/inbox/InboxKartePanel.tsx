@@ -126,41 +126,43 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* Header */}
+          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact+link */}
           <div className="right-panel-header">
-            <div className="right-panel-avatar">
-              {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
-                <img
-                  src={selectedConversation.profile_picture_url}
-                  alt={t("inbox.avatarAlt")}
-                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                  onError={() => handleAvatarError(selectedConversation.lead_id)}
-                />
-              ) : (
-                getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
-              )}
-            </div>
-            <div className="right-panel-header-info">
-              <span className="right-panel-display-name">
-                {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
-              </span>
-              {subParts.length > 0 && (
-                <span className="right-panel-sub">{subParts.join("・")}</span>
-              )}
-              <div className="karte-header-meta">
-                {stagePresentation && leadDetail && (
-                  <span className={`badge badge-${stagePresentation.badgeVariant}`} data-testid="karte-stage-badge">
-                    {t(stagePresentation.labelKey ?? leadDetail.status)}
-                  </span>
-                )}
-                {selectedConversation?.last_message_at && (
-                  <span className="karte-last-contact" data-testid="karte-last-contact">
-                    {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
-                  </span>
+            <div className="karte-hd-top">
+              <div className="right-panel-avatar">
+                {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
+                  <img
+                    src={selectedConversation.profile_picture_url}
+                    alt={t("inbox.avatarAlt")}
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                    onError={() => handleAvatarError(selectedConversation.lead_id)}
+                  />
+                ) : (
+                  getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
                 )}
               </div>
-              <button type="button" className="right-panel-link" onClick={() => setShowProfileModal(true)}>
-                {t("inbox.viewProfile")} →
+              <div className="karte-hd-name-block">
+                <span className="right-panel-display-name">
+                  {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
+                </span>
+                {subParts.length > 0 && (
+                  <span className="right-panel-sub">{subParts.join("・")}</span>
+                )}
+              </div>
+              {stagePresentation && leadDetail && (
+                <span className={`badge badge-${stagePresentation.badgeVariant}`} data-testid="karte-stage-badge">
+                  {t(stagePresentation.labelKey ?? leadDetail.status)}
+                </span>
+              )}
+            </div>
+            <div className="karte-hd-meta">
+              {selectedConversation?.last_message_at && (
+                <span className="karte-last-contact" data-testid="karte-last-contact">
+                  {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
+                </span>
+              )}
+              <button type="button" className="karte-open-link" onClick={() => setShowProfileModal(true)}>
+                {t("inbox.openCustomerPage")} →
               </button>
             </div>
           </div>
