@@ -113,28 +113,81 @@ docker exec astro-webapp-backend-1 python /app/scripts/migrate_adr109_status_cod
 
 対象: tenant_006 (review@salesanchor.jp / App Review テナント) でログインして確認。
 
-### リード一覧 (`/crm/leads`)
+### 4a. 英語 UI での確認（初回セッション）
+
+> **セッション言語**: 英語（同アカウントの UI 設定が英語だったため）
+
+#### リード一覧 (`/crm/leads`)
 
 `screenshots/leads-list.png` 参照。
 
 - ステータスバッジ: **Existing Customer** / **Lead** / **In Progress** が正しく表示 ✅
 - 日本語文字列・生キー文字列（`leads.statusCode.商談中`）は **一切なし** ✅
 - フィルタドロップダウン: Lead / In Progress / Existing Customer / Follow-up (Short) / Follow-up (Long) / Lost / Out of Scope ✅
-- 編集モーダルのステータス選択肢も同様 ✅
 
-### ダッシュボード (`/`) → Leads タブ
-
-`screenshots/dashboard-leads-tab.png` 参照。
-
-- Total / Converted / Excluded / Conversion rate が正常表示 ✅
-- 数値崩れなし
-
-### 受信箱 (`/lead-chat`)
+#### 受信箱 (`/lead-chat`)
 
 `screenshots/inbox.png` 参照。
 
-- 会話リストの "Lead" バッジ（`conv-status-badge`）が正しく表示 ✅
-- 受信箱タブ: All Messages / **Leads** / **In Progress** / **Customers** / **Follow-up** / Archive ✅
+- 会話リストの "Lead" バッジ正しく表示 ✅
+- タブ: All Messages / Leads / In Progress / Customers / Follow-up / Archive ✅
+
+#### ダッシュボード (`/`) → Leads タブ
+
+`screenshots/dashboard-leads-tab.png` 参照。正常表示 ✅
+
+---
+
+### 4b. 日本語 UI での確認（追加セッション）
+
+> **セッション言語**: 日本語（ユーザーメニューから「Japanese」→切替後）
+
+#### リード一覧 - 既存顧客フィルタ
+
+`screenshots/ja-leads-existing-customer.png` 参照。
+
+| 表示確認 | 結果 |
+|:---------|:-----|
+| ステータスバッジ「既存顧客」(existing_customer) | ✅ |
+| ステータスバッジ「リード」(lead) | ✅ |
+| 生キー文字列なし | ✅ |
+
+#### リード一覧 - 商談中フィルタ
+
+`screenshots/ja-leads-negotiating.png` 参照。
+
+- フィルタドロップダウン「商談中」選択 → 対象5行が全て**商談中**バッジで表示 ✅
+- `negotiating` → `商談中` の変換が正常 ✅
+
+#### 受信箱 (`/lead-chat`)
+
+`screenshots/ja-inbox.png` 参照。
+
+- 受信箱タブ: **すべてのメッセージ** / **リード** / **商談中** / **既存顧客** / **追客** / **アーカイブ** ✅
+- 会話バッジ「リード」表示 ✅
+
+#### ダッシュボード
+
+`screenshots/ja-dashboard.png` 参照。全要素日本語表示、崩れなし ✅
+
+---
+
+### 4c. ja.json 全7キー確認
+
+`frontend/src/locales/ja.json` の `leads.statusCode` セクション（実ファイル参照）:
+
+| ADR-109 コード | ja.json 表示ラベル |
+|:--------------|:-----------------|
+| lead | リード |
+| negotiating | 商談中 |
+| existing_customer | 既存顧客 |
+| follow_up_short | 追客（短期） |
+| follow_up_long | 追客（長期） |
+| lost | 失注 |
+| out_of_scope | 対象外 |
+
+全7キー揃い、欠落・誤りなし ✅
+
 - InboxConversationList.tsx:228 の `defaultValue` フォールバック修正は、既にデータが全て正規コードのため現在は不発動（安全網として有効）
 
 ---
@@ -162,8 +215,8 @@ docker exec astro-webapp-backend-1 python /app/scripts/migrate_adr109_status_cod
 
 ---
 
-## ⚠️ 作業中の副作用（要確認）
+## ⚠️ 作業中の副作用（対処済み）
 
 素振り実施のため `review@salesanchor.jp` の Firebase パスワードを一時変更しました。  
-現在のパスワード: `ClaudeTest2026!`  
-不要であれば Firebase Console からリセットをお願いします。
+その後、即時ランダムパスワードへ再設定済み（パスワード自体は非公開）。  
+新パスワードが必要な場合は Firebase Console から再発行してください。
