@@ -18,7 +18,6 @@ GitHub は Node.js 20 の EOL（2026-04）を受け、2026-06-16 から GitHub-h
 | `actions/setup-node` | `@v4` | `@v5` | 15 |
 | `dorny/paths-filter` | `@v3` | `@v4` | 5 |
 | `webfactory/ssh-agent` | `@v0.9.0` | `@v0.10.0` | 1 |
-| **合計** | | | **85 箇所・48 ファイル** |
 
 機械的な置換のみ（ロジック変更なし）。
 
@@ -34,28 +33,10 @@ GitHub は Node.js 20 の EOL（2026-04）を受け、2026-06-16 から GitHub-h
 
 ## 4. 外部・過去事例の参照と我々への応用
 
-### 外部事例
+**外部事例 — GitHub 公式アナウンス（2025-09-19）**:
+「Deprecation of Node 20 on GitHub Actions runners」— Node 24 強制化と各アクションの対応版リリース日（checkout v5: 2024-08-11 / setup-node v5: 2024-09-04 / paths-filter v4: 2026-03-12 / ssh-agent v0.10.0: 2025-03-11）を公開。一時回避策として `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` 環境変数も提供されたが、恒久対応はバージョンアップ。
 
-**GitHub 公式アナウンス（2025-09-19）**:
-「Deprecation of Node 20 on GitHub Actions runners」
-- 内容: 2026-06-16 から Node 24 をデフォルトに変更、2026 年秋に Node 20 削除
-- 対応方法: `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` の環境変数（一時回避）または actions を Node 24 対応版に更新
-- 参照: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-
-### 各アクションの Node 24 対応バージョン
-
-| アクション | Node 24 対応リリース | リリース日 |
-|-----------|-------------------|-----------|
-| `actions/checkout@v5` | v5.0.0 | 2024-08-11 |
-| `actions/setup-node@v5` | v5.0.0 | 2024-09-04 |
-| `dorny/paths-filter@v4` | v4.0.0 | 2026-03-12 |
-| `webfactory/ssh-agent@v0.10.0` | v0.10.0 | 2025-03-11 |
-
-### 我々への応用
-
-- `@v6`（checkout/setup-node）は credentials 保存方式に破壊的変更あり → 今回は `@v5` に留める
-- 次の更新タイミング（Node 24 EOL 見込み 2027 年後半）でも同手順を踏む
-- `workflow-lint.yml` の Node 20 残留は deprecation warning のみで hard failure にはならないため、別途 PO 承認を経て対応する
+**我々への応用**: `@v6`（checkout/setup-node）は credentials 保存方式に破壊的変更あり → `@v5` 止まり。次回は Node 24 EOL（見込み 2027 年後半）時に同手順を踏む。`workflow-lint.yml` の Node 20 残留は deprecation warning のみ（hard failure にならない）のため別途 PO 承認を経て対応する。
 
 ## 5. リスクと対処
 
