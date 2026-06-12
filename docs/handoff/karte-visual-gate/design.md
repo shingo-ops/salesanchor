@@ -1,5 +1,6 @@
 # design.md — 受信箱カルテ 見た目忠実度ゲート（⑤）／ Generator 実装指示
 
+- 対象ADR: ADR-110
 - 対応設計: karte_visual_gate_design（Planner, 2026-06-06）
 - 対応recon: `docs/handoff/karte-visual-gate/recon.md`
 - 見本（正本）: `docs/adr/karte_reference.html` ＋ KarteLayoutReference（各 px 値）
@@ -50,11 +51,24 @@ lead / customer 両段階で確認。
 
 ---
 
-## 受け入れ条件
-- カルテ描画が見本と一致（5a）。
-- カルテ UI を意図せず変える PR で視覚テストが赤 → PR 停止（5b）。
-- `--drawer-width` の他の利用箇所が 300px のまま不変。
-- ベースラインは ubuntu-latest 生成で、Mac 差による誤検知なし。追加課金ゼロ。
+## 外部・過去事例の参照と我々への応用
+
+- **Playwright `toHaveScreenshot()` 公式パターン**（playwright.dev）→ ubuntu-latest でベースライン生成し Mac 差を排除する手法を採用。
+- **ADR-067 デザイントークン強制**（本リポジトリ既存）→ px・色のハードコードを防ぎトークン参照に統一。今回の `--karte-*` トークン群もこれに準拠。
+- 該当なし（外部 SaaS の visual regression 事例は規模・コスト前提が異なるため不採用）。
+
+---
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| カルテ描画が見本と目視一致（lead / customer 両方） | `karte-screenshot-compare.spec.ts` 4枚を目視確認（Shingo 承認） |
+| `--drawer-width` 他利用箇所が 300px のまま不変 | `grep -r drawer-width frontend/src/` で参照箇所を確認 |
+| `toHaveScreenshot()` ゲートが PR 必須チェックとして機能する | karte-gate.yml の `karte-gate` job が PR 上で green |
+| カルテ UI を意図せず変えた PR でゲートが赤になる | 捨てブランチで意図的に1箇所変更 → `karte-gate` FAIL を確認 |
+| ubuntu-latest ベースラインで Mac 差による誤検知がない | workflow_dispatch 後のゲート run が PASS |
+| ADR-067: `check:css-colors` `check:css-values` が 0 件 | CI `Frontend lint & custom checks` グリーン |
 
 ## 実装順（厳守）
 5a（CSS 修正＋幅のカルテ専用化）→ 見本一致を目視確認 → 5b（`toHaveScreenshot()` 追加＋ベースライン生成）
