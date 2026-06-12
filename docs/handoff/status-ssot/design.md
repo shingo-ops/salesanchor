@@ -44,7 +44,11 @@
   Shingo の明示 GO が出るまで行わない**。素振り結果を添えて GO を依頼すること。
 
 ## 受け入れ条件（ADR-109 の残り）
-- [ ] 既存の全 leads 行が新コードへ移行済み・旧値の行ゼロ
-- [ ] DB DEFAULT が新コード
-- [ ] migration が deploy.yml 経由で自動適用される（手動VPS作業なし）
-- [ ] 未移行値・キー欠落時も生キーが画面に出ない（Step 1 の保険）
+
+| 基準 | 検証方法 |
+|------|---------|
+| 既存の全 leads 行が新コードへ移行済み・旧値の行ゼロ | `SELECT status, COUNT(*) FROM tenant_NNN.leads GROUP BY status` で旧値 0 件確認 |
+| DB DEFAULT が `'lead'` | `information_schema.columns` で `column_default` 確認 |
+| migration が deploy.yml 経由で自動適用される（手動VPS作業なし） | `scripts/run_all_migrations.sh` への登録確認・CI deploy ログ確認 |
+| 未移行値・キー欠落時も生キーが画面に出ない | Playwright: 受信箱で `conv-status-badge` にキー文字列なし確認 |
+| 日本語 UI で全7ステータスが正しい日本語ラベルで表示 | Playwright スクリーンショット（`docs/handoff/status-ssot/screenshots/ja-*.png`） |
