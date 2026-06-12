@@ -9,7 +9,7 @@
 
 ### 失敗箇所
 
-`scripts/smoke_test_post_deploy.sh:97-99`
+`scripts/smoke_test_post_deploy.sh:97`（ヘルスチェック呼び出し）〜`scripts/smoke_test_post_deploy.sh:99`（失敗時 exit）
 
 ```bash
 docker exec -e PGPASSWORD="${APP_PASS}" "${BACKEND}" \
@@ -40,6 +40,6 @@ TCP 接続は確立されたが、サーバーが応答なしにクローズ。�
 
 ### 影響範囲
 
-- `scripts/smoke_test_post_deploy.sh:97-99`（1行の health check 呼び出し）のみ
+- `scripts/smoke_test_post_deploy.sh:97`（ヘルスチェック1行）のみ
 - blue-green cutover ロジック（`scripts/blue-green-cutover.sh`）は変更不要
 - 他のスモークテスト項目（[1]-[6], [8]）は問題なし
