@@ -23,7 +23,7 @@ AGENT_WORKTREE_BASE="${HOME}/worktrees"
 # ── フィーチャーブランチのベース ─────────────────────────────────────────────
 # git rebase・divergence チェックで使用するブランチ名
 # origin/$AGENT_BASE_BRANCH との乖離を validate-pr-ownership.sh が確認する
-AGENT_BASE_BRANCH="develop"
+AGENT_BASE_BRANCH="${AGENT_BASE_BRANCH:-develop}"
 
 # ── Active Work Registry の相対パス ─────────────────────────────────────────
 # リポジトリルートからの相対パス（重複作業防止の SSoT ファイル）
