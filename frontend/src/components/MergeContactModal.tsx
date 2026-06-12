@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { getStatusPresentation } from "../utils/statusPresentation";
 
 interface ContactOption {
   id: number;
@@ -225,8 +226,8 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
                         <td>{c.contact_code}</td>
                         <td>{contactDisplayName(c)}</td>
                         <td>
-                          <span className={`badge badge-${c.status === "active" ? "success" : "neutral"}`}>
-                            {c.status}
+                          <span className={`badge badge-${getStatusPresentation("contact", c.status).badgeVariant}`}>
+                            {t(`contacts.statusCode.${c.status}`, { defaultValue: c.status })}
                           </span>
                         </td>
                       </tr>

@@ -734,6 +734,12 @@
     "channels": {
       "unverified_badge": "Unverified",
       "open_link": "Open Link"
+    },
+    "statusCode": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "pending_dedup_review": "Pending Review"
     }
   },
   "inbox": {

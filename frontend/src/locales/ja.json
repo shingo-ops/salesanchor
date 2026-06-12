@@ -734,6 +734,12 @@
     "channels": {
       "unverified_badge": "未検証",
       "open_link": "リンクを開く"
+    },
+    "statusCode": {
+      "active": "有効",
+      "inactive": "無効",
+      "archived": "アーカイブ",
+      "pending_dedup_review": "重複確認中"
     }
   },
   "inbox": {
