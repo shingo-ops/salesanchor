@@ -12,6 +12,10 @@ services:
       - ./certbot/www:/var/www/certbot:ro
       # salesanchor.jp 静的サイト（Production-only、コンテンツは VPS-local 管理）
       - ./www/salesanchor:/var/www/salesanchor:ro
+      # SA設計図書サイト（ADR-134）— deploy.yml が rsync で同期
+      - ./www/design-site:/var/www/design-site:ro
+      # SA設計図書サイト Basic認証（ADR-134 / B-11: git追跡禁止）
+      - ./nginx/htpasswd.d:/etc/nginx/htpasswd.d:ro
       - ./certbot/conf:/etc/letsencrypt:ro
     restart: unless-stopped
     healthcheck:

@@ -21,6 +21,7 @@ const DOMAIN_LABELS: Record<StatusDomain, string> = {
   bot:           "ボット (BotStatus)",
   prospectRank:  "商談ランク (ProspectRank)",
   erpJobStatus:  "ERP同期ジョブ (ErpJobStatus)",
+  contact:       "担当者 (ContactStatus)",
 };
 
 const BUCKET_ORDER = ["success", "danger", "warning", "info", "neutral"] as const;

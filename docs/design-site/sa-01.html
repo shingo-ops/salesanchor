@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA-01 揺るがない原則 — SA設計図書</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/">全体地図</a>
+    <a href="/design/sa-01.html" class="active">SA-01 原則</a>
+    <a href="/design/sa-02.html">SA-02 顧客</a>
+  </nav>
+</header>
+
+<div class="page-container">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <span style="font-size:12px;font-weight:700;color:var(--c-customer);background:var(--c-customer-bg);padding:3px 10px;border-radius:12px;">SA-01</span>
+    <span class="badge badge--cross">横断適用</span>
+  </div>
+  <h1 class="page-title">揺るがない原則</h1>
+  <p class="page-subtitle">
+    SSOT・2本背骨・派生値・ポカヨケ —
+    全SAの実装が合格しているかを確認するための横断基準
+  </p>
+
+  <!-- ①一言でいうと -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">①</span>
+      <span class="template-section__title">一言でいうと</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:15px;line-height:1.8;">
+        <strong>「同じ情報を2か所に持たない。計算できる値は保存しない。ミスが起きにくい構造にする。」</strong>
+      </p>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-sub);">
+        SA-01はアプリの「機能」ではなく、<strong>全ての機能が守らなければならない設計ルール</strong>です。
+        他のSA（02〜07、12）が完了するたびに、このルールへの合格を確認します。
+        ルールは4つあり、総称して「4原則」と呼びます。
+      </p>
+    </div>
+  </div>
+
+  <!-- ②Before→After -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">②</span>
+      <span class="template-section__title">困りごと Before → After</span>
+    </div>
+    <div class="template-section__body">
+      <div class="before-after">
+        <div class="before-after__box before-after__box--before">
+          <div class="before-after__label">Before（現状の問題）</div>
+          <div class="before-after__item">
+            <p>📋 リード管理シートが<strong>61列</strong>に肥大化</p>
+            <p style="margin-top:6px;">🔁 住所・単価・在庫数を複数タブに<strong>手入力で二重管理</strong></p>
+            <p style="margin-top:6px;">❓ タブAとタブBで数値が食い違う→<strong>「どちらが正しいか分からない」</strong>状態が常態化</p>
+            <p style="margin-top:6px;">📝 累計売上・LTVを<strong>手作業で集計・コピペ</strong>→ ズレが発生</p>
+          </div>
+        </div>
+        <div class="before-after__arrow">→</div>
+        <div class="before-after__box before-after__box--after">
+          <div class="before-after__label">After（4原則を適用すると）</div>
+          <div class="before-after__item">
+            <p>🏠 同じ情報の<strong>保管庫は1か所</strong>。他はIDで参照（SSOT）</p>
+            <p style="margin-top:6px;">📐 全データを<strong>顧客マスタ</strong>か<strong>商品・在庫マスタ</strong>から派生させる（2本背骨）</p>
+            <p style="margin-top:6px;">🤖 累計売上・LTVは<strong>保存せず注文から自動計算</strong>（派生値）</p>
+            <p style="margin-top:6px;">✅ 自由入力を選択式に変え、<strong>ミスが起きにくい構造</strong>（ポカヨケ）</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③仕組みの図解 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">③</span>
+      <span class="template-section__title">仕組みの図解 — SSOT原則のイメージ</span>
+    </div>
+    <div class="template-section__body">
+      <div class="architecture-diagram">
+        <svg viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+             role="img" aria-label="SSOT原則の図">
+          <defs>
+            <marker id="arr2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+            </marker>
+          </defs>
+
+          <!-- NG: 二重管理 -->
+          <text x="5" y="22" font-size="13" font-weight="700" fill="#dc2626">❌ 二重管理（問題）</text>
+          <rect x="5" y="35" width="120" height="40" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="65" y="53" text-anchor="middle" font-size="12" fill="#dc2626">住所（タブA）</text>
+          <text x="65" y="68" text-anchor="middle" font-size="10" fill="#ef4444">東京都新宿区…</text>
+
+          <rect x="145" y="35" width="120" height="40" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="205" y="53" text-anchor="middle" font-size="12" fill="#dc2626">住所（タブB）</text>
+          <text x="205" y="68" text-anchor="middle" font-size="10" fill="#ef4444">新宿区…（古い？）</text>
+
+          <text x="285" y="58" font-size="22" fill="#dc2626">≠</text>
+          <text x="310" y="65" font-size="12" fill="#dc2626">どちらが正しい？</text>
+
+          <!-- OK: SSOT -->
+          <text x="5" y="120" font-size="13" font-weight="700" fill="#2d8a4e">✅ SSOT（正しい設計）</text>
+
+          <!-- 保管庫 -->
+          <rect x="5" y="135" width="140" height="50" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+          <text x="75" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">保管庫（1か所）</text>
+          <text x="75" y="173" text-anchor="middle" font-size="12" fill="#1a6fc4">住所: 東京都新宿区…</text>
+
+          <!-- 参照①②③ -->
+          <rect x="220" y="130" width="120" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="280" y="144" text-anchor="middle" font-size="11" fill="#374151">📄 見積書</text>
+          <text x="280" y="159" text-anchor="middle" font-size="10" fill="#9ca3af">住所を参照（コピーしない）</text>
+
+          <rect x="220" y="175" width="120" height="36" rx="6" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="280" y="189" text-anchor="middle" font-size="11" fill="#374151">📄 請求書</text>
+          <text x="280" y="204" text-anchor="middle" font-size="10" fill="#9ca3af">住所を参照（コピーしない）</text>
+
+          <!-- 矢印 -->
+          <line x1="145" y1="148" x2="216" y2="145" stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="145" y1="160" x2="216" y2="190" stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <!-- 説明 -->
+          <text x="370" y="148" font-size="12" fill="#374151">住所を変更したら</text>
+          <text x="370" y="165" font-size="12" fill="#374151">全ての書類に</text>
+          <text x="370" y="182" font-size="14" font-weight="700" fill="#2d8a4e">自動で反映 ✓</text>
+        </svg>
+      </div>
+      <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
+        保管庫を1か所にすると、修正が1回で全体に伝わります。
+        「どのタブが最新か？」という問いが永久になくなります。
+      </p>
+    </div>
+  </div>
+
+  <!-- ④4原則との対応表 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">④</span>
+      <span class="template-section__title">4原則との対応表</span>
+    </div>
+    <div class="template-section__body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">
+        SA-01はこれら4原則を<strong>定義する</strong>ページです。他のSAは完了時にこの表で合格確認します。
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>原則</th>
+            <th>SA-01における意味</th>
+            <th>合格基準の例</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--c-customer);">SSOT</td>
+            <td>同じデータの保管庫は1か所のみ</td>
+            <td>住所・単価・在庫数が複数テーブルに重複保存されていない</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-inventory);">2本背骨</td>
+            <td>全設計が顧客か商品・在庫に収まる</td>
+            <td>新テーブルがどちらかの背骨から派生している</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-derived);">派生値</td>
+            <td>計算で出せる値は保存しない</td>
+            <td>累計売上・LTV・在庫残数がDB列として書き込まれていない</td>
+          </tr>
+          <tr>
+            <td style="color:var(--c-order);">ポカヨケ</td>
+            <td>ミスが起きにくい構造</td>
+            <td>失注理由・対象外理由が選択式。単価変更が全書類に自動反映</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑤用語ミニ辞典 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑤</span>
+      <span class="template-section__title">用語ミニ辞典</span>
+    </div>
+    <div class="template-section__body">
+      <dl class="glossary">
+        <dt>SSOT（Single Source of Truth）</dt>
+        <dd>「1か所の真実」。同じ事実の保管庫は常に1か所。他は参照のみ。</dd>
+
+        <dt>2本背骨</dt>
+        <dd>
+          <span style="color:var(--c-customer);font-weight:600;">①顧客マスタ</span>（誰に売るか）と
+          <span style="color:var(--c-inventory);font-weight:600;">②商品・在庫マスタ</span>（何を売るか）のこと。
+          全てのデータはどちらかの背骨から派生する。
+        </dd>
+
+        <dt>交差点（注文）</dt>
+        <dd>2本の背骨が交わる点。「誰に・何を・いくつ」が確定する場所。</dd>
+
+        <dt>派生値</dt>
+        <dd>累計売上・LTV・在庫残数など、既存データから計算できる値。保存せず必要なときに計算する。</dd>
+
+        <dt>ポカヨケ</dt>
+        <dd>製造業の「ミス防止機構」転用。入力ミスが起きにくい設計（選択式・バリデーション・自動計算）。</dd>
+
+        <dt>A型在庫</dt>
+        <dd>在庫の実物を自社が保有。アプリが数量を管理する。</dd>
+
+        <dt>B型在庫</dt>
+        <dd>在庫は外部の仕入元が保有。フィードで価格・在庫が届く。アプリは数量を触らない。</dd>
+
+        <dt>CRM（顧客管理）</dt>
+        <dd>顧客マスタのこと。永続する「ストック情報」を管理する。</dd>
+
+        <dt>SFA（商談管理）</dt>
+        <dd>初成約までの「フロー情報」を管理する。常連客型なので基本1回。</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ⑥決定済み／未決 -->
+  <div class="template-section">
+    <div class="template-section__head">
+      <span class="template-section__num">⑥</span>
+      <span class="template-section__title">決定済み／未決 一覧</span>
+    </div>
+    <div class="template-section__body">
+      <ul class="decision-list">
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>4原則の定義確定</strong>（ADR-095 Accepted・2026-06-04）</span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>SA-01チェックシートの作成</strong> —
+            <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/SA-01-principles-checklist.md"
+               target="_blank" rel="noopener">SA-01-principles-checklist.md</a>
+          </span>
+        </li>
+        <li>
+          <span class="status-icon">✅</span>
+          <span><strong>適用範囲</strong> — SA-02〜07・12の全件に横断適用</span>
+        </li>
+      </ul>
+      <div class="decision-undecided" style="margin-top:12px;">
+        <strong>⬜ 未決</strong>: 現時点で未決事項はなし（SA-01は「原則定義」のため、実装完了の判定はありません）
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦正本ADRリンク -->
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ 正本</span>
+    <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md"
+       target="_blank" rel="noopener">
+      docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md
+    </a>
+    <span>最終更新: 2026-06-12</span>
+    <span style="color:#dc2626;font-weight:600;">このページとADRが矛盾する場合はADRが優先されます</span>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <p><a href="/design/">← 全体地図に戻る</a></p>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>

@@ -734,6 +734,12 @@
     "channels": {
       "unverified_badge": "未検証",
       "open_link": "リンクを開く"
+    },
+    "statusCode": {
+      "active": "有効",
+      "inactive": "無効",
+      "archived": "アーカイブ",
+      "pending_dedup_review": "重複確認中"
     }
   },
   "inbox": {
@@ -1823,6 +1829,62 @@
     "col_status": "ステータス",
     "reasonTitle": "統合理由",
     "convertedError": "成約済みのリードは「消す側」にできません。残す側に指定してください。"
+  },
+  "mergeContact": {
+    "title": "担当者を統合",
+    "sourceDesc": "「{{name}}」（{{code}}）を別の担当者に吸収させます。",
+    "selectMaster": "統合先（残す側）の担当者を選択",
+    "searchPlaceholder": "担当者名で絞り込み（サーバー検索）",
+    "resultsCapped": "候補が{{count}}件に達しました。担当者名で絞り込んでください。",
+    "noResults": "該当する担当者がありません",
+    "reasonLabel": "統合理由（任意 / audit_logs に記録）",
+    "reasonPlaceholder": "例: 同一人物の重複登録を統合",
+    "nextStep": "次へ（統合内容を確認）",
+    "confirmWarning": "確認: この操作は取り消せません",
+    "confirmDesc1": "「{{sourceName}}」（{{sourceCode}}）に紐づくチャンネル情報が全て「{{masterName}}」（{{masterCode}}）に付け替えられます。",
+    "confirmDesc2": "「{{sourceName}}」の担当者レコードは削除されます。",
+    "confirmDesc3": "監査ログ (audit_logs) に操作内容が記録されます。",
+    "merging": "統合中...",
+    "executeLabel": "「{{masterName}}」へ統合を実行",
+    "col_code": "コード",
+    "col_name": "担当者名",
+    "col_status": "ステータス",
+    "reasonTitle": "統合理由",
+    "relatedError": "関連レコード（商談・注文等）があるため「消す側」にできません。先に担当者を変更してください。"
+  },
+  "contactChannel": {
+    "addTitle": "チャンネルを追加",
+    "editTitle": "チャンネルを編集",
+    "channelLabel": "チャンネル種別",
+    "idLabel": "ID / 番号",
+    "idPlaceholder": {
+      "whatsapp": "電話番号（例: +819012345678）",
+      "telegram": "ユーザー名（例: username）",
+      "discord": "チャンネル ID（例: 1234567890）",
+      "instagram": "Instagram IGSID",
+      "messenger": "Messenger PSID",
+      "default": "ID / ユーザー名"
+    },
+    "guildIdLabel": "サーバー ID（Discord guild_id）",
+    "guildIdPlaceholder": "例: 9876543210",
+    "isPrimaryLabel": "主連絡チャンネルに設定",
+    "duplicateWarning": "同じチャンネル・IDが担当者「{{name}}」にも登録されています。同一人物の場合は「統合する」、別人の場合は「別人として保存」を選択してください。",
+    "mergeButton": "統合する",
+    "saveAsDistinct": "別人として保存（監査ログ記録）",
+    "saveAsDistinctConfirmed": "別人として保存します（監査ログに記録されます）。",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "deleteConfirm": "このチャンネル情報を削除しますか？",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "instagram": "Instagram",
+      "messenger": "Messenger（Meta）",
+      "phone": "電話",
+      "email": "メール",
+      "other": "その他"
+    }
   },
   "superAdmin": {
     "title": "マスタ管理（Jarvis 運用 admin 専用）",

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SA設計図書 — Sales Anchor アーキテクチャ全体地図</title>
+  <link rel="stylesheet" href="/design/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">SA設計図書</span>
+  <nav>
+    <a href="/design/" class="active">全体地図</a>
+    <a href="/design/sa-01.html">SA-01 原則</a>
+    <a href="/design/sa-02.html">SA-02 顧客</a>
+    <span style="color:var(--border);font-size:12px">SA-03〜07・12（Stage 2）</span>
+  </nav>
+</header>
+
+<div class="page-container">
+  <h1 class="page-title">Sales Anchor アーキテクチャ全体地図</h1>
+  <p class="page-subtitle">
+    このサイトはADR-095〜106（SAシリーズ）を非技術者向けに図解したものです。<br>
+    <strong>正本はADRです。このページと矛盾する場合は必ずADRが優先されます。</strong>
+  </p>
+
+  <!-- ①4原則カード -->
+  <section class="section">
+    <h2 class="section-title">揺るがない4原則（SA-01）</h2>
+    <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">
+      すべての設計・実装はこの4原則に合格していなければなりません。
+    </p>
+    <div class="principles-grid">
+
+      <div class="principle-card principle-card--ssot">
+        <div class="principle-card__label">原則 1 · SSOT</div>
+        <div class="principle-card__name">1か所の真実</div>
+        <div class="principle-card__body">
+          同じ事実（住所・単価・在庫数など）の保管庫は<strong>常に1か所</strong>。
+          他の場所はIDで参照するか、計算で出す。
+          同じ情報を2か所に手入力した瞬間に「どちらが正しいか分からない」問題が生まれる。
+        </div>
+      </div>
+
+      <div class="principle-card principle-card--spine">
+        <div class="principle-card__label">原則 2 · 2本背骨</div>
+        <div class="principle-card__name">顧客と商品が背骨</div>
+        <div class="principle-card__body">
+          <span style="color:var(--c-customer);font-weight:700;">①顧客マスタ</span>（誰に売るか）と
+          <span style="color:var(--c-inventory);font-weight:700;">②商品・在庫マスタ</span>（何を売るか）
+          の2軸が全設計の背骨。注文はこの2本が交わる交差点。
+        </div>
+      </div>
+
+      <div class="principle-card principle-card--derived">
+        <div class="principle-card__label">原則 3 · 派生値</div>
+        <div class="principle-card__name">計算できる値は保存しない</div>
+        <div class="principle-card__body">
+          累計売上・在庫残数・LTVなど「計算で出せる値」はDBに保存しない。
+          必要なときに計算して出す。こうすれば元のデータを修正すれば
+          全ての集計に自動で反映される。
+        </div>
+      </div>
+
+      <div class="principle-card principle-card--pokayoke">
+        <div class="principle-card__label">原則 4 · ポカヨケ</div>
+        <div class="principle-card__name">ミスが起きにくい設計</div>
+        <div class="principle-card__body">
+          自由入力をやめて選択式にする。
+          計算できるものは自動計算にする。
+          入力値を画面側で検証する。
+          「頑張って正確に入力してもらう」のではなく、
+          間違いにくい構造にする。
+        </div>
+      </div>
+
+    </div>
+    <p style="font-size:12px;color:var(--text-sub);margin-top:8px;">
+      → 詳細: <a href="/design/sa-01.html">SA-01「揺るがない原則」ページ</a>
+      ／ 正本: <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md" target="_blank" rel="noopener">ADR-095</a>
+    </p>
+  </section>
+
+  <!-- ②全体図 -->
+  <section class="section">
+    <h2 class="section-title">全体図 — データの流れ</h2>
+    <div class="architecture-diagram">
+      <svg viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg"
+           font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+           role="img" aria-label="SA全体アーキテクチャ図">
+        <defs>
+          <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
+          </marker>
+          <marker id="arr-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#1a6fc4"/>
+          </marker>
+          <marker id="arr-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#2d8a4e"/>
+          </marker>
+        </defs>
+
+        <!-- 背骨① 顧客マスタ -->
+        <rect x="20" y="60" width="155" height="70" rx="8"
+              fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+        <text x="98" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">背骨①</text>
+        <text x="98" y="104" text-anchor="middle" font-size="14" font-weight="700" fill="#1a6fc4">顧客マスタ</text>
+        <text x="98" y="121" text-anchor="middle" font-size="10" fill="#3b82f6">（誰に売るか）</text>
+
+        <!-- 背骨② 商品・在庫 -->
+        <rect x="20" y="180" width="155" height="70" rx="8"
+              fill="#dcfce7" stroke="#2d8a4e" stroke-width="2"/>
+        <text x="98" y="204" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">背骨②</text>
+        <text x="98" y="224" text-anchor="middle" font-size="14" font-weight="700" fill="#2d8a4e">商品・在庫マスタ</text>
+        <text x="98" y="241" text-anchor="middle" font-size="10" fill="#16a34a">（何を売るか）</text>
+
+        <!-- 矢印 → 注文 -->
+        <line x1="175" y1="100" x2="258" y2="148"
+              stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+        <line x1="175" y1="212" x2="258" y2="164"
+              stroke="#2d8a4e" stroke-width="1.5" marker-end="url(#arr-green)"/>
+
+        <!-- 注文（交差点）ひし形 -->
+        <polygon points="295,130 355,158 295,186 235,158"
+                 fill="#ffedd5" stroke="#c05621" stroke-width="2"/>
+        <text x="295" y="153" text-anchor="middle" font-size="13" font-weight="700" fill="#c05621">注文</text>
+        <text x="295" y="170" text-anchor="middle" font-size="10" fill="#c05621">（交差点）</text>
+
+        <!-- 矢印 → 書類 -->
+        <line x1="355" y1="148" x2="405" y2="100"
+              stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="355" y1="154" x2="405" y2="155"
+              stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="355" y1="162" x2="405" y2="210"
+              stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="355" y1="166" x2="405" y2="255"
+              stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- 見積書 -->
+        <rect x="405" y="72" width="130" height="46" rx="6"
+              fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+        <text x="470" y="93" text-anchor="middle" font-size="13" fill="#374151">📄 見積書</text>
+        <text x="470" y="109" text-anchor="middle" font-size="10" fill="#9ca3af">自動生成（派生値）</text>
+
+        <!-- 請求書 -->
+        <rect x="405" y="132" width="130" height="46" rx="6"
+              fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+        <text x="470" y="153" text-anchor="middle" font-size="13" fill="#374151">📄 請求書</text>
+        <text x="470" y="169" text-anchor="middle" font-size="10" fill="#9ca3af">自動生成（派生値）</text>
+
+        <!-- 出荷予定 -->
+        <rect x="405" y="192" width="130" height="46" rx="6"
+              fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+        <text x="470" y="213" text-anchor="middle" font-size="13" fill="#374151">🚚 出荷予定</text>
+        <text x="470" y="229" text-anchor="middle" font-size="10" fill="#9ca3af">自動生成（派生値）</text>
+
+        <!-- 顧客実績 -->
+        <rect x="405" y="238" width="130" height="46" rx="6"
+              fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+        <text x="470" y="259" text-anchor="middle" font-size="13" fill="#374151">📊 顧客実績</text>
+        <text x="470" y="275" text-anchor="middle" font-size="10" fill="#9ca3af">自動集計（派生値）</text>
+
+        <!-- 凡例 -->
+        <rect x="555" y="60" width="12" height="12" rx="2" fill="#dbeafe" stroke="#1a6fc4" stroke-width="1.5"/>
+        <text x="572" y="71" font-size="11" fill="#6b7280">顧客（背骨①）</text>
+        <rect x="555" y="82" width="12" height="12" rx="2" fill="#dcfce7" stroke="#2d8a4e" stroke-width="1.5"/>
+        <text x="572" y="93" font-size="11" fill="#6b7280">商品・在庫（背骨②）</text>
+        <polygon points="555,106 567,112 555,118 543,112" fill="#ffedd5" stroke="#c05621" stroke-width="1.5"/>
+        <text x="572" y="115" font-size="11" fill="#6b7280">注文（交差点）</text>
+        <rect x="555" y="126" width="12" height="12" rx="2" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+        <text x="572" y="137" font-size="11" fill="#6b7280">自動生成・派生値</text>
+      </svg>
+    </div>
+    <p style="font-size:12px;color:var(--text-sub);margin-top:8px;text-align:center;">
+      人が手入力するのは各マスタの「属性」のみ。書類・集計は全て参照・計算で自動導出。
+    </p>
+  </section>
+
+  <!-- ③SA一覧 -->
+  <section class="section">
+    <h2 class="section-title">SA（設計課題）一覧</h2>
+    <p style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">
+      進捗は
+      <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/00-SA-OVERVIEW.md"
+         target="_blank" rel="noopener">00-SA-OVERVIEW.md</a>
+      が正本です。バッジはデプロイ時に自動同期されます。
+    </p>
+    <p style="font-size:12px;color:var(--text-sub);margin-bottom:16px;">
+      <span id="progress-generated-at" style="color:var(--c-derived);">（進捗読み込み中…）</span>
+    </p>
+
+    <div class="sa-grid">
+
+      <a href="/design/sa-01.html" class="sa-card" data-sa="SA-01">
+        <div class="sa-card__id">SA-01</div>
+        <div class="sa-card__theme">揺るがない原則<br>（SSOT・2本背骨・派生値・ポカヨケ）</div>
+        <div class="sa-card__adr">ADR-095</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--cross">横断適用</span>
+        </div>
+        <p style="font-size:12px;color:var(--text-sub);">全SAの合格基準。機能ではなく原則。</p>
+      </a>
+
+      <a href="/design/sa-02.html" class="sa-card" data-sa="SA-02">
+        <div class="sa-card__id">SA-02</div>
+        <div class="sa-card__theme">会話ログ＋会社集計ビュー<br>（顧客マスタ／CRMデータモデル）</div>
+        <div class="sa-card__adr">ADR-096</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--wip">進行中 80%</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:80%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">顧客1人1枚のカルテ。取引・会話を正規化。</p>
+      </a>
+
+      <div class="sa-card" data-sa="SA-03" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-03</div>
+        <div class="sa-card__theme">顧客登録トークン基盤</div>
+        <div class="sa-card__adr">ADR-097 / 126 / 127</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--wip">進行中 60%</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:60%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+      <div class="sa-card" data-sa="SA-04" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-04</div>
+        <div class="sa-card__theme">チャネルリンクテンプレSSOT＋guild_id</div>
+        <div class="sa-card__adr">ADR-098</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--todo">未着手</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+      <div class="sa-card" data-sa="SA-05" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-05</div>
+        <div class="sa-card__theme">在庫A/B区分＋2段階引当</div>
+        <div class="sa-card__adr">ADR-099</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--todo">未着手</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+      <div class="sa-card" data-sa="SA-06" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-06</div>
+        <div class="sa-card__theme">解析ログ永続化＋ドリフト検知</div>
+        <div class="sa-card__adr">ADR-100</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--todo">未着手</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+      <div class="sa-card" data-sa="SA-07" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-07</div>
+        <div class="sa-card__theme">請求書スナップショット＋為替＋専用PDF</div>
+        <div class="sa-card__adr">ADR-101</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--todo">未着手</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+      <div class="sa-card" data-sa="SA-12" style="opacity:.7;cursor:default;">
+        <div class="sa-card__id">SA-12</div>
+        <div class="sa-card__theme">テナントポリシー基盤<br>（標準エンジン＋テナント変数）</div>
+        <div class="sa-card__adr">ADR-106</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge badge--todo">未着手</span>
+        </div>
+        <div class="sa-card__progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div>
+        <p style="font-size:12px;color:var(--text-sub);">ページはStage 2で追加予定。</p>
+      </div>
+
+    </div>
+  </section>
+
+</div><!-- /page-container -->
+
+<footer class="page-footer" style="max-width:900px;margin:0 auto;padding:20px;">
+  <div class="adr-ref">
+    <span class="adr-ref__warn">⚠ このサイトはADRの翻訳版です。</span>
+    <span>矛盾があればADRが優先されます。</span>
+    <a href="https://github.com/shingo-ops/salesanchor/tree/main/docs/adr"
+       target="_blank" rel="noopener">正本: docs/adr/ → ADR-095〜106</a>
+    <span>最終更新: 2026-06-12</span>
+  </div>
+</footer>
+
+<script src="/design/progress.js"></script>
+</body>
+</html>

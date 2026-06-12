@@ -734,6 +734,12 @@
     "channels": {
       "unverified_badge": "Unverified",
       "open_link": "Open Link"
+    },
+    "statusCode": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "pending_dedup_review": "Pending Review"
     }
   },
   "inbox": {
@@ -1823,6 +1829,62 @@
     "col_status": "Status",
     "reasonTitle": "Merge Reason",
     "convertedError": "A converted lead cannot be the loser side. Please select it as the master instead."
+  },
+  "mergeContact": {
+    "title": "Merge Contact",
+    "sourceDesc": "Absorb \"{{name}}\" ({{code}}) into another contact.",
+    "selectMaster": "Select the target contact (to keep)",
+    "searchPlaceholder": "Filter by name (server search)",
+    "resultsCapped": "Results capped at {{count}}. Please filter by name.",
+    "noResults": "No matching contacts",
+    "reasonLabel": "Reason (optional, recorded in audit_logs)",
+    "reasonPlaceholder": "e.g. Merging duplicate registrations",
+    "nextStep": "Next (Review merge)",
+    "confirmWarning": "Confirm: This action cannot be undone",
+    "confirmDesc1": "All channel info linked to \"{{sourceName}}\" ({{sourceCode}}) will be reassigned to \"{{masterName}}\" ({{masterCode}}).",
+    "confirmDesc2": "The contact record for \"{{sourceName}}\" will be deleted.",
+    "confirmDesc3": "The action will be recorded in audit_logs.",
+    "merging": "Merging...",
+    "executeLabel": "Merge into \"{{masterName}}\"",
+    "col_code": "Code",
+    "col_name": "Contact Name",
+    "col_status": "Status",
+    "reasonTitle": "Merge Reason",
+    "relatedError": "Cannot be the loser side because of related records (deals, orders, etc.). Please reassign the contact first."
+  },
+  "contactChannel": {
+    "addTitle": "Add Channel",
+    "editTitle": "Edit Channel",
+    "channelLabel": "Channel Type",
+    "idLabel": "ID / Number",
+    "idPlaceholder": {
+      "whatsapp": "Phone number (e.g. +819012345678)",
+      "telegram": "Username (e.g. username)",
+      "discord": "Channel ID (e.g. 1234567890)",
+      "instagram": "Instagram IGSID",
+      "messenger": "Messenger PSID",
+      "default": "ID / Username"
+    },
+    "guildIdLabel": "Server ID (Discord guild_id)",
+    "guildIdPlaceholder": "e.g. 9876543210",
+    "isPrimaryLabel": "Set as primary channel",
+    "duplicateWarning": "The same channel and ID is already registered for contact \"{{name}}\". If this is the same person, choose Merge. If they are different people, choose Save as Distinct.",
+    "mergeButton": "Merge",
+    "saveAsDistinct": "Save as Distinct Person (audit log recorded)",
+    "saveAsDistinctConfirmed": "Will save as a distinct person (recorded in audit log).",
+    "save": "Save",
+    "cancel": "Cancel",
+    "deleteConfirm": "Delete this channel entry?",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "instagram": "Instagram",
+      "messenger": "Messenger (Meta)",
+      "phone": "Phone",
+      "email": "Email",
+      "other": "Other"
+    }
   },
   "superAdmin": {
     "title": "Master Data (Central Admin Only)",

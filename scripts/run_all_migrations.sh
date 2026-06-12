@@ -357,6 +357,12 @@ run_sql migrations/20260612_131520_add_invoice_copypdf.sql
 # ADR-129: tenant_carrier_credentials の UNIQUE 制約を (tenant_id, carrier, environment) に変更
 run_sql migrations/20260612_200000_fedex_creds_unique_env.sql
 
+# SA-04 (ADR-098): contact_contact_channels に UNIQUE(contact_id,channel,COALESCE(purpose,'')) + guild_id catch-up
+run_sql migrations/20260612_100000_add_contact_channel_unique.sql
+
+# SA-04 (ADR-098): company_discord.guild_id VARCHAR(50) 追加
+run_sql migrations/20260612_110000_add_company_discord_guild_id.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

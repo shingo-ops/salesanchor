@@ -35,7 +35,8 @@ export type StatusDomain =
   | "staff"
   | "bot"
   | "prospectRank"
-  | "erpJobStatus";
+  | "erpJobStatus"
+  | "contact";
 
 const NEUTRAL_FALLBACK: StatusPresentation = {
   bucket: "neutral",
@@ -157,6 +158,12 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     failed:    { bucket: "danger",  badgeVariant: "lost", labelKey: "erp.jobStatus_failed" },
     running:   { bucket: "info",    badgeVariant: "negotiating", labelKey: "erp.jobStatus_running" },
     pending:   { bucket: "neutral", badgeVariant: "neutral",     labelKey: "erp.jobStatus_pending" },
+  },
+  contact: {
+    active:               { bucket: "success", badgeVariant: "won",     labelKey: "contacts.statusCode.active" },
+    inactive:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.inactive" },
+    archived:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.archived" },
+    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending", labelKey: "contacts.statusCode.pending_dedup_review" },
   },
 };
 

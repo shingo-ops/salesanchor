@@ -28,6 +28,7 @@ from app.auth.dependencies import (
     get_current_user,
     require_permission,
     reset_tenant_context,
+    tenant_table_ref,
 )
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
@@ -40,6 +41,7 @@ from app.schemas.contact import (
     ContactDiscordResponse,
     ContactEmailInput,
     ContactEmailResponse,
+    ContactMergeRequest,
     ContactResponse,
     ContactUpdate,
 )
@@ -341,6 +343,46 @@ async def list_company_contacts(
 
 
 @router.get(
+    "/contacts/channel-duplicate",
+    dependencies=[Depends(require_permission("customers.view"))],
+    summary="テナント内の同一チャンネルID重複チェック（保存前 best-effort 警告用）",
+    tags=["contacts"],
+)
+async def check_channel_duplicate(
+    channel: str = Query(..., max_length=30),
+    purpose: str = Query(..., max_length=50),
+    exclude_contact_id: int = Query(..., description="チェック対象外にする自分自身の contact_id"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """同一テナント内で channel + purpose が一致する別担当者を返す。
+
+    戻り値: { contact_id, contact_code, display_name } または null（重複なし）。
+    保存前の警告用途のため、結果は best-effort（ロックなし）。
+    パスパラメータ競合を避けるため GET /contacts/{contact_id} より先に定義すること。
+    """
+    ccc_t = tenant_table_ref(db, tenant_id, "contact_contact_channels")
+    ct_t = tenant_table_ref(db, tenant_id, "contacts")
+
+    res = await db.execute(
+        text(f"""
+            SELECT c.id AS contact_id, c.contact_code, c.display_name
+            FROM {ccc_t} ccc
+            JOIN {ct_t} c ON c.id = ccc.contact_id
+            WHERE ccc.channel = :channel
+              AND COALESCE(ccc.purpose, '') = COALESCE(:purpose, '')
+              AND ccc.contact_id != :exclude_id
+            LIMIT 1
+        """),
+        {"channel": channel, "purpose": purpose, "exclude_id": exclude_contact_id},
+    )
+    row = res.mappings().first()
+    if row is None:
+        return None
+    return dict(row)
+
+
+@router.get(
     "/contacts/{contact_id}",
     response_model=ContactResponse,
     dependencies=[Depends(require_permission("customers.view"))],
@@ -609,3 +651,244 @@ async def delete_contact(
             detail="この担当者には関連する商談・注文・見積・請求書があるため削除できません。先に関連データを削除してください。",
         )
     await invalidate_dashboard_cache(tenant_id)
+
+
+@router.post(
+    "/contacts/{contact_id}/channel-acknowledge-duplicate",
+    status_code=204,
+    dependencies=[Depends(require_permission("customers.edit"))],
+    summary="重複IDを認識した上で別人として保存した旨を監査ログに記録",
+    tags=["contacts"],
+)
+async def acknowledge_channel_duplicate(
+    contact_id: int,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """保存前の重複チェックで他担当者とIDが一致したが、別人として保存することを
+    操作者が明示的に選択したときの監査ログエントリを記録する。
+
+    Body: { channel, purpose, duplicate_contact_id }
+    """
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="channel_duplicate_acknowledged",
+        table_name="contacts",
+        record_id=contact_id,
+        old_data=None,
+        new_data={
+            "channel": body.get("channel"),
+            "purpose": body.get("purpose"),
+            "duplicate_contact_id": body.get("duplicate_contact_id"),
+            "decision": "save_as_distinct",
+        },
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+
+@router.post(
+    "/contacts/{master_id}/merge",
+    response_model=ContactResponse,
+    dependencies=[Depends(require_permission("customers.delete"))],
+    summary="担当者を統合（loser → master）",
+    tags=["contacts"],
+)
+async def merge_contacts(
+    master_id: int,
+    body: ContactMergeRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """担当者の重複統合（ADR-098 SA-04 J3）。
+
+    loser の deals / orders / quotes / invoices の contact_id を master へ付け替え、
+    contact_contact_channels も master へ再ポイントし、loser を削除する。
+
+    guard（v1）:
+        loser に deals / orders / quotes / invoices が紐づいている場合は 400 ブロック。
+
+    処理順序（同一トランザクション・FOR UPDATE ロック）:
+      1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
+      2. guard: loser が deals / orders / quotes / invoices を持つ → 400
+      3. FK 付け替え: deals / orders / quotes / invoices の contact_id → master
+      4. contact_contact_channels を master へ再ポイント（重複行は先削除して吸収）
+      5. loser 削除
+      6. 監査ログ 2 件
+    """
+    loser_id = body.loser_id
+
+    if master_id == loser_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="master_id と loser_id が同じです。自己マージはできません。",
+        )
+
+    ct_t = tenant_table_ref(db, tenant_id, "contacts")
+    ccc_t = tenant_table_ref(db, tenant_id, "contact_contact_channels")
+    dl_t = tenant_table_ref(db, tenant_id, "deals")
+    ord_t = tenant_table_ref(db, tenant_id, "orders")
+    qt_t = tenant_table_ref(db, tenant_id, "quotes")
+    inv_t = tenant_table_ref(db, tenant_id, "invoices")
+
+    # 1) master / loser を昇順 FOR UPDATE ロック（デッドロック防止）
+    low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
+    locked_res = await db.execute(
+        text(f"""
+            SELECT {_CONTACT_COLUMNS}
+            FROM {ct_t}
+            WHERE id IN (:id1, :id2)
+            ORDER BY id
+            FOR UPDATE
+        """),
+        {"id1": low_id, "id2": high_id},
+    )
+    locked_rows = locked_res.mappings().all()
+    rows_by_id = {r["id"]: r for r in locked_rows}
+    master_row = rows_by_id.get(master_id)
+    loser_row = rows_by_id.get(loser_id)
+
+    if not master_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"master 担当者 (id={master_id}) が見つかりません",
+        )
+    if not loser_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"loser 担当者 (id={loser_id}) が見つかりません",
+        )
+
+    # 2) guard: loser が関連レコードを持つ場合は 400
+    related_counts: dict[str, int] = {}
+    for tbl, label in (
+        (dl_t, "deals"),
+        (ord_t, "orders"),
+        (qt_t, "quotes"),
+        (inv_t, "invoices"),
+    ):
+        cnt_res = await db.execute(
+            text(f"SELECT COUNT(*) FROM {tbl} WHERE contact_id = :loser"),
+            {"loser": loser_id},
+        )
+        cnt = cnt_res.scalar() or 0
+        if cnt:
+            related_counts[label] = cnt
+
+    if related_counts:
+        detail_parts = ", ".join(f"{label}: {cnt}件" for label, cnt in related_counts.items())
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"loser 担当者 (id={loser_id}) には関連レコードがあるため loser にできません。"
+                f"（{detail_parts}）先に担当者を変更してください。"
+            ),
+        )
+
+    # 3) FK 付け替え: deals / orders / quotes / invoices
+    reassigned_deals = (await db.execute(
+        text(f"UPDATE {dl_t} SET contact_id = :master WHERE contact_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    reassigned_orders = (await db.execute(
+        text(f"UPDATE {ord_t} SET contact_id = :master WHERE contact_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    reassigned_quotes = (await db.execute(
+        text(f"UPDATE {qt_t} SET contact_id = :master WHERE contact_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    reassigned_invoices = (await db.execute(
+        text(f"UPDATE {inv_t} SET contact_id = :master WHERE contact_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    # 4) contact_contact_channels を master へ再ポイント
+    #    UNIQUE(contact_id, channel, COALESCE(purpose,'')) 制約があるため、
+    #    master 側に同一チャンネルが既にあれば先に loser 側を削除する。
+    dup_ccc_res = await db.execute(
+        text(f"""
+            SELECT ccc_loser.id
+            FROM {ccc_t} ccc_loser
+            WHERE ccc_loser.contact_id = :loser
+              AND EXISTS (
+                  SELECT 1 FROM {ccc_t} ccc_master
+                  WHERE ccc_master.contact_id = :master
+                    AND ccc_master.channel = ccc_loser.channel
+                    AND COALESCE(ccc_master.purpose, '') = COALESCE(ccc_loser.purpose, '')
+              )
+        """),
+        {"loser": loser_id, "master": master_id},
+    )
+    dup_ccc_ids = [r[0] for r in dup_ccc_res.fetchall()]
+    if dup_ccc_ids:
+        await db.execute(
+            text(f"DELETE FROM {ccc_t} WHERE id = ANY(:ids)"),
+            {"ids": dup_ccc_ids},
+        )
+
+    reassigned_channels = (await db.execute(
+        text(f"UPDATE {ccc_t} SET contact_id = :master WHERE contact_id = :loser"),
+        {"master": master_id, "loser": loser_id},
+    )).rowcount or 0
+
+    # 5) loser 削除（副テーブルは ON DELETE CASCADE で自動削除）
+    await db.execute(
+        text(f"DELETE FROM {ct_t} WHERE id = :loser"),
+        {"loser": loser_id},
+    )
+
+    # master の最新状態を取得
+    updated_res = await db.execute(
+        text(f"SELECT {_CONTACT_COLUMNS} FROM {ct_t} WHERE id = :id"),
+        {"id": master_id},
+    )
+    master_updated = updated_res.mappings().first()
+
+    # 6) 監査ログ 2 件
+    loser_name = (
+        loser_row.get("display_name")
+        or f"{loser_row.get('surname', '')} {loser_row.get('given_name', '')}".strip()
+    )
+    merge_summary = {
+        "loser_id": loser_id,
+        "loser_display_name": loser_name,
+        "reassigned_deals": reassigned_deals,
+        "reassigned_orders": reassigned_orders,
+        "reassigned_quotes": reassigned_quotes,
+        "reassigned_invoices": reassigned_invoices,
+        "reassigned_channels": reassigned_channels,
+        "reason": body.reason,
+    }
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="merge_absorb", table_name="contacts", record_id=master_id,
+        old_data=dict(master_row),
+        new_data=merge_summary,
+    )
+    await record_audit_log(
+        db=db, tenant_id=tenant_id, user_id=current_user.id,
+        action="merge_delete", table_name="contacts", record_id=loser_id,
+        old_data=dict(loser_row),
+        new_data={"merged_into": master_id, "reason": body.reason},
+    )
+
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
+    await invalidate_dashboard_cache(tenant_id)
+
+    logger.info(
+        "[merge_contacts] tenant=%d master=%d ← loser=%d "
+        "(deals=%d orders=%d quotes=%d invoices=%d channels=%d)",
+        tenant_id, master_id, loser_id,
+        reassigned_deals, reassigned_orders, reassigned_quotes,
+        reassigned_invoices, reassigned_channels,
+    )
+
+    return await _compose_response(db, dict(master_updated))
