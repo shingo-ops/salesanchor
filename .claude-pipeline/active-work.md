@@ -170,3 +170,10 @@
 | feature/morimoto/karte-visual-gate | カルテ見た目忠実度ゲート⑤（Phase 5a CSS 寸法是正 + 5b 視覚ゲート） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/fedex-label-validation-wizard | ADR-129 FedEx Label Validation 申請支援ウィザード | 2026-06-12 | IN_PROGRESS | #1993 | | |
 | feature/morimoto/design-site-smoke-autoblock | smoke④ FAIL 時 /design/ 自動遮断（ADR-134 D） | 2026-06-12 | IN_PROGRESS | | | |
+| feature/morimoto/back-merge-main-for-2032 | main → develop バックマージ（hotfix f2a33605 取り込み・PR #2032 競合解消） | 2026-06-12 | DONE | | | |
+| feature/morimoto/adr-135-final-checkboxes | ADR-135 受け入れ条件チェックボックス更新 + 経緯記録 | 2026-06-12 | IN_PROGRESS | #2033 | | |
+| feature/morimoto/adr-135-cleanup-approvers | ADR-135 AUTHORIZED_APPROVERS/AUTHORS 一時追加削除 | 2026-06-12 | IN_PROGRESS | #2034 | | |
+| feature/morimoto/migration-full-dryrun-ci | migration-test.yml 全件ドライランジョブ追加（ADR-135強化） | 2026-06-12 | DONE | #2051 | | |
+| feature/morimoto/release-pr-migration-manifest | auto-release-pr.yml migration manifest バナー自動記載 | 2026-06-12 | DONE | #2052 | | |
+| feature/morimoto/adr-137-company-stats-ssot | ADR-137 起案 + migration ヘッダ修正（取引額SSOT） | 2026-06-12 | DONE | #2049 | | |
+| feature/morimoto/design-301-redirect | nginx /design 301リダイレクト + smoke⑤ | 2026-06-12 | DONE | #2050 | | |
