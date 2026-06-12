@@ -78,3 +78,19 @@ ADR-095〜106（SAシリーズ）の設計意図を、技術知識のない読�
 ## 9. Generatorへの委任境界
 
 nginx設定の具体・変換スクリプトの実装言語・同期方法等のHowはGenerator裁量。ただし以下は受け入れ基準であり譲れない: **デフォルトdeny／/grafana/とアプリ本体の疎通維持／変換失敗＝デプロイ失敗／htpasswd・配信物のデプロイ耐性（消えない）**。
+
+---
+
+## 10. インシデント記録
+
+### 10-1. Basic認証欠落インシデント（2026-06-12 — Shingo事後承認）
+
+| 項目 | 内容 |
+|------|------|
+| 発生日時 | 2026-06-12（PR #2019 develop→main マージ〜`f2a33605` デプロイ完了まで） |
+| 分類 | 緊急セキュリティ対応（認証欠落 — `/design/` が認証なし 200 を返却） |
+| 原因 | PR #2021（Stage 0）で `docker-compose.yml` に `./nginx/htpasswd.d:/etc/nginx/htpasswd.d:ro` ボリュームを追加したが、`docker compose up -d` が既存nginxコンテナを自動再作成しなかったため、htpasswd.d がコンテナ内未マウントのまま稼働。nginx は `/etc/nginx/htpasswd.d/design-site` を読めず、Basic認証が機能しなかった |
+| 影響 | `app.salesanchor.jp/design/` が認証なしで 200 を返した（PR #2019 デプロイ 15:35〜ホットフィックスデプロイ完了 ~16:30 の約55分間） |
+| 修正内容 | `deploy.yml` に `docker compose up -d --no-deps --force-recreate nginx` ステップを追加（コミット `ca0531c0`、PR `f2a33605`）。デプロイ run #27401107031 で smoke ①②③ PASS 確認 |
+| 事後承認 | **Shingo 承認済み（2026-06-12）**。deploy.yml 変更（通常は事前GO必須）を緊急セキュリティ対応として事後承認 |
+| 再発防止 | PR #2035（`feature/morimoto/design-site-smoke-autoblock`）にて smoke ④ FAIL 時の自動遮断を実装予定 |
