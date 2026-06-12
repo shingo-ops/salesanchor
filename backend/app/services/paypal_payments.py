@@ -432,8 +432,9 @@ def _find_existing_webhook(base: str, headers: dict, webhook_url: str) -> Option
 
 
 def register_webhook(env: str, client_id: str, client_secret: str, webhook_url: str) -> dict:
-    """テナントの PayPal アプリに webhook を作成し webhook_id を返す（INVOICING.INVOICE.PAID 購読）。
+    """テナントの PayPal アプリに webhook を作成し webhook_id を返す。
 
+    購読: INVOICING.INVOICE.PAID（入金）＋ CUSTOMER.DISPUTE.{CREATED,UPDATED,RESOLVED}（ケース・ADR-101改訂(2) Inc4）。
     既存 URL（既登録）は既存 webhook の id を返す。Returns: {"ok", "webhook_id", "message"}。
     """
     base = _BASE_URLS[_norm_env(env)]
@@ -441,7 +442,12 @@ def register_webhook(env: str, client_id: str, client_secret: str, webhook_url: 
     if not token:
         return {"ok": False, "webhook_id": None, "message": "PayPal 認証に失敗しました"}
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    body = {"url": webhook_url, "event_types": [{"name": "INVOICING.INVOICE.PAID"}]}
+    body = {"url": webhook_url, "event_types": [
+        {"name": "INVOICING.INVOICE.PAID"},
+        {"name": "CUSTOMER.DISPUTE.CREATED"},
+        {"name": "CUSTOMER.DISPUTE.UPDATED"},
+        {"name": "CUSTOMER.DISPUTE.RESOLVED"},
+    ]}
     try:
         resp = httpx.post(
             f"{base}/v1/notifications/webhooks", json=body, headers=headers, timeout=_TIMEOUT

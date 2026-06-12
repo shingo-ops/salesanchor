@@ -363,6 +363,9 @@ run_sql migrations/20260612_100000_add_contact_channel_unique.sql
 # SA-04 (ADR-098): company_discord.guild_id VARCHAR(50) 追加
 run_sql migrations/20260612_110000_add_company_discord_guild_id.sql
 
+# ADR-101 改訂(2) Inc4 Step A: paypal_disputes テーブル作成
+run_sql migrations/20260612_154322_create_paypal_disputes.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

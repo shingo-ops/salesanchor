@@ -33,6 +33,7 @@
 |---|---|---|
 | i18n / 国際化 / ja.json / en.json | **ADR-027** | 全 UI 文字列 `t()` 経由・キー同期必須 |
 | リリース / release PR / develop→main / branch protection | **ADR-050** | merge commit のみ（squash 禁止＝back-merge 構造バグ防止）・Ruleset 15777895 |
+| リリース相乗り防止 / 危険変更の develop 入口関所 / develop=出荷可能 | **ADR-135** | 危険変更(migrations/deploy.yml/scripts)は PO GO まで feature で待機・develop マージ＝本番投入可宣言。CODEOWNERS/PRテンプレ済、Ruleset B/C は PO GO 待ち |
 | 自動マージ / human-in-the-loop / develop 自動 merge | **ADR-056** | develop は AI 自動 merge・main は人間。通知集約 |
 | 並行開発 / worktree / AEON / Evidence | **ADR-086** | 複数エージェント並行開発の標準化 |
 | 標準ワークフロー / SOP / process-artifacts gate | **ADR-121** ／ ADR-112 ／ [`docs/STANDARD-WORKFLOW.md`](../STANDARD-WORKFLOW.md) | KGI→recon→設計の関所 |

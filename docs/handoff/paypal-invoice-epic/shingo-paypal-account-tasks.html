@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayPal 正規請求書 — しんごさん作業依頼（PayPalアカウント側）</title>
+<style>
+  :root{ --bg:#f4f1ea; --ink:#2b2b2b; --sub:#6b6b6b; --line:#e2ddd0; --card:#fffdf8;
+    --accent:#0070ba; --good:#2e7d52; --warn:#b8860b; --bad:#b3402f; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.75;font-size:15.5px}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 22px 80px}
+  header.cover{background:linear-gradient(135deg,#0070ba,#003087);color:#fff;border-radius:16px;
+    padding:32px 28px;margin-bottom:26px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
+  header.cover .tag{display:inline-block;background:#fff;color:#003087;font-size:12px;font-weight:700;
+    padding:3px 10px;border-radius:99px;margin-bottom:12px}
+  header.cover h1{margin:0 0 6px;font-size:23px;line-height:1.4}
+  header.cover .meta{color:#cfe0f2;font-size:13px;margin-top:10px}
+  h2{font-size:19px;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
+    background:var(--accent);color:#fff;border-radius:8px;font-size:14px;flex:0 0 auto}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:8px 0} .lead{color:var(--sub);font-size:14.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0;
+    box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;margin-right:6px}
+  .pill.must{background:#f6e1dc;color:var(--bad)} .pill.opt{background:#f5ecd2;color:#8a6400}
+  .pill.done{background:#dcefe4;color:var(--good)} .pill.info{background:#dde7f2;color:#003087}
+  ol,ul{margin:8px 0 8px 2px;padding-left:22px} li{margin:6px 0}
+  code{background:#ece6d8;border-radius:5px;padding:1px 6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+  .callout{border-left:4px solid var(--accent);background:#eef5fb;padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+  .callout.good{border-color:var(--good);background:#f1f8f3}
+  .callout.warn{border-color:var(--warn);background:#fcf7e8}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#e7eef6;font-weight:700;font-size:13px} tr:last-child td{border-bottom:none}
+  .check{list-style:none;padding-left:0} .check li{padding-left:30px;position:relative}
+  .check li::before{content:"☐";position:absolute;left:4px;top:0;font-size:18px;color:var(--accent)}
+  footer{margin-top:42px;color:var(--sub);font-size:12.5px;text-align:center;border-top:1px solid var(--line);padding-top:18px}
+  .small{font-size:13px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <span class="tag">作業依頼 / PayPalアカウント側</span>
+  <h1>PayPal 正規請求書 — しんごさんにお願いしたい作業<br>（Inc3 追跡 / Inc4 ケース管理 の前提）</h1>
+  <p style="color:#e6eefa;margin:6px 0 0">コード側（アプリ実装）は私（Hikky-dev）が進めます。<br>ここに挙げるのは <b>PayPal のアカウント／開発者ダッシュボード上の設定</b>で、しんごさんにしかできない作業です。</p>
+  <div class="meta">作成日: 2026-06-12 ／ 作成: Hikky-dev (Claude Code) ／ 対象: しんごさん（PayPal アカウント管理者）</div>
+</header>
+
+<p class="lead">PayPal 正規請求書（Invoicing）機能のうち、<b>Inc1（請求書発行＋写しPDF）は本番稼働済み</b>です。次の <b>Inc3（発送追跡を PayPal に登録）</b>と <b>Inc4（トラブル＝ケースの自動受信）</b>を動かすには、PayPal の開発者設定でいくつか有効化していただく必要があります。各項目に「なぜ必要か」「どこで」を添えています。</p>
+
+<div class="callout">
+  <b>全体像：</b> アプリのコードは「PayPal に命令を送る」側です。PayPal 側のアプリ（REST アプリ）が <b>その機能を許可されていないと命令が通りません</b>。下記はその「許可」と「通知の宛先設定」です。すべて <a href="https://developer.paypal.com/dashboard/" target="_blank" rel="noopener">developer.paypal.com/dashboard</a> 上の作業です。
+</div>
+
+<!-- 1 -->
+<h2><span class="n">1</span>REST アプリで「請求書(Invoicing)」機能を有効化</h2>
+<div class="card">
+  <p><span class="pill must">必須</span><span class="pill info">Inc1〜Inc4 共通</span></p>
+  <p><b>なぜ：</b> 請求書の発行・送信・ステータス取得は Invoicing 機能の権限が要ります（無いと「送信」で失敗します）。</p>
+  <h3>どこで（手順）</h3>
+  <ol>
+    <li><a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener">Dashboard → Apps & Credentials</a> を開く（本番は <b>Live</b>、テストは <b>Sandbox</b> タブ）。</li>
+    <li>当社が連携に使っている REST アプリを選ぶ。</li>
+    <li><b>Features</b>（機能）一覧で <b>「Invoicing」</b> にチェックが入っているか確認。無ければ有効化して保存。</li>
+  </ol>
+  <p class="small">※ すでに Inc1 が本番で動いているので Live 側は有効な可能性が高いですが、念のため確認をお願いします。</p>
+</div>
+
+<!-- 2 -->
+<h2><span class="n">2</span>REST アプリで「ケース管理(Disputes)」機能を有効化 — <span style="font-size:14px;color:var(--accent)">Inc4 用</span></h2>
+<div class="card">
+  <p><span class="pill must">必須（Inc4）</span></p>
+  <p><b>なぜ：</b> 顧客とのトラブル（ケース＝dispute）の発生・更新・解決を当社アプリが受け取るには、REST アプリで Disputes 機能が有効である必要があります（公式要件）。</p>
+  <h3>どこで（手順）</h3>
+  <ol>
+    <li>上記と同じ <b>Apps & Credentials</b> → 当社 REST アプリ → <b>Features</b>。</li>
+    <li><b>「Customer Disputes」（または Disputes）</b> を有効化して保存。</li>
+  </ol>
+</div>
+
+<!-- 3 -->
+<h2><span class="n">3</span>Webhook に「ケース(Dispute)イベント」を追加購読 — <span style="font-size:14px;color:var(--accent)">Inc4 用</span></h2>
+<div class="card">
+  <p><span class="pill must">必須（Inc4）</span><span class="pill info">アプリ側で自動登録も可</span></p>
+  <p><b>なぜ：</b> ケースが起きたとき PayPal が当社サーバーへ通知（webhook）を飛ばすには、その種類のイベントを購読しておく必要があります。</p>
+  <h3>購読してほしいイベント（3種）</h3>
+  <ul>
+    <li><code>CUSTOMER.DISPUTE.CREATED</code>（ケース発生）</li>
+    <li><code>CUSTOMER.DISPUTE.UPDATED</code>（ケース更新）</li>
+    <li><code>CUSTOMER.DISPUTE.RESOLVED</code>（ケース解決）</li>
+  </ul>
+  <h3>どこで（2通り・どちらでも可）</h3>
+  <ul>
+    <li><b>A. しんごさんが手動：</b> REST アプリの <b>Webhooks</b> で、通知先 URL <code>https://api.salesanchor.jp/api/v1/integrations/paypal/webhook</code> に上記3イベントを追加。</li>
+    <li><b>B. アプリに任せる：</b> 当社アプリの「PayPal 認証情報 保存」時に webhook を自動登録する仕組みがあります。Inc4 実装後、私の方で購読イベントに上記3種を加えるので、<b>管理センターで一度「保存」し直す</b>だけでもOK（手動が不要になります）。実装が出来たら案内します。</li>
+  </ul>
+  <p class="small">※ 入金通知 <code>INVOICING.INVOICE.PAID</code> は既に購読済み・本番稼働中です。</p>
+</div>
+
+<!-- 4 -->
+<h2><span class="n">4</span>「発送追跡(Add Tracking)」の利用可否を確認 — <span style="font-size:14px;color:var(--accent)">Inc3 用</span></h2>
+<div class="card">
+  <p><span class="pill must">必須（Inc3）</span></p>
+  <p><b>なぜ：</b> 発送時に追跡番号を PayPal に登録すると、資金保留の解除が早まり・未着クレームの自動解決やセラープロテクション判定に使われます（公式の実益）。これには PayPal 側で追跡 API（Add Tracking）が使える状態である必要があります。</p>
+  <h3>確認してほしいこと</h3>
+  <ul>
+    <li>当社 REST アプリ／ビジネスアカウントで <b>Transaction Search / Tracking（trackers-batch）</b> が利用可能か（権限・本人確認の状況）。</li>
+    <li>不明な場合は PayPal サポート／アカウントマネージャに「<code>POST /v1/shipping/trackers-batch</code> を使いたい」と確認。</li>
+  </ul>
+  <p class="callout warn small" style="margin-top:10px"><b>補足：</b> Inc3 は当社の「発送」処理に PayPal 追跡登録を差し込みます。現在 FedEx 連携（発送系）をしんごさんが実装中のため、<b>コード側はその発送フローと調整してから着手</b>します（衝突回避）。この項目はその前提確認です。</p>
+</div>
+
+<!-- 5 -->
+<h2><span class="n">5</span>Sandbox テスト用アカウント（任意・動作確認用） — <span style="font-size:14px;color:var(--accent)">Inc4 検証用</span></h2>
+<div class="card">
+  <p><span class="pill opt">任意（実機確認したい場合）</span></p>
+  <p><b>なぜ：</b> ケース機能を本番前に確認するには、Sandbox で「買い手がケースを起こす」操作が要ります。これには Sandbox の買い手アカウント設定が必要です（公式の Integration Guide 記載）。</p>
+  <ul>
+    <li><a href="https://developer.paypal.com/dashboard/accounts" target="_blank" rel="noopener">Sandbox → Accounts</a> に買い手（Personal）アカウントがあるか確認。</li>
+    <li>Sandbox で支払い済みのテスト請求書に対し、買い手アカウントからケースを起こせると、Inc4 の受信→表示まで実機確認できます。</li>
+  </ul>
+  <p class="small">※ ここは無くても Inc4 のコード自体は完成・本番反映できます（実機の最終確認だけ後回しになります）。</p>
+</div>
+
+<!-- まとめ -->
+<h2><span class="n">✓</span>チェックリスト（この順でOK）</h2>
+<div class="card">
+  <ul class="check">
+    <li><b>① Invoicing 機能</b>が REST アプリで有効（Inc1 稼働中なので Live はほぼ済のはず・要確認）</li>
+    <li><b>② Disputes（ケース）機能</b>を REST アプリで有効化（Inc4 必須）</li>
+    <li><b>③ Dispute webhook 3種</b>を購読 — 手動 or 「保存し直し」で自動（Inc4 必須）</li>
+    <li><b>④ Add Tracking 利用可否</b>を確認（Inc3 必須・発送フロー調整後に着手）</li>
+    <li><b>⑤ Sandbox 買い手アカウント</b>（任意・ケース実機確認用）</li>
+  </ul>
+  <div class="callout good">
+    <b>私（Hikky-dev）側の進め方：</b> ②③が済めば <b>Inc4（ケース受信→請求書/受注に紐づけ表示）</b>を本番投入できます。コードは先行して実装・PR まで進めておきます（マージには migration を含むため、しんごさんの GitHub 承認をいただきます）。<b>Inc3（追跡）</b>は④の確認＋発送フロー調整後に着手します。
+  </div>
+</div>
+
+<footer>
+  PayPal 正規請求書 — しんごさん作業依頼（PayPalアカウント側）／ 2026-06-12 ／ Hikky-dev (Claude Code)<br>
+  関連: docs/handoff/paypal-invoice-epic/（recon / design）、ADR-101 改訂(2)
+</footer>
+
+</div>
+</body>
+</html>
