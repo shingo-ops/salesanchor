@@ -186,3 +186,8 @@ grep -c "develop.*常設" ~/.claude/agents/generator.md
 - 2026-05-20: 初版起案（Web Claude via Shingo）
 - 2026-05-28: develop→main のマージ方法を `--squash` → `--merge`（merge commit）に変更。squash merge は back-merge PR の永続発生を引き起こす構造バグのため禁止。GitHub Ruleset（ID: 15777895）で main への squash/rebase を無効化し merge commit のみに機械的強制済み（PR #1085）。
 - 2026-05-31 【訂正】: 上記マージ方式変更は "BEHIND ブロック" 問題の根本原因ではなかった。実際の原因は Ruleset とは独立した Legacy Branch Protection の `required_status_checks.strict: true` であり、2026-05-31 に `strict: false` へ変更済み（詳細: `docs/BRANCH_PROTECTION_SETUP.md §8`）。
+- 2026-06-12 【追補: Admin bypass 除去】:
+  - **事故**: PR #1981（develop→main）が squash merge され ADR-050 違反。副作用として back-merge PR #1984 が自動発生した。
+  - **真因**: Ruleset 15777895 の bypass_actors に `{actor_id: 5, actor_type: RepositoryRole, bypass_mode: always}`（Admin 常時バイパス）が登録されており、Admin（shingo-ops）には `allowed_merge_methods: ["merge"]` の制約が一切効かない状態だった。Ruleset はあったが Admin がフリーパスを持っていた。
+  - **措置**: bypass_actors から Admin エントリを除去（空配列に変更）。Admin を含むすべてのユーザーが `allowed_merge_methods: ["merge"]`（merge commit のみ）の制約を受けるようになった。I2（`allow_squash_merge: false`）は CI パイプライン（feature→develop の自動マージ）が squash を使用しているため見送り。
+  - **緊急時手順（break-glass）**: 緊急リリースが必要で status checks の bypass が必要な場合、① Ruleset の bypass_actors に Admin を一時追加 → ② マージ実行（`--merge` で） → ③ bypass_actors を即除去。この手順は GitHub Issues に記録を残すこと。squash は緊急時でも禁止（ADR-050 §2-2）。
