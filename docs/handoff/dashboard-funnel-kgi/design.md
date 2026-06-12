@@ -1,7 +1,10 @@
 # Phase 3 設計 — ファネル型目標対比ダッシュボード フロントエンド（PR4+5）
 
-**対象ADR**: ADR-139  
-**recon**: docs/handoff/dashboard-funnel-kgi/recon.md  
+> **⚠️ 正本は `docs/handoff/funnel-dashboard-stage1/design.md`（全体設計・ADR-138）を参照。**  
+> このファイルはフロントエンド PR4+5（ADR-139）のフェーズ3設計書として保持。バックエンド・リリース計画は正本を確認すること。
+
+**対象ADR**: ADR-139 / 全体設計: ADR-138  
+**recon**: docs/handoff/dashboard-funnel-kgi/recon.md（正本: docs/handoff/funnel-dashboard-stage1/recon.md）  
 **日付**: 2026-06-12  
 **担当**: Hikky-dev
 

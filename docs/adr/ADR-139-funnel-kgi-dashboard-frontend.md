@@ -3,7 +3,9 @@
 **ステータス**: Accepted  
 **日付**: 2026-06-12  
 **担当**: Hikky-dev  
-**承認**: shingo-ops
+**承認**: shingo-ops  
+**関連ADR**: ADR-138（全体設計・バックエンド: `docs/adr/ADR-138-funnel-dashboard-stage1.md`）  
+**正本ハンドオフ**: `docs/handoff/funnel-dashboard-stage1/`（design.md §4〜5 がフロント仕様）
 
 ---
 
