@@ -21,14 +21,13 @@ Claude Code（CC）が GitHub 上で行う操作（PR 作成・branch push・iss
 
 ## Why（なぜ変えるか）
 
-`process-artifacts gate`（`scripts/check-process-artifacts.js`）は `deploy.yml` / `scripts/` / `migrations/` 変更 PR に対して、**認可済み承認者（`shingo-ops` または `Hikky-dev`）の Approve を必須とする**。
-
 CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が自己 PR を Approve できず（GitHub の自己承認禁止）、危険変更 PR の承認経路が詰まっていた（PR #2000 で実際に発生）。
 
 `shingo-cc` 名義に切り替えることで:
-1. Shingo（`shingo-ops`）が CC 作成 PR を承認できる
-2. 危険変更（`deploy.yml`・`migrations/`・本番スクリプト）に対する二重チェック体制が成立する
-3. CC の操作と PO の判断が GitHub 上で明示的に分離される
+1. Shingo（`shingo-ops`）が CC 作成 PR を Approve できる（CC 作成と PO 判断の分離）
+2. CC の操作と PO の判断が GitHub 上で明示的に分離される
+
+**承認フロー（v2: 2026-06-13 更新）**: GitHub PR Approve による危険変更管制を廃止し、チャット GO 記録方式に移行した。詳細は「§承認フロー v2」参照。
 
 ## 適用範囲
 
@@ -44,9 +43,30 @@ CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が�
 ## ガードレール
 
 - PAT は `~/.claude-access.env` に `SHINGO_CC_PAT` として保管（git 追跡禁止・B-11 準拠）
-- `shingo-cc` は `scripts/check-process-artifacts.js` の `AUTHORIZED_APPROVERS` に**含まない**（`shingo-ops` / `Hikky-dev` のみ）
-- 危険変更（`deploy.yml`・`migrations/`・本番スクリプト）の承認者は人間のみを維持し、AI による自己承認を構造的に不可能にする
-- 作者チェック（`AUTHORIZED_AUTHORS`）の取得失敗時は warn のみでスキップ（fail-open）。可用性とのバランスとして許容。安全性は「自己承認禁止 + 承認必須」が別レイヤーで担保する（2026-06-12 Shingo 評価）
+- 危険変更（`deploy.yml`・`migrations/`・本番スクリプト）は **GitHub Approve ではなく チャット GO 記録**で管制する（v2 方式）
+- 作者チェック（`AUTHORIZED_AUTHORS`）の取得失敗時は warn のみでスキップ（fail-open）。安全性は「GO 記録必須 + PR 番号一致検証」が別レイヤーで担保する（2026-06-13 Shingo 評価）
+
+## 承認フロー v2（チャット GO 方式・PO 単独権限）
+
+**変更日**: 2026-06-13 | **決定者**: Shingo（PO）
+
+### 変更の背景
+
+旧フローでは `AUTHORIZED_APPROVERS`（`shingo-ops` / `Hikky-dev`）の GitHub PR Approve で危険変更を管制していた。しかし Hikky-dev（CC）が自己 Approve でバイパス可能な構造的抜け穴があった。さらに Ruleset に `required_approving_review_count` が設定されていなかったため、技術的封鎖として機能していなかった（§構造的ギャップ 参照）。
+
+### 新フロー（v2）
+
+1. CC はマージ前にチャットで「対象・変更 3 行サマリ・直前バックアップ確認」を PO に提示
+2. PO が「**GO #PR番号**」を返答（番号必須・番号なし曖昧肯定は無効）
+3. CC は受領した GO 原文を PR 本文の `### GO記録` セクションに転記
+4. `scripts/check-process-artifacts.js` が以下を機械検証:
+   - `GO発行者` が `AUTHORIZED_GO_ISSUERS`（`shingo-ops` / `Shingo`）を含む
+   - `日時` フィールドが存在する
+   - `GO原文` が `GO #<PR番号>` 形式かつ番号が現在の PR と一致
+   - `バックアップ確認` フィールドが存在する
+5. 全通過 → gate pass / 1 件でも欠ける → gate fail
+
+**GO 権限は PO（Shingo）単独**。Hikky-dev による Approve バイパスは構造的に廃止。
 
 ## 構造的ギャップ（2026-06-12 発覚）と break-glass ルール
 
@@ -79,13 +99,10 @@ ADR-136 は「危険変更の承認者は人間のみ」を意図したが、Rul
 
 CLAUDE.md「ブランチ運用ルール」にインライン記載済み。
 
-### 層①技術的封鎖（Shingo GO 待ち）
+### 層①技術的封鎖（Ruleset Approve 要件）— 不採用（2026-06-13）
 
-設定差分（**適用は Shingo GO 後のみ**）:
+当初提案として Ruleset に `required_approving_review_count: 1` を設定する案があったが、**承認フロー v2（チャット GO 方式）の採用により不採用**となった。
 
-| Ruleset | 変更前 | 変更後 |
-|---------|--------|--------|
-| develop #16619490 | `pull_request` rule なし | `required_approving_review_count: 1` を追加 |
-| main #15777895 | `required_approving_review_count: 0` | `required_approving_review_count: 1` |
+理由: 2 人体制での GitHub Approve 摩擦（過去に 0→1→0 往復実績）を解消しつつ、PO 単独権限によるより厳格な管制を実現するため、Ruleset 技術封鎖ではなくチャット GO 記録＋gate スクリプト検証を選択した。
 
-注意: 過去（2026-05-20, §5-bis）に main を 0→1→0 と往復した経緯あり。2 人体制での摩擦を理由に 0 に戻した。今回は develop も同時に 1 にする提案で、同じ摩擦が発生する可能性がある。Shingo 判断を要する。
+Ruleset 現状: develop #16619490 = `pull_request` rule なし / main #15777895 = `required_approving_review_count: 0`（変更なし）。
