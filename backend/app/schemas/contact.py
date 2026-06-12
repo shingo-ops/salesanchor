@@ -153,6 +153,12 @@ class ContactUpdate(BaseModel):
         return validate_phone(v)
 
 
+class ContactMergeRequest(BaseModel):
+    """担当者統合リクエスト（ADR-098 SA-04 J3）。"""
+    loser_id: int = Field(..., description="吸収されて削除される側の担当者 ID")
+    reason: str | None = Field(None, max_length=500, description="統合の理由（audit_logs に記録）")
+
+
 class ContactResponse(BaseModel):
     id: int
     tenant_id: int

@@ -1,14 +1,19 @@
 /**
  * 会社詳細 — 担当者タブ。
- * 担当者の追加・編集・削除をインラインモーダルで行う。
+ * 担当者の追加・編集・削除・チャンネル管理・統合をインラインモーダルで行う。
+ *
+ * SA-04: チャンネル追加・編集フォーム（ContactChannelForm）と
+ *        担当者統合モーダル（MergeContactModal）を組み込み。
  */
 
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { Company, Contact, ContactFormState } from "./company-detail.types";
 import { Modal } from "../../components/Modal";
+import ContactChannelForm, { type ContactChannelEntry } from "../../components/ContactChannelForm";
+import MergeContactModal from "../../components/MergeContactModal";
 
 interface Props {
   company: Company;
@@ -23,16 +28,57 @@ interface Props {
   openContactEdit: (c: Contact) => void;
   handleContactSubmit: (e: FormEvent) => void;
   onCloseModal: () => void;
+  /** チャンネル保存・統合完了後にリストを再読み込みするコールバック */
+  onContactsRefresh?: () => void;
 }
 
 export function CompanyContactsTab({
-  contacts, canEdit,
+  company, contacts, canEdit,
   contactModalOpen, contactForm, setContactForm, contactSubmitting,
   setContactDeleteTarget,
   openContactNew, openContactEdit,
   handleContactSubmit, onCloseModal,
+  onContactsRefresh,
 }: Props) {
   const { t } = useTranslation();
+
+  // チャンネル追加フォームの状態
+  const [channelFormOpen, setChannelFormOpen] = useState(false);
+  const [channelFormContact, setChannelFormContact] = useState<Contact | null>(null);
+  const [channelFormInitial, setChannelFormInitial] = useState<ContactChannelEntry | null>(null);
+
+  // 担当者統合モーダルの状態
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [mergeSourceContact, setMergeSourceContact] = useState<Contact | null>(null);
+  // 重複チェックから統合に進む際の対象担当者 ID
+  const [mergeDuplicateContactId, setMergeDuplicateContactId] = useState<number | null>(null);
+
+  const openChannelForm = (contact: Contact, initial: ContactChannelEntry | null = null) => {
+    setChannelFormContact(contact);
+    setChannelFormInitial(initial);
+    setChannelFormOpen(true);
+  };
+
+  const openMergeModal = (contact: Contact) => {
+    setMergeSourceContact(contact);
+    setMergeDuplicateContactId(null);
+    setMergeModalOpen(true);
+  };
+
+  const handleRequestMerge = (duplicateContactId: number) => {
+    if (!channelFormContact) return;
+    // チャンネルフォームを閉じて統合モーダルを開く
+    setChannelFormOpen(false);
+    setMergeSourceContact(channelFormContact);
+    setMergeDuplicateContactId(duplicateContactId);
+    setMergeModalOpen(true);
+  };
+
+  const handleMerged = () => {
+    setMergeModalOpen(false);
+    setMergeSourceContact(null);
+    onContactsRefresh?.();
+  };
 
   const contactName = (c: Contact) =>
     c.display_name || `${c.surname || ""} ${c.given_name || ""}`.trim() || "-";
@@ -59,7 +105,7 @@ export function CompanyContactsTab({
               <th>{t("common.email")}</th>
               <th>{t("common.phone")}</th>
               <th>{t("common.status")}</th>
-              {canEdit && <th>{t("common.actions")}</th>}
+              <th>{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -71,16 +117,24 @@ export function CompanyContactsTab({
                 <td>{c.primary_email || "-"}</td>
                 <td>{c.primary_phone || "-"}</td>
                 <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
-                {canEdit && (
-                  <td>
-                    <button className="btn-sm" onClick={() => openContactEdit(c)}>
-                      {t("common.edit")}
-                    </button>
-                    <button className="btn-sm btn-danger" onClick={() => setContactDeleteTarget(c)}>
-                      {t("common.delete")}
-                    </button>
-                  </td>
-                )}
+                <td>
+                  <button className="btn-sm" onClick={() => openChannelForm(c)}>
+                    {t("contactChannel.addTitle")}
+                  </button>
+                  {canEdit && (
+                    <>
+                      <button className="btn-sm" onClick={() => openContactEdit(c)}>
+                        {t("common.edit")}
+                      </button>
+                      <button className="btn-sm btn-warning" onClick={() => openMergeModal(c)}>
+                        {t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")}
+                      </button>
+                      <button className="btn-sm btn-danger" onClick={() => setContactDeleteTarget(c)}>
+                        {t("common.delete")}
+                      </button>
+                    </>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -178,6 +232,42 @@ export function CompanyContactsTab({
               </div>
             </form>
       </Modal>
+
+      {/* チャンネル追加フォーム */}
+      {channelFormContact && (
+        <ContactChannelForm
+          open={channelFormOpen}
+          contactId={channelFormContact.id}
+          companyId={company.id}
+          initial={channelFormInitial}
+          onSaved={() => {
+            setChannelFormOpen(false);
+            onContactsRefresh?.();
+          }}
+          onCancel={() => setChannelFormOpen(false)}
+          onRequestMerge={handleRequestMerge}
+        />
+      )}
+
+      {/* 担当者統合モーダル */}
+      {mergeSourceContact && (
+        <MergeContactModal
+          open={mergeModalOpen}
+          companyId={company.id}
+          source={{
+            id: mergeSourceContact.id,
+            contact_code: mergeSourceContact.contact_code,
+            display_name: mergeSourceContact.display_name,
+            surname: mergeSourceContact.surname,
+            given_name: mergeSourceContact.given_name,
+          }}
+          onMerged={handleMerged}
+          onCancel={() => {
+            setMergeModalOpen(false);
+            setMergeSourceContact(null);
+          }}
+        />
+      )}
     </div>
   );
 }

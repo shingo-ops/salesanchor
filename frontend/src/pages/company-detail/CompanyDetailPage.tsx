@@ -64,6 +64,7 @@ export default function CompanyDetailPage() {
     handleContactSubmit, handleContactDelete,
     handleDiscordSubmit, handleDiscordDelete,
     handleResolveAsDistinct, handleAddressDelete,
+    load,
   } = state;
 
   if (loading) return <div className="page-container"><p>{t("common.loading")}</p></div>;
@@ -275,6 +276,7 @@ export default function CompanyDetailPage() {
           openContactEdit={openContactEdit}
           handleContactSubmit={handleContactSubmit}
           onCloseModal={() => setContactModalOpen(false)}
+          onContactsRefresh={load}
         />
       )}
 
