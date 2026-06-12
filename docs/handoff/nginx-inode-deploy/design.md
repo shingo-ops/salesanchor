@@ -1,5 +1,6 @@
 # design.md — nginx 反映の確実化（inode ズレ + 502 再発防止統合）
 
+**対応ADR**: ADR-137（nginx 反映の確実化）
 **対応 recon**: `docs/handoff/nginx-inode-deploy/recon.md`
 **関連既存調査**: `docs/handoff/nginx-reload-total-autocount/design.md`（502 問題・resolver 案）
 **投入可否**: deploy.yml / nginx.conf 変更を含む。**Shingo GO 必須。**
