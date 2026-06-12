@@ -34,6 +34,18 @@ BEGIN
             CONTINUE;
         END IF;
 
+        -- 新版（paid_invoice_count 列あり）が既に適用済みならスキップ
+        -- （20260612_120000 が本番に先行適用された場合の再実行安全性確保）
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_rec.nspname
+              AND table_name = 'v_company_stats'
+              AND column_name = 'paid_invoice_count'
+        ) THEN
+            RAISE NOTICE 'migration 20260604_100000: %.v_company_stats は新版（paid_invoice_count あり）のためスキップ', schema_rec.nspname;
+            CONTINUE;
+        END IF;
+
         -- v_company_stats ビュー作成（CREATE OR REPLACE で冪等）
         EXECUTE format($q$
             CREATE OR REPLACE VIEW %I.v_company_stats AS
