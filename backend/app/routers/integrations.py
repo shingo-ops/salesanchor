@@ -383,9 +383,10 @@ async def save_carrier_credentials(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="認証ID・シークレットの両方を入力してください。",
         )
+    # ADR-129: FedEx のみ sandbox 対応。それ以外のキャリアは production 固定（バックエンド強制）。
+    effective_env = payload.environment if carrier == "fedex" else "production"
     # 変更前の非機密情報を取得（機密値は記録しない）
-    # ADR-129: payload.environment で本番/Sandbox を区別して保存
-    old_status = await carriers.get_status(db, tenant_id, carrier, environment=payload.environment)
+    old_status = await carriers.get_status(db, tenant_id, carrier, environment=effective_env)
     audit_action = "update" if old_status["configured"] else "create"
     old_audit = {
         "carrier": carrier,
@@ -399,13 +400,13 @@ async def save_carrier_credentials(
         carrier,
         payload.client_id,
         payload.client_secret,
-        payload.environment,  # ADR-129: 環境を受け取り（旧: production 固定）
+        effective_env,  # ADR-129: FedEx=指定環境 / 他キャリア=production 強制
         user.id,
         account_number=payload.account_number,
     )
     # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:182）。
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
-    new_status = await carriers.get_status(db, tenant_id, carrier, environment=payload.environment)
+    new_status = await carriers.get_status(db, tenant_id, carrier, environment=effective_env)
     new_audit = {
         "carrier": carrier,
         "environment": new_status["environment"],
