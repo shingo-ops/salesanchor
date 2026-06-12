@@ -187,6 +187,15 @@ class LeadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LeadStatsResponse(BaseModel):
+    """GET /leads/{lead_id}/stats レスポンス（ADR-136: v_company_stats 由来）"""
+    total_deal_amount: Decimal
+    paid_invoice_count: int
+    last_paid_at: datetime | None
+    conversation_count: int
+    last_conversation_at: datetime | None
+
+
 class LeadConvertRequest(BaseModel):
     """リード→案件変換リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
     company_id: int = Field(ge=1, description="会社ID")

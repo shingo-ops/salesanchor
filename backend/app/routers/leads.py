@@ -32,7 +32,7 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
-from app.schemas.lead import LeadConvertRequest, LeadCreate, LeadResponse, LeadUpdate
+from app.schemas.lead import LeadConvertRequest, LeadCreate, LeadResponse, LeadStatsResponse, LeadUpdate
 from app.services import encryption, meta_graph
 from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
@@ -2209,3 +2209,75 @@ async def merge_leads(
     )
 
     return LeadResponse(**master_updated)
+
+
+# ---------------------------------------------------------------------------
+# ADR-136: リードの取引実績サマリー（v_company_stats 経由）
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/leads/{lead_id}/stats",
+    response_model=LeadStatsResponse,
+    dependencies=[Depends(require_permission("leads.view"))],
+)
+async def get_lead_stats(
+    lead_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """v_company_stats 経由でリードに紐づく会社の取引実績を返す（ADR-136）。
+
+    companies.lead_id でリードから会社を逆引きし、v_company_stats の定義値を返す。
+    公式定義: paid_at IS NOT NULL AND voided_at IS NULL の請求書合計（ADR-108）。
+    会社が未登録またはビューが存在しない場合はゼロ値を返す。
+    """
+    companies_t = tenant_table_ref(db, tenant_id, "companies")
+
+    co_res = await db.execute(
+        text(f"SELECT id FROM {companies_t} WHERE lead_id = :lid LIMIT 1"),
+        {"lid": lead_id},
+    )
+    co_row = co_res.mappings().first()
+
+    if co_row is None:
+        return LeadStatsResponse(
+            total_deal_amount=Decimal("0"),
+            paid_invoice_count=0,
+            last_paid_at=None,
+            conversation_count=0,
+            last_conversation_at=None,
+        )
+
+    company_id = co_row["id"]
+
+    try:
+        stats_res = await db.execute(
+            text("""
+                SELECT total_deal_amount, paid_invoice_count, last_paid_at,
+                       conversation_count, last_conversation_at
+                FROM v_company_stats
+                WHERE company_id = :cid
+            """),
+            {"cid": company_id},
+        )
+        stats_row = stats_res.mappings().first()
+    except Exception:
+        stats_row = None
+
+    if stats_row is None:
+        return LeadStatsResponse(
+            total_deal_amount=Decimal("0"),
+            paid_invoice_count=0,
+            last_paid_at=None,
+            conversation_count=0,
+            last_conversation_at=None,
+        )
+
+    return LeadStatsResponse(
+        total_deal_amount=Decimal(str(stats_row["total_deal_amount"] or 0)),
+        paid_invoice_count=int(stats_row["paid_invoice_count"] or 0),
+        last_paid_at=stats_row["last_paid_at"],
+        conversation_count=int(stats_row["conversation_count"] or 0),
+        last_conversation_at=stats_row["last_conversation_at"],
+    )

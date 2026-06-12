@@ -191,7 +191,8 @@ async def _fetch_company_stats(db: AsyncSession, company_id: int) -> dict:
     try:
         res = await db.execute(
             text("""
-                SELECT total_deal_amount, deal_count, conversation_count, last_conversation_at
+                SELECT total_deal_amount, paid_invoice_count, last_paid_at,
+                       deal_count, conversation_count, last_conversation_at
                 FROM v_company_stats
                 WHERE company_id = :cid
             """),

@@ -27,8 +27,8 @@ const leadKisonkosakuNoDeal = loadFixture("karte-lead-kisonkosaku-no-deal.json")
 const leadOikomi = loadFixture("karte-lead-oikomi-with-deal.json") as Record<string, unknown>;
 const leadOikomiNoDeal = loadFixture("karte-lead-oikomi-no-deal.json") as Record<string, unknown>;
 
-const invoicesPaid = loadFixture("karte-invoices-paid.json");
-const invoicesEmpty = loadFixture("karte-invoices-empty.json");
+const leadStatsPaid = loadFixture("karte-lead-stats-paid.json");
+const leadStatsEmpty = loadFixture("karte-lead-stats-empty.json");
 
 const discordConfig = loadFixture("karte-discord-config.json");
 const karteMessages = loadFixture("karte-messages.json");
@@ -64,7 +64,7 @@ function makeConversations(lead: Record<string, unknown>) {
 async function renderKarte(
   page: Page,
   leadFixture: Record<string, unknown>,
-  invoicesFixture: unknown,
+  statsFixture: unknown,
 ) {
   const leadId = leadFixture.id as number;
 
@@ -84,8 +84,8 @@ async function renderKarte(
       });
     },
     [`GET /leads/${leadId}/messages`]: karteMessages,
+    [`GET /leads/${leadId}/stats`]: statsFixture,
     "GET /admin/discord-config": discordConfig,
-    "GET /invoices": invoicesFixture,
     [`POST /leads/${leadId}/messages/mark-read`]: { marked_count: 0 },
   };
 
@@ -117,7 +117,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Tab structure (all stages)", () => {
 
     test("[ADR-110-1] Tab order is deal / company / contact", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const tabBar = page.locator('[data-testid="karte-tab-bar"]');
       const tabs = tabBar.locator("button");
@@ -131,7 +131,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-2] Stage badge is displayed in the header", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const badge = page.locator('[data-testid="karte-stage-badge"]');
       await expect(badge).toBeVisible();
@@ -140,7 +140,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-2] Last contact elapsed is displayed in the header", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const lastContact = page.locator('[data-testid="karte-last-contact"]');
       await expect(lastContact).toBeVisible();
@@ -148,7 +148,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
 
     test("[ADR-110-3] Fixed action bar has overflow button", async ({ page }) => {
       // Shinki (new) has a primary action (convert), so the action bar renders
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const actionBar = page.locator('[data-testid="karte-action-bar"]');
       await expect(actionBar).toBeVisible();
@@ -158,7 +158,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-6] Performance summary heading has lock icon (read-only distinction)", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       // Switch to company tab to see the performance summary section
       await page.locator('[data-testid="karte-tab-company"]').click();
@@ -175,7 +175,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     // the company tab and must NOT appear on the deal tab.
 
     test("[ADR-108-1] Deal tab does not show nickname field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       // Deal tab is already active (default for shinki)
       const tabContent = page.locator(".right-panel-tab-content");
@@ -185,7 +185,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-108-1] Deal tab does not show country field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const tabContent = page.locator(".right-panel-tab-content");
       // ja.json: leads.country = "国"
@@ -194,7 +194,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-108-1] Deal tab does not show customer_type field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const tabContent = page.locator(".right-panel-tab-content");
       // ja.json: leads.customerType = "顧客タイプ"
@@ -203,7 +203,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-108-1] Deal tab does not show target_titles field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const tabContent = page.locator(".right-panel-tab-content");
       // ja.json: leads.targetTitles = "取り扱いタイトル"
@@ -212,7 +212,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-108-1] Deal tab does not show sales_form field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const tabContent = page.locator(".right-panel-tab-content");
       // ja.json: leads.salesForm = "販売形態"
@@ -224,7 +224,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Company tab -- 4 sections (ADR-110-4)", () => {
 
     test("[ADR-110-4] Company tab has Basic section heading", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-company"]').click();
 
       await expect(
@@ -233,7 +233,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-4] Company tab has Trade Profile section heading", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-company"]').click();
 
       await expect(
@@ -242,7 +242,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-4] Company tab has Performance Summary section heading (read-only)", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-company"]').click();
 
       await expect(
@@ -251,7 +251,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test("[ADR-110-4] Company tab has Handover section heading", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-company"]').click();
 
       await expect(
@@ -263,7 +263,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Performance summary -- no deals (ADR-110-5 / ADR-108-6)", () => {
 
     test('[ADR-110-5] With 0 invoices, "No transaction history" is displayed', async ({ page }) => {
-      await renderKarte(page, leadShinkiNoDeal, invoicesEmpty);
+      await renderKarte(page, leadShinkiNoDeal, leadStatsEmpty);
       await page.locator('[data-testid="karte-tab-company"]').click();
 
       const perfSection = page.locator('[data-testid="karte-performance-section"]');
@@ -283,28 +283,28 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Default tab switching (ADR-108-4)", () => {
 
     test("[ADR-108-4] Lead (shinki) defaults to deal tab", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       const dealTab = page.locator('[data-testid="karte-tab-deal"]');
       await expect(dealTab).toHaveClass(/active/);
     });
 
     test("[ADR-108-4] Shoudanchuu defaults to deal tab", async ({ page }) => {
-      await renderKarte(page, leadShoudanchuu, invoicesPaid);
+      await renderKarte(page, leadShoudanchuu, leadStatsPaid);
 
       const dealTab = page.locator('[data-testid="karte-tab-deal"]');
       await expect(dealTab).toHaveClass(/active/);
     });
 
     test("[ADR-108-4] Existing customer defaults to company tab", async ({ page }) => {
-      await renderKarte(page, leadKisonkosaku, invoicesPaid);
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
 
       const companyTab = page.locator('[data-testid="karte-tab-company"]');
       await expect(companyTab).toHaveClass(/active/);
     });
 
     test("[ADR-108-4] Oikomi (follow-up) defaults to company tab", async ({ page }) => {
-      await renderKarte(page, leadOikomi, invoicesPaid);
+      await renderKarte(page, leadOikomi, leadStatsPaid);
 
       const companyTab = page.locator('[data-testid="karte-tab-company"]');
       await expect(companyTab).toHaveClass(/active/);
@@ -314,7 +314,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Contact tab -- no manual URL input (ADR-108-8)", () => {
 
     test("[ADR-108-8] Contact tab has no URL input field", async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-contact"]').click();
 
       // Wait for contact tab to render
@@ -327,7 +327,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
 
     test("[ADR-108-8] When discord_guild_channel_id is null, no discord link is shown", async ({ page }) => {
       // leadShinki has discord_guild_channel_id: null
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
       await page.locator('[data-testid="karte-tab-contact"]').click();
 
       // Wait for contact tab to render
@@ -342,7 +342,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
   test.describe("Forbidden items (ADR-110-8/9)", () => {
 
     test('[ADR-110-8] Text "追加予定" does not appear on screen', async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       // Check all three tabs
       // eslint-disable-next-line local/no-japanese-literal -- asserting absence of forbidden text
@@ -358,7 +358,7 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
     });
 
     test('[ADR-110-8] Text "担当者" does not appear on screen', async ({ page }) => {
-      await renderKarte(page, leadShinki, invoicesPaid);
+      await renderKarte(page, leadShinki, leadStatsPaid);
 
       // Check all three tabs
       // eslint-disable-next-line local/no-japanese-literal -- asserting absence of forbidden text
