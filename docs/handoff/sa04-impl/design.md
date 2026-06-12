@@ -29,10 +29,10 @@ migrations/20260612_100000_add_contact_channel_unique.sql
 - 事前確認: 本番 DB で重複行 = 0（recon 時に確認済み）
 - 冪等: `CREATE UNIQUE INDEX IF NOT EXISTS`
 
-**合格基準** | **検証方法**
---- | ---
-重複 ID 保存が DB レベルで阻止される | `INSERT ... ON CONFLICT` で 23505 エラーが発生すること
-既存データへの影響なし | migration 実行後 既存行数が変わらないこと
+| 基準 | 検証方法 |
+|------|----------|
+| 重複 ID 保存が DB レベルで阻止される | `INSERT ... ON CONFLICT` で 23505 エラーが発生すること |
+| 既存データへの影響なし | migration 実行後 既存行数が変わらないこと |
 
 ### [M-2] company_discord.guild_id 追加（migration 必須・Shingo GO）
 
@@ -43,9 +43,9 @@ migrations/20260612_110000_add_company_discord_guild_id.sql
 - `ALTER TABLE company_discord ADD COLUMN IF NOT EXISTS guild_id VARCHAR(50)`
 - 会社レベルの Discord リンク生成に guild_id を使えるようにする（ADR-098 G2 補完）
 
-**合格基準** | **検証方法**
---- | ---
-guild_id 列が全テナントの company_discord に存在 | `\d tenant_001.company_discord` で確認
+| 基準 | 検証方法 |
+|------|----------|
+| guild_id 列が全テナントの company_discord に存在 | `\d tenant_001.company_discord` で確認 |
 
 ### [B-1] setup_tenant.py + sync_tenant_schema.py に catch-up 追加（コードのみ・CI 緑で可）
 
@@ -70,10 +70,10 @@ guard: `loser` が deals/orders/quotes/invoices を持つ場合は 400 ブロッ
 5. loser 削除
 6. 監査ログ 2 件
 
-**合格基準** | **検証方法**
---- | ---
-正常統合で loser が削除され master に FK 付け替えが完了 | POST 後に loser の GET が 404
-guard 違反で 400 が返る | deal 付き contact を loser 指定 → 400
+| 基準 | 検証方法 |
+|------|----------|
+| 正常統合で loser が削除され master に FK 付け替えが完了 | POST 後に loser の GET が 404 |
+| guard 違反で 400 が返る | deal 付き contact を loser 指定 → 400 |
 
 ### [F-1] ContactChannelForm（フロントエンド・CI 緑で可）
 
