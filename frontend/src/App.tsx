@@ -8,6 +8,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/login/LoginPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
+import FollowUpsPage from "./pages/dashboard/FollowUpsPage";
+import FunnelLeadsPage from "./pages/dashboard/FunnelLeadsPage";
+import FunnelRevenuePage from "./pages/dashboard/FunnelRevenuePage";
+import FunnelReasonsPage from "./pages/dashboard/FunnelReasonsPage";
 import GoalSettingPage from "./pages/goal-setting/GoalSettingPage";
 import CompaniesPage from "./pages/companies/CompaniesPage";
 import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
@@ -127,6 +131,10 @@ function App() {
                   }
                 >
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/dashboard/follow-ups" element={<FollowUpsPage />} />
+                  <Route path="/dashboard/leads" element={<FunnelLeadsPage />} />
+                  <Route path="/dashboard/revenue" element={<FunnelRevenuePage />} />
+                  <Route path="/dashboard/reasons" element={<FunnelReasonsPage />} />
                   <Route path="/goals/settings" element={<GoalSettingPage />} />
 
                   {/* 旧ルート後方互換リダイレクト（/crm/* ハブへ転送） */}
