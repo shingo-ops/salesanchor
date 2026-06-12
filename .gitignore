@@ -74,6 +74,8 @@ sheets/
 !.claude/agents/
 !.claude/settings.json
 !.claude/agent-config.sh
+!.claude/hooks/
+!.claude/hooks/*.sh
 CLAUDE.local.md
 
 # Claude Code エージェント作業artefact（worktree並行作業・Evaluator実行で生成）
