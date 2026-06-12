@@ -54,6 +54,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
   - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
 - **develop にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで feature ブランチで待機し develop にマージしない。develop は待合室ではない。
+- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）単独。Hikky-devのApproveバイパスは廃止
 - **リリース PR 作成時**は `git diff main...develop --name-only` で変更ファイル一覧を PR 本文に記載。危険パスが含まれたら停止して PO 確認。
 
 ---

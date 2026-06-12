@@ -24,6 +24,8 @@ const {
   classifyFile,
   classifyChanges,
   parseSOPDeclaration,
+  parseGORecord,
+  validateGORecord,
   normalizeCitationPath,
   extractFileCitations,
   hasFileCitations,
@@ -85,6 +87,11 @@ function validDesignContent(reconPath, adr) {
   return `# 設計 — test\n**対象ADR**: ${adr}\n**recon**: ${reconPath}\n\n## 外部・過去事例の参照と我々への応用\n該当なし：今回は小規模修正のため外部事例は不要と判断\n\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テストが通る | pytest tests/test_xxx.py |\n`;
 }
 
+/** 正常なGO記録セクション */
+function validGORecordSection(prNumber) {
+  return `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #${prNumber}\n- バックアップ確認: あり\n`;
+}
+
 // ─── テストスイート ───────────────────────────────────────────────────────────
 
 console.log('\n=== process-artifacts gate テスト（design.md §7）===\n');
@@ -109,8 +116,9 @@ test('deploy.yml は dangerous 区分', () => {
   assert.strictEqual(classifyFile('.github/workflows/deploy.yml'), 'dangerous');
 });
 
-test('aeon-dispatch.sh は dangerous 区分', () => {
+test('scripts/ は dangerous 区分', () => {
   assert.strictEqual(classifyFile('scripts/aeon-dispatch.sh'), 'dangerous');
+  assert.strictEqual(classifyFile('scripts/check-process-artifacts.js'), 'dangerous');
 });
 
 test('frontend/src/ は real-code 区分', () => {
@@ -163,6 +171,101 @@ test('緊急モードを検出', () => {
 test('セクションがない場合は null', () => {
   const d = parseSOPDeclaration('## なぜ\nなし\n');
   assert.strictEqual(d, null);
+});
+
+// ── ユニットテスト: GO記録パース ─────────────────────────────────────────────
+console.log('\n【GO記録パーステスト】');
+
+test('全フィールド揃いのGO記録をパース', () => {
+  const body = `## 変更概要\ntest\n\n${validGORecordSection(2099)}\n\n## その他\n`;
+  const r = parseGORecord(body);
+  assert.ok(r, 'GORecordがnull');
+  assert.ok(r.issuer && r.issuer.includes('Shingo'));
+  assert.ok(r.date && r.date.includes('2026'));
+  assert.strictEqual(r.goText, 'GO #2099');
+  assert.strictEqual(r.backup, 'あり');
+});
+
+test('GO記録セクションなし → null', () => {
+  const r = parseGORecord('## 変更概要\ntest\n');
+  assert.strictEqual(r, null);
+});
+
+test('GO発行者なし → issuer: null', () => {
+  const body = `### GO記録\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const r = parseGORecord(body);
+  assert.ok(r);
+  assert.strictEqual(r.issuer, null);
+});
+
+test('GO原文なし → goText: null', () => {
+  const body = `### GO記録\n- GO発行者: Shingo\n- 日時: 2026-06-13 10:00 JST\n- バックアップ確認: あり\n`;
+  const r = parseGORecord(body);
+  assert.ok(r);
+  assert.strictEqual(r.goText, null);
+});
+
+test('バックアップ確認なし → backup: null', () => {
+  const body = `### GO記録\n- GO発行者: Shingo\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n`;
+  const r = parseGORecord(body);
+  assert.ok(r);
+  assert.strictEqual(r.backup, null);
+});
+
+// ── ユニットテスト: GO記録検証 ───────────────────────────────────────────────
+console.log('\n【GO記録検証テスト】');
+
+test('正常GO記録（PR番号一致）→ エラーなし', () => {
+  const r = parseGORecord(validGORecordSection(2099));
+  const errors = validateGORecord(r, '2099');
+  assert.deepStrictEqual(errors, []);
+});
+
+test('GO記録なし（null）→ セクション未記入エラー', () => {
+  const errors = validateGORecord(null, '2099');
+  assert.ok(errors.length > 0);
+  assert.ok(errors[0].includes('GO記録'));
+});
+
+test('GO発行者が権限外 → 権限外エラー', () => {
+  const body = `### GO記録\n- GO発行者: Hikky-dev\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.ok(errors.some(e => e.includes('権限外') || e.includes('GO権限')));
+});
+
+test('GO原文の書式不正（番号なし）→ 書式不正エラー', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO\n- バックアップ確認: あり\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.ok(errors.some(e => e.includes('書式不正') || e.includes('番号のないGO')));
+});
+
+test('GO原文のPR番号不一致 → 番号不一致エラー', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #9999\n- バックアップ確認: あり\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.ok(errors.some(e => e.includes('番号不一致') || e.includes('9999')));
+});
+
+test('バックアップ確認未記入 → バックアップエラー', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.ok(errors.some(e => e.includes('バックアップ')));
+});
+
+test('バックアップ確認「該当なし」→ エラーなし（DB非接触の危険変更向け）', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: 該当なし\n`;
+  const r = parseGORecord(body);
+  const errors = validateGORecord(r, '2099');
+  assert.deepStrictEqual(errors, [], '「該当なし」はバックアップ確認として有効');
+});
+
+test('PR番号未指定時は番号一致チェックをスキップ', () => {
+  const r = parseGORecord(validGORecordSection(9999));
+  const errors = validateGORecord(r, null); // prNumber=null → スキップ
+  assert.deepStrictEqual(errors, []);
 });
 
 // ── ユニットテスト: file:line 引用検証 ───────────────────────────────────────
@@ -266,7 +369,6 @@ test('バッククォートなし・存在しないファイル → エラー検
 
 test('URL は引用として扱わない', () => {
   const content = '参考: https://github.com/owner/repo:42 を参照';
-  // URL 形式はスキップされるので引用なしと同等
   const errors = validateFileCitations(content);
   assert.deepStrictEqual(errors, [], 'URL はファイル引用としてチェックしない');
 });
@@ -298,70 +400,110 @@ test('AC3: 検証方法が空の受け入れ基準はfail', () => {
   assert.ok(errors.some(e => e.includes('検証方法が空')));
 });
 
-// ── §7 AC4: 危ない変更で承認なしは即 fail ────────────────────────────────────
-test('AC4: 危ない変更＋承認なし → 承認必須メッセージで即fail', () => {
+// ── §7 AC4: 危ない変更でGO記録なしはfail ────────────────────────────────────
+test('AC4: 危ない変更＋GO記録なし → GO記録必須メッセージで即fail', () => {
   const result = runScript({
     CHANGED_FILES: 'migrations/001_test.sql',
-    MOCK_APPROVALS: '',
     MOCK_PR_BODY: '',
   });
-  assert.notStrictEqual(result.code, 0, '承認なしでfailするべき（exit != 0）');
+  assert.notStrictEqual(result.code, 0, 'GO記録なしでfailするべき（exit != 0）');
   assert.ok(
     result.stderr.includes('PROCESS ARTIFACTS GATE FAILED'),
     'GATE FAILED メッセージが出るべき'
   );
   assert.ok(
-    result.stderr.includes('Approve') || result.stderr.includes('承認者'),
-    '承認要求メッセージが出るべき'
+    result.stderr.includes('GO記録') || result.stderr.includes('GO #'),
+    'GO記録要求メッセージが出るべき'
   );
 });
 
-test('AC4-edge: 危ない変更＋承認なし＋成果物が完全に揃っていても fail（PR #2063 再発防止）', () => {
-  // PR #2063 で発覚したバグ: artifacts 完備でも承認なしは通らない
+test('AC4-edge: 危ない変更＋GO記録なし＋成果物完備でも fail', () => {
+  // 成果物が完備でもGO記録がなければdangerous PRはfail
   setupTmp();
   try {
     const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
     const reconContent = validReconContent(scriptRelPath, 1);
-    const reconRelPath = writeTmp('danger-no-approve/recon.md', reconContent);
+    const reconRelPath = writeTmp('danger-no-go/recon.md', reconContent);
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
-    const designRelPath = writeTmp('danger-no-approve/design.md', designContent);
+    const designRelPath = writeTmp('danger-no-go/design.md', designContent);
     const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
 
     const result = runScript({
       CHANGED_FILES: 'migrations/001_test.sql',
-      MOCK_APPROVALS: '',
       MOCK_PR_BODY: body,
     });
-    assert.notStrictEqual(result.code, 0, '成果物完備でも承認なしはfailするべき（PR #2063 再発防止）');
+    assert.notStrictEqual(result.code, 0, '成果物完備でもGO記録なしはfailするべき');
     assert.ok(
-      result.stderr.includes('Approve') || result.stderr.includes('承認者'),
-      '承認要求メッセージが出るべき'
+      result.stderr.includes('GO記録') || result.stderr.includes('GO #'),
+      'GO記録要求メッセージが出るべき'
     );
   } finally {
     cleanupTmp();
   }
 });
 
-test('AC4: 危ない変更で自己申告免除"だけ"はfail', () => {
+test('AC4-bad-format: GO原文の書式不正（番号なし）→ fail', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '書式不正はfailするべき');
+  assert.ok(
+    result.stderr.includes('書式不正') || result.stderr.includes('番号のないGO'),
+    '書式不正メッセージが出るべき'
+  );
+});
+
+test('AC4-number-mismatch: GO原文のPR番号不一致 → fail', () => {
+  const body = `### GO記録\n- GO発行者: Shingo（shingo-ops）\n- 日時: 2026-06-13 10:00 JST\n- GO原文: GO #9999\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '番号不一致はfailするべき');
+  assert.ok(
+    result.stderr.includes('番号不一致') || result.stderr.includes('9999'),
+    '番号不一致メッセージが出るべき'
+  );
+});
+
+test('AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須）', () => {
   const body = `### 標準ワークフロー確認\n- [x] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n`;
   const result = runScript({
     CHANGED_FILES: 'migrations/001_test.sql',
-    MOCK_APPROVALS: '',
     MOCK_PR_BODY: body,
   });
   assert.notStrictEqual(result.code, 0);
 });
 
-// ── §7 AC5: 緊急承認PRはpass＋宿題待ち起票 ──────────────────────────────────
-test('AC5: 緊急承認PRはpass（issue起票はPR_NUMBER未設定時にスキップ）', () => {
-  const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-1\n- recon: docs/handoff/x/recon.md\n- 設計: docs/handoff/x/design.md\n- （危ない変更の特例時）モード: 緊急 ＋ 承認者: shingo-ops\n`;
+// ── §7 AC5: GO記録あり（全フィールド正常）→ pass ────────────────────────────
+test('AC5: 危ない変更＋正常GO記録（PR番号一致）→ pass', () => {
+  const body = validGORecordSection(2099);
   const result = runScript({
     CHANGED_FILES: 'migrations/001_test.sql',
-    MOCK_APPROVALS: 'shingo-ops',
     MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
   });
   assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
-  assert.ok(result.stdout.includes('緊急承認') || result.stdout.includes('pass'));
+  assert.ok(result.stdout.includes('GO記録確認済み') || result.stdout.includes('pass'));
+});
+
+test('AC5: 危ない変更＋正常GO記録（緊急モード）→ pass＋宿題起票試行', () => {
+  const sopSection = `### 標準ワークフロー確認\n- （危ない変更の特例時）モード: 緊急\n`;
+  const goSection = validGORecordSection(2099);
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: sopSection + '\n' + goSection,
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+  assert.ok(
+    result.stdout.includes('緊急') || result.stdout.includes('pass'),
+    '緊急GO passメッセージが出るべき'
+  );
 });
 
 // ── §7 AC6: 書類のみPRは自動スキップ ────────────────────────────────────────
