@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user, set_tenant_context
 from app.auth.schemas import UserRegister, UserResponse
-from app.auth.utils import hash_password, set_tenant_claim
+from app.auth.utils import set_tenant_claim
 from app.cache import (
     blacklist_token,
     invalidate_user_permissions,
@@ -33,13 +33,11 @@ async def register_user(
       ① 管理者権限を確認
       ② tenant_codeからテナントを検索
       ③ 同じメールアドレスのユーザーがいないか確認（いれば409）
-      ④ パスワードをbcryptでハッシュ化（平文は保存しない）
-      ⑤ usersテーブルにユーザーを作成
+      ④ usersテーブルにユーザーを作成
+      ⑤ Firebaseカスタムクレームにテナントを設定
 
     注意:
-      - このAPIで登録した後、ユーザーはFirebase Authenticationにも
-        アカウントを作成する必要がある（フロントエンド側で実施）
-      - パスワードはDB側のバックアップ認証用（Firebase障害時のフォールバック）
+      - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。
     """
     # 管理者権限チェック
     if current_user.role != "admin":
@@ -72,12 +70,11 @@ async def register_user(
             detail="このメールアドレスは既に登録されています",
         )
 
-    # ユーザー作成（パスワードはbcryptハッシュ化して保存）
+    # ユーザー作成（認証は Firebase が担当、DB にパスワードは保存しない）
     user = User(
         tenant_id=tenant.id,
         username=data.username,
         email=data.email,
-        password_hash=hash_password(data.password),
         full_name=data.full_name,
         role="user",
         is_active=True,

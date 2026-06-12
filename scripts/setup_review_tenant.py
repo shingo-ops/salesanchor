@@ -274,15 +274,14 @@ async def _create_staff_record(
     return staff_id
 
 
-async def _setup_user(engine, tenant_id: int, firebase_uid: str, password_hash: str) -> int:
+async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
     """public.users にユーザーを登録・付け替え、staff レコードを作成する。
 
     AC-3 適合: public.users.tenant_id の UPDATE は公開スキーマへの変更であり、
     既存業務テナント（tenant_004 等）のスキーマデータには一切手を加えない。
     既存テナントの staff レコードはそのまま保持する。
+    認証は Firebase が担当するため password_hash は保存しない。
     """
-    from app.auth.utils import hash_password as _hash  # noqa: F401 型確認用
-
     schema_name = f"tenant_{tenant_id:03d}"
 
     async with engine.begin() as conn:
@@ -299,11 +298,10 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str, password_hash: 
                     text("""
                         UPDATE public.users
                         SET tenant_id = :new_tid,
-                            password_hash = :hash,
                             is_active = TRUE
                         WHERE id = :uid
                     """),
-                    {"new_tid": tenant_id, "hash": password_hash, "uid": user_id},
+                    {"new_tid": tenant_id, "uid": user_id},
                 )
                 logger.info(
                     "  public.users: %s を tenant_id=%d → %d に付け替え (id=%d)",
@@ -311,24 +309,23 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str, password_hash: 
                 )
             else:
                 await conn.execute(
-                    text("UPDATE public.users SET password_hash = :hash, is_active = TRUE WHERE id = :uid"),
-                    {"hash": password_hash, "uid": user_id},
+                    text("UPDATE public.users SET is_active = TRUE WHERE id = :uid"),
+                    {"uid": user_id},
                 )
-                logger.info("  public.users: 既存ユーザー (id=%d) パスワード更新", user_id)
+                logger.info("  public.users: 既存ユーザー (id=%d) 確認", user_id)
         else:
             row = (await conn.execute(
                 text("""
                     INSERT INTO public.users (
-                        tenant_id, username, email, password_hash, full_name, role, is_active
+                        tenant_id, username, email, full_name, role, is_active
                     )
-                    VALUES (:tid, :username, :email, :hash, :fullname, 'user', TRUE)
+                    VALUES (:tid, :username, :email, :fullname, 'user', TRUE)
                     RETURNING id
                 """),
                 {
                     "tid": tenant_id,
                     "username": REVIEW_DISPLAY_NAME,
                     "email": REVIEW_EMAIL,
-                    "hash": password_hash,
                     "fullname": REVIEW_DISPLAY_NAME,
                 },
             )).first()
@@ -442,7 +439,7 @@ Demo Customer 数: {len(DEMO_CUSTOMERS)} 件
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    from app.auth.utils import generate_password, hash_password
+    from app.auth.utils import generate_password
 
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -464,7 +461,6 @@ async def main() -> None:
 
         # 3. Firebase ユーザー準備
         password = generate_password()
-        password_hash = hash_password(password)
 
         _init_firebase()
         existing_uid = _firebase_get_uid(REVIEW_EMAIL)
@@ -475,7 +471,7 @@ async def main() -> None:
             firebase_uid = _firebase_create_user(REVIEW_EMAIL, password, REVIEW_DISPLAY_NAME)
 
         # 4. DB ユーザー登録・テナント付け替え（冪等）
-        await _setup_user(engine, tenant_id, firebase_uid, password_hash)
+        await _setup_user(engine, tenant_id, firebase_uid)
 
         # 5. Demo Customer × 7 シード（冪等）
         await _seed_demo_customers(engine, tenant_id)
