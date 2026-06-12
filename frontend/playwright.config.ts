@@ -43,6 +43,15 @@ export default defineConfig({
     navigationTimeout: 30_000,
   },
 
+  expect: {
+    toHaveScreenshot: {
+      // アンチエイリアス差（~0.3%）を吸収しつつ、5px+ の配置ズレを検出するしきい値
+      maxDiffPixelRatio: 0.005,
+      // ピクセルごとの色距離（0〜1）: 0.15 = サブピクセル差を許容
+      threshold: 0.15,
+    },
+  },
+
   projects: [
     {
       name: "chromium",
