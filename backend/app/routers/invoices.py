@@ -129,7 +129,8 @@ _INVOICE_COLUMNS = """
     notes, created_by, created_at, updated_at,
     ship_to_snapshot, bill_to_snapshot, issue_mode,
     duty_amount, duty_policy_snapshot, fx_rate_snapshot,
-    paypal_order_id, paypal_approval_url, payment_fee, paypal_invoicer_view_url
+    paypal_order_id, paypal_approval_url, payment_fee,
+    paypal_invoicer_view_url, paypal_copy_pdf_at
 """
 
 _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}

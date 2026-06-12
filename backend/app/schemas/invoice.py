@@ -132,6 +132,7 @@ class InvoiceResponse(BaseModel):
     payment_fee: Decimal | None = None
     # ADR-101改訂(2) Inc1: 発行者ビュー URL（原本ワンクリック）。写しPDF blob は Response に含めない
     paypal_invoicer_view_url: str | None = None
+    paypal_copy_pdf_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

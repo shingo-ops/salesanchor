@@ -81,8 +81,9 @@ interface InvoiceDetail {
   paypal_order_id: string | null;
   paypal_approval_url: string | null;
   payment_fee: number | null;
-  // ADR-101改訂(2) Inc1: 発行者ビュー（原本ワンクリック）
+  // ADR-101改訂(2) Inc1: 発行者ビュー（原本ワンクリック）＋写しPDF保存日時
   paypal_invoicer_view_url: string | null;
+  paypal_copy_pdf_at: string | null;
 }
 
 export default function InvoiceDetailPage() {
@@ -210,7 +211,9 @@ export default function InvoiceDetailPage() {
             {invoice.paypal_invoicer_view_url && (
               <a className="btn-secondary" href={invoice.paypal_invoicer_view_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openOriginal")}</a>
             )}
-            <button className="btn-secondary" onClick={handleDownloadCopyPdf}>{t("invoices.paypal.downloadCopyPdf")}</button>
+            {invoice.paypal_copy_pdf_at && (
+              <button className="btn-secondary" onClick={handleDownloadCopyPdf}>{t("invoices.paypal.downloadCopyPdf")}</button>
+            )}
           </div>
         </div>
       )}
