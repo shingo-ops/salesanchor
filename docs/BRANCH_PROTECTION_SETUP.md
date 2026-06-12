@@ -127,7 +127,30 @@ gh pr create --base develop --head feature/morimoto/redo-business-address --titl
 
 ## 4. 緊急時の admin bypass 記録
 
-Ruleset の bypass を使った場合、以下にログを残す:
+### 4-A. break-glass マージ手順（通常 Approve なしで緊急マージが必要な場合）
+
+**適用条件**: 本番障害の復旧のみ（機能追加・通常 hotfix には使わない）
+
+| 手順 | 内容 |
+|------|------|
+| ① | PR タイトルの先頭に `EMERGENCY:` と理由を明記（例: `EMERGENCY: cannot drop columns from view 本番障害`） |
+| ② | Shingo（PO）に即時報告（Slack / 口頭）— 承認前でも後でも構わないが報告は必須 |
+| ③ | マージ後 24 時間以内に事後 Approve（Shingo `shingo-ops` が当該 PR を GitHub 上で Approve）を取得 |
+| ④ | 下記「4-B. 緊急マージ（0-Approve）ログ」に1行追記 |
+
+**このルールは CLAUDE.md ブランチ運用ルール§緊急 break-glass に同期記載。**
+
+### 4-B. 緊急マージ（0-Approve）ログ
+
+通常 Approve なしでマージされた PR の記録:
+
+| 日時 | PR | 内容 | 承認状況 | 事後Approve |
+|------|----|----|---------|------------|
+| 2026-06-12 14:53 JST | #2063 | hotfix: v_company_stats migration スキップガード追加（再デプロイ安全） | 0 Approve（shingo-cc がマージ） | ✅ 済み（[shingo-ops コメント](https://github.com/shingo-ops/salesanchor/pull/2063#issuecomment-4692791190) 2026-06-12） |
+
+### 4-C. Ruleset bypass ログ（CI Required Check をスキップした場合）
+
+Ruleset の bypass actor 権限を使って Required Status Check をスキップした場合、以下にログを残す:
 
 | 日時 | 緊急度 | 内容 | bypass 理由 | commit |
 |---|---|---|---|---|
