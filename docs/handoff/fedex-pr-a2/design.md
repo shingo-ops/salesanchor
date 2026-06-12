@@ -15,6 +15,7 @@
 | フル値が露出しないこと | 8文字未満の client_id はそのまま返す（短縮不能を防ぐ） |
 
 関連 ADR: ADR-125（FedEx Rates Stage1 — client_id_hint フィールド仕様定義元）
+recon 参照: docs/handoff/fedex-pr-a2/recon.md
 
 ## ② CSS 標準合わせ
 
