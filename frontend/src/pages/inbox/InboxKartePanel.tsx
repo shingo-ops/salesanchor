@@ -297,15 +297,17 @@ function ActionBar({
           >
             {t("registration.generateAddressLink")}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="karte-overflow-item"
-            disabled={regLinkLoading}
-            onClick={() => generateLink("change_billing")}
-          >
-            {t("registration.generateChangeBillingLink")}
-          </button>
+          {status === "existing_customer" && (
+            <button
+              type="button"
+              role="menuitem"
+              className="karte-overflow-item"
+              disabled={regLinkLoading}
+              onClick={() => generateLink("change_billing")}
+            >
+              {t("registration.generateChangeBillingLink")}
+            </button>
+          )}
           {regLink && (
             <div className="karte-overflow-link" style={{ padding: "var(--spacing-2)", wordBreak: "break-all", fontSize: "var(--font-size-xs)" }}>
               <a href={regLink} target="_blank" rel="noopener noreferrer">{regLink}</a>
