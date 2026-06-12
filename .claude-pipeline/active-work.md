@@ -124,6 +124,7 @@
 | feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
 | feature/morimoto/design-site-auth-postapproval | （記入してください） | 2026-06-12 18:22 | IN_PROGRESS | | | |
 | feature/morimoto/nginx-force-recreate | （記入してください） | 2026-06-12 18:23 | IN_PROGRESS | | | |
+| feature/morimoto/sa04-plan-update | SA-04-plan.md ⑤本番反映更新（PR #2023） | 2026-06-12 | REVIEW | #2023 | | |
 ---
 
 ## 記入例
