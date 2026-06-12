@@ -857,38 +857,74 @@ jobs:
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
 
-      - name: 全タイムスタンプ SQL マイグレーションを順次実行（run_all_migrations.sh の記載順）
+      - name: 1周目：全タイムスタンプ SQL を順次実行（新規適用）
         # 対象: migrations/20260604_*.sql 以降（タイムスタンプ形式）のみ
         # 番号付き migration（013-100）と初期タイムスタンプ（20260601-20260603）は
         # Python migration や numbered migration が作るカラムに依存するため除外。
         # 20260604 以降は本 CI の base schema + Sprint 1 でカバーされる。
         # これらは既存の migration-test-run ジョブで変更時のみ検証される。
         run: |
-          echo "🔍 run_all_migrations.sh から 20260604 以降のタイムスタンプ SQL の順序を取得..."
-          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026060[4-9]' || echo 0)
-          TOTAL2=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026061' || echo 0)
-          TOTAL2b=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -c '^migrations/2026062' || echo 0)
-          TOTAL=$((TOTAL + TOTAL2 + TOTAL2b))
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 1周目（新規適用）開始"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+            | grep -cE '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
           echo "対象 SQL ファイル数（20260604〜形式）: ${TOTAL}"
           STEP=0
 
-          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' | while read sqlfile; do
+          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+            | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
+            | while read sqlfile; do
             [ -z "$sqlfile" ] && continue
             STEP=$((STEP + 1))
             if [ ! -f "$sqlfile" ]; then
-              echo "⚠️  [${STEP}/${TOTAL}] ファイルなし、スキップ: $sqlfile"
+              echo "⚠️  [1周目 ${STEP}/${TOTAL}] ファイルなし、スキップ: $sqlfile"
               continue
             fi
-            echo "▶ [${STEP}/${TOTAL}] $sqlfile..."
+            echo "▶ [1周目 ${STEP}/${TOTAL}] $sqlfile..."
             if ! psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"; then
-              echo "❌ [${STEP}/${TOTAL}] 失敗: $sqlfile"
+              echo "❌ [1周目 ${STEP}/${TOTAL}] 失敗: $sqlfile"
               exit 1
             fi
-            echo "✅ [${STEP}/${TOTAL}] $sqlfile"
+            echo "✅ [1周目 ${STEP}/${TOTAL}] $sqlfile"
           done
 
           echo ""
-          echo "✅ タイムスタンプ形式全件ドライラン完了"
+          echo "✅ 1周目（新規適用）完了"
+
+      - name: 2周目：全タイムスタンプ SQL を再実行（冪等性チェック＝再デプロイ安全性）
+        # 1周目適用済み状態に対して同じ SQL を全件再実行する。
+        # これにより「次回デプロイ時に同じ migration が再実行されたとき安全か」を機械的に検証。
+        # 今日の本番失敗型（CREATE OR REPLACE VIEW でカラム数が減る → cannot drop columns from view）は
+        # 1周目で新版 SQL が列を追加した後に 2周目で旧版 SQL が少ない列で置換しようとして検出される。
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔄 2周目（冪等性チェック）開始"
+          echo "   ※ 1周目適用済み状態への再実行 = 本番再デプロイ安全性の検証"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+            | grep -cE '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
+          STEP=0
+
+          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+            | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
+            | while read sqlfile; do
+            [ -z "$sqlfile" ] && continue
+            STEP=$((STEP + 1))
+            if [ ! -f "$sqlfile" ]; then
+              continue
+            fi
+            echo "▶ [2周目 ${STEP}/${TOTAL}] $sqlfile..."
+            if ! psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"; then
+              echo "❌ [2周目 ${STEP}/${TOTAL}] 冪等性チェック失敗: $sqlfile"
+              echo "   ↑ 本番再デプロイ時に同じエラーが発生します（migration を修正してください）"
+              exit 1
+            fi
+            echo "✅ [2周目 ${STEP}/${TOTAL}] $sqlfile"
+          done
+
+          echo ""
+          echo "✅ 2周目（冪等性チェック）完了 — 再デプロイ安全性 OK"
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
