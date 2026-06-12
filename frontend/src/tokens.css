@@ -216,6 +216,7 @@
 
   /* ---- Form controls ---- */
   --size-lang-select-min: 120px;  /* 言語選択プルダウン最小幅 */
+  --size-carrier-label-col: 120px; /* キャリア設定カード: ラベル列幅 */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
