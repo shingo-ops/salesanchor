@@ -40,7 +40,8 @@ function StepHeader({ num, title, done }: { num: number; title: string; done?: b
     <div className="lv-step-header">
       <span className={`lv-step-num ${done ? "lv-step-num--done" : ""}`}>{num}</span>
       <strong>{title}</strong>
-      {done && <span className="lv-step-badge-done">✓</span>}
+      {/* done indicator is CSS-only (::after pseudo-element) to avoid hardcoded non-i18n characters */}
+      {done && <span className="lv-step-badge-done" aria-label="done" />}
     </div>
   );
 }

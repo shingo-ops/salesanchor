@@ -144,7 +144,7 @@ async def get_credentials(db, tenant_id: int, carrier: str, environment: str = "
     return {
         "client_id": encryption.decrypt(rec[0]),
         "client_secret": encryption.decrypt(rec[1]),
-        "environment": rec[2] or "sandbox",
+        "environment": rec[2] or "production",  # NULL 安全フォールバック（ADR-125: 既存行は production）
         "account_number": account_number,
     }
 

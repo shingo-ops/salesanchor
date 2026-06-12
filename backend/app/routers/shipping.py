@@ -766,7 +766,9 @@ async def lv_download_cover_sheet(
     creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment="sandbox")
     account_number = creds["account_number"] if creds else None
 
-    pdf_bytes = lv.generate_cover_sheet_pdf(
+    # M1: reportlab は CPU バウンド処理のためスレッドプールで実行
+    pdf_bytes = await asyncio.to_thread(
+        lv.generate_cover_sheet_pdf,
         company_name=profile.get("company_name"),
         company_name_en=profile.get("company_name_en"),
         address=profile.get("address"),

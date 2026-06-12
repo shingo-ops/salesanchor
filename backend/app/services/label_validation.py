@@ -28,6 +28,7 @@ from reportlab.pdfgen import canvas
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import tenant_table_ref
 from app.services.po_renderer import register_japanese_font
 
 logger = logging.getLogger(__name__)
@@ -48,11 +49,12 @@ _SERVICES = [
 
 async def get_tenant_profile(db: AsyncSession, tenant_id: int) -> dict:
     """テナントプロフィールを取得する。"""
-    schema = f"tenant_{int(tenant_id):03d}"
+    # M2: tenant_table_ref を使用して SQLite(pytest) / PostgreSQL の差異を吸収する
+    tp = tenant_table_ref(db, tenant_id, "tenant_profile")
     row = (await db.execute(
         text(f"""
             SELECT company_name, company_name_en, address, phone, email
-            FROM {schema}.tenant_profile
+            FROM {tp}
             ORDER BY id LIMIT 1
         """),
     )).mappings().first()
@@ -142,10 +144,8 @@ def generate_cover_sheet_pdf(
     # ── FedEx アカウント ─────────────────────────────────────────────
     y = section_title("FedEx Account Information（FedExアカウント情報）", y)
     y = labeled_field("Account Number:", account_number, y)
-    text_line("（Note: Account number registered in Sandbox environment for Label Validation）",
-              margin_l, y, size=8)
-    c.setFillColorRGB(0.5, 0.5, 0.5)
     c.setFont(font, 8)
+    c.setFillColorRGB(0.5, 0.5, 0.5)
     c.drawString(margin_l, y, "（Note: Account number registered in Sandbox environment for Label Validation）")
     c.setFillColorRGB(0, 0, 0)
     y -= 12 * mm

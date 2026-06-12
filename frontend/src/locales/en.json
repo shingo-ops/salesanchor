@@ -76,7 +76,8 @@
     "devOnly": "DEV only",
     "unitMan": "万",
     "unitOku": "億",
-    "unitMonth": ""
+    "unitMonth": "",
+    "colon": ": "
   },
   "nav": {
     "dashboard": "Dashboard",

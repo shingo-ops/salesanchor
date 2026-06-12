@@ -333,8 +333,8 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
                 {result.ok
                   ? t("carrierIntegration.successMsg")
                   : t("carrierIntegration.failMsg")}
-                ：{result.message}
-                {result.status_code ? `（HTTP ${result.status_code}）` : ""}
+                {t("common.colon")}{result.message}
+                {result.status_code ? ` (HTTP ${result.status_code})` : ""}
               </p>
             )}
           </section>
