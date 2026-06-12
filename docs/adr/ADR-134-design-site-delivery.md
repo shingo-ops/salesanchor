@@ -76,3 +76,23 @@ ADR-095〜106（SAシリーズ）の設計意図を非技術者向けに図解�
 - 進捗正本: `docs/plans/sa-progress/00-SA-OVERVIEW.md`
 - 変換スクリプト: `scripts/design-site/generate-progress-json.py`
 - smoke: `scripts/smoke/design-site-smoke.sh`
+
+---
+
+## 事故記録
+
+### INC-001 — migration 013 失敗→fail-closed→/design/ 自動遮断（2026-06-12）
+
+**発生**: 2026-06-12T17:28 UTC（deploy run #27431943512）  
+**影響**: `/design/` が 403 Forbidden となり、設計図書サイトに接続不可。本番アプリへの機能影響なし（health check 通過）。
+
+**経過**:  
+PR #2068（ファネルダッシュボード PR1、merged 2026-06-12T15:00 UTC）に含まれる `migrations/20260613_030000_funnel_leads_initiative_channel.sql`（`scripts/run_all_migrations.sh:387行目`）が ADR-138 §D1-3 クリーンスレート方針に基づき全テナントの `leads.source` 列を `DROP COLUMN IF EXISTS` した。  
+同日 16:44 UTC のデプロイ（run #27429644941）で当該 migration が初めて本番実行され、`leads.source` が全テナントから消滅。  
+続く 17:28 UTC のデプロイで `migrations/013_add_meta_webhook_idempotency.sql`（`run_all_migrations.sh:74行目`、step [2/145]）が `SELECT source FROM tenant_001.leads` を実行し `ERROR: column "source" does not exist` で終了。`set -e` により migration ステップ全体が即停止。smoke tests がスキップされ、ADR-134 §D（`Emergency block /design/ on smoke FAIL`）が htpasswd ファイルを削除・nginx を再起動、`/design/` を fail-closed（403）に遮断した。
+
+**根本原因**: `run_all_migrations.sh` は毎デプロイ全 migration を最初から再実行するが、migration 状態テーブルを持たない。migration 013（step 2）は `leads.source` の存在を前提としていたが、後続の migration 20260613_030000（step ~100相当）が同列を DROP した結果、次のデプロイから 013 が常に失敗する構造になった。migration 順序の後ろ方向依存（early migration → column 存在前提、late migration → column 廃止）が顕在化したケース。
+
+**修正**: PR #2084 — `migrations/013_add_meta_webhook_idempotency.sql` に `information_schema` チェックを追加し、`source` 列が欠落している場合は `ADD COLUMN IF NOT EXISTS source VARCHAR(50)` でスキーマを修復してから続行するよう変更（`migrations/013_add_meta_webhook_idempotency.sql:53-70`）。後続の 20260613_030000 が引き続き同列を DROP するため、毎デプロイ「013 が source を復元 → 20260613_030000 が DROP」というサイクルになるが、動作は安全かつ冪等。
+
+**自己修復の動作確認**: 次の成功デプロイで htpasswd が `Setup design-site htpasswd (idempotent)` ステップにより再生成、nginx 再起動後に `/design/` が 401 → 200 に復旧することで、fail-closed ブロックが自動解除される。
