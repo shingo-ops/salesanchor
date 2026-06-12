@@ -6,6 +6,7 @@
 # smoke②: 認証あり → 200
 # smoke③: progress.json → 200 + valid JSON with generated_at
 # smoke④: /api/health + /grafana/api/health → 200（既存経路確認）
+# smoke⑤: スラッシュなし → 301
 #
 # 環境変数:
 #   DESIGN_SMOKE_CRED  - "user:password" 形式（DESIGN_SITE_SMOKE_CRED Secret から）
@@ -35,6 +36,11 @@ echo "=== SA設計図書サイト smoke ==="
 _code=$(curl -s -o /dev/null -w "%{http_code}" \
   --max-time 10 "${BASE_URL}/design/" 2>/dev/null || echo "FAIL")
 check "smoke① 認証なし=401" "401" "${_code}"
+
+# smoke⑤: 末尾スラッシュなし → 301（SPA catch-all 落下防止確認）
+_code=$(curl -s -o /dev/null -w "%{http_code}" \
+  --max-time 10 "${BASE_URL}/design" 2>/dev/null || echo "FAIL")
+check "smoke⑤ スラッシュなし=301" "301" "${_code}"
 
 # smoke②③: DESIGN_SMOKE_CRED が設定済みの場合のみ実行
 if [ -n "${DESIGN_SMOKE_CRED:-}" ]; then

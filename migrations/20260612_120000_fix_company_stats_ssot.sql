@@ -1,4 +1,4 @@
--- ADR-136: v_company_stats SSOT 修正
+-- ADR-137: v_company_stats SSOT 修正
 -- 取引額集計のフィルタを `status != 'cancelled'` から
 -- `paid_at IS NOT NULL AND voided_at IS NULL` へ変更し、
 -- ADR-108 の公式定義に統一する。
