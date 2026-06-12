@@ -28,23 +28,40 @@ BEGIN
         -- ============================================================
         -- C2: meta_messages に message_id 列を追加
         --     NULL許可（既存行・mid未取得メッセージへの影響なし）
+        --
+        -- ADR-036 整合: meta_messages は run_all_migrations.sh で本 migration の
+        -- 直前に走る scripts/migrate_meta.py が作成する。部分テナント（未整合
+        -- スキーマ）や migration 単体検証で meta_messages が無い場合でも abort
+        -- せず WARNING で loud-skip する（C1 の leads.source ガードと同方針）。
         -- ============================================================
-        EXECUTE format(
-            'ALTER TABLE %I.meta_messages
-             ADD COLUMN IF NOT EXISTS message_id VARCHAR(100)',
-            schema_record.schema_name
-        );
+        IF EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_record.schema_name
+              AND table_name = 'meta_messages'
+        ) THEN
+            EXECUTE format(
+                'ALTER TABLE %I.meta_messages
+                 ADD COLUMN IF NOT EXISTS message_id VARCHAR(100)',
+                schema_record.schema_name
+            );
 
-        -- message_id の UNIQUE 部分インデックス（NULL は除外）
-        EXECUTE format(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_messages_message_id_unique
-             ON %I.meta_messages (message_id)
-             WHERE message_id IS NOT NULL',
-            schema_record.schema_name
-        );
+            -- message_id の UNIQUE 部分インデックス（NULL は除外）
+            EXECUTE format(
+                'CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_messages_message_id_unique
+                 ON %I.meta_messages (message_id)
+                 WHERE message_id IS NOT NULL',
+                schema_record.schema_name
+            );
 
-        RAISE NOTICE 'meta_messages: message_id column and unique index applied for %',
-            schema_record.schema_name;
+            RAISE NOTICE 'meta_messages: message_id column and unique index applied for %',
+                schema_record.schema_name;
+        ELSE
+            RAISE WARNING
+                'Schema %: meta_messages テーブルが存在しないため message_id 列追加を '
+                'スキップしました。テナントスキーマ未整合の可能性があります（ADR-036）。'
+                'scripts/db/sync_tenant_schema.py で baseline に整合させてください。',
+                schema_record.schema_name;
+        END IF;
 
         -- ============================================================
         -- C1: leads(source) に UNIQUE 部分インデックスを追加
