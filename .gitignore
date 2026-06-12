@@ -115,3 +115,6 @@ monitoring/prometheus/secrets/
 
 # SA設計図書サイト Basic認証ファイル（ADR-134 / B-11: git追跡禁止）
 nginx/htpasswd.d/
+
+# CC ボット認証情報（ADR-136 / B-11: git追跡禁止）
+.claude-access.env
