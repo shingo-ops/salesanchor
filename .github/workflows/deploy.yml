@@ -41,6 +41,9 @@ jobs:
               - 'backend/**'
               - 'docker-compose.yml'
               - '.github/workflows/deploy.yml'
+            nginx:
+              - 'nginx/**'
+              - 'docker-compose.yml'
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -338,6 +341,37 @@ jobs:
             echo "============================================"
             echo "Code + env + docker compose phase done."
             echo "============================================"
+
+      # ============================================
+      # ADR-137: nginx inode ズレ対策 — nginx 設定変更時の force-recreate
+      #
+      # 問題: git reset --hard は nginx.conf を新 inode で置換するが、
+      # Docker bind mount はコンテナ起動時の inode に束縛されるため、
+      # コンテナを再作成しないと新設定（location追加・volume追加等）が反映されない。
+      # nginx -s reload では旧 inode の設定を再読み込みするだけで解消しない。
+      #
+      # 対策: nginx/** または docker-compose.yml が変更されたデプロイで
+      # nginx コンテナを force-recreate して bind mount を最新 inode に再束縛する。
+      # blue-green による backend 切替完了後に実行するため backend 可用性に影響しない。
+      # nginx 再起動中（~2-3s）に brief な 502 窓が生じるが、nginx 設定を変えない
+      # 通常デプロイ（backend/frontend のみ）ではこのステップは実行されない。
+      # ============================================
+      - name: Recreate nginx (apply config/volume changes)
+        if: ${{ success() && steps.changes.outputs.nginx == 'true' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+            echo "nginx config/volume change detected — force-recreating nginx container..."
+            docker compose up -d --no-deps --force-recreate nginx
+            echo "nginx recreated. Waiting 3s for startup..."
+            sleep 3
+            docker inspect --format='{{.State.Status}}' astro-webapp-nginx-1
+            echo "nginx force-recreate done."
 
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
