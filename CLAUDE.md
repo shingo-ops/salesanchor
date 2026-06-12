@@ -51,6 +51,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 **作業開始前に `docs/STANDARD-WORKFLOW.md` を必ず read すること。** 全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。成果物は中身が揃って初めて成果物（在るだけ不可）。
 ### 成果物の完了定義（必須）
+- **着手前に既存 ADR を検索**（機能キーワードで `git grep -i docs/adr/` ＋ `docs/adr/FEATURE-INDEX.md`）。ADR は自動ロードされない＝指さないと見落とす。結果を recon.md に明記。
 - recon.md: フルパス:行番号 で引用（例: `.github/workflows/x.yml:15`）。短縮禁止。
 - design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
 - PR本文: `### 標準ワークフロー確認` セクション必須。
