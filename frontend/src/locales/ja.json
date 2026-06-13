@@ -377,7 +377,13 @@
     "email": "メールアドレス",
     "password": "パスワード",
     "signIn": "ログイン",
-    "signingIn": "ログイン中..."
+    "signingIn": "ログイン中...",
+    "forgotPassword": "パスワードをお忘れの方",
+    "resetPassword": "パスワード再設定",
+    "sendResetEmail": "再設定メールを送信",
+    "sendingEmail": "送信中...",
+    "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
+    "backToLogin": "ログイン画面に戻る"
   },
   "language": {
     "label": "言語",

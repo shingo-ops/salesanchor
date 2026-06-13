@@ -377,7 +377,13 @@
     "email": "Email address",
     "password": "Password",
     "signIn": "Sign in",
-    "signingIn": "Signing in..."
+    "signingIn": "Signing in...",
+    "forgotPassword": "Forgot your password?",
+    "resetPassword": "Reset password",
+    "sendResetEmail": "Send reset email",
+    "sendingEmail": "Sending...",
+    "resetEmailSent": "Password reset email sent. Please check your inbox.",
+    "backToLogin": "Back to sign in"
   },
   "language": {
     "label": "Language",
