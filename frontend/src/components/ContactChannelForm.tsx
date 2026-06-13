@@ -171,6 +171,7 @@ export default function ContactChannelForm({
       onSaved();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
+      // eslint-disable-next-line local/no-japanese-literal
       if (msg.includes("23505") || msg.includes("unique") || msg.includes("重複")) {
         setError(t("contactChannel.duplicateWarning"));
       } else {
@@ -321,5 +322,4 @@ export default function ContactChannelForm({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const logger = { warn: (msg: string) => console.warn(msg) };

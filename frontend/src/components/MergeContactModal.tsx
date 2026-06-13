@@ -130,6 +130,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
       onMerged(selected.id);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
+      // eslint-disable-next-line local/no-japanese-literal
       if (msg.includes("関連レコード") || msg.includes("related")) {
         setError(t("mergeContact.relatedError"));
       } else {
