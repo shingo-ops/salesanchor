@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS public.tenant_deletion_audit (
 - テナントスキーマとは独立した `public` スキーマに保持 → DROP 後も記録が残る
 - `actor_id` は `ON DELETE SET NULL`（actor ユーザー削除時も監査行は残る）
 
-### 3-5. reports.py 呼び出し元確認
+### 3-6. reports.py 呼び出し元確認
 
 recon B-5 で `reports.py:187` の `export_csv(tenant_id: int, ...)` に is_active フィルタがないことを確認した。
 
@@ -342,8 +342,8 @@ develop → main
 | # | タスク | 危険変更 |
 |---|--------|---------|
 | T-1 | `public.tenant_deletion_audit` migration 作成 + deploy.yml 追記 | ✅ PO GO 必要 |
-| T-2 | 論理削除 EP 実装（`DELETE /api/v1/admin/tenants/{id}`） | - |
-| T-3 | 物理削除 EP 実装（`DELETE /api/v1/admin/tenants/{id}/physical`） | ✅ DROP 含む |
+| T-2 | 論理削除 EP 実装（`DELETE /api/v1/super-admin/tenants/{tenant_id}`） | - |
+| T-3 | 物理削除 EP 実装（`DELETE /api/v1/super-admin/tenants/{tenant_id}/physical`） | ✅ DROP 含む |
 | T-4 | `scripts/backup_tenant_before_drop.sh` 新規作成 | - |
 | T-5 | `reports.py` 呼び出し元の is_active ガード確認・必要なら修正 | - |
 | T-6 | `test_tenant_deletion.py` 作成（SQLite + PostgreSQL 実機） | - |
