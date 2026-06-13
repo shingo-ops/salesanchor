@@ -6,7 +6,8 @@ from __future__ import annotations
 テナントスキーマの deals テーブル定義:
   id, tenant_id, deal_code, company_id, contact_id, lead_id, title, amount,
   currency, status, stage, probability,
-  assigned_to, expected_close_date, notes, lead_source, created_at, updated_at
+  assigned_to, expected_close_date, notes, lead_source,
+  closed_at, close_reason_memo, created_at, updated_at
 
 変更履歴:
   2026-04-16: Phase 1拡張（deal_code, lead_id, assigned_to, stage,
@@ -15,6 +16,7 @@ from __future__ import annotations
     company_id / contact_id を必須化（新 B2B モデル唯一の正）
   2026-06-01: migration 096 — lead_source（流入元）追加
   2026-06-12: PR1 — lost_reason / lost_reason_code 廃止（migration 102）
+  2026-06-13: PR3 — closed_at, close_reason_memo, close_reasons 追加
 """
 
 from datetime import date, datetime
@@ -67,6 +69,12 @@ class DealCreate(BaseModel):
     lead_source: str | None = Field(default=None, max_length=50, description="流入元")
 
 
+class CloseReasonRef(BaseModel):
+    """成約/失注理由の参照（商談更新時に渡す）"""
+    reason_id: int = Field(ge=1, description="close_reasons.id")
+    is_primary: bool = Field(default=False, description="主因フラグ（必ず1件だけ True）")
+
+
 class DealUpdate(BaseModel):
     """商談更新リクエスト（部分更新）"""
     company_id: int | None = Field(default=None, ge=1)
@@ -82,6 +90,8 @@ class DealUpdate(BaseModel):
     expected_close_date: date | None = None
     notes: str | None = Field(default=None, max_length=5000)
     lead_source: str | None = Field(default=None, max_length=50)
+    close_reason_memo: str | None = Field(default=None, max_length=1000, description="成約/失注メモ")
+    close_reasons: list[CloseReasonRef] | None = Field(default=None, description="成約/失注理由（主因1件必須）")
 
 
 class DealResponse(BaseModel):
@@ -108,6 +118,8 @@ class DealResponse(BaseModel):
     expected_close_date: date | None
     notes: str | None
     lead_source: str | None
+    closed_at: datetime | None = None
+    close_reason_memo: str | None = None
     created_at: datetime
     updated_at: datetime
 
