@@ -639,7 +639,8 @@ async def normal_client(db_session):
 @pytest.mark.asyncio
 async def test_logical_delete_requires_super_admin(normal_client: AsyncClient):
     """非 super_admin は 403"""
-    resp = await normal_client.delete(
+    resp = await normal_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/1",
         json={"confirm": "DELETE:test-corp"},
     )
@@ -649,7 +650,8 @@ async def test_logical_delete_requires_super_admin(normal_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_physical_delete_requires_super_admin(normal_client: AsyncClient):
     """非 super_admin は 403"""
-    resp = await normal_client.delete(
+    resp = await normal_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/1/physical",
         json={"confirm": "DELETE:test-corp"},
     )
@@ -667,7 +669,8 @@ async def test_logical_delete_wrong_confirm(super_admin_client: AsyncClient, db_
     )
     await db_session.commit()
 
-    resp = await super_admin_client.delete(
+    resp = await super_admin_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/97",
         json={"confirm": "WRONG"},
     )
@@ -685,7 +688,8 @@ async def test_logical_delete_success(super_admin_client: AsyncClient, db_sessio
     )
     await db_session.commit()
 
-    resp = await super_admin_client.delete(
+    resp = await super_admin_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/99",
         json={"confirm": "DELETE:test-99"},
     )
@@ -714,7 +718,8 @@ async def test_logical_delete_already_deleted(super_admin_client: AsyncClient, d
     )
     await db_session.commit()
 
-    resp = await super_admin_client.delete(
+    resp = await super_admin_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/98",
         json={"confirm": "DELETE:test-98"},
     )
@@ -729,7 +734,8 @@ async def test_physical_delete_requires_logical_first(super_admin_client: AsyncC
     )
     await db_session.commit()
 
-    resp = await super_admin_client.delete(
+    resp = await super_admin_client.request(
+        "DELETE",
         "/api/v1/super-admin/tenants/96/physical",
         json={"confirm": "DELETE:test-96"},
     )
