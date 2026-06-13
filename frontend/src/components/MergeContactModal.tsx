@@ -18,6 +18,9 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
+import { TextField } from "./TextField";
+import { Textarea } from "./Textarea";
 import { getStatusPresentation } from "../utils/statusPresentation";
 
 interface ContactOption {
@@ -127,6 +130,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
       onMerged(selected.id);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
+      // eslint-disable-next-line local/no-japanese-literal
       if (msg.includes("関連レコード") || msg.includes("related")) {
         setError(t("mergeContact.relatedError"));
       } else {
@@ -148,15 +152,13 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
 
         {stage === "select" && (
           <>
-            <div className="form-row">
-              <label>{t("mergeContact.selectMaster")}</label>
-              <input
-                type="text"
-                placeholder={t("mergeContact.searchPlaceholder")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+            <TextField
+              label={t("mergeContact.selectMaster")}
+              type="text"
+              placeholder={t("mergeContact.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
 
             {resultsCapped && (
               <div
@@ -213,6 +215,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
                         }}
                       >
                         <td>
+                          {/* radio は TextField 対象外のため残置 */}
                           <input
                             type="radio"
                             name="master-candidate"
@@ -237,9 +240,9 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
               )}
             </div>
 
-            <div className="form-row" style={{ marginTop: "var(--space-4)" }}>
-              <label>{t("mergeContact.reasonLabel")}</label>
-              <textarea
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <Textarea
+                label={t("mergeContact.reasonLabel")}
                 rows={2}
                 placeholder={t("mergeContact.reasonPlaceholder")}
                 value={reason}
@@ -249,17 +252,17 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
             </div>
 
             <div className="form-actions">
-              <button type="button" onClick={onCancel}>
+              <Button type="button" variant="secondary" onClick={onCancel}>
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-primary"
+                variant="primary"
                 disabled={!selected}
                 onClick={() => setStage("confirm")}
               >
                 {t("mergeContact.nextStep")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -308,22 +311,23 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
             )}
 
             <div className="form-actions">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setStage("select")}
                 disabled={submitting}
               >
                 {t("common.back")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="btn-danger"
+                variant="danger"
                 disabled={submitting}
               >
                 {submitting
                   ? t("mergeContact.merging")
                   : t("mergeContact.executeLabel", { masterName: contactDisplayName(selected) })}
-              </button>
+              </Button>
             </div>
           </form>
         )}
