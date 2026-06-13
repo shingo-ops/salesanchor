@@ -64,34 +64,48 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
         logger.warning("%s: lead_channels table not found, skipping", schema)
         return counts
 
-    # 1) source プレフィックスから移植
-    for prefix, platform in PLATFORM_PREFIXES:
-        offset_val = len(prefix) + 1  # SUBSTRING は 1-indexed; int を SQL に直接埋め込む（asyncpg は :param を text 型推論するため）
-        result = await conn.execute(
-            text(
-                f"""
-                INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
-                SELECT
-                    id,
-                    :platform,
-                    SUBSTRING(source FROM {offset_val}),
-                    customer_name
-                FROM {schema}.leads
-                WHERE source LIKE :pattern
-                ON CONFLICT (platform, external_id) DO NOTHING
-                """
-            ),
-            {
-                "platform": platform,
-                "pattern": f"{prefix}%",
-            },
-        )
-        counts[platform] += result.rowcount
+    # leads.source 列の存在確認（ADR-138 §D1-3 クリーンスレートにより廃止済みの場合はスキップ）
+    source_col_check = await conn.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = :schema AND table_name = 'leads' AND column_name = 'source'"
+        ),
+        {"schema": schema},
+    )
+    has_source_col = source_col_check.scalar() is not None
+
+    if not has_source_col:
+        logger.info("%s: leads.source column not found (廃止済み per ADR-138), source-based backfill skipped", schema)
+
+    # 1) source プレフィックスから移植（source 列が存在する場合のみ）
+    if has_source_col:
+        for prefix, platform in PLATFORM_PREFIXES:
+            offset_val = len(prefix) + 1  # SUBSTRING は 1-indexed; int を SQL に直接埋め込む（asyncpg は :param を text 型推論するため）
+            result = await conn.execute(
+                text(
+                    f"""
+                    INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
+                    SELECT
+                        id,
+                        :platform,
+                        SUBSTRING(source FROM {offset_val}),
+                        customer_name
+                    FROM {schema}.leads
+                    WHERE source LIKE :pattern
+                    ON CONFLICT (platform, external_id) DO NOTHING
+                    """
+                ),
+                {
+                    "platform": platform,
+                    "pattern": f"{prefix}%",
+                },
+            )
+            counts[platform] += result.rowcount
 
     # 2) discord_user_id が残っている leads（source が 'discord:' で始まらないケース）
-    discord_uid_result = await conn.execute(
-        text(
-            f"""
+    #    source 列が廃止済みの場合は source 条件を除いて実行
+    if has_source_col:
+        discord_uid_sql = f"""
             INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
             SELECT
                 id,
@@ -103,8 +117,19 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
               AND (source IS NULL OR source NOT LIKE 'discord:%')
             ON CONFLICT (platform, external_id) DO NOTHING
             """
-        )
-    )
+    else:
+        discord_uid_sql = f"""
+            INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
+            SELECT
+                id,
+                'discord',
+                discord_user_id,
+                customer_name
+            FROM {schema}.leads
+            WHERE discord_user_id IS NOT NULL
+            ON CONFLICT (platform, external_id) DO NOTHING
+            """
+    discord_uid_result = await conn.execute(text(discord_uid_sql))
     counts["discord_uid"] += discord_uid_result.rowcount
 
     return counts
