@@ -138,6 +138,7 @@
 | feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | | |
 | feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | | |
 | feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | #2020 | | |
+| feature/morimoto/tenant-deletion-clean | テナント論理削除・物理削除 API（ADR 対象・PO GO待ち） | 2026-06-14 | IN_PROGRESS | | | #2143クローズ後クリーンブランチ再作成 |
 ---
 
 ## 記入例
