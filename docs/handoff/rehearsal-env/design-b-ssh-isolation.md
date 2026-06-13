@@ -126,3 +126,55 @@ ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 \
 ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 \
   "grep 'hikky-claude-restricted' ~/.ssh/authorized_keys"
 ```
+
+---
+
+## 是正記録（2026-06-13: PO判断による人間アクセス経路復活）
+
+### 発覚した副作用
+
+`~/.ssh/config` が IP アドレスをパターンに使ったため、
+**人間が `ssh ubuntu@<ip>` と打った場合も** `salesanchor-claude`（ForceCommand 制限）が
+適用されてしまい、インタラクティブな緊急ログインが不可能になった。
+
+| 経路 | PR #2078 直後 | 是正後 |
+|------|--------------|--------|
+| Agent: `ssh ubuntu@<ip>` | salesanchor-claude（ForceCommand ✓）| 変わらず ✓ |
+| 人間: `ssh ubuntu@<ip>` | salesanchor-claude（ForceCommand ✗ 副作用）| 同左（意図しない制限のまま） |
+| 人間: `ssh prod1` / `ssh prod2` | 存在しなかった | id_ed25519（無制限 ✓）**NEW** |
+
+### 是正内容（`~/.ssh/config` に追記）
+
+```
+# 人間の緊急対話ログイン用（無制限鍵）
+Host prod1
+  HostName 49.212.137.46
+  User ubuntu
+  IdentityFile ~/.ssh/manual-only/id_ed25519
+  IdentitiesOnly yes
+
+Host prod2
+  HostName 49.212.160.98
+  User ubuntu
+  IdentityFile ~/.ssh/manual-only/id_ed25519
+  IdentitiesOnly yes
+```
+
+- IP ベースのエントリ（エージェント用 ForceCommand 制限）は**そのまま維持**
+- VPS 側の `authorized_keys` は**無変更**
+- `prod1` / `prod2` エイリアスは `ssh config` の Host パターンマッチがエイリアス名で行われるため、
+  IP 直打ち時の ForceCommand ブロックとは別経路になる
+
+### 是正後の検証結果（2026-06-13）
+
+| テスト | コマンド | 結果 |
+|--------|---------|------|
+| 人間フルシェル ✓ | `ssh prod2 "whoami && echo HUMAN_FULL_SHELL_OK"` | `ubuntu / HUMAN_FULL_SHELL_OK` |
+| エージェント制限 ✓ | `ssh ubuntu@49.212.160.98 "echo UNRESTRICTED"` | `Permission denied (publickey)` |
+| .137.46 port 22 ⚠️ | `ssh prod1 "whoami"` | `Connection refused`（別事象・要調査） |
+
+### 別事象: 49.212.137.46 port 22 拒否（PR #2078 とは無関係）
+
+- ping は通る（ホスト生存中）
+- port 22 は `Connection refused`（SSH サービス停止 or ポート変更）
+- **PO 確認要**: SSH サービスの状態・ポート変更の有無を確認すること
