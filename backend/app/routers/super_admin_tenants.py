@@ -30,10 +30,7 @@ class TenantDeleteRequest(BaseModel):
 
 
 # ── 論理削除 ──────────────────────────────────────────────────────────────
-@router.delete(
-    "/super-admin/tenants/{tenant_id}",
-    dependencies=[Depends(require_super_admin)],
-)
+@router.delete("/super-admin/tenants/{tenant_id}")
 async def delete_tenant_logical(
     tenant_id: int,
     body: TenantDeleteRequest,
@@ -92,10 +89,7 @@ async def delete_tenant_logical(
 
 
 # ── 物理削除 ──────────────────────────────────────────────────────────────
-@router.delete(
-    "/super-admin/tenants/{tenant_id}/physical",
-    dependencies=[Depends(require_super_admin)],
-)
+@router.delete("/super-admin/tenants/{tenant_id}/physical")
 async def delete_tenant_physical(
     tenant_id: int,
     body: TenantDeleteRequest,
