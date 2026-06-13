@@ -455,7 +455,7 @@ function KarteTabContent({
           <span className="right-panel-label">{t("leads.targetTitles")}</span>
           <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
             onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
-            onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
+            onBlur={handleCardFieldBlur} placeholder={t("leads.targetTitlesPlaceholder")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.salesForm")}</span>
@@ -521,9 +521,9 @@ function KarteTabContent({
         <select className="right-panel-field" value={cardForm.temperature ?? ""}
           onChange={(e) => handleCardFieldChange("temperature", e.target.value || null)} onBlur={handleCardFieldBlur}>
           <option value="">—</option>
-          <option value="Hot">Hot</option>
-          <option value="Warm">Warm</option>
-          <option value="Cold">Cold</option>
+          <option value="Hot">{t("leads.temperature_hot")}</option>
+          <option value="Warm">{t("leads.temperature_warm")}</option>
+          <option value="Cold">{t("leads.temperature_cold")}</option>
         </select>
       </div>
       <div className="right-panel-memo-label">{t("leads.challenge")}</div>
@@ -551,9 +551,9 @@ function KarteTabContent({
         <select className="right-panel-field" value={cardForm.estimated_scale ?? ""}
           onChange={(e) => handleCardFieldChange("estimated_scale", e.target.value || null)} onBlur={handleCardFieldBlur}>
           <option value="">—</option>
-          <option value="Small">Small</option>
-          <option value="Medium">Medium</option>
-          <option value="Large">Large</option>
+          <option value="Small">{t("leads.estimatedScale_small")}</option>
+          <option value="Medium">{t("leads.estimatedScale_medium")}</option>
+          <option value="Large">{t("leads.estimatedScale_large")}</option>
         </select>
       </div>
       <div className="right-panel-row">
