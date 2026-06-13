@@ -43,6 +43,7 @@ from app.routers import (
     discord_oauth,  # ADR-091 拡張: Discord Bot OAuth Invite フロー
     discord_remove,  # ADR-091 KPI6: チャンネル削除・Kick・BAN API
     discord_role_resync,  # ADR-091 KPI7: ロール手動再同期 API
+    discord_auto_setup,  # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
@@ -237,6 +238,11 @@ app.include_router(
 # /start は get_current_tenant 必須、/callback は Discord からのリダイレクトのため不要
 app.include_router(
     discord_oauth.router, prefix="/api/v1", tags=["discord"],
+)
+# ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
+app.include_router(
+    discord_auto_setup.router, prefix="/api/v1", tags=["discord"],
+    dependencies=[Depends(get_current_tenant)],
 )
 # ADR-091 KPI3: チケット機能設定 API (tenant admin)
 app.include_router(
