@@ -395,6 +395,9 @@ run_sql migrations/20260613_050000_funnel_purchase_cost_nullable.sql
 # A4: carrier credentials 接続テスト結果を保存（last_tested_at / last_test_ok / last_test_message）
 run_sql migrations/20260614_030000_add_carrier_test_result.sql
 
+# テナント削除 中央監査ログ（public.tenant_deletion_audit 新設）
+run_sql migrations/20260614_040137_add_tenant_deletion_audit.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

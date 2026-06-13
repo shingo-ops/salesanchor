@@ -85,6 +85,7 @@ from app.routers import (
     super_admin_phase_switch,
     super_admin_suppliers,
     super_admin_tcg,
+    super_admin_tenants,
     suppliers,
     teams,
     tenant_admin_inventory_visibility,
@@ -495,6 +496,11 @@ app.include_router(
 # require_super_admin で保護 (router レベル + 各エンドポイントで重ねガード)
 app.include_router(
     super_admin_phase_switch.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# テナント論理削除 / 物理削除
+app.include_router(
+    super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # Google Calendar 連携
