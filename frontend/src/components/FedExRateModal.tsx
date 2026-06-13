@@ -71,8 +71,8 @@ function SourceBadge({ source }: { source: "static" | "fedex_live" }) {
           borderRadius: "4px",
           fontSize: "11px",
           fontWeight: 600,
-          backgroundColor: "var(--color-blue-100)",
-          color: "var(--color-blue-700)",
+          backgroundColor: "var(--info-bg)",
+          color: "var(--info-text)",
         }}
       >
         {t("fedexRateModal.sourceLive")}
@@ -87,8 +87,8 @@ function SourceBadge({ source }: { source: "static" | "fedex_live" }) {
         borderRadius: "4px",
         fontSize: "11px",
         fontWeight: 600,
-        backgroundColor: "var(--color-gray-100)",
-        color: "var(--color-gray-600)",
+        backgroundColor: "var(--bg-subtle)",
+        color: "var(--text-secondary)",
       }}
     >
       {t("fedexRateModal.sourceStatic")}
@@ -145,10 +145,12 @@ export function FedExRateModal({
 
   // エラーメッセージの整形（ADR-125 D5）
   // 未連携 / アカウント番号未設定 / API エラーの3種を区別して表示
+  // eslint-disable-next-line local/no-japanese-literal -- backend API error string
   const isNotConnected = response?.live_error?.includes("未連携") ?? false;
   const liveErrorMessage = response?.live_error
     ? isNotConnected
       ? t("fedexRateModal.errorNotConnected")
+      // eslint-disable-next-line local/no-japanese-literal -- backend API error string
       : response.live_error.includes("アカウント番号")
         ? t("fedexRateModal.errorAccountNumber")
         : `${t("fedexRateModal.errorApiFailure")}: ${response.live_error}`
@@ -178,7 +180,7 @@ export function FedExRateModal({
               maxLength={3}
               placeholder={t("fedexRateModal.originPlaceholder")}
               onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
-              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
             />
           </div>
           <div>
@@ -195,7 +197,7 @@ export function FedExRateModal({
               maxLength={3}
               placeholder={t("fedexRateModal.destinationPlaceholder")}
               onChange={(e) => setDestCC(e.target.value.toUpperCase())}
-              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
             />
           </div>
           <div>
@@ -212,7 +214,7 @@ export function FedExRateModal({
               step="0.001"
               value={internalWeightKg}
               onChange={(e) => setInternalWeightKg(Number(e.target.value))}
-              style={{ width: "100px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+              style={{ width: "100px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
             />
           </div>
         </div>
@@ -241,7 +243,7 @@ export function FedExRateModal({
           maxLength={20}
           placeholder={t("fedexRateModal.postalCodePlaceholder")}
           onChange={(e) => setDestinationPostalCode(e.target.value)}
-          style={{ width: "160px", padding: "6px 8px", border: "1px solid var(--color-border)", borderRadius: "4px", fontSize: "13px" }}
+          style={{ width: "160px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
         />
       </div>
 
@@ -252,8 +254,8 @@ export function FedExRateModal({
           style={{
             padding: "12px",
             borderRadius: "6px",
-            backgroundColor: "var(--color-red-50)",
-            color: "var(--color-red-700)",
+            backgroundColor: "var(--danger-bg)",
+            color: "var(--danger-text)",
             marginBottom: "12px",
           }}
         >
@@ -268,8 +270,8 @@ export function FedExRateModal({
           style={{
             padding: "16px",
             borderRadius: "6px",
-            backgroundColor: "var(--color-amber-50)",
-            color: "var(--color-amber-800)",
+            backgroundColor: "var(--warning-bg)",
+            color: "var(--warning-text)",
             marginBottom: "12px",
           }}
         >
@@ -290,8 +292,8 @@ export function FedExRateModal({
           style={{
             padding: "12px",
             borderRadius: "6px",
-            backgroundColor: "var(--color-amber-50)",
-            color: "var(--color-amber-800)",
+            backgroundColor: "var(--warning-bg)",
+            color: "var(--warning-text)",
             marginBottom: "12px",
           }}
         >
@@ -312,8 +314,8 @@ export function FedExRateModal({
                 gap: "6px",
                 padding: "6px 10px",
                 borderRadius: "6px",
-                backgroundColor: "var(--color-amber-50)",
-                color: "var(--color-amber-800)",
+                backgroundColor: "var(--warning-bg)",
+                color: "var(--warning-text)",
                 fontSize: "12px",
                 marginBottom: "10px",
               }}
@@ -322,11 +324,11 @@ export function FedExRateModal({
             </div>
           )}
           {response.results.length === 0 ? (
-            <p style={{ color: "var(--color-text-secondary)" }}>{t("fedexRateModal.noResults")}</p>
+            <p style={{ color: "var(--text-secondary)" }}>{t("fedexRateModal.noResults")}</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
               <thead>
-                <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
+                <tr style={{ borderBottom: "2px solid var(--border)" }}>
                   <th style={{ textAlign: "left", padding: "8px 4px" }}>{t("fedexRateModal.colSource")}</th>
                   <th style={{ textAlign: "left", padding: "8px 4px" }}>{t("fedexRateModal.colService")}</th>
                   <th style={{ textAlign: "right", padding: "8px 4px" }}>{t("fedexRateModal.colTransitDays")}</th>
@@ -339,7 +341,7 @@ export function FedExRateModal({
                 {response.results.map((r, i) => (
                   <tr
                     key={i}
-                    style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+                    style={{ borderBottom: "1px solid var(--border)" }}
                   >
                     <td style={{ padding: "8px 4px" }}>
                       <SourceBadge source={r.source} />

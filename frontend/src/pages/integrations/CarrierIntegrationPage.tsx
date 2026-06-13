@@ -25,6 +25,7 @@ import { Tabs } from "../../components/Tabs";
 import { Badge } from "../../components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
 import { FedexLabelValidationTab } from "./FedexLabelValidationTab";
+import "./CarrierIntegrationPage.css";
 
 type Carrier = "fedex" | "dhl" | "ups";
 type PageTab = "credentials" | "integrationGuide";

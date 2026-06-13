@@ -599,6 +599,22 @@
   font-size: var(--font-base);
 }
 
+.success-message {
+  background: var(--success-bg);
+  color: var(--success-text);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-base);
+}
+
+.form-hint {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
 /* --- Tooltip (data-tooltip attribute pattern) ---
  * Usage: <button data-tooltip="ラベル">
  * 要素は position: relative/fixed/absolute/sticky が必要。
