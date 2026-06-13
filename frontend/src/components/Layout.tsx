@@ -108,6 +108,7 @@ export default function Layout() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -125,6 +126,17 @@ export default function Layout() {
   useEffect(() => { loadUnreadCount(); }, [loadUnreadCount]);
   useSSE({ endpoint: "/api/v1/conversations/stream", onUpdate: loadUnreadCount });
 
+  // mobile sidebar: Escape key で閉じる
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileSidebarOpen]);
+
   const toggleAccordion = (key: string) => {
     const next = openAccordion === key ? null : key;
     setOpenAccordion(next);
@@ -139,6 +151,7 @@ export default function Layout() {
   const handleNavClick = () => {
     setSidebarExpanded(false);
     setOpenAccordion(null);
+    setIsMobileSidebarOpen(false);
   };
 
   /* ---- permission-filtered sub-item lists ---- */
@@ -171,9 +184,19 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
+      {/* ============ Mobile sidebar backdrop ============ */}
+      {isMobileSidebarOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ============ Sidebar ============ */}
       <aside
-        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}`}
+        id="sidebar-panel"
+        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}${isMobileSidebarOpen ? " sidebar-mobile-open" : ""}`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={handleSidebarLeave}
       >
@@ -379,6 +402,17 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* ============ Mobile menu button (hamburger — mobile only) ============ */}
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setIsMobileSidebarOpen(true)}
+        aria-label={t("nav.openMenu")}
+        aria-expanded={isMobileSidebarOpen}
+        aria-controls="sidebar-panel"
+      >
+        <NAV_ICONS.menu size={ICON.md} aria-hidden="true" />
+      </button>
 
       {/* ============ Fixed avatar button (Chrome / Meta style) ============ */}
       <button

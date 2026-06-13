@@ -103,6 +103,28 @@
 }
 
 /* ============================================================
+   Mobile  <=767px — PageLayout 調整
+   ============================================================ */
+@media (max-width: 767px) {
+  /* ヘッダー: 左余白を縮小し、右は既存の avatar clearance をそのまま流用
+     （avatar-btn は position: fixed で絶対座標のため、clearance 幅は変わらない） */
+  .page-layout-header {
+    padding-left: var(--space-4);
+    padding-right: var(--page-header-avatar-clearance);
+  }
+
+  /* title-row: title と action が横に並びきらない場合、折り返しを許可 */
+  .page-layout-title-row {
+    flex-wrap: wrap;
+  }
+
+  /* header-right (action button): 折り返した行でも右端に寄せる */
+  .page-layout-header-right {
+    margin-left: auto;
+  }
+}
+
+/* ============================================================
    汎用レイアウトパターン
    ============================================================ */
 
