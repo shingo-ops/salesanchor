@@ -64,7 +64,7 @@ recon の分類結果から以下とする：
 // 現状（InboxKartePanel.tsx:461-463）
 <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
   onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur}
-  placeholder={t("leads.targetTitlesPlaceholder")} />
+  placeholder={t("inbox.emptyField")} />
 
 // 修正後（PO から選択肢を受け取った後に実装）
 <select className="right-panel-field" value={cardForm.sales_form ?? ""}
