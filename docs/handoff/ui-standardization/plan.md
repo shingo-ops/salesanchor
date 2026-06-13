@@ -68,17 +68,24 @@
 
 **対象ファイル**:
 
-| ファイル | button→Button | input→TextField | select→Select | textarea→Textarea |
-|----------|:---:|:---:|:---:|:---:|
-| `components/CompanyContactsTab.tsx` | 7 | 9 | - | - |
-| `components/ContactChannelForm.tsx` | 5 | 4 | - | - |
-| `components/MergeContactModal.tsx` | 3 | 3 | - | - |
+| ファイル | button→Button | input→TextField | select→Select | textarea→Textarea | 残置 raw |
+|----------|:---:|:---:|:---:|:---:|------|
+| `components/CompanyContactsTab.tsx` | 7 | 9 | - | - | — |
+| `components/ContactChannelForm.tsx` | 5 | 2 | 1 | - | checkbox input 1件（残置可・後述） |
+| `components/MergeContactModal.tsx` | 3 | 1 | - | 1 | radio input 1件（残置可・後述） |
 
-**合計**: button 15件、input 16件
+**合計**: button 15件、text input 12件、select 1件、textarea 1件
+
+**raw input 残置ルール（PR-A）**:
+
+- `ContactChannelForm.tsx` line 230: `<input type="checkbox">` — チェックボックスは `<TextField>` の対象外。今回 raw 残置可。将来 `<Checkbox>` 標準コンポーネント導入時に移行する。
+- `MergeContactModal.tsx` line 216: `<input type="radio">` — ラジオボタンは `<TextField>` の対象外。テーブル行セレクタとして機能しており、今回 raw 残置可。
 
 **受入条件**:
 - [ ] `rg "<button" frontend/src/components/CompanyContactsTab.tsx frontend/src/components/ContactChannelForm.tsx frontend/src/components/MergeContactModal.tsx` → 0件
-- [ ] `rg "<input" ...同上...` → 0件
+- [ ] `rg "<input" ...同上...` → checkbox/radio のみ残存（text/email/tel/number 等は 0件）
+- [ ] `rg "<select" ...同上...` → 0件
+- [ ] `rg "<textarea" ...同上...` → 0件
 - [ ] TypeScriptビルドエラーなし（`npm run type-check`）
 - [ ] `rg 'label=|aria-label=|placeholder=' ...対象ファイル...` で i18n 対応確認
 - [ ] 連絡先追加・マージ・チャンネル追加フローを手動確認

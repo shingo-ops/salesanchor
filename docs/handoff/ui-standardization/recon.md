@@ -83,10 +83,10 @@ git grep -i "i18n" docs/adr/ | grep "ADR-" | head -10
 | `frontend/src/components/Drawer.tsx` | 1 | 閉じるボタン |
 | `frontend/src/components/FedExRateModal.tsx` | 3 | 送料計算ボタン類 |
 | `frontend/src/components/MergeCompanyModal.tsx` | 4 | マージ実行・キャンセル |
-| `frontend/src/components/MergeContactModal.tsx` | 4 | 同上 |
+| `frontend/src/components/MergeContactModal.tsx` | 4 | 同上（**一部採用済み / raw残あり**: input/textarea は未移行・PR-A対象） |
 | `frontend/src/components/CommissionPanel.tsx` | 2 | 手数料操作 |
 | `frontend/src/components/OrderFinancialPanel.tsx` | 3 | 財務操作 |
-| `frontend/src/components/ContactChannelForm.tsx` | 5 | チャンネル追加・削除 |
+| `frontend/src/components/ContactChannelForm.tsx` | 5 | チャンネル追加・削除（**一部採用済み / raw残あり**: button以外の input/select は未移行） |
 | `frontend/src/components/PriorityScoreOverride.tsx` | 2 | スコア上書き |
 | `frontend/src/components/MergeLeadModal.tsx` | 4 | リードマージ |
 | `frontend/src/components/InboxSettingsModal.tsx` | 3 | 設定保存・キャンセル |
