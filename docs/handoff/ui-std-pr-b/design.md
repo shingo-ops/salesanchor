@@ -1,86 +1,63 @@
 # design — UI標準化 PR-B (Company系3ファイル)
 
-## 目的
+**対象ADR**: ADR-067  
+**recon**: docs/handoff/ui-std-pr-b/recon.md  
+**日付**: 2026-06-14  
+**担当**: Hikky-dev
 
-PR-A（Contact系: ContactModal / ContactsTab / ConvLogModal）で確立した
-Button / TextField / Select / Textarea 置換方針を Company系3ファイルへ横展開する。
+---
 
-参照: recon.md (同ディレクトリ)
+## 外部・過去事例の参照と我々への応用
 
-## 変更スコープ
+PR-A（feature/morimoto/ui-std-pr-a）で Contact系3ファイルに同方針を適用済み。
+Button/TextField/Select/Textarea の置換パターンとcheckbox/radio残置方針はPR-Aで確立・検証済み。
+Storybook カタログ（ADR-067）の全コンポーネント Stories が通過確認済みのため、今回は過去事例としてPR-Aの結果をそのまま適用する。
 
-| ファイル | 変更種別 | 変更なし |
-|---------|---------|---------|
-| MergeCompanyModal.tsx | Button/TextField/Textarea import追加 + 6要素置換 | API・ロジック全て |
-| CompanyAddressModal.tsx | Button/TextField/Select import追加 + 15要素置換 | API・ロジック全て |
-| CompanyDetailPage.tsx | Button import追加 + 14要素置換 | API・ロジック全て |
+---
 
-## 判断基準テーブル
+## 受け入れ基準
 
-| 基準 | 検証方法 | 期待値 |
-|------|---------|--------|
-| raw `<button>` が残らない | `rg "<button" frontend/src/components/MergeCompanyModal.tsx` | 0件 |
-| raw `<button>` が残らない | `rg "<button" frontend/src/pages/company-detail/CompanyAddressModal.tsx` | 0件 |
-| raw `<button>` が残らない | `rg "<button" frontend/src/pages/company-detail/CompanyDetailPage.tsx` | 0件 |
-| raw `<input` (text/email/etc.) が残らない | `rg "<input" ... \| grep -v "type=\"checkbox\"\|type=\"radio\""` | 0件 |
-| raw `<select>` が残らない | `rg "<select" frontend/src/pages/company-detail/CompanyAddressModal.tsx` | 0件 |
-| raw `<textarea>` が残らない | `rg "<textarea" frontend/src/components/MergeCompanyModal.tsx` | 0件 |
-| `btn-primary`/`btn-sm` クラス直書きなし | `rg "className.*btn-" 対象3ファイル` | 0件 |
-| TypeScript コンパイル成功 | `cd frontend && npx tsc --noEmit` | エラーなし |
-| i18n キー変更なし | `rg "t(" 対象3ファイル` の diff | 追加・削除なし |
+| 基準 | 検証方法 |
+|------|---------|
+| raw `<button>` が0件 | `rg "<button" frontend/src/components/MergeCompanyModal.tsx` |
+| raw `<button>` が0件 | `rg "<button" frontend/src/pages/company-detail/CompanyAddressModal.tsx` |
+| raw `<button>` が0件 | `rg "<button" frontend/src/pages/company-detail/CompanyDetailPage.tsx` |
+| raw `<select>` が0件 | `rg "<select" frontend/src/pages/company-detail/CompanyAddressModal.tsx` |
+| raw `<textarea>` が0件 | `rg "<textarea" frontend/src/components/MergeCompanyModal.tsx` |
+| btn-* className直書きなし | `rg 'className.*btn-' 対象3ファイル` |
+| TypeScript コンパイル成功 | `cd frontend && tsc --noEmit` |
+| i18n キー変更なし | t() 呼び出し diff — 追加・削除なし |
 
-## 置換方針
+---
 
-### variant マッピング
+## 技術 How・KPI
 
-| 旧クラス | Button variant |
-|---------|---------------|
-| `btn-primary` / `className="btn-sm btn-primary"` | default (primary) |
-| `btn-sm` (secondary相当) | `variant="secondary"` |
-| `btn-danger` | `variant="danger"` |
-| `tab ...` (タブボタン) | `variant="ghost" className="tab ..."` |
-| なし (plain button) | `variant="secondary"` |
+- KPI: raw HTML 要素 0件（Button/TextField/Select/Textarea で完全置換）
+- 技術選択: Button variant マッピング（primary/secondary/ghost/danger）、Select の options 配列インライン定義
 
-### Select options定義
+---
 
-CompanyAddressModal の billing/delivery select は options 配列をインライン定義:
-```tsx
-options={[
-  { value: "billing", label: t("companies.billing") },
-  { value: "delivery", label: t("companies.delivery") },
-]}
-```
+## 弊害・トレードオフ
 
-### telephone エラー表示統合
+- Button の comp-btn base class がタブ見た目を壊す可能性 → variant="ghost" は btn-ghost のみ付与、`.tab`/.`.tab.active` CSS は残存するため影響なし
+- Select wrapping div が form-row レイアウトを崩す可能性 → label なし使用（PR-A検証済みパターン）で回避
+- TextField wrapping div が既存 field-error span と二重表示になる可能性 → telephone の error prop 統合で解決
 
-旧: `<input>` + `{addrPhoneError && <span className="field-error">...}` の2要素  
-新: `<TextField error={addrPhoneError ?? undefined}>` の1要素（TextFieldの error prop に統合）
+---
 
-### style CSS変数の扱い
+## 計画票
 
-コピーリンクボタンの `style={{ marginLeft: "var(--spacing-2)" }}` は CSS変数（ADR-067準拠）のため保持。
+| ステップ | 内容 | 担当 |
+|---------|------|------|
+| 1 | recon.md / design.md 作成 | Hikky-dev |
+| 2 | MergeCompanyModal.tsx 置換（6要素） | Hikky-dev |
+| 3 | CompanyAddressModal.tsx 置換（15要素） | Hikky-dev |
+| 4 | CompanyDetailPage.tsx 置換（14要素） | Hikky-dev |
+| 5 | rg 検証・PR作成 | Hikky-dev |
 
-### タブボタン
+---
 
-`<button className="tab active">` → `<Button variant="ghost" className="tab active">`  
-Buttonが生成する `btn-ghost` と既存 `.tab` / `.tab.active` CSS が共存する（className merge済み）。
+## 継続
 
-## 残置項目
-
-| 要素 | ファイル | 理由 |
-|------|---------|------|
-| `<input type="checkbox">` | CompanyAddressModal.tsx:140 | Checkbox標準コンポーネント未実装 |
-| `<input type="radio">` | MergeCompanyModal.tsx:217-225 | Radio標準コンポーネント未実装 |
-
-## 弊害・リスク
-
-| リスク | 対策 |
-|--------|------|
-| Button の `comp-btn` base classがタブ見た目を壊す | `variant="ghost"` は `btn-ghost` のみ付与。`.tab` / `.tab.active` CSSは残存するため影響なし |
-| Select wrapping div (`comp-field`) が form-row レイアウトを崩す | form-row内で Select を label なし使用（PR-A検証済みパターン）|
-| TextField wrapping div が既存 field-error span と二重表示 | telephone のみ error prop 統合で span を削除 |
-
-## 外部事例
-
-PR-A (feature/morimoto/ui-std-pr-a) で同方針を Contact系3ファイルに適用済み。
-Storybook カタログ（ADR-067）の Button/TextField/Select/Textarea Stories が通過確認済み。
+- 完了後の監視: Visual Regression（Chromatic UI Tests）で目視確認
+- 次フェーズへの引き継ぎ: checkbox/radio 標準コンポーネント実装時に残置箇所を置換

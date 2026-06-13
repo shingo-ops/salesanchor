@@ -1,74 +1,79 @@
 # recon — UI標準化 PR-B (Company系3ファイル)
 
-## ブランチ
-`feature/morimoto/ui-std-pr-b`
+**仕事名**: UI標準化 PR-B  
+**日付**: 2026-06-14  
+**対象ADR**: ADR-067  
+**担当**: Hikky-dev
 
-## 対象ファイルと置換ポイント
+---
 
-### 1. frontend/src/components/MergeCompanyModal.tsx
+## file:line 引用表
 
-| 行 | 現行要素 | 置換先 | 備考 |
-|----|---------|--------|------|
-| 155 | `<input type="text" placeholder=...>` | `<TextField>` | 検索フィールド |
-| 217-225 | `<input type="radio">` | **残置** | ラジオボタン — PR-A方針に従い残置 |
-| 243 | `<textarea rows={2}>` | `<Textarea>` | reason入力 |
-| 253 | `<button type="button">` (cancel) | `<Button variant="secondary">` | |
-| 256 | `<button type="button" className="btn-primary">` | `<Button>` (default=primary) | |
-| 315 | `<button type="button">` (back) | `<Button variant="secondary">` | |
-| 322 | `<button type="submit" className="btn-danger">` | `<Button variant="danger">` | |
+### MergeCompanyModal.tsx
 
-### 2. frontend/src/pages/company-detail/CompanyAddressModal.tsx
+| `path:line` | 確認内容 |
+|-------------|---------|
+| `frontend/src/components/MergeCompanyModal.tsx:22` | Button import 追加 |
+| `frontend/src/components/MergeCompanyModal.tsx:23` | TextField import 追加 |
+| `frontend/src/components/MergeCompanyModal.tsx:24` | Textarea import 追加 |
+| `frontend/src/components/MergeCompanyModal.tsx:158` | 検索フィールド TextField 置換 |
+| `frontend/src/components/MergeCompanyModal.tsx:220` | radio input 残置（専用コンポーネント未実装） |
+| `frontend/src/components/MergeCompanyModal.tsx:246` | reason Textarea 置換 |
+| `frontend/src/components/MergeCompanyModal.tsx:256` | cancel Button(secondary) 置換 |
+| `frontend/src/components/MergeCompanyModal.tsx:261` | next Button(primary) 置換 |
+| `frontend/src/components/MergeCompanyModal.tsx:320` | back Button(secondary) 置換 |
+| `frontend/src/components/MergeCompanyModal.tsx:327` | merge Button(danger) 置換 |
 
-| 行 | 現行要素 | 置換先 | 備考 |
-|----|---------|--------|------|
-| 81-85 | `<select>` (billing/delivery) | `<Select options={[...]}>` | options配列インライン定義 |
-| 89-90 | `<input>` branch_name | `<TextField>` | |
-| 92-94 | `<input>` name | `<TextField>` | |
-| 96-98 | `<input type="email">` email | `<TextField type="email">` | |
-| 100-103 | `<input>` telephone + `<span class="field-error">` | `<TextField error={addrPhoneError ?? undefined}>` | エラーをTextFieldのerror propに統合 |
-| 105-107 | `<input>` tax_id | `<TextField>` | |
-| 109-111 | `<input>` address_line_1 | `<TextField>` | |
-| 113-115 | `<input>` address_line_2 | `<TextField>` | |
-| 117-119 | `<input>` address_line_3 | `<TextField>` | |
-| 121-123 | `<input>` city | `<TextField>` | |
-| 125-127 | `<input>` state | `<TextField>` | |
-| 129-131 | `<input>` zip | `<TextField>` | |
-| 133-137 | `<input maxLength={2}>` country_code | `<TextField maxLength={2}>` | |
-| 140 | `<input type="checkbox">` is_default | **残置** | チェックボックス — PR-A方針に従い残置 |
-| 146 | `<button type="button">` (cancel) | `<Button variant="secondary">` | |
-| 147 | `<button type="submit" className="btn-primary">` | `<Button>` (default=primary) | |
+### CompanyAddressModal.tsx
 
-### 3. frontend/src/pages/company-detail/CompanyDetailPage.tsx
+| `path:line` | 確認内容 |
+|-------------|---------|
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:11` | Button import 追加 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:12` | TextField import 追加 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:13` | Select import 追加 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:84` | billing/delivery Select 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:96` | branch_name TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:100` | name TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:104` | email TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:108` | telephone TextField 置換（error prop統合） |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:113` | tax_id TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:117` | address_line_1 TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:121` | address_line_2 TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:125` | address_line_3 TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:129` | city TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:133` | state TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:137` | zip TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:141` | country_code TextField 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:145` | checkbox 残置（専用コンポーネント未実装） |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:153` | cancel Button(secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx:154` | save Button(primary) 置換 |
 
-| 行 | 現行要素 | 置換先 | 備考 |
-|----|---------|--------|------|
-| 75 | `<button>` (back, no-data state) | `<Button variant="secondary">` | |
-| 148 | `<button className="btn-sm">` (header back) | `<Button size="sm" variant="secondary">` | |
-| 154-159 | `<button className="btn-sm btn-primary">` (reg link) | `<Button size="sm">` (default=primary) | title prop保持 |
-| 164-169 | `<button className="btn-sm">` (addr link) | `<Button size="sm" variant="secondary">` | |
-| 171-175 | `<button className="btn-sm">` (change billing) | `<Button size="sm" variant="secondary">` | |
-| 189-192 | `<button className="btn-sm">` (copy reg link) | `<Button size="sm" variant="secondary">` | style CSS変数保持 |
-| 198-201 | `<button className="btn-sm">` (copy addr link) | `<Button size="sm" variant="secondary">` | style CSS変数保持 |
-| 207-210 | `<button className="btn-sm">` (copy billing link) | `<Button size="sm" variant="secondary">` | style CSS変数保持 |
-| 217 | `<button className="tab ...">` (basic tab) | `<Button variant="ghost" className="tab ...">` | |
-| 220 | `<button className="tab ...">` (addresses tab) | `<Button variant="ghost" className="tab ...">` | |
-| 223 | `<button className="tab ...">` (contacts tab) | `<Button variant="ghost" className="tab ...">` | |
-| 226 | `<button className="tab ...">` (channels tab) | `<Button variant="ghost" className="tab ...">` | |
-| 229 | `<button className="tab ...">` (discord tab) | `<Button variant="ghost" className="tab ...">` | |
-| 232 | `<button className="tab ...">` (convHistory tab) | `<Button variant="ghost" className="tab ...">` | |
+### CompanyDetailPage.tsx
 
-## 参照コンポーネント
+| `path:line` | 確認内容 |
+|-------------|---------|
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:16` | Button import 追加 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:76` | back Button(secondary) 置換（no-data状態） |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:149` | back Button(sm/secondary) 置換（ヘッダー） |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:155` | reg link Button(sm/primary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:165` | addr link Button(sm/secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:173` | billing link Button(sm/secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:192` | reg copy Button(sm/secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:201` | addr copy Button(sm/secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:210` | billing copy Button(sm/secondary) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:220` | basic タブ Button(ghost) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:223` | addresses タブ Button(ghost) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:226` | contacts タブ Button(ghost) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:229` | channels タブ Button(ghost) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:232` | discord タブ Button(ghost) 置換 |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx:235` | convHistory タブ Button(ghost) 置換 |
 
-- `frontend/src/components/Button.tsx` — variant=primary(default)/secondary/ghost/danger, size=sm/md(default)/lg, className マージ済み
-- `frontend/src/components/TextField.tsx:54` — `{label != null && ...}` によりlabelなし使用可（form-row外部labelと共存）
-- `frontend/src/components/Select.tsx:17-21` — `SelectOption = { value: string; label: string }`が必須
-- `frontend/src/components/Textarea.tsx` — TextareaHTMLAttributes を継承
+---
 
-## 既存ADR確認
+## 不明点リスト
 
-- `docs/adr/ADR-027`: i18n強制 — 本PR変更なし（既存のt()呼び出しをそのまま維持）
-- `docs/adr/ADR-067`: デザイントークン強制 — style prop の CSS変数(`var(--spacing-2)`, `var(--spacing-4)`)はトークン準拠のため保持
+| # | 不明点 | 解消方法 | 状態 |
+|---|-------|---------|------|
+| 1 | checkbox/radio の標準コンポーネントがあるか | 既存 PR-A の方針を確認 | ✅ 解消済み（未実装のため残置） |
 
-## 残置理由（checkbox / radio）
-
-PR-A (Contact系) と同方針。`<input type="checkbox">` / `<input type="radio">` は標準コンポーネントに対応する専用金型が未実装のため残置。ADR-067 既知負債として記録。
+**未解決ゼロ確認**: 全て解消済み
