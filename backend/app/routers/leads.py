@@ -488,8 +488,15 @@ async def update_lead(
         selections_t = tenant_table_ref(db, tenant_id, "lead_sales_form_selections")
         options_t = tenant_table_ref(db, tenant_id, "tenant_sales_form_options")
 
-        # テナント境界チェック: option_id が全て当該テナントの有効なオプションか確認
+        # 重複 option_id チェック: DB UNIQUE制約に当たる前に 400 を返す
         option_ids = [s["option_id"] for s in sales_form_selections_data]
+        if len(option_ids) != len(set(option_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="option_id が重複しています。同一の選択肢を複数回指定することはできません",
+            )
+
+        # テナント境界チェック: option_id が全て当該テナントの有効なオプションか確認
         if option_ids:
             # IN 句をパラメータ展開（PostgreSQL / SQLite 両対応）
             id_params = {f"id_{i}": oid for i, oid in enumerate(option_ids)}

@@ -172,6 +172,18 @@ class TestLeadUpdateSelections:
         })
         assert res.status_code == 400
 
+    async def test_duplicate_option_id_rejected(self, client):
+        """同一 option_id を2回送ると 400（DB UNIQUE 制約前に API レベルで弾く）"""
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "sales_form_selections": [
+                {"option_id": 1, "other_text": None},
+                {"option_id": 1, "other_text": None},
+            ],
+        })
+        assert res.status_code == 400
+        assert "重複" in res.json()["detail"]
+
     async def test_persist_across_get(self, client):
         """保存した選択が GET で読み取れる（永続性確認）"""
         lead_id = await _create_lead(client)
