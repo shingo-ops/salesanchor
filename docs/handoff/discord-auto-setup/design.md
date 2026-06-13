@@ -79,6 +79,22 @@ Step 4: チケットボタン投稿
 
 > **注**: Member/Partner ロールのIDはDBに保存しない。`discord_role_sync.py` が名前で照合する既存設計（`_get_or_create_role()`）を維持する。
 
+### member-announcements の権限設計
+
+`member-announcements` は「Member以上が閲覧可」とするが、Discordのロール階層だけで閲覧権限が自動継承されるわけではない。
+
+そのため、自動セットアップ時は以下の権限を明示的に設定する。
+
+| 対象 | view_channel | read_message_history | send_messages |
+|---|---:|---:|---:|
+| @everyone | deny | deny | deny |
+| Member | allow | allow | deny |
+| Partner | allow | allow | deny |
+| Sales Anchor Staff | allow | allow | allow |
+
+理由:
+Large顧客は Partner ロールのみを持つ可能性があるため、Partner にも `member-announcements` の閲覧許可を明示的に付ける。
+
 ---
 
 ## 3. 作成済みの場合の冪等動作
@@ -238,6 +254,17 @@ public.tenant_discord_ticket_config
 | 既存チャンネルの削除・リネーム | 意図せぬ削除リスクが高い |
 | Member/Partner ロールIDのDB保存 | `discord_role_sync.py` の名前ベース照合で十分 |
 | `ウェルカムメッセージ` の自動設定 | 既存のデフォルト値を使う |
+| Sales Anchor Staff ロールの自動付与 | 後述参照 |
+
+### Sales Anchor Staff ロール付与の扱い
+
+Sales Anchor Staff ロールの作成と `staff_role_id` 保存はMVP対象。
+
+ただし、Discord上でどのスタッフに Sales Anchor Staff ロールを付与するかはMVP対象外とする。
+
+初期セットアップ完了後、サーバー管理者がDiscord上でスタッフに Sales Anchor Staff ロールを手動付与する。
+
+将来PRで、`staff.discord_user_id` などスタッフとDiscordアカウントを紐づける設計が固まった後、自動付与を検討する。
 
 ---
 
