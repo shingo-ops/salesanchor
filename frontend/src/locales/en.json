@@ -292,7 +292,7 @@
     "fedexGuideTitle": "FedEx Integration Guide",
     "fedexGuideIntro": "FedEx integration has two stages: 'API connection (no review required)' and 'Label issuance (review required)'. API connection is typically completed the same day.",
     "fedexGuidePart1Title": "Part 1: API Connection — No Review Required",
-    "fedexGuidePart1Intro": "Create a FedEx Developer account and register your API keys in the app. This enables rate estimates and connection testing.",
+    "fedexGuidePart1Intro": "Log in to the FedEx Developer Portal and register your API keys in the app.",
     "fedexGuidePart1Step1Title": "Log in to FedEx Developer Portal",
     "fedexGuidePart1Step1Desc": "Assuming you already have a FedEx account, log in to the Developer Portal.",
     "fedexGuideDeveloperPortalButton": "Open FedEx Developer Portal",

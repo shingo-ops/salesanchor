@@ -168,12 +168,12 @@ export function FedexLabelValidationTab() {
         <section className="lv-step card">
           <StepHeader num={1} title={t("carrierIntegration.fedexGuidePart1Step1Title")} />
           <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step1Desc")}</p>
-          <div className="form-actions">
+          <div className="lv-step-action">
             <a
               href="https://developer.fedex.com/api/ja-jp/home.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary"
+              className="btn-primary"
             >
               {t("carrierIntegration.fedexGuideDeveloperPortalButton")}
             </a>
