@@ -686,13 +686,8 @@ jobs:
               created_at       TIMESTAMPTZ DEFAULT NOW(),
               updated_at       TIMESTAMPTZ DEFAULT NOW()
           );
-          CREATE TABLE IF NOT EXISTS tenant_001.companies (
-              id         SERIAL PRIMARY KEY,
-              tenant_id  INTEGER NOT NULL,
-              name       VARCHAR(255) NOT NULL,
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              updated_at TIMESTAMPTZ DEFAULT NOW()
-          );
+          -- companies は migration 028 が CREATE TABLE するため、ここでは作成しない
+          -- （pre-create すると normalized_name 等の列が欠落して 028 の INDEX 作成が失敗する）
           CREATE TABLE IF NOT EXISTS tenant_001.conversation_logs (
               id                  SERIAL PRIMARY KEY,
               tenant_id           INTEGER NOT NULL,
