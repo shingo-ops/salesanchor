@@ -13,6 +13,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePermissions } from "../../hooks/usePermissions";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import MergeCompanyModal from "../../components/MergeCompanyModal";
 import { useCompanyDetail } from "./useCompanyDetail";
@@ -72,7 +73,7 @@ export default function CompanyDetailPage() {
     return (
       <div className="page-container">
         <p>{t("common.noData")}</p>
-        <button onClick={() => navigate("/companies")}>{t("common.back")}</button>
+        <Button variant="secondary" onClick={() => navigate("/companies")}>{t("common.back")}</Button>
       </div>
     );
   }
@@ -145,36 +146,38 @@ export default function CompanyDetailPage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <button className="btn-sm" onClick={() => navigate("/companies")}>&larr; {t("common.back")}</button>
+          <Button size="sm" variant="secondary" onClick={() => navigate("/companies")}>&larr; {t("common.back")}</Button>
           <h1>{company.name}</h1>
         </div>
         <div className="page-header-actions">
           {canEdit && company.lead_id && (
             <>
-              <button
-                className="btn-sm btn-primary"
+              <Button
+                size="sm"
                 onClick={handleGenerateRegLink}
                 disabled={regLinkLoading || isAlreadyRegistered}
                 title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
               >
                 {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
-              </button>
+              </Button>
               {isAlreadyRegistered && (
                 <>
-                  <button
-                    className="btn-sm"
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={handleGenerateAddrLink}
                     disabled={addrLinkLoading}
                   >
                     {addrLinkLoading ? t("common.loading") : t("registration.generateAddressLink")}
-                  </button>
-                  <button
-                    className="btn-sm"
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={handleGenerateChangeBillingLink}
                     disabled={changeBillingLinkLoading}
                   >
                     {changeBillingLinkLoading ? t("common.loading") : t("registration.generateChangeBillingLink")}
-                  </button>
+                  </Button>
                 </>
               )}
             </>
@@ -186,52 +189,52 @@ export default function CompanyDetailPage() {
       {regLinkUrl && (
         <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
           {t("registration.linkGenerated")}: <a href={regLinkUrl} target="_blank" rel="noopener noreferrer">{regLinkUrl}</a>
-          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+          <Button size="sm" variant="secondary" style={{ marginLeft: "var(--spacing-2)" }}
             onClick={() => { navigator.clipboard.writeText(regLinkUrl); }}>
             {t("registration.copyLink")}
-          </button>
+          </Button>
         </div>
       )}
       {addrLinkUrl && (
         <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
           {t("registration.addressLinkGenerated")}: <a href={addrLinkUrl} target="_blank" rel="noopener noreferrer">{addrLinkUrl}</a>
-          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+          <Button size="sm" variant="secondary" style={{ marginLeft: "var(--spacing-2)" }}
             onClick={() => { navigator.clipboard.writeText(addrLinkUrl); }}>
             {t("registration.copyLink")}
-          </button>
+          </Button>
         </div>
       )}
       {changeBillingLinkUrl && (
         <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
           {t("registration.changeBillingLinkGenerated")}: <a href={changeBillingLinkUrl} target="_blank" rel="noopener noreferrer">{changeBillingLinkUrl}</a>
-          <button className="btn-sm" style={{ marginLeft: "var(--spacing-2)" }}
+          <Button size="sm" variant="secondary" style={{ marginLeft: "var(--spacing-2)" }}
             onClick={() => { navigator.clipboard.writeText(changeBillingLinkUrl); }}>
             {t("registration.copyLink")}
-          </button>
+          </Button>
         </div>
       )}
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="tabs">
-        <button className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => switchTab("basic")}>
+        <Button variant="ghost" className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => switchTab("basic")}>
           {t("companies.basicInfo")}
-        </button>
-        <button className={`tab ${activeTab === "addresses" ? "active" : ""}`} onClick={() => switchTab("addresses")}>
+        </Button>
+        <Button variant="ghost" className={`tab ${activeTab === "addresses" ? "active" : ""}`} onClick={() => switchTab("addresses")}>
           {t("companies.address")} ({company.addresses.length})
-        </button>
-        <button className={`tab ${activeTab === "contacts" ? "active" : ""}`} onClick={() => switchTab("contacts")}>
+        </Button>
+        <Button variant="ghost" className={`tab ${activeTab === "contacts" ? "active" : ""}`} onClick={() => switchTab("contacts")}>
           {t("contacts.title")} ({contacts.length})
-        </button>
-        <button className={`tab ${activeTab === "channels" ? "active" : ""}`} onClick={() => switchTab("channels")}>
+        </Button>
+        <Button variant="ghost" className={`tab ${activeTab === "channels" ? "active" : ""}`} onClick={() => switchTab("channels")}>
           {t("nav.channels")} ({company.sales_channels.length})
-        </button>
-        <button className={`tab ${activeTab === "discord" ? "active" : ""}`} onClick={() => switchTab("discord")}>
+        </Button>
+        <Button variant="ghost" className={`tab ${activeTab === "discord" ? "active" : ""}`} onClick={() => switchTab("discord")}>
           {t("discord.title")}
-        </button>
-        <button className={`tab ${activeTab === "convHistory" ? "active" : ""}`} onClick={() => switchTab("convHistory")}>
+        </Button>
+        <Button variant="ghost" className={`tab ${activeTab === "convHistory" ? "active" : ""}`} onClick={() => switchTab("convHistory")}>
           {t("companies.convHistory.tabLabel")}
-        </button>
+        </Button>
       </div>
 
       {activeTab === "basic" && basicForm && (
