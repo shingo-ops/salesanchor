@@ -140,36 +140,35 @@
 <text x="590" y="284" text-anchor="middle" font-size="18" font-weight="700" fill="#C2410C">注文</text>
 <text x="590" y="308" text-anchor="middle" font-size="13" fill="#EA580C">交差点</text>
 
-<!-- 矢印: 注文→下流4ノードへ（放射状） -->
-<path d="M518 330 L175 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<path d="M553 348 L385 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<path d="M627 348 L795 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<path d="M662 330 M660 330 L1005 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<line x1="660" y1="330" x2="1005" y2="430" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<!-- 矢印: 注文→下流4ノードへ（放射状・1本ずつ） -->
+<path d="M518 330 L180 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<path d="M553 348 L450 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<path d="M627 348 L720 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<line x1="660" y1="330" x2="995" y2="430" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
 
-<!-- 下段4ノード -->
-<rect x="60" y="430" width="230" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="175" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 見積書</text>
-<text x="175" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
-<text x="175" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積段階で発行</text>
+<!-- 下段4ノード（等間隔配置・重なりなし） -->
+<rect x="60" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="180" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 見積書</text>
+<text x="180" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="180" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積段階で発行</text>
 
-<rect x="310" y="430" width="230" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="425" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 請求書</text>
-<text x="425" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
-<text x="425" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積承認で変換</text>
+<rect x="330" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="450" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 請求書</text>
+<text x="450" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="450" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積承認で変換</text>
 
-<rect x="680" y="430" width="230" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="795" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">🚚 出荷予定</text>
-<text x="795" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
-<text x="795" y="504" text-anchor="middle" font-size="12" fill="#6B7280">入金確認後</text>
+<rect x="600" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="720" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">🚚 出荷予定</text>
+<text x="720" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="720" y="504" text-anchor="middle" font-size="12" fill="#6B7280">入金確認後</text>
 
-<rect x="880" y="430" width="250" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="1005" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📊 顧客実績</text>
-<text x="1005" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動集計</text>
-<text x="1005" y="504" text-anchor="middle" font-size="12" fill="#6B7280">完了後に反映</text>
+<rect x="870" y="430" width="250" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="995" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📊 顧客実績</text>
+<text x="995" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動集計</text>
+<text x="995" y="504" text-anchor="middle" font-size="12" fill="#6B7280">完了後に反映</text>
 
 <!-- 実績→顧客カルテ -->
-<text x="1005" y="542" text-anchor="middle" font-size="12" fill="#9CA3AF">↻ 顧客カルテに自動表示</text>
+<text x="995" y="542" text-anchor="middle" font-size="12" fill="#9CA3AF">↻ 顧客カルテに自動表示</text>
 
 <!-- 凡例 -->
 <rect x="60" y="600" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#3B82F6"/>
