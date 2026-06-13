@@ -39,8 +39,8 @@
 | ADR-023（スタッフ3層同期） | Firebase 無効化パターンの参照元。今回は **Firebase 無効化を Phase 3 スコープ外** とする（後述 2-3） |
 | ADR-034（テナント migration 自動化） | 作成フロー逆順の設計根拠として参照 |
 | ADR-036（スキーマ整合性） | 削除後の整合性テストを `test_tenant_schema_integrity.py` パターンで追加 |
-| ADR-072（tenant_context reset） | 削除エンドポイントは write EP のため `db.commit()` 後に `reset_tenant_context()` 必須 |
-| ADR-131（context 自動リセット） | ADR-072 と同様に適用 |
+| ADR-072（tenant_context reset） | **super_admin_tenants.py には適用しない。** `get_current_tenant` を付けない設計のため tenant context は設定されず、`reset_tenant_context()` は不要。`get_db` finally 句が context をクリアする |
+| ADR-131（context 自動リセット） | ADR-072 と同様に不適用 |
 
 ### 2-3. Firebase 無効化の要否（PO 決定事項）
 
@@ -123,7 +123,8 @@ async def delete_tenant_logical(tenant_id: int, body: TenantDeleteRequest, ...):
         await _record_deletion_audit(
             db, tenant, mode="logical", status="succeeded", actor=current_user
         )
-    reset_tenant_context(db)  # ADR-072 / ADR-131
+    # reset_tenant_context() は不要（super_admin_tenants.py は get_current_tenant なし）
+    # → get_db finally 句が context をクリア
 ```
 
 ### 3-4. 物理削除
@@ -188,7 +189,7 @@ async def delete_tenant_physical(tenant_id: int, body: TenantDeleteRequest, ...)
         db, tenant, mode="physical", status="started", actor=current_user
     )
     await db.commit()
-    reset_tenant_context(db)  # ADR-072
+    # reset_tenant_context() は不要（super_admin_tenants.py は get_current_tenant なし）
 
     try:
         # 4-5. DROP SCHEMA + 明示 commit（§4 採用案 A）
@@ -198,17 +199,14 @@ async def delete_tenant_physical(tenant_id: int, body: TenantDeleteRequest, ...)
         # 6. public.tenants DELETE（CASCADE → public.users 連鎖削除）
         async with db.begin():
             await db.execute(text("DELETE FROM public.tenants WHERE id = :id"), {"id": tenant_id})
-        reset_tenant_context(db)  # ADR-072
 
         # 7. 監査ログ succeeded
         await _update_audit_status(db, audit_id, status="succeeded")
         await db.commit()
-        reset_tenant_context(db)
 
     except Exception as exc:
         await _update_audit_status(db, audit_id, status="failed", error=str(exc))
         await db.commit()
-        reset_tenant_context(db)
         raise
 ```
 
@@ -315,7 +313,7 @@ backend/tests/test_tenant_deletion.py   # 新規
 
 ### migration
 
-`public.tenant_deletion_audit` テーブル新設が必要（additive-only — カラム追加のみのため許可範囲内）。
+`public.tenant_deletion_audit` テーブル新設が必要（additive migration — 新規 public table 追加のため許可範囲内）。
 
 - ファイル命名: `migrations/YYYYMMDD_HHMMSS_add_tenant_deletion_audit.sql`
 - `deploy.yml` への追記必須（migration-guard が検知）
@@ -344,7 +342,7 @@ develop → main
 | T-1 | `public.tenant_deletion_audit` migration 作成 + deploy.yml 追記 | ✅ PO GO 必要 |
 | T-2 | 論理削除 EP 実装（`DELETE /api/v1/super-admin/tenants/{tenant_id}`） | - |
 | T-3 | 物理削除 EP 実装（`DELETE /api/v1/super-admin/tenants/{tenant_id}/physical`） | ✅ DROP 含む |
-| T-4 | `scripts/backup_tenant_before_drop.sh` 新規作成 | - |
+| T-4 | `scripts/backup_tenant_before_drop.sh` 新規作成 | ✅ PO GO 必要 |
 | T-5 | `reports.py` 呼び出し元の is_active ガード確認・必要なら修正 | - |
 | T-6 | `test_tenant_deletion.py` 作成（SQLite + PostgreSQL 実機） | - |
 
