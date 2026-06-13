@@ -160,6 +160,22 @@ jobs:
               category    VARCHAR(50)  NOT NULL DEFAULT ''
           );
 
+          -- テナント削除 中央監査ログ（public.tenant_deletion_audit 新設）
+          CREATE TABLE IF NOT EXISTS public.tenant_deletion_audit (
+              id            SERIAL PRIMARY KEY,
+              tenant_id     INTEGER NOT NULL,
+              tenant_code   TEXT NOT NULL,
+              tenant_name   TEXT NOT NULL,
+              mode          TEXT NOT NULL,
+              status        TEXT NOT NULL,
+              actor_id      INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              actor_email   TEXT NOT NULL,
+              executed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              completed_at  TIMESTAMPTZ,
+              error_message TEXT,
+              meta          JSONB
+          );
+
           -- 既存データを挿入（本番の既存ユーザーを模擬）
           INSERT INTO public.tenants (tenant_name, tenant_code)
           VALUES ('テストテナント', 'test-tenant') ON CONFLICT DO NOTHING;

@@ -79,6 +79,10 @@ async def test_engine():
             statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
         if "public.registration_tokens" in statement:
             statement = statement.replace("public.registration_tokens", "registration_tokens")
+        if "public.tenants" in statement:
+            statement = statement.replace("public.tenants", "tenants")
+        if "public.tenant_deletion_audit" in statement:
+            statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1105,6 +1109,33 @@ async def setup_test_db(test_engine):
                 (5, 'lost', '対応が遅れた', 4),
                 (6, 'lost', 'その他', 99)
         """))
+        # テナント削除テスト用: tenants テーブル（public. は rewrite で除去済み）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenants (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_code  TEXT NOT NULL UNIQUE,
+                tenant_name  TEXT NOT NULL DEFAULT '',
+                company_name TEXT NOT NULL DEFAULT '',
+                is_active    INTEGER NOT NULL DEFAULT 1
+            )
+        """))
+        # テナント削除 中央監査ログ（public. は rewrite で除去済み）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_deletion_audit (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id     INTEGER NOT NULL,
+                tenant_code   TEXT NOT NULL,
+                tenant_name   TEXT NOT NULL,
+                mode          TEXT NOT NULL,
+                status        TEXT NOT NULL,
+                actor_id      INTEGER,
+                actor_email   TEXT NOT NULL,
+                executed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at  TIMESTAMP,
+                error_message TEXT,
+                meta          TEXT
+            )
+        """))
     yield
 
 
@@ -1182,6 +1213,9 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM user_roles"))
         await conn.execute(text("DELETE FROM role_permissions"))
         await conn.execute(text("DELETE FROM roles"))
+        # テナント削除テスト用クリーンアップ（FK 順: audit → tenants）
+        await conn.execute(text("DELETE FROM tenant_deletion_audit"))
+        await conn.execute(text("DELETE FROM tenants WHERE id > 90"))
 
 
 def _mock_user():
