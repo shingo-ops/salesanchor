@@ -33,6 +33,19 @@
     商品マスタ・在庫マスタの分離 — 自社在庫（A）と仕入元フィード（B）を区別し、二重売りを構造で防ぐ。
   </p>
 
+  <div class="understanding-points">
+    <div class="understanding-points__title">このページで分かること</div>
+    <ul>
+      <li>商品マスタと在庫マスタを分ける理由が分かる</li>
+      <li>A在庫とB在庫の違いが分かる</li>
+      <li>引当と発送時の2段階管理でオーバーセルを防ぐ流れが分かる</li>
+    </ul>
+  </div>
+
+  <div class="status-explain">
+    このページは設計方針を説明するページです。実装完了状態ではありません。進捗の正本は <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/00-SA-OVERVIEW.md" target="_blank" rel="noopener">00-SA-OVERVIEW.md</a> です。
+  </div>
+
   <!-- ① 一言でいうと -->
   <div class="template-section">
     <div class="template-section__head">
@@ -156,6 +169,9 @@
           <!-- 矢印: 注文 → 2段階 -->
           <line x1="910" y1="285" x2="910" y2="338" stroke="#9ca3af" stroke-width="2" marker-end="url(#arr05)"/>
         </svg>
+      </div>
+      <div class="diagram-reading">
+        読み方: 商品マスタは商品の基本情報だけを持ちます。A在庫は引当（確保）で数を押さえ、B在庫は注文時に発注トリガを出します。
       </div>
     </div>
   </div>
