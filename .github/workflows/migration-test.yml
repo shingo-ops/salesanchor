@@ -670,10 +670,33 @@ jobs:
           psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'TENANT_SQL'
           CREATE SCHEMA IF NOT EXISTS tenant_001;
 
+          -- roles: migration 003 が作成（run_all_migrations.sh 外）・migration 075/025 が参照
+          CREATE TABLE IF NOT EXISTS tenant_001.roles (
+              id          SERIAL PRIMARY KEY,
+              tenant_id   INTEGER      NOT NULL DEFAULT 1,
+              name        VARCHAR(100) NOT NULL,
+              color       VARCHAR(7)   DEFAULT '#6c757d',
+              priority    INTEGER      NOT NULL DEFAULT 0,
+              is_system   BOOLEAN      DEFAULT FALSE,
+              description VARCHAR(500),
+              created_at  TIMESTAMPTZ  DEFAULT NOW(),
+              updated_at  TIMESTAMPTZ  DEFAULT NOW(),
+              UNIQUE(tenant_id, name)
+          );
+          -- role_permissions: migration 003 が作成・production 構造（role_id/permission_id）に合わせる
+          -- migration 025/075 が role_id で INSERT するため simplified 版では動作しない
           CREATE TABLE IF NOT EXISTS tenant_001.role_permissions (
-              id         SERIAL PRIMARY KEY,
-              role       VARCHAR(50) NOT NULL,
-              permission VARCHAR(100) NOT NULL
+              id            SERIAL PRIMARY KEY,
+              role_id       INTEGER NOT NULL REFERENCES tenant_001.roles(id) ON DELETE CASCADE,
+              permission_id INTEGER NOT NULL,
+              UNIQUE(role_id, permission_id)
+          );
+          -- user_roles: migration 003 が作成（参照する numbered migration がある場合の予防）
+          CREATE TABLE IF NOT EXISTS tenant_001.user_roles (
+              id          SERIAL PRIMARY KEY,
+              user_id     INTEGER NOT NULL,
+              role_id     INTEGER NOT NULL REFERENCES tenant_001.roles(id) ON DELETE CASCADE,
+              assigned_at TIMESTAMPTZ DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS tenant_001.staff (
               id         SERIAL PRIMARY KEY,
