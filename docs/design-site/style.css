@@ -596,6 +596,68 @@ a:hover { text-decoration: underline; }
   font-size: 13px;
 }
 
+/* ── 理解導線カード ───────────────────────── */
+.reader-guide {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid var(--c-customer);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin: 18px 0 28px;
+  font-size: 13px;
+}
+
+.reader-guide__title {
+  font-weight: 700;
+  color: var(--c-customer);
+  margin-bottom: 8px;
+}
+
+.reader-guide ol,
+.reader-guide ul {
+  margin-left: 1.4em;
+}
+
+.reader-guide li + li {
+  margin-top: 4px;
+}
+
+.understanding-points {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin: 14px 0 24px;
+  font-size: 13px;
+  box-shadow: var(--shadow);
+}
+
+.understanding-points__title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.diagram-reading {
+  background: var(--bg);
+  border-left: 3px solid var(--c-derived);
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-top: 10px;
+}
+
+.status-explain {
+  background: var(--c-undecided-bg);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin: 10px 0 22px;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
 /* ── レスポンシブ ── */
 @media (max-width: 600px) {
   .before-after {

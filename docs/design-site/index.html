@@ -30,6 +30,15 @@
     <strong>正本はADRです。このページと矛盾する場合は必ずADRが優先されます。</strong>
   </p>
 
+  <div class="reader-guide">
+    <div class="reader-guide__title">この設計図書の読み方</div>
+    <ol>
+      <li>まず SA-01 の4原則で、全体の判断基準を見る</li>
+      <li>次に全体図で、顧客・商品/在庫・注文の関係を見る</li>
+      <li>各SAページで、個別の仕組みと未決事項を確認する</li>
+    </ol>
+  </div>
+
   <!-- ①4原則カード -->
   <section class="section">
     <h2 class="section-title">揺るがない4原則（SA-01）</h2>
@@ -85,6 +94,17 @@
       → 詳細: <a href="/design/sa-01.html">SA-01「揺るがない原則」ページ</a>
       ／ 正本: <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md" target="_blank" rel="noopener">ADR-095</a>
     </p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">最終的に実現すること</h2>
+    <div class="understanding-points">
+      <div class="understanding-points__title">受注から完了までを、二重入力なしでつなげる</div>
+      <p>
+        受注 → 見積 → 請求 → 入金 → 発送 → 実績 → P&amp;L が、
+        同じ情報を何度も手入力せず、注文を起点に自動でつながる状態を目指します。
+      </p>
+    </div>
   </section>
 
   <!-- ②全体図 -->
@@ -183,6 +203,9 @@
 <text x="942" y="613" font-size="12.5" fill="#4B5563">商談＝フロー（破線）</text>
 </svg>
 </div>
+    <div class="diagram-reading">
+      読み方: 上段の「顧客マスタ」と「商品・在庫マスタ」が2本の背骨です。中央の「注文」が交差点になり、下段の見積書・請求書・出荷予定・顧客実績がそこから自動生成されます。
+    </div>
     <p style="font-size:12px;color:var(--text-sub);margin-top:8px;text-align:center;">人が手入力するのは各マスタの「属性」と商談の記録だけ。書類・実績はすべて注文から自動導出（派生値）。</p>
     <p style="font-size:13px;color:#6B7280">※ 注文のレコードは「見積段階」から存在して育ちます。見積書は商談中（顧客登録前でも）発行でき、承認されると請求書へ変換＝受注確定となります（正本: ADR-101）。</p>
   </section>

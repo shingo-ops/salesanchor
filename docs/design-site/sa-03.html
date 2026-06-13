@@ -33,6 +33,15 @@
     署名付きトークンで登録口を一本化 — 担当者が発行する個別リンクだけが入口。テナントはサーバーが決める。
   </p>
 
+  <div class="understanding-points">
+    <div class="understanding-points__title">このページで分かること</div>
+    <ul>
+      <li>なぜGoogleフォームではなく専用リンクにするのかが分かる</li>
+      <li>テナント誤混入をサーバー側でどう防ぐかが分かる</li>
+      <li>顧客登録後、データがどこに保存されるかが分かる</li>
+    </ul>
+  </div>
+
   <!-- ① 一言でいうと -->
   <div class="template-section">
     <div class="template-section__head">
@@ -151,6 +160,9 @@
           <text x="745" y="358" text-anchor="middle" font-size="13" font-weight="700" fill="#dc2626">403 エラー（多言語）</text>
           <text x="745" y="382" text-anchor="middle" font-size="11" fill="#9ca3af">期限切れ / 使用済 / 改ざん</text>
         </svg>
+      </div>
+      <div class="diagram-reading">
+        読み方: 担当者が専用リンクを発行し、顧客が送信します。サーバーがトークン（署名付きトークン＝改ざんできない専用リンクの鍵）を検証し、成功時だけ顧客マスタに登録されます。
       </div>
       <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
         テナントの決定は<strong>トークンを検証したサーバーだけが行います</strong>。

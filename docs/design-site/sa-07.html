@@ -33,6 +33,19 @@
     見積・請求の生成 — 注文から書類を自動生成し、発行時点の金額を永久保存（スナップショット）する。
   </p>
 
+  <div class="understanding-points">
+    <div class="understanding-points__title">このページで分かること</div>
+    <ul>
+      <li>注文から見積書・請求書を自動生成する流れが分かる</li>
+      <li>発行済み書類をスナップショット（発行時点の金額・住所・明細を固定保存したもの）として残す理由が分かる</li>
+      <li>PayPalは支払いチャネルであり、書類の正本ではないことが分かる</li>
+    </ul>
+  </div>
+
+  <div class="status-explain">
+    このページは設計方針を説明するページです。実装完了状態ではありません。進捗の正本は <a href="https://github.com/shingo-ops/salesanchor/blob/main/docs/plans/sa-progress/00-SA-OVERVIEW.md" target="_blank" rel="noopener">00-SA-OVERVIEW.md</a> です。
+  </div>
+
   <!-- ① 一言でいうと -->
   <div class="template-section">
     <div class="template-section__head">
@@ -146,6 +159,9 @@
           <!-- 矢印: 請求書 → PayPal -->
           <line x1="1040" y1="320" x2="1058" y2="320" stroke="#9ca3af" stroke-width="2" marker-end="url(#arr07)"/>
         </svg>
+      </div>
+      <div class="diagram-reading">
+        読み方: 注文を起点に書類生成エンジンが顧客・在庫・発行者情報を参照し、見積書と請求書を自動生成します。PayPalは請求書の送付と入金確認（webhook＝外部サービスから自動で届く通知）に使います。
       </div>
       <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
         書類の正本は常に自社システムです。PayPal は「支払いチャネル」として請求書データを受け取るだけ。

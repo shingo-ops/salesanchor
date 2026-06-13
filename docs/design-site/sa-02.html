@@ -34,6 +34,15 @@
     Excelの1行61列を「顧客カルテ」に再設計する
   </p>
 
+  <div class="understanding-points">
+    <div class="understanding-points__title">このページで分かること</div>
+    <ul>
+      <li>顧客マスタを「1人1枚のカルテ」にする理由が分かる</li>
+      <li>商談・会話ログ・住所帳が顧客にどう紐づくかが分かる</li>
+      <li>累計取引額やLTVを手入力せず、注文から自動計算する流れが分かる</li>
+    </ul>
+  </div>
+
   <!-- ①一言でいうと -->
   <div class="template-section">
     <div class="template-section__head">
@@ -183,6 +192,9 @@
           <!-- 補足説明 -->
           <text x="60" y="525" font-size="12" fill="#6b7280">顧客マスタは永続の背骨。実績（累計・LTV）は注文から計算するため、手入力で二重管理しない。</text>
         </svg>
+      </div>
+      <div class="diagram-reading">
+        読み方: 左の顧客マスタを起点に、商談・会話ログ・住所帳が紐づきます。注文は顧客IDと商品IDを参照し、累計売上やLTVは注文から自動計算されます。
       </div>
       <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
         顧客マスタは<strong>変更しない・削除しない</strong>永続情報。
