@@ -1,7 +1,7 @@
 # Phase 3 設計 — ui-standardization PR-A
 
 **対象ADR**: ADR-067  
-**recon**: docs/handoff/ui-standardization/recon.md  
+**recon**: docs/handoff/ui-standardization/pr-a-recon.md  
 **日付**: 2026-06-14  
 **担当**: Generator
 
@@ -68,4 +68,4 @@
 
 - PR-A 完了後: PR-B（Company系 MergeCompanyModal・CompanyDetailPage）に着手
 - 次フェーズ参照: `docs/handoff/ui-standardization/plan.md` PR-B〜E 計画
-- 本設計の参照元: `docs/handoff/ui-standardization/recon.md`（ADR-067、ADR-027 準拠確認済み）
+- 本設計の参照元: docs/handoff/ui-standardization/pr-a-recon.md（ADR-067、ADR-027 準拠確認済み）
