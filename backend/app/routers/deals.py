@@ -40,7 +40,8 @@ _DEAL_COLUMNS = """
     id, deal_code, company_id, contact_id, lead_id,
     title, amount, currency,
     status, stage, probability, assigned_to,
-    expected_close_date, notes, lead_source, created_at, updated_at
+    expected_close_date, notes, lead_source,
+    closed_at, close_reason_memo, created_at, updated_at
 """
 
 _UPDATABLE_COLUMNS = {
@@ -48,7 +49,10 @@ _UPDATABLE_COLUMNS = {
     "title", "amount", "currency",
     "status", "stage", "probability",
     "assigned_to", "expected_close_date", "notes", "lead_source",
+    "close_reason_memo",
 }
+
+_WON_LOST_STATUSES = {"won", "lost"}
 
 
 @router.get(
@@ -250,9 +254,38 @@ async def update_deal(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商談が見つかりません")
 
     raw_update = data.model_dump(exclude_unset=True)
+    close_reasons_input = raw_update.pop("close_reasons", None)
     update_data = {k: v for k, v in raw_update.items() if k in _UPDATABLE_COLUMNS}
-    if not update_data:
+    if not update_data and close_reasons_input is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+
+    # won/lost 遷移の検出と closed_at 自動セット
+    new_status_raw = update_data.get("status")
+    new_status = new_status_raw.value if new_status_raw is not None else None
+    old_status = old_row["status"]
+    is_closing = new_status in _WON_LOST_STATUSES and old_status not in _WON_LOST_STATUSES
+
+    if is_closing:
+        # closed_at を自動セット
+        update_data["closed_at_now"] = True  # UPDATE 句で NOW() を埋め込む（後で処理）
+        # close_reasons 必須チェック
+        if not close_reasons_input:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="成約/失注遷移時は close_reasons（主因1件必須）が必要です",
+            )
+        primary_count = sum(1 for r in close_reasons_input if r.get("is_primary"))
+        if primary_count != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"主因（is_primary: true）はちょうど1件必要です（{primary_count}件指定）",
+            )
+        # close_reason_memo 必須チェック
+        if not update_data.get("close_reason_memo"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="成約/失注遷移時は close_reason_memo が必要です",
+            )
 
     # company_id / contact_id の整合性検証（Step 5d 以降）
     has_company_update = "company_id" in raw_update
@@ -310,18 +343,53 @@ async def update_deal(
         if key in update_data and update_data[key] is not None:
             update_data[key] = update_data[key].value
 
-    set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
+    # closed_at_now フラグを SET 句に変換
+    use_closed_at_now = update_data.pop("closed_at_now", False)
+    set_clauses_parts = [f"{k} = :{k}" for k in update_data]
+    if use_closed_at_now:
+        set_clauses_parts.append("closed_at = NOW()")
+    set_clauses_parts.append("updated_at = NOW()")
+    set_clauses = ", ".join(set_clauses_parts)
     update_data["id"] = deal_id
 
     result = await db.execute(
         text(f"""
-            UPDATE {deals_t} SET {set_clauses}, updated_at = NOW()
+            UPDATE {deals_t} SET {set_clauses}
             WHERE id = :id
             RETURNING {_DEAL_COLUMNS}
         """),
         update_data,
     )
     row = result.mappings().first()
+
+    # close_reasons 登録（won/lost 遷移時）
+    if close_reasons_input and is_closing:
+        close_reasons_t = tenant_table_ref(db, tenant_id, "close_reasons")
+        deal_close_reasons_t = tenant_table_ref(db, tenant_id, "deal_close_reasons")
+        # 既存の理由をクリア（再遷移の場合でも冪等に）
+        await db.execute(
+            text(f"DELETE FROM {deal_close_reasons_t} WHERE deal_id = :did"),
+            {"did": deal_id},
+        )
+        for reason in close_reasons_input:
+            # reason_id の存在確認
+            reason_check = await db.execute(
+                text(f"SELECT id FROM {close_reasons_t} WHERE id = :rid AND is_active = true"),
+                {"rid": reason["reason_id"]},
+            )
+            if not reason_check.first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"close_reason id={reason['reason_id']} が見つかりません",
+                )
+            await db.execute(
+                text(f"""
+                    INSERT INTO {deal_close_reasons_t} (deal_id, reason_id, is_primary)
+                    VALUES (:did, :rid, :is_primary)
+                    ON CONFLICT (deal_id, reason_id) DO UPDATE SET is_primary = EXCLUDED.is_primary
+                """),
+                {"did": deal_id, "rid": reason["reason_id"], "is_primary": reason["is_primary"]},
+            )
 
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,

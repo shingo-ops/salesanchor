@@ -28,6 +28,7 @@ from app.routers import (
     archives,
     auth,
     bots,
+    close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
@@ -262,6 +263,11 @@ app.include_router(
 )
 app.include_router(
     deals.router, prefix="/api/v1", tags=["deals"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-138 PR3: 成約・失注理由マスタ CRUD
+app.include_router(
+    close_reasons.router, prefix="/api/v1", tags=["close-reasons"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
