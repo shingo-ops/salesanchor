@@ -178,3 +178,81 @@ Host prod2
 - ping は通る（ホスト生存中）
 - port 22 は `Connection refused`（SSH サービス停止 or ポート変更）
 - **PO 確認要**: SSH サービスの状態・ポート変更の有無を確認すること
+- → **2026-06-13 追記**: 現時点で `ssh prod1 "whoami"` = `ubuntu` 正常応答。本事象は自然解消済み。
+
+---
+
+## 完了確認記録（2026-06-13: Hikky-dev Mac）
+
+**確認実施者**: Hikky-dev CC（Claude Code / tanizawashingo@Hs-MacBook-Pro）
+
+### ~/.ssh/config 本番ホスト設定（確認済み）
+
+```
+# エージェント用: IP直打ち → ForceCommand制限鍵（salesanchor-claude）
+Host 49.212.137.46
+  IdentityFile ~/.ssh/salesanchor-claude
+  IdentitiesOnly yes
+
+Host 49.212.160.98
+  IdentityFile ~/.ssh/salesanchor-claude
+  IdentitiesOnly yes
+
+# 人間の緊急対話ログイン用（無制限鍵）
+Host prod1
+  HostName 49.212.137.46
+  IdentityFile ~/.ssh/manual-only/id_ed25519
+  IdentitiesOnly yes
+
+Host prod2
+  HostName 49.212.160.98
+  IdentityFile ~/.ssh/manual-only/id_ed25519
+  IdentitiesOnly yes
+```
+
+### 無制限鍵の退避先
+
+`~/.ssh/manual-only/id_ed25519` に退避済み（`~/.ssh/id_ed25519` には不在）
+
+### エージェントが無制限コマンドを打てないことの実証
+
+```
+# prod1 (49.212.137.46): ForceCommand が上書き — 任意コマンドは実行されない
+$ ssh 49.212.137.46 "psql -U postgres -c 'SELECT 1'"
+CONTAINER ID   NAME                                CPU %  MEM USAGE / LIMIT  ...
+829a84123b70   astro-webapp-frontend-1             0.00%  2.332MiB / 128MiB  ...
+（ForceCommand: docker stats --no-stream が代わりに実行。指定コマンドは無視される）
+
+# prod2 (49.212.160.98): salesanchor-claude 鍵が登録されていないため接続不可
+$ ssh 49.212.160.98 "echo UNRESTRICTED_TEST"
+Permission denied (publickey).
+```
+
+### 人間用緊急ログイン経路（確認済み）
+
+```
+$ ssh prod1 "whoami && echo HUMAN_FULL_SHELL_OK"
+ubuntu
+HUMAN_FULL_SHELL_OK
+
+$ ssh prod2 "whoami && echo HUMAN_FULL_SHELL_OK"
+ubuntu
+HUMAN_FULL_SHELL_OK
+```
+
+### パイプライン無影響確認
+
+deploy Run #27469138615（PR #2098 main マージ）成功。
+deploy.yml は `secrets.SSH_PRIVATE_KEY`（GitHub Actions 専用鍵）を使用しており、
+ローカル ~/.ssh/config の変更は無影響。
+
+### 判定
+
+| 受け入れ条件 | 結果 |
+|---|---|
+| エージェント IP 直打ちで任意コマンド拒否 | ✅ ForceCommand 上書き / Permission denied |
+| 人間用緊急ログイン経路あり | ✅ ssh prod1 / prod2 でフルシェル確認 |
+| deploy パイプライン無影響 | ✅ Run #27469138615 成功 |
+| .137.46 port 22 別事象 | ✅ 自然解消（ssh prod1 正常） |
+
+**Hikky-dev Mac: SSH 鍵隔離 完了** ✅
