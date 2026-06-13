@@ -151,11 +151,77 @@ export function FedexLabelValidationTab() {
 
   return (
     <div className="lv-wizard">
-      <h3>{t("carrierIntegration.lvTitle")}</h3>
-      <p className="form-hint">{t("carrierIntegration.lvDescription")}</p>
+      {/* ── ガイド全体ヘッダー ── */}
+      <div className="lv-guide-header">
+        <h3>{t("carrierIntegration.fedexGuideTitle")}</h3>
+        <p className="form-hint">{t("carrierIntegration.fedexGuideIntro")}</p>
+      </div>
 
-      {/* ── Step 1: Sandbox 認証情報確認 ── */}
-      <section className="lv-step card">
+      {/* -- 第1部: API接続・審査不要 -- */}
+      <div className="lv-part">
+        <div className="lv-part__header">
+          <h4 className="lv-part__title">{t("carrierIntegration.fedexGuidePart1Title")}</h4>
+          <p className="lv-part__intro">{t("carrierIntegration.fedexGuidePart1Intro")}</p>
+        </div>
+
+        {/* Part 1 / Step 1: FedExアカウント作成 */}
+        <section className="lv-step card">
+          <StepHeader num={1} title={t("carrierIntegration.fedexGuidePart1Step1Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step1Desc")}</p>
+          <div className="lv-placeholder-card" data-screenshot="fedex-account-creation">
+            <span className="lv-placeholder-card__label">{t("carrierIntegration.fedexGuidePart1PlaceholderLabel")}:</span>
+            <span>{t("carrierIntegration.fedexGuidePart1Step1Title")}</span>
+          </div>
+        </section>
+
+        {/* Part 1 / Step 2: Developer Portalでプロジェクト作成 */}
+        <section className="lv-step card">
+          <StepHeader num={2} title={t("carrierIntegration.fedexGuidePart1Step2Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step2Desc")}</p>
+          <div className="lv-placeholder-card" data-screenshot="fedex-developer-portal-project">
+            <span className="lv-placeholder-card__label">{t("carrierIntegration.fedexGuidePart1PlaceholderLabel")}:</span>
+            <span>{t("carrierIntegration.fedexGuidePart1Step2Title")}</span>
+          </div>
+        </section>
+
+        {/* Part 1 / Step 3: 必要なAPIを追加 */}
+        <section className="lv-step card">
+          <StepHeader num={3} title={t("carrierIntegration.fedexGuidePart1Step3Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step3Desc")}</p>
+          <div className="lv-placeholder-card" data-screenshot="fedex-api-selection">
+            <span className="lv-placeholder-card__label">{t("carrierIntegration.fedexGuidePart1PlaceholderLabel")}:</span>
+            <span>{t("carrierIntegration.fedexGuidePart1Step3Title")}</span>
+          </div>
+        </section>
+
+        {/* Part 1 / Step 4: Sandboxキー登録 */}
+        <section className="lv-step card">
+          <StepHeader num={4} title={t("carrierIntegration.fedexGuidePart1Step4Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step4Desc")}</p>
+        </section>
+
+        {/* Part 1 / Step 5: 本番キー登録 */}
+        <section className="lv-step card">
+          <StepHeader num={5} title={t("carrierIntegration.fedexGuidePart1Step5Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step5Desc")}</p>
+        </section>
+
+        {/* Part 1 / Step 6: 接続テスト */}
+        <section className="lv-step card">
+          <StepHeader num={6} title={t("carrierIntegration.fedexGuidePart1Step6Title")} />
+          <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step6Desc")}</p>
+        </section>
+      </div>
+
+      {/* -- 第2部: ラベル発行の審査準備（審査あり）-- */}
+      <div className="lv-part">
+        <div className="lv-part__header">
+          <h4 className="lv-part__title">{t("carrierIntegration.fedexGuidePart2Title")}</h4>
+          <p className="lv-part__intro">{t("carrierIntegration.fedexGuidePart2Intro")}</p>
+        </div>
+
+        {/* ── Step 1: Sandbox 認証情報確認 ── */}
+        <section className="lv-step card">
         <StepHeader num={1} title={t("carrierIntegration.lvStep1Title")} />
         <p className="form-hint">{t("carrierIntegration.lvStep1Desc")}</p>
       </section>
@@ -340,10 +406,11 @@ export function FedexLabelValidationTab() {
       </section>
 
       {/* ── Step 9: 完了 ── */}
-      <section className="lv-step card lv-step--complete">
-        <StepHeader num={9} title={t("carrierIntegration.lvStep9Title")} />
-        <p className="form-hint">{t("carrierIntegration.lvStep9Desc")}</p>
-      </section>
+        <section className="lv-step card lv-step--complete">
+          <StepHeader num={9} title={t("carrierIntegration.lvStep9Title")} />
+          <p className="form-hint">{t("carrierIntegration.lvStep9Desc")}</p>
+        </section>
+      </div>
     </div>
   );
 }
