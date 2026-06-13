@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【要対応】デプロイ停止の復旧手順 — tenant_001 スキーマ整合</title>
+<style>
+  body { font-family: -apple-system, "Hiragino Sans", sans-serif; line-height: 1.8; max-width: 860px; margin: 0 auto; padding: 24px; color: #1a202c; }
+  h1 { font-size: 1.5rem; border-bottom: 3px solid #e53e3e; padding-bottom: 8px; }
+  h2 { font-size: 1.2rem; margin-top: 32px; background: #f7fafc; padding: 8px 12px; border-left: 4px solid #3182ce; }
+  .box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .warn { background: #fffaf0; border-left: 4px solid #dd6b20; }
+  .ok { background: #f0fff4; border-left: 4px solid #38a169; }
+  .danger { background: #fff5f5; border-left: 4px solid #e53e3e; }
+  pre { background: #1a202c; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem; }
+  code { background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; font-size: 0.92rem; }
+  th { background: #edf2f7; }
+  .step { font-weight: bold; color: #2b6cb0; }
+  .small { color: #718096; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>【要対応・PO】デプロイ停止の復旧手順</h1>
+<p class="small">対象: しんごさん（DB アクセス・本番判断）／作成: Hikky-dev（Claude Code）／関連: ADR-036, ADR-034, release #2081, deploy run 27432430556</p>
+
+<div class="box ok">
+  <strong>✅ 本番サービスは稼働中です。</strong> アプリ（app.salesanchor.jp）200・backend コンテナ正常・再起動ループなし。リリース #2081 のコード（PayPal ケース受信ハンドラ等）も反映済みです。<br>
+  <strong>⚠️ ただし「デプロイ」は failure で終了し、DB マイグレーションが止まっています。このまま放置すると次回以降の全デプロイが同じ場所で失敗します。</strong>
+</div>
+
+<h2>何が起きたか</h2>
+<p>リリース #2081 のデプロイで、<code>Run database migrations</code> ステップが <strong>2 個目の migration（013）で停止</strong>しました。ログの直接証拠:</p>
+<pre><code>ERROR:  column "source" does not exist
+QUERY:  SELECT source FROM tenant_001.leads WHERE source LIKE 'messenger:%' ...</code></pre>
+<p>= <strong><code>tenant_001</code> の <code>leads</code> テーブルに <code>source</code> 列がありません。</strong></p>
+
+<div class="box warn">
+  <strong>原因（確定）:</strong> リリース #2081 は migration / script を 1 つも変更していません（16:44 の成功デプロイとコード同一）。変わったのは <code>tenant_001</code> の DB 状態です。<br>
+  本日 16:44〜17:41 の間に <strong>tenant_001 が「過去マイグレーション未適用の不完全スキーマ」で作成/リセット</strong>されたのが原因です（しんごさんがアカウント＝テナント操作をされていた時間帯と一致）。これは ADR-034 / ADR-036 が想定する「新規テナントに過去 migration が自動適用されない」既知欠陥の再発です。
+</div>
+
+<h2>復旧手順（推奨: ADR-036 の sync ツールで整合）</h2>
+<p>ADR-036 Level 1 の <code>sync_tenant_schema.py</code>（tenant_004 を基準に全テナント差分を冪等適用）で tenant_001 を整合させます。<strong>まず <code>--dry-run</code> で差分を確認</strong>してから適用してください。</p>
+
+<p><span class="step">STEP 1.</span> VPS に SSH（しんごさんの鍵）:</p>
+<pre><code>ssh ubuntu@49.212.137.46</code></pre>
+
+<p><span class="step">STEP 2.</span> リポジトリへ移動:</p>
+<pre><code>cd /home/ubuntu/salesanchor</code></pre>
+
+<p><span class="step">STEP 3.</span> <strong>差分プレビュー（適用なし）</strong>。tenant_001 が何を欠いているか一覧されます:</p>
+<pre><code>docker compose exec backend python /app/scripts/db/sync_tenant_schema.py --dry-run</code></pre>
+<p class="small">※ <code>DATABASE_URL が未設定</code> と出る場合は、DDL 権限のある URL を渡してください（run_all_migrations と同じ admin ロール）:<br>
+<code>docker compose exec backend sh -lc 'python /app/scripts/db/sync_tenant_schema.py --dry-run'</code></p>
+
+<div class="box danger">
+  <strong>STEP 3 の出力を確認してください。</strong> tenant_001 以外（tenant_005 / 006 等）にも差分が出る場合があります。意図しない変更が無いか目視してから STEP 4 に進んでください。判断に迷ったら出力を Hikky-dev（私）に貼ってください — 一緒に確認します。
+</div>
+
+<p><span class="step">STEP 4.</span> <strong>差分を適用</strong>（<code>--dry-run</code> を外すだけ・冪等）:</p>
+<pre><code>docker compose exec backend python /app/scripts/db/sync_tenant_schema.py</code></pre>
+
+<p><span class="step">STEP 5.</span> 止まっていたデプロイを再実行（Mac 側 or GitHub UI から）。コードは反映済みなので、これは migration を通すための再走です:</p>
+<pre><code>gh run rerun 27432430556</code></pre>
+<p class="small">※ Mac の Hikky-dev からでも実行できます。やっておきましょうか？と聞かれたら「お願い」でこちらで叩きます。</p>
+
+<h2>確認（復旧完了の判定）</h2>
+<table>
+  <tr><th>確認項目</th><th>期待</th></tr>
+  <tr><td>再デプロイの <code>Run database migrations</code></td><td>[145/145] まで完走・green</td></tr>
+  <tr><td>tenant_001.leads.source 列</td><td>存在する（STEP 3 の dry-run で「差分なし」になる）</td></tr>
+  <tr><td>app.salesanchor.jp</td><td>200（引き続き正常）</td></tr>
+</table>
+
+<h2>代替: tenant_001 が「お試し/不要」だった場合</h2>
+<div class="box warn">
+  STEP 3 の dry-run で tenant_001 が大量に欠けている＝実体のないテスト用なら、<strong>整合させるより削除</strong>が適切なこともあります。その場合は <strong>削除して良いか Hikky-dev に一言</strong>ください（不可逆操作なので手順を一緒に確認します）。本番テナントは tenant_004（highlife-jpn）です。
+</div>
+
+<h2>恒久対応（別途・私が対応）</h2>
+<ul>
+  <li><strong>migration 013 の防御ガード</strong>（PR 準備済・GO 待ち）: 部分テナントが 1 つでもあるとデプロイ全体が止まる脆弱性を解消。leads.source が無いテナントは <code>WARNING</code> でスキップしデプロイ継続（整合性検出は schema-check が担当）。これがあれば今回のような全停止は起きません。</li>
+  <li><strong>ADR-034 の deploy 配線</strong>（Proposed・別タスク）: <code>sync_tenant_schema.py</code> / <code>schema-check</code> を deploy パイプラインに組み込み、新規テナント作成時に過去 migration を自動適用。根本解決。PO 判断で着手。</li>
+</ul>
+
+</body>
+</html>
