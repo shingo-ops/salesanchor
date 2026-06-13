@@ -6,6 +6,28 @@
 
 ---
 
+## 0. 根拠 file:line（gate 確認用）
+
+### 標準コンポーネント定義（移行先）
+
+- `frontend/src/components/Button.tsx:40` — `export function Button({` — variant/size型定義
+- `frontend/src/components/TextField.tsx:29` — `export function TextField({` — label/error/size props
+- `frontend/src/components/Select.tsx:36` — `export function Select({` — options配列必須 prop
+- `frontend/src/components/Textarea.tsx:28` — `export function Textarea({` — TextareaProps定義
+- `frontend/src/components/Modal.tsx:35` — `export function Modal({` — focus trap / portal
+
+### PR-A 対象ファイル（移行後）
+
+- `frontend/src/pages/company-detail/CompanyContactsTab.tsx:38` — `export function CompanyContactsTab({`
+- `frontend/src/components/ContactChannelForm.tsx:58` — `export default function ContactChannelForm({`
+- `frontend/src/components/MergeContactModal.tsx:56` — `export default function MergeContactModal({`
+
+### 計画ドキュメント
+
+- `docs/handoff/ui-standardization/plan.md:1` — PR-A〜E 分割計画
+
+---
+
 ## 1. 実施した調査コマンド
 
 ```bash

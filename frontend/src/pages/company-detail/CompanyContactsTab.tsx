@@ -12,6 +12,9 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { Company, Contact, ContactFormState } from "./company-detail.types";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
+import { TextField } from "../../components/TextField";
+import { Select } from "../../components/Select";
 import ContactChannelForm, { type ContactChannelEntry } from "../../components/ContactChannelForm";
 import MergeContactModal from "../../components/MergeContactModal";
 
@@ -87,9 +90,9 @@ export function CompanyContactsTab({
     <div>
       {canEdit && (
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <button className="btn-sm" onClick={openContactNew}>
+          <Button size="sm" variant="secondary" onClick={openContactNew}>
             + {t("contacts.newContact")}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -118,20 +121,21 @@ export function CompanyContactsTab({
                 <td>{c.primary_phone || "-"}</td>
                 <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
                 <td>
-                  <button className="btn-sm" onClick={() => openChannelForm(c)}>
+                  <Button size="sm" variant="secondary" onClick={() => openChannelForm(c)}>
                     {t("contactChannel.addTitle")}
-                  </button>
+                  </Button>
                   {canEdit && (
                     <>
-                      <button className="btn-sm" onClick={() => openContactEdit(c)}>
+                      <Button size="sm" variant="secondary" onClick={() => openContactEdit(c)}>
                         {t("common.edit")}
-                      </button>
-                      <button className="btn-sm btn-warning" onClick={() => openMergeModal(c)}>
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
+                        {/* eslint-disable-next-line local/no-japanese-literal */}
                         {t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")}
-                      </button>
-                      <button className="btn-sm btn-danger" onClick={() => setContactDeleteTarget(c)}>
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => setContactDeleteTarget(c)}>
                         {t("common.delete")}
-                      </button>
+                      </Button>
                     </>
                   )}
                 </td>
@@ -148,89 +152,75 @@ export function CompanyContactsTab({
         title={contactForm.id === null ? t("contacts.newContact") : t("contacts.editContact")}
         size="md"
       >
-            <form onSubmit={handleContactSubmit}>
-              <div className="form-grid">
-                <div className="form-row">
-                  <label>{t("contacts.displayName")}</label>
-                  <input
-                    value={contactForm.display_name}
-                    onChange={(e) => setContactForm({ ...contactForm, display_name: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("contacts.surname")}</label>
-                  <input
-                    value={contactForm.surname}
-                    onChange={(e) => setContactForm({ ...contactForm, surname: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("contacts.givenName")}</label>
-                  <input
-                    value={contactForm.given_name}
-                    onChange={(e) => setContactForm({ ...contactForm, given_name: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("contacts.position")}</label>
-                  <input
-                    value={contactForm.job_title}
-                    onChange={(e) => setContactForm({ ...contactForm, job_title: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("contacts.department")}</label>
-                  <input
-                    value={contactForm.department}
-                    onChange={(e) => setContactForm({ ...contactForm, department: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("common.email")}</label>
-                  <input
-                    type="email"
-                    value={contactForm.primary_email}
-                    onChange={(e) => setContactForm({ ...contactForm, primary_email: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("common.phone")}</label>
-                  <input
-                    value={contactForm.primary_phone}
-                    onChange={(e) => setContactForm({ ...contactForm, primary_phone: e.target.value })}
-                  />
-                </div>
-                <div className="form-row">
-                  <label>{t("common.status")}</label>
-                  <select
-                    value={contactForm.status}
-                    onChange={(e) => setContactForm({ ...contactForm, status: e.target.value })}
-                  >
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
-                    <option value="archived">archived</option>
-                  </select>
-                </div>
-                <div className="form-row">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={contactForm.is_primary_contact}
-                      onChange={(e) => setContactForm({ ...contactForm, is_primary_contact: e.target.checked })}
-                    />
-                    {" "}{t("contacts.isPrimary")}
-                  </label>
-                </div>
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn-sm" onClick={onCloseModal}>
-                  {t("common.cancel")}
-                </button>
-                <button type="submit" className="btn-sm btn-primary" disabled={contactSubmitting}>
-                  {contactSubmitting ? t("common.saving") : t("common.save")}
-                </button>
-              </div>
-            </form>
+        <form onSubmit={handleContactSubmit}>
+          <div className="form-grid">
+            <TextField
+              label={t("contacts.displayName")}
+              value={contactForm.display_name}
+              onChange={(e) => setContactForm({ ...contactForm, display_name: e.target.value })}
+            />
+            <TextField
+              label={t("contacts.surname")}
+              value={contactForm.surname}
+              onChange={(e) => setContactForm({ ...contactForm, surname: e.target.value })}
+            />
+            <TextField
+              label={t("contacts.givenName")}
+              value={contactForm.given_name}
+              onChange={(e) => setContactForm({ ...contactForm, given_name: e.target.value })}
+            />
+            <TextField
+              label={t("contacts.position")}
+              value={contactForm.job_title}
+              onChange={(e) => setContactForm({ ...contactForm, job_title: e.target.value })}
+            />
+            <TextField
+              label={t("contacts.department")}
+              value={contactForm.department}
+              onChange={(e) => setContactForm({ ...contactForm, department: e.target.value })}
+            />
+            <TextField
+              label={t("common.email")}
+              type="email"
+              value={contactForm.primary_email}
+              onChange={(e) => setContactForm({ ...contactForm, primary_email: e.target.value })}
+            />
+            <TextField
+              label={t("common.phone")}
+              value={contactForm.primary_phone}
+              onChange={(e) => setContactForm({ ...contactForm, primary_phone: e.target.value })}
+            />
+            <Select
+              label={t("common.status")}
+              value={contactForm.status}
+              onChange={(e) => setContactForm({ ...contactForm, status: e.target.value })}
+              options={[
+                { value: "active", label: "active" },
+                { value: "inactive", label: "inactive" },
+                { value: "archived", label: "archived" },
+              ]}
+            />
+            <div className="form-row">
+              <label>
+                {/* checkbox は TextField 対象外のため残置 */}
+                <input
+                  type="checkbox"
+                  checked={contactForm.is_primary_contact}
+                  onChange={(e) => setContactForm({ ...contactForm, is_primary_contact: e.target.checked })}
+                />
+                {" "}{t("contacts.isPrimary")}
+              </label>
+            </div>
+          </div>
+          <div className="form-actions">
+            <Button type="button" size="sm" variant="secondary" onClick={onCloseModal}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" size="sm" variant="primary" disabled={contactSubmitting}>
+              {contactSubmitting ? t("common.saving") : t("common.save")}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* チャンネル追加フォーム */}

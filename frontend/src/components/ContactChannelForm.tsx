@@ -14,6 +14,9 @@ import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
+import { TextField } from "./TextField";
+import { Select } from "./Select";
 
 export interface ContactChannelEntry {
   id?: number;
@@ -168,6 +171,7 @@ export default function ContactChannelForm({
       onSaved();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "";
+      // eslint-disable-next-line local/no-japanese-literal
       if (msg.includes("23505") || msg.includes("unique") || msg.includes("重複")) {
         setError(t("contactChannel.duplicateWarning"));
       } else {
@@ -186,47 +190,40 @@ export default function ContactChannelForm({
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       <form onSubmit={handleSubmit}>
         <div className="form-grid">
-          <div className="form-row">
-            <label>{t("contactChannel.channelLabel")}</label>
-            <select
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              disabled={!!initial}
-            >
-              {KNOWN_CHANNELS.map((ch) => (
-                <option key={ch} value={ch}>
-                  {t(`contactChannel.channels.${ch}`, { defaultValue: ch })}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label={t("contactChannel.channelLabel")}
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+            disabled={!!initial}
+            options={KNOWN_CHANNELS.map((ch) => ({
+              value: ch,
+              label: t(`contactChannel.channels.${ch}`, { defaultValue: ch }),
+            }))}
+          />
 
-          <div className="form-row">
-            <label>{t("contactChannel.idLabel")}</label>
-            <input
-              type="text"
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder={idPlaceholder}
-              maxLength={50}
-            />
-          </div>
+          <TextField
+            label={t("contactChannel.idLabel")}
+            type="text"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            placeholder={idPlaceholder}
+            maxLength={50}
+          />
 
           {channel === "discord" && (
-            <div className="form-row">
-              <label>{t("contactChannel.guildIdLabel")}</label>
-              <input
-                type="text"
-                value={guildId}
-                onChange={(e) => setGuildId(e.target.value)}
-                placeholder={t("contactChannel.guildIdPlaceholder")}
-                maxLength={50}
-              />
-            </div>
+            <TextField
+              label={t("contactChannel.guildIdLabel")}
+              type="text"
+              value={guildId}
+              onChange={(e) => setGuildId(e.target.value)}
+              placeholder={t("contactChannel.guildIdPlaceholder")}
+              maxLength={50}
+            />
           )}
 
           <div className="form-row">
             <label>
+              {/* checkbox は TextField 対象外のため残置 */}
               <input
                 type="checkbox"
                 checked={isPrimary}
@@ -257,21 +254,23 @@ export default function ContactChannelForm({
             </p>
             <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
               {onRequestMerge && (
-                <button
+                <Button
                   type="button"
-                  className="btn-sm btn-warning"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => onRequestMerge(duplicate.contact_id)}
                 >
                   {t("contactChannel.mergeButton")}
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 type="button"
-                className="btn-sm"
+                size="sm"
+                variant="ghost"
                 onClick={() => setForceWithAudit(true)}
               >
                 {t("contactChannel.saveAsDistinct")}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -297,25 +296,25 @@ export default function ContactChannelForm({
         {/* 重複あり・選択前は保存ボタン非表示（2択ボタンでのみ進める） */}
         {(!duplicate || forceWithAudit) && (
           <div className="form-actions">
-            <button type="button" onClick={onCancel}>
+            <Button type="button" variant="secondary" onClick={onCancel}>
               {t("contactChannel.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn-primary"
+              variant="primary"
               disabled={submitting || !channel}
             >
               {submitting ? t("common.saving") : t("contactChannel.save")}
-            </button>
+            </Button>
           </div>
         )}
 
         {/* 重複あり・選択前はキャンセルのみ */}
         {duplicate && !forceWithAudit && (
           <div className="form-actions">
-            <button type="button" onClick={onCancel}>
+            <Button type="button" variant="secondary" onClick={onCancel}>
               {t("contactChannel.cancel")}
-            </button>
+            </Button>
           </div>
         )}
       </form>
@@ -323,5 +322,4 @@ export default function ContactChannelForm({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const logger = { warn: (msg: string) => console.warn(msg) };
