@@ -51,6 +51,10 @@ interface CarrierStatus {
   client_id_hint: string | null;
   secret_configured: boolean;
   account_number_hint: string | null;
+  // A4: 接続テスト結果（永続化）
+  last_tested_at: string | null;
+  last_test_ok: boolean | null;
+  last_test_message: string | null;
 }
 
 interface TestResult {
@@ -132,26 +136,10 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
           ? { account_number: formAccountNumber }
           : {}),
       });
-      // 保存成功: ステータス取得 + 接続テストを並行実行
+      // 保存成功: 接続テスト実行 → ステータス再取得（A4: 順次実行で結果をDBに保存）
       const query = SUPPORTS_ENV_SELECT.has(carrier) ? `?environment=${editingEnv}` : "";
-      const [statusResult, testResult] = await Promise.allSettled([
-        api.get<CarrierStatus>(`/integrations/carriers/${carrier}/status${query}`),
-        api.post<TestResult>(`/integrations/carriers/${carrier}/test-connection${query}`, {}),
-      ]);
-      const newStatus = statusResult.status === "fulfilled" ? statusResult.value : null;
-      const testRes: TestResult =
-        testResult.status === "fulfilled"
-          ? testResult.value
-          : {
-              ok: false,
-              status_code: null,
-              message:
-                testResult.reason instanceof Error
-                  ? testResult.reason.message
-                  : t("common.operationError"),
-            };
-      const setEnvData = editingEnv === "production" ? setProdData : setSandboxData;
-      setEnvData({ status: newStatus, testResult: testRes, lastTested: new Date() });
+      await api.post<TestResult>(`/integrations/carriers/${carrier}/test-connection${query}`, {}).catch(() => null);
+      await loadStatus();
       setEditingEnv(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
@@ -165,12 +153,12 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
     setError("");
     try {
       const query = SUPPORTS_ENV_SELECT.has(carrier) ? `?environment=${env}` : "";
-      const res = await api.post<TestResult>(
+      await api.post<TestResult>(
         `/integrations/carriers/${carrier}/test-connection${query}`,
         {},
       );
-      const setEnvData = env === "production" ? setProdData : setSandboxData;
-      setEnvData((d) => ({ ...d, testResult: res, lastTested: new Date() }));
+      // A4: テスト結果はDBに保存済み → ステータス再取得で永続化された結果を表示
+      await loadStatus();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
     } finally {
@@ -207,14 +195,15 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
 
   const renderStatusBadge = (data: EnvData) => {
     if (!data.status?.configured) return null;
-    if (!data.testResult) {
+    // A4: バッジはDBに永続化されたテスト結果を参照
+    if (data.status.last_test_ok === null) {
       return (
         <Badge variant="neutral" size="sm" dot>
           {t("carrierIntegration.statusUnverified")}
         </Badge>
       );
     }
-    return data.testResult.ok ? (
+    return data.status.last_test_ok ? (
       <Badge variant="success" size="sm" dot>
         {t("carrierIntegration.statusOk")}
       </Badge>
@@ -338,18 +327,17 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
         <div className="carrier-env-card__header">
           <h3 className="carrier-env-card__title">{cardTitle}</h3>
           {renderStatusBadge(data)}
-          {data.lastTested && (
+          {data.status?.last_tested_at && (
             <span className="carrier-env-card__last-tested">
               {t("carrierIntegration.lastTested", {
-                time: data.lastTested.toLocaleTimeString(),
+                time: new Date(data.status.last_tested_at).toLocaleTimeString(),
               })}
             </span>
           )}
         </div>
-        {data.testResult && !data.testResult.ok && (
+        {data.status?.last_test_ok === false && data.status.last_test_message && (
           <p className="error-message carrier-env-card__test-error">
-            {data.testResult.message}
-            {data.testResult.status_code ? ` (HTTP ${data.testResult.status_code})` : ""}
+            {data.status.last_test_message}
           </p>
         )}
         <div className="carrier-env-card__body">

@@ -110,6 +110,9 @@ async def test_status_endpoint_configured(client, monkeypatch):
             "client_id_hint": "test-api-key-id",
             "secret_configured": True,
             "account_number_hint": "******011",
+            "last_tested_at": None,
+            "last_test_ok": None,
+            "last_test_message": None,
         }
 
     monkeypatch.setattr(svc, "get_status", _status)
@@ -132,6 +135,9 @@ async def test_status_endpoint_not_configured(client, monkeypatch):
             "client_id_hint": None,
             "secret_configured": False,
             "account_number_hint": None,
+            "last_tested_at": None,
+            "last_test_ok": None,
+            "last_test_message": None,
         }
 
     monkeypatch.setattr(svc, "get_status", _status)
@@ -224,20 +230,85 @@ async def test_save_with_account_number(client, monkeypatch):
 
 
 async def test_test_connection_endpoint(client, monkeypatch):
+    saved = {}
+
     async def _creds(db, tid, carrier, environment="production"):
         return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
 
+    async def _save_result(db, tid, carrier, environment, ok, message):
+        saved["ok"] = ok
+        saved["message"] = message
+
     monkeypatch.setattr(svc, "get_credentials", _creds)
     monkeypatch.setattr(svc, "test_connection", lambda *a, **k: {"ok": True, "status_code": 200, "message": "認証成功"})
+    monkeypatch.setattr(svc, "save_test_result", _save_result)
     resp = await client.post("/api/v1/integrations/carriers/fedex/test-connection", json={})
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
+    # A4: save_test_result が呼ばれていること
+    assert saved.get("ok") is True
+    assert saved.get("message") == "認証成功"
 
 
 async def test_test_connection_not_configured(client, monkeypatch):
+    saved = {}
+
     async def _none(db, tid, carrier, environment="production"):
         return None
 
+    async def _save_result(db, tid, carrier, environment, ok, message):
+        saved["called"] = True
+
     monkeypatch.setattr(svc, "get_credentials", _none)
+    monkeypatch.setattr(svc, "save_test_result", _save_result)
     resp = await client.post("/api/v1/integrations/carriers/dhl/test-connection", json={})
     assert resp.status_code == 400
+    # A4: 認証情報未設定の場合は save_test_result を呼ばない
+    assert "called" not in saved
+
+
+# ─────────────────────────────────────────────────────────────
+# A4: save_test_result
+# ─────────────────────────────────────────────────────────────
+async def test_test_connection_saves_failure_result(client, monkeypatch):
+    """接続テスト失敗時も save_test_result が呼ばれ ok=False が保存される。"""
+    saved = {}
+
+    async def _creds(db, tid, carrier, environment="production"):
+        return {"client_id": "x", "client_secret": "y", "environment": "production"}
+
+    async def _save_result(db, tid, carrier, environment, ok, message):
+        saved["ok"] = ok
+        saved["message"] = message
+
+    monkeypatch.setattr(svc, "get_credentials", _creds)
+    monkeypatch.setattr(svc, "test_connection", lambda *a, **k: {"ok": False, "status_code": 401, "message": "認証情報が正しくありません"})
+    monkeypatch.setattr(svc, "save_test_result", _save_result)
+    resp = await client.post("/api/v1/integrations/carriers/ups/test-connection", json={})
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is False
+    assert saved.get("ok") is False
+    assert saved.get("message") == "認証情報が正しくありません"
+
+
+async def test_status_returns_last_test_fields(client, monkeypatch):
+    """GET /status が last_tested_at / last_test_ok / last_test_message を返す。"""
+    async def _status(db, tid, carrier, environment="production"):
+        return {
+            "configured": True,
+            "environment": "production",
+            "client_id_hint": "abcd...ef01",
+            "secret_configured": True,
+            "account_number_hint": None,
+            "last_tested_at": "2026-06-14T10:00:00+00:00",
+            "last_test_ok": True,
+            "last_test_message": "認証成功（トークン取得）",
+        }
+
+    monkeypatch.setattr(svc, "get_status", _status)
+    resp = await client.get("/api/v1/integrations/carriers/fedex/status")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["last_test_ok"] is True
+    assert body["last_test_message"] == "認証成功（トークン取得）"
+    assert body["last_tested_at"] is not None
