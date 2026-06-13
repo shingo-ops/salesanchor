@@ -369,6 +369,8 @@ async def setup_test_db(test_engine):
                 expected_close_date DATE,
                 notes TEXT,
                 lead_source VARCHAR(50),
+                closed_at TIMESTAMP,
+                close_reason_memo TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -1023,6 +1025,27 @@ async def setup_test_db(test_engine):
                 UNIQUE (user_id, team_id, period_type, period_year, period_num, kpi_type)
             )
         """))
+        # ADR-138 PR1: 成約・失注理由マスタ（close_reasons / deal_close_reasons）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS close_reasons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type VARCHAR(10) NOT NULL,
+                label TEXT NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (type, label)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS deal_close_reasons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                deal_id INTEGER NOT NULL REFERENCES deals(id),
+                reason_id INTEGER NOT NULL REFERENCES close_reasons(id),
+                is_primary INTEGER NOT NULL DEFAULT 0,
+                UNIQUE (deal_id, reason_id)
+            )
+        """))
         # Google Drive 連携設定テーブル（中重要度 audit テスト用）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_google_drive_config (
@@ -1069,6 +1092,16 @@ async def setup_test_db(test_engine):
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # ADR-138: デフォルト成約・失注理由を初回投入
+        await conn.execute(text("""
+            INSERT OR IGNORE INTO close_reasons (id, type, label, sort_order) VALUES
+                (1, 'won', '在庫・品揃え', 1),
+                (2, 'won', '価格', 2),
+                (3, 'won', 'その他', 99),
+                (4, 'lost', '価格が合わなかった', 1),
+                (5, 'lost', '対応が遅れた', 4),
+                (6, 'lost', 'その他', 99)
+        """))
     yield
 
 
@@ -1112,7 +1145,19 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM order_financials"))
         await conn.execute(text("DELETE FROM orders"))
         await conn.execute(text("DELETE FROM products"))
+        await conn.execute(text("DELETE FROM deal_close_reasons"))
         await conn.execute(text("DELETE FROM deals"))
+        await conn.execute(text("DELETE FROM close_reasons"))
+        # ADR-138: デフォルト理由を再投入（テスト間の独立性確保）
+        await conn.execute(text("""
+            INSERT OR IGNORE INTO close_reasons (id, type, label, sort_order) VALUES
+                (1, 'won', '在庫・品揃え', 1),
+                (2, 'won', '価格', 2),
+                (3, 'won', 'その他', 99),
+                (4, 'lost', '価格が合わなかった', 1),
+                (5, 'lost', '対応が遅れた', 4),
+                (6, 'lost', 'その他', 99)
+        """))
         await conn.execute(text("DELETE FROM leads"))
         # Phase 1-B-2 Step 5b-1: companies/contacts 副テーブル → 本体
         # ADR-089 Sprint 6: customer_contact_channels/customer_discord/customer_sales_channels/customer_addresses は削除済み
