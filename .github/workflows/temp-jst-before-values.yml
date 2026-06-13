@@ -1,0 +1,202 @@
+name: "[TEMP] JST統一 ビフォー値取得 (tenant_004 / READ ONLY)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '実行確認: "yes" と入力してください（Shingo 権限のみ・自動実行なし）'
+        required: true
+        default: ''
+
+jobs:
+  jst-before-values:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    timeout-minutes: 10
+
+    steps:
+      - name: VPS SSH → psql 読み取り専用 JST ビフォー値取得 (tenant_004)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            docker compose exec -T postgres psql \
+              -U jarvis -d jarvis_db \
+              -v ON_ERROR_STOP=1 \
+              <<'PSQL'
+            BEGIN;
+            SET TRANSACTION READ ONLY;
+
+            -- jarvis は SUPERUSER/BYPASSRLS のため RLS が評価されない。
+            -- salesanchor_app (NOBYPASSRLS) へ降格することで RLS を実際に有効化する。
+            -- SET LOCAL ROLE はデータ変更ではないため READ ONLY トランザクション内で動作する。
+            SET LOCAL ROLE salesanchor_app;
+
+            -- created_at::date を UTC naive として扱うことを明示
+            SET LOCAL TIME ZONE 'UTC';
+
+            -- テナントコンテキスト (set_tenant_context() と同じ3点セット, dependencies.py:274-277)
+            -- app.tenant_id は数値文字列 '4' (RLS ポリシーが ::INTEGER キャストで評価)
+            SET LOCAL search_path = tenant_004, public;
+            SET LOCAL app.tenant_id = '4';
+            SET LOCAL app.is_operator = '';
+
+            \echo '========================================='
+            \echo '[確認] セッション・テナントコンテキスト検証'
+            \echo '  current_user = salesanchor_app であること'
+            \echo '  app_tenant_id = 4 であること'
+            \echo '  timezone = UTC であること'
+            \echo '========================================='
+            SELECT
+              session_user,
+              current_user,
+              current_schema()                             AS current_schema,
+              current_setting('app.tenant_id',   true)    AS app_tenant_id,
+              current_setting('app.is_operator', true)    AS app_is_operator;
+            SHOW TIME ZONE;
+
+            \echo ''
+            \echo '========================================='
+            \echo '[1] orders 月別集計: UTC naive（現行） vs expected_jst（#2098後）'
+            \echo ''
+            \echo '  old_utc_naive  = 現行 API が返す値 (created_at::date ベース)'
+            \echo '  expected_jst   = #2098 後に API が返すべき値 (JST暦月 UTC境界ベース)'
+            \echo ''
+            \echo '  JST 2026-05: UTC [2026-04-30 15:00, 2026-05-31 15:00)'
+            \echo '  JST 2026-06: UTC [2026-05-31 15:00, 2026-06-30 15:00)'
+            \echo '========================================='
+            SELECT
+              COUNT(*) FILTER (
+                WHERE created_at::date >= '2026-05-01'
+                  AND created_at::date <= '2026-05-31'
+              )                                          AS may_count_utc_naive,
+              COALESCE(SUM(total_amount) FILTER (
+                WHERE created_at::date >= '2026-05-01'
+                  AND created_at::date <= '2026-05-31'
+              ), 0)                                     AS may_amount_utc_naive,
+              COUNT(*) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              )                                         AS may_count_expected_jst,
+              COALESCE(SUM(total_amount) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              ), 0)                                     AS may_amount_expected_jst,
+              COUNT(*) FILTER (
+                WHERE created_at::date >= '2026-06-01'
+                  AND created_at::date <= '2026-06-30'
+              )                                         AS jun_count_utc_naive,
+              COALESCE(SUM(total_amount) FILTER (
+                WHERE created_at::date >= '2026-06-01'
+                  AND created_at::date <= '2026-06-30'
+              ), 0)                                     AS jun_amount_utc_naive,
+              COUNT(*) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00'
+              )                                         AS jun_count_expected_jst,
+              COALESCE(SUM(total_amount) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00'
+              ), 0)                                     AS jun_amount_expected_jst
+            FROM orders
+            WHERE
+              created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+              AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00';
+
+            \echo ''
+            \echo '========================================='
+            \echo '[2] deals won 月別集計: UTC naive（現行） vs expected_jst（#2098後）'
+            \echo '========================================='
+            SELECT
+              COUNT(*) FILTER (
+                WHERE created_at::date >= '2026-05-01'
+                  AND created_at::date <= '2026-05-31'
+              )                                         AS may_count_utc_naive,
+              COALESCE(SUM(amount) FILTER (
+                WHERE created_at::date >= '2026-05-01'
+                  AND created_at::date <= '2026-05-31'
+              ), 0)                                     AS may_amount_utc_naive,
+              COUNT(*) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              )                                         AS may_count_expected_jst,
+              COALESCE(SUM(amount) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              ), 0)                                     AS may_amount_expected_jst,
+              COUNT(*) FILTER (
+                WHERE created_at::date >= '2026-06-01'
+                  AND created_at::date <= '2026-06-30'
+              )                                         AS jun_count_utc_naive,
+              COALESCE(SUM(amount) FILTER (
+                WHERE created_at::date >= '2026-06-01'
+                  AND created_at::date <= '2026-06-30'
+              ), 0)                                     AS jun_amount_utc_naive,
+              COUNT(*) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00'
+              )                                         AS jun_count_expected_jst,
+              COALESCE(SUM(amount) FILTER (
+                WHERE created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+                  AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00'
+              ), 0)                                     AS jun_amount_expected_jst
+            FROM deals
+            WHERE
+              status = 'won'
+              AND created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+              AND created_at <  TIMESTAMPTZ '2026-06-30 15:00:00+00';
+
+            \echo ''
+            \echo '========================================='
+            \echo '[3a] 境界詳細 orders: 5→6月 (JST 6/1 00:00-08:59 = UTC 5/31 15:00-23:59:59)'
+            \echo '     現行: 5月カウント → #2098後: 6月カウントに移動する注文'
+            \echo '========================================='
+            SELECT
+              COUNT(*)                        AS order_count,
+              COALESCE(SUM(total_amount), 0)  AS total_amount_sum,
+              MIN(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_min,
+              MAX(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_max
+            FROM orders
+            WHERE
+              created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              AND created_at <  TIMESTAMPTZ '2026-06-01 00:00:00+00';
+
+            \echo ''
+            \echo '[3b] 境界詳細 orders: 4→5月 (JST 5/1 00:00-08:59 = UTC 4/30 15:00-23:59:59) (参考)'
+            SELECT
+              COUNT(*)                        AS order_count,
+              COALESCE(SUM(total_amount), 0)  AS total_amount_sum,
+              MIN(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_min,
+              MAX(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_max
+            FROM orders
+            WHERE
+              created_at >= TIMESTAMPTZ '2026-04-30 15:00:00+00'
+              AND created_at <  TIMESTAMPTZ '2026-05-01 00:00:00+00';
+
+            \echo ''
+            \echo '[3c] 境界詳細 deals won: 5→6月 (JST 6/1 00:00-08:59 = UTC 5/31 15:00-23:59:59)'
+            \echo '     現行: 5月カウント → #2098後: 6月カウントに移動する deal'
+            SELECT
+              COUNT(*)                        AS won_count,
+              COALESCE(SUM(amount), 0)        AS amount_sum,
+              MIN(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_min,
+              MAX(created_at AT TIME ZONE 'Asia/Tokyo') AS jst_max
+            FROM deals
+            WHERE
+              status = 'won'
+              AND created_at >= TIMESTAMPTZ '2026-05-31 15:00:00+00'
+              AND created_at <  TIMESTAMPTZ '2026-06-01 00:00:00+00';
+
+            ROLLBACK;
+            \echo ''
+            \echo '========================================='
+            \echo '✅ 調査完了 (ROLLBACK 済み - DB への変更ゼロ)'
+            \echo ''
+            \echo '--- #2098 後の判定方法 ---'
+            \echo '  同じ生 SQL を再実行しても集計値は変わらない（変更はアプリ側ロジック）。'
+            \echo '  API の period=1m レスポンスが [1][2] の expected_jst 値と一致すれば成功。'
+            \echo '========================================='
+            PSQL
