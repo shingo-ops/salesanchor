@@ -72,7 +72,7 @@ ADR-108本体は「DB構造を変えず表示再編」として起案された�
 
 - `SalesFormMultiSelect` 新規コンポーネント（data-testid 付き）
 - `InboxKartePanel` company タブに配置
-- `salesFormOptions` props を KarteTabContent に明示的に渡す（TypeScript 型安全）
+- `InboxKartePanel` が `leadDetail.sales_form_options ?? []` を直接 `SalesFormMultiSelect` に渡す（salesFormOptions state を介さず leadDetail から直参照）
 - ADR-067: `--size-dropdown-max-h` トークン追加
 
 ---
