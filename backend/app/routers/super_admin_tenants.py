@@ -20,6 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
+from app.cache import invalidate_tenant_cache
 from app.database import get_admin_db, get_db
 
 router = APIRouter()
@@ -84,6 +85,9 @@ async def delete_tenant_logical(
         )
     # get_current_tenant を使わない設計のため reset_tenant_context() 不要
     # get_db finally 句が context をクリアする
+
+    # Redis キャッシュを削除: 論理削除後も cached is_active=True で通過するのを防ぐ
+    await invalidate_tenant_cache(tenant_id)
 
     return {"status": "ok", "tenant_id": tenant_id, "mode": "logical"}
 
@@ -164,7 +168,10 @@ async def delete_tenant_physical(
                 {"id": tenant_id},
             )
 
-        # 7. 監査ログ: status=succeeded + completed_at
+        # 7. Redis キャッシュを削除（DROP 成功後。テナント行削除前でも後でも可）
+        await invalidate_tenant_cache(tenant_id)
+
+        # 8. 監査ログ: status=succeeded + completed_at
         async with db.begin():
             await db.execute(
                 text(
