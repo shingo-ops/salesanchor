@@ -12,6 +12,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { NAV_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
 import type { SalesFormOption, SalesFormSelectionState } from "./inbox.types";
 
 interface Props {
@@ -100,13 +102,16 @@ export function SalesFormMultiSelect({ options, value, onChange, onBlur }: Props
       <button
         type="button"
         className="right-panel-field sales-form-trigger"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (open) onBlur();
+          setOpen((prev) => !prev);
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
         data-testid="sales-form-trigger"
       >
         {selectedLabels || t("leads.salesFormPlaceholder")}
-        <span className="sales-form-caret" aria-hidden="true">▾</span>
+        <NAV_ICONS.chevronDown size={ICON.sm} aria-hidden="true" className="sales-form-caret" />
       </button>
 
       {/* ドロップダウンパネル */}

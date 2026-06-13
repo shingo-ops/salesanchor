@@ -200,3 +200,27 @@ class TestLeadUpdateSelections:
         assert ids == {1, 5}
         other = next(s for s in data["sales_form_selections"] if s["option_id"] == 5)
         assert other["other_text"] == "卸専門"
+
+    async def test_audit_log_includes_selections(self, client, db_session):
+        """selections のみ更新時も audit_log.new_data に sales_form_selections が含まれる"""
+        import json
+        from sqlalchemy import text
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "sales_form_selections": [{"option_id": 2, "other_text": None}],
+        })
+        assert res.status_code == 200
+        result = await db_session.execute(
+            text(
+                "SELECT new_data FROM audit_logs"
+                " WHERE action='update' AND record_id=:id"
+                " ORDER BY id DESC LIMIT 1"
+            ),
+            {"id": lead_id},
+        )
+        row = result.first()
+        assert row is not None, "audit_log に update レコードがない"
+        new_data = json.loads(row[0])
+        assert "sales_form_selections" in new_data
+        assert len(new_data["sales_form_selections"]) == 1
+        assert new_data["sales_form_selections"][0]["option_id"] == 2

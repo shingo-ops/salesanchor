@@ -5,7 +5,7 @@ import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import type { LeadDetail, KarteTabKey, SalesFormOption, SalesFormSelectionState } from "./inbox.types";
+import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.types";
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 
 interface CardForm {
@@ -95,8 +95,6 @@ export function InboxKartePanel({
 }: Props) {
   const { t } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
-  // ADR-108 Phase B-1: テナント別 sales_form 選択肢マスタ
-  const [salesFormOptions, setSalesFormOptions] = useState<SalesFormOption[]>([]);
 
   useEffect(() => {
     if (!leadDetail?.discord_guild_channel_id || guildId) return;
@@ -104,14 +102,6 @@ export function InboxKartePanel({
       .then((d) => setGuildId(d.guild_id ?? null))
       .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
-
-  // ADR-108 Phase B-1: GET /leads/{id} は常に sales_form_options を付加して返す（推奨A）
-  // leads.py L325 で _fetch_sales_form_options() を毎回呼ぶため別途フェッチ不要。
-  useEffect(() => {
-    if (leadDetail?.sales_form_options) {
-      setSalesFormOptions(leadDetail.sales_form_options);
-    }
-  }, [leadDetail?.sales_form_options]);
 
   const stagePresentation = leadDetail ? getStatusPresentation("lead", leadDetail.status) : null;
   const subParts = leadDetail
@@ -206,7 +196,6 @@ export function InboxKartePanel({
               handleCardFieldChange={handleCardFieldChange}
               handleCardFieldBlur={handleCardFieldBlur}
               guildId={guildId}
-              salesFormOptions={salesFormOptions}
             />
           </div>
 
@@ -347,7 +336,7 @@ function ActionBar({
 // ---------------------------------------------------------------------------
 
 function KarteTabContent({
-  tab, leadDetail, cardForm, handleCardFieldChange, handleCardFieldBlur, guildId, salesFormOptions,
+  tab, leadDetail, cardForm, handleCardFieldChange, handleCardFieldBlur, guildId,
 }: {
   tab: KarteTabKey;
   leadDetail: LeadDetail;
@@ -355,7 +344,6 @@ function KarteTabContent({
   handleCardFieldChange: (field: keyof LeadDetail, value: unknown) => void;
   handleCardFieldBlur: () => void;
   guildId: string | null;
-  salesFormOptions: SalesFormOption[];
 }) {
   const { t } = useTranslation();
 
@@ -474,7 +462,7 @@ function KarteTabContent({
         <div className="right-panel-row right-panel-row--multiselect">
           <span className="right-panel-label">{t("leads.salesForm")}</span>
           <SalesFormMultiSelect
-            options={salesFormOptions}
+            options={leadDetail.sales_form_options ?? []}
             value={cardForm.sales_form_selections ?? []}
             onChange={(selections) => handleCardFieldChange("sales_form_selections", selections)}
             onBlur={handleCardFieldBlur}
