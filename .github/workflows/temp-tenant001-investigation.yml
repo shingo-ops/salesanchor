@@ -1,0 +1,204 @@
+name: "[TEMP] tenant_001 スキーマ・データ調査（読み取り専用）"
+
+# ⚠️ 使い捨てワークフロー
+# 用途: tenant_001 のデータ空き確認・スキーマ欠損調査（一回限り）
+# 調査完了後は PR を出してこのファイルを削除すること。
+# 再実行が必要な場合は Shingo が workflow_dispatch を手動押下。自動実行なし。
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: |
+          実行確認: "yes" と入力してください（Shingo 権限のみ・自動実行なし）
+        required: true
+        default: ''
+
+jobs:
+  investigate-tenant-001:
+    name: tenant_001 読み取り専用調査
+    runs-on: ubuntu-latest
+    # confirm="yes" のみ実行。入力ミス・誤トリガーをブロック。
+    if: github.event.inputs.confirm == 'yes'
+    timeout-minutes: 10
+
+    steps:
+      - name: 実行内容の宣言（レビュー用）
+        run: |
+          echo "========================================"
+          echo "  tenant_001 スキーマ・データ調査"
+          echo "========================================"
+          echo "実行クエリ (全 SELECT のみ):"
+          echo "  [1/6] テナント一覧 (public.tenants)"
+          echo "  [2/6] tenant_001 テーブル一覧"
+          echo "  [3/6] tenant_001 主要テーブルの存在確認"
+          echo "  [4/6] tenant_001 データ件数・最終更新 (COUNT/MAX のみ・個人データなし)"
+          echo "  [5/6] tenant_001 vs tenant_005 テーブル差分"
+          echo "  [6/6] tenant_001 vs tenant_003 テーブル差分"
+          echo ""
+          echo "読み取り保証:"
+          echo "  - SET TRANSACTION READ ONLY (PostgreSQL レベルで DML/DDL 物理ブロック)"
+          echo "  - \\set ON_ERROR_ROLLBACK on (テーブル欠損エラーで継続)"
+          echo "  - ROLLBACK で終了 (変更ゼロ)"
+          echo "========================================"
+
+      - name: VPS SSH → psql 読み取り専用調査
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # script はシングルクォート heredoc で変数展開なし。
+          # SET TRANSACTION READ ONLY により UPDATE/DELETE/DROP は PostgreSQL レベルで拒否される。
+          script: |
+            cd /home/ubuntu/salesanchor
+
+            docker compose exec -T postgres psql \
+              -U jarvis -d jarvis_db \
+              -v ON_ERROR_STOP=0 \
+              <<'PSQL'
+
+            -- ================================================================
+            -- 全クエリを READ ONLY トランザクション内で実行
+            -- SET TRANSACTION READ ONLY: UPDATE/DELETE/INSERT/DROP は物理的に失敗
+            -- \set ON_ERROR_ROLLBACK on: テーブル欠損等のエラーで次のクエリへ継続
+            -- ROLLBACK: 最後に必ず変更なしで終了
+            -- ================================================================
+            \set ON_ERROR_ROLLBACK on
+
+            BEGIN;
+            SET TRANSACTION READ ONLY;
+
+            \echo ''
+            \echo '━━━ [1/6] テナント一覧 (public.tenants) ━━━'
+            SELECT id, tenant_code, tenant_name, is_active, created_at
+            FROM public.tenants
+            ORDER BY id;
+
+            \echo ''
+            \echo '━━━ [2/6] tenant_001 テーブル一覧 ━━━'
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'tenant_001'
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name;
+
+            \echo ''
+            \echo '━━━ [3/6] tenant_001 主要テーブルの存在確認 ━━━'
+            SELECT
+              t.name                                                        AS table_name,
+              CASE WHEN e.table_name IS NOT NULL THEN 'EXISTS' ELSE 'MISSING' END AS status
+            FROM (VALUES
+              ('leads'), ('deals'), ('companies'), ('contacts'), ('staff'),
+              ('invoices'), ('quotes'), ('quote_items'), ('invoice_items'),
+              ('lead_channels'), ('conversation_logs'), ('role_permissions'),
+              ('teams')
+            ) AS t(name)
+            LEFT JOIN information_schema.tables e
+              ON e.table_schema = 'tenant_001' AND e.table_name = t.name
+            ORDER BY t.name;
+
+            \echo ''
+            \echo '━━━ [4/6] tenant_001 データ件数・最終更新 (COUNT/MAX のみ・個人データ非取得) ━━━'
+            \echo '--- leads ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.leads;
+
+            \echo '--- deals ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.deals;
+
+            \echo '--- companies ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.companies;
+
+            \echo '--- staff ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.staff;
+
+            \echo '--- invoices (存在する場合) ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.invoices;
+
+            \echo '--- quotes (存在する場合) ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM tenant_001.quotes;
+
+            \echo '--- users (public schema, tenant_id=1) ---'
+            SELECT COUNT(*) AS record_count,
+                   MAX(created_at) AS last_created,
+                   MAX(updated_at) AS last_updated
+            FROM public.users
+            WHERE tenant_id = 1;
+
+            \echo ''
+            \echo '━━━ [5/6] tenant_001 vs tenant_005 テーブル差分 ━━━'
+            SELECT
+              '001_not_in_005' AS diff_type,
+              t1.table_name
+            FROM information_schema.tables t1
+            WHERE t1.table_schema = 'tenant_001'
+              AND t1.table_type  = 'BASE TABLE'
+              AND NOT EXISTS (
+                SELECT 1 FROM information_schema.tables t5
+                WHERE t5.table_schema = 'tenant_005'
+                  AND t5.table_name   = t1.table_name
+              )
+            UNION ALL
+            SELECT
+              '005_not_in_001',
+              t5.table_name
+            FROM information_schema.tables t5
+            WHERE t5.table_schema = 'tenant_005'
+              AND t5.table_type  = 'BASE TABLE'
+              AND NOT EXISTS (
+                SELECT 1 FROM information_schema.tables t1
+                WHERE t1.table_schema = 'tenant_001'
+                  AND t1.table_name   = t5.table_name
+              )
+            ORDER BY 1, 2;
+
+            \echo ''
+            \echo '━━━ [6/6] tenant_001 vs tenant_003 テーブル差分 ━━━'
+            SELECT
+              '001_not_in_003' AS diff_type,
+              t1.table_name
+            FROM information_schema.tables t1
+            WHERE t1.table_schema = 'tenant_001'
+              AND t1.table_type  = 'BASE TABLE'
+              AND NOT EXISTS (
+                SELECT 1 FROM information_schema.tables t3
+                WHERE t3.table_schema = 'tenant_003'
+                  AND t3.table_name   = t1.table_name
+              )
+            UNION ALL
+            SELECT
+              '003_not_in_001',
+              t3.table_name
+            FROM information_schema.tables t3
+            WHERE t3.table_schema = 'tenant_003'
+              AND t3.table_type  = 'BASE TABLE'
+              AND NOT EXISTS (
+                SELECT 1 FROM information_schema.tables t1
+                WHERE t1.table_schema = 'tenant_001'
+                  AND t1.table_name   = t3.table_name
+              )
+            ORDER BY 1, 2;
+
+            ROLLBACK;
+
+            \echo ''
+            \echo '✅ 調査完了 (ROLLBACK 済み - DB への変更ゼロ)'
+            PSQL
