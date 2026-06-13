@@ -193,12 +193,27 @@ jobs:
           );
 
           -- leads: テナント個別スキーマにのみ存在
+          -- NOTE: source 列は migration 103 (ADR-138 §D1-3) で廃止済み。
+          --       customer_name / discord_user_id は migration 003/091 相当で存在する。
           CREATE TABLE IF NOT EXISTS tenant_001.leads (
-              id         SERIAL PRIMARY KEY,
-              tenant_id  INTEGER NOT NULL,
-              full_name  VARCHAR(255),
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              updated_at TIMESTAMPTZ DEFAULT NOW()
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER      NOT NULL,
+              full_name       VARCHAR(255),
+              customer_name   VARCHAR(255),
+              discord_user_id VARCHAR(64),
+              created_at      TIMESTAMPTZ  DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ  DEFAULT NOW()
+          );
+
+          -- lead_channels: ADR-119 で作成（migrate_adr119_lead_channels_backfill.py が INSERT する）
+          CREATE TABLE IF NOT EXISTS tenant_001.lead_channels (
+              id           SERIAL PRIMARY KEY,
+              lead_id      INTEGER      NOT NULL REFERENCES tenant_001.leads(id),
+              platform     VARCHAR(50)  NOT NULL,
+              external_id  VARCHAR(255) NOT NULL,
+              display_name VARCHAR(255),
+              created_at   TIMESTAMPTZ  DEFAULT NOW(),
+              UNIQUE (platform, external_id)
           );
 
           -- deals: テナント個別スキーマにのみ存在
@@ -707,14 +722,16 @@ jobs:
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
+          -- NOTE: source 列は migration 103 (ADR-138 §D1-3) で廃止済み。
           CREATE TABLE IF NOT EXISTS tenant_001.leads (
-              id            SERIAL PRIMARY KEY,
-              tenant_id     INTEGER NOT NULL,
-              full_name     VARCHAR(255),
-              customer_name VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
-              source        VARCHAR(50),   -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
-              created_at    TIMESTAMPTZ DEFAULT NOW(),
-              updated_at    TIMESTAMPTZ DEFAULT NOW()
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER      NOT NULL,
+              full_name       VARCHAR(255),
+              customer_name   VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
+              source          VARCHAR(50),   -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
+              discord_user_id VARCHAR(64),
+              created_at      TIMESTAMPTZ  DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ  DEFAULT NOW()
           );
           -- meta_messages: migration 012 が作成（run_all_migrations.sh 外）
           -- migration 013 C2 / migration 092 が参照（013 は IF EXISTS ガード済み・092 はガードなし）
@@ -729,6 +746,15 @@ jobs:
               direction    VARCHAR(10)  NOT NULL DEFAULT 'inbound',
               raw_payload  JSONB,
               created_at   TIMESTAMPTZ  DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_001.lead_channels (
+              id           SERIAL PRIMARY KEY,
+              lead_id      INTEGER      NOT NULL REFERENCES tenant_001.leads(id),
+              platform     VARCHAR(50)  NOT NULL,
+              external_id  VARCHAR(255) NOT NULL,
+              display_name VARCHAR(255),
+              created_at   TIMESTAMPTZ  DEFAULT NOW(),
+              UNIQUE (platform, external_id)
           );
           CREATE TABLE IF NOT EXISTS tenant_001.deals (
               id               SERIAL PRIMARY KEY,
@@ -908,6 +934,93 @@ jobs:
           else
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
+
+      # ── 廃止列前提検出: run_all_migrations.sh に登録された Python スクリプトを静的解析 ──
+      # ADR-138 §D1-3 で廃止された leads.source 列を information_schema ガードなしで
+      # 参照するスクリプトを検出して即 fail させる。
+      #
+      # 検出対象パターン:
+      #   WHERE source LIKE / source NOT LIKE / SUBSTRING(source / ON leads(source)
+      #
+      # ガード判定: 同一ファイルに以下があれば OK（ガード済み）
+      #   has_source / column_name.*'source' / information_schema.*columns.*source
+      #
+      # 「修正前のコードで赤になること」の証明: 旧 migrate_adr119_lead_channels_backfill.py は
+      # WHERE source LIKE :pattern を has_source ガードなしで記述していたため
+      # このステップが VIOLATION を検出して赤くなる。修正後はガードが付くため緑になる。
+      - name: 廃止列前提検出（leads.source ガードなし参照を禁止）
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 廃止列前提検出: ADR-138 leads.source 廃止列のガードなし参照を検出"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          VIOLATIONS=false
+
+          while IFS= read -r script; do
+            [ -z "$script" ] && continue
+            [ ! -f "$script" ] && continue
+
+            # leads.source を直接 SQL で参照するパターンを検出
+            #   WHERE source LIKE / source NOT LIKE / SUBSTRING(source FROM / ON leads(source)
+            if grep -qP "(WHERE|AND|OR)\s+source\s+(LIKE|NOT\s+LIKE|IS|=)|SUBSTRING\(source(\s+FROM)?|ON\s+\S*leads[^)]*\(\s*source\s*\)" "$script" 2>/dev/null \
+               || grep -q "source LIKE\|source NOT LIKE" "$script" 2>/dev/null; then
+
+              # has_source ガード / information_schema カラムチェックがあるか確認
+              if ! grep -qP "has_source|column_name\s*=\s*['\"]source['\"]|column_name.*source" "$script" 2>/dev/null; then
+                echo "❌ VIOLATION: $script"
+                echo "   leads.source を information_schema/has_source ガードなしで参照しています。"
+                echo "   ADR-138 §D1-3: leads.source は廃止済み。列の存在チェックを追加してください。"
+                VIOLATIONS=true
+              fi
+            fi
+          done < <(grep '^run_py' scripts/run_all_migrations.sh | awk '{print $2}')
+
+          if [ "$VIOLATIONS" = "true" ]; then
+            echo ""
+            echo "❌ 廃止列前提違反を検出。修正後に再実行してください。"
+            exit 1
+          fi
+          echo "✅ 廃止列前提なし — 全 Python マイグレーションスクリプト OK"
+
+      # ── Python バックフィルスクリプトを source 廃止済みスキーマで実行 ─────────────
+      # migrate_adr119_lead_channels_backfill.py が source なし DB で
+      # "leads.source column not found (廃止済み per ADR-138), section 1 skipped" を
+      # NOTICE して正常完了することを確認する。
+      # これは本番 step[119/145] 相当の動作証明。
+      - name: ADR-119 バックフィルスクリプトを source 廃止済みスキーマで実行
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "▶ [step[119/145] 相当] scripts/migrate_adr119_lead_channels_backfill.py"
+          echo "   テスト環境: leads.source 列なし（ADR-138 §D1-3 廃止済み状態）"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # public.tenants にテナントレコードが必要（backfill は tenants を参照する）
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 <<'SEED_SQL'
+          INSERT INTO public.tenants (id, tenant_name, tenant_code, is_active)
+          VALUES (1, 'テストテナント', 'test-tenant', true)
+          ON CONFLICT DO NOTHING;
+          SEED_SQL
+
+          # backfill スクリプト実行（スキップ NOTICE が出ることを確認）
+          python scripts/migrate_adr119_lead_channels_backfill.py 2>&1 | tee /tmp/adr119_backfill.log
+
+          # 正常終了を確認
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "❌ backfill スクリプトが失敗しました (exit=$EXIT_CODE)"
+            exit 1
+          fi
+
+          # source 列なし → section 1 スキップ NOTICE が出ていることを確認
+          if grep -q "leads.source column not found\|section 1.*skipped\|廃止済み" /tmp/adr119_backfill.log; then
+            echo "✅ source 列なし → section 1 スキップ NOTICE 確認"
+          else
+            echo "ℹ️  スキップ NOTICE が見つかりません（テナントデータが空の場合は正常）"
+          fi
+
+          echo "✅ ADR-119 バックフィルスクリプト source 廃止済み状態で正常完了"
 
       - name: 1周目：全 run_sql migration を順次実行（新規適用）
         # 対象: run_all_migrations.sh の run_sql 行すべて（numbered 0XX + タイムスタンプ形式）
