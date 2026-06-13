@@ -672,16 +672,19 @@ jobs:
               id         SERIAL PRIMARY KEY,
               tenant_id  INTEGER NOT NULL,
               full_name  VARCHAR(255),
+              source     VARCHAR(50),  -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS tenant_001.deals (
-              id         SERIAL PRIMARY KEY,
-              tenant_id  INTEGER NOT NULL,
-              title      VARCHAR(255),
-              company_id INTEGER,
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              updated_at TIMESTAMPTZ DEFAULT NOW()
+              id               SERIAL PRIMARY KEY,
+              tenant_id        INTEGER NOT NULL,
+              title            VARCHAR(255),
+              company_id       INTEGER,
+              lost_reason      TEXT,           -- migration 102 適用前の初期状態を模擬
+              lost_reason_code VARCHAR(30),    -- migration 102 適用前の初期状態を模擬
+              created_at       TIMESTAMPTZ DEFAULT NOW(),
+              updated_at       TIMESTAMPTZ DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS tenant_001.companies (
               id         SERIAL PRIMARY KEY,
@@ -857,23 +860,23 @@ jobs:
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
 
-      - name: 1周目：全タイムスタンプ SQL を順次実行（新規適用）
-        # 対象: migrations/20260604_*.sql 以降（タイムスタンプ形式）のみ
-        # 番号付き migration（013-100）と初期タイムスタンプ（20260601-20260603）は
-        # Python migration や numbered migration が作るカラムに依存するため除外。
-        # 20260604 以降は本 CI の base schema + Sprint 1 でカバーされる。
-        # これらは既存の migration-test-run ジョブで変更時のみ検証される。
+      - name: 1周目：全 run_sql migration を順次実行（新規適用）
+        # 対象: run_all_migrations.sh の run_sql 行すべて（numbered 0XX + タイムスタンプ形式）
+        # 初期タイムスタンプ（20260601-20260603）は Python migration 依存のため引き続き除外。
+        # numbered migration (013, 091 等) を含めることで、後続 migration で削除された列を
+        # 前提とする型のバグ（013 vs 103 型）を 1周目→2周目で機械的に捕捉する。
+        # 前提: base schema の leads に source 列あり → 1周目で 013 が index 作成 → 103 が source DROP
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🔍 1周目（新規適用）開始"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
-            | grep -cE '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
-          echo "対象 SQL ファイル数（20260604〜形式）: ${TOTAL}"
+            | grep -cE '^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
+          echo "対象 SQL ファイル数（numbered + タイムスタンプ形式）: ${TOTAL}"
           STEP=0
 
           grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
-            | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
+            | grep -E '^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
             | while read sqlfile; do
             [ -z "$sqlfile" ] && continue
             STEP=$((STEP + 1))
@@ -892,22 +895,22 @@ jobs:
           echo ""
           echo "✅ 1周目（新規適用）完了"
 
-      - name: 2周目：全タイムスタンプ SQL を再実行（冪等性チェック＝再デプロイ安全性）
+      - name: 2周目：全 run_sql migration を再実行（冪等性チェック＝再デプロイ安全性）
         # 1周目適用済み状態に対して同じ SQL を全件再実行する。
         # これにより「次回デプロイ時に同じ migration が再実行されたとき安全か」を機械的に検証。
-        # 今日の本番失敗型（CREATE OR REPLACE VIEW でカラム数が減る → cannot drop columns from view）は
-        # 1周目で新版 SQL が列を追加した後に 2周目で旧版 SQL が少ない列で置換しようとして検出される。
+        # 今回の事故型（013: leads.source を SELECT → 103: source を DROP → 2周目で 013 が ERROR）は
+        # 2周目で source が存在しない状態で 013 が実行される時に検出される（修正なし → ERROR）。
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🔄 2周目（冪等性チェック）開始"
           echo "   ※ 1周目適用済み状態への再実行 = 本番再デプロイ安全性の検証"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
-            | grep -cE '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
+            | grep -cE '^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' || echo 0)
           STEP=0
 
           grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
-            | grep -E '^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
+            | grep -E '^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062' \
             | while read sqlfile; do
             [ -z "$sqlfile" ] && continue
             STEP=$((STEP + 1))
