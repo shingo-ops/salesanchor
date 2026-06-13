@@ -278,7 +278,7 @@ export function FedExRateModal({
           <p style={{ marginBottom: "8px" }}>{t("fedexRateModal.errorNotConnected")}</p>
           <a
             href="/integrations/fedex"
-            style={{ color: "var(--color-blue-700)", textDecoration: "underline", fontSize: "14px" }}
+            style={{ color: "var(--link)", textDecoration: "underline", fontSize: "14px" }}
           >
             {t("fedexRateModal.goToIntegrationSettings")}
           </a>
