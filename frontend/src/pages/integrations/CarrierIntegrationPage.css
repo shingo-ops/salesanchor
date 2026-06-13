@@ -23,6 +23,7 @@
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .carrier-env-card__title {
@@ -41,7 +42,8 @@
 .carrier-env-card__last-tested {
   font-size: var(--font-xs);
   color: var(--text-muted);
-  margin-left: auto;
+  margin-left: 0;
+  white-space: nowrap;
 }
 
 .carrier-env-card__test-error {
