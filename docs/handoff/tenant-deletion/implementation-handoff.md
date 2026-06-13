@@ -31,6 +31,7 @@ super_admin が特定テナントを安全に論理削除・物理削除でき�
 - `scripts/run_all_migrations.sh` — migration 追記
 - `scripts/backup_tenant_before_drop.sh` 新規作成
 - `backend/tests/test_tenant_deletion.py` 新規作成
+- `.github/workflows/migration-test.yml` — SQLite セットアップに `public.tenant_deletion_audit` / `public.tenants` 最小 CREATE TABLE 追加
 - `backend/app/tasks/reports.py` — 呼び出し元 is_active ガード確認・必要なら修正
 
 **対象外（今回実装しない）**:
@@ -66,6 +67,7 @@ super_admin が特定テナントを安全に論理削除・物理削除でき�
 | `scripts/run_all_migrations.sh` | **修正**（末尾に run_sql 追記） | ✅ PO GO 必要 |
 | `scripts/backup_tenant_before_drop.sh` | **新規** | ✅ PO GO 必要 |
 | `backend/tests/test_tenant_deletion.py` | **新規** | - |
+| `.github/workflows/migration-test.yml` | **修正**（SQLite セットアップに `public.tenant_deletion_audit` / `public.tenants` 最小 CREATE を追加） | ⚠️ CI 設定変更 |
 | `backend/app/tasks/reports.py` | **条件修正**（呼び出し元に is_active ガードが必要な場合のみ） | - |
 
 > **PO GO まで feature ブランチ `feature/morimoto/tenant-deletion-impl` で待機。**  
@@ -117,24 +119,26 @@ async def delete_tenant_logical(
     current_user=Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    # テナント取得
-    row = (
-        await db.execute(
-            text("SELECT id, tenant_code, tenant_name, is_active FROM public.tenants WHERE id = :id"),
-            {"id": tenant_id},
-        )
-    ).mappings().one_or_none()
-    if not row:
-        raise HTTPException(404, "テナントが見つかりません")
-
-    # confirm 文字列チェック（誤操作防止）
-    if body.confirm != f"DELETE:{row['tenant_code']}":
-        raise HTTPException(400, f"confirm 文字列不一致。期待値: DELETE:{row['tenant_code']}")
-
-    if not row["is_active"]:
-        raise HTTPException(400, "すでに論理削除済みです")
-
+    # SELECT〜UPDATE〜audit INSERT を同一トランザクション内に収める
+    # （トランザクション外で SELECT すると TOCTOU になるため）
     async with db.begin():
+        # テナント取得（ロック不要だがトランザクション内で確認）
+        row = (
+            await db.execute(
+                text("SELECT id, tenant_code, tenant_name, is_active FROM public.tenants WHERE id = :id"),
+                {"id": tenant_id},
+            )
+        ).mappings().one_or_none()
+        if not row:
+            raise HTTPException(404, "テナントが見つかりません")
+
+        # confirm 文字列チェック（誤操作防止）
+        if body.confirm != f"DELETE:{row['tenant_code']}":
+            raise HTTPException(400, f"confirm 文字列不一致。期待値: DELETE:{row['tenant_code']}")
+
+        if not row["is_active"]:
+            raise HTTPException(400, "すでに論理削除済みです")
+
         # is_active を False に
         await db.execute(
             text("UPDATE public.tenants SET is_active = FALSE WHERE id = :id"),
@@ -365,13 +369,40 @@ echo "保存場所: /tmp/ はコンテナ再起動で消えます。ホスト側
 
 ---
 
-### 5-6. `backend/tests/test_tenant_deletion.py`（新規）
+### 5-6. `.github/workflows/migration-test.yml`（修正・⚠️ CI 設定変更）
+
+`backend/CLAUDE.md` の migration-test 拡充ルール:  
+「migration が操作するテーブルが migration-test.yml セットアップになければ最小定義を追加すること」
+
+追加箇所: `migration-test.yml` 内の PostgreSQL セットアップ SQL ブロック（既存の `public.tenants` INSERT がある行の近く）に以下を追加:
+
+```sql
+-- テナント削除 中央監査ログ新設 migration のテスト用テーブル
+CREATE TABLE IF NOT EXISTS public.tenant_deletion_audit (
+    id            SERIAL PRIMARY KEY,
+    tenant_id     INTEGER NOT NULL,
+    tenant_code   TEXT NOT NULL,
+    tenant_name   TEXT NOT NULL,
+    mode          TEXT NOT NULL,
+    status        TEXT NOT NULL,
+    actor_id      INTEGER,
+    actor_email   TEXT NOT NULL,
+    executed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at  TIMESTAMPTZ,
+    error_message TEXT,
+    meta          JSONB
+);
+```
+
+---
+
+### 5-7. `backend/tests/test_tenant_deletion.py`（新規）
 
 詳細は §6 テスト計画を参照。
 
 ---
 
-### 5-7. `backend/app/tasks/reports.py`（条件修正）
+### 5-8. `backend/app/tasks/reports.py`（条件修正）
 
 **調査方針**: `reports.py:187` の `export_csv(tenant_id: int, ...)` を呼ぶ Celery タスク投入箇所を grep で特定し、呼び出し前に is_active チェックがあるか確認する。
 
@@ -394,34 +425,203 @@ if not tenant or not tenant.is_active:
 
 ## 6. テスト計画
 
+### 6-0. SQLite テスト実現のための前提作業（conftest.py と migration-test.yml）
+
+#### 問題
+
+現行 `conftest.py:68-85` の `rewrite_ilike_for_sqlite` リスナーは  
+`public.users` / `public.permissions` 等は rewrite するが、  
+`public.tenants` と `public.tenant_deletion_audit` は**対象外**。  
+SQLite にはスキーマプレフィックスがないため、これらのテーブルに `public.` 付きでアクセスすると  
+`no such table: public.tenants` エラーになる。
+
+#### 対策: conftest.py に 2 件追加（プルリクのスコープに含める）
+
+**① rewrite リスナーへの追加**（`conftest.py:68-85` の `rewrite_ilike_for_sqlite` 関数内）:
+
+```python
+# 既存ブロックの末尾 " FOR UPDATE" 置換の直前に追加
+if "public.tenants" in statement:
+    statement = statement.replace("public.tenants", "tenants")
+if "public.tenant_deletion_audit" in statement:
+    statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
+```
+
+**② `setup_test_db` セッション fixture へのテーブル作成追加**  
+（`conftest.py:91-` の `setup_test_db` の `async with test_engine.begin() as conn:` ブロック末尾）:
+
+```python
+# テナント削除テスト用: tenants テーブル（public. は rewrite で除去済み）
+await conn.execute(text("""
+    CREATE TABLE IF NOT EXISTS tenants (
+        id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_code TEXT NOT NULL UNIQUE,
+        tenant_name TEXT NOT NULL DEFAULT '',
+        company_name TEXT NOT NULL DEFAULT '',
+        is_active INTEGER NOT NULL DEFAULT 1
+    )
+"""))
+
+# テナント削除 中央監査ログ（public. は rewrite で除去済み）
+await conn.execute(text("""
+    CREATE TABLE IF NOT EXISTS tenant_deletion_audit (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id     INTEGER NOT NULL,
+        tenant_code   TEXT NOT NULL,
+        tenant_name   TEXT NOT NULL,
+        mode          TEXT NOT NULL,
+        status        TEXT NOT NULL,
+        actor_id      INTEGER,
+        actor_email   TEXT NOT NULL,
+        executed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at  TIMESTAMP,
+        error_message TEXT,
+        meta          TEXT
+    )
+"""))
+```
+
+#### migration-test.yml への追加
+
+`.github/workflows/migration-test.yml` のセットアップ SQL ブロックにも同様の最小 CREATE TABLE を追加する  
+（`backend/CLAUDE.md` の migration-test 拡充ルール）。  
+migration-test.yml は migration が操作するテーブルをセットアップするための CI 設定ファイル。既存の `public.tenants` や `public.users` のセットアップ箇所を参考に追記すること。
+
+---
+
 ### 6-1. SQLite テスト（CI で常時実行）
+
+#### fixture 設計
+
+現行の `client` fixture（`conftest.py:1282`）は `_mock_user()` を返す。  
+`_mock_user()` には `is_super_admin` が設定されていない → `require_super_admin` が `getattr(current_user, "is_super_admin", False)` で `False` を返し 403 になる。
+
+**テストファイル内にローカル fixture を定義する方針**:
 
 ```python
 # backend/tests/test_tenant_deletion.py
+from __future__ import annotations
 
 import pytest
-from httpx import AsyncClient
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy import text
+from unittest.mock import patch
 
-# ── 権限ガード ────────────────────────────────────────────────────────────
+
+def _make_super_admin_user():
+    """is_super_admin=True のテスト用ユーザー"""
+    from app.models import User
+    user = User()
+    user.id = 888
+    user.tenant_id = None  # super_admin は tenant に紐付かない
+    user.username = "superadmin"
+    user.email = "superadmin@example.com"
+    user.role = "super_admin"
+    user.is_active = True
+    user.is_super_admin = True
+    return user
+
+
+def _make_normal_user():
+    """is_super_admin=False（デフォルト）のテスト用ユーザー"""
+    from app.models import User
+    user = User()
+    user.id = 999
+    user.tenant_id = 999
+    user.username = "normaluser"
+    user.email = "normal@example.com"
+    user.role = "admin"
+    user.is_active = True
+    # is_super_admin は設定しない → getattr で False
+    return user
+
+
+@pytest_asyncio.fixture
+async def super_admin_client(db_session):
+    """
+    is_super_admin=True のユーザーで認証された HTTP クライアント。
+    require_super_admin を通過させるために get_current_user を override する。
+    """
+    from app.main import app
+    from app.auth.dependencies import get_current_user, get_current_tenant
+    from app.database import get_db
+
+    super_admin = _make_super_admin_user()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_get_current_user():
+        return super_admin
+
+    async def override_get_current_tenant():
+        return None  # super_admin EP は get_current_tenant を使わない
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_tenant] = override_get_current_tenant
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def normal_client(db_session):
+    """
+    is_super_admin が設定されていないユーザーで認証された HTTP クライアント。
+    require_super_admin に 403 を返させるために使用。
+    """
+    from app.main import app
+    from app.auth.dependencies import get_current_user, get_current_tenant
+    from app.database import get_db
+
+    normal_user = _make_normal_user()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_get_current_user():
+        return normal_user
+
+    async def override_get_current_tenant():
+        return 999
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_tenant] = override_get_current_tenant
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+```
+
+#### テストケース
+
+```python
+# ── 権限ガード: normal_client は 403 ─────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_logical_delete_requires_super_admin(client: AsyncClient):
+async def test_logical_delete_requires_super_admin(normal_client: AsyncClient):
     """非 super_admin は 403"""
-    resp = await client.delete(
+    resp = await normal_client.delete(
         "/api/v1/super-admin/tenants/1",
         json={"confirm": "DELETE:test-corp"},
-        headers={"Authorization": "Bearer <normal_user_token>"},
     )
     assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_physical_delete_requires_super_admin(client: AsyncClient):
+async def test_physical_delete_requires_super_admin(normal_client: AsyncClient):
     """非 super_admin は 403"""
-    resp = await client.delete(
+    resp = await normal_client.delete(
         "/api/v1/super-admin/tenants/1/physical",
         json={"confirm": "DELETE:test-corp"},
-        headers={"Authorization": "Bearer <normal_user_token>"},
     )
     assert resp.status_code == 403
 
@@ -429,68 +629,86 @@ async def test_physical_delete_requires_super_admin(client: AsyncClient):
 # ── confirm バリデーション ────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_logical_delete_wrong_confirm(client: AsyncClient, super_admin_token: str):
+async def test_logical_delete_wrong_confirm(super_admin_client: AsyncClient, db_session):
     """confirm 文字列不一致で 400"""
-    resp = await client.delete(
-        "/api/v1/super-admin/tenants/1",
+    # SQLite: public. は conftest rewrite で除去済み → tenants テーブル
+    await db_session.execute(
+        text("INSERT OR IGNORE INTO tenants (id, tenant_name, tenant_code, is_active) VALUES (97, 'Test', 'test-97', 1)")
+    )
+    await db_session.commit()
+
+    resp = await super_admin_client.delete(
+        "/api/v1/super-admin/tenants/97",
         json={"confirm": "WRONG"},
-        headers={"Authorization": f"Bearer {super_admin_token}"},
     )
     assert resp.status_code == 400
 
 
-# ── 論理削除成功（SQLite でも DB 操作範囲は public.tenants のみ）───────────
+# ── 論理削除成功 ──────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_logical_delete_success(client: AsyncClient, super_admin_token: str, db_session):
+async def test_logical_delete_success(super_admin_client: AsyncClient, db_session):
     """is_active=False になること・監査ログが記録されること"""
-    # テスト用テナント挿入
+    # SQLite: public. rewrite により tenants / tenant_deletion_audit テーブルへアクセス
     await db_session.execute(
-        text("INSERT INTO public.tenants (id, tenant_name, tenant_code, is_active) VALUES (99, 'Test', 'test-99', TRUE)")
+        text("INSERT OR IGNORE INTO tenants (id, tenant_name, tenant_code, is_active) VALUES (99, 'Test', 'test-99', 1)")
     )
     await db_session.commit()
 
-    resp = await client.delete(
+    resp = await super_admin_client.delete(
         "/api/v1/super-admin/tenants/99",
         json={"confirm": "DELETE:test-99"},
-        headers={"Authorization": f"Bearer {super_admin_token}"},
     )
     assert resp.status_code == 200
     assert resp.json()["mode"] == "logical"
 
-    # is_active が False になっていること
+    # is_active が 0（False）になっていること
     row = (await db_session.execute(
-        text("SELECT is_active FROM public.tenants WHERE id = 99")
+        text("SELECT is_active FROM tenants WHERE id = 99")
     )).one()
-    assert row.is_active is False
+    assert not row.is_active
 
     # 監査ログ記録
     audit = (await db_session.execute(
-        text("SELECT mode, status FROM public.tenant_deletion_audit WHERE tenant_id = 99")
+        text("SELECT mode, status FROM tenant_deletion_audit WHERE tenant_id = 99")
     )).one()
     assert audit.mode == "logical"
     assert audit.status == "succeeded"
 
 
 @pytest.mark.asyncio
-async def test_logical_delete_already_deleted(client: AsyncClient, super_admin_token: str, db_session):
+async def test_logical_delete_already_deleted(super_admin_client: AsyncClient, db_session):
     """すでに論理削除済みテナントは 400"""
     await db_session.execute(
-        text("INSERT INTO public.tenants (id, tenant_name, tenant_code, is_active) VALUES (98, 'Test', 'test-98', FALSE)")
+        text("INSERT OR IGNORE INTO tenants (id, tenant_name, tenant_code, is_active) VALUES (98, 'Test', 'test-98', 0)")
     )
     await db_session.commit()
 
-    resp = await client.delete(
+    resp = await super_admin_client.delete(
         "/api/v1/super-admin/tenants/98",
         json={"confirm": "DELETE:test-98"},
-        headers={"Authorization": f"Bearer {super_admin_token}"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_physical_delete_requires_logical_first(super_admin_client: AsyncClient, db_session):
+    """is_active=True のテナントへの物理削除は 400"""
+    await db_session.execute(
+        text("INSERT OR IGNORE INTO tenants (id, tenant_name, tenant_code, is_active) VALUES (96, 'Test', 'test-96', 1)")
+    )
+    await db_session.commit()
+
+    resp = await super_admin_client.delete(
+        "/api/v1/super-admin/tenants/96/physical",
+        json={"confirm": "DELETE:test-96"},
     )
     assert resp.status_code == 400
 ```
 
 ### 6-2. PostgreSQL 実機テスト（`RLS_TEST_DATABASE_URL` 必須）
 
-`test_tenant_schema_integrity.py` の skip ガードパターン（line 52-54）を踏襲:
+`test_tenant_schema_integrity.py:52-54` の skip ガードパターンを踏襲:
 
 ```python
 import os
@@ -587,35 +805,48 @@ migration / deploy.yml / 本番 scripts を含む本 PR は PO GO が出るま�
 
 以下の順序で実装すること。各ステップ完了後に `make lint` を通過させてから次に進む。
 
-### Step 1: migration ファイル作成
+### Step 1: migration ファイル作成 + CI 設定
 
 1. 現在時刻で migration ファイル名を確定: `date +%Y%m%d_%H%M%S`
 2. `migrations/<TIMESTAMP>_add_tenant_deletion_audit.sql` を作成（§5-3 の SQL をそのまま使用）
 3. `scripts/run_all_migrations.sh` の末尾 `echo "✅ 全マイグレーション完了"` ブロック直前に `run_sql migrations/<TIMESTAMP>_add_tenant_deletion_audit.sql` を追記
-4. `.github/workflows/migration-test.yml` のセットアップ SQL に `public.tenant_deletion_audit` の最小 CREATE TABLE を追加
+4. `.github/workflows/migration-test.yml` のセットアップ SQL に `public.tenant_deletion_audit` の最小 CREATE TABLE を追加（§5-6）
 
-### Step 2: super_admin_tenants.py 作成
+### Step 2: conftest.py 更新
 
-1. `backend/app/routers/super_admin_tenants.py` を§5-1 の内容で作成
+**SQLite テストを通すために必須。**
+
+1. `backend/tests/conftest.py:68-85` の `rewrite_ilike_for_sqlite` 関数内に追記（§6-0 ①）:
+   ```python
+   if "public.tenants" in statement:
+       statement = statement.replace("public.tenants", "tenants")
+   if "public.tenant_deletion_audit" in statement:
+       statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
+   ```
+2. `backend/tests/conftest.py` の `setup_test_db` セッション fixture（`async with test_engine.begin() as conn:` ブロック末尾）に `tenants` と `tenant_deletion_audit` の CREATE TABLE を追加（§6-0 ②）
+
+### Step 3: super_admin_tenants.py 作成
+
+1. `backend/app/routers/super_admin_tenants.py` を §5-1 の内容で作成
 2. `backend/app/main.py` に import と include_router を追加（§5-2）
 3. `make lint` PASS を確認
 
-### Step 3: backup スクリプト作成
+### Step 4: backup スクリプト作成
 
-1. `scripts/backup_tenant_before_drop.sh` を§5-5 の内容で作成
+1. `scripts/backup_tenant_before_drop.sh` を §5-5 の内容で作成
 2. `chmod +x scripts/backup_tenant_before_drop.sh`
 
-### Step 4: reports.py 調査・修正
+### Step 5: reports.py 調査・修正
 
 1. 以下を実行して呼び出し元を特定:
    ```bash
    grep -rn "export_csv\|delay.*export\|apply_async.*export" backend/app/tasks/ backend/app/routers/ --include="*.py"
    ```
-2. 呼び出し元で is_active チェックがなければ追加（§5-7）
+2. 呼び出し元で is_active チェックがなければ追加（§5-8）
 
-### Step 5: テスト作成
+### Step 6: テスト作成
 
-1. `backend/tests/test_tenant_deletion.py` を§6-1 の内容で作成
+1. `backend/tests/test_tenant_deletion.py` を §6-1 の内容で作成（`super_admin_client` / `normal_client` fixture 含む）
 2. SQLite テストを実行して全 PASS を確認:
    ```bash
    cd backend && pytest tests/test_tenant_deletion.py -v
@@ -623,23 +854,25 @@ migration / deploy.yml / 本番 scripts を含む本 PR は PO GO が出るま�
 3. PostgreSQL 実機テスト（§6-2）を追加
 4. `make check` PASS を確認
 
-### Step 6: コミット & PR 作成
+### Step 7: コミット & PR 作成
 
 ```bash
 # worktree 準備（CLAUDE.md 必須手順）
 bash scripts/new-worktree.sh feature/morimoto/tenant-deletion-impl --claude
 
-# 実装後
+# 実装後（.github/workflows/migration-test.yml と backend/tests/conftest.py を忘れずに追加）
 git add backend/app/routers/super_admin_tenants.py \
         backend/app/main.py \
         migrations/<TIMESTAMP>_add_tenant_deletion_audit.sql \
         scripts/run_all_migrations.sh \
         scripts/backup_tenant_before_drop.sh \
-        backend/tests/test_tenant_deletion.py
+        backend/tests/test_tenant_deletion.py \
+        backend/tests/conftest.py \
+        .github/workflows/migration-test.yml
 # reports.py を修正した場合は追加
 git commit -m "feat: テナント論理削除・物理削除 API 実装（super_admin_tenants.py）"
 
-# PR 作成（develop ではなく main 向け、またはブランチポリシーに従う）
+# PR 作成
 gh pr create \
   --title "feat: テナント論理削除・物理削除 API（super_admin_tenants.py）" \
   --body "..."
