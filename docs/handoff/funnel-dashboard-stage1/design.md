@@ -278,8 +278,8 @@ Hub-shell パターン（recon#12: `App.tsx:146`）を踏襲:
 
 ---
 
-## 8. 外部事例参照
+## 8. 外部・過去事例の参照と我々への応用
 
-- Salesforce/HubSpot: パイプライン段階別転換率 + 目標対比は標準構成
-- Win/loss reason: 主因単一化＋自由記述の組み合わせは一般実務
-- 要フォロー顧客: CS分野のヘルススコア/離脱予兆アラートの取引型近似手法
+- 事例1: Salesforce Einstein Analytics — パイプライン段階別転換率＋目標対比を1画面に集約 → 我々への応用: ファネル4ステージカードに実績/目標/達成率を並列表示、ボトルネック自動検出
+- 事例2: HubSpot Deal Pipeline — Win/loss reason を主因1＋副因複数＋自由記述で構造化 → 我々への応用: `close_reasons` マスタ＋`deal_close_reasons` 中間テーブルで同構成を実装
+- 事例3: Pipedrive Follow-up Tracking — CS分野のヘルススコア/離脱予兆アラートの取引型近似 → 我々への応用: 発注停止30日/初回後45日未復注/成約後30日未発注の3区分で要フォロー顧客を定量化

@@ -80,8 +80,8 @@
 
 **Meta チャネル（部分的に実装済み）**:
 
-- **meta_messages** テーブル: `lead_id INTEGER`, `direction VARCHAR(10)`, `created_at TIMESTAMPTZ`  
-  `migrations/012_add_meta_tenant_tables.sql:11,16,18`
+- **meta_messages** テーブル: **lead_id INTEGER**, **direction VARCHAR(10)**, **created_at TIMESTAMPTZ**  
+  `migrations/012_add_meta_tenant_tables.sql`（lines 11, 16, 18）
 - **lead_id** に紐付く — company 単位での統合は未実装
 
 **ギャップ**:
@@ -261,7 +261,7 @@ export function useRecordDrawer<T extends { id: number }, F>({ toForm, emptyForm
 </Route>
 ```
 
-**現状**: `/funnel` または analytics 専用サブページルートは存在しない（**App.tsx** に `/` → **DashboardPage** のみ）。
+**現状**: **/funnel** または analytics 専用サブページルートは存在しない（**App.tsx** に `/` → **DashboardPage** のみ）。
 
 ---
 
