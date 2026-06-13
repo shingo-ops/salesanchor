@@ -5,7 +5,8 @@ import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import type { LeadDetail, KarteTabKey } from "./inbox.types";
+import type { LeadDetail, KarteTabKey, SalesFormOption, SalesFormSelectionState } from "./inbox.types";
+import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 
 interface CardForm {
   nickname?: string | null;
@@ -27,6 +28,7 @@ interface CardForm {
   target_titles?: string | null;
   challenge?: string | null;
   sales_form?: string | null;
+  sales_form_selections?: SalesFormSelectionState[];
   competitor_check?: boolean | null;
   notes?: string | null;
   meeting_memo?: string | null;
@@ -93,6 +95,8 @@ export function InboxKartePanel({
 }: Props) {
   const { t } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
+  // ADR-108 Phase B-1: テナント別 sales_form 選択肢マスタ
+  const [salesFormOptions, setSalesFormOptions] = useState<SalesFormOption[]>([]);
 
   useEffect(() => {
     if (!leadDetail?.discord_guild_channel_id || guildId) return;
@@ -100,6 +104,13 @@ export function InboxKartePanel({
       .then((d) => setGuildId(d.guild_id ?? null))
       .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
+
+  // ADR-108 Phase B-1: leadDetail に options が付いてきたらそれを使う、なければ別取得
+  useEffect(() => {
+    if (leadDetail?.sales_form_options && leadDetail.sales_form_options.length > 0) {
+      setSalesFormOptions(leadDetail.sales_form_options);
+    }
+  }, [leadDetail?.sales_form_options]);
 
   const stagePresentation = leadDetail ? getStatusPresentation("lead", leadDetail.status) : null;
   const subParts = leadDetail
@@ -457,11 +468,14 @@ function KarteTabContent({
             onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
             onBlur={handleCardFieldBlur} placeholder={t("leads.targetTitlesPlaceholder")} />
         </div>
-        <div className="right-panel-row">
+        <div className="right-panel-row right-panel-row--multiselect">
           <span className="right-panel-label">{t("leads.salesForm")}</span>
-          <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-            onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur}
-            placeholder={t("inbox.emptyField")} />
+          <SalesFormMultiSelect
+            options={salesFormOptions}
+            value={cardForm.sales_form_selections ?? []}
+            onChange={(selections) => handleCardFieldChange("sales_form_selections", selections)}
+            onBlur={handleCardFieldBlur}
+          />
         </div>
 
         {/* 実績サマリー (read-only) — ADR-110 */}

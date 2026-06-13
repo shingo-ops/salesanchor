@@ -32,7 +32,15 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
-from app.schemas.lead import LeadConvertRequest, LeadCreate, LeadResponse, LeadStatsResponse, LeadUpdate
+from app.schemas.lead import (
+    LeadConvertRequest,
+    LeadCreate,
+    LeadResponse,
+    LeadStatsResponse,
+    LeadUpdate,
+    SalesFormOptionResponse,
+    SalesFormSelectionResponse,
+)
 from app.services import encryption, meta_graph
 from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
@@ -226,6 +234,71 @@ async def list_leads(
 
 
 @router.get(
+    "/leads/sales-form-options",
+    response_model=list[SalesFormOptionResponse],
+    dependencies=[Depends(require_permission("leads.view"))],
+)
+async def list_sales_form_options(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> list[SalesFormOptionResponse]:
+    """テナント別 sales_form 選択肢マスタ一覧を取得する（is_active=True のみ）"""
+    options_t = tenant_table_ref(db, tenant_id, "tenant_sales_form_options")
+    result = await db.execute(
+        text(f"""
+            SELECT id, label, value, sort_order, is_active
+            FROM {options_t}
+            WHERE tenant_id = :tenant_id AND is_active = TRUE
+            ORDER BY sort_order
+        """),
+        {"tenant_id": tenant_id},
+    )
+    return [SalesFormOptionResponse(**row) for row in result.mappings().all()]
+
+
+async def _fetch_lead_selections(
+    db: AsyncSession,
+    tenant_id: int,
+    lead_id: int,
+) -> list[SalesFormSelectionResponse]:
+    """指定リードの sales_form 選択状態を取得する内部ヘルパー。"""
+    selections_t = tenant_table_ref(db, tenant_id, "lead_sales_form_selections")
+    options_t = tenant_table_ref(db, tenant_id, "tenant_sales_form_options")
+    result = await db.execute(
+        text(f"""
+            SELECT ls.option_id,
+                   o.value  AS option_value,
+                   o.label  AS option_label,
+                   ls.other_text
+            FROM {selections_t} ls
+            JOIN {options_t} o ON o.id = ls.option_id
+            WHERE ls.lead_id = :lead_id
+            ORDER BY o.sort_order
+        """),
+        {"lead_id": lead_id},
+    )
+    return [SalesFormSelectionResponse(**row) for row in result.mappings().all()]
+
+
+async def _fetch_sales_form_options(
+    db: AsyncSession,
+    tenant_id: int,
+) -> list[SalesFormOptionResponse]:
+    """テナント別選択肢マスタを取得する内部ヘルパー。"""
+    options_t = tenant_table_ref(db, tenant_id, "tenant_sales_form_options")
+    result = await db.execute(
+        text(f"""
+            SELECT id, label, value, sort_order, is_active
+            FROM {options_t}
+            WHERE tenant_id = :tenant_id AND is_active = TRUE
+            ORDER BY sort_order
+        """),
+        {"tenant_id": tenant_id},
+    )
+    return [SalesFormOptionResponse(**row) for row in result.mappings().all()]
+
+
+@router.get(
     "/leads/{lead_id}",
     response_model=LeadResponse,
     dependencies=[Depends(require_permission("leads.view"))],
@@ -245,7 +318,12 @@ async def get_lead(
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
-    return LeadResponse(**row)
+
+    # ADR-108 Phase B-1: 複数選択データ + 選択肢マスタを付加
+    lead_dict = dict(row)
+    lead_dict["sales_form_selections"] = await _fetch_lead_selections(db, tenant_id, lead_id)
+    lead_dict["sales_form_options"] = await _fetch_sales_form_options(db, tenant_id)
+    return LeadResponse(**lead_dict)
 
 
 @router.post(
@@ -357,8 +435,10 @@ async def update_lead(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
 
     update_data = data.model_dump(exclude_unset=True)
+    # ADR-108 Phase B-1: sales_form_selections は _UPDATABLE_COLUMNS 外で個別処理
+    sales_form_selections_data = update_data.pop("sales_form_selections", None)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
-    if not update_data:
+    if not update_data and sales_form_selections_data is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
 
     # Enum→文字列変換
@@ -381,18 +461,86 @@ async def update_lead(
             merged["response_speed"], merged["monthly_forecast"],
         )
 
-    set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
-    update_data["id"] = lead_id
+    # leads テーブル更新（update_data が空の場合は selections のみ更新）
+    if update_data:
+        set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
+        update_data["id"] = lead_id
+        result = await db.execute(
+            text(f"""
+                UPDATE {leads_t} SET {set_clauses}, updated_at = NOW()
+                WHERE id = :id
+                RETURNING {_LEAD_COLUMNS}
+            """),
+            update_data,
+        )
+        row = result.mappings().first()
+    else:
+        # selections のみ更新: leads テーブルの updated_at だけ更新
+        result = await db.execute(
+            text(f"UPDATE {leads_t} SET updated_at = NOW() WHERE id = :id RETURNING {_LEAD_COLUMNS}"),
+            {"id": lead_id},
+        )
+        row = result.mappings().first()
+        update_data["id"] = lead_id
 
-    result = await db.execute(
-        text(f"""
-            UPDATE {leads_t} SET {set_clauses}, updated_at = NOW()
-            WHERE id = :id
-            RETURNING {_LEAD_COLUMNS}
-        """),
-        update_data,
-    )
-    row = result.mappings().first()
+    # ADR-108 Phase B-1: sales_form_selections 更新
+    if sales_form_selections_data is not None:
+        selections_t = tenant_table_ref(db, tenant_id, "lead_sales_form_selections")
+        options_t = tenant_table_ref(db, tenant_id, "tenant_sales_form_options")
+
+        # テナント境界チェック: option_id が全て当該テナントの有効なオプションか確認
+        option_ids = [s["option_id"] for s in sales_form_selections_data]
+        if option_ids:
+            # IN 句をパラメータ展開（PostgreSQL / SQLite 両対応）
+            id_params = {f"id_{i}": oid for i, oid in enumerate(option_ids)}
+            placeholders = ", ".join(f":id_{i}" for i in range(len(option_ids)))
+            valid_result = await db.execute(
+                text(f"""
+                    SELECT id FROM {options_t}
+                    WHERE id IN ({placeholders}) AND tenant_id = :tenant_id AND is_active = TRUE
+                """),
+                {"tenant_id": tenant_id, **id_params},
+            )
+            valid_ids = {r["id"] for r in valid_result.mappings().all()}
+            invalid_ids = set(option_ids) - valid_ids
+            if invalid_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"無効または他テナントの option_id が含まれています: {sorted(invalid_ids)}",
+                )
+
+            # other_text は value='other' のオプション選択時のみ許可
+            other_opt_result = await db.execute(
+                text(f"SELECT id FROM {options_t} WHERE value = 'other' AND tenant_id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            )
+            other_opt_row = other_opt_result.mappings().first()
+            other_option_id = other_opt_row["id"] if other_opt_row else None
+
+            for sel in sales_form_selections_data:
+                if sel.get("other_text") and sel["option_id"] != other_option_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="other_text は 'その他' オプション選択時のみ有効です",
+                    )
+
+        # DELETE + INSERT（置き換え方式）
+        await db.execute(
+            text(f"DELETE FROM {selections_t} WHERE lead_id = :lead_id"),
+            {"lead_id": lead_id},
+        )
+        for sel in sales_form_selections_data:
+            await db.execute(
+                text(f"""
+                    INSERT INTO {selections_t} (lead_id, option_id, other_text)
+                    VALUES (:lead_id, :option_id, :other_text)
+                """),
+                {
+                    "lead_id": lead_id,
+                    "option_id": sel["option_id"],
+                    "other_text": sel.get("other_text"),
+                },
+            )
 
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
@@ -428,7 +576,11 @@ async def update_lead(
                     "[leads] Discord role sync task creation failed lead=%d", lead_id,
                 )
 
-    return LeadResponse(**row)
+    # ADR-108 Phase B-1: 更新後のレスポンスに selections + options を付加
+    lead_dict = dict(row)
+    lead_dict["sales_form_selections"] = await _fetch_lead_selections(db, tenant_id, lead_id)
+    lead_dict["sales_form_options"] = await _fetch_sales_form_options(db, tenant_id)
+    return LeadResponse(**lead_dict)
 
 
 @router.delete(

@@ -37,6 +37,25 @@ export type KarteTabKey = "contact" | "company" | "deal";
 export const FOLLOWUP_EXCLUDED = new Set(["lost", "out_of_scope"]);
 
 // ---------------------------------------------------------------------------
+// ADR-108 Phase B-1: sales_form 複数選択型
+// ---------------------------------------------------------------------------
+
+export interface SalesFormSelectionState {
+  option_id: number;
+  option_value: string;
+  option_label: string;
+  other_text: string | null;
+}
+
+export interface SalesFormOption {
+  id: number;
+  label: string;
+  value: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // LeadDetail 型（GET /leads/{id} のレスポンス）
 // ---------------------------------------------------------------------------
 
@@ -81,6 +100,10 @@ export interface LeadDetail {
   // ADR-091 KPI7: ロール同期ステータス (read-only, set by discord_role_sync service)
   discord_role_sync_status: string | null;
   discord_role_sync_at: string | null;
+  // ADR-108 Phase B-1: 複数選択データ
+  sales_form_selections: SalesFormSelectionState[];
+  // ADR-108 Phase B-1: テナント別選択肢マスタ（GET /leads/{id} で取得）
+  sales_form_options: SalesFormOption[];
 }
 
 // ---------------------------------------------------------------------------
