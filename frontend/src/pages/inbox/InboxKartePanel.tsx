@@ -105,9 +105,10 @@ export function InboxKartePanel({
       .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
 
-  // ADR-108 Phase B-1: leadDetail に options が付いてきたらそれを使う、なければ別取得
+  // ADR-108 Phase B-1: GET /leads/{id} は常に sales_form_options を付加して返す（推奨A）
+  // leads.py L325 で _fetch_sales_form_options() を毎回呼ぶため別途フェッチ不要。
   useEffect(() => {
-    if (leadDetail?.sales_form_options && leadDetail.sales_form_options.length > 0) {
+    if (leadDetail?.sales_form_options) {
       setSalesFormOptions(leadDetail.sales_form_options);
     }
   }, [leadDetail?.sales_form_options]);
@@ -205,6 +206,7 @@ export function InboxKartePanel({
               handleCardFieldChange={handleCardFieldChange}
               handleCardFieldBlur={handleCardFieldBlur}
               guildId={guildId}
+              salesFormOptions={salesFormOptions}
             />
           </div>
 
@@ -345,7 +347,7 @@ function ActionBar({
 // ---------------------------------------------------------------------------
 
 function KarteTabContent({
-  tab, leadDetail, cardForm, handleCardFieldChange, handleCardFieldBlur, guildId,
+  tab, leadDetail, cardForm, handleCardFieldChange, handleCardFieldBlur, guildId, salesFormOptions,
 }: {
   tab: KarteTabKey;
   leadDetail: LeadDetail;
@@ -353,6 +355,7 @@ function KarteTabContent({
   handleCardFieldChange: (field: keyof LeadDetail, value: unknown) => void;
   handleCardFieldBlur: () => void;
   guildId: string | null;
+  salesFormOptions: SalesFormOption[];
 }) {
   const { t } = useTranslation();
 

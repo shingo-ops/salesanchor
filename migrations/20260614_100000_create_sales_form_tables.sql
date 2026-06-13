@@ -9,7 +9,7 @@
 --   - 旧 leads.sales_form カラムは残す（additive-only, ADR-045）
 --   - option 削除は is_active=false 運用（CASCADE DELETE はリード削除時のみ）
 --   - 全テナントスキーマに適用 (DO $$ pg_namespace ループ)
---   - {schema} プレースホルダ禁止 → EXECUTE format() で動的SQL (ADR チェック3)
+--   - スキーマプレースホルダ形式禁止 → EXECUTE format() で動的SQL (ADR チェック3)
 --   - REFERENCES public.X 禁止 → テナント内FK使用 (ADR チェック4)
 --   - 初期データは tenant_004 のみ投入（existing テナント）
 --
