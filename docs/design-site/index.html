@@ -23,7 +23,7 @@
   </nav>
 </header>
 
-<div class="page-container">
+<div class="page-container page-container--map">
   <h1 class="page-title">Sales Anchor アーキテクチャ全体地図</h1>
   <p class="page-subtitle">
     このサイトはADR-095〜106（SAシリーズ）を非技術者向けに図解したものです。<br>
@@ -90,57 +90,97 @@
   <!-- ②全体図 -->
   <section class="section">
     <h2 class="section-title">全体図 — データの流れ</h2>
-    <div style="overflow-x:auto">
-<svg width="100%" style="min-width:900px" viewBox="0 0 1000 520" role="img" xmlns="http://www.w3.org/2000/svg">
+    <div class="architecture-diagram architecture-diagram--wide">
+<svg viewBox="0 0 1180 660" xmlns="http://www.w3.org/2000/svg"
+     font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif"
+     role="img" aria-label="Sales Anchor アーキテクチャ全体地図">
 <title>全体図 — データの流れ</title>
 <desc>顧客マスタから商談を経て注文に至り、注文から見積書・請求書・出荷予定・顧客実績が時間順に自動生成される</desc>
 <defs>
-<marker id="arwB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arwG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="arwN" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="arwB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arwG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arwN" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
 </defs>
-<rect x="40" y="40" width="220" height="72" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
-<text x="150" y="67" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="700" fill="#1D4ED8">顧客マスタ</text>
-<text x="150" y="93" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#3B82F6">背骨①・誰に売るか</text>
-<rect x="330" y="40" width="220" height="72" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="8 5"/>
-<text x="440" y="67" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="700" fill="#1D4ED8">商談（SFA）</text>
-<text x="440" y="93" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#3B82F6">初成約までのフロー</text>
-<rect x="700" y="40" width="260" height="72" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5"/>
-<text x="830" y="67" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="700" fill="#15803D">商品・在庫マスタ</text>
-<text x="830" y="93" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#16A34A">背骨②・何を売るか</text>
-<line x1="262" y1="76" x2="324" y2="76" stroke="#3B82F6" stroke-width="2" marker-end="url(#arwB)"/>
-<line x1="440" y1="116" x2="487" y2="155" stroke="#3B82F6" stroke-width="2" marker-end="url(#arwB)"/>
-<line x1="830" y1="116" x2="566" y2="187" stroke="#16A34A" stroke-width="2" marker-end="url(#arwG)"/>
-<polygon points="500,160 600,210 500,260 400,210" fill="#FFF7ED" stroke="#EA580C" stroke-width="2"/>
-<text x="500" y="200" text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="700" fill="#C2410C">注文</text>
-<text x="500" y="226" text-anchor="middle" dominant-baseline="central" font-size="12.5" fill="#EA580C">交差点</text>
-<path d="M500 262 L500 300 L140 300 L140 324" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<rect x="40" y="330" width="200" height="76" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="140" y="358" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#374151">📄 見積書</text>
-<text x="140" y="386" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6B7280">自動生成・見積段階で発行</text>
-<rect x="280" y="330" width="200" height="76" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="380" y="358" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#374151">📄 請求書</text>
-<text x="380" y="386" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6B7280">自動生成・見積承認で変換</text>
-<rect x="520" y="330" width="200" height="76" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="620" y="358" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#374151">🚚 出荷予定</text>
-<text x="620" y="386" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6B7280">自動生成・入金確認後</text>
-<rect x="760" y="330" width="200" height="76" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
-<text x="860" y="358" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#374151">📊 顧客実績</text>
-<text x="860" y="386" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6B7280">自動集計・完了後に反映</text>
-<line x1="242" y1="368" x2="276" y2="368" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<line x1="482" y1="368" x2="516" y2="368" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<line x1="722" y1="368" x2="756" y2="368" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
-<text x="860" y="434" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#9CA3AF">↻ 顧客カルテに自動表示</text>
-<rect x="40" y="470" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#3B82F6"/>
-<text x="62" y="477" dominant-baseline="central" font-size="12.5" fill="#4B5563">顧客（背骨①）</text>
-<rect x="200" y="470" width="14" height="14" rx="3" fill="#F0FDF4" stroke="#22C55E"/>
-<text x="222" y="477" dominant-baseline="central" font-size="12.5" fill="#4B5563">商品・在庫（背骨②）</text>
-<rect x="420" y="470" width="14" height="14" rx="3" fill="#FFF7ED" stroke="#EA580C"/>
-<text x="442" y="477" dominant-baseline="central" font-size="12.5" fill="#4B5563">注文（交差点）</text>
-<rect x="590" y="470" width="14" height="14" rx="3" fill="#F9FAFB" stroke="#9CA3AF"/>
-<text x="612" y="477" dominant-baseline="central" font-size="12.5" fill="#4B5563">自動生成・派生値</text>
-<rect x="770" y="470" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4 3"/>
-<text x="792" y="477" dominant-baseline="central" font-size="12.5" fill="#4B5563">商談＝フロー（破線）</text>
+
+<!-- 上段: 顧客マスタ -->
+<rect x="60" y="50" width="260" height="80" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
+<text x="190" y="82" text-anchor="middle" font-size="17" font-weight="700" fill="#1D4ED8">顧客マスタ</text>
+<text x="190" y="108" text-anchor="middle" font-size="13" fill="#3B82F6">背骨①・誰に売るか</text>
+
+<!-- 上段: 商談 -->
+<rect x="420" y="50" width="260" height="80" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="8 5"/>
+<text x="550" y="82" text-anchor="middle" font-size="17" font-weight="700" fill="#1D4ED8">商談（SFA）</text>
+<text x="550" y="108" text-anchor="middle" font-size="13" fill="#3B82F6">初成約までのフロー</text>
+
+<!-- 上段: 商品・在庫マスタ -->
+<rect x="860" y="50" width="270" height="80" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5"/>
+<text x="995" y="82" text-anchor="middle" font-size="17" font-weight="700" fill="#15803D">商品・在庫マスタ</text>
+<text x="995" y="108" text-anchor="middle" font-size="13" fill="#16A34A">背骨②・何を売るか</text>
+
+<!-- 矢印: 顧客→商談 -->
+<line x1="322" y1="90" x2="414" y2="90" stroke="#3B82F6" stroke-width="2" marker-end="url(#arwB)"/>
+
+<!-- 矢印: 商談→注文 -->
+<line x1="550" y1="134" x2="590" y2="245" stroke="#3B82F6" stroke-width="2" marker-end="url(#arwB)"/>
+
+<!-- 矢印: 在庫→注文 -->
+<line x1="920" y1="134" x2="660" y2="265" stroke="#16A34A" stroke-width="2" marker-end="url(#arwG)"/>
+
+<!-- 矢印: 顧客→注文（直接） -->
+<path d="M190 134 Q190 210 510 270" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arwB)"/>
+
+<!-- 中段: 注文（交差点） ひし形 -->
+<polygon points="590,230 700,290 590,350 480,290" fill="#FFF7ED" stroke="#EA580C" stroke-width="2.2"/>
+<text x="590" y="284" text-anchor="middle" font-size="18" font-weight="700" fill="#C2410C">注文</text>
+<text x="590" y="308" text-anchor="middle" font-size="13" fill="#EA580C">交差点</text>
+
+<!-- 矢印: 注文→下流4ノードへ（放射状・1本ずつ） -->
+<path d="M518 330 L180 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<path d="M553 348 L450 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<path d="M627 348 L720 430" fill="none" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+<line x1="660" y1="330" x2="995" y2="430" stroke="#9CA3AF" stroke-width="2" marker-end="url(#arwN)"/>
+
+<!-- 下段4ノード（等間隔配置・重なりなし） -->
+<rect x="60" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="180" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 見積書</text>
+<text x="180" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="180" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積段階で発行</text>
+
+<rect x="330" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="450" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📄 請求書</text>
+<text x="450" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="450" y="504" text-anchor="middle" font-size="12" fill="#6B7280">見積承認で変換</text>
+
+<rect x="600" y="430" width="240" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="720" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">🚚 出荷予定</text>
+<text x="720" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動生成</text>
+<text x="720" y="504" text-anchor="middle" font-size="12" fill="#6B7280">入金確認後</text>
+
+<rect x="870" y="430" width="250" height="84" rx="10" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>
+<text x="995" y="462" text-anchor="middle" font-size="16" font-weight="700" fill="#374151">📊 顧客実績</text>
+<text x="995" y="488" text-anchor="middle" font-size="12" fill="#6B7280">自動集計</text>
+<text x="995" y="504" text-anchor="middle" font-size="12" fill="#6B7280">完了後に反映</text>
+
+<!-- 実績→顧客カルテ -->
+<text x="995" y="542" text-anchor="middle" font-size="12" fill="#9CA3AF">↻ 顧客カルテに自動表示</text>
+
+<!-- 凡例 -->
+<rect x="60" y="600" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#3B82F6"/>
+<text x="82" y="613" font-size="12.5" fill="#4B5563">顧客（背骨①）</text>
+<rect x="260" y="600" width="14" height="14" rx="3" fill="#F0FDF4" stroke="#22C55E"/>
+<text x="282" y="613" font-size="12.5" fill="#4B5563">商品・在庫（背骨②）</text>
+<rect x="500" y="600" width="14" height="14" rx="3" fill="#FFF7ED" stroke="#EA580C"/>
+<text x="522" y="613" font-size="12.5" fill="#4B5563">注文（交差点）</text>
+<rect x="700" y="600" width="14" height="14" rx="3" fill="#F9FAFB" stroke="#9CA3AF"/>
+<text x="722" y="613" font-size="12.5" fill="#4B5563">自動生成・派生値</text>
+<rect x="920" y="600" width="14" height="14" rx="3" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4 3"/>
+<text x="942" y="613" font-size="12.5" fill="#4B5563">商談＝フロー（破線）</text>
 </svg>
 </div>
     <p style="font-size:12px;color:var(--text-sub);margin-top:8px;text-align:center;">人が手入力するのは各マスタの「属性」と商談の記録だけ。書類・実績はすべて注文から自動導出（派生値）。</p>

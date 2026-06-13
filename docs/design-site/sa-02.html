@@ -23,7 +23,7 @@
   </nav>
 </header>
 
-<div class="page-container">
+<div class="page-container page-container--wide">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
     <span style="font-size:12px;font-weight:700;color:var(--c-customer);background:var(--c-customer-bg);padding:3px 10px;border-radius:12px;">SA-02</span>
     <span class="badge badge--wip" data-sa="SA-02">進行中 80%</span>
@@ -94,90 +94,94 @@
       <span class="template-section__title">仕組みの図解 — データの流れ</span>
     </div>
     <div class="template-section__body">
-      <div class="architecture-diagram">
-        <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg"
-             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
+      <div class="architecture-diagram architecture-diagram--wide">
+        <svg viewBox="0 0 1160 560" xmlns="http://www.w3.org/2000/svg"
+             font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif"
              role="img" aria-label="SA-02 顧客データモデル図">
+          <title>SA-02 顧客データモデル図</title>
+          <desc>顧客マスタを永続の背骨とし、商談、会話ログ、住所帳がぶら下がり、注文から累計売上とLTVが自動計算される図</desc>
+
           <defs>
-            <marker id="arr3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <marker id="sa02-blue-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#1a6fc4"/>
+            </marker>
+            <marker id="sa02-gray-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
             </marker>
-            <marker id="arr3-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#1a6fc4"/>
+            <marker id="sa02-order-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#c05621"/>
             </marker>
           </defs>
 
-          <!-- 顧客マスタ（中心左）-->
-          <rect x="20" y="100" width="160" height="90" rx="8"
-                fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
-          <text x="100" y="122" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">顧客マスタ（永続）</text>
-          <text x="100" y="140" text-anchor="middle" font-size="12" fill="#1a6fc4">顧客名 / 国 / 種別</text>
-          <text x="100" y="156" text-anchor="middle" font-size="12" fill="#1a6fc4">流入経路 / 担当者</text>
-          <text x="100" y="172" text-anchor="middle" font-size="11" fill="#3b82f6">※ 永続・削除しない</text>
+          <!-- 顧客マスタ -->
+          <rect x="60" y="215" width="240" height="140" rx="12" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+          <text x="180" y="245" text-anchor="middle" font-size="15" font-weight="700" fill="#1a6fc4">顧客マスタ（永続）</text>
+          <text x="180" y="273" text-anchor="middle" font-size="13" fill="#1a6fc4">顧客名 / 国 / 種別</text>
+          <text x="180" y="295" text-anchor="middle" font-size="13" fill="#1a6fc4">流入経路 / 担当者</text>
+          <text x="180" y="318" text-anchor="middle" font-size="12" fill="#3b82f6">※ 永続・削除しない</text>
+          <text x="180" y="338" text-anchor="middle" font-size="12" fill="#3b82f6">1人1枚のカルテ</text>
 
-          <!-- 矢印: 顧客→商談 -->
-          <line x1="180" y1="120" x2="245" y2="75"
-                stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr3-blue)"/>
+          <!-- 商談 -->
+          <rect x="410" y="70" width="300" height="110" rx="12" fill="#fff7ed" stroke="#c05621" stroke-width="1.8"/>
+          <text x="560" y="100" text-anchor="middle" font-size="15" font-weight="700" fill="#c05621">商談（SFA・初成約まで）</text>
+          <text x="560" y="128" text-anchor="middle" font-size="13" fill="#c05621">進捗 / 温度感 / 失注理由</text>
+          <text x="560" y="150" text-anchor="middle" font-size="12" fill="#d97706">失注理由は選択式</text>
+          <text x="560" y="166" text-anchor="middle" font-size="11" fill="#d97706">※ 常連客型なので基本1回</text>
 
-          <!-- 矢印: 顧客→会話ログ -->
-          <line x1="180" y1="155" x2="245" y2="165"
-                stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr3-blue)"/>
-
-          <!-- 矢印: 顧客→住所帳 -->
-          <line x1="180" y1="170" x2="245" y2="235"
-                stroke="#1a6fc4" stroke-width="1.5" marker-end="url(#arr3-blue)"/>
-
-          <!-- 商談（SFA）-->
-          <rect x="245" y="40" width="145" height="60" rx="8"
-                fill="#fff7ed" stroke="#c05621" stroke-width="1.5"/>
-          <text x="318" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#c05621">商談（SFA・初成約まで）</text>
-          <text x="318" y="78" text-anchor="middle" font-size="11" fill="#c05621">進捗 / 温度感 / 失注理由（選択式）</text>
-          <text x="318" y="91" text-anchor="middle" font-size="10" fill="#d97706">※ 常連客型なので基本1回</text>
-
-          <!-- 会話ログ-->
-          <rect x="245" y="138" width="145" height="55" rx="8"
-                fill="#f0fdf4" stroke="#2d8a4e" stroke-width="1.5"/>
-          <text x="318" y="158" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">会話ログ（1件1行）</text>
-          <text x="318" y="174" text-anchor="middle" font-size="11" fill="#2d8a4e">日時 / 送受信 / 原文 / 翻訳</text>
-          <text x="318" y="187" text-anchor="middle" font-size="10" fill="#16a34a">商談IDで紐づく</text>
+          <!-- 会話ログ -->
+          <rect x="410" y="225" width="300" height="120" rx="12" fill="#f0fdf4" stroke="#2d8a4e" stroke-width="1.8"/>
+          <text x="560" y="255" text-anchor="middle" font-size="15" font-weight="700" fill="#2d8a4e">会話ログ（1件1行）</text>
+          <text x="560" y="283" text-anchor="middle" font-size="13" fill="#2d8a4e">日時 / 送受信 / 原文</text>
+          <text x="560" y="305" text-anchor="middle" font-size="13" fill="#2d8a4e">翻訳 / 商談解析</text>
+          <text x="560" y="326" text-anchor="middle" font-size="12" fill="#16a34a">顧客IDで紐づく</text>
 
           <!-- 住所帳 -->
-          <rect x="245" y="208" width="145" height="50" rx="8"
-                fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
-          <text x="318" y="228" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">住所帳（1:N）</text>
-          <text x="318" y="244" text-anchor="middle" font-size="11" fill="#4b5563">配送先 D（複数登録可）</text>
+          <rect x="410" y="400" width="300" height="90" rx="12" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.8"/>
+          <text x="560" y="430" text-anchor="middle" font-size="15" font-weight="700" fill="#374151">住所帳（1:N）</text>
+          <text x="560" y="458" text-anchor="middle" font-size="13" fill="#4b5563">配送先D（複数登録可）</text>
+          <text x="560" y="476" text-anchor="middle" font-size="11" fill="#6b7280">注文は参照。コピーしない。</text>
 
-          <!-- 矢印: 顧客→注文（参照） -->
-          <line x1="180" y1="142" x2="468" y2="130"
-                stroke="#c05621" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr3)"/>
+          <!-- 注文 -->
+          <rect x="795" y="220" width="250" height="120" rx="12" fill="#ffedd5" stroke="#c05621" stroke-width="2.2"/>
+          <text x="920" y="253" text-anchor="middle" font-size="16" font-weight="700" fill="#c05621">注文（交差点）</text>
+          <text x="920" y="282" text-anchor="middle" font-size="13" fill="#c05621">顧客ID + 商品IDで参照</text>
+          <text x="920" y="305" text-anchor="middle" font-size="12" fill="#c05621">ここから実績を自動計算</text>
 
-          <!-- 注文（交差点）-->
-          <rect x="468" y="108" width="130" height="50" rx="8"
-                fill="#ffedd5" stroke="#c05621" stroke-width="2"/>
-          <text x="533" y="128" text-anchor="middle" font-size="12" font-weight="700" fill="#c05621">注文（交差点）</text>
-          <text x="533" y="146" text-anchor="middle" font-size="10" fill="#c05621">顧客ID + 商品IDで参照</text>
+          <!-- 派生値: 累計売上 -->
+          <rect x="1060" y="145" width="80" height="72" rx="10" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.6"/>
+          <text x="1100" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#4b5563">累計</text>
+          <text x="1100" y="194" text-anchor="middle" font-size="12" fill="#9ca3af">売上</text>
 
-          <!-- 矢印: 注文→自動集計 -->
-          <line x1="598" y1="133" x2="635" y2="90"
-                stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr3)"/>
-          <line x1="598" y1="138" x2="635" y2="155"
-                stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr3)"/>
+          <!-- 派生値: LTV -->
+          <rect x="1060" y="260" width="80" height="72" rx="10" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.6"/>
+          <text x="1100" y="288" text-anchor="middle" font-size="13" font-weight="700" fill="#4b5563">LTV</text>
+          <text x="1100" y="310" text-anchor="middle" font-size="11" fill="#9ca3af">自動</text>
 
-          <!-- 自動集計 -->
-          <rect x="635" y="65" width="40" height="40" rx="6"
-                fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
-          <text x="655" y="82" text-anchor="middle" font-size="9" fill="#4b5563">累計</text>
-          <text x="655" y="95" text-anchor="middle" font-size="9" fill="#9ca3af">売上</text>
+          <!-- 矢印: 顧客→商談 -->
+          <path d="M300 255 C350 180, 365 125, 405 125" fill="none" stroke="#1a6fc4" stroke-width="2" marker-end="url(#sa02-blue-arrow)"/>
 
-          <rect x="635" y="138" width="40" height="40" rx="6"
-                fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
-          <text x="655" y="155" text-anchor="middle" font-size="9" fill="#4b5563">LTV</text>
-          <text x="655" y="169" text-anchor="middle" font-size="9" fill="#9ca3af">（自動）</text>
+          <!-- 矢印: 顧客→会話ログ -->
+          <path d="M300 285 C350 285, 365 285, 405 285" fill="none" stroke="#1a6fc4" stroke-width="2" marker-end="url(#sa02-blue-arrow)"/>
 
-          <!-- 説明ラベル -->
-          <text x="400" y="110" font-size="10" fill="#9ca3af">顧客IDで</text>
-          <text x="400" y="122" font-size="10" fill="#9ca3af">参照のみ</text>
-          <text x="400" y="134" font-size="10" fill="#e89324">（コピーしない）</text>
+          <!-- 矢印: 顧客→住所帳 -->
+          <path d="M300 325 C350 390, 365 445, 405 445" fill="none" stroke="#1a6fc4" stroke-width="2" marker-end="url(#sa02-blue-arrow)"/>
+
+          <!-- 顧客→注文（参照のみ・破線） -->
+          <path d="M300 285 C470 360, 650 360, 790 285" fill="none" stroke="#c05621" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#sa02-order-arrow)"/>
+
+          <!-- 注記カード: 参照のみ -->
+          <rect x="735" y="150" width="210" height="46" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.2"/>
+          <text x="840" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#c05621">顧客IDで参照のみ</text>
+          <text x="840" y="187" text-anchor="middle" font-size="11" fill="#c05621">同じ情報をコピーしない</text>
+
+          <!-- 矢印: 注文→累計売上 -->
+          <path d="M1045 260 C1058 230, 1062 205, 1060 181" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#sa02-gray-arrow)"/>
+
+          <!-- 矢印: 注文→LTV -->
+          <line x1="1045" y1="295" x2="1062" y2="296" stroke="#9ca3af" stroke-width="2" marker-end="url(#sa02-gray-arrow)"/>
+
+          <!-- 補足説明 -->
+          <text x="60" y="525" font-size="12" fill="#6b7280">顧客マスタは永続の背骨。実績（累計・LTV）は注文から計算するため、手入力で二重管理しない。</text>
         </svg>
       </div>
       <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">
