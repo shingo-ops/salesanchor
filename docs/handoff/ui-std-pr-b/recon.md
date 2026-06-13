@@ -11,8 +11,8 @@
 
 ### MergeCompanyModal.tsx
 
-| `path:line` | 確認内容 |
-|-------------|---------|
+| 引用先 | 確認内容 |
+|--------|---------|
 | `frontend/src/components/MergeCompanyModal.tsx:22` | Button import 追加 |
 | `frontend/src/components/MergeCompanyModal.tsx:23` | TextField import 追加 |
 | `frontend/src/components/MergeCompanyModal.tsx:24` | Textarea import 追加 |
@@ -26,8 +26,8 @@
 
 ### CompanyAddressModal.tsx
 
-| `path:line` | 確認内容 |
-|-------------|---------|
+| 引用先 | 確認内容 |
+|--------|---------|
 | `frontend/src/pages/company-detail/CompanyAddressModal.tsx:11` | Button import 追加 |
 | `frontend/src/pages/company-detail/CompanyAddressModal.tsx:12` | TextField import 追加 |
 | `frontend/src/pages/company-detail/CompanyAddressModal.tsx:13` | Select import 追加 |
@@ -50,8 +50,8 @@
 
 ### CompanyDetailPage.tsx
 
-| `path:line` | 確認内容 |
-|-------------|---------|
+| 引用先 | 確認内容 |
+|--------|---------|
 | `frontend/src/pages/company-detail/CompanyDetailPage.tsx:16` | Button import 追加 |
 | `frontend/src/pages/company-detail/CompanyDetailPage.tsx:76` | back Button(secondary) 置換（no-data状態） |
 | `frontend/src/pages/company-detail/CompanyDetailPage.tsx:149` | back Button(sm/secondary) 置換（ヘッダー） |
