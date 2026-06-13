@@ -15,7 +15,7 @@
  * テスト用モック変数:
  *   CHANGED_FILES 改行区切りのファイルパスリスト（BASE_SHA/HEAD_SHA の代替）
  *   MOCK_PR_BODY  PR 本文テキスト（GitHub API の代替）
- *   MOCK_APPROVALS カンマ区切りの承認者ログインリスト（'' = 承認なし）
+ *   MOCK_PR_AUTHOR PR 作者ログイン（GitHub API の代替）
  */
 'use strict';
 
@@ -25,11 +25,11 @@ const { join } = require('path');
 
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
-// ─── 認可された承認者 ─────────────────────────────────────────────────────────
-const AUTHORIZED_APPROVERS = ['shingo-ops', 'Hikky-dev'];
-
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
+
+// ─── GO権限（PO単独）────────────────────────────────────────────────────────
+const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
 
 // ─── パス区分定義（design.md §1） ────────────────────────────────────────────
 const DOCS_PATTERNS = [
@@ -95,6 +95,84 @@ function parseSOPDeclaration(prBody) {
     designPath: designMatch ? designMatch[1].trim() : null,
     mode: modeMatch ? modeMatch[1] : null,
   };
+}
+
+// ─── GO記録パース ─────────────────────────────────────────────────────────────
+/**
+ * PR本文からGO記録セクションをパースする。
+ * 書式:
+ *   ### GO記録
+ *   - GO発行者: Shingo（shingo-ops）
+ *   - 日時: 2026-06-13 10:00 JST
+ *   - GO原文: GO #<PR番号>
+ *   - バックアップ確認: あり  ← DB変更なしの危険変更は「該当なし」も可
+ */
+function parseGORecord(prBody) {
+  if (!prBody) return null;
+  const sectionMatch = prBody.match(
+    /###\s*GO記録\s*\n([\s\S]*?)(?=\n###|\n##|\n#|$)/
+  );
+  if (!sectionMatch) return null;
+  const section = sectionMatch[1];
+
+  const issuerMatch = section.match(/GO発行者:\s*(.+)/);
+  const dateMatch = section.match(/日時:\s*(.+)/);
+  const goTextMatch = section.match(/GO原文:\s*(.+)/);
+  const backupMatch = section.match(/バックアップ確認:\s*(.+)/);
+
+  return {
+    issuer: issuerMatch ? issuerMatch[1].trim() : null,
+    date: dateMatch ? dateMatch[1].trim() : null,
+    goText: goTextMatch ? goTextMatch[1].trim() : null,
+    backup: backupMatch ? backupMatch[1].trim() : null,
+  };
+}
+
+// ─── GO記録検証 ──────────────────────────────────────────────────────────────
+/**
+ * GO記録の必須要素を検証する。
+ * 必須: GO発行者（PO）・日時・GO #<PR番号>原文・バックアップ確認の有無
+ * バックアップ確認: 「あり」「なし」「該当なし」いずれも可（DB非接触の危険変更は「該当なし」でよい）
+ * GOの正式書式: 「GO #<PR番号>」（番号必須。番号のない曖昧な肯定はGOとみなさない）
+ */
+function validateGORecord(goRecord, prNumber) {
+  if (!goRecord) {
+    return [
+      '❌ PR本文に「### GO記録」セクションがありません',
+      '   → 危険変更はマージ前にチャットで「3行サマリ＋バックアップ確認」をPOに提示し、',
+      '     「GO #<PR番号>」を受領してからPR本文の「### GO記録」セクションに転記してください',
+      '   → 詳細: CLAUDE.md §ブランチ運用ルール',
+    ];
+  }
+
+  const errors = [];
+
+  if (!goRecord.issuer || !AUTHORIZED_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
+    errors.push(`❌ GO発行者が未記入または権限外です（「${goRecord.issuer || '未記入'}」）`);
+    errors.push('   → GO権限はPO（Shingo / shingo-ops）のみです（Hikky-devによるバイパスは廃止）');
+  }
+
+  if (!goRecord.date || goRecord.date.trim().length < 5) {
+    errors.push('❌ GO日時が記入されていません（「日時: YYYY-MM-DD HH:MM JST」形式）');
+  }
+
+  if (!goRecord.goText) {
+    errors.push('❌ GO原文が記入されていません（「GO原文: GO #<PR番号>」必須）');
+  } else {
+    const goNumberMatch = goRecord.goText.match(/GO\s*#(\d+)/i);
+    if (!goNumberMatch) {
+      errors.push(`❌ GO原文の書式不正（「${goRecord.goText}」）: 「GO #<PR番号>」形式が必須（番号のないGOは無効）`);
+    } else if (prNumber && goNumberMatch[1] !== String(prNumber)) {
+      errors.push(`❌ GO原文のPR番号不一致（原文: GO #${goNumberMatch[1]} / 現在のPR: #${prNumber}）`);
+      errors.push('   → GO #番号はこのPRの番号と完全に一致している必要があります');
+    }
+  }
+
+  if (!goRecord.backup || goRecord.backup.trim().length < 2) {
+    errors.push('❌ バックアップ確認が記入されていません（「バックアップ確認: あり/なし/該当なし」）');
+  }
+
+  return errors;
 }
 
 // ─── recon.md 検証 ────────────────────────────────────────────────────────────
@@ -204,16 +282,16 @@ function validateDesignDoc(designContent, reconPath, adr) {
   return errors;
 }
 
-// ─── 自動起票（緊急承認時） ───────────────────────────────────────────────────
+// ─── 自動起票（緊急GO時） ────────────────────────────────────────────────────
 function createFollowupIssue(prNumber, repo) {
   if (!repo || !prNumber) return;
   try {
     const deadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const title = `[sop-followup] PR #${prNumber} 緊急承認 — 宿題期限: ${deadline}`;
+    const title = `[sop-followup] PR #${prNumber} 緊急GO — 宿題期限: ${deadline}`;
     const body = [
-      `## 宿題待ち（緊急承認による先行マージ）`,
+      `## 宿題待ち（緊急GOによる先行マージ）`,
       ``,
-      `PR #${prNumber} が緊急承認で先行マージされました。`,
+      `PR #${prNumber} が緊急GOで先行マージされました。`,
       `**期限**: ${deadline} までに以下の成果物を揃えて後追い提出してください。`,
       ``,
       `### 提出が必要なもの`,
@@ -406,41 +484,21 @@ function main() {
 
   const declaration = parseSOPDeclaration(prBody);
 
-  // 危ない変更の処理
+  // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
-    let approvals = [];
-    if (process.env.MOCK_APPROVALS !== undefined) {
-      approvals = process.env.MOCK_APPROVALS ? process.env.MOCK_APPROVALS.split(',').filter(Boolean) : [];
-    } else if (prNumber && repo) {
-      try {
-        const json = execSync(
-          `gh api "repos/${repo}/pulls/${prNumber}/reviews" --jq '[.[] | select(.state == "APPROVED") | .user.login]'`,
-          { encoding: 'utf8' }
-        ).trim();
-        approvals = JSON.parse(json);
-      } catch {
-        console.warn('⚠️  PR承認状態の取得に失敗 — 承認なしとして扱います');
-      }
-    }
+    const goRecord = parseGORecord(prBody);
+    const goErrors = validateGORecord(goRecord, prNumber);
 
-    const hasAuth = approvals.some(a => AUTHORIZED_APPROVERS.includes(a));
-
-    if (!hasAuth) {
-      printFailure([
-        `❌ 危険変更（migrations/ / deploy.yml / 本番スクリプト等）には`,
-        `   認可された承認者（${AUTHORIZED_APPROVERS.join(' / ')}）の PR Approve が必要です。`,
-        `   現在の承認者: ${approvals.length > 0 ? approvals.join(', ') : 'なし'}`,
-        `   → shingo-ops に PR の Approve を依頼してください。`,
-        `   ※ 本番障害の緊急対応は EMERGENCY: をPRタイトルに明記し、Shingo承認後にマージしてください。`,
-      ]);
+    if (goErrors.length > 0) {
+      printFailure(goErrors);
     }
 
     const mode = declaration ? declaration.mode : null;
     if (mode === '緊急') {
-      console.log(`✅ 危ない変更：緊急承認（${approvals.join(', ')}）— pass＋宿題待ち起票`);
+      console.log(`✅ 危ない変更：GO記録確認済み（緊急）— pass＋宿題待ち起票`);
       createFollowupIssue(prNumber, repo);
     } else {
-      console.log(`✅ 危ない変更：承認（${approvals.join(', ')}）些細 — pass`);
+      console.log(`✅ 危ない変更：GO記録確認済み — pass`);
     }
     process.exit(0);
   }
@@ -459,6 +517,8 @@ module.exports = {
   classifyFile,
   classifyChanges,
   parseSOPDeclaration,
+  parseGORecord,
+  validateGORecord,
   normalizeCitationPath,
   extractFileCitations,
   hasFileCitations,
