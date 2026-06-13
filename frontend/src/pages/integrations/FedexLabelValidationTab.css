@@ -111,6 +111,55 @@
   color: var(--text-muted);
 }
 
+/* ── ガイド全体ヘッダー ── */
+.lv-guide-header {
+  margin-bottom: var(--space-2);
+}
+
+/* ── 2部構成セクション ── */
+.lv-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lv-part__header {
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--border);
+}
+
+.lv-part__title {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.lv-part__intro {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── スクリーンショットプレースホルダ ── */
+.lv-placeholder-card {
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+}
+
+.lv-placeholder-card__label {
+  font-weight: var(--font-weight-semi);
+  white-space: nowrap;
+}
+
 /* ── メールテンプレート ── */
 .lv-email-template {
   margin-top: var(--space-3);
