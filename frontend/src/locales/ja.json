@@ -292,7 +292,7 @@
     "fedexGuideTitle": "FedEx 連携ガイド",
     "fedexGuideIntro": "FedEx連携は「API接続（審査不要）」と「ラベル発行（審査あり）」の2段階で進めます。API接続は通常即日で完了します。",
     "fedexGuidePart1Title": "第1部: API接続・審査不要",
-    "fedexGuidePart1Intro": "FedEx Developerアカウントを作成し、APIキーをアプリに登録します。見積もり・接続テストが利用できるようになります。",
+    "fedexGuidePart1Intro": "FedEx Developer Portalにログインし、APIキーをアプリに登録します。",
     "fedexGuidePart1Step1Title": "FedEx Developer Portalにログイン",
     "fedexGuidePart1Step1Desc": "FedExアカウントをお持ちの前提で、Developer Portalにログインします。",
     "fedexGuideDeveloperPortalButton": "FedEx Developer Portalを開く",

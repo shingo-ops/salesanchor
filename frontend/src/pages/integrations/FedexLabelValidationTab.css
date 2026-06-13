@@ -160,6 +160,13 @@
   white-space: nowrap;
 }
 
+/* ── ステップ内アクション（左寄せ） ── */
+.lv-step-action {
+  margin-top: var(--space-3);
+  display: flex;
+  justify-content: flex-start;
+}
+
 /* ── メールテンプレート ── */
 .lv-email-template {
   margin-top: var(--space-3);
