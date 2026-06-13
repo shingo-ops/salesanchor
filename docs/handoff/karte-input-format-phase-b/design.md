@@ -36,93 +36,175 @@ recon の分類結果から以下とする：
 
 ---
 
-## Phase B-1: sales_form 選択肢化
+## Phase B-1: sales_form 複数選択 + その他自由記述 + テナント別カスタム
+
+> **⚠️ 2026-06-14 PO方針変更**: 下記の「単一 select 暫定案」は採用しない。  
+> PO 判断により「複数選択可能なチェックボックス付きドロップダウン」へ再設計する。  
+> 本セクションは追補設計であり、旧暫定案（単一 select）は廃止する。
+
+---
+
+### 旧暫定案（廃止・参照のみ）
+
+~~単一 `<select>` で sales_form 文字列を保存する案。migration なし。~~  
+**採用しない。** PO が複数選択 + テナント別カスタムを要件として定義したため、単一 select では対応不可。
+
+---
 
 ### 目的 / KGI
 
 | 基準 | 検証方法 |
 |-----|---------|
-| sales_form を制御語彙（PO 定義の正規選択肢）に統一する | grep で free-text input が残らないことを確認 |
-| 既存 DB 値を壊さない | option value は既存 DB 値と一致する文字列を使用 |
-| i18n 対応（ADR-027） | 選択肢ラベルを t() 経由にする |
+| sales_form を複数選択可能な制御語彙に統一する | UI で複数選択できること |
+| 「その他」選択時に自由記述欄が表示される | E2E で「その他」チェック → テキスト欄出現を確認 |
+| 選択内容が正しく保存・復元される | PATCH → GET で同じ選択状態が返ること |
+| 既存 sales_form 値を失わない | 移行方針を実装前に確定する（SQL 確認 → PO 判断） |
+| テナントごとに選択肢追加が将来可能な設計にする | D 案のスキーマが選択肢マスタを分離していること |
 
-### 対象範囲
+---
 
-- `frontend/src/pages/inbox/InboxKartePanel.tsx:461-463` — `text input` → `select`
-- `frontend/src/locales/ja.json` — 選択肢ラベルキー追加
-- `frontend/src/locales/en.json` — 選択肢ラベルキー追加
+### 保存方式 比較
 
-### 対象外
+> **現状の `leads.sales_form`**: `VARCHAR(100)` のフリーテキスト。複数選択を表現できない。  
+> 複数選択を実現するには保存方式の変更が必要であり、**いずれの案でも migration が発生する**。
 
-- backend schema 変更（`str | None max_length=100` のまま）
-- migration
-- 既存 DB 値の一括変換（PO 判断・別作業）
+| 案 | 方式 | migration | 概要 | メリット | デメリット |
+|----|------|-----------|------|---------|-----------|
+| **A** | `leads.sales_form` にカンマ区切り文字列保存 | 不要（既存列を流用） | `"実店舗,ECサイト"` 形式で既存列に保存 | migration ゼロ | SQL での集計・絞り込みが難しい。将来のテナント別カスタムに対応できない |
+| **B** | `leads.sales_form_json` JSON 配列カラム追加 | **必要**（新規列 `sales_form_json jsonb`） | `["実店舗","ECサイト"]` 形式。既存 sales_form は残す | SQLで `@>` 演算子使用可。migration 1本 | テナント別マスタと選択の分離ができない。jsonb は RLS・インデックス注意 |
+| **C** | `lead_sales_form_selections` 中間テーブル | **必要**（2テーブル追加） | 固定マスタ + lead ごとの選択行 | 正規化。集計・絞り込みが容易 | テナント別カスタム選択肢に対応できない |
+| **D** | `tenant_sales_form_options` + `lead_sales_form_selections` | **必要**（2テーブル追加） | テナント別選択肢マスタ + lead ごとの複数選択 | テナント別カスタム対応。正規化。将来の管理 UI に対応可 | migration 工数が最大。API 設計も変わる |
 
-### 技術 How
+**推奨: D 案**
+
+---
+
+### 推奨案 D の詳細設計
+
+#### スキーマ
+
+```sql
+-- テナントごとの販売形態マスタ
+CREATE TABLE {schema}.tenant_sales_form_options (
+    id          SERIAL PRIMARY KEY,
+    tenant_id   INTEGER NOT NULL,
+    label       VARCHAR(100) NOT NULL,   -- 表示名（日本語）
+    value       VARCHAR(100) NOT NULL,   -- DB 保存値（英数字推奨）
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- リードごとの販売形態選択（複数選択）
+CREATE TABLE {schema}.lead_sales_form_selections (
+    id         SERIAL PRIMARY KEY,
+    lead_id    INTEGER NOT NULL REFERENCES {schema}.leads(id) ON DELETE CASCADE,
+    option_id  INTEGER NOT NULL REFERENCES {schema}.tenant_sales_form_options(id),
+    other_text TEXT,                    -- option.value = 'other' のときのみ使用
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (lead_id, option_id)
+);
+```
+
+#### 初期データ（テナント初期化時に INSERT）
+
+```sql
+INSERT INTO {schema}.tenant_sales_form_options (tenant_id, label, value, sort_order) VALUES
+  (:tenant_id, '実店舗',    'physical_store', 1),
+  (:tenant_id, 'ECサイト',  'ec_site',        2),
+  (:tenant_id, 'ライブ配信', 'live_streaming', 3),
+  (:tenant_id, '卸・代理店', 'wholesale',      4),
+  (:tenant_id, 'その他',    'other',          5);
+```
+
+#### API 変更
+
+- **GET `/leads/{id}`** レスポンスに `sales_form_selections: [{option_id, label, value, other_text}]` を追加
+- **PATCH `/leads/{id}`** ボディに `sales_form_selections: [{option_id, other_text?}]` を受け付ける
+- 既存 `leads.sales_form`（VARCHAR 100）は migration では削除せず残す（additive-only 原則）。表示は `sales_form_selections` を優先し、`sales_form_selections` が空の場合に既存値をフォールバック表示する
+
+#### フロントエンド
 
 ```tsx
-// 現状（InboxKartePanel.tsx:461-463）
-<input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-  onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur}
-  placeholder={t("inbox.emptyField")} />
+// 概念コード（実装は別 PR）
+// InboxKartePanel.tsx — company tab
+<SalesFormMultiSelect
+  options={tenantOptions}            // GET /tenant/sales-form-options
+  selected={cardForm.sales_form_selections}
+  onChange={(sels) => handleCardFieldChange("sales_form_selections", sels)}
+  onBlur={handleCardFieldBlur}
+/>
 
-// 修正後（PO から選択肢を受け取った後に実装）
-<select className="right-panel-field" value={cardForm.sales_form ?? ""}
-  onChange={(e) => handleCardFieldChange("sales_form", e.target.value || null)} onBlur={handleCardFieldBlur}>
-  <option value="">—</option>
-  <option value="[PO定義値1]">{t("leads.salesForm_[key1]")}</option>
-  <option value="[PO定義値2]">{t("leads.salesForm_[key2]")}</option>
-  {/* PO 確認後に埋める */}
-</select>
+// SalesFormMultiSelect コンポーネント（新規作成）
+// - チェックボックス付きドロップダウン
+// - 「その他」選択時にテキスト入力欄を表示
+// - i18n: option label は t() 経由 or テナントマスタの label を直接表示
 ```
 
-**option value は PO 定義の正規 DB 値をそのまま使う（Phase A と同パターン）**。
+#### 移行方針（既存 sales_form 値）
 
-### 変更対象ファイル
+1. 確認 SQL を実行して既存値の分布を把握する（recon.md §5 参照）
+2. PO が移行方針を決定する:
+   - a. 既存値を `lead_sales_form_selections` に移行する（要移行スクリプト）
+   - b. 既存値は表示のみ残し、編集時に新方式で上書きする
+   - c. 既存値を null にする
+3. 移行スクリプトは **PO GO 後に別 PR** で実装する
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `frontend/src/pages/inbox/InboxKartePanel.tsx` | text input → select（:461-463） |
-| `frontend/src/locales/ja.json` | `leads.salesForm_*` キー追加（選択肢数 × 1） |
-| `frontend/src/locales/en.json` | 同上 |
+---
 
-migration なし / deploy.yml 変更なし。
+### B-1 の影響範囲
 
-### 受け入れ基準 / 検証方法
+| 区分 | 内容 |
+|-----|------|
+| migration | **必要**（2テーブル追加 + 初期データ INSERT）。ADR-045 additive-only 原則に準拠 |
+| backend | 新規 router または leads router 拡張（GET/PATCH `/leads/{id}` の response/body 変更） |
+| frontend | `SalesFormMultiSelect` 新規コンポーネント + InboxKartePanel.tsx 修正 |
+| i18n | 選択肢ラベルはテナントマスタで管理するか、ja/en.json で管理するか PO 確認が必要 |
+| visual gate | `karte-customer-company.png` の baseline 更新が必要 |
+| deploy.yml | migration ステップの追記が必要（migration-guard.yml が自動検知） |
 
-```bash
-# sales_form が text input でなくなること
-grep -n 'type="text".*sales_form\|sales_form.*type="text"' frontend/src/pages/inbox/InboxKartePanel.tsx
-# → 0件
+**B-1 は「軽量 UI 修正」ではなく、DB / API 設計を伴う中規模実装 PR になる。**  
+単一 select 案（migration なし）とは工数・リスクが大幅に異なる。
 
-# ja/en キー対称確認
-npm run lint
+---
 
-# 視覚ゲート
-npx playwright test tests-e2e/karte-visual-gate.spec.ts --project=chromium
-# → karte-customer-company.png に差分が出る場合は文言/構造変化を確認し baseline 更新
+### 実装前ゲート（既存データ確認 SQL）
+
+以下を **PO 確認後に実行**すること。本番 DB への書き込みは禁止。
+
+```sql
+-- tenant_004 の既存 sales_form 値の分布
+SELECT sales_form, COUNT(*) as cnt
+FROM tenant_004.leads
+WHERE sales_form IS NOT NULL
+GROUP BY sales_form
+ORDER BY cnt DESC
+LIMIT 50;
 ```
 
-### 想定リスク
+この結果を受けて移行方針を PO と決定してから実装に入る。
 
-| リスク | 影響 | 対策 |
-|-------|-----|------|
-| 既存 DB 値が選択肢外 | 保存済みの sales_form が select でハイライトされず `""` 扱いになる | 確認 SQL 実行 → PO 判断（一括変換 or そのまま） |
-| PO 定義の選択肢変更 | 再実装が必要 | 実装前に選択肢を確定してもらう |
-| visual gate baseline ズレ | 次 PR がブロック | ubuntu-latest で --update-snapshots（Mac 禁止） |
+---
 
 ### ロールバック方針
 
-select → text input に戻すだけ。migration なしのため即時ロールバック可。
+- **migration**: additive-only のため、追加したテーブルを DROP するには PO 確認が必要（ADR-045）
+- **frontend**: `SalesFormMultiSelect` を削除し、text input に戻す
+- **API**: `sales_form_selections` フィールドをレスポンスから除去
 
-### PO確認事項
+migration を含むため、ロールバックは Phase A（i18n のみ）より複雑。PO の GO 確認を実装前に必ず取ること。
 
-1. sales_form の正規選択肢は何か（例: "卸販売" / "小売" / "代理販売" 等）
-2. 各選択肢の日本語・英語表示ラベルは何か
-3. 既存 DB の sales_form 値（確認 SQL 実行後）にある自由入力値の扱いは？
-   - 選択肢に追加する
-   - null に変換する（要別作業）
-   - そのまま残す（select で表示は崩れるが DB 値は保持）
+### PO確認事項（B-1 追補）
+
+1. 初期選択肢（実店舗 / ECサイト / ライブ配信 / 卸・代理店 / その他）でよいか
+2. 「卸・代理店」を1つにするか、「卸」と「代理店」に分けるか
+3. 「その他」自由記述をどこまで扱うか
+   - カルテ内表示のみ（検索・集計対象外）
+   - 検索対象にする（full-text index 追加が必要）
+   - 集計・分析対象にする（将来の dashboard 機能拡張）
+4. テナント管理画面での選択肢追加（CRUD）をいつ実装するか（B-1 同梱か / 別フェーズか）
+5. 既存 sales_form 値の移行方針（確認 SQL 実行後に提示する）
+6. i18n: 選択肢ラベルをテナントマスタで管理するか（多言語テナント対応）、ja/en.json で固定するか
 
 ---
 
