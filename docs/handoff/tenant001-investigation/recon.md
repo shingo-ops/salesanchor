@@ -16,13 +16,13 @@ tenant_001 が空テナントか否か・スキーマ欠損の有無を本番 DB
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
-|-------------------|---------|
-| `backend/app/services/tenant.py:1488` | スキーマ命名: `tenant_{id:03d}` 形式 |
-| `backend/app/models.py:11` | `id = Column(Integer, primary_key=True)` — SERIAL 連番 |
-| `backend/app/models.py:13` | `tenant_code = Column(String(50), unique=True)` — 表示用識別子 |
+| 引用先 | 確認内容 |
+|--------|---------|
+| `backend/app/services/tenant.py:1488` | スキーマ命名: tenant_{id:03d} 形式 |
+| `backend/app/models.py:11` | id = Column(Integer, primary_key=True) — SERIAL 連番 |
+| `backend/app/models.py:13` | tenant_code = Column(String(50), unique=True) — 表示用識別子 |
 | `.github/workflows/temp-tenant001-investigation.yml:8` | workflow_dispatch + confirm gate |
-| `.github/workflows/temp-tenant001-investigation.yml:69` | `BEGIN; SET TRANSACTION READ ONLY;` — DB レベル書き込み禁止 |
+| `.github/workflows/temp-tenant001-investigation.yml:69` | SET TRANSACTION READ ONLY — DB レベル書き込み禁止 |
 
 ---
 
