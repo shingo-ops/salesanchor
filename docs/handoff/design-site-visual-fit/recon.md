@@ -1,6 +1,6 @@
 # Recon: design-site 視認性・理解容易性 最高品質化
 
-**調査日**: 2026-06-13
+**調査日**: 2026-06-13 / 追加調査: 2026-06-14
 **担当**: Generator（Claude Code）
 **正本指示書**: 本 handoff 内 `design.md`
 
@@ -55,6 +55,21 @@ git grep -i "RLS" docs/adr/ docs/handoff/ | head -80
 | G3 | SA-02 SVG が `680×300` で情報量に対して小さい | `sa-02.html:98` |
 | G4 | SA-02 注記が矢印と重なりやすい座標にある | `sa-02.html:178-180` |
 | G5 | SA-12 の未決・KGI未設定が長文 1 ブロックで意味階層が見えない | `sa-12.html:243-260` |
+
+---
+
+## 追加recon: 全SVG図の横断点検（2026-06-14）
+
+| ページ | 図タイトル | file:line | 現状 | 改善方針 |
+|---|---|---|---|---|
+| SA-01 | 仕組みの図解 — SSOT原則のイメージ | `docs/design-site/sa-01.html:93-141` | `viewBox 640×240`、page-container未拡張 | `--wide`+`--wide` 付与、`viewBox 980×380` に拡張 |
+| SA-02 | 仕組みの図解 — データの流れ | PR #2109変更済み | `viewBox 1160×560`、注記カード化済み | 最終目視対象 |
+| SA-03 | 仕組みの図解 — トークン検証フロー | `docs/design-site/sa-03.html:92-151` | `viewBox 680×230`、page-container/diagram未拡張、サーバー検証ノード窮屈 | `--wide`+`--wide`、`viewBox 1180×430` |
+| SA-04 | 仕組みの図解 — ID 保存 → テンプレ → リンク生成 | `docs/design-site/sa-04.html:94-140` | `viewBox 680×220`、テンプレ表 180px 幅に長文が詰まる | `--wide`+`--wide`、`viewBox 1160×420` |
+| SA-05 | 仕組みの図解 — A/B 区分と 2 段階引当 | `docs/design-site/sa-05.html:93-149` | `viewBox 680×240`、A在庫2段階説明が横に詰まる | `--wide`+`--wide`、`viewBox 1180×500` |
+| SA-06 | 仕組みの図解 — 解析パイプライン | `docs/design-site/sa-06.html:94-158` | `viewBox 680×220`、AI解析ノードが 145px 幅で窮屈 | `--wide`+`--wide`、`viewBox 1320×540` |
+| SA-07 | 仕組みの図解 — 見積・請求の生成フロー | `docs/design-site/sa-07.html:93-147` | `viewBox 680×220`、見積書ノード 145px で1行に長文 | `--wide`+`--wide`、`viewBox 1180×460` |
+| SA-12 | 仕組みの図解 — エンジン＋ポリシー注入モデル | `docs/design-site/sa-12.html:94-153` | `viewBox 680×230`、page-container--wide済み、diagram未拡張 | `architecture-diagram--wide` 追加、`viewBox 1160×420` |
 
 ---
 
