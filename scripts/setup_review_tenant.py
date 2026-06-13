@@ -4,8 +4,15 @@
 ADR-028: Meta App Review 撮影用テナント分離の実装。
 
 実行方法（VPS側、backendコンテナ内）:
+  # 通常実行（パスワードは変更しない）
   docker compose exec -e ALLOW_REVIEW_TENANT_SETUP=1 backend \\
       python /app/scripts/setup_review_tenant.py
+
+  # パスワードリセット（明示フラグ必須）
+  docker compose exec \\
+      -e ALLOW_REVIEW_TENANT_SETUP=1 \\
+      -e ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 \\
+      backend python /app/scripts/setup_review_tenant.py
 
 前提:
   - firebase-credentials.json がコンテナ内 /app に存在すること
@@ -13,17 +20,23 @@ ADR-028: Meta App Review 撮影用テナント分離の実装。
   - ALLOW_REVIEW_TENANT_SETUP=1 を環境変数で渡すこと（誤実行防止のガード）
 
 冪等性:
-  - 複数回実行しても安全。既存テナント・ユーザー・顧客データを重複作成しない。
+  - 複数回実行しても安全。既存テナント・ユーザーを重複作成しない。
+  - 既存 Firebase ユーザーがいる場合、パスワードは変更しない（デフォルト）。
 
 注意:
   - review@salesanchor.jp が既存テナントに紐付いている場合、新テナントに付け替えます。
     既存テナント（tenant_004 等）のスキーマデータは一切変更しません（AC-3）。
   - Meta OAuth 再接続は OAuth フロー経由で別途実施してください（自動化不可）。
-  - パスワードは /tmp/review_tenant_setup_*.txt に出力します。
-    Mac 側への取り出し: docker compose exec -T backend cat /tmp/review_tenant_setup_*.txt
+  - パスワードリセット時のみ /tmp/review_tenant_setup_*.txt に出力します。
+    コンテナ再起動で /tmp は消えるため、Shingo に安全な手段で共有すること。
+    ChatGPT / PR 本文 / GitHub コメントにパスワードを書かないこと。
 
 変更履歴:
   2026-05-14: ADR-028 初版作成
+  2026-06-14: ADR-089 対応（customers 廃止 → _seed_demo_customers 削除）
+              ADR-138 対応（password_hash 廃止 → Firebase 専一認証）
+              パスワード保護: 既存ユーザーへの無条件 password reset を禁止、
+              ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 で明示許可した場合のみ変更可
 """
 from __future__ import annotations
 
@@ -56,17 +69,6 @@ TENANT_NAME = "Sales Anchor App Review"
 REVIEW_EMAIL = "review@salesanchor.jp"
 REVIEW_DISPLAY_NAME = "App Review"
 
-# Demo Customer × 7（実顧客データは一切含まない）
-DEMO_CUSTOMERS = [
-    {"customer_code": "DEMO-001", "company_name": "Demo Trading Co. Ltd."},
-    {"customer_code": "DEMO-002", "company_name": "Demo Import Export Inc."},
-    {"customer_code": "DEMO-003", "company_name": "Demo EC Solutions Corp."},
-    {"customer_code": "DEMO-004", "company_name": "Demo Boutique Japan"},
-    {"customer_code": "DEMO-005", "company_name": "Demo Wholesale Group"},
-    {"customer_code": "DEMO-006", "company_name": "Demo Retail Partners"},
-    {"customer_code": "DEMO-007", "company_name": "Demo Global Commerce"},
-]
-
 
 # ---------------------------------------------------------------------------
 # ガードチェック
@@ -80,6 +82,11 @@ def _check_guard() -> None:
             " python /app/scripts/setup_review_tenant.py"
         )
         sys.exit(1)
+
+
+def _password_reset_requested() -> bool:
+    """ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 が明示されているか。"""
+    return os.getenv("ALLOW_REVIEW_TENANT_PASSWORD_RESET") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +124,10 @@ def _firebase_create_user(email: str, password: str, display_name: str) -> str:
 
 def _firebase_update_password(uid: str, password: str) -> None:
     firebase_auth.update_user(uid, password=password)
-    logger.info("Firebase: uid=%s のパスワードを更新", uid)
+    logger.warning(
+        "Firebase: uid=%s のパスワードを更新しました"
+        " (ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 により実行)", uid
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -280,7 +290,8 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
     AC-3 適合: public.users.tenant_id の UPDATE は公開スキーマへの変更であり、
     既存業務テナント（tenant_004 等）のスキーマデータには一切手を加えない。
     既存テナントの staff レコードはそのまま保持する。
-    認証は Firebase が担当するため password_hash は保存しない。
+
+    ADR-138: 認証は Firebase 専一。password_hash は保存しない。
     """
     schema_name = f"tenant_{tenant_id:03d}"
 
@@ -312,7 +323,7 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
                     text("UPDATE public.users SET is_active = TRUE WHERE id = :uid"),
                     {"uid": user_id},
                 )
-                logger.info("  public.users: 既存ユーザー (id=%d) 確認", user_id)
+                logger.info("  public.users: 既存ユーザー (id=%d) is_active=TRUE 確認", user_id)
         else:
             row = (await conn.execute(
                 text("""
@@ -358,52 +369,29 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# DB: Demo Customer シード
-# ---------------------------------------------------------------------------
-
-async def _seed_demo_customers(engine, tenant_id: int) -> int:
-    """Demo Customer × 7 をシードする（冪等: 既存 customer_code はスキップ）。
-
-    実顧客データは一切含まない。AC-2 適合。
-    """
-    schema_name = f"tenant_{tenant_id:03d}"
-    created = 0
-
-    async with engine.begin() as conn:
-        await conn.execute(text(f"SET search_path = {schema_name}, public"))
-        await conn.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
-
-        for c in DEMO_CUSTOMERS:
-            existing = (await conn.execute(
-                text("SELECT id FROM customers WHERE tenant_id = :tid AND customer_code = :code"),
-                {"tid": tenant_id, "code": c["customer_code"]},
-            )).first()
-            if existing:
-                logger.info("  顧客 %s は既存 (id=%d) のため skip", c["customer_code"], existing[0])
-                continue
-
-            await conn.execute(
-                text("""
-                    INSERT INTO customers (tenant_id, customer_code, company_name, status)
-                    VALUES (:tid, :code, :name, 'active')
-                """),
-                {"tid": tenant_id, "code": c["customer_code"], "name": c["company_name"]},
-            )
-            logger.info("  顧客作成: %s / %s", c["customer_code"], c["company_name"])
-            created += 1
-
-    logger.info("Demo Customer: %d 件作成（既存 skip 含む合計 %d 件）", created, len(DEMO_CUSTOMERS))
-    return created
-
-
-# ---------------------------------------------------------------------------
 # 結果出力
 # ---------------------------------------------------------------------------
 
-def _write_result_file(tenant_id: int, password: str) -> Path:
+def _write_result_file(tenant_id: int, new_password: str | None) -> Path:
+    """セットアップ結果を /tmp に書き出す。
+
+    new_password が None の場合（パスワード未変更）は "unchanged" と記載。
+    パスワード本文はこのファイル以外に出力しない。
+    """
     schema_name = f"tenant_{tenant_id:03d}"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     out_path = Path("/tmp") / f"review_tenant_setup_{stamp}.txt"
+
+    if new_password is not None:
+        password_line = f"password : {new_password}"
+        reset_note = "パスワードリセット: 実行済み (ALLOW_REVIEW_TENANT_PASSWORD_RESET=1)"
+    else:
+        password_line = "password : unchanged（既存パスワードを維持）"
+        reset_note = (
+            "パスワードリセット: スキップ（既存ユーザーのため変更なし）\n"
+            "  変更が必要な場合: ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 を追加して再実行"
+        )
+
     content = f"""=== ADR-028: tenant-review セットアップ結果 ===
 
 テナント情報:
@@ -414,17 +402,21 @@ def _write_result_file(tenant_id: int, password: str) -> Path:
 
 ログイン情報:
   email    : {REVIEW_EMAIL}
-  password : {password}
+  {password_line}
 
-Demo Customer 数: {len(DEMO_CUSTOMERS)} 件
+{reset_note}
 
 次のステップ（手動実施）:
   1. ブラウザで https://app.salesanchor.jp/ にアクセス
   2. 上記 email / password でログイン
-  3. Dashboard に Demo Customer のみ表示されることを確認（AC-1, AC-2）
+  3. Dashboard に Demo データのみ表示されることを確認（AC-1, AC-2）
   4. Meta Inbox → 接続 から OAuth 再接続を実施（AC-4）
      - HIGH LIFE JPN Test Page と treasureislandjapan を紐付ける
   5. Messenger / Instagram で実際にメッセージ送受信を確認（AC-4, AC-5）
+
+注意:
+  このファイルはコンテナ再起動で消えます。Shingo に安全な手段で共有してください。
+  ChatGPT / PR 本文 / GitHub コメントにパスワードを書かないこと。
 """
     out_path.write_text(content, encoding="utf-8")
     try:
@@ -449,9 +441,20 @@ async def main() -> None:
         db_url = "postgresql+asyncpg://" + db_url[len("postgresql://"):]
 
     engine = create_async_engine(db_url, echo=False)
+    reset_password = _password_reset_requested()
 
     try:
         logger.info("=== ADR-028: tenant-review セットアップ開始 ===")
+        if reset_password:
+            logger.warning(
+                "ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 検出:"
+                " Firebase パスワードをリセットします (email=%s)", REVIEW_EMAIL
+            )
+        else:
+            logger.info(
+                "通常モード: 既存 Firebase ユーザーのパスワードは変更しません。"
+                " パスワードリセットが必要な場合は ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 を付けて再実行してください。"
+            )
 
         # 1. テナント作成（冪等）
         tenant_id = await _ensure_tenant(engine)
@@ -460,29 +463,51 @@ async def main() -> None:
         await _apply_tenant_schema(engine, tenant_id)
 
         # 3. Firebase ユーザー準備
-        password = generate_password()
+        new_password: str | None = None
 
         _init_firebase()
         existing_uid = _firebase_get_uid(REVIEW_EMAIL)
         if existing_uid:
-            _firebase_update_password(existing_uid, password)
+            if reset_password:
+                new_password = generate_password()
+                _firebase_update_password(existing_uid, new_password)
+            else:
+                logger.info(
+                    "Firebase: 既存ユーザーのため password update skipped (uid=%s)",
+                    existing_uid,
+                )
             firebase_uid = existing_uid
         else:
-            firebase_uid = _firebase_create_user(REVIEW_EMAIL, password, REVIEW_DISPLAY_NAME)
+            # 新規ユーザーの場合はパスワード生成が必須
+            new_password = generate_password()
+            firebase_uid = _firebase_create_user(REVIEW_EMAIL, new_password, REVIEW_DISPLAY_NAME)
 
         # 4. DB ユーザー登録・テナント付け替え（冪等）
+        # ADR-138: 認証は Firebase 専一。password_hash は保存しない。
         await _setup_user(engine, tenant_id, firebase_uid)
 
-        # 5. Demo Customer × 7 シード（冪等）
-        await _seed_demo_customers(engine, tenant_id)
+        # 5. Demo データシード
+        # ADR-089: customers テーブルは廃止済み（2026-06-01 DROP）。
+        # Demo データは scripts/qa/seed-tenant.sql（QA Smoke Suite）で管理。
+        logger.info(
+            "Demo データシード: スキップ"
+            " (ADR-089: customers テーブル廃止済み。Demo データは scripts/qa/seed-tenant.sql を参照)"
+        )
 
         # 6. 結果ファイル出力
-        out_path = _write_result_file(tenant_id, password)
+        out_path = _write_result_file(tenant_id, new_password)
 
         logger.info("\n=== セットアップ完了 ===")
         logger.info("結果ファイル: %s", out_path)
-        logger.info("Mac 側への取り出し（VPS で実行）:")
-        logger.info("  docker compose exec -T backend cat %s", out_path)
+        if new_password is not None:
+            logger.info(
+                "パスワードリセット済み。結果ファイルを Shingo に安全な手段で共有してください。"
+            )
+            logger.info(
+                "取り出し（VPS で実行）: docker compose exec -T backend cat %s", out_path
+            )
+        else:
+            logger.info("パスワードは変更されていません。既存パスワードでそのままログインできます。")
 
     finally:
         await engine.dispose()
