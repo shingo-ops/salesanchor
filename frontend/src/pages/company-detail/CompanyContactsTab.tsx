@@ -130,6 +130,7 @@ export function CompanyContactsTab({
                         {t("common.edit")}
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
+                        {/* eslint-disable-next-line local/no-japanese-literal */}
                         {t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")}
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => setContactDeleteTarget(c)}>
