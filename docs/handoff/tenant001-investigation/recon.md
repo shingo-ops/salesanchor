@@ -28,10 +28,10 @@ tenant_001 が空テナントか否か・スキーマ欠損の有無を本番 DB
 
 ## 調査範囲
 
-- `public.tenants` 一覧確認
-- `tenant_001` テーブル一覧・主要テーブル存在確認
-- `tenant_001` データ件数・最終更新（COUNT/MAX のみ）
-- `tenant_001` vs `tenant_003`・`tenant_005` テーブル差分
+- public.tenants 一覧確認
+- tenant_001 テーブル一覧・主要テーブル存在確認
+- tenant_001 データ件数・最終更新（COUNT/MAX のみ）
+- tenant_001 vs tenant_003・tenant_005 テーブル差分
 
 ## 変更内容
 
