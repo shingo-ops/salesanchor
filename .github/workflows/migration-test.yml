@@ -644,6 +644,22 @@ jobs:
               category    VARCHAR(50)  NOT NULL DEFAULT ''
           );
 
+          -- public.auth_events（migration 001 が作成・run_all_migrations.sh に含まれないため手動定義）
+          -- migration 072 が idx_auth_events_created_at を追加するために参照する
+          CREATE TABLE IF NOT EXISTS public.auth_events (
+              id          BIGSERIAL PRIMARY KEY,
+              event_type  VARCHAR(50)  NOT NULL,
+              path        VARCHAR(500) NOT NULL,
+              method      VARCHAR(10)  NOT NULL,
+              status_code INTEGER      NOT NULL,
+              client_ip   VARCHAR(45),
+              user_agent  VARCHAR(500),
+              duration_ms INTEGER,
+              created_at  TIMESTAMPTZ  DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_auth_events_type_created
+              ON public.auth_events (event_type, created_at DESC);
+
           INSERT INTO public.tenants (tenant_name, tenant_code)
           VALUES ('テストテナント', 'test-tenant') ON CONFLICT DO NOTHING;
 
