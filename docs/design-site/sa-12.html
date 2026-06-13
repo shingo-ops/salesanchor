@@ -23,7 +23,7 @@
   </nav>
 </header>
 
-<div class="page-container">
+<div class="page-container page-container--wide">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
     <span style="font-size:12px;font-weight:700;color:var(--c-derived);background:var(--c-derived-bg);padding:3px 10px;border-radius:12px;">SA-12</span>
     <span class="badge badge--todo" data-sa="SA-12">未着手</span>
@@ -240,8 +240,23 @@
           <span><strong>テナント ID 確定方法</strong> — 署名トークン経由のみ（ADR-097 連動）</span>
         </li>
       </ul>
-      <div class="decision-undecided" style="margin-top:12px;">
-        <strong>⬜ 未決</strong>: KGI 承認（未着手）/ SA-02〜07 完了後に横断チェックとして適用
+      <div class="state-card" style="margin-top:12px;">
+        <div class="state-card__head">
+          <span class="state-card__badge state-card__badge--todo">未決</span>
+          <span>KGI承認と横断適用タイミング</span>
+        </div>
+        <div class="state-card__body">
+          <div class="state-card__grid">
+            <div class="state-card__label">状態</div>
+            <div class="state-card__value">KGI承認は未着手</div>
+
+            <div class="state-card__label">理由</div>
+            <div class="state-card__value">SA-12はSA-02〜07全体に横断適用されるため、他SAの完了に合わせて定義する</div>
+
+            <div class="state-card__label">次アクション</div>
+            <div class="state-card__value">SA-02〜07完了後に横断チェックとして適用</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -253,10 +268,32 @@
       <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
     </div>
     <div class="template-section__body">
-      <div class="kgi-unset">
-        <strong>⬜ KGI 未設定</strong>: SA-12 はフェーズ①（KGI 承認）に未着手です。<br>
-        SA-12 は SA-02〜07 全体に横断適用されるため、他の SA の完了に合わせて KGI を定義します。<br>
-        <span style="color:var(--text-sub);">設計上の候補: ①テナント分岐 if 文 0 件 ②RLS 境界テスト 100% PASS ③新テナント追加時のコード変更 0 件</span>
+      <div class="state-card">
+        <div class="state-card__head">
+          <span class="state-card__badge state-card__badge--todo">KGI未設定</span>
+          <span>SA-12のゴール定義は横断適用タイミングで確定する</span>
+        </div>
+        <div class="state-card__body">
+          <div class="state-card__grid">
+            <div class="state-card__label">現在の状態</div>
+            <div class="state-card__value">SA-12はフェーズ①（KGI承認）に未着手</div>
+
+            <div class="state-card__label">理由</div>
+            <div class="state-card__value">SA-12はSA-02〜07全体に横断適用されるため、他のSAの完了に合わせてKGIを定義する</div>
+
+            <div class="state-card__label">定義タイミング</div>
+            <div class="state-card__value">SA-02〜07完了後、テナントポリシーが横断チェックとして必要になった段階</div>
+
+            <div class="state-card__label">設計上の候補</div>
+            <div class="state-card__value">
+              <ul>
+                <li>テナント分岐 if 文 0 件</li>
+                <li>RLS 境界テスト 100% PASS</li>
+                <li>新テナント追加時のコード変更 0 件</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
