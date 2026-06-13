@@ -270,10 +270,43 @@
       <span class="template-section__title">ゴール（KGI）と測り方（KPI）</span>
     </div>
     <div class="template-section__body">
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">
-        SA-01 は「機能」ではなく<strong>全 SA 共通の合格基準</strong>です。
-        SA-01 自身に数値ゴールはなく、SA-02〜07・12 が完了するたびに下記 4 原則への適合を確認します。
-      </p>
+      <h3 class="section-title" style="margin-top:0;margin-bottom:8px;">この設計全体のゴール（KGI）</h3>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">SA-01〜SA-12のすべては、最終的に次の4つの状態に到達することを目指す。ここに到達すれば設計は成功。</p>
+      <table class="kgi-table">
+        <thead>
+          <tr><th>#</th><th>KGI（最終ゴール状態）</th><th>意味（平易な言い換え）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>SSOT成立</td><td>同じ事実の二重持ち・手入力がゼロ。1か所の変更が全下流（書類・実績）に自動反映される</td></tr>
+          <tr><td>2</td><td>ポカヨケ成立</td><td>設計で防ぐと決めた事故が、実運用で発生しない（下記KPIの事故系がすべて0）</td></tr>
+          <tr><td>3</td><td>自動化成立</td><td>受注→見積→請求→入金→発送→完了→P&amp;L が、手入力なしで流れる</td></tr>
+          <tr><td>4</td><td>保守性成立</td><td>作成者以外が運用・一次対応・改修できる（ドキュメント＋ログ＋UIが揃う）</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="section-title" style="margin-top:20px;margin-bottom:8px;">達成度の測りかた（KPI）</h3>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">KGIに向かう途中の測定指標。すべてシステムが自動計測できる形にする（手集計にしない＝SSOT思想と一致）。事故系（1〜5・8）は発生したら即アラートが理想。</p>
+      <table class="kgi-table">
+        <thead>
+          <tr><th>#</th><th>指標</th><th>目標</th><th>測り方</th><th>主担当SA</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>誤テナント登録 件数</td><td>0</td><td>登録時のテナントがトークン由来かを監査</td><td>SA-03</td></tr>
+          <tr><td>2</td><td>オーバーセル（二重売り）件数</td><td>0</td><td>A在庫の利用可能&lt;0 が起きた回数</td><td>SA-05</td></tr>
+          <tr><td>3</td><td>請求書と実配送先の不一致 件数</td><td>0</td><td>注文スナップショットと出荷先の突合</td><td>SA-07</td></tr>
+          <tr><td>4</td><td>二重持ちしている事実の数</td><td>0</td><td>同一事実を手入力で複数箇所保持していないか</td><td>SA-01</td></tr>
+          <tr><td>5</td><td>自動計算項目への手入力上書き 件数</td><td>0</td><td>実績・P&amp;L・会話集計が書込可能になっていないか</td><td>SA-02 / 10</td></tr>
+          <tr><td>6</td><td>解析：提供元別 除外率／平均確信度</td><td>監視・しきい値内</td><td>解析ログから算出。悪化でドリフト検知</td><td>SA-06</td></tr>
+          <tr><td>7</td><td>集計同期のビュー化</td><td>成立</td><td>集計を実テーブル保存せず動的導出か</td><td>SA-05</td></tr>
+          <tr><td>8</td><td>関税・送料のハードコード箇所</td><td>0</td><td>キャリア×国×テナント設定化されているか</td><td>SA-07 / 12</td></tr>
+          <tr><td>9</td><td>発注最適化Lv2による平均原価率</td><td>改善（％）</td><td>Lv2提案の採用前後の原価率差</td><td>SA-08 / 10</td></tr>
+          <tr><td>10</td><td>受注処理リードタイム（入金確認→発送）</td><td>短縮</td><td>ステータス遷移時刻の差分</td><td>SA-09 / 10</td></tr>
+          <tr><td>11</td><td>保守性：作成者以外が運用可能か</td><td>成立</td><td>解析ログ＋失敗通知＋ナレッジUI＋一次対応手順の有無</td><td>SA-06</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="section-title" style="margin-top:20px;margin-bottom:8px;">各SAが原則を守っているかの確認</h3>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">上のゴールに対し、各SAが4原則（SSOT・2本背骨・派生値・ポカヨケ）を実装で守れているかを実装完了時に確認する横断チェック。</p>
       <table class="kgi-table">
         <thead>
           <tr>
