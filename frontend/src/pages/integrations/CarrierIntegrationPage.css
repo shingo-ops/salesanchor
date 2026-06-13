@@ -101,3 +101,24 @@
 .update-form {
   margin-top: var(--space-4);
 }
+
+/* ── FedExページ上部タブ: activeを濃色CTA寄せにする ── */
+.carrier-page-tabs.comp-tabs--pill .comp-tabs__tab {
+  border: 1px solid transparent;
+}
+
+.carrier-page-tabs.comp-tabs--pill .comp-tabs__tab--active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.carrier-page-tabs.comp-tabs--pill .comp-tabs__tab--active:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+
+.carrier-page-tabs.comp-tabs--pill .comp-tabs__tab:hover:not(:disabled):not(.comp-tabs__tab--active) {
+  background: var(--link-active-bg);
+  color: var(--accent);
+}
