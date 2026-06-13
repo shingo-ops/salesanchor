@@ -11,6 +11,7 @@ from __future__ import annotations
   2026-05-25: ダッシュボード強化 — 着地予測・期間別サマリー追加
   2026-05-31: Sprint 2 — 月別受注実績＋着地予想API追加（予実比較グラフ用）
   2026-05-31: Sprint 3 — 先月比（前期比較）フィールドをサマリーAPIに追加
+  2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
 from datetime import date, timedelta
@@ -23,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
 from app.database import get_db
 from app.models import User
+from app.services.time import _jst_month_range_utc
 
 router = APIRouter()
 
@@ -379,6 +381,15 @@ class OrderSummary(BaseModel):
     total_revenue: float
     order_count: int
     active_count: int
+    gross_profit: float = 0.0
+    gross_profit_margin: float | None = None
+    cost_coverage_rate: float = 0.0
+
+
+class CustomerSummary(BaseModel):
+    """新規 / 既存アクティブ顧客の内訳"""
+    new_count: int = 0
+    active_existing_count: int = 0
 
 
 class KpiChange(BaseModel):
@@ -405,6 +416,7 @@ class DashboardSummaryResponse(BaseModel):
     leads: LeadSummary
     deals: DealSummary
     orders: OrderSummary
+    customers: CustomerSummary = CustomerSummary()
     comparison: PeriodComparison
 
 
@@ -424,12 +436,36 @@ async def dashboard_summary(
     """
     期間・タブ別のリード/商談/受注サマリー。
 
-    period: 1w=7日 / 1m=30日 / 3m=90日 / 6m=180日 / 12m=365日
+    period: 1w=7日 / 1m=JST暦月 / 3m=90日 / 6m=180日 / 12m=365日
     tab: team=テナント全体 / individual=自分（または指定ユーザー）
+
+    ⚠️ 挙動変更（PR2）: period="1m" は JST 暦月境界に統一。
+    以前は date.today() - timedelta(30) だったため UTC/JST 差（最大9時間）で
+    月初・月末のデータが漏れていた。_jst_month_range_utc() を適用。
     """
-    days = PERIOD_DAYS.get(period, 30)
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
+    today = date.today()
+    if period == "1m":
+        # ⚠️ 挙動変更: JST 暦月境界（UTC aware datetime）に統一。
+        # 以前は date.today() - timedelta(30) だったため UTC/JST 差（最大9時間）で
+        # 月初・月末のデータが漏れていた。
+        start_date, end_date = _jst_month_range_utc(today.year, today.month)
+        # 半開区間 [start, end) — created_at >= :start AND created_at < :end
+        date_filter = "created_at >= :start AND created_at < :end"
+        # 前期: 前月 JST 暦月
+        prev_month = today.month - 1
+        prev_year = today.year
+        if prev_month < 1:
+            prev_month = 12
+            prev_year -= 1
+        prev_start, prev_end = _jst_month_range_utc(prev_year, prev_month)
+    else:
+        days = PERIOD_DAYS.get(period, 30)
+        end_date = today
+        start_date = end_date - timedelta(days=days)
+        # 閉区間 [start, end] — 既存動作互換
+        date_filter = "created_at::date >= :start AND created_at::date <= :end"
+        prev_end = start_date
+        prev_start = prev_end - timedelta(days=days)
 
     if tab == "individual":
         target_user_id = user_id or current_user.id
@@ -449,7 +485,7 @@ async def dashboard_summary(
                 COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
                 COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded
             FROM leads
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
             {assign_filter_leads}
         """),
         params,
@@ -468,7 +504,7 @@ async def dashboard_summary(
                 COUNT(*) FILTER (WHERE status NOT IN ('won', 'lost')) AS active,
                 COUNT(*) FILTER (WHERE status = 'won') AS won
             FROM deals
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
             {assign_filter_deals}
         """),
         params,
@@ -481,34 +517,32 @@ async def dashboard_summary(
 
     # 受注集計（受注はテナント全体のみ）
     order_result = await db.execute(
-        text("""
+        text(f"""
             SELECT
                 COALESCE(SUM(total_amount), 0) AS revenue,
                 COUNT(*) AS cnt,
                 COUNT(*) FILTER (WHERE status IN ('pending', 'processing', 'shipped')) AS active
             FROM orders
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
         """),
         {"start": start_date, "end": end_date},
     )
     orr = order_result.mappings().first() or {}
 
     # ── 前期（同じ期間幅の一つ前）を集計して比較データを生成 ──
-    prev_end = start_date
-    prev_start = prev_end - timedelta(days=days)
-
     if tab == "individual":
         prev_params: dict = {"start": prev_start, "end": prev_end, "uid": target_user_id}
     else:
         prev_params = {"start": prev_start, "end": prev_end}
 
+    # 前期も同じ date_filter パターンを使用（1m: JST 暦月、他: days ベース）
     prev_lead_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted
             FROM leads
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
             {assign_filter_leads}
         """),
         prev_params,
@@ -525,7 +559,7 @@ async def dashboard_summary(
                 COUNT(*) FILTER (WHERE status = 'won') AS won,
                 COUNT(*) AS total
             FROM deals
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
             {assign_filter_deals}
         """),
         prev_params,
@@ -537,12 +571,12 @@ async def dashboard_summary(
     prev_win_rate = round(prev_deal_won / prev_deal_total * 100, 1) if prev_deal_total > 0 else 0.0
 
     prev_order_result = await db.execute(
-        text("""
+        text(f"""
             SELECT
                 COALESCE(SUM(total_amount), 0) AS revenue,
                 COUNT(*) AS cnt
             FROM orders
-            WHERE created_at::date >= :start AND created_at::date <= :end
+            WHERE {date_filter}
         """),
         {"start": prev_start, "end": prev_end},
     )
@@ -558,6 +592,67 @@ async def dashboard_summary(
 
     current_order_count = int(orr.get("cnt", 0) or 0)
     current_revenue = float(orr.get("revenue", 0) or 0)
+
+    # ── 粗利集計（order_financials JOIN）──
+    gp_result = await db.execute(
+        text(f"""
+            SELECT
+                COALESCE(SUM(f.revenue_amount), 0) AS rev,
+                COALESCE(SUM(
+                    f.purchase_cost + f.purchase_shipping +
+                    f.paypal_fee + f.wise_fee + f.exchange_fee +
+                    f.outsource_fee + f.packing_fee + f.ad_cost +
+                    f.return_fee + f.refund_amount
+                ), 0) AS cost,
+                COUNT(f.id) AS costed_cnt
+            FROM orders o
+            LEFT JOIN order_financials f ON f.order_id = o.id
+            WHERE {date_filter.replace('created_at', 'o.created_at')}
+        """),
+        {"start": start_date, "end": end_date},
+    )
+    gp_row = gp_result.mappings().first() or {}
+    gp_rev = float(gp_row.get("rev", 0) or 0)
+    gp_cost = float(gp_row.get("cost", 0) or 0)
+    gross_profit = gp_rev - gp_cost
+    gross_profit_margin = round(gross_profit / gp_rev * 100, 1) if gp_rev > 0 else None
+    costed_cnt = int(gp_row.get("costed_cnt", 0) or 0)
+    cost_coverage_rate = round(costed_cnt / current_order_count * 100, 1) if current_order_count > 0 else 0.0
+
+    # ── 顧客集計 ──
+    # 新規顧客: 当期間に初めて発注した会社
+    new_cust_result = await db.execute(
+        text(f"""
+            SELECT COUNT(DISTINCT o.company_id) AS cnt
+            FROM orders o
+            WHERE {date_filter.replace('created_at', 'o.created_at')}
+              AND o.company_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM orders o2
+                  WHERE o2.company_id = o.company_id
+                    AND o2.created_at < :start
+              )
+        """),
+        {"start": start_date, "end": end_date},
+    )
+    new_count = int((new_cust_result.scalar() or 0))
+
+    # アクティブ既存顧客: 過去12ヶ月以内に発注があった会社（当期間の新規を除く）
+    twelve_months_ago = today - timedelta(days=365)
+    active_existing_result = await db.execute(
+        text("""
+            SELECT COUNT(DISTINCT company_id) AS cnt
+            FROM orders
+            WHERE company_id IS NOT NULL
+              AND created_at >= :twelve_months_ago
+              AND company_id IN (
+                  SELECT company_id FROM orders
+                  WHERE created_at < :start AND company_id IS NOT NULL
+              )
+        """),
+        {"twelve_months_ago": twelve_months_ago, "start": start_date},
+    )
+    active_existing_count = int((active_existing_result.scalar() or 0))
 
     return DashboardSummaryResponse(
         period=period,
@@ -579,6 +674,13 @@ async def dashboard_summary(
             total_revenue=current_revenue,
             order_count=current_order_count,
             active_count=int(orr.get("active", 0) or 0),
+            gross_profit=gross_profit,
+            gross_profit_margin=gross_profit_margin,
+            cost_coverage_rate=cost_coverage_rate,
+        ),
+        customers=CustomerSummary(
+            new_count=new_count,
+            active_existing_count=active_existing_count,
         ),
         comparison=PeriodComparison(
             leads_total=_kpi_change(lead_total, prev_lead_total),
@@ -761,3 +863,363 @@ async def monthly_revenue(
             cur_year += 1
 
     return RevenueChartResponse(granularity="monthly", entries=entries_m)
+
+
+# ─────────────────────────────────────────────
+# ファネルダッシュボード: ファネル4ステージ
+# ─────────────────────────────────────────────
+
+class FunnelLeads(BaseModel):
+    target: int
+    actual: int
+
+
+class FunnelConversion(BaseModel):
+    target_rate: int
+    actual_rate: int
+    converted: int
+
+
+class FunnelActive(BaseModel):
+    count: int
+    amount: float
+    coverage_pct_of_remaining_target: int
+
+
+class FunnelClosed(BaseModel):
+    won_target: int
+    won: int
+    won_rate: int
+    lost: int
+
+
+class FunnelResponse(BaseModel):
+    month: str
+    month_elapsed_pct: int
+    leads: FunnelLeads
+    conversion: FunnelConversion
+    active: FunnelActive
+    closed: FunnelClosed
+
+
+def _month_elapsed_pct(today: date) -> int:
+    """当月の経過率（0-100 整数）"""
+    import calendar
+    days_in_month = calendar.monthrange(today.year, today.month)[1]
+    return min(100, int(today.day / days_in_month * 100))
+
+
+@router.get(
+    "/analytics/funnel",
+    response_model=FunnelResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def funnel_stages(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    ファネル4ステージ: リード獲得 → 商談化 → 進行中 → 成約/失注
+
+    api-contract.md section 2 に準拠。
+    目標値は goals テーブルから取得（未設定時は 0）。
+    """
+    today = date.today()
+    if month:
+        parts = month.split("-")
+        target_year = int(parts[0])
+        target_month = int(parts[1])
+    else:
+        target_year = today.year
+        target_month = today.month
+
+    month_str = f"{target_year:04d}-{target_month:02d}"
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+    elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
+
+    # scope filter
+    if scope == "mine":
+        assign_filter_leads = "AND assigned_to = :uid"
+        assign_filter_deals = "AND assigned_to = :uid"
+        extra_params: dict = {"uid": current_user.id}
+    else:
+        assign_filter_leads = ""
+        assign_filter_deals = ""
+        extra_params = {}
+
+    base_params = {"start": start_utc, "end": end_utc, **extra_params}
+
+    # リード獲得数
+    # SUM(CASE ...) は SQLite / PostgreSQL 両互換
+    lead_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN converted_deal_id IS NOT NULL THEN 1 ELSE 0 END) AS converted
+            FROM leads
+            WHERE created_at >= :start AND created_at < :end
+            {assign_filter_leads}
+        """),
+        base_params,
+    )
+    lr = lead_result.mappings().first() or {}
+    lead_actual = int(lr.get("total", 0) or 0)
+    converted = int(lr.get("converted", 0) or 0)
+    conversion_rate = int(round(converted / lead_actual * 100)) if lead_actual > 0 else 0
+
+    # 進行中商談
+    active_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) AS cnt,
+                COALESCE(SUM(amount), 0) AS amount
+            FROM deals
+            WHERE status NOT IN ('won', 'lost')
+              AND created_at >= :start AND created_at < :end
+            {assign_filter_deals}
+        """),
+        base_params,
+    )
+    ar = active_result.mappings().first() or {}
+    active_count = int(ar.get("cnt", 0) or 0)
+    active_amount = float(ar.get("amount", 0) or 0)
+
+    # 成約/失注（updated_at を closed_at 代替として使用）
+    # TODO: PR1 マージ後に closed_at に変更
+    closed_result = await db.execute(
+        text(f"""
+            SELECT
+                SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) AS won,
+                SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) AS lost
+            FROM deals
+            WHERE updated_at >= :start AND updated_at < :end
+              AND status IN ('won', 'lost')
+            {assign_filter_deals}
+        """),
+        base_params,
+    )
+    cr = closed_result.mappings().first() or {}
+    won_count = int(cr.get("won", 0) or 0)
+    lost_count = int(cr.get("lost", 0) or 0)
+    total_closed = won_count + lost_count
+    won_rate = int(round(won_count / total_closed * 100)) if total_closed > 0 else 0
+
+    # 目標値取得（goals テーブル）
+    # owner_id: scope=mine なら current_user.id、team なら NULL (team_id 使用)
+    # 現時点では team 目標は team_id=NULL (テナント全体) で取得
+    goal_filter = "user_id = :goal_owner AND team_id IS NULL" if scope == "mine" else "team_id IS NOT NULL AND user_id IS NULL"
+    goal_owner_params: dict = {"goal_owner": current_user.id} if scope == "mine" else {}
+    goal_result = await db.execute(
+        text(f"""
+            SELECT kpi_type, COALESCE(target_value, 0) AS target_value
+            FROM goals
+            WHERE {goal_filter}
+              AND period_type = 'monthly'
+              AND period_year = :year
+              AND period_num = :month
+        """),
+        {"year": target_year, "month": target_month, **goal_owner_params},
+    )
+    goals: dict[str, float] = {
+        row["kpi_type"]: float(row["target_value"]) for row in goal_result.mappings().all()
+    }
+    lead_target = int(goals.get("lead_count", 0))
+    conversion_target_rate = int(goals.get("conversion_rate", 0))
+    won_target = int(goals.get("won_count", goals.get("deal_count", 0)))
+
+    # 残り目標に対する進行中商談カバー率
+    revenue_target = goals.get("revenue", 0)
+    # 既に成約分の売上（当月 won の amount 合計）
+    won_amount_result = await db.execute(
+        text(f"""
+            SELECT COALESCE(SUM(amount), 0) AS won_amount
+            FROM deals
+            WHERE status = 'won'
+              AND updated_at >= :start AND updated_at < :end
+            {assign_filter_deals}
+        """),
+        base_params,
+    )
+    won_amount = float((won_amount_result.mappings().first() or {}).get("won_amount", 0) or 0)
+    remaining_target = max(0, revenue_target - won_amount)
+    coverage_pct = int(round(active_amount / remaining_target * 100)) if remaining_target > 0 else (100 if active_amount > 0 else 0)
+
+    return FunnelResponse(
+        month=month_str,
+        month_elapsed_pct=elapsed_pct,
+        leads=FunnelLeads(target=lead_target, actual=lead_actual),
+        conversion=FunnelConversion(
+            target_rate=conversion_target_rate,
+            actual_rate=conversion_rate,
+            converted=converted,
+        ),
+        active=FunnelActive(
+            count=active_count,
+            amount=active_amount,
+            coverage_pct_of_remaining_target=coverage_pct,
+        ),
+        closed=FunnelClosed(
+            won_target=won_target,
+            won=won_count,
+            won_rate=won_rate,
+            lost=lost_count,
+        ),
+    )
+
+
+# ─────────────────────────────────────────────
+# ファネルダッシュボード: 要フォロー顧客
+# ─────────────────────────────────────────────
+
+class FollowUpCustomer(BaseModel):
+    customer_id: int
+    name: str
+    segment: str
+    days: int
+    last_order_at: str | None
+    last_contact_at: str | None
+    assignee: str | None
+
+
+class FollowUpsResponse(BaseModel):
+    items: list[FollowUpCustomer]
+
+
+@router.get(
+    "/analytics/follow-ups",
+    response_model=FollowUpsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def follow_ups_summary(
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    要フォロー顧客3区分カウント。
+
+    api-contract.md section 5 に準拠:
+    - order_stopped: 発注停止（最終発注から30日超）
+    - no_repeat_after_first: 初回後未フォロー（初回発注から45日以内に2回目なし）
+    - won_no_order: 成約後未発注（成約後30日超で発注なし）
+    """
+    today = date.today()
+    items: list[FollowUpCustomer] = []
+    # 境界日を Python 側で計算（SQLite / PostgreSQL 両互換）
+    threshold_30 = str(today - timedelta(days=30))
+    threshold_45 = str(today - timedelta(days=45))
+
+    # scope filter for deals
+    deal_assign_filter = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    # ── 1. order_stopped: 最終発注から30日超 ──
+    stopped_result = await db.execute(
+        text("""
+            SELECT
+                c.id AS company_id,
+                c.name,
+                MAX(o.created_at) AS last_order_at,
+                u.username AS assignee
+            FROM companies c
+            JOIN orders o ON o.company_id = c.id
+            LEFT JOIN deals d ON d.company_id = c.id AND d.status NOT IN ('lost')
+            LEFT JOIN users u ON u.id = d.assigned_to
+            WHERE o.company_id IS NOT NULL
+            GROUP BY c.id, c.name, u.username
+            HAVING MAX(o.created_at) < :threshold
+            ORDER BY MAX(o.created_at) ASC
+        """),
+        {"threshold": threshold_30},
+    )
+    for row in stopped_result.mappings().all():
+        last_order = str(row["last_order_at"])[:10] if row["last_order_at"] else None
+        days_since = (today - date.fromisoformat(last_order)).days if last_order else 0
+        items.append(FollowUpCustomer(
+            customer_id=row["company_id"],
+            name=row["name"],
+            segment="order_stopped",
+            days=days_since,
+            last_order_at=last_order,
+            last_contact_at=None,
+            assignee=row["assignee"],
+        ))
+
+    # ── 2. no_repeat_after_first: 初回発注から45日以内に2回目なし ──
+    no_repeat_result = await db.execute(
+        text("""
+            SELECT
+                c.id AS company_id,
+                c.name,
+                MIN(o.created_at) AS first_order_at,
+                COUNT(o.id) AS order_cnt,
+                u.username AS assignee
+            FROM companies c
+            JOIN orders o ON o.company_id = c.id
+            LEFT JOIN deals d ON d.company_id = c.id AND d.status NOT IN ('lost')
+            LEFT JOIN users u ON u.id = d.assigned_to
+            WHERE o.company_id IS NOT NULL
+            GROUP BY c.id, c.name, u.username
+            HAVING COUNT(o.id) = 1
+              AND MIN(o.created_at) < :threshold_now
+              AND MIN(o.created_at) >= :threshold_45
+            ORDER BY MIN(o.created_at) ASC
+        """),
+        {"threshold_now": str(today), "threshold_45": threshold_45},
+    )
+    for row in no_repeat_result.mappings().all():
+        first_order = str(row["first_order_at"])[:10] if row["first_order_at"] else None
+        days_since = (today - date.fromisoformat(first_order)).days if first_order else 0
+        items.append(FollowUpCustomer(
+            customer_id=row["company_id"],
+            name=row["name"],
+            segment="no_repeat_after_first",
+            days=days_since,
+            last_order_at=first_order,
+            last_contact_at=None,
+            assignee=row["assignee"],
+        ))
+
+    # ── 3. won_no_order: 成約後30日超で発注なし ──
+    # TODO: PR1 マージ後に closed_at に変更（現在は updated_at を代替使用）
+    won_no_order_result = await db.execute(
+        text(f"""
+            SELECT
+                d.company_id,
+                c.name,
+                d.updated_at AS closed_at,
+                u.username AS assignee
+            FROM deals d
+            JOIN companies c ON c.id = d.company_id
+            LEFT JOIN users u ON u.id = d.assigned_to
+            WHERE d.status = 'won'
+              AND d.company_id IS NOT NULL
+              AND d.updated_at < :threshold
+              AND NOT EXISTS (
+                  SELECT 1 FROM orders o
+                  WHERE o.company_id = d.company_id
+                    AND o.created_at >= d.updated_at
+              )
+            {deal_assign_filter}
+            ORDER BY d.updated_at ASC
+        """),
+        {"threshold": threshold_30, **scope_params},
+    )
+    for row in won_no_order_result.mappings().all():
+        closed_at = str(row["closed_at"])[:10] if row["closed_at"] else None
+        days_since = (today - date.fromisoformat(closed_at)).days if closed_at else 0
+        items.append(FollowUpCustomer(
+            customer_id=row["company_id"],
+            name=row["name"],
+            segment="won_no_order",
+            days=days_since,
+            last_order_at=None,
+            last_contact_at=None,
+            assignee=row["assignee"],
+        ))
+
+    return FollowUpsResponse(items=items)
