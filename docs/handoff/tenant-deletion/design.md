@@ -58,19 +58,40 @@
 
 ## 3. 実装方針
 
-### 3-1. エンドポイント設計
+### 3-1. ルーター配置
+
+**新規ファイル: `backend/app/routers/super_admin_tenants.py`**
+
+理由:
+- `admin.router` は `main.py:204-207` で `Depends(get_current_tenant)` + `Depends(get_current_admin)` がルーターレベルで付与されている
+- テナント削除は public schema 操作のため `get_current_tenant` を付けない設計が必要
+- 既存の `super_admin_*` 系（`super_admin_dex.py` 等）は `prefix="/api/v1"` + エンドポイントレベルで `require_super_admin` を付与するパターン — 同パターンに揃える
+
+**main.py への追加登録**（既存 super-admin ブロックに追記）:
+
+```python
+# main.py
+from app.routers import super_admin_tenants
+app.include_router(super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"])
+```
+
+### 3-2. エンドポイント設計
 
 ```
-DELETE /api/v1/admin/tenants/{tenant_id}
-  Depends: require_super_admin
-  Body: { "mode": "logical" | "physical", "confirm": "DELETE:{tenant_code}" }
+DELETE /api/v1/super-admin/tenants/{tenant_id}
+  Depends: require_super_admin（エンドポイントレベル）
+  Body: { "confirm": "DELETE:{tenant_code}" }
+
+DELETE /api/v1/super-admin/tenants/{tenant_id}/physical
+  Depends: require_super_admin（エンドポイントレベル）
+  Body: { "confirm": "DELETE:{tenant_code}" }
 ```
 
-- `mode=logical`: `is_active=False` のみ（可逆）
-- `mode=physical`: logical 済みを前提に DROP SCHEMA CASCADE（不可逆）
+- 論理削除 EP: `is_active=False` のみ（可逆）
+- 物理削除 EP: logical 済みを前提に DROP SCHEMA CASCADE（不可逆）
 - `confirm` フィールド: 誤操作防止のため `"DELETE:{tenant_code}"` 文字列一致を必須とする
 
-### 3-2. 論理削除
+### 3-3. 論理削除
 
 **採用案: `is_active=False` のみ（MVP）。`deleted_at` カラムは今回追加しない。**
 
@@ -84,32 +105,51 @@ DELETE /api/v1/admin/tenants/{tenant_id}
 - `is_active=False` でアクセス遮断は即座に有効
 - migration を増やすと deploy.yml 変更が必要になり PO GO フローが複雑になる
 
-**実装**:
+**実装スケッチ**:
 
 ```python
-# backend/app/routers/admin.py
-@router.delete("/admin/tenants/{tenant_id}", dependencies=[Depends(require_super_admin)])
-async def delete_tenant_logical(tenant_id: int, ...):
+# backend/app/routers/super_admin_tenants.py
+router = APIRouter()
+
+@router.delete(
+    "/super-admin/tenants/{tenant_id}",
+    dependencies=[Depends(require_super_admin)],
+)
+async def delete_tenant_logical(tenant_id: int, body: TenantDeleteRequest, ...):
+    if body.confirm != f"DELETE:{tenant.tenant_code}":
+        raise HTTPException(400, "confirm 文字列不一致")
     async with db.begin():
-        tenant = await db.get(Tenant, tenant_id)
-        if not tenant:
-            raise HTTPException(404)
         tenant.is_active = False
-        await _record_deletion_audit(db, tenant, mode="logical", actor=current_user)
+        await _record_deletion_audit(
+            db, tenant, mode="logical", status="succeeded", actor=current_user
+        )
     reset_tenant_context(db)  # ADR-072 / ADR-131
 ```
 
-### 3-3. 物理削除
+### 3-4. 物理削除
 
-**前提条件チェック（実行前に必ず確認）**:
+**推奨実行順序**（DROP 失敗時のリカバリを考慮）:
+
+| ステップ | 内容 | 失敗時の状態 |
+|---------|------|------------|
+| 1 | 対象確認（is_active=False 確認・schema 存在確認） | 中断 → 再試行可 |
+| 2 | バックアップ取得（`pg_dump -n tenant_NNN`） | 中断 → 再試行可 |
+| 3 | 中央監査ログ `status=started` を記録（DROP 前） | 記録後に DROP 失敗 → `failed` で更新 |
+| 4 | `DROP SCHEMA tenant_NNN CASCADE` | 失敗 → tenant は `is_active=false` のまま残存・再試行可 |
+| 5 | `await admin_db.commit()` | — |
+| 6 | `DELETE FROM public.tenants WHERE id = :id`（CASCADE で public.users も削除） | — |
+| 7 | 中央監査ログ `status=succeeded` + `completed_at=NOW()` に更新 | — |
+
+**この順序の根拠**:
+- DROP（4）→ public.tenants DELETE（6）の順にする理由: DELETE 先行で DROP が失敗した場合、registry/users だけ消えてスキーマが残る状態になり手動リカバリが困難になる
+- DROP 失敗時は tenant が `is_active=false` のまま残るため再試行可能（is_active=false なので API アクセスは遮断済み）
+
+**対象確認 SQL（READ ONLY）**:
 
 ```sql
--- 対象確認SQL（READ ONLY）
 SELECT id, tenant_code, tenant_name, is_active
 FROM public.tenants
 WHERE id = :tenant_id;
-
--- is_active=False であることを確認してから DROP に進む
 ```
 
 **DROP 前バックアップ**:
@@ -128,56 +168,75 @@ WHERE schemaname = 'tenant_004'
 ORDER BY tablename;
 ```
 
-**物理削除実装**:
+**実装スケッチ**:
 
 ```python
-@router.delete("/admin/tenants/{tenant_id}/physical", dependencies=[Depends(require_super_admin)])
-async def delete_tenant_physical(tenant_id: int, ...):
-    # 1. 論理削除済み確認
-    tenant = await db.get(Tenant, tenant_id)
+@router.delete(
+    "/super-admin/tenants/{tenant_id}/physical",
+    dependencies=[Depends(require_super_admin)],
+)
+async def delete_tenant_physical(tenant_id: int, body: TenantDeleteRequest, ...):
+    # 1. 対象確認
+    if body.confirm != f"DELETE:{tenant.tenant_code}":
+        raise HTTPException(400)
     if not tenant or tenant.is_active:
         raise HTTPException(400, "論理削除が先に必要です")
-
     schema_name = f"tenant_{tenant_id:03d}"
 
-    # 2. 中央監査ログ（DROP 前に記録 — DROP 後は書けない）
-    async with db.begin():
-        await _record_deletion_audit(db, tenant, mode="physical", actor=current_user)
+    # 3. 監査ログ physical_started（DROP 前に記録）
+    audit_id = await _record_deletion_audit(
+        db, tenant, mode="physical", status="started", actor=current_user
+    )
+    await db.commit()
     reset_tenant_context(db)  # ADR-072
 
-    # 3. public.users CASCADE DELETE（tenants DELETE が CASCADE で連鎖）
-    async with db.begin():
-        await db.execute(
-            text("DELETE FROM public.tenants WHERE id = :id"),
-            {"id": tenant_id}
-        )
-    reset_tenant_context(db)  # ADR-072
+    try:
+        # 4-5. DROP SCHEMA + 明示 commit（§4 採用案 A）
+        await admin_db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+        await admin_db.commit()
 
-    # 4. DROP SCHEMA CASCADE（admin_db で実行、明示 commit — 後述 §4 参照）
-    await admin_db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-    await admin_db.commit()  # §4 採用案 A
+        # 6. public.tenants DELETE（CASCADE → public.users 連鎖削除）
+        async with db.begin():
+            await db.execute(text("DELETE FROM public.tenants WHERE id = :id"), {"id": tenant_id})
+        reset_tenant_context(db)  # ADR-072
+
+        # 7. 監査ログ succeeded
+        await _update_audit_status(db, audit_id, status="succeeded")
+        await db.commit()
+        reset_tenant_context(db)
+
+    except Exception as exc:
+        await _update_audit_status(db, audit_id, status="failed", error=str(exc))
+        await db.commit()
+        reset_tenant_context(db)
+        raise
 ```
 
-### 3-4. 中央監査ログ保全（`public.tenant_deletion_audit`）
+### 3-5. 中央監査ログ保全（`public.tenant_deletion_audit`）
 
 新規テーブルが必要（migration 対象 — §6 参照）。
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.tenant_deletion_audit (
-    id          SERIAL PRIMARY KEY,
-    tenant_id   INTEGER NOT NULL,
-    tenant_code TEXT NOT NULL,
-    tenant_name TEXT NOT NULL,
-    mode        TEXT NOT NULL CHECK (mode IN ('logical', 'physical')),
-    actor_id    INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
-    actor_email TEXT NOT NULL,
-    executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    meta        JSONB
+    id              SERIAL PRIMARY KEY,
+    tenant_id       INTEGER NOT NULL,
+    tenant_code     TEXT NOT NULL,
+    tenant_name     TEXT NOT NULL,
+    mode            TEXT NOT NULL CHECK (mode IN ('logical', 'physical')),
+    status          TEXT NOT NULL CHECK (status IN ('started', 'succeeded', 'failed')),
+    actor_id        INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+    actor_email     TEXT NOT NULL,
+    executed_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at    TIMESTAMPTZ,
+    error_message   TEXT,
+    meta            JSONB
 );
 ```
 
-- テナントスキーマとは独立した `public` スキーマに保持
-- DROP 後も記録が残る
+- `status`: 物理削除の開始 / 成功 / 失敗を区別（論理削除は `succeeded` 直書き）
+- `completed_at`: DROP + DELETE 完了時刻（started → succeeded/failed で更新）
+- `error_message`: DROP 失敗時の例外メッセージを保存
+- テナントスキーマとは独立した `public` スキーマに保持 → DROP 後も記録が残る
 - `actor_id` は `ON DELETE SET NULL`（actor ユーザー削除時も監査行は残る）
 
 ### 3-5. reports.py 呼び出し元確認
