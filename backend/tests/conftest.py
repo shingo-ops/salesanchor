@@ -992,7 +992,7 @@ async def setup_test_db(test_engine):
             INSERT OR IGNORE INTO users (id, tenant_id, username, email, role, is_active, locale, theme)
             VALUES (999, 999, 'testuser', 'test@example.com', 'admin', TRUE, 'ja', 'light')
         """))
-        # 配送キャリア認証情報テーブル（migration 20260608 相当: SQLite 互換版）
+        # 配送キャリア認証情報テーブル（migration 20260608 + A4 20260614 相当: SQLite 互換版）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_carrier_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1005,7 +1005,10 @@ async def setup_test_db(test_engine):
                 updated_by_user_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (tenant_id, carrier)
+                last_tested_at TIMESTAMP,
+                last_test_ok BOOLEAN,
+                last_test_message TEXT,
+                UNIQUE (tenant_id, carrier, environment)
             )
         """))
         # 目標テーブル（migration 075 相当: SQLite 互換版）

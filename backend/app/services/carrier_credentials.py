@@ -79,7 +79,8 @@ async def get_status(db, tenant_id: int, carrier: str, environment: str = "produ
     """
     row = await db.execute(
         text(
-            "SELECT client_id_encrypted, environment, account_number_encrypted"
+            "SELECT client_id_encrypted, environment, account_number_encrypted,"
+            "       last_tested_at, last_test_ok, last_test_message"
             " FROM tenant_carrier_credentials"
             " WHERE tenant_id = :tid AND carrier = :c AND environment = :env"
         ),
@@ -93,6 +94,9 @@ async def get_status(db, tenant_id: int, carrier: str, environment: str = "produ
             "client_id_hint": None,
             "secret_configured": False,
             "account_number_hint": None,
+            "last_tested_at": None,
+            "last_test_ok": None,
+            "last_test_message": None,
         }
     client_id = encryption.decrypt(rec[0])
     account_number: Optional[str] = (
@@ -108,6 +112,9 @@ async def get_status(db, tenant_id: int, carrier: str, environment: str = "produ
         "client_id_hint": f"{client_id[:4]}...{client_id[-4:]}" if len(client_id) >= 8 else client_id,
         "secret_configured": True,
         "account_number_hint": account_number_hint,
+        "last_tested_at": rec[3],
+        "last_test_ok": rec[4],
+        "last_test_message": rec[5],
     }
 
 
@@ -203,6 +210,41 @@ async def delete_credentials(db, tenant_id: int, carrier: str, environment: str 
     await db.commit()
 
 
+_MAX_MESSAGE_LEN = 500
+
+
+async def save_test_result(
+    db,
+    tenant_id: int,
+    carrier: str,
+    environment: str,
+    ok: bool,
+    message: str,
+) -> None:
+    """接続テスト結果を tenant_carrier_credentials に保存する（A4）。
+
+    UPDATE のみ（INSERT しない）。credentials が存在しない場合は何もしない。
+    API key / secret / account number の平文を message に含めないこと。
+    """
+    await db.execute(
+        text(
+            "UPDATE tenant_carrier_credentials"
+            " SET last_tested_at = NOW(),"
+            "     last_test_ok = :ok,"
+            "     last_test_message = :msg"
+            " WHERE tenant_id = :tid AND carrier = :c AND environment = :env"
+        ),
+        {
+            "tid": tenant_id,
+            "c": carrier,
+            "env": _norm_env(environment),
+            "ok": ok,
+            "msg": message[:_MAX_MESSAGE_LEN],
+        },
+    )
+    await db.commit()
+
+
 # ---------------------------------------------------------------------------
 # 接続テスト（httpx 同期・呼び出し側で run_in_threadpool 推奨）
 # ---------------------------------------------------------------------------
@@ -292,5 +334,6 @@ __all__ = [
     "get_credentials",
     "save_credentials",
     "delete_credentials",
+    "save_test_result",
     "test_connection",
 ]
