@@ -87,6 +87,13 @@ async function renderKarte(
     [`GET /leads/${leadId}/stats`]: statsFixture,
     "GET /admin/discord-config": discordConfig,
     [`POST /leads/${leadId}/messages/mark-read`]: { marked_count: 0 },
+    "GET /leads/sales-form-options": [
+      { id: 1, label: "実店舗", value: "physical_store", sort_order: 1, is_active: true },
+      { id: 2, label: "ECサイト", value: "ec_site", sort_order: 2, is_active: true },
+      { id: 3, label: "ライブ配信", value: "live_streaming", sort_order: 3, is_active: true },
+      { id: 4, label: "卸・代理店", value: "wholesale", sort_order: 4, is_active: true },
+      { id: 5, label: "その他", value: "other", sort_order: 5, is_active: true },
+    ],
   };
 
   await mockApi(page, mocks);

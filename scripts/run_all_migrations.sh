@@ -398,6 +398,9 @@ run_sql migrations/20260614_030000_add_carrier_test_result.sql
 # テナント削除 中央監査ログ（public.tenant_deletion_audit 新設）
 run_sql migrations/20260614_040137_add_tenant_deletion_audit.sql
 
+# ADR-108 Phase B-1: sales_form 複数選択 — tenant_sales_form_options / lead_sales_form_selections テーブル追加
+run_sql migrations/20260614_100000_create_sales_form_tables.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
