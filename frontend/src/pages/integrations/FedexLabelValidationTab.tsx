@@ -164,13 +164,19 @@ export function FedexLabelValidationTab() {
           <p className="lv-part__intro">{t("carrierIntegration.fedexGuidePart1Intro")}</p>
         </div>
 
-        {/* Part 1 / Step 1: FedExアカウント作成 */}
+        {/* Part 1 / Step 1: FedEx Developer Portalにログイン */}
         <section className="lv-step card">
           <StepHeader num={1} title={t("carrierIntegration.fedexGuidePart1Step1Title")} />
           <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step1Desc")}</p>
-          <div className="lv-placeholder-card" data-screenshot="fedex-account-creation">
-            <span className="lv-placeholder-card__label">{t("carrierIntegration.fedexGuidePart1PlaceholderLabel")}:</span>
-            <span>{t("carrierIntegration.fedexGuidePart1Step1Title")}</span>
+          <div className="form-actions">
+            <a
+              href="https://developer.fedex.com/api/ja-jp/home.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+            >
+              {t("carrierIntegration.fedexGuideDeveloperPortalButton")}
+            </a>
           </div>
         </section>
 
