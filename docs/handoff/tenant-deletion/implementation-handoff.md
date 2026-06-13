@@ -31,6 +31,7 @@ super_admin が特定テナントを安全に論理削除・物理削除でき�
 - `scripts/run_all_migrations.sh` — migration 追記
 - `scripts/backup_tenant_before_drop.sh` 新規作成
 - `backend/tests/test_tenant_deletion.py` 新規作成
+- `backend/tests/conftest.py` — SQLite rewrite / test table setup / cleanup 追加
 - `.github/workflows/migration-test.yml` — SQLite セットアップに `public.tenant_deletion_audit` / `public.tenants` 最小 CREATE TABLE 追加
 - `backend/app/tasks/reports.py` — 呼び出し元 is_active ガード確認・必要なら修正
 
@@ -67,6 +68,7 @@ super_admin が特定テナントを安全に論理削除・物理削除でき�
 | `scripts/run_all_migrations.sh` | **修正**（末尾に run_sql 追記） | ✅ PO GO 必要 |
 | `scripts/backup_tenant_before_drop.sh` | **新規** | ✅ PO GO 必要 |
 | `backend/tests/test_tenant_deletion.py` | **新規** | - |
+| `backend/tests/conftest.py` | **修正**（SQLite rewrite / test table setup / cleanup 追加） | - |
 | `.github/workflows/migration-test.yml` | **修正**（SQLite セットアップに `public.tenant_deletion_audit` / `public.tenants` 最小 CREATE を追加） | ⚠️ CI 設定変更 |
 | `backend/app/tasks/reports.py` | **条件修正**（呼び出し元に is_active ガードが必要な場合のみ） | - |
 
@@ -351,18 +353,29 @@ run_sql migrations/20260614_120000_add_tenant_deletion_audit.sql
 ```bash
 #!/usr/bin/env bash
 # backup_tenant_before_drop.sh — 物理削除前のテナントスキーマバックアップ
-# 使用例: TENANT_ID=4 DATABASE_URL=... bash scripts/backup_tenant_before_drop.sh
+#
+# 使用例:
+#   TENANT_ID=4 DATABASE_URL=postgresql+asyncpg://... bash scripts/backup_tenant_before_drop.sh
+#   TENANT_ID=4 PG_DUMP_DATABASE_URL=postgresql://...  bash scripts/backup_tenant_before_drop.sh
+#
+# pg_dump は libpq URL（postgresql://...）を要求する。
+# SQLAlchemy の URL（postgresql+asyncpg://...）は直接渡せないため変換する。
+# PG_DUMP_DATABASE_URL が設定されていればそれを優先し、変換不要の URL を直接指定できる。
 set -euo pipefail
 
 TENANT_ID="${TENANT_ID:?TENANT_ID 環境変数が必要です}"
-DATABASE_URL="${DATABASE_URL:?DATABASE_URL 環境変数が必要です}"
+
+# PG_DUMP_DATABASE_URL が設定されていればそれを使用。なければ DATABASE_URL を変換。
+RAW_DATABASE_URL="${PG_DUMP_DATABASE_URL:-${DATABASE_URL:?DATABASE_URL or PG_DUMP_DATABASE_URL is required}}"
+# postgresql+asyncpg:// → postgresql:// に変換（pg_dump が認識できる形式）
+DUMP_DATABASE_URL="${RAW_DATABASE_URL/postgresql+asyncpg:/postgresql:}"
 
 SCHEMA_NAME="tenant_$(printf '%03d' "${TENANT_ID}")"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 OUTPUT_FILE="/tmp/${SCHEMA_NAME}_pre_drop_${TIMESTAMP}.sql"
 
 echo "バックアップ開始: schema=${SCHEMA_NAME}, 出力=${OUTPUT_FILE}"
-pg_dump -n "${SCHEMA_NAME}" "${DATABASE_URL}" > "${OUTPUT_FILE}"
+pg_dump -n "${SCHEMA_NAME}" "${DUMP_DATABASE_URL}" > "${OUTPUT_FILE}"
 echo "✅ バックアップ完了: ${OUTPUT_FILE}"
 echo "保存場所: /tmp/ はコンテナ再起動で消えます。ホスト側に退避してください。"
 ```
@@ -435,7 +448,7 @@ if not tenant or not tenant.is_active:
 SQLite にはスキーマプレフィックスがないため、これらのテーブルに `public.` 付きでアクセスすると  
 `no such table: public.tenants` エラーになる。
 
-#### 対策: conftest.py に 2 件追加（プルリクのスコープに含める）
+#### 対策: conftest.py に 3 件追加（プルリクのスコープに含める）
 
 **① rewrite リスナーへの追加**（`conftest.py:68-85` の `rewrite_ilike_for_sqlite` 関数内）:
 
@@ -480,6 +493,23 @@ await conn.execute(text("""
     )
 """))
 ```
+
+**③ `db_session` fixture の cleanup DELETE への追加**  
+既存 conftest は `db_session` fixture の finally 節で明示 DELETE によりテーブルを掃除する方式。  
+追加しないとテスト間でデータが残り、テスト順序依存のエラーが発生する。
+
+`db_session` fixture の `yield` 後 cleanup ブロック（`DELETE FROM ...` が並んでいる箇所）に以下を追加:
+
+```python
+await db_session.execute(text("DELETE FROM tenant_deletion_audit"))
+await db_session.execute(text("DELETE FROM tenants"))
+await db_session.commit()
+```
+
+> `DELETE FROM tenants` は他テストが利用中のテナント行（id=999 等）も消す可能性があるため、  
+> `tenant_deletion_audit` の DELETE より後に実行し、既存テストで INSERT している id=999 の行は  
+> `INSERT OR IGNORE` で再挿入しているか確認すること。  
+> もし既存テストが `tenants` テーブルを参照するなら `WHERE id > 90` 等のスコープ限定も検討。
 
 #### migration-test.yml への追加
 
@@ -824,6 +854,12 @@ migration / deploy.yml / 本番 scripts を含む本 PR は PO GO が出るま�
        statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
    ```
 2. `backend/tests/conftest.py` の `setup_test_db` セッション fixture（`async with test_engine.begin() as conn:` ブロック末尾）に `tenants` と `tenant_deletion_audit` の CREATE TABLE を追加（§6-0 ②）
+3. `backend/tests/conftest.py` の `db_session` fixture の cleanup DELETE ブロックに追加（§6-0 ③）:
+   ```python
+   await db_session.execute(text("DELETE FROM tenant_deletion_audit"))
+   await db_session.execute(text("DELETE FROM tenants"))
+   await db_session.commit()
+   ```
 
 ### Step 3: super_admin_tenants.py 作成
 
