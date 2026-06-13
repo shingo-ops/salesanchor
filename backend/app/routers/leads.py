@@ -549,10 +549,13 @@ async def update_lead(
                 },
             )
 
+    audit_new_data = dict(update_data)
+    if sales_form_selections_data is not None:
+        audit_new_data["sales_form_selections"] = sales_form_selections_data
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="update", table_name="leads", record_id=lead_id,
-        old_data=dict(old_row), new_data=update_data,
+        old_data=dict(old_row), new_data=audit_new_data,
     )
     await db.commit()
     await invalidate_dashboard_cache(tenant_id)
