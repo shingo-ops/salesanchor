@@ -1,0 +1,103 @@
+/**
+ * CarrierIntegrationPage — ページ固有スタイル
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ * PR-A3: 受信箱トークン準拠（--accent / --link-active-bg / --info-bg 等）
+ */
+
+/* ── 環境カード ── */
+.carrier-env-card {
+  margin-bottom: var(--space-4);
+}
+
+.carrier-env-card--editing {
+  border: 2px solid var(--accent);
+}
+
+.carrier-env-card--empty {
+  opacity: var(--opacity-secondary);
+}
+
+/* ── カードヘッダー ── */
+.carrier-env-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.carrier-env-card__title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.carrier-env-card__hint {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.carrier-env-card__last-tested {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.carrier-env-card__test-error {
+  margin-bottom: var(--space-3);
+}
+
+/* ── カード情報行 ── */
+.carrier-env-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.carrier-env-info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-sm);
+}
+
+.carrier-env-info-label {
+  min-width: var(--size-carrier-label-col);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.carrier-env-info-value {
+  color: var(--text-primary);
+}
+
+.carrier-env-info-value--masked {
+  font-family: monospace;
+  color: var(--text-secondary);
+}
+
+.carrier-env-info-value--muted {
+  color: var(--text-muted);
+}
+
+.carrier-env-info-value--warn {
+  color: var(--warning-text);
+}
+
+/* ── 削除ボタン ── */
+.carrier-env-card__delete-btn {
+  color: var(--danger);
+  margin-left: auto;
+}
+
+.carrier-env-card__delete-btn:hover:not(:disabled) {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+}
+
+/* ── 更新フォームセクション ── */
+.update-form {
+  margin-top: var(--space-4);
+}

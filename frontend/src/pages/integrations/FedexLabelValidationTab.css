@@ -1,0 +1,156 @@
+/**
+ * FedexLabelValidationTab — Label Validation ウィザード固有スタイル
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ * ADR-129: FedEx Label Validation 申請支援
+ */
+
+/* ── ウィザード全体 ── */
+.lv-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── ステップ ── */
+.lv-step {
+  transition: opacity var(--transition-fast);
+}
+
+.lv-step--done {
+  opacity: var(--opacity-muted);
+}
+
+.lv-step--complete {
+  border: 2px solid var(--accent);
+}
+
+/* ── ステップヘッダー ── */
+.lv-step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.lv-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  flex-shrink: 0;
+}
+
+.lv-step-num--done {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+/* 完了バッジ（checkmark via CSS）*/
+.lv-step-badge-done::before {
+  content: "✓";
+  font-size: var(--font-sm);
+  color: var(--success-text);
+  font-weight: var(--font-weight-semi);
+}
+
+/* ── チェックラベル ── */
+.lv-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-top: var(--space-2);
+}
+
+/* ── ラベル一覧 ── */
+.lv-label-list {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lv-label-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+}
+
+.lv-service-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  white-space: nowrap;
+}
+
+.lv-service-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.lv-tracking-number {
+  font-family: monospace;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+/* ── メールテンプレート ── */
+.lv-email-template {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lv-email-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lv-email-body-field {
+  gap: var(--space-2);
+}
+
+.lv-email-label {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lv-email-value {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+.lv-email-body {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-family: monospace;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  margin: 0;
+}
