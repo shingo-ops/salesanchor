@@ -7,23 +7,23 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 ## プロジェクト前提
 
 - **PO**: しんごさん（`shingo-ops`）— 本番アクセス・ADR起案・不可逆操作の最終判断
-- **Dev**: Claude Code (Hikky-dev) & Codex — 設計・実装・PR起票
+- **Dev**: Claude Code / Sonnet (Hikky-dev) — 主Generator・実装・PR起票 | ChatGPT — Planner・Architect・Reviewer | Codex app / CLI — UI/UX補助・第二レビュー・Fallback
 
 ---
 
-## 役割分担（Codex vs Claude Code）
+## 役割分担（ChatGPT / Claude Code / Codex）
 
 | ステージ | 担当 | 責務 |
 |---------|------|------|
-| **Research** | Codex | 外部導入事例を5W2H＋数値エビデンスで収集。成功事例（成功要因）・失敗事例（失敗要因）を数値化してPlannerへ渡す |
-| **Planner** | Codex | Researchエビデンスを受け取り、開発ルール（CLAUDE.md/ADR/CI）と照合し、「なぜこの設計が成功するか」のエビデンスを確立してADR/仕様書を設計する |
-| **Architect** | Claude Code | 開発ルール確認＋Plannerのエビデンス確立が十分か検証＋トレードオフ言語化。APPROVE / REVISE の判定を返す |
-| **Generator** | Codex（fallback: Claude Code） | ADR/仕様書に基づいてコード実装・PR起票 |
-| **Reviewer** | Claude Code | コードレビュー・PR審査 |
+| **Research** | ChatGPT | 外部導入事例を5W2H＋数値エビデンスで収集。成功事例・失敗事例を数値化してPlannerへ渡す |
+| **Planner** | ChatGPT | Researchエビデンスを受け取り、開発ルール（CLAUDE.md/ADR/CI）と照合し、「なぜこの設計が成功するか」のエビデンスを確立してADR/仕様書を設計する |
+| **Architect** | ChatGPT | 開発ルール確認＋Plannerのエビデンス確立が十分か検証＋トレードオフ言語化。APPROVE / REVISE の判定を返す |
+| **Generator** | **Claude Code / Sonnet**（主担当） | レビュー済みADR/仕様書に忠実にコード実装・PR起票。設計の再解釈・独断変更は禁止 |
+| **UI/UX補助・第二レビュー** | Codex app / CLI | UI/UXの視覚検証・プロトタイプ・read-only差分レビュー・UI-only spike。詳細は「Codex app UI/UX補助運用」参照 |
+| **Reviewer** | ChatGPT（最終ゲート）/ Codex app（第二レビュー） | コードレビュー・PR審査。ChatGPTが最終承認ゲートを担う |
 | **Evaluator** | Claude Code | Playwright等で動作検証 |
 
-- 新機能・バグ修正は Codex にリサーチ → プランニング → 実装を一貫委任するのが基本
-- Claude Code は Architect として設計査定・Reviewer としてコードレビューを担う
+- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → PO GO → develop マージ
 - Plannerが確立したエビデンスは ADR の Why セクションに必ず含める
 
 ### エビデンス要件（Research → Planner → Architect の鉄則）
@@ -38,6 +38,8 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 - 「本番障害3日間・売上損失¥2,000万（Who: 某EC、When: 2022年）」→ ✅
 
 ### Generator Executor 切り替え（ADR-082）
+
+> **注意**: これは **GitHub Actions 自動パイプライン上の executor 選択**仕様であり、通常の人間主導開発における主 Generator は Claude Code / Sonnet。
 
 `claude-pipeline.yml` の `workflow_dispatch` 起動時に `generator_executor` で実行エンジンを選択できる:
 
@@ -62,7 +64,12 @@ PR `synchronize` トリガー（regenerate ジョブ）は常に `auto` モー�
 Runtime pipeline は次の順序で運用する。
 
 ```text
-Research -> Planner -> Architect -> PO Approval -> Generator -> Reviewer -> Evaluator -> GitHub CI
+ChatGPT (Research / Planner / Architect)
+  → PO Approval
+  → Claude Code / Sonnet (Generator)
+  → Codex app (UI/Review assist — 任意)
+  → ChatGPT (final gate / Reviewer)
+  → Evaluator → GitHub CI
 ```
 
 - `.claude/agents/*` が runtime の正本
@@ -151,6 +158,31 @@ DROP TABLE / 大量 DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - `/app` は書込不可 → 出力先は `/tmp`
 - `docker compose cp backend:/tmp/...` は使えない（tmpfs）→ `docker compose exec -T backend cat /tmp/xxx > host_file`
 - コンテナ再起動で `/tmp` は消える
+
+---
+
+## Codex app UI/UX補助運用
+
+Codex app / CLI は以下の作業のみ許可する。
+
+### 許可
+- UI/UXの視覚レビュー（スクリーンショット・Figma・ローカルプレビューを見た改善案）
+- read-only差分レビュー（コードを変更せず意見を出す）
+- UI-only spike branch での試作（CSS / レイアウト / 空状態 / カードUI / 文言配置）
+- ChatGPT 設計後のフロントエンド実装補助（デザイントークン・i18n・PageLayout ルール遵守が前提）
+
+### 禁止
+- ChatGPT 設計ハンドオフの再設計・独断変更
+- API仕様変更
+- DB migration の作成・実行
+- `deploy.yml` の変更
+- 本番 `scripts/` の変更
+- secrets 変更
+- 認証・課金・Webhook など事故コストが高い領域の独断変更
+- `develop` / `main` への直接 push
+- PO GO なしの危険変更
+
+> i18n、PageLayout、CSS変数、E2E更新ルールは Claude Code と同一基準で遵守すること（`frontend/AGENTS.md` 参照）。
 
 ---
 
