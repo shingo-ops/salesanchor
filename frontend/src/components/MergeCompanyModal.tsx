@@ -19,6 +19,9 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
+import { TextField } from "./TextField";
+import { Textarea } from "./Textarea";
 
 interface CompanyOption {
   id: number;
@@ -152,7 +155,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
           <>
             <div className="form-row">
               <label>{t("mergeCompany.selectMaster")}</label>
-              <input
+              <TextField
                 type="text"
                 placeholder={t("mergeCompany.searchPlaceholder")}
                 value={search}
@@ -240,7 +243,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
 
             <div className="form-row" style={{ marginTop: "var(--space-4)" }}>
               <label>{t("mergeCompany.reasonLabel")}</label>
-              <textarea
+              <Textarea
                 rows={2}
                 placeholder={t("mergeCompany.reasonPlaceholder")}
                 value={reason}
@@ -250,17 +253,16 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
             </div>
 
             <div className="form-actions">
-              <button type="button" onClick={onCancel}>
+              <Button type="button" variant="secondary" onClick={onCancel}>
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-primary"
                 disabled={!selected}
                 onClick={() => setStage("confirm")}
               >
                 {t("mergeCompany.nextStep")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -312,22 +314,23 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
             )}
 
             <div className="form-actions">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setStage("select")}
                 disabled={submitting}
               >
                 {t("common.back")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="btn-danger"
+                variant="danger"
                 disabled={submitting}
               >
                 {submitting
                   ? t("mergeCompany.merging")
                   : t("mergeCompany.executeLabel", { masterName: selected.name })}
-              </button>
+              </Button>
             </div>
           </form>
         )}

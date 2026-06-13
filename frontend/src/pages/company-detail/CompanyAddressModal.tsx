@@ -8,6 +8,9 @@ import { useTranslation } from "react-i18next";
 import type { AddressFormState, Company } from "./company-detail.types";
 import { addressFromApi, typeLabel, PHONE_RE } from "./company-detail.types";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
+import { TextField } from "../../components/TextField";
+import { Select } from "../../components/Select";
 
 interface Props {
   isOpen: boolean;
@@ -78,61 +81,65 @@ export function CompanyAddressModal({
         <form onSubmit={handleSave} className="form-grid">
           <div className="form-row">
             <label>{t("common.type")}</label>
-            <select disabled={!canEdit || addrSubmitting} value={addrForm.address_type}
-              onChange={(e) => handleAddressTypeChange(e.target.value as "billing" | "delivery")}>
-              <option value="billing">{t("companies.billing")}</option>
-              <option value="delivery">{t("companies.delivery")}</option>
-            </select>
+            <Select
+              options={[
+                { value: "billing", label: t("companies.billing") },
+                { value: "delivery", label: t("companies.delivery") },
+              ]}
+              disabled={!canEdit || addrSubmitting}
+              value={addrForm.address_type}
+              onChange={(e) => handleAddressTypeChange(e.target.value as "billing" | "delivery")}
+            />
           </div>
           <div className="form-row">
             <label>{t("companies.branchNameHint")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.branch_name}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.branch_name}
               onChange={(e) => setAddrForm({ ...addrForm, branch_name: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("companies.contactName")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.name}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.name}
               onChange={(e) => setAddrForm({ ...addrForm, name: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("common.email")}</label>
-            <input type="email" disabled={!canEdit || addrSubmitting} value={addrForm.email}
+            <TextField type="email" disabled={!canEdit || addrSubmitting} value={addrForm.email}
               onChange={(e) => setAddrForm({ ...addrForm, email: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("common.phone")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.telephone}
-              onChange={(e) => setAddrForm({ ...addrForm, telephone: e.target.value })} />
-            {addrPhoneError && <span className="field-error">{addrPhoneError}</span>}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.telephone}
+              onChange={(e) => setAddrForm({ ...addrForm, telephone: e.target.value })}
+              error={addrPhoneError ?? undefined} />
           </div>
           <div className="form-row"><label>{t("companies.taxId")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.tax_id}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.tax_id}
               onChange={(e) => setAddrForm({ ...addrForm, tax_id: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.address1")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.address_line_1}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_1}
               onChange={(e) => setAddrForm({ ...addrForm, address_line_1: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.address2")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.address_line_2}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_2}
               onChange={(e) => setAddrForm({ ...addrForm, address_line_2: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.address3")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.address_line_3}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_3}
               onChange={(e) => setAddrForm({ ...addrForm, address_line_3: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.city")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.city}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.city}
               onChange={(e) => setAddrForm({ ...addrForm, city: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.stateCode")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.state}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.state}
               onChange={(e) => setAddrForm({ ...addrForm, state: e.target.value })} />
           </div>
           <div className="form-row"><label>{t("shipping.zipCode")}</label>
-            <input disabled={!canEdit || addrSubmitting} value={addrForm.zip}
+            <TextField disabled={!canEdit || addrSubmitting} value={addrForm.zip}
               onChange={(e) => setAddrForm({ ...addrForm, zip: e.target.value })} />
           </div>
           <div className="form-row">
             <label>{t("shipping.countryCode")}{t("companies.countryCodeHint")}</label>
-            <input maxLength={2} disabled={!canEdit || addrSubmitting} value={addrForm.country_code}
+            <TextField maxLength={2} disabled={!canEdit || addrSubmitting} value={addrForm.country_code}
               onChange={(e) => setAddrForm({ ...addrForm, country_code: e.target.value.toUpperCase() })} />
           </div>
           <div className="form-row">
@@ -143,10 +150,10 @@ export function CompanyAddressModal({
             </label>
           </div>
           <div className="form-actions">
-            <button type="button" onClick={onClose} disabled={addrSubmitting}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={!canEdit || addrSubmitting}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={addrSubmitting}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={!canEdit || addrSubmitting}>
               {addrSubmitting ? t("common.saving") : t("common.save")}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
