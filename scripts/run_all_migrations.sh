@@ -392,6 +392,9 @@ run_sql migrations/20260613_040000_funnel_goals_kpi_extend.sql
 # ADR-138: order_financials.purchase_cost を NULL 許容・DEFAULT 削除
 run_sql migrations/20260613_050000_funnel_purchase_cost_nullable.sql
 
+# A4: carrier credentials 接続テスト結果を保存（last_tested_at / last_test_ok / last_test_message）
+run_sql migrations/20260614_030000_add_carrier_test_result.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
@@ -298,6 +299,10 @@ class CarrierStatus(BaseModel):
     client_id_hint: str | None = None
     secret_configured: bool = False
     account_number_hint: str | None = None  # 例: "******011"
+    # A4: 接続テスト結果（永続化）
+    last_tested_at: datetime | None = None
+    last_test_ok: bool | None = None
+    last_test_message: str | None = None
 
 
 class CarrierCredentialsRequest(BaseModel):
@@ -362,6 +367,9 @@ async def carrier_status(
         client_id_hint=st["client_id_hint"],
         secret_configured=st["secret_configured"],
         account_number_hint=st["account_number_hint"],
+        last_tested_at=st["last_tested_at"],
+        last_test_ok=st["last_test_ok"],
+        last_test_message=st["last_test_message"],
     )
 
 
@@ -486,6 +494,11 @@ async def carrier_test_connection(
         creds["client_id"],
         creds["client_secret"],
     )
+    # A4: テスト結果を永続化
+    await carriers.save_test_result(
+        db, tenant_id, carrier, environment, result["ok"], result["message"]
+    )
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return CarrierTestResponse(ok=result["ok"], status_code=result.get("status_code"), message=result["message"])
 
 
