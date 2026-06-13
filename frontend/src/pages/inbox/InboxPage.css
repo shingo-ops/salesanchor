@@ -1610,7 +1610,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);
   z-index: var(--z-dropdown);
-  max-height: var(--size-dropdown-max-h);
+  max-height: var(--dropdown-max-h);
   overflow-y: auto;
 }
 

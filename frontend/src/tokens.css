@@ -150,7 +150,6 @@
   --size-icon-btn-lg:   44px;   /* lg アイコンボタン（モバイルタッチターゲット基準 WCAG 2.5.5） */
   --size-msg-attach-w:  240px;  /* メッセージバブル内画像添付 最大幅 */
   --size-msg-attach-h:  200px;  /* メッセージバブル内画像添付 最大高 */
-  --size-dropdown-max-h: 200px; /* ドロップダウンリスト最大高（販売形態・候補リスト等）*/
   --textarea-min-h:     80px;   /* テキストエリア最小高 */
   --topbar-height:      56px;   /* トップバー・ブランドバー高さ */
   --drawer-width:      300px;   /* ユーザードロワー幅 */
