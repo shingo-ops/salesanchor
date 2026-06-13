@@ -23,7 +23,7 @@
   </nav>
 </header>
 
-<div class="page-container">
+<div class="page-container page-container--wide">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
     <span style="font-size:12px;font-weight:700;color:var(--c-customer);background:var(--c-customer-bg);padding:3px 10px;border-radius:12px;">SA-04</span>
     <span class="badge badge--wip" data-sa="SA-04">④ 実装中 (35%)</span>
@@ -91,52 +91,52 @@
       <span class="template-section__title">仕組みの図解 — ID 保存 → テンプレ → リンク生成</span>
     </div>
     <div class="template-section__body">
-      <div class="architecture-diagram">
-        <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"
+      <div class="architecture-diagram architecture-diagram--wide">
+        <svg viewBox="0 0 1160 420" xmlns="http://www.w3.org/2000/svg"
              font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif"
              role="img" aria-label="SA-04 チャネルリンク生成図">
           <defs>
             <marker id="arr04" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
             </marker>
-            <marker id="arr04b" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#1a6fc4"/>
+            <marker id="arr04g" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#2d8a4e"/>
             </marker>
           </defs>
 
           <!-- 顧客マスタ（ID格納） -->
-          <rect x="10" y="60" width="150" height="110" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
-          <text x="85" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#1a6fc4">顧客マスタ（ID保存）</text>
-          <text x="85" y="100" text-anchor="middle" font-size="11" fill="#1a6fc4">WhatsApp: +8190…</text>
-          <text x="85" y="116" text-anchor="middle" font-size="11" fill="#1a6fc4">Telegram: @username</text>
-          <text x="85" y="132" text-anchor="middle" font-size="11" fill="#1a6fc4">Discord: guild/channel</text>
-          <text x="85" y="152" text-anchor="middle" font-size="10" fill="#3b82f6">※ URL 文字列は保存しない</text>
+          <rect x="60" y="120" width="260" height="150" rx="8" fill="#dbeafe" stroke="#1a6fc4" stroke-width="2"/>
+          <text x="190" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="#1a6fc4">顧客マスタ（ID保存）</text>
+          <text x="190" y="170" text-anchor="middle" font-size="12" fill="#1a6fc4">WhatsApp: +8190…</text>
+          <text x="190" y="190" text-anchor="middle" font-size="12" fill="#1a6fc4">Telegram: @username</text>
+          <text x="190" y="210" text-anchor="middle" font-size="12" fill="#1a6fc4">Discord: guild/channel</text>
+          <text x="190" y="238" text-anchor="middle" font-size="11" fill="#3b82f6">※ URL 文字列は保存しない</text>
+
+          <!-- 矢印: 顧客マスタ → テンプレ表 -->
+          <line x1="320" y1="195" x2="428" y2="195" stroke="#9ca3af" stroke-width="2" marker-end="url(#arr04)"/>
+          <text x="374" y="188" text-anchor="middle" font-size="11" fill="#9ca3af">ID を渡す</text>
 
           <!-- テンプレ表（SSOT） -->
-          <rect x="255" y="40" width="180" height="140" rx="8" fill="#f0fdf4" stroke="#2d8a4e" stroke-width="2"/>
-          <text x="345" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#2d8a4e">テンプレ表（SSOT）</text>
-          <text x="345" y="80" text-anchor="middle" font-size="10" fill="#2d8a4e">WhatsApp → wa.me/{phone}</text>
-          <text x="345" y="96" text-anchor="middle" font-size="10" fill="#2d8a4e">Telegram → t.me/{username}</text>
-          <text x="345" y="112" text-anchor="middle" font-size="10" fill="#2d8a4e">Discord → discord.com/…</text>
-          <text x="345" y="128" text-anchor="middle" font-size="9" fill="#4b5563">Messenger → ※未文書化・隔離</text>
-          <text x="345" y="144" text-anchor="middle" font-size="9" fill="#4b5563">Instagram → ※未文書化・隔離</text>
-          <text x="345" y="165" text-anchor="middle" font-size="10" fill="#16a34a">1チャネル＝1行（変更は1行だけ）</text>
+          <rect x="430" y="80" width="320" height="220" rx="8" fill="#f0fdf4" stroke="#2d8a4e" stroke-width="2"/>
+          <text x="590" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#2d8a4e">テンプレ表（SSOT）</text>
+          <text x="590" y="132" text-anchor="middle" font-size="12" fill="#2d8a4e">WhatsApp → wa.me/{phone}</text>
+          <text x="590" y="154" text-anchor="middle" font-size="12" fill="#2d8a4e">Telegram → t.me/{username}</text>
+          <text x="590" y="176" text-anchor="middle" font-size="12" fill="#2d8a4e">Discord → discord.com/…</text>
+          <text x="590" y="200" text-anchor="middle" font-size="11" fill="#4b5563">Messenger → ※未文書化・隔離</text>
+          <text x="590" y="220" text-anchor="middle" font-size="11" fill="#4b5563">Instagram → ※未文書化・隔離</text>
+          <text x="590" y="274" text-anchor="middle" font-size="12" fill="#16a34a">1チャネル＝1行（変更は1行だけ）</text>
 
-          <!-- 矢印: ID → テンプレ参照 -->
-          <line x1="160" y1="115" x2="250" y2="115" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr04)"/>
-          <text x="205" y="109" text-anchor="middle" font-size="9" fill="#9ca3af">ID を渡す</text>
+          <!-- 矢印: テンプレ表 → 連絡先タブ -->
+          <line x1="750" y1="195" x2="858" y2="195" stroke="#2d8a4e" stroke-width="2" marker-end="url(#arr04g)"/>
+          <text x="804" y="188" text-anchor="middle" font-size="11" fill="#2d8a4e">生成</text>
 
-          <!-- 矢印: テンプレ → リンク生成 -->
-          <line x1="435" y1="110" x2="480" y2="110" stroke="#2d8a4e" stroke-width="1.5" marker-end="url(#arr04)"/>
-          <text x="457" y="104" text-anchor="middle" font-size="9" fill="#2d8a4e">生成</text>
-
-          <!-- 生成されたリンク（クリック要素） -->
-          <rect x="480" y="60" width="185" height="100" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
-          <text x="572" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">連絡先タブ（表示）</text>
-          <text x="572" y="100" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ WhatsApp を開く</text>
-          <text x="572" y="116" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ Telegram を開く</text>
-          <text x="572" y="132" text-anchor="middle" font-size="11" fill="#1a6fc4">▶ Discord を開く</text>
-          <text x="572" y="150" text-anchor="middle" font-size="9" fill="#9ca3af">※ URL 文字列は見せない</text>
+          <!-- 連絡先タブ（表示） -->
+          <rect x="860" y="120" width="250" height="150" rx="8" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.5"/>
+          <text x="985" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="#374151">連絡先タブ（表示）</text>
+          <text x="985" y="170" text-anchor="middle" font-size="12" fill="#1a6fc4">▶ WhatsApp を開く</text>
+          <text x="985" y="190" text-anchor="middle" font-size="12" fill="#1a6fc4">▶ Telegram を開く</text>
+          <text x="985" y="210" text-anchor="middle" font-size="12" fill="#1a6fc4">▶ Discord を開く</text>
+          <text x="985" y="238" text-anchor="middle" font-size="11" fill="#9ca3af">※ URL 文字列は見せない</text>
         </svg>
       </div>
       <p style="font-size:13px;color:var(--text-sub);margin-top:12px;">

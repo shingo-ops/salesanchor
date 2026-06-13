@@ -87,6 +87,114 @@ a:hover { text-decoration: underline; }
   padding: 32px 20px 64px;
 }
 
+/* ── 図解ページ用の幅拡張 ───────────────────────────── */
+.page-container--wide {
+  max-width: 1120px;
+}
+
+.page-container--map {
+  max-width: 1280px;
+}
+
+@media (min-width: 1440px) {
+  .page-container--map {
+    max-width: 1320px;
+  }
+}
+
+/* ── 視認性改善用の図ラッパ ───────────────────────── */
+.architecture-diagram--wide {
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.architecture-diagram--wide svg {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
+
+/* PCでは図を横スクロールなしで読ませる */
+@media (min-width: 1180px) {
+  .architecture-diagram--wide svg {
+    min-width: 0;
+  }
+}
+
+/* 狭い画面では潰さず横スクロールを許容 */
+@media (max-width: 1179px) {
+  .architecture-diagram--wide svg {
+    min-width: 1040px;
+  }
+}
+
+/* ── 状態カード: SA-12などの未決/KGI表示用 ─────────── */
+.state-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.state-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.state-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.state-card__badge--todo {
+  color: var(--c-undecided);
+  background: var(--c-undecided-bg);
+  border: 1px solid #fde68a;
+}
+
+.state-card__body {
+  padding: 12px 14px;
+}
+
+.state-card__grid {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 8px 14px;
+}
+
+.state-card__label {
+  color: var(--text-sub);
+  font-weight: 700;
+}
+
+.state-card__value {
+  color: var(--text-main);
+}
+
+.state-card__value ul {
+  margin-left: 1.2em;
+}
+
+@media (max-width: 700px) {
+  .state-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .page-title {
   font-size: 24px;
   font-weight: 700;
