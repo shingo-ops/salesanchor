@@ -708,12 +708,13 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS tenant_001.leads (
-              id         SERIAL PRIMARY KEY,
-              tenant_id  INTEGER NOT NULL,
-              full_name  VARCHAR(255),
-              source     VARCHAR(50),  -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              updated_at TIMESTAMPTZ DEFAULT NOW()
+              id            SERIAL PRIMARY KEY,
+              tenant_id     INTEGER NOT NULL,
+              full_name     VARCHAR(255),
+              customer_name VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
+              source        VARCHAR(50),   -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
+              created_at    TIMESTAMPTZ DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ DEFAULT NOW()
           );
           -- meta_messages: migration 012 が作成（run_all_migrations.sh 外）
           -- migration 013 C2 / migration 092 が参照（013 は IF EXISTS ガード済み・092 はガードなし）
