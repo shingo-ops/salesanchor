@@ -193,6 +193,16 @@ SQL
 
 ---
 
+## Botロール順の確認（ロール付与が失敗する場合）
+
+Bot がロールを付与できない場合、Discord のロール階層が原因の可能性があります。
+
+**確認**: Discord サーバー設定 → ロール で「Sales Anchor Bot」ロールが **Partner / Member より上**にあるか確認する。
+
+詳細手順: [discord-role-order-guide.md](discord-role-order-guide.md)
+
+---
+
 ## 関連 ADR / Memory
 
 - ADR-009 Discord Gateway (M2 → M3 拡張)
@@ -201,3 +211,4 @@ SQL
 - backend/app/services/discord_notifier.py (LLM 予算超過通知、1h de-bounce)
 - migration 066 (tenant_llm_budgets seed + last_hard_stop_notified_at)
 - memory: project_jarvis_discord_channel_access_pending (Discord アクセス権の現状)
+- [discord-role-order-guide.md](discord-role-order-guide.md) — Bot ロール順設定ガイド（非エンジニア向け）
