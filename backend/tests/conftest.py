@@ -1105,6 +1105,38 @@ async def setup_test_db(test_engine):
                 (5, 'lost', '対応が遅れた', 4),
                 (6, 'lost', 'その他', 99)
         """))
+        # ADR-108 Phase B-1: 販売形態複数選択テーブル（SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_sales_form_options (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                value VARCHAR(50) NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (tenant_id, value)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS lead_sales_form_selections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                option_id INTEGER NOT NULL REFERENCES tenant_sales_form_options(id) ON DELETE RESTRICT,
+                other_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (lead_id, option_id)
+            )
+        """))
+        # テスト用デフォルト選択肢を投入（tenant_id=999）
+        await conn.execute(text("""
+            INSERT OR IGNORE INTO tenant_sales_form_options (id, tenant_id, label, value, sort_order) VALUES
+                (1, 999, '実店舗', 'physical_store', 1),
+                (2, 999, 'ECサイト', 'ec_site', 2),
+                (3, 999, 'ライブ配信', 'live_streaming', 3),
+                (4, 999, '卸・代理店', 'wholesale', 4),
+                (5, 999, 'その他', 'other', 5)
+        """))
     yield
 
 
@@ -1161,7 +1193,18 @@ async def db_session(test_engine, setup_test_db):
                 (5, 'lost', '対応が遅れた', 4),
                 (6, 'lost', 'その他', 99)
         """))
+        # ADR-108 Phase B-1: 選択データのみクリア（マスタは再投入）
+        await conn.execute(text("DELETE FROM lead_sales_form_selections"))
         await conn.execute(text("DELETE FROM leads"))
+        # マスタを再投入
+        await conn.execute(text("""
+            INSERT OR IGNORE INTO tenant_sales_form_options (id, tenant_id, label, value, sort_order) VALUES
+                (1, 999, '実店舗', 'physical_store', 1),
+                (2, 999, 'ECサイト', 'ec_site', 2),
+                (3, 999, 'ライブ配信', 'live_streaming', 3),
+                (4, 999, '卸・代理店', 'wholesale', 4),
+                (5, 999, 'その他', 'other', 5)
+        """))
         # Phase 1-B-2 Step 5b-1: companies/contacts 副テーブル → 本体
         # ADR-089 Sprint 6: customer_contact_channels/customer_discord/customer_sales_channels/customer_addresses は削除済み
         await conn.execute(text("DELETE FROM contact_contact_channels"))

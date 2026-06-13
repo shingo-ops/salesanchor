@@ -395,6 +395,9 @@ run_sql migrations/20260613_050000_funnel_purchase_cost_nullable.sql
 # A4: carrier credentials 接続テスト結果を保存（last_tested_at / last_test_ok / last_test_message）
 run_sql migrations/20260614_030000_add_carrier_test_result.sql
 
+# ADR-108 Phase B-1: sales_form 複数選択 — tenant_sales_form_options / lead_sales_form_selections テーブル追加
+run_sql migrations/20260614_100000_create_sales_form_tables.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

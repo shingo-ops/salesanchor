@@ -549,6 +549,8 @@
     "meetingImpression": "Meeting Impression",
     "csMemo": "CS Memo",
     "salesForm": "Sales Form",
+    "salesFormPlaceholder": "Select options",
+    "salesFormOtherPlaceholder": "Enter other sales form",
     "competitorCheck": "Competitor Check",
     "perOrderAmount": "Per Order Amount",
     "monthlyFrequency": "Monthly Frequency",

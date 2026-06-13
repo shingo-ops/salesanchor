@@ -549,6 +549,8 @@
     "meetingImpression": "面談印象",
     "csMemo": "CSメモ",
     "salesForm": "販売形態",
+    "salesFormPlaceholder": "選択してください",
+    "salesFormOtherPlaceholder": "その他の販売形態を入力",
     "competitorCheck": "競合確認",
     "perOrderAmount": "1件単価",
     "monthlyFrequency": "月間頻度",
