@@ -1,81 +1,79 @@
 /* ============================================================
    Sales Anchor - Responsive Styles
-   App.css から分割: @media ブレークポイント（タブレット以下）
+   モバイル / タブレット / デスクトップ 3段階ブレークポイント
+   公式値: tokens.css §ブレークポイント
+     mobile  : max-width: 767px
+     tablet  : 768px - 1279px
+     desktop : min-width: 1280px
+
+   ⚠️  このファイルの breakpoint 値は breakpoints.ts と同期が必要。
+       check-breakpoint-sync.js で自動検証。
+   ⚠️  Inbox 固有 (.inbox-*) / Hub Shell 固有 (.hub-*) は
+       各自のCSSファイルで制御 — ここでは上書きしない。
    ============================================================ */
 
-/* --- Responsive --- */
-@media (max-width: 768px) {
-  .layout {
-    flex-direction: column;
+/* ============================================================
+   Mobile  <=767px
+   ============================================================ */
+@media (max-width: 767px) {
+  /* --- App Shell --- */
+
+  /* sidebar: 画面外に隠す（desktop の hover 展開とは独立した mobile 専用制御）
+     sidebar-mobile-open class は Layout.tsx の isMobileSidebarOpen state で付与 */
+  .sidebar-panel {
+    transform: translateX(-100%);
+    transition:
+      width var(--transition-sidebar),
+      transform var(--transition-sidebar);
   }
-  .sidebar {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+
+  /* mobile menu button で開いた状態: オーバーレイとして表示 */
+  .sidebar-panel.sidebar-mobile-open {
+    transform: translateX(0);
+    width: var(--sidebar-width-expanded, 240px);
   }
-  .sidebar-nav {
+
+  /* app-body: sidebar 分の左余白を解除 */
+  .app-body {
+    margin-left: 0;
+  }
+
+  /* --- Mobile menu button (hamburger) --- */
+  /* topbar.css で display: none をデフォルト → ここで mobile 時のみ表示 */
+  .mobile-menu-btn {
     display: flex;
-    padding: 0;
   }
-  .sidebar-nav a {
-    padding: var(--space-2) var(--space-4);
-  }
-  .sidebar-footer {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-  }
-  .dashboard-tables {
-    grid-template-columns: 1fr;
-  }
+
+  /* --- Page padding --- */
   .page {
     padding: var(--space-4);
   }
+
+  /* --- Roles page layout --- */
   .roles-layout {
     grid-template-columns: 1fr;
   }
+
   .roles-sidebar {
     position: static;
   }
+
   .roles-main-header {
     flex-direction: column;
     align-items: stretch;
   }
-  .topnav {
-    flex-wrap: wrap;
-    height: auto;
-    padding: var(--space-2) var(--space-4);
-    gap: var(--space-2);
+
+  /* --- Dashboard tables --- */
+  .dashboard-tables {
+    grid-template-columns: 1fr;
   }
-  .topnav-links {
-    order: 3;
-    width: 100%;
-    padding-top: var(--space-1);
-  }
-  .topnav-user {
-    margin-left: auto;
-  }
-  .topnav-email {
-    max-width: var(--topnav-email-max-w);
-  }
-  .brandbar {
-    flex-direction: column;
-    height: auto;
-    padding: var(--space-2) var(--space-4);
-    gap: var(--space-2);
-    align-items: stretch;
-  }
-  .brandbar-search {
-    max-width: 100%;
-  }
-  .mainnav {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .mainnav-user {
-    order: 2;
-    padding: var(--space-2) 0;
-    justify-content: flex-end;
+}
+
+/* ============================================================
+   Desktop  >=768px — mobile-menu-btn を非表示
+   ============================================================ */
+@media (min-width: 768px) {
+  .mobile-menu-btn {
+    display: none;
   }
 }

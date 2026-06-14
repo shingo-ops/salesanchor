@@ -33,18 +33,11 @@ from app.services.discord_role_sync import sync_lead_discord_role
 # SQLite in-memory fixtures
 # ---------------------------------------------------------------------------
 
-_DDL_STAFF = """
-CREATE TABLE IF NOT EXISTS staff (
-    id   INTEGER PRIMARY KEY,
-    name VARCHAR(128) NOT NULL
-)
-"""
-
 _DDL_DISCORD = """
 CREATE TABLE IF NOT EXISTS tenant_discord_config (
     tenant_id INTEGER PRIMARY KEY,
     guild_id  VARCHAR(32) NOT NULL,
-    connected_by_staff_id INTEGER REFERENCES staff(id),
+    connected_by_staff_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
@@ -61,12 +54,10 @@ async def db_engine():
     @event.listens_for(engine.sync_engine, "before_cursor_execute", retval=True)
     def _rewrite_sqlite(conn, cursor, statement, parameters, context, executemany):
         statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
-        statement = statement.replace("public.staff", "staff")
         statement = statement.replace("NOW()", "CURRENT_TIMESTAMP")
         return statement, parameters
 
     async with engine.begin() as conn:
-        await conn.execute(text(_DDL_STAFF))
         await conn.execute(text(_DDL_DISCORD))
     yield engine
     await engine.dispose()
@@ -344,3 +335,25 @@ class TestDiscordGuildConfigAPI:
             json={"guild_id": "12345"},
         )
         assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_get_connected_by_staff_name_is_null(self, app_client, db_session):
+        """connected_by_staff_id があっても connected_by_staff_name は null を返す。
+
+        staff テーブルは migration 019 時点で name 列を持たないため staff JOIN は行わない。
+        guild_id は正しく返り、connected_by_staff_name は null であることを検証する。
+        refs: docs/handoff/discord-auto-setup/guild-id-not-reflected-recon.md
+        """
+        await db_session.execute(
+            text(
+                "INSERT INTO tenant_discord_config (tenant_id, guild_id, connected_by_staff_id)"
+                " VALUES (999, '1288437029213835356', 42)"
+            )
+        )
+        await db_session.commit()
+
+        resp = await app_client.get("/api/v1/admin/discord-config")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["guild_id"] == "1288437029213835356"
+        assert body["connected_by_staff_name"] is None

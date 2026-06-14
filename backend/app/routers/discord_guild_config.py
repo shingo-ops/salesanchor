@@ -65,20 +65,16 @@ async def get_discord_config(
     """Discord Guild 設定を取得する。未設定の場合は guild_id=None を返す。"""
     result = await db.execute(
         text("""
-            SELECT
-                tdc.guild_id,
-                tdc.updated_at,
-                s.name AS staff_name
-            FROM public.tenant_discord_config tdc
-            LEFT JOIN public.staff s ON s.id = tdc.connected_by_staff_id
-            WHERE tdc.tenant_id = :tid
+            SELECT guild_id, updated_at
+            FROM public.tenant_discord_config
+            WHERE tenant_id = :tid
         """),
         {"tid": tenant_id},
     )
     row = result.first()
     guild_id = str(row[0]) if row else None
     connected_at = str(row[1]) if row and row[1] else None
-    connected_by_staff_name = str(row[2]) if row and row[2] else None
+    connected_by_staff_name = None  # staff 名解決は別 PR で対応
 
     # ロール名は tenant_discord_ticket_config から取得（テーブル未作成時はデフォルト）
     role_member, role_partner = "Member", "Partner"

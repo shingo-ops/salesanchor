@@ -108,6 +108,7 @@ export default function Layout() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -125,6 +126,30 @@ export default function Layout() {
   useEffect(() => { loadUnreadCount(); }, [loadUnreadCount]);
   useSSE({ endpoint: "/api/v1/conversations/stream", onUpdate: loadUnreadCount });
 
+  // mobile sidebar: open / close ヘルパー
+  // sidebarExpanded を同期させることで .sidebar-expanded .sidebar-label { opacity: 1 } が効く
+  const openMobileSidebar = () => {
+    setIsMobileSidebarOpen(true);
+    setSidebarExpanded(true);
+  };
+
+  const closeMobileSidebar = () => {
+    setIsMobileSidebarOpen(false);
+    setSidebarExpanded(false);
+    setOpenAccordion(null);
+  };
+
+  // mobile sidebar: Escape key で閉じる
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMobileSidebarOpen) {
+        closeMobileSidebar();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileSidebarOpen]);
+
   const toggleAccordion = (key: string) => {
     const next = openAccordion === key ? null : key;
     setOpenAccordion(next);
@@ -136,10 +161,8 @@ export default function Layout() {
     setOpenAccordion(null);
   };
 
-  const handleNavClick = () => {
-    setSidebarExpanded(false);
-    setOpenAccordion(null);
-  };
+  // nav item click: desktop hover も mobile open もまとめて閉じる
+  const handleNavClick = () => closeMobileSidebar();
 
   /* ---- permission-filtered sub-item lists ---- */
 
@@ -171,9 +194,19 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
+      {/* ============ Mobile sidebar backdrop ============ */}
+      {isMobileSidebarOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={closeMobileSidebar}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ============ Sidebar ============ */}
       <aside
-        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}`}
+        id="sidebar-panel"
+        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}${isMobileSidebarOpen ? " sidebar-mobile-open" : ""}`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={handleSidebarLeave}
       >
@@ -379,6 +412,17 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* ============ Mobile menu button (hamburger — mobile only) ============ */}
+      <button
+        className="mobile-menu-btn"
+        onClick={openMobileSidebar}
+        aria-label={t("nav.openMenu")}
+        aria-expanded={isMobileSidebarOpen}
+        aria-controls="sidebar-panel"
+      >
+        <NAV_ICONS.menu size={ICON.md} aria-hidden="true" />
+      </button>
 
       {/* ============ Fixed avatar button (Chrome / Meta style) ============ */}
       <button
