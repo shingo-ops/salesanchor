@@ -186,6 +186,13 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      # review@salesanchor.jp メール監視（GitHub Secrets → deploy.yml → VPS .env）
+      - REVIEW_MAIL_IMAP_HOST=${REVIEW_MAIL_IMAP_HOST:-}
+      - REVIEW_MAIL_IMAP_PORT=${REVIEW_MAIL_IMAP_PORT:-993}
+      - REVIEW_MAIL_IMAP_USER=${REVIEW_MAIL_IMAP_USER:-}
+      - REVIEW_MAIL_IMAP_PASSWORD=${REVIEW_MAIL_IMAP_PASSWORD:-}
+      - REVIEW_MAIL_WEBMAIL_URL=${REVIEW_MAIL_WEBMAIL_URL:-}
+      - REVIEW_MAIL_DISCORD_WEBHOOK=${REVIEW_MAIL_DISCORD_WEBHOOK:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:

@@ -89,6 +89,17 @@ async def invalidate_jwt_cache(token: str) -> None:
         logger.warning("JWTキャッシュ削除失敗")
 
 
+async def invalidate_tenant_cache(tenant_id: int) -> None:
+    """テナント情報キャッシュを削除する。論理削除・物理削除時に呼ぶ。"""
+    r = get_redis()
+    if not r:
+        return
+    try:
+        await r.delete(f"tenant:{tenant_id}")
+    except Exception:
+        logger.warning("テナントキャッシュ削除失敗")
+
+
 async def invalidate_dashboard_cache(tenant_id: int) -> None:
     """ダッシュボードKPIキャッシュを削除する（顧客/商談/注文の変更時に呼ぶ）。"""
     r = get_redis()

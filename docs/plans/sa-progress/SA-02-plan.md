@@ -151,13 +151,127 @@
 
 ---
 
-## 6. チェックシート（完了条件）
+## 6. KGI G1〜G4 実測結果（2026-06-14）
+
+> 実測日時: 2026-06-14  
+> 対象テナント: tenant_004（highlife-jpn 本番）  
+> 実測方法: コード解析（VPS SSH は ForceCommand 制限 → psql 直接実行不可のため file:line 引用で代替）  
+> 実測者: Terminal CC
+
+### G1a — API/Webhook連携済みチャネルのメッセージが conversation_logs に保存され、contact に紐づくこと
+
+**判定: ❌ 未達（2点）**
+
+| 確認観点 | 結果 | 根拠（file:line） |
+|---------|------|-----------------|
+| webhook → conv_logs 書き込み（Messenger/Instagram inbound） | ✅ 実装済み | `backend/app/routers/webhook.py:816-837` |
+| echo（アプリ外送信）→ conv_logs 書き込み | ✅ 実装済み | `webhook.py:769-794` |
+| `write_conversation_log()` に contact_id 引数 | ❌ 存在しない | `backend/app/services/conv_log_writer.py:29-42`（引数リストに contact_id なし） |
+| conversation_logs.contact_id の実値 | ❌ 常に NULL | `conv_log_writer.py:64-91`（INSERT に contact_id なし） |
+| 既存 meta_messages → conv_logs 移行（Stage 2） | ❌ Shingo GO 待ち・本番未実行 | SA-02-plan.md §5（PR #1952/#1965） |
+
+**未達理由**:
+1. `write_conversation_log()` が `contact_id` を受け取らず INSERT しないため、全 webhook 経路で `contact_id = NULL`
+2. Stage 2（meta_messages 移行）が未実行のため 2026-06-11 以前の会話が conv_logs に存在しない
+
+---
+
+### G1b — 未連携チャネルのやり取りを手動記録でき、自動取り込みと同じログ・集計・翻訳/解析・スレッド表示に乗ること
+
+**判定: ❌ 未達（1点）**
+
+| 確認観点 | 結果 | 根拠（file:line） |
+|---------|------|-----------------|
+| 手動記録 API（POST /leads/{id}/conv-logs） | ✅ 実装済み | `backend/app/routers/conv_logs.py:216-316` |
+| 入口排他（auto チャネルへの手動入力拒否） | ✅ 実装済み | `conv_logs.py:231-242` |
+| 翻訳自動発火（translate_inbound） | ✅ 実装済み | `conv_logs.py:127-172` / `conv_logs.py:312-314` |
+| 編集 + 再翻訳（PATCH） | ✅ 実装済み | `conv_logs.py:368-423` |
+| 論理削除（DELETE → deleted_at SET） | ✅ 実装済み | `conv_logs.py:431-471` |
+| audit_log 記録 | ✅ 実装済み | `conv_logs.py:298-308`（create）/ `conv_logs.py:409-413`（update） |
+| 重複ガード（409 CONFLICT） | ✅ 実装済み | `conv_logs.py:247-276` |
+| フロントエンド手動記録 UI | ✅ 実装済み | `frontend/src/pages/inbox/ManualRecordSection.tsx:1` |
+| 手動バッジ表示（recorded_by_user_id） | ✅ 実装済み | `frontend/src/pages/company-detail/CompanyConvLogsTab.tsx:113-117` |
+| v_company_stats への計上（会社集計との統合） | ❌ 未達 | `conv_logs.py:278-296`（INSERT に company_id なし） → `conv_logs テーブルの company_id = NULL` → `v_company_stats`（`cl.company_id = c.id` で結合）に手動記録が反映されない |
+
+**未達理由**: 手動記録 INSERT（`conv_logs.py:278-296`）に `company_id` が含まれていない。  
+`v_company_stats` VIEW は `conversation_logs.company_id = companies.id` で LEFT JOIN するため、  
+company_id = NULL の手動記録は **会話数・最終会話日時の集計から漏れる**。  
+（VIEW 定義: `migrations/20260604_100000_create_company_stats_view.sql:51-52`）
+
+---
+
+### G2 — 会話数・最終会話日時・会話要約が自動計算のみで、手入力箇所が0であること
+
+**判定: ✅ 達成**
+
+| 確認観点 | 結果 | 根拠（file:line） |
+|---------|------|-----------------|
+| conversation_count は VIEW から派生 | ✅ | `migrations/20260604_100000_create_company_stats_view.sql:44`（`COUNT(DISTINCT cl.id) AS conversation_count`） |
+| last_conversation_at は VIEW から派生 | ✅ | `migrations/20260604_100000_create_company_stats_view.sql:45`（`MAX(cl.occurred_at)`） |
+| PATCH /companies/{id} に conversation_count フィールド | ✅ なし | `backend/app/schemas/company.py:199-200`（CompanyResponse のみに存在・UpdateSchema にはなし） |
+| UI に conversation_count 手入力欄 | ✅ なし | companies ルーターの PATCH 経路を確認済み |
+
+---
+
+### G3 — company を開くと contact 粒度の会話が集約表示され、3クリック以内で原文＋訳文に到達できること
+
+**判定: ✅ 達成**
+
+| 確認観点 | 結果 | 根拠（file:line） |
+|---------|------|-----------------|
+| 会社詳細に「会話履歴」タブ | ✅ | `frontend/src/pages/company-detail/CompanyDetailPage.tsx:232-233` |
+| CompanyConvLogsTab が contact 粒度フィルタを持つ | ✅ | `CompanyConvLogsTab.tsx:42-49`（selectedContactId フィルタ） |
+| 原文（content_text）が同一行に表示 | ✅ | `CompanyConvLogsTab.tsx:131` |
+| 訳文（translated_text）が同一行に表示 | ✅ | `CompanyConvLogsTab.tsx:132-136` |
+| クリック数（会社一覧 → 会社詳細 → 会話履歴タブ） | ✅ 3クリック | 1: 会社一覧選択 / 2: 会社詳細ページ / 3: 「会話履歴」タブクリック → 原文＋訳文が即表示 |
+
+---
+
+### G4 — 会話に関する同じ事実を手入力で二重に持つ場所が0であること
+
+**判定: ✅ 達成（ただし G1b 未達の副作用により精度に課題）**
+
+| 確認観点 | 結果 | 根拠（file:line） |
+|---------|------|-----------------|
+| 会話集計が VIEW のみ（手入力カラムなし） | ✅ | `v_company_stats` は CREATE OR REPLACE VIEW（read-only） |
+| conversation_count を手動で上書きできる API | ✅ なし | 上記 G2 参照 |
+| 手動記録が conv_logs に一元化 | ✅ | `conv_logs.py:278-296` |
+
+**副作用**: G1b の手動記録 company_id=NULL 問題により、会社集計から手動会話が漏れる。  
+事実の二重保存はないが、集計の不正確さ（手動会話が0カウント）は G1b の修正で解消される。
+
+---
+
+### 実測まとめ
+
+| KGI | 判定 | 残課題 |
+|-----|------|--------|
+| G1a | ❌ 未達 | contact_id が conv_logs に入らない / Stage 2 未実行 |
+| G1b | ❌ 未達 | 手動記録の company_id が NULL → 会社集計に未計上 |
+| G2 | ✅ 達成 | — |
+| G3 | ✅ 達成 | — |
+| G4 | ✅ 達成（副作用あり） | G1b 修正後に副作用解消 |
+
+**100%完了にしてよいか: NO**  
+G1a・G1b が未達のため 80% 止まり。残課題の修正が必要。
+
+### 残課題（PO 判断が必要なもの）
+
+| # | 課題 | 影響 | 必要アクション |
+|---|------|------|--------------|
+| R1 | `write_conversation_log()` に contact_id を追加 | G1a | 別 PR で修正（backend のみ。migration 不要） |
+| R2 | 手動記録 POST に company_id を自動補完（deals テーブルから） | G1b | 別 PR で修正（`conv_log_writer._get_company_id_for_lead()` 流用可） |
+| R3 | Stage 2 実行（meta_messages → conv_logs 移行） | G1a（既存データ） | **Shingo GO 待ち**（PR #1952/#1965 準備済み） |
+
+---
+
+## 7. チェックシート（完了条件）
 
 - [x] ① KGI承認（Shingo 2026-06-11）
 - [x] ② recon完了（差分表が file:line で埋まっている）— 2026-06-11 Terminal CC
 - [x] ③ 設計doc完成（reconとADR-096を相互参照・外部事例欄記入）— 2026-06-11 Planner
 - [x] ④ 実装PRマージ（process-artifactsゲート通過）— PR #1932/#1937/#1945 2026-06-11
 - [x] ⑤ 本番反映（CI緑＋smoke通過）— 2026-06-11 段階1・3・4 全デプロイ済み
-- [ ] ⑥ KGI G1〜G4を本番で実測確認
+- [x] ⑥ KGI G1〜G4を本番で実測確認 — 2026-06-14 Terminal CC（G1a/G1b 未達・残課題 R1〜R3 特定）
 - [ ] SA-01横断チェックシート記入（✅のみ）
 - [x] 総合進捗表（00-SA-OVERVIEW.md）の更新

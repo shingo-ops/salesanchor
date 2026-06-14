@@ -5,7 +5,8 @@ import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import type { LeadDetail, KarteTabKey } from "./inbox.types";
+import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.types";
+import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 
 interface CardForm {
   nickname?: string | null;
@@ -27,6 +28,7 @@ interface CardForm {
   target_titles?: string | null;
   challenge?: string | null;
   sales_form?: string | null;
+  sales_form_selections?: SalesFormSelectionState[];
   competitor_check?: boolean | null;
   notes?: string | null;
   meeting_memo?: string | null;
@@ -457,11 +459,14 @@ function KarteTabContent({
             onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
             onBlur={handleCardFieldBlur} placeholder={t("leads.targetTitlesPlaceholder")} />
         </div>
-        <div className="right-panel-row">
+        <div className="right-panel-row right-panel-row--multiselect">
           <span className="right-panel-label">{t("leads.salesForm")}</span>
-          <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
-            onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur}
-            placeholder={t("inbox.emptyField")} />
+          <SalesFormMultiSelect
+            options={leadDetail.sales_form_options ?? []}
+            value={cardForm.sales_form_selections ?? []}
+            onChange={(selections) => handleCardFieldChange("sales_form_selections", selections)}
+            onBlur={handleCardFieldBlur}
+          />
         </div>
 
         {/* 実績サマリー (read-only) — ADR-110 */}

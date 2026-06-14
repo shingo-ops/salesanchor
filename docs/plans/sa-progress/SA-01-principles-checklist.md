@@ -12,8 +12,8 @@
 
 | チェック | SA-02 | SA-03 | SA-04 | SA-05 | SA-06 | SA-07 | SA-12 |
 |---------|-------|-------|-------|-------|-------|-------|-------|
-| 同じ事実を手入力で複数箇所に持っていない | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| マスタの変更が全下流に自動反映される | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 同じ事実を手入力で複数箇所に持っていない | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| マスタの変更が全下流に自動反映される | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 > SA-03 根拠: フォーム送信→`companies`/`company_addresses`/`contacts` への直接INSERT（手転記なし）。`GET /companies/:id` が即反映（`registration_tokens.py:215-299`）。
 
@@ -23,8 +23,8 @@
 
 | チェック | SA-02 | SA-03 | SA-04 | SA-05 | SA-06 | SA-07 | SA-12 |
 |---------|-------|-------|-------|-------|-------|-------|-------|
-| 書き込み可能な派生値カラムが存在しない | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| UI・APIに派生値の上書きエンドポイントがない | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 書き込み可能な派生値カラムが存在しない | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| UI・APIに派生値の上書きエンドポイントがない | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 > SA-03 根拠: `registration_tokens` テーブルに派生値カラムなし。公開エンドポイントは新規INSERT専用で上書きパスなし（`registration_tokens.py:380-408` — INSERT only, ON CONFLICT なし）。
 
@@ -34,8 +34,8 @@
 
 | チェック | SA-02 | SA-03 | SA-04 | SA-05 | SA-06 | SA-07 | SA-12 |
 |---------|-------|-------|-------|-------|-------|-------|-------|
-| 対応するKPI事故系（ADR-095 KPI#1〜5・8）が実装されている | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| 計測素データ（ログ）が最初から残っている | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 対応するKPI事故系（ADR-095 KPI#1〜5・8）が実装されている | ⚠️ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 計測素データ（ログ）が最初から残っている | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 > SA-03 根拠: 誤テナント登録 → HMAC-SHA256 検証でテナント分離（`registration_token.py:120-148`）。`registration_tokens.used_at` により使用ログ保持。二重使用防止（`used_at IS NOT NULL` → 403）。
 
@@ -45,8 +45,8 @@
 
 | チェック | SA-02 | SA-03 | SA-04 | SA-05 | SA-06 | SA-07 | SA-12 |
 |---------|-------|-------|-------|-------|-------|-------|-------|
-| 新規テーブルにRLSが適用されている | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| テナント分岐がif文散在でなくポリシー注入 | ⬜ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| 新規テーブルにRLSが適用されている | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| テナント分岐がif文散在でなくポリシー注入 | ✅ | ✅ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 > SA-03 根拠: `registration_tokens` はテナントスキーマ分離（`tenant_NNN`）で実質RLS同等。公開エンドポイントはトークンで tenant_id を確定し `set_tenant_context()` を呼び出す（`registration_tokens.py:164-172`）。テナント分岐は `verify_token()` + `set_tenant_context()` に集約（if 文散在なし）。
 
@@ -69,4 +69,15 @@
 
 ---
 
-_更新: 2026-06-13（SA-04 ✅ 記入 — Terminal CC・Shingo本番検収完了）/ 作成: Hikky-dev_
+---
+
+## SA-02 チェック注記（2026-06-14）
+
+| 記号 | 意味 |
+|------|------|
+| ✅ | コード実測で確認済み（file:line 引用あり → SA-02-plan.md §6） |
+| ⚠️ | 部分実装：audit_log + sweeper は存在するが G1a（contact_id NULL）/ G1b（company_id NULL で集計漏れ）の残課題 R1〜R2 修正後に完全達成。Stage 2（R3）実行待ち |
+
+> SA-02 根拠: `conversation_logs` に RLS 適用済み（`migrations/20260604_090000_create_conversation_logs.sql:34`）。`v_company_stats` VIEW が conversation_count / last_conversation_at を自動算出（書き込みカラムなし、`migrations/20260604_100000_create_company_stats_view.sql:44-45`）。PATCH /companies/{id} に conversation_count フィールドなし（`backend/app/schemas/company.py:199-200`）。テナント分岐は `set_tenant_context()` に集約（if 文散在なし）。
+
+_更新: 2026-06-14（SA-02 KGI G1〜G4 実測確認 — Terminal CC）/ 作成: Hikky-dev_
