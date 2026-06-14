@@ -506,8 +506,9 @@ async def test_dm_writer_creates_new_lead():
       4. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
       5. INSERT meta_messages RETURNING id（→ id=10）
       6. [SA-02] SELECT deals WHERE lead_id → None（案件なし: company_id=None）
-      7. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
-      8. commit
+      7. [SA-02] SELECT deals WHERE lead_id AND contact_id IS NOT NULL → None（contact_id 補完）
+      8. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
+      9. commit
     """
     from app.discord_gateway.dm_writer import upsert_lead_and_message
 
@@ -518,8 +519,9 @@ async def test_dm_writer_creates_new_lead():
         _mock_result(None),      # (3) INSERT lead_channels (_ensure_lead_channel)
         _mock_result(None),      # (4) UPDATE discord_dm_channel_id
         _mock_result((10,)),     # (5) INSERT meta_messages RETURNING id=10
-        _mock_result(None),      # (6) SA-02: SELECT deals → 案件なし
-        _mock_scalar(42),        # (7) SA-02: INSERT conversation_logs RETURNING id=42
+        _mock_result(None),      # (6) SA-02: SELECT deals (company_id 補完) → 案件なし
+        _mock_result(None),      # (7) SA-02: SELECT deals (contact_id 補完) → 案件なし
+        _mock_scalar(42),        # (8) SA-02: INSERT conversation_logs RETURNING id=42
     ]
 
     await upsert_lead_and_message(
@@ -533,8 +535,8 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 7回の execute + 1回の commit（Stage 2 source lookup 除去済み）
-    assert mock_session.execute.call_count == 7
+    # 8回の execute + 1回の commit（SA-02 R1: contact_id 補完クエリ追加）
+    assert mock_session.execute.call_count == 8
     assert mock_session.commit.call_count == 1
 
 

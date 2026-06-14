@@ -32,6 +32,7 @@ from app.auth.dependencies import (
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.conv_log_writer import _get_company_id_for_lead
 
 logger = logging.getLogger(__name__)
 
@@ -275,18 +276,21 @@ async def create_conv_log(
                 },
             )
 
+    company_id = await _get_company_id_for_lead(db, lead_id)
+
     result = await db.execute(
         text(
             f"INSERT INTO {schema}.conversation_logs "
-            f"(tenant_id, lead_id, channel_type, direction, content_text, "
+            f"(tenant_id, lead_id, company_id, channel_type, direction, content_text, "
             f" occurred_at, recorded_by_user_id) "
-            f"VALUES (:tenant_id, :lead_id, :channel_type, :direction, :content_text, "
+            f"VALUES (:tenant_id, :lead_id, :company_id, :channel_type, :direction, :content_text, "
             f"        :occurred_at, :user_id) "
             f"RETURNING id"
         ),
         {
             "tenant_id": tenant_id,
             "lead_id": lead_id,
+            "company_id": company_id,
             "channel_type": body.channel_type,
             "direction": body.direction,
             "content_text": body.content_text,
@@ -300,6 +304,7 @@ async def create_conv_log(
         record_id=log_id,
         new_data={
             "lead_id": lead_id,
+            "company_id": company_id,
             "channel_type": body.channel_type,
             "direction": body.direction,
             "content_text": body.content_text,
