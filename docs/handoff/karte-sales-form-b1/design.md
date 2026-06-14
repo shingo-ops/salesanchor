@@ -13,7 +13,7 @@
 temperature / estimated_scale の option label を `t()` 化した際、`option value`（DB保存値）を一切変更しなかった「表示と保存値を分離する」パターンを確立。本PRでも選択肢ラベルはテナントマスタの `label` を直接使用し、DB保存は `option_id` FK 参照にしている。
 
 **PR-B（#2141）— UI標準化 Company系**:  
-Select/TextField/Button の標準コンポーネント置換パターン（ADR-067）を確立。本PRでは `SalesFormMultiSelect` を独自コンポーネントとして新設しているが、ADR-067 デザイントークン（`--size-dropdown-max-h` 等）を使用して設計している。
+Select/TextField/Button の標準コンポーネント置換パターン（ADR-067）を確立。本PRでは `SalesFormMultiSelect` を独自コンポーネントとして新設しているが、ADR-067 デザイントークン（`--dropdown-max-h`（既存）等）を使用して設計している。
 
 **既存カルテ設計（ADR-108）との整合**:  
 ADR-108本体は「DB構造を変えず表示再編」として起案されたが、「販売形態を複数選択できること」という要件は `leads.sales_form VARCHAR(100)` 単一列では技術的に実現不可能。ADR-045（additive-only）に従い既存列を削除せず、新規テーブルを追加する D 案（`tenant_sales_form_options` + `lead_sales_form_selections`）を採用する。ADR-108 に追記する形で設計範囲を明確化する（本PRは ADR-108 の Phase B-1 実装として位置づける）。
@@ -73,7 +73,7 @@ ADR-108本体は「DB構造を変えず表示再編」として起案された�
 - `SalesFormMultiSelect` 新規コンポーネント（data-testid 付き）
 - `InboxKartePanel` company タブに配置
 - `InboxKartePanel` が `leadDetail.sales_form_options ?? []` を直接 `SalesFormMultiSelect` に渡す（salesFormOptions state を介さず leadDetail から直参照）
-- ADR-067: `--size-dropdown-max-h` トークン追加
+- ADR-067: 既存 `--dropdown-max-h` を使用（新規トークン追加なし）
 
 ---
 

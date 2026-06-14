@@ -44,11 +44,8 @@
 
 | 引用先 | 確認内容 |
 |--------|---------|
-| `frontend/src/pages/inbox/InboxKartePanel.tsx:99` | salesFormOptions state 定義 |
-| `frontend/src/pages/inbox/InboxKartePanel.tsx:209` | KarteTabContent に salesFormOptions props 渡し |
-| `frontend/src/pages/inbox/InboxKartePanel.tsx:350` | KarteTabContent 引数分割代入に salesFormOptions 追加 |
-| `frontend/src/pages/inbox/InboxKartePanel.tsx:358` | KarteTabContent props 型定義 |
-| `frontend/src/pages/inbox/InboxKartePanel.tsx:476` | SalesFormMultiSelect 配置（company タブ） |
+| `frontend/src/pages/inbox/InboxKartePanel.tsx:464` | SalesFormMultiSelect 配置（company タブ） |
+| `frontend/src/pages/inbox/InboxKartePanel.tsx:465` | `options={leadDetail.sales_form_options ?? []}` 直参照（state 介さず） |
 
 ### Frontend — SalesFormMultiSelect.tsx
 
