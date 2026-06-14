@@ -26,6 +26,22 @@ SSE_CONNECTIONS_ACTIVE = Gauge(
     ("stream",),
 )
 
+SECURITY_FAIL_OPEN_TOTAL = Counter(
+    "security_fail_open_total",
+    "Security controls that failed open to preserve availability",
+    ("component", "reason"),
+)
+
+
+def record_security_fail_open(component: str, reason: str) -> None:
+    """Record a security control failing open.
+
+    Keep labels intentionally low-cardinality. Do not include user IDs, IPs,
+    paths, or exception messages in labels.
+    """
+
+    SECURITY_FAIL_OPEN_TOTAL.labels(component, reason).inc()
+
 
 def _handler_name(request: Request) -> str:
     route = request.scope.get("route")
