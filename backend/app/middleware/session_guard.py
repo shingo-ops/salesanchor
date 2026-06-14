@@ -30,6 +30,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.security.client_ip import get_trusted_client_ip
+
 logger = logging.getLogger(__name__)
 
 # セッション追跡の有効期間: 1時間（Firebase JWTの最大有効期限と合わせる）
@@ -53,13 +55,6 @@ def _decode_jwt_payload(auth_header: str | None) -> dict | None:
         return json.loads(base64.urlsafe_b64decode(padded))
     except Exception:
         return None
-
-
-def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 def _ip_prefix_8(ip: str) -> str:
@@ -158,7 +153,7 @@ class SessionGuardMiddleware(BaseHTTPMiddleware):
         # JWTのハッシュをセッション識別子として使用
         token = auth_header[7:]
         token_hash = hashlib.sha256(token.encode()).hexdigest()[:24]
-        client_ip = _get_client_ip(request)
+        client_ip = get_trusted_client_ip(request)
 
         # セッションIP確認（物理的に不可能な移動を検知）
         if await _check_session_ip(token_hash, client_ip):
