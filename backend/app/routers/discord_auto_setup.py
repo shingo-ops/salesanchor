@@ -214,65 +214,82 @@ async def run_auto_setup(
     if step.discord_id:
         category_id = step.discord_id
 
-    # Step 3a: "ticket-start" チャンネル（@everyone view可・Staff送信可）
-    step = await _get_or_create_channel_step(
-        step_name="ch_ticket",
-        channel_name="ticket-start",
-        channel_type=0,  # GUILD_TEXT
-        parent_id=category_id,
-        existing_id=existing_ticket_ch_id,
-        existing_channel_ids=existing_channel_ids,
-        guild_id=guild_id,
-        bot_token=bot_token,
-        permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id),
-    )
-    steps.append(step)
-    if step.discord_id:
-        ticket_ch_id = step.discord_id
+    # カテゴリが存在しない場合は配下チャンネルを作成しない（ルート直下防止）
+    if not category_id:
+        _no_category_msg = "カテゴリ作成に失敗したためチャンネルを作成できません"
+        steps.append(AutoSetupStep(step="ch_ticket", status="failed", error=_no_category_msg))
+        steps.append(AutoSetupStep(step="ch_member", status="failed", error=_no_category_msg))
+        steps.append(AutoSetupStep(step="ch_partner", status="failed", error=_no_category_msg))
+        steps.append(AutoSetupStep(step="button", status="failed", error=_no_category_msg))
+    else:
+        # Step 3a: "ticket-start" チャンネル（@everyone view可・Staff送信可）
+        ch_ticket_step = await _get_or_create_channel_step(
+            step_name="ch_ticket",
+            channel_name="ticket-start",
+            channel_type=0,  # GUILD_TEXT
+            parent_id=category_id,
+            existing_id=existing_ticket_ch_id,
+            existing_channel_ids=existing_channel_ids,
+            guild_id=guild_id,
+            bot_token=bot_token,
+            permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id),
+        )
+        steps.append(ch_ticket_step)
+        if ch_ticket_step.discord_id:
+            ticket_ch_id = ch_ticket_step.discord_id
 
-    # Step 3b: "member-announcements" チャンネル（Member/Partner view可・Staff送信可）
-    step = await _get_or_create_channel_step(
-        step_name="ch_member",
-        channel_name="member-announcements",
-        channel_type=0,
-        parent_id=category_id,
-        existing_id=existing_small_ch_id,
-        existing_channel_ids=existing_channel_ids,
-        guild_id=guild_id,
-        bot_token=bot_token,
-        permission_overwrites=_member_announcements_overwrites(
-            guild_id, member_role_id, partner_role_id, staff_role_id
-        ),
-    )
-    steps.append(step)
-    if step.discord_id:
-        small_ch_id = step.discord_id
+        # Step 3b: "member-announcements" チャンネル（Member/Partner view可・Staff送信可）
+        step = await _get_or_create_channel_step(
+            step_name="ch_member",
+            channel_name="member-announcements",
+            channel_type=0,
+            parent_id=category_id,
+            existing_id=existing_small_ch_id,
+            existing_channel_ids=existing_channel_ids,
+            guild_id=guild_id,
+            bot_token=bot_token,
+            permission_overwrites=_member_announcements_overwrites(
+                guild_id, member_role_id, partner_role_id, staff_role_id
+            ),
+        )
+        steps.append(step)
+        if step.discord_id:
+            small_ch_id = step.discord_id
 
-    # Step 3c: "partner-announcements" チャンネル（Partner view可・Staff送信可）
-    step = await _get_or_create_channel_step(
-        step_name="ch_partner",
-        channel_name="partner-announcements",
-        channel_type=0,
-        parent_id=category_id,
-        existing_id=existing_large_ch_id,
-        existing_channel_ids=existing_channel_ids,
-        guild_id=guild_id,
-        bot_token=bot_token,
-        permission_overwrites=_partner_announcements_overwrites(
-            guild_id, partner_role_id, staff_role_id
-        ),
-    )
-    steps.append(step)
-    if step.discord_id:
-        large_ch_id = step.discord_id
+        # Step 3c: "partner-announcements" チャンネル（Partner view可・Staff送信可）
+        step = await _get_or_create_channel_step(
+            step_name="ch_partner",
+            channel_name="partner-announcements",
+            channel_type=0,
+            parent_id=category_id,
+            existing_id=existing_large_ch_id,
+            existing_channel_ids=existing_channel_ids,
+            guild_id=guild_id,
+            bot_token=bot_token,
+            permission_overwrites=_partner_announcements_overwrites(
+                guild_id, partner_role_id, staff_role_id
+            ),
+        )
+        steps.append(step)
+        if step.discord_id:
+            large_ch_id = step.discord_id
 
-    # Step 4a: チケットボタン投稿
-    step = await _post_ticket_button_step(
-        step_name="button",
-        ticket_ch_id=ticket_ch_id,
-        bot_token=bot_token,
-    )
-    steps.append(step)
+        # Step 4a: チケットボタン投稿
+        # ch_ticket が新規作成時のみ POST。スキップ・失敗時はボタンも同じ扱いにする
+        if ch_ticket_step.status == "created":
+            step = await _post_ticket_button_step(
+                step_name="button",
+                ticket_ch_id=ticket_ch_id,
+                bot_token=bot_token,
+            )
+        elif ch_ticket_step.status == "skipped":
+            step = AutoSetupStep(step="button", status="skipped", discord_id=None)
+        else:
+            step = AutoSetupStep(
+                step="button", status="failed",
+                error="ticket-start チャンネルの作成に失敗したためボタン投稿をスキップしました。",
+            )
+        steps.append(step)
 
     # ---- DB 保存（COALESCE で失敗ステップの既存値を保持）----
     await db.execute(

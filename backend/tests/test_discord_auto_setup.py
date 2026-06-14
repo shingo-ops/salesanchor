@@ -223,7 +223,7 @@ async def test_idempotent_skips_existing() -> None:
     discord_responses = [
         existing_roles,     # GET roles
         existing_channels,  # GET channels
-        {"id": "MSG-2"},    # POST button（ボタンは常に投稿）
+        # ch_ticket が skipped のためボタン投稿は発生しない
     ]
 
     with ExitStack() as stack:
@@ -248,10 +248,11 @@ async def test_idempotent_skips_existing() -> None:
     assert steps["ch_ticket"]["status"] == "skipped"
     assert steps["ch_member"]["status"] == "skipped"
     assert steps["ch_partner"]["status"] == "skipped"
-    assert steps["button"]["status"] == "posted"
+    # ch_ticket が skipped のため button も skipped
+    assert steps["button"]["status"] == "skipped"
 
-    # GET×2 + button POST×1 = 計3回のみ
-    assert mock_api.call_count == 3
+    # GET×2 のみ（ボタン投稿なし）
+    assert mock_api.call_count == 2
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +344,58 @@ async def test_no_bot_token_returns_503() -> None:
 
     assert resp.status_code == 503
     assert "Bot トークン" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# テスト: カテゴリ作成失敗 → チャンネル作成がスキップされること
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_category_failure_blocks_channels() -> None:
+    """カテゴリ作成が失敗した場合、チャンネル作成・ボタン投稿が全て failed になること。
+
+    ルート直下へのチャンネル作成 POST は発生しないこと。
+    """
+    from app.services.discord_rest import DiscordAPIError
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    discord_responses = [
+        [],                                                              # 1: GET roles
+        [],                                                              # 2: GET channels
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},             # 3: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                      # 4: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                        # 5: POST role_member
+        DiscordAPIError("Missing Permissions", status_code=403),        # 6: POST category 失敗
+        # POST チャンネルは呼ばれない
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "partial"
+    assert body["error_hint"] is not None
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["status"] == "failed"
+    # チャンネル・ボタンは全て failed（ルート直下作成防止）
+    assert steps["ch_ticket"]["status"] == "failed"
+    assert "カテゴリ" in steps["ch_ticket"]["error"]
+    assert steps["ch_member"]["status"] == "failed"
+    assert steps["ch_partner"]["status"] == "failed"
+    assert steps["button"]["status"] == "failed"
+
+    # GET×2 + role POST×3 + category POST×1 = 計6回のみ（チャンネルPOSTなし）
+    assert mock_api.call_count == 6
 
 
 # ---------------------------------------------------------------------------
