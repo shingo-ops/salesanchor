@@ -134,15 +134,23 @@ def check_and_notify() -> int:
     """INBOX を IMAP で確認し、未通知メールを Discord に通知する。
 
     Returns:
-        通知した件数（0 = 設定未完了・新着なし・全件通知済みのいずれか）
+        通知した件数（0 = 設定未完了・Redis 不能・新着なし・全件通知済みのいずれか）
 
     例外を外に出さない。失敗はすべてログで記録して 0 を返す。
+
+    Redis 不能時の設計:
+        重複排除ができない状態では 5 分ごとに同じメールを再通知してしまう。
+        本体障害を起こすより再通知させないことを優先し、Redis 不能なら即 return 0。
     """
     if not _is_configured():
         logger.info("[review_mail] IMAP 設定未完了 (skip: HOST/USER/PASSWORD を確認)")
         return 0
 
     redis_client = _get_redis()
+    if redis_client is None:
+        # Redis 不能 = 重複排除不能 → 再通知リスクを避けるため全処理をスキップ
+        logger.warning("[review_mail] Redis 使用不可 — 重複通知防止不能のためスキップ")
+        return 0
 
     try:
         conn = imaplib.IMAP4_SSL(_IMAP_HOST, _IMAP_PORT)
@@ -164,7 +172,7 @@ def check_and_notify() -> int:
         for uid_bytes in uids:
             uid = uid_bytes.decode()
 
-            if redis_client and _is_notified(redis_client, uid):
+            if _is_notified(redis_client, uid):
                 continue
 
             try:
@@ -193,8 +201,7 @@ def check_and_notify() -> int:
             content = _build_discord_content(from_addr, subject, date_str)
 
             if _post_discord(content):
-                if redis_client:
-                    _mark_notified(redis_client, uid)
+                _mark_notified(redis_client, uid)
                 notified_count += 1
 
         return notified_count
