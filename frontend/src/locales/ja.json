@@ -2482,6 +2482,37 @@
     "largeRoleNameLabel": "Large 顧客向けロール名",
     "invalidRoleName": "ロール名は1文字以上入力してください"
   },
+  "discordAutoSetup": {
+    "title": "Discordサーバー自動セットアップ",
+    "description": "Bot招待後に必要なロール・カテゴリ・チャンネル・チケット開始ボタンを自動作成します。2回目以降も安全に再実行できます。",
+    "runButton": "自動セットアップを実行",
+    "running": "セットアップ中...",
+    "disabledHint": "先にDiscordサーバーを接続してください。",
+    "completed": "セットアップが完了しました。",
+    "partial": "一部のセットアップに失敗しました。",
+    "failed": "セットアップに失敗しました。",
+    "retryHint": "内容を確認して、もう一度実行できます。",
+    "stepsTitle": "実行結果",
+    "roleOrderGuidePrompt": "次に、Sales Anchor Bot ロールを Partner / Member より上に移動してください。",
+    "roleOrderGuideLink": "ロール順設定ガイドを見る",
+    "requestFailed": "自動セットアップに失敗しました。",
+    "steps": {
+      "role_staff": "Sales Anchor Staff ロール",
+      "role_partner": "Partner ロール",
+      "role_member": "Member ロール",
+      "category": "Sales Anchor カテゴリ",
+      "ch_ticket": "ticket-start チャンネル",
+      "ch_member": "member-announcements チャンネル",
+      "ch_partner": "partner-announcements チャンネル",
+      "button": "チケット開始ボタン"
+    },
+    "statuses": {
+      "created": "作成済み",
+      "skipped": "既存のためスキップ",
+      "posted": "投稿済み",
+      "failed": "失敗"
+    }
+  },
   "discordAnnounce": {
     "description": "Discordの指定チャンネルにアナウンスを投稿します。Discordを開かずにアプリから直接送信できます。",
     "channelIdLabel": "投稿先チャンネル ID",
