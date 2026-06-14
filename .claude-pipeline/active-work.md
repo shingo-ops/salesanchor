@@ -183,3 +183,6 @@
 | feature/morimoto/adr-137-company-stats-ssot | ADR-137 起案 + migration ヘッダ修正（取引額SSOT） | 2026-06-12 | DONE | #2049 | | |
 | feature/morimoto/design-301-redirect | nginx /design 301リダイレクト + smoke⑤ | 2026-06-12 | DONE | #2050 | | |
 | feature/morimoto/responsive-ux-pr-r1 | レスポンシブ基盤最適化 PR-R1（mobile menu button / 767px 統一） | 2026-06-14 | REVIEW | #2156 | | |
+| feature/morimoto/tenant-deletion-clean | テナント論理削除・物理削除 API | 2026-06-14 | DONE | #2149 | 2026-06-14 | PR #2159 release にて main 反映済み。物理削除APIは未実行・個別PO GO待ち |
+| feature/morimoto/tenant-deletion-cache-fix | 論理削除・物理削除後の Redis tenant cache 無効化 | 2026-06-14 | DONE | #2154 | 2026-06-14 | PR #2159 release にて main 反映済み |
+| release/develop-to-main-2159 | develop → main release（tenant deletion / ADR-108 B-1 / Discord Auto Setup） | 2026-06-14 | DONE | #2159 | 2026-06-14 | Deploy to VPS run 27486632360 success / migration success |
