@@ -1,130 +1,79 @@
-# design — SA-02 残課題 R1/R2: conversation_logs contact_id / company_id 補完
+# Phase 3 設計 — SA-02 残課題 R1/R2: conversation_logs contact_id / company_id 補完
 
-**仕事名**: SA-02 R1/R2 — conv_log_writer contact_id 追加 + 手動記録 company_id 補完  
+**対象ADR**: ADR-096  
+**recon**: docs/handoff/sa02-r1-r2-convlog-links/recon.md  
 **日付**: 2026-06-14  
-**対象ADR**: ADR-096, ADR-095, ADR-072, ADR-135  
 **担当**: Hikky-dev
 
 ---
 
-## 1. Why（なぜやるか）
+## 外部・過去事例の参照と我々への応用
 
-SA-02 KGI G1 を満たすために:
+ADR-096 の既存パターンを応用:
 
-- **G1a**: `conversation_logs.contact_id` が常に NULL → KPI 計算・絞り込みに使えない
-- **G1b**: 手動記録の `conversation_logs.company_id` が NULL → `v_company_stats` VIEW の `conversation_count` / `last_conversation_at` 集計から漏れる
-
-migration は不要（両カラム既存）。コードの INSERT 文に追加するだけ。
-
----
-
-## 2. What（何を変えるか）
-
-### R1: `write_conversation_log()` に `contact_id` 対応を追加
-
-| 変更 | 内容 |
-|------|------|
-| 追加ヘルパー | `_get_contact_id_for_lead(db, lead_id)` — `contacts WHERE lead_id=X ORDER BY is_primary_contact DESC, id ASC LIMIT 1` |
-| シグネチャ変更 | `contact_id: int | None = None` オプション引数を追加（後方互換） |
-| 自動解決ロジック | `contact_id` が None かつ `lead_id` がある場合、`_get_contact_id_for_lead` で補完 |
-| INSERT 追加 | `contact_id` 列を INSERT に追加 |
-
-**基準**: 呼び出し元が `contact_id` を明示する場合はそちらを優先（「渡せば確定」原則）。
-
-### R2: `POST /leads/{lead_id}/conv-logs` に `company_id` 自動補完を追加
-
-| 変更 | 内容 |
-|------|------|
-| import 追加 | `from app.services.conv_log_writer import _get_company_id_for_lead` |
-| 自動補完 | INSERT 前に `company_id = await _get_company_id_for_lead(db, lead_id)` |
-| INSERT 追加 | `company_id` 列を INSERT に追加 |
-| audit_log 追加 | `new_data` に `company_id` を追加 |
+- **既存パターン（ADR-096 company_id 補完）**: `_get_company_id_for_lead(db, lead_id)` が `deals` テーブルから `company_id` を補完する実装が `conv_log_writer.py:61` および `conv_log_writer.py:107-121` に存在する。今回の R1 はこのパターンをそのまま `contacts` テーブルへ応用する（`_get_contact_id_for_lead`）。
+- **既存パターン（ADR-096 手動記録）**: `conv_logs.py` の `create_conv_log` で deals/company_id 補完が webhook 経由では行われていたが手動記録では欠落していた（R2）。webhook 経由と手動記録の INSERT 列を統一することで `v_company_stats` 集計の整合性を確保する。
+- **ADR-072 遵守**: `db.commit()` 直後に `reset_tenant_context()` を呼ぶパターンは既存実装に準拠（変更なし）。
 
 ---
 
-## 3. How（どう実装するか）
-
-### R1 実装詳細
-
-```python
-# 新ヘルパー（_get_company_id_for_lead の直後に配置）
-async def _get_contact_id_for_lead(db: AsyncSession, lead_id: int) -> int | None:
-    result = await db.execute(
-        text("""
-            SELECT id FROM contacts
-            WHERE lead_id = :lead_id
-            ORDER BY is_primary_contact DESC, id ASC
-            LIMIT 1
-        """),
-        {"lead_id": lead_id},
-    )
-    row = result.first()
-    return int(row[0]) if row else None
-
-# write_conversation_log: シグネチャ追加
-async def write_conversation_log(
-    db, *, tenant_id, lead_id, channel_type, channel_identity=None,
-    direction, sender=None, content_text=None, external_message_id=None,
-    raw_payload=None, occurred_at,
-    contact_id: int | None = None,   # ← 追加
-) -> int | None:
-
-# 自動解決（company_id 解決の直後）
-    resolved_contact_id = contact_id
-    if resolved_contact_id is None and lead_id:
-        resolved_contact_id = await _get_contact_id_for_lead(db, lead_id)
-
-# INSERT に contact_id 追加
-```
-
-### R2 実装詳細
-
-```python
-# conv_logs.py import 追加
-from app.services.conv_log_writer import _get_company_id_for_lead
-
-# create_conv_log: 重複チェック後・INSERT 前に追加
-    company_id = await _get_company_id_for_lead(db, lead_id)
-
-# INSERT: company_id 追加
-```
-
----
-
-## 4. 弊害・リスク
-
-| リスク | 対処 |
-|--------|------|
-| `_get_contact_id_for_lead` が contacts 未作成リードで None を返す | NULL 許容列なので問題なし |
-| `_get_company_id_for_lead` は deals テーブルを SELECT → 手動記録でも1クエリ増加 | 1 SELECT のみ。パフォーマンス許容範囲 |
-| シグネチャ変更で呼び出し元が壊れる | `contact_id` はオプション引数（default=None）。後方互換あり |
-
----
-
-## 5. 対象外（R3）
-
-- `v_company_stats` VIEW の再確認（R3）: R1/R2 修正後の本番データ確認
-- テスト追加 for webhook.py / dm_writer.py 呼び出しパス（呼び出し元はデフォルト None で後方互換）
-
----
-
-## 6. 検証方法
+## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
-| `write_conversation_log` に `contact_id` パラメータがある | `inspect.signature()` テスト |
-| `contact_id` が INSERT される | SQL 文の grep / mock テスト |
-| `lead_id` あり・`contact_id` 省略時に自動補完される | `_get_contact_id_for_lead` が呼ばれることを mock で確認 |
-| `lead_id=None` で両ヘルパーが呼ばれない | mock.assert_not_called |
-| 手動記録 INSERT に `company_id` が含まれる | mock の call_args 確認 |
-| audit_log に `company_id` が含まれる | `record_audit_log` の call_args 確認 |
+| `write_conversation_log()` に `contact_id` パラメータがある | `inspect.signature()` テスト（`test_conv_log_writer.py::test_signature_has_required_params`） |
+| `contact_id` が INSERT SQL に含まれる | `test_conv_log_writer.py::test_write_conversation_log_explicit_contact_id`（call_args確認） |
+| `lead_id` あり・`contact_id` 省略時に自動補完される | `test_conv_log_writer.py::test_write_conversation_log_auto_resolves_contact_id` |
+| `lead_id=None` で両ヘルパーが呼ばれない | `test_conv_log_writer.py::test_write_conversation_log_no_lead_id` |
+| 手動記録 INSERT に `company_id` が含まれる | `test_conv_logs_router.py::test_create_conv_log_company_id_in_insert_params` |
+| audit_log に `company_id` が含まれる | `test_conv_logs_router.py::test_create_conv_log_company_id_in_audit_log` |
+| `company_id=None` でも 201 を返す | `test_conv_logs_router.py::test_create_conv_log_no_company_id_still_returns_201` |
+| `_get_contact_id_for_lead` がインポートできる | `test_conv_log_writer.py::test_import` |
+| `_get_contact_id_for_lead` が contact なしで None を返す | `test_conv_log_writer.py::test_get_contact_id_no_contact` |
+| `_get_contact_id_for_lead` が contact ありで id を返す | `test_conv_log_writer.py::test_get_contact_id_found` |
 
 ---
 
-## 7. 外部事例
+## 技術 How・KPI
 
-ADR-096 §4「contact 粒度での集計」要件。`v_company_stats` は `LEFT JOIN conversation_logs cl ON cl.company_id = c.id` で集計しており、`company_id=NULL` のレコードは除外される。既存の webhook 経由ログは `_get_company_id_for_lead` で補完済みのため R2 の補完により手動記録も同等の挙動になる。
+**KPI**:
+- R1: 新規自動ログ（webhook/DM）で `contact_id` が既存 contact ありの場合に NULL にならない（`_get_contact_id_for_lead` が1行返すとき）
+- R2: 手動記録で `company_id` が deals ありの場合に NULL にならない（`_get_company_id_for_lead` が1行返すとき）
+- R3: 対象外（`v_company_stats` 本番データ確認は R1/R2 マージ後の別タスク）
+
+**技術選択**:
+- `contact_id` の自動解決: `contacts WHERE lead_id=X ORDER BY is_primary_contact DESC, id ASC LIMIT 1`（primary contact 優先、次点は最初に登録されたもの）
+- 後方互換: `contact_id: int | None = None` でオプション引数化（既存呼び出し元への変更不要）
 
 ---
 
-_作成: Hikky-dev / 2026-06-14_
+## 弊害・トレードオフ
+
+| リスク | 対策 |
+|--------|------|
+| `_get_contact_id_for_lead` が contacts 未登録リードで None を返す | NULL 許容列のため問題なし。保存は継続される |
+| 手動記録でも `_get_company_id_for_lead` が deals SELECT を1回追加 | 1 SELECT のみ。パフォーマンス許容範囲 |
+| シグネチャ変更で呼び出し元が壊れる | `contact_id` はオプション引数（default=None）。後方互換あり |
+| 既存テストの `db.execute` 呼び出し回数への影響 | `test_discord_inbox.py::test_dm_writer_creates_new_lead` の side_effect を8件に更新 |
+
+---
+
+## 計画票
+
+| ステップ | 内容 | 担当 |
+|---------|------|------|
+| 1 | recon.md 作成（docs/handoff/sa02-r1-r2-convlog-links/recon.md） | Generator |
+| 2 | design.md 作成（本ファイル） | Generator |
+| 3 | R1実装: `_get_contact_id_for_lead()` 追加・`write_conversation_log()` 拡張 | Generator |
+| 4 | R2実装: `conv_logs.py` に `_get_company_id_for_lead` 追加 | Generator |
+| 5 | テスト更新: `test_conv_log_writer.py`（8→12件）・`test_conv_logs_router.py`（8→12件）・`test_discord_inbox.py` side_effect 修正 | Generator |
+| 6 | pytest full suite 実行・PASS確認 | Generator |
+| 7 | CI確認（Backend Tests・Process Artifacts Gate） | Generator |
+
+---
+
+## 継続
+
+- R1/R2 マージ後: R3 Stage 2（`v_company_stats` 本番データ確認）を Shingo GO 付きで実施
+- 旧データ backfill（マージ前に作成された NULL レコードの補完）はこの PR 対象外
+- 旧データ backfill の必要性は本番での NULL 率確認後に判断（R3 タスクで追記）
