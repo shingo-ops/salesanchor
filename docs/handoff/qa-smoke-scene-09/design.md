@@ -85,7 +85,8 @@ GitHub-hosted runner では実行不可（DB 直接アクセスが必要なた�
 
 | 項目 | 内容 |
 |------|------|
-| 危険変更 | なし（migration/deploy.yml/本番スクリプト変更なし） |
+| Gate 上の分類 | `scripts/qa/seed-tenant.sql` は `scripts/` 配下のため Process Artifacts Gate 上は「危険変更」扱い。ただし実態は QA専用 tenant_006 seed のみで、本番 tenant_004 には影響なし。GO #2194 取得済み |
+| migration 変更 | なし（deploy.yml/本番スクリプト変更なし） |
 | 本番稼働テナント | tenant_004 への変更なし |
 | 物理削除 API | 今回実行しない（B も論理削除のみ、物理削除禁止） |
 | 秘匿情報 | QA認証情報・DATABASE_URLをコード/PR/GitHubコメントに記載しない |
