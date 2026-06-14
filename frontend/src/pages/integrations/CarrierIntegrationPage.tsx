@@ -330,7 +330,14 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
           {data.status?.last_tested_at && (
             <span className="carrier-env-card__last-tested">
               {t("carrierIntegration.lastTested", {
-                time: new Date(data.status.last_tested_at).toLocaleTimeString(),
+                time: new Intl.DateTimeFormat("ja-JP", {
+                  year: "numeric",
+                  month: "numeric",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }).format(new Date(data.status.last_tested_at)),
               })}
             </span>
           )}
