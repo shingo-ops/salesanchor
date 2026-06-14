@@ -30,6 +30,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.metrics import record_security_fail_open
+
 logger = logging.getLogger(__name__)
 
 # セッション追跡の有効期間: 1時間（Firebase JWTの最大有効期限と合わせる）
@@ -91,6 +93,10 @@ async def _check_session_ip(token_hash: str, current_ip: str) -> bool:
         from app.cache import get_redis
         r = get_redis()
         if not r:
+            record_security_fail_open("session_guard", "redis_unavailable")
+            logger.warning(
+                "security_fail_open component=session_guard reason=redis_unavailable"
+            )
             return False
 
         session_key = f"session_ip:{token_hash}"
@@ -137,7 +143,11 @@ async def _check_session_ip(token_hash: str, current_ip: str) -> bool:
         )
         return False
     except Exception:
-        logger.warning("セッションIP確認失敗: fail-openとして通過")
+        record_security_fail_open("session_guard", "redis_exception")
+        logger.warning(
+            "security_fail_open component=session_guard reason=redis_exception",
+            exc_info=True,
+        )
         return False
 
 
