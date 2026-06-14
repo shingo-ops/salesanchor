@@ -27,6 +27,7 @@ from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.database import AsyncSessionLocal
+from app.security.client_ip import get_trusted_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +60,6 @@ def _decode_jwt_email(auth_header: str | None) -> str | None:
         return payload.get("email")
     except Exception:
         return None
-
-
-def _get_client_ip_from_request(request: Request) -> str:
-    """クライアントIPをリバースプロキシ対応で取得する。"""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 async def _check_and_record_bulk_export(user_email: str | None) -> bool:
@@ -148,7 +141,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
     ) -> None:
         """認証イベントをDBに記録する"""
         try:
-            client_ip = _get_client_ip_from_request(request)
+            client_ip = get_trusted_client_ip(request)
 
             if status_code in _AUTH_FAILURE_CODES:
                 event_type = "auth_failure"
@@ -191,7 +184,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         大量アクセス閾値超過時はアラートも記録する（P2-3）。
         """
         try:
-            client_ip = _get_client_ip_from_request(request)
+            client_ip = get_trusted_client_ip(request)
             user_email = _decode_jwt_email(request.headers.get("Authorization"))
             event_type = "data_write"
 
