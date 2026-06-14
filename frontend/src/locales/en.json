@@ -1001,6 +1001,7 @@
     "discordConnectError": "Failed to connect Discord. Please try again.",
     "discordNoServer": "No Discord server connected yet",
     "discordNoServerDesc": "Add a Bot to your Discord server to start message integration.",
+    "discordOpenSettings": "Open Discord settings",
     "discordDisconnect": "Disconnect",
     "discordDisconnecting": "Disconnecting...",
     "discordDisconnectTitle": "Disconnect Discord Integration",
