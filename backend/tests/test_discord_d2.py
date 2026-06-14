@@ -344,3 +344,31 @@ class TestDiscordGuildConfigAPI:
             json={"guild_id": "12345"},
         )
         assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_get_returns_staff_name_when_connected_by_staff(
+        self, app_client, db_session
+    ):
+        """connected_by_staff_id がある行の GET が staff.name を返すこと。
+
+        回帰テスト: discord_guild_config.py で `public.staff` と書いていたため
+        PostgreSQL で relation "public.staff" does not exist エラーが発生していた。
+        正しくは search_path に依存してスキーマなし `staff` で参照する。
+        refs: docs/handoff/discord-auto-setup/guild-id-not-reflected-recon.md
+        """
+        # staff レコードを事前登録
+        await db_session.execute(text("INSERT INTO staff (id, name) VALUES (42, 'テスト担当者')"))
+        # connected_by_staff_id 付きで discord config を保存
+        await db_session.execute(
+            text(
+                "INSERT INTO tenant_discord_config (tenant_id, guild_id, connected_by_staff_id)"
+                " VALUES (999, '1288437029213835356', 42)"
+            )
+        )
+        await db_session.commit()
+
+        resp = await app_client.get("/api/v1/admin/discord-config")
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["guild_id"] == "1288437029213835356"
+        assert body["connected_by_staff_name"] == "テスト担当者"

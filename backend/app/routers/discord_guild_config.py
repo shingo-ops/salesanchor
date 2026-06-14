@@ -70,7 +70,7 @@ async def get_discord_config(
                 tdc.updated_at,
                 s.name AS staff_name
             FROM public.tenant_discord_config tdc
-            LEFT JOIN public.staff s ON s.id = tdc.connected_by_staff_id
+            LEFT JOIN staff s ON s.id = tdc.connected_by_staff_id
             WHERE tdc.tenant_id = :tid
         """),
         {"tid": tenant_id},
