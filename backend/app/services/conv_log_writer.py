@@ -31,6 +31,7 @@ async def write_conversation_log(
     *,
     tenant_id: int,
     lead_id: int | None,
+    contact_id: int | None = None,
     channel_type: str,
     channel_identity: str | None = None,
     direction: str,
@@ -46,6 +47,7 @@ async def write_conversation_log(
         db: テナントコンテキスト設定済みの AsyncSession。
         tenant_id: テナント ID（RLS カラム用）。
         lead_id: リード ID。案件未紐づけの場合も受け付ける（company_id は deals から補完）。
+        contact_id: 担当者 ID。呼び出し元が特定済みなら渡す。None の場合は deals から補完。
         channel_type: チャネル種別（'messenger' / 'instagram' / 'discord' / 'phone' 等）。
         channel_identity: 送受信相手のチャネル固有 ID（PSID / Discord UID 等）。
         direction: 'inbound'（受信）または 'outbound'（エコー含む送信）。
@@ -59,16 +61,18 @@ async def write_conversation_log(
         挿入された id。external_message_id 重複でスキップした場合は None。
     """
     company_id = await _get_company_id_for_lead(db, lead_id) if lead_id else None
+    if contact_id is None and lead_id:
+        contact_id = await _get_contact_id_for_lead(db, lead_id)
     raw_json = json.dumps(raw_payload) if raw_payload else None
 
     result = await db.execute(
         text("""
             INSERT INTO conversation_logs (
-                tenant_id, lead_id, company_id,
+                tenant_id, lead_id, contact_id, company_id,
                 channel_type, channel_identity, direction, sender,
                 content_text, external_message_id, raw_payload, occurred_at
             ) VALUES (
-                :tenant_id, :lead_id, :company_id,
+                :tenant_id, :lead_id, :contact_id, :company_id,
                 :channel_type, :channel_identity, :direction, :sender,
                 :content_text, :external_message_id, :raw_payload::jsonb, :occurred_at
             )
@@ -79,6 +83,7 @@ async def write_conversation_log(
         {
             "tenant_id": tenant_id,
             "lead_id": lead_id,
+            "contact_id": contact_id,
             "company_id": company_id,
             "channel_type": channel_type,
             "channel_identity": channel_identity,
@@ -112,6 +117,23 @@ async def _get_company_id_for_lead(db: AsyncSession, lead_id: int) -> int | None
             FROM deals
             WHERE lead_id = :lead_id
               AND company_id IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        """),
+        {"lead_id": lead_id},
+    )
+    row = result.first()
+    return int(row[0]) if row else None
+
+
+async def _get_contact_id_for_lead(db: AsyncSession, lead_id: int) -> int | None:
+    """lead_id に紐づく最新案件の contact_id を返す。案件がなければ None。"""
+    result = await db.execute(
+        text("""
+            SELECT contact_id
+            FROM deals
+            WHERE lead_id = :lead_id
+              AND contact_id IS NOT NULL
             ORDER BY created_at DESC
             LIMIT 1
         """),
