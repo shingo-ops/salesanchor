@@ -7,7 +7,7 @@ review@salesanchor.jp 新着メール → Discord 通知サービス。
   - IMAP over SSL で接続し INBOX を監視する。
   - BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)] のみ取得（本文・添付は絶対に読まない）。
   - 通知済み UID を Redis に記録し重複通知を防ぐ。
-  - Discord webhook は既存 ADMIN_NOTIFICATION_DISCORD_WEBHOOK を使用（新 Secret 不要）。
+  - Discord webhook は REVIEW_MAIL_DISCORD_WEBHOOK を使用（専用チャンネル）。
   - IMAP 未設定・接続失敗・Redis 障害のいずれでも本体を止めない。
 
 セキュリティ:
@@ -35,7 +35,7 @@ _IMAP_USER = os.getenv("REVIEW_MAIL_IMAP_USER", "")
 _IMAP_PASSWORD = os.getenv("REVIEW_MAIL_IMAP_PASSWORD", "")
 _WEBMAIL_URL = os.getenv("REVIEW_MAIL_WEBMAIL_URL", "")
 _REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-_DISCORD_WEBHOOK = os.getenv("ADMIN_NOTIFICATION_DISCORD_WEBHOOK", "")
+_DISCORD_WEBHOOK = os.getenv("REVIEW_MAIL_DISCORD_WEBHOOK", "")
 
 _REDIS_KEY_PREFIX = "review_mail:notified:"
 _REDIS_TTL_SECONDS = 30 * 24 * 60 * 60  # 30 日

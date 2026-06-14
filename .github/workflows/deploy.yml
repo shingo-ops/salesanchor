@@ -237,6 +237,12 @@ jobs:
               -e '/^GOOGLE_DRIVE_REDIRECT_URI=/d' \
               -e '/^SMOKE_SERVICE_TOKEN=/d' \
               -e '/^SMOKE_SERVICE_EMAIL=/d' \
+              -e '/^REVIEW_MAIL_IMAP_HOST=/d' \
+              -e '/^REVIEW_MAIL_IMAP_PORT=/d' \
+              -e '/^REVIEW_MAIL_IMAP_USER=/d' \
+              -e '/^REVIEW_MAIL_IMAP_PASSWORD=/d' \
+              -e '/^REVIEW_MAIL_WEBMAIL_URL=/d' \
+              -e '/^REVIEW_MAIL_DISCORD_WEBHOOK=/d' \
               .env
             rm -f .env.bak
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -262,6 +268,12 @@ jobs:
             GOOGLE_DRIVE_REDIRECT_URI=${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}
             SMOKE_SERVICE_TOKEN=${{ secrets.FEDEX_SMOKE_API_TOKEN }}
             SMOKE_SERVICE_EMAIL=${{ secrets.FEDEX_SMOKE_USER_EMAIL }}
+            REVIEW_MAIL_IMAP_HOST=${{ secrets.REVIEW_MAIL_IMAP_HOST }}
+            REVIEW_MAIL_IMAP_PORT=${{ secrets.REVIEW_MAIL_IMAP_PORT }}
+            REVIEW_MAIL_IMAP_USER=${{ secrets.REVIEW_MAIL_IMAP_USER }}
+            REVIEW_MAIL_IMAP_PASSWORD=${{ secrets.REVIEW_MAIL_IMAP_PASSWORD }}
+            REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
+            REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
             ENV_EOF
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
