@@ -33,6 +33,7 @@ MFA_REQUIRED = os.getenv("MFA_REQUIRED", "true").lower() == "true"
 # SMOKE_SERVICE_TOKEN: 256-bit ランダムトークン（secrets.token_urlsafe(32)）。
 # 一致した場合は Firebase 検証・MFA チェックをスキップし SMOKE_SERVICE_EMAIL のユーザーを返す。
 # どちらも未設定（空文字）の場合はこのパスは完全に不活性。
+# 本番では ALLOW_SMOKE_SERVICE_BYPASS_IN_PRODUCTION=1 が明示されない限り無効化する。
 _SMOKE_SERVICE_TOKEN: str = os.getenv("SMOKE_SERVICE_TOKEN", "")
 _SMOKE_SERVICE_EMAIL: str = os.getenv("SMOKE_SERVICE_EMAIL", "")
 
@@ -41,6 +42,26 @@ import threading
 
 _firebase_init_lock = threading.Lock()
 _firebase_initialized = False
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _is_production() -> bool:
+    return os.getenv("ENVIRONMENT", "development") == "production"
+
+
+def _smoke_service_bypass_enabled() -> bool:
+    """CI/CD smoke bypass が現在の環境で有効かを返す。
+
+    本番では明示flagなしにbypassを有効化しない。
+    """
+    if not (_SMOKE_SERVICE_TOKEN and _SMOKE_SERVICE_EMAIL):
+        return False
+    if _is_production() and not _env_flag("ALLOW_SMOKE_SERVICE_BYPASS_IN_PRODUCTION"):
+        return False
+    return True
 
 
 def _init_firebase():
@@ -94,9 +115,9 @@ async def get_current_user(
     # SMOKE_SERVICE_TOKEN が設定されており Bearer トークンと一致する場合、
     # Firebase 検証・MFA チェックをスキップして SMOKE_SERVICE_EMAIL のユーザーを返す。
     # secrets.compare_digest でタイミング攻撃を防ぐ。
+    # 本番では ALLOW_SMOKE_SERVICE_BYPASS_IN_PRODUCTION=1 が明示されない限り無効。
     if (
-        _SMOKE_SERVICE_TOKEN
-        and _SMOKE_SERVICE_EMAIL
+        _smoke_service_bypass_enabled()
         and secrets.compare_digest(token, _SMOKE_SERVICE_TOKEN)
     ):
         _sa_result = await db.execute(
