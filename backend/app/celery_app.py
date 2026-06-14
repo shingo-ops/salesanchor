@@ -30,6 +30,7 @@ celery_app = Celery(
         "app.tasks.priority_scoring_check",
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
+        "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
     ],
 )
 
@@ -121,5 +122,11 @@ celery_app.conf.beat_schedule = {
     "sa02-daily-recon": {
         "task": "app.tasks.sa02_recon_monitor.run_sa02_daily_recon",
         "schedule": crontab(hour=8, minute=0),  # JST 8:00（timezone=Asia/Tokyo が適用済み）
+    },
+    # review@salesanchor.jp の INBOX を 5 分ごとに確認して新着を Discord 通知
+    # 未設定（REVIEW_MAIL_IMAP_HOST 等）の場合は no-op で安全スキップ
+    "review-mail-discord-notifier": {
+        "task": "app.tasks.review_mail_monitor.check_review_mail_inbox",
+        "schedule": 300.0,  # 5分
     },
 }
