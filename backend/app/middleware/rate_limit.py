@@ -19,6 +19,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.metrics import record_security_fail_open
+
 logger = logging.getLogger(__name__)
 
 # 認証済みユーザー: 300回/分
@@ -68,6 +70,10 @@ async def _check_rate_limit(identifier: str, limit: int, window_sec: int) -> boo
         from app.cache import get_redis
         r = get_redis()
         if not r:
+            record_security_fail_open("rate_limit", "redis_unavailable")
+            logger.warning(
+                "security_fail_open component=rate_limit reason=redis_unavailable"
+            )
             return False
 
         minute_bucket = int(time.time()) // window_sec
@@ -78,7 +84,11 @@ async def _check_rate_limit(identifier: str, limit: int, window_sec: int) -> boo
 
         return count > limit
     except Exception:
-        logger.warning("レートリミット確認失敗: fail-openとして通過")
+        record_security_fail_open("rate_limit", "redis_exception")
+        logger.warning(
+            "security_fail_open component=rate_limit reason=redis_exception",
+            exc_info=True,
+        )
         return False
 
 
