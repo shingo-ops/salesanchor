@@ -23,6 +23,7 @@ from app.cache import (
 )
 from app.database import get_db
 from app.models import Tenant, User
+from app.security.client_ip import get_trusted_client_ip
 
 security = HTTPBearer()
 
@@ -59,14 +60,6 @@ def _init_firebase():
         _firebase_initialized = True
 
 
-def _get_client_ip(request: Request) -> str:
-    """クライアントIPをリバースプロキシ対応で取得する。"""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
 async def get_current_user(
     request: Request,
     cred: HTTPAuthorizationCredentials = Depends(security),
@@ -88,7 +81,7 @@ async def get_current_user(
     _init_firebase()
 
     token = cred.credentials
-    client_ip = _get_client_ip(request)
+    client_ip = get_trusted_client_ip(request)
 
     # サービスアカウントバイパス（CI/CD スモークテスト専用）
     # SMOKE_SERVICE_TOKEN が設定されており Bearer トークンと一致する場合、
@@ -278,7 +271,7 @@ async def set_tenant_context(db: AsyncSession, tenant_id: int) -> None:
 
 
 def set_tenant_context_sync(session: Session, tenant_id: int) -> None:
-    """Celery タスク（同期 SQLAlchemy Session）向け set_tenant_context。
+    """同期 Session 向け set_tenant_context。
 
     Celery ワーカーは asyncpg ではなく psycopg2 を使うため常に PostgreSQL 接続。
     `app.tenant_id` を設定しないと RLS が tenant_id IS NULL として評価し、
