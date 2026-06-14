@@ -186,6 +186,14 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      # Discord 通知（review_mail_monitor 等が使用。backend と同一 Secret を流用）
+      - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
+      # review@salesanchor.jp メール監視（VPS .env に手動追加・未設定は no-op）
+      - REVIEW_MAIL_IMAP_HOST=${REVIEW_MAIL_IMAP_HOST:-}
+      - REVIEW_MAIL_IMAP_PORT=${REVIEW_MAIL_IMAP_PORT:-993}
+      - REVIEW_MAIL_IMAP_USER=${REVIEW_MAIL_IMAP_USER:-}
+      - REVIEW_MAIL_IMAP_PASSWORD=${REVIEW_MAIL_IMAP_PASSWORD:-}
+      - REVIEW_MAIL_WEBMAIL_URL=${REVIEW_MAIL_WEBMAIL_URL:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
