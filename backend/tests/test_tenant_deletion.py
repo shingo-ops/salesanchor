@@ -338,3 +338,75 @@ async def test_physical_delete_success(
         )
     ).one()
     assert audit.status == "succeeded"
+
+
+# ── テナントキャッシュ無効化 ──────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_logical_delete_invalidates_cache(
+    super_admin_client: AsyncClient, db_session
+):
+    """論理削除時に invalidate_tenant_cache が呼ばれること"""
+    await db_session.execute(
+        text(
+            "INSERT OR IGNORE INTO tenants"
+            " (id, tenant_name, tenant_code, is_active)"
+            " VALUES (93, 'Cache', 'test-93', 1)"
+        )
+    )
+    await db_session.commit()
+
+    with patch(
+        "app.routers.super_admin_tenants.invalidate_tenant_cache",
+        new_callable=AsyncMock,
+    ) as mock_invalidate:
+        resp = await super_admin_client.request(
+            "DELETE",
+            "/api/v1/super-admin/tenants/93",
+            json={"confirm": "DELETE:test-93"},
+        )
+    assert resp.status_code == 200
+    mock_invalidate.assert_awaited_once_with(93)
+
+
+@pytest.mark.asyncio
+async def test_physical_delete_invalidates_cache(
+    super_admin_client: AsyncClient, db_session
+):
+    """物理削除成功時に invalidate_tenant_cache が呼ばれること"""
+    await db_session.execute(
+        text(
+            "INSERT OR IGNORE INTO tenants"
+            " (id, tenant_name, tenant_code, is_active)"
+            " VALUES (92, 'CachePhys', 'test-92', 0)"
+        )
+    )
+    await db_session.commit()
+
+    mock_admin_session = AsyncMock()
+    mock_admin_session.execute = AsyncMock(return_value=None)
+    mock_admin_session.commit = AsyncMock(return_value=None)
+
+    async def override_get_admin_db():
+        yield mock_admin_session
+
+    from app.main import app
+    from app.database import get_admin_db
+
+    app.dependency_overrides[get_admin_db] = override_get_admin_db
+
+    try:
+        with patch(
+            "app.routers.super_admin_tenants.invalidate_tenant_cache",
+            new_callable=AsyncMock,
+        ) as mock_invalidate:
+            resp = await super_admin_client.request(
+                "DELETE",
+                "/api/v1/super-admin/tenants/92/physical",
+                json={"confirm": "DELETE:test-92"},
+            )
+    finally:
+        app.dependency_overrides.pop(get_admin_db, None)
+
+    assert resp.status_code == 200
+    mock_invalidate.assert_awaited_once_with(92)
