@@ -126,15 +126,30 @@ export default function Layout() {
   useEffect(() => { loadUnreadCount(); }, [loadUnreadCount]);
   useSSE({ endpoint: "/api/v1/conversations/stream", onUpdate: loadUnreadCount });
 
+  // mobile sidebar: open / close ヘルパー
+  // sidebarExpanded を同期させることで .sidebar-expanded .sidebar-label { opacity: 1 } が効く
+  const openMobileSidebar = () => {
+    setIsMobileSidebarOpen(true);
+    setSidebarExpanded(true);
+  };
+
+  const closeMobileSidebar = () => {
+    setIsMobileSidebarOpen(false);
+    setSidebarExpanded(false);
+    setOpenAccordion(null);
+  };
+
   // mobile sidebar: Escape key で閉じる
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isMobileSidebarOpen) {
-        setIsMobileSidebarOpen(false);
+        closeMobileSidebar();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
+  // closeMobileSidebar は render ごとに再生成される関数のため deps から除外
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobileSidebarOpen]);
 
   const toggleAccordion = (key: string) => {
@@ -148,11 +163,8 @@ export default function Layout() {
     setOpenAccordion(null);
   };
 
-  const handleNavClick = () => {
-    setSidebarExpanded(false);
-    setOpenAccordion(null);
-    setIsMobileSidebarOpen(false);
-  };
+  // nav item click: desktop hover も mobile open もまとめて閉じる
+  const handleNavClick = () => closeMobileSidebar();
 
   /* ---- permission-filtered sub-item lists ---- */
 
@@ -188,7 +200,7 @@ export default function Layout() {
       {isMobileSidebarOpen && (
         <div
           className="sidebar-mobile-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
+          onClick={closeMobileSidebar}
           aria-hidden="true"
         />
       )}
@@ -406,7 +418,7 @@ export default function Layout() {
       {/* ============ Mobile menu button (hamburger — mobile only) ============ */}
       <button
         className="mobile-menu-btn"
-        onClick={() => setIsMobileSidebarOpen(true)}
+        onClick={openMobileSidebar}
         aria-label={t("nav.openMenu")}
         aria-expanded={isMobileSidebarOpen}
         aria-controls="sidebar-panel"
