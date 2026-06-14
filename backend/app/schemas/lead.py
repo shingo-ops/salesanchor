@@ -10,6 +10,10 @@ from __future__ import annotations
   2026-05-07: ADR-015 §6 ステータス拡張（既存値は維持、新規 5 値を追加）。
     questions/Q01-B「既存 LeadStatus は置き換えではなく拡張」「移行スクリプト
     不要」の方針に従う。
+  2026-06-14: ADR-108 Phase B-1 — sales_form 複数選択対応
+    SalesFormSelectionCreate / SalesFormSelectionResponse / SalesFormOptionResponse 追加。
+    LeadUpdate に sales_form_selections を追加（_UPDATABLE_COLUMNS 外・個別処理）。
+    LeadResponse に sales_form_selections / sales_form_options を追加。
 """
 
 from datetime import date, datetime
@@ -59,6 +63,36 @@ class LeadResponseSpeed(str, Enum):
     within_24h = "24h以内"
     within_3d = "3日以内"
     over_3d = "3日超"
+
+
+# ---------------------------------------------------------------------------
+# ADR-108 Phase B-1: sales_form 複数選択スキーマ
+# ---------------------------------------------------------------------------
+
+class SalesFormSelectionCreate(BaseModel):
+    """PATCH /leads/{id} 用: 販売形態選択アイテム（1件分）"""
+    option_id: int = Field(ge=1)
+    other_text: str | None = Field(default=None, max_length=1000)
+
+
+class SalesFormSelectionResponse(BaseModel):
+    """GET /leads/{id} レスポンス用: 販売形態選択アイテム（1件分）"""
+    option_id: int
+    option_value: str
+    option_label: str
+    other_text: str | None = None
+
+
+class SalesFormOptionResponse(BaseModel):
+    """GET /leads/sales-form-options レスポンス用: テナント別選択肢マスタ"""
+    id: int
+    label: str
+    value: str
+    sort_order: int
+    is_active: bool
+
+
+# ---------------------------------------------------------------------------
 
 
 class LeadCreate(BaseModel):
@@ -115,6 +149,8 @@ class LeadUpdate(BaseModel):
     meeting_impression: str | None = Field(default=None, max_length=255)
     cs_memo: str | None = Field(default=None, max_length=2000)
     sales_form: str | None = Field(default=None, max_length=100)
+    # ADR-108 Phase B-1: 複数選択（_UPDATABLE_COLUMNS 外・leads.py で個別処理）
+    sales_form_selections: list[SalesFormSelectionCreate] | None = None
     competitor_check: bool | None = None
     per_order_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     monthly_frequency: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
@@ -186,6 +222,10 @@ class LeadResponse(BaseModel):
     discord_role_sync_at: datetime | None = None
     # ADR-107: 顧客優先度スコア（analytics.customer_priority.view 権限所持者のみ意味を持つ）
     priority_score: dict[str, Any] | None = None
+    # ADR-108 Phase B-1: 複数選択データ（get_lead で JOIN 取得、list_leads では空リスト）
+    sales_form_selections: list[SalesFormSelectionResponse] = Field(default_factory=list)
+    # ADR-108 Phase B-1: テナント別選択肢マスタ（get_lead で取得、list_leads では空リスト）
+    sales_form_options: list[SalesFormOptionResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

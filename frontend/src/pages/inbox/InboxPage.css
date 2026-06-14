@@ -1560,3 +1560,89 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--danger-bg); border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
 }
+
+/* ======= ADR-108 Phase B-1: SalesFormMultiSelect ======= */
+
+.right-panel-row--multiselect {
+  align-items: flex-start;
+}
+
+.sales-form-multi-select {
+  flex: 1;
+  position: relative;
+}
+
+.sales-form-trigger {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text);
+  min-height: var(--size-icon-btn-sm);
+}
+
+.sales-form-trigger:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.sales-form-caret {
+  margin-left: var(--space-2);
+  font-size: var(--font-2xs);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sales-form-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-dropdown);
+  max-height: var(--dropdown-max-h);
+  overflow-y: auto;
+}
+
+.sales-form-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  color: var(--text);
+}
+
+.sales-form-option:hover {
+  background: var(--bg-hover, var(--bg-accent-subtle));
+}
+
+.sales-form-option--checked {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sales-form-option input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.sales-form-option-label {
+  flex: 1;
+}
+
+.sales-form-other-input {
+  margin-top: var(--space-1);
+  width: 100%;
+}
