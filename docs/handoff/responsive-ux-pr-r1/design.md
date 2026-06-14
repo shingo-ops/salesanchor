@@ -127,6 +127,13 @@ PR-R1 は既存アプリの CSS/JS 基盤修正（small scope）のため、外�
 
 ---
 
+## 参照
+
+- recon: docs/handoff/responsive-ux-pr-r1/recon.md
+- ADR: ADR-067-design-token-enforcement.md（ADR-067）, ADR-027-ui-internationalization.md, ADR-022.md
+
+---
+
 ## 今後の課題（PR-R1 スコープ外）
 
 - **PR-R3**: `responsive-layout.spec.ts` (Playwright E2E) の追加。375×812 / 768×1024 / 1280×800 で主要ページを自動検証。
