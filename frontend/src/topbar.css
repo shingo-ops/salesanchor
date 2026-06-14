@@ -105,6 +105,35 @@
   overflow: hidden;
 }
 
+/* --- Mobile menu button (hamburger — mobile only) ---
+   display: none がデフォルト。responsive.css の @media (max-width: 767px) で flex に切り替わる。
+   position: fixed で avatar-btn と同じ高さ（--avatar-zone-top）に配置。
+   左上隅に固定し、サイドバーが隠れている mobile で sidebar toggle を提供する。 */
+.mobile-menu-btn {
+  display: none; /* desktop では非表示; responsive.css @media mobile で flex に切替 */
+  position: fixed; /* fixed-ok: Layout-level hamburger button, not in pages/ */
+  top: var(--avatar-zone-top);
+  left: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  /* --size-icon-btn-lg = 44px — WCAG 2.5.5 タッチターゲット最小サイズ（tokens.css §サイズ） */
+  width: var(--size-icon-btn-lg);
+  height: var(--size-icon-btn-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  z-index: var(--avatar-zone-z);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mobile-menu-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
 /* --- Fixed avatar button (Chrome / Meta style) --- */
 .avatar-btn {
   position: fixed;
@@ -260,4 +289,29 @@
 
 .user-drawer-action--danger:hover {
   background: var(--danger-bg);
+}
+
+/* --- Mobile sidebar backdrop ---
+   sidebar-mobile-open 時に表示。user-drawer-backdrop と同じ仕組み。
+   z-index は sidebar より 1 下にして、backdrop → sidebar の前後関係を維持する。 */
+.sidebar-mobile-backdrop {
+  position: fixed; /* fixed-ok: Layout-level mobile sidebar overlay, not in pages/ */
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: calc(var(--z-sidebar) - 1);
+}
+
+/* ============================================================
+   Mobile  <=767px — topbar / drawer 調整
+   ============================================================ */
+@media (max-width: 767px) {
+  /* user-drawer: mobile では全幅表示（横幅 300px だと一部画面外になる機種あり） */
+  .user-drawer {
+    width: 100%;
+  }
+
+  /* topbar-email: 狭い画面では非表示 */
+  .topbar-email {
+    display: none;
+  }
 }

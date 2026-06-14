@@ -80,6 +80,7 @@ import {
   TrashIcon as TrashOutlineIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
+  Bars3Icon as Bars3OutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -169,6 +170,7 @@ const TrashOutline        = hi(TrashOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const ChatBubbleOutline   = hi(ChatBubbleOvalLeftOutlineIcon); /* 空状態 outline 版 */
+const Bars3Outline        = hi(Bars3OutlineIcon);              /* mobile menu button */
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -245,6 +247,7 @@ export const NAV_ICONS = {
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
   purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
+  menu:        Bars3Outline,       // outline — mobile menu button（ハンバーガー）
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用
