@@ -33,18 +33,11 @@ from app.services.discord_role_sync import sync_lead_discord_role
 # SQLite in-memory fixtures
 # ---------------------------------------------------------------------------
 
-_DDL_STAFF = """
-CREATE TABLE IF NOT EXISTS staff (
-    id   INTEGER PRIMARY KEY,
-    name VARCHAR(128) NOT NULL
-)
-"""
-
 _DDL_DISCORD = """
 CREATE TABLE IF NOT EXISTS tenant_discord_config (
     tenant_id INTEGER PRIMARY KEY,
     guild_id  VARCHAR(32) NOT NULL,
-    connected_by_staff_id INTEGER REFERENCES staff(id),
+    connected_by_staff_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
@@ -61,12 +54,10 @@ async def db_engine():
     @event.listens_for(engine.sync_engine, "before_cursor_execute", retval=True)
     def _rewrite_sqlite(conn, cursor, statement, parameters, context, executemany):
         statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
-        statement = statement.replace("public.staff", "staff")
         statement = statement.replace("NOW()", "CURRENT_TIMESTAMP")
         return statement, parameters
 
     async with engine.begin() as conn:
-        await conn.execute(text(_DDL_STAFF))
         await conn.execute(text(_DDL_DISCORD))
     yield engine
     await engine.dispose()
@@ -346,19 +337,15 @@ class TestDiscordGuildConfigAPI:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_returns_staff_name_when_connected_by_staff(
+    async def test_get_returns_guild_id_and_null_staff_name(
         self, app_client, db_session
     ):
-        """connected_by_staff_id がある行の GET が staff.name を返すこと。
+        """connected_by_staff_id があっても connected_by_staff_name は null を返すこと。
 
-        回帰テスト: discord_guild_config.py で `public.staff` と書いていたため
-        PostgreSQL で relation "public.staff" does not exist エラーが発生していた。
-        正しくは search_path に依存してスキーマなし `staff` で参照する。
-        refs: docs/handoff/discord-auto-setup/guild-id-not-reflected-recon.md
+        staff.name は migration 019 に存在しないため GET /admin/discord-config では
+        staff JOIN を行わず、connected_by_staff_name は常に null とする。
+        staff 名解決は別 PR で対応する。
         """
-        # staff レコードを事前登録
-        await db_session.execute(text("INSERT INTO staff (id, name) VALUES (42, 'テスト担当者')"))
-        # connected_by_staff_id 付きで discord config を保存
         await db_session.execute(
             text(
                 "INSERT INTO tenant_discord_config (tenant_id, guild_id, connected_by_staff_id)"
@@ -371,4 +358,4 @@ class TestDiscordGuildConfigAPI:
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["guild_id"] == "1288437029213835356"
-        assert body["connected_by_staff_name"] == "テスト担当者"
+        assert body["connected_by_staff_name"] is None

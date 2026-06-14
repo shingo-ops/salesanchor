@@ -67,10 +67,8 @@ async def get_discord_config(
         text("""
             SELECT
                 tdc.guild_id,
-                tdc.updated_at,
-                s.name AS staff_name
+                tdc.updated_at
             FROM public.tenant_discord_config tdc
-            LEFT JOIN staff s ON s.id = tdc.connected_by_staff_id
             WHERE tdc.tenant_id = :tid
         """),
         {"tid": tenant_id},
@@ -78,7 +76,7 @@ async def get_discord_config(
     row = result.first()
     guild_id = str(row[0]) if row else None
     connected_at = str(row[1]) if row and row[1] else None
-    connected_by_staff_name = str(row[2]) if row and row[2] else None
+    connected_by_staff_name = None  # staff.name は migration 019 未定義: 別 PR で対応
 
     # ロール名は tenant_discord_ticket_config から取得（テーブル未作成時はデフォルト）
     role_member, role_partner = "Member", "Partner"
