@@ -26,6 +26,22 @@ SSE_CONNECTIONS_ACTIVE = Gauge(
     ("stream",),
 )
 
+AUTH_FAIL_OPEN_TOTAL = Counter(
+    "auth_fail_open_total",
+    "Authentication controls that failed open to preserve availability",
+    ("component", "reason"),
+)
+
+
+def record_auth_fail_open(component: str, reason: str) -> None:
+    """Record an authentication control failing open.
+
+    Keep labels intentionally low-cardinality. Do not include user IDs, IPs,
+    token hashes, paths, or exception messages in labels.
+    """
+
+    AUTH_FAIL_OPEN_TOTAL.labels(component, reason).inc()
+
 
 def _handler_name(request: Request) -> str:
     route = request.scope.get("route")
