@@ -25,9 +25,14 @@ import pytest
 # 1. インポートが通る
 # ---------------------------------------------------------------------------
 def test_import():
-    from app.services.conv_log_writer import write_conversation_log, _get_company_id_for_lead
+    from app.services.conv_log_writer import (
+        write_conversation_log,
+        _get_company_id_for_lead,
+        _get_contact_id_for_lead,
+    )
     assert callable(write_conversation_log)
     assert callable(_get_company_id_for_lead)
+    assert callable(_get_contact_id_for_lead)
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +44,7 @@ def test_signature_has_required_params():
     sig = inspect.signature(write_conversation_log)
     params = set(sig.parameters.keys())
     required = {
-        "db", "tenant_id", "lead_id", "channel_type",
+        "db", "tenant_id", "lead_id", "contact_id", "channel_type",
         "direction", "occurred_at",
     }
     assert required.issubset(params), f"不足パラメータ: {required - params}"
@@ -56,6 +61,7 @@ def test_sql_has_on_conflict():
     content = src.read_text(encoding="utf-8")
     assert "ON CONFLICT (external_message_id)" in content
     assert "DO NOTHING" in content
+    assert "contact_id" in content
 
 
 # ---------------------------------------------------------------------------
@@ -109,9 +115,9 @@ async def test_write_conversation_log_success():
     db = AsyncMock()
     db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.conv_log_writer._get_company_id_for_lead",
-        new=AsyncMock(return_value=None),
+    with (
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
     ):
         result = await write_conversation_log(
             db,
@@ -143,9 +149,9 @@ async def test_write_conversation_log_duplicate_returns_none():
     db = AsyncMock()
     db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.conv_log_writer._get_company_id_for_lead",
-        new=AsyncMock(return_value=None),
+    with (
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
     ):
         result = await write_conversation_log(
             db,
@@ -164,7 +170,7 @@ async def test_write_conversation_log_duplicate_returns_none():
 
 
 # ---------------------------------------------------------------------------
-# 8. write_conversation_log: lead_id=None でも company_id 検索を呼ばない
+# 8. write_conversation_log: lead_id=None でも company_id/contact_id 検索を呼ばない
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_write_conversation_log_no_lead_id():
@@ -176,10 +182,10 @@ async def test_write_conversation_log_no_lead_id():
     db = AsyncMock()
     db.execute = AsyncMock(return_value=mock_result)
 
-    with patch(
-        "app.services.conv_log_writer._get_company_id_for_lead",
-        new=AsyncMock(return_value=None),
-    ) as mock_get_company:
+    with (
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock(return_value=None)) as mock_get_company,
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock(return_value=None)) as mock_get_contact,
+    ):
         await write_conversation_log(
             db,
             tenant_id=1,
@@ -191,3 +197,89 @@ async def test_write_conversation_log_no_lead_id():
         )
 
     mock_get_company.assert_not_called()
+    mock_get_contact.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 9. _get_contact_id_for_lead: 案件なしのとき None を返す
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_get_contact_id_no_deal():
+    from app.services.conv_log_writer import _get_contact_id_for_lead
+
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result)
+
+    result = await _get_contact_id_for_lead(db, lead_id=42)
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 10. write_conversation_log: deals に contact がいれば contact_id が渡る
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_write_conversation_log_contact_id_derived_from_deal():
+    """deals テーブルに contact_id=55 がある場合、INSERT に contact_id=55 が渡される。"""
+    from app.services.conv_log_writer import write_conversation_log
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = 300
+
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result)
+
+    with (
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock(return_value=7)),
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock(return_value=55)),
+    ):
+        result = await write_conversation_log(
+            db,
+            tenant_id=1,
+            lead_id=10,
+            channel_type="messenger",
+            direction="inbound",
+            occurred_at=datetime(2026, 6, 11, 10, 0, 0, tzinfo=timezone.utc),
+        )
+
+    assert result == 300
+    # INSERT に contact_id=55 が含まれていることを確認
+    call_params = db.execute.call_args[0][1]
+    assert call_params["contact_id"] == 55
+    assert call_params["company_id"] == 7
+
+
+# ---------------------------------------------------------------------------
+# 11. write_conversation_log: 呼び出し元が contact_id を渡せば DB 検索をスキップ
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_write_conversation_log_contact_id_explicit_skips_lookup():
+    """明示的に contact_id を渡した場合、_get_contact_id_for_lead は呼ばれない。"""
+    from app.services.conv_log_writer import write_conversation_log
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = 400
+
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result)
+
+    with (
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock(return_value=999)) as mock_lookup,
+    ):
+        result = await write_conversation_log(
+            db,
+            tenant_id=1,
+            lead_id=10,
+            contact_id=77,  # 明示的に渡す
+            channel_type="phone",
+            direction="inbound",
+            occurred_at=datetime(2026, 6, 11, 10, 0, 0, tzinfo=timezone.utc),
+        )
+
+    assert result == 400
+    mock_lookup.assert_not_called()
+    call_params = db.execute.call_args[0][1]
+    assert call_params["contact_id"] == 77
