@@ -10,6 +10,13 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Vite 8 / lightningcss のデフォルト target が "baseline-widely-available" (Safari 16.4+) のため、
+    // @media (max-width: 767px) を Level 4 range 構文 (width<=767px) に変換してしまう。
+    // iOS < 16.4 (Safari < 16.4) は Level 4 range 構文に非対応 → 全 @media が無視される。
+    // safari14 をターゲットに含めることで従来の max-width: 形式を維持する。
+    cssTarget: ['chrome87', 'safari14', 'firefox78', 'edge88'],
+  },
   server: {
     host: true,
     port: 5173
