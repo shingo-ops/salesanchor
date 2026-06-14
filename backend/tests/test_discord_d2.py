@@ -337,14 +337,12 @@ class TestDiscordGuildConfigAPI:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_returns_guild_id_and_null_staff_name(
-        self, app_client, db_session
-    ):
-        """connected_by_staff_id があっても connected_by_staff_name は null を返すこと。
+    async def test_get_connected_by_staff_name_is_null(self, app_client, db_session):
+        """connected_by_staff_id があっても connected_by_staff_name は null を返す。
 
-        staff.name は migration 019 に存在しないため GET /admin/discord-config では
-        staff JOIN を行わず、connected_by_staff_name は常に null とする。
-        staff 名解決は別 PR で対応する。
+        staff テーブルは migration 019 時点で name 列を持たないため staff JOIN は行わない。
+        guild_id は正しく返り、connected_by_staff_name は null であることを検証する。
+        refs: docs/handoff/discord-auto-setup/guild-id-not-reflected-recon.md
         """
         await db_session.execute(
             text(
