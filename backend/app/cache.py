@@ -6,6 +6,8 @@ from typing import Optional
 
 import redis.asyncio as redis
 
+from app.metrics import record_auth_fail_open
+
 logger = logging.getLogger(__name__)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -18,6 +20,19 @@ TENANT_CACHE_TTL = 600
 PERMISSIONS_CACHE_TTL = 300
 
 _redis: Optional[redis.Redis] = None
+
+
+def _record_auth_control_fail_open(component: str, reason: str) -> None:
+    """認証系制御のfail-openを低cardinality metricsとして記録する。"""
+    try:
+        record_auth_fail_open(component, reason)
+    except Exception:
+        logger.warning(
+            "auth_fail_open metric record failed component=%s reason=%s",
+            component,
+            reason,
+            exc_info=True,
+        )
 
 
 async def init_redis() -> None:
@@ -296,13 +311,19 @@ async def check_auth_rate_limit(ip: str) -> bool:
     """
     r = get_redis()
     if not r:
+        _record_auth_control_fail_open("auth_lockout", "redis_unavailable")
+        logger.warning("auth_fail_open component=auth_lockout reason=redis_unavailable")
         return False
     try:
         key = f"auth_fail_ip:{hashlib.sha256(ip.encode()).hexdigest()[:16]}"
         count = await r.get(key)
         return int(count or 0) >= AUTH_FAIL_MAX
     except Exception:
-        logger.warning("auth_rate_limit確認失敗: fail-openとして通過")
+        _record_auth_control_fail_open("auth_lockout", "redis_exception")
+        logger.warning(
+            "auth_fail_open component=auth_lockout reason=redis_exception",
+            exc_info=True,
+        )
         return False
 
 
@@ -310,6 +331,8 @@ async def record_auth_failure(ip: str) -> None:
     """認証失敗をIPアドレスに記録する。"""
     r = get_redis()
     if not r:
+        _record_auth_control_fail_open("auth_failure_record", "redis_unavailable")
+        logger.warning("auth_fail_open component=auth_failure_record reason=redis_unavailable")
         return
     try:
         key = f"auth_fail_ip:{hashlib.sha256(ip.encode()).hexdigest()[:16]}"
@@ -317,7 +340,11 @@ async def record_auth_failure(ip: str) -> None:
         if count == 1:
             await r.expire(key, AUTH_FAIL_LOCKOUT_TTL)
     except Exception:
-        logger.warning("認証失敗記録に失敗")
+        _record_auth_control_fail_open("auth_failure_record", "redis_exception")
+        logger.warning(
+            "auth_fail_open component=auth_failure_record reason=redis_exception",
+            exc_info=True,
+        )
 
 
 async def is_token_blacklisted(token: str) -> bool:
@@ -328,11 +355,18 @@ async def is_token_blacklisted(token: str) -> bool:
     """
     r = get_redis()
     if not r:
-        logger.warning("Redis未接続: ブラックリスト検証をスキップして認証を継続")
+        _record_auth_control_fail_open("token_blacklist", "redis_unavailable")
+        logger.warning(
+            "auth_fail_open component=token_blacklist reason=redis_unavailable"
+        )
         return False
     try:
         key = f"blacklist:{_token_hash(token)}"
         return await r.exists(key) > 0
     except Exception:
-        logger.warning("ブラックリスト確認失敗: fail-openとして認証を継続")
+        _record_auth_control_fail_open("token_blacklist", "redis_exception")
+        logger.warning(
+            "auth_fail_open component=token_blacklist reason=redis_exception",
+            exc_info=True,
+        )
         return False
