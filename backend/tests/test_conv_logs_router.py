@@ -414,3 +414,130 @@ async def test_deactivate_auto_channel_returns_400():
             )
     assert exc_info.value.status_code == 400
     assert "自動連携チャネル" in str(exc_info.value.detail)
+
+
+# ---------------------------------------------------------------------------
+# R2: company_id が INSERT パラメータに含まれる
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_create_conv_log_company_id_in_insert_params():
+    """R2: 手動記録 INSERT に company_id が含まれる。"""
+    from app.routers.conv_logs import create_conv_log, ConvLogCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    mock_result = _make_mock_result([], scalar_value=55)
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+
+    body = ConvLogCreate(
+        channel_type="phone",
+        content_text="company_id テスト",
+        occurred_at=datetime(2026, 6, 11, tzinfo=timezone.utc),
+    )
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs.reset_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs._get_channel_master", new=AsyncMock(
+            return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
+        )),
+        patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=42)),
+        patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
+        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+    ):
+        result = await create_conv_log(
+            lead_id=10, body=body,
+            current_user=mock_user, tenant_id=1, db=mock_db,
+        )
+
+    assert result == {"id": 55}
+    call_params = mock_db.execute.call_args[0][1]
+    assert call_params["company_id"] == 42
+
+
+# ---------------------------------------------------------------------------
+# R2: company_id が audit_log new_data に含まれる
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_create_conv_log_company_id_in_audit_log():
+    """R2: audit_log の new_data に company_id が含まれる。"""
+    from app.routers.conv_logs import create_conv_log, ConvLogCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    mock_result = _make_mock_result([], scalar_value=56)
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+
+    body = ConvLogCreate(
+        channel_type="phone",
+        content_text="audit_log テスト",
+        occurred_at=datetime(2026, 6, 11, tzinfo=timezone.utc),
+    )
+
+    mock_audit = AsyncMock()
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs.reset_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs._get_channel_master", new=AsyncMock(
+            return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
+        )),
+        patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=99)),
+        patch("app.routers.conv_logs.record_audit_log", new=mock_audit),
+        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+    ):
+        await create_conv_log(
+            lead_id=10, body=body,
+            current_user=mock_user, tenant_id=1, db=mock_db,
+        )
+
+    mock_audit.assert_called_once()
+    _, kwargs = mock_audit.call_args
+    assert kwargs["new_data"]["company_id"] == 99
+
+
+# ---------------------------------------------------------------------------
+# R2: company_id=None でも 201 を返す（deals なしリード）
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_create_conv_log_no_company_id_still_returns_201():
+    """R2: _get_company_id_for_lead が None を返しても 201 を返す。"""
+    from app.routers.conv_logs import create_conv_log, ConvLogCreate
+
+    mock_user = MagicMock()
+    mock_user.id = 1
+
+    mock_result = _make_mock_result([], scalar_value=57)
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.commit = AsyncMock()
+
+    body = ConvLogCreate(
+        channel_type="phone",
+        content_text="deals なしテスト",
+        occurred_at=datetime(2026, 6, 11, tzinfo=timezone.utc),
+    )
+
+    with (
+        patch("app.routers.conv_logs.set_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs.reset_tenant_context", new=AsyncMock()),
+        patch("app.routers.conv_logs._get_channel_master", new=AsyncMock(
+            return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
+        )),
+        patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
+        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+    ):
+        result = await create_conv_log(
+            lead_id=10, body=body,
+            current_user=mock_user, tenant_id=1, db=mock_db,
+        )
+
+    assert result == {"id": 57}
+    call_params = mock_db.execute.call_args[0][1]
+    assert call_params["company_id"] is None

@@ -6,6 +6,8 @@
 - external_message_id の UNIQUE 制約で冪等を保証（ON CONFLICT DO NOTHING → None 返却）。
 - company_id は deals テーブルから lead の最新案件を参照して補完する（案件なければ NULL）。
   v_company_stats VIEW が company_id で集計するため、案件紐づけ後は自動で集計される。
+- contact_id は contacts テーブルから lead の primary contact を参照して補完する（なければ NULL）。
+  呼び出し元が contact_id を明示した場合はそちらを優先する（渡せば確定）。
 - conversation_logs の analysis / translated_text は Stage 3（翻訳発火配線）で埋まる。
   Stage 1 ではデータフロー（受信→保存）の確立のみ行う。
 
@@ -47,7 +49,7 @@ async def write_conversation_log(
         db: テナントコンテキスト設定済みの AsyncSession。
         tenant_id: テナント ID（RLS カラム用）。
         lead_id: リード ID。案件未紐づけの場合も受け付ける（company_id は deals から補完）。
-        contact_id: 担当者 ID。呼び出し元が特定済みなら渡す。None の場合は deals から補完。
+        contact_id: コンタクト ID。省略時は contacts から lead の primary contact を自動補完。
         channel_type: チャネル種別（'messenger' / 'instagram' / 'discord' / 'phone' 等）。
         channel_identity: 送受信相手のチャネル固有 ID（PSID / Discord UID 等）。
         direction: 'inbound'（受信）または 'outbound'（エコー含む送信）。
@@ -127,14 +129,17 @@ async def _get_company_id_for_lead(db: AsyncSession, lead_id: int) -> int | None
 
 
 async def _get_contact_id_for_lead(db: AsyncSession, lead_id: int) -> int | None:
-    """lead_id に紐づく最新案件の contact_id を返す。案件がなければ None。"""
+    """lead_id に紐づく primary contact の id を返す。なければ None。
+
+    is_primary_contact=true を優先し、同 lead に複数 contact があるときは
+    最初に登録された（id が小さい）ものを採用する。
+    """
     result = await db.execute(
         text("""
-            SELECT contact_id
-            FROM deals
+            SELECT id
+            FROM contacts
             WHERE lead_id = :lead_id
-              AND contact_id IS NOT NULL
-            ORDER BY created_at DESC
+            ORDER BY is_primary_contact DESC, id ASC
             LIMIT 1
         """),
         {"lead_id": lead_id},
