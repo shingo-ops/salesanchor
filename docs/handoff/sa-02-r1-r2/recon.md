@@ -10,7 +10,7 @@
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 path:line | 確認内容 |
 |-------------------|---------|
 | `backend/app/services/conv_log_writer.py:29` | write_conversation_log — R1修正対象: contact_id 引数を追加 |
 | `backend/app/services/conv_log_writer.py:34` | contact_id: int \| None = None — 新規引数（既存呼び出し元は後方互換） |
