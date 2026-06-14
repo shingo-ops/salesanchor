@@ -138,6 +138,10 @@
 | feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | | |
 | feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | | |
 | feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | #2020 | | |
+| feature/morimoto/fedex-a4-test-result-persistence | FedEx A4 接続テスト結果保存 | 2026-06-14 03:29 | DONE | #2140 | 2026-06-14 | PR #2138 release にて main 反映済み |
+| feature/morimoto/fedex-last-tested-position-fix | 最終確認バッジ配置修正（margin-left: auto → 0） | 2026-06-14 08:32 | DONE | #2151 | 2026-06-14 | PR #2158 release にて main 反映済み |
+| feature/fedex-last-tested-date-format | 最終確認 日時フォーマット修正（時刻のみ→日付+時刻） | 2026-06-14 09:06 | DONE | #2157 | 2026-06-14 | PR #2158 release にて main 反映済み |
+| feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
