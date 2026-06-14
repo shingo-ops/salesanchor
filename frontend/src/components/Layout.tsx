@@ -148,8 +148,6 @@ export default function Layout() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  // closeMobileSidebar は render ごとに再生成される関数のため deps から除外
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobileSidebarOpen]);
 
   const toggleAccordion = (key: string) => {
