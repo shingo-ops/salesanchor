@@ -26,6 +26,22 @@ SSE_CONNECTIONS_ACTIVE = Gauge(
     ("stream",),
 )
 
+PERMISSION_FALLBACK_TOTAL = Counter(
+    "permission_fallback_total",
+    "Permission fallback paths used by authorization checks",
+    ("fallback",),
+)
+
+
+def record_permission_fallback(fallback: str) -> None:
+    """Record use of an authorization permission fallback.
+
+    Keep labels intentionally low-cardinality. Do not include user IDs,
+    tenant IDs, permission names, or paths in labels.
+    """
+
+    PERMISSION_FALLBACK_TOTAL.labels(fallback).inc()
+
 
 def _handler_name(request: Request) -> str:
     route = request.scope.get("route")
