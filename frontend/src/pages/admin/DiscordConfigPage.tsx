@@ -32,6 +32,20 @@ interface DiscordTicketConfig {
   large_role_name: string;
 }
 
+interface DiscordAutoSetupStep {
+  step: string;
+  status: "created" | "skipped" | "posted" | "failed";
+  discord_id?: string | null;
+  error?: string | null;
+}
+
+interface DiscordAutoSetupResponse {
+  status: "completed" | "partial" | "failed";
+  steps: DiscordAutoSetupStep[];
+  role_order_guide_url: string;
+  error_hint?: string | null;
+}
+
 export default function DiscordConfigPage() {
   const { t } = useTranslation();
   const { hasPermission, loading: permsLoading } = usePermissions();
@@ -62,6 +76,11 @@ export default function DiscordConfigPage() {
   const [deploying, setDeploying] = useState(false);
   const [deployError, setDeployError] = useState("");
   const [deployDone, setDeployDone] = useState(false);
+
+  // 自動セットアップ
+  const [autoSetupRunning, setAutoSetupRunning] = useState(false);
+  const [autoSetupError, setAutoSetupError] = useState("");
+  const [autoSetupResult, setAutoSetupResult] = useState<DiscordAutoSetupResponse | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -185,7 +204,40 @@ export default function DiscordConfigPage() {
     }
   };
 
+  const handleAutoSetup = async () => {
+    setAutoSetupRunning(true);
+    setAutoSetupError("");
+    setAutoSetupResult(null);
+    try {
+      const result = await api.post<DiscordAutoSetupResponse>("/admin/discord/auto-setup", {});
+      setAutoSetupResult(result);
+      for (const step of result.steps) {
+        if (step.status !== "created" || !step.discord_id) continue;
+        if (step.step === "category") setTicketCategoryId(step.discord_id);
+        if (step.step === "ch_ticket") setTicketButtonChannelId(step.discord_id);
+        if (step.step === "ch_member") setSmallChannelId(step.discord_id);
+        if (step.step === "ch_partner") setLargeChannelId(step.discord_id);
+        if (step.step === "role_staff") setStaffRoleId(step.discord_id);
+      }
+    } catch {
+      setAutoSetupError(t("discordAutoSetup.requestFailed"));
+    } finally {
+      setAutoSetupRunning(false);
+    }
+  };
+
   const canEdit = hasPermission("tenant.profile.edit");
+
+  const autoSetupStepLabels: Record<string, string> = {
+    role_staff: t("discordAutoSetup.steps.role_staff"),
+    role_partner: t("discordAutoSetup.steps.role_partner"),
+    role_member: t("discordAutoSetup.steps.role_member"),
+    category: t("discordAutoSetup.steps.category"),
+    ch_ticket: t("discordAutoSetup.steps.ch_ticket"),
+    ch_member: t("discordAutoSetup.steps.ch_member"),
+    ch_partner: t("discordAutoSetup.steps.ch_partner"),
+    button: t("discordAutoSetup.steps.button"),
+  };
 
   if (permsLoading || loading) {
     return (
@@ -228,6 +280,99 @@ export default function DiscordConfigPage() {
             </button>
           )}
         </section>
+
+        {/* ── Discord サーバー自動セットアップ ── */}
+        {canEdit && (
+          <section className="space-y-4">
+            <div>
+              <p className="text-base font-semibold text-token-text-primary">
+                {t("discordAutoSetup.title")}
+              </p>
+              <p className="mt-1 text-sm text-token-text-secondary">
+                {t("discordAutoSetup.description")}
+              </p>
+            </div>
+
+            {!guildId && (
+              <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.disabledHint")}</p>
+            )}
+
+            <button
+              onClick={handleAutoSetup}
+              disabled={!guildId || autoSetupRunning}
+              className="btn btn-secondary"
+            >
+              {autoSetupRunning ? t("discordAutoSetup.running") : t("discordAutoSetup.runButton")}
+            </button>
+
+            {autoSetupError && <p className="text-sm text-red-500">{autoSetupError}</p>}
+
+            {autoSetupResult && (
+              <div className="rounded border border-token-border bg-token-bg-subtle p-4 space-y-3">
+                {autoSetupResult.status === "completed" && (
+                  <p className="text-sm font-medium text-green-600">{t("discordAutoSetup.completed")}</p>
+                )}
+                {autoSetupResult.status === "partial" && (
+                  <>
+                    <p className="text-sm font-medium text-yellow-600">{t("discordAutoSetup.partial")}</p>
+                    <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.retryHint")}</p>
+                  </>
+                )}
+                {autoSetupResult.status === "failed" && (
+                  <>
+                    <p className="text-sm font-medium text-red-600">{t("discordAutoSetup.failed")}</p>
+                    <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.retryHint")}</p>
+                  </>
+                )}
+
+                {autoSetupResult.error_hint && (
+                  <p className="text-xs text-red-500">{autoSetupResult.error_hint}</p>
+                )}
+
+                <p className="text-xs font-medium text-token-text-primary">
+                  {t("discordAutoSetup.stepsTitle")}
+                </p>
+                <ul className="space-y-1">
+                  {autoSetupResult.steps.map((step) => (
+                    <li key={step.step} className="text-xs flex gap-2">
+                      <span className="text-token-text-secondary w-48 shrink-0">
+                        {autoSetupStepLabels[step.step] ?? step.step}
+                      </span>
+                      <span
+                        className={
+                          step.status === "failed"
+                            ? "text-red-500"
+                            : step.status === "created" || step.status === "posted"
+                            ? "text-green-600"
+                            : "text-token-text-secondary"
+                        }
+                      >
+                        {t(`discordAutoSetup.statuses.${step.status}`)}
+                        {step.error && ` — ${step.error}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {autoSetupResult.status === "completed" && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs text-token-text-secondary">
+                      {t("discordAutoSetup.roleOrderGuidePrompt")}
+                    </p>
+                    <a
+                      href={autoSetupResult.role_order_guide_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-500 hover:underline"
+                    >
+                      {t("discordAutoSetup.roleOrderGuideLink")}
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <hr className="border-token-border" />
 

@@ -2482,6 +2482,37 @@
     "largeRoleNameLabel": "Role name for Large customers",
     "invalidRoleName": "Role name must not be empty"
   },
+  "discordAutoSetup": {
+    "title": "Discord server auto setup",
+    "description": "Automatically creates the required roles, category, channels, and ticket button after Bot invitation. Safe to run again at any time.",
+    "runButton": "Run auto setup",
+    "running": "Setting up...",
+    "disabledHint": "Please connect your Discord server first.",
+    "completed": "Setup completed successfully.",
+    "partial": "Some setup steps failed.",
+    "failed": "Setup failed.",
+    "retryHint": "Review the details and try again.",
+    "stepsTitle": "Results",
+    "roleOrderGuidePrompt": "Next, move the Sales Anchor Bot role above Partner / Member in Discord.",
+    "roleOrderGuideLink": "View role order guide",
+    "requestFailed": "Auto setup failed.",
+    "steps": {
+      "role_staff": "Sales Anchor Staff role",
+      "role_partner": "Partner role",
+      "role_member": "Member role",
+      "category": "Sales Anchor category",
+      "ch_ticket": "ticket-start channel",
+      "ch_member": "member-announcements channel",
+      "ch_partner": "partner-announcements channel",
+      "button": "Ticket button"
+    },
+    "statuses": {
+      "created": "Created",
+      "skipped": "Skipped (already exists)",
+      "posted": "Posted",
+      "failed": "Failed"
+    }
+  },
   "discordAnnounce": {
     "description": "Post announcements to a Discord channel directly from the app — no need to open Discord.",
     "channelIdLabel": "Target Channel ID",
