@@ -74,7 +74,7 @@ test.describe("Scene 09-A: 販売形態複数選択 (ADR-108 B-1)", { tag: ["@sc
     await companyTab.click();
 
     // SalesFormMultiSelect が表示されること（data-testid）
-    const dropdown = page.locator("[data-testid='sales-form-dropdown-trigger']");
+    const dropdown = page.locator("[data-testid='sales-form-trigger']");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
     // console error なし
@@ -99,7 +99,7 @@ test.describe("Scene 09-A: 販売形態複数選択 (ADR-108 B-1)", { tag: ["@sc
     const companyTab = page.getByRole("tab", { name: /company|会社/i });
     await companyTab.click();
 
-    const trigger = page.locator("[data-testid='sales-form-dropdown-trigger']");
+    const trigger = page.locator("[data-testid='sales-form-trigger']");
     await expect(trigger).toBeVisible({ timeout: 10_000 });
     await trigger.click();
 
@@ -155,7 +155,7 @@ test.describe("Scene 09-A: 販売形態複数選択 (ADR-108 B-1)", { tag: ["@sc
     const companyTab = page.getByRole("tab", { name: /company|会社/i });
     await companyTab.click();
 
-    const trigger = page.locator("[data-testid='sales-form-dropdown-trigger']");
+    const trigger = page.locator("[data-testid='sales-form-trigger']");
     await trigger.click();
     const dropdown = page.locator("[data-testid='sales-form-dropdown']");
 
