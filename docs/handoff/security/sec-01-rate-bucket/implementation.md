@@ -58,7 +58,8 @@
 - テスト意図は維持。
 - テスト用tokenはJWT形状ではない文字列に変更。
 - 実秘密値は含めない。
-- このPRはmerge前にSecret Scanの再確認が必要。
+- merge前にSecret Scanの再確認が必要。
+- Secret Scanが再度失敗する場合、gitleaks artifactを安全に確認して原因を特定する。
 
 ---
 
