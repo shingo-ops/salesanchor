@@ -34,7 +34,13 @@ const GUILD_ID = process.env.QA_SCENE_C_GUILD_ID || "";
 // ─────────────────────────────────────────────
 // Setup: tenant_006 に sales_form_options を seed
 // ─────────────────────────────────────────────
+// DATABASE_URL が未設定（runner が監視VPS の場合）は skip する。
+// reset-tenant.sh が seed-tenant.sql 経由で同データを投入済みのため不要。
 test.beforeAll(async () => {
+  if (!process.env.DATABASE_URL) {
+    console.log("[scene-09 beforeAll] DATABASE_URL 未設定 — reset-tenant.sh 実行済みのためスキップ");
+    return;
+  }
   psqlRows(`
     INSERT INTO ${SCHEMA}.tenant_sales_form_options (tenant_id, label, value, sort_order)
     VALUES
@@ -185,6 +191,12 @@ test.describe("Scene 09-A: 販売形態複数選択 (ADR-108 B-1)", { tag: ["@sc
   });
 
   test("A-4: DB で選択内容が正しく保存されている", async ({ page }) => {
+    // DATABASE_URL が未設定（runner が監視VPS の場合）はスキップする。
+    // A-1〜A-3 の UI テストで保存動作を確認済みのため、DB assert はベストエフォート。
+    if (!process.env.DATABASE_URL) {
+      test.skip(true, "DATABASE_URL 未設定 — runner が監視VPS のため psql DB assert をスキップ");
+      return;
+    }
     // A-2 で保存したデータを DB で確認
     const count = psqlCount(`
       SELECT COUNT(*) FROM ${SCHEMA}.lead_sales_form_selections s

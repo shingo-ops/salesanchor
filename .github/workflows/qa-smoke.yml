@@ -14,19 +14,27 @@ name: QA Smoke Suite (ADR-038)
 #                           (毎 PR 走らせると prod 負荷になるため変更時のみ)
 #
 # Runner:
-#   - **self-hosted** (VPS or 同等ネットワーク経路内のホスト)
-#     reason: 本番 DB + 本番 API + 本番 Firebase に直アクセスするため
+#   - **self-hosted** (salesanchor-vps ラベル = 監視VPS 49.212.160.98)
+#     reason: 本番 API + 本番 Firebase に直アクセスするため
 #             github-hosted runner からは firewall で塞がれる前提
 #
+# アーキテクチャ注記:
+#   - Reset / Cleanup は appleboy/ssh-action でアプリVPS上の docker exec で実行する
+#     理由: runner(監視VPS) → PostgreSQL(アプリVPS docker 内部) は 5432 port 未公開のため
+#           runner から直接 psql 接続不可。deploy.yml と同パターンで回避。
+#   - DATABASE_URL は backend コンテナ内の env を使うため GitHub Secret 不要。
+#
 # Required Secrets (Settings → Secrets and variables → Actions):
-#   DATABASE_URL                postgresql://... (本番 readwrite 想定。tenant_006 限定で使用)
+#   VPS_HOST                    アプリVPS ホスト名/IP (既存 deploy 共用)
+#   VPS_USER                    SSH ユーザー名 (既存 deploy 共用)
+#   SSH_PRIVATE_KEY             SSH 秘密鍵 (既存 deploy 共用)
 #   QA_ADMIN_EMAIL              Firebase real user (tenant_006 = tenant-review)
 #   QA_ADMIN_PASSWORD
 #   QA_STAFF_EMAIL
 #   QA_STAFF_PASSWORD
 #   QA_VIEWER_EMAIL
 #   QA_VIEWER_PASSWORD
-#   QA_ADMIN_FIREBASE_UID       seed-tenant.sql に渡す
+#   QA_ADMIN_FIREBASE_UID       reset-tenant.sh / seed-tenant.sql に渡す
 #   QA_STAFF_FIREBASE_UID
 #   QA_VIEWER_FIREBASE_UID
 #   QA_ADMIN_PASSWORD_HASH      bcrypt 済 (fallback)
@@ -62,7 +70,8 @@ jobs:
     env:
       QA_SMOKE_BASE_URL: https://app.salesanchor.jp
       QA_SMOKE_API_URL:  https://api.salesanchor.jp
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # DATABASE_URL は runner(監視VPS) から直接 psql 接続できないため job env に置かない。
+      # reset / cleanup は SSH 経由でアプリVPS docker 内で実行し、コンテナの DATABASE_URL を使う。
 
     steps:
       - name: Checkout
@@ -101,17 +110,38 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      # --- tenant_006 reset (seed 投入) ---
-      - name: Reset tenant_006 (seed known state)
+      # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
+      # runner (監視VPS 49.212.160.98) は PostgreSQL (アプリVPS docker 内部) に
+      # 直接アクセスできないため、appleboy/ssh-action でアプリVPS にSSH し、
+      # backend コンテナ内で reset-tenant.sh を実行する。
+      # DATABASE_URL はコンテナが既に持っている env を使用するため Secret 不要。
+      - name: Reset tenant_006 on app VPS (via SSH + docker exec)
+        uses: appleboy/ssh-action@v1
         env:
-          QA_ADMIN_FIREBASE_UID:  ${{ secrets.QA_ADMIN_FIREBASE_UID }}
-          QA_STAFF_FIREBASE_UID:  ${{ secrets.QA_STAFF_FIREBASE_UID }}
-          QA_VIEWER_FIREBASE_UID: ${{ secrets.QA_VIEWER_FIREBASE_UID }}
+          QA_ADMIN_FIREBASE_UID:   ${{ secrets.QA_ADMIN_FIREBASE_UID }}
+          QA_STAFF_FIREBASE_UID:   ${{ secrets.QA_STAFF_FIREBASE_UID }}
+          QA_VIEWER_FIREBASE_UID:  ${{ secrets.QA_VIEWER_FIREBASE_UID }}
           QA_ADMIN_PASSWORD_HASH:  ${{ secrets.QA_ADMIN_PASSWORD_HASH }}
           QA_STAFF_PASSWORD_HASH:  ${{ secrets.QA_STAFF_PASSWORD_HASH }}
           QA_VIEWER_PASSWORD_HASH: ${{ secrets.QA_VIEWER_PASSWORD_HASH }}
           QA_DISCORD_WEBHOOK_URL:  ${{ secrets.QA_DISCORD_WEBHOOK_URL }}
-        run: bash scripts/qa/reset-tenant.sh
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_ADMIN_PASSWORD_HASH,QA_STAFF_PASSWORD_HASH,QA_VIEWER_PASSWORD_HASH,QA_DISCORD_WEBHOOK_URL
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+            docker compose exec -T \
+              -e QA_ADMIN_FIREBASE_UID="$QA_ADMIN_FIREBASE_UID" \
+              -e QA_STAFF_FIREBASE_UID="$QA_STAFF_FIREBASE_UID" \
+              -e QA_VIEWER_FIREBASE_UID="$QA_VIEWER_FIREBASE_UID" \
+              -e QA_ADMIN_PASSWORD_HASH="$QA_ADMIN_PASSWORD_HASH" \
+              -e QA_STAFF_PASSWORD_HASH="$QA_STAFF_PASSWORD_HASH" \
+              -e QA_VIEWER_PASSWORD_HASH="$QA_VIEWER_PASSWORD_HASH" \
+              -e QA_DISCORD_WEBHOOK_URL="${QA_DISCORD_WEBHOOK_URL:-}" \
+              backend bash /app/scripts/qa/reset-tenant.sh
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
@@ -129,10 +159,20 @@ jobs:
           ./frontend/node_modules/.bin/playwright test \
             --config tests/qa-smoke/playwright.config.ts
 
-      # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort) ---
-      - name: Cleanup smoke-prefixed data
+      # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort, via SSH + docker exec) ---
+      # cleanup-smoke-data.sh も psql を使うため同様に SSH 経由で実行する。
+      - name: Cleanup smoke-prefixed data (via SSH + docker exec)
         if: always()
-        run: bash scripts/qa/cleanup-smoke-data.sh || echo "cleanup failed (best-effort)"
+        uses: appleboy/ssh-action@v1
+        continue-on-error: true
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            docker compose exec -T backend bash /app/scripts/qa/cleanup-smoke-data.sh \
+              || echo "cleanup failed (best-effort)"
 
       # --- Artifacts ---
       - name: Upload Playwright report
