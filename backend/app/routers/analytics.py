@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -909,6 +909,30 @@ def _month_elapsed_pct(today: date) -> int:
     return min(100, int(today.day / days_in_month * 100))
 
 
+def _parse_month(month: str | None, today: date) -> tuple[int, int]:
+    """month クエリパラメータを (year, month_num) に変換する。
+    省略時は今月。形式が不正なら HTTPException 422 を上げる。
+    """
+    if month is None:
+        return today.year, today.month
+    parts = month.split("-")
+    if len(parts) != 2:
+        raise HTTPException(status_code=422, detail="month は YYYY-MM 形式で指定してください")
+    try:
+        y, m = int(parts[0]), int(parts[1])
+    except ValueError:
+        raise HTTPException(status_code=422, detail="month は YYYY-MM 形式で指定してください")
+    if not (1 <= m <= 12):
+        raise HTTPException(status_code=422, detail="month の月は 1〜12 の範囲で指定してください")
+    return y, m
+
+
+def _validate_scope(scope: str) -> None:
+    """scope が team / mine 以外なら HTTPException 422 を上げる。"""
+    if scope not in ("team", "mine"):
+        raise HTTPException(status_code=422, detail="scope は team または mine で指定してください")
+
+
 @router.get(
     "/analytics/funnel",
     response_model=FunnelResponse,
@@ -927,15 +951,9 @@ async def funnel_stages(
     api-contract.md section 2 に準拠。
     目標値は goals テーブルから取得（未設定時は 0）。
     """
+    _validate_scope(scope)
     today = date.today()
-    if month:
-        parts = month.split("-")
-        target_year = int(parts[0])
-        target_month = int(parts[1])
-    else:
-        target_year = today.year
-        target_month = today.month
-
+    target_year, target_month = _parse_month(month, today)
     month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
     elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
@@ -987,15 +1005,15 @@ async def funnel_stages(
     active_count = int(ar.get("cnt", 0) or 0)
     active_amount = float(ar.get("amount", 0) or 0)
 
-    # 成約/失注（updated_at を closed_at 代替として使用）
-    # TODO: PR1 マージ後に closed_at に変更
+    # 成約/失注（closed_at 基準・closed_at IS NULL = 集計対象外）
     closed_result = await db.execute(
         text(f"""
             SELECT
                 SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) AS won,
                 SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) AS lost
             FROM deals
-            WHERE updated_at >= :start AND updated_at < :end
+            WHERE closed_at >= :start AND closed_at < :end
+              AND closed_at IS NOT NULL
               AND status IN ('won', 'lost')
             {assign_filter_deals}
         """),
@@ -1032,13 +1050,14 @@ async def funnel_stages(
 
     # 残り目標に対する進行中商談カバー率
     revenue_target = goals.get("revenue", 0)
-    # 既に成約分の売上（当月 won の amount 合計）
+    # 既に成約分の売上（当月 won の amount 合計・closed_at 基準）
     won_amount_result = await db.execute(
         text(f"""
             SELECT COALESCE(SUM(amount), 0) AS won_amount
             FROM deals
             WHERE status = 'won'
-              AND updated_at >= :start AND updated_at < :end
+              AND closed_at >= :start AND closed_at < :end
+              AND closed_at IS NOT NULL
             {assign_filter_deals}
         """),
         base_params,
@@ -1107,6 +1126,7 @@ async def follow_ups_summary(
     - no_repeat_after_first: 初回後未フォロー（初回発注から45日以内に2回目なし）
     - won_no_order: 成約後未発注（成約後30日超で発注なし）
     """
+    _validate_scope(scope)
     today = date.today()
     items: list[FollowUpCustomer] = []
     # 境界日を Python 側で計算（SQLite / PostgreSQL 両互換）
@@ -1184,28 +1204,28 @@ async def follow_ups_summary(
             assignee=row["assignee"],
         ))
 
-    # ── 3. won_no_order: 成約後30日超で発注なし ──
-    # TODO: PR1 マージ後に closed_at に変更（現在は updated_at を代替使用）
+    # ── 3. won_no_order: 成約後30日超で発注なし（closed_at 基準）──
     won_no_order_result = await db.execute(
         text(f"""
             SELECT
                 d.company_id,
                 c.name,
-                d.updated_at AS closed_at,
+                d.closed_at,
                 u.username AS assignee
             FROM deals d
             JOIN companies c ON c.id = d.company_id
             LEFT JOIN users u ON u.id = d.assigned_to
             WHERE d.status = 'won'
               AND d.company_id IS NOT NULL
-              AND d.updated_at < :threshold
+              AND d.closed_at IS NOT NULL
+              AND d.closed_at < :threshold
               AND NOT EXISTS (
                   SELECT 1 FROM orders o
                   WHERE o.company_id = d.company_id
-                    AND o.created_at >= d.updated_at
+                    AND o.created_at >= d.closed_at
               )
             {deal_assign_filter}
-            ORDER BY d.updated_at ASC
+            ORDER BY d.closed_at ASC
         """),
         {"threshold": threshold_30, **scope_params},
     )
@@ -1223,3 +1243,373 @@ async def follow_ups_summary(
         ))
 
     return FollowUpsResponse(items=items)
+
+
+# ─────────────────────────────────────────────
+# /analytics/revenue-summary
+# ─────────────────────────────────────────────
+
+class RevenueSplit(BaseModel):
+    new: float
+    repeat: float
+
+
+class RevenueSummaryResponse(BaseModel):
+    month: str
+    target: float
+    actual: float
+    pace: float  # 当月経過率で按分した目標に対する達成率（整数 %）
+    split: RevenueSplit
+    new_customers: int
+    active_existing_customers: int
+    gross_margin: float
+    uncosted_orders: int
+
+
+@router.get(
+    "/analytics/revenue-summary",
+    response_model=RevenueSummaryResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def revenue_summary(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    月次売上サマリー。api-contract.md section 3 に準拠。
+    - target: goals.revenue 目標
+    - actual: 当月 closed_at の won deals amount 合計
+    - pace: elapsed_pct 基準の目標按分に対する達成率（%）
+    - split.new: 新規顧客（当月初回発注）の売上合計
+    - split.repeat: リピート顧客の売上合計
+    - new_customers: 当月新規顧客数
+    - active_existing_customers: 当月リピート購買のユニーク既存顧客数
+    - gross_margin: (revenue - purchase_cost) / revenue * 100（costed orders のみ）
+    - uncosted_orders: purchase_cost が NULL の注文数
+    """
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    month_str = f"{target_year:04d}-{target_month:02d}"
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+    elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
+
+    # scope で orders を絞る: mine は deal 経由で assigned_to
+    if scope == "mine":
+        order_scope_join = "JOIN deals od ON od.id = o.deal_id AND od.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    # ── 目標値 ──
+    if scope == "mine":
+        goal_filter = "user_id = :goal_owner AND team_id IS NULL"
+        goal_extra: dict = {"goal_owner": current_user.id}
+    else:
+        goal_filter = "team_id IS NOT NULL AND user_id IS NULL"
+        goal_extra = {}
+    goal_result = await db.execute(
+        text(f"""
+            SELECT kpi_type, COALESCE(target_value, 0) AS target_value
+            FROM goals
+            WHERE {goal_filter}
+              AND period_type = 'monthly'
+              AND period_year = :year
+              AND period_num = :month_num
+        """),
+        {"year": target_year, "month_num": target_month, **goal_extra},
+    )
+    goals: dict[str, float] = {
+        row["kpi_type"]: float(row["target_value"]) for row in goal_result.mappings().all()
+    }
+    revenue_target = goals.get("revenue", 0.0)
+
+    # ── 実績: 当月 closed_at won の orders.amount 合計（scope 適用）──
+    actual_result = await db.execute(
+        text(f"""
+            SELECT COALESCE(SUM(o.total_amount), 0) AS actual
+            FROM orders o
+            {order_scope_join}
+            WHERE o.created_at >= :start AND o.created_at < :end
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    actual = float((actual_result.mappings().first() or {}).get("actual", 0) or 0)
+
+    # pace: elapsed_pct 基準の按分目標に対する達成率
+    pace_target = revenue_target * elapsed_pct / 100 if elapsed_pct > 0 else revenue_target
+    pace = int(round(actual / pace_target * 100)) if pace_target > 0 else (100 if actual > 0 else 0)
+
+    # ── 新規 / リピート 分類 ──
+    # 新規顧客: 当月に初めて発注した company（当月以前に orders なし）
+    # order_scope_join は mine の場合のみ適用
+    split_result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                SUM(o.total_amount) AS total_amount,
+                MIN(o.created_at) AS first_ever
+            FROM orders o
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start AND o.created_at < :end
+            GROUP BY o.company_id
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    split_rows = split_result.mappings().all()
+
+    new_revenue = 0.0
+    repeat_revenue = 0.0
+    new_customer_ids: set[int] = set()
+    repeat_customer_ids: set[int] = set()
+
+    for row in split_rows:
+        company_id = row["company_id"]
+        amt = float(row["total_amount"] or 0)
+        # 当月以前に発注があるか確認
+        prior_result = await db.execute(
+            text("SELECT COUNT(*) AS cnt FROM orders WHERE company_id = :cid AND created_at < :start"),
+            {"cid": company_id, "start": start_utc},
+        )
+        prior_cnt = int((prior_result.mappings().first() or {}).get("cnt", 0) or 0)
+        if prior_cnt == 0:
+            new_revenue += amt
+            new_customer_ids.add(company_id)
+        else:
+            repeat_revenue += amt
+            repeat_customer_ids.add(company_id)
+
+    # ── 粗利計算（purchase_cost IS NOT NULL の orders のみ）──
+    margin_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(o.id) AS total_orders,
+                SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN 1 ELSE 0 END) AS costed_cnt,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN o.total_amount ELSE 0 END), 0) AS costed_revenue,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN f.purchase_cost ELSE 0 END), 0) AS total_cost
+            FROM orders o
+            {order_scope_join}
+            LEFT JOIN order_financials f ON f.order_id = o.id
+            WHERE o.created_at >= :start AND o.created_at < :end
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    mr = margin_result.mappings().first() or {}
+    total_orders = int(mr.get("total_orders", 0) or 0)
+    costed_cnt = int(mr.get("costed_cnt", 0) or 0)
+    costed_revenue = float(mr.get("costed_revenue", 0) or 0)
+    total_cost = float(mr.get("total_cost", 0) or 0)
+    uncosted_orders = total_orders - costed_cnt
+    gross_margin = ((costed_revenue - total_cost) / costed_revenue * 100) if costed_revenue > 0 else 0.0
+
+    return RevenueSummaryResponse(
+        month=month_str,
+        target=revenue_target,
+        actual=actual,
+        pace=pace,
+        split=RevenueSplit(new=new_revenue, repeat=repeat_revenue),
+        new_customers=len(new_customer_ids),
+        active_existing_customers=len(repeat_customer_ids),
+        gross_margin=round(gross_margin, 1),
+        uncosted_orders=uncosted_orders,
+    )
+
+
+# ─────────────────────────────────────────────
+# /analytics/channels
+# ─────────────────────────────────────────────
+
+class ChannelStats(BaseModel):
+    channel: str
+    leads: int
+    deals: int
+    won: int
+    revenue: float
+
+
+class ChannelsResponse(BaseModel):
+    month: str
+    channels: list[ChannelStats]
+
+
+@router.get(
+    "/analytics/channels",
+    response_model=ChannelsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def channels_summary(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    チャネル別集計。api-contract.md section 4 に準拠。
+    leads.channel_type でグループ化し、deals / orders は lead 経由で紐付ける。
+    """
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    month_str = f"{target_year:04d}-{target_month:02d}"
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+
+    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    # ── リード数（channel_type ごと）──
+    lead_result = await db.execute(
+        text(f"""
+            SELECT
+                COALESCE(channel_type, 'unknown') AS channel,
+                COUNT(*) AS leads
+            FROM leads l
+            WHERE l.created_at >= :start AND l.created_at < :end
+            {lead_assign}
+            GROUP BY COALESCE(channel_type, 'unknown')
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    lead_rows = {row["channel"]: int(row["leads"]) for row in lead_result.mappings().all()}
+
+    # ── 商談数・成約数・売上（lead 経由 channel_type）──
+    deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    deal_result = await db.execute(
+        text(f"""
+            SELECT
+                COALESCE(l.channel_type, 'unknown') AS channel,
+                COUNT(DISTINCT d.id) AS deals,
+                SUM(CASE WHEN d.status = 'won' THEN 1 ELSE 0 END) AS won,
+                COALESCE(SUM(CASE WHEN d.status = 'won' THEN d.amount ELSE 0 END), 0) AS revenue
+            FROM deals d
+            LEFT JOIN leads l ON l.converted_deal_id = d.id
+            WHERE d.closed_at >= :start AND d.closed_at < :end
+              AND d.closed_at IS NOT NULL
+            {deal_assign}
+            GROUP BY COALESCE(l.channel_type, 'unknown')
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    deal_rows = {
+        row["channel"]: {
+            "deals": int(row["deals"]),
+            "won": int(row["won"]),
+            "revenue": float(row["revenue"] or 0),
+        }
+        for row in deal_result.mappings().all()
+    }
+
+    # 全チャネルを合算
+    all_channels = set(lead_rows.keys()) | set(deal_rows.keys())
+    channels: list[ChannelStats] = []
+    for ch in sorted(all_channels):
+        dr = deal_rows.get(ch, {})
+        channels.append(ChannelStats(
+            channel=ch,
+            leads=lead_rows.get(ch, 0),
+            deals=dr.get("deals", 0),
+            won=dr.get("won", 0),
+            revenue=dr.get("revenue", 0.0),
+        ))
+
+    return ChannelsResponse(month=month_str, channels=channels)
+
+
+# ─────────────────────────────────────────────
+# /analytics/reasons
+# ─────────────────────────────────────────────
+
+class ReasonItem(BaseModel):
+    reason_id: int
+    label: str
+    outcome: str  # "won" | "lost"
+    count: int
+    memos: list[str]  # 最新 10 件
+
+
+class ReasonsResponse(BaseModel):
+    month: str
+    reasons: list[ReasonItem]
+
+
+@router.get(
+    "/analytics/reasons",
+    response_model=ReasonsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def reasons_summary(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    成約/失注理由別集計。api-contract.md section 6 に準拠。
+    close_reasons × deal_close_reasons でグループ化、memos は最新10件。
+    """
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    month_str = f"{target_year:04d}-{target_month:02d}"
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+
+    deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    # 集計
+    agg_result = await db.execute(
+        text(f"""
+            SELECT
+                cr.id AS reason_id,
+                cr.label,
+                cr.type AS outcome,
+                COUNT(dcr.deal_id) AS cnt
+            FROM deal_close_reasons dcr
+            JOIN close_reasons cr ON cr.id = dcr.reason_id
+            JOIN deals d ON d.id = dcr.deal_id
+            WHERE d.closed_at >= :start AND d.closed_at < :end
+              AND d.closed_at IS NOT NULL
+            {deal_assign}
+            GROUP BY cr.id, cr.label, cr.type
+            ORDER BY cnt DESC
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    agg_rows = agg_result.mappings().all()
+
+    # reason_id ごとに memos（close_reason_memo, 最新10件, closed_at DESC）
+    reasons: list[ReasonItem] = []
+    for row in agg_rows:
+        rid = row["reason_id"]
+        memo_result = await db.execute(
+            text(f"""
+                SELECT d.close_reason_memo
+                FROM deal_close_reasons dcr
+                JOIN deals d ON d.id = dcr.deal_id
+                WHERE dcr.reason_id = :rid
+                  AND d.closed_at >= :start AND d.closed_at < :end
+                  AND d.closed_at IS NOT NULL
+                  AND d.close_reason_memo IS NOT NULL
+                  AND d.close_reason_memo != ''
+                {deal_assign}
+                ORDER BY d.closed_at DESC
+                LIMIT 10
+            """),
+            {"rid": rid, "start": start_utc, "end": end_utc, **scope_params},
+        )
+        memos = [r["close_reason_memo"] for r in memo_result.mappings().all()]
+        reasons.append(ReasonItem(
+            reason_id=rid,
+            label=row["label"],
+            outcome=row["outcome"],
+            count=int(row["cnt"]),
+            memos=memos,
+        ))
+
+    return ReasonsResponse(month=month_str, reasons=reasons)

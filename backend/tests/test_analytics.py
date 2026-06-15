@@ -293,8 +293,8 @@ class TestFollowUps:
         # 成約案件: 40日前に won（won_no_order に該当）
         won_date = str(date.today() - timedelta(days=40))
         await db_session.execute(text("""
-            INSERT INTO deals (tenant_id, company_id, contact_id, title, amount, status, updated_at, created_at)
-            VALUES (999, :co_id, :ct_id, 'WonDeal', 100000, 'won', :dt, :dt)
+            INSERT INTO deals (tenant_id, company_id, contact_id, title, amount, status, closed_at, updated_at, created_at)
+            VALUES (999, :co_id, :ct_id, 'WonDeal', 100000, 'won', :dt, :dt, :dt)
         """), {"co_id": co2_id, "ct_id": ct2_id, "dt": won_date})
         await db_session.commit()
 
@@ -339,3 +339,191 @@ class TestSummaryExtensions:
         assert "gross_profit" in data["orders"]
         assert "gross_profit_margin" in data["orders"]
         assert "cost_coverage_rate" in data["orders"]
+
+
+# ─────────────────────────────────────────────
+# revenue-summary EP テスト
+# ─────────────────────────────────────────────
+
+class TestRevenueSummary:
+    """GET /analytics/revenue-summary"""
+
+    async def test_revenue_summary_empty(self, client):
+        """データなしで 200 を返し、数値がすべて 0"""
+        res = await client.get("/api/v1/analytics/revenue-summary")
+        assert res.status_code == 200
+        data = res.json()
+        assert "month" in data
+        assert data["target"] == 0.0
+        assert data["actual"] == 0.0
+        assert data["split"]["new"] == 0.0
+        assert data["split"]["repeat"] == 0.0
+        assert data["new_customers"] == 0
+        assert data["active_existing_customers"] == 0
+        assert data["uncosted_orders"] == 0
+
+    async def test_revenue_summary_with_data(self, client, db_session):
+        """注文データ投入時に revenue-summary が正しい値を返す"""
+        co = await client.post("/api/v1/companies", json={"name": "RevCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "RevContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]  # YYYY-MM
+
+        # 今月の注文を1件（新規顧客）
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (999, :co_id, :ct_id, 'REV-001', 200000, 'pending', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["actual"] == 200000.0
+        assert data["new_customers"] == 1
+        assert data["active_existing_customers"] == 0
+        assert data["split"]["new"] == 200000.0
+        assert data["split"]["repeat"] == 0.0
+
+    async def test_revenue_summary_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/revenue-summary?scope=invalid")
+        assert res.status_code == 422
+
+    async def test_revenue_summary_with_gross_margin(self, client, db_session):
+        """purchase_cost あり注文で gross_margin が計算される"""
+        co = await client.post("/api/v1/companies", json={"name": "GrossCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "GrossContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # 注文を1件
+        await db_session.execute(text("""
+            INSERT INTO orders (id, tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (9901, 999, :co_id, :ct_id, 'GROSS-001', 100000, 'pending', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        # order_financials に purchase_cost を設定
+        await db_session.execute(text("""
+            INSERT INTO order_financials (order_id, tenant_id, revenue_amount, purchase_cost)
+            VALUES (9901, 999, 100000, 60000)
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["gross_margin"] == 40.0  # (100000 - 60000) / 100000 * 100
+        assert data["uncosted_orders"] == 0
+
+
+# ─────────────────────────────────────────────
+# channels EP テスト
+# ─────────────────────────────────────────────
+
+class TestChannels:
+    """GET /analytics/channels"""
+
+    async def test_channels_empty(self, client):
+        """データなしで 200 を返し、channels が空リスト"""
+        res = await client.get("/api/v1/analytics/channels")
+        assert res.status_code == 200
+        data = res.json()
+        assert "month" in data
+        assert data["channels"] == []
+
+    async def test_channels_with_data(self, client, db_session):
+        """channel_type 付きリードで channels が返る"""
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # channel_type='instagram' のリードを2件
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, status, created_at)
+            VALUES (999, 'InstaLead1', 'instagram', 'lead', :dt),
+                   (999, 'InstaLead2', 'instagram', 'lead', :dt)
+        """), {"dt": str(today)})
+        # channel_type='dm' のリードを1件
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, status, created_at)
+            VALUES (999, 'DmLead1', 'dm', 'lead', :dt)
+        """), {"dt": str(today)})
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/channels?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        channels_by_name = {ch["channel"]: ch for ch in data["channels"]}
+
+        assert "instagram" in channels_by_name
+        assert channels_by_name["instagram"]["leads"] == 2
+        assert "dm" in channels_by_name
+        assert channels_by_name["dm"]["leads"] == 1
+
+    async def test_channels_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/channels?scope=bad")
+        assert res.status_code == 422
+
+
+# ─────────────────────────────────────────────
+# reasons EP テスト
+# ─────────────────────────────────────────────
+
+class TestReasons:
+    """GET /analytics/reasons"""
+
+    async def test_reasons_empty(self, client):
+        """当月の deal_close_reasons なしで 200 を返し、reasons が空リスト"""
+        res = await client.get("/api/v1/analytics/reasons")
+        assert res.status_code == 200
+        data = res.json()
+        assert "month" in data
+        assert data["reasons"] == []
+
+    async def test_reasons_with_data(self, client, db_session):
+        """成約理由付き商談で reasons が返る"""
+        co = await client.post("/api/v1/companies", json={"name": "ReasonCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "ReasonContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # won deal with close reason
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
+            VALUES (9001, 999, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        # close_reasons ID=1 is '在庫・品揃え' (won) — seeded in conftest
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9001, 1, 1)
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/reasons?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["reasons"]) >= 1
+        first = data["reasons"][0]
+        assert first["reason_id"] == 1
+        assert first["outcome"] == "won"
+        assert first["count"] == 1
+        assert "品揃えが豊富でした" in first["memos"]
+
+    async def test_reasons_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/reasons?scope=xxx")
+        assert res.status_code == 422
