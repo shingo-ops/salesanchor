@@ -153,7 +153,9 @@
     "accountSettings": "Account Settings",
     "sales": "Sales",
     "commissions": "Commissions",
-    "channelMasters": "Channel Management"
+    "channelMasters": "Channel Management",
+    "openDrawer": "Open navigation",
+    "closeDrawer": "Close navigation"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
