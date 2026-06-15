@@ -368,3 +368,198 @@ class TestCheckAndNotify:
         # 通知の必要情報（差出人・件名）は含む
         assert "noreply@firebase.com" in content
         assert "Password Reset for your account" in content
+
+
+# ---------------------------------------------------------------------------
+# _parse_mention: メンション解析
+# ---------------------------------------------------------------------------
+
+class TestParseMention:
+    def test_empty_string_returns_none(self) -> None:
+        mention, am = notifier._parse_mention("")
+        assert mention is None
+        assert am == {"parse": []}
+
+    def test_whitespace_only_returns_none(self) -> None:
+        mention, am = notifier._parse_mention("   ")
+        assert mention is None
+        assert am == {"parse": []}
+
+    def test_user_mention_valid(self) -> None:
+        mention, am = notifier._parse_mention("<@1255555836776939692>")
+        assert mention == "<@1255555836776939692>"
+        assert am == {"parse": [], "users": ["1255555836776939692"]}
+
+    def test_user_mention_with_exclamation(self) -> None:
+        mention, am = notifier._parse_mention("<@!1255555836776939692>")
+        assert mention == "<@!1255555836776939692>"
+        assert am == {"parse": [], "users": ["1255555836776939692"]}
+
+    def test_role_mention_valid(self) -> None:
+        mention, am = notifier._parse_mention("<@&123456789012345678>")
+        assert mention == "<@&123456789012345678>"
+        assert am == {"parse": [], "roles": ["123456789012345678"]}
+
+    def test_invalid_format_returns_none_with_warning(self, caplog) -> None:
+        import logging
+        with caplog.at_level(logging.WARNING):
+            mention, am = notifier._parse_mention("@everyone")
+        assert mention is None
+        assert am == {"parse": []}
+        assert "不正" in caplog.text
+
+    def test_invalid_too_short_id(self) -> None:
+        mention, am = notifier._parse_mention("<@12345>")
+        assert mention is None
+
+    def test_invalid_plain_text(self) -> None:
+        mention, am = notifier._parse_mention("SomeText")
+        assert mention is None
+
+    def test_leading_trailing_whitespace_stripped(self) -> None:
+        mention, am = notifier._parse_mention("  <@1255555836776939692>  ")
+        assert mention == "<@1255555836776939692>"
+        assert am["users"] == ["1255555836776939692"]
+
+
+# ---------------------------------------------------------------------------
+# _build_discord_content: メンション付きメッセージ
+# ---------------------------------------------------------------------------
+
+class TestBuildDiscordContentMention:
+    def test_mention_prepended_to_content(self) -> None:
+        content = notifier._build_discord_content(
+            "f@e.com", "sub", "date", mention="<@1255555836776939692>"
+        )
+        assert content.startswith("<@1255555836776939692>\n")
+
+    def test_no_mention_when_none(self) -> None:
+        content = notifier._build_discord_content("f@e.com", "sub", "date", mention=None)
+        assert not content.startswith("<@")
+        assert content.startswith("📩")
+
+    def test_subject_in_mention_does_not_fire(self) -> None:
+        """件名に @everyone や <@999> が含まれても allowed_mentions で制御する。
+        content 文字列に @everyone が含まれること自体は許容（Discord 側で制御）。"""
+        content = notifier._build_discord_content(
+            "f@e.com", "@everyone big sale", "date", mention=None
+        )
+        assert "@everyone big sale" in content  # 件名は表示される
+
+
+# ---------------------------------------------------------------------------
+# _post_discord: allowed_mentions ペイロード
+# ---------------------------------------------------------------------------
+
+class TestPostDiscordAllowedMentions:
+    def test_allowed_mentions_in_payload(self) -> None:
+        """allowed_mentions が Discord POST payload に含まれる。"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        captured: list[dict] = []
+
+        def capture(url, json, timeout):
+            captured.append(json)
+            return mock_resp
+
+        with (
+            patch.object(notifier, "_DISCORD_WEBHOOK", "https://discord.example.com/wh"),
+            patch("httpx.post", side_effect=capture),
+        ):
+            notifier._post_discord("test", allowed_mentions={"parse": [], "users": ["123"]})
+
+        assert len(captured) == 1
+        assert captured[0]["allowed_mentions"] == {"parse": [], "users": ["123"]}
+
+    def test_default_allowed_mentions_parse_empty(self) -> None:
+        """allowed_mentions 未指定時は parse:[] がデフォルト。"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        captured: list[dict] = []
+
+        def capture(url, json, timeout):
+            captured.append(json)
+            return mock_resp
+
+        with (
+            patch.object(notifier, "_DISCORD_WEBHOOK", "https://discord.example.com/wh"),
+            patch("httpx.post", side_effect=capture),
+        ):
+            notifier._post_discord("test")
+
+        assert captured[0]["allowed_mentions"] == {"parse": []}
+
+
+# ---------------------------------------------------------------------------
+# check_and_notify: メンション統合ケース
+# ---------------------------------------------------------------------------
+
+class TestCheckAndNotifyMention:
+    def test_mention_prepended_in_discord_payload(self) -> None:
+        """REVIEW_MAIL_DISCORD_MENTION 設定時、Discord payload 先頭にメンションが付く。"""
+        raw_header = _make_raw_header()
+        mock_imap = MagicMock()
+        mock_imap.uid.side_effect = [
+            (None, [b"55"]),
+            (None, [(b"55 ...", raw_header)]),
+        ]
+        mock_redis = MagicMock()
+        mock_redis.exists.return_value = 0
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        captured: list[dict] = []
+
+        def capture(url, json, timeout):
+            captured.append(json)
+            return mock_resp
+
+        with (
+            patch.object(notifier, "_IMAP_HOST", "imap.example.com"),
+            patch.object(notifier, "_IMAP_USER", "user@example.com"),
+            patch.object(notifier, "_IMAP_PASSWORD", "pass"),
+            patch.object(notifier, "_DISCORD_WEBHOOK", "https://discord.example.com/wh"),
+            patch.object(notifier, "_DISCORD_MENTION", "<@1255555836776939692>"),
+            patch("imaplib.IMAP4_SSL", return_value=mock_imap),
+            patch.object(notifier, "_get_redis", return_value=mock_redis),
+            patch("httpx.post", side_effect=capture),
+        ):
+            result = notifier.check_and_notify()
+
+        assert result == 1
+        assert len(captured) == 1
+        assert captured[0]["content"].startswith("<@1255555836776939692>\n")
+        assert captured[0]["allowed_mentions"] == {"parse": [], "users": ["1255555836776939692"]}
+
+    def test_invalid_mention_env_skips_mention(self) -> None:
+        """REVIEW_MAIL_DISCORD_MENTION が不正形式のとき、メンションなしで通知する。"""
+        raw_header = _make_raw_header()
+        mock_imap = MagicMock()
+        mock_imap.uid.side_effect = [
+            (None, [b"56"]),
+            (None, [(b"56 ...", raw_header)]),
+        ]
+        mock_redis = MagicMock()
+        mock_redis.exists.return_value = 0
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        captured: list[dict] = []
+
+        def capture(url, json, timeout):
+            captured.append(json)
+            return mock_resp
+
+        with (
+            patch.object(notifier, "_IMAP_HOST", "imap.example.com"),
+            patch.object(notifier, "_IMAP_USER", "user@example.com"),
+            patch.object(notifier, "_IMAP_PASSWORD", "pass"),
+            patch.object(notifier, "_DISCORD_WEBHOOK", "https://discord.example.com/wh"),
+            patch.object(notifier, "_DISCORD_MENTION", "bad-mention-format"),
+            patch("imaplib.IMAP4_SSL", return_value=mock_imap),
+            patch.object(notifier, "_get_redis", return_value=mock_redis),
+            patch("httpx.post", side_effect=capture),
+        ):
+            result = notifier.check_and_notify()
+
+        assert result == 1
+        assert not captured[0]["content"].startswith("<@")
+        assert captured[0]["allowed_mentions"] == {"parse": []}
