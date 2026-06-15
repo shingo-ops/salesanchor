@@ -18,13 +18,13 @@
 
 DO $$
 BEGIN
-    -- 列ガード
+    -- 列ガード: 全中央カタログ列が揃っていない CI baseline ではスキップ
     IF to_regclass('public.products') IS NULL
-       OR NOT EXISTS (
-           SELECT 1 FROM information_schema.columns
+       OR (SELECT COUNT(*) FROM information_schema.columns
            WHERE table_schema = 'public' AND table_name = 'products'
-             AND column_name IN ('category', 'tcg_type', 'mark', 'product_code', 'set_type')
-       ) THEN
+             AND column_name IN ('category', 'tcg_type', 'mark', 'product_code',
+                                 'product_kind', 'release_date', 'set_type')
+          ) < 7 THEN
         RAISE NOTICE 'public.products central columns not present (migration-test baseline) -- skipping';
         RETURN;
     END IF;
