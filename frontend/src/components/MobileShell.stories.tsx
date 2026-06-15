@@ -1,55 +1,139 @@
 /**
- * MobileShell — モバイル専用 Shell（PR-R2-B）
+ * MobileShell — モバイル専用 Shell デザイントークンカタログ (ADR-067)
  *
- * ADR-137: MobileShell は DesktopShell とは独立した DOM。
- * PR-R2-B 段階では App.tsx 未接続（Vitest / Storybook でのみ動作確認）。
+ * MobileShell.tsx 本体は AuthContext / UiPrefsContext 等の多数のContextに依存するため、
+ * Layout.stories.tsx と同様に CSS クラスを直接使った静的スケルトンでデザイントークンを確認する。
  *
- * NOTE: このコンポーネントは Auth / Permissions / UiPrefs 等の
- *   全コンテキストに依存するため、Storybook では MSW モックを使わず
- *   コンテキストプロバイダーをデコレータとして提供する。
- *   API 呼び出しは初期状態（ローディング or 空）で表示される。
+ * ADR-137: z-index 前後関係 Drawer(210) > Backdrop(200)
+ * ADR-067: 色・余白・z-index はすべて design token 参照
  */
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MemoryRouter } from "react-router-dom";
-import MobileShell from "./MobileShell";
+import "../mobile-shell.css";
 
-/**
- * Storybook 用最小コンテキストモック。
- * MobileShell が依存する React context を最小限で提供し、
- * クラッシュせずに DOM 構造（MobileTopBar / MobileDrawer）を確認できるようにする。
- */
-const meta: Meta<typeof MobileShell> = {
+const meta: Meta = {
   title: "Components/MobileShell",
-  component: MobileShell,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component: `
-**MobileShell（PR-R2-B）** — モバイル専用 Shell コンポーネント。
-
-- MobileTopBar（hamburger / pageTitle / avatar を 1行 flex）
-- MobileDrawer（NavItemList variant="mobile"、左スライドイン）
-- z-index: Drawer(210) > Backdrop(200)（クリック不能バグ防止 ADR-137）
-
-※ この Story は DOM 構造確認用。API 呼び出しはモックなしのため初期状態で表示。
-        `,
-      },
-    },
-  },
-  decorators: [
-    (Story) => (
-      <MemoryRouter>
-        <Story />
-      </MemoryRouter>
-    ),
-  ],
+  parameters: { layout: "fullscreen" },
   tags: ["autodocs"],
 };
 export default meta;
 
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj;
 
-export const Default: Story = {
-  name: "MobileShell（初期状態）",
+/** MobileTopBar: hamburger / pageTitle / avatar が 1行 flex に収まる確認 */
+export const TopBar: Story = {
+  name: "MobileTopBar（sticky header）",
+  render: () => (
+    <div className="mobile-shell" style={{ height: "200px" }}>
+      <div className="mobile-topbar">
+        {/* HamburgerButton */}
+        <button className="mobile-topbar-hamburger" aria-label="ナビゲーションを開く">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        {/* PageTitle */}
+        <span className="mobile-topbar-title">ダッシュボード</span>
+        {/* AvatarButton (in-flow) */}
+        <button className="mobile-topbar-avatar" aria-label="ユーザーメニューを開く">
+          T
+        </button>
+      </div>
+      <div style={{ padding: "var(--space-4)", color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
+        コンテンツエリア
+      </div>
+    </div>
+  ),
+};
+
+/** MobileDrawer: 開いた状態（z-index 210 — Backdrop より前面） */
+export const DrawerOpen: Story = {
+  name: "MobileDrawer（開いた状態）",
+  render: () => (
+    <div className="mobile-shell" style={{ height: "400px", position: "relative" }}>
+      <div className="mobile-topbar">
+        <button className="mobile-topbar-hamburger" aria-label="ナビゲーションを開く">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <span className="mobile-topbar-title">ダッシュボード</span>
+        <button className="mobile-topbar-avatar" aria-label="ユーザーメニューを開く">T</button>
+      </div>
+      {/* Backdrop (z-index 200) */}
+      <div className="mobile-drawer-backdrop" style={{ position: "absolute" }} aria-hidden="true" />
+      {/* Drawer (z-index 210 — Backdrop より前面) */}
+      <div
+        id="mobile-drawer"
+        className="mobile-drawer mobile-drawer--open"
+        style={{ position: "absolute" }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="ナビゲーション"
+      >
+        <div className="mobile-drawer-header">
+          <div style={{ width: 24, height: 24, background: "var(--bg-accent)", borderRadius: "var(--radius-sm)" }} />
+          <button className="mobile-drawer-close" aria-label="ナビゲーションを閉じる">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div className="mobile-drawer-nav">
+          {["ダッシュボード", "スケジュール", "在庫管理", "受注管理", "顧客情報"].map((label, i) => (
+            <div
+              key={i}
+              style={{
+                padding: "var(--space-2) var(--space-4)",
+                color: i === 0 ? "var(--sidebar-item-color-active, var(--text-primary))" : "var(--sidebar-item-color, var(--text-secondary))",
+                background: i === 0 ? "var(--sidebar-item-bg-active, var(--bg-subtle))" : "transparent",
+                fontSize: "var(--font-sm)",
+                fontWeight: i === 0 ? "var(--font-medium)" : "normal",
+              }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mobile-content" style={{ padding: "var(--space-4)", color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
+        コンテンツエリア（Backdropで暗転）
+      </div>
+    </div>
+  ),
+};
+
+/** MobileDrawer: 閉じた状態 */
+export const DrawerClosed: Story = {
+  name: "MobileDrawer（閉じた状態）",
+  render: () => (
+    <div className="mobile-shell" style={{ height: "300px" }}>
+      <div className="mobile-topbar">
+        <button className="mobile-topbar-hamburger" aria-label="ナビゲーションを開く">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <span className="mobile-topbar-title">スケジュール</span>
+        <button className="mobile-topbar-avatar" aria-label="ユーザーメニューを開く">T</button>
+      </div>
+      {/* Drawer: 閉じた状態（translateX(-100%) で画面外） */}
+      <div
+        id="mobile-drawer"
+        className="mobile-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="ナビゲーション"
+      />
+      <div className="mobile-content" style={{ padding: "var(--space-4)", color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
+        コンテンツエリア（Drawer は画面外に退避済み）
+      </div>
+    </div>
+  ),
 };
