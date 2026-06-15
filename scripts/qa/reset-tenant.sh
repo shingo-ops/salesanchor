@@ -75,6 +75,28 @@ require_env() {
 
 # --- 0. 環境変数チェック ---
 require_env DATABASE_URL
+
+# DATABASE_URL の asyncpg drivername を psql 互換に戻す (UID 自動取得で先行使用)
+PSQL_URL="${DATABASE_URL/postgresql+asyncpg:/postgresql:}"
+
+# Firebase UID 自動取得: env 未設定時は既存 tenant_006.staff から読む (冪等リセット用)
+# 初回シード時は secrets で渡す必要あり。2回目以降は DB から自動取得できる。
+if [[ -z "${QA_ADMIN_FIREBASE_UID:-}" ]]; then
+    log "QA_ADMIN_FIREBASE_UID unset — querying tenant_006.staff (QA-ADMIN-001)..."
+    QA_ADMIN_FIREBASE_UID=$(psql "$PSQL_URL" -At -c \
+        "SELECT firebase_uid FROM tenant_006.staff WHERE staff_code='QA-ADMIN-001' LIMIT 1;" 2>/dev/null || true)
+fi
+if [[ -z "${QA_STAFF_FIREBASE_UID:-}" ]]; then
+    log "QA_STAFF_FIREBASE_UID unset — querying tenant_006.staff (QA-STAFF-001)..."
+    QA_STAFF_FIREBASE_UID=$(psql "$PSQL_URL" -At -c \
+        "SELECT firebase_uid FROM tenant_006.staff WHERE staff_code='QA-STAFF-001' LIMIT 1;" 2>/dev/null || true)
+fi
+if [[ -z "${QA_VIEWER_FIREBASE_UID:-}" ]]; then
+    log "QA_VIEWER_FIREBASE_UID unset — querying tenant_006.staff (QA-VIEWER-001)..."
+    QA_VIEWER_FIREBASE_UID=$(psql "$PSQL_URL" -At -c \
+        "SELECT firebase_uid FROM tenant_006.staff WHERE staff_code='QA-VIEWER-001' LIMIT 1;" 2>/dev/null || true)
+fi
+
 require_env QA_ADMIN_FIREBASE_UID
 require_env QA_STAFF_FIREBASE_UID
 require_env QA_VIEWER_FIREBASE_UID
@@ -83,9 +105,6 @@ if [[ ! -f "$SEED_SQL" ]]; then
     log "FATAL: seed SQL not found at $SEED_SQL"
     exit 1
 fi
-
-# DATABASE_URL の asyncpg drivername を psql 互換に戻す
-PSQL_URL="${DATABASE_URL/postgresql+asyncpg:/postgresql:}"
 
 # --- 1. flock 排他取得 ---
 exec 9>"$LOCK_FILE"

@@ -126,13 +126,15 @@ jobs:
           envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_DISCORD_WEBHOOK_URL
           script: |
             set -e
-            cd /home/ubuntu/salesanchor
-            docker compose exec -T \
+            # docker compose exec はプロジェクト名解決 (salesanchor vs astro-webapp) に依存するため
+            # deploy.yml と同様に docker exec でコンテナ名を直接指定する
+            docker exec -i \
               -e QA_ADMIN_FIREBASE_UID="$QA_ADMIN_FIREBASE_UID" \
               -e QA_STAFF_FIREBASE_UID="$QA_STAFF_FIREBASE_UID" \
               -e QA_VIEWER_FIREBASE_UID="$QA_VIEWER_FIREBASE_UID" \
               -e QA_DISCORD_WEBHOOK_URL="${QA_DISCORD_WEBHOOK_URL:-}" \
-              backend bash /app/scripts/qa/reset-tenant.sh
+              astro-webapp-backend-1 \
+              bash /app/scripts/qa/reset-tenant.sh
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
@@ -161,8 +163,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ubuntu/salesanchor
-            docker compose exec -T backend bash /app/scripts/qa/cleanup-smoke-data.sh \
+            docker exec -i astro-webapp-backend-1 \
+              bash /app/scripts/qa/cleanup-smoke-data.sh \
               || echo "cleanup failed (best-effort)"
 
       # --- Artifacts ---
