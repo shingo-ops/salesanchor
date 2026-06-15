@@ -198,6 +198,103 @@ git -C "${DONE_UNPUSHED_DIR}" commit -m "local only" -q 2>/dev/null
 OUTPUT7=$(run_reaper_dry)
 assert_not_in_delete "DONE+upstream未設定+origin有+未push→保護" "${BRANCH_DONE_UNPUSHED}" "${OUTPUT7}"
 
+# ── テスト 8: active-work.md に行なし → 新規行が --- より上に挿入される ────
+# auto-review / auto-done ワークフローの not-found 挿入ロジックをテストする
+BRANCH_NEW="feature/test/brand-new-branch"
+NEW_ACTIVE_WORK="${TMPDIR_TEST}/active-work-insert-test.md"
+cat > "${NEW_ACTIVE_WORK}" << 'AWEOF2'
+# Active Work Registry
+
+## 現在進行中の作業
+
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
+| feature/test/existing | テスト | 2026-06-06 | IN_PROGRESS | | | |
+---
+
+## 記入例
+
+```
+| feature/morimoto/example | サンプル | 2026-06-06 | IN_PROGRESS | | | |
+```
+AWEOF2
+
+python3 - <<'INSERT_PYEOF' "${NEW_ACTIVE_WORK}" "${BRANCH_NEW}" "9999"
+import sys, os
+from datetime import datetime, timezone
+
+filepath   = sys.argv[1]
+branch     = sys.argv[2]
+pr_number  = sys.argv[3]
+
+with open(filepath, encoding="utf-8") as f:
+    content = f.read()
+
+lines = content.splitlines(keepends=True)
+new_lines = []
+found = False
+
+for line in lines:
+    if branch in line and line.strip().startswith("|"):
+        parts = line.rstrip("\n").split("|")
+        cols = parts[1:-1]
+        if len(cols) == 7 and cols[0].strip() == branch:
+            found = True
+    new_lines.append(line)
+
+if not found:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    new_row = f"| {branch} | （自動登録・要補完） | {now} | REVIEW | #{pr_number} | | 自動登録 |\n"
+    inserted = False
+    for i, l in enumerate(new_lines):
+        if l.rstrip() == "---":
+            j = i + 1
+            while j < len(new_lines) and new_lines[j].strip() == "":
+                j += 1
+            if j < len(new_lines) and new_lines[j].startswith("## 記入例"):
+                new_lines.insert(i, new_row)
+                inserted = True
+                break
+    if not inserted:
+        print("ERROR: パターンが見つかりません", file=sys.stderr)
+        sys.exit(1)
+
+with open(filepath, "w", encoding="utf-8") as f:
+    f.write("".join(new_lines))
+INSERT_PYEOF
+
+# 検証: --- の前に新規行があり、--- の後に新規行がないこと
+INSERT_RESULT=$(python3 - <<'VERIFY_PYEOF' "${NEW_ACTIVE_WORK}" "${BRANCH_NEW}"
+import sys
+
+filepath = sys.argv[1]
+branch   = sys.argv[2]
+
+with open(filepath, encoding="utf-8") as f:
+    lines = f.readlines()
+
+sep_index  = next((i for i, l in enumerate(lines) if l.rstrip() == "---"), None)
+row_index  = next((i for i, l in enumerate(lines) if branch in l), None)
+
+if sep_index is None:
+    print("NO_SEP")
+elif row_index is None:
+    print("NO_ROW")
+elif row_index < sep_index:
+    print("OK_BEFORE_SEP")
+else:
+    print("FAIL_AFTER_SEP")
+VERIFY_PYEOF
+)
+
+if [ "${INSERT_RESULT}" = "OK_BEFORE_SEP" ]; then
+  echo "✅ PASS [新規行テーブル内挿入]: 新規行が --- より上に挿入されました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [新規行テーブル内挿入]: 期待=OK_BEFORE_SEP 実際=${INSERT_RESULT}"
+  FAIL=$(( FAIL + 1 ))
+fi
+
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""
 echo "=== 合計 ==="

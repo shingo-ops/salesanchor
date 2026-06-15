@@ -63,21 +63,23 @@ jobs:
               new_lines.append(line)
 
           if not found:
-              # 行が無ければ新規追加
+              # 行が無ければ "---\n\n## 記入例" の直前（テーブル末尾）に挿入
               now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
               new_row = f"| {branch} | （自動登録・要補完） | {now} | REVIEW | #{pr_number} | | 自動登録 |\n"
-              # 「現在進行中の作業」セクション末尾に挿入
-              in_section = False
               inserted = False
               for i, l in enumerate(new_lines):
-                  if "## 現在進行中の作業" in l:
-                      in_section = True
-                  elif in_section and l.startswith("##"):
-                      new_lines.insert(i, new_row)
-                      inserted = True
-                      break
-              if not inserted and in_section:
-                  new_lines.append(new_row)
+                  if l.rstrip() == "---":
+                      # この --- の後（空行を挟んで）## 記入例 があるか確認
+                      j = i + 1
+                      while j < len(new_lines) and new_lines[j].strip() == "":
+                          j += 1
+                      if j < len(new_lines) and new_lines[j].startswith("## 記入例"):
+                          new_lines.insert(i, new_row)
+                          inserted = True
+                          break
+              if not inserted:
+                  print("ERROR: active-work.md に '---' + '## 記入例' パターンが見つかりません。テーブル外への追記を防ぐため中止します。", file=sys.stderr)
+                  sys.exit(1)
               updated = True
               print(f"AUTO_ADDED: {branch} as REVIEW #{pr_number}")
 
