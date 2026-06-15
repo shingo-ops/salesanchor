@@ -18,9 +18,6 @@
 #   QA_ADMIN_FIREBASE_UID       admin ユーザーの Firebase UID
 #   QA_STAFF_FIREBASE_UID       staff ユーザーの Firebase UID
 #   QA_VIEWER_FIREBASE_UID      viewer ユーザーの Firebase UID
-#   QA_ADMIN_PASSWORD_HASH      bcrypt 済 password hash (fallback)
-#   QA_STAFF_PASSWORD_HASH
-#   QA_VIEWER_PASSWORD_HASH
 #
 # 任意環境変数:
 #   QA_DISCORD_WEBHOOK_URL      Discord webhook URL (未設定なら通知 skip)
@@ -31,7 +28,8 @@
 #   docker compose exec -T backend \
 #       env DATABASE_URL=$DATABASE_URL \
 #           QA_ADMIN_FIREBASE_UID=... \
-#           ... \
+#           QA_STAFF_FIREBASE_UID=... \
+#           QA_VIEWER_FIREBASE_UID=... \
 #       bash /app/scripts/qa/reset-tenant.sh
 #
 # 関連:
@@ -41,6 +39,7 @@
 #
 # 変更履歴:
 #   2026-05-15: ADR-038 初版
+#   2026-06-16: ADR-138 に従い password_hash 依存を完全削除
 # =============================================================================
 set -euo pipefail
 
@@ -79,9 +78,6 @@ require_env DATABASE_URL
 require_env QA_ADMIN_FIREBASE_UID
 require_env QA_STAFF_FIREBASE_UID
 require_env QA_VIEWER_FIREBASE_UID
-require_env QA_ADMIN_PASSWORD_HASH
-require_env QA_STAFF_PASSWORD_HASH
-require_env QA_VIEWER_PASSWORD_HASH
 
 if [[ ! -f "$SEED_SQL" ]]; then
     log "FATAL: seed SQL not found at $SEED_SQL"
@@ -120,9 +116,6 @@ if ! psql "$PSQL_URL" \
     -v "qa_admin_firebase_uid=$QA_ADMIN_FIREBASE_UID" \
     -v "qa_staff_firebase_uid=$QA_STAFF_FIREBASE_UID" \
     -v "qa_viewer_firebase_uid=$QA_VIEWER_FIREBASE_UID" \
-    -v "qa_admin_password_hash=$QA_ADMIN_PASSWORD_HASH" \
-    -v "qa_staff_password_hash=$QA_STAFF_PASSWORD_HASH" \
-    -v "qa_viewer_password_hash=$QA_VIEWER_PASSWORD_HASH" \
     -f "$SEED_SQL"; then
     log "FATAL: seed-tenant.sql failed"
     discord_notify "🔴 [QA-smoke] reset FAILED — seed-tenant.sql のエラーを CI ログで確認"

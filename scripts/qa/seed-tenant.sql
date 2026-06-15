@@ -21,9 +21,7 @@
 --   :qa_admin_firebase_uid   admin ユーザーの Firebase UID
 --   :qa_staff_firebase_uid   staff ユーザーの Firebase UID
 --   :qa_viewer_firebase_uid  viewer ユーザーの Firebase UID
---   :qa_admin_password_hash  bcrypt 済 password hash (fallback 用)
---   :qa_staff_password_hash
---   :qa_viewer_password_hash
+--   (password_hash は ADR-138 により物理削除済み・Firebase 専一)
 --
 -- 関連:
 --   docs/adr/ADR-038-qa-smoke-suite.md
@@ -33,6 +31,7 @@
 --
 -- 変更履歴:
 --   2026-05-15: ADR-038 初版
+--   2026-06-16: ADR-138 に従い password_hash カラム依存を完全削除
 -- ============================================================================
 
 \set ON_ERROR_STOP on
@@ -95,12 +94,13 @@ DELETE FROM public.users WHERE email LIKE 'qa-%@salesanchor.jp';
 -- 3. users 3 件 (admin / staff / viewer)
 --    - locale=ja 固定 (ADR-038 seed 表)
 --    - email は `qa-` 接頭辞でクリーンアップ可能
+--    - password_hash は ADR-138 により物理削除済み (Firebase 認証専一)
 -- ---------------------------------------------------------------------------
-INSERT INTO public.users (tenant_id, username, email, password_hash, full_name, role, is_active, locale)
+INSERT INTO public.users (tenant_id, username, email, full_name, role, is_active, locale)
 VALUES
-    (6, 'qa-admin',  'qa-admin@salesanchor.jp',  :'qa_admin_password_hash',  'QA Admin',  'admin',  TRUE, 'ja'),
-    (6, 'qa-staff',  'qa-staff@salesanchor.jp',  :'qa_staff_password_hash',  'QA Staff',  'user',   TRUE, 'ja'),
-    (6, 'qa-viewer', 'qa-viewer@salesanchor.jp', :'qa_viewer_password_hash', 'QA Viewer', 'user',   TRUE, 'ja');
+    (6, 'qa-admin',  'qa-admin@salesanchor.jp',  'QA Admin',  'admin', TRUE, 'ja'),
+    (6, 'qa-staff',  'qa-staff@salesanchor.jp',  'QA Staff',  'user',  TRUE, 'ja'),
+    (6, 'qa-viewer', 'qa-viewer@salesanchor.jp', 'QA Viewer', 'user',  TRUE, 'ja');
 
 -- tenant_006.staff (per-tenant) と role 紐付け
 -- role_id は seed_system_roles で既に作成済 (オーナー / システム管理者 / 営業)
