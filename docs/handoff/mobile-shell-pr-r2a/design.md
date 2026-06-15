@@ -37,7 +37,7 @@
 
 ## KPI / 検証方法
 
-| 基準（KPI） | 目標値 | 検証方法 |
+| 基準 | 目標値 | 検証方法 |
 |---|---|---|
 | KPI-1: NavItemList unit test | 全 pass | Vitest または Playwright component test |
 | KPI-2: useIsMobile unit test | 全 pass | Vitest (jsdom) でブレークポイント境界値テスト |
