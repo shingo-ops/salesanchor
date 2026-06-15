@@ -89,13 +89,7 @@ PYEOF
 2>/dev/null || echo "ERROR")
   fi
 
-  # IN_PROGRESS または REVIEW → 絶対に消さない（最優先チェック）
-  if [ "${ACTIVE_STATUS}" = "IN_PROGRESS" ] || [ "${ACTIVE_STATUS}" = "REVIEW" ]; then
-    SKIP_IN_PROGRESS+=("${BRANCH}")
-    continue
-  fi
-
-  # ── チェック 2: 未保存の作業がないか ────────────────────────────────────
+  # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
   # 判定順:
   #   a. 未コミット・未ステージ確認
   #   b. upstream 設定済み → @{u}..HEAD で未push 確認
@@ -155,13 +149,20 @@ PYEOF
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
 
-  if [ "${IS_DONE}" -eq 0 ]; then
-    SKIP_NOT_MERGED+=("${BRANCH}")
+  # DONE またはマージ済み → 削除候補
+  if [ "${IS_DONE}" -eq 1 ]; then
+    WILL_DELETE+=("${BRANCH}::${WORKTREE_PATH}")
     continue
   fi
 
-  # ── 全条件クリア → 削除候補 ──────────────────────────────────────────────
-  WILL_DELETE+=("${BRANCH}::${WORKTREE_PATH}")
+  # IN_PROGRESS または REVIEW かつ未マージ → 保護（マージ済みなら上で回収済み）
+  if [ "${ACTIVE_STATUS}" = "IN_PROGRESS" ] || [ "${ACTIVE_STATUS}" = "REVIEW" ]; then
+    SKIP_IN_PROGRESS+=("${BRANCH}")
+    continue
+  fi
+
+  # その他（NOT_FOUND・ERROR 等）かつ未マージ → 保護
+  SKIP_NOT_MERGED+=("${BRANCH}")
 done
 
 # ── サマリ表示 ────────────────────────────────────────────────────────────

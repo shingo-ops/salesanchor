@@ -119,3 +119,13 @@ jobs:
           # 並行更新に備えて push 前に pull --rebase
           git pull --rebase origin develop
           git push origin HEAD:refs/heads/develop
+
+      - name: Trigger reaper-run dispatch
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          gh api repos/${{ github.repository }}/dispatches \
+            --method POST \
+            --field event_type=reaper-run \
+            --field "client_payload[triggered_by]=active-work-auto-done" \
+            --field "client_payload[branch]=${{ github.event.pull_request.head.ref }}"

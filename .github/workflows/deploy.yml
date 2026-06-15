@@ -809,18 +809,20 @@ jobs:
           # ── release PR 本文から manifest を抽出 ─────────────────────────
           PR_BODY=$(gh pr view "$RELEASE_PR_NUM" --json body -q '.body' 2>/dev/null || true)
 
+          # 注意: python3 -c の継続行は YAML リテラルブロックの最低インデント（10sp）を
+          # 下回ってはならない。YAML パーサーがブロックスカラーを早期終了させるため。
           MANIFEST_PR_NUMS=$(echo "$PR_BODY" \
             | python3 -c "
-import sys, re
-body = sys.stdin.read()
-m = re.search(r'<!-- active-work-release-manifest\s+prs:\s+(.*?)(?:branches:|-->)', body, re.DOTALL)
-if not m:
-    sys.exit(0)
-for line in m.group(1).splitlines():
-    line = line.strip()
-    if re.match(r'^- \d+$', line):
-        print(line.lstrip('- ').strip())
-" 2>/dev/null || true)
+          import sys, re
+          body = sys.stdin.read()
+          m = re.search(r'<!-- active-work-release-manifest\s+prs:\s+(.*?)(?:branches:|-->)', body, re.DOTALL)
+          if not m:
+              sys.exit(0)
+          for line in m.group(1).splitlines():
+              line = line.strip()
+              if re.match(r'^- \d+\$', line):
+                  print(line.lstrip('- ').strip())
+          " 2>/dev/null || true)
 
           if [ -z "$MANIFEST_PR_NUMS" ]; then
             echo "⚠️ release PR #${RELEASE_PR_NUM} に manifest ブロックが見つかりません — stamp をスキップします"
