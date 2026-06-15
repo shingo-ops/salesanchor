@@ -1,8 +1,9 @@
 # テナント削除 運用 Runbook
 
 対象API実装: `backend/app/routers/super_admin_tenants.py`  
-審査ログ: `public.tenant_deletion_audit`  
-実装ADR: `docs/adr/ADR-138-tenant-deletion-api.md`（または該当PR #2149）
+監査ログ: `public.tenant_deletion_audit`  
+実装根拠: PR #2149 / PR #2154 / PR #2159  
+関連設計: `docs/handoff/tenant-deletion-cache-fix/recon.md`, `docs/handoff/tenant-deletion-cache-fix/design.md`
 
 ---
 
@@ -89,7 +90,7 @@ PO GO 確認後、以下のAPIを実行する。
 Body: { "confirm": "DELETE:<tenant_code>" }
 ```
 
-> **注意**: このAPIは論理削除済みテナントにのみ実行できる。`is_active = true` のテナントには 409 が返る。
+> **注意**: このAPIは論理削除済みテナントにのみ実行できる。`is_active = true` のテナントには 400 が返る。
 
 ---
 
