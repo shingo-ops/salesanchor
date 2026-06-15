@@ -404,6 +404,126 @@ async def test_category_failure_blocks_channels() -> None:
 
 
 # ---------------------------------------------------------------------------
+# テスト: 再実行時に Discord 上の既存チャンネルを名前検索でスキップ（重複作成防止）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_rerun_skips_existing_category_by_name() -> None:
+    """DB未保存でも Discord 上に同名カテゴリがある場合は重複作成せず skipped になること。
+
+    シナリオ:
+      1回目: category 作成成功 / ch_ticket 403失敗 → DB INSERT スキップ（Cause E fix）
+      2回目（Cause D修正後）: Discord GET に category が存在 → name+type で検出 → skipped
+    """
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    # Discord 上にカテゴリのみ存在（テキストチャンネルは前回失敗で未作成）
+    existing_channels = [
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+    ]
+
+    discord_responses = [
+        [],               # 1: GET roles
+        existing_channels,  # 2: GET channels
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},              # 3: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                       # 4: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                         # 5: POST role_member
+        # category: 名前検索でスキップ → POST なし
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},         # 6: POST ch_ticket
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0}, # 7: POST ch_member
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 8: POST ch_partner
+        {"id": "MSG-1"},                                                  # 9: POST button
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "completed"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    # カテゴリは重複作成されず skipped（discord_id は Discord から取得したもの）
+    assert steps["category"]["status"] == "skipped"
+    assert steps["category"]["discord_id"] == "CAT-1"
+    # テキストチャンネルは新規作成（前回未作成）
+    assert steps["ch_ticket"]["status"] == "created"
+    assert steps["ch_member"]["status"] == "created"
+    assert steps["ch_partner"]["status"] == "created"
+    assert steps["button"]["status"] == "posted"
+
+    # GET×2 + roles×3 + ch_ticket+ch_member+ch_partner+button×1 = 9（category POSTなし）
+    assert mock_api.call_count == 9
+
+    # NOT NULL カラムが揃うため DB commit が呼ばれる
+    mock_db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
+    """DB未保存でも Discord 上に同名・同parent チャンネルがある場合は skipped になること。
+
+    シナリオ: category + ch_ticket が既に Discord 上に存在するが DB行はない。
+    ch_member / ch_partner は存在しない → 作成される。
+    """
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    # カテゴリと ch_ticket のみ Discord に存在（ch_member/ch_partner は未作成）
+    existing_channels = [
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+    ]
+
+    discord_responses = [
+        [],               # 1: GET roles
+        existing_channels,  # 2: GET channels
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},               # 3: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                        # 4: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                          # 5: POST role_member
+        # category: 名前検索 skipped
+        # ch_ticket: 名前+parent_id 検索 skipped
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},  # 6: POST ch_member
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0}, # 7: POST ch_partner
+        # button: ch_ticket が skipped のためボタン投稿なし
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "completed"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["status"] == "skipped"
+    assert steps["category"]["discord_id"] == "CAT-1"
+    assert steps["ch_ticket"]["status"] == "skipped"
+    assert steps["ch_ticket"]["discord_id"] == "CH-TICKET"
+    assert steps["ch_member"]["status"] == "created"
+    assert steps["ch_partner"]["status"] == "created"
+    # ch_ticket が skipped のためボタン投稿なし
+    assert steps["button"]["status"] == "skipped"
+
+    # GET×2 + roles×3 + ch_member+ch_partner = 7（category/ch_ticket/button POSTなし）
+    assert mock_api.call_count == 7
+
+    mock_db.commit.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
 # テスト: 初回実行 + チャンネル作成403 → 500 でなく 200 partial（Cause E 回帰テスト）
 # ---------------------------------------------------------------------------
 

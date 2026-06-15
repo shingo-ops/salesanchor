@@ -145,8 +145,6 @@ async def run_auto_setup(
     except DiscordAPIError as exc:
         raise HTTPException(status_code=502, detail=f"Discord API 接続エラー: {exc}") from exc
 
-    existing_channel_ids = {str(ch["id"]) for ch in existing_channels}
-
     # ---- ステップ実行 ----
     steps: list[AutoSetupStep] = []
 
@@ -198,7 +196,7 @@ async def run_auto_setup(
         channel_type=4,  # GUILD_CATEGORY
         parent_id=None,
         existing_id=existing_category_id,
-        existing_channel_ids=existing_channel_ids,
+        existing_channels=existing_channels,
         guild_id=guild_id,
         bot_token=bot_token,
         permission_overwrites=[
@@ -229,7 +227,7 @@ async def run_auto_setup(
             channel_type=0,  # GUILD_TEXT
             parent_id=category_id,
             existing_id=existing_ticket_ch_id,
-            existing_channel_ids=existing_channel_ids,
+            existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
             permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id),
@@ -245,7 +243,7 @@ async def run_auto_setup(
             channel_type=0,
             parent_id=category_id,
             existing_id=existing_small_ch_id,
-            existing_channel_ids=existing_channel_ids,
+            existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
             permission_overwrites=_member_announcements_overwrites(
@@ -263,7 +261,7 @@ async def run_auto_setup(
             channel_type=0,
             parent_id=category_id,
             existing_id=existing_large_ch_id,
-            existing_channel_ids=existing_channel_ids,
+            existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
             permission_overwrites=_partner_announcements_overwrites(
@@ -384,6 +382,33 @@ def _find_role_id(roles: list[dict[str, Any]], name: str) -> str | None:
     return None
 
 
+def _find_channel(
+    channels: list[dict[str, Any]],
+    name: str,
+    channel_type: int,
+    parent_id: str | None = None,
+) -> str | None:
+    """Discord チャンネル/カテゴリを名前・type・parent_id で検索する。
+
+    カテゴリ (type=4) は parent_id=None で検索。
+    テキストチャンネル (type=0) は name + type + parent_id が全一致した場合のみ返す。
+    """
+    for ch in channels:
+        if ch.get("name") != name:
+            continue
+        if ch.get("type") != channel_type:
+            continue
+        ch_parent = ch.get("parent_id")
+        if parent_id is None:
+            if ch_parent is not None:
+                continue  # カテゴリ: parent なしのみマッチ
+        else:
+            if ch_parent is None or str(ch_parent) != parent_id:
+                continue  # テキストチャンネル: parent_id が一致しないとスキップ
+        return str(ch["id"])
+    return None
+
+
 async def _get_or_create_role_step(
     *,
     step_name: str,
@@ -422,18 +447,28 @@ async def _get_or_create_channel_step(
     channel_type: int,
     parent_id: str | None,
     existing_id: str | None,
-    existing_channel_ids: set[str],
+    existing_channels: list[dict[str, Any]],
     guild_id: str,
     bot_token: str,
     permission_overwrites: list[dict[str, Any]],
 ) -> AutoSetupStep:
     """チャンネル/カテゴリを冪等に作成する。
 
-    保存済みIDが Discord に存在する場合はスキップ。
-    存在しない場合（削除された場合も含む）は再作成。
+    1. DB保存済みIDが Discord に存在する場合はスキップ。
+    2. DB未保存でも Discord 上に同名・同type・同parent_id のチャンネルがあればスキップ
+       （初回失敗→DB未保存→再実行時の重複作成防止）。
+    3. どちらでもなければ新規作成。
     """
+    existing_channel_ids = {str(ch["id"]) for ch in existing_channels}
+
+    # 1. DB保存済みID が Discord 上に存在するならスキップ
     if existing_id and existing_id in existing_channel_ids:
         return AutoSetupStep(step=step_name, status="skipped", discord_id=existing_id)
+
+    # 2. 名前+type+parent_id で Discord 上に既存チャンネルを検索（DB未保存対応）
+    found_id = _find_channel(existing_channels, channel_name, channel_type, parent_id)
+    if found_id:
+        return AutoSetupStep(step=step_name, status="skipped", discord_id=found_id)
 
     payload: dict[str, Any] = {
         "name": channel_name,
