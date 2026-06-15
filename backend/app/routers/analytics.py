@@ -1317,7 +1317,6 @@ async def revenue_summary(
     _validate_scope(scope)
     today = date.today()
     target_year, target_month = _parse_month(month, today)
-    month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
     elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
 
@@ -1363,10 +1362,6 @@ async def revenue_summary(
         {"start": start_utc, "end": end_utc, **order_scope_params},
     )
     actual = float((actual_result.mappings().first() or {}).get("actual", 0) or 0)
-
-    # pace: elapsed_pct 基準の按分目標に対する達成率
-    pace_target = revenue_target * elapsed_pct / 100 if elapsed_pct > 0 else revenue_target
-    pace = int(round(actual / pace_target * 100)) if pace_target > 0 else (100 if actual > 0 else 0)
 
     # ── 新規 / リピート 分類 ──
     # 新規顧客: 当月に初めて発注した company（当月以前に orders なし）
@@ -1429,8 +1424,6 @@ async def revenue_summary(
     costed_revenue = float(mr.get("costed_revenue", 0) or 0)
     total_cost = float(mr.get("total_cost", 0) or 0)
     uncosted_orders = total_orders - costed_cnt
-    gross_margin = ((costed_revenue - total_cost) / costed_revenue * 100) if costed_revenue > 0 else 0.0
-
     gross_amount = round(costed_revenue - total_cost, 2)
 
     return RevenueSummaryResponse(
