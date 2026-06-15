@@ -139,6 +139,12 @@ jobs:
               last_login    TIMESTAMPTZ
           );
 
+          -- public.products（tenant_NNN.quote_items / invoice_items / purchase_order_items の FK 参照先）
+          -- ADR-090 PR4: tenant.py の FK が public.products を参照するようになったため追加
+          CREATE TABLE IF NOT EXISTS public.products (
+              id SERIAL PRIMARY KEY
+          );
+
           -- public.permissions（seed_system_roles が参照）
           CREATE TABLE IF NOT EXISTS public.permissions (
               id          SERIAL PRIMARY KEY,

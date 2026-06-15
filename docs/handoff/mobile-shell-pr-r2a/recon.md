@@ -14,12 +14,12 @@
 
 1. `frontend/src/components/NavItemList.tsx`（新規）— 共通 nav item builder
 2. `frontend/src/hooks/useIsMobile.ts`（新規）— JS 判定 Shell 切り替え hook
-3. `frontend/tests-e2e/nav-item-list.spec.ts` または unit test（新規）— minimal tests
+3. unit test（新規、Vitest）— minimal tests（E2E spec は PR-R2-B/C で追加）
 
 ### 実装対象外（PR-R2-A に含めない）
 
 - `frontend/src/components/Layout.tsx` の変更（DesktopShell への rename は PR-R2-C）
-- `frontend/src/components/MobileShell.tsx` の新規作成（PR-R2-B）
+- MobileShell.tsx の新規作成（PR-R2-B、現時点では未作成）
 - `frontend/src/App.tsx` の Shell 切り替えロジック（PR-R2-C）
 
 ---
@@ -92,7 +92,7 @@ export function useIsMobile(): boolean {
 ## i18n ルール（ADR-027）
 
 新規 aria-label は必ず t("key") 経由。
-`frontend/src/i18n/ja.json` と `frontend/src/i18n/en.json` の両方に追加必須。
+`frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の両方に追加必須。
 
 ---
 

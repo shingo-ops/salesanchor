@@ -143,6 +143,10 @@
 | feature/fedex-last-tested-date-format | 最終確認 日時フォーマット修正（時刻のみ→日付+時刻） | 2026-06-14 09:06 | DONE | #2157 | 2026-06-14 | PR #2158 release にて main 反映済み |
 | feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | DONE | #2162 | | |
 | feature/morimoto/sa02-r1-r2-convlog-links | SA-02 残課題 R1（contact_id補完）/ R2（手動記録company_id補完） | 2026-06-14 | DONE | #2208 | 2026-06-15 | R3 Stage 2 は Shingo GO 待ち |
+| feature/morimoto/adr090-pr3-fk-remap-design | ADR-090 PR3 下流FK再マップ 設計（recon/design・docs-only） | 2026-06-15 16:23 | DONE | #2228 | | |
+| feature/morimoto/seed-mega-products | 商品マスタ ポケモンカードゲームMEGAシリーズ 追加 | 2026-06-15 23:10 | DONE | #2231 | | |
+| feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | DONE | #2235 | | |
+| feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
@@ -185,6 +189,9 @@
 | feature/morimoto/design-301-redirect | nginx /design 301リダイレクト + smoke⑤ | 2026-06-12 | DONE | #2050 | | |
 | feature/morimoto/responsive-ux-pr-r1 | レスポンシブ基盤最適化 PR-R1（mobile menu button / 767px 統一） | 2026-06-14 | MERGED | #2156 | | |
 | feature/morimoto/hotfix-css-mediaq-safari | Vite 8 cssTarget hotfix — Safari Level 4 media query 非対応バグ修正 | 2026-06-15 | REVIEW | #2198 | | |
+| feature/morimoto/mobile-shell-pr-r2a | mobile-shell PR-R2-A: NavItemList.tsx + useIsMobile.ts + unit tests | 2026-06-15 | REVIEW | #2223 | | |
+| docs/morimoto/mobile-shell-pr-r2b-handoff | mobile-shell PR-R2-B 実装ハンドオフ（recon + design docs-only） | 2026-06-15 | IN_PROGRESS | | | |
 | feature/morimoto/tenant-deletion-clean | テナント論理削除・物理削除 API | 2026-06-14 | DONE | #2149 | 2026-06-14 | PR #2159 release にて main 反映済み。物理削除APIは未実行・個別PO GO待ち |
 | feature/morimoto/tenant-deletion-cache-fix | 論理削除・物理削除後の Redis tenant cache 無効化 | 2026-06-14 | DONE | #2154 | 2026-06-14 | PR #2159 release にて main 反映済み |
 | release/develop-to-main-2159 | develop → main release（tenant deletion / ADR-108 B-1 / Discord Auto Setup） | 2026-06-14 | DONE | #2159 | 2026-06-14 | Deploy to VPS run 27486632360 success / migration success |
+| docs/morimoto/fedex-etd-stamp-recon | FedEx ETD / Stampステップ失敗原因 recon（docs-only） | 2026-06-15 | IN_PROGRESS | | | |

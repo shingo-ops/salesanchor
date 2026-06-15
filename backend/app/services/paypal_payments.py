@@ -595,9 +595,17 @@ def create_and_send_invoice(
         return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
                 "status_code": None, "message": "通信エラー（ネットワーク/URL を確認）"}
     if resp.status_code not in (200, 201):
+        try:
+            err_body = resp.json()
+            err_detail = err_body.get("details", [{}])[0].get("description") \
+                or err_body.get("message") \
+                or resp.text[:300]
+        except Exception:  # noqa: BLE001
+            err_detail = resp.text[:300]
+        logger.warning("[paypal] invoice 作成失敗 HTTP %s: %s", resp.status_code, err_detail)
         return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
                 "status_code": resp.status_code,
-                "message": f"PayPal 請求書作成に失敗（HTTP {resp.status_code}）"}
+                "message": f"PayPal 請求書作成に失敗（HTTP {resp.status_code}）: {err_detail}"}
     try:
         pp_invoice_id = resp.json().get("id")
     except Exception:  # noqa: BLE001
@@ -618,9 +626,16 @@ def create_and_send_invoice(
         return {"ok": False, "paypal_invoice_id": pp_invoice_id, "recipient_view_url": None,
                 "status_code": None, "message": "通信エラー（送付）"}
     if send_resp.status_code not in (200, 201, 202):
+        try:
+            send_err = send_resp.json()
+            send_detail = send_err.get("details", [{}])[0].get("description") \
+                or send_err.get("message") or send_resp.text[:300]
+        except Exception:  # noqa: BLE001
+            send_detail = send_resp.text[:300]
+        logger.warning("[paypal] invoice 送付失敗 HTTP %s: %s", send_resp.status_code, send_detail)
         return {"ok": False, "paypal_invoice_id": pp_invoice_id, "recipient_view_url": None,
                 "status_code": send_resp.status_code,
-                "message": f"PayPal 請求書送付に失敗（HTTP {send_resp.status_code}）"}
+                "message": f"PayPal 請求書送付に失敗（HTTP {send_resp.status_code}）: {send_detail}"}
 
     views = _fetch_view_urls(base, headers, pp_invoice_id, send_resp)
     return {"ok": True, "paypal_invoice_id": pp_invoice_id,

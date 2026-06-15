@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_po_supplier ON {schema}.purchase_orders (supplier
 CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     id SERIAL PRIMARY KEY,
     purchase_order_id INTEGER NOT NULL REFERENCES {schema}.purchase_orders(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL REFERENCES {schema}.products(id),
+    product_id INTEGER NOT NULL REFERENCES public.products(id),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
