@@ -682,9 +682,11 @@ async def paypal_test_invoice(
         )).scalar_one()
 
     # 3. ¥100 テスト請求書を issued で作成
-    next_id = (await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM invoices"))).scalar()
-    invoice_number = f"IN-{next_id:04d}-01"
+    # erp_key を先に生成してテスト番号に使う。
+    # MAX(id)+1 ベースは DB rollback 後に同じ番号を再生成し PayPal 側に "Invoice number is duplicate"
+    # エラーを引き起こすため、UUID由来のランダムキーで一意性を保証する。
     erp_key = str(uuid.uuid4())[:8].upper()
+    invoice_number = f"IN-TEST-{erp_key}"
     invoice_id = (await db.execute(
         text("""
             INSERT INTO invoices (
