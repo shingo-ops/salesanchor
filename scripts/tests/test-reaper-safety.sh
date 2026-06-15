@@ -3,9 +3,12 @@
 #
 # 検証項目:
 #   [1] IN_PROGRESS の部屋は dry-run で削除対象に出ない
-#   [2] 未保存の作業がある部屋は dry-run で削除対象に出ない
-#   [3] DONE かつ未保存なし の部屋は dry-run で削除対象に出る
-#   [4] active-work.md に行がない(NOT_FOUND)かつ gh が 0 件を返す部屋は削除対象に出ない
+#   [2] REVIEW の部屋は dry-run で削除対象に出ない
+#   [3] 未保存の作業がある部屋（DONE+未コミット）は dry-run で削除対象に出ない
+#   [4] DONE かつ未保存なし の部屋は dry-run で削除対象に出る
+#   [5] active-work.md に行がない(NOT_FOUND)かつ gh が 0 件を返す部屋は削除対象に出ない
+#   [6] DONE + upstream未設定 + origin/<branch>なし → 削除対象に出る（upstream未設定だけで保護しない）
+#   [7] DONE + upstream未設定 + origin/<branch>あり + 未pushコミットあり → 削除対象に出ない
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -56,14 +59,14 @@ json.dump({'branch': '${branch}', 'uuid': 'test-uuid', 'created_at': '2026-06-06
   echo "${dir}"
 }
 
-# active-work.md のヘッダー
+# active-work.md のヘッダー（7列: branch | area | date | status | pr | main | note）
 cat > "${FAKE_ACTIVE_WORK}" << 'AWEOF'
 # Active Work Registry
 
 ## 現在進行中の作業
 
-| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | 備考 |
-|-----------|--------------|---------|------|-----|------|
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
 AWEOF
 
 run_reaper_dry() {
@@ -104,51 +107,193 @@ assert_in_delete() {
 # ── テスト 1: IN_PROGRESS → 削除対象に出ない ────────────────────────────────
 BRANCH_IP="feature/test/in-progress"
 make_worktree_dir "wt-ip" "${BRANCH_IP}" > /dev/null
-echo "| ${BRANCH_IP} | テスト | 2026-06-06 | IN_PROGRESS | | |" >> "${FAKE_ACTIVE_WORK}"
+echo "| ${BRANCH_IP} | テスト | 2026-06-06 | IN_PROGRESS | | | |" >> "${FAKE_ACTIVE_WORK}"
 
-# ── テスト 3: DONE かつ未保存なし → 削除対象に出る ──────────────────────────
+# ── テスト 2: REVIEW → 削除対象に出ない ─────────────────────────────────────
+BRANCH_REVIEW="feature/test/review-open"
+make_worktree_dir "wt-review" "${BRANCH_REVIEW}" > /dev/null
+echo "| ${BRANCH_REVIEW} | テスト | 2026-06-06 | REVIEW | #777 | | |" >> "${FAKE_ACTIVE_WORK}"
+
+# ── テスト 4: DONE かつ未保存なし → 削除対象に出る ──────────────────────────
 BRANCH_DONE="feature/test/done-clean"
 DONE_DIR=$(make_worktree_dir "wt-done" "${BRANCH_DONE}")
-echo "| ${BRANCH_DONE} | テスト | 2026-06-06 | DONE | #999 | |" >> "${FAKE_ACTIVE_WORK}"
+echo "| ${BRANCH_DONE} | テスト | 2026-06-06 | DONE | #999 | | |" >> "${FAKE_ACTIVE_WORK}"
 # git initして「未保存なし」状態を作る（git rev-parse HEAD が失敗→ unsaved=0 扱い）
 
-# ── テスト 4: NOT_FOUND かつ gh=0 → 削除対象に出ない ────────────────────────
+# ── テスト 5: NOT_FOUND かつ gh=0 → 削除対象に出ない ────────────────────────
 BRANCH_UNKNOWN="feature/test/unknown-no-pr"
 make_worktree_dir "wt-unknown" "${BRANCH_UNKNOWN}" > /dev/null
 # active-work.md に行なし + gh mock は 0 を返す
 
-# ── dry-run 実行 ────────────────────────────────────────────────────────────
+# ── dry-run 実行（テスト 1,2,4,5 をまとめて確認） ───────────────────────────
 OUTPUT=$(run_reaper_dry)
 
 echo ""
-echo "=== reaper dry-run 出力 ==="
+echo "=== reaper dry-run 出力（round 1） ==="
 echo "${OUTPUT}"
 echo ""
 echo "=== テスト結果 ==="
 
-assert_not_in_delete "IN_PROGRESS保護"    "${BRANCH_IP}"      "${OUTPUT}"
-assert_in_delete     "DONE削除候補"        "${BRANCH_DONE}"    "${OUTPUT}"
-assert_not_in_delete "NOT_FOUND+gh0保護"  "${BRANCH_UNKNOWN}" "${OUTPUT}"
+assert_not_in_delete "IN_PROGRESS保護"   "${BRANCH_IP}"      "${OUTPUT}"
+assert_not_in_delete "REVIEW保護"        "${BRANCH_REVIEW}"  "${OUTPUT}"
+assert_in_delete     "DONE削除候補"       "${BRANCH_DONE}"    "${OUTPUT}"
+assert_not_in_delete "NOT_FOUND+gh0保護" "${BRANCH_UNKNOWN}" "${OUTPUT}"
 
-# ── テスト 2: 未保存あり → 削除対象に出ない ─────────────────────────────────
-# git init して未コミットファイルを作る
-BRANCH_UNSAVED="feature/test/unsaved-changes"
-UNSAVED_DIR=$(make_worktree_dir "wt-unsaved" "${BRANCH_UNSAVED}")
-echo "| ${BRANCH_UNSAVED} | テスト | 2026-06-06 | IN_PROGRESS | | |" >> "${FAKE_ACTIVE_WORK}"
-
-# active-work.md に IN_PROGRESS として登録済みなので、IN_PROGRESS チェックで先に引っかかる。
-# 未保存チェックを直接テストするには IN_PROGRESS でない部屋が必要。
-# ここでは DONE + 未保存ありの組み合わせでテスト。
+# ── テスト 3: DONE + 未コミットあり → 削除対象に出ない ──────────────────────
 BRANCH_DONE_UNSAVED="feature/test/done-unsaved"
 DONE_UNSAVED_DIR=$(make_worktree_dir "wt-done-unsaved" "${BRANCH_DONE_UNSAVED}")
-echo "| ${BRANCH_DONE_UNSAVED} | テスト | 2026-06-06 | DONE | #998 | |" >> "${FAKE_ACTIVE_WORK}"
+echo "| ${BRANCH_DONE_UNSAVED} | テスト | 2026-06-06 | DONE | #998 | | |" >> "${FAKE_ACTIVE_WORK}"
 
 # git init + 未コミットファイルを作って git status --porcelain で検出させる
 git init "${DONE_UNSAVED_DIR}" -q 2>/dev/null
 touch "${DONE_UNSAVED_DIR}/unsaved.txt"
 
-OUTPUT2=$(run_reaper_dry)
-assert_not_in_delete "DONE+未保存あり保護" "${BRANCH_DONE_UNSAVED}" "${OUTPUT2}"
+OUTPUT3=$(run_reaper_dry)
+assert_not_in_delete "DONE+未保存あり保護" "${BRANCH_DONE_UNSAVED}" "${OUTPUT3}"
+
+# ── テスト 6: DONE + upstream未設定 + origin/<branch>なし → 削除対象に出る ──
+# upstream未設定だけを理由に未push扱いしないことを確認する
+BRANCH_DONE_NO_UPSTREAM="feature/test/done-no-upstream"
+DONE_NO_UPSTREAM_DIR=$(make_worktree_dir "wt-done-no-upstream" "${BRANCH_DONE_NO_UPSTREAM}")
+echo "| ${BRANCH_DONE_NO_UPSTREAM} | テスト | 2026-06-06 | DONE | #997 | | |" >> "${FAKE_ACTIVE_WORK}"
+# git init + コミットあり + upstream なし + origin/<branch> もなし
+git init "${DONE_NO_UPSTREAM_DIR}" -q 2>/dev/null
+git -C "${DONE_NO_UPSTREAM_DIR}" config user.email "test@test.com"
+git -C "${DONE_NO_UPSTREAM_DIR}" config user.name "test"
+touch "${DONE_NO_UPSTREAM_DIR}/committed.txt"
+git -C "${DONE_NO_UPSTREAM_DIR}" add .
+git -C "${DONE_NO_UPSTREAM_DIR}" commit -m "init" -q 2>/dev/null
+# upstream未設定・origin/<branch>なし → UNSAVED=0 → 削除候補になるべき
+
+OUTPUT6=$(run_reaper_dry)
+assert_in_delete "DONE+upstream未設定+originなし→削除候補" "${BRANCH_DONE_NO_UPSTREAM}" "${OUTPUT6}"
+
+# ── テスト 7: DONE + upstream未設定 + origin/<branch>あり + 未push → 保護 ───
+BRANCH_DONE_UNPUSHED="feature/test/done-unpushed"
+DONE_UNPUSHED_DIR=$(make_worktree_dir "wt-done-unpushed" "${BRANCH_DONE_UNPUSHED}")
+echo "| ${BRANCH_DONE_UNPUSHED} | テスト | 2026-06-06 | DONE | #996 | | |" >> "${FAKE_ACTIVE_WORK}"
+
+# bare リポジトリを「リモート」として作成（古い状態を持つ）
+FAKE_REMOTE="${TMPDIR_TEST}/fake-remote.git"
+git init --bare "${FAKE_REMOTE}" -q 2>/dev/null
+git init "${DONE_UNPUSHED_DIR}" -q 2>/dev/null
+git -C "${DONE_UNPUSHED_DIR}" config user.email "test@test.com"
+git -C "${DONE_UNPUSHED_DIR}" config user.name "test"
+git -C "${DONE_UNPUSHED_DIR}" remote add origin "${FAKE_REMOTE}"
+
+# リモートに最初のコミットを push
+touch "${DONE_UNPUSHED_DIR}/base.txt"
+git -C "${DONE_UNPUSHED_DIR}" add .
+git -C "${DONE_UNPUSHED_DIR}" commit -m "base" -q 2>/dev/null
+git -C "${DONE_UNPUSHED_DIR}" push origin HEAD:"refs/heads/${BRANCH_DONE_UNPUSHED}" -q 2>/dev/null
+# リモートの refs を fetch してローカルに origin/<branch> を作る
+git -C "${DONE_UNPUSHED_DIR}" fetch origin -q 2>/dev/null
+
+# ローカルにだけ追加コミット（未push）
+touch "${DONE_UNPUSHED_DIR}/local-only.txt"
+git -C "${DONE_UNPUSHED_DIR}" add .
+git -C "${DONE_UNPUSHED_DIR}" commit -m "local only" -q 2>/dev/null
+# upstream は設定しない（@{u} は使えない状態）
+
+OUTPUT7=$(run_reaper_dry)
+assert_not_in_delete "DONE+upstream未設定+origin有+未push→保護" "${BRANCH_DONE_UNPUSHED}" "${OUTPUT7}"
+
+# ── テスト 8: active-work.md に行なし → 新規行が --- より上に挿入される ────
+# auto-review / auto-done ワークフローの not-found 挿入ロジックをテストする
+BRANCH_NEW="feature/test/brand-new-branch"
+NEW_ACTIVE_WORK="${TMPDIR_TEST}/active-work-insert-test.md"
+cat > "${NEW_ACTIVE_WORK}" << 'AWEOF2'
+# Active Work Registry
+
+## 現在進行中の作業
+
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
+| feature/test/existing | テスト | 2026-06-06 | IN_PROGRESS | | | |
+---
+
+## 記入例
+
+```
+| feature/morimoto/example | サンプル | 2026-06-06 | IN_PROGRESS | | | |
+```
+AWEOF2
+
+python3 - <<'INSERT_PYEOF' "${NEW_ACTIVE_WORK}" "${BRANCH_NEW}" "9999"
+import sys, os
+from datetime import datetime, timezone
+
+filepath   = sys.argv[1]
+branch     = sys.argv[2]
+pr_number  = sys.argv[3]
+
+with open(filepath, encoding="utf-8") as f:
+    content = f.read()
+
+lines = content.splitlines(keepends=True)
+new_lines = []
+found = False
+
+for line in lines:
+    if branch in line and line.strip().startswith("|"):
+        parts = line.rstrip("\n").split("|")
+        cols = parts[1:-1]
+        if len(cols) == 7 and cols[0].strip() == branch:
+            found = True
+    new_lines.append(line)
+
+if not found:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    new_row = f"| {branch} | （自動登録・要補完） | {now} | REVIEW | #{pr_number} | | 自動登録 |\n"
+    inserted = False
+    for i, l in enumerate(new_lines):
+        if l.rstrip() == "---":
+            j = i + 1
+            while j < len(new_lines) and new_lines[j].strip() == "":
+                j += 1
+            if j < len(new_lines) and new_lines[j].startswith("## 記入例"):
+                new_lines.insert(i, new_row)
+                inserted = True
+                break
+    if not inserted:
+        print("ERROR: パターンが見つかりません", file=sys.stderr)
+        sys.exit(1)
+
+with open(filepath, "w", encoding="utf-8") as f:
+    f.write("".join(new_lines))
+INSERT_PYEOF
+
+# 検証: --- の前に新規行があり、--- の後に新規行がないこと
+INSERT_RESULT=$(python3 - <<'VERIFY_PYEOF' "${NEW_ACTIVE_WORK}" "${BRANCH_NEW}"
+import sys
+
+filepath = sys.argv[1]
+branch   = sys.argv[2]
+
+with open(filepath, encoding="utf-8") as f:
+    lines = f.readlines()
+
+sep_index  = next((i for i, l in enumerate(lines) if l.rstrip() == "---"), None)
+row_index  = next((i for i, l in enumerate(lines) if branch in l), None)
+
+if sep_index is None:
+    print("NO_SEP")
+elif row_index is None:
+    print("NO_ROW")
+elif row_index < sep_index:
+    print("OK_BEFORE_SEP")
+else:
+    print("FAIL_AFTER_SEP")
+VERIFY_PYEOF
+)
+
+if [ "${INSERT_RESULT}" = "OK_BEFORE_SEP" ]; then
+  echo "✅ PASS [新規行テーブル内挿入]: 新規行が --- より上に挿入されました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [新規行テーブル内挿入]: 期待=OK_BEFORE_SEP 実際=${INSERT_RESULT}"
+  FAIL=$(( FAIL + 1 ))
+fi
 
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""

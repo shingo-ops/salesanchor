@@ -1,21 +1,20 @@
-name: active-work auto-DONE（ADR-114）
+name: active-work auto-REVIEW（ADR-114）
 
-# develop への PR がマージされた瞬間に active-work.md の行を DONE に更新する
+# PR が develop に向けてオープンされた瞬間に active-work.md の行を REVIEW に更新する
 # 担当: GitHub 側（原則 4: ノートの行を更新するのは GitHub 側）
 
 on:
   pull_request:
-    types: [closed]
+    types: [opened, reopened, ready_for_review]
     branches: [develop]
 
-# active-work-update グループで直列化（auto-review と同じグループ）
+# active-work-update グループで直列化（auto-done と同じグループ）
 concurrency:
   group: active-work-update
   cancel-in-progress: false
 
 jobs:
-  mark-done:
-    if: github.event.pull_request.merged == true
+  mark-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,11 +25,10 @@ jobs:
           token: ${{ secrets.PIPELINE_PAT }}
           fetch-depth: 0
 
-      - name: Update row to DONE
+      - name: Update row to REVIEW + PR#
         env:
           BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           python3 - <<'PYEOF'
           import os, sys
@@ -38,7 +36,6 @@ jobs:
 
           branch = os.environ["BRANCH"]
           pr_number = os.environ["PR_NUMBER"]
-          merge_sha = os.environ.get("MERGE_SHA", "")[:7]
           filepath = ".claude-pipeline/active-work.md"
 
           with open(filepath, encoding="utf-8") as f:
@@ -55,26 +52,20 @@ jobs:
                   cols = parts[1:-1]
                   if len(cols) == 7 and cols[0].strip() == branch:
                       found = True
-                      status = cols[3].strip()
-                      if status in ("IN_PROGRESS", "REVIEW", "BLOCKED"):
-                          cols[3] = " DONE "
-                          # PR# が空なら補完
-                          if not cols[4].strip():
-                              cols[4] = f" #{pr_number} "
-                          # 備考に merge SHA を追記（既存備考を壊さない）
-                          existing_note = cols[6].strip()
-                          sha_note = f"merged:{merge_sha}"
-                          if sha_note not in existing_note:
-                              cols[6] = f" {(existing_note + ' ') if existing_note else ''}{sha_note} "
-                          eol = "\n" if line.endswith("\n") else ""
-                          line = "|".join([""] + cols + [""]) + eol
-                          updated = True
+                      # 状態を REVIEW に更新
+                      cols[3] = " REVIEW "
+                      # PR# が空なら補完
+                      if not cols[4].strip():
+                          cols[4] = f" #{pr_number} "
+                      eol = "\n" if line.endswith("\n") else ""
+                      line = "|".join([""] + cols + [""]) + eol
+                      updated = True
               new_lines.append(line)
 
           if not found:
               # 行が無ければ "---\n\n## 記入例" の直前（テーブル末尾）に挿入
               now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
-              new_row = f"| {branch} | （自動登録） | {now} | DONE | #{pr_number} | | merged:{merge_sha} merged時自動登録・要確認 |\n"
+              new_row = f"| {branch} | （自動登録・要補完） | {now} | REVIEW | #{pr_number} | | 自動登録 |\n"
               inserted = False
               for i, l in enumerate(new_lines):
                   if l.rstrip() == "---":
@@ -90,17 +81,17 @@ jobs:
                   print("ERROR: active-work.md に '---' + '## 記入例' パターンが見つかりません。テーブル外への追記を防ぐため中止します。", file=sys.stderr)
                   sys.exit(1)
               updated = True
-              print(f"AUTO_ADDED: {branch} as DONE #{pr_number} (merged:{merge_sha})")
+              print(f"AUTO_ADDED: {branch} as REVIEW #{pr_number}")
 
           if updated:
               with open(filepath, "w", encoding="utf-8") as f:
                   f.write("".join(new_lines))
-              print(f"DONE_UPDATED: {branch} #{pr_number}")
+              print(f"REVIEW_UPDATED: {branch} #{pr_number}")
           else:
-              print(f"SKIP (no matching entry): {branch}")
+              print(f"SKIP (already REVIEW or not found): {branch}")
           PYEOF
 
-      - name: Commit and push DONE update
+      - name: Commit and push REVIEW update
         env:
           BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -114,18 +105,22 @@ jobs:
           fi
 
           git add .claude-pipeline/active-work.md
-          git commit -m "chore: active-work.md — ${BRANCH} を DONE に更新（自動）"
+          git commit -m "chore: active-work.md — ${BRANCH} を REVIEW #${PR_NUMBER} に更新（自動）"
+
+          echo "git status before push:"
+          git status
+          echo "git log (last 3):"
+          git log --oneline -3
 
           # 並行更新に備えて push 前に pull --rebase
           git pull --rebase origin develop
-          git push origin HEAD:refs/heads/develop
 
-      - name: Trigger reaper-run dispatch
-        env:
-          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
-        run: |
-          gh api repos/${{ github.repository }}/dispatches \
-            --method POST \
-            --field event_type=reaper-run \
-            --field "client_payload[triggered_by]=active-work-auto-done" \
-            --field "client_payload[branch]=${{ github.event.pull_request.head.ref }}"
+          # active-work REVIEW 更新は補助的な操作。
+          # develop の Branch Protection (Required Status Checks) により direct push が
+          # ブロックされる場合でも PR本体の CI を止めない。
+          if git push origin HEAD:refs/heads/develop; then
+            echo "REVIEW update pushed to develop"
+          else
+            echo "::warning::REVIEW update failed to push (branch protection / required status checks). Manual update or next automation will catch up."
+            exit 0
+          fi
