@@ -2,7 +2,7 @@
 
 **日付**: 2026-06-14 / 追記 2026-06-15  
 **担当**: Hikky-dev  
-**ステータス**: Cause F 確定・PR #2216 作成済み
+**ステータス**: Cause F 確定・PR #2224 作成済み
 
 ---
 
@@ -161,10 +161,10 @@ Discord UI から "Sales Anchor" カテゴリ（重複の 4 件）を全て削�
 
 1. Discord → 対象サーバー → テキストチャンネルリスト
 2. "Sales Anchor" カテゴリ（4件）をそれぞれ右クリック → チャンネルを削除
-3. PR #2216 デプロイ後、`/admin/discord-config` から「自動セットアップを実行」
+3. PR #2224 デプロイ後、`/admin/discord-config` から「自動セットアップを実行」
 
 ### Hikky-dev（対応済み）
 
 - Cause D: Bot API で Sales Anchor ロールを pos=4 に昇格（完了）
 - Cause E: `_can_upsert` guard で INSERT スキップ（PR #2215、本番反映済み）
-- Cause F: カテゴリ permission_overwrites に Bot member overwrite 追加（PR #2216）
+- Cause F: カテゴリ permission_overwrites に Bot member overwrite 追加（PR #2224）
