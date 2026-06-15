@@ -700,7 +700,9 @@ FROM {schema}.bots;
 
 -- === Phase 2: 販売・財務プロセス ===
 
--- 商品マスタ
+-- 商品マスタ（テナント固有テーブル）
+-- DEPRECATED (ADR-090 PR4): 商品マスタは public.products に統一済み。
+--   このテーブルは将来の Phase B で DROP 予定。アプリは一切参照しない。
 -- 2026-04-28 (Phase 1-C M-MVP / migration 038): TCG 輸出向け 11 列追加
 CREATE TABLE IF NOT EXISTS {schema}.products (
     id SERIAL PRIMARY KEY,
@@ -798,7 +800,7 @@ CREATE INDEX IF NOT EXISTS idx_quotes_contact_id ON {schema}.quotes (contact_id)
 CREATE TABLE IF NOT EXISTS {schema}.quote_items (
     id SERIAL PRIMARY KEY,
     quote_id INTEGER NOT NULL REFERENCES {schema}.quotes(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES {schema}.products(id),
+    product_id INTEGER REFERENCES public.products(id),
     product_name VARCHAR(255) NOT NULL,
     -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
     name_en VARCHAR(255),
@@ -851,7 +853,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_contact_id ON {schema}.invoices (contact
 CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     id SERIAL PRIMARY KEY,
     invoice_id INTEGER NOT NULL REFERENCES {schema}.invoices(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES {schema}.products(id),
+    product_id INTEGER REFERENCES public.products(id),
     product_name VARCHAR(255) NOT NULL,
     -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
     name_en VARCHAR(255),
@@ -914,7 +916,7 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
 CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     id SERIAL PRIMARY KEY,
     purchase_order_id INTEGER NOT NULL REFERENCES {schema}.purchase_orders(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL REFERENCES {schema}.products(id),
+    product_id INTEGER NOT NULL REFERENCES public.products(id),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,

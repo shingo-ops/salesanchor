@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS idx_quotes_customer ON {schema}.quotes (customer_id);
 CREATE TABLE IF NOT EXISTS {schema}.quote_items (
     id SERIAL PRIMARY KEY,
     quote_id INTEGER NOT NULL REFERENCES {schema}.quotes(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES {schema}.products(id),
+    product_id INTEGER REFERENCES public.products(id),
     product_name VARCHAR(255) NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(15, 2) NOT NULL,
@@ -144,7 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_customer ON {schema}.invoices (customer_
 CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     id SERIAL PRIMARY KEY,
     invoice_id INTEGER NOT NULL REFERENCES {schema}.invoices(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES {schema}.products(id),
+    product_id INTEGER REFERENCES public.products(id),
     product_name VARCHAR(255) NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(15, 2) NOT NULL,
