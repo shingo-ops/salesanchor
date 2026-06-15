@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-12 / ADR 総数: 137 件
+最終更新: 2026-06-15 / ADR 総数: 138 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -155,6 +155,7 @@
 | [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | — | — |
 | [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Accepted | — | — |
 | [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
+| [ADR-140](./ADR-140-security-hardening-master-plan.md) | ADR-140: Security Hardening Master Plan（SEC-MASTER） | Proposed | — | 2026-06-14 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
