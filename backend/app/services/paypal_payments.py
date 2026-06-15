@@ -187,6 +187,21 @@ def _fmt_amount(amount, currency: str) -> str:
     return str(dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def _get_merchant_email(base: str, token: str) -> Optional[str]:
+    """PayPal アカウントのメールアドレスを取得（userinfo エンドポイント経由）。失敗時 None。"""
+    try:
+        resp = httpx.get(
+            f"{base}/v1/identity/oauth2/userinfo?schema=paypalv1.1",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("emails", [{}])[0].get("value")
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 def _get_token(env: str, client_id: str, client_secret: str) -> Optional[str]:
     """OAuth2 client_credentials でアクセストークンを取得（失敗時 None）。"""
     base = _BASE_URLS[_norm_env(env)]
@@ -570,7 +585,13 @@ def create_and_send_invoice(
                 "status_code": 401, "message": "PayPal 認証に失敗しました（認証情報を確認）"}
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     ccy = (currency or "JPY").upper()
-    body = {
+    # invoicer: sandbox では merchant profile が未設定でも動作するよう email を明示する。
+    # /v1/identity/oauth2/userinfo で merchant email を取得できない場合は省略（PayPal 側 profile に委ねる）。
+    merchant_email = _get_merchant_email(base, token)
+    invoicer: dict = {}
+    if merchant_email:
+        invoicer = {"email_address": merchant_email}
+    body: dict = {
         "detail": {
             "currency_code": ccy,
             "invoice_number": invoice_number,
@@ -587,6 +608,8 @@ def create_and_send_invoice(
             }
         ],
     }
+    if invoicer:
+        body["invoicer"] = invoicer
     # 1. 作成（draft）
     try:
         resp = httpx.post(f"{base}/v2/invoicing/invoices", json=body, headers=headers, timeout=_TIMEOUT)
