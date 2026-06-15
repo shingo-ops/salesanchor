@@ -71,7 +71,7 @@
 
 ## KPI / 検証方法
 
-| KPI | 目標値 | 検証方法 |
+| 基準（KPI） | 目標値 | 検証方法 |
 |---|---|---|
 | KPI-1: Desktop 非退行率 | 100% | desktop-shell.spec.ts — Playwright Chromium 1280×800/1440×900 |
 | KPI-2: MobileShell 成立率 | 100% | mobile-shell.spec.ts — Playwright Chromium 375×812/390×844/414×896 |
@@ -243,6 +243,8 @@ npm run build
 ---
 
 ## 外部・過去事例
+
+Meta / GitHub / Shopify / Salesforce がいずれも DOM 分離型 Shell 切り替えを採用。CSS @media による hide/show ではなく JS 判定での条件レンダリングが業界標準。
 
 ### 採用事例
 

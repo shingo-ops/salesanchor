@@ -17,7 +17,7 @@
 
 ### app-shell 構造
 
-`frontend/src/components/Layout.tsx:196` — ルート要素 `div.app-shell`
+`frontend/src/components/Layout.tsx:196` — ルート要素 div.app-shell
 `frontend/src/sidebar.css:10-15` — `.app-shell { display: flex; height: 100vh; overflow: hidden }`
 
 ```
@@ -57,17 +57,17 @@ onMouseEnter={() => setSidebarExpanded(true)}
 onMouseLeave={handleSidebarLeave}
 ```
 
-`frontend/src/components/Layout.tsx:159-162` — `handleSidebarLeave` は `setSidebarExpanded(false)` + `setOpenAccordion(null)`
+`frontend/src/components/Layout.tsx:159-162` — handleSidebarLeave は setSidebarExpanded(false) + setOpenAccordion(null)
 
 ### sidebar-expanded class / label表示
 
 `frontend/src/components/Layout.tsx:209` — `sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}${isMobileSidebarOpen ? " sidebar-mobile-open" : ""}`
 
-sidebar-expanded が true のときのみ `.sidebar-label` が visible になる（sidebar.css 内の opacity/width 制御）。
+sidebar-expanded が true のときのみ .sidebar-label が visible になる（sidebar.css 内の opacity/width 制御）。
 
 ### accordion 開閉
 
-`frontend/src/components/Layout.tsx:153-157` — `toggleAccordion()` で `setOpenAccordion()` + `setSidebarExpanded(true)`（accordion 展開時は必ず sidebar も展開）
+`frontend/src/components/Layout.tsx:153-157` — toggleAccordion() で setOpenAccordion() + setSidebarExpanded(true)（accordion 展開時は必ず sidebar も展開）
 
 ### app-body margin-left
 
@@ -89,7 +89,7 @@ responsive.css の mobile rule で上書き:
 }
 ```
 
-`frontend/src/components/Layout.tsx:427-435` — click で `setDrawerOpen(true)`
+`frontend/src/components/Layout.tsx:427-435` — click で setDrawerOpen(true)
 
 ### user drawer
 
@@ -116,7 +116,7 @@ responsive.css の mobile rule で上書き:
 
 `frontend/src/topbar.css:112-130` — `position: fixed; top: var(--avatar-zone-top); left: var(--space-4); z-index: var(--avatar-zone-z)=300`
 
-`frontend/src/components/Layout.tsx:417-425` — click で `openMobileSidebar()` 呼び出し
+`frontend/src/components/Layout.tsx:417-425` — click で openMobileSidebar() 呼び出し
 
 ### PC sidebar と mobile 開閉 state の混在
 
@@ -126,14 +126,14 @@ const [sidebarExpanded, setSidebarExpanded] = useState(false);  // PC: hover exp
 const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);  // Mobile: hamburger
 ```
 
-`frontend/src/components/Layout.tsx:131-140` — `openMobileSidebar` / `closeMobileSidebar` が `sidebarExpanded` を副作用として操作（PC hover と mobile open が状態を共有）
+`frontend/src/components/Layout.tsx:131-140` — openMobileSidebar / closeMobileSidebar が sidebarExpanded を副作用として操作（PC hover と mobile open が状態を共有）
 
 `frontend/src/components/Layout.tsx:165` — `handleNavClick = () => closeMobileSidebar()` — PC でも nav click のたびに mobile state reset を呼ぶ（副作用は無害だが責務が不明確）
 
 ### MobileShell 分離が必要な理由
 
-1. **DOM 重複**: モバイルで `.sidebar-panel` が DOM に存在し続ける（CSS で隠れているだけ）。スクリーンリーダーが sidebar のナビ項目を2回読む可能性（aria-hidden 未指定）。
-2. **State 混在**: `sidebarExpanded`（PC hover用）と `isMobileSidebarOpen`（mobile用）が同一コンポーネントに混在し、互いに副作用を持つ（openMobileSidebar が sidebarExpanded を true にする）。
+1. **DOM 重複**: モバイルで .sidebar-panel が DOM に存在し続ける（CSS で隠れているだけ）。スクリーンリーダーが sidebar のナビ項目を2回読む可能性（aria-hidden 未指定）。
+2. **State 混在**: sidebarExpanded（PC hover用）と isMobileSidebarOpen（mobile用）が同一コンポーネントに混在し、互いに副作用を持つ（openMobileSidebar が sidebarExpanded を true にする）。
 3. **topbar 欠如**: Mobile に適した topbar が存在しない。hamburger が `position: fixed` で浮いているだけで、ページタイトルとの関係が定義されていない。
 4. **一時対応 CSS の蓄積**: PR-R1 の `.sidebar-panel { transform: translateX(-100%) }` は PC 構造を前提にした CSS ハック。ADR-137 の「一時対応 CSS を重ね続けて構造問題を隠さない」禁止事項に該当。
 
@@ -160,7 +160,7 @@ DESKTOP_MIN: 1280,
 ```
 
 tokens.css と breakpoints.ts は一致している ✅
-`check-breakpoint-sync.js` により CI で自動検証される。
+`frontend/scripts/check-breakpoint-sync.js` により CI で自動検証される。
 
 ### z-index hierarchy
 
@@ -178,7 +178,7 @@ tokens.css と breakpoints.ts は一致している ✅
 
 MobileDrawer backdrop (298) < MobileDrawer (200) の逆転問題:
 
-**不明点①** — `--z-backdrop: 298` は user-drawer の backdrop 用（`topbar.css:139`）。Mobile sidebar backdrop に同じ値を使うと user-drawer backdrop より低い（298）が MobileDrawer（200）より高く、MobileDrawer の上に backdrop が表示される。MobileShell 実装時は `--z-sidebar-overlay: 210` を MobileDrawer の overlay（backdrop）専用として割り当てるか、新しいtoken `--z-mobile-drawer-backdrop` を追加するか PO 確認が必要。
+**不明点①** — --z-backdrop: 298 は user-drawer の backdrop 用（`frontend/src/topbar.css:139`）。Mobile sidebar backdrop に同じ値を使うと user-drawer backdrop より低い（298）が MobileDrawer（200）より高く、MobileDrawer の上に backdrop が表示される。MobileShell 実装時は --z-sidebar-overlay: 210 を MobileDrawer の overlay（backdrop）専用として割り当てるか、新しいtoken --z-mobile-drawer-backdrop を追加するか PO 確認が必要。
 
 ### icon size tokens
 
@@ -194,7 +194,7 @@ MobileDrawer backdrop (298) < MobileDrawer (200) の逆転問題:
 
 ### ADR-067 Design Token enforcement
 
-`docs/adr/ADR-067-design-token-enforcement.md` — 色・余白・サイズを直書き禁止。MobileShell の新規CSS変数は `:root` に追加し、暗色モード（`:root.force-dark`）にも追記必須。
+`docs/adr/ADR-067-design-token-enforcement.md` — 色・余白・サイズを直書き禁止。MobileShell の新規CSS変数は :root に追加し、暗色モード（:root.force-dark）にも追記必須。
 
 ### nav item 定義（現状）
 
