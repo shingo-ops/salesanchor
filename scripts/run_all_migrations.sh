@@ -404,6 +404,9 @@ run_sql migrations/20260614_100000_create_sales_form_tables.sql
 # ポケモンカードゲーム MEGA シリーズ 商品マスタ投入（14件 product_code あり + 11件 なし）
 run_sql migrations/20260615_235900_seed_pokemon_mega_products.sql
 
+# tcg_type_master 重複 code 統合（pokemon/weiss → pokemon_booster_box/weiss_schwarz）
+run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
