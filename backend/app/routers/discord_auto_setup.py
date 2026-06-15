@@ -49,6 +49,7 @@ router = APIRouter()
 _VIEW_CHANNEL = 1024
 _SEND_MESSAGES = 2048
 _READ_MESSAGE_HISTORY = 65536
+_MANAGE_CHANNELS = 16
 
 # Botロール順ガイド URL
 _ROLE_ORDER_GUIDE_URL = (
@@ -128,7 +129,7 @@ async def run_auto_setup(
     small_role_name: str = cfg["small_role_name"] if cfg else "Member"
     large_role_name: str = cfg["large_role_name"] if cfg else "Partner"
 
-    # 4. Discord 上の既存ロール・チャンネル一覧取得（冪等チェック）
+    # 4. Discord 上の既存ロール・チャンネル一覧 + Bot ユーザー ID 取得（冪等チェック用）
     try:
         existing_roles: list[dict[str, Any]] = await discord_api_request(
             method="GET",
@@ -142,6 +143,15 @@ async def run_auto_setup(
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or []
+        # Bot ユーザー ID を取得する（カテゴリ permission_overwrites に Bot 自身の
+        # VIEW_CHANNEL を付与するために必要。type=1 member overwrite を使用する）。
+        me_data: dict[str, Any] = await discord_api_request(
+            method="GET",
+            path="/users/@me",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or {}
+        bot_user_id: str = str(me_data.get("id", ""))
     except DiscordAPIError as exc:
         raise HTTPException(status_code=502, detail=f"Discord API 接続エラー: {exc}") from exc
 
@@ -189,7 +199,26 @@ async def run_auto_setup(
     steps.append(step)
     member_role_id: str | None = step.discord_id
 
-    # Step 2a: "Sales Anchor" カテゴリ（@everyone view禁止）
+    # Step 2a: "Sales Anchor" カテゴリ（@everyone view禁止・Bot自身はview可）
+    # NOTE: カテゴリに @everyone deny VIEW_CHANNEL を設定すると、Bot 自身も
+    # そのカテゴリ内で VIEW_CHANNEL を失い、チャンネル作成時の permission_overwrites
+    # 設定で 403 Missing Permissions (50013) が発生する（Cause F）。
+    # Bot user に対して type=1 (member overwrite) で明示的に VIEW_CHANNEL を付与する。
+    _category_overwrites: list[dict[str, Any]] = [
+        {
+            "id": guild_id,  # @everyone role id == guild_id
+            "type": 0,
+            "allow": "0",
+            "deny": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY),
+        },
+    ]
+    if bot_user_id:
+        _category_overwrites.append({
+            "id": bot_user_id,
+            "type": 1,  # member overwrite（ロールではなく特定ユーザー）
+            "allow": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY | _MANAGE_CHANNELS),
+            "deny": "0",
+        })
     step = await _get_or_create_channel_step(
         step_name="category",
         channel_name="Sales Anchor",
@@ -199,14 +228,7 @@ async def run_auto_setup(
         existing_channels=existing_channels,
         guild_id=guild_id,
         bot_token=bot_token,
-        permission_overwrites=[
-            {
-                "id": guild_id,  # @everyone role id == guild_id
-                "type": 0,
-                "allow": "0",
-                "deny": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY),
-            },
-        ],
+        permission_overwrites=_category_overwrites,
     )
     steps.append(step)
     if step.discord_id:

@@ -1,8 +1,8 @@
 # recon: Discord 自動セットアップ失敗の原因調査
 
-**日付**: 2026-06-14  
+**日付**: 2026-06-14 / 追記 2026-06-15  
 **担当**: Hikky-dev  
-**ステータス**: VPS実機確認完了・原因確定
+**ステータス**: Cause F 確定・PR #2224 作成済み
 
 ---
 
@@ -112,22 +112,59 @@ DB INSERT 時に ticket_button_channel_id NOT NULL 制約違反が起き 500 に
 
 ---
 
-## 次アクション
+## 追加調査結果（2026-06-15）
 
-### しんごさんへ（Discord 設定・即時対応）
+### Cause D 解消確認（ロール位置）
 
-Discord の「サーバー設定 → 役職」を開き:
-- Sales Anchor Bot ロールを Member と Partner の上に移動
+Bot API (PATCH /guilds/{guild_id}/roles) で Sales Anchor ロールを pos=4 に移動済み。
 
-移動後、もう一度「自動セットアップを実行」を試す。
+| ロール | position（修正後） |
+|------|--------------|
+| Sales Anchor | 4 |
+| Sales Anchor Staff | 3 |
+| Partner | 2 |
+| Member | 1 |
+| @everyone | 0 |
 
-### Hikky-dev（コード修正 PR）
+### Cause F（カテゴリ自己ロックアウト）
 
-- 対象ファイル: `backend/app/routers/discord_auto_setup.py`
-- 対象テスト: `backend/tests/test_discord_auto_setup.py`
-- 修正内容1: 初回実行（cfg is None）かつ NOT NULL カラムが NULL のとき INSERT をスキップし partial で正常返却
-- 修正内容2: _get_or_create_channel_step に名前+type+parent_id 検索フォールバックを追加（重複作成防止）
-- migration 変更なし（NOT NULL は残す）
+**確定**：ロール順修正後も auto-setup が 200 partial（全チャンネル 403）のまま。
 
-→ Cause D（Discord 設定）が解消されれば Cause E の INSERT 問題は踏まなくなるが、
-  Cause E を放置すると他テナント初回実行でも 500 になるため別途修正する。
+根本原因：カテゴリ作成時の permission_overwrites に `@everyone deny VIEW_CHANNEL` のみ設定しており、
+Bot 自身が VIEW_CHANNEL を持たない状態でカテゴリ内にチャンネルを作成しようとすると
+403 Missing Permissions (50013) が発生する。
+
+Discord の権限計算：「チャンネルに permission_overwrites を設定するには、
+Bot がそのチャンネル（親カテゴリを含む）で VIEW_CHANNEL を持つ必要がある」
+
+追加症状：
+- 重複 Sales Anchor カテゴリが 4 件存在（過去の失敗分）
+- これらは Bot が VIEW_CHANNEL を持たないため DELETE も 403
+
+**修正方針**（コードのみ・migration 不要）:
+- `GET /users/@me` で bot_user_id を取得
+- カテゴリ作成の permission_overwrites に type=1 member overwrite（Bot ユーザー）を追加
+  → allow: VIEW_CHANNEL | SEND_MESSAGES | READ_MESSAGE_HISTORY | MANAGE_CHANNELS
+- PR: `backend/app/routers/discord_auto_setup.py`
+- テスト: `backend/tests/test_discord_auto_setup.py`（test_category_includes_bot_member_overwrite 追加）
+
+**しんごさんへ必要な手動対応**：
+Discord UI から "Sales Anchor" カテゴリ（重複の 4 件）を全て削除してください。
+（Bot は既存カテゴリを削除できないため手動が必要）
+削除後、auto-setup を再実行すると 200 completed になる予定。
+
+---
+
+## 次アクション（更新版）
+
+### しんごさんへ（Discord 手動対応）
+
+1. Discord → 対象サーバー → テキストチャンネルリスト
+2. "Sales Anchor" カテゴリ（4件）をそれぞれ右クリック → チャンネルを削除
+3. PR #2224 デプロイ後、`/admin/discord-config` から「自動セットアップを実行」
+
+### Hikky-dev（対応済み）
+
+- Cause D: Bot API で Sales Anchor ロールを pos=4 に昇格（完了）
+- Cause E: `_can_upsert` guard で INSERT スキップ（PR #2215、本番反映済み）
+- Cause F: カテゴリ permission_overwrites に Bot member overwrite 追加（PR #2224）
