@@ -258,10 +258,23 @@ npm run build
 
 ---
 
+## PO確定方針（2026-06-14）
+
+recon.md の不明点①〜④について、PO（shingo-ops）が以下のとおり方針確定。実装時に迷った場合はこのセクションを参照すること。
+
+| # | 確定内容 | 実装への影響 |
+|---|---|---|
+| ① backdrop z-index | `--z-sidebar-overlay: 210` を MobileDrawer overlay 専用に割り当てる。`--z-backdrop: 298` は user-drawer backdrop 専用のまま流用しない | `mobile-shell.css` の `.mobile-drawer-backdrop { z-index: var(--z-sidebar-overlay) }` で実装 |
+| ② nav item builder | 共通ソースを新設（`NavItemList.tsx` + nav items 定義ファイル）。PC/Mobile で二重管理禁止。PR-R2-A はビルダー実装から開始する | PR-R2-A スコープ: `NavItemList.tsx` + nav items SSoT + `useIsMobile.ts` |
+| ③ avatar-btn mobile | MobileTopBar 内に配置。hamburger / page title / avatar の3要素を1行横並び。`position: fixed` での浮かせ配置は廃止 | `MobileTopBar` は `{ display: flex; align-items: center }` の in-flow 要素として実装 |
+| ④ tablet Shell | **767px 以下のみ MobileShell、768px 以上は DesktopShell**（タブレットは DesktopShell 扱い）。ADR-137 の DesktopShell / MobileShell 2分割に準拠 | `useIsMobile`: `MOBILE_MAX = 767` の matchMedia で判定。分岐は2値のみ |
+
+---
+
 ## 継続（次フェーズへの申し送り）
 
-- 不明点① (backdrop z-index) は PR-R2-B 着手前に PO 確認を取ること
-- 不明点② (nav item builder 範囲) は PR-R2-A の設計時に決定すること
-- 不明点③ (avatar-btn の mobile 扱い) は PR-R2-B の MobileTopBar 設計時に決定すること
-- 不明点④ (tablet Shell) は PR-R2-C の Shell 切り替え実装前に PO 確認を取ること
-- PR-R1 CSS ハック削除（PR-R2-D）は MobileShell の本番動作が確認されてから実行すること
+- 不明点①〜④はすべて PO確定済み（上記「PO確定方針」参照）
+- PR-R2-A 着手時: `NavItemList.tsx` / nav items SSoT / `useIsMobile.ts` + tests のみ実装する
+- PR-R2-B 着手時: `MobileTopBar`（hamburger / title / avatar 横並び）+ `MobileDrawer`（`--z-sidebar: 200`）+ `MobileDrawerBackdrop`（`--z-sidebar-overlay: 210`）
+- PR-R2-C 着手時: `App.tsx` で `useIsMobile()` による Shell 条件レンダリング導入 + `Layout.tsx` → `DesktopShell.tsx` rename
+- PR-R1 CSS ハック削除（PR-R2-D）は MobileShell の本番動作が確認されてから別 PR で実行すること
