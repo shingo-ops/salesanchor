@@ -47,6 +47,24 @@ from sqlalchemy.ext.asyncio import create_async_engine
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+
+async def _set_tenant_context(conn, tenant_id: int) -> None:
+    """テナント RLS コンテキストを設定する（asyncpg 対応）。
+
+    ``SET LOCAL app.tenant_id = :param`` は asyncpg がバインドパラメータ ``$1`` に
+    展開するが PostgreSQL の SET コマンドはバインドパラメータを受け付けないため、
+    ``set_config()`` 関数経由で設定する。
+
+    Args:
+        conn: SQLAlchemy async connection（トランザクション内で使用）
+        tenant_id: テナント ID（整数に強制変換して文字列化）
+    """
+    await conn.execute(
+        text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
+        {"tenant_id": str(int(tenant_id))},
+    )
+
+
 # channel_type 変換マッピング（meta_messages.platform → conversation_logs.channel_type）
 PLATFORM_MAP: dict[str, str] = {
     "messenger": "meta_messenger",
@@ -101,19 +119,21 @@ async def migrate_tenant(
 
     logger.info("  %s (tenant_code=%s): 対象 %d 件", schema, tenant_code, stats["total"])
 
-    if stats["total"] == 0 or dry_run:
-        if dry_run:
-            logger.info("  [DRY-RUN] スキップ（実際の変更なし）")
+    if stats["total"] == 0:
+        return stats
+
+    if dry_run:
+        # dry-run でもテナントコンテキスト設定経路を検証する（INSERT は実行しない）
+        async with engine.begin() as conn:
+            await _set_tenant_context(conn, tenant_id)
+        logger.info("  [DRY-RUN] テナントコンテキスト設定 OK — INSERT はスキップ")
         return stats
 
     # バッチ移行
     offset = 0
     while True:
         async with engine.begin() as conn:
-            # set_tenant_context で RLS を通す
-            await conn.execute(text(
-                "SET LOCAL app.tenant_id = :tid"
-            ), {"tid": tenant_id})
+            await _set_tenant_context(conn, tenant_id)
 
             rows = await conn.execute(text(f"""
                 SELECT
