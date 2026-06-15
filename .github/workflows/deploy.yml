@@ -771,46 +771,127 @@ jobs:
             DESIGN_SMOKE_CRED="${DESIGN_SITE_SMOKE_CRED}" \
               bash /home/ubuntu/salesanchor/scripts/smoke/design-site-smoke.sh
 
-      # ADR-116: main デプロイ成功スタンプ
+      # ADR-116: main デプロイ成功スタンプ（manifest 対象 PR のみ）
       # smoke/health 200 + Verify deployment が全通過した"成功側"のみ実行する。
+      # manifest が取れない場合は全件スタンプしない（warningのみ）。
       - name: Stamp main deploy date in active-work.md
         if: success()
         continue-on-error: true
         env:
           PIPELINE_PAT: ${{ secrets.PIPELINE_PAT }}
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          DEPLOY_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           DEPLOY_DATE=$(date -u +%Y-%m-%d)
           export DEPLOY_DATE
-          git fetch origin develop
+
+          # ── release PR 番号を merge commit から取得 ──────────────────────
+          git fetch origin develop main
+
+          # main の最新 merge commit から PR 番号を探す
+          RELEASE_PR_NUM=$(git log origin/main -1 --merges --format="%s %b" \
+            | grep -oE '#[0-9]+' | tr -d '#' | head -1 || true)
+
+          if [ -z "$RELEASE_PR_NUM" ]; then
+            # fallback: gh で develop→main の最新マージ済み PR を探す
+            RELEASE_PR_NUM=$(gh pr list \
+              --base main --head develop --state merged \
+              --json number --jq '.[0].number' 2>/dev/null || true)
+          fi
+
+          if [ -z "$RELEASE_PR_NUM" ]; then
+            echo "⚠️ release PR 番号が取得できませんでした — stamp をスキップします（全件stamp禁止）"
+            exit 0
+          fi
+
+          echo "release PR: #${RELEASE_PR_NUM}"
+
+          # ── release PR 本文から manifest を抽出 ─────────────────────────
+          PR_BODY=$(gh pr view "$RELEASE_PR_NUM" --json body -q '.body' 2>/dev/null || true)
+
+          MANIFEST_PR_NUMS=$(echo "$PR_BODY" \
+            | python3 -c "
+import sys, re
+body = sys.stdin.read()
+m = re.search(r'<!-- active-work-release-manifest\s+prs:\s+(.*?)(?:branches:|-->)', body, re.DOTALL)
+if not m:
+    sys.exit(0)
+for line in m.group(1).splitlines():
+    line = line.strip()
+    if re.match(r'^- \d+$', line):
+        print(line.lstrip('- ').strip())
+" 2>/dev/null || true)
+
+          if [ -z "$MANIFEST_PR_NUMS" ]; then
+            echo "⚠️ release PR #${RELEASE_PR_NUM} に manifest ブロックが見つかりません — stamp をスキップします"
+            exit 0
+          fi
+
+          echo "manifest PR 一覧:"
+          echo "${MANIFEST_PR_NUMS}"
+
+          # manifest の PR 番号からブランチ名を収集
+          MANIFEST_BRANCHES=""
+          for num in $MANIFEST_PR_NUMS; do
+            branch=$(gh pr view "$num" --json headRefName -q '.headRefName' 2>/dev/null || true)
+            if [ -n "$branch" ]; then
+              MANIFEST_BRANCHES="${MANIFEST_BRANCHES}${branch}"$'\n'
+            fi
+          done
+
+          export MANIFEST_BRANCHES
+          export DEPLOY_RUN_URL
+
+          # ── develop ブランチで stamp を実行 ──────────────────────────────
           git checkout -b "stamp-develop-${{ github.run_id }}" origin/develop
+
           python3 - <<'PYEOF'
           import os
           deploy_date = os.environ["DEPLOY_DATE"]
+          manifest_branches = set(
+              b.strip() for b in os.environ.get("MANIFEST_BRANCHES", "").splitlines()
+              if b.strip()
+          )
+          deploy_run_url = os.environ.get("DEPLOY_RUN_URL", "")
           filepath = ".claude-pipeline/active-work.md"
+
+          print(f"manifest branches: {manifest_branches}")
+
           with open(filepath, encoding="utf-8") as f:
               content = f.read()
+
           lines = content.splitlines(keepends=True)
           new_lines = []
           updated = 0
+
           for line in lines:
               if line.strip().startswith("|"):
                   parts = line.rstrip("\n").split("|")
                   cols = parts[1:-1]
                   is_sep = all(c.strip().replace("-", "") == "" for c in cols if c.strip())
+                  branch = cols[0].strip() if cols else ""
                   if (len(cols) == 7 and not is_sep and
-                          "DONE" in cols[3] and cols[5].strip() == ""):
+                          "DONE" in cols[3] and cols[5].strip() == "" and
+                          branch in manifest_branches):
                       cols[5] = f" {deploy_date} "
+                      # 備考に deploy run URL を追記
+                      existing_note = cols[6].strip()
+                      run_note = f"deploy:{deploy_run_url}"
+                      if run_note not in existing_note:
+                          cols[6] = f" {(existing_note + ' ') if existing_note else ''}{run_note} "
                       eol = "\n" if line.endswith("\n") else ""
                       line = "|".join([""] + cols + [""]) + eol
                       updated += 1
               new_lines.append(line)
+
           if updated:
               with open(filepath, "w", encoding="utf-8") as f:
                   f.write("".join(new_lines))
               print(f"STAMPED {updated} rows with main:{deploy_date}")
           else:
-              print("No rows to stamp")
+              print(f"No rows to stamp (manifest has {len(manifest_branches)} branches, none matched DONE+main空欄)")
           PYEOF
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet .claude-pipeline/active-work.md; then

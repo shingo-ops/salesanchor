@@ -2,11 +2,16 @@ name: reaper-schedule — マージ済み worktree 定期回収（ADR-114）
 
 # 各 Mac で毎日実行し、DONE/マージ済みの worktree フォルダを自動削除する
 # Mac が offline の日は次回起動時に自動追いつき（launchd 自動起動: PR-C で実装）
+#
+# repository_dispatch で active-work-auto-done 完了後にも即時起動できる
+# Mac が offline なら即時実行は失敗して OK（毎日 03:00 JST の定期で追いつく）
 
 on:
   schedule:
     - cron: '0 18 * * *'  # 毎日 18:00 UTC = 03:00 JST
   workflow_dispatch:        # 手動実行（テスト・緊急時）
+  repository_dispatch:
+    types: [reaper-run]    # active-work-auto-done 完了後の即時回収
 
 jobs:
   reaper:

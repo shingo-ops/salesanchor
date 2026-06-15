@@ -78,7 +78,7 @@ try:
     for line in content.splitlines():
         if branch in line and line.strip().startswith('|'):
             cols = [c.strip() for c in line.split('|')]
-            # 6列フォーマット: '' branch area date status pr note ''
+            # 7列フォーマット: '' branch area date status pr main note ''
             if len(cols) >= 6 and cols[1] == branch:
                 print(cols[4])
                 sys.exit(0)
@@ -89,24 +89,45 @@ PYEOF
 2>/dev/null || echo "ERROR")
   fi
 
-  # IN_PROGRESS → 絶対に消さない（最優先チェック）
-  if [ "${ACTIVE_STATUS}" = "IN_PROGRESS" ]; then
+  # IN_PROGRESS または REVIEW → 絶対に消さない（最優先チェック）
+  if [ "${ACTIVE_STATUS}" = "IN_PROGRESS" ] || [ "${ACTIVE_STATUS}" = "REVIEW" ]; then
     SKIP_IN_PROGRESS+=("${BRANCH}")
     continue
   fi
 
   # ── チェック 2: 未保存の作業がないか ────────────────────────────────────
+  # 判定順:
+  #   a. 未コミット・未ステージ確認
+  #   b. upstream 設定済み → @{u}..HEAD で未push 確認
+  #   c. upstream 未設定 → origin/<branch> が存在すれば比較する
+  #      upstream 未設定だけを理由に未push 扱いしない（設定漏れで削除保護が過剰になるのを防ぐ）
   UNSAVED=0
   # git status は HEAD なしの fresh init でも動く（untracked files を検出可能）
   if git -C "${WORKTREE_PATH}" status >/dev/null 2>&1; then
-    # 未コミット・未ステージ確認
+    # a. 未コミット・未ステージ確認
     if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null)" ]; then
       UNSAVED=1
     fi
-    # 未push 確認（upstream があれば）
-    if [ "${UNSAVED}" -eq 0 ] && git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
-      if [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
-        UNSAVED=1
+
+    if [ "${UNSAVED}" -eq 0 ]; then
+      # b. upstream 設定済みなら @{u}..HEAD で比較
+      if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
+        if [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+          UNSAVED=1
+        fi
+      else
+        # c. upstream 未設定: origin/<branch> が存在すれば直接比較
+        REMOTE_SHA=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
+        if [ -n "${REMOTE_SHA}" ]; then
+          LOCAL_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
+          if [ -n "${LOCAL_SHA}" ] && [ "${LOCAL_SHA}" != "${REMOTE_SHA}" ]; then
+            UNPUSHED=$(git -C "${WORKTREE_PATH}" log --oneline "${REMOTE_SHA}..HEAD" 2>/dev/null || true)
+            if [ -n "${UNPUSHED}" ]; then
+              UNSAVED=1
+            fi
+          fi
+        fi
+        # origin/<branch> も存在しない場合: upstream 未設定だけを理由に未push 扱いしない
       fi
     fi
   fi
