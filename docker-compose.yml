@@ -193,6 +193,7 @@ services:
       - REVIEW_MAIL_IMAP_PASSWORD=${REVIEW_MAIL_IMAP_PASSWORD:-}
       - REVIEW_MAIL_WEBMAIL_URL=${REVIEW_MAIL_WEBMAIL_URL:-}
       - REVIEW_MAIL_DISCORD_WEBHOOK=${REVIEW_MAIL_DISCORD_WEBHOOK:-}
+      - REVIEW_MAIL_DISCORD_MENTION=${REVIEW_MAIL_DISCORD_MENTION:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
