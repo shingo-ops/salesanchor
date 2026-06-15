@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-12 / ADR 総数: 137 件
+最終更新: 2026-06-15 / ADR 総数: 138 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -150,6 +150,7 @@
 | [ADR-135](./ADR-135-release-stowaway-prevention.md) | ADR-135: リリース相乗り防止 — develop を常に出荷可能に保つ | Accepted | — | — |
 | [ADR-136](./ADR-136-cc-bot-github-identity.md) | ADR-136: CC ボットアカウント GitHub Identity 分離 | Accepted | — | — |
 | [ADR-136](./ADR-136-company-stats-ssot.md) | ADR-136: 取引額集計の SSOT — v_company_stats（公式定義: 入金済み・取消なし） | Completed | — | — |
+| [ADR-137](./ADR-137-adaptive-shell-architecture.md) | ADR-137: Adaptive Shell Architecture（PC / Mobile UI 分離方針） | Accepted | — | — |
 | [ADR-137](./ADR-137-nginx-config-deploy-reliability.md) | ADR-137: nginx 反映の確実化（inode ズレ対策 + 502 再発防止） | Completed（PR-A・PR-B 両問題とも解消済み） | — | — |
 | [ADR-137](./ADR-137-v-company-stats-ssot-filter.md) | ADR-137: v_company_stats フィルタ定義統一（取引額 SSOT） | Accepted | — | — |
 | [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | — | — |
