@@ -146,7 +146,8 @@
 | feature/morimoto/adr090-pr3-fk-remap-design | ADR-090 PR3 下流FK再マップ 設計（recon/design・docs-only） | 2026-06-15 16:23 | DONE | #2228 | | |
 | feature/morimoto/seed-mega-products | 商品マスタ ポケモンカードゲームMEGAシリーズ 追加 | 2026-06-15 23:10 | DONE | #2231 | | |
 | feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | DONE | #2235 | | |
-| feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | IN_PROGRESS | | | |
+| feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | DONE | #2237 | | |
+| feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
