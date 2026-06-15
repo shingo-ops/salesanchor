@@ -144,7 +144,8 @@
 | feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | DONE | #2162 | | |
 | feature/morimoto/sa02-r1-r2-convlog-links | SA-02 残課題 R1（contact_id補完）/ R2（手動記録company_id補完） | 2026-06-14 | DONE | #2208 | 2026-06-15 | R3 Stage 2 は Shingo GO 待ち |
 | feature/morimoto/adr090-pr3-fk-remap-design | ADR-090 PR3 下流FK再マップ 設計（recon/design・docs-only） | 2026-06-15 16:23 | DONE | #2228 | | |
-| feature/morimoto/seed-mega-products | 商品マスタ ポケモンカードゲームMEGAシリーズ 追加 | 2026-06-15 23:10 | IN_PROGRESS | | | |
+| feature/morimoto/seed-mega-products | 商品マスタ ポケモンカードゲームMEGAシリーズ 追加 | 2026-06-15 23:10 | DONE | #2231 | | |
+| feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
