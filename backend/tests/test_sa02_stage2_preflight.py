@@ -299,3 +299,41 @@ async def test_dry_run_total_zero_no_context_call():
     assert stats["inserted"] == 0
     # total=0 のときは engine.begin() を呼ばない
     mock_engine.begin.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 11. f-string 内 JSON literal の修正検証（SA-02 R3 本移行エラー対応）
+# ---------------------------------------------------------------------------
+
+_MIGRATE_SRC = Path(__file__).resolve().parents[2] / "scripts" / "migrate_sa02_stage2_meta_to_conv_logs.py"
+
+
+def test_insert_sql_contains_jsonb_build_object():
+    """analysis カラムに jsonb_build_object('_source', 'sa02_stage2_migration') が使われること。
+
+    修正前: f-string 内に '{"_source": "sa02_stage2_migration"}'::jsonb を直書きしていた。
+    Python が {} を format 指定子として解釈し Invalid format specifier エラーが発生した。
+    修正後: PostgreSQL の jsonb_build_object() 関数を使用。
+    """
+    src = _MIGRATE_SRC.read_text(encoding="utf-8")
+    assert "jsonb_build_object('_source', 'sa02_stage2_migration')" in src, (
+        "INSERT SQL に jsonb_build_object が見つかりません。JSON literal 直書きに戻っています。"
+    )
+
+
+def test_no_raw_json_literal_in_fstring():
+    """f-string 内に JSON literal '\"_source\": \"sa02_stage2_migration\"' が残っていないこと。"""
+    src = _MIGRATE_SRC.read_text(encoding="utf-8")
+    assert '"_source": "sa02_stage2_migration"' not in src, (
+        'INSERT SQL に JSON literal {"_source": "sa02_stage2_migration"} が残っています。'
+        " jsonb_build_object に置き換えてください。"
+    )
+
+
+def test_fstring_insert_sql_compiles_without_error():
+    """スクリプトを exec しても Invalid format specifier が発生しないこと。"""
+    src = _MIGRATE_SRC.read_text(encoding="utf-8")
+    ns: dict = {"__file__": str(_MIGRATE_SRC)}
+    # SyntaxError や f-string の ValueError はここで発生する
+    exec(compile(src, str(_MIGRATE_SRC), "exec"), ns)  # noqa: S102
+    assert callable(ns["migrate_tenant"])
