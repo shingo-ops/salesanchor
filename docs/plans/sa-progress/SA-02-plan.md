@@ -148,6 +148,7 @@
 | 2026-06-11 | #1937 | 段階3: 手動記録 API + スレッドUI + 翻訳発火 + 論理削除 + 重複ガード + チャネル管理UI + 集計ビュー論理削除除外 | マージ・本番デプロイ済み |
 | 2026-06-11 | #1945 | 段階4: 会社詳細→会話履歴タブ（contact集約・混在表示）+ GET /companies/{id}/conv-logs API | マージ・本番デプロイ済み |
 | 2026-06-11 | #1952/#1965 | 段階2: 移行キット準備完了（migrate script・verify script・rollback手順・analysis マーカー方式）| **Shingo GO待ち（本番未実行）** |
+| 2026-06-15 | #2208 | R1: write_conversation_log() に contact_id 自動補完（contacts primary contact 参照）/ R2: 手動記録 POST に company_id 自動補完（deals 参照）+ audit_log 反映。post-merge CI green。R3 未実行 | develop merge 済み |
 
 ---
 
