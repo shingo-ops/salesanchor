@@ -74,6 +74,83 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # --- Firebase UID Secrets 自動登録 (QA_ADMIN_FIREBASE_UID 未登録時のみ実行) ---
+      # backend コンテナ内の Firebase Admin SDK でメールアドレスから UID を取得し
+      # PIPELINE_PAT 経由で gh secret set する。登録済みならスキップ。
+      - name: Check if Firebase UID secrets need registration
+        id: check-uid-secrets
+        env:
+          QA_ADMIN_FIREBASE_UID: ${{ secrets.QA_ADMIN_FIREBASE_UID }}
+        run: |
+          if [[ -z "${QA_ADMIN_FIREBASE_UID:-}" ]]; then
+            echo "need_setup=true" >> "$GITHUB_OUTPUT"
+            echo "Firebase UID secrets not registered — will extract from backend container"
+          else
+            echo "need_setup=false" >> "$GITHUB_OUTPUT"
+            echo "Firebase UID secrets already registered — skipping"
+          fi
+
+      - name: Setup deploy key for app VPS SSH
+        if: steps.check-uid-secrets.outputs.need_setup == 'true'
+        run: |
+          install -m 700 -d ~/.ssh
+          install -m 600 /dev/null ~/.ssh/qa_deploy_key
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/qa_deploy_key
+
+      - name: Extract Firebase UIDs via backend container and register as Secrets
+        if: steps.check-uid-secrets.outputs.need_setup == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          # Python スクリプト: backend コンテナ内 Firebase Admin SDK でメールからUID取得
+          # GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json はコンテナ env に設定済み
+          PY_SCRIPT='
+import sys, os
+import firebase_admin
+from firebase_admin import auth, credentials
+
+cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "/app/firebase-credentials.json")
+if not os.path.exists(cred_path):
+    sys.exit(f"FATAL: credentials not found at {cred_path}")
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(credentials.Certificate(cred_path))
+
+pairs = [
+    ("QA_ADMIN_FIREBASE_UID",  "qa-admin@salesanchor.jp"),
+    ("QA_STAFF_FIREBASE_UID",  "qa-staff@salesanchor.jp"),
+    ("QA_VIEWER_FIREBASE_UID", "qa-viewer@salesanchor.jp"),
+]
+for secret_name, email in pairs:
+    try:
+        user = auth.get_user_by_email(email)
+        print(f"{secret_name}={user.uid}")
+    except auth.UserNotFoundError:
+        sys.exit(f"NOT_FOUND: {email}")
+    except Exception as e:
+        sys.exit(f"ERROR fetching {email}: {e}")
+'
+          # SSH → docker exec -i → python3 - (stdin) で UID 取得
+          # stdout を while ループでマスク + gh secret set にパイプ (値を表示しない)
+          ssh -i ~/.ssh/qa_deploy_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              "${VPS_USER}@${VPS_HOST}" \
+              "docker exec -i astro-webapp-backend-1 python3 -" <<< "$PY_SCRIPT" | \
+          while IFS='=' read -r secret_name uid_val; do
+            [[ -z "$uid_val" ]] && { echo "WARN: empty uid for $secret_name" >&2; continue; }
+            echo "::add-mask::${uid_val}"
+            printf '%s' "${uid_val}" | gh secret set "${secret_name}" --repo shingo-ops/salesanchor
+            echo "Registered: ${secret_name}"
+          done
+          echo "Firebase UID secret registration complete"
+
+      - name: Cleanup deploy key
+        if: always()
+        run: rm -f ~/.ssh/qa_deploy_key
+
       # --- Node + Playwright deps (frontend が @playwright/test を持っている) ---
       - name: Setup Node.js
         uses: actions/setup-node@v5
