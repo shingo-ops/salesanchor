@@ -105,40 +105,17 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          # Python スクリプト: backend コンテナ内 Firebase Admin SDK でメールからUID取得
-          # GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json はコンテナ env に設定済み
-          PY_SCRIPT='
-import sys, os
-import firebase_admin
-from firebase_admin import auth, credentials
-
-cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "/app/firebase-credentials.json")
-if not os.path.exists(cred_path):
-    sys.exit(f"FATAL: credentials not found at {cred_path}")
-if not firebase_admin._apps:
-    firebase_admin.initialize_app(credentials.Certificate(cred_path))
-
-pairs = [
-    ("QA_ADMIN_FIREBASE_UID",  "qa-admin@salesanchor.jp"),
-    ("QA_STAFF_FIREBASE_UID",  "qa-staff@salesanchor.jp"),
-    ("QA_VIEWER_FIREBASE_UID", "qa-viewer@salesanchor.jp"),
-]
-for secret_name, email in pairs:
-    try:
-        user = auth.get_user_by_email(email)
-        print(f"{secret_name}={user.uid}")
-    except auth.UserNotFoundError:
-        sys.exit(f"NOT_FOUND: {email}")
-    except Exception as e:
-        sys.exit(f"ERROR fetching {email}: {e}")
-'
-          # SSH → docker exec -i → python3 - (stdin) で UID 取得
+          # Python スクリプト (base64): YAML の block scalar インデント問題を回避
+          # デコード: base64 -d | python3 - として docker exec stdin に渡す
+          # GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json はコンテナ env 設定済み
+          PY_B64="aW1wb3J0IHN5cywgb3MKaW1wb3J0IGZpcmViYXNlX2FkbWluCmZyb20gZmlyZWJhc2VfYWRtaW4gaW1wb3J0IGF1dGgsIGNyZWRlbnRpYWxzCgpjcmVkX3BhdGggPSBvcy5lbnZpcm9uLmdldCgiR09PR0xFX0FQUExJQ0FUSU9OX0NSRURFTlRJQUxTIiwgIi9hcHAvZmlyZWJhc2UtY3JlZGVudGlhbHMuanNvbiIpCmlmIG5vdCBvcy5wYXRoLmV4aXN0cyhjcmVkX3BhdGgpOgogICAgc3lzLmV4aXQoIkZBVEFMOiBjcmVkZW50aWFscyBub3QgZm91bmQgYXQgIiArIGNyZWRfcGF0aCkKaWYgbm90IGZpcmViYXNlX2FkbWluLl9hcHBzOgogICAgZmlyZWJhc2VfYWRtaW4uaW5pdGlhbGl6ZV9hcHAoY3JlZGVudGlhbHMuQ2VydGlmaWNhdGUoY3JlZF9wYXRoKSkKCnBhaXJzID0gWwogICAgKCJRQV9BRE1JTl9GSVJFQkFTRV9VSUQiLCAgInFhLWFkbWluQHNhbGVzYW5jaG9yLmpwIiksCiAgICAoIlFBX1NUQUZGX0ZJUkVCQVNFX1VJRCIsICAicWEtc3RhZmZAc2FsZXNhbmNob3IuanAiKSwKICAgICgiUUFfVklFV0VSX0ZJUkVCQVNFX1VJRCIsICJxYS12aWV3ZXJAc2FsZXNhbmNob3IuanAiKSwKXQpmb3Igc2VjcmV0X25hbWUsIGVtYWlsIGluIHBhaXJzOgogICAgdHJ5OgogICAgICAgIHVzZXIgPSBhdXRoLmdldF91c2VyX2J5X2VtYWlsKGVtYWlsKQogICAgICAgIHByaW50KHNlY3JldF9uYW1lICsgIj0iICsgdXNlci51aWQpCiAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgc3lzLnN0ZGVyci53cml0ZSgiRVJST1I6ICIgKyBzdHIoZSkgKyAiCiIpCiAgICAgICAgc3lzLmV4aXQoMSkK"
+          # SSH → docker exec -i → base64 -d | python3 - で UID 取得
           # stdout を while ループでマスク + gh secret set にパイプ (値を表示しない)
           ssh -i ~/.ssh/qa_deploy_key \
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=15 \
               "${VPS_USER}@${VPS_HOST}" \
-              "docker exec -i astro-webapp-backend-1 python3 -" <<< "$PY_SCRIPT" | \
+              "echo '${PY_B64}' | base64 -d | docker exec -i astro-webapp-backend-1 python3 -" | \
           while IFS='=' read -r secret_name uid_val; do
             [[ -z "$uid_val" ]] && { echo "WARN: empty uid for $secret_name" >&2; continue; }
             echo "::add-mask::${uid_val}"
