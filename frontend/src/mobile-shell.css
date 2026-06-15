@@ -1,0 +1,150 @@
+/* ============================================================
+   mobile-shell.css — MobileShell 専用スタイル（PR-R2-B）
+   ADR-067: 色・余白・z-index はすべて design token 参照。hex / px マジックナンバー禁止。
+   ADR-137: MobileShell は DesktopShell（Layout.tsx）とは独立した DOM。
+   ============================================================ */
+
+/* ---- MobileShell ルート ---- */
+.mobile-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ---- MobileTopBar: sticky header ---- */
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar); /* 100 */
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-topbar-hamburger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.mobile-topbar-hamburger:hover {
+  background: var(--bg-hover);
+}
+
+.mobile-topbar-title {
+  flex: 1;
+  font-size: var(--font-base);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AvatarButton: in-flow（position: fixed 不使用） */
+.mobile-topbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-avatar-md);
+  height: var(--size-avatar-md);
+  border-radius: 50%;
+  background: var(--bg-accent);
+  color: var(--text-on-accent);
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-sm);
+  font-weight: var(--font-medium);
+  flex-shrink: 0;
+}
+
+.mobile-topbar-avatar:hover {
+  opacity: var(--opacity-secondary); /* 0.85 */
+}
+
+/* ---- MobileDrawerBackdrop: コンテンツより前面、Drawer より背面 ---- */
+/* z-index: var(--z-sidebar)=200  Drawer(210) より背面・user-drawer backdrop(298) と混同禁止 */
+.mobile-drawer-backdrop {
+  position: fixed; /* fixed-ok: Layout-level overlay */
+  inset: 0;
+  z-index: var(--z-sidebar); /* 200 — Drawer(210) より背面 */
+  background: var(--overlay-bg);
+}
+
+/* ---- MobileDrawer: 左からスライドイン。Backdrop(200) より必ず前面 ---- */
+/* z-index: var(--z-sidebar-overlay)=210 ★Backdrop(200)より前面★ — クリック不能バグ防止 */
+.mobile-drawer {
+  position: fixed; /* fixed-ok: Layout-level overlay */
+  inset: 0 auto 0 0;
+  z-index: var(--z-sidebar-overlay); /* 210 ★Backdrop(200)より前面★ */
+  width: var(--sidebar-width-expanded, 240px);
+  transform: translateX(-100%);
+  transition: transform var(--transition-sidebar);
+  overflow-y: auto;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-drawer--open {
+  transform: translateX(0);
+}
+
+/* Drawer header（ロゴ + 閉じるボタン） */
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-drawer-logo {
+  height: var(--icon-xl);
+  width: auto;
+  object-fit: contain;
+}
+
+.mobile-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.mobile-drawer-close:hover {
+  background: var(--bg-hover);
+}
+
+.mobile-drawer-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3) 0;
+}
+
+/* ---- mobile-content: Outlet 表示エリア ---- */
+.mobile-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ---- User drawer（MobileShell 内） ---- */
+/* user-drawer は topbar.css の既存スタイルを流用。追加 override は最小限に留める。 */

@@ -153,7 +153,9 @@
     "accountSettings": "アカウント設定",
     "sales": "売上管理",
     "commissions": "報酬管理",
-    "channelMasters": "チャネル管理"
+    "channelMasters": "チャネル管理",
+    "openDrawer": "ナビゲーションを開く",
+    "closeDrawer": "ナビゲーションを閉じる"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
