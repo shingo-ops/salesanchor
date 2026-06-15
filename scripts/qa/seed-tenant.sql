@@ -320,6 +320,20 @@ CROSS JOIN LATERAL (SELECT id FROM tenant_006.staff WHERE primary_email='qa-admi
 WHERE mc.tenant_id = 6;
 
 -- ---------------------------------------------------------------------------
+-- 13-pre. tenant_sales_form_options: ADR-108 B-1 販売形態複数選択 (QA専用 seed)
+--   tenant_004 は migration で投入済み。tenant_006 はここで冪等 seed する。
+--   ON CONFLICT DO NOTHING により reset-tenant.sh 再実行でも安全。
+-- ---------------------------------------------------------------------------
+INSERT INTO tenant_006.tenant_sales_form_options (tenant_id, label, value, sort_order)
+VALUES
+  (6, '実店舗',    'physical_store',  1),
+  (6, 'ECサイト',  'ec_site',          2),
+  (6, 'ライブ配信', 'live_streaming',  3),
+  (6, '卸・代理店', 'wholesale',       4),
+  (6, 'その他',    'other',            5)
+ON CONFLICT (tenant_id, value) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
 -- 13. 行数 assert (ADR-038 seed 表との突合せ)
 -- ---------------------------------------------------------------------------
 DO $assert_counts$
@@ -373,6 +387,10 @@ BEGIN
     -- public.meta_page_routing 2 件
     SELECT COUNT(*) INTO n FROM public.meta_page_routing WHERE tenant_id = 6 AND is_active = TRUE;
     IF n <> 2 THEN RAISE EXCEPTION 'seed assert FAIL: meta_page_routing expected=2, got=%', n; END IF;
+
+    -- tenant_sales_form_options (ADR-108 B-1)
+    SELECT COUNT(*) INTO n FROM tenant_006.tenant_sales_form_options WHERE tenant_id = 6;
+    IF n < 5 THEN RAISE EXCEPTION 'seed assert FAIL: tenant_sales_form_options expected>=5, got=%', n; END IF;
 
     RAISE NOTICE 'seed row-count assert: ALL OK';
 END

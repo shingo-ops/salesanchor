@@ -116,7 +116,7 @@ async def check_tenant(
     return result
 
 
-async def main(strict: bool) -> None:
+async def main(strict: bool, target_tenant_id: int | None) -> None:
     url = os.getenv("DATABASE_URL")
     if not url:
         logger.error("DATABASE_URL not set")
@@ -130,9 +130,14 @@ async def main(strict: bool) -> None:
 
     try:
         async with engine.connect() as conn:
-            r = await conn.execute(text(
-                "SELECT id, tenant_code FROM public.tenants WHERE is_active = true ORDER BY id"
-            ))
+            q = "SELECT id, tenant_code FROM public.tenants WHERE is_active = true"
+            params: dict = {}
+            if target_tenant_id:
+                q += " AND id = :target_tenant_id"
+                params["target_tenant_id"] = target_tenant_id
+                logger.info("テナント指定: tenant_id=%d", target_tenant_id)
+            q += " ORDER BY id"
+            r = await conn.execute(text(q), params)
             tenants = [(row.id, row.tenant_code) for row in r]
 
         print("\n{:<20} {:>12} {:>12} {:>12} {:>10} {:>8}".format(
@@ -191,5 +196,6 @@ async def main(strict: bool) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SA-02 段階2 件数突合チェック")
     parser.add_argument("--strict", action="store_true", help="gap があれば非0で終了（CI用）")
+    parser.add_argument("--tenant-id", type=int, help="特定テナントのみ確認（テスト用）")
     args = parser.parse_args()
-    asyncio.run(main(strict=args.strict))
+    asyncio.run(main(strict=args.strict, target_tenant_id=args.tenant_id))

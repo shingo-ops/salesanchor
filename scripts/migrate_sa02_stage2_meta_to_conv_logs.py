@@ -222,10 +222,13 @@ async def main(dry_run: bool, target_tenant_id: int | None) -> None:
 
     try:
         async with engine.connect() as conn:
-            q = "SELECT id, tenant_code FROM public.tenants WHERE is_active = true ORDER BY id"
+            q = "SELECT id, tenant_code FROM public.tenants WHERE is_active = true"
+            params: dict = {}
             if target_tenant_id:
-                q += f" AND id = {target_tenant_id}"
-            r = await conn.execute(text(q))
+                q += " AND id = :target_tenant_id"
+                params["target_tenant_id"] = target_tenant_id
+            q += " ORDER BY id"
+            r = await conn.execute(text(q), params)
             tenants = [(row.id, row.tenant_code) for row in r]
 
         logger.info("対象テナント: %d", len(tenants))
