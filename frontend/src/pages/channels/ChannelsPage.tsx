@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -86,6 +87,7 @@ function daysUntil(iso: string | null): number | null {
 export default function ChannelsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -594,7 +596,13 @@ export default function ChannelsPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ flexShrink: 0 }}>
+              <div style={{ flexShrink: 0, display: "flex", gap: "var(--space-2)" }}>
+                <button
+                  className="btn-sm btn-ghost"
+                  onClick={() => navigate("/admin/discord-config")}
+                >
+                  {t("channels.discordOpenSettings")}
+                </button>
                 {canManage && (
                   <button
                     className="btn-sm btn-danger"

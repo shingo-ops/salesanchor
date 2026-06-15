@@ -1001,6 +1001,7 @@
     "discordConnectError": "Discord連携に失敗しました。もう一度お試しください。",
     "discordNoServer": "接続済みDiscordサーバーがありません",
     "discordNoServerDesc": "BotをDiscordサーバーに追加してメッセージ連携を開始しましょう。",
+    "discordOpenSettings": "Discord設定を開く",
     "discordDisconnect": "切断",
     "discordDisconnecting": "切断中...",
     "discordDisconnectTitle": "Discord連携を切断",
