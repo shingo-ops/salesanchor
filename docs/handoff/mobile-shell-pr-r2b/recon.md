@@ -96,7 +96,7 @@ Layout.tsx での使用パターン: `frontend/src/components/Layout.tsx:100` �
 
 戻り値: `{ prefs, loading, prefsFetched, selfStaffId, staffName, refresh, setPrefs }`
 
-MobileShell での使用: `prefs.show_chat_menu` / `prefs.show_sales_menu` / `staffName`
+MobileShell での使用: prefs.show_chat_menu / prefs.show_sales_menu / staffName
 
 ### useSSE + listConversations（未読カウント）
 
@@ -126,19 +126,19 @@ MobileShell も同一パターンを採用する。
 
 `frontend/src/config/routeTitles.ts` — ROUTE_TITLE_KEYS（pathname → nav.* i18n key の対応表）
 
-MobileTopBar の PageTitle は `usePageTitle()` の戻り値をそのまま表示する。
+MobileTopBar の PageTitle は usePageTitle() の戻り値をそのまま表示する。
 
 ### useAuth（ユーザー情報・サインアウト）
 
 `frontend/src/contexts/AuthContext.tsx` — `export function useAuth()`
 
-戻り値に `user` / `signOut` が含まれる（Layout.tsx:99 参照）
+戻り値に user / signOut が含まれる（Layout.tsx:99 参照）
 
 ### useLocale / useTheme（ユーザードロワー内）
 
-`frontend/src/contexts/LocaleContext.tsx` — `useLocale()` → `{ locale, changeLanguage }`
+`frontend/src/contexts/LocaleContext.tsx` — useLocale() → `{ locale, changeLanguage }`
 
-`frontend/src/contexts/ThemeContext.tsx` — `useTheme()` → `{ theme, changeTheme }`
+`frontend/src/contexts/ThemeContext.tsx` — useTheme() → `{ theme, changeTheme }`
 
 ---
 
@@ -150,17 +150,17 @@ MobileTopBar の PageTitle は `usePageTitle()` の戻り値をそのまま表�
 
 | showXxx | 権限条件 | パス |
 |---|---|---|
-| hasPermission("dashboard.view") | 直接チェック | `/` |
-| — | 制限なし | `/schedule` |
-| prefs.show_chat_menu | UI設定 | `/lead-chat`（unread=true） |
-| hasPermission("products.view") | 直接チェック | `/inventory` |
-| hasPermission("purchase_orders.view") | 直接チェック | `/purchase-orders` |
-| showSalesLink | prefs.show_sales_menu && (quotes.view or invoices.view) | `/quotes` or `/invoices` |
-| showCrmLink | leads.view or customers.view | `/crm` |
-| hasPermission("orders.view") | 直接チェック | `/orders` |
-| hasPermission("orders.view") | 直接チェック | `/sales` |
-| hasPermission("orders.view") | 直接チェック | `/commissions` |
-| showManagementCenter | staff/teams/roles/bots/shifts/channels/erp/orders/customers/deals/suppliers/purchase_orders/tenant いずれか | `/management-center` |
+| hasPermission("dashboard.view") | 直接チェック | / |
+| — | 制限なし | /schedule |
+| prefs.show_chat_menu | UI設定 | /lead-chat（unread=true） |
+| hasPermission("products.view") | 直接チェック | /inventory |
+| hasPermission("purchase_orders.view") | 直接チェック | /purchase-orders |
+| showSalesLink | prefs.show_sales_menu && (quotes.view or invoices.view) | /quotes or /invoices |
+| showCrmLink | leads.view or customers.view | /crm |
+| hasPermission("orders.view") | 直接チェック | /orders |
+| hasPermission("orders.view") | 直接チェック | /sales |
+| hasPermission("orders.view") | 直接チェック | /commissions |
+| showManagementCenter | staff/teams/roles/bots/shifts/channels/erp/orders/customers/deals/suppliers/purchase_orders/tenant いずれか | /management-center |
 | isSuperAdmin | super_admin | accordion（children）|
 
 ### アイコン定義元
@@ -214,7 +214,7 @@ MobileShell では sidebar-panel は DOM に存在しない。PC の sidebar-pan
 `frontend/src/topbar.css:138-158` — `.avatar-btn { position: fixed; right: var(--avatar-zone-right); z-index: var(--avatar-zone-z) }`
 
 PO確定（docs/handoff/mobile-shell-pr-r2/design.md §PO確定方針③）:
-MobileTopBar 内では avatar を in-flow 配置（`position: fixed` 廃止）。MobileShell 内アバターは `.mobile-topbar-avatar` クラスで独立実装。
+MobileTopBar 内では avatar を in-flow 配置（`position: fixed` 廃止）。MobileShell 内アバターは .mobile-topbar-avatar クラスで独立実装。
 
 ### PR-R1 responsive.css mobile rules（PR-R2-B では触らない）
 
@@ -230,14 +230,14 @@ MobileTopBar 内では avatar を in-flow 配置（`position: fixed` 廃止）�
 
 ### PR-R2-B で追加が必要な新規キー
 
-`frontend/src/locales/ja.json` / `frontend/src/locales/en.json` の `nav` セクションに追加:
+`frontend/src/locales/ja.json` / `frontend/src/locales/en.json` の nav セクションに追加:
 
 | キー | ja | en |
 |---|---|---|
-| `nav.openDrawer` | "ナビゲーションを開く" | "Open navigation" |
-| `nav.closeDrawer` | "ナビゲーションを閉じる" | "Close navigation" |
+| nav.openDrawer | "ナビゲーションを開く" | "Open navigation" |
+| nav.closeDrawer | "ナビゲーションを閉じる" | "Close navigation" |
 
-`nav.openMenu` は PR-R1 で追加済み。MobileTopBar の hamburger aria-label は `nav.openDrawer` を用いる（PR-R2-B では MobileShell 内専用の aria-label として新設）。
+nav.openMenu は PR-R1 で追加済み。MobileTopBar の hamburger aria-label は nav.openDrawer を用いる（PR-R2-B では MobileShell 内専用の aria-label として新設）。
 
 ---
 

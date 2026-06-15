@@ -16,3 +16,7 @@ export const signInWithEmailAndPassword = async () => {
 };
 
 export const signOut = async () => {};
+
+export const sendPasswordResetEmail = async () => {
+  throw new Error('sendPasswordResetEmail is not available in Storybook');
+};

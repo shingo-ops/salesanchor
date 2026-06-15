@@ -3,6 +3,8 @@ name: Auto Release PR
 # develop への push を検知して develop → main の PR を自動起票する。
 # P1（長期分岐の常態化）を防ぐための仕組み。
 # すでに open の PR がある場合はスキップする。
+# PR 本文に active-work-release-manifest ブロックを追加して
+# deploy.yml が「今回 main に入る PR」を特定できるようにする。
 
 on:
   push:
@@ -28,6 +30,10 @@ jobs:
         run: |
           OPEN=$(gh pr list --base main --head develop --state open --json number -q 'length')
           echo "open_count=$OPEN" >> "$GITHUB_OUTPUT"
+          if [ "$OPEN" != "0" ]; then
+            EXISTING_PR=$(gh pr list --base main --head develop --state open --json number -q '.[0].number')
+            echo "existing_pr=$EXISTING_PR" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 同乗マイグレーションを検出
         id: migrations
@@ -54,6 +60,47 @@ jobs:
             echo "$MIGRATION_FILES"
           fi
 
+      - name: 今回 main に入る PR 一覧を収集（manifest 用）
+        id: manifest
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          # origin/main..HEAD の全コミットから PR 番号を抽出
+          # squash merge は --merges では拾えないため全コミットを対象にする
+          PR_NUMBERS=$(git log origin/main..HEAD --oneline \
+            | grep -oE '#[0-9]+' | tr -d '#' | sort -un || true)
+
+          PR_YAML=""
+          BRANCH_YAML=""
+          TABLE_ROWS=""
+
+          for num in $PR_NUMBERS; do
+            PR_YAML="${PR_YAML}  - ${num}"$'\n'
+            branch=$(gh pr view "$num" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
+            if [ -n "$branch" ]; then
+              BRANCH_YAML="${BRANCH_YAML}  - ${branch}"$'\n'
+              TABLE_ROWS="${TABLE_ROWS}| #${num} | ${branch} |"$'\n'
+            else
+              TABLE_ROWS="${TABLE_ROWS}| #${num} | (不明) |"$'\n'
+            fi
+          done
+
+          PR_COUNT=$(echo "$PR_NUMBERS" | grep -c '[0-9]' || echo 0)
+
+          {
+            echo "pr_yaml<<MANIFEST_PR_EOF"
+            echo "$PR_YAML"
+            echo "MANIFEST_PR_EOF"
+            echo "branch_yaml<<MANIFEST_BR_EOF"
+            echo "$BRANCH_YAML"
+            echo "MANIFEST_BR_EOF"
+            echo "table_rows<<MANIFEST_TABLE_EOF"
+            echo "$TABLE_ROWS"
+            echo "MANIFEST_TABLE_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
+          echo "✅ manifest: ${PR_COUNT} 件の PR を検出"
+
       - name: リリース PR を起票
         if: steps.check.outputs.open_count == '0'
         env:
@@ -64,6 +111,10 @@ jobs:
         run: |
           HAS_MIGRATION="${{ steps.migrations.outputs.has_migrations }}"
           MIGRATION_LIST="${{ steps.migrations.outputs.migration_list }}"
+          PR_COUNT="${{ steps.manifest.outputs.pr_count }}"
+          PR_YAML="${{ steps.manifest.outputs.pr_yaml }}"
+          BRANCH_YAML="${{ steps.manifest.outputs.branch_yaml }}"
+          TABLE_ROWS="${{ steps.manifest.outputs.table_rows }}"
 
           if [ "$HAS_MIGRATION" = "true" ]; then
             MIGRATION_SECTION="## ⚠️ 同乗 migration（本番 DB 変更）— 明示 GO 必須
@@ -95,6 +146,12 @@ jobs:
 
           ${MIGRATION_SECTION}
 
+          ## 今回本番反映予定の PR（${PR_COUNT} 件）
+
+          | PR# | ブランチ |
+          |-----|--------|
+          ${TABLE_ROWS}
+
           ## マージ前チェックリスト
 
           - [ ] develop の変更内容をすべて確認した
@@ -103,11 +160,79 @@ jobs:
           - [ ] 外部サービスの設定変更が不要であることを確認した
 
           ---
+
+          <!-- active-work-release-manifest
+          prs:
+          ${PR_YAML}branches:
+          ${BRANCH_YAML}-->
+
           *このPRは \`develop\` ブランチへのプッシュを検知して自動起票されました。*
           *（必須チェックを起動させるため PIPELINE_PAT で起票しています）*"
 
-          echo "✅ release PR を自動起票しました"
+          echo "✅ release PR を自動起票しました（manifest: ${PR_COUNT} 件）"
 
-      - name: スキップ通知
+      - name: 既存リリース PR の manifest を更新
         if: steps.check.outputs.open_count != '0'
-        run: echo "ℹ️ develop → main の PR がすでに open のためスキップしました"
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          EXISTING_PR: ${{ steps.check.outputs.existing_pr }}
+          PR_COUNT: ${{ steps.manifest.outputs.pr_count }}
+          PR_YAML: ${{ steps.manifest.outputs.pr_yaml }}
+          BRANCH_YAML: ${{ steps.manifest.outputs.branch_yaml }}
+          TABLE_ROWS: ${{ steps.manifest.outputs.table_rows }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, re, subprocess, sys
+
+          existing_pr = os.environ["EXISTING_PR"]
+          pr_count    = os.environ.get("PR_COUNT", "0")
+          pr_yaml     = os.environ.get("PR_YAML", "")
+          branch_yaml = os.environ.get("BRANCH_YAML", "")
+          table_rows  = os.environ.get("TABLE_ROWS", "")
+
+          # 既存 PR 本文を取得
+          result = subprocess.run(
+              ["gh", "pr", "view", existing_pr, "--json", "body", "-q", ".body"],
+              capture_output=True, text=True, check=True,
+          )
+          body = result.stdout.rstrip("\n")
+
+          # manifest ブロック置換
+          new_manifest = (
+              f"<!-- active-work-release-manifest\n"
+              f"prs:\n{pr_yaml}branches:\n{branch_yaml}-->"
+          )
+          new_body = re.sub(
+              r"<!-- active-work-release-manifest.*?-->",
+              new_manifest,
+              body,
+              flags=re.DOTALL,
+          )
+
+          # 「今回本番反映予定の PR（X 件）」見出し＋テーブルを置換
+          new_table = (
+              f"## 今回本番反映予定の PR（{pr_count} 件）\n\n"
+              f"| PR# | ブランチ |\n"
+              f"|-----|--------|\n"
+              f"{table_rows}"
+          )
+          new_body = re.sub(
+              r"## 今回本番反映予定の PR（\d+ 件）\n\n"
+              r"\| PR# \| ブランチ \|\n\|[^\n]+\n(?:\|[^\n]*\n)*",
+              new_table,
+              new_body,
+          )
+
+          if new_body == body:
+              print(
+                  f"⚠️  PR #{existing_pr} 本文に変更なし（manifest ブロックまたはテーブルが見つからない可能性があります）",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          subprocess.run(
+              ["gh", "pr", "edit", existing_pr, "--body", new_body],
+              check=True,
+          )
+          print(f"✅ release PR #{existing_pr} の manifest を更新しました（{pr_count} 件）")
+          PYEOF
