@@ -403,6 +403,106 @@ async def test_category_failure_blocks_channels() -> None:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# テスト: 初回実行 + チャンネル作成403 → 500 でなく 200 partial（Cause E 回帰テスト）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_first_run_channel_403_returns_200_partial_not_500() -> None:
+    """初回実行（DB行なし）でチャンネル作成が403失敗しても 500 にならず 200 partial を返すこと。
+
+    本番再現シナリオ（2026-06-14 VPS確認）:
+      - カテゴリ作成: 成功
+      - ch_ticket / ch_member / ch_partner: 403 Missing Permissions
+      - DB行なし → ticket_button_channel_id NOT NULL 違反を防ぐため INSERT をスキップ
+    """
+    from app.services.discord_rest import DiscordAPIError
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    discord_responses = [
+        [],                                                               # 1: GET roles
+        [],                                                               # 2: GET channels
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},              # 3: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                       # 4: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                         # 5: POST role_member
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},             # 6: POST category 成功
+        DiscordAPIError("Missing Permissions", status_code=403),         # 7: POST ch_ticket 失敗
+        DiscordAPIError("Missing Permissions", status_code=403),         # 8: POST ch_member 失敗
+        DiscordAPIError("Missing Permissions", status_code=403),         # 9: POST ch_partner 失敗
+        # button は ch_ticket 失敗のため呼ばれない
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "partial"
+    assert body["error_hint"] is not None
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["status"] == "created"
+    assert steps["ch_ticket"]["status"] == "failed"
+    assert steps["ch_member"]["status"] == "failed"
+    assert steps["ch_partner"]["status"] == "failed"
+    assert steps["button"]["status"] == "failed"
+
+    # NOT NULL カラムが揃わないため DB commit は呼ばれない
+    mock_db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_first_run_all_channels_403_returns_200_partial_not_500() -> None:
+    """初回実行でカテゴリ含む全チャンネル作成が403失敗しても 500 にならず 200 partial を返すこと。"""
+    from app.services.discord_rest import DiscordAPIError
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    discord_responses = [
+        [],                                                               # 1: GET roles
+        [],                                                               # 2: GET channels
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},              # 3: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                       # 4: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                         # 5: POST role_member
+        DiscordAPIError("Missing Permissions", status_code=403),         # 6: POST category 失敗
+        # チャンネル作成は全スキップ（category失敗フロー）
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "partial"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["status"] == "failed"
+    assert steps["ch_ticket"]["status"] == "failed"
+    assert steps["button"]["status"] == "failed"
+
+    # カテゴリも NOT NULL → DB commit は呼ばれない
+    mock_db.commit.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# テスト: 権限ビット値の検証
+# ---------------------------------------------------------------------------
+
+
 def test_member_announcements_overwrites_bits() -> None:
     """member-announcements の権限ビットが設計通りであること（design.md §2 参照）。"""
     from app.routers.discord_auto_setup import _member_announcements_overwrites

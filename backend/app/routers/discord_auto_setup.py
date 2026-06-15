@@ -292,53 +292,58 @@ async def run_auto_setup(
         steps.append(step)
 
     # ---- DB 保存（COALESCE で失敗ステップの既存値を保持）----
-    await db.execute(
-        text("""
-            INSERT INTO public.tenant_discord_ticket_config
-                (tenant_id, staff_role_id, ticket_category_id, ticket_button_channel_id,
-                 small_channel_id, large_channel_id, updated_at)
-            VALUES
-                (:tid, :staff_role_id, :category_id, :ticket_ch_id,
-                 :small_ch_id, :large_ch_id, NOW())
-            ON CONFLICT (tenant_id) DO UPDATE SET
-                staff_role_id            = COALESCE(EXCLUDED.staff_role_id,
-                                                    tenant_discord_ticket_config.staff_role_id),
-                ticket_category_id       = COALESCE(EXCLUDED.ticket_category_id,
-                                                    tenant_discord_ticket_config.ticket_category_id),
-                ticket_button_channel_id = COALESCE(EXCLUDED.ticket_button_channel_id,
-                                                    tenant_discord_ticket_config.ticket_button_channel_id),
-                small_channel_id         = COALESCE(EXCLUDED.small_channel_id,
-                                                    tenant_discord_ticket_config.small_channel_id),
-                large_channel_id         = COALESCE(EXCLUDED.large_channel_id,
-                                                    tenant_discord_ticket_config.large_channel_id),
-                updated_at               = NOW()
-        """),
-        {
-            "tid": tenant_id,
-            "staff_role_id": staff_role_id,
-            "category_id": category_id,
-            "ticket_ch_id": ticket_ch_id,
-            "small_ch_id": small_ch_id,
-            "large_ch_id": large_ch_id,
-        },
-    )
-    await record_audit_log(
-        db=db,
-        tenant_id=tenant_id,
-        user_id=current_user.id,
-        action="create",
-        table_name="discord_auto_setup",
-        record_id=tenant_id,
-        new_data={
-            "staff_role_id": staff_role_id,
-            "ticket_category_id": category_id,
-            "ticket_button_channel_id": ticket_ch_id,
-            "small_channel_id": small_ch_id,
-            "large_channel_id": large_ch_id,
-        },
-    )
-    await db.commit()
-    await reset_tenant_context(db, tenant_id)  # ADR-072
+    # 初回実行（cfg=None）かつ NOT NULL カラム（ticket_category_id / ticket_button_channel_id）が
+    # 揃っていない場合は INSERT をスキップする（Cause E: NotNullViolationError 防止）。
+    # UPDATE 経路（ON CONFLICT）は COALESCE で安全なため常時実行。
+    _can_upsert = cfg is not None or (category_id is not None and ticket_ch_id is not None)
+    if _can_upsert:
+        await db.execute(
+            text("""
+                INSERT INTO public.tenant_discord_ticket_config
+                    (tenant_id, staff_role_id, ticket_category_id, ticket_button_channel_id,
+                     small_channel_id, large_channel_id, updated_at)
+                VALUES
+                    (:tid, :staff_role_id, :category_id, :ticket_ch_id,
+                     :small_ch_id, :large_ch_id, NOW())
+                ON CONFLICT (tenant_id) DO UPDATE SET
+                    staff_role_id            = COALESCE(EXCLUDED.staff_role_id,
+                                                        tenant_discord_ticket_config.staff_role_id),
+                    ticket_category_id       = COALESCE(EXCLUDED.ticket_category_id,
+                                                        tenant_discord_ticket_config.ticket_category_id),
+                    ticket_button_channel_id = COALESCE(EXCLUDED.ticket_button_channel_id,
+                                                        tenant_discord_ticket_config.ticket_button_channel_id),
+                    small_channel_id         = COALESCE(EXCLUDED.small_channel_id,
+                                                        tenant_discord_ticket_config.small_channel_id),
+                    large_channel_id         = COALESCE(EXCLUDED.large_channel_id,
+                                                        tenant_discord_ticket_config.large_channel_id),
+                    updated_at               = NOW()
+            """),
+            {
+                "tid": tenant_id,
+                "staff_role_id": staff_role_id,
+                "category_id": category_id,
+                "ticket_ch_id": ticket_ch_id,
+                "small_ch_id": small_ch_id,
+                "large_ch_id": large_ch_id,
+            },
+        )
+        await record_audit_log(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            action="create",
+            table_name="discord_auto_setup",
+            record_id=tenant_id,
+            new_data={
+                "staff_role_id": staff_role_id,
+                "ticket_category_id": category_id,
+                "ticket_button_channel_id": ticket_ch_id,
+                "small_channel_id": small_ch_id,
+                "large_channel_id": large_ch_id,
+            },
+        )
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072
 
     # ---- 全体ステータス決定 ----
     failed_steps = [s for s in steps if s.status == "failed"]
