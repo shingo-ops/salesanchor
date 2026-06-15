@@ -143,6 +143,7 @@
 | feature/fedex-last-tested-date-format | 最終確認 日時フォーマット修正（時刻のみ→日付+時刻） | 2026-06-14 09:06 | DONE | #2157 | 2026-06-14 | PR #2158 release にて main 反映済み |
 | feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | DONE | #2162 | | |
 | feature/morimoto/sa02-r1-r2-convlog-links | SA-02 残課題 R1（contact_id補完）/ R2（手動記録company_id補完） | 2026-06-14 | DONE | #2208 | 2026-06-15 | R3 Stage 2 は Shingo GO 待ち |
+| feature/morimoto/adr090-pr3-fk-remap-design | ADR-090 PR3 下流FK再マップ 設計（recon/design・docs-only） | 2026-06-15 16:23 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
