@@ -120,82 +120,29 @@
 | feature/morimoto/sa-02-stage4-company-conv-logs | SA-02 段階4: 会社詳細会話履歴タブ | 2026-06-11 13:09 | DONE | #1945 | ✅ | |
 | feature/morimoto/sa-02-stage4-docs | SA-02 進捗ドキュメント更新 | 2026-06-11 13:15 | IN_PROGRESS | | | |
 | feature/morimoto/adr127-phase2c-button-color | （記入してください） | 2026-06-11 13:50 | IN_PROGRESS | | | |
-| feature/morimoto/sa-02-stage2-migration-prep | （記入してください） | 2026-06-11 13:58 | IN_PROGRESS | | | |
+| feature/morimoto/sa-02-stage2-migration-prep | SA-02 段階2 移行スクリプト準備 | 2026-06-11 13:58 | DONE | #1952 | | |
+| feature/morimoto/sa-02-stage2-rollback-fix | SA-02 段階2 rollback条件修正 | 2026-06-11 16:50 | DONE | #1965 | | |
+| feature/morimoto/sa-02-stage2-plan-update | SA-02 段階2 plan記録更新 | 2026-06-11 17:00 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-develop-adr128 | main/develop 同期（ADR-128 migration 競合解消） | 2026-06-11 14:07 | DONE | #1953 | | |
 | feature/morimoto/add-fedex-migration-to-main | （未使用ブランチ） | 2026-06-11 14:16 | DONE | | | |
-| feature/morimoto/funnel-dashboard-stage1-recon | （記入してください） | 2026-06-12 19:49 | IN_PROGRESS | | | |
-| feature/morimoto/funnel-dashboard-pr1-migrations | ファネルダッシュボード PR1 マイグレーション（leads.source / lost_reason 廃止） | 2026-06-12 | IN_PROGRESS | #2068 | | |
-| feature/morimoto/nginx-force-recreate | ADR-137 PR-A: nginx inode ズレ対策 force-recreate | 2026-06-12 | REVIEW | #2038 | | |
-| feature/morimoto/break-glass-docs | （記入してください） | 2026-06-13 00:46 | IN_PROGRESS | | | |
-| feature/morimoto/design-site-stage2 | （記入してください） | 2026-06-13 00:48 | IN_PROGRESS | | | |
-| feature/morimoto/incident-report-20260613 | （記入してください） | 2026-06-13 01:37 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-pr-a2 | （記入してください） | 2026-06-13 01:56 | IN_PROGRESS | | | |
-| feature/morimoto/ssh-key-isolation | （記入してください） | 2026-06-13 02:08 | IN_PROGRESS | | | |
-| feature/morimoto/design-site-v2-diagram | （記入してください） | 2026-06-13 02:17 | IN_PROGRESS | | | |
-| feature/morimoto/path-normalization-gate | process-artifacts gate パス正規化・書式誤検知解消 | 2026-06-13 02:20 | IN_PROGRESS | #2080 | | |
-| feature/morimoto/approval-v2-go-record | 承認運用v2 GO記録方式（ADR-136承認フロー更新） | 2026-06-13 | REVIEW | #2083 | | |
-| hotfix/morimoto/fix-migration-013-leads-source | （記入してください） | 2026-06-13 02:49 | IN_PROGRESS | | | |
-| feature/morimoto/funnel-docs-consolidation | （記入してください） | 2026-06-13 02:53 | IN_PROGRESS | | | |
-| feature/morimoto/funnel-backend-pr2 | （記入してください） | 2026-06-13 02:54 | IN_PROGRESS | | | |
-| feature/morimoto/funnel-backend-pr3 | （記入してください） | 2026-06-13 03:12 | IN_PROGRESS | | | |
-| feature/morimoto/grafana-ja-locale | （記入してください） | 2026-06-13 03:13 | IN_PROGRESS | | | |
-| feature/morimoto/fix-migration-013-guard | （記入してください） | 2026-06-13 16:34 | IN_PROGRESS | | | |
-| hotfix/morimoto/fix-adr119-leads-source-guard | （記入してください） | 2026-06-13 17:16 | IN_PROGRESS | | | |
-| feature/morimoto/fix-adr119-source-guard | （記入してください） | 2026-06-13 17:23 | IN_PROGRESS | | | |
-| feature/morimoto/fix-ssh-human-access | （記入してください） | 2026-06-13 17:51 | IN_PROGRESS | | | |
-| feature/morimoto/temp-tenant001-investigation | （記入してください） | 2026-06-13 19:54 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-pr-a3 | （記入してください） | 2026-06-13 21:11 | IN_PROGRESS | | | |
-| feature/morimoto/design-sa01-kgi-kpi | （記入してください） | 2026-06-13 22:36 | IN_PROGRESS | | | |
-| feature/morimoto/sa04-100pct | （記入してください） | 2026-06-13 22:50 | IN_PROGRESS | | | |
-| feature/morimoto/temp-jst-before-values | （記入してください） | 2026-06-13 22:58 | IN_PROGRESS | | | |
-| feature/morimoto/dryrun-recon-docs | （記入してください） | 2026-06-13 23:01 | IN_PROGRESS | | | |
-| feature/morimoto/align-agents-md-roles | （記入してください） | 2026-06-13 23:17 | IN_PROGRESS | | | |
-| feature/morimoto/ui-std-pr0-recon | （記入してください） | 2026-06-13 23:40 | IN_PROGRESS | | | |
-| feature/morimoto/ssh-isolation-hikky-mac-complete | （記入してください） | 2026-06-13 23:41 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-guide-b1 | （記入してください） | 2026-06-13 23:46 | IN_PROGRESS | | | |
-| feature/morimoto/design-site-visual-fit | （記入してください） | 2026-06-13 23:46 | IN_PROGRESS | | | |
-| feature/morimoto/ui-std-pr-a | （記入してください） | 2026-06-14 00:31 | IN_PROGRESS | | | |
-| feature/morimoto/karte-input-format-recon | （記入してください） | 2026-06-14 01:25 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-guide-b1b | （記入してください） | 2026-06-14 01:40 | IN_PROGRESS | | | |
-| feature/morimoto/delete-temp-jst-workflow | （記入してください） | 2026-06-14 01:42 | IN_PROGRESS | | | |
-| feature/morimoto/karte-phase-a-i18n | （記入してください） | 2026-06-14 01:48 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-guide-b1c | （記入してください） | 2026-06-14 02:01 | IN_PROGRESS | | | |
-| feature/morimoto/tenant-deletion-recon | （記入してください） | 2026-06-14 02:18 | IN_PROGRESS | | | |
-| feature/morimoto/design-site-understanding-flow | （記入してください） | 2026-06-14 02:20 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-guide-b1d | （記入してください） | 2026-06-14 02:28 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-tab-active-style | （記入してください） | 2026-06-14 02:31 | IN_PROGRESS | | | |
-| feature/morimoto/review-tenant-password-reset-guard | （記入してください） | 2026-06-14 02:32 | IN_PROGRESS | | | |
-| feature/morimoto/karte-phase-b-recon | （記入してください） | 2026-06-14 02:50 | IN_PROGRESS | | | |
-| feature/morimoto/karte-phase-b1-multi-select-design | （記入してください） | 2026-06-14 03:23 | IN_PROGRESS | | | |
-| feature/morimoto/fedex-a4-test-result-persistence | （記入してください） | 2026-06-14 03:29 | IN_PROGRESS | | | |
-| feature/morimoto/ui-std-pr-b | UI標準化 PR-B（Company系3ファイル） | 2026-06-14 03:41 | DONE | #2141 | | |
-| feature/morimoto/tenant-deletion-impl | （記入してください） | 2026-06-14 04:01 | IN_PROGRESS | | | |
-| feature/morimoto/tenant-deletion-clean | テナント論理削除・物理削除 API（クリーンブランチ） | 2026-06-14 | DONE | #2149 | | develop マージ済み 2026-06-13 |
-| feature/morimoto/tenant-deletion-cache-fix | テナント削除後 Redis キャッシュ無効化（ADR-072） | 2026-06-14 | DONE | #2154 | | develop マージ済み 2026-06-14 |
-| release/tenant-deletion-2026-06-14 | release PR #2159 develop→main（テナント削除・販売形態・Discord Auto Setup） | 2026-06-14 | DONE | #2159 | ✅ 2026-06-14 | deploy success / migration確認済み / 全7項目本番確認済み |
-| feature/morimoto/karte-b1-sales-form-multi-select | （記入してください） | 2026-06-14 04:05 | IN_PROGRESS | | | |
-| feature/morimoto/discord-inbox-acceptance-check | （記入してください） | 2026-06-14 04:06 | IN_PROGRESS | | | |
-| feature/morimoto/login-ux-phase1 | ログインページ UI/UX改善・パスワード再設定（KGI 1-3） | 2026-06-14 04:23 | MERGED | PR #2147 | 2026-06-14 | develop マージ済み |
-| feature/morimoto/discord-role-order-guide | （記入してください） | 2026-06-14 04:27 | IN_PROGRESS | | | |
-| feature/morimoto/discord-auto-setup-design | （記入してください） | 2026-06-14 05:34 | IN_PROGRESS | | | |
-| feature/morimoto/sa02-kgi-assessment | （記入してください） | 2026-06-14 09:56 | IN_PROGRESS | | | |
-| feature/morimoto/review-mail-discord-notifier | （記入してください） | 2026-06-14 10:10 | IN_PROGRESS | | | |
-| docs/morimoto/sa-02-kgi-assessment | SA-02 KGI G1〜G4 実測結果 + SA-01 チェックシート更新 | 2026-06-14 10:19 | DONE | #2162 | | |
-| feature/morimoto/discord-auto-setup-frontend | （記入してください） | 2026-06-14 10:23 | IN_PROGRESS | | | |
-| feature/morimoto/discord-auto-setup-acceptance | （記入してください） | 2026-06-14 12:09 | IN_PROGRESS | | | |
-| feature/morimoto/sa02-r1-r2-convlog-links | （記入してください） | 2026-06-14 12:12 | IN_PROGRESS | | | |
-| feature/morimoto/sa02-r1-r2-conv-log-ids | （記入してください） | 2026-06-14 21:05 | IN_PROGRESS | | | |
-| feature/morimoto/fix-discord-guild-id-staff-join | （記入してください） | 2026-06-14 21:14 | IN_PROGRESS | | | |
-| chore/record-tenant-deletion-release-active-work | （記入してください） | 2026-06-14 22:17 | IN_PROGRESS | | | |
-| feature/morimoto/qa-smoke-scene-09 | （記入してください） | 2026-06-14 23:40 | IN_PROGRESS | | | |
-| feature/morimoto/hotfix-css-mediaq-safari | （記入してください） | 2026-06-14 23:56 | IN_PROGRESS | | | |
-| feature/morimoto/discord-settings-link | （記入してください） | 2026-06-15 06:08 | IN_PROGRESS | | | |
-| feature/morimoto/review-mail-discord-mention | （記入してください） | 2026-06-15 09:31 | IN_PROGRESS | | | |
-| docs/morimoto/adr-137-adaptive-shell | （記入してください） | 2026-06-15 10:19 | IN_PROGRESS | | | |
-| feature/morimoto/sa02-stage2-preflight-fix | （記入してください） | 2026-06-15 10:25 | IN_PROGRESS | | | |
-| docs/morimoto/tenant-deletion-runbook | （記入してください） | 2026-06-15 10:33 | IN_PROGRESS | | | |
-| docs/morimoto/mobile-shell-pr-r2-evidence | （記入してください） | 2026-06-15 10:50 | IN_PROGRESS | | | |
-| feature/morimoto/discord-autosetup-null-fix | （記入してください） | 2026-06-15 11:12 | IN_PROGRESS | | | |
+| feature/morimoto/nginx-reload-migration-total | （記入してください） | 2026-06-11 15:54 | IN_PROGRESS | | | |
+| feature/morimoto/adr127-phase2c-css-fix | （記入してください） | 2026-06-11 16:45 | IN_PROGRESS | | | |
+| feature/morimoto/gate-bug-note | （記入してください） | 2026-06-11 18:12 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-recon | （記入してください） | 2026-06-11 18:18 | IN_PROGRESS | | | |
+| feature/morimoto/deploy-timeout-fix | （記入してください） | 2026-06-11 20:58 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-pickup-carriercod-fix | （記入してください） | 2026-06-11 20:59 | IN_PROGRESS | | | |
+| feature/morimoto/sa-03-change-billing | SA-03 change_billing一式（ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2）+ migration | 2026-06-12 04:00 | IN_PROGRESS | | | |
+| feature/morimoto/adr109-db-migration | （記入してください） | 2026-06-12 12:09 | IN_PROGRESS | | | |
+| feature/morimoto/sa02-daily-recon-notify | （記入してください） | 2026-06-12 12:17 | IN_PROGRESS | | | |
+| feature/morimoto/remove-review-locale-en | （記入してください） | 2026-06-12 12:53 | IN_PROGRESS | | | |
+| feature/morimoto/design-site-stage1 | SA設計図書サイト Stage 1 HTML + Stage 0 GO申請 | 2026-06-12 13:00 | IN_PROGRESS | #1997 | | |
+| feature/morimoto/design-site-stage0 | SA設計図書サイト Stage 0 インフラ（nginx/docker-compose/deploy.yml） | 2026-06-12 13:15 | IN_PROGRESS | | | |
+| feature/morimoto/company-stats-ssot | 取引額SSOT化 v_company_stats 公式定義統一（ADR-136） | 2026-06-12 | IN_PROGRESS | #2020 | | |
+| feature/morimoto/fedex-a4-test-result-persistence | FedEx A4 接続テスト結果保存 | 2026-06-14 03:29 | DONE | #2140 | 2026-06-14 | PR #2138 release にて main 反映済み |
+| feature/morimoto/fedex-last-tested-position-fix | 最終確認バッジ配置修正（margin-left: auto → 0） | 2026-06-14 08:32 | DONE | #2151 | 2026-06-14 | PR #2158 release にて main 反映済み |
+| feature/fedex-last-tested-date-format | 最終確認 日時フォーマット修正（時刻のみ→日付+時刻） | 2026-06-14 09:06 | DONE | #2157 | 2026-06-14 | PR #2158 release にて main 反映済み |
+| feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | DONE | #2162 | | |
+| feature/morimoto/sa02-r1-r2-convlog-links | SA-02 残課題 R1（contact_id補完）/ R2（手動記録company_id補完） | 2026-06-14 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
@@ -225,11 +172,19 @@
 | feature/morimoto/fix-develop-migration-order | develop migration 順序修正（SA-02 Stage 3 追加） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/sync-main-to-develop-3 | main → develop フルマージ（SA-02 Stage 3 コード取り込み） | 2026-06-11 | IN_PROGRESS | | | |
 | feature/morimoto/release-fix | develop → main リリース競合解消（run_all_migrations.sh ADR-128挿入） | 2026-06-11 | IN_PROGRESS | | | |
-| feature/morimoto/fix-htpasswd-openssl | deploy.yml htpasswd → openssl 修正 | 2026-06-12 | IN_PROGRESS | | | |
-| feature/morimoto/back-merge-main-for-2032 | main → develop バックマージ（hotfix f2a33605 取り込み・PR #2032 競合解消） | 2026-06-12 | DONE | #2039 | | |
-| feature/morimoto/back-merge-main-merge-commit | main → develop マージコミット（git 祖先修復・PR #2032 CONFLICTING 解消） | 2026-06-12 | IN_PROGRESS | | | |
-| feature/morimoto/remove-password-hash | password_hash 列廃止（ADR-138・PO決定 2026-06-12） | 2026-06-12 | IN_PROGRESS | #2067 | 認証 | |
-| feature/morimoto/funnel-dashboard-frontend | ファネルダッシュボード フロントエンド（PR4+5）第1層＋下層4ルート | 2026-06-12 | REVIEW | #2066 | | |
+| feature/morimoto/nginx-resolver-adr133 | ADR-133 nginx resolver+proxy_pass変数化 IP固着502恒久解 | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/karte-visual-gate | カルテ見た目忠実度ゲート⑤（Phase 5a CSS 寸法是正 + 5b 視覚ゲート） | 2026-06-11 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-label-validation-wizard | ADR-129 FedEx Label Validation 申請支援ウィザード | 2026-06-12 | IN_PROGRESS | #1993 | | |
+| feature/morimoto/design-site-smoke-autoblock | smoke④ FAIL 時 /design/ 自動遮断（ADR-134 D） | 2026-06-12 | IN_PROGRESS | | | |
+| feature/morimoto/back-merge-main-for-2032 | main → develop バックマージ（hotfix f2a33605 取り込み・PR #2032 競合解消） | 2026-06-12 | DONE | | | |
+| feature/morimoto/adr-135-final-checkboxes | ADR-135 受け入れ条件チェックボックス更新 + 経緯記録 | 2026-06-12 | IN_PROGRESS | #2033 | | |
+| feature/morimoto/adr-135-cleanup-approvers | ADR-135 AUTHORIZED_APPROVERS/AUTHORS 一時追加削除 | 2026-06-12 | IN_PROGRESS | #2034 | | |
+| feature/morimoto/migration-full-dryrun-ci | migration-test.yml 全件ドライランジョブ追加（ADR-135強化） | 2026-06-12 | DONE | #2051 | | |
+| feature/morimoto/release-pr-migration-manifest | auto-release-pr.yml migration manifest バナー自動記載 | 2026-06-12 | DONE | #2052 | | |
+| feature/morimoto/adr-137-company-stats-ssot | ADR-137 起案 + migration ヘッダ修正（取引額SSOT） | 2026-06-12 | DONE | #2049 | | |
+| feature/morimoto/design-301-redirect | nginx /design 301リダイレクト + smoke⑤ | 2026-06-12 | DONE | #2050 | | |
 | feature/morimoto/responsive-ux-pr-r1 | レスポンシブ基盤最適化 PR-R1（mobile menu button / 767px 統一） | 2026-06-14 | MERGED | #2156 | | |
 | feature/morimoto/hotfix-css-mediaq-safari | Vite 8 cssTarget hotfix — Safari Level 4 media query 非対応バグ修正 | 2026-06-15 | REVIEW | #2198 | | |
-| hotfix/morimoto/discord-auto-setup-cause-e-main | Discord 自動セットアップ Cause E 修正 hotfix（main直反映） | 2026-06-15 | IN_PROGRESS | | main | #2210 cherry-pick |
+| feature/morimoto/tenant-deletion-clean | テナント論理削除・物理削除 API | 2026-06-14 | DONE | #2149 | 2026-06-14 | PR #2159 release にて main 反映済み。物理削除APIは未実行・個別PO GO待ち |
+| feature/morimoto/tenant-deletion-cache-fix | 論理削除・物理削除後の Redis tenant cache 無効化 | 2026-06-14 | DONE | #2154 | 2026-06-14 | PR #2159 release にて main 反映済み |
+| release/develop-to-main-2159 | develop → main release（tenant deletion / ADR-108 B-1 / Discord Auto Setup） | 2026-06-14 | DONE | #2159 | 2026-06-14 | Deploy to VPS run 27486632360 success / migration success |
