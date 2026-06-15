@@ -401,6 +401,9 @@ run_sql migrations/20260614_040137_add_tenant_deletion_audit.sql
 # ADR-108 Phase B-1: sales_form 複数選択 — tenant_sales_form_options / lead_sales_form_selections テーブル追加
 run_sql migrations/20260614_100000_create_sales_form_tables.sql
 
+# ポケモンカードゲーム MEGA シリーズ 商品マスタ投入（14件 product_code あり + 11件 なし）
+run_sql migrations/20260615_235900_seed_pokemon_mega_products.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
