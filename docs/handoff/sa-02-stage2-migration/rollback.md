@@ -2,6 +2,34 @@
 
 > **本番実行はShingo GOが必要。このドキュメントは実行前に必ず読むこと。**
 
+## 2026-06-15 R2 試行失敗記録（f-string JSON literal エラー）
+
+### 発生内容
+
+PR #2217（asyncpg SET LOCAL 修正）適用後の R2 試行で、以下のエラーが全 13 件発生：
+
+```
+ValueError: Invalid format specifier ' "sa02_stage2_migration"'
+```
+
+エラー発生箇所: `scripts/migrate_sa02_stage2_meta_to_conv_logs.py:191`（当時の行番号）
+
+Python f-string 内に JSON literal `'{"_source": "sa02_stage2_migration"}'::jsonb` を直書きしていたため、
+`{` が format 指定子として解釈され ValueError を送出。
+
+### 被害範囲
+
+- DB への INSERT: **0 件**（エラーは SQL 送信前に発生）
+- ロールバック: **不要**（DB 変更なし）
+- 影響テナント: なし
+
+### 復旧措置
+
+PR #2232 で JSON literal を `jsonb_build_object('_source', 'sa02_stage2_migration')` に置換。
+テスト 3 件追加（f-string 内 JSON literal の回帰検出）。
+
+---
+
 ## 概要
 
 `meta_messages` → `conversation_logs` への移行はデータ追加のみ（`meta_messages` は変更・削除しない）。
