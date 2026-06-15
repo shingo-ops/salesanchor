@@ -8,9 +8,7 @@ Redis 不通時は制限を適用しない（fail-open）。
 ヘルスチェック・静的ファイルは除外。
 """
 
-import base64
 import hashlib
-import json
 import logging
 import time
 from typing import Callable
@@ -36,18 +34,16 @@ UNAUTHED_WINDOW_SEC = 60
 _SKIP_PATHS = ("/health", "/metrics", "/docs", "/openapi", "/static", "/api/health")
 
 
-def _decode_jwt_email(auth_header: str | None) -> str | None:
-    """Bearer トークンのペイロードから email を取得する（署名検証なし）。"""
+def _extract_bearer_token(auth_header: str | None) -> str | None:
+    """Authorization headerからBearer tokenを抽出する。
+
+    JWT payloadは署名検証前に攻撃者が任意生成できるため、ここではdecodeしない。
+    user bucketは、認証Dependencyが検証済みtokenとしてRedis cacheへ入れた場合だけ使う。
+    """
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
-    try:
-        token = auth_header[7:]
-        payload_b64 = token.split(".")[1]
-        padded = payload_b64 + "=" * (4 - len(payload_b64) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(padded))
-        return payload.get("email")
-    except Exception:
-        return None
+    token = auth_header[7:].strip()
+    return token or None
 
 
 def _get_client_ip(request: Request) -> str:
@@ -55,6 +51,31 @@ def _get_client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+async def _rate_limit_identity(request: Request) -> tuple[str, int, int]:
+    """Rate limit bucketを決定する。
+
+    SEC-01 PR-D:
+    - 未検証JWT payload emailは信用しない。
+    - get_cached_jwt(token) がemailを返す場合だけ verified user bucket を使う。
+    - それ以外はIP bucketへ倒す。
+    """
+    token = _extract_bearer_token(request.headers.get("Authorization"))
+    if token:
+        try:
+            from app.cache import get_cached_jwt
+
+            cached = await get_cached_jwt(token)
+            email = cached.get("email") if cached else None
+            if email:
+                return f"user:{email}", AUTHED_RATE_LIMIT, AUTHED_WINDOW_SEC
+        except Exception:
+            # bucket選択で例外が起きてもレート制限全体は従来どおり可用性優先。
+            logger.warning("verified JWT cache lookup failed for rate bucket", exc_info=True)
+
+    client_ip = _get_client_ip(request)
+    return f"ip:{client_ip}", UNAUTHED_RATE_LIMIT, UNAUTHED_WINDOW_SEC
 
 
 async def _check_rate_limit(identifier: str, limit: int, window_sec: int) -> bool:
@@ -92,25 +113,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in _SKIP_PATHS):
             return await call_next(request)
 
-        user_email = _decode_jwt_email(request.headers.get("Authorization"))
-
-        if user_email:
-            # 認証済みユーザー: メール単位で 100回/分
-            exceeded = await _check_rate_limit(
-                f"user:{user_email}", AUTHED_RATE_LIMIT, AUTHED_WINDOW_SEC
-            )
-        else:
-            # 未認証: IP単位で 60回/分
-            client_ip = _get_client_ip(request)
-            exceeded = await _check_rate_limit(
-                f"ip:{client_ip}", UNAUTHED_RATE_LIMIT, UNAUTHED_WINDOW_SEC
-            )
+        identifier, limit, window_sec = await _rate_limit_identity(request)
+        exceeded = await _check_rate_limit(identifier, limit, window_sec)
 
         if exceeded:
             return JSONResponse(
                 status_code=429,
                 content={"detail": "リクエスト数が上限に達しました。しばらく時間をおいてから再試行してください"},
-                headers={"Retry-After": str(AUTHED_WINDOW_SEC)},
+                headers={"Retry-After": str(window_sec)},
             )
 
         return await call_next(request)
