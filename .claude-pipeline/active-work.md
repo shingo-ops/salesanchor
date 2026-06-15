@@ -141,7 +141,8 @@
 | feature/morimoto/fedex-a4-test-result-persistence | FedEx A4 接続テスト結果保存 | 2026-06-14 03:29 | DONE | #2140 | 2026-06-14 | PR #2138 release にて main 反映済み |
 | feature/morimoto/fedex-last-tested-position-fix | 最終確認バッジ配置修正（margin-left: auto → 0） | 2026-06-14 08:32 | DONE | #2151 | 2026-06-14 | PR #2158 release にて main 反映済み |
 | feature/fedex-last-tested-date-format | 最終確認 日時フォーマット修正（時刻のみ→日付+時刻） | 2026-06-14 09:06 | DONE | #2157 | 2026-06-14 | PR #2158 release にて main 反映済み |
-| feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | IN_PROGRESS | | | |
+| feature/morimoto/sa02-kgi-assessment | SA-02 KGI G1〜G4 本番実測・docs更新 | 2026-06-14 09:56 | DONE | #2162 | | |
+| feature/morimoto/sa02-r1-r2-convlog-links | SA-02 残課題 R1（contact_id補完）/ R2（手動記録company_id補完） | 2026-06-14 | IN_PROGRESS | | | |
 ---
 
 ## 記入例

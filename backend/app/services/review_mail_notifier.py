@@ -13,6 +13,9 @@ review@salesanchor.jp 新着メール → Discord 通知サービス。
 セキュリティ:
   - メール本文・添付・Firebase oobCode は Discord に投稿しない。
   - REVIEW_MAIL_IMAP_PASSWORD はログに出力しない。
+  - REVIEW_MAIL_DISCORD_MENTION は <@USER_ID> / <@&ROLE_ID> 形式のみ許可する。
+  - allowed_mentions の parse:[] により件名・差出人由来の @everyone や <@ID> が
+    Discord 上でメンションとして発火しないようにする。
 """
 
 import email
@@ -20,6 +23,7 @@ import email.header
 import imaplib
 import logging
 import os
+import re
 from typing import TYPE_CHECKING
 
 import httpx
@@ -36,12 +40,34 @@ _IMAP_PASSWORD = os.getenv("REVIEW_MAIL_IMAP_PASSWORD", "")
 _WEBMAIL_URL = os.getenv("REVIEW_MAIL_WEBMAIL_URL", "")
 _REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 _DISCORD_WEBHOOK = os.getenv("REVIEW_MAIL_DISCORD_WEBHOOK", "")
+_DISCORD_MENTION = os.getenv("REVIEW_MAIL_DISCORD_MENTION", "")
+
+_VALID_MENTION_RE = re.compile(r"^<@(?P<type>[!&]?)(?P<id>\d{17,20})>$")
 
 _REDIS_KEY_PREFIX = "review_mail:notified:"
 _REDIS_TTL_SECONDS = 30 * 24 * 60 * 60  # 30 日
 _MAX_SUBJECT_CHARS = 200
 _MAX_FROM_CHARS = 300
 _MAX_DISCORD_CHARS = 1800
+
+
+def _parse_mention(raw: str) -> tuple[str | None, dict]:
+    """REVIEW_MAIL_DISCORD_MENTION を検証し (mention_str, allowed_mentions) を返す。
+
+    Returns:
+        (mention_str, allowed_mentions):
+          - mention_str: 有効なメンション文字列 or None（未設定・不正形式）
+          - allowed_mentions: Discord payload 用辞書。parse:[] で誤発火防止済み。
+    """
+    raw = raw.strip()
+    if not raw:
+        return None, {"parse": []}
+    m = _VALID_MENTION_RE.match(raw)
+    if not m:
+        logger.warning("[review_mail] REVIEW_MAIL_DISCORD_MENTION の形式が不正: %r (skip)", raw)
+        return None, {"parse": []}
+    kind = "roles" if m.group("type") == "&" else "users"
+    return raw, {"parse": [], kind: [m.group("id")]}
 
 
 def _is_configured() -> bool:
@@ -88,9 +114,13 @@ def _mark_notified(client: "redis_module.Redis", uid: str) -> None:
         logger.warning("[review_mail] Redis 書き込み失敗 uid=%s: %s", uid, exc)
 
 
-def _build_discord_content(from_addr: str, subject: str, date_str: str) -> str:
+def _build_discord_content(
+    from_addr: str, subject: str, date_str: str, mention: str | None = None
+) -> str:
     """Discord に投稿するメッセージを組み立てる。本文・oobCode は含まない。"""
+    prefix = f"{mention}\n" if mention else ""
     return (
+        f"{prefix}"
         "📩 **Sales Anchor メール通知**\n\n"
         f"宛先: review@salesanchor.jp\n"
         f"差出人: {from_addr[:_MAX_FROM_CHARS]}\n"
@@ -102,21 +132,19 @@ def _build_discord_content(from_addr: str, subject: str, date_str: str) -> str:
     )
 
 
-def _post_discord(content: str) -> bool:
+def _post_discord(content: str, allowed_mentions: dict | None = None) -> bool:
     """Discord webhook に同期 POST する。失敗しても例外を投げない。"""
     webhook = _DISCORD_WEBHOOK.strip()
     if not webhook:
         logger.info("[review_mail] Discord webhook 未設定 (skip)")
         return False
+    payload: dict = {
+        "content": content[:_MAX_DISCORD_CHARS],
+        "username": "Sales Anchor メール通知",
+        "allowed_mentions": allowed_mentions if allowed_mentions is not None else {"parse": []},
+    }
     try:
-        resp = httpx.post(
-            webhook,
-            json={
-                "content": content[:_MAX_DISCORD_CHARS],
-                "username": "Sales Anchor メール通知",
-            },
-            timeout=10.0,
-        )
+        resp = httpx.post(webhook, json=payload, timeout=10.0)
         if resp.status_code >= 400:
             logger.warning(
                 "[review_mail] Discord webhook HTTP %s: %s",
@@ -145,6 +173,8 @@ def check_and_notify() -> int:
     if not _is_configured():
         logger.info("[review_mail] IMAP 設定未完了 (skip: HOST/USER/PASSWORD を確認)")
         return 0
+
+    mention_str, allowed_mentions = _parse_mention(_DISCORD_MENTION)
 
     redis_client = _get_redis()
     if redis_client is None:
@@ -198,9 +228,9 @@ def check_and_notify() -> int:
             from_addr = _decode_mime_header(msg.get("From", "(不明)"))
             date_str = msg.get("Date", "(不明)")
 
-            content = _build_discord_content(from_addr, subject, date_str)
+            content = _build_discord_content(from_addr, subject, date_str, mention=mention_str)
 
-            if _post_discord(content):
+            if _post_discord(content, allowed_mentions=allowed_mentions):
                 _mark_notified(redis_client, uid)
                 notified_count += 1
 
