@@ -51,3 +51,45 @@
 - [ ] 全テナントに本実行
 - [ ] 検証スクリプトで coverage 100% を確認
 - [ ] `v_company_stats` の conversation_count が 0 以外になっていることを会社詳細ページで確認
+
+---
+
+## バグ修正メモ（2026-06-15: asyncpg + SET LOCAL 非互換）
+
+### 障害概要
+
+R3 本移行（2026-06-15）実行時に `highlife-jpn`（tenant_id=4）の最初のバッチで以下のエラーが発生：
+
+```
+asyncpg.exceptions.PostgresSyntaxError: syntax error at or near "$1"
+```
+
+DB への INSERT は 0 件（エラーは最初の SET LOCAL 呼び出し時点で発生）。
+
+### 根本原因
+
+移行スクリプト内の `SET LOCAL app.tenant_id = :tid` において、asyncpg が `:tid` を
+PostgreSQL の `$1` プレースホルダに変換するが、PostgreSQL の `SET` コマンドは
+バインドパラメータを受け付けないため構文エラーが発生。
+
+### 修正内容
+
+`_set_tenant_context()` ヘルパーを追加し、`set_config()` SQL 関数経由で設定するよう変更：
+
+```python
+await conn.execute(
+    text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
+    {"tenant_id": str(int(tenant_id))},
+)
+```
+
+`set_config()` は通常の SELECT 関数として扱われるためバインドパラメータが使える。
+`is_local=true` を指定することで `SET LOCAL` 相当のトランザクションスコープを維持。
+
+### dry-run 検証ギャップの修正
+
+元の dry-run パスは `if total == 0 or dry_run: return` で早期リターンしていたため、
+`SET LOCAL` のバグがステージング（dry-run）で検出されなかった。
+
+修正後は dry-run でも `engine.begin()` → `_set_tenant_context()` 経路を通ることで
+同バグを事前に検出できるようにした。
