@@ -1249,21 +1249,45 @@ async def follow_ups_summary(
 # /analytics/revenue-summary
 # ─────────────────────────────────────────────
 
+class RevenueBlock(BaseModel):
+    target: float
+    actual: float
+    pace: str  # "ahead" | "on_track" | "behind"
+
+
 class RevenueSplit(BaseModel):
     new: float
     repeat: float
 
 
-class RevenueSummaryResponse(BaseModel):
-    month: str
-    target: float
-    actual: float
-    pace: float  # 当月経過率で按分した目標に対する達成率（整数 %）
-    split: RevenueSplit
-    new_customers: int
-    active_existing_customers: int
-    gross_margin: float
+class NewCustomersBlock(BaseModel):
+    target: int
+    actual: int
+
+
+class GrossMarginBlock(BaseModel):
+    amount: float
     uncosted_orders: int
+
+
+class RevenueSummaryResponse(BaseModel):
+    revenue: RevenueBlock
+    split: RevenueSplit
+    new_customers: NewCustomersBlock
+    active_existing_customers: int
+    gross_margin: GrossMarginBlock
+
+
+def _pace_label(actual: float, target: float, elapsed_pct: int) -> str:
+    """目標達成ペース判定。"""
+    if target == 0:
+        return "ahead" if actual > 0 else "on_track"
+    pace_target = target * elapsed_pct / 100 if elapsed_pct > 0 else target
+    if actual >= pace_target:
+        return "ahead"
+    if actual >= pace_target * 0.85:
+        return "on_track"
+    return "behind"
 
 
 @router.get(
@@ -1407,16 +1431,18 @@ async def revenue_summary(
     uncosted_orders = total_orders - costed_cnt
     gross_margin = ((costed_revenue - total_cost) / costed_revenue * 100) if costed_revenue > 0 else 0.0
 
+    gross_amount = round(costed_revenue - total_cost, 2)
+
     return RevenueSummaryResponse(
-        month=month_str,
-        target=revenue_target,
-        actual=actual,
-        pace=pace,
+        revenue=RevenueBlock(
+            target=revenue_target,
+            actual=actual,
+            pace=_pace_label(actual, revenue_target, elapsed_pct),
+        ),
         split=RevenueSplit(new=new_revenue, repeat=repeat_revenue),
-        new_customers=len(new_customer_ids),
+        new_customers=NewCustomersBlock(target=0, actual=len(new_customer_ids)),
         active_existing_customers=len(repeat_customer_ids),
-        gross_margin=round(gross_margin, 1),
-        uncosted_orders=uncosted_orders,
+        gross_margin=GrossMarginBlock(amount=gross_amount, uncosted_orders=uncosted_orders),
     )
 
 
@@ -1424,17 +1450,18 @@ async def revenue_summary(
 # /analytics/channels
 # ─────────────────────────────────────────────
 
-class ChannelStats(BaseModel):
+class ChannelRow(BaseModel):
+    initiative: str   # "inbound" | "outbound"
     channel: str
     leads: int
-    deals: int
-    won: int
-    revenue: float
+    conversion_rate: float
+    win_rate: float
+    avg_order_value: float
+    gross_margin: float
 
 
 class ChannelsResponse(BaseModel):
-    month: str
-    channels: list[ChannelStats]
+    rows: list[ChannelRow]
 
 
 @router.get(
@@ -1451,73 +1478,61 @@ async def channels_summary(
 ):
     """
     チャネル別集計。api-contract.md section 4 に準拠。
-    leads.channel_type でグループ化し、deals / orders は lead 経由で紐付ける。
+    initiative IN ('inbound','outbound') のみ返す（frontend が initiative_short キーを使用）。
     """
     _validate_scope(scope)
     today = date.today()
     target_year, target_month = _parse_month(month, today)
-    month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
 
     lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
     scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
 
-    # ── リード数（channel_type ごと）──
-    lead_result = await db.execute(
+    # initiative × channel_type でリード集計（inbound/outbound のみ）
+    result = await db.execute(
         text(f"""
             SELECT
-                COALESCE(channel_type, 'unknown') AS channel,
-                COUNT(*) AS leads
-            FROM leads l
-            WHERE l.created_at >= :start AND l.created_at < :end
-            {lead_assign}
-            GROUP BY COALESCE(channel_type, 'unknown')
-        """),
-        {"start": start_utc, "end": end_utc, **scope_params},
-    )
-    lead_rows = {row["channel"]: int(row["leads"]) for row in lead_result.mappings().all()}
-
-    # ── 商談数・成約数・売上（lead 経由 channel_type）──
-    deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
-    deal_result = await db.execute(
-        text(f"""
-            SELECT
+                l.initiative,
                 COALESCE(l.channel_type, 'unknown') AS channel,
-                COUNT(DISTINCT d.id) AS deals,
+                COUNT(*) AS leads,
+                COUNT(l.converted_deal_id) AS converted,
+                COUNT(DISTINCT d.id) AS total_deals,
                 SUM(CASE WHEN d.status = 'won' THEN 1 ELSE 0 END) AS won,
-                COALESCE(SUM(CASE WHEN d.status = 'won' THEN d.amount ELSE 0 END), 0) AS revenue
-            FROM deals d
-            LEFT JOIN leads l ON l.converted_deal_id = d.id
-            WHERE d.closed_at >= :start AND d.closed_at < :end
-              AND d.closed_at IS NOT NULL
-            {deal_assign}
-            GROUP BY COALESCE(l.channel_type, 'unknown')
+                COALESCE(
+                    AVG(CASE WHEN d.status = 'won' THEN d.amount ELSE NULL END),
+                    0
+                ) AS avg_order_value
+            FROM leads l
+            LEFT JOIN deals d ON d.id = l.converted_deal_id
+            WHERE l.created_at >= :start AND l.created_at < :end
+              AND l.initiative IN ('inbound', 'outbound')
+            {lead_assign}
+            GROUP BY l.initiative, COALESCE(l.channel_type, 'unknown')
+            ORDER BY l.initiative, COALESCE(l.channel_type, 'unknown')
         """),
         {"start": start_utc, "end": end_utc, **scope_params},
     )
-    deal_rows = {
-        row["channel"]: {
-            "deals": int(row["deals"]),
-            "won": int(row["won"]),
-            "revenue": float(row["revenue"] or 0),
-        }
-        for row in deal_result.mappings().all()
-    }
+    rows_raw = result.mappings().all()
 
-    # 全チャネルを合算
-    all_channels = set(lead_rows.keys()) | set(deal_rows.keys())
-    channels: list[ChannelStats] = []
-    for ch in sorted(all_channels):
-        dr = deal_rows.get(ch, {})
-        channels.append(ChannelStats(
-            channel=ch,
-            leads=lead_rows.get(ch, 0),
-            deals=dr.get("deals", 0),
-            won=dr.get("won", 0),
-            revenue=dr.get("revenue", 0.0),
+    rows: list[ChannelRow] = []
+    for row in rows_raw:
+        leads = int(row["leads"] or 0)
+        converted = int(row["converted"] or 0)
+        total_deals = int(row["total_deals"] or 0)
+        won = int(row["won"] or 0)
+        conversion_rate = round(converted / leads * 100, 1) if leads > 0 else 0.0
+        win_rate = round(won / total_deals * 100, 1) if total_deals > 0 else 0.0
+        rows.append(ChannelRow(
+            initiative=row["initiative"],
+            channel=row["channel"],
+            leads=leads,
+            conversion_rate=conversion_rate,
+            win_rate=win_rate,
+            avg_order_value=round(float(row["avg_order_value"] or 0), 2),
+            gross_margin=0.0,  # order_financials JOIN は PR-R2-B スコープ外
         ))
 
-    return ChannelsResponse(month=month_str, channels=channels)
+    return ChannelsResponse(rows=rows)
 
 
 # ─────────────────────────────────────────────
@@ -1525,16 +1540,21 @@ async def channels_summary(
 # ─────────────────────────────────────────────
 
 class ReasonItem(BaseModel):
-    reason_id: int
     label: str
-    outcome: str  # "won" | "lost"
-    count: int
-    memos: list[str]  # 最新 10 件
+    primary_count: int
+    secondary_count: int
+
+
+class ReasonMemo(BaseModel):
+    deal_id: int
+    primary_label: str
+    memo: str
+    closed_at: str  # YYYY-MM-DD
 
 
 class ReasonsResponse(BaseModel):
-    month: str
     reasons: list[ReasonItem]
+    memos: list[ReasonMemo]
 
 
 @router.get(
@@ -1543,6 +1563,7 @@ class ReasonsResponse(BaseModel):
     dependencies=[Depends(require_permission("dashboard.view"))],
 )
 async def reasons_summary(
+    type: str | None = Query(default=None, description="won / lost でフィルタ。省略時は両方"),
     month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
     scope: str = Query(default="team", description="team / mine"),
     db: AsyncSession = Depends(get_db),
@@ -1550,66 +1571,82 @@ async def reasons_summary(
     current_user: User = Depends(get_current_user),
 ):
     """
-    成約/失注理由別集計。api-contract.md section 6 に準拠。
-    close_reasons × deal_close_reasons でグループ化、memos は最新10件。
+    成約/失注理由別集計。api-contract.md section 5 に準拠。
+
+    - reasons: ラベルごとに主因(is_primary=1) / 副因(is_primary=0) の件数
+    - memos: 主因ラベル・deal_id・一言メモ・closed_at（最新20件）
+    - type=won|lost: close_reasons.type で絞り込み
     """
     _validate_scope(scope)
+    if type is not None and type not in ("won", "lost"):
+        raise HTTPException(status_code=422, detail="type は won または lost で指定してください")
     today = date.today()
     target_year, target_month = _parse_month(month, today)
-    month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
 
     deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
     scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+    type_filter = "AND cr.type = :rtype" if type is not None else ""
+    type_params: dict = {"rtype": type} if type is not None else {}
 
-    # 集計
+    # ── 理由別 主因/副因 集計 ──
     agg_result = await db.execute(
         text(f"""
             SELECT
-                cr.id AS reason_id,
                 cr.label,
-                cr.type AS outcome,
-                COUNT(dcr.deal_id) AS cnt
+                SUM(CASE WHEN dcr.is_primary THEN 1 ELSE 0 END) AS primary_count,
+                SUM(CASE WHEN dcr.is_primary THEN 0 ELSE 1 END) AS secondary_count
             FROM deal_close_reasons dcr
             JOIN close_reasons cr ON cr.id = dcr.reason_id
             JOIN deals d ON d.id = dcr.deal_id
             WHERE d.closed_at >= :start AND d.closed_at < :end
               AND d.closed_at IS NOT NULL
+            {type_filter}
             {deal_assign}
-            GROUP BY cr.id, cr.label, cr.type
-            ORDER BY cnt DESC
+            GROUP BY cr.label
+            ORDER BY primary_count DESC
         """),
-        {"start": start_utc, "end": end_utc, **scope_params},
+        {"start": start_utc, "end": end_utc, **type_params, **scope_params},
     )
-    agg_rows = agg_result.mappings().all()
-
-    # reason_id ごとに memos（close_reason_memo, 最新10件, closed_at DESC）
-    reasons: list[ReasonItem] = []
-    for row in agg_rows:
-        rid = row["reason_id"]
-        memo_result = await db.execute(
-            text(f"""
-                SELECT d.close_reason_memo
-                FROM deal_close_reasons dcr
-                JOIN deals d ON d.id = dcr.deal_id
-                WHERE dcr.reason_id = :rid
-                  AND d.closed_at >= :start AND d.closed_at < :end
-                  AND d.closed_at IS NOT NULL
-                  AND d.close_reason_memo IS NOT NULL
-                  AND d.close_reason_memo != ''
-                {deal_assign}
-                ORDER BY d.closed_at DESC
-                LIMIT 10
-            """),
-            {"rid": rid, "start": start_utc, "end": end_utc, **scope_params},
-        )
-        memos = [r["close_reason_memo"] for r in memo_result.mappings().all()]
-        reasons.append(ReasonItem(
-            reason_id=rid,
+    reasons: list[ReasonItem] = [
+        ReasonItem(
             label=row["label"],
-            outcome=row["outcome"],
-            count=int(row["cnt"]),
-            memos=memos,
-        ))
+            primary_count=int(row["primary_count"] or 0),
+            secondary_count=int(row["secondary_count"] or 0),
+        )
+        for row in agg_result.mappings().all()
+    ]
 
-    return ReasonsResponse(month=month_str, reasons=reasons)
+    # ── メモ: 主因ラベル + deal_id + close_reason_memo + closed_at ──
+    memo_result = await db.execute(
+        text(f"""
+            SELECT
+                d.id AS deal_id,
+                cr.label AS primary_label,
+                d.close_reason_memo AS memo,
+                d.closed_at
+            FROM deals d
+            JOIN deal_close_reasons dcr ON dcr.deal_id = d.id AND dcr.is_primary
+            JOIN close_reasons cr ON cr.id = dcr.reason_id
+            WHERE d.closed_at >= :start AND d.closed_at < :end
+              AND d.closed_at IS NOT NULL
+              AND d.close_reason_memo IS NOT NULL
+              AND d.close_reason_memo != ''
+            {type_filter}
+            {deal_assign}
+            ORDER BY d.closed_at DESC
+            LIMIT 20
+        """),
+        {"start": start_utc, "end": end_utc, **type_params, **scope_params},
+    )
+    memos: list[ReasonMemo] = [
+        ReasonMemo(
+            deal_id=int(row["deal_id"]),
+            primary_label=row["primary_label"],
+            memo=row["memo"],
+            closed_at=str(row["closed_at"])[:10],
+        )
+        for row in memo_result.mappings().all()
+    ]
+
+    return ReasonsResponse(reasons=reasons, memos=memos)

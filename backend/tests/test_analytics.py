@@ -349,18 +349,25 @@ class TestRevenueSummary:
     """GET /analytics/revenue-summary"""
 
     async def test_revenue_summary_empty(self, client):
-        """データなしで 200 を返し、数値がすべて 0"""
+        """データなしで 200 を返し、フロント契約形 (revenue/new_customers/gross_margin 入れ子) を確認"""
         res = await client.get("/api/v1/analytics/revenue-summary")
         assert res.status_code == 200
         data = res.json()
-        assert "month" in data
-        assert data["target"] == 0.0
-        assert data["actual"] == 0.0
+        # revenue ブロック
+        assert data["revenue"]["target"] == 0.0
+        assert data["revenue"]["actual"] == 0.0
+        assert data["revenue"]["pace"] in ("ahead", "on_track", "behind")
+        # split
         assert data["split"]["new"] == 0.0
         assert data["split"]["repeat"] == 0.0
-        assert data["new_customers"] == 0
+        # new_customers ブロック
+        assert data["new_customers"]["target"] == 0
+        assert data["new_customers"]["actual"] == 0
+        # active_existing_customers
         assert data["active_existing_customers"] == 0
-        assert data["uncosted_orders"] == 0
+        # gross_margin ブロック
+        assert data["gross_margin"]["amount"] == 0.0
+        assert data["gross_margin"]["uncosted_orders"] == 0
 
     async def test_revenue_summary_with_data(self, client, db_session):
         """注文データ投入時に revenue-summary が正しい値を返す"""
@@ -384,8 +391,9 @@ class TestRevenueSummary:
         res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
         assert res.status_code == 200
         data = res.json()
-        assert data["actual"] == 200000.0
-        assert data["new_customers"] == 1
+        assert data["revenue"]["actual"] == 200000.0
+        assert data["new_customers"]["actual"] == 1
+        assert data["new_customers"]["target"] == 0
         assert data["active_existing_customers"] == 0
         assert data["split"]["new"] == 200000.0
         assert data["split"]["repeat"] == 0.0
@@ -422,8 +430,9 @@ class TestRevenueSummary:
         res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
         assert res.status_code == 200
         data = res.json()
-        assert data["gross_margin"] == 40.0  # (100000 - 60000) / 100000 * 100
-        assert data["uncosted_orders"] == 0
+        # gross_margin.amount = 収益 - 原価 = 100000 - 60000 = 40000
+        assert data["gross_margin"]["amount"] == 40000.0
+        assert data["gross_margin"]["uncosted_orders"] == 0
 
 
 # ─────────────────────────────────────────────
@@ -434,40 +443,49 @@ class TestChannels:
     """GET /analytics/channels"""
 
     async def test_channels_empty(self, client):
-        """データなしで 200 を返し、channels が空リスト"""
+        """データなしで 200 を返し、rows が空リスト"""
         res = await client.get("/api/v1/analytics/channels")
         assert res.status_code == 200
         data = res.json()
-        assert "month" in data
-        assert data["channels"] == []
+        assert data["rows"] == []
 
     async def test_channels_with_data(self, client, db_session):
-        """channel_type 付きリードで channels が返る"""
+        """initiative + channel_type 付きリードで rows が返る"""
         today = date.today()
         this_month = str(today)[:7]
 
-        # channel_type='instagram' のリードを2件
+        # initiative='inbound', channel_type='instagram' のリードを2件
         await db_session.execute(text("""
-            INSERT INTO leads (tenant_id, customer_name, channel_type, status, created_at)
-            VALUES (999, 'InstaLead1', 'instagram', 'lead', :dt),
-                   (999, 'InstaLead2', 'instagram', 'lead', :dt)
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, created_at)
+            VALUES (999, 'InstaLead1', 'instagram', 'inbound', 'lead', :dt),
+                   (999, 'InstaLead2', 'instagram', 'inbound', 'lead', :dt)
         """), {"dt": str(today)})
-        # channel_type='dm' のリードを1件
+        # initiative='outbound', channel_type='cold_call' のリードを1件
         await db_session.execute(text("""
-            INSERT INTO leads (tenant_id, customer_name, channel_type, status, created_at)
-            VALUES (999, 'DmLead1', 'dm', 'lead', :dt)
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, created_at)
+            VALUES (999, 'ColdLead1', 'cold_call', 'outbound', 'lead', :dt)
         """), {"dt": str(today)})
         await db_session.commit()
 
         res = await client.get(f"/api/v1/analytics/channels?month={this_month}")
         assert res.status_code == 200
         data = res.json()
-        channels_by_name = {ch["channel"]: ch for ch in data["channels"]}
+        rows_by_channel = {r["channel"]: r for r in data["rows"]}
 
-        assert "instagram" in channels_by_name
-        assert channels_by_name["instagram"]["leads"] == 2
-        assert "dm" in channels_by_name
-        assert channels_by_name["dm"]["leads"] == 1
+        # フロント契約フィールドの存在確認
+        assert "instagram" in rows_by_channel
+        insta = rows_by_channel["instagram"]
+        assert insta["initiative"] == "inbound"
+        assert insta["leads"] == 2
+        assert "conversion_rate" in insta
+        assert "win_rate" in insta
+        assert "avg_order_value" in insta
+        assert "gross_margin" in insta
+
+        assert "cold_call" in rows_by_channel
+        cold = rows_by_channel["cold_call"]
+        assert cold["initiative"] == "outbound"
+        assert cold["leads"] == 1
 
     async def test_channels_invalid_scope(self, client):
         """scope が不正な場合は 422"""
@@ -483,15 +501,15 @@ class TestReasons:
     """GET /analytics/reasons"""
 
     async def test_reasons_empty(self, client):
-        """当月の deal_close_reasons なしで 200 を返し、reasons が空リスト"""
+        """当月の deal_close_reasons なしで 200 を返し、reasons/memos が空リスト"""
         res = await client.get("/api/v1/analytics/reasons")
         assert res.status_code == 200
         data = res.json()
-        assert "month" in data
         assert data["reasons"] == []
+        assert data["memos"] == []
 
     async def test_reasons_with_data(self, client, db_session):
-        """成約理由付き商談で reasons が返る"""
+        """成約理由付き商談で reasons と memos が返る"""
         co = await client.post("/api/v1/companies", json={"name": "ReasonCo"})
         co_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
@@ -502,12 +520,12 @@ class TestReasons:
         today = date.today()
         this_month = str(today)[:7]
 
-        # won deal with close reason
+        # won deal with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
         await db_session.execute(text("""
             INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
             VALUES (9001, 999, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
         """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
-        # close_reasons ID=1 is '在庫・品揃え' (won) — seeded in conftest
+        # is_primary=1: 主因
         await db_session.execute(text("""
             INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9001, 1, 1)
         """))
@@ -516,12 +534,66 @@ class TestReasons:
         res = await client.get(f"/api/v1/analytics/reasons?month={this_month}")
         assert res.status_code == 200
         data = res.json()
+
+        # reasons: label / primary_count / secondary_count
         assert len(data["reasons"]) >= 1
         first = data["reasons"][0]
-        assert first["reason_id"] == 1
-        assert first["outcome"] == "won"
-        assert first["count"] == 1
-        assert "品揃えが豊富でした" in first["memos"]
+        assert first["label"] == "在庫・品揃え"
+        assert first["primary_count"] == 1
+        assert first["secondary_count"] == 0
+
+        # memos: deal_id / primary_label / memo / closed_at
+        assert len(data["memos"]) >= 1
+        memo = data["memos"][0]
+        assert memo["deal_id"] == 9001
+        assert memo["primary_label"] == "在庫・品揃え"
+        assert memo["memo"] == "品揃えが豊富でした"
+        assert memo["closed_at"] == str(today)
+
+    async def test_reasons_type_filter(self, client, db_session):
+        """?type=won / ?type=lost で close_reasons.type による絞り込みが効く"""
+        co = await client.post("/api/v1/companies", json={"name": "FilterCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "FilterContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # won deal — close_reason ID=1 ('在庫・品揃え', type='won')
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9011, 999, :co_id, :ct_id, 'WonDeal', 50000, 'won', :dt, :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9011, 1, 1)
+        """))
+
+        # lost deal — close_reason ID=4 ('価格が合わなかった', type='lost')
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9012, 999, :co_id, :ct_id, 'LostDeal', 50000, 'lost', :dt, :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9012, 4, 1)
+        """))
+        await db_session.commit()
+
+        # ?type=won — '在庫・品揃え' のみ
+        res_won = await client.get(f"/api/v1/analytics/reasons?month={this_month}&type=won")
+        assert res_won.status_code == 200
+        labels_won = [r["label"] for r in res_won.json()["reasons"]]
+        assert "在庫・品揃え" in labels_won
+        assert "価格が合わなかった" not in labels_won
+
+        # ?type=lost — '価格が合わなかった' のみ
+        res_lost = await client.get(f"/api/v1/analytics/reasons?month={this_month}&type=lost")
+        assert res_lost.status_code == 200
+        labels_lost = [r["label"] for r in res_lost.json()["reasons"]]
+        assert "価格が合わなかった" in labels_lost
+        assert "在庫・品揃え" not in labels_lost
 
     async def test_reasons_invalid_scope(self, client):
         """scope が不正な場合は 422"""

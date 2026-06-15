@@ -62,22 +62,22 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
 
 ```json
 {
-  "month": "2026-06",
-  "target": 5000000.0,
-  "actual": 2000000.0,
-  "pace": 80,
+  "revenue": { "target": 5000000.0, "actual": 2000000.0, "pace": "behind" },
   "split": { "new": 1200000.0, "repeat": 800000.0 },
-  "new_customers": 3,
+  "new_customers": { "target": 0, "actual": 3 },
   "active_existing_customers": 5,
-  "gross_margin": 42.5,
-  "uncosted_orders": 2
+  "gross_margin": { "amount": 800000.0, "uncosted_orders": 2 }
 }
 ```
 
-- `pace`: `actual / (target * elapsed_pct / 100) * 100`（整数）
+- `revenue.pace`: `"ahead"` / `"on_track"` / `"behind"`（文字列 enum）
+  - `ahead`: `actual >= pace_target`
+  - `on_track`: `actual >= pace_target * 0.85`
+  - `behind`: それ以外
+  - `pace_target = target * elapsed_pct / 100`
 - `split.new`: 当月が初回発注の顧客の売上合計
-- `gross_margin`: `(Σ revenue - Σ purchase_cost) / Σ revenue * 100`（purchase_cost IS NOT NULL のみ）
-- `uncosted_orders`: `order_financials` が未紐付け or `purchase_cost IS NULL` の注文数
+- `gross_margin.amount`: `Σ revenue - Σ purchase_cost`（purchase_cost IS NOT NULL のみ）
+- `gross_margin.uncosted_orders`: `order_financials` が未紐付け or `purchase_cost IS NULL` の注文数
 
 ---
 
@@ -87,21 +87,27 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
 
 ```json
 {
-  "month": "2026-06",
-  "channels": [
+  "rows": [
     {
+      "initiative": "inbound",
       "channel": "instagram",
       "leads": 20,
-      "deals": 8,
-      "won": 3,
-      "revenue": 900000.0
+      "conversion_rate": 40.0,
+      "win_rate": 37.5,
+      "avg_order_value": 300000.0,
+      "gross_margin": 0.0
     }
   ]
 }
 ```
 
-- `channel`: `leads.channel_type`（NULL は "unknown" にまとめる）
-- `deals`/`won`/`revenue`: `deals.closed_at` が当月範囲内かつ `closed_at IS NOT NULL`
+- `initiative`: `leads.initiative`（`'inbound'` / `'outbound'`）
+- `channel`: `leads.channel_type`（NULL は `"unknown"` にまとめる）
+- `conversion_rate`: `converted / leads * 100`（リードから商談化した割合）
+- `win_rate`: `won / total_deals * 100`（商談のうち成約した割合）
+- `avg_order_value`: 成約商談の平均金額
+- `gross_margin`: 粗利率（現時点では `0.0` プレースホルダー）
+- `initiative IN ('inbound', 'outbound')` 以外のリードは集計除外
 
 ---
 
@@ -109,23 +115,33 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
 
 成約/失注理由別集計（新規エンドポイント）
 
+クエリパラメータ:
+- `type=won|lost`（省略時は両方）
+
 ```json
 {
-  "month": "2026-06",
   "reasons": [
     {
-      "reason_id": 1,
       "label": "在庫・品揃え",
-      "outcome": "won",
-      "count": 5,
-      "memos": ["メモ1", "メモ2"]
+      "primary_count": 5,
+      "secondary_count": 2
+    }
+  ],
+  "memos": [
+    {
+      "deal_id": 123,
+      "primary_label": "在庫・品揃え",
+      "memo": "品揃えが豊富でした",
+      "closed_at": "2026-06-10"
     }
   ]
 }
 ```
 
-- `outcome`: `close_reasons.type`（"won" or "lost"）
-- `memos`: `deals.close_reason_memo` の最新10件（`closed_at DESC`）
+- `reasons.primary_count`: `deal_close_reasons.is_primary = 1` の件数
+- `reasons.secondary_count`: `deal_close_reasons.is_primary = 0` の件数
+- `memos`: 主因（is_primary=1）を持つ商談の `close_reason_memo` 最新20件（`closed_at DESC`）
+- `type` フィルタ: `close_reasons.type` で絞り込み
 
 ---
 
