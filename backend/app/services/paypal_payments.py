@@ -630,10 +630,24 @@ def create_and_send_invoice(
                 "status_code": resp.status_code,
                 "message": f"PayPal 請求書作成に失敗（HTTP {resp.status_code}）: {err_detail}"}
     try:
-        pp_invoice_id = resp.json().get("id")
+        resp_json = resp.json()
+        pp_invoice_id = resp_json.get("id")
+        # PayPal sandbox は links[rel=self] の href 末尾にも ID がある
+        if not pp_invoice_id:
+            for link in resp_json.get("links", []):
+                if link.get("rel") == "self":
+                    pp_invoice_id = link.get("href", "").rstrip("/").split("/")[-1] or None
+                    break
     except Exception:  # noqa: BLE001
+        resp_json = {}
         pp_invoice_id = None
+    # Location ヘッダーからの最終フォールバック
     if not pp_invoice_id:
+        loc = resp.headers.get("Location", "")
+        if loc:
+            pp_invoice_id = loc.rstrip("/").split("/")[-1] or None
+    if not pp_invoice_id:
+        logger.warning("[paypal] invoice 作成 HTTP %s body=%s", resp.status_code, resp.text[:500])
         return {"ok": False, "paypal_invoice_id": None, "recipient_view_url": None,
                 "status_code": resp.status_code, "message": "PayPal 請求書 ID を取得できませんでした"}
 
