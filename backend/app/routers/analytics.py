@@ -1279,15 +1279,22 @@ class RevenueSummaryResponse(BaseModel):
 
 
 def _pace_label(actual: float, target: float, elapsed_pct: int) -> str:
-    """目標達成ペース判定。"""
-    if target == 0:
+    """目標達成ペース判定。
+
+    achievement_pct = actual / target * 100
+    ahead    : achievement_pct > elapsed_pct + 10
+    on_track : abs(achievement_pct - elapsed_pct) <= 10
+    behind   : achievement_pct < elapsed_pct - 10
+    target <= 0: actual > 0 → ahead, actual == 0 → on_track
+    """
+    if target <= 0:
         return "ahead" if actual > 0 else "on_track"
-    pace_target = target * elapsed_pct / 100 if elapsed_pct > 0 else target
-    if actual >= pace_target:
+    achievement_pct = actual / target * 100
+    if achievement_pct > elapsed_pct + 10:
         return "ahead"
-    if actual >= pace_target * 0.85:
-        return "on_track"
-    return "behind"
+    if achievement_pct < elapsed_pct - 10:
+        return "behind"
+    return "on_track"
 
 
 @router.get(
@@ -1403,14 +1410,28 @@ async def revenue_summary(
             repeat_revenue += amt
             repeat_customer_ids.add(company_id)
 
-    # ── 粗利計算（purchase_cost IS NOT NULL の orders のみ）──
+    # ── 粗利計算（purchase_cost IS NOT NULL の orders のみ・全コスト列を合算）──
+    # cost_total = purchase_cost + purchase_shipping + paypal_fee + wise_fee
+    #            + exchange_fee + outsource_fee + packing_fee + ad_cost
+    #            + return_fee + refund_amount
     margin_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(o.id) AS total_orders,
                 SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN 1 ELSE 0 END) AS costed_cnt,
                 COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN o.total_amount ELSE 0 END), 0) AS costed_revenue,
-                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN f.purchase_cost ELSE 0 END), 0) AS total_cost
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN (
+                    COALESCE(f.purchase_cost, 0)
+                    + COALESCE(f.purchase_shipping, 0)
+                    + COALESCE(f.paypal_fee, 0)
+                    + COALESCE(f.wise_fee, 0)
+                    + COALESCE(f.exchange_fee, 0)
+                    + COALESCE(f.outsource_fee, 0)
+                    + COALESCE(f.packing_fee, 0)
+                    + COALESCE(f.ad_cost, 0)
+                    + COALESCE(f.return_fee, 0)
+                    + COALESCE(f.refund_amount, 0)
+                ) ELSE 0 END), 0) AS total_cost
             FROM orders o
             {order_scope_join}
             LEFT JOIN order_financials f ON f.order_id = o.id
@@ -1507,6 +1528,41 @@ async def channels_summary(
     )
     rows_raw = result.mappings().all()
 
+    # ── 粗利: lead → deal → order → order_financials（二重カウント回避のため別クエリ）──
+    margin_result = await db.execute(
+        text(f"""
+            SELECT
+                COALESCE(l.initiative, '') AS initiative,
+                COALESCE(l.channel_type, 'unknown') AS channel,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN (
+                    o.total_amount
+                    - COALESCE(f.purchase_cost, 0)
+                    - COALESCE(f.purchase_shipping, 0)
+                    - COALESCE(f.paypal_fee, 0)
+                    - COALESCE(f.wise_fee, 0)
+                    - COALESCE(f.exchange_fee, 0)
+                    - COALESCE(f.outsource_fee, 0)
+                    - COALESCE(f.packing_fee, 0)
+                    - COALESCE(f.ad_cost, 0)
+                    - COALESCE(f.return_fee, 0)
+                    - COALESCE(f.refund_amount, 0)
+                ) ELSE 0 END), 0.0) AS gross_margin_amount
+            FROM leads l
+            JOIN deals d ON d.id = l.converted_deal_id
+            JOIN orders o ON o.deal_id = d.id
+            LEFT JOIN order_financials f ON f.order_id = o.id
+            WHERE l.created_at >= :start AND l.created_at < :end
+              AND l.initiative IN ('inbound', 'outbound')
+            {lead_assign}
+            GROUP BY COALESCE(l.initiative, ''), COALESCE(l.channel_type, 'unknown')
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    margin_map: dict[tuple[str, str], float] = {
+        (row["initiative"], row["channel"]): float(row["gross_margin_amount"] or 0)
+        for row in margin_result.mappings().all()
+    }
+
     rows: list[ChannelRow] = []
     for row in rows_raw:
         leads = int(row["leads"] or 0)
@@ -1515,14 +1571,16 @@ async def channels_summary(
         won = int(row["won"] or 0)
         conversion_rate = round(converted / leads * 100, 1) if leads > 0 else 0.0
         win_rate = round(won / total_deals * 100, 1) if total_deals > 0 else 0.0
+        ini = row["initiative"]
+        ch = row["channel"]
         rows.append(ChannelRow(
-            initiative=row["initiative"],
-            channel=row["channel"],
+            initiative=ini,
+            channel=ch,
             leads=leads,
             conversion_rate=conversion_rate,
             win_rate=win_rate,
             avg_order_value=round(float(row["avg_order_value"] or 0), 2),
-            gross_margin=0.0,  # order_financials JOIN は PR-R2-B スコープ外
+            gross_margin=round(margin_map.get((ini, ch), 0.0), 2),
         ))
 
     return ChannelsResponse(rows=rows)

@@ -20,15 +20,22 @@ PR4（`feature/morimoto/funnel-dashboard-live-contract`）にて実装完了。
   "month_elapsed_pct": 50,
   "leads": { "target": 30, "actual": 12 },
   "conversion": { "target_rate": 20, "actual_rate": 25, "converted": 3 },
-  "active": { "count": 5, "amount": 1500000 },
+  "active": {
+    "count": 5,
+    "amount": 1500000,
+    "coverage_pct_of_remaining_target": 80
+  },
   "closed": {
-    "won": 2, "lost": 1, "won_rate": 67,
-    "won_target": 10, "coverage_pct": 80
+    "won_target": 10,
+    "won": 2,
+    "won_rate": 67,
+    "lost": 1
   }
 }
 ```
 
-closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_at IS NOT NULL AND status IN ('won', 'lost')`
+- `active.coverage_pct_of_remaining_target`: 進行中商談 amount / (revenue目標 − 既成約 amount) × 100
+- closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_at IS NOT NULL AND status IN ('won', 'lost')`
 
 ---
 
@@ -71,12 +78,14 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
 ```
 
 - `revenue.pace`: `"ahead"` / `"on_track"` / `"behind"`（文字列 enum）
-  - `ahead`: `actual >= pace_target`
-  - `on_track`: `actual >= pace_target * 0.85`
-  - `behind`: それ以外
-  - `pace_target = target * elapsed_pct / 100`
+  - `achievement_pct = actual / target * 100`
+  - `ahead`: `achievement_pct > elapsed_pct + 10`
+  - `on_track`: `|achievement_pct - elapsed_pct| <= 10`
+  - `behind`: `achievement_pct < elapsed_pct - 10`
+  - `target <= 0` の場合: `actual > 0` → `ahead`、`actual == 0` → `on_track`
 - `split.new`: 当月が初回発注の顧客の売上合計
-- `gross_margin.amount`: `Σ revenue - Σ purchase_cost`（purchase_cost IS NOT NULL のみ）
+- `gross_margin.amount`: `Σ revenue - Σ cost_total`（purchase_cost IS NOT NULL のみ）
+  - `cost_total` = purchase_cost + purchase_shipping + paypal_fee + wise_fee + exchange_fee + outsource_fee + packing_fee + ad_cost + return_fee + refund_amount
 - `gross_margin.uncosted_orders`: `order_financials` が未紐付け or `purchase_cost IS NULL` の注文数
 
 ---
@@ -95,7 +104,7 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
       "conversion_rate": 40.0,
       "win_rate": 37.5,
       "avg_order_value": 300000.0,
-      "gross_margin": 0.0
+      "gross_margin": 120000.0
     }
   ]
 }
@@ -106,7 +115,7 @@ closed集計の条件: `deals.closed_at >= start AND closed_at < end AND closed_
 - `conversion_rate`: `converted / leads * 100`（リードから商談化した割合）
 - `win_rate`: `won / total_deals * 100`（商談のうち成約した割合）
 - `avg_order_value`: 成約商談の平均金額
-- `gross_margin`: 粗利率（現時点では `0.0` プレースホルダー）
+- `gross_margin`: 粗利額（lead → deal → order → order_financials で計算。全コスト列合算）
 - `initiative IN ('inbound', 'outbound')` 以外のリードは集計除外
 
 ---
