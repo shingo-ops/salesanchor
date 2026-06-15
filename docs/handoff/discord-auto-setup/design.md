@@ -295,6 +295,7 @@ Sales Anchor Staff ロールの作成と `staff_role_id` 保存はMVP対象。
 ## 関連リンク
 
 - `docs/handoff/discord-auto-setup/recon.md` — 本設計の前提コード実証
+- `docs/handoff/discord-auto-setup/auto-setup-failure-recon.md` — VPS実機確認・Cause E バグ特定（2026-06-14）
 - `docs/runbooks/discord-role-order-guide.md` — Botロール順設定ガイド
 - `docs/adr/ADR-091-discord-bot-scope-definition.md:172-174` — 拡張する「対象外」定義
 - `backend/app/services/discord_role_sync.py:82` — `_get_or_create_role()` の実装参考
