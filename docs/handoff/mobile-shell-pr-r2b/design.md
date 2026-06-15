@@ -5,7 +5,7 @@
 - recon: docs/handoff/mobile-shell-pr-r2b/recon.md
 - PR-R2 evidence: docs/handoff/mobile-shell-pr-r2/design.md
 - PR-R2-A evidence: docs/handoff/mobile-shell-pr-r2a/design.md
-- ADR: ADR-067-design-token-enforcement.md / ADR-027-ui-internationalization.md / ADR-022.md
+- ADR: ADR-137-adaptive-shell-architecture.md / ADR-067-design-token-enforcement.md / ADR-027-ui-internationalization.md / ADR-022.md
 
 ---
 
@@ -64,15 +64,18 @@ MobileShell
 │   ├── HamburgerButton (button.mobile-topbar-hamburger, aria-controls="mobile-drawer")
 │   ├── PageTitle (span.mobile-topbar-title — usePageTitle() の戻り値)
 │   └── AvatarButton (button.mobile-topbar-avatar — in-flow、position:fixed ではない)
-├── MobileDrawer (div.mobile-drawer — position:fixed, z-index: var(--z-sidebar)=200)
+├── MobileDrawerBackdrop (div.mobile-drawer-backdrop — position:fixed, z-index: var(--z-sidebar)=200)
+├── MobileDrawer (div.mobile-drawer — position:fixed, z-index: var(--z-sidebar-overlay)=210 ★Backdropより前面★)
 │   └── NavItemList variant="mobile" items={resolvedItems} onNavClick={closeDrawer}
-├── MobileDrawerBackdrop (div.mobile-drawer-backdrop — position:fixed, z-index: var(--z-sidebar-overlay)=210)
 └── div.mobile-content (flex:1, overflow-y:auto)
     └── <Outlet />
 ```
 
 注意:
-- MobileDrawerBackdrop の z-index は `--z-sidebar-overlay: 210`（`--z-backdrop: 298` は user-drawer 専用・流用禁止）。
+- **z-index 前後関係（重要）**: MobileDrawer(210) > MobileDrawerBackdrop(200) > コンテンツ。Backdrop が Drawer を覆うとクリック不能になるため、必ず Drawer を Backdrop より前面に置く。
+  - MobileDrawer: `z-index: var(--z-sidebar-overlay)=210`（Backdrop より前面）
+  - MobileDrawerBackdrop: `z-index: var(--z-sidebar)=200`（コンテンツより前面、Drawer より背面）
+  - `--z-backdrop: 298` は user-drawer backdrop 専用・流用禁止
 - AvatarButton は in-flow（`position: fixed` ではない）。MobileTopBar の flex row の右端に配置。
 - MobileShell は PR-R2-B 段階では App.tsx から条件レンダリングされない（単独ファイルとして存在するのみ）。App.tsx の切り替えは PR-R2-C。
 
@@ -165,11 +168,19 @@ AvatarButton click → `setUserDrawerOpen(true)` でドロワーを開く。
   /* 色・余白は token 参照 */
 }
 
-/* MobileDrawer: 左からスライドイン */
+/* MobileDrawerBackdrop: コンテンツより前面、Drawer より背面 */
+.mobile-drawer-backdrop {
+  position: fixed; /* fixed-ok: Layout-level overlay */
+  inset: 0;
+  z-index: var(--z-sidebar); /* 200 — Drawer(210) より背面・user-drawer backdrop(298) と混同禁止 */
+  background: var(--overlay-bg);
+}
+
+/* MobileDrawer: 左からスライドイン。Backdrop(200) より必ず前面 */
 .mobile-drawer {
   position: fixed; /* fixed-ok: Layout-level overlay */
   inset: 0 auto 0 0;
-  z-index: var(--z-sidebar); /* 200 */
+  z-index: var(--z-sidebar-overlay); /* 210 ★Backdrop(200)より前面★ — クリック不能バグ防止 */
   width: var(--sidebar-width-expanded, 240px);
   transform: translateX(-100%);
   transition: transform var(--transition-sidebar);
@@ -178,14 +189,6 @@ AvatarButton click → `setUserDrawerOpen(true)` でドロワーを開く。
 
 .mobile-drawer--open {
   transform: translateX(0);
-}
-
-/* MobileDrawerBackdrop */
-.mobile-drawer-backdrop {
-  position: fixed; /* fixed-ok: Layout-level overlay */
-  inset: 0;
-  z-index: var(--z-sidebar-overlay); /* 210 — user-drawer backdrop(298) と混同禁止 */
-  background: var(--overlay-bg);
 }
 
 /* mobile-content: Outlet 表示エリア */
