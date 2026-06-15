@@ -130,8 +130,68 @@ Member
 
 ---
 
+---
+
+## Bot 権限チェックリスト
+
+Developer Portal の Bot Permissions および Discord サーバーの "Sales Anchor" ロールに付与すべき権限の一覧。
+権限の意図は `docs/adr/ADR-091-discord-bot-scope-definition.md` の「Bot 権限定義」セクションを参照。
+
+### チェックする権限（必須）
+
+Developer Portal（`https://discord.com/developers/applications` → 対象アプリ → Bot）と
+Discord サーバーの "Sales Anchor" ロール、両方に設定する。
+
+| # | 権限（英語） | 権限（日本語） |
+|---|---|---|
+| ☐ | Manage Roles | ロールの管理 |
+| ☐ | Manage Channels | チャンネルの管理 |
+| ☐ | View Channels | チャンネルを表示 |
+| ☐ | Send Messages | メッセージを送る |
+| ☐ | Read Message History | メッセージ履歴を読む |
+| ☐ | Kick Members | メンバーをキック |
+| ☐ | Ban Members | メンバーをBAN |
+
+> **View Channels が特に重要**: Bot が対象カテゴリ・チャンネルを見えない状態だと、
+> auto-setup で作成したチャンネルの削除・操作時に `403 Missing Access (50001)` が発生する。
+
+### チェックしてよい権限（将来機能・任意）
+
+実装前に別途 ADR・PO 承認が必要。現時点では API 呼び出しが存在しないため動作に影響しない。
+
+| # | 権限（英語） | 権限（日本語） | 注意 |
+|---|---|---|---|
+| ☐ | Manage Webhooks | ウェブフックを管理 | 実装時は ADR 起案必要 |
+| ☐ | Manage Messages | メッセージを管理 | **実装時は監査ログ・確認画面・権限制御を必須とする** |
+| ☐ | Embed Links | リンクを埋め込み | |
+| ☐ | Attach Files | ファイルを添付 | |
+| ☐ | Add Reactions | リアクションを付ける | |
+
+### チェックしない権限
+
+| 権限（英語） | 権限（日本語） | 理由 |
+|---|---|---|
+| ✗ Administrator | 管理者 | 最小権限原則違反・チャンネル権限上書きをバイパスしてしまう |
+| ✗ Manage Guild | サーバー管理 | Bot 業務範囲外 |
+| ✗ Create Public/Private Threads | スレッド作成系 | ADR-091 でスレッド機能不使用と定義済み |
+| ✗ Connect / Speak | 音声系 | Bot 業務範囲外 |
+
+---
+
+## auto-setup 実行前チェック
+
+`/admin/discord-config` → 自動セットアップ を実行する前に確認する:
+
+- [ ] 上記「チェックする権限（必須）」がすべて付与されている
+- [ ] "Sales Anchor" ロールが `@everyone` より上位にある（本ガイドの Step 1〜5 参照）
+- [ ] 旧セットアップ失敗分の "Sales Anchor" カテゴリが Discord サーバーに残っていない
+  - 残っている場合は Discord サーバー設定 → チャンネルから手動削除してから実行する
+  - Bot は `@everyone deny VIEW_CHANNEL` が設定されたカテゴリを削除できないため、必ず**手動**で削除する
+
+---
+
 ## 関連ドキュメント
 
 - [discord-gateway-operations.md](discord-gateway-operations.md) — Gateway 運用・DM受信箱トラブルシュート
-- [ADR-091](../adr/ADR-091-discord-bot-scope-definition.md) — Discord Bot 担当業務スコープ定義
+- [ADR-091](../adr/ADR-091-discord-bot-scope-definition.md) — Discord Bot 担当業務スコープ定義・権限意図の正本
 - Discord 公式: ロール管理 — <https://support.discord.com/hc/ja/articles/214836687>

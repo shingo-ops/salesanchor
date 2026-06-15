@@ -6,7 +6,7 @@ Accepted
 
 ## Date
 
-2026-06-02（起案） / 2026-06-03（実装完了・記録更新）
+2026-06-02（起案） / 2026-06-03（実装完了・記録更新） / 2026-06-16（権限定義追記）
 
 ## Context
 
@@ -45,6 +45,47 @@ Discord Bot の担当業務を上記 7 項目と定義する。
   - 理由: 顧客（発注者）が Discord を直接操作するため、スレッドは手順が増えて混乱を招く
   - 代替: チャンネルに直接書くだけ。受注ごとの整理は Sales Anchor アプリ側で行う
 - **顧客は Discord を直接操作、担当者は Sales Anchor アプリで完結**
+
+---
+
+## Bot 権限定義（Developer Portal / サーバーロール）
+
+Developer Portal の Bot Permissions および Discord サーバーの "Sales Anchor" ロールに付与すべき権限の正本。
+運用手順は `docs/runbooks/discord-role-order-guide.md` を参照。
+
+### 必須・既存実装あり
+
+| 権限（英語） | 権限（日本語） | 意図 |
+|---|---|---|
+| Manage Roles | ロールの管理 | auto-setup で Sales Anchor Staff / Partner / Member ロールを作成・利用するため |
+| Manage Channels | チャンネルの管理 | カテゴリ作成・チャンネル作成・権限上書き設定に必要。Discord ではカテゴリもチャンネル種別として扱われる |
+| View Channels | チャンネルを表示 | Bot が対象カテゴリ・チャンネルを見えないと作成後の操作や削除ができないため |
+| Send Messages | メッセージを送る | ticket-start チャンネルにチケット開始ボタンを投稿するため |
+| Read Message History | メッセージ履歴を読む | 既存チャンネル確認・運用確認に必要 |
+| Kick Members | メンバーをキック | 顧客削除時に Discord サーバーからも削除する既存 API（`discord_remove.py`）があるため |
+| Ban Members | メンバーをBAN | 悪質顧客・スパムをアプリ側から BAN する既存 API があるため |
+
+### 将来機能として許容
+
+実装前に別途 ADR・PO 承認が必要。現時点では Developer Portal のチェックを入れてよいが、
+API 呼び出し実装は承認後に行うこと。
+
+| 権限（英語） | 権限（日本語） | 意図・注意 |
+|---|---|---|
+| Manage Webhooks | ウェブフックを管理 | 営業担当・スタッフがアプリ側で Webhook 設定できるようにする構想のため |
+| Manage Messages | メッセージを管理 | アプリ側から Discord メッセージ削除を行う構想のため。**強い権限のため、実装時は監査ログ・確認画面・権限制御を必須とする** |
+| Embed Links | リンクを埋め込み | 追跡番号 URL・請求書リンク等のプレビュー表示に必要 |
+| Attach Files | ファイルを添付 | 請求書 PDF・写真共有を Bot 経由で行う構想のため |
+| Add Reactions | リアクションを付ける | アプリ側リアクションを Discord へ同期する構想のため |
+
+### チェックしない権限
+
+| 権限（英語） | 権限（日本語） | 理由 |
+|---|---|---|
+| Administrator | 管理者 | 強すぎるため不要。チャンネル権限上書きをバイパスするため最小権限原則に反する |
+| Manage Guild | サーバー管理 | 現状の Bot 業務範囲外 |
+| スレッド系権限 | （Create Threads 等） | ADR-091 で「スレッド機能は使わない」と定義済み |
+| 音声系権限 | （Connect, Speak 等） | 現状の Bot 業務範囲外 |
 
 ---
 
@@ -188,5 +229,7 @@ GET API で `staff` テーブルを JOIN して接続者名を返す。
 - ADR-072: write endpoint の `reset_tenant_context()` 必須ルール
 - `backend/app/routers/discord_oauth.py` — Bot Invite OAuth2 フロー
 - `backend/app/routers/discord_guild_config.py` — Guild 設定 CRUD + 切断
+- `backend/app/routers/discord_auto_setup.py` — auto-setup（カテゴリ・チャンネル自動作成）
 - `frontend/src/pages/channels/ChannelsPage.tsx` — Channels ページ UI
+- `docs/runbooks/discord-role-order-guide.md` — Bot 権限設定の実際のチェックリスト手順
 - memory: `project_discord_bot_kgi_kpi.md`
