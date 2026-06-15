@@ -190,6 +190,19 @@ Discord サーバーの "Sales Anchor" ロール、両方に設定する。
 
 ---
 
+## Developer Portal 未使用項目（触らなくてよい項目）
+
+以下の項目は Developer Portal に存在するが、現時点では操作・設定不要。
+詳細は `docs/adr/ADR-091-discord-bot-scope-definition.md` の「Developer Portal 未使用項目」セクションを参照。
+
+| タブ / 項目 | 現状 | 将来対応 |
+|---|---|---|
+| Webhooks | 未使用。Bot 接続は OAuth2 フロー経由のため不要 | Webhook イベント受信が必要になった時点で ADR 起案 |
+| Application Testers | 未使用。自社サーバーで検証中のため不要 | 複数テナントへのテスト配布フェーズで追加検討 |
+| App Verification | 未申請。100 サーバー未満のため不要 | 100 サーバー展開前に申請（利用規約・PP URL・本人確認が必要） |
+
+---
+
 ## 関連ドキュメント
 
 - [discord-gateway-operations.md](discord-gateway-operations.md) — Gateway 運用・DM受信箱トラブルシュート

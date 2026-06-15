@@ -89,6 +89,41 @@ API 呼び出し実装は承認後に行うこと。
 
 ---
 
+## Developer Portal 未使用項目（2026-06-16 現在）
+
+Developer Portal に存在する以下の項目は、現時点では使用しない。
+将来対応が必要になった時点で別途 ADR を起案する。
+
+### Webhooks
+
+**現状: 未使用**
+
+- Sales Anchor の Bot 接続フローは `/discord/oauth/start` → `/discord/oauth/callback` の OAuth2 フローを使用する
+- Discord Webhook Events（Discord → Sales Anchor への公開エンドポイント）は現時点で用意していない
+- Developer Portal の "Webhooks" タブ（Bot がサーバー内に Webhook を作成するための設定画面）も現時点では使用しない
+- **注意**: 「将来機能として許容」に記載の Manage Webhooks 権限（Bot がサーバー内 Webhook を作成・管理する）は Developer Portal の Webhooks タブとは**別物**である
+
+### Application Testers
+
+**現状: 未使用**
+
+- 現在は自社 Discord サーバーで Bot 連携を検証する段階であり、公開前アプリを複数 Discord ユーザーにテスト配布するフェーズではない
+- 将来、テナント担当者が Bot 招待フローをテストする段階になった場合に追加を検討する
+
+### App Verification
+
+**現状: 未申請**
+
+- 100 サーバーを超えて Bot を展開する前に Discord から求められる審査
+- 審査通過には以下が必要になる:
+  - 利用規約 URL
+  - プライバシーポリシー URL
+  - チームオーナーの本人確認
+- 現時点の auto-setup 動作確認・自社テナント運用には不要
+- 将来 100 サーバー展開が見えた段階で別途対応する
+
+---
+
 ## 実装記録（2026-06-02〜06-03）
 
 ### Bot 招待フロー（OAuth2）の技術的知見
