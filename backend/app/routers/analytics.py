@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -909,6 +909,30 @@ def _month_elapsed_pct(today: date) -> int:
     return min(100, int(today.day / days_in_month * 100))
 
 
+def _parse_month(month: str | None, today: date) -> tuple[int, int]:
+    """month クエリパラメータを (year, month_num) に変換する。
+    省略時は今月。形式が不正なら HTTPException 422 を上げる。
+    """
+    if month is None:
+        return today.year, today.month
+    parts = month.split("-")
+    if len(parts) != 2:
+        raise HTTPException(status_code=422, detail="month は YYYY-MM 形式で指定してください")
+    try:
+        y, m = int(parts[0]), int(parts[1])
+    except ValueError:
+        raise HTTPException(status_code=422, detail="month は YYYY-MM 形式で指定してください")
+    if not (1 <= m <= 12):
+        raise HTTPException(status_code=422, detail="month の月は 1〜12 の範囲で指定してください")
+    return y, m
+
+
+def _validate_scope(scope: str) -> None:
+    """scope が team / mine 以外なら HTTPException 422 を上げる。"""
+    if scope not in ("team", "mine"):
+        raise HTTPException(status_code=422, detail="scope は team または mine で指定してください")
+
+
 @router.get(
     "/analytics/funnel",
     response_model=FunnelResponse,
@@ -927,15 +951,9 @@ async def funnel_stages(
     api-contract.md section 2 に準拠。
     目標値は goals テーブルから取得（未設定時は 0）。
     """
+    _validate_scope(scope)
     today = date.today()
-    if month:
-        parts = month.split("-")
-        target_year = int(parts[0])
-        target_month = int(parts[1])
-    else:
-        target_year = today.year
-        target_month = today.month
-
+    target_year, target_month = _parse_month(month, today)
     month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
     elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
@@ -987,15 +1005,15 @@ async def funnel_stages(
     active_count = int(ar.get("cnt", 0) or 0)
     active_amount = float(ar.get("amount", 0) or 0)
 
-    # 成約/失注（updated_at を closed_at 代替として使用）
-    # TODO: PR1 マージ後に closed_at に変更
+    # 成約/失注（closed_at 基準・closed_at IS NULL = 集計対象外）
     closed_result = await db.execute(
         text(f"""
             SELECT
                 SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) AS won,
                 SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) AS lost
             FROM deals
-            WHERE updated_at >= :start AND updated_at < :end
+            WHERE closed_at >= :start AND closed_at < :end
+              AND closed_at IS NOT NULL
               AND status IN ('won', 'lost')
             {assign_filter_deals}
         """),
@@ -1032,13 +1050,14 @@ async def funnel_stages(
 
     # 残り目標に対する進行中商談カバー率
     revenue_target = goals.get("revenue", 0)
-    # 既に成約分の売上（当月 won の amount 合計）
+    # 既に成約分の売上（当月 won の amount 合計・closed_at 基準）
     won_amount_result = await db.execute(
         text(f"""
             SELECT COALESCE(SUM(amount), 0) AS won_amount
             FROM deals
             WHERE status = 'won'
-              AND updated_at >= :start AND updated_at < :end
+              AND closed_at >= :start AND closed_at < :end
+              AND closed_at IS NOT NULL
             {assign_filter_deals}
         """),
         base_params,
@@ -1107,6 +1126,7 @@ async def follow_ups_summary(
     - no_repeat_after_first: 初回後未フォロー（初回発注から45日以内に2回目なし）
     - won_no_order: 成約後未発注（成約後30日超で発注なし）
     """
+    _validate_scope(scope)
     today = date.today()
     items: list[FollowUpCustomer] = []
     # 境界日を Python 側で計算（SQLite / PostgreSQL 両互換）
@@ -1184,28 +1204,28 @@ async def follow_ups_summary(
             assignee=row["assignee"],
         ))
 
-    # ── 3. won_no_order: 成約後30日超で発注なし ──
-    # TODO: PR1 マージ後に closed_at に変更（現在は updated_at を代替使用）
+    # ── 3. won_no_order: 成約後30日超で発注なし（closed_at 基準）──
     won_no_order_result = await db.execute(
         text(f"""
             SELECT
                 d.company_id,
                 c.name,
-                d.updated_at AS closed_at,
+                d.closed_at,
                 u.username AS assignee
             FROM deals d
             JOIN companies c ON c.id = d.company_id
             LEFT JOIN users u ON u.id = d.assigned_to
             WHERE d.status = 'won'
               AND d.company_id IS NOT NULL
-              AND d.updated_at < :threshold
+              AND d.closed_at IS NOT NULL
+              AND d.closed_at < :threshold
               AND NOT EXISTS (
                   SELECT 1 FROM orders o
                   WHERE o.company_id = d.company_id
-                    AND o.created_at >= d.updated_at
+                    AND o.created_at >= d.closed_at
               )
             {deal_assign_filter}
-            ORDER BY d.updated_at ASC
+            ORDER BY d.closed_at ASC
         """),
         {"threshold": threshold_30, **scope_params},
     )
@@ -1223,3 +1243,461 @@ async def follow_ups_summary(
         ))
 
     return FollowUpsResponse(items=items)
+
+
+# ─────────────────────────────────────────────
+# /analytics/revenue-summary
+# ─────────────────────────────────────────────
+
+class RevenueBlock(BaseModel):
+    target: float
+    actual: float
+    pace: str  # "ahead" | "on_track" | "behind"
+
+
+class RevenueSplit(BaseModel):
+    new: float
+    repeat: float
+
+
+class NewCustomersBlock(BaseModel):
+    target: int
+    actual: int
+
+
+class GrossMarginBlock(BaseModel):
+    amount: float
+    uncosted_orders: int
+
+
+class RevenueSummaryResponse(BaseModel):
+    revenue: RevenueBlock
+    split: RevenueSplit
+    new_customers: NewCustomersBlock
+    active_existing_customers: int
+    gross_margin: GrossMarginBlock
+
+
+def _pace_label(actual: float, target: float, elapsed_pct: int) -> str:
+    """目標達成ペース判定。
+
+    achievement_pct = actual / target * 100
+    ahead    : achievement_pct > elapsed_pct + 10
+    on_track : abs(achievement_pct - elapsed_pct) <= 10
+    behind   : achievement_pct < elapsed_pct - 10
+    target <= 0: actual > 0 → ahead, actual == 0 → on_track
+    """
+    if target <= 0:
+        return "ahead" if actual > 0 else "on_track"
+    achievement_pct = actual / target * 100
+    if achievement_pct > elapsed_pct + 10:
+        return "ahead"
+    if achievement_pct < elapsed_pct - 10:
+        return "behind"
+    return "on_track"
+
+
+@router.get(
+    "/analytics/revenue-summary",
+    response_model=RevenueSummaryResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def revenue_summary(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    月次売上サマリー。api-contract.md section 3 に準拠。
+    - target: goals.revenue 目標
+    - actual: 当月 closed_at の won deals amount 合計
+    - pace: elapsed_pct 基準の目標按分に対する達成率（%）
+    - split.new: 新規顧客（当月初回発注）の売上合計
+    - split.repeat: リピート顧客の売上合計
+    - new_customers: 当月新規顧客数
+    - active_existing_customers: 当月リピート購買のユニーク既存顧客数
+    - gross_margin: (revenue - purchase_cost) / revenue * 100（costed orders のみ）
+    - uncosted_orders: purchase_cost が NULL の注文数
+    """
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+    elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
+
+    # scope で orders を絞る: mine は deal 経由で assigned_to
+    if scope == "mine":
+        order_scope_join = "JOIN deals od ON od.id = o.deal_id AND od.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    # ── 目標値 ──
+    if scope == "mine":
+        goal_filter = "user_id = :goal_owner AND team_id IS NULL"
+        goal_extra: dict = {"goal_owner": current_user.id}
+    else:
+        goal_filter = "team_id IS NOT NULL AND user_id IS NULL"
+        goal_extra = {}
+    goal_result = await db.execute(
+        text(f"""
+            SELECT kpi_type, COALESCE(target_value, 0) AS target_value
+            FROM goals
+            WHERE {goal_filter}
+              AND period_type = 'monthly'
+              AND period_year = :year
+              AND period_num = :month_num
+        """),
+        {"year": target_year, "month_num": target_month, **goal_extra},
+    )
+    goals: dict[str, float] = {
+        row["kpi_type"]: float(row["target_value"]) for row in goal_result.mappings().all()
+    }
+    revenue_target = goals.get("revenue", 0.0)
+
+    # ── 実績: 当月 closed_at won の orders.amount 合計（scope 適用）──
+    actual_result = await db.execute(
+        text(f"""
+            SELECT COALESCE(SUM(o.total_amount), 0) AS actual
+            FROM orders o
+            {order_scope_join}
+            WHERE o.created_at >= :start AND o.created_at < :end
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    actual = float((actual_result.mappings().first() or {}).get("actual", 0) or 0)
+
+    # ── 新規 / リピート 分類 ──
+    # 新規顧客: 当月に初めて発注した company（当月以前に orders なし）
+    # order_scope_join は mine の場合のみ適用
+    split_result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                SUM(o.total_amount) AS total_amount,
+                MIN(o.created_at) AS first_ever
+            FROM orders o
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start AND o.created_at < :end
+            GROUP BY o.company_id
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    split_rows = split_result.mappings().all()
+
+    new_revenue = 0.0
+    repeat_revenue = 0.0
+    new_customer_ids: set[int] = set()
+    repeat_customer_ids: set[int] = set()
+
+    for row in split_rows:
+        company_id = row["company_id"]
+        amt = float(row["total_amount"] or 0)
+        # 当月以前に発注があるか確認
+        prior_result = await db.execute(
+            text("SELECT COUNT(*) AS cnt FROM orders WHERE company_id = :cid AND created_at < :start"),
+            {"cid": company_id, "start": start_utc},
+        )
+        prior_cnt = int((prior_result.mappings().first() or {}).get("cnt", 0) or 0)
+        if prior_cnt == 0:
+            new_revenue += amt
+            new_customer_ids.add(company_id)
+        else:
+            repeat_revenue += amt
+            repeat_customer_ids.add(company_id)
+
+    # ── 粗利計算（purchase_cost IS NOT NULL の orders のみ・全コスト列を合算）──
+    # cost_total = purchase_cost + purchase_shipping + paypal_fee + wise_fee
+    #            + exchange_fee + outsource_fee + packing_fee + ad_cost
+    #            + return_fee + refund_amount
+    margin_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(o.id) AS total_orders,
+                SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN 1 ELSE 0 END) AS costed_cnt,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN o.total_amount ELSE 0 END), 0) AS costed_revenue,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN (
+                    COALESCE(f.purchase_cost, 0)
+                    + COALESCE(f.purchase_shipping, 0)
+                    + COALESCE(f.paypal_fee, 0)
+                    + COALESCE(f.wise_fee, 0)
+                    + COALESCE(f.exchange_fee, 0)
+                    + COALESCE(f.outsource_fee, 0)
+                    + COALESCE(f.packing_fee, 0)
+                    + COALESCE(f.ad_cost, 0)
+                    + COALESCE(f.return_fee, 0)
+                    + COALESCE(f.refund_amount, 0)
+                ) ELSE 0 END), 0) AS total_cost
+            FROM orders o
+            {order_scope_join}
+            LEFT JOIN order_financials f ON f.order_id = o.id
+            WHERE o.created_at >= :start AND o.created_at < :end
+        """),
+        {"start": start_utc, "end": end_utc, **order_scope_params},
+    )
+    mr = margin_result.mappings().first() or {}
+    total_orders = int(mr.get("total_orders", 0) or 0)
+    costed_cnt = int(mr.get("costed_cnt", 0) or 0)
+    costed_revenue = float(mr.get("costed_revenue", 0) or 0)
+    total_cost = float(mr.get("total_cost", 0) or 0)
+    uncosted_orders = total_orders - costed_cnt
+    gross_amount = round(costed_revenue - total_cost, 2)
+
+    return RevenueSummaryResponse(
+        revenue=RevenueBlock(
+            target=revenue_target,
+            actual=actual,
+            pace=_pace_label(actual, revenue_target, elapsed_pct),
+        ),
+        split=RevenueSplit(new=new_revenue, repeat=repeat_revenue),
+        new_customers=NewCustomersBlock(target=0, actual=len(new_customer_ids)),
+        active_existing_customers=len(repeat_customer_ids),
+        gross_margin=GrossMarginBlock(amount=gross_amount, uncosted_orders=uncosted_orders),
+    )
+
+
+# ─────────────────────────────────────────────
+# /analytics/channels
+# ─────────────────────────────────────────────
+
+class ChannelRow(BaseModel):
+    initiative: str   # "inbound" | "outbound"
+    channel: str
+    leads: int
+    conversion_rate: float
+    win_rate: float
+    avg_order_value: float
+    gross_margin: float
+
+
+class ChannelsResponse(BaseModel):
+    rows: list[ChannelRow]
+
+
+@router.get(
+    "/analytics/channels",
+    response_model=ChannelsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def channels_summary(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    チャネル別集計。api-contract.md section 4 に準拠。
+    initiative IN ('inbound','outbound') のみ返す（frontend が initiative_short キーを使用）。
+    """
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+
+    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    # initiative × channel_type でリード集計（inbound/outbound のみ）
+    result = await db.execute(
+        text(f"""
+            SELECT
+                l.initiative,
+                COALESCE(l.channel_type, 'unknown') AS channel,
+                COUNT(*) AS leads,
+                COUNT(l.converted_deal_id) AS converted,
+                COUNT(DISTINCT d.id) AS total_deals,
+                SUM(CASE WHEN d.status = 'won' THEN 1 ELSE 0 END) AS won,
+                COALESCE(
+                    AVG(CASE WHEN d.status = 'won' THEN d.amount ELSE NULL END),
+                    0
+                ) AS avg_order_value
+            FROM leads l
+            LEFT JOIN deals d ON d.id = l.converted_deal_id
+            WHERE l.created_at >= :start AND l.created_at < :end
+              AND l.initiative IN ('inbound', 'outbound')
+            {lead_assign}
+            GROUP BY l.initiative, COALESCE(l.channel_type, 'unknown')
+            ORDER BY l.initiative, COALESCE(l.channel_type, 'unknown')
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    rows_raw = result.mappings().all()
+
+    # ── 粗利: lead → deal → order → order_financials（二重カウント回避のため別クエリ）──
+    margin_result = await db.execute(
+        text(f"""
+            SELECT
+                COALESCE(l.initiative, '') AS initiative,
+                COALESCE(l.channel_type, 'unknown') AS channel,
+                COALESCE(SUM(CASE WHEN f.purchase_cost IS NOT NULL THEN (
+                    o.total_amount
+                    - COALESCE(f.purchase_cost, 0)
+                    - COALESCE(f.purchase_shipping, 0)
+                    - COALESCE(f.paypal_fee, 0)
+                    - COALESCE(f.wise_fee, 0)
+                    - COALESCE(f.exchange_fee, 0)
+                    - COALESCE(f.outsource_fee, 0)
+                    - COALESCE(f.packing_fee, 0)
+                    - COALESCE(f.ad_cost, 0)
+                    - COALESCE(f.return_fee, 0)
+                    - COALESCE(f.refund_amount, 0)
+                ) ELSE 0 END), 0.0) AS gross_margin_amount
+            FROM leads l
+            JOIN deals d ON d.id = l.converted_deal_id
+            JOIN orders o ON o.deal_id = d.id
+            LEFT JOIN order_financials f ON f.order_id = o.id
+            WHERE l.created_at >= :start AND l.created_at < :end
+              AND l.initiative IN ('inbound', 'outbound')
+            {lead_assign}
+            GROUP BY COALESCE(l.initiative, ''), COALESCE(l.channel_type, 'unknown')
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    margin_map: dict[tuple[str, str], float] = {
+        (row["initiative"], row["channel"]): float(row["gross_margin_amount"] or 0)
+        for row in margin_result.mappings().all()
+    }
+
+    rows: list[ChannelRow] = []
+    for row in rows_raw:
+        leads = int(row["leads"] or 0)
+        converted = int(row["converted"] or 0)
+        total_deals = int(row["total_deals"] or 0)
+        won = int(row["won"] or 0)
+        conversion_rate = round(converted / leads * 100, 1) if leads > 0 else 0.0
+        win_rate = round(won / total_deals * 100, 1) if total_deals > 0 else 0.0
+        ini = row["initiative"]
+        ch = row["channel"]
+        rows.append(ChannelRow(
+            initiative=ini,
+            channel=ch,
+            leads=leads,
+            conversion_rate=conversion_rate,
+            win_rate=win_rate,
+            avg_order_value=round(float(row["avg_order_value"] or 0), 2),
+            gross_margin=round(margin_map.get((ini, ch), 0.0), 2),
+        ))
+
+    return ChannelsResponse(rows=rows)
+
+
+# ─────────────────────────────────────────────
+# /analytics/reasons
+# ─────────────────────────────────────────────
+
+class ReasonItem(BaseModel):
+    label: str
+    primary_count: int
+    secondary_count: int
+
+
+class ReasonMemo(BaseModel):
+    deal_id: int
+    primary_label: str
+    memo: str
+    closed_at: str  # YYYY-MM-DD
+
+
+class ReasonsResponse(BaseModel):
+    reasons: list[ReasonItem]
+    memos: list[ReasonMemo]
+
+
+@router.get(
+    "/analytics/reasons",
+    response_model=ReasonsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def reasons_summary(
+    type: str | None = Query(default=None, description="won / lost でフィルタ。省略時は両方"),
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    成約/失注理由別集計。api-contract.md section 5 に準拠。
+
+    - reasons: ラベルごとに主因(is_primary=1) / 副因(is_primary=0) の件数
+    - memos: 主因ラベル・deal_id・一言メモ・closed_at（最新20件）
+    - type=won|lost: close_reasons.type で絞り込み
+    """
+    _validate_scope(scope)
+    if type is not None and type not in ("won", "lost"):
+        raise HTTPException(status_code=422, detail="type は won または lost で指定してください")
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+
+    deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+    type_filter = "AND cr.type = :rtype" if type is not None else ""
+    type_params: dict = {"rtype": type} if type is not None else {}
+
+    # ── 理由別 主因/副因 集計 ──
+    agg_result = await db.execute(
+        text(f"""
+            SELECT
+                cr.label,
+                SUM(CASE WHEN dcr.is_primary THEN 1 ELSE 0 END) AS primary_count,
+                SUM(CASE WHEN dcr.is_primary THEN 0 ELSE 1 END) AS secondary_count
+            FROM deal_close_reasons dcr
+            JOIN close_reasons cr ON cr.id = dcr.reason_id
+            JOIN deals d ON d.id = dcr.deal_id
+            WHERE d.closed_at >= :start AND d.closed_at < :end
+              AND d.closed_at IS NOT NULL
+            {type_filter}
+            {deal_assign}
+            GROUP BY cr.label
+            ORDER BY primary_count DESC
+        """),
+        {"start": start_utc, "end": end_utc, **type_params, **scope_params},
+    )
+    reasons: list[ReasonItem] = [
+        ReasonItem(
+            label=row["label"],
+            primary_count=int(row["primary_count"] or 0),
+            secondary_count=int(row["secondary_count"] or 0),
+        )
+        for row in agg_result.mappings().all()
+    ]
+
+    # ── メモ: 主因ラベル + deal_id + close_reason_memo + closed_at ──
+    memo_result = await db.execute(
+        text(f"""
+            SELECT
+                d.id AS deal_id,
+                cr.label AS primary_label,
+                d.close_reason_memo AS memo,
+                d.closed_at
+            FROM deals d
+            JOIN deal_close_reasons dcr ON dcr.deal_id = d.id AND dcr.is_primary
+            JOIN close_reasons cr ON cr.id = dcr.reason_id
+            WHERE d.closed_at >= :start AND d.closed_at < :end
+              AND d.closed_at IS NOT NULL
+              AND d.close_reason_memo IS NOT NULL
+              AND d.close_reason_memo != ''
+            {type_filter}
+            {deal_assign}
+            ORDER BY d.closed_at DESC
+            LIMIT 20
+        """),
+        {"start": start_utc, "end": end_utc, **type_params, **scope_params},
+    )
+    memos: list[ReasonMemo] = [
+        ReasonMemo(
+            deal_id=int(row["deal_id"]),
+            primary_label=row["primary_label"],
+            memo=row["memo"],
+            closed_at=str(row["closed_at"])[:10],
+        )
+        for row in memo_result.mappings().all()
+    ]
+
+    return ReasonsResponse(reasons=reasons, memos=memos)

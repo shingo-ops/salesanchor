@@ -293,8 +293,8 @@ class TestFollowUps:
         # 成約案件: 40日前に won（won_no_order に該当）
         won_date = str(date.today() - timedelta(days=40))
         await db_session.execute(text("""
-            INSERT INTO deals (tenant_id, company_id, contact_id, title, amount, status, updated_at, created_at)
-            VALUES (999, :co_id, :ct_id, 'WonDeal', 100000, 'won', :dt, :dt)
+            INSERT INTO deals (tenant_id, company_id, contact_id, title, amount, status, closed_at, updated_at, created_at)
+            VALUES (999, :co_id, :ct_id, 'WonDeal', 100000, 'won', :dt, :dt, :dt)
         """), {"co_id": co2_id, "ct_id": ct2_id, "dt": won_date})
         await db_session.commit()
 
@@ -339,3 +339,361 @@ class TestSummaryExtensions:
         assert "gross_profit" in data["orders"]
         assert "gross_profit_margin" in data["orders"]
         assert "cost_coverage_rate" in data["orders"]
+
+
+# ─────────────────────────────────────────────
+# revenue-summary EP テスト
+# ─────────────────────────────────────────────
+
+class TestRevenueSummary:
+    """GET /analytics/revenue-summary"""
+
+    async def test_revenue_summary_empty(self, client):
+        """データなしで 200 を返し、フロント契約形 (revenue/new_customers/gross_margin 入れ子) を確認"""
+        res = await client.get("/api/v1/analytics/revenue-summary")
+        assert res.status_code == 200
+        data = res.json()
+        # revenue ブロック
+        assert data["revenue"]["target"] == 0.0
+        assert data["revenue"]["actual"] == 0.0
+        assert data["revenue"]["pace"] in ("ahead", "on_track", "behind")
+        # split
+        assert data["split"]["new"] == 0.0
+        assert data["split"]["repeat"] == 0.0
+        # new_customers ブロック
+        assert data["new_customers"]["target"] == 0
+        assert data["new_customers"]["actual"] == 0
+        # active_existing_customers
+        assert data["active_existing_customers"] == 0
+        # gross_margin ブロック
+        assert data["gross_margin"]["amount"] == 0.0
+        assert data["gross_margin"]["uncosted_orders"] == 0
+
+    async def test_revenue_summary_with_data(self, client, db_session):
+        """注文データ投入時に revenue-summary が正しい値を返す"""
+        co = await client.post("/api/v1/companies", json={"name": "RevCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "RevContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]  # YYYY-MM
+
+        # 今月の注文を1件（新規顧客）
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (999, :co_id, :ct_id, 'REV-001', 200000, 'pending', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["revenue"]["actual"] == 200000.0
+        assert data["new_customers"]["actual"] == 1
+        assert data["new_customers"]["target"] == 0
+        assert data["active_existing_customers"] == 0
+        assert data["split"]["new"] == 200000.0
+        assert data["split"]["repeat"] == 0.0
+
+    async def test_revenue_summary_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/revenue-summary?scope=invalid")
+        assert res.status_code == 422
+
+    async def test_revenue_summary_with_gross_margin(self, client, db_session):
+        """purchase_cost あり注文で gross_margin が計算される"""
+        co = await client.post("/api/v1/companies", json={"name": "GrossCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "GrossContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # 注文を1件
+        await db_session.execute(text("""
+            INSERT INTO orders (id, tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (9901, 999, :co_id, :ct_id, 'GROSS-001', 100000, 'pending', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        # order_financials に purchase_cost を設定
+        await db_session.execute(text("""
+            INSERT INTO order_financials (order_id, tenant_id, revenue_amount, purchase_cost)
+            VALUES (9901, 999, 100000, 60000)
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        # gross_margin.amount = 収益 - 原価 = 100000 - 60000 = 40000
+        assert data["gross_margin"]["amount"] == 40000.0
+        assert data["gross_margin"]["uncosted_orders"] == 0
+
+    async def test_revenue_summary_all_cost_columns(self, client, db_session):
+        """purchase_cost 以外の費用列も全て gross_margin から差し引かれること"""
+        co = await client.post("/api/v1/companies", json={"name": "AllCostCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "AllCostContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        await db_session.execute(text("""
+            INSERT INTO orders (id, tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (9902, 999, :co_id, :ct_id, 'ALLCOST-001', 200000, 'pending', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        # purchase_cost=50000 + paypal_fee=5000 + wise_fee=3000 + ad_cost=10000 = 68000
+        await db_session.execute(text("""
+            INSERT INTO order_financials (
+                order_id, tenant_id, revenue_amount,
+                purchase_cost, purchase_shipping, paypal_fee, wise_fee,
+                exchange_fee, outsource_fee, packing_fee, ad_cost,
+                return_fee, refund_amount
+            ) VALUES (
+                9902, 999, 200000,
+                50000, 0, 5000, 3000,
+                0, 0, 0, 10000,
+                0, 0
+            )
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        # gross_margin.amount = 200000 - (50000+5000+3000+10000) = 132000
+        assert data["gross_margin"]["amount"] == 132000.0
+
+    async def test_revenue_summary_pace_logic(self, client, db_session):
+        """pace が achievement_pct と elapsed_pct の差 ±10 で判定されること"""
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # revenue 目標 1,000,000 を設定（team 目標）
+        await db_session.execute(text("""
+            INSERT INTO goals (user_id, team_id, period_type, period_year, period_num, kpi_type, target_value, created_by)
+            VALUES (NULL, 1, 'monthly', :y, :m, 'revenue', 1000000, 999)
+        """), {"y": today.year, "m": today.month})
+        await db_session.commit()
+
+        # actual=0 → achievement_pct=0。elapsed_pct が >10 なら behind、else on_track
+        res = await client.get(f"/api/v1/analytics/revenue-summary?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["revenue"]["pace"] in ("ahead", "on_track", "behind")
+
+
+# ─────────────────────────────────────────────
+# channels EP テスト
+# ─────────────────────────────────────────────
+
+class TestChannels:
+    """GET /analytics/channels"""
+
+    async def test_channels_empty(self, client):
+        """データなしで 200 を返し、rows が空リスト"""
+        res = await client.get("/api/v1/analytics/channels")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["rows"] == []
+
+    async def test_channels_with_data(self, client, db_session):
+        """initiative + channel_type 付きリードで rows が返る"""
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # initiative='inbound', channel_type='instagram' のリードを2件
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, created_at)
+            VALUES (999, 'InstaLead1', 'instagram', 'inbound', 'lead', :dt),
+                   (999, 'InstaLead2', 'instagram', 'inbound', 'lead', :dt)
+        """), {"dt": str(today)})
+        # initiative='outbound', channel_type='cold_call' のリードを1件
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, created_at)
+            VALUES (999, 'ColdLead1', 'cold_call', 'outbound', 'lead', :dt)
+        """), {"dt": str(today)})
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/channels?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        rows_by_channel = {r["channel"]: r for r in data["rows"]}
+
+        # フロント契約フィールドの存在確認
+        assert "instagram" in rows_by_channel
+        insta = rows_by_channel["instagram"]
+        assert insta["initiative"] == "inbound"
+        assert insta["leads"] == 2
+        assert "conversion_rate" in insta
+        assert "win_rate" in insta
+        assert "avg_order_value" in insta
+        assert "gross_margin" in insta
+
+        assert "cold_call" in rows_by_channel
+        cold = rows_by_channel["cold_call"]
+        assert cold["initiative"] == "outbound"
+        assert cold["leads"] == 1
+
+    async def test_channels_gross_margin_calculated(self, client, db_session):
+        """channels.gross_margin が 0.0 固定でなく order_financials から実計算されること"""
+        co = await client.post("/api/v1/companies", json={"name": "ChGrossCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "ChGrossContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # inbound/instagram リードを作成し、deal に変換し、order + order_financials を紐付ける
+        # Lead → deal (converted_deal_id) → order (deal_id) → order_financials
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9100, 999, :co_id, :ct_id, 'ChGrossDeal', 500000, 'won', :dt, :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status,
+                               converted_deal_id, created_at)
+            VALUES (999, 'ChGrossLead', 'instagram', 'inbound', 'converted', 9100, :dt)
+        """), {"dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO orders (id, tenant_id, company_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES (9910, 999, :co_id, 9100, 'CHGROSS-001', 300000, 'pending', :dt)
+        """), {"co_id": co_id, "dt": str(today)})
+        # purchase_cost=100000, ad_cost=20000 → cost_total=120000 → gross=300000-120000=180000
+        await db_session.execute(text("""
+            INSERT INTO order_financials (order_id, tenant_id, revenue_amount, purchase_cost, ad_cost)
+            VALUES (9910, 999, 300000, 100000, 20000)
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/channels?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+        rows_by_channel = {r["channel"]: r for r in data["rows"]}
+        assert "instagram" in rows_by_channel
+        # gross_margin は 0.0 固定ではなく実計算値（180000）であること
+        assert rows_by_channel["instagram"]["gross_margin"] == 180000.0
+
+    async def test_channels_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/channels?scope=bad")
+        assert res.status_code == 422
+
+
+# ─────────────────────────────────────────────
+# reasons EP テスト
+# ─────────────────────────────────────────────
+
+class TestReasons:
+    """GET /analytics/reasons"""
+
+    async def test_reasons_empty(self, client):
+        """当月の deal_close_reasons なしで 200 を返し、reasons/memos が空リスト"""
+        res = await client.get("/api/v1/analytics/reasons")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["reasons"] == []
+        assert data["memos"] == []
+
+    async def test_reasons_with_data(self, client, db_session):
+        """成約理由付き商談で reasons と memos が返る"""
+        co = await client.post("/api/v1/companies", json={"name": "ReasonCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "ReasonContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # won deal with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
+            VALUES (9001, 999, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        # is_primary=1: 主因
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9001, 1, 1)
+        """))
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/reasons?month={this_month}")
+        assert res.status_code == 200
+        data = res.json()
+
+        # reasons: label / primary_count / secondary_count
+        assert len(data["reasons"]) >= 1
+        first = data["reasons"][0]
+        assert first["label"] == "在庫・品揃え"
+        assert first["primary_count"] == 1
+        assert first["secondary_count"] == 0
+
+        # memos: deal_id / primary_label / memo / closed_at
+        assert len(data["memos"]) >= 1
+        memo = data["memos"][0]
+        assert memo["deal_id"] == 9001
+        assert memo["primary_label"] == "在庫・品揃え"
+        assert memo["memo"] == "品揃えが豊富でした"
+        assert memo["closed_at"] == str(today)
+
+    async def test_reasons_type_filter(self, client, db_session):
+        """?type=won / ?type=lost で close_reasons.type による絞り込みが効く"""
+        co = await client.post("/api/v1/companies", json={"name": "FilterCo"})
+        co_id = co.json()["id"]
+        ct = await client.post("/api/v1/contacts", json={
+            "company_id": co_id, "display_name": "FilterContact",
+        })
+        ct_id = ct.json()["id"]
+
+        today = date.today()
+        this_month = str(today)[:7]
+
+        # won deal — close_reason ID=1 ('在庫・品揃え', type='won')
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9011, 999, :co_id, :ct_id, 'WonDeal', 50000, 'won', :dt, :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9011, 1, 1)
+        """))
+
+        # lost deal — close_reason ID=4 ('価格が合わなかった', type='lost')
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9012, 999, :co_id, :ct_id, 'LostDeal', 50000, 'lost', :dt, :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9012, 4, 1)
+        """))
+        await db_session.commit()
+
+        # ?type=won — '在庫・品揃え' のみ
+        res_won = await client.get(f"/api/v1/analytics/reasons?month={this_month}&type=won")
+        assert res_won.status_code == 200
+        labels_won = [r["label"] for r in res_won.json()["reasons"]]
+        assert "在庫・品揃え" in labels_won
+        assert "価格が合わなかった" not in labels_won
+
+        # ?type=lost — '価格が合わなかった' のみ
+        res_lost = await client.get(f"/api/v1/analytics/reasons?month={this_month}&type=lost")
+        assert res_lost.status_code == 200
+        labels_lost = [r["label"] for r in res_lost.json()["reasons"]]
+        assert "価格が合わなかった" in labels_lost
+        assert "在庫・品揃え" not in labels_lost
+
+    async def test_reasons_invalid_scope(self, client):
+        """scope が不正な場合は 422"""
+        res = await client.get("/api/v1/analytics/reasons?scope=xxx")
+        assert res.status_code == 422
