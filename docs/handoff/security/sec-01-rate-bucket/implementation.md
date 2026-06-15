@@ -3,7 +3,8 @@
 > Issue: #2179  
 > Recon: `docs/handoff/security/sec-01-rate-bucket/recon.md`  
 > Design: `docs/handoff/security/sec-01-rate-bucket/design.md`  
-> 実装日: 2026-06-14
+> 実装日: 2026-06-14  
+> Clean branch recovery: 2026-06-15
 
 ---
 
@@ -50,7 +51,17 @@
 
 ---
 
-## 4. 検証方法
+## 4. Secret Scan 対策
+
+履歴内のJWT形状テスト文字列を避けるため、clean branchとして作り直した。
+
+- テスト意図は維持。
+- テスト用tokenはJWT形状ではない文字列に変更。
+- 実秘密値は含めない。
+
+---
+
+## 5. 検証方法
 
 ```bash
 python -m pytest backend/tests/security/test_rate_limit_identity.py -q
@@ -64,7 +75,7 @@ python -m pytest backend/tests -q
 
 ---
 
-## 5. 対象外
+## 6. 対象外
 
 - Nginx変更なし。
 - deploy.yml変更なし。
@@ -75,7 +86,7 @@ python -m pytest backend/tests -q
 
 ---
 
-## 6. 残リスク
+## 7. 残リスク
 
 - JWT cache missの初回リクエストはIP bucketになる。
 - NAT配下で多数ユーザーが同時操作する場合、正規ユーザー429増加の可能性が残る。
