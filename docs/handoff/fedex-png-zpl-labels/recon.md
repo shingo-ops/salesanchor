@@ -3,7 +3,7 @@
 **仕事名**: fedex-png-zpl-labels  
 **調査日**: 2026-06-16  
 **対象ADR**: ADR-123 / ADR-125 / ADR-129  
-**目的**: `lv_issue_sample_labels` にPNG/ZPLIIを追加するために必要な現状確認  
+**目的**: lv_issue_sample_labels にPNG/ZPLIIを追加するために必要な現状確認  
 **スコープ**: 実装変更なし・docs-only recon
 
 ---
@@ -21,7 +21,7 @@ git grep -i "label" docs/adr/FEATURE-INDEX.md  # → ADR-103/ADR-123/ADR-128
 | ADR-123 §D4 | "ラベル/インボイス: 既存PDF基盤（reportlab）を活用。ZPLはFedEx応答をそのまま保存" |
 | ADR-125 スコープ外 | "ラベル発行（Ship API / Open Ship API）" は第2段と明記 |
 | ADR-129 §3.2 | "テストラベル一括発行UI（Sandbox 4サービス）" — Sprint 3.2 実装済み |
-| ADR-129 §技術的制約 | "IPE のサービスタイプコードは `FEDEX_INTERNATIONAL_PRIORITY_EXPRESS`（`FEDEX_` プレフィックス必須）" |
+| ADR-129 §技術的制約 | "IPE のサービスタイプコードは FEDEX_INTERNATIONAL_PRIORITY_EXPRESS（FEDEX_ プレフィックス必須）" |
 
 ---
 
@@ -35,21 +35,21 @@ git grep -i "label" docs/adr/FEATURE-INDEX.md  # → ADR-103/ADR-123/ADR-128
 | label_image_type パラメータ | `backend/app/services/fedex_ship.py:69` | `label_image_type: str = "PDF"` — デフォルト PDF。任意の形式文字列を渡せる |
 | リクエスト組み立て | `backend/app/services/fedex_ship.py:120` | `"imageType": label_image_type` — labelSpecification に動的セット済み |
 | labelStockType | `backend/app/services/fedex_ship.py:122` | `"labelStockType": "PAPER_85X11_TOP_HALF_LABEL"` — 現状 PDF 固定値 |
-| 返却値 | `backend/app/services/fedex_ship.py:196-204` | `ShipmentResult(tracking_number, label_bytes, ...)` — `label_bytes` は Base64 デコード済みバイト列 |
-| customs_clearance | `backend/app/services/fedex_ship.py:126-127` | 国際便用通関情報。現在 lv では `_LV_CUSTOMS` を渡している |
+| 返却値 | `backend/app/services/fedex_ship.py:196-204` | ShipmentResult(tracking_number, label_bytes, ...) — label_bytes は Base64 デコード済みバイト列 |
+| customs_clearance | `backend/app/services/fedex_ship.py:126-127` | 国際便用通関情報。現在 lv では _LV_CUSTOMS を渡している |
 
-**確認事項**: `label_image_type` の引数を変えるだけで PNG / ZPLII に切り替わる。ただし `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されているため、ZPLII 用に `STOCK_4X6` を渡すには `create_shipment()` への `label_stock_type` 引数追加が必要（実装時に追加済み）。
+**確認事項**: label_image_type の引数を変えるだけで PNG / ZPLII に切り替わる。ただし labelStockType が "PAPER_85X11_TOP_HALF_LABEL" に固定されているため、ZPLII 用に STOCK_4X6 を渡すには create_shipment() への label_stock_type 引数追加が必要（実装時に追加済み）。
 
 **既存調査**: `docs/handoff/fedex-ship-stage2/recon.md:107` — "imageType（PDF / PNG / ZPLII / EPL2 / DPL）"
 
 ### A2. ZPL の labelStockType について
 
 FedEx Ship API の仕様（`docs/handoff/fedex-ship-stage2/recon.md:107`）で確認済み:
-- PDF: `labelStockType` = `PAPER_85X11_TOP_HALF_LABEL`（現在の固定値）
-- PNG: `labelStockType` = `PAPER_85X11_TOP_HALF_LABEL` でも動作する見込み（ピクセル画像）
-- ZPLII: `labelStockType` = `STOCK_4X6`（熱転写プリンター用 4x6インチ）推奨
+- PDF: labelStockType = PAPER_85X11_TOP_HALF_LABEL（現在の固定値）
+- PNG: labelStockType = PAPER_85X11_TOP_HALF_LABEL でも動作する見込み（ピクセル画像）
+- ZPLII: labelStockType = STOCK_4X6（熱転写プリンター用 4x6インチ）推奨
 
-⚠️ **Sandbox 実機確認が必要**: ZPLII の `labelStockType` はサンドボックス実機テストで確認する（`STOCK_4X6` / `PAPER_85X11_TOP_HALF_LABEL` どちらが返るか）。
+⚠️ **Sandbox 実機確認が必要**: ZPLII の labelStockType はサンドボックス実機テストで確認する（STOCK_4X6 / PAPER_85X11_TOP_HALF_LABEL どちらが返るか）。
 
 ---
 
@@ -67,18 +67,18 @@ class LVSampleResult(_BaseModel):
     pdf_base64: str        # ← PDF のみ
 ```
 
-**不足**: `png_base64` / `zpl_base64` フィールドが存在しない。
+**不足**: png_base64 / zpl_base64 フィールドが存在しない。
 
 ### B2. lv_issue_sample_labels() の現状
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| エンドポイント定義 | `backend/app/routers/shipping.py:686` | `POST /shipping/label-validation/samples` |
+| エンドポイント定義 | `backend/app/routers/shipping.py:686` | POST /shipping/label-validation/samples |
 | 関数本体 | `backend/app/routers/shipping.py:691-745` | |
-| label_image_type 引数 | `backend/app/routers/shipping.py:720-733` | `create_shipment()` に渡していない → デフォルト PDF のみ |
-| ループ対象サービス | `backend/app/routers/shipping.py:714` | `for abbr, service_type, service_name in _LV_SERVICES:` |
-| 返却 | `backend/app/routers/shipping.py:737-742` | `pdf_base64=_b64.b64encode(result.label_bytes).decode()` のみ |
-| エラーメッセージ | `backend/app/routers/shipping.py:734-736` | `f"{service_name}({abbr}) ラベル発行失敗: {e}"` — サービス名のみ（形式が分からない） |
+| label_image_type 引数 | `backend/app/routers/shipping.py:720-733` | create_shipment() に渡していない → デフォルト PDF のみ |
+| ループ対象サービス | `backend/app/routers/shipping.py:714` | for abbr, service_type, service_name in _LV_SERVICES: |
+| 返却 | `backend/app/routers/shipping.py:737-742` | pdf_base64=_b64.b64encode(result.label_bytes).decode() のみ |
+| エラーメッセージ | `backend/app/routers/shipping.py:734-736` | f"{service_name}({abbr}) ラベル発行失敗: {e}" — サービス名のみ（形式が分からない） |
 
 ### B3. 固定データ（4サービス）
 
@@ -110,7 +110,7 @@ interface LVSampleLabel {
 }
 ```
 
-**不足**: `png_base64` / `zpl_base64` フィールドが存在しない。
+**不足**: png_base64 / zpl_base64 フィールドが存在しない。
 
 ### C2. handleDownloadLabel() の現状
 
@@ -122,7 +122,7 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `fedex_lv_${label.service_abbr}_${label.tracking_number}.pdf`;
+  a.download = "fedex_lv_" + label.service_abbr + "_" + label.tracking_number + ".pdf";
   a.click();
   URL.revokeObjectURL(url);
 };
@@ -136,7 +136,7 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
 |---|---|---|
 | Step 2 セクション開始 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:163` | `<section className="lv-step card">` |
 | 発行ボタン | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:166-173` | 「テストラベルを発行（4サービス）」ボタン 1 つ |
-| ラベル一覧 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:177-194` | `.lv-label-list` 内に `.lv-label-item` ×4 |
+| ラベル一覧 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:177-194` | lv-label-list 内に lv-label-item ×4 |
 | ダウンロードボタン | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:185-190` | `btn-secondary btn-sm` ボタン **1 つだけ**（"PDFをダウンロード"） |
 
 **不足**: PNG / ZPL 用ダウンロードボタンが存在しない。ダウンロードボタンが 1 サービスにつき 1 つだけ（3 形式分のボタンが必要）。
@@ -157,7 +157,7 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
 "lvStep2Download": "PDFをダウンロード",
 ```
 
-**不足**: PNG/ZPL ダウンロードボタン用キー（`lvStep2DownloadPng` / `lvStep2DownloadZpl`）と説明文更新が必要。
+**不足**: PNG/ZPL ダウンロードボタン用キー（lvStep2DownloadPng / lvStep2DownloadZpl）と説明文更新が必要。
 
 ### D2. en.json 既存キー（ADR-027 準拠・ja.json と同一キー必須）
 
@@ -181,16 +181,16 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
 |---|---|---|
 | ファイル存在 | `backend/tests/test_fedex_ship.py:1` | 461 行 |
 | create_shipment テスト | `backend/tests/test_fedex_ship.py:145-327` | 正常系 / 認証エラー / APIエラー / dimensions あり・なし / surcharges |
-| label_image_type テスト | `backend/tests/test_fedex_ship.py:1-461` | **存在しない** — `label_image_type` を引数に渡すケースのテストなし |
+| label_image_type テスト | `backend/tests/test_fedex_ship.py:1-461` | **存在しない** — label_image_type を引数に渡すケースのテストなし |
 | _mock_ship_resp | `backend/tests/test_fedex_ship.py:59-101` | Base64 ダミーラベル返却モックあり。形式に関わらず同じ構造 |
 
 ### E2. lv_issue_sample_labels テスト
 
 `backend/tests/` 全体を確認:
-- `test_carrier_integrations.py` — lv エンドポイントのテストなし
-- `test_fedex_ship.py` — `lv_issue_sample_labels` のテストなし
+- `backend/tests/test_carrier_integrations.py` — lv エンドポイントのテストなし
+- `backend/tests/test_fedex_ship.py` — lv_issue_sample_labels のテストなし
 
-**不足**: `lv_issue_sample_labels` の単体テストが存在しない（PNG/ZPL 追加時に合わせて追加が必要）。
+**不足**: lv_issue_sample_labels の単体テストが存在しない（PNG/ZPL 追加時に合わせて追加が必要）。
 
 ---
 
@@ -198,7 +198,7 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
 
 | # | 不明点 | 解消手段 | ブロッカー |
 |---|---|---|---|
-| U1 | ZPLII の `labelStockType` — Sandbox で `STOCK_4X6` か `PAPER_85X11_TOP_HALF_LABEL` か | Sandbox 実機テスト（Shingo の Sandbox credentials で実行） | Sandbox アカウント番号登録待ち |
+| U1 | ZPLII の labelStockType — Sandbox で STOCK_4X6 か PAPER_85X11_TOP_HALF_LABEL か | Sandbox 実機テスト（Shingo の Sandbox credentials で実行） | Sandbox アカウント番号登録待ち |
 | U2 | ZPLII の FedEx Sandbox 返却値はテキスト（ZPL コマンド文字列）か Base64 か | 既存 recon（`docs/handoff/fedex-ship-stage2/recon.md:74`）では "Base64 で返却" と記録 — ただし ZPL は印刷コマンド文字列のためバイナリではない可能性あり | Sandbox 実機確認 |
 
 ---

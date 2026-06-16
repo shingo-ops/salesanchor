@@ -38,7 +38,7 @@
 
 ### 0. `backend/app/services/fedex_ship.py`
 
-既存の `create_shipment()` では `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されており、ZPLII に必要な `STOCK_4X6` を渡せなかった。そのため `label_stock_type` 引数を追加した。
+既存の create_shipment() では labelStockType が "PAPER_85X11_TOP_HALF_LABEL" に固定されており、ZPLII に必要な STOCK_4X6 を渡せなかった。そのため label_stock_type 引数を追加した。
 
 ```python
 # 変更箇所: fedex_ship.py — create_shipment() シグネチャ
@@ -53,7 +53,7 @@ def create_shipment(
 "labelStockType": label_stock_type,  # 固定値から引数に変更
 ```
 
-既存の呼び出し元はデフォルト値 `"PAPER_85X11_TOP_HALF_LABEL"` を使うため後方互換を維持する。
+既存の呼び出し元はデフォルト値 "PAPER_85X11_TOP_HALF_LABEL" を使うため後方互換を維持する。
 
 ---
 
@@ -84,15 +84,15 @@ class LVSampleResult(_BaseModel):
 
 #### 1-2. lv_issue_sample_labels() の拡張
 
-- `create_shipment()` を 3 回呼ぶヘルパー `_issue_one(creds, service_type, service_name, abbr, fmt, account_number)` を作る（または インライン記述でも可）
-- 各呼び出しに `label_image_type=fmt` を渡す（PDF / PNG / ZPLII）
-- ZPLII の `labelStockType` は **`STOCK_4X6`** を試す。Sandbox でエラーになる場合は `PAPER_85X11_TOP_HALF_LABEL` にフォールバック（実機確認して確定させる）
+- create_shipment() を 3 回呼ぶヘルパー _issue_one(creds, service_type, service_name, abbr, fmt, account_number) を作る（または インライン記述でも可）
+- 各呼び出しに label_image_type=fmt を渡す（PDF / PNG / ZPLII）
+- ZPLII の labelStockType は **STOCK_4X6** を試す。Sandbox でエラーになる場合は PAPER_85X11_TOP_HALF_LABEL にフォールバック（実機確認して確定させる）
 - エラーメッセージ形式: `f"{service_name}({abbr}) {fmt} ラベル発行失敗: {e}"`
-- 全形式を 1 つの `LVSampleResult` にまとめて返す（一部失敗なら HTTPException を raise）
+- 全形式を 1 つの LVSampleResult にまとめて返す（一部失敗なら HTTPException を raise）
 
 #### 1-3. create_shipment() への labelStockType 引数追加（必要な場合のみ）
 
-ZPLII が `PAPER_85X11_TOP_HALF_LABEL` では動作しない場合、`create_shipment()` に `label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL"` 引数を追加し、呼び出し側で形式別に渡す。**まず既存の labelStockType で試してから判断する。**
+ZPLII が PAPER_85X11_TOP_HALF_LABEL では動作しない場合、create_shipment() に label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL" 引数を追加し、呼び出し側で形式別に渡す。**まず既存の labelStockType で試してから判断する。**
 
 ---
 
@@ -115,7 +115,7 @@ interface LVSampleLabel {
 
 #### 2-2. ダウンロード関数の分割
 
-既存の `handleDownloadLabel` は削除して以下に分割する:
+既存の handleDownloadLabel は削除して以下に分割する:
 
 ```typescript
 const _triggerDownload = (blob: Blob, filename: string) => {
@@ -164,13 +164,13 @@ const handleDownloadZpl = (label: LVSampleLabel) => {
 </div>
 ```
 
-`lv-label-download-buttons` は CSS の flex layout 推奨（横並び）。
+lv-label-download-buttons は CSS の flex layout 推奨（横並び）。
 
 ---
 
 ### 3. `frontend/src/locales/ja.json`
 
-`carrierIntegration` オブジェクト内で、**既存キーの直後に**追加する:
+carrierIntegration オブジェクト内で、**既存キーの直後に**追加する:
 
 ```json
 // lvStep2Download の直後に追加（lvStep2Download は削除する）
@@ -179,12 +179,12 @@ const handleDownloadZpl = (label: LVSampleLabel) => {
 "lvStep2DownloadZpl": "ZPL をダウンロード",
 ```
 
-既存 `lvStep2Desc` の値を更新:
+既存 lvStep2Desc の値を更新:
 ```json
 "lvStep2Desc": "4サービス分のテストラベルをSandboxで発行します。各サービス PDF / PNG / ZPL の3形式が生成されます。"
 ```
 
-既存 `lvStep2Download` は削除する（`FedexLabelValidationTab.tsx` で未使用になる）。
+既存 lvStep2Download は削除する（`frontend/src/pages/integrations/FedexLabelValidationTab.tsx` で未使用になる）。
 
 ---
 
@@ -199,7 +199,7 @@ ja.json と同一キー・同一順序で追加する（ADR-027 必須）:
 "lvStep2DownloadZpl": "Download ZPL",
 ```
 
-既存 `lvStep2Desc` の値を更新:
+既存 lvStep2Desc の値を更新:
 ```json
 "lvStep2Desc": "Issue test labels for 4 services in Sandbox. Each service generates 3 formats: PDF, PNG, and ZPL."
 ```
@@ -208,7 +208,7 @@ ja.json と同一キー・同一順序で追加する（ADR-027 必須）:
 
 ### 5. `backend/tests/test_fedex_ship.py`
 
-既存の `TestCreateShipment` クラスに以下を追加:
+既存の TestCreateShipment クラスに以下を追加:
 
 ```python
 def test_label_image_type_is_passed_to_request(self):
@@ -236,7 +236,7 @@ def test_label_image_type_is_passed_to_request(self):
     assert label_spec["imageType"] == "PNG"
 ```
 
-同様に `label_image_type="ZPLII"` のケースも追加する。
+同様に label_image_type="ZPLII" のケースも追加する。
 
 ---
 
@@ -263,7 +263,7 @@ cd frontend && npm run build
 
 | 禁止事項 | 理由 |
 |---|---|
-| `backend/app/services/fedex_ship.py` を大きく変更する | `label_image_type` はすでに対応済み。ルーター側のワイヤリングのみ |
+| `backend/app/services/fedex_ship.py` を大きく変更する | label_image_type はすでに対応済み。ルーター側のワイヤリングのみ |
 | ETD（etdDetail）を実装する | APAC Q1〜Q6 回答待ち |
 | Commercial Invoice（FedEx CI フォーム）を実装する | APAC Q6 回答待ち |
 | migration を作成する | スキーマ変更なし |
@@ -274,8 +274,8 @@ cd frontend && npm run build
 | FedEx 外部設定を変更する | 不要（Sandbox 実機テストは credentials 使用のみ） |
 | PayPal / Discord / analytics / QA Smoke / SA-02 / mobile-shell を変更する | スコープ外 |
 | `#2250 / #2257 / #2261 / #2262 / #2263 / #2264` を reopen する | スコープ外 |
-| `pdf_base64` フィールドを削除・改名する | 後方互換破壊 |
-| `handleDownloadLabel` を残したまま重複させる | TypeScript 型エラーの原因になる可能性 |
+| pdf_base64 フィールドを削除・改名する | 後方互換破壊 |
+| handleDownloadLabel を残したまま重複させる | TypeScript 型エラーの原因になる可能性 |
 | i18n キーを ja.json のみ追加して en.json を忘れる | ADR-027 違反・CI 失敗 |
 
 ---

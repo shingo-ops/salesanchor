@@ -12,7 +12,7 @@
 
 小規模なワイヤリング実装（既存 API パラメータを通すだけ）のため、外部ライブラリ調査・設計パターン調査は不要。
 
-FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services/fedex_ship.py:120`）および `docs/handoff/fedex-ship-stage2/recon.md:107` の調査済み仕様に従う。ZPLII の `labelStockType` はSandbox 実機確認後に確定（U1/U2 参照）。
+FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services/fedex_ship.py:120`）および `docs/handoff/fedex-ship-stage2/recon.md:107` の調査済み仕様に従う。ZPLII の labelStockType はSandbox 実機確認後に確定（U1/U2 参照）。
 
 ---
 
@@ -20,7 +20,7 @@ FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services
 
 | KGI | 検証方法 |
 |---|---|
-| 4サービス分の PDF / PNG / ZPLII ラベルをバックエンドで発行できる | pytest: `test_lv_issue_sample_labels` が PASS |
+| 4サービス分の PDF / PNG / ZPLII ラベルをバックエンドで発行できる | pytest: test_lv_issue_sample_labels が PASS |
 | フロントエンドから PDF / PNG / ZPL を個別にダウンロードできる | 目視確認（Shingo sandbox 環境）+ Playwright テスト（追加可能な場合） |
 | 既存 PDF ダウンロード動作が壊れない | 既存 CI / pytest 全 PASS |
 
@@ -32,7 +32,7 @@ FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services
 
 | ファイル | 変更内容 |
 |---|---|
-| `backend/app/services/fedex_ship.py` | `label_stock_type` 引数追加（ZPLII 用 STOCK_4X6 対応） |
+| `backend/app/services/fedex_ship.py` | label_stock_type 引数追加（ZPLII 用 STOCK_4X6 対応） |
 | `backend/app/routers/shipping.py` | LVSampleResult にフィールド追加 + lv_issue_sample_labels 拡張 |
 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx` | LVSampleLabel 拡張 + handleDownloadLabel 分割 + Step 2 UI ボタン追加 |
 | `frontend/src/locales/ja.json` | PNG/ZPL ダウンロードボタン用キー追加 |
@@ -69,13 +69,13 @@ class LVSampleResult(_BaseModel):
     zpl_base64: str        # 追加（ZPLII ラベル Base64 — ZPL コマンドを Base64 エンコード）
 ```
 
-**後方互換の考え方**: フロントエンドは同一リポジトリで同時に更新するため、既存 `pdf_base64` を削除・改名しない。追加のみ行う。
+**後方互換の考え方**: フロントエンドは同一リポジトリで同時に更新するため、既存 pdf_base64 を削除・改名しない。追加のみ行う。
 
 ### 2. バックエンド: lv_issue_sample_labels() 拡張
 
 #### 2-1. 発行ループの構造
 
-各サービス（IP/IE/IPE/FICP）に対して、PDF / PNG / ZPLII の 3 形式を順に発行し、すべてを 1 つの `LVSampleResult` にまとめて返す。
+各サービス（IP/IE/IPE/FICP）に対して、PDF / PNG / ZPLII の 3 形式を順に発行し、すべてを 1 つの LVSampleResult にまとめて返す。
 
 ```python
 # 変更後のループ骨格（擬似コード）
@@ -92,7 +92,7 @@ for abbr, service_type, service_name in _LV_SERVICES:
     ))
 ```
 
-ヘルパー `_issue_one()` は `asyncio.to_thread(fedex_ship.create_shipment, ..., label_image_type=fmt)` を呼ぶ薄いラッパー。
+ヘルパー _issue_one() は asyncio.to_thread(fedex_ship.create_shipment, ..., label_image_type=fmt) を呼ぶ薄いラッパー。
 
 #### 2-2. エラーメッセージ形式
 
@@ -104,18 +104,18 @@ for abbr, service_type, service_name in _LV_SERVICES:
 
 現状の `f"{service_name}({abbr}) ラベル発行失敗: {e}"` からサービス名の後に形式（PDF/PNG/ZPL）を追加する。
 
-#### 2-3. labelStockType の扱い（`create_shipment()` の引数化）
+#### 2-3. labelStockType の扱い（create_shipment() の引数化）
 
-既存の `backend/app/services/fedex_ship.py` では `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されていた。ZPLII は熱転写プリンター用の `STOCK_4X6` が必要なため、`create_shipment()` に `label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL"` 引数を追加し、呼び出し側で形式別に渡す設計とした。
+既存の `backend/app/services/fedex_ship.py` では labelStockType が "PAPER_85X11_TOP_HALF_LABEL" に固定されていた。ZPLII は熱転写プリンター用の STOCK_4X6 が必要なため、create_shipment() に label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL" 引数を追加し、呼び出し側で形式別に渡す設計とした。
 
-- PDF / PNG: `label_stock_type="PAPER_85X11_TOP_HALF_LABEL"`（既存デフォルト）
-- ZPLII: `label_stock_type="STOCK_4X6"`（熱転写プリンター用 4×6 インチ）
+- PDF / PNG: label_stock_type="PAPER_85X11_TOP_HALF_LABEL"（既存デフォルト）
+- ZPLII: label_stock_type="STOCK_4X6"（熱転写プリンター用 4×6 インチ）
 
-**Sandbox 実機確認**: STOCK_4X6 が正常レスポンスを返さない場合は `PAPER_85X11_TOP_HALF_LABEL` にフォールバック。
+**Sandbox 実機確認**: STOCK_4X6 が正常レスポンスを返さない場合は PAPER_85X11_TOP_HALF_LABEL にフォールバック。
 
 #### 2-4. API 呼び出し回数
 
-4 サービス × 3 形式 = **12 回**。Sandbox 用途（審査申請のみ）であるため、パフォーマンス影響は許容範囲内。タイムアウトは既存の `_TIMEOUT`（connect=3s, read=15s）をそのまま使用。
+4 サービス × 3 形式 = **12 回**。Sandbox 用途（審査申請のみ）であるため、パフォーマンス影響は許容範囲内。タイムアウトは既存の _TIMEOUT（connect=3s, read=15s）をそのまま使用。
 
 ### 3. フロントエンド: LVSampleLabel 拡張
 
@@ -134,7 +134,7 @@ interface LVSampleLabel {
 
 ### 4. フロントエンド: ダウンロード関数
 
-`handleDownloadLabel` を形式別に分割する（または形式引数を渡す）:
+handleDownloadLabel を形式別に分割する（または形式引数を渡す）:
 
 ```typescript
 // 方針: 形式ごとに関数を分割（明確・型安全）
@@ -213,7 +213,7 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 "lvStep2Desc": "4サービス分のテストラベルをSandboxで発行します。各サービス PDF / PNG / ZPL の3形式が生成されます。"
 ```
 
-（`lvStep2Desc` は既存キーの値を更新）
+（lvStep2Desc は既存キーの値を更新）
 
 #### en.json 追加キー
 
@@ -224,7 +224,7 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 "lvStep2Desc": "Issue test labels for 4 services in Sandbox. Each service generates 3 formats: PDF, PNG, and ZPL."
 ```
 
-**既存キー `lvStep2Download` の扱い**: `lvStep2DownloadPdf` に移行後、`lvStep2Download` は削除する（未使用になる）。
+**既存キー lvStep2Download の扱い**: lvStep2DownloadPdf に移行後、lvStep2Download は削除する（未使用になる）。
 
 ---
 
@@ -232,13 +232,13 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 
 | 基準 | 検証方法 |
 |---|---|
-| `lv_issue_sample_labels` が 4サービス × PDF/PNG/ZPLII を返す | pytest: `test_lv_issue_sample_labels_returns_three_formats` が PASS |
-| `LVSampleResult` に `png_base64` / `zpl_base64` フィールドが含まれる | pytest: レスポンスのキー確認 |
-| label_image_type="PNG" 時に imageType="PNG" がリクエストに含まれる | pytest: `test_label_image_type_png_is_passed_to_request` PASS |
-| label_image_type="ZPLII" 時に imageType="ZPLII" + labelStockType="STOCK_4X6" がリクエストに入る | pytest: `test_label_image_type_zplii_is_passed_to_request` PASS |
+| lv_issue_sample_labels が 4サービス × PDF/PNG/ZPLII を返す | pytest: test_lv_issue_sample_labels_returns_three_formats が PASS |
+| LVSampleResult に png_base64 / zpl_base64 フィールドが含まれる | pytest: レスポンスのキー確認 |
+| label_image_type="PNG" 時に imageType="PNG" がリクエストに含まれる | pytest: test_label_image_type_png_is_passed_to_request PASS |
+| label_image_type="ZPLII" 時に imageType="ZPLII" + labelStockType="STOCK_4X6" がリクエストに入る | pytest: test_label_image_type_zplii_is_passed_to_request PASS |
 | フロント TypeScript が型エラーなくビルドできる | CI: frontend lint & custom checks が PASS |
 | 既存 PDF ダウンロードが壊れない | 既存 pytest / CI が全 PASS |
-| `lvStep2DownloadPdf` / `lvStep2DownloadPng` / `lvStep2DownloadZpl` キーが ja.json と en.json の両方にある | CI: Frontend lint & i18n チェックが PASS |
+| lvStep2DownloadPdf / lvStep2DownloadPng / lvStep2DownloadZpl キーが ja.json と en.json の両方にある | CI: Frontend lint & i18n チェックが PASS |
 
 ---
 
@@ -247,8 +247,8 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 | リスク | 影響 | 対策 |
 |---|---|---|
 | FedEx Sandbox API 呼び出しが 12 回になる | レイテンシ増加（約 3〜5 秒 × 12 = 最大 60 秒）| Sandbox 限定用途（申請時のみ実行）で許容。タイムアウト設定は既存 `_TIMEOUT`（connect=3s, read=15s）のまま |
-| ZPLII の labelStockType が未確定 | Sandbox でエラーになる可能性 | `STOCK_4X6` を試し、エラーなら `PAPER_85X11_TOP_HALF_LABEL` を試す。Generator が Sandbox 実機で確定する |
-| ZPLII が Base64 でなくテキスト直返しの場合 | `atob()` が失敗 | 既存 recon（`docs/handoff/fedex-ship-stage2/recon.md:74`）は Base64 と記録。実機で確認し、テキスト返しなら `new TextEncoder().encode(text)` でバイト変換に切り替える |
+| ZPLII の labelStockType が未確定 | Sandbox でエラーになる可能性 | STOCK_4X6 を試し、エラーなら PAPER_85X11_TOP_HALF_LABEL を試す。Generator が Sandbox 実機で確定する |
+| ZPLII が Base64 でなくテキスト直返しの場合 | atob() が失敗 | 既存 recon（`docs/handoff/fedex-ship-stage2/recon.md:74`）は Base64 と記録。実機で確認し、テキスト返しなら new TextEncoder().encode(text) でバイト変換に切り替える |
 | 途中失敗（例: PNG OK / ZPL 失敗）で一部のみ発行済みになる | ユーザーが発行数を見誤る | エラーメッセージに「どのサービス・どの形式」かを明示（§2-2）。全形式一括発行なので部分成功データは返さない（HTTPException で失敗） |
 | Base64 レスポンスサイズ増加 | レスポンスが 3 倍のサイズになる | Sandbox 専用エンドポイントのため許容。ZIP 圧縮は将来 ADR で検討 |
 
@@ -256,10 +256,10 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 
 ## 実装メモ
 
-- `backend/app/services/fedex_ship.py` に `label_stock_type` 引数を追加（ZPLII 用 STOCK_4X6 対応）
+- `backend/app/services/fedex_ship.py` に label_stock_type 引数を追加（ZPLII 用 STOCK_4X6 対応）
 - `backend/app/services/fedex_rates.py:230` — get_or_refresh_token()（変更なし）
 - `backend/app/services/carrier_credentials.py:114` — get_credentials()（変更なし）
-- 固定テストデータ: `_LV_SHIPPER` / `_LV_RECIPIENT` / `_LV_CUSTOMS`（`backend/app/routers/shipping.py:643-669`、変更なし）
+- 固定テストデータ: _LV_SHIPPER / _LV_RECIPIENT / _LV_CUSTOMS（`backend/app/routers/shipping.py:643-669`、変更なし）
 
 ---
 
