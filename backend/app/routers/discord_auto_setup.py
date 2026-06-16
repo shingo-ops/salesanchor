@@ -294,8 +294,9 @@ async def run_auto_setup(
         if step.discord_id:
             large_ch_id = step.discord_id
 
-        # Step 4a: チケットボタン投稿
-        # ch_ticket が新規作成時のみ POST。スキップ・失敗時はボタンも同じ扱いにする
+        # Step 4a: チケットボタン投稿（冪等）
+        # created: 新規チャンネルのためボタン未存在確実 → 直接投稿
+        # skipped: 既存チャンネルのためボタン存在確認してから投稿（重複防止）
         if ch_ticket_step.status == "created":
             step = await _post_ticket_button_step(
                 step_name="button",
@@ -303,7 +304,11 @@ async def run_auto_setup(
                 bot_token=bot_token,
             )
         elif ch_ticket_step.status == "skipped":
-            step = AutoSetupStep(step="button", status="skipped", discord_id=None)
+            step = await _ensure_ticket_button_step(
+                step_name="button",
+                ticket_ch_id=ticket_ch_id,
+                bot_token=bot_token,
+            )
         else:
             step = AutoSetupStep(
                 step="button", status="failed",
@@ -518,6 +523,56 @@ async def _get_or_create_channel_step(
         return AutoSetupStep(step=step_name, status="failed", error=str(exc))
 
 
+async def _ensure_ticket_button_step(
+    *,
+    step_name: str,
+    ticket_ch_id: str | None,
+    bot_token: str,
+) -> AutoSetupStep:
+    """既存 ticket-start チャンネルにボタンが無い場合のみ投稿する（冪等）。
+
+    直近50件のメッセージから custom_id=ticket_open のボタンを検索し、
+    見つかれば 'skipped'、なければ投稿する。
+    403 / 50013 の場合は Bot ロール順・チャンネル権限不足が分かるエラー文を返す。
+    """
+    if not ticket_ch_id:
+        return AutoSetupStep(
+            step=step_name,
+            status="failed",
+            error="ticket-start チャンネルが未作成のためボタン確認をスキップしました。",
+        )
+
+    try:
+        messages: list[dict[str, Any]] = await discord_api_request(
+            method="GET",
+            path=f"/channels/{ticket_ch_id}/messages?limit=50",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or []
+    except DiscordAPIError as exc:
+        return AutoSetupStep(
+            step=step_name,
+            status="failed",
+            error=(
+                f"ticket-start チャンネルのメッセージ取得に失敗しました"
+                f"（Bot ロールが Staff/Partner/Member より上位にあるか、"
+                f"チャンネル権限 VIEW_CHANNEL を確認）: {exc}"
+            ),
+        )
+
+    for msg in messages:
+        for row in msg.get("components", []):
+            for component in row.get("components", []):
+                if component.get("custom_id") == "ticket_open":
+                    return AutoSetupStep(
+                        step=step_name, status="skipped", discord_id=str(msg["id"])
+                    )
+
+    return await _post_ticket_button_step(
+        step_name=step_name, ticket_ch_id=ticket_ch_id, bot_token=bot_token
+    )
+
+
 async def _post_ticket_button_step(
     *,
     step_name: str,
@@ -564,7 +619,14 @@ async def _post_ticket_button_step(
             "[discord_auto_setup] button post failed ch=%s: %s",
             ticket_ch_id, exc,
         )
-        return AutoSetupStep(step=step_name, status="failed", error=str(exc))
+        error_msg = str(exc)
+        if "50013" in error_msg or "Missing Permissions" in error_msg:
+            error_msg = (
+                f"ボタン投稿権限不足（SEND_MESSAGES）: Bot ロールが Staff/Partner/Member より"
+                f"上位にあるか確認し、ticket-start チャンネルの権限設定を確認してください。"
+                f"詳細: {exc}"
+            )
+        return AutoSetupStep(step=step_name, status="failed", error=error_msg)
 
 
 # ---------------------------------------------------------------------------
