@@ -15,13 +15,13 @@ PR-R2-D（#2271）残タスク。`avatar-btn`（z-index:300）が `user-drawer`�
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
-|-------------------|---------|
-| `frontend/src/tokens.css:126` | `--z-drawer: 301` — 変更後の値（旧:299）|
-| `frontend/src/tokens.css:127` | `--z-avatar: 300` — avatar-btn の z-index |
-| `frontend/src/tokens.css:180` | `--avatar-zone-z: var(--z-avatar)` — avatar-btn が参照するエイリアス |
-| `frontend/src/topbar.css:125` | `.avatar-btn { z-index: var(--avatar-zone-z); }` — avatar-btn は position:fixed |
-| `frontend/src/topbar.css:160` | `.user-drawer { z-index: var(--z-drawer); }` — drawer のスタック位置 |
+| 引用先 | 確認内容 |
+|--------|---------|
+| `frontend/src/tokens.css:126` | --z-drawer: 301 — 変更後の値（旧:299）|
+| `frontend/src/tokens.css:127` | --z-avatar: 300 — avatar-btn の z-index |
+| `frontend/src/tokens.css:180` | --avatar-zone-z: var(--z-avatar) — avatar-btn が参照するエイリアス |
+| `frontend/src/topbar.css:125` | .avatar-btn の z-index: var(--avatar-zone-z)、position:fixed |
+| `frontend/src/topbar.css:160` | .user-drawer の z-index: var(--z-drawer)、drawer のスタック位置 |
 | `frontend/tests-e2e/desktop-shell.spec.ts:59` | 修正後: user-drawer-close 直接クリックテスト |
 | `frontend/tests-e2e/mobile-shell.spec.ts:131` | 追加: mobile avatar → user-drawer-close 直接クリックテスト |
 
