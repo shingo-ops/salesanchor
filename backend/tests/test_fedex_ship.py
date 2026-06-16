@@ -320,6 +320,56 @@ class TestCreateShipment:
         assert result.surcharges[0].amount == Decimal("500.0")
         assert result.surcharges[1].description == "RESIDENTIAL_DELIVERY"
 
+    def test_label_image_type_png_is_passed_to_request(self):
+        """label_image_type="PNG" が labelSpecification.imageType に渡されること。"""
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_ship_resp(),
+        ]) as mock_post:
+            create_shipment(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                shipper=_sample_shipper(),
+                recipient=_sample_recipient(),
+                service_type="INTERNATIONAL_PRIORITY",
+                weight_kg=Decimal("1.0"),
+                label_image_type="PNG",
+            )
+
+        ship_call = mock_post.call_args_list[1]
+        body = ship_call.kwargs.get("json") or ship_call.args[1]
+        label_spec = body["requestedShipment"]["labelSpecification"]
+        assert label_spec["imageType"] == "PNG"
+
+    def test_label_image_type_zplii_is_passed_to_request(self):
+        """label_image_type="ZPLII" が labelSpecification.imageType に渡されること。"""
+        with patch("httpx.post", side_effect=[
+            _mock_token_resp(),
+            _mock_ship_resp(),
+        ]) as mock_post:
+            create_shipment(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                shipper=_sample_shipper(),
+                recipient=_sample_recipient(),
+                service_type="INTERNATIONAL_PRIORITY",
+                weight_kg=Decimal("1.0"),
+                label_image_type="ZPLII",
+                label_stock_type="STOCK_4X6",
+            )
+
+        ship_call = mock_post.call_args_list[1]
+        body = ship_call.kwargs.get("json") or ship_call.args[1]
+        label_spec = body["requestedShipment"]["labelSpecification"]
+        assert label_spec["imageType"] == "ZPLII"
+        assert label_spec["labelStockType"] == "STOCK_4X6"
+
 
 # ---------------------------------------------------------------------------
 # create_pickup テスト

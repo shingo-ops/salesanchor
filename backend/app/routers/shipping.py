@@ -675,7 +675,9 @@ class LVSampleResult(_BaseModel):
     service_name: str
     service_type: str
     tracking_number: str
-    pdf_base64: str
+    pdf_base64: str   # 既存フィールド（後方互換維持）
+    png_base64: str   # PNG ラベル Base64
+    zpl_base64: str   # ZPLII ラベル Base64
 
 
 class LVSamplesResponse(_BaseModel):
@@ -710,10 +712,9 @@ async def lv_issue_sample_labels(
             detail="FedEx Sandbox 認証情報またはアカウント番号が未設定です。先にSandbox認証情報を登録してください。",
         )
 
-    labels: list[LVSampleResult] = []
-    for abbr, service_type, service_name in _LV_SERVICES:
+    async def _issue_one(service_type: str, service_name: str, abbr: str, fmt: str, stock_type: str):
         try:
-            result = await asyncio.to_thread(
+            return await asyncio.to_thread(
                 fedex_ship.create_shipment,
                 tenant_id=tenant_id,
                 environment="sandbox",
@@ -725,21 +726,31 @@ async def lv_issue_sample_labels(
                 service_type=service_type,
                 weight_kg=Decimal("1.0"),
                 customs_clearance=_LV_CUSTOMS,
+                label_image_type=fmt,
+                label_stock_type=stock_type,
             )
         except FedExAuthError as e:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
         except FedExAPIError as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"{service_name}({abbr}) ラベル発行失敗: {e}",
+                detail=f"{service_name}({abbr}) {fmt} ラベル発行失敗: {e}",
             )
+
+    labels: list[LVSampleResult] = []
+    for abbr, service_type, service_name in _LV_SERVICES:
+        pdf_result = await _issue_one(service_type, service_name, abbr, "PDF", "PAPER_85X11_TOP_HALF_LABEL")
+        png_result = await _issue_one(service_type, service_name, abbr, "PNG", "PAPER_85X11_TOP_HALF_LABEL")
+        zpl_result = await _issue_one(service_type, service_name, abbr, "ZPLII", "STOCK_4X6")
 
         labels.append(LVSampleResult(
             service_abbr=abbr,
             service_name=service_name,
             service_type=service_type,
-            tracking_number=result.tracking_number,
-            pdf_base64=_b64.b64encode(result.label_bytes).decode(),
+            tracking_number=pdf_result.tracking_number,
+            pdf_base64=_b64.b64encode(pdf_result.label_bytes).decode(),
+            png_base64=_b64.b64encode(png_result.label_bytes).decode(),
+            zpl_base64=_b64.b64encode(zpl_result.label_bytes).decode(),
         ))
 
     return LVSamplesResponse(labels=labels)
