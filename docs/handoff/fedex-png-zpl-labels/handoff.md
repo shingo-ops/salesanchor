@@ -6,6 +6,7 @@
 **設計**: docs/handoff/fedex-png-zpl-labels/design.md  
 **recon**: docs/handoff/fedex-png-zpl-labels/recon.md  
 **実装役**: Generator (Claude Code)  
+**実装状態**: 実装完了（2026-06-17）  
 **Shingo GO 要否**: 不要（migration なし・危険変更なし）
 
 ---
@@ -24,6 +25,7 @@
 
 | ファイル | 変更種別 |
 |---|---|
+| `backend/app/services/fedex_ship.py` | 修正（label_stock_type 引数追加 — ZPLII 用 STOCK_4X6 対応） |
 | `backend/app/routers/shipping.py` | 修正（LVSampleResult 拡張 + lv_issue_sample_labels 拡張） |
 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx` | 修正（LVSampleLabel 拡張 + ダウンロード関数分割 + Step 2 UI 3ボタン化） |
 | `frontend/src/locales/ja.json` | 修正（PNG/ZPL ダウンロードキー追加 + lvStep2Desc 更新） |
@@ -33,6 +35,27 @@
 ---
 
 ## ファイルごとの実装方針
+
+### 0. `backend/app/services/fedex_ship.py`
+
+既存の `create_shipment()` では `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されており、ZPLII に必要な `STOCK_4X6` を渡せなかった。そのため `label_stock_type` 引数を追加した。
+
+```python
+# 変更箇所: fedex_ship.py — create_shipment() シグネチャ
+def create_shipment(
+    ...
+    label_image_type: str = "PDF",
+    label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL",  # 追加
+    ...
+) -> ShipmentResult:
+
+# 変更箇所: labelSpecification 組み立て部
+"labelStockType": label_stock_type,  # 固定値から引数に変更
+```
+
+既存の呼び出し元はデフォルト値 `"PAPER_85X11_TOP_HALF_LABEL"` を使うため後方互換を維持する。
+
+---
 
 ### 1. `backend/app/routers/shipping.py`
 

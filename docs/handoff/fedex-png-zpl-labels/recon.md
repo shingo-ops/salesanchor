@@ -38,7 +38,7 @@ git grep -i "label" docs/adr/FEATURE-INDEX.md  # → ADR-103/ADR-123/ADR-128
 | 返却値 | `backend/app/services/fedex_ship.py:196-204` | `ShipmentResult(tracking_number, label_bytes, ...)` — `label_bytes` は Base64 デコード済みバイト列 |
 | customs_clearance | `backend/app/services/fedex_ship.py:126-127` | 国際便用通関情報。現在 lv では `_LV_CUSTOMS` を渡している |
 
-**確認事項**: `label_image_type` の引数を変えるだけで PNG / ZPLII に切り替わる。`create_shipment()` 側の改修は不要。
+**確認事項**: `label_image_type` の引数を変えるだけで PNG / ZPLII に切り替わる。ただし `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されているため、ZPLII 用に `STOCK_4X6` を渡すには `create_shipment()` への `label_stock_type` 引数追加が必要（実装時に追加済み）。
 
 **既存調査**: `docs/handoff/fedex-ship-stage2/recon.md:107` — "imageType（PDF / PNG / ZPLII / EPL2 / DPL）"
 

@@ -4,7 +4,7 @@
 **作成日**: 2026-06-16  
 **recon**: docs/handoff/fedex-png-zpl-labels/recon.md  
 **対象ADR**: ADR-123 / ADR-125 / ADR-129  
-**ステータス**: Generator 着手待ち（Shingo GO 不要 — migration なし / 危険変更なし）
+**ステータス**: 実装完了（Shingo GO 不要 — migration なし / 危険変更なし）
 
 ---
 
@@ -32,17 +32,17 @@ FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services
 
 | ファイル | 変更内容 |
 |---|---|
+| `backend/app/services/fedex_ship.py` | `label_stock_type` 引数追加（ZPLII 用 STOCK_4X6 対応） |
 | `backend/app/routers/shipping.py` | LVSampleResult にフィールド追加 + lv_issue_sample_labels 拡張 |
 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx` | LVSampleLabel 拡張 + handleDownloadLabel 分割 + Step 2 UI ボタン追加 |
 | `frontend/src/locales/ja.json` | PNG/ZPL ダウンロードボタン用キー追加 |
 | `frontend/src/locales/en.json` | 同上（ADR-027: ja.json と同一キー必須） |
-| `backend/tests/test_fedex_ship.py` | label_image_type テストケース追加（任意だが推奨） |
+| `backend/tests/test_fedex_ship.py` | label_image_type テストケース追加 |
 
 ### 対象外（やってはいけない）
 
 | 対象外 | 理由 |
 |---|---|
-| `backend/app/services/fedex_ship.py` | `label_image_type` はすでに実装済み。改修不要 |
 | ETD / Paperless Trade（etdDetail） | APAC Q1〜Q6 回答待ち |
 | Commercial Invoice（FedEx フォーム 057P） | APAC Q6 回答待ち |
 | migration | スキーマ変更なし |
@@ -104,10 +104,14 @@ for abbr, service_type, service_name in _LV_SERVICES:
 
 現状の `f"{service_name}({abbr}) ラベル発行失敗: {e}"` からサービス名の後に形式（PDF/PNG/ZPL）を追加する。
 
-#### 2-3. labelStockType の扱い
+#### 2-3. labelStockType の扱い（`create_shipment()` の引数化）
 
-ZPLII 用の `labelStockType` は Sandbox 実機確認（U1）が必要。実装時は `STOCK_4X6` を試し、FedEx Sandbox から正常レスポンスが返った形式を採用する。  
-**実装担当者（Generator）が Sandbox テストで確定してコミットする。**
+既存の `backend/app/services/fedex_ship.py` では `labelStockType` が `"PAPER_85X11_TOP_HALF_LABEL"` に固定されていた。ZPLII は熱転写プリンター用の `STOCK_4X6` が必要なため、`create_shipment()` に `label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL"` 引数を追加し、呼び出し側で形式別に渡す設計とした。
+
+- PDF / PNG: `label_stock_type="PAPER_85X11_TOP_HALF_LABEL"`（既存デフォルト）
+- ZPLII: `label_stock_type="STOCK_4X6"`（熱転写プリンター用 4×6 インチ）
+
+**Sandbox 実機確認**: STOCK_4X6 が正常レスポンスを返さない場合は `PAPER_85X11_TOP_HALF_LABEL` にフォールバック。
 
 #### 2-4. API 呼び出し回数
 
@@ -230,7 +234,8 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 |---|---|
 | `lv_issue_sample_labels` が 4サービス × PDF/PNG/ZPLII を返す | pytest: `test_lv_issue_sample_labels_returns_three_formats` が PASS |
 | `LVSampleResult` に `png_base64` / `zpl_base64` フィールドが含まれる | pytest: レスポンスのキー確認 |
-| label_image_type="PNG" 時に imageType="PNG" がリクエストに含まれる | pytest: `test_create_shipment_with_label_image_type` mock 確認 |
+| label_image_type="PNG" 時に imageType="PNG" がリクエストに含まれる | pytest: `test_label_image_type_png_is_passed_to_request` PASS |
+| label_image_type="ZPLII" 時に imageType="ZPLII" + labelStockType="STOCK_4X6" がリクエストに入る | pytest: `test_label_image_type_zplii_is_passed_to_request` PASS |
 | フロント TypeScript が型エラーなくビルドできる | CI: frontend lint & custom checks が PASS |
 | 既存 PDF ダウンロードが壊れない | 既存 pytest / CI が全 PASS |
 | `lvStep2DownloadPdf` / `lvStep2DownloadPng` / `lvStep2DownloadZpl` キーが ja.json と en.json の両方にある | CI: Frontend lint & i18n チェックが PASS |
@@ -249,12 +254,12 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 
 ---
 
-## 実装済み確認（Generator は触らなくてよい）
+## 実装メモ
 
-- `backend/app/services/fedex_ship.py:57-133` — create_shipment() の label_image_type 対応
-- `backend/app/services/fedex_rates.py:230` — get_or_refresh_token()
-- `backend/app/services/carrier_credentials.py:114` — get_credentials()
-- 固定テストデータ: `_LV_SHIPPER` / `_LV_RECIPIENT` / `_LV_CUSTOMS`（`backend/app/routers/shipping.py:643-669`）
+- `backend/app/services/fedex_ship.py` に `label_stock_type` 引数を追加（ZPLII 用 STOCK_4X6 対応）
+- `backend/app/services/fedex_rates.py:230` — get_or_refresh_token()（変更なし）
+- `backend/app/services/carrier_credentials.py:114` — get_credentials()（変更なし）
+- 固定テストデータ: `_LV_SHIPPER` / `_LV_RECIPIENT` / `_LV_CUSTOMS`（`backend/app/routers/shipping.py:643-669`、変更なし）
 
 ---
 
