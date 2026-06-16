@@ -108,28 +108,35 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          # Python スクリプト (base64): Firebase Admin で3ユーザーを作成しUID+PWを出力
+          # gh CLI は self-hosted runner には存在しないため pynacl + GitHub REST API で代替。
+          # nacl が importable でなければ venv を作成してインストール (sudo 不要)。
+          if ! python3 -c "import nacl" 2>/dev/null; then
+            python3 -m venv /tmp/qa-venv
+            /tmp/qa-venv/bin/pip install pynacl --quiet 2>&1 | tail -2
+            PYBIN=/tmp/qa-venv/bin/python3
+          else
+            PYBIN=python3
+          fi
+          # Firebase 作成スクリプト (base64): Firebase Admin で3ユーザー作成しUID+PWを stdout 出力
           # 既存ユーザーはUIDのみ出力 (PW更新しない)
-          # GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json はコンテナ env 設定済み
           PY_B64="aW1wb3J0IHN5cywgb3MsIHNlY3JldHMsIHN0cmluZwppbXBvcnQgZmlyZWJhc2VfYWRtaW4KZnJvbSBmaXJlYmFzZV9hZG1pbiBpbXBvcnQgYXV0aCwgY3JlZGVudGlhbHMKCmNyZWRfcGF0aCA9IG9zLmVudmlyb24uZ2V0KCJHT09HTEVfQVBQTElDQVRJT05fQ1JFREVOVElBTFMiLCAiL2FwcC9maXJlYmFzZS1jcmVkZW50aWFscy5qc29uIikKaWYgbm90IG9zLnBhdGguZXhpc3RzKGNyZWRfcGF0aCk6CiAgICBzeXMuZXhpdCgiRkFUQUw6IGNyZWRlbnRpYWxzIG5vdCBmb3VuZCBhdCAiICsgY3JlZF9wYXRoKQppZiBub3QgZmlyZWJhc2VfYWRtaW4uX2FwcHM6CiAgICBmaXJlYmFzZV9hZG1pbi5pbml0aWFsaXplX2FwcChjcmVkZW50aWFscy5DZXJ0aWZpY2F0ZShjcmVkX3BhdGgpKQoKZGVmIGdlbl9wYXNzd29yZChsZW5ndGg9MjQpOgogICAgY2hhcnMgPSBzdHJpbmcuYXNjaWlfbGV0dGVycyArIHN0cmluZy5kaWdpdHMgKyAiIUAjJCVeJiotXysiCiAgICByZXR1cm4gIiIuam9pbihzZWNyZXRzLmNob2ljZShjaGFycykgZm9yIF8gaW4gcmFuZ2UobGVuZ3RoKSkKCnBhaXJzID0gWwogICAgKCJRQV9BRE1JTl9GSVJFQkFTRV9VSUQiLCAgIlFBX0FETUlOX1BBU1NXT1JEIiwgICJxYS1hZG1pbkBzYWxlc2FuY2hvci5qcCIpLAogICAgKCJRQV9TVEFGRl9GSVJFQkFTRV9VSUQiLCAgIlFBX1NUQUZGX1BBU1NXT1JEIiwgICJxYS1zdGFmZkBzYWxlc2FuY2hvci5qcCIpLAogICAgKCJRQV9WSUVXRVJfRklSRUJBU0VfVUlEIiwgIlFBX1ZJRVdFUl9QQVNTV09SRCIsICJxYS12aWV3ZXJAc2FsZXNhbmNob3IuanAiKSwKXQpmb3IgdWlkX2tleSwgcHdfa2V5LCBlbWFpbCBpbiBwYWlyczoKICAgIHRyeToKICAgICAgICB1c2VyID0gYXV0aC5nZXRfdXNlcl9ieV9lbWFpbChlbWFpbCkKICAgICAgICBwcmludCh1aWRfa2V5ICsgIj0iICsgdXNlci51aWQpCiAgICBleGNlcHQgYXV0aC5Vc2VyTm90Rm91bmRFcnJvcjoKICAgICAgICBwdyA9IGdlbl9wYXNzd29yZCgpCiAgICAgICAgdXNlciA9IGF1dGguY3JlYXRlX3VzZXIoZW1haWw9ZW1haWwsIHBhc3N3b3JkPXB3KQogICAgICAgIHByaW50KHVpZF9rZXkgKyAiPSIgKyB1c2VyLnVpZCkKICAgICAgICBwcmludChwd19rZXkgKyAiPSIgKyBwdykKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICBwcmludCgiRVJST1I6ICIgKyBzdHIoZSksIGZpbGU9c3lzLnN0ZGVycikKICAgICAgICBzeXMuZXhpdCgxKQo="
-          # SSH → base64 -d | docker exec -i python3 - で ユーザー作成+UID/PW 取得
-          # stdout を while ループで ::add-mask:: + gh secret set にパイプ (値を表示しない)
+          # GitHub Secrets 登録スクリプト (base64): pynacl + GitHub REST API で暗号化 PUT
+          # stdin の KEY=VALUE を読んで secrets/{name} にセットする
+          REG_B64="aW1wb3J0IHN5cywgb3MsIGJhc2U2NCwganNvbgppbXBvcnQgdXJsbGliLnJlcXVlc3QKZnJvbSBuYWNsIGltcG9ydCBlbmNvZGluZywgcHVibGljCgp0b2tlbiA9IG9zLmVudmlyb24uZ2V0KCdHSF9UT0tFTicsICcnKQppZiBub3QgdG9rZW46CiAgICBzeXMuZXhpdCgnRkFUQUw6IEdIX1RPS0VOIG5vdCBzZXQnKQpoZWFkZXJzID0gewogICAgJ0F1dGhvcml6YXRpb24nOiAndG9rZW4gJyArIHRva2VuLAogICAgJ0FjY2VwdCc6ICdhcHBsaWNhdGlvbi92bmQuZ2l0aHViLnYzK2pzb24nLAogICAgJ1gtR2l0SHViLUFwaS1WZXJzaW9uJzogJzIwMjItMTEtMjgnLAp9CnJlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QoCiAgICAnaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy9zaGluZ28tb3BzL3NhbGVzYW5jaG9yL2FjdGlvbnMvc2VjcmV0cy9wdWJsaWMta2V5JywKICAgIGhlYWRlcnM9aGVhZGVycwopCndpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihyZXEpIGFzIHI6CiAgICBwa19kYXRhID0ganNvbi5sb2FkcyhyLnJlYWQoKSkKa2V5X2lkID0gcGtfZGF0YVsna2V5X2lkJ10KcGsgPSBwdWJsaWMuUHVibGljS2V5KHBrX2RhdGFbJ2tleSddLmVuY29kZSgpLCBlbmNvZGluZy5CYXNlNjRFbmNvZGVyKCkpCmJveCA9IHB1YmxpYy5TZWFsZWRCb3gocGspCgpkZWYgc2V0X3NlY3JldChuYW1lLCB2YWx1ZSk6CiAgICBwcmludCgnOjphZGQtbWFzazo6JyArIHZhbHVlLCBmbHVzaD1UcnVlKQogICAgZW5jID0gYmFzZTY0LmI2NGVuY29kZShib3guZW5jcnlwdCh2YWx1ZS5lbmNvZGUoKSkpLmRlY29kZSgpCiAgICBwYXlsb2FkID0ganNvbi5kdW1wcyh7J2VuY3J5cHRlZF92YWx1ZSc6IGVuYywgJ2tleV9pZCc6IGtleV9pZH0pLmVuY29kZSgpCiAgICBwdXRfaGVhZGVycyA9IGRpY3QobGlzdChoZWFkZXJzLml0ZW1zKCkpICsgWygiQ29udGVudC1UeXBlIiwgImFwcGxpY2F0aW9uL2pzb24iKV0pCiAgICBwdXRfcmVxID0gdXJsbGliLnJlcXVlc3QuUmVxdWVzdCgKICAgICAgICAnaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy9zaGluZ28tb3BzL3NhbGVzYW5jaG9yL2FjdGlvbnMvc2VjcmV0cy8nICsgbmFtZSwKICAgICAgICBkYXRhPXBheWxvYWQsCiAgICAgICAgaGVhZGVycz1wdXRfaGVhZGVycywKICAgICAgICBtZXRob2Q9J1BVVCcKICAgICkKICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihwdXRfcmVxKSBhcyByOgogICAgICAgIHBhc3MKICAgIHByaW50KCdSZWdpc3RlcmVkOiAnICsgbmFtZSwgZmx1c2g9VHJ1ZSkKCmZvciBsaW5lIGluIHN5cy5zdGRpbjoKICAgIGxpbmUgPSBsaW5lLnN0cmlwKCkKICAgIGlmIG5vdCBsaW5lIG9yICc9JyBub3QgaW4gbGluZToKICAgICAgICBjb250aW51ZQogICAgaWYgbGluZS5zdGFydHN3aXRoKCdFUlJPUicpOgogICAgICAgIHByaW50KCdGaXJlYmFzZSBlcnJvcjogJyArIGxpbmUsIGZpbGU9c3lzLnN0ZGVycikKICAgICAgICBzeXMuZXhpdCgxKQogICAgbmFtZSwgXywgdmFsID0gbGluZS5wYXJ0aXRpb24oJz0nKQogICAgaWYgdmFsOgogICAgICAgIHNldF9zZWNyZXQobmFtZSwgdmFsKQo="
+          # 登録スクリプトをファイルに展開 (stdin を SSH output に使うため)
+          echo "${REG_B64}" | base64 -d > /tmp/reg_secrets.py
+          # SSH → docker exec → Firebase 作成/取得 → GitHub Secrets 暗号化登録
           ssh -i ~/.ssh/qa_deploy_key \
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=15 \
               "${VPS_USER}@${VPS_HOST}" \
               "echo '${PY_B64}' | base64 -d | docker exec -i astro-webapp-backend-1 python3 -" | \
-          while IFS='=' read -r secret_name secret_val; do
-            [[ -z "$secret_val" ]] && { echo "WARN: empty val for $secret_name" >&2; continue; }
-            echo "::add-mask::${secret_val}"
-            printf '%s' "${secret_val}" | gh secret set "${secret_name}" --repo shingo-ops/salesanchor
-            echo "Registered: ${secret_name}"
-          done
-          # Email secrets (non-sensitive, emails are defined in ADR-038)
-          gh secret set QA_ADMIN_EMAIL  --body "qa-admin@salesanchor.jp"  --repo shingo-ops/salesanchor
-          gh secret set QA_STAFF_EMAIL  --body "qa-staff@salesanchor.jp"  --repo shingo-ops/salesanchor
-          gh secret set QA_VIEWER_EMAIL --body "qa-viewer@salesanchor.jp" --repo shingo-ops/salesanchor
+          "$PYBIN" /tmp/reg_secrets.py
+          # Email secrets (固定値・公開情報)
+          printf 'QA_ADMIN_EMAIL=qa-admin@salesanchor.jp\nQA_STAFF_EMAIL=qa-staff@salesanchor.jp\nQA_VIEWER_EMAIL=qa-viewer@salesanchor.jp\n' | \
+          "$PYBIN" /tmp/reg_secrets.py
           echo "Registered: QA_ADMIN_EMAIL QA_STAFF_EMAIL QA_VIEWER_EMAIL"
+          rm -f /tmp/reg_secrets.py
           echo "Firebase QA secret setup complete"
 
       - name: Cleanup deploy key
