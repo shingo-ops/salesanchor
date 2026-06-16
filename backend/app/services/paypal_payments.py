@@ -572,6 +572,7 @@ def create_and_send_invoice(
     recipient_email: str,
     reference: str,
     item_name: str = "Sales Anchor Invoice",
+    shipping_fee: int = 0,
 ) -> dict:
     """PayPal Invoice を作成・送付し、顧客が支払うホストURL(recipient_view_url)を返す。
 
@@ -596,6 +597,8 @@ def create_and_send_invoice(
             "currency_code": ccy,
             "invoice_number": invoice_number,
             "reference": reference,
+            **({"shipping_amount": {"currency_code": ccy, "value": _fmt_amount(shipping_fee, currency)}}
+               if shipping_fee else {}),
         },
         "primary_recipients": [
             {"billing_info": {"email_address": recipient_email}}
