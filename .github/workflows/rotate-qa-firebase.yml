@@ -1,0 +1,57 @@
+name: "QA Firebase Password Rotation (one-shot, delete after use)"
+# 使い終わったらこのファイルを削除すること。
+# 目的: GitHub Secrets に登録済みの新QAパスワードを Firebase Auth へ反映する。
+# トリガー: 手動のみ (workflow_dispatch)
+# Runner: 監視VPS (appleboy/ssh-action 経由でアプリVPSのコンテナに接続)
+on:
+  workflow_dispatch:
+
+jobs:
+  update-firebase:
+    name: Update QA Firebase passwords
+    runs-on: [self-hosted, salesanchor-vps]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # scripts/qa/update_firebase_qa_passwords.py をアプリVPSの /tmp/qa/ へSCP
+      - name: Upload Firebase update script to app VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts/qa/update_firebase_qa_passwords.py"
+          target: "/tmp/qa/"
+          strip_components: 2
+
+      # コンテナへスクリプトをコピーし、新パスワードを env 経由で渡してFirebaseを更新する。
+      # パスワードは GitHub Secrets から渡されるため CI ログには *** として表示される。
+      - name: Update Firebase passwords via backend container
+        uses: appleboy/ssh-action@v1
+        env:
+          QA_ADMIN_PASSWORD:  ${{ secrets.QA_ADMIN_PASSWORD }}
+          QA_STAFF_PASSWORD:  ${{ secrets.QA_STAFF_PASSWORD }}
+          QA_VIEWER_PASSWORD: ${{ secrets.QA_VIEWER_PASSWORD }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: QA_ADMIN_PASSWORD,QA_STAFF_PASSWORD,QA_VIEWER_PASSWORD
+          script: |
+            set -e
+            docker exec astro-webapp-backend-1 mkdir -p /tmp/qa 2>/dev/null || true
+            docker cp /tmp/qa/update_firebase_qa_passwords.py \
+              astro-webapp-backend-1:/tmp/qa/update_firebase_qa_passwords.py
+            docker exec -i \
+              -e QA_ADMIN_PASSWORD="$QA_ADMIN_PASSWORD" \
+              -e QA_STAFF_PASSWORD="$QA_STAFF_PASSWORD" \
+              -e QA_VIEWER_PASSWORD="$QA_VIEWER_PASSWORD" \
+              astro-webapp-backend-1 \
+              python3 /tmp/qa/update_firebase_qa_passwords.py
+            docker exec astro-webapp-backend-1 \
+              rm -f /tmp/qa/update_firebase_qa_passwords.py 2>/dev/null || true
+            rm -f /tmp/qa/update_firebase_qa_passwords.py 2>/dev/null || true
+            echo "[OK] Firebase rotation completed"
