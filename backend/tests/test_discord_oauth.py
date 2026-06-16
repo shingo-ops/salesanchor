@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 from contextlib import ExitStack
 from unittest.mock import AsyncMock, patch
+from urllib.parse import parse_qs, urlparse
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -204,6 +205,82 @@ class TestDiscordOAuthStart:
         """未認証だと 401 または 403 が返る。"""
         res = await unauth_client.post("/api/v1/discord/oauth/start")
         assert res.status_code in (401, 403, 422)
+
+    @pytest.mark.asyncio
+    async def test_invite_url_contains_required_permissions(self, app_client):
+        """発行された invite_url に permissions=805432406 が含まれる。
+
+        Developer Portal で確認した permissions integer（2026-06-16）と一致することを保証する。
+        ADR-091 Bot 権限定義の正本と同期している。
+        """
+        mock_issued = {
+            "state": "perm-check-state-xyz",
+            "ttl_seconds": 600,
+            "expires_at": "2026-06-16T00:10:00+00:00",
+        }
+        with patch(
+            "app.routers.discord_oauth.oauth_state.issue_state",
+            AsyncMock(return_value=mock_issued),
+        ):
+            res = await app_client.post("/api/v1/discord/oauth/start")
+
+        assert res.status_code == 200
+        invite_url = res.json()["invite_url"]
+        parsed = urlparse(invite_url)
+        qs = parse_qs(parsed.query)
+
+        assert qs.get("permissions") == ["805432406"], (
+            f"permissions が 805432406 ではありません: {qs.get('permissions')}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_invite_url_contains_required_oauth_params(self, app_client):
+        """発行された invite_url に必須の OAuth2 パラメータが全て含まれる。
+
+        - scope に bot と applications.commands が含まれること
+        - response_type=code が含まれること
+        - redirect_uri が /discord/oauth/callback を含むこと
+        - state が含まれること
+        """
+        mock_issued = {
+            "state": "oauth-param-check-state",
+            "ttl_seconds": 600,
+            "expires_at": "2026-06-16T00:10:00+00:00",
+        }
+        with patch(
+            "app.routers.discord_oauth.oauth_state.issue_state",
+            AsyncMock(return_value=mock_issued),
+        ):
+            res = await app_client.post("/api/v1/discord/oauth/start")
+
+        assert res.status_code == 200
+        invite_url = res.json()["invite_url"]
+        parsed = urlparse(invite_url)
+        qs = parse_qs(parsed.query)
+
+        # scope: bot と applications.commands が含まれること
+        scope_values = qs.get("scope", [""])
+        scope_str = " ".join(scope_values)
+        assert "bot" in scope_str, f"scope に bot が含まれていません: {scope_str}"
+        assert "applications.commands" in scope_str, (
+            f"scope に applications.commands が含まれていません: {scope_str}"
+        )
+
+        # response_type=code（callback-less flow を避けるために必須）
+        assert qs.get("response_type") == ["code"], (
+            f"response_type が code ではありません: {qs.get('response_type')}"
+        )
+
+        # redirect_uri にコールバックパスが含まれること
+        redirect_uri_values = qs.get("redirect_uri", [""])
+        assert any("discord/oauth/callback" in v for v in redirect_uri_values), (
+            f"redirect_uri に discord/oauth/callback が含まれていません: {redirect_uri_values}"
+        )
+
+        # state が含まれること
+        assert qs.get("state") == ["oauth-param-check-state"], (
+            f"state が一致しません: {qs.get('state')}"
+        )
 
 
 # ---------------------------------------------------------------------------
