@@ -107,9 +107,9 @@ Layout.tsx を DesktopShell.tsx にリネームし、mobile 固有コードを�
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-docs/handoff/mobile-shell-pr-r2/design.md §外部・過去事例 参照（Meta / GitHub / Shopify / Salesforce）。JS 判定での DOM 切り替えが業界標準。
+docs/handoff/mobile-shell-pr-r2/design.md §外部・過去事例 参照（Meta / GitHub / Shopify / Salesforce）。JS 判定での DOM 切り替えが業界標準。ShellSwitch パターンは React 公式推奨の条件レンダリングと同一原理であり、SSR なし CSR 専用アプリには最適解。
 
 ---
 

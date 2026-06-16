@@ -20,7 +20,7 @@
 
 ### 実装対象外（PR-R2-C に含めない）
 
-- `frontend/src/responsive.css` の PR-R1 CSS ハック削除（PR-R2-D）
+- frontend/src/responsive.css の PR-R1 CSS ハック削除（PR-R2-D）
 - migrations / deploy.yml / 本番 scripts
 
 ---
@@ -29,16 +29,16 @@
 
 ### MobileShell.tsx（PR-R2-B 新規・develop にマージ済み）
 
-`frontend/src/components/MobileShell.tsx:74` — `export default function MobileShell()`
+`frontend/src/components/MobileShell.tsx:74` — export default function MobileShell()
 
-MobileShell は `useAuth` / `useLocale` / `useTheme` / `useUiPrefs` / `usePermissions` / `useSuperAdmin` / `usePageTitle` / `useSSE` / `listConversations` を利用。
-`Outlet` を `<main className="mobile-content">` でラップ。DesktopShell と完全に独立した DOM。
+MobileShell は useAuth / useLocale / useTheme / useUiPrefs / usePermissions / useSuperAdmin / usePageTitle / useSSE / listConversations を利用。
+Outlet を main.mobile-content でラップ。DesktopShell と完全に独立した DOM。
 
 ### useIsMobile.ts（PR-R2-A 新規・develop にマージ済み）
 
-`frontend/src/hooks/useIsMobile.ts:15` — `export function useIsMobile(): boolean`
+`frontend/src/hooks/useIsMobile.ts:15` — export function useIsMobile(): boolean
 
-- `window.matchMedia(`(max-width: 767px)`)` で判定（`BREAKPOINTS.MOBILE_MAX = 767`）
+- window.matchMedia("(max-width: 767px)") で判定（BREAKPOINTS.MOBILE_MAX = 767）
 - matchMedia change イベントでリアルタイム更新
 - SSR では動作しない（現時点は CSR のみ）
 
@@ -48,39 +48,27 @@ MobileShell は `useAuth` / `useLocale` / `useTheme` / `useUiPrefs` / `usePermis
 
 ### App.tsx（Shell 切り替え追加先）
 
-`frontend/src/App.tsx:8` — `import Layout from "./components/Layout";`（変更対象）
+`frontend/src/App.tsx:8` — import Layout から ShellSwitch への変更対象行
 
-`frontend/src/App.tsx:114-338` — `function App()` 本体
+`frontend/src/App.tsx:126-131` — ProtectedRoute element として Layout が配置されており、ShellSwitch に置換する。ShellSwitch は BrowserRouter 内でレンダリングされるため useIsMobile / useNavigate ともに利用可。
 
-`frontend/src/App.tsx:126-131` — Shell が使われている箇所:
-```tsx
-<Route
-  element={
-    <ProtectedRoute>
-      <Layout />
-    </ProtectedRoute>
-  }
->
-```
+### Layout.tsx（DesktopShell にリネーム・削除済み）
 
-ShellSwitch は `<Layout />` を `<ShellSwitch />` に置換する。ShellSwitch は BrowserRouter 内でレンダリングされるため useIsMobile / useNavigate ともに利用可。
+Layout.tsx は PR-R2-C で DesktopShell.tsx にリネームし git rm 削除済み。
+`frontend/src/components/DesktopShell.tsx` — export default function DesktopShell()
 
-### Layout.tsx（DesktopShell にリネーム・整理）
+#### mobile 固有コード（Layout.tsx から削除済み）
 
-`frontend/src/components/Layout.tsx:95` — `export default function Layout()`
-
-#### mobile 固有コード（削除対象）
-
-| 行 | 内容 | 削除理由 |
+| 削除コード | 内容 | 削除理由 |
 |---|---|---|
-| `frontend/src/components/Layout.tsx:111` | `const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)` | MobileShell へ移管済み |
-| `frontend/src/components/Layout.tsx:131-134` | `const openMobileSidebar = ...` | 同上 |
-| `frontend/src/components/Layout.tsx:136-140` | `const closeMobileSidebar = ...` | 同上 |
-| `frontend/src/components/Layout.tsx:143-150` | Escape key handler（isMobileSidebarOpen 依存） | 同上 |
-| `frontend/src/components/Layout.tsx:165` | `const handleNavClick = () => closeMobileSidebar()` | handleSidebarLeave に統一 |
-| `frontend/src/components/Layout.tsx:197-204` | `sidebar-mobile-backdrop` div | MobileShell へ移管済み |
-| `frontend/src/components/Layout.tsx:209` | `sidebar-mobile-open` class 付与 | 同上 |
-| `frontend/src/components/Layout.tsx:417-425` | `mobile-menu-btn` button | MobileShell TopBar へ移管済み |
+| isMobileSidebarOpen state (旧 Layout.tsx line 111) | モバイルサイドバー開閉状態管理 | MobileShell へ移管済み |
+| openMobileSidebar 関数 (旧 Layout.tsx line 131-134) | サイドバーを開く | 同上 |
+| closeMobileSidebar 関数 (旧 Layout.tsx line 136-140) | サイドバーを閉じる | 同上 |
+| Escape key handler (旧 Layout.tsx line 143-150) | isMobileSidebarOpen 依存 | 同上 |
+| handleNavClick → handleSidebarLeave に統一 (旧 Layout.tsx line 165) | PC は mouse leave で折りたたみ | mobile 固有コード不要 |
+| sidebar-mobile-backdrop div (旧 Layout.tsx line 197-204) | モバイルバックドロップ要素 | MobileShell へ移管済み |
+| sidebar-mobile-open クラス付与 (旧 Layout.tsx line 209) | モバイル展開クラス | 同上 |
+| mobile-menu-btn button (旧 Layout.tsx line 417-425) | ハンバーガーボタン | MobileShell TopBar へ移管済み |
 
 ---
 
@@ -88,26 +76,26 @@ ShellSwitch は `<Layout />` を `<ShellSwitch />` に置換する。ShellSwitch
 
 ### auth.ts（認証 bypass）
 
-`frontend/tests-e2e/utils/auth.ts:43` — `export async function installAuthBypass(page: Page): Promise<void>`
+`frontend/tests-e2e/utils/auth.ts:43` — export async function installAuthBypass(page: Page): Promise<void>
 
 Firebase Auth を IndexedDB + fetch patch で bypass する。page.goto 前に必ず呼ぶ。
 
 ### api-mock.ts（API モック）
 
-`frontend/tests-e2e/utils/api-mock.ts` — `export async function mockApi(page, mocks: MockMap): Promise<void>`
+`frontend/tests-e2e/utils/api-mock.ts` — export async function mockApi(page, mocks: MockMap): Promise<void>
 
 ### common-mocks.ts（共通モック）
 
-`frontend/tests-e2e/utils/common-mocks.ts:42` — `export function commonMocks(): MockMap`
+`frontend/tests-e2e/utils/common-mocks.ts:42` — export function commonMocks(): MockMap
 
 - GET /me/permissions → 全権限付与
 - GET /staff/me → ui_preferences 含む staff 情報
 
 ### playwright.config.ts
 
-`frontend/playwright.config.ts:56-59` — `projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }]`
+`frontend/playwright.config.ts:56-59` — Chromium Desktop Chrome project 設定
 
-デフォルト viewport は Desktop Chrome（1280×720）。モバイル E2E は `page.setViewportSize` で 375×812 に変更する。
+デフォルト viewport は Desktop Chrome（1280×720）。モバイル E2E は page.setViewportSize で 375×812 に変更する。
 
 ---
 
@@ -116,13 +104,13 @@ Firebase Auth を IndexedDB + fetch patch で bypass する。page.goto 前に�
 ### MobileShell 用 token（変更なし）
 
 `frontend/src/tokens.css:122-127` — z-index 階層:
-- `--z-topbar: 100`（MobileTopBar）
-- `--z-sidebar: 200`（MobileDrawer）
-- `--z-sidebar-overlay: 210`（MobileDrawerBackdrop）
+- --z-topbar: 100（MobileTopBar）
+- --z-sidebar: 200（MobileDrawer）
+- --z-sidebar-overlay: 210（MobileDrawerBackdrop）
 
 ### BREAKPOINTS 定数
 
-`frontend/src/constants/breakpoints.ts:19` — `MOBILE_MAX: 767`
+`frontend/src/constants/breakpoints.ts:19` — MOBILE_MAX: 767
 
 ---
 
