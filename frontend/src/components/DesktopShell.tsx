@@ -1,5 +1,13 @@
 /**
- * アプリケーション共通レイアウト（ADR-022: Meta Business Suite 風サイドバー）
+ * DesktopShell — PC 専用 Shell（ADR-022: Meta Business Suite 風サイドバー）
+ *
+ * PR-R2-C: Layout.tsx から rename。mobile 固有コードを削除し DesktopShell に特化。
+ *   - isMobileSidebarOpen / openMobileSidebar / closeMobileSidebar を削除
+ *   - sidebar-mobile-backdrop / mobile-menu-btn を削除
+ *   - handleNavClick を handleSidebarLeave に統一（PC のみ考慮）
+ *
+ * ADR-137: App.tsx の useIsMobile() により 767px 以下では MobileShell が使われる。
+ *          DesktopShell は 768px 以上（tablet 含む）で利用される。
  *
  * 構成:
  *   app-shell (flex row)
@@ -12,6 +20,7 @@
  *   2026-05-11: ADR-022 — 左サイドバー + Meta Business Suite 配色に刷新
  *   2026-05-14: ADR-027 — i18n対応（useTranslation + useLocale）
  *   2026-05-14: ADR-033 — テーマ切り替えボタン追加（useTheme）
+ *   2026-06-16: PR-R2-C — Layout.tsx → DesktopShell.tsx rename + mobile コード削除
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -89,10 +98,10 @@ function SidebarAccordion({
 }
 
 /* ------------------------------------------------------------------ */
-/* Layout                                                               */
+/* DesktopShell                                                         */
 /* ------------------------------------------------------------------ */
 
-export default function Layout() {
+export default function DesktopShell() {
   const { t } = useTranslation();
   const { locale, changeLanguage } = useLocale();
   const { theme, changeTheme } = useTheme();
@@ -108,7 +117,6 @@ export default function Layout() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -126,43 +134,17 @@ export default function Layout() {
   useEffect(() => { loadUnreadCount(); }, [loadUnreadCount]);
   useSSE({ endpoint: "/api/v1/conversations/stream", onUpdate: loadUnreadCount });
 
-  // mobile sidebar: open / close ヘルパー
-  // sidebarExpanded を同期させることで .sidebar-expanded .sidebar-label { opacity: 1 } が効く
-  const openMobileSidebar = () => {
-    setIsMobileSidebarOpen(true);
-    setSidebarExpanded(true);
-  };
-
-  const closeMobileSidebar = () => {
-    setIsMobileSidebarOpen(false);
-    setSidebarExpanded(false);
-    setOpenAccordion(null);
-  };
-
-  // mobile sidebar: Escape key で閉じる
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isMobileSidebarOpen) {
-        closeMobileSidebar();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isMobileSidebarOpen]);
-
   const toggleAccordion = (key: string) => {
     const next = openAccordion === key ? null : key;
     setOpenAccordion(next);
     if (next !== null) setSidebarExpanded(true); // アコーディオンを開く際はサイドバーも展開
   };
 
+  // PC: mouse leave でサイドバーを折りたたむ。nav item click でも同じ動作を適用。
   const handleSidebarLeave = () => {
     setSidebarExpanded(false);
     setOpenAccordion(null);
   };
-
-  // nav item click: desktop hover も mobile open もまとめて閉じる
-  const handleNavClick = () => closeMobileSidebar();
 
   /* ---- permission-filtered sub-item lists ---- */
 
@@ -194,19 +176,10 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      {/* ============ Mobile sidebar backdrop ============ */}
-      {isMobileSidebarOpen && (
-        <div
-          className="sidebar-mobile-backdrop"
-          onClick={closeMobileSidebar}
-          aria-hidden="true"
-        />
-      )}
-
       {/* ============ Sidebar ============ */}
       <aside
         id="sidebar-panel"
-        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}${isMobileSidebarOpen ? " sidebar-mobile-open" : ""}`}
+        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}`}
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={handleSidebarLeave}
       >
@@ -229,7 +202,7 @@ export default function Layout() {
                   to="/"
                   end
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.dashboard size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.dashboard")}</span>
@@ -239,7 +212,7 @@ export default function Layout() {
               <NavLink
                 to="/schedule"
                 className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                onClick={handleNavClick}
+                onClick={handleSidebarLeave}
               >
                 <span className="sidebar-icon"><NAV_ICONS.schedule size={ICON.base} /></span>
                 <span className="sidebar-label">{t("nav.schedule")}</span>
@@ -249,7 +222,7 @@ export default function Layout() {
                 <NavLink
                   to="/lead-chat"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon">
                     <LeadChatIcon size={ICON.base} />
@@ -270,7 +243,7 @@ export default function Layout() {
                 <NavLink
                   to="/inventory"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.inventory size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.inventory")}</span>
@@ -282,7 +255,7 @@ export default function Layout() {
                 <NavLink
                   to="/purchase-orders"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.purchaseOrders size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.purchaseOrders")}</span>
@@ -300,7 +273,7 @@ export default function Layout() {
                       location.pathname.startsWith("/invoices");
                     return `sidebar-item${on ? " active" : ""}`;
                   }}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.fileText size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.quotesInvoices")}</span>
@@ -316,7 +289,7 @@ export default function Layout() {
                       location.pathname.startsWith("/crm/");
                     return `sidebar-item${onCrm ? " active" : ""}`;
                   }}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.leads size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.leads")}</span>
@@ -327,7 +300,7 @@ export default function Layout() {
                 <NavLink
                   to="/orders"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.orders size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.orders")}</span>
@@ -340,7 +313,7 @@ export default function Layout() {
                 <NavLink
                   to="/sales"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.sales size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.sales")}</span>
@@ -353,7 +326,7 @@ export default function Layout() {
                 <NavLink
                   to="/commissions"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.commissions size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.commissions")}</span>
@@ -364,7 +337,7 @@ export default function Layout() {
                 <NavLink
                   to="/management-center"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleNavClick}
+                  onClick={handleSidebarLeave}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.admin size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.managementCenter")}</span>
@@ -385,7 +358,7 @@ export default function Layout() {
                     isExpanded={sidebarExpanded}
                     isOpen={openAccordion === "saasAdmin"}
                     onToggle={() => toggleAccordion("saasAdmin")}
-                    onNavClick={handleNavClick}
+                    onNavClick={handleSidebarLeave}
                   />
                 </>
               )}
@@ -398,7 +371,7 @@ export default function Layout() {
                 isExpanded={sidebarExpanded}
                 isOpen={openAccordion === "more"}
                 onToggle={() => toggleAccordion("more")}
-                onNavClick={handleNavClick}
+                onNavClick={handleSidebarLeave}
               />
             </>
           )}
@@ -412,17 +385,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-
-      {/* ============ Mobile menu button (hamburger — mobile only) ============ */}
-      <button
-        className="mobile-menu-btn"
-        onClick={openMobileSidebar}
-        aria-label={t("nav.openMenu")}
-        aria-expanded={isMobileSidebarOpen}
-        aria-controls="sidebar-panel"
-      >
-        <NAV_ICONS.menu size={ICON.md} aria-hidden="true" />
-      </button>
 
       {/* ============ Fixed avatar button (Chrome / Meta style) ============ */}
       <button

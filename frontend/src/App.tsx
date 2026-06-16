@@ -5,7 +5,9 @@ import { UiPrefsProvider } from "./contexts/UiPrefsContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
+import DesktopShell from "./components/DesktopShell";
+import MobileShell from "./components/MobileShell";
+import { useIsMobile } from "./hooks/useIsMobile";
 import LoginPage from "./pages/login/LoginPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import FollowUpsPage from "./pages/dashboard/FollowUpsPage";
@@ -106,6 +108,20 @@ function CompanyIdRedirect() {
   return <Navigate to={`/crm/companies/${id}`} replace />;
 }
 
+/**
+ * ShellSwitch — useIsMobile() で DesktopShell / MobileShell を切り替える。
+ *
+ * ADR-137: CSS @media による hide/show ではなく DOM 切り替えを採用。
+ *   767px 以下 → MobileShell（hamburger + drawer）
+ *   768px 以上 → DesktopShell（collapsed sidebar）
+ *
+ * BrowserRouter 内でレンダリングされるため useIsMobile / useNavigate ともに利用可。
+ */
+function ShellSwitch() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileShell /> : <DesktopShell />;
+}
+
 function App() {
   const { t } = useTranslation();
   // PR #166 F5: UiPrefsProvider は BrowserRouter の内側に配置する。
@@ -126,7 +142,7 @@ function App() {
                 <Route
                   element={
                     <ProtectedRoute>
-                      <Layout />
+                      <ShellSwitch />
                     </ProtectedRoute>
                   }
                 >
