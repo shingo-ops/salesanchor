@@ -90,7 +90,9 @@ test.describe("MobileShell KGI-2 検証（375×812）", () => {
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
     const backdrop = page.locator(".mobile-drawer-backdrop");
-    await backdrop.click();
+    // mobile-drawer (z-index:210) が backdrop (z-index:200) の前面にあるため、
+    // drawer 幅（240px）の外側（375px viewport の右端付近）をクリックする。
+    await backdrop.click({ position: { x: 320, y: 400 } });
     await expect(drawer).not.toBeVisible({ timeout: 3_000 });
   });
 
