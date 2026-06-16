@@ -339,7 +339,7 @@
     "successMsg": "接続成功",
     "failMsg": "接続失敗",
     "payTestTitle": "決済テスト",
-    "payTestHint": "テスト用の請求書（¥100）を作成し、PayPal 請求書を送付します（sandbox 環境限定）。",
+    "payTestHint": "テスト用の請求書（商品 ¥100 ＋ 送料 ¥500、合計 ¥600）を作成し、PayPal 請求書を送付します（sandbox 環境限定）。",
     "payTestButton": "テスト請求書を発行",
     "payTestRunning": "作成中...",
     "payTestCreated": "テスト請求書を作成しました",
