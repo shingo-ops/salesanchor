@@ -127,6 +127,20 @@ test.describe("MobileShell KGI-2 検証（375×812）", () => {
     const userDrawer = page.locator(".user-drawer--open");
     await expect(userDrawer).toBeVisible({ timeout: 5_000 });
   });
+
+  test("avatar クリックで表示された user-drawer が close ボタン直接クリックで閉じる", async ({ page }) => {
+    const avatar = page.locator(".mobile-topbar-avatar");
+    await avatar.click();
+
+    const userDrawer = page.locator(".user-drawer--open");
+    await expect(userDrawer).toBeVisible({ timeout: 5_000 });
+
+    // mobile-topbar-avatar は in-flow（position: fixed 不使用）なので
+    // user-drawer-close ボタンを直接クリックできる。
+    const closeBtn = page.locator(".user-drawer-close");
+    await closeBtn.click();
+    await expect(userDrawer).not.toBeVisible({ timeout: 3_000 });
+  });
 });
 
 test.describe("MobileShell KGI-2 検証（390×844）", () => {
