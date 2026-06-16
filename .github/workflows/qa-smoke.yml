@@ -109,24 +109,10 @@ jobs:
         run: |
           set -euo pipefail
           # gh CLI は self-hosted runner には存在しないため pynacl + GitHub REST API で代替。
-          # python3-venv が未インストールの場合は apt で入れてから venv 作成。
-          # sudo 失敗 / venv 作成失敗の場合は pip --break-system-packages にフォールバック。
-          if ! python3 -c "import nacl" 2>/dev/null; then
-            PYBIN=""
-            # Attempt 1: venv (preferred — 環境を汚染しない)
-            if sudo apt-get install -y python3-venv 2>&1 | tail -2 && \
-               python3 -m venv /tmp/qa-venv 2>/dev/null; then
-              /tmp/qa-venv/bin/pip install pynacl --quiet 2>&1 | tail -2
-              PYBIN=/tmp/qa-venv/bin/python3
-            fi
-            # Attempt 2: pip --user --break-system-packages (Ubuntu 23+ externally-managed)
-            if [[ -z "$PYBIN" ]]; then
-              pip3 install pynacl --user --break-system-packages --quiet 2>&1 | tail -2
-              PYBIN=python3
-            fi
-          else
-            PYBIN=python3
-          fi
+          # python3-nacl は Debian/Ubuntu の apt パッケージ (pip 不要・sudo のみ)。
+          python3 -c "import nacl" 2>/dev/null || \
+            sudo apt-get install -y python3-nacl 2>&1 | tail -3
+          PYBIN=python3
           # Firebase 作成スクリプト (base64): Firebase Admin で3ユーザー作成しUID+PWを stdout 出力
           # 既存ユーザーはUIDのみ出力 (PW更新しない)
           PY_B64="aW1wb3J0IHN5cywgb3MsIHNlY3JldHMsIHN0cmluZwppbXBvcnQgZmlyZWJhc2VfYWRtaW4KZnJvbSBmaXJlYmFzZV9hZG1pbiBpbXBvcnQgYXV0aCwgY3JlZGVudGlhbHMKCmNyZWRfcGF0aCA9IG9zLmVudmlyb24uZ2V0KCJHT09HTEVfQVBQTElDQVRJT05fQ1JFREVOVElBTFMiLCAiL2FwcC9maXJlYmFzZS1jcmVkZW50aWFscy5qc29uIikKaWYgbm90IG9zLnBhdGguZXhpc3RzKGNyZWRfcGF0aCk6CiAgICBzeXMuZXhpdCgiRkFUQUw6IGNyZWRlbnRpYWxzIG5vdCBmb3VuZCBhdCAiICsgY3JlZF9wYXRoKQppZiBub3QgZmlyZWJhc2VfYWRtaW4uX2FwcHM6CiAgICBmaXJlYmFzZV9hZG1pbi5pbml0aWFsaXplX2FwcChjcmVkZW50aWFscy5DZXJ0aWZpY2F0ZShjcmVkX3BhdGgpKQoKZGVmIGdlbl9wYXNzd29yZChsZW5ndGg9MjQpOgogICAgY2hhcnMgPSBzdHJpbmcuYXNjaWlfbGV0dGVycyArIHN0cmluZy5kaWdpdHMgKyAiIUAjJCVeJiotXysiCiAgICByZXR1cm4gIiIuam9pbihzZWNyZXRzLmNob2ljZShjaGFycykgZm9yIF8gaW4gcmFuZ2UobGVuZ3RoKSkKCnBhaXJzID0gWwogICAgKCJRQV9BRE1JTl9GSVJFQkFTRV9VSUQiLCAgIlFBX0FETUlOX1BBU1NXT1JEIiwgICJxYS1hZG1pbkBzYWxlc2FuY2hvci5qcCIpLAogICAgKCJRQV9TVEFGRl9GSVJFQkFTRV9VSUQiLCAgIlFBX1NUQUZGX1BBU1NXT1JEIiwgICJxYS1zdGFmZkBzYWxlc2FuY2hvci5qcCIpLAogICAgKCJRQV9WSUVXRVJfRklSRUJBU0VfVUlEIiwgIlFBX1ZJRVdFUl9QQVNTV09SRCIsICJxYS12aWV3ZXJAc2FsZXNhbmNob3IuanAiKSwKXQpmb3IgdWlkX2tleSwgcHdfa2V5LCBlbWFpbCBpbiBwYWlyczoKICAgIHRyeToKICAgICAgICB1c2VyID0gYXV0aC5nZXRfdXNlcl9ieV9lbWFpbChlbWFpbCkKICAgICAgICBwcmludCh1aWRfa2V5ICsgIj0iICsgdXNlci51aWQpCiAgICBleGNlcHQgYXV0aC5Vc2VyTm90Rm91bmRFcnJvcjoKICAgICAgICBwdyA9IGdlbl9wYXNzd29yZCgpCiAgICAgICAgdXNlciA9IGF1dGguY3JlYXRlX3VzZXIoZW1haWw9ZW1haWwsIHBhc3N3b3JkPXB3KQogICAgICAgIHByaW50KHVpZF9rZXkgKyAiPSIgKyB1c2VyLnVpZCkKICAgICAgICBwcmludChwd19rZXkgKyAiPSIgKyBwdykKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICBwcmludCgiRVJST1I6ICIgKyBzdHIoZSksIGZpbGU9c3lzLnN0ZGVycikKICAgICAgICBzeXMuZXhpdCgxKQo="
