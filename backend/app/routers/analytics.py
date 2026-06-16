@@ -1129,9 +1129,9 @@ async def follow_ups_summary(
     _validate_scope(scope)
     today = date.today()
     items: list[FollowUpCustomer] = []
-    # 境界日を Python 側で計算（SQLite / PostgreSQL 両互換）
-    threshold_30 = str(today - timedelta(days=30))
-    threshold_45 = str(today - timedelta(days=45))
+    # 境界日を Python 側で計算（date オブジェクトのまま渡す・str 変換禁止）
+    threshold_30 = today - timedelta(days=30)
+    threshold_45 = today - timedelta(days=45)
 
     # scope filter for deals
     deal_assign_filter = "AND d.assigned_to = :uid" if scope == "mine" else ""
@@ -1189,7 +1189,7 @@ async def follow_ups_summary(
               AND MIN(o.created_at) >= :threshold_45
             ORDER BY MIN(o.created_at) ASC
         """),
-        {"threshold_now": str(today), "threshold_45": threshold_45},
+        {"threshold_now": today, "threshold_45": threshold_45},
     )
     for row in no_repeat_result.mappings().all():
         first_order = str(row["first_order_at"])[:10] if row["first_order_at"] else None
