@@ -9,7 +9,7 @@
 
 ## 背景
 
-PR-R2-D（#2271）残タスク。`avatar-btn`（z-index:300）が `user-drawer`（z-index:299）の前面に重なるため、`user-drawer-close` ボタンを直接クリックできない。
+PR-R2-D（#2271）残タスク。avatar-btn（z-index:300）が user-drawer（z-index:299）の前面に重なるため、user-drawer-close ボタンを直接クリックできない。
 
 ---
 
