@@ -37,6 +37,9 @@ name: QA Smoke Suite (ADR-038)
 #   QA_ADMIN_FIREBASE_UID       reset-tenant.sh / seed-tenant.sql に渡す
 #   QA_STAFF_FIREBASE_UID
 #   QA_VIEWER_FIREBASE_UID
+#   QA_ADMIN_PASSWORD_HASH      bcrypt 済 hash (reset-tenant.sh が DB seed 時に使用)
+#   QA_STAFF_PASSWORD_HASH
+#   QA_VIEWER_PASSWORD_HASH
 #   QA_DISCORD_WEBHOOK_URL      (optional) reset 開始/完了 通知用
 #
 # Secrets 初期登録:
@@ -135,12 +138,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            docker exec astro-webapp-backend-1 mkdir -p /app/scripts/qa 2>/dev/null || true
-            docker cp /tmp/qa-scripts/reset-tenant.sh    astro-webapp-backend-1:/app/scripts/qa/reset-tenant.sh
-            docker cp /tmp/qa-scripts/seed-tenant.sql    astro-webapp-backend-1:/app/scripts/qa/seed-tenant.sql
-            docker cp /tmp/qa-scripts/cleanup-smoke-data.sh astro-webapp-backend-1:/app/scripts/qa/cleanup-smoke-data.sh
+            # /app は read-only のため /tmp/qa-scripts/ へ投入する
+            # (mkdir -p /app/... は失敗するため 2>/dev/null || true でも docker cp が失敗する)
+            docker exec astro-webapp-backend-1 mkdir -p /tmp/qa-scripts
+            docker cp /tmp/qa-scripts/reset-tenant.sh       astro-webapp-backend-1:/tmp/qa-scripts/reset-tenant.sh
+            docker cp /tmp/qa-scripts/seed-tenant.sql       astro-webapp-backend-1:/tmp/qa-scripts/seed-tenant.sql
+            docker cp /tmp/qa-scripts/cleanup-smoke-data.sh astro-webapp-backend-1:/tmp/qa-scripts/cleanup-smoke-data.sh
             # docker cp は元ファイルのパーミッションを引き継ぐ (chmod 不要)
-            docker exec astro-webapp-backend-1 ls -la /app/scripts/qa/
+            docker exec astro-webapp-backend-1 ls -la /tmp/qa-scripts/
 
       # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
       # runner (監視VPS 49.212.160.98) は PostgreSQL (アプリVPS docker 内部) に
@@ -150,15 +155,18 @@ jobs:
       - name: Reset tenant_006 on app VPS (via SSH + docker exec)
         uses: appleboy/ssh-action@v1
         env:
-          QA_ADMIN_FIREBASE_UID:   ${{ secrets.QA_ADMIN_FIREBASE_UID }}
-          QA_STAFF_FIREBASE_UID:   ${{ secrets.QA_STAFF_FIREBASE_UID }}
-          QA_VIEWER_FIREBASE_UID:  ${{ secrets.QA_VIEWER_FIREBASE_UID }}
-          QA_DISCORD_WEBHOOK_URL:  ${{ secrets.QA_DISCORD_WEBHOOK_URL }}
+          QA_ADMIN_FIREBASE_UID:    ${{ secrets.QA_ADMIN_FIREBASE_UID }}
+          QA_STAFF_FIREBASE_UID:    ${{ secrets.QA_STAFF_FIREBASE_UID }}
+          QA_VIEWER_FIREBASE_UID:   ${{ secrets.QA_VIEWER_FIREBASE_UID }}
+          QA_ADMIN_PASSWORD_HASH:   ${{ secrets.QA_ADMIN_PASSWORD_HASH }}
+          QA_STAFF_PASSWORD_HASH:   ${{ secrets.QA_STAFF_PASSWORD_HASH }}
+          QA_VIEWER_PASSWORD_HASH:  ${{ secrets.QA_VIEWER_PASSWORD_HASH }}
+          QA_DISCORD_WEBHOOK_URL:   ${{ secrets.QA_DISCORD_WEBHOOK_URL }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_DISCORD_WEBHOOK_URL
+          envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_ADMIN_PASSWORD_HASH,QA_STAFF_PASSWORD_HASH,QA_VIEWER_PASSWORD_HASH,QA_DISCORD_WEBHOOK_URL
           script: |
             set -e
             # docker compose exec はプロジェクト名解決 (salesanchor vs astro-webapp) に依存するため
@@ -167,9 +175,12 @@ jobs:
               -e QA_ADMIN_FIREBASE_UID="$QA_ADMIN_FIREBASE_UID" \
               -e QA_STAFF_FIREBASE_UID="$QA_STAFF_FIREBASE_UID" \
               -e QA_VIEWER_FIREBASE_UID="$QA_VIEWER_FIREBASE_UID" \
+              -e QA_ADMIN_PASSWORD_HASH="$QA_ADMIN_PASSWORD_HASH" \
+              -e QA_STAFF_PASSWORD_HASH="$QA_STAFF_PASSWORD_HASH" \
+              -e QA_VIEWER_PASSWORD_HASH="$QA_VIEWER_PASSWORD_HASH" \
               -e QA_DISCORD_WEBHOOK_URL="${QA_DISCORD_WEBHOOK_URL:-}" \
               astro-webapp-backend-1 \
-              bash /app/scripts/qa/reset-tenant.sh
+              bash /tmp/qa-scripts/reset-tenant.sh
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
@@ -201,7 +212,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             docker exec -i astro-webapp-backend-1 \
-              bash /app/scripts/qa/cleanup-smoke-data.sh \
+              bash /tmp/qa-scripts/cleanup-smoke-data.sh \
               || echo "cleanup failed (best-effort)"
 
       # --- Artifacts ---
