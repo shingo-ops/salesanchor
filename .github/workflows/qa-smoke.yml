@@ -38,6 +38,10 @@ name: QA Smoke Suite (ADR-038)
 #   QA_STAFF_FIREBASE_UID
 #   QA_VIEWER_FIREBASE_UID
 #   QA_DISCORD_WEBHOOK_URL      (optional) reset 開始/完了 通知用
+#
+# Secrets 初期登録:
+#   上記 QA_* Secrets は一回限りの VPS 作業で事前登録済み。
+#   Firebase ユーザー作成・Secrets 登録は CI 外で実施（このワークフロー外）。
 
 on:
   workflow_dispatch:
@@ -73,56 +77,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      # --- Firebase QA Secrets 自動セットアップ (QA_ADMIN_FIREBASE_UID 未登録時のみ実行) ---
-      # GO #2229-Firebase-QA: Shingo 2026-06-16 承認済み
-      # backend コンテナ内の Firebase Admin SDK で:
-      #   1. 3メールが存在しなければ新規作成 (ランダムパスワード)
-      #   2. UID + Password を PIPELINE_PAT 経由で gh secret set
-      # 登録済みなら全ステップスキップ。
-      - name: Check if Firebase QA secrets need setup
-        id: check-uid-secrets
-        env:
-          QA_ADMIN_FIREBASE_UID: ${{ secrets.QA_ADMIN_FIREBASE_UID }}
-        run: |
-          if [[ -z "${QA_ADMIN_FIREBASE_UID:-}" ]]; then
-            echo "need_setup=true" >> "$GITHUB_OUTPUT"
-            echo "Firebase QA secrets not registered — running setup"
-          else
-            echo "need_setup=false" >> "$GITHUB_OUTPUT"
-            echo "Firebase QA secrets already registered — skipping setup"
-          fi
-
-      # Firebase 作成 + Secret 登録を backend コンテナ内で一括実行
-      # コンテナには firebase_admin インストール済み。
-      # pynacl (nacl) は pip で追加 (コンテナ再起動で消えるが 1 回限りのセットアップで十分)。
-      # GH_TOKEN は docker exec -e で渡す。値はログに出力しない。
-      - name: Create Firebase QA users + register UID/Password Secrets (in backend container)
-        if: steps.check-uid-secrets.outputs.need_setup == 'true'
-        uses: appleboy/ssh-action@v1
-        env:
-          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GH_TOKEN
-          script: |
-            set -e
-            # pynacl を backend コンテナにインストール (GitHub Secrets API の暗号化に必要)
-            # appuser は system site-packages への書き込み不可のため -u root で実行
-            docker exec -u root astro-webapp-backend-1 \
-              pip install pynacl --quiet 2>&1
-            # 統合スクリプト (base64):
-            #   firebase_admin で 3 ユーザー作成/取得 → pynacl + GitHub REST API で Secret 登録
-            #   stdout に UID_PASSTHROUGH:KEY=VALUE 行を出力 → reset step が /tmp/qa-firebase-uids.env で受け取る
-            COMBINED_B64="aW1wb3J0IHN5cywgb3MsIHNlY3JldHMsIHN0cmluZywgYmFzZTY0LCBqc29uCmltcG9ydCB1cmxsaWIucmVxdWVzdAppbXBvcnQgZmlyZWJhc2VfYWRtaW4KZnJvbSBmaXJlYmFzZV9hZG1pbiBpbXBvcnQgYXV0aCwgY3JlZGVudGlhbHMKZnJvbSBuYWNsIGltcG9ydCBlbmNvZGluZywgcHVibGljCgpjcmVkX3BhdGggPSBvcy5lbnZpcm9uLmdldCgiR09PR0xFX0FQUExJQ0FUSU9OX0NSRURFTlRJQUxTIiwgIi9hcHAvZmlyZWJhc2UtY3JlZGVudGlhbHMuanNvbiIpCmlmIG5vdCBvcy5wYXRoLmV4aXN0cyhjcmVkX3BhdGgpOgogICAgc3lzLmV4aXQoIkZBVEFMOiBjcmVkZW50aWFscyBub3QgZm91bmQgYXQgIiArIGNyZWRfcGF0aCkKaWYgbm90IGZpcmViYXNlX2FkbWluLl9hcHBzOgogICAgZmlyZWJhc2VfYWRtaW4uaW5pdGlhbGl6ZV9hcHAoY3JlZGVudGlhbHMuQ2VydGlmaWNhdGUoY3JlZF9wYXRoKSkKCnRva2VuID0gb3MuZW52aXJvbi5nZXQoIkdIX1RPS0VOIiwgIiIpCmlmIG5vdCB0b2tlbjoKICAgIHN5cy5leGl0KCJGQVRBTDogR0hfVE9LRU4gbm90IHNldCIpCmhlYWRlcnMgPSB7CiAgICAiQXV0aG9yaXphdGlvbiI6ICJ0b2tlbiAiICsgdG9rZW4sCiAgICAiQWNjZXB0IjogImFwcGxpY2F0aW9uL3ZuZC5naXRodWIudjMranNvbiIsCiAgICAiWC1HaXRIdWItQXBpLVZlcnNpb24iOiAiMjAyMi0xMS0yOCIsCn0KcmVxID0gdXJsbGliLnJlcXVlc3QuUmVxdWVzdCgKICAgICJodHRwczovL2FwaS5naXRodWIuY29tL3JlcG9zL3NoaW5nby1vcHMvc2FsZXNhbmNob3IvYWN0aW9ucy9zZWNyZXRzL3B1YmxpYy1rZXkiLAogICAgaGVhZGVycz1oZWFkZXJzCikKd2l0aCB1cmxsaWIucmVxdWVzdC51cmxvcGVuKHJlcSkgYXMgcjoKICAgIHBrX2RhdGEgPSBqc29uLmxvYWRzKHIucmVhZCgpKQprZXlfaWQgPSBwa19kYXRhWyJrZXlfaWQiXQpwayA9IHB1YmxpYy5QdWJsaWNLZXkocGtfZGF0YVsia2V5Il0uZW5jb2RlKCksIGVuY29kaW5nLkJhc2U2NEVuY29kZXIoKSkKYm94ID0gcHVibGljLlNlYWxlZEJveChwaykKCmRlZiBzZXRfc2VjcmV0KG5hbWUsIHZhbHVlKToKICAgIGVuYyA9IGJhc2U2NC5iNjRlbmNvZGUoYm94LmVuY3J5cHQodmFsdWUuZW5jb2RlKCkpKS5kZWNvZGUoKQogICAgcGF5bG9hZCA9IGpzb24uZHVtcHMoeyJlbmNyeXB0ZWRfdmFsdWUiOiBlbmMsICJrZXlfaWQiOiBrZXlfaWR9KS5lbmNvZGUoKQogICAgcHV0X2hlYWRlcnMgPSBkaWN0KGxpc3QoaGVhZGVycy5pdGVtcygpKSArIFsoIkNvbnRlbnQtVHlwZSIsICJhcHBsaWNhdGlvbi9qc29uIildKQogICAgcHV0X3JlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QoCiAgICAgICAgImh0dHBzOi8vYXBpLmdpdGh1Yi5jb20vcmVwb3Mvc2hpbmdvLW9wcy9zYWxlc2FuY2hvci9hY3Rpb25zL3NlY3JldHMvIiArIG5hbWUsCiAgICAgICAgZGF0YT1wYXlsb2FkLCBoZWFkZXJzPXB1dF9oZWFkZXJzLCBtZXRob2Q9IlBVVCIKICAgICkKICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihwdXRfcmVxKSBhcyByOgogICAgICAgIHBhc3MKICAgIHByaW50KCJSZWdpc3RlcmVkOiAiICsgbmFtZSwgZmx1c2g9VHJ1ZSkKCmRlZiBnZW5fcGFzc3dvcmQobGVuZ3RoPTI0KToKICAgIGNoYXJzID0gc3RyaW5nLmFzY2lpX2xldHRlcnMgKyBzdHJpbmcuZGlnaXRzICsgIiFAIyQlXiYqLV8rIgogICAgcmV0dXJuICIiLmpvaW4oc2VjcmV0cy5jaG9pY2UoY2hhcnMpIGZvciBfIGluIHJhbmdlKGxlbmd0aCkpCgp1aWRzID0ge30KcGFpcnMgPSBbCiAgICAoIlFBX0FETUlOX0ZJUkVCQVNFX1VJRCIsICAiUUFfQURNSU5fUEFTU1dPUkQiLCAgInFhLWFkbWluQHNhbGVzYW5jaG9yLmpwIiksCiAgICAoIlFBX1NUQUZGX0ZJUkVCQVNFX1VJRCIsICAiUUFfU1RBRkZfUEFTU1dPUkQiLCAgInFhLXN0YWZmQHNhbGVzYW5jaG9yLmpwIiksCiAgICAoIlFBX1ZJRVdFUl9GSVJFQkFTRV9VSUQiLCAiUUFfVklFV0VSX1BBU1NXT1JEIiwgInFhLXZpZXdlckBzYWxlc2FuY2hvci5qcCIpLApdCmZvciB1aWRfa2V5LCBwd19rZXksIGVtYWlsIGluIHBhaXJzOgogICAgdHJ5OgogICAgICAgIHVzZXIgPSBhdXRoLmdldF91c2VyX2J5X2VtYWlsKGVtYWlsKQogICAgICAgIHVpZHNbdWlkX2tleV0gPSB1c2VyLnVpZAogICAgICAgIHNldF9zZWNyZXQodWlkX2tleSwgdXNlci51aWQpCiAgICBleGNlcHQgYXV0aC5Vc2VyTm90Rm91bmRFcnJvcjoKICAgICAgICBwdyA9IGdlbl9wYXNzd29yZCgpCiAgICAgICAgdXNlciA9IGF1dGguY3JlYXRlX3VzZXIoZW1haWw9ZW1haWwsIHBhc3N3b3JkPXB3KQogICAgICAgIHVpZHNbdWlkX2tleV0gPSB1c2VyLnVpZAogICAgICAgIHNldF9zZWNyZXQodWlkX2tleSwgdXNlci51aWQpCiAgICAgICAgc2V0X3NlY3JldChwd19rZXksIHB3KQogICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgIHByaW50KCJFUlJPUjogIiArIHN0cihlKSwgZmlsZT1zeXMuc3RkZXJyKQogICAgICAgIHN5cy5leGl0KDEpCgpzZXRfc2VjcmV0KCJRQV9BRE1JTl9FTUFJTCIsICAicWEtYWRtaW5Ac2FsZXNhbmNob3IuanAiKQpzZXRfc2VjcmV0KCJRQV9TVEFGRl9FTUFJTCIsICAicWEtc3RhZmZAc2FsZXNhbmNob3IuanAiKQpzZXRfc2VjcmV0KCJRQV9WSUVXRVJfRU1BSUwiLCAicWEtdmlld2VyQHNhbGVzYW5jaG9yLmpwIikKCiMgcmVzZXQgc3RlcCBVSUQgcGFzc3Rocm91Z2g6IHdyaXRlIEtFWT1WQUxVRSBsaW5lcyBmb3Igc291cmNpbmcKZm9yIHVpZF9rZXksIHVpZF92YWwgaW4gdWlkcy5pdGVtcygpOgogICAgcHJpbnQoIlVJRF9QQVNTVEhST1VHSDoiICsgdWlkX2tleSArICI9IiArIHVpZF92YWwsIGZsdXNoPVRydWUpCgpwcmludCgiRmlyZWJhc2UgUUEgc2VjcmV0IHNldHVwIGNvbXBsZXRlIikK"
-            # 出力をキャプチャ: UID_PASSTHROUGH: 行はファイルに保存 (reset step が参照)、それ以外は表示
-            SETUP_OUTPUT=$(echo "${COMBINED_B64}" | base64 -d | \
-              docker exec -i -e GH_TOKEN="$GH_TOKEN" astro-webapp-backend-1 python3 -)
-            echo "$SETUP_OUTPUT" | grep -v "^UID_PASSTHROUGH:"
-            echo "$SETUP_OUTPUT" | grep "^UID_PASSTHROUGH:" | \
-              sed 's/^UID_PASSTHROUGH://' > /tmp/qa-firebase-uids.env
 
       # --- Node + Playwright deps (frontend が @playwright/test を持っている) ---
       - name: Setup Node.js
@@ -176,12 +130,6 @@ jobs:
           envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_DISCORD_WEBHOOK_URL
           script: |
             set -e
-            # GH Actions は同一 run 内に登録した Secret を再評価しない。
-            # Firebase setup step が /tmp/qa-firebase-uids.env に書いた UID をここで補完する。
-            if [[ -z "${QA_ADMIN_FIREBASE_UID:-}" ]] && [[ -f /tmp/qa-firebase-uids.env ]]; then
-              # shellcheck disable=SC1091
-              source /tmp/qa-firebase-uids.env
-            fi
             # docker compose exec はプロジェクト名解決 (salesanchor vs astro-webapp) に依存するため
             # deploy.yml と同様に docker exec でコンテナ名を直接指定する
             docker exec -i \
