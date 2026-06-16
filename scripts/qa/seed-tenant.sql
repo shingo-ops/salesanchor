@@ -220,10 +220,8 @@ VALUES
      '["messages","messaging_postbacks","message_reactions"]'::jsonb,
      NOW(), TRUE);
 
-INSERT INTO public.meta_page_routing (tenant_id, config_id, schema_name, page_id, instagram_business_account_id, is_active)
-SELECT 6, c.id, 'tenant_006', c.page_id, c.instagram_business_account_id, TRUE
-FROM tenant_006.tenant_meta_config c
-WHERE c.tenant_id = 6 AND c.is_active = TRUE;
+-- meta_page_routing は trg_sync_meta_page_routing (INSERT trigger on tenant_meta_config) が
+-- 自動で UPSERT するため、ここでの明示 INSERT は不要 (二重 INSERT で PK 衝突する)。
 
 -- ---------------------------------------------------------------------------
 -- 10. meta_messages 10 件 (messenger 6 + instagram 4)
