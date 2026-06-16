@@ -224,11 +224,18 @@ jobs:
           )
 
           if new_body == body:
-              print(
-                  f"⚠️  PR #{existing_pr} 本文に変更なし（manifest ブロックまたはテーブルが見つからない可能性があります）",
-                  file=sys.stderr,
-              )
-              sys.exit(1)
+              # manifest ブロックが存在するか確認
+              has_manifest = bool(re.search(r"<!-- active-work-release-manifest.*?-->", body, flags=re.DOTALL))
+              has_table    = bool(re.search(r"## 今回本番反映予定の PR（\d+ 件）", body))
+              if not has_manifest or not has_table:
+                  print(
+                      f"❌ PR #{existing_pr} 本文に manifest ブロックまたはテーブルが見つかりません（フォーマット崩れの可能性）",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+              # manifest は存在するが内容が既に最新 → no-op として正常終了
+              print(f"ℹ️  release PR #{existing_pr} の manifest は既に最新です（{pr_count} 件・変更なし）")
+              sys.exit(0)
 
           subprocess.run(
               ["gh", "pr", "edit", existing_pr, "--body", new_body],

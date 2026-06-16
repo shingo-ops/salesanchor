@@ -196,3 +196,4 @@
 | feature/morimoto/tenant-deletion-cache-fix | 論理削除・物理削除後の Redis tenant cache 無効化 | 2026-06-14 | DONE | #2154 | 2026-06-14 | PR #2159 release にて main 反映済み |
 | release/develop-to-main-2159 | develop → main release（tenant deletion / ADR-108 B-1 / Discord Auto Setup） | 2026-06-14 | DONE | #2159 | 2026-06-14 | Deploy to VPS run 27486632360 success / migration success |
 | docs/morimoto/fedex-etd-stamp-recon | FedEx ETD / Stampステップ失敗原因 recon（docs-only） | 2026-06-15 | IN_PROGRESS | | | |
+| feature/morimoto/mobile-shell-pr-r2c | MobileShell/DesktopShell 切り替え接続（ADR-137 PR-R2-C） | 2026-06-16 | DONE | #2253 | 2026-06-16 | develop squash merge d7c560fb 完了 |
