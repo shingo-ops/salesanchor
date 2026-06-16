@@ -592,24 +592,29 @@ def create_and_send_invoice(
     invoicer: dict = {}
     if merchant_email:
         invoicer = {"email_address": merchant_email}
+    items = [
+        {
+            "name": item_name,
+            "quantity": "1",
+            "unit_amount": {"currency_code": ccy, "value": _fmt_amount(amount, currency)},
+        }
+    ]
+    if shipping_fee:
+        items.append({
+            "name": "送料",
+            "quantity": "1",
+            "unit_amount": {"currency_code": ccy, "value": _fmt_amount(shipping_fee, currency)},
+        })
     body: dict = {
         "detail": {
             "currency_code": ccy,
             "invoice_number": invoice_number,
             "reference": reference,
-            **({"shipping_amount": {"currency_code": ccy, "value": _fmt_amount(shipping_fee, currency)}}
-               if shipping_fee else {}),
         },
         "primary_recipients": [
             {"billing_info": {"email_address": recipient_email}}
         ],
-        "items": [
-            {
-                "name": item_name,
-                "quantity": "1",
-                "unit_amount": {"currency_code": ccy, "value": _fmt_amount(amount, currency)},
-            }
-        ],
+        "items": items,
     }
     if invoicer:
         body["invoicer"] = invoicer
