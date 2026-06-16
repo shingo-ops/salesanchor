@@ -44,7 +44,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1499458730171961535")
-_DISCORD_PERMISSIONS = "268504082"
+
+# Bot permissions integer (confirmed from Developer Portal 2026-06-16).
+# See docs/adr/ADR-091-discord-bot-scope-definition.md for full intent.
+#
+# Current required permissions:
+#   - Manage Roles          — create Sales Anchor Staff / Partner / Member roles in auto-setup
+#   - Manage Channels       — create categories and channels; set channel permission overwrites
+#   - View Channels         — bot must see channels to operate or delete them (avoids 403 50001)
+#   - Send Messages         — post ticket-start button in ticket channel
+#   - Read Message History  — inspect existing channels during setup and operations
+#   - Kick Members          — remove customers from Discord server via app (discord_remove.py)
+#   - Ban Members           — ban abusive / spam customers via app
+#
+# Approved future permissions (no API calls yet; require separate ADR before implementation):
+#   - Manage Webhooks       — planned: staff configures webhooks from app
+#   - Manage Messages       — planned: delete Discord messages from app (must include audit log)
+#   - Embed Links           — planned: preview tracking URLs / invoice links
+#   - Attach Files          — planned: share invoice PDFs / photos via bot
+#   - Add Reactions         — planned: sync app reactions to Discord
+#
+# Intentionally excluded:
+#   - Administrator         — violates least-privilege; bypasses channel permission overwrites
+#   - Manage Guild          — outside bot's operational scope
+#   - Thread permissions    — ADR-091: thread features are not used
+#   - Voice permissions     — outside bot's operational scope
+_DISCORD_PERMISSIONS = "805432406"
 _DISCORD_CALLBACK_URL = os.getenv(
     "DISCORD_CALLBACK_URL",
     "https://api.salesanchor.jp/api/v1/discord/oauth/callback",
