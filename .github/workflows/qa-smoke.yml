@@ -109,11 +109,21 @@ jobs:
         run: |
           set -euo pipefail
           # gh CLI は self-hosted runner には存在しないため pynacl + GitHub REST API で代替。
-          # nacl が importable でなければ venv を作成してインストール (sudo 不要)。
+          # python3-venv が未インストールの場合は apt で入れてから venv 作成。
+          # sudo 失敗 / venv 作成失敗の場合は pip --break-system-packages にフォールバック。
           if ! python3 -c "import nacl" 2>/dev/null; then
-            python3 -m venv /tmp/qa-venv
-            /tmp/qa-venv/bin/pip install pynacl --quiet 2>&1 | tail -2
-            PYBIN=/tmp/qa-venv/bin/python3
+            PYBIN=""
+            # Attempt 1: venv (preferred — 環境を汚染しない)
+            if sudo apt-get install -y python3-venv 2>&1 | tail -2 && \
+               python3 -m venv /tmp/qa-venv 2>/dev/null; then
+              /tmp/qa-venv/bin/pip install pynacl --quiet 2>&1 | tail -2
+              PYBIN=/tmp/qa-venv/bin/python3
+            fi
+            # Attempt 2: pip --user --break-system-packages (Ubuntu 23+ externally-managed)
+            if [[ -z "$PYBIN" ]]; then
+              pip3 install pynacl --user --break-system-packages --quiet 2>&1 | tail -2
+              PYBIN=python3
+            fi
           else
             PYBIN=python3
           fi
