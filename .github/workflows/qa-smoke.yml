@@ -107,9 +107,11 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Playwright browsers
-        if: steps.pw-cache.outputs.cache-hit != 'true'
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: |
+          # cache-hit でも --with-deps は省略できないため条件なしで実行する。
+          # playwright install は冪等 (既存 binary があれば即時終了) なので常時実行しても問題ない。
+          npx playwright install --with-deps chromium
 
       # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
       # runner (監視VPS 49.212.160.98) は PostgreSQL (アプリVPS docker 内部) に
