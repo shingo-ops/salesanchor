@@ -339,7 +339,7 @@
     "successMsg": "Connection succeeded",
     "failMsg": "Connection failed",
     "payTestTitle": "Payment Test",
-    "payTestHint": "Create a test invoice (100 JPY) and send a PayPal invoice in one click (sandbox only).",
+    "payTestHint": "Create a test invoice (item ¥100 + shipping ¥500, total ¥600) and send a PayPal invoice in one click (sandbox only).",
     "payTestButton": "Create Test Invoice",
     "payTestRunning": "Creating...",
     "payTestCreated": "Test invoice created",

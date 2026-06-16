@@ -705,7 +705,7 @@ async def paypal_test_invoice(
     await db.execute(
         text("INSERT INTO invoice_items "
              "(invoice_id, product_name, quantity, unit_price, subtotal, sort_order) "
-             "VALUES (:iid, 'PayPal決済テスト', 1, 100, 100, 0)"),
+             "VALUES (:iid, 'PayPal Test Invoice', 1, 100, 100, 0)"),
         {"iid": invoice_id},
     )
 

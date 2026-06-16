@@ -601,7 +601,7 @@ def create_and_send_invoice(
     ]
     if shipping_fee:
         items.append({
-            "name": "送料",
+            "name": "Shipping",
             "quantity": "1",
             "unit_amount": {"currency_code": ccy, "value": _fmt_amount(shipping_fee, currency)},
         })
