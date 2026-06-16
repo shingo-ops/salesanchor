@@ -9,8 +9,8 @@
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
-|-------------------|---------|
+| 引用先 | 確認内容 |
+|--------|---------|
 | `backend/app/routers/integrations.py:730` | paypal_test_invoice の UPDATE 文（paypal_invoicer_view_url が欠落していた） |
 | `backend/app/services/paypal_payments.py:628` | create_and_send_invoice が invoicer_view_url を返却済み |
 | `backend/app/services/paypal_payments.py:543` | _fetch_view_urls が invoicer_view_url を取得する実装 |
@@ -22,6 +22,6 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | `paypal_invoicer_view_url` カラムは既存か | `backend/app/routers/invoices.py` の `_INVOICE_COLUMNS` に含まれることを確認 | ✅ 解消済み |
+| 1 | paypal_invoicer_view_url カラムは既存か | `backend/app/routers/invoices.py:170` の _INVOICE_COLUMNS に含まれることを確認 | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
