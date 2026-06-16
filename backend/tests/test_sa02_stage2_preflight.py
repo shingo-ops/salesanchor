@@ -348,7 +348,10 @@ def test_fstring_insert_sql_compiles_without_error():
 #
 # 原因: meta_messages.raw_payload は JSONB。SQLAlchemy が Python dict として返すが、
 #       asyncpg は dict を JSONB パラメータとして自動エンコードしない。
-# 修正: _serialize_jsonb() で json.dumps() → 文字列化し :raw_payload::jsonb でキャスト。
+# 修正: _serialize_jsonb() で json.dumps() → 文字列化し CAST(:raw_payload AS JSONB) でキャスト。
+#        注意: `:param::jsonb` 形式は asyncpg が named param を positional param ($N) へ変換する際に
+#              `::jsonb` が残置されて PostgresSyntaxError になる（R3 本番で確認 2026-06-16）。
+#              `CAST(:param AS JSONB)` を使うこと。
 # ---------------------------------------------------------------------------
 
 
@@ -398,13 +401,19 @@ def test_serialize_jsonb_list_returns_json_string():
     assert _json.loads(result) == [1, 2, 3]
 
 
-def test_raw_payload_parameter_uses_jsonb_cast():
-    """INSERT SQL で :raw_payload::jsonb キャストが使われること。
+def test_raw_payload_parameter_uses_cast_jsonb():
+    """INSERT SQL で CAST(:raw_payload AS JSONB) が使われること。
 
-    :raw_payload::jsonb により asyncpg が文字列を JSONB として PostgreSQL に渡す。
+    asyncpg は named param（:name）を positional param（$N）へ変換するが、
+    `:raw_payload::jsonb` と書くと `::jsonb` が変換されずに残り PostgresSyntaxError になる
+    （R3 本番 2026-06-16 で確認）。`CAST(:raw_payload AS JSONB)` を使うこと。
     """
     src = _MIGRATE_SRC.read_text(encoding="utf-8")
-    assert ":raw_payload::jsonb" in src, (
-        "INSERT SQL に ':raw_payload::jsonb' が見つかりません。"
-        " JSONB キャストが必要です（conv_log_writer.py と同じパターン）。"
+    assert "CAST(:raw_payload AS JSONB)" in src, (
+        "INSERT SQL に 'CAST(:raw_payload AS JSONB)' が見つかりません。"
+        " ':raw_payload::jsonb' は asyncpg で PostgresSyntaxError になるため禁止。"
+    )
+    assert ":raw_payload::jsonb" not in src, (
+        "INSERT SQL に危険な ':raw_payload::jsonb' が残っています。"
+        " CAST(:raw_payload AS JSONB) に置き換えてください。"
     )
