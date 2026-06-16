@@ -153,7 +153,7 @@
 ## 記入例
 
 ```
-| feature/morimoto/your-feature-name | 受信箱 UI    | 2026-05-26 10:00 | IN_PROGRESS |     | | タブ1で作業中 |
+| feature/morimoto/your-feature-name | 受信箱 UI    | 2026-05-26 10:00 | <状態> |     | | タブ1で作業中 |
 | feature/morimoto/your-other-feature | スケジュール  | 2026-05-26 11:30 | REVIEW      | 923 | | タブ2で作業中 |
 ```
 
