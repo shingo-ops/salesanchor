@@ -17,6 +17,7 @@ const EXPECTED_TOTAL = 15000 + 32500 + 8900;
 
 test.describe("Scene 05: Leads & Orders (real backend)", { tag: ['@scene-05'] }, () => {
   test("seed leads 5 件、status が 5 種類分かれている", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     expect(
       psqlCount(`SELECT COUNT(*) FROM tenant_006.leads WHERE lead_code LIKE 'QA-LD-%'`),
     ).toBe(5);
@@ -28,6 +29,7 @@ test.describe("Scene 05: Leads & Orders (real backend)", { tag: ['@scene-05'] },
   });
 
   test("seed orders 3 件、合計売上が DB 計算と一致する", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     const rows = psqlRows(
       `SELECT SUM(total_amount)::TEXT FROM tenant_006.orders WHERE order_number LIKE 'QA-OR-%'`,
     );

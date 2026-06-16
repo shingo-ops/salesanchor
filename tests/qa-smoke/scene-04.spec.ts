@@ -27,14 +27,17 @@ import {
 
 test.describe("Scene 04: Inbox & Channels (real backend)", { tag: ['@scene-04'] }, () => {
   test("ADR-026 regression guard: meta_messages.message_id 列が TEXT 型", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     assertMessageIdIsText("tenant_006");
   });
 
   test("ADR-024 regression guard: tenant_meta_config と meta_page_routing が同期", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     assertMetaPageRoutingInSync(6);
   });
 
   test("migration 041 regression guard: meta_messages の 9 カラム拡張が適用されている", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     const expectedCols = [
       "recipient_id",
       "messaging_type",
@@ -57,6 +60,7 @@ test.describe("Scene 04: Inbox & Channels (real backend)", { tag: ['@scene-04'] 
   });
 
   test("seed 済 meta_messages が 10 件 (messenger 6 + instagram 4) 入っている", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     expect(psqlCount(`SELECT COUNT(*) FROM tenant_006.meta_messages`)).toBe(10);
     expect(psqlCount(`SELECT COUNT(*) FROM tenant_006.meta_messages WHERE platform='messenger'`)).toBe(6);
     expect(psqlCount(`SELECT COUNT(*) FROM tenant_006.meta_messages WHERE platform='instagram'`)).toBe(4);

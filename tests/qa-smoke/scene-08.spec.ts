@@ -17,6 +17,7 @@ import { psqlCount, psqlRows } from "./utils/db-assert";
 
 test.describe("Scene 08: Data Lifecycle (real backend)", { tag: ['@scene-08'] }, () => {
   test("顧客 → channel → mock webhook → lead → order → KPI の通し", async ({ page }) => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     // === 0. 起点: seed company A が存在 ===
     expect(
       psqlCount(

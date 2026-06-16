@@ -30,6 +30,7 @@ function getStaffRoleName(email: string): string {
 
 test.describe("Scene 06: Staff & Permissions (real backend)", { tag: ['@scene-06'] }, () => {
   test("seed staff の role が seed 表通り (admin=オーナー / staff=営業 / viewer=CS)", () => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     expect(getStaffRoleName("qa-admin@salesanchor.jp")).toBe("オーナー");
     expect(getStaffRoleName("qa-staff@salesanchor.jp")).toBe("営業");
     expect(getStaffRoleName("qa-viewer@salesanchor.jp")).toBe("CS");
@@ -49,6 +50,7 @@ test.describe("Scene 06: Staff & Permissions (real backend)", { tag: ['@scene-06
   });
 
   test("admin で staff の role 変更が DB に反映される (元に戻す)", async ({ page }) => {
+    test.skip(!process.env.DATABASE_URL, "DATABASE_URL 未設定 — runner から DB に直接アクセス不可");
     const target = "qa-staff@salesanchor.jp";
     const before = getStaffRoleName(target);
     expect(before).toBe("営業");
@@ -90,6 +92,7 @@ test.describe("Scene 06: Staff & Permissions (real backend)", { tag: ['@scene-06
 
   test.afterAll(() => {
     // すべての test が終わったあと、staff role が seed と一致しているかの最終確認
+    if (!process.env.DATABASE_URL) return;  // DATABASE_URL 未設定時はスキップ
     const after = getStaffRoleName("qa-staff@salesanchor.jp");
     if (after !== "営業") {
       // 戻し漏れを警告ログのみ — テスト fail まではしない
