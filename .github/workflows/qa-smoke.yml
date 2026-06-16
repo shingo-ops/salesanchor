@@ -109,9 +109,10 @@ jobs:
       - name: Install Playwright browsers
         working-directory: frontend
         run: |
-          # cache-hit でも --with-deps は省略できないため条件なしで実行する。
-          # playwright install は冪等 (既存 binary があれば即時終了) なので常時実行しても問題ない。
-          npx playwright install --with-deps chromium
+          # self-hosted runner は OS 依存ライブラリ pre-install 済のため --with-deps 不要
+          # (--with-deps は sudo を要求するが runner user に passwordless sudo がない)
+          # 条件なしで実行: playwright install は冪等 (binary 存在時は即時終了)
+          npx playwright install chromium
 
       # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
       # runner (監視VPS 49.212.160.98) は PostgreSQL (アプリVPS docker 内部) に
