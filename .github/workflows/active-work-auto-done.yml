@@ -116,9 +116,23 @@ jobs:
           git add .claude-pipeline/active-work.md
           git commit -m "chore: active-work.md — ${BRANCH} を DONE に更新（自動）"
 
+          echo "git status before push:"
+          git status
+          echo "git log (last 3):"
+          git log --oneline -3
+
           # 並行更新に備えて push 前に pull --rebase
           git pull --rebase origin develop
-          git push origin HEAD:refs/heads/develop
+
+          # active-work DONE 更新は補助的な操作。
+          # develop の Branch Protection (Required Status Checks) により direct push が
+          # ブロックされる場合でも後続ワークフロー（reaper dispatch 等）を止めない。
+          if git push origin HEAD:refs/heads/develop; then
+            echo "DONE update pushed to develop"
+          else
+            echo "::warning::DONE update failed to push (branch protection / required status checks). Manual update or next automation will catch up."
+            exit 0
+          fi
 
       - name: Trigger reaper-run dispatch
         env:
