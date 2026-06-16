@@ -53,7 +53,7 @@ BEGIN
         RAISE EXCEPTION 'seed abort: public.tenants.id=6 が存在しません。setup_review_tenant.py を先に実行してください';
     END IF;
     IF actual_code <> 'tenant-review' THEN
-        RAISE EXCEPTION 'seed abort: tenant_id=6 の tenant_code は %% だが、期待値は tenant-review。誤実行防止のため停止', actual_code;
+        RAISE EXCEPTION 'seed abort: tenant_id=6 の tenant_code は % だが、期待値は tenant-review。誤実行防止のため停止', actual_code;
     END IF;
     RAISE NOTICE 'tenant_code assert OK: tenant_id=6, tenant_code=tenant-review';
 END
