@@ -19,7 +19,7 @@ PR-R2-C で DesktopShell.tsx から mobile 固有コード（DOM 要素・state�
 ### 実装対象
 
 1. `frontend/src/responsive.css` — PR-R1 App Shell mobile ハック（6 ルール）削除
-2. `frontend/src/topbar.css` — `.mobile-menu-btn` 定義と `.sidebar-mobile-backdrop` 定義削除
+2. `frontend/src/topbar.css` — .mobile-menu-btn 定義と .sidebar-mobile-backdrop 定義削除
 
 ### 実装対象外（PR-R2-D に含めない）
 
@@ -50,17 +50,17 @@ git grep -i "mobile" docs/adr/  # → ADR-137（採用アーキテクチャ）�
 
 以下のルールは PR-R1 が追加した App Shell mobile ハック。MobileShell（PR-R2-A〜C）の完成により不要となったため削除済み。
 
-- `.sidebar-panel { transform: translateX(-100%); }` — MobileShell では `#sidebar-panel` は DOM に存在しない
-- `.sidebar-panel.sidebar-mobile-open { transform: translateX(0); }` — `isMobileSidebarOpen` state は PR-R2-C で削除済み
-- `.app-body { margin-left: 0; }` — MobileShell では `.app-body` は使用しない
-- `.mobile-menu-btn { display: flex; }` — `.mobile-menu-btn` DOM は PR-R2-C で削除済み
+- `.sidebar-panel { transform: translateX(-100%); }` — MobileShell では #sidebar-panel は DOM に存在しない
+- `.sidebar-panel.sidebar-mobile-open { transform: translateX(0); }` — isMobileSidebarOpen state は PR-R2-C で削除済み
+- `.app-body { margin-left: 0; }` — MobileShell では .app-body は使用しない
+- `.mobile-menu-btn { display: flex; }` — .mobile-menu-btn DOM は PR-R2-C で削除済み
 - `@media (min-width: 768px) { .mobile-menu-btn { display: none; } }` ブロック全体 — 上記と同理由
 
 ### frontend/src/topbar.css から削除
 
 - `.mobile-menu-btn { ... }` 定義 — PR-R1 ハンバーガーボタン。DesktopShell.tsx から削除済み（PR-R2-C）
 - `.mobile-menu-btn:hover { ... }` — 同上
-- `.sidebar-mobile-backdrop { ... }` — PR-R1 モバイルバックドロップ。`sidebar-mobile-backdrop` div は PR-R2-C で削除済み
+- `.sidebar-mobile-backdrop { ... }` — PR-R1 モバイルバックドロップ。sidebar-mobile-backdrop div は PR-R2-C で削除済み
 
 ---
 
@@ -72,7 +72,7 @@ git grep -i "mobile" docs/adr/  # → ADR-137（採用アーキテクチャ）�
 
 | 現在地 | クラス | 残す理由 |
 |---|---|---|
-| `frontend/src/responsive.css:20` | `.page { padding: var(--space-4); }` | MobileShell 内でも `.page` クラスは使用される |
+| `frontend/src/responsive.css:20` | `.page { padding: var(--space-4); }` | MobileShell 内でも .page クラスは使用される |
 | `frontend/src/responsive.css:25` | `.roles-layout { grid-template-columns: 1fr; }` | RolesPage のモバイルレイアウト。PR-R1 とは無関係 |
 | `frontend/src/responsive.css:29` | `.roles-sidebar { position: static; }` | 同上 |
 | `frontend/src/responsive.css:33` | `.roles-main-header { flex-direction: column; ... }` | 同上 |
@@ -94,15 +94,15 @@ MobileShell 専用スタイル（PR-R2-B 追加）。削除対象外。
 
 | 現在地 | クラス | 役割 |
 |---|---|---|
-| `frontend/src/mobile-shell.css:8` | `.mobile-shell` | MobileShell ルート |
-| `frontend/src/mobile-shell.css:15` | `.mobile-topbar` | sticky header |
-| `frontend/src/mobile-shell.css:29` | `.mobile-topbar-hamburger` | ハンバーガーボタン |
-| `frontend/src/mobile-shell.css:46` | `.mobile-topbar-title` | タイトル |
-| `frontend/src/mobile-shell.css:57` | `.mobile-topbar-avatar` | アバター（in-flow） |
-| `frontend/src/mobile-shell.css:79` | `.mobile-drawer-backdrop` | ドロワーバックドロップ（z-index:200） |
-| `frontend/src/mobile-shell.css:88` | `.mobile-drawer` | ドロワーパネル（z-index:210） |
-| `frontend/src/mobile-shell.css:101` | `.mobile-drawer--open` | 開閉状態クラス |
-| `frontend/src/mobile-shell.css:144` | `.mobile-content` | Outlet 表示エリア |
+| `frontend/src/mobile-shell.css:8` | .mobile-shell | MobileShell ルート |
+| `frontend/src/mobile-shell.css:15` | .mobile-topbar | sticky header |
+| `frontend/src/mobile-shell.css:29` | .mobile-topbar-hamburger | ハンバーガーボタン |
+| `frontend/src/mobile-shell.css:46` | .mobile-topbar-title | タイトル |
+| `frontend/src/mobile-shell.css:57` | .mobile-topbar-avatar | アバター（in-flow） |
+| `frontend/src/mobile-shell.css:79` | .mobile-drawer-backdrop | ドロワーバックドロップ（z-index:200） |
+| `frontend/src/mobile-shell.css:88` | .mobile-drawer | ドロワーパネル（z-index:210） |
+| `frontend/src/mobile-shell.css:101` | .mobile-drawer--open | 開閉状態クラス |
+| `frontend/src/mobile-shell.css:144` | .mobile-content | Outlet 表示エリア |
 
 ### ShellSwitch（変更なし）
 
