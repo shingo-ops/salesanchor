@@ -46,7 +46,7 @@ async def test_test_invoice_success_and_dedup(client, monkeypatch):
     assert r1.status_code == 200, r1.text
     b1 = r1.json()
     assert b1["approval_url"] == "https://sandbox.paypal/x"
-    assert b1["amount"] == 100
+    assert b1["amount"] == 600
     assert b1["currency"] == "JPY"
 
     r2 = await client.post("/api/v1/integrations/paypal/test-invoice", json={})

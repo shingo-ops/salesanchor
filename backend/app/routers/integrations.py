@@ -695,7 +695,7 @@ async def paypal_test_invoice(
                 payment_method, status, branch_number, erp_key, issued_at, created_by
             ) VALUES (
                 :tid, :num, :cid, :coid, 'JPY',
-                100, 0, 0, 100,
+                100, 500, 0, 600,
                 'paypal', 'issued', 1, :erp, NOW(), :uid
             ) RETURNING id
         """),
@@ -718,6 +718,7 @@ async def paypal_test_invoice(
         amount=100,
         recipient_email=test_email,
         reference=f"{tenant_id}:{invoice_id}",
+        shipping_fee=500,
     )
     if not result.get("ok"):
         await db.rollback()  # 請求書を中途半端に残さない（atomic）
@@ -737,7 +738,7 @@ async def paypal_test_invoice(
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return PaypalTestInvoiceResponse(
         invoice_id=invoice_id, invoice_number=invoice_number,
-        amount=100, currency="JPY", approval_url=result["recipient_view_url"],
+        amount=600, currency="JPY", approval_url=result["recipient_view_url"],
     )
 
 
