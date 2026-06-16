@@ -138,13 +138,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            # /app は read-only のため /tmp/qa-scripts/ へ投入する
-            # (mkdir -p /app/... は失敗するため 2>/dev/null || true でも docker cp が失敗する)
-            docker exec astro-webapp-backend-1 mkdir -p /tmp/qa-scripts
-            docker cp /tmp/qa-scripts/reset-tenant.sh       astro-webapp-backend-1:/tmp/qa-scripts/reset-tenant.sh
-            docker cp /tmp/qa-scripts/seed-tenant.sql       astro-webapp-backend-1:/tmp/qa-scripts/seed-tenant.sql
-            docker cp /tmp/qa-scripts/cleanup-smoke-data.sh astro-webapp-backend-1:/tmp/qa-scripts/cleanup-smoke-data.sh
-            # docker cp は元ファイルのパーミッションを引き継ぐ (chmod 不要)
+            # docker cp はコンテナ内に /tmp/qa-scripts が存在しないと失敗するため stdin pipe 方式へ変更
+            # (rotate-qa-firebase.yml と同じ根本対処: docker exec mkdir の失敗がマスクされる)
+            docker exec -i astro-webapp-backend-1 bash -c \
+              'mkdir -p /tmp/qa-scripts && cat > /tmp/qa-scripts/reset-tenant.sh' \
+              < /tmp/qa-scripts/reset-tenant.sh
+            docker exec -i astro-webapp-backend-1 bash -c \
+              'cat > /tmp/qa-scripts/seed-tenant.sql' \
+              < /tmp/qa-scripts/seed-tenant.sql
+            docker exec -i astro-webapp-backend-1 bash -c \
+              'cat > /tmp/qa-scripts/cleanup-smoke-data.sh' \
+              < /tmp/qa-scripts/cleanup-smoke-data.sh
             docker exec astro-webapp-backend-1 ls -la /tmp/qa-scripts/
 
       # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
