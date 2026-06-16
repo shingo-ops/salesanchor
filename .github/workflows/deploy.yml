@@ -226,6 +226,7 @@ jobs:
               -e '/^REVIEW_MAIL_IMAP_PASSWORD=/d' \
               -e '/^REVIEW_MAIL_WEBMAIL_URL=/d' \
               -e '/^REVIEW_MAIL_DISCORD_WEBHOOK=/d' \
+              -e '/^VITE_FUNNEL_DASHBOARD=/d' \
               .env
             rm -f .env.bak
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -257,6 +258,7 @@ jobs:
             REVIEW_MAIL_IMAP_PASSWORD=${{ secrets.REVIEW_MAIL_IMAP_PASSWORD }}
             REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
             REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
+            VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
             ENV_EOF
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
