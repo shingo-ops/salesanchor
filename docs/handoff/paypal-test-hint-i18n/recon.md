@@ -9,7 +9,7 @@
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 path:line | 確認内容 |
 |-------------------|---------|
 | `frontend/src/locales/ja.json:342` | payTestHint — 旧文言「テスト用の請求書（¥100）」 |
 | `frontend/src/locales/en.json:342` | payTestHint — 旧文言「Create a test invoice (100 JPY)」 |
