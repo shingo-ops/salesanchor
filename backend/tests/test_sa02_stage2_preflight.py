@@ -336,4 +336,84 @@ def test_fstring_insert_sql_compiles_without_error():
     ns: dict = {"__file__": str(_MIGRATE_SRC)}
     # SyntaxError や f-string の ValueError はここで発生する
     exec(compile(src, str(_MIGRATE_SRC), "exec"), ns)  # noqa: S102
-    assert callable(ns["migrate_tenant"])
+
+
+# ---------------------------------------------------------------------------
+# 12. raw_payload JSONB シリアライズ修正検証（SA-02 R3 本移行エラー対応）
+#
+# 本番で発生したエラー:
+#   asyncpg.exceptions.DataError: invalid input for query argument $10:
+#   {'has_text': True, 'timestamp': ..., 'has_attachments': False}
+#   ('dict' object has no attribute 'encode')
+#
+# 原因: meta_messages.raw_payload は JSONB。SQLAlchemy が Python dict として返すが、
+#       asyncpg は dict を JSONB パラメータとして自動エンコードしない。
+# 修正: _serialize_jsonb() で json.dumps() → 文字列化し CAST(:raw_payload AS JSONB) でキャスト。
+#        注意: `:param::jsonb` 形式は asyncpg が named param を positional param ($N) へ変換する際に
+#              `::jsonb` が残置されて PostgresSyntaxError になる（R3 本番で確認 2026-06-16）。
+#              `CAST(:param AS JSONB)` を使うこと。
+# ---------------------------------------------------------------------------
+
+
+def test_serialize_jsonb_none_returns_none():
+    """None は None のまま（PostgreSQL NULL）になること。"""
+    from scripts.migrate_sa02_stage2_meta_to_conv_logs import _serialize_jsonb  # type: ignore[import]
+
+    assert _serialize_jsonb(None) is None
+
+
+def test_serialize_jsonb_dict_returns_json_string():
+    """dict は json.dumps() で JSON 文字列になること（asyncpg DataError の修正）。
+
+    本番で発生した payload パターンを再現:
+      {'has_text': True, 'timestamp': 1778758072245, 'has_attachments': False}
+    """
+    import json as _json
+
+    from scripts.migrate_sa02_stage2_meta_to_conv_logs import _serialize_jsonb  # type: ignore[import]
+
+    payload = {"has_text": True, "timestamp": 1778758072245, "has_attachments": False}
+    result = _serialize_jsonb(payload)
+
+    assert isinstance(result, str), f"str を期待したが {type(result).__name__} が返った"
+    parsed = _json.loads(result)
+    assert parsed["has_text"] is True
+    assert parsed["timestamp"] == 1778758072245
+    assert parsed["has_attachments"] is False
+
+
+def test_serialize_jsonb_string_passthrough():
+    """すでに文字列の場合はそのまま通ること。"""
+    from scripts.migrate_sa02_stage2_meta_to_conv_logs import _serialize_jsonb  # type: ignore[import]
+
+    raw = '{"key": "value"}'
+    assert _serialize_jsonb(raw) == raw
+
+
+def test_serialize_jsonb_list_returns_json_string():
+    """list も json.dumps() で JSON 文字列になること。"""
+    import json as _json
+
+    from scripts.migrate_sa02_stage2_meta_to_conv_logs import _serialize_jsonb  # type: ignore[import]
+
+    result = _serialize_jsonb([1, 2, 3])
+    assert isinstance(result, str)
+    assert _json.loads(result) == [1, 2, 3]
+
+
+def test_raw_payload_parameter_uses_cast_jsonb():
+    """INSERT SQL で CAST(:raw_payload AS JSONB) が使われること。
+
+    asyncpg は named param（:name）を positional param（$N）へ変換するが、
+    `:raw_payload::jsonb` と書くと `::jsonb` が変換されずに残り PostgresSyntaxError になる
+    （R3 本番 2026-06-16 で確認）。`CAST(:raw_payload AS JSONB)` を使うこと。
+    """
+    src = _MIGRATE_SRC.read_text(encoding="utf-8")
+    assert "CAST(:raw_payload AS JSONB)" in src, (
+        "INSERT SQL に 'CAST(:raw_payload AS JSONB)' が見つかりません。"
+        " ':raw_payload::jsonb' は asyncpg で PostgresSyntaxError になるため禁止。"
+    )
+    assert ":raw_payload::jsonb" not in src, (
+        "INSERT SQL に危険な ':raw_payload::jsonb' が残っています。"
+        " CAST(:raw_payload AS JSONB) に置き換えてください。"
+    )

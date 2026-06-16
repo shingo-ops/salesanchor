@@ -41,6 +41,13 @@
 | Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
 
+## インフラ / デプロイ / nginx
+
+| 機能キーワード | 正準 ADR | 補足 |
+|---|---|---|
+| nginx / inode / bind mount / force-recreate / deploy / git reset | **ADR-137** | git reset 後の inode ズレ対策。nginx/** 変更時のみ conditional force-recreate（git reset 後・bootstrap 前） |
+| 502 / resolver / backend IP / proxy_pass | **ADR-137** ／ ADR-133 | PR-B 相当は ADR-133 で実装済み。ADR-137 では解消済みとして統合記録 |
+
 > **使い方（recon）**: ①この表で領域の正準 ADR を引く → ②`git grep -i "<keyword>" docs/adr/` で取りこぼしを確認 → ③該当 ADR を read してから設計に入る。該当が無ければ「既存設計なし（grep 済み）」と recon.md に明記する。
 
 ## ADR 候補バックログ（未起案）

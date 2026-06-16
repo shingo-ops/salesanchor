@@ -1,14 +1,16 @@
 /**
- * Layout（App Shell）— デザイントークンカタログ (ADR-067)
+ * DesktopShell（App Shell）— デザイントークンカタログ (ADR-067)
  *
  * サイドバー + トップバーのデザイントークン視覚確認
- * ※ Layout.tsx本体はAuthContext等の多数のContextに依存するため、
+ * PR-R2-C: Layout.stories.tsx から rename（Layout.tsx → DesktopShell.tsx に伴う）
+ *
+ * ※ DesktopShell.tsx本体はAuthContext等の多数のContextに依存するため、
  *   CSSクラスを直接使った静的スケルトンでデザイントークンを確認する
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 const meta: Meta = {
-  title: 'Components/Layout',
+  title: 'Components/DesktopShell',
   parameters: { layout: 'fullscreen' },
   tags: ['autodocs'],
 }

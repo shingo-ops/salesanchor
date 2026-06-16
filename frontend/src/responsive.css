@@ -16,34 +16,6 @@
    Mobile  <=767px
    ============================================================ */
 @media (max-width: 767px) {
-  /* --- App Shell --- */
-
-  /* sidebar: 画面外に隠す（desktop の hover 展開とは独立した mobile 専用制御）
-     sidebar-mobile-open class は Layout.tsx の isMobileSidebarOpen state で付与 */
-  .sidebar-panel {
-    transform: translateX(-100%);
-    transition:
-      width var(--transition-sidebar),
-      transform var(--transition-sidebar);
-  }
-
-  /* mobile menu button で開いた状態: オーバーレイとして表示 */
-  .sidebar-panel.sidebar-mobile-open {
-    transform: translateX(0);
-    width: var(--sidebar-width-expanded, 240px);
-  }
-
-  /* app-body: sidebar 分の左余白を解除 */
-  .app-body {
-    margin-left: 0;
-  }
-
-  /* --- Mobile menu button (hamburger) --- */
-  /* topbar.css で display: none をデフォルト → ここで mobile 時のみ表示 */
-  .mobile-menu-btn {
-    display: flex;
-  }
-
   /* --- Page padding --- */
   .page {
     padding: var(--space-4);
@@ -69,11 +41,3 @@
   }
 }
 
-/* ============================================================
-   Desktop  >=768px — mobile-menu-btn を非表示
-   ============================================================ */
-@media (min-width: 768px) {
-  .mobile-menu-btn {
-    display: none;
-  }
-}

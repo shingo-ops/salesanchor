@@ -96,24 +96,35 @@ fi
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AGENT_BASE_BRANCH と現在ブランチの分岐点が最新であるか確認
 # 不一致 = 他エージェントの変更がベースにマージされた後に rebase していない
+#
+# 例外: release/* / hotfix/* は main をターゲットとするブランチ。
+#       origin/main ベースで作られるため origin/develop との乖離は正常であり、
+#       このチェックの対象外とする。通常の feature/* は引き続きチェック対象。
 
-if git rev-parse --verify "origin/${AGENT_BASE_BRANCH}" >/dev/null 2>&1; then
-  MERGE_BASE="$(git merge-base HEAD "origin/${AGENT_BASE_BRANCH}" 2>/dev/null)"
-  BASE_HEAD="$(git rev-parse "origin/${AGENT_BASE_BRANCH}" 2>/dev/null)"
+case "${CURRENT_BRANCH}" in
+  release/*|hotfix/*)
+    # main 直 PR 用ブランチは develop 乖離チェックをスキップ
+    ;;
+  *)
+    if git rev-parse --verify "origin/${AGENT_BASE_BRANCH}" >/dev/null 2>&1; then
+      MERGE_BASE="$(git merge-base HEAD "origin/${AGENT_BASE_BRANCH}" 2>/dev/null)"
+      BASE_HEAD="$(git rev-parse "origin/${AGENT_BASE_BRANCH}" 2>/dev/null)"
 
-  if [ -n "${MERGE_BASE}" ] && [ -n "${BASE_HEAD}" ]; then
-    if [ "${MERGE_BASE}" != "${BASE_HEAD}" ]; then
-      echo ""
-      echo "⚠️  push を中断しました: ${AGENT_BASE_BRANCH} と乖離があります。"
-      echo "   他エージェントの変更が ${AGENT_BASE_BRANCH} にマージされています。"
-      echo ""
-      echo "   正しい手順:"
-      echo "   git fetch origin && git rebase origin/${AGENT_BASE_BRANCH}"
-      echo ""
-      exit 1
+      if [ -n "${MERGE_BASE}" ] && [ -n "${BASE_HEAD}" ]; then
+        if [ "${MERGE_BASE}" != "${BASE_HEAD}" ]; then
+          echo ""
+          echo "⚠️  push を中断しました: ${AGENT_BASE_BRANCH} と乖離があります。"
+          echo "   他エージェントの変更が ${AGENT_BASE_BRANCH} にマージされています。"
+          echo ""
+          echo "   正しい手順:"
+          echo "   git fetch origin && git rebase origin/${AGENT_BASE_BRANCH}"
+          echo ""
+          exit 1
+        fi
+      fi
     fi
-  fi
-fi
+    ;;
+esac
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # チェック4: マージ済みPRへの追加 push を禁止

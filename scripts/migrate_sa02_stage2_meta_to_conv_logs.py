@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -46,6 +47,24 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def _serialize_jsonb(value: object) -> str | None:
+    """asyncpg に渡す JSONB パラメータを JSON 文字列にシリアライズする。
+
+    SQLAlchemy + asyncpg は Python dict/list を JSONB パラメータとして
+    自動エンコードしない（'dict' object has no attribute 'encode' エラー）。
+    conv_log_writer.py と同じ方式で json.dumps() により文字列化する。
+
+    - None → None（PostgreSQL NULL として扱われる）
+    - str  → そのまま（すでに文字列化済みの場合）
+    - dict/list/その他 → json.dumps() で JSON 文字列化
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, default=str)
 
 
 async def _set_tenant_context(conn, tenant_id: int) -> None:
@@ -187,7 +206,7 @@ async def migrate_tenant(
                             :tenant_id, :lead_id, NULL, :company_id, NULL,
                             :channel_type, :channel_identity, :direction, :sender,
                             :content_text, NULL, :external_message_id,
-                            :raw_payload, 'sent', :translated_text,
+                            CAST(:raw_payload AS JSONB), 'sent', :translated_text,
                             jsonb_build_object('_source', 'sa02_stage2_migration'),
                             :occurred_at, :created_at,
                             false, NULL, NULL
@@ -203,7 +222,7 @@ async def migrate_tenant(
                         "sender": row.sender_name,
                         "content_text": row.message_text,
                         "external_message_id": ext_id,
-                        "raw_payload": row.raw_payload,
+                        "raw_payload": _serialize_jsonb(row.raw_payload),
                         "translated_text": row.translated_text,
                         "occurred_at": row.created_at,
                         "created_at": row.created_at,
