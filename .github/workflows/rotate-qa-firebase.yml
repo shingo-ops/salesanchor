@@ -27,7 +27,8 @@ jobs:
           target: "/tmp/qa/"
           strip_components: 2
 
-      # コンテナへスクリプトをコピーし、新パスワードを env 経由で渡してFirebaseを更新する。
+      # docker cp は /tmp/qa がコンテナ内に存在しないと失敗するため
+      # stdin pipe 経由で python3 - に直接渡す方式に変更（docker cp 不使用）
       # パスワードは GitHub Secrets から渡されるため CI ログには *** として表示される。
       - name: Update Firebase passwords via backend container
         uses: appleboy/ssh-action@v1
@@ -42,16 +43,13 @@ jobs:
           envs: QA_ADMIN_PASSWORD,QA_STAFF_PASSWORD,QA_VIEWER_PASSWORD
           script: |
             set -e
-            docker exec astro-webapp-backend-1 mkdir -p /tmp/qa 2>/dev/null || true
-            docker cp /tmp/qa/update_firebase_qa_passwords.py \
-              astro-webapp-backend-1:/tmp/qa/update_firebase_qa_passwords.py
+            # docker cp を使わず stdin pipe で python3 - に直接渡す
+            # /tmp/qa はアプリVPS上のファイル（SCP済）。コンテナ内のディレクトリ作成不要。
             docker exec -i \
               -e QA_ADMIN_PASSWORD="$QA_ADMIN_PASSWORD" \
               -e QA_STAFF_PASSWORD="$QA_STAFF_PASSWORD" \
               -e QA_VIEWER_PASSWORD="$QA_VIEWER_PASSWORD" \
               astro-webapp-backend-1 \
-              python3 /tmp/qa/update_firebase_qa_passwords.py
-            docker exec astro-webapp-backend-1 \
-              rm -f /tmp/qa/update_firebase_qa_passwords.py 2>/dev/null || true
+              python3 - < /tmp/qa/update_firebase_qa_passwords.py
             rm -f /tmp/qa/update_firebase_qa_passwords.py 2>/dev/null || true
             echo "[OK] Firebase rotation completed"
