@@ -147,6 +147,7 @@ services:
         VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
         VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
         VITE_GCP_PROJECT_ID: ${VITE_GCP_PROJECT_ID}
+        VITE_FUNNEL_DASHBOARD: ${VITE_FUNNEL_DASHBOARD}
     restart: unless-stopped
     healthcheck:
       # localhost が IPv6 (::1) に解決され nginx の IPv4-only listen と
