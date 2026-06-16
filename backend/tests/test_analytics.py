@@ -319,6 +319,42 @@ class TestFollowUps:
         for item in won_items:
             assert item["days"] >= 30
 
+    async def test_follow_ups_date_params_are_date_objects(self):
+        """
+        回帰テスト: asyncpg DataError 修正確認。
+
+        asyncpg は SQL パラメータに str 型の日付を受け付けない:
+          asyncpg.exceptions.DataError: invalid input for query argument $1:
+          '2026-05-16' (expected a datetime.date or datetime.datetime instance, got 'str')
+
+        follow_ups_summary が threshold_30 / threshold_45 / threshold_now を
+        date オブジェクトのまま渡していることを DB mock で確認する。
+        """
+        from datetime import date as date_class
+        from unittest.mock import AsyncMock, MagicMock
+
+        from app.routers.analytics import follow_ups_summary
+
+        mapping_result = MagicMock()
+        mapping_result.mappings.return_value.all.return_value = []
+        db_mock = AsyncMock()
+        db_mock.execute.return_value = mapping_result
+
+        user_mock = MagicMock()
+        user_mock.id = 1
+
+        await follow_ups_summary(scope="team", db=db_mock, tenant_id=1, current_user=user_mock)
+
+        date_param_keys = {"threshold", "threshold_now", "threshold_45"}
+        for call in db_mock.execute.call_args_list:
+            params: dict = call.args[1] if len(call.args) > 1 else {}
+            for key, val in params.items():
+                if key in date_param_keys:
+                    assert isinstance(val, date_class), (
+                        f"SQL param '{key}' must be datetime.date, got {type(val).__name__!r}. "
+                        "str() 変換すると asyncpg DataError になる（本番500の原因）。"
+                    )
+
 
 # ─────────────────────────────────────────────
 # summary 拡張テスト（新フィールド）
