@@ -114,6 +114,34 @@ jobs:
           # 条件なしで実行: playwright install は冪等 (binary 存在時は即時終了)
           npx playwright install chromium
 
+      # --- QA スクリプトをアプリVPSへ転送 ---
+      # runner の git checkout にある scripts/qa/ をアプリVPSの /tmp/qa-scripts/ に SCP し、
+      # docker cp でコンテナへ投入する。コンテナ再作成後も毎回最新スクリプトが使われる。
+      - name: Upload QA scripts to app VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "scripts/qa/reset-tenant.sh,scripts/qa/seed-tenant.sql,scripts/qa/cleanup-smoke-data.sh"
+          target: "/tmp/qa-scripts/"
+          strip_components: 2
+
+      - name: Inject QA scripts into backend container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            docker exec astro-webapp-backend-1 mkdir -p /app/scripts/qa 2>/dev/null || true
+            docker cp /tmp/qa-scripts/reset-tenant.sh    astro-webapp-backend-1:/app/scripts/qa/reset-tenant.sh
+            docker cp /tmp/qa-scripts/seed-tenant.sql    astro-webapp-backend-1:/app/scripts/qa/seed-tenant.sql
+            docker cp /tmp/qa-scripts/cleanup-smoke-data.sh astro-webapp-backend-1:/app/scripts/qa/cleanup-smoke-data.sh
+            # docker cp は元ファイルのパーミッションを引き継ぐ (chmod 不要)
+            docker exec astro-webapp-backend-1 ls -la /app/scripts/qa/
+
       # --- tenant_006 reset (seed 投入): アプリVPS上でSSH経由実行 ---
       # runner (監視VPS 49.212.160.98) は PostgreSQL (アプリVPS docker 内部) に
       # 直接アクセスできないため、appleboy/ssh-action でアプリVPS にSSH し、
