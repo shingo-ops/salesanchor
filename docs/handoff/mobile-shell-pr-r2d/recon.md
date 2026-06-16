@@ -44,60 +44,71 @@ git grep -i "mobile" docs/adr/  # → ADR-137（採用アーキテクチャ）�
 
 ---
 
-## 削除対象 CSS（file:line）
+## 削除した CSS（PR-R1 ハック）
 
-### frontend/src/responsive.css
+### frontend/src/responsive.css から削除
 
-| 行 | クラス | 削除理由 |
-|---|---|---|
-| `frontend/src/responsive.css:19-28` | `.sidebar-panel { transform: translateX(-100%); ... }` | PR-R1 ハック。MobileShell では `#sidebar-panel` は DOM に存在しない |
-| `frontend/src/responsive.css:31-34` | `.sidebar-panel.sidebar-mobile-open { transform: translateX(0); ... }` | PR-R1 ハック。`isMobileSidebarOpen` state は DesktopShell.tsx から削除済み（PR-R2-C） |
-| `frontend/src/responsive.css:37-39` | `.app-body { margin-left: 0; }` | PR-R1 ハック。MobileShell では `.app-body` は使用しない |
-| `frontend/src/responsive.css:43-45` | `.mobile-menu-btn { display: flex; }` | PR-R1 ハック。`mobile-menu-btn` は DesktopShell.tsx から削除済み（PR-R2-C） |
-| `frontend/src/responsive.css:73-79` | `@media (min-width: 768px) { .mobile-menu-btn { display: none; } }` ブロック全体 | PR-R1 ハック。`.mobile-menu-btn` が DOM に存在しなくなったため不要 |
+以下のルールは PR-R1 が追加した App Shell mobile ハック。MobileShell（PR-R2-A〜C）の完成により不要となったため削除済み。
 
-また、`@media (max-width: 767px)` ブロック内のコメント（行 19-22 / 30-31 / 36-37 / 41-43）も削除対象（削除対象ルールへの説明コメントのため）。
+- `.sidebar-panel { transform: translateX(-100%); }` — MobileShell では `#sidebar-panel` は DOM に存在しない
+- `.sidebar-panel.sidebar-mobile-open { transform: translateX(0); }` — `isMobileSidebarOpen` state は PR-R2-C で削除済み
+- `.app-body { margin-left: 0; }` — MobileShell では `.app-body` は使用しない
+- `.mobile-menu-btn { display: flex; }` — `.mobile-menu-btn` DOM は PR-R2-C で削除済み
+- `@media (min-width: 768px) { .mobile-menu-btn { display: none; } }` ブロック全体 — 上記と同理由
 
-### frontend/src/topbar.css
+### frontend/src/topbar.css から削除
 
-| 行 | クラス | 削除理由 |
-|---|---|---|
-| `frontend/src/topbar.css:108-135` | `.mobile-menu-btn { ... }` + `.mobile-menu-btn:hover { ... }` | PR-R1 ハンバーガーボタン定義。DesktopShell.tsx から削除済み（PR-R2-C）。MobileTopBar は `.mobile-topbar-hamburger`（mobile-shell.css）を使用 |
-| `frontend/src/topbar.css:294-302` | `.sidebar-mobile-backdrop { ... }` | PR-R1 モバイルバックドロップ。`sidebar-mobile-backdrop` div は DesktopShell.tsx から削除済み（PR-R2-C）。MobileShell は `.mobile-drawer-backdrop`（mobile-shell.css）を使用 |
+- `.mobile-menu-btn { ... }` 定義 — PR-R1 ハンバーガーボタン。DesktopShell.tsx から削除済み（PR-R2-C）
+- `.mobile-menu-btn:hover { ... }` — 同上
+- `.sidebar-mobile-backdrop { ... }` — PR-R1 モバイルバックドロップ。`sidebar-mobile-backdrop` div は PR-R2-C で削除済み
 
 ---
 
-## 削除してはいけない CSS（file:line）
+## 残存 CSS の確認（削除後の現在地）
 
-### frontend/src/responsive.css — 残すルール
+### frontend/src/responsive.css — 残したルール
 
-| 行 | クラス | 残す理由 |
+削除後 43 行。`@media (max-width: 767px)` ブロック内に以下のみ残存:
+
+| 現在地 | クラス | 残す理由 |
 |---|---|---|
-| `frontend/src/responsive.css:47-51` | `.page { padding: var(--space-4); }` | page コンテンツのモバイルパディング。MobileShell でも `.page` クラスは使用される |
-| `frontend/src/responsive.css:53-55` | `.roles-layout { grid-template-columns: 1fr; }` | RolesPage のモバイルレイアウト。PR-R1 とは無関係 |
-| `frontend/src/responsive.css:57-59` | `.roles-sidebar { position: static; }` | 同上 |
-| `frontend/src/responsive.css:61-64` | `.roles-main-header { flex-direction: column; align-items: stretch; }` | 同上 |
-| `frontend/src/responsive.css:67-70` | `.dashboard-tables { grid-template-columns: 1fr; }` | DashboardPage のモバイルテーブル。PR-R1 とは無関係 |
+| `frontend/src/responsive.css:20` | `.page { padding: var(--space-4); }` | MobileShell 内でも `.page` クラスは使用される |
+| `frontend/src/responsive.css:25` | `.roles-layout { grid-template-columns: 1fr; }` | RolesPage のモバイルレイアウト。PR-R1 とは無関係 |
+| `frontend/src/responsive.css:29` | `.roles-sidebar { position: static; }` | 同上 |
+| `frontend/src/responsive.css:33` | `.roles-main-header { flex-direction: column; ... }` | 同上 |
+| `frontend/src/responsive.css:39` | `.dashboard-tables { grid-template-columns: 1fr; }` | DashboardPage のモバイルテーブル。PR-R1 とは無関係 |
 
-### frontend/src/topbar.css — 残すルール
+### frontend/src/topbar.css — 残したルール
 
-| 行 | クラス | 残す理由 |
+削除後 278 行。以下は PR-R1 とは無関係のため残存:
+
+| 現在地 | クラス | 残す理由 |
 |---|---|---|
-| `frontend/src/topbar.css:307-311` | `@media (max-width: 767px) { .user-drawer { width: 100%; } }` | ユーザードロワーの mobile 全幅表示。PR-R1 とは無関係 |
-| `frontend/src/topbar.css:313-315` | `.topbar-email { display: none; }` | 狭い画面でのメール非表示。PR-R1 とは無関係 |
+| `frontend/src/topbar.css:109` | `.avatar-btn { ... }` | DesktopShell の固定アバターボタン |
+| `frontend/src/topbar.css:138` | `.user-drawer-backdrop { ... }` | ユーザードロワーのバックドロップ |
+| `frontend/src/topbar.css:268` | `@media (max-width: 767px)` ブロック | user-drawer 全幅・topbar-email 非表示（PR-R1 とは無関係） |
 
 ### frontend/src/mobile-shell.css — 全行残す
 
-MobileShell 専用スタイル（PR-R2-B 追加）。削除してはいけない。
+MobileShell 専用スタイル（PR-R2-B 追加）。削除対象外。
 
-| 対象 | 残す理由 |
+| 現在地 | クラス | 役割 |
+|---|---|---|
+| `frontend/src/mobile-shell.css:8` | `.mobile-shell` | MobileShell ルート |
+| `frontend/src/mobile-shell.css:15` | `.mobile-topbar` | sticky header |
+| `frontend/src/mobile-shell.css:29` | `.mobile-topbar-hamburger` | ハンバーガーボタン |
+| `frontend/src/mobile-shell.css:46` | `.mobile-topbar-title` | タイトル |
+| `frontend/src/mobile-shell.css:57` | `.mobile-topbar-avatar` | アバター（in-flow） |
+| `frontend/src/mobile-shell.css:79` | `.mobile-drawer-backdrop` | ドロワーバックドロップ（z-index:200） |
+| `frontend/src/mobile-shell.css:88` | `.mobile-drawer` | ドロワーパネル（z-index:210） |
+| `frontend/src/mobile-shell.css:101` | `.mobile-drawer--open` | 開閉状態クラス |
+| `frontend/src/mobile-shell.css:144` | `.mobile-content` | Outlet 表示エリア |
+
+### ShellSwitch（変更なし）
+
+| 現在地 | 内容 |
 |---|---|
-| `frontend/src/mobile-shell.css:8-12` | `.mobile-shell` ルート |
-| `frontend/src/mobile-shell.css:15-27` | `.mobile-topbar` sticky header |
-| `frontend/src/mobile-shell.css:29-72` | `.mobile-topbar-hamburger`, `.mobile-topbar-title`, `.mobile-topbar-avatar` |
-| `frontend/src/mobile-shell.css:79-103` | `.mobile-drawer-backdrop`, `.mobile-drawer`, `.mobile-drawer--open` |
-| `frontend/src/mobile-shell.css:106-147` | `.mobile-drawer-header`, `.mobile-drawer-nav` 等 |
-| `frontend/src/mobile-shell.css:149-151` | `.mobile-content` |
+| `frontend/src/App.tsx:120` | `function ShellSwitch()` — useIsMobile() → MobileShell/DesktopShell 切替 |
 
 ---
 
