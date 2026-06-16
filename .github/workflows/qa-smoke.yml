@@ -142,6 +142,7 @@ jobs:
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
+        working-directory: frontend
         env:
           QA_ADMIN_EMAIL:    ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
@@ -151,10 +152,10 @@ jobs:
           QA_VIEWER_PASSWORD: ${{ secrets.QA_VIEWER_PASSWORD }}
           CI: 'true'
         run: |
-          # frontend 配下に @playwright/test がインストール済。リポジトリ直下から
-          # --config を指定して tests/qa-smoke/ の config を読み込ませる
-          ./frontend/node_modules/.bin/playwright test \
-            --config tests/qa-smoke/playwright.config.ts
+          # @playwright/test は frontend/node_modules に存在するため
+          # frontend/ を working-directory にして node_modules の解決パスを合わせる
+          node_modules/.bin/playwright test \
+            --config ../tests/qa-smoke/playwright.config.ts
 
       # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort, via SSH + docker exec) ---
       # cleanup-smoke-data.sh も psql を使うため同様に SSH 経由で実行する。
@@ -177,7 +178,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-playwright-report
-          path: playwright-report
+          path: frontend/playwright-report
           retention-days: 14
           if-no-files-found: ignore
 
@@ -186,6 +187,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-test-results
-          path: test-results
+          path: frontend/test-results
           retention-days: 14
           if-no-files-found: ignore
