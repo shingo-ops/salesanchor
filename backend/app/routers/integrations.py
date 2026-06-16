@@ -729,8 +729,9 @@ async def paypal_test_invoice(
 
     await db.execute(
         text("UPDATE invoices SET paypal_order_id = :oid, paypal_approval_url = :url, "
-             "updated_at = NOW() WHERE id = :id"),
-        {"id": invoice_id, "oid": result["paypal_invoice_id"], "url": result["recipient_view_url"]},
+             "paypal_invoicer_view_url = :ivu, updated_at = NOW() WHERE id = :id"),
+        {"id": invoice_id, "oid": result["paypal_invoice_id"], "url": result["recipient_view_url"],
+         "ivu": result.get("invoicer_view_url")},
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
