@@ -1,7 +1,9 @@
 # design: discord-gateway DB接続復旧
 
 **GO**: Shingo 2026-06-17  
-**優先度**: CRITICAL（Discord gateway の全 DB 操作が失敗中）
+**優先度**: CRITICAL（Discord gateway の全 DB 操作が失敗中）  
+**関連 ADR**: ADR-009  
+**recon**: docs/handoff/runtime-config-audit/recon.md
 
 ---
 
@@ -45,3 +47,9 @@
 ssh prod1 "sudo sh -c 'free -h'"
 # available が 200Mi 以上あることを確認（discord-gateway 256MB 上限）
 ```
+
+## 外部・過去事例の参照と我々への応用
+
+Docker Compose の environment セクションで env var を明示パススルーしないと `.env` の値がコンテナに届かないのは Docker Compose の既知の動作。  
+- 公式 docs: `environment:` 記述なしでは `.env` の値はコンテナ内 `os.getenv` から参照不可（host shell の export と同様）。  
+- 今回の教訓: `backend` コンテナが持つ env var を `discord-gateway` に複製する際、コードで `os.getenv` を使っているすべての変数を compose の `environment:` に明示することが必須。recon で「欠落+必要」1件だけと確認できたので 1 行追加で完結。
