@@ -38,6 +38,9 @@ release の main マージや main 直 hotfix で develop が main にコンテ�
 | 5 | コンフリクト時に強制 merge しない（人間解決へ） | コードレビュー（auto-merge は GitHub 側がチェック/コンフリクト判定・`|| true` で失敗許容） |
 | 6 | branch protection / ruleset を変更しない（非 admin で安全） | コードレビュー（`gh api ... rulesets` 変更を含まない） |
 | 7 | YAML が有効・workflow-lint 通過 | `python -c yaml.safe_load` ＋ CI workflow-lint |
+| 8 | `scripts/**` / `migrations/**` / `.github/workflows/**` を含む main差分では auto-merge を有効化しない | shellロジックのコードレビュー + manual review分岐のPR本文確認 |
+| 9 | manual review対象がある場合、draft PR 本文に対象ファイル一覧が出る | workflow内の本文生成ロジック確認（`steps.classify.outputs.manual_files` を PR body に埋め込み） |
+| 10 | safe差分だけの場合、従来どおり自動起票 + auto-merge best-effort が維持される | 既存ケースA分岐が変わっていないことをコードレビュー（`has_manual_files == 'false'` 分岐） |
 
 ## 4. 弊害・トレードオフ
 - auto-merge はリポ設定「Allow auto-merge」と必須チェック通過が前提。無効/権限不足なら **PR は open のまま人間 merge**（従来比で「自動起票」分だけ改善・退行なし）。

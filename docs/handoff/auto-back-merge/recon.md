@@ -30,3 +30,25 @@
 - 変更: `.github/workflows/auto-back-merge.yml`（新規）＋ SOP 成果物（docs/）。
 - `scripts/check-process-artifacts.js` の REAL_CODE_PATTERNS に `^.github/workflows/` が含まれる＝**real-code → SOP 成果物必須**。DANGEROUS_PATTERNS は `deploy.yml` のみ＝本ファイルは dangerous ではない（新規 workflow 追加は許容範囲・branch protection/ruleset は変更しない）。
 - 権限: PIPELINE_PAT（Hikky-dev）は admin ではない（branch protection bypass 不可）。よって本ワークフローは**起票＋auto-merge 有効化のみ**。auto-merge は必須チェック通過後に GitHub 側が merge（コンフリクト時は人間解決待ち）。branch protection / ruleset は一切変更しない。
+
+## 6. 安全ガード追加の背景（2026-06-17 実例・追記）
+
+### 問題: #2299 で rotate-qa-firebase.yml が通常 back-merge に混ざりかけた
+
+- PR #2299 は hotfix/rotate-qa-firebase-fix ブランチの main マージ後に back-merge が必要になった事例。
+- `.github/workflows/rotate-qa-firebase.yml` は Firebase Auth / QA Secrets を操作する workflow であり、通常の back-merge（auto-merge 有効）に混ぜることは安全でない。
+- Firebase Auth 操作・QA Secrets 更新は Shingo 確認が必要な不可逆操作であり、CI が自動 merge してはならない。
+
+### 対処: #2308 で one-shot workflow / script を削除済み
+
+- PR #2308 で `scripts/qa/update_firebase_qa_passwords.py`（または相当するスクリプト）と `.github/workflows/rotate-qa-firebase.yml` の one-shot 実行系を削除。
+- 削除により残余ファイルが main→develop 差分に含まれなくなった。
+
+### 今後の方針: `.github/workflows/**` / `scripts/**` / `migrations/**` を manual review 扱いに
+
+- 上記ファイルパターンを含む main 差分は **draft PR** を起票し、auto-merge は有効化しない。
+- 理由:
+  - `scripts/**`: 本番スクリプト・Secrets 操作スクリプトを含む可能性がある
+  - `migrations/**`: DB マイグレーションは不可逆操作であり PO GO 必須（ADR-135）
+  - `.github/workflows/**`: CI 設定・Firebase / Secrets / 外部サービス操作を含む可能性がある
+- 安全差分（上記パターン以外）は従来どおり通常 back-merge PR + auto-merge best-effort を維持する。

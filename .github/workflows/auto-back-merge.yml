@@ -6,6 +6,10 @@ name: Auto Back-Merge
 #
 # クリーンな merge-commit リリース後は develop が遅れていないため起票しない（誤起票防止）。
 # 乖離源は主に「main 直 hotfix」「例外的な squash」。
+#
+# 安全ガード（2026-06-17追加）:
+# scripts/**、migrations/**、.github/workflows/** を含む差分は手動確認が必要なため
+# auto-merge を有効化しない。draft PR を起票し Shingo / ChatGPT 確認を要求する。
 
 on:
   push:
@@ -35,6 +39,34 @@ jobs:
           else
             echo "main がコンテンツ前進（hotfix / 例外 squash）→ back-merge 必要"
             echo "needs_merge=true" >> "$GITHUB_OUTPUT"
+            echo "base_sha=$BASE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 差分ファイルを分類（safe / manual-review）
+        id: classify
+        if: steps.diverge.outputs.needs_merge == 'true'
+        run: |
+          BASE="${{ steps.diverge.outputs.base_sha }}"
+          CHANGED_FILES="$(git diff --name-only "$BASE" origin/main)"
+          echo "変更ファイル一覧:"
+          echo "$CHANGED_FILES"
+
+          # scripts/**、migrations/**、.github/workflows/** は手動確認が必要
+          MANUAL_FILES="$(printf '%s\n' "$CHANGED_FILES" | grep -E '^(scripts/|migrations/|\.github/workflows/)' || true)"
+
+          if [ -n "$MANUAL_FILES" ]; then
+            echo "⚠️ 手動確認対象ファイルあり:"
+            echo "$MANUAL_FILES"
+            # 複数行を単一行に変換（PR本文埋め込み用）
+            MANUAL_FILES_ESCAPED="$(printf '%s\n' "$MANUAL_FILES" | sed ':a;N;$!ba;s/\n/\\n/g')"
+            echo "has_manual_files=true" >> "$GITHUB_OUTPUT"
+            echo "manual_files<<EOF" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "$MANUAL_FILES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "✅ 手動確認対象ファイルなし → 通常 back-merge"
+            echo "has_manual_files=false" >> "$GITHUB_OUTPUT"
+            echo "manual_files=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: main → develop の open PR を確認
@@ -46,8 +78,12 @@ jobs:
           OPEN=$(gh pr list --base develop --head main --state open --json number -q 'length')
           echo "open_count=$OPEN" >> "$GITHUB_OUTPUT"
 
-      - name: back-merge PR を起票（＋ auto-merge 有効化）
-        if: steps.diverge.outputs.needs_merge == 'true' && steps.check.outputs.open_count == '0'
+      # ── ケース A: safe差分のみ → 通常 back-merge PR ＋ auto-merge ──────────────
+      - name: "[A] back-merge PR を起票（safe差分・auto-merge有効化）"
+        if: >-
+          steps.diverge.outputs.needs_merge == 'true' &&
+          steps.check.outputs.open_count == '0' &&
+          steps.classify.outputs.has_manual_files == 'false'
         env:
           # PIPELINE_PAT で起票する（GITHUB_TOKEN だと作成された PR で pull_request トリガーの
           # workflow が起動せず必須チェックが永久 Waiting になるため。auto-release-pr.yml と同様）。
@@ -75,6 +111,47 @@ jobs:
           echo "✅ back-merge PR を自動起票しました: $PR_URL"
           # 必須チェック通過後に GitHub 側で merge（auto-merge 無効/権限不足/コンフリクト時は人間 merge）。
           gh pr merge --auto --merge "$PR_URL" || echo "ℹ️ auto-merge を有効化できませんでした（人間 merge に委ねます）"
+
+      # ── ケース B: 手動確認対象ファイルあり → draft PR のみ（auto-merge なし）────
+      - name: "[B] draft back-merge PR を起票（manual review 必須・auto-merge なし）"
+        id: draft_pr
+        if: >-
+          steps.diverge.outputs.needs_merge == 'true' &&
+          steps.check.outputs.open_count == '0' &&
+          steps.classify.outputs.has_manual_files == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          MANUAL_FILES="${{ steps.classify.outputs.manual_files }}"
+
+          PR_BODY="## manual review required
+
+          main が develop に対してコンテンツ的に先行していますが、以下の手動確認対象ファイルが含まれるため auto-merge は有効化していません。
+
+          ### 手動確認対象
+
+          \`\`\`text
+          ${MANUAL_FILES}
+          \`\`\`
+
+          ### 注意
+
+          * Firebase / Secrets / 外部サービス操作に関わる可能性があります
+          * **Shingo / ChatGPT確認までマージ禁止**
+          * 通常のback-mergeに混ぜてよいか、別PRに分けるかを判断してください
+
+          ---
+          *このPRは \`main\` への push を検知して自動起票されました（PIPELINE_PAT 起票・draft）。*"
+
+          PR_URL=$(gh pr create \
+            --base develop \
+            --head main \
+            --draft \
+            --title "manual: back-merge main → develop（manual review required）" \
+            --body "$PR_BODY")
+          echo "⚠️ manual review 必須の draft back-merge PR を起票しました: $PR_URL"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          # auto-merge は有効化しない（意図的）
 
       - name: スキップ通知
         if: steps.diverge.outputs.needs_merge != 'true' || steps.check.outputs.open_count != '0'
