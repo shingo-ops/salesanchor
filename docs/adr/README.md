@@ -156,6 +156,7 @@
 | [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | — | — |
 | [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Accepted | — | — |
 | [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
+| [ADR-140](./ADR-140-mobile-nav-bottom-tabs.md) | ADR-140: モバイルナビ刷新 — 下部タブバー方式への移行 | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 
 ## ステータス凡例
