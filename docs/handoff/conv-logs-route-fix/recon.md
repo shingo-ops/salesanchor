@@ -9,7 +9,7 @@
 
 ## file:line 引用表
 
-| 引用先 `path:line` | 確認内容 |
+| ファイル:行 | 確認内容 |
 |-------------------|---------|
 | `backend/app/routers/companies.py:1031` | ルートパス定義箇所。バグ原因: /companies/ プレフィックスが欠落しており /api/v1/6/conv-logs に解決されていた |
 | `backend/app/routers/companies.py:1032` | バグ行: ルートパス文字列。修正後は /companies/{company_id}/conv-logs |
