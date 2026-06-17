@@ -1029,7 +1029,7 @@ async def merge_companies(
 # ---------------------------------------------------------------------------
 
 @router.get(
-    "/{company_id}/conv-logs",
+    "/companies/{company_id}/conv-logs",
     summary="会社別会話ログ一覧（contact粒度・SA-02 Stage 4）",
     tags=["companies"],
 )

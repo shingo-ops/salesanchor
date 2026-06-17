@@ -4,6 +4,7 @@
   1. 通常取得: company_id に紐づく deleted_at IS NULL のログが返る
   2. contact_id フィルタが SQL パラメータに渡る
   3. deleted_at IS NULL フィルタが SQL に含まれる
+  4. HTTP ルートパスが /api/v1/companies/{id}/conv-logs であること（リグレッション防止）
 """
 from __future__ import annotations
 from datetime import datetime, timezone
@@ -108,3 +109,18 @@ async def test_list_company_conv_logs_deleted_at_filter():
     # SQL テキストに deleted_at IS NULL が含まれる
     sql_text = str(mock_db.execute.call_args[0][0])
     assert "deleted_at IS NULL" in sql_text
+
+
+def test_conv_logs_route_path_is_companies_prefixed():
+    """GET /api/v1/companies/{id}/conv-logs のルートパスが正しく登録されていること。
+
+    リグレッション防止: companies.py の @router.get パスに /companies/ プレフィックスが
+    抜けると /api/v1/{id}/conv-logs に解決されてしまい 404 になる（過去バグ再現防止）。
+    """
+    from app.routers.companies import router
+
+    route_paths = {route.path for route in router.routes}
+    assert "/companies/{company_id}/conv-logs" in route_paths, (
+        "GET /companies/{company_id}/conv-logs が router に存在しない。"
+        "path が /{company_id}/conv-logs になっていないか確認してください。"
+    )
