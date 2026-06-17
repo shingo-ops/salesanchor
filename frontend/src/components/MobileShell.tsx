@@ -1,32 +1,35 @@
 /**
- * MobileShell — モバイル専用 Shell コンポーネント（PR-R2-B）
+ * MobileShell — モバイル専用 Shell コンポーネント（ADR-140 PR-B）
  *
  * ADR-137: MobileShell は DesktopShell（Layout.tsx）とは独立した DOM。
- *   PR-R2-B 段階では App.tsx に接続しない（PR-R2-C で接続）。
+ * ADR-140: ハンバーガー+Drawer → 下部タブバー（主役4タブ＋「もっと」シート）に刷新。
  * ADR-067: 色・余白・z-index はすべて CSS token 参照。hex / px マジックナンバー禁止。
  * ADR-027: 全 UI 文字列は t("key") 経由。ハードコード禁止。
  *
  * DOM 構造:
  *   MobileShell (.mobile-shell)
  *   ├── MobileTopBar (.mobile-topbar — sticky, z-index: var(--z-topbar)=100)
- *   │   ├── HamburgerButton (.mobile-topbar-hamburger, aria-controls="mobile-drawer")
- *   │   ├── PageTitle (span.mobile-topbar-title)
- *   │   └── AvatarButton (.mobile-topbar-avatar — in-flow, NOT position:fixed)
- *   ├── MobileDrawerBackdrop (.mobile-drawer-backdrop — z-index: var(--z-sidebar)=200)
- *   ├── MobileDrawer (.mobile-drawer — z-index: var(--z-sidebar-overlay)=210 ★Backdropより前面★)
- *   │   └── NavItemList variant="mobile"
- *   └── .mobile-content
- *       └── <Outlet />
+ *   │   └── PageTitle (span.mobile-topbar-title)
+ *   ├── .mobile-content → <Outlet />
+ *   ├── .mobile-more-backdrop（moreSheetOpen 時のみ）
+ *   ├── .mobile-more-sheet（slide-up, z-index: var(--z-sidebar-overlay)=210）
+ *   │   └── NavItemList variant="mobile"（脇役全項目）
+ *   ├── MobileTabBar (.mobile-tabbar — position:fixed, bottom:0, z-index: var(--z-topbar)=100)
+ *   │   ├── NavLink(ホーム: /)
+ *   │   ├── NavLink(受信箱: /lead-chat) — prefs.show_chat_menu 条件付き
+ *   │   ├── NavLink(受注管理: /orders) — orders.view 権限
+ *   │   ├── NavLink(在庫: /inventory) — products.view 権限
+ *   │   ├── MoreButton（「もっと」シート開閉）
+ *   │   └── AvatarButton（ユーザーメニュー）
+ *   ├── User drawer backdrop
+ *   ├── User drawer panel
+ *   └── ConfirmModal（ログアウト確認）
  *
- * z-index 前後関係:
- *   MobileDrawer(210) > MobileDrawerBackdrop(200) > コンテンツ
- *   Backdrop が Drawer を覆うとクリック不能になる → 必ず Drawer を前面に
- *
- * 参照: docs/handoff/mobile-shell-pr-r2b/design.md
+ * 参照: docs/handoff/mobile-responsive/design.md §B-2
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocale } from "../contexts/LocaleContext";
@@ -69,6 +72,9 @@ function navItemsToResolved(items: NavItem[]): ResolvedNavItem[] {
   );
 }
 
+// 主役タブの key セット（more sheet から除外）
+const MAIN_TAB_KEYS = new Set(["dashboard", "leadChat", "inventory", "orders"]);
+
 // ─── MobileShell ─────────────────────────────────────────────────────────────
 
 export default function MobileShell() {
@@ -84,22 +90,19 @@ export default function MobileShell() {
 
   const navLoading = permsLoading || uiPrefsLoading;
 
-  // ── ドロワー状態 ──
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // ── シート/ドロワー状態 ──
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const [userDrawerOpen, setUserDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const openDrawer = () => setDrawerOpen(true);
-  const closeDrawer = () => setDrawerOpen(false);
-
-  // Escape key でナビドロワーを閉じる
+  // Escape key で「もっと」シートを閉じる
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && drawerOpen) closeDrawer();
+      if (e.key === "Escape" && moreSheetOpen) setMoreSheetOpen(false);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [drawerOpen]);
+  }, [moreSheetOpen]);
 
   // ── 未読カウント（Layout.tsx:117-127 と同一パターン） ──
   const [unreadCount, setUnreadCount] = useState(0);
@@ -272,71 +275,131 @@ export default function MobileShell() {
           : []),
       ];
 
+  // 「もっと」シート用: 主役タブ4つを除いた残り
+  const moreItems = resolvedItems.filter((item) => !MAIN_TAB_KEYS.has(item.key));
+
   // ── レンダリング ──
 
   return (
     <div className="mobile-shell">
-      {/* ============ MobileTopBar ============ */}
+      {/* ============ MobileTopBar（タイトルのみ） ============ */}
       <div className="mobile-topbar">
-        <button
-          className="mobile-topbar-hamburger"
-          onClick={openDrawer}
-          aria-label={t("nav.openDrawer")}
-          aria-expanded={drawerOpen}
-          aria-controls="mobile-drawer"
-        >
-          <NAV_ICONS.menu size={ICON.md} aria-hidden="true" />
-        </button>
-
         <span className="mobile-topbar-title">{pageTitle}</span>
-
-        <button
-          className="mobile-topbar-avatar"
-          onClick={() => setUserDrawerOpen(true)}
-          aria-label={t("nav.openUserMenu")}
-          data-tooltip={t("nav.openUserMenu")}
-        >
-          {user?.email ? user.email[0].toUpperCase() : <NAV_ICONS.logout size={18} aria-hidden="true" />}
-        </button>
       </div>
 
-      {/* ============ MobileDrawerBackdrop（Drawer より背面: z-index 200） ============ */}
-      {drawerOpen && (
+      {/* ============ Outlet ============ */}
+      <main className="mobile-content">
+        <Outlet />
+      </main>
+
+      {/* ============ MoreSheet backdrop（Drawer より背面: z-index 200） ============ */}
+      {moreSheetOpen && (
         <div
-          className="mobile-drawer-backdrop"
-          onClick={closeDrawer}
+          className="mobile-more-backdrop"
+          onClick={() => setMoreSheetOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* ============ MobileDrawer（Backdropより前面: z-index 210） ============ */}
+      {/* ============ MoreSheet（Backdrop より前面: z-index 210、slide-up） ============ */}
       <div
-        id="mobile-drawer"
-        className={`mobile-drawer${drawerOpen ? " mobile-drawer--open" : ""}`}
+        className={`mobile-more-sheet${moreSheetOpen ? " mobile-more-sheet--open" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-label={t("nav.openDrawer")}
+        aria-label={t("nav.mobileMore")}
       >
-        <div className="mobile-drawer-header">
-          <img src="/favicon.png" alt="Sales Anchor" className="mobile-drawer-logo" />
-          <button
-            className="mobile-drawer-close"
-            onClick={closeDrawer}
-            aria-label={t("nav.closeDrawer")}
-          >
-            <NAV_ICONS.close size={ICON.md} aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="mobile-drawer-nav">
-          <NavItemList
-            variant="mobile"
-            items={resolvedItems}
-            onNavClick={closeDrawer}
-            unreadCount={unreadCount}
-          />
-        </div>
+        <NavItemList
+          variant="mobile"
+          items={moreItems}
+          onNavClick={() => setMoreSheetOpen(false)}
+          unreadCount={unreadCount}
+        />
       </div>
+
+      {/* ============ MobileTabBar（fixed bottom） ============ */}
+      <nav className="mobile-tabbar" aria-label={t("nav.openMenu")}>
+        {/* ホーム */}
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+          }
+          aria-label={t("nav.dashboard")}
+        >
+          <NAV_ICONS.dashboard size={ICON.base} aria-hidden="true" />
+          <span className="mobile-tab-label">{t("nav.dashboard")}</span>
+        </NavLink>
+
+        {/* 受信箱: prefs.show_chat_menu 条件付き */}
+        {prefs.show_chat_menu && (
+          <NavLink
+            to="/lead-chat"
+            className={({ isActive }) =>
+              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+            }
+            aria-label={t("nav.leadChat")}
+          >
+            <LeadChatIcon size={ICON.base} aria-hidden="true" />
+            <span className="mobile-tab-label">{t("nav.leadChat")}</span>
+            {unreadCount > 0 && (
+              <span className="mobile-tab-badge" aria-hidden="true">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* 受注管理: orders.view 権限 */}
+        {hasPermission("orders.view") && (
+          <NavLink
+            to="/orders"
+            className={({ isActive }) =>
+              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+            }
+            aria-label={t("nav.orders")}
+          >
+            <NAV_ICONS.orders size={ICON.base} aria-hidden="true" />
+            <span className="mobile-tab-label">{t("nav.orders")}</span>
+          </NavLink>
+        )}
+
+        {/* 在庫: products.view 権限 */}
+        {hasPermission("products.view") && (
+          <NavLink
+            to="/inventory"
+            className={({ isActive }) =>
+              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+            }
+            aria-label={t("nav.inventory")}
+          >
+            <NAV_ICONS.inventory size={ICON.base} aria-hidden="true" />
+            <span className="mobile-tab-label">{t("nav.inventory")}</span>
+          </NavLink>
+        )}
+
+        {/* もっと */}
+        <button
+          className="mobile-tab"
+          onClick={() => setMoreSheetOpen(true)}
+          aria-label={t("nav.mobileMore")}
+          aria-expanded={moreSheetOpen}
+        >
+          <NAV_ICONS.more size={ICON.base} aria-hidden="true" />
+          <span className="mobile-tab-label">{t("nav.mobileMore")}</span>
+        </button>
+
+        {/* アバター（ユーザーメニュー） */}
+        <button
+          className="mobile-tab mobile-tab-avatar"
+          onClick={() => setUserDrawerOpen(true)}
+          aria-label={t("nav.openUserMenu")}
+        >
+          <span className="mobile-tab-avatar-icon">
+            {user?.email ? user.email[0].toUpperCase() : <NAV_ICONS.logout size={18} aria-hidden="true" />}
+          </span>
+        </button>
+      </nav>
 
       {/* ============ User drawer backdrop ============ */}
       {userDrawerOpen && (
@@ -430,11 +493,6 @@ export default function MobileShell() {
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
-
-      {/* ============ Outlet ============ */}
-      <main className="mobile-content">
-        <Outlet />
-      </main>
     </div>
   );
 }

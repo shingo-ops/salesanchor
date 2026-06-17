@@ -1,7 +1,8 @@
 /* ============================================================
-   mobile-shell.css — MobileShell 専用スタイル（PR-R2-B）
+   mobile-shell.css — MobileShell 専用スタイル（ADR-140 PR-B）
    ADR-067: 色・余白・z-index はすべて design token 参照。hex / px マジックナンバー禁止。
    ADR-137: MobileShell は DesktopShell（Layout.tsx）とは独立した DOM。
+   ADR-140: ハンバーガー+Drawer → 下部タブバー（主役4タブ＋「もっと」シート）
    ============================================================ */
 
 /* ---- MobileShell ルート ---- */
@@ -11,7 +12,7 @@
   min-height: 100dvh;
 }
 
-/* ---- MobileTopBar: sticky header ---- */
+/* ---- MobileTopBar: sticky header（タイトルのみ） ---- */
 .mobile-topbar {
   display: flex;
   align-items: center;
@@ -26,23 +27,6 @@
   flex-shrink: 0;
 }
 
-.mobile-topbar-hamburger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-primary);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.mobile-topbar-hamburger:hover {
-  background: var(--bg-hover);
-}
-
 .mobile-topbar-title {
   flex: 1;
   font-size: var(--font-base);
@@ -53,97 +37,129 @@
   white-space: nowrap;
 }
 
-/* AvatarButton: in-flow（position: fixed 不使用） */
-.mobile-topbar-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--size-avatar-md);
-  height: var(--size-avatar-md);
-  border-radius: 50%;
-  background: var(--bg-accent);
-  color: var(--text-on-accent);
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-sm);
-  font-weight: var(--font-medium);
-  flex-shrink: 0;
+/* ---- mobile-content: Outlet 表示エリア ---- */
+/* padding-bottom でタブバー高さ分のスペースを確保（コンテンツが隠れないように） */
+.mobile-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(var(--tabbar-height, 56px) + env(safe-area-inset-bottom, 0px));
 }
 
-.mobile-topbar-avatar:hover {
-  opacity: var(--opacity-secondary); /* 0.85 */
-}
-
-/* ---- MobileDrawerBackdrop: コンテンツより前面、Drawer より背面 ---- */
-/* z-index: var(--z-sidebar)=200  Drawer(210) より背面・user-drawer backdrop(298) と混同禁止 */
-.mobile-drawer-backdrop {
+/* ---- MoreSheet backdrop: コンテンツより前面、MoreSheet より背面 ---- */
+/* z-index: var(--z-sidebar)=200 */
+.mobile-more-backdrop {
   position: fixed; /* fixed-ok: Layout-level overlay */
   inset: 0;
-  z-index: var(--z-sidebar); /* 200 — Drawer(210) より背面 */
+  z-index: var(--z-sidebar); /* 200 — MoreSheet(210) より背面 */
   background: var(--overlay-bg);
 }
 
-/* ---- MobileDrawer: 左からスライドイン。Backdrop(200) より必ず前面 ---- */
-/* z-index: var(--z-sidebar-overlay)=210 ★Backdrop(200)より前面★ — クリック不能バグ防止 */
-.mobile-drawer {
+/* ---- MoreSheet: 下からスライドアップ。Backdrop(200) より必ず前面 ---- */
+/* z-index: var(--z-sidebar-overlay)=210 */
+.mobile-more-sheet {
   position: fixed; /* fixed-ok: Layout-level overlay */
-  inset: 0 auto 0 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-sidebar-overlay); /* 210 ★Backdrop(200)より前面★ */
-  width: var(--sidebar-width-expanded, 240px);
-  transform: translateX(-100%);
-  transition: transform var(--transition-sidebar);
+  background: var(--bg-surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  max-height: 70vh;
   overflow-y: auto;
-  background: var(--sidebar-bg);
+  transform: translateY(100%);
+  transition: transform var(--transition-slow);
+}
+
+.mobile-more-sheet--open {
+  transform: translateY(0);
+}
+
+/* ---- MobileTabBar: fixed bottom tab bar ---- */
+.mobile-tabbar {
+  position: fixed; /* fixed-ok: persistent bottom nav */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-topbar); /* 100 */
+  height: var(--tabbar-height, 56px);
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---- タブ項目（NavLink / button 共通） ---- */
+/* WCAG 2.5.5: タップターゲット最小 44px を保証 */
+.mobile-tab {
   display: flex;
   flex-direction: column;
-}
-
-.mobile-drawer--open {
-  transform: translateX(0);
-}
-
-/* Drawer header（ロゴ + 閉じるボタン） */
-.mobile-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.mobile-drawer-logo {
-  height: var(--icon-xl);
-  width: auto;
-  object-fit: contain;
-}
-
-.mobile-drawer-close {
-  display: flex;
   align-items: center;
   justify-content: center;
+  flex: 1;
+  min-height: var(--size-icon-btn-lg); /* 44px — WCAG 2.5.5 */
+  gap: var(--space-1);
   background: transparent;
   border: none;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  position: relative;
+  transition: color var(--transition-fast);
 }
 
-.mobile-drawer-close:hover {
-  background: var(--bg-hover);
+.mobile-tab:hover {
+  color: var(--text-primary);
+  text-decoration: none;
 }
 
-.mobile-drawer-nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-3) 0;
+.mobile-tab--active {
+  color: var(--accent);
 }
 
-/* ---- mobile-content: Outlet 表示エリア ---- */
-.mobile-content {
-  flex: 1;
-  overflow-y: auto;
+.mobile-tab--active:hover {
+  color: var(--accent);
+}
+
+/* ---- タブラベル ---- */
+.mobile-tab-label {
+  font-size: var(--font-2xs);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---- 未読バッジ（受信箱タブ） ---- */
+.mobile-tab-badge {
+  position: absolute;
+  top: var(--space-1);
+  right: calc(50% - var(--space-5));
+  min-width: var(--nav-badge-size);   /* 18px */
+  height: var(--nav-badge-size);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-badge);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--nav-badge-size);
+  text-align: center;
+}
+
+/* ---- アバタータブ（ユーザーメニュー） ---- */
+.mobile-tab-avatar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-avatar-sm, 28px);
+  height: var(--size-avatar-sm, 28px);
+  border-radius: 50%;
+  background: var(--bg-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-sm);
+  font-weight: var(--font-medium);
 }
 
 /* ---- NavItemList: mobile variant ---- */
