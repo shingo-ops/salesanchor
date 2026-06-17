@@ -2837,7 +2837,10 @@
     "reasonsRanking": "理由ランキング",
     "memoList": "顧客の声",
     "primaryCount": "第一理由",
-    "secondaryCount": "第二理由"
+    "secondaryCount": "第二理由",
+    "noTarget": "目標未設定",
+    "errorFetch": "ファネルデータを取得できませんでした。時間をおいて再読み込みしてください。",
+    "activeNote": "当月開始の進行中商談"
   },
   "initiative": {
     "inbound": "お客様から問い合わせ",

@@ -126,6 +126,18 @@
   color: var(--text-secondary);
 }
 
+.fn-card-note {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.fn-card-no-target {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .fn-card-sub {
   font-size: var(--font-xs);
   color: var(--text-secondary);

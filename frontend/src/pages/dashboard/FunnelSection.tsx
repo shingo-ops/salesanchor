@@ -139,6 +139,7 @@ function ActiveCard({ data }: { data: FunnelResponse["active"] }) {
   const { t } = useTranslation();
   return (
     <FunnelCard title={t("funnel.active")}>
+      <div className="fn-card-note">{t("funnel.activeNote")}</div>
       <div className="fn-card-main">
         <span className="fn-card-value">{data.count}</span>
         <span className="fn-card-unit">{t("funnel.unitDeal")}</span>
@@ -256,7 +257,8 @@ function RevenueSummaryCard({ data }: { data: RevenueSummaryResponse }) {
 function SideSummaryCards({ data }: { data: RevenueSummaryResponse }) {
   const { t } = useTranslation();
   const { new_customers, active_existing_customers } = data;
-  const ncRate = achievementRate(new_customers.actual, new_customers.target);
+  const hasTarget = new_customers.target > 0;
+  const ncRate = hasTarget ? achievementRate(new_customers.actual, new_customers.target) : 0;
 
   return (
     <div className="fn-side-cards">
@@ -264,9 +266,13 @@ function SideSummaryCards({ data }: { data: RevenueSummaryResponse }) {
         <div className="fn-card-title">{t("funnel.newCustomers")}</div>
         <div className="fn-card-main">
           <span className="fn-card-value">{new_customers.actual}</span>
-          <span className="fn-card-target">/ {new_customers.target}</span>
+          {hasTarget ? (
+            <span className="fn-card-target">/ {new_customers.target}</span>
+          ) : (
+            <span className="fn-card-no-target">{t("funnel.noTarget")}</span>
+          )}
         </div>
-        <AchievementBar rate={ncRate} />
+        {hasTarget && <AchievementBar rate={ncRate} />}
       </div>
       <div className="fn-side-card">
         <div className="fn-card-title">{t("funnel.activeExisting")}</div>
@@ -382,7 +388,7 @@ export function FunnelSection({ month, viewMode }: FunnelSectionProps) {
   if (error || !funnel || !revenue || !followUps) {
     return (
       <section className="fn-section" aria-label={t("funnel.sectionTitle")}>
-        <div className="fn-error">{error || t("common.errorLoad")}</div>
+        <div className="fn-error">{t("funnel.errorFetch")}</div>
       </section>
     );
   }

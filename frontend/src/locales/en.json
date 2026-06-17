@@ -2837,7 +2837,10 @@
     "reasonsRanking": "Reasons Ranking",
     "memoList": "Customer Voice",
     "primaryCount": "Primary",
-    "secondaryCount": "Secondary"
+    "secondaryCount": "Secondary",
+    "noTarget": "No Target Set",
+    "errorFetch": "Could not load funnel data. Please wait and try reloading.",
+    "activeNote": "Deals started this month"
   },
   "initiative": {
     "inbound": "Inbound Inquiry",
