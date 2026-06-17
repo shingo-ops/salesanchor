@@ -221,11 +221,19 @@ async def test_idempotent_skips_existing() -> None:
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
     ]
 
+    _existing_button_msg = [
+        {
+            "id": "MSG-EXISTING",
+            "content": "サポートが必要な場合は下のボタンを押してください。",
+            "components": [{"type": 1, "components": [{"type": 2, "custom_id": "ticket_open"}]}],
+        }
+    ]
+
     discord_responses = [
-        existing_roles,     # GET roles
-        existing_channels,  # GET channels
-        {"id": "BOT-1"},    # GET /users/@me
-        # ch_ticket が skipped のためボタン投稿は発生しない
+        existing_roles,          # GET roles
+        existing_channels,       # GET channels
+        {"id": "BOT-1"},         # GET /users/@me
+        _existing_button_msg,    # GET messages（ボタン確認: 既存ボタンあり）
     ]
 
     with ExitStack() as stack:
@@ -250,11 +258,12 @@ async def test_idempotent_skips_existing() -> None:
     assert steps["ch_ticket"]["status"] == "skipped"
     assert steps["ch_member"]["status"] == "skipped"
     assert steps["ch_partner"]["status"] == "skipped"
-    # ch_ticket が skipped のため button も skipped
+    # 既存ボタンを検出したため skipped（discord_id = 既存メッセージID）
     assert steps["button"]["status"] == "skipped"
+    assert steps["button"]["discord_id"] == "MSG-EXISTING"
 
-    # GET×2 + GET /users/@me×1 のみ（ボタン投稿なし）
-    assert mock_api.call_count == 3
+    # GET×2 + GET /users/@me×1 + GET messages×1 = 4
+    assert mock_api.call_count == 4
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +507,8 @@ async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
         # ch_ticket: 名前+parent_id 検索 skipped
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},  # 7: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0}, # 8: POST ch_partner
-        # button: ch_ticket が skipped のためボタン投稿なし
+        [],               # 9: GET messages（ボタン確認: 未投稿）
+        {"id": "MSG-1"},  # 10: POST button
     ]
 
     with ExitStack() as stack:
@@ -520,11 +530,12 @@ async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
     assert steps["ch_ticket"]["discord_id"] == "CH-TICKET"
     assert steps["ch_member"]["status"] == "created"
     assert steps["ch_partner"]["status"] == "created"
-    # ch_ticket が skipped のためボタン投稿なし
-    assert steps["button"]["status"] == "skipped"
+    # 既存チャンネルにボタンが未存在 → 新規投稿
+    assert steps["button"]["status"] == "posted"
+    assert steps["button"]["discord_id"] == "MSG-1"
 
-    # GET×2 + GET /users/@me×1 + roles×3 + ch_member+ch_partner = 8（category/ch_ticket/button POSTなし）
-    assert mock_api.call_count == 8
+    # GET×2 + GET /users/@me×1 + roles×3 + ch_member+ch_partner + GET messages + POST button = 10
+    assert mock_api.call_count == 10
 
     mock_db.commit.assert_called_once()
 
@@ -766,3 +777,227 @@ def test_partner_announcements_overwrites_bits() -> None:
     # Staff: 全許可
     assert int(by_id["STAFF-ROLE"]["allow"]) == _VIEW | _SEND | _READ
     assert int(by_id["STAFF-ROLE"]["deny"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# テスト: button 冪等化（_ensure_ticket_button_step）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_existing_channel_without_button_posts_button() -> None:
+    """既存 ticket-start チャンネルにボタンが無い場合、ボタンを投稿すること。"""
+    existing_config = {
+        "ticket_category_id": "CAT-1",
+        "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF",
+        "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER",
+        "small_role_name": "Member",
+        "large_role_name": "Partner",
+    }
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=existing_config)
+    app = _build_app(mock_db)
+
+    existing_roles = [
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},
+        {"id": "ROLE-PARTNER", "name": "Partner"},
+        {"id": "ROLE-MEMBER", "name": "Member"},
+    ]
+    existing_channels = [
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
+    ]
+
+    discord_responses = [
+        existing_roles,    # GET roles
+        existing_channels, # GET channels
+        {"id": "BOT-1"},   # GET /users/@me
+        [],                # GET messages（ボタン未存在）
+        {"id": "MSG-NEW"}, # POST button
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "completed"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["ch_ticket"]["status"] == "skipped"
+    # ボタン未存在 → 投稿される
+    assert steps["button"]["status"] == "posted"
+    assert steps["button"]["discord_id"] == "MSG-NEW"
+
+    # GET×2 + GET /users/@me×1 + GET messages×1 + POST button×1 = 5
+    assert mock_api.call_count == 5
+
+
+@pytest.mark.asyncio
+async def test_existing_channel_with_button_skips_button() -> None:
+    """既存 ticket-start チャンネルにボタンが既にある場合、重複投稿しないこと。"""
+    existing_config = {
+        "ticket_category_id": "CAT-1",
+        "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF",
+        "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER",
+        "small_role_name": "Member",
+        "large_role_name": "Partner",
+    }
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=existing_config)
+    app = _build_app(mock_db)
+
+    existing_roles = [
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},
+        {"id": "ROLE-PARTNER", "name": "Partner"},
+        {"id": "ROLE-MEMBER", "name": "Member"},
+    ]
+    existing_channels = [
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
+    ]
+    existing_button_messages = [
+        {
+            "id": "MSG-EXISTING",
+            "content": "サポートが必要な場合は下のボタンを押してください。",
+            "components": [
+                {"type": 1, "components": [{"type": 2, "custom_id": "ticket_open"}]}
+            ],
+        }
+    ]
+
+    discord_responses = [
+        existing_roles,           # GET roles
+        existing_channels,        # GET channels
+        {"id": "BOT-1"},          # GET /users/@me
+        existing_button_messages, # GET messages（ボタン既存）
+        # POST button は呼ばれない
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "completed"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["ch_ticket"]["status"] == "skipped"
+    # 既存ボタン検出 → 重複投稿しない
+    assert steps["button"]["status"] == "skipped"
+    assert steps["button"]["discord_id"] == "MSG-EXISTING"
+
+    # POST button が呼ばれないこと（GET×2 + GET /users/@me×1 + GET messages×1 = 4）
+    assert mock_api.call_count == 4
+
+
+@pytest.mark.asyncio
+async def test_button_post_403_returns_descriptive_error() -> None:
+    """ボタン投稿が 403 Missing Permissions で失敗した場合、ロール順を示すエラーを返すこと。"""
+    from app.services.discord_rest import DiscordAPIError
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+
+    discord_responses = [
+        [],                                                              # 1: GET roles
+        [],                                                              # 2: GET channels
+        {"id": "BOT-1"},                                                 # 3: GET /users/@me
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},             # 4: POST role_staff
+        {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
+        {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},            # 7: POST category
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},        # 8: POST ch_ticket (created)
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},# 9: POST ch_member
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 10: POST ch_partner
+        DiscordAPIError("Missing Permissions", status_code=403),        # 11: POST button 403
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "partial"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["button"]["status"] == "failed"
+    # 403 エラーにはロール順に関するガイドが含まれる
+    assert steps["button"]["error"] is not None
+    assert "SEND_MESSAGES" in steps["button"]["error"]
+    assert "上位" in steps["button"]["error"]
+
+
+@pytest.mark.asyncio
+async def test_button_read_403_returns_descriptive_error() -> None:
+    """ボタン確認のメッセージ取得が 403 で失敗した場合、権限不足エラーを返すこと。"""
+    from app.services.discord_rest import DiscordAPIError
+
+    existing_config = {
+        "ticket_category_id": "CAT-1",
+        "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF",
+        "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER",
+        "small_role_name": "Member",
+        "large_role_name": "Partner",
+    }
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=existing_config)
+    app = _build_app(mock_db)
+
+    existing_roles = [
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},
+        {"id": "ROLE-PARTNER", "name": "Partner"},
+        {"id": "ROLE-MEMBER", "name": "Member"},
+    ]
+    existing_channels = [
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
+    ]
+
+    discord_responses = [
+        existing_roles,    # GET roles
+        existing_channels, # GET channels
+        {"id": "BOT-1"},   # GET /users/@me
+        DiscordAPIError("Missing Permissions", status_code=403),  # GET messages 403
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "partial"
+
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["button"]["status"] == "failed"
+    assert steps["button"]["error"] is not None
+    assert "チャンネル権限" in steps["button"]["error"] or "VIEW_CHANNEL" in steps["button"]["error"]
