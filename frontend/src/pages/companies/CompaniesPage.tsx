@@ -7,6 +7,7 @@
  *
  * 変更履歴:
  *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチC）
+ *   2026-06-17: 一覧操作ボタン廃止・行クリックで詳細遷移・削除は詳細ページへ移動
  */
 
 import { useEffect, useState, FormEvent } from "react";
@@ -14,14 +15,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
-import { Drawer } from "../../components/Drawer";
-import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
-import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
-import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -146,18 +143,6 @@ const emptyForm: FormState = {
   sales_channels: "",
 };
 
-const emptyEditForm: CompanyFormState = {
-  name: "", status: "active", industry: "", priority_focus: "", notes: "",
-};
-
-const toForm = (c: Company): CompanyFormState => ({
-  name: c.name || "",
-  status: c.status,
-  industry: c.industry || "",
-  priority_focus: c.priority_focus || "",
-  notes: c.notes || "",
-});
-
 type Tab = "basic" | "billing" | "delivery";
 
 const companyDisplayName = (c: Company): string => {
@@ -186,14 +171,10 @@ export default function CompaniesPage() {
   const [activeTab, setActiveTab] = useState<Tab>("basic");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [addressesDirty, setAddressesDirty] = useState(false);
-  // 編集ドロワー
-  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
-    useRecordDrawer<Company, CompanyFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
 
   const loadCompanies = async () => {
     try {
@@ -310,38 +291,6 @@ export default function CompaniesPage() {
     }
   };
 
-  /* ── ドロワー内編集保存（6 要点フィールド） ── */
-  const handleEditSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (!editId) return;
-    try {
-      await api.patch(`/companies/${editId}`, {
-        name: editForm.name,
-        status: editForm.status,
-        industry: toNull(editForm.industry),
-        priority_focus: toNull(editForm.priority_focus),
-        notes: toNull(editForm.notes),
-      });
-      closeDrawer();
-      loadCompanies();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.saveError"));
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await api.delete(`/companies/${deleteTarget.id}`);
-      setDeleteTarget(null);
-      loadCompanies();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.deleteError"));
-      setDeleteTarget(null);
-    }
-  };
-
   // PR #145 Q2: pending_dedup_review の件数を一覧サマリで提示し、解消フローへの導線を強める
   const pendingDedupCount = companies.filter((c) => c.status === "pending_dedup_review").length;
 
@@ -389,23 +338,12 @@ export default function CompaniesPage() {
         const columns: DataTableColumn<Company>[] = [
           { key: "name", header: t("common.name"), renderCell: (c) => (
             /* 詳細ページへ: multi_branch 住所編集 / 担当者タブ / 販売チャネル */
-            <Link to={`/companies/${c.id}`}>{companyDisplayName(c)}</Link>
+            <Link to={`/crm/companies/${c.id}`} onClick={(e) => e.stopPropagation()}>{companyDisplayName(c)}</Link>
           )},
           { key: "industry", header: t("companies.industry"), renderCell: (c) => c.industry || "-" },
           { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
           { key: "billing", header: t("companies.billing"), renderCell: (c) => addressDisplay(defaultAddress(c, "billing")) },
           { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
-          { key: "actions", header: t("common.actions"), renderCell: (c) => (
-            <>
-              <Link to={`/companies/${c.id}`} className="btn-sm" onClick={(e) => e.stopPropagation()}>{t("companies.viewDetail")}</Link>
-              {hasPermission("customers.update") && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</button>
-              )}
-              {hasPermission("customers.delete") && (
-                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</button>
-              )}
-            </>
-          )},
         ];
         return (
           <DataTable<Company>
@@ -413,7 +351,7 @@ export default function CompaniesPage() {
             data={companies}
             rowKey={(c) => String(c.id)}
             rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
-            onRowClick={hasPermission("customers.update") ? handleRowClick : undefined}
+            onRowClick={(c) => navigate(`/crm/companies/${c.id}`)}
             emptyState={t("companies.noCompanies")}
           />
         );
@@ -548,41 +486,6 @@ export default function CompaniesPage() {
             </form>
         </div>
       </Modal>
-
-      {/* 編集 Drawer（行クリックで開く・6 要点フィールド） */}
-      <Drawer
-        open={drawerOpen}
-        onClose={closeDrawer}
-        title={t("companies.editCompany")}
-        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/crm/companies/${editId}`); } : undefined}
-      >
-        <form onSubmit={handleEditSubmit}>
-          <CompanyFormFields
-            form={editForm}
-            onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
-          />
-          <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
-          </div>
-        </form>
-      </Drawer>
-
-      <ConfirmModal
-        open={deleteTarget !== null}
-        title={t("companies.deleteCompany")}
-        message={
-          deleteTarget
-            ? t("companies.deleteConfirmMessage", {
-                name: companyDisplayName(deleteTarget),
-                code: deleteTarget.company_code,
-              })
-            : ""
-        }
-        confirmLabel={t("common.delete")}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </PageLayout>
   );
 }

@@ -34,6 +34,9 @@ export default function CompanyDetailPage() {
   const canEdit = hasPermission("customers.update");
   // A-4: 会社マージは customers.delete 権限相当
   const canMerge = hasPermission("customers.delete");
+  const canDelete = hasPermission("customers.delete");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   // ADR-SA-03 + ADR-127: 登録リンク発行（register / add_address / change_billing）
   const [regLinkUrl, setRegLinkUrl] = useState<string | null>(null);
   const [regLinkLoading, setRegLinkLoading] = useState(false);
@@ -126,6 +129,16 @@ export default function CompanyDetailPage() {
     }
   };
 
+  const handleCompanyDelete = async () => {
+    try {
+      await api.delete(`/companies/${company.id}`);
+      navigate("/crm/companies");
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : t("common.deleteError"));
+      setDeleteOpen(false);
+    }
+  };
+
   const billingAddresses = company.addresses.filter((a) => a.address_type === "billing");
   const deliveryAddresses = company.addresses.filter((a) => a.address_type === "delivery");
   // ADR-127 §4: 第1層ゲート — 登録済み（billing is_default=true が存在）なら register 発行を無効化
@@ -183,6 +196,11 @@ export default function CompanyDetailPage() {
             </>
           )}
           <span className={`status-badge status-${company.status}`}>{company.status}</span>
+          {canDelete && (
+            <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)}>
+              {t("common.delete")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -215,6 +233,7 @@ export default function CompanyDetailPage() {
       )}
 
       {error && <div className="error-banner">{error}</div>}
+      {deleteError && <div className="error-banner">{deleteError}</div>}
 
       <div className="tabs">
         <Button variant="ghost" className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => switchTab("basic")}>
@@ -365,6 +384,19 @@ export default function CompanyDetailPage() {
         confirmLabel={t("companies.dedupResolveConfirmLabel")}
         onConfirm={handleResolveAsDistinct}
         onCancel={() => setDedupConfirmOpen(false)}
+      />
+
+      {/* 会社削除確認 */}
+      <ConfirmModal
+        open={deleteOpen}
+        title={t("companies.deleteCompany")}
+        message={t("companies.deleteConfirmMessage", {
+          name: company.billing_display_name || company.name || company.company_code || "-",
+          code: company.company_code,
+        })}
+        confirmLabel={t("common.delete")}
+        onConfirm={handleCompanyDelete}
+        onCancel={() => setDeleteOpen(false)}
       />
 
       {/* A-4: 重複マージモーダル */}
