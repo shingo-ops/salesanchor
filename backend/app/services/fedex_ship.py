@@ -67,6 +67,7 @@ def create_shipment(
     packaging_type: str = "YOUR_PACKAGING",
     pickup_type: str = "DROPOFF_AT_FEDEX_LOCATION",
     label_image_type: str = "PDF",
+    label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL",
     dimensions_cm: Optional[dict] = None,
     customs_clearance: Optional[dict] = None,
 ) -> ShipmentResult:
@@ -84,7 +85,8 @@ def create_shipment(
         weight_kg: 重量（kg）
         packaging_type: 梱包タイプ
         pickup_type: ピックアップタイプ
-        label_image_type: ラベル画像タイプ（PDF 推奨）
+        label_image_type: ラベル画像タイプ（PDF / PNG / ZPLII 等）
+        label_stock_type: ラベルストックタイプ（ZPLII 用に STOCK_4X6 等）
         dimensions_cm: 寸法 {"length": float, "width": float, "height": float}（任意）
         customs_clearance: 国際便用関税情報（任意）
 
@@ -119,7 +121,7 @@ def create_shipment(
         "labelSpecification": {
             "imageType": label_image_type,
             "labelFormatType": "COMMON2D",
-            "labelStockType": "PAPER_85X11_TOP_HALF_LABEL",
+            "labelStockType": label_stock_type,
         },
         "requestedPackageLineItems": [pkg_item],
     }
