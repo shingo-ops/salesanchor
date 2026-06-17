@@ -58,15 +58,16 @@ FedEx の形式名（PDF / PNG / ZPLII）は既存実装（`backend/app/services
 ### 1. バックエンド: LVSampleResult 拡張（後方互換優先）
 
 ```python
-# backend/app/routers/shipping.py:673-679（変更後）
+# backend/app/routers/shipping.py（変更後）
 class LVSampleResult(_BaseModel):
     service_abbr: str
     service_name: str
     service_type: str
     tracking_number: str
-    pdf_base64: str        # 既存フィールド（必須・そのまま）
-    png_base64: str        # 追加（PNG ラベル Base64）
-    zpl_base64: str        # 追加（ZPLII ラベル Base64 — ZPL コマンドを Base64 エンコード）
+    pdf_base64: str            # 既存フィールド（必須・そのまま）
+    png_base64: str            # 追加（PNG ラベル Base64）
+    zpl_base64: str            # 追加（ZPLII ラベル Base64 — ZPL コマンドを Base64 エンコード）
+    zpl_label_stock_type: str  # 追加（実際に成功した labelStockType — デバッグ用）
 ```
 
 **後方互換の考え方**: フロントエンドは同一リポジトリで同時に更新するため、既存 pdf_base64 を削除・改名しない。追加のみ行う。
@@ -104,14 +105,20 @@ for abbr, service_type, service_name in _LV_SERVICES:
 
 現状の `f"{service_name}({abbr}) ラベル発行失敗: {e}"` からサービス名の後に形式（PDF/PNG/ZPL）を追加する。
 
-#### 2-3. labelStockType の扱い（create_shipment() の引数化）
+#### 2-3. labelStockType の扱い（create_shipment() の引数化 + ZPLII フォールバック）
 
 既存の `backend/app/services/fedex_ship.py` では labelStockType が "PAPER_85X11_TOP_HALF_LABEL" に固定されていた。ZPLII は熱転写プリンター用の STOCK_4X6 が必要なため、create_shipment() に label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL" 引数を追加し、呼び出し側で形式別に渡す設計とした。
 
 - PDF / PNG: label_stock_type="PAPER_85X11_TOP_HALF_LABEL"（既存デフォルト）
-- ZPLII: label_stock_type="STOCK_4X6"（熱転写プリンター用 4×6 インチ）
+- ZPLII: まず STOCK_4X6 で試行。FedExAPIError 失敗時のみ PAPER_85X11_TOP_HALF_LABEL にフォールバック
 
-**Sandbox 実機確認**: STOCK_4X6 が正常レスポンスを返さない場合は PAPER_85X11_TOP_HALF_LABEL にフォールバック。
+**フォールバック実装方針**（REQUEST_CHANGES 対応）:
+- PDF / PNG ではフォールバックしない（コード上も ZPLII 専用ヘルパー `_lv_issue_zpl_with_fallback()` を使用）
+- ZPLII フォールバックは `_lv_issue_zpl_with_fallback()` モジュールレベル関数として独立実装（テスト容易性のため）
+- 両方失敗した場合のエラー文には STOCK_4X6 失敗理由と PAPER_85X11_TOP_HALF_LABEL 失敗理由の両方を含める
+- 成功した stock type は `LVSampleResult.zpl_label_stock_type` フィールドで返す
+
+**Sandbox 実機確認**: STOCK_4X6 が正常レスポンスを返さない場合は PAPER_85X11_TOP_HALF_LABEL で再試行するためコード上はフォールバック実装済み。どちらが使われたかは `zpl_label_stock_type` で確認可能。
 
 #### 2-4. API 呼び出し回数
 
@@ -233,9 +240,12 @@ ZPL は FedEx API が ZPL コマンドテキストを Base64 エンコードし�
 | 基準 | 検証方法 |
 |---|---|
 | lv_issue_sample_labels が 4サービス × PDF/PNG/ZPLII を返す | pytest: test_lv_issue_sample_labels_returns_three_formats が PASS |
-| LVSampleResult に png_base64 / zpl_base64 フィールドが含まれる | pytest: レスポンスのキー確認 |
+| LVSampleResult に png_base64 / zpl_base64 / zpl_label_stock_type フィールドが含まれる | pytest: レスポンスのキー確認 |
 | label_image_type="PNG" 時に imageType="PNG" がリクエストに含まれる | pytest: test_label_image_type_png_is_passed_to_request PASS |
 | label_image_type="ZPLII" 時に imageType="ZPLII" + labelStockType="STOCK_4X6" がリクエストに入る | pytest: test_label_image_type_zplii_is_passed_to_request PASS |
+| ZPLII STOCK_4X6 が FedExAPIError → PAPER_85X11_TOP_HALF_LABEL で再試行して成功 | pytest: test_stock4x6_fedex_api_error_falls_back_to_paper PASS |
+| ZPLII フォールバック成功時に PDF/PNG が失敗扱いにならない | pytest: test_fallback_success_does_not_affect_pdf_png PASS |
+| ZPLII 両方失敗時のエラー文に STOCK_4X6 / PAPER_85X11_TOP_HALF_LABEL が含まれる | pytest: test_both_stock_types_fail_raises_http_422_with_both_messages PASS |
 | フロント TypeScript が型エラーなくビルドできる | CI: frontend lint & custom checks が PASS |
 | 既存 PDF ダウンロードが壊れない | 既存 pytest / CI が全 PASS |
 | lvStep2DownloadPdf / lvStep2DownloadPng / lvStep2DownloadZpl キーが ja.json と en.json の両方にある | CI: Frontend lint & i18n チェックが PASS |

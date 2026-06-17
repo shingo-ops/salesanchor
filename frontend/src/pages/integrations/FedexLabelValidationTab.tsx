@@ -28,9 +28,10 @@ interface LVSampleLabel {
   service_name: string;
   service_type: string;
   tracking_number: string;
-  pdf_base64: string;   // 既存フィールド（後方互換維持）
+  pdf_base64: string;           // 既存フィールド（後方互換維持）
   png_base64: string;
   zpl_base64: string;
+  zpl_label_stock_type: string; // ZPLII 発行に実際に使用した labelStockType（デバッグ用）
 }
 
 interface EmailTemplate {
