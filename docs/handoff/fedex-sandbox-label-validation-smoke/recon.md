@@ -1,18 +1,18 @@
-# recon: FedEx Sandbox ラベル発行 実機確認
+# recon: FedEx Sandbox Label Validation 実機確認（PDF / A4 一本化）
 
 **仕事名**: fedex-sandbox-label-validation-smoke  
-**調査日**: 2026-06-17  
+**更新日**: 2026-06-17（PDF/A4 一本化方針反映）  
 **対象ADR**: ADR-123 / ADR-129  
-**目的**: PR #2300 でマージした PNG/ZPL ラベル発行実装が、実際の FedEx Sandbox 認証情報で正常動作するかを確認するための調査・手順書作成  
-**スコープ**: 実装変更なし・docs-only（手順書・確認チェックリスト）
+**目的**: A4通常プリンターによる PDF ラベルのみで FedEx Label Validation 申請フローを完結させる  
+**スコープ**: PNG / ZPL は通常フロー対象外（低レイヤー互換は維持）
 
 ---
 
-## PR #2300 マージ・CI 確認
+## 運用前提（2026-06-17 Shingo 確定）
 
-- PR #2300 (`feature/morimoto/fedex-png-zpl-labels`) は develop にマージ済み
-- Backend Tests: success / Frontend Check: success / Frontend E2E: success / Chromatic: success / Secret Scan: success / Migration Guard: success / Process Artifacts Gate: success（最終 head `3f39093e` で全 CI グリーン確認）
-- ADR-129 §3.2「テストラベル一括発行 UI」Sprint 3.2 の実装完了分
+- **プリンター形式**: A4 通常プリンター（熱転写ラベルプリンターは使用しない）
+- **発行形式**: PDF のみ（PNG / ZPL は通常フロー確認対象外）
+- **背景**: FedEx Label Validation 申請は PDF / A4 だけで完結する。ZPL（熱転写）は不使用のため通常フローから除去。
 
 ---
 
@@ -26,7 +26,7 @@
 
 ---
 
-## A. バックエンド実装（#2300 マージ済み）
+## A. バックエンド実装（PDF 専用化後）
 
 ### A1. create_shipment() — label_image_type / label_stock_type
 
@@ -38,73 +38,60 @@
 | リクエスト組み立て imageType | `backend/app/services/fedex_ship.py:122` | `"imageType": label_image_type` |
 | リクエスト組み立て labelStockType | `backend/app/services/fedex_ship.py:124` | `"labelStockType": label_stock_type` |
 
-### A2. ZPLII フォールバック実装
+※ 低レイヤー（`fedex_ship.create_shipment`）は PNG/ZPL パラメータを保持しているが、LV 通常フローでは使用しない。
+
+### A2. LVSampleResult レスポンスモデル（PDF専用）
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| フォールバック関数 | `backend/app/routers/shipping.py:673` | `async def _lv_issue_zpl_with_fallback(...)` — STOCK_4X6 優先、失敗時 PAPER_85X11_TOP_HALF_LABEL |
-| primary stock type | `backend/app/routers/shipping.py:692` | `_primary = "STOCK_4X6"` |
-| fallback stock type | `backend/app/routers/shipping.py:693` | `_fallback = "PAPER_85X11_TOP_HALF_LABEL"` |
-| fallback ログ | `backend/app/routers/shipping.py:717` | `"[shipping] ZPLII STOCK_4X6 失敗 … → PAPER_85X11_TOP_HALF_LABEL にフォールバック"` |
-| 両方失敗時 422 | `backend/app/routers/shipping.py:732-733` | `"STOCK_4X6: {primary_err}; PAPER_85X11_TOP_HALF_LABEL: {fallback_err}"` |
+| クラス定義 | `backend/app/routers/shipping.py:673` | `class LVSampleResult(_BaseModel)` |
+| pdf_base64 フィールド | `backend/app/routers/shipping.py:679` | PDF ラベル Base64 |
+| png_base64 / zpl_base64 | 除去済み | 通常フロー対象外のため削除 |
 
-### A3. LVSampleResult レスポンスモデル
+### A3. lv_issue_sample_labels() — エンドポイント（PDF専用）
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| クラス定義 | `backend/app/routers/shipping.py:738` | `class LVSampleResult(_BaseModel)` |
-| png_base64 フィールド | `backend/app/routers/shipping.py:744` | PNG ラベル Base64 |
-| zpl_base64 フィールド | `backend/app/routers/shipping.py:745` | ZPLII ラベル Base64 |
-| zpl_label_stock_type フィールド | `backend/app/routers/shipping.py:746` | 実際に使用した labelStockType（デバッグ用） |
-
-### A4. lv_issue_sample_labels() — エンドポイント
-
-| 確認事項 | file:line | 内容 |
-|---|---|---|
-| エンドポイント定義 | `backend/app/routers/shipping.py:759` | `async def lv_issue_sample_labels(...)` POST /shipping/label-validation/samples |
-| 内部ヘルパー _issue_one | `backend/app/routers/shipping.py:781` | `async def _issue_one(service_type, service_name, abbr, fmt, stock_type)` |
+| エンドポイント定義 | `backend/app/routers/shipping.py:688` | POST /shipping/label-validation/samples |
 | 対象サービス定義 | `backend/app/routers/shipping.py:665` | `_LV_SERVICES` — IP / IE / IPE / FICP の 4 サービス |
-| PDF 発行呼び出し | `backend/app/routers/shipping.py:808` | `_issue_one(..., "PDF", "PAPER_85X11_TOP_HALF_LABEL")` |
-| PNG 発行呼び出し | `backend/app/routers/shipping.py:809` | `_issue_one(..., "PNG", "PAPER_85X11_TOP_HALF_LABEL")` |
-| ZPL フォールバック呼び出し | `backend/app/routers/shipping.py:811` | `_lv_issue_zpl_with_fallback(...)` |
-| zpl_label_stock_type 格納 | `backend/app/routers/shipping.py:827` | `zpl_label_stock_type=zpl_stock_used` |
+| PDF 発行（4サービス × 1回） | `backend/app/routers/shipping.py:755` | `fedex_ship.create_shipment(...)` — label_image_type デフォルト(PDF) |
+| PNG / ZPL 発行 | 除去済み | `_lv_issue_zpl_with_fallback` 含め削除 |
 
 ---
 
-## B. フロントエンド実装（#2300 マージ済み）
+## B. フロントエンド実装（PNG/ZPL除去後）
 
 ### B1. LVSampleLabel インターフェース
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
 | インターフェース定義 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:26` | `interface LVSampleLabel` |
-| zpl_label_stock_type | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:34` | `zpl_label_stock_type: string` — デバッグ用フィールド |
+| pdf_base64 | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:30` | PDF フィールドのみ |
+| png_base64 / zpl_base64 / zpl_label_stock_type | 除去済み | 通常フロー対象外のため削除 |
 
 ### B2. ダウンロードハンドラー
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| PDF ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:105` | `const handleDownloadPdf` — PDF Blob, `application/pdf` |
-| PNG ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:111` | `const handleDownloadPng` — PNG Blob, `image/png` |
-| ZPL ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:117` | `const handleDownloadZpl` — ZPL テキスト, `application/octet-stream` |
+| PDF ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:96` | `const handleDownloadPdf` — PDF Blob, `application/pdf` |
+| handleDownloadPng / handleDownloadZpl | 除去済み | 通常フロー対象外のため削除 |
 
 ### B3. ラベル一覧 UI
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| ラベル一覧コンテナ | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:269` | `lv-label-list` — 4 サービス分の lv-label-item |
-| PNG ダウンロードボタン | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:287` | `lvStep2DownloadPng` キー |
-| ZPL ダウンロードボタン | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:293` | `lvStep2DownloadZpl` キー |
+| ラベル一覧コンテナ | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:261` | `lv-label-list` — 4 サービス分の lv-label-item |
+| PDF ダウンロードボタン（のみ） | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:267` | `lvStep2DownloadPdf` キー（PNG/ZPLボタン除去済み） |
 
 ---
 
-## C. 不明点・実機確認が必要な事項
+## C. PNG / ZPL の取り扱い
 
-| # | 不明点 | 解消手段 | ブロッカー |
-|---|---|---|---|
-| U1 | ZPLII の labelStockType — Sandbox で STOCK_4X6 が成功するか | 実機テストで zpl_label_stock_type レスポンスフィールドを確認 | Sandbox アカウント番号が必要 |
-| U2 | ZPLII の返却値形式 — Base64 バイナリか ZPL コマンド文字列か | `docs/handoff/fedex-ship-stage2/recon.md:74` では Base64 返却と記録。実機で ZPL ファイルを開いて確認 | Sandbox 実機 |
-| U3 | PNG が PAPER_85X11_TOP_HALF_LABEL で正常生成されるか | 実機でダウンロードして画像として開けるか確認 | Sandbox 実機 |
+| 形式 | 通常フロー | 低レイヤー対応（開発検証用） |
+|------|-----------|--------------------------|
+| PDF  | ✅ 発行対象 | `create_shipment(label_image_type="PDF")` |
+| PNG  | ❌ 対象外  | `create_shipment(label_image_type="PNG")` で発行可能 |
+| ZPL  | ❌ 対象外  | `create_shipment(label_image_type="ZPLII", label_stock_type=...)` で発行可能 |
 
 ---
 
@@ -114,6 +101,3 @@
 - `docs/adr/FEATURE-INDEX.md:17`
 - `docs/adr/ADR-123-carrier-integrator-provider.md:1`
 - `docs/adr/ADR-129-fedex-label-validation-wizard.md:1`
-- `docs/handoff/fedex-png-zpl-labels/recon.md` — #2300 実装 recon
-- `docs/handoff/fedex-png-zpl-labels/design.md` — #2300 設計
-- `docs/handoff/fedex-ship-stage2/recon.md:74` — ZPL 返却形式記録
