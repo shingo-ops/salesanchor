@@ -38,7 +38,7 @@
 | リクエスト組み立て imageType | `backend/app/services/fedex_ship.py:122` | `"imageType": label_image_type` |
 | リクエスト組み立て labelStockType | `backend/app/services/fedex_ship.py:124` | `"labelStockType": label_stock_type` |
 
-※ 低レイヤー（`fedex_ship.create_shipment`）は PNG/ZPL パラメータを保持しているが、LV 通常フローでは使用しない。
+※ 低レイヤー（fedex_ship.create_shipment）は PNG/ZPL パラメータを保持しているが、LV 通常フローでは使用しない。
 
 ### A2. LVSampleResult レスポンスモデル（PDF専用）
 
@@ -53,9 +53,9 @@
 | 確認事項 | file:line | 内容 |
 |---|---|---|
 | エンドポイント定義 | `backend/app/routers/shipping.py:688` | POST /shipping/label-validation/samples |
-| 対象サービス定義 | `backend/app/routers/shipping.py:665` | `_LV_SERVICES` — IP / IE / IPE / FICP の 4 サービス |
-| PDF 発行（4サービス × 1回） | `backend/app/routers/shipping.py:755` | `fedex_ship.create_shipment(...)` — label_image_type デフォルト(PDF) |
-| PNG / ZPL 発行 | 除去済み | `_lv_issue_zpl_with_fallback` 含め削除 |
+| 対象サービス定義 | `backend/app/routers/shipping.py:665` | _LV_SERVICES — IP / IE / IPE / FICP の 4 サービス |
+| PDF 発行（4サービス × 1回） | `backend/app/routers/shipping.py:755` | fedex_ship.create_shipment(...) — label_image_type デフォルト(PDF) |
+| PNG / ZPL 発行 | 除去済み | _lv_issue_zpl_with_fallback 含め削除 |
 
 ---
 
@@ -73,15 +73,15 @@
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| PDF ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:96` | `const handleDownloadPdf` — PDF Blob, `application/pdf` |
+| PDF ダウンロード | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:96` | const handleDownloadPdf — PDF Blob, application/pdf |
 | handleDownloadPng / handleDownloadZpl | 除去済み | 通常フロー対象外のため削除 |
 
 ### B3. ラベル一覧 UI
 
 | 確認事項 | file:line | 内容 |
 |---|---|---|
-| ラベル一覧コンテナ | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:261` | `lv-label-list` — 4 サービス分の lv-label-item |
-| PDF ダウンロードボタン（のみ） | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:267` | `lvStep2DownloadPdf` キー（PNG/ZPLボタン除去済み） |
+| ラベル一覧コンテナ | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:261` | lv-label-list — 4 サービス分の lv-label-item |
+| PDF ダウンロードボタン（のみ） | `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:267` | lvStep2DownloadPdf キー（PNG/ZPLボタン除去済み） |
 
 ---
 
@@ -89,8 +89,8 @@
 
 | 形式 | 通常フロー | 低レイヤー対応（開発検証用） |
 |------|-----------|--------------------------|
-| PDF  | ✅ 発行対象 | `create_shipment(label_image_type="PDF")` |
-| PNG  | ❌ 対象外  | `create_shipment(label_image_type="PNG")` で発行可能 |
+| PDF  | ✅ 発行対象 | create_shipment(label_image_type="PDF") |
+| PNG  | ❌ 対象外  | create_shipment(label_image_type="PNG") で発行可能 |
 | ZPL  | ❌ 対象外  | `create_shipment(label_image_type="ZPLII", label_stock_type=...)` で発行可能 |
 
 ---
