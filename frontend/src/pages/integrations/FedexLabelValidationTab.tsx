@@ -28,10 +28,7 @@ interface LVSampleLabel {
   service_name: string;
   service_type: string;
   tracking_number: string;
-  pdf_base64: string;           // 既存フィールド（後方互換維持）
-  png_base64: string;
-  zpl_base64: string;
-  zpl_label_stock_type: string; // ZPLII 発行に実際に使用した labelStockType（デバッグ用）
+  pdf_base64: string;
 }
 
 interface EmailTemplate {
@@ -106,18 +103,6 @@ export function FedexLabelValidationTab() {
     const bytes = Uint8Array.from(atob(label.pdf_base64), (c) => c.charCodeAt(0));
     _triggerDownload(new Blob([bytes], { type: "application/pdf" }),
       `fedex_lv_${label.service_abbr}_${label.tracking_number}.pdf`);
-  };
-
-  const handleDownloadPng = (label: LVSampleLabel) => {
-    const bytes = Uint8Array.from(atob(label.png_base64), (c) => c.charCodeAt(0));
-    _triggerDownload(new Blob([bytes], { type: "image/png" }),
-      `fedex_lv_${label.service_abbr}_${label.tracking_number}.png`);
-  };
-
-  const handleDownloadZpl = (label: LVSampleLabel) => {
-    const bytes = Uint8Array.from(atob(label.zpl_base64), (c) => c.charCodeAt(0));
-    _triggerDownload(new Blob([bytes], { type: "application/octet-stream" }),
-      `fedex_lv_${label.service_abbr}_${label.tracking_number}.zpl`);
   };
 
   const handleDownloadCoverSheet = async () => {
@@ -273,26 +258,12 @@ export function FedexLabelValidationTab() {
                 <span className="lv-service-badge">{label.service_abbr}</span>
                 <span className="lv-service-name">{label.service_name}</span>
                 <span className="lv-tracking-number">{label.tracking_number}</span>
-                <div className="lv-label-download-buttons">
-                  <button
-                    className="btn-secondary btn-sm"
-                    onClick={() => handleDownloadPdf(label)}
-                  >
-                    {t("carrierIntegration.lvStep2DownloadPdf")}
-                  </button>
-                  <button
-                    className="btn-secondary btn-sm"
-                    onClick={() => handleDownloadPng(label)}
-                  >
-                    {t("carrierIntegration.lvStep2DownloadPng")}
-                  </button>
-                  <button
-                    className="btn-secondary btn-sm"
-                    onClick={() => handleDownloadZpl(label)}
-                  >
-                    {t("carrierIntegration.lvStep2DownloadZpl")}
-                  </button>
-                </div>
+                <button
+                  className="btn-secondary btn-sm"
+                  onClick={() => handleDownloadPdf(label)}
+                >
+                  {t("carrierIntegration.lvStep2DownloadPdf")}
+                </button>
               </div>
             ))}
           </div>
