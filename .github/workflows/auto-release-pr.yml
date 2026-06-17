@@ -182,7 +182,7 @@ jobs:
           TABLE_ROWS: ${{ steps.manifest.outputs.table_rows }}
         run: |
           python3 - <<'PYEOF'
-          import os, re, subprocess, sys
+          import json, os, re, subprocess, sys
 
           existing_pr = os.environ["EXISTING_PR"]
           pr_count    = os.environ.get("PR_COUNT", "0")
@@ -230,8 +230,15 @@ jobs:
               )
               sys.exit(1)
 
+          # gh pr edit は GraphQL で read:org スコープを要求するため REST API を使用する
+          # PIPELINE_PAT は repo + workflow スコープのみ。REST PATCH は repo スコープで足りる。
+          repo = os.environ.get("GITHUB_REPOSITORY", "shingo-ops/salesanchor")
           subprocess.run(
-              ["gh", "pr", "edit", existing_pr, "--body", new_body],
+              ["gh", "api", f"repos/{repo}/pulls/{existing_pr}",
+               "--method", "PATCH",
+               "--input", "-"],
+              input=json.dumps({"body": new_body}),
+              text=True,
               check=True,
           )
           print(f"✅ release PR #{existing_pr} の manifest を更新しました（{pr_count} 件）")
