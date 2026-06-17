@@ -1,0 +1,60 @@
+name: hotfix — ADR-045 granted_scopes backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'dry_run=true → SELECT のみ。false → UPDATE 実行'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Backfill granted_scopes NULL rows (ADR-045)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DRY_RUN
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+
+            echo "=== ADR-045 granted_scopes backfill (dry_run=${DRY_RUN}) ==="
+
+            # 対象行を確認
+            echo "--- Before ---"
+            docker exec -i astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -c \
+              "SELECT id, page_id, granted_scopes IS NULL AS is_null FROM tenant_006.tenant_meta_config WHERE granted_scopes IS NULL;"
+
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "DRY RUN: UPDATE はスキップ"
+              exit 0
+            fi
+
+            # UPDATE 実行
+            echo "--- UPDATE ---"
+            docker exec -i astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -c \
+              "UPDATE tenant_006.tenant_meta_config
+                SET granted_scopes = '[\"pages_show_list\",\"pages_manage_metadata\",\"pages_messaging\",\"pages_read_engagement\",\"instagram_basic\",\"instagram_manage_messages\"]'::jsonb
+                WHERE granted_scopes IS NULL;"
+
+            # 確認
+            echo "--- After (remaining NULLs) ---"
+            docker exec -i astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -c \
+              "SELECT COUNT(*) AS remaining_nulls FROM tenant_006.tenant_meta_config WHERE granted_scopes IS NULL;"
+
+            echo "=== backfill 完了 ==="
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
