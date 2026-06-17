@@ -37,10 +37,8 @@ name: QA Smoke Suite (ADR-038)
 #   QA_ADMIN_FIREBASE_UID       reset-tenant.sh / seed-tenant.sql に渡す
 #   QA_STAFF_FIREBASE_UID
 #   QA_VIEWER_FIREBASE_UID
-#   QA_ADMIN_PASSWORD_HASH      bcrypt 済 hash (reset-tenant.sh が DB seed 時に使用)
-#   QA_STAFF_PASSWORD_HASH
-#   QA_VIEWER_PASSWORD_HASH
 #   QA_DISCORD_WEBHOOK_URL      (optional) reset 開始/完了 通知用
+#   (QA_*_PASSWORD_HASH は ADR-138 により物理削除済み — 不要)
 #
 # Secrets 初期登録:
 #   上記 QA_* Secrets は一回限りの VPS 作業で事前登録済み。
@@ -162,26 +160,21 @@ jobs:
           QA_ADMIN_FIREBASE_UID:    ${{ secrets.QA_ADMIN_FIREBASE_UID }}
           QA_STAFF_FIREBASE_UID:    ${{ secrets.QA_STAFF_FIREBASE_UID }}
           QA_VIEWER_FIREBASE_UID:   ${{ secrets.QA_VIEWER_FIREBASE_UID }}
-          QA_ADMIN_PASSWORD_HASH:   ${{ secrets.QA_ADMIN_PASSWORD_HASH }}
-          QA_STAFF_PASSWORD_HASH:   ${{ secrets.QA_STAFF_PASSWORD_HASH }}
-          QA_VIEWER_PASSWORD_HASH:  ${{ secrets.QA_VIEWER_PASSWORD_HASH }}
           QA_DISCORD_WEBHOOK_URL:   ${{ secrets.QA_DISCORD_WEBHOOK_URL }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_ADMIN_PASSWORD_HASH,QA_STAFF_PASSWORD_HASH,QA_VIEWER_PASSWORD_HASH,QA_DISCORD_WEBHOOK_URL
+          envs: QA_ADMIN_FIREBASE_UID,QA_STAFF_FIREBASE_UID,QA_VIEWER_FIREBASE_UID,QA_DISCORD_WEBHOOK_URL
           script: |
             set -e
             # docker compose exec はプロジェクト名解決 (salesanchor vs astro-webapp) に依存するため
             # deploy.yml と同様に docker exec でコンテナ名を直接指定する
+            # QA_*_PASSWORD_HASH は ADR-138 により物理削除済みのため不要
             docker exec -i \
               -e QA_ADMIN_FIREBASE_UID="$QA_ADMIN_FIREBASE_UID" \
               -e QA_STAFF_FIREBASE_UID="$QA_STAFF_FIREBASE_UID" \
               -e QA_VIEWER_FIREBASE_UID="$QA_VIEWER_FIREBASE_UID" \
-              -e QA_ADMIN_PASSWORD_HASH="$QA_ADMIN_PASSWORD_HASH" \
-              -e QA_STAFF_PASSWORD_HASH="$QA_STAFF_PASSWORD_HASH" \
-              -e QA_VIEWER_PASSWORD_HASH="$QA_VIEWER_PASSWORD_HASH" \
               -e QA_DISCORD_WEBHOOK_URL="${QA_DISCORD_WEBHOOK_URL:-}" \
               astro-webapp-backend-1 \
               bash /tmp/qa-scripts/reset-tenant.sh
