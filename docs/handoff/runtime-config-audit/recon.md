@@ -1,167 +1,179 @@
 # runtime-config-audit recon
 
 **日付**: 2026-06-17  
-**担当**: Terminal CC（読み取り専用）  
-**手法**: docker-compose.yml 静的解析 + VPS 実機 `docker inspect` による runtime env 確認
+**担当**: architect（Terminal CC）  
+**契機**: discord-gateway の DATABASE_URL 欠落（19 日間サイレント受信失敗）  
+**モード**: 読み取り専用。変更なし。推測禁止・file:line / ログ / DB 出力で証拠化。
 
 ---
 
-## §1 調査範囲
+## §1 調査方法
 
-app コンテナ 4 本の env を比較し、「gateway コードが必要とする変数が gateway に無い」ケースを file:line で特定する。
+| 手段 | 対象 |
+|------|------|
+| `docker inspect <container> --format '{{json .Config.Env}}'` | 各コンテナの実 runtime env (VPS 2026-06-17 実機) |
+| `docker-compose.yml` 静的解析 | env 供給方式 (environment: / env_file: ) の file:line |
+| `grep -rn "os.getenv\|os.environ"` | gateway コードの env 参照箇所 |
+| `docker logs --tail=300 <svc>` | サイレント失敗パターン |
+| `psql` クエリ | 受信データ着地確認 |
 
-- `backend` (FastAPI)
-- `celery-worker` (Celery worker)
-- `compose-beat` (Celery beat)
-- `discord-gateway` (Discord Bot WebSocket)
-
----
-
-## §2 各コンテナの実 runtime 環境変数（本番 VPS 2026-06-17 実機確認）
-
-> 値はマスク。変数名のみ記載。取得コマンド: `docker inspect <container> --format '{{json .Config.Env}}'`
-
-### backend (astro-webapp-backend-1)
-
-| 変数名 | 用途 |
-|--------|------|
-| `DATABASE_URL` | メイン DB 接続 |
-| `ADMIN_DATABASE_URL` | DDL/クロステナント専用 DB（未設定時 DATABASE_URL にフォールバック）|
-| `REDIS_URL` | Redis 接続（パスワード込み形式）|
-| `CELERY_BROKER_URL` | Celery ブローカー |
-| `CELERY_RESULT_BACKEND` | Celery 結果バックエンド |
-| `ENVIRONMENT` | `production` |
-| `ALLOWED_ORIGINS` | CORS |
-| `GCP_PROJECT_ID` | Firebase/GCP |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase 認証 JSON パス |
-| `GEMINI_API_KEY` | LLM（翻訳・在庫解析）|
-| `ADMIN_NOTIFICATION_DISCORD_WEBHOOK` | 予算超過通知 Webhook |
-| `DISCORD_BOT_TOKEN_4` | KPI 4〜7 用 Bot Token（backend → REST API 直接呼出し）|
-| `META_VERIFY_TOKEN` | Meta Webhook 検証 |
-| `META_APP_SECRET` | Meta App Secret |
-| `META_APP_ID` | Meta App ID |
-| `META_OAUTH_REDIRECT_URI` | Meta OAuth コールバック URL |
-| `META_GRAPH_API_VERSION` | Graph API バージョン |
-| `META_PAGE_ID` | Fallback tenant 紐付け |
-| `META_PAGE_ACCESS_TOKEN` | Meta ページアクセストークン |
-| `METADATA_FERNET_KEY` | tokens/secrets 暗号化キー |
-| `ENFORCE_METADATA_FERNET_KEY` | Fernet 強制フラグ |
-| `FRONTEND_BASE_URL` | メール内リンク生成 |
-| `MFA_REQUIRED` | MFA 強制フラグ（`false`）|
-| `SMOKE_SERVICE_TOKEN` | CI スモーク用バイパストークン |
-| `SMOKE_SERVICE_EMAIL` | CI スモーク用サービスアカウント email |
-| `GOOGLE_DRIVE_CLIENT_ID` | Google Drive OAuth |
-| `GOOGLE_DRIVE_CLIENT_SECRET` | Google Drive OAuth |
-| `GOOGLE_DRIVE_REDIRECT_URI` | Google Drive OAuth コールバック |
-| `GOOGLE_DRIVE_SA_JSON_B64` | Drive サービスアカウント JSON (Base64) |
-| `GOOGLE_CALENDAR_CLIENT_ID/SECRET/REDIRECT_URI` | Google Calendar OAuth |
-
-### celery-worker (astro-webapp-celery-worker-1)
-
-| 変数名 | 備考 |
-|--------|------|
-| `DATABASE_URL` | ✅ |
-| `REDIS_URL` | ✅ |
-| `CELERY_BROKER_URL` | ✅ |
-| `CELERY_RESULT_BACKEND` | ✅ |
-| `ENVIRONMENT` | ✅ |
-| `GCP_PROJECT_ID` | ✅ |
-| `GOOGLE_APPLICATION_CREDENTIALS` | ✅ |
-| `REVIEW_MAIL_*`（IMAP_HOST/USER/PASSWORD/PORT + WEBHOOK/MENTION/WEBMAIL_URL）| `.env` 直接引き継ぎ |
-| ~~GEMINI_API_KEY~~ | **❌ 欠落**（後述 §4 サイレント失敗）|
-
-### celery-beat (astro-webapp-celery-beat-1)
-
-| 変数名 | 備考 |
-|--------|------|
-| `DATABASE_URL` | ✅ |
-| `REDIS_URL` | ✅ |
-| `CELERY_BROKER_URL` | ✅ |
-| `CELERY_RESULT_BACKEND` | ✅ |
-
-`celery-beat` は定期タスクのスケジュール送信のみ。実行はすべて celery-worker 側。欠落なし。
-
-### discord-gateway (astro-webapp-discord-gateway-1)
-
-| 変数名 | 備考 |
-|--------|------|
-| `ENVIRONMENT` | ✅ |
-| `DISCORD_GATEWAY_LOG_LEVEL` | ✅ |
-| `DISCORD_BOT_TOKEN_4` | ✅ |
-| `DISCORD_TENANT_CODE_4` | ✅ |
-| ~~DATABASE_URL~~ | **❌ 欠落（CRITICAL）** |
+**`env_file:` 使用有無**: `docker-compose.yml` 全体を確認 → `env_file:` キーの記述なし（全行）。env 供給はすべて `environment:` セクションの変数展開（`${VAR}`）のみ。
 
 ---
 
-## §3 gateway コードが必要とする変数 × gateway の欠落（差分分析）
+## §2 クラスター1 — 環境変数の渡し漏れ点検
 
-### 判定基準
+### §2-1 各コンテナへの env 供給方式
 
-「**欠落+必要**」= gateway コードのモジュール import チェーンから到達でき、かつ欠落時に crash / データ損失を起こすもの。
+| コンテナ | 供給方式 | compose file:line |
+|----------|---------|-------------------|
+| backend | `environment:` 変数展開 | `docker-compose.yml:64-107` |
+| celery-worker | `environment:` 変数展開 | `docker-compose.yml:181-188` |
+| celery-beat | `environment:` 変数展開 | `docker-compose.yml:218-222` |
+| discord-gateway | `environment:` 変数展開 | `docker-compose.yml:253-260` |
 
-| 変数名 | gateway コードの参照 | 欠落時の挙動 | 判定 |
-|--------|---------------------|-------------|------|
-| `DATABASE_URL` | `backend/app/database.py:8` — `os.getenv("DATABASE_URL", "postgresql+asyncpg://myapp_user:password@postgres:5432/myapp_db")` | fallback の `myapp_user` で auth 失敗。**全 DB ops クラッシュ**（`asyncpg.InvalidPasswordError` 確認済み）| **CRITICAL・欠落** |
-| `REDIS_URL` | `backend/app/cache.py:11` — `os.getenv("REDIS_URL", "redis://redis:6379/0")` | `init_redis()` は `discord_gateway/main.py` では呼ばれない → `_redis = None` のまま → cache 関数すべて graceful no-op | **欠落・影響なし** |
-| `GEMINI_API_KEY` | `backend/app/services/inventory_parser_llm.py:207` — lazy import（実行時のみ）| LLM 解析が `rule_only` に降格。crash なし。**ただし DATABASE_URL が先に壊れているため現状到達しない** | **欠落・降格のみ** |
-| `ADMIN_NOTIFICATION_DISCORD_WEBHOOK` | `backend/app/services/discord_notifier.py:41` — lazy call | 未設定時は log warning を出して skip。crash なし | **欠落・影響なし** |
-| `MFA_REQUIRED` / `SMOKE_SERVICE_*` / `GOOGLE_APPLICATION_CREDENTIALS` | `backend/app/auth/dependencies.py` — HTTP 認証フローのみ | gateway は HTTP エンドポイントを公開しない → これらは呼ばれない | **不要** |
+`env_file:` は全サービスで使用なし。
 
-### 結論: **「欠落+必要」は `DATABASE_URL` のみ**
+### §2-2 gateway コードが参照する環境変数（`os.getenv` / `os.environ` 全件）
+
+| 変数名 | 参照箇所 `path:line` | 既定値/フォールバック | gateway コードが実際に使うか |
+|--------|---------------------|---------------------|---------------------------|
+| `DATABASE_URL` | `backend/app/database.py:8` | `"postgresql+asyncpg://myapp_user:password@postgres:5432/myapp_db"` | **✅ 使う**（全 DB ops の engine 生成。モジュールロード時に確定） |
+| `DISCORD_BOT_TOKEN_<N>` | `backend/app/discord_gateway/config.py:22-31` | なし（未設定なら idle） | **✅ 使う**（Bot 認証に必須） |
+| `DISCORD_TENANT_CODE_<N>` | `backend/app/discord_gateway/config.py:32-35` | `f"tenant_{tenant_id}"` | ✅ 使う（tenant_code 設定）|
+| `DISCORD_GATEWAY_LOG_LEVEL` | `backend/app/discord_gateway/config.py:48` | `"INFO"` | ✅ 使う（ログレベル）|
+| `DISCORD_GATEWAY_FATAL_COOLDOWN` | `backend/app/discord_gateway/main.py:22` | `"60"` | ✅ 使う（クールダウン秒）|
+| `REDIS_URL` | `backend/app/cache.py:11` | `"redis://redis:6379/0"` | **❌ 実質不使用**（`init_redis()` は `discord_gateway/main.py` で未呼び出し → `_redis=None` のまま → cache 関数はすべて no-op） |
+| `METADATA_FERNET_KEY` | `backend/app/main.py:108`（FastAPI startup event のみ） | — | **❌ 不使用**（gateway は `app.main` を import しない。FastAPI application startup には到達しない） |
+| `GEMINI_API_KEY` | `backend/app/services/inventory_parser_llm.py:207` | `""` | **⚠️ 使うが degradation のみ**（on_message guild 経路 → `inbound_writer` → lazy import。空なら LLM 解析スキップ・crash なし） |
+| `ADMIN_NOTIFICATION_DISCORD_WEBHOOK` | `backend/app/services/discord_notifier.py:41` | `""` | **⚠️ 使うが degradation のみ**（空なら log warning + skip） |
+| `MFA_REQUIRED` / `SMOKE_SERVICE_*` / `GOOGLE_APPLICATION_CREDENTIALS` | `backend/app/auth/dependencies.py:30,36,37,53` | — | **❌ 不使用**（HTTP 認証フローのみ。gateway は HTTP エンドポイントを公開しない） |
+| `ENFORCE_METADATA_FERNET_KEY` / `META_*` / `FRONTEND_BASE_URL` / `GCP_PROJECT_ID` / `GOOGLE_*` | `backend/app/main.py` startup / 各 router | — | **❌ 不使用**（FastAPI startup / HTTP router に閉じている） |
+
+### §2-3 差分表（backend vs gateway の実 runtime env）
+
+VPS 2026-06-17 実機確認。値はマスク。コマンド: `docker inspect <container> --format '{{json .Config.Env}}'`
+
+| 環境変数 | backend が持つ | gateway が持つ | gateway コードが使う `path:line` | 判定（欠落+必要/OK/該当なし） |
+|---------|:---:|:---:|---------------------------|------|
+| `DATABASE_URL` | ✅ | ❌ | `database.py:8`（モジュールロード時に engine 確定） | **欠落+必要 CRITICAL** |
+| `ENVIRONMENT` | ✅ | ✅ | `discord_gateway/config.py`（log 目的） | OK |
+| `DISCORD_BOT_TOKEN_4` | ✅ | ✅ | `config.py:22-31` | OK |
+| `DISCORD_TENANT_CODE_4` | ✅ | ✅ | `config.py:32-35` | OK |
+| `DISCORD_GATEWAY_LOG_LEVEL` | — | ✅ | `config.py:48` | OK |
+| `DISCORD_GATEWAY_FATAL_COOLDOWN` | — | — | `main.py:22`（default=60s） | OK（既定値で動作） |
+| `REDIS_URL` | ✅（パスワード込み） | ❌ | `cache.py:11`（init_redis 未呼） | 欠落・影響なし |
+| `METADATA_FERNET_KEY` | ✅ | ❌ | 不使用（FastAPI startup のみ） | 該当なし |
+| `GEMINI_API_KEY` | ✅ | ❌ | `inventory_parser_llm.py:207`（lazy import） | 欠落・degradation のみ |
+| `ADMIN_NOTIFICATION_DISCORD_WEBHOOK` | ✅（空文字） | ❌ | `discord_notifier.py:41`（skip if empty） | 欠落・影響なし |
+| `META_*` / `GCP_PROJECT_ID` / `GOOGLE_*` / `MFA_REQUIRED` / `SMOKE_*` / `FRONTEND_BASE_URL` | ✅ | ❌ | 不使用（HTTP router / FastAPI startup） | 該当なし |
+
+### §2-4 結論
+
+**「欠落+必要」（欠落時に crash / データ損失が生じる）は `DATABASE_URL` のみ。**
 
 ---
 
-## §4 他のサイレント失敗（ログ・実データ確認）
+## §3 クラスター2 — サイレント失敗の事実（ログ / データ）
 
-### celery-worker: GEMINI_API_KEY 未設定（翻訳タスク失敗）
+### §3-1 discord-gateway: 全 DB 操作失敗（CONFIRMED）
 
-- **証拠ログ**（2026-06-17 14:05:37 UTC）:
-  ```
-  WARNING ForkPoolWorker-2] [translation_task] non-fatal error message_id=...: GEMINI_API_KEY が未設定です。翻訳機能は無効化されます。
-  INFO ForkPoolWorker-2] [translation_task] batch done: processed=0 skipped=0 failed=3
-  ```
-- **根本原因**: `docker-compose.yml` の `celery-worker` 定義に `GEMINI_API_KEY` が記載されていない（`backend` には記載あり）。
-  - `docker-compose.yml:182-188` — celery-worker environment セクションに `GEMINI_API_KEY` なし
-  - `docker-compose.yml:93` — `backend` には `- GEMINI_API_KEY=${GEMINI_API_KEY:-}` あり
-- **影響**: `translate_pending_messages` タスクが翻訳を実行できずスキップ。Meta 受信メッセージの自動翻訳が無効。
-- **severity**: HIGH（機能停止、ただし crash なし・DB 整合は維持）
-- **修正**: `celery-worker` environment に `- GEMINI_API_KEY=${GEMINI_API_KEY:-}` を追加（**本 PR 外・別変更として分離**）
+- **根拠**: `asyncpg.InvalidPasswordError: password authentication failed for user "myapp_user"` を `07:44:18` のログで直接確認（`client.py:139 → ticket_channel_creator.py:32`）
+- **DM 受信着地**: `SELECT COUNT(*) FROM tenant_004.meta_messages WHERE platform='discord'` = **0 rows**（一度も書き込みなし）
+- **Guild 受信着地**: `SELECT COUNT(*), MAX(received_at) FROM public.discord_inbound_messages` = **18 rows / MAX=2026-05-29**（現コンテナ起動 2026-06-17T05:20:26Z の 19 日前・現デプロイ後ゼロ）
+- **WebSocket**: READY + RESUMED ×6 = 正常稼働（障害は DB 書き込みのみ）
 
-### Meta 受信: 直近 24h ゼロ
+### §3-2 celery-worker: translate_pending_messages が Event Loop エラーで断続的クラッシュ【新規発見】
 
-- **証拠**: `SELECT COUNT(*), MAX(created_at) FROM tenant_004.meta_messages WHERE platform='meta' AND created_at > NOW() - INTERVAL '24 hours'` → `0 / NULL`
-- **全件**: `SELECT COUNT(*), MAX(created_at) FROM tenant_004.meta_messages` → `5 / 2026-06-10 04:42:20`（最終: 7日前）
-- **判定**: **不明**。「実際に Meta DM が来ていない」か「webhook が届いていない」か区別できない。backend は 200 正常応答中（5xx なし）。Meta App Review 申請待ち期間中のため、実ユーザーからのメッセージが少ない可能性あり。
+- **観測期間**: 少なくとも 2026-06-17 08:35 〜 14:20 UTC（全 6h 期間）
+- **発生パターン**: ForkPoolWorker-1/2 が交互に crash。約 30 分間隔で実行・約 50% が `RuntimeError` で失敗
+
+```
+[2026-06-17 13:50:37 ERROR/ForkPoolWorker-1] Task app.tasks.translation.translate_pending_messages raised unexpected:
+RuntimeError("Task <Task name='Task-72' coro=<_run_batch() at /app/app/tasks/translation.py:54>>
+got Future <...> attached to a different loop")
+RuntimeError: Event loop is closed
+
+[2026-06-17 14:00:00 ERROR/ForkPoolWorker-2] Task app.tasks.translation.check_translation_health raised unexpected:
+(同上 RuntimeError)
+```
+
+- **推定原因**: Celery fork-pool worker が asyncio event loop を再利用する際に asyncpg の pending Future が残留し "attached to a different loop" が発生。fork 後 2 回目以降の実行で顕在化（初回は clean state → 成功）
+- **影響**: 翻訳機能が事実上停止。`translate_pending_messages` 成功時も `processed=0, skipped=0, failed=3`（GEMINI 欠落による）
+- **DB 整合**: クラッシュ時も DB には未コミット状態で整合維持（データ破損なし）
+- **severity**: HIGH
+- **本 PR スコープ外**: 別 ADR または hotfix 必要
+
+### §3-3 celery-worker: GEMINI_API_KEY 欠落で翻訳スキップ（上記と複合）
+
+```
+[2026-06-17 14:05:37 WARNING/ForkPoolWorker-2] [translation_task] non-fatal error ...:
+GEMINI_API_KEY が未設定です。翻訳機能は無効化されます。
+[2026-06-17 14:05:37 INFO/ForkPoolWorker-2] [translation_task] batch done: processed=0 skipped=0 failed=3
+```
+
+- **根本原因**: `docker-compose.yml:181-188`（celery-worker env）に `GEMINI_API_KEY` が記載なし（backend の `docker-compose.yml:93` には在り）
+- **severity**: HIGH（EventLoop 修正時に同時対応推奨）
+- **本 PR スコープ外**
+
+### §3-4 Meta 受信（Messenger / Instagram）: 7 日間ゼロ
+
+```sql
+SELECT platform, direction, COUNT(*), MAX(created_at)
+FROM tenant_004.meta_messages GROUP BY platform, direction;
+```
+
+| platform | direction | count | latest |
+|----------|-----------|-------|--------|
+| instagram | inbound | 2 | 2026-06-10 04:42:20+00 |
+| messenger | inbound | 3 | 2026-06-10 04:41:39+00 |
+
+- **判定**: **不明**。backend に 5xx なし・webhook 受付自体は正常と推定。「実 DM が来ていない」か「Meta Webhook 配信が止まっている」かは区別不可
 - **推奨**: Meta Webhook ダッシュボードでイベント配信ログを確認（PO 操作が必要）
 
-### backend 5xx: なし
+### §3-5 backend / 5xx: 継続発生なし
 
-- **証拠**: `docker logs astro-webapp-backend-1 --since 1h` で 5xx ゼロ。401 が複数（Grafana からの未認証アクセス、正常）。
+`docker logs astro-webapp-backend-1 --since 1h` → 401 のみ（Grafana 未認証アクセス、正常）・5xx ゼロ
 
-### Celery ヘルス
+### §3-6 Celery 定期タスク: 正常稼働
 
-- **証拠**: `docker compose ps` で celery-worker/beat とも `Up 9 hours`。直近タスクは succeeded で終了している。
+```
+Task app.tasks.dashboard.refresh_all_tenant_kpis    succeeded ~0.09s, updated=5 total=5  (10分毎)
+Task app.tasks.maintenance.purge_expired_inventory  succeeded ~0.04s, deleted=0           (30分毎)
+Task app.tasks.review_mail_monitor.check_...        succeeded ~0.09s, notified=0          (定期)
+```
 
 ---
 
-## §5 ギャップ（既知未実装）
+## §4 クラスター3 — 既知のギャップ（不具合ではない）
 
-| # | 項目 | 現状 | ADR 参照 |
-|---|------|------|---------|
+| # | 項目 | 現状 | 補足 |
+|---|------|------|------|
 | G-1 | `bots.guild_count` / `bots.last_resume_failed_at` 拡張列 | コード・migration なし | ADR-009 M5 未着手 |
-| G-2 | テナント越境拒否ロジック（`discord_user_id → tenant_id` 逆引き）| 明示的チェックなし | ADR-009 M5 未着手 |
-| G-3 | Prometheus metrics（接続 gauge / heartbeat latency / reconnect counter）| コードなし | ADR-009 M6 未着手 |
+| G-2 | テナント越境拒否ロジック（discord_user_id → tenant_id 逆引き明示チェック）| コードなし | per-tenant Bot アーキテクチャ + RLS フェイルクローズで構造的隔離。実害低 |
+| G-3 | Prometheus metrics（接続 gauge / heartbeat latency / reconnect counter）| コードなし | ADR-009 M6 未着手。Loki アラートで代替中 |
 | G-4 | Grafana Discord Gateway 専用パネル | JSON なし | ADR-009 M6 未着手 |
-| G-5 | Gateway 切断 → Discord 直接通知（on_disconnect 内） | log のみ | ADR-009 M6 未着手 |
-| G-6 | `on_resumed` 補完の対象範囲（3 guild 全チャンネル） | routing 未登録チャンネルも history fetch → Discord REST 過負荷リスク | ADR-009 将来改善候補 |
+| G-5 | Gateway 切断 → Discord 直接通知（`on_disconnect` 内）| log のみ | ADR-009 M6 未着手 |
+| G-6 | `on_resumed` 補完範囲 | `client.py:324-326` — `after=last_at, limit=100` / channel。DB 破損中は例外 → 全 ch スキップ（630 行の resume fetch failed）。**DB 復旧後**: `last_at=None`（行ゼロ）なら全履歴 100 件/ch フェッチ試行 → デプロイ直後バーストリスク（§5 参照）| PO 確認推奨 |
+| G-7 | guilds=3 のうち 2 ギルドの tenant routing | `tenant_discord_config`: guild_id `1515681337158271187`（tenant_id=4）の 1 行のみ。`supplier_discord_routing`: 0 rows。残り 2 ギルドは DB 未登録 → `lookup_routing()→None` → `ignored_routing` で保存（データ混在はなし・RLS 保護）| 別確認タスク |
+
+---
+
+## §5 デプロイ後リスク（PR #2326 マージ直後）
+
+| リスク | 内容 | 評価 | 対策 |
+|--------|------|------|------|
+| R-1: on_resumed バースト | DB 復旧直後の RESUMED で全チャンネルの `last_at=None` → limit=100/ch の履歴 REST fetch が同時走行 | VPS available=329Mi、swap 1.1G 使用中（discord-gateway 上限 256MB）| デプロイ直後 `free -h` を監視 |
+| R-2: ignored_routing メッセージ | routing 未登録 2 ギルドのメッセージが `discord_inbound_messages` に INSERT（`ignored_routing` ステータス）| `public` スキーマ直接 INSERT → RLS テナント混在なし。データ問題なし | 確認のみ |
 
 ---
 
 ## §6 まとめ
 
-| 優先度 | 項目 | 対象コンテナ | 修正の難易度 |
-|--------|------|-------------|-------------|
-| **CRITICAL** | `DATABASE_URL` 欠落 → 全 DB ops 失敗 | discord-gateway | docker-compose.yml 1 行追加 |
-| **HIGH** | `GEMINI_API_KEY` 欠落 → 翻訳タスク全滅 | celery-worker | docker-compose.yml 1 行追加（別 PR）|
-| **不明** | Meta 受信ゼロ（7 日間） | — | PO が Meta Webhook ダッシュボード確認必要 |
-| **ギャップ** | ADR-009 M5/M6 未実装（`bots` 拡張・metrics）| discord-gateway | 別 ADR 起案後に実装 |
+| 優先度 | 項目 | 状態 |
+|--------|------|------|
+| **CRITICAL** | discord-gateway `DATABASE_URL` 欠落 → 全 DB ops 失敗 | PR #2326 作成済み・GO 済み |
+| **HIGH** | celery-worker `translate_pending_messages` EventLoop クラッシュ（断続的・6h 継続）| 別トラック・未着手 |
+| **HIGH** | celery-worker `GEMINI_API_KEY` 欠落 → 翻訳不可（EventLoop 修正時に同時対応推奨）| 別トラック・未着手 |
+| **不明** | Meta 受信 7 日間ゼロ（Messenger 3 件・Instagram 2 件・最終 2026-06-10）| PO が Meta Webhook ダッシュボード確認要 |
+| **ギャップ** | ADR-009 M5/M6 未実装、3ギルド routing 確認、on_resumed 全履歴フェッチ制限 | 別 ADR で計画 |
