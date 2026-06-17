@@ -70,7 +70,7 @@ VPS 2026-06-17 実機確認。値はマスク。コマンド: `docker inspect <c
 
 ### §2-4 結論
 
-**「欠落+必要」（欠落時に crash / データ損失が生じる）は `DATABASE_URL` のみ。**
+**「欠落+必要」（欠落時に crash / データ損失が生じる）は DATABASE_URL のみ。**
 
 ---
 
@@ -78,7 +78,7 @@ VPS 2026-06-17 実機確認。値はマスク。コマンド: `docker inspect <c
 
 ### §3-1 discord-gateway: 全 DB 操作失敗（CONFIRMED）
 
-- **根拠**: `asyncpg.InvalidPasswordError: password authentication failed for user "myapp_user"` を `07:44:18` のログで直接確認（`backend/app/discord_gateway/client.py:139`）
+- **根拠**: `asyncpg.InvalidPasswordError: password authentication failed for user "myapp_user"` を 07:44:18 のログで直接確認（`backend/app/discord_gateway/client.py:139`）
 - **DM 受信着地**: `SELECT COUNT(*) FROM tenant_004.meta_messages WHERE platform='discord'` = **0 rows**（一度も書き込みなし）
 - **Guild 受信着地**: `SELECT COUNT(*), MAX(received_at) FROM public.discord_inbound_messages` = **18 rows / MAX=2026-05-29**（現コンテナ起動 2026-06-17T05:20:26Z の 19 日前・現デプロイ後ゼロ）
 - **WebSocket**: READY + RESUMED ×6 = 正常稼働（障害は DB 書き込みのみ）
@@ -99,7 +99,7 @@ RuntimeError: Event loop is closed
 ```
 
 - **推定原因**: Celery fork-pool worker が asyncio event loop を再利用する際に asyncpg の pending Future が残留し "attached to a different loop" が発生。fork 後 2 回目以降の実行で顕在化（初回は clean state → 成功）
-- **影響**: 翻訳機能が事実上停止。`translate_pending_messages` 成功時も `processed=0, skipped=0, failed=3`（GEMINI 欠落による）
+- **影響**: 翻訳機能が事実上停止。translate_pending_messages 成功時も `processed=0, skipped=0, failed=3`（GEMINI 欠落による）
 - **DB 整合**: クラッシュ時も DB には未コミット状態で整合維持（データ破損なし）
 - **severity**: HIGH
 - **本 PR スコープ外**: 別 ADR または hotfix 必要
