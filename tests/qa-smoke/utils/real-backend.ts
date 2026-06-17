@@ -31,6 +31,9 @@ export async function login(page: Page, role: QaRole): Promise<void> {
   await page.getByLabel("メールアドレス").fill(cred.email);
   await page.getByLabel("パスワード").fill(cred.password);
   await page.getByRole("button", { name: "ログイン" }).click();
+  // ログインボタンを押した直後にパスワード欄をクリアする。
+  // DOM スナップショット (error-context.md) / スクリーンショットへの平文漏洩を防ぐ。
+  await page.getByLabel("パスワード").fill("").catch(() => {/* フォームが消えた場合は無視 */});
 
   // ログイン成功後は `/` (Dashboard) に遷移する想定。最大 navigationTimeout 待機。
   await page.waitForURL((u) => u.pathname === "/" || u.pathname === "/dashboard", {
