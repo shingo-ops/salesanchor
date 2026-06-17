@@ -157,3 +157,70 @@ test.describe("MobileShell KGI-2 検証（390×844）", () => {
     await expect(sidebar).not.toBeAttached();
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// CSS 検証: nav-item-list__item が青いデフォルトリンクでないこと
+// fix/morimoto/mobile-nav-css で追加（.nav-item-list__* CSS 欠落修正）
+// ────────────────────────────────────────────────────────────────────────────
+
+test.describe("MobileShell nav-item-list CSS 検証（375×812）", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize(MOBILE_VIEWPORT);
+    await installAuthBypass(page);
+    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    // ドロワーを開く
+    await page.locator(".mobile-topbar-hamburger").click();
+    await page.waitForSelector(".mobile-drawer--open", { timeout: 5_000 });
+    await page.waitForSelector(".nav-item-list__item", { timeout: 5_000 });
+  });
+
+  test("最初の nav-item-list__item が青いデフォルトリンク（text-decoration）でないこと", async ({
+    page,
+  }) => {
+    const firstItem = page.locator(".nav-item-list__item").first();
+    await expect(firstItem).toBeVisible();
+
+    const textDecorationLine = await firstItem.evaluate(
+      (el) => getComputedStyle(el).textDecorationLine,
+    );
+    expect(textDecorationLine).toBe("none");
+  });
+
+  test("最初の nav-item-list__item が display:flex（横並びレイアウト）であること", async ({
+    page,
+  }) => {
+    const firstItem = page.locator(".nav-item-list__item").first();
+    const display = await firstItem.evaluate(
+      (el) => getComputedStyle(el).display,
+    );
+    expect(display).toBe("flex");
+  });
+
+  test("最初の nav-item-list__item のタップターゲット高さが 44px 以上であること（WCAG 2.5.5）", async ({
+    page,
+  }) => {
+    const firstItem = page.locator(".nav-item-list__item").first();
+    const box = await firstItem.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test("ドロワー内のすべての nav 項目がドロワー幅内に収まること（横スクロールなし）", async ({
+    page,
+  }) => {
+    const drawerWidth = await page
+      .locator(".mobile-drawer")
+      .evaluate((el) => el.getBoundingClientRect().width);
+
+    const items = page.locator(".nav-item-list__item");
+    const count = await items.count();
+    for (let i = 0; i < count; i++) {
+      const box = await items.nth(i).boundingBox();
+      if (!box) continue;
+      // 各アイテムの右端がドロワー幅内に収まること（1px 誤差許容）
+      expect(box.x + box.width).toBeLessThanOrEqual(drawerWidth + 1);
+    }
+  });
+});
