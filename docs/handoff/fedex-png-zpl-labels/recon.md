@@ -198,7 +198,7 @@ const handleDownloadLabel = (label: LVSampleLabel) => {
 
 | # | 不明点 | 解消手段 | ブロッカー |
 |---|---|---|---|
-| U1 | ZPLII の labelStockType — Sandbox で STOCK_4X6 が成功するか未確定 | **コード上はフォールバック実装済み**（STOCK_4X6 失敗時に PAPER_85X11_TOP_HALF_LABEL で自動再試行）。実際にどちらが使われたかは `zpl_label_stock_type` レスポンスフィールドで確認可能。Sandbox 実機テストでの確認推奨 | 解消済み（フォールバック実装 — Sandbox アカウント番号登録後に実機確認） |
+| U1 | ZPLII の labelStockType — Sandbox で STOCK_4X6 が成功するか未確定 | **コード上はフォールバック実装済み**（STOCK_4X6 失敗時に PAPER_85X11_TOP_HALF_LABEL で自動再試行）。実際にどちらが使われたかは zpl_label_stock_type レスポンスフィールドで確認可能。Sandbox 実機テストでの確認推奨 | 解消済み（フォールバック実装 — Sandbox アカウント番号登録後に実機確認） |
 | U2 | ZPLII の FedEx Sandbox 返却値はテキスト（ZPL コマンド文字列）か Base64 か | 既存 recon（`docs/handoff/fedex-ship-stage2/recon.md:74`）では "Base64 で返却" と記録 — ただし ZPL は印刷コマンド文字列のためバイナリではない可能性あり | Sandbox 実機確認 |
 
 ---
