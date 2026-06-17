@@ -30,11 +30,14 @@
 - `docker-compose.yml` のみ（コード変更なし）
 - 「1リリース1変更」の原則に準拠
 
-## 検収条件
+## 受け入れ基準
 
-1. デプロイ後 `docker logs astro-webapp-discord-gateway-1` に `asyncpg.InvalidPasswordError` が出ない
-2. Shingo が `Sales Anchor#8667` に Discord DM を送信
-3. `SELECT COUNT(*), MAX(created_at) FROM tenant_004.meta_messages WHERE platform='discord'` が 1 以上に増える
+| 基準 | 検証方法 |
+|------|---------|
+| gateway ログに `asyncpg.InvalidPasswordError` / `myapp_user` が出ない | `docker logs astro-webapp-discord-gateway-1 --tail=200 \| grep myapp_user` → 0 件 |
+| Discord DM が DB に着地する | Shingo が `Sales Anchor#8667` に DM 送信 → `SELECT COUNT(*) FROM tenant_004.meta_messages WHERE platform='discord'` が 0 → 1 以上 |
+| メモリ異常なし | デプロイ直後 `free -h` で available ≥ 200Mi |
+| 他コンテナ影響なし | `docker compose ps` で backend/celery/postgres が healthy 維持 |
 
 ## デプロイ後監視
 
