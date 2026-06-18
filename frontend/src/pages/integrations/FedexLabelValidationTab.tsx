@@ -90,15 +90,19 @@ export function FedexLabelValidationTab() {
     }
   };
 
-  const handleDownloadLabel = (label: LVSampleLabel) => {
-    const bytes = Uint8Array.from(atob(label.pdf_base64), (c) => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: "application/pdf" });
+  const _triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `fedex_lv_${label.service_abbr}_${label.tracking_number}.pdf`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdf = (label: LVSampleLabel) => {
+    const bytes = Uint8Array.from(atob(label.pdf_base64), (c) => c.charCodeAt(0));
+    _triggerDownload(new Blob([bytes], { type: "application/pdf" }),
+      `fedex_lv_${label.service_abbr}_${label.tracking_number}.pdf`);
   };
 
   const handleDownloadCoverSheet = async () => {
@@ -256,9 +260,9 @@ export function FedexLabelValidationTab() {
                 <span className="lv-tracking-number">{label.tracking_number}</span>
                 <button
                   className="btn-secondary btn-sm"
-                  onClick={() => handleDownloadLabel(label)}
+                  onClick={() => handleDownloadPdf(label)}
                 >
-                  {t("carrierIntegration.lvStep2Download")}
+                  {t("carrierIntegration.lvStep2DownloadPdf")}
                 </button>
               </div>
             ))}

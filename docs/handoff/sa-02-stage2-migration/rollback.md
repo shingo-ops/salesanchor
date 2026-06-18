@@ -137,3 +137,19 @@ docker compose exec backend python /app/scripts/verify_sa02_stage2_count_check.p
 docker compose exec backend python /app/scripts/migrate_sa02_stage2_meta_to_conv_logs.py --dry-run
 docker compose exec backend python /app/scripts/migrate_sa02_stage2_meta_to_conv_logs.py
 ```
+
+---
+
+## R3 完了記録（2026-06-16）— ロールバック未実行・不要
+
+R3 本番移行は正常完了。ロールバック判断基準「errors > 0」に非該当。
+
+| テナント | meta_total | conv_from_meta | coverage | gap | 備考 |
+|---------|-----------|----------------|----------|-----|------|
+| tenant_004 (highlife-jpn) | 5 | 5 | 100% | 0 | 正常完了 |
+| tenant_006 (tenant-review) | 10 | 14 | 140% | -4 | 前回 R3 挿入分 4 件残存のため正常（未移行なし） |
+
+- errors=0
+- rollback 実行なし
+- meta_messages は変更なし（設計どおり読み取り専用で使用）
+- analysis->>'_source'='sa02_stage2_migration' 合計: tenant_004=5 / tenant_006=14 / total=19

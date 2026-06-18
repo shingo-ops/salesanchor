@@ -11,7 +11,7 @@
 |------|------|------|------|--------|
 | R1 | 2026-06-15 | ❌ inserted=0 | asyncpg + SET LOCAL 非互換 | #2217 |
 | R2 | 2026-06-15 | ❌ inserted=0 | f-string 内 JSON literal が format 指定子として解釈 | #2232 |
-| R3 | TBD | 待機中 | — | — |
+| R3 | 2026-06-16 | ✅ 完了（coverage 100%・errors=0） | — | #2254/#2270 |
 
 > R1・R2 ともに DB への変更は 0 件。ロールバック不要。
 
@@ -55,3 +55,20 @@ Shingo が確認した場合は、以下にコメントして PR #2232 に GO �
 GO: Shingo YYYY-MM-DD
 SA-02 段階2 移行実行を承認します。
 ```
+
+---
+
+## R3 完了記録（2026-06-16）
+
+| 項目 | 結果 |
+|------|------|
+| 実行日時 | 2026-06-16 |
+| errors | 0 |
+| rollback | 未実行・不要 |
+| tenant_004 (highlife-jpn) | meta_total=5 / conv_from_meta=5 / coverage=100% / gap=0 |
+| tenant_006 (tenant-review) | meta_total=10 / conv_from_meta=14 / coverage=140% / gap=-4 |
+| tenant_006 gap=-4 の説明 | 前回 R3 で挿入済み 4 件が残っているためで、未移行ではない |
+| analysis->>'_source'='sa02_stage2_migration' 合計 | tenant_004=5 / tenant_006=14 / total=19 |
+| deploy/main反映 | 未実行（#2254/#2270 は develop merge済み・追加本番作業は不要） |
+
+> **#2272 は validate-pr-ownership 修正 PR であり、SA-02 完了記録とは無関係。**

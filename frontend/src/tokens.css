@@ -123,7 +123,7 @@
   --z-sidebar:       200;
   --z-sidebar-overlay: 210;
   --z-backdrop:      298;
-  --z-drawer:        299;
+  --z-drawer:        301;   /* avatar(300)より前面 — user-drawer-close 直接クリック可 */
   --z-avatar:        300;
   --z-modal:         400;
   --z-toast:         500;
