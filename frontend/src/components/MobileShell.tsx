@@ -318,18 +318,20 @@ export default function MobileShell() {
 
       {/* ============ MobileTabBar（fixed bottom） ============ */}
       <nav className="mobile-tabbar" aria-label={t("nav.openMenu")}>
-        {/* ホーム */}
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            `mobile-tab${isActive ? " mobile-tab--active" : ""}`
-          }
-          aria-label={t("nav.dashboard")}
-        >
-          <NAV_ICONS.dashboard size={ICON.base} aria-hidden="true" />
-          <span className="mobile-tab-label">{t("nav.dashboard")}</span>
-        </NavLink>
+        {/* ホーム: dashboard.view 権限 */}
+        {hasPermission("dashboard.view") && (
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+            }
+            aria-label={t("nav.dashboard")}
+          >
+            <NAV_ICONS.dashboard size={ICON.base} aria-hidden="true" />
+            <span className="mobile-tab-label">{t("nav.dashboard")}</span>
+          </NavLink>
+        )}
 
         {/* 受信箱: prefs.show_chat_menu 条件付き */}
         {prefs.show_chat_menu && (
