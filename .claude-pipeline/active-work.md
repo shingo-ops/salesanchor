@@ -150,6 +150,7 @@
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
 | main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
+| feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | REVIEW | #2340 | | 自動登録 |
 ---
 
 ## 記入例
