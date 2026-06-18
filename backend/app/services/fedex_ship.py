@@ -54,6 +54,12 @@ def _parse_surcharges(surcharge_list: list[dict]) -> list[SurchargeDetail]:
     return result
 
 
+# J3 dormant フラグ（ADR-137）
+# CTS回答（C-Q6）確定後に customerImageUsages を組み立て・True に変更。
+# False の間は本番フローに ETD フィールドが一切出ない。
+_ETD_ENABLED: bool = False
+
+
 def create_shipment(
     tenant_id: int,
     environment: str,
@@ -70,6 +76,7 @@ def create_shipment(
     label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL",
     dimensions_cm: Optional[dict] = None,
     customs_clearance: Optional[dict] = None,
+    etd_image_indices: Optional[dict] = None,
 ) -> ShipmentResult:
     """FedEx Ship API でラベルを発行する。
 
@@ -127,6 +134,16 @@ def create_shipment(
     }
     if customs_clearance:
         requested_shipment["customsClearanceDetail"] = customs_clearance
+
+    # J3 dormant: ETD customerImageUsages フック（ADR-137 S4）
+    # _ETD_ENABLED=False の間は本番フローに影響しない。
+    # TODO(C-Q6/CTS): stampType(INCLUSIVE/EXCLUSIVE) / requestedDocumentCopies /
+    #                  workflow(ETDPreShipment/PostShipment) / customerImageUsages 構造 確定後に実装。
+    if _ETD_ENABLED and etd_image_indices:
+        requested_shipment["shippingDocumentSpecification"] = {
+            # TODO(C-Q6): 正確な customerImageUsages 構造を CTS 回答後に埋める
+            "customerImageUsages": etd_image_indices,
+        }
 
     payload: dict = {
         "labelResponseOptions": "LABEL",

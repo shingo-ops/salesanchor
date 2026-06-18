@@ -19,7 +19,7 @@ import logging
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel as _BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -48,7 +48,7 @@ from app.schemas.shipping import (
     ShippingZoneResponse,
     SurchargeDetail,
 )
-from app.services import carrier_credentials, fedex_rates
+from app.services import carrier_credentials, fedex_etd, fedex_rates
 from app.services.audit import record_audit_log
 from app.services.fedex_rates import FedExAPIError, FedExAuthError
 
@@ -821,4 +821,114 @@ async def lv_get_email_template(
         email=profile.get("email"),
         phone=profile.get("phone"),
         account_number=account_number,
+    )
+
+
+# =========================================================================
+# FedEx ETD 書類登録（ADR-137）
+# 機能は VITE_FEDEX_ETD_ENABLED フラグで既定 OFF（FE 側）。
+# エンドポイント自体は常時有効（フラグ OFF 時は FE が呼び出さない）。
+# =========================================================================
+
+
+class EtdImageResponse(_BaseModel):
+    image_type: str
+    environment: str
+    fedex_image_index: str
+
+
+class EtdImagesListResponse(_BaseModel):
+    images: list[EtdImageResponse]
+
+
+@router.post(
+    "/shipping/etd/images",
+    dependencies=[Depends(require_permission("shipping.manage"))],
+    status_code=status.HTTP_200_OK,
+)
+async def etd_upload_image(
+    image_type: str = Form(...),
+    environment: str = Form(...),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> dict:
+    """FedEx ETD 書類登録: レターヘッド/署名画像をアップロードし imageIndex を DB upsert する（ADR-137 J2a）。
+
+    - image_type: LETTERHEAD または SIGNATURE のみ（それ以外は 422）
+    - environment: sandbox または production
+    - file: GIF/PNG。LETTERHEAD=700x50px/5MB・SIGNATURE=240x25px/5MB（制約はクライアント側で検証）
+    - 結果: fedex_etd_images に upsert（同一テナント×種別×環境は上書き）
+
+    G3（Developer Portal に Trade Documents Upload API 追加）が未完了の場合、
+    FedEx API 疎通が失敗する可能性あり。コードは完成済み。
+    """
+    if image_type not in fedex_etd.PERSISTENT_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"image_type={image_type!r} は無効です。LETTERHEAD または SIGNATURE を指定してください",
+        )
+    if environment not in ("sandbox", "production"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"environment={environment!r} は無効です。sandbox または production を指定してください",
+        )
+
+    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex", environment=environment)
+    if not creds:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"FedEx {environment} 認証情報が未設定です",
+        )
+
+    image_bytes = await file.read()
+
+    try:
+        image_index = fedex_etd.upload_etd_image(
+            tenant_id=tenant_id,
+            environment=environment,
+            image_type=image_type,  # type: ignore[arg-type]
+            image_bytes=image_bytes,
+            client_id=creds["client_id"],
+            client_secret=creds["client_secret"],
+        )
+    except FedExAuthError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    except FedExAPIError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+    await fedex_etd.upsert_etd_image(
+        db=db,
+        tenant_id=tenant_id,
+        image_type=image_type,
+        environment=environment,
+        image_index=image_index,
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
+
+    return {"image_type": image_type, "environment": environment, "fedex_image_index": image_index}
+
+
+@router.get(
+    "/shipping/etd/images",
+    response_model=EtdImagesListResponse,
+    dependencies=[Depends(require_permission("shipping.manage"))],
+)
+async def etd_list_images(
+    environment: str = Query("sandbox"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> EtdImagesListResponse:
+    """登録済みの ETD 画像 imageIndex 一覧を返す（FE 表示用）（ADR-137 J4）。"""
+    images_dict = await fedex_etd.get_etd_images(db, tenant_id, environment)
+    return EtdImagesListResponse(
+        images=[
+            EtdImageResponse(
+                image_type=itype,
+                environment=environment,
+                fedex_image_index=idx,
+            )
+            for itype, idx in images_dict.items()
+        ]
     )
