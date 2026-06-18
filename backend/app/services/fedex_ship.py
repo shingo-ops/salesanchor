@@ -67,6 +67,7 @@ def create_shipment(
     packaging_type: str = "YOUR_PACKAGING",
     pickup_type: str = "DROPOFF_AT_FEDEX_LOCATION",
     label_image_type: str = "PDF",
+    label_stock_type: str = "PAPER_85X11_TOP_HALF_LABEL",
     dimensions_cm: Optional[dict] = None,
     customs_clearance: Optional[dict] = None,
 ) -> ShipmentResult:
@@ -84,7 +85,8 @@ def create_shipment(
         weight_kg: 重量（kg）
         packaging_type: 梱包タイプ
         pickup_type: ピックアップタイプ
-        label_image_type: ラベル画像タイプ（PDF 推奨）
+        label_image_type: ラベル画像タイプ（PDF / PNG / ZPLII 等）
+        label_stock_type: ラベルストックタイプ（ZPLII 用に STOCK_4X6 等）
         dimensions_cm: 寸法 {"length": float, "width": float, "height": float}（任意）
         customs_clearance: 国際便用関税情報（任意）
 
@@ -119,7 +121,7 @@ def create_shipment(
         "labelSpecification": {
             "imageType": label_image_type,
             "labelFormatType": "COMMON2D",
-            "labelStockType": "PAPER_85X11_TOP_HALF_LABEL",
+            "labelStockType": label_stock_type,
         },
         "requestedPackageLineItems": [pkg_item],
     }
@@ -218,7 +220,7 @@ def create_pickup(
         account_number: FedEx 配送契約アカウント番号
         pickup_address: 集荷先住所 {"contact": {...}, "address": {...}}
         ready_datetime: 集荷準備完了日時（ISO 8601）
-        company_close_time: 会社の営業終了時刻（"HH:MM" 形式）
+        company_close_time: 会社の営業終了時刻（"HH:MM" または "HH:MM:SS" 形式）
         carrier_code: キャリアコード（FDXE=Express, FDXG=Ground）
         package_count: 荷物数
         total_weight_kg: 総重量（kg）
@@ -233,9 +235,17 @@ def create_pickup(
     base_url = _BASE_URLS.get(environment, _BASE_URLS["sandbox"])
     token = get_or_refresh_token(tenant_id, environment, client_id, client_secret)
 
+    # FedEx API v1 は customerCloseTime を HH:MM:SS 形式で要求する
+    close_time = company_close_time if len(company_close_time) == 8 else f"{company_close_time}:00"
+
+    # associatedAccountNumberType はキャリアコードに対応させる
+    account_number_type = "FEDEX_EXPRESS" if carrier_code == "FDXE" else "FEDEX_GROUND"
+
     payload: dict = {
         "associatedAccountNumber": {"value": account_number},
-        "pickupRequestDetail": {
+        "carrierCode": carrier_code,
+        "associatedAccountNumberType": account_number_type,
+        "originDetail": {
             "pickupAddressType": "ACCOUNT",
             "pickupLocation": {
                 "contact": pickup_address["contact"],
@@ -243,13 +253,12 @@ def create_pickup(
                 "accountNumber": {"value": account_number},
                 "deliveryInstructions": "",
             },
-            "requestType": "SAME_DAY",
-            "packageCount": package_count,
-            "totalWeight": {"units": "KG", "value": float(total_weight_kg)},
-            "carrierCode": carrier_code,
+            "packageLocation": "FRONT",
             "readyDateTimestamp": ready_datetime,
-            "customerCloseTime": company_close_time,
+            "customerCloseTime": close_time,
         },
+        "totalWeight": {"units": "KG", "value": float(total_weight_kg)},
+        "packageCount": package_count,
     }
 
     try:

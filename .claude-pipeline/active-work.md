@@ -148,12 +148,14 @@
 | feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | DONE | #2235 | | |
 | feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | DONE | #2237 | | |
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
+| main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
+| feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
 ---
 
 ## 記入例
 
 ```
-| feature/morimoto/your-feature-name | 受信箱 UI    | 2026-05-26 10:00 | IN_PROGRESS |     | | タブ1で作業中 |
+| feature/morimoto/your-feature-name | 受信箱 UI    | 2026-05-26 10:00 | <状態> |     | | タブ1で作業中 |
 | feature/morimoto/your-other-feature | スケジュール  | 2026-05-26 11:30 | REVIEW      | 923 | | タブ2で作業中 |
 ```
 

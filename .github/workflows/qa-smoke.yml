@@ -46,7 +46,6 @@ on:
     paths:
       - 'tests/qa-smoke/**'
       - 'scripts/qa/**'
-      - '.github/workflows/qa-smoke.yml'
 
 concurrency:
   # 同時実行禁止 (tenant_006 を共有するため race condition を防ぐ)
@@ -62,7 +61,7 @@ jobs:
     env:
       QA_SMOKE_BASE_URL: https://app.salesanchor.jp
       QA_SMOKE_API_URL:  https://api.salesanchor.jp
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.QA_TENANT006_DATABASE_URL }}
 
     steps:
       - name: Checkout

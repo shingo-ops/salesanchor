@@ -3,9 +3,9 @@
 | 項目 | 内容 |
 |------|------|
 | 対応ADR | ADR-096（顧客マスタ／CRMデータモデル）、前提: ADR-095 |
-| ステータス | ④ 実装中（段階1・3・4/4完了・進捗 80%・KGI承認済み 2026-06-11） |
+| ステータス | ⑥ KGI実測達成（Stage 2 R3完了・coverage 100%・errors=0・2026-06-16） |
 | 担当 | PO: Shingo ／ Planner: Web Claude ／ recon・実装: Terminal CC |
-| 最終更新 | 2026-06-11（Generator・Stage 4完了） |
+| 最終更新 | 2026-06-16（Stage 2 R3完了・#2254/#2270 develop merge済み） |
 
 ---
 
@@ -147,8 +147,11 @@
 | 2026-06-11 | #1932 | 段階1: channel_masters + webhook→conv_logs 配線 + エコー受信 + 冪等 | マージ・本番デプロイ済み |
 | 2026-06-11 | #1937 | 段階3: 手動記録 API + スレッドUI + 翻訳発火 + 論理削除 + 重複ガード + チャネル管理UI + 集計ビュー論理削除除外 | マージ・本番デプロイ済み |
 | 2026-06-11 | #1945 | 段階4: 会社詳細→会話履歴タブ（contact集約・混在表示）+ GET /companies/{id}/conv-logs API | マージ・本番デプロイ済み |
-| 2026-06-11 | #1952/#1965 | 段階2: 移行キット準備完了（migrate script・verify script・rollback手順・analysis マーカー方式）| **Shingo GO待ち（本番未実行）** |
+| 2026-06-11 | #1952/#1965 | 段階2: 移行キット準備完了（migrate script・verify script・rollback手順・analysis マーカー方式）| develop merge済み（#2270 正本反映済み） |
 | 2026-06-15 | #2208 | R1: write_conversation_log() に contact_id 自動補完（contacts primary contact 参照）/ R2: 手動記録 POST に company_id 自動補完（deals 参照）+ audit_log 反映。post-merge CI green。R3 未実行 | develop merge 済み |
+| 2026-06-16 | #2254 | raw_payload JSONB serialization 修正（asyncpg に dict 渡し → JSON 文字列化） | develop merge済み |
+| 2026-06-16 | #2270 | CAST(:raw_payload AS JSONB) 正本反映（migrate/verify スクリプト）| develop merge済み |
+| 2026-06-16 | — | **Stage 2 R3 本番移行完了**（tenant_004: meta=5/conv=5/coverage=100%/gap=0・tenant_006: meta=10/conv=14/coverage=140%/gap=-4（前回挿入分残存・未移行なし）・errors=0・rollback未実行） | 本番完了（deploy/main反映は別途） |
 
 ---
 
@@ -169,7 +172,7 @@
 | echo（アプリ外送信）→ conv_logs 書き込み | ✅ 実装済み | `webhook.py:769-794` |
 | `write_conversation_log()` に contact_id 引数 | ❌ 存在しない | `backend/app/services/conv_log_writer.py:29-42`（引数リストに contact_id なし） |
 | conversation_logs.contact_id の実値 | ❌ 常に NULL | `conv_log_writer.py:64-91`（INSERT に contact_id なし） |
-| 既存 meta_messages → conv_logs 移行（Stage 2） | ❌ Shingo GO 待ち・本番未実行 | SA-02-plan.md §5（PR #1952/#1965） |
+| 既存 meta_messages → conv_logs 移行（Stage 2） | ✅ R3 完了（2026-06-16） | tenant_004: coverage=100% / tenant_006: coverage=140% gap=-4（前回挿入分残存で正常）・errors=0 |
 
 **未達理由**:
 1. `write_conversation_log()` が `contact_id` を受け取らず INSERT しないため、全 webhook 経路で `contact_id = NULL`
@@ -273,6 +276,6 @@ G1a・G1b が未達のため 80% 止まり。残課題の修正が必要。
 - [x] ③ 設計doc完成（reconとADR-096を相互参照・外部事例欄記入）— 2026-06-11 Planner
 - [x] ④ 実装PRマージ（process-artifactsゲート通過）— PR #1932/#1937/#1945 2026-06-11
 - [x] ⑤ 本番反映（CI緑＋smoke通過）— 2026-06-11 段階1・3・4 全デプロイ済み
-- [x] ⑥ KGI G1〜G4を本番で実測確認 — 2026-06-14 Terminal CC（G1a/G1b 未達・残課題 R1〜R3 特定）
+- [x] ⑥ KGI G1〜G4を本番で実測確認 — 2026-06-14 Terminal CC（G1a/G1b 未達・残課題 R1〜R3 特定）・R1/R2: #2208 develop merge済み・R3: 2026-06-16 本番完了（coverage 100%・errors=0）
 - [ ] SA-01横断チェックシート記入（✅のみ）
 - [x] 総合進捗表（00-SA-OVERVIEW.md）の更新
