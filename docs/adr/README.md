@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-18 / ADR 総数: 139 件
+最終更新: 2026-06-18 / ADR 総数: 140 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -19,6 +19,7 @@
 
 | 番号 | タイトル | ステータス | Amends / Superseded | 日付 |
 |------|---------|-----------|---------------------|------|
+| [ADR-009](./ADR-009-discord-gateway.md) | ADR-009: Discord Gateway Worker | Accepted | — | — |
 | [ADR-011](./ADR-011.md) | ADR-011: ADR駆動ワークフロー採用 (3者協調モデル) | Proposed | — | — |
 | [ADR-012](./ADR-012-what-how-separation.md) | ADR-012: 開発フロー再設計 — What/How 役割分担モデル採用 | Proposed | Amends ADR-011 | — |
 | [ADR-013](./ADR-013.md) | ADR-013: ヘッダーロゴと favicon を Sales Anchor 正式ブランドに統一 | Proposed | — | — |
