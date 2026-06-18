@@ -46,7 +46,6 @@ on:
     paths:
       - 'tests/qa-smoke/**'
       - 'scripts/qa/**'
-      - '.github/workflows/qa-smoke.yml'
 
 concurrency:
   # 同時実行禁止 (tenant_006 を共有するため race condition を防ぐ)
