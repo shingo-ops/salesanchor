@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.reaper-onlogin.plist — 起動時 worktree 自動回収（ADR-114 PR-C）
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+
+  Hikky-dev-Mac に適用する場合:
+    - WorkingDirectory → /Users/hitoshi/salesanchor
+    - StandardOutPath/StandardErrorPath → /Users/hitoshi/Library/Logs/reaper-onlogin.*
+
+  配置コマンド:
+    cp ops/launchd/jp.salesanchor.reaper-onlogin.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+
+  動作確認:
+    launchctl list | grep reaper
+    tail ~/Library/Logs/reaper-onlogin.log
+
+  無効化:
+    launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.reaper-onlogin</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>bash scripts/reaper-worktree.sh --execute</string>
+  </array>
+
+  <!-- WorkingDirectory が git rev-parse の前提を満たす（scripts/reaper-worktree.sh:28-34） -->
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/salesanchor</string>
+
+  <!-- ログイン時に 1 回だけ実行（KeepAlive=false = デーモン化しない） -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/reaper-onlogin.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/reaper-onlogin.err</string>
+</dict>
+</plist>

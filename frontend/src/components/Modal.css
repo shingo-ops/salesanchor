@@ -90,10 +90,10 @@
 }
 
 /* ----------------------------------------------------------------
-   モバイル（近全幅）
+   モバイル（近全幅）= --breakpoint-mobile-max (767px)
    ---------------------------------------------------------------- */
 
-@media (max-width: 640px) {
+@media (max-width: 767px) { /* = --breakpoint-mobile-max */
   .comp-modal-overlay {
     align-items: flex-end;
     padding: 0;
