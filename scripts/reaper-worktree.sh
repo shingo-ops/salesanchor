@@ -2,9 +2,11 @@
 # reaper-worktree.sh — マージ済み worktree の自動回収（ADR-114）
 #
 # 安全条件（非交渉・すべて満たした部屋だけ削除）:
-#   ① active-work.md が DONE、または gh で PR がマージ済み（base=develop）
-#   ② 未コミット・未push がゼロ
-#   ③ IN_PROGRESS でない
+#   ① 未コミット・未push がゼロ（絶対保護・最優先）
+#   ② active-work.md が DONE、または gh で PR がマージ済み（develop or main）
+#   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
+#
+# .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
 #
 # 既定: dry-run（削除予定の一覧表示のみ）
 # 実削除: --execute フラグが必須
@@ -54,9 +56,8 @@ for WORKTREE_PATH in "${WORKTREES_DIR}"/*/; do
   [ -d "${WORKTREE_PATH}" ] || continue
 
   WORKTREE_ID_FILE="${WORKTREE_PATH}.worktree-id"
-  [ -f "${WORKTREE_ID_FILE}" ] || continue
-
-  BRANCH=$(python3 -c "
+  if [ -f "${WORKTREE_ID_FILE}" ]; then
+    BRANCH=$(python3 -c "
 import json,sys
 try:
     d=json.load(open(sys.argv[1]))
@@ -64,6 +65,10 @@ try:
 except Exception:
     print('')
 " "${WORKTREE_ID_FILE}" 2>/dev/null || echo "")
+  else
+    # .worktree-id なし（旧 worktree）: git から現在ブランチ名を取得
+    BRANCH=$(git -C "${WORKTREE_PATH}" branch --show-current 2>/dev/null || echo "")
+  fi
 
   [ -z "${BRANCH}" ] && continue
 
@@ -138,14 +143,15 @@ PYEOF
 
   if [ "${IS_DONE}" -eq 0 ]; then
     # gh で PR マージ済み確認（squash マージでも機能）
+    # develop または main へのマージを検知（hotfix/release の main マージも対象）
     # エラー時は 0 扱い（安全側）
     MERGED_COUNT=$(gh pr list \
       --repo "${REPO_NAME}" \
       --state merged \
-      --base develop \
       --head "${BRANCH}" \
-      --json number \
-      --jq length 2>/dev/null || echo "0")
+      --json number,baseRefName \
+      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")] | length' \
+      2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
 
@@ -170,7 +176,7 @@ echo "=== reaper 結果 ==="
 echo ""
 
 if [ "${#SKIP_IN_PROGRESS[@]}" -gt 0 ]; then
-  echo "🔒 IN_PROGRESS（削除しない）: ${#SKIP_IN_PROGRESS[@]} 件"
+  echo "🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: ${#SKIP_IN_PROGRESS[@]} 件"
   for B in "${SKIP_IN_PROGRESS[@]}"; do echo "   - ${B}"; done
   echo ""
 fi

@@ -29,13 +29,26 @@ FAKE_ACTIVE_WORK="${TMPDIR_TEST}/active-work.md"
 
 mkdir -p "${FAKE_WORKTREES}"
 
-# ── モック gh コマンド（常に 0 件を返す）──────────────────────────────────
+# ── モック gh コマンド ────────────────────────────────────────────────────
+# MOCK_GH_MERGED_BRANCH (カンマ区切り) に含まれるブランチは 1 を返す、それ以外は 0
+# MOCK_GH_MAIN_MERGED (カンマ区切り) に含まれるブランチは main マージとして 1 を返す
 MOCK_BIN="${TMPDIR_TEST}/mock-bin"
 mkdir -p "${MOCK_BIN}"
 cat > "${MOCK_BIN}/gh" << 'GHEOF'
 #!/bin/bash
-# モック gh: pr list --jq length → 常に 0
-if [[ "$*" == *"--jq length"* ]]; then
+# モック gh: --state merged クエリに応答
+if [[ "$*" == *"--state merged"* ]]; then
+  if [ -n "${MOCK_GH_MERGED_BRANCH:-}" ]; then
+    IFS=',' read -ra _MERGED <<< "${MOCK_GH_MERGED_BRANCH}"
+    for _b in "${_MERGED[@]}"; do
+      for arg in "$@"; do
+        if [ "${arg}" = "${_b}" ]; then
+          echo "1"
+          exit 0
+        fi
+      done
+    done
+  fi
   echo "0"
 else
   echo ""
@@ -74,6 +87,26 @@ run_reaper_dry() {
   REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
   REAPER_REPO_NAME="test/test" \
   bash "${REAPER}" 2>&1
+}
+
+run_reaper_dry_with_merged() {
+  local merged_branches="${1:-}"
+  REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" \
+  MOCK_GH_MERGED_BRANCH="${merged_branches}" \
+  bash "${REAPER}" 2>&1
+}
+
+# .worktree-id なしの旧 worktree を作る（git init + ブランチ設定）
+make_worktree_dir_no_id() {
+  local name="$1"
+  local branch="$2"
+  local dir="${FAKE_WORKTREES}/${name}"
+  mkdir -p "${dir}"
+  git init "${dir}" -q 2>/dev/null
+  git -C "${dir}" checkout -b "${branch}" -q 2>/dev/null
+  echo "${dir}"
 }
 
 assert_not_in_delete() {
@@ -294,6 +327,59 @@ else
   echo "❌ FAIL [新規行テーブル内挿入]: 期待=OK_BEFORE_SEP 実際=${INSERT_RESULT}"
   FAIL=$(( FAIL + 1 ))
 fi
+
+# ── テスト 9-12: IN_PROGRESS/REVIEW + merged/no-merge ────────────────────────
+# 判定順: 未保存チェック → PR merged 判定 → IN_PROGRESS/REVIEW チェック
+# マージ済みなら IN_PROGRESS/REVIEW でも削除候補になること
+BRANCH_IP_MERGED="feature/test/in-progress-merged"
+make_worktree_dir "wt-ip-merged" "${BRANCH_IP_MERGED}" > /dev/null
+echo "| ${BRANCH_IP_MERGED} | テスト | 2026-06-16 | IN_PROGRESS | | | |" >> "${FAKE_ACTIVE_WORK}"
+
+BRANCH_REVIEW_MERGED="feature/test/review-merged"
+make_worktree_dir "wt-review-merged" "${BRANCH_REVIEW_MERGED}" > /dev/null
+echo "| ${BRANCH_REVIEW_MERGED} | テスト | 2026-06-16 | REVIEW | | | |" >> "${FAKE_ACTIVE_WORK}"
+
+BRANCH_REVIEW_NO_MERGE="feature/test/review-no-merge"
+make_worktree_dir "wt-review-no-merge" "${BRANCH_REVIEW_NO_MERGE}" > /dev/null
+echo "| ${BRANCH_REVIEW_NO_MERGE} | テスト | 2026-06-16 | REVIEW | | | |" >> "${FAKE_ACTIVE_WORK}"
+
+BRANCH_IP_NO_MERGE="feature/test/in-progress-no-merge"
+make_worktree_dir "wt-ip-no-merge" "${BRANCH_IP_NO_MERGE}" > /dev/null
+echo "| ${BRANCH_IP_NO_MERGE} | テスト | 2026-06-16 | IN_PROGRESS | | | |" >> "${FAKE_ACTIVE_WORK}"
+
+OUTPUT_M=$(run_reaper_dry_with_merged "${BRANCH_IP_MERGED},${BRANCH_REVIEW_MERGED}")
+
+echo ""
+echo "=== テスト 9-12 dry-run 出力 ==="
+echo "${OUTPUT_M}"
+echo ""
+echo "=== テスト 9-12 結果 ==="
+
+assert_in_delete     "IN_PROGRESS+merged削除候補"   "${BRANCH_IP_MERGED}"       "${OUTPUT_M}"
+assert_in_delete     "REVIEW+merged削除候補"         "${BRANCH_REVIEW_MERGED}"   "${OUTPUT_M}"
+assert_not_in_delete "REVIEW+未マージ保護"           "${BRANCH_REVIEW_NO_MERGE}" "${OUTPUT_M}"
+assert_not_in_delete "IN_PROGRESS+未マージ保護"      "${BRANCH_IP_NO_MERGE}"     "${OUTPUT_M}"
+
+# ── テスト 13-14: .worktree-id なし（旧 worktree）────────────────────────────
+# .worktree-id がなくても git branch --show-current でブランチを取得して処理する
+
+BRANCH_LEGACY_MERGED="feature/test/legacy-merged-no-id"
+LEGACY_MERGED_DIR=$(make_worktree_dir_no_id "wt-legacy-merged" "${BRANCH_LEGACY_MERGED}")
+# active-work.md に行なし（NOT_FOUND 扱い）→ gh merged で判定する
+
+BRANCH_LEGACY_NO_MERGE="feature/test/legacy-no-merge-no-id"
+LEGACY_NO_MERGE_DIR=$(make_worktree_dir_no_id "wt-legacy-no-merge" "${BRANCH_LEGACY_NO_MERGE}")
+
+OUTPUT_LEGACY=$(run_reaper_dry_with_merged "${BRANCH_LEGACY_MERGED}")
+
+echo ""
+echo "=== テスト 13-14 dry-run 出力 ==="
+echo "${OUTPUT_LEGACY}"
+echo ""
+echo "=== テスト 13-14 結果 ==="
+
+assert_in_delete     ".worktree-idなし+merged削除候補"   "${BRANCH_LEGACY_MERGED}"   "${OUTPUT_LEGACY}"
+assert_not_in_delete ".worktree-idなし+未マージ保護"      "${BRANCH_LEGACY_NO_MERGE}" "${OUTPUT_LEGACY}"
 
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""
