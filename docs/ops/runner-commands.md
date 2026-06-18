@@ -176,6 +176,49 @@ gh api /repos/shingo-ops/salesanchor/actions/secrets --jq '.secrets[].name'
 
 ---
 
+## 9. Shingo-Mac-Temp: launchd 管理（svc.sh）
+
+**実パス**: `~/actions-runner-shingo/`（`~/actions-runner` ではない）  
+**agentName**: `Shingo-Mac-Temp`  
+**管理方式**: svc.sh による LaunchAgent（ADR-029 Amendment 2026-06-18）
+
+```bash
+# --- runner 自動起動化（初回のみ）---
+cd ~/actions-runner-shingo
+ps aux | grep Runner.Listener | grep -v grep   # 手動起動プロセスがあれば停止
+./svc.sh install    # ~/Library/LaunchAgents/actions.runner.*.plist を生成・登録
+./svc.sh start
+./svc.sh status     # "Started" + PID が表示されれば成功
+
+# --- 日常確認 ---
+./svc.sh status
+launchctl list | grep actions.runner
+
+# --- 停止・アンインストール（ロールバック）---
+./svc.sh stop
+./svc.sh uninstall
+```
+
+### 起動時 worktree 自動回収（起動時 reaper）
+
+`ops/launchd/jp.salesanchor.reaper-onlogin.plist` を配置・load することで  
+ログイン時に `reaper-worktree.sh --execute` が自動実行される（ADR-114 PR-C）。
+
+```bash
+# 配置（初回のみ）
+cp ops/launchd/jp.salesanchor.reaper-onlogin.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+
+# 動作確認
+launchctl list | grep reaper
+tail ~/Library/Logs/reaper-onlogin.log
+
+# 無効化
+launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+```
+
+---
+
 ## 関連 doc
 
 - [`self-hosted-runner-credential-trap.md`](./self-hosted-runner-credential-trap.md) — 2026-05-07 の事故と PIPELINE_PAT 導入の経緯

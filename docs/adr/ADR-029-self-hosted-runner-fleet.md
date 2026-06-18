@@ -216,6 +216,37 @@ VPS の空きメモリが不足して OOM が発生した場合は、スワッ�
 
 ---
 
+---
+
+## Amendment — 2026-06-18: Shingo-Mac-Temp の runner 自動起動を svc.sh (LaunchAgent) で実装（ADR-114 PR-C）
+
+### 背景
+
+ADR-029 §3「Hikky-dev-Mac の launchd 自動起動」は「ひとし TODO（2026-05-15）」として未完のまま残っていた。
+ADR-114 PR-C の recon（2026-06-18）にて Shingo-Mac-Temp を先に自動化することが確定した。
+
+### 決定事項
+
+| 決定 | 内容 |
+|------|------|
+| 自動起動方式 | **svc.sh (LaunchAgent)** を採用。macOS 個人機（ログイン時起動）に適合。完全無人化（LaunchDaemon = ログイン前起動）はスケール時まで保留 |
+| 実パス | `~/actions-runner-shingo/`（`~/actions-runner` ではない。docs/ops/runner-commands.md:15 の旧記述を修正済み）|
+| 起動時 reaper | ログイン時に `scripts/reaper-worktree.sh --execute` をローカル直実行する LaunchAgent を新設（`ops/launchd/jp.salesanchor.reaper-onlogin.plist`）。GitHub Actions 経由ではなくローカル直実行を採用（理由: GHA 経由は runner online 待ちで「起動時に追いつく」目的と矛盾する）|
+| 二重起動防止 | `scripts/reaper-worktree.sh` 冒頭に mkdir ベースの排他ロック（`/tmp/reaper-worktree.lock.d`）を追加。cron / LaunchAgent / 手動の全経路を一律保護 |
+
+### §3「Hikky-dev-Mac の launchd 自動起動」ステータス更新
+
+- 旧目標（:47）「ログイン時 / shutdown 復帰時に runner が自動 online になる」→ Shingo-Mac-Temp で **2026-06-18 に実装完了**
+- Hikky-dev-Mac への適用は別タスク（パスを `/Users/hitoshi/salesanchor` に読み替え）
+
+### 関連ファイル
+
+- `ops/launchd/jp.salesanchor.reaper-onlogin.plist` — 起動時 reaper LaunchAgent テンプレート（本 PR 追加）
+- `docs/ops/runner-commands.md §9` — Shingo-Mac-Temp launchd 操作コマンドリファレンス（本 PR 追加）
+- ADR-114 §4 — reaper self-heal（launchd + 起動時 reaper が self-heal を完成させる最終ピース）
+
+---
+
 ## 関連メモリ・ドキュメント
 
 - `~/.claude/projects/-Users-hitoshi-Documents---------------CRM----/memory/project_adr029_runner.md` (本 ADR 起案根拠、2 台体制記録)

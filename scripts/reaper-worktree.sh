@@ -25,6 +25,16 @@ if [ "${1:-}" = "--execute" ]; then
   EXECUTE=1
 fi
 
+# ── 多重起動ガード（全経路共通: cron / LaunchAgent / 手動）─────────────────
+# mkdir はアトミック操作のため macOS/Linux 両対応の排他ロックとして機能する
+_REAPER_LOCK="/tmp/reaper-worktree.lock.d"
+if ! mkdir "${_REAPER_LOCK}" 2>/dev/null; then
+  echo "[reaper] another instance is running; skip."
+  exit 0
+fi
+# shellcheck disable=SC2064
+trap "rmdir '${_REAPER_LOCK}' 2>/dev/null || true" EXIT INT TERM
+
 # ── メインリポジトリルート取得 ──────────────────────────────────────────────
 GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null || echo "")"
 if [[ "${GIT_COMMON_DIR}" = /* ]]; then
