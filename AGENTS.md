@@ -102,6 +102,12 @@ bash scripts/aeon-dispatch.sh generator --auto   # 自動承認モード
 
 ---
 
+## 実行役 preflight
+
+- 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
+
+---
+
 ## セットアップ & 実行コマンド
 
 ### Frontend
