@@ -37,3 +37,4 @@ FedEx Pickup API v1 の正式仕様に合わせてペイロード構造を修正
 
 - FedEx Pickup API v1 公式仕様: carrierCode はトップレベル必須フィールド（旧 v0 では pickupRequestDetail 内だった）
 - Sandbox 実機確認 2 回: pickupConfirmationCode "3075" (2026-06-11), pickupConfirmationCode "3084" (2026-06-12)
+
