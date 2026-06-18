@@ -35,7 +35,17 @@ def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
     """
     import asyncio
 
-    return asyncio.run(_run_batch())
+    from app.database import engine
+
+    try:
+        return asyncio.run(_run_batch())
+    finally:
+        # Celery fork-pool は asyncio.run() を呼ぶたびに新ループを生成する。
+        # asyncpg 接続プールはループに紐づいた asyncio.Lock/Event を保持するため、
+        # ループ close 後も古いオブジェクトがプールに残り次回タスクで
+        # "Future attached to a different loop" を起こす（recon.md A-1）。
+        # engine.dispose() でプール接続を全破棄してから終了することで回避する。
+        asyncio.run(engine.dispose())
 
 
 async def _run_batch() -> dict:
@@ -134,7 +144,13 @@ def check_translation_health_task(self: object) -> dict:  # type: ignore[overrid
     """翻訳健全性チェックと Discord 通知（3点セット 状態検証 + 監視/通知）。"""
     import asyncio
 
-    return asyncio.run(_run_health_check())
+    from app.database import engine
+
+    try:
+        return asyncio.run(_run_health_check())
+    finally:
+        # translate_pending_messages と同様の EventLoop クラッシュ対策（recon.md A-1）。
+        asyncio.run(engine.dispose())
 
 
 async def _run_health_check() -> dict:
