@@ -16,8 +16,8 @@
 |------|------|------|
 | `engine = create_async_engine(...)` | `backend/app/database.py:33` | モジュールロード時に1回だけ生成。asyncpg 接続プールをここで初期化 |
 | `AsyncSessionLocal = sessionmaker(engine, ...)` | `backend/app/database.py:36-40` | engine を使うグローバルセッションファクトリ |
-| `asyncio.run(_run_batch())` | `backend/app/tasks/translation.py:38` | Celery タスク本体。呼ぶたびに **新しい event loop** を生成 |
-| `asyncio.run(_run_health_check())` | `backend/app/tasks/translation.py:137` | 健全性チェックタスク。同様に毎回新ループ |
+| asyncio.run(_run_batch()) | `backend/app/tasks/translation.py:38` | Celery タスク本体。呼ぶたびに **新しい event loop** を生成 |
+| asyncio.run(_run_health_check()) | `backend/app/tasks/translation.py:137` | 健全性チェックタスク。同様に毎回新ループ |
 | `async with AsyncSessionLocal() as db:` | `backend/app/tasks/translation.py:49` | モジュールレベルの engine（= 1 回目のループで作った接続プール）を参照 |
 | `await db.execute(...)` — 最初の await | `backend/app/tasks/translation.py:54` | ここで "Future attached to a different loop" が爆発 |
 
@@ -222,7 +222,7 @@ ADMIN_NOTIFICATION_DISCORD_WEBHOOK → Discord Webhook は discord_notifier.py�
 
 | 優先度 | 項目 | 状態 | 接続 |
 |--------|------|------|------|
-| **CRITICAL / Phase 1** | EventLoop クラッシュ（translate + health check の2タスク） | `backend/app/tasks/translation.py:38` と `:137` に engine.dispose() 追加 | Phase 1 設計へ |
+| **CRITICAL / Phase 1** | EventLoop クラッシュ（translate + health check の2タスク） | `backend/app/tasks/translation.py:38` と `backend/app/tasks/translation.py:137` に engine.dispose() 追加 | Phase 1 設計へ |
 | **CRITICAL / Phase 1** | GEMINI_API_KEY 注入漏れ（celery-worker） | `docker-compose.yml:181-188` に1行追加 | Phase 1 設計へ（GO 必須）|
 | **HIGH / Phase 1 同時** | ADMIN_NOTIFICATION_DISCORD_WEBHOOK 注入漏れ（celery-worker） | 同上と同一 PR 推奨 | Phase 1 設計へ |
 | **在る・動く** | 場面3（手記録の受信翻訳）— conv_logs API | `backend/app/routers/conv_logs.py:314` で既に発火 | 動作確認のみ |
