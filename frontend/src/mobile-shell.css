@@ -76,6 +76,42 @@
   transform: translateY(0);
 }
 
+/* ---- Mobile menu actions（theme / language / sign out） ---- */
+.mobile-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.mobile-menu-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10px);
+  width: 100%;
+  padding: var(--space-10px) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.mobile-menu-action:hover {
+  background: var(--bg-hover);
+}
+
+.mobile-menu-action--danger {
+  color: var(--danger);
+}
+
+.mobile-menu-action--danger:hover {
+  background: var(--danger-bg);
+}
+
 /* ---- MobileTabBar: fixed bottom tab bar ---- */
 .mobile-tabbar {
   position: fixed; /* fixed-ok: persistent bottom nav */
@@ -146,20 +182,6 @@
   font-weight: var(--font-weight-bold);
   line-height: var(--nav-badge-size);
   text-align: center;
-}
-
-/* ---- アバタータブ（ユーザーメニュー） ---- */
-.mobile-tab-avatar-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--size-avatar-sm, 28px);
-  height: var(--size-avatar-sm, 28px);
-  border-radius: 50%;
-  background: var(--bg-accent);
-  color: var(--text-on-accent);
-  font-size: var(--font-sm);
-  font-weight: var(--font-medium);
 }
 
 /* ---- NavItemList: mobile variant ---- */
@@ -294,6 +316,3 @@
   background: var(--sidebar-item-active-bg);
   text-decoration: none;
 }
-
-/* ---- User drawer（MobileShell 内） ---- */
-/* user-drawer は topbar.css の既存スタイルを流用。追加 override は最小限に留める。 */
