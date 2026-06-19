@@ -2,7 +2,7 @@
  * MobileShell — モバイル専用 Shell コンポーネント（ADR-140 PR-B）
  *
  * ADR-137: MobileShell は DesktopShell（Layout.tsx）とは独立した DOM。
- * ADR-140: ハンバーガー+Drawer → 下部タブバー（主役4タブ＋「もっと」シート）に刷新。
+ * ADR-140: ハンバーガー+Drawer → 下部タブバー（3タブ＋メニュー）に刷新。
  * ADR-067: 色・余白・z-index はすべて CSS token 参照。hex / px マジックナンバー禁止。
  * ADR-027: 全 UI 文字列は t("key") 経由。ハードコード禁止。
  *
@@ -13,30 +13,26 @@
  *   ├── .mobile-content → <Outlet />
  *   ├── .mobile-more-backdrop（moreSheetOpen 時のみ）
  *   ├── .mobile-more-sheet（slide-up, z-index: var(--z-sidebar-overlay)=210）
- *   │   └── NavItemList variant="mobile"（脇役全項目）
+ *   │   ├── NavItemList variant="mobile"（メニュー項目）
+ *   │   └── action rows（theme / language / sign out）
  *   ├── MobileTabBar (.mobile-tabbar — position:fixed, bottom:0, z-index: var(--z-topbar)=100)
- *   │   ├── NavLink(ホーム: /)
  *   │   ├── NavLink(受信箱: /lead-chat) — prefs.show_chat_menu 条件付き
+ *   │   ├── NavLink(在庫表: /inventory) — products.view 権限
  *   │   ├── NavLink(受注管理: /orders) — orders.view 権限
- *   │   ├── NavLink(在庫: /inventory) — products.view 権限
- *   │   ├── MoreButton（「もっと」シート開閉）
- *   │   └── AvatarButton（ユーザーメニュー）
- *   ├── User drawer backdrop
- *   ├── User drawer panel
+ *   │   └── MenuButton（「…」シート開閉）
  *   └── ConfirmModal（ログアウト確認）
  *
  * 参照: docs/handoff/mobile-responsive/design.md §B-2
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocale } from "../contexts/LocaleContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
-import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useSSE } from "../hooks/useSSE";
 import { listConversations } from "../lib/messages";
@@ -50,7 +46,6 @@ import {
 import { ICON } from "../constants/iconSizes";
 import { NavItemList } from "./NavItemList";
 import type { ResolvedNavItem } from "./NavItemList";
-import type { NavItem } from "../types/nav";
 import ConfirmModal from "./ConfirmModal";
 import "../mobile-shell.css";
 
@@ -66,36 +61,24 @@ function resolveItem(
   return { key, labelKey, icon, path, ...opts };
 }
 
-function navItemsToResolved(items: NavItem[]): ResolvedNavItem[] {
-  return items.map((item) =>
-    resolveItem(item.to, item.labelKey, <span />, item.to),
-  );
-}
-
-// 主役タブの key セット（more sheet から除外）
-const MAIN_TAB_KEYS = new Set(["dashboard", "leadChat", "inventory", "orders"]);
-
 // ─── MobileShell ─────────────────────────────────────────────────────────────
 
 export default function MobileShell() {
   const { t } = useTranslation();
   const { locale, changeLanguage } = useLocale();
   const { theme, changeTheme } = useTheme();
-  const { user, signOut } = useAuth();
-  const { hasPermission, hasAny, loading: permsLoading } = usePermissions();
-  const { isSuperAdmin } = useSuperAdmin();
-  const { prefs, loading: uiPrefsLoading, staffName } = useUiPrefs();
-  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  const { prefs, loading: uiPrefsLoading } = useUiPrefs();
   const pageTitle = usePageTitle();
 
   const navLoading = permsLoading || uiPrefsLoading;
 
   // ── シート/ドロワー状態 ──
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
-  const [userDrawerOpen, setUserDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Escape key で「もっと」シートを閉じる
+  // Escape key でメニューシートを閉じる
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && moreSheetOpen) setMoreSheetOpen(false);
@@ -129,38 +112,7 @@ export default function MobileShell() {
     (hasPermission("quotes.view") || hasPermission("invoices.view"));
   const salesLinkTo = hasPermission("quotes.view") ? "/quotes" : "/invoices";
 
-  const showManagementCenter = hasAny(
-    "staff.view",
-    "teams.view",
-    "roles.view",
-    "bots.view",
-    "shifts.view",
-    "channels.view",
-    "erp.view",
-    "orders.view",
-    "customers.view",
-    "deals.view",
-    "suppliers.view",
-    "purchase_orders.view",
-    "tenant.profile.view",
-  );
-
-  const saasAdminNavItems: NavItem[] = isSuperAdmin
-    ? [
-        { to: "/super-admin/masters", labelKey: "nav.superAdminMasters" },
-        { to: "/super-admin/inbound", labelKey: "nav.superAdminInbound" },
-        {
-          to: "/super-admin/inventory-offers",
-          labelKey: "nav.superAdminInventoryOffers",
-        },
-        {
-          to: "/super-admin/phase-switch",
-          labelKey: "nav.superAdminPhaseSwitch",
-        },
-      ]
-    : [];
-
-  const resolvedItems: ResolvedNavItem[] = navLoading
+  const menuItems: ResolvedNavItem[] = navLoading
     ? []
     : [
         ...(hasPermission("dashboard.view")
@@ -179,37 +131,6 @@ export default function MobileShell() {
           <NAV_ICONS.schedule size={ICON.base} aria-hidden="true" />,
           "/schedule",
         ),
-        ...(prefs.show_chat_menu
-          ? [
-              resolveItem(
-                "leadChat",
-                "nav.leadChat",
-                <LeadChatIcon size={ICON.base} aria-hidden="true" />,
-                "/lead-chat",
-                { unread: true },
-              ),
-            ]
-          : []),
-        ...(hasPermission("products.view")
-          ? [
-              resolveItem(
-                "inventory",
-                "nav.inventory",
-                <NAV_ICONS.inventory size={ICON.base} aria-hidden="true" />,
-                "/inventory",
-              ),
-            ]
-          : []),
-        ...(hasPermission("purchase_orders.view")
-          ? [
-              resolveItem(
-                "purchaseOrders",
-                "nav.purchaseOrders",
-                <NAV_ICONS.purchaseOrders size={ICON.base} aria-hidden="true" />,
-                "/purchase-orders",
-              ),
-            ]
-          : []),
         ...(showSalesLink
           ? [
               resolveItem(
@@ -230,53 +151,13 @@ export default function MobileShell() {
               ),
             ]
           : []),
-        ...(hasPermission("orders.view")
-          ? [
-              resolveItem(
-                "orders",
-                "nav.orders",
-                <NAV_ICONS.orders size={ICON.base} aria-hidden="true" />,
-                "/orders",
-              ),
-              resolveItem(
-                "sales",
-                "nav.sales",
-                <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
-                "/sales",
-              ),
-              resolveItem(
-                "commissions",
-                "nav.commissions",
-                <NAV_ICONS.commissions size={ICON.base} aria-hidden="true" />,
-                "/commissions",
-              ),
-            ]
-          : []),
-        ...(showManagementCenter
-          ? [
-              resolveItem(
-                "managementCenter",
-                "nav.managementCenter",
-                <NAV_ICONS.admin size={ICON.base} aria-hidden="true" />,
-                "/management-center",
-              ),
-            ]
-          : []),
-        ...(isSuperAdmin
-          ? [
-              resolveItem(
-                "saasAdmin",
-                "nav.saasAdmin",
-                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
-                "/super-admin",
-                { children: navItemsToResolved(saasAdminNavItems) },
-              ),
-            ]
-          : []),
+        resolveItem(
+          "accountSettings",
+          "nav.accountSettings",
+          <ACCOUNT_ICONS.profile size={ICON.base} aria-hidden="true" />,
+          "/account/settings",
+        ),
       ];
-
-  // 「もっと」シート用: 主役タブ4つを除いた残り
-  const moreItems = resolvedItems.filter((item) => !MAIN_TAB_KEYS.has(item.key));
 
   // ── レンダリング ──
 
@@ -306,33 +187,55 @@ export default function MobileShell() {
         className={`mobile-more-sheet${moreSheetOpen ? " mobile-more-sheet--open" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-label={t("nav.mobileMore")}
+        aria-label={t("nav.menu")}
       >
         <NavItemList
           variant="mobile"
-          items={moreItems}
+          items={menuItems}
           onNavClick={() => setMoreSheetOpen(false)}
           unreadCount={unreadCount}
         />
+
+        <div className="mobile-menu-actions">
+          <button
+            className="mobile-menu-action"
+            onClick={() => changeTheme(theme === "light" ? "dark" : "light")}
+          >
+            {theme === "light" ? (
+              <THEME_ICONS.light size={ICON.md} aria-hidden="true" />
+            ) : (
+              <THEME_ICONS.dark size={ICON.md} aria-hidden="true" />
+            )}
+            <span>
+              {theme === "light"
+                ? t("nav.switchToDark")
+                : t("nav.switchToLight")}
+            </span>
+          </button>
+
+          <button
+            className="mobile-menu-action"
+            onClick={() => changeLanguage(locale === "ja" ? "en" : "ja")}
+          >
+            <GlobeIcon size={ICON.md} aria-hidden="true" />
+            <span>{locale === "ja" ? t("language.en") : t("language.ja")}</span>
+          </button>
+
+          <button
+            className="mobile-menu-action mobile-menu-action--danger"
+            onClick={() => {
+              setMoreSheetOpen(false);
+              setShowLogoutConfirm(true);
+            }}
+          >
+            <NAV_ICONS.logout size={ICON.md} aria-hidden="true" />
+            <span>{t("nav.signOut")}</span>
+          </button>
+        </div>
       </div>
 
       {/* ============ MobileTabBar（fixed bottom） ============ */}
       <nav className="mobile-tabbar" aria-label={t("nav.openMenu")}>
-        {/* ホーム: dashboard.view 権限 */}
-        {hasPermission("dashboard.view") && (
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
-            }
-            aria-label={t("nav.dashboard")}
-          >
-            <NAV_ICONS.dashboard size={ICON.base} aria-hidden="true" />
-            <span className="mobile-tab-label">{t("nav.dashboard")}</span>
-          </NavLink>
-        )}
-
         {/* 受信箱: prefs.show_chat_menu 条件付き */}
         {prefs.show_chat_menu && (
           <NavLink
@@ -352,20 +255,6 @@ export default function MobileShell() {
           </NavLink>
         )}
 
-        {/* 受注管理: orders.view 権限 */}
-        {hasPermission("orders.view") && (
-          <NavLink
-            to="/orders"
-            className={({ isActive }) =>
-              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
-            }
-            aria-label={t("nav.orders")}
-          >
-            <NAV_ICONS.orders size={ICON.base} aria-hidden="true" />
-            <span className="mobile-tab-label">{t("nav.orders")}</span>
-          </NavLink>
-        )}
-
         {/* 在庫: products.view 権限 */}
         {hasPermission("products.view") && (
           <NavLink
@@ -380,109 +269,30 @@ export default function MobileShell() {
           </NavLink>
         )}
 
-        {/* もっと */}
+        {/* 受注管理: orders.view 権限 */}
+        {hasPermission("orders.view") && (
+          <NavLink
+            to="/orders"
+            className={({ isActive }) =>
+              `mobile-tab${isActive ? " mobile-tab--active" : ""}`
+            }
+            aria-label={t("nav.orders")}
+          >
+            <NAV_ICONS.orders size={ICON.base} aria-hidden="true" />
+            <span className="mobile-tab-label">{t("nav.orders")}</span>
+          </NavLink>
+        )}
+
+        {/* メニュー */}
         <button
           className="mobile-tab"
           onClick={() => setMoreSheetOpen(true)}
-          aria-label={t("nav.mobileMore")}
+          aria-label={t("nav.menu")}
           aria-expanded={moreSheetOpen}
         >
           <NAV_ICONS.more size={ICON.base} aria-hidden="true" />
-          <span className="mobile-tab-label">{t("nav.mobileMore")}</span>
-        </button>
-
-        {/* アバター（ユーザーメニュー） */}
-        <button
-          className="mobile-tab mobile-tab-avatar"
-          onClick={() => setUserDrawerOpen(true)}
-          aria-label={t("nav.openUserMenu")}
-        >
-          <span className="mobile-tab-avatar-icon">
-            {user?.email ? user.email[0].toUpperCase() : <NAV_ICONS.logout size={18} aria-hidden="true" />}
-          </span>
         </button>
       </nav>
-
-      {/* ============ User drawer backdrop ============ */}
-      {userDrawerOpen && (
-        <div
-          className="user-drawer-backdrop"
-          onClick={() => setUserDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* ============ User drawer panel ============ */}
-      <div
-        className={`user-drawer${userDrawerOpen ? " user-drawer--open" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("nav.account")}
-      >
-        <div className="user-drawer-header">
-          <span className="user-drawer-title">{t("nav.account")}</span>
-          <button
-            className="user-drawer-close"
-            onClick={() => setUserDrawerOpen(false)}
-            aria-label={t("common.close")}
-            data-tooltip={t("common.close")}
-          >
-            <NAV_ICONS.close size={ICON.md} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="user-drawer-body">
-          <div className="user-drawer-email">{user?.email}</div>
-          {staffName && <div className="user-drawer-name">{staffName}</div>}
-
-          <button
-            className="user-drawer-action"
-            onClick={() => {
-              setUserDrawerOpen(false);
-              navigate("/account/settings");
-            }}
-          >
-            <ACCOUNT_ICONS.profile size={ICON.md} aria-hidden="true" />
-            <span>{t("nav.accountSettings")}</span>
-          </button>
-
-          <hr className="user-drawer-sep" />
-
-          <button
-            className="user-drawer-action"
-            onClick={() => changeTheme(theme === "light" ? "dark" : "light")}
-          >
-            {theme === "light" ? (
-              <THEME_ICONS.light size={ICON.md} aria-hidden="true" />
-            ) : (
-              <THEME_ICONS.dark size={ICON.md} aria-hidden="true" />
-            )}
-            <span>
-              {theme === "light"
-                ? t("nav.switchToDark")
-                : t("nav.switchToLight")}
-            </span>
-          </button>
-
-          <button
-            className="user-drawer-action"
-            onClick={() => changeLanguage(locale === "ja" ? "en" : "ja")}
-          >
-            <GlobeIcon size={ICON.md} aria-hidden="true" />
-            <span>{locale === "ja" ? t("language.en") : t("language.ja")}</span>
-          </button>
-
-          <button
-            className="user-drawer-action user-drawer-action--danger"
-            onClick={() => {
-              setUserDrawerOpen(false);
-              setShowLogoutConfirm(true);
-            }}
-          >
-            <NAV_ICONS.logout size={ICON.md} aria-hidden="true" />
-            <span>{t("nav.signOut")}</span>
-          </button>
-        </div>
-      </div>
 
       <ConfirmModal
         open={showLogoutConfirm}

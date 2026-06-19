@@ -117,6 +117,7 @@ export default function DesktopShell() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [sidebarExpandSuppressed, setSidebarExpandSuppressed] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -140,11 +141,32 @@ export default function DesktopShell() {
     if (next !== null) setSidebarExpanded(true); // アコーディオンを開く際はサイドバーも展開
   };
 
-  // PC: mouse leave でサイドバーを折りたたむ。nav item click でも同じ動作を適用。
+  // PC: mouse leave でサイドバーを折りたたむ。
+  // nav item click 後は一時的に hover 展開を抑止し、マウスが離れたら通常挙動へ戻す。
   const handleSidebarLeave = () => {
     setSidebarExpanded(false);
     setOpenAccordion(null);
+    setSidebarExpandSuppressed(false);
   };
+
+  const handleSidebarEnter = () => {
+    if (!sidebarExpandSuppressed) {
+      setSidebarExpanded(true);
+    }
+  };
+
+  const handleSidebarNavClick = () => {
+    setSidebarExpanded(false);
+    setOpenAccordion(null);
+    setSidebarExpandSuppressed(true);
+  };
+
+  // ルート遷移後も展開状態を残さない。
+  // クリック時に閉じても、遷移先で hover 判定が残るケースをここで吸収する。
+  useEffect(() => {
+    setSidebarExpanded(false);
+    setOpenAccordion(null);
+  }, [location.pathname]);
 
   /* ---- permission-filtered sub-item lists ---- */
 
@@ -180,7 +202,7 @@ export default function DesktopShell() {
       <aside
         id="sidebar-panel"
         className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}`}
-        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseEnter={handleSidebarEnter}
         onMouseLeave={handleSidebarLeave}
       >
         {/* Logo */}
@@ -202,7 +224,7 @@ export default function DesktopShell() {
                   to="/"
                   end
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.dashboard size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.dashboard")}</span>
@@ -212,7 +234,7 @@ export default function DesktopShell() {
               <NavLink
                 to="/schedule"
                 className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                onClick={handleSidebarLeave}
+                onClick={handleSidebarNavClick}
               >
                 <span className="sidebar-icon"><NAV_ICONS.schedule size={ICON.base} /></span>
                 <span className="sidebar-label">{t("nav.schedule")}</span>
@@ -222,7 +244,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/lead-chat"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon">
                     <LeadChatIcon size={ICON.base} />
@@ -243,7 +265,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/inventory"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.inventory size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.inventory")}</span>
@@ -255,7 +277,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/purchase-orders"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.purchaseOrders size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.purchaseOrders")}</span>
@@ -273,7 +295,7 @@ export default function DesktopShell() {
                       location.pathname.startsWith("/invoices");
                     return `sidebar-item${on ? " active" : ""}`;
                   }}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.fileText size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.quotesInvoices")}</span>
@@ -289,7 +311,7 @@ export default function DesktopShell() {
                       location.pathname.startsWith("/crm/");
                     return `sidebar-item${onCrm ? " active" : ""}`;
                   }}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.leads size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.leads")}</span>
@@ -300,7 +322,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/orders"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.orders size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.orders")}</span>
@@ -313,7 +335,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/sales"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.sales size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.sales")}</span>
@@ -326,7 +348,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/commissions"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.commissions size={ICON.base} aria-hidden="true" /></span>
                   <span className="sidebar-label">{t("nav.commissions")}</span>
@@ -337,7 +359,7 @@ export default function DesktopShell() {
                 <NavLink
                   to="/management-center"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarLeave}
+                  onClick={handleSidebarNavClick}
                 >
                   <span className="sidebar-icon"><NAV_ICONS.admin size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.managementCenter")}</span>
@@ -358,7 +380,7 @@ export default function DesktopShell() {
                     isExpanded={sidebarExpanded}
                     isOpen={openAccordion === "saasAdmin"}
                     onToggle={() => toggleAccordion("saasAdmin")}
-                    onNavClick={handleSidebarLeave}
+                    onNavClick={handleSidebarNavClick}
                   />
                 </>
               )}
@@ -371,7 +393,7 @@ export default function DesktopShell() {
                 isExpanded={sidebarExpanded}
                 isOpen={openAccordion === "more"}
                 onToggle={() => toggleAccordion("more")}
-                onNavClick={handleSidebarLeave}
+                onNavClick={handleSidebarNavClick}
               />
             </>
           )}
