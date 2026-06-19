@@ -130,8 +130,42 @@ function discoverPostgresContainer(): string {
 
 function runPsql(sql: string) {
   const { user, password, database } = parseConnectionInfo();
-  const container = discoverPostgresContainer();
+  const conn = psqlUrl();
 
+  const direct = spawnSync("psql", [conn, "-At", "-F", "\t", "-c", sql], {
+    encoding: "utf-8",
+    timeout: 15_000,
+  });
+  if (direct.status === 0) {
+    return direct;
+  }
+
+  if (direct.error && direct.error.code === "ENOENT") {
+    const shell = spawnSync(
+      "bash",
+      [
+        "-lc",
+        [
+          "psql",
+          JSON.stringify(conn),
+          "-At",
+          "-F",
+          "$'\\t'",
+          "-c",
+          JSON.stringify(sql),
+        ].join(" "),
+      ],
+      {
+        encoding: "utf-8",
+        timeout: 15_000,
+      },
+    );
+    if (shell.status === 0 || (shell.error && shell.error.code !== "ENOENT")) {
+      return shell;
+    }
+  }
+
+  const container = discoverPostgresContainer();
   return spawnSync(
     "docker",
     [
