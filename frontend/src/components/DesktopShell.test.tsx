@@ -125,6 +125,7 @@ describe("DesktopShell", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "nav.schedule" }));
     expect(container.querySelector(".sidebar-expanded")).toBeNull();
+    expect(sidebar?.classList.contains("sidebar-hover-suppressed")).toBe(true);
 
     fireEvent.mouseEnter(sidebar!);
     expect(container.querySelector(".sidebar-expanded")).toBeNull();
@@ -134,5 +135,6 @@ describe("DesktopShell", () => {
     await waitFor(() => {
       expect(container.querySelector(".sidebar-expanded")).toBeTruthy();
     });
+    expect(sidebar?.classList.contains("sidebar-hover-suppressed")).toBe(false);
   });
 });
