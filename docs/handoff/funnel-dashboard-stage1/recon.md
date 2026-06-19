@@ -269,8 +269,8 @@ export function useRecordDrawer<T extends { id: number }, F>({ toForm, emptyForm
 
 **フロントエンド権限**:
 
-- **usePermissions()** + **hasPermission()**: `frontend/src/components/Layout.tsx:100`
-- **dashboard.view** 権限チェック: `frontend/src/components/Layout.tsx:194`
+- **usePermissions()** + **hasPermission()**: `frontend/src/components/DesktopShell.tsx:109`
+- **dashboard.view** 権限チェック: `frontend/src/components/DesktopShell.tsx:200`
 
 **バックエンド自己フィルタ**:
 
