@@ -31,6 +31,10 @@
   z-index: var(--z-sidebar);
 }
 
+.sidebar-panel:hover {
+  width: var(--sidebar-width-expanded, 240px);
+}
+
 .sidebar-panel.sidebar-expanded {
   width: var(--sidebar-width-expanded, 240px);
 }
@@ -51,6 +55,11 @@
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
+}
+
+.sidebar-panel:hover .sidebar-logo-area {
+  justify-content: flex-start;
+  padding-left: calc(var(--sidebar-nav-icon-center-x) - var(--logo-size) / 2);
 }
 
 /* expanded 時: ロゴアイコン中心を --sidebar-nav-icon-center-x (33px) に揃える
@@ -161,7 +170,15 @@
   opacity: 1;
 }
 
+.sidebar-panel:hover .sidebar-label {
+  opacity: 1;
+}
+
 .sidebar-expanded .sidebar-item {
+  padding: var(--sidebar-item-padding-v) var(--space-5);
+}
+
+.sidebar-panel:hover .sidebar-item {
   padding: var(--sidebar-item-padding-v) var(--space-5);
 }
 

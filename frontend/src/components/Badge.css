@@ -20,6 +20,7 @@
   line-height: 1;
   white-space: nowrap;
   vertical-align: middle;
+  transition: opacity .4s, transform .4s;
   /* デフォルトは neutral soft */
   background: var(--neutral-bg);
   color: var(--neutral-text);
