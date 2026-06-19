@@ -513,6 +513,158 @@ class TestCustomerOrders:
 
 
 # ─────────────────────────────────────────────
+# revenue-segments EP テスト
+# ─────────────────────────────────────────────
+
+class TestRevenueSegments:
+    """GET /analytics/revenue-segments"""
+
+    async def test_revenue_segments_empty(self, client):
+        """データなしで 200 を返し、各 segment がゼロ"""
+        res = await client.get("/api/v1/analytics/revenue-segments")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total"] == {"revenue": 0.0, "order_count": 0, "customer_count": 0}
+        assert data["new"]["revenue"] == 0.0
+        assert data["new"]["order_count"] == 0
+        assert data["new"]["customer_count"] == 0
+        assert data["new"]["avg_order_amount"] is None
+        assert data["new"]["share"] == 0.0
+        assert data["repeat"]["revenue"] == 0.0
+        assert data["repeat"]["order_count"] == 0
+        assert data["repeat"]["customer_count"] == 0
+        assert data["repeat"]["avg_order_amount"] is None
+        assert data["repeat"]["share"] == 0.0
+
+    async def test_revenue_segments_with_data(self, client, db_session):
+        """new / repeat の売上・件数・平均単価・顧客数・構成比が正しい"""
+        from app.services.time import _jst_month_range_utc
+
+        today = date.today()
+        start, _ = _jst_month_range_utc(today.year, today.month)
+
+        new_co = await client.post("/api/v1/companies", json={"name": "SegmentNewCo"})
+        new_co_id = new_co.json()["id"]
+        repeat_co = await client.post("/api/v1/companies", json={"name": "SegmentRepeatCo"})
+        repeat_co_id = repeat_co.json()["id"]
+
+        new_ct = await client.post("/api/v1/contacts", json={
+            "company_id": new_co_id,
+            "display_name": "SegmentNewContact",
+        })
+        new_ct_id = new_ct.json()["id"]
+        repeat_ct = await client.post("/api/v1/contacts", json={
+            "company_id": repeat_co_id,
+            "display_name": "SegmentRepeatContact",
+        })
+        repeat_ct_id = repeat_ct.json()["id"]
+
+        new_1 = start + timedelta(minutes=1)
+        new_2 = start + timedelta(days=1)
+        repeat_prev = start - timedelta(days=2)
+        repeat_cur = start + timedelta(hours=1)
+
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES
+                (999, :new_co, :new_ct, 'SEG-N-001', 120, 'awaiting_payment', :new_1),
+                (999, :new_co, :new_ct, 'SEG-N-002', 180, 'awaiting_payment', :new_2),
+                (999, :repeat_co, :repeat_ct, 'SEG-R-001', 500, 'awaiting_payment', :repeat_prev),
+                (999, :repeat_co, :repeat_ct, 'SEG-R-002', 300, 'awaiting_payment', :repeat_cur)
+        """), {
+            "new_co": new_co_id,
+            "new_ct": new_ct_id,
+            "repeat_co": repeat_co_id,
+            "repeat_ct": repeat_ct_id,
+            "new_1": str(new_1),
+            "new_2": str(new_2),
+            "repeat_prev": str(repeat_prev),
+            "repeat_cur": str(repeat_cur),
+        })
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/revenue-segments?period=1m")
+        assert res.status_code == 200
+        data = res.json()
+
+        assert data["period"] == "1m"
+        assert data["scope"] == "team"
+        assert data["total"] == {"revenue": 600.0, "order_count": 3, "customer_count": 2}
+
+        new_seg = data["new"]
+        assert new_seg["revenue"] == 300.0
+        assert new_seg["order_count"] == 2
+        assert new_seg["avg_order_amount"] == 150.0
+        assert new_seg["customer_count"] == 1
+        assert new_seg["share"] == 50.0
+
+        repeat_seg = data["repeat"]
+        assert repeat_seg["revenue"] == 300.0
+        assert repeat_seg["order_count"] == 1
+        assert repeat_seg["avg_order_amount"] == 300.0
+        assert repeat_seg["customer_count"] == 1
+        assert repeat_seg["share"] == 50.0
+
+    async def test_revenue_segments_mine_scope(self, client, db_session):
+        """scope=mine で担当案件の注文だけ返る"""
+        today = date.today()
+        current = today + timedelta(days=0)
+
+        mine_co = await client.post("/api/v1/companies", json={"name": "MineSegmentCo"})
+        mine_co_id = mine_co.json()["id"]
+        other_co = await client.post("/api/v1/companies", json={"name": "OtherSegmentCo"})
+        other_co_id = other_co.json()["id"]
+
+        mine_ct = await client.post("/api/v1/contacts", json={
+            "company_id": mine_co_id,
+            "display_name": "MineSegmentContact",
+        })
+        mine_ct_id = mine_ct.json()["id"]
+        other_ct = await client.post("/api/v1/contacts", json={
+            "company_id": other_co_id,
+            "display_name": "OtherSegmentContact",
+        })
+        other_ct_id = other_ct.json()["id"]
+
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES
+                (8201, 999, :mine_co, :mine_ct, 'MineSegmentDeal', 1000, 'won', 999, :dt, :dt),
+                (8202, 999, :other_co, :other_ct, 'OtherSegmentDeal', 1000, 'won', 321, :dt, :dt)
+        """), {
+            "mine_co": mine_co_id,
+            "mine_ct": mine_ct_id,
+            "other_co": other_co_id,
+            "other_ct": other_ct_id,
+            "dt": str(current),
+        })
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES
+                (999, :mine_co, :mine_ct, 8201, 'MINE-SEG-001', 1000, 'awaiting_payment', :dt),
+                (999, :other_co, :other_ct, 8202, 'OTHER-SEG-001', 2000, 'awaiting_payment', :dt)
+        """), {
+            "mine_co": mine_co_id,
+            "mine_ct": mine_ct_id,
+            "other_co": other_co_id,
+            "other_ct": other_ct_id,
+            "dt": str(current),
+        })
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/revenue-segments?scope=mine")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total"] == {"revenue": 1000.0, "order_count": 1, "customer_count": 1}
+        assert data["new"]["revenue"] == 1000.0
+        assert data["new"]["order_count"] == 1
+        assert data["new"]["customer_count"] == 1
+        assert data["repeat"]["revenue"] == 0.0
+        assert data["repeat"]["order_count"] == 0
+        assert data["repeat"]["customer_count"] == 0
+
+
+# ─────────────────────────────────────────────
 # summary 拡張テスト（新フィールド）
 # ─────────────────────────────────────────────
 
