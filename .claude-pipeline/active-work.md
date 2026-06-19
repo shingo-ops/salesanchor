@@ -156,6 +156,7 @@
 | feature/morimoto/paypal-sandbox-smoke | （自動登録・要補完） | 2026-06-19 00:46 | DONE | #2341 | | 自動登録 merged:db00260 |
 | feature/morimoto/develop-delete-guardrails | （自動登録・要補完） | 2026-06-19 01:02 | REVIEW | #2350 | | 自動登録 |
 | feature/morimoto/qa-smoke-playwright-package | （自動登録・要補完） | 2026-06-19 01:03 | REVIEW | #2351 | | 自動登録 |
+| feature/morimoto/develop-guard-workflow | （自動登録・要補完） | 2026-06-19 01:12 | REVIEW | #2353 | | 自動登録 |
 ---
 
 ## 記入例
