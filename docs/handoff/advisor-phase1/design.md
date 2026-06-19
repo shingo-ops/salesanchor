@@ -24,7 +24,7 @@
 
 - KPI: 顧客ごとの最終接触日、days_since_last_contact、接触回数、is_communication_low を period / scope / stale_days 別に read-only で返す
 - 期間: 1m / 3m / 6m / 12m。1m は JST 暦月境界、他は日数ベース
-- scope: team / mine。mine は customer-level のため companies.sales_rep_id で担当会社に絞る
+- scope: team / mine。mine は customer-level のため companies テーブルの sales_rep_id で担当会社に絞る
 - 接触回数: period 内の conversation_logs 件数
 - 最終接触日: conversation_logs.occurred_at の MAX
 - low 判定: last_contact_at が null、または days_since_last_contact >= stale_days

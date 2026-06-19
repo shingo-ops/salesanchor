@@ -12,7 +12,7 @@
 | backend/app/routers/analytics.py:97-110 | 顧客接触 API の response model（CustomerContactItem / CustomerContactsResponse）を追加 |
 | backend/app/routers/analytics.py:146-154 | 1m / 3m / 6m / 12m の期間境界 helper を流用 |
 | backend/app/routers/analytics.py:382-430 | /analytics/customer-contacts が period / scope / stale_days を受けて read-only 集計を返す |
-| backend/app/routers/analytics.py:400-430 | scope=mine は companies.sales_rep_id で担当会社に絞り、MAX(cl.occurred_at) から last_contact_at を導出 |
+| backend/app/routers/analytics.py:400-430 | 担当者向けスコープでは companies テーブルの sales_rep_id で担当会社に絞り、最終接触日時の最大値から last_contact_at を導出 |
 | backend/tests/test_analytics.py:86-194 | tenant_006 fixture、conversation_logs / public.data_access_events の SQLite 互換テーブルを追加 |
 | backend/tests/test_analytics.py:627-759 | team / mine / stale_days の pytest を追加 |
 
@@ -35,5 +35,5 @@
 ## 補足
 
 - read-only の集計 API 追加で、DB migration は不要。
-- `scope=mine` の基準は customer-level のため `companies.sales_rep_id` に統一した。
+- 担当者向けスコープの基準は customer-level のため、companies テーブルの sales_rep_id に統一した。
 - PayPal smoke は本 PR の必須チェックではないため、マージ判定から除外する。
