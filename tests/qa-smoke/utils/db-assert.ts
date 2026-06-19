@@ -32,6 +32,56 @@ function psqlUrl(): string {
   return raw.replace(/^postgresql\+asyncpg:/, "postgresql:");
 }
 
+function parsePsqlUrl() {
+  const url = new URL(psqlUrl());
+  const user = decodeURIComponent(url.username);
+  const password = decodeURIComponent(url.password);
+  const database = decodeURIComponent(url.pathname.replace(/^\//, "")) || "postgres";
+  return { user, password, database };
+}
+
+function runPsql(sql: string) {
+  const conn = psqlUrl();
+  const local = spawnSync("psql", [conn, "-At", "-F", "\t", "-c", sql], {
+    encoding: "utf-8",
+    timeout: 15_000,
+  });
+  if (local.status === 0) {
+    return local;
+  }
+
+  if (local.error && local.error.code === "ENOENT") {
+    const { user, password, database } = parsePsqlUrl();
+    const container = process.env.QA_SMOKE_PG_CONTAINER || "astro-webapp-postgres-1";
+    return spawnSync(
+      "docker",
+      [
+        "exec",
+        "-i",
+        "-e",
+        `PGPASSWORD=${password}`,
+        container,
+        "psql",
+        "-U",
+        user,
+        "-d",
+        database,
+        "-At",
+        "-F",
+        "\t",
+        "-c",
+        sql,
+      ],
+      {
+        encoding: "utf-8",
+        timeout: 15_000,
+      },
+    );
+  }
+
+  return local;
+}
+
 /**
  * PostgreSQL 文字列リテラル用の安全な quote。
  * シングルクォートをエスケープしてバインド代替として使う。
@@ -46,13 +96,10 @@ export function pgQuote(s: string): string {
  * 失敗時は throw。
  */
 export function psqlRows(sql: string): string[][] {
-  const r = spawnSync("psql", [psqlUrl(), "-At", "-F", "\t", "-c", sql], {
-    encoding: "utf-8",
-    timeout: 15_000,
-  });
+  const r = runPsql(sql);
   if (r.status !== 0) {
     throw new Error(
-      `psql failed (status=${r.status}): ${r.stderr || r.stdout || "<no output>"}`,
+      `psql failed (status=${r.status}): ${r.stderr || r.stdout || r.error?.message || "<no output>"}`,
     );
   }
   return r.stdout
