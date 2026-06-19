@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| サイドバー自動展開抑止の再実装 | Agent | 本番で「クリック後も hover 再展開」が残ることを確認し、`DesktopShell.tsx` から一度戻した上で、`sidebarExpandSuppressed` による再展開抑止案を採用 | `feature/morimoto/sidebar-click-collapse` を作成し、最小差分で commit / push / PR まで進める | 本番スクリーンショット / Playwright 実測 / `frontend/src/sidebar.css` | 2026-06-19 |
 | Claude Code KPI / Grafana 基盤 | Agent | backend の同時処理中リクエスト数 / SSE 接続数を `/metrics` と Grafana `backend-api-metrics` に追加し、さらに `monitoring-main` を総合通知 → 部門サマリー → 機能別詳細の階層ポータルへ再設計、色基準（緑=OK / 黄=注意 / 赤=異常）と repo反映 vs 実機反映の区別も明文化済み | Prometheus alert の warning line を実測値に合わせて微調整し、KPI 正本 `docs/ai-agents/kpi.md` の collector 設計へ反映する | `backend/app/metrics.py` / `backend/app/services/sse_pubsub.py` / `monitoring/grafana/provisioning/dashboards/json/backend-metrics.json` / `monitoring/grafana/provisioning/dashboards/json/monitoring-main.json` / `monitoring/prometheus/alert_rules.yml` / `docs/INCIDENT_RESPONSE.md` / `docs/runbooks/monitoring-vps-migration.md` 確認済み | 2026-06-17 |
 | 監視VPS移行 M8（ADR-080） | PO待ち | M7完了・M8未着手。ADR-081 で監視VPS 受信経路と backend worker 方針を最終確定済み | PO確認の上、Sakura パケットフィルタ反映 → app VPS から 3000/3001/9090 疎通確認 → 1週間運用確認後にアプリVPSの旧監視Dockerボリューム削除（prometheus_data/grafana_data/loki_data） | docs/runbooks/monitoring-vps-migration.md / docs/adr/ADR-081-monitoring-vps-final-operational-design.md | 2026-06-17 |
 | VPS runner登録（ADR-078） | PO待ち | 2026-06-15予定日到来も未実行。現在 qa-smoke 未稼働のまま | PO GOを待って `docs/runbooks/vps-runner-setup.md` に従い実行 | memory/project_vps_runner_plan.md / ADR-078 | 2026-06-17 |
