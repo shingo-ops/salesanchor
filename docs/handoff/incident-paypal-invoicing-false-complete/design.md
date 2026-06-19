@@ -4,8 +4,7 @@
 **作成**: Planner（Web Claude）
 **実装**: Generator（Claude Code）
 **参照 recon**: `docs/handoff/incident-paypal-invoicing-false-complete/recon.md`
-**参照 案ドラフト**: `incident-paypal-invoice-prevention.md`
-**対象 ADR**: 新規ADR起案が必要（下記§計画票）。関連既存ADR: ADR-051（claude-pipeline 自動化）/ ADR-121（process-artifacts gate）/ ADR-135（develop 常時出荷可能）/ ADR-136（危険変更0承認マージ防止・認可承認者の承認必須ロジック）/ ADR-112（設計起点フロー v2）/ ADR-012（ブランチ運用）/ ADR-124（sop-health-reporter）
+**対象 ADR**: ADR-1000（本インシデントのADR）。関連既存ADR: ADR-051（claude-pipeline 自動化）/ ADR-121（process-artifacts gate）/ ADR-135（develop 常時出荷可能）/ ADR-136（危険変更0承認マージ防止・認可承認者の承認必須ロジック）/ ADR-112（設計起点フロー v2）/ ADR-012（ブランチ運用）/ ADR-124（sop-health-reporter）
 **ステータス**: PO承認済み（KGI承認ゲート通過 2026-06-18）
 **日付**: 2026-06-18
 **正本**: `docs/STANDARD-WORKFLOW.md`。矛盾時は正本優先。

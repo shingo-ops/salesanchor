@@ -1,6 +1,6 @@
 # recon — PayPal請求書発行インシデント 現在地把握
 
-対応 brief: 再発防止案ドラフト（`incident-paypal-invoice-prevention.md`）の R1〜R6。
+対応 brief: 本インシデント対策ADR（ADR-1000）の R1〜R6。
 読み取り専用 / 変更・修復なし。
 
 実コードを **フルパス:行番号** で引用（短縮禁止）。
@@ -128,7 +128,7 @@ gate が検証するのは以下の **形式的要件** のみ:
 
 - `docs/handoff/paypal-invoicing/recon.md` → **存在し、file:line 引用あり**（→ R1で確認）
 - `docs/handoff/paypal-invoicing/design.md` → **存在し、基準表あり**（design.md:33-44 の `| # | 基準 | 検証方法 |` 表）
-- ADR-101 参照 → **あり**
+- ADR-1000 参照 → **あり**（新ADR）
 - PR 本文 `### 標準ワークフロー確認` → **あり**
 
 ### gate が止められなかった構造的理由
