@@ -94,6 +94,28 @@ class CustomerOrdersResponse(BaseModel):
     items: list[CustomerOrderItem]
 
 
+class RevenueSegmentStat(BaseModel):
+    revenue: float
+    order_count: int
+    avg_order_amount: float | None
+    customer_count: int
+    share: float
+
+
+class RevenueSegmentSummary(BaseModel):
+    revenue: float
+    order_count: int
+    customer_count: int
+
+
+class RevenueSegmentsResponse(BaseModel):
+    period: str
+    scope: str
+    new: RevenueSegmentStat
+    repeat: RevenueSegmentStat
+    total: RevenueSegmentSummary
+
+
 def _normalize_date(value: object) -> date:
     """DB から返る date / datetime / str を date に正規化する。"""
     if isinstance(value, datetime):
@@ -339,6 +361,107 @@ async def customer_orders_report(
 
     items.sort(key=lambda item: (item.last_order_at, item.total_amount, item.company_id), reverse=True)
     return CustomerOrdersResponse(items=items)
+
+
+@router.get(
+    "/analytics/revenue-segments",
+    response_model=RevenueSegmentsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def revenue_segments_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """新規/既存セグメント別の売上サマリーを返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    if scope == "mine":
+        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    split_result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                COALESCE(SUM(o.total_amount), 0) AS total_amount,
+                COUNT(*) AS order_count
+            FROM orders o
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start
+              AND o.created_at < :end
+            GROUP BY o.company_id
+            ORDER BY o.company_id
+        """),
+        {"start": start, "end": end, **order_scope_params},
+    )
+    split_rows = split_result.mappings().all()
+
+    new_revenue = 0.0
+    repeat_revenue = 0.0
+    new_order_count = 0
+    repeat_order_count = 0
+    new_customer_ids: set[int] = set()
+    repeat_customer_ids: set[int] = set()
+
+    for row in split_rows:
+        company_id = int(row["company_id"])
+        revenue = float(row["total_amount"] or 0)
+        order_count = int(row["order_count"] or 0)
+
+        prior_result = await db.execute(
+            text("SELECT COUNT(*) AS cnt FROM orders WHERE company_id = :cid AND created_at < :start"),
+            {"cid": company_id, "start": start},
+        )
+        prior_cnt = int((prior_result.mappings().first() or {}).get("cnt", 0) or 0)
+
+        if prior_cnt == 0:
+            new_revenue += revenue
+            new_order_count += order_count
+            new_customer_ids.add(company_id)
+        else:
+            repeat_revenue += revenue
+            repeat_order_count += order_count
+            repeat_customer_ids.add(company_id)
+
+    total_revenue = round(new_revenue + repeat_revenue, 2)
+    total_order_count = new_order_count + repeat_order_count
+    total_customer_count = len(new_customer_ids | repeat_customer_ids)
+
+    def _segment_payload(
+        revenue: float,
+        order_count: int,
+        customer_count: int,
+    ) -> RevenueSegmentStat:
+        avg_order_amount = round(revenue / order_count, 2) if order_count > 0 else None
+        share = round((revenue / total_revenue * 100), 1) if total_revenue > 0 else 0.0
+        return RevenueSegmentStat(
+            revenue=round(revenue, 2),
+            order_count=order_count,
+            avg_order_amount=avg_order_amount,
+            customer_count=customer_count,
+            share=share,
+        )
+
+    return RevenueSegmentsResponse(
+        period=period,
+        scope=scope,
+        new=_segment_payload(new_revenue, new_order_count, len(new_customer_ids)),
+        repeat=_segment_payload(repeat_revenue, repeat_order_count, len(repeat_customer_ids)),
+        total=RevenueSegmentSummary(
+            revenue=total_revenue,
+            order_count=total_order_count,
+            customer_count=total_customer_count,
+        ),
+    )
 
 
 # ─────────────────────────────────────────────
