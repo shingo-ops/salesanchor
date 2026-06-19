@@ -68,6 +68,15 @@
   transition: border-color 0.2s;
 }
 
+.fn-card--clickable {
+  cursor: pointer;
+}
+
+.fn-card--clickable:hover,
+.fn-card--clickable:focus-visible {
+  border-color: var(--accent);
+}
+
 .fn-card--bottleneck {
   border-color: var(--warning);
 }
@@ -168,6 +177,15 @@
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
+}
+
+.fn-revenue-card--clickable {
+  cursor: pointer;
+}
+
+.fn-revenue-card--clickable:hover,
+.fn-revenue-card--clickable:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-bg-subtle), var(--shadow-sm);
 }
 
 .fn-revenue-main {
@@ -328,12 +346,45 @@
   box-shadow: var(--shadow-sm);
 }
 
+.fn-side-card--clickable {
+  cursor: pointer;
+}
+
+.fn-side-card--clickable:hover,
+.fn-side-card--clickable:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-bg-subtle), var(--shadow-sm);
+}
+
+.fn-side-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  min-height: var(--space-6);
+}
+
+.fn-side-card-title {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+  flex: 1;
+}
+
 /* ── 要フォロー顧客カード ── */
 .fn-followup-summary-card {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
+}
+
+.fn-followup-summary-card--clickable {
+  cursor: pointer;
+}
+
+.fn-followup-summary-card--clickable:hover,
+.fn-followup-summary-card--clickable:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-bg-subtle), var(--shadow-sm);
 }
 
 .fn-followup-total {
