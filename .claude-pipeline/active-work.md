@@ -154,6 +154,7 @@
 | feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | DONE | #2340 | | 自動登録 merged:ce03ca3 |
 | feature/morimoto/executor-preflight-hook | （自動登録） | 2026-06-19 00:27 | DONE | #2347 | | merged:1e0efff merged時自動登録・要確認 |
 | feature/morimoto/paypal-sandbox-smoke | （自動登録・要補完） | 2026-06-19 00:46 | DONE | #2341 | | 自動登録 merged:db00260 |
+| feature/morimoto/develop-delete-guardrails | （自動登録・要補完） | 2026-06-19 01:02 | REVIEW | #2350 | | 自動登録 |
 ---
 
 ## 記入例
