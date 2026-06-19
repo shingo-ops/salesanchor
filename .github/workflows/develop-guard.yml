@@ -1,0 +1,44 @@
+# develop ブランチが削除されたら main から自動再作成し、Issue で通知する自己修復ガード。
+# 重要: delete イベントは「既定ブランチ(main)上にあるワークフロー定義」でのみ発火する。
+#       このファイルが develop にあるだけでは動かない。main に到達して初めて有効になる。
+name: develop-guard
+
+on:
+  delete:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  restore-develop:
+    if: github.event.ref_type == 'branch' && github.event.ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Recreate develop from main
+        run: |
+          git push origin HEAD:refs/heads/develop
+
+      - name: Alert via issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "develop was deleted - auto-recreated from main",
+              body: [
+                "develop が削除されたため、main から自動再作成しました。",
+                "",
+                "- 原因を調査してください（多くは head=develop のPRマージ＋head自動削除）。",
+                "- 削除で自動クローズされたPRがあれば reopen が必要なことがあります。",
+                "- 注意: 復元元は main 先端です。develop にしか無かった未マージのコミットは含まれません",
+                "  （必要なら reflog / 該当PRの merge SHA から復元）。"
+              ].join("\\n")
+            });
