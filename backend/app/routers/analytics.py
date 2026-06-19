@@ -94,6 +94,22 @@ class CustomerOrdersResponse(BaseModel):
     items: list[CustomerOrderItem]
 
 
+class CustomerContactItem(BaseModel):
+    company_id: int
+    company_name: str
+    contact_count: int
+    last_contact_at: str | None
+    days_since_last_contact: int | None
+    is_communication_low: bool
+
+
+class CustomerContactsResponse(BaseModel):
+    period: str
+    scope: str
+    stale_days: int
+    items: list[CustomerContactItem]
+
+
 class RevenueSegmentStat(BaseModel):
     revenue: float
     order_count: int
@@ -361,6 +377,85 @@ async def customer_orders_report(
 
     items.sort(key=lambda item: (item.last_order_at, item.total_amount, item.company_id), reverse=True)
     return CustomerOrdersResponse(items=items)
+
+
+@router.get(
+    "/analytics/customer-contacts",
+    response_model=CustomerContactsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def customer_contacts_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    stale_days: int = Query(default=30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """顧客別の接触履歴とコミュニケーション低下フラグを返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    company_scope_filter = "AND c.sales_rep_id = :uid" if scope == "mine" else ""
+    company_scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                c.id AS company_id,
+                COALESCE(c.name, '') AS company_name,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN cl.occurred_at >= :start AND cl.occurred_at < :end THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS contact_count,
+                MAX(cl.occurred_at) AS last_conversation_at
+            FROM companies c
+            LEFT JOIN conversation_logs cl ON cl.company_id = c.id
+            WHERE 1 = 1
+              {company_scope_filter}
+            GROUP BY c.id, c.name
+            ORDER BY
+                CASE WHEN MAX(cl.occurred_at) IS NULL THEN 1 ELSE 0 END DESC,
+                MAX(cl.occurred_at) ASC,
+                c.id
+        """),
+        {"start": start, "end": end, **company_scope_params},
+    )
+    rows = result.mappings().all()
+
+    items: list[CustomerContactItem] = []
+    for row in rows:
+        last_contact_raw = row["last_conversation_at"]
+        last_contact_at: str | None = None
+        days_since_last_contact: int | None = None
+        is_communication_low = True
+        if last_contact_raw is not None:
+            last_contact_date = _normalize_date(last_contact_raw)
+            last_contact_at = last_contact_date.isoformat()
+            days_since_last_contact = (today - last_contact_date).days
+            is_communication_low = days_since_last_contact >= stale_days
+
+        items.append(CustomerContactItem(
+            company_id=int(row["company_id"]),
+            company_name=str(row["company_name"] or ""),
+            contact_count=int(row["contact_count"] or 0),
+            last_contact_at=last_contact_at,
+            days_since_last_contact=days_since_last_contact,
+            is_communication_low=is_communication_low,
+        ))
+
+    return CustomerContactsResponse(
+        period=period,
+        scope=scope,
+        stale_days=stale_days,
+        items=items,
+    )
 
 
 @router.get(

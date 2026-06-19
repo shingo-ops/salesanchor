@@ -15,6 +15,7 @@ NOTE:
 from datetime import date, timedelta
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
 
 
@@ -80,6 +81,117 @@ async def _seed_orders(client, pairs, count: int = 3):
         })
         orders.append(res.json())
     return orders
+
+
+@pytest_asyncio.fixture
+async def client_tenant_006(db_session):
+    """tenant_006 前提のテストクライアント。tenant_4 は使わない。"""
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.database import get_db
+    from app.main import app
+    from app.models import User
+    from httpx import ASGITransport, AsyncClient
+    from unittest.mock import patch
+
+    mock_user = User()
+    mock_user.id = 6
+    mock_user.tenant_id = 6
+    mock_user.username = "tenant006-user"
+    mock_user.email = "tenant006@example.com"
+    mock_user.role = "admin"
+    mock_user.is_active = True
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_get_current_user():
+        return mock_user
+
+    async def override_get_current_tenant():
+        return 6
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_tenant] = override_get_current_tenant
+
+    await db_session.execute(text("""
+        CREATE TABLE IF NOT EXISTS conversation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id INTEGER NOT NULL,
+            company_id INTEGER,
+            contact_id INTEGER,
+            channel_type VARCHAR(30) NOT NULL,
+            channel_identity VARCHAR(255),
+            direction VARCHAR(10) NOT NULL,
+            sender VARCHAR(100),
+            content_text TEXT,
+            external_message_id VARCHAR(255),
+            raw_payload TEXT,
+            status VARCHAR(20) DEFAULT 'sent',
+            translated_text TEXT,
+            analysis TEXT,
+            occurred_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """))
+    await db_session.execute(text("""
+        CREATE TABLE IF NOT EXISTS public.data_access_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type VARCHAR(30) NOT NULL,
+            method VARCHAR(20) NOT NULL,
+            path VARCHAR(255) NOT NULL,
+            status_code INTEGER NOT NULL,
+            user_email VARCHAR(255),
+            client_ip VARCHAR(255),
+            user_agent VARCHAR(255),
+            duration_ms INTEGER
+        )
+    """))
+    await db_session.commit()
+
+    transport = ASGITransport(app=app)
+    with (
+        patch("app.routers.companies.record_audit_log", _noop_record_audit_log),
+        patch("app.routers.contacts.record_audit_log", _noop_record_audit_log),
+    ):
+        try:
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                yield ac
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_current_tenant, None)
+
+
+async def _insert_conversation(
+    db_session,
+    *,
+    company_id: int,
+    contact_id: int | None,
+    days_ago: int,
+    tenant_id: int = 6,
+    content_text: str = "test",
+) -> None:
+    occurred_at = date.today() - timedelta(days=days_ago)
+    await db_session.execute(text("""
+        INSERT INTO conversation_logs (
+            tenant_id, company_id, contact_id,
+            channel_type, direction, content_text, occurred_at
+        ) VALUES (
+            :tenant_id, :company_id, :contact_id,
+            'email', 'inbound', :content_text, :occurred_at
+        )
+    """), {
+        "tenant_id": tenant_id,
+        "company_id": company_id,
+        "contact_id": contact_id,
+        "content_text": content_text,
+        "occurred_at": occurred_at,
+    })
+
+
+async def _noop_record_audit_log(*args, **kwargs):
+    return None
 
 
 # ─────────────────────────────────────────────
@@ -510,6 +622,141 @@ class TestCustomerOrders:
         assert len(items) == 1
         assert items[0]["company_id"] == mine_co_id
         assert items[0]["order_count"] == 1
+
+
+class TestCustomerContacts:
+    """GET /analytics/customer-contacts"""
+
+    async def test_customer_contacts_team_scope(self, client_tenant_006, db_session):
+        """team は全会社を返し、接触低下フラグと no-contact の扱いが正しい"""
+        today = date.today()
+
+        own_co = await client_tenant_006.post(
+            "/api/v1/companies",
+            json={"name": "OwnContactCo", "sales_rep_id": 6},
+        )
+        own_co_id = own_co.json()["id"]
+        stale_co = await client_tenant_006.post(
+            "/api/v1/companies",
+            json={"name": "StaleContactCo", "sales_rep_id": 7},
+        )
+        stale_co_id = stale_co.json()["id"]
+        silent_co = await client_tenant_006.post(
+            "/api/v1/companies",
+            json={"name": "SilentContactCo", "sales_rep_id": 7},
+        )
+        silent_co_id = silent_co.json()["id"]
+
+        own_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": own_co_id,
+            "display_name": "OwnContact",
+        })
+        own_ct_id = own_ct.json()["id"]
+        stale_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": stale_co_id,
+            "display_name": "StaleContact",
+        })
+        stale_ct_id = stale_ct.json()["id"]
+
+        await _insert_conversation(
+            db_session,
+            company_id=own_co_id,
+            contact_id=own_ct_id,
+            days_ago=5,
+            content_text="recent contact",
+        )
+        await _insert_conversation(
+            db_session,
+            company_id=stale_co_id,
+            contact_id=stale_ct_id,
+            days_ago=40,
+            content_text="stale contact",
+        )
+        await db_session.commit()
+
+        res = await client_tenant_006.get("/api/v1/analytics/customer-contacts?period=3m&scope=team")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["period"] == "3m"
+        assert data["scope"] == "team"
+        assert data["stale_days"] == 30
+
+        items = {item["company_id"]: item for item in data["items"]}
+        assert items[own_co_id]["company_name"] == "OwnContactCo"
+        assert items[own_co_id]["contact_count"] == 1
+        assert items[own_co_id]["last_contact_at"] == str(today - timedelta(days=5))
+        assert items[own_co_id]["days_since_last_contact"] == 5
+        assert items[own_co_id]["is_communication_low"] is False
+
+        assert items[stale_co_id]["company_name"] == "StaleContactCo"
+        assert items[stale_co_id]["contact_count"] == 1
+        assert items[stale_co_id]["last_contact_at"] == str(today - timedelta(days=40))
+        assert items[stale_co_id]["days_since_last_contact"] == 40
+        assert items[stale_co_id]["is_communication_low"] is True
+
+        assert items[silent_co_id]["company_name"] == "SilentContactCo"
+        assert items[silent_co_id]["contact_count"] == 0
+        assert items[silent_co_id]["last_contact_at"] is None
+        assert items[silent_co_id]["days_since_last_contact"] is None
+        assert items[silent_co_id]["is_communication_low"] is True
+
+    async def test_customer_contacts_mine_scope_and_threshold(self, client_tenant_006, db_session):
+        """scope=mine は担当会社のみ、stale_days でフラグが変わる"""
+        today = date.today()
+
+        own_co = await client_tenant_006.post(
+            "/api/v1/companies",
+            json={"name": "MineContactCo", "sales_rep_id": 6},
+        )
+        own_co_id = own_co.json()["id"]
+        other_co = await client_tenant_006.post(
+            "/api/v1/companies",
+            json={"name": "OtherContactCo", "sales_rep_id": 7},
+        )
+        other_co_id = other_co.json()["id"]
+
+        own_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": own_co_id,
+            "display_name": "MineContact",
+        })
+        own_ct_id = own_ct.json()["id"]
+        other_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": other_co_id,
+            "display_name": "OtherContact",
+        })
+        other_ct_id = other_ct.json()["id"]
+
+        await _insert_conversation(
+            db_session,
+            company_id=own_co_id,
+            contact_id=own_ct_id,
+            days_ago=5,
+            content_text="mine contact",
+        )
+        await _insert_conversation(
+            db_session,
+            company_id=other_co_id,
+            contact_id=other_ct_id,
+            days_ago=40,
+            content_text="other contact",
+        )
+        await db_session.commit()
+
+        res = await client_tenant_006.get(
+            "/api/v1/analytics/customer-contacts?period=3m&scope=mine&stale_days=3",
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["scope"] == "mine"
+        assert data["stale_days"] == 3
+
+        items = data["items"]
+        assert len(items) == 1
+        assert items[0]["company_id"] == own_co_id
+        assert items[0]["contact_count"] == 1
+        assert items[0]["last_contact_at"] == str(today - timedelta(days=5))
+        assert items[0]["days_since_last_contact"] == 5
+        assert items[0]["is_communication_low"] is True
 
 
 # ─────────────────────────────────────────────

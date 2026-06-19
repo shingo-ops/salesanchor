@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
