@@ -1,4 +1,4 @@
-# design.md — Advisor Phase 1 / PR-3 顧客別 接触集計API
+# design.md — Advisor Phase 1 / PR-4 新規モード 逆算アドバイスAPI
 
 **対象ADR**: ADR-139
 **recon**: docs/handoff/advisor-phase1/recon.md
@@ -7,48 +7,58 @@
 
 ## 目的
 
-顧客ごとの接触頻度を read-only で返し、目標設定アドバイザーの「維持・離脱予兆」基盤にする。
+月次の売上目標または成約件数目標から、必要成約数・必要商談数・必要リード数と今週分を read-only で返す。根拠として使った単価、率、稼働日、shift_status を同時に返し、画面はその結果を表示するだけにする。
 
 ## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
-| GET /api/v1/analytics/customer-contacts が返る | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
-| period / scope / stale_days がレスポンスに反映される | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
-| last_contact_at / days_since_last_contact / contact_count / is_communication_low が正しい | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
-| scope=mine で担当外会社が混ざらない | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
-| no-contact 顧客が low 扱いになる | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
+| GET /api/v1/analytics/new-goal-advice が返る | pytest backend/tests/test_analytics.py -q -k new_goal_advice --no-cov |
+| kgi_type=revenue で unit_price から必要成約数が算出される | pytest backend/tests/test_analytics.py -q -k new_goal_advice --no-cov |
+| kgi_type=wins で月次成約件数を起点に必要商談数・必要リード数が算出される | pytest backend/tests/test_analytics.py -q -k new_goal_advice --no-cov |
+| submitted / not_submitted の shift_status が正しい | pytest backend/tests/test_analytics.py -q -k new_goal_advice --no-cov |
+| data_sufficient=false のとき monthly_required / weekly_required が null になる | pytest backend/tests/test_analytics.py -q -k new_goal_advice --no-cov |
 | process-artifacts gate が通る | GitHub Actions の process-artifacts gate |
 
 ## 技術方針
 
-- KPI: 顧客ごとの最終接触日、days_since_last_contact、接触回数、is_communication_low を period / scope / stale_days 別に read-only で返す
-- 期間: 1m / 3m / 6m / 12m。1m は JST 暦月境界、他は日数ベース
-- scope: team / mine。mine は customer-level のため companies テーブルの sales_rep_id で担当会社に絞る
-- 接触回数: period 内の conversation_logs 件数
-- 最終接触日: conversation_logs.occurred_at の MAX
-- low 判定: last_contact_at が null、または days_since_last_contact >= stale_days
+- 入力は monthly_kgi, kgi_type, period, scope。
+- kgi_type は revenue と wins の 2 種のみ。
+- rates_used は表示用の百分率で返す。内部の逆算では 100 で割った比率を使う。
+- unit_price は revenue-segments の new.avg_order_amount を使う。
+- win_rate は deals の won 件数 / total 件数、deal_rate は leads の converted 件数 / total 件数。
+- data_sufficient は rate が 0/null、または revenue モードで unit_price が 0/null のとき false。
+- monthly_required は revenue モードなら monthly_kgi / unit_price を起点に、wins → deals → leads の順で逆算する。
+- wins モードは monthly_kgi を成約件数として扱い、そのまま deals / leads を逆算する。
+- working_days は shifts テーブルの current_user.id を元に計算する。current month に 1 行でもあれば submitted、無ければ not_submitted。
+- submitted 時は distinct shift_date を今日以降で数える。not_submitted 時は平日（月〜金）を数える。週次は今日から週末までの範囲で同じルールを使う。
+- 祝日は v1 では考慮しない。
 
 ## 外部・過去事例の参照と我々への応用
 
-該当なし。今回の PR は既存の conversation_logs と companies.sales_rep_id を read-only で集計するだけで、外部ライブラリや追加の過去事例を参照して設計を変える必要はない。
+該当なし。今回の PR は既存の revenue-segments、deals、leads、shifts を read-only で組み合わせるだけで、外部ライブラリや追加の過去事例を参照して設計を変える必要はない。
 
 ## API
 
-- ルート: /api/v1/analytics/customer-contacts
+- ルート: /api/v1/analytics/new-goal-advice
 - クエリ:
-  - period: 1m / 3m / 6m / 12m
+  - monthly_kgi: 必須
+  - kgi_type: revenue / wins
   - scope: team / mine
-  - stale_days: 既定 30
+  - period: 1m / 3m / 6m / 12m
 - レスポンス:
-  - period, scope, stale_days
-  - items: company_id, company_name, contact_count, last_contact_at, days_since_last_contact, is_communication_low
+  - inputs: monthly_kgi, kgi_type, period, scope
+  - rates_used: unit_price, win_rate, deal_rate
+  - monthly_required: wins, deals, leads
+  - weekly_required: wins, deals, leads
+  - working_days: remaining_month, remaining_week, shift_status
+  - data_sufficient: bool
 
 ## 変更範囲
 
-- backend/app/routers/analytics.py: 集計 API 追加
+- backend/app/routers/analytics.py: 逆算アドバイス API 追加
 - backend/tests/test_analytics.py: tenant_006 の pytest 追加
-- docs/handoff/advisor-phase1/: recon / design を PR-3 用に更新
+- docs/handoff/advisor-phase1/: recon / design を PR-4 用に更新
 
 ## 検証メモ
 

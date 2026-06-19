@@ -1,6 +1,6 @@
-# recon: Advisor Phase 1 / PR-3 顧客別 接触集計API
+# recon: Advisor Phase 1 / PR-4 新規モード 逆算アドバイスAPI
 
-**仕事名**: Advisor Phase 1 / PR-3 顧客別 接触集計API
+**仕事名**: Advisor Phase 1 / PR-4 新規モード 逆算アドバイスAPI
 **日付**: 2026-06-20
 **対象ADR**: ADR-139
 **担当**: architect
@@ -9,31 +9,34 @@
 
 | 引用先 path:line | 確認内容 |
 |------------------|---------|
-| backend/app/routers/analytics.py:97-110 | 顧客接触 API の response model（CustomerContactItem / CustomerContactsResponse）を追加 |
-| backend/app/routers/analytics.py:146-154 | 1m / 3m / 6m / 12m の期間境界 helper を流用 |
-| backend/app/routers/analytics.py:382-430 | /analytics/customer-contacts が period / scope / stale_days を受けて read-only 集計を返す |
-| backend/app/routers/analytics.py:400-430 | 担当者向けスコープでは companies テーブルの sales_rep_id で担当会社に絞り、最終接触日時の最大値から last_contact_at を導出 |
-| backend/tests/test_analytics.py:86-194 | tenant_006 fixture、conversation_logs / public.data_access_events の SQLite 互換テーブルを追加 |
-| backend/tests/test_analytics.py:627-759 | team / mine / stale_days の pytest を追加 |
+| backend/app/routers/analytics.py:114-145 | 逆算アドバイスの response model（GoalAdviceInputs / GoalAdviceRatesUsed / GoalAdviceRequired / GoalAdviceWorkingDays / GoalAdviceResponse）を追加 |
+| backend/app/routers/analytics.py:181-243 | 期間境界、平日カウント、月末・週末、shifts の distinct カウント helper を追加 |
+| backend/app/routers/analytics.py:555-648 | revenue-segments が new セグメントの avg_order_amount を返し、unit_price の根拠になる |
+| backend/app/routers/analytics.py:651-814 | /analytics/new-goal-advice が monthly_kgi / kgi_type / scope / period を受け、rates_used / monthly_required / weekly_required / working_days / data_sufficient を返す |
+| backend/tests/test_analytics.py:193-230 | shifts 行の投入 helper と平日カウント helper を追加 |
+| backend/tests/test_analytics.py:958-1177 | revenue / wins / data_sufficient の pytest を追加 |
 
 ## 事実メモ
 
-- 最終接触日は conversation_logs.occurred_at の MAX から導出する。v_company_stats は使わない。
-- 接触回数は period 内の conversation_logs 件数。
-- is_communication_low は last_contact_at がない場合も true にする（no-contact 顧客も低接触扱い）。
-- tenant_006 のテスト実行時は tenant_id=6 を使い、tenant_4 は使っていない。
+- unit_price は revenue-segments の new.avg_order_amount をそのまま使う。
+- win_rate は deals の won 件数 / total 件数、deal_rate は leads の converted 件数 / total 件数で計算する。
+- rates_used の win_rate / deal_rate は表示用の百分率値で、内部計算では 100 で割って使う。
+- shifts はログイン中ユーザーの current_user.id で数える。current month に1行でもあれば submitted、無ければ not_submitted。
+- submitted 時の remaining_month / remaining_week は distinct shift_date を今日以降で数える。not_submitted 時は平日（月〜金）で数える。
+- data_sufficient=false のときは monthly_required / weekly_required を null にする。
+- tenant_006 のテストを使い、tenant_4 は使っていない。
 
 ## 不明点リスト
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | last_contact_at を date 表示にするか datetime 表示にするか | 既存 dashboard の日付表示に合わせて date 化 | 解消済み |
-| 2 | no-contact 顧客を low とみなすか | 0接触を low 扱いにするテストで固定 | 解消済み |
+| 1 | 逆算の rate を百分率で返すか比率で返すか | 百分率で返し、内部計算で 100 分の 1 に変換 | 解消済み |
+| 2 | shifts の remaining_month を月内全件にするか今日以降にするか | 今日以降の distinct shift_date に統一 | 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
 
 ## 補足
 
-- read-only の集計 API 追加で、DB migration は不要。
-- 担当者向けスコープの基準は customer-level のため、companies テーブルの sales_rep_id に統一した。
+- read-only の集計 API 追加で、DB migration / deploy.yml 変更は不要。
+- scope=mine は rates の集計範囲に適用し、working_days はログイン中ユーザーのシフトで判定する。
 - PayPal smoke は本 PR の必須チェックではないため、マージ判定から除外する。

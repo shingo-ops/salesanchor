@@ -190,6 +190,50 @@ async def _insert_conversation(
     })
 
 
+async def _insert_shift(
+    db_session,
+    *,
+    shift_date: date,
+    user_id: int = 6,
+    tenant_id: int = 6,
+) -> None:
+    """tenant_006 の shifts 行を 1 件追加する。"""
+    await db_session.execute(text("""
+        INSERT INTO shifts (
+            tenant_id, user_id, shift_date, start_time, end_time, shift_type, notes
+        ) VALUES (
+            :tenant_id, :user_id, :shift_date, '09:00', '18:00', 'normal', 'advisor-test'
+        )
+    """), {
+        "tenant_id": tenant_id,
+        "user_id": user_id,
+        "shift_date": shift_date.isoformat(),
+    })
+
+
+def _count_weekdays_inclusive(start: date, end: date) -> int:
+    """start〜end を両端含みで平日だけ数える。"""
+    if end < start:
+        return 0
+    total = 0
+    current = start
+    while current <= end:
+        if current.weekday() < 5:
+            total += 1
+        current += timedelta(days=1)
+    return total
+
+
+def _month_end_date(today: date) -> date:
+    from calendar import monthrange
+
+    return date(today.year, today.month, monthrange(today.year, today.month)[1])
+
+
+def _week_end_date(today: date) -> date:
+    return today + timedelta(days=(6 - today.weekday()))
+
+
 async def _noop_record_audit_log(*args, **kwargs):
     return None
 
@@ -909,6 +953,228 @@ class TestRevenueSegments:
         assert data["repeat"]["revenue"] == 0.0
         assert data["repeat"]["order_count"] == 0
         assert data["repeat"]["customer_count"] == 0
+
+
+class TestNewGoalAdvice:
+    """GET /analytics/new-goal-advice"""
+
+    async def test_new_goal_advice_revenue_with_shifts_and_rates(self, client_tenant_006, db_session):
+        """revenue 逆算が単価・成約率・商談化率とシフト連動で正しく計算される"""
+        today = date.today()
+        month_end = _month_end_date(today)
+        week_end = _week_end_date(today)
+
+        shift_dates: list[date] = []
+        for delta_days in (0, 1, 2):
+            candidate = today + timedelta(days=delta_days)
+            if candidate <= month_end:
+                shift_dates.append(candidate)
+        for shift_date in shift_dates:
+            await _insert_shift(db_session, shift_date=shift_date)
+
+        new_co = await client_tenant_006.post("/api/v1/companies", json={"name": "AdviceNewCo"})
+        new_co_id = new_co.json()["id"]
+        repeat_co = await client_tenant_006.post("/api/v1/companies", json={"name": "AdviceRepeatCo"})
+        repeat_co_id = repeat_co.json()["id"]
+
+        new_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": new_co_id,
+            "display_name": "AdviceNewContact",
+        })
+        new_ct_id = new_ct.json()["id"]
+        repeat_ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": repeat_co_id,
+            "display_name": "AdviceRepeatContact",
+        })
+        repeat_ct_id = repeat_ct.json()["id"]
+
+        new_deal_id = 9201
+        repeat_deal_id = 9202
+        past_order_date = today - timedelta(days=91)
+
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES
+                (:new_deal_id, 6, :new_co_id, :new_ct_id, 'AdviceNewDeal', 1000, 'won', 6, :today_dt, :today_dt),
+                (:repeat_deal_id, 6, :repeat_co_id, :repeat_ct_id, 'AdviceRepeatDeal', 1500, 'open', 6, :today_dt, :today_dt)
+        """), {
+            "new_deal_id": new_deal_id,
+            "repeat_deal_id": repeat_deal_id,
+            "new_co_id": new_co_id,
+            "new_ct_id": new_ct_id,
+            "repeat_co_id": repeat_co_id,
+            "repeat_ct_id": repeat_ct_id,
+            "today_dt": str(today),
+        })
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES
+                (6, :new_co_id, :new_ct_id, :new_deal_id, 'ADV-NEW-001', 1000, 'awaiting_payment', :today_dt),
+                (6, :repeat_co_id, :repeat_ct_id, :repeat_deal_id, 'ADV-REP-001', 500, 'awaiting_payment', :past_dt),
+                (6, :repeat_co_id, :repeat_ct_id, :repeat_deal_id, 'ADV-REP-002', 1500, 'awaiting_payment', :today_dt)
+        """), {
+            "new_co_id": new_co_id,
+            "new_ct_id": new_ct_id,
+            "new_deal_id": new_deal_id,
+            "repeat_co_id": repeat_co_id,
+            "repeat_ct_id": repeat_ct_id,
+            "repeat_deal_id": repeat_deal_id,
+            "today_dt": str(today),
+            "past_dt": str(past_order_date),
+        })
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, assigned_to, converted_deal_id, created_at)
+            VALUES
+                (6, 'AdviceLead1', 'web', 'inbound', 'converted', 6, :new_deal_id, :today_dt),
+                (6, 'AdviceLead2', 'web', 'inbound', 'converted', 6, :repeat_deal_id, :today_dt),
+                (6, 'AdviceLead3', 'web', 'inbound', 'new', 6, NULL, :today_dt),
+                (6, 'AdviceLead4', 'web', 'inbound', 'new', 6, NULL, :today_dt)
+        """), {
+            "new_deal_id": new_deal_id,
+            "repeat_deal_id": repeat_deal_id,
+            "today_dt": str(today),
+        })
+        await db_session.commit()
+
+        res = await client_tenant_006.get(
+            "/api/v1/analytics/new-goal-advice",
+            params={
+                "monthly_kgi": 10000,
+                "kgi_type": "revenue",
+                "scope": "mine",
+                "period": "3m",
+            },
+        )
+        assert res.status_code == 200, res.text
+        data = res.json()
+
+        assert data["inputs"] == {
+            "monthly_kgi": 10000.0,
+            "kgi_type": "revenue",
+            "period": "3m",
+            "scope": "mine",
+        }
+        assert data["rates_used"]["unit_price"] == 1000.0
+        assert data["rates_used"]["win_rate"] == 50.0
+        assert data["rates_used"]["deal_rate"] == 50.0
+        assert data["data_sufficient"] is True
+        assert data["monthly_required"] == {"wins": 10.0, "deals": 20.0, "leads": 40.0}
+        expected_remaining_month = len({d for d in shift_dates if d >= today})
+        expected_remaining_week = len({d for d in shift_dates if d <= week_end})
+        assert data["working_days"]["shift_status"] == "submitted"
+        assert data["working_days"]["remaining_month"] == max(expected_remaining_month, 1)
+        assert data["working_days"]["remaining_week"] == expected_remaining_week
+
+        monthly_wins = data["monthly_required"]["wins"]
+        assert data["weekly_required"]["wins"] == round(monthly_wins / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"], 2)
+        assert data["weekly_required"]["deals"] == round(data["monthly_required"]["deals"] / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"], 2)
+        assert data["weekly_required"]["leads"] == round(data["monthly_required"]["leads"] / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"], 2)
+
+    async def test_new_goal_advice_wins_without_unit_price_and_not_submitted(self, client_tenant_006, db_session):
+        """wins は unit_price が無くても成立し、シフト未提出なら平日フォールバックになる"""
+        today = date.today()
+        month_end = _month_end_date(today)
+        week_end = _week_end_date(today)
+
+        won_deal_id = 9301
+        open_deal_id = 9302
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES
+                (:won_deal_id, 6, NULL, NULL, 'WinsAdviceWon', 1200, 'won', 6, :today_dt, :today_dt),
+                (:open_deal_id, 6, NULL, NULL, 'WinsAdviceOpen', 800, 'open', 6, :today_dt, :today_dt)
+        """), {
+            "won_deal_id": won_deal_id,
+            "open_deal_id": open_deal_id,
+            "today_dt": str(today),
+        })
+        await db_session.execute(text("""
+            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status, assigned_to, converted_deal_id, created_at)
+            VALUES
+                (6, 'WinsAdviceLead1', 'web', 'inbound', 'converted', 6, :won_deal_id, :today_dt),
+                (6, 'WinsAdviceLead2', 'web', 'inbound', 'converted', 6, :open_deal_id, :today_dt),
+                (6, 'WinsAdviceLead3', 'web', 'inbound', 'new', 6, NULL, :today_dt),
+                (6, 'WinsAdviceLead4', 'web', 'inbound', 'new', 6, NULL, :today_dt)
+        """), {
+            "won_deal_id": won_deal_id,
+            "open_deal_id": open_deal_id,
+            "today_dt": str(today),
+        })
+        await db_session.commit()
+
+        res = await client_tenant_006.get(
+            "/api/v1/analytics/new-goal-advice",
+            params={
+                "monthly_kgi": 8,
+                "kgi_type": "wins",
+                "scope": "mine",
+                "period": "3m",
+            },
+        )
+        assert res.status_code == 200, res.text
+        data = res.json()
+
+        assert data["rates_used"]["unit_price"] is None
+        assert data["rates_used"]["win_rate"] == 50.0
+        assert data["rates_used"]["deal_rate"] == 50.0
+        assert data["data_sufficient"] is True
+        assert data["monthly_required"] == {"wins": 8.0, "deals": 16.0, "leads": 32.0}
+        assert data["working_days"]["shift_status"] == "not_submitted"
+        assert data["working_days"]["remaining_month"] == _count_weekdays_inclusive(today, month_end)
+        assert data["working_days"]["remaining_week"] == _count_weekdays_inclusive(today, week_end)
+        assert data["weekly_required"]["wins"] == round(
+            data["monthly_required"]["wins"] / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"],
+            2,
+        )
+        assert data["weekly_required"]["deals"] == round(
+            data["monthly_required"]["deals"] / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"],
+            2,
+        )
+        assert data["weekly_required"]["leads"] == round(
+            data["monthly_required"]["leads"] / data["working_days"]["remaining_month"] * data["working_days"]["remaining_week"],
+            2,
+        )
+
+    async def test_new_goal_advice_revenue_insufficient_when_rates_missing(self, client_tenant_006, db_session):
+        """revenue で単価があっても率が欠けていれば data_sufficient=false になる"""
+        today = date.today()
+
+        co = await client_tenant_006.post("/api/v1/companies", json={"name": "AdviceSparseCo"})
+        co_id = co.json()["id"]
+        ct = await client_tenant_006.post("/api/v1/contacts", json={
+            "company_id": co_id,
+            "display_name": "AdviceSparseContact",
+        })
+        ct_id = ct.json()["id"]
+
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES (9401, 6, :co_id, :ct_id, 'AdviceSparseDeal', 1000, 'open', 6, :today_dt, :today_dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "today_dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES (6, :co_id, :ct_id, 9401, 'ADV-SPARSE-001', 1000, 'awaiting_payment', :today_dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "today_dt": str(today)})
+        await db_session.commit()
+
+        res = await client_tenant_006.get(
+            "/api/v1/analytics/new-goal-advice",
+            params={
+                "monthly_kgi": 10000,
+                "kgi_type": "revenue",
+                "scope": "mine",
+                "period": "3m",
+            },
+        )
+        assert res.status_code == 200, res.text
+        data = res.json()
+
+        assert data["rates_used"]["unit_price"] == 1000.0
+        assert data["rates_used"]["win_rate"] == 0.0
+        assert data["rates_used"]["deal_rate"] is None
+        assert data["data_sufficient"] is False
+        assert data["monthly_required"] == {"wins": None, "deals": None, "leads": None}
+        assert data["weekly_required"] == {"wins": None, "deals": None, "leads": None}
 
 
 # ─────────────────────────────────────────────
