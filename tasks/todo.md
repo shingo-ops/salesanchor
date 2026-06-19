@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| Advisor Phase 1 PR-2 新規/既存セグメント別 売上サマリーAPI | Agent | `backend/app/routers/analytics.py` に `/analytics/revenue-segments` を追加し、`new / repeat` の売上・件数・平均単価・顧客数・構成比を返す read-only 集計 API を実装中 | `backend/tests/test_analytics.py` に team / mine / boundary の pytest を追加し、`docs/handoff/advisor-phase1/` の recon/design を PR-2 用に更新して branch → push → CI へ進める | `backend/app/routers/analytics.py:97-464` / `backend/tests/test_analytics.py:519-664` / `docs/handoff/advisor-phase1/recon.md` / `docs/handoff/advisor-phase1/design.md` | 2026-06-20 |
+| Advisor Phase 1 PR-3 顧客別 接触集計API | Agent | `backend/app/routers/analytics.py` に `/analytics/customer-contacts` を追加し、`last_contact_at` / `days_since_last_contact` / `contact_count` / `is_communication_low` を返す read-only 集計 API を実装中 | `backend/tests/test_analytics.py` に tenant_006 の team / mine / stale_days pytest を追加し、`docs/handoff/advisor-phase1/` の recon/design を PR-3 用に更新して branch → push → CI へ進める | `backend/app/routers/analytics.py:97-430` / `backend/tests/test_analytics.py:86-194` / `backend/tests/test_analytics.py:627-759` / `docs/handoff/advisor-phase1/recon.md` / `docs/handoff/advisor-phase1/design.md` | 2026-06-20 |
 | PayPal Sandbox smoke の coverage 閾値除去 | Agent | `/private/tmp/paypal-sandbox/.github/workflows/external-api-smoke.yml` に `--no-cov` を追加済み | `test_paypal_sandbox.py` が PASS し、`process-artifacts gate` を含む workflow 全体が green であることを確認済み（run 27833818674 / 27833818677） | `/private/tmp/paypal-sandbox/.github/workflows/external-api-smoke.yml` / `gh run watch 27833818677` / `gh pr checks 2354` | 2026-06-20 |
 | Discord ticket gateway visibility + lead紐付け修正 | Agent | PR #2360 反映後、private ticket channel の bot 可視性不足と未作成 lead を実機で再現し、`ticket_channel_creator.py` の修正着手中 | `backend/app/discord_gateway/ticket_channel_creator.py` の bot overwrite / lead upsert をテストで固め、CI 確認へ進む | PR #2360 / VPS ログ `Missing Access` / `tenant_004.leads` 空確認済み | 2026-06-19 |
 | Claude Code KPI / Grafana 基盤 | Agent | backend の同時処理中リクエスト数 / SSE 接続数を `/metrics` と Grafana `backend-api-metrics` に追加し、さらに `monitoring-main` を総合通知 → 部門サマリー → 機能別詳細の階層ポータルへ再設計、色基準（緑=OK / 黄=注意 / 赤=異常）と repo反映 vs 実機反映の区別も明文化済み | Prometheus alert の warning line を実測値に合わせて微調整し、KPI 正本 `docs/ai-agents/kpi.md` の collector 設計へ反映する | `backend/app/metrics.py` / `backend/app/services/sse_pubsub.py` / `monitoring/grafana/provisioning/dashboards/json/backend-metrics.json` / `monitoring/grafana/provisioning/dashboards/json/monitoring-main.json` / `monitoring/prometheus/alert_rules.yml` / `docs/INCIDENT_RESPONSE.md` / `docs/runbooks/monitoring-vps-migration.md` 確認済み | 2026-06-17 |
@@ -24,6 +24,7 @@
 
 | タスク | 完了日 | PR |
 |------|------|---|
+| Advisor Phase 1 PR-2 新規/既存セグメント別 売上サマリーAPI | 2026-06-20 | #2382 |
 | Advisor Phase 1 PR-1 顧客別受注履歴API | 2026-06-20 | #2377 |
 | サイドバークリック時の自動折りたたみ + hover 抑止修正 | 2026-06-20 | #2375 / #2376 |
 | loading / feedback 共用部品の追加と main 反映 | 2026-06-19 | #2363 / #2348 / #2361 |

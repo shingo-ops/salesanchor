@@ -1,57 +1,57 @@
-# Phase 3 設計 — Advisor Phase 1 / PR-2 新規/既存セグメント別 売上サマリーAPI
+# design.md — Advisor Phase 1 / PR-3 顧客別 接触集計API
 
 **対象ADR**: ADR-139
 **recon**: docs/handoff/advisor-phase1/recon.md
 **日付**: 2026-06-20
 **担当**: Planner
 
-## 外部・過去事例の参照と我々への応用
+## 目的
 
-該当なし。
-
-今回は既存 revenue-summary の new / repeat 定義を再利用し、orders の件数だけを segment 別に足す read-only 集計 API である。外部事例や追加の過去事例参照は不要。
+顧客ごとの接触頻度を read-only で返し、目標設定アドバイザーの「維持・離脱予兆」基盤にする。
 
 ## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
-| GET /api/v1/analytics/revenue-segments が返る | pytest backend/tests/test_analytics.py -q -k revenue_segments --no-cov |
-| new / repeat の売上・件数・平均単価・顧客数・構成比が返る | pytest backend/tests/test_analytics.py -q -k revenue_segments --no-cov |
-| scope=mine で担当外注文が混ざらない | pytest backend/tests/test_analytics.py -q -k revenue_segments --no-cov |
-| 片側セグメントがゼロのとき 0 / null で壊れない | pytest backend/tests/test_analytics.py -q -k revenue_segments --no-cov |
+| GET /api/v1/analytics/customer-contacts が返る | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
+| period / scope / stale_days がレスポンスに反映される | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
+| last_contact_at / days_since_last_contact / contact_count / is_communication_low が正しい | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
+| scope=mine で担当外会社が混ざらない | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
+| no-contact 顧客が low 扱いになる | pytest backend/tests/test_analytics.py -q -k customer_contacts --no-cov |
 | process-artifacts gate が通る | GitHub Actions の process-artifacts gate |
 
-## 技術 How・KPI
+## 技術方針
 
-- KPI: new / repeat の売上、件数、平均単価、顧客数、構成比が period / scope 別に read-only で返ること
-- 技術選択: period は 1m / 3m / 6m / 12m、scope は team / mine。mine は deals.assigned_to 経由で既存流儀に揃える
+- KPI: 顧客ごとの最終接触日、days_since_last_contact、接触回数、is_communication_low を period / scope / stale_days 別に read-only で返す
+- 期間: 1m / 3m / 6m / 12m。1m は JST 暦月境界、他は日数ベース
+- scope: team / mine。mine は customer-level のため companies テーブルの sales_rep_id で担当会社に絞る
+- 接触回数: period 内の conversation_logs 件数
+- 最終接触日: conversation_logs.occurred_at の MAX
+- low 判定: last_contact_at が null、または days_since_last_contact >= stale_days
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし。今回の PR は既存の conversation_logs と companies.sales_rep_id を read-only で集計するだけで、外部ライブラリや追加の過去事例を参照して設計を変える必要はない。
 
 ## API
 
-- ルート: /api/v1/analytics/revenue-segments
+- ルート: /api/v1/analytics/customer-contacts
 - クエリ:
   - period: 1m / 3m / 6m / 12m
   - scope: team / mine
+  - stale_days: 既定 30
 - レスポンス:
-  - new: revenue, order_count, avg_order_amount, customer_count, share
-  - repeat: revenue, order_count, avg_order_amount, customer_count, share
-  - total: revenue, order_count, customer_count
+  - period, scope, stale_days
+  - items: company_id, company_name, contact_count, last_contact_at, days_since_last_contact, is_communication_low
 
-## 弊害・トレードオフ
+## 変更範囲
 
-- new / repeat の分類は revenue-summary と同じく、当月以前に注文があるかで決まる
-- average は order_count が 0 のとき null にするため、ゼロ埋め前提のUIではなく集計表示前提になる
-- segment-aware conversion rate は扱わないため、新規開拓の率は既存 funnel 側をそのまま使う
+- backend/app/routers/analytics.py: 集計 API 追加
+- backend/tests/test_analytics.py: tenant_006 の pytest 追加
+- docs/handoff/advisor-phase1/: recon / design を PR-3 用に更新
 
-## 計画票
+## 検証メモ
 
-| ステップ | 内容 | 担当 |
-|---------|------|------|
-| 1 | segment summary の API と response model を追加 | Generator |
-| 2 | SQLite + PostgreSQL RLS の pytest を追加 | Generator |
-| 3 | process-artifacts gate と required checks を通す | CI |
-
-## 継続
-
-- 完了後の監視: PR の required checks 確認
-- 次フェーズへの引き継ぎ: 新規 / 既存 segment の率や UI 表示の後続 PR
+- tenant_006 を使う。tenant_4 は使わない。
+- DB migration / deploy.yml 変更なし。
+- PayPal smoke は必須ではないため、CI 判定から外してよい。
