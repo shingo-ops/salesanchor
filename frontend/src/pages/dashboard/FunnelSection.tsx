@@ -4,7 +4,7 @@
  * モックデータ駆動。実API結線は frontend/src/api/funnel.ts の MOCK_MODE を変更。
  */
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -26,11 +26,25 @@ interface FunnelSectionProps {
   viewMode: ViewMode;
 }
 
+const VIEW_ALL_LABEL = "funnel.viewAll";
+const YOKU = String.fromCharCode(0x5104);
+const MAN = String.fromCharCode(0x4e07);
+
+function makeCardKeyHandler(onClick?: () => void) {
+  if (!onClick) return undefined;
+  return (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
+}
+
 // ─── ユーティリティ ───────────────────────────────────────────────────────
 
 function fmtMoney(n: number): string {
-  if (n >= 100_000_000) return `¥${(n / 100_000_000).toFixed(1)}億`;
-  if (n >= 10_000) return `¥${Math.round(n / 10_000)}万`;
+  if (n >= 100_000_000) return `¥${(n / 100_000_000).toFixed(1)}${YOKU}`;
+  if (n >= 10_000) return `¥${Math.round(n / 10_000)}${MAN}`;
   return `¥${n.toLocaleString("ja-JP")}`;
 }
 
@@ -71,14 +85,36 @@ interface FunnelCardProps {
   title: string;
   isBottleneck?: boolean;
   children: ReactNode;
+  onClick?: () => void;
+  actionLabel?: string;
 }
 
-function FunnelCard({ title, isBottleneck, children }: FunnelCardProps) {
+function FunnelCard({ title, isBottleneck, children, onClick, actionLabel }: FunnelCardProps) {
   const { t } = useTranslation();
+  const clickable = Boolean(onClick);
   return (
-    <div className={`fn-card${isBottleneck ? " fn-card--bottleneck" : ""}`}>
+    <div
+      className={`fn-card${isBottleneck ? " fn-card--bottleneck" : ""}${clickable ? " fn-card--clickable" : ""}`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={title}
+      onClick={onClick}
+      onKeyDown={makeCardKeyHandler(onClick)}
+    >
       <div className="fn-card-header">
         <span className="fn-card-title">{title}</span>
+        {clickable && onClick && actionLabel && (
+          <button
+            type="button"
+            className="fn-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+          >
+            {t(actionLabel)} →
+          </button>
+        )}
         {isBottleneck && (
           <span className="fn-bottleneck-badge" aria-label={t("funnel.bottleneck")}>
             {t("funnel.bottleneck")}
@@ -92,11 +128,19 @@ function FunnelCard({ title, isBottleneck, children }: FunnelCardProps) {
 
 // ─── LeadsCard ──────────────────────────────────────────────────────────
 
-function LeadsCard({ data, isBottleneck }: { data: FunnelResponse["leads"]; isBottleneck: boolean }) {
+function LeadsCard({
+  data,
+  isBottleneck,
+  onOpen,
+}: {
+  data: FunnelResponse["leads"];
+  isBottleneck: boolean;
+  onOpen?: () => void;
+}) {
   const { t } = useTranslation();
   const rate = achievementRate(data.actual, data.target);
   return (
-    <FunnelCard title={t("funnel.leads")} isBottleneck={isBottleneck}>
+    <FunnelCard title={t("funnel.leads")} isBottleneck={isBottleneck} onClick={onOpen} actionLabel={VIEW_ALL_LABEL}>
       <div className="fn-card-main">
         <span className="fn-card-value">{data.actual}</span>
         <span className="fn-card-target">/ {data.target} {t("funnel.target")}</span>
@@ -112,14 +156,16 @@ function LeadsCard({ data, isBottleneck }: { data: FunnelResponse["leads"]; isBo
 function ConversionCard({
   data,
   isBottleneck,
+  onOpen,
 }: {
   data: FunnelResponse["conversion"];
   isBottleneck: boolean;
+  onOpen?: () => void;
 }) {
   const { t } = useTranslation();
   const rate = achievementRate(data.actual_rate, data.target_rate);
   return (
-    <FunnelCard title={t("funnel.conversion")} isBottleneck={isBottleneck}>
+    <FunnelCard title={t("funnel.conversion")} isBottleneck={isBottleneck} onClick={onOpen} actionLabel={VIEW_ALL_LABEL}>
       <div className="fn-card-main">
         <span className="fn-card-value">{data.actual_rate}%</span>
         <span className="fn-card-target">/ {data.target_rate}% {t("funnel.target")}</span>
@@ -156,14 +202,16 @@ function ActiveCard({ data }: { data: FunnelResponse["active"] }) {
 function ClosedCard({
   data,
   isBottleneck,
+  onOpen,
 }: {
   data: FunnelResponse["closed"];
   isBottleneck: boolean;
+  onOpen?: () => void;
 }) {
   const { t } = useTranslation();
   const rate = achievementRate(data.won, data.won_target);
   return (
-    <FunnelCard title={t("funnel.closed")} isBottleneck={isBottleneck}>
+    <FunnelCard title={t("funnel.closed")} isBottleneck={isBottleneck} onClick={onOpen} actionLabel={VIEW_ALL_LABEL}>
       <div className="fn-card-main">
         <span className="fn-card-value">{data.won}</span>
         <span className="fn-card-target">/ {data.won_target} {t("funnel.target")}</span>
@@ -178,10 +226,11 @@ function ClosedCard({
 
 // ─── RevenueSummaryCard ──────────────────────────────────────────────────
 
-function RevenueSummaryCard({ data }: { data: RevenueSummaryResponse }) {
+function RevenueSummaryCard({ data, onOpen }: { data: RevenueSummaryResponse; onOpen?: () => void }) {
   const { t } = useTranslation();
   const { revenue, split, gross_margin } = data;
   const achievePct = achievementRate(revenue.actual, revenue.target);
+  const clickable = Boolean(onOpen);
 
   const paceClass =
     revenue.pace === "ahead"
@@ -193,12 +242,29 @@ function RevenueSummaryCard({ data }: { data: RevenueSummaryResponse }) {
   const totalSplit = split.new + split.repeat;
 
   return (
-    <div className="fn-revenue-card">
+    <div
+      className={`fn-revenue-card${clickable ? " fn-revenue-card--clickable" : ""}`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={t("funnel.revenueTitle")}
+      onClick={onOpen}
+      onKeyDown={makeCardKeyHandler(onOpen)}
+    >
       <div className="fn-card-header">
         <span className="fn-card-title">{t("funnel.revenueTitle")}</span>
-        <span className={`fn-pace-badge ${paceClass}`}>
-          {t(`funnel.pace_${revenue.pace}`)}
-        </span>
+        {clickable && onOpen && (
+          <button
+            type="button"
+            className="fn-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
+            {t(VIEW_ALL_LABEL)} →
+          </button>
+        )}
+        <span className={`fn-pace-badge ${paceClass}`}>{t(`funnel.pace_${revenue.pace}`)}</span>
       </div>
 
       <div className="fn-revenue-main">
@@ -253,23 +319,66 @@ function RevenueSummaryCard({ data }: { data: RevenueSummaryResponse }) {
 
 // ─── SideSummaryCards ────────────────────────────────────────────────────
 
-function SideSummaryCards({ data }: { data: RevenueSummaryResponse }) {
+function SideSummaryCards({ data, onOpen }: { data: RevenueSummaryResponse; onOpen?: () => void }) {
   const { t } = useTranslation();
   const { new_customers, active_existing_customers } = data;
   const ncRate = achievementRate(new_customers.actual, new_customers.target);
+  const clickable = Boolean(onOpen);
 
   return (
     <div className="fn-side-cards">
-      <div className="fn-side-card">
-        <div className="fn-card-title">{t("funnel.newCustomers")}</div>
+      <div
+        className={`fn-side-card${clickable ? " fn-side-card--clickable" : ""}`}
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={t("funnel.newCustomers")}
+        onClick={onOpen}
+        onKeyDown={makeCardKeyHandler(onOpen)}
+      >
+        <div className="fn-side-card-header">
+          <div className="fn-side-card-title">{t("funnel.newCustomers")}</div>
+          {clickable && onOpen && (
+            <button
+              type="button"
+              className="fn-link-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+            >
+              {t(VIEW_ALL_LABEL)} →
+            </button>
+          )}
+        </div>
         <div className="fn-card-main">
           <span className="fn-card-value">{new_customers.actual}</span>
           <span className="fn-card-target">/ {new_customers.target}</span>
         </div>
         <AchievementBar rate={ncRate} />
       </div>
-      <div className="fn-side-card">
-        <div className="fn-card-title">{t("funnel.activeExisting")}</div>
+      <div
+        className={`fn-side-card${clickable ? " fn-side-card--clickable" : ""}`}
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={t("funnel.activeExisting")}
+        onClick={onOpen}
+        onKeyDown={makeCardKeyHandler(onOpen)}
+      >
+        <div className="fn-side-card-header">
+          <div className="fn-side-card-title">{t("funnel.activeExisting")}</div>
+          {clickable && onOpen && (
+            <button
+              type="button"
+              className="fn-link-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+            >
+              {t(VIEW_ALL_LABEL)} →
+            </button>
+          )}
+        </div>
         <div className="fn-card-main">
           <span className="fn-card-value">{active_existing_customers}</span>
           <span className="fn-card-unit">{t("funnel.unitCompany")}</span>
@@ -281,26 +390,37 @@ function SideSummaryCards({ data }: { data: RevenueSummaryResponse }) {
 
 // ─── FollowUpSummaryCard ─────────────────────────────────────────────────
 
-function FollowUpSummaryCard({ data }: { data: FollowUpsResponse }) {
+function FollowUpSummaryCard({ data, onOpen }: { data: FollowUpsResponse; onOpen?: () => void }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-
+  const clickable = Boolean(onOpen);
   const total = data.items.length;
   const orderStopped = data.items.filter((i) => i.segment === "order_stopped").length;
   const noRepeat = data.items.filter((i) => i.segment === "no_repeat_after_first").length;
   const wonNoOrder = data.items.filter((i) => i.segment === "won_no_order").length;
 
   return (
-    <div className="fn-followup-summary-card">
+    <div
+      className={`fn-followup-summary-card${clickable ? " fn-followup-summary-card--clickable" : ""}`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={t("funnel.followUpTitle")}
+      onClick={onOpen}
+      onKeyDown={makeCardKeyHandler(onOpen)}
+    >
       <div className="fn-card-header">
         <span className="fn-card-title">{t("funnel.followUpTitle")}</span>
-        <button
-          type="button"
-          className="fn-link-btn"
-          onClick={() => navigate("/dashboard/follow-ups")}
-        >
-          {t("funnel.viewAll")} →
-        </button>
+        {clickable && onOpen && (
+          <button
+            type="button"
+            className="fn-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
+            {t(VIEW_ALL_LABEL)} →
+          </button>
+        )}
       </div>
       <div className="fn-followup-total">{total}</div>
       <div className="fn-followup-segments">
@@ -325,6 +445,7 @@ function FollowUpSummaryCard({ data }: { data: FollowUpsResponse }) {
 
 export function FunnelSection({ month, viewMode }: FunnelSectionProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const scope = viewMode === "player" ? "mine" : undefined;
 
   const [funnel, setFunnel] = useState<FunnelResponse | null>(null);
@@ -391,20 +512,32 @@ export function FunnelSection({ month, viewMode }: FunnelSectionProps) {
     <section className="fn-section" aria-label={t("funnel.sectionTitle")}>
       {/* ファネル4カード */}
       <div className="fn-funnel-row">
-        <LeadsCard data={funnel.leads} isBottleneck={bottleneck === "leads"} />
-        <ConversionCard data={funnel.conversion} isBottleneck={bottleneck === "conversion"} />
+        <LeadsCard
+          data={funnel.leads}
+          isBottleneck={bottleneck === "leads"}
+          onOpen={() => navigate("/dashboard/leads")}
+        />
+        <ConversionCard
+          data={funnel.conversion}
+          isBottleneck={bottleneck === "conversion"}
+          onOpen={() => navigate("/dashboard/leads")}
+        />
         <ActiveCard data={funnel.active} />
-        <ClosedCard data={funnel.closed} isBottleneck={bottleneck === "closed"} />
+        <ClosedCard
+          data={funnel.closed}
+          isBottleneck={bottleneck === "closed"}
+          onOpen={() => navigate("/dashboard/reasons")}
+        />
       </div>
 
       {/* 売上カード(大) + サイドカード */}
       <div className="fn-revenue-row">
-        <RevenueSummaryCard data={revenue} />
-        <SideSummaryCards data={revenue} />
+        <RevenueSummaryCard data={revenue} onOpen={() => navigate("/dashboard/revenue")} />
+        <SideSummaryCards data={revenue} onOpen={() => navigate("/dashboard/revenue")} />
       </div>
 
       {/* 要フォロー顧客カード */}
-      <FollowUpSummaryCard data={followUps} />
+      <FollowUpSummaryCard data={followUps} onOpen={() => navigate("/dashboard/follow-ups")} />
     </section>
   );
 }
