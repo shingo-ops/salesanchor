@@ -62,6 +62,7 @@ function discoverPostgresContainer(): string {
   }
 
   const commands: Array<[string, string[]]> = [
+    ["docker", ["compose", "-f", "docker-compose.yml", "ps", "-q", "postgres"]],
     ["docker", ["compose", "ps", "-q", "postgres"]],
     [
       "docker",
@@ -78,6 +79,14 @@ function discoverPostgresContainer(): string {
     [
       "docker",
       ["ps", "--filter", "name=postgres", "--filter", "status=running", "--format", "{{.ID}} {{.Names}}"],
+    ],
+    [
+      "docker",
+      [
+        "ps",
+        "--format",
+        "{{.ID}} {{.Names}} {{.Image}} {{.Command}}",
+      ],
     ],
   ];
 
@@ -103,8 +112,19 @@ function discoverPostgresContainer(): string {
     return lines[0].split(/\s+/)[0];
   }
 
+  const inventory = spawnSync(
+    "docker",
+    ["ps", "--format", "{{.ID}} {{.Names}} {{.Image}} {{.Status}}"],
+    { encoding: "utf-8" },
+  );
   throw new Error(
-    "QA smoke abort: postgres container could not be discovered. Set QA_SMOKE_POSTGRES_CONTAINER if needed.",
+    [
+      "QA smoke abort: postgres container could not be discovered.",
+      "Set QA_SMOKE_POSTGRES_CONTAINER if needed.",
+      inventory.stdout?.trim() ? `docker ps:\n${inventory.stdout.trim()}` : "",
+    ]
+      .filter((part) => part.length > 0)
+      .join("\n"),
   );
 }
 
