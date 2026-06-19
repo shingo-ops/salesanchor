@@ -3,19 +3,19 @@
 **仕事名**: incident-paypal-invoicing-false-complete
 **作成**: Planner（Web Claude）
 **実装**: Generator（Claude Code）
-**参照 recon**: `docs/handoff/incident-paypal-invoicing-false-complete/recon.md`
+**参照 recon**: docs/handoff/incident-paypal-invoicing-false-complete/recon.md
 **対象 ADR**: ADR-1000（本インシデントのADR）。関連既存ADR: ADR-051（claude-pipeline 自動化）/ ADR-121（process-artifacts gate）/ ADR-135（develop 常時出荷可能）/ ADR-136（危険変更0承認マージ防止・認可承認者の承認必須ロジック）/ ADR-112（設計起点フロー v2）/ ADR-012（ブランチ運用）/ ADR-124（sop-health-reporter）
 **ステータス**: PO承認済み（KGI承認ゲート通過 2026-06-18）
 **日付**: 2026-06-18
-**正本**: `docs/STANDARD-WORKFLOW.md`。矛盾時は正本優先。
+**正本**: docs/STANDARD-WORKFLOW.md。矛盾時は正本優先。
 
 ---
 
 ## 外部・過去事例の参照と我々への応用
 
-- **過去事例1: ADR-136 / PR #2063（2026-06-12）** — 危険変更を含むのに承認ゼロでマージされた事故。`check-process-artifacts.js:398` の `!hasAuth` ブランチが `runFullCheck` にフォールスルーし、書類が揃っていればgateを通過してしまう実装バグが原因。「書類の存在チェックは、動作・承認の実在を保証しない」という今回の穴3と同じ構造。**このADRで導入した「認可承認者の PR Approve が無ければ gate FAIL」のロジックを、本設計の人間確認必須化（PR-E）に流用する。**
-- **過去事例2: ADR-135 / #1981（2026-06-12）** — develop に PR レビュー必須がなく、危険変更がセルフマージで本番手前まで到達。人間レビュー必須化を Ruleset（require_code_owner_review）で試みたが GitHub 仕様上不成立（`required_approving_review_count=0` だと review 要求が生成されない）。→ **本設計でも「人間確認を必須にする」が、Ruleset 方式ではなく gate 方式で実現する（PR-E）。**
-- **過去事例3: FedEx スモークテストの休止（今回 recon R6）** — `test_fedex_sandbox.py` は存在するが CI secrets 未登録で常時 SKIP（=緑扱い）。「テストを書いても起動・実行されなければ無いのと同じ」という、穴1・穴2と同じ教訓の先行例。→ 本設計では「secrets 未登録時は SKIP ではなく FAIL」を原則化（KGI-4）。
+- **過去事例1: ADR-136 / PR #2063（2026-06-12）** — 危険変更を含むのに承認ゼロでマージされた事故。check-process-artifacts.js:398 の !hasAuth ブランチが runFullCheck にフォールスルーし、書類が揃っていればgateを通過してしまう実装バグが原因。「書類の存在チェックは、動作・承認の実在を保証しない」という今回の穴3と同じ構造。**このADRで導入した「認可承認者の PR Approve が無ければ gate FAIL」のロジックを、本設計の人間確認必須化（PR-E）に流用する。**
+- **過去事例2: ADR-135 / #1981（2026-06-12）** — develop に PR レビュー必須がなく、危険変更がセルフマージで本番手前まで到達。人間レビュー必須化を Ruleset（require_code_owner_review）で試みたが GitHub 仕様上不成立（required_approving_review_count=0 だと review 要求が生成されない）。→ **本設計でも「人間確認を必須にする」が、Ruleset 方式ではなく gate 方式で実現する（PR-E）。**
+- **過去事例3: FedEx スモークテストの休止（今回 recon R6）** — test_fedex_sandbox.py は存在するが CI secrets 未登録で常時 SKIP（=緑扱い）。「テストを書いても起動・実行されなければ無いのと同じ」という、穴1・穴2と同じ教訓の先行例。→ 本設計では「secrets 未登録時は SKIP ではなく FAIL」を原則化（KGI-4）。
 - **外部事例: 契約テスト/スモークテストのベストプラクティス** — 速度のため外部APIをモックするのは一般的だが、実APIの疎通を保証するには別途「実エンドポイントを最小限叩くスモーク」を用意するのが定石（モックは実APIの破壊を検知できない）。今回 R2 で「PayPal テスト6本すべてモックのみ」が確定したため、この定石に従い実Sandboxスモークを新設する。
 - **外部事例: 多層防御（defense in depth）** — 単一の砦に依存せず、独立した複数の関門を直列に置く考え方。今回の核心（§設計思想）はこれに沿う。人間を唯一の砦にした結果が今回の事故であり、機械の関門を一次に、人間を最終に置く。
 
@@ -49,7 +49,7 @@
 | # | KGI | 検証方法 |
 |---|------|---------|
 | KGI-1 | 外部APIを叩くコードを変更したPRは、**実Sandboxで実際にAPIを起動・呼び出し正常応答を確認するスモークが成功しない限りマージできない** | 故意に実装を壊すとスモークが FAIL し、マージ不可になることを確認（負のテスト） |
-| KGI-2 | 上記スモークの起動がブランチ名に依存しない（`feature/morimoto/*`（CLAUDE.md:70）でも起動） | 当該ブランチのPRでスモークjob起動をCIログ確認。起動率 0%→100% |
+| KGI-2 | 上記スモークの起動がブランチ名に依存しない（feature/morimoto/*（CLAUDE.md:70）でも起動） | 当該ブランチのPRでスモークjob起動をCIログ確認。起動率 0%→100% |
 | KGI-3 | 「外部APIを叩くコード変更」の検出が**人間の手動登録に依存しない**。スモーク未用意・未実行のPRは gate が FAIL | スモーク未用意PRで gate FAIL を確認（負のテスト） |
 | KGI-4 | スモークの認証情報（secrets）が未登録のとき SKIP（緑）ではなく FAIL | secrets を外した状態でCI赤を確認 |
 | KGI-5 | 外部API連携PRは、**認可承認者（Shingo/Suttan）の承認が無ければマージできない**（人間確認・マージ前） | 承認なしPRで gate FAIL を確認 |
@@ -66,10 +66,10 @@
 
 | 穴 | 事実 | 出所（file:line / PR） |
 |---|------|------|
-| 穴1 | 検証パイプライン（Evaluator含む）が `claude-impl/*` のみ対象で、正規の人間ブランチ `feature/morimoto/*` では起動しない。今回 Evaluator は SKIPPED | `claude-pipeline.yml:63-70`（recon R5）。正規命名は `CLAUDE.md:70` |
-| 穴2 | PayPal テスト6本すべてモックのみ。実Sandboxを叩くテストは存在しない。実APIが壊れても緑 | recon R2。実装は `backend/app/services/paypal_payments.py:549-629`（create→send→get）, `backend/app/routers/invoices.py:602-707` |
-| 穴3 | gate（`scripts/check-process-artifacts.js`）は recon.md・design.md の存在と形式のみ検証。動作確認の有無を判定しない。Evaluator と独立動作のため Evaluator SKIPPED でも gate PASS | recon R4。gate本体 `scripts/check-process-artifacts.js`, ワークフロー `.github/workflows/process-artifacts-gate.yml` |
-| 穴4 | 完了報告の根拠がモックテスト緑のみ。人間レビュー0件（sandbox実機確認の記録なし） | recon R3。PR #1980（`feature/morimoto/paypal-invoicing` → develop, 2026-06-11） |
+| 穴1 | 検証パイプライン（Evaluator含む）が claude-impl/* のみ対象で、正規の人間ブランチ feature/morimoto/* では起動しない。今回 Evaluator は SKIPPED | claude-pipeline.yml:63-70（recon R5）。正規命名は CLAUDE.md:70 |
+| 穴2 | PayPal テスト6本すべてモックのみ。実Sandboxを叩くテストは存在しない。実APIが壊れても緑 | recon R2。実装は backend/app/services/paypal_payments.py:549-629（create→send→get）, backend/app/routers/invoices.py:602-707 |
+| 穴3 | gate（scripts/check-process-artifacts.js）は recon.md・design.md の存在と形式のみ検証。動作確認の有無を判定しない。Evaluator と独立動作のため Evaluator SKIPPED でも gate PASS | recon R4。gate本体 scripts/check-process-artifacts.js, ワークフロー .github/workflows/process-artifacts-gate.yml |
+| 穴4 | 完了報告の根拠がモックテスト緑のみ。人間レビュー0件（sandbox実機確認の記録なし） | recon R3。PR #1980（feature/morimoto/paypal-invoicing → develop, 2026-06-11） |
 
 ---
 
@@ -78,10 +78,10 @@
 | PR | 内容 | 塞ぐ穴／層 | 種別 | PO GO | フェーズ |
 |---|---|---|---|---|---|
 | PR-A | PayPal Sandbox スモークテスト新設 | 穴2 / 層1 | テスト追加（通常）＋ secrets登録（PO作業） | テスト部分は不要 / secretsはPO手動 | 1 |
-| PR-B | 検証パイプライン起動条件の拡張 | 穴1 / 層1 | `claude-pipeline.yml` 変更（**危険**） | **必須** | 1 |
-| PR-C | gate に「外部API呼び出し検出→スモーク必須」＋ secrets未登録時 FAIL | 穴3 / 層1 | `check-process-artifacts.js` 変更（**危険**） | **必須** | 1 |
-| PR-E | gate に「外部API連携PRは認可承認者の承認必須」を追加 | 層2（人間・マージ前） | `check-process-artifacts.js` 変更（**危険**） | **必須** | 2 |
-| PR-F | 本番デプロイ安全化：本番相当素振り＋人間の証拠付き最終確認＋デプロイ後ヘルス＋自動ロールバック | 層3〜5 | `deploy.yml`／本番scripts 変更（**危険**） | **必須** | 3 |
+| PR-B | 検証パイプライン起動条件の拡張 | 穴1 / 層1 | claude-pipeline.yml 変更（**危険**） | **必須** | 1 |
+| PR-C | gate に「外部API呼び出し検出→スモーク必須」＋ secrets未登録時 FAIL | 穴3 / 層1 | check-process-artifacts.js 変更（**危険**） | **必須** | 1 |
+| PR-E | gate に「外部API連携PRは認可承認者の承認必須」を追加 | 層2（人間・マージ前） | check-process-artifacts.js 変更（**危険**） | **必須** | 2 |
+| PR-F | 本番デプロイ安全化：本番相当素振り＋人間の証拠付き最終確認＋デプロイ後ヘルス＋自動ロールバック | 層3〜5 | deploy.yml／本番scripts 変更（**危険**） | **必須** | 3 |
 | PR-D | 完了定義のインライン明記 | 穴4 / 層全体の定義 | docs-only | 不要（自動スキップ） | 4 |
 
 > **最優先は Phase 1（PR-A＋PR-B＋PR-C）**。スモークを書いても（PR-A）人間ブランチで起動しなければ（穴1）空振りし、起動だけ広げても（PR-B）走るのがモックだけ／検出漏れなら故障を見逃すため、3つで初めて効く。
@@ -91,34 +91,34 @@
 ## 実装方針（技術How）
 
 ### 層1 / 穴2 / PR-A：PayPal Sandbox スモークテスト
-- `backend/app/services/paypal_payments.py:549-629` の3ステップ（create→send→get）を、**実Sandboxに対して請求書を1枚発行する**最小スモークとして新設。モック差し替えをしない。
-- テストファイル名：`backend/tests/test_paypal_sandbox.py`（FedEx の `test_fedex_sandbox.py` に倣う）。
+- backend/app/services/paypal_payments.py:549-629 の3ステップ（create→send→get）を、**実Sandboxに対して請求書を1枚発行する**最小スモークとして新設。モック差し替えをしない。
+- テストファイル名：backend/tests/test_paypal_sandbox.py（FedEx の test_fedex_sandbox.py に倣う）。
 - flaky対策：発行1件のみ、タイムアウト＋限定リトライ。Sandbox自体の障害と自社実装の故障を切り分け（安易な無条件SKIPはしない）。
 - secrets 未登録時は SKIP ではなく FAIL（KGI-4）。
 
 ### 層1 / 穴1 / PR-B：パイプライン起動条件の拡張
-- 目的：`feature/morimoto/*`（CLAUDE.md:70）のPRでも検証（少なくともスモーク／Evaluator）が起動する。
-- **要確認（推測で確定しない）**：現行 `claude-pipeline.yml` の起動意図に食い違いの疑い。ADR-051 は「ADR push起動」、recon R5 は「`claude-impl/*` 対象（:63-70）」、userメモリ上は「ADR自動発火の旧4エージェントモデルは ADR-112 で廃止済み」。**3者の整合を、実装着手前に正本 STANDARD-WORKFLOW.md と現物で確定する。**
+- 目的：feature/morimoto/*（CLAUDE.md:70）のPRでも検証（少なくともスモーク／Evaluator）が起動する。
+- **要確認（推測で確定しない）**：現行 claude-pipeline.yml の起動意図に食い違いの疑い。ADR-051 は「ADR push起動」、recon R5 は「claude-impl/* 対象（:63-70）」、userメモリ上は「ADR自動発火の旧4エージェントモデルは ADR-112 で廃止済み」。**3者の整合を、実装着手前に正本 STANDARD-WORKFLOW.md と現物で確定する。**
 - 確定している論理：正規の人間ブランチで検証が起動しないのは穴であり塞ぐ。これは不変。
 
 ### 層1 / 穴3 / PR-C：gate 強化 ＋ SKIP→FAIL
-- `scripts/check-process-artifacts.js` に、**外部APIを実際に叩くコード（HTTP通信部分）の変更を検出したPRには、対応する実Sandboxスモークの成功（緑）を通過条件に加える**ロジックを追加。
+- scripts/check-process-artifacts.js に、**外部APIを実際に叩くコード（HTTP通信部分）の変更を検出したPRには、対応する実Sandboxスモークの成功（緑）を通過条件に加える**ロジックを追加。
 - **検出は人間の手動登録に依存させない**（KGI-3）。
 - スモークは **secrets 未登録時 SKIP ではなく FAIL**（KGI-4）。
 - 検出の具体実装・挿入file:lineは Step 1 architect recon で確定。
 
 ### 層2 / PR-E：認可承認者の承認必須（人間・マージ前）
 - ADR-136 の「認可承認者（shingo-ops / Hikky-dev）の PR Approve が無ければ gate FAIL」ロジックを流用し、**外部API連携PRにも承認必須**を適用する。
-- 承認者は確認内容を**証拠付き**でPRに残す。`GO: Shingo YYYY-MM-DD` コメント方式（既存運用）と整合。
+- 承認者は確認内容を**証拠付き**でPRに残す。GO: Shingo YYYY-MM-DD コメント方式（既存運用）と整合。
 - **限界明記**：機械が強制できるのは「承認の存在」まで。空判子は機械で防げないため、層1の機械防御を主とする。
 
 ### 層3〜5 / PR-F：本番デプロイ安全化
-- **本番現状は未確認**：`deploy.yml`・本番scripts・現行のヘルスチェック／ロールバックの有無は Step 1 recon で確認する（推測で断定しない）。
+- **本番現状は未確認**：deploy.yml・本番scripts・現行のヘルスチェック／ロールバックの有無は Step 1 recon で確認する（推測で断定しない）。
 - 確認後、次を組み込む：①本番相当 docker-compose 環境での素振り（機械・環境差検出）、②人間の証拠付き最終動作確認を本番反映の必須ステップ化、③デプロイ後の自動ヘルスチェック、④ヘルス異常時の自動ロールバック。
 - **本番での人間の実操作確認の具体（どのテナントにテスト発行するか等）は、実顧客に実害が出ない形を Step 1 recon/設計で確定する。**
 
 ### 穴4 / PR-D：完了定義のインライン明記
-- `docs/STANDARD-WORKFLOW.md` と `CLAUDE.md` にインライン明記：
+- docs/STANDARD-WORKFLOW.md と CLAUDE.md にインライン明記：
   - 「外部API連携を含む変更の完了とは、(a) 実Sandboxスモークを含む指定ゲートが全て緑、(b) 認可承認者の証拠付き承認、(c) 本番反映時の人間の証拠付き最終確認、の全てを満たすことを指す。担当者の『確認した』という自己申告は完了の根拠にしない。」
 
 ---
@@ -128,7 +128,7 @@
 | 指標 | 目標 | 測り方 |
 |---|---|---|
 | 外部API連携PRの実Sandboxスモーク実行率 | 100% | CIログ集計（sop-health-reporter 拡張余地） |
-| `feature/morimoto/*` PRでのパイプライン起動率 | 0% → 100% | CIログ |
+| feature/morimoto/* PRでのパイプライン起動率 | 0% → 100% | CIログ |
 | 外部API連携PRの認可承認者 承認率 | 100% | gate ログ |
 | 本番反映時の人間証拠付き確認の記録率 | 100% | デプロイ記録 |
 | 実API故障の本番流出 | 0件 | インシデント記録 |
@@ -143,7 +143,7 @@
 - **CI時間・コスト増**：→ スモーク必須は「外部API通信コードを変更したPR」に限定。
 - **人間確認のボトルネック化**：承認者を Shingo/Suttan の2名に。通常PR（外部API非該当）は従来どおり影響なし。
 - **空判子リスク**：→ 機械の層を主防御に。人間確認は証拠添付を要件化。
-- **危険変更の自己ブートストラップ**：PR-C/PR-E は `scripts/` を触り gate の承認要求が自分自身に発火（ADR-135 B-2 と同じ）。設計どおり、Shingo Approve で通す。
+- **危険変更の自己ブートストラップ**：PR-C/PR-E は scripts/ を触り gate の承認要求が自分自身に発火（ADR-135 B-2 と同じ）。設計どおり、Shingo Approve で通す。
 
 ---
 
@@ -161,7 +161,7 @@
 | 7 | PR-D：完了定義インライン明記 | Generator | 不要 |
 | 8 | 負のテスト（故意破壊で FAIL／secrets外して FAIL／承認なしで FAIL／ヘルス異常でロールバック）でKGI実測 | architect / PO | — |
 
-> 危険変更（PR-B/C/E/F）は ADR-130「1リリース1変更」に従い別PR。各々 Shingo の明示GO（PR上に `GO: Shingo YYYY-MM-DD`）を事前取得。新規ADRは穴・層ごとに起案（What/Why）。
+> 危険変更（PR-B/C/E/F）は ADR-130「1リリース1変更」に従い別PR。各々 Shingo の明示GO（PR上に GO: Shingo YYYY-MM-DD）を事前取得。新規ADRは穴・層ごとに起案（What/Why）。
 
 ---
 
@@ -193,22 +193,22 @@
 
 | # | 基準 | 検証方法 |
 |---|------|---------|
-| A1 | 実Sandboxスモークが存在し正常時に緑 | `pytest test_paypal_sandbox.py` PASS |
+| A1 | 実Sandboxスモークが存在し正常時に緑 | pytest test_paypal_sandbox.py PASS |
 | A2 | 故意に実装を壊すとスモークが FAIL | 負のテスト（誤エンドポイント等）で赤確認 |
 | A3 | secrets 未登録でスモークが SKIP ではなく FAIL | secrets を外してCI赤確認 |
-| A4 | `feature/morimoto/*` のPRでパイプライン／スモークが起動 | CIログで起動確認 |
+| A4 | feature/morimoto/* のPRでパイプライン／スモークが起動 | CIログで起動確認 |
 | A5 | 外部API呼び出しコード変更PRで、スモーク未用意なら gate FAIL | gate 負のテスト |
 | A6 | 外部API連携PRで、認可承認者の承認なしなら gate FAIL | gate 負のテスト |
 | A7 | 本番反映手順に「本番相当素振り」「人間の証拠付き最終確認」が必須ステップとして存在 | 手順書・deploy フロー確認 |
 | A8 | 本番ヘルス異常時に自動ロールバックが発火 | 異常注入テスト |
-| A9 | 完了定義が CLAUDE.md / STANDARD-WORKFLOW.md にインライン記載 | `git grep` |
-| A10 | 既存CIチェック・モックテストが消えていない | `git diff --name-only` / CI一覧 |
-| A11 | 危険変更PR（B/C/E/F）に `GO: Shingo` コメントがある | PR確認 |
+| A9 | 完了定義が CLAUDE.md / STANDARD-WORKFLOW.md にインライン記載 | git grep |
+| A10 | 既存CIチェック・モックテストが消えていない | git diff --name-only / CI一覧 |
+| A11 | 危険変更PR（B/C/E/F）に GO: Shingo コメントがある | PR確認 |
 
 ---
 
 ## 危険変更とPO GO要否（まとめ）
 
-- **PO GO必須**：PR-B（`claude-pipeline.yml`）, PR-C・PR-E（`scripts/check-process-artifacts.js`）, PR-F（`deploy.yml`／本番scripts）。
+- **PO GO必須**：PR-B（claude-pipeline.yml）, PR-C・PR-E（scripts/check-process-artifacts.js）, PR-F（deploy.yml／本番scripts）。
 - **PO手動作業**：PayPal Sandbox secrets のCI登録（PR-A）。本番での人間の証拠付き最終確認（層4）。
 - **GO不要**：PR-A のテストコード追加、PR-D の docs-only。
