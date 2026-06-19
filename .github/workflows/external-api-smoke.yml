@@ -67,7 +67,8 @@ jobs:
 
       - name: Install backend dependencies
         if: steps.scope.outputs.is_target == 'true'
-        run: uv pip install --system -r backend/requirements-dev.txt
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
 
       - name: Run PayPal Sandbox smoke
         if: steps.scope.outputs.is_target == 'true'
