@@ -4,8 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 import DesktopShell from "./DesktopShell";
 
 const { mockHasPermission, mockHasAny } = vi.hoisted(() => ({
-  mockHasPermission: vi.fn(() => false),
-  mockHasAny: vi.fn(() => false),
+  mockHasPermission: vi.fn<(perm: string) => boolean>(() => false),
+  mockHasAny: vi.fn<(...keys: string[]) => boolean>(() => false),
 }));
 
 vi.mock("react-i18next", () => ({
