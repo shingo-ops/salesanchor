@@ -67,8 +67,7 @@ jobs:
 
       - name: Install backend dependencies
         if: steps.scope.outputs.is_target == 'true'
-        working-directory: backend
-        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
+        run: uv pip install --system -r backend/requirements-dev.txt
 
       - name: Run PayPal Sandbox smoke
         if: steps.scope.outputs.is_target == 'true'
@@ -77,4 +76,4 @@ jobs:
           PAYPAL_SANDBOX_CLIENT_SECRET: ${{ secrets.PAYPAL_SANDBOX_CLIENT_SECRET }}
           CI: 'true'
           PYTHONPATH: backend
-        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short --no-cov
+        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short
