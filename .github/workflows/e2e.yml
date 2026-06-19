@@ -80,7 +80,7 @@ jobs:
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - frontend 変更あり: lint-run の結果を報告
-  # - frontend 変更なし: lint-run が skipped → 成功として報告（デッドロック解消）
+  # - frontend 変更なし: lint-run が skipped → 成功として報告（デッドロック解消)
   lint:
     name: Lint & Dark Mode Check (ADR-067)
     needs: [detect-changes, lint-run]
@@ -102,7 +102,6 @@ jobs:
   # ─── E2E テスト ────────────────────────────────────────────────────────────
   playwright:
     name: Playwright E2E (chromium)
-    if: false # 一時停止 2026-06-01 — CI ボトルネック解消まで停止（再開時はこの行を削除）
     runs-on: ubuntu-latest
     timeout-minutes: 12
     # NOTE: needs: lint を削除し lint と並列実行（2026-05-28）。
