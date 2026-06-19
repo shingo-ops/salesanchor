@@ -98,7 +98,7 @@ jobs:
       - name: Install Playwright browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
         working-directory: tests/qa-smoke
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       # --- tenant_006 reset (seed 投入) ---
       - name: Bootstrap qa_tenant006_rw role on VPS
