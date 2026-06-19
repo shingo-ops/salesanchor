@@ -3,7 +3,7 @@
  *
  * テスト対象:
  *   - rendering: MobileTopBar / MobileTabBar / NavItemList が描画される
- *   - more sheet open/close: もっとボタン click で open、backdrop click で close
+ *   - menu sheet open/close: 「…」ボタン click で open、backdrop click で close
  *   - Escape key: keydown Escape で more sheet close
  *   - nav click: onNavClick で more sheet close
  *   - unread badge: unreadCount > 0 時に tabbar の受信箱バッジ表示
@@ -61,7 +61,7 @@ vi.mock("../contexts/ThemeContext", () => ({
 
 vi.mock("../contexts/UiPrefsContext", () => ({
   useUiPrefs: () => ({
-    prefs: { show_chat_menu: true, show_sales_menu: false },
+    prefs: { show_chat_menu: true, show_sales_menu: true },
     loading: false,
     staffName: "Test Staff",
   }),
@@ -164,18 +164,21 @@ describe("MobileShell", () => {
       expect(container.querySelector(".mobile-tabbar")).toBeTruthy();
     });
 
-    it("renders 「もっと」 button in tabbar", () => {
+    it("renders menu button in tabbar", () => {
       renderMobileShell();
       expect(
-        screen.getByRole("button", { name: "nav.mobileMore" }),
+        screen.getByRole("button", { name: "nav.menu" }),
       ).toBeTruthy();
     });
 
-    it("renders avatar button in tabbar", () => {
+    it("renders 4 bottom tabs when permissions exist", () => {
+      mockHasPermission.mockReturnValue(true);
+
       renderMobileShell();
+
       expect(
-        screen.getByRole("button", { name: "nav.openUserMenu" }),
-      ).toBeTruthy();
+        document.querySelectorAll(".mobile-tabbar .mobile-tab").length,
+      ).toBe(4);
     });
 
     it("more sheet is not open on initial render", () => {
@@ -190,21 +193,31 @@ describe("MobileShell", () => {
   });
 
   describe("more sheet open/close", () => {
-    it("もっと button click opens more sheet", () => {
+    it("menu button click opens more sheet", () => {
       const { container } = renderMobileShell();
-      fireEvent.click(screen.getByRole("button", { name: "nav.mobileMore" }));
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       expect(container.querySelector(".mobile-more-sheet--open")).toBeTruthy();
+    });
+
+    it("menu sheet renders 5 navigation items", () => {
+      mockHasPermission.mockReturnValue(true);
+      const { container } = renderMobileShell();
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
+
+      expect(
+        container.querySelectorAll(".mobile-more-sheet--open .nav-item-list__item").length,
+      ).toBe(5);
     });
 
     it("backdrop is visible when more sheet is open", () => {
       const { container } = renderMobileShell();
-      fireEvent.click(screen.getByRole("button", { name: "nav.mobileMore" }));
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       expect(container.querySelector(".mobile-more-backdrop")).toBeTruthy();
     });
 
     it("backdrop click closes more sheet", () => {
       const { container } = renderMobileShell();
-      fireEvent.click(screen.getByRole("button", { name: "nav.mobileMore" }));
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       const backdrop = container.querySelector(".mobile-more-backdrop");
       expect(backdrop).toBeTruthy();
       fireEvent.click(backdrop!);
@@ -215,7 +228,7 @@ describe("MobileShell", () => {
   describe("Escape key", () => {
     it("Escape keydown closes more sheet when open", () => {
       const { container } = renderMobileShell();
-      fireEvent.click(screen.getByRole("button", { name: "nav.mobileMore" }));
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       expect(container.querySelector(".mobile-more-sheet--open")).toBeTruthy();
       fireEvent.keyDown(document, { key: "Escape" });
       expect(container.querySelector(".mobile-more-sheet--open")).toBeNull();
@@ -230,12 +243,12 @@ describe("MobileShell", () => {
 
   describe("nav click in more sheet", () => {
     it("clicking nav item in more sheet closes it", () => {
-      mockHasPermission.mockReturnValue(false);
+      mockHasPermission.mockReturnValue(true);
       const { container } = renderMobileShell();
-      fireEvent.click(screen.getByRole("button", { name: "nav.mobileMore" }));
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       expect(container.querySelector(".mobile-more-sheet--open")).toBeTruthy();
 
-      // schedule is shown without permission gate (in more sheet)
+      // schedule is shown without permission gate (in menu sheet)
       const scheduleLink = screen.getByText("nav.schedule");
       fireEvent.click(scheduleLink);
       expect(container.querySelector(".mobile-more-sheet--open")).toBeNull();
@@ -266,21 +279,23 @@ describe("MobileShell", () => {
   });
 
   describe("permission filtering", () => {
-    it("schedule item is visible in more sheet without any permissions", () => {
+    it("schedule item is visible in menu sheet without any permissions", () => {
       renderMobileShell();
       expect(screen.getByText("nav.schedule")).toBeTruthy();
     });
 
-    it("dashboard tab is hidden when dashboard.view permission is denied", () => {
+    it("dashboard tab is hidden from bottom tabs when dashboard.view permission is denied", () => {
       mockHasPermission.mockReturnValue(false);
       renderMobileShell();
-      // dashboard tab: NavLink with aria-label=nav.dashboard
-      expect(screen.queryByRole("link", { name: "nav.dashboard" })).toBeNull();
+      expect(
+        screen.queryByRole("link", { name: "nav.dashboard" }),
+      ).toBeNull();
     });
 
-    it("dashboard tab is shown when dashboard.view permission is granted", () => {
+    it("dashboard item is shown in menu sheet when dashboard.view permission is granted", () => {
       mockHasPermission.mockReturnValue(true);
       renderMobileShell();
+      fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
       expect(screen.getByRole("link", { name: "nav.dashboard" })).toBeTruthy();
     });
   });
