@@ -109,6 +109,7 @@ jobs:
   # ─── E2E テスト ────────────────────────────────────────────────────────────
   playwright:
     name: Playwright E2E (chromium)
+    needs: detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 12
     # NOTE: needs: lint を削除し lint と並列実行（2026-05-28）。
