@@ -115,7 +115,7 @@ describe("DesktopShell", () => {
     mockHasAny.mockReturnValue(false);
   });
 
-  it("collapses the sidebar after a nav click", async () => {
+  it("keeps the sidebar collapsed after nav click until mouse leaves", async () => {
     const { container } = renderDesktopShell();
     const sidebar = container.querySelector("#sidebar-panel");
     expect(sidebar).toBeTruthy();
@@ -124,9 +124,15 @@ describe("DesktopShell", () => {
     expect(container.querySelector(".sidebar-expanded")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("link", { name: "nav.schedule" }));
+    expect(container.querySelector(".sidebar-expanded")).toBeNull();
 
+    fireEvent.mouseEnter(sidebar!);
+    expect(container.querySelector(".sidebar-expanded")).toBeNull();
+
+    fireEvent.mouseLeave(sidebar!);
+    fireEvent.mouseEnter(sidebar!);
     await waitFor(() => {
-      expect(container.querySelector(".sidebar-expanded")).toBeNull();
+      expect(container.querySelector(".sidebar-expanded")).toBeTruthy();
     });
   });
 });
