@@ -146,6 +146,13 @@ export default function DesktopShell() {
     setOpenAccordion(null);
   };
 
+  // ルート遷移後も展開状態を残さない。
+  // クリック時に閉じても、遷移先で hover 判定が残るケースをここで吸収する。
+  useEffect(() => {
+    setSidebarExpanded(false);
+    setOpenAccordion(null);
+  }, [location.pathname]);
+
   /* ---- permission-filtered sub-item lists ---- */
 
   const showCrmLink = hasPermission("leads.view") || hasPermission("customers.view");
