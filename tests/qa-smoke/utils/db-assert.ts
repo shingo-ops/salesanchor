@@ -61,6 +61,42 @@ function discoverPostgresContainer(): string {
     return override;
   }
 
+  const imageCommands: Array<[string, string[]]> = [
+    [
+      "docker",
+      [
+        "ps",
+        "--filter",
+        "ancestor=postgres:16",
+        "--format",
+        "{{.ID}} {{.Names}} {{.Image}}",
+      ],
+    ],
+    [
+      "docker",
+      [
+        "ps",
+        "--filter",
+        "ancestor=postgres",
+        "--format",
+        "{{.ID}} {{.Names}} {{.Image}}",
+      ],
+    ],
+  ];
+
+  for (const [command, args] of imageCommands) {
+    const result = spawnSync(command, args, { encoding: "utf-8" });
+    if (result.status !== 0) continue;
+    const lines = (result.stdout || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length === 0) continue;
+    const preferred = lines.find((line) => /postgres:16|postgres/i.test(line));
+    if (preferred) return preferred.split(/\s+/)[0];
+    if (lines.length === 1) return lines[0].split(/\s+/)[0];
+  }
+
   const commands: Array<[string, string[]]> = [
     ["docker", ["compose", "-f", "docker-compose.yml", "ps", "-q", "postgres"]],
     ["docker", ["compose", "ps", "-q", "postgres"]],
@@ -131,53 +167,30 @@ function discoverPostgresContainer(): string {
 function runPsql(sql: string) {
   const { user, password, database } = parseConnectionInfo();
   const container = discoverPostgresContainer();
-  const candidates = ["/usr/local/bin/psql", "/usr/bin/psql", "/usr/lib/postgresql/16/bin/psql"];
-
-  let lastResult = spawnSync(
+  return spawnSync(
     "docker",
-    ["exec", "-i", "-e", `PGPASSWORD=${password}`, container, "sh", "-lc", "command -v psql || which psql"],
+    [
+      "exec",
+      "-i",
+      "-e",
+      `PGPASSWORD=${password}`,
+      container,
+      "psql",
+      "-U",
+      user,
+      "-d",
+      database,
+      "-At",
+      "-F",
+      "\t",
+      "-c",
+      sql,
+    ],
     {
       encoding: "utf-8",
       timeout: 15_000,
     },
   );
-
-  for (const bin of candidates) {
-    const result = spawnSync(
-      "docker",
-      [
-        "exec",
-        "-i",
-        "-e",
-        `PGPASSWORD=${password}`,
-        container,
-        bin,
-        "-U",
-        user,
-        "-d",
-        database,
-        "-At",
-        "-F",
-        "\t",
-        "-c",
-        sql,
-      ],
-      {
-        encoding: "utf-8",
-        timeout: 15_000,
-      },
-    );
-    lastResult = result;
-    if (result.status === 0) {
-      return result;
-    }
-    const stderr = `${result.stderr || ""}\n${result.stdout || ""}`;
-    if (!/executable file not found|not found/i.test(stderr)) {
-      return result;
-    }
-  }
-
-  return lastResult;
 }
 
 /**
