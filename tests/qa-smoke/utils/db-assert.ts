@@ -22,11 +22,7 @@
 
 import { spawnSync } from "node:child_process";
 
-type ConnectionInfo = {
-  user: string;
-  password: string;
-  database: string;
-};
+const PSQL_BIN = resolvePsqlBin();
 
 function psqlUrl(): string {
   const raw = process.env.DATABASE_URL;
@@ -38,160 +34,27 @@ function psqlUrl(): string {
   return raw.replace(/^postgresql\+asyncpg:/, "postgresql:");
 }
 
-function parseConnectionInfo(): ConnectionInfo {
-  const url = new URL(psqlUrl());
-  const user = decodeURIComponent(url.username);
-  const password = decodeURIComponent(url.password);
-  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
-
-  if (!user || !database) {
-    throw new Error("QA smoke abort: DATABASE_URL is missing user or database name");
+function resolvePsqlBin(): string {
+  const result = spawnSync("sh", ["-lc", "command -v psql || which psql"], {
+    encoding: "utf-8",
+  });
+  const found = (result.stdout || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+  if (result.status !== 0 || !found) {
+    throw new Error(
+      "QA smoke abort: host psql binary could not be discovered. Set PSQL_BIN if needed.",
+    );
   }
-
-  return { user, password, database };
-}
-
-function discoverPostgresContainer(): string {
-  const override = [
-    process.env.QA_SMOKE_POSTGRES_CONTAINER,
-    process.env.POSTGRES_CONTAINER,
-    process.env.QA_POSTGRES_CONTAINER,
-  ].find((value) => value && value.trim().length > 0)?.trim();
-  if (override) {
-    return override;
-  }
-
-  const commands: Array<[string, string[]]> = [
-    ["docker", ["compose", "-f", "docker-compose.yml", "ps", "-q", "postgres"]],
-    ["docker", ["compose", "ps", "-q", "postgres"]],
-    [
-      "docker",
-      [
-        "ps",
-        "--filter",
-        "label=com.docker.compose.service=postgres",
-        "--filter",
-        "status=running",
-        "--format",
-        "{{.ID}} {{.Names}}",
-      ],
-    ],
-    [
-      "docker",
-      ["ps", "--filter", "name=postgres", "--filter", "status=running", "--format", "{{.ID}} {{.Names}}"],
-    ],
-    [
-      "docker",
-      [
-        "ps",
-        "--format",
-        "{{.ID}} {{.Names}} {{.Image}} {{.Command}}",
-      ],
-    ],
-  ];
-
-  for (const [command, args] of commands) {
-    const result = spawnSync(command, args, { encoding: "utf-8" });
-    if (result.status !== 0) {
-      continue;
-    }
-    const lines = (result.stdout || "")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-    if (lines.length === 0) {
-      continue;
-    }
-    if (lines.length === 1) {
-      return lines[0].split(/\s+/)[0];
-    }
-    const preferred = lines.find((line) => /astro-webapp-postgres|postgres/i.test(line));
-    if (preferred) {
-      return preferred.split(/\s+/)[0];
-    }
-    return lines[0].split(/\s+/)[0];
-  }
-
-  const inventory = spawnSync(
-    "docker",
-    ["ps", "--format", "{{.ID}} {{.Names}} {{.Image}} {{.Status}}"],
-    { encoding: "utf-8" },
-  );
-  throw new Error(
-    [
-      "QA smoke abort: postgres container could not be discovered.",
-      "Set QA_SMOKE_POSTGRES_CONTAINER if needed.",
-      inventory.stdout?.trim() ? `docker ps:\n${inventory.stdout.trim()}` : "",
-    ]
-      .filter((part) => part.length > 0)
-      .join("\n"),
-  );
+  return found;
 }
 
 function runPsql(sql: string) {
-  const { user, password, database } = parseConnectionInfo();
-  const conn = psqlUrl();
-
-  const direct = spawnSync("psql", [conn, "-At", "-F", "\t", "-c", sql], {
+  return spawnSync(PSQL_BIN, [psqlUrl(), "-At", "-F", "\t", "-c", sql], {
     encoding: "utf-8",
     timeout: 15_000,
   });
-  if (direct.status === 0) {
-    return direct;
-  }
-
-  if (direct.error && direct.error.code === "ENOENT") {
-    const shell = spawnSync(
-      "bash",
-      [
-        "-lc",
-        [
-          "psql",
-          JSON.stringify(conn),
-          "-At",
-          "-F",
-          "$'\\t'",
-          "-c",
-          JSON.stringify(sql),
-        ].join(" "),
-      ],
-      {
-        encoding: "utf-8",
-        timeout: 15_000,
-      },
-    );
-    if (shell.status === 0 || (shell.error && shell.error.code !== "ENOENT")) {
-      return shell;
-    }
-  }
-
-  const container = discoverPostgresContainer();
-  return spawnSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "-e",
-      `PGPASSWORD=${password}`,
-      container,
-      "sh",
-      "-lc",
-      [
-        "exec psql",
-        `-U "${user}"`,
-        `-d "${database}"`,
-        "-At",
-        '-F "$(printf \'\\t\')"',
-        `-c "$1"`,
-      ].join(" "),
-      "sh",
-      sql,
-    ],
-    {
-      encoding: "utf-8",
-      timeout: 15_000,
-    },
-  );
 }
 
 /**
