@@ -64,9 +64,12 @@ class _FakeCategoryChannel(sys.modules["discord"].CategoryChannel):
 @dataclass
 class _FakeTextChannel(sys.modules["discord"].TextChannel):
     id: int
-    mention: str
     send: AsyncMock
+    mention_text: str
 
+    @property
+    def mention(self):
+        return self.mention_text
 
 class _DBContext:
     def __init__(self, session: AsyncMock) -> None:
@@ -94,7 +97,7 @@ def _make_guild(*, category_id: int, bot_member: _FakeMember, staff_role: _FakeR
     guild.get_role = MagicMock(return_value=staff_role)
     created_channel = _FakeTextChannel(
         id=1517435280951349310,
-        mention="#ticket-shingo-9692",
+        mention_text="#ticket-shingo-9692",
         send=AsyncMock(return_value=None),
     )
     guild.create_text_channel = AsyncMock(return_value=created_channel)
@@ -220,7 +223,7 @@ async def test_ticket_channel_returns_existing_channel_without_recreate():
     bot_member = _FakeMember(id=9999, display_name="SalesAnchor Bot")
     existing_channel = _FakeTextChannel(
         id=1517435280951349310,
-        mention="#ticket-shingo-9692",
+        mention_text="#ticket-shingo-9692",
         send=AsyncMock(return_value=None),
     )
     guild = MagicMock()
