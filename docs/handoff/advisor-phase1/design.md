@@ -29,6 +29,10 @@
 - 最終接触日: `conversation_logs.occurred_at` の MAX
 - low 判定: `last_contact_at` が null、または `days_since_last_contact >= stale_days`
 
+## 外部・過去事例の参照と我々への応用
+
+該当なし。今回の PR は既存の `conversation_logs` と `companies.sales_rep_id` を read-only で集計するだけで、外部ライブラリや追加の過去事例を参照して設計を変える必要はない。
+
 ## API
 
 - ルート: /api/v1/analytics/customer-contacts
