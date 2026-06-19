@@ -12,6 +12,7 @@
  */
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Spinner } from "./loading";
 import "./Button.css";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline";
@@ -22,6 +23,7 @@ interface ButtonOwnProps {
   size?: ButtonSize;
   fullWidth?: boolean;
   loading?: boolean;
+  loadingText?: string;
   /** true にする場合は aria-label 必須 */
   iconOnly?: boolean;
   children?: ReactNode;
@@ -42,6 +44,7 @@ export function Button({
   size = "md",
   fullWidth = false,
   loading = false,
+  loadingText,
   iconOnly = false,
   children,
   className,
@@ -61,13 +64,13 @@ export function Button({
   return (
     <button
       className={classes}
-      disabled={disabled ?? loading}
+      disabled={disabled || loading}
       aria-busy={loading || undefined}
       aria-label={ariaLabel}
       {...rest}
     >
-      {loading && <span className="comp-btn__spinner" aria-hidden="true" />}
-      {children}
+      {loading && <Spinner size="sm" onAccent={variant === "primary"} />}
+      {loading ? (loadingText ?? children) : children}
     </button>
   );
 }

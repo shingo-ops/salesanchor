@@ -131,9 +131,18 @@
   /* ---- Motion / Transitions ---- */
   /* duration tokens — 値は ms 統一（Material Design 3 / Tailwind 準拠） */
   --duration-base:      200ms;                               /* animation で easing を別指定する場合の duration 単体 */
+  --duration-spinner:   800ms;                               /* Spinner 回転 */
+  --duration-shimmer:  1500ms;                               /* Skeleton shimmer */
+  --duration-striped:    700ms;                               /* Progress striped */
+  --duration-bounce:    1300ms;                              /* Splash dots bounce */
+  --duration-blink:     1300ms;                              /* Splash logo blink */
+  --duration-toast-in:    350ms;                              /* Toast enter */
+  --duration-toast-out:   300ms;                              /* Toast exit */
+  --duration-fade-up:     400ms;                              /* Empty state fade-up */
   --transition-micro:   100ms ease;                          /* ボタン押下・スウォッチ */
   --transition-fast:    150ms ease;                          /* hover・カラー変化 */
   --transition-base:    200ms ease;                          /* フェードイン・スケール */
+  --transition-highlight: 600ms ease;                        /* 行ハイライト */
   --transition-sidebar: 250ms ease;                          /* サイドバー幅アニメーション */
   --transition-slow:    280ms cubic-bezier(0.4, 0, 0.2, 1); /* ドロワー・モーダル展開 */
 
@@ -141,6 +150,8 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* Material/Meta 標準 */
   --ease-enter:    cubic-bezier(0, 0, 0.2, 1);    /* 要素が画面に入る */
   --ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* 要素が画面から出る */
+  --toast-slide-distance: 120%;                  /* Toast の退避距離 */
+  --splash-dot-delay-step: 180ms;                /* Splash dots のずらし */
 
   /* ---- Component sizes ---- */
   /* btn-min-height: 現行ボタンはpadding主体のため最小高として定義（height固定ではない） */
