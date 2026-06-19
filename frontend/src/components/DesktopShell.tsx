@@ -201,7 +201,7 @@ export default function DesktopShell() {
       {/* ============ Sidebar ============ */}
       <aside
         id="sidebar-panel"
-        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}`}
+        className={`sidebar-panel${sidebarExpanded ? " sidebar-expanded" : ""}${sidebarExpandSuppressed ? " sidebar-hover-suppressed" : ""}`}
         onMouseEnter={handleSidebarEnter}
         onMouseLeave={handleSidebarLeave}
       >
