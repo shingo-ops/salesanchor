@@ -11,9 +11,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Badge } from "../../components/Badge";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import InventoryFilterPanel from "./InventoryFilterPanel";
+import InventoryModeTabs from "./InventoryModeTabs";
 
 interface InventoryRow {
   id: number;
@@ -417,7 +419,18 @@ export default function InventoryPage() {
   };
 
   return (
-    <PageLayout navKey="nav.inventory" subtitleKey="inventory.view.subtitle">
+    <PageLayout
+      navKey="nav.inventory"
+      subtitleKey="inventory.view.subtitle"
+      headerLeft={(
+        <Badge variant="info" appearance="soft" size="sm">
+          WEGO
+        </Badge>
+      )}
+    >
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <InventoryModeTabs />
+      </div>
       <div className="error-message" role="status" data-testid="inventory-expiry-warning" style={{ marginBottom: "var(--space-3)" }}>
         {t("inventory.expiryWarning")}
       </div>
