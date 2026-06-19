@@ -22,7 +22,12 @@ from typing import Any, Callable
 
 import discord
 
-from app.discord_gateway import dm_writer, inbound_writer, ticket_channel_creator
+from app.discord_gateway import (
+    dm_writer,
+    inbound_writer,
+    ticket_channel_creator,
+    ticket_channel_writer,
+)
 from app.discord_gateway.config import TenantBotConfig
 
 logger = logging.getLogger(__name__)
@@ -177,13 +182,14 @@ class JarvisDiscordClient(discord.Client):
         )
 
     async def on_message(self, message: discord.Message) -> None:  # type: ignore[override]
-        """MESSAGE_CREATE: DM は顧客受信箱経路、guild は仕入元解析経路へ振り分ける。
+        """MESSAGE_CREATE: DM は顧客受信箱経路、guild は ticket channel 優先で処理する。
 
         DM (guild=None):
           _process_dm_message → dm_writer → {schema}.meta_messages (platform='discord')
 
         Guild メッセージ:
-          _process_message → inbound_writer → public.discord_inbound_messages (在庫解析)
+          - lead.discord_guild_channel_id に一致 → ticket_channel_writer → {schema}.meta_messages
+          - それ以外 → _process_message → inbound_writer → public.discord_inbound_messages
 
         AC5.1: 受信から 5 秒以内に discord_inbound_messages 1 行追加
         AC5.2: 同一 discord_message_id 2 回 → 1 行のみ
@@ -196,8 +202,32 @@ class JarvisDiscordClient(discord.Client):
             # DM → 顧客メッセージング（受信箱）経路
             await self._process_dm_message(message)
         else:
-            # Guild チャンネル → 仕入元在庫解析経路（既存）
-            await self._process_message(message)
+            await self._process_guild_message(message)
+
+    async def _process_guild_message(self, message: discord.Message) -> None:
+        """Guild メッセージを ticket channel → 在庫解析の順で振り分ける."""
+        try:
+            handled = await ticket_channel_writer.process_ticket_channel_message(
+                self._db_factory(),
+                tenant_id=self.tenant.tenant_id,
+                message=message,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] ticket channel routing failed tenant=%s msg=%s: %s",
+                self.tenant.tenant_code,
+                getattr(message, "id", "?"),
+                exc,
+                exc_info=True,
+            )
+            return
+
+        if handled:
+            return
+
+        await self._process_message(message)
 
     # --- internal --------------------------------------------------------
 
