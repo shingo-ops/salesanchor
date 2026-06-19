@@ -407,6 +407,9 @@ run_sql migrations/20260615_235900_seed_pokemon_mega_products.sql
 # tcg_type_master 重複 code 統合（pokemon/weiss → pokemon_booster_box/weiss_schwarz）
 run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 
+# ADR-137 ETD骨格: fedex_etd_images テーブル
+run_sql migrations/20260618_120000_add_fedex_etd_images.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

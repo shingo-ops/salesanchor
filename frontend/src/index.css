@@ -125,6 +125,8 @@
 
   /* accent背景上のテキスト（常に白） */
   --on-accent: #ffffff;
+  --spinner-on-accent-track: rgba(255, 255, 255, 0.4);
+  --spinner-on-accent-head: #ffffff;
 
   /* リードバッジ: コンタクト中（orange系 — 既存変数に対応なし） */
   --lead-contact-bg:   #fbd38d;
@@ -307,6 +309,8 @@
 
   /* accent背景上のテキスト（常に白） */
   --on-accent: #ffffff;
+  --spinner-on-accent-track: rgba(255, 255, 255, 0.4);
+  --spinner-on-accent-head: #ffffff;
 
   /* リードバッジ: コンタクト中（ダーク） */
   --lead-contact-bg:   #3d2b00;

@@ -1,0 +1,80 @@
+name: External API Smoke (PayPal Sandbox)
+
+# paths / paths-ignore を使わず常時起動し、内部判定で対象PRのみ実スモークを回す。
+# required check 化したとき、対象外PRが pending のまま詰まらないようにする。
+#
+# 対象:
+#   - backend/app/services/**
+#   - backend/app/routers/**
+#   - backend/tests/sandbox/**
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: external-api-smoke-paypal
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  paypal-sandbox-smoke:
+    name: PayPal Sandbox smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect smoke scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+          echo "$CHANGED_FILES"
+
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/app/services/|backend/app/routers/|backend/tests/sandbox/)'; then
+            echo "is_target=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_target=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip smoke for unrelated PRs
+        if: steps.scope.outputs.is_target != 'true'
+        run: echo "No sandbox smoke changes detected; workflow completes successfully."
+
+      - name: Setup Python
+        if: steps.scope.outputs.is_target == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        if: steps.scope.outputs.is_target == 'true'
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        if: steps.scope.outputs.is_target == 'true'
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
+
+      - name: Run PayPal Sandbox smoke
+        if: steps.scope.outputs.is_target == 'true'
+        env:
+          PAYPAL_SANDBOX_CLIENT_ID: ${{ secrets.PAYPAL_SANDBOX_CLIENT_ID }}
+          PAYPAL_SANDBOX_CLIENT_SECRET: ${{ secrets.PAYPAL_SANDBOX_CLIENT_SECRET }}
+          CI: 'true'
+          PYTHONPATH: backend
+        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short

@@ -95,6 +95,7 @@ import DesignPreviewPage from "./pages/design-preview/DesignPreviewPage";
 import RegisterPage from "./pages/register/RegisterPage";
 import RegisterAddressPage from "./pages/register/RegisterAddressPage";
 import RegisterChangeBillingPage from "./pages/register/RegisterChangeBillingPage";
+import { Toaster } from "./components/loading";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -133,6 +134,7 @@ function App() {
         <UiPrefsProvider>
           <LocaleProvider>
             <ThemeProvider>
+              <Toaster />
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}

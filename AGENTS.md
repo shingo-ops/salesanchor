@@ -102,6 +102,12 @@ bash scripts/aeon-dispatch.sh generator --auto   # 自動承認モード
 
 ---
 
+## 実行役 preflight
+
+- 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
+
+---
+
 ## セットアップ & 実行コマンド
 
 ### Frontend
@@ -135,6 +141,14 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 - 完了後 `gh pr create` で PR 作成 → レビュー後 `develop` へマージ
 - `develop → main` も PR 経由（直 push 禁止・Branch Protection で強制）
   - マージ方法は必ず "Create a merge commit"（squash 禁止 — back-merge が永続発生するため）
+
+### develop 消失防止（無料運用）
+
+- GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
+- `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
+- `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
+- `./scripts/dev/executor-preflight.sh` は `origin/main` と `origin/develop` の存在を毎回確認する
+- もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
 
 ---
 

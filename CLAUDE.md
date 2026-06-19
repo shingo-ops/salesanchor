@@ -57,6 +57,14 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）単独。Hikky-devのApproveバイパスは廃止
 - **リリース PR 作成時**は `git diff main...develop --name-only` で変更ファイル一覧を PR 本文に記載。危険パスが含まれたら停止して PO 確認。
 
+### develop 消失防止（無料運用）
+
+- GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
+- `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
+- `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
+- `./scripts/dev/executor-preflight.sh` は `origin/main` と `origin/develop` の存在を毎回確認する
+- もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
+
 ---
 
 ## 標準開発フロー（正本: docs/STANDARD-WORKFLOW.md）
@@ -68,6 +76,12 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
 - PR本文: `### 標準ワークフロー確認` セクション必須。
 - recon.md と design.md は必ず git add してからコミットすること。
+
+---
+
+## 実行役 preflight
+
+- 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
 
 ---
 
