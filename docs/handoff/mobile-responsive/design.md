@@ -49,7 +49,7 @@
 | G4 | 下部タブ各項目・「もっと」・主要ボタンのタップ領域が高さ≥44px | Playwright: 対象要素の `getBoundingClientRect().height >= 44` |
 | G5 | 641〜767px帯で Drawer/Modal が全画面で開く（中途半端な幅にならない） | Playwright 700px: Drawer/Modal 展開時の幅が viewport 幅と一致 |
 | 構造1 | PC（1280px）でサイドバー等の既存ナビが変化していない | Playwright 1280px 視覚差分（変更前後で diff 無し）＋ `git diff` でPC専用CSSの無改変確認 |
-| 構造2 | 640px の生値が Drawer/Modal から消え、公式トークンを参照している | `grep -rn "640px" frontend/src/components/Drawer.css frontend/src/components/Modal.css` → 0件 |
+| 構造2 | 640px の生値が Drawer/Modal から消え、公式トークンを参照している | `npm run check:mobile-responsive-structure2` → 0件（対象は first-phase shell CSS の `Drawer.css` / `Modal.css` のみ。`tokens.css` は定義ファイル、`pages/**` は第二弾のため除外） |
 | 構造3 | モバイルでサイドバー（`sidebar-panel`）が非表示になる（DesktopShell非表示） | Playwright 375px: DesktopShell が DOM に存在しない（`#sidebar-panel` 不在） |
 
 ---
