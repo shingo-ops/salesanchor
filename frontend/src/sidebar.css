@@ -39,6 +39,10 @@
   width: var(--sidebar-width-expanded, 240px);
 }
 
+.sidebar-panel.sidebar-hover-suppressed:hover {
+  width: var(--sidebar-width-collapsed, 54px);
+}
+
 /* Logo area */
 .sidebar-logo-area {
   display: flex;
@@ -67,6 +71,12 @@
 /* stylelint-disable-next-line no-descending-specificity -- intentional: expanded state overrides collapsed */
 .sidebar-expanded .sidebar-logo-area {
   padding-left: calc(var(--sidebar-nav-icon-center-x) - var(--logo-size) / 2);
+}
+
+.sidebar-panel.sidebar-hover-suppressed:hover .sidebar-logo-area {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sidebar-logo-icon {
@@ -174,12 +184,20 @@
   opacity: 1;
 }
 
+.sidebar-panel.sidebar-hover-suppressed:hover .sidebar-label {
+  opacity: 0;
+}
+
 .sidebar-expanded .sidebar-item {
   padding: var(--sidebar-item-padding-v) var(--space-5);
 }
 
 .sidebar-panel:hover .sidebar-item {
   padding: var(--sidebar-item-padding-v) var(--space-5);
+}
+
+.sidebar-panel.sidebar-hover-suppressed:hover .sidebar-item {
+  padding: var(--sidebar-item-padding-v) var(--space-14px);
 }
 
 /* Accordion */
