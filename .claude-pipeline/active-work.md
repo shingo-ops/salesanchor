@@ -153,6 +153,7 @@
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
 | feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | DONE | #2340 | | 自動登録 merged:ce03ca3 |
 | feature/morimoto/executor-preflight-hook | （自動登録） | 2026-06-19 00:27 | DONE | #2347 | | merged:1e0efff merged時自動登録・要確認 |
+| feature/morimoto/paypal-sandbox-smoke | （自動登録・要補完） | 2026-06-19 00:46 | REVIEW | #2341 | | 自動登録 |
 ---
 
 ## 記入例
