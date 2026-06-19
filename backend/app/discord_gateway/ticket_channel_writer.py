@@ -1,9 +1,7 @@
-"""Discord ticket channel 受信 → 受信箱 DB 書き込みヘルパ。
+"""Discord ticket channel inbound 保存ヘルパ。
 
-チケット専用チャンネルのメッセージを meta_messages に保存し、
-必要なら保存直後に翻訳を走らせる。
-
-DM 受信経路(dm_writer.py) とは独立した ticket channel 専用経路。
+チケット専用チャンネルの customer 投稿を meta_messages に保存し、
+保存後に worker へ即時翻訳を enqueue する。
 """
 from __future__ import annotations
 
@@ -17,15 +15,12 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
-from app.services.message_translator import translate_inbound
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class TicketChannelLead:
-    """チケットチャンネルに紐づく lead 情報。"""
-
     lead_id: int
     discord_user_id: str | None
     customer_name: str | None
@@ -71,12 +66,7 @@ async def process_ticket_channel_message(
     tenant_id: int,
     message: Any,
 ) -> bool:
-    """チケットチャンネルの guild メッセージを meta_messages に保存する。
-
-    Returns:
-        True  = チケットチャンネルとして処理した（INSERT の成否を問わない）
-        False = チケットチャンネルではない（通常の guild 解析へ委譲してよい）
-    """
+    """チケットチャンネルの guild メッセージを meta_messages に保存する。"""
     channel = getattr(message, "channel", None)
     guild = getattr(message, "guild", None)
     if guild is None or channel is None:
@@ -111,9 +101,14 @@ async def process_ticket_channel_message(
             channel_id=channel_id,
         )
         if lead is None:
-            return False
+            logger.warning(
+                "[discord-gateway] ticket channel lead not found tenant=%s ch=%s msg=%s",
+                tenant_id,
+                channel_id,
+                message_id,
+            )
+            return True
 
-        schema = _schema(tenant_id)
         if getattr(author, "bot", False) or webhook_id:
             logger.info(
                 "[discord-gateway] ticket channel skip bot/webhook tenant=%s lead=%s msg=%s",
@@ -124,52 +119,36 @@ async def process_ticket_channel_message(
             return True
 
         inbound = bool(lead.discord_user_id) and author_id == str(lead.discord_user_id)
-        if inbound:
-            insert_sql = text(f"""
-                INSERT INTO {schema}.meta_messages
-                    (tenant_id, lead_id, platform, sender_id, sender_name,
-                     message_text, direction, message_id, created_at)
-                VALUES
-                    (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                     :message_text, 'inbound', :message_id, :created_at)
-                ON CONFLICT (message_id) WHERE message_id IS NOT NULL
-                DO NOTHING
-                RETURNING id
-            """)
-            insert_params = {
-                "tenant_id": tenant_id,
-                "lead_id": lead.lead_id,
-                "sender_id": author_id,
-                "sender_name": author_name,
-                "message_text": message_text,
-                "message_id": message_id,
-                "created_at": received_at,
-            }
-        else:
-            insert_sql = text(f"""
-                INSERT INTO {schema}.meta_messages
-                    (tenant_id, lead_id, platform, sender_id, sender_name,
-                     message_text, direction, message_id, recipient_id,
-                     sent_by_staff_id, created_at)
-                VALUES
-                    (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                     :message_text, 'outbound', :message_id, :recipient_id,
-                     :sent_by_staff_id, :created_at)
-                ON CONFLICT (message_id) WHERE message_id IS NOT NULL
-                DO NOTHING
-                RETURNING id
-            """)
-            insert_params = {
-                "tenant_id": tenant_id,
-                "lead_id": lead.lead_id,
-                "sender_id": author_id,
-                "sender_name": author_name,
-                "message_text": message_text,
-                "message_id": message_id,
-                "recipient_id": lead.discord_user_id,
-                "sent_by_staff_id": None,
-                "created_at": received_at,
-            }
+        if not inbound:
+            logger.info(
+                "[discord-gateway] ticket channel non-customer message ignored tenant=%s lead=%s msg=%s",
+                tenant_id,
+                lead.lead_id,
+                message_id,
+            )
+            return True
+
+        schema = _schema(tenant_id)
+        insert_sql = text(f"""
+            INSERT INTO {schema}.meta_messages
+                (tenant_id, lead_id, platform, sender_id, sender_name,
+                 message_text, direction, message_id, created_at)
+            VALUES
+                (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
+                 :message_text, 'inbound', :message_id, :created_at)
+            ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+            DO NOTHING
+            RETURNING id
+        """)
+        insert_params = {
+            "tenant_id": tenant_id,
+            "lead_id": lead.lead_id,
+            "sender_id": author_id,
+            "sender_name": author_name,
+            "message_text": message_text,
+            "message_id": message_id,
+            "created_at": received_at,
+        }
 
         result = await db.execute(insert_sql, insert_params)
         inserted_row = result.first()
@@ -184,29 +163,24 @@ async def process_ticket_channel_message(
             )
             return True
 
-        if inbound and message_text.strip():
+        if message_text.strip():
             try:
-                await translate_inbound(
-                    db=db,
+                from app.tasks.translation import translate_inbound_message
+
+                translate_inbound_message.delay(
                     tenant_id=tenant_id,
-                    table_ref=f"{schema}.message_translations",
+                    table_ref="meta_messages",
                     message_id=message_id,
                     message_text=message_text,
+                    target_language="ja",
                 )
             except Exception:  # noqa: BLE001
                 logger.warning(
-                    "[discord-gateway] ticket channel translation failed tenant=%s lead=%s msg=%s",
+                    "[discord-gateway] ticket channel translation enqueue failed tenant=%s lead=%s msg=%s",
                     tenant_id,
                     lead.lead_id,
                     message_id,
                     exc_info=True,
                 )
-
-        try:
-            from app.services.sse_pubsub import publish_inbox_update
-
-            await publish_inbox_update(tenant_id)
-        except Exception:  # noqa: BLE001
-            logger.debug("[discord-gateway] SSE publish skipped for ticket channel")
 
     return True
