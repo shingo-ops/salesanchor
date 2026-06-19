@@ -22,7 +22,11 @@
 
 import { spawnSync } from "node:child_process";
 
-const PSQL_BIN = resolvePsqlBin();
+type ConnectionInfo = {
+  user: string;
+  password: string;
+  database: string;
+};
 
 function psqlUrl(): string {
   const raw = process.env.DATABASE_URL;
@@ -34,27 +38,146 @@ function psqlUrl(): string {
   return raw.replace(/^postgresql\+asyncpg:/, "postgresql:");
 }
 
-function resolvePsqlBin(): string {
-  const result = spawnSync("sh", ["-lc", "command -v psql || which psql"], {
-    encoding: "utf-8",
-  });
-  const found = (result.stdout || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.length > 0);
-  if (result.status !== 0 || !found) {
-    throw new Error(
-      "QA smoke abort: host psql binary could not be discovered. Set PSQL_BIN if needed.",
-    );
+function parseConnectionInfo(): ConnectionInfo {
+  const url = new URL(psqlUrl());
+  const user = decodeURIComponent(url.username);
+  const password = decodeURIComponent(url.password);
+  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
+
+  if (!user || !database) {
+    throw new Error("QA smoke abort: DATABASE_URL is missing user or database name");
   }
-  return found;
+
+  return { user, password, database };
+}
+
+function discoverPostgresContainer(): string {
+  const override = [
+    process.env.QA_SMOKE_POSTGRES_CONTAINER,
+    process.env.POSTGRES_CONTAINER,
+    process.env.QA_POSTGRES_CONTAINER,
+  ].find((value) => value && value.trim().length > 0)?.trim();
+  if (override) {
+    return override;
+  }
+
+  const commands: Array<[string, string[]]> = [
+    ["docker", ["compose", "-f", "docker-compose.yml", "ps", "-q", "postgres"]],
+    ["docker", ["compose", "ps", "-q", "postgres"]],
+    [
+      "docker",
+      [
+        "ps",
+        "--filter",
+        "label=com.docker.compose.service=postgres",
+        "--filter",
+        "status=running",
+        "--format",
+        "{{.ID}} {{.Names}}",
+      ],
+    ],
+    [
+      "docker",
+      ["ps", "--filter", "name=postgres", "--filter", "status=running", "--format", "{{.ID}} {{.Names}}"],
+    ],
+    [
+      "docker",
+      [
+        "ps",
+        "--format",
+        "{{.ID}} {{.Names}} {{.Image}} {{.Command}}",
+      ],
+    ],
+  ];
+
+  for (const [command, args] of commands) {
+    const result = spawnSync(command, args, { encoding: "utf-8" });
+    if (result.status !== 0) {
+      continue;
+    }
+    const lines = (result.stdout || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length === 0) {
+      continue;
+    }
+    if (lines.length === 1) {
+      return lines[0].split(/\s+/)[0];
+    }
+    const preferred = lines.find((line) => /astro-webapp-postgres|postgres/i.test(line));
+    if (preferred) {
+      return preferred.split(/\s+/)[0];
+    }
+    return lines[0].split(/\s+/)[0];
+  }
+
+  const inventory = spawnSync(
+    "docker",
+    ["ps", "--format", "{{.ID}} {{.Names}} {{.Image}} {{.Status}}"],
+    { encoding: "utf-8" },
+  );
+  throw new Error(
+    [
+      "QA smoke abort: postgres container could not be discovered.",
+      "Set QA_SMOKE_POSTGRES_CONTAINER if needed.",
+      inventory.stdout?.trim() ? `docker ps:\n${inventory.stdout.trim()}` : "",
+    ]
+      .filter((part) => part.length > 0)
+      .join("\n"),
+  );
 }
 
 function runPsql(sql: string) {
-  return spawnSync(PSQL_BIN, [psqlUrl(), "-At", "-F", "\t", "-c", sql], {
-    encoding: "utf-8",
-    timeout: 15_000,
-  });
+  const { user, password, database } = parseConnectionInfo();
+  const container = discoverPostgresContainer();
+  const candidates = ["/usr/local/bin/psql", "/usr/bin/psql", "/usr/lib/postgresql/16/bin/psql"];
+
+  let lastResult = spawnSync(
+    "docker",
+    ["exec", "-i", "-e", `PGPASSWORD=${password}`, container, "sh", "-lc", "command -v psql || which psql"],
+    {
+      encoding: "utf-8",
+      timeout: 15_000,
+    },
+  );
+
+  for (const bin of candidates) {
+    const result = spawnSync(
+      "docker",
+      [
+        "exec",
+        "-i",
+        "-e",
+        `PGPASSWORD=${password}`,
+        container,
+        bin,
+        "-U",
+        user,
+        "-d",
+        database,
+        "-At",
+        "-F",
+        "\t",
+        "-c",
+        sql,
+      ],
+      {
+        encoding: "utf-8",
+        timeout: 15_000,
+      },
+    );
+    lastResult = result;
+    if (result.status === 0) {
+      return result;
+    }
+    const stderr = `${result.stderr || ""}\n${result.stdout || ""}`;
+    if (!/executable file not found|not found/i.test(stderr)) {
+      return result;
+    }
+  }
+
+  return lastResult;
 }
 
 /**

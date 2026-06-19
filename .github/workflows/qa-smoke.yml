@@ -100,16 +100,6 @@ jobs:
         working-directory: tests/qa-smoke
         run: npx playwright install chromium
 
-      - name: Install PostgreSQL client
-        run: |
-          if ! command -v psql >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
-          fi
-
-      - name: Locate host psql
-        run: command -v psql || which psql
-
       # --- tenant_006 reset (seed 投入) ---
       - name: Bootstrap qa_tenant006_rw role on VPS
         uses: appleboy/ssh-action@v1
