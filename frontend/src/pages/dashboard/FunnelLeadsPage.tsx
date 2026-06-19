@@ -9,10 +9,17 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
+import { api } from "../../lib/api";
 import { getChannels, type ChannelRow } from "../../api/funnel";
 
 interface ChannelRowWithId extends ChannelRow {
   id: number;
+}
+
+interface LeadSummaryResponse {
+  leads: {
+    excluded: number;
+  };
 }
 
 function fmtMoney(n: number): string {
@@ -25,6 +32,7 @@ export default function FunnelLeadsPage() {
   const navigate = useNavigate();
 
   const [rows, setRows] = useState<ChannelRowWithId[]>([]);
+  const [summary, setSummary] = useState<LeadSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const currentMonth = (() => {
@@ -34,9 +42,18 @@ export default function FunnelLeadsPage() {
 
   useEffect(() => {
     setLoading(true);
-    getChannels(currentMonth)
-      .then((res) => {
-        setRows(res.rows.map((r, i) => ({ ...r, id: i + 1 })));
+    Promise.allSettled([
+      getChannels(currentMonth),
+      // このページは管理視点固定なので、対象外も team スコープで揃える。
+      api.get<LeadSummaryResponse>("/analytics/summary?period=1m&tab=team"),
+    ])
+      .then(([channelsResult, summaryResult]) => {
+        if (channelsResult.status === "fulfilled") {
+          setRows(channelsResult.value.rows.map((r, i) => ({ ...r, id: i + 1 })));
+        }
+        if (summaryResult.status === "fulfilled") {
+          setSummary(summaryResult.value);
+        }
       })
       .finally(() => setLoading(false));
   }, [currentMonth]);
@@ -104,6 +121,32 @@ export default function FunnelLeadsPage() {
         </div>
       ) : (
         <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: "var(--space-4)",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: "var(--space-2)",
+                padding: "var(--space-3) var(--space-4)",
+                borderRadius: "var(--radius-lg)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
+                {t("dashboard.leadExcluded")}
+              </span>
+              <strong style={{ color: "var(--text-primary)", fontSize: "var(--font-lg)" }}>
+                {summary?.leads.excluded ?? 0}
+              </strong>
+            </div>
+          </div>
           <style>{`
             .fl-initiative-chip { display: inline-flex; align-items: center; padding: 2px var(--space-2); border-radius: var(--radius-badge); font-size: var(--font-xs); font-weight: var(--font-weight-semi); white-space: nowrap; }
             .fl-initiative--inbound { background: var(--accent-bg-subtle); color: var(--accent); }
