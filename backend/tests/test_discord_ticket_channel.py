@@ -3,42 +3,21 @@ from __future__ import annotations
 import sys
 import types
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.discord_gateway.config import TenantBotConfig
-
 if "discord" not in sys.modules:
     discord_stub = types.ModuleType("discord")
 
-    class _DummyIntents:
-        def __init__(self) -> None:
-            self.guilds = False
-            self.guild_messages = False
-            self.dm_messages = False
-            self.message_content = False
-            self.members = False
-
-        @classmethod
-        def none(cls) -> "_DummyIntents":
-            return cls()
-
-    class _DummyClient:
-        def __init__(self, *, intents=None) -> None:
-            self.intents = intents
-            self.guilds = []
-            self.user = None
+    class _DummyPermissionOverwrite:
+        def __init__(self, **kwargs) -> None:
+            self.__dict__.update(kwargs)
 
     class _DummyHTTPException(Exception):
         pass
 
-    class _DummyMessage:
-        pass
-
-    class _DummyInteraction:
+    class _DummyForbidden(Exception):
         pass
 
     class _DummyGuild:
@@ -53,48 +32,40 @@ if "discord" not in sys.modules:
     class _DummyTextChannel:
         pass
 
-    discord_stub.Intents = _DummyIntents
-    discord_stub.Client = _DummyClient
+    discord_stub.PermissionOverwrite = _DummyPermissionOverwrite
     discord_stub.HTTPException = _DummyHTTPException
-    discord_stub.Message = _DummyMessage
-    discord_stub.Interaction = _DummyInteraction
+    discord_stub.Forbidden = _DummyForbidden
     discord_stub.Guild = _DummyGuild
     discord_stub.Member = _DummyMember
     discord_stub.CategoryChannel = _DummyCategoryChannel
     discord_stub.TextChannel = _DummyTextChannel
-    discord_stub.InteractionType = types.SimpleNamespace(component=object())
     sys.modules["discord"] = discord_stub
 
-from app.discord_gateway.client import JarvisDiscordClient
+from app.discord_gateway import ticket_channel_creator
+
+
+@dataclass(frozen=True)
+class _FakeRole:
+    id: int
+    name: str
+
+
+@dataclass(frozen=True)
+class _FakeMember:
+    id: int
+    display_name: str
+
+
+@dataclass(frozen=True)
+class _FakeCategoryChannel(sys.modules["discord"].CategoryChannel):
+    id: int
 
 
 @dataclass
-class _FakeAuthor:
+class _FakeTextChannel(sys.modules["discord"].TextChannel):
     id: int
-    bot: bool = False
-    display_name: str = "staff"
-    name: str = "staff"
-
-
-@dataclass
-class _FakeGuild:
-    id: int
-
-
-@dataclass
-class _FakeChannel:
-    id: int
-
-
-@dataclass
-class _FakeMessage:
-    id: int
-    content: str
-    author: _FakeAuthor
-    guild: _FakeGuild | None
-    channel: _FakeChannel
-    created_at: datetime
-    webhook_id: str | None = None
+    mention: str
+    send: AsyncMock
 
 
 class _DBContext:
@@ -114,215 +85,170 @@ def _mock_result(first_value):
     return result
 
 
-def _make_message(
-    *,
-    msg_id: int = 1001,
-    channel_id: int = 2001,
-    author_id: int = 3001,
-    content: str = "hello",
-    bot: bool = False,
-    guild_id: int = 4001,
-    webhook_id: str | None = None,
-) -> _FakeMessage:
-    return _FakeMessage(
-        id=msg_id,
-        content=content,
-        author=_FakeAuthor(id=author_id, bot=bot),
-        guild=_FakeGuild(id=guild_id) if guild_id else None,
-        channel=_FakeChannel(id=channel_id),
-        created_at=datetime.now(timezone.utc),
-        webhook_id=webhook_id,
+def _make_guild(*, category_id: int, bot_member: _FakeMember, staff_role: _FakeRole | None = None):
+    category = _FakeCategoryChannel(category_id)
+    guild = MagicMock()
+    guild.default_role = _FakeRole(id=0, name="@everyone")
+    guild.me = bot_member
+    guild._category = category
+    guild.get_role = MagicMock(return_value=staff_role)
+    created_channel = _FakeTextChannel(
+        id=1517435280951349310,
+        mention="#ticket-shingo-9692",
+        send=AsyncMock(return_value=None),
     )
+    guild.create_text_channel = AsyncMock(return_value=created_channel)
+    guild.get_channel = MagicMock(side_effect=lambda channel_id: category if channel_id == category_id else None)
+    return guild, category, created_channel
 
 
 @pytest.mark.asyncio
-async def test_ticket_channel_inbound_triggers_translation_and_publish():
-    from app.discord_gateway import ticket_channel_writer
-
+async def test_ticket_channel_adds_bot_visibility_and_updates_existing_lead():
     session = AsyncMock()
     session.execute.side_effect = [
-        _mock_result((7, "3001", "Customer")),
-        _mock_result((101,)),
+        _mock_result((7, None, "Shingo")),
+        _mock_result((1,)),
+        _mock_result((1,)),
     ]
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     db_factory = MagicMock(return_value=_DBContext(session))
-    message = _make_message(author_id=3001, content="incoming hello")
+
+    bot_member = _FakeMember(id=9999, display_name="SalesAnchor Bot")
+    staff_role = _FakeRole(id=456, name="Staff")
+    guild, category, created_channel = _make_guild(
+        category_id=123,
+        bot_member=bot_member,
+        staff_role=staff_role,
+    )
+    member = _FakeMember(id=1255555836776939692, display_name="Shingo")
 
     with patch.object(
-        ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
-    ), patch.object(
-        ticket_channel_writer, "translate_inbound", new=AsyncMock(return_value=SimpleNamespace())
-    ) as mock_translate, patch(
-        "app.services.sse_pubsub.publish_inbox_update",
-        new=AsyncMock(return_value=None),
-    ) as mock_publish:
-        handled = await ticket_channel_writer.process_ticket_channel_message(
-            db_factory,
-            tenant_id=4,
-            message=message,
-        )
-
-    assert handled is True
-    assert session.execute.await_count == 2
-    assert session.commit.await_count == 1
-    mock_translate.assert_awaited_once()
-    assert mock_translate.await_args.kwargs["message_id"] == "1001"
-    assert mock_translate.await_args.kwargs["message_text"] == "incoming hello"
-    mock_publish.assert_awaited_once_with(4)
-
-    insert_sql = session.execute.await_args_list[1].args[0]
-    assert "direction, message_id, created_at" in str(insert_sql)
-    assert "'inbound'" in str(insert_sql)
-
-
-@pytest.mark.asyncio
-async def test_ticket_channel_outbound_skips_translation():
-    from app.discord_gateway import ticket_channel_writer
-
-    session = AsyncMock()
-    session.execute.side_effect = [
-        _mock_result((7, "3001", "Customer")),
-        _mock_result((202,)),
-    ]
-    session.commit = AsyncMock()
-    db_factory = MagicMock(return_value=_DBContext(session))
-    message = _make_message(author_id=9999, content="staff reply")
-
-    with patch.object(
-        ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
-    ), patch.object(
-        ticket_channel_writer, "translate_inbound", new=AsyncMock(return_value=SimpleNamespace())
-    ) as mock_translate, patch(
-        "app.services.sse_pubsub.publish_inbox_update",
-        new=AsyncMock(return_value=None),
-    ) as mock_publish:
-        handled = await ticket_channel_writer.process_ticket_channel_message(
-            db_factory,
-            tenant_id=4,
-            message=message,
-        )
-
-    assert handled is True
-    assert session.execute.await_count == 2
-    assert session.commit.await_count == 1
-    mock_translate.assert_not_awaited()
-    mock_publish.assert_awaited_once_with(4)
-
-    insert_sql = session.execute.await_args_list[1].args[0]
-    assert "direction, message_id, recipient_id" in str(insert_sql)
-    assert "'outbound'" in str(insert_sql)
-
-
-@pytest.mark.asyncio
-async def test_ticket_channel_non_ticket_returns_false():
-    from app.discord_gateway import ticket_channel_writer
-
-    session = AsyncMock()
-    session.execute.side_effect = [_mock_result(None)]
-    session.commit = AsyncMock()
-    db_factory = MagicMock(return_value=_DBContext(session))
-    message = _make_message()
-
-    with patch.object(
-        ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
+        ticket_channel_creator, "set_tenant_context", new=AsyncMock(return_value=None)
     ):
-        handled = await ticket_channel_writer.process_ticket_channel_message(
-            db_factory,
+        channel = await ticket_channel_creator.get_or_create_ticket_channel(
+            guild=guild,
+            config={
+                "ticket_category_id": "123",
+                "staff_role_id": "456",
+                "welcome_template": "Welcome!",
+            },
+            member=member,
             tenant_id=4,
-            message=message,
+            db_factory=db_factory,
         )
 
-    assert handled is False
-    assert session.commit.await_count == 0
+    assert channel is created_channel
+    assert session.execute.await_count == 3
+    assert session.commit.await_count == 1
+    guild.create_text_channel.assert_awaited_once()
+    guild.get_channel.assert_called_with(123)
+    guild.get_role.assert_called_with(456)
+    created_kwargs = guild.create_text_channel.await_args.kwargs
+    overwrites = created_kwargs["overwrites"]
+    assert overwrites[guild.default_role].view_channel is False
+    assert overwrites[member].view_channel is True
+    assert overwrites[member].send_messages is True
+    assert overwrites[member].read_message_history is True
+    assert overwrites[staff_role].view_channel is True
+    assert overwrites[bot_member].view_channel is True
+    assert overwrites[bot_member].read_message_history is True
+    assert overwrites[bot_member].send_messages is True
+    created_channel.send.assert_awaited_once_with("Welcome!")
+
+    update_sql = session.execute.await_args_list[1].args[0]
+    ensure_sql = session.execute.await_args_list[2].args[0]
+    assert "SET discord_guild_channel_id" in str(update_sql)
+    assert "INSERT INTO tenant_004.lead_channels" in str(ensure_sql)
 
 
 @pytest.mark.asyncio
-async def test_ticket_channel_webhook_is_skipped():
-    from app.discord_gateway import ticket_channel_writer
-
+async def test_ticket_channel_creates_missing_lead_and_links_channel():
     session = AsyncMock()
-    session.execute.side_effect = [_mock_result((7, "3001", "Customer"))]
+    session.execute.side_effect = [
+        _mock_result(None),
+        _mock_result((77,)),
+        _mock_result((1,)),
+    ]
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     db_factory = MagicMock(return_value=_DBContext(session))
-    message = _make_message(webhook_id="wh_123")
+
+    bot_member = _FakeMember(id=9999, display_name="SalesAnchor Bot")
+    guild, category, created_channel = _make_guild(
+        category_id=123,
+        bot_member=bot_member,
+        staff_role=None,
+    )
+    member = _FakeMember(id=1255555836776939692, display_name="Shingo")
 
     with patch.object(
-        ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
-    ), patch.object(
-        ticket_channel_writer, "translate_inbound", new=AsyncMock(return_value=SimpleNamespace())
-    ) as mock_translate, patch(
-        "app.services.sse_pubsub.publish_inbox_update",
-        new=AsyncMock(return_value=None),
-    ) as mock_publish:
-        handled = await ticket_channel_writer.process_ticket_channel_message(
-            db_factory,
+        ticket_channel_creator, "set_tenant_context", new=AsyncMock(return_value=None)
+    ):
+        channel = await ticket_channel_creator.get_or_create_ticket_channel(
+            guild=guild,
+            config={
+                "ticket_category_id": "123",
+                "staff_role_id": None,
+                "welcome_template": "Welcome!",
+            },
+            member=member,
             tenant_id=4,
-            message=message,
+            db_factory=db_factory,
         )
 
-    assert handled is True
-    assert session.execute.await_count == 1
+    assert channel is created_channel
+    assert session.execute.await_count == 3
+    assert session.commit.await_count == 1
+    created_kwargs = guild.create_text_channel.await_args.kwargs
+    overwrites = created_kwargs["overwrites"]
+    assert overwrites[bot_member].view_channel is True
+    assert overwrites[bot_member].read_message_history is True
+    assert overwrites[bot_member].send_messages is True
+    assert "discord_guild_channel_id" in str(session.execute.await_args_list[1].args[0])
+    assert "INSERT INTO tenant_004.lead_channels" in str(session.execute.await_args_list[2].args[0])
+    created_channel.send.assert_awaited_once_with("Welcome!")
+
+
+@pytest.mark.asyncio
+async def test_ticket_channel_returns_existing_channel_without_recreate():
+    session = AsyncMock()
+    session.execute.side_effect = [_mock_result((7, "1517435280951349310", "Shingo"))]
+    session.commit = AsyncMock()
+    db_factory = MagicMock(return_value=_DBContext(session))
+
+    bot_member = _FakeMember(id=9999, display_name="SalesAnchor Bot")
+    existing_channel = _FakeTextChannel(
+        id=1517435280951349310,
+        mention="#ticket-shingo-9692",
+        send=AsyncMock(return_value=None),
+    )
+    guild = MagicMock()
+    guild.default_role = _FakeRole(id=0, name="@everyone")
+    guild.me = bot_member
+    category = _FakeCategoryChannel(123)
+    guild.get_channel = MagicMock(
+        side_effect=lambda channel_id: category if channel_id == 123 else existing_channel if channel_id == existing_channel.id else None
+    )
+    guild.get_role = MagicMock(return_value=None)
+    guild.create_text_channel = AsyncMock()
+    member = _FakeMember(id=1255555836776939692, display_name="Shingo")
+
+    with patch.object(
+        ticket_channel_creator, "set_tenant_context", new=AsyncMock(return_value=None)
+    ):
+        channel = await ticket_channel_creator.get_or_create_ticket_channel(
+            guild=guild,
+            config={
+                "ticket_category_id": "123",
+                "staff_role_id": None,
+                "welcome_template": "Welcome!",
+            },
+            member=member,
+            tenant_id=4,
+            db_factory=db_factory,
+        )
+
+    assert channel is existing_channel
+    guild.create_text_channel.assert_not_awaited()
     assert session.commit.await_count == 0
-    mock_translate.assert_not_awaited()
-    mock_publish.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_client_routes_ticket_channel_before_guild_parser():
-    client = JarvisDiscordClient(
-        TenantBotConfig(tenant_id=4, tenant_code="tenant_4", bot_token="x"),
-        db_factory=lambda: _DBContext(AsyncMock()),
-    )
-    message = _make_message()
-
-    with patch(
-        "app.discord_gateway.client.ticket_channel_writer.process_ticket_channel_message",
-        new=AsyncMock(return_value=True),
-    ) as mock_ticket, patch.object(
-        client, "_process_message", new=AsyncMock(return_value=None)
-    ) as mock_process:
-        await client.on_message(message)
-
-    mock_ticket.assert_awaited_once()
-    mock_process.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_client_routes_non_ticket_guild_to_existing_parser():
-    client = JarvisDiscordClient(
-        TenantBotConfig(tenant_id=4, tenant_code="tenant_4", bot_token="x"),
-        db_factory=lambda: _DBContext(AsyncMock()),
-    )
-    message = _make_message()
-
-    with patch(
-        "app.discord_gateway.client.ticket_channel_writer.process_ticket_channel_message",
-        new=AsyncMock(return_value=False),
-    ) as mock_ticket, patch.object(
-        client, "_process_message", new=AsyncMock(return_value=None)
-    ) as mock_process:
-        await client.on_message(message)
-
-    mock_ticket.assert_awaited_once()
-    mock_process.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_client_ignores_dm_messages():
-    client = JarvisDiscordClient(
-        TenantBotConfig(tenant_id=4, tenant_code="tenant_4", bot_token="x"),
-        db_factory=lambda: _DBContext(AsyncMock()),
-    )
-    message = _make_message(guild_id=0)
-    message.guild = None
-
-    with patch(
-        "app.discord_gateway.client.ticket_channel_writer.process_ticket_channel_message",
-        new=AsyncMock(return_value=True),
-    ) as mock_ticket, patch.object(
-        client, "_process_message", new=AsyncMock(return_value=None)
-    ) as mock_process:
-        await client.on_message(message)
-
-    mock_ticket.assert_not_awaited()
-    mock_process.assert_not_awaited()

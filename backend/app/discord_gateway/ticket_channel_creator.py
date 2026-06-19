@@ -1,6 +1,7 @@
 """チケットチャンネル作成サービス (ADR-091 KPI3 Phase 2).
 
 顧客がボタンを押したとき、専用プライベートチャンネルを冪等に作成する。
+gateway bot が閲覧できるようにし、lead が未作成なら同時に作成・紐付けする。
 
 フロー:
   1. DB から tenant_discord_ticket_config を取得
@@ -10,21 +11,32 @@
      - @everyone: view 禁止
      - member: view / send / history 許可
      - staff_role（設定済みなら）: view / send / history 許可
+     - gateway bot: view / send / history 許可
   5. ウェルカムメッセージを送信
-  6. leads.discord_guild_channel_id を更新
+  6. leads.discord_user_id / leads.discord_guild_channel_id を upsert
 """
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import discord
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import set_tenant_context
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_WELCOME = "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+
+
+@dataclass(frozen=True)
+class _LeadState:
+    lead_id: int
+    discord_guild_channel_id: str | None
+    customer_name: str | None
 
 
 async def get_ticket_config(session: AsyncSession, tenant_id: int) -> dict | None:
@@ -66,6 +78,51 @@ async def _get_existing_channel_id(
     return str(row[0])
 
 
+async def _get_lead_state(
+    session: AsyncSession,
+    tenant_id: int,
+    discord_user_id: str,
+) -> _LeadState | None:
+    """discord_user_id から lead を取得する。未存在なら None。"""
+    schema = f"tenant_{tenant_id:03d}"
+    result = await session.execute(
+        text(f"""
+            SELECT id, discord_guild_channel_id, customer_name
+            FROM {schema}.leads
+            WHERE discord_user_id = :uid
+            LIMIT 1
+        """),  # noqa: S608
+        {"uid": discord_user_id},
+    )
+    row = result.first()
+    if not row:
+        return None
+    return _LeadState(
+        lead_id=int(row[0]),
+        discord_guild_channel_id=str(row[1]) if row[1] else None,
+        customer_name=str(row[2]) if row[2] else None,
+    )
+
+
+async def _ensure_lead_channel(
+    session: AsyncSession,
+    tenant_id: int,
+    lead_id: int,
+    discord_user_id: str,
+    display_name: str,
+) -> None:
+    """lead_channels に discord 行が無ければ補完する（冪等）。"""
+    schema = f"tenant_{tenant_id:03d}"
+    await session.execute(
+        text(f"""
+            INSERT INTO {schema}.lead_channels (lead_id, platform, external_id, display_name)
+            VALUES (:lead_id, 'discord', :external_id, :name)
+            ON CONFLICT (platform, external_id) DO NOTHING
+        """),
+        {"lead_id": lead_id, "external_id": discord_user_id, "name": display_name},
+    )
+
+
 async def _update_lead_channel_id(
     session: AsyncSession,
     tenant_id: int,
@@ -83,6 +140,25 @@ async def _update_lead_channel_id(
         """),
         {"ch_id": channel_id, "uid": discord_user_id},
     )
+
+
+def _bot_permission_overwrites(guild: discord.Guild) -> dict[Any, discord.PermissionOverwrite]:
+    """gateway bot に必要な可視性を付与する。
+
+    welcome メッセージ送信と受信箱への後続投稿を安定させるため、
+    read_message_history / send_messages も付与する。
+    """
+    bot_member = getattr(guild, "me", None)
+    if bot_member is None:
+        logger.warning("[ticket] guild.me unavailable; bot overwrite skipped")
+        return {}
+    return {
+        bot_member: discord.PermissionOverwrite(
+            view_channel=True,
+            read_message_history=True,
+            send_messages=True,
+        ),
+    }
 
 
 def _channel_name_for(member: discord.Member) -> str:
@@ -121,10 +197,14 @@ async def get_or_create_ticket_channel(
         return None
 
     discord_user_id = str(member.id)
+    customer_name = member.display_name or f"Discord User {discord_user_id}"
+    schema = f"tenant_{tenant_id:03d}"
 
     # 既存チャンネル確認（冪等）
     async with db_factory() as session:
-        existing_ch_id = await _get_existing_channel_id(session, tenant_id, discord_user_id)
+        await set_tenant_context(session, tenant_id)
+        lead_state = await _get_lead_state(session, tenant_id, discord_user_id)
+        existing_ch_id = lead_state.discord_guild_channel_id if lead_state else None
 
     if existing_ch_id:
         ch = guild.get_channel(int(existing_ch_id))
@@ -152,6 +232,7 @@ async def get_or_create_ticket_channel(
             read_message_history=True,
         ),
     }
+    overwrites.update(_bot_permission_overwrites(guild))
     if staff_role_id:
         staff_role = guild.get_role(int(staff_role_id))
         if staff_role:
@@ -204,14 +285,59 @@ async def get_or_create_ticket_channel(
     except Exception as exc:  # noqa: BLE001
         logger.warning("[ticket] failed to send welcome message: %s", exc)
 
-    # leads.discord_guild_channel_id 更新
+    # leads.discord_user_id / leads.discord_guild_channel_id 更新
     async with db_factory() as session:
-        await _update_lead_channel_id(
-            session,
-            tenant_id=tenant_id,
-            discord_user_id=discord_user_id,
-            channel_id=str(new_channel.id),
-        )
+        await set_tenant_context(session, tenant_id)
+        if lead_state is None:
+            insert_lead = await session.execute(
+                text(f"""
+                    INSERT INTO {schema}.leads
+                        (tenant_id, customer_name, channel_type, initiative, type, status,
+                         discord_user_id, discord_guild_channel_id, created_at, updated_at)
+                    VALUES
+                        (:tenant_id, :customer_name, 'discord', 'inbound', 'Inbound', 'lead',
+                         :discord_user_id, :channel_id, NOW(), NOW())
+                    RETURNING id
+                """),
+                {
+                    "tenant_id": tenant_id,
+                    "customer_name": customer_name,
+                    "discord_user_id": discord_user_id,
+                    "channel_id": str(new_channel.id),
+                },
+            )
+            row = insert_lead.first()
+            if row is None:
+                logger.error(
+                    "[ticket] lead insert failed tenant=%d user=%s channel=%s",
+                    tenant_id,
+                    discord_user_id,
+                    new_channel.id,
+                )
+                await session.rollback()
+                return None
+            lead_id = int(row[0])
+            await _ensure_lead_channel(
+                session,
+                tenant_id=tenant_id,
+                lead_id=lead_id,
+                discord_user_id=discord_user_id,
+                display_name=customer_name,
+            )
+        else:
+            await _update_lead_channel_id(
+                session,
+                tenant_id=tenant_id,
+                discord_user_id=discord_user_id,
+                channel_id=str(new_channel.id),
+            )
+            await _ensure_lead_channel(
+                session,
+                tenant_id=tenant_id,
+                lead_id=lead_state.lead_id,
+                discord_user_id=discord_user_id,
+                display_name=lead_state.customer_name or customer_name,
+            )
         await session.commit()
 
     return new_channel

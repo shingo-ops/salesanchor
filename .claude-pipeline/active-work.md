@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| dashboard-pr2 | Discord ticket gateway visibility + lead紐付け修正 | 2026-06-19 | IN_PROGRESS | | | #2360 反映後の follow-up 修正 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
 | feature/morimoto/invoice-issuer-path-fix | 請求書作成 発行者情報ボタンパス修正 | 2026-06-02 | DONE | | | |
@@ -150,6 +151,7 @@
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
 | main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
+| feat/loading-parts | （記入してください） | 2026-06-19 15:27 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
