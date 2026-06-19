@@ -15,6 +15,7 @@ from __future__ import annotations
 """
 
 from datetime import date, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -110,6 +111,40 @@ class CustomerContactsResponse(BaseModel):
     items: list[CustomerContactItem]
 
 
+class GoalAdviceInputs(BaseModel):
+    monthly_kgi: float
+    kgi_type: Literal["revenue", "wins"]
+    period: str
+    scope: str
+
+
+class GoalAdviceRatesUsed(BaseModel):
+    unit_price: float | None
+    win_rate: float | None
+    deal_rate: float | None
+
+
+class GoalAdviceRequired(BaseModel):
+    wins: float | None
+    deals: float | None
+    leads: float | None
+
+
+class GoalAdviceWorkingDays(BaseModel):
+    remaining_month: int
+    remaining_week: int
+    shift_status: Literal["submitted", "not_submitted"]
+
+
+class GoalAdviceResponse(BaseModel):
+    inputs: GoalAdviceInputs
+    rates_used: GoalAdviceRatesUsed
+    monthly_required: GoalAdviceRequired
+    weekly_required: GoalAdviceRequired
+    working_days: GoalAdviceWorkingDays
+    data_sufficient: bool
+
+
 class RevenueSegmentStat(BaseModel):
     revenue: float
     order_count: int
@@ -152,6 +187,60 @@ def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, ob
         raise HTTPException(status_code=422, detail="period は 1m / 3m / 6m / 12m で指定してください")
     end = today + timedelta(days=1)
     return today - timedelta(days=days_map[period]), end
+
+
+def _count_inclusive_weekdays(start: date, end: date) -> int:
+    """start から end までの平日数を両端含みで数える。"""
+    if end < start:
+        return 0
+    total = 0
+    cursor = start
+    while cursor <= end:
+        if cursor.weekday() < 5:
+            total += 1
+        cursor += timedelta(days=1)
+    return total
+
+
+def _month_end_date(today: date) -> date:
+    """today が属する月の月末日を返す。"""
+    import calendar
+
+    return date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+
+
+def _week_end_date(today: date) -> date:
+    """today が属する週の日曜を返す。"""
+    return today + timedelta(days=(6 - today.weekday()))
+
+
+async def _count_shift_dates(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    start: date,
+    end: date,
+) -> int:
+    """指定範囲内の shifts.shift_date を distinct 件数で数える。"""
+    result = await db.execute(
+        text("""
+            SELECT COUNT(DISTINCT shift_date) AS cnt
+            FROM shifts
+            WHERE tenant_id = :tenant_id
+              AND user_id = :user_id
+              AND shift_date >= :start_date
+              AND shift_date <= :end_date
+        """),
+        {
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+        },
+    )
+    row = result.mappings().first() or {}
+    return int(row.get("cnt", 0) or 0)
 
 
 @router.get(
@@ -556,6 +645,172 @@ async def revenue_segments_report(
             order_count=total_order_count,
             customer_count=total_customer_count,
         ),
+    )
+
+
+@router.get(
+    "/analytics/new-goal-advice",
+    response_model=GoalAdviceResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def new_goal_advice(
+    monthly_kgi: float = Query(default=..., ge=0),
+    kgi_type: Literal["revenue", "wins"] = Query(default=..., description="revenue / wins"),
+    scope: str = Query(default="team", description="team / mine"),
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """新規モード向けの逆算アドバイスを返す read-only API。"""
+    _validate_scope(scope)
+    today = date.today()
+
+    segments = await revenue_segments_report(
+        period=period,
+        scope=scope,
+        db=db,
+        tenant_id=tenant_id,
+        current_user=current_user,
+    )
+    unit_price = segments.new.avg_order_amount
+
+    if scope == "mine":
+        lead_assign_filter = "AND assigned_to = :uid"
+        deal_assign_filter = "AND assigned_to = :uid"
+        scope_params: dict = {"uid": current_user.id}
+    else:
+        lead_assign_filter = ""
+        deal_assign_filter = ""
+        scope_params = {}
+
+    start, end = _customer_orders_period_bounds(period, today)
+
+    win_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE status = 'won') AS won,
+                COUNT(*) AS total
+            FROM deals
+            WHERE created_at >= :start
+              AND created_at < :end
+              {deal_assign_filter}
+        """),
+        {"start": start, "end": end, **scope_params},
+    )
+    win_row = win_result.mappings().first() or {}
+    total_deals = int(win_row.get("total", 0) or 0)
+    won_deals = int(win_row.get("won", 0) or 0)
+    win_rate = round(won_deals / total_deals * 100, 1) if total_deals > 0 else 0.0
+
+    deal_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
+                COUNT(*) AS total
+            FROM leads
+            WHERE created_at >= :start
+              AND created_at < :end
+              {lead_assign_filter}
+        """),
+        {"start": start, "end": end, **scope_params},
+    )
+    deal_row = deal_result.mappings().first() or {}
+    total_leads = int(deal_row.get("total", 0) or 0)
+    converted_leads = int(deal_row.get("converted", 0) or 0)
+    deal_rate = round(converted_leads / total_leads * 100, 1) if total_leads > 0 else 0.0
+
+    month_end = _month_end_date(today)
+    week_end = _week_end_date(today)
+    month_start = today.replace(day=1)
+    month_shift_days = await _count_shift_dates(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        start=month_start,
+        end=month_end,
+    )
+    shift_status: Literal["submitted", "not_submitted"]
+    if month_shift_days > 0:
+        shift_status = "submitted"
+        remaining_month = await _count_shift_dates(
+            db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            start=today,
+            end=month_end,
+        )
+        remaining_week = await _count_shift_dates(
+            db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            start=today,
+            end=week_end,
+        )
+    else:
+        shift_status = "not_submitted"
+        remaining_month = _count_inclusive_weekdays(today, month_end)
+        remaining_week = _count_inclusive_weekdays(today, week_end)
+
+    remaining_month = max(remaining_month, 1)
+
+    data_sufficient = (
+        win_rate > 0
+        and deal_rate > 0
+        and (kgi_type == "wins" or (unit_price is not None and unit_price > 0))
+    )
+
+    def _empty_required() -> GoalAdviceRequired:
+        return GoalAdviceRequired(wins=None, deals=None, leads=None)
+
+    def _calc_required(monthly_wins: float | None) -> GoalAdviceRequired:
+        if monthly_wins is None:
+            return _empty_required()
+        monthly_deals = monthly_wins / (win_rate / 100.0)
+        monthly_leads = monthly_deals / (deal_rate / 100.0)
+        return GoalAdviceRequired(
+            wins=round(monthly_wins, 2),
+            deals=round(monthly_deals, 2),
+            leads=round(monthly_leads, 2),
+        )
+
+    monthly_required: GoalAdviceRequired
+    weekly_required: GoalAdviceRequired
+    if data_sufficient:
+        if kgi_type == "revenue":
+            monthly_wins = monthly_kgi / float(unit_price or 1)
+        else:
+            monthly_wins = monthly_kgi
+        monthly_required = _calc_required(monthly_wins)
+        weekly_required = GoalAdviceRequired(
+            wins=round(monthly_required.wins / remaining_month * remaining_week, 2) if monthly_required.wins is not None else None,
+            deals=round(monthly_required.deals / remaining_month * remaining_week, 2) if monthly_required.deals is not None else None,
+            leads=round(monthly_required.leads / remaining_month * remaining_week, 2) if monthly_required.leads is not None else None,
+        )
+    else:
+        monthly_required = _empty_required()
+        weekly_required = _empty_required()
+
+    return GoalAdviceResponse(
+        inputs=GoalAdviceInputs(
+            monthly_kgi=monthly_kgi,
+            kgi_type=kgi_type,
+            period=period,
+            scope=scope,
+        ),
+        rates_used=GoalAdviceRatesUsed(
+            unit_price=round(float(unit_price), 2) if unit_price is not None else None,
+            win_rate=win_rate if total_deals > 0 else None,
+            deal_rate=deal_rate if total_leads > 0 else None,
+        ),
+        monthly_required=monthly_required,
+        weekly_required=weekly_required,
+        working_days=GoalAdviceWorkingDays(
+            remaining_month=remaining_month,
+            remaining_week=remaining_week,
+            shift_status=shift_status,
+        ),
+        data_sufficient=data_sufficient,
     )
 
 
