@@ -357,6 +357,162 @@ class TestFollowUps:
 
 
 # ─────────────────────────────────────────────
+# customer-orders EP テスト
+# ─────────────────────────────────────────────
+
+class TestCustomerOrders:
+    """GET /analytics/customer-orders"""
+
+    async def test_customer_orders_empty(self, client):
+        """データなしで 200 を返し、items が空リスト"""
+        res = await client.get("/api/v1/analytics/customer-orders")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["items"] == []
+
+    async def test_customer_orders_invalid_period(self, client):
+        """period が不正なら 422"""
+        res = await client.get("/api/v1/analytics/customer-orders?period=2m")
+        assert res.status_code == 422
+
+    async def test_customer_orders_with_data(self, client, db_session):
+        """顧客別の受注履歴・頻度・継続期間・予測が正しい"""
+        today = date.today()
+
+        co1 = await client.post("/api/v1/companies", json={"name": "HistoryCo"})
+        co1_id = co1.json()["id"]
+        co2 = await client.post("/api/v1/companies", json={"name": "SingleOrderCo"})
+        co2_id = co2.json()["id"]
+
+        ct1 = await client.post("/api/v1/contacts", json={
+            "company_id": co1_id,
+            "display_name": "HistoryContact",
+        })
+        ct1_id = ct1.json()["id"]
+        ct2 = await client.post("/api/v1/contacts", json={
+            "company_id": co2_id,
+            "display_name": "SingleContact",
+        })
+        ct2_id = ct2.json()["id"]
+
+        d1 = today - timedelta(days=20)
+        d2 = today - timedelta(days=12)
+        d3 = today - timedelta(days=4)
+        d4 = today - timedelta(days=6)
+
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES
+                (999, :co1, :ct1, 'ORD-H-001', 100, 'awaiting_payment', :d1),
+                (999, :co1, :ct1, 'ORD-H-002', 200, 'awaiting_payment', :d2),
+                (999, :co1, :ct1, 'ORD-H-003', 300, 'awaiting_payment', :d3),
+                (999, :co2, :ct2, 'ORD-S-001', 450, 'awaiting_payment', :d4)
+        """), {"co1": co1_id, "ct1": ct1_id, "co2": co2_id, "ct2": ct2_id, "d1": str(d1), "d2": str(d2), "d3": str(d3), "d4": str(d4)})
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/customer-orders?period=3m")
+        assert res.status_code == 200
+        data = res.json()
+        items = {item["company_id"]: item for item in data["items"]}
+
+        history = items[co1_id]
+        assert history["company_name"] == "HistoryCo"
+        assert history["order_count"] == 3
+        assert history["first_order_at"] == str(d1)
+        assert history["last_order_at"] == str(d3)
+        assert history["days_since_last_order"] == (today - d3).days
+        assert history["continuation_days"] == (d3 - d1).days
+        assert history["avg_interval_days"] == 8.0
+        assert history["avg_order_amount"] == 200.0
+        assert history["total_amount"] == 600.0
+        assert history["predicted_next_order_at"] == str(d3 + timedelta(days=8))
+
+        single = items[co2_id]
+        assert single["company_name"] == "SingleOrderCo"
+        assert single["order_count"] == 1
+        assert single["first_order_at"] == str(d4)
+        assert single["last_order_at"] == str(d4)
+        assert single["days_since_last_order"] == (today - d4).days
+        assert single["continuation_days"] == 0
+        assert single["avg_interval_days"] is None
+        assert single["predicted_next_order_at"] is None
+        assert single["avg_order_amount"] == 450.0
+        assert single["total_amount"] == 450.0
+
+    async def test_customer_orders_jst_month_boundary(self, client, db_session):
+        """1m は JST 暦月境界で当月データを拾う"""
+        from app.services.time import _jst_month_range_utc
+
+        today = date.today()
+        start, _ = _jst_month_range_utc(today.year, today.month)
+        boundary_dt = start + timedelta(minutes=1)
+
+        await db_session.execute(text("""
+            INSERT INTO companies (tenant_id, company_code, name, status)
+            VALUES (999, 'BOUNDARY-CO', 'BoundaryCo', 'active')
+        """))
+        co_id = int((await db_session.execute(text("SELECT id FROM companies WHERE company_code = 'BOUNDARY-CO'"))).scalar_one())
+        await db_session.execute(text("""
+            INSERT INTO contacts (tenant_id, company_id, contact_code, display_name, status)
+            VALUES (999, :co_id, 'BOUNDARY-CT', 'BoundaryContact', 'active')
+        """), {"co_id": co_id})
+        ct_id = int((await db_session.execute(text("SELECT id FROM contacts WHERE contact_code = 'BOUNDARY-CT'"))).scalar_one())
+
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (999, :co_id, :ct_id, 'BD-001', 123, 'awaiting_payment', :dt)
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(boundary_dt)})
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/customer-orders?period=1m")
+        assert res.status_code == 200
+        data = res.json()
+        assert any(item["company_id"] == co_id for item in data["items"])
+
+    async def test_customer_orders_mine_scope(self, client, db_session):
+        """scope=mine で担当案件に紐づく注文だけ返る"""
+        today = date.today()
+
+        mine_co = await client.post("/api/v1/companies", json={"name": "MineCo"})
+        mine_co_id = mine_co.json()["id"]
+        other_co = await client.post("/api/v1/companies", json={"name": "OtherCo"})
+        other_co_id = other_co.json()["id"]
+
+        mine_ct = await client.post("/api/v1/contacts", json={
+            "company_id": mine_co_id,
+            "display_name": "MineContact",
+        })
+        mine_ct_id = mine_ct.json()["id"]
+        other_ct = await client.post("/api/v1/contacts", json={
+            "company_id": other_co_id,
+            "display_name": "OtherContact",
+        })
+        other_ct_id = other_ct.json()["id"]
+
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES
+                (8101, 999, :mine_co, :mine_ct, 'MineDeal', 1000, 'won', 999, :dt, :dt),
+                (8102, 999, :other_co, :other_ct, 'OtherDeal', 2000, 'won', 321, :dt, :dt)
+        """), {"mine_co": mine_co_id, "mine_ct": mine_ct_id, "other_co": other_co_id, "other_ct": other_ct_id, "dt": str(today)})
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES
+                (999, :mine_co, :mine_ct, 8101, 'MINE-001', 1000, 'awaiting_payment', :dt),
+                (999, :other_co, :other_ct, 8102, 'OTHER-001', 2000, 'awaiting_payment', :dt)
+        """), {"mine_co": mine_co_id, "mine_ct": mine_ct_id, "other_co": other_co_id, "other_ct": other_ct_id, "dt": str(today)})
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/customer-orders?scope=mine")
+        assert res.status_code == 200
+        data = res.json()
+        items = data["items"]
+        assert len(items) == 1
+        assert items[0]["company_id"] == mine_co_id
+        assert items[0]["order_count"] == 1
+
+
+# ─────────────────────────────────────────────
 # summary 拡張テスト（新フィールド）
 # ─────────────────────────────────────────────
 
