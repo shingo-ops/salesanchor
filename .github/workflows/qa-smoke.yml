@@ -58,8 +58,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  debug-database-url-shape:
+    name: Debug DATABASE_URL shape
+    if: github.event_name == 'workflow_dispatch' && inputs.debug_url_shape == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print DATABASE_URL shape only
+        env:
+          DATABASE_URL: ${{ secrets.QA_TENANT006_DATABASE_URL }}
+        run: |
+          node -e 'const raw=process.env.DATABASE_URL||""; const u=raw.replace("postgresql+asyncpg:","postgresql:"); let ok=false, em=""; try{new URL(u); ok=true}catch(e){em=e.message}; console.log(JSON.stringify({set:!!raw,hasScheme:u.includes("://"),len:u.length,newUrlOk:ok,err:em}))'
+
   reset-and-smoke:
     name: Reset tenant_006 + run smoke (real backend)
+    if: github.event_name != 'workflow_dispatch' || inputs.debug_url_shape != 'true'
     runs-on: [self-hosted, salesanchor-vps]
     timeout-minutes: 90
 
@@ -211,11 +223,6 @@ jobs:
           # tests/qa-smoke を package boundary にして、同じ package から Playwright を解決する
           npx playwright test \
             --config playwright.config.ts
-
-      - name: Debug DATABASE_URL shape
-        if: github.event_name == 'workflow_dispatch' && inputs.debug_url_shape == 'true'
-        run: |
-          node -e 'const raw=process.env.DATABASE_URL||""; const u=raw.replace("postgresql+asyncpg:","postgresql:"); let ok=false, em=""; try{new URL(u); ok=true}catch(e){em=e.message}; console.log(JSON.stringify({set:!!raw,hasScheme:u.includes("://"),len:u.length,newUrlOk:ok,err:em}))'
 
       # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort) ---
       - name: Cleanup smoke-prefixed data
