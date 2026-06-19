@@ -36,4 +36,3 @@ jobs:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           exitZeroOnChanges: true  # 差分があっても CI は green のまま（レビューは Chromatic UI で実施）
           onlyChanged: true        # TurboSnap: 変更コンポーネントのみスナップショット（70-90% コスト削減）
-          autoAcceptChanges: "codex/inventory-tabs-ci-cloud"  # 今回の検証ブランチのみ baseline を自動更新
