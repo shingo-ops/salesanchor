@@ -22,6 +22,12 @@
 
 import { spawnSync } from "node:child_process";
 
+type ConnectionInfo = {
+  user: string;
+  password: string;
+  database: string;
+};
+
 function psqlUrl(): string {
   const raw = process.env.DATABASE_URL;
   if (!raw) {
@@ -32,54 +38,104 @@ function psqlUrl(): string {
   return raw.replace(/^postgresql\+asyncpg:/, "postgresql:");
 }
 
-function parsePsqlUrl() {
+function parseConnectionInfo(): ConnectionInfo {
   const url = new URL(psqlUrl());
   const user = decodeURIComponent(url.username);
   const password = decodeURIComponent(url.password);
-  const database = decodeURIComponent(url.pathname.replace(/^\//, "")) || "postgres";
+  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
+
+  if (!user || !database) {
+    throw new Error("QA smoke abort: DATABASE_URL is missing user or database name");
+  }
+
   return { user, password, database };
 }
 
-function runPsql(sql: string) {
-  const conn = psqlUrl();
-  const local = spawnSync("psql", [conn, "-At", "-F", "\t", "-c", sql], {
-    encoding: "utf-8",
-    timeout: 15_000,
-  });
-  if (local.status === 0) {
-    return local;
+function discoverPostgresContainer(): string {
+  const override = [
+    process.env.QA_SMOKE_POSTGRES_CONTAINER,
+    process.env.POSTGRES_CONTAINER,
+    process.env.QA_POSTGRES_CONTAINER,
+  ].find((value) => value && value.trim().length > 0)?.trim();
+  if (override) {
+    return override;
   }
 
-  if (local.error && local.error.code === "ENOENT") {
-    const { user, password, database } = parsePsqlUrl();
-    const container = process.env.QA_SMOKE_PG_CONTAINER || "astro-webapp-postgres-1";
-    return spawnSync(
+  const commands: Array<[string, string[]]> = [
+    ["docker", ["compose", "ps", "-q", "postgres"]],
+    [
       "docker",
       [
-        "exec",
-        "-i",
-        "-e",
-        `PGPASSWORD=${password}`,
-        container,
-        "psql",
-        "-U",
-        user,
-        "-d",
-        database,
-        "-At",
-        "-F",
-        "\t",
-        "-c",
-        sql,
+        "ps",
+        "--filter",
+        "label=com.docker.compose.service=postgres",
+        "--filter",
+        "status=running",
+        "--format",
+        "{{.ID}} {{.Names}}",
       ],
-      {
-        encoding: "utf-8",
-        timeout: 15_000,
-      },
-    );
+    ],
+    [
+      "docker",
+      ["ps", "--filter", "name=postgres", "--filter", "status=running", "--format", "{{.ID}} {{.Names}}"],
+    ],
+  ];
+
+  for (const [command, args] of commands) {
+    const result = spawnSync(command, args, { encoding: "utf-8" });
+    if (result.status !== 0) {
+      continue;
+    }
+    const lines = (result.stdout || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length === 0) {
+      continue;
+    }
+    if (lines.length === 1) {
+      return lines[0].split(/\s+/)[0];
+    }
+    const preferred = lines.find((line) => /astro-webapp-postgres|postgres/i.test(line));
+    if (preferred) {
+      return preferred.split(/\s+/)[0];
+    }
+    return lines[0].split(/\s+/)[0];
   }
 
-  return local;
+  throw new Error(
+    "QA smoke abort: postgres container could not be discovered. Set QA_SMOKE_POSTGRES_CONTAINER if needed.",
+  );
+}
+
+function runPsql(sql: string) {
+  const { user, password, database } = parseConnectionInfo();
+  const container = discoverPostgresContainer();
+
+  return spawnSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      "-e",
+      `PGPASSWORD=${password}`,
+      container,
+      "psql",
+      "-U",
+      user,
+      "-d",
+      database,
+      "-At",
+      "-F",
+      "\t",
+      "-c",
+      sql,
+    ],
+    {
+      encoding: "utf-8",
+      timeout: 15_000,
+    },
+  );
 }
 
 /**
