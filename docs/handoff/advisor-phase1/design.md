@@ -1,51 +1,45 @@
-# Advisor Phase 1 / PR-1 design
+# Phase 3 設計 — Advisor Phase 1 / PR-1 顧客別受注履歴 API
 
-**測定日**: 2026-06-19
+**対象ADR**: ADR-139
+**recon**: docs/handoff/advisor-phase1/recon.md
+**日付**: 2026-06-19
+**担当**: Planner
 
-## 目的
-`GET /api/v1/analytics/customer-orders` を追加し、顧客別の受注履歴から以下を返す。
+## 外部・過去事例の参照と我々への応用
 
-- 受注件数
-- 初回受注日 / 最終受注日
-- 最終受注からの経過日数
-- 継続期間
-- 平均受注額
-- 合計受注額
-- 平均受注間隔
-- 次回受注予測日
+該当なし。
 
-## 仕様
+今回の PR は既存 analytics の period / scope 実装と orders の既存カラムを使う read-only 集計 API であり、外部事例の比較や過去事例の追加参照は不要。
 
-- ルート: `/api/v1/analytics/customer-orders`
-- 認可: `dashboard.view`
-- クエリ:
-  - `period`: `1m / 3m / 6m / 12m`
-  - `scope`: `team / mine`
-- レスポンス:
-  - `items: list[...]`
-  - 各 item に `company_id`, `company_name`, `order_count`, `first_order_at`, `last_order_at`, `days_since_last_order`, `continuation_days`, `avg_interval_days`, `avg_order_amount`, `total_amount`, `predicted_next_order_at`
+## 受け入れ基準
 
-## 実装方針
+| 基準 | 検証方法 |
+|------|---------|
+| 顧客別受注履歴 API が 200 で返る | pytest backend/tests/test_analytics.py -q -k customer_orders --no-cov |
+| 1 件のみの受注では平均間隔と予測日が null になる | pytest backend/tests/test_analytics.py -q -k customer_orders --no-cov |
+| scope=mine で担当外会社が混ざらない | pytest backend/tests/test_analytics.py -q -k customer_orders --no-cov |
+| period の不正値が 422 になる | pytest backend/tests/test_analytics.py -q -k customer_orders --no-cov |
+| process-artifacts gate が通る | GitHub Actions の process-artifacts gate |
 
-1. 既存 `analytics.py` の `scope` バリデーションと期間境界の書き方に合わせる。
-2. `scope=mine` のときは `orders.deal_id` から `deals.assigned_to = current_user.id` に絞る。
-3. 集計は SQL の戻りを Python 側で会社単位にまとめ、日付差分で以下を計算する。
-   - `continuation_days`
-   - `avg_interval_days`
-   - `predicted_next_order_at`
-4. 受注 1 件の会社は返却するが、`avg_interval_days` と `predicted_next_order_at` は `null` にする。
-5. `period` が不正なら 422 を返す。
+## 技術 How・KPI
 
-## テスト
+- KPI: 顧客ごとの受注履歴、平均受注額、平均受注間隔、最終受注日、次回受注予測日が read-only で返ること
+- 技術選択: 既存 analytics の scope / period の流儀に揃え、orders.deal_id と deals.assigned_to を結合して mine を実現する
 
-- 空データで 200 / `items=[]`
-- 会社別に複数注文を入れたときの集計が正しい
-- 1 件のみの会社で interval / prediction が `null`
-- `scope=mine` で担当外会社が混ざらない
+## 弊害・トレードオフ
 
-## 運用メモ
+- 受注 1 件の会社では平均間隔と予測日が計算できないため null を返す
+- 集計は read-only で、編集や保存は行わない
 
-- migration なし
-- deploy.yml 変更なし
-- process-artifacts gate では本ファイルと `recon.md` を参照する
+## 計画票
 
+| ステップ | 内容 | 担当 |
+|---------|------|------|
+| 1 | analytics に customer-orders エンドポイントを追加 | Generator |
+| 2 | pytest で境界ケースを確認 | Generator |
+| 3 | process-artifacts gate を通す | CI |
+
+## 継続
+
+- 完了後の監視: PR の CI 結果確認
+- 次フェーズへの引き継ぎ: フロント表示と advisor の後続 PR
