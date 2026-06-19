@@ -36,6 +36,11 @@ name: QA Smoke Suite (ADR-038)
 
 on:
   workflow_dispatch:
+    inputs:
+      debug_url_shape:
+        description: Print DATABASE_URL shape and skip the smoke run
+        required: false
+        default: 'false'
   schedule:
     # 毎週月曜 03:00 JST (= 18:00 UTC Sun)
     - cron: '0 18 * * 0'
@@ -192,6 +197,7 @@ jobs:
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
+        if: github.event_name != 'workflow_dispatch' || inputs.debug_url_shape != 'true'
         working-directory: tests/qa-smoke
         env:
           QA_ADMIN_EMAIL:    ${{ secrets.QA_ADMIN_EMAIL }}
@@ -206,14 +212,19 @@ jobs:
           npx playwright test \
             --config playwright.config.ts
 
+      - name: Debug DATABASE_URL shape
+        if: github.event_name == 'workflow_dispatch' && inputs.debug_url_shape == 'true'
+        run: |
+          node -e 'const raw=process.env.DATABASE_URL||""; const u=raw.replace("postgresql+asyncpg:","postgresql:"); let ok=false, em=""; try{new URL(u); ok=true}catch(e){em=e.message}; console.log(JSON.stringify({set:!!raw,hasScheme:u.includes("://"),len:u.length,newUrlOk:ok,err:em}))'
+
       # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort) ---
       - name: Cleanup smoke-prefixed data
-        if: always()
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.debug_url_shape != 'true')
         run: bash scripts/qa/cleanup-smoke-data.sh || echo "cleanup failed (best-effort)"
 
       # --- Artifacts ---
       - name: Upload Playwright report
-        if: always()
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.debug_url_shape != 'true')
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-playwright-report
@@ -222,7 +233,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload test-results (trace / video / screenshot)
-        if: failure()
+        if: failure() && (github.event_name != 'workflow_dispatch' || inputs.debug_url_shape != 'true')
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-test-results
