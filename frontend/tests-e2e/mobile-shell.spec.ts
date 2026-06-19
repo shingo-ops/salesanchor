@@ -24,6 +24,16 @@ import { commonMocks } from "./utils/common-mocks";
 const MOBILE_VIEWPORT = { width: 375, height: 812 };
 const PC_VIEWPORT = { width: 1280, height: 900 };
 
+function mobileShellMocks() {
+  const mocks = commonMocks();
+  return {
+    ...mocks,
+    "GET /me/permissions": {
+      permissions: [...mocks["GET /me/permissions"].permissions, "orders.view"],
+    },
+  };
+}
+
 function dashboardMock() {
   return {
     "GET /analytics/followups": { overdue: [], due_today: [], upcoming: [], stalled: [] },
@@ -43,7 +53,7 @@ test.describe("MobileShell 基本構造（375×812）", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });
@@ -90,12 +100,12 @@ test.describe("G1: 375px で横スクロールなし（ADR-140）", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
   });
 
   for (const path of ["/", "/lead-chat", "/orders", "/inventory"]) {
     test(`G1: ${path} で横スクロールなし`, async ({ page }) => {
-      await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+      await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
@@ -115,7 +125,7 @@ test.describe("G2: 375px で本文が画面全幅（ADR-140）", () => {
   test("G2: .mobile-content が viewport 幅とほぼ一致する", async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -137,7 +147,7 @@ test.describe("G3: タブナビ遷移・メニューシート（ADR-140）", () 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });
@@ -194,7 +204,7 @@ test.describe("G4: タップターゲット ≥ 44px（ADR-140）", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
   });
@@ -227,7 +237,7 @@ test.describe("構造1: PC（1280px）でサイドバーが存在する（ADR-14
   test("構造1: 1280px で #sidebar-panel が DOM に存在し可視", async ({ page }) => {
     await page.setViewportSize(PC_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -238,7 +248,7 @@ test.describe("構造1: PC（1280px）でサイドバーが存在する（ADR-14
   test("構造1: 1280px で .mobile-tabbar が DOM に存在しない", async ({ page }) => {
     await page.setViewportSize(PC_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -255,7 +265,7 @@ test.describe("MobileShell more-sheet nav-item-list CSS 検証（375×812）", (
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await installAuthBypass(page);
-    await mockApi(page, { ...commonMocks(), ...dashboardMock() });
+    await mockApi(page, { ...mobileShellMocks(), ...dashboardMock() });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     // メニューシートを開く
