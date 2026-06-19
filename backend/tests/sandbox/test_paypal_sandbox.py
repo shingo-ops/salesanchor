@@ -78,3 +78,5 @@ def test_paypal_sandbox_create_and_send_invoice() -> None:
         f"recipient_view_url が PayPal ドメインではありません: "
         f"{result['recipient_view_url']}"
     )
+
+    # Disposable PR: this line keeps the sandbox-only diff non-empty.
