@@ -158,6 +158,30 @@ test.describe("ファネルダッシュボード 第1層", () => {
     await expect(playerTab).toHaveClass(/active/);
   });
 
+  test("遷移可能なカードをクリックすると下層ページへ遷移する", async ({ page }) => {
+    await installAuthBypass(page);
+    await mockApi(page, { ...commonMocks(), ...funnelMocks() });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const cases = [
+      { name: "リード獲得", path: "/dashboard/leads" },
+      { name: "商談化率", path: "/dashboard/leads" },
+      { name: "成約・失注", path: "/dashboard/reasons" },
+      { name: "売上目標対比", path: "/dashboard/revenue" },
+      { name: "新規顧客獲得", path: "/dashboard/revenue" },
+      { name: "アクティブ既存顧客", path: "/dashboard/revenue" },
+      { name: "要フォロー顧客", path: "/dashboard/follow-ups" },
+    ];
+
+    for (const c of cases) {
+      await page.getByRole("button", { name: c.name }).click();
+      await expect(page).toHaveURL(c.path);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+    }
+  });
+
   test("要フォロー詳細ボタンで /dashboard/follow-ups に遷移する", async ({ page }) => {
     await installAuthBypass(page);
     await mockApi(page, { ...commonMocks(), ...funnelMocks() });
