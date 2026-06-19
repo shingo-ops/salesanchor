@@ -14,7 +14,7 @@ from __future__ import annotations
   2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -74,6 +74,46 @@ class OverdueReport(BaseModel):
     count: int
     total_amount: float
     invoices: list[OverdueInvoice]
+
+
+class CustomerOrderItem(BaseModel):
+    company_id: int
+    company_name: str
+    order_count: int
+    first_order_at: date
+    last_order_at: date
+    days_since_last_order: int
+    continuation_days: int
+    avg_interval_days: float | None
+    avg_order_amount: float
+    total_amount: float
+    predicted_next_order_at: date | None
+
+
+class CustomerOrdersResponse(BaseModel):
+    items: list[CustomerOrderItem]
+
+
+def _normalize_date(value: object) -> date:
+    """DB から返る date / datetime / str を date に正規化する。"""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        return date.fromisoformat(value[:10])
+    return date.fromisoformat(str(value)[:10])
+
+
+def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, object]:
+    """customer-orders 用の期間境界を返す。"""
+    if period == "1m":
+        return _jst_month_range_utc(today.year, today.month)
+    days_map = {"3m": 90, "6m": 180, "12m": 365}
+    if period not in days_map:
+        raise HTTPException(status_code=422, detail="period は 1m / 3m / 6m / 12m で指定してください")
+    end = today + timedelta(days=1)
+    return today - timedelta(days=days_map[period]), end
 
 
 @router.get(
@@ -205,6 +245,100 @@ async def overdue_invoices_report(
     total = sum(i.total_amount or 0 for i in invoices)
 
     return OverdueReport(count=len(invoices), total_amount=total, invoices=invoices)
+
+
+@router.get(
+    "/analytics/customer-orders",
+    response_model=CustomerOrdersResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def customer_orders_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """顧客別の受注履歴と再受注予測を返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    if scope == "mine":
+        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                COALESCE(c.name, '') AS company_name,
+                o.created_at,
+                o.total_amount
+            FROM orders o
+            LEFT JOIN companies c ON c.id = o.company_id
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start
+              AND o.created_at < :end
+            ORDER BY o.company_id, o.created_at, o.id
+        """),
+        {"start": start, "end": end, **order_scope_params},
+    )
+    rows = result.mappings().all()
+
+    grouped_names: dict[int, str] = {}
+    grouped_orders: dict[int, list[dict[str, object]]] = {}
+    for row in rows:
+        company_id = int(row["company_id"])
+        grouped_names.setdefault(company_id, str(row["company_name"] or ""))
+        grouped_orders.setdefault(company_id, []).append({
+            "created_at": _normalize_date(row["created_at"]),
+            "total_amount": float(row["total_amount"] or 0),
+        })
+
+    items: list[CustomerOrderItem] = []
+    for company_id, orders in grouped_orders.items():
+        orders = sorted(orders, key=lambda x: x["created_at"])
+        if not orders:
+            continue
+        first_order = orders[0]["created_at"]
+        last_order = orders[-1]["created_at"]
+        order_count = len(orders)
+        total_amount = sum(order["total_amount"] for order in orders)
+        avg_order_amount = round(total_amount / order_count, 2)
+        continuation_days = (last_order - first_order).days
+        days_since_last_order = (today - last_order).days
+
+        avg_interval_days: float | None = None
+        predicted_next_order_at: date | None = None
+        if order_count >= 2:
+            intervals = [
+                (orders[idx]["created_at"] - orders[idx - 1]["created_at"]).days
+                for idx in range(1, order_count)
+            ]
+            avg_interval_days = round(sum(intervals) / len(intervals), 1)
+            predicted_next_order_at = last_order + timedelta(days=max(1, int(round(avg_interval_days))))
+
+        items.append(CustomerOrderItem(
+            company_id=company_id,
+            company_name=grouped_names.get(company_id, ""),
+            order_count=order_count,
+            first_order_at=first_order,
+            last_order_at=last_order,
+            days_since_last_order=days_since_last_order,
+            continuation_days=continuation_days,
+            avg_interval_days=avg_interval_days,
+            avg_order_amount=avg_order_amount,
+            total_amount=round(total_amount, 2),
+            predicted_next_order_at=predicted_next_order_at,
+        ))
+
+    items.sort(key=lambda item: (item.last_order_at, item.total_amount, item.company_id), reverse=True)
+    return CustomerOrdersResponse(items=items)
 
 
 # ─────────────────────────────────────────────
