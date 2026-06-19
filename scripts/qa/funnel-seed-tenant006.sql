@@ -272,52 +272,52 @@ FROM tenant_006.leads l WHERE l.lead_code = 'QA-LD-005';
 -- ---------------------------------------------------------------------------
 -- 7. Deals / reasons / converted leads
 -- ---------------------------------------------------------------------------
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D01', 'won', 800000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '3 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D01', 'QA Funnel Deal 01', 'won', 800000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '3 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D01';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D02', 'won', 700000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '5 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D02', 'QA Funnel Deal 02', 'won', 700000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '5 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D02';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D03', 'lost', 500000, 'lost', NOW() - INTERVAL '13 days', NOW() - INTERVAL '4 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D03', 'QA Funnel Deal 03', 'lost', 500000, 'lost', NOW() - INTERVAL '13 days', NOW() - INTERVAL '4 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D03';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at)
-SELECT 6, c.id, 'QA-FN-D04', 'open', 900000, 'open', NOW() - INTERVAL '12 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at)
+SELECT 6, c.id, 'QA-FN-D04', 'QA Funnel Deal 04', 'open', 900000, 'open', NOW() - INTERVAL '12 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D04';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D05', 'won', 900000, 'won', NOW() - INTERVAL '13 days', NOW() - INTERVAL '6 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D05', 'QA Funnel Deal 05', 'won', 900000, 'won', NOW() - INTERVAL '13 days', NOW() - INTERVAL '6 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D05';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at)
-SELECT 6, c.id, 'QA-FN-D06', 'negotiating', 1100000, 'negotiating', NOW() - INTERVAL '11 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at)
+SELECT 6, c.id, 'QA-FN-D06', 'QA Funnel Deal 06', 'negotiating', 1100000, 'negotiating', NOW() - INTERVAL '11 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D06';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D07', 'won', 600000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D07', 'QA Funnel Deal 07', 'won', 600000, 'won', NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D07';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D08', 'lost', 400000, 'lost', NOW() - INTERVAL '13 days', NOW() - INTERVAL '8 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D08', 'QA Funnel Deal 08', 'lost', 400000, 'lost', NOW() - INTERVAL '13 days', NOW() - INTERVAL '8 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D08';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at)
-SELECT 6, c.id, 'QA-FN-D09', 'open', 800000, 'open', NOW() - INTERVAL '10 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at)
+SELECT 6, c.id, 'QA-FN-D09', 'QA Funnel Deal 09', 'open', 800000, 'open', NOW() - INTERVAL '10 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D09';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at)
-SELECT 6, c.id, 'QA-FN-D10', 'negotiating', 700000, 'negotiating', NOW() - INTERVAL '9 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at)
+SELECT 6, c.id, 'QA-FN-D10', 'QA Funnel Deal 10', 'negotiating', 700000, 'negotiating', NOW() - INTERVAL '9 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D10';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at)
-SELECT 6, c.id, 'QA-FN-D11', 'on_hold', 500000, 'on_hold', NOW() - INTERVAL '8 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at)
+SELECT 6, c.id, 'QA-FN-D11', 'QA Funnel Deal 11', 'on_hold', 500000, 'on_hold', NOW() - INTERVAL '8 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D11';
 
-INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, status, amount, stage, created_at, closed_at)
-SELECT 6, c.id, 'QA-FN-D12', 'won', 500000, 'won', NOW() - INTERVAL '50 days', NOW() - INTERVAL '35 days'
+INSERT INTO tenant_006.deals (tenant_id, company_id, deal_code, title, status, amount, stage, created_at, closed_at)
+SELECT 6, c.id, 'QA-FN-D12', 'QA Funnel Deal 12', 'won', 500000, 'won', NOW() - INTERVAL '50 days', NOW() - INTERVAL '35 days'
 FROM tenant_006.companies c WHERE c.company_code = 'QA-FN-CO-D12';
 
 INSERT INTO tenant_006.deal_close_reasons (deal_id, reason_id, is_primary)
