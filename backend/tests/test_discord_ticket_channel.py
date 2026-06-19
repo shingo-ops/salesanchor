@@ -61,11 +61,11 @@ class _FakeCategoryChannel(sys.modules["discord"].CategoryChannel):
     id: int
 
 
-@dataclass
 class _FakeTextChannel(sys.modules["discord"].TextChannel):
-    id: int
-    send: AsyncMock
-    mention_text: str
+    def __init__(self, *, id: int, mention_text: str, send: AsyncMock) -> None:
+        self.id = id
+        self.mention_text = mention_text
+        self.send = send
 
     @property
     def mention(self):
