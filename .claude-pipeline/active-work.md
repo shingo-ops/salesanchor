@@ -160,6 +160,7 @@
 | feature/morimoto/qa-smoke-playwright-package | （自動登録・要補完） | 2026-06-19 01:03 | REVIEW | #2351 | | 自動登録 |
 | feature/morimoto/develop-guard-workflow | （自動登録・要補完） | 2026-06-19 01:12 | REVIEW | #2353 | | 自動登録 |
 | feature/morimoto/paypal-external-api-smoke | PayPal external API smoke ワークフロー復旧 | 2026-06-19 09:43 | DONE | #2349 | | merged:a8a6eca |
+| feature/morimoto/paypal-sandbox-failcheck | PayPal sandbox smoke FAIL 確認 | 2026-06-19 10:53 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
