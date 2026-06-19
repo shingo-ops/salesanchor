@@ -16,10 +16,10 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| dashboard-pr2 | Discord ticket gateway visibility + lead紐付け修正 | 2026-06-19 | IN_PROGRESS | | | #2360 反映後の follow-up 修正 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
 | feature/morimoto/invoice-issuer-path-fix | 請求書作成 発行者情報ボタンパス修正 | 2026-06-02 | DONE | | | |
+| feature/morimoto/etd-scaffold-adr137 | ADR-137 ETD骨格 / owner: shingo | 2026-06-19 09:00 | DONE | #2340 | | merged:ce03ca3 |
 
 | feature/morimoto/pre-commit-active-work-exception | （記入してください） | 2026-06-02 10:40 | DONE | | | |
 | feature/morimoto/fix-release-pr-drawbacks | （記入してください） | 2026-06-02 10:42 | DONE | | | |
@@ -149,9 +149,16 @@
 | feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | DONE | #2235 | | |
 | feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | DONE | #2237 | | |
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
+<<<<<<< HEAD
 | main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
-| feat/loading-parts | （記入してください） | 2026-06-19 15:27 | IN_PROGRESS | | | |
+| feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | DONE | #2340 | | 自動登録 merged:ce03ca3 |
+| feature/morimoto/executor-preflight-hook | （自動登録） | 2026-06-19 00:27 | DONE | #2347 | | merged:1e0efff merged時自動登録・要確認 |
+| feature/morimoto/paypal-sandbox-smoke | （自動登録・要補完） | 2026-06-19 00:46 | DONE | #2341 | | 自動登録 merged:db00260 |
+| feature/morimoto/develop-delete-guardrails | （自動登録・要補完） | 2026-06-19 01:02 | DONE | #2350 | | 自動登録 merged:93f0d22 |
+| feature/morimoto/qa-smoke-playwright-package | （自動登録・要補完） | 2026-06-19 01:03 | REVIEW | #2351 | | 自動登録 |
+| feature/morimoto/develop-guard-workflow | （自動登録・要補完） | 2026-06-19 01:12 | REVIEW | #2353 | | 自動登録 |
+| feature/morimoto/paypal-external-api-smoke | PayPal external API smoke ワークフロー復旧 | 2026-06-19 09:43 | DONE | #2349 | | merged:a8a6eca |
 ---
 
 ## 記入例
