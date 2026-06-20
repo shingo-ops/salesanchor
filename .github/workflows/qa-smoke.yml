@@ -201,6 +201,16 @@ jobs:
                 astro-webapp-postgres-1 \
                 psql -U qa_tenant006_rw -d jarvis_db -v ON_ERROR_STOP=1 -f -
 
+      - name: Resolve psql bin
+        run: |
+          BIN="$(command -v psql || true)"
+          if [ -z "$BIN" ]; then
+            echo "psql not found on runner PATH"
+            exit 1
+          fi
+          echo "PSQL_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "resolved PSQL_BIN=$BIN"
+
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
         working-directory: tests/qa-smoke

@@ -28,25 +28,6 @@ type ConnectionInfo = {
   database: string;
 };
 
-type DockerContainer = {
-  id: string;
-  name: string;
-  image: string;
-  status: string;
-};
-
-type PsqlExecutor = {
-  label: string;
-  run(sql: string): ReturnType<typeof spawnSync>;
-};
-
-type DiscoveryTrace = {
-  label: string;
-  exitCode: number | null;
-};
-
-let cachedExecutor: PsqlExecutor | undefined;
-
 function psqlUrl(): string {
   const raw = process.env.DATABASE_URL;
   if (!raw) {
@@ -70,71 +51,25 @@ function parseConnectionInfo(): ConnectionInfo {
   return { user, password, database };
 }
 
-function parseDockerInventory(): DockerContainer[] {
-  const result = spawnSync("docker", ["ps", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}"], {
-    encoding: "utf-8",
-  });
-  if (result.status !== 0) {
-    return [];
+function resolvePsqlBin(): string {
+  const envBin = process.env.PSQL_BIN?.trim();
+  if (envBin) {
+    return envBin;
   }
 
-  return (result.stdout || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [id = "", name = "", image = "", ...rest] = line.split("\t");
-      return {
-        id,
-        name,
-        image,
-        status: rest.join("\t"),
-      };
-    })
-    .filter((container) => container.id.length > 0);
+  return "psql";
 }
 
-function runSelect1WithDocker(containerId: string, connection: ConnectionInfo) {
+function runPsql(sql: string) {
+  const { user, password, database } = parseConnectionInfo();
+  const bin = resolvePsqlBin();
   return spawnSync(
-    "docker",
+    bin,
     [
-      "exec",
-      "-i",
-      "-e",
-      `PGPASSWORD=${connection.password}`,
-      containerId,
-      "psql",
       "-U",
-      connection.user,
+      user,
       "-d",
-      connection.database,
-      "-At",
-      "-F",
-      "\t",
-      "-c",
-      "SELECT 1",
-    ],
-    {
-      encoding: "utf-8",
-      timeout: 15_000,
-    },
-  );
-}
-
-function runSqlWithDocker(containerId: string, connection: ConnectionInfo, sql: string) {
-  return spawnSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "-e",
-      `PGPASSWORD=${connection.password}`,
-      containerId,
-      "psql",
-      "-U",
-      connection.user,
-      "-d",
-      connection.database,
+      database,
       "-At",
       "-F",
       "\t",
@@ -144,177 +79,12 @@ function runSqlWithDocker(containerId: string, connection: ConnectionInfo, sql: 
     {
       encoding: "utf-8",
       timeout: 15_000,
-    },
-  );
-}
-
-function hostPsqlCandidates(): string[] {
-  const pathDirs = (process.env.PATH || "")
-    .split(":")
-    .map((dir) => dir.trim())
-    .filter((dir) => dir.length > 0);
-  const candidates = [
-    ...pathDirs.map((dir) => `${dir.replace(/\/$/, "")}/psql`),
-    "/usr/bin/psql",
-    "/usr/local/bin/psql",
-    "/opt/homebrew/bin/psql",
-  ];
-  return [...new Set(candidates)];
-}
-
-function runSelect1WithHostPsql(bin: string, connection: ConnectionInfo) {
-  return spawnSync(
-    bin,
-    [
-      "-U",
-      connection.user,
-      "-d",
-      connection.database,
-      "-At",
-      "-F",
-      "\t",
-      "-c",
-      "SELECT 1",
-    ],
-    {
-      encoding: "utf-8",
-      timeout: 15_000,
       env: {
         ...process.env,
-        PGPASSWORD: connection.password,
+        PGPASSWORD: password,
       },
     },
   );
-}
-
-function selectExecutor(): PsqlExecutor {
-  if (cachedExecutor) {
-    return cachedExecutor;
-  }
-
-  const connection = parseConnectionInfo();
-  const containers = parseDockerInventory();
-  const postgresLike = containers.filter(
-    (container) => /postgres/i.test(container.name) || /postgres/i.test(container.image),
-  );
-  const traces: DiscoveryTrace[] = [];
-
-  for (const container of postgresLike) {
-    const probe = runSelect1WithDocker(container.id, connection);
-    traces.push({ label: `docker exec ${container.name} (${container.image})`, exitCode: probe.status });
-    if (probe.status === 0 && probe.stdout.trim() === "1") {
-      cachedExecutor = {
-        label: `docker exec ${container.name} (${container.image})`,
-        run(sql: string) {
-          return runSqlWithDocker(container.id, connection, sql);
-        },
-      };
-      return cachedExecutor;
-    }
-  }
-
-  for (const bin of hostPsqlCandidates()) {
-    const probe = runSelect1WithHostPsql(bin, connection);
-    traces.push({ label: `host psql ${bin}`, exitCode: probe.status });
-    if (probe.status === 0 && probe.stdout.trim() === "1") {
-      cachedExecutor = {
-        label: `host psql ${bin}`,
-        run(sql: string) {
-          return spawnSync(
-            bin,
-            [
-              "-U",
-              connection.user,
-              "-d",
-              connection.database,
-              "-At",
-              "-F",
-              "\t",
-              "-c",
-              sql,
-            ],
-            {
-              encoding: "utf-8",
-              timeout: 15_000,
-              env: {
-                ...process.env,
-                PGPASSWORD: connection.password,
-              },
-            },
-          );
-        },
-      };
-      return cachedExecutor;
-    }
-  }
-
-  for (const container of containers) {
-    const probe = runSelect1WithDocker(container.id, connection);
-    traces.push({
-      label: `docker exec ${container.name} (${container.image}) [fallback]`,
-      exitCode: probe.status,
-    });
-    if (probe.status === 0 && probe.stdout.trim() === "1") {
-      cachedExecutor = {
-        label: `docker exec ${container.name} (${container.image}) [fallback]`,
-        run(sql: string) {
-          return runSqlWithDocker(container.id, connection, sql);
-        },
-      };
-      return cachedExecutor;
-    }
-  }
-
-  const dockerPs = containers.length
-    ? containers.map((container) => `- ${container.name}\t${container.image}\t${container.status}`).join("\n")
-    : "- <no running containers>";
-  const psqlPresence = containers.length
-    ? containers
-        .map((container) => {
-          const probe = spawnSync(
-            "docker",
-            [
-              "exec",
-              "-i",
-              container.id,
-              "sh",
-              "-c",
-              "command -v psql || ls /usr/local/bin/psql /usr/bin/psql 2>/dev/null || echo NO_PSQL",
-            ],
-            { encoding: "utf-8", timeout: 10_000 },
-          );
-          const found = (probe.stdout || "").trim().replace(/\s+/g, " ");
-          return `- ${container.name}: ${found || "NO_PSQL"} (status=${probe.status})`;
-        })
-        .join("\n")
-    : "- <no running containers>";
-  const hostPaths = hostPsqlCandidates()
-    .map((bin) => {
-      const probe = runSelect1WithHostPsql(bin, connection);
-      return `- ${bin}: status=${probe.status}`;
-    })
-    .join("\n");
-  const probeTraces = traces.length
-    ? traces.map((trace) => `- ${trace.label}: status=${trace.exitCode}`).join("\n")
-    : "- <no probe attempts>";
-
-  throw new Error(
-    [
-      "QA smoke abort: no working psql path discovered.",
-      "docker ps:",
-      dockerPs,
-      "psql presence:",
-      psqlPresence,
-      "host psql candidates:",
-      hostPaths || "- <none>",
-      "probe exits:",
-      probeTraces,
-    ].join("\n"),
-  );
-}
-
-function runPsql(sql: string) {
-  return selectExecutor().run(sql);
 }
 
 /**
