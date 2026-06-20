@@ -21,6 +21,91 @@ _BATCH_SIZE = 20
 
 
 @celery_app.task(
+    name="app.tasks.translation.translate_inbound_message",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+)
+def translate_inbound_message(
+    self: object,  # type: ignore[override]
+    tenant_id: int,
+    table_ref: str = "meta_messages",
+    message_id: str = "",
+    message_text: str = "",
+    target_language: str = "ja",
+) -> dict:
+    """単発の inbound 翻訳を実行して SSE 更新を通知する。"""
+    import asyncio
+
+    from app.database import engine
+
+    try:
+        return asyncio.run(
+            _run_translate_inbound_message(
+                tenant_id=tenant_id,
+                table_ref=table_ref,
+                message_id=message_id,
+                message_text=message_text,
+                target_language=target_language,
+            )
+        )
+    finally:
+        asyncio.run(engine.dispose())
+
+
+async def _run_translate_inbound_message(
+    *,
+    tenant_id: int,
+    table_ref: str,
+    message_id: str,
+    message_text: str,
+    target_language: str,
+) -> dict:
+    from app.database import AsyncSessionLocal
+    from app.services.message_translator import translate_inbound
+
+    schema_name = f"tenant_{tenant_id:03d}"
+    translation_table_ref = table_ref
+    if translation_table_ref == "meta_messages" or translation_table_ref.endswith(".meta_messages"):
+        translation_table_ref = f"{schema_name}.message_translations"
+    elif "." not in translation_table_ref:
+        translation_table_ref = f"{schema_name}.{translation_table_ref}"
+
+    async with AsyncSessionLocal() as db:
+        result = await translate_inbound(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=translation_table_ref,
+            message_id=message_id,
+            message_text=message_text,
+            target_language=target_language,
+        )
+
+    try:
+        from app.services.sse_pubsub import publish_inbox_update
+
+        await publish_inbox_update(tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[translation_task] SSE publish failed tenant=%s msg=%s: %s",
+            tenant_id,
+            message_id,
+            exc,
+            exc_info=True,
+        )
+
+    return {
+        "status": "ok",
+        "tenant_id": tenant_id,
+        "message_id": message_id,
+        "cached": result.cached,
+        "engine": result.engine,
+        "confidence": result.confidence,
+        "translated_text": result.translated_text,
+    }
+
+
+@celery_app.task(
     name="app.tasks.translation.translate_pending_messages",
     bind=True,
     max_retries=3,
