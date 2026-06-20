@@ -19,6 +19,9 @@
 | codex/advisor-phase1-new-goal-advice-root | Advisor Phase 1 PR-4 新規モード 逆算アドバイスAPI | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-phase1/ |
 | codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
+| feature/morimoto/schedule-gcal-pr1-tokens | Schedule Google Calendar UI PR2/PR3/PR4 カレンダー本体 + settings + backend category | 2026-06-20 | IN_PROGRESS | | | `SchedulePage.tsx` を内製グリッドへ置換し、`/schedule/settings` と backend の `calendar_events.category` / `/calendar/events` レスポンス拡張、フロントの API 優先正規化、保守的 backfill migration 追加まで完了 |
+| feature/morimoto/paypal-sandbox-failcheck | PayPal Sandbox smoke coverage閾値除去 | 2026-06-20 | COMPLETED | #2354 | green | run 27833818674 / gate 27833818677 を確認済み |
+| dashboard-pr2 | Discord ticket gateway visibility + lead紐付け修正 | 2026-06-19 | IN_PROGRESS | | | #2360 反映後の follow-up 修正 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
 | feature/morimoto/invoice-issuer-path-fix | 請求書作成 発行者情報ボタンパス修正 | 2026-06-02 | DONE | | | |
@@ -152,7 +155,6 @@
 | feature/morimoto/fix-tcg-type-dedup | tcg_type_master 重複 code 統合（pokemon/weiss→正規 code） | 2026-06-15 23:52 | DONE | #2235 | | |
 | feature/morimoto/paypal-invoice-422-debug | PayPal テスト請求書 422 エラー詳細露出・デバッグ | 2026-06-16 00:30 | DONE | #2237 | | |
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
-<<<<<<< HEAD
 | main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
 | feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | DONE | #2340 | | 自動登録 merged:ce03ca3 |
@@ -162,6 +164,14 @@
 | feature/morimoto/qa-smoke-playwright-package | （自動登録・要補完） | 2026-06-19 01:03 | REVIEW | #2351 | | 自動登録 |
 | feature/morimoto/develop-guard-workflow | （自動登録・要補完） | 2026-06-19 01:12 | REVIEW | #2353 | | 自動登録 |
 | feature/morimoto/paypal-external-api-smoke | PayPal external API smoke ワークフロー復旧 | 2026-06-19 09:43 | DONE | #2349 | | merged:a8a6eca |
+| feat/loading-parts | loading / feedback 共用部品追加 | 2026-06-19 15:27 | DONE | #2363 | 2026-06-19 | PR #2363 merged / main deploy #2361 success |
+| feature/morimoto/sidebar-auto-collapse-fix | （記入してください） | 2026-06-19 22:56 | IN_PROGRESS | | | |
+| feature/morimoto/sidebar-hover-suppression | （記入してください） | 2026-06-20 00:08 | DONE | | | |
+| feature/morimoto/discord-ticket-immediate-translation-2 | （記入してください） | 2026-06-20 00:19 | IN_PROGRESS | | | |
+| feature/morimoto/advisor-phase1-pr3-customer-contact | （記入してください） | 2026-06-20 02:15 | IN_PROGRESS | | | |
+| feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
+| feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
+| feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | IN_PROGRESS | | | `frontend/src/pages/goal-setting/GoalSettingPage.tsx` / `frontend/src/pages/goal-setting/GoalSettingPage.css` / `frontend/tests-e2e/goal-setting-advisor.spec.ts` |
 ---
 
 ## 記入例
