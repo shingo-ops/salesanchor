@@ -84,6 +84,7 @@ import {
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
+  PlusIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
@@ -174,6 +175,7 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
+const PlusOutline         = hi(PlusIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
@@ -259,7 +261,7 @@ export const NAV_ICONS = {
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
   purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
   menu:        Bars3Outline,       // outline — mobile menu button（ハンバーガー）
-  add:         Plus,               // solid — 作成ボタン
+  add:         PlusOutline,        // outline — 作成ボタン
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用

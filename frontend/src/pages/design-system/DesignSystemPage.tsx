@@ -58,6 +58,7 @@ const COLOR_TOKENS = [
   { name: "--inbox-hover",             label: "Inbox item hover" },
   { name: "--inbox-action-icon-color", label: "Inbox action icon" },
   { name: "--inbox-bulk-icon-color",   label: "Inbox bulk icon" },
+  { name: "--accent-bright",          label: "Schedule bright accent" },
 ];
 
 function ColorsSection() {
