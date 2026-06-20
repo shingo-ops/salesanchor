@@ -168,7 +168,7 @@
 | feat/loading-parts | loading / feedback 共用部品追加 | 2026-06-19 15:27 | DONE | #2363 | 2026-06-19 | PR #2363 merged / main deploy #2361 success |
 | feature/morimoto/sidebar-auto-collapse-fix | （記入してください） | 2026-06-19 22:56 | IN_PROGRESS | | | |
 | feature/morimoto/sidebar-hover-suppression | （記入してください） | 2026-06-20 00:08 | DONE | | | |
-| feature/morimoto/discord-ticket-immediate-translation-2 | Meta受信の即時二言語翻訳 A2（Messenger/Instagram） | 2026-06-20 00:19 | IN_PROGRESS | | | develop 取り込み済み、Meta inbound 保存直後に翻訳 enqueue |
+| feature/morimoto/discord-ticket-immediate-translation-2 | Meta受信の即時二言語翻訳 A2（Messenger/Instagram） | 2026-06-20 00:19 | DONE | #2397 / #2393 | | develop/main 反映済み |
 | feature/morimoto/advisor-phase1-pr3-customer-contact | （記入してください） | 2026-06-20 02:15 | IN_PROGRESS | | | |
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
 | feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
