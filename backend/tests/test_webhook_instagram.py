@@ -41,7 +41,6 @@ from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-
 # ---------------------------------------------------------------------------
 # DDL（必要最小限、既存 test_message_send.py / test_conversations.py と整合）
 # ---------------------------------------------------------------------------
@@ -485,9 +484,11 @@ async def test_search_tenant_meta_config_prefers_meta_page_routing(
          発行されないこと
     を確認する。
     """
-    from app.routers import webhook as wh
-    from sqlalchemy.engine import Result
     from unittest.mock import MagicMock
+
+    from sqlalchemy.engine import Result
+
+    from app.routers import webhook as wh
 
     queries: list[str] = []
     original_execute = db_session.execute
@@ -882,7 +883,8 @@ async def test_process_event_messenger_inbound_persists_record(db_session, webho
             }],
         }],
     }
-    await wh.process_messenger_event(body)
+    with patch("app.tasks.translation.translate_inbound_message.delay") as delay_mock:
+        await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
         "SELECT platform, message_text, page_id FROM meta_messages "
@@ -894,6 +896,13 @@ async def test_process_event_messenger_inbound_persists_record(db_session, webho
     assert row["message_text"] == "Hello"
     # Phase 1-E F14-S5: Messenger は entry.id を page_id として保存
     assert row["page_id"] == "PAGE-A"
+    delay_mock.assert_called_once_with(
+        tenant_id=999,
+        table_ref="meta_messages",
+        message_id="mid-msg-100",
+        message_text="Hello",
+        target_language="ja",
+    )
 
     res = await db_session.execute(text(
         "SELECT channel_type FROM leads WHERE channel_type = 'messenger'"
@@ -996,7 +1005,8 @@ async def test_process_event_instagram_messaging_persists_record(db_session, web
             }],
         }],
     }
-    await wh.process_messenger_event(body)
+    with patch("app.tasks.translation.translate_inbound_message.delay") as delay_mock:
+        await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
         "SELECT platform, sender_id FROM meta_messages WHERE message_id = 'ig-mid-100'"
@@ -1005,6 +1015,13 @@ async def test_process_event_instagram_messaging_persists_record(db_session, web
     assert row is not None
     assert row["platform"] == "instagram"
     assert row["sender_id"] == "IGSID-100"
+    delay_mock.assert_called_once_with(
+        tenant_id=999,
+        table_ref="meta_messages",
+        message_id="ig-mid-100",
+        message_text="やあ",
+        target_language="ja",
+    )
 
     res = await db_session.execute(text(
         "SELECT channel_type FROM leads WHERE channel_type = 'instagram'"
