@@ -2509,6 +2509,15 @@
     "create": "Create",
     "myCalendars": "My calendars",
     "otherCalendars": "Other calendars",
+    "calendarLabels": {
+      "meeting": "Meetings",
+      "personal": "Personal",
+      "procurement": "Procurement",
+      "shipping": "Shipping",
+      "billing": "Billing",
+      "release": "Release dates",
+      "holiday": "Holidays"
+    },
     "gmtLabel": "GMT+09",
     "connectBtn": "Google Calendar",
     "connectBtnConnected": "✔︎ Connected",

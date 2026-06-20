@@ -194,7 +194,7 @@ function SchedulePopover({
                 className="schedule-category-chip"
                 style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
               >
-                {meta.label}
+                {t(meta.labelKey)}
               </span>
             )}
           </div>
@@ -271,7 +271,7 @@ function SchedulePopover({
               >
                 {CALENDARS.map((calendar) => (
                   <option key={calendar.id} value={calendar.id}>
-                    {calendar.label}
+                    {t(calendar.labelKey)}
                   </option>
                 ))}
               </select>
@@ -493,7 +493,7 @@ function ScheduleSidebar({
                     style={{ background: cssVar(calendar.colorVar) }}
                     aria-hidden="true"
                   />
-                  <span className="schedule-calendar-item__label">{calendar.label}</span>
+                  <span className="schedule-calendar-item__label">{t(calendar.labelKey)}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -521,7 +521,7 @@ function ScheduleSidebar({
                     style={{ background: cssVar(calendar.colorVar) }}
                     aria-hidden="true"
                   />
-                  <span className="schedule-calendar-item__label">{calendar.label}</span>
+                  <span className="schedule-calendar-item__label">{t(calendar.labelKey)}</span>
                 </div>
                 <input
                   type="checkbox"

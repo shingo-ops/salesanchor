@@ -2509,6 +2509,15 @@
     "create": "作成",
     "myCalendars": "マイカレンダー",
     "otherCalendars": "他のカレンダー",
+    "calendarLabels": {
+      "meeting": "商談",
+      "personal": "個人",
+      "procurement": "仕入",
+      "shipping": "発送",
+      "billing": "請求",
+      "release": "発売日",
+      "holiday": "祝日"
+    },
     "gmtLabel": "GMT+09",
     "connectBtn": "Googleカレンダー連携",
     "connectBtnConnected": "✔︎連携済",
