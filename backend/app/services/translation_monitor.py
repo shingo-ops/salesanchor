@@ -56,15 +56,18 @@ async def check_translation_health(
     """
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
-    # 未処理（pending）数 = meta_messages に対応する翻訳行がない件数
+    # 未処理（pending）数 = 必要な翻訳行が揃っていない件数
     result = await db.execute(
         text(
             f"SELECT "
             f"  COUNT(*) AS total, "
-            f"  COUNT(*) FILTER (WHERE mt.message_id IS NULL) AS pending "
+            f"  COUNT(*) FILTER (WHERE mt_ja.message_id IS NULL "
+            f"    OR (COALESCE(mt_ja.original_language, '') <> 'en' AND mt_en.message_id IS NULL)) AS pending "
             f"FROM {meta_table_ref} m "
-            f"LEFT JOIN {table_ref} mt "
-            f"  ON mt.message_id = m.message_id AND mt.target_language = 'ja' "
+            f"LEFT JOIN {table_ref} mt_ja "
+            f"  ON mt_ja.message_id = m.message_id AND mt_ja.target_language = 'ja' "
+            f"LEFT JOIN {table_ref} mt_en "
+            f"  ON mt_en.message_id = m.message_id AND mt_en.target_language = 'en' "
             f"WHERE m.direction = 'inbound' "
             f"  AND m.created_at >= :since"
         ),

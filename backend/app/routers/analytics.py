@@ -145,6 +145,20 @@ class GoalAdviceResponse(BaseModel):
     data_sufficient: bool
 
 
+class WeeklyAdvisorAction(BaseModel):
+    type: Literal["reorder", "churn_risk", "comm_low"]
+    company_id: int
+    company_name: str
+    score: float
+    expected_value: float
+    reason: dict[str, object]
+    suggested_action: str
+
+
+class WeeklyAdvisorResponse(BaseModel):
+    actions: list[WeeklyAdvisorAction]
+
+
 class RevenueSegmentStat(BaseModel):
     revenue: float
     order_count: int
@@ -212,6 +226,78 @@ def _month_end_date(today: date) -> date:
 def _week_end_date(today: date) -> date:
     """today が属する週の日曜を返す。"""
     return today + timedelta(days=(6 - today.weekday()))
+
+
+_WEEKLY_REORDER_THRESHOLD = 0.8
+_WEEKLY_REORDER_CERTAINTY = 0.8
+_WEEKLY_CHURN_CERTAINTY = 0.5
+_WEEKLY_COMM_LOW_CERTAINTY = 0.3
+_WEEKLY_COMM_LOW_THRESHOLD_DAYS = 14
+_WEEKLY_COMM_LOW_URGENCY_WINDOW_DAYS = 60.0
+_WEEKLY_CHURN_PACE_MAX_DAYS_RATIO = 2.0
+_WEEKLY_CHURN_CONTACT_WARN_DAYS = 30
+_WEEKLY_CHURN_CONTACT_MAX_DAYS = 60
+_WEEKLY_CHURN_DECLINE_RATIO = 0.67
+
+
+def _order_scope_clause(scope: str, user_id: int) -> tuple[str, dict[str, int]]:
+    """order / deal 集計で使う scope 句を返す。"""
+    if scope == "mine":
+        return "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid", {"uid": user_id}
+    return "", {}
+
+
+def _previous_period_bounds(start: object, end: object) -> tuple[object, object]:
+    """current period と同じ長さの直前期間を返す。"""
+    span = end - start
+    return start - span, start
+
+
+def _pace_score(days_since_last_order: int, avg_interval_days: float) -> float:
+    """発注ペースの加点（0-60）。1.0倍で0点、1.3倍で約30点、2.0倍で満点。"""
+    if avg_interval_days <= 0:
+        return 0.0
+    ratio = days_since_last_order / avg_interval_days
+    if ratio <= 1.0:
+        return 0.0
+    if ratio <= 1.3:
+        return round((ratio - 1.0) / 0.3 * 30, 1)
+    if ratio <= _WEEKLY_CHURN_PACE_MAX_DAYS_RATIO:
+        return round(30 + (ratio - 1.3) / (_WEEKLY_CHURN_PACE_MAX_DAYS_RATIO - 1.3) * 30, 1)
+    return 60.0
+
+
+def _contact_score(days_since_last_contact: int | None) -> float:
+    """接触途絶の加点（0-60）。"""
+    if days_since_last_contact is None:
+        return 0.0
+    if days_since_last_contact < _WEEKLY_CHURN_CONTACT_WARN_DAYS:
+        return 0.0
+    if days_since_last_contact >= _WEEKLY_CHURN_CONTACT_MAX_DAYS:
+        return 60.0
+    return 30.0
+
+
+def _decline_score(
+    *,
+    current_order_count: int,
+    current_revenue: float,
+    previous_order_count: int,
+    previous_revenue: float,
+) -> float:
+    """受注の落ち込みスコア（0-40）。"""
+    if previous_order_count <= 0 and previous_revenue <= 0:
+        return 0.0
+
+    count_ratio = (current_order_count / previous_order_count) if previous_order_count > 0 else 1.0
+    revenue_ratio = (current_revenue / previous_revenue) if previous_revenue > 0 else 1.0
+    weakest_ratio = min(count_ratio, revenue_ratio)
+
+    if weakest_ratio >= 1.0:
+        return 0.0
+    if weakest_ratio >= _WEEKLY_CHURN_DECLINE_RATIO:
+        return 20.0
+    return 40.0
 
 
 async def _count_shift_dates(
@@ -812,6 +898,175 @@ async def new_goal_advice(
         ),
         data_sufficient=data_sufficient,
     )
+
+
+# ─────────────────────────────────────────────
+# 守り3種ランキング
+# ─────────────────────────────────────────────
+
+@router.get(
+    "/analytics/weekly-advisor-defensive",
+    response_model=WeeklyAdvisorResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def weekly_advisor_defensive(
+    scope: str = Query(default="team", description="team / mine"),
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """守り3種（そろそろ受注 / 離脱リスク / コミュ低下）を rank 済みで返す read-only API。"""
+    _validate_scope(scope)
+    today = date.today()
+
+    orders_report = await customer_orders_report(
+        period=period,
+        scope=scope,
+        db=db,
+        tenant_id=tenant_id,
+        current_user=current_user,
+    )
+    contacts_report = await customer_contacts_report(
+        period=period,
+        scope=scope,
+        stale_days=_WEEKLY_COMM_LOW_THRESHOLD_DAYS,
+        db=db,
+        tenant_id=tenant_id,
+        current_user=current_user,
+    )
+
+    orders_by_company = {item.company_id: item for item in orders_report.items}
+    contacts_by_company = {item.company_id: item for item in contacts_report.items}
+
+    start, end = _customer_orders_period_bounds(period, today)
+    prev_start, prev_end = _previous_period_bounds(start, end)
+    order_scope_join, order_scope_params = _order_scope_clause(scope, current_user.id)
+    prev_result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                COALESCE(SUM(o.total_amount), 0) AS total_amount,
+                COUNT(*) AS order_count
+            FROM orders o
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :prev_start
+              AND o.created_at < :prev_end
+            GROUP BY o.company_id
+        """),
+        {"prev_start": prev_start, "prev_end": prev_end, **order_scope_params},
+    )
+    prev_rows = prev_result.mappings().all()
+    prev_by_company = {
+        int(row["company_id"]): {
+            "total_amount": float(row["total_amount"] or 0),
+            "order_count": int(row["order_count"] or 0),
+        }
+        for row in prev_rows
+    }
+
+    actions: list[WeeklyAdvisorAction] = []
+    churn_company_ids: set[int] = set()
+
+    for item in orders_report.items:
+        if item.avg_interval_days is None or item.avg_interval_days <= 0:
+            continue
+
+        expected_value = float(item.avg_order_amount or 0)
+        if expected_value <= 0:
+            continue
+
+        pace_ratio = item.days_since_last_order / item.avg_interval_days
+        if pace_ratio >= _WEEKLY_REORDER_THRESHOLD:
+            urgency = min(max(pace_ratio / 2.0, 0.0), 1.0)
+            score = round(expected_value * _WEEKLY_REORDER_CERTAINTY * urgency, 2)
+            if score > 0:
+                actions.append(WeeklyAdvisorAction(
+                    type="reorder",
+                    company_id=item.company_id,
+                    company_name=item.company_name,
+                    score=score,
+                    expected_value=round(expected_value, 2),
+                    reason={
+                        "last_order_at": item.last_order_at.isoformat(),
+                        "avg_interval_days": item.avg_interval_days,
+                        "days_since_last_order": item.days_since_last_order,
+                    },
+                    suggested_action="再発注の案内を送る",
+                ))
+
+        contact_item = contacts_by_company.get(item.company_id)
+        contact_score = _contact_score(contact_item.days_since_last_contact if contact_item else None)
+        previous = prev_by_company.get(item.company_id, {"total_amount": 0.0, "order_count": 0})
+        decline_score = _decline_score(
+            current_order_count=item.order_count,
+            current_revenue=float(item.total_amount or 0),
+            previous_order_count=int(previous["order_count"]),
+            previous_revenue=float(previous["total_amount"]),
+        )
+        pace_risk_score = _pace_score(item.days_since_last_order, item.avg_interval_days)
+        total_risk_score = round(pace_risk_score + contact_score + decline_score, 1)
+        if total_risk_score <= 0:
+            continue
+
+        churn_company_ids.add(item.company_id)
+        risk_urgency = min(total_risk_score / 100.0, 1.0)
+        score = round(expected_value * _WEEKLY_CHURN_CERTAINTY * risk_urgency, 2)
+        if score <= 0:
+            continue
+
+        actions.append(WeeklyAdvisorAction(
+            type="churn_risk",
+            company_id=item.company_id,
+            company_name=item.company_name,
+            score=score,
+            expected_value=round(expected_value, 2),
+            reason={
+                "pace_score": pace_risk_score,
+                "contact_score": contact_score,
+                "decline_score": decline_score,
+                "total_score": total_risk_score,
+                "days_since_last_order": item.days_since_last_order,
+                "avg_interval_days": item.avg_interval_days,
+                "days_since_contact": contact_item.days_since_last_contact if contact_item else None,
+                "last_order_at": item.last_order_at.isoformat(),
+            },
+            suggested_action="状況確認と再提案を行う",
+        ))
+
+    for contact_item in contacts_report.items:
+        if contact_item.company_id in churn_company_ids:
+            continue
+        if contact_item.days_since_last_contact is None or contact_item.days_since_last_contact < _WEEKLY_COMM_LOW_THRESHOLD_DAYS:
+            continue
+
+        order_item = orders_by_company.get(contact_item.company_id)
+        expected_value = float(order_item.avg_order_amount if order_item else 0) if order_item else 0.0
+        if expected_value <= 0:
+            continue
+
+        urgency = min(contact_item.days_since_last_contact / _WEEKLY_COMM_LOW_URGENCY_WINDOW_DAYS, 1.0)
+        score = round(expected_value * _WEEKLY_COMM_LOW_CERTAINTY * urgency, 2)
+        if score <= 0:
+            continue
+
+        actions.append(WeeklyAdvisorAction(
+            type="comm_low",
+            company_id=contact_item.company_id,
+            company_name=contact_item.company_name,
+            score=score,
+            expected_value=round(expected_value, 2),
+            reason={
+                "days_since_contact": contact_item.days_since_last_contact,
+                "last_contact_at": contact_item.last_contact_at,
+                "stale_days": _WEEKLY_COMM_LOW_THRESHOLD_DAYS,
+            },
+            suggested_action="最近の状況確認の連絡をする",
+        ))
+
+    actions.sort(key=lambda item: (item.score, item.expected_value, item.company_id), reverse=True)
+    return WeeklyAdvisorResponse(actions=actions)
 
 
 # ─────────────────────────────────────────────

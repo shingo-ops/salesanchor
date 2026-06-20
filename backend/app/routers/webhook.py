@@ -657,6 +657,42 @@ async def _persist_meta_message(
     return (msg_inserted_id, lead_id)
 
 
+async def _enqueue_meta_inbound_translation(
+    *,
+    tenant_id: int,
+    lead_id: int,
+    message_id: str,
+    message_text: str,
+    platform: str,
+) -> None:
+    """Meta inbound を A1 と同じ即時翻訳キューへ載せる。
+
+    共有の翻訳ロジックは `app.tasks.translation.translate_inbound_message` 側に寄せ、
+    ここでは保存後の薄い enqueue だけを行う。
+    """
+    if not message_text.strip():
+        return
+
+    try:
+        from app.tasks.translation import translate_inbound_message
+
+        translate_inbound_message.delay(
+            tenant_id=tenant_id,
+            table_ref="meta_messages",
+            message_id=message_id,
+            message_text=message_text,
+            target_language="ja",
+        )
+    except Exception:  # noqa: BLE001
+        logging.warning(
+            "[Meta] inbound translation enqueue failed channel=%s lead=%s ext_id=%s（Webhook処理は継続）",
+            platform,
+            lead_id,
+            message_id,
+            exc_info=True,
+        )
+
+
 async def process_messenger_event(body: dict) -> None:
     """Meta から受信した Webhook イベントを処理する（Messenger + Instagram 兼用）。
 
@@ -794,6 +830,14 @@ async def process_messenger_event(body: dict) -> None:
                                 platform, m.get("message_id"),
                                 exc_info=True,
                             )
+
+                        await _enqueue_meta_inbound_translation(
+                            tenant_id=tenant_id,
+                            lead_id=lead_id,
+                            message_id=m["message_id"],
+                            message_text=m["message_text"],
+                            platform=platform,
+                        )
 
                         # アバター画像URLをバックグラウンドで取得・キャッシュ
                         # 例外は握り潰してWebhook処理本体に影響させない

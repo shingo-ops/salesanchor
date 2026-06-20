@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
 | codex/advisor-phase1-new-goal-advice-root | Advisor Phase 1 PR-4 新規モード 逆算アドバイスAPI | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-phase1/ |
 | codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
@@ -167,7 +168,7 @@
 | feat/loading-parts | loading / feedback 共用部品追加 | 2026-06-19 15:27 | DONE | #2363 | 2026-06-19 | PR #2363 merged / main deploy #2361 success |
 | feature/morimoto/sidebar-auto-collapse-fix | （記入してください） | 2026-06-19 22:56 | IN_PROGRESS | | | |
 | feature/morimoto/sidebar-hover-suppression | （記入してください） | 2026-06-20 00:08 | DONE | | | |
-| feature/morimoto/discord-ticket-immediate-translation-2 | （記入してください） | 2026-06-20 00:19 | IN_PROGRESS | | | |
+| feature/morimoto/discord-ticket-immediate-translation-2 | Meta受信の即時二言語翻訳 A2（Messenger/Instagram） | 2026-06-20 00:19 | IN_PROGRESS | | | develop 取り込み済み、Meta inbound 保存直後に翻訳 enqueue |
 | feature/morimoto/advisor-phase1-pr3-customer-contact | （記入してください） | 2026-06-20 02:15 | IN_PROGRESS | | | |
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
 | feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |

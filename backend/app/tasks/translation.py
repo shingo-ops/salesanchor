@@ -62,7 +62,10 @@ async def _run_translate_inbound_message(
     target_language: str,
 ) -> dict:
     from app.database import AsyncSessionLocal
-    from app.services.message_translator import translate_inbound
+    from app.services.message_translator import (
+        translate_inbound,
+        translate_inbound_languages,
+    )
 
     schema_name = f"tenant_{tenant_id:03d}"
     translation_table_ref = table_ref
@@ -72,14 +75,25 @@ async def _run_translate_inbound_message(
         translation_table_ref = f"{schema_name}.{translation_table_ref}"
 
     async with AsyncSessionLocal() as db:
-        result = await translate_inbound(
-            db=db,
-            tenant_id=tenant_id,
-            table_ref=translation_table_ref,
-            message_id=message_id,
-            message_text=message_text,
-            target_language=target_language,
-        )
+        if target_language == "ja":
+            results = await translate_inbound_languages(
+                db=db,
+                tenant_id=tenant_id,
+                table_ref=translation_table_ref,
+                message_id=message_id,
+                message_text=message_text,
+                primary_target_language=target_language,
+            )
+            result = results["ja"]
+        else:
+            result = await translate_inbound(
+                db=db,
+                tenant_id=tenant_id,
+                table_ref=translation_table_ref,
+                message_id=message_id,
+                message_text=message_text,
+                target_language=target_language,
+            )
 
     try:
         from app.services.sse_pubsub import publish_inbox_update
@@ -114,8 +128,8 @@ async def _run_translate_inbound_message(
 def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
     """未翻訳の受信メッセージを一括翻訳するバッチタスク。
 
-    各テナントの meta_messages で translated_text が NULL の行（受信のみ）を
-    対象に translate_inbound() を呼び出す。
+    各テナントの meta_messages で必要な翻訳行が欠けている受信メッセージを
+    対象に translate_inbound_languages() を呼び出す。
     失敗は non-fatal でスキップ（ADR-110 受け入れ条件 9）。
     """
     import asyncio
@@ -135,7 +149,7 @@ def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
 
 async def _run_batch() -> dict:
     from app.database import AsyncSessionLocal
-    from app.services.message_translator import BudgetExceededError, translate_inbound
+    from app.services.message_translator import BudgetExceededError, translate_inbound_languages
 
     processed = 0
     skipped = 0
@@ -162,18 +176,19 @@ async def _run_batch() -> dict:
             meta_t = f"{schema_name}.meta_messages"
             trans_t = f"{schema_name}.message_translations"
 
-            # 未翻訳の受信メッセージを取得
+            # 未翻訳/一部翻訳の受信メッセージを取得
             result = await db.execute(
                 text(
                     f"SELECT m.message_id, m.message_text "
                     f"FROM {meta_t} m "
+                    f"LEFT JOIN {trans_t} t_ja "
+                    f"  ON t_ja.message_id = m.message_id AND t_ja.target_language = 'ja' "
+                    f"LEFT JOIN {trans_t} t_en "
+                    f"  ON t_en.message_id = m.message_id AND t_en.target_language = 'en' "
                     f"WHERE m.direction = 'inbound' "
                     f"  AND m.message_text IS NOT NULL AND m.message_text <> '' "
-                    f"  AND NOT EXISTS ( "
-                    f"      SELECT 1 FROM {trans_t} t "
-                    f"      WHERE t.message_id = m.message_id "
-                    f"        AND t.target_language = 'ja' "
-                    f"  ) "
+                    f"  AND (t_ja.message_id IS NULL "
+                    f"       OR (COALESCE(t_ja.original_language, '') <> 'en' AND t_en.message_id IS NULL)) "
                     f"ORDER BY m.created_at ASC "
                     f"LIMIT :limit"
                 ),
@@ -183,13 +198,12 @@ async def _run_batch() -> dict:
 
             for message_id, message_text in rows:
                 try:
-                    await translate_inbound(
+                    await translate_inbound_languages(
                         db=db,
                         tenant_id=tenant_id,
                         table_ref=trans_t,
                         message_id=str(message_id),
                         message_text=str(message_text),
-                        target_language="ja",
                     )
                     processed += 1
                 except BudgetExceededError:
