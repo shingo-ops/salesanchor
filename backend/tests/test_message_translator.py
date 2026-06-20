@@ -26,19 +26,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services import message_translator
+from app.services.llm_budget import BudgetStatus
 from app.services.message_translator import (
-    BudgetExceededError,
-    MODEL_RECEIVE,
     MODEL_SEND,
+    BudgetExceededError,
     LegacyTranslationResult,
-    TranslationResult,
     _parse_translation_response,
     generate_outbound_draft,
     translate_inbound,
+    translate_inbound_languages,
     translate_message,
 )
-from app.services.llm_budget import BudgetStatus
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -265,6 +263,72 @@ async def test_no_budget_row_raises_error():
     assert exc_info.value.status == BudgetStatus.NO_BUDGET_ROW
 
 
+@pytest.mark.asyncio
+async def test_translate_inbound_languages_english_original_skips_en_translation():
+    db = AsyncMock()
+    primary_result = MagicMock(
+        translated_text="こんにちは",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.94,
+        original_language="en",
+    )
+
+    with patch(
+        "app.services.message_translator.translate_inbound",
+        AsyncMock(return_value=primary_result),
+    ) as translate_mock:
+        results = await translate_inbound_languages(
+            db=db,
+            tenant_id=1,
+            table_ref="tenant_001.message_translations",
+            message_id="mid-en",
+            message_text="Hello there",
+        )
+
+    assert set(results) == {"ja"}
+    assert results["ja"].original_language == "en"
+    assert translate_mock.await_count == 1
+    assert translate_mock.await_args.kwargs["target_language"] == "ja"
+
+
+@pytest.mark.asyncio
+async def test_translate_inbound_languages_non_english_adds_en_translation():
+    db = AsyncMock()
+    primary_result = MagicMock(
+        translated_text="こんにちは",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.91,
+        original_language="ja",
+    )
+    english_result = MagicMock(
+        translated_text="Hello",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.93,
+        original_language="ja",
+    )
+
+    with patch(
+        "app.services.message_translator.translate_inbound",
+        AsyncMock(side_effect=[primary_result, english_result]),
+    ) as translate_mock:
+        results = await translate_inbound_languages(
+            db=db,
+            tenant_id=1,
+            table_ref="tenant_001.message_translations",
+            message_id="mid-ja",
+            message_text="こんにちは",
+        )
+
+    assert set(results) == {"ja", "en"}
+    assert results["ja"].translated_text == "こんにちは"
+    assert results["en"].translated_text == "Hello"
+    assert translate_mock.await_count == 2
+    assert [call.kwargs["target_language"] for call in translate_mock.await_args_list] == ["ja", "en"]
+
+
 # ---------------------------------------------------------------------------
 # translate_message（ADR-088 互換）
 # ---------------------------------------------------------------------------
@@ -416,8 +480,9 @@ async def test_confirm_outbound_already_confirmed_returns_false():
 
 def test_translate_request_validation():
     """_TranslateRequest: target_language が空の場合 ValidationError。"""
-    from app.routers.leads import _TranslateRequest
     from pydantic import ValidationError
+
+    from app.routers.leads import _TranslateRequest
 
     with pytest.raises(ValidationError):
         _TranslateRequest(target_language="")

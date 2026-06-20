@@ -95,6 +95,34 @@ async def test_check_health_pending_messages():
     assert snap.fail_rate == pytest.approx(0.30)
 
 
+@pytest.mark.asyncio
+async def test_check_health_query_tracks_ja_and_en_variants():
+    captured_sql: list[str] = []
+
+    async def _execute(stmt, params=None):
+        sql = str(stmt)
+        captured_sql.append(sql)
+        result = MagicMock()
+        row = MagicMock()
+        if len(captured_sql) == 1:
+            row.__getitem__ = MagicMock(side_effect=lambda i: [10, 2][i])
+        else:
+            row.__getitem__ = MagicMock(return_value=1)
+        result.first.return_value = row
+        return result
+
+    db = AsyncMock()
+    db.execute = AsyncMock(side_effect=_execute)
+
+    snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
+
+    assert snap.total == 10
+    assert snap.failed == 2
+    assert any("mt_ja.target_language = 'ja'" in sql for sql in captured_sql)
+    assert any("mt_en.target_language = 'en'" in sql for sql in captured_sql)
+    assert any("COALESCE(mt_ja.original_language, '') <> 'en'" in sql for sql in captured_sql)
+
+
 # ---------------------------------------------------------------------------
 # notify_translation_anomaly
 # ---------------------------------------------------------------------------
