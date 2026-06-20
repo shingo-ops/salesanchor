@@ -43,7 +43,10 @@ import {
   WrenchScrewdriverIcon, ChatBubbleLeftIcon, ChatBubbleOvalLeftIcon, ClipboardDocumentListIcon,
   DocumentTextIcon,
   EllipsisHorizontalIcon,
+  ArrowLeftIcon,
+  ArrowPathIcon,
   TrashIcon, EnvelopeIcon, EnvelopeOpenIcon,
+  EyeIcon,
   ArrowTrendingUpIcon, BellIcon, CalendarDaysIcon, ArrowRightIcon, FlagIcon,
   ReceiptPercentIcon,
   UserCircleIcon, LockClosedIcon, PhoneIcon,
@@ -53,6 +56,7 @@ import {
   PaperAirplaneIcon,
   PaperClipIcon,
   ArrowTopRightOnSquareIcon,
+  PlusIcon,
 } from "@heroicons/react/24/solid";
 
 // ── outline: サイドバーナビゲーション専用 ────────────────────────────────
@@ -72,12 +76,15 @@ import {
   ArrowRightOnRectangleIcon,
   AdjustmentsHorizontalIcon,
   MagnifyingGlassIcon,
+  BellIcon as BellOutlineIcon,
   XMarkIcon as XMarkOutlineIcon,
   ChatBubbleOvalLeftIcon as ChatBubbleOvalLeftOutlineIcon,
   TruckIcon as TruckOutlineIcon,
+  EyeIcon as EyeOutlineIcon,
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
+  PlusIcon as PlusOutlineIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
@@ -145,6 +152,7 @@ const Languages     = hi(LanguageIcon);
 const PaperAirplane = hi(PaperAirplaneIcon);
 const Paperclip     = hi(PaperClipIcon);
 const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
+const Plus          = hi(PlusIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
@@ -167,8 +175,13 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
+const PlusOutline         = hi(PlusOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
+const EyeOutline          = hi(EyeOutlineIcon);
+const ArrowPathOutline    = hi(ArrowPathIcon);
+const ArrowLeft           = hi(ArrowLeftIcon);
+const BellOutline         = hi(BellOutlineIcon);
 const ChatBubbleOutline   = hi(ChatBubbleOvalLeftOutlineIcon); /* 空状態 outline 版 */
 const Bars3Outline        = hi(Bars3OutlineIcon);              /* mobile menu button */
 
@@ -248,6 +261,7 @@ export const NAV_ICONS = {
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
   purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
   menu:        Bars3Outline,       // outline — mobile menu button（ハンバーガー）
+  add:         PlusOutline,        // outline — 作成ボタン
 } satisfies Record<string, Icon>;
 
 // ダッシュボード強化用
@@ -365,6 +379,16 @@ export const SCHEDULE_POPOVER_ICONS = {
   edit:   PencilSquareOutline,  // PencilSquareIcon outline
   delete: TrashOutline,         // TrashIcon outline
   close:  XOutline,             // XMarkIcon outline
+} satisfies Record<string, Icon>;
+
+export const SCHEDULE_SETTINGS_ICONS = {
+  back:      ArrowLeft,
+  display:   EyeOutline,
+  sync:      ArrowPathOutline,
+  calendar:  CalendarBlank,
+  automation: BellOutline,
+  edit:      PencilSquareOutline,
+  close:     XOutline,
 } satisfies Record<string, Icon>;
 
 // SaaS 管理者ハブ ボトムタブ用
