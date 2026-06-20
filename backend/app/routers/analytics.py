@@ -14,7 +14,8 @@ from __future__ import annotations
   2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -74,6 +75,172 @@ class OverdueReport(BaseModel):
     count: int
     total_amount: float
     invoices: list[OverdueInvoice]
+
+
+class CustomerOrderItem(BaseModel):
+    company_id: int
+    company_name: str
+    order_count: int
+    first_order_at: date
+    last_order_at: date
+    days_since_last_order: int
+    continuation_days: int
+    avg_interval_days: float | None
+    avg_order_amount: float
+    total_amount: float
+    predicted_next_order_at: date | None
+
+
+class CustomerOrdersResponse(BaseModel):
+    items: list[CustomerOrderItem]
+
+
+class CustomerContactItem(BaseModel):
+    company_id: int
+    company_name: str
+    contact_count: int
+    last_contact_at: str | None
+    days_since_last_contact: int | None
+    is_communication_low: bool
+
+
+class CustomerContactsResponse(BaseModel):
+    period: str
+    scope: str
+    stale_days: int
+    items: list[CustomerContactItem]
+
+
+class GoalAdviceInputs(BaseModel):
+    monthly_kgi: float
+    kgi_type: Literal["revenue", "wins"]
+    period: str
+    scope: str
+
+
+class GoalAdviceRatesUsed(BaseModel):
+    unit_price: float | None
+    win_rate: float | None
+    deal_rate: float | None
+
+
+class GoalAdviceRequired(BaseModel):
+    wins: float | None
+    deals: float | None
+    leads: float | None
+
+
+class GoalAdviceWorkingDays(BaseModel):
+    remaining_month: int
+    remaining_week: int
+    shift_status: Literal["submitted", "not_submitted"]
+
+
+class GoalAdviceResponse(BaseModel):
+    inputs: GoalAdviceInputs
+    rates_used: GoalAdviceRatesUsed
+    monthly_required: GoalAdviceRequired
+    weekly_required: GoalAdviceRequired
+    working_days: GoalAdviceWorkingDays
+    data_sufficient: bool
+
+
+class RevenueSegmentStat(BaseModel):
+    revenue: float
+    order_count: int
+    avg_order_amount: float | None
+    customer_count: int
+    share: float
+
+
+class RevenueSegmentSummary(BaseModel):
+    revenue: float
+    order_count: int
+    customer_count: int
+
+
+class RevenueSegmentsResponse(BaseModel):
+    period: str
+    scope: str
+    new: RevenueSegmentStat
+    repeat: RevenueSegmentStat
+    total: RevenueSegmentSummary
+
+
+def _normalize_date(value: object) -> date:
+    """DB から返る date / datetime / str を date に正規化する。"""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        return date.fromisoformat(value[:10])
+    return date.fromisoformat(str(value)[:10])
+
+
+def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, object]:
+    """customer-orders 用の期間境界を返す。"""
+    if period == "1m":
+        return _jst_month_range_utc(today.year, today.month)
+    days_map = {"3m": 90, "6m": 180, "12m": 365}
+    if period not in days_map:
+        raise HTTPException(status_code=422, detail="period は 1m / 3m / 6m / 12m で指定してください")
+    end = today + timedelta(days=1)
+    return today - timedelta(days=days_map[period]), end
+
+
+def _count_inclusive_weekdays(start: date, end: date) -> int:
+    """start から end までの平日数を両端含みで数える。"""
+    if end < start:
+        return 0
+    total = 0
+    cursor = start
+    while cursor <= end:
+        if cursor.weekday() < 5:
+            total += 1
+        cursor += timedelta(days=1)
+    return total
+
+
+def _month_end_date(today: date) -> date:
+    """today が属する月の月末日を返す。"""
+    import calendar
+
+    return date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+
+
+def _week_end_date(today: date) -> date:
+    """today が属する週の日曜を返す。"""
+    return today + timedelta(days=(6 - today.weekday()))
+
+
+async def _count_shift_dates(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    start: date,
+    end: date,
+) -> int:
+    """指定範囲内の shifts.shift_date を distinct 件数で数える。"""
+    result = await db.execute(
+        text("""
+            SELECT COUNT(DISTINCT shift_date) AS cnt
+            FROM shifts
+            WHERE tenant_id = :tenant_id
+              AND user_id = :user_id
+              AND shift_date >= :start_date
+              AND shift_date <= :end_date
+        """),
+        {
+            "tenant_id": tenant_id,
+            "user_id": user_id,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+        },
+    )
+    row = result.mappings().first() or {}
+    return int(row.get("cnt", 0) or 0)
 
 
 @router.get(
@@ -205,6 +372,446 @@ async def overdue_invoices_report(
     total = sum(i.total_amount or 0 for i in invoices)
 
     return OverdueReport(count=len(invoices), total_amount=total, invoices=invoices)
+
+
+@router.get(
+    "/analytics/customer-orders",
+    response_model=CustomerOrdersResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def customer_orders_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """顧客別の受注履歴と再受注予測を返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    if scope == "mine":
+        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                COALESCE(c.name, '') AS company_name,
+                o.created_at,
+                o.total_amount
+            FROM orders o
+            LEFT JOIN companies c ON c.id = o.company_id
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start
+              AND o.created_at < :end
+            ORDER BY o.company_id, o.created_at, o.id
+        """),
+        {"start": start, "end": end, **order_scope_params},
+    )
+    rows = result.mappings().all()
+
+    grouped_names: dict[int, str] = {}
+    grouped_orders: dict[int, list[dict[str, object]]] = {}
+    for row in rows:
+        company_id = int(row["company_id"])
+        grouped_names.setdefault(company_id, str(row["company_name"] or ""))
+        grouped_orders.setdefault(company_id, []).append({
+            "created_at": _normalize_date(row["created_at"]),
+            "total_amount": float(row["total_amount"] or 0),
+        })
+
+    items: list[CustomerOrderItem] = []
+    for company_id, orders in grouped_orders.items():
+        orders = sorted(orders, key=lambda x: x["created_at"])
+        if not orders:
+            continue
+        first_order = orders[0]["created_at"]
+        last_order = orders[-1]["created_at"]
+        order_count = len(orders)
+        total_amount = sum(order["total_amount"] for order in orders)
+        avg_order_amount = round(total_amount / order_count, 2)
+        continuation_days = (last_order - first_order).days
+        days_since_last_order = (today - last_order).days
+
+        avg_interval_days: float | None = None
+        predicted_next_order_at: date | None = None
+        if order_count >= 2:
+            intervals = [
+                (orders[idx]["created_at"] - orders[idx - 1]["created_at"]).days
+                for idx in range(1, order_count)
+            ]
+            avg_interval_days = round(sum(intervals) / len(intervals), 1)
+            predicted_next_order_at = last_order + timedelta(days=max(1, int(round(avg_interval_days))))
+
+        items.append(CustomerOrderItem(
+            company_id=company_id,
+            company_name=grouped_names.get(company_id, ""),
+            order_count=order_count,
+            first_order_at=first_order,
+            last_order_at=last_order,
+            days_since_last_order=days_since_last_order,
+            continuation_days=continuation_days,
+            avg_interval_days=avg_interval_days,
+            avg_order_amount=avg_order_amount,
+            total_amount=round(total_amount, 2),
+            predicted_next_order_at=predicted_next_order_at,
+        ))
+
+    items.sort(key=lambda item: (item.last_order_at, item.total_amount, item.company_id), reverse=True)
+    return CustomerOrdersResponse(items=items)
+
+
+@router.get(
+    "/analytics/customer-contacts",
+    response_model=CustomerContactsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def customer_contacts_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    stale_days: int = Query(default=30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """顧客別の接触履歴とコミュニケーション低下フラグを返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    company_scope_filter = "AND c.sales_rep_id = :uid" if scope == "mine" else ""
+    company_scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                c.id AS company_id,
+                COALESCE(c.name, '') AS company_name,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN cl.occurred_at >= :start AND cl.occurred_at < :end THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS contact_count,
+                MAX(cl.occurred_at) AS last_conversation_at
+            FROM companies c
+            LEFT JOIN conversation_logs cl ON cl.company_id = c.id
+            WHERE 1 = 1
+              {company_scope_filter}
+            GROUP BY c.id, c.name
+            ORDER BY
+                CASE WHEN MAX(cl.occurred_at) IS NULL THEN 1 ELSE 0 END DESC,
+                MAX(cl.occurred_at) ASC,
+                c.id
+        """),
+        {"start": start, "end": end, **company_scope_params},
+    )
+    rows = result.mappings().all()
+
+    items: list[CustomerContactItem] = []
+    for row in rows:
+        last_contact_raw = row["last_conversation_at"]
+        last_contact_at: str | None = None
+        days_since_last_contact: int | None = None
+        is_communication_low = True
+        if last_contact_raw is not None:
+            last_contact_date = _normalize_date(last_contact_raw)
+            last_contact_at = last_contact_date.isoformat()
+            days_since_last_contact = (today - last_contact_date).days
+            is_communication_low = days_since_last_contact >= stale_days
+
+        items.append(CustomerContactItem(
+            company_id=int(row["company_id"]),
+            company_name=str(row["company_name"] or ""),
+            contact_count=int(row["contact_count"] or 0),
+            last_contact_at=last_contact_at,
+            days_since_last_contact=days_since_last_contact,
+            is_communication_low=is_communication_low,
+        ))
+
+    return CustomerContactsResponse(
+        period=period,
+        scope=scope,
+        stale_days=stale_days,
+        items=items,
+    )
+
+
+@router.get(
+    "/analytics/revenue-segments",
+    response_model=RevenueSegmentsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def revenue_segments_report(
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """新規/既存セグメント別の売上サマリーを返す read-only 集計API。"""
+    _validate_scope(scope)
+    today = date.today()
+    start, end = _customer_orders_period_bounds(period, today)
+
+    if scope == "mine":
+        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        order_scope_params: dict = {"uid": current_user.id}
+    else:
+        order_scope_join = ""
+        order_scope_params = {}
+
+    split_result = await db.execute(
+        text(f"""
+            SELECT
+                o.company_id,
+                COALESCE(SUM(o.total_amount), 0) AS total_amount,
+                COUNT(*) AS order_count
+            FROM orders o
+            {order_scope_join}
+            WHERE o.company_id IS NOT NULL
+              AND o.created_at >= :start
+              AND o.created_at < :end
+            GROUP BY o.company_id
+            ORDER BY o.company_id
+        """),
+        {"start": start, "end": end, **order_scope_params},
+    )
+    split_rows = split_result.mappings().all()
+
+    new_revenue = 0.0
+    repeat_revenue = 0.0
+    new_order_count = 0
+    repeat_order_count = 0
+    new_customer_ids: set[int] = set()
+    repeat_customer_ids: set[int] = set()
+
+    for row in split_rows:
+        company_id = int(row["company_id"])
+        revenue = float(row["total_amount"] or 0)
+        order_count = int(row["order_count"] or 0)
+
+        prior_result = await db.execute(
+            text("SELECT COUNT(*) AS cnt FROM orders WHERE company_id = :cid AND created_at < :start"),
+            {"cid": company_id, "start": start},
+        )
+        prior_cnt = int((prior_result.mappings().first() or {}).get("cnt", 0) or 0)
+
+        if prior_cnt == 0:
+            new_revenue += revenue
+            new_order_count += order_count
+            new_customer_ids.add(company_id)
+        else:
+            repeat_revenue += revenue
+            repeat_order_count += order_count
+            repeat_customer_ids.add(company_id)
+
+    total_revenue = round(new_revenue + repeat_revenue, 2)
+    total_order_count = new_order_count + repeat_order_count
+    total_customer_count = len(new_customer_ids | repeat_customer_ids)
+
+    def _segment_payload(
+        revenue: float,
+        order_count: int,
+        customer_count: int,
+    ) -> RevenueSegmentStat:
+        avg_order_amount = round(revenue / order_count, 2) if order_count > 0 else None
+        share = round((revenue / total_revenue * 100), 1) if total_revenue > 0 else 0.0
+        return RevenueSegmentStat(
+            revenue=round(revenue, 2),
+            order_count=order_count,
+            avg_order_amount=avg_order_amount,
+            customer_count=customer_count,
+            share=share,
+        )
+
+    return RevenueSegmentsResponse(
+        period=period,
+        scope=scope,
+        new=_segment_payload(new_revenue, new_order_count, len(new_customer_ids)),
+        repeat=_segment_payload(repeat_revenue, repeat_order_count, len(repeat_customer_ids)),
+        total=RevenueSegmentSummary(
+            revenue=total_revenue,
+            order_count=total_order_count,
+            customer_count=total_customer_count,
+        ),
+    )
+
+
+@router.get(
+    "/analytics/new-goal-advice",
+    response_model=GoalAdviceResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def new_goal_advice(
+    monthly_kgi: float = Query(default=..., ge=0),
+    kgi_type: Literal["revenue", "wins"] = Query(default=..., description="revenue / wins"),
+    scope: str = Query(default="team", description="team / mine"),
+    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """新規モード向けの逆算アドバイスを返す read-only API。"""
+    _validate_scope(scope)
+    today = date.today()
+
+    segments = await revenue_segments_report(
+        period=period,
+        scope=scope,
+        db=db,
+        tenant_id=tenant_id,
+        current_user=current_user,
+    )
+    unit_price = segments.new.avg_order_amount
+
+    if scope == "mine":
+        lead_assign_filter = "AND assigned_to = :uid"
+        deal_assign_filter = "AND assigned_to = :uid"
+        scope_params: dict = {"uid": current_user.id}
+    else:
+        lead_assign_filter = ""
+        deal_assign_filter = ""
+        scope_params = {}
+
+    start, end = _customer_orders_period_bounds(period, today)
+
+    win_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE status = 'won') AS won,
+                COUNT(*) AS total
+            FROM deals
+            WHERE created_at >= :start
+              AND created_at < :end
+              {deal_assign_filter}
+        """),
+        {"start": start, "end": end, **scope_params},
+    )
+    win_row = win_result.mappings().first() or {}
+    total_deals = int(win_row.get("total", 0) or 0)
+    won_deals = int(win_row.get("won", 0) or 0)
+    win_rate = round(won_deals / total_deals * 100, 1) if total_deals > 0 else 0.0
+
+    deal_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
+                COUNT(*) AS total
+            FROM leads
+            WHERE created_at >= :start
+              AND created_at < :end
+              {lead_assign_filter}
+        """),
+        {"start": start, "end": end, **scope_params},
+    )
+    deal_row = deal_result.mappings().first() or {}
+    total_leads = int(deal_row.get("total", 0) or 0)
+    converted_leads = int(deal_row.get("converted", 0) or 0)
+    deal_rate = round(converted_leads / total_leads * 100, 1) if total_leads > 0 else 0.0
+
+    month_end = _month_end_date(today)
+    week_end = _week_end_date(today)
+    month_start = today.replace(day=1)
+    month_shift_days = await _count_shift_dates(
+        db,
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        start=month_start,
+        end=month_end,
+    )
+    shift_status: Literal["submitted", "not_submitted"]
+    if month_shift_days > 0:
+        shift_status = "submitted"
+        remaining_month = await _count_shift_dates(
+            db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            start=today,
+            end=month_end,
+        )
+        remaining_week = await _count_shift_dates(
+            db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            start=today,
+            end=week_end,
+        )
+    else:
+        shift_status = "not_submitted"
+        remaining_month = _count_inclusive_weekdays(today, month_end)
+        remaining_week = _count_inclusive_weekdays(today, week_end)
+
+    remaining_month = max(remaining_month, 1)
+
+    data_sufficient = (
+        win_rate > 0
+        and deal_rate > 0
+        and (kgi_type == "wins" or (unit_price is not None and unit_price > 0))
+    )
+
+    def _empty_required() -> GoalAdviceRequired:
+        return GoalAdviceRequired(wins=None, deals=None, leads=None)
+
+    def _calc_required(monthly_wins: float | None) -> GoalAdviceRequired:
+        if monthly_wins is None:
+            return _empty_required()
+        monthly_deals = monthly_wins / (win_rate / 100.0)
+        monthly_leads = monthly_deals / (deal_rate / 100.0)
+        return GoalAdviceRequired(
+            wins=round(monthly_wins, 2),
+            deals=round(monthly_deals, 2),
+            leads=round(monthly_leads, 2),
+        )
+
+    monthly_required: GoalAdviceRequired
+    weekly_required: GoalAdviceRequired
+    if data_sufficient:
+        if kgi_type == "revenue":
+            monthly_wins = monthly_kgi / float(unit_price or 1)
+        else:
+            monthly_wins = monthly_kgi
+        monthly_required = _calc_required(monthly_wins)
+        weekly_required = GoalAdviceRequired(
+            wins=round(monthly_required.wins / remaining_month * remaining_week, 2) if monthly_required.wins is not None else None,
+            deals=round(monthly_required.deals / remaining_month * remaining_week, 2) if monthly_required.deals is not None else None,
+            leads=round(monthly_required.leads / remaining_month * remaining_week, 2) if monthly_required.leads is not None else None,
+        )
+    else:
+        monthly_required = _empty_required()
+        weekly_required = _empty_required()
+
+    return GoalAdviceResponse(
+        inputs=GoalAdviceInputs(
+            monthly_kgi=monthly_kgi,
+            kgi_type=kgi_type,
+            period=period,
+            scope=scope,
+        ),
+        rates_used=GoalAdviceRatesUsed(
+            unit_price=round(float(unit_price), 2) if unit_price is not None else None,
+            win_rate=win_rate if total_deals > 0 else None,
+            deal_rate=deal_rate if total_leads > 0 else None,
+        ),
+        monthly_required=monthly_required,
+        weekly_required=weekly_required,
+        working_days=GoalAdviceWorkingDays(
+            remaining_month=remaining_month,
+            remaining_week=remaining_week,
+            shift_status=shift_status,
+        ),
+        data_sufficient=data_sufficient,
+    )
 
 
 # ─────────────────────────────────────────────
