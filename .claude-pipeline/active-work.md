@@ -18,6 +18,7 @@
 |-----------|--------------|---------|------|-----|------|------|
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
+| docs/morimoto/discord-ssot-sync | Discord受信箱対応 #2356/#2360/#2368 SSOT同期（docs-only） | 2026-06-19 | IN_PROGRESS | | | tasks/todo.md と active-work.md の同期 |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
 | feature/morimoto/invoice-issuer-path-fix | 請求書作成 発行者情報ボタンパス修正 | 2026-06-02 | DONE | | | |
 | feature/morimoto/etd-scaffold-adr137 | ADR-137 ETD骨格 / owner: shingo | 2026-06-19 09:00 | DONE | #2340 | | merged:ce03ca3 |
