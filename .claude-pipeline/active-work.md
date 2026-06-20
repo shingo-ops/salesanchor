@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
 | codex/advisor-phase1-new-goal-advice-root | Advisor Phase 1 PR-4 新規モード 逆算アドバイスAPI | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-phase1/ |
 | codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
