@@ -37,10 +37,6 @@ export async function login(page: Page, role: QaRole): Promise<void> {
     timeout: 30_000,
   });
 
-  // 画面遷移直後の描画揺れを吸収するため、DOM の安定化も少し待つ。
-  await page.waitForLoadState("networkidle").catch(() => {
-    // best-effort
-  });
 }
 
 /**
