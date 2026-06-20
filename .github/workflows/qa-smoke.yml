@@ -202,21 +202,36 @@ jobs:
                 psql -U qa_tenant006_rw -d jarvis_db -v ON_ERROR_STOP=1 -f -
 
       - name: Resolve psql bin
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          BIN="$(command -v psql || true)"
-          if [ -z "$BIN" ]; then
-            for c in /usr/lib/postgresql/*/bin/psql /usr/local/bin/psql /usr/bin/psql /opt/*/bin/psql; do
-              if [ -x "$c" ]; then
-                BIN="$c"
-                break
-              fi
-            done
-          fi
-          if [ -z "$BIN" ]; then
-            echo "psql not found; candidates:"
-            ls -la /usr/lib/postgresql/*/bin/ 2>/dev/null || true
-            exit 1
-          fi
+          keyfile="$(mktemp)"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$keyfile"
+          chmod 600 "$keyfile"
+
+          BIN="$(
+            ssh \
+              -i "$keyfile" \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              "${VPS_USER}@${VPS_HOST}" \
+              'set -e
+               BIN="$(command -v psql || true)"
+               if [ -z "$BIN" ]; then
+                 for c in /usr/lib/postgresql/*/bin/psql /usr/local/bin/psql /usr/bin/psql /opt/*/bin/psql; do
+                   [ -x "$c" ] && BIN="$c" && break
+                 done
+               fi
+               if [ -z "$BIN" ]; then
+                 echo "psql not found on VPS" >&2
+                 exit 1
+               fi
+               printf "%s" "$BIN"'
+          )"
           echo "PSQL_BIN=$BIN" >> "$GITHUB_ENV"
           echo "resolved PSQL_BIN=$BIN"
 
@@ -230,6 +245,9 @@ jobs:
           QA_STAFF_PASSWORD: ${{ secrets.QA_STAFF_PASSWORD }}
           QA_VIEWER_EMAIL:   ${{ secrets.QA_VIEWER_EMAIL }}
           QA_VIEWER_PASSWORD: ${{ secrets.QA_VIEWER_PASSWORD }}
+          VPS_HOST:          ${{ secrets.VPS_HOST }}
+          VPS_USER:          ${{ secrets.VPS_USER }}
+          SSH_PRIVATE_KEY:   ${{ secrets.SSH_PRIVATE_KEY }}
           CI: 'true'
         run: |
           # tests/qa-smoke を package boundary にして、同じ package から Playwright を解決する

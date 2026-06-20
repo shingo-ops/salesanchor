@@ -6,8 +6,8 @@
  * 起動して結果を取得する。
  *
  * 設計理由:
- *   - npm 依存を増やさない (`pg` を入れない) — self-hosted runner 上には
- *     psql が既に在る前提で OK
+ *   - npm 依存を増やさない (`pg` を入れない)
+ *   - runner には psql が無い前提のため、VPS 上の psql を SSH 経由で使う
  *   - 出力 parse 用に `psql -At` (タブ区切り、no-header) を使う
  *
  * 必須環境変数:
@@ -21,12 +21,28 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 type ConnectionInfo = {
   user: string;
   password: string;
   database: string;
 };
+
+type ExecMode =
+  | { kind: "local"; bin: string }
+  | {
+      kind: "ssh";
+      bin: string;
+      host: string;
+      user: string;
+      keyPath: string;
+      tempDir: string;
+    };
+
+let cachedExecMode: ExecMode | null = null;
 
 function psqlUrl(): string {
   const raw = process.env.DATABASE_URL;
@@ -60,29 +76,107 @@ function resolvePsqlBin(): string {
   return "psql";
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function scrubText(value: string): string {
+  return value
+    .replace(/postgresql\+asyncpg:/g, "postgresql:")
+    .replace(/postgresql:\/\/[^@\s]+@/g, "postgresql://<scrubbed>@");
+}
+
+function resolveExecMode(): ExecMode {
+  if (cachedExecMode) {
+    return cachedExecMode;
+  }
+
+  const host = process.env.VPS_HOST?.trim();
+  const user = process.env.VPS_USER?.trim();
+  const key = process.env.SSH_PRIVATE_KEY?.trim();
+  const bin = resolvePsqlBin();
+
+  if (host && user && key) {
+    const tempDir = mkdtempSync(join(tmpdir(), "qa-smoke-ssh-"));
+    const keyPath = join(tempDir, "id_ed25519");
+    writeFileSync(keyPath, `${key}\n`, { mode: 0o600 });
+    chmodSync(keyPath, 0o600);
+    cachedExecMode = { kind: "ssh", bin, host, user, keyPath, tempDir };
+    process.on("exit", () => {
+      try {
+        rmSync(tempDir, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup
+      }
+    });
+    return cachedExecMode;
+  }
+
+  cachedExecMode = { kind: "local", bin };
+  return cachedExecMode;
+}
+
 function runPsql(sql: string) {
   const { user, password, database } = parseConnectionInfo();
-  const bin = resolvePsqlBin();
+  const mode = resolveExecMode();
+
+  if (mode.kind === "local") {
+    return spawnSync(
+      mode.bin,
+      [
+        "-U",
+        user,
+        "-d",
+        database,
+        "-At",
+        "-F",
+        "\t",
+        "-c",
+        sql,
+      ],
+      {
+        encoding: "utf-8",
+        timeout: 15_000,
+        env: {
+          ...process.env,
+          PGPASSWORD: password,
+        },
+      },
+    );
+  }
+
+  const remoteCommand = [
+    "env",
+    `PGPASSWORD=${shellQuote(password)}`,
+    shellQuote(mode.bin),
+    "-U",
+    shellQuote(user),
+    "-d",
+    shellQuote(database),
+    "-At",
+    "-F",
+    shellQuote("\t"),
+    "-c",
+    shellQuote(sql),
+  ].join(" ");
+
   return spawnSync(
-    bin,
+    "ssh",
     [
-      "-U",
-      user,
-      "-d",
-      database,
-      "-At",
-      "-F",
-      "\t",
-      "-c",
-      sql,
+      "-i",
+      mode.keyPath,
+      "-o",
+      "IdentitiesOnly=yes",
+      "-o",
+      "StrictHostKeyChecking=no",
+      "-o",
+      "UserKnownHostsFile=/dev/null",
+      `${mode.user}@${mode.host}`,
+      remoteCommand,
     ],
     {
       encoding: "utf-8",
-      timeout: 15_000,
-      env: {
-        ...process.env,
-        PGPASSWORD: password,
-      },
+      timeout: 30_000,
     },
   );
 }
@@ -103,8 +197,15 @@ export function pgQuote(s: string): string {
 export function psqlRows(sql: string): string[][] {
   const r = runPsql(sql);
   if (r.status !== 0) {
+    const mode = resolveExecMode();
+    const modeInfo =
+      mode.kind === "ssh"
+        ? `ssh host=${mode.host} bin=${mode.bin}`
+        : `local bin=${mode.bin}`;
     throw new Error(
-      `psql failed (status=${r.status}): ${r.stderr || r.stdout || r.error?.message || "<no output>"}`,
+      scrubText(
+        `psql failed (${modeInfo}, status=${r.status}): ${r.stderr || r.stdout || r.error?.message || "<no output>"}`,
+      ),
     );
   }
   return r.stdout
