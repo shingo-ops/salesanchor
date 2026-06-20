@@ -77,4 +77,4 @@ jobs:
           PAYPAL_SANDBOX_CLIENT_SECRET: ${{ secrets.PAYPAL_SANDBOX_CLIENT_SECRET }}
           CI: 'true'
           PYTHONPATH: backend
-        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short --no-cov
+        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short
