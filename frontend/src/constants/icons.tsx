@@ -84,7 +84,7 @@ import {
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
-  PlusIcon,
+  PlusIcon as PlusOutlineIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
@@ -175,7 +175,7 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
-const PlusOutline         = hi(PlusIcon);
+const PlusOutline         = hi(PlusOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
