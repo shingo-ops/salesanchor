@@ -7,7 +7,8 @@
  *
  * 設計理由:
  *   - npm 依存を増やさない (`pg` を入れない)
- *   - runner には psql が無い前提のため、VPS 上の psql を SSH 経由で使う
+ *   - runner には psql が無い前提のため、VPS 上の postgres コンテナへ
+ *     SSH + docker exec で入り、その中の psql を使う
  *   - 出力 parse 用に `psql -At` (タブ区切り、no-header) を使う
  *
  * 必須環境変数:
@@ -38,6 +39,7 @@ type ExecMode =
       bin: string;
       host: string;
       user: string;
+      container: string;
       keyPath: string;
       tempDir: string;
     };
@@ -93,15 +95,16 @@ function resolveExecMode(): ExecMode {
 
   const host = process.env.VPS_HOST?.trim();
   const user = process.env.VPS_USER?.trim();
+  const container = process.env.PSQL_CONTAINER?.trim();
   const key = process.env.SSH_PRIVATE_KEY?.trim();
   const bin = resolvePsqlBin();
 
-  if (host && user && key) {
+  if (host && user && container && key) {
     const tempDir = mkdtempSync(join(tmpdir(), "qa-smoke-ssh-"));
     const keyPath = join(tempDir, "id_ed25519");
     writeFileSync(keyPath, `${key}\n`, { mode: 0o600 });
     chmodSync(keyPath, 0o600);
-    cachedExecMode = { kind: "ssh", bin, host, user, keyPath, tempDir };
+    cachedExecMode = { kind: "ssh", bin, host, user, container, keyPath, tempDir };
     process.on("exit", () => {
       try {
         rmSync(tempDir, { recursive: true, force: true });
@@ -146,8 +149,12 @@ function runPsql(sql: string) {
   }
 
   const remoteCommand = [
-    "env",
+    "docker",
+    "exec",
+    "-i",
+    "-e",
     `PGPASSWORD=${shellQuote(password)}`,
+    shellQuote(mode.container),
     shellQuote(mode.bin),
     "-U",
     shellQuote(user),
@@ -200,7 +207,7 @@ export function psqlRows(sql: string): string[][] {
     const mode = resolveExecMode();
     const modeInfo =
       mode.kind === "ssh"
-        ? `ssh host=${mode.host} bin=${mode.bin}`
+        ? `ssh host=${mode.host} container=${mode.container} bin=${mode.bin}`
         : `local bin=${mode.bin}`;
     throw new Error(
       scrubText(

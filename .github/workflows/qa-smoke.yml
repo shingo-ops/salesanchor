@@ -212,7 +212,7 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$keyfile"
           chmod 600 "$keyfile"
 
-          BIN="$(
+          REMOTE_INFO="$(
             ssh \
               -i "$keyfile" \
               -o IdentitiesOnly=yes \
@@ -220,20 +220,34 @@ jobs:
               -o UserKnownHostsFile=/dev/null \
               "${VPS_USER}@${VPS_HOST}" \
               'set -e
-               BIN="$(command -v psql || true)"
+               CONTAINER="$(docker ps --format '"'"'{{.Names}}\t{{.Image}}'"'"' | awk '"'"'$2 ~ /postgres/ {print $1; exit}'"'"')"
+               if [ -z "$CONTAINER" ]; then
+                 echo "postgres container not found on VPS" >&2
+                 exit 1
+               fi
+               BIN="$(docker exec "$CONTAINER" sh -lc '"'"'command -v psql || true'"'"')"
                if [ -z "$BIN" ]; then
                  for c in /usr/lib/postgresql/*/bin/psql /usr/local/bin/psql /usr/bin/psql /opt/*/bin/psql; do
-                   [ -x "$c" ] && BIN="$c" && break
+                   if docker exec "$CONTAINER" sh -lc "[ -x \"$c\" ]"; then
+                     BIN="$c"
+                     break
+                   fi
                  done
                fi
                if [ -z "$BIN" ]; then
-                 echo "psql not found on VPS" >&2
+                 echo "psql not found in postgres container" >&2
                  exit 1
                fi
-               printf "%s" "$BIN"'
+               printf "%s\t%s" "$CONTAINER" "$BIN"'
           )"
+          IFS=$'\t' read -r PG_CONTAINER BIN <<< "$REMOTE_INFO"
+          if [ -z "$PG_CONTAINER" ] || [ -z "$BIN" ]; then
+            echo "failed to resolve postgres container/bin"
+            exit 1
+          fi
+          echo "PSQL_CONTAINER=$PG_CONTAINER" >> "$GITHUB_ENV"
           echo "PSQL_BIN=$BIN" >> "$GITHUB_ENV"
-          echo "resolved PSQL_BIN=$BIN"
+          echo "resolved PSQL_CONTAINER=$PG_CONTAINER PSQL_BIN=$BIN"
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
