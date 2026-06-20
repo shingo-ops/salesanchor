@@ -1,27 +1,22 @@
-name: External API Smoke (PayPal Sandbox)
+name: External API Smoke Gate
 
-# paths / paths-ignore を使わず常時起動し、内部判定で対象PRのみ実スモークを回す。
-# required check 化したとき、対象外PRが pending のまま詰まらないようにする。
-#
-# 対象:
-#   - backend/app/services/**
-#   - backend/app/routers/**
-#   - backend/tests/sandbox/**
+# 外部API呼び出しの有無は scripts/detect-external-api-change.js で判定する。
+# PayPal は既存の実Sandbox smoke を必須化し、それ以外のAPIは未整備を可視化する。
 
 on:
   pull_request:
     branches: [main, develop]
 
 concurrency:
-  group: external-api-smoke-paypal
+  group: external-api-smoke
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  paypal-sandbox-smoke:
-    name: PayPal Sandbox smoke
+  external-api-gate:
+    name: External API gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -31,47 +26,45 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect smoke scope
-        id: scope
+      - name: Detect external API changes
+        id: detect
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          node scripts/detect-external-api-change.js
 
-          CHANGED_FILES="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
-          echo "$CHANGED_FILES"
+      - name: Skip unrelated PRs
+        if: steps.detect.outputs.has_external != 'true'
+        run: echo "No external API changes detected; workflow completes successfully."
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/app/services/|backend/app/routers/|backend/tests/sandbox/)'; then
-            echo "is_target=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_target=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip smoke for unrelated PRs
-        if: steps.scope.outputs.is_target != 'true'
-        run: echo "No sandbox smoke changes detected; workflow completes successfully."
+      - name: Report unprepared external APIs
+        if: steps.detect.outputs.unprepared_apis != ''
+        run: |
+          echo "実環境スモーク未整備: ${{ steps.detect.outputs.unprepared_apis }}"
+          echo "検出API: ${{ steps.detect.outputs.detected_apis }}"
 
       - name: Setup Python
-        if: steps.scope.outputs.is_target == 'true'
+        if: steps.detect.outputs.paypal_detected == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Setup uv
-        if: steps.scope.outputs.is_target == 'true'
+        if: steps.detect.outputs.paypal_detected == 'true'
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
           cache-dependency-glob: backend/requirements-dev.txt
 
       - name: Install backend dependencies
-        if: steps.scope.outputs.is_target == 'true'
+        if: steps.detect.outputs.paypal_detected == 'true'
         working-directory: backend
         run: uv pip install --system -r requirements.txt -r requirements-dev.txt
 
       - name: Run PayPal Sandbox smoke
-        if: steps.scope.outputs.is_target == 'true'
+        if: steps.detect.outputs.paypal_detected == 'true'
         env:
           PAYPAL_SANDBOX_CLIENT_ID: ${{ secrets.PAYPAL_SANDBOX_CLIENT_ID }}
           PAYPAL_SANDBOX_CLIENT_SECRET: ${{ secrets.PAYPAL_SANDBOX_CLIENT_SECRET }}
