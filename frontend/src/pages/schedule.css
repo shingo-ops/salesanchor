@@ -292,7 +292,7 @@
   height: var(--space-3);
   border-radius: 4px;
   flex: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  box-shadow: var(--schedule-calendar-item-swatch-shadow);
 }
 
 .schedule-calendar-item__label {
@@ -715,7 +715,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-backdrop);
-  background: rgba(15, 23, 42, 0.12);
+  background: var(--schedule-overlay-scrim);
 }
 
 .schedule-popover {
@@ -1158,18 +1158,18 @@
   aspect-ratio: 1;
   border: 2px solid transparent;
   border-radius: var(--radius-full);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: var(--schedule-color-swatch-shadow);
 }
 
 .schedule-color-swatch--selected {
-  box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 2px var(--accent), var(--schedule-color-swatch-shadow);
 }
 
 .schedule-dialog__backdrop {
   position: fixed;
   inset: 0;
   z-index: var(--z-backdrop);
-  background: rgba(15, 23, 42, 0.12);
+  background: var(--schedule-overlay-scrim);
 }
 
 .schedule-dialog {
