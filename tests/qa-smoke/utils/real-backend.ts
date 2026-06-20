@@ -32,14 +32,14 @@ export async function login(page: Page, role: QaRole): Promise<void> {
   await page.getByLabel("パスワード").fill(cred.password);
   await page.getByRole("button", { name: "ログイン" }).click();
 
-  // ログイン成功後は `/` (Dashboard) に遷移する想定。最大 navigationTimeout 待機。
-  await page.waitForURL((u) => u.pathname === "/" || u.pathname === "/dashboard", {
+  // SPA 遷移は URL の load を待つより、Dashboard の描画を直接待つ方が安定する。
+  await expect(page.getByRole("heading", { name: /ダッシュボード|Dashboard/i })).toBeVisible({
     timeout: 30_000,
   });
 
-  // 念のため Dashboard 見出しの描画も待つ
-  await expect(page.getByRole("heading", { name: /ダッシュボード|Dashboard/i })).toBeVisible({
-    timeout: 20_000,
+  // 画面遷移直後の描画揺れを吸収するため、DOM の安定化も少し待つ。
+  await page.waitForLoadState("networkidle").catch(() => {
+    // best-effort
   });
 }
 
