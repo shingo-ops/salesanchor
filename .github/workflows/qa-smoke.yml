@@ -205,7 +205,16 @@ jobs:
         run: |
           BIN="$(command -v psql || true)"
           if [ -z "$BIN" ]; then
-            echo "psql not found on runner PATH"
+            for c in /usr/lib/postgresql/*/bin/psql /usr/local/bin/psql /usr/bin/psql /opt/*/bin/psql; do
+              if [ -x "$c" ]; then
+                BIN="$c"
+                break
+              fi
+            done
+          fi
+          if [ -z "$BIN" ]; then
+            echo "psql not found; candidates:"
+            ls -la /usr/lib/postgresql/*/bin/ 2>/dev/null || true
             exit 1
           fi
           echo "PSQL_BIN=$BIN" >> "$GITHUB_ENV"
