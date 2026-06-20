@@ -167,13 +167,6 @@
   box-shadow: var(--shadow-accent-hover);
 }
 
-.gs-advisor__toggle-btn:focus-visible,
-.gs-advisor__run-btn:focus-visible,
-.gs-advisor__metric-input:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring-shadow);
-}
-
 .gs-advisor__run-btn {
   min-height: var(--size-icon-btn-lg);
   white-space: nowrap;
@@ -304,6 +297,14 @@
   min-height: var(--size-icon-btn-lg);
 }
 
+.gs-advisor__toggle-btn:focus-visible,
+.gs-advisor__run-btn:focus-visible,
+.gs-advisor__metric-input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+
 .gs-advisor__aside {
   align-self: start;
 }
@@ -364,10 +365,6 @@
   border-bottom: 1px solid var(--border);
 }
 
-.gs-advisor__facts > div:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
 
 .gs-advisor__facts dt {
   color: var(--text-muted);
@@ -439,6 +436,11 @@
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
+}
+
+.gs-advisor__facts > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .gs-advisor__reason-grid span {
