@@ -129,8 +129,8 @@ async def test_worker_translation_task_translates_then_publishes():
     )
 
     with patch("app.database.AsyncSessionLocal", return_value=_DBContext(session)), patch(
-        "app.services.message_translator.translate_inbound",
-        AsyncMock(return_value=translate_result),
+        "app.services.message_translator.translate_inbound_languages",
+        AsyncMock(return_value={"ja": translate_result, "en": translate_result}),
     ) as translate_mock, patch(
         "app.services.sse_pubsub.publish_inbox_update",
         AsyncMock(return_value=None),
@@ -148,7 +148,7 @@ async def test_worker_translation_task_translates_then_publishes():
     translate_kwargs = translate_mock.await_args.kwargs
     assert translate_kwargs["table_ref"] == "tenant_007.message_translations"
     assert translate_kwargs["message_id"] == "mid-1"
-    assert translate_kwargs["target_language"] == "ja"
+    assert translate_kwargs["primary_target_language"] == "ja"
     publish_mock.assert_awaited_once_with(7)
 
 

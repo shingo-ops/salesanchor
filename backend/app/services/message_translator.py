@@ -474,6 +474,44 @@ async def translate_inbound(
     )
 
 
+async def translate_inbound_languages(
+    db: AsyncSession,
+    tenant_id: int,
+    table_ref: str,
+    message_id: str,
+    message_text: str,
+    *,
+    primary_target_language: str = "ja",
+) -> dict[str, TranslationResult]:
+    """受信メッセージを複数言語へ展開する。
+
+    まず primary_target_language（既定: ja）へ翻訳し、原文が英語でなければ
+    英語版も追加する。英語原文は message_text を原文表示に使うため、
+    en 翻訳は省略する。
+    """
+    primary = await translate_inbound(
+        db=db,
+        tenant_id=tenant_id,
+        table_ref=table_ref,
+        message_id=message_id,
+        message_text=message_text,
+        target_language=primary_target_language,
+    )
+    results: dict[str, TranslationResult] = {primary_target_language: primary}
+
+    if primary_target_language == "ja" and primary.original_language != "en":
+        results["en"] = await translate_inbound(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=table_ref,
+            message_id=message_id,
+            message_text=message_text,
+            target_language="en",
+        )
+
+    return results
+
+
 async def generate_outbound_draft(
     db: AsyncSession,
     tenant_id: int,
@@ -593,5 +631,6 @@ __all__ = [
     "confirm_outbound_draft",
     "generate_outbound_draft",
     "translate_inbound",
+    "translate_inbound_languages",
     "translate_message",
 ]
