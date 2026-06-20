@@ -100,6 +100,17 @@ jobs:
         working-directory: tests/qa-smoke
         run: npx playwright install chromium
 
+      - name: Diagnose docker & psql
+        run: |
+          set +e
+          echo "=== docker ps ==="
+          docker ps --format '{{.Names}}\t{{.Image}}'
+          echo "=== psql per container ==="
+          for c in $(docker ps --format '{{.Names}}'); do
+            echo "--- $c ---"
+            docker exec "$c" sh -c 'command -v psql || ls /usr/local/bin/psql /usr/bin/psql 2>/dev/null || echo NO_PSQL' || true
+          done
+
       # --- tenant_006 reset (seed 投入) ---
       - name: Bootstrap qa_tenant006_rw role on VPS
         uses: appleboy/ssh-action@v1
