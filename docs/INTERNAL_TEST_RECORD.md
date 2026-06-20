@@ -3,6 +3,8 @@
 このドキュメントは**しんごさん・hitoshiさん（運営側）**が管理する記録シートです。
 テスターには公開しません。
 
+<!-- CI verification: unrelated docs-only change for external API gate validation. -->
+
 ---
 
 ## 1. テスト概要
