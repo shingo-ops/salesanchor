@@ -26,11 +26,34 @@ export type QaRole = "admin" | "staff" | "viewer";
  */
 export async function login(page: Page, role: QaRole): Promise<void> {
   const cred = QA_USERS[role];
+  page.on("requestfailed", (request) => {
+    const failure = request.failure()?.errorText ?? "<no error text>";
+    console.log("[reqfailed]", request.method(), request.url(), failure);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      console.log("[resp>=400]", response.status(), response.url());
+    }
+  });
+  page.on("console", (message) => {
+    console.log("[browser]", message.type(), message.text());
+  });
+
   await page.goto("/login", { waitUntil: "domcontentloaded" });
+  console.log("[login] page.url before submit", page.url());
+  console.log(
+    "[login] role",
+    role,
+    "email",
+    cred.email,
+    "password_len",
+    cred.password.length,
+  );
 
   await page.getByLabel("メールアドレス").fill(cred.email);
   await page.getByLabel("パスワード").fill(cred.password);
   await page.getByRole("button", { name: "ログイン" }).click();
+  console.log("[login] page.url after submit", page.url());
 
   // SPA 遷移は URL の load を待つより、Dashboard の描画を直接待つ方が安定する。
   await expect(page.getByRole("heading", { name: /ダッシュボード|Dashboard/i })).toBeVisible({
