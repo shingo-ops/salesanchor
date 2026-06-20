@@ -70,4 +70,6 @@ jobs:
           PAYPAL_SANDBOX_CLIENT_SECRET: ${{ secrets.PAYPAL_SANDBOX_CLIENT_SECRET }}
           CI: 'true'
           PYTHONPATH: backend
-        run: pytest -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short
+        run: pytest --no-cov -m sandbox backend/tests/sandbox/test_paypal_sandbox.py -v --tb=short
+# Keep sandbox smoke execution without coverage gate.
+# No coverage gate for this sandbox smoke; keep PayPal API assertions intact and stable.
