@@ -159,6 +159,7 @@ function runPsql(sql: string) {
     "-i",
     "-e",
     `PGOPTIONS=${shellQuote(QA_PGOPTIONS)}`,
+    "-e",
     `PGPASSWORD=${shellQuote(password)}`,
     shellQuote(mode.container),
     shellQuote(mode.bin),
