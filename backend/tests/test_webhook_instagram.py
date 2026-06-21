@@ -883,7 +883,7 @@ async def test_process_event_messenger_inbound_persists_record(db_session, webho
             }],
         }],
     }
-    with patch("app.tasks.translation.translate_inbound_message.delay") as delay_mock:
+    with patch("app.routers.webhook.enqueue_inbound_translation") as enqueue_mock:
         await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
@@ -896,18 +896,44 @@ async def test_process_event_messenger_inbound_persists_record(db_session, webho
     assert row["message_text"] == "Hello"
     # Phase 1-E F14-S5: Messenger は entry.id を page_id として保存
     assert row["page_id"] == "PAGE-A"
-    delay_mock.assert_called_once_with(
+    enqueue_mock.assert_called_once_with(
+        "meta_messages",
+        "mid-msg-100",
+        "Hello",
         tenant_id=999,
-        table_ref="meta_messages",
-        message_id="mid-msg-100",
-        message_text="Hello",
-        target_language="ja",
     )
 
     res = await db_session.execute(text(
         "SELECT channel_type FROM leads WHERE channel_type = 'messenger'"
     ))
     assert res.scalar() == "messenger"
+
+
+@pytest.mark.asyncio
+async def test_process_event_messenger_echo_skips_translation_enqueue(
+    db_session, webhook_env,
+):
+    from app.routers import webhook as wh
+
+    await _insert_tenant_meta_config(
+        db_session, tenant_id=999, page_id="PAGE-A",
+    )
+
+    body = {
+        "object": "page",
+        "entry": [{
+            "id": "PAGE-A",
+            "messaging": [{
+                "sender": {"id": "PSID-100"},
+                "timestamp": 1714400000,
+                "message": {"mid": "mid-echo-100", "text": "Echo!", "is_echo": True},
+            }],
+        }],
+    }
+    with patch("app.routers.webhook.enqueue_inbound_translation") as enqueue_mock:
+        await wh.process_messenger_event(body)
+
+    enqueue_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -1005,7 +1031,7 @@ async def test_process_event_instagram_messaging_persists_record(db_session, web
             }],
         }],
     }
-    with patch("app.tasks.translation.translate_inbound_message.delay") as delay_mock:
+    with patch("app.routers.webhook.enqueue_inbound_translation") as enqueue_mock:
         await wh.process_messenger_event(body)
 
     res = await db_session.execute(text(
@@ -1015,12 +1041,11 @@ async def test_process_event_instagram_messaging_persists_record(db_session, web
     assert row is not None
     assert row["platform"] == "instagram"
     assert row["sender_id"] == "IGSID-100"
-    delay_mock.assert_called_once_with(
+    enqueue_mock.assert_called_once_with(
+        "meta_messages",
+        "ig-mid-100",
+        "やあ",
         tenant_id=999,
-        table_ref="meta_messages",
-        message_id="ig-mid-100",
-        message_text="やあ",
-        target_language="ja",
     )
 
     res = await db_session.execute(text(

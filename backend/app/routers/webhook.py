@@ -52,6 +52,7 @@ from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
 from app.services.conv_log_writer import write_conversation_log
+from app.services.inbound_translation import enqueue_inbound_translation
 
 router = APIRouter()
 
@@ -657,42 +658,6 @@ async def _persist_meta_message(
     return (msg_inserted_id, lead_id)
 
 
-async def _enqueue_meta_inbound_translation(
-    *,
-    tenant_id: int,
-    lead_id: int,
-    message_id: str,
-    message_text: str,
-    platform: str,
-) -> None:
-    """Meta inbound を A1 と同じ即時翻訳キューへ載せる。
-
-    共有の翻訳ロジックは `app.tasks.translation.translate_inbound_message` 側に寄せ、
-    ここでは保存後の薄い enqueue だけを行う。
-    """
-    if not message_text.strip():
-        return
-
-    try:
-        from app.tasks.translation import translate_inbound_message
-
-        translate_inbound_message.delay(
-            tenant_id=tenant_id,
-            table_ref="meta_messages",
-            message_id=message_id,
-            message_text=message_text,
-            target_language="ja",
-        )
-    except Exception:  # noqa: BLE001
-        logging.warning(
-            "[Meta] inbound translation enqueue failed channel=%s lead=%s ext_id=%s（Webhook処理は継続）",
-            platform,
-            lead_id,
-            message_id,
-            exc_info=True,
-        )
-
-
 async def process_messenger_event(body: dict) -> None:
     """Meta から受信した Webhook イベントを処理する（Messenger + Instagram 兼用）。
 
@@ -701,7 +666,8 @@ async def process_messenger_event(body: dict) -> None:
       2. entry[].id でテナント特定（tenant_meta_config 参照、env fallback あり）
       3. _iter_inbound_messages で messaging[] / changes[] 両形式を正規化
       4. _persist_meta_message で leads upsert + meta_messages INSERT
-      5. Discord 通知（PII 除去済）
+      5. 保存後に受信翻訳を標準入口へ enqueue
+      6. Discord 通知（PII 除去済）
     """
     try:
         object_type = body.get("object")
@@ -831,14 +797,6 @@ async def process_messenger_event(body: dict) -> None:
                                 exc_info=True,
                             )
 
-                        await _enqueue_meta_inbound_translation(
-                            tenant_id=tenant_id,
-                            lead_id=lead_id,
-                            message_id=m["message_id"],
-                            message_text=m["message_text"],
-                            platform=platform,
-                        )
-
                         # アバター画像URLをバックグラウンドで取得・キャッシュ
                         # 例外は握り潰してWebhook処理本体に影響させない
                         try:
@@ -863,6 +821,14 @@ async def process_messenger_event(body: dict) -> None:
                             logging.warning(
                                 "[Meta] SSE publish 失敗（Webhook 処理は継続）: tenant_id=%s",
                                 tenant_id,
+                            )
+
+                        if m["message_text"].strip():
+                            enqueue_inbound_translation(
+                                "meta_messages",
+                                m["message_id"],
+                                m["message_text"],
+                                tenant_id=tenant_id,
                             )
 
                         # Discord 通知（個人情報を載せない: 送信者 ID は先頭 8 文字 + ***）

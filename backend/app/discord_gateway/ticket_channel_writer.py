@@ -15,6 +15,7 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
+from app.services.inbound_translation import enqueue_inbound_translation
 
 logger = logging.getLogger(__name__)
 
@@ -164,23 +165,11 @@ async def process_ticket_channel_message(
             return True
 
         if message_text.strip():
-            try:
-                from app.tasks.translation import translate_inbound_message
-
-                translate_inbound_message.delay(
-                    tenant_id=tenant_id,
-                    table_ref="meta_messages",
-                    message_id=message_id,
-                    message_text=message_text,
-                    target_language="ja",
-                )
-            except Exception:  # noqa: BLE001
-                logger.warning(
-                    "[discord-gateway] ticket channel translation enqueue failed tenant=%s lead=%s msg=%s",
-                    tenant_id,
-                    lead.lead_id,
-                    message_id,
-                    exc_info=True,
-                )
+            enqueue_inbound_translation(
+                "meta_messages",
+                message_id,
+                message_text,
+                tenant_id=tenant_id,
+            )
 
     return True

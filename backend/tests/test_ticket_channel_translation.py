@@ -133,9 +133,9 @@ async def test_ticket_channel_message_enqueues_translation_task_after_save():
     with patch.object(
         ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
     ), patch(
-        "app.tasks.translation.translate_inbound_message.delay",
-        MagicMock(return_value=None),
-    ) as delay_mock:
+        "app.discord_gateway.ticket_channel_writer.enqueue_inbound_translation",
+        MagicMock(return_value=True),
+    ) as enqueue_mock:
         handled = await ticket_channel_writer.process_ticket_channel_message(
             db_factory,
             tenant_id=4,
@@ -144,12 +144,11 @@ async def test_ticket_channel_message_enqueues_translation_task_after_save():
 
     assert handled is True
     assert session.commit.await_count == 1
-    delay_mock.assert_called_once_with(
+    enqueue_mock.assert_called_once_with(
+        "meta_messages",
+        "1517435280951349311",
+        "Do you accept PayPal?",
         tenant_id=4,
-        table_ref="meta_messages",
-        message_id="1517435280951349311",
-        message_text="Do you accept PayPal?",
-        target_language="ja",
     )
 
 
@@ -174,9 +173,9 @@ async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation(
     with patch.object(
         ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
     ), patch(
-        "app.tasks.translation.translate_inbound_message.delay",
-        MagicMock(return_value=None),
-    ) as delay_mock, patch(
+        "app.discord_gateway.ticket_channel_writer.enqueue_inbound_translation",
+        MagicMock(return_value=True),
+    ) as enqueue_mock, patch(
         "app.services.sse_pubsub.publish_inbox_update",
         AsyncMock(return_value=None),
     ) as publish_mock:
@@ -188,7 +187,7 @@ async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation(
 
     assert handled is True
     assert session.commit.await_count == 0
-    delay_mock.assert_not_called()
+    enqueue_mock.assert_not_called()
     publish_mock.assert_not_called()
 
 
