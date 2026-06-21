@@ -94,7 +94,7 @@ async def process_ticket_channel_message(
         received_at = received_at.replace(tzinfo=timezone.utc)
 
     db_factory_result = db_factory()
-    async with db_factory_result as db:  # type: ignore[misc]
+    async with db_factory_result as db:
         await set_tenant_context(db, tenant_id)
         lead = await _lookup_ticket_channel_lead(
             db,

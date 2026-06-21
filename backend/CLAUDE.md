@@ -59,17 +59,8 @@ destructive な変更が必要な場合は必ずしんごさん（PO）に確認
 
 `customers` テーブルは廃止済み（2026-06-01 Sprint 7 DROP）。取引先は `companies` / `company_addresses` / `company_discord` を使うこと。本番DROP手順: `scripts/migrate_089_drop_customers_tables.py`（PO確認必須）。詳細: `docs/adr/ADR-089-deprecate-customers-unify-to-companies.md`
 
----
-
 ## Meta App Review テナント（tenant_006）パスワード管理
 
 `scripts/setup_review_tenant.py` 実行後は必ずホスト側に保存すること（コンテナ `/tmp` は再起動で消える）。
-手順詳細: `backend/scripts/CLAUDE.md`
-
-## 受信翻訳の標準入口
-
-受信保存後の翻訳 enqueue は必ず `app.services.inbound_translation.enqueue_inbound_translation()` を使う。新しい受信チャネルもこの入口に1行接続する。
-
-## 品質チェック
-ローカル: `make lint`（ruff/bandit/mypy）/ `make check`（lint + pytest）初回: `pip install -r requirements-dev.txt`
+手順詳細: `backend/scripts/CLAUDE.md`。受信翻訳の標準入口は `app.services.inbound_translation.enqueue_inbound_translation()`。受信保存後の翻訳 enqueue は必ずこれを使う。品質チェック: `make lint`（ruff/bandit/mypy）/ `make check`（lint + pytest）初回: `pip install -r requirements-dev.txt`
 **ADR-072 write endpoint**: `db.commit()` 直後に `reset_tenant_context()` 必須 → 詳細: `backend/tenant/CLAUDE.md`
