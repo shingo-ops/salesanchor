@@ -201,6 +201,18 @@ jobs:
                 astro-webapp-postgres-1 \
                 psql -U qa_tenant006_rw -d jarvis_db -v ON_ERROR_STOP=1 -f -
 
+      - name: Verify qa-admin after reset
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            docker exec astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -At \
+              -c "SELECT count(*) AS qa_admin_after_reset FROM public.users WHERE email='qa-admin@salesanchor.jp';"
+
       - name: Resolve psql bin
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
