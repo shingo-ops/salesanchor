@@ -88,21 +88,17 @@ def test_graph_api_version_override(monkeypatch):
     assert graph_base_url() == "https://graph.facebook.com/v20.0"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "pre-existing on main: asyncio.get_event_loop() path is incompatible with the "
-        "pytest-asyncio setup in this repo; tracked separately."
-    ),
-    strict=False,
-)
 def test_app_id_missing_raises(monkeypatch):
     """`META_APP_ID` 未設定で MetaGraphError。"""
     monkeypatch.delenv("META_APP_ID", raising=False)
     import asyncio
     with pytest.raises(MetaGraphError, match="META_APP_ID"):
-        asyncio.get_event_loop().run_until_complete(
-            exchange_code_for_short_token("dummy-code", "https://example.com/cb",
-                                          client=_make_client(lambda req: _ok({"access_token": "x"})))
+        asyncio.run(
+            exchange_code_for_short_token(
+                "dummy-code",
+                "https://example.com/cb",
+                client=_make_client(lambda req: _ok({"access_token": "x"})),
+            )
         )
 
 
