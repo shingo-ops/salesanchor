@@ -113,6 +113,7 @@ export interface WeeklyAdvisorAction {
   type: "reorder" | "churn_risk" | "comm_low";
   company_id: number;
   company_name: string;
+  lead_id: number | null;
   score: number;
   expected_value: number;
   suggested_action: string;
