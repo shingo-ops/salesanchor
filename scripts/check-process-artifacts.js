@@ -63,6 +63,9 @@ const USER_IMPACT_PATTERNS = [
   /^frontend\/src\//,
   /^backend\/app\/routers\//,
   /^backend\/app\/services\//,
+  /^backend\/app\/auth\//,
+  /^backend\/app\/tasks\//,
+  /^backend\/app\/discord_gateway\//,
 ];
 
 function classifyFile(filePath) {

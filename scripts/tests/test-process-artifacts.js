@@ -160,6 +160,21 @@ test('backend/app/services/ は user-impacting 区分', () => {
   assert.ok(hasUserImpactingChange(['backend/app/services/message_translator.py']));
 });
 
+test('backend/app/auth/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('backend/app/auth/dependencies.py'));
+  assert.ok(hasUserImpactingChange(['backend/app/auth/dependencies.py']));
+});
+
+test('backend/app/tasks/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('backend/app/tasks/refresh_meta_tokens.py'));
+  assert.ok(hasUserImpactingChange(['backend/app/tasks/refresh_meta_tokens.py']));
+});
+
+test('backend/app/discord_gateway/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('backend/app/discord_gateway/client.py'));
+  assert.ok(hasUserImpactingChange(['backend/app/discord_gateway/client.py']));
+});
+
 test('backend/app/schemas/ は user-impacting ではない', () => {
   assert.ok(!isUserImpactingFile('backend/app/schemas/lead.py'));
   assert.ok(!hasUserImpactingChange(['backend/app/schemas/lead.py']));
