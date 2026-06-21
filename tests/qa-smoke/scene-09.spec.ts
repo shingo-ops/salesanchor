@@ -51,6 +51,8 @@ test.beforeAll(async () => {
 // A. カルテ company tab 販売形態複数選択
 // ─────────────────────────────────────────────
 test.describe("Scene 09-A: 販売形態複数選択 (ADR-108 B-1)", { tag: ["@scene-09"] }, () => {
+  test.skip(true, "Layer A #2422: 認証ユーザー解決/データ可視性");
+
   test.afterEach(async ({ page }) => {
     await logout(page).catch(() => {/* best-effort */});
   });

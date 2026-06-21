@@ -10,7 +10,8 @@
 #   1. flock 排他 (/tmp/qa-tenant-006.lock) で撮影との時間衝突を防止
 #   2. Discord webhook で開始/完了通知 (QA_DISCORD_WEBHOOK_URL 未設定なら skip)
 #   3. tenant_code='tenant-review' を assert (誤実行ガード — SQL 内でも assert)
-#   4. seed-tenant.sql を psql で投入 (TRUNCATE → seed → 行数 assert)
+#   4. seed-tenant.sql を backend postgres コンテナに対して psql で投入
+#      (TRUNCATE → seed → 行数 assert)
 #   5. psql -v で Firebase UID / password hash を seed に注入
 #
 # 必須環境変数 (CI secrets で渡される):
@@ -28,11 +29,7 @@
 #   QA_LOCK_TIMEOUT_SEC         flock タイムアウト秒 (default: 600)
 #
 # 使い方:
-#   docker compose exec -T backend \
-#       env DATABASE_URL=$DATABASE_URL \
-#           QA_ADMIN_FIREBASE_UID=... \
-#           ... \
-#       bash /app/scripts/qa/reset-tenant.sh
+#   self-hosted runner 上で docker exec により backend postgres コンテナへ接続
 #
 # 関連:
 #   docs/adr/ADR-038-qa-smoke-suite.md
@@ -49,6 +46,9 @@ SEED_SQL="${SCRIPT_DIR}/seed-tenant.sql"
 
 LOCK_FILE="${QA_LOCK_FILE:-/tmp/qa-tenant-006.lock}"
 LOCK_TIMEOUT="${QA_LOCK_TIMEOUT_SEC:-600}"
+QA_TENANT_ID=6
+QA_TENANT_SCHEMA="tenant_006"
+QA_PGOPTIONS="-c search_path=${QA_TENANT_SCHEMA},public -c app.tenant_id=${QA_TENANT_ID}"
 
 log() {
     echo "[reset-tenant] $(date -u +%Y-%m-%dT%H:%M:%SZ) $*" >&2
@@ -88,8 +88,43 @@ if [[ ! -f "$SEED_SQL" ]]; then
     exit 1
 fi
 
-# DATABASE_URL の asyncpg drivername を psql 互換に戻す
-PSQL_URL="${DATABASE_URL/postgresql+asyncpg:/postgresql:}"
+readarray -t DB_PARTS < <(python3 - <<'PY'
+import os
+from urllib.parse import urlparse, unquote
+
+raw = os.environ["DATABASE_URL"].replace("postgresql+asyncpg:", "postgresql:")
+parsed = urlparse(raw)
+user = unquote(parsed.username or "")
+password = unquote(parsed.password or "")
+database = unquote(parsed.path.lstrip("/"))
+
+if not user or not password or not database:
+    raise SystemExit("DATABASE_URL is missing user, password, or database name")
+
+print(user)
+print(password)
+print(database)
+PY
+)
+
+DB_USER="${DB_PARTS[0]}"
+DB_PASSWORD="${DB_PARTS[1]}"
+DB_NAME="${DB_PARTS[2]}"
+
+POSTGRES_CONTAINER="${QA_SMOKE_POSTGRES_CONTAINER:-astro-webapp-postgres-1}"
+
+if ! docker ps --format '{{.Names}}' | grep -Fxq "$POSTGRES_CONTAINER"; then
+    log "FATAL: postgres container '$POSTGRES_CONTAINER' is not running"
+    exit 5
+fi
+
+psql_backend() {
+    docker exec -i \
+        -e PGPASSWORD="$DB_PASSWORD" \
+        -e PGOPTIONS="$QA_PGOPTIONS" \
+        "$POSTGRES_CONTAINER" \
+        psql -U "$DB_USER" -d "$DB_NAME" "$@"
+}
 
 # --- 1. flock 排他取得 ---
 exec 9>"$LOCK_FILE"
@@ -105,7 +140,7 @@ discord_notify "🟡 [QA-smoke] tenant_006 reset 開始 ($(date -u +%FT%TZ))"
 
 # --- 3. tenant_code assert (psql 経由でも seed-tenant.sql 内でも assert) ---
 log "asserting tenant_006 maps to tenant_code=tenant-review..."
-ACTUAL_CODE=$(psql "$PSQL_URL" -At -c "SELECT tenant_code FROM public.tenants WHERE id=6;")
+ACTUAL_CODE=$(psql_backend -At -c "SELECT tenant_code FROM public.tenants WHERE id=6;")
 if [[ "$ACTUAL_CODE" != "tenant-review" ]]; then
     log "FATAL: tenant_id=6 maps to tenant_code='$ACTUAL_CODE', expected 'tenant-review'"
     discord_notify "🔴 [QA-smoke] reset abort: tenant_code mismatch ('$ACTUAL_CODE')"
@@ -115,7 +150,7 @@ log "tenant_code assert OK"
 
 # --- 4. seed SQL 投入 ---
 log "applying seed-tenant.sql..."
-if ! psql "$PSQL_URL" \
+if ! psql_backend \
     -v ON_ERROR_STOP=1 \
     -v "qa_admin_firebase_uid=$QA_ADMIN_FIREBASE_UID" \
     -v "qa_staff_firebase_uid=$QA_STAFF_FIREBASE_UID" \
@@ -123,7 +158,7 @@ if ! psql "$PSQL_URL" \
     -v "qa_admin_password_hash=$QA_ADMIN_PASSWORD_HASH" \
     -v "qa_staff_password_hash=$QA_STAFF_PASSWORD_HASH" \
     -v "qa_viewer_password_hash=$QA_VIEWER_PASSWORD_HASH" \
-    -f "$SEED_SQL"; then
+    -f - < "$SEED_SQL"; then
     log "FATAL: seed-tenant.sql failed"
     discord_notify "🔴 [QA-smoke] reset FAILED — seed-tenant.sql のエラーを CI ログで確認"
     exit 4

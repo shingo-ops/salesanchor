@@ -50,10 +50,6 @@ export default defineConfig({
     video: "retain-on-failure",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    // 実 backend を相手にするので User-Agent で smoke を識別可能にする
-    extraHTTPHeaders: {
-      "X-QA-Smoke": "adr-038",
-    },
   },
 
   projects: [

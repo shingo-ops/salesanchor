@@ -67,7 +67,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # --- Node + Playwright deps (frontend が @playwright/test を持っている) ---
+      # --- Node + Playwright deps (tests/qa-smoke を package boundary にする) ---
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
@@ -75,15 +75,15 @@ jobs:
           # Playwright は Node.js 22 正式サポート済み。GHA Node.js 20 廃止対応 2026-06-16。
           node-version: '22'
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: tests/qa-smoke/package-lock.json
 
-      - name: Install frontend dependencies (for @playwright/test)
-        working-directory: frontend
+      - name: Install qa-smoke dependencies (for @playwright/test)
+        working-directory: tests/qa-smoke
         run: npm ci
 
       - name: Get Playwright version
         id: pw
-        working-directory: frontend
+        working-directory: tests/qa-smoke
         run: |
           PW_VERSION=$(node -p "require('@playwright/test/package.json').version")
           echo "version=$PW_VERSION" >> "$GITHUB_OUTPUT"
@@ -97,23 +97,173 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        working-directory: tests/qa-smoke
+        run: npx playwright install chromium
+
+      - name: Diagnose docker & psql
+        run: |
+          set +e
+          echo "=== docker ps ==="
+          docker ps --format '{{.Names}}\t{{.Image}}'
+          echo "=== psql per container ==="
+          for c in $(docker ps --format '{{.Names}}'); do
+            echo "--- $c ---"
+            docker exec "$c" sh -c 'command -v psql || ls /usr/local/bin/psql /usr/bin/psql 2>/dev/null || echo NO_PSQL' || true
+          done
 
       # --- tenant_006 reset (seed 投入) ---
-      - name: Reset tenant_006 (seed known state)
+      - name: Bootstrap qa_tenant006_rw role on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            QA_TENANT006_DATABASE_URL='${{ secrets.QA_TENANT006_DATABASE_URL }}'
+            db_without_scheme=${QA_TENANT006_DATABASE_URL#postgresql://}
+            db_password_and_host=${db_without_scheme#*:}
+            db_password=${db_password_and_host%@*}
+            docker exec -i \
+              astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -v role_password="$db_password" <<'SQL'
+            DO $$
+            BEGIN
+              CREATE ROLE qa_tenant006_rw
+                LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT;
+            EXCEPTION WHEN duplicate_object THEN
+              RAISE NOTICE 'qa_tenant006_rw already exists, skipping CREATE';
+            END $$;
+
+            ALTER ROLE qa_tenant006_rw
+              LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT;
+            ALTER ROLE qa_tenant006_rw PASSWORD :'role_password';
+            GRANT CONNECT ON DATABASE jarvis_db TO qa_tenant006_rw;
+            GRANT USAGE ON SCHEMA tenant_006 TO qa_tenant006_rw;
+            GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
+              ON ALL TABLES IN SCHEMA tenant_006 TO qa_tenant006_rw;
+            GRANT USAGE, SELECT, UPDATE
+              ON ALL SEQUENCES IN SCHEMA tenant_006 TO qa_tenant006_rw;
+            ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA tenant_006
+              GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON TABLES TO qa_tenant006_rw;
+            ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA tenant_006
+              GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO qa_tenant006_rw;
+            ALTER ROLE qa_tenant006_rw SET search_path = tenant_006, public;
+            SQL
+
+      - name: Verify qa_tenant006_rw role and tenant_006 schema access
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            docker exec -i astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -At <<'SQL'
+            SELECT rolname, rolcanlogin, rolsuper, rolbypassrls
+              FROM pg_roles
+             WHERE rolname = 'qa_tenant006_rw';
+            SELECT has_schema_privilege('qa_tenant006_rw', 'tenant_006', 'USAGE') AS schema_usage;
+            SQL
+
+      - name: Prepare tenant_006 funnel seed payload
+        run: |
+          awk '
+            {
+              line = $0
+              sub(/[[:space:]]*--.*/, "", line)
+              if (line ~ /public\./) {
+                print "FATAL: scripts/qa/funnel-seed-tenant006.sql contains a forbidden reference on a non-comment line" > "/dev/stderr"
+                bad = 1
+              }
+            }
+            END { exit bad }
+          ' scripts/qa/funnel-seed-tenant006.sql
+          FUNNEL_SEED_TENANT006_SQL_B64="$(python3 -c 'import base64, pathlib; print(base64.b64encode(pathlib.Path("scripts/qa/funnel-seed-tenant006.sql").read_bytes()).decode())')"
+          echo "FUNNEL_SEED_TENANT006_SQL_B64=$FUNNEL_SEED_TENANT006_SQL_B64" >> "$GITHUB_ENV"
+
+      - name: Seed tenant_006 funnel known state on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: FUNNEL_SEED_TENANT006_SQL_B64
+          script: |
+            set -e
+            QA_TENANT006_DATABASE_URL='${{ secrets.QA_TENANT006_DATABASE_URL }}'
+            db_without_scheme=${QA_TENANT006_DATABASE_URL#postgresql://}
+            db_password_and_host=${db_without_scheme#*:}
+            db_password=${db_password_and_host%@*}
+            printf '%s' "$FUNNEL_SEED_TENANT006_SQL_B64" | base64 -d | \
+              docker exec -i \
+                -e PGPASSWORD="$db_password" \
+                astro-webapp-postgres-1 \
+                psql -U qa_tenant006_rw -d jarvis_db -v ON_ERROR_STOP=1 -f -
+
+      - name: Verify qa-admin after reset
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            docker exec astro-webapp-postgres-1 \
+              psql -U jarvis -d jarvis_db -At \
+              -c "SELECT count(*) AS qa_admin_after_reset FROM public.users WHERE email='qa-admin@salesanchor.jp';"
+
+      - name: Resolve psql bin
         env:
-          QA_ADMIN_FIREBASE_UID:  ${{ secrets.QA_ADMIN_FIREBASE_UID }}
-          QA_STAFF_FIREBASE_UID:  ${{ secrets.QA_STAFF_FIREBASE_UID }}
-          QA_VIEWER_FIREBASE_UID: ${{ secrets.QA_VIEWER_FIREBASE_UID }}
-          QA_ADMIN_PASSWORD_HASH:  ${{ secrets.QA_ADMIN_PASSWORD_HASH }}
-          QA_STAFF_PASSWORD_HASH:  ${{ secrets.QA_STAFF_PASSWORD_HASH }}
-          QA_VIEWER_PASSWORD_HASH: ${{ secrets.QA_VIEWER_PASSWORD_HASH }}
-          QA_DISCORD_WEBHOOK_URL:  ${{ secrets.QA_DISCORD_WEBHOOK_URL }}
-        run: bash scripts/qa/reset-tenant.sh
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          keyfile="$(mktemp)"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$keyfile"
+          chmod 600 "$keyfile"
+
+          REMOTE_INFO="$(
+            ssh \
+              -i "$keyfile" \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              "${VPS_USER}@${VPS_HOST}" \
+              'set -e
+               CONTAINER="$(docker ps --format '"'"'{{.Names}}\t{{.Image}}'"'"' | awk '"'"'$2 ~ /postgres/ {print $1; exit}'"'"')"
+               if [ -z "$CONTAINER" ]; then
+                 echo "postgres container not found on VPS" >&2
+                 exit 1
+               fi
+               BIN="$(docker exec "$CONTAINER" sh -lc '"'"'command -v psql || true'"'"')"
+               if [ -z "$BIN" ]; then
+                 for c in /usr/lib/postgresql/*/bin/psql /usr/local/bin/psql /usr/bin/psql /opt/*/bin/psql; do
+                   if docker exec "$CONTAINER" sh -lc "[ -x \"$c\" ]"; then
+                     BIN="$c"
+                     break
+                   fi
+                 done
+               fi
+               if [ -z "$BIN" ]; then
+                 echo "psql not found in postgres container" >&2
+                 exit 1
+               fi
+               printf "%s\t%s" "$CONTAINER" "$BIN"'
+          )"
+          IFS=$'\t' read -r PG_CONTAINER BIN <<< "$REMOTE_INFO"
+          if [ -z "$PG_CONTAINER" ] || [ -z "$BIN" ]; then
+            echo "failed to resolve postgres container/bin"
+            exit 1
+          fi
+          echo "PSQL_CONTAINER=$PG_CONTAINER" >> "$GITHUB_ENV"
+          echo "PSQL_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "resolved PSQL_CONTAINER=$PG_CONTAINER PSQL_BIN=$BIN"
 
       # --- 8 scene 実行 ---
       - name: Run QA smoke (8 scenes against real backend)
+        working-directory: tests/qa-smoke
         env:
           QA_ADMIN_EMAIL:    ${{ secrets.QA_ADMIN_EMAIL }}
           QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
@@ -121,12 +271,14 @@ jobs:
           QA_STAFF_PASSWORD: ${{ secrets.QA_STAFF_PASSWORD }}
           QA_VIEWER_EMAIL:   ${{ secrets.QA_VIEWER_EMAIL }}
           QA_VIEWER_PASSWORD: ${{ secrets.QA_VIEWER_PASSWORD }}
+          VPS_HOST:          ${{ secrets.VPS_HOST }}
+          VPS_USER:          ${{ secrets.VPS_USER }}
+          SSH_PRIVATE_KEY:   ${{ secrets.SSH_PRIVATE_KEY }}
           CI: 'true'
         run: |
-          # frontend 配下に @playwright/test がインストール済。リポジトリ直下から
-          # --config を指定して tests/qa-smoke/ の config を読み込ませる
-          ./frontend/node_modules/.bin/playwright test \
-            --config tests/qa-smoke/playwright.config.ts
+          # tests/qa-smoke を package boundary にして、同じ package から Playwright を解決する
+          npx playwright test \
+            --config playwright.config.ts
 
       # --- Cleanup: qa-/QA- 接頭辞データを掃除 (best-effort) ---
       - name: Cleanup smoke-prefixed data
@@ -139,7 +291,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-playwright-report
-          path: playwright-report
+          path: tests/qa-smoke/playwright-report
           retention-days: 14
           if-no-files-found: ignore
 
@@ -148,6 +300,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-smoke-test-results
-          path: test-results
+          path: tests/qa-smoke/test-results
           retention-days: 14
           if-no-files-found: ignore

@@ -18,6 +18,32 @@ import { QA_USERS } from "../fixtures/qa-tenant-creds";
 
 export type QaRole = "admin" | "staff" | "viewer";
 
+const SMOKE_HEADER_NAME = "x-qa-smoke";
+const SMOKE_HEADER_VALUE = "adr-038";
+const smokeHeaderRoutes = new WeakSet<BrowserContext>();
+
+async function ensureSmokeHeaderRouting(context: BrowserContext): Promise<void> {
+  if (smokeHeaderRoutes.has(context)) {
+    return;
+  }
+
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    const headers = { ...request.headers() };
+    const host = new URL(request.url()).hostname;
+
+    if (host === "app.salesanchor.jp") {
+      headers[SMOKE_HEADER_NAME] = SMOKE_HEADER_VALUE;
+    } else {
+      delete headers[SMOKE_HEADER_NAME];
+    }
+
+    await route.continue({ headers });
+  });
+
+  smokeHeaderRoutes.add(context);
+}
+
 /**
  * Real-backend login。LoginPage を操作して Firebase 経由で signIn する。
  *
@@ -26,20 +52,39 @@ export type QaRole = "admin" | "staff" | "viewer";
  */
 export async function login(page: Page, role: QaRole): Promise<void> {
   const cred = QA_USERS[role];
+  page.on("requestfailed", (request) => {
+    const failure = request.failure()?.errorText ?? "<no error text>";
+    console.log("[reqfailed]", request.method(), request.url(), failure);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      console.log("[resp>=400]", response.status(), response.url());
+    }
+  });
+  page.on("console", (message) => {
+    console.log("[browser]", message.type(), message.text());
+  });
+
+  await ensureSmokeHeaderRouting(page.context());
   await page.goto("/login", { waitUntil: "domcontentloaded" });
+  console.log("[login] page.url before submit", page.url());
+  console.log(
+    "[login] role",
+    role,
+    "email",
+    cred.email,
+    "password_len",
+    cred.password.length,
+  );
 
   await page.getByLabel("メールアドレス").fill(cred.email);
   await page.getByLabel("パスワード").fill(cred.password);
   await page.getByRole("button", { name: "ログイン" }).click();
+  console.log("[login] page.url after submit", page.url());
 
-  // ログイン成功後は `/` (Dashboard) に遷移する想定。最大 navigationTimeout 待機。
-  await page.waitForURL((u) => u.pathname === "/" || u.pathname === "/dashboard", {
+  // SPA 遷移は URL の load を待つより、Dashboard の描画を直接待つ方が安定する。
+  await expect(page.getByRole("heading", { level: 2, name: /ダッシュボード|Dashboard/i })).toBeVisible({
     timeout: 30_000,
-  });
-
-  // 念のため Dashboard 見出しの描画も待つ
-  await expect(page.getByRole("heading", { name: /ダッシュボード|Dashboard/i })).toBeVisible({
-    timeout: 20_000,
   });
 }
 
