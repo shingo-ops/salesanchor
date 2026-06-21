@@ -32,6 +32,11 @@
   --schedule-mini-calendar-padding: var(--space-6px) var(--space-2) 0 0;
   --schedule-mini-dot-size: var(--space-10px);
   --schedule-mini-dot-z: 6;
+  /* day head height: pad-top(8) + weekday-name-lh(18) + gap(2) + day-circle(46) + pad-bottom(8) = 82px */
+  --schedule-day-head-h: 82px;
+  /* sticky z-index layers within .schedule-grid__viewport scroll container */
+  --schedule-header-z: 2;
+  --schedule-allday-z: 1;
 }
 
 .schedule-page {
@@ -39,6 +44,7 @@
   flex-direction: column;
   gap: var(--schedule-shell-gap);
   min-height: 0;
+  height: 100%; /* fill .app-content so page-level overflow-y never fires */
   padding: var(--page-padding-y) var(--page-padding-x); /* #1: 他ページ共通ガター（24px）と揃える */
 }
 
@@ -174,9 +180,11 @@
 .schedule-shell__content {
   display: grid;
   grid-template-columns: var(--schedule-leftpanel-width) minmax(0, 1fr);
+  grid-template-rows: 1fr; /* fill all remaining height so .schedule-main can stretch */
   gap: var(--schedule-shell-gap);
+  flex: 1;        /* consume remaining height in .schedule-page flex column */
   min-height: 0;
-  align-items: start;
+  align-items: stretch; /* .schedule-sidebar keeps align-self:start; .schedule-main fills cell */
 }
 
 .schedule-sidebar {
@@ -345,12 +353,14 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  min-height: 0; /* allow flex children to shrink within the constrained grid cell */
 }
 
 .schedule-main__surface {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  flex: 1;        /* fill .schedule-main flex column */
   min-height: 0;
   padding: var(--space-4);
   background: var(--bg-surface);
@@ -417,6 +427,13 @@
   color: var(--error-text);
 }
 
+/* scroll container: only the time body scrolls */
+.schedule-grid__viewport {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .schedule-grid {
   display: flex;
   flex-direction: column;
@@ -432,6 +449,10 @@
 
 .schedule-grid__header {
   border-bottom: 1px solid var(--schedule-cell-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--schedule-header-z);
+  background: var(--bg-surface);
 }
 
 .schedule-grid__gutter {
@@ -467,6 +488,8 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   cursor: pointer;
+  flex: 1;        /* equal-width within the flex .schedule-grid__days row */
+  min-width: 0;
 }
 
 .schedule-day-head:hover {
@@ -500,6 +523,10 @@
 .schedule-grid__allday-row {
   min-height: var(--schedule-allday-row-h);
   border-bottom: 1px solid var(--schedule-cell-border);
+  position: sticky;
+  top: var(--schedule-day-head-h);
+  z-index: var(--schedule-allday-z);
+  background: var(--bg-surface);
 }
 
 .schedule-grid__allday-cell {
@@ -509,6 +536,8 @@
   padding: var(--space-1);
   border-left: 1px solid var(--schedule-cell-border);
   background: var(--bg-surface);
+  flex: 1;        /* equal-width column matching day head / body columns */
+  min-width: 0;
 }
 
 .schedule-chip {
@@ -547,13 +576,14 @@
 }
 
 .schedule-grid__days {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--schedule-day-min-w), 1fr));
+  display: flex;
+  flex-wrap: nowrap; /* 7 columns always stay in one row at any viewport width */
   min-width: 0;
 }
 
 .schedule-day-column {
   position: relative;
+  flex: 1;          /* equal-width column, matches day head cells */
   min-width: 0;
   border-left: 1px solid var(--schedule-cell-border);
   background:
