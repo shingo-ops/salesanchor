@@ -32,6 +32,10 @@ type ConnectionInfo = {
   database: string;
 };
 
+const QA_TENANT_ID = 6;
+const QA_TENANT_SCHEMA = "tenant_006";
+const QA_PGOPTIONS = `-c search_path=${QA_TENANT_SCHEMA},public -c app.tenant_id=${QA_TENANT_ID}`;
+
 type ExecMode =
   | { kind: "local"; bin: string }
   | {
@@ -137,15 +141,16 @@ function runPsql(sql: string) {
         "-c",
         sql,
       ],
-      {
-        encoding: "utf-8",
-        timeout: 15_000,
-        env: {
-          ...process.env,
-          PGPASSWORD: password,
+        {
+          encoding: "utf-8",
+          timeout: 15_000,
+          env: {
+            ...process.env,
+            PGOPTIONS: QA_PGOPTIONS,
+            PGPASSWORD: password,
+          },
         },
-      },
-    );
+      );
   }
 
   const remoteCommand = [
@@ -153,6 +158,7 @@ function runPsql(sql: string) {
     "exec",
     "-i",
     "-e",
+    `PGOPTIONS=${shellQuote(QA_PGOPTIONS)}`,
     `PGPASSWORD=${shellQuote(password)}`,
     shellQuote(mode.container),
     shellQuote(mode.bin),
