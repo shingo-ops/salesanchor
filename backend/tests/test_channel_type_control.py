@@ -33,6 +33,29 @@ def _mock_user(tenant_id: int = 999):
     return user
 
 
+async def _ensure_tenant_006_schema(
+    admin_engine,
+    app_engine,
+) -> None:
+    async with admin_engine.connect() as conn:
+        schema_exists = await conn.scalar(
+            text(
+                "SELECT 1 FROM information_schema.schemata "
+                "WHERE schema_name = 'tenant_006'"
+            )
+        )
+    if schema_exists:
+        return
+
+    admin_session_factory = sessionmaker(admin_engine, class_=AsyncSession, expire_on_commit=False)
+    app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
+    async with admin_session_factory() as admin_db:
+        async with app_session_factory() as app_db:
+            await tenant_service.create_tenant_schema(app_db, 6, admin_db=admin_db)
+            await app_db.commit()
+            await admin_db.commit()
+
+
 @pytest.mark.asyncio
 async def test_channel_masters_seeded_and_lead_channel_type_is_dropdown_friendly(client):
     channel_res = await client.get("/api/v1/channel-masters")
@@ -117,6 +140,7 @@ async def test_channel_type_backfill_normalizes_and_seeds_whatsapp_under_tenant_
 
     try:
         tenant_id = 6
+        await _ensure_tenant_006_schema(admin_engine, app_engine)
 
         async with admin_engine.begin() as conn:
             result = await conn.execute(
