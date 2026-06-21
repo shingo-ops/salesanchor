@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
+_VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
+_DEFAULT_OWNER_COLOR = "#1a73e8"
 CalendarCategory = Literal["personal", "meeting", "purchase", "shipping", "billing", "release", "holiday"]
 
 
@@ -46,6 +48,31 @@ def _require_admin(user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この操作は管理者のみ実行できます",
         )
+
+
+def _owner_display_name(row: dict) -> str:
+    given = (row.get("given_name_jp") or "").strip()
+    surname = (row.get("surname_jp") or "").strip()
+    full_name = f"{surname} {given}".strip()
+    if full_name:
+        return full_name
+    return (row.get("primary_email") or "").strip() or f"担当者 {row.get('id')}"
+
+
+async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | None:
+    user_email = getattr(current_user, "email", None)
+    result = await db.execute(
+        text("""
+            SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
+            FROM staff
+            WHERE user_id = :uid OR primary_email = :email
+            ORDER BY CASE WHEN user_id = :uid THEN 0 ELSE 1 END, id ASC
+            LIMIT 1
+        """),
+        {"uid": current_user.id, "email": user_email},
+    )
+    row = result.mappings().first()
+    return dict(row) if row else None
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +103,31 @@ class UpdateEventBody(BaseModel):
 
 class SyncModeBody(BaseModel):
     sync_mode: str
+
+
+class OwnerSettingsBody(BaseModel):
+    color: Optional[str] = None
+    is_visible: Optional[bool] = None
+    share_mode: Optional[str] = None
+
+
+class OwnerRosterItem(BaseModel):
+    staff_id: int
+    user_id: Optional[int]
+    staff_code: str
+    name: str
+    primary_email: Optional[str]
+    color: str
+    is_visible: bool
+    share_mode: str
+    is_self: bool
+
+
+class OwnerRosterResponse(BaseModel):
+    can_manage_others: bool
+    current_staff_id: Optional[int]
+    current_user_id: int
+    owners: list[OwnerRosterItem]
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +164,182 @@ async def list_events(
         user_id=user_id if user_id is not None else user.id,
     )
     return {"events": events}
+
+
+# ---------------------------------------------------------------------------
+# 担当者一覧 / 設定
+# ---------------------------------------------------------------------------
+
+
+@router.get("/calendar/owners", tags=["calendar"], response_model=OwnerRosterResponse)
+async def list_calendar_owners(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    perms = await load_user_permissions(db, tenant_id, user.id)
+    can_manage_others = "staff.view" in perms
+    current_staff = await _current_staff_row(db, user)
+    if not current_staff:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="現在のユーザーに紐づく担当者が見つかりません",
+        )
+
+    current_staff_id = int(current_staff["id"])
+    query = """
+        SELECT
+            s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, s.primary_email,
+            COALESCE(cos.color, :default_color) AS color,
+            COALESCE(cos.is_visible, FALSE) AS is_visible,
+            COALESCE(cos.share_mode, 'self') AS share_mode
+        FROM staff s
+        LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
+    """
+    params = {"default_color": _DEFAULT_OWNER_COLOR}
+    if can_manage_others:
+        query += " ORDER BY s.staff_code, s.id"
+    else:
+        query += " WHERE s.id = :current_staff_id ORDER BY s.staff_code, s.id"
+        params["current_staff_id"] = current_staff_id
+
+    result = await db.execute(text(query), params)
+    rows = result.mappings().all()
+    if not can_manage_others and not rows:
+        rows = [current_staff]
+
+    owners = [
+        OwnerRosterItem(
+            staff_id=row["id"],
+            user_id=row["user_id"],
+            staff_code=row["staff_code"],
+            name=_owner_display_name(dict(row)),
+            primary_email=row.get("primary_email"),
+            color=row.get("color") or _DEFAULT_OWNER_COLOR,
+            is_visible=bool(row.get("is_visible")) if row.get("is_visible") is not None else False,
+            share_mode=row.get("share_mode") or "self",
+            is_self=int(row["id"]) == current_staff_id,
+        )
+        for row in rows
+    ]
+    return OwnerRosterResponse(
+        can_manage_others=can_manage_others,
+        current_staff_id=current_staff_id,
+        current_user_id=user.id,
+        owners=owners,
+    )
+
+
+@router.patch("/calendar/owners/{staff_id}", tags=["calendar"], response_model=OwnerRosterItem)
+async def update_calendar_owner(
+    staff_id: int,
+    body: OwnerSettingsBody,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    perms = await load_user_permissions(db, tenant_id, user.id)
+    if "staff.view" not in perms:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="この操作にはマネージャー権限が必要です",
+        )
+
+    payload: dict[str, object] = {}
+    if body.color is not None:
+        payload["color"] = body.color
+    if body.is_visible is not None:
+        payload["is_visible"] = body.is_visible
+    if body.share_mode is not None:
+        if body.share_mode not in _VALID_OWNER_SHARE_MODES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"share_mode は {_VALID_OWNER_SHARE_MODES} のいずれかを指定してください",
+            )
+        payload["share_mode"] = body.share_mode
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="更新フィールドが指定されていません",
+        )
+
+    staff_row = await db.execute(
+        text("""
+            SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
+            FROM staff
+            WHERE id = :staff_id
+            LIMIT 1
+        """),
+        {"staff_id": staff_id},
+    )
+    if not staff_row.first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="担当者が見つかりません",
+        )
+
+    current_staff = await _current_staff_row(db, user)
+    current_staff_id = int(current_staff["id"]) if current_staff else None
+
+    insert_columns = ["staff_id"]
+    insert_values = [":staff_id"]
+    params: dict[str, object] = {"staff_id": staff_id}
+    update_parts: list[str] = []
+    for key in ("color", "is_visible", "share_mode"):
+        if key in payload:
+            insert_columns.append(key)
+            insert_values.append(f":{key}")
+            params[key] = payload[key]
+            update_parts.append(f"{key} = EXCLUDED.{key}")
+
+    await db.execute(
+        text(
+            "INSERT INTO calendar_owner_settings ("
+            + ", ".join(insert_columns)
+            + ") VALUES ("
+            + ", ".join(insert_values)
+            + ") ON CONFLICT (staff_id) DO UPDATE SET "
+            + ", ".join(update_parts)
+            + ", updated_at = NOW()"
+        ),
+        params,
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+    refreshed = await db.execute(
+        text("""
+            SELECT
+                s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, s.primary_email,
+                COALESCE(cos.color, :default_color) AS color,
+                COALESCE(cos.is_visible, FALSE) AS is_visible,
+                COALESCE(cos.share_mode, 'self') AS share_mode
+            FROM staff s
+            LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
+            WHERE s.id = :staff_id
+            LIMIT 1
+        """),
+        {"staff_id": staff_id, "default_color": _DEFAULT_OWNER_COLOR},
+    )
+    row = refreshed.mappings().first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="担当者が見つかりません",
+        )
+    data = dict(row)
+    return OwnerRosterItem(
+        staff_id=data["id"],
+        user_id=data["user_id"],
+        staff_code=data["staff_code"],
+        name=_owner_display_name(data),
+        primary_email=data.get("primary_email"),
+        color=data.get("color") or _DEFAULT_OWNER_COLOR,
+        is_visible=bool(data.get("is_visible")) if data.get("is_visible") is not None else False,
+        share_mode=data.get("share_mode") or "self",
+        is_self=(current_staff_id == data["id"]) if current_staff_id is not None else False,
+    )
 
 
 # ---------------------------------------------------------------------------

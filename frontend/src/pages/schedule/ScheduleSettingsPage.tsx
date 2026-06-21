@@ -475,7 +475,7 @@ export default function ScheduleSettingsPage() {
   const activeSubtitleKey = SECTION_SUBTITLE_KEYS[activeSection];
 
   return (
-    <PageLayout navKey="nav.schedule">
+    <PageLayout navKey="nav.schedule" subtitleKey="schedule.settingsSubtitle">
       <div className="schedule-settings">
         <div className="schedule-settings__shell">
           <nav className="schedule-settings__nav" aria-label={t("schedule.settingsNavigation")}>
