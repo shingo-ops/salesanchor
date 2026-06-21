@@ -411,6 +411,9 @@ run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 # Foundation F1: 国台帳 public.countries（ISO alpha-2 / 全テナント共有）
 run_sql migrations/20260621_010000_create_countries_master.sql
 
+# SSOT 統合①: meta_messages に master 履歴列を追加（追加のみ）
+run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
+
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
