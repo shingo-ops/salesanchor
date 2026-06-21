@@ -32,8 +32,8 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | `Promise.allSettled` 内の reject が `finally` に到達するか | `SchedulePageImpl.tsx:847` の allSettled は常に resolve → `finally` 必達を確認 | ✅ 解消済み |
-| 2 | `--page-header-avatar-clearance` の未定義リスク | `tokens.css:194` に既存定義確認済み、新規追加ゼロ | ✅ 解消済み |
-| 3 | #4 カレンダーラベルの空表示はコード変更要否 | `calendars.config.ts` は `calendar.label` を直接参照、stale bundle 問題のみ → deploy で解消 | ✅ 解消済み |
+| 1 | `Promise.allSettled` 内の reject が `finally` に到達するか | `frontend/src/pages/schedule/SchedulePageImpl.tsx:847` の allSettled は常に resolve → `finally` 必達を確認 | ✅ 解消済み |
+| 2 | `--page-header-avatar-clearance` の未定義リスク | `frontend/src/tokens.css:194` に既存定義確認済み、新規追加ゼロ | ✅ 解消済み |
+| 3 | #4 カレンダーラベルの空表示はコード変更要否 | `frontend/src/features/schedule/calendars.config.ts` は `calendar.label` を直接参照、stale bundle 問題のみ → deploy で解消 | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
