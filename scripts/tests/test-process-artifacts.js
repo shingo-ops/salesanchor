@@ -23,6 +23,8 @@ const SCRIPT = join(repoRoot, 'scripts/check-process-artifacts.js');
 const {
   classifyFile,
   classifyChanges,
+  hasUserImpactingChange,
+  isUserImpactingFile,
   parseSOPDeclaration,
   parseGORecord,
   validateGORecord,
@@ -141,6 +143,26 @@ test('書類のみのリストは hasDocsOnly=true', () => {
 test('コードを含む場合は hasDocsOnly=false', () => {
   const { hasDocsOnly } = classifyChanges(['docs/adr/ADR-001.md', 'frontend/src/App.tsx']);
   assert.ok(!hasDocsOnly);
+});
+
+test('frontend/src/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('frontend/src/pages/schedule/SchedulePage.tsx'));
+  assert.ok(hasUserImpactingChange(['frontend/src/pages/schedule/SchedulePage.tsx']));
+});
+
+test('backend/app/routers/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('backend/app/routers/leads.py'));
+  assert.ok(hasUserImpactingChange(['backend/app/routers/leads.py']));
+});
+
+test('backend/app/services/ は user-impacting 区分', () => {
+  assert.ok(isUserImpactingFile('backend/app/services/message_translator.py'));
+  assert.ok(hasUserImpactingChange(['backend/app/services/message_translator.py']));
+});
+
+test('backend/app/schemas/ は user-impacting ではない', () => {
+  assert.ok(!isUserImpactingFile('backend/app/schemas/lead.py'));
+  assert.ok(!hasUserImpactingChange(['backend/app/schemas/lead.py']));
 });
 
 // ── ユニットテスト: PR 本文パース ─────────────────────────────────────────────
@@ -525,7 +547,7 @@ test('AC6: 書類のみのPRは自動スキップ（pass）', () => {
 // ── 統合テスト: 正常系（完全な成果物）────────────────────────────────────────
 console.log('\n【統合テスト】');
 
-test('正常系: 実在するrecon＋設計doc → pass', () => {
+test('内部のみのPR: 実在するrecon＋設計doc → GOなしでpass', () => {
   setupTmp();
   try {
     // 実在するファイルを引用
@@ -538,11 +560,56 @@ test('正常系: 実在するrecon＋設計doc → pass', () => {
     const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
 
     const result = runScript({
-      CHANGED_FILES: 'frontend/src/App.tsx',
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
       MOCK_PR_BODY: body,
     });
     assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
     assert.ok(result.stdout.includes('PASSED'));
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('ユーザー影響変更: GOなしはfail', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('user-impact-no-go/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('user-impact-no-go/design.md', designContent);
+    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+
+    const result = runScript({
+      CHANGED_FILES: 'frontend/src/pages/schedule/SchedulePage.tsx',
+      MOCK_PR_BODY: body,
+    });
+
+    assert.notStrictEqual(result.code, 0, 'GOなしのユーザー影響変更はfailするべき');
+    assert.ok(result.stderr.includes('GO記録') || result.stderr.includes('GO #'));
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('ユーザー影響変更: GOありはpass', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('user-impact-with-go/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('user-impact-with-go/design.md', designContent);
+    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n\n${validGORecordSection(2099)}`;
+
+    const result = runScript({
+      CHANGED_FILES: 'backend/app/services/message_translator.py',
+      MOCK_PR_BODY: body,
+      PR_NUMBER: '2099',
+    });
+
+    assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+    assert.ok(result.stdout.includes('ユーザー影響変更') || result.stdout.includes('PASSED'));
   } finally {
     cleanupTmp();
   }

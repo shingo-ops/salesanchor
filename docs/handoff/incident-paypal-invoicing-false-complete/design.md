@@ -192,7 +192,7 @@ PayPal 請求書発行の PR #1980 では、自己申告とモックテストの
 | L2 | 変更検出 | PR-C | 完了済み（コード内容ベース detector） |
 | L3 | 自動チェックの束ね | 既存 CI + process-artifacts gate | 完了済み |
 | L4 | 人の実動作確認 | PR-D | 今回追加する定義 |
-| L5 | 人の承認を仕組みで必須化 | PR-E | 次段階で必須化 |
+| L5 | 人の確認/承認を仕組みで必須化 | PR-E | 次段階で必須化 |
 | F | 不明 | PR-F | この design.md では未定義 |
 
 ### PR-E との境界
@@ -200,6 +200,15 @@ PayPal 請求書発行の PR #1980 では、自己申告とモックテストの
 - PR-D は「完了」の定義そのものを決める。
 - PR-E は、その定義に含まれる人の動作確認／承認を仕組み（ゲート）で必須化する。
 - つまり、PR-D は定義、PR-E は必須化の仕組みである。
+
+### PR-E: 人の確認/承認の必須化
+
+- **柱1（人の動作確認）**: ユーザーに影響する変更は、人が実際に動かして確認しないと「完了」にしない。完了条件は `docs/STANDARD-WORKFLOW.md` の §2 に従う。
+- **柱2（形だけ承認の防止）**: ユーザーに影響する変更は、本番に出す前に Shingo の GO 記録を必須化する。現行フローでは、feature PR で GO を満たして develop に入れる段階で gate し、develop→main の release PR では既に通過済みのものとして扱う。
+- **確認環境の前提（当面）**: 本番のみ。動作確認は tenant_006（QA）または tenant_001（空テスト）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。ローンチ後は別サーバーに dev 環境を構築し、dev で確認 → GO → 本番の順に切り替える。
+- **適用対象**: 現状の線引きでは `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / 外部API変更が対象。内部のみ（models / utils / tests / config）は対象外、migrations は既存の dangerous 区分に従う。
+- **実装方針**: 既存の `GO記録` 解析ロジックを流用し、`scripts/check-process-artifacts.js` の dangerous GO 検証と同じ形式で強制する。新しい承認方式は発明しない。
+- **証跡**: GO 記録と人の実動作確認は `docs/ai-agents/evidence-registry.md` に残す。
 
 ### 既存ゲートの束ね
 

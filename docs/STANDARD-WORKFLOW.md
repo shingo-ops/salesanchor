@@ -43,6 +43,9 @@
 3. 危険な変更（migrations/・deploy.yml・本番 scripts 等）を含む場合、GO 記録がある。
 4. 人が実際に動作確認を行い、不具合がないと判断している。確認内容（何を・どう確認し、問題がなかったか）を docs/ai-agents/evidence-registry.md に記録している。
 
+- **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / 外部API変更）は、**本番に出す前に Shingo の GO 記録が必須**。現行フローでは、まず feature PR で GO を満たして develop に入れ、その後 release PR で main へ昇格する。
+- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_006（QA）または tenant_001（空テスト）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。ローンチ後は別サーバーの dev 環境で事前確認に移行する。
+
 次は完了と認めない。
 - 自己申告のみ（「できました」の宣言だけ）。
 - モック（にせもの）テストが緑なだけで、実動作・人の確認がない。
