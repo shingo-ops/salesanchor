@@ -182,12 +182,13 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "田中 太郎")
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎")
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
         assert result[0]["title"] == "テスト会議"
         assert result[0]["calendar_type"] == "shared"
+        assert result[0]["owner_name"] == "鈴木 花子"
 
     @pytest.mark.asyncio
     async def test_shared_type_filter(self):
@@ -232,10 +233,11 @@ class TestCreateEvent:
         }
         result = await create_event(db, tenant_id=1, user_id=2, payload=payload)
         assert result["id"] == 1
+        assert db.execute.call_args_list[0].args[1]["uid"] == 2
 
     @pytest.mark.asyncio
     async def test_create_personal_event(self):
-        """personal イベントは user_id がセットされる。"""
+        """personal イベントでも owner 用 user_id がセットされる。"""
         from app.services.calendar_service import create_event
 
         db = AsyncMock()
@@ -255,6 +257,7 @@ class TestCreateEvent:
         }
         result = await create_event(db, tenant_id=1, user_id=3, payload=payload)
         assert result["id"] == 5
+        assert db.execute.call_args_list[0].args[1]["uid"] == 3
 
     @pytest.mark.asyncio
     async def test_create_with_google_sync_failure(self):

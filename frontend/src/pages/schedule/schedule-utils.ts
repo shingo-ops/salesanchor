@@ -26,6 +26,7 @@ export interface ApiCalendarEvent {
   created_by_user_id: number | null;
   created_at: string | null;
   updated_at: string | null;
+  owner_name?: string | null;
   created_by_name: string | null;
   category?: string | null;
 }
@@ -51,6 +52,8 @@ export interface ScheduleItem {
   category: import("../../features/schedule/calendars.config").CalendarId | null;
   calendarType: "shared" | "personal";
   source: "app" | "google" | "shift";
+  ownerUserId: number | null;
+  ownerName: string | null;
   organizer?: string | null;
   location?: string | null;
   description?: string | null;
@@ -157,6 +160,8 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   const start = parseLocalDate(event.start_datetime);
   const end = parseLocalDate(event.end_datetime);
   const category = (event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting")) as ScheduleItem["category"];
+  const ownerUserId = event.user_id ?? event.created_by_user_id ?? null;
+  const ownerName = event.owner_name ?? event.created_by_name ?? null;
   return {
     id: `event-${event.id}`,
     title: event.title,
@@ -166,6 +171,8 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     category,
     calendarType: event.calendar_type === "personal" ? "personal" : "shared",
     source: event.source === "google" ? "google" : "app",
+    ownerUserId,
+    ownerName,
     organizer: event.created_by_name ?? null,
     location: event.location ?? null,
     description: event.description ?? null,
@@ -185,6 +192,8 @@ export function normalizeShift(shift: ApiShift): ScheduleItem {
     category: "personal",
     calendarType: "personal",
     source: "shift",
+    ownerUserId: shift.user_id,
+    ownerName: null,
     description: shift.notes ?? null,
   };
 }
