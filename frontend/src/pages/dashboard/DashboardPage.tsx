@@ -34,6 +34,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
+import { WeeklyAdvisorSection } from "./WeeklyAdvisorSection";
 import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
 
@@ -487,6 +488,11 @@ export default function DashboardPage() {
       )}
 
       {/* -------------------------------------------------
+          今やること（W-1: 守り3種 / scope=mine）
+      ------------------------------------------------- */}
+      <WeeklyAdvisorSection />
+
+      {/* -------------------------------------------------
           固定エリア（期間変更でも不変）
       ------------------------------------------------- */}
 
@@ -620,6 +626,67 @@ export default function DashboardPage() {
       {/* -------------------------------------------------
           期間連動エリア（ロール別）
       ------------------------------------------------- */}
+
+      <div className="db-period-area">
+        {loadingPeriod ? (
+          <div className="db-loading">{t("common.loading")}</div>
+        ) : summary ? (
+          <>
+            {/* リード（リードビューとチームビューのみ表示）*/}
+            {(tab === "lead" || tab === "team") && (
+              <div className="db-metric-card">
+                <div className="db-metric-title">{t("dashboard.sectionLeads")}</div>
+                <div className="kpi-grid">
+                  <div className="kpi-card">
+                    <div className="kpi-value">{summary.leads.total}</div>
+                    <div className="kpi-label">{t("dashboard.leadTotal")}</div>
+                    <VsPrev change={summary.comparison.leads_total} />
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-value">{summary.leads.converted}</div>
+                    <div className="kpi-label">{t("dashboard.leadConverted")}</div>
+                  </div>
+                  <div className="kpi-card">
+                    <div className="kpi-value">{summary.leads.excluded}</div>
+                    <div className="kpi-label">{t("dashboard.leadExcluded")}</div>
+                  </div>
+                  <div className="kpi-card accent">
+                    <div className="kpi-value">{summary.leads.conversion_rate}%</div>
+                    <div className="kpi-label">{t("dashboard.conversionRate")}</div>
+                    <VsPrev change={summary.comparison.leads_cv_rate} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 商談（営業ビューとチームビューのみ表示・totalは削除）*/}
+            {(tab === "sales" || tab === "team") && (
+              <div className="db-metric-card">
+                <div className="db-metric-title">{t("dashboard.sectionDeals")}</div>
+                <div className="kpi-grid">
+                  <div className="kpi-card">
+                    <div className="kpi-value">{summary.deals.active}</div>
+                    <div className="kpi-label">{t("dashboard.dealActive")}</div>
+                    <VsPrev change={summary.comparison.deals_active} />
+                  </div>
+                  <div className="kpi-card accent">
+                    <div className="kpi-value">{summary.deals.won}</div>
+                    <div className="kpi-label">{t("dashboard.dealWon")}</div>
+                    <VsPrev change={summary.comparison.deals_won} />
+                  </div>
+                  <div className="kpi-card accent">
+                    <div className="kpi-value">{summary.deals.win_rate}%</div>
+                    <div className="kpi-label">{t("dashboard.winRate")}</div>
+                    <VsPrev change={summary.comparison.deals_win_rate} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 受注は統合カードに移動 */}
+          </>
+        ) : null}
+      </div>
 
       {/* -------------------------------------------------
           受注統合カード（営業/チームビューのみ）

@@ -29,6 +29,75 @@ function dashboardMocks() {
       upcoming: [],
       stalled: [],
     },
+    "GET /analytics/weekly-advisor-defensive": {
+      period: "3m",
+      scope: "mine",
+      stale_days: 14,
+      actions: [
+        {
+          rank: 1,
+          type: "churn_risk",
+          company_id: 101,
+          company_name: "Blue Ocean Co.",
+          score: 12800,
+          expected_value: 320000,
+          suggested_action: "状況確認の連絡",
+          reason: {
+            last_order_at: "2026-05-18",
+            last_contact_at: "2026-05-22",
+            avg_interval_days: 20,
+            days_since_last_order: 34,
+            days_since_contact: 30,
+            pace_score: 18,
+            contact_score: 12,
+            decline_score: 40,
+            total_score: 70,
+            current_order_count: 1,
+            previous_order_count: 4,
+            current_revenue: 320000,
+            previous_revenue: 1280000,
+          },
+        },
+        {
+          rank: 2,
+          type: "reorder",
+          company_id: 102,
+          company_name: "Card Haven LLC",
+          score: 7600,
+          expected_value: 380000,
+          suggested_action: "再受注の案内",
+          reason: {
+            last_order_at: "2026-05-28",
+            last_contact_at: "2026-06-01",
+            avg_interval_days: 18,
+            days_since_last_order: 24,
+            days_since_contact: 20,
+            current_order_count: 3,
+            previous_order_count: 0,
+            current_revenue: 1140000,
+            previous_revenue: 0,
+          },
+        },
+        {
+          rank: 3,
+          type: "comm_low",
+          company_id: 103,
+          company_name: "Tokyo Trading Co.",
+          score: 3200,
+          expected_value: 280000,
+          suggested_action: "近況確認の連絡",
+          reason: {
+            last_order_at: "2026-06-02",
+            last_contact_at: "2026-05-18",
+            days_since_contact: 34,
+            current_order_count: 2,
+            previous_order_count: 1,
+            current_revenue: 560000,
+            previous_revenue: 300000,
+          },
+        },
+      ],
+    },
     // 着地予測
     "GET /analytics/forecast": {
       forecast_amount: 3200000,
@@ -59,7 +128,7 @@ function dashboardMocks() {
         total: 18,
         converted: 7,
         excluded: 2,
-        cv_rate: 38.9,
+        conversion_rate: 38.9,
       },
       deals: {
         total: 12,
@@ -124,6 +193,9 @@ test.describe("Scene 1: Dashboard Overview", () => {
     // 固定エリア: 目標 / フォローアップ（Sprint 4: 着地予測は統合カードに移動）
     await expect(page.getByText("目標", { exact: true })).toBeVisible();
     await expect(page.getByText("フォローアップ", { exact: true })).toBeVisible();
+    await expect(page.getByText("今やること", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("weekly-advisor-section")).toBeVisible();
+    await expect(page.getByTestId("weekly-advisor-item").first()).toContainText("Blue Ocean Co.");
 
     // 受注統合カード: 受注・売上 見出しが描画される（営業担当ビュー）
     await expect(page.getByText("受注・売上", { exact: true })).toBeVisible();

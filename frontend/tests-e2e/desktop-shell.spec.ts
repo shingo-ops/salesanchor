@@ -21,6 +21,7 @@ const DESKTOP_VIEWPORT = { width: 1280, height: 800 };
 function dashboardMock() {
   return {
     "GET /analytics/followups": { overdue: [], due_today: [], upcoming: [], stalled: [] },
+    "GET /analytics/weekly-advisor-defensive": { period: "3m", scope: "mine", stale_days: 14, actions: [] },
     "GET /analytics/forecast": { forecast_amount: 0, won_amount: 0, open_deal_count: 0, period_start: "2026-06-01", period_end: "2026-06-30" },
     "GET /analytics/stalled-deals": { stalled_count: 0, stalled_deals: [] },
     "GET /analytics/monthly-revenue": { granularity: "monthly", entries: [] },
