@@ -21,6 +21,7 @@
 
 const { readFileSync, existsSync } = require('fs');
 const { execSync } = require('child_process');
+const { analyzeRepositoryDiff } = require('./detect-external-api-change');
 const { join } = require('path');
 
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
@@ -59,6 +60,15 @@ const REAL_CODE_PATTERNS = [
   /^scripts\//,
 ];
 
+const USER_IMPACT_PATTERNS = [
+  /^frontend\/src\//,
+  /^backend\/app\/routers\//,
+  /^backend\/app\/services\//,
+  /^backend\/app\/auth\//,
+  /^backend\/app\/tasks\//,
+  /^backend\/app\/discord_gateway\//,
+];
+
 function classifyFile(filePath) {
   if (DANGEROUS_PATTERNS.some(r => r.test(filePath))) return 'dangerous';
   if (DOCS_PATTERNS.some(r => r.test(filePath))) return 'docs';
@@ -71,6 +81,42 @@ function classifyChanges(files) {
   const hasRealCode = files.some(f => ['real-code', 'unknown'].includes(classifyFile(f)));
   const hasDocsOnly = !hasDangerous && !hasRealCode;
   return { hasDangerous, hasRealCode, hasDocsOnly };
+}
+
+function isUserImpactingFile(filePath) {
+  return USER_IMPACT_PATTERNS.some(r => r.test(filePath));
+}
+
+function hasUserImpactingChange(files) {
+  return files.some(f => isUserImpactingFile(f));
+}
+
+function getExternalApiChangeReport() {
+  if (process.env.MOCK_EXTERNAL_API_CHANGE !== undefined) {
+    const hasExternalChange = process.env.MOCK_EXTERNAL_API_CHANGE === 'true';
+    return {
+      hasExternalChange,
+      detectedApis: hasExternalChange ? ['mock_external_api'] : [],
+      unpreparedApis: [],
+    };
+  }
+
+  const baseRef = process.env.MOCK_BASE_REF !== undefined
+    ? process.env.MOCK_BASE_REF
+    : process.env.BASE_SHA;
+  const headRef = process.env.MOCK_HEAD_REF !== undefined
+    ? process.env.MOCK_HEAD_REF
+    : process.env.HEAD_SHA;
+
+  if (!baseRef || !headRef) {
+    return {
+      hasExternalChange: false,
+      detectedApis: [],
+      unpreparedApis: [],
+    };
+  }
+
+  return analyzeRepositoryDiff({ baseRef, headRef });
 }
 
 // ─── PR 本文パース ────────────────────────────────────────────────────────────
@@ -348,7 +394,7 @@ function printFailure(errors) {
 }
 
 // ─── 本検査 ──────────────────────────────────────────────────────────────────
-function runFullCheck(declaration) {
+function runFullCheck(declaration, { allowExempt = true } = {}) {
   const errors = [];
 
   if (!declaration) {
@@ -493,6 +539,15 @@ function main() {
   }
 
   const declaration = parseSOPDeclaration(prBody);
+  const hasUserImpacting = hasUserImpactingChange(changedFiles);
+  let externalApiReport = null;
+  try {
+    externalApiReport = getExternalApiChangeReport();
+  } catch (error) {
+    console.warn(`⚠️ 外部API変更検出に失敗 — 安全側で fail 扱い: ${error.message || error}`);
+    externalApiReport = { hasExternalChange: true, detectedApis: ['external_api_detection_error'], unpreparedApis: [] };
+  }
+  const hasExternalApiImpact = externalApiReport.hasExternalChange;
 
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
@@ -513,19 +568,41 @@ function main() {
     process.exit(0);
   }
 
+  // ユーザー影響のある変更・外部API変更は、develop へ入る前に Shingo GO が必須
+  if (hasUserImpacting || hasExternalApiImpact) {
+    const goRecord = parseGORecord(prBody);
+    const goErrors = validateGORecord(goRecord, prNumber);
+
+    if (goErrors.length > 0) {
+      printFailure([
+        ...goErrors,
+        '   → frontend/src / backend/app/routers / backend/app/services / backend/app/auth / backend/app/tasks / backend/app/discord_gateway / 外部API変更は Shingo の GO 記録が必要です',
+        '   → 先にチャットで GO を受領し、PR 本文の「### GO記録」へ転記してください',
+      ]);
+    }
+
+    const label = hasExternalApiImpact && !hasUserImpacting
+      ? '✅ 外部API変更：GO記録確認済み — pass'
+      : '✅ ユーザー影響変更：GO記録確認済み — pass';
+    console.log(label);
+  }
+
   // 実コード変更の処理
-  if (declaration && declaration.isExempt) {
+  if (!hasUserImpacting && declaration && declaration.isExempt) {
     console.log('✅ 自律クラフト免除宣言あり — pass（記録）');
     process.exit(0);
   }
 
-  runFullCheck(declaration);
+  runFullCheck(declaration, { allowExempt: !hasUserImpacting });
 }
 
 // テスト用にエクスポート
 module.exports = {
   classifyFile,
   classifyChanges,
+  hasUserImpactingChange,
+  isUserImpactingFile,
+  getExternalApiChangeReport,
   parseSOPDeclaration,
   parseGORecord,
   validateGORecord,

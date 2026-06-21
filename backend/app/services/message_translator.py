@@ -17,6 +17,7 @@ ADR-088 基盤を拡張:
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -72,6 +73,18 @@ class TranslationResult:
     flagged_terms: list[FlaggedTerm]
 
 
+@dataclass(frozen=True)
+class InboundLanguageSignals:
+    """受信文の簡易言語シグナル。"""
+
+    has_kana: bool
+    has_latin_word: bool
+
+
+_KANA_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF]")
+_LATIN_WORD_RE = re.compile(r"[A-Za-z]{2,}")
+
+
 # ---------------------------------------------------------------------------
 # Gemini SDK lazy init (ADR-088 パターン踏襲)
 # ---------------------------------------------------------------------------
@@ -82,7 +95,7 @@ _GENAI_CACHE: dict[str, Any] = {}
 def _get_genai_module() -> Any:
     if "module" not in _GENAI_CACHE:
         try:
-            import google.generativeai as genai  # type: ignore[import-untyped]
+            import google.generativeai as genai
         except ImportError as exc:
             raise LLMConfigError(
                 "google-generativeai がインストールされていません。"
@@ -96,6 +109,34 @@ def _ensure_api_key() -> str:
     if not key:
         raise LLMConfigError("GEMINI_API_KEY が未設定です。翻訳機能は無効化されます。")
     return key
+
+
+def detect_inbound_language(text: str) -> InboundLanguageSignals:
+    """受信文の簡易シグナルを返す。
+
+    - has_kana: ひらがな / カタカナを含む
+    - has_latin_word: 2文字以上のラテン単語を含む
+    """
+    normalized = text or ""
+    return InboundLanguageSignals(
+        has_kana=bool(_KANA_RE.search(normalized)),
+        has_latin_word=bool(_LATIN_WORD_RE.search(normalized)),
+    )
+
+
+def get_required_inbound_targets(
+    text: str,
+    original_language_hint: str | None = None,
+) -> set[str]:
+    """受信文の保存済み翻訳から、必要な target_language を返す。"""
+    signals = detect_inbound_language(text)
+    if signals.has_kana and not signals.has_latin_word:
+        return {"en"}
+    if signals.has_kana and signals.has_latin_word:
+        return {"ja", "en"}
+    if (original_language_hint or "").strip().lower() == "en":
+        return {"ja"}
+    return {"ja", "en"}
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +163,33 @@ async def _get_cached_translation(
     if row:
         return str(row[0]), row[1], row[2]
     return None
+
+
+async def get_existing_inbound_translation_targets(
+    db: AsyncSession,
+    table_ref: str,
+    message_id: str,
+) -> tuple[set[str], str | None]:
+    """保存済み翻訳の target_language 群と、ja 行の original_language を返す。"""
+    result = await db.execute(
+        text(
+            f"SELECT target_language, original_language "
+            f"FROM {table_ref} "
+            "WHERE message_id = :message_id"
+        ),
+        {"message_id": message_id},
+    )
+    targets: set[str] = set()
+    ja_original_language: str | None = None
+    for target_language, original_language in result.fetchall():
+        # target_language は保存時に一意、ja 行の original_language はバッチ判定に使う。
+        if target_language is None:
+            continue
+        target = str(target_language).strip().lower()[:10]
+        targets.add(target)
+        if target == "ja" and original_language is not None:
+            ja_original_language = str(original_language).strip().lower()[:10]
+    return targets, ja_original_language
 
 
 async def _save_translation(
@@ -395,6 +463,7 @@ async def translate_inbound(
     message_id: str,
     message_text: str,
     target_language: str = "ja",
+    original_language_override: str | None = None,
 ) -> TranslationResult:
     """受信メッセージを和訳する。
 
@@ -409,6 +478,8 @@ async def translate_inbound(
     cached = await _get_cached_translation(db, table_ref, message_id, target_language)
     if cached is not None:
         translated_text, confidence, original_language = cached
+        if original_language_override is not None:
+            original_language = original_language_override
         logger.info("[translator] cache hit: message_id=%s lang=%s", message_id, target_language)
         return TranslationResult(
             translated_text=translated_text,
@@ -454,9 +525,10 @@ async def translate_inbound(
                 model = MODEL_SEND
 
     # 5. DB キャッシュ保存
+    effective_original_language = original_language_override or original_language
     await _save_translation(
         db, table_ref, message_id, target_language,
-        translated_text, model, confidence, original_language,
+        translated_text, model, confidence, effective_original_language,
     )
     await db.commit()
 
@@ -469,37 +541,72 @@ async def translate_inbound(
         cached=False,
         engine=model,
         confidence=confidence,
-        original_language=original_language,
+        original_language=effective_original_language,
         flagged_terms=flagged_terms,
     )
 
 
-async def translate_inbound_languages(
+async def ensure_inbound_translations(
     db: AsyncSession,
     tenant_id: int,
     table_ref: str,
     message_id: str,
     message_text: str,
-    *,
-    primary_target_language: str = "ja",
 ) -> dict[str, TranslationResult]:
-    """受信メッセージを複数言語へ展開する。
+    """受信文の必要翻訳を確実に揃える。
 
-    まず primary_target_language（既定: ja）へ翻訳し、原文が英語でなければ
-    英語版も追加する。英語原文は message_text を原文表示に使うため、
-    en 翻訳は省略する。
+    ルール:
+      - かなあり / 英単語なし: ja 原文扱いで en を作る
+      - かなあり / 英単語あり: ja 扱いで ja + en を作る
+      - かななし: まず ja を翻訳し、Gemini 判定が en でなければ en も作る
     """
-    primary = await translate_inbound(
+    signals = detect_inbound_language(message_text)
+    results: dict[str, TranslationResult] = {}
+
+    if signals.has_kana and not signals.has_latin_word:
+        results["en"] = await translate_inbound(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=table_ref,
+            message_id=message_id,
+            message_text=message_text,
+            target_language="en",
+            original_language_override="ja",
+        )
+        return results
+
+    if signals.has_kana and signals.has_latin_word:
+        results["ja"] = await translate_inbound(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=table_ref,
+            message_id=message_id,
+            message_text=message_text,
+            target_language="ja",
+            original_language_override="ja",
+        )
+        results["en"] = await translate_inbound(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=table_ref,
+            message_id=message_id,
+            message_text=message_text,
+            target_language="en",
+            original_language_override="ja",
+        )
+        return results
+
+    ja_result = await translate_inbound(
         db=db,
         tenant_id=tenant_id,
         table_ref=table_ref,
         message_id=message_id,
         message_text=message_text,
-        target_language=primary_target_language,
+        target_language="ja",
     )
-    results: dict[str, TranslationResult] = {primary_target_language: primary}
+    results["ja"] = ja_result
 
-    if primary_target_language == "ja" and primary.original_language != "en":
+    if (ja_result.original_language or "").strip().lower() != "en":
         results["en"] = await translate_inbound(
             db=db,
             tenant_id=tenant_id,
@@ -631,6 +738,5 @@ __all__ = [
     "confirm_outbound_draft",
     "generate_outbound_draft",
     "translate_inbound",
-    "translate_inbound_languages",
     "translate_message",
 ]

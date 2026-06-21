@@ -48,14 +48,11 @@ def test_snapshot_rates():
 # ---------------------------------------------------------------------------
 
 
-def _make_db(total: int, pending: int, low_conf: int) -> AsyncMock:
-    """2クエリを返す AsyncSession モック."""
+def _make_db(message_rows: list[tuple[str, str]], low_conf: int) -> AsyncMock:
+    """messages クエリ + low_conf クエリを返す AsyncSession モック."""
     db = AsyncMock()
-    # 1回目: total / pending クエリ
-    row1 = MagicMock()
-    row1.__getitem__ = MagicMock(side_effect=lambda i: [total, pending][i])
     result1 = MagicMock()
-    result1.first.return_value = row1 if total > 0 else None
+    result1.fetchall.return_value = message_rows
 
     # 2回目: low_conf クエリ
     row2 = MagicMock()
@@ -69,7 +66,7 @@ def _make_db(total: int, pending: int, low_conf: int) -> AsyncMock:
 
 @pytest.mark.asyncio
 async def test_check_health_no_messages():
-    db = _make_db(0, 0, 0)
+    db = _make_db([], 0)
     snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
     assert snap.total == 0
     assert snap.failed == 0
@@ -78,49 +75,70 @@ async def test_check_health_no_messages():
 
 @pytest.mark.asyncio
 async def test_check_health_all_translated():
-    db = _make_db(total=50, pending=0, low_conf=5)
-    snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
-    assert snap.total == 50
+    db = _make_db([("m1", "こんにちは"), ("m2", "Hello stock")], low_conf=5)
+    with patch(
+        "app.services.message_translator.get_existing_inbound_translation_targets",
+        AsyncMock(side_effect=[
+            ({"en"}, "ja"),
+            ({"ja"}, "en"),
+        ]),
+    ) as target_mock:
+        snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
+
+    assert snap.total == 2
     assert snap.failed == 0
     assert snap.fail_rate == 0.0
     assert snap.low_confidence == 5
+    assert target_mock.await_count == 2
 
 
 @pytest.mark.asyncio
 async def test_check_health_pending_messages():
-    db = _make_db(total=100, pending=30, low_conf=10)
-    snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
-    assert snap.total == 100
-    assert snap.failed == 30
-    assert snap.fail_rate == pytest.approx(0.30)
+    db = _make_db([("m1", "こんにちは stock"), ("m2", "Hello stock"), ("m3", "Hola stock")], low_conf=10)
+    with patch(
+        "app.services.message_translator.get_existing_inbound_translation_targets",
+        AsyncMock(side_effect=[
+            ({"ja"}, "ja"),    # mixed: en missing
+            ({"ja"}, "en"),    # English original: complete
+            ({"ja"}, "es"),    # non-English original: en missing
+        ]),
+    ):
+        snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
+
+    assert snap.total == 3
+    assert snap.failed == 2
+    assert snap.fail_rate == pytest.approx(2 / 3)
+    assert snap.low_confidence == 10
 
 
 @pytest.mark.asyncio
 async def test_check_health_query_tracks_ja_and_en_variants():
-    captured_sql: list[str] = []
-
-    async def _execute(stmt, params=None):
-        sql = str(stmt)
-        captured_sql.append(sql)
-        result = MagicMock()
-        row = MagicMock()
-        if len(captured_sql) == 1:
-            row.__getitem__ = MagicMock(side_effect=lambda i: [10, 2][i])
-        else:
-            row.__getitem__ = MagicMock(return_value=1)
-        result.first.return_value = row
-        return result
+    messages_result = MagicMock()
+    messages_result.fetchall.return_value = [
+        ("m1", "こんにちは stock"),
+        ("m2", "Hello stock"),
+        ("m3", "Hola stock"),
+    ]
+    low_conf_row = MagicMock()
+    low_conf_row.__getitem__ = MagicMock(return_value=1)
+    low_conf_result = MagicMock()
+    low_conf_result.first.return_value = low_conf_row
 
     db = AsyncMock()
-    db.execute = AsyncMock(side_effect=_execute)
+    db.execute = AsyncMock(side_effect=[messages_result, low_conf_result])
+    with patch(
+        "app.services.message_translator.get_existing_inbound_translation_targets",
+        AsyncMock(side_effect=[
+            ({"ja"}, "ja"),
+            ({"ja"}, "en"),
+            ({"ja"}, "es"),
+        ]),
+    ):
+        snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
 
-    snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
-
-    assert snap.total == 10
+    assert snap.total == 3
     assert snap.failed == 2
-    assert any("mt_ja.target_language = 'ja'" in sql for sql in captured_sql)
-    assert any("mt_en.target_language = 'en'" in sql for sql in captured_sql)
-    assert any("COALESCE(mt_ja.original_language, '') <> 'en'" in sql for sql in captured_sql)
+    assert snap.low_confidence == 1
 
 
 # ---------------------------------------------------------------------------
