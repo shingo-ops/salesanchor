@@ -110,6 +110,17 @@ async def backfill_schema(conn, schema: str, tenant_id: int, *, dry_run: bool = 
     else:
         logger.info("%s: channel_masters table not found, seed skipped", schema)
 
+    channel_type_column_check = await conn.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = :schema AND table_name = 'leads' AND column_name = 'channel_type'"
+        ),
+        {"schema": schema},
+    )
+    if channel_type_column_check.scalar_one_or_none() is None:
+        logger.info("%s: leads.channel_type column not found, skipped", schema)
+        return counts
+
     rows = (
         await conn.execute(
             text(f"SELECT id, channel_type FROM {schema}.leads WHERE channel_type IS NOT NULL")
