@@ -15,7 +15,6 @@ from __future__ import annotations
 """
 
 from datetime import date, datetime, timedelta
-from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -95,70 +94,6 @@ class CustomerOrdersResponse(BaseModel):
     items: list[CustomerOrderItem]
 
 
-class CustomerContactItem(BaseModel):
-    company_id: int
-    company_name: str
-    contact_count: int
-    last_contact_at: str | None
-    days_since_last_contact: int | None
-    is_communication_low: bool
-
-
-class CustomerContactsResponse(BaseModel):
-    period: str
-    scope: str
-    stale_days: int
-    items: list[CustomerContactItem]
-
-
-class GoalAdviceInputs(BaseModel):
-    monthly_kgi: float
-    kgi_type: Literal["revenue", "wins"]
-    period: str
-    scope: str
-
-
-class GoalAdviceRatesUsed(BaseModel):
-    unit_price: float | None
-    win_rate: float | None
-    deal_rate: float | None
-
-
-class GoalAdviceRequired(BaseModel):
-    wins: float | None
-    deals: float | None
-    leads: float | None
-
-
-class GoalAdviceWorkingDays(BaseModel):
-    remaining_month: int
-    remaining_week: int
-    shift_status: Literal["submitted", "not_submitted"]
-
-
-class GoalAdviceResponse(BaseModel):
-    inputs: GoalAdviceInputs
-    rates_used: GoalAdviceRatesUsed
-    monthly_required: GoalAdviceRequired
-    weekly_required: GoalAdviceRequired
-    working_days: GoalAdviceWorkingDays
-    data_sufficient: bool
-
-
-class WeeklyAdvisorAction(BaseModel):
-    type: Literal["reorder", "churn_risk", "comm_low"]
-    company_id: int
-    company_name: str
-    score: float
-    expected_value: float
-    reason: dict[str, object]
-    suggested_action: str
-
-
-class WeeklyAdvisorResponse(BaseModel):
-    actions: list[WeeklyAdvisorAction]
-
-
 class RevenueSegmentStat(BaseModel):
     revenue: float
     order_count: int
@@ -179,6 +114,40 @@ class RevenueSegmentsResponse(BaseModel):
     new: RevenueSegmentStat
     repeat: RevenueSegmentStat
     total: RevenueSegmentSummary
+
+
+class WeeklyAdvisorReason(BaseModel):
+    last_order_at: date | None = None
+    last_contact_at: datetime | None = None
+    avg_interval_days: float | None = None
+    days_since_last_order: int | None = None
+    days_since_contact: int | None = None
+    pace_score: float | None = None
+    contact_score: float | None = None
+    decline_score: float | None = None
+    total_score: float | None = None
+    current_order_count: int | None = None
+    previous_order_count: int | None = None
+    current_revenue: float | None = None
+    previous_revenue: float | None = None
+
+
+class WeeklyAdvisorAction(BaseModel):
+    rank: int
+    type: str
+    company_id: int
+    company_name: str
+    score: float
+    expected_value: float
+    suggested_action: str
+    reason: WeeklyAdvisorReason
+
+
+class WeeklyAdvisorResponse(BaseModel):
+    period: str
+    scope: str
+    stale_days: int
+    actions: list[WeeklyAdvisorAction]
 
 
 def _normalize_date(value: object) -> date:
@@ -203,130 +172,78 @@ def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, ob
     return today - timedelta(days=days_map[period]), end
 
 
-def _count_inclusive_weekdays(start: date, end: date) -> int:
-    """start から end までの平日数を両端含みで数える。"""
-    if end < start:
-        return 0
-    total = 0
-    cursor = start
-    while cursor <= end:
-        if cursor.weekday() < 5:
-            total += 1
-        cursor += timedelta(days=1)
-    return total
+def _advisor_period_bounds(period: str, today: date) -> tuple[object, object, object, object]:
+    """週次アドバイザー用に current / previous の期間境界を返す。"""
+    current_start, current_end = _customer_orders_period_bounds(period, today)
+    if period == "1m":
+        prev_month = today.month - 1
+        prev_year = today.year
+        if prev_month < 1:
+            prev_month = 12
+            prev_year -= 1
+        previous_start, previous_end = _jst_month_range_utc(prev_year, prev_month)
+        return current_start, current_end, previous_start, previous_end
+
+    window = current_end - current_start
+    previous_end = current_start
+    previous_start = previous_end - window
+    return current_start, current_end, previous_start, previous_end
 
 
-def _month_end_date(today: date) -> date:
-    """today が属する月の月末日を返す。"""
-    import calendar
-
-    return date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
-
-
-def _week_end_date(today: date) -> date:
-    """today が属する週の日曜を返す。"""
-    return today + timedelta(days=(6 - today.weekday()))
-
-
-_WEEKLY_REORDER_THRESHOLD = 0.8
-_WEEKLY_REORDER_CERTAINTY = 0.8
-_WEEKLY_CHURN_CERTAINTY = 0.5
-_WEEKLY_COMM_LOW_CERTAINTY = 0.3
-_WEEKLY_COMM_LOW_THRESHOLD_DAYS = 14
-_WEEKLY_COMM_LOW_URGENCY_WINDOW_DAYS = 60.0
-_WEEKLY_CHURN_PACE_MAX_DAYS_RATIO = 2.0
-_WEEKLY_CHURN_CONTACT_WARN_DAYS = 30
-_WEEKLY_CHURN_CONTACT_MAX_DAYS = 60
-_WEEKLY_CHURN_DECLINE_RATIO = 0.67
+def _order_count_drop_score(current: int, previous: int) -> float:
+    """受注数の落ち込みを 0 / 20 / 40 点で返す。"""
+    if previous <= 0:
+        return 0.0
+    ratio = current / previous if previous > 0 else 1.0
+    if ratio >= 0.9:
+        return 0.0
+    if ratio >= 0.7:
+        return 20.0
+    return 40.0
 
 
-def _order_scope_clause(scope: str, user_id: int) -> tuple[str, dict[str, int]]:
-    """order / deal 集計で使う scope 句を返す。"""
-    if scope == "mine":
-        return "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid", {"uid": user_id}
-    return "", {}
+def _revenue_drop_score(current: float, previous: float) -> float:
+    """売上の落ち込みを 0 / 20 / 40 点で返す。"""
+    if previous <= 0:
+        return 0.0
+    ratio = current / previous if previous > 0 else 1.0
+    if ratio >= 0.9:
+        return 0.0
+    if ratio >= 0.7:
+        return 20.0
+    return 40.0
 
 
-def _previous_period_bounds(start: object, end: object) -> tuple[object, object]:
-    """current period と同じ長さの直前期間を返す。"""
-    span = end - start
-    return start - span, start
-
-
-def _pace_score(days_since_last_order: int, avg_interval_days: float) -> float:
-    """発注ペースの加点（0-60）。1.0倍で0点、1.3倍で約30点、2.0倍で満点。"""
-    if avg_interval_days <= 0:
+def _pace_score(days_since_last_order: int, avg_interval_days: float | None) -> float:
+    """受注ペースの超過度を 0〜60 点で返す。"""
+    if avg_interval_days is None or avg_interval_days <= 0:
         return 0.0
     ratio = days_since_last_order / avg_interval_days
     if ratio <= 1.0:
         return 0.0
     if ratio <= 1.3:
-        return round((ratio - 1.0) / 0.3 * 30, 1)
-    if ratio <= _WEEKLY_CHURN_PACE_MAX_DAYS_RATIO:
-        return round(30 + (ratio - 1.3) / (_WEEKLY_CHURN_PACE_MAX_DAYS_RATIO - 1.3) * 30, 1)
+        return round(((ratio - 1.0) / 0.3) * 30.0, 1)
+    if ratio <= 2.0:
+        return round(30.0 + (((ratio - 1.3) / 0.7) * 30.0), 1)
     return 60.0
 
 
-def _contact_score(days_since_last_contact: int | None) -> float:
-    """接触途絶の加点（0-60）。"""
-    if days_since_last_contact is None:
+def _contact_score(days_since_contact: int | None, stale_days: int) -> float:
+    """接触途絶の強さを 0〜60 点で返す。"""
+    if days_since_contact is None or days_since_contact < stale_days:
         return 0.0
-    if days_since_last_contact < _WEEKLY_CHURN_CONTACT_WARN_DAYS:
+    if days_since_contact <= stale_days + 30:
+        return round(((days_since_contact - stale_days) / 30.0) * 30.0, 1)
+    if days_since_contact <= stale_days + 60:
+        return round(30.0 + (((days_since_contact - (stale_days + 30)) / 30.0) * 30.0), 1)
+    return 60.0
+
+
+def _normalized_urgency(score: float, cap: float) -> float:
+    """score を cap で正規化し、最小 0.1 を確保する。"""
+    if score <= 0:
         return 0.0
-    if days_since_last_contact >= _WEEKLY_CHURN_CONTACT_MAX_DAYS:
-        return 60.0
-    return 30.0
-
-
-def _decline_score(
-    *,
-    current_order_count: int,
-    current_revenue: float,
-    previous_order_count: int,
-    previous_revenue: float,
-) -> float:
-    """受注の落ち込みスコア（0-40）。"""
-    if previous_order_count <= 0 and previous_revenue <= 0:
-        return 0.0
-
-    count_ratio = (current_order_count / previous_order_count) if previous_order_count > 0 else 1.0
-    revenue_ratio = (current_revenue / previous_revenue) if previous_revenue > 0 else 1.0
-    weakest_ratio = min(count_ratio, revenue_ratio)
-
-    if weakest_ratio >= 1.0:
-        return 0.0
-    if weakest_ratio >= _WEEKLY_CHURN_DECLINE_RATIO:
-        return 20.0
-    return 40.0
-
-
-async def _count_shift_dates(
-    db: AsyncSession,
-    *,
-    tenant_id: int,
-    user_id: int,
-    start: date,
-    end: date,
-) -> int:
-    """指定範囲内の shifts.shift_date を distinct 件数で数える。"""
-    result = await db.execute(
-        text("""
-            SELECT COUNT(DISTINCT shift_date) AS cnt
-            FROM shifts
-            WHERE tenant_id = :tenant_id
-              AND user_id = :user_id
-              AND shift_date >= :start_date
-              AND shift_date <= :end_date
-        """),
-        {
-            "tenant_id": tenant_id,
-            "user_id": user_id,
-            "start_date": start.isoformat(),
-            "end_date": end.isoformat(),
-        },
-    )
-    row = result.mappings().first() or {}
-    return int(row.get("cnt", 0) or 0)
+    return max(0.1, min(score / cap, 1.0))
 
 
 @router.get(
@@ -555,85 +472,6 @@ async def customer_orders_report(
 
 
 @router.get(
-    "/analytics/customer-contacts",
-    response_model=CustomerContactsResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def customer_contacts_report(
-    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
-    scope: str = Query(default="team", description="team / mine"),
-    stale_days: int = Query(default=30, ge=1, le=365),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """顧客別の接触履歴とコミュニケーション低下フラグを返す read-only 集計API。"""
-    _validate_scope(scope)
-    today = date.today()
-    start, end = _customer_orders_period_bounds(period, today)
-
-    company_scope_filter = "AND c.sales_rep_id = :uid" if scope == "mine" else ""
-    company_scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
-
-    result = await db.execute(
-        text(f"""
-            SELECT
-                c.id AS company_id,
-                COALESCE(c.name, '') AS company_name,
-                COALESCE(
-                    SUM(
-                        CASE
-                            WHEN cl.occurred_at >= :start AND cl.occurred_at < :end THEN 1
-                            ELSE 0
-                        END
-                    ),
-                    0
-                ) AS contact_count,
-                MAX(cl.occurred_at) AS last_conversation_at
-            FROM companies c
-            LEFT JOIN conversation_logs cl ON cl.company_id = c.id
-            WHERE 1 = 1
-              {company_scope_filter}
-            GROUP BY c.id, c.name
-            ORDER BY
-                CASE WHEN MAX(cl.occurred_at) IS NULL THEN 1 ELSE 0 END DESC,
-                MAX(cl.occurred_at) ASC,
-                c.id
-        """),
-        {"start": start, "end": end, **company_scope_params},
-    )
-    rows = result.mappings().all()
-
-    items: list[CustomerContactItem] = []
-    for row in rows:
-        last_contact_raw = row["last_conversation_at"]
-        last_contact_at: str | None = None
-        days_since_last_contact: int | None = None
-        is_communication_low = True
-        if last_contact_raw is not None:
-            last_contact_date = _normalize_date(last_contact_raw)
-            last_contact_at = last_contact_date.isoformat()
-            days_since_last_contact = (today - last_contact_date).days
-            is_communication_low = days_since_last_contact >= stale_days
-
-        items.append(CustomerContactItem(
-            company_id=int(row["company_id"]),
-            company_name=str(row["company_name"] or ""),
-            contact_count=int(row["contact_count"] or 0),
-            last_contact_at=last_contact_at,
-            days_since_last_contact=days_since_last_contact,
-            is_communication_low=is_communication_low,
-        ))
-
-    return CustomerContactsResponse(
-        period=period,
-        scope=scope,
-        stale_days=stale_days,
-        items=items,
-    )
-
-
-@router.get(
     "/analytics/revenue-segments",
     response_model=RevenueSegmentsResponse,
     dependencies=[Depends(require_permission("dashboard.view"))],
@@ -735,338 +573,233 @@ async def revenue_segments_report(
 
 
 @router.get(
-    "/analytics/new-goal-advice",
-    response_model=GoalAdviceResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def new_goal_advice(
-    monthly_kgi: float = Query(default=..., ge=0),
-    kgi_type: Literal["revenue", "wins"] = Query(default=..., description="revenue / wins"),
-    scope: str = Query(default="team", description="team / mine"),
-    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """新規モード向けの逆算アドバイスを返す read-only API。"""
-    _validate_scope(scope)
-    today = date.today()
-
-    segments = await revenue_segments_report(
-        period=period,
-        scope=scope,
-        db=db,
-        tenant_id=tenant_id,
-        current_user=current_user,
-    )
-    unit_price = segments.new.avg_order_amount
-
-    if scope == "mine":
-        lead_assign_filter = "AND assigned_to = :uid"
-        deal_assign_filter = "AND assigned_to = :uid"
-        scope_params: dict = {"uid": current_user.id}
-    else:
-        lead_assign_filter = ""
-        deal_assign_filter = ""
-        scope_params = {}
-
-    start, end = _customer_orders_period_bounds(period, today)
-
-    win_result = await db.execute(
-        text(f"""
-            SELECT
-                COUNT(*) FILTER (WHERE status = 'won') AS won,
-                COUNT(*) AS total
-            FROM deals
-            WHERE created_at >= :start
-              AND created_at < :end
-              {deal_assign_filter}
-        """),
-        {"start": start, "end": end, **scope_params},
-    )
-    win_row = win_result.mappings().first() or {}
-    total_deals = int(win_row.get("total", 0) or 0)
-    won_deals = int(win_row.get("won", 0) or 0)
-    win_rate = round(won_deals / total_deals * 100, 1) if total_deals > 0 else 0.0
-
-    deal_result = await db.execute(
-        text(f"""
-            SELECT
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
-                COUNT(*) AS total
-            FROM leads
-            WHERE created_at >= :start
-              AND created_at < :end
-              {lead_assign_filter}
-        """),
-        {"start": start, "end": end, **scope_params},
-    )
-    deal_row = deal_result.mappings().first() or {}
-    total_leads = int(deal_row.get("total", 0) or 0)
-    converted_leads = int(deal_row.get("converted", 0) or 0)
-    deal_rate = round(converted_leads / total_leads * 100, 1) if total_leads > 0 else 0.0
-
-    month_end = _month_end_date(today)
-    week_end = _week_end_date(today)
-    month_start = today.replace(day=1)
-    month_shift_days = await _count_shift_dates(
-        db,
-        tenant_id=tenant_id,
-        user_id=current_user.id,
-        start=month_start,
-        end=month_end,
-    )
-    shift_status: Literal["submitted", "not_submitted"]
-    if month_shift_days > 0:
-        shift_status = "submitted"
-        remaining_month = await _count_shift_dates(
-            db,
-            tenant_id=tenant_id,
-            user_id=current_user.id,
-            start=today,
-            end=month_end,
-        )
-        remaining_week = await _count_shift_dates(
-            db,
-            tenant_id=tenant_id,
-            user_id=current_user.id,
-            start=today,
-            end=week_end,
-        )
-    else:
-        shift_status = "not_submitted"
-        remaining_month = _count_inclusive_weekdays(today, month_end)
-        remaining_week = _count_inclusive_weekdays(today, week_end)
-
-    remaining_month = max(remaining_month, 1)
-
-    data_sufficient = (
-        win_rate > 0
-        and deal_rate > 0
-        and (kgi_type == "wins" or (unit_price is not None and unit_price > 0))
-    )
-
-    def _empty_required() -> GoalAdviceRequired:
-        return GoalAdviceRequired(wins=None, deals=None, leads=None)
-
-    def _calc_required(monthly_wins: float | None) -> GoalAdviceRequired:
-        if monthly_wins is None:
-            return _empty_required()
-        monthly_deals = monthly_wins / (win_rate / 100.0)
-        monthly_leads = monthly_deals / (deal_rate / 100.0)
-        return GoalAdviceRequired(
-            wins=round(monthly_wins, 2),
-            deals=round(monthly_deals, 2),
-            leads=round(monthly_leads, 2),
-        )
-
-    monthly_required: GoalAdviceRequired
-    weekly_required: GoalAdviceRequired
-    if data_sufficient:
-        if kgi_type == "revenue":
-            monthly_wins = monthly_kgi / float(unit_price or 1)
-        else:
-            monthly_wins = monthly_kgi
-        monthly_required = _calc_required(monthly_wins)
-        weekly_required = GoalAdviceRequired(
-            wins=round(monthly_required.wins / remaining_month * remaining_week, 2) if monthly_required.wins is not None else None,
-            deals=round(monthly_required.deals / remaining_month * remaining_week, 2) if monthly_required.deals is not None else None,
-            leads=round(monthly_required.leads / remaining_month * remaining_week, 2) if monthly_required.leads is not None else None,
-        )
-    else:
-        monthly_required = _empty_required()
-        weekly_required = _empty_required()
-
-    return GoalAdviceResponse(
-        inputs=GoalAdviceInputs(
-            monthly_kgi=monthly_kgi,
-            kgi_type=kgi_type,
-            period=period,
-            scope=scope,
-        ),
-        rates_used=GoalAdviceRatesUsed(
-            unit_price=round(float(unit_price), 2) if unit_price is not None else None,
-            win_rate=win_rate if total_deals > 0 else None,
-            deal_rate=deal_rate if total_leads > 0 else None,
-        ),
-        monthly_required=monthly_required,
-        weekly_required=weekly_required,
-        working_days=GoalAdviceWorkingDays(
-            remaining_month=remaining_month,
-            remaining_week=remaining_week,
-            shift_status=shift_status,
-        ),
-        data_sufficient=data_sufficient,
-    )
-
-
-# ─────────────────────────────────────────────
-# 守り3種ランキング
-# ─────────────────────────────────────────────
-
-@router.get(
     "/analytics/weekly-advisor-defensive",
     response_model=WeeklyAdvisorResponse,
     dependencies=[Depends(require_permission("dashboard.view"))],
 )
 async def weekly_advisor_defensive(
-    scope: str = Query(default="team", description="team / mine"),
     period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
+    scope: str = Query(default="mine", description="team / mine"),
+    stale_days: int = Query(default=14, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """守り3種（そろそろ受注 / 離脱リスク / コミュ低下）を rank 済みで返す read-only API。"""
+    """守り3種の打ち手を score 降順で返す read-only 集計 API。"""
     _validate_scope(scope)
     today = date.today()
+    current_start, current_end, previous_start, previous_end = _advisor_period_bounds(period, today)
 
-    orders_report = await customer_orders_report(
-        period=period,
-        scope=scope,
-        db=db,
-        tenant_id=tenant_id,
-        current_user=current_user,
-    )
-    contacts_report = await customer_contacts_report(
-        period=period,
-        scope=scope,
-        stale_days=_WEEKLY_COMM_LOW_THRESHOLD_DAYS,
-        db=db,
-        tenant_id=tenant_id,
-        current_user=current_user,
-    )
+    if scope == "mine":
+        scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        scope_params: dict = {"uid": current_user.id}
+    else:
+        scope_join = ""
+        scope_params = {}
 
-    orders_by_company = {item.company_id: item for item in orders_report.items}
-    contacts_by_company = {item.company_id: item for item in contacts_report.items}
-
-    start, end = _customer_orders_period_bounds(period, today)
-    prev_start, prev_end = _previous_period_bounds(start, end)
-    order_scope_join, order_scope_params = _order_scope_clause(scope, current_user.id)
-    prev_result = await db.execute(
+    combined_result = await db.execute(
         text(f"""
             SELECT
                 o.company_id,
-                COALESCE(SUM(o.total_amount), 0) AS total_amount,
-                COUNT(*) AS order_count
+                COALESCE(c.name, '') AS company_name,
+                o.created_at,
+                COALESCE(o.total_amount, 0) AS total_amount
             FROM orders o
-            {order_scope_join}
+            LEFT JOIN companies c ON c.id = o.company_id
+            {scope_join}
             WHERE o.company_id IS NOT NULL
-              AND o.created_at >= :prev_start
-              AND o.created_at < :prev_end
-            GROUP BY o.company_id
+              AND o.created_at >= :previous_start
+              AND o.created_at < :current_end
+            ORDER BY o.company_id, o.created_at, o.id
         """),
-        {"prev_start": prev_start, "prev_end": prev_end, **order_scope_params},
+        {"previous_start": previous_start, "current_end": current_end, **scope_params},
     )
-    prev_rows = prev_result.mappings().all()
-    prev_by_company = {
-        int(row["company_id"]): {
+    combined_rows = combined_result.mappings().all()
+
+    grouped_names: dict[int, str] = {}
+    grouped_orders: dict[int, list[dict[str, object]]] = {}
+    candidate_company_ids: set[int] = set()
+    for row in combined_rows:
+        company_id = int(row["company_id"])
+        candidate_company_ids.add(company_id)
+        grouped_names.setdefault(company_id, str(row["company_name"] or ""))
+        grouped_orders.setdefault(company_id, []).append({
+            "created_at": _normalize_date(row["created_at"]),
             "total_amount": float(row["total_amount"] or 0),
-            "order_count": int(row["order_count"] or 0),
-        }
-        for row in prev_rows
-    }
+        })
+
+    if not candidate_company_ids:
+        return WeeklyAdvisorResponse(period=period, scope=scope, stale_days=stale_days, actions=[])
+
+    contact_last_seen: dict[int, datetime] = {}
+    try:
+        contact_result = await db.execute(
+            text("""
+                SELECT company_id, MAX(occurred_at) AS last_conversation_at
+                FROM conversation_logs
+                WHERE company_id IS NOT NULL
+                GROUP BY company_id
+            """),
+        )
+        for row in contact_result.mappings().all():
+            company_id = int(row["company_id"])
+            if company_id in candidate_company_ids and row["last_conversation_at"] is not None:
+                contact_last_seen[company_id] = row["last_conversation_at"]
+    except Exception:
+        contact_last_seen = {}
 
     actions: list[WeeklyAdvisorAction] = []
     churn_company_ids: set[int] = set()
+    current_start_cmp = _normalize_date(current_start)
+    current_end_cmp = _normalize_date(current_end)
+    previous_start_cmp = _normalize_date(previous_start)
+    previous_end_cmp = _normalize_date(previous_end)
 
-    for item in orders_report.items:
-        if item.avg_interval_days is None or item.avg_interval_days <= 0:
+    for company_id, orders in grouped_orders.items():
+        orders_sorted = sorted(orders, key=lambda item: item["created_at"])
+        if not orders_sorted:
             continue
 
-        expected_value = float(item.avg_order_amount or 0)
-        if expected_value <= 0:
-            continue
+        current_orders = [
+            item for item in orders_sorted
+            if current_start_cmp <= item["created_at"] < current_end_cmp
+        ]
+        previous_orders = [
+            item for item in orders_sorted
+            if previous_start_cmp <= item["created_at"] < previous_end_cmp
+        ]
 
-        pace_ratio = item.days_since_last_order / item.avg_interval_days
-        if pace_ratio >= _WEEKLY_REORDER_THRESHOLD:
-            urgency = min(max(pace_ratio / 2.0, 0.0), 1.0)
-            score = round(expected_value * _WEEKLY_REORDER_CERTAINTY * urgency, 2)
-            if score > 0:
-                actions.append(WeeklyAdvisorAction(
-                    type="reorder",
-                    company_id=item.company_id,
-                    company_name=item.company_name,
-                    score=score,
-                    expected_value=round(expected_value, 2),
-                    reason={
-                        "last_order_at": item.last_order_at.isoformat(),
-                        "avg_interval_days": item.avg_interval_days,
-                        "days_since_last_order": item.days_since_last_order,
-                    },
-                    suggested_action="再発注の案内を送る",
-                ))
+        all_order_count = len(orders_sorted)
+        all_total_amount = sum(float(item["total_amount"] or 0) for item in orders_sorted)
+        first_order_at = orders_sorted[0]["created_at"]
+        last_order_at = orders_sorted[-1]["created_at"]
+        days_since_last_order = (today - last_order_at).days
 
-        contact_item = contacts_by_company.get(item.company_id)
-        contact_score = _contact_score(contact_item.days_since_last_contact if contact_item else None)
-        previous = prev_by_company.get(item.company_id, {"total_amount": 0.0, "order_count": 0})
-        decline_score = _decline_score(
-            current_order_count=item.order_count,
-            current_revenue=float(item.total_amount or 0),
-            previous_order_count=int(previous["order_count"]),
-            previous_revenue=float(previous["total_amount"]),
+        avg_interval_days: float | None = None
+        if all_order_count >= 2:
+            intervals = [
+                (orders_sorted[idx]["created_at"] - orders_sorted[idx - 1]["created_at"]).days
+                for idx in range(1, all_order_count)
+            ]
+            avg_interval_days = round(sum(intervals) / len(intervals), 1)
+
+        avg_order_amount = round(all_total_amount / all_order_count, 2)
+        current_order_count = len(current_orders)
+        previous_order_count = len(previous_orders)
+        current_revenue = round(sum(float(item["total_amount"] or 0) for item in current_orders), 2)
+        previous_revenue = round(sum(float(item["total_amount"] or 0) for item in previous_orders), 2)
+
+        last_contact_at = contact_last_seen.get(company_id)
+        days_since_contact = (today - _normalize_date(last_contact_at)).days if last_contact_at else None
+
+        if avg_interval_days is not None and days_since_last_order >= avg_interval_days * 0.8:
+            urgency = _normalized_urgency(
+                days_since_last_order / max(avg_interval_days, 1.0) - 0.8,
+                1.2,
+            )
+            score = round(avg_order_amount * 0.8 * urgency, 1)
+            actions.append(WeeklyAdvisorAction(
+                rank=0,
+                type="reorder",
+                company_id=company_id,
+                company_name=grouped_names.get(company_id, ""),
+                score=score,
+                expected_value=avg_order_amount,
+                suggested_action="再受注の案内",
+                reason=WeeklyAdvisorReason(
+                    last_order_at=first_order_at if all_order_count == 1 else last_order_at,
+                    avg_interval_days=avg_interval_days,
+                    days_since_last_order=days_since_last_order,
+                    last_contact_at=last_contact_at,
+                    days_since_contact=days_since_contact,
+                    current_order_count=current_order_count,
+                    previous_order_count=previous_order_count,
+                    current_revenue=current_revenue,
+                    previous_revenue=previous_revenue,
+                ),
+            ))
+
+        pace_score = _pace_score(days_since_last_order, avg_interval_days)
+        contact_score = _contact_score(days_since_contact, stale_days)
+        decline_score = max(
+            _order_count_drop_score(current_order_count, previous_order_count),
+            _revenue_drop_score(current_revenue, previous_revenue),
         )
-        pace_risk_score = _pace_score(item.days_since_last_order, item.avg_interval_days)
-        total_risk_score = round(pace_risk_score + contact_score + decline_score, 1)
-        if total_risk_score <= 0:
-            continue
+        total_risk_score = round(pace_score + contact_score + decline_score, 1)
+        if total_risk_score >= 60:
+            churn_company_ids.add(company_id)
+            urgency = _normalized_urgency(total_risk_score, 180.0)
+            score = round(avg_order_amount * 0.5 * urgency, 1)
+            actions.append(WeeklyAdvisorAction(
+                rank=0,
+                type="churn_risk",
+                company_id=company_id,
+                company_name=grouped_names.get(company_id, ""),
+                score=score,
+                expected_value=avg_order_amount,
+                suggested_action="状況確認の連絡",
+                reason=WeeklyAdvisorReason(
+                    last_order_at=last_order_at,
+                    last_contact_at=last_contact_at,
+                    avg_interval_days=avg_interval_days,
+                    days_since_last_order=days_since_last_order,
+                    days_since_contact=days_since_contact,
+                    pace_score=pace_score,
+                    contact_score=contact_score,
+                    decline_score=decline_score,
+                    total_score=total_risk_score,
+                    current_order_count=current_order_count,
+                    previous_order_count=previous_order_count,
+                    current_revenue=current_revenue,
+                    previous_revenue=previous_revenue,
+                ),
+            ))
 
-        churn_company_ids.add(item.company_id)
-        risk_urgency = min(total_risk_score / 100.0, 1.0)
-        score = round(expected_value * _WEEKLY_CHURN_CERTAINTY * risk_urgency, 2)
-        if score <= 0:
-            continue
+        if (
+            days_since_contact is not None
+            and days_since_contact >= stale_days
+            and company_id not in churn_company_ids
+        ):
+            urgency = _normalized_urgency(days_since_contact - stale_days, 60.0)
+            score = round(avg_order_amount * 0.3 * urgency, 1)
+            actions.append(WeeklyAdvisorAction(
+                rank=0,
+                type="comm_low",
+                company_id=company_id,
+                company_name=grouped_names.get(company_id, ""),
+                score=score,
+                expected_value=avg_order_amount,
+                suggested_action="近況確認の連絡",
+                reason=WeeklyAdvisorReason(
+                    last_order_at=last_order_at,
+                    last_contact_at=last_contact_at,
+                    days_since_contact=days_since_contact,
+                    current_order_count=current_order_count,
+                    previous_order_count=previous_order_count,
+                    current_revenue=current_revenue,
+                    previous_revenue=previous_revenue,
+                ),
+            ))
 
-        actions.append(WeeklyAdvisorAction(
-            type="churn_risk",
-            company_id=item.company_id,
-            company_name=item.company_name,
-            score=score,
-            expected_value=round(expected_value, 2),
-            reason={
-                "pace_score": pace_risk_score,
-                "contact_score": contact_score,
-                "decline_score": decline_score,
-                "total_score": total_risk_score,
-                "days_since_last_order": item.days_since_last_order,
-                "avg_interval_days": item.avg_interval_days,
-                "days_since_contact": contact_item.days_since_last_contact if contact_item else None,
-                "last_order_at": item.last_order_at.isoformat(),
-            },
-            suggested_action="状況確認と再提案を行う",
-        ))
+    actions.sort(
+        key=lambda item: (
+            item.score,
+            item.expected_value,
+            item.company_name,
+            item.company_id,
+        ),
+        reverse=True,
+    )
+    ranked_actions: list[WeeklyAdvisorAction] = []
+    for idx, action in enumerate(actions, start=1):
+        ranked_actions.append(action.model_copy(update={"rank": idx}))
 
-    for contact_item in contacts_report.items:
-        if contact_item.company_id in churn_company_ids:
-            continue
-        if contact_item.days_since_last_contact is None or contact_item.days_since_last_contact < _WEEKLY_COMM_LOW_THRESHOLD_DAYS:
-            continue
-
-        order_item = orders_by_company.get(contact_item.company_id)
-        expected_value = float(order_item.avg_order_amount if order_item else 0) if order_item else 0.0
-        if expected_value <= 0:
-            continue
-
-        urgency = min(contact_item.days_since_last_contact / _WEEKLY_COMM_LOW_URGENCY_WINDOW_DAYS, 1.0)
-        score = round(expected_value * _WEEKLY_COMM_LOW_CERTAINTY * urgency, 2)
-        if score <= 0:
-            continue
-
-        actions.append(WeeklyAdvisorAction(
-            type="comm_low",
-            company_id=contact_item.company_id,
-            company_name=contact_item.company_name,
-            score=score,
-            expected_value=round(expected_value, 2),
-            reason={
-                "days_since_contact": contact_item.days_since_last_contact,
-                "last_contact_at": contact_item.last_contact_at,
-                "stale_days": _WEEKLY_COMM_LOW_THRESHOLD_DAYS,
-            },
-            suggested_action="最近の状況確認の連絡をする",
-        ))
-
-    actions.sort(key=lambda item: (item.score, item.expected_value, item.company_id), reverse=True)
-    return WeeklyAdvisorResponse(actions=actions)
+    return WeeklyAdvisorResponse(
+        period=period,
+        scope=scope,
+        stale_days=stale_days,
+        actions=ranked_actions,
+    )
 
 
 # ─────────────────────────────────────────────

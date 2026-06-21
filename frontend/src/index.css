@@ -183,6 +183,10 @@
   --calendar-status-ok-text:     #1e7e34;
   --calendar-status-error-bg:    #fce8e6;
   --calendar-status-error-text:  #c5221f;
+  --accent-bright:               var(--calendar-today-bg);
+  --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --schedule-overlay-scrim: rgba(15, 23, 42, 0.12);
 
   /* color-scheme: OS非依存（ADR-033: アプリ設定を優先） */
   color-scheme: light;
@@ -368,6 +372,10 @@
   --calendar-status-ok-text:     #4ade80;
   --calendar-status-error-bg:    #4c1d1d;
   --calendar-status-error-text:  #f87171;
+  --accent-bright:               var(--calendar-today-bg);
+  --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --schedule-overlay-scrim: rgba(15, 23, 42, 0.12);
 
   color-scheme: dark;
 }

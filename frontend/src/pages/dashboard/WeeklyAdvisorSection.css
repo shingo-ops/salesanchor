@@ -1,0 +1,146 @@
+.db-weekly-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.db-weekly-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-weekly-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.db-weekly-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.db-weekly-item {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid transparent;
+  padding: var(--space-3);
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.db-weekly-item--reorder {
+  border-left-color: var(--accent);
+  background: var(--accent-bg-subtle);
+}
+
+.db-weekly-item--churn_risk {
+  border-left-color: var(--danger);
+  background: var(--danger-bg-subtle);
+}
+
+.db-weekly-item--comm_low {
+  border-left-color: var(--warning-text);
+  background: var(--warning-bg-subtle);
+}
+
+.db-weekly-item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.db-weekly-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--dashboard-rank-badge);
+  height: var(--dashboard-rank-badge);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.db-weekly-type {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.db-weekly-score-label {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-weekly-company {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.db-weekly-meta {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-weekly-reason {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.db-weekly-reason-title {
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.db-weekly-reason-rows {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.db-weekly-loading {
+  padding: var(--space-3) 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.db-weekly-empty {
+  margin: 0;
+  padding: var(--space-2) 0;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.db-weekly-error {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg-subtle);
+  color: var(--danger);
+  font-size: var(--font-sm);
+}

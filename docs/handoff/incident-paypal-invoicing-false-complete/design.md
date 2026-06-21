@@ -174,6 +174,41 @@
 
 ---
 
+## PR-D: 完了の定義
+
+### 背景
+
+PayPal 請求書発行の PR #1980 では、自己申告とモックテストの緑だけで「完了」と扱われ、本番でエラーになった。完了判定に、実証と人の動作確認が欠けていた。
+
+### 役割
+
+「完了とは何か」を `docs/STANDARD-WORKFLOW.md` の §2 で定義した4条件に束ねる。
+
+### 5層防御 / PR-A〜F 対応地図
+
+| 層 | 役割 | 対応PR | 状態 |
+|---|---|---|---|
+| L1 | 実スモークの実行 | PR-A / PR-B | 完了済み（PayPal Sandbox smoke を維持） |
+| L2 | 変更検出 | PR-C | 完了済み（コード内容ベース detector） |
+| L3 | 自動チェックの束ね | 既存 CI + process-artifacts gate | 完了済み |
+| L4 | 人の実動作確認 | PR-D | 今回追加する定義 |
+| L5 | 人の承認を仕組みで必須化 | PR-E | 次段階で必須化 |
+| F | 不明 | PR-F | この design.md では未定義 |
+
+### PR-E との境界
+
+- PR-D は「完了」の定義そのものを決める。
+- PR-E は、その定義に含まれる人の動作確認／承認を仕組み（ゲート）で必須化する。
+- つまり、PR-D は定義、PR-E は必須化の仕組みである。
+
+### 既存ゲートの束ね
+
+- 自動チェック部分は PR-A/B（外部APIスモーク）＋PR-C（検出）＋process-artifacts gate＋CI が担保する。
+- 今回は新規ゲートを作らない。完了記録は `tasks/todo.md`・`.claude-pipeline/active-work.md`・`docs/ai-agents/evidence-registry.md` に残す。
+- `docs/handoff/incident-paypal-invoicing-false-complete/recon.md` と相互参照する。
+
+---
+
 ## 対象外（やってはいけない）
 
 | 対象外 | 理由 |
