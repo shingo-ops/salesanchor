@@ -185,23 +185,32 @@ function normalizeCitationPath(rawPath) {
   return rawPath.startsWith('./') ? rawPath.slice(2) : rawPath;
 }
 
+const CITATION_FILE_EXTENSIONS = /\.(?:md|js|ts|tsx|py|yml|yaml|json)$/i;
+
+function isRecognizedCitationPath(rawPath) {
+  return CITATION_FILE_EXTENSIONS.test(normalizeCitationPath(rawPath));
+}
+
 /**
  * recon コンテンツから file パス引用をすべて抽出する。
  * 以下の書式を認識する:
- *   - `path:N`, `path:N-M`, `path`  (バッククォート付き、行番号任意)
- *   - path/to/file:N, path/to/file:N-M  (バッククォートなし・スラッシュ必須・行番号あり)
- *   - ./path/to/file:N  (相対パス、行番号あり)
+ *   - `path/to/file.ext`, `path/to/file.ext:N`, `path/to/file.ext:N-M`
+ *   - path/to/file.ext:N, path/to/file.ext:N-M  (バッククォートなし・スラッシュ必須・行番号あり)
+ *   - ./path/to/file.ext:N  (相対パス、行番号あり)
+ * 認識対象は .md/.js/.ts/.tsx/.py/.yml/.yaml/.json のみ。
  * 行番号の妥当性チェックは行わない（ファイル実在確認のみ）。
  */
 function extractFileCitations(content) {
   const paths = new Set();
 
   // バッククォート付き（行番号はオプション、単数・範囲どちらも可）
+  // ただし実ファイル拡張子を持つパスだけを存在チェック対象にする。
   const backtickRe = /`([^`\s]+?)(?::[\d]+(?:-[\d]+)?)?`/g;
   let m;
   while ((m = backtickRe.exec(content)) !== null) {
     const raw = m[1];
     if (/^https?:\/\//.test(raw)) continue; // URL スキップ
+    if (!isRecognizedCitationPath(raw)) continue;
     paths.add(normalizeCitationPath(raw));
   }
 
@@ -212,6 +221,7 @@ function extractFileCitations(content) {
   while ((m = plainRe.exec(content)) !== null) {
     const raw = m[1];
     if (/^https?:\/\//.test(raw)) continue;
+    if (!isRecognizedCitationPath(raw)) continue;
     paths.add(normalizeCitationPath(raw));
   }
 
