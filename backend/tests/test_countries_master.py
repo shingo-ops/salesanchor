@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-TEST_PG_URL = os.getenv("TEST_PG_URL") or os.getenv("RLS_TEST_DATABASE_URL")
+TEST_PG_URL = (
+    os.getenv("RLS_ADMIN_DATABASE_URL")
+    or os.getenv("TEST_PG_URL")
+)
 MIGRATION_FILE = "20260621_010000_create_countries_master.sql"
 
 
@@ -124,7 +127,7 @@ async def test_get_countries_shared_across_tenants(db_session):
     assert resp.json()[1]["code"] == "AL"
 
 
-@pytest.mark.skipif(not TEST_PG_URL, reason="実 PostgreSQL 環境が必要 (TEST_PG_URL / RLS_TEST_DATABASE_URL 未設定)。")
+@pytest.mark.skipif(not TEST_PG_URL, reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。")
 @pytest.mark.asyncio
 async def test_countries_migration_creates_shared_master():
     from sqlalchemy import text
