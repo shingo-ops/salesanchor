@@ -7,7 +7,9 @@ name: Process Artifacts Gate
 
 on:
   pull_request:
-    branches: [main, develop]
+    # 通常: main, develop のみ
+    # 検証用一時追加: feature/morimoto/gate-diff-3dot-verify (ケースA実機検証後に削除)
+    branches: [main, develop, feature/morimoto/gate-diff-3dot-verify]
 
 jobs:
   gate:
