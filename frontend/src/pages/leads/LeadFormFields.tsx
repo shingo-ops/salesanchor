@@ -1,11 +1,12 @@
 /**
- * LeadFormFields — リードクイック編集フォーム（Drawer用 6項目）
+ * LeadFormFields — リードクイック編集フォーム（Drawer用 7項目）
  *
  * LeadsPage（Drawer内）で使用する要点フィールド。
  * 全項目は LeadEditPage を参照。
  */
 
 import { useTranslation } from "react-i18next";
+import { CountryCombobox } from "../../components/CountryCombobox";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
 export interface LeadFormState {
@@ -15,6 +16,7 @@ export interface LeadFormState {
   status: string;
   type: string;
   notes: string;
+  country: string;
 }
 
 interface Props {
@@ -78,6 +80,15 @@ export function LeadFormFields({ form, onChange }: Props) {
         <textarea
           value={form.notes}
           onChange={(e) => onChange("notes", e.target.value)}
+        />
+      </div>
+      <div className="form-group">
+        <label>{t("leads.country")}</label>
+        <CountryCombobox
+          id="lead-form-country"
+          value={form.country}
+          onChange={(value) => onChange("country", value)}
+          placeholder={t("common.search")}
         />
       </div>
     </>

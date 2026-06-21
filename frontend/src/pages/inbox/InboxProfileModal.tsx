@@ -152,11 +152,6 @@ export function InboxProfileModal({
                   onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
-                <span className="right-panel-label">{t("leads.country")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
-                  onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
-              </div>
-              <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.customerType")}</span>
                 <select className="right-panel-field" value={cardForm.customer_type ?? ""}
                   onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>

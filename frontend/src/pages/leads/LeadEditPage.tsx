@@ -9,6 +9,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { CountryCombobox } from "../../components/CountryCombobox";
 import { api } from "../../lib/api";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
@@ -28,6 +29,7 @@ interface Lead {
   response_speed: string | null;
   monthly_forecast: number | null;
   notes: string | null;
+  country: string | null;
 }
 
 type FormState = {
@@ -45,13 +47,14 @@ type FormState = {
   response_speed: string;
   monthly_forecast: string;
   notes: string;
+  country: string;
 };
 
 const emptyForm: FormState = {
   customer_name: "", company_name: "", email: "", phone: "",
   channel_type: "", initiative: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
-  monthly_forecast: "", notes: "",
+  monthly_forecast: "", notes: "", country: "",
 };
 
 const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
@@ -83,6 +86,7 @@ export default function LeadEditPage() {
           response_speed: lead.response_speed || "",
           monthly_forecast: lead.monthly_forecast != null ? String(lead.monthly_forecast) : "",
           notes: lead.notes || "",
+          country: lead.country || "",
         });
       })
       .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
@@ -110,6 +114,7 @@ export default function LeadEditPage() {
         response_speed: toNull(form.response_speed),
         monthly_forecast: form.monthly_forecast ? Number(form.monthly_forecast) : null,
         notes: toNull(form.notes),
+        country: toNull(form.country),
       });
       navigate("/crm/leads");
     } catch (e) {
@@ -196,6 +201,14 @@ export default function LeadEditPage() {
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.country")}</label>
+            <CountryCombobox
+              id="lead-country"
+              value={form.country}
+              onChange={(value) => setForm({ ...form, country: value })}
+              placeholder={t("common.search")}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => navigate("/crm/leads")}>{t("common.cancel")}</button>

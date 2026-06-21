@@ -43,6 +43,7 @@ from app.schemas.lead import (
 )
 from app.services import encryption, meta_graph
 from app.services import messaging_window as mw
+from app.services.country_codes import parse_country_code
 from app.services.audit import record_audit_log
 from app.services.meta_graph import (
     MetaGraphAPIError,
@@ -143,6 +144,35 @@ def _enum_to_str(value):
     if value is None:
         return None
     return value.value if hasattr(value, "value") else value
+
+
+async def _ensure_country_code_in_master(db: AsyncSession, country_code: str | None) -> str | None:
+    """public.countries に存在する alpha-2 だけを通す。
+
+    schema 側の parse_country_code で alpha-2 化したうえで、SSOT の国台帳に
+    実在するコードかを追加確認する。
+    """
+    if country_code is None:
+        return None
+    normalized = parse_country_code(country_code)
+    if normalized is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="country は ISO 3166-1 alpha-2 または国名で指定してください",
+        )
+    result = await db.execute(
+        text(
+            "SELECT 1 FROM public.countries "
+            "WHERE code = :code AND is_active = TRUE"
+        ),
+        {"code": normalized},
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="指定された country は国台帳に存在しません",
+        )
+    return normalized
 
 
 @router.get(
@@ -346,6 +376,7 @@ async def create_lead(
         _enum_to_str(data.response_speed),
         data.monthly_forecast,
     )
+    country_code = await _ensure_country_code_in_master(db, data.country)
 
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     result = await db.execute(
@@ -353,12 +384,12 @@ async def create_lead(
             INSERT INTO {leads_t} (
                 tenant_id, customer_name, company_name, email, phone,
                 channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
-                response_speed, monthly_forecast, prospect_rank, assigned_to, notes
+                response_speed, monthly_forecast, prospect_rank, assigned_to, notes, country
             )
             VALUES (
                 :tenant_id, :customer_name, :company_name, :email, :phone,
                 :channel_type, :initiative, :type, :status, :temperature, :estimated_scale, :customer_type,
-                :response_speed, :monthly_forecast, :prospect_rank, :assigned_to, :notes
+                :response_speed, :monthly_forecast, :prospect_rank, :assigned_to, :notes, :country
             )
             RETURNING id
         """),
@@ -380,6 +411,7 @@ async def create_lead(
             "prospect_rank": rank,
             "assigned_to": data.assigned_to,
             "notes": data.notes,
+            "country": country_code,
         },
     )
     new_id = result.scalar_one()
@@ -445,6 +477,8 @@ async def update_lead(
     for key in ("type", "status", "temperature", "estimated_scale", "customer_type", "response_speed"):
         if key in update_data and update_data[key] is not None:
             update_data[key] = _enum_to_str(update_data[key])
+    if "country" in update_data:
+        update_data["country"] = await _ensure_country_code_in_master(db, update_data["country"])
 
     # prospect_rank再計算（リード属性のいずれかが変わった場合）
     rank_fields = {"temperature", "estimated_scale", "customer_type", "response_speed", "monthly_forecast"}
