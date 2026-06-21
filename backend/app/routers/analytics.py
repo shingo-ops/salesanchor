@@ -674,7 +674,6 @@ async def weekly_advisor_defensive(
         first_order_at = orders_sorted[0]["created_at"]
         last_order_at = orders_sorted[-1]["created_at"]
         days_since_last_order = (today - last_order_at).days
-        continuation_days = (last_order_at - first_order_at).days
 
         avg_interval_days: float | None = None
         if all_order_count >= 2:

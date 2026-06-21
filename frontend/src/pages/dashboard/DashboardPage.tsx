@@ -487,9 +487,7 @@ export default function DashboardPage() {
         <FunnelSection month={funnelMonth} viewMode={viewMode} />
       )}
 
-      {/* -------------------------------------------------
-          今やること（W-1: 守り3種 / scope=mine）
-      ------------------------------------------------- */}
+      {/* 今やること（W-1: 守り3種 / scope=mine） */}
       <WeeklyAdvisorSection />
 
       {/* -------------------------------------------------
