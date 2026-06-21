@@ -16,7 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| codex/inventory-aggregation-preserve | 在庫集計サービス＋ゴールデンをVCSに保存（CI発火確認） | 2026-06-22 | IN_PROGRESS | | |
+| codex/inventory-aggregation-preserve | 在庫集計サービス＋ゴールデンをVCSに保存（CI発火確認） | 2026-06-22 | IN_PROGRESS | | | `backend/app/services/inventory_aggregation.py` / `backend/tests/test_inventory_aggregation.py` / `backend/tests/fixtures/inventory_aggregation/` |
 | codex/fix-schedule-parity | Foundation F1 国台帳 `public.countries` 新設 | 2026-06-21 | IN_PROGRESS | | | `backend/app/routers/countries.py` / `backend/tests/test_countries_master.py` / `migrations/20260621_010000_create_countries_master.sql` |
 | feature/morimoto/pr-e-human-go-gate | process-artifacts gate PR-E（ユーザー影響変更の Shingo GO 必須化） | 2026-06-21 | DONE | #2410 | | `scripts/check-process-artifacts.js` / `scripts/tests/test-process-artifacts.js` / `docs/STANDARD-WORKFLOW.md` / `docs/handoff/incident-paypal-invoicing-false-complete/design.md`。`backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` と **PR-C の外部API検出で見つかる変更**を対象に含めるよう修正し、更新 push 済み。Shingo GO 待ち |
 | feature/morimoto/discord-ticket-lang-refactor | Discord ticket inbound 二言語化リファクタ PR | 2026-06-21 | IN_PROGRESS | | | backend/app/services/message_translator.py + backend/app/tasks/translation.py + backend/app/services/translation_monitor.py + backend/app/routers/conv_logs.py |
