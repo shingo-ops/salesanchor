@@ -122,6 +122,10 @@ async def _ensure_tenant_006_schema(
                     "connection_type": connection_type,
                 },
             )
+        await conn.execute(text("GRANT USAGE ON SCHEMA tenant_006 TO salesanchor_app"))
+        await conn.execute(
+            text("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA tenant_006 TO salesanchor_app")
+        )
 
 
 @pytest.mark.asyncio
