@@ -526,7 +526,7 @@ function main() {
       console.error('❌ BASE_SHA / HEAD_SHA が設定されていません');
       process.exit(1);
     }
-    changedFiles = execSync(`git diff --name-only "${base}" "${head}"`, { encoding: 'utf8' })
+    changedFiles = execSync(`git diff --name-only "${base}...${head}"`, { encoding: 'utf8' })
       .trim().split('\n').filter(Boolean);
   }
 

@@ -1051,6 +1051,138 @@ test('hotfix→main は通常検査（スキップしない）', () => {
   assert.notStrictEqual(result.code, 0, 'hotfix→main は検査でfailするべき');
 });
 
+// ── git diff 3点形式の動作検証（古い土台の巻き込み解消） ──────────────────────
+console.log('\n【git diff 3点形式テスト（gate-diff-3dot）】');
+
+test('3点差分: 古い土台のブランチで本線側の scripts/ 変更を巻き込まない', () => {
+  // 期待値先行:
+  //   2点 git diff A B   → base(develop先端)～head間の "A と B の差" にdevelop側のscripts/も出る
+  //   3点 git diff A...B → merge-base(A,B) から B への差分のみ = feature が実際に加えた変更だけ
+
+  const { mkdtempSync } = require('fs');
+  const tmpRepo = mkdtempSync('/tmp/gate-3dot-test-');
+  try {
+    // 1. 一時リポジトリ初期化
+    execSync(
+      `git -C "${tmpRepo}" init -q && ` +
+      `git -C "${tmpRepo}" config user.email "t@t" && ` +
+      `git -C "${tmpRepo}" config user.name "t"`,
+      { encoding: 'utf8' }
+    );
+
+    // 2. 共通の base コミット X（ブランチ分岐点）
+    execSync(
+      `touch "${tmpRepo}/base.txt" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "base"`,
+      { encoding: 'utf8' }
+    );
+
+    // 3. develop に scripts/ の変更を追加（ブランチ分岐後に本線へ入った変更）
+    execSync(
+      `mkdir -p "${tmpRepo}/scripts" && ` +
+      `printf '#!/bin/sh\necho hi\n' > "${tmpRepo}/scripts/reaper.sh" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "develop: add scripts/reaper.sh"`,
+      { encoding: 'utf8' }
+    );
+    const baseSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // 4. feature ブランチを X（1コミット前）から切り、docs のみ変更
+    execSync(`git -C "${tmpRepo}" checkout -q -b feature HEAD~1`, { encoding: 'utf8' });
+    execSync(
+      `mkdir -p "${tmpRepo}/docs" && ` +
+      `printf '# design\n' > "${tmpRepo}/docs/design.md" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "feature: docs only"`,
+      { encoding: 'utf8' }
+    );
+    const headSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // 5. 前提確認: 2点形式は scripts/reaper.sh を巻き込む（旧バグの再現）
+    const diff2 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}" "${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      diff2.includes('scripts/reaper.sh'),
+      `前提: 2点差分は scripts/reaper.sh を含むべき（旧バグ確認）: ${diff2}`
+    );
+
+    // 6. 修正確認: 3点形式は scripts/reaper.sh を巻き込まない
+    const diff3 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}...${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      !diff3.includes('scripts/reaper.sh'),
+      `3点差分は scripts/reaper.sh を含まないべき: ${diff3}`
+    );
+    assert.ok(
+      diff3.includes('docs/design.md'),
+      `3点差分は feature が加えた docs/design.md を含むべき: ${diff3}`
+    );
+  } finally {
+    rmSync(tmpRepo, { recursive: true, force: true });
+  }
+});
+
+test('3点差分: feature が本当に scripts/ を変更した場合は正しく検出する（検知漏れなし）', () => {
+  // 期待値: feature が scripts/ を実際に変更した場合、3点差分にも出る
+  const { mkdtempSync } = require('fs');
+  const tmpRepo = mkdtempSync('/tmp/gate-3dot-danger-');
+  try {
+    execSync(
+      `git -C "${tmpRepo}" init -q && ` +
+      `git -C "${tmpRepo}" config user.email "t@t" && ` +
+      `git -C "${tmpRepo}" config user.name "t"`,
+      { encoding: 'utf8' }
+    );
+    execSync(
+      `touch "${tmpRepo}/base.txt" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "base"`,
+      { encoding: 'utf8' }
+    );
+
+    // develop に別変更（docs）
+    execSync(
+      `printf '# changelog\n' > "${tmpRepo}/CHANGELOG.md" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "develop: changelog"`,
+      { encoding: 'utf8' }
+    );
+    const baseSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // feature は scripts/ を実際に変更する
+    execSync(`git -C "${tmpRepo}" checkout -q -b feature HEAD~1`, { encoding: 'utf8' });
+    execSync(
+      `mkdir -p "${tmpRepo}/scripts" && ` +
+      `printf '#!/bin/sh\necho deploy\n' > "${tmpRepo}/scripts/deploy.sh" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "feature: add scripts/deploy.sh"`,
+      { encoding: 'utf8' }
+    );
+    const headSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    const diff3 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}...${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      diff3.includes('scripts/deploy.sh'),
+      `3点差分も feature が加えた scripts/deploy.sh を検出するべき（検知漏れなし）: ${diff3}`
+    );
+    // develop 側の CHANGELOG.md は巻き込まない
+    assert.ok(
+      !diff3.includes('CHANGELOG.md'),
+      `3点差分は develop 側の CHANGELOG.md を巻き込まないべき: ${diff3}`
+    );
+  } finally {
+    rmSync(tmpRepo, { recursive: true, force: true });
+  }
+});
+
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`
 ${'='.repeat(50)}`);
