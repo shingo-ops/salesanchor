@@ -421,7 +421,7 @@ function ScheduleSidebar({
   return (
     <aside className="schedule-sidebar">
       <section className="schedule-sidebar__section schedule-sidebar__section--action">
-        <Button variant="primary" fullWidth className="schedule-sidebar__create" disabled={!canManage} onClick={onCreate}>
+        <Button variant="primary" className="schedule-sidebar__create" disabled={!canManage} onClick={onCreate}>
           <AddIcon size={18} aria-hidden="true" />
           {t("schedule.create")}
         </Button>
@@ -1009,14 +1009,11 @@ export default function SchedulePage() {
   return (
     <div className="schedule-page">
       <header className="schedule-shell__header">
-        <div className="schedule-shell__header-copy">
+        {/* #5/#6: 左ブロック（brand + 今日/‹›/期間ラベル）。faviconは削除し、navを左へ移動 */}
+        <div className="schedule-shell__header-left">
           <div className="schedule-shell__brand">
-            <img className="schedule-shell__brand-icon" src="/favicon.png" alt="" aria-hidden="true" />
             <h1 className="schedule-shell__title">{t("schedule.title")}</h1>
           </div>
-        </div>
-
-        <div className="schedule-shell__toolbar">
           <div className="schedule-nav">
             <Button variant="secondary" size="sm" onClick={() => navigatePeriod("today")}>{t("schedule.today")}</Button>
             <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.prevPeriod")} onClick={() => navigatePeriod("prev")}>
@@ -1027,6 +1024,10 @@ export default function SchedulePage() {
             </Button>
           </div>
           <span className="schedule-shell__range">{viewLabel}</span>
+        </div>
+
+        {/* 右ブロック（ツール類のみ） */}
+        <div className="schedule-shell__toolbar">
           <Button
             variant="ghost"
             size="md"
