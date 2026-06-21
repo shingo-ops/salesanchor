@@ -154,7 +154,7 @@ async def test_ticket_channel_message_enqueues_translation_task_after_save():
 
 
 @pytest.mark.asyncio
-async def test_ticket_channel_outbound_publishes_without_translation_task():
+async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation():
     session = AsyncMock()
     session.execute.side_effect = [
         _mock_result((45, "1234567890", "Shingo")),
@@ -187,9 +187,9 @@ async def test_ticket_channel_outbound_publishes_without_translation_task():
         )
 
     assert handled is True
-    assert session.commit.await_count == 1
+    assert session.commit.await_count == 0
     delay_mock.assert_not_called()
-    publish_mock.assert_awaited_once_with(4)
+    publish_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
