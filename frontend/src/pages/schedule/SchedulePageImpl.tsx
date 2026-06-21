@@ -861,6 +861,7 @@ export default function SchedulePage() {
         }
       } catch (err) {
         if (!cancelled) {
+          setEvents([]);  // タイムアウト・例外時も空配列で空状態へ遷移させスピナーを解除
           setError(err instanceof Error ? err.message : t("schedule.errorFetch"));
         }
       } finally {
