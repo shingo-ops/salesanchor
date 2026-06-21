@@ -48,6 +48,7 @@ import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
 import ArchivesPage from "./pages/archives/ArchivesPage";
 import ShiftsPage from "./pages/shifts/ShiftsPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
+import ScheduleSettingsPage from "./pages/schedule/ScheduleSettingsPage";
 import ERPPage from "./pages/erp/ERPPage";
 import StaffPage from "./pages/staff/StaffPage";
 import StaffEditPage from "./pages/staff/StaffEditPage";
@@ -239,6 +240,7 @@ function App() {
                   />
                   <Route path="/shifts" element={<ShiftsPage />} />
                   <Route path="/schedule" element={<SchedulePage />} />
+                  <Route path="/schedule/settings" element={<ScheduleSettingsPage />} />
 
                   {/* Phase 1-D Sprint 3: Meta Inbox 接続管理 */}
                   <Route path="/channels" element={<ChannelsPage />} />

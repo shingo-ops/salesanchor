@@ -32,6 +32,8 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/data":                       "nav.dataManagement",
   "/channels":                   "nav.channels",
   "/settings":                   "nav.settings",
+  "/schedule":                   "nav.schedule",
+  "/schedule/settings":          "nav.scheduleSettings",
   "/commission-settings":        "nav.commissionSettings",
   "/admin/inventory-visibility": "nav.inventoryVisibility",
   "/admin/tenant-profile":       "nav.tenantProfile",

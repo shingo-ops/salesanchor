@@ -149,6 +149,7 @@ run_sql migrations/075_create_goals.sql
 run_sql migrations/076_add_google_calendar_config.sql
 run_sql migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql
 run_sql migrations/078_create_calendar_events_tenant.sql
+run_sql migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql
 run_py  scripts/migrate_20260620_080000_calendar_category_backfill.py
 run_sql migrations/080_phase_b_migration.sql
 
