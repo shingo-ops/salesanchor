@@ -27,6 +27,10 @@ W-1 API `/analytics/weekly-advisor-defensive` を `scope=mine` で取得し、�
 - `WeeklyAdvisorSection` 内で API を読み、結果を score 降順のまま描画する
 - フォロー追加などの書き込み導線は W-1c へ切り分ける
 
+## 外部・過去事例の参照と我々への応用
+
+該当なし。今回の UI は既存ダッシュボードの section-card / dark mode token / score 表示パターンをそのまま流用すれば足りるため、外部事例の新規参照は不要。重要なのは、提案は表示のみで確定しないことと、`scope=mine` に固定して担当者スコープを明示すること。
+
 ## 完了条件
 
 - ダッシュボードに「今やること」が表示される
