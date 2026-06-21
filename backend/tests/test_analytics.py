@@ -622,6 +622,18 @@ class TestWeeklyAdvisorDefensive:
         other_ct = await client.post("/api/v1/contacts", json={"company_id": other_co_id, "display_name": "Other Contact"})
         other_ct_id = other_ct.json()["id"]
 
+        reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead", "status": "existing_customer"})
+        reorder_lead_id = reorder_lead.json()["id"]
+        churn_lead = await client.post("/api/v1/leads", json={"customer_name": "Churn Lead", "status": "existing_customer"})
+        churn_lead_id = churn_lead.json()["id"]
+
+        await db_session.execute(text("""
+            UPDATE companies SET lead_id = :lead_id WHERE id = :company_id
+        """), {"lead_id": reorder_lead_id, "company_id": reorder_co_id})
+        await db_session.execute(text("""
+            UPDATE companies SET lead_id = :lead_id WHERE id = :company_id
+        """), {"lead_id": churn_lead_id, "company_id": churn_co_id})
+
         await db_session.execute(text("""
             INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
             VALUES
@@ -707,6 +719,9 @@ class TestWeeklyAdvisorDefensive:
         assert actions[0]["type"] == "churn_risk"
         assert actions[0]["company_name"] == "Card Haven LLC"
         assert actions == sorted(actions, key=lambda a: a["score"], reverse=True)
+        assert next(a for a in actions if a["company_id"] == reorder_co_id)["lead_id"] == reorder_lead_id
+        assert next(a for a in actions if a["company_id"] == churn_co_id)["lead_id"] == churn_lead_id
+        assert next(a for a in actions if a["company_id"] == comm_co_id)["lead_id"] is None
 
         types = [a["type"] for a in actions]
         assert "reorder" in types
