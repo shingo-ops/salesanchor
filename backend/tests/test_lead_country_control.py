@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import ExitStack
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -9,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from unittest.mock import AsyncMock, patch
 
 from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
