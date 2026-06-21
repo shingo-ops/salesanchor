@@ -13,11 +13,11 @@
 
 | 基準 | 検証方法 |
 |------|---------|
-| 画面の差し込み位置が正しい | `frontend/src/pages/dashboard/DashboardPage.tsx:487-493` |
-| 打ち手が score 降順で表示される | `frontend/tests-e2e/scene1-dashboard.spec.ts` |
-| 個人スコープ固定で表示される | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120` |
-| ローディング / 空状態 / エラーが崩れない | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120` / `frontend/src/pages/dashboard/WeeklyAdvisorSection.css:1-120` |
-| ダークモード・意味ベース色に従う | `frontend/src/pages/dashboard/WeeklyAdvisorSection.css:1-120` |
+| 画面の差し込み位置が正しい | frontend/src/pages/dashboard/DashboardPage.tsx の 487-493行 |
+| 打ち手が score 降順で表示される | frontend/tests-e2e/scene1-dashboard.spec.ts |
+| 個人スコープ固定で表示される | frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx の 1-120行 |
+| ローディング / 空状態 / エラーが崩れない | frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx の 1-120行 / frontend/src/pages/dashboard/WeeklyAdvisorSection.css の 1-120行 |
+| ダークモード・意味ベース色に従う | frontend/src/pages/dashboard/WeeklyAdvisorSection.css の 1-120行 |
 | process-artifacts gate に必要な標準ワークフロー確認が PR に含まれる | PR本文 |
 
 ## 技術方針
