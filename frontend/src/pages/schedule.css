@@ -188,8 +188,8 @@
   top: var(--space-4);
   align-self: start;
   /* #2: フラット単一パネル（カード分割を廃止し右1px罫線のみ） */
-  background: var(--schedule-rail-bg);
-  border-right: 1px solid var(--schedule-rail-border);
+  background: transparent;
+  border-right: 1px solid var(--border);
   padding: var(--space-4) var(--space-14px) var(--space-5);
 }
 

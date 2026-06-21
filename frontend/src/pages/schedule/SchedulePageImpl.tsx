@@ -421,7 +421,7 @@ function ScheduleSidebar({
   return (
     <aside className="schedule-sidebar">
       <section className="schedule-sidebar__section schedule-sidebar__section--action">
-        <Button variant="primary" className="schedule-sidebar__create" disabled={!canManage} onClick={onCreate}>
+        <Button variant="primary" className="schedule-sidebar__create" onClick={onCreate}>
           <AddIcon size={18} aria-hidden="true" />
           {t("schedule.create")}
         </Button>
@@ -745,23 +745,6 @@ function ScheduleMonthGrid({
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <div className="schedule-empty">
-      <div className="schedule-empty__card">
-        <div className="schedule-empty__icon">
-          <NAV_ICONS.schedule size={28} aria-hidden="true" />
-        </div>
-        <h3>{t("schedule.emptyTitle")}</h3>
-        <p>{t("schedule.emptyDescription")}</p>
-        <Button variant="primary" onClick={onCreate}>
-          {t("schedule.addEvent")}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function LoadingState() {
   const { t } = useTranslation();
@@ -996,7 +979,6 @@ export default function SchedulePage() {
   const visibleEvents = events.filter((item) => eventMatchesFilters(item, visibleCalendars));
   const allDayEvents = visibleEvents.filter((item) => item.allDay);
   const timedEvents = visibleEvents.filter((item) => !item.allDay);
-  const isEmpty = demoState === "empty" || (!loading && visibleEvents.length === 0);
   const viewLabel = formatRangeTitle(view, anchorDate);
   const SearchIcon = NAV_ICONS.search;
   const SettingsIcon = NAV_ICONS.settings;
@@ -1099,9 +1081,7 @@ export default function SchedulePage() {
                   {error}
                 </div>
               )}
-              {isEmpty ? (
-                <EmptyState onCreate={() => canManage && openCreate(anchorDate, null)} />
-              ) : view === "month" ? (
+              {view === "month" ? (
                 <ScheduleMonthGrid
                   cells={viewDays}
                   monthDate={anchorDate}
