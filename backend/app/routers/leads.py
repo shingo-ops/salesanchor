@@ -44,6 +44,7 @@ from app.schemas.lead import (
 from app.services import encryption, meta_graph
 from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
+from app.services.channel_masters import normalize_channel_type_value
 from app.services.country_codes import parse_country_code
 from app.services.meta_graph import (
     MetaGraphAPIError,
@@ -173,6 +174,45 @@ async def _ensure_country_code_in_master(db: AsyncSession, country_code: str | N
             detail="指定された country は国台帳に存在しません",
         )
     return normalized
+
+
+async def _ensure_channel_type_in_master(
+    db: AsyncSession,
+    tenant_id: int,
+    channel_type: str | None,
+    *,
+    existing_value: str | None = None,
+) -> str | None:
+    """channel_masters に存在する値だけを通す。
+
+    既存値が legacy のまま残っている場合は、未変更の保存を壊さないため
+    その値と同じなら通す。`whatsapp_personal` / `whatsapp_business` は
+    canonical `whatsapp` に寄せる。
+    """
+    normalized = normalize_channel_type_value(channel_type)
+    if normalized is None:
+        return None
+    if existing_value is not None and normalized == existing_value:
+        return normalized
+
+    channel_masters_t = tenant_table_ref(db, tenant_id, "channel_masters")
+    result = await db.execute(
+        text(
+            f"""
+            SELECT platform
+            FROM {channel_masters_t}
+            WHERE platform = :platform AND is_active = TRUE
+            """
+        ),
+        {"platform": normalized},
+    )
+    if result.scalar_one_or_none() is not None:
+        return normalized
+
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="channel_type はチャネル台帳に存在する値を指定してください",
+    )
 
 
 @router.get(
@@ -377,6 +417,7 @@ async def create_lead(
         data.monthly_forecast,
     )
     country_code = await _ensure_country_code_in_master(db, data.country)
+    channel_type = await _ensure_channel_type_in_master(db, tenant_id, data.channel_type)
 
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     result = await db.execute(
@@ -399,7 +440,7 @@ async def create_lead(
             "company_name": data.company_name,
             "email": data.email,
             "phone": data.phone,
-            "channel_type": data.channel_type,
+            "channel_type": channel_type,
             "initiative": data.initiative,
             "type": _enum_to_str(data.type),
             "status": _enum_to_str(data.status),
@@ -479,6 +520,13 @@ async def update_lead(
             update_data[key] = _enum_to_str(update_data[key])
     if "country" in update_data:
         update_data["country"] = await _ensure_country_code_in_master(db, update_data["country"])
+    if "channel_type" in update_data:
+        update_data["channel_type"] = await _ensure_channel_type_in_master(
+            db,
+            tenant_id,
+            update_data["channel_type"],
+            existing_value=old_row["channel_type"],
+        )
 
     # prospect_rank再計算（リード属性のいずれかが変わった場合）
     rank_fields = {"temperature", "estimated_scale", "customer_type", "response_speed", "monthly_forecast"}

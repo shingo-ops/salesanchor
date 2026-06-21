@@ -28,6 +28,7 @@ from app.auth.dependencies import (
     get_current_user,
     reset_tenant_context,
     set_tenant_context,
+    tenant_table_ref,
 )
 from app.database import get_db
 from app.models import User
@@ -79,11 +80,11 @@ async def _get_channel_master(
     platform: str,
 ) -> dict[str, Any] | None:
     """channel_masters から接続種別を取得する。"""
-    schema = f"tenant_{tenant_id:03d}"
+    table_ref = tenant_table_ref(db, tenant_id, "channel_masters")
     result = await db.execute(
         text(
             f"SELECT id, platform, display_name, connection_type "
-            f"FROM {schema}.channel_masters "
+            f"FROM {table_ref} "
             f"WHERE platform = :platform AND is_active = true"
         ),
         {"platform": platform},
@@ -189,11 +190,11 @@ async def list_channel_masters(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict[str, Any]]:
     await set_tenant_context(db, tenant_id)
-    schema = f"tenant_{tenant_id:03d}"
+    table_ref = tenant_table_ref(db, tenant_id, "channel_masters")
     result = await db.execute(
         text(
             f"SELECT id, platform, display_name, connection_type, is_active "
-            f"FROM {schema}.channel_masters "
+            f"FROM {table_ref} "
             f"WHERE is_active = true ORDER BY platform"
         )
     )

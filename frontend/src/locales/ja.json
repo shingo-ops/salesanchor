@@ -506,6 +506,8 @@
     "companyName": "会社名",
     "email": "メール",
     "phone": "電話番号",
+    "channelType": "流入元",
+    "channelTypePlaceholder": "チャネルを選択してください",
     "source": "流入元",
     "sourcePlaceholder": "例: Web問い合わせ、展示会、紹介",
     "type": "タイプ",

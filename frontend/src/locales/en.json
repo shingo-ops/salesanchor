@@ -506,6 +506,8 @@
     "companyName": "Company name",
     "email": "Email",
     "phone": "Phone",
+    "channelType": "Source",
+    "channelTypePlaceholder": "Select a channel",
     "source": "Source",
     "sourcePlaceholder": "e.g. Web inquiry, Trade show, Referral",
     "type": "Type",
