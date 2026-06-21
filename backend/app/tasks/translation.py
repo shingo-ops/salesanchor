@@ -27,14 +27,18 @@ _BATCH_SIZE = 20
     default_retry_delay=60,
 )
 def translate_inbound_message(
-    self: object,  # type: ignore[override]
+    self: object,
     tenant_id: int,
     table_ref: str = "meta_messages",
     message_id: str = "",
     message_text: str = "",
     target_language: str = "ja",
 ) -> dict:
-    """単発の inbound 翻訳を実行して SSE 更新を通知する。"""
+    """単発の inbound 翻訳を実行して SSE 更新を通知する。
+
+    gateway 側は保存後にこのタスクを enqueue するだけにし、
+    Gemini 呼び出しは worker 側へ寄せる。
+    """
     import asyncio
 
     from app.database import engine
@@ -50,6 +54,8 @@ def translate_inbound_message(
             )
         )
     finally:
+        # Celery worker の asyncio ループ再利用に伴う
+        # "Future attached to a different loop" を避ける。
         asyncio.run(engine.dispose())
 
 
@@ -61,11 +67,9 @@ async def _run_translate_inbound_message(
     message_text: str,
     target_language: str,
 ) -> dict:
+    """ensure_inbound_translations を呼んだ後に inbox SSE を publish する。"""
     from app.database import AsyncSessionLocal
-    from app.services.message_translator import (
-        translate_inbound,
-        translate_inbound_languages,
-    )
+    from app.services.message_translator import ensure_inbound_translations
 
     schema_name = f"tenant_{tenant_id:03d}"
     translation_table_ref = table_ref
@@ -75,25 +79,13 @@ async def _run_translate_inbound_message(
         translation_table_ref = f"{schema_name}.{translation_table_ref}"
 
     async with AsyncSessionLocal() as db:
-        if target_language == "ja":
-            results = await translate_inbound_languages(
-                db=db,
-                tenant_id=tenant_id,
-                table_ref=translation_table_ref,
-                message_id=message_id,
-                message_text=message_text,
-                primary_target_language=target_language,
-            )
-            result = results["ja"]
-        else:
-            result = await translate_inbound(
-                db=db,
-                tenant_id=tenant_id,
-                table_ref=translation_table_ref,
-                message_id=message_id,
-                message_text=message_text,
-                target_language=target_language,
-            )
+        results = await ensure_inbound_translations(
+            db=db,
+            tenant_id=tenant_id,
+            table_ref=translation_table_ref,
+            message_id=message_id,
+            message_text=message_text,
+        )
 
     try:
         from app.services.sse_pubsub import publish_inbox_update
@@ -112,10 +104,14 @@ async def _run_translate_inbound_message(
         "status": "ok",
         "tenant_id": tenant_id,
         "message_id": message_id,
-        "cached": result.cached,
-        "engine": result.engine,
-        "confidence": result.confidence,
-        "translated_text": result.translated_text,
+        "cached": all(result.cached for result in results.values()) if results else False,
+        "engine": ",".join(sorted({result.engine for result in results.values()})) if results else "",
+        "confidence": max((result.confidence for result in results.values()), default=0.0),
+        "translated_text": (
+            results["ja"].translated_text
+            if "ja" in results
+            else next(iter(results.values())).translated_text
+        ) if results else "",
     }
 
 
@@ -125,11 +121,11 @@ async def _run_translate_inbound_message(
     max_retries=3,
     default_retry_delay=60,
 )
-def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
-    """未翻訳の受信メッセージを一括翻訳するバッチタスク。
+def translate_pending_messages(self: object) -> dict:
+    """未処理の受信メッセージを一括翻訳するバッチタスク。
 
-    各テナントの meta_messages で必要な翻訳行が欠けている受信メッセージを
-    対象に translate_inbound_languages() を呼び出す。
+    各テナントの inbound メッセージについて、新ルールに基づき
+    必要な target_language が欠けているものだけ補完する。
     失敗は non-fatal でスキップ（ADR-110 受け入れ条件 9）。
     """
     import asyncio
@@ -149,7 +145,12 @@ def translate_pending_messages(self: object) -> dict:  # type: ignore[override]
 
 async def _run_batch() -> dict:
     from app.database import AsyncSessionLocal
-    from app.services.message_translator import BudgetExceededError, translate_inbound_languages
+    from app.services.message_translator import (
+        BudgetExceededError,
+        ensure_inbound_translations,
+        get_existing_inbound_translation_targets,
+        get_required_inbound_targets,
+    )
 
     processed = 0
     skipped = 0
@@ -176,19 +177,14 @@ async def _run_batch() -> dict:
             meta_t = f"{schema_name}.meta_messages"
             trans_t = f"{schema_name}.message_translations"
 
-            # 未翻訳/一部翻訳の受信メッセージを取得
+            # 未翻訳の受信メッセージを取得
             result = await db.execute(
                 text(
                     f"SELECT m.message_id, m.message_text "
                     f"FROM {meta_t} m "
-                    f"LEFT JOIN {trans_t} t_ja "
-                    f"  ON t_ja.message_id = m.message_id AND t_ja.target_language = 'ja' "
-                    f"LEFT JOIN {trans_t} t_en "
-                    f"  ON t_en.message_id = m.message_id AND t_en.target_language = 'en' "
                     f"WHERE m.direction = 'inbound' "
+                    f"  AND m.message_id IS NOT NULL "
                     f"  AND m.message_text IS NOT NULL AND m.message_text <> '' "
-                    f"  AND (t_ja.message_id IS NULL "
-                    f"       OR (COALESCE(t_ja.original_language, '') <> 'en' AND t_en.message_id IS NULL)) "
                     f"ORDER BY m.created_at ASC "
                     f"LIMIT :limit"
                 ),
@@ -198,7 +194,18 @@ async def _run_batch() -> dict:
 
             for message_id, message_text in rows:
                 try:
-                    await translate_inbound_languages(
+                    existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
+                        db,
+                        trans_t,
+                        str(message_id),
+                    )
+                    required_targets = get_required_inbound_targets(
+                        str(message_text),
+                        ja_original_language,
+                    )
+                    if required_targets.issubset(existing_targets):
+                        continue
+                    await ensure_inbound_translations(
                         db=db,
                         tenant_id=tenant_id,
                         table_ref=trans_t,
@@ -239,7 +246,7 @@ async def _run_batch() -> dict:
     name="app.tasks.translation.check_translation_health",
     bind=True,
 )
-def check_translation_health_task(self: object) -> dict:  # type: ignore[override]
+def check_translation_health_task(self: object) -> dict:
     """翻訳健全性チェックと Discord 通知（3点セット 状態検証 + 監視/通知）。"""
     import asyncio
 

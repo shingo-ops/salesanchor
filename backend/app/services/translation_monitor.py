@@ -56,28 +56,44 @@ async def check_translation_health(
     """
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
-    # 未処理（pending）数 = 必要な翻訳行が揃っていない件数
-    result = await db.execute(
+    from app.services.message_translator import (
+        get_existing_inbound_translation_targets,
+        get_required_inbound_targets,
+    )
+
+    messages_result = await db.execute(
         text(
-            f"SELECT "
-            f"  COUNT(*) AS total, "
-            f"  COUNT(*) FILTER (WHERE mt_ja.message_id IS NULL "
-            f"    OR (COALESCE(mt_ja.original_language, '') <> 'en' AND mt_en.message_id IS NULL)) AS pending "
-            f"FROM {meta_table_ref} m "
-            f"LEFT JOIN {table_ref} mt_ja "
-            f"  ON mt_ja.message_id = m.message_id AND mt_ja.target_language = 'ja' "
-            f"LEFT JOIN {table_ref} mt_en "
-            f"  ON mt_en.message_id = m.message_id AND mt_en.target_language = 'en' "
-            f"WHERE m.direction = 'inbound' "
-            f"  AND m.created_at >= :since"
+            f"SELECT message_id, message_text "
+            f"FROM {meta_table_ref} "
+            f"WHERE direction = 'inbound' "
+            f"  AND message_id IS NOT NULL "
+            f"  AND message_text IS NOT NULL AND message_text <> '' "
+            f"  AND created_at >= :since "
+            f"ORDER BY created_at ASC"
         ),
         {"since": since},
     )
-    row = result.first()
-    if row is None or row[0] == 0:
+    messages = messages_result.fetchall()
+    if not messages:
         return TranslationHealthSnapshot(0, 0, 0, 0.0, 0.0)
 
-    total, pending = int(row[0]), int(row[1])
+    pending = 0
+    for message_id, message_text in messages:
+        if message_id is None:
+            continue
+        existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
+            db,
+            table_ref,
+            str(message_id),
+        )
+        required_targets = get_required_inbound_targets(
+            str(message_text),
+            ja_original_language,
+        )
+        if not required_targets.issubset(existing_targets):
+            pending += 1
+
+    total = len(messages)
 
     # 低確信度数は翻訳済み行から集計
     lc_result = await db.execute(
