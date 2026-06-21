@@ -40,12 +40,23 @@ async def _ensure_smoke_schema(engine) -> None:
                 """
                 CREATE TABLE IF NOT EXISTS public.suppliers (
                     id BIGSERIAL PRIMARY KEY,
-                    tenant_id INTEGER,
-                    supplier_code VARCHAR(20),
+                    supplier_code VARCHAR(20) UNIQUE,
                     name VARCHAR(255) NOT NULL,
-                    supplier_type VARCHAR(50) DEFAULT 'corporate',
-                    default_language VARCHAR(10) DEFAULT 'ja',
-                    is_active BOOLEAN DEFAULT TRUE,
+                    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
+                    default_language CHAR(2) NOT NULL DEFAULT 'ja',
+                    contact_name VARCHAR(255),
+                    email VARCHAR(255),
+                    phone VARCHAR(50),
+                    address TEXT,
+                    notes TEXT,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_by INTEGER,
+                    line_name VARCHAR(255),
+                    postal_code VARCHAR(20),
+                    prefecture VARCHAR(50),
+                    city VARCHAR(100),
+                    address1 VARCHAR(255),
+                    address2 VARCHAR(255),
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
@@ -57,19 +68,49 @@ async def _ensure_smoke_schema(engine) -> None:
                 """
                 CREATE TABLE IF NOT EXISTS public.products (
                     id BIGSERIAL PRIMARY KEY,
-                    tenant_id INTEGER,
                     product_code VARCHAR(50),
-                    category VARCHAR(100),
-                    mark VARCHAR(100),
                     name VARCHAR(255) NOT NULL,
                     name_en VARCHAR(255),
-                    required_output_value VARCHAR(255),
-                    release_date DATE,
-                    unit VARCHAR(20),
+                    description TEXT,
+                    unit_price NUMERIC(15, 2),
+                    unit_price_usd NUMERIC(15, 2),
+                    unit_price_eur NUMERIC(15, 2),
+                    stock_quantity INTEGER NOT NULL DEFAULT 0,
+                    jan_code VARCHAR(20),
+                    card_number VARCHAR(50),
+                    expansion_code VARCHAR(20),
+                    rarity VARCHAR(20),
+                    language VARCHAR(10),
+                    image_url VARCHAR(500),
+                    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+                    archived_at TIMESTAMPTZ,
+                    supplier_default_id INTEGER REFERENCES public.suppliers(id) ON DELETE SET NULL,
+                    category VARCHAR(100),
+                    mark VARCHAR(100),
+                    status VARCHAR(20) DEFAULT 'active',
+                    condition VARCHAR(50),
+                    weight NUMERIC(10, 3),
+                    notes TEXT,
                     tcg_type VARCHAR(50),
-                    stock_quantity INTEGER DEFAULT 0,
-                    supplier_default_id INTEGER,
-                    is_archived BOOLEAN DEFAULT FALSE,
+                    product_kind VARCHAR(50) DEFAULT 'TCG',
+                    set_type VARCHAR(50),
+                    unit VARCHAR(20),
+                    boxes_per_case INTEGER,
+                    packs_per_box INTEGER,
+                    box_weight_kg NUMERIC(8, 3),
+                    case_weight_kg NUMERIC(8, 3),
+                    release_date DATE,
+                    moq INTEGER,
+                    hs_code VARCHAR(20),
+                    material VARCHAR(50),
+                    volume_weight NUMERIC(8, 3),
+                    search_keywords TEXT,
+                    exclude_keywords TEXT,
+                    related_series VARCHAR(255),
+                    category_classification VARCHAR(100),
+                    required_output_value VARCHAR(255),
+                    item VARCHAR(255),
+                    display_order INTEGER,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
@@ -82,7 +123,7 @@ async def _ensure_smoke_schema(engine) -> None:
                 CREATE TABLE IF NOT EXISTS public.inventory (
                     id BIGSERIAL PRIMARY KEY,
                     supplier_id INTEGER NOT NULL REFERENCES public.suppliers(id) ON DELETE CASCADE,
-                    product_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL REFERENCES public.products(id) ON DELETE RESTRICT,
                     condition VARCHAR(50) NOT NULL,
                     quantity INTEGER NOT NULL DEFAULT 0,
                     unit_price INTEGER NOT NULL DEFAULT 0,
@@ -95,10 +136,21 @@ async def _ensure_smoke_schema(engine) -> None:
                     offered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     expires_at TIMESTAMPTZ,
                     source VARCHAR(50) NOT NULL DEFAULT 'manual',
+                    source_kind VARCHAR(10) NOT NULL DEFAULT 'B_feed',
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    UNIQUE (supplier_id, product_id, condition)
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_offer_key
+                    ON public.inventory (
+                        supplier_id, product_id, condition,
+                        COALESCE(unit, ''), offer_type, COALESCE(ship_timing, '')
+                    )
                 """
             )
         )
@@ -142,14 +194,14 @@ async def _seed_inventory_smoke(engine) -> dict[str, object]:
     async with engine.begin() as conn:
         product_id = (
             await conn.execute(
-                text(
-                    """
-                    INSERT INTO public.products
-                        (tenant_id, product_code, category, mark, name, name_en,
+                    text(
+                        """
+                        INSERT INTO public.products
+                        (product_code, category, mark, name, name_en,
                          required_output_value, release_date, unit, tcg_type)
                     VALUES
-                        (6, :code, 'Pokemon', 'SMOKE', :name, :name_en,
-                         :series, DATE '2026-09-16', 'box', 'card')
+                        (:code, 'Pokemon', 'SMOKE', :name, :name_en,
+                         :series, DATE '2026-09-16', 'box', 'pokemon_booster_box')
                     RETURNING id
                     """
                 ),
@@ -175,9 +227,9 @@ async def _seed_inventory_smoke(engine) -> dict[str, object]:
                     text(
                         """
                         INSERT INTO public.suppliers
-                            (tenant_id, supplier_code, name, supplier_type, default_language)
+                            (supplier_code, name, supplier_type, default_language)
                         VALUES
-                            (6, :code, :name, 'corporate', 'ja')
+                            (:code, :name, 'corporate', 'ja')
                         RETURNING id
                         """
                     ),
@@ -192,11 +244,11 @@ async def _seed_inventory_smoke(engine) -> dict[str, object]:
                         INSERT INTO public.inventory
                             (supplier_id, product_id, condition, quantity, unit_price,
                              unit, offer_type, ship_timing, status, notes_ja, notes_en,
-                             offered_at, expires_at, source)
+                             offered_at, expires_at, source, source_kind)
                         VALUES
                             (:supplier_id, :product_id, 'Sealed box', :quantity, :unit_price,
                              'box', 'in_stock', NULL, 'in_stock', NULL, NULL,
-                             :offered_at, :expires_at, 'manual')
+                             :offered_at, :expires_at, 'manual', 'B_feed')
                         RETURNING id
                         """
                     ),
