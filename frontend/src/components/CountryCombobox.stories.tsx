@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CountryCombobox } from './CountryCombobox'
 import { api } from '../lib/api'
@@ -9,7 +10,9 @@ const MOCK_COUNTRIES = [
   { code: 'SG', name: 'Singapore', dial_code: '+65', is_active: true },
 ]
 
-function CountryComboboxStory(props: StoryObj<typeof CountryCombobox>['args']) {
+type CountryComboboxStoryProps = ComponentProps<typeof CountryCombobox>
+
+function CountryComboboxStory(props: CountryComboboxStoryProps) {
   const originalGet = api.get
   api.get = async () => MOCK_COUNTRIES as any
 
