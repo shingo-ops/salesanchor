@@ -165,6 +165,21 @@ PYEOF
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
 
+  if [ "${IS_DONE}" -eq 0 ]; then
+    # CLOSED（却下）PR も削除対象: mergedAt=null かつ state=CLOSED
+    # マージせず閉じられたブランチ（放棄・却下）は保持する意味がない
+    # PRなし（CLOSED_COUNT=0）は保護のまま（保護条件変えず）
+    # 未保存保護は前段（チェック2）で既に通過済み → CLOSED でも未保存なら削除しない
+    CLOSED_COUNT=$(gh pr list \
+      --repo "${REPO_NAME}" \
+      --state closed \
+      --head "${BRANCH}" \
+      --json number,baseRefName,mergedAt \
+      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main") | select(.mergedAt == null)] | length' \
+      2>/dev/null || echo "0")
+    [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
+  fi
+
   # DONE またはマージ済み → 削除候補
   if [ "${IS_DONE}" -eq 1 ]; then
     WILL_DELETE+=("${BRANCH}::${WORKTREE_PATH}")
