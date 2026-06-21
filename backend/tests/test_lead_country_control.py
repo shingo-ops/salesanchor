@@ -81,10 +81,9 @@ async def test_lead_country_backfill_and_rls_readability_under_tenant_006():
 
     try:
         async with admin_engine.connect() as conn:
-            tenant_row = await conn.execute(
-                text("SELECT id FROM public.tenants WHERE tenant_code = 'tenant_006'")
-            )
-            tenant_id = tenant_row.scalar_one_or_none()
+            tenant_id = await conn.scalar(text("SELECT tenant_id FROM tenant_006.leads ORDER BY id LIMIT 1"))
+            if tenant_id is None:
+                tenant_id = await conn.scalar(text("SELECT tenant_id FROM tenant_006.companies ORDER BY id LIMIT 1"))
         assert tenant_id is not None
 
         async def override_get_current_user():
