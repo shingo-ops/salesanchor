@@ -345,6 +345,38 @@
   --schedule-nav-btn-size:   32px;   /* カレンダーナビボタン幅・高さ */
   --schedule-allday-row-h:   24px;   /* 終日エリア固定高（デスクトップ≥1280px） */
   --schedule-day-num-size:   1.625rem; /* 26px — カレンダー日付数字（曜日ヘッダー） */
+  --schedule-today:          var(--accent-bright); /* 今日の丸囲み・アクティブ強調 */
+  --schedule-gridline:       var(--calendar-grid-border); /* 時間グリッド/日列の罫線 */
+  --schedule-now-line:       #ea4335;  /* 現在時刻ライン */
+  --schedule-slot-hover:     rgba(37, 99, 235, .045); /* 空きスロット hover */
+  --schedule-row-height:     48px;     /* 1時間の高さ（標準） */
+  --schedule-row-height-compact: 40px; /* 1時間の高さ（コンパクト） */
+  --schedule-time-gutter-width: 60px;  /* 左の時刻ガリー幅 */
+  --schedule-leftpanel-width: 256px;   /* 左パネル幅 */
+  --schedule-event-radius:   6px;      /* 予定カード角丸 */
+  --schedule-shell-gap:      var(--space-5); /* 左パネルとメインの間隔 */
+  --schedule-shell-radius:   var(--radius-lg); /* スケジュール面の角丸 */
+  --schedule-popover-width:  20rem;    /* 詳細ポップオーバー幅 */
+  --schedule-popover-max-h:  34rem;    /* 詳細ポップオーバー最大高 */
+  --schedule-month-cell-min-h: 7.5rem; /* 月ビューのセル最小高 */
+  --schedule-rail-bg:        var(--bg-surface); /* 左パネル/レール面背景 */
+  --schedule-rail-border:    var(--border); /* 左パネル/レール枠線 */
+  --schedule-cell-border:    var(--schedule-gridline); /* 時間グリッド罫線 */
+  --schedule-hour-bg:        var(--bg-surface); /* 時刻列背景 */
+  --schedule-hour-label:     var(--text-muted); /* 時刻列ラベル色 */
+  --schedule-day-min-w:      10rem;    /* 日列の最小幅 */
+  --schedule-empty-icon-bg:  var(--calendar-google-blue-light); /* 空状態アイコン背景 */
+  --schedule-empty-icon-color: var(--calendar-google-blue); /* 空状態アイコン前景 */
+  --schedule-control-border: var(--border); /* ビュー/操作コントロール枠線 */
+
+  /* ---- Schedule category colors (Google Calendar handoff) ---- */
+  --cal-personal:        #1e3a8a;  --cal-personal-tint: #e9edf7;  --cal-personal-text: #1e3a8a;
+  --cal-meeting:         #2563eb;  --cal-meeting-tint:  #e7eefc;  --cal-meeting-text:  #1d4ed8;
+  --cal-purchase:        #2e7d32;  --cal-purchase-tint: #e6f3e8;  --cal-purchase-text: #22613f;
+  --cal-shipping:        #7c3aed;  --cal-shipping-tint: #efe8fb;  --cal-shipping-text: #5b3aa8;
+  --cal-billing:         #d97706;  --cal-billing-tint:  #fbeede;  --cal-billing-text:  #9a5800;
+  --cal-release:         #0d9488;  --cal-release-tint:  #e0f1ef;  --cal-release-text:  #0b6e66;
+  --cal-holiday:         #64748b;  --cal-holiday-tint:  #eef1f4;  --cal-holiday-text:  #475569;
 
   /* ---- Field sizes ---- */
   --min-width-input-sm:   120px;  /* 小型入力フィールド最小幅 */
@@ -491,4 +523,18 @@
     --schedule-slot-h:       40px;  /* タイムグリッド1時間スロット高（タブレット） */
     --schedule-allday-row-h: 14px;  /* 終日エリア固定高（タブレット） */
   }
+}
+
+/* ---- Schedule category dark palette ---- */
+:root.force-dark {
+  --cal-personal:  #6f8fd6; --cal-personal-tint: #1c2742; --cal-personal-text: #aac3ef;
+  --cal-meeting:   #5b8dd9; --cal-meeting-tint:  #16263f; --cal-meeting-text:  #9dc0ef;
+  --cal-purchase:  #5bb36a; --cal-purchase-tint: #142c1b; --cal-purchase-text: #a7e0b2;
+  --cal-shipping:  #a78bfa; --cal-shipping-tint: #271a45; --cal-shipping-text: #cdb6fb;
+  --cal-billing:   #e0a35a; --cal-billing-tint:  #3a2a10; --cal-billing-text:  #f1c48e;
+  --cal-release:   #2dd4bf; --cal-release-tint:  #0c322d; --cal-release-text:  #8de6da;
+  --cal-holiday:   #94a3b8; --cal-holiday-tint:  #1f2a3a; --cal-holiday-text:  #c2cdda;
+
+  --schedule-gridline:  #2d3b52;
+  --schedule-slot-hover: rgba(91, 141, 217, .10);
 }
