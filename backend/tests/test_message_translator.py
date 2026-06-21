@@ -26,17 +26,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services import message_translator
-from app.services.llm_budget import BudgetStatus
 from app.services.message_translator import (
-    MODEL_SEND,
     BudgetExceededError,
+    detect_inbound_language,
+    ensure_inbound_translations,
+    MODEL_RECEIVE,
+    MODEL_SEND,
     LegacyTranslationResult,
+    TranslationResult,
     _parse_translation_response,
     generate_outbound_draft,
     translate_inbound,
-    translate_inbound_languages,
     translate_message,
 )
+from app.services.llm_budget import BudgetStatus
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -87,6 +91,23 @@ def _install_fake_genai(response: MagicMock) -> MagicMock:
 # ---------------------------------------------------------------------------
 # _parse_translation_response
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "has_kana", "has_latin_word"),
+    [
+        ("こんにちは", True, False),
+        ("在庫確認", False, False),
+        ("こんにちは stock", True, True),
+        ("Hello stock", False, True),
+        ("¿Hay stock?", False, True),
+        ("123 😊", False, False),
+    ],
+)
+def test_detect_inbound_language(text: str, has_kana: bool, has_latin_word: bool):
+    signals = detect_inbound_language(text)
+    assert signals.has_kana is has_kana
+    assert signals.has_latin_word is has_latin_word
 
 
 def test_parse_valid_json():
@@ -264,69 +285,184 @@ async def test_no_budget_row_raises_error():
 
 
 @pytest.mark.asyncio
-async def test_translate_inbound_languages_english_original_skips_en_translation():
+async def test_translate_inbound_override_persists_to_save():
     db = AsyncMock()
-    primary_result = MagicMock(
-        translated_text="こんにちは",
-        cached=False,
-        engine="gemini-1.5-flash",
-        confidence=0.94,
-        original_language="en",
-    )
+    fake_resp = _make_gemini_json_response("テスト翻訳", confidence=0.88, original_language="en")
+    _install_fake_genai(fake_resp)
 
-    with patch(
-        "app.services.message_translator.translate_inbound",
-        AsyncMock(return_value=primary_result),
-    ) as translate_mock:
-        results = await translate_inbound_languages(
+    with patch.object(
+        message_translator,
+        "_get_cached_translation",
+        new_callable=AsyncMock,
+        return_value=None,
+    ), patch(
+        "app.services.message_translator.load_glossary",
+        new_callable=AsyncMock,
+        return_value=[],
+    ), patch(
+        "app.services.message_translator.check_budget",
+        new_callable=AsyncMock,
+        return_value=BudgetStatus.UNDER,
+    ), patch(
+        "app.services.message_translator.record_cost",
+        new_callable=AsyncMock,
+    ), patch.object(
+        message_translator,
+        "_save_translation",
+        new_callable=AsyncMock,
+    ) as mock_save, patch(
+        "app.services.message_translator._ensure_api_key",
+        return_value="fake-key",
+    ):
+        result = await translate_inbound(
             db=db,
             tenant_id=1,
             table_ref="tenant_001.message_translations",
-            message_id="mid-en",
-            message_text="Hello there",
+            message_id="mid_override",
+            message_text="こんにちは stock",
+            target_language="en",
+            original_language_override="ja",
+    )
+
+    assert result.original_language == "ja"
+    save_args = mock_save.await_args.args
+    assert save_args[7] == "ja"
+
+
+@pytest.mark.asyncio
+async def test_ensure_inbound_translations_kana_only_en():
+    db = AsyncMock()
+    result = TranslationResult(
+        translated_text="translated",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.9,
+        original_language="ja",
+        flagged_terms=[],
+    )
+    with patch(
+        "app.services.message_translator.translate_inbound",
+        AsyncMock(return_value=result),
+    ) as translate_mock:
+        results = await ensure_inbound_translations(
+            db=db,
+            tenant_id=1,
+            table_ref="tenant_001.message_translations",
+            message_id="mid_kana",
+            message_text="こんにちは",
         )
 
-    assert set(results) == {"ja"}
-    assert results["ja"].original_language == "en"
-    assert translate_mock.await_count == 1
+    assert list(results.keys()) == ["en"]
+    translate_mock.assert_awaited_once()
+    kwargs = translate_mock.await_args.kwargs
+    assert kwargs["target_language"] == "en"
+    assert kwargs["original_language_override"] == "ja"
+
+
+@pytest.mark.asyncio
+async def test_ensure_inbound_translations_mixed_text_both_targets():
+    db = AsyncMock()
+    ja_result = TranslationResult(
+        translated_text="ja text",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.9,
+        original_language="ja",
+        flagged_terms=[],
+    )
+    en_result = TranslationResult(
+        translated_text="en text",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.9,
+        original_language="ja",
+        flagged_terms=[],
+    )
+    with patch(
+        "app.services.message_translator.translate_inbound",
+        AsyncMock(side_effect=[ja_result, en_result]),
+    ) as translate_mock:
+        results = await ensure_inbound_translations(
+            db=db,
+            tenant_id=1,
+            table_ref="tenant_001.message_translations",
+            message_id="mid_mixed",
+            message_text="こんにちは stock",
+        )
+
+    assert list(results.keys()) == ["ja", "en"]
+    assert translate_mock.await_count == 2
+    first = translate_mock.await_args_list[0].kwargs
+    second = translate_mock.await_args_list[1].kwargs
+    assert first["target_language"] == "ja"
+    assert first["original_language_override"] == "ja"
+    assert second["target_language"] == "en"
+    assert second["original_language_override"] == "ja"
+
+
+@pytest.mark.asyncio
+async def test_ensure_inbound_translations_no_kana_en_original_skips_en():
+    db = AsyncMock()
+    ja_result = TranslationResult(
+        translated_text="translated ja",
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.9,
+        original_language="en",
+        flagged_terms=[],
+    )
+    with patch(
+        "app.services.message_translator.translate_inbound",
+        AsyncMock(return_value=ja_result),
+    ) as translate_mock:
+        results = await ensure_inbound_translations(
+            db=db,
+            tenant_id=1,
+            table_ref="tenant_001.message_translations",
+            message_id="mid_en",
+            message_text="Hello stock",
+        )
+
+    assert list(results.keys()) == ["ja"]
+    translate_mock.assert_awaited_once()
     assert translate_mock.await_args.kwargs["target_language"] == "ja"
 
 
 @pytest.mark.asyncio
-async def test_translate_inbound_languages_non_english_adds_en_translation():
+async def test_ensure_inbound_translations_no_kana_non_en_requires_both():
     db = AsyncMock()
-    primary_result = MagicMock(
-        translated_text="こんにちは",
+    ja_result = TranslationResult(
+        translated_text="translated ja",
         cached=False,
         engine="gemini-1.5-flash",
-        confidence=0.91,
-        original_language="ja",
+        confidence=0.9,
+        original_language="es",
+        flagged_terms=[],
     )
-    english_result = MagicMock(
-        translated_text="Hello",
+    en_result = TranslationResult(
+        translated_text="translated en",
         cached=False,
         engine="gemini-1.5-flash",
-        confidence=0.93,
-        original_language="ja",
+        confidence=0.9,
+        original_language="es",
+        flagged_terms=[],
     )
-
     with patch(
         "app.services.message_translator.translate_inbound",
-        AsyncMock(side_effect=[primary_result, english_result]),
+        AsyncMock(side_effect=[ja_result, en_result]),
     ) as translate_mock:
-        results = await translate_inbound_languages(
+        results = await ensure_inbound_translations(
             db=db,
             tenant_id=1,
             table_ref="tenant_001.message_translations",
-            message_id="mid-ja",
-            message_text="こんにちは",
+            message_id="mid_es",
+            message_text="Hola stock",
         )
 
-    assert set(results) == {"ja", "en"}
-    assert results["ja"].translated_text == "こんにちは"
-    assert results["en"].translated_text == "Hello"
+    assert list(results.keys()) == ["ja", "en"]
     assert translate_mock.await_count == 2
-    assert [call.kwargs["target_language"] for call in translate_mock.await_args_list] == ["ja", "en"]
+    assert translate_mock.await_args_list[0].kwargs["target_language"] == "ja"
+    assert translate_mock.await_args_list[1].kwargs["target_language"] == "en"
 
 
 # ---------------------------------------------------------------------------
@@ -480,9 +616,8 @@ async def test_confirm_outbound_already_confirmed_returns_false():
 
 def test_translate_request_validation():
     """_TranslateRequest: target_language が空の場合 ValidationError。"""
-    from pydantic import ValidationError
-
     from app.routers.leads import _TranslateRequest
+    from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
         _TranslateRequest(target_language="")
