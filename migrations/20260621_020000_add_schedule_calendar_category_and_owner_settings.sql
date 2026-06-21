@@ -25,6 +25,10 @@ BEGIN
       CONTINUE;
     END IF;
 
+    IF to_regclass(format('%I.calendar_events', schema_rec.nspname)) IS NULL THEN
+      CONTINUE;
+    END IF;
+
     EXECUTE format(
       'ALTER TABLE %I.calendar_events
          ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT ''meeting''',
