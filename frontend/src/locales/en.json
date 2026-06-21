@@ -2486,7 +2486,16 @@
     "connectBtn": "Google Calendar",
     "connectBtnConnected": "✔︎ Connected",
     "connectBtnError": "× Connection Error",
-    "viewSelect": "Select view"
+    "viewSelect": "Select view",
+    "calendarLabels": {
+      "personal": "Personal",
+      "meeting": "Meetings",
+      "procurement": "Purchasing / Inbound",
+      "shipping": "Shipping / Pickup",
+      "billing": "Billing / Payments",
+      "release": "New Releases",
+      "holiday": "Japan Holidays"
+    }
   },
   "inventoryVisibility": {
     "title": "Inventory Visibility Settings",

@@ -6,7 +6,7 @@
  * ADR-067: 色・寸法は CSS 変数参照のみ。
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -793,8 +793,10 @@ export default function SchedulePage() {
   const [reloadTick, setReloadTick] = useState(0);
   const [, setNowTick] = useState(0);
 
-  const rangeStart = toRangeStart(view, anchorDate);
-  const rangeEnd = toRangeEnd(view, anchorDate);
+  // useMemo で参照を安定させる: 毎レンダーで new Date() が生成されると
+  // Object.is 比較が false になり useEffect が際限なく再発火する（shifts 500 無限ループの根本原因）
+  const rangeStart = useMemo(() => toRangeStart(view, anchorDate), [view, anchorDate]);
+  const rangeEnd = useMemo(() => toRangeEnd(view, anchorDate), [view, anchorDate]);
   const currentMonth = view === "month" ? anchorDate : startOfMonth(anchorDate);
 
   useEffect(() => {
@@ -861,6 +863,7 @@ export default function SchedulePage() {
         }
       } catch (err) {
         if (!cancelled) {
+          setEvents([]);  // タイムアウト・例外時も空配列で空状態へ遷移させスピナーを解除
           setError(err instanceof Error ? err.message : t("schedule.errorFetch"));
         }
       } finally {
