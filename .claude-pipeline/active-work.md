@@ -22,12 +22,22 @@
 | codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
 | feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
 | feature/morimoto/schedule-gcal-pr1-tokens | Schedule Google Calendar UI PR2/PR3/PR4 カレンダー本体 + settings + backend category | 2026-06-20 | IN_PROGRESS | | | `SchedulePage.tsx` を内製グリッドへ置換し、`/schedule/settings` と backend の `calendar_events.category` / `/calendar/events` レスポンス拡張、フロントの API 優先正規化、保守的 backfill migration 追加まで完了 |
+| codex/inventory-aggregation-preserve | 在庫集計サービス＋ゴールデンをVCSに保存（CI発火確認） | 2026-06-22 | IN_PROGRESS | | | |
+| codex/fix-schedule-parity | Foundation F1 国台帳 `public.countries` 新設 | 2026-06-21 | IN_PROGRESS | | | `backend/app/routers/countries.py` / `backend/tests/test_countries_master.py` / `migrations/20260621_010000_create_countries_master.sql` |
+| feature/morimoto/pr-e-human-go-gate | process-artifacts gate PR-E（ユーザー影響変更の Shingo GO 必須化） | 2026-06-21 | DONE | #2410 | | `scripts/check-process-artifacts.js` / `scripts/tests/test-process-artifacts.js` / `docs/STANDARD-WORKFLOW.md` / `docs/handoff/incident-paypal-invoicing-false-complete/design.md`。`backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` と **PR-C の外部API検出で見つかる変更**を対象に含めるよう修正し、更新 push 済み。Shingo GO 待ち |
+| feature/morimoto/discord-ticket-lang-refactor | Discord ticket inbound 二言語化リファクタ PR | 2026-06-21 | IN_PROGRESS | | | backend/app/services/message_translator.py + backend/app/tasks/translation.py + backend/app/services/translation_monitor.py + backend/app/routers/conv_logs.py |
+| feature/morimoto/discord-ticket-lang-refactor-code | Discord ticket inbound 二言語化リファクタ PR | 2026-06-21 | IN_PROGRESS | | | backend/app/services/message_translator.py + backend/app/tasks/translation.py + backend/app/services/translation_monitor.py + backend/app/routers/conv_logs.py |
+| feature/morimoto/discord-ticket-lang-refactor-clean | Discord ticket inbound 二言語化リファクタ PR | 2026-06-21 | IN_PROGRESS | | | backend/app/services/message_translator.py + backend/app/tasks/translation.py + backend/app/services/translation_monitor.py + backend/app/routers/conv_logs.py |
+| feature/condition-stage2-base | condition stage2a 軸列追加・並行書き・防御的 backfill | 2026-06-22 | IN_PROGRESS | | | `backend/app/services/inventory_axes.py` / `backend/app/services/inventory_movements.py` / `backend/app/routers/inventory_offers.py` / `migrations/20260623_010000_add_inventory_axes_columns.sql` |
+| feature/morimoto/schedule-gcal-pr1-tokens | Schedule Google Calendar UI PR2/PR3/PR4 カレンダー本体 + settings + backend category | 2026-06-20 | DONE | #2379 | main | `SchedulePage.tsx` を内製グリッドへ置換し、`/schedule/settings` と backend の `calendar_events.category` / `/calendar/events` レスポンス拡張、フロントの API 優先正規化、保守的 backfill migration 追加まで完了。release PR #2379 は main へマージ済み |
+>>>>>>> 9fb73b8c (chore: active-work.md に codex/inventory-aggregation-preserve を登録)
 | feature/morimoto/paypal-sandbox-failcheck | PayPal Sandbox smoke coverage閾値除去 | 2026-06-20 | COMPLETED | #2354 | green | run 27833818674 / gate 27833818677 を確認済み |
+| docs/pr-d-completion-definition | PR-D 完了の定義（docs-only）STANDARD-WORKFLOW.md + design.md | 2026-06-21 | DONE | #2398 | | merge commit 09241796 |
+| feature/morimoto/sidebar-click-collapse | サイドバーの自動展開抑止（クリック後だけ一時停止） | 2026-06-19 | IN_PROGRESS | | | click後の hover 再展開を抑止 |
 | dashboard-pr2 | Discord ticket gateway visibility + lead紐付け修正 | 2026-06-19 | IN_PROGRESS | | | #2360 反映後の follow-up 修正 |
 | docs/fedex-pr-a4-recon-design | FedEx A4 接続テスト結果保存 recon/design（docs-only） | 2026-06-14 | DONE | | | |
 | feature/morimoto/dev-workflow-improvements | 開発ワークフロー改善 | 2026-06-02 | DONE | | | |
 | feature/morimoto/invoice-issuer-path-fix | 請求書作成 発行者情報ボタンパス修正 | 2026-06-02 | DONE | | | |
-| feature/morimoto/etd-scaffold-adr137 | ADR-137 ETD骨格 / owner: shingo | 2026-06-19 09:00 | DONE | #2340 | | merged:ce03ca3 |
 
 | feature/morimoto/pre-commit-active-work-exception | （記入してください） | 2026-06-02 10:40 | DONE | | | |
 | feature/morimoto/fix-release-pr-drawbacks | （記入してください） | 2026-06-02 10:42 | DONE | | | |
@@ -159,21 +169,34 @@
 | feature/morimoto/paypal-invoice-invoicer-fix | PayPal 請求書 422 根本修正（invoicer email 明示） | 2026-06-16 01:00 | IN_PROGRESS | | | |
 | main | （自動登録） | 2026-06-18 05:04 | DONE | #2314 | | merged:42d4d8a merged時自動登録・要確認 |
 | feature/morimoto/funnel-dashboard-stage1-seed-fix | （自動登録・要補完） | 2026-06-18 08:07 | REVIEW | #2346 | | 自動登録 |
-| feature/morimoto/etd-scaffold-adr137 | （自動登録・要補完） | 2026-06-18 13:13 | DONE | #2340 | | 自動登録 merged:ce03ca3 |
-| feature/morimoto/executor-preflight-hook | （自動登録） | 2026-06-19 00:27 | DONE | #2347 | | merged:1e0efff merged時自動登録・要確認 |
-| feature/morimoto/paypal-sandbox-smoke | （自動登録・要補完） | 2026-06-19 00:46 | DONE | #2341 | | 自動登録 merged:db00260 |
-| feature/morimoto/develop-delete-guardrails | （自動登録・要補完） | 2026-06-19 01:02 | DONE | #2350 | | 自動登録 merged:93f0d22 |
-| feature/morimoto/qa-smoke-playwright-package | （自動登録・要補完） | 2026-06-19 01:03 | REVIEW | #2351 | | 自動登録 |
-| feature/morimoto/develop-guard-workflow | （自動登録・要補完） | 2026-06-19 01:12 | REVIEW | #2353 | | 自動登録 |
-| feature/morimoto/paypal-external-api-smoke | PayPal external API smoke ワークフロー復旧 | 2026-06-19 09:43 | DONE | #2349 | | merged:a8a6eca |
 | feat/loading-parts | loading / feedback 共用部品追加 | 2026-06-19 15:27 | DONE | #2363 | 2026-06-19 | PR #2363 merged / main deploy #2361 success |
 | feature/morimoto/sidebar-auto-collapse-fix | （記入してください） | 2026-06-19 22:56 | IN_PROGRESS | | | |
 | feature/morimoto/sidebar-hover-suppression | （記入してください） | 2026-06-20 00:08 | DONE | | | |
-| feature/morimoto/discord-ticket-immediate-translation-2 | Meta受信の即時二言語翻訳 A2（Messenger/Instagram） | 2026-06-20 00:19 | IN_PROGRESS | | | develop 取り込み済み、Meta inbound 保存直後に翻訳 enqueue |
+| feature/morimoto/discord-ticket-immediate-translation-2 | （記入してください） | 2026-06-20 00:19 | IN_PROGRESS | | | |
+| feature/morimoto/translation-double-lang-a1 | Discord ticket translation ダブル言語対応 A1 | 2026-06-20 | DONE | #2389 | | PR #2389 merged into develop |
 | feature/morimoto/advisor-phase1-pr3-customer-contact | （記入してください） | 2026-06-20 02:15 | IN_PROGRESS | | | |
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
-| feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
-| feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | IN_PROGRESS | | | `frontend/src/pages/goal-setting/GoalSettingPage.tsx` / `frontend/src/pages/goal-setting/GoalSettingPage.css` / `frontend/tests-e2e/goal-setting-advisor.spec.ts` |
+| feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | DONE | #2387 | 2026-06-20 | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
+| feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | DONE | | | `frontend/src/pages/goal-setting/GoalSettingPage.tsx` / `frontend/src/pages/goal-setting/GoalSettingPage.css` / `frontend/tests-e2e/goal-setting-advisor.spec.ts` |
+| hotfix/morimoto/paypal-smoke-no-cov-v2 | （記入してください） | 2026-06-20 21:41 | DONE | | | |
+| shingo-cc/back-merge-main-develop-2394 | （記入してください） | 2026-06-20 22:57 | IN_PROGRESS | | | |
+| shingo-cc/fix-discord-gateway-celery-redis | discord-gateway Celery Redis auth fix | 2026-06-21 11:28 | IN_PROGRESS | | | `discord-gateway` に Celery の Redis 認証付き URL を注入 |
+| feature/morimoto/advisor-weekly-w1-defensive-api | （記入してください） | 2026-06-20 22:59 | DONE | | | |
+| feature/morimoto/schedule-parity | （記入してください） | 2026-06-21 08:20 | IN_PROGRESS | | | |
+| feature/morimoto/schedule-parity-v2 | （記入してください） | 2026-06-21 08:20 | IN_PROGRESS | | | |
+| feature/morimoto/advisor-weekly-w1b | （記入してください） | 2026-06-21 09:07 | IN_PROGRESS | | | |
+| feature/morimoto/schedule-token-root-defs-v2 | （記入してください） | 2026-06-21 11:35 | IN_PROGRESS | | | |
+| feature/morimoto/schedule-create-btn-fix | （記入してください） | 2026-06-21 20:41 | DONE | | | |
+| feature/morimoto/schedule-header-fix | （記入してください） | 2026-06-21 22:25 | DONE | | | |
+| feature/morimoto/schedule-nowrap-sticky | （記入してください） | 2026-06-21 23:06 | DONE | | | |
+| feature/morimoto/reaper-closed-pr-fix | （記入してください） | 2026-06-21 23:32 | DONE | | | |
+| feature/morimoto/schedule-owner-base | カレンダーを担当者ベース表示へ移行し、owner roster/settings API・owner colors・`/schedule/settings` を追加。PR #2442 を develop、release PR #2443 を main へ反映済み | 2026-06-21 23:57 | DONE | #2442, #2443 | main | `backend/app/routers/calendar.py` / `backend/app/services/calendar_service.py` / `frontend/src/pages/schedule/SchedulePageImpl.tsx` / `frontend/src/pages/schedule/ScheduleSettingsPage.tsx` / `migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql` |
+| feature/morimoto/fix-migration-080-untracked | （記入してください） | 2026-06-22 00:09 | DONE | | | |
+| feature/morimoto/ssot-meta-history-columns | （記入してください） | 2026-06-22 00:10 | DONE | | | |
+| feature/morimoto/prc-final-doc-align | （記入してください） | 2026-06-22 00:11 | IN_PROGRESS | | | |
+| feature/morimoto/reaper-fix2-scan-all | （記入してください） | 2026-06-22 00:24 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-etd-migration | （記入してください） | 2026-06-22 01:15 | IN_PROGRESS | | | |
+| feature/morimoto/gate-diff-3dot | 関所 git diff を2点→3点形式に変更（古い土台による巻き込み誤爆解消） | 2026-06-22 | IN_PROGRESS | | | `scripts/check-process-artifacts.js:529` |
 ---
 
 ## 記入例
@@ -225,5 +248,6 @@
 | hotfix/morimoto/reaper-fallback-main | reaper .worktree-id fallback を main に cherry-pick（ADR-114 STEP 0） | 2026-06-18 | IN_PROGRESS | | main | #2325 cherry-pick |
 | feature/morimoto/worktree-adr114-pr-c1 | ADR-114 PR-C1: flock追加・起動時reaper plist・docs/ADR更新 | 2026-06-18 | IN_PROGRESS | | | |
 | feature/morimoto/schedule-8issues-fix | スケジュールページ 8件本番バグ修正 | 2026-06-21 | DONE | #2411 | | merged |
-| feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | IN_PROGRESS | | | |
+| feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | DONE | | | |
 | feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |
+| feature/morimoto/inbound-translation-entry | 受信翻訳の標準入口 + Meta onboard | 2026-06-21 23:30 | DONE | | | backend/app/services/inbound_translation.py / backend/app/discord_gateway/ticket_channel_writer.py / backend/app/routers/webhook.py |
