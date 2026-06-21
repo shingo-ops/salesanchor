@@ -112,6 +112,14 @@ PayPal 請求書発行の PR #1980 では、自己申告とモックテストの
 - そのため PR-F は「既存 deploy 安全網の確認」と「ステージング前提の事前リハーサル」を分けて管理する。
 - `docs/adr/ADR-1000-external-api-smoke-mandatory.md` にも同じ区切りを記録する。
 
+### PR-F の決定
+
+- 本番デプロイの安全化については、`deploy.yml` に **Pre-deploy DB backup**、**backend health check**、**health 失敗時の自動ロールバック**、**blue-green 切替** が既に実装されている。
+- したがって PR-F のうち **deploy 後 health + auto-rollback は既達** と扱う。
+- 残る **別環境での事前リハーサル** は、ステージング環境が前提であり、ローンチ後に構築する。
+- そのため PR-F は「既存 deploy 安全網の確認」と「ステージング前提の事前リハーサル」を分けて管理する。
+- `docs/adr/ADR-1000-external-api-smoke-mandatory.md` にも同じ区切りを記録する。
+
 ### 既存ゲートの束ね
 
 - 自動チェック部分は PR-A/B（外部APIスモーク）＋PR-C（検出）＋process-artifacts gate＋CI が担保する。
