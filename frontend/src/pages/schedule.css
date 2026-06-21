@@ -39,6 +39,7 @@
   flex-direction: column;
   gap: var(--schedule-shell-gap);
   min-height: 0;
+  padding: var(--page-padding-y) var(--page-padding-x); /* #1: 他ページ共通ガター（24px）と揃える */
 }
 
 .schedule-shell__header {
@@ -47,6 +48,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding-bottom: var(--space-1);
+  padding-right: var(--page-header-avatar-clearance); /* #7: 固定アバターとのクリアランス 68px */
 }
 
 .schedule-shell__header-copy {
@@ -54,6 +56,15 @@
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+}
+
+/* #6: ヘッダー左ブロック（brand + 今日/‹›/期間ラベル） */
+.schedule-shell__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
 }
 
 .schedule-shell__brand {
@@ -176,21 +187,21 @@
   position: sticky;
   top: var(--space-4);
   align-self: start;
+  /* #2: フラット単一パネル（カード分割を廃止し右1px罫線のみ） */
+  background: var(--schedule-rail-bg);
+  border-right: 1px solid var(--schedule-rail-border);
+  padding: var(--space-4) var(--space-14px) var(--space-5);
 }
 
 .schedule-sidebar__section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--schedule-rail-bg);
-  border: 1px solid var(--schedule-rail-border);
-  border-radius: var(--schedule-shell-radius);
-  box-shadow: var(--shadow-xs);
+  /* #2: 各セクションのカード化を解除（border/radius/shadow を削除） */
 }
 
 .schedule-sidebar__section--action {
-  padding: var(--space-3);
+  /* no override needed */
 }
 
 .schedule-sidebar__section--calendar {
@@ -200,10 +211,13 @@
 .schedule-sidebar__create {
   border-radius: var(--radius-full);
   min-height: 3rem;
+  display: inline-flex;      /* #3: auto幅（fullWidthを外した後のデフォルト） */
+  align-items: center;        /* #3: icon とテキストの中央揃えを確実に */
   justify-content: flex-start;
-  padding-inline-start: var(--space-4);
+  padding-inline-start: 18px; /* #3: 正本に合わせる */
+  padding-inline-end: var(--space-6);
   font-weight: var(--font-weight-semi);
-  gap: var(--space-2);
+  gap: var(--space-10px);    /* #3: 正本値 */
 }
 
 .schedule-section__title {

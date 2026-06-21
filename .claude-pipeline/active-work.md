@@ -223,3 +223,4 @@
 | docs/morimoto/fedex-etd-stamp-recon | FedEx ETD / Stampステップ失敗原因 recon（docs-only） | 2026-06-15 | IN_PROGRESS | | | |
 | hotfix/morimoto/reaper-fallback-main | reaper .worktree-id fallback を main に cherry-pick（ADR-114 STEP 0） | 2026-06-18 | IN_PROGRESS | | main | #2325 cherry-pick |
 | feature/morimoto/worktree-adr114-pr-c1 | ADR-114 PR-C1: flock追加・起動時reaper plist・docs/ADR更新 | 2026-06-18 | IN_PROGRESS | | | |
+| feature/morimoto/schedule-8issues-fix | スケジュールページ 8件本番バグ修正（P0:auth timeout / P1:padding・avatar / P2:header・sidebar・button・favicon） | 2026-06-21 | IN_PROGRESS | | | |

@@ -61,6 +61,7 @@
     "yes": "はい",
     "no": "いいえ",
     "notAuthenticated": "認証されていません",
+    "authTimeout": "認証の取得がタイムアウトしました。再読み込みしてください",
     "pleaseSelect": "選択してください",
     "detail": "詳細",
     "done": "済",
