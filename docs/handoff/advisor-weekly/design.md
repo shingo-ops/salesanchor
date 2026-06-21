@@ -36,3 +36,4 @@ W-1 API `/analytics/weekly-advisor-defensive` を `scope=mine` で取得し、�
 ## 外部・過去事例の参照と我々への応用
 
 - 該当なし（W-1b は既存ダッシュボードへの UI 差し込みであり、外部導入事例を参照せずとも受け入れ基準を file:line で検証できる）
+- 画面追加のみで、外部API / DB / migration の設計追加は不要
