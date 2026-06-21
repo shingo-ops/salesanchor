@@ -571,39 +571,43 @@ function ScheduleWeekGrid({
         <div className="schedule-grid__gutter schedule-grid__gutter--header">
           <span>{t("schedule.gmtLabel")}</span>
         </div>
-        {days.map((date) => {
-          const today = isSameDay(date, new Date());
-          return (
-            <button
-              key={date.toISOString()}
-              className={`schedule-day-head${today ? " schedule-day-head--today" : ""}`}
-              onClick={(event) => onSelectSlot(date, event.currentTarget.getBoundingClientRect())}
-            >
-              <span className="schedule-day-head__name">{new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(date)}</span>
-              <span className="schedule-day-head__num">{date.getDate()}</span>
-            </button>
-          );
-        })}
+        <div className="schedule-grid__days">
+          {days.map((date) => {
+            const today = isSameDay(date, new Date());
+            return (
+              <button
+                key={date.toISOString()}
+                className={`schedule-day-head${today ? " schedule-day-head--today" : ""}`}
+                onClick={(event) => onSelectSlot(date, event.currentTarget.getBoundingClientRect())}
+              >
+                <span className="schedule-day-head__name">{new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(date)}</span>
+                <span className="schedule-day-head__num">{date.getDate()}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="schedule-grid__allday-row">
         <div className="schedule-grid__gutter schedule-grid__gutter--allday">
           <span>{t("schedule.allDay")}</span>
         </div>
-        {timedDays.map((day) => (
-          <div key={day.date.toISOString()} className="schedule-grid__allday-cell">
-            {day.allDay.map((item) => (
-              <button
-                key={item.id}
-                className="schedule-chip"
-                style={{ background: cssVar(getCalendarMeta(item.category)?.colorVar ?? "--cal-meeting"), color: "var(--on-solid)" }}
-                onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
-              >
-                {item.title}
-              </button>
-            ))}
-          </div>
-        ))}
+        <div className="schedule-grid__days">
+          {timedDays.map((day) => (
+            <div key={day.date.toISOString()} className="schedule-grid__allday-cell">
+              {day.allDay.map((item) => (
+                <button
+                  key={item.id}
+                  className="schedule-chip"
+                  style={{ background: cssVar(getCalendarMeta(item.category)?.colorVar ?? "--cal-meeting"), color: "var(--on-solid)" }}
+                  onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
+                >
+                  {item.title}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="schedule-grid__body">
