@@ -23,6 +23,40 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260622-001
+date: 2026-06-22
+agent: Codex
+task: W-2① 属性別成約率集計 API
+scope: backend/app/routers/analytics.py, backend/tests/test_analytics.py, backend/tests/test_analytics_conversion_by_attribute_rls.py, tasks/todo.md
+evidence:
+  - type: file
+    reference: backend/app/routers/analytics.py
+    summary: /analytics/conversion-by-attribute を追加し、channel_type / country / sales_form / temperature / response_speed の 5 軸を all-time 集計、k=10 shrink、overall_rate 付きで返す read-only endpoint を実装した
+  - type: file
+    reference: backend/tests/test_analytics.py
+    summary: SQLite 契約テストで empty / team / mine / shrink / n 返却を検証した
+  - type: file
+    reference: backend/tests/test_analytics_conversion_by_attribute_rls.py
+    summary: tenant_006 を用いた PG/RLS 実走テストを追加し、RLS 接続変数未設定時は skip になる形で実装した
+  - type: file
+    reference: tasks/todo.md
+    summary: W-2① を進行中タスクとして記録した
+  - type: command
+    reference: ruff check backend/app/routers/analytics.py backend/tests/test_analytics.py backend/tests/test_analytics_conversion_by_attribute_rls.py
+    summary: touched analytics files の静的チェックが通過した
+  - type: command
+    reference: pytest -q backend/tests/test_analytics.py -k conversion_by_attribute --no-cov
+    summary: SQLite 契約テスト 2 件が通過した
+  - type: command
+    reference: pytest -q backend/tests/test_analytics_conversion_by_attribute_rls.py --no-cov
+    summary: PG/RLS 実走テストは接続変数未設定のため 1 件 skip になった
+confidence: medium
+tradeoff: 0-1 スケールの率で返すため、フロント側の表示時に必要ならパーセント換算が要る
+decision: 既存 channels の scope 実装を踏襲しつつ、属性別集計は all-time の read-only endpoint として段階導入する
+follow_up: RLS 接続先を設定した実環境で tenant_006 の実走を再確認し、PR 化する
+```
+
+```text
 id: EV-20260531-002
 date: 2026-05-31
 agent: Codex

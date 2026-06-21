@@ -17,7 +17,6 @@ from datetime import date, timedelta
 import pytest
 from sqlalchemy import text
 
-
 # ─────────────────────────────────────────────
 # ヘルパー
 # ─────────────────────────────────────────────
@@ -181,8 +180,9 @@ class TestJSTBoundary:
 
     def test_jst_month_range_utc_basic(self):
         """_jst_month_range_utc が正しい UTC 境界を返す"""
-        from app.services.time import _jst_month_range_utc
         from datetime import timezone
+
+        from app.services.time import _jst_month_range_utc
 
         start, end = _jst_month_range_utc(2026, 6)
         # JST 2026-06-01 00:00 = UTC 2026-05-31 15:00
@@ -280,7 +280,7 @@ class TestFunnel:
         """データ投入時にファネル数値が正しい"""
         pairs = await _seed_companies_and_contacts(client)
         # リード 3件（1件コンバート済み）
-        leads = await _seed_leads(client, 3)
+        await _seed_leads(client, 3)
         # 商談: open 2件, won 1件
         await _seed_deals(client, pairs, ["open", "open", "won"])
 
@@ -1133,6 +1133,84 @@ class TestChannels:
         """scope が不正な場合は 422"""
         res = await client.get("/api/v1/analytics/channels?scope=bad")
         assert res.status_code == 422
+
+
+# ─────────────────────────────────────────────
+# conversion-by-attribute EP テスト
+# ─────────────────────────────────────────────
+
+class TestConversionByAttribute:
+    """GET /analytics/conversion-by-attribute"""
+
+    async def test_conversion_by_attribute_empty(self, client):
+        """データなしで 200 を返し、5軸が空配列"""
+        res = await client.get("/api/v1/analytics/conversion-by-attribute")
+        assert res.status_code == 200
+        data = res.json()
+        for axis_name in ("channel_type", "country", "sales_form", "temperature", "response_speed"):
+            axis = data[axis_name]
+            assert axis["overall_rate"] == 0.0
+            assert axis["items"] == []
+
+    async def test_conversion_by_attribute_team_and_mine(self, client, db_session):
+        """team / mine の差、n、収縮率、overall_rate が返る"""
+        today = date.today()
+
+        await db_session.execute(text("""
+            INSERT INTO leads (
+                tenant_id, customer_name, channel_type, country, sales_form,
+                temperature, response_speed, assigned_to, converted_deal_id, created_at
+            )
+            VALUES
+                (999, 'AttrLead1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, 1001, :dt),
+                (999, 'AttrLead2', 'instagram', 'JP', 'physical_store', 'Warm', '3日以内', 999, NULL, :dt),
+                (999, 'AttrLead3', 'cold_call', 'US', 'ec_site', 'Cold', '3日超', 999, NULL, :dt),
+                (999, 'AttrLead4', 'cold_call', 'US', 'other', 'Hot', '24h以内', 321, 1002, :dt)
+        """), {"dt": str(today)})
+        await db_session.commit()
+
+        team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
+        assert team_res.status_code == 200
+        team = team_res.json()
+
+        assert team["channel_type"]["overall_rate"] == pytest.approx(0.5, abs=1e-4)
+        instagram = {row["value"]: row for row in team["channel_type"]["items"]}["instagram"]
+        cold_call = {row["value"]: row for row in team["channel_type"]["items"]}["cold_call"]
+        assert instagram["n"] == 2
+        assert instagram["conversions"] == 1
+        assert instagram["raw_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert instagram["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert cold_call["n"] == 2
+        assert cold_call["conversions"] == 1
+        assert cold_call["raw_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert cold_call["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
+
+        country = {row["value"]: row for row in team["country"]["items"]}
+        assert country["JP"]["n"] == 2
+        assert country["JP"]["conversions"] == 1
+        assert country["US"]["n"] == 2
+        assert country["US"]["conversions"] == 1
+
+        mine_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=mine")
+        assert mine_res.status_code == 200
+        mine = mine_res.json()
+
+        assert mine["channel_type"]["overall_rate"] == pytest.approx(1 / 3, abs=1e-4)
+        mine_channels = {row["value"]: row for row in mine["channel_type"]["items"]}
+        assert mine_channels["instagram"]["n"] == 2
+        assert mine_channels["instagram"]["conversions"] == 1
+        assert mine_channels["instagram"]["raw_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert mine_channels["instagram"]["smoothed_rate"] == pytest.approx((1 + 10 * (1 / 3)) / 12, abs=1e-4)
+        assert mine_channels["cold_call"]["n"] == 1
+        assert mine_channels["cold_call"]["conversions"] == 0
+        assert mine_channels["cold_call"]["raw_rate"] == pytest.approx(0.0, abs=1e-4)
+        assert mine_channels["cold_call"]["smoothed_rate"] == pytest.approx((0 + 10 * (1 / 3)) / 11, abs=1e-4)
+
+        mine_country = {row["value"]: row for row in mine["country"]["items"]}
+        assert mine_country["JP"]["n"] == 2
+        assert mine_country["JP"]["conversions"] == 1
+        assert mine_country["US"]["n"] == 1
+        assert mine_country["US"]["conversions"] == 0
 
 
 # ─────────────────────────────────────────────
