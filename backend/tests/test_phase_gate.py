@@ -8,6 +8,8 @@ spec.md v1.2 F9 / AC9.1:
 SQLite モック禁止 (memory: feedback_evaluator_gap_2026_05_15)。
 """
 
+# Verification PR: keep a harmless real-code diff so process-artifacts runs.
+
 from __future__ import annotations
 
 import os
