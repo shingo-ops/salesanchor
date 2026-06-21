@@ -214,10 +214,10 @@
   display: inline-flex;      /* #3: auto幅（fullWidthを外した後のデフォルト） */
   align-items: center;        /* #3: icon とテキストの中央揃えを確実に */
   justify-content: flex-start;
-  padding-inline-start: 18px; /* #3: 正本 18px に合わせる */
+  padding-inline-start: 18px; /* #3: 正本に合わせる */
   padding-inline-end: var(--space-6);
   font-weight: var(--font-weight-semi);
-  gap: var(--space-10px);    /* #3: 正本 gap:10px に合わせる */
+  gap: var(--space-10px);    /* #3: 正本値 */
 }
 
 .schedule-section__title {
