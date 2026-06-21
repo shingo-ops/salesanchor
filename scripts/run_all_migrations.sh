@@ -418,6 +418,10 @@ run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
+# ADR-137 J1: ETD 画像 imageIndex 永続化テーブル（LETTERHEAD/SIGNATURE・無期限再利用）
+# 本番適用: G1 Shingo GO 後のみ（未適用・dormant）
+run_sql migrations/20260622_030000_add_fedex_etd_images.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
