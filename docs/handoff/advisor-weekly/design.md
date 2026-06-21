@@ -32,3 +32,7 @@ W-1 API `/analytics/weekly-advisor-defensive` を `scope=mine` で取得し、�
 - ダッシュボードに「今やること」が表示される
 - Playwright で表示確認できる
 - CI が green なら通常マージ
+
+## 外部・過去事例の参照と我々への応用
+
+- 該当なし（W-1b は既存ダッシュボードへの UI 差し込みであり、外部導入事例を参照せずとも受け入れ基準を file:line で検証できる）
