@@ -36,13 +36,25 @@ const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
 // fetchタイムアウト（ミリ秒）。重いSQLが最適化されたら 10_000 に短縮予定
 const FETCH_TIMEOUT_MS = 25_000;
+// Firebase getIdToken() タイムアウト（ミリ秒）。
+// getIdToken() は fetch() の前に呼ばれるため FETCH_TIMEOUT の AbortController に
+// 守られない。Promise.race でここでタイムアウトを設けることで永久ペンディングを防ぐ。
+const AUTH_TIMEOUT_MS = 10_000;
 // Blob取得（CSVエクスポート等）のタイムアウト（ミリ秒）
 const BLOB_FETCH_TIMEOUT_MS = 120_000;
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
   if (!user) throw new Error(i18n.t("common.notAuthenticated"));
-  const token = await user.getIdToken();
+  const token = await Promise.race([
+    user.getIdToken(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(i18n.t("common.authTimeout"))),
+        AUTH_TIMEOUT_MS,
+      )
+    ),
+  ]);
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",

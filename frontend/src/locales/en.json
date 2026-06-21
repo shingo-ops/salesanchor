@@ -61,6 +61,7 @@
     "yes": "Yes",
     "no": "No",
     "notAuthenticated": "Not authenticated",
+    "authTimeout": "Authentication timed out. Please reload the page",
     "pleaseSelect": "Please select",
     "detail": "Details",
     "done": "Done",
