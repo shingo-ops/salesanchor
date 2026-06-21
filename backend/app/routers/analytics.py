@@ -137,6 +137,7 @@ class WeeklyAdvisorAction(BaseModel):
     type: str
     company_id: int
     company_name: str
+    lead_id: int | None = None
     score: float
     expected_value: float
     suggested_action: str
@@ -602,6 +603,7 @@ async def weekly_advisor_defensive(
             SELECT
                 o.company_id,
                 COALESCE(c.name, '') AS company_name,
+                c.lead_id,
                 o.created_at,
                 COALESCE(o.total_amount, 0) AS total_amount
             FROM orders o
@@ -617,12 +619,16 @@ async def weekly_advisor_defensive(
     combined_rows = combined_result.mappings().all()
 
     grouped_names: dict[int, str] = {}
+    grouped_lead_ids: dict[int, int | None] = {}
     grouped_orders: dict[int, list[dict[str, object]]] = {}
     candidate_company_ids: set[int] = set()
     for row in combined_rows:
         company_id = int(row["company_id"])
         candidate_company_ids.add(company_id)
         grouped_names.setdefault(company_id, str(row["company_name"] or ""))
+        if company_id not in grouped_lead_ids:
+            lead_id = row["lead_id"]
+            grouped_lead_ids[company_id] = int(lead_id) if lead_id is not None else None
         grouped_orders.setdefault(company_id, []).append({
             "created_at": _normalize_date(row["created_at"]),
             "total_amount": float(row["total_amount"] or 0),
@@ -674,7 +680,6 @@ async def weekly_advisor_defensive(
         first_order_at = orders_sorted[0]["created_at"]
         last_order_at = orders_sorted[-1]["created_at"]
         days_since_last_order = (today - last_order_at).days
-
         avg_interval_days: float | None = None
         if all_order_count >= 2:
             intervals = [
@@ -703,6 +708,7 @@ async def weekly_advisor_defensive(
                 type="reorder",
                 company_id=company_id,
                 company_name=grouped_names.get(company_id, ""),
+                lead_id=grouped_lead_ids.get(company_id),
                 score=score,
                 expected_value=avg_order_amount,
                 suggested_action="再受注の案内",
@@ -735,6 +741,7 @@ async def weekly_advisor_defensive(
                 type="churn_risk",
                 company_id=company_id,
                 company_name=grouped_names.get(company_id, ""),
+                lead_id=grouped_lead_ids.get(company_id),
                 score=score,
                 expected_value=avg_order_amount,
                 suggested_action="状況確認の連絡",
@@ -767,6 +774,7 @@ async def weekly_advisor_defensive(
                 type="comm_low",
                 company_id=company_id,
                 company_name=grouped_names.get(company_id, ""),
+                lead_id=grouped_lead_ids.get(company_id),
                 score=score,
                 expected_value=avg_order_amount,
                 suggested_action="近況確認の連絡",

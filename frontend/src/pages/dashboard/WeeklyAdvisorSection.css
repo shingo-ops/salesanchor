@@ -124,6 +124,119 @@
   flex-wrap: wrap;
 }
 
+.db-weekly-followup-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.db-weekly-followup-btn {
+  white-space: nowrap;
+}
+
+.db-weekly-added-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-weekly-added-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+}
+
+.db-weekly-edit-btn {
+  margin-left: auto;
+}
+
+.db-weekly-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.db-weekly-composer-loading {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.db-weekly-composer-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg-subtle);
+  color: var(--warning-text);
+  font-size: var(--font-xs);
+}
+
+.db-weekly-composer-warning-value {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-weekly-composer-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.db-weekly-composer-label {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-secondary);
+}
+
+.db-weekly-composer-input {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  resize: vertical;
+}
+
+.db-weekly-composer-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.db-weekly-composer-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.db-weekly-composer-error {
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg-subtle);
+  color: var(--danger);
+  font-size: var(--font-xs);
+}
+
 .db-weekly-loading {
   padding: var(--space-3) 0;
   font-size: var(--font-sm);

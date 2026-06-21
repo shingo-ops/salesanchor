@@ -9,11 +9,11 @@
 
 | 引用先 path:line | 確認内容 |
 |------------------|---------|
-| frontend/src/pages/dashboard/DashboardPage.tsx:487-493 | FunnelSection の直下に WeeklyAdvisorSection を差し込める |
+| frontend/src/pages/dashboard/DashboardPage.tsx:487-493 | `FunnelSection` の直下に `WeeklyAdvisorSection` を差し込める |
 | frontend/src/pages/dashboard/DashboardPage.tsx:502-618 | 既存の固定エリアはフォローアップ / 目標のまま残る |
-| frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120 | W-1 API を scope=mine で呼び、守り3種を score 順で表示する UI |
+| frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120 | W-1 API を `scope=mine` で呼び、守り3種を score 順で表示する UI |
 | frontend/src/pages/dashboard/WeeklyAdvisorSection.css:1-120 | 意味ベース色・ダークモード対応のセクションスタイル |
-| frontend/src/api/funnel.ts:167-180 | /analytics/weekly-advisor-defensive の API クライアント |
+| frontend/src/api/funnel.ts:167-180 | `/analytics/weekly-advisor-defensive` の API クライアント |
 | frontend/tests-e2e/scene1-dashboard.spec.ts:1-220 | Dashboard 画面で今やることセクションを確認する Playwright 追加 |
 | frontend/tests-e2e/funnel-dashboard.spec.ts:1-200 | ダッシュボードのスクリーンショット系 spec に weekly advisor mock を追加 |
 
@@ -29,5 +29,5 @@
 ## 補足
 
 - 表示のみで、フォロー追加導線は含めない。
-- tenant_006 前提での確認、tenant_4 は使わない。
+- `tenant_006` 前提での確認、`tenant_4` は使わない。
 - DB / API の追加変更は不要。
