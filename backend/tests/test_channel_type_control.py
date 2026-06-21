@@ -113,7 +113,7 @@ async def _ensure_tenant_006_schema(
                 text("""
                     INSERT INTO tenant_006.channel_masters
                         (tenant_id, platform, display_name, connection_type, is_active)
-                    VALUES (6, :platform, :display_name, :connection_type, 1)
+                    VALUES (6, :platform, :display_name, :connection_type, TRUE)
                     ON CONFLICT (platform) DO NOTHING
                 """),
                 {
