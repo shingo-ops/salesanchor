@@ -7,10 +7,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Badge } from "../../components/Badge";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import InventoryModeTabs from "./InventoryModeTabs";
 
 interface OwnInventoryRow {
   id: number;
@@ -107,7 +109,18 @@ export default function OwnInventoryPage() {
   };
 
   return (
-    <PageLayout navKey="nav.ownInventory" subtitleKey="ownInventory.subtitle">
+    <PageLayout
+      navKey="nav.inventory"
+      subtitleKey="ownInventory.subtitle"
+      headerLeft={(
+        <Badge variant="neutral" appearance="soft" size="sm">
+          自社
+        </Badge>
+      )}
+    >
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <InventoryModeTabs />
+      </div>
       {error && (
         <div className="alert alert-error" role="alert">
           {error}
