@@ -17,26 +17,6 @@
   --schedule-empty-icon-bg: var(--calendar-google-blue-light);
   --schedule-empty-icon-color: var(--calendar-google-blue);
   --schedule-control-border: var(--border);
-  --schedule-brand-icon-size: 26px;
-  --schedule-brand-radius: 7px;
-  --schedule-shell-title-size: 19px;
-  --schedule-shell-range-size: 20px;
-  --schedule-nav-button-size: 34px;
-  --schedule-shell-button-size: 38px;
-  --schedule-section-title-size: var(--font-base);
-  --schedule-mini-nav-button-size: 26px;
-  --schedule-calendar-item-radius: var(--radius-sm);
-  --schedule-calendar-checkbox-size: 18px;
-  --schedule-calendar-item-hidden-opacity: var(--opacity-skipped);
-  --schedule-mini-calendar-day-gap: var(--space-2px);
-  --schedule-mini-calendar-padding: var(--space-6px) var(--space-2) 0 0;
-  --schedule-mini-dot-size: var(--space-10px);
-  --schedule-mini-dot-z: 6;
-  /* day head height: pad-top(8) + weekday-name-lh(18) + gap(2) + day-circle(46) + pad-bottom(8) = 82px */
-  --schedule-day-head-h: 82px;
-  /* sticky z-index layers within .schedule-grid__viewport scroll container */
-  --schedule-header-z: 2;
-  --schedule-allday-z: 1;
 }
 
 .schedule-page {
@@ -44,8 +24,6 @@
   flex-direction: column;
   gap: var(--schedule-shell-gap);
   min-height: 0;
-  height: 100%; /* fill .app-content so page-level overflow-y never fires */
-  padding: var(--page-padding-y) var(--page-padding-x); /* #1: 他ページ共通ガター（24px）と揃える */
 }
 
 .schedule-shell__header {
@@ -54,7 +32,6 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding-bottom: var(--space-1);
-  padding-right: var(--page-header-avatar-clearance); /* #7: 固定アバターとのクリアランス 68px */
 }
 
 .schedule-shell__header-copy {
@@ -62,15 +39,6 @@
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
-}
-
-/* #6: ヘッダー左ブロック（brand + 今日/‹›/期間ラベル） */
-.schedule-shell__header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-  flex: 1;
 }
 
 .schedule-shell__brand {
@@ -81,9 +49,9 @@
 }
 
 .schedule-shell__brand-icon {
-  width: var(--schedule-brand-icon-size);
-  height: var(--schedule-brand-icon-size);
-  border-radius: var(--schedule-brand-radius);
+  width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
+  border-radius: var(--radius-lg);
   flex: none;
 }
 
@@ -98,7 +66,7 @@
 
 .schedule-shell__title {
   margin: 0;
-  font-size: var(--schedule-shell-title-size);
+  font-size: var(--font-xl);
   line-height: 1.2;
   font-weight: 600;
   color: var(--text-primary);
@@ -106,7 +74,7 @@
 
 .schedule-shell__range {
   color: var(--text-secondary);
-  font-size: var(--schedule-shell-range-size);
+  font-size: var(--font-xl);
   font-weight: 400;
   line-height: 1.2;
   white-space: nowrap;
@@ -133,19 +101,19 @@
 }
 
 .schedule-nav__icon-button {
-  width: var(--schedule-nav-button-size);
-  height: var(--schedule-nav-button-size);
+  width: var(--space-9);
+  height: var(--space-9);
 }
 
 .schedule-shell__icon-button {
-  width: var(--schedule-shell-button-size);
-  height: var(--schedule-shell-button-size);
+  width: var(--size-icon-btn);
+  height: var(--size-icon-btn);
 }
 
 .schedule-view-switch {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2px);
+  padding: 2px;
   border: 1px solid var(--schedule-control-border);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
@@ -180,11 +148,9 @@
 .schedule-shell__content {
   display: grid;
   grid-template-columns: var(--schedule-leftpanel-width) minmax(0, 1fr);
-  grid-template-rows: 1fr; /* fill all remaining height so .schedule-main can stretch */
   gap: var(--schedule-shell-gap);
-  flex: 1;        /* consume remaining height in .schedule-page flex column */
   min-height: 0;
-  align-items: stretch; /* .schedule-sidebar keeps align-self:start; .schedule-main fills cell */
+  align-items: start;
 }
 
 .schedule-sidebar {
@@ -195,21 +161,21 @@
   position: sticky;
   top: var(--space-4);
   align-self: start;
-  /* #2: フラット単一パネル（カード分割を廃止し右1px罫線のみ） */
-  background: transparent;
-  border-right: 1px solid var(--border);
-  padding: var(--space-4) var(--space-14px) var(--space-5);
 }
 
 .schedule-sidebar__section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  /* #2: 各セクションのカード化を解除（border/radius/shadow を削除） */
+  padding: var(--space-4);
+  background: var(--schedule-rail-bg);
+  border: 1px solid var(--schedule-rail-border);
+  border-radius: var(--schedule-shell-radius);
+  box-shadow: var(--shadow-xs);
 }
 
 .schedule-sidebar__section--action {
-  /* no override needed */
+  padding: var(--space-3);
 }
 
 .schedule-sidebar__section--calendar {
@@ -219,17 +185,14 @@
 .schedule-sidebar__create {
   border-radius: var(--radius-full);
   min-height: 3rem;
-  display: inline-flex;      /* #3: auto幅（fullWidthを外した後のデフォルト） */
-  align-items: center;        /* #3: icon とテキストの中央揃えを確実に */
   justify-content: flex-start;
-  padding-inline-start: 18px; /* #3: 正本に合わせる */
-  padding-inline-end: var(--space-6);
+  padding-inline-start: var(--space-4);
   font-weight: var(--font-weight-semi);
-  gap: var(--space-10px);    /* #3: 正本値 */
+  gap: var(--space-2);
 }
 
 .schedule-section__title {
-  font-size: var(--schedule-section-title-size);
+  font-size: var(--font-base);
   font-weight: var(--font-weight-semi);
   line-height: 1.4;
   color: var(--text-primary);
@@ -249,8 +212,8 @@
 }
 
 .schedule-mini-calendar__nav-button {
-  width: var(--schedule-brand-icon-size);
-  height: var(--schedule-brand-icon-size);
+  width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
 }
 
 .schedule-mini-calendar {
@@ -313,8 +276,12 @@
   cursor: pointer;
 }
 
+.schedule-calendar-item--fixed {
+  cursor: default;
+}
+
 .schedule-calendar-item--hidden {
-  opacity: var(--schedule-calendar-item-hidden-opacity);
+  opacity: var(--opacity-skipped);
 }
 
 .schedule-calendar-item__meta {
@@ -327,7 +294,7 @@
 .schedule-calendar-item__swatch {
   width: var(--space-3);
   height: var(--space-3);
-  border-radius: var(--schedule-calendar-item-radius);
+  border-radius: var(--radius-sm);
   flex: none;
   box-shadow: var(--schedule-calendar-item-swatch-shadow);
 }
@@ -341,11 +308,17 @@
 }
 
 .schedule-calendar-checkbox {
-  width: var(--schedule-calendar-checkbox-size);
-  height: var(--schedule-calendar-checkbox-size);
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
   margin: 0;
   flex: none;
   cursor: pointer;
+}
+
+.schedule-calendar-empty {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  padding: 0 var(--space-1);
 }
 
 .schedule-main {
@@ -353,14 +326,12 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
-  min-height: 0; /* allow flex children to shrink within the constrained grid cell */
 }
 
 .schedule-main__surface {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  flex: 1;        /* fill .schedule-main flex column */
   min-height: 0;
   padding: var(--space-4);
   background: var(--bg-surface);
@@ -427,13 +398,6 @@
   color: var(--error-text);
 }
 
-/* scroll container: only the time body scrolls */
-.schedule-grid__viewport {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
 .schedule-grid {
   display: flex;
   flex-direction: column;
@@ -449,10 +413,6 @@
 
 .schedule-grid__header {
   border-bottom: 1px solid var(--schedule-cell-border);
-  position: sticky;
-  top: 0;
-  z-index: var(--schedule-header-z);
-  background: var(--bg-surface);
 }
 
 .schedule-grid__gutter {
@@ -474,22 +434,20 @@
 .schedule-grid__gutter--allday {
   align-items: flex-start;
   justify-content: flex-end;
-  padding: var(--schedule-mini-calendar-padding);
+  padding: var(--space-6px) var(--space-2) 0 0;
 }
 
 .schedule-day-head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--schedule-mini-calendar-day-gap);
+  gap: 2px;
   padding: var(--space-2) 0;
   border: none;
   border-left: 1px solid var(--schedule-cell-border);
   background: var(--bg-surface);
   color: var(--text-primary);
   cursor: pointer;
-  flex: 1;        /* equal-width within the flex .schedule-grid__days row */
-  min-width: 0;
 }
 
 .schedule-day-head:hover {
@@ -523,10 +481,6 @@
 .schedule-grid__allday-row {
   min-height: var(--schedule-allday-row-h);
   border-bottom: 1px solid var(--schedule-cell-border);
-  position: sticky;
-  top: var(--schedule-day-head-h);
-  z-index: var(--schedule-allday-z);
-  background: var(--bg-surface);
 }
 
 .schedule-grid__allday-cell {
@@ -536,8 +490,6 @@
   padding: var(--space-1);
   border-left: 1px solid var(--schedule-cell-border);
   background: var(--bg-surface);
-  flex: 1;        /* equal-width column matching day head / body columns */
-  min-width: 0;
 }
 
 .schedule-chip {
@@ -576,14 +528,13 @@
 }
 
 .schedule-grid__days {
-  display: flex;
-  flex-wrap: nowrap; /* 7 columns always stay in one row at any viewport width */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--schedule-day-min-w), 1fr));
   min-width: 0;
 }
 
 .schedule-day-column {
   position: relative;
-  flex: 1;          /* equal-width column, matches day head cells */
   min-width: 0;
   border-left: 1px solid var(--schedule-cell-border);
   background:
@@ -605,16 +556,16 @@
   inset-inline: 0;
   height: 2px;
   background: var(--schedule-now-line);
-  z-index: var(--schedule-mini-dot-z);
+  z-index: var(--z-base);
 }
 
 .schedule-day-column__now-dot {
   position: absolute;
-  left: -5px;
-  top: -4px;
-  width: var(--schedule-mini-dot-size);
-  height: var(--schedule-mini-dot-size);
-  border-radius: 50%;
+  left: calc(var(--space-1) * -1.25);
+  top: calc(var(--space-1) * -1);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
   background: var(--schedule-now-line);
 }
 
@@ -635,7 +586,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--schedule-mini-calendar-day-gap);
+  gap: 2px;
   padding: var(--space-1) var(--space-2);
   border: none;
   border-radius: var(--schedule-event-radius);
@@ -771,14 +722,14 @@
 }
 
 .schedule-popover-backdrop {
-  position: fixed; /* fixed-ok: modal/backdrop */
+  position: fixed; /* fixed-ok: modal backdrop */
   inset: 0;
   z-index: var(--z-backdrop);
   background: var(--schedule-overlay-scrim);
 }
 
 .schedule-popover {
-  position: fixed; /* fixed-ok: modal/backdrop */
+  position: fixed; /* fixed-ok: modal popover */
   z-index: var(--z-modal);
   width: min(var(--schedule-popover-width), calc(100vw - var(--space-6)));
   max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)));
@@ -870,7 +821,7 @@
 
 .schedule-popover__details > div {
   display: grid;
-  gap: var(--schedule-mini-calendar-day-gap);
+  gap: 2px;
 }
 
 .schedule-popover__details dt {
@@ -947,13 +898,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  padding-top: var(--space-2);
 }
 
 .schedule-settings__header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-top: var(--space-2);
 }
 
 .schedule-settings__header-copy {
@@ -1011,10 +964,11 @@
 
 .schedule-settings__shell {
   display: grid;
-  grid-template-columns: var(--schedule-leftpanel-width) minmax(0, 1fr);
-  gap: var(--space-4);
+  grid-template-columns: minmax(15rem, var(--schedule-leftpanel-width)) minmax(0, 1fr);
+  gap: var(--space-5);
   align-items: start;
   min-width: 0;
+  width: 100%;
 }
 
 .schedule-settings__nav {
@@ -1022,7 +976,7 @@
   flex-direction: column;
   gap: var(--space-2);
   position: sticky;
-  top: var(--space-4);
+  top: var(--space-5);
   align-self: start;
   min-width: 0;
 }
@@ -1063,6 +1017,7 @@
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+  padding-top: var(--space-2);
 }
 
 .schedule-settings__banner {
@@ -1109,7 +1064,7 @@
 .schedule-settings__row-copy {
   display: flex;
   flex-direction: column;
-  gap: var(--schedule-mini-calendar-day-gap);
+  gap: 2px;
   min-width: 0;
 }
 
@@ -1225,14 +1180,14 @@
 }
 
 .schedule-dialog__backdrop {
-  position: fixed; /* fixed-ok: modal/backdrop */
+  position: fixed; /* fixed-ok: modal backdrop */
   inset: 0;
   z-index: var(--z-backdrop);
   background: var(--schedule-overlay-scrim);
 }
 
 .schedule-dialog {
-  position: fixed; /* fixed-ok: modal/backdrop */
+  position: fixed; /* fixed-ok: modal dialog */
   inset: 50% auto auto 50%;
   z-index: var(--z-modal);
   width: min(32rem, calc(100vw - var(--space-6)));
@@ -1367,7 +1322,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--schedule-mini-calendar-day-gap);
+  gap: 2px;
   padding: var(--space-2) 0 var(--space-1);
 }
 
