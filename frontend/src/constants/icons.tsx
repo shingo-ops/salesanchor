@@ -84,10 +84,10 @@ import {
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
-  PlusIcon as PlusOutlineIcon,
   CommandLineIcon,
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
+  PlusIcon as PlusOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -152,7 +152,6 @@ const Languages     = hi(LanguageIcon);
 const PaperAirplane = hi(PaperAirplaneIcon);
 const Paperclip     = hi(PaperClipIcon);
 const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
-const Plus          = hi(PlusIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
@@ -175,7 +174,6 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
-const PlusOutline         = hi(PlusOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
@@ -184,6 +182,7 @@ const ArrowLeft           = hi(ArrowLeftIcon);
 const BellOutline         = hi(BellOutlineIcon);
 const ChatBubbleOutline   = hi(ChatBubbleOvalLeftOutlineIcon); /* 空状態 outline 版 */
 const Bars3Outline        = hi(Bars3OutlineIcon);              /* mobile menu button */
+const PlusOutline         = hi(PlusOutlineIcon);
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
