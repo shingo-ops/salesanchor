@@ -9,7 +9,7 @@
 設計原則（ADR-096・SA-02-design.md §3）:
   - connection_type='auto' のチャネルには手動入力不可（入口排他）
   - 削除は論理削除のみ（deleted_at SET）。物理削除なし。
-  - 保存・編集時に translate_inbound_languages を発火（try/except で非致命的）
+  - 保存・編集時に translate_inbound を発火（try/except で非致命的）
   - 編集・削除は record_audit_log で履歴を残す（record_audit_log 流用）
 """
 from __future__ import annotations
@@ -131,25 +131,25 @@ async def _fire_translation(
     log_id: int,
     content_text: str,
 ) -> None:
-    """translate_inbound_languages を発火し、結果を conversation_logs に書き戻す。
+    """ensure_inbound_translations を発火し、結果を conversation_logs に書き戻す。
 
     失敗しても呼び出し元の処理は継続する（try/except で非致命的）。
     """
-    from app.services.message_translator import translate_inbound_languages
+    from app.services.message_translator import ensure_inbound_translations
 
     schema = f"tenant_{tenant_id:03d}"
     table_ref = f"{schema}.message_translations"
     message_id = f"conv_log_{log_id}"
 
     try:
-        results = await translate_inbound_languages(
+        results = await ensure_inbound_translations(
             db=db,
             tenant_id=tenant_id,
             table_ref=table_ref,
             message_id=message_id,
             message_text=content_text,
         )
-        result = results["ja"]
+        result = results.get("ja", next(iter(results.values())))
         await db.execute(
             text(
                 f"UPDATE {schema}.conversation_logs "

@@ -1,53 +1,12 @@
 from __future__ import annotations
 
-import sys
-import types
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-if "discord" not in sys.modules:
-    discord_stub = types.ModuleType("discord")
-
-    class _DummyIntents:
-        @staticmethod
-        def none():
-            return _DummyIntents()
-
-        def __init__(self) -> None:
-            self.guilds = False
-            self.guild_messages = False
-            self.dm_messages = False
-            self.message_content = False
-            self.members = False
-
-    class _DummyClient:
-        def __init__(self, *, intents=None) -> None:
-            self.intents = intents
-
-    class _DummyHTTPException(Exception):
-        pass
-
-    class _DummyInteractionType:
-        component = object()
-
-    class _DummyMessage:
-        pass
-
-    class _DummyInteraction:
-        pass
-
-    discord_stub.Intents = _DummyIntents
-    discord_stub.Client = _DummyClient
-    discord_stub.HTTPException = _DummyHTTPException
-    discord_stub.InteractionType = _DummyInteractionType
-    discord_stub.Message = _DummyMessage
-    discord_stub.Interaction = _DummyInteraction
-    sys.modules["discord"] = discord_stub
-
-from app.discord_gateway import client, ticket_channel_writer
-from app.tasks.translation import _run_translate_inbound_message, translate_inbound_message
+from app.discord_gateway import ticket_channel_writer
+from app.tasks.translation import _run_batch, _run_translate_inbound_message, translate_inbound_message
 
 
 class _DBContext:
@@ -121,6 +80,7 @@ def test_translate_inbound_message_task_wrapper_runs_and_disposes_engine():
 @pytest.mark.asyncio
 async def test_worker_translation_task_translates_then_publishes():
     session = AsyncMock()
+
     translate_result = MagicMock(
         cached=False,
         engine="gemini-1.5-flash",
@@ -129,8 +89,8 @@ async def test_worker_translation_task_translates_then_publishes():
     )
 
     with patch("app.database.AsyncSessionLocal", return_value=_DBContext(session)), patch(
-        "app.services.message_translator.translate_inbound_languages",
-        AsyncMock(return_value={"ja": translate_result, "en": translate_result}),
+        "app.services.message_translator.ensure_inbound_translations",
+        AsyncMock(return_value={"en": translate_result}),
     ) as translate_mock, patch(
         "app.services.sse_pubsub.publish_inbox_update",
         AsyncMock(return_value=None),
@@ -148,12 +108,12 @@ async def test_worker_translation_task_translates_then_publishes():
     translate_kwargs = translate_mock.await_args.kwargs
     assert translate_kwargs["table_ref"] == "tenant_007.message_translations"
     assert translate_kwargs["message_id"] == "mid-1"
-    assert translate_kwargs["primary_target_language"] == "ja"
     publish_mock.assert_awaited_once_with(7)
+    assert result["translated_text"] == "こんにちは"
 
 
 @pytest.mark.asyncio
-async def test_client_routes_ticket_channel_message_before_inventory_parser():
+async def test_ticket_channel_message_enqueues_translation_task_after_save():
     session = AsyncMock()
     session.execute.side_effect = [
         _mock_result((45, "1234567890", "Shingo")),
@@ -170,21 +130,20 @@ async def test_client_routes_ticket_channel_message_before_inventory_parser():
         guild=_FakeGuild(id=1),
     )
 
-    mock_client = client.JarvisDiscordClient.__new__(client.JarvisDiscordClient)
-    mock_client.tenant = MagicMock(tenant_id=4, tenant_code="tenant-4")
-    mock_client._db_factory = MagicMock(return_value=db_factory)
-    mock_client._process_message = AsyncMock(return_value=None)
-    mock_client._process_dm_message = AsyncMock(return_value=None)
-
     with patch.object(
         ticket_channel_writer, "set_tenant_context", new=AsyncMock(return_value=None)
     ), patch(
         "app.tasks.translation.translate_inbound_message.delay",
         MagicMock(return_value=None),
     ) as delay_mock:
-        await client.JarvisDiscordClient._process_guild_message(mock_client, message)
+        handled = await ticket_channel_writer.process_ticket_channel_message(
+            db_factory,
+            tenant_id=4,
+            message=message,
+        )
 
-    mock_client._process_message.assert_not_awaited()
+    assert handled is True
+    assert session.commit.await_count == 1
     delay_mock.assert_called_once_with(
         tenant_id=4,
         table_ref="meta_messages",
@@ -195,10 +154,11 @@ async def test_client_routes_ticket_channel_message_before_inventory_parser():
 
 
 @pytest.mark.asyncio
-async def test_ticket_channel_writer_ignores_staff_messages_without_publish():
+async def test_ticket_channel_outbound_publishes_without_translation_task():
     session = AsyncMock()
     session.execute.side_effect = [
         _mock_result((45, "1234567890", "Shingo")),
+        _mock_result((1,)),
     ]
     session.commit = AsyncMock()
     db_factory = MagicMock(return_value=_DBContext(session))
@@ -227,5 +187,45 @@ async def test_ticket_channel_writer_ignores_staff_messages_without_publish():
         )
 
     assert handled is True
+    assert session.commit.await_count == 1
     delay_mock.assert_not_called()
-    publish_mock.assert_not_called()
+    publish_mock.assert_awaited_once_with(4)
+
+
+@pytest.mark.asyncio
+async def test_batch_skips_completed_messages_and_translates_only_missing():
+    session = AsyncMock()
+    tenants_result = MagicMock()
+    tenants_result.fetchall.return_value = [(7,)]
+    messages_result = MagicMock()
+    messages_result.fetchall.return_value = [
+        ("mid-ja", "こんにちは"),
+        ("mid-en", "Hello stock"),
+        ("mid-es", "Hola stock"),
+    ]
+    session.execute = AsyncMock(side_effect=[tenants_result, messages_result])
+
+    missing_result = MagicMock(
+        cached=False,
+        engine="gemini-1.5-flash",
+        confidence=0.97,
+        translated_text="translated",
+    )
+
+    with patch("app.database.AsyncSessionLocal", return_value=_DBContext(session)), patch(
+        "app.services.message_translator.get_existing_inbound_translation_targets",
+        AsyncMock(side_effect=[
+            ({"en"}, "ja"),
+            ({"ja"}, "en"),
+            ({"ja"}, "es"),
+        ]),
+    ), patch(
+        "app.services.message_translator.ensure_inbound_translations",
+        AsyncMock(return_value={"en": missing_result}),
+    ) as ensure_mock:
+        result = await _run_batch()
+
+    assert result["processed"] == 1
+    assert result["failed"] == 0
+    assert ensure_mock.await_count == 1
+    assert ensure_mock.await_args.kwargs["message_id"] == "mid-es"
