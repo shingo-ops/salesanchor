@@ -43,6 +43,12 @@ import {
   toRangeEnd,
   toRangeStart,
 } from "./schedule-utils";
+import {
+  DEFAULT_OWNER_COLOR,
+  normalizeOwner,
+  type ApiCalendarOwnersResponse,
+  type CalendarOwner,
+} from "./schedule-owner";
 
 type PopoverMode = "detail" | "edit" | "create";
 
@@ -62,6 +68,13 @@ interface SchedulePopoverState {
   mode: PopoverMode;
   anchor: AnchorRect | null;
   item: ScheduleItem | null;
+}
+
+interface ScheduleRosterState {
+  canManageOthers: boolean;
+  currentStaffId: number | null;
+  currentUserId: number;
+  owners: CalendarOwner[];
 }
 
 const DEFAULT_ROW_HEIGHT = 48;
@@ -125,8 +138,9 @@ function getCalendarMeta(category: CalendarId | null) {
   return category ? CALENDAR_MAP[category] : null;
 }
 
-function eventMatchesFilters(item: ScheduleItem, visibleIds: CalendarId[]) {
-  return item.category == null || visibleIds.includes(item.category);
+function eventMatchesFilters(item: ScheduleItem, visibleOwnerIds: number[]) {
+  if (visibleOwnerIds.length === 0) return true;
+  return item.ownerUserId == null || visibleOwnerIds.includes(item.ownerUserId);
 }
 
 function monthItems(items: ScheduleItem[], date: Date) {
@@ -137,16 +151,18 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <div className="schedule-section__title">{children}</div>;
 }
 
-function CategorySwatch({ category }: { category: CalendarId | null }) {
-  const meta = getCalendarMeta(category);
-  if (!meta) return <span className="schedule-event__dot" aria-hidden="true" />;
-  return (
-    <span
-      className="schedule-event__dot schedule-event__dot--category"
-      style={{ background: cssVar(meta.colorVar) }}
-      aria-hidden="true"
-    />
-  );
+function getOwnerMeta(
+  ownerByUserId: Map<number, CalendarOwner>,
+  ownerUserId: number | null,
+  fallbackUserId: number | null,
+) {
+  const resolvedUserId = ownerUserId ?? fallbackUserId;
+  const owner = resolvedUserId != null ? ownerByUserId.get(resolvedUserId) ?? null : null;
+  return {
+    owner,
+    color: owner?.color ?? DEFAULT_OWNER_COLOR,
+    name: owner?.name ?? null,
+  };
 }
 
 function SchedulePopover({
@@ -230,13 +246,17 @@ function SchedulePopover({
             <p className="schedule-popover__title">{item.title || t("schedule.noTitle")}</p>
             <p className="schedule-popover__time">{timeLabel}</p>
             <p className="schedule-popover__date">{dateLabel}</p>
-            {item.organizer && <p className="schedule-popover__meta">{item.organizer}</p>}
+            {item.ownerName && <p className="schedule-popover__meta">{item.ownerName}</p>}
             {item.location && <p className="schedule-popover__meta">{item.location}</p>}
             {item.description && <p className="schedule-popover__description">{item.description}</p>}
             <dl className="schedule-popover__details">
               <div>
-                <dt>{t("schedule.calendarType")}</dt>
-                <dd>{t(`schedule.calendarTypeValues.${item.calendarType}`)}</dd>
+                <dt>{t("schedule.owner")}</dt>
+                <dd>{item.ownerName ?? t("schedule.ownerFallback")}</dd>
+              </div>
+              <div>
+                <dt>{t("schedule.category")}</dt>
+                <dd>{meta ? t(meta.labelKey) : t("schedule.calendarTypeValues.shared")}</dd>
               </div>
               <div>
                 <dt>{t("schedule.source")}</dt>
@@ -394,21 +414,23 @@ function SchedulePopover({
 function ScheduleSidebar({
   currentMonth,
   selectedDate,
-  visibleCalendars,
-  onToggleCalendar,
+  owners,
+  visibleOwnerIds,
+  onToggleOwner,
   onCreate,
   onJumpToDate,
   onShiftMonth,
-  canManage,
+  canManageOthers,
 }: {
   currentMonth: Date;
   selectedDate: Date;
-  visibleCalendars: CalendarId[];
-  onToggleCalendar: (category: CalendarId) => void;
+  owners: CalendarOwner[];
+  visibleOwnerIds: number[];
+  onToggleOwner: (ownerId: number) => void;
   onCreate: () => void;
   onJumpToDate: (date: Date) => void;
   onShiftMonth: (direction: -1 | 1) => void;
-  canManage: boolean;
+  canManageOthers: boolean;
 }) {
   const { t } = useTranslation();
   const AddIcon = NAV_ICONS.add;
@@ -483,24 +505,26 @@ function ScheduleSidebar({
       <section className="schedule-sidebar__section">
         <SectionTitle>{t("schedule.myCalendars")}</SectionTitle>
         <div className="schedule-calendar-list">
-          {CALENDARS.filter((calendar) => calendar.primary).map((calendar) => {
-            const checked = visibleCalendars.includes(calendar.id);
+          {owners.filter((owner) => owner.isSelf).map((owner) => {
+            const key = owner.userId ?? owner.staffId;
+            const checked = visibleOwnerIds.includes(key);
             return (
-              <label key={calendar.id} className={`schedule-calendar-item${checked ? "" : " schedule-calendar-item--hidden"}`}>
+              <label key={owner.staffId} className="schedule-calendar-item">
                 <div className="schedule-calendar-item__meta">
                   <span
                     className="schedule-calendar-item__swatch"
-                    style={{ background: cssVar(calendar.colorVar) }}
+                    style={{ background: owner.color }}
                     aria-hidden="true"
                   />
-                  <span className="schedule-calendar-item__label">{t(calendar.labelKey)}</span>
+                  <span className="schedule-calendar-item__label">{owner.name}</span>
                 </div>
                 <input
                   type="checkbox"
                   className="schedule-calendar-checkbox"
-                  style={{ accentColor: cssVar(calendar.colorVar) }}
-                  checked={checked}
-                  onChange={() => onToggleCalendar(calendar.id)}
+                  style={{ accentColor: owner.color }}
+                  checked={checked || owner.isSelf}
+                  disabled
+                  aria-label={owner.name}
                 />
               </label>
             );
@@ -508,33 +532,37 @@ function ScheduleSidebar({
         </div>
       </section>
 
-      <section className="schedule-sidebar__section">
-        <SectionTitle>{t("schedule.otherCalendars")}</SectionTitle>
-        <div className="schedule-calendar-list">
-          {CALENDARS.filter((calendar) => !calendar.primary).map((calendar) => {
-            const checked = visibleCalendars.includes(calendar.id);
-            return (
-              <label key={calendar.id} className={`schedule-calendar-item${checked ? "" : " schedule-calendar-item--hidden"}`}>
-                <div className="schedule-calendar-item__meta">
-                  <span
-                    className="schedule-calendar-item__swatch"
-                    style={{ background: cssVar(calendar.colorVar) }}
-                    aria-hidden="true"
+      {canManageOthers && owners.some((owner) => !owner.isSelf) && (
+        <section className="schedule-sidebar__section">
+          <SectionTitle>{t("schedule.otherCalendars")}</SectionTitle>
+          <div className="schedule-calendar-list">
+            {owners.filter((owner) => !owner.isSelf).map((owner) => {
+              const key = owner.userId ?? owner.staffId;
+              const checked = visibleOwnerIds.includes(key);
+              return (
+                <label key={owner.staffId} className={`schedule-calendar-item${checked ? "" : " schedule-calendar-item--hidden"}`}>
+                  <div className="schedule-calendar-item__meta">
+                    <span
+                      className="schedule-calendar-item__swatch"
+                      style={{ background: owner.color }}
+                      aria-hidden="true"
+                    />
+                    <span className="schedule-calendar-item__label">{owner.name}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="schedule-calendar-checkbox"
+                    style={{ accentColor: owner.color }}
+                    checked={checked}
+                    onChange={() => owner.userId != null && onToggleOwner(key)}
+                    aria-label={owner.name}
                   />
-                  <span className="schedule-calendar-item__label">{t(calendar.labelKey)}</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="schedule-calendar-checkbox"
-                  style={{ accentColor: cssVar(calendar.colorVar) }}
-                  checked={checked}
-                  onChange={() => onToggleCalendar(calendar.id)}
-                />
-              </label>
-            );
-          })}
-        </div>
-      </section>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </aside>
   );
 }
@@ -542,14 +570,18 @@ function ScheduleSidebar({
 function ScheduleWeekGrid({
   days,
   events,
-  visibleCalendars,
+  visibleOwnerIds,
+  ownerByUserId,
+  currentOwnerUserId,
   currentTime,
   onSelectSlot,
   onSelectEvent,
 }: {
   days: Date[];
   events: ScheduleItem[];
-  visibleCalendars: CalendarId[];
+  visibleOwnerIds: number[];
+  ownerByUserId: Map<number, CalendarOwner>;
+  currentOwnerUserId: number | null;
   currentTime: Date;
   onSelectSlot: (date: Date, rect: AnchorRect) => void;
   onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
@@ -558,15 +590,15 @@ function ScheduleWeekGrid({
   const rowHeight = DEFAULT_ROW_HEIGHT;
   const timedDays = days.map((date) => ({
     date,
-    allDay: events.filter((item) => item.allDay && isSameDay(item.start, date) && eventMatchesFilters(item, visibleCalendars)),
+    allDay: events.filter((item) => item.allDay && isSameDay(item.start, date) && eventMatchesFilters(item, visibleOwnerIds)),
     timed: layoutDay(
-      events.filter((item) => !item.allDay && isSameDay(item.start, date) && eventMatchesFilters(item, visibleCalendars)),
+      events.filter((item) => !item.allDay && isSameDay(item.start, date) && eventMatchesFilters(item, visibleOwnerIds)),
       rowHeight,
     ),
   }));
 
   return (
-      <div className="schedule-grid schedule-grid--week">
+    <div className="schedule-grid schedule-grid--week">
       <div className="schedule-grid__header">
         <div className="schedule-grid__gutter schedule-grid__gutter--header">
           <span>{t("schedule.gmtLabel")}</span>
@@ -595,16 +627,28 @@ function ScheduleWeekGrid({
         <div className="schedule-grid__days">
           {timedDays.map((day) => (
             <div key={day.date.toISOString()} className="schedule-grid__allday-cell">
-              {day.allDay.map((item) => (
-                <button
-                  key={item.id}
-                  className="schedule-chip"
-                  style={{ background: cssVar(getCalendarMeta(item.category)?.colorVar ?? "--cal-meeting"), color: "var(--on-solid)" }}
-                  onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
-                >
-                  {item.title}
-                </button>
-              ))}
+              {day.allDay.map((item) => {
+                const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
+                const meta = getCalendarMeta(item.category);
+                return (
+                  <button
+                    key={item.id}
+                    className="schedule-chip"
+                    style={{ background: ownerMeta.color, color: "var(--on-solid)" }}
+                    onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
+                  >
+                    {item.title}
+                    {meta && (
+                      <span
+                        className="schedule-category-chip"
+                        style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar), marginLeft: "var(--space-2)" }}
+                      >
+                        {t(meta.labelKey)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -613,29 +657,29 @@ function ScheduleWeekGrid({
       <div className="schedule-grid__body">
         <div className="schedule-grid__times">
           {Array.from({ length: 24 }, (_, hour) => (
-            <div key={hour} className="schedule-time-label" style={{ height: `var(--schedule-row-height)` }}>
+            <div key={hour} className="schedule-time-label" style={{ height: "var(--schedule-row-height)" }}>
               {hour === 0 ? "0:00" : `${hour}:00`}
             </div>
           ))}
         </div>
         <div className="schedule-grid__days">
           {timedDays.map((day) => (
-              <div key={day.date.toISOString()} className="schedule-day-column">
-                <div className="schedule-day-column__slots" style={{ height: `calc(24 * var(--schedule-row-height))` }}>
-                  {isSameDay(day.date, currentTime) && (
-                    <div
-                      className="schedule-day-column__now-line"
-                      style={{
-                        top: `calc(${currentTime.getHours() + currentTime.getMinutes() / 60} * var(--schedule-row-height))`,
-                      }}
-                    >
-                      <span className="schedule-day-column__now-dot" aria-hidden="true" />
-                    </div>
-                  )}
-                  {Array.from({ length: 24 }, (_, hour) => (
-                    <button
-                      key={hour}
-                      className="schedule-slot"
+            <div key={day.date.toISOString()} className="schedule-day-column">
+              <div className="schedule-day-column__slots" style={{ height: "calc(24 * var(--schedule-row-height))" }}>
+                {isSameDay(day.date, currentTime) && (
+                  <div
+                    className="schedule-day-column__now-line"
+                    style={{
+                      top: `calc(${currentTime.getHours() + currentTime.getMinutes() / 60} * var(--schedule-row-height))`,
+                    }}
+                  >
+                    <span className="schedule-day-column__now-dot" aria-hidden="true" />
+                  </div>
+                )}
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <button
+                    key={hour}
+                    className="schedule-slot"
                     style={{ top: `calc(${hour} * var(--schedule-row-height))` }}
                     onClick={(event) => {
                       const base = new Date(day.date);
@@ -646,6 +690,7 @@ function ScheduleWeekGrid({
                 ))}
                 {day.timed.map((laneItem) => {
                   const meta = getCalendarMeta(laneItem.item.category);
+                  const ownerMeta = getOwnerMeta(ownerByUserId, laneItem.item.ownerUserId, currentOwnerUserId);
                   return (
                     <button
                       key={laneItem.item.id}
@@ -655,7 +700,7 @@ function ScheduleWeekGrid({
                         left: `calc(${laneItem.left}% + var(--space-1))`,
                         width: `calc(${laneItem.width}% - var(--space-2))`,
                         height: `calc(${laneItem.height} * 1px)`,
-                        background: cssVar(meta?.colorVar ?? "--cal-meeting"),
+                        background: ownerMeta.color,
                       }}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -663,6 +708,14 @@ function ScheduleWeekGrid({
                       }}
                     >
                       <span className="schedule-event__title">{laneItem.item.title}</span>
+                      {meta && (
+                        <span
+                          className="schedule-category-chip"
+                          style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
+                        >
+                          {t(meta.labelKey)}
+                        </span>
+                      )}
                       <span className="schedule-event__time">
                         {formatTimeRange(laneItem.item.start, laneItem.item.end, laneItem.item.allDay, "ja-JP", t("schedule.allDay"))}
                       </span>
@@ -682,14 +735,18 @@ function ScheduleMonthGrid({
   cells,
   monthDate,
   events,
-  visibleCalendars,
+  visibleOwnerIds,
+  ownerByUserId,
+  currentOwnerUserId,
   onSelectDay,
   onSelectEvent,
 }: {
   cells: Date[];
   monthDate: Date;
   events: ScheduleItem[];
-  visibleCalendars: CalendarId[];
+  visibleOwnerIds: number[];
+  ownerByUserId: Map<number, CalendarOwner>;
+  currentOwnerUserId: number | null;
   onSelectDay: (date: Date, rect: AnchorRect) => void;
   onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
 }) {
@@ -705,7 +762,7 @@ function ScheduleMonthGrid({
       </div>
       <div className="schedule-month__grid">
         {cells.map((date) => {
-          const dayEvents = monthItems(events, date).filter((item) => eventMatchesFilters(item, visibleCalendars));
+          const dayEvents = monthItems(events, date).filter((item) => eventMatchesFilters(item, visibleOwnerIds));
           const isToday = isSameDay(date, new Date());
           const isCurrentMonth = date.getMonth() === monthDate.getMonth();
           return (
@@ -722,18 +779,26 @@ function ScheduleMonthGrid({
               <div className="schedule-month__events">
                 {dayEvents.slice(0, 3).map((item) => {
                   const meta = getCalendarMeta(item.category);
+                  const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
                   return (
                     <button
                       key={item.id}
                       className="schedule-month__event"
-                      style={{ background: cssVar(meta?.colorVar ?? "--cal-meeting"), color: "var(--on-solid)" }}
+                      style={{ background: ownerMeta.color, color: "var(--on-solid)" }}
                       onClick={(event) => {
                         event.stopPropagation();
                         onSelectEvent(item, event.currentTarget.getBoundingClientRect());
                       }}
                     >
-                      <CategorySwatch category={item.category} />
                       <span>{item.title}</span>
+                      {meta && (
+                        <span
+                          className="schedule-category-chip"
+                          style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar), marginLeft: "var(--space-1)" }}
+                        >
+                          {t(meta.labelKey)}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -765,14 +830,15 @@ export default function SchedulePage() {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
-  const canManage = hasPermission("channels.manage");
+  const canManageOwners = hasPermission("staff.view");
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [events, setEvents] = useState<ScheduleItem[]>([]);
+  const [owners, setOwners] = useState<CalendarOwner[]>([]);
+  const [visibleOwnerIds, setVisibleOwnerIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visibleCalendars, setVisibleCalendars] = useState<CalendarId[]>(CALENDARS.map((calendar) => calendar.id));
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [popover, setPopover] = useState<SchedulePopoverState | null>(null);
   const [draft, setDraft] = useState<ScheduleDraft>(createDraft());
@@ -785,6 +851,17 @@ export default function SchedulePage() {
   const rangeStart = useMemo(() => toRangeStart(view, anchorDate), [view, anchorDate]);
   const rangeEnd = useMemo(() => toRangeEnd(view, anchorDate), [view, anchorDate]);
   const currentMonth = view === "month" ? anchorDate : startOfMonth(anchorDate);
+  const ownerByUserId = useMemo(() => {
+    return new Map<number, CalendarOwner>(
+      owners
+        .filter((owner) => owner.userId != null)
+        .map((owner) => [owner.userId as number, owner]),
+    );
+  }, [owners]);
+  const currentOwnerUserId = useMemo(
+    () => owners.find((owner) => owner.isSelf)?.userId ?? null,
+    [owners],
+  );
 
   useEffect(() => {
     const connected = searchParams.get("connected");
@@ -833,14 +910,35 @@ export default function SchedulePage() {
       try {
         const startIso = rangeStart.toISOString();
         const endIso = rangeEnd.toISOString();
-        const [eventsResult, shiftsResult] = await Promise.allSettled([
+        const [ownersResult, eventsResult, shiftsResult] = await Promise.allSettled([
+          api.get<ApiCalendarOwnersResponse>("/calendar/owners"),
           api.get<{ events: ApiCalendarEvent[] }>(`/calendar/events?start=${startIso}&end=${endIso}`),
           api.get<ApiShift[]>(`/shifts?date_from=${formatDayKey(rangeStart)}&date_to=${formatDayKey(rangeEnd)}`),
         ]);
 
+        const nextOwners = ownersResult.status === "fulfilled"
+          ? ownersResult.value.owners.map(normalizeOwner)
+          : [];
+        if (!cancelled) {
+          setOwners(nextOwners);
+          const selfOwner = nextOwners.find((owner) => owner.isSelf);
+          if (selfOwner) {
+            setVisibleOwnerIds((current) => (current.length > 0 ? current : [selfOwner.userId ?? selfOwner.staffId]));
+          }
+        }
+
         const nextEvents: ScheduleItem[] = [];
         if (eventsResult.status === "fulfilled") {
-          nextEvents.push(...eventsResult.value.events.map(normalizeEvent));
+          const normalizedEvents = eventsResult.value.events.map(normalizeEvent).map((item) => {
+            const ownerUserId = item.ownerUserId ?? (nextOwners.find((owner) => owner.isSelf)?.userId ?? null);
+            const owner = ownerUserId != null ? nextOwners.find((entry) => entry.userId === ownerUserId) ?? null : null;
+            return {
+              ...item,
+              ownerUserId,
+              ownerName: item.ownerName ?? owner?.name ?? null,
+            };
+          });
+          nextEvents.push(...normalizedEvents);
         }
         if (shiftsResult.status === "fulfilled") {
           nextEvents.push(...shiftsResult.value.map(normalizeShift));
@@ -980,20 +1078,24 @@ export default function SchedulePage() {
       ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
       : getWeekDays(anchorDate);
   const currentTime = new Date();
-  const visibleEvents = events.filter((item) => eventMatchesFilters(item, visibleCalendars));
+  const visibleEvents = events.filter((item) => eventMatchesFilters(item, visibleOwnerIds));
   const allDayEvents = visibleEvents.filter((item) => item.allDay);
   const timedEvents = visibleEvents.filter((item) => !item.allDay);
   const viewLabel = formatRangeTitle(view, anchorDate);
   const SearchIcon = NAV_ICONS.search;
   const SettingsIcon = NAV_ICONS.settings;
 
-  const toggleCalendar = (category: CalendarId) => {
-    setVisibleCalendars((current) => (
-      current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category]
+  const toggleOwner = (ownerId: number) => {
+    setVisibleOwnerIds((current) => (
+      current.includes(ownerId)
+        ? current.filter((item) => item !== ownerId)
+        : [...current, ownerId]
     ));
   };
+
+  const canEditSelected = Boolean(
+    popover?.item && (popover.item.ownerUserId === currentOwnerUserId || canManageOwners),
+  );
 
   return (
     <div className="schedule-page">
@@ -1026,16 +1128,18 @@ export default function SchedulePage() {
           >
             <SearchIcon size={18} aria-hidden="true" />
           </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            iconOnly
-            className="schedule-shell__icon-button"
-            aria-label={t("schedule.settings")}
-            onClick={() => navigate("/schedule/settings")}
-          >
-            <SettingsIcon size={18} aria-hidden="true" />
-          </Button>
+          {canManageOwners && (
+            <Button
+              variant="ghost"
+              size="md"
+              iconOnly
+              className="schedule-shell__icon-button"
+              aria-label={t("schedule.settings")}
+              onClick={() => navigate("/schedule/settings")}
+            >
+              <SettingsIcon size={18} aria-hidden="true" />
+            </Button>
+          )}
           <div className="schedule-view-switch" role="group" aria-label={t("schedule.viewSelect")}>
             {(["day", "week", "month"] as const).map((nextView) => (
               <button
@@ -1056,12 +1160,13 @@ export default function SchedulePage() {
         <ScheduleSidebar
           currentMonth={currentMonth}
           selectedDate={anchorDate}
-          visibleCalendars={visibleCalendars}
-          onToggleCalendar={toggleCalendar}
+          owners={owners}
+          visibleOwnerIds={visibleOwnerIds}
+          onToggleOwner={toggleOwner}
           onCreate={() => openCreate(anchorDate, null)}
           onJumpToDate={jumpToDate}
           onShiftMonth={shiftMonth}
-          canManage={canManage}
+          canManageOthers={canManageOwners}
         />
 
         <main className="schedule-main">
@@ -1090,8 +1195,10 @@ export default function SchedulePage() {
                   cells={viewDays}
                   monthDate={anchorDate}
                   events={timedEvents.concat(allDayEvents)}
-                  visibleCalendars={visibleCalendars}
-                  onSelectDay={(date, rect) => canManage && openCreate(date, rect)}
+                  visibleOwnerIds={visibleOwnerIds}
+                  ownerByUserId={ownerByUserId}
+                  currentOwnerUserId={currentOwnerUserId}
+                  onSelectDay={(date, rect) => openCreate(date, rect)}
                   onSelectEvent={(item, rect) => openDetail(item, rect)}
                 />
               ) : (
@@ -1099,9 +1206,11 @@ export default function SchedulePage() {
                   <ScheduleWeekGrid
                     days={viewDays}
                     events={timedEvents.concat(allDayEvents)}
-                    visibleCalendars={visibleCalendars}
+                    visibleOwnerIds={visibleOwnerIds}
+                    ownerByUserId={ownerByUserId}
+                    currentOwnerUserId={currentOwnerUserId}
                     currentTime={currentTime}
-                    onSelectSlot={(date, rect) => canManage && openCreate(date, rect)}
+                    onSelectSlot={(date, rect) => openCreate(date, rect)}
                     onSelectEvent={(item, rect) => openDetail(item, rect)}
                   />
                 </div>
@@ -1121,7 +1230,7 @@ export default function SchedulePage() {
           onClose={closePopover}
           onSave={popover.mode === "detail" ? openEdit : saveEvent}
           onDelete={deleteEvent}
-          canEdit={canManage}
+          canEdit={canEditSelected}
         />
       )}
     </div>

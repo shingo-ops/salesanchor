@@ -14,7 +14,7 @@
 --
 -- デフォルトシード:
 --   messenger / instagram / discord → auto
---   phone（電話） / in_person（対面）→ manual
+--   phone（電話） / in_person（対面） / whatsapp → manual
 --
 -- 冪等性:
 --   CREATE TABLE IF NOT EXISTS / ON CONFLICT DO NOTHING / RLS 存在チェック
@@ -76,7 +76,8 @@ BEGIN
                 ($1, 'instagram',  'Instagram', 'auto'),
                 ($1, 'discord',    'Discord',   'auto'),
                 ($1, 'phone',      '電話',       'manual'),
-                ($1, 'in_person',  '対面',       'manual')
+                ($1, 'in_person',  '対面',       'manual'),
+                ($1, 'whatsapp',   'WhatsApp',  'manual')
             ON CONFLICT (platform) DO NOTHING
         $q$, schema_rec.nspname) USING tenant_id_val;
 

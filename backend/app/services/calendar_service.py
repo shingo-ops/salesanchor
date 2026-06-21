@@ -110,13 +110,16 @@ async def list_events(
     where = " AND ".join(f"ce.{f}" for f in filters)
     result = await db.execute(
         text(
-            f"SELECT ce.id, ce.user_id, ce.calendar_type, ce.title, ce.description, ce.location,"
+            f"SELECT ce.id, ce.user_id, ce.calendar_type, ce.category, ce.title, ce.description, ce.location,"
             f" ce.start_datetime, ce.end_datetime, ce.is_all_day, ce.google_event_id, ce.source,"
             f" ce.sync_status, ce.created_by_user_id, ce.created_at, ce.updated_at,"
-            f" TRIM(COALESCE(s.surname_jp,'') || ' ' || COALESCE(s.given_name_jp,'')) AS created_by_name"
+            f" TRIM(COALESCE(owner.surname_jp,'') || ' ' || COALESCE(owner.given_name_jp,'')) AS owner_name,"
+            f" TRIM(COALESCE(created.surname_jp,'') || ' ' || COALESCE(created.given_name_jp,'')) AS created_by_name"
             f" FROM calendar_events ce"
-            f" LEFT JOIN public.users u ON u.id = ce.created_by_user_id"
-            f" LEFT JOIN staff s ON s.primary_email = u.email"
+            f" LEFT JOIN public.users owner_user ON owner_user.id = ce.user_id"
+            f" LEFT JOIN staff owner ON owner.user_id = owner_user.id"
+            f" LEFT JOIN public.users created_user ON created_user.id = ce.created_by_user_id"
+            f" LEFT JOIN staff created ON created.user_id = created_user.id"
             f" WHERE {where}"
             f" ORDER BY ce.start_datetime"
         ),
@@ -128,19 +131,21 @@ async def list_events(
             "id": r[0],
             "user_id": r[1],
             "calendar_type": r[2],
-            "title": r[3],
-            "description": r[4],
-            "location": r[5],
-            "start_datetime": r[6].isoformat() if r[6] else None,
-            "end_datetime": r[7].isoformat() if r[7] else None,
-            "is_all_day": r[8],
-            "google_event_id": r[9],
-            "source": r[10],
-            "sync_status": r[11],
-            "created_by_user_id": r[12],
-            "created_at": r[13].isoformat() if r[13] else None,
-            "updated_at": r[14].isoformat() if r[14] else None,
-            "created_by_name": r[15] or None,
+            "category": r[3],
+            "title": r[4],
+            "description": r[5],
+            "location": r[6],
+            "start_datetime": r[7].isoformat() if r[7] else None,
+            "end_datetime": r[8].isoformat() if r[8] else None,
+            "is_all_day": r[9],
+            "google_event_id": r[10],
+            "source": r[11],
+            "sync_status": r[12],
+            "created_by_user_id": r[13],
+            "created_at": r[14].isoformat() if r[14] else None,
+            "updated_at": r[15].isoformat() if r[15] else None,
+            "owner_name": r[16] or None,
+            "created_by_name": r[17] or None,
         }
         for r in rows
     ]
@@ -165,18 +170,19 @@ async def create_event(
     result = await db.execute(
         text(
             "INSERT INTO calendar_events"
-            " (user_id, calendar_type, title, description, location,"
+            " (user_id, calendar_type, category, title, description, location,"
             "  start_datetime, end_datetime, is_all_day, source, sync_status,"
             "  created_by_user_id)"
             " VALUES"
-            " (:uid, :ctype, :title, :desc, :loc,"
+            " (:uid, :ctype, :category, :title, :desc, :loc,"
             "  :start, :end, :all_day, 'app', 'pending',"
             "  :cuid)"
             " RETURNING id"
         ),
         {
-            "uid": user_id if payload.get("calendar_type") == "personal" else None,
+            "uid": user_id,
             "ctype": payload.get("calendar_type", "shared"),
+            "category": payload.get("category", "meeting"),
             "title": payload["title"],
             "desc": payload.get("description"),
             "loc": payload.get("location"),

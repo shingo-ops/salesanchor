@@ -19,6 +19,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import MergeLeadModal from "../../components/MergeLeadModal";
 import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
+import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
@@ -301,7 +302,12 @@ export default function LeadsPage() {
             <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.channelType")}</label>
-            <input placeholder={t("leads.channelTypePlaceholder")} value={createForm.channel_type} onChange={(e) => setCreateForm({ ...createForm, channel_type: e.target.value })} />
+            <ChannelTypeCombobox
+              id="lead-channel-type-create"
+              value={createForm.channel_type}
+              onChange={(value) => setCreateForm({ ...createForm, channel_type: value })}
+              placeholder={t("leads.channelTypePlaceholder")}
+            />
           </div>
           <div className="form-group"><label>{t("leads.initiative")}</label>
             <select value={createForm.initiative} onChange={(e) => setCreateForm({ ...createForm, initiative: e.target.value })}>
