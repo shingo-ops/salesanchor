@@ -8,6 +8,8 @@ ADR-110: 翻訳監視サービスの単体テスト。
 """
 from __future__ import annotations
 
+# Verification PR: keep a harmless real-code diff so process-artifacts runs.
+
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
