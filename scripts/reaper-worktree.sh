@@ -347,3 +347,5 @@ echo "✅ reaper 完了: 削除 ${DELETED} 件"
 if [ "${#SKIP_UNSAVED[@]}" -gt 0 ]; then
   echo "⚠️  未保存あり ${#SKIP_UNSAVED[@]} 件は保護済み（人が確認してください）"
 fi
+
+# [ケースB実機検証] この1行は検証用コメント（動作変化なし・検証後削除）
