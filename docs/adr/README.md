@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-19 / ADR 総数: 141 件
+最終更新: 2026-06-21 / ADR 総数: 142 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -158,8 +158,9 @@
 | [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Accepted | — | — |
 | [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
 | [ADR-140](./ADR-140-mobile-nav-bottom-tabs.md) | ADR-140: モバイルナビ刷新 — 下部タブバー方式への移行 | Accepted | — | — |
+| [ADR-141](./ADR-141-inbound-translation-entry.md) | ADR-141: 受信翻訳の標準入口を `enqueue_inbound_translation()` に統一する | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
-| [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化による虚偽完了報告の再発防止 | Accepted | — | — |
+| [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 
 ## ステータス凡例
 

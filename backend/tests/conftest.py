@@ -12,6 +12,7 @@ PostgreSQL固有のスキーマ分離はモックし、認証もモックする�
 """
 
 import os
+
 # app.database が import される前に DATABASE_URL を SQLite に差し替える
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
@@ -26,16 +27,26 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
 from unittest.mock import patch
 
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event, text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
 # Python 3.14: mock.patch は target の親 package が submodule を attribute として
 # 保持していることを要求する。app.auth.dependencies を先に import しておく。
 import app.auth.dependencies  # noqa: F401
 
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy import text, event
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+
+def _load_country_seed_rows() -> list[tuple[str, str, str]]:
+    """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
+    import re
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "constants" / "countries.ts").read_text("utf-8")
+    pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
+    return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
 
 # pytest-asyncio 0.25+ で event_loop fixture の上書きは deprecated。
 # asyncio_default_fixture_loop_scope = "function" の場合、session-scoped fixture は
@@ -73,6 +84,8 @@ async def test_engine():
             statement = statement.replace("public.users", "users")
         if "public.permissions" in statement:
             statement = statement.replace("public.permissions", "permissions")
+        if "public.countries" in statement:
+            statement = statement.replace("public.countries", "countries")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -558,6 +571,16 @@ async def setup_test_db(test_engine):
                 category VARCHAR(50) NOT NULL
             )
         """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS countries (
+                code CHAR(2) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                dial_code VARCHAR(10) NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         # パーミッションマスタを全件シード（admin ユーザーの load_user_permissions フォールバック用）
         for perm_key in sorted(ALL_TEST_PERMISSIONS):
             parts = perm_key.split(".", 1)
@@ -570,6 +593,11 @@ async def setup_test_db(test_engine):
                 "key": perm_key, "resource": resource, "action": action,
                 "description": perm_key, "category": resource,
             })
+        for code, name, dial in _load_country_seed_rows():
+            await conn.execute(text("""
+                INSERT OR IGNORE INTO countries (code, name, dial_code, is_active)
+                VALUES (:code, :name, :dial_code, 1)
+            """), {"code": code, "name": name, "dial_code": dial})
         # ロール
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS roles (
@@ -1364,12 +1392,12 @@ async def client(db_session):
     テスト用HTTPクライアント。
     認証・DB・audit_log・権限チェックをモックしてSQLiteで動作させる。
     """
-    from app.main import app
     from app.auth.dependencies import (
-        get_current_user,
         get_current_tenant,
+        get_current_user,
     )
     from app.database import get_db
+    from app.main import app
 
     mock_user = _mock_user()
 
