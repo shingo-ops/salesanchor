@@ -29,6 +29,78 @@ function dashboardMocks() {
       upcoming: [],
       stalled: [],
     },
+    "GET /analytics/weekly-advisor-defensive": {
+      period: "3m",
+      scope: "mine",
+      stale_days: 14,
+      actions: [
+        {
+          rank: 1,
+          type: "churn_risk",
+          company_id: 101,
+          company_name: "Blue Ocean Co.",
+          lead_id: 9001,
+          score: 12800,
+          expected_value: 320000,
+          suggested_action: "状況確認の連絡",
+          reason: {
+            last_order_at: "2026-05-18",
+            last_contact_at: "2026-05-22",
+            avg_interval_days: 20,
+            days_since_last_order: 34,
+            days_since_contact: 30,
+            pace_score: 18,
+            contact_score: 12,
+            decline_score: 40,
+            total_score: 70,
+            current_order_count: 1,
+            previous_order_count: 4,
+            current_revenue: 320000,
+            previous_revenue: 1280000,
+          },
+        },
+        {
+          rank: 2,
+          type: "reorder",
+          company_id: 102,
+          company_name: "Card Haven LLC",
+          lead_id: 9002,
+          score: 7600,
+          expected_value: 380000,
+          suggested_action: "再受注の案内",
+          reason: {
+            last_order_at: "2026-05-28",
+            last_contact_at: "2026-06-01",
+            avg_interval_days: 18,
+            days_since_last_order: 24,
+            days_since_contact: 20,
+            current_order_count: 3,
+            previous_order_count: 0,
+            current_revenue: 1140000,
+            previous_revenue: 0,
+          },
+        },
+        {
+          rank: 3,
+          type: "comm_low",
+          company_id: 103,
+          company_name: "Tokyo Trading Co.",
+          lead_id: null,
+          score: 3200,
+          expected_value: 280000,
+          suggested_action: "近況確認の連絡",
+          reason: {
+            last_order_at: "2026-06-02",
+            last_contact_at: "2026-05-18",
+            days_since_contact: 34,
+            current_order_count: 2,
+            previous_order_count: 1,
+            current_revenue: 560000,
+            previous_revenue: 300000,
+          },
+        },
+      ],
+    },
     // 着地予測
     "GET /analytics/forecast": {
       forecast_amount: 3200000,
@@ -59,7 +131,7 @@ function dashboardMocks() {
         total: 18,
         converted: 7,
         excluded: 2,
-        cv_rate: 38.9,
+        conversion_rate: 38.9,
       },
       deals: {
         total: 12,
@@ -124,6 +196,9 @@ test.describe("Scene 1: Dashboard Overview", () => {
     // 固定エリア: 目標 / フォローアップ（Sprint 4: 着地予測は統合カードに移動）
     await expect(page.getByText("目標", { exact: true })).toBeVisible();
     await expect(page.getByText("フォローアップ", { exact: true })).toBeVisible();
+    await expect(page.getByText("今やること", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("weekly-advisor-section")).toBeVisible();
+    await expect(page.getByTestId("weekly-advisor-item").first()).toContainText("Blue Ocean Co.");
 
     // 受注統合カード: 受注・売上 見出しが描画される（営業担当ビュー）
     await expect(page.getByText("受注・売上", { exact: true })).toBeVisible();
@@ -133,6 +208,100 @@ test.describe("Scene 1: Dashboard Overview", () => {
     await page.getByRole("button", { name: "チーム" }).click();
     await expect(page.locator(".db-period-area").getByText("リード", { exact: true })).toBeVisible();
     await expect(page.locator(".db-period-area").getByText("商談", { exact: true })).toBeVisible();
+  });
+
+  test("今やることのフォロー追加で lead.next_action を保存できる", async ({ page }) => {
+    let capturedPatch: { next_action?: string; next_action_date?: string | null } | null = null;
+
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...commonMocks(),
+      ...dashboardMocks(),
+      "GET /leads/9001": {
+        id: 9001,
+        next_action: null,
+        next_action_date: null,
+      },
+      "PATCH /leads/9001": async (route) => {
+        capturedPatch = route.request().postDataJSON() as { next_action?: string; next_action_date?: string | null };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: 9001,
+            next_action: capturedPatch?.next_action ?? null,
+            next_action_date: capturedPatch?.next_action_date ?? null,
+          }),
+        });
+      },
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const composerOpen = page.getByTestId("weekly-followup-open").first();
+    await expect(composerOpen).toBeVisible();
+    await composerOpen.click();
+
+    const composer = page.getByTestId("weekly-followup-composer");
+    await expect(composer).toBeVisible();
+    await expect(page.getByTestId("weekly-followup-save")).toBeEnabled();
+
+    const actionField = composer.locator("textarea");
+    await actionField.fill("担当者へ連絡する");
+    await page.getByTestId("weekly-followup-save").click();
+
+    await expect.poll(() => capturedPatch?.next_action).toBe("担当者へ連絡する");
+    expect(capturedPatch?.next_action_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    await expect(page.getByTestId("weekly-followup-saved")).toContainText("追加済み");
+  });
+
+  test("lead_id が無い場合は会社詳細へ遷移する", async ({ page }) => {
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...commonMocks(),
+      ...dashboardMocks(),
+      "GET /companies/103": {
+        id: 103,
+        tenant_id: 999,
+        company_code: "CT-00103",
+        lead_id: null,
+        sales_rep_id: null,
+        name: "Tokyo Trading Co.",
+        name_en: null,
+        normalized_name: null,
+        industry: null,
+        website: null,
+        priority_focus: null,
+        per_order_amount: null,
+        monthly_frequency: null,
+        monthly_forecast: null,
+        monthly_forecast_source: null,
+        monthly_forecast_updated_at: null,
+        billing_display_name: null,
+        payment_recipient_name: null,
+        fedex_account: null,
+        shipping_note: null,
+        status: "active",
+        notes: null,
+        addresses: [],
+        sales_channels: [],
+        discord: null,
+        created_at: "2026-06-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+        total_deal_amount: null,
+        deal_count: 0,
+        conversation_count: 0,
+        last_conversation_at: null,
+      },
+      "GET /companies/103/contacts": [],
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("weekly-company-open").click();
+    await expect(page).toHaveURL(/\/companies\/103/);
   });
 
   test("0:18–0:25: メインナビにダッシュボード / リード / 管理メニューが出ている", async ({

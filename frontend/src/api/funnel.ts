@@ -92,6 +92,41 @@ export interface ReasonsResponse {
   memos: ReasonMemo[];
 }
 
+export interface WeeklyAdvisorReason {
+  last_order_at: string | null;
+  last_contact_at: string | null;
+  avg_interval_days: number | null;
+  days_since_last_order: number | null;
+  days_since_contact: number | null;
+  pace_score: number | null;
+  contact_score: number | null;
+  decline_score: number | null;
+  total_score: number | null;
+  current_order_count: number | null;
+  previous_order_count: number | null;
+  current_revenue: number | null;
+  previous_revenue: number | null;
+}
+
+export interface WeeklyAdvisorAction {
+  rank: number;
+  type: "reorder" | "churn_risk" | "comm_low";
+  company_id: number;
+  company_name: string;
+  lead_id: number | null;
+  score: number;
+  expected_value: number;
+  suggested_action: string;
+  reason: WeeklyAdvisorReason;
+}
+
+export interface WeeklyAdvisorResponse {
+  period: string;
+  scope: string;
+  stale_days: number;
+  actions: WeeklyAdvisorAction[];
+}
+
 // ─── API 呼び出し ──────────────────────────────────────────────────────
 
 export function getFunnel(month: string, scope?: "mine"): Promise<FunnelResponse> {
@@ -128,4 +163,20 @@ export function getReasons(
   if (MOCK_MODE)
     return Promise.resolve(type === "won" ? MOCK_REASONS_WON : MOCK_REASONS_LOST);
   return api.get<ReasonsResponse>(`/analytics/reasons?type=${type}&month=${month}`);
+}
+
+export function getWeeklyAdvisorDefensive(
+  scope: "mine" | "team" = "mine",
+  period: "1m" | "3m" | "6m" | "12m" = "3m",
+): Promise<WeeklyAdvisorResponse> {
+  if (MOCK_MODE) {
+    return Promise.resolve({
+      period,
+      scope,
+      stale_days: 14,
+      actions: [],
+    });
+  }
+  const params = new URLSearchParams({ scope, period });
+  return api.get<WeeklyAdvisorResponse>(`/analytics/weekly-advisor-defensive?${params}`);
 }
