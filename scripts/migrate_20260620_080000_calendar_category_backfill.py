@@ -24,15 +24,36 @@ import os
 import re
 import sys
 from pathlib import Path
-
-_APP_ROOT = Path(__file__).resolve().parent.parent
-if str(_APP_ROOT) not in sys.path:
-    sys.path.insert(0, str(_APP_ROOT))
+from typing import Literal, Mapping
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.services.calendar_category_utils import resolve_backfill_category
+# --- resolve_backfill_category をインライン化 ---
+# app.services.calendar_category_utils は Docker コンテナ外の CI 環境では
+# sys.path が合わないため、依存を除去して自己完結スクリプトにする。
+CalendarCategory = Literal["personal", "meeting", "purchase", "shipping", "billing", "release", "holiday"]
+
+_BACKFILL_RULES: tuple[tuple[CalendarCategory, tuple[re.Pattern[str], ...]], ...] = (
+    ("billing", (re.compile(r"\b請求\b"), re.compile(r"\b入金\b"), re.compile(r"請求"), re.compile(r"入金"), re.compile(r"billing", re.I), re.compile(r"invoice", re.I), re.compile(r"payment", re.I))),
+    ("shipping", (re.compile(r"発送"), re.compile(r"集荷"), re.compile(r"出荷"), re.compile(r"shipping", re.I), re.compile(r"delivery", re.I), re.compile(r"pickup", re.I))),
+    ("purchase", (re.compile(r"仕入"), re.compile(r"入荷"), re.compile(r"発注"), re.compile(r"purchase", re.I), re.compile(r"procure", re.I), re.compile(r"buy", re.I))),
+)
+
+def resolve_backfill_category(row: Mapping[str, object | None]) -> CalendarCategory | None:
+    current = row.get("category")
+    if isinstance(current, str) and current:
+        return None
+    if row.get("calendar_type") == "personal":
+        return "personal"
+    if row.get("source") != "app":
+        return None
+    text_val = "\n".join(str(row.get(f) or "") for f in ("title", "description", "location"))
+    for category, patterns in _BACKFILL_RULES:
+        if any(p.search(text_val) for p in patterns):
+            return category
+    return None
+# --- インライン化ここまで ---
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
