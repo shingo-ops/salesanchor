@@ -116,6 +116,26 @@ class RevenueSegmentsResponse(BaseModel):
     total: RevenueSegmentSummary
 
 
+class AttributeConversionItem(BaseModel):
+    value: str
+    n: int
+    conversions: int
+    raw_rate: float
+    smoothed_rate: float
+
+
+class AttributeConversionAxis(BaseModel):
+    axis: str
+    items: list[AttributeConversionItem]
+
+
+class AttributeConversionResponse(BaseModel):
+    month: str
+    scope: str
+    overall_rate: float
+    axes: list[AttributeConversionAxis]
+
+
 class WeeklyAdvisorReason(BaseModel):
     last_order_at: date | None = None
     last_contact_at: datetime | None = None
@@ -160,6 +180,17 @@ def _normalize_date(value: object) -> date:
     if isinstance(value, str):
         return date.fromisoformat(value[:10])
     return date.fromisoformat(str(value)[:10])
+
+
+def _normalize_attribute_bucket(value: object | None) -> str:
+    """属性集計用に空値を unknown に寄せる。"""
+    if value is None:
+        return "unknown"
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned or "unknown"
+    cleaned = str(value).strip()
+    return cleaned or "unknown"
 
 
 def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, object]:
@@ -1536,6 +1567,41 @@ def _validate_scope(scope: str) -> None:
         raise HTTPException(status_code=422, detail="scope は team または mine で指定してください")
 
 
+def _attribute_conversion_axis_rows(
+    rows: list[dict[str, object]],
+    *,
+    axis_name: str,
+    column_name: str,
+    overall_rate: float,
+    k: int = 10,
+) -> AttributeConversionAxis:
+    stats: dict[str, dict[str, int]] = {}
+    for row in rows:
+        value = _normalize_attribute_bucket(row.get(column_name))
+        bucket = stats.setdefault(value, {"n": 0, "conversions": 0})
+        bucket["n"] += 1
+        if row.get("converted_deal_id") is not None:
+            bucket["conversions"] += 1
+
+    items: list[AttributeConversionItem] = []
+    for value, stat in sorted(stats.items(), key=lambda item: (item[0] == "unknown", item[0])):
+        n = stat["n"]
+        conversions = stat["conversions"]
+        raw_rate = round(conversions / n, 4) if n > 0 else 0.0
+        smoothed_rate = round((conversions + k * overall_rate) / (n + k), 4) if n > 0 else overall_rate
+        items.append(
+            AttributeConversionItem(
+                value=value,
+                n=n,
+                conversions=conversions,
+                raw_rate=raw_rate,
+                smoothed_rate=smoothed_rate,
+            )
+        )
+
+    return AttributeConversionAxis(axis=axis_name, items=items)
+
+
 @router.get(
     "/analytics/funnel",
     response_model=FunnelResponse,
@@ -2187,6 +2253,66 @@ async def channels_summary(
         ))
 
     return ChannelsResponse(rows=rows)
+
+
+@router.get(
+    "/analytics/conversion-by-attribute",
+    response_model=AttributeConversionResponse,
+    dependencies=[Depends(require_permission("reports.view"))],
+)
+async def conversion_by_attribute(
+    month: str | None = Query(default=None, description="YYYY-MM 形式。省略時は今月"),
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """属性別の成約率集計を返す read-only API。"""
+    _validate_scope(scope)
+    today = date.today()
+    target_year, target_month = _parse_month(month, today)
+    month_value = f"{target_year:04d}-{target_month:02d}"
+    start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
+
+    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                l.channel_type,
+                l.country,
+                l.sales_form,
+                l.temperature,
+                l.response_speed,
+                l.converted_deal_id
+            FROM leads l
+            WHERE l.created_at >= :start AND l.created_at < :end
+            {lead_assign}
+            ORDER BY l.id
+        """),
+        {"start": start_utc, "end": end_utc, **scope_params},
+    )
+    rows = result.mappings().all()
+
+    total_leads = len(rows)
+    total_converted = sum(1 for row in rows if row["converted_deal_id"] is not None)
+    overall_rate = round(total_converted / total_leads, 4) if total_leads > 0 else 0.0
+
+    axes = [
+        _attribute_conversion_axis_rows(rows, axis_name="channel_type", column_name="channel_type", overall_rate=overall_rate),
+        _attribute_conversion_axis_rows(rows, axis_name="country", column_name="country", overall_rate=overall_rate),
+        _attribute_conversion_axis_rows(rows, axis_name="sales_form", column_name="sales_form", overall_rate=overall_rate),
+        _attribute_conversion_axis_rows(rows, axis_name="temperature", column_name="temperature", overall_rate=overall_rate),
+        _attribute_conversion_axis_rows(rows, axis_name="response_speed", column_name="response_speed", overall_rate=overall_rate),
+    ]
+
+    return AttributeConversionResponse(
+        month=month_value,
+        scope=scope,
+        overall_rate=overall_rate,
+        axes=axes,
+    )
 
 
 # ─────────────────────────────────────────────

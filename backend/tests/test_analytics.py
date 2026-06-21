@@ -582,6 +582,120 @@ class TestRevenueSegments:
 
 
 # ─────────────────────────────────────────────
+# conversion-by-attribute EP テスト
+# ─────────────────────────────────────────────
+
+class TestConversionByAttribute:
+    """GET /analytics/conversion-by-attribute"""
+
+    async def test_conversion_by_attribute_team_and_mine(self, client, db_session):
+        """5軸の成約率が team / mine で分かれ、shrink 付きで返る"""
+        today = date.today()
+        month = str(today)[:7]
+
+        async def make_deal(company_name: str, contact_name: str, *, assigned_to: int = 999) -> int:
+            company = await client.post("/api/v1/companies", json={"name": company_name})
+            company_id = company.json()["id"]
+            contact = await client.post("/api/v1/contacts", json={
+                "company_id": company_id,
+                "display_name": contact_name,
+            })
+            contact_id = contact.json()["id"]
+            deal = await client.post("/api/v1/deals", json={
+                "company_id": company_id,
+                "contact_id": contact_id,
+                "title": f"{company_name} Deal",
+                "amount": 100000,
+                "status": "won",
+                "stage": "won",
+                "assigned_to": assigned_to,
+            })
+            assert deal.status_code == 201, deal.text
+            return deal.json()["id"]
+
+        mine_deal_1 = await make_deal("Attr Mine 1", "Mine One")
+        mine_deal_3 = await make_deal("Attr Mine 3", "Mine Three")
+        other_deal_1 = await make_deal("Attr Other 1", "Other One", assigned_to=321)
+
+        await db_session.execute(text("""
+            INSERT INTO leads (
+                tenant_id, customer_name, channel_type, country, sales_form,
+                temperature, response_speed, status, assigned_to, converted_deal_id, created_at
+            )
+            VALUES
+                (999, 'Mine Attr 1', 'instagram', 'JP', 'Retail', 'Hot', '24h以内', 'negotiating', 999, :mine_deal_1, :dt),
+                (999, 'Mine Attr 2', 'instagram', 'JP', 'Retail', 'Hot', '24h以内', 'lead', 999, NULL, :dt),
+                (999, 'Mine Attr 3', 'phone', 'JP', 'Retail', 'Hot', '24h以内', 'negotiating', 999, :mine_deal_3, :dt),
+                (999, 'Other Attr 1', 'messenger', 'US', 'Wholesale', 'Warm', '24h以内', 'negotiating', 321, :other_deal_1, :dt),
+                (999, 'Other Attr 2', 'discord', 'US', 'Wholesale', 'Cold', '3日超', 'lead', 321, NULL, :dt)
+        """), {
+            "mine_deal_1": mine_deal_1,
+            "mine_deal_3": mine_deal_3,
+            "other_deal_1": other_deal_1,
+            "dt": str(today),
+        })
+        await db_session.commit()
+
+        res = await client.get(f"/api/v1/analytics/conversion-by-attribute?month={month}")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["month"] == month
+        assert data["scope"] == "team"
+        assert data["overall_rate"] == pytest.approx(3 / 5, abs=1e-4)
+
+        axes = {axis["axis"]: axis for axis in data["axes"]}
+        assert set(axes) == {"channel_type", "country", "sales_form", "temperature", "response_speed"}
+
+        channel_rows = {row["value"]: row for row in axes["channel_type"]["items"]}
+        assert channel_rows["instagram"]["n"] == 2
+        assert channel_rows["instagram"]["conversions"] == 1
+        assert channel_rows["instagram"]["raw_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert channel_rows["instagram"]["smoothed_rate"] == pytest.approx((1 + 10 * (3 / 5)) / 12, abs=1e-4)
+        assert channel_rows["discord"]["n"] == 1
+        assert channel_rows["discord"]["conversions"] == 0
+
+        country_rows = {row["value"]: row for row in axes["country"]["items"]}
+        assert country_rows["JP"]["n"] == 3
+        assert country_rows["JP"]["conversions"] == 2
+        assert country_rows["US"]["n"] == 2
+        assert country_rows["US"]["conversions"] == 1
+
+        sales_form_rows = {row["value"]: row for row in axes["sales_form"]["items"]}
+        assert sales_form_rows["Retail"]["n"] == 3
+        assert sales_form_rows["Retail"]["conversions"] == 2
+        assert sales_form_rows["Wholesale"]["n"] == 2
+        assert sales_form_rows["Wholesale"]["conversions"] == 1
+
+        temperature_rows = {row["value"]: row for row in axes["temperature"]["items"]}
+        assert temperature_rows["Hot"]["n"] == 3
+        assert temperature_rows["Hot"]["conversions"] == 2
+        assert temperature_rows["Warm"]["n"] == 1
+        assert temperature_rows["Warm"]["conversions"] == 1
+        assert temperature_rows["Cold"]["n"] == 1
+        assert temperature_rows["Cold"]["conversions"] == 0
+
+        response_speed_rows = {row["value"]: row for row in axes["response_speed"]["items"]}
+        assert response_speed_rows["24h以内"]["n"] == 4
+        assert response_speed_rows["24h以内"]["conversions"] == 3
+        assert response_speed_rows["3日超"]["n"] == 1
+        assert response_speed_rows["3日超"]["conversions"] == 0
+
+        mine_res = await client.get(f"/api/v1/analytics/conversion-by-attribute?month={month}&scope=mine")
+        assert mine_res.status_code == 200, mine_res.text
+        mine_data = mine_res.json()
+        assert mine_data["scope"] == "mine"
+        assert mine_data["overall_rate"] == pytest.approx(2 / 3, abs=1e-4)
+        mine_axes = {axis["axis"]: axis for axis in mine_data["axes"]}
+        mine_channel_rows = {row["value"]: row for row in mine_axes["channel_type"]["items"]}
+        assert set(mine_channel_rows) == {"instagram", "phone"}
+        assert mine_channel_rows["instagram"]["n"] == 2
+        assert mine_channel_rows["instagram"]["conversions"] == 1
+        assert mine_channel_rows["phone"]["n"] == 1
+        assert mine_channel_rows["phone"]["conversions"] == 1
+        assert mine_channel_rows["instagram"]["smoothed_rate"] == pytest.approx((1 + 10 * (2 / 3)) / 12, abs=1e-4)
+
+
+# ─────────────────────────────────────────────
 # weekly-advisor-defensive EP テスト
 # ─────────────────────────────────────────────
 
