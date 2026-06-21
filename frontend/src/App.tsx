@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+// PR-E gate verification: user-impacting no-op change.
 import { AuthProvider } from "./contexts/AuthContext";
 import { UiPrefsProvider } from "./contexts/UiPrefsContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
