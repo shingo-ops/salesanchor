@@ -83,7 +83,7 @@ export async function login(page: Page, role: QaRole): Promise<void> {
   console.log("[login] page.url after submit", page.url());
 
   // SPA 遷移は URL の load を待つより、Dashboard の描画を直接待つ方が安定する。
-  await expect(page.getByRole("heading", { name: /ダッシュボード|Dashboard/i })).toBeVisible({
+  await expect(page.getByRole("heading", { level: 2, name: /ダッシュボード|Dashboard/i })).toBeVisible({
     timeout: 30_000,
   });
 }
