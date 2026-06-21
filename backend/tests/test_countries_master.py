@@ -7,10 +7,11 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-TEST_PG_URL = (
+ADMIN_PG_URL = (
     os.getenv("RLS_ADMIN_DATABASE_URL")
     or os.getenv("TEST_PG_URL")
 )
+APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
 MIGRATION_FILE = "20260621_010000_create_countries_master.sql"
 
 
@@ -127,13 +128,13 @@ async def test_get_countries_shared_across_tenants(db_session):
     assert resp.json()[1]["code"] == "AL"
 
 
-@pytest.mark.skipif(not TEST_PG_URL, reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。")
+@pytest.mark.skipif(not ADMIN_PG_URL, reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。")
 @pytest.mark.asyncio
 async def test_countries_migration_creates_shared_master():
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    engine = create_async_engine(TEST_PG_URL, echo=False)
+    engine = create_async_engine(ADMIN_PG_URL, echo=False)
     try:
         await _apply_migration(engine, MIGRATION_FILE)
         async with engine.connect() as conn:
@@ -160,3 +161,112 @@ async def test_countries_migration_creates_shared_master():
         assert {row["code"] for row in rows} == {code for code, _, _ in expected}
     finally:
         await engine.dispose()
+
+
+@pytest.mark.skipif(
+    not ADMIN_PG_URL or not APP_PG_URL,
+    reason=(
+        "実 PostgreSQL 環境が必要 "
+        "(RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL 未設定)。"
+    ),
+)
+@pytest.mark.asyncio
+async def test_countries_shared_read_and_rls_isolation_under_app_role():
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.database import get_db
+    from app.main import app
+
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+    app_engine = create_async_engine(APP_PG_URL, echo=False)
+    app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def override_get_db():
+        async with app_session_factory() as session:
+            yield session
+
+    async def override_get_current_user():
+        return _mock_user()
+
+    async def override_get_current_tenant():
+        return 998
+
+    try:
+        await _apply_migration(admin_engine, MIGRATION_FILE)
+
+        async with admin_engine.begin() as conn:
+            for tenant_id in (998, 999):
+                schema = f"tenant_{tenant_id:03d}"
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+                await conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {schema}.country_probe (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+                        value TEXT NOT NULL
+                    )
+                """))
+                await conn.execute(text(f"ALTER TABLE {schema}.country_probe ENABLE ROW LEVEL SECURITY"))
+                await conn.execute(text(f"ALTER TABLE {schema}.country_probe FORCE ROW LEVEL SECURITY"))
+                await conn.execute(text(f"""
+                    DROP POLICY IF EXISTS tenant_isolation_country_probe
+                    ON {schema}.country_probe
+                """))
+                await conn.execute(text(f"""
+                    CREATE POLICY tenant_isolation_country_probe
+                    ON {schema}.country_probe
+                    USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER)
+                """))
+                await conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO salesanchor_app"))
+                await conn.execute(text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {schema} TO salesanchor_app"))
+                await conn.execute(text(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO salesanchor_app"))
+                await conn.execute(text(f"DELETE FROM {schema}.country_probe"))
+                await conn.execute(text(f"""
+                    INSERT INTO {schema}.country_probe (tenant_id, value)
+                    VALUES (:tenant_id, :value)
+                """), {"tenant_id": tenant_id, "value": f"tenant-{tenant_id}"})
+
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_current_tenant] = override_get_current_tenant
+
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                resp = await ac.get("/api/v1/countries")
+            assert resp.status_code == 200
+            assert len(resp.json()) == 190
+            assert resp.json()[0]["code"] == "AF"
+
+            async with app_session_factory() as session:
+                async with session.begin():
+                    await session.execute(text("SET LOCAL app.tenant_id = '998'"))
+
+                    country_count = (
+                        await session.execute(text("SELECT count(*) FROM public.countries"))
+                    ).scalar_one()
+                    assert country_count == 190
+
+                    visible_probe = (
+                        await session.execute(
+                            text(
+                                "SELECT value FROM tenant_998.country_probe "
+                                "ORDER BY id"
+                            )
+                        )
+                    ).scalars().all()
+                    assert visible_probe == ["tenant-998"]
+
+                    hidden_probe = (
+                        await session.execute(
+                            text("SELECT value FROM tenant_999.country_probe")
+                        )
+                    ).fetchall()
+                    assert hidden_probe == []
+        finally:
+            app.dependency_overrides.clear()
+    finally:
+        await admin_engine.dispose()
+        await app_engine.dispose()
