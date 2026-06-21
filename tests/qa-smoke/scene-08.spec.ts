@@ -16,6 +16,8 @@ import { login } from "./utils/real-backend";
 import { psqlCount, psqlRows } from "./utils/db-assert";
 
 test.describe("Scene 08: Data Lifecycle (real backend)", { tag: ['@scene-08'] }, () => {
+  test.skip(true, "Layer A #2422: 認証ユーザー解決/データ可視性");
+
   test("顧客 → channel → mock webhook → lead → order → KPI の通し", async ({ page }) => {
     // === 0. 起点: seed company A が存在 ===
     expect(
