@@ -7,24 +7,24 @@
 
 ## 目的
 
-W-1 API `/analytics/weekly-advisor-defensive` を `scope=mine` で取得し、ダッシュボードの `FunnelSection` 直下に「今やること」セクションを表示する。
+W-1 API /analytics/weekly-advisor-defensive を scope=mine で取得し、ダッシュボードの FunnelSection 直下に「今やること」セクションを表示する。
 
 ## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
-| `WeeklyAdvisorSection` が `DashboardPage` の `FunnelSection` 直下に出る | `frontend/src/pages/dashboard/DashboardPage.tsx:487-493` |
+| WeeklyAdvisorSection が DashboardPage の FunnelSection 直下に出る | `frontend/src/pages/dashboard/DashboardPage.tsx:487-493` |
 | 守り3種が score 降順で表示される | `frontend/tests-e2e/scene1-dashboard.spec.ts` |
-| `scope=mine` 固定で表示される | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx` |
-| ローディング / 空状態 / エラーが崩れない | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx` / `.css` |
-| ダークモード・意味ベース色に従う | `frontend/src/pages/dashboard/WeeklyAdvisorSection.css` |
+| scope=mine 固定で表示される | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120` |
+| ローディング / 空状態 / エラーが崩れない | `frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:1-120` / `frontend/src/pages/dashboard/WeeklyAdvisorSection.css:1-120` |
+| ダークモード・意味ベース色に従う | `frontend/src/pages/dashboard/WeeklyAdvisorSection.css:1-120` |
 | process-artifacts gate に必要な標準ワークフロー確認が PR に含まれる | PR本文 |
 
 ## 技術方針
 
-- 既存の `db-section-card` / `db-section-header` を流用する
+- 既存の db-section-card / db-section-header を流用する
 - 追加 CTA は置かない
-- `WeeklyAdvisorSection` 内で API を読み、結果を score 降順のまま描画する
+- WeeklyAdvisorSection 内で API を読み、結果を score 降順のまま描画する
 - フォロー追加などの書き込み導線は W-1c へ切り分ける
 
 ## 完了条件
