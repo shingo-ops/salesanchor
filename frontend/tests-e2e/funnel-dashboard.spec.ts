@@ -70,12 +70,14 @@ const mockSummary = {
   },
 };
 const mockMonthlyRevenue = { granularity: "monthly", entries: [] };
+const mockWeeklyAdvisor = { period: "3m", scope: "mine", stale_days: 14, actions: [] };
 
 function funnelMocks() {
   return {
     "GET /analytics/funnel": mockFunnel,
     "GET /analytics/revenue-summary": mockRevenueSummary,
     "GET /analytics/follow-ups": mockFollowUps,
+    "GET /analytics/weekly-advisor-defensive": mockWeeklyAdvisor,
     // 既存EP
     "GET /goals/summary": mockGoalSummary,
     "GET /analytics/forecast": mockForecast,

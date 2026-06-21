@@ -27,6 +27,7 @@ const TABLET_BOUNDARY_VIEWPORT = { width: 700, height: 900 };
 function dashboardMocks() {
   return {
     "GET /analytics/followups": { overdue: [], due_today: [], upcoming: [], stalled: [] },
+    "GET /analytics/weekly-advisor-defensive": { period: "3m", scope: "mine", stale_days: 14, actions: [] },
     "GET /analytics/forecast": {
       forecast_amount: 0,
       won_amount: 0,
