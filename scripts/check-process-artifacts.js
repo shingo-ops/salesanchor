@@ -21,6 +21,7 @@
 
 const { readFileSync, existsSync } = require('fs');
 const { execSync } = require('child_process');
+const { analyzeRepositoryDiff } = require('./detect-external-api-change');
 const { join } = require('path');
 
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
@@ -88,6 +89,34 @@ function isUserImpactingFile(filePath) {
 
 function hasUserImpactingChange(files) {
   return files.some(f => isUserImpactingFile(f));
+}
+
+function getExternalApiChangeReport() {
+  if (process.env.MOCK_EXTERNAL_API_CHANGE !== undefined) {
+    const hasExternalChange = process.env.MOCK_EXTERNAL_API_CHANGE === 'true';
+    return {
+      hasExternalChange,
+      detectedApis: hasExternalChange ? ['mock_external_api'] : [],
+      unpreparedApis: [],
+    };
+  }
+
+  const baseRef = process.env.MOCK_BASE_REF !== undefined
+    ? process.env.MOCK_BASE_REF
+    : process.env.BASE_SHA;
+  const headRef = process.env.MOCK_HEAD_REF !== undefined
+    ? process.env.MOCK_HEAD_REF
+    : process.env.HEAD_SHA;
+
+  if (!baseRef || !headRef) {
+    return {
+      hasExternalChange: false,
+      detectedApis: [],
+      unpreparedApis: [],
+    };
+  }
+
+  return analyzeRepositoryDiff({ baseRef, headRef });
 }
 
 // ─── PR 本文パース ────────────────────────────────────────────────────────────
@@ -511,6 +540,14 @@ function main() {
 
   const declaration = parseSOPDeclaration(prBody);
   const hasUserImpacting = hasUserImpactingChange(changedFiles);
+  let externalApiReport = null;
+  try {
+    externalApiReport = getExternalApiChangeReport();
+  } catch (error) {
+    console.warn(`⚠️ 外部API変更検出に失敗 — 安全側で fail 扱い: ${error.message || error}`);
+    externalApiReport = { hasExternalChange: true, detectedApis: ['external_api_detection_error'], unpreparedApis: [] };
+  }
+  const hasExternalApiImpact = externalApiReport.hasExternalChange;
 
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
@@ -531,20 +568,23 @@ function main() {
     process.exit(0);
   }
 
-  // ユーザー影響のある変更は、develop へ入る前に Shingo GO が必須
-  if (hasUserImpacting) {
+  // ユーザー影響のある変更・外部API変更は、develop へ入る前に Shingo GO が必須
+  if (hasUserImpacting || hasExternalApiImpact) {
     const goRecord = parseGORecord(prBody);
     const goErrors = validateGORecord(goRecord, prNumber);
 
     if (goErrors.length > 0) {
       printFailure([
         ...goErrors,
-        '   → frontend/src / backend/app/routers / backend/app/services の変更は Shingo の GO 記録が必要です',
+        '   → frontend/src / backend/app/routers / backend/app/services / backend/app/auth / backend/app/tasks / backend/app/discord_gateway / 外部API変更は Shingo の GO 記録が必要です',
         '   → 先にチャットで GO を受領し、PR 本文の「### GO記録」へ転記してください',
       ]);
     }
 
-    console.log('✅ ユーザー影響変更：GO記録確認済み — pass');
+    const label = hasExternalApiImpact && !hasUserImpacting
+      ? '✅ 外部API変更：GO記録確認済み — pass'
+      : '✅ ユーザー影響変更：GO記録確認済み — pass';
+    console.log(label);
   }
 
   // 実コード変更の処理
@@ -562,6 +602,7 @@ module.exports = {
   classifyChanges,
   hasUserImpactingChange,
   isUserImpactingFile,
+  getExternalApiChangeReport,
   parseSOPDeclaration,
   parseGORecord,
   validateGORecord,

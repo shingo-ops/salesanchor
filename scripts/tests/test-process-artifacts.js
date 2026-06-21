@@ -25,6 +25,7 @@ const {
   classifyChanges,
   hasUserImpactingChange,
   isUserImpactingFile,
+  getExternalApiChangeReport,
   parseSOPDeclaration,
   parseGORecord,
   validateGORecord,
@@ -173,6 +174,19 @@ test('backend/app/tasks/ は user-impacting 区分', () => {
 test('backend/app/discord_gateway/ は user-impacting 区分', () => {
   assert.ok(isUserImpactingFile('backend/app/discord_gateway/client.py'));
   assert.ok(hasUserImpactingChange(['backend/app/discord_gateway/client.py']));
+});
+
+test('PR-C の外部API検出レポートを読み込める', () => {
+  const prev = process.env.MOCK_EXTERNAL_API_CHANGE;
+  process.env.MOCK_EXTERNAL_API_CHANGE = 'true';
+  const report = getExternalApiChangeReport();
+  assert.ok(report.hasExternalChange);
+  assert.ok(report.detectedApis.includes('mock_external_api'));
+  if (prev === undefined) {
+    delete process.env.MOCK_EXTERNAL_API_CHANGE;
+  } else {
+    process.env.MOCK_EXTERNAL_API_CHANGE = prev;
+  }
 });
 
 test('backend/app/schemas/ は user-impacting ではない', () => {
@@ -625,6 +639,53 @@ test('ユーザー影響変更: GOありはpass', () => {
 
     assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
     assert.ok(result.stdout.includes('ユーザー影響変更') || result.stdout.includes('PASSED'));
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('外部API変更: GOなしはfail', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('external-api-no-go/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('external-api-no-go/design.md', designContent);
+    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+
+    const result = runScript({
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
+      MOCK_EXTERNAL_API_CHANGE: 'true',
+      MOCK_PR_BODY: body,
+    });
+
+    assert.notStrictEqual(result.code, 0, 'GOなしの外部API変更はfailするべき');
+    assert.ok(result.stderr.includes('GO記録') || result.stderr.includes('GO #'));
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('外部API変更: GOありはpass', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('external-api-with-go/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('external-api-with-go/design.md', designContent);
+    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n\n${validGORecordSection(2099)}`;
+
+    const result = runScript({
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
+      MOCK_EXTERNAL_API_CHANGE: 'true',
+      MOCK_PR_BODY: body,
+      PR_NUMBER: '2099',
+    });
+
+    assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+    assert.ok(result.stdout.includes('外部API変更') || result.stdout.includes('PASSED'));
   } finally {
     cleanupTmp();
   }
