@@ -113,30 +113,32 @@ async def test_check_health_pending_messages():
 
 @pytest.mark.asyncio
 async def test_check_health_query_tracks_ja_and_en_variants():
-    captured_sql: list[str] = []
-
-    async def _execute(stmt, params=None):
-        sql = str(stmt)
-        captured_sql.append(sql)
-        result = MagicMock()
-        row = MagicMock()
-        if len(captured_sql) == 1:
-            row.__getitem__ = MagicMock(side_effect=lambda i: [10, 2][i])
-        else:
-            row.__getitem__ = MagicMock(return_value=1)
-        result.first.return_value = row
-        return result
+    messages_result = MagicMock()
+    messages_result.fetchall.return_value = [
+        ("m1", "こんにちは stock"),
+        ("m2", "Hello stock"),
+        ("m3", "Hola stock"),
+    ]
+    low_conf_row = MagicMock()
+    low_conf_row.__getitem__ = MagicMock(return_value=1)
+    low_conf_result = MagicMock()
+    low_conf_result.first.return_value = low_conf_row
 
     db = AsyncMock()
-    db.execute = AsyncMock(side_effect=_execute)
+    db.execute = AsyncMock(side_effect=[messages_result, low_conf_result])
+    with patch(
+        "app.services.message_translator.get_existing_inbound_translation_targets",
+        AsyncMock(side_effect=[
+            ({"ja"}, "ja"),
+            ({"ja"}, "en"),
+            ({"ja"}, "es"),
+        ]),
+    ):
+        snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
 
-    snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
-
-    assert snap.total == 10
+    assert snap.total == 3
     assert snap.failed == 2
-    assert any("mt_ja.target_language = 'ja'" in sql for sql in captured_sql)
-    assert any("mt_en.target_language = 'en'" in sql for sql in captured_sql)
-    assert any("COALESCE(mt_ja.original_language, '') <> 'en'" in sql for sql in captured_sql)
+    assert snap.low_confidence == 1
 
 
 # ---------------------------------------------------------------------------
