@@ -269,6 +269,9 @@ services:
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DISCORD_GATEWAY_LOG_LEVEL=${DISCORD_GATEWAY_LOG_LEVEL:-INFO}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
       # per-tenant Bot Token（ADR-009 5-3）
       # 形式: DISCORD_BOT_TOKEN_<TENANT_ID>=<token>
       # tenant_004 = HIGH LIFE JPN
