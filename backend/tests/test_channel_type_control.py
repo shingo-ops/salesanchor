@@ -80,7 +80,7 @@ async def _ensure_tenant_006_schema(
                 meeting_impression VARCHAR(50),
                 cs_memo TEXT,
                 sales_form VARCHAR(50),
-                competitor_check BOOLEAN NOT NULL DEFAULT 0,
+                competitor_check BOOLEAN NOT NULL DEFAULT FALSE,
                 per_order_amount NUMERIC(15, 2),
                 monthly_frequency NUMERIC(10, 2),
                 nickname VARCHAR(255),
