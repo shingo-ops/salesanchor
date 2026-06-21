@@ -288,6 +288,12 @@ test('存在するファイル・有効な行番号は validateFileCitations が
   assert.deepStrictEqual(errors, []);
 });
 
+test('拡張子なしのコードスパンは file citation として無視される', () => {
+  const content = '| `scope=mine` | `FunnelSection` | `/analytics/weekly-advisor-defensive` | `tenant_006` |';
+  assert.ok(!hasFileCitations(content));
+  assert.deepStrictEqual(validateFileCitations(content), []);
+});
+
 // ── §7 受け入れ基準 AC1: 偽のfile:lineはfail ─────────────────────────────────
 console.log('\n【§7 受け入れ基準テスト】');
 
