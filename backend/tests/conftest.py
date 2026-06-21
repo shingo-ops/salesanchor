@@ -37,6 +37,7 @@ from sqlalchemy.orm import sessionmaker
 # Python 3.14: mock.patch は target の親 package が submodule を attribute として
 # 保持していることを要求する。app.auth.dependencies を先に import しておく。
 import app.auth.dependencies  # noqa: F401
+from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 
 def _load_country_seed_rows() -> list[tuple[str, str, str]]:
@@ -367,6 +368,17 @@ async def setup_test_db(test_engine):
                 discord_guild_channel_id VARCHAR(50)
             )
         """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS channel_masters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL DEFAULT 999,
+                platform VARCHAR(30) NOT NULL UNIQUE,
+                display_name VARCHAR(100) NOT NULL,
+                connection_type VARCHAR(10) NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         # 案件テーブル（Step 5d: 旧 customer_id 列削除済）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS deals (
@@ -598,6 +610,15 @@ async def setup_test_db(test_engine):
                 INSERT OR IGNORE INTO countries (code, name, dial_code, is_active)
                 VALUES (:code, :name, :dial_code, 1)
             """), {"code": code, "name": name, "dial_code": dial})
+        for platform, display_name, connection_type in DEFAULT_CHANNEL_MASTERS:
+            await conn.execute(text("""
+                INSERT OR IGNORE INTO channel_masters (platform, display_name, connection_type, is_active)
+                VALUES (:platform, :display_name, :connection_type, 1)
+            """), {
+                "platform": platform,
+                "display_name": display_name,
+                "connection_type": connection_type,
+            })
         # ロール
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS roles (

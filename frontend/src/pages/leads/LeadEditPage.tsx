@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
+import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { api } from "../../lib/api";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
@@ -142,7 +143,12 @@ export default function LeadEditPage() {
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.channelType")}</label>
-            <input placeholder={t("leads.channelTypePlaceholder")} value={form.channel_type} onChange={(e) => setForm({ ...form, channel_type: e.target.value })} />
+            <ChannelTypeCombobox
+              id="lead-channel-type"
+              value={form.channel_type}
+              onChange={(value) => setForm({ ...form, channel_type: value })}
+              placeholder={t("leads.channelTypePlaceholder")}
+            />
           </div>
           <div className="form-group"><label>{t("leads.initiative")}</label>
             <select value={form.initiative} onChange={(e) => setForm({ ...form, initiative: e.target.value })}>

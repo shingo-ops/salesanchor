@@ -24,6 +24,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.base import validate_email_loose, validate_phone
+from app.services.channel_masters import normalize_channel_type_value
 from app.services.country_codes import parse_country_code
 
 
@@ -125,6 +126,11 @@ class LeadCreate(BaseModel):
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
 
+    @field_validator("channel_type")
+    @classmethod
+    def check_channel_type(cls, v: str | None) -> str | None:
+        return normalize_channel_type_value(v)
+
     @field_validator("country")
     @classmethod
     def check_country(cls, v: str | None) -> str | None:
@@ -183,6 +189,11 @@ class LeadUpdate(BaseModel):
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("channel_type")
+    @classmethod
+    def check_channel_type(cls, v: str | None) -> str | None:
+        return normalize_channel_type_value(v)
 
     @field_validator("country")
     @classmethod
