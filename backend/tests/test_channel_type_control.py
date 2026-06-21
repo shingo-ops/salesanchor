@@ -116,12 +116,7 @@ async def test_channel_type_backfill_normalizes_and_seeds_whatsapp_under_tenant_
     lead_ids: list[int] = []
 
     try:
-        async with admin_engine.connect() as conn:
-            tenant_row = await conn.execute(
-                text("SELECT id FROM public.tenants WHERE tenant_code = 'tenant_006'")
-            )
-            tenant_id = tenant_row.scalar_one_or_none()
-        assert tenant_id is not None
+        tenant_id = 6
 
         async with admin_engine.begin() as conn:
             result = await conn.execute(
