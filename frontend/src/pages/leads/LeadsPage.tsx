@@ -22,6 +22,7 @@ import PriorityScoreBadge, { type CustomerScoreData } from "../../components/Pri
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
+import { CountryCombobox } from "../../components/CountryCombobox";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { DataTable } from "../../components/DataTable";
@@ -54,6 +55,7 @@ interface Lead {
   assigned_to: number | null;
   converted_deal_id: number | null;
   notes: string | null;
+  country: string | null;
   created_at: string;
   updated_at: string;
   discord_user_id: string | null;
@@ -77,18 +79,19 @@ type CreateFormState = {
   response_speed: string;
   monthly_forecast: string;
   notes: string;
+  country: string;
 };
 
 const emptyCreateForm: CreateFormState = {
   customer_name: "", company_name: "", email: "", phone: "",
   channel_type: "", initiative: "", type: "", status: "lead", temperature: "",
   estimated_scale: "", customer_type: "", response_speed: "",
-  monthly_forecast: "", notes: "",
+  monthly_forecast: "", notes: "", country: "",
 };
 
 const emptyEditForm: LeadFormState = {
   customer_name: "", email: "", phone: "",
-  status: "lead", type: "", notes: "",
+  status: "lead", type: "", notes: "", country: "",
 };
 
 const toForm = (l: Lead): LeadFormState => ({
@@ -98,6 +101,7 @@ const toForm = (l: Lead): LeadFormState => ({
   status: l.status,
   type: l.type || "",
   notes: l.notes || "",
+  country: l.country || "",
 });
 
 /* ------------------------------------------------------------------ */
@@ -176,6 +180,7 @@ export default function LeadsPage() {
         response_speed: toNull(createForm.response_speed),
         monthly_forecast: createForm.monthly_forecast ? Number(createForm.monthly_forecast) : null,
         notes: toNull(createForm.notes),
+        country: toNull(createForm.country),
       });
       setShowCreate(false);
       setCreateForm(emptyCreateForm);
@@ -185,7 +190,7 @@ export default function LeadsPage() {
     }
   };
 
-  /* ── Drawer 編集（6項目） ── */
+  /* ── Drawer 編集（7項目） ── */
   const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editId || !editForm) return;
@@ -199,6 +204,7 @@ export default function LeadsPage() {
         status: editForm.status,
         type: toNull(editForm.type),
         notes: toNull(editForm.notes),
+        country: toNull(editForm.country),
       });
       closeDrawer();
       loadLeads();
@@ -352,6 +358,14 @@ export default function LeadsPage() {
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
             <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+          </div>
+          <div className="form-group"><label>{t("leads.country")}</label>
+            <CountryCombobox
+              id="lead-create-country"
+              value={createForm.country}
+              onChange={(value) => setCreateForm({ ...createForm, country: value })}
+              placeholder={t("common.search")}
+            />
           </div>
           <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>

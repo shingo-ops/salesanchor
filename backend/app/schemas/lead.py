@@ -24,6 +24,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.base import validate_email_loose, validate_phone
+from app.services.country_codes import parse_country_code
 
 
 class LeadStatus(str, Enum):
@@ -112,6 +113,7 @@ class LeadCreate(BaseModel):
     monthly_forecast: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     assigned_to: int | None = Field(default=None, ge=1)
     notes: str | None = Field(default=None, max_length=5000)
+    country: str | None = Field(default=None, max_length=100)
 
     @field_validator("email")
     @classmethod
@@ -122,6 +124,16 @@ class LeadCreate(BaseModel):
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("country")
+    @classmethod
+    def check_country(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        parsed = parse_country_code(v)
+        if parsed is None:
+            raise ValueError("country は ISO 3166-1 alpha-2 または国名で指定してください")
+        return parsed
 
 
 class LeadUpdate(BaseModel):
@@ -171,6 +183,16 @@ class LeadUpdate(BaseModel):
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("country")
+    @classmethod
+    def check_country(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        parsed = parse_country_code(v)
+        if parsed is None:
+            raise ValueError("country は ISO 3166-1 alpha-2 または国名で指定してください")
+        return parsed
 
 
 class LeadResponse(BaseModel):

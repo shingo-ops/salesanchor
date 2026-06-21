@@ -149,6 +149,7 @@ run_sql migrations/075_create_goals.sql
 run_sql migrations/076_add_google_calendar_config.sql
 run_sql migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql
 run_sql migrations/078_create_calendar_events_tenant.sql
+run_py  scripts/migrate_20260620_080000_calendar_category_backfill.py
 run_sql migrations/080_phase_b_migration.sql
 
 # Inventory 拡張
@@ -410,6 +411,8 @@ run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 # Foundation F1: 国台帳 public.countries（ISO alpha-2 / 全テナント共有）
 run_sql migrations/20260621_010000_create_countries_master.sql
 
+# Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
+run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
 echo ""
 echo "============================================"
