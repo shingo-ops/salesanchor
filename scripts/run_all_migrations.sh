@@ -65,6 +65,16 @@ run_sql() {
   docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"
 }
 
+preflight_registered_files() {
+  echo ">>> [0] Verifying registered migration files exist..."
+  bash scripts/check-migration-registration-exists.sh \
+    --mode container \
+    --repo-root "${REPO_DIR}" \
+    --backend-container "${BACKEND}"
+}
+
+preflight_registered_files
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
