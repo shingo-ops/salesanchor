@@ -9,6 +9,8 @@
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import './DashboardPage.css'
+import './WeeklyAdvisorSection.css'
+import './PriorityProspectsSection.css'
 
 const meta: Meta = {
   title: 'Pages/Dashboard',
@@ -50,6 +52,66 @@ export const Tabs: Story = {
         <button className="db-tab active">月次</button>
         <button className="db-tab">週次</button>
         <button className="db-tab">日次</button>
+      </div>
+    </div>
+  ),
+}
+
+export const TodayActionsSplit: Story = {
+  name: 'Today actions split',
+  render: () => (
+    <div style={{ width: 'var(--ds-preview-width)' }} className="db-content-stack">
+      <div className="db-section-card db-priority-card">
+        <div className="db-section-header">
+          <span className="db-section-icon" aria-hidden="true">▲</span>
+          <h3>
+            Priority prospects
+            <span className="db-priority-ai-pill">Opportunity</span>
+          </h3>
+        </div>
+        <p className="db-priority-subtitle">Sort offensive targets by ease and expected value.</p>
+        <div className="db-priority-item">
+          <div className="db-priority-item-head">
+            <span className="db-priority-badge">Opportunity</span>
+            <span className="db-priority-type">Priority prospect</span>
+            <span className="db-priority-score-label">Rank score: <strong>25,088,000</strong></span>
+          </div>
+          <div className="db-priority-company">Blue Ocean Co.</div>
+          <div className="db-priority-meta">
+            <span>Ease: 78.4%</span>
+            <span>Monthly forecast: ¥320,000</span>
+          </div>
+          <div className="db-priority-flag-row">
+            <span className="db-priority-flag">Small sample</span>
+          </div>
+          <div className="db-priority-axis">
+            <span className="db-priority-axis-chip"><span className="db-priority-axis-label">channel_type:</span><span className="db-priority-axis-value">web</span></span>
+            <span className="db-priority-axis-chip"><span className="db-priority-axis-label">country:</span><span className="db-priority-axis-value">JP</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div className="db-section-card db-weekly-card">
+        <div className="db-section-header">
+          <span className="db-section-icon" aria-hidden="true">✓</span>
+          <h3>
+            Today's Actions
+            <span className="db-weekly-ai-pill">AI Suggested</span>
+          </h3>
+        </div>
+        <p className="db-weekly-subtitle">Defensive priorities stay intact below.</p>
+        <div className="db-weekly-item db-weekly-item--reorder">
+          <div className="db-weekly-item-head">
+            <span className="db-weekly-rank">#1</span>
+            <span className="db-weekly-type">Reorder Soon</span>
+            <span className="db-weekly-score-label">Score: <strong>12,800</strong></span>
+          </div>
+          <div className="db-weekly-company">Blue Ocean Co.</div>
+          <div className="db-weekly-meta">
+            <span>Expected value: ¥320,000</span>
+            <span>Reconnect soon</span>
+          </div>
+        </div>
       </div>
     </div>
   ),
