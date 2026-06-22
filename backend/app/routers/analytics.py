@@ -1823,7 +1823,6 @@ async def priority_prospects(
     if scope != "mine":
         raise HTTPException(status_code=422, detail="scope は mine で指定してください")
 
-    lead_assign = "AND l.assigned_to = :uid"
     scope_params: dict[str, object] = {"uid": current_user.id}
     overall_rate, team_axes = await _fetch_attribute_conversion_summary(
         db,
