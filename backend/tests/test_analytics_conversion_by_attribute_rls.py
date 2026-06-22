@@ -51,6 +51,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 await session.execute(text("SET app.is_operator = ''"))
                 yield session
 
+    # 1件は他担当に振って scope=team / mine の差を作る。
     inserted_rows: list[int] = []
     foreign_rows: list[int] = []
 
