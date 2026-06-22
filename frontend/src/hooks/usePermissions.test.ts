@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePermissions } from "./usePermissions";
 
@@ -103,7 +103,9 @@ describe("usePermissions", () => {
 
     expect(result.current.permissions.has("write:orders")).toBe(false);
 
-    result.current.reload();
+    await act(async () => {
+      await result.current.reload();
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.permissions.has("write:orders")).toBe(true);
