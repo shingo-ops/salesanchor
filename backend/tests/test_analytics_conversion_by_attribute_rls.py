@@ -107,9 +107,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                     )
                     RETURNING id
                 """),
-                {
-                    "other_uid": current_user.id + 1,
-                },
+                {"other_uid": current_user.id + 1},
             )
             foreign_rows.extend(int(row_id) for row_id in foreign_result.scalars().all())
 
