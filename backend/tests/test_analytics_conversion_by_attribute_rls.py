@@ -79,6 +79,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
 
                 current_user = _build_user(999, int(tenant_id), "admin")
 
+                # FastAPI dependency 解決を介さず、同一 session の RLS クエリを直接検証する。
                 team = await conversion_by_attribute_summary(
                     scope="team",
                     db=session,
