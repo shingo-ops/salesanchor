@@ -129,6 +129,49 @@
   gap: var(--space-2);
 }
 
+/* ── ステップ1 サブステップ ── */
+.etd-guide__substeps {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.etd-guide__substep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
+}
+
+.etd-guide__substep-label {
+  margin: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.etd-guide__screenshot {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+/* 情報ノート（テストキー注意書き）*/
+.etd-guide__note--info {
+  margin-top: var(--space-4);
+  border-left: 3px solid var(--info-text, var(--accent));
+  color: var(--text-secondary);
+}
+
 .etd-guide__nav {
   justify-content: space-between;
   margin-top: var(--space-2);
