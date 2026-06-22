@@ -20,7 +20,19 @@ logger = logging.getLogger(__name__)
 
 
 def _iter_inventory_rows(db: Session):
-    result = db.execute(text("SELECT id, condition, unit FROM public.inventory ORDER BY id ASC"))
+    has_unit_column = db.execute(
+        text(
+            """
+            SELECT 1
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = 'inventory'
+               AND column_name = 'unit'
+            """
+        )
+    ).first() is not None
+    unit_expr = "unit" if has_unit_column else "NULL::text AS unit"
+    result = db.execute(text(f"SELECT id, condition, {unit_expr} FROM public.inventory ORDER BY id ASC"))
     for row in result.mappings().all():
         yield dict(row)
 
