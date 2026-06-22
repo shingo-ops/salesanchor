@@ -13,6 +13,11 @@
 --
 -- 先に新キーを作成し、検証後に旧キーを外す。
 
+-- migration-test.yml の現行-era ベースラインでは 20260602 系が走らないため、
+-- この migration 単体で評価できるよう、旧列が未存在なら安全に追加する。
+ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS offer_type VARCHAR(20) NOT NULL DEFAULT 'in_stock';
+ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS ship_timing VARCHAR(20);
+
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_inventory_offer_v2
     ON public.inventory (
         supplier_id,
