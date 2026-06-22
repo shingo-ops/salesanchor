@@ -45,8 +45,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     app_session_factory = sessionmaker(app_conn, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
-        async with app_conn.begin():
-            async with app_session_factory() as session:
+        async with app_session_factory() as session:
+            async with session.begin():
                 yield session
 
     async def override_get_current_tenant(db: AsyncSession = Depends(get_db)) -> int:
