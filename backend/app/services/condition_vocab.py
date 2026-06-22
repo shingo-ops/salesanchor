@@ -46,7 +46,7 @@ LEGACY_CONDITION_TO_CURRENT: dict[str, str] = {
     "state_b": "grade_b",
     "new": "unknown",
     "used": "unknown",
-    "opened": "sealed",
+    "opened": "unknown",
 }
 
 # ver4.1 の実挙動 -> current condition
@@ -79,6 +79,12 @@ CONDITION_TO_AXES: dict[str, dict[str, Any]] = {
     "unknown": {},
 }
 
+# 梱包(unit) 由来の既定 search_cond。box / case は未サーチ扱いで自動補完する。
+UNIT_DEFAULT_SEARCH_COND: dict[str, str] = {
+    "box": "unsearched",
+    "case": "unsearched",
+}
+
 
 def normalize_condition(value: str | None) -> str | None:
     """旧 condition 値を current condition 正典に寄せる。"""
@@ -98,6 +104,17 @@ def condition_axes(value: str | None) -> dict[str, Any]:
     if normalized is None:
         return {}
     return dict(CONDITION_TO_AXES.get(normalized, {}))
+
+
+def unit_default_search_cond(unit: str | None) -> str | None:
+    """梱包(unit) 由来の既定 search_cond を返す。"""
+
+    if unit is None:
+        return None
+    normalized = str(unit).strip().lower()
+    if not normalized:
+        return None
+    return UNIT_DEFAULT_SEARCH_COND.get(normalized)
 
 
 def condition_is_canonical(value: str | None) -> bool:
@@ -127,4 +144,5 @@ __all__ = [
     "condition_is_canonical",
     "condition_vocab_as_text",
     "normalize_condition",
+    "unit_default_search_cond",
 ]

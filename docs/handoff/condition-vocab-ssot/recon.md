@@ -51,7 +51,7 @@ ON public.inventory (
 - `SEARCH_COND_VALUES`: `unsearched / searched`
 - `GRADE_VALUES`: `s / a / b / c / d / normal / graded / junk / bulk`
 - `CONDITION_VALUES`: `shrink / no_shrink / sealed / damage / unsearched / searched / graded / grade_s / grade_a / grade_b / grade_c / grade_d / junk / bulk / normal / unknown`
-- `LEGACY_CONDITION_TO_CURRENT`: `shrink_yes / shrink_no / damaged / state_a_minus / state_a / state_b / new / used / opened` を current condition に寄せる
+- `LEGACY_CONDITION_TO_CURRENT`: `shrink_yes / shrink_no / damaged / state_a_minus / state_a / state_b / new / used / opened` を current condition に寄せる（`opened` は `unknown`）
 - `VER41_TO_CONDITION`: ver4.1 表記を current condition に寄せる
 
 ### Pydantic 型（`backend/app/schemas/inventory_offers.py:25-42`）
@@ -72,6 +72,7 @@ ON public.inventory (
   - `state_a_minus` / `state_a` は `grade_a`
   - `state_b` は `grade_b`
   - `new` / `used` は `unknown`
+- `unit_default_search_cond()` が box / case の既定 search_cond を `unsearched` に返す（unit ベースのルール）
 
 ### LLM パーサ（`backend/app/services/inventory_parser_llm.py:64-81,102-125,159-180,299-317`）
 
