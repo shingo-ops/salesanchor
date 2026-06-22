@@ -24,6 +24,7 @@ InventoryShipTiming = Literal["on_release", "1day_before", "2day_before", "other
 
 # 状態の正規 16 値 (migration 089)。
 # UNIQUE(supplier_id × product_id × condition) の discriminator として使用。
+# bulk は売り方/形態であり、grade 軸には寄せない。
 InventoryCondition = Literal[*CONDITION_VALUES]
 
 

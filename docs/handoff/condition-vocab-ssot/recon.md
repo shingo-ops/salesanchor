@@ -49,7 +49,7 @@ ON public.inventory (
 - `UNIT_VALUES`: `piece / pack / box / case / set`
 - `SEAL_VALUES`: `shrink / no_shrink / sealed / opened`
 - `SEARCH_COND_VALUES`: `unsearched / searched`
-- `GRADE_VALUES`: `s / a / b / c / d / normal / graded / junk / bulk`
+- `GRADE_VALUES`: `s / a / b / c / d / normal / graded / junk`
 - `CONDITION_VALUES`: `shrink / no_shrink / sealed / damage / unsearched / searched / graded / grade_s / grade_a / grade_b / grade_c / grade_d / junk / bulk / normal / unknown`
 - `LEGACY_CONDITION_TO_CURRENT`: `shrink_yes / shrink_no / damaged / state_a_minus / state_a / state_b / new / used / opened` を current condition に寄せる（`opened` は `unknown`）
 - `VER41_TO_CONDITION`: ver4.1 表記を current condition に寄せる
@@ -59,8 +59,10 @@ ON public.inventory (
 16 値 `InventoryCondition` Literal 定義。コメントに軸の自白あり:
 - 封系 (box/case/set 主): shrink / no_shrink / sealed / damage
 - サーチ系 (pack 主): unsearched / searched
-- ランク系 (piece 主): graded / grade_s〜d / junk / bulk / normal
+- ランク系 (piece 主): graded / grade_s〜d / junk / normal
 - 全単位: unknown
+
+`bulk` は condition には残るが grade ではなく、現スコープでは集計対象外。
 
 ### ルールパーサ（`backend/app/services/inventory_parser.py:107-108,223-237,511-518,577-672,1097-1111`）
 
