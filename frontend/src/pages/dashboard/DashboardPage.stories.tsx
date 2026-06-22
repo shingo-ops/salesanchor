@@ -8,6 +8,7 @@
  * ライト / ダークモード両対応
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { DashboardIcons } from '../../constants/icons'
 import './DashboardPage.css'
 import './WeeklyAdvisorSection.css'
 import './PriorityProspectsSection.css'
@@ -63,7 +64,7 @@ export const TodayActionsSplit: Story = {
     <div style={{ width: 'var(--ds-preview-width)' }} className="db-content-stack">
       <div className="db-section-card db-priority-card">
         <div className="db-section-header">
-          <span className="db-section-icon" aria-hidden="true">▲</span>
+          <DashboardIcons.goalFlag aria-hidden="true" className="db-section-icon" />
           <h3>
             Priority prospects
             <span className="db-priority-ai-pill">Opportunity</span>
@@ -93,7 +94,7 @@ export const TodayActionsSplit: Story = {
 
       <div className="db-section-card db-weekly-card">
         <div className="db-section-header">
-          <span className="db-section-icon" aria-hidden="true">✓</span>
+          <DashboardIcons.goalDone aria-hidden="true" className="db-section-icon" />
           <h3>
             Today's Actions
             <span className="db-weekly-ai-pill">AI Suggested</span>
