@@ -54,6 +54,68 @@ def _tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
     ]
 
 
+async def _ensure_public_products_schema(admin_engine) -> None:
+    async with admin_engine.begin() as conn:
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS public.tcg_type_master (
+                code VARCHAR(50) PRIMARY KEY,
+                name_ja VARCHAR(100) NOT NULL,
+                name_en VARCHAR(100),
+                sort_order INTEGER NOT NULL DEFAULT 100,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS public.products (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER,
+                product_code VARCHAR(20),
+                name VARCHAR(255) NOT NULL,
+                name_en VARCHAR(255),
+                category VARCHAR(100),
+                mark VARCHAR(100),
+                status VARCHAR(20) DEFAULT 'active',
+                condition VARCHAR(50),
+                unit_price NUMERIC(15, 2),
+                stock_quantity INTEGER NOT NULL DEFAULT 0,
+                weight NUMERIC(10, 3),
+                notes TEXT,
+                release_date DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                jan_code VARCHAR(20),
+                card_number VARCHAR(50),
+                expansion_code VARCHAR(20),
+                rarity VARCHAR(20),
+                language VARCHAR(10),
+                unit_price_usd NUMERIC(15, 2),
+                unit_price_eur NUMERIC(15, 2),
+                image_url VARCHAR(500),
+                is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+                archived_at TIMESTAMP,
+                supplier_default_id INTEGER,
+                tcg_type VARCHAR(50) REFERENCES public.tcg_type_master(code),
+                unit VARCHAR(20),
+                boxes_per_case INTEGER,
+                packs_per_box INTEGER,
+                box_weight_kg NUMERIC(8, 3),
+                case_weight_kg NUMERIC(8, 3),
+                volume_weight NUMERIC(8, 3),
+                moq INTEGER,
+                hs_code VARCHAR(20),
+                material VARCHAR(50),
+                item VARCHAR(255),
+                required_output_value VARCHAR(255),
+                search_keywords TEXT,
+                exclude_keywords TEXT,
+                related_series VARCHAR(255),
+                product_kind VARCHAR(50) DEFAULT 'TCG',
+                set_type VARCHAR(50),
+                display_order INTEGER
+            )
+        """))
+
+
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:
     app = FastAPI()
     app.include_router(products_router.router, prefix="/api/v1")
@@ -82,16 +144,8 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
     created_ids: list[int] = []
 
     try:
+        await _ensure_public_products_schema(admin_engine)
         async with admin_engine.begin() as conn:
-            await conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS public.tcg_type_master (
-                    code VARCHAR(50) PRIMARY KEY,
-                    name_ja VARCHAR(100) NOT NULL,
-                    name_en VARCHAR(100),
-                    sort_order INTEGER NOT NULL DEFAULT 100,
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE
-                )
-            """))
             for code, name_ja, name_en in _tcg_type_seed_rows():
                 await conn.execute(
                     text("""

@@ -16,7 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| feature/morimoto/ssot-tcg-type-fk | SSOT大掃除② `products.tcg_type` FK固定 | 2026-06-22 | IN_PROGRESS | | | `backend/app/routers/products.py` / `backend/tests/conftest.py` / `backend/tests/test_products.py` / `backend/tests/test_products_tcg_type_fk.py` / `frontend/src/pages/products/ProductEditPage.tsx` / `frontend/tests-e2e/product-edit-tcg-type.spec.ts` / `migrations/20260623_030000_add_products_tcg_type_fk.sql` / `scripts/run_all_migrations.sh` / `tasks/todo.md` |
+| feature/morimoto/ssot-tcg-type-fk | SSOT大掃除② `products.tcg_type` FK固定 | 2026-06-22 | IN_PROGRESS | | | `backend/app/routers/products.py` / `backend/tests/conftest.py` / `backend/tests/test_products.py` / `backend/tests/test_products_tcg_type_fk.py` / `frontend/src/pages/products/ProductEditPage.tsx` / `frontend/tests-e2e/product-edit-tcg-type.spec.ts` / `migrations/20260623_030000_add_products_tcg_type_fk.sql` / `scripts/run_all_migrations.sh` / `tasks/todo.md` / `public.products` bootstrap for PG-RLS |
 | feature/fedex-etd-guide-clean | FedEx ETD 設定ガイド Level1 / ETD upload 422 ガード | 2026-06-22 | IN_PROGRESS | | | feature/morimoto/fedex-etd-migration からガイドを分離したクリーンブランチ |
 | feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
 | codex/advisor-phase1-new-goal-advice-root | Advisor Phase 1 PR-4 新規モード 逆算アドバイスAPI | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-phase1/ |
