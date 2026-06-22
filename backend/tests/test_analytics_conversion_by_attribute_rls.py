@@ -51,7 +51,6 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 await session.execute(text("SET app.is_operator = ''"))
                 yield session
 
-    # 1件は他担当に振って scope=team / mine の差を作る。
     inserted_rows: list[int] = []
     foreign_rows: list[int] = []
 
@@ -98,22 +97,6 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
             )
             inserted_rows.extend(int(row_id) for row_id in lead_result.scalars().all())
 
-            foreign_result = await conn.execute(
-                text("""
-                    INSERT INTO tenant_006.leads (
-                        tenant_id, customer_name, channel_type, country, sales_form,
-                        temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
-                    )
-                    VALUES (
-                        998, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
-                        'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
-                    )
-                    RETURNING id
-                """),
-                {"other_uid": current_user.id + 1},
-            )
-            foreign_rows.extend(int(row_id) for row_id in foreign_result.scalars().all())
-
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             team_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=team")
@@ -157,6 +140,23 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 else:
                     assert len(item["axis_breakdown"]) == 5
                     assert "monthly_forecast_unset" not in item["low_sample_flags"]
+
+        async with admin_engine.begin() as conn:
+            foreign_result = await conn.execute(
+                text("""
+                    INSERT INTO tenant_006.leads (
+                        tenant_id, customer_name, channel_type, country, sales_form,
+                        temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
+                    )
+                    VALUES (
+                        998, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
+                        'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
+                    )
+                    RETURNING id
+                """),
+                {"other_uid": current_user.id + 1},
+            )
+            foreign_rows.extend(int(row_id) for row_id in foreign_result.scalars().all())
 
         async with app_session_factory() as session:
             async with session.begin():
