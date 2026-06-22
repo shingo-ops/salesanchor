@@ -34,6 +34,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
+import { PriorityProspectsSection } from "./PriorityProspectsSection";
 import { WeeklyAdvisorSection } from "./WeeklyAdvisorSection";
 import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
@@ -484,6 +485,8 @@ export default function DashboardPage() {
       {FUNNEL_MODE !== "off" && (
         <FunnelSection month={funnelMonth} viewMode={viewMode} />
       )}
+      {/* 今やること（攻め/守りの2セクション） */}
+      <PriorityProspectsSection />
       {/* 今やること（W-1: 守り3種 / scope=mine） */}
       <WeeklyAdvisorSection />
       {/* -------------------------------------------------
