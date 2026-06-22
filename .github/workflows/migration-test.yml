@@ -65,6 +65,23 @@ jobs:
             --mode host \
             --repo-root "${GITHUB_WORKSPACE}"
 
+  # チェッカー自体の回帰テスト。欠品で必ず落ちる / 全件揃いで通ることを
+  # 恒久的に保証する。手動検証の腐りを防ぐため、PRごとに必ず実行する。
+  migration-registration-exists-regression:
+    name: マイグレーション登録ファイル存在点検 回帰テスト
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: 回帰テストを実行
+        run: node scripts/tests/test-migration-registration-exists.js
+
   # マイグレーション変更がある場合のみ PostgreSQL を起動して実行
   migration-test-run:
     name: マイグレーションSQL 実行（内部）
@@ -1134,7 +1151,7 @@ jobs:
   # - migration 変更なし: 両ジョブが skipped → 成功として報告
   migration-test:
     name: マイグレーションSQL 実行テスト（実DB）
-    needs: [detect-changes, migration-registration-exists, migration-test-run, migration-full-dryrun]
+    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -1143,13 +1160,15 @@ jobs:
           r="${{ needs.migration-test-run.result }}"
           d="${{ needs.migration-full-dryrun.result }}"
           e="${{ needs.migration-registration-exists.result }}"
+          g="${{ needs.migration-registration-exists-regression.result }}"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
           echo "migration-registration-exists: $e"
-          if [[ "$e" == "success" || "$e" == "skipped" ]] && [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
+          echo "migration-registration-exists-regression: $g"
+          if [[ "$e" == "success" || "$e" == "skipped" ]] && [[ "$g" == "success" || "$g" == "skipped" ]] && [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
             echo "OK: all migration tests passed or no migration changes"
             exit 0
           else
-            echo "FAIL: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+            echo "FAIL: migration-registration-exists=$e, migration-registration-exists-regression=$g, migration-test-run=$r, migration-full-dryrun=$d"
             exit 1
           fi
