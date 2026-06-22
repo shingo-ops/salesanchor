@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/morimoto/schedule-i18n-main | スケジュールナビの文言追加（nav.scheduleSettings） | 2026-06-22 | IN_PROGRESS | | | frontend/src/locales/ja.json + en.json |
 | release/fedex-etd-step1-to-main | FedEx ETD Step1 ガイド develop→main リリース | 2026-06-22 | IN_PROGRESS | | | locale conflict 解決済み |
 | feature/fedex-etd-guide-clean | FedEx ETD 設定ガイド Level1 / ETD upload 422 ガード | 2026-06-22 | IN_PROGRESS | | | feature/morimoto/fedex-etd-migration からガイドを分離したクリーンブランチ |
 | feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
