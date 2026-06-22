@@ -45,10 +45,9 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
 
     async def override_get_db():
         async with app_session_factory() as session:
-            async with session.begin():
-                await session.execute(text("SELECT set_config('search_path', 'tenant_006, public', true)"))
-                await session.execute(text("SELECT set_config('app.tenant_id', '6', true)"))
-                yield session
+            await session.execute(text("SET search_path = tenant_006, public"))
+            await session.execute(text("SET app.tenant_id = '6'"))
+            yield session
 
     extra_tenant_row: tuple[str, int] | None = None
 
