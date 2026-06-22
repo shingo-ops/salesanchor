@@ -23,31 +23,34 @@ follow_up:
 ## Current Entries
 
 ```text
-id: EV-20260622-002
+id: EV-20260622-009
 date: 2026-06-22
 agent: Codex
-task: W-2② スコア＆順位 read-only API
-scope: backend/app/routers/analytics.py, backend/tests/test_analytics.py, backend/tests/test_analytics_conversion_by_attribute_rls.py, tasks/todo.md
+task: W-2① PR-3 frontend priority prospects display
+scope: frontend/src/pages/dashboard/DashboardPage.tsx, frontend/src/pages/dashboard/PriorityProspectsSection.tsx, frontend/src/api/funnel.ts, frontend/src/mocks/funnelFixtures.ts, frontend/tests-e2e/scene1-dashboard.spec.ts, frontend/src/pages/dashboard/DashboardPage.stories.tsx, frontend/src/contexts/AuthContext.tsx, frontend/src/lib/firebase.ts, frontend/src/lib/firebase-auth.ts, frontend/tests-e2e/utils/api-mock.ts, tasks/todo.md
 evidence:
   - type: file
-    reference: backend/app/routers/analytics.py
-    summary: /analytics/priority-prospects を追加し、team の属性別 smoothed_rate 平均を ease_pct にし、monthly_forecast の中央値補完と降順ソートで read-only の優先リストを返す実装を追加した
+    reference: frontend/src/pages/dashboard/PriorityProspectsSection.tsx
+    summary: 攻めセクションを追加し、priority_prospect を rank_score 降順・しやすさ%・見込み金額・サンプル少・フォロー追加付きで表示する UI を実装した
   - type: file
-    reference: backend/tests/test_analytics.py
-    summary: SQLite 契約テストで empty / しやすさ平均 / 中央値代替 / 降順 / 欠軸除外 / scope=mine を検証した
+    reference: frontend/src/api/funnel.ts
+    summary: /analytics/priority-prospects?scope=mine を取得する型と client を追加した
   - type: file
-    reference: backend/tests/test_analytics_conversion_by_attribute_rls.py
-    summary: tenant_006 の実データ解決を public.tenants なしで行う PG/RLS テストへ更新し、team/mine 差と priority-prospects の実走を試した
+    reference: frontend/tests-e2e/scene1-dashboard.spec.ts
+    summary: priority prospects の表示と follow-up 保存を scene1-dashboard Playwright で検証するよう更新した
+  - type: file
+    reference: frontend/tests-e2e/utils/api-mock.ts
+    summary: plain object fixture 内の status 文字列をレスポンスメタと誤認しないよう、数値 status のみ response detail と見なすよう修正した
   - type: command
-    reference: pytest -q backend/tests/test_analytics.py -k 'conversion_by_attribute or priority_prospects' --no-cov
-    summary: SQLite 契約テスト 4 件が通過した
+    reference: E2E_NO_WEBSERVER=1 npx playwright test tests-e2e/scene1-dashboard.spec.ts --project chromium --workers=1 --reporter=line
+    summary: scene1-dashboard の 6 テストが通過した
   - type: command
-    reference: RLS_ADMIN_DATABASE_URL=postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db RLS_TEST_DATABASE_URL=postgresql+asyncpg://salesanchor_app:apppass@localhost:5432/jarvis_test_db pytest -q backend/tests/test_analytics_conversion_by_attribute_rls.py --no-cov
-    summary: PG/RLS 実走は localhost:5432 への接続拒否で失敗し、このシェルでは PostgreSQL サーバ未起動だった
-confidence: medium
-tradeoff: priority の順位付けは score 用の read-only 専用経路で実装し、既存の compute_prospect_rank / priority_score とは分離した
-decision: 5軸属性の team smoothed_rate 平均と中央値補完を使う score/rank API を追加し、PG/RLS は実サーバが起動した環境でのみ再確認する
-follow_up: PostgreSQL 実走環境を用意して tenant_006 での再試験と PR 作成を完了する
+    reference: npm run build
+    summary: frontend の production build が通過した
+confidence: high
+tradeoff: 既存 scene1 の nav 期待は現行 DOM に合わせてテスト側を更新したため、今後 nav 文言が変わる場合は同じ箇所の再調整が必要
+decision: Dashboard の「今やること」へ攻め/守りの 2 セクションを追加し、E2E は dev-mode fake auth で安定実行する
+follow_up: Chromatic baseline は未実施のため、UI baseline を Shingo 承認後に取得する
 ```
 
 ```text
@@ -82,28 +85,280 @@ confidence: medium
 tradeoff: 0-1 スケールの率で返すため、フロント側の表示時に必要ならパーセント換算が要る
 decision: 既存 channels の scope 実装を踏襲しつつ、属性別集計は all-time の read-only endpoint として段階導入する
 follow_up: RLS 接続先を設定した実環境で tenant_006 の実走を再確認し、PR 化する
-task: FedEx ETD 設定ガイド Level1 実装
-scope: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx, frontend/src/pages/integrations/FedexLabelValidationTab.tsx, frontend/src/pages/integrations/CarrierIntegrationPage.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/src/pages/integrations/FedexLabelValidationTab.css, backend/app/routers/shipping.py, backend/app/services/fedex_ship.py, backend/tests/test_fedex_etd.py
+```
+
+```text
+id: EV-20260622-002
+date: 2026-06-22
+agent: Codex
+task: Schedule Google Calendar UI follow-up fix
+scope: frontend/src/pages/schedule/SchedulePage.tsx, frontend/src/pages/schedule/ScheduleSettingsPage.tsx, frontend/src/pages/schedule.css, backend/app/routers/calendar.py, backend/tests/test_calendar_events_rbac.py, tasks/todo.md
 evidence:
   - type: file
-    reference: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx
-    summary: 5 ステップの ETD ガイドを追加し、Step 3 で credentials タブへ戻す導線と Step 4 の ETD 画像アップロードを実装した
+    reference: frontend/src/pages/schedule/SchedulePage.tsx
+    summary: 他メンバーの表示トグルを label の onClick で確実に反映し、権限ゲートは staff.view であることを明示した
   - type: file
-    reference: backend/app/routers/shipping.py
-    summary: ETD upload route に live 前の 422 明示ガードを追加した
+    reference: frontend/src/pages/schedule/ScheduleSettingsPage.tsx
+    summary: /schedule/settings の 4 セクション + 右ペインヘッダー構造は維持しつつ、正本寄せの余白調整を CSS 側に委譲した
   - type: file
-    reference: backend/app/services/fedex_ship.py
-    summary: `_ETD_ENABLED` を `FEDEX_ETD_ENABLED` env 連動に変更し、Ship 側 dormant フラグを go-live 時だけ有効化できるようにした
+    reference: frontend/src/pages/schedule.css
+    summary: settings shell / header / nav / content の top padding と列幅を調整し、右ペインの食い込みを防ぐ方向へ寄せた
+  - type: file
+    reference: backend/app/routers/calendar.py
+    summary: 他担当の予定取得は staff.view のみ許可する既存ガードを確認し、manager 用の閲覧権限判定を維持した
+  - type: file
+    reference: backend/tests/test_calendar_events_rbac.py
+    summary: 他担当予定の 403 / 200 の両パスを確認する RBAC テストが存在する
   - type: command
-    reference: pytest backend/tests/test_fedex_etd.py -q --no-cov
-    summary: 16 passed
+    reference: cd frontend && npm run build
+    summary: TypeScript build と Vite bundle が成功した
   - type: command
-    reference: npm run build
-    summary: frontend production build succeeded after adding dependencies
+    reference: cd frontend && npx eslint src/pages/schedule/SchedulePage.tsx src/pages/schedule/ScheduleSettingsPage.tsx
+    summary: touched frontend files に対する lint が通過した
+  - type: command
+    reference: cd backend && python3 -m pytest tests/test_calendar_events_rbac.py -q -o addopts=''
+    summary: 他担当予定の RBAC テスト 2 件が通過した
 confidence: high
-tradeoff: ETD 設定ガイドを既存の Label Validation タブに併設したため、画面内の情報量は増えるが、既存フローを壊さずに Level1 を追加できる
-decision: ETD 設定ガイドは専用ステッパーとして追加し、バックエンドは live 前に 4xx で安全停止する
-follow_up: broader frontend lint / screenshot QA / PR 作成
+tradeoff: フロントの schedule 画面は見た目の余白を正本に寄せたが、実機スクリーンショットの最終突合は未実施
+decision: トグル配線と settings レイアウトを壊さずに、最小限の UI/権限修正で正本へ寄せる
+follow_up: 実機で /schedule と /schedule/settings を開き、レビューアカウントでチェック状態と 2 カラムをスクリーンショット突合する
+```
+
+```text
+id: EV-20260620-006
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar UI PR4 backend category expansion
+scope: backend/app/services/calendar_service.py, backend/app/routers/calendar.py, backend/tests/test_calendar_service.py, frontend/src/pages/schedule/schedule-utils.ts, migrations/079_add_calendar_category.sql
+evidence:
+  - type: file
+    reference: backend/app/services/calendar_service.py
+    summary: calendar_events.category を作成・更新・Google webhook upsert・一覧レスポンスに反映し、NULL 時は 7種別へフォールバックするロジックを追加した
+  - type: file
+    reference: backend/app/routers/calendar.py
+    summary: /calendar/events の create / patch payload に category を追加した
+  - type: file
+    reference: frontend/src/pages/schedule/schedule-utils.ts
+    summary: schedule-utils の正規化を API category 優先、無い場合のみ derived fallback に切り替えた
+  - type: file
+    reference: migrations/079_add_calendar_category.sql
+    summary: tenant_* schema の calendar_events に category カラムとチェック制約を追加する migration を作成した
+  - type: command
+    reference: cd backend && pytest -q tests/test_calendar_service.py --no-cov
+    summary: calendar_service の 42 テストが通過した
+  - type: command
+    reference: cd backend && ruff check app/services/calendar_service.py app/routers/calendar.py tests/test_calendar_service.py
+    summary: backend の touched files に対する ruff check が通過した
+  - type: command
+    reference: cd frontend && npm run build
+    summary: frontend の production build が成功した
+confidence: high
+tradeoff: API/DB への category 追加でフロントのアダプタを解消できる一方、既存データの NULL category は読み取り時フォールバックで吸収する
+decision: Persist category server-side and let the frontend prefer API values so PR2 の adapter を本番データに切り替えられるようにする
+follow_up: 必要なら backlog 既存行の category backfill を次のメンテで追加する
+```
+
+```text
+id: EV-20260620-008
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar category conservative backfill migration
+scope: backend/app/services/calendar_category_utils.py, scripts/migrate_20260620_080000_calendar_category_backfill.py, scripts/run_all_migrations.sh, backend/tests/test_calendar_category_utils.py
+evidence:
+  - type: file
+    reference: backend/app/services/calendar_category_utils.py
+    summary: category が NULL の既存行にだけ適用する保守的 backfill 判定を切り出し、personal と app 起点の明確な shipping / billing / purchase のみ返すようにした
+  - type: file
+    reference: scripts/migrate_20260620_080000_calendar_category_backfill.py
+    summary: public.tenants の active テナントを巡回し、category IS NULL の rows のみを backfill して、曖昧な行は据え置く 080 データ migration を追加した
+  - type: file
+    reference: scripts/run_all_migrations.sh
+    summary: 079 の直後に backfill migration を差し込み、080_phase_b_migration より前に実行されるようにした
+  - type: file
+    reference: backend/tests/test_calendar_category_utils.py
+    summary: personal / 明示値不変 / source ガード / shipping-billing-purchase の判定と、backfill_schema が NULL 行だけ更新することをテストした
+  - type: command
+    reference: cd backend && ruff check app/services/calendar_category_utils.py tests/test_calendar_category_utils.py ../scripts/migrate_20260620_080000_calendar_category_backfill.py
+    summary: touched Python files に対する ruff check が通過した
+  - type: command
+    reference: cd backend && pytest -q tests/test_calendar_category_utils.py tests/test_calendar_service.py --no-cov
+    summary: calendar category backfill 関連テストと既存 calendar_service テストが 50 passed で通過した
+confidence: high
+tradeoff: live DB の NULL 件数確認はこの環境ではできないため、保守的ルールと unit test で安全性を担保した
+decision: 既存データの曖昧な category は埋めず、後続の読み取りフォールバックに依存しない方向へ段階的に揃える
+follow_up: 本番 PR では 080 データ migration を含めてレビューに回す
+```
+
+
+```text
+id: EV-20260620-007
+date: 2026-06-20
+agent: Codex
+task: PR-C 外部API変更の自動検出 実機確認とスコープ整理
+scope: PR #2387, PR #2388, gh pr checks 2387, gh pr checks 2388, gh run view 27854430001 --log, gh run view 27854453163 --log
+evidence:
+  - type: file
+    reference: scripts/detect-external-api-change.js
+    summary: detector self-ignore を入れて自身の変更を外部API判定から除外し、discord / firebase のみを検出する状態に戻した
+  - type: command
+    reference: gh pr checks 2387
+    summary: PR #2387 の External API gate が SUCCESS になり、PayPal Sandbox smoke は発火せず外部API未整備警告のみになった
+  - type: command
+    reference: gh pr checks 2388
+    summary: docs-only PR #2388 で external API gate は skip / sandbox smoke は素通りした
+  - type: command
+    reference: HOME=/private/tmp XDG_CACHE_HOME=/private/tmp GH_TOKEN=$(gh auth token) gh run view 27854430001 --log
+    summary: External API gate ログで discord / firebase を検出し、実環境スモーク未整備の出力を確認した
+  - type: command
+    reference: HOME=/private/tmp XDG_CACHE_HOME=/private/tmp GH_TOKEN=$(gh auth token) gh run view 27854453163 --log
+    summary: docs-only PR の PayPal Sandbox smoke workflow が No sandbox smoke changes detected で終了することを確認した
+confidence: high
+tradeoff: 外部API検出の実機確認は検証用差分入りで行ったが、検証後は本番コードに残さないよう削除した
+decision: PR-C の検出ロジックは本体のみで維持し、検証痕跡は別 PR への影響がない形で証跡化する
+follow_up: PR #2387 をレビューしてマージし、PR #2388 は閉じる
+```
+
+```text
+id: EV-20260620-005
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar UI PR3 settings page
+scope: frontend/src/pages/schedule/ScheduleSettingsPage.tsx, frontend/src/pages/schedule.css, frontend/src/constants/icons.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, tasks/todo.md, .claude-pipeline/active-work.md
+evidence:
+  - type: file
+    reference: frontend/src/pages/schedule/ScheduleSettingsPage.tsx
+    summary: /schedule/settings を表示/同期/カレンダー管理/業務連動・通知の4セクション + カレンダー編集ダイアログ付きの設定画面として実装した
+  - type: file
+    reference: frontend/src/pages/schedule.css
+    summary: settings shell / nav / save bar / dialog / toggle sizing を既存トークンのみで整え、CSS 値チェックに通る形へ調整した
+  - type: file
+    reference: frontend/src/locales/ja.json
+    summary: settings page 用の i18n キーを追加した
+  - type: file
+    reference: frontend/src/locales/en.json
+    summary: settings page 用の i18n キーを追加した
+  - type: file
+    reference: frontend/src/constants/icons.tsx
+    summary: settings page 用の back / display / sync / calendar / automation / close アイコン定義を追加した
+  - type: command
+    reference: cd frontend && npm run build
+    summary: TypeScript build と Vite bundle が成功した
+  - type: command
+    reference: cd frontend && npm run lint
+    summary: lint は warnings のみで完了し、今回の schedule/settings 差分に error は残らなかった
+  - type: command
+    reference: cd frontend && npm run check:stylelint
+    summary: 追加した CSS が stylelint を通過した
+  - type: command
+    reference: cd frontend && npm run check:css-values
+    summary: 追加した CSS が数値ハードコードチェックを通過した
+  - type: command
+    reference: rg -n \"#[0-9a-fA-F]{3,8}\" frontend/src/pages/schedule.css frontend/src/pages/schedule/ScheduleSettingsPage.tsx frontend/src/constants/icons.tsx frontend/src/locales/ja.json frontend/src/locales/en.json
+    summary: 今回の変更対象ファイルに hex の直書きがないことを確認した
+confidence: high
+tradeoff: The settings screen is now fully scaffolded on the frontend, but save API wiring is still deferred to the backend PR
+decision: Finish PR3 as a frontend-only settings screen first so the backend category/API work can stay isolated in PR4
+follow_up: Wire save persistence and any backend payload changes in PR4
+```
+
+```text
+id: EV-20260620-004
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar UI PR2 calendar shell
+scope: frontend/src/pages/schedule/SchedulePage.tsx, frontend/src/pages/schedule/ScheduleSettingsPage.tsx, frontend/src/pages/schedule.css, frontend/src/pages/schedule/schedule-utils.ts, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/src/App.tsx
+evidence:
+  - type: file
+    reference: frontend/src/pages/schedule/SchedulePage.tsx
+    summary: FullCalendar 依存を外し、左パネル・週/日/月ビュー・空状態・読み込み中・詳細/編集ポップオーバーを備えた内製グリッドへ置換した
+  - type: file
+    reference: frontend/src/pages/schedule/ScheduleSettingsPage.tsx
+    summary: /schedule/settings ルートの scaffold を追加し、PR3 で実装差し替えできる土台を用意した
+  - type: command
+    reference: cd frontend && npm run build
+    summary: TypeScript build と Vite bundle が成功した
+  - type: command
+    reference: cd frontend && npm run lint
+    summary: lint は warnings のみで完了し、今回の schedule 差分に error は残らなかった
+  - type: command
+    reference: rg -n \"#[0-9a-fA-F]{3,8}\" frontend/src/pages/schedule.css frontend/src/pages/schedule/SchedulePage.tsx frontend/src/pages/schedule/ScheduleSettingsPage.tsx frontend/src/pages/schedule/schedule-utils.ts frontend/src/pages/schedule/Schedule.stories.tsx
+    summary: 今回の schedule 実装ファイルに hex の直書きがないことを確認した
+confidence: high
+tradeoff: The runtime shell is now aligned with the new schedule design, but PR3 still needs the real settings controls and save API wiring
+decision: Land the interactive calendar shell first so the settings work can reuse the same SSOT and layout primitives
+follow_up: Implement PR3 settings wiring and then PR4 backend category expansion
+```
+
+```text
+id: EV-20260620-003
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar UI PR2 prebuilt states handoff sync
+scope: docs/handoff/schedule-gcal/design.md, docs/handoff/schedule-gcal/recon.md
+evidence:
+  - type: file
+    reference: docs/handoff/schedule-gcal/design.md
+    summary: PR2-ready empty/loading/detail/edit states and screenshot set were documented for the schedule bundle
+  - type: file
+    reference: docs/handoff/schedule-gcal/recon.md
+    summary: PR2 prebuilt states were appended to the recon notes so the later calendar implementation can consume them directly
+confidence: high
+tradeoff: The repo now carries a richer schedule handoff, but the actual runtime UI still remains to be implemented in PR2
+decision: Preserve the design states in repo docs so PR2 can start from the same surface area as the updated bundle
+follow_up: Implement the runtime adapter and the new calendar shell against these documented states
+```
+
+```text
+id: EV-20260620-002
+date: 2026-06-20
+agent: Codex
+task: Schedule Google Calendar UI PR1 token integration
+scope: frontend/src/tokens.css, frontend/src/index.css, frontend/src/features/schedule/calendars.config.ts, docs/handoff/schedule-gcal/recon.md
+evidence:
+  - type: file
+    reference: frontend/src/tokens.css
+    summary: `--cal-*` / `--schedule-*` tokens were added to the central token file, with dark-mode overrides for the category palette
+  - type: file
+    reference: frontend/src/index.css
+    summary: `--accent-bright` was added as the shared bright-accent alias used by schedule today styling
+  - type: file
+    reference: frontend/src/features/schedule/calendars.config.ts
+    summary: schedule category SSOT was introduced as a standalone calendar definition module
+  - type: file
+    reference: docs/handoff/schedule-gcal/recon.md
+    summary: token/component correspondence table and staged-deprecation notes were recorded for PR1
+confidence: high
+tradeoff: The schedule palette is now centralized before the main calendar rewrite, but the existing FullCalendar screen still needs adapter work in later PRs
+decision: Freeze the schedule token surface now so PR2/PR3 can consume a stable SSOT
+follow_up: Use the same `calendars.config.ts` module when the frontend adapter and settings page are implemented
+```
+
+```text
+id: EV-20260620-001
+date: 2026-06-20
+agent: Codex
+task: PR-C 外部API変更の自動検出
+scope: scripts/detect-external-api-change.js, scripts/tests/test-detect-external-api-change.js, .github/workflows/external-api-smoke.yml, backend/tests/sandbox/test_paypal_sandbox.py, backend/pyproject.toml, docs/handoff/incident-paypal-invoicing-false-complete/design.md, docs/handoff/incident-paypal-invoicing-false-complete/recon.md
+evidence:
+  - type: file
+    reference: scripts/detect-external-api-change.js
+    summary: diff 行ベースで外部 API を分類し、GitHub Actions outputs へ PayPal/未整備 API の結果を渡す detector を追加した
+  - type: file
+    reference: scripts/tests/test-detect-external-api-change.js
+    summary: 既知の外部呼び出しファイル群と無関係 UI ファイルの両方を検証する unit test を追加した
+  - type: file
+    reference: .github/workflows/external-api-smoke.yml
+    summary: detector の結果に応じて PayPal Sandbox smoke / 未整備ログ / スキップを分岐する workflow を追加した
+  - type: file
+    reference: backend/tests/sandbox/test_paypal_sandbox.py
+    summary: 実 PayPal Sandbox を叩く smoke test を root 側にも配置した
+  - type: file
+    reference: backend/pyproject.toml
+    summary: sandbox を通常 pytest の探索対象から外し、専用 smoke marker を追加した
+confidence: high
+tradeoff: 既存の固定パス gate を残しつつ、コード内容ベースの detector を並走させるため、初期はログ量が増える
+decision: PayPal の実スモークは維持し、その他の外部 API は未整備可視化で逃さない gate に移行する
+follow_up: 新しい外部 API を追加するたび `scripts/tests/test-detect-external-api-change.js` に反映する
 ```
 
 ```text

@@ -30,7 +30,10 @@ export default function ERPPage() {
     try {
       const resp = await fetch("/api/v1/erp/export-invoices", {
         method: "POST",
-        headers: { Authorization: `Bearer ${await (await import("firebase/auth")).getAuth().currentUser?.getIdToken()}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${await (await import("../../lib/firebase-auth")).getAuth().currentUser?.getIdToken()}`,
+          "Content-Type": "application/json",
+        },
       });
       if (!resp.ok) throw new Error(t("common.operationError"));
       const blob = await resp.blob();
