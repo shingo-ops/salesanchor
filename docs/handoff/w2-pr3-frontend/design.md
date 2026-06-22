@@ -21,13 +21,15 @@ W-2② の read-only 優先見込み客リストを、Dashboard の「今やる�
 
 ## 受け入れ基準
 
-1. Dashboard で「今やること」に攻めカードが追加される。
-2. 攻めカードは `priority-prospects` の先頭順で並ぶ。
-3. `しやすさ%` / `見込み金額` / `サンプル少` / `金額未設定` が表示される。
-4. `priority` 側の [フォロー追加] から `PATCH /leads/{id}` が送信される。
-5. 既存 W-1 守り 3 種は変更しない。
-6. Playwright で dark mode でも表示と保存フローが通る。
-7. Chromatic 用の story baseline が用意される。
+| 基準 | 検証方法 |
+| --- | --- |
+| Dashboard で「今やること」に攻めカードが追加される | `frontend/tests-e2e/scene1-dashboard.spec.ts` の Playwright 実行で確認する |
+| 攻めカードは `priority-prospects` の先頭順で並ぶ | mock した `GET /analytics/priority-prospects` の `rank_score` 順と画面表示を照合する |
+| `しやすさ%` / `見込み金額` / `サンプル少` / `金額未設定` が表示される | Playwright で各ラベルと値のレンダリングをアサートする |
+| `priority` 側の [フォロー追加] から `PATCH /leads/{id}` が送信される | 保存操作後の request payload を Playwright で検証する |
+| 既存 W-1 守り 3 種は変更しない | 既存の表示・スナップショット・E2E の期待値が崩れないことを確認する |
+| Playwright で dark mode でも表示と保存フローが通る | `ADR-067` の dark mode プロジェクトで E2E を実行する |
+| Chromatic 用の story baseline が用意される | Storybook の対象 story が追加され、Chromatic でベースライン判定できることを確認する |
 
 ## テスト方針
 
