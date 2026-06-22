@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.auth.dependencies import get_current_tenant, get_current_user
+from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
@@ -45,7 +45,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
 
     async def override_get_db():
         async with app_session_factory() as session:
-            yield session
+            async with session.begin():
+                yield session
 
     extra_tenant_row: tuple[str, int] | None = None
 
@@ -73,12 +74,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         async def override_get_current_user():
             return _build_user(999, int(tenant_id), "admin")
 
-        async def override_get_current_tenant():
-            return tenant_id
-
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[get_current_user] = override_get_current_user
-        app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
         with patch("app.auth.dependencies.load_user_permissions", new=AsyncMock(return_value={"dashboard.view"})):
             transport = ASGITransport(app=app)
