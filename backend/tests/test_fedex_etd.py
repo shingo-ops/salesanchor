@@ -15,9 +15,12 @@ FedEx ETD サービスのユニットテスト（ADR-137）。
 """
 from __future__ import annotations
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+os.environ.setdefault("FEDEX_ETD_ENABLED", "false")
 
 from app.services.fedex_etd import (
     PERSISTENT_IMAGE_TYPES,
@@ -270,3 +273,20 @@ class TestEtdDormant:
         assert "shippingDocumentSpecification" not in req_ship, (
             "shippingDocumentSpecification が本番経路に出ています。_ETD_ENABLED を確認してください"
         )
+
+
+class TestEtdUploadRouteGuard:
+    @pytest.mark.asyncio
+    async def test_upload_route_returns_422_when_not_live(self, client, monkeypatch):
+        from app.services import fedex_ship
+
+        monkeypatch.setattr(fedex_ship, "_ETD_ENABLED", False)
+
+        resp = await client.post(
+            "/api/v1/shipping/etd/images",
+            data={"image_type": "LETTERHEAD", "environment": "sandbox"},
+            files={"file": ("letterhead.png", b"fake", "image/png")},
+        )
+
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "FedEx ETD はまだ有効化されていません"

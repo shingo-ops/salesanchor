@@ -33,11 +33,14 @@ export type MockMap = Record<string, MockEntry>;
 const API_PREFIX = "/api/v1";
 
 function isResponseDetail(v: unknown): v is MockResponseDetail {
+  const status = typeof v === "object" && v !== null && !Array.isArray(v)
+    ? (v as { status?: unknown }).status
+    : undefined;
   return (
     typeof v === "object" &&
     v !== null &&
     !Array.isArray(v) &&
-    ("status" in v || "body" in v || "headers" in v || "contentType" in v)
+    (typeof status === "number" || "body" in v || "headers" in v || "contentType" in v)
   );
 }
 
