@@ -54,6 +54,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.condition_vocab import normalize_condition
+
 logger = logging.getLogger(__name__)
 
 PARSE_ENGINE = "rule_v1"
@@ -102,8 +104,8 @@ class ParsedItem:
     quantity: int | None = None
     unit: str | None = None  # 'box' / 'case' / 'pack' / 'piece' / 'set'
     unit_price: str | None = None  # Decimal を JSON 安全に str で保持
-    condition: str | None = None  # 'normal' / 'state_a_minus' / 'state_b' / 'shrink_yes' / 'shrink_no'
-    raw_condition: str | None = None  # マッチした元テキスト
+    condition: str | None = None  # current 16-value condition 正典
+    raw_condition: str | None = None  # 状態判定の根拠になった元行 / 元ブロック
     # ADR-093 Phase 3b: 区分/発送日の行内自動判定。offer_type=None は在庫(in_stock)扱い。
     offer_type: str | None = None  # 'pre_order' 検出時のみ。None=在庫
     ship_timing: str | None = None  # 'on_release'/'1day_before'/'2day_before'/'other'（予約のみ）
@@ -220,18 +222,18 @@ PRICE_MUL_QTY_RE = re.compile(
 #   括弧なし: "シュリンク無し" "シュリ有"
 CONDITION_PATTERNS: list[tuple[str, str]] = [
     (r"\[\s*通常品\s*\]", "normal"),
-    (r"\[\s*状態A[\-－—‐]\s*\]", "state_a_minus"),
-    (r"\[\s*状態A\s*\]", "state_a"),
-    (r"\[\s*状態B\s*\]", "state_b"),
-    (r"\[\s*新品\s*\]", "new"),
-    (r"\[\s*中古\s*\]", "used"),
-    (r"[（(]\s*シュリ(?:ンク)?有(?:り)?\s*[）)]", "shrink_yes"),
-    (r"[（(]\s*シュリ(?:ンク)?無(?:し)?\s*[）)]", "shrink_no"),
-    (r"[（(]\s*シュリ(?:ンク)?あり\s*[）)]", "shrink_yes"),
-    (r"[（(]\s*シュリ(?:ンク)?なし\s*[）)]", "shrink_no"),
-    (r"シュリンク無し", "shrink_no"),
-    (r"シュリンク有り", "shrink_yes"),
-    (r"傷み(?:あり|有り)", "damaged"),
+    (r"\[\s*状態A[\-－—‐]\s*\]", "grade_a"),
+    (r"\[\s*状態A\s*\]", "grade_a"),
+    (r"\[\s*状態B\s*\]", "grade_b"),
+    (r"\[\s*新品\s*\]", "unknown"),
+    (r"\[\s*中古\s*\]", "unknown"),
+    (r"[（(]\s*シュリ(?:ンク)?有(?:り)?\s*[）)]", "shrink"),
+    (r"[（(]\s*シュリ(?:ンク)?無(?:し)?\s*[）)]", "no_shrink"),
+    (r"[（(]\s*シュリ(?:ンク)?あり\s*[）)]", "shrink"),
+    (r"[（(]\s*シュリ(?:ンク)?なし\s*[）)]", "no_shrink"),
+    (r"シュリンク無し", "no_shrink"),
+    (r"シュリンク有り", "shrink"),
+    (r"傷み(?:あり|有り)", "damage"),
 ]
 CONDITION_REGEXES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(p), label) for p, label in CONDITION_PATTERNS
@@ -511,7 +513,8 @@ def _extract_condition(line: str) -> tuple[str | None, str | None]:
     for pat, label in CONDITION_REGEXES:
         m = pat.search(line)
         if m:
-            return label, m.group(0)
+            normalized = normalize_condition(label)
+            return normalized, m.group(0)
     return None, None
 
 
@@ -594,13 +597,13 @@ def _extract_blocks(line: str) -> list[tuple[int | None, str | None, Decimal | N
             re.IGNORECASE,
         )
         if unit_at_price_qty:
-            condition_line, raw_cond_line = _extract_condition(line)
+            condition_line, _ = _extract_condition(line)
             for m in unit_at_price_qty:
                 unit_raw, price_str, qty_str = m
                 qty = int(qty_str) if qty_str.isdigit() else None
                 unit = DEFAULT_UNIT_NORMALIZATION.get(unit_raw, unit_raw)
                 price = _parse_decimal(price_str)
-                blocks.append((qty, unit, price, condition_line, raw_cond_line))
+                blocks.append((qty, unit, price, condition_line, line if condition_line else None))
             return blocks
 
         # 単位なしで「@price 数量N」だけ (例: "Day24 デイ24 @5,300 数量30")
@@ -610,12 +613,12 @@ def _extract_blocks(line: str) -> list[tuple[int | None, str | None, Decimal | N
             re.IGNORECASE,
         )
         if at_price_qty:
-            condition_line, raw_cond_line = _extract_condition(line)
+            condition_line, _ = _extract_condition(line)
             for m in at_price_qty:
                 price_str, qty_str = m
                 qty = int(qty_str) if qty_str.isdigit() else None
                 price = _parse_decimal(price_str)
-                blocks.append((qty, None, price, condition_line, raw_cond_line))
+                blocks.append((qty, None, price, condition_line, line if condition_line else None))
             return blocks
 
     # 「数量N」キーワード無し: qty unit @ price [cond] を試行
@@ -632,7 +635,7 @@ def _extract_blocks(line: str) -> list[tuple[int | None, str | None, Decimal | N
             unit = DEFAULT_UNIT_NORMALIZATION.get(unit_raw, unit_raw)
             price = _parse_decimal(price_str)
             condition, raw_cond = _extract_condition(cond_raw) if cond_raw.strip() else (None, None)
-            blocks.append((qty, unit, price, condition, raw_cond))
+            blocks.append((qty, unit, price, condition, line if condition or raw_cond else None))
         return blocks
 
     # 価格×数量 形式: "11,800円×30BOX(シュリ有)" or "14,800×200箱"
@@ -644,7 +647,7 @@ def _extract_blocks(line: str) -> list[tuple[int | None, str | None, Decimal | N
     )
     if price_x_qty:
         # 行全体から condition を取得（括弧外にある「シュリンク無し」等も拾う）
-        line_condition, line_raw_cond = _extract_condition(line)
+        line_condition, _ = _extract_condition(line)
         for m in price_x_qty:
             price_str, qty_str, unit_raw, cond_raw = m
             price = _parse_decimal(price_str)
@@ -657,15 +660,16 @@ def _extract_blocks(line: str) -> list[tuple[int | None, str | None, Decimal | N
             if cond_raw.strip():
                 condition, raw_cond = _extract_condition(cond_raw)
             else:
-                condition, raw_cond = line_condition, line_raw_cond
-            blocks.append((qty, unit, price, condition, raw_cond))
+                condition, raw_cond = line_condition, (line if line_condition else None)
+            blocks.append((qty, unit, price, condition, line if condition or raw_cond else None))
         if blocks:
             return blocks
 
     # フォールバック: 単一抽出
     qty, unit, price = _extract_unit_quantity_price(line)
     condition, raw_cond = _extract_condition(line)
-    return [(qty, unit, price, condition, raw_cond)]
+    raw_source = line if condition else None
+    return [(qty, unit, price, condition, raw_source)]
 
 
 # ---------------------------------------------------------------------------
@@ -1099,8 +1103,8 @@ def _to_parsed_item_from_llm(llm_item: Any) -> ParsedItem:
         quantity=qty_value,
         unit=llm_item.unit,
         unit_price=price_str,
-        condition=llm_item.condition,
-        raw_condition=None,
+        condition=normalize_condition(llm_item.condition),
+        raw_condition=llm_item.raw_condition or llm_item.raw_line,
         offer_type=offer_type,
         ship_timing=ship_timing,
         notes=notes_value,

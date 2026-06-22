@@ -2247,35 +2247,14 @@
         },
         "condition": {
           "unspecified": "Unspecified",
-          "new": "New",
-          "usedA": "Used A",
-          "sealed": "Sealed",
-          "opened": "Opened"
+          "sealed": "Sealed"
         },
         "unitOptions": {
           "piece": "Single Card",
           "pack": "Pack",
           "box": "Box",
           "case": "Case / Carton",
-          "set": "Set / Bulk"
-        },
-        "conditionOptions": {
-          "shrink": "Shrink-wrapped",
-          "no_shrink": "No shrink",
-          "sealed": "Sealed",
-          "damage": "Damaged",
-          "unsearched": "Unsearched",
-          "searched": "Searched",
-          "graded": "Graded",
-          "grade_s": "S",
-          "grade_a": "A",
-          "grade_b": "B",
-          "grade_c": "C",
-          "grade_d": "D",
-          "junk": "Junk",
-          "bulk": "Bulk",
-          "normal": "Normal",
-          "unknown": "Unknown"
+          "set": "Set"
         }
       }
     },

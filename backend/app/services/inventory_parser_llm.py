@@ -34,6 +34,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.services.condition_vocab import CONDITION_VALUES
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,6 +78,7 @@ class LLMParsedItem:
     unit_price: float | None  # JSON 由来。Decimal は呼出側で必要時 cast
     condition: str | None
     confidence: float | None
+    raw_condition: str | None = None
 
 
 @dataclass
@@ -111,6 +114,7 @@ _OUTPUT_SCHEMA: dict[str, Any] = {
                     "unit": {"type": "string", "nullable": True},
                     "unit_price": {"type": "number", "nullable": True},
                     "condition": {"type": "string", "nullable": True},
+                    "raw_condition": {"type": "string", "nullable": True},
                     "confidence": {"type": "number", "nullable": True},
                 },
                 "required": ["raw_line", "line_no", "name"],
@@ -167,7 +171,8 @@ Discord 仕入元から届いた在庫メッセージのうち、ルールベー
 - quantity は数値のみ（box / pack / セット等の数量を整数で）
 - unit は box / pack / set / piece / case のいずれか（不明なら null）。カートン（carton）は case として扱う
 - unit_price は数値（円単位、不明なら null）
-- condition は 'shrink' / 'no_shrink' / 'sealed' / 'damage' / 'unsearched' / 'searched' / 'graded' / 'grade_s' / 'grade_a' / 'grade_b' / 'grade_c' / 'grade_d' / 'junk' / 'bulk' / 'normal' / 'unknown' のいずれか（不明なら null）
+- condition は {", ".join(repr(v) for v in CONDITION_VALUES)} のいずれか（不明なら null）
+- raw_condition は condition の根拠テキスト。元の表記全体をできるだけそのまま返してください
 - confidence は 0.0〜1.0 で推定信頼度
 - 1 行から複数商品を抽出してよい（その場合は line_no を同じ値で複数 item に分割）
 - 解析不能な行は items から除外 (報告しない)
@@ -307,6 +312,7 @@ async def parse_with_gemini(
                 unit=_normalize_unit(it.get("unit")),
                 unit_price=_safe_float(it.get("unit_price")),
                 condition=_safe_str_or_none(it.get("condition")),
+                raw_condition=_safe_str_or_none(it.get("raw_condition")),
                 confidence=_safe_float(it.get("confidence")),
             )
         )

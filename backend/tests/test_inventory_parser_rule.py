@@ -318,7 +318,8 @@ def test_17_price_x_qty_format():
     assert result.items[0].quantity == 30
     assert result.items[0].unit == "box"
     assert result.items[0].unit_price == "11800"
-    assert result.items[0].condition == "shrink_yes"
+    assert result.items[0].condition == "shrink"
+    assert result.items[0].raw_condition == "●ニンジャスピナー 11,800円×30BOX(シュリ有)"
 
 
 def test_18_full_width_at_sign():
@@ -347,7 +348,8 @@ def test_19_unit_at_price_qty_format():
     assert result.items[0].quantity == 1  # alias の "151" を qty と誤検出しない
     assert result.items[0].unit == "case"
     assert result.items[0].unit_price == "520000"
-    assert result.items[0].condition == "damaged"
+    assert result.items[0].condition == "damage"
+    assert result.items[0].raw_condition == "●151 カートン@520,000 数量1 傷みあり"
 
 
 def test_20_multiple_blocks_per_line():
@@ -368,7 +370,7 @@ def test_20_multiple_blocks_per_line():
     assert items_sorted[0].quantity == 100
     assert items_sorted[0].condition == "normal"
     assert items_sorted[1].quantity == 20
-    assert items_sorted[1].condition == "state_a_minus"
+    assert items_sorted[1].condition == "grade_a"
 
 
 def test_21_condition_normal():
@@ -384,7 +386,7 @@ def test_21_condition_normal():
 
 
 def test_22_condition_state_a_minus():
-    """[状態A-] が condition='state_a_minus' に正規化される。"""
+    """[状態A-] が condition='grade_a' に正規化される。"""
     raw = "■ムニキスゼロ 20BOX@4,500円[状態A-]"
     result = parse_raw_content(
         raw,
@@ -392,11 +394,11 @@ def test_22_condition_state_a_minus():
         aliases=[AliasRow(id=1, supplier_id=1, alias_text="ムニキスゼロ", product_id=101)],
         rules=[],
     )
-    assert result.items[0].condition == "state_a_minus"
+    assert result.items[0].condition == "grade_a"
 
 
 def test_23_condition_state_b():
-    """[状態B] が condition='state_b' に正規化される。"""
+    """[状態B] が condition='grade_b' に正規化される。"""
     raw = "■ムニキスゼロ 7BOX@4,000円[状態B]"
     result = parse_raw_content(
         raw,
@@ -404,11 +406,11 @@ def test_23_condition_state_b():
         aliases=[AliasRow(id=1, supplier_id=1, alias_text="ムニキスゼロ", product_id=101)],
         rules=[],
     )
-    assert result.items[0].condition == "state_b"
+    assert result.items[0].condition == "grade_b"
 
 
 def test_24_condition_shrink_yes():
-    """(シュリ有) → shrink_yes, シュリンク有り → shrink_yes。"""
+    """(シュリ有) → shrink, シュリンク有り → shrink。"""
     raw1 = "●ニンジャスピナー 11,800円×30BOX(シュリ有)"
     result1 = parse_raw_content(
         raw1,
@@ -416,11 +418,11 @@ def test_24_condition_shrink_yes():
         aliases=[AliasRow(id=1, supplier_id=3, alias_text="ニンジャスピナー", product_id=300)],
         rules=[],
     )
-    assert result1.items[0].condition == "shrink_yes"
+    assert result1.items[0].condition == "shrink"
 
 
 def test_25_condition_shrink_no():
-    """(シュリ無) / シュリンク無し → shrink_no。"""
+    """(シュリ無) / シュリンク無し → no_shrink。"""
     raw = "ニンジャスピナー シュリンク無し 10500×50箱"
     result = parse_raw_content(
         raw,
@@ -428,7 +430,7 @@ def test_25_condition_shrink_no():
         aliases=[AliasRow(id=1, supplier_id=4, alias_text="ニンジャスピナー", product_id=400)],
         rules=[],
     )
-    assert result.items[0].condition == "shrink_no"
+    assert result.items[0].condition == "no_shrink"
 
 
 # ---------------------------------------------------------------------------
@@ -716,8 +718,8 @@ def test_42_sample_03_iseki_handles_shrink(aliases_sup1):
     result = parse_raw_content(content, supplier_id=3, aliases=aliases, rules=[])
     # シュリンク 有 / 無 が混在する items が出てくる
     conditions = {i.condition for i in result.items if i.condition is not None}
-    assert "shrink_yes" in conditions
-    assert "shrink_no" in conditions
+    assert "shrink" in conditions
+    assert "no_shrink" in conditions
 
 
 # ---------------------------------------------------------------------------

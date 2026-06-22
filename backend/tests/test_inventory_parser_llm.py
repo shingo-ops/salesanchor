@@ -141,7 +141,8 @@ class TestParseWithGeminiBasic:
                         "quantity": 3,
                         "unit": "box",
                         "unit_price": 8000,
-                        "condition": "new",
+                        "condition": "unknown",
+                        "raw_condition": "新品",
                         "confidence": 0.92,
                     }
                 ]
@@ -163,6 +164,7 @@ class TestParseWithGeminiBasic:
         assert item.unit == "box"
         assert item.unit_price == 8000.0
         assert item.line_no == 1
+        assert item.raw_condition == "新品"
         # AC4.2: token 数が記録される
         assert result.input_tokens == 1200
         assert result.output_tokens == 350
@@ -178,6 +180,7 @@ class TestParseWithGeminiBasic:
                         "name": "リザード",
                         "quantity": 3,
                         "unit": "box",
+                        "raw_condition": "リザード 3box / ピカ 2box",
                     },
                     {
                         "raw_line": "リザード 3box / ピカ 2box",
@@ -185,6 +188,7 @@ class TestParseWithGeminiBasic:
                         "name": "ピカチュウ",
                         "quantity": 2,
                         "unit": "box",
+                        "raw_condition": "リザード 3box / ピカ 2box",
                     },
                 ]
             }
@@ -332,6 +336,7 @@ class TestPromptAndSchema:
         assert "ユニークーー" not in passed_prompt  # sanity check
         assert "ユニーク文字列ABCXYZ" in passed_prompt
         assert "L5:" in passed_prompt  # line_no が prompt に入る
+        assert "raw_condition" in passed_prompt
 
     @pytest.mark.asyncio
     async def test_generation_config_uses_structured_output(self) -> None:
@@ -349,6 +354,8 @@ class TestPromptAndSchema:
         schema = gen_cfg["response_schema"]
         assert schema["type"] == "object"
         assert "items" in schema["properties"]
+        item_schema = schema["properties"]["items"]["items"]["properties"]
+        assert "raw_condition" in item_schema
 
     @pytest.mark.asyncio
     async def test_uses_gemini_2_5_flash_by_default(self) -> None:
@@ -630,7 +637,8 @@ class TestHybridParseInventoryMessage:
                             quantity=3,
                             unit="box",
                             unit_price=8000.0,
-                            condition="new",
+                            condition="unknown",
+                            raw_condition="リザex 3",
                             confidence=0.9,
                         )
                     ],
@@ -648,6 +656,7 @@ class TestHybridParseInventoryMessage:
         assert len(result.items) == 1
         assert result.items[0].product_name == "リザードンex"
         assert result.items[0].quantity == 3
+        assert result.items[0].raw_condition == "リザex 3"
         # line_no=1 の unparsed は削除、line_no=2 は残存
         assert len(result.unparsed) == 1
         assert result.unparsed[0].line_no == 2
