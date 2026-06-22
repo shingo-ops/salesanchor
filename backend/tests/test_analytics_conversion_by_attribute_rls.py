@@ -52,8 +52,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 yield session
 
     inserted_rows: list[int] = []
-    extra_rows: list[int] = []
-    extra_code: str | None = None
+    foreign_rows: list[int] = []
 
     try:
         async with admin_engine.connect() as conn:
@@ -96,38 +95,23 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
             )
             inserted_rows.extend(int(row_id) for row_id in lead_result.scalars().all())
 
-            extra_schema_result = await conn.execute(
+            foreign_result = await conn.execute(
                 text("""
-                    SELECT schema_name
-                    FROM information_schema.schemata
-                    WHERE schema_name LIKE 'tenant_%'
-                      AND schema_name NOT IN ('tenant_006', 'tenant_004')
-                    ORDER BY schema_name
-                    LIMIT 1
+                    INSERT INTO tenant_006.leads (
+                        tenant_id, customer_name, channel_type, country, sales_form,
+                        temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
+                    )
+                    VALUES (
+                        998, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
+                        'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
+                    )
+                    RETURNING id
                 """),
+                {
+                    "other_uid": current_user.id + 1,
+                },
             )
-            extra_row = extra_schema_result.mappings().first()
-            if extra_row is not None:
-                extra_code = str(extra_row["schema_name"])
-                extra_tenant_id = int(extra_code.split("_", 1)[1])
-                extra_result = await conn.execute(
-                    text(f"""
-                        INSERT INTO {extra_code}.leads (
-                            tenant_id, customer_name, channel_type, country, sales_form,
-                            temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
-                        )
-                        VALUES (
-                            :tenant_id, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
-                            'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
-                        )
-                        RETURNING id
-                    """),
-                    {
-                        "tenant_id": extra_tenant_id,
-                        "other_uid": current_user.id + 1,
-                    },
-                )
-                extra_rows.extend(int(row_id) for row_id in extra_result.scalars().all())
+            foreign_rows.extend(int(row_id) for row_id in foreign_result.scalars().all())
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -180,10 +164,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                     {"tenant_id": str(tenant_id)},
                 )
                 tenant_006_count = (await session.execute(text("SELECT COUNT(*) FROM tenant_006.leads"))).scalar_one()
-                assert tenant_006_count >= 3
-                if extra_code is not None:
-                    extra_count = (await session.execute(text(f"SELECT COUNT(*) FROM {extra_code}.leads"))).scalar_one()
-                    assert extra_count >= 1
+                assert tenant_006_count == 3
     finally:
         app.dependency_overrides.clear()
         with suppress(Exception):
@@ -193,11 +174,10 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                         text("DELETE FROM tenant_006.leads WHERE id = :id"),
                         {"id": row_id},
                     )
-                if extra_code is not None:
-                    for row_id in extra_rows:
-                        await conn.execute(
-                            text(f"DELETE FROM {extra_code}.leads WHERE id = :id"),
-                            {"id": row_id},
-                        )
+                for row_id in foreign_rows:
+                    await conn.execute(
+                        text("DELETE FROM tenant_006.leads WHERE id = :id"),
+                        {"id": row_id},
+                    )
         await admin_engine.dispose()
         await app_engine.dispose()
