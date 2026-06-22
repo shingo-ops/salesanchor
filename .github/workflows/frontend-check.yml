@@ -10,6 +10,7 @@ jobs:
   check:
     name: Frontend lint & custom checks
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
         with:

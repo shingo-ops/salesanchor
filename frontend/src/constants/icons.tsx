@@ -152,6 +152,7 @@ const Languages     = hi(LanguageIcon);
 const PaperAirplane = hi(PaperAirplaneIcon);
 const Paperclip     = hi(PaperClipIcon);
 const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
+const Plus          = hi(PlusIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
