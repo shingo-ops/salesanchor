@@ -575,7 +575,6 @@ class TestProductsMasterFields:
         "search_keywords": "ピカチュウ pikachu sv",
         "exclude_keywords": "プロモ promo",
         "related_series": "Scarlet & Violet",
-        "category_classification": "sealed_box",
     }
 
     async def test_master_fields_stored_on_create(self, client):
@@ -599,7 +598,6 @@ class TestProductsMasterFields:
         assert data["search_keywords"] == "ピカチュウ pikachu sv"
         assert data["exclude_keywords"] == "プロモ promo"
         assert data["related_series"] == "Scarlet & Violet"
-        assert data["category_classification"] == "sealed_box"
 
     async def test_master_fields_updatable(self, client):
         """更新時に全マスタ項目を変更できる"""
@@ -615,7 +613,7 @@ class TestProductsMasterFields:
 
         # 永続化確認（再取得）
         get_res = await client.get(f"/api/v1/products/{product_id}")
-        assert get_res.json()["category_classification"] == "sealed_box"
+        assert get_res.json()["related_series"] == "Scarlet & Violet"
 
     async def test_negative_boxes_per_case_rejected(self, client):
         """負の入数は 422（ge=0 バリデーション）"""

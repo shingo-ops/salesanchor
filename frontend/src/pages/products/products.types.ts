@@ -49,7 +49,6 @@ export interface Product {
   search_keywords: string | null;
   exclude_keywords: string | null;
   related_series: string | null;
-  category_classification: string | null;
   // 手動並び替え（行ドラッグ）順。NULL=未設定。
   display_order: number | null;
 }
@@ -93,7 +92,6 @@ export type FormState = {
   search_keywords: string;
   exclude_keywords: string;
   related_series: string;
-  category_classification: string;
 };
 
 export const emptyForm: FormState = {
@@ -106,7 +104,7 @@ export const emptyForm: FormState = {
   // 発送ラベルは TCG（カード）共通の既定値（ひとしさん確定 2026-06-04）
   volume_weight: "", moq: "", hs_code: "9504400000", material: "Paper", item: "Playing card",
   required_output_value: "", search_keywords: "", exclude_keywords: "",
-  related_series: "", category_classification: "",
+  related_series: "",
 };
 
 // 各種マスタ(product_attribute_masters)の 1 選択肢。
