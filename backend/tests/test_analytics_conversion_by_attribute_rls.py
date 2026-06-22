@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.auth.dependencies import get_current_tenant, get_current_user
+from app.auth.dependencies import clear_tenant_context, get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
@@ -45,12 +45,18 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
 
     async def override_get_db():
         async with app_session_factory() as session:
-            await session.execute(text("SET search_path = tenant_006, public"))
-            await session.execute(
-                text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
-                {"tenant_id": str(int(tenant_id))},
-            )
-            yield session
+            try:
+                await session.execute(text("SET search_path = tenant_006, public"))
+                await session.execute(
+                    text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
+                    {"tenant_id": str(int(tenant_id))},
+                )
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await clear_tenant_context(session)
 
     extra_tenant_row: tuple[str, int] | None = None
 
