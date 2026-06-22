@@ -225,3 +225,4 @@
 | feature/morimoto/worktree-adr114-pr-c1 | ADR-114 PR-C1: flock追加・起動時reaper plist・docs/ADR更新 | 2026-06-18 | IN_PROGRESS | | | |
 | feature/morimoto/schedule-8issues-fix | スケジュールページ 8件本番バグ修正 | 2026-06-21 | DONE | #2411 | | merged |
 | feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | IN_PROGRESS | | | |
+| feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |

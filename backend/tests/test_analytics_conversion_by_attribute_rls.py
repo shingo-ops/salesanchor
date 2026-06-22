@@ -47,7 +47,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         async with app_session_factory() as session:
             await session.execute(text("SET search_path = tenant_006, public"))
             await session.execute(
-                text("SET app.tenant_id = :tenant_id"),
+                text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
                 {"tenant_id": str(int(tenant_id))},
             )
             yield session
