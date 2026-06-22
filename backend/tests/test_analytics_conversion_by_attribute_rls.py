@@ -41,7 +41,8 @@ def _build_user(user_id: int, tenant_id: int, role: str = "admin") -> User:
 async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     app_engine = create_async_engine(APP_PG_URL, echo=False)
-    app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
+    app_conn = await app_engine.connect()
+    app_session_factory = sessionmaker(app_conn, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
         async with app_session_factory() as session:
@@ -143,4 +144,5 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     finally:
         app.dependency_overrides.clear()
         await admin_engine.dispose()
+        await app_conn.close()
         await app_engine.dispose()
