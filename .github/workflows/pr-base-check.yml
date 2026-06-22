@@ -23,8 +23,8 @@ jobs:
             exit 0
           fi
 
-          # develop または hotfix/* → リリース/ホットフィックスPRとして許可
-          if [ "${HEAD}" = "develop" ] || echo "${HEAD}" | grep -qE '^hotfix/'; then
+          # develop または hotfix/* または release/* → リリース/ホットフィックスPRとして許可
+          if [ "${HEAD}" = "develop" ] || echo "${HEAD}" | grep -qE '^hotfix/' || echo "${HEAD}" | grep -qE '^release/'; then
             echo "✅ ${HEAD} → main のリリース/ホットフィックスPR: 許可"
             exit 0
           fi
@@ -35,7 +35,7 @@ jobs:
           echo "   head : ${HEAD}"
           echo "   base : main"
           echo ""
-          echo "   main を向く PR は develop または hotfix/* からのみ許可されています。"
+          echo "   main を向く PR は develop / hotfix/* / release/* からのみ許可されています。"
           echo "   feature ブランチは --base develop で PR を作成してください。"
           echo ""
           echo "   修正方法:"
