@@ -157,7 +157,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
 
         async with app_session_factory() as session:
             async with session.begin():
-                await session.execute(text("SET LOCAL search_path = tenant_006, public"))
+                await session.execute(text(f"SET LOCAL search_path = {WORK_SCHEMA}, public"))
                 await session.execute(text("SET LOCAL app.tenant_id = '6'"))
                 await session.execute(text("SET LOCAL app.is_operator = ''"))
 
