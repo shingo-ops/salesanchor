@@ -8,6 +8,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { CALENDARS, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ScheduleSettingsDialog, SettingsRow } from "./ScheduleSettingsDialog";
+import "../schedule.css";
 
 type SectionKey = "display" | "sync" | "management" | "automation";
 type ShareMode = "self" | "view" | "edit";

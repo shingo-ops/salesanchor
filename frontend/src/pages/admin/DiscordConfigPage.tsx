@@ -63,8 +63,8 @@ export default function DiscordConfigPage() {
   const [ticketCategoryId, setTicketCategoryId] = useState("");
   const [ticketButtonChannelId, setTicketButtonChannelId] = useState("");
   const [staffRoleId, setStaffRoleId] = useState("");
-  const [welcomeTemplate, setWelcomeTemplate] = useState(
-    "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+  const [welcomeTemplate, setWelcomeTemplate] = useState(() =>
+    t("discordTicketConfig.welcomeTemplateDefault")
   );
   const [smallChannelId, setSmallChannelId] = useState("");
   const [largeChannelId, setLargeChannelId] = useState("");
@@ -242,7 +242,7 @@ export default function DiscordConfigPage() {
   if (permsLoading || loading) {
     return (
       <PageLayout navKey="nav.discordConfig">
-        <p className="text-token-text-secondary text-sm">{t("loading")}</p>
+        <p className="text-token-text-secondary text-sm">{t("common.loading")}</p>
       </PageLayout>
     );
   }
@@ -276,7 +276,7 @@ export default function DiscordConfigPage() {
 
           {canEdit && (
             <button onClick={handleSave} disabled={saving} className="btn btn-primary">
-              {saving ? t("saving") : t("save")}
+              {saving ? t("common.saving") : t("common.save")}
             </button>
           )}
         </section>
@@ -539,7 +539,7 @@ export default function DiscordConfigPage() {
 
           {canEdit && (
             <button onClick={handleTicketSave} disabled={ticketSaving} className="btn btn-primary">
-              {ticketSaving ? t("saving") : t("save")}
+              {ticketSaving ? t("common.saving") : t("common.save")}
             </button>
           )}
 

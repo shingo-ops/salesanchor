@@ -59,7 +59,7 @@ export default function DiscordAnnouncePage() {
   if (permsLoading) {
     return (
       <PageLayout navKey="nav.discordAnnounce">
-        <p className="text-token-text-secondary text-sm">{t("loading")}</p>
+        <p className="text-token-text-secondary text-sm">{t("common.loading")}</p>
       </PageLayout>
     );
   }
