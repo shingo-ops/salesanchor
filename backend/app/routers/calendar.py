@@ -15,7 +15,7 @@ from __future__ import annotations
 """
 
 import logging
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -39,7 +39,6 @@ router = APIRouter()
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
-CalendarCategory = Literal["personal", "meeting", "purchase", "shipping", "billing", "release", "holiday"]
 
 
 def _require_admin(user: User) -> None:
@@ -75,36 +74,6 @@ async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | Non
     return dict(row) if row else None
 
 
-# ---------------------------------------------------------------------------
-# Pydantic モデル
-# ---------------------------------------------------------------------------
-
-
-class CreateEventBody(BaseModel):
-    title: str
-    start_datetime: str
-    end_datetime: str
-    calendar_type: str = "shared"
-    category: Optional[CalendarCategory] = None
-    description: Optional[str] = None
-    location: Optional[str] = None
-    is_all_day: bool = False
-
-
-class UpdateEventBody(BaseModel):
-    title: Optional[str] = None
-    start_datetime: Optional[str] = None
-    end_datetime: Optional[str] = None
-    category: Optional[CalendarCategory] = None
-    description: Optional[str] = None
-    location: Optional[str] = None
-    is_all_day: Optional[bool] = None
-
-
-class SyncModeBody(BaseModel):
-    sync_mode: str
-
-
 class OwnerSettingsBody(BaseModel):
     color: Optional[str] = None
     is_visible: Optional[bool] = None
@@ -131,6 +100,34 @@ class OwnerRosterResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Pydantic モデル
+# ---------------------------------------------------------------------------
+
+
+class CreateEventBody(BaseModel):
+    title: str
+    start_datetime: str
+    end_datetime: str
+    calendar_type: str = "shared"
+    description: Optional[str] = None
+    location: Optional[str] = None
+    is_all_day: bool = False
+
+
+class UpdateEventBody(BaseModel):
+    title: Optional[str] = None
+    start_datetime: Optional[str] = None
+    end_datetime: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    is_all_day: Optional[bool] = None
+
+
+class SyncModeBody(BaseModel):
+    sync_mode: str
+
+
+# ---------------------------------------------------------------------------
 # イベント一覧
 # ---------------------------------------------------------------------------
 
@@ -140,28 +137,18 @@ async def list_events(
     start: str = Query(..., description="ISO 8601 形式 例: 2025-05-01T00:00:00Z"),
     end: str = Query(..., description="ISO 8601 形式 例: 2025-05-31T23:59:59Z"),
     type: Optional[str] = Query(None, description="'shared' | 'personal' | None（両方）"),
-    user_id: Optional[int] = Query(None, description="personal カレンダーの所有者ユーザーID"),
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """カレンダーイベントを期間・タイプで取得する。"""
-    if user_id is not None and user_id != user.id:
-        perms = await load_user_permissions(db, tenant_id, user.id)
-        if "staff.view" not in perms:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="他担当の予定を閲覧する権限がありません",
-            )
-        if type is None:
-            type = "personal"
     events = await cal_svc.list_events(
         db,
         tenant_id=tenant_id,
         start=start,
         end=end,
         calendar_type=type,
-        user_id=user_id if user_id is not None else user.id,
+        user_id=user.id,
     )
     return {"events": events}
 
@@ -397,7 +384,7 @@ async def update_event(
             detail="更新フィールドが指定されていません",
         )
 
-    # 権限確認: 自分のイベントか admin のみ
+    # 権限確認: 自分のイベントか channels.manage 権限保持者のみ
     row = await db.execute(
         text("SELECT created_by_user_id, calendar_type FROM calendar_events WHERE id = :id"),
         {"id": event_id},

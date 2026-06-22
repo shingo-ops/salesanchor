@@ -1,40 +1,84 @@
-// ============================================================
-// Sales Anchor — Schedule calendar definitions
-//
-// `design_handoff_schedule_gcal` の category 正本。
-// PR2/PR3 では UI のフィルタ・設定・業務連動の全てがここを参照する。
-// ============================================================
-
 export type CalendarId =
-  | "personal"
   | "meeting"
-  | "purchase"
+  | "personal"
+  | "procurement"
   | "shipping"
   | "billing"
   | "release"
   | "holiday";
 
-export interface CalendarDef {
+export interface CalendarMeta {
   id: CalendarId;
   labelKey: string;
-  label: string;
   colorVar: string;
   tintVar: string;
   textVar: string;
   primary: boolean;
 }
 
-export const CALENDARS: readonly CalendarDef[] = [
-  { id: "personal", labelKey: "schedule.personal", label: "Personal", colorVar: "--cal-personal", tintVar: "--cal-personal-tint", textVar: "--cal-personal-text", primary: true },
-  { id: "meeting", labelKey: "schedule.meeting", label: "Meeting", colorVar: "--cal-meeting", tintVar: "--cal-meeting-tint", textVar: "--cal-meeting-text", primary: true },
-  { id: "purchase", labelKey: "schedule.purchase", label: "Purchase", colorVar: "--cal-purchase", tintVar: "--cal-purchase-tint", textVar: "--cal-purchase-text", primary: true },
-  { id: "shipping", labelKey: "schedule.shipping", label: "Shipping", colorVar: "--cal-shipping", tintVar: "--cal-shipping-tint", textVar: "--cal-shipping-text", primary: true },
-  { id: "billing", labelKey: "schedule.billing", label: "Billing", colorVar: "--cal-billing", tintVar: "--cal-billing-tint", textVar: "--cal-billing-text", primary: true },
-  { id: "release", labelKey: "schedule.release", label: "Release", colorVar: "--cal-release", tintVar: "--cal-release-tint", textVar: "--cal-release-text", primary: true },
-  { id: "holiday", labelKey: "schedule.holiday", label: "Holiday", colorVar: "--cal-holiday", tintVar: "--cal-holiday-tint", textVar: "--cal-holiday-text", primary: false },
-] as const;
+export const CALENDARS: CalendarMeta[] = [
+  {
+    id: "meeting",
+    labelKey: "schedule.calendarLabels.meeting",
+    colorVar: "#1a73e8",
+    tintVar: "#e8f0fe",
+    textVar: "#174ea6",
+    primary: true,
+  },
+  {
+    id: "personal",
+    labelKey: "schedule.calendarLabels.personal",
+    colorVar: "#9333ea",
+    tintVar: "#f3e8ff",
+    textVar: "#6b21a8",
+    primary: true,
+  },
+  {
+    id: "procurement",
+    labelKey: "schedule.calendarLabels.procurement",
+    colorVar: "#0f9d58",
+    tintVar: "#e6f4ea",
+    textVar: "#166534",
+    primary: true,
+  },
+  {
+    id: "shipping",
+    labelKey: "schedule.calendarLabels.shipping",
+    colorVar: "#d93025",
+    tintVar: "#fce8e6",
+    textVar: "#b91c1c",
+    primary: true,
+  },
+  {
+    id: "billing",
+    labelKey: "schedule.calendarLabels.billing",
+    colorVar: "#f29900",
+    tintVar: "#fef3c7",
+    textVar: "#92400e",
+    primary: true,
+  },
+  {
+    id: "release",
+    labelKey: "schedule.calendarLabels.release",
+    colorVar: "#5f6368",
+    tintVar: "#f3f4f6",
+    textVar: "#374151",
+    primary: true,
+  },
+  {
+    id: "holiday",
+    labelKey: "schedule.calendarLabels.holiday",
+    colorVar: "#7e22ce",
+    tintVar: "#f5f3ff",
+    textVar: "#6b21a8",
+    primary: false,
+  },
+];
 
-export const CALENDAR_MAP: Record<CalendarId, CalendarDef> =
-  Object.fromEntries(CALENDARS.map((calendar) => [calendar.id, calendar])) as Record<CalendarId, CalendarDef>;
+export const CALENDAR_MAP = Object.fromEntries(
+  CALENDARS.map((calendar) => [calendar.id, calendar]),
+) as Record<CalendarId, CalendarMeta>;
 
-export const cssVar = (name: string) => `var(${name})`;
+export function cssVar(value: string | null | undefined): string {
+  return value ?? "";
+}
