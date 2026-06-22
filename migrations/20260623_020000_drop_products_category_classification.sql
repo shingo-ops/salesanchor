@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.products_category_classification_backup (
 DO $$
 DECLARE
     has_column boolean;
+    backed_up_rows bigint := 0;
 BEGIN
     SELECT EXISTS (
         SELECT 1
@@ -53,6 +54,8 @@ BEGIN
                 category_classification = EXCLUDED.category_classification,
                 captured_at = EXCLUDED.captured_at
         $sql$;
+        GET DIAGNOSTICS backed_up_rows = ROW_COUNT;
+        RAISE NOTICE 'migration 20260623_020000: backed up % products.category_classification rows', backed_up_rows;
 
         EXECUTE 'ALTER TABLE public.products DROP COLUMN IF EXISTS category_classification';
     END IF;
