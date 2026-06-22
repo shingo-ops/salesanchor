@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import os
 import base64
 import logging
 from decimal import Decimal
@@ -55,9 +56,9 @@ def _parse_surcharges(surcharge_list: list[dict]) -> list[SurchargeDetail]:
 
 
 # J3 dormant フラグ（ADR-137）
-# CTS回答（C-Q6）確定後に customerImageUsages を組み立て・True に変更。
-# False の間は本番フローに ETD フィールドが一切出ない。
-_ETD_ENABLED: bool = False
+# FE / BE ともに FEDEX_ETD_ENABLED で切り替える。
+# 既定は false で、CTS回答（C-Q6）確定後に go-live 時だけ true にする。
+_ETD_ENABLED: bool = os.getenv("FEDEX_ETD_ENABLED", "false").strip().lower() == "true"
 
 
 def create_shipment(

@@ -54,6 +54,28 @@ confidence: medium
 tradeoff: 0-1 スケールの率で返すため、フロント側の表示時に必要ならパーセント換算が要る
 decision: 既存 channels の scope 実装を踏襲しつつ、属性別集計は all-time の read-only endpoint として段階導入する
 follow_up: RLS 接続先を設定した実環境で tenant_006 の実走を再確認し、PR 化する
+task: FedEx ETD 設定ガイド Level1 実装
+scope: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx, frontend/src/pages/integrations/FedexLabelValidationTab.tsx, frontend/src/pages/integrations/CarrierIntegrationPage.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/src/pages/integrations/FedexLabelValidationTab.css, backend/app/routers/shipping.py, backend/app/services/fedex_ship.py, backend/tests/test_fedex_etd.py
+evidence:
+  - type: file
+    reference: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx
+    summary: 5 ステップの ETD ガイドを追加し、Step 3 で credentials タブへ戻す導線と Step 4 の ETD 画像アップロードを実装した
+  - type: file
+    reference: backend/app/routers/shipping.py
+    summary: ETD upload route に live 前の 422 明示ガードを追加した
+  - type: file
+    reference: backend/app/services/fedex_ship.py
+    summary: `_ETD_ENABLED` を `FEDEX_ETD_ENABLED` env 連動に変更し、Ship 側 dormant フラグを go-live 時だけ有効化できるようにした
+  - type: command
+    reference: pytest backend/tests/test_fedex_etd.py -q --no-cov
+    summary: 16 passed
+  - type: command
+    reference: npm run build
+    summary: frontend production build succeeded after adding dependencies
+confidence: high
+tradeoff: ETD 設定ガイドを既存の Label Validation タブに併設したため、画面内の情報量は増えるが、既存フローを壊さずに Level1 を追加できる
+decision: ETD 設定ガイドは専用ステッパーとして追加し、バックエンドは live 前に 4xx で安全停止する
+follow_up: broader frontend lint / screenshot QA / PR 作成
 ```
 
 ```text

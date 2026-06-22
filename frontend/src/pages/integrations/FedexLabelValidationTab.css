@@ -11,6 +11,129 @@
   gap: var(--space-4);
 }
 
+/* ── ETD 設定ガイド ── */
+.etd-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border: 1px solid var(--border);
+}
+
+.etd-guide__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.etd-guide__eyebrow {
+  margin: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.etd-guide__title {
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.etd-guide__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.etd-guide__progress-track {
+  position: relative;
+  width: 100%;
+  height: var(--space-10px);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.etd-guide__progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+  border-radius: var(--radius-full);
+}
+
+.etd-guide__progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.etd-guide__step {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.etd-guide__step--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.etd-guide__step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.etd-guide__step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  flex-shrink: 0;
+}
+
+.etd-guide__note {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+.etd-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.etd-upload__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.etd-guide__complete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.etd-guide__nav {
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
 /* ── ステップ ── */
 .lv-step {
   transition: opacity var(--transition-fast);
