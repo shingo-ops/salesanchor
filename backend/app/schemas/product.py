@@ -80,7 +80,6 @@ class ProductCreate(BaseModel):
     search_keywords: str | None = Field(default=None, max_length=5000)
     exclude_keywords: str | None = Field(default=None, max_length=5000)
     related_series: str | None = Field(default=None, max_length=255)
-    category_classification: str | None = Field(default=None, max_length=100)
 
     @field_validator("image_url")
     @classmethod
@@ -131,7 +130,6 @@ class ProductUpdate(BaseModel):
     search_keywords: str | None = Field(default=None, max_length=5000)
     exclude_keywords: str | None = Field(default=None, max_length=5000)
     related_series: str | None = Field(default=None, max_length=255)
-    category_classification: str | None = Field(default=None, max_length=100)
     # 手動並び替え（商品マスタ一覧の行ドラッグ）順
     display_order: int | None = Field(default=None, ge=0)
 
@@ -189,7 +187,6 @@ class ProductResponse(BaseModel):
     search_keywords: str | None = None
     exclude_keywords: str | None = None
     related_series: str | None = None
-    category_classification: str | None = None
     # 手動並び替え（商品マスタ一覧の行ドラッグ）順。NULL=未設定。
     display_order: int | None = None
 

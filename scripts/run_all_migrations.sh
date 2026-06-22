@@ -428,6 +428,9 @@ run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
+# SSOT cleanup 1: products.category_classification 廃止（backup 退避 → DROP）
+run_sql migrations/20260623_020000_drop_products_category_classification.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
