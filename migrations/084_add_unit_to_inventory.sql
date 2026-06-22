@@ -12,6 +12,7 @@
 -- 注: migration-test.yml の最小ベースラインには public.inventory (081) が無いため、
 --     to_regclass で存在チェックしてから ALTER する（不在環境では no-op）。
 --     本番は 081 適用済みなので deploy では確実に列が追加される。
+--     2b の unique key migration テストでは、この列が前提になる。
 --
 -- 関連:
 --   migrations/081_create_inventory.sql (public.inventory 本体)
