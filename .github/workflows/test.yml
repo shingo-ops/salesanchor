@@ -24,6 +24,7 @@ on:
       - '.github/workflows/test.yml'
       - 'backend/pyproject.toml'
       - 'backend/Makefile'
+  workflow_dispatch:
   # schedule 削除（2026-05-28）: PR + push トリガーで十分にカバーされるため冗長。
   # 依存パッケージの週次フルスキャンが必要な場合は workflow_dispatch で手動実行。
 
