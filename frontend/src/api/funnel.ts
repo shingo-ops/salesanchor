@@ -15,6 +15,7 @@ import {
   MOCK_CHANNELS,
   MOCK_REASONS_WON,
   MOCK_REASONS_LOST,
+  MOCK_PRIORITY_PROSPECTS,
 } from "../mocks/funnelFixtures";
 
 type FunnelMode = "off" | "mock" | "live";
@@ -127,6 +128,34 @@ export interface WeeklyAdvisorResponse {
   actions: WeeklyAdvisorAction[];
 }
 
+export interface PriorityProspectAxisBreakdown {
+  axis: string;
+  value: string;
+  n: number;
+  conversions: number;
+  raw_rate: number;
+  smoothed_rate: number;
+  low_sample: boolean;
+}
+
+export interface PriorityProspectItem {
+  lead_id: number;
+  type: "priority_prospect";
+  ease_pct: number;
+  monthly_forecast: number;
+  rank_score: number;
+  score: number;
+  expected_value: number;
+  suggested_action: string;
+  axis_breakdown: PriorityProspectAxisBreakdown[];
+  low_sample_flags: string[];
+}
+
+export interface PriorityProspectsResponse {
+  scope: string;
+  items: PriorityProspectItem[];
+}
+
 // ─── API 呼び出し ──────────────────────────────────────────────────────
 
 export function getFunnel(month: string, scope?: "mine"): Promise<FunnelResponse> {
@@ -179,4 +208,12 @@ export function getWeeklyAdvisorDefensive(
   }
   const params = new URLSearchParams({ scope, period });
   return api.get<WeeklyAdvisorResponse>(`/analytics/weekly-advisor-defensive?${params}`);
+}
+
+export function getPriorityProspects(scope: "mine" = "mine"): Promise<PriorityProspectsResponse> {
+  if (MOCK_MODE) {
+    return Promise.resolve(MOCK_PRIORITY_PROSPECTS);
+  }
+  const params = new URLSearchParams({ scope });
+  return api.get<PriorityProspectsResponse>(`/analytics/priority-prospects?${params}`);
 }

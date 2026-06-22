@@ -22,5 +22,47 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+const useFakeFirebaseAuth = import.meta.env.DEV;
+
+type FakeUser = {
+  uid: string;
+  email: string;
+  displayName: string;
+  emailVerified: boolean;
+  getIdToken: () => Promise<string>;
+};
+
+type FakeAuth = {
+  currentUser: FakeUser | null;
+  __setCurrentUser: (user: FakeUser | null) => void;
+};
+
+const createFakeAuth = (): FakeAuth => {
+  const isLoginRoute = typeof window !== "undefined" && window.location.pathname === "/login";
+  const seeded = typeof window !== "undefined"
+    ? (window as unknown as {
+        __salesanchorE2eAuthUser?: { uid?: string; email?: string; displayName?: string; emailVerified?: boolean };
+      }).__salesanchorE2eAuthUser
+    : undefined;
+  let currentUser: FakeUser | null =
+    !isLoginRoute
+      ? {
+          uid: seeded?.uid || "e2e-test-user-uid",
+          email: seeded?.email || "review@salesanchor.jp",
+          displayName: seeded?.displayName || "E2E Test User",
+          emailVerified: seeded?.emailVerified ?? true,
+          getIdToken: async () => "e2e-fake-id-token",
+        }
+      : null;
+  return {
+    get currentUser() {
+      return currentUser;
+    },
+    __setCurrentUser(user) {
+      currentUser = user;
+    },
+  };
+};
+
+export const auth = useFakeFirebaseAuth ? createFakeAuth() : getAuth(app);
 export default app;
