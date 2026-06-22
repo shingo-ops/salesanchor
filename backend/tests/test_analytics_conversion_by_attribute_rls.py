@@ -45,13 +45,14 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     app_session_factory = sessionmaker(app_conn, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
-        async with app_session_factory() as session:
-            yield session
+        async with app_conn.begin():
+            async with app_session_factory() as session:
+                yield session
 
     async def override_get_current_tenant(db: AsyncSession = Depends(get_db)) -> int:
-        await db.execute(text("SET search_path = tenant_006, public"))
-        await db.execute(text("SET app.tenant_id = '6'"))
-        await db.execute(text("SET app.is_operator = ''"))
+        await db.execute(text("SET LOCAL search_path = tenant_006, public"))
+        await db.execute(text("SET LOCAL app.tenant_id = '6'"))
+        await db.execute(text("SET LOCAL app.is_operator = ''"))
         return 6
 
     extra_tenant_row: tuple[str, int] | None = None
