@@ -29,14 +29,13 @@ tenant_006 で以下を満たし、結果を見て Shingo が GO:
 | 梱包 | `unit` | piece / pack / box / case / set | — | 解析（必ず出る）既存流用 |
 | 封 | `seal` | shrink / no_shrink / sealed / opened | box / case / set | 解析。無ければ空欄 |
 | サーチ | `search_cond` | unsearched / searched | pack | ルール既定は unit 由来（box/case→unsearched 自動）＋pack は実値 |
-| ランク | `grade` | s / a / b / c / d / normal / graded / junk / bulk | piece | 解析 |
+| ランク | `grade` | s / a / b / c / d / normal / graded / junk | piece | 解析 |
 | 破損 | `damage` | true / false（BOOLEAN NOT NULL DEFAULT false） | 全梱包 | 解析。無ければ false |
 
-### bulk の帰属仮置き（§7.2）
+### bulk / rarity の扱い（現スコープ）
 
-`bulk` は **grade 軸の暫定値**。バルク = 低グレードシングルの大量まとめ販売（質の属性、梱包形態ではない）。  
-現行コードも `condition` に入り「piece 主」と注記済み（`inventory_offers.py:39`）。  
-今回の段階 1 では **確認待ち（暫定grade）** として据え、段階 2 の backfill 前に最終確認する。  
+`bulk` は **grade ではなく供給メッセージ側の売り方/形態**。現スコープでは集計対象外（`FLAG_SINGLE` 相当）として脇に置き、軸 backfill の対象に入れない。
+レアリティ軸（AR / SAR / SR / UR …）は **将来追加**。バルク/シングルを扱う段で実装する。今回は作らない。
 `frontend/src/locales/ja.json:2237-2243` の `"set": "セット / バルク"` は「セット商品」の別文脈。バルクカードとは無関係——掃除時に `"set": "セット"` へ分離済み。
 
 ---
@@ -60,9 +59,9 @@ tenant_006 で以下を満たし、結果を見て Shingo が GO:
 
 移行中は condition ＋ 軸列を**並行書き込み**。
 
-### §7.2 bulk の帰属
+### §7.2 bulk / rarity の扱い
 
-→ grade 軸（上の正典表に反映済み）
+→ 集計対象外（`FLAG_SINGLE` 相当）。レアリティ軸は将来追加。
 
 ### §7.3 一意キー最終構成
 
@@ -135,7 +134,7 @@ JSONB `raw_attributes` は YAGNI（将来必要なら別 ADR）。
 | `graded` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | grade=graded |
 | `grade_s` / `grade_a` / `grade_b` / `grade_c` / `grade_d` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | grade=s/a/b/c/d |
 | `junk` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | grade=junk |
-| `bulk` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | grade=bulk（暫定） |
+| `bulk` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | 集計対象外（`FLAG_SINGLE` 相当） |
 | `normal` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | grade=normal |
 | `unknown` | `backend/app/services/inventory_parser_llm.py:169-180` / `frontend/src/locales/ja.json:2233-2243` | 未確定時の受け皿 |
 | `new / usedA / opened` | `frontend/src/locales/ja.json:2233-2243` | **廃止・削除** |

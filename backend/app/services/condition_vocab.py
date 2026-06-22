@@ -7,7 +7,8 @@ UNIT_VALUES = ("piece", "pack", "box", "case", "set")
 # 多軸の正典値
 SEAL_VALUES = ("shrink", "no_shrink", "sealed", "opened")
 SEARCH_COND_VALUES = ("unsearched", "searched")
-GRADE_VALUES = ("s", "a", "b", "c", "d", "normal", "graded", "junk", "bulk")
+# bulk は売り方/形態であり、grade 軸には入れない。
+GRADE_VALUES = ("s", "a", "b", "c", "d", "normal", "graded", "junk")
 DAMAGE_VALUES = (True, False)
 
 # いまの 1 列 condition の正典値
@@ -74,7 +75,8 @@ CONDITION_TO_AXES: dict[str, dict[str, Any]] = {
     "grade_c": {"grade": "c", "damage": False},
     "grade_d": {"grade": "d", "damage": False},
     "junk": {"grade": "junk", "damage": False},
-    "bulk": {"grade": "bulk", "damage": False},
+    # bulk は集計対象外。grade には落とさず、空軸として扱う。
+    "bulk": {},
     "normal": {"grade": "normal", "damage": False},
     "unknown": {},
 }
@@ -98,7 +100,10 @@ def normalize_condition(value: str | None) -> str | None:
 
 
 def condition_axes(value: str | None) -> dict[str, Any]:
-    """current condition から推定できる多軸値を返す。"""
+    """current condition から推定できる多軸値を返す。
+
+    bulk のような集計対象外の値は空 dict を返す。
+    """
 
     normalized = normalize_condition(value)
     if normalized is None:
