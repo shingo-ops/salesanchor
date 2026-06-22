@@ -6,11 +6,11 @@ from typing import Any, Iterable, Mapping
 
 from app.services.condition_vocab import (
     CONDITION_VALUES,
+    VER41_TO_CONDITION,
+    VER41_TO_UNIT,
     axes_to_aggkey,
     condition_axes,
     normalize_condition,
-    VER41_TO_CONDITION,
-    VER41_TO_UNIT,
 )
 
 logger = logging.getLogger(__name__)
