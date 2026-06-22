@@ -58,7 +58,19 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
             )
             if not schema_exists:
                 pytest.skip('tenant_006 schema is not present in this CI PostgreSQL database')
-            tenant_id = 999
+            tenant_row = await conn.execute(
+                text("""
+                    SELECT tenant_id, COUNT(*) AS n
+                    FROM tenant_006.leads
+                    GROUP BY tenant_id
+                    ORDER BY n DESC, tenant_id
+                    LIMIT 1
+                """),
+            )
+            tenant_row_data = tenant_row.mappings().first()
+            if tenant_row_data is None:
+                pytest.skip('tenant_006.leads has no rows in this CI PostgreSQL database')
+            tenant_id = int(tenant_row_data["tenant_id"])
 
             other_tenant_row = await conn.execute(
                 text("""
