@@ -4,7 +4,7 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -46,6 +46,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     async def override_get_db():
         async with app_session_factory() as session:
             async with session.begin():
+                await session.execute(text("SELECT set_config('search_path', 'tenant_006, public', true)"))
+                await session.execute(text("SELECT set_config('app.tenant_id', '6', true)"))
                 yield session
 
     extra_tenant_row: tuple[str, int] | None = None
@@ -74,9 +76,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         async def override_get_current_user():
             return _build_user(999, int(tenant_id), "admin")
 
-        async def override_get_current_tenant(db: AsyncSession = Depends(get_db)):
-            await db.execute(text("SELECT set_config('search_path', 'tenant_006, public', true)"))
-            await db.execute(text("SELECT set_config('app.tenant_id', '6', true)"))
+        async def override_get_current_tenant():
             return tenant_id
 
         app.dependency_overrides[get_db] = override_get_db
