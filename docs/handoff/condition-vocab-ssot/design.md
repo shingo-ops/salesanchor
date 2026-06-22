@@ -63,6 +63,16 @@ tenant_006 で以下を満たし、結果を見て Shingo が GO:
 
 → 集計対象外（`FLAG_SINGLE` 相当）。レアリティ軸は将来追加。
 
+### §7.2.1 088 / 089 の扱い（superseded）
+
+`088_standardize_unit_values.sql` と `089_standardize_condition_values.sql` は、段階1では runner 強制の対象にせず superseded とする。  
+理由:
+
+- `088` は実 DB で `unit` が空欄のため、現段階で CHECK を押し込んでも実害の回収より運用ノイズが大きい
+- `089` は condition を軸列へ置換する段階2で再設計する前提で、旧 16 値 CHECK を runner で復活させない
+
+段階1の gate は main の `migration-guard.yml` に一本化し、Codex 版の重複ゲートは置かない。
+
 ### §7.3 一意キー最終構成
 
 **全 4 軸 ＋ unit ＋ offer_type ＋ ship_timing の複合キー（段階 2b で切り替え）**
