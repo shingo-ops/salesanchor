@@ -1071,31 +1071,6 @@ async def _fetch_attribute_conversion_summary(
 
 
 @router.get(
-    "/analytics/conversion-by-attribute",
-    response_model=AttributeConversionResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def conversion_by_attribute_summary(
-    scope: str = Query(default="team", description="team / mine"),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    リード属性別の成約率を all-time で返す read-only 集計。
-
-    - 成約定義: leads.converted_deal_id IS NOT NULL
-    - 5軸: channel_type / country / sales_form / temperature / response_speed
-    - 率は 0〜1 の小数で返す
-    """
-    _validate_scope(scope)
-    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
-    scope_params: dict[str, object] = {"uid": current_user.id} if scope == "mine" else {}
-    _, response = await _fetch_attribute_conversion_summary(db, lead_assign, scope_params)
-    return response
-
-
-@router.get(
     "/analytics/funnel",
     response_model=FunnelResponse,
     dependencies=[Depends(require_permission("dashboard.view"))],
