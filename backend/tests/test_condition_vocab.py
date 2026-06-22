@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.services.condition_vocab import (
     GRADE_VALUES,
     LEGACY_CONDITION_TO_CURRENT,
+    axes_to_aggkey,
     condition_axes,
     unit_default_search_cond,
 )
@@ -47,3 +48,44 @@ def test_bulk_projection_isolated_without_axes() -> None:
     assert projection.seal is None
     assert projection.search_cond is None
     assert projection.grade is None
+
+
+def test_axes_to_aggkey_round_trips_ver41_keys_and_excludes_pack() -> None:
+    assert (
+        axes_to_aggkey(
+            unit="box",
+            seal="shrink",
+            search_cond="unsearched",
+            damage=False,
+        )
+        == "Sealed box"
+    )
+    assert (
+        axes_to_aggkey(
+            unit="box",
+            seal="no_shrink",
+            search_cond="unsearched",
+            damage=False,
+        )
+        == "No shrink box"
+    )
+    assert (
+        axes_to_aggkey(
+            unit="box",
+            seal="sealed",
+            search_cond="unsearched",
+            damage=True,
+        )
+        == "Damaged sealed box"
+    )
+    assert (
+        axes_to_aggkey(
+            unit="case",
+            seal="sealed",
+            search_cond="unsearched",
+            damage=False,
+        )
+        == "Case"
+    )
+    assert axes_to_aggkey(unit="pack", search_cond="unsearched") is None
+    assert axes_to_aggkey(unit="bulk", seal="sealed", damage=False) is None

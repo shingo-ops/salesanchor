@@ -111,6 +111,58 @@ def condition_axes(value: str | None) -> dict[str, Any]:
     return dict(CONDITION_TO_AXES.get(normalized, {}))
 
 
+def _normalize_axis_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized or None
+
+
+def axes_to_aggkey(
+    *,
+    unit: str | None,
+    seal: str | None = None,
+    search_cond: str | None = None,
+    grade: str | None = None,
+    damage: bool | None = None,
+) -> str | None:
+    """多軸から ver4.1 の集計鍵へ戻す。
+
+    track1 は box / case 系のみを集計対象とし、pack / bulk / single など
+    の out-of-scope は None を返す。
+    """
+
+    unit_normalized = _normalize_axis_value(unit)
+    if unit_normalized not in {"box", "case"}:
+        return None
+
+    seal_normalized = _normalize_axis_value(seal)
+    grade_normalized = _normalize_axis_value(grade)
+
+    if grade_normalized is not None:
+        return None
+
+    if unit_normalized == "box":
+        if damage is True:
+            if seal_normalized in (None, "sealed", "shrink"):
+                return "Damaged sealed box"
+            return None
+        if seal_normalized == "shrink":
+            return "Sealed box"
+        if seal_normalized == "no_shrink":
+            return "No shrink box"
+        return None
+
+    if unit_normalized == "case":
+        if damage is True:
+            return None
+        if seal_normalized == "sealed":
+            return "Case"
+        return None
+
+    return None
+
+
 def unit_default_search_cond(unit: str | None) -> str | None:
     """梱包(unit) 由来の既定 search_cond を返す。"""
 
@@ -145,6 +197,7 @@ __all__ = [
     "UnitValue",
     "UNIT_VALUES",
     "VER41_TO_CONDITION",
+    "axes_to_aggkey",
     "condition_axes",
     "condition_is_canonical",
     "condition_vocab_as_text",
