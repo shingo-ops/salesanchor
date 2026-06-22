@@ -28,7 +28,7 @@ tenant_006 で以下を満たし、結果を見て Shingo が GO:
 |---|---|---|---|---|
 | 梱包 | `unit` | piece / pack / box / case / set | — | 解析（必ず出る）既存流用 |
 | 封 | `seal` | shrink / no_shrink / sealed / opened | box / case / set | 解析。無ければ空欄 |
-| サーチ | `search_cond` | unsearched / searched | pack | ルール既定（box/case→unsearched 自動）＋pack は実値 |
+| サーチ | `search_cond` | unsearched / searched | pack | ルール既定は unit 由来（box/case→unsearched 自動）＋pack は実値 |
 | ランク | `grade` | s / a / b / c / d / normal / graded / junk / bulk | piece | 解析 |
 | 破損 | `damage` | true / false（BOOLEAN NOT NULL DEFAULT false） | 全梱包 | 解析。無ければ false |
 
@@ -91,6 +91,7 @@ CREATE UNIQUE INDEX uq_inventory_offer_v2
 | DB | `public.inventory` に `raw_condition TEXT` 追加（`migrations/20260622_020000_add_inventory_raw_condition.sql:1-6`） |
 | ルールパーサ | `ParsedItem.raw_condition` 実装済み（`backend/app/services/inventory_parser.py:107-108`）。DB に書く INSERT 側は、**最初の1片ではなく元行/元ブロックの原文**をそのまま保存するように修正済み（`inventory_parser.py:577-672`, `:1097-1111`） |
 | LLM パーサ | `LLMParsedItem` に `raw_condition: str \| None` フィールド追加（`backend/app/services/inventory_parser_llm.py:64-81`）。`_OUTPUT_SCHEMA` にも追加（`:102-125`）。プロンプトに「状態の根拠テキストを raw_condition に返せ」を追記（`:159-180`） |
+| unit 既定 | `box / case → search_cond=unsearched` は `backend/app/services/condition_vocab.py:63-113` の unit helper で保持 |
 
 JSONB `raw_attributes` は YAGNI（将来必要なら別 ADR）。
 
@@ -103,7 +104,7 @@ JSONB `raw_attributes` は YAGNI（将来必要なら別 ADR）。
 | Sealed box | box | shrink | — | — | false | GAS stepF2: 残る Sealed box = シュリンク有 確定 |
 | No shrink box | box | no_shrink | — | — | false | GAS stepF2 の対 |
 | Damaged sealed box | box | sealed | — | — | **true** | 多軸なら未開封情報を消さない（旧 1 列方式の取りこぼし解消） |
-| Case | case | sealed | unsearched（自動） | — | false | ver4.1 はカートンのシュリンク有無を区別しない |
+| Case | case | sealed | unsearched（unit 既定） | — | false | ver4.1 はカートンのシュリンク有無を区別しない |
 | Unsearched pack | pack | — | unsearched | — | false | — |
 | FLAG_SINGLE | piece | — | — | — | — | 集計対象外（ver4.1 と同じ） |
 
