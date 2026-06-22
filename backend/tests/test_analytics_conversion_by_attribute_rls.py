@@ -52,7 +52,6 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 yield session
 
     inserted_rows: list[int] = []
-    deal_rows: list[int] = []
     extra_rows: list[int] = []
     extra_code: str | None = None
 
@@ -78,21 +77,6 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
         async with admin_engine.begin() as conn:
-            deal_result = await conn.execute(
-                text("""
-                    INSERT INTO tenant_006.deals (
-                        tenant_id, title, amount, status, assigned_to, created_at, updated_at
-                    )
-                    VALUES
-                        (:tenant_id, 'RLS-Deal-1', 1000, 'won', :uid, NOW(), NOW()),
-                        (:tenant_id, 'RLS-Deal-2', 2000, 'open', :uid, NOW(), NOW())
-                    RETURNING id
-                """),
-                {"tenant_id": tenant_id, "uid": current_user.id},
-            )
-            deal_ids = [int(row_id) for row_id in deal_result.scalars().all()]
-            deal_rows.extend(deal_ids)
-
             lead_result = await conn.execute(
                 text("""
                     INSERT INTO tenant_006.leads (
@@ -100,7 +84,7 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                         temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
                     )
                     VALUES
-                        (:tenant_id, 'RLS-Lead-1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, :deal_1, 100, NOW()),
+                        (:tenant_id, 'RLS-Lead-1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, 1001, 100, NOW()),
                         (:tenant_id, 'RLS-Lead-2', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, NULL, 300, NOW()),
                         (:tenant_id, 'RLS-Lead-3', 'cold_call', 'US', NULL, 'Cold', '3日超', :uid, NULL, NULL, NOW())
                     RETURNING id
@@ -108,7 +92,6 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 {
                     "tenant_id": tenant_id,
                     "uid": current_user.id,
-                    "deal_1": deal_ids[0],
                 },
             )
             inserted_rows.extend(int(row_id) for row_id in lead_result.scalars().all())
@@ -135,14 +118,13 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                         )
                         VALUES (
                             :tenant_id, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
-                            'Warm', '3日以内', :other_uid, :converted_deal_id, 9999, NOW()
+                            'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
                         )
                         RETURNING id
                     """),
                     {
                         "tenant_id": extra_tenant_id,
                         "other_uid": current_user.id + 1,
-                        "converted_deal_id": 9999,
                     },
                 )
                 extra_rows.extend(int(row_id) for row_id in extra_result.scalars().all())
@@ -217,10 +199,5 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                             text(f"DELETE FROM {extra_code}.leads WHERE id = :id"),
                             {"id": row_id},
                         )
-                for row_id in deal_rows:
-                    await conn.execute(
-                        text("DELETE FROM tenant_006.deals WHERE id = :id"),
-                        {"id": row_id},
-                    )
         await admin_engine.dispose()
         await app_engine.dispose()
