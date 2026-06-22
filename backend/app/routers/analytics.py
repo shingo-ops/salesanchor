@@ -1536,6 +1536,148 @@ def _validate_scope(scope: str) -> None:
         raise HTTPException(status_code=422, detail="scope は team または mine で指定してください")
 
 
+class AttributeConversionBucket(BaseModel):
+    value: str
+    n: int
+    conversions: int
+    raw_rate: float
+    smoothed_rate: float
+
+
+class AttributeConversionAxis(BaseModel):
+    overall_rate: float
+    items: list[AttributeConversionBucket]
+
+
+class AttributeConversionResponse(BaseModel):
+    channel_type: AttributeConversionAxis
+    country: AttributeConversionAxis
+    sales_form: AttributeConversionAxis
+    temperature: AttributeConversionAxis
+    response_speed: AttributeConversionAxis
+
+
+ATTRIBUTE_CONVERSION_SHRINK_K = 10
+ATTRIBUTE_CONVERSION_AXES: dict[str, str] = {
+    "channel_type": "COALESCE(NULLIF(TRIM(l.channel_type), ''), 'unknown')",
+    "country": "COALESCE(NULLIF(UPPER(TRIM(l.country)), ''), 'unknown')",
+    "sales_form": "COALESCE(NULLIF(TRIM(l.sales_form), ''), 'unknown')",
+    "temperature": "COALESCE(NULLIF(TRIM(l.temperature), ''), 'unknown')",
+    "response_speed": "COALESCE(NULLIF(TRIM(l.response_speed), ''), 'unknown')",
+}
+
+
+def _attribute_rate(conversions: int, n: int) -> float:
+    """率を 0〜1 の小数で返す。"""
+    if n <= 0:
+        return 0.0
+    return conversions / n
+
+
+def _smoothed_attribute_rate(
+    conversions: int,
+    n: int,
+    overall_rate: float,
+    k: int = ATTRIBUTE_CONVERSION_SHRINK_K,
+) -> float:
+    """overall_rate へ k で縮退させた率を返す。"""
+    if n < 0:
+        return 0.0
+    return (conversions + k * overall_rate) / (n + k)
+
+
+async def _fetch_attribute_conversion_axis(
+    db: AsyncSession,
+    value_expr: str,
+    lead_assign: str,
+    scope_params: dict[str, object],
+    overall_rate: float,
+) -> AttributeConversionAxis:
+    """属性1軸分の集計を返す。"""
+    result = await db.execute(
+        text(f"""
+            SELECT
+                {value_expr} AS value,
+                COUNT(*) AS n,
+                COUNT(l.converted_deal_id) AS conversions
+            FROM leads l
+            WHERE 1 = 1
+            {lead_assign}
+            GROUP BY {value_expr}
+            ORDER BY {value_expr}
+        """),
+        scope_params,
+    )
+    items: list[AttributeConversionBucket] = []
+    for row in result.mappings().all():
+        n = int(row["n"] or 0)
+        conversions = int(row["conversions"] or 0)
+        raw_rate = _attribute_rate(conversions, n)
+        smoothed_rate = _smoothed_attribute_rate(conversions, n, overall_rate)
+        items.append(AttributeConversionBucket(
+            value=str(row["value"] or "unknown"),
+            n=n,
+            conversions=conversions,
+            raw_rate=round(raw_rate, 4),
+            smoothed_rate=round(smoothed_rate, 4),
+        ))
+    return AttributeConversionAxis(
+        overall_rate=round(overall_rate, 4),
+        items=items,
+    )
+
+
+@router.get(
+    "/analytics/conversion-by-attribute",
+    response_model=AttributeConversionResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def conversion_by_attribute_summary(
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    リード属性別の成約率を all-time で返す read-only 集計。
+
+    - 成約定義: leads.converted_deal_id IS NOT NULL
+    - 5軸: channel_type / country / sales_form / temperature / response_speed
+    - 率は 0〜1 の小数で返す
+    """
+    _validate_scope(scope)
+    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict[str, object] = {"uid": current_user.id} if scope == "mine" else {}
+
+    overall_result = await db.execute(
+        text(f"""
+            SELECT
+                COUNT(*) AS n,
+                COUNT(l.converted_deal_id) AS conversions
+            FROM leads l
+            WHERE 1 = 1
+            {lead_assign}
+        """),
+        scope_params,
+    )
+    overall_row = overall_result.mappings().first() or {}
+    overall_n = int(overall_row.get("n", 0) or 0)
+    overall_conversions = int(overall_row.get("conversions", 0) or 0)
+    overall_rate = _attribute_rate(overall_conversions, overall_n)
+
+    axes: dict[str, AttributeConversionAxis] = {}
+    for axis_name, value_expr in ATTRIBUTE_CONVERSION_AXES.items():
+        axes[axis_name] = await _fetch_attribute_conversion_axis(
+            db=db,
+            value_expr=value_expr,
+            lead_assign=lead_assign,
+            scope_params=scope_params,
+            overall_rate=overall_rate,
+        )
+
+    return AttributeConversionResponse(**axes)
+
+
 @router.get(
     "/analytics/funnel",
     response_model=FunnelResponse,
