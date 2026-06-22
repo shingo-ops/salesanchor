@@ -4,13 +4,13 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
@@ -74,8 +74,14 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         async def override_get_current_user():
             return _build_user(999, int(tenant_id), "admin")
 
+        async def override_get_current_tenant(db: AsyncSession = Depends(get_db)):
+            await db.execute(text("SELECT set_config('search_path', 'tenant_006, public', true)"))
+            await db.execute(text("SELECT set_config('app.tenant_id', '6', true)"))
+            return tenant_id
+
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
         with patch("app.auth.dependencies.load_user_permissions", new=AsyncMock(return_value={"dashboard.view"})):
             transport = ASGITransport(app=app)
