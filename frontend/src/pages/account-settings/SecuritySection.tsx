@@ -1,6 +1,10 @@
 import { useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "../../lib/firebase-auth";
 import { auth } from "../../lib/firebase";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { ACCOUNT_ICONS } from "../../constants/icons";
@@ -35,8 +39,8 @@ export default function SecuritySection() {
     setChanging(true);
     try {
       const cred = EmailAuthProvider.credential(user.email, form.current);
-      await reauthenticateWithCredential(user, cred);
-      await updatePassword(user, form.next);
+      await reauthenticateWithCredential(user as never, cred as never);
+      await updatePassword(user as never, form.next);
       setSuccess(true);
       setForm({ current: "", next: "", confirm: "" });
     } catch (err) {
