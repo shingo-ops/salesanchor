@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Inventory axis backfill helper (stage2a).
 
 This script is intentionally not auto-registered in run_all_migrations.sh.
 It prepares defensive backfill logic for existing public.inventory rows.
 """
+
+from __future__ import annotations
 
 import argparse
 import asyncio

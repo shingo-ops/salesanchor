@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_permission, require_super_admin
 from app.database import get_db
-from app.services.inventory_axes import log_axis_isolation, project_inventory_axes
 from app.schemas.inventory_offers import (
     InventoryListResponse,
     InventoryOfferCreate,
@@ -32,6 +31,7 @@ from app.schemas.inventory_offers import (
     InventoryRow,
     InventorySupplierFacet,
 )
+from app.services.inventory_axes import log_axis_isolation, project_inventory_axes
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
