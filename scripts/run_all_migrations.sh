@@ -159,7 +159,6 @@ run_sql migrations/075_create_goals.sql
 run_sql migrations/076_add_google_calendar_config.sql
 run_sql migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql
 run_sql migrations/078_create_calendar_events_tenant.sql
-run_sql migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql
 run_py  scripts/migrate_20260620_080000_calendar_category_backfill.py
 run_sql migrations/080_phase_b_migration.sql
 
@@ -168,6 +167,10 @@ run_sql migrations/081_create_inventory.sql
 run_sql migrations/082_extend_products_box_attributes.sql
 run_sql migrations/083_add_staff_phone.sql
 run_sql migrations/084_add_unit_to_inventory.sql
+run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
+run_sql migrations/20260622_020000_add_inventory_raw_condition.sql
+run_sql migrations/20260623_010000_add_inventory_axes_columns.sql
+run_sql migrations/20260623_020000_add_inventory_offer_v2_unique_key.sql
 run_sql migrations/085_create_tcg_type_master.sql
 run_sql migrations/086_seed_additional_tcg_types.sql
 run_sql migrations/087_create_supplier_prompts.sql
@@ -427,9 +430,6 @@ run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
 
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
-
-# SSOT cleanup 1: products.category_classification 廃止（backup 退避 → DROP）
-run_sql migrations/20260623_020000_drop_products_category_classification.sql
 
 echo ""
 echo "============================================"
