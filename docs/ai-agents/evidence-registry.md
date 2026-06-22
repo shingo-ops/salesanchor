@@ -23,6 +23,34 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260622-002
+date: 2026-06-22
+agent: Codex
+task: W-2② スコア＆順位 read-only API
+scope: backend/app/routers/analytics.py, backend/tests/test_analytics.py, backend/tests/test_analytics_conversion_by_attribute_rls.py, tasks/todo.md
+evidence:
+  - type: file
+    reference: backend/app/routers/analytics.py
+    summary: /analytics/priority-prospects を追加し、team の属性別 smoothed_rate 平均を ease_pct にし、monthly_forecast の中央値補完と降順ソートで read-only の優先リストを返す実装を追加した
+  - type: file
+    reference: backend/tests/test_analytics.py
+    summary: SQLite 契約テストで empty / しやすさ平均 / 中央値代替 / 降順 / 欠軸除外 / scope=mine を検証した
+  - type: file
+    reference: backend/tests/test_analytics_conversion_by_attribute_rls.py
+    summary: tenant_006 の実データ解決を public.tenants なしで行う PG/RLS テストへ更新し、team/mine 差と priority-prospects の実走を試した
+  - type: command
+    reference: pytest -q backend/tests/test_analytics.py -k 'conversion_by_attribute or priority_prospects' --no-cov
+    summary: SQLite 契約テスト 4 件が通過した
+  - type: command
+    reference: RLS_ADMIN_DATABASE_URL=postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db RLS_TEST_DATABASE_URL=postgresql+asyncpg://salesanchor_app:apppass@localhost:5432/jarvis_test_db pytest -q backend/tests/test_analytics_conversion_by_attribute_rls.py --no-cov
+    summary: PG/RLS 実走は localhost:5432 への接続拒否で失敗し、このシェルでは PostgreSQL サーバ未起動だった
+confidence: medium
+tradeoff: priority の順位付けは score 用の read-only 専用経路で実装し、既存の compute_prospect_rank / priority_score とは分離した
+decision: 5軸属性の team smoothed_rate 平均と中央値補完を使う score/rank API を追加し、PG/RLS は実サーバが起動した環境でのみ再確認する
+follow_up: PostgreSQL 実走環境を用意して tenant_006 での再試験と PR 作成を完了する
+```
+
+```text
 id: EV-20260622-001
 date: 2026-06-22
 agent: Codex
@@ -54,6 +82,28 @@ confidence: medium
 tradeoff: 0-1 スケールの率で返すため、フロント側の表示時に必要ならパーセント換算が要る
 decision: 既存 channels の scope 実装を踏襲しつつ、属性別集計は all-time の read-only endpoint として段階導入する
 follow_up: RLS 接続先を設定した実環境で tenant_006 の実走を再確認し、PR 化する
+task: FedEx ETD 設定ガイド Level1 実装
+scope: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx, frontend/src/pages/integrations/FedexLabelValidationTab.tsx, frontend/src/pages/integrations/CarrierIntegrationPage.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/src/pages/integrations/FedexLabelValidationTab.css, backend/app/routers/shipping.py, backend/app/services/fedex_ship.py, backend/tests/test_fedex_etd.py
+evidence:
+  - type: file
+    reference: frontend/src/pages/integrations/FedexEtdSetupGuide.tsx
+    summary: 5 ステップの ETD ガイドを追加し、Step 3 で credentials タブへ戻す導線と Step 4 の ETD 画像アップロードを実装した
+  - type: file
+    reference: backend/app/routers/shipping.py
+    summary: ETD upload route に live 前の 422 明示ガードを追加した
+  - type: file
+    reference: backend/app/services/fedex_ship.py
+    summary: `_ETD_ENABLED` を `FEDEX_ETD_ENABLED` env 連動に変更し、Ship 側 dormant フラグを go-live 時だけ有効化できるようにした
+  - type: command
+    reference: pytest backend/tests/test_fedex_etd.py -q --no-cov
+    summary: 16 passed
+  - type: command
+    reference: npm run build
+    summary: frontend production build succeeded after adding dependencies
+confidence: high
+tradeoff: ETD 設定ガイドを既存の Label Validation タブに併設したため、画面内の情報量は増えるが、既存フローを壊さずに Level1 を追加できる
+decision: ETD 設定ガイドは専用ステッパーとして追加し、バックエンドは live 前に 4xx で安全停止する
+follow_up: broader frontend lint / screenshot QA / PR 作成
 ```
 
 ```text

@@ -863,6 +863,13 @@ async def etd_upload_image(
     G3（Developer Portal に Trade Documents Upload API 追加）が未完了の場合、
     FedEx API 疎通が失敗する可能性あり。コードは完成済み。
     """
+    from app.services import fedex_etd, fedex_ship
+
+    if not fedex_ship._ETD_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="FedEx ETD はまだ有効化されていません",
+        )
     if image_type not in fedex_etd.PERSISTENT_IMAGE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

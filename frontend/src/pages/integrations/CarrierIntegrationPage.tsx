@@ -412,7 +412,9 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
       )}
 
       {/* 連携ガイドタブ（FedEx のみ・中身は Part B で作り替え） */}
-      {pageTab === "integrationGuide" && isFedex && <FedexLabelValidationTab />}
+      {pageTab === "integrationGuide" && isFedex && (
+        <FedexLabelValidationTab onOpenCredentialsTab={() => setPageTab("credentials")} />
+      )}
 
       {/* API連携設定タブ（全キャリア共通） */}
       {pageTab === "credentials" && (
