@@ -1,0 +1,213 @@
+.db-priority-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-left: 4px solid var(--success);
+  background: linear-gradient(180deg, var(--success-bg-subtle), var(--bg-surface) 58%);
+}
+
+.db-priority-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-priority-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.db-priority-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.db-priority-item {
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--success);
+  padding: var(--space-3);
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.db-priority-item--no-sample {
+  border-left-color: var(--warning-text);
+}
+
+.db-priority-item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.db-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--dashboard-rank-badge);
+  height: var(--dashboard-rank-badge);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--success);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.db-priority-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-priority-score-label {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-priority-company {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.db-priority-meta {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.db-priority-meta span {
+  white-space: nowrap;
+}
+
+.db-priority-flag-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.db-priority-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--warning-bg-subtle);
+  color: var(--warning-text);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-priority-axis {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+
+.db-priority-axis-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-badge);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.db-priority-axis-label {
+  color: var(--text-secondary);
+}
+
+.db-priority-axis-value {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-priority-followup-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.db-priority-followup-btn {
+  white-space: nowrap;
+}
+
+.db-priority-added-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+}
+
+.db-priority-added-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--success-bg-subtle);
+  color: var(--success);
+  font-size: var(--font-xs);
+}
+
+.db-priority-edit-btn {
+  margin-left: auto;
+}
+
+.db-priority-empty,
+.db-priority-loading,
+.db-priority-error {
+  font-size: var(--font-sm);
+}
+
+.db-priority-loading {
+  color: var(--text-secondary);
+  padding: var(--space-3) 0;
+}
+
+.db-priority-empty {
+  margin: 0;
+  padding: var(--space-2) 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.db-priority-error {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg-subtle);
+  color: var(--danger);
+}

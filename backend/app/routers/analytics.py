@@ -14,7 +14,9 @@ from __future__ import annotations
   2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
+from statistics import median
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -74,177 +76,6 @@ class OverdueReport(BaseModel):
     count: int
     total_amount: float
     invoices: list[OverdueInvoice]
-
-
-class CustomerOrderItem(BaseModel):
-    company_id: int
-    company_name: str
-    order_count: int
-    first_order_at: date
-    last_order_at: date
-    days_since_last_order: int
-    continuation_days: int
-    avg_interval_days: float | None
-    avg_order_amount: float
-    total_amount: float
-    predicted_next_order_at: date | None
-
-
-class CustomerOrdersResponse(BaseModel):
-    items: list[CustomerOrderItem]
-
-
-class RevenueSegmentStat(BaseModel):
-    revenue: float
-    order_count: int
-    avg_order_amount: float | None
-    customer_count: int
-    share: float
-
-
-class RevenueSegmentSummary(BaseModel):
-    revenue: float
-    order_count: int
-    customer_count: int
-
-
-class RevenueSegmentsResponse(BaseModel):
-    period: str
-    scope: str
-    new: RevenueSegmentStat
-    repeat: RevenueSegmentStat
-    total: RevenueSegmentSummary
-
-
-class WeeklyAdvisorReason(BaseModel):
-    last_order_at: date | None = None
-    last_contact_at: datetime | None = None
-    avg_interval_days: float | None = None
-    days_since_last_order: int | None = None
-    days_since_contact: int | None = None
-    pace_score: float | None = None
-    contact_score: float | None = None
-    decline_score: float | None = None
-    total_score: float | None = None
-    current_order_count: int | None = None
-    previous_order_count: int | None = None
-    current_revenue: float | None = None
-    previous_revenue: float | None = None
-
-
-class WeeklyAdvisorAction(BaseModel):
-    rank: int
-    type: str
-    company_id: int
-    company_name: str
-    lead_id: int | None = None
-    score: float
-    expected_value: float
-    suggested_action: str
-    reason: WeeklyAdvisorReason
-
-
-class WeeklyAdvisorResponse(BaseModel):
-    period: str
-    scope: str
-    stale_days: int
-    actions: list[WeeklyAdvisorAction]
-
-
-def _normalize_date(value: object) -> date:
-    """DB から返る date / datetime / str を date に正規化する。"""
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if isinstance(value, str):
-        return date.fromisoformat(value[:10])
-    return date.fromisoformat(str(value)[:10])
-
-
-def _customer_orders_period_bounds(period: str, today: date) -> tuple[object, object]:
-    """customer-orders 用の期間境界を返す。"""
-    if period == "1m":
-        return _jst_month_range_utc(today.year, today.month)
-    days_map = {"3m": 90, "6m": 180, "12m": 365}
-    if period not in days_map:
-        raise HTTPException(status_code=422, detail="period は 1m / 3m / 6m / 12m で指定してください")
-    end = today + timedelta(days=1)
-    return today - timedelta(days=days_map[period]), end
-
-
-def _advisor_period_bounds(period: str, today: date) -> tuple[object, object, object, object]:
-    """週次アドバイザー用に current / previous の期間境界を返す。"""
-    current_start, current_end = _customer_orders_period_bounds(period, today)
-    if period == "1m":
-        prev_month = today.month - 1
-        prev_year = today.year
-        if prev_month < 1:
-            prev_month = 12
-            prev_year -= 1
-        previous_start, previous_end = _jst_month_range_utc(prev_year, prev_month)
-        return current_start, current_end, previous_start, previous_end
-
-    window = current_end - current_start
-    previous_end = current_start
-    previous_start = previous_end - window
-    return current_start, current_end, previous_start, previous_end
-
-
-def _order_count_drop_score(current: int, previous: int) -> float:
-    """受注数の落ち込みを 0 / 20 / 40 点で返す。"""
-    if previous <= 0:
-        return 0.0
-    ratio = current / previous if previous > 0 else 1.0
-    if ratio >= 0.9:
-        return 0.0
-    if ratio >= 0.7:
-        return 20.0
-    return 40.0
-
-
-def _revenue_drop_score(current: float, previous: float) -> float:
-    """売上の落ち込みを 0 / 20 / 40 点で返す。"""
-    if previous <= 0:
-        return 0.0
-    ratio = current / previous if previous > 0 else 1.0
-    if ratio >= 0.9:
-        return 0.0
-    if ratio >= 0.7:
-        return 20.0
-    return 40.0
-
-
-def _pace_score(days_since_last_order: int, avg_interval_days: float | None) -> float:
-    """受注ペースの超過度を 0〜60 点で返す。"""
-    if avg_interval_days is None or avg_interval_days <= 0:
-        return 0.0
-    ratio = days_since_last_order / avg_interval_days
-    if ratio <= 1.0:
-        return 0.0
-    if ratio <= 1.3:
-        return round(((ratio - 1.0) / 0.3) * 30.0, 1)
-    if ratio <= 2.0:
-        return round(30.0 + (((ratio - 1.3) / 0.7) * 30.0), 1)
-    return 60.0
-
-
-def _contact_score(days_since_contact: int | None, stale_days: int) -> float:
-    """接触途絶の強さを 0〜60 点で返す。"""
-    if days_since_contact is None or days_since_contact < stale_days:
-        return 0.0
-    if days_since_contact <= stale_days + 30:
-        return round(((days_since_contact - stale_days) / 30.0) * 30.0, 1)
-    if days_since_contact <= stale_days + 60:
-        return round(30.0 + (((days_since_contact - (stale_days + 30)) / 30.0) * 30.0), 1)
-    return 60.0
-
-
-def _normalized_urgency(score: float, cap: float) -> float:
-    """score を cap で正規化し、最小 0.1 を確保する。"""
-    if score <= 0:
-        return 0.0
-    return max(0.1, min(score / cap, 1.0))
 
 
 @router.get(
@@ -376,438 +207,6 @@ async def overdue_invoices_report(
     total = sum(i.total_amount or 0 for i in invoices)
 
     return OverdueReport(count=len(invoices), total_amount=total, invoices=invoices)
-
-
-@router.get(
-    "/analytics/customer-orders",
-    response_model=CustomerOrdersResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def customer_orders_report(
-    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
-    scope: str = Query(default="team", description="team / mine"),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """顧客別の受注履歴と再受注予測を返す read-only 集計API。"""
-    _validate_scope(scope)
-    today = date.today()
-    start, end = _customer_orders_period_bounds(period, today)
-
-    if scope == "mine":
-        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
-        order_scope_params: dict = {"uid": current_user.id}
-    else:
-        order_scope_join = ""
-        order_scope_params = {}
-
-    result = await db.execute(
-        text(f"""
-            SELECT
-                o.company_id,
-                COALESCE(c.name, '') AS company_name,
-                o.created_at,
-                o.total_amount
-            FROM orders o
-            LEFT JOIN companies c ON c.id = o.company_id
-            {order_scope_join}
-            WHERE o.company_id IS NOT NULL
-              AND o.created_at >= :start
-              AND o.created_at < :end
-            ORDER BY o.company_id, o.created_at, o.id
-        """),
-        {"start": start, "end": end, **order_scope_params},
-    )
-    rows = result.mappings().all()
-
-    grouped_names: dict[int, str] = {}
-    grouped_orders: dict[int, list[dict[str, object]]] = {}
-    for row in rows:
-        company_id = int(row["company_id"])
-        grouped_names.setdefault(company_id, str(row["company_name"] or ""))
-        grouped_orders.setdefault(company_id, []).append({
-            "created_at": _normalize_date(row["created_at"]),
-            "total_amount": float(row["total_amount"] or 0),
-        })
-
-    items: list[CustomerOrderItem] = []
-    for company_id, orders in grouped_orders.items():
-        orders = sorted(orders, key=lambda x: x["created_at"])
-        if not orders:
-            continue
-        first_order = orders[0]["created_at"]
-        last_order = orders[-1]["created_at"]
-        order_count = len(orders)
-        total_amount = sum(order["total_amount"] for order in orders)
-        avg_order_amount = round(total_amount / order_count, 2)
-        continuation_days = (last_order - first_order).days
-        days_since_last_order = (today - last_order).days
-
-        avg_interval_days: float | None = None
-        predicted_next_order_at: date | None = None
-        if order_count >= 2:
-            intervals = [
-                (orders[idx]["created_at"] - orders[idx - 1]["created_at"]).days
-                for idx in range(1, order_count)
-            ]
-            avg_interval_days = round(sum(intervals) / len(intervals), 1)
-            predicted_next_order_at = last_order + timedelta(days=max(1, int(round(avg_interval_days))))
-
-        items.append(CustomerOrderItem(
-            company_id=company_id,
-            company_name=grouped_names.get(company_id, ""),
-            order_count=order_count,
-            first_order_at=first_order,
-            last_order_at=last_order,
-            days_since_last_order=days_since_last_order,
-            continuation_days=continuation_days,
-            avg_interval_days=avg_interval_days,
-            avg_order_amount=avg_order_amount,
-            total_amount=round(total_amount, 2),
-            predicted_next_order_at=predicted_next_order_at,
-        ))
-
-    items.sort(key=lambda item: (item.last_order_at, item.total_amount, item.company_id), reverse=True)
-    return CustomerOrdersResponse(items=items)
-
-
-@router.get(
-    "/analytics/revenue-segments",
-    response_model=RevenueSegmentsResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def revenue_segments_report(
-    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
-    scope: str = Query(default="team", description="team / mine"),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """新規/既存セグメント別の売上サマリーを返す read-only 集計API。"""
-    _validate_scope(scope)
-    today = date.today()
-    start, end = _customer_orders_period_bounds(period, today)
-
-    if scope == "mine":
-        order_scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
-        order_scope_params: dict = {"uid": current_user.id}
-    else:
-        order_scope_join = ""
-        order_scope_params = {}
-
-    split_result = await db.execute(
-        text(f"""
-            SELECT
-                o.company_id,
-                COALESCE(SUM(o.total_amount), 0) AS total_amount,
-                COUNT(*) AS order_count
-            FROM orders o
-            {order_scope_join}
-            WHERE o.company_id IS NOT NULL
-              AND o.created_at >= :start
-              AND o.created_at < :end
-            GROUP BY o.company_id
-            ORDER BY o.company_id
-        """),
-        {"start": start, "end": end, **order_scope_params},
-    )
-    split_rows = split_result.mappings().all()
-
-    new_revenue = 0.0
-    repeat_revenue = 0.0
-    new_order_count = 0
-    repeat_order_count = 0
-    new_customer_ids: set[int] = set()
-    repeat_customer_ids: set[int] = set()
-
-    for row in split_rows:
-        company_id = int(row["company_id"])
-        revenue = float(row["total_amount"] or 0)
-        order_count = int(row["order_count"] or 0)
-
-        prior_result = await db.execute(
-            text("SELECT COUNT(*) AS cnt FROM orders WHERE company_id = :cid AND created_at < :start"),
-            {"cid": company_id, "start": start},
-        )
-        prior_cnt = int((prior_result.mappings().first() or {}).get("cnt", 0) or 0)
-
-        if prior_cnt == 0:
-            new_revenue += revenue
-            new_order_count += order_count
-            new_customer_ids.add(company_id)
-        else:
-            repeat_revenue += revenue
-            repeat_order_count += order_count
-            repeat_customer_ids.add(company_id)
-
-    total_revenue = round(new_revenue + repeat_revenue, 2)
-    total_order_count = new_order_count + repeat_order_count
-    total_customer_count = len(new_customer_ids | repeat_customer_ids)
-
-    def _segment_payload(
-        revenue: float,
-        order_count: int,
-        customer_count: int,
-    ) -> RevenueSegmentStat:
-        avg_order_amount = round(revenue / order_count, 2) if order_count > 0 else None
-        share = round((revenue / total_revenue * 100), 1) if total_revenue > 0 else 0.0
-        return RevenueSegmentStat(
-            revenue=round(revenue, 2),
-            order_count=order_count,
-            avg_order_amount=avg_order_amount,
-            customer_count=customer_count,
-            share=share,
-        )
-
-    return RevenueSegmentsResponse(
-        period=period,
-        scope=scope,
-        new=_segment_payload(new_revenue, new_order_count, len(new_customer_ids)),
-        repeat=_segment_payload(repeat_revenue, repeat_order_count, len(repeat_customer_ids)),
-        total=RevenueSegmentSummary(
-            revenue=total_revenue,
-            order_count=total_order_count,
-            customer_count=total_customer_count,
-        ),
-    )
-
-
-@router.get(
-    "/analytics/weekly-advisor-defensive",
-    response_model=WeeklyAdvisorResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def weekly_advisor_defensive(
-    period: str = Query(default="3m", description="1m / 3m / 6m / 12m"),
-    scope: str = Query(default="mine", description="team / mine"),
-    stale_days: int = Query(default=14, ge=1, le=365),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """守り3種の打ち手を score 降順で返す read-only 集計 API。"""
-    _validate_scope(scope)
-    today = date.today()
-    current_start, current_end, previous_start, previous_end = _advisor_period_bounds(period, today)
-
-    if scope == "mine":
-        scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
-        scope_params: dict = {"uid": current_user.id}
-    else:
-        scope_join = ""
-        scope_params = {}
-
-    combined_result = await db.execute(
-        text(f"""
-            SELECT
-                o.company_id,
-                COALESCE(c.name, '') AS company_name,
-                c.lead_id,
-                o.created_at,
-                COALESCE(o.total_amount, 0) AS total_amount
-            FROM orders o
-            LEFT JOIN companies c ON c.id = o.company_id
-            {scope_join}
-            WHERE o.company_id IS NOT NULL
-              AND o.created_at >= :previous_start
-              AND o.created_at < :current_end
-            ORDER BY o.company_id, o.created_at, o.id
-        """),
-        {"previous_start": previous_start, "current_end": current_end, **scope_params},
-    )
-    combined_rows = combined_result.mappings().all()
-
-    grouped_names: dict[int, str] = {}
-    grouped_lead_ids: dict[int, int | None] = {}
-    grouped_orders: dict[int, list[dict[str, object]]] = {}
-    candidate_company_ids: set[int] = set()
-    for row in combined_rows:
-        company_id = int(row["company_id"])
-        candidate_company_ids.add(company_id)
-        grouped_names.setdefault(company_id, str(row["company_name"] or ""))
-        if company_id not in grouped_lead_ids:
-            lead_id = row["lead_id"]
-            grouped_lead_ids[company_id] = int(lead_id) if lead_id is not None else None
-        grouped_orders.setdefault(company_id, []).append({
-            "created_at": _normalize_date(row["created_at"]),
-            "total_amount": float(row["total_amount"] or 0),
-        })
-
-    if not candidate_company_ids:
-        return WeeklyAdvisorResponse(period=period, scope=scope, stale_days=stale_days, actions=[])
-
-    contact_last_seen: dict[int, datetime] = {}
-    try:
-        contact_result = await db.execute(
-            text("""
-                SELECT company_id, MAX(occurred_at) AS last_conversation_at
-                FROM conversation_logs
-                WHERE company_id IS NOT NULL
-                GROUP BY company_id
-            """),
-        )
-        for row in contact_result.mappings().all():
-            company_id = int(row["company_id"])
-            if company_id in candidate_company_ids and row["last_conversation_at"] is not None:
-                contact_last_seen[company_id] = row["last_conversation_at"]
-    except Exception:
-        contact_last_seen = {}
-
-    actions: list[WeeklyAdvisorAction] = []
-    churn_company_ids: set[int] = set()
-    current_start_cmp = _normalize_date(current_start)
-    current_end_cmp = _normalize_date(current_end)
-    previous_start_cmp = _normalize_date(previous_start)
-    previous_end_cmp = _normalize_date(previous_end)
-
-    for company_id, orders in grouped_orders.items():
-        orders_sorted = sorted(orders, key=lambda item: item["created_at"])
-        if not orders_sorted:
-            continue
-
-        current_orders = [
-            item for item in orders_sorted
-            if current_start_cmp <= item["created_at"] < current_end_cmp
-        ]
-        previous_orders = [
-            item for item in orders_sorted
-            if previous_start_cmp <= item["created_at"] < previous_end_cmp
-        ]
-
-        all_order_count = len(orders_sorted)
-        all_total_amount = sum(float(item["total_amount"] or 0) for item in orders_sorted)
-        first_order_at = orders_sorted[0]["created_at"]
-        last_order_at = orders_sorted[-1]["created_at"]
-        days_since_last_order = (today - last_order_at).days
-        avg_interval_days: float | None = None
-        if all_order_count >= 2:
-            intervals = [
-                (orders_sorted[idx]["created_at"] - orders_sorted[idx - 1]["created_at"]).days
-                for idx in range(1, all_order_count)
-            ]
-            avg_interval_days = round(sum(intervals) / len(intervals), 1)
-
-        avg_order_amount = round(all_total_amount / all_order_count, 2)
-        current_order_count = len(current_orders)
-        previous_order_count = len(previous_orders)
-        current_revenue = round(sum(float(item["total_amount"] or 0) for item in current_orders), 2)
-        previous_revenue = round(sum(float(item["total_amount"] or 0) for item in previous_orders), 2)
-
-        last_contact_at = contact_last_seen.get(company_id)
-        days_since_contact = (today - _normalize_date(last_contact_at)).days if last_contact_at else None
-
-        if avg_interval_days is not None and days_since_last_order >= avg_interval_days * 0.8:
-            urgency = _normalized_urgency(
-                days_since_last_order / max(avg_interval_days, 1.0) - 0.8,
-                1.2,
-            )
-            score = round(avg_order_amount * 0.8 * urgency, 1)
-            actions.append(WeeklyAdvisorAction(
-                rank=0,
-                type="reorder",
-                company_id=company_id,
-                company_name=grouped_names.get(company_id, ""),
-                lead_id=grouped_lead_ids.get(company_id),
-                score=score,
-                expected_value=avg_order_amount,
-                suggested_action="再受注の案内",
-                reason=WeeklyAdvisorReason(
-                    last_order_at=first_order_at if all_order_count == 1 else last_order_at,
-                    avg_interval_days=avg_interval_days,
-                    days_since_last_order=days_since_last_order,
-                    last_contact_at=last_contact_at,
-                    days_since_contact=days_since_contact,
-                    current_order_count=current_order_count,
-                    previous_order_count=previous_order_count,
-                    current_revenue=current_revenue,
-                    previous_revenue=previous_revenue,
-                ),
-            ))
-
-        pace_score = _pace_score(days_since_last_order, avg_interval_days)
-        contact_score = _contact_score(days_since_contact, stale_days)
-        decline_score = max(
-            _order_count_drop_score(current_order_count, previous_order_count),
-            _revenue_drop_score(current_revenue, previous_revenue),
-        )
-        total_risk_score = round(pace_score + contact_score + decline_score, 1)
-        if total_risk_score >= 60:
-            churn_company_ids.add(company_id)
-            urgency = _normalized_urgency(total_risk_score, 180.0)
-            score = round(avg_order_amount * 0.5 * urgency, 1)
-            actions.append(WeeklyAdvisorAction(
-                rank=0,
-                type="churn_risk",
-                company_id=company_id,
-                company_name=grouped_names.get(company_id, ""),
-                lead_id=grouped_lead_ids.get(company_id),
-                score=score,
-                expected_value=avg_order_amount,
-                suggested_action="状況確認の連絡",
-                reason=WeeklyAdvisorReason(
-                    last_order_at=last_order_at,
-                    last_contact_at=last_contact_at,
-                    avg_interval_days=avg_interval_days,
-                    days_since_last_order=days_since_last_order,
-                    days_since_contact=days_since_contact,
-                    pace_score=pace_score,
-                    contact_score=contact_score,
-                    decline_score=decline_score,
-                    total_score=total_risk_score,
-                    current_order_count=current_order_count,
-                    previous_order_count=previous_order_count,
-                    current_revenue=current_revenue,
-                    previous_revenue=previous_revenue,
-                ),
-            ))
-
-        if (
-            days_since_contact is not None
-            and days_since_contact >= stale_days
-            and company_id not in churn_company_ids
-        ):
-            urgency = _normalized_urgency(days_since_contact - stale_days, 60.0)
-            score = round(avg_order_amount * 0.3 * urgency, 1)
-            actions.append(WeeklyAdvisorAction(
-                rank=0,
-                type="comm_low",
-                company_id=company_id,
-                company_name=grouped_names.get(company_id, ""),
-                lead_id=grouped_lead_ids.get(company_id),
-                score=score,
-                expected_value=avg_order_amount,
-                suggested_action="近況確認の連絡",
-                reason=WeeklyAdvisorReason(
-                    last_order_at=last_order_at,
-                    last_contact_at=last_contact_at,
-                    days_since_contact=days_since_contact,
-                    current_order_count=current_order_count,
-                    previous_order_count=previous_order_count,
-                    current_revenue=current_revenue,
-                    previous_revenue=previous_revenue,
-                ),
-            ))
-
-    actions.sort(
-        key=lambda item: (
-            item.score,
-            item.expected_value,
-            item.company_name,
-            item.company_id,
-        ),
-        reverse=True,
-    )
-    ranked_actions: list[WeeklyAdvisorAction] = []
-    for idx, action in enumerate(actions, start=1):
-        ranked_actions.append(action.model_copy(update={"rank": idx}))
-
-    return WeeklyAdvisorResponse(
-        period=period,
-        scope=scope,
-        stale_days=stale_days,
-        actions=ranked_actions,
-    )
 
 
 # ─────────────────────────────────────────────
@@ -1585,6 +984,16 @@ def _smoothed_attribute_rate(
         return 0.0
     return (conversions + k * overall_rate) / (n + k)
 
+def _normalize_attribute_value(axis_name: str, raw_value: object | None) -> str | None:
+    """集計に使う属性値を lead 側で照合しやすい形に正規化する。"""
+    if raw_value is None:
+        return None
+    value = str(raw_value).strip()
+    if not value:
+        return None
+    if axis_name == "country":
+        return value.upper()
+    return value
 
 async def _fetch_attribute_conversion_axis(
     db: AsyncSession,
@@ -1626,29 +1035,12 @@ async def _fetch_attribute_conversion_axis(
         items=items,
     )
 
-
-@router.get(
-    "/analytics/conversion-by-attribute",
-    response_model=AttributeConversionResponse,
-    dependencies=[Depends(require_permission("dashboard.view"))],
-)
-async def conversion_by_attribute_summary(
-    scope: str = Query(default="team", description="team / mine"),
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    リード属性別の成約率を all-time で返す read-only 集計。
-
-    - 成約定義: leads.converted_deal_id IS NOT NULL
-    - 5軸: channel_type / country / sales_form / temperature / response_speed
-    - 率は 0〜1 の小数で返す
-    """
-    _validate_scope(scope)
-    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
-    scope_params: dict[str, object] = {"uid": current_user.id} if scope == "mine" else {}
-
+async def _fetch_attribute_conversion_summary(
+    db: AsyncSession,
+    lead_assign: str,
+    scope_params: dict[str, object],
+) -> tuple[float, AttributeConversionResponse]:
+    """属性別成約率の全体値と5軸集計をまとめて返す。"""
     overall_result = await db.execute(
         text(f"""
             SELECT
@@ -1675,7 +1067,32 @@ async def conversion_by_attribute_summary(
             overall_rate=overall_rate,
         )
 
-    return AttributeConversionResponse(**axes)
+    return overall_rate, AttributeConversionResponse(**axes)
+
+
+@router.get(
+    "/analytics/conversion-by-attribute",
+    response_model=AttributeConversionResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def conversion_by_attribute_summary(
+    scope: str = Query(default="team", description="team / mine"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    リード属性別の成約率を all-time で返す read-only 集計。
+
+    - 成約定義: leads.converted_deal_id IS NOT NULL
+    - 5軸: channel_type / country / sales_form / temperature / response_speed
+    - 率は 0〜1 の小数で返す
+    """
+    _validate_scope(scope)
+    lead_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
+    scope_params: dict[str, object] = {"uid": current_user.id} if scope == "mine" else {}
+    _, response = await _fetch_attribute_conversion_summary(db, lead_assign, scope_params)
+    return response
 
 
 @router.get(
@@ -2223,6 +1640,34 @@ class ChannelsResponse(BaseModel):
     rows: list[ChannelRow]
 
 
+class PriorityProspectAxisBreakdown(BaseModel):
+    axis: str
+    value: str
+    n: int
+    conversions: int
+    raw_rate: float
+    smoothed_rate: float
+    low_sample: bool
+
+
+class PriorityProspectItem(BaseModel):
+    lead_id: int
+    type: Literal["priority_prospect"] = "priority_prospect"
+    ease_pct: float
+    monthly_forecast: float
+    rank_score: float
+    score: float
+    expected_value: float
+    suggested_action: str
+    axis_breakdown: list[PriorityProspectAxisBreakdown]
+    low_sample_flags: list[str]
+
+
+class PriorityProspectsResponse(BaseModel):
+    scope: str
+    items: list[PriorityProspectItem]
+
+
 @router.get(
     "/analytics/channels",
     response_model=ChannelsResponse,
@@ -2329,6 +1774,123 @@ async def channels_summary(
         ))
 
     return ChannelsResponse(rows=rows)
+
+
+@router.get(
+    "/analytics/priority-prospects",
+    response_model=PriorityProspectsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def priority_prospects(
+    scope: str = Query(default="mine", description="mine only"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    しやすさ% × 見込み金額の read-only 優先リストを返す。
+
+    - しやすさ% は team の属性別 smoothed_rate を平均したもの
+    - 欠軸は平均から除外
+    - 全欠けは overall_rate にフォールバック
+    - monthly_forecast が null の場合は、scope 内の中央値で補完
+    """
+    if scope != "mine":
+        raise HTTPException(status_code=422, detail="scope は mine で指定してください")
+
+    scope_params: dict[str, object] = {"uid": current_user.id}
+    overall_rate, team_axes = await _fetch_attribute_conversion_summary(
+        db,
+        lead_assign="",
+        scope_params={},
+    )
+
+    lead_result = await db.execute(
+        text("""
+            SELECT
+                id,
+                monthly_forecast,
+                channel_type,
+                country,
+                sales_form,
+                temperature,
+                response_speed
+            FROM leads l
+            WHERE 1 = 1
+              AND l.assigned_to = :uid
+            ORDER BY id
+        """),
+        scope_params,
+    )
+    lead_rows = lead_result.mappings().all()
+    forecast_values = [
+        float(row["monthly_forecast"])
+        for row in lead_rows
+        if row["monthly_forecast"] is not None
+    ]
+    representative_forecast = median(forecast_values) if forecast_values else 0.0
+
+    items: list[PriorityProspectItem] = []
+    for row in lead_rows:
+        axis_breakdown: list[PriorityProspectAxisBreakdown] = []
+        sampled_rates: list[float] = []
+        low_sample_flags: list[str] = []
+        for axis_name in ATTRIBUTE_CONVERSION_AXES:
+            normalized_value = _normalize_attribute_value(axis_name, row[axis_name])
+            if normalized_value is None:
+                continue
+            axis_data = getattr(team_axes, axis_name)
+            bucket_map = {item.value: item for item in axis_data.items}
+            bucket = bucket_map.get(normalized_value)
+            if bucket is None:
+                bucket = bucket_map.get("unknown")
+            if bucket is None:
+                continue
+            low_sample = bucket.n < ATTRIBUTE_CONVERSION_SHRINK_K
+            if low_sample:
+                low_sample_flags.append(f"{axis_name}:low_sample")
+            axis_breakdown.append(PriorityProspectAxisBreakdown(
+                axis=axis_name,
+                value=normalized_value,
+                n=bucket.n,
+                conversions=bucket.conversions,
+                raw_rate=bucket.raw_rate,
+                smoothed_rate=bucket.smoothed_rate,
+                low_sample=low_sample,
+            ))
+            sampled_rates.append(bucket.smoothed_rate)
+
+        ease_rate = sum(sampled_rates) / len(sampled_rates) if sampled_rates else overall_rate
+        ease_pct = round(ease_rate * 100, 4)
+
+        monthly_forecast_raw = row["monthly_forecast"]
+        monthly_forecast = (
+            float(monthly_forecast_raw)
+            if monthly_forecast_raw is not None
+            else float(representative_forecast)
+        )
+        if monthly_forecast_raw is None:
+            low_sample_flags.append("monthly_forecast_unset")
+
+        rank_score = round(ease_pct * monthly_forecast, 2)
+        items.append(PriorityProspectItem(
+            lead_id=int(row["id"]),
+            ease_pct=ease_pct,
+            monthly_forecast=round(monthly_forecast, 2),
+            rank_score=rank_score,
+            score=rank_score,
+            expected_value=round(monthly_forecast, 2),
+            suggested_action="今やること",
+            axis_breakdown=axis_breakdown,
+            low_sample_flags=low_sample_flags,
+        ))
+
+    items.sort(key=lambda item: (-item.rank_score, item.lead_id))
+    for item in items:
+        item.rank_score = round(item.rank_score, 2)
+        item.score = item.rank_score
+
+    return PriorityProspectsResponse(scope=scope, items=items)
 
 
 # ─────────────────────────────────────────────

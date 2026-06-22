@@ -13,20 +13,17 @@
  * - Step 7: メール文面コピー
  * - Step 8: メール送信
  * - Step 9: 申請完了
- * - (ETD) ETD 書類登録: VITE_FEDEX_ETD_ENABLED=true のみ表示（ADR-137・既定非表示）
  *
  * 変更履歴:
  *   2026-06-12: 初版（ADR-129）
- *   2026-06-18: ADR-137 ETD書類登録セクション追加（既定非表示）
+ *   2026-06-22: ADR-137 ETD設定ガイドを別セクションで追加
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { FedexEtdSetupGuide } from "./FedexEtdSetupGuide";
 import "./FedexLabelValidationTab.css";
-
-// ADR-137: ETD 機能フラグ（既定 OFF。CTS確認・Shingo GO 後に環境変数で有効化）
-const ETD_ENABLED = import.meta.env.VITE_FEDEX_ETD_ENABLED === "true";
 
 interface LVSampleLabel {
   service_abbr: string;
@@ -52,7 +49,11 @@ function StepHeader({ num, title, done }: { num: number; title: string; done?: b
   );
 }
 
-export function FedexLabelValidationTab() {
+export function FedexLabelValidationTab({
+  onOpenCredentialsTab,
+}: {
+  onOpenCredentialsTab: () => void;
+}) {
   const { t } = useTranslation();
 
   // Step 2: labels
@@ -71,17 +72,6 @@ export function FedexLabelValidationTab() {
   const [printerCount, setPrinterCount] = useState("");
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState("");
-
-  // ETD 書類登録（ADR-137 J4 / VITE_FEDEX_ETD_ENABLED=true のみ表示）
-  const [etdEnvironment, setEtdEnvironment] = useState<"sandbox" | "production">("sandbox");
-  const [etdBusyLetterhead, setEtdBusyLetterhead] = useState(false);
-  const [etdBusySignature, setEtdBusySignature] = useState(false);
-  const [etdSuccessLetterhead, setEtdSuccessLetterhead] = useState(false);
-  const [etdSuccessSignature, setEtdSuccessSignature] = useState(false);
-  const [etdErrorLetterhead, setEtdErrorLetterhead] = useState("");
-  const [etdErrorSignature, setEtdErrorSignature] = useState("");
-  const letterheadInputRef = useRef<HTMLInputElement>(null);
-  const signatureInputRef = useRef<HTMLInputElement>(null);
 
   // Step 7: email template
   const [emailBusy, setEmailBusy] = useState(false);
@@ -165,32 +155,6 @@ export function FedexLabelValidationTab() {
     setTimeout(() => setEmailCopied(false), 2000);
   };
 
-  const handleEtdUpload = async (imageType: "LETTERHEAD" | "SIGNATURE") => {
-    const inputRef = imageType === "LETTERHEAD" ? letterheadInputRef : signatureInputRef;
-    const setBusy = imageType === "LETTERHEAD" ? setEtdBusyLetterhead : setEtdBusySignature;
-    const setSuccess = imageType === "LETTERHEAD" ? setEtdSuccessLetterhead : setEtdSuccessSignature;
-    const setError = imageType === "LETTERHEAD" ? setEtdErrorLetterhead : setEtdErrorSignature;
-
-    const file = inputRef.current?.files?.[0];
-    if (!file) return;
-
-    setBusy(true);
-    setError("");
-    setSuccess(false);
-    try {
-      const form = new FormData();
-      form.append("image_type", imageType);
-      form.append("environment", etdEnvironment);
-      form.append("file", file);
-      await api.postForm("/shipping/etd/images", form);
-      setSuccess(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.operationError"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const mailtoHref = emailTemplate
     ? `mailto:?subject=${encodeURIComponent(emailTemplate.subject)}&body=${encodeURIComponent(emailTemplate.body)}`
     : "mailto:";
@@ -202,6 +166,8 @@ export function FedexLabelValidationTab() {
         <h3>{t("carrierIntegration.fedexGuideTitle")}</h3>
         <p className="form-hint">{t("carrierIntegration.fedexGuideIntro")}</p>
       </div>
+
+      <FedexEtdSetupGuide onOpenCredentialsTab={onOpenCredentialsTab} />
 
       {/* -- 第1部: API接続・審査不要 -- */}
       <div className="lv-part">
@@ -463,84 +429,6 @@ export function FedexLabelValidationTab() {
           <p className="form-hint">{t("carrierIntegration.lvStep9Desc")}</p>
         </section>
 
-      {/* ── ETD 書類登録（ADR-137 J4）──
-          VITE_FEDEX_ETD_ENABLED=true のみ表示。既定非表示。
-          CTS確認・Shingo GO 後に環境変数で有効化する。 */}
-      {ETD_ENABLED && (
-        <section className="lv-step card">
-          <StepHeader num={10} title={t("carrierIntegration.etdStepTitle")} />
-          <p className="form-hint">{t("carrierIntegration.etdStepDesc")}</p>
-
-          {/* 環境セレクタ */}
-          <div className="form-group">
-            <label htmlFor="etd-environment">{t("carrierIntegration.etdEnvironmentLabel")}</label>
-            <select
-              id="etd-environment"
-              value={etdEnvironment}
-              onChange={(e) => setEtdEnvironment(e.target.value as "sandbox" | "production")}
-            >
-              <option value="sandbox">{t("carrierIntegration.etdEnvironmentSandbox")}</option>
-              <option value="production">{t("carrierIntegration.etdEnvironmentProduction")}</option>
-            </select>
-          </div>
-
-          {/* レターヘッド */}
-          <div className="form-group">
-            <label htmlFor="etd-letterhead">{t("carrierIntegration.etdLetterheadLabel")}</label>
-            <p className="form-hint">{t("carrierIntegration.etdLetterheadHint")}</p>
-            <input
-              id="etd-letterhead"
-              type="file"
-              accept="image/gif,image/png"
-              ref={letterheadInputRef}
-              aria-label={t("carrierIntegration.etdLetterheadLabel")}
-            />
-            <div className="form-actions">
-              <button
-                className="btn-secondary"
-                disabled={etdBusyLetterhead}
-                onClick={() => handleEtdUpload("LETTERHEAD")}
-              >
-                {etdBusyLetterhead
-                  ? t("carrierIntegration.etdUploading")
-                  : t("carrierIntegration.etdUploadButton")}
-              </button>
-            </div>
-            {etdErrorLetterhead && <p className="error-message">{etdErrorLetterhead}</p>}
-            {etdSuccessLetterhead && (
-              <p className="success-message">{t("carrierIntegration.etdUploadSuccess")}</p>
-            )}
-          </div>
-
-          {/* 署名 */}
-          <div className="form-group">
-            <label htmlFor="etd-signature">{t("carrierIntegration.etdSignatureLabel")}</label>
-            <p className="form-hint">{t("carrierIntegration.etdSignatureHint")}</p>
-            <input
-              id="etd-signature"
-              type="file"
-              accept="image/gif,image/png"
-              ref={signatureInputRef}
-              aria-label={t("carrierIntegration.etdSignatureLabel")}
-            />
-            <div className="form-actions">
-              <button
-                className="btn-secondary"
-                disabled={etdBusySignature}
-                onClick={() => handleEtdUpload("SIGNATURE")}
-              >
-                {etdBusySignature
-                  ? t("carrierIntegration.etdUploading")
-                  : t("carrierIntegration.etdUploadButton")}
-              </button>
-            </div>
-            {etdErrorSignature && <p className="error-message">{etdErrorSignature}</p>}
-            {etdSuccessSignature && (
-              <p className="success-message">{t("carrierIntegration.etdUploadSuccess")}</p>
-            )}
-          </div>
-        </section>
-      )}
       </div>
     </div>
   );
