@@ -123,26 +123,43 @@ def test_condition_filter_clause_translates_ver41_labels_to_axes_and_fallbacks()
     )
 
     assert clause is not None
-    assert "i.condition = :cond0_condition" in clause
-    assert "COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit" in clause
-    assert "i.seal = :cond0_seal" in clause
+    assert clause == (
+        "(i.condition = :cond0_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit "
+        "AND i.seal = :cond0_seal AND i.damage = :cond0_damage)) OR "
+        "(i.condition = :cond1_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond1_unit "
+        "AND i.seal = :cond1_seal AND i.damage = :cond1_damage)) OR "
+        "(i.condition = :cond2_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond2_unit "
+        "AND i.search_cond = :cond2_search_cond AND i.damage = :cond2_damage))"
+    )
     assert params["cond0_condition"] == "shrink"
     assert params["cond0_unit"] == "box"
     assert params["cond0_seal"] == "shrink"
+    assert params["cond0_damage"] is False
 
-    assert "i.condition = :cond1_condition" in clause
-    assert "COALESCE(NULLIF(i.unit, ''), p.unit) = :cond1_unit" in clause
-    assert "i.seal = :cond1_seal" in clause
     assert params["cond1_condition"] == "sealed"
     assert params["cond1_unit"] == "case"
     assert params["cond1_seal"] == "sealed"
+    assert params["cond1_damage"] is False
 
-    assert "i.condition = :cond2_condition" in clause
-    assert "COALESCE(NULLIF(i.unit, ''), p.unit) = :cond2_unit" in clause
-    assert "i.search_cond = :cond2_search_cond" in clause
     assert params["cond2_condition"] == "unsearched"
     assert params["cond2_unit"] == "pack"
     assert params["cond2_search_cond"] == "unsearched"
+    assert params["cond2_damage"] is False
+
+
+def test_condition_filter_clause_keeps_sealed_box_grouped_and_excludes_unit_only_matches() -> None:
+    clause, params = build_condition_filter_clause(["Sealed box"])
+
+    assert clause is not None
+    assert clause == (
+        "(i.condition = :cond0_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit "
+        "AND i.seal = :cond0_seal AND i.damage = :cond0_damage))"
+    )
+    assert " OR COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit" not in clause
+    assert params["cond0_condition"] == "shrink"
+    assert params["cond0_unit"] == "box"
+    assert params["cond0_seal"] == "shrink"
+    assert params["cond0_damage"] is False
 
 
 def test_condition_filter_clause_keeps_current_condition_fallback() -> None:

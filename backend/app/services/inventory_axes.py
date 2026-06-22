@@ -189,34 +189,47 @@ def build_condition_filter_clause(
         if current_condition is None:
             current_condition = label_condition
 
-        part_clauses: list[str] = []
+        fallback_clause: str | None = None
         if label_condition is not None:
-            part_clauses.append(f"{condition_column} = :{param_prefix}{idx}_condition")
             params[f"{param_prefix}{idx}_condition"] = label_condition
+            fallback_clause = f"{condition_column} = :{param_prefix}{idx}_condition"
+        elif current_condition is not None:
+            params[f"{param_prefix}{idx}_current"] = current_condition
+            fallback_clause = f"{condition_column} = :{param_prefix}{idx}_current"
 
+        axis_clauses: list[str] = []
         if label_unit is not None and label_condition is not None:
             axes = condition_axes(label_condition)
-            part_clauses.append(f"{unit_column} = :{param_prefix}{idx}_unit")
             params[f"{param_prefix}{idx}_unit"] = label_unit
+            axis_clauses.append(f"{unit_column} = :{param_prefix}{idx}_unit")
             if seal := axes.get("seal"):
-                part_clauses.append(f"{seal_column} = :{param_prefix}{idx}_seal")
                 params[f"{param_prefix}{idx}_seal"] = seal
+                axis_clauses.append(f"{seal_column} = :{param_prefix}{idx}_seal")
             if search_cond := axes.get("search_cond"):
-                part_clauses.append(f"{search_cond_column} = :{param_prefix}{idx}_search_cond")
                 params[f"{param_prefix}{idx}_search_cond"] = search_cond
+                axis_clauses.append(f"{search_cond_column} = :{param_prefix}{idx}_search_cond")
             if grade := axes.get("grade"):
-                part_clauses.append(f"{grade_column} = :{param_prefix}{idx}_grade")
                 params[f"{param_prefix}{idx}_grade"] = grade
+                axis_clauses.append(f"{grade_column} = :{param_prefix}{idx}_grade")
             if "damage" in axes:
-                part_clauses.append(f"{damage_column} = :{param_prefix}{idx}_damage")
                 params[f"{param_prefix}{idx}_damage"] = bool(axes["damage"])
+                axis_clauses.append(f"{damage_column} = :{param_prefix}{idx}_damage")
 
-        if current_condition is not None and label_condition is None:
-            part_clauses.append(f"{condition_column} = :{param_prefix}{idx}_current")
-            params[f"{param_prefix}{idx}_current"] = current_condition
-
-        if part_clauses:
-            clauses.append("(" + " OR ".join(dict.fromkeys(part_clauses)) + ")")
+        if fallback_clause is None and axis_clauses:
+            clauses.append("(" + " AND ".join(dict.fromkeys(axis_clauses)) + ")")
+        elif fallback_clause is not None and axis_clauses:
+            clauses.append(
+                "("
+                + fallback_clause
+                + " OR ("
+                + " AND ".join(dict.fromkeys(axis_clauses))
+                + ")"
+                + ")"
+            )
+        elif fallback_clause is not None:
+            clauses.append(f"({fallback_clause})")
+        elif axis_clauses:
+            clauses.append("(" + " AND ".join(dict.fromkeys(axis_clauses)) + ")")
 
     if not clauses:
         return None, {}
