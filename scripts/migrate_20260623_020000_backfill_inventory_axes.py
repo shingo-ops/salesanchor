@@ -7,27 +7,27 @@ It prepares defensive backfill logic for existing public.inventory rows.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import logging
 import os
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.services.inventory_axes import log_axis_isolation, project_inventory_axes
 
 logger = logging.getLogger(__name__)
 
 
-async def _iter_inventory_rows(db: AsyncSession):
-    result = await db.execute(text("SELECT id, condition, unit FROM public.inventory ORDER BY id ASC"))
+def _iter_inventory_rows(db: Session):
+    result = db.execute(text("SELECT id, condition, unit FROM public.inventory ORDER BY id ASC"))
     for row in result.mappings().all():
         yield dict(row)
 
 
-async def backfill_inventory_axes(db: AsyncSession, *, dry_run: bool = True) -> list[dict[str, object]]:
+def backfill_inventory_axes(db: Session, *, dry_run: bool = True) -> list[dict[str, object]]:
     changed: list[dict[str, object]] = []
-    async for row in _iter_inventory_rows(db):
+    for row in _iter_inventory_rows(db):
         projection = project_inventory_axes(row.get("condition"), row.get("unit"))
         log_axis_isolation(
             logger_=logger,
@@ -47,7 +47,7 @@ async def backfill_inventory_axes(db: AsyncSession, *, dry_run: bool = True) -> 
         }
         changed.append(payload)
         if not dry_run:
-            await db.execute(
+            db.execute(
                 text(
                     """
                     UPDATE public.inventory
@@ -62,7 +62,7 @@ async def backfill_inventory_axes(db: AsyncSession, *, dry_run: bool = True) -> 
                 payload,
             )
     if not dry_run:
-        await db.commit()
+        db.commit()
     return changed
 
 
@@ -70,24 +70,24 @@ def _build_engine():
     database_url = os.getenv("DATABASE_URL") or os.getenv("TEST_PG_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL or TEST_PG_URL is required")
-    return create_async_engine(database_url, echo=False)
+    return create_engine(database_url, echo=False)
 
 
-async def _main() -> None:
+def _main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true", help="perform UPDATEs instead of dry-run")
     args = parser.parse_args()
 
     engine = _build_engine()
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     try:
-        async with session_factory() as db:
-            rows = await backfill_inventory_axes(db, dry_run=not args.apply)
+        with session_factory() as db:
+            rows = backfill_inventory_axes(db, dry_run=not args.apply)
             print(f"changed_rows={len(rows)}")
     finally:
-        await engine.dispose()
+        engine.dispose()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(_main())
+    _main()
