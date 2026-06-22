@@ -13,6 +13,8 @@ admin は明示的に PATCH を選ぶ。
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_permission, require_super_admin
 from app.database import get_db
+from app.services.inventory_axes import log_axis_isolation, project_inventory_axes
 from app.schemas.inventory_offers import (
     InventoryListResponse,
     InventoryOfferCreate,
@@ -31,6 +34,7 @@ from app.schemas.inventory_offers import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 _BASE_SELECT = """
@@ -385,6 +389,14 @@ async def create_offer(
     db: AsyncSession = Depends(get_db),
 ):
     """新規オファーを admin が手動追加 (AC11.5)。"""
+    projection = project_inventory_axes(payload.condition, payload.unit)
+    log_axis_isolation(
+        logger_=logger,
+        condition=payload.condition,
+        unit=payload.unit,
+        context="inventory_offers.create_offer",
+        projection=projection,
+    )
     try:
         new_id = (
             await db.execute(
@@ -392,15 +404,23 @@ async def create_offer(
                     """
                     INSERT INTO public.inventory
                         (supplier_id, product_id, condition, quantity, unit_price, unit,
+                         seal, search_cond, grade, damage,
                          offer_type, ship_timing,
                          status, notes_ja, notes_en, expires_at, source)
                     VALUES (:supplier_id, :product_id, :condition, :quantity, :unit_price, :unit,
+                            :seal, :search_cond, :grade, :damage,
                             :offer_type, :ship_timing,
                             :status, :notes_ja, :notes_en, :expires_at, :source)
                     RETURNING id
                     """
                 ),
-                payload.model_dump(),
+                {
+                    **payload.model_dump(),
+                    "seal": projection.seal,
+                    "search_cond": projection.search_cond,
+                    "grade": projection.grade,
+                    "damage": projection.damage if projection.damage is not None else False,
+                },
             )
         ).scalar_one()
         await db.commit()
@@ -465,6 +485,39 @@ async def update_offer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="指定されたオファーが見つかりません",
         )
+
+    offer = await _load_offer(db, offer_id)
+    if offer is None:
+        raise HTTPException(status_code=500, detail="UPDATE 直後の取得に失敗しました")
+
+    projection = project_inventory_axes(offer.get("condition"), offer.get("unit"))
+    log_axis_isolation(
+        logger_=logger,
+        condition=offer.get("condition"),
+        unit=offer.get("unit"),
+        context="inventory_offers.update_offer",
+        projection=projection,
+    )
+    await db.execute(
+        text(
+            """
+            UPDATE public.inventory
+               SET seal = :seal,
+                   search_cond = :search_cond,
+                   grade = :grade,
+                   damage = :damage,
+                   updated_at = NOW()
+             WHERE id = :id
+            """
+        ),
+        {
+            "id": offer_id,
+            "seal": projection.seal,
+            "search_cond": projection.search_cond,
+            "grade": projection.grade,
+            "damage": projection.damage if projection.damage is not None else False,
+        },
+    )
     await db.commit()
 
     offer = await _load_offer(db, offer_id)

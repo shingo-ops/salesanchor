@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.inventory_axes import log_axis_isolation, project_inventory_axes
 from app.services.phase_gate import Phase, get_phase
 
 logger = logging.getLogger(__name__)
@@ -100,14 +101,25 @@ async def _upsert_inventory_offer(
     - 時間失効モデル: offered_at=NOW() / expires_at=NOW()+18h を付与（再オファー時も
       リフレッシュ）。期限切れは Celery purge_expired_inventory_offers が物理削除する。
     """
+    projection = project_inventory_axes(condition, unit)
+    log_axis_isolation(
+        logger_=logger,
+        condition=condition,
+        unit=unit,
+        context="inventory_movements._upsert_inventory_offer",
+        projection=projection,
+    )
+
     await db.execute(
         text(
             """
             INSERT INTO public.inventory
                 (supplier_id, product_id, condition, quantity, unit_price, unit,
+                 seal, search_cond, grade, damage,
                  offer_type, ship_timing,
                  status, source, offered_at, expires_at)
             VALUES (:sid, :pid, :cond, :qty, :up, :unit,
+                    :seal, :search_cond, :grade, :damage,
                     :offer_type, :ship_timing,
                     'in_stock', 'f6_approved',
                     NOW(), NOW() + make_interval(hours => :exp_hours))
@@ -131,6 +143,10 @@ async def _upsert_inventory_offer(
             "qty": int(quantity),
             "up": int(unit_price),
             "unit": (str(unit) if unit else None),
+            "seal": projection.seal,
+            "search_cond": projection.search_cond,
+            "grade": projection.grade,
+            "damage": projection.damage if projection.damage is not None else False,
             "offer_type": str(offer_type or "in_stock"),
             "ship_timing": (str(ship_timing) if ship_timing else None),
             "exp_hours": _OFFER_EXPIRY_HOURS,

@@ -169,6 +169,7 @@ run_sql migrations/083_add_staff_phone.sql
 run_sql migrations/084_add_unit_to_inventory.sql
 run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
 run_sql migrations/20260622_020000_add_inventory_raw_condition.sql
+run_sql migrations/20260623_010000_add_inventory_axes_columns.sql
 run_sql migrations/085_create_tcg_type_master.sql
 run_sql migrations/086_seed_additional_tcg_types.sql
 run_sql migrations/087_create_supplier_prompts.sql

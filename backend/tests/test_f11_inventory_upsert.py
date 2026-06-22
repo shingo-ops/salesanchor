@@ -189,7 +189,7 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
                 await conn.execute(
                     text(
                         "SELECT supplier_id, product_id, condition, quantity, unit_price, "
-                        "       status, source "
+                        "       status, source, seal, search_cond, grade, damage "
                         "FROM public.inventory "
                         "WHERE supplier_id = :sid AND product_id = :pid AND condition = 'new'"
                     ),
@@ -201,6 +201,168 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
             assert row["unit_price"] == 4500
             assert row["status"] == "in_stock"
             assert row["source"] == "f6_approved"
+            assert row["seal"] is None
+            assert row["search_cond"] is None
+            assert row["grade"] is None
+            assert row["damage"] is False
+    finally:
+        await _cleanup(
+            engine,
+            pid=int(pid),
+            iid=iid,
+            tenant_id=tenant_id,
+            supplier_id=supplier_id,
+        )
+
+
+@pytest.mark.parametrize(
+    ("condition", "unit", "expected"),
+    [
+        ("shrink", "piece", {"seal": "shrink", "search_cond": None, "grade": None, "damage": False}),
+        ("sealed", "box", {"seal": "sealed", "search_cond": "unsearched", "grade": None, "damage": False}),
+        ("no_shrink", "case", {"seal": "no_shrink", "search_cond": "unsearched", "grade": None, "damage": False}),
+        ("damage", "box", {"seal": "sealed", "search_cond": "unsearched", "grade": None, "damage": True}),
+    ],
+)
+async def test_f11_upsert_populates_axis_columns_from_condition_and_unit(
+    engine, condition, unit, expected
+):
+    """condition→軸列の並行書き: 梱包単位は search_cond=unsearched を補完する。"""
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from app.services.inventory_movements import apply_inbound_items
+
+    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    tag = uuid.uuid4().hex[:8]
+    tenant_id = await _ensure_tenant(engine, f"f11_axes_{tag}")
+    supplier_id = await _create_supplier(engine, tag)
+
+    async with engine.begin() as conn:
+        pid = (
+            await conn.execute(
+                text(
+                    "INSERT INTO public.products (tenant_id, product_code, name, stock_quantity) "
+                    "VALUES (:tid, :code, :n, 0) RETURNING id"
+                ),
+                {"tid": tenant_id, "code": f"F11AX-{tag}", "n": f"f11_axes_{tag}"},
+            )
+        ).scalar_one()
+    iid = await _create_inbound(engine, tag)
+
+    try:
+        async with SessionLocal() as db:
+            await apply_inbound_items(
+                db,
+                inbound_id=iid,
+                items=[
+                    {
+                        "product_id": int(pid),
+                        "delta_qty": 2,
+                        "condition": condition,
+                        "quantity_offered": 2,
+                        "unit_price": 1200,
+                        "unit": unit,
+                    }
+                ],
+                operator_id=9200,
+                supplier_id=supplier_id,
+                phase="B",
+            )
+            await db.commit()
+
+        async with engine.connect() as conn:
+            row = (
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT seal, search_cond, grade, damage "
+                            "FROM public.inventory "
+                            "WHERE supplier_id = :sid AND product_id = :pid AND condition = :cond"
+                        ),
+                        {"sid": supplier_id, "pid": int(pid), "cond": condition},
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            assert row is not None
+            assert dict(row) == expected
+    finally:
+        await _cleanup(
+            engine,
+            pid=int(pid),
+            iid=iid,
+            tenant_id=tenant_id,
+            supplier_id=supplier_id,
+        )
+
+
+async def test_f11_upsert_bulk_keeps_axes_empty(engine):
+    """bulk は grade に入らず、軸列は空のまま隔離される。"""
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from app.services.inventory_movements import apply_inbound_items
+
+    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    tag = uuid.uuid4().hex[:8]
+    tenant_id = await _ensure_tenant(engine, f"f11_bulk_{tag}")
+    supplier_id = await _create_supplier(engine, tag)
+
+    async with engine.begin() as conn:
+        pid = (
+            await conn.execute(
+                text(
+                    "INSERT INTO public.products (tenant_id, product_code, name, stock_quantity) "
+                    "VALUES (:tid, :code, :n, 0) RETURNING id"
+                ),
+                {"tid": tenant_id, "code": f"F11BK-{tag}", "n": f"f11_bulk_{tag}"},
+            )
+        ).scalar_one()
+    iid = await _create_inbound(engine, tag)
+
+    try:
+        async with SessionLocal() as db:
+            await apply_inbound_items(
+                db,
+                inbound_id=iid,
+                items=[
+                    {
+                        "product_id": int(pid),
+                        "delta_qty": 1,
+                        "condition": "bulk",
+                        "quantity_offered": 1,
+                        "unit_price": 500,
+                        "unit": "box",
+                    }
+                ],
+                operator_id=9201,
+                supplier_id=supplier_id,
+                phase="B",
+            )
+            await db.commit()
+
+        async with engine.connect() as conn:
+            row = (
+                (
+                    await conn.execute(
+                        text(
+                            "SELECT seal, search_cond, grade, damage "
+                            "FROM public.inventory "
+                            "WHERE supplier_id = :sid AND product_id = :pid AND condition = 'bulk'"
+                        ),
+                        {"sid": supplier_id, "pid": int(pid)},
+                    )
+                )
+                .mappings()
+                .first()
+            )
+            assert row is not None
+            assert row["seal"] is None
+            assert row["search_cond"] is None
+            assert row["grade"] is None
+            assert row["damage"] is False
     finally:
         await _cleanup(
             engine,
