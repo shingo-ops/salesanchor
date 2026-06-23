@@ -1,5 +1,5 @@
--- 20260623_020000_add_inventory_offer_v2_unique_key.sql
--- 2b: condition ベースの旧キーを軸列ベースへ移行するための新 UNIQUE index。
+-- 20260623_020000_create_inventory_offer_v2_unique_key.sql
+-- 2b 前提: condition ベースの旧キーを軸列ベースへ移行するための新 UNIQUE index を作成する。
 --
 -- 重要:
 -- - runner は transaction で包まない前提（scripts/run_all_migrations.sh を確認）
@@ -11,7 +11,7 @@
 --   GROUP BY 1,2,3,4,5,6,7,8,9
 --   HAVING COUNT(*) > 1;
 --
--- 先に新キーを作成し、検証後に旧キーを外す。
+-- この migration は「新キー作成」のみ。旧キー削除は別 migration に分割する。
 
 -- migration-test.yml の現行-era ベースラインでは 20260602 系が走らないため、
 -- この migration 単体で評価できるよう、旧列が未存在なら安全に追加する。
@@ -30,5 +30,3 @@ CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_inventory_offer_v2
         offer_type,
         COALESCE(ship_timing, '')
     );
-
-DROP INDEX IF EXISTS uq_inventory_offer_key;

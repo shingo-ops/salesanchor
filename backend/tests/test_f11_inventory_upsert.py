@@ -2,7 +2,7 @@
 
 spec.md v1.3 F11 AC11.3:
   - Phase B/C + supplier_id 指定 + items.condition 指定 の場合のみ
-    public.inventory (supplier_id × product_id × condition UNIQUE) を UPSERT する
+    public.inventory (supplier_id × product_id × axes + unit UNIQUE) を UPSERT する
   - condition 未指定なら inventory UPSERT は skip (後方互換)
   - quantity_offered 未指定なら after_qty で代替
   - unit_price 未指定なら 0 で記録
@@ -189,7 +189,7 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
                 await conn.execute(
                     text(
                         "SELECT supplier_id, product_id, condition, quantity, unit_price, "
-                        "       status, source "
+                        "       status, source, raw_condition, seal, search_cond, grade, damage "
                         "FROM public.inventory "
                         "WHERE supplier_id = :sid AND product_id = :pid AND condition = 'new'"
                     ),
@@ -201,6 +201,11 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
             assert row["unit_price"] == 4500
             assert row["status"] == "in_stock"
             assert row["source"] == "f6_approved"
+            assert row["raw_condition"] == "new"
+            assert row["seal"] is None
+            assert row["search_cond"] is None
+            assert row["grade"] is None
+            assert row["damage"] is False
     finally:
         await _cleanup(
             engine,
@@ -212,7 +217,7 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
 
 
 async def test_f11_upsert_updates_on_conflict(engine):
-    """AC11.3: 同一 supplier × product × condition の 2 回目 approve で UPDATE (UPSERT)。"""
+    """AC11.3: 同一 supplier × product × axes + unit の 2 回目 approve で UPDATE (UPSERT)。"""
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -247,6 +252,7 @@ async def test_f11_upsert_updates_on_conflict(engine):
                         "product_id": int(pid),
                         "delta_qty": 10,
                         "condition": "used_a",
+                        "raw_condition": "used_a",
                         "quantity_offered": 10,
                         "unit_price": 3000,
                     }
@@ -267,6 +273,7 @@ async def test_f11_upsert_updates_on_conflict(engine):
                         "product_id": int(pid),
                         "delta_qty": 15,
                         "condition": "used_a",
+                        "raw_condition": "used_a",
                         "quantity_offered": 25,
                         "unit_price": 2800,
                     }
@@ -281,7 +288,8 @@ async def test_f11_upsert_updates_on_conflict(engine):
             rows = (
                 await conn.execute(
                     text(
-                        "SELECT quantity, unit_price FROM public.inventory "
+                        "SELECT quantity, unit_price, raw_condition, seal, search_cond, grade, damage "
+                        "FROM public.inventory "
                         "WHERE supplier_id = :sid AND product_id = :pid "
                         "  AND condition = 'used_a'"
                     ),
@@ -291,6 +299,11 @@ async def test_f11_upsert_updates_on_conflict(engine):
             assert len(rows) == 1, "UNIQUE 制約により 1 行のみ存在"
             assert rows[0][0] == 25, f"quantity が UPDATE される (期待 25、実 {rows[0][0]})"
             assert rows[0][1] == 2800
+            assert rows[0][2] == "used_a"
+            assert rows[0][3] is None
+            assert rows[0][4] is None
+            assert rows[0][5] is None
+            assert rows[0][6] is False
     finally:
         for iid in (iid1, iid2):
             async with engine.begin() as conn:

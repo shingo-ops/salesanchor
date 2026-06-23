@@ -58,7 +58,8 @@ async def _fetch_inventory_row(engine, supplier_id: int, product_id: int, condit
         row = (
             await conn.execute(
                 text(
-                    "SELECT quantity, unit_price, status, source "
+                    "SELECT quantity, unit_price, status, source, raw_condition, "
+                    "       seal, search_cond, grade, damage, unit "
                     "FROM public.inventory "
                     "WHERE supplier_id=:sid AND product_id=:pid AND condition=:cond"
                 ),
@@ -189,6 +190,7 @@ async def test_inventory_upsert_insert_on_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 5,
                                 "unit_price": 1000,
                             }
@@ -207,6 +209,12 @@ async def test_inventory_upsert_insert_on_approve(engine):
         assert row["unit_price"] == 1000
         assert row["status"] == "in_stock"
         assert row["source"] == "f6_approved"
+        assert row["raw_condition"] == "Sealed box"
+        assert row["seal"] == "shrink"
+        assert row["search_cond"] == "unsearched"
+        assert row["grade"] is None
+        assert row["damage"] is False
+        assert row["unit"] == "box"
     finally:
         await _cleanup(engine, sup_id, product_id, inbound_id)
 
@@ -261,6 +269,7 @@ async def test_inventory_upsert_update_on_second_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 5,
                                 "unit_price": 1000,
                             }
@@ -281,6 +290,7 @@ async def test_inventory_upsert_update_on_second_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 10,
                                 "unit_price": 1200,
                             }
@@ -297,6 +307,12 @@ async def test_inventory_upsert_update_on_second_approve(engine):
         assert row is not None
         assert row["quantity"] == 10, f"UPSERT 後 quantity が更新されていない: {row}"
         assert row["unit_price"] == 1200, f"UPSERT 後 unit_price が更新されていない: {row}"
+        assert row["raw_condition"] == "Sealed box"
+        assert row["seal"] == "shrink"
+        assert row["search_cond"] == "unsearched"
+        assert row["grade"] is None
+        assert row["damage"] is False
+        assert row["unit"] == "box"
     finally:
         async with engine.begin() as conn:
             await conn.execute(
