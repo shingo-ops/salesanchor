@@ -21,14 +21,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
-import { Tabs } from "../../components/Tabs";
 import { Badge } from "../../components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
-import { FedexLabelValidationTab } from "./FedexLabelValidationTab";
 import "./CarrierIntegrationPage.css";
 
 type Carrier = "fedex" | "dhl" | "ups";
-type PageTab = "credentials" | "integrationGuide";
 type Env = "production" | "sandbox";
 
 const NAV_KEY: Record<Carrier, `nav.${string}`> = {
@@ -80,7 +77,6 @@ const EMPTY_ENV_DATA: EnvData = { status: null, testResult: null, lastTested: nu
 export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }) {
   const { t } = useTranslation();
 
-  const [pageTab, setPageTab] = useState<PageTab>("credentials");
   const [prodData, setProdData] = useState<EnvData>(EMPTY_ENV_DATA);
   const [sandboxData, setSandboxData] = useState<EnvData>(EMPTY_ENV_DATA);
   // editingEnv: 編集フォームを展開中の環境（null = ビューモード）
@@ -185,13 +181,6 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
 
   const labels = CRED_LABEL[carrier];
   const isFedex = SUPPORTS_ENV_SELECT.has(carrier);
-
-  const pageTabs = isFedex
-    ? [
-        { key: "credentials" as PageTab, label: t("carrierIntegration.tabCredentials") },
-        { key: "integrationGuide" as PageTab, label: t("carrierIntegration.tabIntegrationGuide") },
-      ]
-    : null;
 
   const renderStatusBadge = (data: EnvData) => {
     if (!data.status?.configured) return null;
@@ -398,31 +387,25 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
   };
 
   return (
-    <PageLayout navKey={NAV_KEY[carrier]} subtitleKey="carrierIntegration.subtitle">
-      {/* FedEx: ページタブ（API連携設定 / 連携ガイド） */}
-      {pageTabs && (
-        <Tabs
-          items={pageTabs}
-          activeKey={pageTab}
-          onChange={setPageTab}
-          variant="pill"
-          size="md"
-          className="carrier-page-tabs"
-        />
-      )}
-
-      {/* 連携ガイドタブ（FedEx のみ・中身は Part B で作り替え） */}
-      {pageTab === "integrationGuide" && isFedex && (
-        <FedexLabelValidationTab onOpenCredentialsTab={() => setPageTab("credentials")} />
-      )}
-
-      {/* API連携設定タブ（全キャリア共通） */}
-      {pageTab === "credentials" && (
-        <>
-          {renderCard("production", prodData)}
-          {isFedex && renderCard("sandbox", sandboxData)}
-        </>
-      )}
+    <PageLayout
+      navKey={NAV_KEY[carrier]}
+      subtitleKey="carrierIntegration.subtitle"
+      headerAction={
+        isFedex ? (
+          <a
+            href={`/management-center/integrations/${carrier}/setup-guide`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary"
+          >
+            {t("carrierIntegration.openSetupGuide")}
+          </a>
+        ) : undefined
+      }
+    >
+      {/* API連携設定（全キャリア共通） */}
+      {renderCard("production", prodData)}
+      {isFedex && renderCard("sandbox", sandboxData)}
 
       {/* 削除確認モーダル */}
       <ConfirmModal
