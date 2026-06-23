@@ -49,6 +49,24 @@ def _load_country_seed_rows() -> list[tuple[str, str, str]]:
     pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
     return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
 
+
+def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
+    """tcg_type_master の seed rows を canonical code に合わせる。"""
+    return [
+        ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
+        ("one_piece", "ワンピース", "One Piece TCG"),
+        ("dragon_ball", "ドラゴンボール", "Dragon Ball TCG"),
+        ("union_arena", "ユニオンアリーナ", "Union Arena"),
+        ("yugioh", "遊戯王", "Yu-Gi-Oh!"),
+        ("other", "その他", "Other"),
+        ("gundam", "ガンダムカードゲーム", "Gundam Card Game"),
+        ("weiss_schwarz", "ヴァイスシュヴァルツ", "Weiß Schwarz"),
+        ("digimon", "デジモンカードゲーム", "Digimon Card Game"),
+        ("hololive", "ホロライブ", "hololive Official Card Game"),
+        ("lorcana", "ディズニー ロルカナ", "Disney Lorcana"),
+        ("xross_stars", "クロススタァ", "Xross Stars"),
+    ]
+
 # pytest-asyncio 0.25+ で event_loop fixture の上書きは deprecated。
 # asyncio_default_fixture_loop_scope = "function" の場合、session-scoped fixture は
 # loop_scope="session" を明示することで専用のイベントループを確保する。
@@ -87,6 +105,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
+        if "public.tcg_type_master" in statement:
+            statement = statement.replace("public.tcg_type_master", "tcg_type_master")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -593,6 +613,18 @@ async def setup_test_db(test_engine):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tcg_type_master (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code VARCHAR(50) NOT NULL UNIQUE,
+                name_ja VARCHAR(100) NOT NULL,
+                name_en VARCHAR(100),
+                sort_order INTEGER NOT NULL DEFAULT 100,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         # パーミッションマスタを全件シード（admin ユーザーの load_user_permissions フォールバック用）
         for perm_key in sorted(ALL_TEST_PERMISSIONS):
             parts = perm_key.split(".", 1)
@@ -619,6 +651,11 @@ async def setup_test_db(test_engine):
                 "display_name": display_name,
                 "connection_type": connection_type,
             })
+        for code, name_ja, name_en in _load_tcg_type_seed_rows():
+            await conn.execute(text("""
+                INSERT OR IGNORE INTO tcg_type_master (code, name_ja, name_en, sort_order, is_active)
+                VALUES (:code, :name_ja, :name_en, 100, 1)
+            """), {"code": code, "name_ja": name_ja, "name_en": name_en})
         # ロール
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS roles (
@@ -705,7 +742,7 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50),
+                tcg_type VARCHAR(50) REFERENCES tcg_type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),

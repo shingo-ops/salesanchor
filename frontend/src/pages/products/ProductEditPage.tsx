@@ -237,7 +237,11 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.field.category")}</label>
-              <select value={form.tcg_type} onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}>
+              <select
+                value={form.tcg_type}
+                onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}
+                data-testid="product-edit-tcg-type"
+              >
                 <option value="">{t("common.notSet")}</option>
                 {tcgTypes.map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
