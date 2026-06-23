@@ -1,7 +1,7 @@
 """F11 AC11.3: F6 approve 時に public.inventory へ UPSERT されることを検証 (実 PG)。
 
 カバレッジ対象: app/services/inventory_movements.py の条件 4 (UPSERT 分岐)
-  - condition 指定あり → public.inventory に INSERT
+  - condition 指定あり → public.inventory に INSERT（condition 列には書かない）
   - 同一 approve を再実行 → DO UPDATE で既存行を更新
   - condition 指定なし → UPSERT skip (backward compat)
 """
@@ -50,7 +50,7 @@ async def _migration_081_ready(engine) -> bool:
     return exists is not None
 
 
-async def _fetch_inventory_row(engine, supplier_id: int, product_id: int, condition: str):
+async def _fetch_inventory_row(engine, supplier_id: int, product_id: int):
     """public.inventory から該当行を取得して dict で返す。なければ None。"""
     from sqlalchemy import text
 
@@ -58,11 +58,12 @@ async def _fetch_inventory_row(engine, supplier_id: int, product_id: int, condit
         row = (
             await conn.execute(
                 text(
-                    "SELECT quantity, unit_price, status, source "
+                    "SELECT quantity, unit_price, status, source, raw_condition, "
+                    "       seal, search_cond, grade, damage, unit "
                     "FROM public.inventory "
-                    "WHERE supplier_id=:sid AND product_id=:pid AND condition=:cond"
+                    "WHERE supplier_id=:sid AND product_id=:pid"
                 ),
-                {"sid": supplier_id, "pid": product_id, "cond": condition},
+                {"sid": supplier_id, "pid": product_id},
             )
         ).mappings().one_or_none()
     return dict(row) if row else None
@@ -189,6 +190,7 @@ async def test_inventory_upsert_insert_on_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 5,
                                 "unit_price": 1000,
                             }
@@ -201,12 +203,18 @@ async def test_inventory_upsert_insert_on_approve(engine):
         finally:
             app.dependency_overrides.clear()
 
-        row = await _fetch_inventory_row(engine, sup_id, product_id, "Sealed box")
+        row = await _fetch_inventory_row(engine, sup_id, product_id)
         assert row is not None, "public.inventory に行が INSERT されていない"
         assert row["quantity"] == 5
         assert row["unit_price"] == 1000
         assert row["status"] == "in_stock"
         assert row["source"] == "f6_approved"
+        assert row["raw_condition"] == "Sealed box"
+        assert row["seal"] == "shrink"
+        assert row["search_cond"] == "unsearched"
+        assert row["grade"] is None
+        assert row["damage"] is False
+        assert row["unit"] == "box"
     finally:
         await _cleanup(engine, sup_id, product_id, inbound_id)
 
@@ -261,6 +269,7 @@ async def test_inventory_upsert_update_on_second_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 5,
                                 "unit_price": 1000,
                             }
@@ -281,6 +290,7 @@ async def test_inventory_upsert_update_on_second_approve(engine):
                                 "product_id": product_id,
                                 "delta_qty": 5,
                                 "condition": "Sealed box",
+                                "unit": "box",
                                 "quantity_offered": 10,
                                 "unit_price": 1200,
                             }
@@ -293,10 +303,16 @@ async def test_inventory_upsert_update_on_second_approve(engine):
         finally:
             app.dependency_overrides.clear()
 
-        row = await _fetch_inventory_row(engine, sup_id, product_id, "Sealed box")
+        row = await _fetch_inventory_row(engine, sup_id, product_id)
         assert row is not None
         assert row["quantity"] == 10, f"UPSERT 後 quantity が更新されていない: {row}"
         assert row["unit_price"] == 1200, f"UPSERT 後 unit_price が更新されていない: {row}"
+        assert row["raw_condition"] == "Sealed box"
+        assert row["seal"] == "shrink"
+        assert row["search_cond"] == "unsearched"
+        assert row["grade"] is None
+        assert row["damage"] is False
+        assert row["unit"] == "box"
     finally:
         async with engine.begin() as conn:
             await conn.execute(

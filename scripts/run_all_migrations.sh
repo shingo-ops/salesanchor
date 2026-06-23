@@ -159,7 +159,6 @@ run_sql migrations/075_create_goals.sql
 run_sql migrations/076_add_google_calendar_config.sql
 run_sql migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql
 run_sql migrations/078_create_calendar_events_tenant.sql
-run_sql migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql
 run_py  scripts/migrate_20260620_080000_calendar_category_backfill.py
 run_sql migrations/080_phase_b_migration.sql
 
@@ -168,6 +167,16 @@ run_sql migrations/081_create_inventory.sql
 run_sql migrations/082_extend_products_box_attributes.sql
 run_sql migrations/083_add_staff_phone.sql
 run_sql migrations/084_add_unit_to_inventory.sql
+run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
+run_sql migrations/20260622_020000_add_inventory_raw_condition.sql
+run_sql migrations/20260623_010000_add_inventory_axes_columns.sql
+run_sql migrations/20260623_040000_make_inventory_condition_nullable.sql
+run_sql migrations/20260623_020000_create_inventory_offer_v2_unique_key.sql
+# HELD: 旧キー削除は新コードデプロイ後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+# run_sql migrations/20260623_030000_drop_inventory_offer_key.sql
+# HELD: inventory.condition の削除は backfill とコード切替完了後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+# run_sql migrations/20260623_050000_drop_inventory_condition.sql
+run_sql migrations/20260623_020000_drop_products_category_classification.sql
 run_sql migrations/085_create_tcg_type_master.sql
 run_sql migrations/086_seed_additional_tcg_types.sql
 run_sql migrations/087_create_supplier_prompts.sql
@@ -420,20 +429,17 @@ run_sql migrations/20260615_235900_seed_pokemon_mega_products.sql
 # tcg_type_master 重複 code 統合（pokemon/weiss → pokemon_booster_box/weiss_schwarz）
 run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 
-# 在庫集計ルール（price_tolerance / stock_tolerance の正本テーブル）
-run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
-
 # Foundation F1: 国台帳 public.countries（ISO alpha-2 / 全テナント共有）
 run_sql migrations/20260621_010000_create_countries_master.sql
 
 # SSOT 統合①: meta_messages に master 履歴列を追加（追加のみ）
 run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
 
+# SSOT 統合②: conversation_logs の conv 専用行を実在 lead のみ meta_messages に移送
+run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
+
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
-
-# SSOT cleanup 1: products.category_classification 廃止（backup 退避 → DROP）
-run_sql migrations/20260623_020000_drop_products_category_classification.sql
 
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_030000_add_products_tcg_type_fk.sql

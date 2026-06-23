@@ -16,8 +16,14 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| develop | main→develop バックマージ（condition多軸 6本取り込み） | 2026-06-23 | IN_PROGRESS | | | git merge origin/main |
+| release/morimoto/schedule-i18n-main | スケジュールナビの文言追加（nav.scheduleSettings） | 2026-06-22 | IN_PROGRESS | | | frontend/src/locales/ja.json + en.json |
+| release/fedex-etd-step1-to-main | FedEx ETD Step1 ガイド develop→main リリース | 2026-06-22 | IN_PROGRESS | | | locale conflict 解決済み |
+| feature/morimoto/rls-message-translations | SA-18 ③-b(5) message_translations RLS 有効化 | 2026-06-23 | IN_PROGRESS | #2518 | | migration + _run_translate_inbound_message context fix |
 | feature/morimoto/remove-chromatic-ci | Chromatic CI 削除（Chromatic Snapshot / UI Tests の配線整理） | 2026-06-23 | IN_PROGRESS | | | `.github/workflows/chromatic.yml` / `docs/handoff/remove-chromatic-ci/recon.md` / `docs/handoff/remove-chromatic-ci/design.md` |
+| feature/morimoto/priority-prospects-bootstrap | ② priority-prospects PG/RLS bootstrap 修正（Track B 分離） | 2026-06-23 | IN_PROGRESS | | | `backend/tests/rls_bootstrap.py` / `backend/tests/test_analytics_conversion_by_attribute_rls.py` |
 | feature/morimoto/inventory-aggregated | GET /inventory/aggregated エンドポイント（集計ピボット・best-pick） | 2026-06-23 | IN_PROGRESS | #2514 | | inventory_aggregated_service + router + migration 20260620_010000 |
+| feature/morimoto/trackb-order-based | Track B決定1 成約定義の一本化（受注ベース） | 2026-06-23 | IN_PROGRESS | | | `backend/app/routers/dashboard.py` / `backend/app/routers/analytics.py` / `backend/app/routers/goals.py` / `backend/app/services/priority_scoring.py` / `backend/app/services/conversion_metrics.py` / `backend/tests/test_analytics.py` / `backend/tests/test_analytics_conversion_by_attribute_rls.py` / `backend/tests/test_celery.py` / `docs/adr/ADR-142-order-based-conversion-definition.md` |
 | feature/morimoto/ssot-tcg-type-fk | SSOT大掃除② `products.tcg_type` FK固定 | 2026-06-22 | IN_PROGRESS | | | `backend/app/routers/products.py` / `backend/tests/conftest.py` / `backend/tests/test_products.py` / `backend/tests/test_products_tcg_type_fk.py` / `frontend/src/pages/products/ProductEditPage.tsx` / `frontend/tests-e2e/product-edit-tcg-type.spec.ts` / `migrations/20260623_030000_add_products_tcg_type_fk.sql` / `scripts/run_all_migrations.sh` / `tasks/todo.md` / `public.products` bootstrap for PG-RLS via actual migration files |
 | feature/fedex-etd-guide-clean | FedEx ETD 設定ガイド Level1 / ETD upload 422 ガード | 2026-06-22 | IN_PROGRESS | | | feature/morimoto/fedex-etd-migration からガイドを分離したクリーンブランチ |
 | feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
@@ -230,3 +236,4 @@
 | feature/morimoto/schedule-8issues-fix | スケジュールページ 8件本番バグ修正 | 2026-06-21 | DONE | #2411 | | merged |
 | feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | IN_PROGRESS | | | |
 | feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |
+| hotfix/morimoto/page-header-revert-clean | 全PageLayoutページ ヘッダー白帯・1段下ズレ修正（#2432 リグレッション） | 2026-06-23 | IN_PROGRESS | #2486 | main | |

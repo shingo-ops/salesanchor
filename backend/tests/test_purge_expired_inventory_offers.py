@@ -51,15 +51,26 @@ def test_purge_deletes_only_expired_offers():
             return conn.execute(
                 text(
                     "INSERT INTO public.inventory "
-                    "(supplier_id, product_id, condition, quantity, unit_price, "
-                    " status, source, expires_at) "
-                    f"VALUES (:sid, :pid, :cond, 1, 100, 'in_stock', 'f6_approved', {exp_sql}) "
+                    "(supplier_id, product_id, raw_condition, quantity, unit_price, unit, "
+                    " seal, search_cond, grade, damage, status, source, expires_at) "
+                    f"VALUES (:sid, :pid, :raw_condition, 1, 100, :unit, "
+                    " :seal, :search_cond, :grade, :damage, 'in_stock', 'f6_approved', "
+                    f"{exp_sql}) "
                     "RETURNING id"
                 ),
-                {"sid": supplier_id, "pid": pid, "cond": cond},
+                {
+                    "sid": supplier_id,
+                    "pid": pid,
+                    "raw_condition": cond,
+                    "unit": "box" if "box" in cond else "case",
+                    "seal": "shrink" if cond == "new" else "no_shrink" if "used" in cond else "sealed",
+                    "search_cond": "unsearched",
+                    "grade": None,
+                    "damage": False,
+                },
             ).scalar_one()
 
-        # UNIQUE(supplier_id, product_id, condition) を満たすよう condition を変える
+        # UNIQUE(supplier_id, product_id, axes + unit) を満たすよう原文と軸を変える
         id_expired = _ins("new", "NOW() - INTERVAL '1 hour'")
         id_fresh = _ins("used_a", "NOW() + INTERVAL '5 hours'")
         id_perm = _ins("sealed", "NULL")

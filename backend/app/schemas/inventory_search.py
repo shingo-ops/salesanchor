@@ -6,7 +6,7 @@ spec.md v1.1 F7 / AC7.4 / AC7.9:
     (フロント側で `***` 表示、AC7.9)
 
 spec.md v1.3 F11 AC11.4 (Sprint 11):
-  - 各検索結果に `inventory_offers` (仕入元 × condition × 数量/単価 の現在オファー)
+  - 各検索結果に `inventory_offers` (仕入元 × axis / raw_condition の現在オファー)
     を埋め込む。営業フローで「仕入先 X が今 Y 個 Z 円」を表示。
   - inventory.visibility.full=false の user では offers も全件マスクする
     (quantity / unit_price=None、AC11.4 + AC7.9 整合)。
@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 class InventoryOfferSummary(BaseModel):
     """検索結果に同梱する 1 件の仕入元現在オファー (spec v1.3 F11 AC11.4)。
 
-    public.inventory (supplier_id × product_id × condition UNIQUE) の 1 行と対応。
+    public.inventory (supplier_id × product_id × axes + unit UNIQUE) の 1 行と対応。
     visibility.full を持たない user では quantity / unit_price=None でマスク。
     """
 
@@ -81,7 +81,7 @@ class InventorySearchCandidate(BaseModel):
     inventory_offers: list[InventoryOfferSummary] = Field(
         default_factory=list,
         description=(
-            "仕入元 × condition の現在オファー一覧。status='in_stock' のみ含む。"
+            "仕入元 × axis / raw_condition の現在オファー一覧。status='in_stock' のみ含む。"
             "visibility.full=false なら quantity / unit_price=None マスク。"
         ),
     )

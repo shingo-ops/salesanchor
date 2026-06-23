@@ -836,7 +836,7 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
               disabled={loading !== null}
               className="btn btn-secondary text-xs"
             >
-              {loading === "remove-from-channel" ? t("processing") : t("leads.discordRemoveFromChannel")}
+              {loading === "remove-from-channel" ? t("common.processing") : t("leads.discordRemoveFromChannel")}
             </button>
           )}
           <button
@@ -844,14 +844,14 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
             disabled={loading !== null}
             className="btn btn-secondary text-xs"
           >
-            {loading === "kick" ? t("processing") : t("leads.discordKick")}
+            {loading === "kick" ? t("common.processing") : t("leads.discordKick")}
           </button>
           <button
             onClick={() => handleAction("ban")}
             disabled={loading !== null}
             className="btn btn-danger text-xs"
           >
-            {loading === "ban" ? t("processing") : t("leads.discordBan")}
+            {loading === "ban" ? t("common.processing") : t("leads.discordBan")}
           </button>
         </div>
         {done && <span className="text-xs text-green-600">{done}</span>}

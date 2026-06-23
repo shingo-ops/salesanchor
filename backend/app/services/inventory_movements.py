@@ -17,7 +17,7 @@ spec.md v1.3 F9 AC9.1 (Sprint 9 revised、v1.2 Phase A 並走方針を撤回):
 
 spec.md v1.3 F11 AC11.3 (Sprint 11、本 module で実装):
   - Phase B/C + supplier_id 指定 + items.condition 指定 の場合のみ、
-    `public.inventory` を UPSERT (UNIQUE: supplier_id × product_id × condition)。
+    `public.inventory` を UPSERT (UNIQUE: supplier_id × product_id × axes + unit)。
   - items.condition が無い場合は UPSERT skip (backward compat、既存テスト不変)。
   - items.quantity_offered / items.unit_price も任意で受け取り反映。
 
@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.inventory_axes import project_inventory_axes
 from app.services.phase_gate import Phase, get_phase
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ async def _upsert_inventory_offer(
     supplier_id: int,
     product_id: int,
     condition: str,
+    raw_condition: str | None = None,
     quantity: int,
     unit_price: int,
     unit: str | None = None,
@@ -91,32 +93,66 @@ async def _upsert_inventory_offer(
 ) -> None:
     """public.inventory に「仕入元 × 商品 × 状態」の現在オファーを UPSERT する。
 
-    UNIQUE(supplier_id, product_id, condition)。products.stock_quantity（中央在庫）
-    とは独立しており、この関数は中央在庫を一切変更しない。F11 AC11.3 の UPSERT を
-    delta_qty>0 経路と delta_qty=0 経路 (Option Z) の双方から共用するための helper。
+    UNIQUE(supplier_id, product_id, seal, search_cond, grade, damage, unit,
+    offer_type, ship_timing)。products.stock_quantity（中央在庫）とは独立しており、
+    この関数は中央在庫を一切変更しない。public.inventory.condition は保存しない
+    （raw_condition と軸列だけを持つ）。F11 AC11.3 の UPSERT を delta_qty>0 経路と
+    delta_qty=0 経路 (Option Z) の双方から共用するための helper。
+
+    注意:
+    - uq_inventory_offer_v2 が存在して初めて ON CONFLICT が成立する。
+    - 本番適用順は「新キー作成 → 本コードのデプロイ → 旧キー削除」を厳守する。
 
     QA 2026-05-30:
     - unit (数量の単位 Box/Case/Pack/Set/Peace) を保存 (migration 084 の列)。
     - 時間失効モデル: offered_at=NOW() / expires_at=NOW()+18h を付与（再オファー時も
       リフレッシュ）。期限切れは Celery purge_expired_inventory_offers が物理削除する。
     """
+    projection = project_inventory_axes(condition, unit)
+    persisted_raw_condition = (
+        str(raw_condition).strip()
+        if raw_condition is not None and str(raw_condition).strip()
+        else str(condition).strip()
+    )
+    seal = projection.seal
+    search_cond = projection.search_cond
+    grade = projection.grade
+    damage = bool(projection.damage) if projection.damage is not None else False
     await db.execute(
         text(
             """
             INSERT INTO public.inventory
-                (supplier_id, product_id, condition, quantity, unit_price, unit,
+                (supplier_id, product_id, raw_condition, quantity,
+                 unit_price, unit, seal, search_cond, grade, damage,
                  offer_type, ship_timing,
                  status, source, offered_at, expires_at)
-            VALUES (:sid, :pid, :cond, :qty, :up, :unit,
+            VALUES (:sid, :pid, :raw_cond, :qty, :up, :unit, :seal,
+                    :search_cond, :grade, :damage,
                     :offer_type, :ship_timing,
                     'in_stock', 'f6_approved',
                     NOW(), NOW() + make_interval(hours => :exp_hours))
-            -- ADR-093 Phase 3a: UNIQUE キー粒度拡張に合わせ ON CONFLICT を
-            -- COALESCE ベースの式 UNIQUE INDEX (uq_inventory_offer_key) に一致させる。
-            ON CONFLICT (supplier_id, product_id, condition, COALESCE(unit, ''), offer_type, COALESCE(ship_timing, '')) DO UPDATE SET
+            -- ADR-093 Phase 3b:
+            -- uq_inventory_offer_v2 が存在して初めて成立する。適用順は
+            -- 新キー作成 → 本コードのデプロイ → 旧キー削除 を厳守。
+            ON CONFLICT (
+                supplier_id,
+                product_id,
+                COALESCE(seal, ''),
+                COALESCE(search_cond, ''),
+                COALESCE(grade, ''),
+                damage,
+                COALESCE(unit, ''),
+                offer_type,
+                COALESCE(ship_timing, '')
+            ) DO UPDATE SET
                 quantity = EXCLUDED.quantity,
                 unit_price = EXCLUDED.unit_price,
                 unit = EXCLUDED.unit,
+                raw_condition = EXCLUDED.raw_condition,
+                seal = EXCLUDED.seal,
+                search_cond = EXCLUDED.search_cond,
+                grade = EXCLUDED.grade,
+                damage = EXCLUDED.damage,
                 status = EXCLUDED.status,
                 source = 'f6_approved',
                 offered_at = NOW(),
@@ -127,10 +163,14 @@ async def _upsert_inventory_offer(
         {
             "sid": supplier_id,
             "pid": product_id,
-            "cond": str(condition),
+            "raw_cond": persisted_raw_condition,
             "qty": int(quantity),
             "up": int(unit_price),
             "unit": (str(unit) if unit else None),
+            "seal": seal,
+            "search_cond": search_cond,
+            "grade": grade,
+            "damage": damage,
             "offer_type": str(offer_type or "in_stock"),
             "ship_timing": (str(ship_timing) if ship_timing else None),
             "exp_hours": _OFFER_EXPIRY_HOURS,
@@ -200,6 +240,7 @@ async def apply_inbound_items(
                     supplier_id=supplier_id,
                     product_id=product_id,
                     condition=str(condition_raw),
+                    raw_condition=item.get("raw_condition"),
                     quantity=int(item.get("quantity_offered") or 0),
                     unit_price=int(item.get("unit_price") or 0),
                     unit=item.get("unit"),
@@ -329,6 +370,7 @@ async def apply_inbound_items(
                     supplier_id=supplier_id,
                     product_id=product_id,
                     condition=str(condition_raw),
+                    raw_condition=item.get("raw_condition"),
                     quantity=int(offered_qty),
                     unit_price=int(item.get("unit_price") or 0),
                     unit=item.get("unit"),
