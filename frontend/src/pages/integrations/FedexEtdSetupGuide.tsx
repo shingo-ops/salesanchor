@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/Badge";
+import { Check } from "../../constants/icons";
 import "./FedexLabelValidationTab.css";
 
 type Env = "sandbox" | "production";
@@ -25,6 +26,44 @@ interface StepDefinition {
 const ETD_ENABLED = import.meta.env.VITE_FEDEX_ETD_ENABLED === "true";
 
 const PORTAL_URL = "https://developer.fedex.com/api/ja-jp/home.html";
+
+function StepIndicator({
+  steps,
+  activeIndex,
+  ariaLabel,
+}: {
+  steps: StepDefinition[];
+  activeIndex: number;
+  ariaLabel: string;
+}) {
+  return (
+    <nav className="etd-stepper" aria-label={ariaLabel}>
+      <ol className="etd-stepper__list">
+        {steps.map((step, index) => {
+          const isDone = index < activeIndex;
+          const isCurrent = index === activeIndex;
+          const stateClass = isDone
+            ? " etd-stepper__item--done"
+            : isCurrent
+              ? " etd-stepper__item--current"
+              : "";
+          return (
+            <li
+              key={step.key}
+              className={`etd-stepper__item${stateClass}`}
+              aria-current={isCurrent ? "step" : undefined}
+            >
+              <div className="etd-stepper__dot" aria-hidden="true">
+                {isDone ? <Check size={14} /> : index + 1}
+              </div>
+              <span className="etd-stepper__label">{step.heading}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
 
 function StepCard({
   stepNumber,
@@ -157,7 +196,6 @@ export function FedexEtdSetupGuide({
 
   const currentStep = stepDefinitions[activeStepIndex] ?? stepDefinitions[0];
   const currentIndex = activeStepIndex + 1;
-  const totalSteps = stepDefinitions.length;
 
   const currentImages = registeredImages[etdEnvironment];
   const etdComplete = Boolean(!ETD_ENABLED || (currentImages.LETTERHEAD && currentImages.SIGNATURE));
@@ -210,18 +248,11 @@ export function FedexEtdSetupGuide({
 
   return (
     <section className="etd-guide card">
-      <div className="etd-guide__progress" aria-label={t("carrierIntegration.fedexEtdGuideProgressLabel")}>
-        <div className="etd-guide__progress-track">
-          <div
-            className="etd-guide__progress-fill"
-            style={{ width: `${(currentIndex / totalSteps) * 100}%` }}
-          />
-        </div>
-        <div className="etd-guide__progress-meta">
-          <span>{t("carrierIntegration.fedexEtdGuideProgress", { current: currentIndex, total: totalSteps })}</span>
-          <span>{currentStep?.heading}</span>
-        </div>
-      </div>
+      <StepIndicator
+        steps={stepDefinitions}
+        activeIndex={activeStepIndex}
+        ariaLabel={t("carrierIntegration.fedexEtdGuideProgressLabel")}
+      />
 
       {statusLoading && <p className="form-hint">{t("common.loading")}</p>}
       {statusError && <p className="error-message">{statusError}</p>}
@@ -229,12 +260,21 @@ export function FedexEtdSetupGuide({
       <StepCard stepNumber={currentIndex} heading={currentStep.heading} isActive>
         {currentStep.key === "portal" && (
           <>
-            <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1Desc")}</p>
-            <div className="form-actions etd-guide__actions--left">
-              <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                {t("carrierIntegration.fedexEtdGuideOpenPortal")}
-              </a>
-            </div>
+            <p className="form-hint">
+              <Trans
+                i18nKey="carrierIntegration.fedexEtdGuideStep1Desc"
+                components={{
+                  portalLink: (
+                    <a
+                      href={PORTAL_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="etd-guide__inline-link"
+                    />
+                  ),
+                }}
+              />
+            </p>
 
             <ol className="etd-guide__substeps">
               <li className="etd-guide__substep">
