@@ -159,10 +159,23 @@
 }
 
 .etd-guide__screenshot {
-  width: 100%;
+  max-height: var(--size-screenshot-thumb-h);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  cursor: pointer;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   display: block;
+}
+
+.etd-guide__screenshot-link {
+  display: block;
+  text-align: center;
+}
+
+.etd-guide__actions--left {
+  justify-content: flex-start;
 }
 
 /* 情報ノート（テストキー注意書き）*/
