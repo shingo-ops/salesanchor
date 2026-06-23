@@ -6,5 +6,16 @@
 -- - 先に condition を参照するコードをすべて軸列へ切り替え、
 --   nullable 化と backfill を完了させた後にだけ適用する。
 
-ALTER TABLE public.inventory
-    DROP COLUMN condition;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'inventory'
+          AND column_name = 'condition'
+    ) THEN
+        ALTER TABLE public.inventory
+            DROP COLUMN condition;
+    END IF;
+END $$;
