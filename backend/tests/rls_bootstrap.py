@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
+from app.auth.dependencies import set_tenant_context
 from app.services.tenant import (
     get_rls_enable_sql,
     get_rls_policy_sql,
@@ -169,6 +170,50 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                 session,
                 get_tenant_tables_sql(schema_name, tenant_id),
             )
+            await session.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS {schema_name}.tenant_sales_form_options (
+                    id SERIAL PRIMARY KEY,
+                    tenant_id INTEGER NOT NULL,
+                    label VARCHAR(100) NOT NULL,
+                    value VARCHAR(100) NOT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE (tenant_id, value)
+                )
+            """))
+            await session.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS {schema_name}.lead_sales_form_selections (
+                    id SERIAL PRIMARY KEY,
+                    lead_id INTEGER NOT NULL
+                        REFERENCES {schema_name}.leads(id) ON DELETE CASCADE,
+                    option_id INTEGER NOT NULL
+                        REFERENCES {schema_name}.tenant_sales_form_options(id) ON DELETE RESTRICT,
+                    other_text TEXT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE (lead_id, option_id)
+                )
+            """))
+            await session.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_lead_sales_form_selections_lead_id
+                ON {schema_name}.lead_sales_form_selections (lead_id)
+            """))
+            await session.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS idx_tenant_sales_form_options_tenant_active
+                ON {schema_name}.tenant_sales_form_options (tenant_id, is_active)
+            """))
+            if schema_name == "tenant_004":
+                await session.execute(text("""
+                    INSERT INTO tenant_004.tenant_sales_form_options
+                        (tenant_id, label, value, sort_order)
+                    VALUES
+                        (4, '実店舗',   'physical_store',  1),
+                        (4, 'ECサイト', 'ec_site',          2),
+                        (4, 'ライブ配信', 'live_streaming', 3),
+                        (4, '卸・代理店', 'wholesale',      4),
+                        (4, 'その他',   'other',            5)
+                    ON CONFLICT (tenant_id, value) DO NOTHING
+                """))
             for statement in (
                 f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS messenger_link VARCHAR(1000)",
                 f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255)",
@@ -227,3 +272,16 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
             except Exception:
                 pass
     return schema_name
+
+
+@asynccontextmanager
+async def tenant_rls_session(app_session_factory: sessionmaker, tenant_id: int):
+    """テスト用に tenant 文脈付きの app session を返す。
+
+    GET 系 RLS テストでは get_current_tenant の override だけでは不十分なので、
+    実運用と同じく search_path / app.tenant_id / app.is_operator をセットしてから
+    request を実行する。
+    """
+    async with app_session_factory() as session:
+        await set_tenant_context(session, tenant_id)
+        yield session

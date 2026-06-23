@@ -16,7 +16,7 @@ from app.database import get_db
 from app.models import User
 from app.routers import leads as leads_router
 from scripts.migrate_20260621_020000_backfill_lead_country import backfill_schema
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_rls_session, tenant_schema_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -73,16 +73,15 @@ async def test_lead_country_backfill_and_rls_readability_under_tenant_006():
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     app_engine = create_async_engine(APP_PG_URL, echo=False)
     app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
+    tenant_id = 6
 
     async def override_get_db():
-        async with app_session_factory() as session:
+        async with tenant_rls_session(app_session_factory, tenant_id) as session:
             yield session
 
     leads_to_cleanup: list[int] = []
 
     try:
-        tenant_id = 6
-
         async def override_get_current_user():
             return _mock_user(tenant_id=tenant_id)
 

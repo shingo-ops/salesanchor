@@ -14,7 +14,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_rls_session, tenant_schema_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -144,12 +144,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
-        async with app_session_factory() as session:
-            async with session.begin():
-                await session.execute(text(f"SET search_path = {TENANT_SCHEMA}, public"))
-                await session.execute(text("SET app.tenant_id = '6'"))
-                await session.execute(text("SET app.is_operator = ''"))
-                yield session
+        async with tenant_rls_session(app_session_factory, TENANT_ID) as session:
+            yield session
 
     inserted: dict[str, list[int]] = {"lead_ids": [], "company_ids": [], "order_ids": []}
     foreign_inserted: dict[str, list[int]] = {"lead_ids": [], "company_ids": [], "order_ids": []}
