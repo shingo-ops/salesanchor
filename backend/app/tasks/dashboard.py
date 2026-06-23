@@ -32,7 +32,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 DASHBOARD_CACHE_TTL = 660  # 11分（10分の更新間隔 + 1分のバッファ）
 
 # KPIキャッシュのスキーマバージョン。ルーター側の KPI_SCHEMA_VERSION と揃える。
-KPI_SCHEMA_VERSION = 3
+KPI_SCHEMA_VERSION = 4
 
 
 def _get_sync_engine():
@@ -63,18 +63,6 @@ def _compute_kpis(session, tenant_id: int) -> dict:
     """))
     lead_row = r.mappings().first() or {"total": 0, "open_count": 0}
 
-    # 商談集計
-    r = session.execute(text("""
-        SELECT
-            COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status = 'open') AS open_count,
-            COUNT(*) FILTER (WHERE status = 'won') AS won_count,
-            COALESCE(SUM(amount), 0) AS total_amount,
-            COALESCE(SUM(amount) FILTER (WHERE status = 'won'), 0) AS won_amount
-        FROM deals
-    """))
-    deal_row = r.mappings().first()
-
     # 注文集計
     r = session.execute(text("""
         SELECT
@@ -99,17 +87,6 @@ def _compute_kpis(session, tenant_id: int) -> dict:
         for row in r.mappings().all()
     ]
 
-    # 直近の商談（5件）
-    r = session.execute(text("""
-        SELECT id, title, amount, status, created_at
-        FROM deals ORDER BY created_at DESC LIMIT 5
-    """))
-    recent_deals = [
-        {k: (str(v) if isinstance(v, (datetime, type(None))) else float(v) if hasattr(v, '__float__') and k == 'amount' else v)
-         for k, v in dict(row).items()}
-        for row in r.mappings().all()
-    ]
-
     # 直近のリード（5件）
     r = session.execute(text("""
         SELECT id, customer_name, status, prospect_rank, created_at
@@ -125,17 +102,11 @@ def _compute_kpis(session, tenant_id: int) -> dict:
         "company_count": company_count,
         "lead_count": lead_row["total"],
         "lead_open_count": lead_row["open_count"],
-        "deal_count": deal_row["total"],
-        "deal_open_count": deal_row["open_count"],
-        "deal_won_count": deal_row["won_count"],
-        "deal_total_amount": float(deal_row["total_amount"]),
-        "deal_won_amount": float(deal_row["won_amount"]),
         "order_count": order_row["total"],
         "order_pending_count": order_row["pending_count"],
         "order_total_amount": float(order_row["total_amount"]),
         "team_count": team_count,
         "recent_companies": recent_companies,
-        "recent_deals": recent_deals,
         "recent_leads": recent_leads,
     }
 

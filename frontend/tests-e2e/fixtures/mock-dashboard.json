@@ -5,11 +5,6 @@
   "lead_inbound_count": 11,
   "lead_outbound_count": 7,
   "lead_conversion_rate": 38,
-  "deal_count": 12,
-  "deal_open_count": 5,
-  "deal_won_count": 4,
-  "deal_total_amount": 18500000,
-  "deal_won_amount": 7800000,
   "order_count": 9,
   "order_pending_count": 2,
   "order_total_amount": 5400000,
@@ -24,20 +19,6 @@
   "inventory_value": 3100000,
   "supplier_count": 5,
   "po_pending_count": 1,
-  "pipeline_by_stage": [
-    {
-      "stage": "open",
-      "count": 5,
-      "amount": 6500000,
-      "weighted_amount": 1300000
-    },
-    {
-      "stage": "negotiating",
-      "count": 3,
-      "amount": 4200000,
-      "weighted_amount": 2100000
-    }
-  ],
   "recent_customers": [
     {
       "id": 101,
@@ -45,15 +26,6 @@
       "name": "Sample Customer A",
       "company": "ACME Co.",
       "created_at": "2026-04-30T09:00:00+00:00"
-    }
-  ],
-  "recent_deals": [
-    {
-      "id": 201,
-      "title": "Spring Promo",
-      "amount": 1200000,
-      "status": "open",
-      "created_at": "2026-04-29T10:00:00+00:00"
     }
   ],
   "recent_leads": [
