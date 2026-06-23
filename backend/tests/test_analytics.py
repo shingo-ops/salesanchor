@@ -133,7 +133,7 @@ async def _seed_order_based_conversion_dataset(db_session):
         })
 
     order_rows = [
-        (3001, 999, 2001, "ORD-1001-A", 100.0, "pending"),
+        (3001, 999, 2001, "ORD-1001-A", 100.0, "completed"),
         (3002, 999, 2002, "ORD-1001-B", 150.0, "completed"),
         (3003, 999, 2003, "ORD-1002", 200.0, "cancelled"),
         (3004, 999, 2004, "ORD-1004", 400.0, "pending"),
@@ -178,7 +178,12 @@ class TestExistingEPSmoke:
         assert data["entries"] == []
 
     async def test_conversion_by_user_uses_order_based_conversion(self, client, db_session):
-        """担当者別 conversion は company→order ベースで数える"""
+        """担当者別 conversion は company→order ベースで数える。
+
+        lead1 は 2 社 2 注文とも non-cancelled にして、1 lead が company/order 件数では
+        なく lead 単位で 1 回だけ数えられることを検証する。lead3 は company なし、
+        lead2 は cancelled のみなので converted に入らない。
+        """
         await _seed_order_based_conversion_dataset(db_session)
 
         res = await client.get("/api/v1/analytics/conversion")
