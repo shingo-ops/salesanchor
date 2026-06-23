@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models import User
 from app.routers import leads as leads_router
 from scripts.migrate_20260621_020000_backfill_lead_country import backfill_schema
+from tests.rls_bootstrap import bootstrap_tenant_schema
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -80,10 +81,6 @@ async def test_lead_country_backfill_and_rls_readability_under_tenant_006():
     leads_to_cleanup: list[int] = []
 
     try:
-        async with admin_engine.connect() as conn:
-            schema_exists = await conn.scalar(text("SELECT 1 FROM information_schema.schemata WHERE schema_name = 'tenant_006'"))
-        if not schema_exists:
-            pytest.skip('tenant_006 schema is not present in this CI PostgreSQL database')
         tenant_id = 6
 
         async def override_get_current_user():
@@ -93,6 +90,7 @@ async def test_lead_country_backfill_and_rls_readability_under_tenant_006():
             return tenant_id
 
         schema = "tenant_006"
+        await bootstrap_tenant_schema(admin_engine, tenant_id)
         async with admin_engine.begin() as conn:
             result = await conn.execute(
                 text(

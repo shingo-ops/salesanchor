@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from contextlib import ExitStack
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -17,6 +16,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import products as products_router
+from tests.rls_bootstrap import bootstrap_public_products
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -25,26 +25,6 @@ pytestmark = pytest.mark.skipif(
     not ADMIN_PG_URL or not APP_PG_URL,
     reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL / TEST_PG_URL 未設定)。",
 )
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_MIGRATIONS_DIR = _REPO_ROOT / "migrations"
-_PG_BOOTSTRAP_MIGRATIONS = [
-    "056_add_suppliers_type_and_promote_public.sql",
-    "062_create_inventory_movements_and_budget.sql",
-    "082_extend_products_box_attributes.sql",       # products.category 追加（020000 の backfill に必須）
-    "085_create_tcg_type_master.sql",
-    "086_seed_additional_tcg_types.sql",
-    "20260602_000000_add_products_central_columns.sql",
-    "20260602_020000_add_products_tcg_type.sql",
-    "20260602_030000_add_products_unit.sql",
-    "20260602_170000_add_products_master_label_columns.sql",
-    "20260603_000000_add_products_product_kind.sql",
-    "20260603_040000_add_products_set_type.sql",        # products.set_type 追加
-    "20260605_000000_add_products_display_order.sql",   # products.display_order 追加
-    "20260616_000000_fix_tcg_type_dedup.sql",
-    "20260623_030000_add_products_tcg_type_fk.sql",
-]
-
 
 def _mock_user(tenant_id: int) -> User:
     user = User()
@@ -56,69 +36,6 @@ def _mock_user(tenant_id: int) -> User:
     user.is_active = True
     return user
 
-
-def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
-    statements: list[str] = []
-    buf: list[str] = []
-    i = 0
-    in_dollar = False
-    dollar_tag = ""
-    while i < len(sql):
-        if sql[i] == "$":
-            j = i + 1
-            while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
-                j += 1
-            if j < len(sql) and sql[j] == "$":
-                tag = sql[i : j + 1]
-                if not in_dollar:
-                    in_dollar = True
-                    dollar_tag = tag
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-                if tag == dollar_tag:
-                    in_dollar = False
-                    dollar_tag = ""
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-        if sql[i] == ";" and not in_dollar:
-            statements.append("".join(buf))
-            buf = []
-        else:
-            buf.append(sql[i])
-        i += 1
-    if buf:
-        statements.append("".join(buf))
-    return statements
-
-
-async def _apply_migration(admin_engine, filename: str) -> None:
-    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
-    async with admin_engine.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.exec_driver_sql(stmt)
-
-
-async def _bootstrap_public_products(admin_engine) -> None:
-    for filename in _PG_BOOTSTRAP_MIGRATIONS:
-        await _apply_migration(admin_engine, filename)
-
-    async with admin_engine.connect() as conn:
-        fk_exists = await conn.scalar(
-            text("""
-                SELECT 1
-                FROM pg_constraint c
-                JOIN pg_class rel ON rel.oid = c.conrelid
-                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-                WHERE nsp.nspname = 'public'
-                  AND rel.relname = 'products'
-                  AND c.conname = 'fk_products_tcg_type'
-            """)
-        )
-    assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:
@@ -153,7 +70,7 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
     tenant_id = 6
 
     try:
-        await _bootstrap_public_products(admin_engine)
+        await bootstrap_public_products(admin_engine)
 
         app = await _build_app(app_session_factory, tenant_id)
 

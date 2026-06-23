@@ -14,7 +14,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
-from app.services.tenant import create_tenant_schema
+from tests.rls_bootstrap import bootstrap_tenant_schema
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -23,7 +23,6 @@ TENANT_ID = 6
 TENANT_SCHEMA = "tenant_006"
 FOREIGN_TENANT_ID = 998
 FOREIGN_SCHEMA = "tenant_998"
-
 
 def _build_user(user_id: int, tenant_id: int, role: str = "admin") -> User:
     user = User()
@@ -35,105 +34,6 @@ def _build_user(user_id: int, tenant_id: int, role: str = "admin") -> User:
     user.is_active = True
     return user
 
-
-async def _bootstrap_tenant_schema(admin_engine, tenant_id: int) -> None:
-    async with admin_engine.begin() as session:
-        await session.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.users (
-                id INTEGER PRIMARY KEY,
-                role TEXT NOT NULL DEFAULT 'user'
-            )
-        """))
-        await session.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.permissions (
-                id SERIAL PRIMARY KEY,
-                key VARCHAR(100) NOT NULL UNIQUE,
-                resource VARCHAR(50) NOT NULL,
-                action VARCHAR(50) NOT NULL,
-                description VARCHAR(255) NOT NULL,
-                category VARCHAR(50) NOT NULL
-            )
-        """))
-        await session.execute(text("""
-            INSERT INTO public.users (id, role) VALUES (999, 'admin')
-            ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
-        """))
-        for key in ("dashboard.view", "goals.view", "reports.view", "system.manage"):
-            resource, action = key.split(".", 1)
-            await session.execute(
-                text("""
-                    INSERT INTO public.permissions (key, resource, action, description, category)
-                    VALUES (:key, :resource, :action, :description, :category)
-                    ON CONFLICT (key) DO NOTHING
-                """),
-                {
-                    "key": key,
-                    "resource": resource,
-                    "action": action,
-                    "description": key,
-                    "category": resource,
-                },
-            )
-        await session.execute(text(f"DROP SCHEMA IF EXISTS tenant_{tenant_id:03d} CASCADE"))
-        await create_tenant_schema(session, tenant_id, admin_db=session)
-
-        # CI の Postgres ブートストラップで schema 再作成のタイミングに揺れがあり、
-        # companies/orders が見えないケースがあったため、このテストで使う最低限の
-        # テーブルを冪等に再保証する。create_tenant_schema が正常なら no-op。
-        await session.execute(text(f"""
-            CREATE TABLE IF NOT EXISTS tenant_{tenant_id:03d}.companies (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-                company_code VARCHAR(20) NOT NULL,
-                lead_id INTEGER,
-                name VARCHAR(255) NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                UNIQUE (tenant_id, company_code)
-            )
-        """))
-        await session.execute(text(f"""
-            CREATE TABLE IF NOT EXISTS tenant_{tenant_id:03d}.orders (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-                company_id INTEGER,
-                order_number VARCHAR(100) NOT NULL,
-                total_amount NUMERIC(15, 2),
-                status VARCHAR(50) DEFAULT 'pending',
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )
-        """))
-        await session.execute(text(f"CREATE INDEX IF NOT EXISTS idx_companies_lead_id ON tenant_{tenant_id:03d}.companies (lead_id)"))
-        await session.execute(text(f"CREATE INDEX IF NOT EXISTS idx_orders_company_id ON tenant_{tenant_id:03d}.orders (company_id)"))
-        await session.execute(text(f"ALTER TABLE tenant_{tenant_id:03d}.companies ENABLE ROW LEVEL SECURITY"))
-        await session.execute(text(f"ALTER TABLE tenant_{tenant_id:03d}.companies FORCE ROW LEVEL SECURITY"))
-        await session.execute(text(f"""
-            DROP POLICY IF EXISTS tenant_isolation_companies
-            ON tenant_{tenant_id:03d}.companies
-        """))
-        await session.execute(text(f"""
-            CREATE POLICY tenant_isolation_companies
-            ON tenant_{tenant_id:03d}.companies
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
-        """))
-        await session.execute(text(f"ALTER TABLE tenant_{tenant_id:03d}.orders ENABLE ROW LEVEL SECURITY"))
-        await session.execute(text(f"ALTER TABLE tenant_{tenant_id:03d}.orders FORCE ROW LEVEL SECURITY"))
-        await session.execute(text(f"""
-            DROP POLICY IF EXISTS tenant_isolation_orders
-            ON tenant_{tenant_id:03d}.orders
-        """))
-        await session.execute(text(f"""
-            CREATE POLICY tenant_isolation_orders
-            ON tenant_{tenant_id:03d}.orders
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
-        """))
-        await session.execute(text(f"GRANT USAGE ON SCHEMA tenant_{tenant_id:03d} TO salesanchor_app"))
-        await session.execute(text(f"""
-            GRANT SELECT, INSERT, UPDATE, DELETE
-            ON ALL TABLES IN SCHEMA tenant_{tenant_id:03d}
-            TO salesanchor_app
-        """))
 
 
 async def _seed_conversion_fixture(admin_engine, schema: str, tenant_id: int, assigned_uid: int, other_uid: int) -> dict[str, list[int]]:
@@ -270,8 +170,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         app.dependency_overrides[get_current_user] = override_get_current_user
         app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
-        await _bootstrap_tenant_schema(admin_engine, TENANT_ID)
-        await _bootstrap_tenant_schema(admin_engine, FOREIGN_TENANT_ID)
+        await bootstrap_tenant_schema(admin_engine, TENANT_ID)
+        await bootstrap_tenant_schema(admin_engine, FOREIGN_TENANT_ID)
         inserted = await _seed_conversion_fixture(
             admin_engine,
             TENANT_SCHEMA,
