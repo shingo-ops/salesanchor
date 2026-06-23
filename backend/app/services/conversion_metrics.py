@@ -7,6 +7,8 @@ from __future__ import annotations
 判定式だけを共有する。
 """
 
+# Order-based conversion is shared here so dashboard / analytics / goals stay aligned.
+
 
 def lead_has_successful_order_sql(lead_alias: str = "l") -> str:
     """lead が非 cancelled の order を持つ company を持つかを SQL 式で返す。"""

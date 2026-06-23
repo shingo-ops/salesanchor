@@ -29,6 +29,7 @@ export const FUNNEL_MODE: FunnelMode = (() => {
 const MOCK_MODE = FUNNEL_MODE === "mock";
 
 // ─── 型定義（API contract と同形） ────────────────────────────────────
+// Keep this contract thin so the dashboard tracks backend changes directly.
 
 export interface FunnelResponse {
   month: string;
