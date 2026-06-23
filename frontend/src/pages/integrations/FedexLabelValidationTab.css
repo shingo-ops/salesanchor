@@ -134,13 +134,7 @@
 }
 
 .etd-guide__step {
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.etd-guide__step--active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  padding: var(--space-5);
 }
 
 .etd-guide__step-header {
