@@ -326,7 +326,7 @@ async def test_translate_inbound_override_persists_to_save():
 
     assert result.original_language == "ja"
     save_args = mock_save.await_args.args
-    assert save_args[7] == "ja"
+    assert save_args[8] == "ja"
 
 
 @pytest.mark.asyncio

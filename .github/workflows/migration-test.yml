@@ -154,7 +154,7 @@ jobs:
       #
       # 現在登録済みのテーブル:
       #   public:    tenants / users / permissions / tenant_discord_config / inventory
-      #   tenant_001: role_permissions / staff / leads / deals
+      #   tenant_001: role_permissions / staff / leads / deals / message_translations
       #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
       #   ※ public.inventory は PUBLIC_SQL セクションに最小定義を登録（migration 081 相当）
       #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
@@ -311,6 +311,16 @@ jobs:
               analysis            JSONB,
               occurred_at         TIMESTAMPTZ NOT NULL,
               created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          CREATE TABLE IF NOT EXISTS tenant_001.message_translations (
+              id               SERIAL PRIMARY KEY,
+              message_id       TEXT NOT NULL,
+              target_language  VARCHAR(10) NOT NULL,
+              translated_text  TEXT NOT NULL,
+              engine           VARCHAR(50) NOT NULL DEFAULT 'gemini-2.5-flash',
+              created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              CONSTRAINT uq_message_translations UNIQUE (message_id, target_language)
           );
 
           -- quotes: 見積書テーブル（C-6 スナップショット migration が ALTER する）
