@@ -14,6 +14,8 @@ from __future__ import annotations
   2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
+# Keep analytics entrypoints stable so CI covers the latest conversion contract.
+
 from datetime import date, timedelta
 from statistics import median
 from typing import Literal

@@ -17,6 +17,8 @@
  *   2026-06-13: PR4 ファネルセクション追加（モックデータ駆動）
  */
 
+// Keep the dashboard page as the trigger point for UI checks and CI validation.
+
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
