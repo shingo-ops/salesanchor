@@ -38,6 +38,16 @@ def _build_user(user_id: int, tenant_id: int, role: str = "admin") -> User:
 
 async def _bootstrap_tenant_schema(admin_engine, tenant_id: int) -> None:
     async with admin_engine.begin() as session:
+        await session.execute(text("""
+            CREATE TABLE IF NOT EXISTS public.permissions (
+                id SERIAL PRIMARY KEY,
+                key VARCHAR(100) NOT NULL UNIQUE,
+                resource VARCHAR(50) NOT NULL,
+                action VARCHAR(50) NOT NULL,
+                description VARCHAR(255) NOT NULL,
+                category VARCHAR(50) NOT NULL
+            )
+        """))
         await session.execute(text(f"DROP SCHEMA IF EXISTS tenant_{tenant_id:03d} CASCADE"))
         await create_tenant_schema(session, tenant_id, admin_db=session)
 

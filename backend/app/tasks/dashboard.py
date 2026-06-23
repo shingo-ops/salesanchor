@@ -111,7 +111,6 @@ def _compute_kpis(session, tenant_id: int) -> dict:
         "company_count": company_count,
         "lead_count": lead_row["total"],
         "lead_open_count": lead_row["open_count"],
-        "converted": lead_conversion_row["converted"],
         "lead_conversion_rate": round(
             (lead_conversion_row["converted"] / lead_conversion_row["total"] * 100),
             1,

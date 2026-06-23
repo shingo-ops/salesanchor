@@ -71,6 +71,7 @@ class TestDashboardTask:
         mock_session = MagicMock()
 
         lead_row = {"total": 7, "open_count": 4}
+        conversion_row = {"total": 7, "converted": 3}
         order_row = {"total": 8, "pending_count": 2, "total_amount": 800000}
 
         def mk_mapping(data):
@@ -79,6 +80,7 @@ class TestDashboardTask:
             return m
 
         mock_lead = mk_mapping(lead_row)
+        mock_conversion = mk_mapping(conversion_row)
         mock_order = mk_mapping(order_row)
 
         call_count = [0]
@@ -88,17 +90,19 @@ class TestDashboardTask:
             result = MagicMock()
             # クエリ順:
             # 1: SET search_path / 2: SET app.tenant_id / 3: SET app.is_operator
-            # 4: companies count / 5: leads集計 / 6: orders集計
-            # 7: teams count / 8: 直近会社 / 9: 直近リード
+            # 4: companies count / 5: leads集計 / 6: conversion集計 / 7: orders集計
+            # 8: teams count / 9: 直近会社 / 10: 直近リード
             if call_count[0] == 4:
                 result.scalar.return_value = 10
             elif call_count[0] == 5:
                 result.mappings.return_value.first.return_value = mock_lead
             elif call_count[0] == 6:
-                result.mappings.return_value.first.return_value = mock_order
+                result.mappings.return_value.first.return_value = mock_conversion
             elif call_count[0] == 7:
+                result.mappings.return_value.first.return_value = mock_order
+            elif call_count[0] == 8:
                 result.scalar.return_value = 3
-            elif call_count[0] in (8, 9):
+            elif call_count[0] in (9, 10):
                 result.mappings.return_value.all.return_value = []
             return result
 
@@ -110,6 +114,7 @@ class TestDashboardTask:
             "schema_version",
             "company_count",
             "lead_count", "lead_open_count",
+            "lead_conversion_rate",
             "order_count", "order_pending_count", "order_total_amount",
             "team_count",
             "recent_companies", "recent_leads",
@@ -117,9 +122,10 @@ class TestDashboardTask:
         assert set(kpis.keys()) == expected_keys
         assert kpis["company_count"] == 10
         assert kpis["lead_count"] == 7
+        assert kpis["lead_conversion_rate"] == 42.9
         assert kpis["order_count"] == 8
         assert kpis["team_count"] == 3
-        assert kpis["schema_version"] == 4
+        assert kpis["schema_version"] == 5
 
 
 class TestMaintenanceTask:
