@@ -2,7 +2,7 @@
 """出力.csv を public.inventory (F11) に seed する (spec.md v1.3 / Sprint 11)。
 
 入力: astro-webapp/sheets/raw/出力.csv (102 行)
-出力: public.inventory に UPSERT (UNIQUE (supplier_id, product_id, condition))
+出力: public.inventory に UPSERT (UNIQUE (supplier_id, product_id, axes + unit))
 
 CSV ヘッダー期待:
   Categoly, Series, Quantity, Unit Price, Condition, Status,
@@ -14,7 +14,7 @@ DB マッピング:
   Mark         → product_id (products.product_code で resolve)
   Quantity     → quantity
   Unit Price   → unit_price (JPY, INTEGER)
-  Condition    → condition (raw のまま、e.g., 'Sealed box', 'No shrink box', 'Damaged box')
+  Condition    → raw_condition (raw のまま、e.g., 'Sealed box', 'No shrink box', 'Damaged box')
   Status       → status ('In Stock' → 'in_stock' 等に正規化)
   Note_JA/EN   → notes_ja/notes_en
 
@@ -24,7 +24,7 @@ Resolve 失敗 (supplier/product 不在) は warning ログ + skip。
   docker compose exec -w /app backend python scripts/seed_inventory_from_output.py --dry-run
   docker compose exec -w /app backend python scripts/seed_inventory_from_output.py --apply
 
-冪等: ON CONFLICT (supplier_id, product_id, condition) DO UPDATE
+冪等: ON CONFLICT (supplier_id, product_id, seal, search_cond, grade, damage, unit, offer_type, ship_timing) DO UPDATE
 
 前提:
   - migration 081 (public.inventory 作成) 適用済
@@ -48,6 +48,13 @@ if str(_APP_ROOT) not in sys.path:
 
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
+
+from app.services.condition_vocab import (  # noqa: E402
+    VER41_TO_CONDITION,
+    VER41_TO_UNIT,
+    normalize_condition,
+)
+from app.services.inventory_axes import project_inventory_axes  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -92,6 +99,25 @@ def _normalize_status(s: str) -> str:
     return STATUS_MAP.get((s or "").strip().lower(), "in_stock")
 
 
+def _project_axes(
+    condition_text: str,
+) -> tuple[str, str | None, str | None, str | None, bool, str | None]:
+    token = (condition_text or "").strip()
+    canonical = VER41_TO_CONDITION.get(token)
+    if canonical is None:
+        canonical = normalize_condition(token)
+    unit = VER41_TO_UNIT.get(token)
+    projection = project_inventory_axes(canonical if canonical is not None else token, unit)
+    return (
+        token or "unknown",
+        projection.seal,
+        projection.search_cond,
+        projection.grade,
+        bool(projection.damage) if projection.damage is not None else False,
+        unit,
+    )
+
+
 def _load_rows() -> list[InventoryRow]:
     csv_path = next((p for p in CSV_CANDIDATES if p.exists()), None)
     if csv_path is None:
@@ -119,6 +145,7 @@ def _load_rows() -> list[InventoryRow]:
                                supplier_name, mark, raw.get("Quantity"), raw.get("Unit Price"))
                 continue
             condition = (raw.get("Condition") or "").strip() or "unknown"
+            raw_condition = condition
             rows.append(
                 InventoryRow(
                     supplier_name=supplier_name,
@@ -192,16 +219,29 @@ async def _seed(rows: Iterable[InventoryRow], dry_run: bool) -> None:
 
             inserted = updated = 0
             for (r, sid, pid) in resolved:
+                raw_condition, seal, search_cond, grade, damage, unit = _project_axes(r.condition)
                 result = await conn.execute(
                     text(
                         """
                         INSERT INTO public.inventory
-                            (supplier_id, product_id, condition, quantity, unit_price,
+                            (supplier_id, product_id, raw_condition, quantity, unit_price, unit,
+                             seal, search_cond, grade, damage, offer_type, ship_timing,
                              status, notes_ja, notes_en, source)
-                        VALUES (:sid, :pid, :cond, :qty, :up, :st, :nj, :ne, 'csv_import')
-                        ON CONFLICT (supplier_id, product_id, condition) DO UPDATE SET
+                        VALUES (:sid, :pid, :raw_condition, :qty, :up, :unit,
+                                :seal, :search_cond, :grade, :damage, :offer_type, :ship_timing,
+                                :st, :nj, :ne, 'csv_import')
+                        ON CONFLICT (
+                            supplier_id, product_id, COALESCE(seal, ''),
+                            COALESCE(search_cond, ''), COALESCE(grade, ''), damage,
+                            COALESCE(unit, ''), offer_type, COALESCE(ship_timing, '')
+                        ) DO UPDATE SET
+                            raw_condition = EXCLUDED.raw_condition,
                             quantity = EXCLUDED.quantity,
                             unit_price = EXCLUDED.unit_price,
+                            seal = EXCLUDED.seal,
+                            search_cond = EXCLUDED.search_cond,
+                            grade = EXCLUDED.grade,
+                            damage = EXCLUDED.damage,
                             status = EXCLUDED.status,
                             notes_ja = EXCLUDED.notes_ja,
                             notes_en = EXCLUDED.notes_en,
@@ -212,8 +252,21 @@ async def _seed(rows: Iterable[InventoryRow], dry_run: bool) -> None:
                         """
                     ),
                     {
-                        "sid": sid, "pid": pid, "cond": r.condition, "qty": r.quantity,
-                        "up": r.unit_price, "st": r.status, "nj": r.notes_ja, "ne": r.notes_en,
+                        "sid": sid,
+                        "pid": pid,
+                        "raw_condition": raw_condition,
+                        "qty": r.quantity,
+                        "up": r.unit_price,
+                        "seal": seal,
+                        "search_cond": search_cond,
+                        "grade": grade,
+                        "damage": damage,
+                        "unit": unit,
+                        "offer_type": "in_stock",
+                        "ship_timing": None,
+                        "st": r.status,
+                        "nj": r.notes_ja,
+                        "ne": r.notes_en,
                     },
                 )
                 row = result.fetchone()

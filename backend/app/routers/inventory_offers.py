@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 _BASE_SELECT = """
-    SELECT i.id, i.supplier_id, i.product_id, i.condition, i.quantity,
+    SELECT i.id, i.supplier_id, i.product_id, i.raw_condition, i.quantity,
            i.unit_price, i.unit, i.offer_type, i.ship_timing,
            i.seal, i.search_cond, i.grade, i.damage,
            i.status, i.notes_ja, i.notes_en,
@@ -93,7 +93,7 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 
 # 在庫表ビュー用 SELECT（参考画像準拠の列。admin 専用の notes/source/status は除外）。
 _VIEW_SELECT = """
-    SELECT i.id, i.product_id, i.condition,
+    SELECT i.id, i.product_id, i.raw_condition,
            -- ADR-093: 単位はオファー優先。未設定なら商品マスタ(public.products.unit)を使う
            COALESCE(NULLIF(i.unit, ''), p.unit) AS unit,
            i.seal, i.search_cond, i.grade, i.damage,
@@ -122,7 +122,7 @@ _SORT_COLUMNS = {
     "name": "p.name",
     "category": "p.category",
     "mark": "p.mark",
-    "condition": "i.condition",
+    "condition": "COALESCE(NULLIF(i.raw_condition, ''), '')",
     # 表示・フィルタと同じく単位はオファー優先・未設定は商品マスタへフォールバック
     "unit": "COALESCE(NULLIF(i.unit, ''), p.unit)",
     "offer_type": "i.offer_type",
@@ -149,7 +149,7 @@ def _project_inventory_rows(
                 name_en=row.get("name_en"),
                 category=row.get("category"),
                 mark=row.get("mark"),
-                condition=str(resolve_condition_view(row) or row.get("condition") or ""),
+                condition=str(resolve_condition_view(row) or row.get("raw_condition") or ""),
                 unit=row.get("unit"),
                 offer_type=row.get("offer_type") or "in_stock",
                 ship_timing=row.get("ship_timing"),
@@ -330,7 +330,7 @@ async def list_inventory_view(
     # 他フィルタ非依存で全候補を返す＝複数選択チェックボックスの候補に使う）。
     cond_rows = await db.execute(
         text(
-            "SELECT i.condition, i.seal, i.search_cond, i.grade, i.damage, "
+            "SELECT i.raw_condition, i.seal, i.search_cond, i.grade, i.damage, "
             "COALESCE(NULLIF(i.unit, ''), p.unit) AS unit "
             "FROM public.inventory i "
             "LEFT JOIN public.products p ON p.id = i.product_id "
@@ -339,9 +339,9 @@ async def list_inventory_view(
     )
     condition_facet = sorted(
         {
-            resolve_condition_view(r) or r.get("condition")
+            resolve_condition_view(r)
             for r in cond_rows.mappings().all()
-            if (resolve_condition_view(r) or r.get("condition"))
+            if resolve_condition_view(r)
         }
     )
     unit_rows = await db.execute(
@@ -394,8 +394,10 @@ async def list_offers(
         conditions.append("i.product_id = :product_id")
         params["product_id"] = product_id
     if condition:
-        conditions.append("i.condition = :condition")
-        params["condition"] = condition
+        condition_clause, condition_params = build_condition_filter_clause([condition])
+        if condition_clause is not None:
+            conditions.append(condition_clause)
+            params.update(condition_params)
     if status_filter:
         conditions.append("i.status = :status_filter")
         params["status_filter"] = status_filter
@@ -427,7 +429,7 @@ async def list_offers(
         InventoryOfferResponse(
             **{
                 **dict(r),
-                "condition": resolve_condition_view(r) or r.get("condition"),
+                "condition": str(resolve_condition_view(r) or r.get("raw_condition") or ""),
             }
         )
         for r in result.mappings().all()
@@ -462,11 +464,11 @@ async def create_offer(
                 text(
                     """
                     INSERT INTO public.inventory
-                        (supplier_id, product_id, condition, quantity, unit_price, unit,
+                        (supplier_id, product_id, raw_condition, quantity, unit_price, unit,
                          seal, search_cond, grade, damage,
                          offer_type, ship_timing,
                          status, notes_ja, notes_en, expires_at, source)
-                    VALUES (:supplier_id, :product_id, :condition, :quantity, :unit_price, :unit,
+                    VALUES (:supplier_id, :product_id, :raw_condition, :quantity, :unit_price, :unit,
                             :seal, :search_cond, :grade, :damage,
                             :offer_type, :ship_timing,
                             :status, :notes_ja, :notes_en, :expires_at, :source)
@@ -474,7 +476,8 @@ async def create_offer(
                     """
                 ),
                 {
-                    **payload.model_dump(),
+                    **payload.model_dump(exclude={"condition"}),
+                    "raw_condition": payload.condition,
                     "seal": projection.seal,
                     "search_cond": projection.search_cond,
                     "grade": projection.grade,
@@ -496,7 +499,7 @@ async def create_offer(
     offer = await _load_offer(db, int(new_id))
     if offer is None:
         raise HTTPException(status_code=500, detail="INSERT 直後の取得に失敗しました")
-    offer["condition"] = resolve_condition_view(offer) or offer.get("condition")
+    offer["condition"] = str(resolve_condition_view(offer) or offer.get("raw_condition") or "")
     return InventoryOfferResponse(**offer)
 
 
@@ -550,10 +553,11 @@ async def update_offer(
     if offer is None:
         raise HTTPException(status_code=500, detail="UPDATE 直後の取得に失敗しました")
 
-    projection = project_inventory_axes(offer.get("condition"), offer.get("unit"))
+    source_condition = resolve_condition_view(offer) or offer.get("raw_condition")
+    projection = project_inventory_axes(source_condition, offer.get("unit"))
     log_axis_isolation(
         logger_=logger,
-        condition=offer.get("condition"),
+        condition=source_condition,
         unit=offer.get("unit"),
         context="inventory_offers.update_offer",
         projection=projection,
@@ -583,7 +587,7 @@ async def update_offer(
     offer = await _load_offer(db, offer_id)
     if offer is None:
         raise HTTPException(status_code=500, detail="UPDATE 直後の取得に失敗しました")
-    offer["condition"] = resolve_condition_view(offer) or offer.get("condition")
+    offer["condition"] = str(resolve_condition_view(offer) or offer.get("raw_condition") or "")
     return InventoryOfferResponse(**offer)
 
 

@@ -188,10 +188,10 @@ async def test_f11_upsert_inserts_when_condition_specified(engine):
             row = (
                 await conn.execute(
                     text(
-                        "SELECT supplier_id, product_id, condition, quantity, unit_price, "
+                        "SELECT supplier_id, product_id, quantity, unit_price, "
                         "       status, source, raw_condition, seal, search_cond, grade, damage "
                         "FROM public.inventory "
-                        "WHERE supplier_id = :sid AND product_id = :pid AND condition = 'new'"
+                        "WHERE supplier_id = :sid AND product_id = :pid"
                     ),
                     {"sid": supplier_id, "pid": int(pid)},
                 )
@@ -290,8 +290,7 @@ async def test_f11_upsert_updates_on_conflict(engine):
                     text(
                         "SELECT quantity, unit_price, raw_condition, seal, search_cond, grade, damage "
                         "FROM public.inventory "
-                        "WHERE supplier_id = :sid AND product_id = :pid "
-                        "  AND condition = 'used_a'"
+                        "WHERE supplier_id = :sid AND product_id = :pid"
                     ),
                     {"sid": supplier_id, "pid": int(pid)},
                 )
