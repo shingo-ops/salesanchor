@@ -28,7 +28,7 @@ from app.models import User
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-KPI_SCHEMA_VERSION = 3
+KPI_SCHEMA_VERSION = 4
 
 
 class DashboardResponse(BaseModel):
@@ -41,11 +41,6 @@ class DashboardResponse(BaseModel):
     lead_inbound_count: int = 0
     lead_outbound_count: int = 0
     lead_conversion_rate: float = 0.0
-    deal_count: int
-    deal_open_count: int
-    deal_won_count: int
-    deal_total_amount: float
-    deal_won_amount: float
     order_count: int
     order_pending_count: int
     order_total_amount: float
@@ -61,11 +56,8 @@ class DashboardResponse(BaseModel):
     inventory_value: float = 0.0
     supplier_count: int = 0
     po_pending_count: int = 0
-    # パイプライン（ステージ別）
-    pipeline_by_stage: list[dict] = []
     # 直近データ
     recent_companies: list[dict]
-    recent_deals: list[dict]
     recent_leads: list[dict] = []
     recent_quotes: list[dict] = []
     cached: bool = False
@@ -116,38 +108,6 @@ async def get_dashboard(
     lead_total = lead_row.get("total", 0) or 0
     lead_converted = lead_row.get("converted", 0) or 0
     conversion_rate = round((lead_converted / lead_total * 100), 1) if lead_total > 0 else 0.0
-
-    # 商談集計
-    result = await db.execute(text("""
-        SELECT
-            COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status = 'open') AS open_count,
-            COUNT(*) FILTER (WHERE status = 'won') AS won_count,
-            COALESCE(SUM(amount), 0) AS total_amount,
-            COALESCE(SUM(amount) FILTER (WHERE status = 'won'), 0) AS won_amount
-        FROM deals
-    """))
-    deal_row = result.mappings().first()
-
-    # パイプライン（ステージ別）
-    result = await db.execute(text("""
-        SELECT stage,
-               COUNT(*) AS count,
-               COALESCE(SUM(amount), 0) AS amount,
-               COALESCE(SUM(amount * probability / 100.0), 0) AS weighted_amount
-        FROM deals
-        WHERE status NOT IN ('won', 'lost')
-        GROUP BY stage
-        ORDER BY
-            CASE stage
-                WHEN 'open' THEN 1
-                WHEN 'negotiating' THEN 2
-                WHEN 'proposal' THEN 3
-                WHEN 'on_hold' THEN 4
-                ELSE 5
-            END
-    """))
-    pipeline = [dict(row) for row in result.mappings().all()]
 
     # 注文集計
     result = await db.execute(text("""
@@ -211,9 +171,6 @@ async def get_dashboard(
     """))
     recent_companies = [dict(row) for row in result.mappings().all()]
 
-    result = await db.execute(text("SELECT id, title, amount, status, created_at FROM deals ORDER BY created_at DESC LIMIT 5"))
-    recent_deals = [dict(row) for row in result.mappings().all()]
-
     result = await db.execute(text("SELECT id, customer_name, status, prospect_rank, created_at FROM leads ORDER BY created_at DESC LIMIT 5"))
     recent_leads = [dict(row) for row in result.mappings().all()]
 
@@ -227,11 +184,6 @@ async def get_dashboard(
         lead_inbound_count=lead_row.get("inbound", 0) or 0,
         lead_outbound_count=lead_row.get("outbound", 0) or 0,
         lead_conversion_rate=conversion_rate,
-        deal_count=deal_row["total"],
-        deal_open_count=deal_row["open_count"],
-        deal_won_count=deal_row["won_count"],
-        deal_total_amount=float(deal_row["total_amount"]),
-        deal_won_amount=float(deal_row["won_amount"]),
         order_count=order_row["total"],
         order_pending_count=order_row["pending_count"],
         order_total_amount=float(order_row["total_amount"]),
@@ -246,9 +198,7 @@ async def get_dashboard(
         inventory_value=float(product_row.get("value", 0) or 0),
         supplier_count=supplier_count,
         po_pending_count=po_pending,
-        pipeline_by_stage=pipeline,
         recent_companies=recent_companies,
-        recent_deals=recent_deals,
         recent_leads=recent_leads,
         recent_quotes=recent_quotes,
         cached=False,

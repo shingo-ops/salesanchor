@@ -87,18 +87,6 @@ interface FollowUps {
   upcoming: FollowUpItem[];
 }
 
-interface StalledDeal {
-  id: number;
-  title: string;
-  stage: string | null;
-  days_stalled: number;
-}
-
-interface StalledDealsReport {
-  stalled_count: number;
-  stalled_deals: StalledDeal[];
-}
-
 interface DashboardSummary {
   period: string;
   start_date: string;
@@ -108,12 +96,6 @@ interface DashboardSummary {
     converted: number;
     excluded: number;
     conversion_rate: number;
-  };
-  deals: {
-    total: number;
-    active: number;
-    won: number;
-    win_rate: number;
   };
   orders: {
     total_revenue: number;
@@ -144,9 +126,6 @@ interface KpiChange {
 interface PeriodComparison {
   leads_total: KpiChange;
   leads_cv_rate: KpiChange;
-  deals_active: KpiChange;
-  deals_won: KpiChange;
-  deals_win_rate: KpiChange;
   orders_revenue: KpiChange;
   orders_count: KpiChange;
 }
@@ -346,7 +325,6 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<GoalSummary | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [followups, setFollowups] = useState<FollowUps | null>(null);
-  const [stalled, setStalled] = useState<StalledDealsReport | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [revenueChart, setRevenueChart] = useState<RevenueChartResponse | null>(null);
 
@@ -361,13 +339,11 @@ export default function DashboardPage() {
       api.get<GoalSummary>(`/goals/summary?tab=${toApiTab(tab)}`),
       api.get<Forecast>("/analytics/forecast"),
       api.get<FollowUps>("/analytics/followups"),
-      api.get<StalledDealsReport>("/analytics/stalled-deals?threshold_days=14"),
     ])
-      .then(([g, f, fu, sd]) => {
+      .then(([g, f, fu]) => {
         setGoals(g);
         setForecast(f);
         setFollowups(fu);
-        setStalled(sd);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoadingFixed(false));
@@ -411,8 +387,7 @@ export default function DashboardPage() {
 
   const urgentCount =
     (followups?.overdue.length ?? 0) +
-    (followups?.due_today.length ?? 0) +
-    (stalled?.stalled_count ?? 0);
+    (followups?.due_today.length ?? 0);
 
   if (error) {
     return (
@@ -538,20 +513,6 @@ export default function DashboardPage() {
                   <span className="db-followup-action">{item.next_action || "-"}</span>
                 </div>
               ))}
-              {stalled && stalled.stalled_deals.slice(0, 3).map((d) => (
-                <div
-                  key={d.id}
-                  className="db-followup-item db-stalled db-followup-clickable"
-                  onClick={() => navigate("/deals")}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && navigate("/deals")}
-                >
-                  <span className="db-followup-badge db-badge-stalled">{t("dashboard.stalled")}</span>
-                  <span className="db-followup-name">{d.title}</span>
-                  <span className="db-followup-date">{d.days_stalled}{t("dashboard.daysNoUpdate")}</span>
-                </div>
-              ))}
               {followups && followups.upcoming.slice(0, 3).map((item) => (
                 <div
                   key={item.id}
@@ -654,31 +615,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-
-            {/* 商談（営業ビューとチームビューのみ表示・totalは削除）*/}
-            {(tab === "sales" || tab === "team") && (
-              <div className="db-metric-card">
-                <div className="db-metric-title">{t("dashboard.sectionDeals")}</div>
-                <div className="kpi-grid">
-                  <div className="kpi-card">
-                    <div className="kpi-value">{summary.deals.active}</div>
-                    <div className="kpi-label">{t("dashboard.dealActive")}</div>
-                    <VsPrev change={summary.comparison.deals_active} />
-                  </div>
-                  <div className="kpi-card accent">
-                    <div className="kpi-value">{summary.deals.won}</div>
-                    <div className="kpi-label">{t("dashboard.dealWon")}</div>
-                    <VsPrev change={summary.comparison.deals_won} />
-                  </div>
-                  <div className="kpi-card accent">
-                    <div className="kpi-value">{summary.deals.win_rate}%</div>
-                    <div className="kpi-label">{t("dashboard.winRate")}</div>
-                    <VsPrev change={summary.comparison.deals_win_rate} />
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 受注は統合カードに移動 */}
           </>
         ) : null}
