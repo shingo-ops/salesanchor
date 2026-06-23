@@ -7,7 +7,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.services.tenant import create_tenant_schema
+from app.services.tenant import (
+    get_rls_enable_sql,
+    get_rls_policy_sql,
+    get_tenant_tables_sql,
+    seed_default_channel_masters,
+    seed_system_roles,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATIONS_DIR = _REPO_ROOT / "migrations"
@@ -72,6 +78,14 @@ async def _apply_migration(admin_engine, filename: str) -> None:
             stmt = stmt.strip()
             if stmt:
                 await conn.exec_driver_sql(stmt)
+
+
+async def _execute_statements_preserving_do_blocks(db: AsyncSession, sql: str) -> None:
+    """DO block を壊さずに複数 SQL 文を順番に実行する。"""
+    for stmt in _split_sql_preserving_do_blocks(sql):
+        stmt = stmt.strip()
+        if stmt:
+            await db.execute(text(stmt))
 
 
 @asynccontextmanager
@@ -149,6 +163,67 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                         "description": key,
                         "category": resource,
                     },
-                )
-            schema_name = await create_tenant_schema(session, tenant_id, admin_db=session)
+            )
+            await session.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
+            await _execute_statements_preserving_do_blocks(
+                session,
+                get_tenant_tables_sql(schema_name, tenant_id),
+            )
+            for statement in (
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS messenger_link VARCHAR(1000)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS instagram_link VARCHAR(1000)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS whatsapp_link VARCHAR(1000)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_user_id VARCHAR(50)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_dm_channel_id VARCHAR(50)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_role_sync_status VARCHAR(20)",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_role_sync_at TIMESTAMPTZ",
+                f"ALTER TABLE {schema_name}.leads ADD COLUMN IF NOT EXISTS discord_guild_channel_id VARCHAR(50)",
+                f"CREATE INDEX IF NOT EXISTS idx_leads_discord_user_id ON {schema_name}.leads (tenant_id, discord_user_id) WHERE discord_user_id IS NOT NULL",
+                f"CREATE INDEX IF NOT EXISTS idx_leads_discord_guild_channel_id ON {schema_name}.leads (tenant_id, discord_guild_channel_id) WHERE discord_guild_channel_id IS NOT NULL",
+            ):
+                await session.execute(text(statement))
+            for statement in get_rls_enable_sql(schema_name).strip().split(";"):
+                statement = statement.strip()
+                if statement:
+                    await session.execute(text(statement))
+            await session.execute(text(get_rls_policy_sql(schema_name)))
+            await session.execute(text(f"""
+            DO $$
+            BEGIN
+              GRANT USAGE ON SCHEMA {schema_name} TO salesanchor_app;
+              GRANT SELECT, INSERT, UPDATE, DELETE
+                ON ALL TABLES IN SCHEMA {schema_name} TO salesanchor_app;
+              GRANT USAGE, SELECT
+                ON ALL SEQUENCES IN SCHEMA {schema_name} TO salesanchor_app;
+              ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA {schema_name}
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO salesanchor_app;
+              ALTER DEFAULT PRIVILEGES FOR ROLE jarvis IN SCHEMA {schema_name}
+                GRANT USAGE, SELECT ON SEQUENCES TO salesanchor_app;
+              RAISE NOTICE 'Granted salesanchor_app on schema: {schema_name}';
+            EXCEPTION WHEN others THEN
+              RAISE WARNING 'GRANT failed for %: %', '{schema_name}', SQLERRM;
+            END $$;
+            """))
+            await seed_system_roles(session, tenant_id, schema_name)
+            await seed_default_channel_masters(session, tenant_id, schema_name)
+            try:
+                async with session.begin_nested():
+                    await session.execute(
+                        text(
+                            "INSERT INTO public.tenant_settings "
+                            "(tenant_id, spreadsheet_phase, "
+                            " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                            " quote_validity_days, default_currency, document_language, "
+                            " duty_incoterms, issue_mode) "
+                            "VALUES (:tid, 'A', "
+                            " 'none', 0, 0, "
+                            " 1, 'JPY', 'en', "
+                            " 'DAP', 'pdf') "
+                            "ON CONFLICT (tenant_id) DO NOTHING"
+                        ),
+                        {"tid": int(tenant_id)},
+                    )
+            except Exception:
+                pass
     return schema_name
