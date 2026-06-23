@@ -174,9 +174,9 @@
   --sidebar-nav-icon-center-x: 33px;
 
   /* ---- Layout constraints ---- */
-  --max-width-page:          1200px; /* ページコンテンツ最大幅（.page / .page-container） */
-  --max-width-setup-guide:    900px; /* セットアップガイド コンテンツ幅上限（ETD等スクショ含む） */
-  --max-width-truncate:       200px; /* テキスト切り捨て最大幅（ドロップダウン説明・ユーザー名等） */
+  --max-width-page:     1200px; /* ページコンテンツ最大幅（.page / .page-container） */
+  --max-width-setup-guide: 900px; /* セットアップガイド コンテンツ幅上限（ETD等スクショ含む） */
+  --max-width-truncate:  200px; /* テキスト切り捨て最大幅（ドロップダウン説明・ユーザー名等） */
 
   /* ---- Page layout spacing（全ページ共通余白） ---- */
   --page-padding-x:  var(--space-6);  /* 24px — 左右余白 */
