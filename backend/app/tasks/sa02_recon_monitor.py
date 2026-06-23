@@ -18,6 +18,8 @@ from datetime import date, datetime, timezone
 import httpx
 from sqlalchemy import text
 
+from app.auth.dependencies import clear_tenant_context, set_tenant_context
+
 logger = logging.getLogger(__name__)
 
 _WEBHOOK_ENV = "ADMIN_NOTIFICATION_DISCORD_WEBHOOK"
@@ -63,23 +65,27 @@ async def _run_daily_recon() -> dict:
             tenant_id = int(row[0])
             schema = f"tenant_{tenant_id:03d}"
 
-            meta_result = await db.execute(
-                text(
-                    f"SELECT COUNT(*) FROM {schema}.meta_messages "
-                    f"WHERE created_at >= :since"
-                ),
-                {"since": today_start},
-            )
-            meta_count = int(meta_result.scalar() or 0)
+            await set_tenant_context(db, tenant_id)
+            try:
+                meta_result = await db.execute(
+                    text(
+                        f"SELECT COUNT(*) FROM {schema}.meta_messages "
+                        f"WHERE created_at >= :since"
+                    ),
+                    {"since": today_start},
+                )
+                meta_count = int(meta_result.scalar() or 0)
 
-            conv_result = await db.execute(
-                text(
-                    f"SELECT COUNT(*) FROM {schema}.conversation_logs "
-                    f"WHERE occurred_at >= :since AND direction = 'inbound'"
-                ),
-                {"since": today_start},
-            )
-            conv_count = int(conv_result.scalar() or 0)
+                conv_result = await db.execute(
+                    text(
+                        f"SELECT COUNT(*) FROM {schema}.conversation_logs "
+                        f"WHERE occurred_at >= :since AND direction = 'inbound'"
+                    ),
+                    {"since": today_start},
+                )
+                conv_count = int(conv_result.scalar() or 0)
+            finally:
+                await clear_tenant_context(db)
 
             meta_total += meta_count
             conv_total += conv_count
