@@ -35,15 +35,17 @@ export default function CarrierSetupGuidePage() {
   }
 
   return (
-    <PageLayout
-      navKey={NAV_KEY[carrier] ?? "nav.integrationFedex"}
-      subtitleKey="carrierIntegration.subtitle"
-    >
-      <FedexEtdSetupGuide
-        onOpenCredentialsTab={() =>
-          navigate(`/management-center/integrations/${carrier}`)
-        }
-      />
-    </PageLayout>
+    <div className="setup-guide-page">
+      <PageLayout
+        navKey={NAV_KEY[carrier] ?? "nav.integrationFedex"}
+        subtitleKey="carrierIntegration.subtitle"
+      >
+        <FedexEtdSetupGuide
+          onOpenCredentialsTab={() =>
+            navigate(`/management-center/integrations/${carrier}`)
+          }
+        />
+      </PageLayout>
+    </div>
   );
 }
