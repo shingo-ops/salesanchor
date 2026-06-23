@@ -19,6 +19,7 @@ interface CarrierStatus {
 interface StepDefinition {
   key: StepKey;
   title: string;
+  heading: string;
 }
 
 const ETD_ENABLED = import.meta.env.VITE_FEDEX_ETD_ENABLED === "true";
@@ -27,12 +28,12 @@ const PORTAL_URL = "https://developer.fedex.com/api/ja-jp/home.html";
 
 function StepCard({
   stepNumber,
-  title,
+  heading,
   children,
   isActive,
 }: {
   stepNumber: number;
-  title: string;
+  heading: string;
   children: ReactNode;
   isActive: boolean;
 }) {
@@ -40,7 +41,7 @@ function StepCard({
     <section className={`etd-guide__step card ${isActive ? "etd-guide__step--active" : ""}`}>
       <div className="etd-guide__step-header">
         <span className="etd-guide__step-number">{stepNumber}</span>
-        <strong>{title}</strong>
+        <strong>{heading}</strong>
       </div>
       {children}
     </section>
@@ -145,13 +146,13 @@ export function FedexEtdSetupGuide({
   );
 
   const stepDefinitions: StepDefinition[] = [
-    { key: "portal", title: t("carrierIntegration.fedexEtdGuideStep1Title") },
-    { key: "apis", title: t("carrierIntegration.fedexEtdGuideStep2Title") },
-    { key: "credentials", title: t("carrierIntegration.fedexEtdGuideStep3Title") },
+    { key: "portal", title: t("carrierIntegration.fedexEtdGuideStep1Title"), heading: t("carrierIntegration.fedexEtdGuideStep1Heading") },
+    { key: "apis", title: t("carrierIntegration.fedexEtdGuideStep2Title"), heading: t("carrierIntegration.fedexEtdGuideStep2Heading") },
+    { key: "credentials", title: t("carrierIntegration.fedexEtdGuideStep3Title"), heading: t("carrierIntegration.fedexEtdGuideStep3Heading") },
     ...(ETD_ENABLED
-      ? [{ key: "etd" as const, title: t("carrierIntegration.fedexEtdGuideStep4Title") }]
+      ? [{ key: "etd" as const, title: t("carrierIntegration.fedexEtdGuideStep4Title"), heading: t("carrierIntegration.fedexEtdGuideStep4Heading") }]
       : []),
-    { key: "done", title: t("carrierIntegration.fedexEtdGuideStep5Title") },
+    { key: "done", title: t("carrierIntegration.fedexEtdGuideStep5Title"), heading: t("carrierIntegration.fedexEtdGuideStep5Heading") },
   ];
 
   const currentStep = stepDefinitions[activeStepIndex] ?? stepDefinitions[0];
@@ -209,12 +210,6 @@ export function FedexEtdSetupGuide({
 
   return (
     <section className="etd-guide card">
-      <div className="etd-guide__header">
-        <p className="etd-guide__eyebrow">{t("carrierIntegration.fedexEtdGuideEyebrow")}</p>
-        <h3 className="etd-guide__title">{t("carrierIntegration.fedexEtdGuideTitle")}</h3>
-        <p className="form-hint">{t("carrierIntegration.fedexEtdGuideIntro")}</p>
-      </div>
-
       <div className="etd-guide__progress" aria-label={t("carrierIntegration.fedexEtdGuideProgressLabel")}>
         <div className="etd-guide__progress-track">
           <div
@@ -224,18 +219,18 @@ export function FedexEtdSetupGuide({
         </div>
         <div className="etd-guide__progress-meta">
           <span>{t("carrierIntegration.fedexEtdGuideProgress", { current: currentIndex, total: totalSteps })}</span>
-          <span>{currentStep?.title}</span>
+          <span>{currentStep?.heading}</span>
         </div>
       </div>
 
       {statusLoading && <p className="form-hint">{t("common.loading")}</p>}
       {statusError && <p className="error-message">{statusError}</p>}
 
-      <StepCard stepNumber={currentIndex} title={currentStep.title} isActive>
+      <StepCard stepNumber={currentIndex} heading={currentStep.heading} isActive>
         {currentStep.key === "portal" && (
           <>
             <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1Desc")}</p>
-            <div className="form-actions">
+            <div className="form-actions etd-guide__actions--left">
               <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="btn-primary">
                 {t("carrierIntegration.fedexEtdGuideOpenPortal")}
               </a>
@@ -245,61 +240,76 @@ export function FedexEtdSetupGuide({
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-1</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_1")}</p>
-                <img
-                  src="/images/fedex-setup/step1-01-my-projects.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <a href="/images/fedex-setup/step1-01-my-projects.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-01-my-projects.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-2</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_2")}</p>
-                <img
-                  src="/images/fedex-setup/step1-02-purpose.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <a href="/images/fedex-setup/step1-02-purpose.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-02-purpose.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-3</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_3")}</p>
-                <img
-                  src="/images/fedex-setup/step1-03-api-cards.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
-                <img
-                  src="/images/fedex-setup/step1-04-api-checklist.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <a href="/images/fedex-setup/step1-03-api-cards.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-03-api-cards.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
+                <a href="/images/fedex-setup/step1-04-api-checklist.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-04-api-checklist.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-4</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_4")}</p>
-                <img
-                  src="/images/fedex-setup/step1-05-config.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <a href="/images/fedex-setup/step1-05-config.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-05-config.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-5</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_5")}</p>
-                <img
-                  src="/images/fedex-setup/step1-06-confirm.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <a href="/images/fedex-setup/step1-06-confirm.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-06-confirm.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
               <li className="etd-guide__substep">
                 <p className="etd-guide__substep-label">1-6</p>
                 <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_6")}</p>
-                <img
-                  src="/images/fedex-setup/step1-07-overview.png"
-                  alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-                  className="etd-guide__screenshot"
-                />
+                <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1_6b")}</p>
+                <a href="/images/fedex-setup/step1-07-overview.png" target="_blank" rel="noopener noreferrer" className="etd-guide__screenshot-link">
+                  <img
+                    src="/images/fedex-setup/step1-07-overview.png"
+                    alt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+                    className="etd-guide__screenshot"
+                  />
+                </a>
               </li>
             </ol>
 
