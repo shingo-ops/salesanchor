@@ -181,6 +181,8 @@ async def seed_aggregated_dataset():
                     name_en             VARCHAR(255),
                     description         TEXT,
                     unit_price          NUMERIC(15, 2),
+                    unit_price_usd      NUMERIC(15, 2),
+                    unit_price_eur      NUMERIC(15, 2),
                     stock_quantity      INTEGER NOT NULL DEFAULT 0,
                     jan_code            VARCHAR(20),
                     card_number         VARCHAR(50),
