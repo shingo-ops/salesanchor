@@ -441,6 +441,8 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
+# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
+run_sql migrations/20260623_100000_rls_message_translations.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
