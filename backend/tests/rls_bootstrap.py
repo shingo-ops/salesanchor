@@ -94,7 +94,36 @@ async def bootstrap_public_products(admin_engine) -> None:
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
     """本番 migration 順で tenant schema を冪等に作成する。"""
     await bootstrap_public_products(admin_engine)
+    schema_name = f"tenant_{int(tenant_id):03d}"
+
     async with admin_engine.begin() as conn:
+        await conn.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": int(tenant_id)})
+
+        schema_exists = await conn.scalar(
+            text("""
+                SELECT 1
+                FROM information_schema.schemata
+                WHERE schema_name = :schema_name
+            """),
+            {"schema_name": schema_name},
+        )
+        leads_has_ai_collection_state = False
+        if schema_exists:
+            leads_has_ai_collection_state = bool(
+                await conn.scalar(
+                    text("""
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = :schema_name
+                          AND table_name = 'leads'
+                          AND column_name = 'ai_collection_state'
+                    """),
+                    {"schema_name": schema_name},
+                )
+            )
+        if schema_exists and not leads_has_ai_collection_state:
+            await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS public.users (
                 id INTEGER PRIMARY KEY,
