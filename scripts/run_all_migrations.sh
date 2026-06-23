@@ -429,9 +429,6 @@ run_sql migrations/20260615_235900_seed_pokemon_mega_products.sql
 # tcg_type_master 重複 code 統合（pokemon/weiss → pokemon_booster_box/weiss_schwarz）
 run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 
-# 在庫集計ルール（price_tolerance / stock_tolerance の正本テーブル）
-run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
-
 # Foundation F1: 国台帳 public.countries（ISO alpha-2 / 全テナント共有）
 run_sql migrations/20260621_010000_create_countries_master.sql
 
