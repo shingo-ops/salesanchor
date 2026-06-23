@@ -137,6 +137,7 @@ flex: 1; /* fill .schedule-main flex column */
 
 ### `.schedule-grid__viewport`（`frontend/src/pages/schedule.css` に定義なし）
 → **CSS 定義なし**（origin/main の schedule.css 全行 grep で 0 件）。
+→ JSX の `className` は `frontend/src/pages/schedule/SchedulePageImpl.tsx:1205` に残存。
 
 ---
 
