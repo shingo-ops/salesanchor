@@ -35,6 +35,9 @@
   gap: var(--space-4);
   padding: var(--space-5);
   margin-bottom: var(--space-4);
+  /* A: コンテンツ幅の上限（スクショ含む全コンテンツをカード内に収める） */
+  max-width: var(--max-width-setup-guide);
+  margin-inline: auto;
 }
 
 .etd-guide__header {
@@ -246,6 +249,9 @@
 
 .etd-guide__screenshot {
   width: 100%;
+  /* B: 保険。カードを突き破らないよう max-width で原寸制限・縦横比保持 */
+  max-width: 100%;
+  height: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   display: block;
