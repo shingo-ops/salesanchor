@@ -77,7 +77,7 @@ function StepCard({
   isActive: boolean;
 }) {
   return (
-    <section className={`etd-guide__step card ${isActive ? "etd-guide__step--active" : ""}`}>
+    <section className="etd-guide__step">
       <div className="etd-guide__step-header">
         <span className="etd-guide__step-number">{stepNumber}</span>
         <strong>{heading}</strong>
