@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/Badge";
 import "./FedexLabelValidationTab.css";
@@ -229,12 +229,21 @@ export function FedexEtdSetupGuide({
       <StepCard stepNumber={currentIndex} heading={currentStep.heading} isActive>
         {currentStep.key === "portal" && (
           <>
-            <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep1Desc")}</p>
-            <div className="form-actions etd-guide__actions--left">
-              <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                {t("carrierIntegration.fedexEtdGuideOpenPortal")}
-              </a>
-            </div>
+            <p className="form-hint">
+              <Trans
+                i18nKey="carrierIntegration.fedexEtdGuideStep1Desc"
+                components={{
+                  portalLink: (
+                    <a
+                      href={PORTAL_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="etd-guide__inline-link"
+                    />
+                  ),
+                }}
+              />
+            </p>
 
             <ol className="etd-guide__substeps">
               <li className="etd-guide__substep">
