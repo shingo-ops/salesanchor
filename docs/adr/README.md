@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-21 / ADR 総数: 142 件
+最終更新: 2026-06-23 / ADR 総数: 143 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -103,7 +103,7 @@
 | [ADR-092](./ADR-092-deploy-concurrency-control.md) | ADR-092: deploy.yml 多重実行防止（concurrency 制御 + コンテナ pre-cleanup） | Accepted | — | — |
 | [ADR-093](./ADR-093-inventory-table-product-master-redesign.md) | ADR-093: 在庫表 / 仕入元オファー / 商品マスタ 再設計 | Accepted | — | — |
 | [ADR-093](./ADR-093-sales-management-page.md) | ADR-093: 売上管理ページ（Single Source of Truth） | Proposed | — | — |
-| [ADR-094](./ADR-094-crm-definition-and-deals-reorganization.md) | ADR-094: CRM定義の明文化と「案件」→「商談」へのリネーム・CRM移管 | Proposed | — | — |
+| [ADR-094](./ADR-094-crm-definition-and-deals-reorganization.md) | ADR-094: CRM定義の明文化と「案件」→「商談」へのリネーム・CRM移管 | Proposed | Amended by ADR-142 | — |
 | [ADR-094](./ADR-094-sales-management-page.md) | ADR-094: 売上管理ページ（Single Source of Truth） | Proposed | — | — |
 | [ADR-095](./ADR-095-sa-ssot-two-backbone-architecture.md) | ADR-095: SSOT原則と「2本背骨」アーキテクチャ（ADR-SA-01） | Accepted | — | — |
 | [ADR-096](./ADR-096-sa-customer-master-crm-data-model.md) | ADR-096: 顧客マスタ／CRMデータモデル（顧客背骨・商談・会話ログ）（ADR-SA-02） | Accepted | — | — |
@@ -117,7 +117,7 @@
 | [ADR-104](./ADR-104-sa-payment-confirmation-status-pnl.md) | ADR-104: 入金確認・受注ステータスライフサイクル・完了・売上P&L（ADR-SA-10） | Accepted | — | — |
 | [ADR-105](./ADR-105-sa-trouble-refund.md) | ADR-105: トラブル／返金（ADR-SA-11） | Accepted | — | — |
 | [ADR-106](./ADR-106-sa-multitenant-policy.md) | ADR-106: マルチテナント＆「標準エンジン＋テナント別ポリシー」方針（ADR-SA-12） | Accepted | — | — |
-| [ADR-107](./ADR-107-sa-analytics-agent-a-customer-priority.md) | ADR-107 — 分析エージェント (A) 顧客優先度付け | Proposed | — | 2026-06-04 |
+| [ADR-107](./ADR-107-sa-analytics-agent-a-customer-priority.md) | ADR-107 — 分析エージェント (A) 顧客優先度付け | Proposed | Amended by ADR-142 | 2026-06-04 |
 | [ADR-108](./ADR-108-inbox-karte-panel-redesign.md) | ADR-108: 受信箱カルテの表示再編（商談／顧客／連絡先の再編・段階出し分け） | Proposed | — | — |
 | [ADR-109](./ADR-109-leads-status-ssot-immutable-codes.md) | ADR-109: status の SSOT化（不変コード＋i18nラベル） | Accepted | — | — |
 | [ADR-110](./ADR-110-karte-reference-alignment.md) | ADR-110: 受信箱カルテをリファレンスに一致させる是正（ADR-108 実装是正） | Accepted | — | — |
@@ -154,11 +154,12 @@
 | [ADR-137](./ADR-137-fedex-etd-paperless-trade.md) | ADR-137: FedEx ETD / Paperless Trade 連携 | — | — | — |
 | [ADR-137](./ADR-137-nginx-config-deploy-reliability.md) | ADR-137: nginx 反映の確実化（inode ズレ対策 + 502 再発防止） | Completed（PR-A・PR-B 両問題とも解消済み） | — | — |
 | [ADR-137](./ADR-137-v-company-stats-ssot-filter.md) | ADR-137: v_company_stats フィルタ定義統一（取引額 SSOT） | Accepted | — | — |
-| [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | — | — |
+| [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | Amended by ADR-142 | — |
 | [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Accepted | — | — |
-| [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
+| [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | Amended by ADR-142 | — |
 | [ADR-140](./ADR-140-mobile-nav-bottom-tabs.md) | ADR-140: モバイルナビ刷新 — 下部タブバー方式への移行 | Accepted | — | — |
 | [ADR-141](./ADR-141-inbound-translation-entry.md) | ADR-141: 受信翻訳の標準入口を `enqueue_inbound_translation()` に統一する | Accepted | — | — |
+| [ADR-142](./ADR-142-order-based-conversion-definition.md) | ADR-142: 成約定義の一本化（受注ベース） | Accepted | Amends ADR-094, Amends ADR-107, Amends ADR-138, Amends ADR-139 | 2026-06-23 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 

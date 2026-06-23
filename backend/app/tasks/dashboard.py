@@ -20,6 +20,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.auth.dependencies import set_tenant_context_sync
+from app.services.conversion_metrics import lead_has_successful_order_sql
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 DASHBOARD_CACHE_TTL = 660  # 11分（10分の更新間隔 + 1分のバッファ）
 
 # KPIキャッシュのスキーマバージョン。ルーター側の KPI_SCHEMA_VERSION と揃える。
-KPI_SCHEMA_VERSION = 4
+KPI_SCHEMA_VERSION = 5
 
 
 def _get_sync_engine():
@@ -62,6 +63,14 @@ def _compute_kpis(session, tenant_id: int) -> dict:
         FROM leads
     """))
     lead_row = r.mappings().first() or {"total": 0, "open_count": 0}
+
+    r = session.execute(text(f"""
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE {lead_has_successful_order_sql('l')}) AS converted
+        FROM leads l
+    """))
+    lead_conversion_row = r.mappings().first() or {"total": 0, "converted": 0}
 
     # 注文集計
     r = session.execute(text("""
@@ -102,6 +111,10 @@ def _compute_kpis(session, tenant_id: int) -> dict:
         "company_count": company_count,
         "lead_count": lead_row["total"],
         "lead_open_count": lead_row["open_count"],
+        "lead_conversion_rate": round(
+            (lead_conversion_row["converted"] / lead_conversion_row["total"] * 100),
+            1,
+        ) if lead_conversion_row["total"] else 0.0,
         "order_count": order_row["total"],
         "order_pending_count": order_row["pending_count"],
         "order_total_amount": float(order_row["total_amount"]),

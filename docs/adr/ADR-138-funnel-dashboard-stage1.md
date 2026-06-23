@@ -11,6 +11,9 @@
 
 ## Context（問題とrecon結果）
 
+> 注: 本 ADR の『成約』表現の正式定義は ADR-142 で受注ベースに上書き済み。
+Amended by ADR-142
+
 現状の DashboardPage（`frontend/src/pages/dashboard/DashboardPage.tsx:748行`）は売上推移・フォローアップ件数・目標のみを表示しており、以下が欠如している:
 
 1. **ファネル段階別の目標対比・転換率** — leads→deals→won の段階ごとに実績と目標を並べられない

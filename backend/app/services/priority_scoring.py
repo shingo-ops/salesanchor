@@ -182,7 +182,7 @@ async def calibrate_tenant_weights(
             JOIN leads l ON l.id = ml.lead_id
             JOIN invoices i ON i.lead_id = l.id
             WHERE ml.direction = 'inbound'
-              AND i.status != 'cancelled'
+              AND i.status != 'voided'
             """
         )
     )

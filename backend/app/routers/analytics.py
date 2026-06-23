@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
 from app.database import get_db
 from app.models import User
+from app.services.conversion_metrics import lead_has_successful_order_sql
 from app.services.time import _jst_month_range_utc
 
 router = APIRouter()
@@ -88,19 +89,19 @@ async def conversion_analysis(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """担当者別のリード→案件コンバージョン分析"""
+    """担当者別のリード→受注ベース成約分析"""
     result = await db.execute(text("""
         SELECT
             l.assigned_to AS user_id,
             u.username,
             COUNT(*) AS lead_count,
-            COUNT(l.converted_deal_id) AS converted_count
+            COUNT(*) FILTER (WHERE {converted_pred}) AS converted_count
         FROM leads l
         LEFT JOIN public.users u ON u.id = l.assigned_to
         WHERE l.assigned_to IS NOT NULL
         GROUP BY l.assigned_to, u.username
         ORDER BY converted_count DESC
-    """))
+    """.format(converted_pred=lead_has_successful_order_sql("l"))))
     rows = result.mappings().all()
 
     entries = []
@@ -478,15 +479,16 @@ async def dashboard_summary(
         assign_filter_leads = ""
         assign_filter_deals = ""
         params = {"start": start_date, "end": end_date}
+    converted_pred = lead_has_successful_order_sql("l")
 
     # リード集計
     lead_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
+                COUNT(*) FILTER (WHERE {converted_pred}) AS converted,
                 COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded
-            FROM leads
+            FROM leads l
             WHERE {date_filter}
             {assign_filter_leads}
         """),
@@ -542,8 +544,8 @@ async def dashboard_summary(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted
-            FROM leads
+                COUNT(*) FILTER (WHERE {converted_pred}) AS converted
+            FROM leads l
             WHERE {date_filter}
             {assign_filter_leads}
         """),
@@ -1003,12 +1005,13 @@ async def _fetch_attribute_conversion_axis(
     overall_rate: float,
 ) -> AttributeConversionAxis:
     """属性1軸分の集計を返す。"""
+    converted_pred = lead_has_successful_order_sql("l")
     result = await db.execute(
         text(f"""
             SELECT
                 {value_expr} AS value,
                 COUNT(*) AS n,
-                COUNT(l.converted_deal_id) AS conversions
+                SUM(CASE WHEN {converted_pred} THEN 1 ELSE 0 END) AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
@@ -1041,11 +1044,12 @@ async def _fetch_attribute_conversion_summary(
     scope_params: dict[str, object],
 ) -> tuple[float, AttributeConversionResponse]:
     """属性別成約率の全体値と5軸集計をまとめて返す。"""
+    converted_pred = lead_has_successful_order_sql("l")
     overall_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS n,
-                COUNT(l.converted_deal_id) AS conversions
+                SUM(CASE WHEN {converted_pred} THEN 1 ELSE 0 END) AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
@@ -1084,7 +1088,7 @@ async def conversion_by_attribute_summary(
     """
     リード属性別の成約率を all-time で返す read-only 集計。
 
-    - 成約定義: leads.converted_deal_id IS NOT NULL
+    - 成約定義: lead の company が non-cancelled order を持つ
     - 5軸: channel_type / country / sales_form / temperature / response_speed
     - 率は 0〜1 の小数で返す
     """

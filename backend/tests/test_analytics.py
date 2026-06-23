@@ -81,6 +81,86 @@ async def _seed_orders(client, pairs, count: int = 3):
     return orders
 
 
+async def _seed_order_based_conversion_dataset(db_session):
+    """受注ベース成約の共通データセットを投入する。"""
+    today = date.today()
+    rows = [
+        (1001, 999, "OrderLead1", "instagram", "JP", "physical_store", "Hot", "24h以内", 999, 100.0),
+        (1002, 999, "OrderLead2", "instagram", "JP", "physical_store", "Warm", "3日以内", 999, 300.0),
+        (1003, 999, "OrderLead3", "cold_call", "US", None, "Cold", "3日超", 999, None),
+        (1004, 999, "OrderLead4", "messenger", "CA", "online", "Warm", "3日以内", 321, 9999.0),
+    ]
+    for lead_id, tenant_id, customer_name, channel_type, country, sales_form, temperature, response_speed, assigned_to, monthly_forecast in rows:
+        await db_session.execute(text("""
+            INSERT INTO leads (
+                id, tenant_id, customer_name, channel_type, country, sales_form,
+                temperature, response_speed, assigned_to, monthly_forecast, created_at, status
+            )
+            VALUES (:id, :tenant_id, :customer_name, :channel_type, :country, :sales_form,
+                    :temperature, :response_speed, :assigned_to, :monthly_forecast, :dt, 'lead')
+        """), {
+            "id": lead_id,
+            "tenant_id": tenant_id,
+            "customer_name": customer_name,
+            "channel_type": channel_type,
+            "country": country,
+            "sales_form": sales_form,
+            "temperature": temperature,
+            "response_speed": response_speed,
+            "assigned_to": assigned_to,
+            "monthly_forecast": monthly_forecast,
+            "dt": str(today),
+        })
+
+    company_rows = [
+        (2001, 999, "ORD-COMP-1A", 1001, "OrderLead1 Co A"),
+        (2002, 999, "ORD-COMP-1B", 1001, "OrderLead1 Co B"),
+        (2003, 999, "ORD-COMP-2", 1002, "OrderLead2 Co"),
+        (2004, 999, "ORD-COMP-4", 1004, "OrderLead4 Co"),
+    ]
+    for company_id, tenant_id, company_code, lead_id, name in company_rows:
+        await db_session.execute(text("""
+            INSERT INTO companies (id, tenant_id, company_code, lead_id, name, created_at, updated_at)
+            VALUES (:id, :tenant_id, :company_code, :lead_id, :name, :dt, :dt)
+        """), {
+            "id": company_id,
+            "tenant_id": tenant_id,
+            "company_code": company_code,
+            "lead_id": lead_id,
+            "name": name,
+            "dt": str(today),
+        })
+
+    order_rows = [
+        (3001, 999, 2001, "ORD-1001-A", 100.0, "pending"),
+        (3002, 999, 2002, "ORD-1001-B", 150.0, "completed"),
+        (3003, 999, 2003, "ORD-1002", 200.0, "cancelled"),
+        (3004, 999, 2004, "ORD-1004", 400.0, "pending"),
+    ]
+    for order_id, tenant_id, company_id, order_number, total_amount, status in order_rows:
+        await db_session.execute(text("""
+            INSERT INTO orders (
+                id, tenant_id, company_id, order_number, total_amount, status, created_at, updated_at
+            )
+            VALUES (:id, :tenant_id, :company_id, :order_number, :total_amount, :status, :dt, :dt)
+        """), {
+            "id": order_id,
+            "tenant_id": tenant_id,
+            "company_id": company_id,
+            "order_number": order_number,
+            "total_amount": total_amount,
+            "status": status,
+            "dt": str(today),
+        })
+    await db_session.commit()
+
+    return {
+        "lead_ids": [1001, 1002, 1003, 1004],
+        "company_ids": [2001, 2002, 2003, 2004],
+        "order_ids": [3001, 3002, 3003, 3004],
+    }
+
+
 # ─────────────────────────────────────────────
 # 既存5EP スモークテスト
 # ─────────────────────────────────────────────
@@ -95,6 +175,23 @@ class TestExistingEPSmoke:
         data = res.json()
         assert data["overall_rate"] == 0.0
         assert data["entries"] == []
+
+    async def test_conversion_by_user_uses_order_based_conversion(self, client, db_session):
+        """担当者別 conversion は company→order ベースで数える"""
+        await _seed_order_based_conversion_dataset(db_session)
+
+        res = await client.get("/api/v1/analytics/conversion")
+        assert res.status_code == 200, res.text
+        data = res.json()
+
+        entries_by_user = {entry["user_id"]: entry for entry in data["entries"]}
+        assert data["overall_rate"] == pytest.approx(50.0, abs=1e-4)
+        assert entries_by_user[999]["lead_count"] == 3
+        assert entries_by_user[999]["converted_count"] == 1
+        assert entries_by_user[999]["conversion_rate"] == pytest.approx(33.3, abs=1e-1)
+        assert entries_by_user[321]["lead_count"] == 1
+        assert entries_by_user[321]["converted_count"] == 1
+        assert entries_by_user[321]["conversion_rate"] == pytest.approx(100.0, abs=1e-4)
 
     @pytest.mark.skip(reason="FILTER (WHERE ...) + ::date cast is PostgreSQL-specific")
     async def test_stalled_deals_empty(self, client):
@@ -646,20 +743,7 @@ class TestConversionByAttribute:
 
     async def test_conversion_by_attribute_team_and_mine(self, client, db_session):
         """team / mine の差、n、収縮率、overall_rate が返る"""
-        today = date.today()
-
-        await db_session.execute(text("""
-            INSERT INTO leads (
-                tenant_id, customer_name, channel_type, country, sales_form,
-                temperature, response_speed, assigned_to, converted_deal_id, created_at
-            )
-            VALUES
-                (999, 'AttrLead1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, 1001, :dt),
-                (999, 'AttrLead2', 'instagram', 'JP', 'physical_store', 'Warm', '3日以内', 999, NULL, :dt),
-                (999, 'AttrLead3', 'cold_call', 'US', 'ec_site', 'Cold', '3日超', 999, NULL, :dt),
-                (999, 'AttrLead4', 'cold_call', 'US', 'other', 'Hot', '24h以内', 321, 1002, :dt)
-        """), {"dt": str(today)})
-        await db_session.commit()
+        await _seed_order_based_conversion_dataset(db_session)
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200
@@ -672,16 +756,16 @@ class TestConversionByAttribute:
         assert instagram["conversions"] == 1
         assert instagram["raw_rate"] == pytest.approx(0.5, abs=1e-4)
         assert instagram["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
-        assert cold_call["n"] == 2
-        assert cold_call["conversions"] == 1
-        assert cold_call["raw_rate"] == pytest.approx(0.5, abs=1e-4)
-        assert cold_call["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert cold_call["n"] == 1
+        assert cold_call["conversions"] == 0
+        assert cold_call["raw_rate"] == pytest.approx(0.0, abs=1e-4)
+        assert cold_call["smoothed_rate"] == pytest.approx((0 + 10 * 0.5) / 11, abs=1e-4)
 
         country = {row["value"]: row for row in team["country"]["items"]}
         assert country["JP"]["n"] == 2
         assert country["JP"]["conversions"] == 1
-        assert country["US"]["n"] == 2
-        assert country["US"]["conversions"] == 1
+        assert country["US"]["n"] == 1
+        assert country["US"]["conversions"] == 0
 
         mine_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=mine")
         assert mine_res.status_code == 200
@@ -722,20 +806,7 @@ class TestPriorityProspects:
 
     async def test_priority_prospects_rank_and_median_fallback(self, client, db_session):
         """team の smoothed_rate 平均、中央値代替、降順、欠軸除外を検証"""
-        today = date.today()
-
-        await db_session.execute(text("""
-            INSERT INTO leads (
-                tenant_id, customer_name, channel_type, country, sales_form,
-                temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
-            )
-            VALUES
-                (999, 'PriorityLead1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, 1001, 100, :dt),
-                (999, 'PriorityLead2', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, NULL, 300, :dt),
-                (999, 'PriorityLead3', 'cold_call', 'US', NULL, 'Cold', '3日超', 999, NULL, NULL, :dt),
-                (999, 'PriorityLead4', 'messenger', 'CA', 'online', 'Warm', '3日以内', 321, 2001, 9999, :dt)
-        """), {"dt": str(today)})
-        await db_session.commit()
+        await _seed_order_based_conversion_dataset(db_session)
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200

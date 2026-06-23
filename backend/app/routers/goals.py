@@ -32,6 +32,7 @@ from app.schemas.goal import (
     GoalWithActual,
 )
 from app.services.audit import record_audit_log
+from app.services.conversion_metrics import lead_has_successful_order_sql
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -360,9 +361,11 @@ async def _fetch_actuals(
         end = start + timedelta(days=7)
 
     if tab == "team":
-        assign_filter = "assigned_to IN (SELECT user_id FROM team_members WHERE team_id = :owner_id)"
+        assign_filter_leads = "l.assigned_to IN (SELECT user_id FROM team_members WHERE team_id = :owner_id)"
+        assign_filter_deals = "d.assigned_to IN (SELECT user_id FROM team_members WHERE team_id = :owner_id)"
     else:
-        assign_filter = "assigned_to = :owner_id"
+        assign_filter_leads = "l.assigned_to = :owner_id"
+        assign_filter_deals = "d.assigned_to = :owner_id"
 
     params = {"owner_id": owner_id, "start": start, "end": end}
 
@@ -381,8 +384,8 @@ async def _fetch_actuals(
     r = await db.execute(
         text(f"""
             SELECT COUNT(*) AS val
-            FROM deals
-            WHERE {assign_filter}
+            FROM deals d
+            WHERE {assign_filter_deals}
               AND created_at >= :start AND created_at < :end
         """),
         params,
@@ -395,8 +398,8 @@ async def _fetch_actuals(
             SELECT
                 COUNT(*) FILTER (WHERE status = 'won') AS won,
                 COUNT(*) AS total
-            FROM deals
-            WHERE {assign_filter}
+            FROM deals d
+            WHERE {assign_filter_deals}
               AND created_at >= :start AND created_at < :end
         """),
         params,
@@ -410,8 +413,8 @@ async def _fetch_actuals(
     r = await db.execute(
         text(f"""
             SELECT COUNT(*) AS val
-            FROM leads
-            WHERE {assign_filter}
+            FROM leads l
+            WHERE {assign_filter_leads}
               AND created_at >= :start AND created_at < :end
         """),
         params,
@@ -422,10 +425,10 @@ async def _fetch_actuals(
     r = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
+                COUNT(*) FILTER (WHERE {lead_has_successful_order_sql('l')}) AS converted,
                 COUNT(*) AS total
-            FROM leads
-            WHERE {assign_filter}
+            FROM leads l
+            WHERE {assign_filter_leads}
               AND created_at >= :start AND created_at < :end
         """),
         params,

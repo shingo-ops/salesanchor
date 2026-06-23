@@ -4,6 +4,7 @@
 **Date:** 2026-06-04
 **Authors:** Planner（壁打ち確定）→ Claude Code（Generator）
 **Supersedes:** —
+Amended by ADR-142
 **Related:** ADR-025（外部AI連携3点セット）, ADR-072（write後テナントリセット）, ADR-106（マルチテナントポリシー）
 
 ---
@@ -23,7 +24,7 @@
 | `conversation_logs` | `meta_messages` | `migrations/012_add_meta_tenant_tables.sql:8` | tenant_id/lead_id/direction/message_text 列あり。`sa-foundation-pr4-conv-logs` で拡張予定（IN_PROGRESS） |
 | `deals` | `deals` テーブル | `backend/app/schemas/deal.py:1` / `backend/app/routers/deals.py:1` / `migrations/003_add_phase1_tenant_tables.sql:148` | probability(int 0-100), status, stage, lost_reason(VARCHAR) 列あり |
 | `lost_reason_code` (C-1) | `deals.lost_reason` (VARCHAR) | `backend/app/schemas/deal.py:62` | 現在は自由テキスト。enum 化（7択）は `sa-foundation-pr2-audit-fix` で追加予定（IN_PROGRESS） |
-| `invoices` | `invoices` テーブル | `backend/app/schemas/invoice.py:1` / `migrations/005_add_phase2_tenant_tables.sql:109` | status ≠ cancelled = 有効請求書（§28 記録の成約判定） |
+| `invoices` | `invoices` テーブル | `backend/app/schemas/invoice.py:1` / `migrations/005_add_phase2_tenant_tables.sql:109` | status ≠ voided = 有効請求書（§28 記録の成約判定） |
 | `contact` | `contacts` テーブル | `backend/app/schemas/contact.py:1` / `migrations/029_create_contacts.sql:1` | company_id FK, lead_id, is_primary_contact |
 | `company` | `companies` テーブル | `backend/app/schemas/company.py:1` / `migrations/028_create_companies.sql:1` | trust_level(int 1-5), priority_focus(text) 既存 |
 | `顧客タイプ` | `LeadCustomerType` enum | `backend/app/schemas/lead.py:52` | "信頼重視" / "価格重視" の2択（leads テーブル） |
@@ -63,7 +64,7 @@
 
 ## 教師ラベル
 
-- 勝ち = 有効請求書での成約（`invoices.status ≠ cancelled`）
+- 勝ち = 有効請求書での成約（`invoices.status ≠ voided`）
 - 負け = `deals.lost_reason`（`lost_reason_code` enum 化後は7択）
 
 ---
@@ -92,7 +93,7 @@
 
 - `meta_messages`（= conversation_logs 実体） — テナントスキーマ内
 - `deals` + `lost_reason` / `lost_reason_code`（sa-foundation-pr2 マージ後は enum）
-- `invoices`（status ≠ cancelled = 有効請求書）
+- `invoices`（status ≠ voided = 有効請求書）
 - `contacts` / `companies`
 - すべてテナント私有面。テナント越境参照禁止。
 

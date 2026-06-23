@@ -5,12 +5,11 @@ Celeryブローカー不要: タスクのロジックとAPIエンドポイント
 """
 
 import os
+
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
 import json
-from unittest.mock import patch, MagicMock, AsyncMock
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestCeleryAppConfig:
@@ -161,10 +160,11 @@ class TestReportsAPI:
 
     async def test_export_request_valid_type(self):
         """有効なレポートタイプでエクスポートリクエストが受け付けられること"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -199,10 +199,11 @@ class TestReportsAPI:
 
     async def test_export_request_invalid_type(self):
         """無効なレポートタイプで422が返ること"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -229,10 +230,11 @@ class TestReportsAPI:
 
     async def test_download_not_found(self):
         """存在しないタスクIDで404が返ること"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -260,10 +262,11 @@ class TestReportsAPI:
 
     async def test_export_status_returns_pending(self):
         """タスクステータスエンドポイントが PENDING を返すこと"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -295,10 +298,11 @@ class TestReportsAPI:
 
     async def test_export_status_redis_failure_returns_unknown(self):
         """結果バックエンド障害時は UNKNOWN ステータスを返すこと"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -329,10 +333,11 @@ class TestDashboardCacheIntegration:
 
     async def test_dashboard_cache_hit(self):
         """キャッシュヒット時にキャッシュデータが返ること"""
-        from app.main import app
-        from app.auth.dependencies import get_current_user, get_current_tenant
+        from httpx import ASGITransport, AsyncClient
+
+        from app.auth.dependencies import get_current_tenant, get_current_user
         from app.database import get_db
-        from httpx import AsyncClient, ASGITransport
+        from app.main import app
         from app.models import User
 
         mock_user = User()
@@ -347,12 +352,13 @@ class TestDashboardCacheIntegration:
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_current_tenant] = lambda: 999
 
-        # schema_version=4 を含む最新スキーマのキャッシュ（商談KPI除去後）
+        # schema_version=5 を含む最新スキーマのキャッシュ（受注ベース conversion_rate 対応後）
         cached_kpi = json.dumps({
-            "schema_version": 4,
+            "schema_version": 5,
             "company_count": 42,
             "lead_count": 7,
             "lead_open_count": 4,
+            "lead_conversion_rate": 28.6,
             "order_count": 20,
             "order_pending_count": 3,
             "order_total_amount": 800000.0,

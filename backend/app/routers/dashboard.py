@@ -24,11 +24,12 @@ from app.auth.dependencies import get_current_tenant, get_current_user, require_
 from app.cache import get_redis
 from app.database import get_db
 from app.models import User
+from app.services.conversion_metrics import lead_has_successful_order_sql
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-KPI_SCHEMA_VERSION = 4
+KPI_SCHEMA_VERSION = 5
 
 
 class DashboardResponse(BaseModel):
@@ -95,14 +96,14 @@ async def get_dashboard(
     company_count = result.scalar() or 0
 
     # リード集計
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             COUNT(*) AS total,
             COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'out_of_scope')) AS open_count,
             COUNT(*) FILTER (WHERE type = 'Inbound') AS inbound,
             COUNT(*) FILTER (WHERE type = 'Outbound') AS outbound,
-            COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted
-        FROM leads
+            COUNT(*) FILTER (WHERE {lead_has_successful_order_sql('l')}) AS converted
+        FROM leads l
     """))
     lead_row = result.mappings().first() or {}
     lead_total = lead_row.get("total", 0) or 0
