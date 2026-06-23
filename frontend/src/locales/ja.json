@@ -231,6 +231,7 @@
     "productionFixed": "本番環境（固定）",
     "tabCredentials": "API連携設定",
     "tabIntegrationGuide": "連携ガイド",
+    "openSetupGuide": "セットアップガイドを開く",
     "tabLabelValidation": "Label Validation申請支援",
     "tabProduction": "本番",
     "tabSandbox": "Sandbox",
