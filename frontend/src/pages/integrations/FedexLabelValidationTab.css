@@ -44,6 +44,12 @@
 
 /* ── ステップインジケーター ── */
 .etd-stepper {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-dropdown);
+  background: var(--bg-primary);
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
   margin-bottom: var(--space-4);
 }
 
