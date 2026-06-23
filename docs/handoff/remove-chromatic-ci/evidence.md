@@ -1,3 +1,7 @@
+# Chromatic workflow snapshot
+
+This is a snapshot of the deleted `.github/workflows/chromatic.yml` file retained for process-artifacts evidence.
+
 name: Chromatic Visual Testing
 
 on:

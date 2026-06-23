@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/remove-chromatic-ci | Chromatic CI 削除（Chromatic Snapshot / UI Tests の配線整理） | 2026-06-23 | IN_PROGRESS | | | `.github/workflows/chromatic.yml` / `docs/handoff/remove-chromatic-ci/recon.md` / `docs/handoff/remove-chromatic-ci/design.md` |
 | feature/morimoto/inventory-aggregated | GET /inventory/aggregated エンドポイント（集計ピボット・best-pick） | 2026-06-23 | IN_PROGRESS | #2514 | | inventory_aggregated_service + router + migration 20260620_010000 |
 | feature/morimoto/ssot-tcg-type-fk | SSOT大掃除② `products.tcg_type` FK固定 | 2026-06-22 | IN_PROGRESS | | | `backend/app/routers/products.py` / `backend/tests/conftest.py` / `backend/tests/test_products.py` / `backend/tests/test_products_tcg_type_fk.py` / `frontend/src/pages/products/ProductEditPage.tsx` / `frontend/tests-e2e/product-edit-tcg-type.spec.ts` / `migrations/20260623_030000_add_products_tcg_type_fk.sql` / `scripts/run_all_migrations.sh` / `tasks/todo.md` / `public.products` bootstrap for PG-RLS via actual migration files |
 | feature/fedex-etd-guide-clean | FedEx ETD 設定ガイド Level1 / ETD upload 422 ガード | 2026-06-22 | IN_PROGRESS | | | feature/morimoto/fedex-etd-migration からガイドを分離したクリーンブランチ |
