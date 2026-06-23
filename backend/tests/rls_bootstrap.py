@@ -40,7 +40,36 @@ def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
     i = 0
     in_dollar = False
     dollar_tag = ""
+    in_line_comment = False
+    in_block_comment = False
     while i < len(sql):
+        if in_line_comment:
+            buf.append(sql[i])
+            if sql[i] == "\n":
+                in_line_comment = False
+            i += 1
+            continue
+        if in_block_comment:
+            buf.append(sql[i])
+            if sql[i] == "*" and i + 1 < len(sql) and sql[i + 1] == "/":
+                buf.append("/")
+                i += 2
+                in_block_comment = False
+            else:
+                i += 1
+            continue
+        if not in_dollar and sql[i] == "-" and i + 1 < len(sql) and sql[i + 1] == "-":
+            buf.append(sql[i])
+            buf.append(sql[i + 1])
+            i += 2
+            in_line_comment = True
+            continue
+        if not in_dollar and sql[i] == "/" and i + 1 < len(sql) and sql[i + 1] == "*":
+            buf.append(sql[i])
+            buf.append(sql[i + 1])
+            i += 2
+            in_block_comment = True
+            continue
         if sql[i] == "$":
             j = i + 1
             if j < len(sql) and sql[j] == "$":
