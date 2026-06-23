@@ -95,7 +95,8 @@ async def _upsert_inventory_offer(
 
     UNIQUE(supplier_id, product_id, seal, search_cond, grade, damage, unit,
     offer_type, ship_timing)。products.stock_quantity（中央在庫）とは独立しており、
-    この関数は中央在庫を一切変更しない。F11 AC11.3 の UPSERT を delta_qty>0 経路と
+    この関数は中央在庫を一切変更しない。public.inventory.condition は保存しない
+    （raw_condition と軸列だけを持つ）。F11 AC11.3 の UPSERT を delta_qty>0 経路と
     delta_qty=0 経路 (Option Z) の双方から共用するための helper。
 
     注意:
@@ -121,11 +122,11 @@ async def _upsert_inventory_offer(
         text(
             """
             INSERT INTO public.inventory
-                (supplier_id, product_id, condition, raw_condition, quantity,
+                (supplier_id, product_id, raw_condition, quantity,
                  unit_price, unit, seal, search_cond, grade, damage,
                  offer_type, ship_timing,
                  status, source, offered_at, expires_at)
-            VALUES (:sid, :pid, :cond, :raw_cond, :qty, :up, :unit, :seal,
+            VALUES (:sid, :pid, :raw_cond, :qty, :up, :unit, :seal,
                     :search_cond, :grade, :damage,
                     :offer_type, :ship_timing,
                     'in_stock', 'f6_approved',
@@ -162,7 +163,6 @@ async def _upsert_inventory_offer(
         {
             "sid": supplier_id,
             "pid": product_id,
-            "cond": str(condition),
             "raw_cond": persisted_raw_condition,
             "qty": int(quantity),
             "up": int(unit_price),

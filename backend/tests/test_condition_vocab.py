@@ -100,7 +100,7 @@ def test_axes_to_aggkey_round_trips_ver41_keys_and_excludes_pack() -> None:
     assert axes_to_aggkey(unit="bulk", seal="sealed", damage=False) is None
 
 
-def test_resolve_condition_view_prefers_axes_and_falls_back_to_condition() -> None:
+def test_resolve_condition_view_prefers_axes_and_falls_back_to_raw_condition() -> None:
     with_axes = {
         "condition": "unknown",
         "unit": "box",
@@ -109,7 +109,7 @@ def test_resolve_condition_view_prefers_axes_and_falls_back_to_condition() -> No
         "grade": None,
         "damage": False,
     }
-    fallback_only = {"condition": "unknown"}
+    fallback_only = {"raw_condition": "unknown"}
 
     assert resolve_condition_view(with_axes) == "Sealed box"
     assert resolve_aggkey(with_axes) == "Sealed box"
@@ -117,31 +117,28 @@ def test_resolve_condition_view_prefers_axes_and_falls_back_to_condition() -> No
     assert resolve_aggkey(fallback_only) == "unknown"
 
 
-def test_condition_filter_clause_translates_ver41_labels_to_axes_and_fallbacks() -> None:
+def test_condition_filter_clause_translates_ver41_labels_to_axes_only() -> None:
     clause, params = build_condition_filter_clause(
         ["Sealed box", "Case", "Unsearched pack"]
     )
 
     assert clause is not None
     assert clause == (
-        "(i.condition = :cond0_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit "
-        "AND i.seal = :cond0_seal AND i.damage = :cond0_damage)) OR "
-        "(i.condition = :cond1_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond1_unit "
-        "AND i.seal = :cond1_seal AND i.damage = :cond1_damage)) OR "
-        "(i.condition = :cond2_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond2_unit "
-        "AND i.search_cond = :cond2_search_cond AND i.damage = :cond2_damage))"
+        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit AND i.seal = :cond0_seal "
+        "AND i.damage = :cond0_damage) OR "
+        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond1_unit AND i.seal = :cond1_seal "
+        "AND i.damage = :cond1_damage) OR "
+        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond2_unit AND i.search_cond = :cond2_search_cond "
+        "AND i.damage = :cond2_damage)"
     )
-    assert params["cond0_condition"] == "shrink"
     assert params["cond0_unit"] == "box"
     assert params["cond0_seal"] == "shrink"
     assert params["cond0_damage"] is False
 
-    assert params["cond1_condition"] == "sealed"
     assert params["cond1_unit"] == "case"
     assert params["cond1_seal"] == "sealed"
     assert params["cond1_damage"] is False
 
-    assert params["cond2_condition"] == "unsearched"
     assert params["cond2_unit"] == "pack"
     assert params["cond2_search_cond"] == "unsearched"
     assert params["cond2_damage"] is False
@@ -152,19 +149,27 @@ def test_condition_filter_clause_keeps_sealed_box_grouped_and_excludes_unit_only
 
     assert clause is not None
     assert clause == (
-        "(i.condition = :cond0_condition OR (COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit "
-        "AND i.seal = :cond0_seal AND i.damage = :cond0_damage))"
+        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit AND i.seal = :cond0_seal "
+        "AND i.damage = :cond0_damage)"
     )
     assert " OR COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit" not in clause
-    assert params["cond0_condition"] == "shrink"
     assert params["cond0_unit"] == "box"
     assert params["cond0_seal"] == "shrink"
     assert params["cond0_damage"] is False
 
 
-def test_condition_filter_clause_keeps_current_condition_fallback() -> None:
+def test_condition_filter_clause_translates_current_condition_to_axes() -> None:
     clause, params = build_condition_filter_clause(["sealed"])
 
     assert clause is not None
-    assert clause == "(i.condition = :cond0_current)"
-    assert params["cond0_current"] == "sealed"
+    assert clause == "(i.seal = :cond0_seal AND i.damage = :cond0_damage)"
+    assert params["cond0_seal"] == "sealed"
+    assert params["cond0_damage"] is False
+    assert "i.condition" not in clause
+
+
+def test_condition_filter_clause_rejects_out_of_scope_tokens() -> None:
+    clause, params = build_condition_filter_clause(["bulk"])
+
+    assert clause == "(FALSE)"
+    assert params == {}

@@ -597,7 +597,7 @@ export default function ParseReviewPage() {
                               </option>
                               {CONDITION_OPTIONS.map((c) => (
                                 <option key={c} value={c}>
-                                  {t(`superAdmin.inbound.review.conditionOptions.${c}`)}
+                                  {t(`superAdmin.inbound.review.conditionAxisOptions.${c}`)}
                                 </option>
                               ))}
                             </select>

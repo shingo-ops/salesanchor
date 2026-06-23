@@ -2315,19 +2315,16 @@
         },
         "condition": {
           "unspecified": "未指定",
-          "new": "新品",
-          "usedA": "中古 A",
-          "sealed": "未開封",
-          "opened": "開封済"
+          "sealed": "未開封"
         },
         "unitOptions": {
           "piece": "シングル (1枚)",
           "pack": "パック",
           "box": "ボックス",
           "case": "ケース / カートン",
-          "set": "セット / バルク"
+          "set": "セット"
         },
-        "conditionOptions": {
+        "conditionAxisOptions": {
           "shrink": "シュリンク付き",
           "no_shrink": "シュリンクなし",
           "sealed": "未開封",

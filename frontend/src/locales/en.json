@@ -2315,19 +2315,16 @@
         },
         "condition": {
           "unspecified": "Unspecified",
-          "new": "New",
-          "usedA": "Used A",
-          "sealed": "Sealed",
-          "opened": "Opened"
+          "sealed": "Sealed"
         },
         "unitOptions": {
           "piece": "Single Card",
           "pack": "Pack",
           "box": "Box",
           "case": "Case / Carton",
-          "set": "Set / Bulk"
+          "set": "Set"
         },
-        "conditionOptions": {
+        "conditionAxisOptions": {
           "shrink": "Shrink-wrapped",
           "no_shrink": "No shrink",
           "sealed": "Sealed",
