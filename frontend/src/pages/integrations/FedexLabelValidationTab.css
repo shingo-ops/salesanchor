@@ -174,8 +174,9 @@
   text-align: center;
 }
 
-.etd-guide__actions--left {
-  justify-content: flex-start;
+.etd-guide__inline-link {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 /* 情報ノート（テストキー注意書き）*/

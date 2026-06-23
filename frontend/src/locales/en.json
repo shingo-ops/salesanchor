@@ -325,7 +325,7 @@
     "fedexEtdGuideProgress": "{{current}} / {{total}}",
     "fedexEtdGuideStep1Title": "Log in to FedEx Developer Portal",
     "fedexEtdGuideStep1Heading": "API Setup",
-    "fedexEtdGuideStep1Desc": "Log in to Developer Portal with your existing FedEx account.",
+    "fedexEtdGuideStep1Desc": "Log in to <portalLink>FedEx Developer Portal</portalLink> with your FedEx account.",
     "fedexEtdGuideOpenPortal": "Open FedEx Developer Portal",
     "fedexEtdGuideStep1_1": "Log in to developer.fedex.com, open \"My Projects\", and click \"+ Create API Project\". Select an existing project if you have one.",
     "fedexEtdGuideStep1_2": "Under \"What do you need the APIs for?\", select \"I need to ship with FedEx and integrate FedEx APIs into my system\".",
