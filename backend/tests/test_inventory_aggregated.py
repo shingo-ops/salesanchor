@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import patch
 
 import pytest
+import pytest_asyncio
 
 # CI は TEST_PG_URL を未設定（comment in test.yml）→ RLS_ADMIN_DATABASE_URL に fallback。
 # jarvis ロールは DDL 権限あり → テーブル自前 bootstrap が可能。
@@ -139,7 +140,7 @@ def _split_sql(sql: str) -> list[str]:
     return statements
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def pg_engine():
     """モジュール単位の PG エンジン。必要テーブルを自前 bootstrap してから yield。"""
     from pathlib import Path
@@ -216,7 +217,7 @@ async def pg_engine():
     await eng.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def seed_aggregated_dataset(pg_engine):
     """配線E2E / タブテスト用 seed。テスト後にクリーンアップ。"""
     from sqlalchemy import text
