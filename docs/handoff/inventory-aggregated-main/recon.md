@@ -35,5 +35,5 @@
 ## 補足
 
 - 実装は develop の PR #2514（`f4c20d5c`）から `git checkout` で正確コピー。手打ちなし。
-- main の `_load_inventory_offers`（`inventory_search.py`）は `raw_condition` / `seal` / `search_cond` / `grade` / `damage` / `unit` を参照するため、テスト fixture の bootstrap loop に 3 migration を追加済み（commit `2c512798`・`6306097a`）。
+- main の `_load_inventory_offers`（backend/app/services/inventory_search.py）は raw_condition / seal / search_cond / grade / damage / unit を参照するため、テスト fixture の bootstrap loop に 3 migration を追加済み（commit 2c512798・6306097a）。
 - 新規 migration: ゼロ。既存エンドポイントへの影響: なし（追加のみ）。

@@ -20,7 +20,7 @@
 | `GET /api/v1/inventory/aggregated` が 200 を返し tabs/rows ピボットを含む | `pytest backend/tests/test_inventory_aggregated.py::test_aggregated_endpoint_returns_best_pick_rows` |
 | category フィルタが機能する | `pytest backend/tests/test_inventory_aggregated.py::test_aggregated_endpoint_category_filter` |
 | テナント応答に `supplier_name`/`reason`/`raw` が含まれない | `pytest backend/tests/test_inventory_aggregated.py::test_aggregated_boundary_no_internal_fields` |
-| 既存 golden テスト（`test_inventory_aggregation.py`）が退行しない | CI backend-tests — 1928 passed / 0 failed（CI run #28061239951 確認済み） |
+| 既存 golden テスト（test_inventory_aggregation.py）が退行しない | CI backend-tests — 1928 passed / 0 failed（CI run #28061239951 確認済み） |
 | `git diff --name-only origin/main..HEAD` に `migrations/` が含まれない | `git diff --name-only origin/main..HEAD \| grep -c migrations/` = 0 |
 
 ---
