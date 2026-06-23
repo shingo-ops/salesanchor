@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 from app.services.tenant import create_tenant_schema
 
@@ -71,6 +74,17 @@ async def _apply_migration(admin_engine, filename: str) -> None:
                 await conn.exec_driver_sql(stmt)
 
 
+@asynccontextmanager
+async def tenant_schema_lock(admin_engine, tenant_id: int):
+    """tenant_id ごとの bootstrap/利用を直列化する。"""
+    async with admin_engine.connect() as conn:
+        await conn.execute(text("SELECT pg_advisory_lock(:lock_key)"), {"lock_key": int(tenant_id)})
+        try:
+            yield
+        finally:
+            await conn.execute(text("SELECT pg_advisory_unlock(:lock_key)"), {"lock_key": int(tenant_id)})
+
+
 async def bootstrap_public_products(admin_engine) -> None:
     """public.products とその周辺の前提 migration を冪等に適用する。"""
     for filename in _PG_BOOTSTRAP_MIGRATIONS:
@@ -96,69 +110,45 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
     await bootstrap_public_products(admin_engine)
     schema_name = f"tenant_{int(tenant_id):03d}"
 
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": int(tenant_id)})
-
-        schema_exists = await conn.scalar(
-            text("""
-                SELECT 1
-                FROM information_schema.schemata
-                WHERE schema_name = :schema_name
-            """),
-            {"schema_name": schema_name},
-        )
-        leads_has_ai_collection_state = False
-        if schema_exists:
-            leads_has_ai_collection_state = bool(
-                await conn.scalar(
-                    text("""
-                        SELECT 1
-                        FROM information_schema.columns
-                        WHERE table_schema = :schema_name
-                          AND table_name = 'leads'
-                          AND column_name = 'ai_collection_state'
-                    """),
-                    {"schema_name": schema_name},
+    admin_session_factory = sessionmaker(admin_engine, class_=AsyncSession, expire_on_commit=False)
+    async with admin_session_factory() as session:
+        async with session.begin():
+            await session.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+            await session.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.users (
+                    id INTEGER PRIMARY KEY,
+                    role TEXT NOT NULL DEFAULT 'user'
                 )
-            )
-        if schema_exists and not leads_has_ai_collection_state:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.users (
-                id INTEGER PRIMARY KEY,
-                role TEXT NOT NULL DEFAULT 'user'
-            )
-        """))
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.permissions (
-                id SERIAL PRIMARY KEY,
-                key VARCHAR(100) NOT NULL UNIQUE,
-                resource VARCHAR(50) NOT NULL,
-                action VARCHAR(50) NOT NULL,
-                description VARCHAR(255) NOT NULL,
-                category VARCHAR(50) NOT NULL
-            )
-        """))
-        await conn.execute(text("""
-            INSERT INTO public.users (id, role) VALUES (999, 'admin')
-            ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
-        """))
-        for key in ("dashboard.view", "goals.view", "reports.view", "system.manage"):
-            resource, action = key.split(".", 1)
-            await conn.execute(
-                text("""
-                    INSERT INTO public.permissions (key, resource, action, description, category)
-                    VALUES (:key, :resource, :action, :description, :category)
-                    ON CONFLICT (key) DO NOTHING
-                """),
-                {
-                    "key": key,
-                    "resource": resource,
-                    "action": action,
-                    "description": key,
-                    "category": resource,
-                },
-            )
-        schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
+            """))
+            await session.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.permissions (
+                    id SERIAL PRIMARY KEY,
+                    key VARCHAR(100) NOT NULL UNIQUE,
+                    resource VARCHAR(50) NOT NULL,
+                    action VARCHAR(50) NOT NULL,
+                    description VARCHAR(255) NOT NULL,
+                    category VARCHAR(50) NOT NULL
+                )
+            """))
+            await session.execute(text("""
+                INSERT INTO public.users (id, role) VALUES (999, 'admin')
+                ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role
+            """))
+            for key in ("dashboard.view", "goals.view", "reports.view", "system.manage"):
+                resource, action = key.split(".", 1)
+                await session.execute(
+                    text("""
+                        INSERT INTO public.permissions (key, resource, action, description, category)
+                        VALUES (:key, :resource, :action, :description, :category)
+                        ON CONFLICT (key) DO NOTHING
+                    """),
+                    {
+                        "key": key,
+                        "resource": resource,
+                        "action": action,
+                        "description": key,
+                        "category": resource,
+                    },
+                )
+            schema_name = await create_tenant_schema(session, tenant_id, admin_db=session)
     return schema_name

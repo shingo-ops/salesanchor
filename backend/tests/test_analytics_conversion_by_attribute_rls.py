@@ -14,7 +14,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
-from tests.rls_bootstrap import bootstrap_tenant_schema
+from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -164,87 +164,91 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
         async def override_get_current_tenant():
             return tenant_id
 
-        app = FastAPI()
-        app.include_router(analytics_router.router, prefix="/api/v1")
-        app.dependency_overrides[get_db] = override_get_db
-        app.dependency_overrides[get_current_user] = override_get_current_user
-        app.dependency_overrides[get_current_tenant] = override_get_current_tenant
-
-        await bootstrap_tenant_schema(admin_engine, TENANT_ID)
-        await bootstrap_tenant_schema(admin_engine, FOREIGN_TENANT_ID)
-        inserted = await _seed_conversion_fixture(
-            admin_engine,
-            TENANT_SCHEMA,
-            TENANT_ID,
-            current_user.id,
-            current_user.id + 1,
-        )
-        foreign_inserted = await _seed_conversion_fixture(
-            admin_engine,
-            FOREIGN_SCHEMA,
-            FOREIGN_TENANT_ID,
-            current_user.id,
-            current_user.id + 1,
-        )
-
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            team_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=team")
-            assert team_res.status_code == 200, team_res.text
-            team = team_res.json()
-            assert team["channel_type"]["overall_rate"] == pytest.approx(0.5, abs=1e-4)
-            team_channels = {row["value"]: row for row in team["channel_type"]["items"]}
-            assert team_channels["instagram"]["n"] == 2
-            assert team_channels["instagram"]["conversions"] == 1
-            assert team_channels["cold_call"]["n"] == 1
-            assert team_channels["cold_call"]["conversions"] == 0
-            assert team_channels["cold_call"]["smoothed_rate"] == pytest.approx((10 * 0.5) / 11, abs=1e-4)
-
-            mine_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=mine")
-            assert mine_res.status_code == 200, mine_res.text
-            mine = mine_res.json()
-            assert mine["channel_type"]["overall_rate"] == pytest.approx(1 / 3, abs=1e-4)
-            mine_channels = {row["value"]: row for row in mine["channel_type"]["items"]}
-            assert mine_channels["instagram"]["n"] == 2
-            assert mine_channels["instagram"]["conversions"] == 1
-            assert mine_channels["cold_call"]["n"] == 1
-            assert mine_channels["cold_call"]["conversions"] == 0
-
-            priority_res = await ac.get("/api/v1/analytics/priority-prospects?scope=mine")
-            assert priority_res.status_code == 200, priority_res.text
-            priority = priority_res.json()
-            assert priority["scope"] == "mine"
-            assert len(priority["items"]) == 3
-            assert priority["items"] == sorted(
-                priority["items"],
-                key=lambda row: (-row["rank_score"], row["lead_id"]),
+        async with tenant_schema_lock(admin_engine, TENANT_ID):
+            await bootstrap_tenant_schema(admin_engine, TENANT_ID)
+            await bootstrap_tenant_schema(admin_engine, FOREIGN_TENANT_ID)
+            async with admin_engine.begin() as conn:
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {TENANT_SCHEMA}"))
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {FOREIGN_SCHEMA}"))
+            inserted = await _seed_conversion_fixture(
+                admin_engine,
+                TENANT_SCHEMA,
+                TENANT_ID,
+                current_user.id,
+                current_user.id + 1,
             )
-            items = {item["lead_id"]: item for item in priority["items"]}
-            assert set(items) == set(inserted["lead_ids"][:3])
-            assert all(item["type"] == "priority_prospect" for item in items.values())
-            for lead_id, item in items.items():
-                expected_ease = sum(b["smoothed_rate"] for b in item["axis_breakdown"]) / len(item["axis_breakdown"])
-                assert item["ease_pct"] == pytest.approx(expected_ease * 100, abs=1e-4)
-                assert item["rank_score"] == pytest.approx(item["ease_pct"] * item["monthly_forecast"], abs=1e-4)
-                assert any(flag.endswith(":low_sample") for flag in item["low_sample_flags"])
-                if lead_id == inserted["lead_ids"][2]:
-                    assert len(item["axis_breakdown"]) == 4
-                    assert "monthly_forecast_unset" in item["low_sample_flags"]
-                    assert item["monthly_forecast"] == pytest.approx(200, abs=1e-4)
-                else:
-                    assert len(item["axis_breakdown"]) == 5
-                    assert "monthly_forecast_unset" not in item["low_sample_flags"]
+            foreign_inserted = await _seed_conversion_fixture(
+                admin_engine,
+                FOREIGN_SCHEMA,
+                FOREIGN_TENANT_ID,
+                current_user.id,
+                current_user.id + 1,
+            )
 
-        async with app_session_factory() as session:
-            async with session.begin():
-                await session.execute(
-                    text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
-                    {"tenant_id": str(tenant_id)},
+            app = FastAPI()
+            app.include_router(analytics_router.router, prefix="/api/v1")
+            app.dependency_overrides[get_db] = override_get_db
+            app.dependency_overrides[get_current_user] = override_get_current_user
+            app.dependency_overrides[get_current_tenant] = override_get_current_tenant
+
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                team_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=team")
+                assert team_res.status_code == 200, team_res.text
+                team = team_res.json()
+                assert team["channel_type"]["overall_rate"] == pytest.approx(0.5, abs=1e-4)
+                team_channels = {row["value"]: row for row in team["channel_type"]["items"]}
+                assert team_channels["instagram"]["n"] == 2
+                assert team_channels["instagram"]["conversions"] == 1
+                assert team_channels["cold_call"]["n"] == 1
+                assert team_channels["cold_call"]["conversions"] == 0
+                assert team_channels["cold_call"]["smoothed_rate"] == pytest.approx((10 * 0.5) / 11, abs=1e-4)
+
+                mine_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=mine")
+                assert mine_res.status_code == 200, mine_res.text
+                mine = mine_res.json()
+                assert mine["channel_type"]["overall_rate"] == pytest.approx(1 / 3, abs=1e-4)
+                mine_channels = {row["value"]: row for row in mine["channel_type"]["items"]}
+                assert mine_channels["instagram"]["n"] == 2
+                assert mine_channels["instagram"]["conversions"] == 1
+                assert mine_channels["cold_call"]["n"] == 1
+                assert mine_channels["cold_call"]["conversions"] == 0
+
+                priority_res = await ac.get("/api/v1/analytics/priority-prospects?scope=mine")
+                assert priority_res.status_code == 200, priority_res.text
+                priority = priority_res.json()
+                assert priority["scope"] == "mine"
+                assert len(priority["items"]) == 3
+                assert priority["items"] == sorted(
+                    priority["items"],
+                    key=lambda row: (-row["rank_score"], row["lead_id"]),
                 )
-                tenant_count = (await session.execute(text(f"SELECT COUNT(*) FROM {TENANT_SCHEMA}.leads"))).scalar_one()
-                foreign_count = (await session.execute(text(f"SELECT COUNT(*) FROM {FOREIGN_SCHEMA}.leads"))).scalar_one()
-                assert tenant_count >= 4
-                assert foreign_count == 0
+                items = {item["lead_id"]: item for item in priority["items"]}
+                assert set(items) == set(inserted["lead_ids"][:3])
+                assert all(item["type"] == "priority_prospect" for item in items.values())
+                for lead_id, item in items.items():
+                    expected_ease = sum(b["smoothed_rate"] for b in item["axis_breakdown"]) / len(item["axis_breakdown"])
+                    assert item["ease_pct"] == pytest.approx(expected_ease * 100, abs=1e-4)
+                    assert item["rank_score"] == pytest.approx(item["ease_pct"] * item["monthly_forecast"], abs=1e-4)
+                    assert any(flag.endswith(":low_sample") for flag in item["low_sample_flags"])
+                    if lead_id == inserted["lead_ids"][2]:
+                        assert len(item["axis_breakdown"]) == 4
+                        assert "monthly_forecast_unset" in item["low_sample_flags"]
+                        assert item["monthly_forecast"] == pytest.approx(200, abs=1e-4)
+                    else:
+                        assert len(item["axis_breakdown"]) == 5
+                        assert "monthly_forecast_unset" not in item["low_sample_flags"]
+
+            async with app_session_factory() as session:
+                async with session.begin():
+                    await session.execute(
+                        text("SELECT set_config('app.tenant_id', :tenant_id, true)"),
+                        {"tenant_id": str(tenant_id)},
+                    )
+                    tenant_count = (await session.execute(text(f"SELECT COUNT(*) FROM {TENANT_SCHEMA}.leads"))).scalar_one()
+                    foreign_count = (await session.execute(text(f"SELECT COUNT(*) FROM {FOREIGN_SCHEMA}.leads"))).scalar_one()
+                    assert tenant_count >= 4
+                    assert foreign_count == 0
     finally:
         with suppress(Exception):
             async with admin_engine.begin() as conn:
