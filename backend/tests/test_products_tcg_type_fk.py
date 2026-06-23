@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import ExitStack
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -25,6 +26,22 @@ pytestmark = pytest.mark.skipif(
     reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL / TEST_PG_URL 未設定)。",
 )
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_MIGRATIONS_DIR = _REPO_ROOT / "migrations"
+_PG_BOOTSTRAP_MIGRATIONS = [
+    "056_add_suppliers_type_and_promote_public.sql",
+    "062_create_inventory_movements_and_budget.sql",
+    "085_create_tcg_type_master.sql",
+    "086_seed_additional_tcg_types.sql",
+    "20260602_000000_add_products_central_columns.sql",
+    "20260602_020000_add_products_tcg_type.sql",
+    "20260602_030000_add_products_unit.sql",
+    "20260602_170000_add_products_master_label_columns.sql",
+    "20260603_000000_add_products_product_kind.sql",
+    "20260616_000000_fix_tcg_type_dedup.sql",
+    "20260623_030000_add_products_tcg_type_fk.sql",
+]
+
 
 def _mock_user(tenant_id: int) -> User:
     user = User()
@@ -37,83 +54,68 @@ def _mock_user(tenant_id: int) -> User:
     return user
 
 
-def _tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    return [
-        ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
-        ("one_piece", "ワンピース", "One Piece TCG"),
-        ("dragon_ball", "ドラゴンボール", "Dragon Ball TCG"),
-        ("union_arena", "ユニオンアリーナ", "Union Arena"),
-        ("yugioh", "遊戯王", "Yu-Gi-Oh!"),
-        ("other", "その他", "Other"),
-        ("gundam", "ガンダムカードゲーム", "Gundam Card Game"),
-        ("weiss_schwarz", "ヴァイスシュヴァルツ", "Weiß Schwarz"),
-        ("digimon", "デジモンカードゲーム", "Digimon Card Game"),
-        ("hololive", "ホロライブ", "hololive Official Card Game"),
-        ("lorcana", "ディズニー ロルカナ", "Disney Lorcana"),
-        ("xross_stars", "クロススタァ", "Xross Stars"),
-    ]
+def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
+    statements: list[str] = []
+    buf: list[str] = []
+    i = 0
+    in_dollar = False
+    dollar_tag = ""
+    while i < len(sql):
+        if sql[i] == "$":
+            j = i + 1
+            while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
+                j += 1
+            if j < len(sql) and sql[j] == "$":
+                tag = sql[i : j + 1]
+                if not in_dollar:
+                    in_dollar = True
+                    dollar_tag = tag
+                    buf.append(tag)
+                    i = j + 1
+                    continue
+                if tag == dollar_tag:
+                    in_dollar = False
+                    dollar_tag = ""
+                    buf.append(tag)
+                    i = j + 1
+                    continue
+        if sql[i] == ";" and not in_dollar:
+            statements.append("".join(buf))
+            buf = []
+        else:
+            buf.append(sql[i])
+        i += 1
+    if buf:
+        statements.append("".join(buf))
+    return statements
 
 
-async def _ensure_public_products_schema(admin_engine) -> None:
+async def _apply_migration(admin_engine, filename: str) -> None:
+    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
     async with admin_engine.begin() as conn:
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.tcg_type_master (
-                code VARCHAR(50) PRIMARY KEY,
-                name_ja VARCHAR(100) NOT NULL,
-                name_en VARCHAR(100),
-                sort_order INTEGER NOT NULL DEFAULT 100,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE
-            )
-        """))
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.products (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER,
-                product_code VARCHAR(20),
-                name VARCHAR(255) NOT NULL,
-                name_en VARCHAR(255),
-                category VARCHAR(100),
-                mark VARCHAR(100),
-                status VARCHAR(20) DEFAULT 'active',
-                condition VARCHAR(50),
-                unit_price NUMERIC(15, 2),
-                stock_quantity INTEGER NOT NULL DEFAULT 0,
-                weight NUMERIC(10, 3),
-                notes TEXT,
-                release_date DATE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                jan_code VARCHAR(20),
-                card_number VARCHAR(50),
-                expansion_code VARCHAR(20),
-                rarity VARCHAR(20),
-                language VARCHAR(10),
-                unit_price_usd NUMERIC(15, 2),
-                unit_price_eur NUMERIC(15, 2),
-                image_url VARCHAR(500),
-                is_archived BOOLEAN NOT NULL DEFAULT FALSE,
-                archived_at TIMESTAMP,
-                supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES public.tcg_type_master(code),
-                unit VARCHAR(20),
-                boxes_per_case INTEGER,
-                packs_per_box INTEGER,
-                box_weight_kg NUMERIC(8, 3),
-                case_weight_kg NUMERIC(8, 3),
-                volume_weight NUMERIC(8, 3),
-                moq INTEGER,
-                hs_code VARCHAR(20),
-                material VARCHAR(50),
-                item VARCHAR(255),
-                required_output_value VARCHAR(255),
-                search_keywords TEXT,
-                exclude_keywords TEXT,
-                related_series VARCHAR(255),
-                product_kind VARCHAR(50) DEFAULT 'TCG',
-                set_type VARCHAR(50),
-                display_order INTEGER
-            )
-        """))
+        for stmt in _split_sql_preserving_do_blocks(sql):
+            stmt = stmt.strip()
+            if stmt:
+                await conn.exec_driver_sql(stmt)
+
+
+async def _bootstrap_public_products(admin_engine) -> None:
+    for filename in _PG_BOOTSTRAP_MIGRATIONS:
+        await _apply_migration(admin_engine, filename)
+
+    async with admin_engine.connect() as conn:
+        fk_exists = await conn.scalar(
+            text("""
+                SELECT 1
+                FROM pg_constraint c
+                JOIN pg_class rel ON rel.oid = c.conrelid
+                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                WHERE nsp.nspname = 'public'
+                  AND rel.relname = 'products'
+                  AND c.conname = 'fk_products_tcg_type'
+            """)
+        )
+    assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:
@@ -144,18 +146,6 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
     created_ids: list[int] = []
 
     try:
-        await _ensure_public_products_schema(admin_engine)
-        async with admin_engine.begin() as conn:
-            for code, name_ja, name_en in _tcg_type_seed_rows():
-                await conn.execute(
-                    text("""
-                        INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order, is_active)
-                        VALUES (:code, :name_ja, :name_en, 100, TRUE)
-                        ON CONFLICT (code) DO NOTHING
-                    """),
-                    {"code": code, "name_ja": name_ja, "name_en": name_en},
-                )
-
         async with admin_engine.connect() as conn:
             schema_exists = await conn.scalar(
                 text("SELECT 1 FROM information_schema.schemata WHERE schema_name = 'tenant_006'")
@@ -163,6 +153,8 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
         if not schema_exists:
             pytest.skip("tenant_006 schema is not present in this CI PostgreSQL database")
         tenant_id = 6
+
+        await _bootstrap_public_products(admin_engine)
 
         app = await _build_app(app_session_factory, tenant_id)
 
@@ -235,6 +227,19 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
                 )
                 assert patch_ng.status_code == 400, patch_ng.text
                 assert "tcg_type" in patch_ng.json()["detail"]
+
+        async with admin_engine.begin() as conn:
+            null_row = await conn.execute(
+                text(
+                    "INSERT INTO public.products (name, stock_quantity, tcg_type) "
+                    "VALUES (:name, :stock_quantity, NULL) RETURNING id, tcg_type"
+                ),
+                {"name": "PG FK Enforcement NULL", "stock_quantity": 0},
+            )
+            inserted_null = null_row.mappings().first()
+            assert inserted_null is not None
+            assert inserted_null["tcg_type"] is None
+            created_ids.append(inserted_null["id"])
 
         async with admin_engine.begin() as conn:
             with pytest.raises(IntegrityError):
