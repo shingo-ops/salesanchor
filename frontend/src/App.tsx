@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./contexts/AuthContext";
 import { UiPrefsProvider } from "./contexts/UiPrefsContext";
@@ -143,6 +143,10 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/register/address" element={<RegisterAddressPage />} />
                 <Route path="/register/change-billing" element={<RegisterChangeBillingPage />} />
+                {/* フルスクリーン専用ルート: 認証あり・シェル（サイドバー/ヘッダー）なし */}
+                <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+                  <Route path="/management-center/integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
+                </Route>
                 <Route
                   element={
                     <ProtectedRoute>
@@ -338,7 +342,6 @@ function App() {
                     <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
                     <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
                     <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
-                    <Route path="integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
                     <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />

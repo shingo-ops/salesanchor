@@ -48,6 +48,7 @@ const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
   /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
+  /^frontend\/src\/pages-layout\.css$/,  // 全ページ共通レイアウト（共有＝変更にGO必須）
 ];
 
 const REAL_CODE_PATTERNS = [

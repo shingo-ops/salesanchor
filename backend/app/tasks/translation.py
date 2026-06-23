@@ -80,13 +80,17 @@ async def _run_translate_inbound_message(
         translation_table_ref = f"{schema_name}.{translation_table_ref}"
 
     async with AsyncSessionLocal() as db:
-        results = await ensure_inbound_translations(
-            db=db,
-            tenant_id=tenant_id,
-            table_ref=translation_table_ref,
-            message_id=message_id,
-            message_text=message_text,
-        )
+        await set_tenant_context(db, tenant_id)
+        try:
+            results = await ensure_inbound_translations(
+                db=db,
+                tenant_id=tenant_id,
+                table_ref=translation_table_ref,
+                message_id=message_id,
+                message_text=message_text,
+            )
+        finally:
+            await clear_tenant_context(db)
 
     try:
         from app.services.sse_pubsub import publish_inbox_update

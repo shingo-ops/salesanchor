@@ -154,7 +154,7 @@ jobs:
       #
       # 現在登録済みのテーブル:
       #   public:    tenants / users / permissions / tenant_discord_config / inventory
-      #   tenant_001: role_permissions / staff / leads / deals / message_translations
+      #   tenant_001: role_permissions / staff / leads / deals / message_translations (tenant_id ③-a 適用後)
       #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
       #   ※ public.inventory は PUBLIC_SQL セクションに最小定義を登録（migration 081 相当）
       #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
@@ -313,8 +313,11 @@ jobs:
               created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
 
+          -- message_translations: ③-a(20260623_040000) で tenant_id INTEGER を ADD COLUMN した後の状態を再現
+          -- 本番と同じ nullable（DEFAULT なし）・backfill 済みで既存行は NOT NULL 相当
           CREATE TABLE IF NOT EXISTS tenant_001.message_translations (
               id               SERIAL PRIMARY KEY,
+              tenant_id        INTEGER,
               message_id       TEXT NOT NULL,
               target_language  VARCHAR(10) NOT NULL,
               translated_text  TEXT NOT NULL,

@@ -143,6 +143,7 @@ async def _fire_translation(
     message_id = f"conv_log_{log_id}"
 
     try:
+        await set_tenant_context(db, tenant_id)  # reset_tenant_context 後に RLS 用コンテキストを再設定
         results = await ensure_inbound_translations(
             db=db,
             tenant_id=tenant_id,
