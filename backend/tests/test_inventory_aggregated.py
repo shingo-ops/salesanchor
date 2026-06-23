@@ -7,6 +7,9 @@
      - 配線E2E: in_stock seed -> エンドポイントが best-pick 行を返す
      - 境界: supplier_name / reason / raw が応答に含まれない
      - タブ: ?category=pokemon で pokemon のみ絞り込み
+
+NOTE: inventory テーブル bootstrap には condition多軸列（raw_condition/seal/search_cond/
+      grade/damage/unit）を含める。_load_inventory_offers が SELECT するため必須。
 """
 from __future__ import annotations
 
