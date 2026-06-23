@@ -39,6 +39,8 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.inventory_axes import resolve_condition_view
+
 # 検索結果の matched_via 優先順位 (低数値が高優先)
 MATCHED_VIA_PRIORITY: dict[str, int] = {
     "products_card_number_exact": 1,
@@ -469,8 +471,9 @@ async def _load_inventory_offers(
         return {}
 
     sql = """
-        SELECT i.supplier_id, i.product_id, i.condition, i.quantity, i.unit_price,
-               i.status, s.name AS supplier_name
+        SELECT i.supplier_id, i.product_id, i.raw_condition, i.quantity, i.unit_price,
+               i.status, i.seal, i.search_cond, i.grade, i.damage,
+               i.unit, s.name AS supplier_name
         FROM public.inventory i
         LEFT JOIN public.suppliers s ON s.id = i.supplier_id
         WHERE i.product_id = ANY(:pids)
@@ -485,7 +488,7 @@ async def _load_inventory_offers(
             OfferSummary(
                 supplier_id=int(row["supplier_id"]),
                 supplier_name=row.get("supplier_name"),
-                condition=str(row["condition"]),
+                condition=str(resolve_condition_view(row) or row.get("raw_condition") or ""),
                 quantity=(None if mask_stock else int(row["quantity"])),
                 unit_price=(None if mask_stock else int(row["unit_price"])),
                 status=str(row["status"]),

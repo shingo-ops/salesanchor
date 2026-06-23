@@ -118,7 +118,9 @@ def _normalize_bool_axis(value: Any) -> bool | None:
 
 
 def resolve_condition_resolution(source: Mapping[str, Any] | Any) -> InventoryConditionResolution:
-    raw_condition = normalize_condition(_get_value(source, ("condition", "Condition")))
+    raw_condition = normalize_condition(
+        _get_value(source, ("condition", "raw_condition", "Condition", "Raw Condition"))
+    )
     unit = _get_value(source, ("unit", "Unit"))
     seal = _get_value(source, ("seal", "Seal"))
     search_cond = _get_value(source, ("search_cond", "searchCond", "Search Cond"))
@@ -161,7 +163,6 @@ def resolve_aggkey(source: Mapping[str, Any] | Any) -> str | None:
 def build_condition_filter_clause(
     values: Iterable[str],
     *,
-    condition_column: str = "i.condition",
     unit_column: str = "COALESCE(NULLIF(i.unit, ''), p.unit)",
     seal_column: str = "i.seal",
     search_cond_column: str = "i.search_cond",
@@ -171,8 +172,8 @@ def build_condition_filter_clause(
 ) -> tuple[str | None, dict[str, Any]]:
     """condition/condition_in を軸優先の WHERE 句へ変換する。
 
-    ver4.1 表記は軸に翻訳しつつ、並行期間の安全網として condition 列の
-    直接比較も OR で残す。current condition のみの値は condition 列で受ける。
+    ver4.1 表記と current condition はいずれも軸へ翻訳して判定する。
+    inventory.condition には依存しない。
     """
 
     clauses: list[str] = []
@@ -186,49 +187,31 @@ def build_condition_filter_clause(
         label_condition = VER41_TO_CONDITION.get(token)
         label_unit = VER41_TO_UNIT.get(token)
         current_condition = normalize_condition(token)
-        if current_condition is None:
-            current_condition = label_condition
+        axes_source = label_condition if label_condition is not None else current_condition
+        axes = condition_axes(axes_source)
 
-        fallback_clause: str | None = None
-        if label_condition is not None:
-            params[f"{param_prefix}{idx}_condition"] = label_condition
-            fallback_clause = f"{condition_column} = :{param_prefix}{idx}_condition"
-        elif current_condition is not None:
-            params[f"{param_prefix}{idx}_current"] = current_condition
-            fallback_clause = f"{condition_column} = :{param_prefix}{idx}_current"
+        if not axes:
+            clauses.append("(FALSE)")
+            continue
 
         axis_clauses: list[str] = []
-        if label_unit is not None and label_condition is not None:
-            axes = condition_axes(label_condition)
+        if label_unit is not None:
             params[f"{param_prefix}{idx}_unit"] = label_unit
             axis_clauses.append(f"{unit_column} = :{param_prefix}{idx}_unit")
-            if seal := axes.get("seal"):
-                params[f"{param_prefix}{idx}_seal"] = seal
-                axis_clauses.append(f"{seal_column} = :{param_prefix}{idx}_seal")
-            if search_cond := axes.get("search_cond"):
-                params[f"{param_prefix}{idx}_search_cond"] = search_cond
-                axis_clauses.append(f"{search_cond_column} = :{param_prefix}{idx}_search_cond")
-            if grade := axes.get("grade"):
-                params[f"{param_prefix}{idx}_grade"] = grade
-                axis_clauses.append(f"{grade_column} = :{param_prefix}{idx}_grade")
-            if "damage" in axes:
-                params[f"{param_prefix}{idx}_damage"] = bool(axes["damage"])
-                axis_clauses.append(f"{damage_column} = :{param_prefix}{idx}_damage")
+        if seal := axes.get("seal"):
+            params[f"{param_prefix}{idx}_seal"] = seal
+            axis_clauses.append(f"{seal_column} = :{param_prefix}{idx}_seal")
+        if search_cond := axes.get("search_cond"):
+            params[f"{param_prefix}{idx}_search_cond"] = search_cond
+            axis_clauses.append(f"{search_cond_column} = :{param_prefix}{idx}_search_cond")
+        if grade := axes.get("grade"):
+            params[f"{param_prefix}{idx}_grade"] = grade
+            axis_clauses.append(f"{grade_column} = :{param_prefix}{idx}_grade")
+        if "damage" in axes:
+            params[f"{param_prefix}{idx}_damage"] = bool(axes["damage"])
+            axis_clauses.append(f"{damage_column} = :{param_prefix}{idx}_damage")
 
-        if fallback_clause is None and axis_clauses:
-            clauses.append("(" + " AND ".join(dict.fromkeys(axis_clauses)) + ")")
-        elif fallback_clause is not None and axis_clauses:
-            clauses.append(
-                "("
-                + fallback_clause
-                + " OR ("
-                + " AND ".join(dict.fromkeys(axis_clauses))
-                + ")"
-                + ")"
-            )
-        elif fallback_clause is not None:
-            clauses.append(f"({fallback_clause})")
-        elif axis_clauses:
+        if axis_clauses:
             clauses.append("(" + " AND ".join(dict.fromkeys(axis_clauses)) + ")")
 
     if not clauses:
