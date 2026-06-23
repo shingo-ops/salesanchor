@@ -39,6 +39,8 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260602_030000_add_products_unit.sql",
     "20260602_170000_add_products_master_label_columns.sql",
     "20260603_000000_add_products_product_kind.sql",
+    "20260603_040000_add_products_set_type.sql",        # products.set_type 追加
+    "20260605_000000_add_products_display_order.sql",   # products.display_order 追加
     "20260616_000000_fix_tcg_type_dedup.sql",
     "20260623_030000_add_products_tcg_type_fk.sql",
 ]
