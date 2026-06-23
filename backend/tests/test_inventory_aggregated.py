@@ -221,19 +221,23 @@ async def seed_aggregated_dataset():
             """)
         )
 
-    # ── migration: inventory_aggregation_rules (冪等) ──────────────────────
-    migration_path = (
-        Path(__file__).resolve().parents[2]
-        / "migrations"
-        / "20260620_010000_create_inventory_aggregation_rules.sql"
-    )
-    if migration_path.exists():
-        sql = migration_path.read_text("utf-8")
-        async with eng.begin() as conn:
-            for stmt in _split_sql(sql):
-                stmt = stmt.strip()
-                if stmt:
-                    await conn.execute(text(stmt))
+    # ── migration: inventory_aggregation_rules + 列追加 (冪等) ────────────
+    migrations_root = Path(__file__).resolve().parents[2] / "migrations"
+    for mig_file in [
+        "20260620_010000_create_inventory_aggregation_rules.sql",
+        # _load_inventory_offers が参照する列 (main で追加)
+        "084_add_unit_to_inventory.sql",                       # i.unit
+        "20260622_020000_add_inventory_raw_condition.sql",     # i.raw_condition
+        "20260623_010000_add_inventory_axes_columns.sql",      # i.seal/search_cond/grade/damage
+    ]:
+        migration_path = migrations_root / mig_file
+        if migration_path.exists():
+            sql = migration_path.read_text("utf-8")
+            async with eng.begin() as conn:
+                for stmt in _split_sql(sql):
+                    stmt = stmt.strip()
+                    if stmt:
+                        await conn.execute(text(stmt))
 
     tag = uuid.uuid4().hex[:8]
 
