@@ -78,6 +78,38 @@ async def _apply_migration(admin_engine, filename: str) -> None:
                 await conn.exec_driver_sql(stmt)
 
 
+async def _ensure_public_users(admin_engine) -> None:
+    async with admin_engine.begin() as conn:
+        await conn.execute(
+            text("""
+                CREATE TABLE IF NOT EXISTS public.users (
+                    id INTEGER PRIMARY KEY,
+                    tenant_id INTEGER NOT NULL DEFAULT 999,
+                    firebase_uid VARCHAR(128) UNIQUE,
+                    username VARCHAR(255),
+                    email VARCHAR(255),
+                    full_name VARCHAR(255),
+                    role VARCHAR(50) DEFAULT 'user',
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                    locale VARCHAR(10) NOT NULL DEFAULT 'ja',
+                    theme VARCHAR(10) NOT NULL DEFAULT 'light'
+                )
+            """)
+        )
+        await conn.execute(
+            text("""
+                INSERT INTO public.users (
+                    id, tenant_id, firebase_uid, username, email, full_name,
+                    role, is_active, is_super_admin, locale, theme
+                )
+                VALUES (999, 999, 'test-user', 'testuser', 'test@example.com', 'Test User',
+                        'admin', TRUE, TRUE, 'ja', 'light')
+                ON CONFLICT (id) DO NOTHING
+            """)
+        )
+
+
 @asynccontextmanager
 async def tenant_schema_lock(admin_engine, tenant_id: int):
     """同じ tenant schema を使う PG/RLS テストを xdist 下で直列化する。"""
@@ -119,6 +151,7 @@ async def bootstrap_public_products(admin_engine) -> None:
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
     """本番 migration 順で tenant schema を冪等に作成する。"""
     await bootstrap_public_products(admin_engine)
+    await _ensure_public_users(admin_engine)
     async with admin_engine.begin() as conn:
         schema_name = f"tenant_{int(tenant_id):03d}"
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
