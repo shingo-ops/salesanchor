@@ -331,7 +331,7 @@
     "fedexEtdGuideProgress": "{{current}} / {{total}}",
     "fedexEtdGuideStep1Title": "FedEx Developer Portal にログイン",
     "fedexEtdGuideStep1Heading": "APIの設定",
-    "fedexEtdGuideStep1Desc": "お持ちの FedEx アカウントで Developer Portal にログインします。",
+    "fedexEtdGuideStep1Desc": "お持ちの FedEx アカウントで <portalLink>Developer Portal にログイン</portalLink>します。",
     "fedexEtdGuideOpenPortal": "FedEx Developer Portal を開く",
     "fedexEtdGuideStep1_1": "developer.fedex.com にログイン後、「マイ・プロジェクト」→「＋ APIプロジェクトを作成」をクリックします。既存プロジェクトがある場合は選択してください。",
     "fedexEtdGuideStep1_2": "「何にAPIを必要とされていますか」では「FedExを利用して出荷し、FedExのAPIをシステムに統合する必要があります」を選択します。",
