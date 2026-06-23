@@ -7,10 +7,11 @@
 
 ## 現状コード引用（file:line）
 
-- `frontend/src/pages/integrations/FedexLabelValidationTab.css:32` — `.etd-guide` の定義（gap/padding のみ・max-width なし）
-- `frontend/src/pages/integrations/FedexLabelValidationTab.css:247` — `.etd-guide__screenshot { width: 100% }` max-width なし・height:auto なし
-- `frontend/src/pages/integrations/FedexLabelValidationTab.css:63` — `.etd-stepper` sticky定義（影響範囲確認）
-- `frontend/src/tokens.css:177` — Layout constraints セクション（既存トークン群）
+- `frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:250` — `.etd-guide` セクション開始（コンテンツ親要素）
+- `frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:287` — `className="etd-guide__screenshot"` 使用箇所（width:100% が引き伸ばされる）
+- `frontend/src/pages/integrations/FedexLabelValidationTab.tsx:26` — CSS インポート
+- `docs/adr/ADR-129-fedex-label-validation-wizard.md:1` — 本実装の親ADR
+- `docs/adr/ADR-067-design-token-enforcement.md:1` — CSS変数ルール（max-width も var() 必須）
 
 ## ADR 確認
 
@@ -19,5 +20,6 @@
 
 ## 変更スコープ
 
-CSS のみ。migration / deploy.yml / backend 変更なし。
+CSS のみ（`frontend/src/tokens.css` + `frontend/src/pages/integrations/FedexLabelValidationTab.css`）。
+migration / deploy.yml / backend 変更なし。
 `.etd-stepper` は `.etd-guide` の外側にあるため幅制限の影響を受けない。

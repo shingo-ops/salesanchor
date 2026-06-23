@@ -25,3 +25,10 @@
 | `.etd-stepper` の sticky 固定が維持されている | セットアップガイド画面でスクロールして進捗バーが追従することを確認 |
 | lint: 0 errors / build: success | `npm run lint` + `npm run build` をローカル実行 |
 | ADR-067: 生 px 値を使わない | `--max-width-setup-guide` トークン経由で var() 参照 |
+
+## 外部・過去事例の参照と我々への応用
+
+CSS の `max-width` + `margin-inline: auto` によるコンテンツ幅制限はブラウザ標準パターン。
+MDN "max-width" ドキュメントおよび Bootstrap/Tailwind の `.container` 実装と同一手法。
+`height: auto` + `max-width: 100%` はレスポンシブ画像の定番（MDN "Responsive images" に記載）。
+本プロジェクトでは同様のパターンを `--max-width-form: 560px` (アカウント設定) / `--max-width-page: 1200px` (ページ全体) で採用済み。今回は専用トークン `--max-width-setup-guide: 900px` を追加して同一パターンを適用。
