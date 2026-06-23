@@ -214,6 +214,12 @@ async def seed_aggregated_dataset():
                     offered_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     expires_at  TIMESTAMPTZ,
                     source      TEXT      NOT NULL DEFAULT 'manual',
+                    unit        VARCHAR(20),
+                    raw_condition TEXT,
+                    seal        VARCHAR(20),
+                    search_cond VARCHAR(20),
+                    grade       VARCHAR(20),
+                    damage      BOOLEAN NOT NULL DEFAULT FALSE,
                     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     UNIQUE (supplier_id, product_id, condition)
