@@ -31,6 +31,7 @@ _MIGRATIONS_DIR = _REPO_ROOT / "migrations"
 _PG_BOOTSTRAP_MIGRATIONS = [
     "056_add_suppliers_type_and_promote_public.sql",
     "062_create_inventory_movements_and_budget.sql",
+    "082_extend_products_box_attributes.sql",       # products.category 追加（020000 の backfill に必須）
     "085_create_tcg_type_master.sql",
     "086_seed_additional_tcg_types.sql",
     "20260602_000000_add_products_central_columns.sql",
@@ -145,15 +146,11 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
     app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
     created_ids: list[int] = []
 
-    try:
-        async with admin_engine.connect() as conn:
-            schema_exists = await conn.scalar(
-                text("SELECT 1 FROM information_schema.schemata WHERE schema_name = 'tenant_006'")
-            )
-        if not schema_exists:
-            pytest.skip("tenant_006 schema is not present in this CI PostgreSQL database")
-        tenant_id = 6
+    # tenant_id=6 は public.products.tenant_id に挿入される値。
+    # tenant_006 スキーマは不要（public.products は RLS なし中央テーブル）。
+    tenant_id = 6
 
+    try:
         await _bootstrap_public_products(admin_engine)
 
         app = await _build_app(app_session_factory, tenant_id)
