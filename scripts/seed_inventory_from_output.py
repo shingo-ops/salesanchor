@@ -145,7 +145,6 @@ def _load_rows() -> list[InventoryRow]:
                                supplier_name, mark, raw.get("Quantity"), raw.get("Unit Price"))
                 continue
             condition = (raw.get("Condition") or "").strip() or "unknown"
-            raw_condition = condition
             rows.append(
                 InventoryRow(
                     supplier_name=supplier_name,
