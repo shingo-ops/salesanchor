@@ -168,16 +168,32 @@ async def seed_aggregated_dataset():
                 )
             """)
         )
+        # migration 062 のフルスキーマに合わせる（product_code / jan_code 等の列と
+        # その INDEX が 062 で作成されるため、先に最小テーブルを作ると列が欠落して
+        # INDEX 作成が失敗する。CREATE TABLE IF NOT EXISTS で冪等）
         await conn.execute(
             text("""
                 CREATE TABLE IF NOT EXISTS public.products (
-                    id          BIGSERIAL PRIMARY KEY,
-                    name        TEXT      NOT NULL,
-                    name_en     TEXT,
-                    tcg_type    TEXT,
-                    is_archived BOOLEAN   NOT NULL DEFAULT FALSE,
-                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    id                  BIGSERIAL PRIMARY KEY,
+                    tenant_id           INTEGER,
+                    product_code        VARCHAR(50),
+                    name                VARCHAR(255) NOT NULL,
+                    name_en             VARCHAR(255),
+                    description         TEXT,
+                    unit_price          NUMERIC(15, 2),
+                    stock_quantity      INTEGER NOT NULL DEFAULT 0,
+                    jan_code            VARCHAR(20),
+                    card_number         VARCHAR(50),
+                    expansion_code      VARCHAR(20),
+                    rarity              VARCHAR(20),
+                    language            VARCHAR(10),
+                    image_url           VARCHAR(500),
+                    tcg_type            TEXT,
+                    is_archived         BOOLEAN NOT NULL DEFAULT FALSE,
+                    archived_at         TIMESTAMPTZ,
+                    supplier_default_id INTEGER,
+                    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
         )
