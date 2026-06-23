@@ -443,6 +443,9 @@ run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
 # SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
 run_sql migrations/20260623_100000_rls_message_translations.sql
+
+# SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
+run_sql migrations/20260623_030000_add_products_tcg_type_fk.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
