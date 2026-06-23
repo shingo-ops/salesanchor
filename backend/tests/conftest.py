@@ -15,6 +15,8 @@ import os
 
 # app.database が import される前に DATABASE_URL を SQLite に差し替える
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+# data_deletion / celery_app の import-time guard 用に管理者接続も同じ SQLite を使う。
+os.environ.setdefault("ADMIN_DATABASE_URL", os.environ["DATABASE_URL"])
 
 # Sprint 2 Reviewer Out-of-scope #1 (PR #510 follow-up) は別 Issue で起票推奨。
 # 本 PR では各テスト側 (test_super_admin_*.py / test_tenant_admin_*.py 等) で
