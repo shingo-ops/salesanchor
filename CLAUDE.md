@@ -76,6 +76,8 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
 - PR本文: `### 標準ワークフロー確認` セクション必須。
 - recon.md と design.md は必ず git add してからコミットすること。
+- **KGI/KPIの粒度**: POが画面・出力で○×を一義に判定できる粒度で書く（抽象語=統一/改善/正常 禁止→観測可能な事象に分解）。
+- **役割**: Generatorは単純作業のみ。Plannerが file:line＋変更前後コード＋触らない範囲まで設計。実装不備/PO不満=設計粒度の責任。
 
 ---
 
