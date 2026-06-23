@@ -32,89 +32,10 @@ _TENANT_BOOTSTRAP_MIGRATIONS = [
 ]
 _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE = 20260623
 _TENANT_SCHEMA_LOCK_NAMESPACE = 20260623
-
-
-def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
-    statements: list[str] = []
-    buf: list[str] = []
-    i = 0
-    in_dollar = False
-    dollar_tag = ""
-    in_line_comment = False
-    in_block_comment = False
-    while i < len(sql):
-        if in_line_comment:
-            buf.append(sql[i])
-            if sql[i] == "\n":
-                in_line_comment = False
-            i += 1
-            continue
-        if in_block_comment:
-            buf.append(sql[i])
-            if sql[i] == "*" and i + 1 < len(sql) and sql[i + 1] == "/":
-                buf.append("/")
-                i += 2
-                in_block_comment = False
-            else:
-                i += 1
-            continue
-        if not in_dollar and sql[i] == "-" and i + 1 < len(sql) and sql[i + 1] == "-":
-            buf.append(sql[i])
-            buf.append(sql[i + 1])
-            i += 2
-            in_line_comment = True
-            continue
-        if not in_dollar and sql[i] == "/" and i + 1 < len(sql) and sql[i + 1] == "*":
-            buf.append(sql[i])
-            buf.append(sql[i + 1])
-            i += 2
-            in_block_comment = True
-            continue
-        if sql[i] == "$":
-            j = i + 1
-            if j < len(sql) and sql[j] == "$":
-                tag = "$$"
-                end = j
-            else:
-                while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
-                    j += 1
-                if j < len(sql) and sql[j] == "$":
-                    tag = sql[i : j + 1]
-                    end = j
-                else:
-                    tag = ""
-                    end = i
-            if tag:
-                if not in_dollar:
-                    in_dollar = True
-                    dollar_tag = tag
-                    buf.append(tag)
-                    i = end + 1
-                    continue
-                if tag == dollar_tag:
-                    in_dollar = False
-                    dollar_tag = ""
-                    buf.append(tag)
-                    i = end + 1
-                    continue
-        if sql[i] == ";" and not in_dollar:
-            statements.append("".join(buf))
-            buf = []
-        else:
-            buf.append(sql[i])
-        i += 1
-    if buf:
-        statements.append("".join(buf))
-    return statements
-
-
 async def _apply_migration(admin_engine, filename: str) -> None:
     sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
     async with admin_engine.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.exec_driver_sql(stmt)
+        await conn.exec_driver_sql(sql)
 
 
 async def _ensure_public_users(conn) -> None:
@@ -177,10 +98,7 @@ async def _bootstrap_public_shared(conn) -> None:
     """shared public bootstrap を 1 接続内で適用する。"""
     for filename in _PG_BOOTSTRAP_MIGRATIONS:
         sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.exec_driver_sql(stmt)
+        await conn.exec_driver_sql(sql)
 
     fk_exists = await conn.scalar(
         text("""
