@@ -14,6 +14,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
+from app.routers.analytics import conversion_by_attribute_summary
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -154,24 +155,37 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
             )
             inserted_rows.extend(int(row_id) for row_id in lead_result.scalars().all())
 
+        async with app_session_factory() as session:
+            async with session.begin():
+                await session.execute(text(f"SET LOCAL search_path = {WORK_SCHEMA}, public"))
+                await session.execute(text("SET LOCAL app.tenant_id = '6'"))
+                await session.execute(text("SET LOCAL app.is_operator = ''"))
+
+                # FastAPI dependency 解決を介さず、同一 session の RLS クエリを直接検証する。
+                team = await conversion_by_attribute_summary(
+                    scope="team",
+                    db=session,
+                    tenant_id=tenant_id,
+                    current_user=current_user,
+                )
+                assert team.channel_type.overall_rate == pytest.approx(0.25, abs=1e-4)
+                team_channels = {row.value: row for row in team.channel_type.items}
+                assert team_channels["instagram"].n == 2
+                assert team_channels["instagram"].conversions == 1
+                assert team_channels["cold_call"].n == 1
+                assert team_channels["cold_call"].conversions == 0
+                assert team_channels["cold_call"].smoothed_rate == pytest.approx((10 * 0.25) / 11, abs=1e-4)
+
+                mine = await conversion_by_attribute_summary(
+                    scope="mine",
+                    db=session,
+                    tenant_id=tenant_id,
+                    current_user=current_user,
+                )
+                assert mine.channel_type.overall_rate == pytest.approx(1 / 3, abs=1e-4)
+
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            team_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=team")
-            assert team_res.status_code == 200, team_res.text
-            team = team_res.json()
-            assert team["channel_type"]["overall_rate"] == pytest.approx(0.25, abs=1e-4)
-            team_channels = {row["value"]: row for row in team["channel_type"]["items"]}
-            assert team_channels["instagram"]["n"] == 2
-            assert team_channels["instagram"]["conversions"] == 1
-            assert team_channels["cold_call"]["n"] == 1
-            assert team_channels["cold_call"]["conversions"] == 0
-            assert team_channels["cold_call"]["smoothed_rate"] == pytest.approx((10 * 0.25) / 11, abs=1e-4)
-
-            mine_res = await ac.get("/api/v1/analytics/conversion-by-attribute?scope=mine")
-            assert mine_res.status_code == 200, mine_res.text
-            mine = mine_res.json()
-            assert mine["channel_type"]["overall_rate"] == pytest.approx(1 / 3, abs=1e-4)
-
             priority_res = await ac.get("/api/v1/analytics/priority-prospects?scope=mine")
             assert priority_res.status_code == 200, priority_res.text
             priority = priority_res.json()

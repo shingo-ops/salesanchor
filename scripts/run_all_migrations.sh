@@ -431,6 +431,9 @@ run_sql migrations/20260621_010000_create_countries_master.sql
 # SSOT 統合①: meta_messages に master 履歴列を追加（追加のみ）
 run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
 
+# SSOT 統合②: conversation_logs の conv 専用行を実在 lead のみ meta_messages に移送
+run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
+
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
