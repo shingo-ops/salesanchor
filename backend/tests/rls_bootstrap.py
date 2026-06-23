@@ -83,6 +83,31 @@ async def _ensure_public_users(admin_engine) -> None:
     async with admin_engine.begin() as conn:
         await conn.execute(
             text("""
+                CREATE TABLE IF NOT EXISTS public.tenants (
+                    id INTEGER PRIMARY KEY,
+                    tenant_code VARCHAR(50) NOT NULL UNIQUE,
+                    tenant_name VARCHAR(255) NOT NULL DEFAULT '',
+                    company_name VARCHAR(255) NOT NULL DEFAULT '',
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    settings JSONB NOT NULL DEFAULT '{}'::jsonb
+                )
+            """)
+        )
+        await conn.execute(
+            text("""
+                INSERT INTO public.tenants (
+                    id, tenant_code, tenant_name, company_name, is_active
+                )
+                VALUES (999, 'tenant_999', 'Test Tenant', 'Test Tenant', TRUE)
+                ON CONFLICT (id) DO UPDATE SET
+                    tenant_code = EXCLUDED.tenant_code,
+                    tenant_name = EXCLUDED.tenant_name,
+                    company_name = EXCLUDED.company_name,
+                    is_active = EXCLUDED.is_active
+            """)
+        )
+        await conn.execute(
+            text("""
                 CREATE TABLE IF NOT EXISTS public.users (
                     id INTEGER PRIMARY KEY,
                     tenant_id INTEGER NOT NULL DEFAULT 999,
@@ -182,6 +207,31 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
         try:
             await _bootstrap_public_shared(conn)
             await _ensure_public_users(conn)
+            await conn.execute(
+                text("""
+                    INSERT INTO public.tenants (
+                        id, tenant_code, tenant_name, company_name, is_active
+                    )
+                    VALUES (
+                        :tenant_id,
+                        :tenant_code,
+                        :tenant_name,
+                        :company_name,
+                        TRUE
+                    )
+                    ON CONFLICT (id) DO UPDATE SET
+                        tenant_code = EXCLUDED.tenant_code,
+                        tenant_name = EXCLUDED.tenant_name,
+                        company_name = EXCLUDED.company_name,
+                        is_active = EXCLUDED.is_active
+                """),
+                {
+                    "tenant_id": int(tenant_id),
+                    "tenant_code": f"tenant_{int(tenant_id):03d}",
+                    "tenant_name": f"tenant_{int(tenant_id):03d}",
+                    "company_name": f"tenant_{int(tenant_id):03d}",
+                },
+            )
             schema_name = f"tenant_{int(tenant_id):03d}"
             await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
             schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
