@@ -9,7 +9,8 @@
 - 各 tenant ループ内で `set_tenant_context()` を呼ぶ。
 - tenant 処理後に `clear_tenant_context()` で session context を戻す。
 - `translation.py` はメッセージ単位で `reset_tenant_context()` を再適用する。
-- `data_deletion.py` は別ステップで admin 接続隔離を検討するため、今回は触らない。
+- data_deletion.py は別ステップで admin 接続隔離を検討するため、今回は触らない。
+- recon: docs/handoff/translation-context-batch/recon.md
 
 ## 受け入れ基準
 
