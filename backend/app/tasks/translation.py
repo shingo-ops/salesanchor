@@ -11,6 +11,7 @@ ADR-110: 翻訳バックグラウンドタスク（Celery）。
 
 import logging
 
+from app.auth.dependencies import clear_tenant_context, reset_tenant_context, set_tenant_context
 from app.celery_app import celery_app
 from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
 
@@ -177,63 +178,73 @@ async def _run_batch() -> dict:
             meta_t = f"{schema_name}.meta_messages"
             trans_t = f"{schema_name}.message_translations"
 
-            # 未翻訳の受信メッセージを取得
-            result = await db.execute(
-                text(
-                    f"SELECT m.message_id, m.message_text "
-                    f"FROM {meta_t} m "
-                    f"WHERE m.direction = 'inbound' "
-                    f"  AND m.message_id IS NOT NULL "
-                    f"  AND m.message_text IS NOT NULL AND m.message_text <> '' "
-                    f"ORDER BY m.created_at ASC "
-                    f"LIMIT :limit"
-                ),
-                {"limit": _BATCH_SIZE},
-            )
-            rows = result.fetchall()
+            await set_tenant_context(db, tenant_id)
+            try:
+                # 未翻訳の受信メッセージを取得
+                result = await db.execute(
+                    text(
+                        f"SELECT m.message_id, m.message_text "
+                        f"FROM {meta_t} m "
+                        f"WHERE m.direction = 'inbound' "
+                        f"  AND m.message_text IS NOT NULL AND m.message_text <> '' "
+                        f"  AND NOT EXISTS ( "
+                        f"      SELECT 1 FROM {trans_t} t "
+                        f"      WHERE t.message_id = m.message_id "
+                        f"        AND t.target_language = 'ja' "
+                        f"  ) "
+                        f"ORDER BY m.created_at ASC "
+                        f"LIMIT :limit"
+                    ),
+                        {"limit": _BATCH_SIZE},
+                )
+                rows = result.fetchall()
 
-            for message_id, message_text in rows:
-                try:
-                    existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
-                        db,
-                        trans_t,
-                        str(message_id),
-                    )
-                    required_targets = get_required_inbound_targets(
-                        str(message_text),
-                        ja_original_language,
-                    )
-                    if required_targets.issubset(existing_targets):
-                        continue
-                    await ensure_inbound_translations(
-                        db=db,
-                        tenant_id=tenant_id,
-                        table_ref=trans_t,
-                        message_id=str(message_id),
-                        message_text=str(message_text),
-                    )
-                    processed += 1
-                except BudgetExceededError:
-                    logger.info(
-                        "[translation_task] budget exceeded for tenant %s, skip remaining",
-                        tenant_id,
-                    )
-                    # 残メッセージをスキップとしてカウント
-                    remaining = len(rows) - rows.index((message_id, message_text)) - 1
-                    skipped += remaining
-                    break
-                except (LLMConfigError, LLMParseError) as exc:
-                    logger.warning(
-                        "[translation_task] non-fatal error message_id=%s: %s",
-                        message_id, exc,
-                    )
-                    failed += 1
-                except Exception as exc:
-                    logger.exception(
-                        "[translation_task] unexpected error message_id=%s: %s",
-                        message_id, exc,
-                    )
-                    failed += 1
+                for message_id, message_text in rows:
+                    try:
+                        existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
+                            db,
+                            trans_t,
+                            str(message_id),
+                        )
+                        required_targets = get_required_inbound_targets(
+                            str(message_text),
+                            ja_original_language,
+                        )
+                        if required_targets.issubset(existing_targets):
+                            continue
+                        await ensure_inbound_translations(
+                            db=db,
+                            tenant_id=tenant_id,
+                            table_ref=trans_t,
+                            message_id=str(message_id),
+                            message_text=str(message_text),
+                        )
+                        processed += 1
+                    except BudgetExceededError:
+                        logger.info(
+                            "[translation_task] budget exceeded for tenant %s, skip remaining",
+                            tenant_id,
+                        )
+                        # 残メッセージをスキップとしてカウント
+                        remaining = len(rows) - rows.index((message_id, message_text)) - 1
+                        skipped += remaining
+                        break
+                    except (LLMConfigError, LLMParseError) as exc:
+                        logger.warning(
+                            "[translation_task] non-fatal error message_id=%s: %s",
+                            message_id, exc,
+                        )
+                        failed += 1
+                    except Exception as exc:
+                        logger.exception(
+                            "[translation_task] unexpected error message_id=%s: %s",
+                            message_id, exc,
+                        )
+                        failed += 1
+                    finally:
+                        await reset_tenant_context(db, tenant_id)
+            finally:
+                await clear_tenant_context(db)
 
     logger.info(
         "[translation_task] batch done: processed=%d skipped=%d failed=%d",
