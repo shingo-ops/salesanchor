@@ -16,6 +16,9 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/morimoto/schedule-i18n-main | スケジュールナビの文言追加（nav.scheduleSettings） | 2026-06-22 | IN_PROGRESS | | | frontend/src/locales/ja.json + en.json |
+| release/fedex-etd-step1-to-main | FedEx ETD Step1 ガイド develop→main リリース | 2026-06-22 | IN_PROGRESS | | | locale conflict 解決済み |
+| feature/fedex-etd-guide-clean | FedEx ETD 設定ガイド Level1 / ETD upload 422 ガード | 2026-06-22 | IN_PROGRESS | | | feature/morimoto/fedex-etd-migration からガイドを分離したクリーンブランチ |
 | feature/morimoto/advisor-weekly-w1-defensive-api | Advisor Phase 1 PR-W1 守り3種 集計＋離脱スコア＋ランク API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-weekly/ |
 | codex/advisor-phase1-new-goal-advice-root | Advisor Phase 1 PR-4 新規モード 逆算アドバイスAPI | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py + docs/handoff/advisor-phase1/ |
 | codex/advisor-phase1-customer-contact | Advisor Phase 1 PR-3 顧客別 接触集計API | 2026-06-20 | IN_PROGRESS | | | backend/app/routers/analytics.py + backend/tests/test_analytics.py |
@@ -225,3 +228,5 @@
 | feature/morimoto/worktree-adr114-pr-c1 | ADR-114 PR-C1: flock追加・起動時reaper plist・docs/ADR更新 | 2026-06-18 | IN_PROGRESS | | | |
 | feature/morimoto/schedule-8issues-fix | スケジュールページ 8件本番バグ修正 | 2026-06-21 | DONE | #2411 | | merged |
 | feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | IN_PROGRESS | | | |
+| feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |
+| hotfix/morimoto/page-header-revert-clean | 全PageLayoutページ ヘッダー白帯・1段下ズレ修正（#2432 リグレッション） | 2026-06-23 | IN_PROGRESS | #2486 | main | |

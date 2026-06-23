@@ -80,14 +80,26 @@ function writeTmp(name, content) {
 
 // ─── フィクスチャ ─────────────────────────────────────────────────────────────
 
+function normalizeAdrs(adrs) {
+  if (!adrs) return ['ADR-999'];
+  return Array.isArray(adrs) ? adrs : [adrs];
+}
+
 /** 存在するファイル/行のfile:line引用を含む正常なrecon */
-function validReconContent(filePath, lineNum) {
-  return `# recon — test\n**対象ADR**: ADR-999\n\n## file:line 引用表\n| 引用先 | 確認内容 |\n|---|---|\n| \`${filePath}:${lineNum}\` | 確認済み |\n\n## 不明点リスト\n未解決ゼロ確認: 該当なし\n`;
+function validReconContent(filePath, lineNum, adrs = 'ADR-999') {
+  const adrLines = normalizeAdrs(adrs).map(adr => `**対象ADR**: ${adr}`).join('\n');
+  return `# recon — test\n${adrLines}\n\n## file:line 引用表\n| 引用先 | 確認内容 |\n|---|---|\n| \`${filePath}:${lineNum}\` | 確認済み |\n\n## 不明点リスト\n未解決ゼロ確認: 該当なし\n`;
 }
 
 /** 設計docの正常形 */
-function validDesignContent(reconPath, adr) {
-  return `# 設計 — test\n**対象ADR**: ${adr}\n**recon**: ${reconPath}\n\n## 外部・過去事例の参照と我々への応用\n該当なし：今回は小規模修正のため外部事例は不要と判断\n\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テストが通る | pytest tests/test_xxx.py |\n`;
+function validDesignContent(reconPath, adrs) {
+  const adrLines = normalizeAdrs(adrs).map(adr => `**対象ADR**: ${adr}`).join('\n');
+  return `# 設計 — test\n${adrLines}\n**recon**: ${reconPath}\n\n## 外部・過去事例の参照と我々への応用\n該当なし：今回は小規模修正のため外部事例は不要と判断\n\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テストが通る | pytest tests/test_xxx.py |\n`;
+}
+
+function validSOPBody(reconPath, designPath, adrs) {
+  const adrLines = normalizeAdrs(adrs).map(adr => `- 対象ADR: ${adr}`).join('\n');
+  return `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n${adrLines}\n- recon: ${reconPath}\n- 設計: ${designPath}\n`;
 }
 
 /** 正常なGO記録セクション */
@@ -202,9 +214,18 @@ test('標準ワークフロー確認セクションをパース', () => {
   const d = parseSOPDeclaration(body);
   assert.ok(d, 'declaration が null');
   assert.strictEqual(d.adr, 'ADR-123');
+  assert.deepStrictEqual(d.adrs, ['ADR-123']);
   assert.strictEqual(d.reconPath, 'docs/handoff/my-job/recon.md');
   assert.strictEqual(d.designPath, 'docs/handoff/my-job/design.md');
   assert.strictEqual(d.isExempt, false);
+});
+
+test('標準ワークフロー確認セクションで複数ADRをパース', () => {
+  const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-009\n- 対象ADR: ADR-011\n- recon: docs/handoff/my-job/recon.md\n- 設計: docs/handoff/my-job/design.md\n`;
+  const d = parseSOPDeclaration(body);
+  assert.ok(d, 'declaration が null');
+  assert.deepStrictEqual(d.adrs, ['ADR-009', 'ADR-011']);
+  assert.strictEqual(d.adr, 'ADR-009');
 });
 
 test('免除チェック済みを検出', () => {
@@ -444,6 +465,21 @@ test('AC2: 「外部・過去事例と応用」欄が空欄の設計はfail', ()
   assert.ok(errors.some(e => e.includes('外部') && e.includes('空欄')));
 });
 
+test('AC2: 複数ADRを含む設計は全件相互参照が必要', () => {
+  const content = `# 設計\n**対象ADR**: ADR-009\n**対象ADR**: ADR-011\n**recon**: docs/handoff/x/recon.md\n\n## 外部・過去事例の参照と我々への応用\n該当なし：テスト\n\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テスト | pytest |\n`;
+  const okErrors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-009', 'ADR-011']);
+  assert.deepStrictEqual(okErrors, []);
+
+  const ngErrors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-009', 'ADR-999999']);
+  assert.ok(ngErrors.some(e => e.includes('ADR-999999')));
+});
+
+test('AC2: 設計docのADR参照も境界付きで評価される', () => {
+  const content = `# 設計\n**対象ADR**: ADR-1000\n**recon**: docs/handoff/x/recon.md\n\n## 外部・過去事例の参照と我々への応用\n該当なし：テスト\n\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テスト | pytest |\n`;
+  const errors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-10']);
+  assert.ok(errors.some(e => e.includes('ADR-10')), `ADR-10 が ADR-1000 に吸われてはいけない: ${errors.join(' | ')}`);
+});
+
 test('AC2: 「外部・過去事例と応用」欄セクション自体が無い場合もfail', () => {
   const content = `# 設計\n## 受け入れ基準\n| 基準 | 検証方法 |\n|---|---|\n| テスト | pytest |\n`;
   const errors = validateDesignDoc(content, null, null);
@@ -586,7 +622,12 @@ test('内部のみのPR: 実在するrecon＋設計doc → GOなしでpass', () 
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
     const designRelPath = writeTmp('test-job/design.md', designContent);
 
-    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+    const body = `### 標準ワークフロー確認
+- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+`;
 
     const result = runScript({
       CHANGED_FILES: 'backend/app/schemas/lead.py',
@@ -607,7 +648,12 @@ test('ユーザー影響変更: GOなしはfail', () => {
     const reconRelPath = writeTmp('user-impact-no-go/recon.md', reconContent);
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
     const designRelPath = writeTmp('user-impact-no-go/design.md', designContent);
-    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+    const body = `### 標準ワークフロー確認
+- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+`;
 
     const result = runScript({
       CHANGED_FILES: 'frontend/src/pages/schedule/SchedulePage.tsx',
@@ -629,7 +675,13 @@ test('ユーザー影響変更: GOありはpass', () => {
     const reconRelPath = writeTmp('user-impact-with-go/recon.md', reconContent);
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
     const designRelPath = writeTmp('user-impact-with-go/design.md', designContent);
-    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n\n${validGORecordSection(2099)}`;
+    const body = `### 標準ワークフロー確認
+- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+
+${validGORecordSection(2099)}`;
 
     const result = runScript({
       CHANGED_FILES: 'backend/app/services/message_translator.py',
@@ -652,7 +704,12 @@ test('外部API変更: GOなしはfail', () => {
     const reconRelPath = writeTmp('external-api-no-go/recon.md', reconContent);
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
     const designRelPath = writeTmp('external-api-no-go/design.md', designContent);
-    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n`;
+    const body = `### 標準ワークフロー確認
+- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+`;
 
     const result = runScript({
       CHANGED_FILES: 'backend/app/schemas/lead.py',
@@ -675,7 +732,13 @@ test('外部API変更: GOありはpass', () => {
     const reconRelPath = writeTmp('external-api-with-go/recon.md', reconContent);
     const designContent = validDesignContent(reconRelPath, 'ADR-999');
     const designRelPath = writeTmp('external-api-with-go/design.md', designContent);
-    const body = `### 標準ワークフロー確認\n- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n- 対象ADR: ADR-999\n- recon: ${reconRelPath}\n- 設計: ${designRelPath}\n\n${validGORecordSection(2099)}`;
+    const body = `### 標準ワークフロー確認
+- [ ] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+
+${validGORecordSection(2099)}`;
 
     const result = runScript({
       CHANGED_FILES: 'backend/app/schemas/lead.py',
@@ -691,14 +754,279 @@ test('外部API変更: GOありはpass', () => {
   }
 });
 
-test('免除宣言のある低リスクPRはpass', () => {
-  const body = `### 標準ワークフロー確認\n- [x] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ\n`;
+test('正常系: 実在するADR命名バリエーション4件は全てpass', () => {
+  const cases = [
+    { adr: 'ADR-009', label: 'ADR-009-discord-gateway.md' },
+    { adr: 'ADR-011', label: 'ADR-011.md' },
+    { adr: 'ADR-018', label: 'ADR-018_instagram_send_endpoint_fix.md' },
+    { adr: 'ADR-1000', label: 'ADR-1000-external-api-smoke-mandatory.md' },
+  ];
+
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    for (const { adr, label } of cases) {
+      const reconContent = validReconContent(scriptRelPath, 1, adr);
+      const reconRelPath = writeTmp(`adr-variants/${adr}-recon.md`, reconContent);
+      const designContent = validDesignContent(reconRelPath, adr);
+      const designRelPath = writeTmp(`adr-variants/${adr}-design.md`, designContent);
+      const body = validSOPBody(reconRelPath, designRelPath, adr);
+
+      const result = runScript({
+        CHANGED_FILES: 'backend/app/schemas/lead.py',
+        MOCK_PR_BODY: body,
+      });
+      assert.strictEqual(result.code, 0, `${label} は pass するべき: stderr=${result.stderr}`);
+      assert.ok(result.stdout.includes('PASSED'), `${label} は PASSED 出力が必要`);
+    }
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('境界: ADR-10 参照は ADR-1000-*.md だけでは pass しない', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1, 'ADR-10');
+    const reconRelPath = writeTmp('adr-boundary/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-10');
+    const designRelPath = writeTmp('adr-boundary/design.md', designContent);
+    const body = validSOPBody(reconRelPath, designRelPath, 'ADR-10');
+
+    const result = runScript({
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
+      MOCK_PR_BODY: body,
+    });
+    assert.notStrictEqual(result.code, 0, 'ADR-10 は ADR-1000 を誤検知して pass してはいけない');
+    assert.ok(
+      result.stderr.includes('ADR ADR-10') || result.stderr.includes('ADR-10 のファイル'),
+      `境界失敗メッセージが必要: stderr=${result.stderr}`
+    );
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('複数ADR: 1件でも欠ければ fail', () => {
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1, ['ADR-009', 'ADR-011']);
+    const reconRelPath = writeTmp('adr-multi/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, ['ADR-009', 'ADR-011']);
+    const designRelPath = writeTmp('adr-multi/design.md', designContent);
+
+    const okBody = validSOPBody(reconRelPath, designRelPath, ['ADR-009', 'ADR-011']);
+    const okResult = runScript({
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
+      MOCK_PR_BODY: okBody,
+    });
+    assert.strictEqual(okResult.code, 0, `両方存在すれば pass するべき: stderr=${okResult.stderr}`);
+
+    const ngBody = validSOPBody(reconRelPath, designRelPath, ['ADR-009', 'ADR-999999']);
+    const ngResult = runScript({
+      CHANGED_FILES: 'backend/app/schemas/lead.py',
+      MOCK_PR_BODY: ngBody,
+    });
+    assert.notStrictEqual(ngResult.code, 0, '欠けたADRがあれば fail するべき');
+    assert.ok(ngResult.stderr.includes('ADR-999999'), `欠落したADRのエラーが必要: stderr=${ngResult.stderr}`);
+  } finally {
+    cleanupTmp();
+  }
+});
+
+// ── §7 AC2: 複数ADRを含む設計は全件相互参照が必要 ──────────────────────────
+test('AC2: 複数ADRを含む設計は全件相互参照が必要', () => {
+  const content = `# 設計
+**対象ADR**: ADR-009
+**対象ADR**: ADR-011
+**recon**: docs/handoff/x/recon.md
+
+## 外部・過去事例の参照と我々への応用
+該当なし：テスト
+
+## 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| テスト | pytest |
+`;
+  const okErrors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-009', 'ADR-011']);
+  assert.deepStrictEqual(okErrors, []);
+
+  const ngErrors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-009', 'ADR-999999']);
+  assert.ok(ngErrors.some(e => e.includes('ADR-999999')));
+});
+
+test('AC2: 設計docのADR参照も境界付きで評価される', () => {
+  const content = `# 設計
+**対象ADR**: ADR-1000
+**recon**: docs/handoff/x/recon.md
+
+## 外部・過去事例の参照と我々への応用
+該当なし：テスト
+
+## 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| テスト | pytest |
+`;
+  const errors = validateDesignDoc(content, 'docs/handoff/x/recon.md', ['ADR-10']);
+  assert.ok(errors.some(e => e.includes('ADR-10')), `ADR-10 が ADR-1000 に吸われてはいけない: ${errors.join(' | ')}`);
+});
+
+// ── §7 AC2: 「外部・過去事例と応用」欄セクション自体が無い場合もfail ─────────────────────────────
+test('AC2: 「外部・過去事例と応用」欄セクション自体が無い場合もfail', () => {
+  const content = `# 設計
+## 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| テスト | pytest |
+`;
+  const errors = validateDesignDoc(content, null, null);
+  assert.ok(errors.some(e => e.includes('外部')));
+});
+
+// ── §7 AC3: 検証リンク無しの受入基準はfail ───────────────────────────────────
+test('AC3: 検証方法が空の受け入れ基準はfail', () => {
+  const content = `# 設計
+**対象ADR**: ADR-1
+**recon**: docs/handoff/x/recon.md
+
+## 外部・過去事例の参照と我々への応用
+該当なし：テスト
+
+## 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| テストが通る | |
+`;
+  const errors = validateDesignDoc(content, 'docs/handoff/x/recon.md', 'ADR-1');
+  assert.ok(errors.some(e => e.includes('検証方法が空')));
+});
+
+// ── §7 AC4: 危ない変更でGO記録なしはfail ────────────────────────────────────
+test('AC4: 危ない変更＋GO記録なし → GO記録必須メッセージで即fail', () => {
   const result = runScript({
-    CHANGED_FILES: 'backend/app/main.py',
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: '',
+  });
+  assert.notStrictEqual(result.code, 0, 'GO記録なしでfailするべき（exit != 0）');
+  assert.ok(
+    result.stderr.includes('PROCESS ARTIFACTS GATE FAILED'),
+    'GATE FAILED メッセージが出るべき'
+  );
+  assert.ok(
+    result.stderr.includes('GO記録') || result.stderr.includes('GO #'),
+    'GO記録要求メッセージが出るべき'
+  );
+});
+
+test('AC4-edge: 危ない変更＋GO記録なし＋成果物完備でも fail', () => {
+  // 成果物が完備でもGO記録がなければdangerous PRはfail
+  setupTmp();
+  try {
+    const scriptRelPath = SCRIPT.replace(repoRoot + '/', '');
+    const reconContent = validReconContent(scriptRelPath, 1);
+    const reconRelPath = writeTmp('danger-no-go/recon.md', reconContent);
+    const designContent = validDesignContent(reconRelPath, 'ADR-999');
+    const designRelPath = writeTmp('danger-no-go/design.md', designContent);
+    const body = `### 標準ワークフロー確認
+- 対象ADR: ADR-999
+- recon: ${reconRelPath}
+- 設計: ${designRelPath}
+`;
+
+    const result = runScript({
+      CHANGED_FILES: 'migrations/001_test.sql',
+      MOCK_PR_BODY: body,
+    });
+    assert.notStrictEqual(result.code, 0, '成果物完備でもGO記録なしはfailするべき');
+    assert.ok(
+      result.stderr.includes('GO記録') || result.stderr.includes('GO #'),
+      'GO記録要求メッセージが出るべき'
+    );
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test('AC4-bad-format: GO原文の書式不正（番号なし）→ fail', () => {
+  const body = `### GO記録
+- GO発行者: Shingo（shingo-ops）
+- 日時: 2026-06-13 10:00 JST
+- GO原文: GO
+- バックアップ確認: あり
+`;
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '書式不正はfailするべき');
+  assert.ok(
+    result.stderr.includes('書式不正') || result.stderr.includes('番号のないGO'),
+    '書式不正メッセージが出るべき'
+  );
+});
+
+test('AC4-number-mismatch: GO原文のPR番号不一致 → fail', () => {
+  const body = `### GO記録
+- GO発行者: Shingo（shingo-ops）
+- 日時: 2026-06-13 10:00 JST
+- GO原文: GO #9999
+- バックアップ確認: あり
+`;
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '番号不一致はfailするべき');
+  assert.ok(
+    result.stderr.includes('番号不一致') || result.stderr.includes('9999'),
+    '番号不一致メッセージが出るべき'
+  );
+});
+
+test('AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須）', () => {
+  const body = `### 標準ワークフロー確認
+- [x] 免除（自律クラフト：バグ修正/CI/リファクタ）※低リスクのみ
+`;
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
     MOCK_PR_BODY: body,
   });
+  assert.notStrictEqual(result.code, 0);
+});
+
+// ── §7 AC5: GO記録あり（全フィールド正常）→ pass ────────────────────────────
+test('AC5: 危ない変更＋正常GO記録（PR番号一致）→ pass', () => {
+  const body = validGORecordSection(2099);
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
   assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
-  assert.ok(result.stdout.includes('免除'));
+  assert.ok(result.stdout.includes('GO記録確認済み') || result.stdout.includes('pass'));
+});
+
+test('AC5: 危ない変更＋正常GO記録（緊急モード）→ pass＋宿題起票試行', () => {
+  const sopSection = `### 標準ワークフロー確認
+- （危ない変更の特例時）モード: 緊急
+`;
+  const goSection = validGORecordSection(2099);
+  const result = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: sopSection + '\n' + goSection,
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+  assert.ok(
+    result.stdout.includes('緊急') || result.stdout.includes('pass'),
+    '緊急GO passメッセージが出るべき'
+  );
 });
 
 // ── develop→main リリースPR スキップ ─────────────────────────────────────────
@@ -723,8 +1051,141 @@ test('hotfix→main は通常検査（スキップしない）', () => {
   assert.notStrictEqual(result.code, 0, 'hotfix→main は検査でfailするべき');
 });
 
+// ── git diff 3点形式の動作検証（古い土台の巻き込み解消） ──────────────────────
+console.log('\n【git diff 3点形式テスト（gate-diff-3dot）】');
+
+test('3点差分: 古い土台のブランチで本線側の scripts/ 変更を巻き込まない', () => {
+  // 期待値先行:
+  //   2点 git diff A B   → base(develop先端)～head間の "A と B の差" にdevelop側のscripts/も出る
+  //   3点 git diff A...B → merge-base(A,B) から B への差分のみ = feature が実際に加えた変更だけ
+
+  const { mkdtempSync } = require('fs');
+  const tmpRepo = mkdtempSync('/tmp/gate-3dot-test-');
+  try {
+    // 1. 一時リポジトリ初期化
+    execSync(
+      `git -C "${tmpRepo}" init -q && ` +
+      `git -C "${tmpRepo}" config user.email "t@t" && ` +
+      `git -C "${tmpRepo}" config user.name "t"`,
+      { encoding: 'utf8' }
+    );
+
+    // 2. 共通の base コミット X（ブランチ分岐点）
+    execSync(
+      `touch "${tmpRepo}/base.txt" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "base"`,
+      { encoding: 'utf8' }
+    );
+
+    // 3. develop に scripts/ の変更を追加（ブランチ分岐後に本線へ入った変更）
+    execSync(
+      `mkdir -p "${tmpRepo}/scripts" && ` +
+      `printf '#!/bin/sh\necho hi\n' > "${tmpRepo}/scripts/reaper.sh" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "develop: add scripts/reaper.sh"`,
+      { encoding: 'utf8' }
+    );
+    const baseSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // 4. feature ブランチを X（1コミット前）から切り、docs のみ変更
+    execSync(`git -C "${tmpRepo}" checkout -q -b feature HEAD~1`, { encoding: 'utf8' });
+    execSync(
+      `mkdir -p "${tmpRepo}/docs" && ` +
+      `printf '# design\n' > "${tmpRepo}/docs/design.md" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "feature: docs only"`,
+      { encoding: 'utf8' }
+    );
+    const headSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // 5. 前提確認: 2点形式は scripts/reaper.sh を巻き込む（旧バグの再現）
+    const diff2 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}" "${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      diff2.includes('scripts/reaper.sh'),
+      `前提: 2点差分は scripts/reaper.sh を含むべき（旧バグ確認）: ${diff2}`
+    );
+
+    // 6. 修正確認: 3点形式は scripts/reaper.sh を巻き込まない
+    const diff3 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}...${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      !diff3.includes('scripts/reaper.sh'),
+      `3点差分は scripts/reaper.sh を含まないべき: ${diff3}`
+    );
+    assert.ok(
+      diff3.includes('docs/design.md'),
+      `3点差分は feature が加えた docs/design.md を含むべき: ${diff3}`
+    );
+  } finally {
+    rmSync(tmpRepo, { recursive: true, force: true });
+  }
+});
+
+test('3点差分: feature が本当に scripts/ を変更した場合は正しく検出する（検知漏れなし）', () => {
+  // 期待値: feature が scripts/ を実際に変更した場合、3点差分にも出る
+  const { mkdtempSync } = require('fs');
+  const tmpRepo = mkdtempSync('/tmp/gate-3dot-danger-');
+  try {
+    execSync(
+      `git -C "${tmpRepo}" init -q && ` +
+      `git -C "${tmpRepo}" config user.email "t@t" && ` +
+      `git -C "${tmpRepo}" config user.name "t"`,
+      { encoding: 'utf8' }
+    );
+    execSync(
+      `touch "${tmpRepo}/base.txt" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "base"`,
+      { encoding: 'utf8' }
+    );
+
+    // develop に別変更（docs）
+    execSync(
+      `printf '# changelog\n' > "${tmpRepo}/CHANGELOG.md" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "develop: changelog"`,
+      { encoding: 'utf8' }
+    );
+    const baseSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    // feature は scripts/ を実際に変更する
+    execSync(`git -C "${tmpRepo}" checkout -q -b feature HEAD~1`, { encoding: 'utf8' });
+    execSync(
+      `mkdir -p "${tmpRepo}/scripts" && ` +
+      `printf '#!/bin/sh\necho deploy\n' > "${tmpRepo}/scripts/deploy.sh" && ` +
+      `git -C "${tmpRepo}" add . && ` +
+      `git -C "${tmpRepo}" commit -q -m "feature: add scripts/deploy.sh"`,
+      { encoding: 'utf8' }
+    );
+    const headSha = execSync(`git -C "${tmpRepo}" rev-parse HEAD`, { encoding: 'utf8' }).trim();
+
+    const diff3 = execSync(
+      `git -C "${tmpRepo}" diff --name-only "${baseSha}...${headSha}"`,
+      { encoding: 'utf8' }
+    ).trim();
+    assert.ok(
+      diff3.includes('scripts/deploy.sh'),
+      `3点差分も feature が加えた scripts/deploy.sh を検出するべき（検知漏れなし）: ${diff3}`
+    );
+    // develop 側の CHANGELOG.md は巻き込まない
+    assert.ok(
+      !diff3.includes('CHANGELOG.md'),
+      `3点差分は develop 側の CHANGELOG.md を巻き込まないべき: ${diff3}`
+    );
+  } finally {
+    rmSync(tmpRepo, { recursive: true, force: true });
+  }
+});
+
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
-console.log(`\n${'='.repeat(50)}`);
+console.log(`
+${'='.repeat(50)}`);
 console.log(`テスト結果: ✅ ${passed} PASS / ❌ ${failed} FAIL`);
 if (failed > 0) {
   console.error('FAILED');

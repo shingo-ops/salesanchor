@@ -2,7 +2,7 @@
 
 spec.md v1.3 F11 / AC11.5:
   - 中央 admin が public.inventory (仕入元現在オファー) を一覧 / 編集 / 追加 / 削除する
-  - UNIQUE (supplier_id, product_id, condition) で 1 行に集約
+  - 入力 condition は raw_condition + 軸列へ投影して 1 行に集約
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ InventoryOfferType = Literal["in_stock", "pre_order"]
 InventoryShipTiming = Literal["on_release", "1day_before", "2day_before", "other"]
 
 # 状態の正規 16 値 (migration 089)。
-# UNIQUE(supplier_id × product_id × condition) の discriminator として使用。
+# 入力 condition の正規化と軸投影に使う。
 InventoryCondition = Literal[
     "shrink",      # シュリンク付き  (box 主)
     "no_shrink",   # シュリンクなし  (box 主)
@@ -47,7 +47,7 @@ class InventoryOfferBase(BaseModel):
 
     supplier_id: int = Field(..., gt=0)
     product_id: int = Field(..., gt=0)
-    # 状態。UNIQUE(supplier_id × product_id × condition) の discriminator。
+    # 状態。入力 condition として受け、保存時は raw_condition + 軸列へ投影する。
     # migration 089 で 16 値に正規化・CHECK 制約追加済み。
     condition: InventoryCondition = Field(...)
     quantity: int = Field(..., ge=0)
@@ -70,7 +70,7 @@ class InventoryOfferCreate(InventoryOfferBase):
 
 class InventoryOfferUpdate(BaseModel):
     """PATCH 用。すべて任意。supplier_id / product_id / condition は変更不可
-    (UNIQUE キー、変更したい場合は DELETE + INSERT)。"""
+    （状態変更したい場合は DELETE + INSERT 相当で再作成）。"""
 
     quantity: int | None = Field(default=None, ge=0)
     unit_price: int | None = Field(default=None, ge=0)
@@ -94,7 +94,7 @@ class InventoryOfferResponse(InventoryOfferBase):
     updated_at: datetime
 
     # レスポンスでは condition を str に緩める（非正規値を含む既存データで500にならないよう）
-    # 書き込み側（Create/Update）は InventoryCondition のまま維持
+    # 書き込み側（Create/Update）は InventoryCondition のまま維持、保存時は raw_condition + 軸列に投影
     condition: str = Field(...)
     # 区分/発送日もレスポンスは str に緩める（旧データ/将来値で500を避ける）
     offer_type: str = "in_stock"

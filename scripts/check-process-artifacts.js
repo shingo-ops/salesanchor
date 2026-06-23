@@ -129,18 +129,34 @@ function parseSOPDeclaration(prBody) {
   const section = sectionMatch[1];
 
   const isExempt = /- \[x\]\s*免除/i.test(section);
-  const adrMatch = section.match(/対象ADR:\s*(ADR-[\w-]+)/);
+  const adrs = extractTargetADRs(section);
   const reconMatch = section.match(/recon:\s*(docs\/handoff\/[^\s\n]+\.md)/);
   const designMatch = section.match(/設計:\s*([^\n（]+)/);
   const modeMatch = section.match(/モード:\s*(些細|緊急)/);
 
   return {
     isExempt,
-    adr: adrMatch ? adrMatch[1].trim() : null,
+    adr: adrs.length > 0 ? adrs[0] : null,
+    adrs,
     reconPath: reconMatch ? reconMatch[1].trim() : null,
     designPath: designMatch ? designMatch[1].trim() : null,
     mode: modeMatch ? modeMatch[1] : null,
   };
+}
+
+function extractTargetADRs(section) {
+  const adrs = [];
+  const targetAdrRe = /対象ADR:\s*([^\n]+)/g;
+  let match;
+
+  while ((match = targetAdrRe.exec(section)) !== null) {
+    const lineAdrs = match[1].match(/ADR-\d[\w-]*/g);
+    if (lineAdrs) {
+      adrs.push(...lineAdrs);
+    }
+  }
+
+  return [...new Set(adrs)];
 }
 
 // ─── GO記録パース ─────────────────────────────────────────────────────────────
@@ -292,6 +308,7 @@ function validateFileCitations(content) {
 // ─── 設計doc 検証 ─────────────────────────────────────────────────────────────
 function validateDesignDoc(designContent, reconPath, adr) {
   const errors = [];
+  const adrs = normalizeAdrList(adr);
 
   // 受け入れ基準表の存在確認（| 基準 | 検証方法 | パターン）
   if (!/\|\s*基準\s*\|/.test(designContent)) {
@@ -316,8 +333,10 @@ function validateDesignDoc(designContent, reconPath, adr) {
   }
 
   // ADR 参照
-  if (adr && !designContent.includes(adr)) {
-    errors.push(`  ❌ 設計docに ADR 参照（${adr}）がありません（相互参照必須）`);
+  for (const targetAdr of adrs) {
+    if (!textHasAdrReference(designContent, targetAdr)) {
+      errors.push(`  ❌ 設計docに ADR 参照（${targetAdr}）がありません（相互参照必須）`);
+    }
   }
 
   // 外部・過去事例欄の存在と非空確認
@@ -336,6 +355,27 @@ function validateDesignDoc(designContent, reconPath, adr) {
   }
 
   return errors;
+}
+
+function normalizeAdrList(adrOrAdrs) {
+  if (!adrOrAdrs) return [];
+  const list = Array.isArray(adrOrAdrs) ? adrOrAdrs : [adrOrAdrs];
+  return [...new Set(list.map(a => String(a).trim()).filter(Boolean))];
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function adrFileMatchesReference(fileName, adr) {
+  const stem = fileName.replace(/\.md$/i, '');
+  const pattern = new RegExp(`^${escapeRegExp(adr)}(?:$|[-_.][\\w.-]*)$`, 'i');
+  return pattern.test(stem);
+}
+
+function textHasAdrReference(text, adr) {
+  const pattern = new RegExp(`(^|[^A-Za-z0-9])${escapeRegExp(adr)}($|[^A-Za-z0-9])`, 'i');
+  return pattern.test(text);
 }
 
 // ─── 自動起票（緊急GO時） ────────────────────────────────────────────────────
@@ -403,19 +443,22 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
     printFailure(errors);
   }
 
-  const { adr, reconPath, designPath } = declaration;
+  const { adr, adrs: declaredAdrs, reconPath, designPath } = declaration;
+  const adrs = normalizeAdrList(declaredAdrs || adr);
 
   // a. ADR 参照
-  if (!adr || adr === 'ADR-____') {
+  if (adrs.length === 0 || adrs.every(a => a === 'ADR-____')) {
     errors.push('❌ 対象ADRが記入されていません（ADR-NNN の形式で記入）');
   } else {
     const adrGlob = join(repoRoot, 'docs/adr');
-    const adrPattern = new RegExp(`^${adr}[\\w-]*\\.md$`, 'i');
     try {
       const adrFiles = execSync(`ls "${adrGlob}" 2>/dev/null`, { encoding: 'utf8' })
-        .split('\n').filter(f => adrPattern.test(f));
-      if (adrFiles.length === 0) {
-        errors.push(`❌ ADR ${adr} のファイルが docs/adr/ に存在しません`);
+        .split('\n').filter(Boolean);
+      for (const targetAdr of adrs) {
+        const matchedFiles = adrFiles.filter(f => adrFileMatchesReference(f, targetAdr));
+        if (matchedFiles.length === 0) {
+          errors.push(`❌ ADR ${targetAdr} のファイルが docs/adr/ に存在しません`);
+        }
       }
     } catch {
       errors.push(`❌ docs/adr/ が読み取れません`);
@@ -449,7 +492,7 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
       errors.push(`❌ 設計docが存在しません: ${designPath}`);
     } else {
       const designContent = readFileSync(fullDesignPath, 'utf8');
-      const designErrors = validateDesignDoc(designContent, reconPath, adr);
+      const designErrors = validateDesignDoc(designContent, reconPath, adrs);
       errors.push(...designErrors);
     }
   }
@@ -483,7 +526,7 @@ function main() {
       console.error('❌ BASE_SHA / HEAD_SHA が設定されていません');
       process.exit(1);
     }
-    changedFiles = execSync(`git diff --name-only "${base}" "${head}"`, { encoding: 'utf8' })
+    changedFiles = execSync(`git diff --name-only "${base}...${head}"`, { encoding: 'utf8' })
       .trim().split('\n').filter(Boolean);
   }
 

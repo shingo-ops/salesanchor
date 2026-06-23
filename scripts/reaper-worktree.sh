@@ -12,7 +12,8 @@
 # 実削除: --execute フラグが必須
 #
 # テスト用オーバーライド環境変数:
-#   REAPER_WORKTREES_DIR      — 走査するディレクトリ（既定: ~/worktrees/salesanchor）
+#   REAPER_WORKTREES_DIR      — 指定するとそのディレクトリのみ走査（テスト互換モード）
+#                               未指定（本番）: git worktree list --porcelain で全登録 worktree を対象にする
 #   REAPER_ACTIVE_WORK_FILE   — active-work.md のパス（既定: <repo>/.claude-pipeline/active-work.md）
 #   REAPER_REPO_NAME          — gh コマンドに使うリポジトリ名（既定: shingo-ops/salesanchor）
 #
@@ -43,7 +44,6 @@ else
   MAIN_REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
 fi
 
-WORKTREES_DIR="${REAPER_WORKTREES_DIR:-${HOME}/worktrees/salesanchor}"
 ACTIVE_WORK_FILE="${REAPER_ACTIVE_WORK_FILE:-${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md}"
 REPO_NAME="${REAPER_REPO_NAME:-shingo-ops/salesanchor}"
 
@@ -53,34 +53,85 @@ SKIP_IN_PROGRESS=()
 SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
 
-if [ ! -d "${WORKTREES_DIR}" ]; then
-  echo "📂 ${WORKTREES_DIR} が存在しません"
-  exit 0
-fi
+# ── worktree リスト収集 ──────────────────────────────────────────────────────
+# REAPER_WORKTREES_DIR 指定あり（テスト用オーバーライド）: 単一ディレクトリ走査
+# 指定なし（本番）: git worktree list --porcelain で全登録 worktree を対象にする
+# 結果: WT_PATHS / WT_BRANCHES 並列配列（同インデックスが対応）
+WT_PATHS=()
+WT_BRANCHES=()
 
-echo "🔍 worktree を走査: ${WORKTREES_DIR}"
-echo ""
+if [ -n "${REAPER_WORKTREES_DIR:-}" ]; then
+  # ── テストモード: 単一ディレクトリ走査（REAPER_WORKTREES_DIR 優先）────────
+  _SCAN_DIR="${REAPER_WORKTREES_DIR}"
+  echo "🔍 worktree を走査（ディレクトリ指定）: ${_SCAN_DIR}"
+  echo ""
 
-# ── worktree 走査 ──────────────────────────────────────────────────────────
-for WORKTREE_PATH in "${WORKTREES_DIR}"/*/; do
-  [ -d "${WORKTREE_PATH}" ] || continue
+  if [ ! -d "${_SCAN_DIR}" ]; then
+    echo "📂 ${_SCAN_DIR} が存在しません"
+    exit 0
+  fi
 
-  WORKTREE_ID_FILE="${WORKTREE_PATH}.worktree-id"
-  if [ -f "${WORKTREE_ID_FILE}" ]; then
-    BRANCH=$(python3 -c "
+  for _WT_PATH in "${_SCAN_DIR}"/*/; do
+    [ -d "${_WT_PATH}" ] || continue
+    _WT_ID_FILE="${_WT_PATH}.worktree-id"
+    if [ -f "${_WT_ID_FILE}" ]; then
+      _WT_BRANCH=$(python3 -c "
 import json,sys
 try:
     d=json.load(open(sys.argv[1]))
     print(d.get('branch',''))
 except Exception:
     print('')
-" "${WORKTREE_ID_FILE}" 2>/dev/null || echo "")
-  else
-    # .worktree-id なし（旧 worktree）: git から現在ブランチ名を取得
-    BRANCH=$(git -C "${WORKTREE_PATH}" branch --show-current 2>/dev/null || echo "")
-  fi
+" "${_WT_ID_FILE}" 2>/dev/null || echo "")
+    else
+      # .worktree-id なし（旧 worktree）: git から現在ブランチ名を取得
+      _WT_BRANCH=$(git -C "${_WT_PATH}" branch --show-current 2>/dev/null || echo "")
+    fi
+    [ -z "${_WT_BRANCH}" ] && continue
+    WT_PATHS+=("${_WT_PATH}")
+    WT_BRANCHES+=("${_WT_BRANCH}")
+  done
+else
+  # ── 本番モード: git worktree list --porcelain で全登録 worktree を対象にする
+  # フォーマット: worktree <path> / HEAD <hash> / branch refs/heads/<name> / (空行)
+  # 最初のエントリ（メインリポジトリ）はスキップ。detached HEAD（branch行なし）もスキップ。
+  echo "🔍 worktree を走査（全件）: git worktree list"
+  echo ""
 
-  [ -z "${BRANCH}" ] && continue
+  _WT_PATH=""
+  _WT_BRANCH=""
+  _IS_FIRST=1
+  while IFS= read -r _LINE; do
+    case "${_LINE}" in
+      worktree\ *)
+        # 前エントリを確定（空パスまたは branch なしはスキップ）
+        if [ -n "${_WT_PATH}" ] && [ -n "${_WT_BRANCH}" ]; then
+          WT_PATHS+=("${_WT_PATH}")
+          WT_BRANCHES+=("${_WT_BRANCH}")
+        fi
+        _WT_PATH="${_LINE#worktree }"
+        _WT_BRANCH=""
+        # 最初のエントリ（メインリポジトリ）をスキップ
+        if [ "${_IS_FIRST}" -eq 1 ]; then
+          _WT_PATH=""
+          _IS_FIRST=0
+        fi
+        ;;
+      branch\ refs/heads/*)
+        _WT_BRANCH="${_LINE#branch refs/heads/}"
+        ;;
+    esac
+  # 末尾に sentinel を流して最後のエントリの確定トリガーにする
+  done < <(git -C "${MAIN_REPO_ROOT}" worktree list --porcelain 2>/dev/null; echo "worktree __END__")
+fi
+
+echo "   対象 worktree 数: ${#WT_PATHS[@]} 件"
+echo ""
+
+# ── worktree 走査 ──────────────────────────────────────────────────────────
+for _IDX in "${!WT_PATHS[@]}"; do
+  WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
+  BRANCH="${WT_BRANCHES[${_IDX}]}"
 
   # ── チェック 1: active-work.md のステータス ──────────────────────────────
   ACTIVE_STATUS="NOT_FOUND"
@@ -163,6 +214,21 @@ PYEOF
       --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")] | length' \
       2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
+  fi
+
+  if [ "${IS_DONE}" -eq 0 ]; then
+    # CLOSED（却下）PR も削除対象: mergedAt=null かつ state=CLOSED
+    # マージせず閉じられたブランチ（放棄・却下）は保持する意味がない
+    # PRなし（CLOSED_COUNT=0）は保護のまま（保護条件変えず）
+    # 未保存保護は前段（チェック2）で既に通過済み → CLOSED でも未保存なら削除しない
+    CLOSED_COUNT=$(gh pr list \
+      --repo "${REPO_NAME}" \
+      --state closed \
+      --head "${BRANCH}" \
+      --json number,baseRefName,mergedAt \
+      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main") | select(.mergedAt == null)] | length' \
+      2>/dev/null || echo "0")
+    [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
 
   # DONE またはマージ済み → 削除候補

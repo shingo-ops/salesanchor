@@ -41,7 +41,46 @@ jobs:
             migrations:
               - 'migrations/**'
               - 'scripts/migrate_*.py'
+              - 'scripts/check-migration-registration-exists.sh'
+              - 'scripts/run_all_migrations.sh'
               - '.github/workflows/migration-test.yml'
+
+  # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
+  # ここでの失敗は workflow 全体を fail-close にする。run_py の既存静的解析は
+  # そのまま残し、この新ゲートを正本として追加する。
+  migration-registration-exists:
+    name: マイグレーション登録ファイル存在点検
+    needs: detect-changes
+    if: needs.detect-changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 登録ファイルの実在を全数確認
+        run: |
+          set -euo pipefail
+          bash scripts/check-migration-registration-exists.sh \
+            --mode host \
+            --repo-root "${GITHUB_WORKSPACE}"
+
+  # チェッカー自体の回帰テスト。欠品で必ず落ちる / 全件揃いで通ることを
+  # 恒久的に保証する。手動検証の腐りを防ぐため、PRごとに必ず実行する。
+  migration-registration-exists-regression:
+    name: マイグレーション登録ファイル存在点検 回帰テスト
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: 回帰テストを実行
+        run: node scripts/tests/test-migration-registration-exists.js
 
   # マイグレーション変更がある場合のみ PostgreSQL を起動して実行
   migration-test-run:
@@ -115,7 +154,7 @@ jobs:
       #
       # 現在登録済みのテーブル:
       #   public:    tenants / users / permissions / tenant_discord_config / inventory
-      #   tenant_001: role_permissions / staff / leads / deals
+      #   tenant_001: role_permissions / staff / leads / deals / message_translations
       #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
       #   ※ public.inventory は PUBLIC_SQL セクションに最小定義を登録（migration 081 相当）
       #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
@@ -272,6 +311,16 @@ jobs:
               analysis            JSONB,
               occurred_at         TIMESTAMPTZ NOT NULL,
               created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
+          CREATE TABLE IF NOT EXISTS tenant_001.message_translations (
+              id               SERIAL PRIMARY KEY,
+              message_id       TEXT NOT NULL,
+              target_language  VARCHAR(10) NOT NULL,
+              translated_text  TEXT NOT NULL,
+              engine           VARCHAR(50) NOT NULL DEFAULT 'gemini-2.5-flash',
+              created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              CONSTRAINT uq_message_translations UNIQUE (message_id, target_language)
           );
 
           -- quotes: 見積書テーブル（C-6 スナップショット migration が ALTER する）
@@ -1112,7 +1161,7 @@ jobs:
   # - migration 変更なし: 両ジョブが skipped → 成功として報告
   migration-test:
     name: マイグレーションSQL 実行テスト（実DB）
-    needs: [detect-changes, migration-test-run, migration-full-dryrun]
+    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -1120,12 +1169,16 @@ jobs:
         run: |
           r="${{ needs.migration-test-run.result }}"
           d="${{ needs.migration-full-dryrun.result }}"
+          e="${{ needs.migration-registration-exists.result }}"
+          g="${{ needs.migration-registration-exists-regression.result }}"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
-          if [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
+          echo "migration-registration-exists: $e"
+          echo "migration-registration-exists-regression: $g"
+          if [[ "$e" == "success" || "$e" == "skipped" ]] && [[ "$g" == "success" || "$g" == "skipped" ]] && [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
             echo "OK: all migration tests passed or no migration changes"
             exit 0
           else
-            echo "FAIL: migration-test-run=$r, migration-full-dryrun=$d"
+            echo "FAIL: migration-registration-exists=$e, migration-registration-exists-regression=$g, migration-test-run=$r, migration-full-dryrun=$d"
             exit 1
           fi

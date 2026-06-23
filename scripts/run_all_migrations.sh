@@ -65,6 +65,16 @@ run_sql() {
   docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"
 }
 
+preflight_registered_files() {
+  echo ">>> [0] Verifying registered migration files exist..."
+  bash scripts/check-migration-registration-exists.sh \
+    --mode container \
+    --repo-root "${REPO_DIR}" \
+    --backend-container "${BACKEND}"
+}
+
+preflight_registered_files
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -157,6 +167,16 @@ run_sql migrations/081_create_inventory.sql
 run_sql migrations/082_extend_products_box_attributes.sql
 run_sql migrations/083_add_staff_phone.sql
 run_sql migrations/084_add_unit_to_inventory.sql
+run_sql migrations/20260620_010000_create_inventory_aggregation_rules.sql
+run_sql migrations/20260622_020000_add_inventory_raw_condition.sql
+run_sql migrations/20260623_010000_add_inventory_axes_columns.sql
+run_sql migrations/20260623_040000_make_inventory_condition_nullable.sql
+run_sql migrations/20260623_020000_create_inventory_offer_v2_unique_key.sql
+# HELD: 旧キー削除は新コードデプロイ後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+# run_sql migrations/20260623_030000_drop_inventory_offer_key.sql
+# HELD: inventory.condition の削除は backfill とコード切替完了後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+# run_sql migrations/20260623_050000_drop_inventory_condition.sql
+run_sql migrations/20260623_020000_drop_products_category_classification.sql
 run_sql migrations/085_create_tcg_type_master.sql
 run_sql migrations/086_seed_additional_tcg_types.sql
 run_sql migrations/087_create_supplier_prompts.sql
@@ -167,6 +187,7 @@ run_sql migrations/091_add_leads_discord_messaging_columns.sql
 run_sql migrations/092_add_meta_messages_discord_index.sql
 run_sql migrations/093_rename_order_statuses.sql
 run_sql migrations/094_create_message_translations.sql
+run_sql migrations/20260623_040000_add_tenant_id_to_message_translations.sql
 run_sql migrations/095_add_lead_social_links.sql
 run_sql migrations/096_add_deal_lead_source.sql
 
@@ -410,6 +431,12 @@ run_sql migrations/20260616_000000_fix_tcg_type_dedup.sql
 
 # Foundation F1: 国台帳 public.countries（ISO alpha-2 / 全テナント共有）
 run_sql migrations/20260621_010000_create_countries_master.sql
+
+# SSOT 統合①: meta_messages に master 履歴列を追加（追加のみ）
+run_sql migrations/20260622_010000_add_meta_messages_master_history_columns.sql
+
+# SSOT 統合②: conversation_logs の conv 専用行を実在 lead のみ meta_messages に移送
+run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py

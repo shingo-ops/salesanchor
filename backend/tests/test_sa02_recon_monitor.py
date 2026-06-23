@@ -7,8 +7,56 @@
 """
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
+
+# ---------------------------------------------------------------------------
+# 0. tenant context は各 tenant ごとに設定・解除される
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_context_set_and_cleared_for_each_tenant():
+    from app.tasks.sa02_recon_monitor import _run_daily_recon
+
+    db = AsyncMock()
+    call_count = 0
+
+    async def side_effect(q, params=None):
+        nonlocal call_count
+        call_count += 1
+        m = MagicMock()
+        if call_count == 1:
+            m.fetchall.return_value = [(1,), (2,)]
+        elif call_count == 2:
+            m.scalar.return_value = 10
+        elif call_count == 3:
+            m.scalar.return_value = 7
+        elif call_count == 4:
+            m.scalar.return_value = 8
+        elif call_count == 5:
+            m.scalar.return_value = 6
+        return m
+
+    db.execute.side_effect = side_effect
+
+    with (
+        patch("app.tasks.sa02_recon_monitor.set_tenant_context", new=AsyncMock()) as mock_set,
+        patch("app.tasks.sa02_recon_monitor.clear_tenant_context", new=AsyncMock()) as mock_clear,
+        patch("app.tasks.sa02_recon_monitor._post_discord", new=AsyncMock()) as mock_discord,
+        patch("app.database.AsyncSessionLocal") as mock_session_cls,
+    ):
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=db)
+        mock_cm.__aexit__ = AsyncMock(return_value=False)
+        mock_session_cls.return_value = mock_cm
+
+        result = await _run_daily_recon()
+
+    assert result["diff"] == 5
+    mock_set.assert_has_awaits([call(db, 1), call(db, 2)])
+    assert mock_clear.await_count == 2
+    mock_discord.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

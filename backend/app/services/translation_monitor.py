@@ -21,6 +21,8 @@ import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import clear_tenant_context, set_tenant_context
+
 logger = logging.getLogger(__name__)
 
 _WEBHOOK_ENV = "ADMIN_NOTIFICATION_DISCORD_WEBHOOK"
@@ -54,69 +56,54 @@ async def check_translation_health(
     failed  = 翻訳行がない未処理メッセージ数（LEFT JOIN で検出）
     low_conf = 低確信度翻訳数（message_translations から）
     """
-    since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
+    await set_tenant_context(db, tenant_id)
+    try:
+        since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
-    from app.services.message_translator import (
-        get_existing_inbound_translation_targets,
-        get_required_inbound_targets,
-    )
-
-    messages_result = await db.execute(
-        text(
-            f"SELECT message_id, message_text "
-            f"FROM {meta_table_ref} "
-            f"WHERE direction = 'inbound' "
-            f"  AND message_id IS NOT NULL "
-            f"  AND message_text IS NOT NULL AND message_text <> '' "
-            f"  AND created_at >= :since "
-            f"ORDER BY created_at ASC"
-        ),
-        {"since": since},
-    )
-    messages = messages_result.fetchall()
-    if not messages:
-        return TranslationHealthSnapshot(0, 0, 0, 0.0, 0.0)
-
-    pending = 0
-    for message_id, message_text in messages:
-        if message_id is None:
-            continue
-        existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
-            db,
-            table_ref,
-            str(message_id),
+        # 未処理（pending）数 = meta_messages に対応する翻訳行がない件数
+        result = await db.execute(
+            text(
+                f"SELECT "
+                f"  COUNT(*) AS total, "
+                f"  COUNT(*) FILTER (WHERE mt.message_id IS NULL) AS pending "
+                f"FROM {meta_table_ref} m "
+                f"LEFT JOIN {table_ref} mt "
+                f"  ON mt.message_id = m.message_id AND mt.target_language = 'ja' "
+                f"WHERE m.direction = 'inbound' "
+                f"  AND m.created_at >= :since"
+            ),
+            {"since": since},
         )
-        required_targets = get_required_inbound_targets(
-            str(message_text),
-            ja_original_language,
+        row = result.first()
+        if row is None or row[0] == 0:
+            return TranslationHealthSnapshot(0, 0, 0, 0.0, 0.0)
+
+        total, pending = int(row[0]), int(row[1])
+
+        # 低確信度数は翻訳済み行から集計
+        lc_result = await db.execute(
+            text(
+                f"SELECT COUNT(*) "
+                f"FROM {table_ref} "
+                f"WHERE created_at >= :since "
+                f"  AND confidence IS NOT NULL AND confidence < :conf_threshold"
+            ),
+            {"since": since, "conf_threshold": _CONF_THRESHOLD_RECEIVE},
         )
-        if not required_targets.issubset(existing_targets):
-            pending += 1
+        lc_row = lc_result.first()
+        low_conf = int(lc_row[0]) if lc_row else 0
 
-    total = len(messages)
-
-    # 低確信度数は翻訳済み行から集計
-    lc_result = await db.execute(
-        text(
-            f"SELECT COUNT(*) "
-            f"FROM {table_ref} "
-            f"WHERE created_at >= :since "
-            f"  AND confidence IS NOT NULL AND confidence < :conf_threshold"
-        ),
-        {"since": since, "conf_threshold": _CONF_THRESHOLD_RECEIVE},
-    )
-    lc_row = lc_result.first()
-    low_conf = int(lc_row[0]) if lc_row else 0
-
-    fail_rate = pending / total if total > 0 else 0.0
-    low_conf_rate = low_conf / total if total > 0 else 0.0
-    return TranslationHealthSnapshot(
-        total=total,
-        failed=pending,
-        low_confidence=low_conf,
-        fail_rate=fail_rate,
-        low_conf_rate=low_conf_rate,
-    )
+        fail_rate = pending / total if total > 0 else 0.0
+        low_conf_rate = low_conf / total if total > 0 else 0.0
+        return TranslationHealthSnapshot(
+            total=total,
+            failed=pending,
+            low_confidence=low_conf,
+            fail_rate=fail_rate,
+            low_conf_rate=low_conf_rate,
+        )
+    finally:
+        await clear_tenant_context(db)
 
 
 async def _get_last_notified(db: AsyncSession, tenant_id: int) -> datetime | None:

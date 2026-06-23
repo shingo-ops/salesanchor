@@ -62,10 +62,6 @@
 .page-layout-header {
   flex-shrink: 0;
   padding: var(--page-padding-y) var(--page-header-avatar-clearance) 0 var(--page-padding-x);
-  position: sticky;
-  top: var(--topbar-height);
-  z-index: var(--z-topbar);
-  background: var(--bg-surface);
 }
 
 .page-layout-title-row {

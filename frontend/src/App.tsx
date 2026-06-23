@@ -48,6 +48,7 @@ import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
 import ArchivesPage from "./pages/archives/ArchivesPage";
 import ShiftsPage from "./pages/shifts/ShiftsPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
+import ScheduleSettingsPage from "./pages/schedule/ScheduleSettingsPage";
 import ERPPage from "./pages/erp/ERPPage";
 import StaffPage from "./pages/staff/StaffPage";
 import StaffEditPage from "./pages/staff/StaffEditPage";
@@ -60,6 +61,7 @@ import ComingSoonPage from "./pages/coming-soon/ComingSoonPage";
 import IntegrationPlaceholderPage from "./pages/integrations/IntegrationPlaceholderPage";
 import GoogleDriveIntegrationPage from "./pages/integrations/GoogleDriveIntegrationPage";
 import CarrierIntegrationPage from "./pages/integrations/CarrierIntegrationPage";
+import CarrierSetupGuidePage from "./pages/integrations/CarrierSetupGuidePage";
 import PaypalIntegrationPage from "./pages/integrations/PaypalIntegrationPage";
 // ADR-021 Phase 5 / Sprint 5: 担当者報酬計算 MVP
 import CommissionSettingsPage from "./pages/commission-settings/CommissionSettingsPage";
@@ -239,6 +241,7 @@ function App() {
                   />
                   <Route path="/shifts" element={<ShiftsPage />} />
                   <Route path="/schedule" element={<SchedulePage />} />
+                  <Route path="/schedule/settings" element={<ScheduleSettingsPage />} />
 
                   {/* Phase 1-D Sprint 3: Meta Inbox 接続管理 */}
                   <Route path="/channels" element={<ChannelsPage />} />
@@ -335,6 +338,7 @@ function App() {
                     <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
                     <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
                     <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
+                    <Route path="integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
                     <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />

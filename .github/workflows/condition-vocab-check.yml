@@ -1,0 +1,21 @@
+name: Condition Vocab Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: condition vocab gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Check condition vocab
+        run: node scripts/check-condition-vocab.js

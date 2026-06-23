@@ -11,6 +11,238 @@
   gap: var(--space-4);
 }
 
+/* ── ETD 設定ガイド ── */
+.etd-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.etd-guide__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.etd-guide__eyebrow {
+  margin: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.etd-guide__title {
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+/* ── ステップインジケーター ── */
+.etd-stepper {
+  margin-bottom: var(--space-4);
+}
+
+.etd-stepper__list {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.etd-stepper__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.etd-stepper__item::before,
+.etd-stepper__item::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--icon-lg) / 2);
+  width: 50%;
+  border-top: 1px solid var(--border);
+}
+
+.etd-stepper__item::before { right: 50%; }
+.etd-stepper__item::after  { left: 50%; }
+
+.etd-stepper__item:first-child::before,
+.etd-stepper__item:last-child::after {
+  display: none;
+}
+
+.etd-stepper__item--done::before,
+.etd-stepper__item--done::after,
+.etd-stepper__item--current::before {
+  border-top-color: var(--accent);
+}
+
+.etd-stepper__dot {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  position: relative;
+  z-index: var(--z-base);
+}
+
+.etd-stepper__item--done .etd-stepper__dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.etd-stepper__item--current .etd-stepper__dot {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.etd-stepper__label {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: calc(100% - var(--space-2));
+}
+
+.etd-stepper__item--done .etd-stepper__label {
+  color: var(--text-secondary);
+}
+
+.etd-stepper__item--current .etd-stepper__label {
+  color: var(--accent);
+  font-weight: var(--font-weight-semi);
+}
+
+.etd-guide__step {
+  padding: var(--space-5);
+}
+
+.etd-guide__step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.etd-guide__step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  flex-shrink: 0;
+}
+
+.etd-guide__note {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+.etd-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.etd-upload__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.etd-guide__complete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── ステップ1 サブステップ ── */
+.etd-guide__substeps {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.etd-guide__substep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent);
+}
+
+.etd-guide__substep-label {
+  margin: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.etd-guide__screenshot {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.etd-guide__screenshot-link {
+  display: block;
+  text-align: center;
+}
+
+.etd-guide__inline-link {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* 情報ノート（テストキー注意書き）*/
+.etd-guide__note--info {
+  margin-top: var(--space-4);
+  border-left: 3px solid var(--info-text, var(--accent));
+  color: var(--text-secondary);
+}
+
+.etd-guide__nav {
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
 /* ── ステップ ── */
 .lv-step {
   transition: opacity var(--transition-fast);

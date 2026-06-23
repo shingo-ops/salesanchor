@@ -48,11 +48,13 @@ def test_snapshot_rates():
 # ---------------------------------------------------------------------------
 
 
-def _make_db(message_rows: list[tuple[str, str]], low_conf: int) -> AsyncMock:
-    """messages クエリ + low_conf クエリを返す AsyncSession モック."""
+def _make_db(total: int, pending: int, low_conf: int) -> AsyncMock:
+    """2クエリを返す AsyncSession モック."""
     db = AsyncMock()
+    row1 = MagicMock()
+    row1.__getitem__ = MagicMock(side_effect=lambda i: [total, pending][i])
     result1 = MagicMock()
-    result1.fetchall.return_value = message_rows
+    result1.first.return_value = row1 if total > 0 else None
 
     # 2回目: low_conf クエリ
     row2 = MagicMock()
@@ -66,7 +68,7 @@ def _make_db(message_rows: list[tuple[str, str]], low_conf: int) -> AsyncMock:
 
 @pytest.mark.asyncio
 async def test_check_health_no_messages():
-    db = _make_db([], 0)
+    db = _make_db(0, 0, 0)
     snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
     assert snap.total == 0
     assert snap.failed == 0
@@ -75,70 +77,39 @@ async def test_check_health_no_messages():
 
 @pytest.mark.asyncio
 async def test_check_health_all_translated():
-    db = _make_db([("m1", "こんにちは"), ("m2", "Hello stock")], low_conf=5)
-    with patch(
-        "app.services.message_translator.get_existing_inbound_translation_targets",
-        AsyncMock(side_effect=[
-            ({"en"}, "ja"),
-            ({"ja"}, "en"),
-        ]),
-    ) as target_mock:
-        snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
+    db = _make_db(50, 0, 5)
+    snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
 
-    assert snap.total == 2
+    assert snap.total == 50
     assert snap.failed == 0
     assert snap.fail_rate == 0.0
     assert snap.low_confidence == 5
-    assert target_mock.await_count == 2
 
 
 @pytest.mark.asyncio
 async def test_check_health_pending_messages():
-    db = _make_db([("m1", "こんにちは stock"), ("m2", "Hello stock"), ("m3", "Hola stock")], low_conf=10)
-    with patch(
-        "app.services.message_translator.get_existing_inbound_translation_targets",
-        AsyncMock(side_effect=[
-            ({"ja"}, "ja"),    # mixed: en missing
-            ({"ja"}, "en"),    # English original: complete
-            ({"ja"}, "es"),    # non-English original: en missing
-        ]),
-    ):
-        snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
+    db = _make_db(100, 30, 10)
+    snap = await check_translation_health(db, 1, "t.message_translations", "t.meta_messages")
 
-    assert snap.total == 3
-    assert snap.failed == 2
-    assert snap.fail_rate == pytest.approx(2 / 3)
+    assert snap.total == 100
+    assert snap.failed == 30
+    assert snap.fail_rate == pytest.approx(0.30)
     assert snap.low_confidence == 10
 
 
 @pytest.mark.asyncio
-async def test_check_health_query_tracks_ja_and_en_variants():
-    messages_result = MagicMock()
-    messages_result.fetchall.return_value = [
-        ("m1", "こんにちは stock"),
-        ("m2", "Hello stock"),
-        ("m3", "Hola stock"),
-    ]
-    low_conf_row = MagicMock()
-    low_conf_row.__getitem__ = MagicMock(return_value=1)
-    low_conf_result = MagicMock()
-    low_conf_result.first.return_value = low_conf_row
+async def test_check_health_sets_and_clears_tenant_context():
+    db = _make_db(20, 2, 1)
 
-    db = AsyncMock()
-    db.execute = AsyncMock(side_effect=[messages_result, low_conf_result])
-    with patch(
-        "app.services.message_translator.get_existing_inbound_translation_targets",
-        AsyncMock(side_effect=[
-            ({"ja"}, "ja"),
-            ({"ja"}, "en"),
-            ({"ja"}, "es"),
-        ]),
+    with (
+        patch("app.services.translation_monitor.set_tenant_context", new=AsyncMock()) as mock_set,
+        patch("app.services.translation_monitor.clear_tenant_context", new=AsyncMock()) as mock_clear,
     ):
-        snap = await check_translation_health(db, 1, "tenant_001.message_translations", "tenant_001.meta_messages")
+        snap = await check_translation_health(db, 42, "t.message_translations", "t.meta_messages")
 
-    assert snap.total == 3
-    assert snap.failed == 2
-    assert snap.low_confidence == 1
+    assert snap.total == 20
+    mock_set.assert_awaited_once_with(db, 42)
+    mock_clear.assert_awaited_once_with(db)
 
 
 # ---------------------------------------------------------------------------

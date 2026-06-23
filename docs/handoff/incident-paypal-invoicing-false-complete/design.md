@@ -24,7 +24,7 @@
 
 - `scripts/detect-external-api-change.js:11-20` で docs / tests / workflow / smoke script を除外し、実コード差分に限定する
 - `scripts/detect-external-api-change.js:30-150` で PayPal / FedEx / Meta / Firebase / Discord / Google / PokeAPI / FX rate を API 別に判定する
-- `scripts/detect-external-api-change.js:168-232` で diff の +/- 行だけを評価する
+- `scripts/detect-external-api-change.js:168-232` で diff の +/- 行だけを評価し、`auth/` / `tasks/` / `discord_gateway/` も含む **パス非依存** の実コード差分を拾う
 - `scripts/detect-external-api-change.js:248-319` で PR 差分を走査し、GitHub Actions の outputs に `paypal_detected` / `unprepared_apis` を渡す
 - `.github/workflows/external-api-smoke.yml:29-73` で PayPal だけ実 Sandbox smoke を走らせ、他 API は `実環境スモーク未整備` をログに出す
 
@@ -52,7 +52,7 @@
 
 ## 弊害・トレードオフ
 
-- 誤検知の可能性: コメントや文字列にも API 名があると拾う。→ tests / docs / workflow / smoke を除外してノイズを抑える
+- 誤検知の可能性: コメントや文字列に **具体トークン**（例: `DISCORD_BOT_TOKEN` / `discord.com/api` / `send_discord_dm`）が入ると拾う。→ tests / docs / workflow / smoke を除外してノイズを抑え、一般語だけでは発火しないようにしている
 - 未整備 API はブロックしない: 失敗させると gate 化が先走る。→ まず可視化して整備対象を見える化する
 - PayPal 以外の API は smoke が無い: しかし黙って通す方が事故になる。→ ログで明示する
 

@@ -27,40 +27,59 @@
 --   旧 UNIQUE 制約の DROP→粒度拡張を伴う。新キーは旧キーより細かいため既存行は必ず
 --   一意（duplicate は発生しない）。public.inventory は 18h 失効の一時オファーデータで
 --   uniqueness 拡大によるデータ損失はない。ADR-093（承認済み）の確定設計。
+--   2b の unique key migration テストでは、この列が前提になる。
 -- ============================================================================
 
 DO $$
+DECLARE
+    has_condition boolean;
 BEGIN
     IF to_regclass('public.inventory') IS NULL THEN
         RAISE NOTICE 'public.inventory not present; skipping ADR-093 Phase 3a changes';
-    ELSE
-        -- 列追加（offer_type は NOT NULL DEFAULT で既存行を 'in_stock' に backfill）
-        ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS offer_type  VARCHAR(20) NOT NULL DEFAULT 'in_stock';
-        ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS ship_timing VARCHAR(20);
-
-        -- CHECK 制約（冪等。conname 既存チェック）
-        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'inventory_offer_type_check') THEN
-            ALTER TABLE public.inventory
-                ADD CONSTRAINT inventory_offer_type_check
-                CHECK (offer_type IN ('in_stock', 'pre_order'));
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'inventory_ship_timing_check') THEN
-            ALTER TABLE public.inventory
-                ADD CONSTRAINT inventory_ship_timing_check
-                CHECK (ship_timing IS NULL OR ship_timing IN ('on_release', '1day_before', '2day_before', 'other'));
-        END IF;
-
-        -- UNIQUE キー粒度拡張: 旧 inline UNIQUE 制約（自動名）を落として
-        -- COALESCE ベースの UNIQUE INDEX へ置換。
-        ALTER TABLE public.inventory DROP CONSTRAINT IF EXISTS inventory_supplier_id_product_id_condition_key;
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_offer_key
-            ON public.inventory (
-                supplier_id, product_id, condition,
-                COALESCE(unit, ''), offer_type, COALESCE(ship_timing, '')
-            );
-
-        -- 予約/区分フィルタ補助（任意・冪等）
-        CREATE INDEX IF NOT EXISTS idx_inventory_offer_type
-            ON public.inventory (offer_type);
+        RETURN;
     END IF;
+
+    SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'inventory'
+          AND column_name = 'condition'
+    ) INTO has_condition;
+
+    IF NOT has_condition THEN
+        RAISE NOTICE 'public.inventory has no condition column; skipping ADR-093 Phase 3a changes';
+        RETURN;
+    END IF;
+
+    -- 列追加（offer_type は NOT NULL DEFAULT で既存行を 'in_stock' に backfill）
+    ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS offer_type  VARCHAR(20) NOT NULL DEFAULT 'in_stock';
+    ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS ship_timing VARCHAR(20);
+    -- 084 相当の unit が未適用の最小ベースラインでも、この migration 単体で止まらないようにする。
+    ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS unit VARCHAR(20);
+
+    -- CHECK 制約（冪等。conname 既存チェック）
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'inventory_offer_type_check') THEN
+        ALTER TABLE public.inventory
+            ADD CONSTRAINT inventory_offer_type_check
+            CHECK (offer_type IN ('in_stock', 'pre_order'));
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'inventory_ship_timing_check') THEN
+        ALTER TABLE public.inventory
+            ADD CONSTRAINT inventory_ship_timing_check
+            CHECK (ship_timing IS NULL OR ship_timing IN ('on_release', '1day_before', '2day_before', 'other'));
+    END IF;
+
+    -- UNIQUE キー粒度拡張: 旧 inline UNIQUE 制約（自動名）を落として
+    -- COALESCE ベースの UNIQUE INDEX へ置換。
+    ALTER TABLE public.inventory DROP CONSTRAINT IF EXISTS inventory_supplier_id_product_id_condition_key;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_offer_key
+        ON public.inventory (
+            supplier_id, product_id, condition,
+            COALESCE(unit, ''), offer_type, COALESCE(ship_timing, '')
+        );
+
+    -- 予約/区分フィルタ補助（任意・冪等）
+    CREATE INDEX IF NOT EXISTS idx_inventory_offer_type
+        ON public.inventory (offer_type);
 END $$;

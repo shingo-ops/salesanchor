@@ -36,6 +36,7 @@ class ReviewItemInput(BaseModel):
       が確定している場合のみ inventory_movements に加えて public.inventory
       も更新される。condition が None なら inventory UPSERT は skip し
       従来挙動 (inventory_movements + products.stock_quantity のみ反映)。
+      raw_condition があれば public.inventory.raw_condition へ原文保持する。
     """
 
     product_id: int | None = Field(
@@ -64,9 +65,14 @@ class ReviewItemInput(BaseModel):
         default=None,
         description=(
             "商品の状態。migration 089 正規値 16 種。"
-            "public.inventory UNIQUE(supplier_id × product_id × condition) の"
+            "public.inventory UNIQUE(supplier_id × product_id × axes) の"
             "discriminator。None なら inventory UPSERT は skip。"
         ),
+    )
+    raw_condition: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="状態の原文。public.inventory.raw_condition に保存される。",
     )
     quantity_offered: int | None = Field(
         default=None,
