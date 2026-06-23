@@ -79,61 +79,60 @@ async def _apply_migration(admin_engine, filename: str) -> None:
                 await conn.exec_driver_sql(stmt)
 
 
-async def _ensure_public_users(admin_engine) -> None:
-    async with admin_engine.begin() as conn:
-        await conn.execute(
-            text("""
-                CREATE TABLE IF NOT EXISTS public.tenants (
-                    id INTEGER PRIMARY KEY,
-                    tenant_code VARCHAR(50) NOT NULL UNIQUE,
-                    tenant_name VARCHAR(255) NOT NULL DEFAULT '',
-                    company_name VARCHAR(255) NOT NULL DEFAULT '',
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                    settings JSONB NOT NULL DEFAULT '{}'::jsonb
-                )
-            """)
-        )
-        await conn.execute(
-            text("""
-                INSERT INTO public.tenants (
-                    id, tenant_code, tenant_name, company_name, is_active
-                )
-                VALUES (999, 'tenant_999', 'Test Tenant', 'Test Tenant', TRUE)
-                ON CONFLICT (id) DO UPDATE SET
-                    tenant_code = EXCLUDED.tenant_code,
-                    tenant_name = EXCLUDED.tenant_name,
-                    company_name = EXCLUDED.company_name,
-                    is_active = EXCLUDED.is_active
-            """)
-        )
-        await conn.execute(
-            text("""
-                CREATE TABLE IF NOT EXISTS public.users (
-                    id INTEGER PRIMARY KEY,
-                    tenant_id INTEGER NOT NULL DEFAULT 999,
-                    firebase_uid VARCHAR(128) UNIQUE,
-                    username VARCHAR(255),
-                    email VARCHAR(255),
-                    full_name VARCHAR(255),
-                    role VARCHAR(50) DEFAULT 'user',
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                    is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
-                    locale VARCHAR(10) NOT NULL DEFAULT 'ja',
-                    theme VARCHAR(10) NOT NULL DEFAULT 'light'
-                )
-            """)
-        )
-        await conn.execute(
-            text("""
-                INSERT INTO public.users (
-                    id, tenant_id, firebase_uid, username, email, full_name,
-                    role, is_active, is_super_admin, locale, theme
-                )
-                VALUES (999, 999, 'test-user', 'testuser', 'test@example.com', 'Test User',
-                        'admin', TRUE, TRUE, 'ja', 'light')
-                ON CONFLICT (id) DO NOTHING
-            """)
-        )
+async def _ensure_public_users(conn) -> None:
+    await conn.execute(
+        text("""
+            CREATE TABLE IF NOT EXISTS public.tenants (
+                id INTEGER PRIMARY KEY,
+                tenant_code VARCHAR(50) NOT NULL UNIQUE,
+                tenant_name VARCHAR(255) NOT NULL DEFAULT '',
+                company_name VARCHAR(255) NOT NULL DEFAULT '',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                settings JSONB NOT NULL DEFAULT '{}'::jsonb
+            )
+        """)
+    )
+    await conn.execute(
+        text("""
+            INSERT INTO public.tenants (
+                id, tenant_code, tenant_name, company_name, is_active
+            )
+            VALUES (999, 'tenant_999', 'Test Tenant', 'Test Tenant', TRUE)
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_code = EXCLUDED.tenant_code,
+                tenant_name = EXCLUDED.tenant_name,
+                company_name = EXCLUDED.company_name,
+                is_active = EXCLUDED.is_active
+        """)
+    )
+    await conn.execute(
+        text("""
+            CREATE TABLE IF NOT EXISTS public.users (
+                id INTEGER PRIMARY KEY,
+                tenant_id INTEGER NOT NULL DEFAULT 999,
+                firebase_uid VARCHAR(128) UNIQUE,
+                username VARCHAR(255),
+                email VARCHAR(255),
+                full_name VARCHAR(255),
+                role VARCHAR(50) DEFAULT 'user',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                locale VARCHAR(10) NOT NULL DEFAULT 'ja',
+                theme VARCHAR(10) NOT NULL DEFAULT 'light'
+            )
+        """)
+    )
+    await conn.execute(
+        text("""
+            INSERT INTO public.users (
+                id, tenant_id, firebase_uid, username, email, full_name,
+                role, is_active, is_super_admin, locale, theme
+            )
+            VALUES (999, 999, 'test-user', 'testuser', 'test@example.com', 'Test User',
+                    'admin', TRUE, TRUE, 'ja', 'light')
+            ON CONFLICT (id) DO NOTHING
+        """)
+    )
 
 
 async def _bootstrap_public_shared(conn) -> None:
