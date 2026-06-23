@@ -43,21 +43,30 @@ def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
     while i < len(sql):
         if sql[i] == "$":
             j = i + 1
-            while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
-                j += 1
             if j < len(sql) and sql[j] == "$":
-                tag = sql[i : j + 1]
+                tag = "$$"
+                end = j
+            else:
+                while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
+                    j += 1
+                if j < len(sql) and sql[j] == "$":
+                    tag = sql[i : j + 1]
+                    end = j
+                else:
+                    tag = ""
+                    end = i
+            if tag:
                 if not in_dollar:
                     in_dollar = True
                     dollar_tag = tag
                     buf.append(tag)
-                    i = j + 1
+                    i = end + 1
                     continue
                 if tag == dollar_tag:
                     in_dollar = False
                     dollar_tag = ""
                     buf.append(tag)
-                    i = j + 1
+                    i = end + 1
                     continue
         if sql[i] == ";" and not in_dollar:
             statements.append("".join(buf))
