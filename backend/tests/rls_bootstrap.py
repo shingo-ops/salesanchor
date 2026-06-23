@@ -30,6 +30,7 @@ _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
     "20260614_100000_create_sales_form_tables.sql",
 ]
+_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE = 20260623
 _TENANT_SCHEMA_LOCK_NAMESPACE = 20260623
 
 
@@ -110,6 +111,29 @@ async def _ensure_public_users(admin_engine) -> None:
         )
 
 
+async def _bootstrap_public_shared(conn) -> None:
+    """shared public bootstrap を 1 接続内で適用する。"""
+    for filename in _PG_BOOTSTRAP_MIGRATIONS:
+        sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+        for stmt in _split_sql_preserving_do_blocks(sql):
+            stmt = stmt.strip()
+            if stmt:
+                await conn.exec_driver_sql(stmt)
+
+    fk_exists = await conn.scalar(
+        text("""
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class rel ON rel.oid = c.conrelid
+            JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+            WHERE nsp.nspname = 'public'
+              AND rel.relname = 'products'
+              AND c.conname = 'fk_products_tcg_type'
+        """)
+    )
+    assert fk_exists == 1, "FK migration が public.products に適用されていません"
+
+
 @asynccontextmanager
 async def tenant_schema_lock(admin_engine, tenant_id: int):
     """同じ tenant schema を使う PG/RLS テストを xdist 下で直列化する。"""
@@ -150,14 +174,25 @@ async def bootstrap_public_products(admin_engine) -> None:
 
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
     """本番 migration 順で tenant schema を冪等に作成する。"""
-    await bootstrap_public_products(admin_engine)
-    await _ensure_public_users(admin_engine)
     async with admin_engine.begin() as conn:
-        schema_name = f"tenant_{int(tenant_id):03d}"
-        await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-        schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
-    for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
-        await _apply_migration(admin_engine, filename)
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:namespace, 0)"),
+            {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
+        )
+        try:
+            await _bootstrap_public_shared(conn)
+            await _ensure_public_users(conn)
+            schema_name = f"tenant_{int(tenant_id):03d}"
+            await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+            schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
+            for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
+                await _apply_migration(admin_engine, filename)
+        finally:
+            with suppress(Exception):
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, 0)"),
+                    {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
+                )
     return schema_name
 
 
