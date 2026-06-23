@@ -89,7 +89,6 @@ export default function ProductEditPage() {
           search_keywords: p.search_keywords || "",
           exclude_keywords: p.exclude_keywords || "",
           related_series: p.related_series || "",
-          category_classification: p.category_classification || "",
         });
       })
       .catch((e) => {
@@ -158,7 +157,6 @@ export default function ProductEditPage() {
       search_keywords: toNull(form.search_keywords),
       exclude_keywords: toNull(form.exclude_keywords),
       related_series: toNull(form.related_series),
-      category_classification: toNull(form.category_classification),
     };
     setSaving(true);
     try {

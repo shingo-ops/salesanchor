@@ -13,6 +13,9 @@ admin は明示的に PATCH を選ぶ。
 
 from __future__ import annotations
 
+import logging
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -29,13 +32,21 @@ from app.schemas.inventory_offers import (
     InventoryRow,
     InventorySupplierFacet,
 )
+from app.services.inventory_axes import (
+    build_condition_filter_clause,
+    log_axis_isolation,
+    project_inventory_axes,
+    resolve_condition_view,
+)
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 _BASE_SELECT = """
     SELECT i.id, i.supplier_id, i.product_id, i.condition, i.quantity,
            i.unit_price, i.unit, i.offer_type, i.ship_timing,
+           i.seal, i.search_cond, i.grade, i.damage,
            i.status, i.notes_ja, i.notes_en,
            i.offered_at, i.expires_at, i.source,
            i.created_at, i.updated_at,
@@ -85,6 +96,7 @@ _VIEW_SELECT = """
     SELECT i.id, i.product_id, i.condition,
            -- ADR-093: 単位はオファー優先。未設定なら商品マスタ(public.products.unit)を使う
            COALESCE(NULLIF(i.unit, ''), p.unit) AS unit,
+           i.seal, i.search_cond, i.grade, i.damage,
            i.offer_type, i.ship_timing, i.unit_price,
            i.quantity, i.offered_at, i.supplier_id,
            s.name AS supplier_name,
@@ -121,6 +133,40 @@ _SORT_COLUMNS = {
 }
 
 
+def _project_inventory_rows(
+    raw_rows: list[dict[str, object]],
+    best_map: dict[int, tuple[bool, str | None, str | None]],
+) -> list[InventoryRow]:
+    projected: list[InventoryRow] = []
+    for row in raw_rows:
+        row_id = int(row["id"])
+        best_flag, reason_category, reason = best_map.get(row_id, (False, None, None))
+        projected.append(
+            InventoryRow(
+                id=row_id,
+                product_id=int(row["product_id"]),
+                product_name=row.get("product_name"),
+                name_en=row.get("name_en"),
+                category=row.get("category"),
+                mark=row.get("mark"),
+                condition=str(resolve_condition_view(row) or row.get("condition") or ""),
+                unit=row.get("unit"),
+                offer_type=row.get("offer_type") or "in_stock",
+                ship_timing=row.get("ship_timing"),
+                supplier_id=int(row["supplier_id"]),
+                supplier_name=row.get("supplier_name"),
+                unit_price=int(row["unit_price"] or 0),
+                quantity=int(row["quantity"] or 0),
+                tcg_type=row.get("tcg_type"),
+                offered_at=row.get("offered_at") or datetime.utcnow(),
+                is_best=best_flag,
+                best_reason_category=reason_category,
+                best_reason=reason,
+            )
+        )
+    return projected
+
+
 @router.get(
     "/inventory",
     response_model=InventoryListResponse,
@@ -134,6 +180,7 @@ async def list_inventory_view(
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
     hide_categories: str | None = Query(default=None, max_length=2000, description="非表示にするカテゴリーのCSV（ユーザー別フィルタ用）"),
     # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
+    condition: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)の単一指定"),
     condition_in: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)のCSV"),
     unit_in: str | None = Query(default=None, max_length=2000, description="表示する形態(unit)のCSV"),
     offer_type_in: str | None = Query(default=None, max_length=100, description="表示する区分(offer_type)のCSV"),
@@ -201,11 +248,11 @@ async def list_inventory_view(
             params[f"hcat{i}"] = c
     # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN。値は bind param で SQLi 防止）。
     cond_in = [c.strip() for c in (condition_in or "").split(",") if c.strip()]
-    if cond_in:
-        ph = ", ".join(f":cond{i}" for i in range(len(cond_in)))
-        conditions.append(f"i.condition IN ({ph})")
-        for i, c in enumerate(cond_in):
-            params[f"cond{i}"] = c
+    requested_conditions = [c.strip() for c in [condition or "", *cond_in] if c.strip()]
+    condition_clause, condition_params = build_condition_filter_clause(requested_conditions)
+    if condition_clause is not None:
+        conditions.append(condition_clause)
+        params.update(condition_params)
     unit_list = [u.strip() for u in (unit_in or "").split(",") if u.strip()]
     if unit_list:
         ph = ", ".join(f":unit{i}" for i in range(len(unit_list)))
@@ -251,7 +298,7 @@ async def list_inventory_view(
         ),
         params,
     )
-    items = [InventoryRow(**dict(r)) for r in result.mappings().all()]
+    items = _project_inventory_rows([dict(r) for r in result.mappings().all()], {})
 
     # ADR-093 Phase 4: フィルタ UI 用の仕入元ファセット（在庫品・未失効のみ。
     # 他フィルタ非依存で全候補を返す＝非表示にした仕入元もチェックボックスに残る）。
@@ -283,12 +330,20 @@ async def list_inventory_view(
     # 他フィルタ非依存で全候補を返す＝複数選択チェックボックスの候補に使う）。
     cond_rows = await db.execute(
         text(
-            "SELECT DISTINCT i.condition AS v FROM public.inventory i "
+            "SELECT i.condition, i.seal, i.search_cond, i.grade, i.damage, "
+            "COALESCE(NULLIF(i.unit, ''), p.unit) AS unit "
+            "FROM public.inventory i "
+            "LEFT JOIN public.products p ON p.id = i.product_id "
             "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "AND i.condition IS NOT NULL AND i.condition <> '' ORDER BY i.condition"
         )
     )
-    condition_facet = [r["v"] for r in cond_rows.mappings().all()]
+    condition_facet = sorted(
+        {
+            resolve_condition_view(r) or r.get("condition")
+            for r in cond_rows.mappings().all()
+            if (resolve_condition_view(r) or r.get("condition"))
+        }
+    )
     unit_rows = await db.execute(
         text(
             "SELECT DISTINCT COALESCE(NULLIF(i.unit, ''), p.unit) AS v "
@@ -368,7 +423,15 @@ async def list_offers(
         ),
         params,
     )
-    items = [InventoryOfferResponse(**dict(r)) for r in result.mappings().all()]
+    items = [
+        InventoryOfferResponse(
+            **{
+                **dict(r),
+                "condition": resolve_condition_view(r) or r.get("condition"),
+            }
+        )
+        for r in result.mappings().all()
+    ]
     return InventoryOfferListResponse(
         items=items, total=total, page=page, per_page=per_page
     )
@@ -385,6 +448,14 @@ async def create_offer(
     db: AsyncSession = Depends(get_db),
 ):
     """新規オファーを admin が手動追加 (AC11.5)。"""
+    projection = project_inventory_axes(payload.condition, payload.unit)
+    log_axis_isolation(
+        logger_=logger,
+        condition=payload.condition,
+        unit=payload.unit,
+        context="inventory_offers.create_offer",
+        projection=projection,
+    )
     try:
         new_id = (
             await db.execute(
@@ -392,15 +463,23 @@ async def create_offer(
                     """
                     INSERT INTO public.inventory
                         (supplier_id, product_id, condition, quantity, unit_price, unit,
+                         seal, search_cond, grade, damage,
                          offer_type, ship_timing,
                          status, notes_ja, notes_en, expires_at, source)
                     VALUES (:supplier_id, :product_id, :condition, :quantity, :unit_price, :unit,
+                            :seal, :search_cond, :grade, :damage,
                             :offer_type, :ship_timing,
                             :status, :notes_ja, :notes_en, :expires_at, :source)
                     RETURNING id
                     """
                 ),
-                payload.model_dump(),
+                {
+                    **payload.model_dump(),
+                    "seal": projection.seal,
+                    "search_cond": projection.search_cond,
+                    "grade": projection.grade,
+                    "damage": projection.damage if projection.damage is not None else False,
+                },
             )
         ).scalar_one()
         await db.commit()
@@ -417,6 +496,7 @@ async def create_offer(
     offer = await _load_offer(db, int(new_id))
     if offer is None:
         raise HTTPException(status_code=500, detail="INSERT 直後の取得に失敗しました")
+    offer["condition"] = resolve_condition_view(offer) or offer.get("condition")
     return InventoryOfferResponse(**offer)
 
 
@@ -465,11 +545,45 @@ async def update_offer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="指定されたオファーが見つかりません",
         )
+
+    offer = await _load_offer(db, offer_id)
+    if offer is None:
+        raise HTTPException(status_code=500, detail="UPDATE 直後の取得に失敗しました")
+
+    projection = project_inventory_axes(offer.get("condition"), offer.get("unit"))
+    log_axis_isolation(
+        logger_=logger,
+        condition=offer.get("condition"),
+        unit=offer.get("unit"),
+        context="inventory_offers.update_offer",
+        projection=projection,
+    )
+    await db.execute(
+        text(
+            """
+            UPDATE public.inventory
+               SET seal = :seal,
+                   search_cond = :search_cond,
+                   grade = :grade,
+                   damage = :damage,
+                   updated_at = NOW()
+             WHERE id = :id
+            """
+        ),
+        {
+            "id": offer_id,
+            "seal": projection.seal,
+            "search_cond": projection.search_cond,
+            "grade": projection.grade,
+            "damage": projection.damage if projection.damage is not None else False,
+        },
+    )
     await db.commit()
 
     offer = await _load_offer(db, offer_id)
     if offer is None:
         raise HTTPException(status_code=500, detail="UPDATE 直後の取得に失敗しました")
+    offer["condition"] = resolve_condition_view(offer) or offer.get("condition")
     return InventoryOfferResponse(**offer)
 
 
