@@ -17,6 +17,11 @@
   --schedule-empty-icon-bg: var(--calendar-google-blue-light);
   --schedule-empty-icon-color: var(--calendar-google-blue);
   --schedule-control-border: var(--border);
+  /* day head height: pad-top(8) + weekday-name-lh(18) + gap(2) + day-circle(46) + pad-bottom(8) = 82px */
+  --schedule-day-head-h: 82px;
+  /* sticky z-index layers within .schedule-grid__viewport scroll container */
+  --schedule-header-z: 2;
+  --schedule-allday-z: 1;
 }
 
 .schedule-page {
@@ -427,6 +432,10 @@
 
 .schedule-grid__header {
   border-bottom: 1px solid var(--schedule-cell-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--schedule-header-z);
+  background: var(--bg-surface);
 }
 
 .schedule-grid__gutter {
@@ -495,6 +504,10 @@
 .schedule-grid__allday-row {
   min-height: var(--schedule-allday-row-h);
   border-bottom: 1px solid var(--schedule-cell-border);
+  position: sticky;
+  top: var(--schedule-day-head-h);
+  z-index: var(--schedule-allday-z);
+  background: var(--bg-surface);
 }
 
 .schedule-grid__allday-cell {
