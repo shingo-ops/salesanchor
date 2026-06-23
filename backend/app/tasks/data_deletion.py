@@ -33,12 +33,27 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
+def _resolve_admin_database_url() -> str:
+    """管理者専用の DB 接続 URL を返す。
+
+    data_deletion は全テナント横断の破壊的操作なので、通常接続への
+    フォールバックは禁止する。ADMIN_DATABASE_URL が無ければ即時に失敗し、
+    salesanchor_app 側へ誤って落ちることを防ぐ。
+    """
+
+    raw = os.getenv("ADMIN_DATABASE_URL", "").strip()
+    if not raw:
+        message = (
+            "ADMIN_DATABASE_URL is required for app.tasks.data_deletion; "
+            "refusing to fall back to DATABASE_URL"
+        )
+        logger.error("[data_deletion] %s", message)
+        raise RuntimeError(message)
+    return raw.replace("postgresql+asyncpg://", "postgresql://")
+
+
 # SA-18 Phase2: data_deletion は全テナントを横断する管理者操作のため ADMIN_DATABASE_URL を使用。
-# ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
-_ADMIN_DATABASE_URL = os.getenv(
-    "ADMIN_DATABASE_URL",
-    os.getenv("DATABASE_URL", ""),
-).replace("postgresql+asyncpg://", "postgresql://")
+_ADMIN_DATABASE_URL = _resolve_admin_database_url()
 
 # F8: モジュールレベル singleton で再利用（呼び出しごとに作成しない）
 _engine = create_engine(_ADMIN_DATABASE_URL, echo=False, pool_pre_ping=True)

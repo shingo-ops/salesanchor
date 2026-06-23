@@ -10,8 +10,10 @@ Celery ブローカー不要: DBセッションをモックしてロジックを
 from __future__ import annotations
 
 import os
+import importlib
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("ADMIN_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 from unittest.mock import MagicMock, call, patch
 
@@ -25,6 +27,54 @@ class TestGetSyncEngine:
         """_get_sync_engine は SQLAlchemy エンジンを返す。"""
         from app.tasks.data_deletion import _get_sync_engine, _engine
         assert _get_sync_engine() is _engine
+
+
+class TestAdminDatabaseUrlResolution:
+    """ADMIN_DATABASE_URL の解決ロジック。"""
+
+    def test_prefers_admin_database_url_and_normalizes_asyncpg(self, monkeypatch):
+        """ADMIN_DATABASE_URL を優先し、asyncpg 形式を sync へ正規化する。"""
+        from app.tasks.data_deletion import _resolve_admin_database_url
+
+        monkeypatch.setenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://user:pw@host:5432/user_db",
+        )
+        monkeypatch.setenv(
+            "ADMIN_DATABASE_URL",
+            "postgresql+asyncpg://admin:pw@host:5432/admin_db",
+        )
+
+        assert _resolve_admin_database_url() == "postgresql://admin:pw@host:5432/admin_db"
+
+    def test_raises_when_admin_database_url_missing(self, monkeypatch):
+        """ADMIN_DATABASE_URL が無ければ明示的に失敗する。"""
+        from app.tasks.data_deletion import _resolve_admin_database_url
+
+        monkeypatch.delenv("ADMIN_DATABASE_URL", raising=False)
+        monkeypatch.setenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://user:pw@host:5432/user_db",
+        )
+
+        with pytest.raises(RuntimeError, match="ADMIN_DATABASE_URL"):
+            _resolve_admin_database_url()
+
+    def test_module_engine_uses_admin_database_url(self, monkeypatch):
+        """モジュール初期化でも ADMIN_DATABASE_URL を優先する。"""
+        import app.tasks.data_deletion as mod
+
+        monkeypatch.setenv(
+            "DATABASE_URL",
+            "sqlite:///user.db",
+        )
+        monkeypatch.setenv(
+            "ADMIN_DATABASE_URL",
+            "sqlite:///admin.db",
+        )
+
+        reloaded = importlib.reload(mod)
+        assert str(reloaded._get_sync_engine().url) == "sqlite:///admin.db"
 
 
 class TestListTenantSchemas:
