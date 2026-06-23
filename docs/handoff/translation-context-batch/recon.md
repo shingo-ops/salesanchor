@@ -15,4 +15,4 @@
 ## 補足
 
 - 今回は RLS を有効化しないため、挙動は変えない。
-- `data_deletion.py` は対象外。
+- data_deletion.py は対象外。
