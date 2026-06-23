@@ -292,12 +292,13 @@ async def seed_aggregated_dataset():
         # poke1: Sealed box × 2 suppliers (best-pick テスト)
         # sup:  1000 円 × 2 個 (最安値・在庫少)
         # sup2: 1100 円 × 50 個 (許容差以内 → stock_priority が選択)
+        # raw_condition を明示: main の _load_inventory_offers は i.raw_condition を参照する
         await conn.execute(
             text(
                 "INSERT INTO public.inventory"
-                " (supplier_id, product_id, condition, quantity, unit_price, status)"
-                " VALUES (:s1, :p, 'Sealed box', 2, 1000, 'in_stock'),"
-                "        (:s2, :p, 'Sealed box', 50, 1100, 'in_stock')"
+                " (supplier_id, product_id, condition, raw_condition, quantity, unit_price, status)"
+                " VALUES (:s1, :p, 'Sealed box', 'Sealed box', 2, 1000, 'in_stock'),"
+                "        (:s2, :p, 'Sealed box', 'Sealed box', 50, 1100, 'in_stock')"
             ),
             {"s1": sup_id, "s2": sup2_id, "p": poke1_id},
         )
@@ -306,8 +307,8 @@ async def seed_aggregated_dataset():
         await conn.execute(
             text(
                 "INSERT INTO public.inventory"
-                " (supplier_id, product_id, condition, quantity, unit_price, status)"
-                " VALUES (:s, :p, 'Case', 5, 9000, 'in_stock')"
+                " (supplier_id, product_id, condition, raw_condition, quantity, unit_price, status)"
+                " VALUES (:s, :p, 'Case', 'Case', 5, 9000, 'in_stock')"
             ),
             {"s": sup_id, "p": poke2_id},
         )
@@ -316,8 +317,8 @@ async def seed_aggregated_dataset():
         await conn.execute(
             text(
                 "INSERT INTO public.inventory"
-                " (supplier_id, product_id, condition, quantity, unit_price, status)"
-                " VALUES (:s, :p, 'Sealed box', 10, 500, 'in_stock')"
+                " (supplier_id, product_id, condition, raw_condition, quantity, unit_price, status)"
+                " VALUES (:s, :p, 'Sealed box', 'Sealed box', 10, 500, 'in_stock')"
             ),
             {"s": sup_id, "p": yugi_id},
         )
