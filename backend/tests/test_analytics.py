@@ -13,6 +13,7 @@ NOTE:
 """
 
 from datetime import date, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import text
@@ -326,6 +327,42 @@ class TestFunnel:
         data = res.json()
         assert data["leads"]["target"] == 30
         assert data["closed"]["won_target"] == 10
+
+    async def test_goals_summary_close_rate_remains_deal_based(self, client, db_session):
+        """goals/summary の close_rate は商談ベースのまま返る"""
+        with patch("app.middleware.audit.AuditMiddleware._record_data_access", new=AsyncMock(return_value=None)):
+            pairs = await _seed_companies_and_contacts(client)
+            for i, status in enumerate(["open", "open", "won"]):
+                pair = pairs[i % len(pairs)]
+                res = await client.post(
+                    "/api/v1/deals",
+                    json={
+                        "company_id": pair[0],
+                        "contact_id": pair[1],
+                        "title": f"GoalDeal{i+1}",
+                        "amount": (i + 1) * 100000,
+                        "status": status,
+                        "stage": status,
+                        "assigned_to": 999,
+                    },
+                )
+                assert res.status_code == 201, res.text
+
+            await db_session.execute(text("""
+                INSERT INTO teams (id, tenant_id, name, is_active) VALUES (1, 999, 'TestTeam', 1)
+            """))
+            await db_session.execute(text("""
+                INSERT INTO team_members (team_id, user_id) VALUES (1, 999)
+            """))
+            await db_session.commit()
+
+        res = await client.get("/api/v1/goals/summary?tab=team&team_id=1")
+        assert res.status_code == 200, res.text
+        data = res.json()
+        monthly = {row["kpi_type"]: row for row in data["monthly"]}
+        assert monthly["close_rate"]["actual_value"] == pytest.approx(33.3, abs=1e-1)
+        assert monthly["close_rate"]["achievement_rate"] == 0.0
+        assert monthly["deal_count"]["actual_value"] == 3
 
     async def test_funnel_with_data(self, client, db_session):
         """データ投入時にファネル数値が正しい"""
