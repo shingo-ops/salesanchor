@@ -41,16 +41,6 @@ ACTUAL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/${AGENT_ACTIVE_WORK_REL}"
 
-# 長命ブランチ（develop / main）は フィーチャー分離チェックを全スキップ
-# 理由: develop への直接 push はバックマージ等の管理オペレーション用途であり、
-#       他エージェントの「混入防止」ロジックはフィーチャーブランチ専用のため不要
-case "${CURRENT_BRANCH}" in
-  develop|main)
-    echo "✅ オーナーシップチェック通過（長命ブランチ・管理オペレーション）: ${CURRENT_BRANCH}"
-    exit 0
-    ;;
-esac
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # チェック1: worktree 外での push を禁止
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
