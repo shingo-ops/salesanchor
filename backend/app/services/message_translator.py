@@ -195,6 +195,7 @@ async def get_existing_inbound_translation_targets(
 async def _save_translation(
     db: AsyncSession,
     table_ref: str,
+    tenant_id: int,
     message_id: str,
     target_language: str,
     translated_text: str,
@@ -206,13 +207,14 @@ async def _save_translation(
     await db.execute(
         text(
             f"INSERT INTO {table_ref} "
-            "(message_id, target_language, translated_text, engine, confidence, original_language) "
-            "VALUES (:message_id, :target_language, :translated_text, :engine, :confidence, :original_language) "
+            "(tenant_id, message_id, target_language, translated_text, engine, confidence, original_language) "
+            "VALUES (:tenant_id, :message_id, :target_language, :translated_text, :engine, :confidence, :original_language) "
             "ON CONFLICT (message_id, target_language) DO UPDATE "
-            "SET translated_text = :translated_text, engine = :engine, "
+            "SET tenant_id = :tenant_id, translated_text = :translated_text, engine = :engine, "
             "    confidence = :confidence, original_language = :original_language"
         ),
         {
+            "tenant_id": tenant_id,
             "message_id": message_id,
             "target_language": target_language,
             "translated_text": translated_text,
@@ -527,7 +529,7 @@ async def translate_inbound(
     # 5. DB キャッシュ保存
     effective_original_language = original_language_override or original_language
     await _save_translation(
-        db, table_ref, message_id, target_language,
+        db, table_ref, tenant_id, message_id, target_language,
         translated_text, model, confidence, effective_original_language,
     )
     await db.commit()

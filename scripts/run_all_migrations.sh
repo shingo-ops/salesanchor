@@ -184,6 +184,7 @@ run_sql migrations/091_add_leads_discord_messaging_columns.sql
 run_sql migrations/092_add_meta_messages_discord_index.sql
 run_sql migrations/093_rename_order_statuses.sql
 run_sql migrations/094_create_message_translations.sql
+run_sql migrations/20260623_040000_add_tenant_id_to_message_translations.sql
 run_sql migrations/095_add_lead_social_links.sql
 run_sql migrations/096_add_deal_lead_source.sql
 
