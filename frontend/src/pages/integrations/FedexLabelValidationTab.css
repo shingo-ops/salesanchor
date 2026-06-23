@@ -159,11 +159,7 @@
 }
 
 .etd-guide__screenshot {
-  max-height: var(--size-screenshot-thumb-h);
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  cursor: pointer;
+  width: 100%;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   display: block;
