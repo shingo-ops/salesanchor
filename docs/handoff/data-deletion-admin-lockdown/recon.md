@@ -9,6 +9,6 @@
 
 ## 確認結果
 
-1. `data_deletion.py` は `ADMIN_DATABASE_URL` が空なら `RuntimeError` を投げ、`DATABASE_URL` へ silent fallback しない。
+1. `backend/app/tasks/data_deletion.py` は `ADMIN_DATABASE_URL` が空なら `RuntimeError` を投げ、`DATABASE_URL` へ silent fallback しない。
 2. compose では backend / celery-worker / celery-beat へ `ADMIN_DATABASE_URL` を配るため、アプリ起動と task 実行時に同じ管理者接続を明示できる。
 3. テストでは `ADMIN_DATABASE_URL` 未設定時に失敗すること、`postgresql+asyncpg://` が sync URL に正規化されることを確認済み。
