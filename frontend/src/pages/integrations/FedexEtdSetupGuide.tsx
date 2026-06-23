@@ -247,7 +247,7 @@ export function FedexEtdSetupGuide({
   };
 
   return (
-    <section className="etd-guide card">
+    <section className="etd-guide">
       <StepIndicator
         steps={stepDefinitions}
         activeIndex={activeStepIndex}
