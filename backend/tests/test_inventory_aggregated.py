@@ -140,9 +140,13 @@ def _split_sql(sql: str) -> list[str]:
     return statements
 
 
-@pytest_asyncio.fixture(scope="module", loop_scope="module")
-async def pg_engine():
-    """モジュール単位の PG エンジン。必要テーブルを自前 bootstrap してから yield。"""
+@pytest_asyncio.fixture
+async def seed_aggregated_dataset():
+    """配線E2E / タブテスト用 seed。テスト後にクリーンアップ。
+
+    テーブル bootstrap（IF NOT EXISTS → 冪等）と seed を一体化し、
+    module-scope fixture を排除してループスコープ不一致を回避。
+    """
     from pathlib import Path
 
     from sqlalchemy import text
@@ -199,7 +203,7 @@ async def pg_engine():
             """)
         )
 
-    # ── migration: inventory_aggregation_rules ──────────────────────────────
+    # ── migration: inventory_aggregation_rules (冪等) ──────────────────────
     migration_path = (
         Path(__file__).resolve().parents[2]
         / "migrations"
@@ -213,18 +217,9 @@ async def pg_engine():
                 if stmt:
                     await conn.execute(text(stmt))
 
-    yield eng
-    await eng.dispose()
-
-
-@pytest_asyncio.fixture
-async def seed_aggregated_dataset(pg_engine):
-    """配線E2E / タブテスト用 seed。テスト後にクリーンアップ。"""
-    from sqlalchemy import text
-
     tag = uuid.uuid4().hex[:8]
 
-    async with pg_engine.begin() as conn:
+    async with eng.begin() as conn:
         sup_id = (
             await conn.execute(
                 text(
@@ -306,6 +301,7 @@ async def seed_aggregated_dataset(pg_engine):
         )
 
     yield {
+        "engine": eng,
         "tag": tag,
         "sup_id": sup_id,
         "sup2_id": sup2_id,
@@ -318,7 +314,7 @@ async def seed_aggregated_dataset(pg_engine):
     }
 
     # Cleanup
-    async with pg_engine.begin() as conn:
+    async with eng.begin() as conn:
         for pid in [poke1_id, poke2_id, yugi_id]:
             await conn.execute(
                 text("DELETE FROM public.inventory WHERE product_id = :p"), {"p": pid}
@@ -330,6 +326,7 @@ async def seed_aggregated_dataset(pg_engine):
             await conn.execute(
                 text("DELETE FROM public.suppliers WHERE id = :s"), {"s": sid}
             )
+    await eng.dispose()
 
 
 def _make_app_client(pg_engine):
@@ -381,12 +378,12 @@ def _make_app_client(pg_engine):
 @pytest.mark.asyncio
 @pytestmark_pg
 async def test_aggregated_endpoint_returns_best_pick_rows(
-    seed_aggregated_dataset, pg_engine
+    seed_aggregated_dataset,
 ):
     """配線E2E: エンドポイントが集計後の best-pick 行を返す。"""
     data = seed_aggregated_dataset
 
-    async with _make_app_client(pg_engine) as client:
+    async with _make_app_client(data["engine"]) as client:
         resp = await client.get("/api/v1/inventory/aggregated")
         assert resp.status_code == 200, resp.text
         data_resp = resp.json()
@@ -418,12 +415,12 @@ async def test_aggregated_endpoint_returns_best_pick_rows(
 @pytest.mark.asyncio
 @pytestmark_pg
 async def test_aggregated_endpoint_category_filter(
-    seed_aggregated_dataset, pg_engine
+    seed_aggregated_dataset,
 ):
     """タブ: ?category=pokemon で pokemon のみ返す。"""
     data = seed_aggregated_dataset
 
-    async with _make_app_client(pg_engine) as client:
+    async with _make_app_client(data["engine"]) as client:
         resp = await client.get("/api/v1/inventory/aggregated?category=pokemon")
         assert resp.status_code == 200, resp.text
         data_resp = resp.json()
@@ -439,10 +436,10 @@ async def test_aggregated_endpoint_category_filter(
 @pytest.mark.asyncio
 @pytestmark_pg
 async def test_aggregated_boundary_no_internal_fields(
-    seed_aggregated_dataset, pg_engine
+    seed_aggregated_dataset,
 ):
     """境界: supplier_name / reason / raw が JSON 応答の全階層に存在しない。"""
-    async with _make_app_client(pg_engine) as client:
+    async with _make_app_client(seed_aggregated_dataset["engine"]) as client:
         resp = await client.get("/api/v1/inventory/aggregated")
         assert resp.status_code == 200
 
