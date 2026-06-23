@@ -159,7 +159,7 @@
 }
 
 .etd-guide__screenshot {
-  max-height: var(--size-screenshot-thumb-h);
+  max-height: 180px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
