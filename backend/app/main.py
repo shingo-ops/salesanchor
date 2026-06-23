@@ -52,6 +52,7 @@ from app.routers import (
     google_calendar,  # Google Calendar OAuth 連携
     health,
     integrations,  # API連携 (Googleドライブ 保存テスト 等)
+    inventory_aggregated,  # 在庫集計エンドポイント (series x condition ピボット)
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
@@ -487,6 +488,13 @@ app.include_router(
 app.include_router(
     inventory_search.router, prefix="/api/v1",
     tags=["inventory-search"],
+    dependencies=[Depends(get_current_tenant)],
+)
+
+# 在庫集計 (series x condition ピボット、テナント向け読み取り専用)
+app.include_router(
+    inventory_aggregated.router, prefix="/api/v1",
+    tags=["inventory-aggregated"],
     dependencies=[Depends(get_current_tenant)],
 )
 
