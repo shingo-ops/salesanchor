@@ -32,6 +32,7 @@ interface InventoryRow {
   quantity: number;
   tcg_type: string | null;
   offered_at: string;
+  release_date: string | null;
 }
 
 interface SupplierFacet {
@@ -87,8 +88,9 @@ export default function InventoryPage() {
   const [searchQ, setSearchQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [category, setCategory] = useState("");
-  const [sortField, setSortField] = useState("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState("release_date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
   // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
@@ -155,6 +157,7 @@ export default function InventoryPage() {
       params.set("order", sortDir);
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
+      if (activeTab !== "all") params.set("tcg_type", activeTab);
       if (filterEnabled && hiddenSupplierIds.size > 0) {
         params.set("hide_supplier_ids", Array.from(hiddenSupplierIds).join(","));
       }
@@ -187,7 +190,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sortField, sortDir, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     void load();
@@ -612,6 +615,21 @@ export default function InventoryPage() {
         {t("common.loading")}
       </div>
 
+      {/* TCG種別タブ（tcg_type_master を sort_order 順に並べる。「すべて」を先頭に）。 */}
+      <div className="tabs" style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", margin: "var(--space-sm) 0" }}>
+        <button
+          className={activeTab === "all" ? "tab active" : "tab"}
+          onClick={() => { setActiveTab("all"); setPage(1); }}
+        >{t("common.all")}</button>
+        {tcgTypes.map((tt) => (
+          <button
+            key={tt.code}
+            className={activeTab === tt.code ? "tab active" : "tab"}
+            onClick={() => { setActiveTab(tt.code); setPage(1); }}
+          >{tt.name_ja}</button>
+        ))}
+      </div>
+
       {/* 列を分割して表示。狭幅では横スクロール。フォントは少し大きめ。 */}
       <div style={{ overflowX: "auto" }}>
         <table
@@ -632,6 +650,7 @@ export default function InventoryPage() {
               {colVisible("quantity") && sortTh("quantity", "quantity", "right")}
               {colVisible("unitPrice") && sortTh("unitPrice", "unit_price", "right")}
               {colVisible("supplier") && sortTh("supplier", "supplier")}
+              {sortTh("releaseDate", "release_date")}
             </tr>
           </thead>
           <tbody>
@@ -695,6 +714,7 @@ export default function InventoryPage() {
                       </div>
                     </td>
                   )}
+                  <td>{it.release_date ?? "-"}</td>
                 </tr>
               ))
             )}

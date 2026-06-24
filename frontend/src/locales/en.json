@@ -1182,7 +1182,8 @@
       "condition": "Condition",
       "unitPrice": "Unit price",
       "quantity": "Qty",
-      "supplier": "Supplier"
+      "supplier": "Supplier",
+      "releaseDate": "Release date"
     },
     "condition": {
       "shrink": "Shrink-wrapped",
