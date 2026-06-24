@@ -410,6 +410,13 @@ export default function InventoryPage() {
         </button>
       </section>
 
+      <p
+        data-testid="inventory-expiry-warning"
+        style={{ margin: "var(--space-2) 0", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}
+      >
+        {t("inventory.expiryWarning")}
+      </p>
+
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
         <InventoryFilterPanel
@@ -445,13 +452,6 @@ export default function InventoryPage() {
           onClose={() => setShowFilterPanel(false)}
         />
       )}
-
-      <p
-        data-testid="inventory-expiry-warning"
-        style={{ margin: "var(--space-2) 0", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}
-      >
-        {t("inventory.expiryWarning")}
-      </p>
 
       <div
         className="loading-indicator"
