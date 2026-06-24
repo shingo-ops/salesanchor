@@ -237,3 +237,4 @@
 | release/send-guard-phase-a-main | 送信ガード Phase A（ADR-143: かな検出+スレッド言語トグル+確認ダイアログ）main単独便 | 2026-06-24 | REVIEW | | | frontend only・バックエンド変更なし |
 | release/send-guard-phase-b | 送信ガード Phase B（ADR-143: 多数決自動判定 API + useInboxState 自動注入）main単独便 | 2026-06-24 | IN_PROGRESS | | main | leads.py+useInboxState.ts+test_lang_judge.py・Phase A無改変 |
 | release/etd-guide-nav-center | ETD ガイド 左ナビ項目ラベル中央揃え リリース | 2026-06-24 | IN_PROGRESS | | main | base=main・CSS 1行 cherry-pick |
+| release/etd-guide-remove-back-button | ETD ガイド 戻るボタン全削除 リリース | 2026-06-25 | IN_PROGRESS | | main | base=main・TSX+CSS cherry-pick |
