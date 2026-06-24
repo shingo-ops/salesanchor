@@ -2,7 +2,7 @@
 
 ## 発端
 
-`#2455`（`ef87c486` "feat: add priority prospects analytics"）が `analytics.py` を 629行削除・216行追加する
+`#2455`（`ef87c486` "feat: add priority prospects analytics"）が `backend/app/routers/analytics.py` を 629行削除・216行追加する
 丸ごと作り直しを行い、`weekly_advisor_defensive` を巻き添えで消した。
 frontend は `frontend/src/api/funnel.ts:210` で `/analytics/weekly-advisor-defensive` を今も呼んでおり、W-1 が develop で壊れている。
 

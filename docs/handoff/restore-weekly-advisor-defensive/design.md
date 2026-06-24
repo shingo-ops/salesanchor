@@ -46,7 +46,7 @@
 
 ## 触らない範囲
 
-- `priority_prospects`（`analytics.py:1779-1893`）
+- `priority_prospects`（`backend/app/routers/analytics.py:1779-1893`）
 - `_fetch_attribute_conversion_axis` / `/conversion-by-attribute`
 - `channels_summary` / `compute_prospect_rank` / `priority_score`
 - `migrations/` / `frontend/` / `scripts/`
