@@ -1681,7 +1681,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .send-guard-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1691,7 +1691,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--bg-surface);
   border-radius: var(--radius-md);
   padding: var(--space-6);
-  max-width: 400px;
+  max-width: var(--modal-max-w-sm);
   width: 90%;
   display: flex;
   flex-direction: column;
