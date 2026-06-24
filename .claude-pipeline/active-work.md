@@ -237,3 +237,4 @@
 | feature/morimoto/schedule-fix2 | スケジュール #4 calendarLabels i18n追加 / #8 catch setEvents([]) 追加 | 2026-06-21 | IN_PROGRESS | | | |
 | feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |
 | hotfix/morimoto/page-header-revert-clean | 全PageLayoutページ ヘッダー白帯・1段下ズレ修正（#2432 リグレッション） | 2026-06-23 | IN_PROGRESS | #2486 | main | |
+| feature/morimoto/send-guard-phase-a | 送信ガード Phase A（ADR-143: かな検出+スレッド言語トグル+確認ダイアログ） | 2026-06-24 | REVIEW | | | frontend only・バックエンド変更なし |
