@@ -10,7 +10,7 @@
 ## 概要
 
 develop では PR #2569（chromatic-full-removal）で npm 依存・プラグイン・コメントを撤去済み。
-main にのみ `.github/workflows/chromatic.yml` が残存していたため本 PR で削除。
+main にのみ chromatic.yml ワークフローが残存していたため本 PR で削除。
 develop→main リリース PR #2540 のコンフリクト解消待ちのため先行して単独削除 PR を起票。
 
 ---
@@ -27,9 +27,8 @@ develop→main リリース PR #2540 のコンフリクト解消待ちのため�
 
 ## 削除対象
 
-| ファイル | 状況 |
-|---|---|
-| `.github/workflows/chromatic.yml` | main にのみ残存（develop には PR #2519 以前に削除済み）。本 PR で `git rm`。 |
+本 PR では `.github/workflows/` 配下の chromatic.yml ワークフローを git rm で削除する。
+main にのみ残存（develop には PR #2519 以前に削除済み）。
 
 ---
 
