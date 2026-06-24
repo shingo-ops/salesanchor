@@ -390,12 +390,12 @@ export default function InventoryPage() {
             setPage(1);
           }}
           onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto", padding: "var(--space-1) var(--space-10px)", fontSize: "var(--font-xs)", boxSizing: "border-box" }}
+          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto", padding: "var(--space-1) var(--space-10px)", fontSize: "var(--font-xs)", boxSizing: "border-box", height: "44px" }}
         />
-        <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch}>
+        <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
           {t("common.search")}
         </button>
-        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll}>
+        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
           {t("inventory.resetSort")}
         </button>
         <button
@@ -405,17 +405,11 @@ export default function InventoryPage() {
           aria-expanded={showFilterPanel}
           aria-pressed={filterEnabled}
           onClick={() => setShowFilterPanel((v) => !v)}
+          style={{ height: "44px", display: "inline-flex", alignItems: "center" }}
         >
           {t("inventory.filterPanel.button")}
         </button>
       </section>
-
-      <p
-        data-testid="inventory-expiry-warning"
-        style={{ margin: "var(--space-2) 0", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}
-      >
-        {t("inventory.expiryWarning")}
-      </p>
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
@@ -463,33 +457,41 @@ export default function InventoryPage() {
         {t("common.loading")}
       </div>
 
-      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン */}
-      <div className="tabs" style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", margin: "var(--space-sm) 0", alignItems: "center" }}>
-        {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
-          const label = code === "all" ? t("common.all") : (tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code);
-          return (
-            <button
-              key={code}
-              className={activeTab === code ? "tab active" : "tab"}
-              onClick={() => { setActiveTab(code); setPage(1); }}
-            >{label}</button>
-          );
-        })}
-        {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
-          <select
-            value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
-            onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
-            aria-label={t("inventory.filter.otherTypes")}
-            style={{ fontSize: "var(--font-xs)", padding: "var(--space-1) var(--space-10px)" }}
-          >
-            <option value="">{t("inventory.filter.otherTypes")}</option>
-            {tcgTypes
-              .filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code))
-              .map((tt) => (
-                <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
-              ))}
-          </select>
-        )}
+      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン ＋ 警告（右端固定） */}
+      <div className="tabs" style={{ display: "flex", gap: "var(--space-sm)", margin: "var(--space-sm) 0", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
+          {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
+            const label = code === "all" ? t("common.all") : (tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code);
+            return (
+              <button
+                key={code}
+                className={activeTab === code ? "tab active" : "tab"}
+                onClick={() => { setActiveTab(code); setPage(1); }}
+              >{label}</button>
+            );
+          })}
+          {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
+            <select
+              value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
+              onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
+              aria-label={t("inventory.filter.otherTypes")}
+              style={{ fontSize: "var(--font-xs)", padding: "var(--space-1) var(--space-10px)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)" }}
+            >
+              <option value="">{t("inventory.filter.otherTypes")}</option>
+              {tcgTypes
+                .filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code))
+                .map((tt) => (
+                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
+                ))}
+            </select>
+          )}
+        </div>
+        <p
+          data-testid="inventory-expiry-warning"
+          style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
+        >
+          {"※"}{t("inventory.expiryWarning")}
+        </p>
       </div>
 
       {/* 列を分割して表示。狭幅では横スクロール。フォントは少し大きめ。 */}
