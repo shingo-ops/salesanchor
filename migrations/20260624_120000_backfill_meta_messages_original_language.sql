@@ -20,6 +20,16 @@ BEGIN
         WHERE nspname ~ '^tenant_[0-9]+$'
         ORDER BY nspname
     LOOP
+        -- テーブル存在確認（migration-test など一部テナントが未セットアップの場合はスキップ）
+        IF to_regclass(schema_rec.nspname || '.meta_messages') IS NULL THEN
+            RAISE NOTICE 'backfill 20260624_120000: %.meta_messages not found — skip', schema_rec.nspname;
+            CONTINUE;
+        END IF;
+        IF to_regclass(schema_rec.nspname || '.message_translations') IS NULL THEN
+            RAISE NOTICE 'backfill 20260624_120000: %.message_translations not found — skip', schema_rec.nspname;
+            CONTINUE;
+        END IF;
+
         -- meta_messages.original_language が NULL の inbound 行を
         -- message_translations の original_language で補完する。
         -- ON CONFLICT なし: IS NULL フィルタで冪等を保証。
