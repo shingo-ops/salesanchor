@@ -1,0 +1,35 @@
+name: Dangling Route Gate
+
+# PRで削除されたバックエンドルートがフロントエンドから参照されていないことを検証する。
+# 削除ルート × フロントエンド参照 が空でなければ PR をブロックする。
+# ※ 必須ではない（non-mandatory）。安定確認後に Ruleset 追加を別途 GO で判断する。
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  gate:
+    name: dangling-route gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Run dangling-route gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-dangling-routes.js
+
+      - name: Run dangling-route tests
+        run: node scripts/tests/test-dangling-routes.js
