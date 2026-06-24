@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
 from app.services.conv_log_writer import write_conversation_log
+from app.services.message_translator import infer_original_language
 
 logger = logging.getLogger(__name__)
 
@@ -196,10 +197,10 @@ async def upsert_lead_and_message(
         text(f"""
             INSERT INTO {schema}.meta_messages
                 (tenant_id, lead_id, platform, sender_id, sender_name,
-                 message_text, direction, message_id, created_at)
+                 message_text, direction, message_id, created_at, original_language)
             VALUES
                 (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                 :text, 'inbound', :message_id, :created_at)
+                 :text, 'inbound', :message_id, :created_at, :original_language)
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
             RETURNING id
@@ -212,6 +213,7 @@ async def upsert_lead_and_message(
             "text": message_text,
             "message_id": discord_message_id,
             "created_at": received_at,
+            "original_language": infer_original_language(message_text),
         },
     )
     msg_row = insert_msg.first()
