@@ -131,11 +131,17 @@ async def _fire_translation(
     tenant_id: int,
     log_id: int,
     content_text: str,
+    direction: str = "inbound",
 ) -> None:
     """ensure_inbound_translations を発火し、結果を conversation_logs に書き戻す。
 
+    outbound（担当者発言）は inbound 専用翻訳を呼ばない（early return）。
     失敗しても呼び出し元の処理は継続する（try/except で非致命的）。
     """
+    if direction != "inbound":
+        logger.debug("[conv_logs] skip translation for outbound log_id=%d", log_id)
+        return
+
     from app.services.message_translator import ensure_inbound_translations
 
     schema = f"tenant_{tenant_id:03d}"
@@ -318,7 +324,7 @@ async def create_conv_log(
 
     # 翻訳を非同期発火（失敗しても 201 を返す）
     if body.content_text:
-        await _fire_translation(db, tenant_id, log_id, body.content_text)
+        await _fire_translation(db, tenant_id, log_id, body.content_text, body.direction)
 
     return {"id": log_id}
 
@@ -425,7 +431,7 @@ async def update_conv_log(
     # content_text 変更時は再翻訳
     new_text = updates.get("content_text")
     if new_text:
-        await _fire_translation(db, tenant_id, log_id, new_text)
+        await _fire_translation(db, tenant_id, log_id, new_text, existing["direction"])
 
     return {"id": log_id, "updated": True}
 
