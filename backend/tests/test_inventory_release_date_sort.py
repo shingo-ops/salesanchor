@@ -152,6 +152,21 @@ async def seed_release_date_dataset():
             """)
         )
 
+    # ── 既存テーブルへの列追加（IF NOT EXISTS → 冪等。共有 PG では
+    #    CREATE TABLE IF NOT EXISTS がスキップされる場合に備え明示 ALTER） ───────
+    async with eng.begin() as conn:
+        for stmt in [
+            "ALTER TABLE public.products ADD COLUMN IF NOT EXISTS mark VARCHAR(100)",
+            "ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit VARCHAR(20)",
+            "ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS unit VARCHAR(20)",
+            "ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS offer_type VARCHAR(20) NOT NULL DEFAULT 'in_stock'",
+            "ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS ship_timing VARCHAR(20)",
+        ]:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                pass
+
     # ── 必要な migration (冪等) ────────────────────────────────────────────
     migrations_root = Path(__file__).resolve().parents[2] / "migrations"
     for mig_file in [
