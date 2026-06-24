@@ -124,6 +124,24 @@ def detect_inbound_language(text: str) -> InboundLanguageSignals:
     )
 
 
+def infer_original_language(text: str) -> str | None:
+    """受信文の原文言語コードを推定して返す。
+
+    ensure_inbound_translations の判定と一致させる:
+      - ひらがな/カタカナ含む → 'ja'
+      - ラテン単語含む（かな無し） → 'en'（ヒューリスティック）
+      - どちらも不明 → None（多数決で「不明」扱い）
+
+    INSERT 時点で呼ぶためだけの純粋関数。DB アクセスなし。
+    """
+    sig = detect_inbound_language(text)
+    if sig.has_kana:
+        return "ja"
+    if sig.has_latin_word:
+        return "en"
+    return None
+
+
 def get_required_inbound_targets(
     text: str,
     original_language_hint: str | None = None,
