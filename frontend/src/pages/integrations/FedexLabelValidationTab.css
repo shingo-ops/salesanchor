@@ -247,6 +247,74 @@
   color: var(--text-primary);
 }
 
+/* ── サブ手順 2ペイン（左ナビ / 右詳細）── */
+.etd-guide__substep-pane {
+  display: grid;
+  grid-template-columns: var(--size-substep-nav) 1fr;
+  gap: var(--space-4);
+  align-items: start;
+  margin-top: var(--space-4);
+}
+
+.etd-guide__substep-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  position: sticky;
+  top: var(--space-2);
+}
+
+.etd-guide__substep-nav-item {
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.etd-guide__substep-nav-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.etd-guide__substep-nav-item--active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.etd-guide__substep-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.etd-guide__substep-detail .form-hint {
+  color: var(--text-primary);
+}
+
+/* 狭幅フォールバック: 縦積み */
+@media (max-width: 768px) {
+  .etd-guide__substep-pane {
+    grid-template-columns: 1fr;
+  }
+
+  .etd-guide__substep-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+  }
+}
+
 .etd-guide__screenshot {
   width: 100%;
   /* B: 保険。カードを突き破らないよう max-width で原寸制限・縦横比保持 */
