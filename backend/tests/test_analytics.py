@@ -881,6 +881,51 @@ class TestReasons:
 # W-1 復元（#2455 で誤削除 → 外科的復元）
 # ─────────────────────────────────────────────
 
+async def _ensure_conversation_logs_table(db_session):
+    """weekly-advisor_defensive 用に SQLite 互換 conversation_logs を作成する。"""
+    await db_session.execute(text("DROP TABLE IF EXISTS conversation_logs"))
+    await db_session.execute(text("""
+        CREATE TABLE conversation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id INTEGER NOT NULL DEFAULT 999,
+            company_id INTEGER,
+            contact_id INTEGER,
+            lead_id INTEGER,
+            channel_type TEXT,
+            channel_identity TEXT,
+            direction TEXT,
+            sender TEXT,
+            content_text TEXT,
+            external_message_id TEXT,
+            raw_payload TEXT,
+            occurred_at TIMESTAMP,
+            deleted_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """))
+    await db_session.commit()
+
+
+async def _ensure_data_access_events_table(db_session):
+    """audit middleware 用の SQLite 互換 data_access_events を作成する。"""
+    await db_session.execute(text("DROP TABLE IF EXISTS data_access_events"))
+    await db_session.execute(text("""
+        CREATE TABLE data_access_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            method TEXT NOT NULL,
+            path TEXT NOT NULL,
+            status_code INTEGER NOT NULL,
+            user_email TEXT,
+            client_ip TEXT,
+            user_agent TEXT,
+            duration_ms INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """))
+    await db_session.commit()
+
 class TestWeeklyAdvisorDefensive:
     """GET /analytics/weekly-advisor-defensive"""
 
