@@ -528,6 +528,27 @@ export function useInboxState(): UseInboxStateReturn {
     loadMessages(selectedLeadId);
     markRead(selectedLeadId);
     loadLeadDetail(selectedLeadId);
+
+    // ADR-143 Phase B: auto スレッドで相手言語を多数決判定して自動設定
+    // - 既に手動で ja/en が設定済みのスレッドは触らない（languageOverrideByLead にエントリあり）
+    // - confident=true && language !== null のときだけ setRecipientLanguage を呼ぶ
+    // - 失敗・0件・2件以下は何もしない（auto のまま = Phase A 安全側を維持）
+    if (languageOverrideByLead[selectedLeadId] !== undefined) return;
+    const leadIdAtFetch = selectedLeadId;
+    api.get<{ language: string | null; total_records: number; confident: boolean }>(
+      `/leads/${leadIdAtFetch}/recipient-language`,
+    ).then((res) => {
+      if (res.confident && res.language !== null) {
+        setLanguageOverrideByLead((prev) => {
+          // 取得完了までに手動変更された場合は上書きしない
+          if (prev[leadIdAtFetch] !== undefined) return prev;
+          return { ...prev, [leadIdAtFetch]: res.language as "ja" | "en" };
+        });
+      }
+    }).catch(() => {
+      // 取得失敗は無視（auto のまま）
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeadId, loadMessages, markRead, loadLeadDetail]);
 
   // メッセージリスト末尾へ自動スクロール
