@@ -53,6 +53,7 @@ from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
 from app.services.conv_log_writer import write_conversation_log
 from app.services.inbound_translation import enqueue_inbound_translation
+from app.services.message_translator import infer_original_language
 
 router = APIRouter()
 
@@ -630,12 +631,12 @@ async def _persist_meta_message(
             INSERT INTO meta_messages (
                 tenant_id, lead_id, platform,
                 sender_id, message_text, direction, raw_payload,
-                message_id, page_id
+                message_id, page_id, original_language
             )
             VALUES (
                 :tenant_id, :lead_id, :platform,
                 :sender_id, :message_text, 'inbound', :raw_payload,
-                :message_id, :page_id
+                :message_id, :page_id, :original_language
             )
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
@@ -650,6 +651,7 @@ async def _persist_meta_message(
             "message_id": message_id,
             "raw_payload": raw_payload,
             "page_id": page_id,
+            "original_language": infer_original_language(message_text),
         },
     )
     msg_inserted_id = ins.scalar_one_or_none()

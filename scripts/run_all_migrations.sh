@@ -443,6 +443,9 @@ run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
 # SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
 run_sql migrations/20260623_100000_rls_message_translations.sql
+
+# 送信ガード土台: meta_messages.original_language を message_translations から backfill
+run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
