@@ -1,0 +1,1 @@
+-- planted dup test (pattern A: 既存刻印再利用)
