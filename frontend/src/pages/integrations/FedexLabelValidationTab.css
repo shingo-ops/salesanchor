@@ -34,7 +34,7 @@
 .etd-guide {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
   padding: var(--space-5);
   margin-bottom: var(--space-4);
   /* 見出し/intro は全幅左寄せ。
@@ -73,7 +73,7 @@
   background: var(--bg-primary);
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .etd-stepper__list {
@@ -172,7 +172,23 @@
 .etd-guide__step-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.etd-guide__step-title-row {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.etd-guide__step-intro {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
 }
 
 .etd-guide__step-number {
@@ -313,6 +329,12 @@
 
 /* 狭幅フォールバック: 縦積み */
 @media (max-width: 768px) {
+  .etd-guide__step-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
   .etd-guide__substep-pane {
     grid-template-columns: 1fr;
   }
