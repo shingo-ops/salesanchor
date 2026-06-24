@@ -69,6 +69,11 @@ async def _bootstrap_minimal_schema(admin_engine, tenant_id: int) -> None:
             )
         """))
 
+        # アプリユーザーにスキーマ・テーブルへのアクセス権を付与
+        # （admin が作成したスキーマは app ユーザーからは無権限→ PUBLIC 付与で解消）
+        await conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO PUBLIC"))
+        await conn.execute(text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {schema}.audit_logs TO PUBLIC"))
+
         # RLS 有効化とポリシー設定（tenant.py:1094/1152-1155 と同等）
         await conn.execute(text(
             f"ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY"
