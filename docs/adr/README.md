@@ -159,6 +159,7 @@
 | [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
 | [ADR-140](./ADR-140-mobile-nav-bottom-tabs.md) | ADR-140: モバイルナビ刷新 — 下部タブバー方式への移行 | Accepted | — | — |
 | [ADR-141](./ADR-141-inbound-translation-entry.md) | ADR-141: 受信翻訳の標準入口を `enqueue_inbound_translation()` に統一する | Accepted | — | — |
+| [ADR-142](./ADR-142-tenant-provisioning-completeness.md) | ADR-142: 新テナント provisioning に必須テナント別テーブルが漏れなく揃うことを保証する | — | — | — |
 | [ADR-143](./ADR-143-send-guard.md) | ADR-143: 送信ガード（Send Guard）Phase A | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
