@@ -6,17 +6,11 @@
 
 ## 調査対象
 
-- `frontend/src/pages/integrations/FedexLabelValidationTab.css:291`
+- `frontend/src/pages/integrations/FedexLabelValidationTab.css:291` — `.etd-guide__substep-nav-item` 定義
 
-## 現状
+## 現状（file:line）
 
-```css
-.etd-guide__substep-nav-item {
-  width: 100%;
-  text-align: left;   /* ← 左寄せ */
-  ...
-}
-```
+`frontend/src/pages/integrations/FedexLabelValidationTab.css:293` に `text-align: left` が設定されており、1-1〜1-6 のボタンラベルが枠内左寄せになっている。
 
 1-1〜1-6 のボタンラベルが枠内左寄せになっている。
 
