@@ -1,5 +1,5 @@
 /**
- * ADR-142 送信ガード Phase A — QA 実機確認テスト
+ * ADR-143 送信ガード Phase A — QA 実機確認テスト
  *
  * ローカル dev server (localhost:5173) + API mock で動作。
  * tenant_006 相当のデータ（mock-conversations.json / mock-messages.json）を使用。

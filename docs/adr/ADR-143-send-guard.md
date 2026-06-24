@@ -1,4 +1,4 @@
-# ADR-142: 送信ガード（Send Guard）Phase A
+# ADR-143: 送信ガード（Send Guard）Phase A
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
@@ -63,7 +63,7 @@ ADR-110 では「日本語直送り（既存送信ボタン）はゲート対象
 ### Phase B: majority vote（将来・別 ADR）
 
 `lang_judge.py` が CRM メッセージ履歴から受信者言語を多数決で判定。
-CRM データ蓄積後に ADR-143 または ADR-110 改訂として起案。
+CRM データ蓄積後に ADR-144 または ADR-110 改訂として起案。
 
 ---
 

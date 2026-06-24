@@ -2,7 +2,7 @@
 
 **仕事名**: send-guard-phase-a
 **日付**: 2026-06-24
-**対象ADR**: ADR-142
+**対象ADR**: ADR-143
 **担当**: Hikky-dev (Claude Code)
 
 ---
@@ -20,7 +20,7 @@
 | `frontend/src/pages/inbox/InboxPage.css:1653` | `.send-guard-lang-toggle` — スレッドヘッダー言語トグルスタイル |
 | `frontend/src/pages/inbox/InboxPage.css:1681` | `.send-guard-overlay` — ダイアログオーバーレイ（`position: fixed; /* fixed-ok: */`） |
 | `frontend/src/locales/ja.json:2933` | `translation.sendGuard.*` キー（dialogTitle / dialogBody / 3ボタンラベル / トグルラベル） |
-| `docs/adr/ADR-142-send-guard.md:1` | ADR-142 本文（Phase A 発火条件表 / ダイアログ選択肢 / Phase B 予告） |
+| `docs/adr/ADR-143-send-guard.md:1` | ADR-143 本文（Phase A 発火条件表 / ダイアログ選択肢 / Phase B 予告） |
 
 ---
 
@@ -29,6 +29,6 @@
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | `requestOutboundPreview` の 3rd 引数 `target_language` は既存 API 対応済みか | `frontend/src/pages/inbox/OutboundTranslationPreview.tsx` の API 呼び出し確認 + バックエンドは ADR-110 実装済み | ✅ 解消済み |
-| 2 | `languageOverrideByLead` の localStorage 永続化は Phase A スコープか | ADR-142 §言語トグル: セッション内のみ（Phase B 検討）と明記 | ✅ 解消済み（スコープ外） |
+| 2 | `languageOverrideByLead` の localStorage 永続化は Phase A スコープか | ADR-143 §言語トグル: セッション内のみ（Phase B 検討）と明記 | ✅ 解消済み（スコープ外） |
 
 **未解決ゼロ確認**: 全て解消済み
