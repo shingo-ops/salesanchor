@@ -13,6 +13,7 @@ ADR-093 (`docs/adr/ADR-093-inventory-page.md`)
 ### #1: selection action bar 削除（書類作成は別ページ・往復動線不使用・PO決定）
 - 対象: `InventoryPage.tsx:521-606`（往復バー + 権限別発注書/見積/請求ボタン群）
 - 削除根拠: 発注書/見積/請求の作成は各専用ページで完結するため /inventory でのショートカット動線は不要。往復バー（fromQuote フロー）も実運用で使われていないとの PO 判断。
+- 往復(fromQuote)フロー全廃: 在庫画面の往復バー削除に加え、入口（QuoteCreatePage / InvoiceCreatePage の `goToInventory` 呼び出し・addMode ラジオボタン）も削除（蛇足機能・PO決定）。キャンセル先も各一覧（/quotes, /invoices）に固定。
 - 削除関数: `selectedPayload`, `goCreate`, `onCreateQuote`, `openPurchaseOrder`, `clearSelection`, `noSelection`
 - 保持: `toggleSelect`, `selectedIds`（テーブルチェックボックスで使用）
 - `usePermissions` import・`hasPermission` 呼び出しも合わせて削除
