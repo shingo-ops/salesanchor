@@ -1,0 +1,1 @@
+-- planted dup test (pattern B: PR内同士・刻印重複 a)
