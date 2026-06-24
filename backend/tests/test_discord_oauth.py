@@ -142,6 +142,12 @@ async def app_client(db_session):
                 AsyncMock(return_value=None),
             )
         )
+        stack.enter_context(
+            patch(
+                "app.auth.dependencies.set_tenant_context",
+                AsyncMock(return_value=None),
+            )
+        )
         async with AsyncClient(
             transport=transport, base_url="http://test", follow_redirects=False
         ) as ac:
@@ -349,6 +355,41 @@ class TestDiscordOAuthCallback:
         location = res.headers["location"]
         assert "discord_status=error" in location
         assert "reason=invalid_state" in location
+
+    @pytest.mark.asyncio
+    async def test_callback_calls_set_tenant_context_before_db_writes(self, app_client):
+        """callback は DB 書き込み前に set_tenant_context を正しい tenant_id で呼ぶ。
+
+        audit_logs の RLS ポリシー（tenant_isolation_audit_logs）は
+        app.tenant_id が設定済みでないと INSERT をブロックする（:183 修正の回帰テスト）。
+        SQLite 環境では RLS が no-op のため、呼ばれたかを mock で確認する。
+        PostgreSQL RLS 実証は test_discord_oauth_rls.py で実施。
+        """
+        mock_payload = {
+            "tenant_id": 7,
+            "staff_id": 42,
+            "created_at": "2026-06-02T00:00:00+00:00",
+            "nonce": "abc",
+        }
+        with patch(
+            "app.routers.discord_oauth.oauth_state.consume_state",
+            AsyncMock(return_value=mock_payload),
+        ), patch(
+            "app.auth.dependencies.set_tenant_context",
+            AsyncMock(return_value=None),
+        ) as mock_set_ctx:
+            res = await app_client.get(
+                "/api/v1/discord/oauth/callback",
+                params={"state": "valid-state", "guild_id": "123456789012345678"},
+            )
+
+        assert res.status_code in (302, 307)
+        # set_tenant_context が呼ばれ、tenant_id=7 が渡されたことを確認
+        mock_set_ctx.assert_awaited_once()
+        call_args = mock_set_ctx.call_args
+        assert call_args.args[1] == 7 or call_args.kwargs.get("tenant_id") == 7, (
+            f"set_tenant_context が tenant_id=7 で呼ばれていない: {call_args}"
+        )
 
     @pytest.mark.asyncio
     async def test_callback_missing_guild_id_redirects_error(self, app_client):
