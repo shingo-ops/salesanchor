@@ -35,7 +35,11 @@ _TENANT_SCHEMA_LOCK_NAMESPACE = 20260623
 async def _apply_migration(admin_engine, filename: str) -> None:
     sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
     async with admin_engine.begin() as conn:
-        await conn.exec_driver_sql(sql)
+        # exec_driver_sql はPrepared Statementプロトコルを使うため
+        # マルチ命令SQLを含む migration ファイルで失敗する。
+        # asyncpgのraw接続でSimple Query プロトコルを使う。
+        raw = await conn.get_raw_connection()
+        await raw.driver_connection.execute(sql)
 
 
 async def _ensure_public_users(conn) -> None:
@@ -96,9 +100,10 @@ async def _ensure_public_users(conn) -> None:
 
 async def _bootstrap_public_shared(conn) -> None:
     """shared public bootstrap を 1 接続内で適用する。"""
+    raw = await conn.get_raw_connection()
     for filename in _PG_BOOTSTRAP_MIGRATIONS:
         sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
-        await conn.exec_driver_sql(sql)
+        await raw.driver_connection.execute(sql)
 
     fk_exists = await conn.scalar(
         text("""
