@@ -1,7 +1,7 @@
 # recon: /inventory UI 整理
 
 ## 対象 ADR
-ADR-093 (`docs/adr/ADR-093-inventory-page.md`)
+ADR-093 (`docs/adr/ADR-093-inventory-table-product-master-redesign.md`)
 
 ## 調査ファイル一覧（file:line 引用）
 
