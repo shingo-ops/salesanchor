@@ -21,6 +21,8 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* アプリ本体（.app-shell）と同じ背景変数を流用してテーマ統一 */
+  background: var(--bg-primary);
 }
 
 .setup-guide-page > .page-layout {
@@ -35,9 +37,8 @@
   gap: var(--space-4);
   padding: var(--space-5);
   margin-bottom: var(--space-4);
-  /* A: コンテンツ幅の上限（スクショ含む全コンテンツをカード内に収める） */
-  max-width: var(--max-width-setup-guide);
-  margin-inline: auto;
+  /* 見出し/intro は全幅左寄せ。
+     コンテンツ幅上限（900px）は .etd-guide__substep-pane に委譲。 */
 }
 
 .etd-guide__header {
@@ -163,13 +164,15 @@
 
 .etd-guide__step {
   padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .etd-guide__step-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
 }
 
 .etd-guide__step-number {
@@ -253,7 +256,10 @@
   grid-template-columns: var(--size-substep-nav) 1fr;
   gap: var(--space-4);
   align-items: start;
-  margin-top: var(--space-4);
+  /* 見出し/intro は全幅。ペインのみ 900px 中央寄せに絞り込む。 */
+  max-width: var(--max-width-setup-guide);
+  margin-inline: auto;
+  width: 100%;
 }
 
 .etd-guide__substep-nav {
