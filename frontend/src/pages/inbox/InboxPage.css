@@ -1647,35 +1647,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   width: 100%;
 }
 
-/* ADR-142: 送信ガード Phase A -------------------------------------------------------- */
-
-/* 言語トグル（スレッドヘッダ内） */
-.send-guard-lang-toggle {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-  margin-right: var(--space-2);
-}
-.send-guard-lang-btn {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  font-size: var(--font-xs);
-  cursor: pointer;
-  transition: background var(--transition-micro), color var(--transition-micro);
-}
-.send-guard-lang-btn.active {
-  background: var(--accent);
-  color: var(--on-accent, white);
-  border-color: var(--accent);
-  font-weight: 600;
-}
-.send-guard-lang-btn:hover:not(.active) {
-  background: var(--bg-hover);
-  color: var(--text);
-}
+/* ADR-143: 送信ガード Phase A -------------------------------------------------------- */
 
 /* 確認ダイアログ */
 .send-guard-overlay {
@@ -1743,8 +1715,4 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--bg-hover);
   color: var(--text);
 }
-/* stylelint-disable-next-line no-descending-specificity -- intentional dark mode override */
-:root.force-dark .send-guard-lang-btn.active {
-  background: var(--accent);
-  color: var(--on-accent, white);
-}
+
