@@ -91,10 +91,15 @@ function SubstepPane({
               role="tab"
               aria-selected={i === activeIndex}
               className={`etd-guide__substep-nav-item${i === activeIndex ? " etd-guide__substep-nav-item--active" : ""}`}
-              onClick={() => {
-                const scrollY = window.scrollY;
+              onClick={(e) => {
+                const pane = (e.currentTarget as HTMLElement).closest(
+                  ".page-layout-content",
+                ) as HTMLElement | null;
+                const scrollTop = pane?.scrollTop ?? 0;
                 setActiveIndex(i);
-                requestAnimationFrame(() => window.scrollTo(0, scrollY));
+                requestAnimationFrame(() => {
+                  if (pane) pane.scrollTop = scrollTop;
+                });
               }}
             >
               {sub.label}
