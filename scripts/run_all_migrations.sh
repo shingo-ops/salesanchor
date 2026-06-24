@@ -446,6 +446,9 @@ run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_030000_add_products_tcg_type_fk.sql
+
+# 送信ガード土台: meta_messages.original_language を message_translations から backfill
+run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

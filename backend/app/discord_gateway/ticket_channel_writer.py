@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
 from app.services.inbound_translation import enqueue_inbound_translation
+from app.services.message_translator import infer_original_language
 
 logger = logging.getLogger(__name__)
 
@@ -133,10 +134,10 @@ async def process_ticket_channel_message(
         insert_sql = text(f"""
             INSERT INTO {schema}.meta_messages
                 (tenant_id, lead_id, platform, sender_id, sender_name,
-                 message_text, direction, message_id, created_at)
+                 message_text, direction, message_id, created_at, original_language)
             VALUES
                 (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                 :message_text, 'inbound', :message_id, :created_at)
+                 :message_text, 'inbound', :message_id, :created_at, :original_language)
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
             RETURNING id
@@ -149,6 +150,7 @@ async def process_ticket_channel_message(
             "message_text": message_text,
             "message_id": message_id,
             "created_at": received_at,
+            "original_language": infer_original_language(message_text),
         }
 
         result = await db.execute(insert_sql, insert_params)

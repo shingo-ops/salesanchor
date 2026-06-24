@@ -108,6 +108,7 @@ _META_MESSAGES_DDL = """
         seen_at TIMESTAMP,
         seen_by_staff_id INTEGER,
         page_id VARCHAR(50),
+        original_language VARCHAR(10),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """
