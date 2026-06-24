@@ -134,19 +134,24 @@ function SubstepPane({
 function StepCard({
   stepNumber,
   heading,
+  intro,
   children,
   isActive,
 }: {
   stepNumber: number;
   heading: string;
+  intro?: ReactNode;
   children: ReactNode;
   isActive: boolean;
 }) {
   return (
     <section className="etd-guide__step">
       <div className="etd-guide__step-header">
-        <span className="etd-guide__step-number">{stepNumber}</span>
-        <strong>{heading}</strong>
+        <div className="etd-guide__step-title-row">
+          <span className="etd-guide__step-number">{stepNumber}</span>
+          <strong>{heading}</strong>
+        </div>
+        {intro && <p className="etd-guide__step-intro">{intro}</p>}
       </div>
       {children}
     </section>
@@ -323,82 +328,86 @@ export function FedexEtdSetupGuide({
       {statusLoading && <p className="form-hint">{t("common.loading")}</p>}
       {statusError && <p className="error-message">{statusError}</p>}
 
-      <StepCard stepNumber={currentIndex} heading={currentStep.heading} isActive>
-        {currentStep.key === "portal" && (
-          <>
-            <p className="form-hint">
-              <Trans
-                i18nKey="carrierIntegration.fedexEtdGuideStep1Desc"
-                components={{
-                  portalLink: (
-                    <a
-                      href={PORTAL_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="etd-guide__inline-link"
-                    />
-                  ),
-                }}
-              />
-            </p>
-
-            <SubstepPane
-              screenshotAlt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
-              substeps={[
-                {
-                  label: "1-1",
-                  descriptions: [t("carrierIntegration.fedexEtdGuideStep1_1")],
-                  screenshots: [{ src: "/images/fedex-setup/step1-01-my-projects.png" }],
-                },
-                {
-                  label: "1-2",
-                  descriptions: [t("carrierIntegration.fedexEtdGuideStep1_2")],
-                  screenshots: [{ src: "/images/fedex-setup/step1-02-purpose.png" }],
-                },
-                {
-                  label: "1-3",
-                  descriptions: [t("carrierIntegration.fedexEtdGuideStep1_3")],
-                  screenshots: [
-                    { src: "/images/fedex-setup/step1-03-api-cards.png" },
-                    { src: "/images/fedex-setup/step1-04-api-checklist.png" },
-                  ],
-                },
-                {
-                  label: "1-4",
-                  descriptions: [t("carrierIntegration.fedexEtdGuideStep1_4")],
-                  screenshots: [{ src: "/images/fedex-setup/step1-05-config.png" }],
-                },
-                {
-                  label: "1-5",
-                  descriptions: [t("carrierIntegration.fedexEtdGuideStep1_5")],
-                  screenshots: [{ src: "/images/fedex-setup/step1-06-confirm.png" }],
-                },
-                {
-                  label: "1-6",
-                  descriptions: [
-                    t("carrierIntegration.fedexEtdGuideStep1_6"),
-                    t("carrierIntegration.fedexEtdGuideStep1_6b"),
-                  ],
-                  screenshots: [{ src: "/images/fedex-setup/step1-07-overview.png" }],
-                },
-              ]}
+      <StepCard
+        stepNumber={currentIndex}
+        heading={currentStep.heading}
+        intro={
+          currentStep.key === "portal" ? (
+            <Trans
+              i18nKey="carrierIntegration.fedexEtdGuideStep1Desc"
+              components={{
+                portalLink: (
+                  <a
+                    href={PORTAL_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="etd-guide__inline-link"
+                  />
+                ),
+              }}
             />
-
-          </>
+          ) : currentStep.key === "apis" ? (
+            t("carrierIntegration.fedexEtdGuideStep2Desc")
+          ) : currentStep.key === "credentials" ? (
+            t("carrierIntegration.fedexEtdGuideStep3Desc")
+          ) : currentStep.key === "etd" && ETD_ENABLED ? (
+            t("carrierIntegration.fedexEtdGuideStep4Desc")
+          ) : undefined
+        }
+        isActive
+      >
+        {currentStep.key === "portal" && (
+          <SubstepPane
+            screenshotAlt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+            substeps={[
+              {
+                label: "1-1",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_1")],
+                screenshots: [{ src: "/images/fedex-setup/step1-01-my-projects.png" }],
+              },
+              {
+                label: "1-2",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_2")],
+                screenshots: [{ src: "/images/fedex-setup/step1-02-purpose.png" }],
+              },
+              {
+                label: "1-3",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_3")],
+                screenshots: [
+                  { src: "/images/fedex-setup/step1-03-api-cards.png" },
+                  { src: "/images/fedex-setup/step1-04-api-checklist.png" },
+                ],
+              },
+              {
+                label: "1-4",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_4")],
+                screenshots: [{ src: "/images/fedex-setup/step1-05-config.png" }],
+              },
+              {
+                label: "1-5",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_5")],
+                screenshots: [{ src: "/images/fedex-setup/step1-06-confirm.png" }],
+              },
+              {
+                label: "1-6",
+                descriptions: [
+                  t("carrierIntegration.fedexEtdGuideStep1_6"),
+                  t("carrierIntegration.fedexEtdGuideStep1_6b"),
+                ],
+                screenshots: [{ src: "/images/fedex-setup/step1-07-overview.png" }],
+              },
+            ]}
+          />
         )}
 
         {currentStep.key === "apis" && (
-          <>
-            <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep2Desc")}</p>
-            <div className="etd-guide__note">
-              {t("carrierIntegration.fedexEtdGuideStep2TradeDocumentsNote")}
-            </div>
-          </>
+          <div className="etd-guide__note">
+            {t("carrierIntegration.fedexEtdGuideStep2TradeDocumentsNote")}
+          </div>
         )}
 
         {currentStep.key === "credentials" && (
           <>
-            <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep3Desc")}</p>
             <div className="form-actions">
               <button className="btn-primary" type="button" onClick={onOpenCredentialsTab}>
                 {t("carrierIntegration.fedexEtdGuideOpenCredentials")}
@@ -416,8 +425,6 @@ export function FedexEtdSetupGuide({
 
         {currentStep.key === "etd" && ETD_ENABLED && (
           <div className="etd-upload">
-            <p className="form-hint">{t("carrierIntegration.fedexEtdGuideStep4Desc")}</p>
-
             <div className="form-group">
               <label htmlFor="etd-environment">{t("carrierIntegration.fedexEtdGuideEnvironmentLabel")}</label>
               <select
