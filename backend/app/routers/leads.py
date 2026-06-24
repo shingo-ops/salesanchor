@@ -2487,3 +2487,41 @@ async def get_lead_stats(
         conversation_count=int(stats_row["conversation_count"] or 0),
         last_conversation_at=stats_row["last_conversation_at"],
     )
+
+
+# ---------------------------------------------------------------------------
+# ADR-143 Phase B: 相手言語の多数決自動判定
+# ---------------------------------------------------------------------------
+
+class RecipientLanguageResponse(BaseModel):
+    """GET /leads/{lead_id}/recipient-language のレスポンス。"""
+
+    language: str | None
+    total_records: int
+    confident: bool
+
+
+@router.get(
+    "/leads/{lead_id}/recipient-language",
+    response_model=RecipientLanguageResponse,
+    dependencies=[Depends(require_permission("leads.view"))],
+)
+async def get_recipient_language(
+    lead_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """リードの inbound 受信履歴から相手言語を多数決で判定する（ADR-143 Phase B）。
+
+    lang_judge.judge_recipient_language に委譲。
+    RLS: lang_judge 内クエリはスキーマ修飾済みのため set_tenant_context 不要。
+    """
+    from app.services.lang_judge import judge_recipient_language
+
+    result = await judge_recipient_language(db=db, tenant_id=tenant_id, lead_id=lead_id)
+    return RecipientLanguageResponse(
+        language=result.language,
+        total_records=result.total_records,
+        confident=result.confident,
+    )

@@ -60,10 +60,31 @@ ADR-110 では「日本語直送り（既存送信ボタン）はゲート対象
 - 状態: `languageOverrideByLead: Record<number, "auto" | "ja" | "en">` — lead_id ごとに独立
 - セッション内のみ保持（localStorage 永続化は Phase B 検討）
 
-### Phase B: majority vote（将来・別 ADR）
+### Phase B: majority vote（本 ADR に追加、2026-06-24 実装）
 
-`lang_judge.py` が CRM メッセージ履歴から受信者言語を多数決で判定。
-CRM データ蓄積後に ADR-144 または ADR-110 改訂として起案。
+スレッドを開いた時点で `GET /api/v1/leads/{lead_id}/recipient-language` を呼び、
+多数決判定結果（`confident=true && language != null`）を `languageOverrideByLead` に自動注入する。
+
+#### 自動注入ルール
+
+| 条件 | 動作 |
+|---|---|
+| `confident=true && language="ja"` | `setRecipientLanguage("ja")` → ダイアログ発火なし（かな入力可） |
+| `confident=true && language="en"` | `setRecipientLanguage("en")` → かな入力でダイアログ発火 |
+| `confident=false` / `language=null` / API 失敗 | 何もしない（`auto` のまま、Phase A 安全側維持） |
+| 既に手動で `ja` / `en` を設定済み（`languageOverrideByLead[lead_id] !== undefined`） | **上書きしない**（手動設定を尊重） |
+
+#### バックエンド
+
+- `GET /leads/{lead_id}/recipient-language` — `backend/app/routers/leads.py` 末尾に新設
+- `lang_judge.judge_recipient_language(db, tenant_id, lead_id)` に委譲
+- `require_permission("leads.view")`、`set_tenant_context` 不要（スキーマ修飾で RLS 対応済み）
+- migration / DB スキーマ変更なし（全て既存テーブルの読み取り）
+
+#### Phase A との関係
+
+`shouldFireGuard`（`InboxMessageThread.tsx:105`）・`checkAndSend`（:107）・確認ダイアログは**一切変更しない**。
+Phase B は `languageOverrideByLead` の初期値を正しい位置に設定するだけで、Phase A の判定ロジックはそのまま機能する。
 
 ---
 
@@ -101,9 +122,15 @@ CRM データ蓄積後に ADR-144 または ADR-110 改訂として起案。
 - `frontend/src/pages/inbox/OutboundTranslationPreview.tsx` — `target_language` prop 追加
 - `frontend/src/locales/ja.json` / `en.json` — `sendGuard.*` キー追加
 
-### 変更なし
+### Phase B 追加変更（2026-06-24）
 
-- `backend/` — 全ファイル無変更
+- `backend/app/routers/leads.py` — `GET /leads/{lead_id}/recipient-language` 追加
+- `frontend/src/pages/inbox/useInboxState.ts` — `selectedLeadId` useEffect に Phase B フェッチ追加
+- `backend/tests/test_lang_judge.py` — 新規（多数決ユニットテスト）
+
+### 変更なし（Phase A・Phase B 共通）
+
+- `frontend/src/pages/inbox/InboxMessageThread.tsx` — 無変更
 - `migrations/` — なし
 - `deploy.yml` — なし
 - `docker-compose.yml` — なし
