@@ -109,7 +109,20 @@ async def test_priority_prospects_pg_rls_all_requirements():
             # 1. 本番 migration 順でテナントスキーマを構築
             await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
 
-            # 2. リードを挿入（admin 権限で直接 INSERT）
+            # 2. leads.converted_deal_id FK 参照先となる deals を先に挿入
+            #    （fk_leads_converted_deal: leads.converted_deal_id → deals.id）
+            async with admin_engine.begin() as conn:
+                await conn.execute(
+                    text(f"""
+                        INSERT INTO {_SCHEMA}.deals (id, tenant_id, title)
+                        VALUES (1001, :tid, 'PP-Deal-1001'),
+                               (2001, :tid, 'PP-Deal-2001')
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    {"tid": _TENANT_ID},
+                )
+
+            # 3. リードを挿入（admin 権限で直接 INSERT）
             async with admin_engine.begin() as conn:
                 result = await conn.execute(
                     text(f"""
@@ -130,7 +143,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
 
             lead_a, lead_b, lead_c, lead_d = inserted_ids
 
-            # 3. エンドポイントを呼び出し
+            # 4. エンドポイントを呼び出し
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as ac:
                 res = await ac.get("/api/v1/analytics/priority-prospects?scope=mine")
