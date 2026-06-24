@@ -1159,7 +1159,8 @@
     "filter": {
       "allTypes": "All types",
       "allOfferTypes": "Stock & pre-order",
-      "allCategories": "All TCG series"
+      "allCategories": "All TCG series",
+      "otherTypes": "Other"
     },
     "resetSort": "Reset",
     "offerType": {
