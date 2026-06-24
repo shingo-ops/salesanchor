@@ -180,6 +180,12 @@ async def discord_oauth_callback(
 
     staff_id_int = int(staff_id) if staff_id else None
 
+    # tenant context を設定（audit_logs の RLS に必要: app.tenant_id が未設定のまま
+    # INSERT すると RLS ポリシー tenant_isolation_audit_logs に弾かれ 500 になる）
+    # get_db の finally → clear_tenant_context が全経路（成功・例外）でリセットを担保
+    from app.auth.dependencies import set_tenant_context  # noqa: PLC0415
+    await set_tenant_context(db, tenant_id)
+
     # guild_id と接続者を upsert
     await db.execute(
         text("""
