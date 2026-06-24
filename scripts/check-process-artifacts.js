@@ -49,6 +49,9 @@ const DANGEROUS_PATTERNS = [
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
   /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
   /^frontend\/src\/pages-layout\.css$/,  // 全ページ共通レイアウト（共有＝変更にGO必須）
+  /^docs\/STANDARD-WORKFLOW\.md$/,                      // 正本（自己保護）
+  /^\.github\/workflows\/process-artifacts-gate\.yml$/, // 関所ワークフロー（自己保護）
+  /^\.github\/PULL_REQUEST_TEMPLATE\.md$/,              // 宣言テンプレ（自己保護）
 ];
 
 const REAL_CODE_PATTERNS = [
