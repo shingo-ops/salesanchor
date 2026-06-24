@@ -372,7 +372,8 @@
     "fedexEtdGuideCompleteDesc": "FedEx ETD を使うための設定は完了です。出荷時に電子書類が自動で添付されます。",
     "fedexEtdGuideIncomplete": "未完了",
     "fedexEtdGuideIncompleteDesc": "まだ完了していない項目があります。前のステップに戻って確認してください。",
-    "fedexEtdGuideFinishedButton": "完了"
+    "fedexEtdGuideFinishedButton": "完了",
+    "fedexEtdGuideStep1AdvanceButton": "ステップ2へ進む"
   },
   "paypalIntegration": {
     "subtitle": "PayPal の API 認証情報を登録し、連携の接続テストを行います。",
