@@ -223,37 +223,22 @@ export function InboxMessageThread({
             </span>
           )}
         </h3>
-        {/* ADR-142: 送信ガード Phase A — 言語トグル */}
-        <div className="send-guard-lang-toggle" role="group" aria-label={t("translation.sendGuard.langToggleLabel")}>
-          {(["auto", "ja", "en"] as const).map((val) => (
-            <button
-              key={val}
-              type="button"
-              className={`send-guard-lang-btn${recipientLanguageSetting === val ? " active" : ""}`}
-              onClick={() => setRecipientLanguage(val)}
-              aria-pressed={recipientLanguageSetting === val}
-            >
-              {val === "auto" ? t("translation.sendGuard.langAuto")
-                : val === "ja" ? t("translation.sendGuard.langJa")
-                : t("translation.sendGuard.langEn")}
-            </button>
-          ))}
-        </div>
+        {/* ADR-143: 送信ガード Phase A — 言語プルダウン */}
+        <select
+          className="inbox-platform-select"
+          value={recipientLanguageSetting}
+          onChange={(e) => setRecipientLanguage(e.target.value as "auto" | "ja" | "en")}
+          aria-label={t("translation.sendGuard.langToggleLabel")}
+        >
+          <option value="auto">{t("translation.sendGuard.langAuto")}</option>
+          <option value="ja">{t("translation.sendGuard.langJa")}</option>
+          <option value="en">{t("translation.sendGuard.langEn")}</option>
+        </select>
         <div className="inbox-thread-actions">
           <button type="button" className="inbox-thread-action-btn"
             onClick={handleMarkUnread}
             aria-label={t("inbox.markUnread")} data-tooltip={t("inbox.markUnread")}>
             <INBOX_ACTION_ICONS.markUnread size={ICON.base} weight="fill" aria-hidden="true" />
-          </button>
-          <button type="button" className="inbox-thread-action-btn"
-            onClick={handleExclude}
-            aria-label={t("inbox.exclude")} data-tooltip={t("inbox.exclude")}>
-            <INBOX_ACTION_ICONS.exclude size={ICON.base} weight="fill" aria-hidden="true" />
-          </button>
-          <button type="button" className="inbox-thread-action-btn danger"
-            onClick={handleDeleteLead}
-            aria-label={t("inbox.deleteLead")} data-tooltip={t("inbox.deleteLead")}>
-            <INBOX_ACTION_ICONS.delete size={ICON.base} weight="fill" aria-hidden="true" />
           </button>
         </div>
         {inboxSettings.showRightPanel && (
