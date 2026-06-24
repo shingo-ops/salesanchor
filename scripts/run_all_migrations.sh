@@ -446,6 +446,10 @@ run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
+
+# [検収2 planted] タイムスタンプ重複テスト用ダミー（削除前提）
+run_sql migrations/20270101_000000_planted_a.sql
+run_sql migrations/20270101_000000_planted_b.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
