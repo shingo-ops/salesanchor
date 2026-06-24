@@ -145,6 +145,14 @@ function parseSOPDeclaration(prBody) {
         .map(f => f.trim())
         .filter(f => f.length > 0)
     : [];
+  const deleteFilesMatch = section.match(/削除するファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const deleteFiles = deleteFilesMatch
+    ? deleteFilesMatch[1]
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .split(/[\n,]/)
+        .map(f => f.trim())
+        .filter(f => f.length > 0 && f !== 'なし')
+    : [];
 
   return {
     isExempt,
@@ -154,6 +162,7 @@ function parseSOPDeclaration(prBody) {
     designPath: designMatch ? designMatch[1].trim() : null,
     mode: modeMatch ? modeMatch[1] : null,
     touchFiles,
+    deleteFiles,
   };
 }
 
@@ -632,6 +641,48 @@ function main() {
       }
       if (touchErrors.length > 0) {
         printFailure(touchErrors);
+      }
+    }
+  }
+  // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
+
+  // ─── 削除ファイル宣言 vs 実diff 照合（PR番号2600以上で義務化） ─────────────
+  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+    const base = process.env.BASE_SHA;
+    const head = process.env.HEAD_SHA;
+    if (base && head) {
+      let numstatLines = [];
+      try {
+        numstatLines = execSync(`git diff --numstat "${base}...${head}"`, { encoding: 'utf8' })
+          .trim().split('\n').filter(Boolean);
+      } catch {
+        console.warn('⚠️ git diff --numstat の実行に失敗 — 削除照合をスキップ');
+      }
+      const deletedFiles = numstatLines
+        .map(line => {
+          const parts = line.split('\t');
+          return parts.length === 3 ? { deletions: parseInt(parts[1], 10), path: parts[2] } : null;
+        })
+        .filter(e => e && e.deletions > 0 && !TOUCH_FILE_EXCLUDE_PATTERNS.some(p => p.test(e.path)))
+        .map(e => e.path);
+
+      if (deletedFiles.length > 0) {
+        const deleteErrors = [];
+        if (!declaration || !declaration.deleteFiles || declaration.deleteFiles.length === 0) {
+          deleteErrors.push('❌ PR本文に「削除するファイル:」の宣言がありません（PR番号2600以上で必須）');
+          deleteErrors.push('   → 「### 標準ワークフロー確認」の「削除するファイル:」にリポジトリ相対パスを記入してください');
+          deleteErrors.push('   → 削除が無い場合は「削除するファイル: なし」と記入してください');
+        } else {
+          const undeclaredDeletes = deletedFiles.filter(f => !declaration.deleteFiles.includes(f));
+          if (undeclaredDeletes.length > 0) {
+            deleteErrors.push('❌ 宣言外のファイルから行を削除しています:');
+            undeclaredDeletes.forEach(f => deleteErrors.push(`   - ${f}`));
+            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない削除を除去してください');
+          }
+        }
+        if (deleteErrors.length > 0) {
+          printFailure(deleteErrors);
+        }
       }
     }
   }
