@@ -1,7 +1,7 @@
 # design: /inventory UI 整理
 
 ## 対象 ADR
-ADR-093 (`docs/adr/ADR-093-inventory-page.md`)
+ADR-093 (`docs/adr/ADR-093-inventory-table-product-master-redesign.md`)
 
 ## recon 相互参照
 `docs/handoff/inventory-ui-cleanup/recon.md`
@@ -40,6 +40,12 @@ ADR-093 (`docs/adr/ADR-093-inventory-page.md`)
 - 新スタイル: `<p>` + `color: var(--text-secondary)`, `fontSize: var(--font-sm)`（赤を除去）
 
 ---
+
+## 外部・過去事例の参照と我々への応用
+
+- 往復ナビゲーションの廃止: 在庫→見積→在庫のような往復フローは、ユーザーが迷子になりやすいアンチパターン（Nielsen Norman Group "Wizard vs. Hub-and-Spoke" 2019）。各専用ページで完結させる設計が標準。本件では fromQuote フローを全廃し、キャンセル先を固定（/quotes, /invoices）。
+- タブ + ドロップダウンの組み合わせ: 主要4カテゴリをボタンタブ、残りをドロップダウンにまとめるパターンは Google Material Design "Tabs with overflow" で推奨。全カテゴリをタブ展開すると画面幅不足で折り返しが発生するため、Primary 4 + その他 select に集約。
+- 警告バナーのトーン: 赤（error-message）は即時アクションが必要な障害向け。期限切れ在庫の警告はソフトな注意喚起であり、グレー小文字（text-secondary + font-sm）が適切（Shopify Polaris "Status banner" ガイドライン参照）。
 
 ## KPI 検証基準
 
