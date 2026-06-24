@@ -1159,7 +1159,8 @@
     "filter": {
       "allTypes": "全種別",
       "allOfferTypes": "在庫・予約すべて",
-      "allCategories": "全TCGシリーズ"
+      "allCategories": "全TCGシリーズ",
+      "otherTypes": "その他"
     },
     "resetSort": "リセット",
     "offerType": {
