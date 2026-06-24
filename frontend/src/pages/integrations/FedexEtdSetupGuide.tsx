@@ -375,9 +375,6 @@ export function FedexEtdSetupGuide({
               ]}
             />
 
-            <div className="etd-guide__note etd-guide__note--info">
-              {t("carrierIntegration.fedexEtdGuideStep1SandboxNote")}
-            </div>
           </>
         )}
 

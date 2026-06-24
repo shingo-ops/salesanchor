@@ -341,7 +341,6 @@
     "fedexEtdGuideStep1_5": "ステップ3「確認」で含まれるAPIが4つ・国/領域が Japan であることを確認し、利用規約に同意して「作成」をクリックします。",
     "fedexEtdGuideStep1_6": "「APIプロジェクトの概要」で完了。APIキー / シークレットキー / アカウント番号を確認してください。",
     "fedexEtdGuideStep1_6b": "4つのAPIすべてが「有効」になっていることを確認してください。",
-    "fedexEtdGuideStep1SandboxNote": "ここで発行されるのはテストキー（サンドボックス）です。本番キーは「APIプロジェクトの概要」画面の「プロダクションキー」タブから別途発行してください。",
     "fedexEtdGuideScreenshotAlt": "FedEx Developer Portal スクリーンショット",
     "fedexEtdGuideStep2Title": "必要な API を追加",
     "fedexEtdGuideStep2Heading": "認証情報の入力",
