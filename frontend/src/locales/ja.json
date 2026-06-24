@@ -2930,6 +2930,17 @@
     "lastScoredAt": "スコア計算日時"
   },
   "translation": {
+    "sendGuard": {
+      "dialogTitle": "かな文字が含まれています",
+      "dialogBody": "この下書きにかな文字が含まれています。英語圏の受信者に送信しますか？",
+      "translateAndSend": "英訳して送る",
+      "sendAsIs": "原文で送る",
+      "cancel": "キャンセル",
+      "langToggleLabel": "送信先言語",
+      "langAuto": "自動",
+      "langJa": "日本語",
+      "langEn": "英語"
+    },
     "outbound": {
       "title": "英訳プレビュー（送信前確認）",
       "buttonTitle": "英訳プレビュー",

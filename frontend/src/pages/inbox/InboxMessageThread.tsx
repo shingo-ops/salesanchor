@@ -39,6 +39,9 @@ interface Props {
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
   clearAttachment: () => void;
+  /** ADR-142: 送信ガード Phase A */
+  recipientLanguageSetting: "auto" | "ja" | "en";
+  setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
 }
 
 /** Per-message translation state. */
@@ -57,6 +60,7 @@ export function InboxMessageThread({
   draft, setDraft, sending, sendError, sendDisabled, canSend, discordDmChannelMissing,
   trimmedDraft, submitSend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
+  recipientLanguageSetting, setRecipientLanguage,
 }: Props) {
   const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -94,6 +98,29 @@ export function InboxMessageThread({
 
   // ADR-110: 送信下訳プレビュー表示
   const [showOutboundPreview, setShowOutboundPreview] = useState(false);
+
+  // ADR-142: 送信ガード Phase A
+  const [showSendGuardDialog, setShowSendGuardDialog] = useState(false);
+  const draftHasKana = /[\u3040-\u30FF]/.test(trimmedDraft);
+  const shouldFireGuard = draftHasKana && recipientLanguageSetting !== "ja";
+
+  const checkAndSend = useCallback(() => {
+    if (!canSend || sendDisabled) return;
+    if (shouldFireGuard) {
+      setShowSendGuardDialog(true);
+    } else {
+      submitSend();
+    }
+  }, [canSend, sendDisabled, shouldFireGuard, submitSend]);
+
+  const handleKeyDownGuarded = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      checkAndSend();
+      return;
+    }
+    handleKeyDown(e);
+  }, [checkAndSend, handleKeyDown]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -196,6 +223,22 @@ export function InboxMessageThread({
             </span>
           )}
         </h3>
+        {/* ADR-142: 送信ガード Phase A — 言語トグル */}
+        <div className="send-guard-lang-toggle" role="group" aria-label={t("translation.sendGuard.langToggleLabel")}>
+          {(["auto", "ja", "en"] as const).map((val) => (
+            <button
+              key={val}
+              type="button"
+              className={`send-guard-lang-btn${recipientLanguageSetting === val ? " active" : ""}`}
+              onClick={() => setRecipientLanguage(val)}
+              aria-pressed={recipientLanguageSetting === val}
+            >
+              {val === "auto" ? t("translation.sendGuard.langAuto")
+                : val === "ja" ? t("translation.sendGuard.langJa")
+                : t("translation.sendGuard.langEn")}
+            </button>
+          ))}
+        </div>
         <div className="inbox-thread-actions">
           <button type="button" className="inbox-thread-action-btn"
             onClick={handleMarkUnread}
@@ -363,12 +406,54 @@ export function InboxMessageThread({
           draftText={draft}
           onClose={() => setShowOutboundPreview(false)}
           disabled={!canSend || sending}
+          targetLanguage={recipientLanguageSetting === "ja" ? "ja" : "en"}
           onConfirmedSend={(finalText) => {
             setShowOutboundPreview(false);
             setDraft(finalText);
             submitSend();
           }}
         />
+      )}
+
+      {/* ADR-142: 送信ガード確認ダイアログ */}
+      {showSendGuardDialog && (
+        <div className="send-guard-overlay" role="dialog" aria-modal="true" aria-labelledby="send-guard-title">
+          <div className="send-guard-dialog">
+            <h3 id="send-guard-title" className="send-guard-title">
+              {t("translation.sendGuard.dialogTitle")}
+            </h3>
+            <p className="send-guard-body">{t("translation.sendGuard.dialogBody")}</p>
+            <div className="send-guard-actions">
+              <button
+                type="button"
+                className="send-guard-btn send-guard-btn--translate"
+                onClick={() => {
+                  setShowSendGuardDialog(false);
+                  setShowOutboundPreview(true);
+                }}
+              >
+                {t("translation.sendGuard.translateAndSend")}
+              </button>
+              <button
+                type="button"
+                className="send-guard-btn send-guard-btn--asis"
+                onClick={() => {
+                  setShowSendGuardDialog(false);
+                  submitSend();
+                }}
+              >
+                {t("translation.sendGuard.sendAsIs")}
+              </button>
+              <button
+                type="button"
+                className="send-guard-btn send-guard-btn--cancel"
+                onClick={() => setShowSendGuardDialog(false)}
+              >
+                {t("translation.sendGuard.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 送信エリア */}
@@ -403,7 +488,7 @@ export function InboxMessageThread({
                 className="inbox-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onKeyDown={handleKeyDownGuarded}
                 placeholder={
                   discordDmChannelMissing
                     ? t("inbox.discordDmChannelMissing")
@@ -454,7 +539,7 @@ export function InboxMessageThread({
             <button
               type="button"
               className="inbox-send-btn"
-              onClick={submitSend}
+              onClick={checkAndSend}
               disabled={sendDisabled && !attachedFile}
               title={
                 discordDmChannelMissing

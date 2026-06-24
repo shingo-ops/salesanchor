@@ -2930,6 +2930,17 @@
     "lastScoredAt": "Last Scored At"
   },
   "translation": {
+    "sendGuard": {
+      "dialogTitle": "Kana characters detected",
+      "dialogBody": "Your draft contains kana characters. Are you sending to an English-speaking recipient?",
+      "translateAndSend": "Translate to English & Send",
+      "sendAsIs": "Send as-is",
+      "cancel": "Cancel",
+      "langToggleLabel": "Recipient language",
+      "langAuto": "Auto",
+      "langJa": "Japanese",
+      "langEn": "English"
+    },
     "outbound": {
       "title": "English Preview (Review before send)",
       "buttonTitle": "English Preview",
