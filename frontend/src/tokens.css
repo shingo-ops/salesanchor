@@ -229,6 +229,7 @@
   /* ---- Form controls ---- */
   --size-lang-select-min:    120px;  /* 言語選択プルダウン最小幅 */
   --size-carrier-label-col:  120px;  /* キャリア設定カード: ラベル列幅 */
+  --size-substep-nav:        160px;  /* セットアップガイド サブ手順左ナビ幅（2ペイン） */
   --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
 
