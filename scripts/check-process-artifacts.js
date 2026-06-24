@@ -134,6 +134,14 @@ function parseSOPDeclaration(prBody) {
   const reconMatch = section.match(/recon:\s*(docs\/handoff\/[^\s\n]+\.md)/);
   const designMatch = section.match(/設計:\s*([^\n（]+)/);
   const modeMatch = section.match(/モード:\s*(些細|緊急)/);
+  const touchFilesMatch = section.match(/触るファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const touchFiles = touchFilesMatch
+    ? touchFilesMatch[1]
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .split(/[\n,]/)
+        .map(f => f.trim())
+        .filter(f => f.length > 0)
+    : [];
 
   return {
     isExempt,
@@ -142,6 +150,7 @@ function parseSOPDeclaration(prBody) {
     reconPath: reconMatch ? reconMatch[1].trim() : null,
     designPath: designMatch ? designMatch[1].trim() : null,
     mode: modeMatch ? modeMatch[1] : null,
+    touchFiles,
   };
 }
 
@@ -592,6 +601,38 @@ function main() {
     externalApiReport = { hasExternalChange: true, detectedApis: ['external_api_detection_error'], unpreparedApis: [] };
   }
   const hasExternalApiImpact = externalApiReport.hasExternalChange;
+
+  // ─── 触るファイル宣言 vs 実diff 照合（PR番号2600以上で義務化） ─────────────
+  const GRACE_THRESHOLD_PR = 2600;
+  const TOUCH_FILE_EXCLUDE_PATTERNS = [
+    /package-lock\.json$/,
+    /-snapshots\/.*\.png$/,
+    /^\.claude-pipeline\/active-work\.md$/,
+  ];
+
+  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+    const targets = changedFiles.filter(
+      f => !TOUCH_FILE_EXCLUDE_PATTERNS.some(p => p.test(f))
+    );
+    if (targets.length > 0) {
+      const touchErrors = [];
+      if (!declaration || !declaration.touchFiles || declaration.touchFiles.length === 0) {
+        touchErrors.push('❌ PR本文に「触るファイル:」の宣言がありません（PR番号2600以上で必須）');
+        touchErrors.push('   → 「### 標準ワークフロー確認」の「触るファイル:」にリポジトリ相対パスを記入してください');
+      } else {
+        const undeclared = targets.filter(f => !declaration.touchFiles.includes(f));
+        if (undeclared.length > 0) {
+          touchErrors.push('❌ 宣言外のファイルを変更しています:');
+          undeclared.forEach(f => touchErrors.push(`   - ${f}`));
+          touchErrors.push('   → 「触るファイル:」に追記するか、意図しない変更を除去してください');
+        }
+      }
+      if (touchErrors.length > 0) {
+        printFailure(touchErrors);
+      }
+    }
+  }
+  // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
 
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
