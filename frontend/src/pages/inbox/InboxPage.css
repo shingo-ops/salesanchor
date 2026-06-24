@@ -1679,7 +1679,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 
 /* 確認ダイアログ */
 .send-guard-overlay {
-  position: fixed;
+  position: fixed; /* fixed-ok: 送信ガード確認ダイアログ オーバーレイ */
   inset: 0;
   background: var(--overlay-bg);
   display: flex;
