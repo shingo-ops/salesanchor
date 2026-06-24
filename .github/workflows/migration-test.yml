@@ -1125,19 +1125,6 @@ jobs:
           echo ""
           echo "✅ 1周目（新規適用）完了"
 
-      - name: "[D-1 KPI1検証] 1周目後 public.inventory 列一覧・インデックス照合"
-        # 一時ステップ: PR #2589 KPI1 照合用。マージ後は削除する。
-        run: |
-          echo "━━ public.inventory 列一覧 ━━"
-          psql -h localhost -U jarvis -d jarvis_db -t -A -F'|' \
-            -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='inventory' ORDER BY column_name;"
-          echo ""
-          echo "━━ public.inventory インデックス一覧 ━━"
-          psql -h localhost -U jarvis -d jarvis_db -t -A -F'|' \
-            -c "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='inventory' ORDER BY indexname;"
-        env:
-          PGPASSWORD: testpass
-
       - name: 2周目：全 run_sql migration を再実行（冪等性チェック＝再デプロイ安全性）
         # 1周目適用済み状態に対して同じ SQL を全件再実行する。
         # これにより「次回デプロイ時に同じ migration が再実行されたとき安全か」を機械的に検証。
