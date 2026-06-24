@@ -118,6 +118,10 @@ async def seed_release_date_dataset():
                     is_archived     BOOLEAN NOT NULL DEFAULT FALSE,
                     archived_at     TIMESTAMPTZ,
                     supplier_default_id INTEGER,
+                    mark            VARCHAR(100),
+                    unit            VARCHAR(20),
+                    category        VARCHAR(50),
+                    release_date    DATE,
                     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
@@ -132,6 +136,9 @@ async def seed_release_date_dataset():
                     condition   TEXT NOT NULL,
                     quantity    INTEGER NOT NULL DEFAULT 0,
                     unit_price  INTEGER NOT NULL DEFAULT 0,
+                    unit        VARCHAR(20),
+                    offer_type  VARCHAR(20) NOT NULL DEFAULT 'in_stock',
+                    ship_timing VARCHAR(20),
                     status      TEXT NOT NULL DEFAULT 'in_stock',
                     notes_ja    TEXT,
                     notes_en    TEXT,
