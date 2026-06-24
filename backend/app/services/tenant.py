@@ -24,12 +24,15 @@ from __future__ import annotations
     companies モデルのみ）。company_discord を追加。
 """
 
+import logging
 import re
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
+
+logger = logging.getLogger(__name__)
 
 # GAS版互換の既定ロール定義。テナント作成時に自動シードされる。
 #
@@ -1620,25 +1623,37 @@ async def create_tenant_schema(
     # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
     #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
     #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
+    #
+    #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
+    #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
+    #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
+    #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
+    #    外側トランザクションを生かしたまま警告ログを出す。
     try:
-        await db.execute(
-            text(
-                "INSERT INTO public.tenant_settings "
-                "(tenant_id, spreadsheet_phase, "
-                " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
-                " quote_validity_days, default_currency, document_language, "
-                " duty_incoterms, issue_mode) "
-                "VALUES (:tid, 'A', "
-                " 'none', 0, 0, "
-                " 1, 'JPY', 'en', "
-                " 'DAP', 'pdf') "
-                "ON CONFLICT (tenant_id) DO NOTHING"
-            ),
-            {"tid": safe_id},
+        async with db.begin_nested():
+            await db.execute(
+                text(
+                    "INSERT INTO public.tenant_settings "
+                    "(tenant_id, spreadsheet_phase, "
+                    " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                    " quote_validity_days, default_currency, document_language, "
+                    " duty_incoterms, issue_mode) "
+                    "VALUES (:tid, 'A', "
+                    " 'none', 0, 0, "
+                    " 1, 'JPY', 'en', "
+                    " 'DAP', 'pdf') "
+                    "ON CONFLICT (tenant_id) DO NOTHING"
+                ),
+                {"tid": safe_id},
+            )
+    except Exception as exc:
+        # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
+        # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
+        logger.warning(
+            "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
+            safe_id,
+            exc,
         )
-    except Exception:
-        # migration 070 未適用環境では skip
-        pass
 
     # commitは呼び出し元で行う（監査ログ等と一括でcommitするため）
     return schema_name
