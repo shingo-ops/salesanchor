@@ -284,10 +284,6 @@ export function FedexEtdSetupGuide({
     setActiveStepIndex((index) => Math.min(index + 1, stepDefinitions.length - 1));
   };
 
-  const retreat = () => {
-    setActiveStepIndex((index) => Math.max(index - 1, 0));
-  };
-
   const canAdvance = currentStep.key !== "portal" || portalAtEnd;
 
   const handleUpload = async (imageType: "LETTERHEAD" | "SIGNATURE") => {
@@ -535,9 +531,6 @@ export function FedexEtdSetupGuide({
         )}
 
         <div className="form-actions etd-guide__nav">
-          <button type="button" className="btn-secondary" onClick={retreat} disabled={activeStepIndex === 0}>
-            {t("common.back")}
-          </button>
           {canAdvance && (
             <button
               type="button"
