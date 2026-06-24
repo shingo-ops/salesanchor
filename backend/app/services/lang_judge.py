@@ -98,7 +98,6 @@ async def judge_recipient_language(
         return LangJudgeResult(language=None, total_records=0, confident=False)
 
     lang: str = row[0]
-    cnt: int = row[1]
 
     # 全件数（多数派のカウントだけでなく全件を取得して閾値判定に使う）
     total_result = await db.execute(
