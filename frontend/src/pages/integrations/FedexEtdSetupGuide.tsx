@@ -91,7 +91,11 @@ function SubstepPane({
               role="tab"
               aria-selected={i === activeIndex}
               className={`etd-guide__substep-nav-item${i === activeIndex ? " etd-guide__substep-nav-item--active" : ""}`}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => {
+                const scrollY = window.scrollY;
+                setActiveIndex(i);
+                requestAnimationFrame(() => window.scrollTo(0, scrollY));
+              }}
             >
               {sub.label}
             </button>
