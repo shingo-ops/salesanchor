@@ -115,6 +115,10 @@ export interface UseInboxStateReturn {
   submitSend: () => Promise<void>;
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 
+  // ADR-142: 送信ガード Phase A — スレッド言語設定
+  recipientLanguageSetting: "auto" | "ja" | "en";
+  setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
+
   // 画像添付
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
@@ -206,6 +210,15 @@ export function useInboxState(): UseInboxStateReturn {
   const [sendError, setSendError] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const clearAttachment = useCallback(() => { setAttachedFile(null); }, []);
+
+  // ADR-142: 送信ガード Phase A — スレッドごとの言語設定
+  const [languageOverrideByLead, setLanguageOverrideByLead] = useState<Record<number, "auto" | "ja" | "en">>({});
+  const recipientLanguageSetting: "auto" | "ja" | "en" =
+    selectedLeadId != null ? (languageOverrideByLead[selectedLeadId] ?? "auto") : "auto";
+  const setRecipientLanguage = useCallback((v: "auto" | "ja" | "en") => {
+    if (selectedLeadId == null) return;
+    setLanguageOverrideByLead((prev) => ({ ...prev, [selectedLeadId]: v }));
+  }, [selectedLeadId]);
 
   // 管理ドロップダウン
   const [manageOpen, setManageOpen] = useState(false);
@@ -834,6 +847,10 @@ export function useInboxState(): UseInboxStateReturn {
     messagingWindow,
     submitSend,
     handleKeyDown,
+
+    // ADR-142: 送信ガード Phase A
+    recipientLanguageSetting,
+    setRecipientLanguage,
 
     // 画像添付
     attachedFile,

@@ -20,6 +20,8 @@ interface Props {
   onConfirmedSend: (finalText: string) => void;
   onClose: () => void;
   disabled: boolean;
+  /** ADR-142: 送信ガード Phase A — 翻訳先言語（省略時 "en"） */
+  targetLanguage?: string;
 }
 
 export function OutboundTranslationPreview({
@@ -28,6 +30,7 @@ export function OutboundTranslationPreview({
   onConfirmedSend,
   onClose,
   disabled,
+  targetLanguage = "en",
 }: Props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -42,7 +45,7 @@ export function OutboundTranslationPreview({
     setError(null);
     setPreview(null);
     try {
-      const result = await requestOutboundPreview(draftText, leadId);
+      const result = await requestOutboundPreview(draftText, leadId, targetLanguage);
       setPreview(result);
       setEditedText(result.draft_text);
     } catch (err: unknown) {
@@ -51,7 +54,7 @@ export function OutboundTranslationPreview({
     } finally {
       setLoading(false);
     }
-  }, [draftText, leadId, t]);
+  }, [draftText, leadId, targetLanguage, t]);
 
   const handleConfirmSend = useCallback(async () => {
     if (!preview || !editedText.trim()) return;
