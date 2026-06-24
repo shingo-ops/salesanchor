@@ -1182,7 +1182,8 @@
       "condition": "状態",
       "unitPrice": "単価",
       "quantity": "数量",
-      "supplier": "仕入元"
+      "supplier": "仕入元",
+      "releaseDate": "発売日"
     },
     "condition": {
       "shrink": "シュリンク付き",
