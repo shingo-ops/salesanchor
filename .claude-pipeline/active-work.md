@@ -235,3 +235,4 @@
 | hotfix/morimoto/page-header-revert-clean | 全PageLayoutページ ヘッダー白帯・1段下ズレ修正（#2432 リグレッション） | 2026-06-23 | IN_PROGRESS | #2486 | main | |
 | release/send-guard-phase-a-main | 送信ガード Phase A（ADR-143: かな検出+スレッド言語トグル+確認ダイアログ）main単独便 | 2026-06-24 | REVIEW | | | frontend only・バックエンド変更なし |
 | release/send-guard-phase-b | 送信ガード Phase B（ADR-143: 多数決自動判定 API + useInboxState 自動注入）main単独便 | 2026-06-24 | IN_PROGRESS | | main | leads.py+useInboxState.ts+test_lang_judge.py・Phase A無改変 |
+| release/etd-guide-nav-center | ETD ガイド 左ナビ項目ラベル中央揃え リリース | 2026-06-24 | IN_PROGRESS | | main | base=main・CSS 1行 cherry-pick |
