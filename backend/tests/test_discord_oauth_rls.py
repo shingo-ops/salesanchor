@@ -22,14 +22,69 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.rls_bootstrap import bootstrap_tenant_schema
-
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
 
 _TENANT_ID = 99  # テスト専用テナント（既存テナントと衝突しない大きな値）
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 _USER_ID = 9901
+
+
+async def _bootstrap_minimal_schema(admin_engine, tenant_id: int) -> None:
+    """テスト用最小スキーマをセットアップする（外部マイグレーション不要・自己完結）。
+
+    public.tenants にテナント行を挿入し、
+    tenant_NNN スキーマと audit_logs テーブル（RLS 有効）を作成する。
+    """
+    schema = f"tenant_{tenant_id:03d}"
+    async with admin_engine.begin() as conn:
+        # public.tenants（存在しなければ作成）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS public.tenants (
+                id INTEGER PRIMARY KEY,
+                tenant_code VARCHAR(50) NOT NULL DEFAULT '',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        await conn.execute(
+            text("INSERT INTO public.tenants (id) VALUES (:tid) ON CONFLICT DO NOTHING"),
+            {"tid": tenant_id},
+        )
+
+        # テナントスキーマ
+        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+
+        # audit_logs テーブル（RLS 対象）
+        await conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {schema}.audit_logs (
+                id BIGSERIAL PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                user_id INTEGER,
+                action VARCHAR(50),
+                table_name VARCHAR(100),
+                record_id INTEGER,
+                old_data JSONB,
+                new_data JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+
+        # RLS 有効化とポリシー設定（tenant.py:1094/1152-1155 と同等）
+        await conn.execute(text(
+            f"ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY"
+        ))
+        await conn.execute(text(
+            f"ALTER TABLE {schema}.audit_logs FORCE ROW LEVEL SECURITY"
+        ))
+        # 既存ポリシーがあれば削除してから再作成（冪等）
+        await conn.execute(text(
+            f"DROP POLICY IF EXISTS tenant_isolation_audit_logs ON {schema}.audit_logs"
+        ))
+        await conn.execute(text(f"""
+            CREATE POLICY tenant_isolation_audit_logs
+            ON {schema}.audit_logs
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
+        """))
 
 
 @pytest.mark.skipif(
@@ -48,13 +103,13 @@ async def test_audit_logs_insert_passes_with_set_tenant_context():
     app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
 
     try:
-        # テナントスキーマ構築（RLS ポリシー含む）
-        await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+        # テナントスキーマ構築（自己完結・外部マイグレーション不要）
+        await _bootstrap_minimal_schema(admin_engine, _TENANT_ID)
 
         # set_tenant_context 相当のセッション変数設定後に INSERT
         async with app_session_factory() as session:
             async with session.begin():
-                # set_tenant_context の実処理と同等（auth/dependencies.py:275-277）
+                # set_tenant_context の実処理と同等（auth/dependencies.py:255-277）
                 await session.execute(text(f"SET search_path = {_SCHEMA}, public"))
                 await session.execute(
                     text("SELECT set_config('app.tenant_id', :tid, true)"),
@@ -111,7 +166,7 @@ async def test_audit_logs_insert_blocked_without_set_tenant_context():
     app_session_factory = sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
 
     # テナントスキーマ構築（1つ目のテストが先に走れば不要だが冪等なので安全）
-    await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+    await _bootstrap_minimal_schema(admin_engine, _TENANT_ID)
 
     try:
         async with app_session_factory() as session:
