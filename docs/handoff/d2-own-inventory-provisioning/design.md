@@ -1,7 +1,8 @@
 # 設計 — D-2: 新テナント own_inventory provisioning 欠如修正
 
-**対象ADR**: ADR-034  
-**recon**: docs/handoff/d2-own-inventory-provisioning/recon.md  
+**対象ADR**: ADR-142  
+**recon**: docs/handoff/d2-own-inventory-provisioning/recon.md
+
 **日付**: 2026-06-24  
 **担当**: Planner
 

@@ -2,7 +2,7 @@
 
 **仕事名**: d2-own-inventory-provisioning  
 **日付**: 2026-06-24  
-**対象ADR**: ADR-034  
+**対象ADR**: ADR-142  
 **担当**: Terminal CC
 
 ---
