@@ -7,7 +7,7 @@
 -- 制約:
 --   - additive-only（UPDATE のみ。DELETE/DROP なし）
 --   - 冪等（original_language IS NULL の行のみ対象）
---   - テナント全件ループ（{schema} プレースホルダではなく pg_namespace 走査）
+--   - テナント全件ループ（プレースホルダ方式ではなく pg_namespace 走査形式）
 --   - Discord DM は message_translations に行がないため影響なし（IS NULL のまま）
 
 DO $$
