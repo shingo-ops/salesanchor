@@ -341,7 +341,6 @@
     "fedexEtdGuideStep1_5": "In Step 3 \"Review\", confirm all 4 APIs are included and Country/Territory is Japan. Agree to the terms and click \"Create\".",
     "fedexEtdGuideStep1_6": "Your API project overview page is ready. Note your API Key / Secret Key / Account Number.",
     "fedexEtdGuideStep1_6b": "Confirm all 4 APIs are showing \"Active\" status.",
-    "fedexEtdGuideStep1SandboxNote": "This creates a test (sandbox) key. To issue a production key, go to the \"Production Key\" tab on the API Project Overview page.",
     "fedexEtdGuideScreenshotAlt": "FedEx Developer Portal screenshot",
     "fedexEtdGuideStep2Title": "Add the required APIs",
     "fedexEtdGuideStep2Heading": "Enter Credentials",
