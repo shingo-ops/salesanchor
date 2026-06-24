@@ -1059,6 +1059,26 @@ CREATE INDEX IF NOT EXISTS idx_goals_user_period
     ON {schema}.goals (user_id, period_year, period_num);
 CREATE INDEX IF NOT EXISTS idx_goals_team_period
     ON {schema}.goals (team_id, period_year, period_num);
+
+-- D-2: A在庫（自社保有在庫）— ADR SA-04/05（B在庫 public.inventory とは完全分離）
+CREATE TABLE IF NOT EXISTS {schema}.own_inventory (
+    id                SERIAL PRIMARY KEY,
+    tenant_id         INTEGER      NOT NULL,
+    product_id        INTEGER      NOT NULL REFERENCES public.products(id),
+    physical_qty      INTEGER      NOT NULL DEFAULT 0 CHECK (physical_qty >= 0),
+    reserved_qty      INTEGER      NOT NULL DEFAULT 0 CHECK (reserved_qty >= 0),
+    available_qty     INTEGER GENERATED ALWAYS AS (physical_qty - reserved_qty) STORED,
+    unit_price        NUMERIC(15,2),
+    condition         VARCHAR(50),
+    status            VARCHAR(20)  NOT NULL DEFAULT 'active'
+                      CHECK (status IN ('active','inactive','sold_out')),
+    note_ja           TEXT,
+    note_en           TEXT,
+    antique_ledger_id INTEGER,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_reserved_le_physical CHECK (reserved_qty <= physical_qty)
+);
 """
 
 # RLS有効化のALTER TABLE群（;で安全に分割可能）
@@ -1108,6 +1128,8 @@ ALTER TABLE {schema}.channel_masters ENABLE ROW LEVEL SECURITY;
 -- ADR-015 §7: テナント別 AI 対応プレイブック
 ALTER TABLE {schema}.lead_playbook ENABLE ROW LEVEL SECURITY;
 -- Phase 1-B-2 Step 5d / PR γ: _customer_migration_map は migration 036 で DROP 済。
+-- D-2: A在庫（ADR SA-04/05）
+ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
 """
 
 # テナント分離ポリシー（DO $$ ... END $$ ブロックは1ステートメントとして実行する。
@@ -1172,6 +1194,11 @@ BEGIN
     -- Phase 2: 販売・財務プロセスのテーブル
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_products' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_products ON {schema}.products
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- D-2: A在庫（ADR SA-04/05）— ポリシー名は既存テナント（migration 20260604_140000）と統一
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'own_inventory_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY own_inventory_tenant_isolation ON {schema}.own_inventory
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_shipping_zones' AND schemaname = '{schema_raw}') THEN
