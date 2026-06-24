@@ -27,7 +27,7 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | Phase B 多数決（lang_judge）は outbound を使うか | `lang_judge.py` の UNION ALL が `direction='inbound'` のみ集計 | ✅ 解消済み |
-| 2 | update_conv_log で direction は取得済みか | `conv_logs.py:359` で `existing["direction"]` として取得済み | ✅ 解消済み |
+| 1 | Phase B 多数決（lang_judge）は outbound を使うか | lang_judge の UNION ALL が direction='inbound' のみ集計（origin/feature/morimoto/lang-record-foundation で確認） | ✅ 解消済み |
+| 2 | update_conv_log で direction は取得済みか | `backend/app/routers/conv_logs.py:359` で `existing["direction"]` として取得済み | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
