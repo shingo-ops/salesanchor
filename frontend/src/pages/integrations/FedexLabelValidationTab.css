@@ -272,6 +272,7 @@
   grid-template-columns: var(--size-substep-nav) 1fr;
   gap: var(--space-4);
   align-items: start;
+  margin-top: var(--space-3);
   /* 全幅。左ナビは見出し/intro と同じ左端に揃える。
      詳細の幅上限は .etd-guide__substep-detail で管理。 */
 }

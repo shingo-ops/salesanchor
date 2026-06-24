@@ -74,9 +74,11 @@ interface SubstepItem {
 function SubstepPane({
   substeps,
   screenshotAlt,
+  onLastReached,
 }: {
   substeps: SubstepItem[];
   screenshotAlt: string;
+  onLastReached?: (isLast: boolean) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = substeps[activeIndex] ?? substeps[0];
@@ -97,6 +99,7 @@ function SubstepPane({
                 ) as HTMLElement | null;
                 const scrollTop = pane?.scrollTop ?? 0;
                 setActiveIndex(i);
+                onLastReached?.(i === substeps.length - 1);
                 requestAnimationFrame(() => {
                   if (pane) pane.scrollTop = scrollTop;
                 });
@@ -165,6 +168,7 @@ export function FedexEtdSetupGuide({
 }) {
   const { t } = useTranslation();
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [portalAtEnd, setPortalAtEnd] = useState(false);
   const [productionStatus, setProductionStatus] = useState<CarrierStatus | null>(null);
   const [sandboxStatus, setSandboxStatus] = useState<CarrierStatus | null>(null);
   const [statusError, setStatusError] = useState("");
@@ -250,6 +254,10 @@ export function FedexEtdSetupGuide({
     };
   }, [etdEnvironment]);
 
+  useEffect(() => {
+    setPortalAtEnd(false);
+  }, [activeStepIndex]);
+
   const isConnected = Boolean(
     (productionStatus?.configured && productionStatus.last_test_ok === true)
       || (sandboxStatus?.configured && sandboxStatus.last_test_ok === true),
@@ -279,6 +287,8 @@ export function FedexEtdSetupGuide({
   const retreat = () => {
     setActiveStepIndex((index) => Math.max(index - 1, 0));
   };
+
+  const canAdvance = currentStep.key !== "portal" || portalAtEnd;
 
   const handleUpload = async (imageType: "LETTERHEAD" | "SIGNATURE") => {
     const inputRef = imageType === "LETTERHEAD" ? letterheadInputRef : signatureInputRef;
@@ -359,6 +369,7 @@ export function FedexEtdSetupGuide({
         {currentStep.key === "portal" && (
           <SubstepPane
             screenshotAlt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
+            onLastReached={setPortalAtEnd}
             substeps={[
               {
                 label: "1-1",
@@ -527,15 +538,17 @@ export function FedexEtdSetupGuide({
           <button type="button" className="btn-secondary" onClick={retreat} disabled={activeStepIndex === 0}>
             {t("common.back")}
           </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={advance}
-          >
-            {activeStepIndex === stepDefinitions.length - 1
-              ? t("carrierIntegration.fedexEtdGuideFinishedButton")
-              : t("common.next")}
-          </button>
+          {canAdvance && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={advance}
+            >
+              {activeStepIndex === stepDefinitions.length - 1
+                ? t("carrierIntegration.fedexEtdGuideFinishedButton")
+                : t("common.next")}
+            </button>
+          )}
         </div>
       </StepCard>
     </section>
