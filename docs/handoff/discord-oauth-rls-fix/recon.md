@@ -31,8 +31,8 @@
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | `public.tenant_discord_config` に RLS があるか | `migrations/099_add_discord_guild_config.sql` と `20260602_200000_add_discord_config_connected_by_staff.sql` に ENABLE ROW LEVEL SECURITY 記述なしを確認 | ✅ 解消済み |
-| 2 | `tenant_id` はなりすまし可能か | `oauth_state.py:98-107` で Fernet 暗号化済みサーバー保持値から取得・外部改ざん不可 | ✅ 解消済み |
-| 3 | 例外時にテナントコンテキストがリセットされるか | `database.py:56-61` の `get_db` finally が全経路を担保 | ✅ 解消済み |
+| 2 | `tenant_id` はなりすまし可能か | `backend/app/services/oauth_state.py:98-107` で Fernet 暗号化済みサーバー保持値から取得・外部改ざん不可 | ✅ 解消済み |
+| 3 | 例外時にテナントコンテキストがリセットされるか | `backend/app/database.py:56-61` の `get_db` finally が全経路を担保 | ✅ 解消済み |
 | 4 | 同種バグが他のエンドポイントにあるか | `record_audit_log` 使用ルーター全確認 → 他は全て `get_current_tenant` 依存あり | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
