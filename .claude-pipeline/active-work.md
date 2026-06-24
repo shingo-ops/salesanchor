@@ -16,8 +16,8 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/morimoto/inventory-ui-cleanup | /inventory UI整理 — アクションバー削除・タブ集約・警告移動（ADR-093） | 2026-06-24 | IN_PROGRESS | | main | base=main |
 | release/setup-guide-screenshot-maxwidth | FedExセットアップガイド スクショ幅修正本番リリース | 2026-06-24 | IN_PROGRESS | #2536 | - | cherry-pick #2535 |
+| hotfix/morimoto/remove-chromatic-yml-main | main から chromatic.yml を削除（1ファイルのみ・base=main） | 2026-06-25 | IN_PROGRESS | | | .github/workflows/chromatic.yml git rm のみ |
 | release/fedex-guide-fullscreen-to-main | FedEx ETD セットアップガイド独立レイアウト化＋進捗バー固定 → main リリース | 2026-06-23 | IN_PROGRESS | | | cherry-pick from #2523 |
 | feature/morimoto/fedex-guide-fullscreen | FedEx ETD セットアップガイド独立レイアウト化＋進捗バー固定 | 2026-06-23 | DONE | #2523 | | develop マージ済み |
 | release/morimoto/schedule-i18n-main | スケジュールナビの文言追加（nav.scheduleSettings） | 2026-06-22 | IN_PROGRESS | | | frontend/src/locales/ja.json + en.json |
@@ -180,6 +180,10 @@
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
 | feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
 | feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | IN_PROGRESS | | | `frontend/src/pages/goal-setting/GoalSettingPage.tsx` / `frontend/src/pages/goal-setting/GoalSettingPage.css` / `frontend/tests-e2e/goal-setting-advisor.spec.ts` |
+| feature/morimoto/discord-oauth-rls-fix | Discord OAuth callback 監査ログ RLS バグ修正（set_tenant_context 追加） | 2026-06-24 23:24 | IN_PROGRESS | #2584 | | |
+| release/morimoto/discord-oauth-rls-fix | #2584 main リリース用ブランチ（feature/morimoto/discord-oauth-rls-fix の cherry-pick） | 2026-06-25 | IN_PROGRESS | #2584 | | |
+| feature/morimoto/d1-inventory-v2-converge | （記入してください） | 2026-06-25 00:52 | IN_PROGRESS | | | |
+| release/inventory-ui-tweaks | /inventory 微調整3点（警告右上固定・検索行高さ1.5倍・プルダウン枠線統一） | 2026-06-25 | IN_PROGRESS | | main | base=main |
 ---
 
 ## 記入例
@@ -237,3 +241,5 @@
 | release/send-guard-phase-a-main | 送信ガード Phase A（ADR-143: かな検出+スレッド言語トグル+確認ダイアログ）main単独便 | 2026-06-24 | REVIEW | | | frontend only・バックエンド変更なし |
 | release/send-guard-phase-b | 送信ガード Phase B（ADR-143: 多数決自動判定 API + useInboxState 自動注入）main単独便 | 2026-06-24 | IN_PROGRESS | | main | leads.py+useInboxState.ts+test_lang_judge.py・Phase A無改変 |
 | release/etd-guide-nav-center | ETD ガイド 左ナビ項目ラベル中央揃え リリース | 2026-06-24 | IN_PROGRESS | | main | base=main・CSS 1行 cherry-pick |
+| release/morimoto/inventory-ui-cleanup | /inventory UI整理（アクションバー削除・タブ集約・警告移動・往復フロー全廃） | 2026-06-24 | IN_PROGRESS | #2581 | main | base=main |
+| release/etd-guide-remove-back-button | ETD ガイド 戻るボタン全削除 リリース | 2026-06-25 | IN_PROGRESS | | main | base=main・TSX+CSS cherry-pick |
