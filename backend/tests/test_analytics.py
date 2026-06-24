@@ -874,3 +874,205 @@ class TestReasons:
         """scope が不正な場合は 422"""
         res = await client.get("/api/v1/analytics/reasons?scope=xxx")
         assert res.status_code == 422
+
+
+# ─────────────────────────────────────────────
+# /analytics/weekly-advisor-defensive テスト
+# W-1 復元（#2455 で誤削除 → 外科的復元）
+# ─────────────────────────────────────────────
+
+async def _ensure_conversation_logs_table(db_session):
+    """weekly-advisor_defensive 用に SQLite 互換 conversation_logs を作成する。"""
+    await db_session.execute(text("DROP TABLE IF EXISTS conversation_logs"))
+    await db_session.execute(text("""
+        CREATE TABLE conversation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id INTEGER NOT NULL DEFAULT 999,
+            company_id INTEGER,
+            contact_id INTEGER,
+            lead_id INTEGER,
+            channel_type TEXT,
+            channel_identity TEXT,
+            direction TEXT,
+            sender TEXT,
+            content_text TEXT,
+            external_message_id TEXT,
+            raw_payload TEXT,
+            occurred_at TIMESTAMP,
+            deleted_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """))
+    await db_session.commit()
+
+
+async def _ensure_data_access_events_table(db_session):
+    """audit middleware 用の SQLite 互換 data_access_events を作成する。"""
+    await db_session.execute(text("DROP TABLE IF EXISTS data_access_events"))
+    await db_session.execute(text("""
+        CREATE TABLE data_access_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            method TEXT NOT NULL,
+            path TEXT NOT NULL,
+            status_code INTEGER NOT NULL,
+            user_email TEXT,
+            client_ip TEXT,
+            user_agent TEXT,
+            duration_ms INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """))
+    await db_session.commit()
+
+class TestWeeklyAdvisorDefensive:
+    """GET /analytics/weekly-advisor-defensive"""
+
+    async def test_weekly_advisor_defensive_empty(self, client):
+        """データなしで 200 を返し、actions が空"""
+        res = await client.get("/api/v1/analytics/weekly-advisor-defensive")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["actions"] == []
+        assert data["period"] == "3m"
+        assert data["scope"] == "mine"
+        assert data["stale_days"] == 14
+
+    async def test_weekly_advisor_defensive_ranking_and_scope(self, client, db_session):
+        """守り3種が score 降順で返り、scope=mine が効く"""
+        today = date.today()
+        await _ensure_data_access_events_table(db_session)
+        await _ensure_conversation_logs_table(db_session)
+
+        reorder_co = await client.post("/api/v1/companies", json={"name": "Blue Ocean Co."})
+        reorder_co_id = reorder_co.json()["id"]
+        churn_co = await client.post("/api/v1/companies", json={"name": "Card Haven LLC"})
+        churn_co_id = churn_co.json()["id"]
+        comm_co = await client.post("/api/v1/companies", json={"name": "Tokyo Trading Co."})
+        comm_co_id = comm_co.json()["id"]
+        other_co = await client.post("/api/v1/companies", json={"name": "Other Scope Co."})
+        other_co_id = other_co.json()["id"]
+
+        reorder_ct = await client.post("/api/v1/contacts", json={"company_id": reorder_co_id, "display_name": "Reorder Contact"})
+        reorder_ct_id = reorder_ct.json()["id"]
+        churn_ct = await client.post("/api/v1/contacts", json={"company_id": churn_co_id, "display_name": "Churn Contact"})
+        churn_ct_id = churn_ct.json()["id"]
+        comm_ct = await client.post("/api/v1/contacts", json={"company_id": comm_co_id, "display_name": "Comm Contact"})
+        comm_ct_id = comm_ct.json()["id"]
+        other_ct = await client.post("/api/v1/contacts", json={"company_id": other_co_id, "display_name": "Other Contact"})
+        other_ct_id = other_ct.json()["id"]
+
+        reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead", "status": "existing_customer"})
+        reorder_lead_id = reorder_lead.json()["id"]
+        churn_lead = await client.post("/api/v1/leads", json={"customer_name": "Churn Lead", "status": "existing_customer"})
+        churn_lead_id = churn_lead.json()["id"]
+
+        await db_session.execute(text("""
+            UPDATE companies SET lead_id = :lead_id WHERE id = :company_id
+        """), {"lead_id": reorder_lead_id, "company_id": reorder_co_id})
+        await db_session.execute(text("""
+            UPDATE companies SET lead_id = :lead_id WHERE id = :company_id
+        """), {"lead_id": churn_lead_id, "company_id": churn_co_id})
+
+        await db_session.execute(text("""
+            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            VALUES
+                (9101, 999, :reorder_co, :reorder_ct, 'Reorder Deal', 380000, 'won', 999, :d20, :d20),
+                (9102, 999, :churn_co, :churn_ct, 'Churn Deal', 350000, 'won', 999, :d20, :d20),
+                (9103, 999, :comm_co, :comm_ct, 'Comm Deal', 280000, 'won', 999, :d10, :d10),
+                (9104, 999, :other_co, :other_ct, 'Other Deal', 500000, 'won', 321, :d10, :d10)
+        """), {
+            "reorder_co": reorder_co_id,
+            "reorder_ct": reorder_ct_id,
+            "churn_co": churn_co_id,
+            "churn_ct": churn_ct_id,
+            "comm_co": comm_co_id,
+            "comm_ct": comm_ct_id,
+            "other_co": other_co_id,
+            "other_ct": other_ct_id,
+            "d20": str(today - timedelta(days=20)),
+            "d10": str(today - timedelta(days=10)),
+        })
+        await db_session.execute(text("""
+            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
+            VALUES
+                (999, :reorder_co, :reorder_ct, 9101, 'R-001', 380000, 'awaiting_payment', :d60),
+                (999, :reorder_co, :reorder_ct, 9101, 'R-002', 380000, 'awaiting_payment', :d40),
+                (999, :reorder_co, :reorder_ct, 9101, 'R-003', 380000, 'awaiting_payment', :d20),
+
+                (999, :churn_co, :churn_ct, 9102, 'C-001', 350000, 'awaiting_payment', :d170),
+                (999, :churn_co, :churn_ct, 9102, 'C-002', 350000, 'awaiting_payment', :d150),
+                (999, :churn_co, :churn_ct, 9102, 'C-003', 350000, 'awaiting_payment', :d130),
+                (999, :churn_co, :churn_ct, 9102, 'C-004', 350000, 'awaiting_payment', :d20),
+
+                (999, :comm_co, :comm_ct, 9103, 'M-001', 280000, 'awaiting_payment', :d60),
+                (999, :comm_co, :comm_ct, 9103, 'M-002', 280000, 'awaiting_payment', :d30),
+                (999, :comm_co, :comm_ct, 9103, 'M-003', 280000, 'awaiting_payment', :d10),
+
+                (999, :other_co, :other_ct, 9104, 'O-001', 500000, 'awaiting_payment', :d10)
+        """), {
+            "reorder_co": reorder_co_id,
+            "reorder_ct": reorder_ct_id,
+            "churn_co": churn_co_id,
+            "churn_ct": churn_ct_id,
+            "comm_co": comm_co_id,
+            "comm_ct": comm_ct_id,
+            "other_co": other_co_id,
+            "other_ct": other_ct_id,
+            "d60": str(today - timedelta(days=60)),
+            "d40": str(today - timedelta(days=40)),
+            "d20": str(today - timedelta(days=20)),
+            "d170": str(today - timedelta(days=170)),
+            "d150": str(today - timedelta(days=150)),
+            "d130": str(today - timedelta(days=130)),
+            "d30": str(today - timedelta(days=30)),
+            "d10": str(today - timedelta(days=10)),
+        })
+        await db_session.execute(text("""
+            INSERT INTO conversation_logs (tenant_id, company_id, contact_id, lead_id, channel_type, channel_identity, direction, sender, content_text, external_message_id, occurred_at)
+            VALUES
+                (999, :reorder_co, :reorder_ct, NULL, 'messenger', 'm-1', 'inbound', 'customer', 'reorder', 'msg-r', :c20),
+                (999, :churn_co, :churn_ct, NULL, 'messenger', 'm-2', 'inbound', 'customer', 'churn', 'msg-c', :c80),
+                (999, :comm_co, :comm_ct, NULL, 'messenger', 'm-3', 'inbound', 'customer', 'comm', 'msg-m', :c34),
+                (999, :other_co, :other_ct, NULL, 'messenger', 'm-4', 'inbound', 'customer', 'other', 'msg-o', :c10)
+        """), {
+            "reorder_co": reorder_co_id,
+            "reorder_ct": reorder_ct_id,
+            "churn_co": churn_co_id,
+            "churn_ct": churn_ct_id,
+            "comm_co": comm_co_id,
+            "comm_ct": comm_ct_id,
+            "other_co": other_co_id,
+            "other_ct": other_ct_id,
+            "c20": str(today - timedelta(days=20)),
+            "c80": str(today - timedelta(days=80)),
+            "c34": str(today - timedelta(days=34)),
+            "c10": str(today - timedelta(days=10)),
+        })
+        await db_session.commit()
+
+        res = await client.get("/api/v1/analytics/weekly-advisor-defensive?scope=mine&period=3m")
+        assert res.status_code == 200
+        data = res.json()
+        actions = data["actions"]
+
+        assert actions[0]["type"] == "churn_risk"
+        assert actions[0]["company_name"] == "Card Haven LLC"
+        assert actions == sorted(actions, key=lambda a: a["score"], reverse=True)
+        assert next(a for a in actions if a["company_id"] == reorder_co_id)["lead_id"] == reorder_lead_id
+        assert next(a for a in actions if a["company_id"] == churn_co_id)["lead_id"] == churn_lead_id
+        assert next(a for a in actions if a["company_id"] == comm_co_id)["lead_id"] is None
+
+        types = [a["type"] for a in actions]
+        assert "reorder" in types
+        assert "churn_risk" in types
+        assert "comm_low" in types
+
+        company_ids = {a["company_id"] for a in actions}
+        assert other_co_id not in company_ids
+
+        churn_ids = {a["company_id"] for a in actions if a["type"] == "churn_risk"}
+        comm_ids = {a["company_id"] for a in actions if a["type"] == "comm_low"}
+        assert churn_co_id in churn_ids
+        assert churn_co_id not in comm_ids
