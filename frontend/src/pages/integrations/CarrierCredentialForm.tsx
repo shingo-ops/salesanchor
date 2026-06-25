@@ -90,6 +90,7 @@ export default function CarrierCredentialForm({
       <div className="update-form">
         <div className="form-group">
           <label htmlFor={`cred-id-${env}`}>{t(labels.id)}</label>
+          {/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}
           <input
             id={`cred-id-${env}`}
             type="text"
@@ -115,6 +116,7 @@ export default function CarrierCredentialForm({
             <label htmlFor={`cred-account-${env}`}>
               {t("carrierIntegration.labelAccountNumber")}
             </label>
+            {/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}
             <input
               id={`cred-account-${env}`}
               type="text"
