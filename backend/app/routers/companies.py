@@ -1042,9 +1042,11 @@ async def list_company_conv_logs(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """
-    会社の全 conversation_logs を時系列で返す。
+    会社の全会話履歴を時系列で返す（SA-02 G1b 追補: 読み取り元を meta_messages に変更）。
     contact_id で絞り込み可（省略時は全 contact の混在表示）。
     論理削除済み（deleted_at IS NOT NULL）は除外。
+    翻訳テキストは message_translations から取得（ja 優先）。
+    is_manual=true の行には手動記録バッジを付与。
     """
     await set_tenant_context(db, tenant_id)
     schema = f"tenant_{tenant_id:03d}"
@@ -1055,21 +1057,27 @@ async def list_company_conv_logs(
     }
     contact_filter = ""
     if contact_id is not None:
-        contact_filter = "AND cl.contact_id = :contact_id"
+        contact_filter = "AND mm.contact_id = :contact_id"
         params["contact_id"] = contact_id
 
     result = await db.execute(
         text(
-            f"SELECT cl.id, cl.contact_id, cl.lead_id, cl.channel_type, cl.direction, "
-            f"       cl.content_text, cl.translated_text, cl.occurred_at, "
-            f"       cl.recorded_by_user_id, "
-            f"       co.display_name AS contact_display_name "
-            f"FROM {schema}.conversation_logs cl "
-            f"LEFT JOIN {schema}.contacts co ON co.id = cl.contact_id "
-            f"WHERE cl.company_id = :company_id "
-            f"  AND cl.deleted_at IS NULL "
+            f"SELECT mm.id, mm.contact_id, mm.lead_id, "
+            f"       mm.platform      AS channel_type, mm.direction, "
+            f"       mm.message_text  AS content_text, "
+            f"       mt.translated_text, "
+            f"       mm.occurred_at, "
+            f"       mm.recorded_by_user_id, "
+            f"       co.display_name  AS contact_display_name, "
+            f"       mm.is_manual "
+            f"FROM {schema}.meta_messages mm "
+            f"LEFT JOIN {schema}.contacts co ON co.id = mm.contact_id "
+            f"LEFT JOIN {schema}.message_translations mt "
+            f"    ON mt.message_id = mm.message_id AND mt.target_language = 'ja' "
+            f"WHERE mm.company_id = :company_id "
+            f"  AND mm.deleted_at IS NULL "
             f"  {contact_filter} "
-            f"ORDER BY cl.occurred_at DESC "
+            f"ORDER BY mm.occurred_at DESC "
             f"LIMIT :limit"
         ),
         params,
@@ -1089,6 +1097,7 @@ async def list_company_conv_logs(
             "occurred_at": r[7].isoformat() if r[7] else None,
             "recorded_by_user_id": r[8],
             "contact_display_name": r[9],
+            "is_manual": r[10],
         }
         for r in rows
     ]

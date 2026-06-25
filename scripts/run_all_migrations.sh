@@ -449,6 +449,9 @@ run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
 
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
+
+# SA-02 G1b 追補: v_company_stats の集計元を conversation_logs → meta_messages に変更
+run_sql migrations/20260626_000000_fix_v_company_stats_to_meta_messages.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
