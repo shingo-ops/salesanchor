@@ -238,3 +238,4 @@
 | feature/morimoto/analytics-rls-fix3 | analytics conversion-by-attribute RLS tenant context fix | 2026-06-22 | IN_PROGRESS | | | `test_analytics_conversion_by_attribute_rls.py` の app.tenant_id を set_config で実 tenant に合わせる |
 | hotfix/morimoto/page-header-revert-clean | 全PageLayoutページ ヘッダー白帯・1段下ズレ修正（#2432 リグレッション） | 2026-06-23 | IN_PROGRESS | #2486 | main | |
 | docs/morimoto/ev-2538-tcg-fk | PR #2538 tcg_type FK 動作確認を evidence-registry に記録（EV-20260624-001） | 2026-06-24 | IN_PROGRESS | | | docs変更のみ |
+| feature/morimoto/outbound-translation-fix | outbound送信翻訳 stale closure修正（段階A: draft_id経由で英訳適用） | 2026-06-26 | IN_PROGRESS | | | migration + backend + frontend |
