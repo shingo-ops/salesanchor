@@ -148,6 +148,35 @@ export default [{
         message:
           '❌ raw <h2> 禁止（ADR-067）。<PageLayout navKey="nav.xxx"> を使ってください（frontend/CLAUDE.md 参照）',
       },
+      // ---- 色直値禁止 (再掲: pages/ ブロックが上書きするため重複必要（ADR-067）) ----
+      // 純粋なhex値: style={{ color: "#fff" }}
+      {
+        selector:
+          "JSXAttribute[name.name='style'] Property > Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
+        message:
+          "❌ インラインスタイルへのhex色ハードコード禁止（ADR-067）。CSS変数を使ってください: style={{ color: 'var(--text-primary)' }}",
+      },
+      // 複合文字列に埋め込まれたhex値: style={{ border: "1px solid #ddd" }}
+      {
+        selector:
+          "JSXAttribute[name.name='style'] Property > Literal[value=/#[0-9a-fA-F]{3,8}/][value!=/^#[0-9a-fA-F]{3,8}$/]",
+        message:
+          "❌ インラインスタイルへのhex色ハードコード禁止（ADR-067）。CSS変数を使ってください: style={{ border: '1px solid var(--border-color)' }}",
+      },
+      // rgba()/rgb() 色直書き禁止: style={{ background: "rgba(0,0,0,0.5)" }}
+      {
+        selector:
+          "JSXAttribute[name.name='style'] Property > Literal[value=/rgba?\\s*\\(/]",
+        message:
+          "❌ インラインスタイルへの rgba()/rgb() 色直書き禁止（ADR-067）。CSS変数を使ってください: style={{ background: 'var(--overlay-bg)' }}",
+      },
+      // opacity 数値直書き禁止: style={{ opacity: 0.5 }} ※文字列 var() は除外
+      {
+        selector:
+          "JSXAttribute[name.name='style'] Property[key.name='opacity'][value.type='Literal'][value.value!=/^var\\(/]",
+        message:
+          "❌ インラインスタイルへの opacity 数値直書き禁止（ADR-067）。CSS変数を使ってください: style={{ opacity: 'var(--opacity-dim)' }}",
+      },
       // ---- Phase 5 (再掲: pages/ ブロックが上書きするため重複必要) ----
       {
         selector:
