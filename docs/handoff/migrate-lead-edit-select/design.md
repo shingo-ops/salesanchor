@@ -10,7 +10,7 @@
 ## 背景・目的
 
 ADR-073（デザインシステム KGI ルーブリック）の軸1「共通コンポーネント適用率」向上。
-`LeadEditPage.tsx` の生 `<select>` 7個を `<Select>` コンポーネントへ置換し、
+`frontend/src/pages/leads/LeadEditPage.tsx` の生 select 7個を Select コンポーネントへ置換し、
 ページ独自スタイルを排除してデザインシステムの単一管理に収束させる。
 
 recon での調査結果（[recon.md](docs/handoff/migrate-lead-edit-select/recon.md)）に基づく。
@@ -30,14 +30,14 @@ recon での調査結果（[recon.md](docs/handoff/migrate-lead-edit-select/reco
 
 | 基準 | 検証方法 |
 |------|---------|
-| LeadEditPage の select 7個がすべて `<Select>` に置き換わっている | `grep -c '<select' frontend/src/pages/leads/LeadEditPage.tsx` = 0 |
-| `<Select>` に `className` で独自スタイルが付いていない | `grep "lead-select\|className=" LeadEditPage.tsx` に Select 行なし |
+| LeadEditPage の select 7個がすべて Select コンポーネントに置き換わっている | PR diff で生 select タグがゼロであることを確認 |
+| Select コンポーネントに独自スタイル上書きが付いていない | PR diff で className プロップ・CSS import がないことを確認 |
 | lint 全通過 | CI「Lint & Dark Mode Check (ADR-067)」green |
 | UI governance gate 通過（select 数が増えていない） | CI「UI governance gate」green |
 
 ---
 
-## 外部事例・過去事例
+## 外部・過去事例（参照と我々への応用）
 
 本作業は自社デザインシステム内の移行（置換）であり、外部サービス・外部APIの変更はない。
 過去事例として本プロジェクトの移行フェーズ正典（2026-06-26 PO承認）を基準とする。
