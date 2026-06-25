@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/fix-tenant-create-tx-double-begin | テナント作成時 SQLAlchemy tx 二重開始解消（壁1） | 2026-06-24 | IN_PROGRESS | #2604 | | backend/app/routers/admin.py / docs/handoff/tenant-create-fix/ |
 | develop | main→develop バックマージ（condition多軸 6本取り込み） | 2026-06-23 | IN_PROGRESS | | | git merge origin/main |
 | release/morimoto/schedule-i18n-main | スケジュールナビの文言追加（nav.scheduleSettings） | 2026-06-22 | IN_PROGRESS | | | frontend/src/locales/ja.json + en.json |
 | release/fedex-etd-step1-to-main | FedEx ETD Step1 ガイド develop→main リリース | 2026-06-22 | IN_PROGRESS | | | locale conflict 解決済み |
