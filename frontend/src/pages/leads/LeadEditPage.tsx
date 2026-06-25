@@ -12,6 +12,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { Select } from "../../components/Select";
+import "./LeadEditPage.css";
 import { api } from "../../lib/api";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
@@ -152,6 +153,7 @@ export default function LeadEditPage() {
             />
           </div>
           <Select
+            className="lead-select"
             label={t("leads.initiative")}
             value={form.initiative}
             onChange={(e) => setForm({ ...form, initiative: e.target.value })}
@@ -162,6 +164,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
+            className="lead-select"
             label={t("leads.type")}
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -172,6 +175,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
+            className="lead-select"
             label={t("leads.status")}
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
@@ -181,6 +185,7 @@ export default function LeadEditPage() {
             }))}
           />
           <Select
+            className="lead-select"
             label={t("leads.temperature")}
             value={form.temperature}
             onChange={(e) => setForm({ ...form, temperature: e.target.value })}
@@ -192,6 +197,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
+            className="lead-select"
             label={t("leads.estimatedScale")}
             value={form.estimated_scale}
             onChange={(e) => setForm({ ...form, estimated_scale: e.target.value })}
@@ -203,6 +209,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
+            className="lead-select"
             label={t("leads.customerType")}
             value={form.customer_type}
             onChange={(e) => setForm({ ...form, customer_type: e.target.value })}
@@ -215,6 +222,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
+            className="lead-select"
             label={t("leads.responseSpeed")}
             value={form.response_speed}
             onChange={(e) => setForm({ ...form, response_speed: e.target.value })}
