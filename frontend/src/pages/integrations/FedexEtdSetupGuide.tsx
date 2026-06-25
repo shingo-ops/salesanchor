@@ -75,13 +75,18 @@ function SubstepPane({
   substeps,
   screenshotAlt,
   onLastReached,
+  onAdvance,
+  advanceLabel,
 }: {
   substeps: SubstepItem[];
   screenshotAlt: string;
   onLastReached?: (isLast: boolean) => void;
+  onAdvance?: () => void;
+  advanceLabel?: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = substeps[activeIndex] ?? substeps[0];
+  const isLast = activeIndex === substeps.length - 1;
 
   return (
     <div className="etd-guide__substep-pane">
@@ -129,6 +134,13 @@ function SubstepPane({
             />
           </a>
         ))}
+        {isLast && onAdvance && (
+          <div className="form-actions etd-guide__substep-advance">
+            <button type="button" className="btn-primary" onClick={onAdvance}>
+              {advanceLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -366,6 +378,8 @@ export function FedexEtdSetupGuide({
           <SubstepPane
             screenshotAlt={t("carrierIntegration.fedexEtdGuideScreenshotAlt")}
             onLastReached={setPortalAtEnd}
+            onAdvance={advance}
+            advanceLabel={t("carrierIntegration.fedexEtdGuideStep1AdvanceButton")}
             substeps={[
               {
                 label: "1-1",
@@ -530,8 +544,8 @@ export function FedexEtdSetupGuide({
           </div>
         )}
 
-        <div className="form-actions etd-guide__nav">
-          {canAdvance && (
+        {currentStep.key !== "portal" && (
+          <div className="form-actions etd-guide__nav">
             <button
               type="button"
               className="btn-primary"
@@ -541,8 +555,8 @@ export function FedexEtdSetupGuide({
                 ? t("carrierIntegration.fedexEtdGuideFinishedButton")
                 : t("common.next")}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </StepCard>
     </section>
   );
