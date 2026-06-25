@@ -372,7 +372,8 @@
     "fedexEtdGuideCompleteDesc": "The FedEx ETD setup is complete. Electronic documents will be attached automatically during shipment.",
     "fedexEtdGuideIncomplete": "Incomplete",
     "fedexEtdGuideIncompleteDesc": "Some steps are still incomplete. Go back and review the previous steps.",
-    "fedexEtdGuideFinishedButton": "Done"
+    "fedexEtdGuideFinishedButton": "Done",
+    "fedexEtdGuideStep1AdvanceButton": "Proceed to Step 2"
   },
   "paypalIntegration": {
     "subtitle": "Register your PayPal API credentials and run a connection test.",
