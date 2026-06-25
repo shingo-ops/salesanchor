@@ -3,7 +3,7 @@
 - **日付**: 2026-06-24
 - **対象**: `backend/app/routers/admin.py` の `register_tenant`
 - **スコープ**: 2層バグのうち Layer 1（壁1）のみ。壁2（号室漏れ）は別途。
-- **参照**: [recon.md](./recon.md)
+- **参照**: [recon.md](./recon.md)（`docs/handoff/tenant-create-fix/recon.md`）
 
 ---
 
@@ -142,6 +142,12 @@ SQLAlchemy `AsyncSession` が自動でトランザクションを開始（autobe
 | CI 緑 | CI |
 
 ---
+
+## 外部・過去事例の参照と我々への応用
+
+SQLAlchemy `autobegin` と `begin()` の二重開始エラーは広く知られたパターン。
+- SQLAlchemy 2.0 公式ドキュメント: `AsyncSession` は最初の `execute()` 呼び出し時に自動でトランザクションを開始する（autobegin）。既存の autobegin トランザクションがある状態で `session.begin()` を呼ぶと `InvalidRequestError` が発生する。
+- 同プロジェクト内の先行実装（`auth.py:register_user`、`companies.py:create_company`）が既に正解パターンを示している。今回はこれらに揃える形で修正。
 
 ## 継続・フォロー
 
