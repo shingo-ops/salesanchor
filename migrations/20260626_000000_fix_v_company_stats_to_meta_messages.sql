@@ -47,30 +47,45 @@ BEGIN
 
         EXECUTE format($q$
             CREATE VIEW %I.v_company_stats AS
+            -- サブクエリで先に集計してから c に JOIN することで
+            -- 横並び JOIN による SUM ファンアウトを防ぐ（ADR-136 §Fan-out 対策）
             SELECT
-                c.id AS company_id,
-                COALESCE(SUM(i.total_amount), 0)                       AS total_deal_amount,
-                COUNT(DISTINCT i.id)                                    AS paid_invoice_count,
-                MAX(i.paid_at)                                          AS last_paid_at,
-                COUNT(DISTINCT d.id)                                    AS deal_count,
-                COUNT(DISTINCT mm.id)                                   AS conversation_count,
-                MAX(mm.occurred_at)                                     AS last_conversation_at
+                c.id                                    AS company_id,
+                COALESCE(inv.total_deal_amount, 0)      AS total_deal_amount,
+                COALESCE(inv.paid_invoice_count, 0)     AS paid_invoice_count,
+                inv.last_paid_at                        AS last_paid_at,
+                COALESCE(d.deal_count, 0)               AS deal_count,
+                COALESCE(mm.conversation_count, 0)      AS conversation_count,
+                mm.last_conversation_at                 AS last_conversation_at
             FROM %I.companies c
-            LEFT JOIN %I.invoices i
-                ON i.company_id = c.id
-                AND i.paid_at IS NOT NULL
-                AND i.voided_at IS NULL
-            LEFT JOIN %I.deals d
-                ON d.company_id = c.id
-            LEFT JOIN %I.meta_messages mm
-                ON mm.company_id = c.id
-            GROUP BY c.id
+            LEFT JOIN (
+                SELECT company_id,
+                       SUM(total_amount)  AS total_deal_amount,
+                       COUNT(*)           AS paid_invoice_count,
+                       MAX(paid_at)       AS last_paid_at
+                FROM %I.invoices
+                WHERE paid_at IS NOT NULL AND voided_at IS NULL
+                GROUP BY company_id
+            ) inv ON inv.company_id = c.id
+            LEFT JOIN (
+                SELECT company_id,
+                       COUNT(*)           AS deal_count
+                FROM %I.deals
+                GROUP BY company_id
+            ) d ON d.company_id = c.id
+            LEFT JOIN (
+                SELECT company_id,
+                       COUNT(*)           AS conversation_count,
+                       MAX(occurred_at)   AS last_conversation_at
+                FROM %I.meta_messages
+                GROUP BY company_id
+            ) mm ON mm.company_id = c.id
         $q$,
-            schema_rec.nspname,
-            schema_rec.nspname,
-            schema_rec.nspname,
-            schema_rec.nspname,
-            schema_rec.nspname
+            schema_rec.nspname,  -- outer SELECT
+            schema_rec.nspname,  -- companies
+            schema_rec.nspname,  -- invoices subquery
+            schema_rec.nspname,  -- deals subquery
+            schema_rec.nspname   -- meta_messages subquery
         );
 
         applied_count := applied_count + 1;
