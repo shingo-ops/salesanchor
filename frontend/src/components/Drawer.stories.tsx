@@ -13,7 +13,6 @@ const meta: Meta<typeof Drawer> = {
   parameters: {
     layout: 'fullscreen',
     docs: { disable: true },
-    chromatic: { disable: true },
   },
   tags: [],
 }
