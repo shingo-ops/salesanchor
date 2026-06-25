@@ -96,6 +96,7 @@ services:
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
+      - DISCORD_BOT_TOKEN_6=${DISCORD_BOT_TOKEN_6:-}
       # API連携: Googleドライブ OAuth（ユーザー委任方式）。カレンダーと同一の OAuth
       # クライアントを流用可。この3行が無いと .env に値があっても os.getenv が空になり
       # 連携が動かない（compose passthrough 漏れ対策）。
@@ -280,6 +281,9 @@ services:
       # tenant_004 = HIGH LIFE JPN
       - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
       - DISCORD_TENANT_CODE_4=${DISCORD_TENANT_CODE_4:-highlife-jpn}
+      # tenant_006 = tenant_review（Meta App Review / QA 用）
+      - DISCORD_BOT_TOKEN_6=${DISCORD_BOT_TOKEN_6:-}
+      - DISCORD_TENANT_CODE_6=${DISCORD_TENANT_CODE_6:-tenant_review}
       # チケット作成で DB アクセスが必要（ticket_channel_creator.get_ticket_config）。
       # 未設定だと database.py のデフォルト myapp_user にフォールバックして接続失敗する。
       - DATABASE_URL=${DATABASE_URL}
