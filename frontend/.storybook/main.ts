@@ -11,14 +11,13 @@ const config: StorybookConfig = {
     "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
   ],
   "addons": [
-    "@chromatic-com/storybook",
     "@storybook/addon-vitest",
     "@storybook/addon-a11y",
     "@storybook/addon-docs",
     "@storybook/addon-mcp"
   ],
   "framework": "@storybook/react-vite",
-  // firebase/app と firebase/auth を Storybook/Chromatic 環境でモックに差し替える
+  // firebase/app と firebase/auth を Storybook 環境でモックに差し替える
   // 本番コード変更なし・視覚テスト時にネットワーク接続不要
   viteFinal: async (config) => {
     const existingAlias = config.resolve?.alias ?? {};
