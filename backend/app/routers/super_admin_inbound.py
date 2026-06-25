@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 from app.schemas.discord_inbound import (
     DiscordInboundDetail,
@@ -249,68 +249,72 @@ async def apply_product_candidates(
     - language は payload.languages の上書き（取込 UI でオペレータが修正した値）を
       優先し、無指定なら商品名から自動判定（日本語文字があれば ja、無ければ en）。
     """
-    # public.products.name は VARCHAR(255)。超過名はバッチ全体を巻き込む
-    # 制約違反（→全件ロールバック）になるため、登録対象から除外する。
-    _NAME_MAX_LEN = 255
-    category = (payload.category or "").strip() or None
+    await set_operator_context(db)
+    try:
+        # public.products.name は VARCHAR(255)。超過名はバッチ全体を巻き込む
+        # 制約違反（→全件ロールバック）になるため、登録対象から除外する。
+        _NAME_MAX_LEN = 255
+        category = (payload.category or "").strip() or None
 
-    # 商品名 → 代表的な unit / condition（最頻値）。解析結果全体から一括取得して
-    # 名前ごとに引く（候補抽出と同じ正規化ルール）。
-    rep_result = await db.execute(
-        text(
-            f"WITH parsed AS ({_PARSED_ITEMS_CTE}) "
-            "SELECT pname, "
-            "  mode() WITHIN GROUP (ORDER BY unit) FILTER (WHERE unit IS NOT NULL) AS unit, "
-            "  mode() WITHIN GROUP (ORDER BY condition) FILTER (WHERE condition IS NOT NULL) AS condition "
-            "FROM parsed GROUP BY pname"
-        )
-    )
-    rep: dict[str, tuple[str | None, str | None]] = {
-        r["pname"]: (r.get("unit"), r.get("condition")) for r in rep_result.mappings().all()
-    }
-    overrides = payload.languages or {}
-
-    inserted = 0
-    skipped = 0
-    seen: set[str] = set()
-    for raw_name in payload.names:
-        name = (raw_name or "").strip()
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        if len(name) > _NAME_MAX_LEN:
-            skipped += 1
-            continue
-        unit, condition = rep.get(name, (None, None))
-        # 言語は UI 上書きを優先し、無指定/不正値はデフォルト日本語。
-        lang = (overrides.get(name) or "").strip().lower()
-        if lang not in ("ja", "en"):
-            lang = _DEFAULT_IMPORT_LANGUAGE
-        result = await db.execute(
+        # 商品名 → 代表的な unit / condition（最頻値）。解析結果全体から一括取得して
+        # 名前ごとに引く（候補抽出と同じ正規化ルール）。
+        rep_result = await db.execute(
             text(
-                "INSERT INTO public.products (name, category, unit, condition, language) "
-                "SELECT :name, :category, :unit, :condition, :language "
-                "WHERE NOT EXISTS ("
-                "  SELECT 1 FROM public.products WHERE name = :name"
-                ")"
-            ),
-            {
-                "name": name,
-                "category": category,
-                "unit": unit,
-                "condition": condition,
-                "language": lang,
-            },
+                f"WITH parsed AS ({_PARSED_ITEMS_CTE}) "
+                "SELECT pname, "
+                "  mode() WITHIN GROUP (ORDER BY unit) FILTER (WHERE unit IS NOT NULL) AS unit, "
+                "  mode() WITHIN GROUP (ORDER BY condition) FILTER (WHERE condition IS NOT NULL) AS condition "
+                "FROM parsed GROUP BY pname"
+            )
         )
-        if result.rowcount:
-            inserted += 1
-        else:
-            skipped += 1
-    await db.commit()
-    logger.info(
-        "inbound product import: inserted=%s skipped=%s category=%s",
-        inserted,
-        skipped,
-        category,
-    )
-    return InboundProductImportApplyResponse(inserted=inserted, skipped=skipped)
+        rep: dict[str, tuple[str | None, str | None]] = {
+            r["pname"]: (r.get("unit"), r.get("condition")) for r in rep_result.mappings().all()
+        }
+        overrides = payload.languages or {}
+
+        inserted = 0
+        skipped = 0
+        seen: set[str] = set()
+        for raw_name in payload.names:
+            name = (raw_name or "").strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            if len(name) > _NAME_MAX_LEN:
+                skipped += 1
+                continue
+            unit, condition = rep.get(name, (None, None))
+            # 言語は UI 上書きを優先し、無指定/不正値はデフォルト日本語。
+            lang = (overrides.get(name) or "").strip().lower()
+            if lang not in ("ja", "en"):
+                lang = _DEFAULT_IMPORT_LANGUAGE
+            result = await db.execute(
+                text(
+                    "INSERT INTO public.products (name, category, unit, condition, language) "
+                    "SELECT :name, :category, :unit, :condition, :language "
+                    "WHERE NOT EXISTS ("
+                    "  SELECT 1 FROM public.products WHERE name = :name"
+                    ")"
+                ),
+                {
+                    "name": name,
+                    "category": category,
+                    "unit": unit,
+                    "condition": condition,
+                    "language": lang,
+                },
+            )
+            if result.rowcount:
+                inserted += 1
+            else:
+                skipped += 1
+        await db.commit()
+        logger.info(
+            "inbound product import: inserted=%s skipped=%s category=%s",
+            inserted,
+            skipped,
+            category,
+        )
+        return InboundProductImportApplyResponse(inserted=inserted, skipped=skipped)
+    finally:
+        await reset_operator_context(db)
