@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/manual-record-to-meta-messages | SA-02 G1b 手動記録を meta_messages に保存して受信箱一覧に表示 | 2026-06-25 | IN_PROGRESS | | main | base=main |
 | release/morimoto/inventory-ui-cleanup | /inventory UI整理 — アクションバー削除・タブ集約・警告移動（ADR-093） | 2026-06-24 | IN_PROGRESS | | main | base=main |
 | release/setup-guide-screenshot-maxwidth | FedExセットアップガイド スクショ幅修正本番リリース | 2026-06-24 | IN_PROGRESS | #2536 | - | cherry-pick #2535 |
 | release/fedex-guide-fullscreen-to-main | FedEx ETD セットアップガイド独立レイアウト化＋進捗バー固定 → main リリース | 2026-06-23 | IN_PROGRESS | | | cherry-pick from #2523 |
