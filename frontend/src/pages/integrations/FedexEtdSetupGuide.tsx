@@ -415,7 +415,7 @@ export function FedexEtdSetupGuide({
                   t("carrierIntegration.fedexEtdGuideStep1_6"),
                   t("carrierIntegration.fedexEtdGuideStep1_6b"),
                 ],
-                screenshots: [{ src: "/images/fedex-setup/step1-07-overview.png" }],
+                screenshots: [{ src: "/images/fedex-setup/step1-07-overview-v2.png" }],
               },
             ]}
           />
