@@ -44,6 +44,7 @@ interface Props {
   /** ADR-142: 送信ガード Phase A */
   recipientLanguageSetting: "auto" | "ja" | "en";
   setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
+  onManualRecordSaved?: () => void;
 }
 
 /** Per-message translation state. */
@@ -63,6 +64,7 @@ export function InboxMessageThread({
   trimmedDraft, submitSend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
+  onManualRecordSaved,
 }: Props) {
   const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -603,6 +605,7 @@ export function InboxMessageThread({
         <ManualRecordSection
           leadId={selectedLeadId}
           currentPlatform={selectedConversation?.platform ?? null}
+          onSaved={onManualRecordSaved}
         />
       )}
 
