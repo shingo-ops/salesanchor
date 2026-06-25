@@ -28,7 +28,7 @@
 
 ### CI gate の穴（ADR-072）
 
-- `lint-tenant-schema.yml` のカバー対象: `backend/app/routers/` のみ
+- `.github/workflows/lint-tenant-schema.yml` のカバー対象: backend/app/routers/ のみ
 - `backend/app/services/tenant.py` は**対象外**（gate 未検知）
 
 ---
@@ -54,7 +54,7 @@ SQLAlchemy 2.x 動作: `AsyncSession` は `autobegin=True`（デフォルト）�
 
 ### Layer 2 — 号室漏れ（Layer 1 解消後に露出する 42501）
 
-`create_tenant_schema`（`tenant.py`）内の seed 関数群が
+`create_tenant_schema`（`backend/app/services/tenant.py`）内の seed 関数群が
 `app.tenant_id` を SET せずに RLS 有効テーブルへ INSERT。
 → `SQLSTATE 42501: permission denied for table roles` 等。
 
@@ -72,7 +72,7 @@ HTTP 500
 {"detail": "A transaction is already begun on this Session."}
 ```
 
-Layer 1（`admin.py:57` の `async with db.begin():`）が発火していることを実機で確認。
+Layer 1（`backend/app/routers/admin.py:57` の `async with db.begin():`）が発火していることを実機で確認。
 DB ロールバック確認済み（`verify-rls-42501` テナントは DB に残存なし）。
 
 ---

@@ -127,7 +127,10 @@ SQLAlchemy `AsyncSession` が自動でトランザクションを開始（autobe
 ## 弊害対策
 
 元の `async with db.begin():` が持っていた「例外時自動ロールバック」保証を、
-`except Exception: await db.rollback(); raise` で明示的に再現（`auth.py:125` と同パターン）。
+`except Exception: await db.rollback(); raise` で明示的に再現（`backend/app/routers/auth.py:125` と同パターン）。
+
+ADR-072（write endpoint commit 後 reset_tenant_context 必須）の対象は今回触らない範囲のため、
+本PRへの適用は不要。ただし design 立案根拠として参照済み。
 
 ---
 
