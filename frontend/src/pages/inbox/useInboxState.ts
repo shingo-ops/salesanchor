@@ -112,7 +112,7 @@ export interface UseInboxStateReturn {
   discordDmChannelMissing: boolean;
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
-  submitSend: () => Promise<void>;
+  submitSend: (opts?: { draftId?: number }) => Promise<void>;
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 
   // ADR-142: 送信ガード Phase A — スレッド言語設定
@@ -606,8 +606,8 @@ export function useInboxState(): UseInboxStateReturn {
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
 
-  const submitSend = useCallback(async () => {
-    if ((trimmedDraft.length === 0 && !attachedFile) || !canSend || selectedLeadId === null || sending) return;
+  const submitSend = useCallback(async (opts?: { draftId?: number }) => {
+    if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
     setSendError("");
     setSending(true);
     try {
@@ -616,7 +616,7 @@ export function useInboxState(): UseInboxStateReturn {
         clearAttachment();
         setDraft("");
       } else {
-        await sendMessage(selectedLeadId, { text: trimmedDraft });
+        await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");
       }
       skipNextPollRef.current = true;
