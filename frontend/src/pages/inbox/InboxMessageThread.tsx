@@ -34,7 +34,7 @@ interface Props {
   canSend: boolean;
   discordDmChannelMissing: boolean;
   trimmedDraft: string;
-  submitSend: () => void;
+  submitSend: (opts?: { draftId?: number }) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
@@ -363,10 +363,9 @@ export function InboxMessageThread({
           draftText={draft}
           onClose={() => setShowOutboundPreview(false)}
           disabled={!canSend || sending}
-          onConfirmedSend={(finalText) => {
+          onConfirmedSend={(finalText, draftId) => {
             setShowOutboundPreview(false);
-            setDraft(finalText);
-            submitSend();
+            submitSend({ draftId });
           }}
         />
       )}
@@ -454,7 +453,7 @@ export function InboxMessageThread({
             <button
               type="button"
               className="inbox-send-btn"
-              onClick={submitSend}
+              onClick={() => submitSend()}
               disabled={sendDisabled && !attachedFile}
               title={
                 discordDmChannelMissing
