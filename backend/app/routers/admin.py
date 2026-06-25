@@ -52,9 +52,10 @@ async def register_tenant(
             detail=f"テナントコード '{data.tenant_code}' は既に使用されています",
         )
 
-    # テナント作成（ロールバック保証: db.begin() で明示的なトランザクション開始）
-    # create_tenant_schema が途中で失敗した場合も tenant レコードが残らないよう保証する。
-    async with db.begin():
+    # テナント作成（autobegun トランザクションを継続使用。auth.py/companies.py と同パターン）
+    # create_tenant_schema が途中で失敗した場合は except で明示ロールバックし、
+    # tenant レコードが残らないよう保証する。
+    try:
         tenant = Tenant(
             tenant_name=data.tenant_name,
             tenant_code=data.tenant_code,
@@ -80,7 +81,10 @@ async def register_tenant(
                 "schema_name": schema_name,
             },
         )
-    # async with db.begin() がコミットを行う（例外時は自動ロールバック）
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     return TenantResponse(
         id=tenant.id,
