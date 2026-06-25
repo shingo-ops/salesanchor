@@ -49,6 +49,7 @@ export interface UseInboxStateReturn {
   convError: string;
   filteredConversations: Conversation[];
   loadConversations: () => Promise<void>;
+  reloadMessages: () => void;
 
   // 受信箱設定
   inboxSettings: InboxSettings;
@@ -341,6 +342,13 @@ export function useInboxState(): UseInboxStateReturn {
       setMsgLoading(false);
     }
   }, [t]);
+
+  const reloadMessages = useCallback(() => {
+    if (selectedLeadId !== null) {
+      void loadMessages(selectedLeadId);
+      void loadConversations();
+    }
+  }, [selectedLeadId, loadMessages, loadConversations]);
 
   const loadLeadDetail = useCallback(async (leadId: number) => {
     try {
@@ -803,6 +811,7 @@ export function useInboxState(): UseInboxStateReturn {
     convError,
     filteredConversations,
     loadConversations,
+    reloadMessages,
 
     // 受信箱設定
     inboxSettings,

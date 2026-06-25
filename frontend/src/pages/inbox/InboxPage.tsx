@@ -167,6 +167,7 @@ export default function InboxPage() {
                 clearAttachment={state.clearAttachment}
                 recipientLanguageSetting={state.recipientLanguageSetting}
                 setRecipientLanguage={state.setRecipientLanguage}
+                onManualRecordSaved={state.reloadMessages}
               />
             </div>
           </div>
