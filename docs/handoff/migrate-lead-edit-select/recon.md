@@ -10,7 +10,7 @@
 ## 背景
 
 移行フェーズ正典・試運転①。
-`LeadEditPage.tsx` に存在した生 `<select>` 7個を共通 `Select` コンポーネントへ置き換える。
+frontend/src/pages/leads/LeadEditPage.tsx に存在した生 select 7個を共通 Select コンポーネントへ置き換える。
 ADR-073（デザインシステム KGI ルーブリック）の軸1（共通コンポーネント適用率）向上が目的。
 
 ---
