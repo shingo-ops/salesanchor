@@ -11,6 +11,11 @@
 | 5 | Step2〜Step5 のフッターナビゲーション（「次へ」/「完了」）は維持 | 各ステップでフッターボタンが表示されることを確認 |
 | 6 | 日本語「ステップ2へ進む」・英語「Proceed to Step 2」が正しく表示 | 言語切替で文言確認 |
 
+## 参照
+
+- recon: docs/handoff/etd-guide-step1-advance/recon.md
+- 対象ADR: ADR-027（UI 国際化 — 全 UI 文字列を `t()` 経由で定義）
+
 ## 設計方針
 
 `SubstepPane` に `onAdvance` / `advanceLabel` をオプション props として追加し、
