@@ -86,6 +86,12 @@ JSX側: `frontend/src/pages/inbox/OutboundTranslationPreview.tsx:180`（変更�
 
 ---
 
+## 外部・過去事例の参照と我々への応用
+
+該当なし：本変更はi18nキー値の修正とuseEffect自動実行化のみ（frontend文言/UI）。DB非接触・API仕様変更なし・新規ライブラリ導入なし。外部事例を参照するまでもなく既存ADR-110実装の延長として完結する。
+
+---
+
 ## 受け入れ基準（ADR-110 § 実機検証）
 
 recon参照: docs/handoff/inbox-ui-text-j1-j5/recon.md §R1〜R6
