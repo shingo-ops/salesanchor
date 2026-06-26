@@ -10,6 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 
 interface CompanyMini {
@@ -136,13 +137,17 @@ export default function ContactEditPage() {
         <div className="loading">{t("common.loading")}</div>
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
-          <div className="form-group">
-            <label>{t("contacts.companyLabel")}</label>
-            <select required value={form.company_id} onChange={(e) => setForm({ ...form, company_id: e.target.value })}>
-              <option value="">{t("common.pleaseSelect")}</option>
-              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}
-            </select>
-          </div>
+          <Select
+            label={t("contacts.companyLabel")}
+            required
+            value={form.company_id}
+            onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+            placeholder={t("common.pleaseSelect")}
+            options={companies.map((c) => ({
+              value: String(c.id),
+              label: `${c.name}（${c.company_code}）`,
+            }))}
+          />
           <div className="form-group"><label>{t("contacts.surname")}</label>
             <input value={form.surname} onChange={(e) => setForm({ ...form, surname: e.target.value })} />
           </div>
@@ -170,14 +175,17 @@ export default function ContactEditPage() {
           <div className="form-group"><label>{t("common.phone")}</label>
             <input value={form.primary_phone} onChange={(e) => setForm({ ...form, primary_phone: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("common.status")}</label>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-              <option value="archived">archived</option>
-              <option value="pending_dedup_review">{t("contacts.statusPendingDedupOption")}</option>
-            </select>
-          </div>
+          <Select
+            label={t("common.status")}
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            options={[
+              { value: "active", label: "active" },
+              { value: "inactive", label: "inactive" },
+              { value: "archived", label: "archived" },
+              { value: "pending_dedup_review", label: t("contacts.statusPendingDedupOption") },
+            ]}
+          />
           <div className="form-group"><label>{t("common.notes")}</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
