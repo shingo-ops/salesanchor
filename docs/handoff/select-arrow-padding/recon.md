@@ -18,11 +18,9 @@
 
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
-| `frontend/src/components/FormField.css:73` | `.comp-field__select` ベースルール（変更対象） |
-| `frontend/src/components/FormField.css:77` | `padding-right: var(--space-5)` — SVG アイコン幅確保 |
-| `frontend/src/components/FormField.css:78` | `background-image` — SVG ▽ アイコン埋め込み |
-| `frontend/src/components/FormField.css:129` | sm サイズ override（padding shorthand 上書き対策） |
-| `frontend/src/components/FormField.css:152` | lg サイズ override（padding shorthand 上書き対策） |
+| `frontend/src/components/Select.tsx:73` | `<select className="comp-field__select">` — スタイル適用先 |
+| `frontend/src/components/Select.tsx:15` | `SelectSize` 型（sm/md/lg）— サイズバリアント定義 |
+| `docs/adr/ADR-073-design-system-kgi-rubric.md:1` | ADR-073 — デザインシステム KGI ルーブリック（本変更の根拠） |
 
 ---
 
