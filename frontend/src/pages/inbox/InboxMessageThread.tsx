@@ -96,6 +96,14 @@ export function InboxMessageThread({
   // Translation state: keyed by message_id
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
 
+  // 受信画像 URL 再取得（CDN 期限切れ対応）
+  const [resolvedUrl, setResolvedUrl] = useState<Record<number, string>>({});
+  const retriedRef = useRef<Set<number>>(new Set());
+  // ライトボックス（原寸表示）
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const openLightbox = useCallback((url: string) => setLightboxUrl(url), []);
+  const closeLightbox = useCallback(() => setLightboxUrl(null), []);
+
   // ADR-110: 送信下訳プレビュー表示
   const [showOutboundPreview, setShowOutboundPreview] = useState(false);
 
@@ -137,6 +145,34 @@ export function InboxMessageThread({
   useEffect(() => {
     setTranslations({});
   }, [selectedLeadId]);
+
+  // Reset resolved URLs and retry tracking on conversation change
+  useEffect(() => {
+    setResolvedUrl({});
+    retriedRef.current = new Set();
+  }, [selectedLeadId]);
+
+  const handleAttachmentError = useCallback(
+    async (msgDbId: number, msgMetaId: string | null) => {
+      if (!msgMetaId || !selectedLeadId) return;
+      if (retriedRef.current.has(msgDbId)) return;
+      retriedRef.current.add(msgDbId);
+      try {
+        const res = await fetch(
+          `/api/v1/leads/${selectedLeadId}/messages/${encodeURIComponent(msgMetaId)}/attachment-url`,
+          { credentials: "include" },
+        );
+        if (res.ok) {
+          const data: { url: string } = await res.json();
+          setResolvedUrl((prev) => ({ ...prev, [msgDbId]: data.url }));
+        }
+        // 404 = 期限切れ → 何もしない（期限切れ表示へフォールバック）
+      } catch {
+        // ネットワークエラーも同様に無視（期限切れ表示）
+      }
+    },
+    [selectedLeadId],
+  );
 
   const handleTranslate = useCallback(async (messageId: string | null) => {
     if (!messageId || !selectedLeadId) return;
@@ -329,12 +365,22 @@ export function InboxMessageThread({
                     Send failed ({msg.error_code})
                   </div>
                 )}
-                {msg.attachment_type === "image" && msg.attachment_url ? (
-                  <img
-                    src={msg.attachment_url}
-                    alt={t("inbox.imagePreviewAlt")}
-                    className="msg-attachment-img"
-                  />
+                {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
+                  retriedRef.current.has(msg.id) && !resolvedUrl[msg.id] ? (
+                    <span className="msg-attachment-placeholder">
+                      <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+                      {t("inbox.imageExpired")}
+                    </span>
+                  ) : (
+                    <img
+                      src={resolvedUrl[msg.id] ?? msg.attachment_url!}
+                      alt={t("inbox.imagePreviewAlt")}
+                      className="msg-attachment-img"
+                      style={{ cursor: "zoom-in" }}
+                      onClick={() => openLightbox(resolvedUrl[msg.id] ?? msg.attachment_url!)}
+                      onError={() => handleAttachmentError(msg.id, msg.message_id ?? null)}
+                    />
+                  )
                 ) : msg.attachment_type === "image" && !msg.attachment_url ? (
                   <span className="msg-attachment-placeholder">
                     <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
@@ -548,6 +594,28 @@ export function InboxMessageThread({
           leadId={selectedLeadId}
           currentPlatform={selectedConversation?.platform ?? null}
         />
+      )}
+
+      {/* 受信画像 原寸ライトボックス（G2） */}
+      {lightboxUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("inbox.imagePreviewAlt")}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={closeLightbox}
+        >
+          <img
+            src={lightboxUrl}
+            alt={t("inbox.imagePreviewAlt")}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </main>
   );
