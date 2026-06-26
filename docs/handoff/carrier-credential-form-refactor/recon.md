@@ -63,7 +63,7 @@
 | `SHOWS_ACCOUNT_NUMBER` | :70 | アカウント番号フィールドの表示有無（fedex/ups） |
 | `SUPPORTS_ENV_SELECT` | :73 | 環境セレクタ対応有無（fedex のみ） |
 
-3定数は現在 `CarrierIntegrationPage.tsx` 内の非エクスポート定数。新コンポーネントが参照するには export が必要。
+3定数は現在 `frontend/src/pages/integrations/CarrierIntegrationPage.tsx` 内の非エクスポート定数。新コンポーネントが参照するには export が必要。
 
 ---
 
