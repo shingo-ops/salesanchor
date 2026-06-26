@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 MODEL_RECEIVE: str = os.getenv("TRANSLATION_MODEL_RECEIVE", "gemini-2.5-flash")
-MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-2.5-pro")
+MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-2.5-flash-lite")
 CONF_THRESHOLD_RECEIVE: float = float(
     os.getenv("TRANSLATION_CONFIDENCE_THRESHOLD_RECEIVE", "0.70")
 )
