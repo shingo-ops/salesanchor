@@ -5,7 +5,7 @@ import signal
 import sys
 
 from app.discord_gateway.client import run_gateway
-from app.discord_gateway.config import get_log_level, load_tenant_bot_configs
+from app.discord_gateway.config import get_log_level, load_single_bot_config
 
 logger = logging.getLogger(__name__)
 
@@ -37,60 +37,55 @@ def _install_signal_handlers(stop_event: asyncio.Event) -> None:
         loop.add_signal_handler(sig, stop_event.set)
 
 
-async def _run_with_shutdown(tenants: list) -> int:
+async def _run_with_shutdown(config: "SingleBotConfig | None") -> int:  # type: ignore[name-defined]  # noqa: F821
+    from app.discord_gateway.config import SingleBotConfig  # local import to keep type ref
+
     stop_event = asyncio.Event()
     _install_signal_handlers(stop_event)
 
-    if not tenants:
+    if config is None:
         logger.warning(
-            "[discord-gateway] DISCORD_BOT_TOKEN_<TENANT_ID> が未設定のため idle で待機します"
+            "[discord-gateway] DISCORD_BOT_TOKEN が未設定のため idle で待機します"
         )
         await stop_event.wait()
         return 0
 
-    logger.info(
-        "[discord-gateway] 起動 tenants=%s",
-        ",".join(f"{t.tenant_code}({t.tenant_id})" for t in tenants),
-    )
+    logger.info("[discord-gateway] 起動 (ADR-146 B方式: 共通bot1台)")
 
-    tasks = [
-        asyncio.create_task(run_gateway(t), name=f"gw-{t.tenant_code}")
-        for t in tenants
-    ]
-    gather_task = asyncio.gather(*tasks, return_exceptions=True)
+    gw_task = asyncio.create_task(run_gateway(config), name="gw-common")
     stop_task = asyncio.create_task(stop_event.wait(), name="gw-shutdown-wait")
 
     try:
         done, _ = await asyncio.wait(
-            [gather_task, stop_task],
+            [gw_task, stop_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
         if stop_task in done:
             logger.info("[discord-gateway] SIGTERM 受信、graceful shutdown 開始")
-            for t in tasks:
-                t.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            gw_task.cancel()
+            await asyncio.gather(gw_task, return_exceptions=True)
         else:
             stop_task.cancel()
 
-        results = await gather_task
+        results = await asyncio.gather(gw_task, return_exceptions=True)
     except asyncio.CancelledError:
-        for t in tasks:
-            t.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        gw_task.cancel()
+        await asyncio.gather(gw_task, return_exceptions=True)
         raise
 
-    fatal = [r for r in results if isinstance(r, Exception) and not isinstance(r, asyncio.CancelledError)]
-    if fatal and len(fatal) == len(tenants):
+    fatal = [
+        r
+        for r in results
+        if isinstance(r, Exception) and not isinstance(r, asyncio.CancelledError)
+    ]
+    if fatal:
         cooldown = _fatal_cooldown_seconds()
         logger.critical(
-            "[discord-gateway] 全 %d テナントで致命的エラー、%d 秒クールダウン後に非ゼロ終了します"
+            "[discord-gateway] 致命的エラー、%d 秒クールダウン後に非ゼロ終了します"
             "（Docker 再起動の連打による Discord 再接続storm→token reset を防ぐ）",
-            len(fatal),
             cooldown,
         )
         if cooldown > 0:
-            # SIGTERM（デプロイ停止）が来たら即座に終了できるよう中断可能な待機にする。
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=cooldown)
             except asyncio.TimeoutError:
@@ -100,8 +95,12 @@ async def _run_with_shutdown(tenants: list) -> int:
 
 
 async def _main_async() -> int:
-    tenants = load_tenant_bot_configs()
-    return await _run_with_shutdown(tenants)
+    try:
+        config = load_single_bot_config()
+    except RuntimeError as e:
+        logger.warning("[discord-gateway] %s — idle で待機します", e)
+        config = None
+    return await _run_with_shutdown(config)
 
 
 def main() -> int:

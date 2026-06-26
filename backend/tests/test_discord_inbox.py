@@ -281,7 +281,7 @@ async def _count_outbound(db_session, *, lead_id: int, tenant_id: int = 999) -> 
 @pytest.mark.asyncio
 async def test_send_discord_dm_success(monkeypatch):
     """送信成功時に Discord メッセージ ID を返す。"""
-    monkeypatch.setenv("DISCORD_BOT_TOKEN_4", "Bot-token-test")
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "Bot-token-test")
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -309,7 +309,7 @@ async def test_send_discord_dm_success(monkeypatch):
 @pytest.mark.asyncio
 async def test_send_discord_dm_raises_on_non_200(monkeypatch):
     """Discord API が非 2xx を返した場合は DiscordSendError を送出する。"""
-    monkeypatch.setenv("DISCORD_BOT_TOKEN_4", "Bot-token-test")
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "Bot-token-test")
 
     mock_response = MagicMock()
     mock_response.status_code = 403
@@ -333,7 +333,7 @@ async def test_send_discord_dm_raises_on_non_200(monkeypatch):
 @pytest.mark.asyncio
 async def test_send_discord_dm_raises_user_friendly_on_401(monkeypatch):
     """Discord API が 401 を返した場合はユーザーフレンドリーなエラーメッセージを送出する。"""
-    monkeypatch.setenv("DISCORD_BOT_TOKEN_4", "Bot-token-test")
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "Bot-token-test")
 
     mock_response = MagicMock()
     mock_response.status_code = 401
@@ -357,9 +357,9 @@ async def test_send_discord_dm_raises_user_friendly_on_401(monkeypatch):
 @pytest.mark.asyncio
 async def test_send_discord_dm_raises_when_token_missing(monkeypatch):
     """Bot Token が未設定の場合は DiscordSendError を送出する（API 呼び出しなし）。"""
-    monkeypatch.delenv("DISCORD_BOT_TOKEN_4", raising=False)
+    monkeypatch.delenv("DISCORD_BOT_TOKEN", raising=False)
 
-    with pytest.raises(DiscordSendError, match="DISCORD_BOT_TOKEN_4"):
+    with pytest.raises(DiscordSendError, match="DISCORD_BOT_TOKEN"):
         await send_discord_dm(
             tenant_id=4,
             dm_channel_id="ch-123",

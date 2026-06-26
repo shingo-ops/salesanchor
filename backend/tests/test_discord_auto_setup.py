@@ -22,7 +22,7 @@ from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-os.environ["DISCORD_BOT_TOKEN_999"] = "test-bot-token"
+os.environ["DISCORD_BOT_TOKEN"] = "test-bot-token"
 
 import pytest
 from fastapi import FastAPI
