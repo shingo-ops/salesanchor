@@ -1169,6 +1169,8 @@ ALTER TABLE {schema}.contact_contact_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.channel_masters ENABLE ROW LEVEL SECURITY;
 -- ADR-015 §7: テナント別 AI 対応プレイブック
 ALTER TABLE {schema}.lead_playbook ENABLE ROW LEVEL SECURITY;
+-- D-2: A在庫（ADR SA-04/05）
+ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
 -- Phase 1-B-2 Step 5d / PR γ: _customer_migration_map は migration 036 で DROP 済。
 -- D-2: A在庫（ADR SA-04/05）
 ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
@@ -1394,6 +1396,11 @@ BEGIN
     -- ADR-015 §7: テナント別 AI 対応プレイブック
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_lead_playbook' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_lead_playbook ON {schema}.lead_playbook
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- D-2: A在庫（ADR SA-04/05）— ポリシー名は既存テナント（migration 20260604_140000）と統一
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'own_inventory_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY own_inventory_tenant_isolation ON {schema}.own_inventory
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
 END $$

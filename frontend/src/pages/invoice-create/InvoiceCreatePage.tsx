@@ -16,7 +16,6 @@ import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import {
   type LineItem,
-  type QuoteDraft,
   type QuoteHandoffState,
   blankItem,
   buildInitialItems,
@@ -67,12 +66,9 @@ export default function InvoiceCreatePage() {
   const location = useLocation();
   const handoff = location.state as QuoteHandoffState;
   const draft = handoff?.draft;
-  const hasHandoff = !!(
-    (handoff?.selectedProducts && handoff.selectedProducts.length > 0) || draft
-  );
 
-  // 在庫表から（往復含む）来た場合は inventory（編集フォーム）モード、そうでなければ見積選択モード。
-  const [mode, setMode] = useState<"inventory" | "quote">(hasHandoff ? "inventory" : "quote");
+  // 見積選択モードで開始（往復フロー廃止）。
+  const [mode, setMode] = useState<"inventory" | "quote">("quote");
 
   // --- 編集フォーム（在庫表から / 見積から編集 で共通） ---
   const [companyId, setCompanyId] = useState<number | null>(draft?.companyId ?? null);
@@ -83,7 +79,6 @@ export default function InvoiceCreatePage() {
   const [taxAmount, setTaxAmount] = useState(draft?.taxAmount ?? "");
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const [items, setItems] = useState<LineItem[]>(() => buildInitialItems(handoff));
-  const [addMode, setAddMode] = useState<"inventory" | "search">("search");
   // #8: どの見積から読み込んだか（編集中の見積コード表示用）。
   const [sourceQuoteCode, setSourceQuoteCode] = useState<string | null>(null);
 
@@ -138,19 +133,6 @@ export default function InvoiceCreatePage() {
       },
     ]);
   };
-  // 「在庫表から」: ドラフトを持って在庫表へ。在庫表で選択して戻ると反映される。
-  const goToInventory = () => {
-    const currentDraft: QuoteDraft = { items, companyId, contactId, currency, notes, shippingFee, taxAmount };
-    navigate("/inventory", {
-      state: {
-        fromQuote: true,
-        returnTo: "/invoices/new",
-        draft: currentDraft,
-        preselectedInventoryIds: items.filter((i) => i.inventory_id != null).map((i) => i.inventory_id),
-      },
-    });
-  };
-
   // #8: 承認済み見積を編集可能な明細としてフォームへ読み込む。
   const loadQuoteForEdit = async (quoteId: number) => {
     setError("");
@@ -230,9 +212,6 @@ export default function InvoiceCreatePage() {
       setSaving(false);
     }
   };
-
-  // 在庫表起点で開いた場合のキャンセルは在庫表へ。
-  const cameFromInventory = hasHandoff;
 
   return (
     <div className="page">
@@ -421,34 +400,17 @@ export default function InvoiceCreatePage() {
             </table>
           </div>
 
-          {/* 明細の追加方法（見積作成と同仕様）: [在庫表から(往復)] / [検索して追加・新規追加] */}
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
-            {addMode === "search" ? (
-              <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
-            ) : (
-              <button type="button" className="btn-secondary" onClick={goToInventory} data-testid="invoice-add-from-inventory">{t("quotes.addFromInventory")}</button>
-            )}
-            <div role="radiogroup" aria-label={t("quotes.addMethod")} style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <input type="radio" name="invoice-add-mode" data-testid="invoice-add-mode-inventory" checked={addMode === "inventory"} onChange={() => setAddMode("inventory")} />
-                {t("quotes.addModeInventory")}
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <input type="radio" name="invoice-add-mode" data-testid="invoice-add-mode-search" checked={addMode === "search"} onChange={() => setAddMode("search")} />
-                {t("quotes.addModeSearch")}
-              </label>
-            </div>
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
           </div>
 
-          {addMode === "search" && (
-            <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
-              <InventorySearchBar
-                onSelect={appendFromSearch}
-                testIdPrefix="invoice-add-search"
-                placeholder={t("inventory.view.searchPlaceholder")}
-              />
-            </div>
-          )}
+          <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
+            <InventorySearchBar
+              onSelect={appendFromSearch}
+              testIdPrefix="invoice-add-search"
+              placeholder={t("inventory.view.searchPlaceholder")}
+            />
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
             <div className="form-group">
@@ -470,7 +432,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate(cameFromInventory ? "/inventory" : "/invoices")}>{t("common.cancel")}</button>
+            <button type="button" className="btn-secondary" onClick={() => navigate("/invoices")}>{t("common.cancel")}</button>
             <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</button>
           </div>
         </form>

@@ -88,6 +88,7 @@ export interface MarkReadResponse {
 
 export interface SendMessageRequest {
   text: string;
+  draft_id?: number;
 }
 
 export interface SendMessageResponse {
@@ -190,7 +191,9 @@ export async function sendMessage(
 ): Promise<SendMessageResponse> {
   return api.post<SendMessageResponse>(
     `/leads/${leadId}/messages`,
-    { text: request.text },
+    request.draft_id != null
+      ? { text: request.text, draft_id: request.draft_id }
+      : { text: request.text },
   );
 }
 

@@ -1161,7 +1161,8 @@
     "filter": {
       "allTypes": "All types",
       "allOfferTypes": "Stock & pre-order",
-      "allCategories": "All TCG series"
+      "allCategories": "All TCG series",
+      "otherTypes": "Other"
     },
     "resetSort": "Reset",
     "offerType": {
@@ -1184,7 +1185,8 @@
       "condition": "Condition",
       "unitPrice": "Unit price",
       "quantity": "Qty",
-      "supplier": "Supplier"
+      "supplier": "Supplier",
+      "releaseDate": "Release date"
     },
     "condition": {
       "shrink": "Shrink-wrapped",
@@ -2932,14 +2934,26 @@
     "lastScoredAt": "Last Scored At"
   },
   "translation": {
+    "sendGuard": {
+      "dialogTitle": "Translate before sending?",
+      "dialogBody": "This message contains Japanese. Translate and send?",
+      "translateAndSend": "Translate to English & Send",
+      "sendAsIs": "Send as-is",
+      "cancel": "Cancel",
+      "langToggleLabel": "Recipient language",
+      "langAuto": "Auto",
+      "langJa": "Japanese",
+      "langEn": "English"
+    },
     "outbound": {
       "title": "English Preview (Review before send)",
       "buttonTitle": "English Preview",
       "originalLabel": "Original (Japanese)",
-      "draftLabel": "English Draft (editable)",
+      "draftLabel": "English draft (editable)",
       "generateBtn": "Generate English Draft",
       "generating": "Generating...",
-      "confirmSend": "Confirm & Send",
+      "confirmSend": "Send",
+      "back": "Back",
       "confirming": "Sending...",
       "regenerate": "Regenerate",
       "lowConfidence": "Low Confidence",

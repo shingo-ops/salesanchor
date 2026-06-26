@@ -1161,7 +1161,8 @@
     "filter": {
       "allTypes": "全種別",
       "allOfferTypes": "在庫・予約すべて",
-      "allCategories": "全TCGシリーズ"
+      "allCategories": "全TCGシリーズ",
+      "otherTypes": "その他"
     },
     "resetSort": "リセット",
     "offerType": {
@@ -1184,7 +1185,8 @@
       "condition": "状態",
       "unitPrice": "単価",
       "quantity": "数量",
-      "supplier": "仕入元"
+      "supplier": "仕入元",
+      "releaseDate": "発売日"
     },
     "condition": {
       "shrink": "シュリンク付き",
@@ -2932,14 +2934,26 @@
     "lastScoredAt": "スコア計算日時"
   },
   "translation": {
+    "sendGuard": {
+      "dialogTitle": "翻訳して送りますか？",
+      "dialogBody": "日本語が含まれていますが翻訳して送信しますか？",
+      "translateAndSend": "英訳して送る",
+      "sendAsIs": "原文で送る",
+      "cancel": "キャンセル",
+      "langToggleLabel": "送信先言語",
+      "langAuto": "自動",
+      "langJa": "日本語",
+      "langEn": "英語"
+    },
     "outbound": {
       "title": "英訳プレビュー（送信前確認）",
       "buttonTitle": "英訳プレビュー",
       "originalLabel": "原文（日本語）",
-      "draftLabel": "英訳下訳（編集可）",
+      "draftLabel": "英訳下書き（編集可）",
       "generateBtn": "英訳を生成",
       "generating": "生成中...",
-      "confirmSend": "確認して送信",
+      "confirmSend": "送信",
+      "back": "戻る",
       "confirming": "送信中...",
       "regenerate": "再生成",
       "lowConfidence": "低確信度",

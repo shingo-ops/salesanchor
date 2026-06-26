@@ -274,3 +274,59 @@ jobs:
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
           fi
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック5（新規）: タイムスタンプ重複チェック（新規 vs main既存／PR内同士）
+      #
+      # 背景: 並行エージェント・並行作業で同一 YYYYMMDD_HHMMSS を付けた migration が
+      #       複数 PR から同時に develop/main に流れ込むと、run_all_migrations.sh の
+      #       手書き登録でしか順序が担保されないため管理コストが増大する。
+      #       PR段階で差分ベースに捕捉し、HHMMSS を変えて一意化させる。
+      # 設計: docs/handoff/migration-timestamp-dup-guard/design.md
+      # ──────────────────────────────────────────────────────────────────────
+      - name: タイムスタンプ重複チェック（新規 vs main既存／PR内同士）
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # PRで新規追加された migrations/*.sql（:81-82 と同じ抽出条件）
+          NEW_SQL=$(git diff "$BASE" "$HEAD" --name-only --diff-filter=A \
+            | grep -E '^migrations/[0-9]{8}_[0-9]{6}_.*\.sql$' || true)
+
+          if [ -z "$NEW_SQL" ]; then
+            echo "✅ 新規追加の timestamp 形式 migration なし。重複チェックskip。"
+            exit 0
+          fi
+
+          # base(main)時点に存在した全 migration の刻印集合（重複は一意化）
+          EXISTING_STAMPS=$(git ls-tree -r --name-only "$BASE" migrations/ \
+            | grep -oE '[0-9]{8}_[0-9]{6}' | sort -u || true)
+
+          DUP_FOUND=0
+
+          # (A) 新規 vs main既存
+          for f in $NEW_SQL; do
+            stamp=$(basename "$f" | grep -oE '^[0-9]{8}_[0-9]{6}' || true)
+            [ -z "$stamp" ] && continue
+            if echo "$EXISTING_STAMPS" | grep -qx "$stamp"; then
+              echo "❌ $f の刻印 $stamp は既存 migration と重複しています"
+              DUP_FOUND=1
+            fi
+          done
+
+          # (B) PR内の新規同士で刻印重複
+          INTERNAL_DUP=$(echo "$NEW_SQL" | xargs -r -n1 basename \
+            | grep -oE '^[0-9]{8}_[0-9]{6}' | sort | uniq -d || true)
+          if [ -n "$INTERNAL_DUP" ]; then
+            echo "❌ PR内で刻印が重複しています: $INTERNAL_DUP"
+            DUP_FOUND=1
+          fi
+
+          if [ "$DUP_FOUND" -eq 1 ]; then
+            echo ""
+            echo "タイムスタンプ(YYYYMMDD_HHMMSS)が重複しています。"
+            echo "HHMMSS を変えて一意な刻印にしてから再 push してください。"
+            exit 1
+          fi
+          echo "✅ タイムスタンプ重複なし"
