@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 
 export interface ContactFormState {
   company_id: string;
@@ -30,23 +31,26 @@ interface Props {
 
 export function ContactFormFields({ form, onChange, companies }: Props) {
   const { t } = useTranslation();
+  const companyOptions = companies.map((c) => ({
+    value: String(c.id),
+    label: `${c.name}（${c.company_code}）`,
+  }));
+  const statusOptions = [
+    { value: "active", label: t("customers.status_active") },
+    { value: "inactive", label: t("customers.status_inactive") },
+    { value: "archived", label: t("customers.status_archived") },
+    { value: "pending_dedup_review", label: t("contacts.statusPendingDedupOption") },
+  ];
   return (
     <>
-      <div className="form-group">
-        <label>{t("contacts.companyLabel")}</label>
-        <select
-          required
-          value={form.company_id}
-          onChange={(e) => onChange("company_id", e.target.value)}
-        >
-          <option value="">{t("common.pleaseSelect")}</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}（{c.company_code}）
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label={t("contacts.companyLabel")}
+        required
+        value={form.company_id}
+        onChange={(e) => onChange("company_id", e.target.value)}
+        options={companyOptions}
+        placeholder={t("common.pleaseSelect")}
+      />
       <div className="form-group">
         <label>{t("contacts.surname")}</label>
         <input
@@ -76,18 +80,12 @@ export function ContactFormFields({ form, onChange, companies }: Props) {
           onChange={(e) => onChange("primary_phone", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("common.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-          <option value="archived">archived</option>
-          <option value="pending_dedup_review">{t("contacts.statusPendingDedupOption")}</option>
-        </select>
-      </div>
+      <Select
+        label={t("common.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
     </>
   );
 }

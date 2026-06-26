@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 
 export interface DealFormState {
   title: string;
@@ -26,6 +27,8 @@ interface Props {
 
 export function DealFormFields({ form, onChange }: Props) {
   const { t } = useTranslation();
+  const statusOptions = STATUSES.map((s) => ({ value: s, label: t(`deals.status_${s}`) }));
+  const stageOptions = STAGES.map((s) => ({ value: s, label: t(`deals.stage_${s}`) }));
   return (
     <>
       <div className="form-group">
@@ -36,28 +39,18 @@ export function DealFormFields({ form, onChange }: Props) {
           onChange={(e) => onChange("title", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("common.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{t(`deals.status_${s}`)}</option>
-          ))}
-        </select>
-      </div>
-      <div className="form-group">
-        <label>{t("dashboard.stage")}</label>
-        <select
-          value={form.stage}
-          onChange={(e) => onChange("stage", e.target.value)}
-        >
-          {STAGES.map((s) => (
-            <option key={s} value={s}>{t(`deals.stage_${s}`)}</option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label={t("common.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
+      <Select
+        label={t("dashboard.stage")}
+        value={form.stage}
+        onChange={(e) => onChange("stage", e.target.value)}
+        options={stageOptions}
+      />
       <div className="form-group">
         <label>{t("deals.amount")}</label>
         <input
