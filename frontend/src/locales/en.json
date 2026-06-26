@@ -341,6 +341,7 @@
     "fedexEtdGuideStep1_5": "In Step 3 \"Review\", confirm all 4 APIs are included and Country/Territory is Japan. Agree to the terms and click \"Create\".",
     "fedexEtdGuideStep1_6": "Your API project overview page is ready. Note your API Key / Secret Key / Account Number.",
     "fedexEtdGuideStep1_6b": "Confirm all 4 APIs are showing \"Active\" status.",
+    "fedexEtdGuideStep1_7": "Now enter the test credentials you obtained from the FedEx portal into SalesAnchor. Paste your API Key and Secret Key into the form below and click \"Save and Test\".",
     "fedexEtdGuideScreenshotAlt": "FedEx Developer Portal screenshot",
     "fedexEtdGuideStep2Title": "Add the required APIs",
     "fedexEtdGuideStep2Heading": "Enter Credentials",
