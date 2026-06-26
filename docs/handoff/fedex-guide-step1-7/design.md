@@ -92,4 +92,4 @@ production 鍵は ETD go-live 時（別フロー）に登録するため、こ�
 - `migrations/` — 不変
 - `.github/workflows/` — 不変
 - `frontend/tests-e2e/` — FedEx ガイド専用 spec なし（手動確認）
-- `CarrierCredentialForm.tsx` — 不変（第1段の実装をそのまま再利用）
+- `frontend/src/pages/integrations/CarrierCredentialForm.tsx` — 不変（第1段の実装をそのまま再利用）
