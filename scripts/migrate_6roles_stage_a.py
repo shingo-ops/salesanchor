@@ -30,19 +30,20 @@
     - seed_system_roles の ON CONFLICT (tenant_id, name) DO UPDATE で重複作成なし
     - 改名時に「リーダー」「仕入れ担当」「発送担当」が残っていない → 何もしない
 
-【⚠ 重要】
-  本番 tenant_004 への適用は Shingo GO を取得してから手動実行。
-  この段階では tenant_006（撮影テナント）のみ。
+【安全ブレーキ】
+  --tenant-id は必須（未指定で終了）。
+  対象に tenant_id=4（本番）が含まれる場合は --yes-production フラグが必要。
 
 実行方法（VPS、backend コンテナ内）:
-  # tenant_006 のみ:
+  # tenant_006 のみ（通常）:
   docker compose exec backend python /app/scripts/migrate_6roles_stage_a.py --tenant-id 6
 
-  # 全テナント（本番 GO 後）:
-  docker compose exec backend python /app/scripts/migrate_6roles_stage_a.py
+  # 本番 tenant_004 を含む場合（Shingo GO 後のみ）:
+  docker compose exec backend python /app/scripts/migrate_6roles_stage_a.py --tenant-id 4 --yes-production
 
 変更履歴:
   2026-06-26: 初版作成（共通6ロール化 段階A）
+  2026-06-26: --tenant-id 必須化・本番ガード追加・件数ログ追加
 """
 from __future__ import annotations
 
@@ -70,6 +71,9 @@ if not DATABASE_URL:
     logger.error("DATABASE_URL 環境変数が設定されていません")
     sys.exit(1)
 
+# 本番テナントID（このIDを含む場合 --yes-production が必須）
+_PRODUCTION_TENANT_IDS = {4}
+
 # 改名マッピング: {旧名: 新名}
 # is_system=false のロールのみ対象（is_system チェックを SQL で行う）
 _RENAME_MAP = {
@@ -79,12 +83,16 @@ _RENAME_MAP = {
 }
 
 
-async def _get_active_tenants(engine) -> list[tuple[int, str]]:
-    async with engine.connect() as conn:
-        result = await conn.execute(
-            text("SELECT id, tenant_code FROM public.tenants WHERE is_active = true ORDER BY id")
-        )
-        return [(row.id, row.tenant_code) for row in result]
+async def _count_roles(conn, schema: str, tenant_id: int) -> tuple[int, int]:
+    """roles 件数と user_roles 件数を返す。"""
+    roles_count = (await conn.execute(
+        text(f"SELECT COUNT(*) FROM {schema}.roles WHERE tenant_id = :tid"),
+        {"tid": tenant_id},
+    )).scalar_one()
+    user_roles_count = (await conn.execute(
+        text(f"SELECT COUNT(*) FROM {schema}.user_roles"),
+    )).scalar_one()
+    return int(roles_count), int(user_roles_count)
 
 
 async def _migrate_tenant(engine, tenant_id: int) -> dict:
@@ -97,6 +105,13 @@ async def _migrate_tenant(engine, tenant_id: int) -> dict:
     async with engine.begin() as conn:
         await conn.execute(text(f"SET search_path = {schema}, public"))
         await conn.execute(text(f"SET app.tenant_id = '{tenant_id}'"))
+
+        # --- 件数ログ（前） ---
+        roles_before, user_roles_before = await _count_roles(conn, schema, tenant_id)
+        logger.info(
+            "  [before] roles=%d / user_roles=%d",
+            roles_before, user_roles_before,
+        )
 
         # --- ① 「在れば改名／無ければ追加」の判定 ---
         for old_name, new_name in _RENAME_MAP.items():
@@ -144,10 +159,34 @@ async def _migrate_tenant(engine, tenant_id: int) -> dict:
         # ON CONFLICT が発動して追加分は created_row のみ処理される。
         await seed_system_roles(conn, tenant_id, schema)
 
+        # --- 件数ログ（後） ---
+        roles_after, user_roles_after = await _count_roles(conn, schema, tenant_id)
+        logger.info(
+            "  [after]  roles=%d (+%d) / user_roles=%d (変化=%+d)",
+            roles_after, roles_after - roles_before,
+            user_roles_after, user_roles_after - user_roles_before,
+        )
+
     return {"renamed": renamed, "skipped": skipped, "added": added}
 
 
-async def main(target_tenant_ids: list[int] | None) -> None:
+async def main(tenant_ids: list[int], yes_production: bool) -> None:
+    # --- 本番ガード ---
+    production_targets = _PRODUCTION_TENANT_IDS & set(tenant_ids)
+    if production_targets and not yes_production:
+        logger.error(
+            "対象に本番テナント %s が含まれています。"
+            " 本番適用には --yes-production フラグが必要です。中断します。",
+            sorted(production_targets),
+        )
+        sys.exit(1)
+
+    if yes_production and production_targets:
+        logger.warning(
+            "⚠ 本番テナント %s を対象に実行します（--yes-production 指定）。",
+            sorted(production_targets),
+        )
+
     url = DATABASE_URL
     if url.startswith("postgresql://"):
         url = "postgresql+asyncpg://" + url[len("postgresql://"):]
@@ -155,18 +194,12 @@ async def main(target_tenant_ids: list[int] | None) -> None:
     engine = create_async_engine(url, echo=False)
     try:
         logger.info("=== 共通6ロール化 段階A 開始 ===")
-
-        if target_tenant_ids:
-            tenants = [(tid, f"tenant_{tid:03d}") for tid in target_tenant_ids]
-            logger.info("対象テナント（指定）: %s", target_tenant_ids)
-        else:
-            tenants = await _get_active_tenants(engine)
-            logger.info("対象テナント（全件）: %d 件", len(tenants))
+        logger.info("対象テナントID: %s", tenant_ids)
 
         total_renamed = 0
         total_added = 0
-        for tenant_id, tenant_code in tenants:
-            logger.info("--- tenant_id=%d (%s) ---", tenant_id, tenant_code)
+        for tenant_id in tenant_ids:
+            logger.info("--- tenant_id=%d ---", tenant_id)
             result = await _migrate_tenant(engine, tenant_id)
             for r in result["renamed"]:
                 logger.info("  ✓ 改名: %s", r)
@@ -183,13 +216,32 @@ async def main(target_tenant_ids: list[int] | None) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="共通6ロール化 段階A")
+    parser = argparse.ArgumentParser(
+        description="共通6ロール化 段階A — 既存テナントのロール名を揃える",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+例:
+  # tenant_006 のみ（通常）:
+  python migrate_6roles_stage_a.py --tenant-id 6
+
+  # 本番 tenant_004 を含む場合（Shingo GO 後のみ）:
+  python migrate_6roles_stage_a.py --tenant-id 4 --yes-production
+        """,
+    )
     parser.add_argument(
         "--tenant-id",
         type=int,
         nargs="+",
         dest="tenant_ids",
-        help="対象テナントID（省略時は全テナント）",
+        required=True,  # 必須（未指定で終了）
+        metavar="ID",
+        help="対象テナントID（必須・複数指定可）。例: --tenant-id 6",
+    )
+    parser.add_argument(
+        "--yes-production",
+        action="store_true",
+        dest="yes_production",
+        help="本番テナント（tenant_id=4）を含む場合に必要な明示フラグ",
     )
     args = parser.parse_args()
-    asyncio.run(main(args.tenant_ids))
+    asyncio.run(main(args.tenant_ids, args.yes_production))

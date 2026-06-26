@@ -143,7 +143,7 @@ DEFAULT_ROLES = [
         "priority": 450,
         "is_system": False,
         "permissions": [
-            "dashboard.view",
+            "dashboard.view", "reports.view",
             # 商品・仕入先
             "products.view",
             "suppliers.view", "suppliers.create", "suppliers.update",
@@ -161,7 +161,7 @@ DEFAULT_ROLES = [
         "priority": 350,
         "is_system": False,
         "permissions": [
-            "dashboard.view",
+            "dashboard.view", "reports.view",
             # 商品確認
             "products.view",
             # 注文確認・更新
