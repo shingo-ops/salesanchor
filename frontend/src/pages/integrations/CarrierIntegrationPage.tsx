@@ -15,6 +15,7 @@
  *   2026-06-10: ADR-125 UX — 登録済み可視化・environment 固定・ポカヨケ改善
  *   2026-06-12: ADR-129 — FedEx 環境セレクタ追加 + Label Validation タブ追加
  *   2026-06-12: PR-A  — view/edit 分離・タブ改名「連携ガイド」
+ *   2026-06-26: 鍵入力フォームを CarrierCredentialForm として切り出し（挙動不変）
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -23,22 +24,19 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Badge } from "../../components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
+import CarrierCredentialForm, {
+  type Carrier,
+  type Env,
+  CRED_LABEL,
+  SHOWS_ACCOUNT_NUMBER,
+  SUPPORTS_ENV_SELECT,
+} from "./CarrierCredentialForm";
 import "./CarrierIntegrationPage.css";
-
-type Carrier = "fedex" | "dhl" | "ups";
-type Env = "production" | "sandbox";
 
 const NAV_KEY: Record<Carrier, `nav.${string}`> = {
   fedex: "nav.integrationFedex",
   dhl: "nav.integrationDhl",
   ups: "nav.integrationUps",
-};
-
-// 認証情報の表示ラベル（FedEx=APIキー/シークレットキー、UPS=Client ID/Secret、DHL=API Key/Secret）
-const CRED_LABEL: Record<Carrier, { id: string; secret: string }> = {
-  fedex: { id: "carrierIntegration.labelFedExApiKey", secret: "carrierIntegration.labelFedExSecretKey" },
-  ups: { id: "carrierIntegration.labelClientId", secret: "carrierIntegration.labelClientSecret" },
-  dhl: { id: "carrierIntegration.labelApiKey", secret: "carrierIntegration.labelApiSecret" },
 };
 
 interface CarrierStatus {
@@ -66,12 +64,6 @@ interface EnvData {
   lastTested: Date | null;
 }
 
-// FedEx / UPS はアカウント番号が必要（ADR-125 D2）
-const SHOWS_ACCOUNT_NUMBER: ReadonlySet<Carrier> = new Set(["fedex", "ups"]);
-
-// ADR-129: FedEx のみ環境切り替えをサポート
-const SUPPORTS_ENV_SELECT: ReadonlySet<Carrier> = new Set(["fedex"]);
-
 const EMPTY_ENV_DATA: EnvData = { status: null, testResult: null, lastTested: null };
 
 export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }) {
@@ -81,9 +73,6 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
   const [sandboxData, setSandboxData] = useState<EnvData>(EMPTY_ENV_DATA);
   // editingEnv: 編集フォームを展開中の環境（null = ビューモード）
   const [editingEnv, setEditingEnv] = useState<Env | null>(null);
-  const [formClientId, setFormClientId] = useState("");
-  const [formClientSecret, setFormClientSecret] = useState("");
-  const [formAccountNumber, setFormAccountNumber] = useState("");
   const [deleteConfirmEnv, setDeleteConfirmEnv] = useState<Env | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -112,36 +101,8 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
   }, [loadStatus]);
 
   const openEdit = (env: Env) => {
-    setFormClientId("");
-    setFormClientSecret("");
-    setFormAccountNumber("");
     setError("");
     setEditingEnv(env);
-  };
-
-  const handleSaveAndTest = async () => {
-    if (!editingEnv) return;
-    setBusy(true);
-    setError("");
-    try {
-      await api.put(`/integrations/carriers/${carrier}/credentials`, {
-        client_id: formClientId,
-        client_secret: formClientSecret,
-        environment: SUPPORTS_ENV_SELECT.has(carrier) ? editingEnv : "production",
-        ...(SHOWS_ACCOUNT_NUMBER.has(carrier) && formAccountNumber
-          ? { account_number: formAccountNumber }
-          : {}),
-      });
-      // 保存成功: 接続テスト実行 → ステータス再取得（A4: 順次実行で結果をDBに保存）
-      const query = SUPPORTS_ENV_SELECT.has(carrier) ? `?environment=${editingEnv}` : "";
-      await api.post<TestResult>(`/integrations/carriers/${carrier}/test-connection${query}`, {}).catch(() => null);
-      await loadStatus();
-      setEditingEnv(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.operationError"));
-    } finally {
-      setBusy(false);
-    }
   };
 
   const handleTest = async (env: Env) => {
@@ -214,76 +175,17 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
     // ── 編集フォーム ──
     if (isEditing) {
       return (
-        <section key={`${env}-edit`} className="card carrier-env-card carrier-env-card--editing">
-          <div className="carrier-env-card__header">
-            <h3 className="carrier-env-card__title">
-              {t("carrierIntegration.editFormTitle", { env: cardTitle })}
-            </h3>
-          </div>
-          <p className="carrier-env-card__hint">{t("carrierIntegration.editFormHint")}</p>
-          <div className="update-form">
-            <div className="form-group">
-              <label htmlFor={`cred-id-${env}`}>{t(labels.id)}</label>
-              <input
-                id={`cred-id-${env}`}
-                type="text"
-                value={formClientId}
-                autoComplete="off"
-                placeholder={t("carrierIntegration.apiKeyPlaceholder")}
-                onChange={(e) => setFormClientId(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor={`cred-secret-${env}`}>{t(labels.secret)}</label>
-              <input
-                id={`cred-secret-${env}`}
-                type="password"
-                value={formClientSecret}
-                autoComplete="new-password"
-                placeholder={t("carrierIntegration.secretPlaceholder")}
-                onChange={(e) => setFormClientSecret(e.target.value)}
-              />
-            </div>
-            {SHOWS_ACCOUNT_NUMBER.has(carrier) && (
-              <div className="form-group">
-                <label htmlFor={`cred-account-${env}`}>
-                  {t("carrierIntegration.labelAccountNumber")}
-                </label>
-                <input
-                  id={`cred-account-${env}`}
-                  type="text"
-                  value={formAccountNumber}
-                  autoComplete="off"
-                  placeholder={t("carrierIntegration.accountNumberEditPlaceholder")}
-                  onChange={(e) => setFormAccountNumber(e.target.value)}
-                />
-                <p className="carrier-env-card__hint">
-                  {t("carrierIntegration.accountNumberHint")}
-                </p>
-              </div>
-            )}
-          </div>
-          {error && <p className="error-message">{error}</p>}
-          <div className="form-actions">
-            <button
-              className="btn-secondary"
-              disabled={busy}
-              onClick={() => {
-                setEditingEnv(null);
-                setError("");
-              }}
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              className="btn-primary"
-              disabled={busy || !formClientId || !formClientSecret}
-              onClick={handleSaveAndTest}
-            >
-              {busy ? t("carrierIntegration.saving") : t("carrierIntegration.saveAndTest")}
-            </button>
-          </div>
-        </section>
+        <CarrierCredentialForm
+          key={env}
+          carrier={carrier}
+          env={env}
+          envLabel={cardTitle}
+          onSaved={loadStatus}
+          onCancel={() => {
+            setEditingEnv(null);
+            setError("");
+          }}
+        />
       );
     }
 
