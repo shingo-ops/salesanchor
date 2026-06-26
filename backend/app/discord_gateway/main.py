@@ -5,7 +5,7 @@ import signal
 import sys
 
 from app.discord_gateway.client import run_gateway
-from app.discord_gateway.config import get_log_level, load_single_bot_config
+from app.discord_gateway.config import SingleBotConfig, get_log_level, load_single_bot_config
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,7 @@ def _install_signal_handlers(stop_event: asyncio.Event) -> None:
         loop.add_signal_handler(sig, stop_event.set)
 
 
-async def _run_with_shutdown(config: "SingleBotConfig | None") -> int:  # type: ignore[name-defined]  # noqa: F821
-    from app.discord_gateway.config import SingleBotConfig  # local import to keep type ref
-
+async def _run_with_shutdown(config: SingleBotConfig | None) -> int:
     stop_event = asyncio.Event()
     _install_signal_handlers(stop_event)
 
