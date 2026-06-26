@@ -67,8 +67,17 @@
 }
 
 /* ── 2. Select 専用 (0,1,0) ── */
+/* appearance: none で OS標準▽を隠し、共通SVGアイコンを background-image で表示。       */
+/* padding-right: var(--space-5) = 20px — SVG 12px + 右端 var(--space-2) 8px を確保。 */
+/* stroke='%23888' は URL エンコードの #888（check-css-colors は %23 を検出しない）。   */
 .comp-field__select {
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--space-5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-2) center;
 }
 
 /* ── 3. フォーカス状態 (0,2,0) ── */
@@ -116,6 +125,11 @@
   min-height: var(--comp-input-height-sm);
 }
 
+/* sm の padding shorthand が padding-right を上書きするため select のみ再指定 */
+.comp-field--sm .comp-field__select {
+  padding-right: var(--space-5);
+}
+
 .comp-field--sm .comp-field__textarea {
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-sm);
@@ -132,6 +146,11 @@
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-md);
   min-height: var(--comp-input-height-mobile);
+}
+
+/* lg の padding shorthand が padding-right を上書きするため select のみ再指定 */
+.comp-field--lg .comp-field__select {
+  padding-right: var(--space-5);
 }
 
 .comp-field--lg .comp-field__label {
