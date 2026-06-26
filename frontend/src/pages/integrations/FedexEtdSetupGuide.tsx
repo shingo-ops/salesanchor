@@ -3,6 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Badge } from "../../components/Badge";
 import { Check } from "../../constants/icons";
+import CarrierCredentialForm from "./CarrierCredentialForm";
 import "./FedexLabelValidationTab.css";
 
 type Env = "sandbox" | "production";
@@ -69,6 +70,8 @@ interface SubstepItem {
   label: string;
   descriptions: string[];
   screenshots: Array<{ src: string }>;
+  /** スクリーンショット後に描画するカスタムコンテンツ（1-7 のフォーム等） */
+  children?: ReactNode;
 }
 
 function SubstepPane({
@@ -77,12 +80,15 @@ function SubstepPane({
   onLastReached,
   onAdvance,
   advanceLabel,
+  canAdvanceFromLast = true,
 }: {
   substeps: SubstepItem[];
   screenshotAlt: string;
   onLastReached?: (isLast: boolean) => void;
   onAdvance?: () => void;
   advanceLabel?: string;
+  /** false のとき最終サブステップの「次へ進む」ボタンを非表示にする（フォーム保存後に true にする） */
+  canAdvanceFromLast?: boolean;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = substeps[activeIndex] ?? substeps[0];
@@ -134,7 +140,8 @@ function SubstepPane({
             />
           </a>
         ))}
-        {isLast && onAdvance && (
+        {active.children}
+        {isLast && canAdvanceFromLast && onAdvance && (
           <div className="form-actions etd-guide__substep-advance">
             <button type="button" className="btn-primary" onClick={onAdvance}>
               {advanceLabel}
@@ -181,6 +188,10 @@ export function FedexEtdSetupGuide({
   const { t } = useTranslation();
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [portalAtEnd, setPortalAtEnd] = useState(false);
+  /** 1-7 フォームで保存+接続テスト成功したか（「ステップ2へ進む」の表示条件） */
+  const [sandboxFormSaved, setSandboxFormSaved] = useState(false);
+  /** 1-7 フォームを表示するか（保存成功後に非表示→成功バッジに切り替える） */
+  const [showCredentialForm, setShowCredentialForm] = useState(true);
   const [productionStatus, setProductionStatus] = useState<CarrierStatus | null>(null);
   const [sandboxStatus, setSandboxStatus] = useState<CarrierStatus | null>(null);
   const [statusError, setStatusError] = useState("");
@@ -380,6 +391,7 @@ export function FedexEtdSetupGuide({
             onLastReached={setPortalAtEnd}
             onAdvance={advance}
             advanceLabel={t("carrierIntegration.fedexEtdGuideStep1AdvanceButton")}
+            canAdvanceFromLast={sandboxFormSaved}
             substeps={[
               {
                 label: "1-1",
@@ -416,6 +428,30 @@ export function FedexEtdSetupGuide({
                   t("carrierIntegration.fedexEtdGuideStep1_6b"),
                 ],
                 screenshots: [{ src: "/images/fedex-setup/step1-07-overview-v2.png" }],
+              },
+              {
+                label: "1-7",
+                descriptions: [t("carrierIntegration.fedexEtdGuideStep1_7")],
+                screenshots: [],
+                children: showCredentialForm ? (
+                  <CarrierCredentialForm
+                    carrier="fedex"
+                    env="sandbox"
+                    envLabel={t("carrierIntegration.fedexEtdGuideEnvironmentSandbox")}
+                    onSaved={async () => {
+                      const sandbox = await api.get<CarrierStatus>(
+                        "/integrations/carriers/fedex/status?environment=sandbox",
+                      );
+                      setSandboxStatus(sandbox);
+                      setSandboxFormSaved(true);
+                    }}
+                    onCancel={() => setShowCredentialForm(false)}
+                  />
+                ) : (
+                  <Badge variant="success" size="sm" dot>
+                    {t("carrierIntegration.fedexEtdGuideConnected")}
+                  </Badge>
+                ),
               },
             ]}
           />
