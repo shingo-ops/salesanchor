@@ -291,7 +291,47 @@ gh api -X PATCH repos/shingo-ops/salesanchor/branches/main/protection/required_s
 - `pytest (SQLite + PostgreSQL RLS)`
 - `Lint & Dark Mode Check (ADR-067)`
 
-Ruleset（3件）と一部重複。将来的には Ruleset に統合して Legacy Branch Protection の status check 要件を削除することが望ましい（不可逆操作のため PO 承認必須）。
+Ruleset（13件、後述 §9）と一部重複。将来的には Ruleset に統合して Legacy Branch Protection の status check 要件を削除することが望ましい（不可逆操作のため PO 承認必須）。
+
+---
+
+## 9. develop Ruleset（ID: 16619490）必須チェック一覧
+
+| # | チェック名 | 追加日 | 備考 |
+|---|-----------|--------|------|
+| 1 | `pytest (SQLite + PostgreSQL RLS)` | 初期 | Legacy BP と重複 |
+| 2 | `テナントスキーマ整合性チェック` | 初期 | |
+| 3 | `マイグレーションSQL 実行テスト（実DB）` | 初期 | Legacy BP と重複 |
+| 4 | `models.py に新 Column → deploy.yml にマイグレーション追記必須` | 初期 | Legacy BP と重複 |
+| 5 | `ADR-072 tenant schema lint (strict mode)` | 初期 | |
+| 6 | `Lint & Dark Mode Check (ADR-067)` | 初期 | Legacy BP と重複 |
+| 7 | `Playwright E2E (chromium)` | 初期 | |
+| 8 | `gitleaks（シークレット漏洩検出）` | 初期 | |
+| 9 | `CLAUDE.md line count check` | 初期 | |
+| 10 | `ADR index is up to date` | 初期 | |
+| 11 | `process-artifacts gate` | 初期 | |
+| 12 | `dangling-route gate` | 初期 | |
+| 13 | `UI governance gate` | 2026-06-25 | ADR-144。生 `<select>`/`<input>`/タブ増加を PR 単位で検出 |
+
+### ロールバックコマンド（UI governance gate 削除）
+
+UI governance gate を Ruleset から外す必要が生じた場合（PO 承認必須）:
+
+```bash
+# 1. 現在の Ruleset 定義を取得
+gh api repos/shingo-ops/salesanchor/rulesets/16619490 > /tmp/ruleset-current.json
+
+# 2. UI governance gate を除いた required_status_checks リストを生成
+jq '.rules |= map(if .type == "required_status_checks" then .parameters.required_status_checks |= map(select(.context != "UI governance gate")) else . end)' /tmp/ruleset-current.json > /tmp/ruleset-without-gate.json
+
+# 3. PUT で適用（shingo-ops 権限必要）
+curl -s -X PUT \
+  -H "Authorization: Bearer $(gh auth token -u shingo-ops)" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/shingo-ops/salesanchor/rulesets/16619490 \
+  -d @/tmp/ruleset-without-gate.json | jq '{id,name,updated_at}'
+```
 
 ---
 

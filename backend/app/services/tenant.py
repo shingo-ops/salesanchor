@@ -24,12 +24,15 @@ from __future__ import annotations
     companies モデルのみ）。company_discord を追加。
 """
 
+import logging
 import re
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
+
+logger = logging.getLogger(__name__)
 
 # GAS版互換の既定ロール定義。テナント作成時に自動シードされる。
 #
@@ -39,7 +42,10 @@ from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 #   - list[str]: 指定された権限キーのみ付与
 #
 # is_system=True の役割は編集/削除不可（オーナーのみ）。
-# その他の4役割は default として作成されるがテナント管理者が自由に編集可能。
+# その他の5役割は default として作成されるがテナント管理者が自由に編集可能。
+#
+# 変更履歴:
+#   2026-06-26: 共通6ロール化 段階A — リーダー→マネージャー改名、仕入れ・発送を追加
 DEFAULT_ROLES = [
     {
         "name": "オーナー",
@@ -58,7 +64,7 @@ DEFAULT_ROLES = [
         "description": "システム設定以外の全機能を管理する管理者",
     },
     {
-        "name": "リーダー",
+        "name": "マネージャー",
         "color": "#3b82f6",  # 青
         "priority": 500,
         "is_system": False,
@@ -83,7 +89,7 @@ DEFAULT_ROLES = [
             "staff_reports.view_own", "staff_reports.view_team", "staff_reports.create", "staff_reports.review",
             "archive.view",
         ],
-        "description": "チーム単位でリードや案件を統括するリーダー",
+        "description": "チーム単位でリードや案件を統括するマネージャー",
     },
     {
         "name": "営業",
@@ -130,6 +136,42 @@ DEFAULT_ROLES = [
             "staff_reports.view_own", "staff_reports.create",
         ],
         "description": "顧客からの問い合わせ対応を担当するカスタマーサポート",
+    },
+    {
+        "name": "仕入れ",
+        "color": "#06b6d4",  # シアン
+        "priority": 450,
+        "is_system": False,
+        "permissions": [
+            "dashboard.view", "reports.view",
+            # 商品・仕入先
+            "products.view",
+            "suppliers.view", "suppliers.create", "suppliers.update",
+            # 発注管理（フル）
+            "purchase_orders.view", "purchase_orders.create",
+            "purchase_orders.update", "purchase_orders.receive",
+            # Phase 4
+            "staff_reports.view_own", "staff_reports.create",
+        ],
+        "description": "仕入先管理と発注業務を担当する仕入れ担当者",
+    },
+    {
+        "name": "発送",
+        "color": "#84cc16",  # ライム
+        "priority": 350,
+        "is_system": False,
+        "permissions": [
+            "dashboard.view", "reports.view",
+            # 商品確認
+            "products.view",
+            # 注文確認・更新
+            "orders.view", "orders.update",
+            # 配送管理（フル）
+            "shipping.view", "shipping.calculate", "shipping.manage",
+            # Phase 4
+            "staff_reports.view_own", "staff_reports.create",
+        ],
+        "description": "受注後の梱包・出荷・配送を担当する発送担当者",
     },
 ]
 
@@ -1130,6 +1172,8 @@ ALTER TABLE {schema}.lead_playbook ENABLE ROW LEVEL SECURITY;
 -- D-2: A在庫（ADR SA-04/05）
 ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
 -- Phase 1-B-2 Step 5d / PR γ: _customer_migration_map は migration 036 で DROP 済。
+-- D-2: A在庫（ADR SA-04/05）
+ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
 """
 
 # テナント分離ポリシー（DO $$ ... END $$ ブロックは1ステートメントとして実行する。
@@ -1194,6 +1238,11 @@ BEGIN
     -- Phase 2: 販売・財務プロセスのテーブル
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_products' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_products ON {schema}.products
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- D-2: A在庫（ADR SA-04/05）— ポリシー名は既存テナント（migration 20260604_140000）と統一
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'own_inventory_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY own_inventory_tenant_isolation ON {schema}.own_inventory
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_shipping_zones' AND schemaname = '{schema_raw}') THEN
@@ -1473,13 +1522,15 @@ async def seed_default_channel_masters(db: AsyncSession, tenant_id: int, schema_
 
 async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) -> None:
     """
-    GAS版互換の既定ロールをシードする（冪等）。
+    共通6ロールをシードする（冪等）。
 
     - オーナー (system): 全権限、削除/編集不可
     - システム管理者: system.manage 以外の全権限、編集可
-    - リーダー: チーム単位のリード/案件管理、編集可
+    - マネージャー: チーム単位のリード/案件管理、編集可
     - 営業: 顧客〜案件〜注文の販売サイクル、編集可
     - CS: 顧客フォローアップ、編集可
+    - 仕入れ: 仕入先管理・発注業務、編集可
+    - 発送: 梱包・出荷・配送管理、編集可
 
     非システムロールは「名前が既存でない場合のみ」権限を初期設定する。
     既に存在する場合は権限のカスタマイズを上書きしない（priority/descriptionのみ更新）。
@@ -1620,25 +1671,37 @@ async def create_tenant_schema(
     # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
     #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
     #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
+    #
+    #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
+    #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
+    #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
+    #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
+    #    外側トランザクションを生かしたまま警告ログを出す。
     try:
-        await db.execute(
-            text(
-                "INSERT INTO public.tenant_settings "
-                "(tenant_id, spreadsheet_phase, "
-                " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
-                " quote_validity_days, default_currency, document_language, "
-                " duty_incoterms, issue_mode) "
-                "VALUES (:tid, 'A', "
-                " 'none', 0, 0, "
-                " 1, 'JPY', 'en', "
-                " 'DAP', 'pdf') "
-                "ON CONFLICT (tenant_id) DO NOTHING"
-            ),
-            {"tid": safe_id},
+        async with db.begin_nested():
+            await db.execute(
+                text(
+                    "INSERT INTO public.tenant_settings "
+                    "(tenant_id, spreadsheet_phase, "
+                    " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                    " quote_validity_days, default_currency, document_language, "
+                    " duty_incoterms, issue_mode) "
+                    "VALUES (:tid, 'A', "
+                    " 'none', 0, 0, "
+                    " 1, 'JPY', 'en', "
+                    " 'DAP', 'pdf') "
+                    "ON CONFLICT (tenant_id) DO NOTHING"
+                ),
+                {"tid": safe_id},
+            )
+    except Exception as exc:
+        # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
+        # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
+        logger.warning(
+            "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
+            safe_id,
+            exc,
         )
-    except Exception:
-        # migration 070 未適用環境では skip
-        pass
 
     # commitは呼び出し元で行う（監査ログ等と一括でcommitするため）
     return schema_name

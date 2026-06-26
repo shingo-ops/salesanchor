@@ -924,6 +924,30 @@ decision: AEON 関連の develop → main release は PR #1178 で完了した�
 follow_up: `tasks/todo.md` の完了欄と release 関連 runbook を必要に応じて参照更新する
 ```
 
+## 2026-06-24 PR #2538 products tcg_type FK 動作確認
+
+```text
+id: EV-20260624-001
+date: 2026-06-24
+agent: Shingo（本番DB read-only SELECT）
+task: PR #2538 products tcg_type FK 動作確認（STEP6検証）
+scope: 本番DB pg_constraint, migration 20260623_030000_add_products_tcg_type_fk.sql
+evidence:
+  - type: command
+    reference: "ssh prod1 docker compose exec -T postgres psql -U jarvis -d jarvis_db -c \"SELECT conname, conrelid::regclass AS tbl, confrelid::regclass AS references FROM pg_constraint WHERE conname = 'fk_products_tcg_type';\""
+    summary: "1行返却 — fk_products_tcg_type | products | tcg_type_master。FK が本番DBに実在することを確認。"
+  - type: review
+    reference: migrations/20260623_030000_add_products_tcg_type_fk.sql
+    summary: "pre-flight付き・データ非破壊（制約追加のみ）・冪等設計。deploy.yml run 28080592231 = success（2026-06-24T06:47:53Z）。"
+  - type: review
+    reference: PR #2538 mergeCommit 0abd9b6a / baseRefName main
+    summary: "main に直接マージ済み。バックアップ salesanchor_db_20260624_082535.sql.gz はマージ後採取のため前後差分比較は実行不可。migration がデータ非破壊設計のため代替判定とする。"
+confidence: high
+tradeoff: バックアップ基準がマージ後のため「前後差分0」の数値比較は実施不可。pre-flightが違反0を保証しFKのみ追加する冪等設計を根拠に完了判定。
+decision: "#2538 完了（正本の完了定義①〜④を満たす）。FK実在・deploy success・データ非破壊を本番DBで直接確認済み。"
+follow_up: public.inventory / message_translations の行数前後差分はバックアップ逆転のため省略。次回のリリースPRでバックアップ採取タイミングをマージ前に統一すること。
+```
+
 ## Review Rules
 
 - `confidence: high` は一次情報が複数あり、再現可能な検証がある場合に限る

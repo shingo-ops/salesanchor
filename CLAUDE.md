@@ -76,6 +76,8 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
 - PR本文: `### 標準ワークフロー確認` セクション必須。
 - recon.md と design.md は必ず git add してからコミットすること。
+- **KGI/KPIの粒度**: POが画面・出力で○×を一義に判定できる粒度で書く（抽象語=統一/改善/正常 禁止→観測可能な事象に分解）。
+- **役割**: Generatorは単純作業のみ。Plannerが file:line＋変更前後コード＋触らない範囲まで設計。実装不備/PO不満=設計粒度の責任。
 
 ---
 
@@ -114,3 +116,5 @@ ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全�
 8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
 
 **ファイル全体が 90 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
+## UIガバナンス遵守（ADR-144）
+UI部品新設時は必ず `components/` の金型を先確認。生select/生input/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`

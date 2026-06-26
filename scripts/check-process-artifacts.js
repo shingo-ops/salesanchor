@@ -48,6 +48,10 @@ const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
   /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
+  /^frontend\/src\/pages-layout\.css$/,  // 全ページ共通レイアウト（共有＝変更にGO必須）
+  /^docs\/STANDARD-WORKFLOW\.md$/,                      // 正本（自己保護）
+  /^\.github\/workflows\/process-artifacts-gate\.yml$/, // 関所ワークフロー（自己保護）
+  /^\.github\/PULL_REQUEST_TEMPLATE\.md$/,              // 宣言テンプレ（自己保護）
 ];
 
 const REAL_CODE_PATTERNS = [
@@ -133,6 +137,22 @@ function parseSOPDeclaration(prBody) {
   const reconMatch = section.match(/recon:\s*(docs\/handoff\/[^\s\n]+\.md)/);
   const designMatch = section.match(/設計:\s*([^\n（]+)/);
   const modeMatch = section.match(/モード:\s*(些細|緊急)/);
+  const touchFilesMatch = section.match(/触るファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const touchFiles = touchFilesMatch
+    ? touchFilesMatch[1]
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .split(/[\n,]/)
+        .map(f => f.trim())
+        .filter(f => f.length > 0)
+    : [];
+  const deleteFilesMatch = section.match(/削除するファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const deleteFiles = deleteFilesMatch
+    ? deleteFilesMatch[1]
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .split(/[\n,]/)
+        .map(f => f.trim())
+        .filter(f => f.length > 0 && f !== 'なし')
+    : [];
 
   return {
     isExempt,
@@ -141,6 +161,8 @@ function parseSOPDeclaration(prBody) {
     reconPath: reconMatch ? reconMatch[1].trim() : null,
     designPath: designMatch ? designMatch[1].trim() : null,
     mode: modeMatch ? modeMatch[1] : null,
+    touchFiles,
+    deleteFiles,
   };
 }
 
@@ -591,6 +613,80 @@ function main() {
     externalApiReport = { hasExternalChange: true, detectedApis: ['external_api_detection_error'], unpreparedApis: [] };
   }
   const hasExternalApiImpact = externalApiReport.hasExternalChange;
+
+  // ─── 触るファイル宣言 vs 実diff 照合（PR番号2600以上で義務化） ─────────────
+  const GRACE_THRESHOLD_PR = 2600;
+  const TOUCH_FILE_EXCLUDE_PATTERNS = [
+    /package-lock\.json$/,
+    /-snapshots\/.*\.png$/,
+    /^\.claude-pipeline\/active-work\.md$/,
+  ];
+
+  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+    const targets = changedFiles.filter(
+      f => !TOUCH_FILE_EXCLUDE_PATTERNS.some(p => p.test(f))
+    );
+    if (targets.length > 0) {
+      const touchErrors = [];
+      if (!declaration || !declaration.touchFiles || declaration.touchFiles.length === 0) {
+        touchErrors.push('❌ PR本文に「触るファイル:」の宣言がありません（PR番号2600以上で必須）');
+        touchErrors.push('   → 「### 標準ワークフロー確認」の「触るファイル:」にリポジトリ相対パスを記入してください');
+      } else {
+        const undeclared = targets.filter(f => !declaration.touchFiles.includes(f));
+        if (undeclared.length > 0) {
+          touchErrors.push('❌ 宣言外のファイルを変更しています:');
+          undeclared.forEach(f => touchErrors.push(`   - ${f}`));
+          touchErrors.push('   → 「触るファイル:」に追記するか、意図しない変更を除去してください');
+        }
+      }
+      if (touchErrors.length > 0) {
+        printFailure(touchErrors);
+      }
+    }
+  }
+  // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
+
+  // ─── 削除ファイル宣言 vs 実diff 照合（PR番号2600以上で義務化） ─────────────
+  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+    const base = process.env.BASE_SHA;
+    const head = process.env.HEAD_SHA;
+    if (base && head) {
+      let numstatLines = [];
+      try {
+        numstatLines = execSync(`git diff --numstat "${base}...${head}"`, { encoding: 'utf8' })
+          .trim().split('\n').filter(Boolean);
+      } catch {
+        console.warn('⚠️ git diff --numstat の実行に失敗 — 削除照合をスキップ');
+      }
+      const deletedFiles = numstatLines
+        .map(line => {
+          const parts = line.split('\t');
+          return parts.length === 3 ? { deletions: parseInt(parts[1], 10), path: parts[2] } : null;
+        })
+        .filter(e => e && e.deletions > 0 && !TOUCH_FILE_EXCLUDE_PATTERNS.some(p => p.test(e.path)))
+        .map(e => e.path);
+
+      if (deletedFiles.length > 0) {
+        const deleteErrors = [];
+        if (!declaration || !declaration.deleteFiles || declaration.deleteFiles.length === 0) {
+          deleteErrors.push('❌ PR本文に「削除するファイル:」の宣言がありません（PR番号2600以上で必須）');
+          deleteErrors.push('   → 「### 標準ワークフロー確認」の「削除するファイル:」にリポジトリ相対パスを記入してください');
+          deleteErrors.push('   → 削除が無い場合は「削除するファイル: なし」と記入してください');
+        } else {
+          const undeclaredDeletes = deletedFiles.filter(f => !declaration.deleteFiles.includes(f));
+          if (undeclaredDeletes.length > 0) {
+            deleteErrors.push('❌ 宣言外のファイルから行を削除しています:');
+            undeclaredDeletes.forEach(f => deleteErrors.push(`   - ${f}`));
+            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない削除を除去してください');
+          }
+        }
+        if (deleteErrors.length > 0) {
+          printFailure(deleteErrors);
+        }
+      }
+    }
+  }
+  // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
 
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {

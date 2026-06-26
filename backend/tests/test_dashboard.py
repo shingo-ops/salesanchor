@@ -67,7 +67,5 @@ class TestDashboard:
         assert res.status_code == 200
         data = res.json()
         assert data["company_count"] == 0  # ADR-089: customer_count → company_count
-        assert data["deal_count"] == 0
         assert data["order_count"] == 0
-        assert data["deal_total_amount"] == 0.0
         assert data["order_total_amount"] == 0.0

@@ -441,17 +441,23 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
-# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
-run_sql migrations/20260623_100000_rls_message_translations.sql
-
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
+
+# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
+run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 
+# D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。ADR-143。
+run_sql migrations/20260624_140000_converge_inventory_v2.sql
+
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
 run_sql migrations/20260626_100000_add_outbound_draft_message_link.sql
+
+# ADR-145 段階2: public.products に FORCE-RLS + 4ポリシー（共通=運営のみ/固有=自テナント）
+run_sql migrations/20260626_130000_force_rls_public_products.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

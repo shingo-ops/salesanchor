@@ -152,7 +152,7 @@ export default function LeadEditPage() {
             />
           </div>
           <Select
-            label={t("leads.initiative")}
+label={t("leads.initiative")}
             value={form.initiative}
             onChange={(e) => setForm({ ...form, initiative: e.target.value })}
             options={[
@@ -162,7 +162,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
-            label={t("leads.type")}
+label={t("leads.type")}
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             options={[
@@ -172,7 +172,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
-            label={t("leads.status")}
+label={t("leads.status")}
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
             options={LEAD_STATUSES.map((s) => ({
@@ -181,7 +181,7 @@ export default function LeadEditPage() {
             }))}
           />
           <Select
-            label={t("leads.temperature")}
+label={t("leads.temperature")}
             value={form.temperature}
             onChange={(e) => setForm({ ...form, temperature: e.target.value })}
             options={[
@@ -192,7 +192,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
-            label={t("leads.estimatedScale")}
+label={t("leads.estimatedScale")}
             value={form.estimated_scale}
             onChange={(e) => setForm({ ...form, estimated_scale: e.target.value })}
             options={[
@@ -203,7 +203,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
-            label={t("leads.customerType")}
+label={t("leads.customerType")}
             value={form.customer_type}
             onChange={(e) => setForm({ ...form, customer_type: e.target.value })}
             options={[
@@ -215,7 +215,7 @@ export default function LeadEditPage() {
             ]}
           />
           <Select
-            label={t("leads.responseSpeed")}
+label={t("leads.responseSpeed")}
             value={form.response_speed}
             onChange={(e) => setForm({ ...form, response_speed: e.target.value })}
             options={[
