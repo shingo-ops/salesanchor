@@ -948,6 +948,42 @@ decision: "#2538 完了（正本の完了定義①〜④を満たす）。FK実�
 follow_up: public.inventory / message_translations の行数前後差分はバックアップ逆転のため省略。次回のリリースPRでバックアップ採取タイミングをマージ前に統一すること。
 ```
 
+## 2026-06-27 PR #2630 public.products FORCE-RLS 本番反映・KGI①②③ 実証
+
+```text
+id: EV-20260627-001
+date: 2026-06-27
+agent: CC（Hikky-dev）+ Shingo（本番DB確認・GO発行）
+task: PR #2630 release/products-rls-2540-resolve → main マージ後 KGI①②③ 本番実証
+scope: 本番DB public.products RLS状態・4ポリシー・inventory.condition・バックエンドログ・ROLLBACK保証プローブ
+evidence:
+  - type: command
+    reference: "ssh prod1: psql -U jarvis -d jarvis_db -c \"SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname='products' AND relnamespace='public'::regnamespace;\""
+    summary: "relrowsecurity=t / relforcerowsecurity=t — KGI① FORCE-RLS 本番で有効"
+  - type: command
+    reference: "ssh prod1: psql -U jarvis -d jarvis_db -c \"SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='products';\""
+    summary: "products_select / products_insert / products_update / products_delete — 4ポリシー全件存在"
+  - type: command
+    reference: "ssh prod1: psql -U jarvis -d jarvis_db -c \"SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='inventory' AND column_name='condition';\""
+    summary: "0 rows — D-1 migration（20260624_140000_converge_inventory_v2.sql）は本番で no-op（列存在せず＝影響なし）"
+  - type: command
+    reference: "ssh prod1: docker logs astro-webapp-backend-1 --since=2h 2>&1 | grep -E '42501|row.level.security|permission denied|RLS|InsufficientPrivilege'"
+    summary: "(no output) — 本番反映後2時間、42501/permission denied ログ一切なし"
+  - type: command
+    reference: "ROLLBACK保証プローブ（BEGIN; SET LOCAL SESSION AUTHORIZATION salesanchor_app; SET LOCAL app.is_operator='true'; INSERT public.products '__postdeploy_probe__'; SELECT count(*); SET LOCAL app.tenant_id='6'; SELECT count(*) WHERE tenant_id IS NULL; ROLLBACK;）"
+    summary: "operator_insert_ok=1（運営INSERT通過）/ tenant_read_ok=1306（テナントSELECT通過）/ ROLLBACK完了 — KGI② 本番実証"
+  - type: command
+    reference: "ROLLBACK後確認: SELECT count(*) AS probes FROM public.products WHERE name='__postdeploy_probe__'; SELECT relforcerowsecurity FROM pg_class WHERE relname='products';"
+    summary: "probes=0（プローブ行残存なし）/ relforcerowsecurity=t（本番 FORCE-RLS 不変）— データ非残存・本番無変更を確認"
+  - type: review
+    reference: "PR #2630 merge commit e3a13731 / deploy run 28270188291 / main branch"
+    summary: "migration [168/168] 完走・Green backend healthy 18s・deploy success。develop 不動（32800137）。GO: Shingo 2026-06-27。"
+confidence: high
+tradeoff: ROLLBACK保証プローブのため本番に実商品データは残していない。実トラフィックではなくプローブによる経路確認。
+decision: "KGI①②③ 全達成。①FORCE-RLS+4ポリシー本番確認済み。②運営INSERT/テナントSELECT ROLLBACK保証プローブで実証・42501なし。③inventory.condition 0rows=他社漏洩リスクなし。PR #2540 GitHub自動MERGED（develop全コミットがmainに取り込まれたため）。"
+follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行が他社から見えない」の実データによる確認は商品マスタ整備後に実施。
+```
+
 ## Review Rules
 
 - `confidence: high` は一次情報が複数あり、再現可能な検証がある場合に限る
