@@ -16,7 +16,8 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/fedex-guide-step1-7 | FedEx ETD ガイド Step1-7 main リリース（cherry-pick #2611） | 2026-06-26 | IN_PROGRESS | | main | base=main |
+| release/carrier-credentials-reset-tenant-ctx | ADR-072 鍵保存後 reset_tenant_context 挿入（cherry-pick #2621） | 2026-06-26 | IN_PROGRESS | | main | base=main |
+| release/fedex-guide-step1-7 | FedEx ETD ガイド Step1-7 main リリース（cherry-pick #2611） | 2026-06-26 | DONE | #2615 | main | main マージ済み |
 | release/carrier-credential-form-refactor | CarrierCredentialForm 切り出し main リリース（cherry-pick #2601） | 2026-06-26 | DONE | #2608 | main | main マージ済み |
 | feature/morimoto/carrier-credential-form | CarrierCredentialForm 切り出し（挙動不変リファクタ・第1段） | 2026-06-26 | DONE | #2601 | | develop マージ済み |
 | feature/morimoto/fix-tenant-create-tx-double-begin | テナント作成時 SQLAlchemy tx 二重開始解消（壁1） | 2026-06-24 | DONE | #2604 | | develop マージ済み 2026-06-26 |
@@ -193,6 +194,7 @@
 | release/select-arrow-padding-only | （記入してください） | 2026-06-26 11:46 | DONE | | | |
 | release/morimoto/inbox-ui-text-j1-j5 | 送信ガード/翻訳プレビュー UI 微調整（便1 J1-J5）文言+自動生成 | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
+| feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
@@ -253,3 +255,5 @@
 | release/morimoto/discord-oauth-rls-fix | Discord OAuth callback 監査ログ RLS バグ修正（set_tenant_context 追加・ADR-091）main 単独便 | 2026-06-25 | IN_PROGRESS | #2585 | main | backend 1行・migration なし |
 | feature/morimoto/migrate-lead-edit-select | LeadEditPage 生select 7個→Select コンポーネント移行（ADR-073） | 2026-06-26 | REVIEW | #2599 | | develop マージ待ち |
 | feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
+| feature/morimoto/common-6roles-stage-a | 共通6ロール化 段階A — DEFAULT_ROLES 6ロール化・migrate スクリプト | 2026-06-26 | REVIEW | #2619 | | backend/app/services/tenant.py + scripts/migrate_6roles_stage_a.py |
+| release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | IN_PROGRESS | | main | TRUE_MISSING 64→0・ASYMMETRY 0 |
