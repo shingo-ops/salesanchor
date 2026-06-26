@@ -42,7 +42,10 @@ logger = logging.getLogger(__name__)
 #   - list[str]: 指定された権限キーのみ付与
 #
 # is_system=True の役割は編集/削除不可（オーナーのみ）。
-# その他の4役割は default として作成されるがテナント管理者が自由に編集可能。
+# その他の5役割は default として作成されるがテナント管理者が自由に編集可能。
+#
+# 変更履歴:
+#   2026-06-26: 共通6ロール化 段階A — リーダー→マネージャー改名、仕入れ・発送を追加
 DEFAULT_ROLES = [
     {
         "name": "オーナー",
@@ -61,7 +64,7 @@ DEFAULT_ROLES = [
         "description": "システム設定以外の全機能を管理する管理者",
     },
     {
-        "name": "リーダー",
+        "name": "マネージャー",
         "color": "#3b82f6",  # 青
         "priority": 500,
         "is_system": False,
@@ -86,7 +89,7 @@ DEFAULT_ROLES = [
             "staff_reports.view_own", "staff_reports.view_team", "staff_reports.create", "staff_reports.review",
             "archive.view",
         ],
-        "description": "チーム単位でリードや案件を統括するリーダー",
+        "description": "チーム単位でリードや案件を統括するマネージャー",
     },
     {
         "name": "営業",
@@ -133,6 +136,42 @@ DEFAULT_ROLES = [
             "staff_reports.view_own", "staff_reports.create",
         ],
         "description": "顧客からの問い合わせ対応を担当するカスタマーサポート",
+    },
+    {
+        "name": "仕入れ",
+        "color": "#06b6d4",  # シアン
+        "priority": 450,
+        "is_system": False,
+        "permissions": [
+            "dashboard.view", "reports.view",
+            # 商品・仕入先
+            "products.view",
+            "suppliers.view", "suppliers.create", "suppliers.update",
+            # 発注管理（フル）
+            "purchase_orders.view", "purchase_orders.create",
+            "purchase_orders.update", "purchase_orders.receive",
+            # Phase 4
+            "staff_reports.view_own", "staff_reports.create",
+        ],
+        "description": "仕入先管理と発注業務を担当する仕入れ担当者",
+    },
+    {
+        "name": "発送",
+        "color": "#84cc16",  # ライム
+        "priority": 350,
+        "is_system": False,
+        "permissions": [
+            "dashboard.view", "reports.view",
+            # 商品確認
+            "products.view",
+            # 注文確認・更新
+            "orders.view", "orders.update",
+            # 配送管理（フル）
+            "shipping.view", "shipping.calculate", "shipping.manage",
+            # Phase 4
+            "staff_reports.view_own", "staff_reports.create",
+        ],
+        "description": "受注後の梱包・出荷・配送を担当する発送担当者",
     },
 ]
 
@@ -1476,13 +1515,15 @@ async def seed_default_channel_masters(db: AsyncSession, tenant_id: int, schema_
 
 async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) -> None:
     """
-    GAS版互換の既定ロールをシードする（冪等）。
+    共通6ロールをシードする（冪等）。
 
     - オーナー (system): 全権限、削除/編集不可
     - システム管理者: system.manage 以外の全権限、編集可
-    - リーダー: チーム単位のリード/案件管理、編集可
+    - マネージャー: チーム単位のリード/案件管理、編集可
     - 営業: 顧客〜案件〜注文の販売サイクル、編集可
     - CS: 顧客フォローアップ、編集可
+    - 仕入れ: 仕入先管理・発注業務、編集可
+    - 発送: 梱包・出荷・配送管理、編集可
 
     非システムロールは「名前が既存でない場合のみ」権限を初期設定する。
     既に存在する場合は権限のカスタマイズを上書きしない（priority/descriptionのみ更新）。

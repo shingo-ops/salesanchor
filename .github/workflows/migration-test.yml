@@ -521,7 +521,8 @@ jobs:
           fi
 
           # Python スクリプト（上で取得済みの diff から抽出）
-          CHANGED=$(echo "$ALL_CHANGED" | grep '^scripts/migrate_' | sort || true)
+          # _stage_*.py は --tenant-id 必須の手動データ移行スクリプト（CI 自動実行対象外）
+          CHANGED=$(echo "$ALL_CHANGED" | grep '^scripts/migrate_' | grep -v '_stage_' | sort || true)
 
           echo "changed_scripts<<EOF" >> "$GITHUB_OUTPUT"
           echo "$CHANGED" >> "$GITHUB_OUTPUT"
