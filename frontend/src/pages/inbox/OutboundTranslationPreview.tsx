@@ -9,7 +9,7 @@
  * 「確認して送信」以外に送信経路は存在しない（ADR-110 受け入れ条件 3）。
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutboundPreviewResponse } from "../../lib/messages";
 import { confirmOutboundDraft, requestOutboundPreview } from "../../lib/messages";
@@ -29,7 +29,7 @@ export function OutboundTranslationPreview({
   draftText,
   onConfirmedSend,
   onClose,
-  disabled,
+  disabled: _disabled, // kept for API compat; button removed (auto-generate via useEffect)
   targetLanguage = "en",
 }: Props) {
   const { t } = useTranslation();
@@ -38,6 +38,7 @@ export function OutboundTranslationPreview({
   const [preview, setPreview] = useState<OutboundPreviewResponse | null>(null);
   const [editedText, setEditedText] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const hasRequestedRef = useRef(false);
 
   const handlePreview = useCallback(async () => {
     if (!draftText.trim()) return;
@@ -55,6 +56,13 @@ export function OutboundTranslationPreview({
       setLoading(false);
     }
   }, [draftText, leadId, targetLanguage, t]);
+
+  useEffect(() => {
+    if (hasRequestedRef.current) return;
+    if (!draftText || draftText.trim() === "") return;
+    hasRequestedRef.current = true;
+    handlePreview();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirmSend = useCallback(async () => {
     if (!preview || !editedText.trim()) return;
@@ -91,16 +99,11 @@ export function OutboundTranslationPreview({
           <div className="outbound-translation-original">{draftText}</div>
         </div>
 
-        {/* プレビューボタン */}
-        {!preview && (
-          <button
-            type="button"
-            className="outbound-translation-preview-btn"
-            onClick={handlePreview}
-            disabled={loading || disabled || !draftText.trim()}
-          >
-            {loading ? t("translation.outbound.generating") : t("translation.outbound.generateBtn")}
-          </button>
+        {/* 生成中ローディング表示（useEffectで自動実行） */}
+        {!preview && loading && (
+          <div className="outbound-translation-generating" aria-live="polite">
+            {t("translation.outbound.generating")}
+          </div>
         )}
 
         {/* エラー */}
@@ -160,11 +163,11 @@ export function OutboundTranslationPreview({
             <div className="outbound-translation-actions">
               <button
                 type="button"
-                className="outbound-translation-regenerate-btn"
-                onClick={handlePreview}
-                disabled={loading || confirming}
+                className="outbound-translation-back-btn"
+                onClick={onClose}
+                disabled={confirming}
               >
-                {loading ? t("translation.outbound.generating") : t("translation.outbound.regenerate")}
+                {t("translation.outbound.back")}
               </button>
               <button
                 type="button"
