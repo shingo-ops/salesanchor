@@ -43,6 +43,9 @@ async def _bootstrap_minimal_schema(admin_engine, tenant_id: int) -> None:
             CREATE TABLE IF NOT EXISTS public.tenants (
                 id INTEGER PRIMARY KEY,
                 tenant_code VARCHAR(50) NOT NULL DEFAULT '',
+                tenant_name VARCHAR(255) NOT NULL DEFAULT '',
+                company_name VARCHAR(255) NOT NULL DEFAULT '',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
