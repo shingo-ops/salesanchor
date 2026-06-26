@@ -12,7 +12,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
-import { usePermissions } from "../../hooks/usePermissions";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 
 interface InventoryRow {
@@ -32,6 +31,7 @@ interface InventoryRow {
   quantity: number;
   tcg_type: string | null;
   offered_at: string;
+  release_date: string | null;
 }
 
 interface SupplierFacet {
@@ -71,7 +71,6 @@ export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasPermission } = usePermissions();
 
   // 見積作成からの往復（在庫表から）: 戻り先・編集中ドラフト・事前選択（在庫行 ID）。
   const quoteReturn = location.state as {
@@ -87,8 +86,9 @@ export default function InventoryPage() {
   const [searchQ, setSearchQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [category, setCategory] = useState("");
-  const [sortField, setSortField] = useState("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState("release_date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
   // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
@@ -155,6 +155,7 @@ export default function InventoryPage() {
       params.set("order", sortDir);
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
+      if (activeTab !== "all") params.set("tcg_type", activeTab);
       if (filterEnabled && hiddenSupplierIds.size > 0) {
         params.set("hide_supplier_ids", Array.from(hiddenSupplierIds).join(","));
       }
@@ -187,7 +188,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sortField, sortDir, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     void load();
@@ -272,57 +273,6 @@ export default function InventoryPage() {
       return next;
     });
   };
-
-  const selectedPayload = () =>
-    items
-      .filter((it) => selectedIds.has(it.id))
-      .map((it) => ({
-        // inventory_id: 見積往復で同一オファー行を再選択判定するためのキー。
-        inventory_id: it.id,
-        product_id: it.product_id,
-        product_name: it.product_name ?? "",
-        unit_price: it.unit_price,
-        condition: it.condition,
-        unit: it.unit,
-        supplier_id: it.supplier_id,
-        supplier_name: it.supplier_name,
-      }));
-
-  const goCreate = (path: string) => {
-    const selectedProducts = selectedPayload();
-    if (selectedProducts.length === 0) return;
-    navigate(path, { state: { selectedProducts } });
-  };
-
-  // 見積作成（営業担当）ボタン。見積往復で来ている場合は、編集中ドラフトを保持したまま
-  // 選択を反映して見積画面へ戻す。通常時は新規見積へ前埋め遷移する。
-  const onCreateQuote = () => {
-    if (quoteReturn?.fromQuote) {
-      navigate(quoteReturn.returnTo ?? "/quotes/new", {
-        state: { selectedProducts: selectedPayload(), draft: quoteReturn.draft, fromInventory: true },
-      });
-      return;
-    }
-    goCreate("/quotes/new");
-  };
-
-  // ヘッダー常設の発注書ボタン: 選択行があれば前埋めして発注書作成へ、無ければ発注書画面を開く。
-  // 発注書は仕入元単位のため、異なる仕入元が混在して選択されている場合は作成へ進ませず警告する。
-  const openPurchaseOrder = () => {
-    const selectedProducts = selectedPayload();
-    const supplierIds = new Set(selectedProducts.map((p) => p.supplier_id));
-    if (supplierIds.size > 1) {
-      setError(t("inventory.differentSuppliersAlert"));
-      return;
-    }
-    navigate(
-      "/purchase-orders",
-      selectedProducts.length > 0 ? { state: { selectedProducts } } : undefined,
-    );
-  };
-
-  const clearSelection = () => setSelectedIds(new Set());
-  const noSelection = selectedIds.size === 0;
 
   // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。
   const onSort = (field: string) => {
@@ -418,10 +368,6 @@ export default function InventoryPage() {
 
   return (
     <PageLayout navKey="nav.inventory" subtitleKey="inventory.view.subtitle">
-      <div className="error-message" role="status" data-testid="inventory-expiry-warning" style={{ marginBottom: "var(--space-3)" }}>
-        {t("inventory.expiryWarning")}
-      </div>
-
       {error && (
         <div className="error-message" role="alert" data-testid="inventory-error">
           {error}
@@ -444,29 +390,14 @@ export default function InventoryPage() {
             setPage(1);
           }}
           onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto" }}
+          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto", padding: "var(--space-1) var(--space-10px)", fontSize: "var(--font-xs)", boxSizing: "border-box", height: "44px" }}
         />
-        <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch}>
+        <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
           {t("common.search")}
         </button>
-        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll}>
+        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
           {t("inventory.resetSort")}
         </button>
-        <select
-          data-testid="inventory-category-filter"
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            setPage(1);
-          }}
-          aria-label={t("inventory.col.category")}
-          style={{ minWidth: "12rem" }}
-        >
-          <option value="">{t("inventory.filter.allCategories")}</option>
-          {sortedCategories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
         <button
           type="button"
           className={filterEnabled ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
@@ -474,6 +405,7 @@ export default function InventoryPage() {
           aria-expanded={showFilterPanel}
           aria-pressed={filterEnabled}
           onClick={() => setShowFilterPanel((v) => !v)}
+          style={{ height: "44px", display: "inline-flex", alignItems: "center" }}
         >
           {t("inventory.filterPanel.button")}
         </button>
@@ -515,93 +447,6 @@ export default function InventoryPage() {
         />
       )}
 
-      {/* アクション: 役割ごとに2段で固定表示（チェック前から常時表示）。
-          各段は権限で出し分け、作成系は商品選択時のみ有効、クリアは両段に表示。 */}
-      {/* 見積/請求作成からの往復中は、専用の「選択を反映して戻る」ボタンのみ表示（権限非依存）。 */}
-      {quoteReturn?.fromQuote ? (
-        <div
-          className="selection-action-bar"
-          data-testid="inventory-roundtrip-bar"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            flexWrap: "wrap",
-            margin: "var(--space-2) 0 var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--bg-subtle)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
-          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }} data-testid="inventory-selected-count">
-            {t("products.selectedCount", { count: selectedIds.size })}
-          </span>
-          <button className="btn-primary btn-sm" disabled={noSelection} onClick={onCreateQuote} data-testid="inventory-apply-selection">
-            {t("inventory.applyToQuote")}
-          </button>
-          <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-roundtrip">
-            {t("common.clear")}
-          </button>
-        </div>
-      ) : (hasPermission("purchase_orders.create") ||
-        hasPermission("quotes.create") ||
-        hasPermission("invoices.create")) ? (
-        <div
-          className="selection-action-bar"
-          data-testid="inventory-action-groups"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-            margin: "var(--space-2) 0 var(--space-4)",
-            padding: "var(--space-3)",
-            background: "var(--bg-subtle)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
-          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }} data-testid="inventory-selected-count">
-            {t("products.selectedCount", { count: selectedIds.size })}
-          </span>
-
-          {hasPermission("purchase_orders.create") && (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
-              <span style={{ minWidth: "6rem", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)" }}>
-                {t("inventory.actions.purchasingRole")}
-              </span>
-              <button className="btn-primary btn-sm" disabled={noSelection} onClick={openPurchaseOrder} data-testid="create-po-from-inventory">
-                {t("inventory.createPO")}
-              </button>
-              <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-purchasing">
-                {t("common.clear")}
-              </button>
-            </div>
-          )}
-
-          {(hasPermission("quotes.create") || hasPermission("invoices.create")) && (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
-              <span style={{ minWidth: "6rem", fontWeight: "var(--font-weight-semi)", color: "var(--text-secondary)" }}>
-                {t("inventory.actions.salesRole")}
-              </span>
-              {hasPermission("quotes.create") && (
-                <button className="btn-primary btn-sm" disabled={noSelection} onClick={onCreateQuote} data-testid="create-quote-from-inventory">
-                  {quoteReturn?.fromQuote ? t("inventory.applyToQuote") : t("products.createQuote")}
-                </button>
-              )}
-              {hasPermission("invoices.create") && (
-                <button className="btn-primary btn-sm" disabled={noSelection} onClick={() => goCreate("/invoices/new")} data-testid="create-invoice-from-inventory">
-                  {t("products.createInvoice")}
-                </button>
-              )}
-              <button className="btn-sm" onClick={clearSelection} data-testid="inventory-clear-sales">
-                {t("common.clear")}
-              </button>
-            </div>
-          )}
-        </div>
-      ) : null}
-
       <div
         className="loading-indicator"
         data-testid="inventory-loading"
@@ -610,6 +455,43 @@ export default function InventoryPage() {
         style={{ minHeight: "1.5rem", visibility: loading ? "visible" : "hidden" }}
       >
         {t("common.loading")}
+      </div>
+
+      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン ＋ 警告（右端固定） */}
+      <div className="tabs" style={{ display: "flex", gap: "var(--space-sm)", margin: "var(--space-sm) 0", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
+          {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
+            const label = code === "all" ? t("common.all") : (tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code);
+            return (
+              <button
+                key={code}
+                className={activeTab === code ? "tab active" : "tab"}
+                onClick={() => { setActiveTab(code); setPage(1); }}
+              >{label}</button>
+            );
+          })}
+          {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
+            <select
+              value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
+              onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
+              aria-label={t("inventory.filter.otherTypes")}
+              style={{ fontSize: "var(--font-xs)", padding: "var(--space-1) var(--space-10px)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)" }}
+            >
+              <option value="">{t("inventory.filter.otherTypes")}</option>
+              {tcgTypes
+                .filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code))
+                .map((tt) => (
+                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
+                ))}
+            </select>
+          )}
+        </div>
+        <p
+          data-testid="inventory-expiry-warning"
+          style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
+        >
+          {"※"}{t("inventory.expiryWarning")}
+        </p>
       </div>
 
       {/* 列を分割して表示。狭幅では横スクロール。フォントは少し大きめ。 */}
@@ -632,6 +514,7 @@ export default function InventoryPage() {
               {colVisible("quantity") && sortTh("quantity", "quantity", "right")}
               {colVisible("unitPrice") && sortTh("unitPrice", "unit_price", "right")}
               {colVisible("supplier") && sortTh("supplier", "supplier")}
+              {sortTh("releaseDate", "release_date")}
             </tr>
           </thead>
           <tbody>
@@ -695,6 +578,7 @@ export default function InventoryPage() {
                       </div>
                     </td>
                   )}
+                  <td>{it.release_date ?? "-"}</td>
                 </tr>
               ))
             )}

@@ -7,9 +7,6 @@
      - 配線E2E: in_stock seed -> エンドポイントが best-pick 行を返す
      - 境界: supplier_name / reason / raw が応答に含まれない
      - タブ: ?category=pokemon で pokemon のみ絞り込み
-
-NOTE: inventory テーブル bootstrap には condition多軸列（raw_condition/seal/search_cond/
-      grade/damage/unit）を含める。_load_inventory_offers が SELECT するため必須。
 """
 from __future__ import annotations
 
@@ -217,12 +214,6 @@ async def seed_aggregated_dataset():
                     offered_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     expires_at  TIMESTAMPTZ,
                     source      TEXT      NOT NULL DEFAULT 'manual',
-                    unit        VARCHAR(20),
-                    raw_condition TEXT,
-                    seal        VARCHAR(20),
-                    search_cond VARCHAR(20),
-                    grade       VARCHAR(20),
-                    damage      BOOLEAN NOT NULL DEFAULT FALSE,
                     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     UNIQUE (supplier_id, product_id, condition)
@@ -230,19 +221,23 @@ async def seed_aggregated_dataset():
             """)
         )
 
-    # ── migration: inventory_aggregation_rules (冪等) ──────────────────────
-    migration_path = (
-        Path(__file__).resolve().parents[2]
-        / "migrations"
-        / "20260620_010000_create_inventory_aggregation_rules.sql"
-    )
-    if migration_path.exists():
-        sql = migration_path.read_text("utf-8")
-        async with eng.begin() as conn:
-            for stmt in _split_sql(sql):
-                stmt = stmt.strip()
-                if stmt:
-                    await conn.execute(text(stmt))
+    # ── migration: inventory_aggregation_rules + 列追加 (冪等) ────────────
+    migrations_root = Path(__file__).resolve().parents[2] / "migrations"
+    for mig_file in [
+        "20260620_010000_create_inventory_aggregation_rules.sql",
+        # _load_inventory_offers が参照する列 (main で追加)
+        "084_add_unit_to_inventory.sql",                       # i.unit
+        "20260622_020000_add_inventory_raw_condition.sql",     # i.raw_condition
+        "20260623_010000_add_inventory_axes_columns.sql",      # i.seal/search_cond/grade/damage
+    ]:
+        migration_path = migrations_root / mig_file
+        if migration_path.exists():
+            sql = migration_path.read_text("utf-8")
+            async with eng.begin() as conn:
+                for stmt in _split_sql(sql):
+                    stmt = stmt.strip()
+                    if stmt:
+                        await conn.execute(text(stmt))
 
     tag = uuid.uuid4().hex[:8]
 
@@ -297,7 +292,7 @@ async def seed_aggregated_dataset():
         # poke1: Sealed box × 2 suppliers (best-pick テスト)
         # sup:  1000 円 × 2 個 (最安値・在庫少)
         # sup2: 1100 円 × 50 個 (許容差以内 → stock_priority が選択)
-        # raw_condition: _load_inventory_offers は raw_condition を読む (condition 列は非参照)
+        # raw_condition を明示: main の _load_inventory_offers は i.raw_condition を参照する
         await conn.execute(
             text(
                 "INSERT INTO public.inventory"

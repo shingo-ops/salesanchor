@@ -104,7 +104,8 @@ _VIEW_SELECT = """
            p.name_en AS name_en,
            p.category AS category,
            p.mark AS mark,
-           p.tcg_type AS tcg_type
+           p.tcg_type AS tcg_type,
+           p.release_date AS release_date
     FROM public.inventory i
     LEFT JOIN public.suppliers s ON s.id = i.supplier_id
     LEFT JOIN public.products  p ON p.id = i.product_id
@@ -130,6 +131,7 @@ _SORT_COLUMNS = {
     "unit_price": "i.unit_price",
     "supplier": "s.name",
     "offered_at": "i.offered_at",
+    "release_date": "p.release_date",
 }
 
 
@@ -189,8 +191,8 @@ async def list_inventory_view(
     price_min: int | None = Query(default=None, ge=0, description="単価の下限（以上）"),
     price_max: int | None = Query(default=None, ge=0, description="単価の上限（以下）"),
     sort: str = Query(
-        default="name",
-        pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at)$",
+        default="release_date",
+        pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at|release_date)$",
         description="ソート列。全列対応（ADR-093 在庫表改修）",
     ),
     order: str = Query(default="asc", pattern="^(asc|desc)$"),

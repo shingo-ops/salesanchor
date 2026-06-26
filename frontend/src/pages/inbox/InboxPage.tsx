@@ -165,6 +165,8 @@ export default function InboxPage() {
                 attachedFile={state.attachedFile}
                 setAttachedFile={state.setAttachedFile}
                 clearAttachment={state.clearAttachment}
+                recipientLanguageSetting={state.recipientLanguageSetting}
+                setRecipientLanguage={state.setRecipientLanguage}
               />
             </div>
           </div>

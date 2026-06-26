@@ -1291,6 +1291,7 @@ _MESSAGE_TEXT_MAX_LEN = 2000
 class _SendMessageRequest(BaseModel):
     """spec §5-5 リクエスト body。"""
     text: str = Field(min_length=1, max_length=_MESSAGE_TEXT_MAX_LEN)
+    draft_id: int | None = None
 
 
 def _extract_recipient_id(inbound_sender_id: Optional[str]) -> Optional[str]:
@@ -1337,6 +1338,7 @@ async def send_lead_message(
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
+    outbound_translation_drafts_t = tenant_table_ref(db, tenant_id, "outbound_translation_drafts")
     lead_q = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} "
              "WHERE id = :id AND tenant_id = :tenant_id"),
@@ -1356,6 +1358,26 @@ async def send_lead_message(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="本文が空です",
         )
+
+    # --- 段階A: draft_id があれば確認済み英訳で本文を差し替え（なければ従来どおり） ---
+    if payload.draft_id is not None:
+        draft_row = (
+            await db.execute(
+                text(
+                    f"SELECT lead_id, draft_text, final_text, confirmed_at "
+                    f"FROM {outbound_translation_drafts_t} "
+                    "WHERE id = :draft_id AND tenant_id = :tenant_id"
+                ),
+                {"draft_id": payload.draft_id, "tenant_id": tenant_id},
+            )
+        ).first()
+        if draft_row is None:
+            raise HTTPException(status_code=400, detail="翻訳下書きが見つかりません")
+        if draft_row[3] is None:  # confirmed_at
+            raise HTTPException(status_code=400, detail="翻訳が未確認です")
+        if draft_row[0] is not None and int(draft_row[0]) != lead_id:  # lead_id
+            raise HTTPException(status_code=400, detail="別リードの翻訳下書きです")
+        text_body = (draft_row[2] or draft_row[1]).strip()  # final_text or draft_text
 
     # ----- (2) 直近 inbound 取得 + platform 推論 -----
     inbound_q = await db.execute(
@@ -1661,6 +1683,19 @@ async def send_lead_message(
             "message_id": send_result.get("message_id"),
         },
     )
+
+    # --- 段階A: 送信成功後に翻訳下書きと紐付け＋is_edited 確定 ---
+    if payload.draft_id is not None:
+        await db.execute(
+            text(
+                f"UPDATE {outbound_translation_drafts_t} "
+                "SET meta_message_id = :mid, "
+                "    is_edited = (final_text IS NOT NULL "
+                "                 AND final_text IS DISTINCT FROM draft_text) "
+                "WHERE id = :draft_id AND tenant_id = :tenant_id"
+            ),
+            {"mid": new_id, "draft_id": payload.draft_id, "tenant_id": tenant_id},
+        )
 
     await db.commit()
 
@@ -2486,4 +2521,42 @@ async def get_lead_stats(
         last_paid_at=stats_row["last_paid_at"],
         conversation_count=int(stats_row["conversation_count"] or 0),
         last_conversation_at=stats_row["last_conversation_at"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# ADR-143 Phase B: 相手言語の多数決自動判定
+# ---------------------------------------------------------------------------
+
+class RecipientLanguageResponse(BaseModel):
+    """GET /leads/{lead_id}/recipient-language のレスポンス。"""
+
+    language: str | None
+    total_records: int
+    confident: bool
+
+
+@router.get(
+    "/leads/{lead_id}/recipient-language",
+    response_model=RecipientLanguageResponse,
+    dependencies=[Depends(require_permission("leads.view"))],
+)
+async def get_recipient_language(
+    lead_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """リードの inbound 受信履歴から相手言語を多数決で判定する（ADR-143 Phase B）。
+
+    lang_judge.judge_recipient_language に委譲。
+    RLS: lang_judge 内クエリはスキーマ修飾済みのため set_tenant_context 不要。
+    """
+    from app.services.lang_judge import judge_recipient_language
+
+    result = await judge_recipient_language(db=db, tenant_id=tenant_id, lead_id=lead_id)
+    return RecipientLanguageResponse(
+        language=result.language,
+        total_records=result.total_records,
+        confident=result.confident,
     )
