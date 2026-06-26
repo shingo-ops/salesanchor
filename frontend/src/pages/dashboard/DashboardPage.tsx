@@ -31,6 +31,7 @@ import {
   Legend,
 } from "recharts";
 import { api } from "../../lib/api";
+import { FeatureGate } from "../../components/FeatureGate";
 import { PageLayout } from "../../components/PageLayout";
 import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
@@ -454,6 +455,14 @@ export default function DashboardPage() {
       }
     >
       <div className="db-content-stack">
+      {/* -------------------------------------------------
+          フィーチャーフラグ検証用表示（inventory_v2 が有効なテナントのみ）
+      ------------------------------------------------- */}
+      <FeatureGate feature="inventory_v2">
+        <div className="db-section-card" style={{ padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
+          {t("featureDemo.enabledLabel")}
+        </div>
+      </FeatureGate>
       {/* -------------------------------------------------
           ファネルセクション（VITE_FUNNEL_DASHBOARD=mock/live のときのみ表示）
       ------------------------------------------------- */}

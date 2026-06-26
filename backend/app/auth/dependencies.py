@@ -555,3 +555,37 @@ def require_permission(*permission_keys: str):
         )
 
     return checker
+
+
+def require_feature(feature_key: str):
+    """
+    指定された feature_key が現在のテナントで有効かチェックする Depends ファクトリ。
+    public.tenant_features テーブルに (current_tenant_id, feature_key, enabled=true) の行が
+    存在すれば通過、なければ HTTP 403 を返す。
+    require_permission と同じエラー形式に揃える。
+
+    使用例:
+        @router.get("/feature-demo/ping",
+                     dependencies=[Depends(require_feature("inventory_v2"))])
+    """
+    if not feature_key:
+        raise ValueError("require_feature には feature_key が必要です")
+
+    async def _check(
+        tenant_id: int = Depends(get_current_tenant),
+        db: AsyncSession = Depends(get_db),
+    ) -> None:
+        result = await db.execute(
+            text(
+                "SELECT 1 FROM public.tenant_features "
+                "WHERE tenant_id = :tid AND feature_key = :fkey AND enabled = true"
+            ),
+            {"tid": tenant_id, "fkey": feature_key},
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"機能が無効です: {feature_key}",
+            )
+
+    return _check
