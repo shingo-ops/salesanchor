@@ -17,7 +17,7 @@ import { confirmOutboundDraft, requestOutboundPreview } from "../../lib/messages
 interface Props {
   leadId: number | null;
   draftText: string;
-  onConfirmedSend: (finalText: string) => void;
+  onConfirmedSend: (finalText: string, draftId: number) => void;
   onClose: () => void;
   disabled: boolean;
   /** ADR-142: 送信ガード Phase A — 翻訳先言語（省略時 "en"） */
@@ -62,7 +62,7 @@ export function OutboundTranslationPreview({
     setError(null);
     try {
       await confirmOutboundDraft(preview.draft_id, editedText.trim());
-      onConfirmedSend(editedText.trim());
+      onConfirmedSend(editedText.trim(), preview.draft_id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t("translation.outbound.confirmError");
       setError(msg);

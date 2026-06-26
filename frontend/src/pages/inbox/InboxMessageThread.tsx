@@ -34,7 +34,7 @@ interface Props {
   canSend: boolean;
   discordDmChannelMissing: boolean;
   trimmedDraft: string;
-  submitSend: () => void;
+  submitSend: (opts?: { draftId?: number }) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
@@ -392,10 +392,9 @@ export function InboxMessageThread({
           onClose={() => setShowOutboundPreview(false)}
           disabled={!canSend || sending}
           targetLanguage={recipientLanguageSetting === "ja" ? "ja" : "en"}
-          onConfirmedSend={(finalText) => {
+          onConfirmedSend={(finalText, draftId) => {
             setShowOutboundPreview(false);
-            setDraft(finalText);
-            submitSend();
+            submitSend({ draftId });
           }}
         />
       )}
