@@ -10,6 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 
@@ -156,23 +157,28 @@ export default function DealEditPage() {
           <div className="form-group"><label>{t("deals.amount")}</label>
             <input type="number" min="0" step="1" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("common.currency")}</label>
-            <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-              <option value="JPY">JPY</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("common.status")}</label>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              {STATUSES.map((s) => <option key={s} value={s}>{t(`deals.status_${s}`)}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>{t("dashboard.stage")}</label>
-            <select value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })}>
-              {STAGES.map((s) => <option key={s} value={s}>{t(`deals.stage_${s}`)}</option>)}
-            </select>
-          </div>
+          <Select
+            label={t("common.currency")}
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            options={[
+              { value: "JPY", label: "JPY" },
+              { value: "USD", label: "USD" },
+              { value: "EUR", label: "EUR" },
+            ]}
+          />
+          <Select
+            label={t("common.status")}
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            options={STATUSES.map((s) => ({ value: s, label: t(`deals.status_${s}`) }))}
+          />
+          <Select
+            label={t("dashboard.stage")}
+            value={form.stage}
+            onChange={(e) => setForm({ ...form, stage: e.target.value })}
+            options={STAGES.map((s) => ({ value: s, label: t(`deals.stage_${s}`) }))}
+          />
           <div className="form-group"><label>{t("deals.probability")}</label>
             <input type="number" min="0" max="100" value={form.probability} onChange={(e) => setForm({ ...form, probability: e.target.value })} />
           </div>

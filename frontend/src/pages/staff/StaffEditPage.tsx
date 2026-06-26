@@ -11,6 +11,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 
@@ -174,19 +175,24 @@ export default function StaffEditPage() {
           <div className="form-group"><label>Discord ID</label>
             <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.role")} *</label>
-            <select required value={form.role_id} onChange={(e) => setForm({ ...form, role_id: e.target.value })}>
-              <option value="">{t("common.pleaseSelect")}</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>{t("staff.status")}</label>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              <option value="active">{t("staff.status_active")}</option>
-              <option value="inactive">{t("staff.status_inactive")}</option>
-              <option value="pending">{t("staff.status_pending")}</option>
-            </select>
-          </div>
+          <Select
+            label={t("staff.role")}
+            required
+            value={form.role_id}
+            onChange={(e) => setForm({ ...form, role_id: e.target.value })}
+            placeholder={t("common.pleaseSelect")}
+            options={roles.map((r) => ({ value: String(r.id), label: r.name }))}
+          />
+          <Select
+            label={t("staff.status")}
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            options={[
+              { value: "active", label: t("staff.status_active") },
+              { value: "inactive", label: t("staff.status_inactive") },
+              { value: "pending", label: t("staff.status_pending") },
+            ]}
+          />
           <div className="form-group"><label>Firebase UID</label>
             <input value={form.firebase_uid} onChange={(e) => setForm({ ...form, firebase_uid: e.target.value })} />
           </div>
