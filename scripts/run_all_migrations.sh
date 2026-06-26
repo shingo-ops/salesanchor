@@ -452,6 +452,9 @@ run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 
 # D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。180000(L221)が offer_key を再作成するため末尾で除去。ADR-143。
 run_sql migrations/20260624_140000_converge_inventory_v2.sql
+
+# ADR-145 段階2: public.products に FORCE-RLS + 4ポリシー（共通=運営のみ/固有=自テナント）
+run_sql migrations/20260626_130000_force_rls_public_products.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

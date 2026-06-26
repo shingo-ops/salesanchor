@@ -1,6 +1,6 @@
 # ADR-145: public.products への FORCE ROW LEVEL SECURITY 付与（共通/テナント固有の2層保護）
 
-- **Status**: Accepted（段階1のみ。段階2は PO GO 後に別 PR）
+- **Status**: Accepted（段階1: PR #2602 マージ済み。段階2: 本 migration PR で実装・PO GO 待ち）
 - **Date**: 2026-06-26
 - **Author**: Hikky-dev (Claude Code)
 - **Supersedes**: ADR-090 §権限制御「public は RLS 無し」方針を本 ADR で更新する（下記参照）
@@ -44,9 +44,11 @@ PR #2602（base=develop）で実施。
 
 段階1 は RLS を付与しないため本番挙動は変わらない。
 
-### 段階2（別 PR・PO 明示 GO 必須）: FORCE-RLS + 4 ポリシー
+### 段階2（本 PR・PO 明示 GO 必須）: FORCE-RLS + 4 ポリシー
 
-以下の migration を別 PR で追加する（段階1 develop マージ後、別セッション・別 recon→設計→dry-run 実施）。
+`migrations/20260626_130000_force_rls_public_products.sql` で実装。
+段階2-a dry-run（本番 ROLLBACK 保証）で全経路実証済み。段階2-b 権限確認（salesanchor_app rolsuper=f / rolbypassrls=f）済み。
+develop マージ ≠ 本番反映。本番で FORCE-RLS が効くのは後日の develop→main リリース時（別途 PO 最終 GO 必要）。
 
 ```sql
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -107,3 +109,4 @@ CREATE POLICY products_delete ON public.products FOR DELETE USING (
 - `public.translation_glossary` FORCE-RLS 実装: `migrations/20260605_010000_rls_translation_glossary.sql`
 - `set_operator_context` / `reset_operator_context`: `backend/app/auth/dependencies.py:419/436`
 - W-2 スコープ外確認: `docs/handoff/products-rls-stage1/recon.md` §RL-6
+- 段階2 recon/design: `docs/handoff/products-rls-stage2/recon.md`, `docs/handoff/products-rls-stage2/design.md`
