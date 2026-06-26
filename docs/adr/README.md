@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-25 / ADR 総数: 145 件
+最終更新: 2026-06-26 / ADR 総数: 146 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -162,6 +162,7 @@
 | [ADR-142](./ADR-142-tenant-provisioning-completeness.md) | ADR-142: 新テナント provisioning に必須テナント別テーブルが漏れなく揃うことを保証する | — | — | — |
 | [ADR-143](./ADR-143-inventory-public-v2-canonical.md) | ADR-143: public.inventory(B在庫) は v2形を正典とし、repoフル実行も末尾収束で v2 に到達する | — | — | 2026-06-24 |
 | [ADR-144](./ADR-144-ui-component-governance.md) | ADR-144: UI共通部品の遵守ガバナンス | Accepted | — | 2026-06-25 |
+| [ADR-145](./ADR-145-public-products-force-rls.md) | ADR-145: public.products への FORCE ROW LEVEL SECURITY 付与（共通/テナント固有の2層保護） | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 
