@@ -16,7 +16,11 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/morimoto/outbound-translation-fix | outbound送信翻訳バグ修正（段階A）draft_id経由確認済み英訳適用 | 2026-06-26 | IN_PROGRESS | | main | base=main・stale closure + backend draft_id lookup |
+| release/fedex-guide-step1-7 | FedEx ETD ガイド Step1-7 main リリース（cherry-pick #2611） | 2026-06-26 | IN_PROGRESS | | main | base=main |
+| release/carrier-credential-form-refactor | CarrierCredentialForm 切り出し main リリース（cherry-pick #2601） | 2026-06-26 | DONE | #2608 | main | main マージ済み |
+| feature/morimoto/carrier-credential-form | CarrierCredentialForm 切り出し（挙動不変リファクタ・第1段） | 2026-06-26 | DONE | #2601 | | develop マージ済み |
+| feature/morimoto/fix-tenant-create-tx-double-begin | テナント作成時 SQLAlchemy tx 二重開始解消（壁1） | 2026-06-24 | DONE | #2604 | | develop マージ済み 2026-06-26 |
+| release/morimoto/outbound-translation-fix | outbound送信翻訳バグ修正（段階A）draft_id経由確認済み英訳適用 | 2026-06-26 | DONE | #2606 | main | base=main |
 | release/morimoto/inventory-ui-cleanup | /inventory UI整理 — アクションバー削除・タブ集約・警告移動（ADR-093） | 2026-06-24 | IN_PROGRESS | | main | base=main |
 | release/setup-guide-screenshot-maxwidth | FedExセットアップガイド スクショ幅修正本番リリース | 2026-06-24 | IN_PROGRESS | #2536 | - | cherry-pick #2535 |
 | release/fedex-guide-fullscreen-to-main | FedEx ETD セットアップガイド独立レイアウト化＋進捗バー固定 → main リリース | 2026-06-23 | IN_PROGRESS | | | cherry-pick from #2523 |
@@ -146,7 +150,6 @@
 | feature/morimoto/gate-bug-note | （記入してください） | 2026-06-11 18:12 | IN_PROGRESS | | | |
 | feature/morimoto/sa-03-recon | （記入してください） | 2026-06-11 18:18 | IN_PROGRESS | | | |
 | feature/morimoto/deploy-timeout-fix | （記入してください） | 2026-06-11 20:58 | IN_PROGRESS | | | |
-| feature/morimoto/carrier-credential-form | CarrierCredentialForm 切り出し（挙動不変リファクタ・第1段） | 2026-06-26 | IN_PROGRESS | #2601 | | frontend/src/pages/integrations/ 2ファイル |
 | feature/morimoto/fedex-pickup-carriercod-fix | （記入してください） | 2026-06-11 20:59 | IN_PROGRESS | | | |
 | feature/morimoto/sa-03-change-billing | SA-03 change_billing一式（ADR-127 A-1〜A-3, B-1/B-2, E-1/E-2）+ migration | 2026-06-12 04:00 | IN_PROGRESS | | | |
 | feature/morimoto/adr109-db-migration | （記入してください） | 2026-06-12 12:09 | IN_PROGRESS | | | |
@@ -182,6 +185,14 @@
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
 | feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
 | feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | IN_PROGRESS | | | `frontend/src/pages/goal-setting/GoalSettingPage.tsx` / `frontend/src/pages/goal-setting/GoalSettingPage.css` / `frontend/tests-e2e/goal-setting-advisor.spec.ts` |
+| feature/morimoto/discord-bot-token-6 | （記入してください） | 2026-06-26 07:39 | IN_PROGRESS | | | |
+| release/lead-edit-select-only | （記入してください） | 2026-06-26 07:58 | DONE | | | |
+| feature/morimoto/select-arrow-padding | （記入してください） | 2026-06-26 10:51 | DONE | | | |
+| feature/morimoto/adr-144-discord-b-method | （記入してください） | 2026-06-26 11:05 | IN_PROGRESS | | | |
+| feature/morimoto/fedex-guide-step1-7-form | FedEx ETD ガイド Step1-7 新設（CarrierCredentialForm 埋め込み・第2段） | 2026-06-26 | IN_PROGRESS | | | frontend/src/pages/integrations/FedexEtdSetupGuide.tsx |
+| release/select-arrow-padding-only | （記入してください） | 2026-06-26 11:46 | DONE | | | |
+| release/morimoto/inbox-ui-text-j1-j5 | 送信ガード/翻訳プレビュー UI 微調整（便1 J1-J5）文言+自動生成 | 2026-06-26 | IN_PROGRESS | | main | base=main |
+| feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
 ---
 
 ## 記入例
@@ -240,3 +251,5 @@
 | release/send-guard-phase-b | 送信ガード Phase B（ADR-143: 多数決自動判定 API + useInboxState 自動注入）main単独便 | 2026-06-24 | IN_PROGRESS | | main | leads.py+useInboxState.ts+test_lang_judge.py・Phase A無改変 |
 | release/etd-guide-nav-center | ETD ガイド 左ナビ項目ラベル中央揃え リリース | 2026-06-24 | IN_PROGRESS | | main | base=main・CSS 1行 cherry-pick |
 | release/morimoto/discord-oauth-rls-fix | Discord OAuth callback 監査ログ RLS バグ修正（set_tenant_context 追加・ADR-091）main 単独便 | 2026-06-25 | IN_PROGRESS | #2585 | main | backend 1行・migration なし |
+| feature/morimoto/migrate-lead-edit-select | LeadEditPage 生select 7個→Select コンポーネント移行（ADR-073） | 2026-06-26 | REVIEW | #2599 | | develop マージ待ち |
+| feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
