@@ -54,7 +54,7 @@
 
 ## i18n キー追加
 
-`frontend/src/locales/ja.json:344`・`en.json:344` に `fedexEtdGuideStep1_7` を追加（`fedexEtdGuideStep1_6b` の直後）。
+`frontend/src/locales/ja.json:344`・`frontend/src/locales/en.json:344` に `fedexEtdGuideStep1_7` を追加（`fedexEtdGuideStep1_6b` の直後）。
 
 ---
 
