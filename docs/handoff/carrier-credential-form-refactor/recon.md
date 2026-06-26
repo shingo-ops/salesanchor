@@ -44,7 +44,7 @@
 
 `renderCard()` 内、`if (isEditing)` ブロック:
 
-- `CarrierIntegrationPage.tsx:215-287`（`<section>` タグ全体）
+- `frontend/src/pages/integrations/CarrierIntegrationPage.tsx:215-287`（`<section>` タグ全体）
 
 フォーム内で参照している親スコープの変数:
 - `env`（引数として渡される）
