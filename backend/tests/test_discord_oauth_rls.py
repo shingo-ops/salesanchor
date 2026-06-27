@@ -38,17 +38,24 @@ async def _bootstrap_minimal_schema(admin_engine, tenant_id: int) -> None:
     """
     schema = f"tenant_{tenant_id:03d}"
     async with admin_engine.begin() as conn:
-        # public.tenants（存在しなければ作成）
+        # public.tenants（存在しなければ作成）— rls_bootstrap.py と同一スキーマで競合を防ぐ
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS public.tenants (
                 id INTEGER PRIMARY KEY,
-                tenant_code VARCHAR(50) NOT NULL DEFAULT '',
+                tenant_code VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
+                tenant_name VARCHAR(255) NOT NULL DEFAULT '',
+                company_name VARCHAR(255) NOT NULL DEFAULT '',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                settings JSONB NOT NULL DEFAULT '{}'::jsonb,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
         await conn.execute(
-            text("INSERT INTO public.tenants (id) VALUES (:tid) ON CONFLICT DO NOTHING"),
-            {"tid": tenant_id},
+            text(
+                "INSERT INTO public.tenants (id, tenant_code) VALUES (:tid, :code)"
+                " ON CONFLICT DO NOTHING"
+            ),
+            {"tid": tenant_id, "code": f"tenant_{tenant_id:03d}"},
         )
 
         # テナントスキーマ

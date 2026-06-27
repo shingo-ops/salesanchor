@@ -458,6 +458,7 @@ export default function InventoryPage() {
       </div>
 
       {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン ＋ 警告（右端固定） */}
+      {/* ui-allow: TCG type tab bar from main back-merge, ADR-143 D-1 inventory v2 (#2624) */}
       <div className="tabs" style={{ display: "flex", gap: "var(--space-sm)", margin: "var(--space-sm) 0", alignItems: "flex-start" }}>
         <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
           {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
@@ -471,6 +472,7 @@ export default function InventoryPage() {
             );
           })}
           {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
+            // ui-allow: TCG "other types" dropdown from main back-merge, ADR-143 D-1 (#2624)
             <select
               value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
               onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
