@@ -1,0 +1,39 @@
+name: UI Governance Gate
+
+# pages/ 配下に新規の生UI部品（生select / 生input text+search+省略 / 自作タブ）が
+# 追加されていないかを検査するゲート。
+#
+# ※ 非必須（non-mandatory）。安定確認後に Ruleset 追加を別途 GO で判断する。
+#    前例: .github/workflows/dangling-route-gate.yml（同様の段階導入）
+#
+# 関連: docs/adr/ADR-144-ui-component-governance.md
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  ui-governance:
+    name: UI governance gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Run UI governance tests
+        run: node scripts/tests/test-ui-governance.js
+
+      - name: Run UI governance gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-ui-governance.js

@@ -413,7 +413,10 @@ async def save_carrier_credentials(
         user.id,
         account_number=payload.account_number,
     )
-    # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:182）。
+    # NOTE: save_credentials は内部で db.commit() 済み（carrier_credentials.py:198）。
+    # ADR-072: 内部 commit 後にコネクションプールが別コネクションを払い出す可能性があるため
+    # app.tenant_id を再設定してから後続クエリ・audit_logs INSERT を実行する。
+    await reset_tenant_context(db, tenant_id)
     # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
     new_status = await carriers.get_status(db, tenant_id, carrier, environment=effective_env)
     new_audit = {

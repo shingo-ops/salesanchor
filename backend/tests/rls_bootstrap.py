@@ -24,7 +24,7 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260603_040000_add_products_set_type.sql",
     "20260605_000000_add_products_display_order.sql",
     "20260616_000000_fix_tcg_type_dedup.sql",
-    "20260623_030000_add_products_tcg_type_fk.sql",
+    "20260623_060000_add_products_tcg_type_fk.sql",
 ]
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",

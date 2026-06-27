@@ -72,10 +72,6 @@ class TestDashboardTask:
         mock_session = MagicMock()
 
         lead_row = {"total": 7, "open_count": 4}
-        deal_row = {
-            "total": 5, "open_count": 3, "won_count": 2,
-            "total_amount": 1000000, "won_amount": 500000,
-        }
         order_row = {"total": 8, "pending_count": 2, "total_amount": 800000}
 
         def mk_mapping(data):
@@ -84,7 +80,6 @@ class TestDashboardTask:
             return m
 
         mock_lead = mk_mapping(lead_row)
-        mock_deal = mk_mapping(deal_row)
         mock_order = mk_mapping(order_row)
 
         call_count = [0]
@@ -94,20 +89,17 @@ class TestDashboardTask:
             result = MagicMock()
             # クエリ順:
             # 1: SET search_path / 2: SET app.tenant_id / 3: SET app.is_operator
-            # 4: companies count / 5: leads集計 / 6: deals集計
-            # 7: orders集計 / 8: teams count
-            # 9: 直近会社 / 10: 直近商談 / 11: 直近リード
+            # 4: companies count / 5: leads集計 / 6: orders集計
+            # 7: teams count / 8: 直近会社 / 9: 直近リード
             if call_count[0] == 4:
                 result.scalar.return_value = 10
             elif call_count[0] == 5:
                 result.mappings.return_value.first.return_value = mock_lead
             elif call_count[0] == 6:
-                result.mappings.return_value.first.return_value = mock_deal
-            elif call_count[0] == 7:
                 result.mappings.return_value.first.return_value = mock_order
-            elif call_count[0] == 8:
+            elif call_count[0] == 7:
                 result.scalar.return_value = 3
-            elif call_count[0] in (9, 10, 11):
+            elif call_count[0] in (8, 9):
                 result.mappings.return_value.all.return_value = []
             return result
 
@@ -119,19 +111,16 @@ class TestDashboardTask:
             "schema_version",
             "company_count",
             "lead_count", "lead_open_count",
-            "deal_count", "deal_open_count", "deal_won_count",
-            "deal_total_amount", "deal_won_amount",
             "order_count", "order_pending_count", "order_total_amount",
             "team_count",
-            "recent_companies", "recent_deals", "recent_leads",
+            "recent_companies", "recent_leads",
         }
         assert set(kpis.keys()) == expected_keys
         assert kpis["company_count"] == 10
         assert kpis["lead_count"] == 7
-        assert kpis["deal_count"] == 5
         assert kpis["order_count"] == 8
         assert kpis["team_count"] == 3
-        assert kpis["schema_version"] == 3
+        assert kpis["schema_version"] == 4
 
 
 class TestMaintenanceTask:
@@ -358,23 +347,17 @@ class TestDashboardCacheIntegration:
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_current_tenant] = lambda: 999
 
-        # schema_version=3 を含む最新スキーマのキャッシュ（Phase 3拡張後）
+        # schema_version=4 を含む最新スキーマのキャッシュ（商談KPI除去後）
         cached_kpi = json.dumps({
-            "schema_version": 3,
+            "schema_version": 4,
             "company_count": 42,
             "lead_count": 7,
             "lead_open_count": 4,
-            "deal_count": 10,
-            "deal_open_count": 5,
-            "deal_won_count": 5,
-            "deal_total_amount": 1000000.0,
-            "deal_won_amount": 500000.0,
             "order_count": 20,
             "order_pending_count": 3,
             "order_total_amount": 800000.0,
             "team_count": 3,
             "recent_companies": [],
-            "recent_deals": [],
             "recent_leads": [],
         })
 

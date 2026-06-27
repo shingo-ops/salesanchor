@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 from app.models import User
 from app.schemas.parse_review import (
@@ -156,124 +156,128 @@ async def approve_review(
     AC6.5: version mismatch → 409 Conflict
     AC6.6: inventory_movements append-only + SUM = stock_quantity 不変条件
     """
-    # 1. 現在の inbound 行を取得 + 楽観ロック値検証
-    row = (
-        (
+    await set_operator_context(db)
+    try:
+        # 1. 現在の inbound 行を取得 + 楽観ロック値検証
+        row = (
+            (
+                await db.execute(
+                    text(
+                        "SELECT id, supplier_id, parse_result_json, parse_status, version "
+                        "FROM public.discord_inbound_messages "
+                        "WHERE id = :id "
+                        "FOR UPDATE"
+                    ),
+                    {"id": inbound_id},
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if row is None:
+            raise HTTPException(status_code=404, detail="inbound not found")
+
+        current_version = int(row["version"] or 0)
+        if current_version != payload.version:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"version mismatch (expected {payload.version}, "
+                    f"server has {current_version}). Reload and retry."
+                ),
+            )
+
+        # すでに approved/rejected な inbound への再 approve は禁止
+        if row["parse_status"] in ("approved", "rejected"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"inbound already {row['parse_status']}; cannot approve again",
+            )
+
+        # 2. items を inventory_movements + products に反映（同一 transaction、commit せず）
+        try:
+            result = await apply_inbound_items(
+                db,
+                inbound_id=inbound_id,
+                items=[i.model_dump() for i in payload.items],
+                operator_id=int(current_user.id),
+                supplier_id=row.get("supplier_id"),
+            )
+        except InventoryApplyError as e:
+            # 業務エラーは 400。db.commit() していないので変更は破棄される。
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        # 3. parse_result_json.skipped[] を更新 (AC6.3)
+        existing_parse_result = _coerce_parse_result_json(row.get("parse_result_json"))
+        skipped_payload = list(payload.skipped_indices)
+        if skipped_payload:
+            existing_parse_result.setdefault("skipped", [])
+            # 既存 skipped と union（重複排除、順序維持）
+            seen = set(existing_parse_result["skipped"])
+            for idx in skipped_payload:
+                if idx not in seen:
+                    existing_parse_result["skipped"].append(idx)
+                    seen.add(idx)
+
+        # 4. discord_inbound_messages 更新（version++、parse_status='approved'、approved_at、
+        #    operator_id、operator_comment、parse_result_json）
+        upd = (
             await db.execute(
                 text(
-                    "SELECT id, supplier_id, parse_result_json, parse_status, version "
-                    "FROM public.discord_inbound_messages "
-                    "WHERE id = :id "
-                    "FOR UPDATE"
-                ),
-                {"id": inbound_id},
-            )
-        )
-        .mappings()
-        .first()
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="inbound not found")
-
-    current_version = int(row["version"] or 0)
-    if current_version != payload.version:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"version mismatch (expected {payload.version}, "
-                f"server has {current_version}). Reload and retry."
-            ),
-        )
-
-    # すでに approved/rejected な inbound への再 approve は禁止
-    if row["parse_status"] in ("approved", "rejected"):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"inbound already {row['parse_status']}; cannot approve again",
-        )
-
-    # 2. items を inventory_movements + products に反映（同一 transaction、commit せず）
-    try:
-        result = await apply_inbound_items(
-            db,
-            inbound_id=inbound_id,
-            items=[i.model_dump() for i in payload.items],
-            operator_id=int(current_user.id),
-            supplier_id=row.get("supplier_id"),
-        )
-    except InventoryApplyError as e:
-        # 業務エラーは 400。db.commit() していないので変更は破棄される。
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-    # 3. parse_result_json.skipped[] を更新 (AC6.3)
-    existing_parse_result = _coerce_parse_result_json(row.get("parse_result_json"))
-    skipped_payload = list(payload.skipped_indices)
-    if skipped_payload:
-        existing_parse_result.setdefault("skipped", [])
-        # 既存 skipped と union（重複排除、順序維持）
-        seen = set(existing_parse_result["skipped"])
-        for idx in skipped_payload:
-            if idx not in seen:
-                existing_parse_result["skipped"].append(idx)
-                seen.add(idx)
-
-    # 4. discord_inbound_messages 更新（version++、parse_status='approved'、approved_at、
-    #    operator_id、operator_comment、parse_result_json）
-    upd = (
-        await db.execute(
-            text(
+                    """
+                UPDATE public.discord_inbound_messages
+                   SET parse_status     = 'approved',
+                       version          = version + 1,
+                       approved_at      = NOW(),
+                       operator_id      = :op_id,
+                       operator_comment = :op_cmt,
+                       parse_result_json = :prj
+                 WHERE id = :id
+                   AND version = :ver
+                RETURNING version
                 """
-            UPDATE public.discord_inbound_messages
-               SET parse_status     = 'approved',
-                   version          = version + 1,
-                   approved_at      = NOW(),
-                   operator_id      = :op_id,
-                   operator_comment = :op_cmt,
-                   parse_result_json = :prj
-             WHERE id = :id
-               AND version = :ver
-            RETURNING version
-            """
-            ),
-            {
-                "id": inbound_id,
-                "ver": current_version,
-                "op_id": int(current_user.id),
-                "op_cmt": payload.operator_comment,
-                "prj": json.dumps(existing_parse_result),
-            },
-        )
-    ).first()
-    if upd is None:
-        # 別 admin が間に挟まった
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="version mismatch detected during update; concurrent approve.",
-        )
-
-    await db.commit()
-
-    return ApproveResponse(
-        inbound_id=inbound_id,
-        parse_status="approved",
-        version=int(upd[0]),
-        movements=[
-            InventoryMovementSummary(
-                movement_id=m.movement_id,
-                product_id=m.product_id,
-                delta_qty=m.delta_qty,
-                before_qty=m.before_qty,
-                after_qty=m.after_qty,
+                ),
+                {
+                    "id": inbound_id,
+                    "ver": current_version,
+                    "op_id": int(current_user.id),
+                    "op_cmt": payload.operator_comment,
+                    "prj": json.dumps(existing_parse_result),
+                },
             )
-            for m in result.movements
-        ],
-        skipped_count=len(skipped_payload) + result.skipped,
-        # QA 2026-05-30 (Option Z): 在庫を動かさず記録した仕入元オファー件数
-        offers_recorded=result.offers_recorded,
-        # Sprint 9 / F9 v1.2: Phase A 並走時に UI が warning toast を出すための情報
-        skipped_stock_update=result.stock_quantity_skipped,
-        phase=str(result.phase),
-    )
+        ).first()
+        if upd is None:
+            # 別 admin が間に挟まった
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="version mismatch detected during update; concurrent approve.",
+            )
+
+        await db.commit()
+
+        return ApproveResponse(
+            inbound_id=inbound_id,
+            parse_status="approved",
+            version=int(upd[0]),
+            movements=[
+                InventoryMovementSummary(
+                    movement_id=m.movement_id,
+                    product_id=m.product_id,
+                    delta_qty=m.delta_qty,
+                    before_qty=m.before_qty,
+                    after_qty=m.after_qty,
+                )
+                for m in result.movements
+            ],
+            skipped_count=len(skipped_payload) + result.skipped,
+            # QA 2026-05-30 (Option Z): 在庫を動かさず記録した仕入元オファー件数
+            offers_recorded=result.offers_recorded,
+            # Sprint 9 / F9 v1.2: Phase A 並走時に UI が warning toast を出すための情報
+            skipped_stock_update=result.stock_quantity_skipped,
+            phase=str(result.phase),
+        )
+    finally:
+        await reset_operator_context(db)
 
 
 @router.post(
