@@ -7,6 +7,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 
 export interface BotFormState {
   display_name: string;
@@ -31,6 +32,21 @@ interface Props {
 
 export function BotFormFields({ form, onChange, staff }: Props) {
   const { t } = useTranslation();
+  const purposeOptions = [
+    { value: "invoice", label: t("bots.purposeInvoice") },
+    { value: "shipment", label: t("bots.purposeShipment") },
+    { value: "notification", label: t("bots.purposeNotification") },
+    { value: "custom", label: t("bots.purposeCustom") },
+  ];
+  const statusOptions = [
+    { value: "active", label: t("bots.statusActive") },
+    { value: "inactive", label: t("bots.statusInactive") },
+    { value: "maintenance", label: t("bots.statusMaintenance") },
+  ];
+  const staffOptions = staff.map((s) => ({
+    value: String(s.id),
+    label: `${s.surname_jp} ${s.given_name_jp}`,
+  }));
   return (
     <>
       <div className="form-group">
@@ -41,45 +57,27 @@ export function BotFormFields({ form, onChange, staff }: Props) {
           onChange={(e) => onChange("display_name", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("bots.purposeLabel")} *</label>
-        <select
-          required
-          value={form.purpose}
-          onChange={(e) => onChange("purpose", e.target.value)}
-        >
-          <option value="invoice">{t("bots.purposeInvoice")}</option>
-          <option value="shipment">{t("bots.purposeShipment")}</option>
-          <option value="notification">{t("bots.purposeNotification")}</option>
-          <option value="custom">{t("bots.purposeCustom")}</option>
-        </select>
-      </div>
-      <div className="form-group">
-        <label>{t("common.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          <option value="active">{t("bots.statusActive")}</option>
-          <option value="inactive">{t("bots.statusInactive")}</option>
-          <option value="maintenance">{t("bots.statusMaintenance")}</option>
-        </select>
-      </div>
-      <div className="form-group">
-        <label>{t("bots.ownerStaff")} *</label>
-        <select
-          required
-          value={form.owner_staff_id}
-          onChange={(e) => onChange("owner_staff_id", e.target.value)}
-        >
-          <option value="">{t("common.pleaseSelect")}</option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.surname_jp} {s.given_name_jp}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label={t("bots.purposeLabel")}
+        required
+        value={form.purpose}
+        onChange={(e) => onChange("purpose", e.target.value)}
+        options={purposeOptions}
+      />
+      <Select
+        label={t("common.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
+      <Select
+        label={t("bots.ownerStaff")}
+        required
+        value={form.owner_staff_id}
+        onChange={(e) => onChange("owner_staff_id", e.target.value)}
+        options={staffOptions}
+        placeholder={t("common.pleaseSelect")}
+      />
       <div className="form-group">
         <label>Discord Bot ID</label>
         <input

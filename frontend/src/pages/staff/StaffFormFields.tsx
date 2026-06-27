@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 
 export interface StaffFormState {
   surname_jp: string;
@@ -29,6 +30,12 @@ interface Props {
 
 export function StaffFormFields({ form, onChange, roles }: Props) {
   const { t } = useTranslation();
+  const roleOptions = roles.map((r) => ({ value: String(r.id), label: r.name }));
+  const statusOptions = [
+    { value: "active", label: t("staff.status_active") },
+    { value: "inactive", label: t("staff.status_inactive") },
+    { value: "pending", label: t("staff.status_pending") },
+  ];
   return (
     <>
       <div className="form-group">
@@ -56,32 +63,20 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
           onChange={(e) => onChange("primary_email", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("staff.role")} *</label>
-        <select
-          required
-          value={form.role_id}
-          onChange={(e) => onChange("role_id", e.target.value)}
-        >
-          <option value="">{t("common.pleaseSelect")}</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="form-group">
-        <label>{t("staff.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          <option value="active">{t("staff.status_active")}</option>
-          <option value="inactive">{t("staff.status_inactive")}</option>
-          <option value="pending">{t("staff.status_pending")}</option>
-        </select>
-      </div>
+      <Select
+        label={t("staff.role")}
+        required
+        value={form.role_id}
+        onChange={(e) => onChange("role_id", e.target.value)}
+        options={roleOptions}
+        placeholder={t("common.pleaseSelect")}
+      />
+      <Select
+        label={t("staff.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
       <div className="form-group">
         <label>Discord ID</label>
         <input
