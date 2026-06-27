@@ -1,16 +1,16 @@
 # design — modal-select-fields
 
 **仕事名**: modal-select-fields
-**日付**: 2026-06-26
-**対象ADR**: ADR-073
+**日付**: 2026-06-28
+**対象ADR**: ADR-121
 **recon**: docs/handoff/modal-select-fields/recon.md
 
 ---
 
 ## 背景・目的
 
-一覧画面のモーダル 6 枚に残っている生 `<select>` を、棚の `Select` に寄せる。
-目的は見た目の統一ではなく、共通部品の適用率を上げて今後の保守を一本化すること。
+一覧画面から開く小窓 6 画面の生 `<select>` を、棚の `Select` に寄せる。
+目的は見た目をいじることではなく、共通部品に統一して今後の保守を一本化すること。
 
 この変更はフロントのみで、DB 変更はしない。`migrations/` と `deploy.yml` は対象外。
 
@@ -18,11 +18,11 @@
 
 ## 変更方針
 
-- **変更スコープ**: 6 つの `*FormFields.tsx` のみ
-- **画面影響**: 7 画面
+- **変更スコープ**: `frontend/src/pages/` 配下の 6 ファイルのみ
+- **画面影響**: 6 画面
 - **禁止事項**: ページ専用 CSS で `Select` を戻さない、入力欄やタブやバッジを触らない
 - **機能不変**: `value` / `onChange` / 選択肢 / 保存先の値は変えない
-- **標準準拠**: `Select` の▽アイコン、必須 `*`、余白は棚の標準を使う
+- **標準準拠**: `Select` の▽アイコン、右余白、必須 `*` は棚の標準を使う
 
 ---
 
@@ -30,10 +30,9 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| 対象 6 ファイルの raw `<select>` が 12 個 → 0 個になる | `rg -n "<select" ...` で 0 件確認 |
-| 画面 7 枚で表示崩れがない | 画面ごとの before / after スクショで確認 |
-| 必須 `*` の見た目が許容範囲 | 画面ごとのスクショと PO 目視 |
-| ▽ アイコンが文字に重ならない | 実機で各モーダルを開いて確認 |
+| 対象 6 ファイルの raw `<select>` が 0 個になる | `rg -n "<select"` で 0 件確認 |
+| 6 画面で表示崩れがない | 画面ごとの before / after スクショで確認 |
+| 必須 `*` と▽が棚の標準にそろっている | 実機で各画面を目視確認 |
 | CI が green | frontend build / required checks / process-artifacts gate |
 | DB 変更ゼロ | `git diff --name-only` で `migrations/` / `deploy.yml` が含まれないことを確認 |
 
@@ -71,11 +70,11 @@
 
 ---
 
-## 外部・過去事例
+## 外部・過去事例の参照と我々への応用
 
 - 外部事例: 該当なし。今回は純粋な内部 UI の置換で、外部 API や DB には触れない
-- 過去事例: `docs/handoff/select-arrow-padding/design.md` と `docs/handoff/select-arrow-padding/recon.md` で、棚の `Select` に▽アイコンと右余白を持たせる標準が確定している
-- 過去事例: `docs/handoff/migrate-lead-edit-select/design.md` と `docs/handoff/migrate-lead-edit-select/recon.md` で、`Select` への置換手順が先行実績として整理されている
+- 過去事例: PR #2607 でリード編集パネルの select を棚へ寄せ、▽ と右余白の標準が確定済み
+- 過去事例: PR #2635 で一覧画面のモーダル select を同系統で棚へ寄せる流れを確認済み
 
 ---
 
@@ -85,6 +84,5 @@
 |---|---|
 | 6 ファイルの raw `<select>` が消えている | `rg -n "<select"` の結果が 0 件 |
 | 変更がフロントのみ | `git diff --name-only` に `migrations/` / `deploy.yml` が無い |
-| 7 画面の before / after が揃う | 画面ごとのスクショ 14 枚を確認 |
-| BotFormFields は 2 画面で効く | BotsPage と BotEditPage の両方でスクショを確認 |
+| 6 画面の before / after が揃う | 画面ごとのスクショ 12 枚を確認 |
 | 全チェック green | CI と process-artifacts gate の結果を確認 |
