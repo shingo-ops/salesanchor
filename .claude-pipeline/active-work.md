@@ -17,6 +17,7 @@
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
+| feature/morimoto/tenant-feature-switch-mvp | テナント単位フィーチャーフラグ MVP（tenant_features テーブル・require_feature・FeatureGate） | 2026-06-27 | IN_PROGRESS | #2631 | | develop マージ済み・main リリース待ち |
 | release/carrier-credentials-reset-tenant-ctx | ADR-072 鍵保存後 reset_tenant_context 挿入（cherry-pick #2621） | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | release/fedex-guide-step1-7 | FedEx ETD ガイド Step1-7 main リリース（cherry-pick #2611） | 2026-06-26 | DONE | #2615 | main | main マージ済み |
 | release/carrier-credential-form-refactor | CarrierCredentialForm 切り出し main リリース（cherry-pick #2601） | 2026-06-26 | DONE | #2608 | main | main マージ済み |

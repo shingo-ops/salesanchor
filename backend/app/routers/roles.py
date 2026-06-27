@@ -122,11 +122,25 @@ async def get_my_permissions(
       導線を出すかどうかの判定に使用）。
     """
     keys = await load_user_permissions(db, tenant_id, current_user.id)
+
+    # テナント単位フィーチャーフラグ: enabled=true の feature_key を配列で返す
+    features_result = await db.execute(
+        text(
+            "SELECT feature_key FROM public.tenant_features "
+            "WHERE tenant_id = :tid AND enabled = true "
+            "ORDER BY feature_key"
+        ),
+        {"tid": tenant_id},
+    )
+    enabled_features = [row[0] for row in features_result.fetchall()]
+
     return {
         "permissions": sorted(keys),
         "is_super_admin": bool(getattr(current_user, "is_super_admin", False)),
         # Sprint 9 / F9 v1.2: 中央 admin が自テナントの Phase 状態を取得するために必要
         "tenant_id": tenant_id,
+        # テナント単位フィーチャーフラグ（フロント FeatureGate で使用）
+        "enabled_features": enabled_features,
     }
 
 
