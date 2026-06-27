@@ -448,9 +448,14 @@ export function FedexEtdSetupGuide({
                     onCancel={() => setShowCredentialForm(false)}
                   />
                 ) : (
-                  <Badge variant="success" size="sm" dot>
-                    {t("carrierIntegration.fedexEtdGuideConnected")}
-                  </Badge>
+                  <>
+                    <Badge variant="success" size="sm" dot>
+                      {t("carrierIntegration.fedexEtdGuideConnected")}
+                    </Badge>
+                    <p className="form-hint">
+                      {t("carrierIntegration.fedexEtdGuideStep1_7Cta")}
+                    </p>
+                  </>
                 ),
               },
             ]}
