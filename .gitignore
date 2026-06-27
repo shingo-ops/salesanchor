@@ -118,3 +118,6 @@ nginx/htpasswd.d/
 
 # CC ボット認証情報（ADR-136 / B-11: git追跡禁止）
 .claude-access.env
+
+# QA スクリーンショット（生成物・git管理不要）
+qa-screenshots/

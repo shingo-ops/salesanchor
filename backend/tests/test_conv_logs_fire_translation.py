@@ -1,10 +1,10 @@
 """
-conv_logs._fire_translation の tenant context 付与テスト（③-b(6)）。
+conv_logs._fire_translation のテスト。
 
-目的:
-  - _fire_translation は reset_tenant_context 後に呼ばれるため、
-    RLS 有効化後に message_translations へアクセスする前に
-    set_tenant_context で号室を再設定することを保証する。
+テスト一覧:
+  - test_fire_translation_sets_tenant_context_before_ensure: ③-b(6) RLS コンテキスト順序
+  - test_fire_translation_skips_outbound: outbound では ensure_inbound_translations を呼ばない
+  - test_fire_translation_fires_for_inbound: inbound では従来どおり翻訳が発火する
 """
 from __future__ import annotations
 
@@ -66,5 +66,74 @@ async def test_fire_translation_sets_tenant_context_before_ensure():
     mock_set.assert_awaited_once_with(db, 4)
     mock_reset.assert_awaited_once_with(db, 4)
     # DB に translated_text が書き戻されること
+    db.execute.assert_called_once()
+    db.commit.assert_called_once()
+
+
+
+@pytest.mark.asyncio
+async def test_fire_translation_skips_outbound():
+    """outbound を渡すと ensure_inbound_translations が呼ばれない（早期リターン）。
+
+    バグC-1 修正: outbound は inbound 専用翻訳 API を呼ばない。
+    DB への書き戻し（translated_text / original_language）も発生しない。
+    """
+    from app.routers.conv_logs import _fire_translation
+
+    db = AsyncMock()
+
+    with patch(
+        "app.routers.conv_logs.set_tenant_context",
+        new=AsyncMock(),
+    ) as mock_set:
+        with patch(
+            "app.services.message_translator.ensure_inbound_translations",
+            new=AsyncMock(),
+        ) as mock_ensure:
+            await _fire_translation(
+                db=db, tenant_id=4, log_id=99, content_text="Hello", direction="outbound"
+            )
+
+    mock_ensure.assert_not_awaited()
+    mock_set.assert_not_awaited()
+    db.execute.assert_not_called()
+    db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fire_translation_fires_for_inbound():
+    """inbound を渡すと ensure_inbound_translations が従来どおり呼ばれる。
+
+    バグC-1 修正後も inbound 挙動が壊れていないことを確認。
+    """
+    from app.routers.conv_logs import _fire_translation
+
+    db = AsyncMock()
+
+    fake_result = MagicMock(
+        translated_text="Hello",
+        original_language="en",
+        confidence=0.90,
+    )
+
+    with (
+        patch(
+            "app.routers.conv_logs.set_tenant_context",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.message_translator.ensure_inbound_translations",
+            new=AsyncMock(return_value={"ja": fake_result}),
+        ) as mock_ensure,
+        patch(
+            "app.routers.conv_logs.reset_tenant_context",
+            new=AsyncMock(),
+        ),
+    ):
+        await _fire_translation(
+            db=db, tenant_id=4, log_id=10, content_text="Hello", direction="inbound"
+        )
+
+    mock_ensure.assert_awaited_once()
     db.execute.assert_called_once()
     db.commit.assert_called_once()

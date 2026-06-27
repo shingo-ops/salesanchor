@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-26 / ADR 総数: 147 件
+最終更新: 2026-06-27 / ADR 総数: 148 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -161,6 +161,7 @@
 | [ADR-141](./ADR-141-inbound-translation-entry.md) | ADR-141: 受信翻訳の標準入口を `enqueue_inbound_translation()` に統一する | Accepted | — | — |
 | [ADR-142](./ADR-142-tenant-provisioning-completeness.md) | ADR-142: 新テナント provisioning に必須テナント別テーブルが漏れなく揃うことを保証する | — | — | — |
 | [ADR-143](./ADR-143-inventory-public-v2-canonical.md) | ADR-143: public.inventory(B在庫) は v2形を正典とし、repoフル実行も末尾収束で v2 に到達する | — | — | 2026-06-24 |
+| [ADR-143](./ADR-143-send-guard.md) | ADR-143: 送信ガード（Send Guard）Phase A | Accepted | — | — |
 | [ADR-144](./ADR-144-ui-component-governance.md) | ADR-144: UI共通部品の遵守ガバナンス | Accepted | — | 2026-06-25 |
 | [ADR-145](./ADR-145-public-products-force-rls.md) | ADR-145: public.products への FORCE ROW LEVEL SECURITY 付与（共通/テナント固有の2層保護） | Accepted | — | — |
 | [ADR-147](./ADR-147-common-6roles-standardization.md) | ADR-147: 共通6ロール標準化（マネージャー・仕入れ・発送追加） | Accepted | — | — |

@@ -112,8 +112,12 @@ export interface UseInboxStateReturn {
   discordDmChannelMissing: boolean;
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
-  submitSend: () => Promise<void>;
+  submitSend: (opts?: { draftId?: number }) => Promise<void>;
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
+
+  // ADR-142: 送信ガード Phase A — スレッド言語設定
+  recipientLanguageSetting: "auto" | "ja" | "en";
+  setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
 
   // 画像添付
   attachedFile: File | null;
@@ -206,6 +210,15 @@ export function useInboxState(): UseInboxStateReturn {
   const [sendError, setSendError] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const clearAttachment = useCallback(() => { setAttachedFile(null); }, []);
+
+  // ADR-142: 送信ガード Phase A — スレッドごとの言語設定
+  const [languageOverrideByLead, setLanguageOverrideByLead] = useState<Record<number, "auto" | "ja" | "en">>({});
+  const recipientLanguageSetting: "auto" | "ja" | "en" =
+    selectedLeadId != null ? (languageOverrideByLead[selectedLeadId] ?? "auto") : "auto";
+  const setRecipientLanguage = useCallback((v: "auto" | "ja" | "en") => {
+    if (selectedLeadId == null) return;
+    setLanguageOverrideByLead((prev) => ({ ...prev, [selectedLeadId]: v }));
+  }, [selectedLeadId]);
 
   // 管理ドロップダウン
   const [manageOpen, setManageOpen] = useState(false);
@@ -515,6 +528,27 @@ export function useInboxState(): UseInboxStateReturn {
     loadMessages(selectedLeadId);
     markRead(selectedLeadId);
     loadLeadDetail(selectedLeadId);
+
+    // ADR-143 Phase B: auto スレッドで相手言語を多数決判定して自動設定
+    // - 既に手動で ja/en が設定済みのスレッドは触らない（languageOverrideByLead にエントリあり）
+    // - confident=true && language !== null のときだけ setRecipientLanguage を呼ぶ
+    // - 失敗・0件・2件以下は何もしない（auto のまま = Phase A 安全側を維持）
+    if (languageOverrideByLead[selectedLeadId] !== undefined) return;
+    const leadIdAtFetch = selectedLeadId;
+    api.get<{ language: string | null; total_records: number; confident: boolean }>(
+      `/leads/${leadIdAtFetch}/recipient-language`,
+    ).then((res) => {
+      if (res.confident && res.language !== null) {
+        setLanguageOverrideByLead((prev) => {
+          // 取得完了までに手動変更された場合は上書きしない
+          if (prev[leadIdAtFetch] !== undefined) return prev;
+          return { ...prev, [leadIdAtFetch]: res.language as "ja" | "en" };
+        });
+      }
+    }).catch(() => {
+      // 取得失敗は無視（auto のまま）
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeadId, loadMessages, markRead, loadLeadDetail]);
 
   // メッセージリスト末尾へ自動スクロール
@@ -572,8 +606,8 @@ export function useInboxState(): UseInboxStateReturn {
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
 
-  const submitSend = useCallback(async () => {
-    if ((trimmedDraft.length === 0 && !attachedFile) || !canSend || selectedLeadId === null || sending) return;
+  const submitSend = useCallback(async (opts?: { draftId?: number }) => {
+    if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
     setSendError("");
     setSending(true);
     try {
@@ -582,7 +616,7 @@ export function useInboxState(): UseInboxStateReturn {
         clearAttachment();
         setDraft("");
       } else {
-        await sendMessage(selectedLeadId, { text: trimmedDraft });
+        await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");
       }
       skipNextPollRef.current = true;
@@ -834,6 +868,10 @@ export function useInboxState(): UseInboxStateReturn {
     messagingWindow,
     submitSend,
     handleKeyDown,
+
+    // ADR-142: 送信ガード Phase A
+    recipientLanguageSetting,
+    setRecipientLanguage,
 
     // 画像添付
     attachedFile,

@@ -1646,3 +1646,73 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   margin-top: var(--space-1);
   width: 100%;
 }
+
+/* ADR-143: 送信ガード Phase A -------------------------------------------------------- */
+
+/* 確認ダイアログ */
+.send-guard-overlay {
+  position: fixed; /* fixed-ok: 送信ガード確認ダイアログ オーバーレイ */
+  inset: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal, 300);
+}
+.send-guard-dialog {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  max-width: var(--modal-max-w-sm);
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-md);
+}
+.send-guard-title {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.send-guard-body {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+.send-guard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.send-guard-btn {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity var(--transition-micro);
+  text-align: center;
+}
+.send-guard-btn--translate {
+  background: var(--accent);
+  color: var(--on-accent, white);
+}
+.send-guard-btn--asis {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.send-guard-btn--cancel {
+  background: transparent;
+  color: var(--text-muted);
+}
+.send-guard-btn:hover { opacity: var(--opacity-dim); }
+
+:root.force-dark .send-guard-btn--asis {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
