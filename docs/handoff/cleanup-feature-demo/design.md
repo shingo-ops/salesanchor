@@ -3,6 +3,7 @@
 ## 参照
 
 - recon: `docs/handoff/cleanup-feature-demo/recon.md`
+- ADR-027: `docs/adr/ADR-027-ui-internationalization.md`（i18n キー削除の根拠）
 - 機能スイッチ実装 PR: #2631（スイッチ本体は残す）
 
 ## 目的
