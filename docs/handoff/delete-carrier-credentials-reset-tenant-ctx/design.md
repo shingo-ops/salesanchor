@@ -1,5 +1,8 @@
 # design: delete-carrier-credentials-reset-tenant-ctx
 
+- recon 参照: `docs/handoff/delete-carrier-credentials-reset-tenant-ctx/recon.md`
+- 対象 ADR: ADR-072（write endpoint の内部 commit 後に reset_tenant_context 必須）
+
 ## KGI
 
 | 基準 | 検証方法 |
@@ -22,5 +25,6 @@
 | fix 位置 | `save_credentials` 後・`get_status` 前 | `delete_credentials` 後・`record_audit_log` 前 |
 | 構造 | 同根 | 同根 |
 
-## 外部事例
-- n/a（ADR-072 既知パターンの適用）
+## 外部・過去事例の参照と我々への応用
+
+ADR-072 は #2621（save）で初適用済みの既知パターン。SQLAlchemy 2.0 の connection pool 動作により `db.commit()` 後にコネクションが返却され、次の SQL は `app.tenant_id = ''` の新規コネクションで実行される（`audit_logs` RLS は NULLIF ガードなし → クラッシュ）。save との同根確認済みのため外部事例の追加調査は不要。
