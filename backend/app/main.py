@@ -48,6 +48,7 @@ from app.routers import (
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
+    feature_demo,  # テナント単位フィーチャーフラグ検証用
     goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
@@ -375,6 +376,11 @@ app.include_router(
 )
 app.include_router(
     duplicates.router, prefix="/api/v1", tags=["duplicates"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# テナント単位フィーチャーフラグ検証用エンドポイント
+app.include_router(
+    feature_demo.router, prefix="/api/v1", tags=["feature-demo"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
