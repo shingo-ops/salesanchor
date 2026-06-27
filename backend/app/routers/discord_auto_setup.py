@@ -252,7 +252,7 @@ async def run_auto_setup(
             existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
-            permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id),
+            permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id, bot_user_id),
         )
         steps.append(ch_ticket_step)
         if ch_ticket_step.discord_id:
@@ -637,8 +637,9 @@ async def _post_ticket_button_step(
 def _ticket_ch_overwrites(
     guild_id: str,
     staff_role_id: str | None,
+    bot_user_id: str = "",
 ) -> list[dict[str, Any]]:
-    """ticket-start: @everyone view可（チケットを開くためのチャンネル）、Staff送信可。"""
+    """ticket-start: @everyone view可（チケットを開くためのチャンネル）、Staff送信可、bot書込可。"""
     overwrites: list[dict[str, Any]] = [
         {
             "id": guild_id,  # @everyone
@@ -651,6 +652,16 @@ def _ticket_ch_overwrites(
         overwrites.append({
             "id": staff_role_id,
             "type": 0,
+            "allow": str(_SEND_MESSAGES),
+            "deny": "0",
+        })
+    if bot_user_id:
+        # bot 自身が ticket-start に書き込めるよう member overwrite を追加（type=1）。
+        # カテゴリの @everyone deny SEND がチャンネルにも継承されるため bot も弾かれる
+        # → カテゴリ(:207-219) と同パターンで bot user を明示的に許可する。
+        overwrites.append({
+            "id": bot_user_id,
+            "type": 1,  # member overwrite（bot ユーザー個人）
             "allow": str(_SEND_MESSAGES),
             "deny": "0",
         })
