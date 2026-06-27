@@ -457,15 +457,16 @@ async def delete_carrier_credentials(
     } if old_status["configured"] else None
 
     await carriers.delete_credentials(db, tenant_id, carrier, environment=environment)
-    # NOTE: delete_credentials は内部で db.commit() 済み（carrier_credentials.py:190）。
-    # audit は別 tx になる（既知の構造的制約: 設計doc §5 参照）。
+    # NOTE: delete_credentials は内部で db.commit() 済み（carrier_credentials.py:210）。
+    # ADR-072: 内部 commit 後にコネクションプールが別コネクションを払い出す可能性があるため
+    # app.tenant_id を再設定してから audit_logs INSERT を実行する。
+    await reset_tenant_context(db, tenant_id)
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=user.id,
         action="delete", table_name="tenant_carrier_credentials",
         record_id=None, old_data=old_audit, new_data=None,
     )
     await db.commit()
-    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
 
 @router.post(
