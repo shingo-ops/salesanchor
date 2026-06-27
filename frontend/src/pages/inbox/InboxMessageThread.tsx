@@ -604,7 +604,7 @@ export function InboxMessageThread({
           aria-label={t("inbox.imagePreviewAlt")}
           style={{
             position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(0,0,0,0.85)",
+            background: "var(--overlay-bg)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
           onClick={closeLightbox}
