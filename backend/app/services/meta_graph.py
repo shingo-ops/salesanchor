@@ -1194,6 +1194,58 @@ async def get_page_subscribed_apps(
     return out
 
 
+async def fetch_attachment_url(
+    *,
+    page_access_token: str,
+    message_id: str,
+) -> Optional[str]:
+    """Meta の GET /{message_id}/attachments で有効な画像 URL を取り直す。
+
+    受信画像の CDN URL が期限切れになった場合に呼ぶ再取得ヘルパー。
+    取得できなければ None を返す（例外で落とさない）。
+    IG は直近 20 件/スレッド制限があるため古いメッセージは None になりうる。
+
+    Returns:
+        有効な画像 URL 文字列、取得不能なら None
+    """
+    url = f"{graph_base_url()}/{message_id}/attachments"
+    try:
+        async with httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT_SECONDS) as client:
+            response = await client.get(
+                url,
+                params={
+                    "fields": "image_data,file_url",
+                    "access_token": page_access_token,
+                },
+            )
+    except (httpx.TimeoutException, httpx.HTTPError) as e:
+        logger.warning("[meta_graph] fetch_attachment_url network error: %s", e)
+        return None
+
+    if response.status_code >= 400:
+        logger.warning(
+            "[meta_graph] fetch_attachment_url HTTP %s for message_id=%s",
+            response.status_code, message_id,
+        )
+        return None
+
+    try:
+        rbody = response.json()
+    except ValueError:
+        return None
+
+    for item in (rbody.get("data") or []):
+        if not isinstance(item, dict):
+            continue
+        # image_data.url を優先、無ければ file_url
+        image_data = item.get("image_data") or {}
+        img_url = image_data.get("url") or item.get("file_url")
+        if img_url:
+            return str(img_url)
+
+    return None
+
+
 __all__ = [
     "MetaGraphError",
     "MetaGraphAPIError",
@@ -1216,4 +1268,5 @@ __all__ = [
     "upload_attachment",
     "send_messenger_attachment",
     "send_instagram_attachment",
+    "fetch_attachment_url",
 ]

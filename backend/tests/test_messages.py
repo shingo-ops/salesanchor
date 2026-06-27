@@ -128,6 +128,8 @@ _META_MESSAGES_DDL = """
         error_message TEXT,
         seen_at TIMESTAMP,
         seen_by_staff_id INTEGER,
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """

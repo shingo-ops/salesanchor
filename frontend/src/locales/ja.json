@@ -965,6 +965,7 @@
     "imagePreviewAlt": "添付画像プレビュー",
     "removeAttachment": "添付を削除",
     "imageSent": "画像",
+    "imageExpired": "画像を表示できません（期限切れ）",
     "humanAgentTag": "ヒューマンエージェントタグを付与（24h〜7d ウィンドウ用）",
     "windowExpired": "メッセージウィンドウ期限切れ",
     "windowWarning": "メッセージウィンドウ: 残り24時間未満",
