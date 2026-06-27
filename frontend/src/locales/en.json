@@ -3070,8 +3070,5 @@
     "outbound": "Outbound Sales",
     "inbound_short": "Customer-led",
     "outbound_short": "Company-led"
-  },
-  "featureDemo": {
-    "enabledLabel": "inventory_v2 is enabled"
   }
 }
