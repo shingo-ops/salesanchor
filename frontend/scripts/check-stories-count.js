@@ -19,6 +19,7 @@ const COMPONENTS_DIR = join(__dirname, '../src/components');
 // UI表示がないコンポーネントは対象外（認証ガード・HOC等）
 const EXEMPT = new Set([
   'ProtectedRoute.tsx',
+  'FeatureGate.tsx', // 条件付きレンダリングラッパー・UI表示なし
 ]);
 
 const files = readdirSync(COMPONENTS_DIR).filter(
