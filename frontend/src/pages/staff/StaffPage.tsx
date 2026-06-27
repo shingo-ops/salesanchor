@@ -15,6 +15,7 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Select } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
@@ -256,19 +257,24 @@ export default function StaffPage() {
           <div className="form-group"><label>Discord ID</label>
             <input value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.role")} *</label>
-            <select required value={createForm.role_id} onChange={(e) => setCreateForm({ ...createForm, role_id: e.target.value })}>
-              <option value="">{t("common.pleaseSelect")}</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>{t("staff.status")}</label>
-            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-              <option value="active">{t("staff.status_active")}</option>
-              <option value="inactive">{t("staff.status_inactive")}</option>
-              <option value="pending">{t("staff.status_pending")}</option>
-            </select>
-          </div>
+          <Select
+            label={t("staff.role")}
+            required
+            value={createForm.role_id}
+            onChange={(e) => setCreateForm({ ...createForm, role_id: e.target.value })}
+            placeholder={t("common.pleaseSelect")}
+            options={roles.map((r) => ({ value: String(r.id), label: r.name }))}
+          />
+          <Select
+            label={t("staff.status")}
+            value={createForm.status}
+            onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+            options={[
+              { value: "active", label: t("staff.status_active") },
+              { value: "inactive", label: t("staff.status_inactive") },
+              { value: "pending", label: t("staff.status_pending") },
+            ]}
+          />
           <h4>{t("staff.uiPreferences")}</h4>
           {(() => {
             const labels: Record<keyof StaffUIPreferences, string> = {
