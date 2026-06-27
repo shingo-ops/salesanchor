@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { CountryCombobox } from "../../components/CountryCombobox";
+import { Select } from "../../components/Select";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 
 export interface LeadFormState {
@@ -28,6 +29,14 @@ const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
 
 export function LeadFormFields({ form, onChange }: Props) {
   const { t } = useTranslation();
+  const statusOptions = LEAD_STATUSES.map((s) => ({
+    value: s,
+    label: t(`leads.statusCode.${s}`, { defaultValue: s }),
+  }));
+  const typeOptions = [
+    { value: "Inbound", label: t("leads.type_inbound") },
+    { value: "Outbound", label: t("leads.type_outbound") },
+  ];
   return (
     <>
       <div className="form-group">
@@ -53,28 +62,19 @@ export function LeadFormFields({ form, onChange }: Props) {
           onChange={(e) => onChange("phone", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("leads.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          {LEAD_STATUSES.map((s) => (
-            <option key={s} value={s}>{t(`leads.statusCode.${s}`, { defaultValue: s })}</option>
-          ))}
-        </select>
-      </div>
-      <div className="form-group">
-        <label>{t("leads.type")}</label>
-        <select
-          value={form.type}
-          onChange={(e) => onChange("type", e.target.value)}
-        >
-          <option value="">{t("common.notSet")}</option>
-          <option value="Inbound">{t("leads.type_inbound")}</option>
-          <option value="Outbound">{t("leads.type_outbound")}</option>
-        </select>
-      </div>
+      <Select
+        label={t("leads.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
+      <Select
+        label={t("leads.type")}
+        value={form.type}
+        onChange={(e) => onChange("type", e.target.value)}
+        options={typeOptions}
+        placeholder={t("common.notSet")}
+      />
       <div className="form-group">
         <label>{t("leads.notes")}</label>
         <textarea

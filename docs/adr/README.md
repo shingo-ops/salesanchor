@@ -164,6 +164,7 @@
 | [ADR-143](./ADR-143-send-guard.md) | ADR-143: 送信ガード（Send Guard）Phase A | Accepted | — | — |
 | [ADR-144](./ADR-144-ui-component-governance.md) | ADR-144: UI共通部品の遵守ガバナンス | Accepted | — | 2026-06-25 |
 | [ADR-145](./ADR-145-public-products-force-rls.md) | ADR-145: public.products への FORCE ROW LEVEL SECURITY 付与（共通/テナント固有の2層保護） | Accepted | — | — |
+| [ADR-147](./ADR-147-common-6roles-standardization.md) | ADR-147: 共通6ロール標準化（マネージャー・仕入れ・発送追加） | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 
