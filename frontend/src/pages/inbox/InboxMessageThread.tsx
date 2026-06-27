@@ -30,6 +30,8 @@ interface Props {
   setDraft: (v: string) => void;
   sending: boolean;
   sendError: string | null;
+  sendErrorReason: string;
+  sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
   discordDmChannelMissing: boolean;
@@ -57,7 +59,7 @@ export function InboxMessageThread({
   handleMarkUnread, handleExclude, handleDeleteLead,
   showKartePanel, openKartePanel, closeKartePanel, inboxSettings,
   messageListRef,
-  draft, setDraft, sending, sendError, sendDisabled, canSend, discordDmChannelMissing,
+  draft, setDraft, sending, sendError, sendErrorReason, sendErrorCode, sendDisabled, canSend, discordDmChannelMissing,
   trimmedDraft, submitSend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
@@ -490,7 +492,12 @@ export function InboxMessageThread({
       <div className="inbox-send-area sticky-bottom-bar">
         {sendError && (
           <div className="inbox-send-error" role="alert">
-            Send error: {sendError}
+            {sendErrorReason === "window_closed"
+              ? t("inbox.sendError.windowClosed")
+              : sendErrorReason === "rate_limited"
+                ? t("inbox.sendError.rateLimited")
+                : t("inbox.sendError.generic")}
+            {sendErrorCode != null && t("inbox.sendError.codeSuffix", { code: sendErrorCode })}
           </div>
         )}
         <div className="send-card">

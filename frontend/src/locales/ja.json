@@ -1082,6 +1082,12 @@
       "browserNotificationsDenied": "ブラウザの設定で通知を許可してください",
       "soundEnabled": "通知音",
       "tooltip": "設定"
+    },
+    "sendError": {
+      "windowClosed": "送信できる時間枠を過ぎています（相手からの受信が必要です）",
+      "rateLimited": "送信が一時的に制限されています。時間をおいて再試行してください",
+      "generic": "送信できませんでした",
+      "codeSuffix": "（コード: {{code}}）"
     }
   },
   "channels": {

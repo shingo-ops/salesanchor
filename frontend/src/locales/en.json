@@ -1082,6 +1082,12 @@
       "browserNotificationsDenied": "Please allow notifications in your browser settings",
       "soundEnabled": "Notification Sound",
       "tooltip": "Settings"
+    },
+    "sendError": {
+      "windowClosed": "The messaging window has closed (a reply from the recipient is required).",
+      "rateLimited": "Sending is temporarily limited. Please try again later.",
+      "generic": "Failed to send the message.",
+      "codeSuffix": " (code: {{code}})"
     }
   },
   "channels": {
