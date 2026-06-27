@@ -3135,8 +3135,5 @@
     "outbound": "こちらから営業",
     "inbound_short": "顧客起点",
     "outbound_short": "自社起点"
-  },
-  "featureDemo": {
-    "enabledLabel": "inventory_v2 が有効です"
   }
 }
