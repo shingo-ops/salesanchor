@@ -7,7 +7,7 @@ API:
 
 前提:
   - Bot が guild に招待済み（tenant_discord_config.guild_id 設定済み）
-  - DISCORD_BOT_TOKEN_{tenant_id} 環境変数設定済み
+  - DISCORD_BOT_TOKEN 環境変数設定済み（ADR-146 B方式: 共通 Bot Token）
   - 既存 permissions=268504082 で MANAGE_CHANNELS / MANAGE_ROLES / SEND_MESSAGES をカバー済み
 
 冪等動作:
@@ -99,12 +99,12 @@ async def run_auto_setup(
         )
     guild_id = str(row[0])
 
-    # 2. Bot トークン取得
-    bot_token: str | None = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
+    # 2. Bot トークン取得 (ADR-146 B方式: 共通 Bot Token)
+    bot_token: str | None = os.environ.get("DISCORD_BOT_TOKEN") or None
     if not bot_token:
         raise HTTPException(
             status_code=503,
-            detail=f"Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN_{tenant_id} を確認してください。",
+            detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
         )
 
     # 3. 既存設定取得（冪等チェック用）

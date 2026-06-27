@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission, reset_tenant_context
 from app.database import get_db
-from app.discord_gateway.config import load_tenant_bot_configs
 from app.models import User
 from app.services.audit import record_audit_log
 
@@ -40,12 +39,9 @@ class AnnounceResponse(BaseModel):
     channel_id: str
 
 
-def _get_bot_token(tenant_id: int) -> str | None:
-    token = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
-    if token:
-        return token
-    cfg = next((c for c in load_tenant_bot_configs() if c.tenant_id == tenant_id), None)
-    return cfg.bot_token if cfg else None
+def _get_bot_token() -> str | None:
+    """共通 Bot Token を取得する (ADR-146 B方式)."""
+    return os.environ.get("DISCORD_BOT_TOKEN") or None
 
 
 @router.post(
@@ -60,11 +56,11 @@ async def post_announcement(
     current_user: User = Depends(get_current_user),
 ) -> AnnounceResponse:
     """Discord チャンネルにアナウンスを投稿する。"""
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         raise HTTPException(
             status_code=503,
-            detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN_{tenant_id} を確認してください。",
+            detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
         )
 
     async with httpx.AsyncClient(timeout=10.0) as client:

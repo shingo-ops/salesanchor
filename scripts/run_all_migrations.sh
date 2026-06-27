@@ -456,6 +456,9 @@ run_sql migrations/20260624_140000_converge_inventory_v2.sql
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
 run_sql migrations/20260626_100000_add_outbound_draft_message_link.sql
 
+# ADR-146 B方式: tenant_discord_config.guild_id に UNIQUE 制約追加（1Guild=1Tenant保証）
+run_sql migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql
+
 # ADR-145 段階2: public.products に FORCE-RLS + 4ポリシー（共通=運営のみ/固有=自テナント）
 run_sql migrations/20260626_130000_force_rls_public_products.sql
 echo ""
