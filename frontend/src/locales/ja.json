@@ -352,6 +352,7 @@
     "fedexEtdGuideStep3Desc": "API キー・シークレット・アカウント番号を登録します。",
     "fedexEtdGuideOpenCredentials": "認証情報タブを開く",
     "fedexEtdGuideConnected": "接続確認済み",
+    "fedexEtdGuideStep1_7Cta": "テスト鍵の設定が完了しました。ステップ2へ進んでください。",
     "fedexEtdGuideConnectionHint": "保存後に接続テストを実行し、ここへ戻って確認してください。",
     "fedexEtdGuideStep4Title": "レターヘッドと署名を登録",
     "fedexEtdGuideStep4Heading": "書類画像の登録",
