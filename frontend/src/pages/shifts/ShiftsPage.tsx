@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Modal } from "../../components/Modal";
+import { Select } from "../../components/Select";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 
@@ -61,11 +62,18 @@ export default function ShiftsPage() {
           <div className="form-group"><label>{t("common.date")} *</label><input type="date" required value={form.shift_date} onChange={e => setForm({ ...form, shift_date: e.target.value })} /></div>
           <div className="form-group"><label>{t("shifts.startTime")} *</label><input type="time" required value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /></div>
           <div className="form-group"><label>{t("shifts.endTime")} *</label><input type="time" required value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /></div>
-          <div className="form-group"><label>{t("shifts.shiftType")}</label>
-            <select value={form.shift_type} onChange={e => setForm({ ...form, shift_type: e.target.value })}>
-              <option value="normal">{t("shifts.type_normal")}</option><option value="early">{t("shifts.type_early")}</option><option value="late">{t("shifts.type_late")}</option><option value="night">{t("shifts.type_night")}</option><option value="off">{t("shifts.type_off")}</option>
-            </select>
-          </div>
+          <Select
+            label={t("shifts.shiftType")}
+            value={form.shift_type}
+            onChange={(e) => setForm({ ...form, shift_type: e.target.value })}
+            options={[
+              { value: "normal", label: t("shifts.type_normal") },
+              { value: "early", label: t("shifts.type_early") },
+              { value: "late", label: t("shifts.type_late") },
+              { value: "night", label: t("shifts.type_night") },
+              { value: "off", label: t("shifts.type_off") },
+            ]}
+          />
           <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
             <button type="submit" className="btn-primary">{t("common.register")}</button>

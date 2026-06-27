@@ -26,6 +26,7 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
+import { Select } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -233,10 +234,15 @@ export default function DealsPage() {
       ) : undefined}
     >
       <div className="filter-bar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">{t("deals.allStatuses")}</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{t(`deals.status_${s}`)}</option>)}
-        </select>
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          placeholder={t("deals.allStatuses")}
+          options={STATUSES.map((s) => ({
+            value: s,
+            label: t(`deals.status_${s}`),
+          }))}
+        />
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -273,23 +279,34 @@ export default function DealsPage() {
           <div className="form-group"><label>{t("deals.amount")}</label>
             <input type="number" min="0" step="1" value={createForm.amount} onChange={(e) => setCreateForm({ ...createForm, amount: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("common.currency")}</label>
-            <select value={createForm.currency} onChange={(e) => setCreateForm({ ...createForm, currency: e.target.value })}>
-              <option value="JPY">JPY</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("common.status")}</label>
-            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-              {STATUSES.map((s) => <option key={s} value={s}>{t(`deals.status_${s}`)}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>{t("dashboard.stage")}</label>
-            <select value={createForm.stage} onChange={(e) => setCreateForm({ ...createForm, stage: e.target.value })}>
-              {STAGES.map((s) => <option key={s} value={s}>{t(`deals.stage_${s}`)}</option>)}
-            </select>
-          </div>
+          <Select
+            label={t("common.currency")}
+            value={createForm.currency}
+            onChange={(e) => setCreateForm({ ...createForm, currency: e.target.value })}
+            options={[
+              { value: "JPY", label: "JPY" },
+              { value: "USD", label: "USD" },
+              { value: "EUR", label: "EUR" },
+            ]}
+          />
+          <Select
+            label={t("common.status")}
+            value={createForm.status}
+            onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+            options={STATUSES.map((s) => ({
+              value: s,
+              label: t(`deals.status_${s}`),
+            }))}
+          />
+          <Select
+            label={t("dashboard.stage")}
+            value={createForm.stage}
+            onChange={(e) => setCreateForm({ ...createForm, stage: e.target.value })}
+            options={STAGES.map((s) => ({
+              value: s,
+              label: t(`deals.stage_${s}`),
+            }))}
+          />
           <div className="form-group"><label>{t("deals.probability")}</label>
             <input type="number" min="0" max="100" value={createForm.probability} onChange={(e) => setCreateForm({ ...createForm, probability: e.target.value })} />
           </div>

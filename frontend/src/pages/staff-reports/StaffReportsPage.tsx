@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Modal } from "../../components/Modal";
+import { Select } from "../../components/Select";
 
 interface StaffReport {
   id: number; report_code: string | null; report_type: string; user_id: number; period: string;
@@ -55,10 +56,15 @@ export default function StaffReportsPage() {
       ) : undefined}
     >
       <div className="filter-bar">
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-          <option value="">{t("common.all")}</option>
-          {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
+        <Select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          placeholder={t("common.all")}
+          options={Object.entries(TYPE_LABELS).map(([k, v]) => ({
+            value: k,
+            label: v,
+          }))}
+        />
       </div>
       {error && <div className="error-message">{error}</div>}
       <Modal
@@ -68,11 +74,15 @@ export default function StaffReportsPage() {
         size="md"
       >
         <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>{t("common.type")} *</label>
-            <select value={form.report_type} onChange={e => setForm({ ...form, report_type: e.target.value })}>
-              {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
+          <Select
+            label={t("common.type")}
+            value={form.report_type}
+            onChange={(e) => setForm({ ...form, report_type: e.target.value })}
+            options={Object.entries(TYPE_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+          />
           <div className="form-group"><label>{t("common.date")} *</label><input required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} /></div>
           <div className="form-group"><label>{t("common.description")} *</label><textarea required value={form.review} onChange={e => setForm({ ...form, review: e.target.value })} style={{ minHeight: 'var(--textarea-min-h-lg)' }} /></div>
           <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
