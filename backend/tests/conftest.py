@@ -119,6 +119,8 @@ async def test_engine():
             statement = statement.replace("public.tenants", "tenants")
         if "public.tenant_deletion_audit" in statement:
             statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
+        if "public.tenant_features" in statement:
+            statement = statement.replace("public.tenant_features", "tenant_features")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1255,6 +1257,16 @@ async def setup_test_db(test_engine):
                 (4, 999, '卸・代理店', 'wholesale', 4),
                 (5, 999, 'その他', 'other', 5)
         """))
+        # テナント単位フィーチャーフラグ（SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_features (
+                tenant_id INTEGER NOT NULL,
+                feature_key TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, feature_key)
+            )
+        """))
     yield
 
 
@@ -1313,6 +1325,7 @@ async def db_session(test_engine, setup_test_db):
         """))
         # ADR-108 Phase B-1: 選択データのみクリア（マスタは再投入）
         await conn.execute(text("DELETE FROM lead_sales_form_selections"))
+        await conn.execute(text("DELETE FROM tenant_features"))
         await conn.execute(text("DELETE FROM leads"))
         # マスタを再投入
         await conn.execute(text("""

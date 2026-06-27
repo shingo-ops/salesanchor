@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { Select } from "../../components/Select";
 
 export interface CompanyFormState {
   name: string;
@@ -22,6 +23,12 @@ interface Props {
 
 export function CompanyFormFields({ form, onChange }: Props) {
   const { t } = useTranslation();
+  const statusOptions = [
+    { value: "active", label: t("customers.status_active") },
+    { value: "inactive", label: t("customers.status_inactive") },
+    { value: "archived", label: t("customers.status_archived") },
+    { value: "pending_dedup_review", label: t("customers.status_pending_dedup") },
+  ];
   return (
     <>
       <div className="form-group">
@@ -32,18 +39,12 @@ export function CompanyFormFields({ form, onChange }: Props) {
           onChange={(e) => onChange("name", e.target.value)}
         />
       </div>
-      <div className="form-group">
-        <label>{t("common.status")}</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange("status", e.target.value)}
-        >
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-          <option value="archived">archived</option>
-          <option value="pending_dedup_review">pending_dedup_review</option>
-        </select>
-      </div>
+      <Select
+        label={t("common.status")}
+        value={form.status}
+        onChange={(e) => onChange("status", e.target.value)}
+        options={statusOptions}
+      />
       <div className="form-group">
         <label>{t("companies.industry")}</label>
         <input
