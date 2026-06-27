@@ -1,6 +1,6 @@
 # recon: ticket-start チャンネル bot 書込許可追加（403修正）
 
-関連ADR: ADR-146（B方式）  
+関連ADR: ADR-091（Discord Bot スコープ定義）  
 調査日: 2026-06-28
 
 ## 確認事項
