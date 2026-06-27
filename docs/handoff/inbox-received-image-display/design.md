@@ -56,6 +56,8 @@
 
 ## 外部・過去事例の参照と我々への応用
 
+Meta Platform Policy および Instagram API の実績パターンを参照し、CDN URL 期限切れ設計・IG 20件制限フォールバックに取り込んだ。
+
 ### Meta Platform Policy Section 3.e
 Messenger 通信コンテンツは Platform Data の一般制限から除外される。受信画像 URL の保存・CDN URL の一時キャッシュは規約上 OK。CDN URL は期限切れがある（期間非公表・数時間〜数日）ため、期限切れ検知後に `GET /{message-id}/attachments` で取り直す設計を採用。
 
