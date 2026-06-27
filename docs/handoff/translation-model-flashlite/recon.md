@@ -46,12 +46,12 @@ _call_gemini(prompt, model_name)   ← 単一の Gemini 呼び出し口（:391�
 
 | 区分 | 箇所 | 変更するか |
 |---|---|---|
-| **変更対象** | `message_translator.py:41` デフォルト値 | YES |
-| **変更対象** | `llm_budget.py:60-67` LLM_PRICING テーブル | YES（flash-lite 行追加） |
-| 触らない | `_call_gemini` / `translate_inbound` / `generate_outbound_draft` | NO |
-| 触らない | `_build_inbound_prompt` / `_build_outbound_prompt` | NO |
-| 触らない | `translation_glossary.py` | NO |
-| 触らない | `MODEL_RECEIVE`（受信側） | NO |
-| 触らない | `migrations/` / `scripts/` / `deploy.yml` | NO |
+| **変更対象** | `backend/app/services/message_translator.py:41` デフォルト値 | YES |
+| **変更対象** | `backend/app/services/llm_budget.py:60-67` LLM_PRICING テーブル | YES（flash-lite 行追加） |
+| 触らない | _call_gemini / translate_inbound / generate_outbound_draft | NO |
+| 触らない | _build_inbound_prompt / _build_outbound_prompt | NO |
+| 触らない | backend/app/services/translation_glossary.py | NO |
+| 触らない | MODEL_RECEIVE（受信側） | NO |
+| 触らない | migrations/ / scripts/ / .github/workflows/deploy.yml | NO |
 
 モデル指定を変えるだけ。翻訳ロジック・プロンプト・グロッサリへの手出しなし。

@@ -54,7 +54,7 @@ MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-2.5-flash-lite")
 | エスカレート先（受信低確信度時）も flash-lite になる | 受信エスカレートは `MODEL_SEND` を参照（:540）。flash-lite で問題なら env var 調整 |
 | `record_cost` が flash-lite 未登録でエラー | LLM_PRICING への追加（変更2）で対応済み |
 
-## 外部事例検討
+## 外部・過去事例の参照と我々への応用
 
 Gemini 2.5 Flash-Lite は Google DeepMind が 2025 年に公開した最軽量・低コストモデル。
 定型文・短文英訳には実用上問題のない品質を持つとされる（公式ドキュメント基準）。
