@@ -16,7 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | IN_PROGRESS | | main | base=main |
+| release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
 | release/carrier-credentials-reset-tenant-ctx | ADR-072 鍵保存後 reset_tenant_context 挿入（cherry-pick #2621） | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | release/fedex-guide-step1-7 | FedEx ETD ガイド Step1-7 main リリース（cherry-pick #2611） | 2026-06-26 | DONE | #2615 | main | main マージ済み |
 | release/carrier-credential-form-refactor | CarrierCredentialForm 切り出し main リリース（cherry-pick #2601） | 2026-06-26 | DONE | #2608 | main | main マージ済み |
@@ -266,4 +266,4 @@
 | feature/morimoto/migrate-lead-edit-select | LeadEditPage 生select 7個→Select コンポーネント移行（ADR-073） | 2026-06-26 | REVIEW | #2599 | | develop マージ待ち |
 | feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
 | feature/morimoto/common-6roles-stage-a | 共通6ロール化 段階A — DEFAULT_ROLES 6ロール化・migrate スクリプト | 2026-06-26 | REVIEW | #2619 | | backend/app/services/tenant.py + scripts/migrate_6roles_stage_a.py |
-| release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | IN_PROGRESS | #2622 | main | TRUE_MISSING 64→0・ASYMMETRY 0 |
+| release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | DONE | #2622 | main | main マージ済み・本番デプロイ済み |
