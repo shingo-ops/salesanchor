@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Select } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
@@ -166,6 +167,17 @@ export default function RolesPage() {
     for (const id of editedPermIds) if (!originalPermIds.has(id)) return true;
     return false;
   }, [originalPermIds, editedPermIds]);
+
+  const priorityOptions = PRIORITY_VALUES.map((v) => ({
+    value: String(v),
+    label: t(`roles.priority_${v}`),
+  }));
+  if (!PRIORITY_VALUES.includes(roleForm.priority)) {
+    priorityOptions.push({
+      value: String(roleForm.priority),
+      label: t("roles.customPriority", { priority: roleForm.priority }),
+    });
+  }
 
   const canEditPerms = hasPermission("roles.update") && !isSystemRole;
 
@@ -516,19 +528,12 @@ export default function RolesPage() {
                   ))}
                 </div>
               </div>
-              <div className="form-group"><label>{t("roles.priority")}</label>
-                <select
-                  value={roleForm.priority}
-                  onChange={(e) => setRoleForm({ ...roleForm, priority: Number(e.target.value) })}
-                >
-                  {PRIORITY_VALUES.map((v) => (
-                    <option key={v} value={v}>{t(`roles.priority_${v}`)}</option>
-                  ))}
-                  {!PRIORITY_VALUES.includes(roleForm.priority) && (
-                    <option value={roleForm.priority}>{t("roles.customPriority", { priority: roleForm.priority })}</option>
-                  )}
-                </select>
-              </div>
+              <Select
+                label={t("roles.priority")}
+                value={roleForm.priority}
+                onChange={(e) => setRoleForm({ ...roleForm, priority: Number(e.target.value) })}
+                options={priorityOptions}
+              />
               <div className="form-group"><label>{t("common.description")}</label>
                 <textarea value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
               </div>

@@ -20,6 +20,7 @@ import CompanyContactSelector from "../../components/CompanyContactSelector";
 import MergeLeadModal from "../../components/MergeLeadModal";
 import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
+import { Select } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
@@ -273,10 +274,15 @@ export default function LeadsPage() {
       ) : undefined}
     >
       <div className="filter-bar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">{t("leads.allStatuses")}</option>
-          {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
-        </select>
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          placeholder={t("leads.allStatuses")}
+          options={LEAD_STATUSES.map((s) => ({
+            value: s,
+            label: translateLeadStatus(s),
+          }))}
+        />
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -309,56 +315,83 @@ export default function LeadsPage() {
               placeholder={t("leads.channelTypePlaceholder")}
             />
           </div>
-          <div className="form-group"><label>{t("leads.initiative")}</label>
-            <select value={createForm.initiative} onChange={(e) => setCreateForm({ ...createForm, initiative: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="inbound">{t("leads.initiative_inbound")}</option>
-              <option value="outbound">{t("leads.initiative_outbound")}</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.type")}</label>
-            <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="Inbound">{t("leads.type_inbound")}</option>
-              <option value="Outbound">{t("leads.type_outbound")}</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.status")}</label>
-            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-              {LEAD_STATUSES.map((s) => <option key={s} value={s}>{translateLeadStatus(s)}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.temperature")}</label>
-            <select value={createForm.temperature} onChange={(e) => setCreateForm({ ...createForm, temperature: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="Hot">{t("leads.temp_hot")}</option>
-              <option value="Warm">{t("leads.temp_warm")}</option>
-              <option value="Cold">{t("leads.temp_cold")}</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.estimatedScale")}</label>
-            <select value={createForm.estimated_scale} onChange={(e) => setCreateForm({ ...createForm, estimated_scale: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="Small">{t("leads.scale_small")}</option>
-              <option value="Medium">{t("leads.scale_medium")}</option>
-              <option value="Large">{t("leads.scale_large")}</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.customerType")}</label>
-            <select value={createForm.customer_type} onChange={(e) => setCreateForm({ ...createForm, customer_type: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="信頼重視">{t("leads.customerType_trust")}</option>
-              <option value="価格重視">{t("leads.customerType_price")}</option>
-            </select>
-          </div>
-          <div className="form-group"><label>{t("leads.responseSpeed")}</label>
-            <select value={createForm.response_speed} onChange={(e) => setCreateForm({ ...createForm, response_speed: e.target.value })}>
-              <option value="">{t("common.notSet")}</option>
-              <option value="24h以内">{t("leads.responseSpeed_24h")}</option>
-              <option value="3日以内">{t("leads.responseSpeed_3days")}</option>
-              <option value="3日超">{t("leads.responseSpeed_over3days")}</option>
-            </select>
-          </div>
+          <Select
+            label={t("leads.initiative")}
+            value={createForm.initiative}
+            onChange={(e) => setCreateForm({ ...createForm, initiative: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              { value: "inbound", label: t("leads.initiative_inbound") },
+              { value: "outbound", label: t("leads.initiative_outbound") },
+            ]}
+          />
+          <Select
+            label={t("leads.type")}
+            value={createForm.type}
+            onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              { value: "Inbound", label: t("leads.type_inbound") },
+              { value: "Outbound", label: t("leads.type_outbound") },
+            ]}
+          />
+          <Select
+            label={t("leads.status")}
+            value={createForm.status}
+            onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+            options={LEAD_STATUSES.map((s) => ({
+              value: s,
+              label: translateLeadStatus(s),
+            }))}
+          />
+          <Select
+            label={t("leads.temperature")}
+            value={createForm.temperature}
+            onChange={(e) => setCreateForm({ ...createForm, temperature: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              { value: "Hot", label: t("leads.temp_hot") },
+              { value: "Warm", label: t("leads.temp_warm") },
+              { value: "Cold", label: t("leads.temp_cold") },
+            ]}
+          />
+          <Select
+            label={t("leads.estimatedScale")}
+            value={createForm.estimated_scale}
+            onChange={(e) => setCreateForm({ ...createForm, estimated_scale: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              { value: "Small", label: t("leads.scale_small") },
+              { value: "Medium", label: t("leads.scale_medium") },
+              { value: "Large", label: t("leads.scale_large") },
+            ]}
+          />
+          <Select
+            label={t("leads.customerType")}
+            value={createForm.customer_type}
+            onChange={(e) => setCreateForm({ ...createForm, customer_type: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              // eslint-disable-next-line local/no-japanese-literal -- DB value
+              { value: "信頼重視", label: t("leads.customerType_trust") },
+              // eslint-disable-next-line local/no-japanese-literal -- DB value
+              { value: "価格重視", label: t("leads.customerType_price") },
+            ]}
+          />
+          <Select
+            label={t("leads.responseSpeed")}
+            value={createForm.response_speed}
+            onChange={(e) => setCreateForm({ ...createForm, response_speed: e.target.value })}
+            placeholder={t("common.notSet")}
+            options={[
+              // eslint-disable-next-line local/no-japanese-literal -- DB value
+              { value: "24h以内", label: t("leads.responseSpeed_24h") },
+              // eslint-disable-next-line local/no-japanese-literal -- DB value
+              { value: "3日以内", label: t("leads.responseSpeed_3days") },
+              // eslint-disable-next-line local/no-japanese-literal -- DB value
+              { value: "3日超", label: t("leads.responseSpeed_over3days") },
+            ]}
+          />
           <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
             <input type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
           </div>
