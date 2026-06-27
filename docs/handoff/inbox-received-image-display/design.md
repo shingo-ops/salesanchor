@@ -1,7 +1,7 @@
 # design.md — 受信画像表示（Meta Messenger/Instagram）
 
 - 作成: 2026-06-26
-- 対象 ADR: migration 100（ADR-089 連動）
+- 対象 ADR: ADR-110（受信箱カルテ是正・ADR-089 連動）
 - recon 参照: `docs/handoff/inbox-received-image-display/recon.md`
 
 ## 何を直すか
