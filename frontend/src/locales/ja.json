@@ -1086,6 +1086,7 @@
     },
     "sendError": {
       "windowClosed": "送信できる時間枠を過ぎています（相手からの受信が必要です）",
+      "permissionDenied": "24時間を過ぎたため送信できません。Instagram/Messengerから直接返信してください",
       "rateLimited": "送信が一時的に制限されています。時間をおいて再試行してください",
       "generic": "送信できませんでした",
       "codeSuffix": "（コード: {{code}}）"
