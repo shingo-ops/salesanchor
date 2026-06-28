@@ -1,6 +1,6 @@
 # design: チケット歓迎メッセージ初期値の英語CTA統一
 
-設計日: 2026-06-28 / 担当: CC / recon 参照: docs/handoff/ticket-welcome-en/recon.md / 関連: ADR-146 / ADR-091
+設計日: 2026-06-28 / 担当: CC / recon 参照: docs/handoff/ticket-welcome-en/recon.md / 関連: ADR-091
 
 ## 目的
 

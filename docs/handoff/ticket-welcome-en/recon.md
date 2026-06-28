@@ -1,6 +1,6 @@
 # recon: チケット歓迎メッセージ初期値の英語CTA統一
 
-調査日: 2026-06-28 / 担当: CC / 関連: ADR-146 / ADR-091
+調査日: 2026-06-28 / 担当: CC / 関連: ADR-091
 
 ## F1 — 実送信に使われる初期値は _DEFAULT_WELCOME（コード定数）
 
@@ -102,5 +102,4 @@ auto-setup 再実行で `welcome_template` は変更されない。初期値変�
 
 ## 参照 ADR
 
-- ADR-146（Discord Bot スコープ定義）: `docs/adr/ADR-146-discord-bot-scope.md`
 - ADR-091（Discord Bot 機能実装）: `docs/adr/ADR-091-discord-bot-scope-definition.md`
