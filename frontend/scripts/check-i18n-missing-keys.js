@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * check-i18n-dashboard-schedule.js
+ * check-i18n-missing-keys.js
  *
- * dashboard / schedule 周辺の literal な t() 参照が
- * ja.json / en.json の両方に存在するかを検証する。
+ * frontend/src 内の literal な t() 参照が
+ * ja.json / en.json の両方に存在するかを検証する（全 prefix 対象）。
  */
 
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -17,7 +17,6 @@ const LOCALE_FILES = [
   join(SRC_DIR, "locales/ja.json"),
   join(SRC_DIR, "locales/en.json"),
 ];
-const TARGET_PREFIXES = ["dashboard.", "schedule.", "common.", "nav."];
 const T_CALL_PATTERN = /(?:\b(?:[A-Za-z_$][\w$]*\.)?t)\(\s*([`'"])([^`'"]+)\1\s*(?:,|\))/g;
 
 function walk(dir) {
@@ -60,7 +59,7 @@ for (const file of walk(SRC_DIR)) {
     while ((match = T_CALL_PATTERN.exec(line))) {
       const key = match[2];
       if (key.includes("${")) continue;
-      if (!TARGET_PREFIXES.some((prefix) => key.startsWith(prefix))) continue;
+      if (!key.includes(".")) continue; // ドットなしは i18n キーでない（コメント内プレースホルダ等）
       const missing = localeKeySets.map((set) => !set.has(key));
       if (missing.some(Boolean)) {
         issues.push({ file: relative(ROOT, file), line: lineIndex + 1, key, missingJa: missing[0], missingEn: missing[1] });
@@ -77,4 +76,4 @@ if (issues.length > 0) {
   process.exit(1);
 }
 
-console.log("✅ i18n key check PASSED (dashboard / schedule / common / nav)");
+console.log("✅ i18n key check PASSED (all prefixes)");
