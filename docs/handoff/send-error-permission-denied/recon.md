@@ -40,6 +40,6 @@ else:
 
 ## R4: i18n 既存キー位置
 
-`frontend/src/locales/ja.json:1087-1092` / `en.json:1087-1092`:
+`frontend/src/locales/ja.json:1087-1092` / `frontend/src/locales/en.json:1087-1092`:
 `inbox.sendError.{windowClosed,rateLimited,generic,codeSuffix}` の4キー確認済み。
 `permissionDenied` を追加する。
