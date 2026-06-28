@@ -1,7 +1,9 @@
 # Design: 送信エラー表記の改善＋ログ追記
 
 base: origin/main @ 7685902b  
-branch: release/morimoto/send-error-messaging
+branch: release/morimoto/send-error-messaging  
+recon: docs/handoff/send-error-messaging/recon.md  
+ADR: ADR-110
 
 ---
 
@@ -116,7 +118,9 @@ MetaGraphRateLimitError（code 4/32/613/17）は別ハンドラで 429 を返す
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 Meta Graph API error codes: https://developers.facebook.com/docs/graph-api/guides/error-handling  
 subcode 2018278 / 2534022 = "Message sent outside of allowed window" のドキュメント既知値。
+
+Meta 公式ドキュメントでは error code 10 + subcode 2018278/2534022 を「24時間メッセージングウィンドウ外」と定義しており、エンドユーザーに「相手からのメッセージが必要」と案内するのが標準的対応（例: ManyChat・Chatfuel 等の SMS/Messenger ボット製品の実装例に倣う）。本実装もこの方針を採用。
