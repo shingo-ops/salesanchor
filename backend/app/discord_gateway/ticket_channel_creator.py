@@ -29,7 +29,7 @@ from app.auth.dependencies import set_tenant_context
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_WELCOME = "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+_DEFAULT_WELCOME = "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
 
 
 @dataclass(frozen=True)

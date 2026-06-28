@@ -55,7 +55,7 @@ class DiscordTicketConfigResponse(BaseModel):
     ticket_category_id: str | None = None
     ticket_button_channel_id: str | None = None
     staff_role_id: str | None = None
-    welcome_template: str = "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+    welcome_template: str = "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
     small_channel_id: str | None = None
     large_channel_id: str | None = None
     # KPI7 拡張: ロール名設定（Small→Member, Large→Partner がデフォルト）
@@ -68,7 +68,7 @@ class DiscordTicketConfigUpdate(BaseModel):
     ticket_button_channel_id: str = Field(..., min_length=17, max_length=20)
     staff_role_id: str | None = Field(default=None, min_length=17, max_length=20)
     welcome_template: str = Field(
-        default="ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。",
+        default="Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
         max_length=_WELCOME_TEMPLATE_MAX,
     )
     small_channel_id: str | None = Field(default=None, min_length=17, max_length=20)

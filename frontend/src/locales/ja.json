@@ -2701,7 +2701,7 @@
     "smallRoleNameLabel": "Small 顧客向けロール名",
     "largeRoleNameLabel": "Large 顧客向けロール名",
     "invalidRoleName": "ロール名は1文字以上入力してください",
-    "welcomeTemplateDefault": "こんにちは！お問い合わせありがとうございます。担当者が確認次第ご連絡します。"
+    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
   },
   "discordAutoSetup": {
     "title": "Discordサーバー自動セットアップ",
