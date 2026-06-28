@@ -948,6 +948,48 @@ decision: "#2538 完了（正本の完了定義①〜④を満たす）。FK実�
 follow_up: public.inventory / message_translations の行数前後差分はバックアップ逆転のため省略。次回のリリースPRでバックアップ採取タイミングをマージ前に統一すること。
 ```
 
+## 2026-06-28 リリースB(#2646)デプロイOOM障害対応・サーバ容量回復・#2665デプロイ完走
+
+```text
+id: EV-20260628-001
+date: 2026-06-28
+agent: CC（Hikky-dev）+ Shingo（GO発行・本番画面確認）+ Claude（Planner）
+task: リリースB(#2646)反映デプロイのOOM失敗 → サーバ容量回復（Docker掃除＋dockerd再起動）→ 本番無害立証 → #2665デプロイ完走
+scope: 本番VPS(prod1)のディスク/メモリ/スワップ・Docker(キャッシュ/コンテナ/イメージ)・全コンテナ稼働・本番DB主要テーブル行数・app_fx_rates migration適用
+evidence:
+  - type: command
+    reference: "ssh prod1: docker system df （掃除前）"
+    summary: "Build Cache 15.07GB(RECLAIMABLE 14.96GB) / Images RECLAIMABLE 13.16GB / Volumes 1.978GB — 回収可能ゴミ総量を特定。volume/imageは今回対象外と判断"
+  - type: command
+    reference: "ssh prod1: docker builder prune -f → df -h / && docker system df"
+    summary: "ビルドキャッシュ削除でディスク 40G(85%)→27G(56%)、13GB回収。Build Cache 15.07GB→117.8MB。イメージ・コンテナ・ボリュームには未接触"
+  - type: command
+    reference: "ssh prod1: docker rm astro-webapp-backend-green （停止コンテナのみ・名前指定）"
+    summary: "deploy残存の停止コンテナ(Exited 0)1本のみ削除。稼働中(Up)コンテナには未接触"
+  - type: command
+    reference: "ssh prod1: ps aux --sort=-%mem （dockerd肥大の特定）"
+    summary: "dockerd RSS 1.0GB(全体51.6%)を占有。本番アプリ各コンテナは軽量(backend-1 115MiB等)。逼迫の主因はdockerdのヒープ抱え込みと判定"
+  - type: command
+    reference: "ssh prod1: sudo systemctl restart docker → sleep 30 → docker ps （低利用時間帯に実施）"
+    summary: "dockerd再起動。スワップ 1.1Gi→70Mi、dockerd RSS 1.0GB→323MB(677MB解放)、RAM available 310Mi→522Mi。全コンテナ復帰"
+  - type: command
+    reference: "ssh prod1: docker ps --format '{{.Names}}\\t{{.Status}}' | sort （復帰確認）"
+    summary: "本番11本すべてUp、うち4本(frontend/nginx/postgres/redis)healthy。Exited残留0件。Stage0顔ぶれと一致。※backend-1は自動復帰せずExited(0)→手動起動で復帰（落とし穴・要調査）"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: 主要テーブル行数 + テナント別 leads/companies"
+    summary: "suppliers47/tenants5/users10/inventory92/products1305 不変。本番tenant_004 leads6・companies51 / tenant_006 leads37・companies30 無傷。データ消失なし"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: SELECT to_regclass('public.app_fx_rates')"
+    summary: "掃除前null→#2665デプロイ後 app_fx_rates 存在(0行・空テーブル正常追加)。migration正常適用・既存データ非破壊"
+  - type: review
+    reference: "deploy run 28322515797(#2665) 全ステップ✓: Pre-deploy DB backup / Deploy to VPS(OOM突破) / Run migrations / Post-deploy smoke tests / success"
+    summary: "メモリ回復後の再デプロイが緑完走。前回OOMで停止した箇所を突破。スモーク緑＝本番正常応答。GO: Shingo 2026-06-28"
+confidence: high
+tradeoff: 掃除＋dockerd再起動の無害性立証と#2665デプロイ成功が同一deployで同時発生したため厳密分離は不可。ただし「処置後に本番が正常稼働・データ無傷」の事実は独立に成立。dockerd再起動は全コンテナ一時停止(数十秒〜数分)を伴う。
+decision: "dockerd再起動＋Dockerキャッシュ掃除＋停止コンテナ削除は、本番を壊さずメモリ回復する有効手段として確立。再現手順=①docker builder prune -f ②停止コンテナrm(名前確認) ③低利用帯にsudo systemctl restart docker。禁止=volume prune(データ消失)/image prune -a(別セッション使用イメージ確認要)。症状トリガー=deploy blue-green healthタイムアウト＋スワップ枯渇＋dockerd RSS肥大。"
+follow_up: "(1)dockerd再起動後backend-1が自動復帰しない件＝無人再起動時の本番停止リスク・要調査 (2)残骸再発防止＝定期自動掃除＋容量早期警報の設計 (3)根本RAM不足＝増設要否は今後のdeploy安定度で判断 (4)未使用イメージ13GB削除は森本さん確認後"
+```
+
 ## 2026-06-27 PR #2630 public.products FORCE-RLS 本番反映・KGI①②③ 実証
 
 ```text
