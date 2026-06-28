@@ -16,7 +16,7 @@ def __init__(self, message: str, ..., fbtrace_id: Optional[str] = None):
     self.message = message   # L104
 ```
 
-`meta_graph.py:232`:
+`backend/app/services/meta_graph.py:232`:
 ```python
 message = err.get("message") or "Meta Graph API error (no message)"
 ```
