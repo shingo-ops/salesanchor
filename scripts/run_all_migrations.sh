@@ -453,6 +453,7 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
+
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
 
@@ -462,7 +463,7 @@ run_sql migrations/20260623_100000_rls_message_translations.sql
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 
-# D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。ADR-143。
+# D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。180000(L221)が offer_key を再作成するため末尾で除去。ADR-143。
 run_sql migrations/20260624_140000_converge_inventory_v2.sql
 
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
