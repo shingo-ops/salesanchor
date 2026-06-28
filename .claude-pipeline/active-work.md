@@ -16,6 +16,9 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| feature/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | IN_PROGRESS | | | base=develop |
+| release/merge-develop-to-main | develop→main 競合解消リリースブランチ（#2641含む全9ファイル develop優先解消） | 2026-06-28 | IN_PROGRESS | | main | base=develop+main merge |
+| release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | IN_PROGRESS | #2646 | main | base=main |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
 | feature/morimoto/tenant-feature-switch-mvp | テナント単位フィーチャーフラグ MVP（tenant_features テーブル・require_feature・FeatureGate） | 2026-06-27 | IN_PROGRESS | #2631 | | develop マージ済み・main リリース待ち |
