@@ -120,7 +120,19 @@ run_py  scripts/migrate_meta_messages_page_id.py
 run_py  scripts/migrate_adr015_lead_foundation.py  -e TENANT_CODE=highlife-jpn
 
 # ロール移行
-run_py  scripts/migrate_roles_gas_compat.py
+# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働
+#   停止理由:
+#     1. メンバー→CS 移行・メンバー削除は全テナント完了済み（5テナントで「メンバー」0件 / 2026-06-28確認）
+#     2. 既存テナントへの seed が DEFAULT_ROLES 変更のたびに新名ロールを全テナントに INSERT し
+#        旧名ロールと重複する事故が再発（tenant_001/003/004/005/006 で旧新ロール重複 / 2026-06-28解消済み）
+#     3. 新テナントの初期ロール seed は create 経路が個別に担保:
+#        admin.py:68 → create_tenant_schema → tenant.py:1650 await seed_system_roles()
+#        scripts/setup_tenant.py:184 await seed_system_roles()
+#        scripts/setup_review_tenant.py:197 await seed_system_roles()
+#   将来 DEFAULT_ROLES を変更する場合:
+#     毎デプロイ自動ではなく --tenant-id 必須の明示スクリプト（migrate_*_stage_*.py 型）で人が意図して実行する。
+#   スクリプト本体（migrate_roles_gas_compat.py）は履歴用に残置。削除は別便で検討。
+# run_py  scripts/migrate_roles_gas_compat.py
 
 # ADR-021
 run_py  scripts/migrate_adr021_sprint2_financials.py
@@ -441,6 +453,7 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
+
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
 
@@ -450,7 +463,7 @@ run_sql migrations/20260623_100000_rls_message_translations.sql
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 
-# D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。ADR-143。
+# D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。180000(L221)が offer_key を再作成するため末尾で除去。ADR-143。
 run_sql migrations/20260624_140000_converge_inventory_v2.sql
 
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加

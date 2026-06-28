@@ -262,6 +262,7 @@ export function InboxMessageThread({
           )}
         </h3>
         {/* ADR-143: 送信ガード Phase A — 言語プルダウン */}
+        {/* ui-allow: ADR-143 Phase A send-guard lang toggle, back-merged from main (#2624) */}
         <select
           className="inbox-platform-select"
           value={recipientLanguageSetting}
