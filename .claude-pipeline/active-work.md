@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/evidence-ev-20260628 | EV-20260628-001 evidence registry 追記（VPS OOM障害対応・#2665デプロイ完走記録） | 2026-06-29 | IN_PROGRESS | | main | base=main |
 | release/stop-gas-compat-seed-main | migrate_roles_gas_compat 停止（run_all_migrations.sh 1行のみ・base=main） | 2026-06-28 | IN_PROGRESS | | main | base=main・単独便 |
 | release/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | DONE | | | 実装済み・release/* に移行 |
