@@ -1,6 +1,9 @@
 # design.md — 為替レート SSOT 設計
 
 > 作成: 2026-06-28 | STANDARD-WORKFLOW Phase ③ 設計 | 担当: Hikky-dev
+>
+> recon: `docs/handoff/fx-rate-ssot/recon.md`
+> ADR: `docs/adr/ADR-148-fx-rate-ssot.md`
 
 ---
 
@@ -55,7 +58,7 @@
 
 ---
 
-## 外部事例欄
+## 外部・過去事例の参照と我々への応用
 
 - **Stripe / Wise**: FX レートを内部 SSOT テーブルに保持し、ユーザー向け API は SSOT から読む設計が標準
 - **Django Money / py-moneyed**: テーブル1行 per 通貨ペア、定期ジョブで UPSERT するパターンを推奨
