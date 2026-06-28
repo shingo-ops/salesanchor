@@ -98,9 +98,6 @@ export function InboxMessageThread({
   // Translation state: keyed by message_id
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
 
-  // 受信画像 URL 再取得（CDN 期限切れ対応）
-  const [resolvedUrl, setResolvedUrl] = useState<Record<number, string>>({});
-  const retriedRef = useRef<Set<number>>(new Set());
   // ライトボックス（原寸表示）
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const openLightbox = useCallback((url: string) => setLightboxUrl(url), []);
@@ -148,33 +145,6 @@ export function InboxMessageThread({
     setTranslations({});
   }, [selectedLeadId]);
 
-  // Reset resolved URLs and retry tracking on conversation change
-  useEffect(() => {
-    setResolvedUrl({});
-    retriedRef.current = new Set();
-  }, [selectedLeadId]);
-
-  const handleAttachmentError = useCallback(
-    async (msgDbId: number, msgMetaId: string | null) => {
-      if (!msgMetaId || !selectedLeadId) return;
-      if (retriedRef.current.has(msgDbId)) return;
-      retriedRef.current.add(msgDbId);
-      try {
-        const res = await fetch(
-          `/api/v1/leads/${selectedLeadId}/messages/${encodeURIComponent(msgMetaId)}/attachment-url`,
-          { credentials: "include" },
-        );
-        if (res.ok) {
-          const data: { url: string } = await res.json();
-          setResolvedUrl((prev) => ({ ...prev, [msgDbId]: data.url }));
-        }
-        // 404 = 期限切れ → 何もしない（期限切れ表示へフォールバック）
-      } catch {
-        // ネットワークエラーも同様に無視（期限切れ表示）
-      }
-    },
-    [selectedLeadId],
-  );
 
   const handleTranslate = useCallback(async (messageId: string | null) => {
     if (!messageId || !selectedLeadId) return;
@@ -367,23 +337,15 @@ export function InboxMessageThread({
                     Send failed ({msg.error_code})
                   </div>
                 )}
-                {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
-                  retriedRef.current.has(msg.id) && !resolvedUrl[msg.id] ? (
-                    <span className="msg-attachment-placeholder">
-                      <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
-                      {t("inbox.imageExpired")}
-                    </span>
-                  ) : (
-                    <img
-                      src={resolvedUrl[msg.id] ?? msg.attachment_url!}
-                      alt={t("inbox.imagePreviewAlt")}
-                      className="msg-attachment-img"
-                      style={{ cursor: "zoom-in" }}
-                      onClick={() => openLightbox(resolvedUrl[msg.id] ?? msg.attachment_url!)}
-                      onError={() => handleAttachmentError(msg.id, msg.message_id ?? null)}
-                    />
-                  )
-                ) : msg.attachment_type === "image" && !msg.attachment_url ? (
+                {msg.attachment_type === "image" && msg.message_id ? (
+                  <img
+                    src={`/api/v1/leads/${selectedLeadId}/messages/${encodeURIComponent(msg.message_id ?? "")}/attachment-image`}
+                    alt={t("inbox.imagePreviewAlt")}
+                    className="msg-attachment-img"
+                    style={{ cursor: "zoom-in" }}
+                    onClick={() => openLightbox(`/api/v1/leads/${selectedLeadId}/messages/${encodeURIComponent(msg.message_id ?? "")}/attachment-image`)}
+                  />
+                ) : msg.attachment_type === "image" && !msg.message_id ? (
                   <span className="msg-attachment-placeholder">
                     <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
                     {t("inbox.imageSent")}

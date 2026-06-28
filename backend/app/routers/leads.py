@@ -18,7 +18,9 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+import httpx
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1383,6 +1385,160 @@ async def get_message_attachment_url(
     await reset_tenant_context(db, tenant_id)
 
     return {"url": fresh_url}
+
+
+# ---------------------------------------------------------------------------
+# ADR-110: 受信画像中継（image proxy）
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/leads/{lead_id}/messages/{message_id}/attachment-image",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def get_message_attachment_image(
+    lead_id: int,
+    message_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """受信メッセージの添付画像を自社サーバー経由で配信する（image proxy）。
+
+    フロントの <img src> がこのエンドポイントを直接叩く。
+    自社ドメインから配信するため CSP(img-src 'self') を通過し、
+    Meta CDN URL の期限切れも内部で fetch_attachment_url により取り直す。
+    画像バイトは保存しない（一時取得して即配信のみ）。
+    """
+    if not message_id or message_id.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="message_id is required",
+        )
+
+    # lead 存在確認
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    lead_q = await db.execute(
+        text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": lead_id, "tenant_id": tenant_id},
+    )
+    if lead_q.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="リードが見つかりません",
+        )
+
+    # message 存在確認 + 現在の attachment_url / platform 取得
+    meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
+    msg_q = await db.execute(
+        text(
+            f"SELECT platform, attachment_url, attachment_type FROM {meta_messages_t} "
+            "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    msg_row = msg_q.first()
+    if msg_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="メッセージが見つかりません",
+        )
+    platform = msg_row[0]
+    current_url = msg_row[1]
+    attachment_type = msg_row[2]
+
+    if attachment_type != "image":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="この添付は画像ではありません",
+        )
+
+    async def _fetch_image_bytes(target_url: str):
+        """与えられた URL から画像バイトを取得。成功なら (bytes, content_type)、失敗なら None。"""
+        if not target_url:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(target_url)
+        except (httpx.TimeoutException, httpx.HTTPError) as e:
+            logger.warning("[attachment-image] fetch network error: %s", e)
+            return None
+        if resp.status_code >= 400:
+            logger.warning("[attachment-image] fetch HTTP %s", resp.status_code)
+            return None
+        ctype = resp.headers.get("content-type", "image/jpeg")
+        return resp.content, ctype
+
+    # (1) まず DB の現在 URL で取得を試みる
+    result = await _fetch_image_bytes(current_url)
+
+    # (2) 失敗した場合のみ、Meta から URL を取り直して再取得（期限切れ対応）
+    if result is None:
+        tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
+        if platform == "messenger":
+            token_q = await db.execute(
+                text(f"""
+                    SELECT page_access_token_encrypted
+                    FROM {tenant_meta_config_t}
+                    WHERE tenant_id = :tenant_id AND is_active = TRUE
+                    ORDER BY connected_at DESC, id DESC
+                    LIMIT 1
+                """),
+                {"tenant_id": tenant_id},
+            )
+        else:
+            token_q = await db.execute(
+                text(f"""
+                    SELECT page_access_token_encrypted
+                    FROM {tenant_meta_config_t}
+                    WHERE tenant_id = :tenant_id
+                      AND is_active = TRUE
+                      AND instagram_business_account_id IS NOT NULL
+                    ORDER BY connected_at DESC, id DESC
+                    LIMIT 1
+                """),
+                {"tenant_id": tenant_id},
+            )
+        token_row = token_q.first()
+        if token_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+        try:
+            page_access_token = encryption.decrypt(_decode_token_blob(token_row[0]))
+        except Exception as exc:
+            logger.error("[attachment-image] page_access_token 復号失敗: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="保存トークンの復号に失敗しました",
+            ) from exc
+
+        fresh_url = await meta_graph.fetch_attachment_url(
+            page_access_token=page_access_token,
+            message_id=message_id,
+        )
+        if fresh_url:
+            await db.execute(
+                text(
+                    f"UPDATE {meta_messages_t} SET attachment_url = :url "
+                    "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+                ),
+                {"url": fresh_url, "message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+            )
+            await db.commit()
+            from app.tenant.context import reset_tenant_context
+            await reset_tenant_context(db, tenant_id)
+            result = await _fetch_image_bytes(fresh_url)
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="expired_or_unavailable",
+        )
+
+    image_bytes, content_type = result
+    return Response(content=image_bytes, media_type=content_type)
 
 
 # ---------------------------------------------------------------------------
