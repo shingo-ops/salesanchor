@@ -1,0 +1,43 @@
+# Chromatic workflow snapshot
+
+This is a snapshot of the deleted `.github/workflows/chromatic.yml` file retained for process-artifacts evidence.
+
+name: Chromatic Visual Testing
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+
+jobs:
+  chromatic:
+    name: Chromatic Snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # TurboSnap のために全履歴が必要
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          workingDir: frontend
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitZeroOnChanges: true  # 差分があっても CI は green のまま（レビューは Chromatic UI で実施）
+          onlyChanged: true        # TurboSnap: 変更コンポーネントのみスナップショット（70-90% コスト削減）
+          autoAcceptChanges: "main"  # main マージ後に baseline を自動更新（feature PR での視覚回帰検知は維持）

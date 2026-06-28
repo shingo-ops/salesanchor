@@ -70,6 +70,7 @@ async def test_fire_translation_sets_tenant_context_before_ensure():
     db.commit.assert_called_once()
 
 
+
 @pytest.mark.asyncio
 async def test_fire_translation_skips_outbound():
     """outbound を渡すと ensure_inbound_translations が呼ばれない（早期リターン）。

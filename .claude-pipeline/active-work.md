@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/merge-develop-to-main | develop→main 競合解消リリースブランチ（#2641含む全9ファイル develop優先解消） | 2026-06-28 | IN_PROGRESS | | main | base=develop+main merge |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
 | feature/morimoto/tenant-feature-switch-mvp | テナント単位フィーチャーフラグ MVP（tenant_features テーブル・require_feature・FeatureGate） | 2026-06-27 | IN_PROGRESS | #2631 | | develop マージ済み・main リリース待ち |
@@ -269,3 +270,4 @@
 | feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
 | feature/morimoto/common-6roles-stage-a | 共通6ロール化 段階A — DEFAULT_ROLES 6ロール化・migrate スクリプト | 2026-06-26 | REVIEW | #2619 | | backend/app/services/tenant.py + scripts/migrate_6roles_stage_a.py |
 | release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | DONE | #2622 | main | main マージ済み・本番デプロイ済み |
+| feature/morimoto/resolve-back-merge-2463 | PR #2463 back-merge 手動解消（main→develop コンフリクト9ファイル）PR #2624 | 2026-06-26 | REVIEW | #2624 | | |
