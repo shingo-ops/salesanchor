@@ -476,6 +476,9 @@ run_sql migrations/20260626_130000_force_rls_public_products.sql
 
 # テナント単位フィーチャーフラグ (public.tenant_features) テーブル新設 + RLS
 run_sql migrations/20260627_120000_add_tenant_features_table.sql
+
+# 為替レート SSOT (public.app_fx_rates) テーブル新設 + RLS（読み取り全許可・書き込みoperatorのみ）
+run_sql migrations/20260628_170000_add_app_fx_rates.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

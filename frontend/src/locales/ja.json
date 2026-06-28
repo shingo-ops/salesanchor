@@ -47,6 +47,7 @@
     "new": "新規",
     "code": "コード",
     "amount": "金額",
+    "yen": "円",
     "currency": "通貨",
     "sortAsc": "▲",
     "sortDesc": "▼",
@@ -150,6 +151,7 @@
     "discordAnnounce": "Discordアナウンス",
     "superAdminPhaseSwitch": "スプレッドシート Phase",
     "superAdminInventoryOffers": "仕入元現在オファー",
+    "superAdminFxRate": "為替レート管理",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -2278,6 +2280,19 @@
       "guildId": "Guild ID",
       "channelId": "Channel ID",
       "bulkDeleteConfirm": "選択した {{count}} 件の仕入元を削除します。よろしいですか？"
+    },
+    "fxRate": {
+      "title": "為替レート管理（SSOT）",
+      "subtitle": "USD/JPY レートを外部 API から1日2回自動取得しています。",
+      "currentRate": "現在のレート",
+      "fetchedAt": "取得日時",
+      "updatedAt": "最終更新",
+      "noData": "まだレートが取得されていません。手動更新ボタンで即時取得できます。",
+      "refreshBtn": "今すぐ更新",
+      "refreshSuccess": "レートを更新しました。",
+      "refreshError": "レートの取得に失敗しました。しばらく待ってから再試行してください。",
+      "currency": "通貨",
+      "rateJpy": "1 外貨 = N 円"
     },
     "llmBudget": {
       "title": "LLM 月次予算（Gemini 2.5 Flash）",

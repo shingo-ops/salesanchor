@@ -47,6 +47,7 @@
     "new": "New",
     "code": "Code",
     "amount": "Amount",
+    "yen": "JPY",
     "currency": "Currency",
     "sortAsc": "▲",
     "sortDesc": "▼",
@@ -150,6 +151,7 @@
     "discordAnnounce": "Discord Announce",
     "superAdminPhaseSwitch": "Spreadsheet Phase",
     "superAdminInventoryOffers": "Supplier Offers",
+    "superAdminFxRate": "FX Rate Management",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -2278,6 +2280,19 @@
       "guildId": "Guild ID",
       "channelId": "Channel ID",
       "bulkDeleteConfirm": "Delete the {{count}} selected suppliers. Are you sure?"
+    },
+    "fxRate": {
+      "title": "FX Rate Management (SSOT)",
+      "subtitle": "USD/JPY rate is automatically fetched twice a day from an external API.",
+      "currentRate": "Current Rate",
+      "fetchedAt": "Fetched At",
+      "updatedAt": "Last Updated",
+      "noData": "No rate data yet. Click the refresh button to fetch immediately.",
+      "refreshBtn": "Refresh Now",
+      "refreshSuccess": "Rate updated successfully.",
+      "refreshError": "Failed to fetch the rate. Please try again later.",
+      "currency": "Currency",
+      "rateJpy": "1 Foreign = N JPY"
     },
     "llmBudget": {
       "title": "Monthly LLM Budget (Gemini 2.5 Flash)",
