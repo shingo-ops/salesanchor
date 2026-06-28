@@ -1,4 +1,29 @@
-# condition-vocab-ssot design
+# condition-vocab-ssot design (Phase 1: products.condition / products.unit コード除去)
+
+**対象ADR**: ADR-093  
+**recon**: docs/handoff/condition-vocab-ssot/recon.md  
+**日付**: 2026-06-28  
+**担当**: Hikky-dev
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+- 該当なし：本変更は `public.products` の残骸列（condition / unit）をアプリコードから除去するだけの内部整理であり、外部ライブラリや他社事例を参照する必要はないと判断。
+
+---
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| `p.condition` / `p.unit` のコード参照がゼロになる | `grep -rnE "\bp\.(condition|unit)\b" backend/` → 空 |
+| フロントエンドの型エラーがない | `tsc --noEmit` 変更起因エラー（TS2339 等）がゼロ |
+| condition/unit 関連テストが全通過 | `pytest backend/tests/test_condition_vocab.py backend/tests/test_super_admin_inbound_api.py` → passed |
+| フロントエンドビルドが成功する | CI `frontend-build` ジョブが green |
+| 全 CI ゲートが通過する | `gh pr checks 2660` → すべて green |
+
+---
 
 ## 本番反映順序
 
