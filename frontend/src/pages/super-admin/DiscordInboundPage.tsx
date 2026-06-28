@@ -39,15 +39,8 @@ interface InboundProductCandidate {
   name: string;
   occurrences: number;
   sample: string | null;
-  // PR5c: 取込時に商品マスタへ転記する付随情報。
-  unit: string | null;       // 代表的な取引単位（carton→case 正規化済・小文字）
-  condition: string | null;  // 代表的な状態（小文字）
   language: string;          // 商品名から自動判定した言語（ja/en・取込時に修正可）
 }
-
-// 取引単位は backend で carton→case 正規化済。表示は「先頭の文字だけ大文字」（例: case→Case）。
-const capUnit = (u: string | null) =>
-  u ? u.charAt(0).toUpperCase() + u.slice(1).toLowerCase() : "-";
 
 // parse_status enum (migration 059 と整合)
 const PARSE_STATUS_VALUES = [
@@ -285,7 +278,6 @@ export default function DiscordInboundPage() {
                         <th style={{ width: "var(--col-width-checkbox)", textAlign: "center" }} aria-label={t("common.select")}></th>
                         <th>{t("common.name")}</th>
                         <th style={{ width: "var(--col-width-checkbox)", textAlign: "right" }}>{t("products.importOccurrences")}</th>
-                        <th style={{ width: "72px" }}>{t("products.unitCol")}</th>
                         <th style={{ width: "104px" }}>{t("language.label")}</th>
                         <th>{t("products.importSample")}</th>
                       </tr>
@@ -303,7 +295,6 @@ export default function DiscordInboundPage() {
                           </td>
                           <td style={{ wordBreak: "break-word" }}>{c.name}</td>
                           <td style={{ textAlign: "right" }}>{c.occurrences}</td>
-                          <td>{capUnit(c.unit)}</td>
                           <td>
                             <select
                               style={{ maxWidth: "100%" }}

@@ -124,11 +124,11 @@ def test_condition_filter_clause_translates_ver41_labels_to_axes_only() -> None:
 
     assert clause is not None
     assert clause == (
-        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit AND i.seal = :cond0_seal "
+        "(NULLIF(i.unit, '') = :cond0_unit AND i.seal = :cond0_seal "
         "AND i.damage = :cond0_damage) OR "
-        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond1_unit AND i.seal = :cond1_seal "
+        "(NULLIF(i.unit, '') = :cond1_unit AND i.seal = :cond1_seal "
         "AND i.damage = :cond1_damage) OR "
-        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond2_unit AND i.search_cond = :cond2_search_cond "
+        "(NULLIF(i.unit, '') = :cond2_unit AND i.search_cond = :cond2_search_cond "
         "AND i.damage = :cond2_damage)"
     )
     assert params["cond0_unit"] == "box"
@@ -149,10 +149,10 @@ def test_condition_filter_clause_keeps_sealed_box_grouped_and_excludes_unit_only
 
     assert clause is not None
     assert clause == (
-        "(COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit AND i.seal = :cond0_seal "
+        "(NULLIF(i.unit, '') = :cond0_unit AND i.seal = :cond0_seal "
         "AND i.damage = :cond0_damage)"
     )
-    assert " OR COALESCE(NULLIF(i.unit, ''), p.unit) = :cond0_unit" not in clause
+    assert " OR NULLIF(i.unit, '') = :cond0_unit" not in clause
     assert params["cond0_unit"] == "box"
     assert params["cond0_seal"] == "shrink"
     assert params["cond0_damage"] is False

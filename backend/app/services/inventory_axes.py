@@ -163,7 +163,7 @@ def resolve_aggkey(source: Mapping[str, Any] | Any) -> str | None:
 def build_condition_filter_clause(
     values: Iterable[str],
     *,
-    unit_column: str = "COALESCE(NULLIF(i.unit, ''), p.unit)",
+    unit_column: str = "NULLIF(i.unit, '')",
     seal_column: str = "i.seal",
     search_cond_column: str = "i.search_cond",
     grade_column: str = "i.grade",
