@@ -19,7 +19,6 @@ from decimal import Decimal
 from typing import Optional
 
 import httpx
-
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
