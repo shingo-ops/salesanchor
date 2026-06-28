@@ -1655,7 +1655,7 @@ async def send_lead_message(
                 "meta_error": e.to_audit_dict(),
             },
         )
-        rate_detail: dict = {"message": "Meta APIのレート制限に達しました"}
+        rate_detail: dict = {"message": "Meta APIのレート制限に達しました", "reason": "rate_limited"}
         if e.retry_after:
             rate_detail["retry_after"] = e.retry_after
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=rate_detail)
@@ -1678,7 +1678,16 @@ async def send_lead_message(
         )
     except MetaGraphAPIError as e:
         meta_error_payload = e.to_audit_dict()
-        logger.warning("Meta Send API error for lead %s: %s", lead_id, e.error_type)
+        logger.warning(
+            "Meta Send API error for lead %s: type=%s code=%s subcode=%s trace=%s",
+            lead_id, e.error_type, e.error_code, e.error_subcode, e.fbtrace_id,
+        )
+        if e.error_code == 10 and e.error_subcode in (2018278, 2534022):
+            send_error_reason = "window_closed"
+        elif e.error_code in (4, 32, 613, 17):
+            send_error_reason = "rate_limited"
+        else:
+            send_error_reason = "generic"
         await _record_send_audit_safely(
             db, tenant_id=tenant_id, user_id=current_user.id,
             action="meta_message_send_failed", record_id=config_id,
@@ -1696,6 +1705,7 @@ async def send_lead_message(
                 "detail": "Meta Send API がエラーを返しました",
                 "error_code": e.error_code,
                 "error_type": e.error_type,
+                "reason": send_error_reason,
             },
         )
     except MetaGraphError as e:

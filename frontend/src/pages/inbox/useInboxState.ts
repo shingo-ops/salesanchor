@@ -107,6 +107,8 @@ export interface UseInboxStateReturn {
   setDraft: (v: string) => void;
   sending: boolean;
   sendError: string;
+  sendErrorReason: string;
+  sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
   discordDmChannelMissing: boolean;
@@ -208,6 +210,8 @@ export function useInboxState(): UseInboxStateReturn {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [sendErrorReason, setSendErrorReason] = useState("");
+  const [sendErrorCode, setSendErrorCode] = useState<number | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const clearAttachment = useCallback(() => { setAttachedFile(null); }, []);
 
@@ -488,6 +492,8 @@ export function useInboxState(): UseInboxStateReturn {
     closeKartePanel();
     setDraft("");
     setSendError("");
+    setSendErrorReason("");
+    setSendErrorCode(null);
     clearAttachment();
 
     // ADR-108: set default karte tab based on lead_status
@@ -609,6 +615,8 @@ export function useInboxState(): UseInboxStateReturn {
   const submitSend = useCallback(async (opts?: { draftId?: number }) => {
     if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
     setSendError("");
+    setSendErrorReason("");
+    setSendErrorCode(null);
     setSending(true);
     try {
       if (attachedFile) {
@@ -624,10 +632,17 @@ export function useInboxState(): UseInboxStateReturn {
       loadConversations();
     } catch (e) {
       if (e instanceof ApiError) {
+        const detail = e.responseDetail as { reason?: string; error_code?: number } | null;
+        setSendErrorReason(detail?.reason ?? "generic");
+        setSendErrorCode(detail?.error_code ?? null);
         setSendError(e.message || "Send failed");
       } else if (e instanceof Error) {
+        setSendErrorReason("generic");
+        setSendErrorCode(null);
         setSendError(e.message);
       } else {
+        setSendErrorReason("generic");
+        setSendErrorCode(null);
         setSendError("Send failed");
       }
     } finally {
@@ -861,6 +876,8 @@ export function useInboxState(): UseInboxStateReturn {
     setDraft,
     sending,
     sendError,
+    sendErrorReason,
+    sendErrorCode,
     sendDisabled,
     canSend,
     discordDmChannelMissing,
