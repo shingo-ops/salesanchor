@@ -1685,6 +1685,8 @@ async def send_lead_message(
         )
         if e.error_code == 10 and e.error_subcode in (2018278, 2534022):
             send_error_reason = "window_closed"
+        elif e.error_code == 10 and e.error_subcode == 2534044:
+            send_error_reason = "permission_denied"
         elif e.error_code in (4, 32, 613, 17):
             send_error_reason = "rate_limited"
         else:
