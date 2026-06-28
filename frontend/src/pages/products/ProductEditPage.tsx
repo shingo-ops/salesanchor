@@ -61,8 +61,6 @@ export default function ProductEditPage() {
           category: p.category || "",
           mark: p.mark || "",
           status: p.status,
-          condition: p.condition || "",
-          unit: p.unit || "",
           unit_price: p.unit_price != null ? String(p.unit_price) : "",
           quantity: String(p.quantity),
           weight: p.weight != null ? String(p.weight) : "",
@@ -129,8 +127,6 @@ export default function ProductEditPage() {
       category: toNull(form.category),
       mark: toNull(form.mark),
       status: form.status,
-      condition: toNull(form.condition),
-      unit: toNull(form.unit),
       unit_price: form.unit_price ? Number(form.unit_price) : null,
       quantity: Number(form.quantity),
       weight: form.weight ? Number(form.weight) : null,
@@ -291,13 +287,6 @@ export default function ProductEditPage() {
               </div>
             </fieldset>
 
-            <div className="form-group">
-              <label>{t("products.unitCol")}</label>
-              <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-                <option value="">{t("common.notSet")}</option>
-                {renderAttrOptions("unit", form.unit)}
-              </select>
-            </div>
             <div className="form-group">
               <label>{t("products.msrp")}</label>
               <input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />

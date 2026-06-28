@@ -43,7 +43,6 @@ class ProductCreate(BaseModel):
     category: str | None = Field(default=None, max_length=100)
     mark: str | None = Field(default=None, max_length=100)
     status: ProductStatus = Field(default=ProductStatus.active)
-    condition: str | None = Field(default=None, max_length=50)
     unit_price: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     quantity: int = Field(default=0, ge=0)
     weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
@@ -64,7 +63,6 @@ class ProductCreate(BaseModel):
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
-    unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
     boxes_per_case: int | None = Field(default=None, ge=0)
@@ -93,7 +91,6 @@ class ProductUpdate(BaseModel):
     category: str | None = Field(default=None, max_length=100)
     mark: str | None = Field(default=None, max_length=100)
     status: ProductStatus | None = None
-    condition: str | None = Field(default=None, max_length=50)
     unit_price: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     quantity: int | None = Field(default=None, ge=0)
     weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
@@ -114,7 +111,6 @@ class ProductUpdate(BaseModel):
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
-    unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
     boxes_per_case: int | None = Field(default=None, ge=0)
@@ -147,7 +143,6 @@ class ProductResponse(BaseModel):
     category: str | None
     mark: str | None
     status: str
-    condition: str | None
     unit_price: Decimal | None
     quantity: int
     weight: Decimal | None
@@ -171,7 +166,6 @@ class ProductResponse(BaseModel):
     tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
-    unit: str | None = Field(default=None, max_length=20)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
     boxes_per_case: int | None = None
