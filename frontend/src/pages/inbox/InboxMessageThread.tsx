@@ -495,9 +495,11 @@ export function InboxMessageThread({
           <div className="inbox-send-error" role="alert">
             {sendErrorReason === "window_closed"
               ? t("inbox.sendError.windowClosed")
-              : sendErrorReason === "rate_limited"
-                ? t("inbox.sendError.rateLimited")
-                : t("inbox.sendError.generic")}
+              : sendErrorReason === "permission_denied"
+                ? t("inbox.sendError.permissionDenied")
+                : sendErrorReason === "rate_limited"
+                  ? t("inbox.sendError.rateLimited")
+                  : t("inbox.sendError.generic")}
             {sendErrorCode != null && t("inbox.sendError.codeSuffix", { code: sendErrorCode })}
           </div>
         )}

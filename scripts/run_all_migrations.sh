@@ -120,7 +120,7 @@ run_py  scripts/migrate_meta_messages_page_id.py
 run_py  scripts/migrate_adr015_lead_foundation.py  -e TENANT_CODE=highlife-jpn
 
 # ロール移行
-# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働
+# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働（GO #2658 Shingo承認済み）
 #   停止理由:
 #     1. メンバー→CS 移行・メンバー削除は全テナント完了済み（5テナントで「メンバー」0件 / 2026-06-28確認）
 #     2. 既存テナントへの seed が DEFAULT_ROLES 変更のたびに新名ロールを全テナントに INSERT し

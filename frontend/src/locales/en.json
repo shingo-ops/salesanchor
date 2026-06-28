@@ -1086,6 +1086,7 @@
     },
     "sendError": {
       "windowClosed": "The messaging window has closed (a reply from the recipient is required).",
+      "permissionDenied": "More than 24 hours have passed, so this message cannot be sent. Please reply directly from Instagram / Messenger.",
       "rateLimited": "Sending is temporarily limited. Please try again later.",
       "generic": "Failed to send the message.",
       "codeSuffix": " (code: {{code}})"
