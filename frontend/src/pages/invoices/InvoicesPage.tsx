@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { DataTable, DataTableColumn } from "../../components/DataTable";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface Invoice {
@@ -133,10 +134,14 @@ export default function InvoicesPage() {
       </nav>
 
       <div className="filter-bar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">{t("invoices.allStatuses")}</option>
-          {INVOICE_STATUSES.map((s) => <option key={s} value={s}>{t(`invoices.status_${s}`)}</option>)}
-        </select>
+        <SelectControl
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          options={INVOICE_STATUSES.map((s) => ({ value: s, label: t(`invoices.status_${s}`) }))}
+          placeholder={t("invoices.allStatuses")}
+          size="sm"
+          style={{ minWidth: "12rem" }}
+        />
       </div>
 
       {error && <div className="error-message">{error}</div>}
