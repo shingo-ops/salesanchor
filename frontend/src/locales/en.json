@@ -2773,7 +2773,7 @@
     "smallRoleNameLabel": "Role name for Small customers",
     "largeRoleNameLabel": "Role name for Large customers",
     "invalidRoleName": "Role name must not be empty",
-    "welcomeTemplateDefault": "Hello! Thanks for reaching out. A staff member will get back to you shortly."
+    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
   },
   "discordAutoSetup": {
     "title": "Discord server auto setup",
