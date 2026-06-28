@@ -120,7 +120,19 @@ run_py  scripts/migrate_meta_messages_page_id.py
 run_py  scripts/migrate_adr015_lead_foundation.py  -e TENANT_CODE=highlife-jpn
 
 # ロール移行
-run_py  scripts/migrate_roles_gas_compat.py
+# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働（GO #2658 Shingo承認済み）
+#   停止理由:
+#     1. メンバー→CS 移行・メンバー削除は全テナント完了済み（5テナントで「メンバー」0件 / 2026-06-28確認）
+#     2. 既存テナントへの seed が DEFAULT_ROLES 変更のたびに新名ロールを全テナントに INSERT し
+#        旧名ロールと重複する事故が再発（tenant_001/003/004/005/006 で旧新ロール重複 / 2026-06-28解消済み）
+#     3. 新テナントの初期ロール seed は create 経路が個別に担保:
+#        admin.py:68 → create_tenant_schema → tenant.py:1650 await seed_system_roles()
+#        scripts/setup_tenant.py:184 await seed_system_roles()
+#        scripts/setup_review_tenant.py:197 await seed_system_roles()
+#   将来 DEFAULT_ROLES を変更する場合:
+#     毎デプロイ自動ではなく --tenant-id 必須の明示スクリプト（migrate_*_stage_*.py 型）で人が意図して実行する。
+#   スクリプト本体（migrate_roles_gas_compat.py）は履歴用に残置。削除は別便で検討。
+# run_py  scripts/migrate_roles_gas_compat.py
 
 # ADR-021
 run_py  scripts/migrate_adr021_sprint2_financials.py
