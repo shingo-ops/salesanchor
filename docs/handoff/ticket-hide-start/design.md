@@ -65,10 +65,10 @@ return new_channel
 **discord.py ネイティブの `channel.set_permissions(member, view_channel=False)`** を採用。  
 Discord API 上は同じ `PUT /channels/{id}/permissions/{user_id}` に解釈される。
 
-## 外部事例
+## 外部・過去事例と我々への応用
 
-- discord.py `TextChannel.set_permissions()`: 既存 `_bot_permission_overwrites`（同ファイル:145-161）が discord.py PermissionOverwrite を使っており、同じパターン。
-- `discord_remove.py:90-116`: httpx 経由 DELETE の前例。今回は PUT 相当を discord.py 経由で実施（引数に bot_token 不要）。
+- discord.py `TextChannel.set_permissions()`: 既存 `_bot_permission_overwrites`（`backend/app/discord_gateway/ticket_channel_creator.py:145-161`）が discord.py PermissionOverwrite を使っており、同じパターン。今回も同じ discord.py ネイティブ API を採用。
+- `backend/app/routers/discord_remove.py:90-116`: httpx 経由 DELETE の前例。今回は PUT 相当を discord.py 経由で実施（引数に bot_token 不要）。既存コードと同一の権限レイヤーを利用。
 
 ## リスク・副作用
 
