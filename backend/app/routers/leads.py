@@ -1263,6 +1263,128 @@ async def translate_message_endpoint(
     }
 
 
+@router.get(
+    "/leads/{lead_id}/messages/{message_id}/attachment-url",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def get_message_attachment_url(
+    lead_id: int,
+    message_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """受信メッセージの添付画像 URL を取り直す（Meta CDN URL 期限切れ対応）。
+
+    フロントが <img onError> で呼ぶ。
+    成功時: {"url": "..."} を返し、meta_messages.attachment_url を最新値で UPDATE する。
+    失敗時: 404 + {"reason": "expired_or_unavailable"}。
+    IG の場合は直近 20 件/スレッド制限により古いメッセージは取れない場合がある。
+    """
+    if not message_id or message_id.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="message_id is required",
+        )
+
+    # lead 存在確認
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    lead_q = await db.execute(
+        text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": lead_id, "tenant_id": tenant_id},
+    )
+    if lead_q.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="リードが見つかりません",
+        )
+
+    # message 存在確認 + platform 取得
+    meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
+    msg_q = await db.execute(
+        text(
+            f"SELECT platform FROM {meta_messages_t} "
+            "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    msg_row = msg_q.first()
+    if msg_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="メッセージが見つかりません",
+        )
+    platform = msg_row[0]
+
+    # tenant_meta_config から page_access_token を取得・復号
+    tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
+    if platform == "messenger":
+        token_q = await db.execute(
+            text(f"""
+                SELECT page_access_token_encrypted
+                FROM {tenant_meta_config_t}
+                WHERE tenant_id = :tenant_id AND is_active = TRUE
+                ORDER BY connected_at DESC, id DESC
+                LIMIT 1
+            """),
+            {"tenant_id": tenant_id},
+        )
+    else:
+        token_q = await db.execute(
+            text(f"""
+                SELECT page_access_token_encrypted
+                FROM {tenant_meta_config_t}
+                WHERE tenant_id = :tenant_id
+                  AND is_active = TRUE
+                  AND instagram_business_account_id IS NOT NULL
+                ORDER BY connected_at DESC, id DESC
+                LIMIT 1
+            """),
+            {"tenant_id": tenant_id},
+        )
+    token_row = token_q.first()
+    if token_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Meta 接続が見つかりません（Channels 設定で接続してください）",
+        )
+
+    try:
+        page_access_token = encryption.decrypt(_decode_token_blob(token_row[0]))
+    except Exception as exc:
+        logger.error("[attachment-url] page_access_token 復号失敗: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="保存トークンの復号に失敗しました",
+        ) from exc
+
+    # Meta Graph API で URL を取り直す
+    fresh_url = await meta_graph.fetch_attachment_url(
+        page_access_token=page_access_token,
+        message_id=message_id,
+    )
+
+    if not fresh_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="expired_or_unavailable",
+        )
+
+    # DB の attachment_url を最新値で UPDATE（次回即時表示用）
+    await db.execute(
+        text(
+            f"UPDATE {meta_messages_t} SET attachment_url = :url "
+            "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"url": fresh_url, "message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    await db.commit()
+    from app.tenant.context import reset_tenant_context
+    await reset_tenant_context(db, tenant_id)
+
+    return {"url": fresh_url}
+
+
 # ---------------------------------------------------------------------------
 # Phase 1-D Sprint 5: メッセージ送信
 # ---------------------------------------------------------------------------
@@ -1533,7 +1655,7 @@ async def send_lead_message(
                 "meta_error": e.to_audit_dict(),
             },
         )
-        rate_detail: dict = {"message": "Meta APIのレート制限に達しました"}
+        rate_detail: dict = {"message": "Meta APIのレート制限に達しました", "reason": "rate_limited"}
         if e.retry_after:
             rate_detail["retry_after"] = e.retry_after
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=rate_detail)
@@ -1556,7 +1678,16 @@ async def send_lead_message(
         )
     except MetaGraphAPIError as e:
         meta_error_payload = e.to_audit_dict()
-        logger.warning("Meta Send API error for lead %s: %s", lead_id, e.error_type)
+        logger.warning(
+            "Meta Send API error for lead %s: type=%s code=%s subcode=%s trace=%s",
+            lead_id, e.error_type, e.error_code, e.error_subcode, e.fbtrace_id,
+        )
+        if e.error_code == 10 and e.error_subcode in (2018278, 2534022):
+            send_error_reason = "window_closed"
+        elif e.error_code in (4, 32, 613, 17):
+            send_error_reason = "rate_limited"
+        else:
+            send_error_reason = "generic"
         await _record_send_audit_safely(
             db, tenant_id=tenant_id, user_id=current_user.id,
             action="meta_message_send_failed", record_id=config_id,
@@ -1574,6 +1705,7 @@ async def send_lead_message(
                 "detail": "Meta Send API がエラーを返しました",
                 "error_code": e.error_code,
                 "error_type": e.error_type,
+                "reason": send_error_reason,
             },
         )
     except MetaGraphError as e:

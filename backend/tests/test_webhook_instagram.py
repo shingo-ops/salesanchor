@@ -109,6 +109,8 @@ _META_MESSAGES_DDL = """
         seen_by_staff_id INTEGER,
         page_id VARCHAR(50),
         original_language VARCHAR(10),
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """
