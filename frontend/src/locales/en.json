@@ -352,6 +352,7 @@
     "fedexEtdGuideStep3Desc": "Register the API key, secret, and account number.",
     "fedexEtdGuideOpenCredentials": "Open credentials tab",
     "fedexEtdGuideConnected": "Connection verified",
+    "fedexEtdGuideStep1_7Cta": "Test key setup is complete. Please proceed to Step 2.",
     "fedexEtdGuideConnectionHint": "Save the credentials, run the connection test, then come back here to continue.",
     "fedexEtdGuideStep4Title": "Register letterhead and signature",
     "fedexEtdGuideStep4Heading": "Register Document Images",
