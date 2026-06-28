@@ -8,10 +8,12 @@
  * ルート: /crm/*
  */
 
-import { NavLink, Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { SubMenu } from "../../components/SubMenu";
+import type { SubMenuGroup } from "../../components/SubMenu";
 
 
 interface SubNavItem {
@@ -45,23 +47,34 @@ export default function CustomerHubPage() {
 
   const visibleItems = items.filter((i) => i.visible);
 
+  // キット(SubMenu)へ渡す形に変換。labelKey は t() で翻訳済み文字列に。
+  const groups: SubMenuGroup[] = [
+    {
+      items: visibleItems.map((i) => ({
+        key: i.to,
+        label: t(i.labelKey),
+        to: i.to,
+      })),
+    },
+  ];
+
+  // 今開いているページを activeKey に反映（末尾セグメントで判定）
+  const location = useLocation();
+  const activeKey =
+    visibleItems.find((i) => location.pathname.endsWith(`/${i.to}`))?.to ??
+    visibleItems[0]?.to ??
+    "";
+
   return (
     <PageLayout navKey="nav.leads" subtitleKey="crm.subtitle" noScroll>
       <div className="hub-shell">
-        {/* 左サブナビ */}
-        <nav className="hub-subnav" aria-label={t("nav.leads")}>
-          {visibleItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `hub-subnav-item${isActive ? " active" : ""}`
-              }
-            >
-              {t(item.labelKey)}
-            </NavLink>
-          ))}
-        </nav>
+        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-148） */}
+        <SubMenu
+          variant="grouped"
+          className="hub-subnav"
+          groups={groups}
+          activeKey={activeKey}
+        />
 
         {/* 右コンテンツ */}
         <div className="hub-content">
