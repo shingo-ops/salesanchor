@@ -79,6 +79,7 @@ echo "  Image: ${BACKEND_IMAGE}"
 echo "Step 2: Starting green backend (backnet only, no traffic yet)..."
 docker run -d \
   --name "${GREEN_BACKEND}" \
+  --restart unless-stopped \
   --stop-signal SIGTERM \
   --stop-timeout 40 \
   --memory 512m \
@@ -149,6 +150,7 @@ echo "  ✅ Old backend stopped and removed."
 # ── Step 6: Green を正規名にリネーム（次回デプロイとの整合性） ──────────────────
 echo "Step 6: Renaming green → ${OLD_BACKEND}..."
 docker rename "${GREEN_BACKEND}" "${OLD_BACKEND}"
+docker update --restart unless-stopped "${OLD_BACKEND}"
 echo "  ✅ Done."
 
 echo "============================================"
