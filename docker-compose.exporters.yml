@@ -31,7 +31,7 @@ services:
     depends_on:
       - postgres
     ports:
-      - "${APP_VPS_IP:-49.212.137.46}:9187:9187"
+      - "${APP_VPS_IP:-49.212.137.46}:19187:9187"
     restart: unless-stopped
     deploy:
       resources:
@@ -48,7 +48,7 @@ services:
     depends_on:
       - nginx
     ports:
-      - "${APP_VPS_IP:-49.212.137.46}:9113:9113"
+      - "${APP_VPS_IP:-49.212.137.46}:19113:9113"
     restart: unless-stopped
     deploy:
       resources:
@@ -66,7 +66,7 @@ services:
     depends_on:
       - redis
     ports:
-      - "${APP_VPS_IP:-49.212.137.46}:9121:9121"
+      - "${APP_VPS_IP:-49.212.137.46}:19121:9121"
     restart: unless-stopped
     deploy:
       resources:
