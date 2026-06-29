@@ -16,18 +16,15 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/gate-message-clarify | process-artifacts gate「削除するファイル:」エラーメッセージ誤読解消（文言のみ・ロジック不変） | 2026-06-29 | IN_PROGRESS | | main | base=main |
-| release/bluegreen-restart-policy | blue-green deploy 後も backend の RestartPolicy を unless-stopped に保持（cutover.sh 2行追加） | 2026-06-29 | DONE | #2671 | main | main マージ済み・本番確認済み |
-| release/certbot-restart-policy | certbot に restart: unless-stopped 追加（docker-compose.yml 1行・dockerd再起動時自動復帰修正） | 2026-06-29 | DONE | #2670 | main | main マージ済み |
-| release/evidence-ev-20260628 | EV-20260628-001 evidence registry 追記（VPS OOM障害対応・#2665デプロイ完走記録） | 2026-06-29 | DONE | #2669 | main | main マージ済み |
-| feature/morimoto/remove-products-condition-unit | products.condition / products.unit コード除去 Phase 1（ADR-093） | 2026-06-28 | DONE | #2660 | | base=develop |
-| release/morimoto/inbox-image-proxy | 受信画像中継（image proxy）ADR-110 — CSP img-src 'self' 対応 | 2026-06-28 | IN_PROGRESS | | main | base=main |
+| release/certbot-restart-policy | certbot に restart: unless-stopped 追加（docker-compose.yml 1行・dockerd再起動時自動復帰修正） | 2026-06-29 | IN_PROGRESS | | main | base=main |
+| release/evidence-ev-20260628 | EV-20260628-001 evidence registry 追記（VPS OOM障害対応・#2665デプロイ完走記録） | 2026-06-29 | IN_PROGRESS | | main | base=main |
 | release/stop-gas-compat-seed-main | migrate_roles_gas_compat 停止（run_all_migrations.sh 1行のみ・base=main） | 2026-06-28 | IN_PROGRESS | | main | base=main・単独便 |
 | release/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | DONE | | | 実装済み・release/* に移行 |
 | release/merge-develop-to-main | develop→main 競合解消リリースブランチ（#2641含む全9ファイル develop優先解消） | 2026-06-28 | IN_PROGRESS | | main | base=develop+main merge |
-| release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | DONE | #2646 | main | main マージ済み |
+| release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | IN_PROGRESS | #2646 | main | base=main |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
+| release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | IN_PROGRESS | #2646 | main | base=main |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
 | feature/morimoto/tenant-feature-switch-mvp | テナント単位フィーチャーフラグ MVP（tenant_features テーブル・require_feature・FeatureGate） | 2026-06-27 | IN_PROGRESS | #2631 | | develop マージ済み・main リリース待ち |
 | release/carrier-credentials-reset-tenant-ctx | ADR-072 鍵保存後 reset_tenant_context 挿入（cherry-pick #2621） | 2026-06-26 | IN_PROGRESS | | main | base=main |
@@ -213,12 +210,9 @@
 | feature/morimoto/adr-144-discord-b-method | （記入してください） | 2026-06-26 11:05 | IN_PROGRESS | | | |
 | feature/morimoto/fedex-guide-step1-7-form | FedEx ETD ガイド Step1-7 新設（CarrierCredentialForm 埋め込み・第2段） | 2026-06-26 | IN_PROGRESS | | | frontend/src/pages/integrations/FedexEtdSetupGuide.tsx |
 | release/select-arrow-padding-only | （記入してください） | 2026-06-26 11:46 | DONE | | | |
-| release/morimoto/select-control-bare-select | 金型の5ファイルを develop→main の小リリースとして切る | 2026-06-28 21:57 | IN_PROGRESS | | | frontend/src/components/Select.tsx / frontend/src/components/FormField.css / frontend/src/components/Select.stories.tsx / frontend/src/pages/invoices/InvoicesPage.tsx / tasks/todo.md |
-| release/node-exporter-port-fix | prod1 の node-exporter 公開ポートを 19100 に合わせる | 2026-06-29 11:16 | IN_PROGRESS | | | docker-compose.exporters.yml |
 | release/morimoto/inbox-ui-text-j1-j5 | 送信ガード/翻訳プレビュー UI 微調整（便1 J1-J5）文言+自動生成 | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
 | feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | IN_PROGRESS | | | |
-| feature/morimoto/select-control-bare-select | （記入してください） | 2026-06-28 20:57 | DONE | | | |
 ---
 
 ## 記入例
@@ -283,8 +277,4 @@
 | feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
 | feature/morimoto/common-6roles-stage-a | 共通6ロール化 段階A — DEFAULT_ROLES 6ロール化・migrate スクリプト | 2026-06-26 | REVIEW | #2619 | | backend/app/services/tenant.py + scripts/migrate_6roles_stage_a.py |
 | release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | DONE | #2622 | main | main マージ済み・本番デプロイ済み |
-| release/morimoto/resolve-2643-conflicts | develop→main #2643 コンフリクト9ファイル解消（run_all_migrations.sh 統合含む） | 2026-06-28 | DONE | #2657 | main | 衝突解消のみ・GO記録記入済み |
-| feature/morimoto/ticket-welcome-en | チケット歓迎メッセージ初期値を英語CTAに統一 | 2026-06-28 | IN_PROGRESS | | main | backend 2ファイル+i18n 2ファイル・DB変更なし |
-| release/morimoto/ticket-welcome-en | チケット歓迎メッセージ英語CTA統一 release branch（PR #2664 base=main） | 2026-06-28 | IN_PROGRESS | #2664 | main | feature cherry-pick・CI gate fix中 |
-| release/morimoto/fx-rate-ssot-wt | 為替レート SSOT 実装（自動取得 Celery Beat・super-admin UI） | 2026-06-28 | IN_PROGRESS | | main | migration + Celery task + API + frontend |
-| release/morimoto/manual-record-to-meta-messages | SA-02 G1b 手動記録を meta_messages に保存して受信箱一覧に表示（release ブランチ化） | 2026-06-28 | IN_PROGRESS | #2600 | main | feature/* → release/* 載せ替え・base=main |
+| feature/morimoto/resolve-back-merge-2463 | PR #2463 back-merge 手動解消（main→develop コンフリクト9ファイル）PR #2624 | 2026-06-26 | DONE | #2624 | develop | |
