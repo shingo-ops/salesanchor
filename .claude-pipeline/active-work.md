@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/f2-prod1-cleanup | prod1 Docker 自動クリーンアップ（停止コンテナ＋build キャッシュ週次削除・f2-cleanup.sh） | 2026-06-29 | IN_PROGRESS | | main | base=main・単独便 |
 | release/certbot-restart-policy | certbot に restart: unless-stopped 追加（docker-compose.yml 1行・dockerd再起動時自動復帰修正） | 2026-06-29 | IN_PROGRESS | | main | base=main |
 | release/evidence-ev-20260628 | EV-20260628-001 evidence registry 追記（VPS OOM障害対応・#2665デプロイ完走記録） | 2026-06-29 | IN_PROGRESS | | main | base=main |
 | release/stop-gas-compat-seed-main | migrate_roles_gas_compat 停止（run_all_migrations.sh 1行のみ・base=main） | 2026-06-28 | IN_PROGRESS | | main | base=main・単独便 |
