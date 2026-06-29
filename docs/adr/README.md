@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-06-28 / ADR 総数: 149 件
+最終更新: 2026-06-29 / ADR 総数: 150 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -165,6 +165,7 @@
 | [ADR-144](./ADR-144-ui-component-governance.md) | ADR-144: UI共通部品の遵守ガバナンス | Accepted | — | 2026-06-25 |
 | [ADR-145](./ADR-145-public-products-force-rls.md) | ADR-145: public.products への FORCE ROW LEVEL SECURITY 付与（共通/テナント固有の2層保護） | Accepted | — | — |
 | [ADR-147](./ADR-147-common-6roles-standardization.md) | ADR-147: 共通6ロール標準化（マネージャー・仕入れ・発送追加） | Accepted | — | — |
+| [ADR-148](./ADR-148-fx-rate-ssot.md) | ADR-148: 為替レート SSOT（public.app_fx_rates） | — | — | — |
 | [ADR-148](./ADR-148-submenu-ssot-link-mode.md) | ADR-148: サイドメニューの共通部品(SubMenu)へのSSOT集約とリンク型対応 | Accepted | — | 2026-06-28 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
