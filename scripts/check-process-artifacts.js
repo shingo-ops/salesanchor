@@ -671,13 +671,14 @@ function main() {
         if (!declaration || !declaration.deleteFiles || declaration.deleteFiles.length === 0) {
           deleteErrors.push('❌ PR本文に「削除するファイル:」の宣言がありません（PR番号2600以上で必須）');
           deleteErrors.push('   → 「### 標準ワークフロー確認」の「削除するファイル:」にリポジトリ相対パスを記入してください');
-          deleteErrors.push('   → 削除が無い場合は「削除するファイル: なし」と記入してください');
+          deleteErrors.push('   ※「削除するファイル」とは、丸ごと消したファイルだけでなく、1行でも削除・変更した行があるファイルを指します');
+          deleteErrors.push('   → 行の削除・変更が無い場合は「削除するファイル: なし」と記入してください');
         } else {
           const undeclaredDeletes = deletedFiles.filter(f => !declaration.deleteFiles.includes(f));
           if (undeclaredDeletes.length > 0) {
             deleteErrors.push('❌ 宣言外のファイルから行を削除しています:');
             undeclaredDeletes.forEach(f => deleteErrors.push(`   - ${f}`));
-            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない削除を除去してください');
+            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない変更を除去してください');
           }
         }
         if (deleteErrors.length > 0) {
