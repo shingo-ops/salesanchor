@@ -1666,10 +1666,12 @@ async def create_tenant_schema(
     await _execute_statements_preserving_do_blocks(ddl_db, trigger_sql)
 
     # ★壁0修正: 全 DDL をここで確定する。
-    # admin_db が別コネクション（SA-18 Phase2）の場合、commit しないと db セッションから
-    # tenant_X.roles 等が 42P01 になる。admin_db が None（= db にフォールバック）の場合は
-    # 同一セッション内なので commit 不要。
-    if admin_db is not None:
+    # admin_db が db と別オブジェクト（SA-18 Phase2 で注入される別 AsyncSession）の場合のみ
+    # commit して、db セッションから tenant_X.* が可視化されるようにする。
+    # admin_db が None（= db にフォールバック）または db と同一オブジェクト
+    # （テスト用 bootstrap_tenant_schema が conn=db=admin_db で渡すケース）の場合は
+    # 同一接続内なので commit 不要（context manager に任せる）。
+    if admin_db is not None and ddl_db is not db:
         await ddl_db.commit()
 
     # DDL commit 後に DML が失敗した場合、DDL は不可逆なためスキーマが孤立する。
@@ -1726,8 +1728,8 @@ async def create_tenant_schema(
 
     except Exception:
         # DML 失敗: DDL は既に commit 済みのためスキーマが孤立する前に DROP する。
-        # admin_db が None（同一セッション）の場合は db.rollback() で DDL ごと巻き戻るので不要。
-        if admin_db is not None:
+        # admin_db が None または db と同一オブジェクトの場合は db.rollback() で巻き戻るので不要。
+        if admin_db is not None and ddl_db is not db:
             try:
                 await ddl_db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
                 await ddl_db.commit()
