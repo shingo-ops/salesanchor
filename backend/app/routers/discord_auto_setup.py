@@ -588,7 +588,7 @@ async def _post_ticket_button_step(
         )
 
     payload = {
-        "content": "サポートが必要な場合は下のボタンを押してください。",
+        "content": "Whether it's a new order or a follow-up, we're here to help — just tap below to get started.",
         "components": [
             {
                 "type": 1,  # ActionRow
