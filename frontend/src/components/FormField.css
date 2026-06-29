@@ -46,6 +46,7 @@
 /* ── 1. 入力要素 共通ベース (0,1,0) ── */
 .comp-field__input,
 .comp-field__select,
+.comp-select__control,
 .comp-field__textarea {
   width: 100%;
   padding: var(--space-2) var(--space-3);
@@ -70,7 +71,8 @@
 /* appearance: none で OS標準▽を隠し、共通SVGアイコンを background-image で表示。       */
 /* padding-right: var(--space-5) = 20px — SVG 12px + 右端 var(--space-2) 8px を確保。 */
 /* stroke='%23888' は URL エンコードの #888（check-css-colors は %23 を検出しない）。   */
-.comp-field__select {
+.comp-field__select,
+.comp-select__control {
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -80,9 +82,19 @@
   background-position: right var(--space-2) center;
 }
 
+.comp-field__select {
+  width: 100%;
+}
+
+.comp-select__control {
+  width: auto;
+  max-width: 100%;
+}
+
 /* ── 3. フォーカス状態 (0,2,0) ── */
 .comp-field__input:focus,
 .comp-field__select:focus,
+.comp-select__control:focus,
 .comp-field__textarea:focus {
   outline: none;
   border-color: var(--accent);
@@ -92,6 +104,7 @@
 /* ── 4. 無効状態 (0,2,0) ── */
 .comp-field__input:disabled,
 .comp-field__select:disabled,
+.comp-select__control:disabled,
 .comp-field__textarea:disabled {
   opacity: var(--opacity-archived);
   cursor: not-allowed;
@@ -119,14 +132,16 @@
 
 /* ── 6. サイズ: sm (0,2,0) ── */
 .comp-field--sm .comp-field__input,
-.comp-field--sm .comp-field__select {
+.comp-field--sm .comp-field__select,
+.comp-select__control--sm {
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-sm);
   min-height: var(--comp-input-height-sm);
 }
 
 /* sm の padding shorthand が padding-right を上書きするため select のみ再指定 */
-.comp-field--sm .comp-field__select {
+.comp-field--sm .comp-field__select,
+.comp-select__control--sm {
   padding-right: var(--space-5);
 }
 
@@ -142,6 +157,7 @@
 /* ── 6. サイズ: lg (0,2,0) ── */
 .comp-field--lg .comp-field__input,
 .comp-field--lg .comp-field__select,
+.comp-select__control--lg,
 .comp-field--lg .comp-field__textarea {
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-md);
@@ -149,8 +165,13 @@
 }
 
 /* lg の padding shorthand が padding-right を上書きするため select のみ再指定 */
-.comp-field--lg .comp-field__select {
+.comp-field--lg .comp-field__select,
+.comp-select__control--lg {
   padding-right: var(--space-5);
+}
+
+.comp-select__control--full {
+  width: 100%;
 }
 
 .comp-field--lg .comp-field__label {
@@ -169,7 +190,8 @@
 /* ── 8. モバイル タッチターゲット（WCAG 2.5.5）── */
 @media (max-width: 767px) {
   .comp-field__input,
-  .comp-field__select {
+  .comp-field__select,
+  .comp-select__control {
     min-height: var(--comp-input-height-mobile);
   }
 }
