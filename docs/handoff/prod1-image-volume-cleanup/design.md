@@ -56,3 +56,9 @@ prod1（本番）に置き忘れられた未使用イメージ `mcr.microsoft.co
 ## GO 記録
 
 PO 手書き欄。ここは空のままにしておく。
+
+## 11. 結果
+
+dry-run 時点で playwright (57b65fdc9cea) は既にデプロイ付随処理で削除済み。当方の rmi 実行は不要だった。
+KGI a〜e すべて実データで○（現役11・本番DB/Redis無傷・監視系全種残存・playwright消失・ディスク約3GB減）。
+無差別pruneの巻き込みなし（監視系全種残存・volume数171維持で確認）。記録（recon/design/結果）を資産として main に取り込む。
