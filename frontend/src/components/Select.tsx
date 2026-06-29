@@ -20,14 +20,55 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-interface SelectOwnProps {
+interface SelectControlOwnProps {
   options: SelectOption[];
-  label?: string;
-  helperText?: string;
-  error?: string;
   size?: SelectSize;
   fullWidth?: boolean;
   placeholder?: string;
+  appearance?: "field" | "bare";
+}
+
+export type SelectControlProps = SelectControlOwnProps &
+  Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectControlOwnProps>;
+
+export function SelectControl({
+  options,
+  size = "md",
+  fullWidth = false,
+  placeholder,
+  appearance = "bare",
+  className,
+  ...rest
+}: SelectControlProps) {
+  const controlClass = [
+    appearance === "field" ? "comp-field__select" : "comp-select__control",
+    appearance !== "field" && size !== "md" ? `comp-select__control--${size}` : "",
+    appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <select className={controlClass} {...rest}>
+      {placeholder != null && (
+        <option value="" disabled={rest.required}>
+          {placeholder}
+        </option>
+      )}
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+interface SelectOwnProps extends SelectControlOwnProps {
+  label?: string;
+  helperText?: string;
+  error?: string;
 }
 
 export type SelectProps = SelectOwnProps &
@@ -70,18 +111,15 @@ export function Select({
           )}
         </label>
       )}
-      <select id={fieldId} className="comp-field__select" {...rest}>
-        {placeholder != null && (
-          <option value="" disabled={rest.required}>
-            {placeholder}
-          </option>
-        )}
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <SelectControl
+        id={fieldId}
+        options={options}
+        size={size}
+        fullWidth={fullWidth}
+        placeholder={placeholder}
+        appearance="field"
+        {...rest}
+      />
       {(error != null || helperText != null) && (
         <p
           className={`comp-field__hint${error != null ? " comp-field__hint--error" : ""}`}

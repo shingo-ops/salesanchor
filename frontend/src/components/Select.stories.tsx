@@ -4,7 +4,7 @@
  * 標準セレクトの全バリアント・状態確認。
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Select } from './Select'
+import { Select, SelectControl } from './Select'
 import type { SelectOption } from './Select'
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -72,6 +72,22 @@ export const Sizes: Story = {
       <Select label="Small" options={STATUS_OPTIONS} size="sm" />
       <Select label="Medium (default)" options={STATUS_OPTIONS} size="md" />
       <Select label="Large" options={STATUS_OPTIONS} size="lg" />
+    </div>
+  ),
+}
+
+export const BareSizes: Story = {
+  name: 'ラベルなし本体 (sm / md)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', width: '18rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>sm</strong>
+        <SelectControl options={STATUS_OPTIONS} size="sm" fullWidth placeholder="-- Select status --" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>md</strong>
+        <SelectControl options={STATUS_OPTIONS} size="md" fullWidth placeholder="-- Select status --" />
+      </div>
     </div>
   ),
 }
