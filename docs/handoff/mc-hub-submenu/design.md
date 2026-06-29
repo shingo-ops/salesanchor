@@ -1,7 +1,7 @@
 # design: mc-hub-submenu
 
 **対象:** PR — ManagementCenterPage のサブナビを SubMenu 共通部品に置換
-**対象ADR:** ADR-148
+**対象ADR:** ADR-148-submenu-ssot-link-mode
 **recon:** docs/handoff/mc-hub-submenu/recon.md
 
 ---
