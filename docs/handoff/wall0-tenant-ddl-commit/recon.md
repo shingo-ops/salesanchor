@@ -15,7 +15,7 @@
 |---|------|-----------------|
 | 1 | `create_tenant_schema` は DDL を admin_db で実行するが commit しない | `backend/app/services/tenant.py:1601,1611-1669` |
 | 2 | `seed_system_roles(db, ...)` は DDL commit 前に `tenant_X.roles` を参照 → 42P01 | `backend/app/services/tenant.py:1657` |
-| 3 | `admin.py` は `db.commit()` のみ・`admin_db.commit()` を呼ばない | `backend/app/routers/admin.py:84,86` |
+| 3 | admin.py は `db.commit()` のみ・`admin_db.commit()` を呼ばない | `backend/app/routers/admin.py:84,86` |
 | 4 | 本番: `ADMIN_DATABASE_URL` 未設定 → admin_engine も同 URL だが別コネクション | VPS env grep |
 | 5 | SA-18 Phase2（2026-06-06）以降 本番テナント作成 0 件（最新=2026-05-14） | 本番 DB クエリ |
 | 6 | 孤立スキーマは 0 件（既存テナントは全員 Phase2 前に作成済み） | 本番 DB クエリ |
