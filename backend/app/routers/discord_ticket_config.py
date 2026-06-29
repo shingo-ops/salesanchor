@@ -262,7 +262,7 @@ async def deploy_ticket_button(
                     {
                         "type": 2,  # Button
                         "style": 1,  # Primary (青)
-                        "label": "チケットを開く",
+                        "label": "Open a ticket",
                         "custom_id": "ticket_open",
                         "emoji": {"name": "🎫"},
                     }

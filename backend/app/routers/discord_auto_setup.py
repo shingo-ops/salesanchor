@@ -596,7 +596,7 @@ async def _post_ticket_button_step(
                     {
                         "type": 2,  # Button
                         "style": 1,  # Primary（青）
-                        "label": "チケットを開く",
+                        "label": "Open a ticket",
                         "custom_id": "ticket_open",
                         "emoji": {"name": "🎫"},
                     }
