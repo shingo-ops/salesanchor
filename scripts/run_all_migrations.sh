@@ -473,6 +473,12 @@ run_sql migrations/20260626_130000_force_rls_public_products.sql
 
 # テナント単位フィーチャーフラグ (public.tenant_features) テーブル新設 + RLS
 run_sql migrations/20260627_120000_add_tenant_features_table.sql
+
+# スコープ②Phase2 backfill: products.unit DROP 前に inventory.unit へ退避（空欄のみ・冪等）
+run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
+
+# スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
+run_sql migrations/20260629_020000_drop_products_condition_unit.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
