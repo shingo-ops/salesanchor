@@ -7,6 +7,7 @@
  *   flat    — フラット縦型（グループ見出しなし）
  */
 import type { ReactNode } from "react";
+import { NavLink } from "react-router-dom";
 import "./SubMenu.css";
 
 export interface SubMenuItem<K extends string = string> {
@@ -16,6 +17,8 @@ export interface SubMenuItem<K extends string = string> {
   /** 件数バッジ（数字） */
   badge?: number;
   disabled?: boolean;
+  /** 行き先。指定すると「ドア型」(押すと遷移)。未指定なら従来の「リモコン型」 */
+  to?: string;
 }
 
 export interface SubMenuGroup<K extends string = string> {
@@ -30,7 +33,7 @@ export interface SubMenuProps<K extends string = string> {
   variant?: SubMenuVariant;
   groups: SubMenuGroup<K>[];
   activeKey: K;
-  onChange: (key: K) => void;
+  onChange?: (key: K) => void;
   className?: string;
 }
 
@@ -59,6 +62,35 @@ export function SubMenu<K extends string = string>({
             <span className="comp-subnav__group-title">{group.title}</span>
           )}
           {group.items.map((item) => {
+            if (item.to) {
+              return (
+                <NavLink
+                  key={item.key}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    [
+                      "comp-subnav__item",
+                      isActive      && "comp-subnav__item--active",
+                      item.disabled && "comp-subnav__item--disabled",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  }
+                  aria-disabled={item.disabled || undefined}
+                  onClick={(e) => {
+                    if (item.disabled) e.preventDefault();
+                  }}
+                >
+                  {item.icon && (
+                    <span className="comp-subnav__icon">{item.icon}</span>
+                  )}
+                  <span className="comp-subnav__label">{item.label}</span>
+                  {item.badge !== undefined && (
+                    <span className="comp-subnav__badge">{item.badge}</span>
+                  )}
+                </NavLink>
+              );
+            }
             const isActive = activeKey === item.key;
             return (
               <button
@@ -66,12 +98,12 @@ export function SubMenu<K extends string = string>({
                 type="button"
                 className={[
                   "comp-subnav__item",
-                  isActive       && "comp-subnav__item--active",
-                  item.disabled  && "comp-subnav__item--disabled",
+                  isActive      && "comp-subnav__item--active",
+                  item.disabled && "comp-subnav__item--disabled",
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                onClick={() => !item.disabled && onChange(item.key)}
+                onClick={() => !item.disabled && onChange?.(item.key)}
                 disabled={item.disabled}
                 aria-current={isActive ? "page" : undefined}
               >
