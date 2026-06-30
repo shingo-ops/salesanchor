@@ -596,6 +596,21 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # データアクセス監査ログ（migrations/071 をSQLite互換で写経。audit.py が書き込む先）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS data_access_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type VARCHAR(50) NOT NULL,
+                method VARCHAR(10) NOT NULL,
+                path VARCHAR(500) NOT NULL,
+                status_code INTEGER NOT NULL,
+                user_email VARCHAR(255),
+                client_ip VARCHAR(45),
+                user_agent VARCHAR(500),
+                duration_ms INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         # パーミッションマスタ（通常は public.permissions だがSQLite互換で無スキーマ）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS permissions (
