@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="460" viewBox="0 0 860 460" role="img" aria-labelledby="title desc" font-family="sans-serif">
+<title id="title">種別マスタの2層構造</title>
+<desc id="desc">種別マスタは共通行と会社独自行が同じ台帳に同居し、商品マスタには見える範囲だけが渡る。共通は運営だけが編集し、会社独自はその会社だけが編集する。</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#776d61" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+<style>
+  .title{font-size:16px;font-weight:700;fill:#2d2a26}
+  .text{font-size:12px;fill:#4e4942}
+  .small{font-size:11px;fill:#615a52}
+  .frame{fill:#f7f3eb;stroke:#7a7369;stroke-width:1.2}
+  .common{fill:#e1f5ee;stroke:#0f6e56;stroke-width:1.1}
+  .tenant{fill:#e6f1fb;stroke:#185fa5;stroke-width:1.1}
+  .read{fill:#eeedfe;stroke:#534ab7;stroke-width:1.1}
+  .line{stroke:#776d61;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+</style>
+<rect class="frame" x="28" y="24" width="804" height="412" rx="18"/>
+<text class="title" x="54" y="56">種別マスタは 2 層</text>
+<text class="text" x="54" y="78">共通の値と会社ごとの値が 1 つの台帳に同居する</text>
+
+<rect class="common" x="56" y="108" width="748" height="64" rx="12"/>
+<text class="text" x="78" y="136">共通の行</text>
+<text class="small" x="78" y="154">全社で見える・運営だけが編集する</text>
+
+<rect class="tenant" x="56" y="188" width="360" height="64" rx="12"/>
+<text class="text" x="78" y="216">A社の行</text>
+<text class="small" x="78" y="234">A社だけが見える・A社が編集する</text>
+
+<rect class="tenant" x="444" y="188" width="360" height="64" rx="12"/>
+<text class="text" x="466" y="216">B社の行</text>
+<text class="small" x="466" y="234">B社だけが見える・B社が編集する</text>
+
+<path class="line" d="M430 268 L430 320"/>
+<text class="small" x="430" y="300" text-anchor="middle">表示は自動で振り分け</text>
+
+<rect class="read" x="128" y="320" width="604" height="58" rx="12"/>
+<text class="text" x="430" y="346" text-anchor="middle">商品マスタは 共通 + 自社分 だけ を受け取る</text>
+<text class="small" x="430" y="366" text-anchor="middle">他社の独自行は見えない</text>
+
+<path class="line" d="M430 172 L430 188"/>
+<path class="line" d="M235 252 L235 320"/>
+<path class="line" d="M625 252 L625 320"/>
+</svg>
