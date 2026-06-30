@@ -38,6 +38,7 @@
 | 自動マージ / human-in-the-loop / develop 自動 merge | **ADR-056** | develop は AI 自動 merge・main は人間。通知集約 |
 | 並行開発 / worktree / AEON / Evidence | **ADR-086** | 複数エージェント並行開発の標準化 |
 | 標準ワークフロー / SOP / process-artifacts gate | **ADR-121** ／ ADR-112 ／ [`docs/STANDARD-WORKFLOW.md`](../STANDARD-WORKFLOW.md) | KGI→recon→設計の関所 |
+| 設計仕様書 / あるべき姿 / 仕様書索引 | **ADR-121** ／ [`docs/specs/README.md`](../specs/README.md) | 領域→設計仕様書の地図。索引に載る領域に触れる開発は仕様書を先に読む |
 | Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
 
