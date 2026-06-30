@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" viewBox="0 0 680 500" role="img" font-family="sans-serif">
+<title>商品マスタを中心とした全体の地図</title>
+<desc>商品マスタが4つのマスタ（種類分け・品目・HTSコード・素材）から値を選んで持ち、在庫と取引から参照される。状態マスタと単位マスタは在庫・取引が参照する。Gemini解析は在庫に紐づき、読めない在庫メッセージを構造化する補助を行う。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<style>
+.t{font-size:14px;font-weight:500;fill:#2c2c2a}.s{font-size:12px;fill:#5f5e5a}
+.teal{fill:#E1F5EE;stroke:#0F6E56}.tealT{fill:#085041}
+.purp{fill:#EEEDFE;stroke:#534AB7}.purpT{fill:#3C3489}
+.gray{fill:#F1EFE8;stroke:#5F5E5A}.grayT{fill:#2C2C2A}
+.amber{fill:#FAEEDA;stroke:#854F0B}.amberT{fill:#633806}
+.blue{fill:#E6F1FB;stroke:#185FA5}.blueT{fill:#0C447C}
+.arr{stroke:#888780;stroke-width:1.5;fill:none}
+</style>
+<text class="t grayT" x="340" y="26" text-anchor="middle">商品マスタが選ぶ4つのマスタ</text>
+<rect class="teal" x="36" y="42" width="142" height="46" rx="8" stroke-width="0.5"/>
+<text class="s tealT" x="107" y="63" text-anchor="middle">種類分けマスタ</text>
+<text class="s tealT" x="107" y="79" text-anchor="middle">tcg_type</text>
+<rect class="teal" x="190" y="42" width="142" height="46" rx="8" stroke-width="0.5"/>
+<text class="s tealT" x="261" y="63" text-anchor="middle">品目マスタ</text>
+<text class="s tealT" x="261" y="79" text-anchor="middle">item（種別を統合）</text>
+<rect class="teal" x="344" y="42" width="142" height="46" rx="8" stroke-width="0.5"/>
+<text class="s tealT" x="415" y="68" text-anchor="middle">HTSコードマスタ</text>
+<rect class="teal" x="498" y="42" width="142" height="46" rx="8" stroke-width="0.5"/>
+<text class="s tealT" x="569" y="68" text-anchor="middle">素材マスタ</text>
+<line class="arr" x1="107" y1="88" x2="107" y2="142" marker-end="url(#arrow)"/>
+<line class="arr" x1="261" y1="88" x2="300" y2="142" marker-end="url(#arrow)"/>
+<line class="arr" x1="415" y1="88" x2="380" y2="142" marker-end="url(#arrow)"/>
+<line class="arr" x1="569" y1="88" x2="573" y2="142" marker-end="url(#arrow)"/>
+<text class="s" x="340" y="118" text-anchor="middle">選んで持つ</text>
+<rect class="purp" x="220" y="142" width="240" height="62" rx="8" stroke-width="0.5"/>
+<text class="t purpT" x="340" y="168" text-anchor="middle">商品マスタ</text>
+<text class="s purpT" x="340" y="188" text-anchor="middle">商品そのものの情報</text>
+<rect class="gray" x="36" y="244" width="180" height="54" rx="8" stroke-width="0.5"/>
+<text class="t grayT" x="126" y="266" text-anchor="middle">在庫</text>
+<text class="s grayT" x="126" y="284" text-anchor="middle">何をいくつ持つか</text>
+<rect class="gray" x="464" y="244" width="180" height="54" rx="8" stroke-width="0.5"/>
+<text class="t grayT" x="554" y="266" text-anchor="middle">取引（見積・受注）</text>
+<text class="s grayT" x="554" y="284" text-anchor="middle">どの商品を売買したか</text>
+<path class="arr" d="M126 244 L126 173 L220 173" marker-end="url(#arrow)"/>
+<path class="arr" d="M554 244 L554 173 L460 173" marker-end="url(#arrow)"/>
+<text class="s" x="150" y="220" text-anchor="middle">商品を指す</text>
+<text class="s" x="530" y="220" text-anchor="middle">商品を指す</text>
+<rect class="blue" x="36" y="330" width="180" height="58" rx="8" stroke-width="0.5"/>
+<text class="t blueT" x="126" y="350" text-anchor="middle">Gemini解析</text>
+<text class="s blueT" x="126" y="368" text-anchor="middle">読めない在庫文を</text>
+<text class="s blueT" x="126" y="382" text-anchor="middle">構造化する補助</text>
+<line class="arr" x1="126" y1="330" x2="126" y2="298" marker-end="url(#arrow)"/>
+<text class="s" x="126" y="314" text-anchor="middle">在庫に紐づく</text>
+<text class="t grayT" x="430" y="354" text-anchor="middle">在庫・取引が選ぶ2つのマスタ</text>
+<rect class="amber" x="280" y="372" width="140" height="50" rx="8" stroke-width="0.5"/>
+<text class="t amberT" x="350" y="392" text-anchor="middle">状態マスタ</text>
+<text class="s amberT" x="350" y="410" text-anchor="middle">condition</text>
+<rect class="amber" x="440" y="372" width="140" height="50" rx="8" stroke-width="0.5"/>
+<text class="t amberT" x="510" y="392" text-anchor="middle">単位マスタ</text>
+<text class="s amberT" x="510" y="410" text-anchor="middle">unit</text>
+<line class="arr" x1="350" y1="372" x2="280" y2="298" marker-end="url(#arrow)"/>
+<line class="arr" x1="540" y1="372" x2="560" y2="298" marker-end="url(#arrow)"/>
+</svg>
