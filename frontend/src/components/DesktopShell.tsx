@@ -192,6 +192,7 @@ export default function DesktopShell() {
     { to: "/super-admin/inbound",          labelKey: "nav.superAdminInbound" },
     { to: "/super-admin/inventory-offers", labelKey: "nav.superAdminInventoryOffers" },
     { to: "/super-admin/phase-switch",     labelKey: "nav.superAdminPhaseSwitch" },
+    { to: "/super-admin/fx-rate",          labelKey: "nav.superAdminFxRate" },
   ] : [];
 
   const moreItems: NavItem[] = [];

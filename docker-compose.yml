@@ -45,6 +45,7 @@ services:
       - ./certbot/www:/var/www/certbot:rw
       - ./certbot/conf:/etc/letsencrypt:rw
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -95,7 +96,8 @@ services:
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
-      - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
+      # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       # API連携: Googleドライブ OAuth（ユーザー委任方式）。カレンダーと同一の OAuth
       # クライアントを流用可。この3行が無いと .env に値があっても os.getenv が空になり
       # 連携が動かない（compose passthrough 漏れ対策）。
@@ -261,11 +263,10 @@ services:
       - backnet
 
   # ============================================================
-  # Discord Gateway Worker (ADR-009 M2: Skeleton)
+  # Discord Gateway Worker (ADR-146 B方式: 共通bot1台 + guild_id振り分け)
   # ============================================================
-  # WebSocket 常駐プロセス。per-tenant Bot Token を環境変数経由で受け取り
-  # READY/heartbeat ログのみ出力する skeleton 段階。
-  # M3 で MESSAGE_CREATE → raw_webhook_events ingestion を追加予定。
+  # WebSocket 常駐プロセス。共通 Bot Token 1本で全テナントのサーバーを受信し、
+  # guild_id → public.tenant_discord_config で tenant_id を逆引きして振り分ける。
   discord-gateway:
     build: ./backend
     command: python -m app.discord_gateway.main
@@ -275,11 +276,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
-      # per-tenant Bot Token（ADR-009 5-3）
-      # 形式: DISCORD_BOT_TOKEN_<TENANT_ID>=<token>
-      # tenant_004 = HIGH LIFE JPN
-      - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
-      - DISCORD_TENANT_CODE_4=${DISCORD_TENANT_CODE_4:-highlife-jpn}
+      # ADR-146 B方式: 共通 Bot Token（テナント共通 — 1本のみ）
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       # チケット作成で DB アクセスが必要（ticket_channel_creator.get_ticket_config）。
       # 未設定だと database.py のデフォルト myapp_user にフォールバックして接続失敗する。
       - DATABASE_URL=${DATABASE_URL}
