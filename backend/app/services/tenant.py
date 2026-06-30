@@ -1580,6 +1580,7 @@ async def create_tenant_schema(
     db: AsyncSession,
     tenant_id: int,
     admin_db: AsyncSession | None = None,
+    caller_tenant_id: int | None = None,
 ) -> str:
     """
     テナント専用スキーマを作成し、業務テーブルとRLSポリシー、
@@ -1593,6 +1594,10 @@ async def create_tenant_schema(
         db: データベースセッション（DML 用）
         tenant_id: テナントID（public.tenants.id）
         admin_db: 管理者セッション（DDL 用、省略時は db にフォールバック）
+        caller_tenant_id: 呼び出し元のテナントID。指定した場合、シード完了後に
+            app.tenant_id をこの値に戻す（壁2後始末: 同一トランザクション内で
+            続く audit_log INSERT 等が caller のテナントスキーマに書けるようにする）。
+            None の場合はリセットしない（テスト・bootstrap 用途）。
 
     Returns:
         作成したスキーマ名（例: "tenant_001"）
@@ -1724,6 +1729,16 @@ async def create_tenant_schema(
                 "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
                 safe_id,
                 exc,
+            )
+
+        # ★壁2後始末: 全シード完了後に app.tenant_id を呼び出し元テナントへ戻す。
+        # set_config(..., true) は transaction-local なので、同一トランザクション内で
+        # 続く record_audit_log 等が caller のテナントスキーマ（RLS）に書けるようにする。
+        # caller_tenant_id が None（テスト・bootstrap）の場合はリセットしない。
+        if caller_tenant_id is not None:
+            await db.execute(
+                text("SELECT set_config('app.tenant_id', :tid, true)"),
+                {"tid": str(int(caller_tenant_id))},
             )
 
     except Exception:
