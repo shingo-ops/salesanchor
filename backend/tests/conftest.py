@@ -611,6 +611,11 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # public. 付き参照の互換ビュー
+        await conn.execute(text(
+            'CREATE VIEW IF NOT EXISTS "public.data_access_events" '
+            'AS SELECT * FROM data_access_events'
+        ))
         # パーミッションマスタ（通常は public.permissions だがSQLite互換で無スキーマ）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS permissions (
