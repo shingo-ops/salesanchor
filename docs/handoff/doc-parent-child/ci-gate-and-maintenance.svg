@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="470" viewBox="0 0 680 470" font-family="sans-serif">
+<rect width="680" height="470" fill="#ffffff"/>
+<text x="40" y="32" font-size="14" font-weight="500" fill="#2C2C2A">① ふだんの提出</text>
+<rect x="40" y="46" width="150" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+<text x="115" y="70" text-anchor="middle" font-size="13" fill="#04342C">子文書を提出</text>
+<text x="115" y="88" text-anchor="middle" font-size="12" fill="#0F6E56">親リンクを付けて</text>
+<line x1="190" y1="73" x2="248" y2="73" stroke="#888780"/>
+<rect x="250" y="46" width="160" height="54" rx="8" fill="#FAEEDA" stroke="#854F0B"/>
+<text x="330" y="70" text-anchor="middle" font-size="13" fill="#412402">関所（CI）</text>
+<text x="330" y="88" text-anchor="middle" font-size="12" fill="#854F0B">親リンクが在るか確認</text>
+<line x1="410" y1="73" x2="468" y2="73" stroke="#888780"/>
+<rect x="470" y="46" width="120" height="54" rx="8" fill="#EAF3DE" stroke="#3B6D11"/>
+<text x="530" y="76" text-anchor="middle" font-size="13" fill="#173404">緑=マージ可</text>
+<rect x="250" y="116" width="160" height="44" rx="8" fill="#FCEBEB" stroke="#A32D2D"/>
+<text x="330" y="143" text-anchor="middle" font-size="13" fill="#501313">親リンク無し→赤で停止</text>
+<line x1="40" y1="188" x2="640" y2="188" stroke="#D3D1C7"/>
+<text x="40" y="216" font-size="14" font-weight="500" fill="#2C2C2A">② 本番マージ後に不具合 → すぐ直して再マージ</text>
+<rect x="40" y="230" width="600" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7"/>
+<text x="60" y="254" font-size="13" font-weight="500" fill="#26215C">書き直さない紙（理想も現状も設計方針も不変）</text>
+<text x="60" y="276" font-size="12" fill="#534AB7">あるべき姿 ・ KGI ・ recon ・ design ・ KPI</text>
+<line x1="340" y1="290" x2="340" y2="310" stroke="#888780"/>
+<rect x="140" y="310" width="400" height="60" rx="10" fill="#FAECE7" stroke="#993C1D"/>
+<text x="340" y="334" text-anchor="middle" font-size="13" font-weight="500" fill="#4A1B0C">実装計画書に1行だけ足す</text>
+<text x="340" y="356" text-anchor="middle" font-size="12" fill="#993C1D">「改修2:○○を修正。理由:本番で△△が出たため」＋進捗表に1行</text>
+<line x1="340" y1="370" x2="340" y2="390" stroke="#888780"/>
+<rect x="200" y="390" width="280" height="50" rx="8" fill="#EAF3DE" stroke="#3B6D11"/>
+<text x="340" y="412" text-anchor="middle" font-size="13" fill="#173404">既存designに紐づけ再提出</text>
+<text x="340" y="430" text-anchor="middle" font-size="12" fill="#3B6D11">関所は親リンク確認→緑→再マージ</text>
+</svg>
