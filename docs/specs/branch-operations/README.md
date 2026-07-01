@@ -68,6 +68,17 @@ develop ブランチが存在しない。撤去は全工程の最後。撤去前
 
 第1便=動線付け替え → 第1.5便=守りの引き継ぎ → 関門（しんご実地確認）→ 第2便=develop 鍵外し → 第3便=develop 撤去（唯一の危険操作）→ 第4便=後片付け。撤去は最後、撤去前はいつでも中止可能。
 
+## 7. 関連文書（この仕様書にぶら下がる子文書）
+
+本仕様書（親・あるべき姿＋KGI）に紐づく子文書:
+- recon（現在地把握）: `docs/handoff/branch-operations/recon.md`
+- design（Phase3設計・第1〜4便）: `docs/handoff/branch-operations/design.md`
+
+親子関係:
+- 親: 本仕様書（KGI・あるべき姿の正本）
+- 子1 recon.md: 親のKGIを満たすための現在地把握（file:line実物）
+- 子2 design.md: 親のKGIとreconに基づく実現設計（各便の受入基準・KPI）
+
 ---
 
 *本仕様書は develop 廃止作業の正本。recon.md / design.md は本書に紐づけて docs/handoff/ 配下に追加する。*
