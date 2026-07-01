@@ -9,6 +9,7 @@
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
+| 文書の親子構造 標準ルール化 | doc-parent-child/README.md (doc-parent-child/README.md) | 公開 |
 | 商品マスタ | [product-master/README.md](product-master/README.md) | 公開 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
 | ├ 品目マスタ（item） | （作成予定） | 未 |
