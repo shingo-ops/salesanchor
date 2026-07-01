@@ -1,5 +1,7 @@
 # recon（現在地把握）- ブランチ運用: develop 廃止後の開発環境
 
+> この文書は何か: develop廃止作業で、いま何がどうなっているかを実物で確かめた記録。
+
 **仕様書**: [docs/specs/branch-operations/README.md](../../specs/branch-operations/README.md)  
 **日付**: 2026-07-01  
 **担当**: architect（Claude）  

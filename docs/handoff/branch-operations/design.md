@@ -1,5 +1,7 @@
 # Phase 3 設計 — ブランチ運用：develop 廃止後の開発環境
 
+> この文書は何か: develop廃止を、どういう順番でどう実現するかを描いた設計図。
+
 **対象ADR**: ADR-056（Human-in-the-Loop Minimization／develop への自動化）
 **仕様書**: ../../specs/branch-operations/README.md
 **recon**: ./recon.md
