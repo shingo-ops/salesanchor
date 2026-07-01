@@ -171,8 +171,14 @@ PYEOF
 
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. upstream 設定済みなら @{u}..HEAD で比較
+      #    ただし専用棚 origin/<branch> と HEAD が一致していれば push 済みとみなす
+      #    （@{u} が main/develop 等の共用側を指す設定漏れによる誤検出を防ぐ）
       if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
-        if [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+        OWN_REMOTE=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
+        HEAD_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
+        if [ -n "${OWN_REMOTE}" ] && [ "${HEAD_SHA}" = "${OWN_REMOTE}" ]; then
+          :  # 専用棚と一致 → push 済み。UNSAVED=0 のまま（保護しない）
+        elif [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
           UNSAVED=1
         fi
       else
