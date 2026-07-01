@@ -209,14 +209,6 @@ async def seed_inbound_for_import(engine):
         ))).scalar_one_or_none()
         if not exists:
             pytest.skip("public.discord_inbound_messages 未作成 (migration 059 必要)")
-        # PR5b の unit 列が無い環境ではスキップ（migration 未適用）。
-        has_unit = (await conn.execute(text(
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_schema='public' AND table_name='products' AND column_name='unit'"
-        ))).scalar_one_or_none()
-        if not has_unit:
-            pytest.skip("public.products.unit 未作成 (PR5b migration 必要)")
-
         await conn.execute(text("""
             INSERT INTO public.discord_inbound_messages
                 (discord_message_id, discord_channel_id,
@@ -236,14 +228,14 @@ async def seed_inbound_for_import(engine):
         ), {"jp": jp_name, "en": en_name})
 
 
-async def test_import_candidates_and_apply_capture_unit_condition_language(
+async def test_import_candidates_and_apply_language(
     engine, seed_inbound_for_import
 ):
-    """PR5c: 候補で unit(carton→case)/condition、apply で products へ転記。
+    """候補抽出と apply（products 一括登録）の基本動作確認。
     言語は全件デフォルト ja（2026-06-02 方針）、apply で en へ上書き可。
 
-    - jp_name: unit=case(carton正規化), condition=shrink, language=ja(既定)
-    - en_name: unit=box(BOX小文字化), language=ja(既定) → apply で languages 上書き en
+    - jp_name: language=ja(既定)
+    - en_name: language=ja(既定) → apply で languages 上書き en
     """
     from httpx import AsyncClient, ASGITransport
     from sqlalchemy import text
@@ -273,12 +265,9 @@ async def test_import_candidates_and_apply_capture_unit_condition_language(
             assert jp_name in by_name and en_name in by_name
 
             jp = by_name[jp_name]
-            assert jp["unit"] == "case"          # carton → case 正規化
-            assert jp["condition"] == "shrink"   # 小文字化 + mode
             assert jp["language"] == "ja"         # 既定 ja
 
             en = by_name[en_name]
-            assert en["unit"] == "box"           # BOX → box 小文字化
             assert en["language"] == "ja"         # 既定 ja（自動判定は廃止）
 
             # apply: en_name の言語をオペレータが en に修正したケース
@@ -291,14 +280,11 @@ async def test_import_candidates_and_apply_capture_unit_condition_language(
 
         async with engine.begin() as conn:
             rows = (await conn.execute(text(
-                "SELECT name, unit, condition, language FROM public.products "
+                "SELECT name, language FROM public.products "
                 "WHERE name IN (:jp, :en)"
             ), {"jp": jp_name, "en": en_name})).mappings().all()
         got = {r["name"]: r for r in rows}
-        assert got[jp_name]["unit"] == "case"
-        assert got[jp_name]["condition"] == "shrink"
         assert got[jp_name]["language"] == "ja"   # 上書きなし → 既定 ja
-        assert got[en_name]["unit"] == "box"
         assert got[en_name]["language"] == "en"   # languages 上書きが優先
     finally:
         app.dependency_overrides.pop(require_super_admin, None)

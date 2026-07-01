@@ -168,14 +168,8 @@ async def get_inbound(
 
 # 解析結果から商品名候補を取り出すための共通 CTE。
 # parse_result_json.items[] の product_name をトリムし、空でないものだけ対象にする。
-# PR5c: 取込時に転記する unit / condition も同時に取り出す。
-#   - unit は小文字化し carton→case に正規化（ユーザー方針 2026-06-02）
-#   - condition は小文字化（表記揺れ吸収）。空文字は NULL 扱い
 _PARSED_ITEMS_CTE = (
-    "SELECT TRIM(it->>'product_name') AS pname, it->>'raw_line' AS raw_line, "
-    "CASE WHEN LOWER(TRIM(it->>'unit')) = 'carton' THEN 'case' "
-    "     ELSE NULLIF(LOWER(TRIM(it->>'unit')), '') END AS unit, "
-    "NULLIF(LOWER(TRIM(it->>'condition')), '') AS condition "
+    "SELECT TRIM(it->>'product_name') AS pname, it->>'raw_line' AS raw_line "
     "FROM public.discord_inbound_messages m, "
     "jsonb_array_elements(COALESCE(m.parse_result_json->'items', '[]'::jsonb)) it "
     "WHERE COALESCE(TRIM(it->>'product_name'), '') <> ''"
@@ -202,9 +196,7 @@ async def list_product_candidates(
     result = await db.execute(
         text(
             f"WITH parsed AS ({_PARSED_ITEMS_CTE}) "
-            "SELECT p.pname AS name, COUNT(*) AS occurrences, MIN(p.raw_line) AS sample, "
-            "  mode() WITHIN GROUP (ORDER BY p.unit) FILTER (WHERE p.unit IS NOT NULL) AS unit, "
-            "  mode() WITHIN GROUP (ORDER BY p.condition) FILTER (WHERE p.condition IS NOT NULL) AS condition "
+            "SELECT p.pname AS name, COUNT(*) AS occurrences, MIN(p.raw_line) AS sample "
             "FROM parsed p "
             "WHERE NOT EXISTS ("
             "  SELECT 1 FROM public.products pr WHERE pr.name = p.pname"
@@ -219,8 +211,6 @@ async def list_product_candidates(
             name=r["name"],
             occurrences=int(r["occurrences"]),
             sample=r.get("sample"),
-            unit=r.get("unit"),
-            condition=r.get("condition"),
             # 言語は全件デフォルト日本語。取込 UI でオペレータが個別修正可能。
             language=_DEFAULT_IMPORT_LANGUAGE,
         )
@@ -244,8 +234,6 @@ async def apply_product_candidates(
       （NOT EXISTS による重複防止。products.name に UNIQUE は無いため
       厳密な同時実行排他ではないが、通常運用では実質冪等）
     - category は任意。指定があれば全件に同じ分類を付与する
-    - PR5c: 解析結果(parse_result_json) から代表的な unit / condition を転記する。
-      unit は carton→case 正規化済・小文字、condition は小文字。
     - language は payload.languages の上書き（取込 UI でオペレータが修正した値）を
       優先し、無指定なら商品名から自動判定（日本語文字があれば ja、無ければ en）。
     """
@@ -256,20 +244,6 @@ async def apply_product_candidates(
         _NAME_MAX_LEN = 255
         category = (payload.category or "").strip() or None
 
-        # 商品名 → 代表的な unit / condition（最頻値）。解析結果全体から一括取得して
-        # 名前ごとに引く（候補抽出と同じ正規化ルール）。
-        rep_result = await db.execute(
-            text(
-                f"WITH parsed AS ({_PARSED_ITEMS_CTE}) "
-                "SELECT pname, "
-                "  mode() WITHIN GROUP (ORDER BY unit) FILTER (WHERE unit IS NOT NULL) AS unit, "
-                "  mode() WITHIN GROUP (ORDER BY condition) FILTER (WHERE condition IS NOT NULL) AS condition "
-                "FROM parsed GROUP BY pname"
-            )
-        )
-        rep: dict[str, tuple[str | None, str | None]] = {
-            r["pname"]: (r.get("unit"), r.get("condition")) for r in rep_result.mappings().all()
-        }
         overrides = payload.languages or {}
 
         inserted = 0
@@ -283,15 +257,14 @@ async def apply_product_candidates(
             if len(name) > _NAME_MAX_LEN:
                 skipped += 1
                 continue
-            unit, condition = rep.get(name, (None, None))
             # 言語は UI 上書きを優先し、無指定/不正値はデフォルト日本語。
             lang = (overrides.get(name) or "").strip().lower()
             if lang not in ("ja", "en"):
                 lang = _DEFAULT_IMPORT_LANGUAGE
             result = await db.execute(
                 text(
-                    "INSERT INTO public.products (name, category, unit, condition, language) "
-                    "SELECT :name, :category, :unit, :condition, :language "
+                    "INSERT INTO public.products (name, category, language) "
+                    "SELECT :name, :category, :language "
                     "WHERE NOT EXISTS ("
                     "  SELECT 1 FROM public.products WHERE name = :name"
                     ")"
@@ -299,8 +272,6 @@ async def apply_product_candidates(
                 {
                     "name": name,
                     "category": category,
-                    "unit": unit,
-                    "condition": condition,
                     "language": lang,
                 },
             )

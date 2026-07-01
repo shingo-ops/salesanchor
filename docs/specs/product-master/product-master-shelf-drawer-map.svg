@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560" role="img" aria-labelledby="title desc" font-family="sans-serif">
+<title id="title">商品マスタの棚と引き出しの地図</title>
+<desc id="desc">商品マスタを棚として置き、その引き出しとして大分類、種別、品目、HTSコード、素材を並べる。種別は大分類にぶら下がり、商品マスタが最終的に参照する。</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#7b746b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+<style>
+  .label{font-size:14px;font-weight:600;fill:#2d2a26}
+  .text{font-size:12px;fill:#514c46}
+  .small{font-size:11px;fill:#655f57}
+  .rack{fill:#f6f1e7;stroke:#7a7369;stroke-width:1.2}
+  .shelf{fill:#fffdf8;stroke:#7a7369;stroke-width:1.1}
+  .cat{fill:#e1f5ee;stroke:#0f6e56;stroke-width:1.1}
+  .type{fill:#e6f1fb;stroke:#185fa5;stroke-width:1.1}
+  .item{fill:#eeedfe;stroke:#534ab7;stroke-width:1.1}
+  .hts{fill:#faeeda;stroke:#854f0b;stroke-width:1.1}
+  .material{fill:#f2ece8;stroke:#7f6a5d;stroke-width:1.1}
+  .line{stroke:#7b746b;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+</style>
+<rect class="rack" x="36" y="24" width="908" height="512" rx="20"/>
+<text class="label" x="60" y="58">商品マスタの棚</text>
+<text class="text" x="60" y="80">商品は 1 つの棚に置き、引き出しから値を選んで持つ</text>
+
+<rect class="shelf" x="80" y="112" width="820" height="160" rx="16"/>
+<text class="label" x="110" y="144">商品マスタ</text>
+<text class="text" x="110" y="166">直接持つ情報 + 引き出しから選ぶ情報の本体</text>
+
+<rect class="cat" x="110" y="198" width="148" height="52" rx="10"/>
+<text class="text" x="184" y="221" text-anchor="middle">大分類マスタ</text>
+<text class="small" x="184" y="239" text-anchor="middle">product_category</text>
+
+<rect class="type" x="294" y="198" width="148" height="52" rx="10"/>
+<text class="text" x="368" y="221" text-anchor="middle">種別マスタ</text>
+<text class="small" x="368" y="239" text-anchor="middle">product_type</text>
+
+<rect class="item" x="478" y="198" width="148" height="52" rx="10"/>
+<text class="text" x="552" y="221" text-anchor="middle">品目マスタ</text>
+<text class="small" x="552" y="239" text-anchor="middle">item</text>
+
+<rect class="hts" x="662" y="198" width="148" height="52" rx="10"/>
+<text class="text" x="736" y="221" text-anchor="middle">HTSコードマスタ</text>
+<text class="small" x="736" y="239" text-anchor="middle">hts_code</text>
+
+<rect class="material" x="786" y="318" width="114" height="48" rx="10"/>
+<text class="text" x="843" y="346" text-anchor="middle">素材マスタ</text>
+
+<path class="line" d="M184 198 L184 176 L184 176"/>
+<path class="line" d="M368 198 L368 176 L368 176"/>
+<path class="line" d="M552 198 L552 176 L552 176"/>
+<path class="line" d="M736 198 L736 176 L736 176"/>
+<text class="small" x="184" y="188" text-anchor="middle">選ぶ</text>
+<text class="small" x="368" y="188" text-anchor="middle">選ぶ</text>
+<text class="small" x="552" y="188" text-anchor="middle">選ぶ</text>
+<text class="small" x="736" y="188" text-anchor="middle">選ぶ</text>
+
+<path class="line" d="M368 198 C368 166, 294 166, 294 198"/>
+<text class="small" x="300" y="150">大分類の下に種別</text>
+
+<path class="line" d="M843 318 C843 284, 795 276, 736 250"/>
+<text class="small" x="760" y="292">素材は商品ごとに変わる</text>
+
+<rect class="shelf" x="80" y="316" width="640" height="160" rx="16"/>
+<text class="label" x="110" y="348">参照先の広がり</text>
+<text class="text" x="110" y="370">大分類は全社共通、種別は 2 層、品目・HTS・素材は商品マスタが使う</text>
+
+<rect class="cat" x="110" y="396" width="170" height="44" rx="10"/>
+<text class="text" x="195" y="423" text-anchor="middle">大分類は運営のみ編集</text>
+
+<rect class="type" x="300" y="396" width="170" height="44" rx="10"/>
+<text class="text" x="385" y="423" text-anchor="middle">種別は会社独自を追加可</text>
+
+<rect class="item" x="490" y="396" width="170" height="44" rx="10"/>
+<text class="text" x="575" y="423" text-anchor="middle">品目は発送ラベル用</text>
+</svg>

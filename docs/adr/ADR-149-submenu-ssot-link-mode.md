@@ -1,4 +1,4 @@
-# ADR-148: サイドメニューの共通部品(SubMenu)へのSSOT集約とリンク型対応
+# ADR-149: サイドメニューの共通部品(SubMenu)へのSSOT集約とリンク型対応
 
 **Status:** Accepted
 **Date:** 2026-06-28

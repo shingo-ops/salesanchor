@@ -11,11 +11,13 @@
  *   2026-05-25: 初版作成（ADR-069 管理センター一元化）
  */
 
-import { NavLink, Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import type { NavItem, NavSection } from "../../types/nav";
+import { SubMenu } from "../../components/SubMenu";
+import type { SubMenuGroup } from "../../components/SubMenu";
 
 
 /** 権限フィルタリング前の生アイテム（このファイル内のみで使用） */
@@ -82,28 +84,34 @@ export default function ManagementCenterPage() {
     .map((s) => ({ key: s.key, titleKey: s.titleKey, items: s.items.filter((i) => i.visible) }))
     .filter((s) => s.items.length > 0);
 
+  // キット(SubMenu)へ渡す形に変換。titleKey/labelKey は t() で翻訳済み文字列に。
+  const groups: SubMenuGroup[] = sections.map((section) => ({
+    title: t(section.titleKey),
+    items: section.items.map((item) => ({
+      key: item.to,
+      label: t(item.labelKey),
+      to: item.to,
+    })),
+  }));
+
+  // 今開いているページを activeKey に反映（末尾セグメントで判定）
+  const location = useLocation();
+  const allItems = sections.flatMap((s) => s.items);
+  const activeKey =
+    allItems.find((i) => location.pathname.endsWith(`/${i.to}`))?.to ??
+    allItems[0]?.to ??
+    "";
+
   return (
     <PageLayout navKey="nav.managementCenter" subtitleKey="managementCenter.subtitle" noScroll>
       <div className="hub-shell">
-        {/* 左サブナビ */}
-        <nav className="hub-subnav" aria-label={t("nav.managementCenter")}>
-          {sections.map((section) => (
-            <div key={section.key} className="hub-subnav-section">
-              <span className="hub-subnav-title">{t(section.titleKey)}</span>
-              {section.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `hub-subnav-item${isActive ? " active" : ""}`
-                    }
-                  >
-                    {t(item.labelKey)}
-                  </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
+        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-149） */}
+        <SubMenu
+          variant="grouped"
+          className="hub-subnav"
+          groups={groups}
+          activeKey={activeKey}
+        />
 
         {/* 右コンテンツ（子ルートが展開される） */}
         <div className="hub-content">

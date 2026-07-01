@@ -1032,3 +1032,17 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
 - `confidence: medium` は一次情報はあるが範囲制限や未検証リスクが残る場合
 - `confidence: low` は仮説、未検証、外部依存が強い場合
 - Evidence なしのルール追加は禁止
+
+
+## 2026-06-30: 標準フローに Phase 1.5「設計仕様書（あるべき姿）の確認・作成」を必須化 + 索引新設
+- PR: #2698（base=develop・docs-only・5ファイル/44行 挿入のみ）/ merged 2026-06-30T06:40:51Z
+- GO記録: GO発行者 Shingo / 日時 2026-06-30 / GO原文 GO #2698 / バックアップ確認 なし（docs-only）
+- CI: process-artifacts gate ほか全 pass（fail ゼロ）
+- 人の目視確認（develop反映後・Shingo）:
+  - KGI#1 SOP表に「1.5」段が見える: ○
+  - KGI#2 §1.5に「先に読む/無ければ作る」「理想優先」: ○
+  - KGI#3 §1.5に「対象/対象外」の線引き: ○
+  - KGI#4 docs/specs/README.md から product-master/README.md へリンク到達（blob 7dd60b1 実在）: ○
+  - KGI#5 PRテンプレに「設計仕様書（あるべき姿）」欄: ○
+  - KGI#6 PR #2698 develop マージ済み: ○
+- 確認者: Shingo

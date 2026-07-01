@@ -12,7 +12,6 @@ export interface Product {
   category: string | null;
   mark: string | null;
   status: string;
-  condition: string | null;
   unit_price: number | null;
   quantity: number;
   weight: number | null;
@@ -34,7 +33,6 @@ export interface Product {
   supplier_default_id: number | null;
   tcg_type: string | null;
   set_type: string | null;
-  unit: string | null;
   // ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
   boxes_per_case: number | null;
   packs_per_box: number | null;
@@ -62,8 +60,6 @@ export type FormState = {
   set_type: string;
   mark: string;
   status: string;
-  condition: string;
-  unit: string;
   unit_price: string;
   quantity: string;
   weight: string;
@@ -96,7 +92,7 @@ export type FormState = {
 
 export const emptyForm: FormState = {
   name_ja: "", name_en: "", product_kind: "TCG", category: "", tcg_type: "", set_type: "", mark: "",
-  status: "active", condition: "", unit: "", unit_price: "", quantity: "0",
+  status: "active", unit_price: "", quantity: "0",
   weight: "", notes: "", release_date: "",
   jan_code: "", card_number: "", expansion_code: "", rarity: "", language: "",
   unit_price_usd: "", unit_price_eur: "", image_url: "",

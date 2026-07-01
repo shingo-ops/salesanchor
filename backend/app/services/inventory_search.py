@@ -98,10 +98,8 @@ class SearchCandidate:
     matched_via: str
     score: float
     # 海外顧客向け見積/請求明細用 (public.products の付帯情報)。
-    # condition=状態 / unit=形態 / box_weight_kg・case_weight_kg=形態別重量
+    # box_weight_kg・case_weight_kg=形態別重量
     # mark=型番 / tcg_type=TCG 種別。見積/請求の明細行に引き込んで使う。
-    condition: str | None = None
-    unit: str | None = None
     box_weight_kg: float | None = None
     case_weight_kg: float | None = None
     mark: str | None = None
@@ -342,8 +340,6 @@ SELECT
     s.name AS supplier_name,
     p.image_url,
     -- 海外顧客向け見積/請求明細用の付帯列 (public.products)
-    p.condition,
-    p.unit,
     p.box_weight_kg,
     p.case_weight_kg,
     p.mark,
@@ -438,8 +434,6 @@ async def search_inventory(
                 supplier_default_id=r.get("supplier_default_id"),
                 supplier_name=r.get("supplier_name"),
                 image_url=r.get("image_url"),
-                condition=r.get("condition"),
-                unit=r.get("unit"),
                 box_weight_kg=(
                     float(r["box_weight_kg"]) if r.get("box_weight_kg") is not None else None
                 ),

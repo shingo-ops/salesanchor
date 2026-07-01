@@ -94,8 +94,8 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 # 在庫表ビュー用 SELECT（参考画像準拠の列。admin 専用の notes/source/status は除外）。
 _VIEW_SELECT = """
     SELECT i.id, i.product_id, i.raw_condition,
-           -- ADR-093: 単位はオファー優先。未設定なら商品マスタ(public.products.unit)を使う
-           COALESCE(NULLIF(i.unit, ''), p.unit) AS unit,
+           -- ADR-093: 在庫オファーの単位（空文字列は NULL として扱う）
+           NULLIF(i.unit, '') AS unit,
            i.seal, i.search_cond, i.grade, i.damage,
            i.offer_type, i.ship_timing, i.unit_price,
            i.quantity, i.offered_at, i.supplier_id,
@@ -124,8 +124,7 @@ _SORT_COLUMNS = {
     "category": "p.category",
     "mark": "p.mark",
     "condition": "COALESCE(NULLIF(i.raw_condition, ''), '')",
-    # 表示・フィルタと同じく単位はオファー優先・未設定は商品マスタへフォールバック
-    "unit": "COALESCE(NULLIF(i.unit, ''), p.unit)",
+    "unit": "NULLIF(i.unit, '')",
     "offer_type": "i.offer_type",
     "quantity": "i.quantity",
     "unit_price": "i.unit_price",
@@ -258,8 +257,7 @@ async def list_inventory_view(
     unit_list = [u.strip() for u in (unit_in or "").split(",") if u.strip()]
     if unit_list:
         ph = ", ".join(f":unit{i}" for i in range(len(unit_list)))
-        # 表示と同じく単位はオファー優先・未設定は商品マスタへフォールバックして照合
-        conditions.append(f"COALESCE(NULLIF(i.unit, ''), p.unit) IN ({ph})")
+        conditions.append(f"NULLIF(i.unit, '') IN ({ph})")
         for i, u in enumerate(unit_list):
             params[f"unit{i}"] = u
     ot_list = [o.strip() for o in (offer_type_in or "").split(",") if o.strip()]
@@ -333,7 +331,7 @@ async def list_inventory_view(
     cond_rows = await db.execute(
         text(
             "SELECT i.raw_condition, i.seal, i.search_cond, i.grade, i.damage, "
-            "COALESCE(NULLIF(i.unit, ''), p.unit) AS unit "
+            "NULLIF(i.unit, '') AS unit "
             "FROM public.inventory i "
             "LEFT JOIN public.products p ON p.id = i.product_id "
             "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
@@ -348,11 +346,11 @@ async def list_inventory_view(
     )
     unit_rows = await db.execute(
         text(
-            "SELECT DISTINCT COALESCE(NULLIF(i.unit, ''), p.unit) AS v "
+            "SELECT DISTINCT NULLIF(i.unit, '') AS v "
             "FROM public.inventory i LEFT JOIN public.products p ON p.id = i.product_id "
             "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "AND COALESCE(NULLIF(i.unit, ''), p.unit) IS NOT NULL "
-            "AND COALESCE(NULLIF(i.unit, ''), p.unit) <> '' "
+            "AND NULLIF(i.unit, '') IS NOT NULL "
+            "AND NULLIF(i.unit, '') <> '' "
             "ORDER BY 1"
         )
     )

@@ -58,9 +58,6 @@ class InboundProductCandidate(BaseModel):
     name: str
     occurrences: int = Field(..., description="受信通知の解析結果中での出現回数")
     sample: str | None = Field(default=None, description="抽出元の受信本文サンプル（raw_line）")
-    # PR5c: 取込時に商品マスタへ転記する付随情報。
-    unit: str | None = Field(default=None, description="代表的な取引単位（carton→case 正規化済・小文字）")
-    condition: str | None = Field(default=None, description="代表的な状態（小文字）")
     language: str = Field(default="ja", description="既定言語（全件 ja。取込時に en へ修正可）")
 
 
