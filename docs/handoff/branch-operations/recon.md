@@ -52,7 +52,7 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 移設不要（既に main でも効く / 守りではない）と確定したもの:
 
 - `.github/workflows/deprecated-columns-check.yml:1-20`: `branches: [main, develop]` で main でも発火済み
-- `docs/handoff/branch-operations/design.md:54-55`: `active-work-auto-done/review.yml`、`publish-qa-checksheet.yml` は develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
+- `docs/handoff/branch-operations/design.md:54-55`: active-work-auto-done/review と publish-qa-checksheet は develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
 
 ## 5. デプロイ動線への影響（最重要確認）
 
@@ -60,7 +60,7 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 
 触らない:
 
-- `deploy.yml` のデプロイ実処理本体
+- デプロイ実処理本体
 - ADR-134（緊急遮断・develop 無関係）
 
 ## 6. 不明点リスト
