@@ -185,3 +185,4 @@ Output a single short message:
 5. **No partial sprints.** If you can't complete the sprint, say so explicitly in `## Known limitations` and score the affected ACs honestly — don't paper over.
 6. **Never push, never open PRs, never merge.** Commit locally only. Reviewer is the sole gatekeeper for push/PR.
 7. **Address reviewer findings in severity order.** On revision from `changes_requested`, critical → major → minor. Don't pick the easy ones first.
+8. **Quote contradictions and stop.** If a card or spec contains conflicting instructions, quote the conflicting lines verbatim in the first report and stop immediately. Do not partially execute one half of the card while ignoring the other half.
