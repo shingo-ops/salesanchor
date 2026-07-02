@@ -25,9 +25,9 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 |---|---|
 | `.github/workflows/deploy.yml:764` | stamp 工程に `continue-on-error: true`。develop 依存だが失敗してもデプロイ本体は止まらない（本番無傷） |
 | `scripts/gh-pr-create-safe.sh:56` | `gh pr create --base develop "$@"`。`--base` 未指定時の既定が develop（廃止後は要付替） |
-| `.github/workflows/claude-pipeline.yml:887` | `Auto-merge to develop`。ADR-056 の自動マージ本線。develop 依存 |
-| `.github/workflows/auto-back-merge.yml:71` | `--base develop`。main→develop back-merge 自動起票。develop 廃止で役目消滅 |
-| `.github/workflows/auto-release-pr.yml:11` | `branches: [develop]`。develop push トリガ。廃止で発火不能 |
+| `docs/specs/branch-operations/README.md:30-38` | main に移す守りの一覧と、「develop にあって main に無い守り」が廃止完了時点でゼロという正本の宣言 |
+| `docs/specs/branch-operations/README.md:69-79` | 第1.5便が「守りの引き継ぎ」として設計され、子文書として recon / design をぶら下げる構造 |
+| `docs/handoff/branch-operations/design.md:45-48` | 第1.5便（守りの移設）の具体策。main の鍵に UI governance / dangling-route を必須追加、worktree 検問を main 宛でも発火 |
 | `.github/workflows/pr-base-check.yml:27` | main 向け PR 許可判定に develop を含む。案内文が廃止後に不整合 |
 | `scripts/new-worktree.sh:73` | `origin/develop` の存在確認で土台選択。無ければ `origin/main` にフォールバック（develop 不在に既に耐性あり） |
 | `scripts/dev/executor-preflight.sh:74` | 作業開始前チェックが `origin/main` と `origin/develop` の両存在を要求。develop 消滅で失敗する（要修正） |
