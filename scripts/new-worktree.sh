@@ -36,6 +36,14 @@ fi
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 REPO_NAME="$(basename "${REPO_ROOT}")"
 
+# shared な台帳とフックが見ている本店ルート（worktree 間で共通）
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
+if [[ "${GIT_COMMON_DIR}" = /* ]]; then
+  MAIN_REPO_ROOT="$(dirname "${GIT_COMMON_DIR}")"
+else
+  MAIN_REPO_ROOT="$(git rev-parse --show-toplevel)"
+fi
+
 # worktree の配置先（~/worktrees/<リポジトリ名>/<ブランチ名の/を-に置換>）
 BRANCH_SAFE="${BRANCH//\//-}"
 WORKTREE_DIR="${HOME}/worktrees/${REPO_NAME}/${BRANCH_SAFE}"
@@ -111,11 +119,11 @@ print(f"🔑 UUID発行: {uuid_val}")
 PYEOF
 
   # Active Work Registry に自動登録（SSoT: .claude-pipeline/active-work.md）
-  ACTIVE_WORK_FILE="${REPO_ROOT}/.claude-pipeline/active-work.md"
+  ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md"
   if [ -f "${ACTIVE_WORK_FILE}" ]; then
     STARTED_AT="$(date '+%Y-%m-%d %H:%M')"
     # 既存のエントリを確認
-    if grep -q "${BRANCH}" "${ACTIVE_WORK_FILE}" 2>/dev/null; then
+    if grep -qE "^\\| ${BRANCH} \\|" "${ACTIVE_WORK_FILE}" 2>/dev/null; then
       echo "ℹ️  active-work.md に既存エントリあり（重複登録をスキップ）"
     else
       python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" "${STARTED_AT}" <<'PYEOF'
