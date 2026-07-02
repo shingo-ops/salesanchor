@@ -66,7 +66,7 @@ if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
   exit 1
 fi
 
-# main から最新化してブランチ作成
+# main から最新化してブランチ作成（branch-operations §3-3 の正規入口）
 git fetch origin
 
 BASE_BRANCH="origin/main"

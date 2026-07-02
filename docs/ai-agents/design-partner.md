@@ -141,7 +141,7 @@ KPI: 達成KGI数 ◯/11。
 - GO記録4欄（発行者/日時/原文/バックアップ確認）は、POの `GO #PR番号` 発話を実装役が転記してよい。PO発話と一致必須。
 - 本運用はエージェントによるGO偽造を機械的には防がない（recon 確定・案X）。歯止めは人手と governance 監査で担保する。
 - マージ直後にMERGEDを実測してから台帳DONE・片付け（成否未確認で進むと「未完なのにDONE」の齟齬が起きる）。
-- 綺麗な作業台: git worktree add -b <branch> <path> origin/main（new-worktree.sh は develop 土台を掴むため使わない）。本店 active-work.md に1行記帳してから push。
+- 綺麗な作業台: `docs/specs/branch-operations/README.md §3-3` の正規手順に従い、`scripts/new-worktree.sh` を使う。本店 active-work.md に1行記帳してから push。
 - カード冒頭に「本カードの許可・禁止は過去便の禁止条項をすべて上書きする」を必ず入れる。前便の禁止が残ったままのカードは矛盾として扱い、関門0の生ログ確認が終わるまで編集に入らない。
 - 手元検問（pre-commit hook等）と正本が矛盾した場合、--no-verify等での素通りは実装役の自己判断で行わず、停止してPO報告。素通りの許可は都度PO（2026-07-02 PR #2718 で実地確認。hook自体の矛盾は branch-operations 延長で対処中）。
 - 並行する便が同じ正本へ節を新設する際は、台帳で節番号を先約し、挿入側に「空き番号への自己回復ガード」を入れる（2026-07-02 PR #2723で番号衝突を実地回避）。
