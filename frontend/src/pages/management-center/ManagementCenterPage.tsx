@@ -105,7 +105,7 @@ export default function ManagementCenterPage() {
   return (
     <PageLayout navKey="nav.managementCenter" subtitleKey="managementCenter.subtitle" noScroll>
       <div className="hub-shell">
-        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-148） */}
+        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-149） */}
         <SubMenu
           variant="grouped"
           className="hub-subnav"

@@ -299,17 +299,42 @@ async def receive_messenger_webhook(
 # ─────────────────────────────────────────────
 
 
+def _extract_first_image_url(msg: dict) -> str | None:
+    """Meta webhookメッセージ dict から最初の画像 URL を返す。"""
+    for a in msg.get("attachments") or []:
+        if not isinstance(a, dict):
+            continue
+        if a.get("type") == "image":
+            url = (a.get("payload") or {}).get("url")
+            if url:
+                return str(url)
+    return None
+
+
+def _extract_first_image_type(msg: dict) -> str | None:
+    """Meta webhookメッセージ dict から最初の添付種別を返す。"""
+    for a in msg.get("attachments") or []:
+        if not isinstance(a, dict):
+            continue
+        att_type = a.get("type")
+        if att_type:
+            return str(att_type)
+    return None
+
+
 def _iter_inbound_messages(
     entry: dict[str, Any], object_type: str,
 ) -> Iterable[dict[str, Any]]:
     """entry から inbound message を 1 件ずつ正規化して yield する。
 
     返却 dict のキー:
-      - sender_id:    PSID / IGSID（送信元）
-      - message_text: 本文（無ければ空文字）
-      - message_id:   Meta の mid（重複防止に使用）
-      - timestamp:    raw timestamp（int / None）
+      - sender_id:      PSID / IGSID（送信元）
+      - message_text:   本文（無ければ空文字）
+      - message_id:     Meta の mid（重複防止に使用）
+      - timestamp:      raw timestamp（int / None）
       - has_attachments: bool（raw_payload 用）
+      - attachment_url: 画像など最初の添付 URL（無ければ None）
+      - attachment_type: 添付種別 "image" 等（無ければ None）
 
     対応フォーマット:
       A) entry[].messaging[] (Messenger 標準 + Instagram でも一般的)
@@ -354,6 +379,8 @@ def _iter_inbound_messages(
                     "message_id": msg.get("mid"),
                     "timestamp": messaging.get("timestamp"),
                     "has_attachments": bool(msg.get("attachments")),
+                    "attachment_url": None,
+                    "attachment_type": None,
                     "is_echo": True,
                 }
             continue
@@ -367,6 +394,8 @@ def _iter_inbound_messages(
             "message_id": msg.get("mid"),
             "timestamp": messaging.get("timestamp"),
             "has_attachments": bool(msg.get("attachments")),
+            "attachment_url": _extract_first_image_url(msg),
+            "attachment_type": _extract_first_image_type(msg),
             "is_echo": False,
         }
 
@@ -407,6 +436,8 @@ def _iter_inbound_messages(
                     "message_id": msg_id,
                     "timestamp": m.get("timestamp") or value.get("timestamp"),
                     "has_attachments": has_attach,
+                    "attachment_url": _extract_first_image_url(m),
+                    "attachment_type": _extract_first_image_type(m),
                 }
 
 
@@ -560,6 +591,8 @@ async def _persist_meta_message(
     timestamp: Any,
     has_attachments: bool,
     page_id: Optional[str] = None,
+    attachment_url: Optional[str] = None,
+    attachment_type: Optional[str] = None,
 ) -> tuple[Optional[int], int]:
     """leads upsert + meta_messages INSERT を共通化する Sprint 6 ヘルパー。
 
@@ -678,12 +711,14 @@ async def _persist_meta_message(
             INSERT INTO meta_messages (
                 tenant_id, lead_id, platform,
                 sender_id, message_text, direction, raw_payload,
-                message_id, page_id, original_language
+                message_id, page_id, original_language,
+                attachment_url, attachment_type
             )
             VALUES (
                 :tenant_id, :lead_id, :platform,
                 :sender_id, :message_text, 'inbound', :raw_payload,
-                :message_id, :page_id, :original_language
+                :message_id, :page_id, :original_language,
+                :attachment_url, :attachment_type
             )
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
@@ -699,6 +734,8 @@ async def _persist_meta_message(
             "raw_payload": raw_payload,
             "page_id": page_id,
             "original_language": infer_original_language(message_text),
+            "attachment_url": attachment_url,
+            "attachment_type": attachment_type,
         },
     )
     msg_inserted_id = ins.scalar_one_or_none()
@@ -824,6 +861,8 @@ async def process_messenger_event(body: dict) -> None:
                             timestamp=m["timestamp"],
                             has_attachments=m["has_attachments"],
                             page_id=page_id_for_message,
+                            attachment_url=m.get("attachment_url"),
+                            attachment_type=m.get("attachment_type"),
                         )
                         if msg_id is None:
                             logging.info(

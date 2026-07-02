@@ -149,25 +149,19 @@ async def create_deal(
     deals_t = tenant_table_ref(db, tenant_id, "deals")
     contacts_t = tenant_table_ref(db, tenant_id, "contacts")
     leads_t = tenant_table_ref(db, tenant_id, "leads")
-    # Step 5d: contact / company の存在 + 所属一致確認のみ
-    contact_check = await db.execute(
-        text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"),
-        {"id": data.contact_id},
-    )
-    contact_row = contact_check.first()
-    if not contact_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
-    if contact_row[0] != data.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="指定された担当者は指定会社に所属していません",
-        )
-
-    # リード存在確認（指定時のみ）
-    if data.lead_id is not None:
-        lead_check = await db.execute(text(f"SELECT id FROM {leads_t} WHERE id = :id"), {"id": data.lead_id})
-        if not lead_check.first():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
+    # 便1a: lead 必須（背骨）。company/contact は任意（フォーム入力後に紐づく）
+    lead_check = await db.execute(text(f"SELECT id FROM {leads_t} WHERE id = :id"), {"id": data.lead_id})
+    if not lead_check.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
+    if data.contact_id is not None:
+        contact_check = await db.execute(
+            text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"), {"id": data.contact_id})
+        contact_row = contact_check.first()
+        if not contact_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
+        if data.company_id is None or contact_row[0] != data.company_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                detail="指定された担当者は指定会社に所属していません")
 
     result = await db.execute(
         text(f"""

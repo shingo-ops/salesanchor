@@ -45,7 +45,7 @@ jobs:
           python3 - << 'EOF'
           import yaml, sys
 
-          # 対策E: deploy.yml / claude-pipeline.yml を追加
+          # 対策E: deploy.yml を追加
           # check-claude-size.yml は常時実行（内部で git diff 判定）のため paths チェック不要
           checks = [
               {
@@ -67,11 +67,6 @@ jobs:
                   "file": ".github/workflows/deploy.yml",
                   "rule": "no_pull_request",
                   "reason": "本番デプロイ: pull_request トリガー追加で意図しない自動デプロイが発生する",
-              },
-              {
-                  "file": ".github/workflows/claude-pipeline.yml",
-                  "rule": "no_paths",
-                  "reason": "ADR自動起動CI: paths追加でADR実装ループが停止する",
               },
               {
                   "file": ".github/workflows/dockerfile-lint.yml",

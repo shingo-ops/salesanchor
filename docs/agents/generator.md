@@ -56,6 +56,11 @@ Governance is outside this runtime pipeline.
 - No git commit unless explicitly requested.
 - No destructive operation.
 
+## Execution Rules
+
+- If a card or spec contains conflicting instructions, quote the conflicting lines verbatim in the first report and stop immediately.
+- Do not partially execute one half of the card while ignoring the other half.
+
 ## Scope Expansion
 
 If implementation appears to require files outside Architect Review `Approved Scope` or Planner Package `Implementation Scope`, stop and return `NEEDS_SCOPE_CHANGE`.

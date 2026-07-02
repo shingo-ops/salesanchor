@@ -87,6 +87,7 @@ import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
 import PhaseSwitchPage from "./pages/super-admin/PhaseSwitchPage";
 import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
+import FxRatePage from "./pages/super-admin/FxRatePage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -296,6 +297,11 @@ function App() {
                   <Route
                     path="/super-admin/inventory-offers"
                     element={<InventoryOffersPage />}
+                  />
+                  {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
+                  <Route
+                    path="/super-admin/fx-rate"
+                    element={<FxRatePage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>

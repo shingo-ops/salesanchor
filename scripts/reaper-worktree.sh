@@ -3,7 +3,7 @@
 #
 # 安全条件（非交渉・すべて満たした部屋だけ削除）:
 #   ① 未コミット・未push がゼロ（絶対保護・最優先）
-#   ② active-work.md が DONE、または gh で PR がマージ済み（develop or main）
+#   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
@@ -171,8 +171,14 @@ PYEOF
 
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. upstream 設定済みなら @{u}..HEAD で比較
+      #    ただし専用棚 origin/<branch> と HEAD が一致していれば push 済みとみなす
+      #    （@{u} が共用側（main 等）を指す設定漏れによる誤検出を防ぐ）
       if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
-        if [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+        OWN_REMOTE=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
+        HEAD_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
+        if [ -n "${OWN_REMOTE}" ] && [ "${HEAD_SHA}" = "${OWN_REMOTE}" ]; then
+          :  # 専用棚と一致 → push 済み。UNSAVED=0 のまま（保護しない）
+        elif [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
           UNSAVED=1
         fi
       else
@@ -204,14 +210,14 @@ PYEOF
 
   if [ "${IS_DONE}" -eq 0 ]; then
     # gh で PR マージ済み確認（squash マージでも機能）
-    # develop または main へのマージを検知（hotfix/release の main マージも対象）
+    # main へのマージを検知（release/hotfix の main マージも対象）
     # エラー時は 0 扱い（安全側）
     MERGED_COUNT=$(gh pr list \
       --repo "${REPO_NAME}" \
       --state merged \
       --head "${BRANCH}" \
       --json number,baseRefName \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")] | length' \
+      --jq '[.[] | select(.baseRefName == "main")] | length' \
       2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -226,7 +232,7 @@ PYEOF
       --state closed \
       --head "${BRANCH}" \
       --json number,baseRefName,mergedAt \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main") | select(.mergedAt == null)] | length' \
+      --jq '[.[] | select(.baseRefName == "main") | select(.mergedAt == null)] | length' \
       2>/dev/null || echo "0")
     [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi

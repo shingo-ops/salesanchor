@@ -609,6 +609,51 @@ test('AC6: 書類のみのPRは自動スキップ（pass）', () => {
   assert.ok(result.stdout.includes('自動スキップ'));
 });
 
+// ── 追加テスト: latest main 既存パスとの二重定義検出 ─────────────────────────────
+console.log('\n【二重定義検出テスト】');
+
+test('新規作成したファイルが latest main に既にある場合は fail', () => {
+  const pathOnMain = 'scripts/tmp-added-probe.js';
+  const result = runScript({
+    CHANGED_FILES: pathOnMain,
+    MOCK_ADDED_FILES: pathOnMain,
+    MOCK_ORIGIN_MAIN_FILES: `${pathOnMain}\n`,
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '既存パスの新規作成は fail するべき');
+  assert.ok(
+    result.stderr.includes('既に存在') || result.stderr.includes('古い土台'),
+    `二重定義検出メッセージが必要: ${result.stderr}`
+  );
+});
+
+test('本当の新規パスは latest main 照合を通過する', () => {
+  const pathNotOnMain = 'scripts/tmp-unique-probe.js';
+  const result = runScript({
+    CHANGED_FILES: pathNotOnMain,
+    MOCK_ADDED_FILES: pathNotOnMain,
+    MOCK_ORIGIN_MAIN_FILES: 'scripts/another-existing-file.js\n',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `新規パスは pass するべき: stderr=${result.stderr}`);
+  assert.ok(result.stdout.includes('危ない変更') || result.stdout.includes('pass'));
+});
+
+test('既存ファイルの変更だけなら二重定義として誤検出しない', () => {
+  const result = runScript({
+    CHANGED_FILES: 'scripts/check-process-artifacts.js',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `既存ファイルの変更は pass するべき: stderr=${result.stderr}`);
+  assert.ok(!result.stderr.includes('既に存在'), '変更のみで新規定義扱いしないこと');
+});
+
 // ── 統合テスト: 正常系（完全な成果物）────────────────────────────────────────
 console.log('\n【統合テスト】');
 
@@ -1182,6 +1227,114 @@ test('3点差分: feature が本当に scripts/ を変更した場合は正し�
     rmSync(tmpRepo, { recursive: true, force: true });
   }
 });
+
+{
+// ─── 維持の仕組み欄テスト（正本§1.7・maintenance-gate便） ────────────────────
+console.log('\n【維持の仕組み欄テスト（単体）】');
+const { validateMaintenanceSection } = require(SCRIPT);
+
+test('維持欄: セクション自体が無い → エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 受け入れ基準\n');
+  assert.ok(errors.some(e => e.includes('維持の仕組み')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 守り手が空欄 → エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: \n- 対象: x\n');
+  assert.ok(errors.some(e => e.includes('ファイルパス') || e.includes('守り手')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 架空パスの名指し → 実在エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: .github/workflows/no-such-guard.yml\n- 対象: x\n');
+  assert.ok(errors.some(e => e.includes('存在しません')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 実在パスの名指し → エラーなし', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: .github/workflows/migration-guard.yml\n- 対象: x\n');
+  assert.strictEqual(errors.length, 0, `誤検知: ${errors}`);
+});
+
+test('維持欄: 「人手で守る」宣言 → エラーなし', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: 人手で守る（理由: 専用関所なし）\n- 対象: x\n');
+  assert.strictEqual(errors.length, 0, `誤検知: ${errors}`);
+});
+
+console.log('\n【維持の仕組み欄テスト（統合・猶予と段階投入）】');
+
+function maintBody(reconPath, designPath) {
+  return validSOPBody(reconPath, designPath) + '触るファイル: backend/app/util_maint_test.py\n削除するファイル: なし\n';
+}
+
+test('維持欄統合: failモード＋欄なし＋PR2700 → fail', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m1/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m1/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 1, `fail期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+    assert.ok(r.stderr.includes('維持の仕組み'), `理由に維持欄が出るべき: ${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: warnモード（未設定）＋欄なし＋PR2700 → pass＋警告表示', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m2/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m2/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+    });
+    assert.strictEqual(r.code, 0, `pass期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+    assert.ok((r.stdout + r.stderr).includes('警告モード'), `警告表示が出るべき: ${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: failモード＋欄あり実在守り手＋PR2700 → pass（誤検知ゼロ）', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m3/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m3/design.md',
+      validDesignContent(reconPath) + '\n## 維持の仕組み\n- 守り手: .github/workflows/migration-guard.yml\n- 対象: テスト対象\n');
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 0, `pass期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: failモード＋欄なし＋PR2599 → pass（猶予・巻き込みゼロ）', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m4/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m4/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: validSOPBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2599',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 0, `pass期待（猶予）: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+}
 
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`

@@ -120,7 +120,7 @@ run_py  scripts/migrate_meta_messages_page_id.py
 run_py  scripts/migrate_adr015_lead_foundation.py  -e TENANT_CODE=highlife-jpn
 
 # ロール移行
-# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働
+# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働（GO #2658 Shingo承認済み）
 #   停止理由:
 #     1. メンバー→CS 移行・メンバー削除は全テナント完了済み（5テナントで「メンバー」0件 / 2026-06-28確認）
 #     2. 既存テナントへの seed が DEFAULT_ROLES 変更のたびに新名ロールを全テナントに INSERT し
@@ -453,11 +453,12 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
-# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
-run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
+
+# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
+run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
@@ -468,6 +469,9 @@ run_sql migrations/20260624_140000_converge_inventory_v2.sql
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
 run_sql migrations/20260626_100000_add_outbound_draft_message_link.sql
 
+# ADR-146 B方式: tenant_discord_config.guild_id に UNIQUE 制約追加（1Guild=1Tenant保証）
+run_sql migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql
+
 # ADR-145 段階2: public.products に FORCE-RLS + 4ポリシー（共通=運営のみ/固有=自テナント）
 run_sql migrations/20260626_130000_force_rls_public_products.sql
 
@@ -476,6 +480,12 @@ run_sql migrations/20260627_120000_add_tenant_features_table.sql
 
 # スコープ②Phase2 backfill: products.unit DROP 前に inventory.unit へ退避（空欄のみ・冪等）
 run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
+
+# 為替レート SSOT (public.app_fx_rates) テーブル新設 + RLS（読み取り全許可・書き込みoperatorのみ）
+run_sql migrations/20260628_170000_add_app_fx_rates.sql
+
+# 便1a: 取引フロー背骨の必須化（遡及lead逆造成 backfill + 条件付き NOT NULL）
+run_sql migrations/20260703_010000_txn_backbone_ben1a.sql
 
 # スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
 run_sql migrations/20260629_020000_drop_products_condition_unit.sql
