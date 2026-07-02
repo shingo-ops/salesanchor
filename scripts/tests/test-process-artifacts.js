@@ -609,6 +609,51 @@ test('AC6: 書類のみのPRは自動スキップ（pass）', () => {
   assert.ok(result.stdout.includes('自動スキップ'));
 });
 
+// ── 追加テスト: latest main 既存パスとの二重定義検出 ─────────────────────────────
+console.log('\n【二重定義検出テスト】');
+
+test('新規作成したファイルが latest main に既にある場合は fail', () => {
+  const pathOnMain = 'scripts/tmp-added-probe.js';
+  const result = runScript({
+    CHANGED_FILES: pathOnMain,
+    MOCK_ADDED_FILES: pathOnMain,
+    MOCK_ORIGIN_MAIN_FILES: `${pathOnMain}\n`,
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '既存パスの新規作成は fail するべき');
+  assert.ok(
+    result.stderr.includes('既に存在') || result.stderr.includes('古い土台'),
+    `二重定義検出メッセージが必要: ${result.stderr}`
+  );
+});
+
+test('本当の新規パスは latest main 照合を通過する', () => {
+  const pathNotOnMain = 'scripts/tmp-unique-probe.js';
+  const result = runScript({
+    CHANGED_FILES: pathNotOnMain,
+    MOCK_ADDED_FILES: pathNotOnMain,
+    MOCK_ORIGIN_MAIN_FILES: 'scripts/another-existing-file.js\n',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `新規パスは pass するべき: stderr=${result.stderr}`);
+  assert.ok(result.stdout.includes('危ない変更') || result.stdout.includes('pass'));
+});
+
+test('既存ファイルの変更だけなら二重定義として誤検出しない', () => {
+  const result = runScript({
+    CHANGED_FILES: 'scripts/check-process-artifacts.js',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `既存ファイルの変更は pass するべき: stderr=${result.stderr}`);
+  assert.ok(!result.stderr.includes('既に存在'), '変更のみで新規定義扱いしないこと');
+});
+
 // ── 統合テスト: 正常系（完全な成果物）────────────────────────────────────────
 console.log('\n【統合テスト】');
 
