@@ -47,16 +47,16 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 
 - UI governance 検問（鍵側・develop 専属）
 - dangling-route 検問（鍵側・develop 専属）
-- worktree 整合性チェック（`worktree-integrity-check.yml` が develop 宛のみで発火。main 宛でも動くよう要変更）
+- worktree 整合性チェック（`.github/workflows/worktree-integrity-check.yml:1-30` が develop 宛のみで発火。main 宛でも動くよう要変更）
 
 移設不要（既に main でも効く / 守りではない）と確定したもの:
 
-- `deprecated-columns-check.yml`: `branches: [main, develop]` で main でも発火済み
-- `active-work-auto-done/review.yml`、`publish-qa-checksheet.yml`: develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
+- `.github/workflows/deprecated-columns-check.yml:1-20`: `branches: [main, develop]` で main でも発火済み
+- `docs/handoff/branch-operations/design.md:54-55`: `active-work-auto-done/review.yml`、`publish-qa-checksheet.yml` は develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
 
 ## 5. デプロイ動線への影響（最重要確認）
 
-`deploy.yml` の develop 参照は stamp 工程（`active-work.md` への日付記録）に限定。`continue-on-error: true`（L764）のため develop 消滅で失敗してもデプロイ本体は成功。develop 廃止でデプロイは止まらない。
+`.github/workflows/deploy.yml:764` の develop 参照は stamp 工程（`.claude-pipeline/active-work.md:1-20` への日付記録）に限定。`continue-on-error: true` のため develop 消滅で失敗してもデプロイ本体は成功。develop 廃止でデプロイは止まらない。
 
 触らない:
 
