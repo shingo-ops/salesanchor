@@ -485,6 +485,9 @@ run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
 run_sql migrations/20260629_020000_drop_products_condition_unit.sql
 # 為替レート SSOT (public.app_fx_rates) テーブル新設 + RLS（読み取り全許可・書き込みoperatorのみ）
 run_sql migrations/20260628_170000_add_app_fx_rates.sql
+
+# 便1a: 取引フロー背骨の必須化（遡及lead逆造成 backfill + 条件付き NOT NULL）
+run_sql migrations/20260703_010000_txn_backbone_ben1a.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
