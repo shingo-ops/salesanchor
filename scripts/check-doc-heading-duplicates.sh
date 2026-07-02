@@ -1,69 +1,25 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-if [ "$#" -gt 0 ]; then
-  files=("$@")
-else
-  files=(
-    "docs/STANDARD-WORKFLOW.md"
-    "docs/specs/design-partner-loop/README.md"
-  )
+# 正本ドキュメントの節番号重複検査（並行便の番号衝突を関所で止める）
+# 使い方: bash scripts/check-doc-heading-duplicates.sh [file...]
+# 引数なしの場合は既定の正本リストを検査する。
+set -u
+FILES=("$@")
+if [ ${#FILES[@]} -eq 0 ]; then
+  FILES=(docs/STANDARD-WORKFLOW.md docs/ai-agents/design-partner.md)
 fi
-
-overall_status=0
-
-check_file() {
-  local file="$1"
-
-  if [ ! -f "$file" ]; then
-    printf '❌ %s: file not found\n' "$file"
-    overall_status=1
-    return
-  fi
-
-  local heading_lines
-  heading_lines="$(grep -nE '^[[:space:]]*#{2,6}[[:space:]]+[0-9]+(\.[0-9]+)*[[:space:]]' "$file" || true)"
-
-  if [ -z "$heading_lines" ]; then
-    printf '✅ %s: no duplicate canonical heading numbers\n' "$file"
-    return
-  fi
-
-  local duplicate_found=0
-  local seen_numbers=$'\n'
-  local first_lines=$'\n'
-  local line_no heading num first_line
-
-  while IFS= read -r heading; do
-    [ -n "$heading" ] || continue
-    line_no="${heading%%:*}"
-    heading="${heading#*:}"
-    num="$(printf '%s' "$heading" | sed -E 's/^[[:space:]]*#{2,6}[[:space:]]+([0-9]+(\.[0-9]+)*).*/\1/')"
-
-    case "$seen_numbers" in
-      *$'\n'"$num"$'\n'*)
-        first_line="$(printf '%s' "$first_lines" | sed -n -E "s/^${num}:([0-9]+)$/\\1/p" | head -n1)"
-        printf '❌ %s: duplicate heading number %s at lines %s and %s\n' "$file" "$num" "$first_line" "$line_no"
-        duplicate_found=1
-        ;;
-      *)
-        seen_numbers+="$num"$'\n'
-        first_lines+="$num:$line_no"$'\n'
-        ;;
-    esac
-  done <<EOF
-$heading_lines
-EOF
-
-  if [ "$duplicate_found" -eq 0 ]; then
-    printf '✅ %s: no duplicate canonical heading numbers\n' "$file"
+rc=0
+for f in "${FILES[@]}"; do
+  [ -f "$f" ] || { echo "SKIP(not found): $f"; continue; }
+  # 見出し行から番号トークンを抽出（#の数=見出しレベルは不問。1 / 1.5 / 1.7 等）
+  dups=$(grep -nE '^#{1,6}[[:space:]]+[0-9]+(\.[0-9]+)*[.)]?([[:space:]]|$)' "$f" \
+    | sed -E 's/^([0-9]+):#{1,6}[[:space:]]+([0-9]+(\.[0-9]+)*).*/\2 L\1/' \
+    | sort | awk '{n[$1]=n[$1]" "$2; c[$1]++} END{for(k in c) if(c[k]>1) print k":"n[k]}')
+  if [ -n "$dups" ]; then
+    echo "FAIL: $f に重複する節番号があります:"
+    echo "$dups" | sed 's/^/  節番号 /'
+    rc=1
   else
-    overall_status=1
+    echo "PASS: $f 節番号の重複なし"
   fi
-}
-
-for file in "${files[@]}"; do
-  check_file "$file"
 done
-
-exit "$overall_status"
+exit $rc
