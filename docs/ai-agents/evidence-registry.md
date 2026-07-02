@@ -1057,3 +1057,18 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   decision: "KGI①②④ 既達成 / ③ 子文書1行説明 4/4 / ⑤ 正本§1.6 明文化 1/1。達成KGI数 5/5。GO: Shingo 2026-07-01(#2704)。"
   lessons: "①マージ方式はリポ設定に合わせる(squash禁止→merge commit)。②GO発行者は英字表記(Shingo/shingo-ops)、ひらがな不可。③正本等の危険ファイル変更PRは『触るファイル:』『削除するファイル:』欄を平打ち(行頭空白・ダッシュなし)で必須。④マージ直後にMERGEDを実測してから台帳DONE・片付け(成否未確認で進むと未完なのにDONEの記録齟齬が発生)。"
   follow_up: "「設計に維持の仕組み欄を必須化し関所で守らせる」新テーマを引き継ぎ済み(第1弾:文章ルール＋守り手関所の名指し / 第2弾:記入と名指し実在の機械強制・案A / 適用は猶予＋warningで段階的)。"
+
+## 2026-07-01: reaper 誤検出修正（専用棚一致で push 済み扱い）（EV-20260701-002）
+- id: EV-20260701-002
+  type: review
+  reference: "PR #2705 merge commit a6050cfffe7cad4e557d956100646a922427a89c / main branch"
+  scope: "scripts/reaper-worktree.sh / scripts/tests/test-reaper-safety.sh"
+  problem: "reaper チェック2 bブロックの未push判定が @{u}..HEAD を使用。@{u} が共用側(origin/main・origin/develop)を指す設定漏れの worktree で、きれい・push済みの完了机を『未保存』と誤検出し永久保護＝堆積させていた。"
+  fix: "HEAD == origin/<branch>（専用棚一致）なら push 済みとみなす救済を b に追加。a（未コミット確認）・c（upstream未設定分岐）・チェック3（完了確認）は不変。"
+  kpi: "既存14テスト緑（回帰なし）＋再現テスト15追加。修正を stash 退避すると test15 が FAIL、復元で 15/15 PASS（テストがバグを捕捉することを立証）。"
+  confidence: high
+  human_verification: "Shingo が KPI ○A○B○C を確認。GO #2705 を自筆で発行。CI 全緑・process-artifacts gate pass を実測後マージ。"
+  decision: "reaper 未push誤検出を修正し main 反映。完了机の自動回収が想定どおり効く状態にした。"
+  lessons: "①CC が別worktree・本店へ勝手に台帳/GO を書き込む逸脱を複数回。生ログ照合と名指し1ファイル撤去で対処。②GO記録はしんご自筆のみ・代筆厳禁を再確認。③main宛PRのブランチ名は release/ または hotfix/ が必須（fix/ は関所で弾かれる）。"
+  follow_up: "第1便で reaper 214/229行（②完了確認の develop→main 付替）を別途実施。カード⑥は本PRマージ後の最新 main で撮り直してから作成する。"
+
