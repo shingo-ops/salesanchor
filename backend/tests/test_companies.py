@@ -2,12 +2,14 @@
 ADR-089: companies 系 API のテスト。
 customers API は Sprint 3 で廃止済み（ADR-089 Sprint 3）。
 """
+from tests.helpers_txn import create_lead
 
 
 class TestCompaniesCRUD:
     async def test_create_minimal(self, client):
         """会社名だけで会社を作成できる（副テーブル全て空）"""
-        res = await client.post("/api/v1/companies", json={"name": "株式会社テスト"})
+        lead_id = await create_lead(client, "株式会社テスト")
+        res = await client.post("/api/v1/companies", json={"name": "株式会社テスト", "lead_id": lead_id})
         assert res.status_code == 201
         data = res.json()
         assert data["name"] == "株式会社テスト"
@@ -18,8 +20,10 @@ class TestCompaniesCRUD:
 
     async def test_create_with_nested_address(self, client):
         """会社を住所付きで作成できる（branch_name + is_default 対応）"""
+        lead_id = await create_lead(client, "Card Galaxy LTD")
         res = await client.post("/api/v1/companies", json={
             "name": "Card Galaxy LTD",
+            "lead_id": lead_id,
             "addresses": [
                 {
                     "address_type": "billing",
@@ -51,8 +55,10 @@ class TestCompaniesCRUD:
 
     async def test_create_explicit_code(self, client):
         """明示的な company_code を指定できる"""
+        lead_id = await create_lead(client, "明示コード会社")
         res = await client.post("/api/v1/companies", json={
             "name": "明示コード会社",
+            "lead_id": lead_id,
             "company_code": "CO-99999",
         })
         assert res.status_code == 201
@@ -60,8 +66,10 @@ class TestCompaniesCRUD:
 
     async def test_list_and_search(self, client):
         """一覧 + 検索"""
-        await client.post("/api/v1/companies", json={"name": "α Company"})
-        await client.post("/api/v1/companies", json={"name": "β Inc"})
+        lead_a = await create_lead(client, "α Company")
+        lead_b = await create_lead(client, "β Inc")
+        await client.post("/api/v1/companies", json={"name": "α Company", "lead_id": lead_a})
+        await client.post("/api/v1/companies", json={"name": "β Inc", "lead_id": lead_b})
 
         res = await client.get("/api/v1/companies")
         assert res.status_code == 200
@@ -73,7 +81,8 @@ class TestCompaniesCRUD:
         assert "β Inc" in names
 
     async def test_get_single(self, client):
-        create = await client.post("/api/v1/companies", json={"name": "取得テスト"})
+        lead_id = await create_lead(client, "取得テスト")
+        create = await client.post("/api/v1/companies", json={"name": "取得テスト", "lead_id": lead_id})
         company_id = create.json()["id"]
         res = await client.get(f"/api/v1/companies/{company_id}")
         assert res.status_code == 200
@@ -84,7 +93,8 @@ class TestCompaniesCRUD:
         assert res.status_code == 404
 
     async def test_patch_partial(self, client):
-        create = await client.post("/api/v1/companies", json={"name": "更新前"})
+        lead_id = await create_lead(client, "更新前")
+        create = await client.post("/api/v1/companies", json={"name": "更新前", "lead_id": lead_id})
         company_id = create.json()["id"]
         res = await client.patch(
             f"/api/v1/companies/{company_id}",
@@ -95,14 +105,17 @@ class TestCompaniesCRUD:
         assert res.json()["industry"] == "IT"
 
     async def test_patch_empty_returns_400(self, client):
-        create = await client.post("/api/v1/companies", json={"name": "空更新"})
+        lead_id = await create_lead(client, "空更新")
+        create = await client.post("/api/v1/companies", json={"name": "空更新", "lead_id": lead_id})
         company_id = create.json()["id"]
         res = await client.patch(f"/api/v1/companies/{company_id}", json={})
         assert res.status_code == 400
 
     async def test_patch_replaces_addresses(self, client):
+        lead_id = await create_lead(client, "住所置換")
         create = await client.post("/api/v1/companies", json={
             "name": "住所置換",
+            "lead_id": lead_id,
             "addresses": [{"address_type": "billing", "name": "旧住所"}],
         })
         company_id = create.json()["id"]
@@ -119,7 +132,8 @@ class TestCompaniesCRUD:
         assert names == ["新請求", "新配送"]
 
     async def test_delete(self, client):
-        create = await client.post("/api/v1/companies", json={"name": "削除対象"})
+        lead_id = await create_lead(client, "削除対象")
+        create = await client.post("/api/v1/companies", json={"name": "削除対象", "lead_id": lead_id})
         company_id = create.json()["id"]
         res = await client.delete(f"/api/v1/companies/{company_id}")
         assert res.status_code == 204
@@ -129,12 +143,16 @@ class TestCompaniesCRUD:
 
     async def test_company_code_required_unique(self, client):
         """同一 company_code を2回登録すると 409"""
+        lead_a = await create_lead(client, "会社A")
+        lead_b = await create_lead(client, "会社B")
         await client.post("/api/v1/companies", json={
             "name": "会社A",
+            "lead_id": lead_a,
             "company_code": "CO-DUP-01",
         })
         res2 = await client.post("/api/v1/companies", json={
             "name": "会社B",
+            "lead_id": lead_b,
             "company_code": "CO-DUP-01",
         })
         assert res2.status_code == 409
@@ -149,8 +167,10 @@ class TestPendingDedupReviewResolution:
 
     async def test_create_with_pending_dedup_review_status(self, client):
         """status='pending_dedup_review' で会社を新規登録できる（CHECK 制約 OK 確認）"""
+        lead_id = await create_lead(client, "重複候補会社")
         res = await client.post("/api/v1/companies", json={
             "name": "重複候補会社",
+            "lead_id": lead_id,
             "status": "pending_dedup_review",
         })
         assert res.status_code == 201, res.text
@@ -158,8 +178,10 @@ class TestPendingDedupReviewResolution:
 
     async def test_resolve_to_active(self, client):
         """pending_dedup_review → active に PATCH で更新できる（解消フロー）"""
+        lead_id = await create_lead(client, "解消対象")
         create = await client.post("/api/v1/companies", json={
             "name": "解消対象",
+            "lead_id": lead_id,
             "status": "pending_dedup_review",
         })
         company_id = create.json()["id"]
@@ -171,8 +193,10 @@ class TestPendingDedupReviewResolution:
 
     async def test_other_fields_intact_after_resolve(self, client):
         """status だけの PATCH は副テーブル（住所・販売チャネル）を巻き込まない"""
+        lead_id = await create_lead(client, "副テーブル保護")
         create = await client.post("/api/v1/companies", json={
             "name": "副テーブル保護",
+            "lead_id": lead_id,
             "status": "pending_dedup_review",
             "addresses": [{"address_type": "billing", "name": "請求", "is_default": True}],
             "sales_channels": ["EC"],
@@ -188,7 +212,8 @@ class TestPendingDedupReviewResolution:
 
     async def test_invalid_status_rejected(self, client):
         """未知の status 値は 422 で拒否される（enum バリデーション）"""
-        create = await client.post("/api/v1/companies", json={"name": "不正値"})
+        lead_id = await create_lead(client, "不正値")
+        create = await client.post("/api/v1/companies", json={"name": "不正値", "lead_id": lead_id})
         company_id = create.json()["id"]
         res = await client.patch(f"/api/v1/companies/{company_id}", json={
             "status": "totally_invalid",
@@ -201,13 +226,15 @@ class TestCompanyDiscord:
 
     async def test_discord_null_by_default(self, client):
         """新規会社作成時は discord が null であること"""
-        res = await client.post("/api/v1/companies", json={"name": "Discord未設定会社"})
+        lead_id = await create_lead(client, "Discord未設定会社")
+        res = await client.post("/api/v1/companies", json={"name": "Discord未設定会社", "lead_id": lead_id})
         assert res.status_code == 201
         assert res.json()["discord"] is None
 
     async def test_discord_upsert_and_retrieve(self, client):
         """PATCH で discord を設定でき、GET で取得できること"""
-        create = await client.post("/api/v1/companies", json={"name": "Discord有会社"})
+        lead_id = await create_lead(client, "Discord有会社")
+        create = await client.post("/api/v1/companies", json={"name": "Discord有会社", "lead_id": lead_id})
         company_id = create.json()["id"]
 
         patch_res = await client.patch(f"/api/v1/companies/{company_id}", json={
@@ -232,7 +259,8 @@ class TestCompanyDiscord:
 
     async def test_discord_delete_via_null(self, client):
         """discord に null を送ると設定が削除されること"""
-        create = await client.post("/api/v1/companies", json={"name": "Discord削除会社"})
+        lead_id = await create_lead(client, "Discord削除会社")
+        create = await client.post("/api/v1/companies", json={"name": "Discord削除会社", "lead_id": lead_id})
         company_id = create.json()["id"]
 
         # 先に設定
@@ -246,7 +274,8 @@ class TestCompanyDiscord:
 
     async def test_discord_omit_does_not_touch(self, client):
         """discord フィールドを省略した PATCH は discord を変更しないこと（sentinel パターン）"""
-        create = await client.post("/api/v1/companies", json={"name": "Discord不変会社"})
+        lead_id = await create_lead(client, "Discord不変会社")
+        create = await client.post("/api/v1/companies", json={"name": "Discord不変会社", "lead_id": lead_id})
         company_id = create.json()["id"]
 
         await client.patch(f"/api/v1/companies/{company_id}", json={

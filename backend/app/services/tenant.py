@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     company_code VARCHAR(20) NOT NULL,
-    lead_id INTEGER,                                   -- FK は leads 作成後に付与
+    lead_id INTEGER NOT NULL,                          -- FK は leads 作成後に付与（便1a）
     name VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
     normalized_name VARCHAR(255),
@@ -429,7 +429,7 @@ CREATE TABLE IF NOT EXISTS {schema}.deals (
     -- CONSTRAINT 名は migration 032 と合わせる（verify の FK 存在 check が新旧テナントで揃うように）
     company_id INTEGER CONSTRAINT fk_deals_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_deals_contact REFERENCES {schema}.contacts(id),
-    lead_id INTEGER REFERENCES {schema}.leads(id),
+    lead_id INTEGER NOT NULL REFERENCES {schema}.leads(id),
     title VARCHAR(255) NOT NULL,
     amount NUMERIC(15, 2),
     currency VARCHAR(10) DEFAULT 'JPY',
@@ -489,7 +489,7 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
-    deal_id INTEGER REFERENCES {schema}.deals(id),
+    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',

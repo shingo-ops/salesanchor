@@ -21,7 +21,9 @@ from decimal import Decimal
 # ---------------------------------------------------------------------------
 
 async def _create_company_contact(client, company_name="請求テスト会社"):
-    co = await client.post("/api/v1/companies", json={"name": company_name})
+    from tests.helpers_txn import create_lead
+    lead_id = await create_lead(client, company_name)
+    co = await client.post("/api/v1/companies", json={"name": company_name, "lead_id": lead_id})
     assert co.status_code == 201, co.text
     company_id = co.json()["id"]
 

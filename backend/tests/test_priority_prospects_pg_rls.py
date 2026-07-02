@@ -103,6 +103,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
     test_app.dependency_overrides[get_current_tenant] = _override_get_current_tenant
 
     inserted_ids: list[int] = []
+    origin_lead_ids: list[int] = []  # deals の出自 lead（クリーンアップ用・unpack 対象外）
 
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
@@ -111,15 +112,27 @@ async def test_priority_prospects_pg_rls_all_requirements():
 
             # 2. leads.converted_deal_id FK 参照先となる deals を先に挿入
             #    （fk_leads_converted_deal: leads.converted_deal_id → deals.id）
+            #    ben1a: deals.lead_id NOT NULL のため出自 lead を先に作成する
             async with admin_engine.begin() as conn:
-                await conn.execute(
+                origin_result = await conn.execute(
                     text(f"""
-                        INSERT INTO {_SCHEMA}.deals (id, tenant_id, title)
-                        VALUES (1001, :tid, 'PP-Deal-1001'),
-                               (2001, :tid, 'PP-Deal-2001')
-                        ON CONFLICT (id) DO NOTHING
+                        INSERT INTO {_SCHEMA}.leads (tenant_id, customer_name)
+                        VALUES (:tid, 'PP-DealOrigin-1001'),
+                               (:tid, 'PP-DealOrigin-2001')
+                        RETURNING id
                     """),
                     {"tid": _TENANT_ID},
+                )
+                origin_lead_ids.extend(int(r) for r in origin_result.scalars().all())
+
+                await conn.execute(
+                    text(f"""
+                        INSERT INTO {_SCHEMA}.deals (id, tenant_id, title, lead_id)
+                        VALUES (1001, :tid, 'PP-Deal-1001', :lid1),
+                               (2001, :tid, 'PP-Deal-2001', :lid2)
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    {"tid": _TENANT_ID, "lid1": origin_lead_ids[0], "lid2": origin_lead_ids[1]},
                 )
 
             # 3. リードを挿入（admin 権限で直接 INSERT）
@@ -302,7 +315,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
         test_app.dependency_overrides.clear()
         with suppress(Exception):
             async with admin_engine.begin() as conn:
-                for iid in inserted_ids:
+                for iid in inserted_ids + origin_lead_ids:
                     await conn.execute(
                         text(f"DELETE FROM {_SCHEMA}.leads WHERE id = :id"),
                         {"id": iid},
