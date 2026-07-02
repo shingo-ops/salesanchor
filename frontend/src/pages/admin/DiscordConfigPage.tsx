@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Card } from "../../components/Card";
 
 interface DiscordConfig {
   guild_id: string | null;
@@ -59,12 +60,14 @@ export default function DiscordConfigPage() {
   const [saved, setSaved] = useState(false);
 
   // チケット設定
-  const [ticketConfig, setTicketConfig] = useState<DiscordTicketConfig | null>(null);
+  const [ticketConfig, setTicketConfig] = useState<DiscordTicketConfig | null>(
+    null,
+  );
   const [ticketCategoryId, setTicketCategoryId] = useState("");
   const [ticketButtonChannelId, setTicketButtonChannelId] = useState("");
   const [staffRoleId, setStaffRoleId] = useState("");
   const [welcomeTemplate, setWelcomeTemplate] = useState(() =>
-    t("discordTicketConfig.welcomeTemplateDefault")
+    t("discordTicketConfig.welcomeTemplateDefault"),
   );
   const [smallChannelId, setSmallChannelId] = useState("");
   const [largeChannelId, setLargeChannelId] = useState("");
@@ -80,7 +83,8 @@ export default function DiscordConfigPage() {
   // 自動セットアップ
   const [autoSetupRunning, setAutoSetupRunning] = useState(false);
   const [autoSetupError, setAutoSetupError] = useState("");
-  const [autoSetupResult, setAutoSetupResult] = useState<DiscordAutoSetupResponse | null>(null);
+  const [autoSetupResult, setAutoSetupResult] =
+    useState<DiscordAutoSetupResponse | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -120,7 +124,9 @@ export default function DiscordConfigPage() {
     setError("");
     setSaved(false);
     try {
-      const updated = await api.put<DiscordConfig>("/admin/discord-config", { guild_id: guildId.trim() });
+      const updated = await api.put<DiscordConfig>("/admin/discord-config", {
+        guild_id: guildId.trim(),
+      });
       setConfig(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -133,11 +139,17 @@ export default function DiscordConfigPage() {
 
   const handleTicketSave = async () => {
     const snowflakeRe = /^\d{17,20}$/;
-    if (!ticketCategoryId.trim() || !snowflakeRe.test(ticketCategoryId.trim())) {
+    if (
+      !ticketCategoryId.trim() ||
+      !snowflakeRe.test(ticketCategoryId.trim())
+    ) {
       setTicketError(t("discordTicketConfig.invalidSnowflake"));
       return;
     }
-    if (!ticketButtonChannelId.trim() || !snowflakeRe.test(ticketButtonChannelId.trim())) {
+    if (
+      !ticketButtonChannelId.trim() ||
+      !snowflakeRe.test(ticketButtonChannelId.trim())
+    ) {
       setTicketError(t("discordTicketConfig.invalidSnowflake"));
       return;
     }
@@ -165,16 +177,19 @@ export default function DiscordConfigPage() {
         setTicketError(t("discordTicketConfig.invalidRoleName"));
         return;
       }
-      const updated = await api.put<DiscordTicketConfig>("/admin/discord-ticket-config", {
-        ticket_category_id: ticketCategoryId.trim(),
-        ticket_button_channel_id: ticketButtonChannelId.trim(),
-        staff_role_id: staffRoleId.trim() || null,
-        welcome_template: welcomeTemplate,
-        small_channel_id: smallChannelId.trim() || null,
-        large_channel_id: largeChannelId.trim() || null,
-        small_role_name: smallRoleName.trim(),
-        large_role_name: largeRoleName.trim(),
-      });
+      const updated = await api.put<DiscordTicketConfig>(
+        "/admin/discord-ticket-config",
+        {
+          ticket_category_id: ticketCategoryId.trim(),
+          ticket_button_channel_id: ticketButtonChannelId.trim(),
+          staff_role_id: staffRoleId.trim() || null,
+          welcome_template: welcomeTemplate,
+          small_channel_id: smallChannelId.trim() || null,
+          large_channel_id: largeChannelId.trim() || null,
+          small_role_name: smallRoleName.trim(),
+          large_role_name: largeRoleName.trim(),
+        },
+      );
       setTicketConfig(updated);
       setSmallChannelId(updated.small_channel_id ?? "");
       setLargeChannelId(updated.large_channel_id ?? "");
@@ -209,12 +224,16 @@ export default function DiscordConfigPage() {
     setAutoSetupError("");
     setAutoSetupResult(null);
     try {
-      const result = await api.post<DiscordAutoSetupResponse>("/admin/discord/auto-setup", {});
+      const result = await api.post<DiscordAutoSetupResponse>(
+        "/admin/discord/auto-setup",
+        {},
+      );
       setAutoSetupResult(result);
       for (const step of result.steps) {
         if (step.status !== "created" || !step.discord_id) continue;
         if (step.step === "category") setTicketCategoryId(step.discord_id);
-        if (step.step === "ch_ticket") setTicketButtonChannelId(step.discord_id);
+        if (step.step === "ch_ticket")
+          setTicketButtonChannelId(step.discord_id);
         if (step.step === "ch_member") setSmallChannelId(step.discord_id);
         if (step.step === "ch_partner") setLargeChannelId(step.discord_id);
         if (step.step === "role_staff") setStaffRoleId(step.discord_id);
@@ -242,7 +261,9 @@ export default function DiscordConfigPage() {
   if (permsLoading || loading) {
     return (
       <PageLayout navKey="nav.discordConfig">
-        <p className="text-token-text-secondary text-sm">{t("common.loading")}</p>
+        <p className="text-token-text-secondary text-sm">
+          {t("common.loading")}
+        </p>
       </PageLayout>
     );
   }
@@ -250,9 +271,11 @@ export default function DiscordConfigPage() {
   return (
     <PageLayout navKey="nav.discordConfig">
       <div className="max-w-lg space-y-10">
-
-        {/* ── Guild ID 設定 ── */}
-        <section className="space-y-6">
+        {/* ── サーバー接続（Guild ID） ── */}
+        <Card variant="container" className="space-y-6">
+          <h3 className="text-base font-semibold text-token-text-primary">
+            {t("discordConfig.guildSectionTitle")}
+          </h3>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-token-text-primary">
               {t("discordConfig.guildIdLabel")}
@@ -270,31 +293,38 @@ export default function DiscordConfigPage() {
             </p>
           </div>
 
-
           {error && <p className="text-sm text-red-500">{error}</p>}
-          {saved && <p className="text-sm text-green-600">{t("discordConfig.saved")}</p>}
+          {saved && (
+            <p className="text-sm text-green-600">{t("discordConfig.saved")}</p>
+          )}
 
           {canEdit && (
-            <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn btn-primary"
+            >
               {saving ? t("common.saving") : t("common.save")}
             </button>
           )}
-        </section>
+        </Card>
 
         {/* ── Discord サーバー自動セットアップ ── */}
         {canEdit && (
-          <section className="space-y-4">
+          <Card variant="container" className="space-y-4">
             <div>
-              <p className="text-base font-semibold text-token-text-primary">
+              <h3 className="text-base font-semibold text-token-text-primary">
                 {t("discordAutoSetup.title")}
-              </p>
+              </h3>
               <p className="mt-1 text-sm text-token-text-secondary">
                 {t("discordAutoSetup.description")}
               </p>
             </div>
 
             {!guildId && (
-              <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.disabledHint")}</p>
+              <p className="text-xs text-token-text-secondary">
+                {t("discordAutoSetup.disabledHint")}
+              </p>
             )}
 
             <button
@@ -302,31 +332,47 @@ export default function DiscordConfigPage() {
               disabled={!guildId || autoSetupRunning}
               className="btn btn-secondary"
             >
-              {autoSetupRunning ? t("discordAutoSetup.running") : t("discordAutoSetup.runButton")}
+              {autoSetupRunning
+                ? t("discordAutoSetup.running")
+                : t("discordAutoSetup.runButton")}
             </button>
 
-            {autoSetupError && <p className="text-sm text-red-500">{autoSetupError}</p>}
+            {autoSetupError && (
+              <p className="text-sm text-red-500">{autoSetupError}</p>
+            )}
 
             {autoSetupResult && (
               <div className="rounded border border-token-border bg-token-bg-subtle p-4 space-y-3">
                 {autoSetupResult.status === "completed" && (
-                  <p className="text-sm font-medium text-green-600">{t("discordAutoSetup.completed")}</p>
+                  <p className="text-sm font-medium text-green-600">
+                    {t("discordAutoSetup.completed")}
+                  </p>
                 )}
                 {autoSetupResult.status === "partial" && (
                   <>
-                    <p className="text-sm font-medium text-yellow-600">{t("discordAutoSetup.partial")}</p>
-                    <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.retryHint")}</p>
+                    <p className="text-sm font-medium text-yellow-600">
+                      {t("discordAutoSetup.partial")}
+                    </p>
+                    <p className="text-xs text-token-text-secondary">
+                      {t("discordAutoSetup.retryHint")}
+                    </p>
                   </>
                 )}
                 {autoSetupResult.status === "failed" && (
                   <>
-                    <p className="text-sm font-medium text-red-600">{t("discordAutoSetup.failed")}</p>
-                    <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.retryHint")}</p>
+                    <p className="text-sm font-medium text-red-600">
+                      {t("discordAutoSetup.failed")}
+                    </p>
+                    <p className="text-xs text-token-text-secondary">
+                      {t("discordAutoSetup.retryHint")}
+                    </p>
                   </>
                 )}
 
                 {autoSetupResult.error_hint && (
-                  <p className="text-xs text-red-500">{autoSetupResult.error_hint}</p>
+                  <p className="text-xs text-red-500">
+                    {autoSetupResult.error_hint}
+                  </p>
                 )}
 
                 <p className="text-xs font-medium text-token-text-primary">
@@ -342,9 +388,10 @@ export default function DiscordConfigPage() {
                         className={
                           step.status === "failed"
                             ? "text-red-500"
-                            : step.status === "created" || step.status === "posted"
-                            ? "text-green-600"
-                            : "text-token-text-secondary"
+                            : step.status === "created" ||
+                                step.status === "posted"
+                              ? "text-green-600"
+                              : "text-token-text-secondary"
                         }
                       >
                         {t(`discordAutoSetup.statuses.${step.status}`)}
@@ -371,17 +418,15 @@ export default function DiscordConfigPage() {
                 )}
               </div>
             )}
-          </section>
+          </Card>
         )}
 
-        <hr className="border-token-border" />
-
         {/* ── チケット機能設定 ── */}
-        <section className="space-y-6">
+        <Card variant="container" className="space-y-6">
           <div>
-            <p className="text-base font-semibold text-token-text-primary">
+            <h3 className="text-base font-semibold text-token-text-primary">
               {t("discordTicketConfig.title")}
-            </p>
+            </h3>
             <p className="mt-1 text-sm text-token-text-secondary">
               {t("discordTicketConfig.description")}
             </p>
@@ -452,7 +497,7 @@ export default function DiscordConfigPage() {
               disabled={!canEdit}
               placeholder={t("discordTicketConfig.welcomeTemplatePlaceholder")}
               maxLength={500}
-              rows={3}
+              rows={6}
               className="input w-full resize-none"
             />
             <p className="text-xs text-token-text-secondary">
@@ -535,10 +580,18 @@ export default function DiscordConfigPage() {
           </div>
 
           {ticketError && <p className="text-sm text-red-500">{ticketError}</p>}
-          {ticketSaved && <p className="text-sm text-green-600">{t("discordTicketConfig.saved")}</p>}
+          {ticketSaved && (
+            <p className="text-sm text-green-600">
+              {t("discordTicketConfig.saved")}
+            </p>
+          )}
 
           {canEdit && (
-            <button onClick={handleTicketSave} disabled={ticketSaving} className="btn btn-primary">
+            <button
+              onClick={handleTicketSave}
+              disabled={ticketSaving}
+              className="btn btn-primary"
+            >
               {ticketSaving ? t("common.saving") : t("common.save")}
             </button>
           )}
@@ -552,18 +605,26 @@ export default function DiscordConfigPage() {
               <p className="text-xs text-token-text-secondary">
                 {t("discordTicketConfig.deployButtonHint")}
               </p>
-              {deployError && <p className="text-sm text-red-500">{deployError}</p>}
-              {deployDone && <p className="text-sm text-green-600">{t("discordTicketConfig.deployDone")}</p>}
+              {deployError && (
+                <p className="text-sm text-red-500">{deployError}</p>
+              )}
+              {deployDone && (
+                <p className="text-sm text-green-600">
+                  {t("discordTicketConfig.deployDone")}
+                </p>
+              )}
               <button
                 onClick={handleDeployButton}
                 disabled={deploying}
                 className="btn btn-secondary"
               >
-                {deploying ? t("discordTicketConfig.deploying") : t("discordTicketConfig.deployButton")}
+                {deploying
+                  ? t("discordTicketConfig.deploying")
+                  : t("discordTicketConfig.deployButton")}
               </button>
             </div>
           )}
-        </section>
+        </Card>
       </div>
     </PageLayout>
   );

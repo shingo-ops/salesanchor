@@ -2651,6 +2651,7 @@
   "discordConfig": {
     "title": "Discord 連携設定",
     "description": "Discord サーバーの Guild ID を登録すると、リードの規模変更に応じてロールが自動更新されます。",
+    "guildSectionTitle": "サーバー接続",
     "guildIdLabel": "Guild ID",
     "guildIdPlaceholder": "例: 1288437029213835356",
     "guildIdHint": "Discord サーバー名を右クリック → 「サーバー ID をコピー」で取得できます。",
