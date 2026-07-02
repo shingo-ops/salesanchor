@@ -1072,3 +1072,18 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①CC が別worktree・本店へ勝手に台帳/GO を書き込む逸脱を複数回。生ログ照合と名指し1ファイル撤去で対処。②GO記録はしんご自筆のみ・代筆厳禁を再確認。③main宛PRのブランチ名は release/ または hotfix/ が必須（fix/ は関所で弾かれる）。"
   follow_up: "第1便で reaper 214/229行（②完了確認の develop→main 付替）を別途実施。カード⑥は本PRマージ後の最新 main で撮り直してから作成する。"
 
+## 2026-07-02: develop廃止 第1便 動線をmainへ付替（EV-20260702-001）
+- id: EV-20260702-001
+  type: review
+  reference: "PR #2715 merge commit 1df552b363160f5ebccb64913a1634395c9fb1be / main branch"
+  scope: "書換8: gh-pr-create-safe.sh / pr-base-check.yml / executor-preflight.sh / new-worktree.sh / backfill-active-work-done.sh / reaper-worktree.sh / validate-pr-ownership.sh / validate-worktree-start.sh ＋修正1: workflow-lint.yml ／ 削除3: auto-back-merge.yml / auto-release-pr.yml / claude-pipeline.yml"
+  problem: "PR動線・worktree土台・完了判定・各種ガードが develop 前提のままで、develop廃止（main一本化）に移行できない。"
+  fix: "既定base・土台・判定・案内文を main/release に付替（develop残存0件×8を検算）。役目消滅の自動化3件を削除。workflow-lint の検査名簿から削除済み claude-pipeline.yml の項目を除去。"
+  kgi: "KGI 5/5 達成（①既定base=main実測 ②削除3不在MISSING×3 ③develop残存0×8 ④MERGED+必須CI全pass+Shingo自筆GO #2715 ⑤develop存続=中止可能の担保 1b9a93b7）。"
+  confidence: high
+  human_verification: "Shingo が GO #2715 を自筆発行。必須チェック10件全pass・MERGED実測後に台帳DONE。"
+  decision: "第1便完了。develop は未撤去（撤去は第3便・別途自筆GO）。CI設定整合性チェックの赤1件は workflow-lint.yml 変更時にPO確認を強制する仕様の警報であり、GO #2715 で確認済み＝想定どおりの赤（必須チェック外・マージ阻害なし）。"
+  lessons: "①カードの禁止条項は便をまたいで残存し矛盾を生む→全カード冒頭に上書き宣言を必須化。②切れた表示から件数を推測しない（名簿9→8と誤予告、実物は10→9）。③絵文字直後の空白数など不可視差分はアンカー不一致の主因→hexdumpで実物確認。④行末バックスラッシュはアンカーに含めない。"
+  follow_up: "第1.5便（守りの移設：main ruleset へ UI governance gate 等）→ しんご実地確認 → 第2便。第4便へ申し送り: runner-label-lint.yml 削除（検査対象消滅の死骸）／test-manifest-generation.sh:2,197 等の残コメント掃除／『絶対に緑にならない警報』の設計改善検討（索引で類似確認のうえ）。"
+
+
