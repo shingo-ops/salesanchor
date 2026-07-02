@@ -41,7 +41,7 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 
 > **注意**: これは **GitHub Actions 自動パイプライン上の executor 選択**仕様であり、通常の人間主導開発における主 Generator は Claude Code / Sonnet。
 
-`claude-pipeline.yml` の `workflow_dispatch` 起動時に `generator_executor` で実行エンジンを選択できる:
+（旧: 自動起動CI での実行エンジン選択は #2715 の claude-pipeline.yml 削除により廃止）
 
 | 値 | 動作 |
 |----|------|
@@ -139,15 +139,15 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 - Codex が自動生成するブランチ名（例: `abc123-codex/fix-inbox`）はそのまま使ってよい
 - `develop` / `main` への直接コミット禁止
 - 完了後 `gh pr create --base main` で PR 作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
-- `develop → main` も PR 経由（直 push 禁止・Branch Protection で強制）
+- `release/*` → `main` は PR 経由（直 push 禁止・Branch Protection で強制）
   - マージ方法は必ず "Create a merge commit"（squash 禁止 — back-merge が永続発生するため）
 
-### develop 消失防止（無料運用）
+### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 
 - GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
 - `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
 - `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
-- `./scripts/dev/executor-preflight.sh` は `origin/main` と `origin/develop` の存在を毎回確認する
+- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
 - もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
 
 ---
