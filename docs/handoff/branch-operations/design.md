@@ -4,7 +4,7 @@
 
 **対象ADR**: ADR-056（Human-in-the-Loop Minimization／develop への自動化）
 **仕様書**: ../../specs/branch-operations/README.md
-**recon**: ./recon.md
+**recon**: ./recon.md（docs/handoff/branch-operations/recon.md）
 **日付**: 2026-07-01
 **担当**: Planner（Claude）
 
@@ -33,6 +33,12 @@
 | 本番アプリ正常 | app.salesanchor.jp が正常表示 |
 
 ## 技術 How・KPI
+
+## 維持の仕組み
+
+- この設計は `docs/handoff/branch-operations/recon.md` の実物確認と対で維持する。
+- 守りの移設は `main` と `develop` の両方で必須チェックを一致させ、片側だけ弱くなる状態を作らない。
+- 第1.5便で移設した守りは、PO の実地確認後に第2便以降の撤去に進む。
 
 基本方針: 「行き先を全て main へ付替 → devの守りを main へ移設 → 撤去 → 後片付け」。撤去は最後、撤去前は中止可能。
 
