@@ -1100,3 +1100,18 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   decision: "第1弾（文章ルール）＋第2弾（機械検査・warnモード）を main 反映。failへの引き上げは運用を見てPO判断（ワークフローにMAINTENANCE_ENFORCE=fail 1行のPR）。"
   lessons: "①CCが赤テストを無断で自己修正しコミットまで進める逸脱（修正内容は事後diff検証で採用可だったが手順違反）。②カードの停止条件は肯定形で一義に書く（『〜以外なら停止』は読み違いを誘発、2回停止）。③pushを飛ばしたPR作成は Head sha blank で失敗する。④机は AGENT_WORKTREE_BASE(~/worktrees)配下が必須、worktree move で中身ごと移設可能。"
   follow_up: "①warn→fail引き上げの時期判断（PO）。②修正md積み重ね（複数design）の関所対応は次便。③design-partner.md §6への教訓還流は別docs便で提案。"
+
+## 2026-07-02: develop廃止 第1.5便 守りの移設（EV-20260702-003）
+- id: EV-20260702-003
+  type: review
+  reference: "PR #2724 merge commit 257812ef01a8f88dc8cdeaf5b3a4529b787c2e49 / main ruleset 15777895（10→12件・PO自身がGitHub画面で実施）"
+  scope: ".github/workflows/worktree-integrity-check.yml（発火先にmain追加）／main branch protection ルールセット（UI governance gate・dangling-route gate を必須追加）"
+  problem: "develop撤去（第3便）後、develop側ルールセットの守り（鍵2・worktree検問）が誰にも掛からなくなる。"
+  fix: "worktree検問の発火先を [main, develop] に拡張（#2724）。main必須チェックに2ゲートを追加（10→12件）。"
+  kgi: "KGI 5/5（①UI governance gate=main必須11番目 ②dangling-route gate=同12番目 ③発火設定[main, develop]×2実測・実発火は次のactive-work.md変更PRで追認 ④既存10件無傷・12件ちょうど ⑤残差=Playwright E2E (chromium) 1件のみ・意図的除外を承認済み）。"
+  confidence: high
+  human_verification: "Shingo が GO #2724 を自筆発行・12件一覧を目視しPUT承認・404後はGitHub画面で自ら追加。MERGED実測後に完了承認。"
+  decision: "第1.5便完了。E2E必須化は見送り（1人開発＋recon運用では必須化コスト＞利益。装置は必須外で存置し警報として活用）。"
+  lessons: "①ルールセット変更はCC権限では404（権限不足は404で返る）＝管理者POの物理操作の領分。②関所の設計パス欄名は『設計:』（『設計doc:』は正規表現に掛からない）。③recon.mdの引用は後続便の削除で宙に浮く——世界を変えたら過去reconの引用整合も便に含める。④採番は毎回実測（002は別テーマが使用済み・2回連続で衝突を実測が防いだ）。"
+  follow_up: "①KGI-3実発火の追認（次にactive-work.mdを触るPRで自然に確認）。②E2E必須化はskip時判定検証込みの独立テーマ（索引確認のうえ）。③巻き戻し控え=~/ruleset-main-before-batch1-5.json。④次は しんご実地確認 → 第2便（developの鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・残コメント掃除）。"
+
