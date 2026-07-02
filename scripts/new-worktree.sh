@@ -66,15 +66,10 @@ if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
   exit 1
 fi
 
-# develop から最新化してブランチ作成
+# main から最新化してブランチ作成
 git fetch origin
 
-# develop ブランチが存在するか確認
-if git show-ref --verify --quiet "refs/remotes/origin/develop"; then
-  BASE_BRANCH="origin/develop"
-else
-  BASE_BRANCH="origin/main"
-fi
+BASE_BRANCH="origin/main"
 
 # すでに worktree が存在する場合はスキップ
 if git worktree list | grep -q "${WORKTREE_DIR}"; then
