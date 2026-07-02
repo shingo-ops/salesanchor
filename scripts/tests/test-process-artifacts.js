@@ -1183,6 +1183,114 @@ test('3点差分: feature が本当に scripts/ を変更した場合は正し�
   }
 });
 
+{
+// ─── 維持の仕組み欄テスト（正本§1.7・maintenance-gate便） ────────────────────
+console.log('\n【維持の仕組み欄テスト（単体）】');
+const { validateMaintenanceSection } = require(SCRIPT);
+
+test('維持欄: セクション自体が無い → エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 受け入れ基準\n');
+  assert.ok(errors.some(e => e.includes('維持の仕組み')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 守り手が空欄 → エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: \n- 対象: x\n');
+  assert.ok(errors.some(e => e.includes('ファイルパス') || e.includes('守り手')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 架空パスの名指し → 実在エラー', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: .github/workflows/no-such-guard.yml\n- 対象: x\n');
+  assert.ok(errors.some(e => e.includes('存在しません')), `期待エラーなし: ${errors}`);
+});
+
+test('維持欄: 実在パスの名指し → エラーなし', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: .github/workflows/migration-guard.yml\n- 対象: x\n');
+  assert.strictEqual(errors.length, 0, `誤検知: ${errors}`);
+});
+
+test('維持欄: 「人手で守る」宣言 → エラーなし', () => {
+  const errors = validateMaintenanceSection('# design\n## 維持の仕組み\n- 守り手: 人手で守る（理由: 専用関所なし）\n- 対象: x\n');
+  assert.strictEqual(errors.length, 0, `誤検知: ${errors}`);
+});
+
+console.log('\n【維持の仕組み欄テスト（統合・猶予と段階投入）】');
+
+function maintBody(reconPath, designPath) {
+  return validSOPBody(reconPath, designPath) + '触るファイル: backend/app/util_maint_test.py\n削除するファイル: なし\n';
+}
+
+test('維持欄統合: failモード＋欄なし＋PR2700 → fail', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m1/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m1/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 1, `fail期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+    assert.ok(r.stderr.includes('維持の仕組み'), `理由に維持欄が出るべき: ${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: warnモード（未設定）＋欄なし＋PR2700 → pass＋警告表示', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m2/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m2/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+    });
+    assert.strictEqual(r.code, 0, `pass期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+    assert.ok((r.stdout + r.stderr).includes('警告モード'), `警告表示が出るべき: ${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: failモード＋欄あり実在守り手＋PR2700 → pass（誤検知ゼロ）', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m3/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m3/design.md',
+      validDesignContent(reconPath) + '\n## 維持の仕組み\n- 守り手: .github/workflows/migration-guard.yml\n- 対象: テスト対象\n');
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: maintBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 0, `pass期待: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+test('維持欄統合: failモード＋欄なし＋PR2599 → pass（猶予・巻き込みゼロ）', () => {
+  setupTmp();
+  try {
+    const reconPath = writeTmp('m4/recon.md', validReconContent('scripts/check-process-artifacts.js', 10));
+    const designPath = writeTmp('m4/design.md', validDesignContent(reconPath));
+    const r = runScript({
+      CHANGED_FILES: 'backend/app/util_maint_test.py',
+      MOCK_PR_BODY: validSOPBody(reconPath, designPath),
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2599',
+      MAINTENANCE_ENFORCE: 'fail',
+    });
+    assert.strictEqual(r.code, 0, `pass期待（猶予）: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  } finally { cleanupTmp(); }
+});
+
+}
+
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`
 ${'='.repeat(50)}`);

@@ -32,6 +32,9 @@ const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
 // ─── GO権限（PO単独）────────────────────────────────────────────────────────
 const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
 
+// ─── 維持の仕組み欄の猶予閾値（GRACE_THRESHOLD_PR と同値） ───────────────────
+const MAINTENANCE_GRACE_PR = 2600;
+
 // ─── パス区分定義（design.md §1） ────────────────────────────────────────────
 const DOCS_PATTERNS = [
   /^docs\//,
@@ -379,6 +382,42 @@ function validateDesignDoc(designContent, reconPath, adr) {
   return errors;
 }
 
+// ─── 維持の仕組み欄 検証（正本§1.7・design-partner-loop maintenance-gate） ──
+// 検査A: 「## 維持の仕組み」欄の存在と「守り手:」行の非空
+// 検査B: 守り手パスの実在（「人手で守る」宣言時はスキップ）
+function validateMaintenanceSection(designContent) {
+  const errors = [];
+  const headingMatch = /^##[^\n]*維持の仕組み[^\n]*$/m.exec(designContent);
+  if (!headingMatch) {
+    errors.push('  ❌ 設計docに「## 維持の仕組み」欄がありません（正本§1.7・空欄不可）');
+    return errors;
+  }
+  const afterHeading = designContent.slice(headingMatch.index + headingMatch[0].length);
+  const nextSectionMatch = afterHeading.match(/\n##/);
+  const sectionContent = nextSectionMatch
+    ? afterHeading.slice(0, nextSectionMatch.index)
+    : afterHeading;
+  const guardianMatch = sectionContent.match(/守り手:\s*([^\n]*)/);
+  const guardianValue = guardianMatch ? guardianMatch[1].trim() : '';
+  if (!guardianValue) {
+    errors.push('  ❌ 「維持の仕組み」欄の「守り手:」が空欄です（関所パス、または「人手で守る」＋理由）');
+    return errors;
+  }
+  if (/人手で守る/.test(guardianValue)) {
+    return errors; // 関所なし宣言 — 理由の適切性は人のレビュー
+  }
+  const pathMatch = guardianValue.match(/[\w.\-]+(?:\/[\w.\-]+)+/);
+  if (!pathMatch) {
+    errors.push(`  ❌ 「守り手:」にファイルパスが見つかりません（「${guardianValue}」）`);
+    return errors;
+  }
+  const guardianPath = normalizeCitationPath(pathMatch[0]);
+  if (!existsSync(join(repoRoot, guardianPath))) {
+    errors.push(`  ❌ 守り手ファイルが存在しません: ${guardianPath}`);
+  }
+  return errors;
+}
+
 function normalizeAdrList(adrOrAdrs) {
   if (!adrOrAdrs) return [];
   const list = Array.isArray(adrOrAdrs) ? adrOrAdrs : [adrOrAdrs];
@@ -516,6 +555,20 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
       const designContent = readFileSync(fullDesignPath, 'utf8');
       const designErrors = validateDesignDoc(designContent, reconPath, adrs);
       errors.push(...designErrors);
+
+      // 維持の仕組み欄 検査（PR番号2600以上のみ・初期は警告モード）
+      const maintenancePrNumber = parseInt(process.env.PR_NUMBER, 10);
+      if (maintenancePrNumber >= MAINTENANCE_GRACE_PR) {
+        const maintenanceErrors = validateMaintenanceSection(designContent);
+        if (maintenanceErrors.length > 0) {
+          if (process.env.MAINTENANCE_ENFORCE === 'fail') {
+            errors.push(...maintenanceErrors);
+          } else {
+            console.warn('⚠️  維持の仕組み欄チェック（警告モード・将来failへ引き上げ予定）:');
+            for (const e of maintenanceErrors) console.warn(e);
+          }
+        }
+      }
     }
   }
 
@@ -751,6 +804,7 @@ module.exports = {
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
+  validateMaintenanceSection,
 };
 
 // CLI として直接実行された場合のみ main() を呼ぶ
