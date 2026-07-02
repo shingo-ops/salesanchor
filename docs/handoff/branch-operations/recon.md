@@ -68,7 +68,7 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 | # | 不明点 | 解消方法 | 状態 |
 |---|---|---|---|
 | 1 | develop 参照の全量に取りこぼしが無いか | 件数マップ 72 + 118 = 190 で二分割検算 | ✅ 解消済み |
-| 2 | deploy が develop 廃止で止まるか | `deploy.yml` L764 `continue-on-error` 実物確認 | ✅ 解消済み（止まらない） |
+| 2 | deploy が develop 廃止で止まるか | `.github/workflows/deploy.yml:764` の `continue-on-error` 実物確認 | ✅ 解消済み（止まらない） |
 | 3 | develop にのみ効く守りの特定 | ruleset 突合 + `on:` ブロック実物確認 | ✅ 解消済み（UI governance / dangling-route / worktree 整合性） |
 | 4 | ADR-056 の実在 | `docs/adr/` で grep | ✅ 解消済み |
 
