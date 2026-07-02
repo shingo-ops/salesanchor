@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| develop廃止 第1.5便（worktree検問 main 宛拡張） | Agent | `release/batch1-5-worktree-guard` の PR #2724 本文を `設計:` 表記へ正本化し、`docs/handoff/branch-operations/recon.md` の未解決引用を機械確認した結果 0件だった | PR #2724 のレビュー待ち。`main` 側で worktree 検問が発火することを確認し、必要なら第1.5便の残り作業に進む | `docs/specs/branch-operations/README.md` §3-2 / `docs/handoff/branch-operations/design.md` 第1.5便 / PR #2724 / `gh pr view 2724` | 2026-07-02 |
 | Chromatic 完全撤去 | Agent | npm依存・プラグイン・コメント除去済み（PR #chromatic-full-removal）。完了定義: `git grep -i chromatic -- ':!docs/' 0件 + ビルド成功` | PR GO待ち | `docs/handoff/chromatic-full-removal/` | 2026-06-24 |
 | Foundation F1 国台帳 `public.countries` 新設 | Agent | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` を追加し、`frontend/src/constants/countries.ts` を seed source とする migration `20260621_010000_create_countries_master.sql` を生成済み。SQLite 互換の `public.countries` rewrite も `backend/tests/conftest.py` に追加した | lint/test を回し、必要なら migration / docs / line ref を微調整して PR 化へ進める | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` / `backend/tests/conftest.py` / `migrations/20260621_010000_create_countries_master.sql` / `docs/handoff/foundation-f1-countries-master/recon.md` / `docs/handoff/foundation-f1-countries-master/design.md` | 2026-06-21 |
 | Foundation F3 流入元の統制 | Agent | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` を追加・更新中 | pytest / Playwright / lint を回し、backfill report を確認して PR 化へ進める | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/conftest.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` / `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` / `docs/handoff/foundation-f3-channel-control/recon.md` / `docs/handoff/foundation-f3-channel-control/design.md` | 2026-06-21 |
@@ -63,6 +64,16 @@
 | QA修正バッチ(Discord取込原文化/SM-4解析行/在庫0行濃淡/GEMINI passthrough) | 2026-05-29 | #1152 |
 | check:new-tokens を release PR(develop→main)で skip | 2026-05-29 | #1159 |
 | QA修正(#1152)の本番反映 (release develop→main → deploy success → backend に GEMINI_API_KEY 到達を docker inspect で確認) | 2026-05-29 | #1135 |
+
+---
+
+## バックログ
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|---------|-----|------|
+| 索引の状態語正規化（現在5系統・凡例は暫定。棚卸し便で実施） | PO待ち | `docs/specs/README.md` の状態語は `未` / `pending` / `草案` / `KGI承認済` / `公開` の5系統が残り、凡例は暫定のまま | 棚卸し便で状態語を正規化し、索引と凡例を一本化する | `docs/specs/README.md` / `git diff -- docs/specs/README.md` / PR #2741 | 2026-07-03 |
+| FEATURE-INDEXへのADR-148/110/091の補充（地図づくり便で発見したキュレーション漏れ） | PO待ち | `docs/adr/FEATURE-INDEX.md` に ADR-148 / ADR-110 / ADR-091 の記載が見当たらず、地図づくり便で補充候補として確認済み | `docs/adr/FEATURE-INDEX.md` に 3 件を補充し、索引漏れを解消する | `docs/adr/FEATURE-INDEX.md` / `git grep -il \"fx_rate\\|為替\\|FXレート\" docs/adr/` / `git grep -n \"ADR-110\" docs/adr/` / `git grep -n \"ADR-091\" docs/adr/` | 2026-07-03 |
+| worktree大掃除便（上限102/100・未保存74台の回収基準設計） | PO待ち | `git worktree list` で worktree が 100 台超に達し、回収基準は未設計 | 回収基準を定義して不要 worktree を整理し、上限超過を防ぐ | `git worktree list` / `./scripts/dev/executor-preflight.sh` | 2026-07-03 |
 
 ---
 
