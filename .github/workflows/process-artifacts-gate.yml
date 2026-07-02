@@ -37,3 +37,6 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: node scripts/check-process-artifacts.js
+
+      - name: Check canonical doc heading duplicates
+        run: bash scripts/check-doc-heading-duplicates.sh
