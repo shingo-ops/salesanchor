@@ -39,7 +39,16 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 
 ### Generator Executor 切り替え（ADR-082）
 
-> **廃止（#2715）**: 本節の自動パイプライン（claude-pipeline.yml）は develop 廃止・第1便で削除済み。executor 切り替え仕様は ADR-082 を歴史として参照。現在の主 Generator は Claude Code / Sonnet（人間主導）。
+> **廃止（#2715）**: 本節の自動起動CI（ADR-082 の executor 切り替え）は develop 廃止・第1便で対象ワークフローごと削除済み。仕様の歴史は ADR-082 を参照。現在の主 Generator は Claude Code / Sonnet（人間主導）。
+
+- **事業**: Sales Anchor — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
+- **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
+- **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
+- **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
+- **設計判断**: `docs/adr/ADR-NNN-*.md` を参照。チャット履歴を根拠にしない
+- **KPI 正本**: `docs/ai-agents/kpi.md`
+
+---
 
 ## AI Agent Pipeline
 
