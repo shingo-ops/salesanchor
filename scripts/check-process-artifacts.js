@@ -14,6 +14,8 @@
  *   GH_TOKEN      GitHub API トークン（CI では自動設定）
  * テスト用モック変数:
  *   CHANGED_FILES 改行区切りのファイルパスリスト（BASE_SHA/HEAD_SHA の代替）
+ *   MOCK_ADDED_FILES 新規追加ファイルの改行区切りリスト（added= A の代替）
+ *   MOCK_ORIGIN_MAIN_FILES latest origin/main の改行区切りファイルリスト
  *   MOCK_PR_BODY  PR 本文テキスト（GitHub API の代替）
  *   MOCK_PR_AUTHOR PR 作者ログイン（GitHub API の代替）
  */
@@ -25,6 +27,7 @@ const { analyzeRepositoryDiff } = require('./detect-external-api-change');
 const { join } = require('path');
 
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+let cachedOriginMainPaths = null;
 
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
@@ -124,6 +127,59 @@ function getExternalApiChangeReport() {
   }
 
   return analyzeRepositoryDiff({ baseRef, headRef });
+}
+
+function parseLineList(envValue) {
+  return envValue
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function getAddedFiles() {
+  if (process.env.MOCK_ADDED_FILES !== undefined) {
+    return parseLineList(process.env.MOCK_ADDED_FILES);
+  }
+
+  const base = process.env.BASE_SHA;
+  const head = process.env.HEAD_SHA;
+  if (!base || !head) {
+    return [];
+  }
+
+  const output = execSync(
+    `git diff --name-status --diff-filter=A "${base}...${head}"`,
+    { encoding: 'utf8' }
+  ).trim();
+
+  if (!output) {
+    return [];
+  }
+
+  return output
+    .split('\n')
+    .map(line => line.split('\t').slice(1).join('\t').trim())
+    .filter(Boolean);
+}
+
+function getLatestOriginMainPaths() {
+  if (process.env.MOCK_ORIGIN_MAIN_FILES !== undefined) {
+    return new Set(parseLineList(process.env.MOCK_ORIGIN_MAIN_FILES));
+  }
+
+  if (cachedOriginMainPaths) {
+    return cachedOriginMainPaths;
+  }
+
+  execSync('git fetch origin main --quiet', { stdio: 'pipe' });
+  const output = execSync('git ls-tree -r --name-only origin/main', { encoding: 'utf8' }).trim();
+  const paths = output ? parseLineList(output) : [];
+  cachedOriginMainPaths = new Set(paths);
+  return cachedOriginMainPaths;
+}
+
+function findAddedPathsAlreadyInMain(addedFiles, originMainPaths) {
+  return addedFiles.filter(filePath => originMainPaths.has(filePath));
 }
 
 // ─── PR 本文パース ────────────────────────────────────────────────────────────
@@ -615,6 +671,18 @@ function main() {
   if (hasDocsOnly) {
     console.log('✅ 書類のみの変更 — 自動スキップ（pass）');
     process.exit(0);
+  }
+
+  const addedFiles = getAddedFiles();
+  if (addedFiles.length > 0) {
+    const duplicateAddedFiles = findAddedPathsAlreadyInMain(addedFiles, getLatestOriginMainPaths());
+    if (duplicateAddedFiles.length > 0) {
+      printFailure([
+        '❌ 新規作成したファイルが最新 origin/main に既に存在します',
+        ...duplicateAddedFiles.map(filePath => `   - ${filePath}`),
+        '   → このパスは既に main に在ります。古い土台で作業している可能性が高いので、最新 origin/main に rebase してやり直してください',
+      ]);
+    }
   }
 
   // PR 作者チェック（コード変更を含む PR のみ）
