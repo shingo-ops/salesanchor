@@ -479,6 +479,9 @@ run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
 
 # スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
 run_sql migrations/20260629_020000_drop_products_condition_unit.sql
+
+# 便1b: conversation_logs の背骨必須化（echo穴埋め + 遡及backfill + NOT NULL）
+run_sql migrations/20260703_020000_conv_backbone_ben1b.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
