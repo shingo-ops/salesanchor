@@ -103,6 +103,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
     test_app.dependency_overrides[get_current_tenant] = _override_get_current_tenant
 
     inserted_ids: list[int] = []
+    origin_lead_ids: list[int] = []  # deals の出自 lead（クリーンアップ用・unpack 対象外）
 
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
@@ -122,8 +123,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
                     """),
                     {"tid": _TENANT_ID},
                 )
-                origin_ids = [int(r) for r in origin_result.scalars().all()]
-                inserted_ids.extend(origin_ids)
+                origin_lead_ids.extend(int(r) for r in origin_result.scalars().all())
 
                 await conn.execute(
                     text(f"""
@@ -132,7 +132,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
                                (2001, :tid, 'PP-Deal-2001', :lid2)
                         ON CONFLICT (id) DO NOTHING
                     """),
-                    {"tid": _TENANT_ID, "lid1": origin_ids[0], "lid2": origin_ids[1]},
+                    {"tid": _TENANT_ID, "lid1": origin_lead_ids[0], "lid2": origin_lead_ids[1]},
                 )
 
             # 3. リードを挿入（admin 権限で直接 INSERT）
@@ -315,7 +315,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
         test_app.dependency_overrides.clear()
         with suppress(Exception):
             async with admin_engine.begin() as conn:
-                for iid in inserted_ids:
+                for iid in inserted_ids + origin_lead_ids:
                     await conn.execute(
                         text(f"DELETE FROM {_SCHEMA}.leads WHERE id = :id"),
                         {"id": iid},
