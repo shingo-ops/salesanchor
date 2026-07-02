@@ -16,7 +16,6 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/branch-guardrail-close | ③④ 抜け道封じ＋詰まれば申告（branch-operations 参照修復） | 2026-07-02 | IN_PROGRESS | | | base=develop |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
 | feature/morimoto/tenant-feature-switch-mvp | テナント単位フィーチャーフラグ MVP（tenant_features テーブル・require_feature・FeatureGate） | 2026-06-27 | IN_PROGRESS | #2631 | | develop マージ済み・main リリース待ち |
