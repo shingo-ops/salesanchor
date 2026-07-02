@@ -8,13 +8,32 @@
 
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
+| ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
+| 文書の親子構造 標準ルール化 | doc-parent-child/README.md (doc-parent-child/README.md) | 公開 |
 | 商品マスタ | [product-master/README.md](product-master/README.md) | 公開 |
+| 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 |
+| GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
+| 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
+| 在庫管理 | [inventory-management/spec.md](inventory-management/spec.md) | 公開（親README未・棚卸し待ち） |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
 | ├ 品目マスタ（item） | （作成予定） | 未 |
 | ├ HTSコードマスタ | （作成予定） | 未 |
 | ├ 素材マスタ | （作成予定） | 未 |
 | ├ 状態マスタ（condition） | （作成予定） | 未 |
 | └ 単位マスタ（unit） | （作成予定） | 未 |
+| 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 |
+| 在庫（自社在庫／ドロップシッピングの2種。接点：order_item の出どころ参照） | （仕様書未作成） | **pending** |
+| 予約販売（接点：order の派生フロー） | （仕様書未作成） | **pending** |
+| 送料マスタ（接点：見積送料の算出） | （仕様書未作成） | **pending** |
+| 請求先/配送先の住所区別（接点：company/order の住所） | （仕様書未作成） | **pending** |
+
+
+## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
+以下は docs/ 直下に置かれた仕様書らしきファイル。生きているか古いかは未確認。移動・削除はここではしない。
+- docs/FEATURE_SPECIFICATION.md
+- docs/FEEDBACK_FORM_DESIGN.md
+- docs/data_deletion_callback_design.md
+- docs/products_design.md
 
 ## 追加のしかた
 新しい設計仕様書を作ったら、この表に「領域名｜相対リンク｜状態」を1行足す。

@@ -31,6 +31,7 @@ celery_app = Celery(
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
+        "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
     ],
 )
 
@@ -128,5 +129,16 @@ celery_app.conf.beat_schedule = {
     "review-mail-discord-notifier": {
         "task": "app.tasks.review_mail_monitor.check_review_mail_inbox",
         "schedule": 300.0,  # 5分
+    },
+    # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rates に UPSERT
+    # 外部 API: open.er-api.com（API キー不要）。失敗時は前回値を残して警告ログのみ。
+    "update-fx-rate-morning": {
+        "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
+        "schedule": crontab(hour=6, minute=0),  # JST 6:00（timezone=Asia/Tokyo が適用済み）
+    },
+    # 為替レート SSOT: USD/JPY を毎日 PM6:00 JST にも取得（夕方レート反映）
+    "update-fx-rate-evening": {
+        "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
+        "schedule": crontab(hour=18, minute=0),  # JST 18:00
     },
 }

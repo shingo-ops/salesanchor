@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     company_code VARCHAR(20) NOT NULL,
-    lead_id INTEGER,                                   -- FK は leads 作成後に付与
+    lead_id INTEGER NOT NULL,                          -- FK は leads 作成後に付与（便1a）
     name VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
     normalized_name VARCHAR(255),
@@ -429,7 +429,7 @@ CREATE TABLE IF NOT EXISTS {schema}.deals (
     -- CONSTRAINT 名は migration 032 と合わせる（verify の FK 存在 check が新旧テナントで揃うように）
     company_id INTEGER CONSTRAINT fk_deals_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_deals_contact REFERENCES {schema}.contacts(id),
-    lead_id INTEGER REFERENCES {schema}.leads(id),
+    lead_id INTEGER NOT NULL REFERENCES {schema}.leads(id),
     title VARCHAR(255) NOT NULL,
     amount NUMERIC(15, 2),
     currency VARCHAR(10) DEFAULT 'JPY',
@@ -489,7 +489,7 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
-    deal_id INTEGER REFERENCES {schema}.deals(id),
+    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',
@@ -1653,13 +1653,10 @@ async def create_tenant_schema(
     """
     await ddl_db.execute(text(grant_sql))
 
-    # 4. システムロール（オーナー/メンバー）をシード（DML → db）
-    await seed_system_roles(db, safe_id, schema_name)
-
-    # 4b. F3: 標準 channel_masters をシード（DML → db）
-    await seed_default_channel_masters(db, safe_id, schema_name)
-
     # 5. F16-FU2: meta_page_routing 同期トリガをセットアップ（DDL → admin_db）
+    # ★壁0修正: DDL を step4(DML)より前に集約する。admin_db を commit する前に
+    # db セッションから seed_* で tenant_X.* を参照すると 42P01 になるため、
+    # 全 DDL をここで終わらせてから commit する。
     # 既存テナントへの適用は scripts/migrate_meta_page_routing.py が担当する。
     # 新規テナントは public.meta_page_routing 表 (migration 043) が既に存在する前提。
     trigger_sql = _META_PAGE_ROUTING_TRIGGER_SQL.format(
@@ -1668,40 +1665,82 @@ async def create_tenant_schema(
     )
     await _execute_statements_preserving_do_blocks(ddl_db, trigger_sql)
 
-    # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
-    #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
-    #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
-    #
-    #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
-    #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
-    #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
-    #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
-    #    外側トランザクションを生かしたまま警告ログを出す。
+    # ★壁0修正: 全 DDL をここで確定する。
+    # admin_db が db と別オブジェクト（SA-18 Phase2 で注入される別 AsyncSession）の場合のみ
+    # commit して、db セッションから tenant_X.* が可視化されるようにする。
+    # admin_db が None（= db にフォールバック）または db と同一オブジェクト
+    # （テスト用 bootstrap_tenant_schema が conn=db=admin_db で渡すケース）の場合は
+    # 同一接続内なので commit 不要（context manager に任せる）。
+    if admin_db is not None and ddl_db is not db:
+        await ddl_db.commit()
+
+    # DDL commit 後に DML が失敗した場合、DDL は不可逆なためスキーマが孤立する。
+    # 以下の try/except で例外時に DROP SCHEMA CASCADE して孤立ゼロを維持する。
     try:
-        async with db.begin_nested():
-            await db.execute(
-                text(
-                    "INSERT INTO public.tenant_settings "
-                    "(tenant_id, spreadsheet_phase, "
-                    " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
-                    " quote_validity_days, default_currency, document_language, "
-                    " duty_incoterms, issue_mode) "
-                    "VALUES (:tid, 'A', "
-                    " 'none', 0, 0, "
-                    " 1, 'JPY', 'en', "
-                    " 'DAP', 'pdf') "
-                    "ON CONFLICT (tenant_id) DO NOTHING"
-                ),
-                {"tid": safe_id},
-            )
-    except Exception as exc:
-        # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
-        # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
-        logger.warning(
-            "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
-            safe_id,
-            exc,
+        # ★壁2修正: seed_* が salesanchor_app で tenant_X.* に INSERT できるよう
+        # RLS 用セッション変数を設定する。SET文はバインド変数を受け付けないため
+        # set_config() を使用（第3引数 true = トランザクション内のみ有効）。
+        await db.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"),
+            {"tid": str(safe_id)},
         )
+
+        # 4. システムロール（オーナー/メンバー）をシード（DML → db）
+        await seed_system_roles(db, safe_id, schema_name)
+
+        # 4b. F3: 標準 channel_masters をシード（DML → db）
+        await seed_default_channel_masters(db, safe_id, schema_name)
+
+        # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
+        #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
+        #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
+        #
+        #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
+        #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
+        #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
+        #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
+        #    外側トランザクションを生かしたまま警告ログを出す。
+        try:
+            async with db.begin_nested():
+                await db.execute(
+                    text(
+                        "INSERT INTO public.tenant_settings "
+                        "(tenant_id, spreadsheet_phase, "
+                        " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                        " quote_validity_days, default_currency, document_language, "
+                        " duty_incoterms, issue_mode) "
+                        "VALUES (:tid, 'A', "
+                        " 'none', 0, 0, "
+                        " 1, 'JPY', 'en', "
+                        " 'DAP', 'pdf') "
+                        "ON CONFLICT (tenant_id) DO NOTHING"
+                    ),
+                    {"tid": safe_id},
+                )
+        except Exception as exc:
+            # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
+            # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
+            logger.warning(
+                "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
+                safe_id,
+                exc,
+            )
+
+    except Exception:
+        # DML 失敗: DDL は既に commit 済みのためスキーマが孤立する前に DROP する。
+        # admin_db が None または db と同一オブジェクトの場合は db.rollback() で巻き戻るので不要。
+        if admin_db is not None and ddl_db is not db:
+            try:
+                await ddl_db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+                await ddl_db.commit()
+                logger.warning("Dropped orphan schema %s after DML failure", schema_name)
+            except Exception as drop_exc:
+                logger.error(
+                    "Failed to drop orphan schema %s: %s",
+                    schema_name,
+                    drop_exc,
+                )
+        raise
 
     # commitは呼び出し元で行う（監査ログ等と一括でcommitするため）
     return schema_name

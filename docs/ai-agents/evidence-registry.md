@@ -948,6 +948,48 @@ decision: "#2538 完了（正本の完了定義①〜④を満たす）。FK実�
 follow_up: public.inventory / message_translations の行数前後差分はバックアップ逆転のため省略。次回のリリースPRでバックアップ採取タイミングをマージ前に統一すること。
 ```
 
+## 2026-06-28 リリースB(#2646)デプロイOOM障害対応・サーバ容量回復・#2665デプロイ完走
+
+```text
+id: EV-20260628-001
+date: 2026-06-28
+agent: CC（Hikky-dev）+ Shingo（GO発行・本番画面確認）+ Claude（Planner）
+task: リリースB(#2646)反映デプロイのOOM失敗 → サーバ容量回復（Docker掃除＋dockerd再起動）→ 本番無害立証 → #2665デプロイ完走
+scope: 本番VPS(prod1)のディスク/メモリ/スワップ・Docker(キャッシュ/コンテナ/イメージ)・全コンテナ稼働・本番DB主要テーブル行数・app_fx_rates migration適用
+evidence:
+  - type: command
+    reference: "ssh prod1: docker system df （掃除前）"
+    summary: "Build Cache 15.07GB(RECLAIMABLE 14.96GB) / Images RECLAIMABLE 13.16GB / Volumes 1.978GB — 回収可能ゴミ総量を特定。volume/imageは今回対象外と判断"
+  - type: command
+    reference: "ssh prod1: docker builder prune -f → df -h / && docker system df"
+    summary: "ビルドキャッシュ削除でディスク 40G(85%)→27G(56%)、13GB回収。Build Cache 15.07GB→117.8MB。イメージ・コンテナ・ボリュームには未接触"
+  - type: command
+    reference: "ssh prod1: docker rm astro-webapp-backend-green （停止コンテナのみ・名前指定）"
+    summary: "deploy残存の停止コンテナ(Exited 0)1本のみ削除。稼働中(Up)コンテナには未接触"
+  - type: command
+    reference: "ssh prod1: ps aux --sort=-%mem （dockerd肥大の特定）"
+    summary: "dockerd RSS 1.0GB(全体51.6%)を占有。本番アプリ各コンテナは軽量(backend-1 115MiB等)。逼迫の主因はdockerdのヒープ抱え込みと判定"
+  - type: command
+    reference: "ssh prod1: sudo systemctl restart docker → sleep 30 → docker ps （低利用時間帯に実施）"
+    summary: "dockerd再起動。スワップ 1.1Gi→70Mi、dockerd RSS 1.0GB→323MB(677MB解放)、RAM available 310Mi→522Mi。全コンテナ復帰"
+  - type: command
+    reference: "ssh prod1: docker ps --format '{{.Names}}\\t{{.Status}}' | sort （復帰確認）"
+    summary: "本番11本すべてUp、うち4本(frontend/nginx/postgres/redis)healthy。Exited残留0件。Stage0顔ぶれと一致。※backend-1は自動復帰せずExited(0)→手動起動で復帰（落とし穴・要調査）"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: 主要テーブル行数 + テナント別 leads/companies"
+    summary: "suppliers47/tenants5/users10/inventory92/products1305 不変。本番tenant_004 leads6・companies51 / tenant_006 leads37・companies30 無傷。データ消失なし"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: SELECT to_regclass('public.app_fx_rates')"
+    summary: "掃除前null→#2665デプロイ後 app_fx_rates 存在(0行・空テーブル正常追加)。migration正常適用・既存データ非破壊"
+  - type: review
+    reference: "deploy run 28322515797(#2665) 全ステップ✓: Pre-deploy DB backup / Deploy to VPS(OOM突破) / Run migrations / Post-deploy smoke tests / success"
+    summary: "メモリ回復後の再デプロイが緑完走。前回OOMで停止した箇所を突破。スモーク緑＝本番正常応答。GO: Shingo 2026-06-28"
+confidence: high
+tradeoff: 掃除＋dockerd再起動の無害性立証と#2665デプロイ成功が同一deployで同時発生したため厳密分離は不可。ただし「処置後に本番が正常稼働・データ無傷」の事実は独立に成立。dockerd再起動は全コンテナ一時停止(数十秒〜数分)を伴う。
+decision: "dockerd再起動＋Dockerキャッシュ掃除＋停止コンテナ削除は、本番を壊さずメモリ回復する有効手段として確立。再現手順=①docker builder prune -f ②停止コンテナrm(名前確認) ③低利用帯にsudo systemctl restart docker。禁止=volume prune(データ消失)/image prune -a(別セッション使用イメージ確認要)。症状トリガー=deploy blue-green healthタイムアウト＋スワップ枯渇＋dockerd RSS肥大。"
+follow_up: "(1)dockerd再起動後backend-1が自動復帰しない件＝無人再起動時の本番停止リスク・要調査 (2)残骸再発防止＝定期自動掃除＋容量早期警報の設計 (3)根本RAM不足＝増設要否は今後のdeploy安定度で判断 (4)未使用イメージ13GB削除は森本さん確認後"
+```
+
 ## 2026-06-27 PR #2630 public.products FORCE-RLS 本番反映・KGI①②③ 実証
 
 ```text
@@ -1004,3 +1046,87 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   - KGI#5 PRテンプレに「設計仕様書（あるべき姿）」欄: ○
   - KGI#6 PR #2698 develop マージ済み: ○
 - 確認者: Shingo
+
+## 2026-07-01: 文書の親子構造 標準ルール化テーマ KGI 5/5 達成（EV-20260701-001）
+- id: EV-20260701-001
+  type: review
+  reference: "PR #2703 merge commit 365a5eec / PR #2704 merge commit 51db94b8 / main branch"
+  summary: "文書の親子構造 標準ルール化テーマ KGI 5/5 達成。型見本(#2703)＋KGI③⑤(#2704)を main 反映。人の目視合格を確認。"
+  confidence: high
+  human_verification: "Shingo が GitHub 上で目視確認。図2枚(親子構造・関所と維持)が表示・親子リンクが双方向に到達・各文書冒頭に素人向け1行説明を確認。合格。"
+  decision: "KGI①②④ 既達成 / ③ 子文書1行説明 4/4 / ⑤ 正本§1.6 明文化 1/1。達成KGI数 5/5。GO: Shingo 2026-07-01(#2704)。"
+  lessons: "①マージ方式はリポ設定に合わせる(squash禁止→merge commit)。②GO発行者は英字表記(Shingo/shingo-ops)、ひらがな不可。③正本等の危険ファイル変更PRは『触るファイル:』『削除するファイル:』欄を平打ち(行頭空白・ダッシュなし)で必須。④マージ直後にMERGEDを実測してから台帳DONE・片付け(成否未確認で進むと未完なのにDONEの記録齟齬が発生)。"
+  follow_up: "「設計に維持の仕組み欄を必須化し関所で守らせる」新テーマを引き継ぎ済み(第1弾:文章ルール＋守り手関所の名指し / 第2弾:記入と名指し実在の機械強制・案A / 適用は猶予＋warningで段階的)。"
+
+## 2026-07-01: reaper 誤検出修正（専用棚一致で push 済み扱い）（EV-20260701-002）
+- id: EV-20260701-002
+  type: review
+  reference: "PR #2705 merge commit a6050cfffe7cad4e557d956100646a922427a89c / main branch"
+  scope: "scripts/reaper-worktree.sh / scripts/tests/test-reaper-safety.sh"
+  problem: "reaper チェック2 bブロックの未push判定が @{u}..HEAD を使用。@{u} が共用側(origin/main・origin/develop)を指す設定漏れの worktree で、きれい・push済みの完了机を『未保存』と誤検出し永久保護＝堆積させていた。"
+  fix: "HEAD == origin/<branch>（専用棚一致）なら push 済みとみなす救済を b に追加。a（未コミット確認）・c（upstream未設定分岐）・チェック3（完了確認）は不変。"
+  kpi: "既存14テスト緑（回帰なし）＋再現テスト15追加。修正を stash 退避すると test15 が FAIL、復元で 15/15 PASS（テストがバグを捕捉することを立証）。"
+  confidence: high
+  human_verification: "Shingo が KPI ○A○B○C を確認。GO #2705 を自筆で発行。CI 全緑・process-artifacts gate pass を実測後マージ。"
+  decision: "reaper 未push誤検出を修正し main 反映。完了机の自動回収が想定どおり効く状態にした。"
+  lessons: "①CC が別worktree・本店へ勝手に台帳/GO を書き込む逸脱を複数回。生ログ照合と名指し1ファイル撤去で対処。②GO記録はしんご自筆のみ・代筆厳禁を再確認。③main宛PRのブランチ名は release/ または hotfix/ が必須（fix/ は関所で弾かれる）。"
+  follow_up: "第1便で reaper 214/229行（②完了確認の develop→main 付替）を別途実施。カード⑥は本PRマージ後の最新 main で撮り直してから作成する。"
+
+## 2026-07-02: develop廃止 第1便 動線をmainへ付替（EV-20260702-001）
+- id: EV-20260702-001
+  type: review
+  reference: "PR #2715 merge commit 1df552b363160f5ebccb64913a1634395c9fb1be / main branch"
+  scope: "書換8: gh-pr-create-safe.sh / pr-base-check.yml / executor-preflight.sh / new-worktree.sh / backfill-active-work-done.sh / reaper-worktree.sh / validate-pr-ownership.sh / validate-worktree-start.sh ＋修正1: workflow-lint.yml ／ 削除3: auto-back-merge.yml / auto-release-pr.yml / claude-pipeline.yml"
+  problem: "PR動線・worktree土台・完了判定・各種ガードが develop 前提のままで、develop廃止（main一本化）に移行できない。"
+  fix: "既定base・土台・判定・案内文を main/release に付替（develop残存0件×8を検算）。役目消滅の自動化3件を削除。workflow-lint の検査名簿から削除済み claude-pipeline.yml の項目を除去。"
+  kgi: "KGI 5/5 達成（①既定base=main実測 ②削除3不在MISSING×3 ③develop残存0×8 ④MERGED+必須CI全pass+Shingo自筆GO #2715 ⑤develop存続=中止可能の担保 1b9a93b7）。"
+  confidence: high
+  human_verification: "Shingo が GO #2715 を自筆発行。必須チェック10件全pass・MERGED実測後に台帳DONE。"
+  decision: "第1便完了。develop は未撤去（撤去は第3便・別途自筆GO）。CI設定整合性チェックの赤1件は workflow-lint.yml 変更時にPO確認を強制する仕様の警報であり、GO #2715 で確認済み＝想定どおりの赤（必須チェック外・マージ阻害なし）。"
+  lessons: "①カードの禁止条項は便をまたいで残存し矛盾を生む→全カード冒頭に上書き宣言を必須化。②切れた表示から件数を推測しない（名簿9→8と誤予告、実物は10→9）。③絵文字直後の空白数など不可視差分はアンカー不一致の主因→hexdumpで実物確認。④行末バックスラッシュはアンカーに含めない。"
+  follow_up: "第1.5便（守りの移設：main ruleset へ UI governance gate 等）→ しんご実地確認 → 第2便。第4便へ申し送り: runner-label-lint.yml 削除（検査対象消滅の死骸）／test-manifest-generation.sh:2,197 等の残コメント掃除／『絶対に緑にならない警報』の設計改善検討（索引で類似確認のうえ）。"
+
+
+
+## 2026-07-02: 維持の仕組み欄の必須化（正本§1.7＋関所検査A/B）KGI 6/6 達成（EV-20260702-002）
+- id: EV-20260702-002
+  type: review
+  reference: "PR #2717 merge commit 7cd89dd0 / 進捗記録 PR #2722 / main branch"
+  scope: "docs/STANDARD-WORKFLOW.md §1.7新設 / scripts/check-process-artifacts.js validateMaintenanceSection / scripts/tests/test-process-artifacts.js 9本追加 / docs/handoff/design-partner-loop-maintenance-gate/"
+  summary: "全designに維持の仕組み欄を必須化。関所が『欄と守り手の非空＋守り手パス実在』を検査（warn初期・MAINTENANCE_ENFORCE=failで引き上げ・PR2600未満は猶予）。design-partner-loop構想§5の予告便を実装。"
+  kgi: "KGI 6/6（①正本§1.7明文 1/1 ②書式3点 3/3 ③design.md実例 3/3 ④空欄検知 1/1 ⑤架空パス検知 1/1 ⑥誤検知0・猶予巻き込み0）。テスト99本全緑。本番CI実機でもPR #2717自身と#2722の2回、警告ゼロ・pass を実測。"
+  confidence: high
+  human_verification: "Shingo が 2026-07-02 14時台にブラウザで3点を目視確認: ①main正本に§1.7が表示 ②PR #2717 がMerged＋全チェック緑 ③親README§5に済(#2717)記載。GO #2717 は自筆発行済み。"
+  decision: "第1弾（文章ルール）＋第2弾（機械検査・warnモード）を main 反映。failへの引き上げは運用を見てPO判断（ワークフローにMAINTENANCE_ENFORCE=fail 1行のPR）。"
+  lessons: "①CCが赤テストを無断で自己修正しコミットまで進める逸脱（修正内容は事後diff検証で採用可だったが手順違反）。②カードの停止条件は肯定形で一義に書く（『〜以外なら停止』は読み違いを誘発、2回停止）。③pushを飛ばしたPR作成は Head sha blank で失敗する。④机は AGENT_WORKTREE_BASE(~/worktrees)配下が必須、worktree move で中身ごと移設可能。"
+  follow_up: "①warn→fail引き上げの時期判断（PO）。②修正md積み重ね（複数design）の関所対応は次便。③design-partner.md §6への教訓還流は別docs便で提案。"
+
+## 2026-07-02: develop廃止 第1.5便 守りの移設（EV-20260702-003）
+- id: EV-20260702-003
+  type: review
+  reference: "PR #2724 merge commit 257812ef01a8f88dc8cdeaf5b3a4529b787c2e49 / main ruleset 15777895（10→12件・PO自身がGitHub画面で実施）"
+  scope: ".github/workflows/worktree-integrity-check.yml（発火先にmain追加）／main branch protection ルールセット（UI governance gate・dangling-route gate を必須追加）"
+  problem: "develop撤去（第3便）後、develop側ルールセットの守り（鍵2・worktree検問）が誰にも掛からなくなる。"
+  fix: "worktree検問の発火先を [main, develop] に拡張（#2724）。main必須チェックに2ゲートを追加（10→12件）。"
+  kgi: "KGI 5/5（①UI governance gate=main必須11番目 ②dangling-route gate=同12番目 ③発火設定[main, develop]×2実測・実発火は次のactive-work.md変更PRで追認 ④既存10件無傷・12件ちょうど ⑤残差=Playwright E2E (chromium) 1件のみ・意図的除外を承認済み）。"
+  confidence: high
+  human_verification: "Shingo が GO #2724 を自筆発行・12件一覧を目視しPUT承認・404後はGitHub画面で自ら追加。MERGED実測後に完了承認。"
+  decision: "第1.5便完了。E2E必須化は見送り（1人開発＋recon運用では必須化コスト＞利益。装置は必須外で存置し警報として活用）。"
+  lessons: "①ルールセット変更はCC権限では404（権限不足は404で返る）＝管理者POの物理操作の領分。②関所の設計パス欄名は『設計:』（『設計doc:』は正規表現に掛からない）。③recon.mdの引用は後続便の削除で宙に浮く——世界を変えたら過去reconの引用整合も便に含める。④採番は毎回実測（002は別テーマが使用済み・2回連続で衝突を実測が防いだ）。"
+  follow_up: "①KGI-3実発火の追認（次にactive-work.mdを触るPRで自然に確認）。②E2E必須化はskip時判定検証込みの独立テーマ（索引確認のうえ）。③巻き戻し控え=~/ruleset-main-before-batch1-5.json。④次は しんご実地確認 → 第2便（developの鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・残コメント掃除）。"
+
+## 2026-07-03: develop廃止・現在地スナップショット（複数セッションの誤報告防止）（EV-20260703-001）
+- id: EV-20260703-001
+  type: snapshot
+  reference: "origin/main SHA 1e8d1a6e239975ece1ec5f05d6bb50a0ea4322f5（2026-07-03 01:04 JST 実測）"
+  scope: "develop廃止計画の進捗に関する全争点の一括実測。別セッションからの『未完』報告2件（worktree検問main未発火・完了記録なし・new-worktree.sh develop起点）が古いmainを見た誤判定だったため、照合基準を1枚に固定する。"
+  problem: "並行セッションが各自の時点のmainで検証し、解決済みの問題を『未完』と報告する事象が2件発生（鮮度未検証の古い写真問題）。"
+  fix: "本記録なし（コード変更なし）。以下の実測値を照合基準として登録する。"
+  kgi: "6争点すべて実測PASS: ①new-worktree.sh L80=BASE_BRANCH origin/main固定（#2715） ②claude-pipeline/auto-back-merge/auto-release-pr=MISSING×3（#2715） ③worktree-integrity-check.yml L5,L8=[main, develop]（#2724） ④main必須チェック12件 ⑤develop−main残差=Playwright E2E (chromium) 1件のみ（意図的除外・EV-20260702-003） ⑥EV-20260702-001/002/003各2箇所実在・develop存続 1b9a93b7（中止可能の担保）。"
+  confidence: high
+  human_verification: "Shingo がエビデンス確立を指示。実測生ログは設計パートナーセッションで全争点確認。"
+  decision: "第1便・第1.5便は完了済みが正。develop未撤去は意図的（第3便まで残置）。別セッションは検証前に git rev-parse origin/main を取り、本記録のSHA以降のmainと突合すること。"
+  lessons: "①並行セッションの検証は必ず実測時のmain SHAを併記する（SHAなしの『未完』報告は鮮度不明として扱う）。②解決済み事項の再報告はSHA突合で1手で棄却できる——スナップショット記録が構造的な防波堤になる。"
+  follow_up: "残作業は変わらず: しんご実地確認 → 第2便（develop鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・deploy.yml stamp・残コメント）。§3-2への守り正本リスト化は別セッション分担（衝突なし）。"
+
+

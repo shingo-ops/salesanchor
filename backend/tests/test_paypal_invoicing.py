@@ -158,7 +158,9 @@ def test_register_webhook_subscribes_invoicing_paid_and_disputes():
 
 # ── router: issue_paypal_link（email 必須・成功経路） ───────────
 async def _company_contact(client, *, email=None):
-    co = await client.post("/api/v1/companies", json={"name": "Invoicingテスト会社"})
+    from tests.helpers_txn import create_lead
+    lead_id = await create_lead(client, "Invoicingテスト会社")
+    co = await client.post("/api/v1/companies", json={"name": "Invoicingテスト会社", "lead_id": lead_id})
     assert co.status_code == 201, co.text
     company_id = co.json()["id"]
     payload = {"company_id": company_id, "display_name": "担当"}

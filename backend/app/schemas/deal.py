@@ -54,9 +54,9 @@ class Currency(str, Enum):
 
 class DealCreate(BaseModel):
     """商談登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
-    company_id: int = Field(ge=1, description="会社ID")
-    contact_id: int = Field(ge=1, description="担当者ID")
-    lead_id: int | None = Field(default=None, ge=1, description="変換元リードID")
+    lead_id: int = Field(ge=1, description="出自リードID（必須・便1a）")
+    company_id: int | None = Field(default=None, ge=1, description="会社ID（フォーム入力後に紐づく）")
+    contact_id: int | None = Field(default=None, ge=1, description="担当者ID（company指定時のみ有効）")
     title: str = Field(min_length=1, max_length=255, description="商談タイトル")
     amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2, description="金額")
     currency: Currency = Field(default=Currency.JPY, description="通貨")
@@ -105,7 +105,7 @@ class DealResponse(BaseModel):
     """
     id: int
     deal_code: str | None
-    company_id: int
+    company_id: int | None  # 便1a: 会社紐づけ前は NULL（フォーム入力後に companies 作成時にセット）
     contact_id: int | None
     lead_id: int | None
     title: str
