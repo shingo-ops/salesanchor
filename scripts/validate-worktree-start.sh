@@ -42,9 +42,9 @@ AGENT_BRANCH_PREFIX="${AGENT_BRANCH_PREFIX:-feature/morimoto/}"
 ACTUAL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 
-# main / develop / hotfix は worktree 不要（読み取り・確認作業のため）
+# main / master は worktree 不要（読み取り・確認作業のため）
 case "${CURRENT_BRANCH}" in
-  main|develop|master)
+  main|master)
     exit 0
     ;;
 esac
