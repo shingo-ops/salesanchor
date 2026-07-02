@@ -140,6 +140,7 @@ KPI: 達成KGI数 ◯/11。
 - マージ直後にMERGEDを実測してから台帳DONE・片付け（成否未確認で進むと「未完なのにDONE」の齟齬が起きる）。
 - 綺麗な作業台: git worktree add -b <branch> <path> origin/main（new-worktree.sh は develop 土台を掴むため使わない）。本店 active-work.md に1行記帳してから push。
 - カード冒頭に「本カードの許可・禁止は過去便の禁止条項をすべて上書きする」を必ず入れる。前便の禁止が残ったままのカードは矛盾として扱い、関門0の生ログ確認が終わるまで編集に入らない。
+- 手元検問（pre-commit hook等）と正本が矛盾した場合、--no-verify等での素通りは実装役の自己判断で行わず、停止してPO報告。素通りの許可は都度PO（2026-07-02 PR #2718 で実地確認。hook自体の矛盾は branch-operations 延長で対処中）。
 
 ---
 
