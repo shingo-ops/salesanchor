@@ -21,6 +21,11 @@
 | ├ 素材マスタ | （作成予定） | 未 |
 | ├ 状態マスタ（condition） | （作成予定） | 未 |
 | └ 単位マスタ（unit） | （作成予定） | 未 |
+| 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 |
+| 在庫（自社在庫／ドロップシッピングの2種。接点：order_item の出どころ参照） | （仕様書未作成） | **pending** |
+| 予約販売（接点：order の派生フロー） | （仕様書未作成） | **pending** |
+| 送料マスタ（接点：見積送料の算出） | （仕様書未作成） | **pending** |
+| 請求先/配送先の住所区別（接点：company/order の住所） | （仕様書未作成） | **pending** |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
