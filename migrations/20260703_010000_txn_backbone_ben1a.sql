@@ -2,7 +2,7 @@
 -- 冪等・全テナントループ。列が存在しない場合（CI minimal schema等）は NOTICE でスキップ。
 -- NULLが残るスキーマは NOTICE でスキップ（tenant_006 はDEMO削除後に再実行で適用）
 DO $$
-DECLARE s RECORD; n_orphan INT; n_left INT; col_exists BOOLEAN;
+DECLARE s RECORD; n_orphan INT; n_left INT; col_exists BOOLEAN; leads_exists BOOLEAN;
 BEGIN
   FOR s IN SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_[0-9]+$' ORDER BY nspname LOOP
     -- (1) companies.lead_id が存在する場合のみバックフィル・NOT NULL化
@@ -10,7 +10,13 @@ BEGIN
       SELECT 1 FROM information_schema.columns
       WHERE table_schema = s.nspname AND table_name = 'companies' AND column_name = 'lead_id'
     ) INTO col_exists;
-    IF col_exists THEN
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = s.nspname AND table_name = 'leads'
+    ) INTO leads_exists;
+    IF col_exists AND NOT leads_exists THEN
+      RAISE NOTICE '[ben1a] % : leads テーブルが存在しないためスキップ', s.nspname;
+    ELSIF col_exists THEN
       -- 孤立 company → 遡及 lead を1件ずつ作成して紐づけ（決定的・名寄せ推測なし）
       EXECUTE format($f$
         WITH orphans AS (SELECT id, tenant_id, name FROM %I.companies WHERE lead_id IS NULL),
