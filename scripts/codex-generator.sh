@@ -78,11 +78,17 @@ PROMPT="$(cat <<'PROMPT_EOF'
 
 ## 実行ルール（順番通りに従うこと）
 
+0. Plannerの作業カードが渡されている場合、カードの手順と禁止条項を逐語で最優先し、
+   以下の既定手順はカードが無い場合のみ適用する。矛盾を感じたら実行せず停止して報告。
+   編集開始前に pwd と git rev-parse HEAD / origin/main を出力し、
+   指定worktree内かつ土台一致（関門0）を生ログで確認してから進むこと。
+
 1. .claude-pipeline/active-work.md を確認し、同一機能エリアの IN_PROGRESS がないか確認。
    重複があれば STOP してユーザーに報告すること。
 
 2. 以下のコマンドでワークツリーを作成（スプリント番号・テーマ名から命名）:
-   bash scripts/new-worktree.sh feature/morimoto/<英語で簡潔なトピック>
+   git worktree add -b release/<英語で簡潔なトピック> ~/worktrees/salesanchor/release-<同トピック> origin/main
+   （scripts/new-worktree.sh は使用禁止）
 
 3. ワークツリーディレクトリに移動して実装する。
 
@@ -97,7 +103,7 @@ PROMPT="$(cat <<'PROMPT_EOF'
 
 7. git push origin HEAD
 
-8. bash scripts/gh-pr-create-safe.sh でPRを作成（--base develop は自動付与）。
+8. bash scripts/gh-pr-create-safe.sh でPRを作成（base はカードの指示に従う。既定は main）。
 
 ## 重要ルール
 - i18n: 全 UI 文字列は t("key") 経由。ja.json + en.json に同キー必須。
