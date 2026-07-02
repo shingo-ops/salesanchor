@@ -1115,3 +1115,18 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①ルールセット変更はCC権限では404（権限不足は404で返る）＝管理者POの物理操作の領分。②関所の設計パス欄名は『設計:』（『設計doc:』は正規表現に掛からない）。③recon.mdの引用は後続便の削除で宙に浮く——世界を変えたら過去reconの引用整合も便に含める。④採番は毎回実測（002は別テーマが使用済み・2回連続で衝突を実測が防いだ）。"
   follow_up: "①KGI-3実発火の追認（次にactive-work.mdを触るPRで自然に確認）。②E2E必須化はskip時判定検証込みの独立テーマ（索引確認のうえ）。③巻き戻し控え=~/ruleset-main-before-batch1-5.json。④次は しんご実地確認 → 第2便（developの鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・残コメント掃除）。"
 
+## 2026-07-03: develop廃止・現在地スナップショット（複数セッションの誤報告防止）（EV-20260703-001）
+- id: EV-20260703-001
+  type: snapshot
+  reference: "origin/main SHA 1e8d1a6e239975ece1ec5f05d6bb50a0ea4322f5（2026-07-03 01:04 JST 実測）"
+  scope: "develop廃止計画の進捗に関する全争点の一括実測。別セッションからの『未完』報告2件（worktree検問main未発火・完了記録なし・new-worktree.sh develop起点）が古いmainを見た誤判定だったため、照合基準を1枚に固定する。"
+  problem: "並行セッションが各自の時点のmainで検証し、解決済みの問題を『未完』と報告する事象が2件発生（鮮度未検証の古い写真問題）。"
+  fix: "本記録なし（コード変更なし）。以下の実測値を照合基準として登録する。"
+  kgi: "6争点すべて実測PASS: ①new-worktree.sh L80=BASE_BRANCH origin/main固定（#2715） ②claude-pipeline/auto-back-merge/auto-release-pr=MISSING×3（#2715） ③worktree-integrity-check.yml L5,L8=[main, develop]（#2724） ④main必須チェック12件 ⑤develop−main残差=Playwright E2E (chromium) 1件のみ（意図的除外・EV-20260702-003） ⑥EV-20260702-001/002/003各2箇所実在・develop存続 1b9a93b7（中止可能の担保）。"
+  confidence: high
+  human_verification: "Shingo がエビデンス確立を指示。実測生ログは設計パートナーセッションで全争点確認。"
+  decision: "第1便・第1.5便は完了済みが正。develop未撤去は意図的（第3便まで残置）。別セッションは検証前に git rev-parse origin/main を取り、本記録のSHA以降のmainと突合すること。"
+  lessons: "①並行セッションの検証は必ず実測時のmain SHAを併記する（SHAなしの『未完』報告は鮮度不明として扱う）。②解決済み事項の再報告はSHA突合で1手で棄却できる——スナップショット記録が構造的な防波堤になる。"
+  follow_up: "残作業は変わらず: しんご実地確認 → 第2便（develop鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・deploy.yml stamp・残コメント）。§3-2への守り正本リスト化は別セッション分担（衝突なし）。"
+
+
