@@ -43,8 +43,8 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ## ブランチ運用ルール
 
-- 作業前に `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止・移行中。正: `docs/specs/branch-operations/`）
-- **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
+- 作業前に `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止・移行中。正: `docs/specs/branch-operations/README.md §3-3`）
+- **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。正典: `docs/specs/branch-operations/README.md §3-3`／詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
 - **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
 - `develop` / `main` への直接コミット禁止
 - 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）

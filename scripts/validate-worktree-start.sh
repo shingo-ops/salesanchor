@@ -71,6 +71,7 @@ case "${ACTUAL_ROOT}" in
     echo "   1. bash scripts/new-worktree.sh ${CURRENT_BRANCH} --claude"
     echo "   2. 作成された個室ディレクトリで作業してください"
     echo "      ${AGENT_WORKTREE_BASE}/salesanchor/$(echo "${CURRENT_BRANCH}" | tr '/' '-')/"
+    echo "   正典: docs/specs/branch-operations/README.md §3-3"
     echo ""
     exit 1
     ;;
