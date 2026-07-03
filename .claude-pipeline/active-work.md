@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/txn-conv-ben1b | 便1b 会話ログの背骨必須化（echo穴埋め・遡及backfill・NOT NULL） | 2026-07-03 | IN_PROGRESS | | main | base=main・push/PR待ち |
 | release/branch-guardrail-close-main | process-artifacts gate 二重定義検出（docs / script） | 2026-07-02 | IN_PROGRESS | | main | base=main・PO GO待ち |
 | release/worktree-canon-main | worktree 手順の正典化（docs / script） | 2026-07-02 | IN_PROGRESS | | main | base=main・new-worktree.sh 正典化・PO GO待ち |
 | release/go-record-transcription-auto | GO記録の自動転記（案X）正本変更（docs-only） | 2026-07-02 | IN_PROGRESS | | main | base=main・docs-only・PO GO待ち |

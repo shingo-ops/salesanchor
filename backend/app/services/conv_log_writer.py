@@ -32,7 +32,7 @@ async def write_conversation_log(
     db: AsyncSession,
     *,
     tenant_id: int,
-    lead_id: int | None,
+    lead_id: int,
     contact_id: int | None = None,
     channel_type: str,
     channel_identity: str | None = None,
@@ -62,8 +62,11 @@ async def write_conversation_log(
     Returns:
         挿入された id。external_message_id 重複でスキップした場合は None。
     """
-    company_id = await _get_company_id_for_lead(db, lead_id) if lead_id else None
-    if contact_id is None and lead_id:
+    if lead_id is None:  # 型上は来ないが動的呼び出しの防波堤（便1b）
+        raise ValueError("conversation_logs は lead_id 必須です（便1b: 背骨）")
+
+    company_id = await _get_company_id_for_lead(db, lead_id)
+    if contact_id is None:
         contact_id = await _get_contact_id_for_lead(db, lead_id)
     raw_json = json.dumps(raw_payload) if raw_payload else None
 
@@ -76,7 +79,7 @@ async def write_conversation_log(
             ) VALUES (
                 :tenant_id, :lead_id, :contact_id, :company_id,
                 :channel_type, :channel_identity, :direction, :sender,
-                :content_text, :external_message_id, :raw_payload::jsonb, :occurred_at
+                :content_text, :external_message_id, :raw_payload, :occurred_at
             )
             ON CONFLICT (external_message_id) WHERE external_message_id IS NOT NULL
             DO NOTHING

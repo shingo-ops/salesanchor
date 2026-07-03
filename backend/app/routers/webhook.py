@@ -533,6 +533,53 @@ async def _find_lead_id_for_psid(
     return int(row[0]) if row else None
 
 
+async def _create_outbound_lead_for_echo(
+    db: AsyncSession,
+    schema: str,
+    tenant_id: int,
+    psid: str,
+) -> int:
+    """echo 受信時に未登録の相手へ outbound lead を作成して id を返す。"""
+    customer_name = f"Messenger:{psid[-8:]}"
+    ins = await db.execute(
+        text("""
+            INSERT INTO leads (
+                tenant_id, customer_name, channel_type, initiative, type, status, notes
+            )
+            VALUES (
+                :tenant_id, :customer_name, :channel_type, 'outbound', 'Inbound', 'lead', :notes
+            )
+            RETURNING id
+        """),
+        {
+            "tenant_id": tenant_id,
+            "customer_name": customer_name,
+            "channel_type": "messenger",
+            "notes": "[便1b] echo受信時に自動作成",
+        },
+    )
+    row = ins.first()
+    if row is None:
+        raise RuntimeError("echo lead creation failed")
+
+    lead_id = int(row[0])
+
+    await db.execute(
+        text("""
+            INSERT INTO lead_channels (lead_id, platform, external_id)
+            VALUES (:lead_id, :platform, :external_id)
+            ON CONFLICT (platform, external_id) DO NOTHING
+        """),
+        {"lead_id": lead_id, "platform": "messenger", "external_id": psid},
+    )
+    await db.execute(
+        text("UPDATE leads SET lead_code = :code WHERE id = :id"),
+        {"code": f"LD-{lead_id:05d}", "id": lead_id},
+    )
+    await db.commit()
+    return lead_id
+
+
 async def _persist_meta_message(
     db: AsyncSession,
     *,
@@ -768,10 +815,19 @@ async def process_messenger_event(body: dict) -> None:
 
                         # ── J1 エコー受信（アプリ外送信）: conv_logs のみ書く ──
                         if m.get("is_echo"):
-                            echo_lead_id = await _find_lead_id_for_psid(
-                                db, platform, m["sender_id"]
-                            )
                             try:
+                                echo_lead_id = await _find_lead_id_for_psid(
+                                    db, platform, m["sender_id"]
+                                )
+                                if echo_lead_id is None:
+                                    echo_lead_id = (
+                                        await _create_outbound_lead_for_echo(
+                                            db,
+                                            f"tenant_{tenant_id:03d}",
+                                            tenant_id,
+                                            m["sender_id"],
+                                        )
+                                    )
                                 await write_conversation_log(
                                     db,
                                     tenant_id=tenant_id,
@@ -788,7 +844,7 @@ async def process_messenger_event(body: dict) -> None:
                                 await reset_tenant_context(db, tenant_id)
                             except Exception:
                                 logging.warning(
-                                    "[Meta] echo conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
+                                    "[Meta] echo lead/conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
                                     platform, m.get("message_id"),
                                     exc_info=True,
                                 )
