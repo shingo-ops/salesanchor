@@ -1143,5 +1143,20 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
   follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
 
+## 2026-07-03: hooks検証（見張りの生死と阻止力）（EV-20260703-003）
+- id: EV-20260703-003
+  type: investigation
+  reference: "単体試験 exit=0×9（cwd=HOME/本店）／反応試験 2026-07-03 13:42 JST／実戦ログ PR #2748 マージ時 PreToolUse hook error×3→実行継続"
+  scope: "~/.claude/settings.json（hooks住所）／~/.claude/scripts/ 5フック／実戦挙動の突合"
+  problem: "hook failed頻発報告→『住所化け（/.claude/…）で見張り不在』の仮説が別セッションから提起された。"
+  fix: "なし（検証のみ）。仮説は棄却。"
+  kgi: "①住所は全件 ~/.claude/ 形式=化け仮説棄却 ②危険入力で danger-hook/scope-guard/worktree-guard が検知 exit=1＋警告文（gh pr merge/push --force/rm -rf/他人PR操作） ③しかし実戦では警告後に gh pr merge が実行完了=阻止力なしの疑い濃厚（表示『BLOCKED』と実効が不一致）。"
+  confidence: high（検知の健在）/ medium（阻止力の機序は未修理・未設計）
+  human_verification: "Shingo が hooks先行の順序を承認。反応試験の生ログを確認。"
+  decision: "対処A（住所修正）は不要でクローズ。阻止力の修理（フックの返し方の見直し・~/.claude/=リポ外につきPO二段構え）は独立対処として次テーマ群へ。"
+  lessons: "①転記化けが偽の真因を作る——実測が5分で棄却した。②『BLOCKED表示=阻止』ではない。守りの検証は表示でなく実効（実戦ログとの突合）で判定する。"
+  follow_up: "①B+C便: generator.md但し書き（Plannerカード優先）＋応答様式節＋design-partner.mdカード設計規約＋check-freshness main化。②フック阻止力の修理（バックアップ→全文提示→PO承認→適用→阻止の実測）。③dangling-route gate誤検知対策（merge-base化 or docs-onlyスキップ・独立テーマ）。"
+
+
 
 
