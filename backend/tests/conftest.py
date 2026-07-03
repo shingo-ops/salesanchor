@@ -121,6 +121,8 @@ async def test_engine():
             statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
         if "public.tenant_features" in statement:
             statement = statement.replace("public.tenant_features", "tenant_features")
+        if "public.suppliers" in statement:
+            statement = statement.replace("public.suppliers", "suppliers")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -855,6 +857,29 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL DEFAULT 999,
+                order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                product_id INTEGER REFERENCES products(id),
+                product_name VARCHAR(255) NOT NULL,
+                name_en VARCHAR(255),
+                condition VARCHAR(50),
+                unit VARCHAR(20),
+                sku VARCHAR(100),
+                quantity INTEGER NOT NULL DEFAULT 1,
+                unit_price NUMERIC(15, 2) NOT NULL,
+                subtotal NUMERIC(15, 2) NOT NULL,
+                weight NUMERIC(10, 3),
+                hs_code VARCHAR(20),
+                usd_unit_value NUMERIC(15, 2),
+                exchange_rate_usd NUMERIC(12, 4),
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS invoices (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
@@ -968,6 +993,8 @@ async def setup_test_db(test_engine):
                 total_amount NUMERIC(15, 2) DEFAULT 0,
                 ordered_at TIMESTAMP,
                 received_at TIMESTAMP,
+                paid_at TIMESTAMP,
+                shipping_fee NUMERIC(15, 2) DEFAULT 0,
                 notes TEXT,
                 created_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -982,6 +1009,7 @@ async def setup_test_db(test_engine):
                 quantity INTEGER NOT NULL DEFAULT 1,
                 unit_cost NUMERIC(15, 2) NOT NULL,
                 subtotal NUMERIC(15, 2) NOT NULL,
+                order_item_id INTEGER REFERENCES order_items(id),
                 sort_order INTEGER DEFAULT 0
             )
         """))
@@ -1318,6 +1346,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM notification_channels"))
         await conn.execute(text("DELETE FROM purchase_order_items"))
         await conn.execute(text("DELETE FROM purchase_orders"))
+        await conn.execute(text("DELETE FROM order_items"))
         await conn.execute(text("DELETE FROM suppliers"))
         # Sprint 8: tenant_profile
         await conn.execute(text("DELETE FROM tenant_profile"))

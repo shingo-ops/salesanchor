@@ -492,6 +492,9 @@ run_sql migrations/20260629_020000_drop_products_condition_unit.sql
 
 # 便1b: conversation_logs の背骨必須化（echo穴埋め + 遡及backfill + NOT NULL）
 run_sql migrations/20260703_020000_conv_backbone_ben1b.sql
+
+# 便2: order_items 新設＋仕入接続
+run_sql migrations/20260703_030000_order_items_ben2.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

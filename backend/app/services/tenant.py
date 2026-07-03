@@ -587,6 +587,10 @@ BEGIN
         CREATE TRIGGER trg_companies_updated_at BEFORE UPDATE ON {schema}.companies
             FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_order_items_updated_at' AND tgrelid = '{schema}.order_items'::regclass) THEN
+        CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON {schema}.order_items
+            FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_contacts_updated_at' AND tgrelid = '{schema}.contacts'::regclass) THEN
         CREATE TRIGGER trg_contacts_updated_at BEFORE UPDATE ON {schema}.contacts
             FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
@@ -910,6 +914,29 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     sort_order INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS {schema}.order_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    order_id INTEGER NOT NULL REFERENCES {schema}.orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES public.products(id),
+    product_name VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    condition VARCHAR(50),
+    unit VARCHAR(20),
+    sku VARCHAR(100),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(15, 2) NOT NULL,
+    subtotal NUMERIC(15, 2) NOT NULL,
+    weight NUMERIC(10, 3),
+    hs_code VARCHAR(20),
+    usd_unit_value NUMERIC(15, 2),
+    exchange_rate_usd NUMERIC(12, 4),
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON {schema}.order_items (order_id);
+
 -- === Phase 3: 仕入れ・調達管理 ===
 
 CREATE TABLE IF NOT EXISTS {schema}.suppliers (
@@ -951,6 +978,8 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
     total_amount NUMERIC(15, 2) DEFAULT 0,
     ordered_at TIMESTAMPTZ,
     received_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    shipping_fee NUMERIC(15, 2) DEFAULT 0,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -964,6 +993,7 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
+    order_item_id INTEGER REFERENCES {schema}.order_items(id),
     sort_order INTEGER DEFAULT 0
 );
 
@@ -1130,6 +1160,7 @@ _RLS_ENABLE_SQL = """
 -- ADR-089 Sprint 5: customers は廃止済。RLS は companies 体系のみ。
 ALTER TABLE {schema}.deals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.roles ENABLE ROW LEVEL SECURITY;
@@ -1188,6 +1219,10 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_orders' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_orders ON {schema}.orders
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_items' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_items ON {schema}.order_items
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_audit_logs' AND schemaname = '{schema_raw}') THEN

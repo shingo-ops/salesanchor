@@ -39,6 +39,8 @@ from app.schemas.order import (
     OrderCreate,
     OrderGroupCountsResponse,
     OrderListResponse,
+    OrderItemCreate,
+    OrderItemResponse,
     OrderPaidStatusUpdate,
     OrderResponse,
     OrderStatus,
@@ -154,6 +156,25 @@ def _build_orders_filters(
         )
         params["search"] = f"%{sanitized}%"
     return conditions, params
+
+
+async def _get_order_items(db: AsyncSession, tenant_id: int, order_id: int) -> list[dict]:
+    order_items_t = tenant_table_ref(db, tenant_id, "order_items")
+    result = await db.execute(
+        text(
+            f"""
+            SELECT
+                id, order_id, product_id, product_name, name_en, condition, unit, sku,
+                quantity, unit_price, subtotal, weight, hs_code, usd_unit_value,
+                exchange_rate_usd, sort_order
+            FROM {order_items_t}
+            WHERE order_id = :order_id
+            ORDER BY sort_order, id
+            """
+        ),
+        {"order_id": order_id},
+    )
+    return [dict(row) for row in result.mappings().all()]
 
 
 @router.get("/orders", response_model=list[OrderListResponse],
@@ -332,6 +353,91 @@ async def get_order(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
     return OrderResponse(**row)
+
+
+@router.get(
+    "/orders/{order_id}/items",
+    response_model=list[OrderItemResponse],
+    dependencies=[Depends(require_permission("orders.view"))],
+)
+async def list_order_items(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    exists = await db.execute(
+        text(f"SELECT id FROM {orders_t} WHERE id = :id"),
+        {"id": order_id},
+    )
+    if exists.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+    return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
+
+
+@router.post(
+    "/orders/{order_id}/items",
+    response_model=list[OrderItemResponse],
+    status_code=201,
+    dependencies=[Depends(require_permission("orders.update"))],
+)
+async def create_order_items(
+    order_id: int,
+    items: list[OrderItemCreate],
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    order_items_t = tenant_table_ref(db, tenant_id, "order_items")
+    if not items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="items を1件以上指定してください")
+    exists = await db.execute(
+        text(f"SELECT id FROM {orders_t} WHERE id = :id"),
+        {"id": order_id},
+    )
+    if exists.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+
+    for item in items:
+        await db.execute(
+            text(
+                f"""
+                INSERT INTO {order_items_t} (
+                    tenant_id, order_id, product_id, product_name, name_en, condition, unit,
+                    sku, quantity, unit_price, subtotal, weight, hs_code, usd_unit_value,
+                    exchange_rate_usd, sort_order
+                )
+                VALUES (
+                    :tenant_id, :order_id, :product_id, :product_name, :name_en, :condition, :unit,
+                    :sku, :quantity, :unit_price, :subtotal, :weight, :hs_code, :usd_unit_value,
+                    :exchange_rate_usd, :sort_order
+                )
+                """
+            ),
+            {
+                "tenant_id": tenant_id,
+                "order_id": order_id,
+                "product_id": item.product_id,
+                "product_name": item.product_name,
+                "name_en": item.name_en,
+                "condition": item.condition,
+                "unit": item.unit,
+                "sku": item.sku,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "subtotal": item.subtotal,
+                "weight": item.weight,
+                "hs_code": item.hs_code,
+                "usd_unit_value": item.usd_unit_value,
+                "exchange_rate_usd": item.exchange_rate_usd,
+                "sort_order": item.sort_order,
+            },
+        )
+
+    await db.commit()
+    return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=201,
