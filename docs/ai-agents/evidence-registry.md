@@ -1217,7 +1217,7 @@ follow_up: 便2 の設計材料整理に進む
   date: 2026-07-03
   agent: Codex
   task: エージェント完結の設計体制 To-Be 文書の納品前登録
-  scope: docs/specs/agent-complete-design/README.md, docs/specs/README.md, tasks/todo.md
+  scope: docs/specs/agent-complete-design/README.md, docs/specs/agent-complete-design/ideal-state.md, docs/specs/agent-complete-design/kgi.md, docs/specs/README.md, tasks/todo.md
   evidence:
     - type: command
       reference: "date -u +'FRESH-RUN-START %Y-%m-%dT%H:%M:%SZ'"
@@ -1227,7 +1227,13 @@ follow_up: 便2 の設計材料整理に進む
       summary: "worktree release/agent-complete-design を origin/main 9af6a97a へ fast-forward した"
     - type: file
       reference: docs/specs/agent-complete-design/README.md
-      summary: "PO承認済み To-Be 本文をそのまま新規納品する"
+      summary: "3ファイル標準の表紙として To-Be 文書を納品する"
+    - type: file
+      reference: docs/specs/agent-complete-design/ideal-state.md
+      summary: "PO自筆のあるべき姿を正本として分離する"
+    - type: file
+      reference: docs/specs/agent-complete-design/kgi.md
+      summary: "KGI と運用を表紙から分離して正本化する"
     - type: file
       reference: docs/specs/README.md
       summary: "索引に agent-complete-design の 1 行を追加する"
