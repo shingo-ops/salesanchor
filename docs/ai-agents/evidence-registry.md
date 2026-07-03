@@ -1026,6 +1026,33 @@ decision: "KGI①②③ 全達成。①FORCE-RLS+4ポリシー本番確認済み
 follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行が他社から見えない」の実データによる確認は商品マスタ整備後に実施。
 ```
 
+## 2026-07-03 PR #2751 便1b 会話ログの背骨必須化
+
+```text
+id: EV-20260703-004
+date: 2026-07-03
+agent: CC
+task: 便1b 会話ログの背骨必須化（echo経路のoutbound lead自動作成・遡及lead逆造成1件・NOT NULL）
+scope: PR #2751, docs/specs/transaction-flow/README.md, docs/handoff/txn-flow-ben1b/design.md, 本番tenant_004 after検証
+evidence:
+  - type: command
+    reference: "PO Shingo の after検証報告（2026-07-03）"
+    summary: "conversation_logs null_convs=0 / [便1b]new_leads=1 / lead_id is_nullable=NO を目視報告済み"
+  - type: command
+    reference: "dry-run 再実行（2026-07-03）"
+    summary: "BEFORE1 → AFTER0 → ROLLBACK。初回はテナント間スキーマ差分でエラー停止したが、最小列方式へ修正後に合格"
+  - type: command
+    reference: "/tmp/backup_tenant004_ben1b.sql"
+    summary: "tenant_004 バックアップを取得済み"
+  - type: command
+    reference: "tenant_006 の dry-run notice"
+    summary: "NULL 3 件のため NOTICE スキップ（DEMO 削除後に再実行で適用）"
+confidence: high
+tradeoff: 本番 after 検証は読み取り専用で実施し、実データの変更は行っていない
+decision: 便1b は本番 tenant_004 の after 検証で成立確認済み
+follow_up: 便2 の設計材料整理に進む
+```
+
 ## Review Rules
 
 - `confidence: high` は一次情報が複数あり、再現可能な検証がある場合に限る
@@ -1143,8 +1170,22 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
   follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
 
-## 2026-07-03: 文書体系（ナレッジベース）起票（EV-20260703-003）
+## 2026-07-03: hooks検証（見張りの生死と阻止力）（EV-20260703-003）
 - id: EV-20260703-003
+  type: investigation
+  reference: "単体試験 exit=0×9（cwd=HOME/本店）／反応試験 2026-07-03 13:42 JST／実戦ログ PR #2748 マージ時 PreToolUse hook error×3→実行継続"
+  scope: "~/.claude/settings.json（hooks住所）／~/.claude/scripts/ 5フック／実戦挙動の突合"
+  problem: "hook failed頻発報告→『住所化け（/.claude/…）で見張り不在』の仮説が別セッションから提起された。"
+  fix: "なし（検証のみ）。仮説は棄却。"
+  kgi: "①住所は全件 ~/.claude/ 形式=化け仮説棄却 ②危険入力で danger-hook/scope-guard/worktree-guard が検知 exit=1＋警告文（gh pr merge/push --force/rm -rf/他人PR操作） ③しかし実戦では警告後に gh pr merge が実行完了=阻止力なしの疑い濃厚（表示『BLOCKED』と実効が不一致）。"
+  confidence: high（検知の健在）/ medium（阻止力の機序は未修理・未設計）
+  human_verification: "Shingo が hooks先行の順序を承認。反応試験の生ログを確認。"
+  decision: "対処A（住所修正）は不要でクローズ。阻止力の修理（フックの返し方の見直し・~/.claude/=リポ外につきPO二段構え）は独立対処として次テーマ群へ。"
+  lessons: "①転記化けが偽の真因を作る——実測が5分で棄却した。②『BLOCKED表示=阻止』ではない。守りの検証は表示でなく実効（実戦ログとの突合）で判定する。"
+  follow_up: "①B+C便: generator.md但し書き（Plannerカード優先）＋応答様式節＋design-partner.mdカード設計規約＋check-freshness main化。②フック阻止力の修理（バックアップ→全文提示→PO承認→適用→阻止の実測）。③dangling-route gate誤検知対策（merge-base化 or docs-onlyスキップ・独立テーマ）。"
+
+## 2026-07-03: 文書体系（ナレッジベース）起票（EV-20260703-005）
+- id: EV-20260703-005
   type: review
   reference: "release/doc-estate-theme worktree / git diff --numstat / git diff / bash scripts/check-doc-heading-duplicates.sh"
   scope: "docs/specs/doc-estate/README.md / docs/specs/doc-estate/ideal-state.md / docs/specs/doc-estate/kgi.md / docs/specs/README.md / tasks/todo.md / .claude-pipeline/active-work.md"
@@ -1156,5 +1197,17 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   decision: "文書体系テーマを §1.5 の 3 ファイル標準構成で起票し、specs 索引から辿れる状態にした。"
   lessons: "①新規ファイルは intent-to-add で diff に出してから検算すると見落としが減る。②worktree を手動作成した場合は active-work 登録を忘れない。③索引更新は 1 行差分でも、親テーマが無いと発見性が落ちるため、親テーマの先行登録が有効。"
   follow_up: "GO 後に PR 作成、必要なら merge commit で main へ反映する。"
-
-
+## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
+- id: EV-20260703-003
+  date: 2026-07-03
+  subject: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）
+  pr: "#2743"
+  spec: docs/specs/transaction-flow/README.md（K1/K2/K3根拠・KGI承認2026-07-02）
+  design: docs/handoff/txn-flow-asis-recon/design.md
+  evidence: |
+    本番tenant_004 after検証（2026-07-03・読み取り専用）:
+    null_companies=0 / total=51, new_leads=49（notes '[便1a]%'）,
+    companies.lead_id is_nullable=NO。
+    dry-run: BEFORE49→AFTER0→ROLLBACK、バックアップ /tmp/backup_tenant004_ben1a.sql（10,005行）。
+    tenant_006: deals 18件/orders 26件 NOTICEスキップ（DEMO削除後に再実行で適用）。
+  confirmed: "○（PO Shingo・2026-07-03・after検証3値を目視）"

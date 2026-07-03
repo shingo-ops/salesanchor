@@ -215,6 +215,7 @@
 | release/morimoto/inbox-ui-text-j1-j5 | 送信ガード/翻訳プレビュー UI 微調整（便1 J1-J5）文言+自動生成 | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
 | feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | IN_PROGRESS | | | |
+| release/evidence-ben1a | （記入してください） | 2026-07-03 02:38 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
