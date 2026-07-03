@@ -1211,3 +1211,30 @@ follow_up: 便2 の設計材料整理に進む
     dry-run: BEFORE49→AFTER0→ROLLBACK、バックアップ /tmp/backup_tenant004_ben1a.sql（10,005行）。
     tenant_006: deals 18件/orders 26件 NOTICEスキップ（DEMO削除後に再実行で適用）。
   confirmed: "○（PO Shingo・2026-07-03・after検証3値を目視）"
+
+## 2026-07-03: エージェント完結の設計体制 To-Be 納品前登録（EV-20260703-006）
+- id: EV-20260703-006
+  date: 2026-07-03
+  agent: Codex
+  task: エージェント完結の設計体制 To-Be 文書の納品前登録
+  scope: docs/specs/agent-complete-design/README.md, docs/specs/README.md, tasks/todo.md
+  evidence:
+    - type: command
+      reference: "date -u +'FRESH-RUN-START %Y-%m-%dT%H:%M:%SZ'"
+      summary: "2026-07-03T06:43:00Z に worktree 作業を開始した"
+    - type: command
+      reference: "git merge --ff-only origin/main"
+      summary: "worktree release/agent-complete-design を origin/main 9af6a97a へ fast-forward した"
+    - type: file
+      reference: docs/specs/agent-complete-design/README.md
+      summary: "PO承認済み To-Be 本文をそのまま新規納品する"
+    - type: file
+      reference: docs/specs/README.md
+      summary: "索引に agent-complete-design の 1 行を追加する"
+    - type: file
+      reference: tasks/todo.md
+      summary: "新規タスクを進行中として記録した"
+confidence: medium
+tradeoff: recon 前納品のため、親リンクと §4 は後続便で更新が必要になる
+decision: "To-Be 文書をリポジトリに先行納品し、索引と台帳を同時に固定する"
+follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親リンクを確定する"
