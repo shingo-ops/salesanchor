@@ -1171,3 +1171,17 @@ follow_up: 便2 の設計材料整理に進む
   follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
 
 
+## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
+- id: EV-20260703-003
+  date: 2026-07-03
+  subject: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）
+  pr: "#2743"
+  spec: docs/specs/transaction-flow/README.md（K1/K2/K3根拠・KGI承認2026-07-02）
+  design: docs/handoff/txn-flow-asis-recon/design.md
+  evidence: |
+    本番tenant_004 after検証（2026-07-03・読み取り専用）:
+    null_companies=0 / total=51, new_leads=49（notes '[便1a]%'）,
+    companies.lead_id is_nullable=NO。
+    dry-run: BEFORE49→AFTER0→ROLLBACK、バックアップ /tmp/backup_tenant004_ben1a.sql（10,005行）。
+    tenant_006: deals 18件/orders 26件 NOTICEスキップ（DEMO削除後に再実行で適用）。
+  confirmed: "○（PO Shingo・2026-07-03・after検証3値を目視）"
