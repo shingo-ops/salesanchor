@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/ledger-cleanup-2759 | PR #2759 / #2761 の台帳更新 | 2026-07-03 12:17 | IN_PROGRESS | #2760 | main | PR #2760 へ追記中 |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |
 | release/agent-complete-design-cycle1 | あるべき姿7項目目の追加とKGI⑧の新設（変更一巡便 #1） | 2026-07-03 12:02 | DONE | #2759 | main | merged: PR #2759 / dc8c4e41 |
 | release/agent-complete-design-tobe2 | track-recordと成長回路の追加（To-Be拡張便） | 2026-07-03 12:09 | DONE | #2761 | main | merged: PR #2761 / 53852779 |
