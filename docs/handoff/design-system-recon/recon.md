@@ -84,6 +84,57 @@ frontend/src/components.css
 
 ### d) アイコン
 ```text
+該当0件（lucide-react / react-icons のimportは存在しない）
+```
+
+### e) テキスト表示形式
+```text
+45
+frontend/src/components/CommissionPanel.tsx
+frontend/src/components/FedExRateModal.tsx
+frontend/src/components/InventoryPicker.tsx
+frontend/src/components/InventorySearchBar.tsx
+frontend/src/components/OrderFinancialPanel.tsx
+frontend/src/pages/archives/ArchivesPage.tsx
+frontend/src/pages/bots/BotsPage.tsx
+frontend/src/pages/buddy/BuddyPage.tsx
+frontend/src/pages/channels/ChannelsPage.tsx
+frontend/src/pages/commission-settings/CommissionSettingsPage.tsx
+frontend/src/pages/commissions/CommissionsPage.tsx
+frontend/src/pages/company-detail/CompanyBasicTab.tsx
+frontend/src/pages/company-detail/CompanyConvLogsTab.tsx
+frontend/src/pages/dashboard/DashboardPage.tsx
+frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+frontend/src/pages/dashboard/FunnelReasonsPage.tsx
+frontend/src/pages/dashboard/FunnelRevenuePage.tsx
+frontend/src/pages/dashboard/FunnelSection.tsx
+frontend/src/pages/dashboard/PriorityProspectsSection.tsx
+frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx
+frontend/src/pages/deals/DealsPage.tsx
+frontend/src/pages/erp/ERPPage.tsx
+frontend/src/pages/goal-setting/GoalSettingPage.tsx
+frontend/src/pages/inbox/InboxKartePanel.tsx
+frontend/src/pages/inbox/inbox.types.ts
+frontend/src/pages/inventory/InventoryPage.tsx
+frontend/src/pages/inventory/OwnInventoryPage.tsx
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx
+frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+frontend/src/pages/invoices/InvoicesPage.tsx
+frontend/src/pages/orders/OrdersTable.tsx
+frontend/src/pages/orders/useOrdersState.ts
+frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx
+frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx
+frontend/src/pages/quote-create/QuoteCreatePage.tsx
+frontend/src/pages/quote-detail/QuoteDetailPage.tsx
+frontend/src/pages/quotes/QuotesPage.tsx
+frontend/src/pages/sales/SalesPage.tsx
+frontend/src/pages/staff-reports/StaffReportsPage.tsx
+frontend/src/pages/super-admin/DiscordInboundPage.tsx
+frontend/src/pages/super-admin/FxRatePage.tsx
+frontend/src/pages/super-admin/InventoryOffersPage.tsx
+frontend/src/pages/super-admin/ParseReviewPage.tsx
+frontend/src/pages/super-admin/SupplierParseStatsTab.tsx
+frontend/src/pages/teams/TeamsPage.tsx
 ```
 
 ## KGI② 現在値
@@ -182,59 +233,56 @@ frontend/src/pages/channels/ChannelsPage.tsx
 
 ### b) Storybook設定
 ```text
-      45
-frontend/src/components/FedExRateModal.tsx
-frontend/src/components/InventorySearchBar.tsx
-frontend/src/components/OrderFinancialPanel.tsx
-frontend/src/components/InventoryPicker.tsx
-frontend/src/components/CommissionPanel.tsx
-frontend/src/pages/commissions/CommissionsPage.tsx
-frontend/src/pages/bots/BotsPage.tsx
-frontend/src/pages/inbox/InboxKartePanel.tsx
-frontend/src/pages/inbox/inbox.types.ts
-frontend/src/pages/invoice-create/InvoiceCreatePage.tsx
-frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx
-frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx
-frontend/src/pages/sales/SalesPage.tsx
-frontend/src/pages/invoices/InvoicesPage.tsx
-frontend/src/pages/quotes/QuotesPage.tsx
-frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-frontend/src/pages/staff-reports/StaffReportsPage.tsx
-frontend/src/pages/deals/DealsPage.tsx
-frontend/src/pages/buddy/BuddyPage.tsx
-frontend/src/pages/archives/ArchivesPage.tsx
-frontend/src/pages/goal-setting/GoalSettingPage.tsx
-frontend/src/pages/dashboard/FunnelReasonsPage.tsx
-frontend/src/pages/dashboard/PriorityProspectsSection.tsx
-frontend/src/pages/dashboard/FunnelRevenuePage.tsx
-frontend/src/pages/dashboard/FunnelLeadsPage.tsx
-frontend/src/pages/dashboard/FunnelSection.tsx
-frontend/src/pages/dashboard/DashboardPage.tsx
-frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx
-frontend/src/pages/super-admin/FxRatePage.tsx
-frontend/src/pages/super-admin/SupplierParseStatsTab.tsx
-frontend/src/pages/super-admin/InventoryOffersPage.tsx
-frontend/src/pages/super-admin/DiscordInboundPage.tsx
-frontend/src/pages/super-admin/ParseReviewPage.tsx
-frontend/src/pages/inventory/InventoryPage.tsx
-frontend/src/pages/inventory/OwnInventoryPage.tsx
-frontend/src/pages/teams/TeamsPage.tsx
-frontend/src/pages/commission-settings/CommissionSettingsPage.tsx
-frontend/src/pages/quote-create/QuoteCreatePage.tsx
-frontend/src/pages/company-detail/CompanyBasicTab.tsx
-frontend/src/pages/company-detail/CompanyConvLogsTab.tsx
-frontend/src/pages/quote-detail/QuoteDetailPage.tsx
-frontend/src/pages/orders/useOrdersState.ts
-frontend/src/pages/orders/OrdersTable.tsx
-frontend/src/pages/erp/ERPPage.tsx
-frontend/src/pages/channels/ChannelsPage.tsx
-```
-
-### c) Storybook設定の有無
-```text
-      37
 main.ts
 preview.tsx
+```
+```text
+45
+frontend/src/components/CommissionPanel.tsx
+frontend/src/components/FedExRateModal.tsx
+frontend/src/components/InventoryPicker.tsx
+frontend/src/components/InventorySearchBar.tsx
+frontend/src/components/OrderFinancialPanel.tsx
+frontend/src/pages/archives/ArchivesPage.tsx
+frontend/src/pages/bots/BotsPage.tsx
+frontend/src/pages/buddy/BuddyPage.tsx
+frontend/src/pages/channels/ChannelsPage.tsx
+frontend/src/pages/commission-settings/CommissionSettingsPage.tsx
+frontend/src/pages/commissions/CommissionsPage.tsx
+frontend/src/pages/company-detail/CompanyBasicTab.tsx
+frontend/src/pages/company-detail/CompanyConvLogsTab.tsx
+frontend/src/pages/dashboard/DashboardPage.tsx
+frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+frontend/src/pages/dashboard/FunnelReasonsPage.tsx
+frontend/src/pages/dashboard/FunnelRevenuePage.tsx
+frontend/src/pages/dashboard/FunnelSection.tsx
+frontend/src/pages/dashboard/PriorityProspectsSection.tsx
+frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx
+frontend/src/pages/deals/DealsPage.tsx
+frontend/src/pages/erp/ERPPage.tsx
+frontend/src/pages/goal-setting/GoalSettingPage.tsx
+frontend/src/pages/inbox/InboxKartePanel.tsx
+frontend/src/pages/inbox/inbox.types.ts
+frontend/src/pages/inventory/InventoryPage.tsx
+frontend/src/pages/inventory/OwnInventoryPage.tsx
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx
+frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+frontend/src/pages/invoices/InvoicesPage.tsx
+frontend/src/pages/orders/OrdersTable.tsx
+frontend/src/pages/orders/useOrdersState.ts
+frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx
+frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx
+frontend/src/pages/quote-create/QuoteCreatePage.tsx
+frontend/src/pages/quote-detail/QuoteDetailPage.tsx
+frontend/src/pages/quotes/QuotesPage.tsx
+frontend/src/pages/sales/SalesPage.tsx
+frontend/src/pages/staff-reports/StaffReportsPage.tsx
+frontend/src/pages/super-admin/DiscordInboundPage.tsx
+frontend/src/pages/super-admin/FxRatePage.tsx
+frontend/src/pages/super-admin/InventoryOffersPage.tsx
+frontend/src/pages/super-admin/ParseReviewPage.tsx
+frontend/src/pages/super-admin/SupplierParseStatsTab.tsx
+frontend/src/pages/teams/TeamsPage.tsx
 ```
 
 ## KGI⑤ 現在値
@@ -242,6 +290,9 @@ preview.tsx
 ```text
 design-token-audit.yml
 ```
+
+上記 design-token-audit.yml の用途（実測）: 週次スケジュールの「未使用トークン監査」（name: デザイントークン週次監査）。
+ページ側の生値ベタ書きを検出・failさせる関所は .github/workflows/ に該当なし（用途の判定はdesign側で行う）。
 
 ## KGI③
 
