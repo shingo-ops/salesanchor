@@ -218,30 +218,30 @@
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | DONE | #2613 |  | merged #2613 |
 | feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | DONE | #2621 |  | merged #2621 |
 | release/evidence-ben1a | （記入してください） | 2026-07-03 02:38 | IN_PROGRESS | | | |
-| release/ledger-cleanup-20260703 | （記入してください） | 2026-07-03 16:55 | IN_PROGRESS | | | |
+| release/ledger-cleanup-20260703 | （記入してください） | 2026-07-03 16:55 | DONE | | | merged #2758 |
 | codex/inventory-aggregation-preserve | （記入してください） | 2026-06-22 | IN_PROGRESS | | | ⑥清書便で補記 |
-| codex/inventory-tabs-ci-cloud | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
-| codex/process-artifacts-precision-fix-root | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
+| codex/inventory-tabs-ci-cloud | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
+| codex/process-artifacts-precision-fix-root | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
 | codex/ssot-message-translations-tenant-id | （記入してください） | 2026-06-22 | IN_PROGRESS | | | ⑥清書便で補記 |
 | docs/dev-workflow-spec | （記入してください） | 2026-06-30 | IN_PROGRESS | | | ⑥清書便で補記 |
 | docs/product-master-overview-2layer | （記入してください） | 2026-06-30 | IN_PROGRESS | | | ⑥清書便で補記 |
 | feature/condition-stage2-base | （記入してください） | 2026-06-23 | IN_PROGRESS | | | ⑥清書便で補記 |
 | feature/desk-check-tool | （記入してください） | 2026-06-30 | IN_PROGRESS | | | ⑥清書便で補記 |
-| feature/morimoto/advisor-weekly-w1b2 | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
+| feature/morimoto/advisor-weekly-w1b2 | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
 | feature/morimoto/analytics-rls-fix | （記入してください） | 2026-06-22 | IN_PROGRESS | | | ⑥清書便で補記 |
 | feature/morimoto/discord-config-card-tidy | （記入してください） | 2026-06-28 | IN_PROGRESS | | | ⑥清書便で補記 |
-| feature/morimoto/external-api-change-detect-ci2 | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
-| feature/morimoto/inventory-migration-schema-aware | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
+| feature/morimoto/external-api-change-detect-ci2 | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
+| feature/morimoto/inventory-migration-schema-aware | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
 | feature/morimoto/inventory-v2-repo-formalize | （記入してください） | 2026-06-24 | IN_PROGRESS | | | ⑥清書便で補記 |
 | feature/morimoto/migration-timestamp-dup-guard | （記入してください） | 2026-06-24 | IN_PROGRESS | | | ⑥清書便で補記 |
-| feature/morimoto/schedule-token-root-defs | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
-| feature/morimoto/w2-conversion-by-attribute | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
+| feature/morimoto/schedule-token-root-defs | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
+| feature/morimoto/w2-conversion-by-attribute | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
 | fix/exporter-port-align-v4 | （記入してください） | 2026-06-29 | IN_PROGRESS | | | ⑥清書便で補記 |
 | hotfix/analytics-rls-fix4 | （記入してください） | 2026-06-22 | IN_PROGRESS | | | ⑥清書便で補記 |
 | hotfix/fedex-etd-docs-main | （記入してください） | 2026-06-16 | IN_PROGRESS | | | ⑥清書便で補記 |
 | hotfix/morimoto/admin-set-tenant-ctx | （記入してください） | 2026-06-30 | IN_PROGRESS | | | ⑥清書便で補記 |
 | hotfix/morimoto/fx-rate-null-guard | （記入してください） | 2026-06-29 | IN_PROGRESS | | | ⑥清書便で補記 |
-| hotfix/morimoto/paypal-smoke-no-cov-root | （記入してください） | 2026-07-03 | IN_PROGRESS | | | ⑥清書便で補記 |
+| hotfix/morimoto/paypal-smoke-no-cov-root | （記入してください） | 2026-07-03 | DONE | | | 机は本店内入れ子のため④便で honten-untracked/ へ移動退避・未保存はディレクトリごと保全・ブランチ存続・再開可 |
 | hotfix/morimoto/wall2-audit-tenant-ctx | （記入してください） | 2026-06-30 | IN_PROGRESS | | | ⑥清書便で補記 |
 | release/branch-guardrail-close | （記入してください） | 2026-07-02 | IN_PROGRESS | | | ⑥清書便で補記 |
 | release/doc-heading-duplicates-20260702 | （記入してください） | 2026-07-02 | IN_PROGRESS | | | ⑥清書便で補記 |
