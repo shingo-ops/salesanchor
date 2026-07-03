@@ -17,6 +17,7 @@
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |
+| release/agent-complete-design-cycle1 | あるべき姿7項目目の追加とKGI⑧の新設（変更一巡便 #1） | 2026-07-03 12:02 | DONE | #2759 | main | merged: PR #2759 / dc8c4e41 |
 | release/doc-estate-theme | 文書体系（ナレッジベース）起票 | 2026-07-03 13:52 | IN_PROGRESS | | main | base=main・docs-only |
 | release/txn-order-items-ben2 | 便2 実装（order_items 新設＋仕入接続） | 2026-07-03 | REVIEW | #2756 | main | base=main・PR提出済み |
 | release/txn-conv-ben1b | 便1b 会話ログの背骨必須化（echo穴埋め・遡及backfill・NOT NULL） | 2026-07-03 | IN_PROGRESS | | main | base=main・push/PR待ち |
