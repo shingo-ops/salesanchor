@@ -1147,7 +1147,7 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
 
 
 ## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
-- id: EV-20260703-002
+- id: EV-20260703-003
   date: 2026-07-03
   subject: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）
   pr: "#2743"
