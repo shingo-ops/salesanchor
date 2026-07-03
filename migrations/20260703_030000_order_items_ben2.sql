@@ -48,13 +48,17 @@ BEGIN
                    WHERE t.tgname = 'trg_order_items_updated_at' AND n.nspname = s.nspname) THEN
       EXECUTE format('CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON %I.order_items FOR EACH ROW EXECUTE FUNCTION %I.trg_set_updated_at()', s.nspname, s.nspname);
     END IF;
-    EXECUTE format('ALTER TABLE %I.purchase_orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ', s.nspname);
-    EXECUTE format('ALTER TABLE %I.purchase_orders ADD COLUMN IF NOT EXISTS shipping_fee NUMERIC(15,2) DEFAULT 0', s.nspname);
-    EXECUTE format('ALTER TABLE %I.purchase_order_items ADD COLUMN IF NOT EXISTS order_item_id INTEGER', s.nspname);
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint con JOIN pg_namespace n ON n.oid = con.connamespace
-                   WHERE con.conname = 'fk_poi_order_item' AND n.nspname = s.nspname) THEN
-      EXECUTE format('ALTER TABLE %I.purchase_order_items ADD CONSTRAINT fk_poi_order_item FOREIGN KEY (order_item_id) REFERENCES %I.order_items(id)', s.nspname, s.nspname);
+    IF to_regclass(format('%I.purchase_orders', s.nspname)) IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE %I.purchase_orders ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ', s.nspname);
+      EXECUTE format('ALTER TABLE %I.purchase_orders ADD COLUMN IF NOT EXISTS shipping_fee NUMERIC(15,2) DEFAULT 0', s.nspname);
     END IF;
-    EXECUTE format('CREATE INDEX IF NOT EXISTS idx_poi_order_item_id ON %I.purchase_order_items (order_item_id)', s.nspname);
+    IF to_regclass(format('%I.purchase_order_items', s.nspname)) IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE %I.purchase_order_items ADD COLUMN IF NOT EXISTS order_item_id INTEGER', s.nspname);
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint con JOIN pg_namespace n ON n.oid = con.connamespace
+                     WHERE con.conname = 'fk_poi_order_item' AND n.nspname = s.nspname) THEN
+        EXECUTE format('ALTER TABLE %I.purchase_order_items ADD CONSTRAINT fk_poi_order_item FOREIGN KEY (order_item_id) REFERENCES %I.order_items(id)', s.nspname, s.nspname);
+      END IF;
+      EXECUTE format('CREATE INDEX IF NOT EXISTS idx_poi_order_item_id ON %I.purchase_order_items (order_item_id)', s.nspname);
+    END IF;
   END LOOP;
 END $$;
