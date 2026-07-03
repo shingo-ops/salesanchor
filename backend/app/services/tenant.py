@@ -917,7 +917,7 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
 CREATE TABLE IF NOT EXISTS {schema}.order_items (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    order_id INTEGER NOT NULL REFERENCES {schema}.orders(id) ON DELETE CASCADE,
+    order_id INTEGER NOT NULL,
     product_id INTEGER REFERENCES public.products(id),
     product_name VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
@@ -936,6 +936,21 @@ CREATE TABLE IF NOT EXISTS {schema}.order_items (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON {schema}.order_items (order_id);
+
+DO $order_items_fk$
+BEGIN
+    IF to_regclass('{schema}.orders') IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'fk_order_items_order'
+              AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
+        ) THEN
+            ALTER TABLE {schema}.order_items
+                ADD CONSTRAINT fk_order_items_order
+                FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE;
+        END IF;
+    END IF;
+END $order_items_fk$;
 
 -- === Phase 3: 仕入れ・調達管理 ===
 

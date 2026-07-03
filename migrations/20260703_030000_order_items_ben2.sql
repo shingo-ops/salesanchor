@@ -7,7 +7,7 @@ BEGIN
     EXECUTE format('CREATE TABLE IF NOT EXISTS %I.order_items (
         id SERIAL PRIMARY KEY,
         tenant_id INTEGER NOT NULL DEFAULT %s,
-        order_id INTEGER NOT NULL REFERENCES %I.orders(id) ON DELETE CASCADE,
+        order_id INTEGER NOT NULL,
         product_id INTEGER REFERENCES public.products(id),
         product_name VARCHAR(255) NOT NULL,
         name_en VARCHAR(255),
@@ -25,6 +25,12 @@ BEGIN
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())', s.nspname, tid, s.nspname);
     EXECUTE format('CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON %I.order_items (order_id)', s.nspname);
+    IF to_regclass(format('%I.orders', s.nspname)) IS NOT NULL THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint con JOIN pg_namespace n ON n.oid = con.connamespace
+                     WHERE con.conname = 'fk_order_items_order' AND n.nspname = s.nspname) THEN
+        EXECUTE format('ALTER TABLE %I.order_items ADD CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES %I.orders(id) ON DELETE CASCADE', s.nspname, s.nspname);
+      END IF;
+    END IF;
     EXECUTE format('ALTER TABLE %I.order_items ENABLE ROW LEVEL SECURITY', s.nspname);
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = s.nspname AND tablename = 'order_items' AND policyname = 'tenant_isolation_order_items') THEN
       EXECUTE format('CREATE POLICY tenant_isolation_order_items ON %I.order_items USING (tenant_id = current_setting(''app.tenant_id'', true)::INTEGER)', s.nspname);
