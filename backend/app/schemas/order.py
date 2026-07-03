@@ -79,6 +79,44 @@ class OrderUpdate(BaseModel):
     notes: str | None = Field(default=None, max_length=5000)
 
 
+class OrderItemCreate(BaseModel):
+    product_id: int | None = Field(default=None, ge=1)
+    product_name: str = Field(min_length=1, max_length=255)
+    name_en: str | None = Field(default=None, max_length=255)
+    condition: str | None = Field(default=None, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
+    sku: str | None = Field(default=None, max_length=100)
+    quantity: int = Field(ge=1)
+    unit_price: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    subtotal: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
+    hs_code: str | None = Field(default=None, max_length=20)
+    usd_unit_value: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    sort_order: int = Field(default=0)
+
+
+class OrderItemResponse(BaseModel):
+    id: int
+    order_id: int
+    product_id: int | None
+    product_name: str
+    name_en: str | None = None
+    condition: str | None = None
+    unit: str | None = None
+    sku: str | None = None
+    quantity: int
+    unit_price: Decimal
+    subtotal: Decimal
+    weight: Decimal | None
+    hs_code: str | None = None
+    usd_unit_value: Decimal | None = None
+    exchange_rate_usd: Decimal | None = None
+    sort_order: int
+
+    model_config = {"from_attributes": True}
+
+
 class OrderResponse(BaseModel):
     """注文情報レスポンス。
 
