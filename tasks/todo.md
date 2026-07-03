@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR 起票済み。PO のレビュー・GO 待ち | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
 | 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | `docs/specs/agent-complete-design/README.md` / `ideal-state.md` / `kgi.md` と `docs/specs/README.md` を作成済み | PR #2757 の本文を 3ファイル標準に合わせて更新し、追加コミットを push する | `FRESH-RUN-START 2026-07-03T06:43:00Z` / worktree release/agent-complete-design / `origin/main` へ ff-only 済み | 2026-07-03 |
 | Chromatic 完全撤去 | Agent | npm依存・プラグイン・コメント除去済み（PR #chromatic-full-removal）。完了定義: `git grep -i chromatic -- ':!docs/' 0件 + ビルド成功` | PR GO待ち | `docs/handoff/chromatic-full-removal/` | 2026-06-24 |
