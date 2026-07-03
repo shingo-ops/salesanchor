@@ -1026,6 +1026,33 @@ decision: "KGI①②③ 全達成。①FORCE-RLS+4ポリシー本番確認済み
 follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行が他社から見えない」の実データによる確認は商品マスタ整備後に実施。
 ```
 
+## 2026-07-03 PR #2751 便1b 会話ログの背骨必須化
+
+```text
+id: EV-20260703-004
+date: 2026-07-03
+agent: CC
+task: 便1b 会話ログの背骨必須化（echo経路のoutbound lead自動作成・遡及lead逆造成1件・NOT NULL）
+scope: PR #2751, docs/specs/transaction-flow/README.md, docs/handoff/txn-flow-ben1b/design.md, 本番tenant_004 after検証
+evidence:
+  - type: command
+    reference: "PO Shingo の after検証報告（2026-07-03）"
+    summary: "conversation_logs null_convs=0 / [便1b]new_leads=1 / lead_id is_nullable=NO を目視報告済み"
+  - type: command
+    reference: "dry-run 再実行（2026-07-03）"
+    summary: "BEFORE1 → AFTER0 → ROLLBACK。初回はテナント間スキーマ差分でエラー停止したが、最小列方式へ修正後に合格"
+  - type: command
+    reference: "/tmp/backup_tenant004_ben1b.sql"
+    summary: "tenant_004 バックアップを取得済み"
+  - type: command
+    reference: "tenant_006 の dry-run notice"
+    summary: "NULL 3 件のため NOTICE スキップ（DEMO 削除後に再実行で適用）"
+confidence: high
+tradeoff: 本番 after 検証は読み取り専用で実施し、実データの変更は行っていない
+decision: 便1b は本番 tenant_004 の after 検証で成立確認済み
+follow_up: 便2 の設計材料整理に進む
+```
+
 ## Review Rules
 
 - `confidence: high` は一次情報が複数あり、再現可能な検証がある場合に限る
@@ -1142,8 +1169,6 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   decision: "第1.7便完了。Planner知識のRAG化＝学びを正本・案内書・記録層に外部化し全セッションに届く構造が成立。"
   lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
   follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
-
-
 
 
 ## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
