@@ -1244,3 +1244,27 @@ confidence: medium
 tradeoff: recon 前納品のため、親リンクと §4 は後続便で更新が必要になる
 decision: "To-Be 文書をリポジトリに先行納品し、索引と台帳を同時に固定する"
 follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親リンクを確定する"
+
+## 2026-07-03: 便2 受注明細（order_items）新設＋仕入接続の完了登録（EV-20260703-007）
+- id: EV-20260703-007
+  date: 2026-07-03
+  agent: CC
+  task: 便2 order_items 新設＋仕入接続（S3・S6）の本番適用完了
+  scope: PR #2756, migrations/20260703_030000_order_items_ben2.sql, 本番tenant_004 恒久確認
+  evidence:
+    - type: command
+      reference: "gh run list --workflow=deploy.yml（run 28659581379）"
+      summary: "PR #2756 マージ後の Deploy to VPS が completed/success（2026-07-03T12:08:53Z）"
+    - type: command
+      reference: "本番読み取り専用SELECT（2026-07-03 21:14）"
+      summary: "tenant_004 で order_items=1／paid_at・shipping_fee の2行／order_item_id の1行を確認（ROLLBACKなしの恒久状態）"
+    - type: command
+      reference: "/home/ubuntu/backup_ben2_20260703_172641.dump"
+      summary: "適用前バックアップ（pg_dump custom形式・2,409,849 bytes）を取得済み"
+    - type: command
+      reference: "本番dry-run（2026-07-03 17:41）"
+      summary: "BEGIN→migration→検証SELECT3本→ROLLBACK で構造増設のみを事前確認し、PO目視4点が全て○"
+  confidence: high
+  tradeoff: purchase_orders未作成の旧テナントはto_regclassガードでスキップされるため、該当テナントには仕入列が立たない
+  decision: "ガード付きmigration（ab002d76）をdry-run目視4点とGO記録（2026-07-03 17:58, shingo-ops）を経て本番適用し、POが自らマージした"
+  follow_up: "便3（段階・成約の自動判定）へ。本セッションのCC違反2件（無断migration修正push・無断PR本文上書き）はB+C便のgenerator.md改定入力として扱う"
