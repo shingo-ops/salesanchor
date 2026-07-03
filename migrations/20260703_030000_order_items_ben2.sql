@@ -4,6 +4,15 @@ DECLARE s RECORD; tid INT;
 BEGIN
   FOR s IN SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_[0-9]+$' ORDER BY nspname LOOP
     tid := regexp_replace(s.nspname, '\D', '', 'g')::INT;
+    EXECUTE format($q$
+      CREATE OR REPLACE FUNCTION %I.trg_set_updated_at()
+      RETURNS TRIGGER AS $fn$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $fn$ LANGUAGE plpgsql
+    $q$, s.nspname);
     EXECUTE format('CREATE TABLE IF NOT EXISTS %I.order_items (
         id SERIAL PRIMARY KEY,
         tenant_id INTEGER NOT NULL DEFAULT %s,

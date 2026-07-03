@@ -587,10 +587,6 @@ BEGIN
         CREATE TRIGGER trg_companies_updated_at BEFORE UPDATE ON {schema}.companies
             FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_order_items_updated_at' AND tgrelid = '{schema}.order_items'::regclass) THEN
-        CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON {schema}.order_items
-            FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
-    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_contacts_updated_at' AND tgrelid = '{schema}.contacts'::regclass) THEN
         CREATE TRIGGER trg_contacts_updated_at BEFORE UPDATE ON {schema}.contacts
             FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
@@ -951,6 +947,18 @@ BEGIN
         END IF;
     END IF;
 END $order_items_fk$;
+
+DO $order_items_trigger$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'trg_order_items_updated_at'
+          AND tgrelid = '{schema}.order_items'::regclass
+    ) THEN
+        CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON {schema}.order_items
+            FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
+    END IF;
+END $order_items_trigger$;
 
 -- === Phase 3: 仕入れ・調達管理 ===
 
