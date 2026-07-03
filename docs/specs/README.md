@@ -28,6 +28,7 @@
 | Sales Anchor アプリ全体（親） | [sales-anchor-app/README.md](sales-anchor-app/README.md) | 草案 |
 | カレンダー（schedule。全予定の見える化・源泉SSOT参照・やることフィード共有） | [schedule/README.md](schedule/README.md) | KGI承認済 2026-07-03 |
 | ダッシュボード（dashboard。羅針盤・やることフィード・目標カスケード・AI提案） | [dashboard/README.md](dashboard/README.md) | KGI承認済 2026-07-03 |
+| 受信箱（inbox。全顧客やり取りの集約表示・子テーマの配置定義。親は見せ方のみ） | [inbox/README.md](inbox/README.md) | KGI承認済 2026-07-04 |
 | 受注管理(業務画面。ステータス別ページ・境界:データ構造は取引フローが正本) | [order-management/README.md](order-management/README.md) | KGI承認済 2026-07-04 |
 | 在庫（自社在庫／ドロップシッピングの2種。接点：order_item の出どころ参照） | （仕様書未作成） | **pending** |
 | 予約販売（接点：order の派生フロー） | （仕様書未作成） | **pending** |
