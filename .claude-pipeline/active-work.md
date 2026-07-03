@@ -16,7 +16,9 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |
 | release/doc-estate-theme | 文書体系（ナレッジベース）起票 | 2026-07-03 13:52 | IN_PROGRESS | | main | base=main・docs-only |
+| release/txn-order-items-ben2 | 便2 実装（order_items 新設＋仕入接続） | 2026-07-03 | REVIEW | #2756 | main | base=main・PR提出済み |
 | release/txn-conv-ben1b | 便1b 会話ログの背骨必須化（echo穴埋め・遡及backfill・NOT NULL） | 2026-07-03 | IN_PROGRESS | | main | base=main・push/PR待ち |
 | release/branch-guardrail-close-main | process-artifacts gate 二重定義検出（docs / script） | 2026-07-02 | IN_PROGRESS | | main | base=main・PO GO待ち |
 | release/worktree-canon-main | worktree 手順の正典化（docs / script） | 2026-07-02 | IN_PROGRESS | | main | base=main・new-worktree.sh 正典化・PO GO待ち |
@@ -216,6 +218,7 @@
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
 | feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | IN_PROGRESS | | | |
 | release/evidence-ben1a | （記入してください） | 2026-07-03 02:38 | IN_PROGRESS | | | |
+| release/ledger-cleanup-20260703 | （記入してください） | 2026-07-03 16:55 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
