@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="510" viewBox="0 0 680 510">
+<style>text{font-family:sans-serif}.th{font-size:14px;font-weight:500}.ts{font-size:12px}</style>
+<rect x="40" y="40" width="600" height="440" rx="12" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="th" x="52" y="62" fill="#2C2C2A">受信箱画面（親が定義する器）</text>
+<rect x="52" y="76" width="576" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="64" y="98" fill="#5F5E5A">ヘッダー</text>
+<text class="ts" x="616" y="98" text-anchor="end" fill="#5F5E5A">テンプレート｜Bot・定型文設定｜FAQ｜設定</text>
+<rect x="52" y="120" width="576" height="30" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="64" y="139" fill="#5F5E5A">すべて/リード/商談中/既存顧客/追客/アーカイブ</text>
+<text class="ts" x="616" y="139" text-anchor="end" fill="#5F5E5A">プラットフォーム絞り込み</text>
+<rect x="52" y="158" width="166" height="300" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="135" y="184" text-anchor="middle" fill="#26215C">会話一覧（②）</text>
+<text class="ts" x="135" y="210" text-anchor="middle" fill="#534AB7">全ツール＋手動を集約</text>
+<text class="ts" x="135" y="228" text-anchor="middle" fill="#534AB7">検索・管理・未読</text>
+<text class="ts" x="135" y="246" text-anchor="middle" fill="#534AB7">ツール別バッジ</text>
+<text class="ts" x="135" y="264" text-anchor="middle" fill="#534AB7">状態タグ（リード等）</text>
+<text class="ts" x="135" y="282" text-anchor="middle" fill="#534AB7">並び順: 新着/未読</text>
+<rect x="230" y="158" width="222" height="300" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="th" x="341" y="180" text-anchor="middle" fill="#26215C">メッセージ欄（①）</text>
+<rect x="238" y="190" width="206" height="30" rx="6" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="341" y="209" text-anchor="middle" fill="#444441">③ 言語切替　⑧ 手動記録</text>
+<rect x="238" y="228" width="206" height="150" rx="6" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="341" y="288" text-anchor="middle" fill="#444441">受信/送信の吹き出し＋訳</text>
+<text class="ts" x="341" y="308" text-anchor="middle" fill="#444441">自動(API)と手動記録が</text>
+<text class="ts" x="341" y="326" text-anchor="middle" fill="#444441">同じ欄に同居（⑧）</text>
+<rect x="238" y="386" width="206" height="64" rx="6" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="th" x="341" y="410" text-anchor="middle" fill="#444441">送信口（④）</text>
+<text class="ts" x="341" y="432" text-anchor="middle" fill="#444441">テキスト・画像・スタンプ・定型文</text>
+<rect x="464" y="158" width="164" height="238" rx="10" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text class="th" x="546" y="184" text-anchor="middle" fill="#4A1B0C">顧客カルテ（⑤）</text>
+<text class="ts" x="546" y="210" text-anchor="middle" fill="#993C1D">商談/顧客/連絡先タブ</text>
+<text class="ts" x="546" y="228" text-anchor="middle" fill="#993C1D">次アクション・温度感</text>
+<text class="ts" x="546" y="246" text-anchor="middle" fill="#993C1D">返信速度など実測欄</text>
+<text class="ts" x="546" y="264" text-anchor="middle" fill="#993C1D">成約/失注の記録</text>
+<text class="ts" x="546" y="282" text-anchor="middle" fill="#993C1D">lead/deal紐づけ</text>
+<text class="ts" x="546" y="300" text-anchor="middle" fill="#993C1D">閲覧・追記が同一画面</text>
+<rect x="464" y="404" width="164" height="54" rx="10" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text class="th" x="546" y="426" text-anchor="middle" fill="#4A1B0C">帳票送付（⑥）</text>
+<text class="ts" x="546" y="446" text-anchor="middle" fill="#993C1D">見積/請求/フォーム</text>
+<text class="ts" x="40" y="500" fill="#5F5E5A">紫＝やり取りの置き場　赤系＝顧客理解の置き場　灰＝器・ヘッダー</text>
+</svg>
