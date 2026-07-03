@@ -22,6 +22,7 @@
 | ├ 状態マスタ（condition） | （作成予定） | 未 |
 | └ 単位マスタ（unit） | （作成予定） | 未 |
 | 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 |
+| 文書体系（ナレッジベース） | [doc-estate/README.md](./doc-estate/README.md) | KGI承認済 |
 | 在庫（自社在庫／ドロップシッピングの2種。接点：order_item の出どころ参照） | （仕様書未作成） | **pending** |
 | 予約販売（接点：order の派生フロー） | （仕様書未作成） | **pending** |
 | 送料マスタ（接点：見積送料の算出） | （仕様書未作成） | **pending** |

@@ -1143,5 +1143,18 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
   follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
 
+## 2026-07-03: 文書体系（ナレッジベース）起票（EV-20260703-003）
+- id: EV-20260703-003
+  type: review
+  reference: "release/doc-estate-theme worktree / git diff --numstat / git diff / bash scripts/check-doc-heading-duplicates.sh"
+  scope: "docs/specs/doc-estate/README.md / docs/specs/doc-estate/ideal-state.md / docs/specs/doc-estate/kgi.md / docs/specs/README.md / tasks/todo.md / .claude-pipeline/active-work.md"
+  problem: "文書体系（ナレッジベース）の親テーマが specs 索引に無く、3 ファイル標準の正本置き場も未起票だった。"
+  fix: "specs の索引へ 1 行追加し、doc-estate 配下に README / ideal-state / kgi の 3 ファイル標準を新設した。worktree と台帳も同時登録した。"
+  kgi: "numstat=6件（新規3/追記3）・索引追加1行/削除0・見出し重複検査 PASS（docs/STANDARD-WORKFLOW.md と docs/ai-agents/design-partner.md の2本）"
+  confidence: high
+  human_verification: "Shingo の GO 待ちで PR 本文へ検算欄転記予定。"
+  decision: "文書体系テーマを §1.5 の 3 ファイル標準構成で起票し、specs 索引から辿れる状態にした。"
+  lessons: "①新規ファイルは intent-to-add で diff に出してから検算すると見落としが減る。②worktree を手動作成した場合は active-work 登録を忘れない。③索引更新は 1 行差分でも、親テーマが無いと発見性が落ちるため、親テーマの先行登録が有効。"
+  follow_up: "GO 後に PR 作成、必要なら merge commit で main へ反映する。"
 
 
