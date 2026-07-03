@@ -47,10 +47,10 @@ class OrderStatus(str, Enum):
 
 
 class OrderCreate(BaseModel):
-    """注文登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
-    company_id: int = Field(ge=1, description="会社ID")
-    contact_id: int = Field(ge=1, description="担当者ID")
-    deal_id: int | None = Field(default=None, ge=1)
+    """注文登録リクエスト（便1a: deal_id 必須・company は deal から自動導出）"""
+    deal_id: int = Field(ge=1, description="商談ID（必須・便1a。company は deal から自動導出）")
+    company_id: int | None = Field(default=None, ge=1, description="非推奨：指定時は deal.company_id と一致必須")
+    contact_id: int | None = Field(default=None, ge=1, description="担当者ID（指定時のみ所属検査）")
     invoice_id: int | None = Field(default=None, ge=1)
     order_number: str = Field(min_length=1, max_length=100)
     total_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)

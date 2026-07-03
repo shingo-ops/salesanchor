@@ -51,7 +51,7 @@ async def _setup_lead_with_company(client, db_session) -> tuple[int, int]:
     assert lead_res.status_code == 201, lead_res.text
     lead_id = lead_res.json()["id"]
 
-    co_res = await client.post("/api/v1/companies", json={"name": "統計テスト会社"})
+    co_res = await client.post("/api/v1/companies", json={"name": "統計テスト会社", "lead_id": lead_id})
     assert co_res.status_code == 201, co_res.text
     company_id = co_res.json()["id"]
 
@@ -215,7 +215,9 @@ class TestCompanyStatsSSot:
         lead_id, _ = await _setup_lead_with_company(client, db_session)
 
         # 別会社を作成してそちらの請求書を支払い済みにする
-        other_co = await client.post("/api/v1/companies", json={"name": "他社"})
+        from tests.helpers_txn import create_lead
+        other_lead_id = await create_lead(client, "他社")
+        other_co = await client.post("/api/v1/companies", json={"name": "他社", "lead_id": other_lead_id})
         assert other_co.status_code == 201
         other_company_id = other_co.json()["id"]
         other_ct = await client.post("/api/v1/contacts", json={

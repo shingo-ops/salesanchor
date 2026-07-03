@@ -5,7 +5,9 @@ Phase 1-B-2 Step 5b-1 で新設した contacts 系 API のスモークテスト�
 
 class TestContactsCRUD:
     async def _create_company(self, client, name: str = "会社A") -> int:
-        res = await client.post("/api/v1/companies", json={"name": name})
+        from tests.helpers_txn import create_lead
+        lead_id = await create_lead(client, name)
+        res = await client.post("/api/v1/companies", json={"name": name, "lead_id": lead_id})
         assert res.status_code == 201
         return res.json()["id"]
 
@@ -160,7 +162,9 @@ class TestContactPendingDedupReviewResolution:
     """
 
     async def _create_company(self, client, name: str = "会社A") -> int:
-        res = await client.post("/api/v1/companies", json={"name": name})
+        from tests.helpers_txn import create_lead
+        lead_id = await create_lead(client, name)
+        res = await client.post("/api/v1/companies", json={"name": name, "lead_id": lead_id})
         assert res.status_code == 201
         return res.json()["id"]
 

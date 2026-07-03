@@ -64,6 +64,12 @@ LLM_PRICING: dict[str, dict[str, Decimal]] = {
         # $10.00 / 1M output tokens
         "output_per_token": Decimal("10.00") / Decimal("1000000"),
     },
+    "gemini-2.5-flash-lite": {
+        # $0.10 / 1M input tokens
+        "input_per_token": Decimal("0.10") / Decimal("1000000"),
+        # $0.40 / 1M output tokens
+        "output_per_token": Decimal("0.40") / Decimal("1000000"),
+    },
 }
 
 DEFAULT_MODEL = "gemini-2.5-flash"

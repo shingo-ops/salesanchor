@@ -68,13 +68,13 @@ else
 fi
 [ -z "$(git config user.email 2>/dev/null || true)" ] && warn "git user.email 未設定。shingo-cc 対応アドレスを設定推奨。"
 
-# 4) 長命ブランチの存在確認
-echo "[4/4] long-lived branches -> origin/main and origin/develop"
-remote_heads="$(git ls-remote --heads origin main develop 2>/dev/null || true)"
-if printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/main' && printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/develop'; then
-  ok "origin/main と origin/develop は存在"
+# 4) 長命ブランチ(main)の存在確認
+echo "[4/4] long-lived branch -> origin/main"
+remote_heads="$(git ls-remote --heads origin main 2>/dev/null || true)"
+if printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/main'; then
+  ok "origin/main は存在"
 else
-  bad "origin/main または origin/develop が欠落。長命ブランチは消失させない運用に戻してから再実行。"
+  bad "origin/main が欠落。main は消失させない運用に戻してから再実行。"
 fi
 
 echo "=============================================="

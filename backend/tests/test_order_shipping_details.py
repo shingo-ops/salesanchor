@@ -17,22 +17,22 @@ from __future__ import annotations
 import csv
 from io import StringIO
 
-
-async def _create_company_contact(client, company_name="発送テスト顧客"):
-    co = await client.post("/api/v1/companies", json={"name": company_name})
-    company_id = co.json()["id"]
-    ct = await client.post("/api/v1/contacts", json={
-        "company_id": company_id,
-        "display_name": f"{company_name}の担当",
-    })
-    return company_id, ct.json()["id"]
+from tests.helpers_txn import create_company, create_deal, create_lead
 
 
 async def _create_order(client, order_number="ORD-SHIP-1"):
-    company_id, contact_id = await _create_company_contact(client, f"Co-{order_number}")
-    res = await client.post("/api/v1/orders", json={
+    lead_id = await create_lead(client, f"Co-{order_number}")
+    deal_id = await create_deal(client, lead_id)
+    company_id = await create_company(client, lead_id, deal_id=deal_id, name=f"Co-{order_number}")
+    ct = await client.post("/api/v1/contacts", json={
         "company_id": company_id,
-        "contact_id": contact_id,
+        "display_name": f"Co-{order_number}の担当",
+    })
+    assert ct.status_code == 201, ct.text
+    res = await client.post("/api/v1/orders", json={
+        "deal_id": deal_id,
+        "company_id": company_id,
+        "contact_id": ct.json()["id"],
         "order_number": order_number,
     })
     assert res.status_code == 201, res.text

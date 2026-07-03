@@ -324,25 +324,22 @@ class TestTenantCommissionSettings:
 # ---------------------------------------------------------------------------
 
 
-async def _create_company_contact(client, name="報酬テスト"):
-    co = await client.post("/api/v1/companies", json={"name": name})
-    assert co.status_code == 201, co.text
-    company_id = co.json()["id"]
+async def _create_order(client, order_number="ORD-COM-1", status_value="awaiting_payment"):
+    from tests.helpers_txn import create_company, create_deal, create_lead
+    lead_id = await create_lead(client, f"Co-{order_number}")
+    deal_id = await create_deal(client, lead_id)
+    company_id = await create_company(client, lead_id, deal_id=deal_id, name=f"Co-{order_number}")
     ct = await client.post("/api/v1/contacts", json={
         "company_id": company_id,
-        "display_name": f"{name}の担当",
+        "display_name": f"Co-{order_number}の担当",
     })
     assert ct.status_code == 201, ct.text
-    return company_id, ct.json()["id"]
-
-
-async def _create_order(client, order_number="ORD-COM-1", status_value="awaiting_payment"):
-    company_id, contact_id = await _create_company_contact(client, f"Co-{order_number}")
     res = await client.post(
         "/api/v1/orders",
         json={
+            "deal_id": deal_id,
             "company_id": company_id,
-            "contact_id": contact_id,
+            "contact_id": ct.json()["id"],
             "order_number": order_number,
             "status": status_value,
         },

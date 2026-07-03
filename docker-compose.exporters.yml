@@ -14,7 +14,7 @@ services:
       - "--path.rootfs=/rootfs"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
     ports:
-      - "${APP_VPS_IP:-49.212.137.46}:9100:9100"
+      - "${APP_VPS_IP:-49.212.137.46}:19100:9100"
     restart: unless-stopped
     deploy:
       resources:
