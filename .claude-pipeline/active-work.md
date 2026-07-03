@@ -16,6 +16,13 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/doc-estate-theme | 文書体系（ナレッジベース）起票 | 2026-07-03 13:52 | DONE | #2755 | main | merged: PR #2755 / 9af6a97a |
+| release/txn-conv-ben1b | 便1b 会話ログの背骨必須化（echo穴埋め・遡及backfill・NOT NULL） | 2026-07-03 | DONE | | main | base=main・push/PR待ち |
+| release/worktree-autoreg-main | worktree 台帳自動登録（repo-root 反映・docs / script） | 2026-07-02 | DONE | | main | base=main・new-worktree.sh が shared active-work に記帳 |
+| release/worktree-canon-main | worktree 手順の正典化（docs / script） | 2026-07-02 | DONE | | main | base=main・new-worktree.sh 正典化・PO GO待ち |
+| release/branch-guardrail-close-main | process-artifacts gate 二重定義検出（docs / script） | 2026-07-02 | DONE | | main | base=main・PO GO待ち |
+| release/batch1-5-worktree-guard | develop廃止 第1.5便（worktree検問 main 宛拡張） | 2026-07-02 14:59 | REVIEW | #2724 | main | base=main・worktree検問の発火先拡張 |
+| release/go-record-transcription-auto | GO記録の自動転記（案X）正本変更（docs-only） | 2026-07-02 | DONE | | main | base=main・docs-only・PO GO待ち |
 | release/stop-gas-compat-seed-main | migrate_roles_gas_compat 停止（run_all_migrations.sh 1行のみ・base=main） | 2026-06-28 | IN_PROGRESS | | main | base=main・単独便 |
 | release/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | DONE | | | 実装済み・release/* に移行 |
@@ -211,6 +218,25 @@
 | release/morimoto/inbox-ui-text-j1-j5 | 送信ガード/翻訳プレビュー UI 微調整（便1 J1-J5）文言+自動生成 | 2026-06-26 | IN_PROGRESS | | main | base=main |
 | feature/morimoto/fix-migration-030000-rename | develop の 030000_add_products_tcg_type_fk を 060000 にリネーム（#2540 CONFLICTING 解消） | 2026-06-26 | IN_PROGRESS | #2613 | | migrations/20260623_060000_add_products_tcg_type_fk.sql / scripts/run_all_migrations.sh / backend/tests/rls_bootstrap.py / backend/tests/test_products_tcg_type_fk.py |
 | feature/morimoto/fix-carrier-reset-tenant-ctx | （記入してください） | 2026-06-26 19:22 | IN_PROGRESS | | | |
+| hotfix/morimoto/wall2-audit-tenant-ctx | （記入してください） | 2026-06-30 11:44 | IN_PROGRESS | | | |
+| docs/product-master-category-type | 商品マスタ：大分類/種別マスタ設計書の追加＋親README §4改訂（docs-only） | 2026-06-30 | DONE | 2696 | | |
+| docs/spec-canon-workflow-step | （記入してください） | 2026-06-30 14:28 | DONE | | | |
+| docs/evidence-spec-canon-step | （記入してください） | 2026-06-30 15:58 | DONE | | | |
+| docs/product-master-overview-2layer | （記入してください） | 2026-06-30 16:41 | IN_PROGRESS | | | |
+| docs/dev-workflow-spec | （記入してください） | 2026-06-30 16:49 | IN_PROGRESS | | | |
+| release/merge-develop-to-main-20260630 | （記入してください） | 2026-06-30 23:00 | DONE | | | |
+| docs/branch-retirement-spec | （記入してください） | 2026-07-01 13:00 | DONE | | | |
+| release/branch-ops-batch1 | develop廃止 第1便（動線付替・不要WF削除） | 2026-07-02 12:05 | DONE | #2715 | | |
+| release/branch-guardrail-close | （記入してください） | 2026-07-02 18:23 | IN_PROGRESS | | | |
+| release/txn-flow-spec-docs | （記入してください） | 2026-07-02 22:14 | DONE | | | |
+| release/branch-guardrail-close-v2 | （記入してください） | 2026-07-02 22:17 | IN_PROGRESS | | | |
+| release/txn-backbone-ben1a | （記入してください） | 2026-07-02 22:37 | IN_PROGRESS | | | |
+| release/schedule-spec-docs | （記入してください） | 2026-07-02 23:29 | IN_PROGRESS | | | |
+| release/spec-inventory-dropship-phase1 | 在庫管理DS調達 Phase1 仕様書（あるべき姿＋KGI・docs-only） | 2026-07-03 02:07 | DONE | #2744 | main | main マージ済み |
+| release/evidence-ben1a | （記入してください） | 2026-07-03 02:38 | IN_PROGRESS | | | |
+| release/workflow-spec-three-files | STANDARD-WORKFLOW §1.5 仕様書3ファイル標準の追記（docs-only） | 2026-07-03 03:22 | DONE | #2747 | main | main マージ済み |
+| release/specs-schedule-dashboard | （記入してください） | 2026-07-03 13:07 | IN_PROGRESS | | | |
+| release/evidence-ben1b | （記入してください） | 2026-07-03 13:19 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
@@ -275,4 +301,36 @@
 | feature/morimoto/products-rls-stage1-operator-context | public.products FORCE-RLS 段階1: 書き込み経路 operator context 付与（ADR-145） | 2026-06-26 | DONE | #2602 | develop | |
 | feature/morimoto/common-6roles-stage-a | 共通6ロール化 段階A — DEFAULT_ROLES 6ロール化・migrate スクリプト | 2026-06-26 | REVIEW | #2619 | | backend/app/services/tenant.py + scripts/migrate_6roles_stage_a.py |
 | release/morimoto/i18n-missing-keys-fill | i18n 欠落64キー追加（badges/buddy/goals/leads）翻訳2ファイルのみ | 2026-06-26 | DONE | #2622 | main | main マージ済み・本番デプロイ済み |
+| feature/desk-check-tool | dev-workflow（始業チェックツール） | 2026-06-30 11:50 | IN_PROGRESS | | | |
+| release/dev-workflow-desk-check | dev-workflow（始業チェックツール） | 2026-06-30 13:20 | DONE | | main | desk-check.sh + handoff |
 | feature/morimoto/resolve-back-merge-2463 | PR #2463 back-merge 手動解消（main→develop コンフリクト9ファイル）PR #2624 | 2026-06-26 | DONE | #2624 | develop | |
+| docs/product-master-spec-v2 | 商品マスタ あるべき姿 設計書（docs-only）develop起点 v2 | 2026-06-30 | DONE | #2695 | develop | マージ済み |
+| release/doc-parent-child-standard | 文書の親子構造 標準ルール化（docs のみ・型見本1セット・base=main） | 2026-07-01 16:01 | DONE | | 2703 | main | docs-only |
+| release/doc-parent-child-kgi | 親子構造ルール KGI達成（③④子文書＋⑤正本§1.6・正本のためGO必須） | 2026-07-01 16:30 | DONE | | main | 正本変更・GO要 |
+| release/evidence-doc-parent-child | 親子構造テーマ evidence登録(EV-20260701-001・docsのみ) | 2026-07-01 20:04 | DONE | | main | docs-only |
+| release/design-partner | 設計パートナー正本 design-partner.md 新設(docsのみ・新規1ファイル) | 2026-07-02 08:26 | DONE | #2707 | main | docs-only・merged |
+| release/design-partner-readlist | design-partner.md §0.5 必読リスト追記(docsのみ) | 2026-07-02 08:41 | DONE | #2708 | main | docs-only・merged |
+| release/design-partner-loop | 循環の親引き継ぎ書 新設＋索引登録(docsのみ) | 2026-07-02 10:28 | DONE | | main | docs-only |
+| release/index-enrichment | 索引充実(書式修正+2件登録+散在4件記録・docsのみ) | 2026-07-02 10:34 | DONE | | main | docs-only |
+| release/loop-plan-update | 循環§5 アクションプラン追記＋済記入(docsのみ) | 2026-07-02 10:53 | DONE | | main | docs-only |
+| release/loop-close-gaps | 一回転実測済の記録＋終了時教訓確認ルール追加(docsのみ) | 2026-07-02 11:40 | DONE | | main | docs-only |
+| release/design-partner-loop-maintenance-gate | 維持の仕組み欄の必須化（正本§1.7新設＋関所検査A/B＋テスト4本） | 2026-07-02 | DONE | #2717 | main | main マージ済み |
+| release/design-partner-loop-kgi-20260702 | 循環体制 KGI数値化 確定版の正本反映（docs/specs/design-partner-loop/README.md §2差し替え） | 2026-07-02 | DONE | #2718 | main | base=main・docs-only・merged |
+| release/design-partner-lesson-hook-20260702 | design-partner.md §6 教訓追記（手元検問と正本の矛盾時は停止してPO報告） | 2026-07-02 | DONE | #2721 | main | base=main・docs-only・merged |
+| release/design-partner-lesson-guard-20260702 | design-partner.md §6 教訓2行追記（台帳1行＋PR） | 2026-07-02 | DONE | merged: PR #2730 / 1ac309b8c324a8f95feb1ac1e0e51cd1eced7819 | main | docs-only |
+| release/triage-rule-heading-fix-20260702 | STANDARD-WORKFLOW の 1.7 見出しを 1.8 へ修正（軽微） | 2026-07-02 | DONE | merged: PR #2734 / f48dc08a8fbec420612d540b675caa17e6707cc9 | main | docs-only |
+| release/doc-heading-duplicates-20260702-v2 | canonical doc heading duplicates gate 追加（process-artifacts gate 拡張） | 2026-07-02 | DONE | merged: PR #2735 / 27d1156181faa4b831c7ad68699e671486a67db2 | main | docs+workflow |
+| release/specs-index-20260702 | docs/specs/README.md に索引の地図を 7 行＋凡例 1 行追記（docs-only） | 2026-07-02 | DONE | merged: PR #2741 / 446f00fcaf90efa2bc01db76b83b5361dd7b34a5 | main | docs-only |
+| release/specs-index-2741-followup | docs/specs/design-partner-loop/README.md §5-4 ステップ1に【済 PR #2741】を追記（docs-only） | 2026-07-03 | DONE | merged: PR #2749 / b473bc9c00c15db565812e93784f30bb676fecbd | main | docs-only |
+| release/design-partner-lesson-20260703 | docs/ai-agents/design-partner.md §6 に教訓3行を追記（docs-only） | 2026-07-03 | DONE | merged: PR #2750 / 1f6a1615c14f412ee58a827e5c93ab2921800bbb | main | docs-only |
+| release/triage-rule-to-sop-20260702 | STANDARD-WORKFLOW に 3段階振り分けの正本節を追加（docs-only） | 2026-07-02 | DONE | merged: PR #2723 / e13472deb8eac1b3ab7a09958c331a7f9d10196d | main | base=main・docs-only |
+| release/loop-progress-2723 | design-partner-loop §5-3 に【済 PR #2723】を追記（docs-only） | 2026-07-02 | DONE | | main | docs-only |
+| release/generator-fidelity | generator定義整備(逐語実行・関門0・古手順除去) | 2026-07-02 12:04 | IN_PROGRESS | | main | agents+script |
+| release/fidelity-finish | KGI⑦穴埋め＋§6教訓還流(1ファイル) | 2026-07-02 12:10 | IN_PROGRESS | | main | docs+script-comment |
+| release/card-override-rule | 禁止上書き宣言＋矛盾即時引用の教訓還流(3ファイル) | 2026-07-02 13:30 | DONE | | main | docs+agents |
+| release/loop-mark-maintenance-done | 循環§5に維持の仕組み便の済(#2717)を記入(docsのみ) | 2026-07-02 | DONE | | main | docs-only |
+| release/ev-maintenance-gate | 維持の仕組み便のevidence登録(docsのみ) | 2026-07-02 | DONE | #2726 | main | main マージ済み |
+| release/lesson-maintenance-gate-session | 維持の仕組み便セッションの教訓2行を§6へ還流(docsのみ) | 2026-07-02 | DONE | | main | main マージ済み |
+| release/claude-md-branch-rules-fix | CLAUDE.mdブランチ運用3行をmain/release現行へ修正(docsのみ) | 2026-07-02 | DONE | #2729 | main | main マージ済み |
+| release/agents-md-branch-rules-fix | AGENTS.mdブランチ運用3行をmain/release現行へ修正(docsのみ) | 2026-07-02 | DONE | #2731 | main | main マージ済み |
+| release/loop-fail-escalation-reservation | §5にfail引き上げの予約条件を記入(docsのみ) | 2026-07-02 | DONE | | main | main マージ済み |
