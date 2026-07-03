@@ -1129,6 +1129,21 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   lessons: "①並行セッションの検証は必ず実測時のmain SHAを併記する（SHAなしの『未完』報告は鮮度不明として扱う）。②解決済み事項の再報告はSHA突合で1手で棄却できる——スナップショット記録が構造的な防波堤になる。"
   follow_up: "残作業は変わらず: しんご実地確認 → 第2便（develop鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・deploy.yml stamp・残コメント）。§3-2への守り正本リスト化は別セッション分担（衝突なし）。"
 
+## 2026-07-03: develop廃止 第1.7便 エージェント案内書のRAG整合（EV-20260703-002）
+- id: EV-20260703-002
+  type: review
+  reference: "PR #2745 merge commit 0de95d9c0b408df4c2b6efe195d32e0aa7ae1358（3コミット構成）"
+  scope: "CLAUDE.md / AGENTS.md / docs/onboarding/claude-code-partner-prompt.md / docs/PARALLEL_TERMINAL_GUIDE.md（4枚をmain一本化へ整合）＋ docs/ai-agents/design-partner.md（接触面分析欄・作法3行・教訓1項目）"
+  problem: "エージェントが読む案内書がdevelop前提のままで、並行セッションが古い世界観で動く（誤報告2件の真因・EV-20260703-001）。"
+  fix: "4分類ルール（削除済み装置参照=撤去／develop起点手順=main書換／残置注記=意味更新して存置／禁止対象のdevelop=存置）で4枚更新。正本に接触面分析欄（6面走査・空欄不可）と作法3行を追加。"
+  kgi: "5条件中○4＋条件つき○1: ①接触面分析欄=1 ②作法3行=各1 ③教訓1項目=1 ④案内書10/12（残置注記はSSOT原則でCLAUDE/AGENTSの2枚に集約・onboardingは45行で正本読了を誘導済み＝意図的） ⑤MERGED+CI緑+PO GO。"
+  confidence: high
+  human_verification: "Shingo がGOをPRコメントで発行しCCにマージを直接指示（本文GO記録欄は空欄のまま・事後承認で確定）。"
+  decision: "第1.7便完了。Planner知識のRAG化＝学びを正本・案内書・記録層に外部化し全セッションに届く構造が成立。"
+  lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
+  follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
+
+
 
 
 ## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）

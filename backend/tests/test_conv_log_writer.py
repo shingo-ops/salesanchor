@@ -222,27 +222,18 @@ async def test_write_conversation_log_duplicate_returns_none():
 
 
 # ---------------------------------------------------------------------------
-# 10. write_conversation_log: lead_id=None で両ヘルパーを呼ばない
+# 10. write_conversation_log: lead_id=None は即 ValueError
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_write_conversation_log_no_lead_id():
     from app.services.conv_log_writer import write_conversation_log
 
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = 200
-
     db = AsyncMock()
-    db.execute = AsyncMock(return_value=mock_result)
 
     with (
-        patch(
-            "app.services.conv_log_writer._get_company_id_for_lead",
-            new=AsyncMock(return_value=None),
-        ) as mock_get_company,
-        patch(
-            "app.services.conv_log_writer._get_contact_id_for_lead",
-            new=AsyncMock(return_value=None),
-        ) as mock_get_contact,
+        patch("app.services.conv_log_writer._get_company_id_for_lead", new=AsyncMock()) as mock_get_company,
+        patch("app.services.conv_log_writer._get_contact_id_for_lead", new=AsyncMock()) as mock_get_contact,
+        pytest.raises(ValueError, match="lead_id 必須"),
     ):
         await write_conversation_log(
             db,
