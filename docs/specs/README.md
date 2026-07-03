@@ -15,6 +15,7 @@
 | エージェント完結の設計体制 | [agent-complete-design/README.md](agent-complete-design/README.md) | 公開 |
 | GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
+| UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
 | 在庫管理 | [inventory-management/spec.md](inventory-management/spec.md) | 公開（親README未・棚卸し待ち） |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
 | ├ 品目マスタ（item） | （作成予定） | 未 |

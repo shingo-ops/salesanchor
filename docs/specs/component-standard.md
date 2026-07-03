@@ -1,5 +1,8 @@
 # コンポーネント標準仕様（Task 1C / 2C 確定値）
 
+> この文書は何か（専門用語なしの1行）: ボタン・カード等の画面部品の確定値（トークン対応表）。
+> 親（あるべき姿＋KGI）: [design-system/README.md](design-system/README.md)
+
 **確定日**: 2026-06-07  
 **PR**: feature/morimoto/token-button-card-preview  
 **前提**: `docs/audits/2026-06-07_three-screens-survey.md`（ダッシュボードをリファレンスに採用）
