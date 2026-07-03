@@ -1184,8 +1184,19 @@ follow_up: 便2 の設計材料整理に進む
   lessons: "①転記化けが偽の真因を作る——実測が5分で棄却した。②『BLOCKED表示=阻止』ではない。守りの検証は表示でなく実効（実戦ログとの突合）で判定する。"
   follow_up: "①B+C便: generator.md但し書き（Plannerカード優先）＋応答様式節＋design-partner.mdカード設計規約＋check-freshness main化。②フック阻止力の修理（バックアップ→全文提示→PO承認→適用→阻止の実測）。③dangling-route gate誤検知対策（merge-base化 or docs-onlyスキップ・独立テーマ）。"
 
-
-
+## 2026-07-03: 文書体系（ナレッジベース）起票（EV-20260703-005）
+- id: EV-20260703-005
+  type: review
+  reference: "release/doc-estate-theme worktree / git diff --numstat / git diff / bash scripts/check-doc-heading-duplicates.sh"
+  scope: "docs/specs/doc-estate/README.md / docs/specs/doc-estate/ideal-state.md / docs/specs/doc-estate/kgi.md / docs/specs/README.md / tasks/todo.md / .claude-pipeline/active-work.md"
+  problem: "文書体系（ナレッジベース）の親テーマが specs 索引に無く、3 ファイル標準の正本置き場も未起票だった。"
+  fix: "specs の索引へ 1 行追加し、doc-estate 配下に README / ideal-state / kgi の 3 ファイル標準を新設した。worktree と台帳も同時登録した。"
+  kgi: "numstat=6件（新規3/追記3）・索引追加1行/削除0・見出し重複検査 PASS（docs/STANDARD-WORKFLOW.md と docs/ai-agents/design-partner.md の2本）"
+  confidence: high
+  human_verification: "Shingo の GO 待ちで PR 本文へ検算欄転記予定。"
+  decision: "文書体系テーマを §1.5 の 3 ファイル標準構成で起票し、specs 索引から辿れる状態にした。"
+  lessons: "①新規ファイルは intent-to-add で diff に出してから検算すると見落としが減る。②worktree を手動作成した場合は active-work 登録を忘れない。③索引更新は 1 行差分でも、親テーマが無いと発見性が落ちるため、親テーマの先行登録が有効。"
+  follow_up: "GO 後に PR 作成、必要なら merge commit で main へ反映する。"
 ## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
 - id: EV-20260703-003
   date: 2026-07-03
