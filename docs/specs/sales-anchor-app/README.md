@@ -6,7 +6,7 @@
 - あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGIと運用: [kgi.md](./kgi.md)
 - 親: 索引 [docs/specs/README.md](../README.md)
-- ステータス: 草案（PO原文収録済み・KGI未作成）
+- ステータス: KGI承認済 2026-07-04（PO原文収録済み）
 
 ## 参照ルール
 
