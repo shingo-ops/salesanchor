@@ -5,7 +5,7 @@
 - 場所: docs/specs/order-management/(索引 docs/specs/README.md に登録)
 - 区分(STANDARD-WORKFLOW §1.8 門番判定): 新規テーマ(フルセット)。理由: 索引に業務画面としての受注管理は無い(取引フローはデータ構造の正本で領域が異なる)。
 - PO: Shingo / Planner: Web Claude
-- ステータス: あるべき姿 確定(PO原文・2026-07-04)/ KGI 承認済み(Shingo / 2026-07-04)/ design 承認済み(Shingo / 2026-07-04)。ただし design.md と図(images/)の収納は後続便で行う。収納完了までは「design収納待ち」であり、本READMEとideal-state.md・kgi.mdのみを正とする。
+- ステータス: あるべき姿 確定(PO原文・2026-07-04)/ KGI 承認済み(Shingo / 2026-07-04)/ design 承認済み・収納済み(Shingo / 2026-07-04)。
 
 ## 境界(混同禁止・2点)
 1. データの持ち方(Order・入金・発送等の構造)は docs/specs/transaction-flow/ が正本。本テーマは「画面と業務手順」の正本。
@@ -28,5 +28,5 @@
 ## 構成
 - ideal-state.md: あるべき姿(POの言葉のみの正本。Planner・Generatorは書き換えない)
 - kgi.md: KGIの数値・○×条件・設計送り事項
-- design.md: 見せ方の設計(収納待ち・後続便)
-- images/: 設計図SVG 3枚(収納待ち・後続便)
+- design.md: 見せ方の設計(収納済み)
+- images/: 設計図SVG 3枚(収納済み)

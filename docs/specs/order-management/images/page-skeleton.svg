@@ -1,0 +1,49 @@
+<svg width="680" height="430" viewBox="0 0 680 430" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>受注管理ページの骨格(サイドメニュー版)</title>
+<style>text{font-family:'Hiragino Sans','Noto Sans JP',sans-serif}.t{font-size:14px;fill:#2C2C2A}.ts{font-size:12px;fill:#5F5E5A}.th{font-size:14px;font-weight:600;fill:#2C2C2A}</style>
+<rect width="680" height="430" fill="#FFFFFF"/>
+<text class="th" x="40" y="36">受注管理</text>
+<rect x="40" y="56" width="140" height="304" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="54" y="82">すべて</text><text class="ts" x="168" y="82" text-anchor="end">52</text>
+<rect x="44" y="98" width="132" height="32" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="54" y="118" fill="#3C3489">未入金</text><text class="th" x="168" y="118" text-anchor="end" fill="#3C3489">12</text>
+<text class="ts" x="54" y="154">仕入れ対応中</text><text class="ts" x="168" y="154" text-anchor="end">5</text>
+<text class="ts" x="54" y="190">発送手配中</text><text class="ts" x="168" y="190" text-anchor="end">8</text>
+<text class="ts" x="54" y="226">発送完了</text><text class="ts" x="168" y="226" text-anchor="end">3</text>
+<text class="ts" x="54" y="262">商品到着</text><text class="ts" x="168" y="262" text-anchor="end">21</text>
+<text class="ts" x="54" y="298">トラブル</text><text class="ts" x="168" y="298" text-anchor="end">2</text>
+<text class="ts" x="54" y="334">キャンセル</text><text class="ts" x="168" y="334" text-anchor="end">1</text>
+<rect x="196" y="56" width="290" height="32" rx="6" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="208" y="76">検索(注文番号・顧客名)</text>
+<rect x="498" y="56" width="142" height="32" rx="6" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="510" y="76">並び替え:更新日</text>
+<rect x="196" y="98" width="444" height="36" rx="4" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 4"/>
+<text class="ts" x="208" y="120">ガイド領域:次に行う操作の案内(中身は子が定義)</text>
+<text class="ts" x="208" y="152">注文</text><text class="ts" x="276" y="152">顧客</text><text class="ts" x="348" y="152">金額</text><text class="ts" x="414" y="152">期日</text><text class="ts" x="456" y="152">ステータス</text><text class="ts" x="556" y="152">次の操作</text>
+<line x1="196" y1="162" x2="640" y2="162" stroke="#D3D1C7" stroke-width="0.5"/>
+<text class="ts" x="208" y="188">ORD-1024</text><text class="ts" x="276" y="188">山田商店</text><text class="ts" x="348" y="188">¥120,000</text><text class="ts" x="414" y="188">7/10</text>
+<rect x="452" y="173" width="56" height="22" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="ts" x="480" y="188" text-anchor="middle" fill="#444441">未入金</text>
+<rect x="552" y="173" width="76" height="22" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="590" y="188" text-anchor="middle" fill="#3C3489">次の操作</text>
+<line x1="196" y1="200" x2="640" y2="200" stroke="#D3D1C7" stroke-width="0.5"/>
+<text class="ts" x="208" y="226">ORD-1025</text><text class="ts" x="276" y="226">Kim Trading</text><text class="ts" x="348" y="226">¥86,500</text><text class="ts" x="414" y="226">7/12</text>
+<rect x="452" y="211" width="56" height="22" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="ts" x="480" y="226" text-anchor="middle" fill="#444441">未入金</text>
+<rect x="552" y="211" width="76" height="22" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="590" y="226" text-anchor="middle" fill="#3C3489">次の操作</text>
+<line x1="196" y1="238" x2="640" y2="238" stroke="#D3D1C7" stroke-width="0.5"/>
+<text class="ts" x="208" y="264">ORD-1027</text><text class="ts" x="276" y="264">Chen Ltd</text><text class="ts" x="348" y="264">¥240,000</text><text class="ts" x="414" y="264">7/15</text>
+<rect x="452" y="249" width="56" height="22" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+<text class="ts" x="480" y="264" text-anchor="middle" fill="#444441">未入金</text>
+<rect x="552" y="249" width="76" height="22" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text class="ts" x="590" y="264" text-anchor="middle" fill="#3C3489">次の操作</text>
+<line x1="196" y1="276" x2="640" y2="276" stroke="#D3D1C7" stroke-width="0.5"/>
+<rect x="196" y="290" width="444" height="66" rx="4" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 4"/>
+<text class="ts" x="208" y="316">子が定義する領域</text>
+<text class="ts" x="208" y="336">ステータス固有の機能・見た目(例:未入金ならリマインド送信)</text>
+<rect x="40" y="386" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text class="ts" x="62" y="397">親が定義(骨格)</text>
+<rect x="200" y="386" width="14" height="14" rx="3" fill="none" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text class="ts" x="222" y="397">子が定義(機能・見た目)</text>
+</svg>
