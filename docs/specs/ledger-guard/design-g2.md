@@ -13,7 +13,11 @@
 机作りの全既存挙動（reaper・上限・登録・worktree作成）。警告は表示のみ。
 
 ## KGI-G2の判定（実測3件）
-T1: G2_TEST_BRANCH=release/foo・引数なし実行 → 警告表示=1件
+（G2.1改修 2026-07-04: 測定対象を実行場所から本店そのものへ変更。git-common-dirで
+本店を特定するため、worktree内から実行しても本店を監視できる＝worktree内で黙る
+盲点を解消。PO指摘起点。警告文の絵文字は輸送時の写し崩れ対策でWARNING表記へ）
+T1: 本店から G2_TEST_BRANCH=release/foo 注入 → 警告=1件
+T4: worktree内から同注入 → 警告=1件（旧設計では0＝盲点解消の実証）
 T2: G2_TEST_BRANCH=main・引数なし実行 → 警告表示=0件
 T3: 本店(main)・注入なし・引数なし実行 → 警告表示=0件（実ブランチ経路の確認）
 
