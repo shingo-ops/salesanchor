@@ -264,8 +264,10 @@
 | release/inbox-theme | 受信箱（inbox）親テーマ一式の新設（5ファイル＋索引1行） | 2026-07-04 03:34 | DONE | #2773 | main | merged: PR #2773 / 1822d21c |
 | release/dev-continuity-recon | （記入してください） | 2026-07-04 03:38 | DONE | | | |
 | release/executor-checklist | （記入してください） | 2026-07-04 03:45 | IN_PROGRESS | | | |
-| release/design-system-recon | （記入してください） | 2026-07-04 03:57 | IN_PROGRESS | | | |
-| release/executor-preamble | （記入してください） | 2026-07-04 03:58 | IN_PROGRESS | | | |
+| release/design-system-recon | design-system recon便（KGI現在値の実測記録） | 2026-07-04 03:57 | DONE | #2777 | main | merged: PR #2777 / 679b669cf0812fdf407e5ca420acb1088e8cd97a |
+| release/executor-preamble | （記入してください） | 2026-07-04 03:58 | DONE | | | |
+| release/order-management-design | 受注管理(業務画面)design.md+SVG3枚の収納 | 2026-07-04 04:10 | IN_PROGRESS | | | |
+| release/inbox-records-salvage | （記入してください） | 2026-07-04 10:34 | IN_PROGRESS | | | |
 ---
 
 ## 記入例
