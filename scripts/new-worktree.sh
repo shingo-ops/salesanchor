@@ -21,6 +21,19 @@ set -e
 BRANCH="${1}"
 WITH_CLAUDE="${2}"
 
+# ledger-guard G2.1: どこから実行しても本店そのものを測る
+HONTEN_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null || echo "")
+if [ -n "${HONTEN_GIT_DIR}" ]; then
+  HONTEN_ROOT=$(dirname "${HONTEN_GIT_DIR}")
+  G2_CURRENT_BRANCH="${G2_TEST_BRANCH:-$(git -C "${HONTEN_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)}"
+  if [ "${G2_CURRENT_BRANCH}" != "main" ]; then
+    echo ""
+    echo "WARNING: 本店が main 以外（${G2_CURRENT_BRANCH}）に居ます。作業は続行しますが、"
+    echo "         本店を main へ戻すことを推奨: git checkout main && git pull --ff-only origin main"
+    echo ""
+  fi
+fi
+
 if [ -z "${BRANCH}" ]; then
   echo ""
   echo "使い方: bash scripts/new-worktree.sh <ブランチ名> [--claude]"
