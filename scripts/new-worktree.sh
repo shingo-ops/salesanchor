@@ -21,6 +21,17 @@ set -e
 BRANCH="${1}"
 WITH_CLAUDE="${2}"
 
+# ── 本店ブランチ警告（ledger-guard G2: 本店がmain以外なら気づける）──────────
+if [[ "$PWD" != "${HOME}/worktrees/"* ]]; then
+  G2_CURRENT_BRANCH="${G2_TEST_BRANCH:-$(git -C "$PWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown") }"
+  if [ "${G2_CURRENT_BRANCH}" != "main" ]; then
+    echo ""
+    echo "⚠️  本店が main 以外（${G2_CURRENT_BRANCH}）に居ます。作業は続行しますが、"
+    echo "   本店を main へ戻すことを推奨: git checkout main && git pull --ff-only origin main"
+    echo ""
+  fi
+fi
+
 if [ -z "${BRANCH}" ]; then
   echo ""
   echo "使い方: bash scripts/new-worktree.sh <ブランチ名> [--claude]"
