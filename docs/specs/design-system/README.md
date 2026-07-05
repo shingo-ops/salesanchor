@@ -18,7 +18,8 @@ PO: しんご
 - [design.md](design.md) — 理想の設計図（承認済）
 - [../component-standard.md](../component-standard.md) — 画面部品の確定値（既存・本テーマの子）
 - [../../handoff/design-system-recon/recon.md](../../handoff/design-system-recon/recon.md) — 現状実測(recon)
+- [migration.md](migration.md) — 移行計画（既存→理想・便0〜6・部品台帳）
+- [track-record.md](track-record.md) — 便履歴と逸脱ログ
 
 ## 後続予定（未作成・在るだけ詐称をしないための明記）
-- 移行計画（既存→理想への移行design）
 - 関所実装（design.md 維持の仕組み欄参照）
