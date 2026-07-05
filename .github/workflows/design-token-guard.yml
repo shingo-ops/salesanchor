@@ -1,0 +1,20 @@
+name: デザイントークン ラチェット（hex増加ブロック）
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/**'
+
+jobs:
+  guard-hex-increase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: デザイントークン ラチェット（hex増加ブロック）
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash scripts/check-design-token-ratchet.sh
