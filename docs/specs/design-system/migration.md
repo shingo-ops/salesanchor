@@ -14,7 +14,7 @@ PO承認: 2026-07-05（チャットにて合意。関所ファースト・同値
 ## 2. 便構成と受入基準
 | 便 | 内容 | 前提 | 受入の芯 |
 |---|---|---|---|
-| 便0 | 関所（ラチェット）新設＋部品台帳の初期棚卸し（§4の未実測欄を埋める） | − | 上限=現状値でfailが稼働 |
+| 便0 | 関所（ラチェット）新設＋部品台帳の初期棚卸し（§4の未棚卸し欄を埋める） | − | 上限=現状値でfailが稼働 |
 | 便1 | 色の同値置換①: frontend/src/index.css のhex 187件 | 便0 | 上限 249→62・前後のhex値セット同一の機械検証 |
 | 便2 | 色の同値置換②: 分散62件（15ファイル） | 便1 | 上限 62→0 |
 | 便3 | プルダウン金型化: 44ファイル→Select.tsx（小口バッチ） | select-control便の状態実測とPO裁定 | <select直書き残存0 |
@@ -35,11 +35,11 @@ PO承認: 2026-07-05（チャットにて合意。関所ファースト・同値
 | 3 | ボタン | frontend/src/components/Button.tsx | .btn定義CSSが4ファイル | ^\.btn を定義するCSSファイル数 |
 | 4 | アイコン | 未確定（便4冒頭で供給源を追いrecon） | ライブラリimport 0件・実態未測 | 追いrecon後に確定 |
 | 5 | テキスト表示形式（日付・金額） | 未確定（便4で共通フォーマッタ化） | 45ファイルに分散 | toLocaleDateString等のgrep |
-| 6 | ページ骨格（タイトル・サブタイトル・ヘッダーアクション） | frontend/src/components/PageLayout.tsx | 素の<h1>直書きページあり・骨格CSS二系統 | pages配下の<h1>残存数・骨格CSS系統数 |
-| 7 | カード | frontend/src/components/Card.tsx | 未実測（便0で棚卸し） | 独自カードCSSの残存（便0で基準確定） |
-| 8 | データ表 | frontend/src/components/DataTable.tsx | 未実測（便0で棚卸し） | 独自<table>実装の残存（同上） |
-| 9 | バッジ | frontend/src/components/Badge.tsx | 未実測（便0で棚卸し） | 同上 |
-| 10 | 空状態 | frontend/src/components/EmptyState.tsx | 未実測（便0で棚卸し） | 同上 |
+| 6 | ページ骨格（タイトル・サブタイトル・ヘッダーアクション） | frontend/src/components/PageLayout.tsx | 素の<h1> 6件・骨格CSS 2系統（.page-header/.page-layout-header） | grep -rln "<h1" frontend/src/pages --include="*.tsx" / grep -n "^\.page-header\b\|^\.page-layout-header\b" frontend/src/pages-layout.css |
+| 7 | カード | frontend/src/components/Card.tsx | 独自カードCSS 0件 | grep -rln "\.card\b" frontend/src/pages --include="*.css" |
+| 8 | データ表 | frontend/src/components/DataTable.tsx | 素の<table> 28件 | grep -rln "<table" frontend/src/pages --include="*.tsx" |
+| 9 | バッジ | frontend/src/components/Badge.tsx | 独自badge CSS 0件 | grep -rln "\.badge\b" frontend/src/pages --include="*.css" |
+| 10 | 空状態 | frontend/src/components/EmptyState.tsx | 独自空状態 4件 | grep -rln "empty-state\|EmptyState" frontend/src/pages --include="*.tsx" --include="*.css" |
 
 行7〜10の現状値は便0の棚卸しで実測する（推測で書かない）。
 
