@@ -79,7 +79,7 @@ if [ ! -f "${ACTIVE_WORK_FILE}" ]; then
 fi
 
 # grep -q で完全一致（"| branch |" 形式）— 部分一致による誤検出を防ぐ
-if ! grep -q "| ${CURRENT_BRANCH} |" "${ACTIVE_WORK_FILE}" 2>/dev/null; then
+if ! ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${CURRENT_BRANCH}" > /dev/null 2>&1; then
   echo ""
   echo "🚫 push を中断しました: ブランチが active-work.md に登録されていません。"
   echo "   ブランチ: ${CURRENT_BRANCH}"
