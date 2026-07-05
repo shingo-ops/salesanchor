@@ -23,6 +23,32 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260704-001
+date: 2026-07-04
+agent: Codex
+task: 受信箱（inbox）親テーマ一式の新設
+scope: docs/specs/inbox/README.md, docs/specs/inbox/ideal-state.md, docs/specs/inbox/kgi.md, docs/specs/inbox/design.md, docs/specs/inbox/layout.svg, docs/specs/README.md, tasks/todo.md, .claude-pipeline/active-work.md
+evidence:
+  - type: file
+    reference: docs/specs/inbox/README.md
+    summary: 受信箱親テーマの表紙を新規作成し、範囲・構成・子テーマ一覧・見送り事項を正本化した
+  - type: file
+    reference: docs/specs/inbox/kgi.md
+    summary: 受信箱の見せ方を 8 項目の○× KGI として定義し、Messenger / Instagram / Discord の分母を明記した
+  - type: file
+    reference: docs/specs/README.md
+    summary: dashboard 行の直後に inbox 索引を 1 行追加した
+  - type: command
+    reference: gh pr view 2773 --json state,mergedAt,mergeCommit,url
+    summary: PR #2773 が MERGED、merge commit は 1822d21c9c80b2fc319153d502837eaac37b508c
+  - type: command
+    reference: git rev-parse origin/main
+    summary: origin/main の実測 SHA は 1822d21c9c80b2fc319153d502837eaac37b508c
+confidence: high
+tradeoff: 仕様文書のみの変更であるため、実装コードや API には影響しないが、索引登録により将来の子テーマ着手時に参照義務が増える
+decision: 受信箱親テーマの正本セットを追加し、索引・台帳・active-work の記録を整合させた
+follow_up: 子テーマ着手時は inbox 親テーマを先に読む前提で進める
+
 id: EV-20260622-009
 date: 2026-06-22
 agent: Codex
