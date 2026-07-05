@@ -135,24 +135,10 @@ for _IDX in "${!WT_PATHS[@]}"; do
 
   # ── チェック 1: active-work.md のステータス ──────────────────────────────
   ACTIVE_STATUS="NOT_FOUND"
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    ACTIVE_STATUS=$(python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-filepath, branch = sys.argv[1], sys.argv[2]
-try:
-    content = open(filepath, encoding="utf-8").read()
-    for line in content.splitlines():
-        if branch in line and line.strip().startswith('|'):
-            cols = [c.strip() for c in line.split('|')]
-            # 7列フォーマット: '' branch area date status pr main note ''
-            if len(cols) >= 6 and cols[1] == branch:
-                print(cols[4])
-                sys.exit(0)
-    print("NOT_FOUND")
-except Exception:
-    print("ERROR")
-PYEOF
-2>/dev/null || echo "ERROR")
+  ROW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null)"
+  if [ -n "${ROW}" ]; then
+    ACTIVE_STATUS="$(echo "${ROW}" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
+    [ -z "${ACTIVE_STATUS}" ] && ACTIVE_STATUS="ERROR"
   fi
 
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
@@ -314,32 +300,12 @@ for ENTRY in "${WILL_DELETE[@]}"; do
     echo "    ✅ ブランチ削除: ${BRANCH}" || \
     echo "    ⚠️  ブランチ削除スキップ"
 
-  # active-work.md を DONE に更新（行は消さず残す）
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-
-filepath, branch = sys.argv[1], sys.argv[2]
-with open(filepath, encoding="utf-8") as f:
-    content = f.read()
-
-lines = content.splitlines(keepends=True)
-new_lines = []
-updated = False
-for line in lines:
-    if branch in line and line.strip().startswith('|') and 'IN_PROGRESS' in line:
-        line = line.replace('IN_PROGRESS', 'DONE', 1)
-        updated = True
-    new_lines.append(line)
-
-new_content = ''.join(new_lines)
-if updated:
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-    print(f"    ✅ active-work.md → DONE: {branch}")
-else:
-    print(f"    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: {branch}")
-PYEOF
+  # active-work.md を DONE に更新（行は消さず残す・窓口経由）
+  ROWW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null || true)"
+  if echo "${ROWW}" | grep -q "IN_PROGRESS"; then
+    ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-update.sh" "${BRANCH}" --status DONE > /dev/null       && echo "    ✅ active-work.md → DONE: ${BRANCH}"       || echo "    ⚠️  active-work.md DONE 更新失敗: ${BRANCH}"
+  else
+    echo "    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: ${BRANCH}"
   fi
 
   DELETED=$(( DELETED + 1 ))
