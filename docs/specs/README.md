@@ -13,6 +13,7 @@
 | 商品マスタ | [product-master/README.md](product-master/README.md) | 公開 |
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 |
 | エージェント完結の設計体制 | [agent-complete-design/README.md](agent-complete-design/README.md) | 公開 |
+| 開発の無駄な停止ゼロ | [dev-continuity/README.md](dev-continuity/README.md) | 公開 |
 | GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
