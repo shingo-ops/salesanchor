@@ -11,6 +11,7 @@
 :root {
   /* index.css migration aliases (same-value mechanical tokens) */
   --color-hex-0f172a: #0f172a;
+  --color-hex-000000: #000000;
   --color-hex-131c2c: #131c2c;
   --color-hex-137333: #137333;
   --color-hex-14432b: #14432b;
@@ -23,11 +24,14 @@
   --color-hex-1d4ed8: #1d4ed8;
   --color-hex-1e293b: #1e293b;
   --color-hex-1e3a5f: #1e3a5f;
+  --color-hex-1e3a8a: #1e3a8a;
   --color-hex-1e7e34: #1e7e34;
   --color-hex-1f2937: #1f2937;
   --color-hex-22543d: #22543d;
   --color-hex-243046: #243046;
+  --color-hex-2563eb: #2563eb;
   --color-hex-2b6cb0: #2b6cb0;
+  --color-hex-2e7d32: #2e7d32;
   --color-hex-334155: #334155;
   --color-hex-374151: #374151;
   --color-hex-3a1515: #3a1515;
@@ -74,6 +78,7 @@
   --color-hex-cccccc: #cccccc;
   --color-hex-d6dde8: #d6dde8;
   --color-hex-d8b4fe: #d8b4fe;
+  --color-hex-d97706: #d97706;
   --color-hex-dadce0: #dadce0;
   --color-hex-dbeafe: #dbeafe;
   --color-hex-dc2626: #dc2626;
