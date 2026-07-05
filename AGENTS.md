@@ -251,3 +251,4 @@ bash scripts/check-task-state.sh   # tasks/todo.md と runbook の構造チェ�
 ```
 
 CI（task-state-check.yml）が PR ごとに自動実行する。
+実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。
