@@ -119,3 +119,10 @@ K1〜K11。詳細は [kgi.md](kgi.md)。
 - ④データ：明細・請求書の版・送料・イベント台帳＝取引フロー正本（境界）。tenant_004本番には触れない。
 - ⑤本番：PayPal API＝外部API＝GO対象の危険変更。確認は tenant_006／tenant_001。
 - ⑥外部：顧客（リマインド受信）／PayPal API（入金検知）／受信箱経由の各チャネル。
+
+## 12. 図（images/）
+- 一覧（2段組み）: [images/unpaid-list.svg](images/unpaid-list.svg)
+- 編集下層ページ: [images/unpaid-edit-subpage.svg](images/unpaid-edit-subpage.svg)
+- 入金確認フロー＋監査: [images/payment-confirm-flow.svg](images/payment-confirm-flow.svg)
+- リマインドのチャネル選択: [images/reminder-channel-ladder.svg](images/reminder-channel-ladder.svg)
+- 再発行の確認ダイアログ: [images/reissue-confirm-dialog.svg](images/reissue-confirm-dialog.svg)
