@@ -6,56 +6,56 @@
    ============================================================ */
 :root {
   /* 背景 */
-  --bg-primary: #f5f7fa;        /* メイン背景（ページ全体） */
-  --bg-surface: #ffffff;         /* カード・モーダル等のサーフェス */
-  --bg-subtle: #f7fafc;          /* テーブルヘッダ・カテゴリヘッダ等 */
-  --bg-hover: #e2e8f0;           /* hover 時の明確な変化 */
-  --bg-active: #cbd5e0;          /* クリック直後/選択中の背景 */
+  --bg-primary: var(--color-hex-f5f7fa);        /* メイン背景（ページ全体） */
+  --bg-surface: var(--on-solid);         /* カード・モーダル等のサーフェス */
+  --bg-subtle: var(--color-hex-f7fafc);          /* テーブルヘッダ・カテゴリヘッダ等 */
+  --bg-hover: var(--color-hex-e2e8f0);           /* hover 時の明確な変化 */
+  --bg-active: var(--color-hex-cbd5e0);          /* クリック直後/選択中の背景 */
 
   /* テキスト */
-  --text-primary: #1a202c;       /* 見出し・本文 */
-  --text-secondary: #4a5568;     /* ラベル・補足 */
-  --text-muted: #718096;         /* 非強調・プレースホルダー */
+  --text-primary: var(--color-hex-1a202c);       /* 見出し・本文 */
+  --text-secondary: var(--color-hex-4a5568);     /* ラベル・補足 */
+  --text-muted: var(--color-hex-718096);         /* 非強調・プレースホルダー */
 
   /* ボーダー */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e0;
-  --border-icon: #000000;    /* アイコン枠線（SSoT: .icon-frame で参照） */
+  --border: var(--color-hex-e2e8f0);
+  --border-strong: var(--color-hex-cbd5e0);
+  --border-icon: var(--color-hex-000000);    /* アイコン枠線（SSoT: .icon-frame で参照） */
 
   /* アクセント（SalesAnchor ブランドネイビー） */
-  --accent: #1e3a8a;             /* プライマリボタン・フォーカス */
-  --accent-hover: #163171;
-  --link: #1e3a8a;               /* ナビゲーションリンク */
-  --link-active-bg: #ebeff8;
-  --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
-  --indicator: #1e3a8a;          /* 選択中インジケーター（会話リスト等） */
+  --accent: var(--color-hex-1e3a8a);             /* プライマリボタン・フォーカス */
+  --accent-hover: var(--color-hex-163171);
+  --link: var(--accent);               /* ナビゲーションリンク */
+  --link-active-bg: var(--color-hex-ebeff8);
+  --avatar-bg: var(--color-hex-f1f4f7);          /* アバター背景（会話リスト等） */
+  --indicator: var(--accent);          /* 選択中インジケーター（会話リスト等） */
 
   /* サイドバー */
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #E4E4E7;
-  --sidebar-item-hover-bg: #ebeff8;
-  --sidebar-item-active-bg: #ebeff8;
-  --sidebar-item-active-color: #1e3a8a;
-  --sidebar-item-active-border: #1e3a8a;
+  --sidebar-bg: var(--on-solid);
+  --sidebar-border: var(--color-hex-e4e4e7);
+  --sidebar-item-hover-bg: var(--color-hex-ebeff8);
+  --sidebar-item-active-bg: var(--color-hex-ebeff8);
+  --sidebar-item-active-color: var(--accent);
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed: 54px;
   --sidebar-width-expanded: 240px;
 
   /* ステータス色 */
-  --danger: #e53e3e;
-  --danger-bg: #fed7d7;
-  --danger-text: #9b2c2c;
-  --warning-bg: #fefcbf;
-  --warning-text: #744210;
-  --success-bg: #c6f6d5;
-  --success-text: #22543d;
+  --danger: var(--color-hex-e53e3e);
+  --danger-bg: var(--color-hex-fed7d7);
+  --danger-text: var(--color-hex-9b2c2c);
+  --warning-bg: var(--color-hex-fefcbf);
+  --warning-text: var(--color-hex-744210);
+  --success-bg: var(--color-hex-c6f6d5);
+  --success-text: var(--color-hex-22543d);
 
   /* バナー通知色（ChannelsPage バナー — Material Design 準拠） */
-  --banner-success-bg: #e6f4ea;
-  --banner-success-text: #137333;
-  --banner-warning-bg: #fff4e5;
-  --banner-warning-text: #a45a00;
-  --banner-error-bg: #fdecea;
-  --banner-error-text: #a50e0e;
+  --banner-success-bg: var(--color-hex-e6f4ea);
+  --banner-success-text: var(--color-hex-137333);
+  --banner-warning-bg: var(--color-hex-fff4e5);
+  --banner-warning-text: var(--color-hex-a45a00);
+  --banner-error-bg: var(--color-hex-fdecea);
+  --banner-error-text: var(--color-hex-a50e0e);
 
   /* 影スケール（Tailwind 準拠 × Meta 実測値調整） */
   --shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.05);
@@ -88,77 +88,77 @@
   --search-focus-glow: 0 0 0 3px rgba(30, 58, 138, 0.15), 0 0 10px 1px rgba(30, 58, 138, 0.18);
 
   /* テーブルの交互背景 */
-  --row-hover: #edf2f7;
+  --row-hover: var(--color-hex-edf2f7);
 
   /* Inbox メッセージバブル（Meta実測値 ADR-063 Phase5完了） */
-  --bubble-inbound-bg: #EFEFEF;
-  --bubble-outbound-bg: #8B2EF5;
+  --bubble-inbound-bg: var(--color-hex-efefef);
+  --bubble-outbound-bg: var(--color-hex-8b2ef5);
 
   /* 見込度バッジ（オレンジ系） */
-  --rank-bg: #FFF3E0;
-  --rank-text: #E65100;
+  --rank-bg: var(--color-hex-fff3e0);
+  --rank-text: var(--color-hex-e65100);
 
   /* info バッジ（水色系） */
-  --info-bg: #bee3f8;
-  --info-text: #2b6cb0;
+  --info-bg: var(--color-hex-bee3f8);
+  --info-text: var(--color-hex-2b6cb0);
 
   /* neutral / semantic solid トークン（Task 3C — Badge 金型用） */
-  --neutral-bg:   #e2e8f0;   /* soft neutral 背景 */
-  --neutral-text: #4a5568;   /* soft neutral 文字 */
-  --neutral:      #718096;   /* solid neutral */
-  --info:         #2563eb;   /* solid info（soft は --info-bg/--info-text） */
-  --warning:      #d97706;   /* solid warning（soft は --warning-bg/--warning-text） */
+  --neutral-bg:   var(--color-hex-e2e8f0);   /* soft neutral 背景 */
+  --neutral-text: var(--color-hex-4a5568);   /* soft neutral 文字 */
+  --neutral:      var(--color-hex-718096);   /* solid neutral */
+  --info:         var(--color-hex-2563eb);   /* solid info（soft は --info-bg/--info-text） */
+  --warning:      var(--color-hex-d97706);   /* solid warning（soft は --warning-bg/--warning-text） */
   /* success solid: ライトは --success(#2e7d32)で流用 */
   --comp-badge-success-solid: var(--success);
   /* danger solid: ライトは --danger(#e53e3e)で流用 */
   --comp-badge-danger-solid:  var(--danger);
 
   /* purple バッジ（保留・発送済み） */
-  --purple-bg: #e9d8fd;
-  --purple-text: #553c9a;
+  --purple-bg: var(--color-hex-e9d8fd);
+  --purple-text: var(--color-hex-553c9a);
 
   /* Inbox 専用カラートークン（Meta Business Suite 準拠 / ADR-064） */
-  --inbox-separator: #e4e6eb;
-  --inbox-hover: #f2f3f5;
+  --inbox-separator: var(--color-hex-e4e6eb);
+  --inbox-hover: var(--color-hex-f2f3f5);
   --inbox-action-icon-color: var(--text-secondary); /* ヘッダーアクションアイコン色（SSoT） */
   --inbox-bulk-icon-color: var(--text-primary);     /* 一括操作アイコン色（SSoT） */
 
   /* accent背景上のテキスト（常に白） */
-  --on-accent: #ffffff;
+  --on-accent: var(--on-solid);
   --spinner-on-accent-track: rgba(255, 255, 255, 0.4);
-  --spinner-on-accent-head: #ffffff;
+  --spinner-on-accent-head: var(--on-solid);
 
   /* リードバッジ: コンタクト中（orange系 — 既存変数に対応なし） */
-  --lead-contact-bg:   #fbd38d;
-  --lead-contact-text: #744210;
+  --lead-contact-bg:   var(--color-hex-fbd38d);
+  --lead-contact-text: var(--color-hex-744210);
 
   /* デザイントークン拡張（フォールバック hex 排除のため追加） */
-  --success: #2e7d32;
-  --color-warning: #c08a00;
-  --bg-disabled: #f7f7f7;
+  --success: var(--color-hex-2e7d32);
+  --color-warning: var(--color-hex-c08a00);
+  --bg-disabled: var(--color-hex-f7f7f7);
   /* 在庫数0の行背景（在庫表）。白い在庫あり行と明確に区別できる濃いめのグレー。
      文字は全不透明のまま視認性を確保するため、行を薄くするのではなく背景濃淡で示す。 */
-  --bg-row-zero-stock: #e3e8f0;
-  --bg-row-zero-stock-hover: #d6dde8;
-  --border-color: #cccccc;
-  --border-light: #eeeeee;
-  --accent-bg: #1e3a8a;
-  --bg-badge: #eeeeff;
+  --bg-row-zero-stock: var(--color-hex-e3e8f0);
+  --bg-row-zero-stock-hover: var(--color-hex-d6dde8);
+  --border-color: var(--color-hex-cccccc);
+  --border-light: var(--color-hex-eeeeee);
+  --accent-bg: var(--accent);
+  --bg-badge: var(--color-hex-eeeeff);
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125） */
-  --color-blue-100:      #dbeafe;  /* ライブバッジ背景 */
-  --color-blue-700:      #1d4ed8;  /* ライブバッジ文字 */
-  --color-gray-100:      #f3f4f6;  /* 静的バッジ背景 */
-  --color-gray-600:      #4b5563;  /* 静的バッジ文字 */
-  --color-red-50:        #fef2f2;  /* エラーバナー背景 */
-  --color-red-700:       #b91c1c;  /* エラーバナー文字 */
-  --color-amber-50:      #fffbeb;  /* 警告バナー背景 */
-  --color-amber-800:     #92400e;  /* 警告バナー文字 */
-  --color-border-subtle: #f3f4f6;  /* テーブル行区切り */
+  --color-blue-100:      var(--color-hex-dbeafe);  /* ライブバッジ背景 */
+  --color-blue-700:      var(--color-hex-1d4ed8);  /* ライブバッジ文字 */
+  --color-gray-100:      var(--color-hex-f3f4f6);  /* 静的バッジ背景 */
+  --color-gray-600:      var(--color-hex-4b5563);  /* 静的バッジ文字 */
+  --color-red-50:        var(--color-hex-fef2f2);  /* エラーバナー背景 */
+  --color-red-700:       var(--color-hex-b91c1c);  /* エラーバナー文字 */
+  --color-amber-50:      var(--color-hex-fffbeb);  /* 警告バナー背景 */
+  --color-amber-800:     var(--color-hex-92400e);  /* 警告バナー文字 */
+  --color-border-subtle: var(--color-hex-f3f4f6);  /* テーブル行区切り */
 
   /* PlatformIcon ブランドカラー（固定値 — ダークモードでも変更なし） */
-  --platform-mail-bg: #ea4335;
-  --platform-unknown-bg: #999999;
+  --platform-mail-bg: var(--schedule-now-line);
+  --platform-unknown-bg: var(--color-hex-999999);
 
   /* Inbox背景グラデーション（Meta Business Suite 実測値 — Playwright取得 2026-05-22） */
   --inbox-bg-gradient:
@@ -170,19 +170,19 @@
 
   /* Tooltip */
   --tooltip-bg:   rgba(26, 32, 44, 0.92);
-  --tooltip-text: #ffffff;
+  --tooltip-text: var(--on-solid);
 
   /* Google Calendar デザイントークン（ADR-067 / schedule ページ） */
-  --calendar-google-blue:        #1a73e8;
-  --calendar-google-blue-light:  #e8f0fe;
-  --calendar-today-bg:           #1a73e8;
-  --calendar-today-text:         #ffffff;
-  --calendar-today-cell-bg:      #e8f0fe;
-  --calendar-grid-border:        #dadce0;
-  --calendar-status-ok-bg:       #e6f4ea;
-  --calendar-status-ok-text:     #1e7e34;
-  --calendar-status-error-bg:    #fce8e6;
-  --calendar-status-error-text:  #c5221f;
+  --calendar-google-blue:        var(--color-hex-1a73e8);
+  --calendar-google-blue-light:  var(--color-hex-e8f0fe);
+  --calendar-today-bg:           var(--color-hex-1a73e8);
+  --calendar-today-text:         var(--on-solid);
+  --calendar-today-cell-bg:      var(--color-hex-e8f0fe);
+  --calendar-grid-border:        var(--color-hex-dadce0);
+  --calendar-status-ok-bg:       var(--color-hex-e6f4ea);
+  --calendar-status-ok-text:     var(--color-hex-1e7e34);
+  --calendar-status-error-bg:    var(--color-hex-fce8e6);
+  --calendar-status-error-text:  var(--color-hex-c5221f);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
@@ -202,42 +202,42 @@
 
 /* ユーザがダークテーマを選択した場合（OS設定に関わらず適用） */
 :root.force-dark {
-  --bg-primary: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-subtle: #243046;
-  --bg-hover: #334155;
-  --bg-active: #475569;
+  --bg-primary: var(--color-hex-0f172a);
+  --bg-surface: var(--color-hex-1e293b);
+  --bg-subtle: var(--color-hex-243046);
+  --bg-hover: var(--color-hex-334155);
+  --bg-active: var(--color-hex-475569);
 
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-primary: var(--color-hex-f1f5f9);
+  --text-secondary: var(--color-hex-cbd5e1);
+  --text-muted: var(--cal-holiday);
 
-  --border: #334155;
-  --border-strong: #475569;
-  --border-icon: #e2e8f0;    /* アイコン枠線（ダーク: 視認性確保のため明色） */
+  --border: var(--color-hex-334155);
+  --border-strong: var(--color-hex-475569);
+  --border-icon: var(--color-hex-e2e8f0);    /* アイコン枠線（ダーク: 視認性確保のため明色） */
 
-  --accent: #5b8dd9;
-  --accent-hover: #4d7fc8;
-  --link: #7baee0;
-  --link-active-bg: #1e3a8a;
-  --avatar-bg: #334155;          /* アバター背景（ダーク） */
-  --indicator: #5b8dd9;          /* 選択中インジケーター（ダーク） */
+  --accent: var(--cal-meeting);
+  --accent-hover: var(--color-hex-4d7fc8);
+  --link: var(--color-hex-7baee0);
+  --link-active-bg: var(--color-hex-1e3a8a);
+  --avatar-bg: var(--color-hex-334155);          /* アバター背景（ダーク） */
+  --indicator: var(--cal-meeting);          /* 選択中インジケーター（ダーク） */
 
-  --danger: #f87171;
-  --danger-bg: #4c1d1d;
-  --danger-text: #fecaca;
-  --warning-bg: #3d2f0c;
-  --warning-text: #fde68a;
-  --success-bg: #14432b;
-  --success-text: #bbf7d0;
+  --danger: var(--color-hex-f87171);
+  --danger-bg: var(--color-hex-4c1d1d);
+  --danger-text: var(--color-hex-fecaca);
+  --warning-bg: var(--color-hex-3d2f0c);
+  --warning-text: var(--color-hex-fde68a);
+  --success-bg: var(--color-hex-14432b);
+  --success-text: var(--color-hex-bbf7d0);
 
   /* バナー通知色（ダーク） */
-  --banner-success-bg: #1a3a25;
-  --banner-success-text: #86efac;
-  --banner-warning-bg: #3a2300;
-  --banner-warning-text: #fcd34d;
-  --banner-error-bg: #3a1515;
-  --banner-error-text: #fca5a5;
+  --banner-success-bg: var(--color-hex-1a3a25);
+  --banner-success-text: var(--color-hex-86efac);
+  --banner-warning-bg: var(--color-hex-3a2300);
+  --banner-warning-text: var(--color-hex-fcd34d);
+  --banner-error-bg: var(--color-hex-3a1515);
+  --banner-error-text: var(--color-hex-fca5a5);
 
   --shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.4);
@@ -266,88 +266,88 @@
   /* 検索欄フォーカス時ネオングロー（ダーク） */
   --search-focus-glow: 0 0 0 3px rgba(91, 141, 217, 0.25), 0 0 12px 2px rgba(91, 141, 217, 0.3);
 
-  --row-hover: #2d3b52;
+  --row-hover: var(--schedule-gridline);
 
   /* Inbox メッセージバブル（ダーク） */
-  --bubble-inbound-bg: #334155;
-  --bubble-outbound-bg: #6d28d9;
+  --bubble-inbound-bg: var(--color-hex-334155);
+  --bubble-outbound-bg: var(--color-hex-6d28d9);
 
   /* 見込度バッジ（ダーク） */
-  --rank-bg: #3d2200;
-  --rank-text: #fb923c;
+  --rank-bg: var(--color-hex-3d2200);
+  --rank-text: var(--color-hex-fb923c);
 
   /* info バッジ（ダーク） */
-  --info-bg: #1e3a5f;
-  --info-text: #93c5fd;
+  --info-bg: var(--color-hex-1e3a5f);
+  --info-text: var(--color-hex-93c5fd);
 
   /* neutral / semantic solid トークン（Task 3C — Badge 金型用 ダーク） */
-  --neutral-bg:   #334155;   /* slate-700 */
-  --neutral-text: #94a3b8;   /* slate-400 */
-  --neutral:      #64748b;   /* slate-500 */
-  --info:         #3b82f6;   /* blue-500 */
-  --warning:      #d97706;   /* amber-600 — 白文字と十分なコントラスト */
+  --neutral-bg:   var(--color-hex-334155);   /* slate-700 */
+  --neutral-text: var(--cal-holiday);   /* slate-400 */
+  --neutral:      var(--color-hex-64748b);   /* slate-500 */
+  --info:         var(--color-hex-3b82f6);   /* blue-500 */
+  --warning:      var(--color-hex-d97706);   /* amber-600 — 白文字と十分なコントラスト */
   /* success solid ダーク: --success=#4ade80 は白文字と低コントラストのため別値 */
-  --comp-badge-success-solid: #15803d;   /* green-700 */
+  --comp-badge-success-solid: var(--color-hex-15803d);   /* green-700 */
   /* danger solid ダーク: --danger=#f87171 は白文字と低コントラストのため別値 */
-  --comp-badge-danger-solid:  #dc2626;   /* red-600 */
+  --comp-badge-danger-solid:  var(--color-hex-dc2626);   /* red-600 */
 
   /* purple バッジ（ダーク） */
-  --purple-bg: #3b1f6e;
-  --purple-text: #d8b4fe;
+  --purple-bg: var(--color-hex-3b1f6e);
+  --purple-text: var(--color-hex-d8b4fe);
 
   /* Inbox 専用カラートークン（ダーク / ADR-064） */
-  --inbox-separator: #374151;
-  --inbox-hover: #243046;
+  --inbox-separator: var(--color-hex-374151);
+  --inbox-hover: var(--color-hex-243046);
   --inbox-action-icon-color: var(--text-secondary); /* ヘッダーアクションアイコン色（SSoT） */
   --inbox-bulk-icon-color: var(--text-primary);     /* 一括操作アイコン色（SSoT） */
 
   /* サイドバー（ダーク / ADR-067） */
-  --sidebar-bg:                 #1e293b;
-  --sidebar-border:             #334155;
-  --sidebar-item-hover-bg:      #1e3a8a;
-  --sidebar-item-active-bg:     #1e3a8a;
-  --sidebar-item-active-color:  #93c5fd;
-  --sidebar-item-active-border: #5b8dd9;
+  --sidebar-bg:                 var(--color-hex-1e293b);
+  --sidebar-border:             var(--color-hex-334155);
+  --sidebar-item-hover-bg:      var(--link-active-bg);
+  --sidebar-item-active-bg:     var(--link-active-bg);
+  --sidebar-item-active-color:  var(--color-hex-93c5fd);
+  --sidebar-item-active-border: var(--cal-meeting);
   --sidebar-width-collapsed:    54px;   /* ライトと同値（パリティ維持） */
   --sidebar-width-expanded:     240px;  /* ライトと同値（パリティ維持） */
 
   /* accent背景上のテキスト（常に白） */
-  --on-accent: #ffffff;
+  --on-accent: var(--on-solid);
   --spinner-on-accent-track: rgba(255, 255, 255, 0.4);
-  --spinner-on-accent-head: #ffffff;
+  --spinner-on-accent-head: var(--on-solid);
 
   /* リードバッジ: コンタクト中（ダーク） */
-  --lead-contact-bg:   #3d2b00;
-  --lead-contact-text: #fbd38d;
+  --lead-contact-bg:   var(--color-hex-3d2b00);
+  --lead-contact-text: var(--color-hex-fbd38d);
 
   /* デザイントークン拡張（ダーク） */
-  --success: #4ade80;
-  --color-warning: #fde68a;
-  --bg-disabled: #2d3b52;
+  --success: var(--color-hex-4ade80);
+  --color-warning: var(--color-hex-fde68a);
+  --bg-disabled: var(--schedule-gridline);
   /* 在庫数0の行背景（ダーク）。サーフェス(#1e293b)より明確に沈めて区別する。
-     旧値#19222fはsurfaceと近すぎて差が弱かったため、ページ背景(#0f172a)と被らない
+     旧値#19222fはsurfaceと近すぎて差が弱かったため、ページ背景(var(--color-hex-0f172a))と被らない
      範囲で約2倍のコントラストに調整（ライトと同じ「在庫0=沈める」方向）。文字は全不透明維持。 */
-  --bg-row-zero-stock: #131c2c;
-  --bg-row-zero-stock-hover: #1b2536;
-  --border-color: #475569;
-  --border-light: #334155;
-  --accent-bg: #5b8dd9;
-  --bg-badge: #3b2d5c;
+  --bg-row-zero-stock: var(--color-hex-131c2c);
+  --bg-row-zero-stock-hover: var(--color-hex-1b2536);
+  --border-color: var(--color-hex-475569);
+  --border-light: var(--color-hex-334155);
+  --accent-bg: var(--cal-meeting);
+  --bg-badge: var(--color-hex-3b2d5c);
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125 ダーク） */
-  --color-blue-100:      #1e3a5f;  /* ライブバッジ背景 */
-  --color-blue-700:      #93c5fd;  /* ライブバッジ文字 */
-  --color-gray-100:      #1f2937;  /* 静的バッジ背景 */
-  --color-gray-600:      #9ca3af;  /* 静的バッジ文字 */
-  --color-red-50:        #450a0a;  /* エラーバナー背景 */
-  --color-red-700:       #fca5a5;  /* エラーバナー文字 */
-  --color-amber-50:      #431407;  /* 警告バナー背景 */
-  --color-amber-800:     #fcd34d;  /* 警告バナー文字 */
-  --color-border-subtle: #374151;  /* テーブル行区切り */
+  --color-blue-100:      var(--color-hex-1e3a5f);  /* ライブバッジ背景 */
+  --color-blue-700:      var(--color-hex-93c5fd);  /* ライブバッジ文字 */
+  --color-gray-100:      var(--color-hex-1f2937);  /* 静的バッジ背景 */
+  --color-gray-600:      var(--color-hex-9ca3af);  /* 静的バッジ文字 */
+  --color-red-50:        var(--color-hex-450a0a);  /* エラーバナー背景 */
+  --color-red-700:       var(--color-hex-fca5a5);  /* エラーバナー文字 */
+  --color-amber-50:      var(--color-hex-431407);  /* 警告バナー背景 */
+  --color-amber-800:     var(--color-hex-fcd34d);  /* 警告バナー文字 */
+  --color-border-subtle: var(--color-hex-374151);  /* テーブル行区切り */
 
   /* PlatformIcon ブランドカラー（固定値 — ダークモードでも変更なし） */
-  --platform-mail-bg: #ea4335;
-  --platform-unknown-bg: #999999;
+  --platform-mail-bg: var(--schedule-now-line);
+  --platform-unknown-bg: var(--color-hex-999999);
 
   /* Inbox背景グラデーション — ダークモード版（色を暗系に変換） */
   --inbox-bg-gradient:
@@ -359,19 +359,19 @@
 
   /* Tooltip */
   --tooltip-bg:   rgba(241, 245, 249, 0.94);
-  --tooltip-text: #0f172a;
+  --tooltip-text: var(--color-hex-0f172a);
 
   /* Google Calendar デザイントークン（ダーク） */
-  --calendar-google-blue:        #8ab4f8;
-  --calendar-google-blue-light:  #1e3a5f;
-  --calendar-today-bg:           #8ab4f8;
-  --calendar-today-text:         #0f172a;
-  --calendar-today-cell-bg:      #1e3a5f;
-  --calendar-grid-border:        #3c4043;
-  --calendar-status-ok-bg:       #14432b;
-  --calendar-status-ok-text:     #4ade80;
-  --calendar-status-error-bg:    #4c1d1d;
-  --calendar-status-error-text:  #f87171;
+  --calendar-google-blue:        var(--color-hex-8ab4f8);
+  --calendar-google-blue-light:  var(--color-hex-1e3a5f);
+  --calendar-today-bg:           var(--color-hex-8ab4f8);
+  --calendar-today-text:         var(--color-hex-0f172a);
+  --calendar-today-cell-bg:      var(--color-hex-1e3a5f);
+  --calendar-grid-border:        var(--color-hex-3c4043);
+  --calendar-status-ok-bg:       var(--color-hex-14432b);
+  --calendar-status-ok-text:     var(--color-hex-4ade80);
+  --calendar-status-error-bg:    var(--color-hex-4c1d1d);
+  --calendar-status-error-text:  var(--color-hex-f87171);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
