@@ -13,7 +13,7 @@
 ## 構成
 - [ideal-state.md](ideal-state.md) — あるべき姿（PO自筆・書き換え禁止）
 - [kgi.md](kgi.md) — KGI 9項目（PO承認済み 2026-07-05）・運用方針・設計送り事項
-- design.md — 未作成（recon後の別便）
+- [design.md](design.md) — To-Be設計（recon依存欄は④で実測・2026-07-06）
 
 ## ステータス
 - 2026-07-05: ideal-state・KGI をPO承認。recon（ADR-110ほか）・design は未着手。
