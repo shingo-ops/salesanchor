@@ -3,6 +3,7 @@
 > この文書は何か（専門用語なしの1行）: 画面の色・部品の設計図を1ヵ所に集め、1ヵ所直せば全ページが変わる仕組みの作り方。
 
 親（あるべき姿＋KGI）: [README.md](README.md)
+子（現状実測）: [../../handoff/design-system-recon/full-recon.md](../../handoff/design-system-recon/full-recon.md) — 見た目層の網羅recon（5問×3検品・本物色36件確定）
 
 ## 1. あるべき姿
 [ideal-state.md](ideal-state.md) を正本とする（PO自筆・書き換え禁止）。

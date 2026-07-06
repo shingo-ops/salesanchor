@@ -2,6 +2,8 @@
 
 > この文書は何か: フロント見た目層を 5 問で漏れなく調べ、共通部品・自前実装・規約・KGI・CI の接点をまとめた記録。
 
+親: [../../specs/design-system/README.md](../../specs/design-system/README.md) / [../../specs/design-system/design.md](../../specs/design-system/design.md)
+
 測定時点:
 - `origin/main` SHA: `cbaee615f7853b00278021f16cda9d4d1eb6ab5c`
 
@@ -281,3 +283,27 @@
 - 素の `<table>` も専用 gate がない
 - empty state の統一も専用 gate がない
 - visual gate は inbox / Karte に限定され、他画面の色や骨格のゆらぎは自動で止まらない
+
+### 追補4: ADR-073 / ADR-144 の深刻度
+
+| ADR | 規約の要旨 | 問題の深刻度 | design-system で直せるか | 補足 |
+|---|---|---|---|---|
+| ADR-073 | KGI 100% の評価ルーブリック | 中: 設計の合否判定そのもの | 直せる | 便0.5〜6 の進行判断に直結するため、設計トラック内で改善すべき |
+| ADR-144 | pages/ の共通部品ガバナンス | 高: 画面実装の直書き増殖を抑える根本規約 | 直せる | raw `<h1>` / `<table>` / 独自 empty state が残るので、設計と移行の両方で扱う |
+
+### 追補5: design.md 各要素 ↔ 現状値 ↔ 差分素材
+
+| design.md の層 / 支え | 現状値 | 理想値 | 差分素材 |
+|---|---|---|---|
+| 層1 トークン | raw 62 のうち本物色 36 件。内訳は `calendars.config.ts` 21、`RolesPage.tsx` 13、`schedule-owner.ts` 1、`DashboardPage.tsx` 1。TSX inline 色 0、CSS 生hex 0。 | 生値はトークン正本だけ | 36 件のうちどれを既存トークンに吸収し、どれを新トークン化するかを table 化できる |
+| 層2 共通部品 | `PageLayout` 62、`DataTable` 22、`Select` 19、`Button` 7、`Badge` 2、`EmptyState` 1。自前実装は `<h1>` 6、`<table>` 28、空状態独自 3。 | 1部品=1定義 | 使用数と自前残存の差分がそのまま移行順序になる |
+| 層3 ページ | 参照のみのページもあるが、自前実装が残るページもある | 部品を import して使うだけ | naked `h1` / `table` / empty state の残存一覧が差分素材 |
+| 支え1 カタログ | Storybook は主要部品に存在するが、テキスト書式は共通金型が弱い | 全共通部品が載る | 共通化漏れの候補がそのままカタログ差分になる |
+| 支え2 関所 | 6 関所はあるが、TS 色定数・`<h1>`・`<table>`・empty state・他画面 visual の穴がある | ベタ書き阻止 | 隙間を埋める追加関所の設計材料になる |
+
+### 追補6: つなぎの確認
+
+- `README.md` から `full-recon.md` への子リンクを追加済み
+- `design.md` から `full-recon.md` への子リンクを追加済み
+- `full-recon.md` 冒頭に `README.md` / `design.md` への親リンクを追加済み
+- これで親子リンクは双方向
