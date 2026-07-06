@@ -191,3 +191,93 @@
 - raw hex の大半はノイズで、実害のある生hexは今回の採取では 0
 - naked `h1` / `table` / empty state の自前実装はまだ残る
 - 見た目を見張る関所は token / governance / visual / process-artifacts に分かれている
+
+## 追補: 穴埋め（色の確定・ADR準拠・関所隙間）
+
+### 追補1: 色の数の食い違いを確定
+
+再測定時点:
+
+- `origin/main` SHA: `cbaee615f7853b00278021f16cda9d4d1eb6ab5c`
+- 同一条件の raw grep:
+  - `grep -rEn "#[0-9a-fA-F]{3,8}\b" frontend/src --include="*.css" --include="*.tsx" --include="*.jsx" --include="*.ts" | grep -vE "frontend/src/(index|tokens)\.css" | wc -l`
+  - 結果: `62`
+
+仕分け結果:
+
+| 区分 | hits | unique | 代表ファイル |
+|---|---:|---:|---|
+| 真の色hex | 36 | 34 | `features/schedule/calendars.config.ts` / `pages/roles/RolesPage.tsx` / `pages/dashboard/DashboardPage.tsx` / `pages/schedule/schedule-owner.ts` |
+| ノイズ | 26 | - | PR番号・コメント・ID断片・URL エンコード断片 |
+
+真の色hexの内訳:
+
+| ファイル | hits | 内容 |
+|---|---:|---|
+| `frontend/src/features/schedule/calendars.config.ts` | 21 | 7 色セットの表示用定数 |
+| `frontend/src/pages/roles/RolesPage.tsx` | 13 | 役割色パレット 12 件 + fallback 1 件 |
+| `frontend/src/pages/schedule/schedule-owner.ts` | 1 | 既定オーナー色 fallback |
+| `frontend/src/pages/dashboard/DashboardPage.tsx` | 1 | accent fallback |
+
+ノイズの内訳:
+
+| ファイル | hits | ノイズ種別 |
+|---|---:|---|
+| `frontend/src/App.tsx` | 1 | PR 番号コメント |
+| `frontend/src/contexts/UiPrefsContext.tsx` | 2 | PR 番号コメント |
+| `frontend/src/components/CompanyContactSelector.tsx` | 6 | PR 番号コメント |
+| `frontend/src/components/ContactChannelForm.stories.tsx` | 1 | `user#1234` 文字列 |
+| `frontend/src/components/MergeCompanyModal.tsx` | 4 | PR 番号コメント |
+| `frontend/src/components.css` | 1 | PR 番号コメント |
+| `frontend/src/pages/inbox/InboxMessageThread.tsx` | 1 | `(#2624)` コメント |
+| `frontend/src/pages/deals/DealsPage.tsx` | 2 | PR 番号コメント |
+| `frontend/src/pages/integrations/CarrierCredentialForm.tsx` | 2 | `(#2601)` コメント |
+| `frontend/src/pages/inventory/InventoryPage.tsx` | 2 | `(#2624)` コメント |
+| `frontend/src/pages/company-detail/CompanyBasicTab.tsx` | 1 | PR 番号コメント |
+| `frontend/src/pages/company-detail/CompanyDetailPage.tsx` | 1 | PR 番号コメント |
+| `frontend/src/pages/companies/CompaniesPage.tsx` | 1 | PR 番号コメント |
+| `frontend/src/components/FormField.css` | 1 | `%23888` の URL エンコード断片 |
+
+結論:
+
+- `62` は正しい raw 数
+- `0` だったのは `CSS 生hex` だけを見た文脈では正しいが、`frontend/src` 全体の raw hex という意味では不正確
+- 差分の主因は **測定範囲の違い + ノイズ判定の違い** で、`already replaced` が理由ではない
+- `TSX inline` の色直書きは `0 hits`
+- `CSS 生hex（index.css / tokens.css 除外）` も `0 actual`
+
+### 追補2: ADR 12 本の準拠 / 違反 / 対象外
+
+| ADR | 判定 | ひとこと根拠 |
+|---|---|---|
+| ADR-061 | 準拠 | Inbox の左パネル / Meta 風構造は現行実装にある |
+| ADR-063 | 準拠 | Inbox のページヘッダ + 全幅タブバーが実装済み |
+| ADR-064 | 準拠 | `--inbox-*` 系の色トークンが `index.css` にある |
+| ADR-067 | 違反 | `frontend/src` 全体では TS/TSX 側の生 hex が 36 hits 残る |
+| ADR-073 | 違反 | KGI 100% は未達で、共用部品 / 監視 / 文書が満点ではない |
+| ADR-087 | 準拠 | hub-shell 共通レイアウトの標準化は運用されている |
+| ADR-110 | 準拠 | Karte / inbox の visual reference との整合を見張る関所がある |
+| ADR-120 | 準拠 | status → 見た目の SSoT がある |
+| ADR-122 | 対象外 | modal 標準化は別の移行スコープで、今回の全体 recon では深掘り対象外 |
+| ADR-139 | 準拠 | dashboard 側で DataTable / visual regression の使い方が成立している |
+| ADR-144 | 違反 | naked `<h1>` / `<table>` / 独自 empty state がまだ残る |
+| ADR-149 | 準拠 | SubMenu の SSOT 集約とリンク型対応が機能している |
+
+### 追補3: 関所の隙間
+
+| 関所 | 守るもの | 守らないもの |
+|---|---|---|
+| `design-token-guard.yml` | `frontend/src/**` の hex 増加 | 既存 debt の解消、visual diff、TS 定数の設計妥当性 |
+| `frontend-check.yml` | `check:css-colors` / `check:dark-parity` / `check:css-var-fallbacks` / `check:css-values` / `check:stories` / `check:stylelint` | TS ファイル内の色定数、ページ骨格の統一、raw table / h1 |
+| `ui-governance-gate.yml` | `pages/` の新規生 select / input / tab | 既存 debt、table、h1、empty state、色直書き |
+| `karte-gate.yml` | inbox / Karte の visual diff | dashboard / roles / schedule など他画面の見た目 |
+| `process-artifacts-gate.yml` | ADR / recon / design doc / GO 記録の書式 | UI の見た目そのもの |
+| `design-token-audit.yml` | 未使用トークンの週次監査 | PR ブロック、既存 debt の是正 |
+
+関所の隙間の要点:
+
+- TSX の inline 色直書きは `frontend-check` があるが、**TS 定数の色リテラル**（`calendars.config.ts` / `RolesPage.tsx` など）は別穴
+- ページ骨格の統一（`<h1>` の正本化）は専用 gate がない
+- 素の `<table>` も専用 gate がない
+- empty state の統一も専用 gate がない
+- visual gate は inbox / Karte に限定され、他画面の色や骨格のゆらぎは自動で止まらない
