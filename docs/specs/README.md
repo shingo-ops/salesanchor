@@ -29,6 +29,7 @@
 | 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 |
 | 文書体系（ナレッジベース） | [doc-estate/README.md](./doc-estate/README.md) | KGI承認済 |
 | Sales Anchor アプリ全体（親） | [sales-anchor-app/README.md](sales-anchor-app/README.md) | KGI承認済 2026-07-04 |
+| recon（現状把握）標準（あるべき姿・KGI・調査観点ひな型の集約） | [recon-standard/README.md](recon-standard/README.md) | あるべき姿・KGI承認済 2026-07-06 |
 | カレンダー（schedule。全予定の見える化・源泉SSOT参照・やることフィード共有） | [schedule/README.md](schedule/README.md) | KGI承認済 2026-07-03 |
 | ダッシュボード（dashboard。羅針盤・やることフィード・目標カスケード・AI提案） | [dashboard/README.md](dashboard/README.md) | KGI承認済 2026-07-03 |
 | チームボード（team-board。ボールの所在・無担当警報・presence。接点：受信箱がSSOT） | [team-board/README.md](team-board/README.md) | KGI承認済 2026-07-03 |
