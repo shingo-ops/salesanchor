@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 344" role="img" aria-label="リマインド送信チャネルの選び方">
+<style>
+/* PLACEHOLDER TOKENS: 値のみ親 images/ の実値へ置換。構造は不変。 */
+svg{--font:'Hiragino Sans','Noto Sans JP',sans-serif;--text:#2C2C2A;--sub:#5F5E5A;--acc-s:#534AB7;--acc-f:#EEEDFE;--acc-t:#3C3489;--bd2:#888780;--surf:#F1EFE8;}
+text{font-family:var(--font);fill:var(--text);}
+.sub{fill:var(--sub);}
+.acc{fill:var(--acc-f);stroke:var(--acc-s);stroke-width:0.5;}
+.acct{fill:var(--acc-t);}
+.gray{fill:var(--surf);stroke:var(--bd2);stroke-width:0.5;}
+.dash{fill:none;stroke:var(--bd2);stroke-width:0.5;stroke-dasharray:5 5;}
+</style>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--bd2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<rect class="acc" x="170" y="24" width="340" height="54" rx="8"/>
+<text x="340" y="46" font-size="14" class="acct" text-anchor="middle">既定：最終やり取りチャネル ＋ メール併送</text>
+<text x="340" y="66" font-size="12" class="acct" text-anchor="middle">直近に会話した経路へ（メール併送は既定ON・切替可）</text>
+<line x1="340" y1="80" x2="340" y2="112" stroke="var(--bd2)" stroke-width="1" marker-end="url(#ar)"/>
+<text x="356" y="102" font-size="12" class="sub">送れない時</text>
+
+<rect class="gray" x="170" y="116" width="340" height="54" rx="8"/>
+<text x="340" y="138" font-size="14" text-anchor="middle">予備1：請求書スレッドのチャネル</text>
+<text x="340" y="158" font-size="12" class="sub" text-anchor="middle">請求書を送った経路へ</text>
+<line x1="340" y1="172" x2="340" y2="204" stroke="var(--bd2)" stroke-width="1" marker-end="url(#ar)"/>
+<text x="356" y="194" font-size="12" class="sub">それも不可なら</text>
+
+<rect class="gray" x="170" y="208" width="340" height="54" rx="8"/>
+<text x="340" y="230" font-size="14" text-anchor="middle">予備2：メール</text>
+<text x="340" y="250" font-size="12" class="sub" text-anchor="middle">どの顧客にも届く万能手段</text>
+
+<rect class="dash" x="60" y="286" width="560" height="46" rx="8"/>
+<text x="80" y="306" font-size="12" class="sub">共通ルール</text>
+<text x="340" y="316" font-size="12" text-anchor="middle">送信前に「送信先＋理由」を表示（自動＝記録／手動＝変更可）・実配信は受信箱テーマ</text>
+</svg>

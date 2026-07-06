@@ -67,9 +67,7 @@ fi
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # awk でテーブルの PR# 列（6列目）を取得（macOS/BSD 互換）
 if [ -f "${ACTIVE_WORK_FILE}" ]; then
-  ACTIVE_PR="$(awk -F'|' -v branch="${CURRENT_BRANCH}" \
-    '$0 ~ "\\| " branch " \\|" { gsub(/ /, "", $6); print $6 }' \
-    "${ACTIVE_WORK_FILE}")"
+  ACTIVE_PR="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${CURRENT_BRANCH}" 2>/dev/null | awk -F'|' '{gsub(/ /, "", $6); print $6}')"
   if [ -n "${ACTIVE_PR}" ] && [ "${ACTIVE_PR}" != "${OWNED_PR}" ]; then
     echo ""
     echo "🚫 マージを中断しました: PR番号の不一致。"

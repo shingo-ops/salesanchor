@@ -8,6 +8,8 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
+| 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
 | Chromatic 完全撤去 | Agent | npm依存・プラグイン・コメント除去済み（PR #chromatic-full-removal）。完了定義: `git grep -i chromatic -- ':!docs/' 0件 + ビルド成功` | PR GO待ち | `docs/handoff/chromatic-full-removal/` | 2026-06-24 |
 | Foundation F1 国台帳 `public.countries` 新設 | Agent | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` を追加し、`frontend/src/constants/countries.ts` を seed source とする migration `20260621_010000_create_countries_master.sql` を生成済み。SQLite 互換の `public.countries` rewrite も `backend/tests/conftest.py` に追加した | lint/test を回し、必要なら migration / docs / line ref を微調整して PR 化へ進める | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` / `backend/tests/conftest.py` / `migrations/20260621_010000_create_countries_master.sql` / `docs/handoff/foundation-f1-countries-master/recon.md` / `docs/handoff/foundation-f1-countries-master/design.md` | 2026-06-21 |
 | Foundation F3 流入元の統制 | Agent | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` を追加・更新中 | pytest / Playwright / lint を回し、backfill report を確認して PR 化へ進める | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/conftest.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` / `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` / `docs/handoff/foundation-f3-channel-control/recon.md` / `docs/handoff/foundation-f3-channel-control/design.md` | 2026-06-21 |
@@ -38,6 +40,10 @@
 
 | タスク | 完了日 | PR |
 |------|------|---|
+| 受注管理(業務画面)テーマの器作成（3ファイル+索引登録） | 2026-07-04 | #2771 |
+| 受信箱（inbox）親テーマ一式の新設 | 2026-07-04 | #2773 |
+| エージェント完結の設計体制（To-Be 3ファイル標準） | 2026-07-03 | #2757 |
+| 教訓便（起因ラベル・#2761記帳・5W2H-002） | 2026-07-03 | #2764 |
 | Advisor Phase 1 PR-1 顧客別受注履歴API | 2026-06-20 | #2377 |
 | Foundation F2 国の統制（lead.country を台帳から選ぶ） | 2026-06-21 | #2428 |
 | サイドバークリック時の自動折りたたみ + hover 抑止修正 | 2026-06-20 | #2375 / #2376 |

@@ -47,10 +47,10 @@ class OrderStatus(str, Enum):
 
 
 class OrderCreate(BaseModel):
-    """注文登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
-    company_id: int = Field(ge=1, description="会社ID")
-    contact_id: int = Field(ge=1, description="担当者ID")
-    deal_id: int | None = Field(default=None, ge=1)
+    """注文登録リクエスト（便1a: deal_id 必須・company は deal から自動導出）"""
+    deal_id: int = Field(ge=1, description="商談ID（必須・便1a。company は deal から自動導出）")
+    company_id: int | None = Field(default=None, ge=1, description="非推奨：指定時は deal.company_id と一致必須")
+    contact_id: int | None = Field(default=None, ge=1, description="担当者ID（指定時のみ所属検査）")
     invoice_id: int | None = Field(default=None, ge=1)
     order_number: str = Field(min_length=1, max_length=100)
     total_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
@@ -77,6 +77,44 @@ class OrderUpdate(BaseModel):
     tracking_number: str | None = Field(default=None, max_length=200)
     shipping_country: str | None = Field(default=None, max_length=100)
     notes: str | None = Field(default=None, max_length=5000)
+
+
+class OrderItemCreate(BaseModel):
+    product_id: int | None = Field(default=None, ge=1)
+    product_name: str = Field(min_length=1, max_length=255)
+    name_en: str | None = Field(default=None, max_length=255)
+    condition: str | None = Field(default=None, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
+    sku: str | None = Field(default=None, max_length=100)
+    quantity: int = Field(ge=1)
+    unit_price: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    subtotal: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
+    hs_code: str | None = Field(default=None, max_length=20)
+    usd_unit_value: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    sort_order: int = Field(default=0)
+
+
+class OrderItemResponse(BaseModel):
+    id: int
+    order_id: int
+    product_id: int | None
+    product_name: str
+    name_en: str | None = None
+    condition: str | None = None
+    unit: str | None = None
+    sku: str | None = None
+    quantity: int
+    unit_price: Decimal
+    subtotal: Decimal
+    weight: Decimal | None
+    hs_code: str | None = None
+    usd_unit_value: Decimal | None = None
+    exchange_rate_usd: Decimal | None = None
+    sort_order: int
+
+    model_config = {"from_attributes": True}
 
 
 class OrderResponse(BaseModel):

@@ -3,7 +3,7 @@
 #
 # 安全条件（非交渉・すべて満たした部屋だけ削除）:
 #   ① 未コミット・未push がゼロ（絶対保護・最優先）
-#   ② active-work.md が DONE、または gh で PR がマージ済み（develop or main）
+#   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
@@ -135,24 +135,10 @@ for _IDX in "${!WT_PATHS[@]}"; do
 
   # ── チェック 1: active-work.md のステータス ──────────────────────────────
   ACTIVE_STATUS="NOT_FOUND"
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    ACTIVE_STATUS=$(python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-filepath, branch = sys.argv[1], sys.argv[2]
-try:
-    content = open(filepath, encoding="utf-8").read()
-    for line in content.splitlines():
-        if branch in line and line.strip().startswith('|'):
-            cols = [c.strip() for c in line.split('|')]
-            # 7列フォーマット: '' branch area date status pr main note ''
-            if len(cols) >= 6 and cols[1] == branch:
-                print(cols[4])
-                sys.exit(0)
-    print("NOT_FOUND")
-except Exception:
-    print("ERROR")
-PYEOF
-2>/dev/null || echo "ERROR")
+  ROW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null)"
+  if [ -n "${ROW}" ]; then
+    ACTIVE_STATUS="$(echo "${ROW}" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
+    [ -z "${ACTIVE_STATUS}" ] && ACTIVE_STATUS="ERROR"
   fi
 
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
@@ -172,7 +158,7 @@ PYEOF
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. upstream 設定済みなら @{u}..HEAD で比較
       #    ただし専用棚 origin/<branch> と HEAD が一致していれば push 済みとみなす
-      #    （@{u} が main/develop 等の共用側を指す設定漏れによる誤検出を防ぐ）
+      #    （@{u} が共用側（main 等）を指す設定漏れによる誤検出を防ぐ）
       if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
         OWN_REMOTE=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
         HEAD_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
@@ -210,14 +196,14 @@ PYEOF
 
   if [ "${IS_DONE}" -eq 0 ]; then
     # gh で PR マージ済み確認（squash マージでも機能）
-    # develop または main へのマージを検知（hotfix/release の main マージも対象）
+    # main へのマージを検知（release/hotfix の main マージも対象）
     # エラー時は 0 扱い（安全側）
     MERGED_COUNT=$(gh pr list \
       --repo "${REPO_NAME}" \
       --state merged \
       --head "${BRANCH}" \
       --json number,baseRefName \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")] | length' \
+      --jq '[.[] | select(.baseRefName == "main")] | length' \
       2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -232,7 +218,7 @@ PYEOF
       --state closed \
       --head "${BRANCH}" \
       --json number,baseRefName,mergedAt \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main") | select(.mergedAt == null)] | length' \
+      --jq '[.[] | select(.baseRefName == "main") | select(.mergedAt == null)] | length' \
       2>/dev/null || echo "0")
     [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -314,32 +300,12 @@ for ENTRY in "${WILL_DELETE[@]}"; do
     echo "    ✅ ブランチ削除: ${BRANCH}" || \
     echo "    ⚠️  ブランチ削除スキップ"
 
-  # active-work.md を DONE に更新（行は消さず残す）
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-
-filepath, branch = sys.argv[1], sys.argv[2]
-with open(filepath, encoding="utf-8") as f:
-    content = f.read()
-
-lines = content.splitlines(keepends=True)
-new_lines = []
-updated = False
-for line in lines:
-    if branch in line and line.strip().startswith('|') and 'IN_PROGRESS' in line:
-        line = line.replace('IN_PROGRESS', 'DONE', 1)
-        updated = True
-    new_lines.append(line)
-
-new_content = ''.join(new_lines)
-if updated:
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-    print(f"    ✅ active-work.md → DONE: {branch}")
-else:
-    print(f"    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: {branch}")
-PYEOF
+  # active-work.md を DONE に更新（行は消さず残す・窓口経由）
+  ROWW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null || true)"
+  if echo "${ROWW}" | grep -q "IN_PROGRESS"; then
+    ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-update.sh" "${BRANCH}" --status DONE > /dev/null       && echo "    ✅ active-work.md → DONE: ${BRANCH}"       || echo "    ⚠️  active-work.md DONE 更新失敗: ${BRANCH}"
+  else
+    echo "    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: ${BRANCH}"
   fi
 
   DELETED=$(( DELETED + 1 ))

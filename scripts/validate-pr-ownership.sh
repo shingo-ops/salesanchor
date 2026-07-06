@@ -33,7 +33,7 @@ if [ -f "${CONFIG_FILE}" ]; then
 fi
 # デフォルト値（config がない環境へのフォールバック）
 AGENT_WORKTREE_BASE="${AGENT_WORKTREE_BASE:-${HOME}/worktrees}"
-AGENT_BASE_BRANCH="${AGENT_BASE_BRANCH:-develop}"
+AGENT_BASE_BRANCH="${AGENT_BASE_BRANCH:-main}"
 AGENT_ACTIVE_WORK_REL="${AGENT_ACTIVE_WORK_REL:-.claude-pipeline/active-work.md}"
 AGENT_BRANCH_PREFIX="${AGENT_BRANCH_PREFIX:-feature/morimoto/}"
 
@@ -79,7 +79,7 @@ if [ ! -f "${ACTIVE_WORK_FILE}" ]; then
 fi
 
 # grep -q で完全一致（"| branch |" 形式）— 部分一致による誤検出を防ぐ
-if ! grep -q "| ${CURRENT_BRANCH} |" "${ACTIVE_WORK_FILE}" 2>/dev/null; then
+if ! ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${CURRENT_BRANCH}" > /dev/null 2>&1; then
   echo ""
   echo "🚫 push を中断しました: ブランチが active-work.md に登録されていません。"
   echo "   ブランチ: ${CURRENT_BRANCH}"
@@ -98,12 +98,12 @@ fi
 # 不一致 = 他エージェントの変更がベースにマージされた後に rebase していない
 #
 # 例外: release/* / hotfix/* は main をターゲットとするブランチ。
-#       origin/main ベースで作られるため origin/develop との乖離は正常であり、
+#       origin/main ベースで作られるため、このチェックの対象外とする。
 #       このチェックの対象外とする。通常の feature/* は引き続きチェック対象。
 
 case "${CURRENT_BRANCH}" in
   release/*|hotfix/*)
-    # main 直 PR 用ブランチは develop 乖離チェックをスキップ
+    # main 直 PR 用ブランチは乖離チェックをスキップ
     ;;
   *)
     if git rev-parse --verify "origin/${AGENT_BASE_BRANCH}" >/dev/null 2>&1; then
@@ -129,7 +129,7 @@ esac
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # チェック4: マージ済みPRへの追加 push を禁止
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 問題: PRマージ後に同じブランチへ push すると変更が develop/main に反映されない
+# 問題: PRマージ後に同じブランチへ push すると変更が main に反映されない
 # 解決: gh でPR状態を確認し MERGED なら push をブロックする
 
 if command -v gh >/dev/null 2>&1; then

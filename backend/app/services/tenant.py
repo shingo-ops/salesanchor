@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     company_code VARCHAR(20) NOT NULL,
-    lead_id INTEGER,                                   -- FK は leads 作成後に付与
+    lead_id INTEGER NOT NULL,                          -- FK は leads 作成後に付与（便1a）
     name VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
     normalized_name VARCHAR(255),
@@ -429,7 +429,7 @@ CREATE TABLE IF NOT EXISTS {schema}.deals (
     -- CONSTRAINT 名は migration 032 と合わせる（verify の FK 存在 check が新旧テナントで揃うように）
     company_id INTEGER CONSTRAINT fk_deals_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_deals_contact REFERENCES {schema}.contacts(id),
-    lead_id INTEGER REFERENCES {schema}.leads(id),
+    lead_id INTEGER NOT NULL REFERENCES {schema}.leads(id),
     title VARCHAR(255) NOT NULL,
     amount NUMERIC(15, 2),
     currency VARCHAR(10) DEFAULT 'JPY',
@@ -489,7 +489,7 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
-    deal_id INTEGER REFERENCES {schema}.deals(id),
+    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',
@@ -910,6 +910,56 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     sort_order INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS {schema}.order_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    order_id INTEGER NOT NULL,
+    product_id INTEGER REFERENCES public.products(id),
+    product_name VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    condition VARCHAR(50),
+    unit VARCHAR(20),
+    sku VARCHAR(100),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(15, 2) NOT NULL,
+    subtotal NUMERIC(15, 2) NOT NULL,
+    weight NUMERIC(10, 3),
+    hs_code VARCHAR(20),
+    usd_unit_value NUMERIC(15, 2),
+    exchange_rate_usd NUMERIC(12, 4),
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON {schema}.order_items (order_id);
+
+DO $order_items_fk$
+BEGIN
+    IF to_regclass('{schema}.orders') IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'fk_order_items_order'
+              AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
+        ) THEN
+            ALTER TABLE {schema}.order_items
+                ADD CONSTRAINT fk_order_items_order
+                FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE;
+        END IF;
+    END IF;
+END $order_items_fk$;
+
+DO $order_items_trigger$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'trg_order_items_updated_at'
+          AND tgrelid = '{schema}.order_items'::regclass
+    ) THEN
+        CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON {schema}.order_items
+            FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
+    END IF;
+END $order_items_trigger$;
+
 -- === Phase 3: 仕入れ・調達管理 ===
 
 CREATE TABLE IF NOT EXISTS {schema}.suppliers (
@@ -951,6 +1001,8 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
     total_amount NUMERIC(15, 2) DEFAULT 0,
     ordered_at TIMESTAMPTZ,
     received_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    shipping_fee NUMERIC(15, 2) DEFAULT 0,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -964,6 +1016,7 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
+    order_item_id INTEGER REFERENCES {schema}.order_items(id),
     sort_order INTEGER DEFAULT 0
 );
 
@@ -1130,6 +1183,7 @@ _RLS_ENABLE_SQL = """
 -- ADR-089 Sprint 5: customers は廃止済。RLS は companies 体系のみ。
 ALTER TABLE {schema}.deals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.roles ENABLE ROW LEVEL SECURITY;
@@ -1188,6 +1242,10 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_orders' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_orders ON {schema}.orders
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_items' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_items ON {schema}.order_items
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_audit_logs' AND schemaname = '{schema_raw}') THEN

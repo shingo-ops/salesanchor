@@ -25,9 +25,9 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 |---|---|
 | `.github/workflows/deploy.yml:764` | stamp 工程に `continue-on-error: true`。develop 依存だが失敗してもデプロイ本体は止まらない（本番無傷） |
 | `scripts/gh-pr-create-safe.sh:56` | `gh pr create --base develop "$@"`。`--base` 未指定時の既定が develop（廃止後は要付替） |
-| `.github/workflows/claude-pipeline.yml:887` | `Auto-merge to develop`。ADR-056 の自動マージ本線。develop 依存 |
-| `.github/workflows/auto-back-merge.yml:71` | `--base develop`。main→develop back-merge 自動起票。develop 廃止で役目消滅 |
-| `.github/workflows/auto-release-pr.yml:11` | `branches: [develop]`。develop push トリガ。廃止で発火不能 |
+| `docs/specs/branch-operations/README.md:30-38` | main に移す守りの一覧と、「develop にあって main に無い守り」が廃止完了時点でゼロという正本の宣言 |
+| `docs/specs/branch-operations/README.md:69-79` | 第1.5便が「守りの引き継ぎ」として設計され、子文書として recon / design をぶら下げる構造 |
+| `docs/handoff/branch-operations/design.md:45-48` | 第1.5便（守りの移設）の具体策。main の鍵に UI governance / dangling-route を必須追加、worktree 検問を main 宛でも発火 |
 | `.github/workflows/pr-base-check.yml:27` | main 向け PR 許可判定に develop を含む。案内文が廃止後に不整合 |
 | `scripts/new-worktree.sh:73` | `origin/develop` の存在確認で土台選択。無ければ `origin/main` にフォールバック（develop 不在に既に耐性あり） |
 | `scripts/dev/executor-preflight.sh:74` | 作業開始前チェックが `origin/main` と `origin/develop` の両存在を要求。develop 消滅で失敗する（要修正） |
@@ -47,20 +47,20 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 
 - UI governance 検問（鍵側・develop 専属）
 - dangling-route 検問（鍵側・develop 専属）
-- worktree 整合性チェック（`worktree-integrity-check.yml` が develop 宛のみで発火。main 宛でも動くよう要変更）
+- worktree 整合性チェック（`.github/workflows/worktree-integrity-check.yml:1-30` が develop 宛のみで発火。main 宛でも動くよう要変更）
 
 移設不要（既に main でも効く / 守りではない）と確定したもの:
 
-- `deprecated-columns-check.yml`: `branches: [main, develop]` で main でも発火済み
-- `active-work-auto-done/review.yml`、`publish-qa-checksheet.yml`: develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
+- `.github/workflows/deprecated-columns-check.yml:1-20`: `branches: [main, develop]` で main でも発火済み
+- `docs/handoff/branch-operations/design.md:54-55`: active-work-auto-done/review と publish-qa-checksheet は develop 運用の付随機能（守りではない）。ADR-056 系として廃止対象
 
 ## 5. デプロイ動線への影響（最重要確認）
 
-`deploy.yml` の develop 参照は stamp 工程（`active-work.md` への日付記録）に限定。`continue-on-error: true`（L764）のため develop 消滅で失敗してもデプロイ本体は成功。develop 廃止でデプロイは止まらない。
+`.github/workflows/deploy.yml:764` の develop 参照は stamp 工程（`.claude-pipeline/active-work.md:1-20` への日付記録）に限定。`continue-on-error: true` のため develop 消滅で失敗してもデプロイ本体は成功。develop 廃止でデプロイは止まらない。
 
 触らない:
 
-- `deploy.yml` のデプロイ実処理本体
+- デプロイ実処理本体
 - ADR-134（緊急遮断・develop 無関係）
 
 ## 6. 不明点リスト
@@ -68,7 +68,7 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 | # | 不明点 | 解消方法 | 状態 |
 |---|---|---|---|
 | 1 | develop 参照の全量に取りこぼしが無いか | 件数マップ 72 + 118 = 190 で二分割検算 | ✅ 解消済み |
-| 2 | deploy が develop 廃止で止まるか | `deploy.yml` L764 `continue-on-error` 実物確認 | ✅ 解消済み（止まらない） |
+| 2 | deploy が develop 廃止で止まるか | `.github/workflows/deploy.yml:764` の `continue-on-error` 実物確認 | ✅ 解消済み（止まらない） |
 | 3 | develop にのみ効く守りの特定 | ruleset 突合 + `on:` ブロック実物確認 | ✅ 解消済み（UI governance / dangling-route / worktree 整合性） |
 | 4 | ADR-056 の実在 | `docs/adr/` で grep | ✅ 解消済み |
 

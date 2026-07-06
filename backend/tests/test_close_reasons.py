@@ -20,14 +20,16 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _create_deal(client) -> int:
-    company_res = await client.post("/api/v1/companies", json={"name": "理由テスト株式会社"})
+    from tests.helpers_txn import create_lead
+    lead_id = await create_lead(client)
+    company_res = await client.post("/api/v1/companies", json={"name": "理由テスト株式会社", "lead_id": lead_id})
     company_id = company_res.json()["id"]
     contact_res = await client.post("/api/v1/contacts", json={
         "company_id": company_id, "name": "担当者", "email": "test-cr@example.com",
     })
     contact_id = contact_res.json()["id"]
     deal_res = await client.post("/api/v1/deals", json={
-        "company_id": company_id, "contact_id": contact_id, "title": "理由テスト商談",
+        "lead_id": lead_id, "company_id": company_id, "contact_id": contact_id, "title": "理由テスト商談",
     })
     return deal_res.json()["id"]
 

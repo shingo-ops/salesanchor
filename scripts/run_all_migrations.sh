@@ -481,10 +481,20 @@ run_sql migrations/20260627_120000_add_tenant_features_table.sql
 # スコープ②Phase2 backfill: products.unit DROP 前に inventory.unit へ退避（空欄のみ・冪等）
 run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
 
-# スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
-run_sql migrations/20260629_020000_drop_products_condition_unit.sql
 # 為替レート SSOT (public.app_fx_rates) テーブル新設 + RLS（読み取り全許可・書き込みoperatorのみ）
 run_sql migrations/20260628_170000_add_app_fx_rates.sql
+
+# 便1a: 取引フロー背骨の必須化（遡及lead逆造成 backfill + 条件付き NOT NULL）
+run_sql migrations/20260703_010000_txn_backbone_ben1a.sql
+
+# スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
+run_sql migrations/20260629_020000_drop_products_condition_unit.sql
+
+# 便1b: conversation_logs の背骨必須化（echo穴埋め + 遡及backfill + NOT NULL）
+run_sql migrations/20260703_020000_conv_backbone_ben1b.sql
+
+# 便2: order_items 新設＋仕入接続
+run_sql migrations/20260703_030000_order_items_ben2.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

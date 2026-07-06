@@ -4,7 +4,7 @@
 
 **対象ADR**: ADR-056（Human-in-the-Loop Minimization／develop への自動化）
 **仕様書**: ../../specs/branch-operations/README.md
-**recon**: ./recon.md
+**recon**: ./recon.md（docs/handoff/branch-operations/recon.md）
 **日付**: 2026-07-01
 **担当**: Planner（Claude）
 
@@ -34,12 +34,19 @@
 
 ## 技術 How・KPI
 
+## 維持の仕組み
+
+- 守り手: 人手で守る（PO が第1.5便の実地確認を行い、main/develop の両方で gate が効くことを目視で確認するため）
+- この設計は `docs/handoff/branch-operations/recon.md` の実物確認と対で維持する。
+- 守りの移設は `main` と `develop` の両方で必須チェックを一致させ、片側だけ弱くなる状態を作らない。
+- 第1.5便で移設した守りは、PO の実地確認後に第2便以降の撤去に進む。
+
 基本方針: 「行き先を全て main へ付替 → devの守りを main へ移設 → 撤去 → 後片付け」。撤去は最後、撤去前は中止可能。
 
 第1便（動線付替）:
 - 削除: auto-back-merge.yml, auto-release-pr.yml, claude-pipeline.yml（ADR-056廃止＝R）
 - 書換: gh-pr-create-safe.sh:56/66, pr-base-check.yml:27, executor-preflight.sh:74, new-worktree.sh:73, backfill-active-work-done.sh:72, reaper-worktree.sh:214/229, validate-pr-ownership.sh:36, validate-worktree-start.sh:47 の develop→main
-- 除外: deploy.yml（危険ファイル・後片付けへ）、検問の branches:[main,develop] 欄（後片付けへ）
+- 除外: `.github/workflows/deploy.yml`（危険ファイル・後片付けへ）、検問の branches:[main,develop] 欄（後片付けへ）
 - KPI: 上表の第1便該当基準が全て○
 
 第1.5便（守りの移設）:
@@ -53,12 +60,12 @@
 
 第2便（鍵外し）: develop の deletion ルールを外す
 第3便（撤去・唯一の危険操作）: develop の SHA を控え→自筆GO→削除→検算（確認→退避→試し→GO→実行→検算）
-第4便（後片付け）: 検問の develop 欄整理、deploy.yml stamp の目印を main へ、記録
+第4便（後片付け）: 検問の develop 欄整理、`.github/workflows/deploy.yml` stamp の目印を main へ、記録
 
 ## 弊害・トレードオフ
 
 - リスク1: ADR-056（AI自動化）を廃止する → 対策: しんごの「全手動GO」方針に合致。将来必要なら練習場を作り直せる。R確定（仕様書§3-3）
-- リスク2: 撤去後 deploy.yml stamp が毎回失敗ログを出す（continue-on-error で握り潰される）→ 対策: 第4便で stamp の目印を main へ修正。実害ゼロだが恒常赤stepを消す
+- リスク2: 撤去後 `.github/workflows/deploy.yml` stamp が毎回失敗ログを出す（continue-on-error で握り潰される）→ 対策: 第4便で stamp の目印を main へ修正。実害ゼロだが恒常赤stepを消す
 - リスク3: 撤去は不可逆 → 対策: 第3便で SHA を控え、問題時は復元。撤去前は全便で中止可能
 
 ## 計画票
