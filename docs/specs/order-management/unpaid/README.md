@@ -31,4 +31,8 @@ PO: しんご
 - [kgi.md](kgi.md) … KGI（○×で測る）
 - [design.md](design.md) … To-Be設計（画面・操作・ルール）
 - [track-record.md](track-record.md) … 定点観測（PR単位の測定台帳）
-- images/ … 画面SVG（後続便で追加：一覧2段組み／編集下層／入金確認フロー ほか）
+- images/unpaid-list.svg … 一覧（2段組み）
+- images/unpaid-edit-subpage.svg … 編集下層ページ
+- images/payment-confirm-flow.svg … 入金確認フロー＋監査
+- images/reminder-channel-ladder.svg … リマインドのチャネル選択
+- images/reissue-confirm-dialog.svg … 再発行の確認ダイアログ
