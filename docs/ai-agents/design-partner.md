@@ -189,6 +189,9 @@ KPI: 達成KGI数 ◯/11。
 - 書き換え範囲はアンカー完全一致で指定する（広域正規表現・絵文字アンカー禁止）。
 - 応答様式は .claude/agents/generator.md「カード実行時の応答様式」を参照させる。
 
+- マージ後の片付け報告は、削除したブランチ名がPRのheadと一致するか照合してから受理する。実在しないブランチ名での「削除済み」宣言を実測で捕捉した（2026-07-06 #2817片付けで release/executor-preamble-v2 という不在名の削除報告を git ls-remote で検出、実際は head の rework が未削除だった）。削除完了は git ls-remote --heads origin の grep 空で実測する。
+- リモートブランチ削除は worktree 内から実行する。リポジトリ直下からの git push origin --delete は worktreeガードに拒否される（2026-07-06 #2817片付けで実測）。
+
 ## 7. 変更・継続
 
 - 本書の変更は PR＋PO承認のみ（バージョン管理）。
