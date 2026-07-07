@@ -8,9 +8,7 @@
 - KGIと運用: [kgi.md](./kgi.md)
 - 定点観測台帳（1便1行の記録）: [track-record.md](./track-record.md)
 - ステータス: To-Be確定済み・recon前（§4参照）。recon後に§4と親リンクを更新する。
-- 親（あるべき姿+KGI）へのリンク: recon後に確定
-  （候補: 新規テーマ、または docs/specs/design-partner-loop/README.md の子。
-  分離による形骸化を防ぐため、事実確認後にPOが判断する）
+- 親（循環の形）: [../design-partner-loop/README.md](../design-partner-loop/README.md) の子（PO確定 2026-07-05）。差分design: [design.md](./design.md)
 
 日付: 2026-07-03 ／ PO: しんご
 
