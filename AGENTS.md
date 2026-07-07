@@ -23,7 +23,7 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 | **Reviewer** | ChatGPT（最終ゲート）/ Codex app（第二レビュー） | コードレビュー・PR審査。ChatGPTが最終承認ゲートを担う |
 | **Evaluator** | Claude Code | Playwright等で動作検証 |
 
-- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → PO GO → main マージ（develop経由は廃止・移行中）
+- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → PO GO → main マージ（develop経由は廃止。release/* → main が現行）
 - Plannerが確立したエビデンスは ADR の Why セクションに必ず含める
 
 ### エビデンス要件（Research → Planner → Architect の鉄則）
@@ -126,7 +126,7 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 
 ## ブランチ運用ルール
 
-- `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止・移行中。正: `docs/specs/branch-operations/`）
+- `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止。新規作業は release/* のみ。develop はロールバック用に残置。正: `docs/specs/branch-operations/`）
 - Codex が自動生成するブランチ名（例: `abc123-codex/fix-inbox`）はそのまま使ってよい
 - `develop` / `main` への直接コミット禁止
 - 完了後 `gh pr create --base main` で PR 作成 → レビュー後 `main` へマージ（merge commit・squash禁止）

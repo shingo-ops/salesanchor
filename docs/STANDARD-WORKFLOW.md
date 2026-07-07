@@ -25,7 +25,7 @@
 | **2 現在地把握（recon）** | architect | 実コードを **file:line で突合**し事実を出す。**推測禁止**。**着手前に必ず既存 ADR を検索**（機能キーワードで `git grep -i "<keyword>" docs/adr/` ＋ [`docs/adr/FEATURE-INDEX.md`](adr/FEATURE-INDEX.md) を引く。ADR は自動ロードされない＝指さないと見落とす）。証拠は `docs/handoff/<仕事名>/recon.md` |
 | **3 実現方法の設計** | Planner | **(a)** 外部・過去事例から学び**我々への応用**を検討（深さは規模/新規性/リスクに**比例**。小規模は「該当なし＋理由」でよいが**検討自体は省略不可**）。**(b)** 技術How・KPI・弊害/トレードオフ・計画票・継続を**高粒度**で。各受け入れ基準に**検証方法を紐づける** |
 | **4 実装** | Generator | レビュー済み設計から実装・PR作成。フロント視覚＝参照に厳密一致 |
-| **5 検証ゲート** | Reviewer＋Evaluator | コード＋UI差分（Playwright）＋テスト/CI。二者APPROVE＋全必須チェック通過で develop マージ |
+| **5 検証ゲート** | Reviewer＋Evaluator | コード＋UI差分（Playwright）＋テスト/CI。二者APPROVE＋全必須チェック通過で release ブランチへマージ |
 
 ### 1.5 設計仕様書（あるべき姿）の正本ルール
 
@@ -84,12 +84,12 @@
 
 タスクが「完了」と認められるのは、次の4つがすべて揃った状態に限る。
 
-1. 変更が PR として本番ブランチ（develop 経由で main）にマージされている。
+1. 変更が PR として本番ブランチ（release 経由で main）にマージされている。
 2. その PR で、必要な自動チェック（自動テスト・該当する外部APIスモーク・process-artifacts gate）がすべて緑だった。
 3. 危険な変更（migrations/・deploy.yml・本番 scripts 等）を含む場合、GO 記録がある。
 4. 人が実際に動作確認を行い、不具合がないと判断している。確認内容（何を・どう確認し、問題がなかったか）を docs/ai-agents/evidence-registry.md に記録している。
 
-- **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / `backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` / **PR-C の外部API検出で見つかる変更**）は、**本番に出す前に Shingo の GO 記録が必須**。現行フローでは、まず feature PR で GO を満たして develop に入れ、その後 release PR で main へ昇格する。
+- **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / `backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` / **PR-C の外部API検出で見つかる変更**）は、**本番に出す前に Shingo の GO 記録が必須**。現行フローでは、release ブランチで GO を満たし、release PR で main へ昇格する。
 - **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_006（QA）または tenant_001（空テスト）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。ローンチ後は別サーバーの dev 環境で事前確認に移行する。
 
 次は完了と認めない。
@@ -135,7 +135,7 @@ tasks/todo.md・.claude-pipeline/active-work.md の「完了（DONE）」移動�
 - **危ない変更**（DBマイグレーション・`deploy.yml`・本番スクリプト）：**自己申告は不可**。特例は**認可された人間の承認**でのみ開く。
   - **些細**：承認 → 軽い扱い（記録）。
   - **緊急**：承認 → 先行マージ＋**宿題を期限内に後追い提出**（"宿題待ち"として記録、期限超過は自動警告・エスカレーション）。
-  - **develop へのマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は、PO の GO が出るまで feature ブランチで待機し develop にマージしない。develop は待合室ではなく出荷口。GO 待ちの作業は feature ブランチが待合室。
+  - **main へのマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は、PO の GO が出るまで release ブランチで待機し main にマージしない。main は出荷口。GO 待ちの作業は release ブランチが待合室。
 
 **承認役＝認可された人間（役割）。現状：PO（Shingo）＋ 開発パートナー。** 承認者は記録される。承認役の増減は PR＋承認で管理（属人化させない）。
 
@@ -146,7 +146,7 @@ tasks/todo.md・.claude-pipeline/active-work.md の「完了（DONE）」移動�
 ---
 
 ## 6. 関所（ゲート）＝ 確実性の所在
-すべての出口（develop へのマージ）に**1つの必須ゲート**を置く。揃わない／本物でない／不明が残るものは通さない。
+すべての出口（release→main のマージ）に**1つの必須ゲート**を置く。揃わない／本物でない／不明が残るものは通さない。
 - **検査**：成果物が揃い・本物（§2）・不明ゼロ（§3）・ADR参照あり、または**免除宣言**あり。
 - 全環境の出口はこの1つ＝**環境非依存でカバー**。
 
