@@ -255,6 +255,7 @@
 | release/morimoto/ticket-msg-en | （記入してください） | 2026-06-29 | IN_PROGRESS | | | ⑥清書便で補記 |
 | release/agent-complete-design-recon | （記入してください） | 2026-07-03 21:54 | DONE | | | |
 | release/agent-complete-design-record | （記入してください） | 2026-07-03 22:25 | IN_PROGRESS | | | |
+| release/agent-complete-design-design2 | （記入してください） | 2026-07-08 05:58 | IN_PROGRESS | | | |
 | release/inventory-theme-split | （記入してください） | 2026-07-04 02:39 | DONE | | | |
 | release/sales-anchor-app-theme | （記入してください） | 2026-07-04 03:00 | DONE | | | |
 | release/design-system-parent-theme-docs | design-system 親テーマ仕様書一式の新設＋索引登録 | 2026-07-04 03:11 | DONE | #2770 | main | merged: PR #2770 / 06ecc06187696b151f274dae18e770e30a9c999f |
