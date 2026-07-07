@@ -9,6 +9,7 @@
 ## 子文書
 - あるべき姿: [ideal-state.md](ideal-state.md)
 - KGIと観点ひな型: [kgi.md](kgi.md)
+- design（維持の仕組み・CI関所）: [design.md](design.md)
 
 ## 境界
 - 本テーマは recon の「中身＝何を必ず調べるか」を定義する正本。新しい実行役（別エージェント）は作らない。recon は設計パートナーが通るモードである（design-partner.md §3）。
