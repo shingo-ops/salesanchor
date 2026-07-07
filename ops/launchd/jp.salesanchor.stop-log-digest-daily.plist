@@ -16,7 +16,7 @@
     launchctl unload ~/Library/LaunchAgents/jp.salesanchor.stop-log-digest-daily.plist
 
   PO確認事項:
-    - 発火時刻は仮置きで 08:30 JST
+    - 発火時刻は仮置きで 07:30 JST
     - StartCalendarInterval は睡眠中の時刻を次回 wake 時に 1 回 coalesce して実行する
 -->
 <plist version="1.0">
@@ -37,7 +37,7 @@
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
-    <integer>8</integer>
+    <integer>7</integer>
     <key>Minute</key>
     <integer>30</integer>
   </dict>
