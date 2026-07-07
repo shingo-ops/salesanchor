@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 380" font-family="sans-serif">
+  <style>
+    .t{font-size:13px;fill:#1a1a1a}.s{font-size:11px;fill:#555}.h{font-size:13px;font-weight:600;fill:#1a1a1a}
+    .today{font-size:11px;font-weight:600;fill:#3E5FBF}
+  </style>
+  <!-- 左サイド -->
+  <rect x="16" y="40" width="120" height="300" rx="8" fill="#f5f4f1" stroke="#c9c6c0" stroke-width="0.5"/>
+  <rect x="26" y="52" width="100" height="24" rx="12" fill="#3E7C7B"/><text class="s" x="76" y="68" text-anchor="middle" fill="#fff">＋ 作成</text>
+  <text class="s" x="26" y="98">源泉レイヤー</text>
+  <text class="s" x="30" y="118">☑ リード計画</text><text class="s" x="30" y="136">☑ 受注の期日</text>
+  <text class="s" x="30" y="154">☑ 販売日</text><text class="s" x="30" y="172">☑ 手動</text>
+  <text class="s" x="26" y="204">色＝状態</text>
+  <rect x="30" y="212" width="10" height="10" fill="#fbe4e4"/><text class="s" x="46" y="221">遅延</text>
+  <rect x="30" y="228" width="10" height="10" fill="#fdf0d9"/><text class="s" x="46" y="237">今日期日</text>
+  <rect x="30" y="244" width="10" height="10" fill="#e0efee"/><text class="s" x="46" y="253">予定</text>
+  <rect x="30" y="260" width="10" height="10" fill="#eeece8"/><text class="s" x="46" y="269">完了</text>
+  <!-- 曜日ヘッダー 7列固定 -->
+  <g>
+    <text class="s" x="185" y="54" text-anchor="middle">月 6</text><text class="s" x="245" y="54" text-anchor="middle">火 7</text>
+    <text class="s" x="305" y="54" text-anchor="middle">水 8</text><text class="today" x="365" y="54" text-anchor="middle">木 9</text>
+    <text class="s" x="425" y="54" text-anchor="middle">金 10</text><text class="s" x="485" y="54" text-anchor="middle">土 11</text>
+    <text class="s" x="545" y="54" text-anchor="middle">日 12</text>
+  </g>
+  <!-- 終日行（固定） -->
+  <rect x="150" y="64" width="510" height="26" rx="4" fill="#f5f4f1" stroke="#7C6BB8" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="s" x="160" y="80">終日</text>
+  <rect x="210" y="68" width="150" height="18" rx="9" fill="#ece8f6"/><text class="s" x="285" y="80" text-anchor="middle">商品X 販売開始（販売日から）</text>
+  <!-- 時間グリッド -->
+  <rect x="150" y="96" width="510" height="180" rx="4" fill="#fff" stroke="#c9c6c0" stroke-width="0.5"/>
+  <line x1="210" y1="96" x2="210" y2="276" stroke="#eee"/><line x1="270" y1="96" x2="270" y2="276" stroke="#eee"/>
+  <line x1="330" y1="96" x2="330" y2="276" stroke="#eee"/><line x1="390" y1="96" x2="390" y2="276" stroke="#eee"/>
+  <line x1="450" y1="96" x2="450" y2="276" stroke="#eee"/><line x1="510" y1="96" x2="510" y2="276" stroke="#eee"/>
+  <!-- 予定（状態色＋CTA） -->
+  <rect x="333" y="104" width="54" height="46" rx="4" fill="#fbe4e4" stroke="#E24B4A" stroke-width="0.5"/><text class="s" x="360" y="120" text-anchor="middle">受注#118</text><text class="s" x="360" y="134" text-anchor="middle" fill="#c0392b">遅延2日</text><rect x="339" y="138" width="42" height="9" rx="2" fill="#E24B4A"/>
+  <rect x="393" y="150" width="54" height="26" rx="4" fill="#fdf0d9"/><text class="s" x="420" y="166" text-anchor="middle">見積送付</text>
+  <rect x="153" y="126" width="54" height="24" rx="4" fill="#eeece8"/><text class="s" x="180" y="140" text-anchor="middle" fill="#999" text-decoration="line-through">入金確認</text>
+  <rect x="213" y="180" width="54" height="24" rx="4" fill="#e0efee"/><text class="s" x="240" y="194" text-anchor="middle">打合せ14時</text>
+  <!-- ドラッグゴースト -->
+  <rect x="453" y="104" width="54" height="40" rx="4" fill="none" stroke="#E24B4A" stroke-width="1" stroke-dasharray="4 3"/><text class="s" x="480" y="126" text-anchor="middle" fill="#c0392b">ドラッグ中</text>
+  <!-- クリック追加 -->
+  <rect x="513" y="200" width="54" height="30" rx="4" fill="none" stroke="#c9c6c0" stroke-dasharray="3 3"/><text class="s" x="540" y="219" text-anchor="middle" fill="#888">＋ 追加</text>
+  <!-- 確認ダイアログ -->
+  <rect x="360" y="286" width="290" height="80" rx="8" fill="#fff" stroke="#999" stroke-width="0.8"/>
+  <text class="t" x="374" y="308">発送期日を 7/9 → 7/11 に変更しますか？</text>
+  <text class="s" x="374" y="326">受注#118 の原本を更新します（影→本体・確認必須）</text>
+  <rect x="374" y="336" width="72" height="22" rx="11" fill="#3E7C7B"/><text class="s" x="410" y="351" text-anchor="middle" fill="#fff">変更する</text>
+  <rect x="454" y="336" width="52" height="22" rx="11" fill="#eeece8"/><text class="s" x="480" y="351" text-anchor="middle">取消</text>
+</svg>
