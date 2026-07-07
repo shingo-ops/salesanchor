@@ -76,16 +76,15 @@ flowchart TD
 
 ### 全窓共通の除外規則
 以下は同期対象から除外する:
-- 画像: *.png ／ *.jpg ／ *.jpeg ／ *.gif ／ *.webp
-- テストの見た目比較スナップショット: **/*-snapshots/**
-- 部品表（自動生成）: package-lock.json（全階層）
-- 大型初期データ: migrations/*seed*.sql
-- キャッシュ・自動生成物: **/__pycache__/** ／ *.pyc
-- 手順書などのバイナリ文書: docs 配下の *.pdf ／ *.html
+- 画像: `*.png` `*.jpg` `*.jpeg` `*.gif` `*.webp`
+- テストの見た目比較スナップショット: `**/*-snapshots/**`
+- 部品表（自動生成）: `package-lock.json`（全階層）
+- 大型初期データ: `migrations/*seed*.sql`
+- キャッシュ・自動生成物: `**/__pycache__/**` `*.pyc`
+- 手順書などのバイナリ文書: docs 配下の `*.pdf` `*.html`
 
 ### 残すもの（除外しない）
-- スキーマ定義のmigration（migrations/ の *seed* を除く .sql）＝テーブル構造・RLS定義は設計判断に必要。
-  DB窓・セキュリティ窓はこれを映す。
+- スキーマ定義のmigration（`migrations/` の `*seed*` を除く `.sql`）＝テーブル構造・RLS定義は設計判断に必要。DB窓・セキュリティ窓はこれを映す。
 - 設計・仕様のテキスト（*.md 等）。
 
 ### 除外物が必要になった時（逃げ道）
