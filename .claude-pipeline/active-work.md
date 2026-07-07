@@ -269,6 +269,7 @@
 | release/executor-preamble | （記入してください） | 2026-07-04 03:58 | DONE | | | |
 | release/order-management-design | 受注管理(業務画面)design.md+SVG3枚の収納 | 2026-07-04 04:10 | DONE | #2779 | main | merged: PR #2779 / 96fcae90529be713391ed61100ab25ee6203fa96 |
 | release/inbox-records-salvage | （記入してください） | 2026-07-04 10:34 | IN_PROGRESS | | | |
+| release/design-partner-lesson-20260708 | （記入してください） | 2026-07-08 06:26 | IN_PROGRESS | | | 正本先約 design-partner.md / GO=未採番 / 単独便 |
 ---
 
 ## 記入例
