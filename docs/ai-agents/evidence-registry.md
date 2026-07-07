@@ -1294,3 +1294,33 @@ follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親
   tradeoff: purchase_orders未作成の旧テナントはto_regclassガードでスキップされるため、該当テナントには仕入列が立たない
   decision: "ガード付きmigration（ab002d76）をdry-run目視4点とGO記録（2026-07-03 17:58, shingo-ops）を経て本番適用し、POが自らマージした"
   follow_up: "便3（段階・成約の自動判定）へ。本セッションのCC違反2件（無断migration修正push・無断PR本文上書き）はB+C便のgenerator.md改定入力として扱う"
+
+## 2026-07-07: B+C便 agent設定整合＋鮮度フックmain基準化（EV-20260707-001）
+- id: EV-20260707-001
+  date: 2026-07-07
+  agent: CC
+  task: B+C便 — generator.md/design-partner.md整合（B-1〜B-4）＋check-freshness.sh を origin/develop→origin/main（C）
+  scope: PR #2807, .claude/agents/generator.md, docs/ai-agents/design-partner.md, .claude/hooks/check-freshness.sh, docs/handoff/agent-guardrails/recon.md, docs/handoff/agent-guardrails/design.md
+  evidence:
+    - type: command
+      reference: "gh pr view 2807 --json state,mergedAt,mergeCommit"
+      summary: "state MERGED / mergedAt 2026-07-07T03:20:12Z / merge commit 277d4443 を確認"
+    - type: command
+      reference: "git merge-base --is-ancestor 951137ab origin/main"
+      summary: "PR先頭 951137ab が origin/main の祖先＝マージ実測（MERGED-CONFIRMED）"
+    - type: command
+      reference: "git show origin/main:.claude/hooks/check-freshness.sh | grep -c origin/develop"
+      summary: "main上フックの develop参照=0・main参照あり（C完了の実測）"
+    - type: command
+      reference: "git show origin/main:.claude/agents/generator.md | grep -c 'Planner card overrides'"
+      summary: "B-1 カード優先ルール=1件 main反映"
+    - type: command
+      reference: "git show origin/main:docs/ai-agents/design-partner.md | grep -c 'カード設計の規約'"
+      summary: "B-4 カード設計規約=1件 main反映"
+    - type: command
+      reference: "使い捨てクローンで /tmp/hook-main.sh 実行（FRESH-RUN 2026-07-07 13:20:28）"
+      summary: "ケースA=古地点で『origin/main より新しい』警告が発火(A-EXIT=0)／ケースB=最新mainで沈黙(B-EXIT=0)。鳴るべき時に鳴り・鳴るべきでない時に黙るを両方実測"
+  confidence: high
+  tradeoff: "develop上の旧worktreeにmain基準の警告が出るが、developは新規作業禁止（handoff§4）ゆえ望ましい挙動"
+  decision: "5点をrelease/agent-guardrails-bcで実装、process-artifacts gate緑通過、GO原文『GO』（shingo-ops 2026-07-05）を経てPOがmerge commitでマージ。C便は使い捨てクローンで動作実測しmain文言発火を確認"
+  follow_up: "本店をmainへ戻す片付け／フック阻止力の修理（BLOCKED後も実行継続・EV-20260703-003残課題）／dangling-route gate誤検知対策"
