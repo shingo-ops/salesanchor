@@ -1,65 +1,85 @@
-# 移行計画（design-system・PO承認済 2026-07-05）
+# 移行計画（design-system・PO承認済 2026-07-06改訂）
 
 > この文書は何か（専門用語なしの1行）: 散らかった今の画面を、1ヵ所直せば全ページ変わる理想形へ、壊さず順番に寄せる工事計画。
 
-親: [README.md](README.md)／理想: [design.md](design.md)／現状実測: [recon.md](../../handoff/design-system-recon/recon.md)
-PO承認: 2026-07-05（チャットにて合意。関所ファースト・同値置換・小口バッチ・部品台帳方式）
+親: [README.md](README.md)／理想: [design.md](design.md)／現状実測: [recon.md](../../handoff/design-system-recon/recon.md)・[網羅recon full-recon.md](../../handoff/design-system-recon/full-recon.md)
+PO承認: 2026-07-05初版／2026-07-06改訂（網羅reconで色の真数36・表28件・関所隙間5つが判明し便構成を再編）
 
-## 1. 方針の柱（4本）
-1. 関所ファースト: 掃除の前に蛇口を閉める。CIにラチェット関所を新設し、ページ側hex件数の上限を現状値に固定、1件でも増えたらfail。上限は便完了ごとに下げる（下げのみ・上げはPO承認必須）。
-2. 同値置換: 色の集約は値を変えず名前に置き換えるだけ。見た目の質の変更（色の整理）は移行完了後の別テーマ。移行とデザイン変更を混ぜない。
-3. 小口バッチ: 部品の金型寄せ（便3・便5）は1便5〜8ファイルに分割し、各バッチで画面確認。
-4. 部品台帳が分母: KGI①の分母は §4 の部品台帳の行数。行を足した瞬間①が満数を割り、更新忘れを機械的に炙り出す（満数方式）。
+## 1. 方針の柱（5本）
+1. 関所ファースト（領域ペア版）: 掃除の前に蛇口を閉める。ただし既存debtを一度に全部failさせると全並行便が詰まるため、便0bラチェットと同じ「増分のみ阻止（A案）」で、各領域を掃除し終えた直後にその領域の関所を建てる。掃除と関所を領域ごとにペアにする。
+2. 同値置換: 色の集約は値を変えず名前に置き換えるだけ。見た目の質の変更は移行完了後の別テーマ。移行とデザイン変更を混ぜない。
+3. 小口バッチ: 部品の金型寄せは1便5〜8ファイルに分割し各バッチで画面確認。
+4. 部品台帳が分母: KGI①の分母は §4 の部品台帳の行数（満数方式）。
+5. 現物照合（便1破棄の教訓）: reconの数字は必ず3検品（ノイズ除外・既存ADR照合・KGI定義照合）を経てから設計に使う。
 
 ## 2. 便構成と受入基準
 | 便 | 内容 | 前提 | 受入の芯 |
 |---|---|---|---|
-| 便0 | 関所（ラチェット）新設＋部品台帳の初期棚卸し（§4の未棚卸し欄を埋める） | − | 上限=現状値でfailが稼働 |
-| 便1 | 色の同値置換①: frontend/src/index.css のhex 187件 | 便0 | 上限 249→62・前後のhex値セット同一の機械検証 |
-| 便2 | 色の同値置換②: 分散62件（15ファイル） | 便1 | 上限 62→0 |
-| 便3 | プルダウン金型化: 44ファイル→Select.tsx（小口バッチ） | select-control便の状態実測とPO裁定 | <select直書き残存0 |
-| 便4 | 検索欄・テキスト書式・アイコン（冒頭にアイコン供給源の追いrecon） | 便0 | 各1定義 |
-| 便5 | 骨格部品の徹底: PageLayout/Card/DataTable等へ全ページを寄せ、骨格CSS二系統（.page-header/.page-layout-header）を1系統へ | 便0 | 素の<h1>残存0・骨格1系統 |
-| 便6 | カタログ満数＋KGI③波及実測（部品定義1件変更→使用全ページ反映を実証） | 便3〜5 | KGI③④の◯/◯判定 |
+| 便0 | 関所ラチェット新設＋部品台帳棚卸し（完了・#2806/#2801） | − | 上限=現状値でfail稼働（済） |
+| 便0.5 | 用途トークン新設: 本物色36の受け皿をADR-067準拠で index.css の :root/:root.force-dark に定義 | 便0 | 新設トークンがdark-parity通過・36件の対応表確定 |
+| 便1a | 色の同値置換①: calendars.config.ts 21件→用途トークン参照 | 便0.5 | config内の生hex 0・visual gate(schedule)一致 |
+| 便1b | 色の同値置換②: RolesPage.tsx 13＋schedule-owner 1＋Dashboard 1＝15件 | 便0.5 | 該当生hex 0・見た目一致 |
+| 便1c-guard | 色掃除領域に関所: TS色定数の増分をfailさせるガード追加（領域ペア） | 便1a/1b | TS色リテラル増分でfail稼働 |
+| 便2 | 素の<table> 28件→DataTable金型（小口バッチ） | 便0.5 | 素の<table>残存0 |
+| 便2-guard | 表領域に関所: 素の<table>新規をfail（領域ペア） | 便2 | 素の<table>増分でfail稼働 |
+| 便5 | 骨格: 素の<h1> 6件→PageLayout・骨格CSS 2系統→1系統 | 便0 | 素の<h1>残存0・骨格1系統 |
+| 便5-guard | 骨格領域に関所: 素の<h1>新規をfail（領域ペア） | 便5 | 素の<h1>増分でfail稼働 |
+| 便6 | 空状態独自3件→EmptyState・検索欄/テキスト書式の共通化 | 便0.5 | 空状態独自0・検索/書式1定義 |
+| 便6-guard | 空状態・visual範囲の関所拡張（inbox/Karte以外へvisual gate拡張の可否をrecon） | 便6 | 隙間の縮小を実測 |
+| 便7 | カタログ満数＋KGI③波及実測（部品定義1件変更→使用全ページ反映を実証） | 便2〜6 | KGI③④の◯/◯判定 |
 
 ## 3. ラチェット運用
-- 関所: .github/workflows/design-token-guard.yml（便0で新設。design.md 維持の仕組み欄と同一物）
-- hex上限の推移: 249（便0時点）→ 62（便1後）→ 0（便2後）
-- 正当な例外（外部サービス埋め込み等）は許可リストで管理（許可リスト変更はPO承認必須）
+- 色ラチェット: .github/workflows/design-token-guard.yml（便0bで新設・稼働中）
+- hex上限の推移（真の分母ベース）: 36（便0.5時点）→ 便1a後に config分減 → 便1b後 0
+- 領域ペア関所（便1c-guard/便2-guard/便5-guard/便6-guard）は各領域の掃除完了直後に増分阻止で追加
+- 正当な例外は許可リストで管理（変更はPO承認必須）
 
-## 4. 部品台帳（KGI①の分母の源泉・行追加で分母が増える）
-| # | 部品 | 金型（1ヵ所定義） | 現状（recon実測） | 直書き残存の測り方 |
+## 4. 部品台帳（KGI①の分母の源泉・満数方式）
+| # | 部品 | 金型（1ヵ所定義） | 現状（網羅recon実測 cbaee61） | 直書き残存の測り方 |
 |---|---|---|---|---|
-| 1 | プルダウン | frontend/src/components/Select.tsx | <select が44ファイルに分散 | pages配下の <select 出現ファイル数 |
-| 2 | 検索欄 | 未確定（便4で決定） | 6ファイルに分散 | placeholder=検索 / type="search" のgrep |
-| 3 | ボタン | frontend/src/components/Button.tsx | .btn定義CSSが4ファイル | ^\.btn を定義するCSSファイル数 |
-| 4 | アイコン | 未確定（便4冒頭で供給源を追いrecon） | ライブラリimport 0件・実態未測 | 追いrecon後に確定 |
-| 5 | テキスト表示形式（日付・金額） | 未確定（便4で共通フォーマッタ化） | 45ファイルに分散 | toLocaleDateString等のgrep |
-| 6 | ページ骨格（タイトル・サブタイトル・ヘッダーアクション） | frontend/src/components/PageLayout.tsx | 素の<h1> 6件・骨格CSS 2系統（.page-header/.page-layout-header） | grep -rln "<h1" frontend/src/pages --include="*.tsx" / grep -n "^\.page-header\b\|^\.page-layout-header\b" frontend/src/pages-layout.css |
-| 7 | カード | frontend/src/components/Card.tsx | 独自カードCSS 0件 | grep -rln "\.card\b" frontend/src/pages --include="*.css" |
-| 8 | データ表 | frontend/src/components/DataTable.tsx | 素の<table> 28件 | grep -rln "<table" frontend/src/pages --include="*.tsx" |
-| 9 | バッジ | frontend/src/components/Badge.tsx | 独自badge CSS 0件 | grep -rln "\.badge\b" frontend/src/pages --include="*.css" |
-| 10 | 空状態 | frontend/src/components/EmptyState.tsx | 独自空状態 4件 | grep -rln "empty-state\|EmptyState" frontend/src/pages --include="*.tsx" --include="*.css" |
+| 1 | プルダウン | components/Select.tsx | 採用19・pages自前<select>は別途 | pages配下<select>出現数 |
+| 2 | 検索欄 | components/InventorySearchBar.tsx | 採用11・共通化弱い | placeholder=検索/type=search |
+| 3 | ボタン | components/Button.tsx | 採用7 | ^\.btn 定義CSS数 |
+| 4 | アイコン | constants/icons.tsx + iconSizes.ts | 採用27 | アイコン供給源 |
+| 5 | テキスト書式 | 共通金型なし（便6で新設） | 43ファイル分散・未集約 | toLocaleDateString等 |
+| 6 | ページ骨格 | components/PageLayout.tsx | 採用62・素の<h1> 6・骨格CSS 2系統 | pages配下<h1>数・骨格CSS系統数 |
+| 7 | カード | components/Card.tsx | 採用2・独自CSS 0 | pages配下 .card |
+| 8 | データ表 | components/DataTable.tsx | 採用22・素の<table> 28 | pages配下<table> |
+| 9 | バッジ | components/Badge.tsx | 採用2・独自CSS 0 | pages配下 .badge |
+| 10 | 空状態 | components/EmptyState.tsx | 採用1・独自3 | pages配下 empty-state/EmptyState |
 
-行7〜10の現状値は便0の棚卸しで実測する（推測で書かない）。
+## 5. 手当て漏れ対応表（網羅reconで露見・全て便に割当済）
+| 露見した差分 | 現状 | 担当便 |
+|---|---|---|
+| 素の<table> | 28件 | 便2＋便2-guard |
+| 素の<h1> | 6件 | 便5＋便5-guard |
+| 空状態独自 | 3件 | 便6 |
+| TS色定数の関所穴 | ガード無し | 便1c-guard |
+| visual gateがinbox/Karteのみ | 他画面穴 | 便6-guard(拡張可否recon) |
+| 検索欄・テキスト書式の共通化弱 | 未集約 | 便6 |
 
-## 5. 弊害・トレードオフ（空欄不可）
-1. 関所導入直後は全並行便がhex 1件の追加でCIが赤くなる。全開発セッションへの周知が必須。
-2. index.css（407行）の一括置換はレビュー困難。機械置換スクリプト＋置換前後のhex値セット同一の機械検証を受入基準にして緩和。
-3. 便3・便5は本番UIに直結する最リスク工程。同値置換原則と小口バッチで緩和。
-4. 便数7つで完了まで時間がかかる。一括より安全を優先した意図的選択。
-5. ラチェットの許可リストに管理コストが発生する。
+## 6. ADR整合（設計トラック内で扱う）
+- ADR-067（色SSOT・:root/:root.force-dark・直書き禁止）: 便0.5でトークン正本化、便1a/1bで直書き解消。
+- ADR-073（KGI 100%ルーブリック・中）: 本移行完了でKGI①〜⑤達成を目指す。設計トラック内。
+- ADR-144（pages/生UI増殖防止・高）: 便2/便5/便6の金型寄せ＋領域ペア関所で対応。設計トラック内。
 
-## 6. 外部・過去事例
-「現状値を上限に固定して漸減させる」ラチェット方式はESLint警告削減など大規模リファクタの定石。リポジトリ内の前例はADR-067（デザイントークン直書き禁止の段階導入）。
+## 7. 弊害・トレードオフ（空欄不可）
+1. 領域ペア関所は便数が増える（guard便が4つ）。ただし各領域を閉じてから次へ進むので逆流ゼロ。
+2. 便0.5の用途命名は判断作業。既存用途名パターンに倣い、生値命名（便1旧版の失敗）は繰り返さない。
+3. config.ts 21件は表示専用と確認済（JS分岐依存なし）だが、便1aは念のためvisual gate(schedule)で確認。
+4. visual gateがinbox/Karteのみ＝他画面の掃除は自動検知外。便で手動画面確認を補う。
+5. 便数が多く完了まで時間がかかる。安全優先の意図的選択。
 
-## 7. 受入基準
-便別受入は§2の表。テーマ全体の完了判定は kgi.md の①〜⑤が○になること（⑥は達成済み）。KGI③の実証は便6で行う。
+## 8. 外部・過去事例
+ラチェット漸減方式はESLint警告削減等の定石。前例ADR-067。
 
-## 8. 接触面分析（6面走査）
-①人: PO承認＋各バッチの画面確認。②エージェント: select-control便と便3が衝突リスク（便3の前提に状態実測を固定）。関所は全並行便に影響。③機械: CI関所を便0で新設。④データ: 影響なし。⑤本番: 便1〜5はUI直結（同値置換で緩和）。⑥外部: 影響なし。
+## 9. 受入基準
+便別受入は§2。テーマ完了は kgi.md ①〜⑤が○（⑥達成済）。KGI③実証は便7。
+
+## 10. 接触面分析（6面走査）
+①人: PO承認＋各便の画面確認。②エージェント: select系並行便と便1系の衝突は該当時に状態実測。③機械: 領域ペア関所を順次新設。④データ: 影響なし。⑤本番: 便0.5〜6はUI直結（同値置換で緩和）。⑥外部: 影響なし。
 
 ## 維持の仕組み
-- 守り手: .github/workflows/design-token-guard.yml / scripts/check-design-token-ratchet.sh（便0bで新設・稼働中・ラチェット上限の機械強制）＋部品台帳の満数方式
-- 対象: ページ側の生値ベタ書き・部品の重複定義・台帳未登録の新部品
-- 未確立（正直な明記）: 便0完了までは人が守る。
+- 守り手: design-token-guard.yml/check-design-token-ratchet.sh（便0b稼働中）＋領域ペア関所（便1c/2/5/6-guardで順次）＋部品台帳満数方式
+- 対象: 生値ベタ書き・部品重複定義・台帳未登録の新部品・素の<table>/<h1>/空状態の新規
+- 未確立（正直な明記）: 領域ペア関所は各guard便完了まで人が守る。
