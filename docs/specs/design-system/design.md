@@ -132,6 +132,40 @@ PO決定事項（2026-07-08）:
 | 25 | role-palette-12 | #64748b | #94a3b8 | |
 | 26 | role-palette-fallback | #6c757d | #a8b3c2 | |
 
+### 5.3.3 便0.5-A 命名確定表（26件・2026-07-08確定）
+
+5.2命名規約に基づき、層0パレット名・層1用途トークン名を確定する。
+便0.5-B実装時はこの表のとおり定義するのみとし、命名判断は行わない。
+
+| # | 用途層トークン名 | 層0パレット名 | ライト値 | ダーク値 |
+|---|---|---|---|---|
+| 1 | --calendar-meeting-text | --color-blue-800 | #174ea6 | #93c5fd |
+| 2 | --calendar-personal-color | --color-purple-600 | #9333ea | #c084fc |
+| 3 | --calendar-personal-tint | --color-purple-50 | #f3e8ff | #2d0e4e |
+| 4 | --calendar-personal-text | --color-purple-800 | #6b21a8 | #d8b4fe |
+| 5 | --calendar-procurement-color | --color-green-700 | #0f9d58 | #4ade80 |
+| 6 | --calendar-procurement-text | --color-green-800 | #166534 | #86efac |
+| 7 | --calendar-shipping-color | --color-red-600 | #d93025 | #f28b82 |
+| 8 | --calendar-billing-color | --color-amber-500 | #f29900 | #f8d66d |
+| 9 | --calendar-billing-tint | --color-amber-100 | #fef3c7 | #362a08 |
+| 10 | --calendar-release-color | --color-gray-600 | #5f6368 | #94a3b8 |
+| 11 | --calendar-holiday-color | --color-violet-700 | #7e22ce | #b771f4 |
+| 12 | --calendar-holiday-tint | --color-violet-50 | #f5f3ff | #1e1b4b |
+| 13 | --calendar-holiday-text | --color-violet-800 | #6b21a8 | #e9d5ff |
+| 14 | --role-palette-1 | --color-red-500 | #ef4444 | #fca5a5 |
+| 15 | --role-palette-2 | --color-orange-500 | #f97316 | #fdba74 |
+| 16 | --role-palette-3 | --color-yellow-500 | #eab308 | #fde68a |
+| 17 | --role-palette-4 | --color-lime-500 | #84cc16 | #bef264 |
+| 18 | --role-palette-5 | --color-green-500 | #22c55e | #86efac |
+| 19 | --role-palette-6 | --color-teal-500 | #14b8a6 | #5eead4 |
+| 20 | --role-palette-7 | --color-cyan-500 | #06b6d4 | #67e8f9 |
+| 21 | --role-palette-8 | --color-blue-500 | #3b82f6 | #b1cdfb |
+| 22 | --role-palette-9 | --color-indigo-500 | #6366f1 | #bcbdfb |
+| 23 | --role-palette-10 | --color-purple-500 | #a855f7 | #d8b4fe |
+| 24 | --role-palette-11 | --color-pink-500 | #ec4899 | #f9a8d4 |
+| 25 | --role-palette-12 | --color-slate-500 | #64748b | #94a3b8 |
+| 26 | --role-palette-fallback | --color-gray-500 | #6c757d | #a8b3c2 |
+
 ### 5.4 優れて残すもの（理想図に明記なくとも採用・提案）
 recon で確認した既存の優良資産は、作り直さず残して採用する:
 1. index.css の色正本（ADR-067準拠・:root/:root.force-dark パリティ済・違反0）→ そのまま土台に使う。
