@@ -97,6 +97,41 @@ PO決定事項（2026-07-08）:
 
 新設対象（ダーク値算出が必要な件数）: b(13) + c(13) + 分割による追加1件 = 27件
 
+### 5.3.2 便0.5-A ダーク値確定表（26件・2026-07-08実測確定）
+
+算出方針: 既存 --cal-* のlight/dark対（21組）から抽出した傾向を目安に算出。
+色相はほぼ維持（±10度以内）、主色系は明度+18〜31、薄色系は明度-76〜80、
+文字色系は明度+30〜51を目安とする（厳密な数式ではなく傾向レンジ）。
+
+| # | トークン名 | ライト値 | ダーク値 | 備考 |
+|---|---|---|---|---|
+| 1 | calendar-meeting.textVar | #174ea6 | #93c5fd | |
+| 2 | calendar-personal.colorVar | #9333ea | #c084fc | |
+| 3 | calendar-personal.tintVar | #f3e8ff | #2d0e4e | |
+| 4 | calendar-personal.textVar | #6b21a8 | #d8b4fe | |
+| 5 | calendar-procurement.colorVar | #0f9d58 | #4ade80 | |
+| 6 | calendar-procurement.textVar | #166534 | #86efac | |
+| 7 | calendar-shipping.colorVar | #d93025 | #f28b82 | |
+| 8 | calendar-billing.colorVar | #f29900 | #f8d66d | |
+| 9 | calendar-billing.tintVar | #fef3c7 | #362a08 | |
+| 10 | calendar-release.colorVar | #5f6368 | #94a3b8 | |
+| 11 | calendar-holiday.colorVar | #7e22ce | #b771f4 | |
+| 12 | calendar-holiday.tintVar | #f5f3ff | #1e1b4b | |
+| 13 | calendar-holiday.textVar | #6b21a8 | #e9d5ff | 目安上限をわずかに超過（+52.4pt、許容） |
+| 14 | role-palette-1 | #ef4444 | #fca5a5 | |
+| 15 | role-palette-2 | #f97316 | #fdba74 | |
+| 16 | role-palette-3 | #eab308 | #fde68a | |
+| 17 | role-palette-4 | #84cc16 | #bef264 | |
+| 18 | role-palette-5 | #22c55e | #86efac | |
+| 19 | role-palette-6 | #14b8a6 | #5eead4 | |
+| 20 | role-palette-7 | #06b6d4 | #67e8f9 | |
+| 21 | role-palette-8 | #3b82f6 | #b1cdfb | |
+| 22 | role-palette-9 | #6366f1 | #bcbdfb | |
+| 23 | role-palette-10 | #a855f7 | #d8b4fe | |
+| 24 | role-palette-11 | #ec4899 | #f9a8d4 | |
+| 25 | role-palette-12 | #64748b | #94a3b8 | |
+| 26 | role-palette-fallback | #6c757d | #a8b3c2 | |
+
 ### 5.4 優れて残すもの（理想図に明記なくとも採用・提案）
 recon で確認した既存の優良資産は、作り直さず残して採用する:
 1. index.css の色正本（ADR-067準拠・:root/:root.force-dark パリティ済・違反0）→ そのまま土台に使う。
