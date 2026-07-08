@@ -45,6 +45,58 @@
 6. 関所隙間5つ（TS色定数/<h1>/<table>/空状態/visual gate範囲外）を領域ペアで塞ぐ。
 （便への割当は [migration.md](migration.md) §2・§5）
 
+### 5.3.1 便0.5-A確定表（本物色36件の振り分け・2026-07-08実測確定）
+
+実測基準SHA: ab09284ef417f40dd6f1cb03b4f60b7835c859ee
+
+| # | hex | ソース | トークン名候補 | 分類 | 根拠 |
+|---|---|---|---|---|---|
+| 1 | #1a73e8 | calendars.config.ts:23 | calendar-meeting.colorVar | a | 既存 --calendar-google-blue と一致 |
+| 2 | #e8f0fe | calendars.config.ts:24 | calendar-meeting.tintVar | a | 既存 --calendar-google-blue-light と一致 |
+| 3 | #174ea6 | calendars.config.ts:25 | calendar-meeting.textVar | b | calendar用途は既存だが値は新設 |
+| 4 | #9333ea | calendars.config.ts:31 | calendar-personal.colorVar | b | 同上 |
+| 5 | #f3e8ff | calendars.config.ts:32 | calendar-personal.tintVar | b | 同上 |
+| 6 | #6b21a8 | calendars.config.ts:33 | calendar-personal.textVar | b | 同上（holidayと値重複→分割確定） |
+| 7 | #0f9d58 | calendars.config.ts:39 | calendar-procurement.colorVar | b | 同上 |
+| 8 | #e6f4ea | calendars.config.ts:40 | calendar-procurement.tintVar | a | 既存 --calendar-status-ok-bg と一致 |
+| 9 | #166534 | calendars.config.ts:41 | calendar-procurement.textVar | b | calendar用途は既存だが値は新設 |
+| 10 | #d93025 | calendars.config.ts:47 | calendar-shipping.colorVar | b | 同上 |
+| 11 | #fce8e6 | calendars.config.ts:48 | calendar-shipping.tintVar | a | 既存 --calendar-status-error-bg と一致 |
+| 12 | #b91c1c | calendars.config.ts:49 | calendar-shipping.textVar | a | 既存 --color-red-700 と一致 |
+| 13 | #f29900 | calendars.config.ts:55 | calendar-billing.colorVar | b | calendar用途は既存だが値は新設 |
+| 14 | #fef3c7 | calendars.config.ts:56 | calendar-billing.tintVar | b | 同上 |
+| 15 | #92400e | calendars.config.ts:57 | calendar-billing.textVar | a | 既存 --color-amber-800 と一致 |
+| 16 | #5f6368 | calendars.config.ts:63 | calendar-release.colorVar | b | calendar用途は既存だが値は新設 |
+| 17 | #f3f4f6 | calendars.config.ts:64 | calendar-release.tintVar | a | 既存 --color-gray-100 と一致 |
+| 18 | #374151 | calendars.config.ts:65 | calendar-release.textVar | a | 既存 --color-border-subtle と一致 |
+| 19 | #7e22ce | calendars.config.ts:71 | calendar-holiday.colorVar | b | calendar用途は既存だが値は新設 |
+| 20 | #f5f3ff | calendars.config.ts:72 | calendar-holiday.tintVar | b | 同上 |
+| 21 | #6b21a8 | calendars.config.ts:73 | calendar-holiday.textVar | b | 同上（personalと値重複→分割確定） |
+| 22 | #ef4444 | RolesPage.tsx:76 | role-palette-1 | c | role-palette体系は新設前提 |
+| 23 | #f97316 | RolesPage.tsx:77 | role-palette-2 | c | 同上 |
+| 24 | #eab308 | RolesPage.tsx:78 | role-palette-3 | c | 同上 |
+| 25 | #84cc16 | RolesPage.tsx:79 | role-palette-4 | c | 同上 |
+| 26 | #22c55e | RolesPage.tsx:80 | role-palette-5 | c | 同上 |
+| 27 | #14b8a6 | RolesPage.tsx:81 | role-palette-6 | c | 同上 |
+| 28 | #06b6d4 | RolesPage.tsx:82 | role-palette-7 | c | 同上 |
+| 29 | #3b82f6 | RolesPage.tsx:83 | role-palette-8 | c | 既存--infoと値偶然一致だが独立新設（PO決定2026-07-08） |
+| 30 | #6366f1 | RolesPage.tsx:84 | role-palette-9 | c | role-palette体系は新設前提 |
+| 31 | #a855f7 | RolesPage.tsx:85 | role-palette-10 | c | 同上 |
+| 32 | #ec4899 | RolesPage.tsx:86 | role-palette-11 | c | 同上 |
+| 33 | #64748b | RolesPage.tsx:87 | role-palette-12 | c | 既存--neutral/--cal-holidayと値偶然一致だが独立新設（PO決定2026-07-08） |
+| 34 | #6c757d | RolesPage.tsx:262 | role-palette-fallback | c | role-palette体系は新設前提 |
+| 35 | #1a73e8 | schedule-owner.ts:34 | calendar-owner.default | a | 既存 --calendar-google-blue と一致 |
+| 36 | #1e3a8a | DashboardPage.tsx:175 | dashboard.accent | a | 既存 --accent と一致 |
+
+集計: a(既存吸収)=10件 b(新設パレット+既存用途)=13件 c(両新設)=13件
+
+PO決定事項（2026-07-08）:
+- #3・#6・#21（personal/holidayのtextVar、値重複#6b21a8）は `--calendar-personal-text` /
+  `--calendar-holiday-text` に分割する。
+- #29・#33（role-palette-8/12）は既存トークンとの値の偶然一致を無視し、独立パレットとして新設する。
+
+新設対象（ダーク値算出が必要な件数）: b(13) + c(13) + 分割による追加1件 = 27件
+
 ### 5.4 優れて残すもの（理想図に明記なくとも採用・提案）
 recon で確認した既存の優良資産は、作り直さず残して採用する:
 1. index.css の色正本（ADR-067準拠・:root/:root.force-dark パリティ済・違反0）→ そのまま土台に使う。
