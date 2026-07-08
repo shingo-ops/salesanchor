@@ -17,9 +17,9 @@
 | GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
-| 在庫管理 | [inventory-management/spec.md](inventory-management/spec.md) | 公開（親README未・棚卸し待ち） |
-| ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | 未 |
-| └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | 未 |
+| 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親README公開（A/B/C完成・D未着手） |
+| ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
+| └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | 表紙のみ・KGI未 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
 | ├ 品目マスタ（item） | （作成予定） | 未 |
 | ├ HTSコードマスタ | （作成予定） | 未 |
