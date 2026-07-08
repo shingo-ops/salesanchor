@@ -16,7 +16,7 @@ PO承認: 2026-07-05初版／2026-07-06改訂（網羅reconで色の真数36・�
 | 便 | 内容 | 前提 | 受入の芯 |
 |---|---|---|---|
 | 便0 | 関所ラチェット新設＋部品台帳棚卸し（完了・#2806/#2801） | − | 上限=現状値でfail稼働（済） |
-| 便0.5 | 用途トークン新設: 本物色36の受け皿をADR-067準拠で index.css の :root/:root.force-dark に定義 | 便0 | 新設トークンがdark-parity通過・36件の対応表確定 |
+| 便0.5 | 用途トークン新設: 本物色36の受け皿をADR-067準拠で index.css の :root/:root.force-dark に定義（詳細は [design.md §5.3.1](design.md) 参照） | 便0 | 新設トークンがdark-parity通過・36件の対応表確定 |
 | 便1a | 色の同値置換①: calendars.config.ts 21件→用途トークン参照 | 便0.5 | config内の生hex 0・visual gate(schedule)一致 |
 | 便1b | 色の同値置換②: RolesPage.tsx 13＋schedule-owner 1＋Dashboard 1＝15件 | 便0.5 | 該当生hex 0・見た目一致 |
 | 便1c-guard | 色掃除領域に関所: TS色定数の増分をfailさせるガード追加（領域ペア） | 便1a/1b | TS色リテラル増分でfail稼働 |
