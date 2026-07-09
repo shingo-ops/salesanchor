@@ -28,6 +28,7 @@
 | ├ 状態マスタ（condition） | （作成予定） | 未 |
 | └ 単位マスタ（unit） | （作成予定） | 未 |
 | 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 |
+| DB設計のSSOT化（db-ssot。同じ事実は1か所・データ分散防止。会話/予測値/金額/分類の重複解消） | [db-ssot/README.md](db-ssot/README.md) | あるべき姿・KGI確定 2026-07-09 |
 | 文書体系（ナレッジベース） | [doc-estate/README.md](./doc-estate/README.md) | KGI承認済 |
 | Sales Anchor アプリ全体（親） | [sales-anchor-app/README.md](sales-anchor-app/README.md) | KGI承認済 2026-07-04 |
 | 見積もり・請求書（quote-invoice。独立ページ・受信箱からは導線のみ） | [quote-invoice/README.md](quote-invoice/README.md) | あるべき姿・KGI確定 2026-07-08 |
