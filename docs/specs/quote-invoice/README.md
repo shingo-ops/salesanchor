@@ -5,6 +5,7 @@
 
 - あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGIと運用: [kgi.md](./kgi.md)
+- 理想の設計図（To-Be）: [to-be.md](./to-be.md)
 - 親: 索引 [docs/specs/README.md](../README.md)
 - 技術How層（吸収）: [docs/adr/ADR-101-sa-quotation-invoice-generation.md](../../adr/ADR-101-sa-quotation-invoice-generation.md)（見積・請求の生成・正規化2テーブル・テンプレSSOT・関税ポリシー・PayPal Invoicing方式・PO承認済み）
 - ステータス: あるべき姿・KGI 確定（PO自筆・2026-07-08）。ADR-101との整合はrecon便で確認。

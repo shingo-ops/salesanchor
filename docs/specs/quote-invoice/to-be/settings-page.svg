@@ -1,0 +1,57 @@
+<svg width="720" height="560" viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="560" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#9881; 見積もり・請求書の設定</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">ここで設定した内容が、見積もり・請求書の作成画面に反映されます</text>
+
+  <rect x="24" y="68" width="672" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="90" font-size="13" font-weight="600" fill="#2c2c2a">請求書PDFの補足テキスト</text>
+  <text x="38" y="108" font-size="11" fill="#888780">PDF下部の備考欄に差し込まれる文章</text>
+  <text x="38" y="128" font-size="12" fill="#5f5e5a">Thank you for your business. Please pay within 7 days via the PayPal link.</text>
+
+  <rect x="24" y="148" width="672" height="96" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="170" font-size="13" font-weight="600" fill="#2c2c2a">見積もりテキストのテンプレート</text>
+  <text x="38" y="188" font-size="11" fill="#888780">「テキストで発行」時に使う定型文。差込タグが使えます</text>
+  <text x="38" y="208" font-size="12" fill="#5f5e5a">Hi {customer}, here is your quote. Total {total}. Let me know…</text>
+  <rect x="38" y="218" width="86" height="18" rx="6" fill="#e6f1fb"/>
+  <text x="81" y="231" font-size="10" fill="#0c447c" text-anchor="middle">{customer}</text>
+  <rect x="130" y="218" width="70" height="18" rx="6" fill="#e6f1fb"/>
+  <text x="165" y="231" font-size="10" fill="#0c447c" text-anchor="middle">{subtotal}</text>
+  <rect x="206" y="218" width="70" height="18" rx="6" fill="#e6f1fb"/>
+  <text x="241" y="231" font-size="10" fill="#0c447c" text-anchor="middle">{shipping}</text>
+  <rect x="282" y="218" width="54" height="18" rx="6" fill="#e6f1fb"/>
+  <text x="309" y="231" font-size="10" fill="#0c447c" text-anchor="middle">{total}</text>
+
+  <rect x="24" y="254" width="672" height="64" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="276" font-size="13" font-weight="600" fill="#2c2c2a">関税の%（既定値）</text>
+  <text x="38" y="294" font-size="11" fill="#888780">米国宛の請求書に自動で乗せる関税率</text>
+  <rect x="38" y="300" width="60" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="68" y="318" font-size="13" fill="#2c2c2a" text-anchor="middle">8</text>
+  <text x="106" y="318" font-size="13" fill="#5f5e5a">%</text>
+
+  <rect x="24" y="328" width="330" height="118" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="350" font-size="13" font-weight="600" fill="#2c2c2a">支払い方法</text>
+  <rect x="38" y="358" width="302" height="24" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="2"/>
+  <text x="50" y="374" font-size="12" fill="#0c447c">PayPal</text>
+  <rect x="278" y="362" width="56" height="16" rx="6" fill="#ffffff"/>
+  <text x="306" y="374" font-size="10" fill="#0c447c" text-anchor="middle">デフォルト</text>
+  <text x="50" y="400" font-size="12" fill="#5f5e5a">Wise</text>
+  <rect x="38" y="410" width="302" height="24" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="189" y="426" font-size="12" fill="#5f5e5a" text-anchor="middle">+ 支払い方法を追加</text>
+
+  <rect x="366" y="328" width="330" height="118" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="380" y="350" font-size="13" font-weight="600" fill="#2c2c2a">支払い通貨</text>
+  <rect x="380" y="358" width="302" height="24" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="2"/>
+  <text x="392" y="374" font-size="12" fill="#0c447c">USD</text>
+  <rect x="620" y="362" width="56" height="16" rx="6" fill="#ffffff"/>
+  <text x="648" y="374" font-size="10" fill="#0c447c" text-anchor="middle">デフォルト</text>
+  <text x="392" y="400" font-size="12" fill="#5f5e5a">JPY ・ EUR</text>
+  <rect x="380" y="410" width="302" height="24" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="531" y="426" font-size="12" fill="#5f5e5a" text-anchor="middle">+ 通貨を追加</text>
+
+  <rect x="24" y="456" width="672" height="88" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="478" font-size="13" font-weight="600" fill="#2c2c2a">&#9993; 請求書送付時のメール（編集で開閉）</text>
+  <text x="38" y="498" font-size="11" fill="#888780">連携方式: Google Workspace 連携 / SMTP設定（自社ドメイン対応）</text>
+  <text x="38" y="518" font-size="12" fill="#5f5e5a">・送信トグル（同時にメールを送るか）  ・メール本文テンプレート編集</text>
+  <text x="38" y="536" font-size="11" fill="#888780">普段は畳まれ、編集ボタンを押したときだけ表示</text>
+</svg>
