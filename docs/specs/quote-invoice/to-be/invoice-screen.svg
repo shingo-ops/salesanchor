@@ -1,0 +1,80 @@
+<svg width="720" height="560" viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="560" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="36" font-size="18" font-weight="600" fill="#2c2c2a">請求書を作成</text>
+  <text x="24" y="56" font-size="12" fill="#5f5e5a">顧客: Pokemon Cards USA LLC</text>
+  <rect x="470" y="20" width="170" height="34" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="2"/>
+  <text x="555" y="42" font-size="13" fill="#0c447c" text-anchor="middle">請求書PDF発行</text>
+  <rect x="648" y="20" width="34" height="34" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="665" y="42" font-size="16" fill="#5f5e5a" text-anchor="middle">&#9881;</text>
+
+  <rect x="24" y="72" width="320" height="86" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="12" fill="#5f5e5a">支払先情報  &#9660;</text>
+  <text x="38" y="114" font-size="13" font-weight="600" fill="#2c2c2a">合同会社 Sales Anchor</text>
+  <text x="38" y="132" font-size="11" fill="#5f5e5a">PayPal: billing@salesanchor.jp</text>
+  <text x="38" y="148" font-size="11" fill="#5f5e5a">〒444-xxxx 愛知県岡崎市…</text>
+
+  <rect x="360" y="72" width="320" height="86" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="374" y="92" font-size="12" fill="#5f5e5a">配送先情報  &#9660;</text>
+  <text x="374" y="114" font-size="13" font-weight="600" fill="#2c2c2a">Pokemon Cards USA LLC</text>
+  <text x="374" y="132" font-size="11" fill="#5f5e5a">1234 Market St, San Francisco</text>
+  <text x="374" y="148" font-size="11" fill="#5f5e5a">CA 94103, United States</text>
+
+  <rect x="24" y="172" width="656" height="118" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="192" font-size="12" fill="#5f5e5a">明細</text>
+  <text x="44" y="212" font-size="11" fill="#888780">商品名</text>
+  <text x="330" y="212" font-size="11" fill="#888780">状態</text>
+  <text x="470" y="212" font-size="11" fill="#888780" text-anchor="middle">数量</text>
+  <text x="560" y="212" font-size="11" fill="#888780" text-anchor="end">単価</text>
+  <text x="660" y="212" font-size="11" fill="#888780" text-anchor="end">金額</text>
+
+  <rect x="40" y="222" width="270" height="28" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="52" y="240" font-size="12" fill="#2c2c2a">&#128269; リザードン VMAX SSR</text>
+  <rect x="320" y="222" width="120" height="28" rx="6" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="330" y="240" font-size="12" fill="#5f5e5a">PSA10  &#9660;</text>
+  <rect x="448" y="222" width="44" height="28" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="470" y="240" font-size="12" fill="#2c2c2a" text-anchor="middle">2</text>
+  <text x="560" y="240" font-size="12" fill="#5f5e5a" text-anchor="end">¥60,000</text>
+  <text x="660" y="240" font-size="13" font-weight="600" fill="#2c2c2a" text-anchor="end">¥120,000</text>
+
+  <rect x="40" y="256" width="270" height="28" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="52" y="274" font-size="12" fill="#2c2c2a">&#128269; ピカチュウ プロモ</text>
+  <rect x="320" y="256" width="120" height="28" rx="6" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="330" y="274" font-size="12" fill="#5f5e5a">未開封  &#9660;</text>
+  <rect x="448" y="256" width="44" height="28" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="470" y="274" font-size="12" fill="#2c2c2a" text-anchor="middle">5</text>
+  <text x="560" y="274" font-size="12" fill="#5f5e5a" text-anchor="end">¥9,000</text>
+  <text x="660" y="274" font-size="13" font-weight="600" fill="#2c2c2a" text-anchor="end">¥45,000</text>
+
+  <rect x="24" y="304" width="320" height="150" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="324" font-size="12" fill="#5f5e5a">配送会社を選択（送料は重量から自動計算・比較）</text>
+  <rect x="38" y="334" width="292" height="26" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="2"/>
+  <text x="50" y="351" font-size="12" fill="#0c447c">&#10003; FedEx</text>
+  <text x="318" y="351" font-size="12" fill="#0c447c" text-anchor="end" font-weight="600">¥8,400</text>
+  <text x="50" y="378" font-size="12" fill="#5f5e5a">DHL</text>
+  <text x="318" y="378" font-size="12" fill="#5f5e5a" text-anchor="end">¥9,100</text>
+  <text x="50" y="400" font-size="12" fill="#5f5e5a">elogi FedEx</text>
+  <text x="318" y="400" font-size="12" fill="#5f5e5a" text-anchor="end">¥7,800</text>
+  <text x="50" y="422" font-size="12" fill="#5f5e5a">EMS</text>
+  <text x="318" y="422" font-size="12" fill="#5f5e5a" text-anchor="end">¥6,900</text>
+
+  <rect x="360" y="304" width="320" height="150" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="374" y="324" font-size="12" fill="#5f5e5a">支払い・関税</text>
+  <text x="374" y="350" font-size="12" fill="#5f5e5a">支払い方法</text>
+  <rect x="560" y="338" width="106" height="20" rx="6" fill="#e6f1fb"/>
+  <text x="613" y="352" font-size="11" fill="#0c447c" text-anchor="middle">PayPal (API)</text>
+  <text x="374" y="384" font-size="12" fill="#5f5e5a">通貨</text>
+  <text x="666" y="384" font-size="12" fill="#2c2c2a" text-anchor="end">USD</text>
+  <text x="374" y="416" font-size="12" fill="#5f5e5a">関税（米国・8%）</text>
+  <text x="666" y="416" font-size="12" fill="#2c2c2a" text-anchor="end">自動計算 ON</text>
+
+  <rect x="24" y="468" width="656" height="76" rx="8" fill="#ffffff" stroke="#5f5e5a" stroke-width="1"/>
+  <text x="38" y="490" font-size="12" fill="#5f5e5a">小計</text>
+  <text x="360" y="490" font-size="12" fill="#5f5e5a" text-anchor="end">¥165,000</text>
+  <text x="38" y="508" font-size="12" fill="#5f5e5a">送料（FedEx）</text>
+  <text x="360" y="508" font-size="12" fill="#5f5e5a" text-anchor="end">¥8,400</text>
+  <text x="38" y="526" font-size="12" fill="#5f5e5a">関税（8%）</text>
+  <text x="360" y="526" font-size="12" fill="#5f5e5a" text-anchor="end">¥13,200</text>
+  <text x="400" y="516" font-size="16" font-weight="600" fill="#2c2c2a">総額</text>
+  <text x="666" y="516" font-size="16" font-weight="600" fill="#2c2c2a" text-anchor="end">¥186,600</text>
+</svg>
