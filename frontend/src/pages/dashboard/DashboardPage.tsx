@@ -172,7 +172,7 @@ const filterGoalsByTab = (goals: GoalWithActual[], tab: Tab): GoalWithActual[] =
 const getChartColors = () => {
   const root = document.documentElement;
   const style = getComputedStyle(root);
-  const accent = style.getPropertyValue("--accent").trim() || "#1e3a8a";
+  const accent = style.getPropertyValue("--accent").trim() || "var(--accent)";
   return { actual: accent, remaining: `${accent}40` };
 };
 
