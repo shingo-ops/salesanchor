@@ -35,6 +35,7 @@ if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
   ok "gh は ${EXPECTED_USER}"
 elif [ "$MODE" = "fix" ]; then
   warn "gh の active account が ${EXPECTED_USER} でない。gh auth switch で切り替え試行..."
+  # 3アカウント同居環境では、login ではなく active account の明示切替を使う。
   if gh auth switch --hostname github.com --user "${EXPECTED_USER}" >/dev/null 2>&1; then
     if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
       ok "gh auth switch 成功: gh は ${EXPECTED_USER}"
