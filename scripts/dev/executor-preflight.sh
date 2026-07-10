@@ -11,7 +11,6 @@
 set -uo pipefail
 
 EXPECTED_USER="shingo-cc"
-CRED_FILE="${HOME}/.claude-access.env"
 MODE="fix"; [ "${1:-}" = "--check" ] && MODE="check"
 
 fail=0
@@ -32,24 +31,22 @@ fi
 
 # 2) gh 認証 = shingo-cc
 echo "[2/3] gh auth = ${EXPECTED_USER}"
-if gh auth status 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
+if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
   ok "gh は ${EXPECTED_USER}"
-elif [ "$MODE" = "fix" ] && [ -f "$CRED_FILE" ]; then
-  warn "gh が ${EXPECTED_USER} でない。${CRED_FILE} からブートストラップ試行..."
-  # shellcheck disable=SC1090
-  source "$CRED_FILE"
-  if [ -n "${SHINGO_CC_PAT:-}" ]; then
-    printf '%s' "$SHINGO_CC_PAT" | gh auth login --hostname github.com --with-token >/dev/null 2>&1
-    if gh auth status 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
-      ok "ブートストラップ成功: gh は ${EXPECTED_USER}"
+elif [ "$MODE" = "fix" ]; then
+  warn "gh の active account が ${EXPECTED_USER} でない。gh auth switch で切り替え試行..."
+  # 3アカウント同居環境では、login ではなく active account の明示切替を使う。
+  if gh auth switch --hostname github.com --user "${EXPECTED_USER}" >/dev/null 2>&1; then
+    if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
+      ok "gh auth switch 成功: gh は ${EXPECTED_USER}"
     else
-      bad "ブートストラップ後も ${EXPECTED_USER} にならず。PATの有効期限 / スコープ(repo) を確認。"
+      bad "gh auth switch 後も active account が ${EXPECTED_USER} にならず。gh auth status --active を確認。"
     fi
   else
-    bad "${CRED_FILE} に SHINGO_CC_PAT が無い。設定してから再実行(チャットに貼らない)。"
+    bad "gh auth switch --hostname github.com --user ${EXPECTED_USER} に失敗。gh auth status --active で現状を確認。"
   fi
 else
-  bad "gh が ${EXPECTED_USER} でない。対策: source ${CRED_FILE}; echo \"\$SHINGO_CC_PAT\" | gh auth login --hostname github.com --with-token"
+  bad "gh が ${EXPECTED_USER} でない。対策: gh auth switch --hostname github.com --user ${EXPECTED_USER}"
 fi
 
 # 3) git identity = shingo-cc
