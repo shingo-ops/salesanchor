@@ -25,6 +25,10 @@
 - 本テーマのファイル変更はPR＋PO承認のみ。process-artifacts gate が通過を管理。
 - ideal-state.md の中身はPOの承認した願いであり、Planner・Generatorは勝手に書き換えない。
 
+## 引き継ぎ
+
+- 次回の続き・残り宿題: ./handover.md
+
 ## ステータス
 
 あるべき姿・KGI 確定（PlannerがまとめPOが承認・2026-07-09）。子の設計は順次。
