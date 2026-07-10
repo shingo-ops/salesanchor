@@ -28,7 +28,14 @@
 | release/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | DONE | #2655 | main | merged #2655 |
 | feature/morimoto/ticket-hide-start | チケット発行後 ticket-start を本人非表示（1人1チケット徹底・ADR-091） | 2026-06-28 | DONE | | | 実装済み・release/* に移行 |
 | release/merge-develop-to-main | develop→main 競合解消リリースブランチ（#2641含む全9ファイル develop優先解消） | 2026-06-28 | IN_PROGRESS | | main | base=develop+main merge |
-| release/db-ssot-conv-unif | 会話データの一元化（conversation-unification）設計図追加 | 2026-07-10 09:32 | IN_PROGRESS | | main | base=main・docs-only |
+| release/db-ssot-conv-unif | 会話データの一元化（conversation-unification）設計図追加 | 2026-07-10 09:32 | DONE | #2870 | main | merged: PR #2870 |
+| release/db-ssot-theme | DB設計のSSOT化 新テーマ器（あるべき姿・KGI・表紙＋索引） | 2026-07-10 07:38 | DONE | #2868 | main | merged: PR #2868 / 1e938f34 |
+| release/db-ssot-handover | 引き継ぎメモ追加＋親READMEにリンク | 2026-07-10 10:49 | DONE | #2871 | main | merged: PR #2871 |
+| release/db-ssot-handover-next | 引き継ぎメモに次回の入り口を追記 | 2026-07-10 12:37 | DONE | #2872 | main | closed: PR #2872 |
+| release/db-ssot-handover-rewrite | 引き継ぎメモの次回入り口を『作り直し範囲の見極め』に書き直し | 2026-07-10 13:04 | DONE | #2873 | main | merged: PR #2873 |
+| release/db-ssot-forecast-separation | 予測値の分離 設計図追加 | 2026-07-10 14:24 | DONE | #2875 | main | merged: PR #2875 |
+| release/db-ssot-money-consolidation | 金額の集約 設計図追加 | 2026-07-10 15:49 | DONE | #2876 | main | merged: PR #2876 |
+| release/db-ssot-impl-plan | 本丸実装の計画 追加 | 2026-07-11 06:52 | IN_PROGRESS | | main | base=main・docs-only |
 | release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | DONE | #2646 | main | merged #2646 |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
