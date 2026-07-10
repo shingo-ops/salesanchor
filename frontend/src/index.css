@@ -24,19 +24,19 @@
 
   /* アクセント（SalesAnchor ブランドネイビー） */
   --accent: #1e3a8a;             /* プライマリボタン・フォーカス */
-  --accent-hover: #163171;
-  --link: #1e3a8a;               /* ナビゲーションリンク */
-  --link-active-bg: #ebeff8;
+  --accent-hover: var(--accent);
+  --link: var(--accent);         /* ナビゲーションリンク */
+  --link-active-bg: var(--accent);
   --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
-  --indicator: #1e3a8a;          /* 選択中インジケーター（会話リスト等） */
+  --indicator: var(--accent);    /* 選択中インジケーター（会話リスト等） */
 
   /* サイドバー */
   --sidebar-bg: #ffffff;
   --sidebar-border: #E4E4E7;
-  --sidebar-item-hover-bg: #ebeff8;
-  --sidebar-item-active-bg: #ebeff8;
-  --sidebar-item-active-color: #1e3a8a;
-  --sidebar-item-active-border: #1e3a8a;
+  --sidebar-item-hover-bg: var(--accent);
+  --sidebar-item-active-bg: var(--accent);
+  --sidebar-item-active-color: var(--accent);
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed: 54px;
   --sidebar-width-expanded: 240px;
 
@@ -66,14 +66,14 @@
   --shadow-modal:        0 8px 32px rgba(0, 0, 0, 0.2);  /* モーダル専用（意図的に重め） */
   --shadow-dropdown:     0 2px 12px rgba(0, 0, 0, 0.15); /* ドロップダウン・ポップオーバー */
   --shadow-drop-sm:      0 2px 4px rgba(0, 0, 0, 0.2);   /* color-swatch 選択時 */
-  --shadow-accent-hover: 0 2px 6px rgba(30, 58, 138, 0.15); /* permission-item hover（--accent #1e3a8a） */
+  --shadow-accent-hover: 0 2px 6px color-mix(in srgb, var(--accent) 15%, transparent); /* permission-item hover（--accent #1e3a8a） */
 
   /* オーバーレイ背景（モーダル・ドロワー用） */
   --overlay-bg: rgba(0, 0, 0, 0.4);
 
   /* 状態色：極薄背景（アイテム状態表示用 — ADR-067 rgba SSoT） */
   --danger-bg-subtle:  rgba(229, 62, 62, 0.06);    /* 期限超過アイテム背景 */
-  --accent-bg-subtle:  rgba(30, 58, 138, 0.06);    /* 当日期限アイテム背景 */
+  --accent-bg-subtle:  color-mix(in srgb, var(--accent) 6%, transparent);    /* 当日期限アイテム背景 */
   --warning-bg-subtle: rgba(183, 121, 31, 0.06);   /* 停滞アイテム背景 */
   --success-bg-subtle: rgba(72, 187, 120, 0.05);   /* 保存完了入力背景 */
 
@@ -83,9 +83,9 @@
   --color-separator-subtle: rgba(203, 210, 217, 0.6); /* 薄いボーダー区切り線 */
 
   /* フォーカスリング（--accent 色依存のため index.css に定義 / ダークも上書き要） */
-  --focus-ring-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15); /* light: --accent #1e3a8a */
+  --focus-ring-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); /* light: --accent #1e3a8a */
   /* 検索欄フォーカス時ネオングロー（枠線＋外側ぼかし光） */
-  --search-focus-glow: 0 0 0 3px rgba(30, 58, 138, 0.15), 0 0 10px 1px rgba(30, 58, 138, 0.18);
+  --search-focus-glow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent), 0 0 10px 1px color-mix(in srgb, var(--accent) 18%, transparent);
 
   /* テーブルの交互背景 */
   --row-hover: #edf2f7;
@@ -142,7 +142,7 @@
   --bg-row-zero-stock-hover: #d6dde8;
   --border-color: #cccccc;
   --border-light: #eeeeee;
-  --accent-bg: #1e3a8a;
+  --accent-bg: var(--accent);
   --bg-badge: #eeeeff;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125） */
@@ -217,11 +217,11 @@
   --border-icon: #e2e8f0;    /* アイコン枠線（ダーク: 視認性確保のため明色） */
 
   --accent: #5b8dd9;
-  --accent-hover: #4d7fc8;
-  --link: #7baee0;
-  --link-active-bg: #1e3a8a;
+  --accent-hover: var(--accent);
+  --link: var(--accent);
+  --link-active-bg: var(--accent);
   --avatar-bg: #334155;          /* アバター背景（ダーク） */
-  --indicator: #5b8dd9;          /* 選択中インジケーター（ダーク） */
+  --indicator: var(--accent);    /* 選択中インジケーター（ダーク） */
 
   --danger: #f87171;
   --danger-bg: #4c1d1d;
@@ -247,13 +247,13 @@
   --shadow-modal:        0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-dropdown:     0 2px 12px rgba(0, 0, 0, 0.35);
   --shadow-drop-sm:      0 2px 4px rgba(0, 0, 0, 0.35);       /* dark: やや濃く */
-  --shadow-accent-hover: 0 2px 6px rgba(91, 141, 217, 0.2);   /* dark: --accent #5b8dd9 */
+  --shadow-accent-hover: 0 2px 6px color-mix(in srgb, var(--accent) 20%, transparent);   /* dark: --accent #5b8dd9 */
 
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
   /* 状態色：極薄背景（ダーク — ADR-067 rgba SSoT） */
   --danger-bg-subtle:  rgba(229, 62, 62, 0.12);    /* ダーク背景向けに不透明度を上げる */
-  --accent-bg-subtle:  rgba(91, 141, 217, 0.12);   /* ダーク accent (#5b8dd9) 準拠 */
+  --accent-bg-subtle:  color-mix(in srgb, var(--accent) 12%, transparent);   /* ダーク accent (#5b8dd9) 準拠 */
   --warning-bg-subtle: rgba(253, 230, 138, 0.10);  /* ダーク warning 準拠 */
   --success-bg-subtle: rgba(74, 222, 128, 0.10);   /* ダーク success 準拠 */
 
@@ -262,9 +262,9 @@
   --color-separator-subtle: rgba(148, 163, 184, 0.4);
 
   /* フォーカスリング（dark: --accent #5b8dd9 ネイビー系） */
-  --focus-ring-shadow: 0 0 0 3px rgba(91, 141, 217, 0.3);
+  --focus-ring-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   /* 検索欄フォーカス時ネオングロー（ダーク） */
-  --search-focus-glow: 0 0 0 3px rgba(91, 141, 217, 0.25), 0 0 12px 2px rgba(91, 141, 217, 0.3);
+  --search-focus-glow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 12px 2px color-mix(in srgb, var(--accent) 30%, transparent);
 
   --row-hover: #2d3b52;
 
@@ -304,10 +304,10 @@
   /* サイドバー（ダーク / ADR-067） */
   --sidebar-bg:                 #1e293b;
   --sidebar-border:             #334155;
-  --sidebar-item-hover-bg:      #1e3a8a;
-  --sidebar-item-active-bg:     #1e3a8a;
-  --sidebar-item-active-color:  #93c5fd;
-  --sidebar-item-active-border: #5b8dd9;
+  --sidebar-item-hover-bg:      var(--accent);
+  --sidebar-item-active-bg:     var(--accent);
+  --sidebar-item-active-color:  var(--accent);
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed:    54px;   /* ライトと同値（パリティ維持） */
   --sidebar-width-expanded:     240px;  /* ライトと同値（パリティ維持） */
 
@@ -331,7 +331,7 @@
   --bg-row-zero-stock-hover: #1b2536;
   --border-color: #475569;
   --border-light: #334155;
-  --accent-bg: #5b8dd9;
+  --accent-bg: var(--accent);
   --bg-badge: #3b2d5c;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125 ダーク） */
