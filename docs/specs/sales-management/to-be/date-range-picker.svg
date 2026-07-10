@@ -1,0 +1,44 @@
+<svg width="480" height="300" viewBox="0 0 480 300" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="480" height="300" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="24" y="30" font-size="13" fill="#5f5e5a">「期間を指定…」を押すと開くカレンダー</text>
+
+  <rect x="24" y="44" width="432" height="232" rx="8" fill="#ffffff" stroke="#378add" stroke-width="1.5"/>
+
+  <text x="40" y="68" font-size="12" fill="#5f5e5a">開始日</text>
+  <rect x="86" y="56" width="90" height="20" rx="6" fill="#e6f1fb"/>
+  <text x="131" y="70" font-size="11" fill="#0c447c" text-anchor="middle">2026-04-01</text>
+  <text x="196" y="70" font-size="12" fill="#888780">&#8594;</text>
+  <text x="222" y="68" font-size="12" fill="#5f5e5a">終了日</text>
+  <rect x="268" y="56" width="90" height="20" rx="6" fill="#e6f1fb"/>
+  <text x="313" y="70" font-size="11" fill="#0c447c" text-anchor="middle">2026-07-09</text>
+
+  <text x="120" y="98" font-size="11" fill="#888780" text-anchor="middle">4月</text>
+  <text x="360" y="98" font-size="11" fill="#888780" text-anchor="middle">7月</text>
+
+  <g>
+    <rect x="52" y="106" width="20" height="16" rx="3" fill="#e6f1fb"/>
+    <text x="62" y="117" font-size="8" fill="#0c447c" text-anchor="middle">1</text>
+  </g>
+  <text x="88" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">2</text>
+  <text x="114" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">3</text>
+  <text x="140" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">4</text>
+  <text x="166" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">5</text>
+  <text x="192" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">6</text>
+  <text x="60" y="140" font-size="8" fill="#5f5e5a" text-anchor="middle">7</text>
+  <text x="86" y="140" font-size="8" fill="#5f5e5a" text-anchor="middle">8</text>
+  <text x="112" y="140" font-size="8" fill="#5f5e5a" text-anchor="middle">…</text>
+
+  <g>
+    <rect x="330" y="106" width="20" height="16" rx="3" fill="#e6f1fb"/>
+    <text x="340" y="117" font-size="8" fill="#0c447c" text-anchor="middle">9</text>
+  </g>
+  <text x="304" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">8</text>
+  <text x="278" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">7</text>
+  <text x="252" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">6</text>
+  <text x="226" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">5</text>
+  <text x="200" y="117" font-size="8" fill="#5f5e5a" text-anchor="middle">4</text>
+  <text x="360" y="140" font-size="8" fill="#5f5e5a" text-anchor="middle">10</text>
+
+  <rect x="40" y="230" width="400" height="28" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="240" y="248" font-size="12" fill="#2c2c2a" text-anchor="middle">この期間でソート</text>
+</svg>
