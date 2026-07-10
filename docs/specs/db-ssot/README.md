@@ -15,7 +15,7 @@
 
 ## 子（適用対象・順次ぶら下げ）
 
-- 会話データの一元化（conversation_logs / meta_messages を1つに）: recon済み・design予定
+- 会話データの一元化（conversation_logs / meta_messages を1つに）: recon済み・design済 → ./conversation-unification/design.md
 - 予測値の整理（手入力=営業優先度／自動計算=CRM本命の2種を分離）: 一部recon済み
 - 金額の集約（複数伝票の重複解消）: 未調査
 - 分類値の台帳化（表記ゆれ防止）: 未着手
