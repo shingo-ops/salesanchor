@@ -19,6 +19,7 @@
 - 予測値の分離（手入力の見立てと自動計算の実績値を分ける）: design済 → ./forecast-separation/design.md
 - 金額の集約（受注・請求・仕入・見積の金額を集約する）: design済 → ./money-consolidation/design.md
 - 分類値の台帳化（国・流入元・顧客規模などを台帳から選ぶ）: design済 → ./classification-master/design.md
+- 本丸実装の計画（STEP1分類マスタ→STEP2戸籍→STEP3金額/会話・各段recon→設計→dry-run→移行）: 計画済 → ./implementation-plan/design.md
 
 ## 維持の仕組み
 
