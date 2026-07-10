@@ -23,7 +23,7 @@
 | [受信箱](../inbox/README.md) | KGI承認済 2026-07-04・design.md完成 |
 | 顧客管理 | 原文あり・KGI未 |
 | [受注管理](../order-management/README.md) | design承認・収納済み 2026-07-04（子: unpaid完成） |
-| 売上管理 | 原文あり・KGI未 |
+| [売上管理](../sales-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-09（独立テーマとして起票） |
 | 管理センター | 原文あり・KGI未 |
 | プロフィール・アカウント設定 | 原文あり・KGI未 |
 | 在庫（ページ） | 原文未・追記待ち |
