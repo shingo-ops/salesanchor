@@ -109,11 +109,12 @@ CC（このチャット）に以下のメッセージを送る:
 ### Step 6: gh auth を shingo-cc に切り替え
 
 ```bash
-# gh 認証切り替え
-gh auth switch --hostname github.com --user shingo-cc
+# PAT 読み込みと gh 認証切り替え
+source ~/.claude-access.env
+echo "${SHINGO_CC_PAT}" | gh auth login --hostname github.com --with-token
 
 # 確認
-gh auth status --active
+gh auth status
 # → "Logged in to github.com account shingo-cc" と表示されれば OK
 ```
 
