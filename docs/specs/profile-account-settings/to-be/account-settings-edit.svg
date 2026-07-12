@@ -1,0 +1,45 @@
+<svg width="720" height="520" viewBox="0 0 720 520" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="520" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; アカウント設定</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">あなた個人の設定です</text>
+
+  <rect x="24" y="70" width="672" height="118" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="13" font-weight="600" fill="#2c2c2a">アカウント情報</text>
+  <rect x="600" y="80" width="60" height="24" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="630" y="96" font-size="10" fill="#2c2c2a" text-anchor="middle">保存</text>
+
+  <text x="38" y="118" font-size="10" fill="#888780">名前</text>
+  <rect x="38" y="124" width="290" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="142" font-size="12" fill="#2c2c2a">田中 太郎</text>
+
+  <text x="360" y="118" font-size="10" fill="#888780">メールアドレス</text>
+  <rect x="360" y="124" width="290" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="370" y="142" font-size="12" fill="#2c2c2a">tanaka@salesanchor.jp</text>
+
+  <rect x="38" y="162" width="150" height="24" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="113" y="178" font-size="10" fill="#2c2c2a" text-anchor="middle">パスワードを変更</text>
+
+  <rect x="24" y="198" width="672" height="46" rx="8" fill="#e6f1fb"/>
+  <text x="360" y="220" font-size="12" fill="#0c447c" text-anchor="middle">パスワードを変更を押すと確認メールを送信します（メール内リンクからのみ変更可能・画面上で直接入力しない）</text>
+  <text x="360" y="236" font-size="10" fill="#0c447c" text-anchor="middle">→ サブ画面: 「確認メールを送信しました」案内カード</text>
+
+  <rect x="24" y="256" width="672" height="94" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="278" font-size="13" font-weight="600" fill="#2c2c2a">表示設定</text>
+
+  <text x="38" y="304" font-size="12" fill="#2c2c2a">表示言語</text>
+  <rect x="500" y="292" width="60" height="22" rx="6" fill="#e6f1fb"/>
+  <text x="530" y="307" font-size="10" fill="#0c447c" text-anchor="middle">日本語</text>
+  <text x="620" y="307" font-size="10" fill="#5f5e5a" text-anchor="middle">English</text>
+
+  <text x="38" y="334" font-size="12" fill="#2c2c2a">テーマ</text>
+  <rect x="500" y="322" width="60" height="22" rx="6" fill="#e6f1fb"/>
+  <text x="530" y="337" font-size="10" fill="#0c447c" text-anchor="middle">ライト</text>
+  <text x="620" y="337" font-size="10" fill="#5f5e5a" text-anchor="middle">ダーク</text>
+
+  <rect x="24" y="360" width="672" height="60" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="382" font-size="13" font-weight="600" fill="#2c2c2a">所属</text>
+  <text x="38" y="402" font-size="11" fill="#5f5e5a">合同会社 Sales Anchor（テナント管理者による招待）</text>
+
+  <text x="360" y="450" font-size="11" fill="#888780" text-anchor="middle">選択した設定は保存され、次回ログイン時も維持されます</text>
+</svg>
