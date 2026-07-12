@@ -35,7 +35,7 @@
 | release/db-ssot-handover-rewrite | 引き継ぎメモの次回入り口を『作り直し範囲の見極め』に書き直し | 2026-07-10 13:04 | DONE | #2873 | main | merged: PR #2873 |
 | release/db-ssot-forecast-separation | 予測値の分離 設計図追加 | 2026-07-10 14:24 | DONE | #2875 | main | merged: PR #2875 |
 | release/db-ssot-money-consolidation | 金額の集約 設計図追加 | 2026-07-10 15:49 | DONE | #2876 | main | merged: PR #2876 |
-| release/db-ssot-impl-plan | 本丸実装の計画 追加 | 2026-07-11 06:52 | IN_PROGRESS | | main | base=main・docs-only |
+| release/db-ssot-impl-plan | 本丸実装の計画 追加 | 2026-07-11 06:52 | DONE | #2883 | main | merged: PR #2883 / e75da4cf |
 | release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | DONE | #2646 | main | merged #2646 |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
