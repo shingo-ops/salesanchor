@@ -20,7 +20,7 @@
 | デザイントークンSSOT化（色・文字・アイコン・コンポーネント・文字サイズ・値・アニメーション・グラフ・ページ構成の索引化・重複排除） | [design-tokens-ssot/README.md](design-tokens-ssot/README.md) | あるべき姿・KGI承認済 2026-07-09 |
 | └ カレンダー色CSS変数化（schedule の 7 カレンダー色） | [design-tokens-ssot/color/calendar/README.md](design-tokens-ssot/color/calendar/README.md) | 公開 |
 | └ アイコン色の用途別トークン集約（10箇所の色決定ポイントをカテゴリ別に束ねる） | [design-tokens-ssot/color/icon/README.md](design-tokens-ssot/color/icon/README.md) | 公開 |
-| 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親README公開（A/B/C完成・D未着手） |
+| 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation完成・inventory-analytics未着手 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | 表紙のみ・KGI未 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |

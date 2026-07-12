@@ -4,8 +4,10 @@
 > 自社在庫と共有在庫（ドロップシッピング）の「今」と「動き」を扱う5つのテーマを束ねる入口。2026-07-04にPO判断で分割され、2026-07-05にfeed-translation（旧称D）が正式起票された。
 
 - 親: 索引 [docs/specs/README.md](../README.md)
+- あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
+- KGIと運用: [kgi.md](./kgi.md)
 - 分割の決定記録: [dropship-procurement/restructure-plan.md](./dropship-procurement/restructure-plan.md)（決定者: PO・2026-07-04）
-- ステータス: A/B/C/feed-translation は あるべき姿・KGI 完成済み。inventory-analytics は表紙のみ（KGI未・recon以降未着手）。
+- ステータス: 親(本ページ全体)のあるべき姿・KGI確定 2026-07-12。A/B/C/feed-translation は あるべき姿・KGI 完成済み。inventory-analytics は表紙のみ（KGI未・recon以降未着手）。
 
 ## 子テーマ
 
