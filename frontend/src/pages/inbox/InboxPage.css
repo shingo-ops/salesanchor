@@ -122,7 +122,7 @@
 .inbox-search-icon {
   position: absolute;
   left: var(--space-3);
-  color: var(--text-secondary);
+  color: var(--icon-search);
   pointer-events: none;
   flex-shrink: 0;
 }
@@ -1347,7 +1347,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   gap: var(--space-1);
   color: var(--success-text);
 }
-.karte-lock-icon { color: var(--success-text); flex-shrink: 0; }
+.karte-lock-icon { color: var(--icon-status-success); flex-shrink: 0; }
 
 /* ADR-110: Read-only row in performance summary */
 .karte-ro-row {
@@ -1715,4 +1715,3 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--bg-hover);
   color: var(--text);
 }
-

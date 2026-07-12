@@ -317,7 +317,7 @@ export function PlatformIcon({ platform, size = 16 }: { platform: string | null;
     const iconSize = Math.round(size * 0.7);
     return (
       <span className="platform-icon-wrap platform-icon-wrap--mail" style={{ width: size, height: size }}>
-        <EnvelopeIcon width={iconSize} height={iconSize} color="white" aria-hidden="true" />
+        <EnvelopeIcon width={iconSize} height={iconSize} aria-hidden="true" />
       </span>
     );
   }
