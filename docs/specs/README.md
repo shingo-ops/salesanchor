@@ -35,6 +35,7 @@
 | 見積もり・請求書（quote-invoice。独立ページ・受信箱からは導線のみ） | [quote-invoice/README.md](quote-invoice/README.md) | あるべき姿・KGI確定 2026-07-08 |
 | 売上管理（sales-management。売上そのものの分析・ダッシュボード/CRMとは非重複） | [sales-management/README.md](sales-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-09 |
 | 顧客管理（customer-management。顧客の理解・優先順位・引き継ぎに専念。売上の本格数値のベース） | [customer-management/README.md](customer-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-10 |
+| プロフィール・アカウント設定（profile-account-settings。プロフィール=テナント/アカウント設定=個人スタッフ。オーナー設定はプロフィールに統合） | [profile-account-settings/README.md](profile-account-settings/README.md) | あるべき姿・KGI・To-Be確定 2026-07-11 |
 | recon（現状把握）標準（あるべき姿・KGI・調査観点ひな型の集約） | [recon-standard/README.md](recon-standard/README.md) | あるべき姿・KGI承認済 2026-07-06 |
 | カレンダー（schedule。全予定の見える化・源泉SSOT参照・やることフィード共有） | [schedule/README.md](schedule/README.md) | KGI承認済 2026-07-03 |
 | ダッシュボード（dashboard。羅針盤・やることフィード・目標カスケード・AI提案） | [dashboard/README.md](dashboard/README.md) | KGI承認済 2026-07-03 |
