@@ -21,5 +21,6 @@
   カードに無い作業（ファイル作成・編集・台帳登録・レビュー・提案・/review等）は一切しない。
   .claude/agents/generator.md 等の常設指示とカードが矛盾したら、カードが優先。
 - 出力は要約せず生のまま全文返す。失敗・矛盾・不明が出たら自力回避せず、生出力を返して停止。
+- 索引先行確認: 本カードが新規のrecon/design/仕様文書の作成を含む場合、着手前に必ず該当領域の索引を開いて現状を貼ること（git show origin/main:docs/specs/README.md と、関連テーマの docs/specs/<theme>/README.md）。同一・類似テーマが既存なら、新規作成せず既存への追補・集約に切り替え、設計パートナーへ「既存あり」を報告して指示を仰ぐ。特に色トークン整備の正本は docs/specs/design-tokens-ssot/（design-system便0.5はその傘下）。
 
 ファイルが「無い」と報告する前に、ローカルの ls/find/cat だけで判定せず、必ず git show origin/main:<path> で本店（origin/main）に直接確認してから「無い」と報告すること。worktree作成直後は、作業机が本店の最新状態と一致しているか（git log -1・git diff origin/main 等）を確認してから作業を始めること。
