@@ -6,6 +6,7 @@
 - 親: 索引 [docs/specs/README.md](../README.md)
 - あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGIと運用: [kgi.md](./kgi.md)
+- 理想の設計図（To-Be）: [to-be.md](./to-be.md)
 - 分割の決定記録: [dropship-procurement/restructure-plan.md](./dropship-procurement/restructure-plan.md)（決定者: PO・2026-07-04）
 - ステータス: 親(本ページ全体)のあるべき姿・KGI確定 2026-07-12。A/B/C/feed-translation は あるべき姿・KGI 完成済み。inventory-analytics は表紙のみ（KGI未・recon以降未着手）。
 
