@@ -280,6 +280,7 @@
 | release/inbox-records-salvage | （記入してください） | 2026-07-04 10:34 | IN_PROGRESS | | | |
 | release/design-partner-lesson-20260708 | （記入してください） | 2026-07-08 06:26 | IN_PROGRESS | | | 正本先約 design-partner.md / GO=未採番 / 単独便 |
 | release/color-tokens-ssot-recon | （記入してください） | 2026-07-09 02:55 | IN_PROGRESS | | | |
+| release/worktree-sync-guard-consolidated | worktree/台帳整合性チェックの再発防止 | 2026-07-14 16:02 | DONE | #2905 | main | merged: PR #2905 / 16bd04eca9466486e04332119e779c4c489405e6 |
 ---
 
 ## 記入例
