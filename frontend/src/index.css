@@ -25,18 +25,18 @@
   /* アクセント（SalesAnchor ブランドネイビー） */
   --accent: #1e3a8a;             /* プライマリボタン・フォーカス */
   --accent-hover: #163171;
-  --link: #1e3a8a;               /* ナビゲーションリンク */
+  --link: #1a73e8;               /* ナビゲーションリンク */
   --link-active-bg: #ebeff8;
   --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
-  --indicator: #1e3a8a;          /* 選択中インジケーター（会話リスト等） */
+  --indicator: var(--accent);          /* 選択中インジケーター（会話リスト等） */
 
   /* サイドバー */
   --sidebar-bg: #ffffff;
   --sidebar-border: #E4E4E7;
   --sidebar-item-hover-bg: #ebeff8;
   --sidebar-item-active-bg: #ebeff8;
-  --sidebar-item-active-color: #1e3a8a;
-  --sidebar-item-active-border: #1e3a8a;
+  --sidebar-item-active-color: var(--accent);
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed: 54px;
   --sidebar-width-expanded: 240px;
 
