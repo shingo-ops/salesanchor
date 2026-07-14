@@ -24,3 +24,5 @@
 - 索引先行確認: 本カードが新規のrecon/design/仕様文書の作成を含む場合、着手前に必ず該当領域の索引を開いて現状を貼ること（git show origin/main:docs/specs/README.md と、関連テーマの docs/specs/<theme>/README.md）。同一・類似テーマが既存なら、新規作成せず既存への追補・集約に切り替え、設計パートナーへ「既存あり」を報告して指示を仰ぐ。特に色トークン整備の正本は docs/specs/design-tokens-ssot/（design-system便0.5はその傘下）。
 
 ファイルが「無い」と報告する前に、ローカルの ls/find/cat だけで判定せず、必ず git show origin/main:<path> で本店（origin/main）に直接確認してから「無い」と報告すること。worktree作成直後は、作業机が本店の最新状態と一致しているか（git log -1・git diff origin/main 等）を確認してから作業を始めること。
+- 編集を始める前（新規worktreeでも、既存worktreeへの追加コミットでも）、対象ファイルの現在の内容を git diff origin/main -- <対象ファイル> で確認し、直前に本店へマージされた変更が土台に反映されているか確かめること。反映されていない古い内容を土台に編集を始めない。
+- PRをマージする前、.claude-pipeline/active-work.md にこの作業の行が存在するか確認する。worktree作成時に自動登録された行がある場合、マージ完了時に同じ行をDONE化して報告に含めること。登録された行が見当たらない場合は、その旨を完了報告に明記し、別途追記する。
