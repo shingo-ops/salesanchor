@@ -512,7 +512,7 @@ frontend/package.json:43
 frontend/package.json:54-63
 frontend/.husky/pre-commit:34-58
 frontend/scripts/check-dark-parity.js:3-11
-frontend/scripts/check-css-hardcoded-colors.js:3-9
+frontend/scripts/.github/workflows/design-token-guard.yml:3-9
 frontend/scripts/check-css-hardcoded-values.js:3-12
 frontend/scripts/check-unused-tokens.js:3-9
 ```
@@ -599,8 +599,8 @@ frontend/scripts/check-unused-tokens.js:3-9
 ## 7. ノイズと境界
 
 - 今回の scan 範囲は `frontend/src` のみ。`node_modules`、`dist`、`coverage`、Storybook build 成果物、`docs/**` は見ない。
-- `check-css-hardcoded-colors.js` は `index.css` / `tokens.css` を除外しているため、直値スキャンの機械判定対象は主に component/page CSS。
-- `check-unused-tokens.js` は `tokens.css` と `index.css` のみを対象にするため、今回の recon で数えた `color-bearing custom prop` の `34` 孤児とは一致しない。
+- `.github/workflows/design-token-guard.yml` は `index.css` / `tokens.css` を除外しているため、直値スキャンの機械判定対象は主に component/page CSS。
+- `frontend/scripts/check-unused-tokens.js` は `tokens.css` と `index.css` のみを対象にするため、今回の recon で数えた `color-bearing custom prop` の `34` 孤児とは一致しない。
 - `--cal-*` 系は現行 `tokens.css` にある legacy color token で、design.md §5.3.3 の exact name ではない。
 - `PR番号`、`TBD`、テストダミー値のような非色の `#` 表記は、今回の `frontend/src` 実測では色リテラルとしての分類対象に入っていない。
 
@@ -609,7 +609,7 @@ frontend/scripts/check-unused-tokens.js:3-9
 ## 補足
 
 - `docs/specs/design-system/design.md` §5.3.3 は 26 件の exact name を定義しているが、現行 `frontend/src` にはその exact name はまだ実装されていない。
-- `frontend/src` の現行 schedule 実装は `calendars.config.ts` の direct hex と `index.css` の Google Calendar 系 tokens を使っている。
+- `frontend/src` の現行 schedule 実装は `frontend/src/features/schedule/calendars.config.ts` の direct hex と `index.css` の Google Calendar 系 tokens を使っている。
 
 ## 8. 追加調査（TS/TSX直書き色の完全棚卸し）
 
@@ -668,12 +668,12 @@ frontend/src/pages/schedule/schedule-owner.ts:34 - export const DEFAULT_OWNER_CO
 #### 8-1-b. 除外した 18 件
 
 - 除外理由: `PR #166` / `PR #147` / `PR #145` / `PR #152` / `PR #164` などのコメント内表記が、`#[0-9a-fA-F]{3,8}` 形の機械抽出に偶然一致したため。
-- 除外件数の内訳: `UiPrefsContext.tsx` 2 件、`DealsPage.tsx` 2 件、`App.tsx` 1 件、`CompanyDetailPage.tsx` 1 件、`CompanyBasicTab.tsx` 1 件、`CompaniesPage.tsx` 1 件、`MergeCompanyModal.tsx` 4 件、`CompanyContactSelector.tsx` 6 件。
+- 除外件数の内訳: `frontend/src/contexts/UiPrefsContext.tsx` 2 件、`frontend/src/pages/deals/DealsPage.tsx` 2 件、`frontend/src/App.tsx` 1 件、`frontend/src/pages/company-detail/CompanyDetailPage.tsx` 1 件、`frontend/src/pages/company-detail/CompanyBasicTab.tsx` 1 件、`frontend/src/pages/companies/CompaniesPage.tsx` 1 件、`frontend/src/components/MergeCompanyModal.tsx` 4 件、`frontend/src/components/CompanyContactSelector.tsx` 6 件。
 - テスト用ダミー値・非色文字列の追加ヒットはなかった。
 
 ### 8-2. 既存の守り手（チェックスクリプト）の対象範囲
 
-- `frontend/scripts/check-css-hardcoded-colors.js:19-20, 28-35, 41-43` は `frontend/src` 配下の `.css` のみを走査し、`index.css` / `tokens.css` を除外する。TS/TSX は対象外。
+- `frontend/scripts/.github/workflows/design-token-guard.yml:19-20, 28-35, 41-43` は `frontend/src` 配下の `.css` のみを走査し、`index.css` / `tokens.css` を除外する。TS/TSX は対象外。
 - `frontend/scripts/check-css-hardcoded-values.js:22-23, 77-85, 90-91` は `frontend/src` 配下の `.css` のみを走査し、`index.css` / `tokens.css` を除外する。TS/TSX は対象外。
 - `frontend/scripts/check-unused-tokens.js:21-27, 60-67, 84-94` は `tokens.css` / `index.css` の定義を `src/` の `.css` / `.tsx` / `.ts` で参照追跡する。TS/TSX の `var(--...)` は見られるが、直書き色は検知しない。
 - `frontend/scripts/check-dark-parity.js:19-33, 40-48` は `frontend/src/index.css` のみを走査する。TS/TSX は対象外。
@@ -691,4 +691,4 @@ frontend/src/pages/schedule/schedule-owner.ts:34 - export const DEFAULT_OWNER_CO
 - `frontend/src/pages/schedule/schedule-owner.ts:34, 43` で `DEFAULT_OWNER_COLOR` を定義・使用している。
 - `frontend/src/pages/roles/RolesPage.tsx:76-87, 262, 356, 561` で `COLOR_PALETTE` と `r.color` フォールバックを使っている。
 - `frontend/src/pages/dashboard/DashboardPage.tsx:175` で `"#1e3a8a"` を `--accent` のフォールバックとして使っている。
-- `calendars.config.ts` と `RolesPage.tsx` 以外の TS/TSX 直書き色については、今回の棚卸しでは全件の依存追跡までは行っていない。
+- `frontend/src/features/schedule/calendars.config.ts` と `frontend/src/pages/roles/RolesPage.tsx` 以外の TS/TSX 直書き色については、今回の棚卸しでは全件の依存追跡までは行っていない。
