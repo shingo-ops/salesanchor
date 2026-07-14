@@ -23,7 +23,7 @@
   transition: opacity .4s, transform .4s;
   /* デフォルトは neutral soft */
   background: var(--neutral-bg);
-  color: var(--neutral-text);
+  color: var(--icon-status-neutral);
 }
 
 /* ── ドット ── */
@@ -55,11 +55,11 @@
 }
 
 /* ── 3. soft バリアント (0,2,0) ── */
-.comp-badge--soft.comp-badge--neutral { background: var(--neutral-bg); color: var(--neutral-text); }
-.comp-badge--soft.comp-badge--info    { background: var(--info-bg);    color: var(--info-text); }
-.comp-badge--soft.comp-badge--success { background: var(--success-bg); color: var(--success-text); }
-.comp-badge--soft.comp-badge--warning { background: var(--warning-bg); color: var(--warning-text); }
-.comp-badge--soft.comp-badge--danger  { background: var(--danger-bg);  color: var(--danger-text); }
+.comp-badge--soft.comp-badge--neutral { background: var(--neutral-bg); color: var(--icon-status-neutral); }
+.comp-badge--soft.comp-badge--info    { background: var(--info-bg);    color: var(--icon-status-info); }
+.comp-badge--soft.comp-badge--success { background: var(--success-bg); color: var(--icon-status-success); }
+.comp-badge--soft.comp-badge--warning { background: var(--warning-bg); color: var(--icon-status-warning); }
+.comp-badge--soft.comp-badge--danger  { background: var(--danger-bg);  color: var(--icon-status-danger); }
 
 /* ── 4. solid バリアント (0,2,0) ── */
 .comp-badge--solid.comp-badge--neutral { background: var(--neutral);                   color: var(--on-solid); }

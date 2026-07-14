@@ -204,7 +204,7 @@
   gap: var(--space-3);
   min-height: var(--size-icon-btn-lg); /* 44px — WCAG 2.5.5 タッチターゲット */
   padding: var(--sidebar-item-padding-v) var(--space-4);
-  color: var(--text-secondary);
+  color: var(--icon-nav);
   text-decoration: none;              /* デフォルトの青リンク下線を消す */
   font-size: var(--font-sm);
   font-weight: var(--font-weight-normal);
@@ -220,13 +220,13 @@
 
 .nav-item-list__item:hover {
   background: var(--sidebar-item-hover-bg);
-  color: var(--sidebar-item-active-color);
+  color: var(--icon-nav-active);
   text-decoration: none;
 }
 
 .nav-item-list__item--active {
   background: var(--sidebar-item-active-bg);
-  color: var(--sidebar-item-active-color);
+  color: var(--icon-nav-active);
   font-weight: var(--font-weight-semi);
   border-left-color: var(--sidebar-item-active-border);
   text-decoration: none;
