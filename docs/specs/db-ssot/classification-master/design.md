@@ -124,6 +124,13 @@
 
 ## 8. まだ決めていない（実装時に詰める）
 - リード状態・商談状態統一の実装手順詳細（leads.status 側への統合実装・archive 追加を含む。影響範囲: backend/app/routers/deals.py, backend/app/routers/analytics.py, backend/app/services/priority_scoring.py, backend/app/schemas/deal.py, backend/app/tasks/reports.py／frontend: DealsPage.tsx, DealFormFields.tsx, DealEditPage.tsx, utils/statusPresentation.ts, statusPresentation.test.ts, design-preview/sections/StatusSection.tsx。2026-07-13 recon確認済み、analytics.py は 12 箇所で status 参照・書き換え規模大）。
+- leadsテーブルの以下7列は、SSOT化（分類マスタ・状態統合等）完了後にまとめて削除を検討する候補（2026-07-14 PO確認・実削除はしない、記録のみ）:
+  - english_name（nicknameへの改名痕跡あり・現行コード不使用）
+  - discord_id（discord_user_idとは別物・現行コード不使用・削除注記あり）
+  - ai_collection_state（ADR-015のAI自動収集機能用に用意されたが未実装。tenant_004実データ0件）
+  - escalation_flag（ADR-015のエスカレーション機能用に用意されたが未実装。tenant_004実データで真値0件）
+  - first_inquiry_at・first_response_at・first_response_seconds（ADR-015の返信速度自動計測機能用に用意されたが未実装。tenant_004実データ0件）
+  - 理由: 今回のreconでDBの構造が想定と異なる点が複数見つかったため、土台（SSOT化）が固まる前の個別削除は避け、完了後にまとめて整理する方針（2026-07-14 PO判断）。
 
 ## 9. 維持の仕組み
 - 本ファイルの変更はPR＋PO承認のみ。process-artifacts gate が管理。
