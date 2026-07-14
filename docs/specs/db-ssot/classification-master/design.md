@@ -123,12 +123,7 @@
 - `既存テーブル活用` は、`country` のように既に正本があるものをそのまま使うための例外枠。
 
 ## 8. まだ決めていない（実装時に詰める）
-- 自動削除（定期実行）の具体的な実行基盤（cron等）。
-- 各分類欄を「どの台帳」に対応させるかの最終マッピング一覧。
-- 取扱商材の選択肢・2階建て要否。
 - リード状態・商談状態統一の実装手順詳細（leads.status 側への統合実装・archive 追加を含む。影響範囲: backend/app/routers/deals.py, backend/app/routers/analytics.py, backend/app/services/priority_scoring.py, backend/app/schemas/deal.py, backend/app/tasks/reports.py／frontend: DealsPage.tsx, DealFormFields.tsx, DealEditPage.tsx, utils/statusPresentation.ts, statusPresentation.test.ts, design-preview/sections/StatusSection.tsx。2026-07-13 recon確認済み、analytics.py は 12 箇所で status 参照・書き換え規模大）。
-- 「商談化」ボタン押下時の自動ステータス変更ロジックの実装箇所（現状 convert_lead 相当の処理拡張が必要）。
-- 再アプローチ短期 / 長期選択時の「アクション日・次回アクション入力必須」バリデーションの実装方法。
 
 ## 9. 維持の仕組み
 - 本ファイルの変更はPR＋PO承認のみ。process-artifacts gate が管理。
