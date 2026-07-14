@@ -1,0 +1,56 @@
+<svg width="900" height="440" viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="900" height="440" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="408" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">在庫解析機能</text>
+  <rect x="16" y="58" width="200" height="36" fill="#e6f1fb"/>
+  <rect x="16" y="58" width="3" height="36" fill="#378add"/>
+  <text x="40" y="80" font-size="12" fill="#0c447c" font-weight="600">商品マスタ</text>
+  <text x="40" y="126" font-size="12" fill="#5f5e5a">解析結果</text>
+  <text x="40" y="172" font-size="12" fill="#5f5e5a">確認待ち一覧</text>
+  <circle cx="196" cy="167" r="8" fill="#f1efe8"/>
+  <text x="196" y="171" font-size="9" fill="#5f5e5a" text-anchor="middle">3</text>
+  <text x="40" y="218" font-size="12" fill="#5f5e5a">仕入元別プロンプト</text>
+
+  <text x="236" y="42" font-size="16" font-weight="600" fill="#2c2c2a">商品マスタ</text>
+  <rect x="792" y="26" width="92" height="26" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="838" y="43" font-size="10" fill="#2c2c2a" text-anchor="middle">+ 商品を追加</text>
+
+  <rect x="236" y="62" width="76" height="24" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="1"/>
+  <text x="274" y="78" font-size="10" fill="#0c447c" text-anchor="middle">トレカ &#9660;</text>
+  <rect x="322" y="60" width="132" height="28" rx="6" fill="#f1efe8"/>
+  <rect x="325" y="63" width="60" height="22" rx="4" fill="#ffffff"/>
+  <text x="355" y="78" font-size="9" fill="#2c2c2a" text-anchor="middle">BOX系</text>
+  <text x="422" y="78" font-size="9" fill="#5f5e5a" text-anchor="middle">シングル</text>
+
+  <rect x="236" y="98" width="60" height="22" rx="6" fill="#e6f1fb"/>
+  <text x="266" y="113" font-size="10" fill="#0c447c" text-anchor="middle">すべて</text>
+  <text x="310" y="113" font-size="10" fill="#5f5e5a">ポケモン</text>
+  <text x="372" y="113" font-size="10" fill="#5f5e5a">ワンピース</text>
+
+  <line x1="236" y1="136" x2="884" y2="136" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="242" y="156" font-size="10" fill="#888780">マーク</text>
+  <text x="290" y="156" font-size="10" fill="#888780">商品名</text>
+  <text x="640" y="156" font-size="10" fill="#888780" text-anchor="end">ケース入数</text>
+  <text x="710" y="156" font-size="10" fill="#888780" text-anchor="end">BOX入数</text>
+  <text x="800" y="156" font-size="10" fill="#888780" text-anchor="end">発売日</text>
+  <line x1="236" y1="164" x2="884" y2="164" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="188" font-size="12" fill="#5f5e5a">SV</text>
+  <text x="290" y="186" font-size="12" fill="#2c2c2a">スカーレット&amp;バイオレット BOX</text>
+  <text x="290" y="200" font-size="9" fill="#888780">Scarlet &amp; Violet Booster Box</text>
+  <text x="640" y="188" font-size="12" fill="#5f5e5a" text-anchor="end">12</text>
+  <text x="710" y="188" font-size="12" fill="#5f5e5a" text-anchor="end">30</text>
+  <text x="800" y="188" font-size="10" fill="#5f5e5a" text-anchor="end">2023-01</text>
+  <text x="870" y="188" font-size="12" fill="#888780" text-anchor="end">&#8250;</text>
+  <line x1="236" y1="210" x2="884" y2="210" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="234" font-size="12" fill="#888780">—</text>
+  <text x="290" y="234" font-size="12" fill="#2c2c2a">ARバルク</text>
+  <text x="640" y="234" font-size="12" fill="#888780" text-anchor="end">—</text>
+  <text x="710" y="234" font-size="12" fill="#888780" text-anchor="end">—</text>
+  <text x="800" y="234" font-size="10" fill="#5f5e5a" text-anchor="end">2022-11</text>
+  <text x="870" y="234" font-size="12" fill="#888780" text-anchor="end">&#8250;</text>
+
+  <text x="560" y="400" font-size="10" fill="#888780" text-anchor="middle">大カテゴリを切り替えると中カテゴリ・タイプの選択肢も連動して切り替わる／行クリックで編集ページへ</text>
+</svg>

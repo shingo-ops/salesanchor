@@ -15,6 +15,7 @@
 ## 構成（3ファイル標準）
 - [ideal-state.md](./ideal-state.md): あるべき姿（PO自筆・正本。書き換えない）
 - [kgi.md](./kgi.md): KGI（○×・数値・免許制の数字・設計送り事項）
+- [to-be.md](./to-be.md): 理想の設計図（To-Be）
 - 技術How層: v0.1昇華設計（DB・処理フロー）を吸収。出所: salesanchor2セッション 2026-07-05。吸収時の修正2点は kgi.md 末尾に明記。
 
 ## ステータス

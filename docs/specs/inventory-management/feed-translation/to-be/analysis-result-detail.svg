@@ -1,0 +1,72 @@
+<svg width="720" height="800" viewBox="0 0 720 800" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="800" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; 解析結果を修正</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">A社 ・ Discord ・ 2分前</text>
+
+  <rect x="24" y="70" width="672" height="60" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="90" font-size="10" fill="#888780">① 原文（根拠箇所をハイライト）</text>
+  <rect x="38" y="98" width="150" height="18" rx="4" fill="#faeeda"/>
+  <text x="45" y="111" font-size="11" fill="#854f0b">PSA10 ARバルク</text>
+  <text x="200" y="111" font-size="12" fill="#2c2c2a">数量要相談</text>
+
+  <rect x="24" y="142" width="672" height="200" rx="8" fill="#ffffff" stroke="#c98a1f" stroke-width="1.5"/>
+  <text x="38" y="164" font-size="12" font-weight="600" fill="#2c2c2a">信頼値の内訳</text>
+  <text x="660" y="168" font-size="18" font-weight="600" fill="#854f0b" text-anchor="end">42%</text>
+
+  <text x="38" y="196" font-size="11" fill="#5f5e5a">① キーワード一致度</text>
+  <rect x="500" y="186" width="90" height="8" rx="4" fill="#f1efe8"/>
+  <rect x="500" y="186" width="63" height="8" rx="4" fill="#2e9e5b"/>
+  <text x="660" y="196" font-size="10" fill="#5f5e5a" text-anchor="end">42/60</text>
+  <line x1="38" y1="210" x2="660" y2="210" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="38" y="232" font-size="11" fill="#5f5e5a">② 必須項目の充足</text>
+  <rect x="500" y="222" width="90" height="8" rx="4" fill="#f1efe8"/>
+  <text x="660" y="232" font-size="10" fill="#854f0b" text-anchor="end">0/40</text>
+  <line x1="38" y1="246" x2="660" y2="246" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="38" y="268" font-size="11" fill="#5f5e5a">③ 除外キーワード衝突</text>
+  <rect x="580" y="258" width="80" height="18" rx="4" fill="#dff3e6"/>
+  <text x="620" y="271" font-size="10" fill="#0f6e56" text-anchor="middle">問題なし</text>
+  <line x1="38" y1="284" x2="660" y2="284" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="38" y="306" font-size="10" fill="#888780">数量・価格が原文に見当たらないため②が0点。①はキーワード一致・表記ゆれで満点にならず</text>
+  <text x="38" y="322" font-size="10" fill="#888780">③は除外キーワードとの衝突なし（減点なし）</text>
+
+  <rect x="24" y="358" width="672" height="80" rx="8" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="380" font-size="10" fill="#888780">② AIの解析結果（変更不可・記録として保持）</text>
+  <text x="38" y="404" font-size="9" fill="#888780">商品名</text>
+  <text x="38" y="420" font-size="11" fill="#5f5e5a">PSA10 ARバルク</text>
+  <text x="238" y="404" font-size="9" fill="#888780">状態</text>
+  <text x="238" y="420" font-size="11" fill="#5f5e5a">PSA10</text>
+  <text x="378" y="404" font-size="9" fill="#888780">数量</text>
+  <text x="378" y="420" font-size="11" fill="#854f0b">?</text>
+  <text x="478" y="404" font-size="9" fill="#888780">価格</text>
+  <text x="478" y="420" font-size="11" fill="#854f0b">?</text>
+
+  <rect x="24" y="454" width="672" height="150" rx="8" fill="#ffffff" stroke="#378add" stroke-width="1.5"/>
+  <text x="38" y="476" font-size="12" fill="#0c447c">③ 人間の修正結果</text>
+
+  <text x="38" y="498" font-size="9" fill="#888780">商品名（商品マスタから検索）</text>
+  <rect x="38" y="504" width="300" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="521" font-size="11" fill="#2c2c2a">&#128269; ARバルク</text>
+
+  <text x="38" y="548" font-size="9" fill="#888780">状態（シングル系の選択肢）</text>
+  <rect x="38" y="554" width="130" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="571" font-size="11" fill="#2c2c2a">PSA10 &#9660;</text>
+  <text x="184" y="548" font-size="9" fill="#888780">数量</text>
+  <rect x="184" y="554" width="130" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="194" y="571" font-size="11" fill="#2c2c2a">2</text>
+  <text x="330" y="548" font-size="9" fill="#888780">価格</text>
+  <rect x="330" y="554" width="130" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="340" y="571" font-size="11" fill="#2c2c2a">¥45,000</text>
+
+  <rect x="24" y="620" width="672" height="46" rx="8" fill="#e6f1fb"/>
+  <text x="360" y="640" font-size="10" fill="#0c447c" text-anchor="middle">保存すると原文・AI結果・修正結果が紐づけて記録され、</text>
+  <text x="360" y="656" font-size="10" fill="#0c447c" text-anchor="middle">解析精度分析とRAGに使用されます</text>
+
+  <rect x="24" y="682" width="140" height="30" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="94" y="701" font-size="11" fill="#0c447c" text-anchor="middle">修正を保存</text>
+  <rect x="174" y="682" width="100" height="30" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="224" y="701" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>
