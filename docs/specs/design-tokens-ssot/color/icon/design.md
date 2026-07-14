@@ -106,9 +106,12 @@
 
 ## 6. 維持の仕組み
 
-- アイコン色は `--icon-*` 経由でしか使わない。
-- 新規アイコンや新しい利用箇所を追加するときは、まず用途カテゴリを決め、対応する `--icon-*` を `index.css` に置く。
-- `color="white"` / 直書き色の再発は grep で検出する。
+守り手: .github/workflows/design-token-guard.yml
+対象: アイコン色が --icon-* を経由せず生hex直書きに戻ること、新規hexの増加。
+
+- アイコン色は --icon-* 経由でしか使わない。
+- 新規アイコン追加時は、まず用途カテゴリを決め、対応する --icon-* を index.css に置く。
+- color="white" / 直書き色の再発は guard-hex-increase チェックと grep で検出する。
 
 ## 7. 接触面分析（6 面）
 
