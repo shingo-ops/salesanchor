@@ -183,6 +183,23 @@
   --calendar-status-ok-text:     #1e7e34;
   --calendar-status-error-bg:    #fce8e6;
   --calendar-status-error-text:  #c5221f;
+  /* アイコン用途別トークン（色の意味は用途カテゴリで集約） */
+  --icon-nav:                 var(--text-secondary);
+  --icon-nav-active:          var(--sidebar-item-active-color);
+  --icon-action:              var(--text-secondary);
+  --icon-action-hover:        var(--text-primary);
+  --icon-action-danger:       var(--danger);
+  --icon-decorative:          var(--accent);
+  --icon-search:              var(--text-secondary);
+  --icon-empty:               var(--text-muted);
+  --icon-platform-mail:       var(--on-solid);
+  --icon-status-neutral:      var(--neutral-text);
+  --icon-status-info:         var(--info-text);
+  --icon-status-success:      var(--success-text);
+  --icon-status-warning:      var(--warning-text);
+  --icon-status-danger:       var(--danger-text);
+  --icon-status-calendar-ok:  var(--calendar-status-ok-text);
+  --icon-status-calendar-error: var(--calendar-status-error-text);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
@@ -372,6 +389,23 @@
   --calendar-status-ok-text:     #4ade80;
   --calendar-status-error-bg:    #4c1d1d;
   --calendar-status-error-text:  #f87171;
+  /* アイコン用途別トークン（色の意味は用途カテゴリで集約） */
+  --icon-nav:                 var(--text-secondary);
+  --icon-nav-active:          var(--sidebar-item-active-color);
+  --icon-action:              var(--text-secondary);
+  --icon-action-hover:        var(--text-primary);
+  --icon-action-danger:       var(--danger);
+  --icon-decorative:          var(--accent);
+  --icon-search:              var(--text-secondary);
+  --icon-empty:               var(--text-muted);
+  --icon-platform-mail:       var(--on-solid);
+  --icon-status-neutral:      var(--neutral-text);
+  --icon-status-info:         var(--info-text);
+  --icon-status-success:      var(--success-text);
+  --icon-status-warning:      var(--warning-text);
+  --icon-status-danger:       var(--danger-text);
+  --icon-status-calendar-ok:  var(--calendar-status-ok-text);
+  --icon-status-calendar-error: var(--calendar-status-error-text);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);

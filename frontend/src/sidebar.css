@@ -134,7 +134,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--sidebar-item-padding-v) var(--space-14px); /* collapsed: border(3)+padding(14)+icon-center(10)=27px=54px÷2 */
-  color: var(--text-secondary);
+  color: var(--icon-nav);
   text-decoration: none;
   font-size: var(--font-sm);
   white-space: nowrap;
@@ -150,12 +150,12 @@
 
 .sidebar-item:hover {
   background: var(--sidebar-item-hover-bg);
-  color: var(--sidebar-item-active-color);
+  color: var(--icon-nav-active);
 }
 
 .sidebar-item.active {
   background: var(--sidebar-item-active-bg);
-  color: var(--sidebar-item-active-color);
+  color: var(--icon-nav-active);
   font-weight: var(--font-weight-semi);
   border-left-color: var(--sidebar-item-active-border);
 }
