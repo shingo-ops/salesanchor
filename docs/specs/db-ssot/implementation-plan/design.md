@@ -21,6 +21,7 @@
 ### STEP2: 戸籍（lead→deal→company→contact）
 - 顧客の実体情報（name/email/phone等）の重複を解消し、正本を1か所に定めて背番号で繋ぐ。
 - 全ての親。金額も会話もここに紐づくため、金額・会話より先。
+- 2026-07-14 PO方針: 担当者(contacts)概念を廃止し、会社(company)に連絡チャネル（Messenger/Instagram/WhatsApp/Discord等、複数登録可）を直接持たせる形に変更する。受信箱は会社単位で会話を集約する。影響範囲61ファイル（recon済み）。次回セッションでSTEP2として正式着手（あるべき姿→KGI→設計から）。
 
 ### STEP3a: 金額（order集約） / STEP3b: 会話（1テーブル統合）
 - 戸籍の上に乗る層。並行可能。
