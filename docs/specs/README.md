@@ -49,6 +49,7 @@
 | 請求先/配送先の住所区別（接点：company/order の住所） | （仕様書未作成） | **pending** |
 | 為替レート | （仕様書未作成・関連ADR: ADR-148） | 未 |
 | 翻訳送信・グロッサリ（接点: conversation_logs。会話ログの紐付けは取引フロー） | [inbox/translation-glossary/README.md](inbox/translation-glossary/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
+| 帳票・フォーム送付（見積・請求書・フォームの送付導線。中身の作りは quote-invoice、入金確認は受注管理を参照） | [inbox/invoice-form-send/README.md](inbox/invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
 | Discord連携 | （仕様書未作成・関連: ADR-009, 014, 100, 091） | 未 |
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
 | 認証・権限・ロール | （仕様書未作成・関連: ADR-023, 032, 138） | 未 |
