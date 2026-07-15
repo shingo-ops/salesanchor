@@ -1,0 +1,70 @@
+
+<svg width="720" height="820" viewBox="0 0 720 820" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="820" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; レポート詳細</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">2026-07-14 商談・A社（閲覧専用）</text>
+
+  <rect x="24" y="70" width="672" height="60" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="9" fill="#888780">顧客名</text>
+  <text x="38" y="108" font-size="12" fill="#2c2c2a">A社</text>
+  <text x="278" y="92" font-size="9" fill="#888780">担当者</text>
+  <text x="278" y="108" font-size="12" fill="#2c2c2a">佐藤 花子</text>
+  <text x="518" y="92" font-size="9" fill="#888780">成約結果</text>
+  <rect x="518" y="98" width="60" height="20" rx="4" fill="#dff3e6"/>
+  <text x="548" y="112" font-size="10" fill="#0f6e56" text-anchor="middle">成約</text>
+
+  <rect x="24" y="144" width="672" height="80" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="166" font-size="12" font-weight="600" fill="#2c2c2a">成約結果の理由</text>
+  <text x="38" y="188" font-size="10" fill="#5f5e5a">価格面での競合優位性を明確に提示できたこと、納期の柔軟性を評価</text>
+  <text x="38" y="204" font-size="10" fill="#5f5e5a">いただけたことが決め手となった。</text>
+
+  <rect x="24" y="238" width="672" height="80" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="260" font-size="12" font-weight="600" fill="#2c2c2a">担当者の振り返り</text>
+  <text x="38" y="282" font-size="10" fill="#5f5e5a">初回接触から成約まで3週間とスムーズだった。次回は初回提案時に</text>
+  <text x="38" y="298" font-size="10" fill="#5f5e5a">サンプルも同時に用意すると、さらに意思決定が早まりそう。</text>
+
+  <rect x="24" y="332" width="672" height="440" rx="8" fill="#ffffff" stroke="#378add" stroke-width="1.5"/>
+  <text x="38" y="360" font-size="13" font-weight="600" fill="#2c2c2a">&#128220; 商談カルテ（顧客管理）</text>
+  <text x="682" y="360" font-size="10" fill="#0c447c" text-anchor="end">顧客管理で全て見る &#8250;</text>
+
+  <rect x="38" y="374" width="60" height="20" rx="4" fill="#faeeda"/>
+  <text x="68" y="388" font-size="9" fill="#854f0b" text-anchor="middle">温度感：熱い</text>
+
+  <line x1="38" y1="410" x2="682" y2="410" stroke="#e3e1d9" stroke-width="1"/>
+  <text x="38" y="428" font-size="9" fill="#888780">顧客名</text>
+  <text x="38" y="444" font-size="11" fill="#2c2c2a">A社</text>
+  <text x="252" y="428" font-size="9" fill="#888780">国</text>
+  <text x="252" y="444" font-size="11" fill="#2c2c2a">日本</text>
+  <text x="466" y="428" font-size="9" fill="#888780">流入元</text>
+  <text x="466" y="444" font-size="11" fill="#2c2c2a">eBay</text>
+  <text x="38" y="468" font-size="9" fill="#888780">取扱タイトル</text>
+  <text x="38" y="484" font-size="11" fill="#2c2c2a">ポケモン</text>
+  <text x="252" y="468" font-size="9" fill="#888780">販売形態</text>
+  <text x="252" y="484" font-size="11" fill="#2c2c2a">ECサイト</text>
+  <text x="466" y="468" font-size="9" fill="#888780">返信速度</text>
+  <text x="466" y="484" font-size="11" fill="#2c2c2a">早い</text>
+
+  <line x1="38" y1="504" x2="682" y2="504" stroke="#e3e1d9" stroke-width="1"/>
+  <text x="38" y="522" font-size="9" fill="#888780">顧客タイプ</text>
+  <text x="38" y="538" font-size="11" fill="#2c2c2a">卸売業者</text>
+  <text x="252" y="522" font-size="9" fill="#888780">規模感</text>
+  <text x="252" y="538" font-size="11" fill="#2c2c2a">中規模</text>
+  <text x="466" y="522" font-size="9" fill="#888780">競合確認</text>
+  <text x="466" y="538" font-size="11" fill="#2c2c2a">あり（B社経由）</text>
+  <text x="38" y="562" font-size="9" fill="#888780">月間見込み金額</text>
+  <text x="38" y="580" font-size="13" font-weight="600" fill="#2c2c2a">¥450,000</text>
+  <text x="252" y="562" font-size="9" fill="#888780">会話回数</text>
+  <text x="252" y="580" font-size="11" fill="#2c2c2a">8回</text>
+
+  <line x1="38" y1="600" x2="682" y2="600" stroke="#e3e1d9" stroke-width="1"/>
+  <text x="38" y="620" font-size="11" font-weight="600" fill="#2c2c2a">課題・ニーズ</text>
+  <text x="38" y="640" font-size="10" fill="#5f5e5a">現地での在庫確保に苦戦しており、安定供給できるパートナーを</text>
+  <text x="38" y="656" font-size="10" fill="#5f5e5a">探している。</text>
+
+  <text x="38" y="686" font-size="11" font-weight="600" fill="#2c2c2a">商談メモ</text>
+  <text x="38" y="706" font-size="10" fill="#5f5e5a">価格交渉に前向き。納期については柔軟に対応できる旨を強調すると</text>
+  <text x="38" y="722" font-size="10" fill="#5f5e5a">好反応。</text>
+
+  <text x="360" y="800" font-size="10" fill="#888780" text-anchor="middle">本ページは閲覧専用。編集は各データの発生元ページ（受信箱・顧客管理等）で行う</text>
+</svg>
