@@ -221,7 +221,7 @@
   --link: #7baee0;
   --link-active-bg: #1e3a8a;
   --avatar-bg: #334155;          /* アバター背景（ダーク） */
-  --indicator: #5b8dd9;          /* 選択中インジケーター（ダーク） */
+  --indicator: var(--accent);          /* 選択中インジケーター（ダーク） */
 
   --danger: #f87171;
   --danger-bg: #4c1d1d;
@@ -307,7 +307,7 @@
   --sidebar-item-hover-bg:      #1e3a8a;
   --sidebar-item-active-bg:     #1e3a8a;
   --sidebar-item-active-color:  #93c5fd;
-  --sidebar-item-active-border: #5b8dd9;
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed:    54px;   /* ライトと同値（パリティ維持） */
   --sidebar-width-expanded:     240px;  /* ライトと同値（パリティ維持） */
 
