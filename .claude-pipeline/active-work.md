@@ -78,6 +78,7 @@
 | feature/morimoto/discord-ticket-phase3 | ADR-091 KPI3 Phase 3 | 2026-06-02 13:30 | DONE | #1406 | | |
 | feature/morimoto/discord-kpi4-announce | ADR-091 KPI4 アナウンス投稿 | 2026-06-02 14:00 | DONE | | | |
 | feature/morimoto/discord-newtab | （記入してください） | 2026-06-02 22:12 | DONE | | | |
+ - release/inbox-invoice-form-send-spec : reserve docs/specs/README.md, docs/specs/inbox/README.md (spec create)
 | feature/morimoto/worktree-guard-auto-recovery | worktreeガード自動リカバリー機能 | 2026-06-02 23:00 | DONE | | | |
 | feature/morimoto/discord-oauth-redirect-fix | Discord OAuth リダイレクト修正・テスト追加 | 2026-06-02 23:30 | DONE | | | |
 | feature/morimoto/migrate-consolidation | マイグレーション一括化 | 2026-06-02 23:30 | DONE | | | |
