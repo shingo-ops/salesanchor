@@ -25,7 +25,6 @@
 | [受注管理](../order-management/README.md) | design承認・収納済み 2026-07-04（子: unpaid完成） |
 | [売上管理](../sales-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-09（独立テーマとして起票） |
 | [管理センター](../management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15（独立テーマとして起票） |
-| [ロール](../management-center/role/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15（独立テーマとして起票） |
 | [プロフィール・アカウント設定](../profile-account-settings/README.md) | あるべき姿・KGI・To-Be確定 2026-07-11（独立テーマとして起票） |
 | 在庫（ページ） | 原文未・追記待ち |
 | [見積もり・請求書（ページ）](../quote-invoice/README.md) | あるべき姿・KGI確定 2026-07-08（独立テーマとして起票） |
