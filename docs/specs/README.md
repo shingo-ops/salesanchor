@@ -23,6 +23,7 @@
 | 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation/inventory-analytics すべて あるべき姿・KGI・To-Be完成 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 |
+| 管理センター（management-center。全データの基盤管理＝データセンターの役割。CRM等の分析機能とは意図的に別役割） | [management-center/README.md](management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
 | ├ 品目マスタ（item） | （作成予定） | 未 |
 | ├ HTSコードマスタ | （作成予定） | 未 |
