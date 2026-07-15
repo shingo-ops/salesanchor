@@ -8,7 +8,7 @@
 - KGIと運用: [kgi.md](./kgi.md)
 - 理想の設計図（To-Be）: [to-be.md](./to-be.md)
 - 分割の決定記録: [dropship-procurement/restructure-plan.md](./dropship-procurement/restructure-plan.md)（決定者: PO・2026-07-04）
-- ステータス: 親(本ページ全体)のあるべき姿・KGI確定 2026-07-12。A/B/C/feed-translation は あるべき姿・KGI 完成済み。inventory-analytics は表紙のみ（KGI未・recon以降未着手）。
+- ステータス: 親(本ページ全体)のあるべき姿・KGI確定 2026-07-12。A/B/C/feed-translation/inventory-analytics は あるべき姿・KGI・To-Be 完成済み。
 
 ## 子テーマ
 
@@ -18,7 +18,7 @@
 | [B: 受注調達・発注依頼](./order-procurement/README.md) | 受注後の仕入れルート候補提示・発注依頼 | あるべき姿・KGI完成（KGI-B1〜B10） |
 | [C: 共用在庫の推移](./market-history/README.md) | 価格・数量の変動を市場履歴として蓄積 | あるべき姿・KGI完成（KGI-C1〜C2） |
 | [提供元フィード翻訳（feed-translation）](./feed-translation/README.md) | 仕入先メッセージの解析・整形・免許制承認をへてA・Cへ配信（旧称テーマD） | あるべき姿・KGI完成（KGI 15項目・免許制） |
-| [在庫解析（inventory-analytics）](./inventory-analytics/README.md) | feed-translationの下流。配信済みデータの変化検知・傾向集計・提案 | 表紙のみ起票（KGI未・recon以降未着手） |
+| [在庫解析（inventory-analytics）](./inventory-analytics/README.md) | feed-translationの下流。配信済みデータの変化検知・傾向集計・提案 | あるべき姿・KGI・To-Be完成（2026-07-15） |
 
 ## 既存資料との関係
 
@@ -31,4 +31,4 @@
 ## 維持の仕組み
 
 - 本表紙の変更はPR＋PO承認のみ。process-artifacts gate が通過を管理。
-- 子テーマ(A/B/C/feed-translation/inventory-analytics)のideal-state.md・kgi.mdは各テーマのREADME配下で独立管理し、本表紙は書き換えない。
+- 子テーマ(A/B/C/feed-translation/inventory-analytics)のideal-state.md・kgi.md・to-be.mdは各テーマのREADME配下で独立管理し、本表紙は書き換えない。
