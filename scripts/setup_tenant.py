@@ -267,6 +267,8 @@ async def _apply_catchup_migrations(engine, tenant_id: int, schema_name: str) ->
         # pg_namespace ループ形式のため {schema} 置換不要。冪等（IF NOT EXISTS）。
         ("091_add_leads_discord_messaging_columns.sql",    "091: leads Discord DM カラム"),
         ("092_add_meta_messages_discord_index.sql",        "092: meta_messages discord インデックス"),
+        # 便1: conversation_logs.lead_id → leads.id のFK追加
+        ("20260715_100000_add_conversation_logs_lead_fk.sql", "20260715: conversation_logs.lead FK"),
     ]
     for sql_file, desc in tenant_migrations:
         sql_path = MIGRATIONS_DIR / sql_file
