@@ -1324,3 +1324,14 @@ follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親
   tradeoff: "develop上の旧worktreeにmain基準の警告が出るが、developは新規作業禁止（handoff§4）ゆえ望ましい挙動"
   decision: "5点をrelease/agent-guardrails-bcで実装、process-artifacts gate緑通過、GO原文『GO』（shingo-ops 2026-07-05）を経てPOがmerge commitでマージ。C便は使い捨てクローンで動作実測しmain文言発火を確認"
   follow_up: "本店をmainへ戻す片付け／フック阻止力の修理（BLOCKED後も実行継続・EV-20260703-003残課題）／dangling-route gate誤検知対策"
+
+## EV-20260715-2924 : スコープガードがblock記録した直後にマージが成立（経路未捕捉）
+
+- 事象: PR #2924（inbox/invoice-form-send To-Be design）のマージで、手元ガードがblockを記録したにもかかわらずマージが成立。成立コマンドがエージェントログに残っていない。
+- ガード: `~/.claude/scripts/gh-scope-guard.sh`（PreToolUse・exit1=hard block）。理由「PR#2924 は自分のPRではない（許可なし）」で `gh_scope_blocked` を記録。
+- blocked記録時刻: `2026-07-15T12:44:10Z` / `2026-07-15T13:05:57Z`（`agent-events.jsonl:40835`, `:40854`。フィールドは `type/session/branch/reason/ts` のみ、`actor/tool/pid` 無し）
+- 実マージ（GitHub側メタデータ）: `mergedBy=shingo-cc` / `mergedAt=2026-07-15T12:44:15Z` / `mergeCommit=9bed25ba757a9818a73948fa3cfd6502b3908768`
+- 迂回フラグ: 生ログに `--admin` / `--force` / `--no-verify` / `HUSKY=0` / `SKIP=` は未検出。
+- 未捕捉: `agent-events.jsonl` に #2924 のマージ成立イベントは無い（blocked 2件のみ）。他ログにも成立記録なし。
+- 評価: 実行主体（`shingo-cc`）は正当。問題は仕組み層の2つの穴 - (1)`gh-scope-guard` が `gh pr merge` の一部経路しか止められていない（網羅性）、(2)エージェントログが成立イベントを捕捉していない（監査性）。§6「検問failed後の続行=素通り扱い・結果無事は手順の正当化にならない」に該当。
+- 引き継ぎ: 恒久是正は `branch-operations` / ガード層テーマで recon→設計→GO。本子テーマ（invoice-form-send）のスコープ外。
