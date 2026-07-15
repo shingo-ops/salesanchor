@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * .tsx/.jsx の JSX style 内 UIスタイル色直書き検査（warn版・落とさない）。
- * 目的: color/background/border 等への #hex / rgb() 直書き（var(--)でない）を警告。
+ * .tsx/.jsx の JSX style 内 UIスタイル色直書き検査（block版）。
+ * 目的: color/background/border 等への #hex / rgb() 直書き（var(--)でない）を検出して失敗させる。
  * データ色（下記 EXCLUDE のファイル）は誤爆防止のため検査対象外。
- * ブロック化は誤爆0を確認後に別便で exit(1) に切替。
+ * データ色以外で検出したら CI を赤にする。
  */
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -46,9 +46,9 @@ for (const f of files) {
 }
 
 if (hits.length) {
-  console.log(`⚠️  [warn] .tsx UIスタイル色の直書きを ${hits.length} 件検出（トークン var(--*) 推奨）:`);
+  console.log(`❌ .tsx UIスタイル色の直書きを ${hits.length} 件検出（トークン var(--*) を使用してください。データ色は EXCLUDE に追加）:`);
   hits.forEach((h) => console.log('  ' + h));
 } else {
   console.log('✅ .tsx UIスタイル色の直書きなし（データ色除外後）');
 }
-process.exit(0); // warn版: 常に成功
+process.exit(hits.length ? 1 : 0); // block版: 違反があれば失敗
