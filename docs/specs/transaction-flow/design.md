@@ -162,3 +162,10 @@ SQL転送はファイル経由で psql -f。DB確認はSSH prod1経由のVPS内�
 - 取引データ（lead・会社・deal・会話ログ等）: 非表示で永久保存。ゴミ箱ページから見返し・復元可能。時限削除（90日等）はやらない（理由・PO自筆:「使い込むほどデータ分析材料が増えるのに消すのはもったいない」）
 - 分類マスタは別ルール: 使わない選択肢は90日削除を維持（データの性質で分ける）
 - 着手前に本テーマ専用のあるべき姿→KGI→reconを経る。全テーブル横断のため規模大
+
+### 予約③: 新テナントへのcatch-up同期（全migration登録の揃え直し）
+便1のFK migrationを既存テナントのみ対応（run_all_migrations.sh登録）にした際、新テナント経路（setup_tenant.py / sync_tenant_schema.py の catch-up 2リスト）には登録しない判断をした（2026-07-15）。理由: 前例 20260703_020000_conv_backbone_ben1b.sql も catch-up 2リスト未登録で、便1のFKだけ単独で新テナント対応するとシステム全体が不揃いになるため。
+- 積み残し: 新テナントを setup_tenant.py 経由で作ると、conversation_logs にFKが付かない（便1bのNOT NULL化も同様に未反映の可能性）
+- あるべき姿: 既存テナントと新テナントで schema が一致する（新テナントにも lead 背骨のFK・制約が最初から付く）
+- 対象範囲: 便1bを含む「run_all_migrations.sh にあるが catch-up 2リストに無い」migration群を洗い出し、catch-up 2リスト（setup_tenant.py・sync_tenant_schema.py）へ揃えて登録。check_schema_catchup_sync.py の完全一致（順序含む）を満たすこと
+- 着手前に本テーマ専用のあるべき姿→KGI→reconを経る。全テナント作成経路に影響するため慎重に（新テナント作成のdry-run必須）
