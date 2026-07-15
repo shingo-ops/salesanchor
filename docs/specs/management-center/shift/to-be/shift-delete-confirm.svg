@@ -1,0 +1,13 @@
+<svg width="480" height="260" viewBox="0 0 480 260" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="480" height="260" fill="#2c2c2a" opacity="0.35"/>
+  <rect x="70" y="50" width="340" height="160" rx="10" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="240" y="86" font-size="14" font-weight="600" fill="#2c2c2a" text-anchor="middle">&#9888; シフトを削除しますか？</text>
+  <text x="240" y="110" font-size="10" fill="#5f5e5a" text-anchor="middle">「田中 太郎・2026年7月14日（月）9:00-18:00」</text>
+  <text x="240" y="126" font-size="10" fill="#5f5e5a" text-anchor="middle">を削除します。この操作は取り消せません。</text>
+
+  <rect x="180" y="150" width="86" height="26" rx="5" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="223" y="167" font-size="10" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+  <rect x="274" y="150" width="86" height="26" rx="5" fill="#c4432f"/>
+  <text x="317" y="167" font-size="10" fill="#ffffff" text-anchor="middle">削除する</text>
+</svg>
