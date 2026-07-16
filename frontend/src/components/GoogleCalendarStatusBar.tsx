@@ -78,7 +78,7 @@ export function GoogleCalendarStatusBar({
       });
       onStatusChange?.(false);
     }
-  }, [onStatusChange]);
+  }, [onStatusChange, onSyncStatusChange]);
 
   useEffect(() => {
     checkStatus();
@@ -112,7 +112,7 @@ export function GoogleCalendarStatusBar({
   const configs = {
     connected: {
       bg: "var(--calendar-status-ok-bg)",
-      color: "var(--calendar-status-ok-text)",
+      color: "var(--icon-status-calendar-ok)",
       Icon: Check,
       message: lastSyncTime
         ? t("schedule.statusLastSync", { time: formatLastSync(lastSyncTime) })
@@ -121,7 +121,7 @@ export function GoogleCalendarStatusBar({
     },
     disconnected: {
       bg: "var(--calendar-status-error-bg)",
-      color: "var(--calendar-status-error-text)",
+      color: "var(--icon-status-calendar-error)",
       Icon: X,
       message: t("schedule.statusDisconnected"),
       action: canManage ? (
