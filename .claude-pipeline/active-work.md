@@ -16,6 +16,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/infra-alert-delivery | 通知配達係 Alertmanager 追加＋誤報掃除（Discord 集約・重い exporter 隔離） | 2026-07-18 19:48 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |
