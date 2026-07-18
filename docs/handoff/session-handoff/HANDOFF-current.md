@@ -6,7 +6,9 @@
 > マージ後は必ず SHA前進＋成果物実在を独立実測してから完了とする（前々セッションのマージ誤認の教訓）。
 
 ## 基準SHA
-origin/main 0087a312e204edf1cd4ea60be9fd7e659e322549
+origin/main 51f910ed2c434d2f912be098b8869e0e4fd41761
+
+鮮度更新: 51f910ed2c434d2f912be098b8869e0e4fd41761 時点で全項目再実測・事実に変化なし（色実装未反映のまま）
 
 ## 0. これまでの経緯（要点）
 - 色SSOTの設計・エビデンス初版・コンポーネントSSOT計画は main に在る（本物）。
@@ -65,7 +67,7 @@ origin/main 0087a312e204edf1cd4ea60be9fd7e659e322549
 
 ## 8. 実測ログ（証跡・改ざん検出用）
 ```text
-BASE=0087a312e204edf1cd4ea60be9fd7e659e322549
+BASE=51f910ed2c434d2f912be098b8869e0e4fd41761
 == 色実装が main に入っていないことの再確認 ==
 0
 == 設計docは在るか ==
@@ -76,6 +78,8 @@ ICON_DESIGN_EXISTS
 #2926 OPEN head=release/guard-tsx-style-color
 == color=white 生指定の残り（icon集約の対象） ==
 frontend/src/constants/icons.tsx:320:        <EnvelopeIcon width={iconSize} height={iconSize} color="white" aria-hidden="true" />
+== 現行 handoff の基準SHA 行（更新後） ==
+9:origin/main 51f910ed2c434d2f912be098b8869e0e4fd41761
 ```
 
 ## 9. 次セッションでの確認ポイント
