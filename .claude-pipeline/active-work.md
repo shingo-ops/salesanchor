@@ -1,3 +1,7 @@
+> 【凍結アーカイブ】この台帳への新規登録は廃止されました。
+> 新規登録は .claude-pipeline/active-work.d/（1ブランチ1ファイル・机作りで自動作成）へ。
+> 既存行の状態更新のみ scripts/ledger-update.sh 経由で可。一覧表示は scripts/ledger-view.sh。
+
 # Active Work Registry — 並列エージェント作業の唯一の真実（SSoT）
 
 > **新しいターミナルで作業を開始する前に必ずこのファイルを確認すること。**

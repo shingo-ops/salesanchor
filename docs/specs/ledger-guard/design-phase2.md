@@ -4,7 +4,7 @@
 > 全員が同じ1枚に書く台帳を「1ブランチ1ファイル＋束ね表示」に分割し、
 > 消し合い・追いかけっこを構造ごと無くすための設計図。
 
-- 参照: [recon.md](./recon.md)（17読者の実測・相互参照）／[ideal-state.md](./ideal-state.md) 2項
+- 参照: [recon.md](./recon.md)／便3現在地: docs/handoff/ledger-guard/recon.md（17読者の実測・相互参照）／[ideal-state.md](./ideal-state.md) 2項
   ／[kgi.md](./kgi.md) G3〜G6／[design-phase1.md](./design-phase1.md)
 - 関連ADR: ADR-114（worktree回収。DONE行は消さず残す原則を本設計も踏襲）
 
@@ -70,3 +70,9 @@ Debian/Nginx/systemd が採る conf.d / sites-enabled / drop-in 方式（共有1
   各便とも危ない変更区分の正規手順（GO転記→関所再実行→全緑→マージ）で
 - .d/ファイルはDONE後も残す（ADR-114踏襲）→ 件数増は対策③の掃き出し便で整理
 - セーフ形衝突はガードで停止するが自動解決はしない（レア事象・人間判断）
+
+## 維持の仕組み
+- 守り手: scripts/tests/test-ledger-helpers.sh（窓口3本＋単票検証の回帰・9項目）
+- 守り手: frontend/.husky/pre-commit（本店直コミット遮断。便3-2で台帳例外を撤去済み）
+- 対象: 「1ブランチ1ファイル」の書き先と窓口経由の読み書きが壊れると、
+  共有1枚への逆流＝消し合いが再発する。
