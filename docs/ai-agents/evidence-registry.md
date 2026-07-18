@@ -1343,3 +1343,5 @@ follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親
 - 判定: `gh-scope-guard` の素通りは個別事象でなく常態（#2924・#2927 で2回連続再現）。
 - 追加欠陥（ログ信頼性）: マージ前後のログ行数が同一（`LOG_LINES_BEFORE=LOG_LINES_AFTER=40924`）にもかかわらず、`gh_scope_blocked for 2927` の行がログに存在。行数と内容が不整合＝`agent-events.jsonl` を監査の一次証拠に使う前に、記録の整合性自体の検証が必要。
 - 引き継ぎ（優先度・ガード層テーマへ）: (1)`gh pr merge` の全経路をガードで捕捉（網羅性）、(2)成立イベントのログ捕捉（監査性）、(3)ログ書き込みの整合性（行数と内容の一致）。本子テーマ（invoice-form-send）のスコープ外。
+
+<!-- strict-test green disposable note -->
