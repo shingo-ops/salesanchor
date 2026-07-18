@@ -7,6 +7,7 @@
 """
 
 import pytest
+from tests.helpers_txn import create_deal
 
 
 # ────────────────────────────────────────────
@@ -17,11 +18,12 @@ class TestBackboneConstraintsNegative:
     """必須フィールド未指定は Pydantic 422 を返す"""
 
     async def test_create_deal_without_lead_rejected(self, client):
-        """lead_id 欠落の POST /deals は 422"""
+        """lead_id 欠落の POST /deals は 405（deal-removal 段階① による封鎖）"""
         res = await client.post("/api/v1/deals", json={
             "title": "lead なし案件",
         })
-        assert res.status_code == 422
+        # POST /deals 封鎖(deal-removal 段階①) による
+        assert res.status_code == 405
 
     async def test_create_company_without_lead_rejected(self, client):
         """lead_id 欠落の POST /companies は 422"""
@@ -57,13 +59,7 @@ class TestBackboneLifecycleNormalized:
         lead_id = lead_res.json()["id"]
 
         # (2) deal 作成（lead_id のみ・company 未定）
-        deal_res = await client.post("/api/v1/deals", json={
-            "lead_id": lead_id,
-            "title": "便1a 正順案件",
-        })
-        assert deal_res.status_code == 201, f"deal 作成失敗: {deal_res.text}"
-        deal_id = deal_res.json()["id"]
-        assert deal_res.json().get("lead_id") == lead_id
+        deal_id = await create_deal(client, lead_id, title="便1a 正順案件")
 
         # (3) company 作成（lead_id + deal_id を指定 → deal.company_id が更新される）
         company_res = await client.post("/api/v1/companies", json={
