@@ -33,3 +33,4 @@
 ## ステータス
 
 あるべき姿・KGI 確定（PlannerがまとめPOが承認・2026-07-09）。子の設計は順次。
+- 子: [deal-removal/design.md](deal-removal/design.md) — dealsテーブル廃止・リード統合（2026-07-18起票）

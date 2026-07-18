@@ -38,6 +38,8 @@
 | release/db-ssot-money-consolidation | 金額の集約 設計図追加 | 2026-07-10 15:49 | DONE | #2876 | main | merged: PR #2876 |
 | release/db-ssot-impl-plan | 本丸実装の計画 追加 | 2026-07-11 06:52 | DONE | #2883 | main | merged: PR #2883 / e75da4cf |
 | release/db-ssot-leads-dead-columns-decision | leads未使用疑い7列をSSOT化完了後の削除候補としてメモ | 2026-07-14 06:19 | DONE | #2904 | main | merged: PR #2904 / 9b75c7d268909818a3dc2e7995d76befe76159fd |
+| release/dp-sec6-ledger-done-branch | design-partner §6 の台帳DONE化教訓追記 | 2026-07-18 16:24 | IN_PROGRESS | | main | dp-sec6-ledger-done |
+| release/db-ssot-deal-removal-design | deals廃止設計の正本化（README・design.md） | 2026-07-18 15:48 | DONE | #2942 | main | merged: PR #2942 / 82d5c2132a7d5c6701c48c4000c743d090c33854 |
 | release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | DONE | #2646 | main | merged #2646 |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
 | release/morimoto/translation-model-flashlite | 送信翻訳モデル切替（MODEL_SEND: gemini-2.5-pro → flash-lite） | 2026-06-26 | DONE | #2627 | main | main マージ済み・本番デプロイ済み |
