@@ -235,7 +235,10 @@ async def test_priority_prospects_pg_rls_all_requirements():
                             response_speed VARCHAR(20),
                             assigned_to INTEGER,
                             converted_deal_id INTEGER,
-                            monthly_forecast NUMERIC(15, 2)
+                            monthly_forecast NUMERIC(15, 2),
+                            amount NUMERIC(15, 2),
+                            currency VARCHAR(10) DEFAULT 'JPY',
+                            expected_close_date DATE
                         )
                     """))
                     await conn.execute(
