@@ -227,6 +227,7 @@ jobs:
               -e '/^REVIEW_MAIL_WEBMAIL_URL=/d' \
               -e '/^REVIEW_MAIL_DISCORD_WEBHOOK=/d' \
               -e '/^VITE_FUNNEL_DASHBOARD=/d' \
+              -e '/^COMPOSE_FILE=/d' \
               .env
             rm -f .env.bak
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -259,6 +260,7 @@ jobs:
             REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
             REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
             VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
+            COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
@@ -331,6 +333,8 @@ jobs:
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
             docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway
+            echo "Step 3d: Ensuring monitoring collectors are up..."
+            docker compose up -d --no-deps node-exporter promtail
 
             echo "Step 4: Backend is already healthy (confirmed by blue-green cutover)."
             echo "Step 4b: nginx reload already done inside blue-green-cutover.sh."
