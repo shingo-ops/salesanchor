@@ -131,44 +131,27 @@ with open(out_file, "w", encoding="utf-8") as f:
 print(f"🔑 UUID発行: {uuid_val}")
 PYEOF
 
-  # Active Work Registry に自動登録（SSoT: .claude-pipeline/active-work.md）
-  ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md"
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    STARTED_AT="$(date '+%Y-%m-%d %H:%M')"
-    # 既存のエントリを確認
-    if grep -qE "^\\| ${BRANCH} \\|" "${ACTIVE_WORK_FILE}" 2>/dev/null; then
-      echo "ℹ️  active-work.md に既存エントリあり（重複登録をスキップ）"
+  # Active Work Registry に自動登録（分割台帳 SSoT: .claude-pipeline/active-work.d/）
+  LEDGER_DIR="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.d"
+  mkdir -p "${LEDGER_DIR}"
+  DFILE="${LEDGER_DIR}/${BRANCH_SAFE}.md"
+  if [ -f "${DFILE}" ]; then
+    DECLARED="$(grep -m1 '^branch: ' "${DFILE}" | sed 's/^branch: //')"
+    if [ "${DECLARED}" != "${BRANCH}" ]; then
+      echo "🚫 衝突: ${DFILE} は branch: ${DECLARED} の登録です（要求: ${BRANCH}）。登録せず中止しました。人の判断を仰いでください。"
     else
-      python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" "${STARTED_AT}" <<'PYEOF'
-import sys, re
-
-filepath, branch, started = sys.argv[1], sys.argv[2], sys.argv[3]
-new_row = f"| {branch} | （記入してください） | {started} | IN_PROGRESS | | | |"
-
-with open(filepath, encoding="utf-8") as f:
-    content = f.read()
-
-# *(なし)* プレースホルダー行を置換（初回登録）
-if "*(なし)*" in content:
-    content = re.sub(r"\| \*\(なし\)\* \| — \| — \| — \| — \| — \| — \|", new_row, content)
-else:
-    # テーブルの最終行の直後に挿入（--- セパレータの前）
-    # 構造: | 最終行 |\n\n---\n\n## 記入例
-    # "## 記入例" の前には "---" セパレータがあるため、
-    # "## 記入例" の直前に挿入するとテーブル外になるバグを修正
-    # lambda を使うことでブランチ名内の \1 等が後方参照と誤解釈されるのを防ぐ
-    content = re.sub(
-        r"(\n---\n\n## 記入例)",
-        lambda m: "\n" + new_row + m.group(1),
-        content,
-        count=1,
-    )
-
-with open(filepath, "w", encoding="utf-8") as f:
-    f.write(content)
-PYEOF
-      echo "📋 active-work.md に登録しました（担当機能エリアを記入してください）"
+      echo "ℹ️  active-work.d に既存登録あり（重複登録をスキップ）"
     fi
+  else
+    STARTED_AT="$(date '+%Y-%m-%d %H:%M')"
+    {
+      echo "branch: ${BRANCH}"
+      echo ""
+      echo "| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |"
+      echo "|-----------|--------------|---------|------|-----|------|------|"
+      echo "| ${BRANCH} | （記入してください） | ${STARTED_AT} | IN_PROGRESS | | | |"
+    } > "${DFILE}"
+    echo "📋 active-work.d に登録しました（担当機能エリアを記入してください）"
   fi
 fi
 
