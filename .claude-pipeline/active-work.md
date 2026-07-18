@@ -293,6 +293,69 @@
 | release/design-partner-lesson-20260708 | （記入してください） | 2026-07-08 06:26 | IN_PROGRESS | | | 正本先約 design-partner.md / GO=未採番 / 単独便 |
 | release/color-tokens-ssot-recon | （記入してください） | 2026-07-09 02:55 | IN_PROGRESS | | | |
 | release/worktree-sync-guard-consolidated | worktree/台帳整合性チェックの再発防止 | 2026-07-14 16:02 | DONE | #2905 | main | merged: PR #2905 / 16bd04eca9466486e04332119e779c4c489405e6 |
+| ―（掃き出し便 2026-07-18: 以下61行は未コミット退避分の保全・出所 salesanchor-evacuation/20260718-202133）― | | | | | | |
+| release/color-accent-unification | 土台色ネイビーをvar(--accent)に統一（SVG/カレンダー/ロール除く） | 2026-07-14 | CLOSED | #2877 | main | closed by request |
+| release/calendar-color-impl | カレンダー色CSS変数化の実装（index.css 定義 / calendars.config.ts var参照化 / cssVar除去） | 2026-07-12 06:40 | IN_PROGRESS | | main | docs/specs/design-tokens-ssot/color/calendar/design.md |
+| release/profile-account-settings-theme-v2 | （記入してください） | 2026-07-12 16:03 | DONE | | | |
+| release/db-ssot-missing-file-recurrence-prevention | （記入してください） | 2026-07-12 17:05 | IN_PROGRESS | | | |
+| release/icon-mono-design | （記入してください） | 2026-07-12 21:46 | DONE | | | |
+| release/icon-color-design | （記入してください） | 2026-07-12 23:04 | DONE | | | |
+| release/icon-color-impl | （記入してください） | 2026-07-12 23:59 | IN_PROGRESS | | | |
+| release/inventory-management-parent-kgi | （記入してください） | 2026-07-13 00:09 | DONE | | | |
+| release/design-partner-lesson-20260713 | （記入してください） | 2026-07-13 11:49 | DONE | #2896 | main | merged: PR #2896 / 594efb059fcb0d05d9c6f07688737a509d9ca850 |
+| release/db-ssot-classification-master-v2 | （記入してください） | 2026-07-13 11:50 | IN_PROGRESS | | | |
+| release/db-ssot-classification-master-table-design | （記入してください） | 2026-07-13 14:10 | IN_PROGRESS | | | |
+| release/executor-preamble-index-guard | （記入してください） | 2026-07-13 15:31 | DONE | #2899 | main | merged: PR #2899 / 103d8efb6e56fa95e28dfd897230eff1e469727a |
+| release/db-ssot-classification-master-16items | （記入してください） | 2026-07-13 16:20 | IN_PROGRESS | | | |
+| release/feed-translation-line-scope | （記入してください） | 2026-07-14 07:44 | DONE | | | |
+| release/db-ssot-lead-deal-status-unify | （記入してください） | 2026-07-14 11:50 | DONE | #2902 | main | merged: PR #2902 / 270420f4cbd53f511e21b206bd874bd9edb52888 |
+| release/design-def-testlog | docs/specs/design-partner-loop/design-phase-definition.md §11 追記 | 2026-07-14 13:19 | DONE | PR #2903 | a4a48d6c0ef6c00e0f873ed71af024ee14397dfa | |
+| release/active-work-fill-blank | worktree/台帳整合性チェックの再発防止 | 2026-07-14 16:30 | DONE | #2906 | main | merged: PR #2906 / 9ca0db6c722c27560810749306c2fb4dce044ba0 |
+| release/icon-design-gate-fit | docs/specs/design-tokens-ssot/color/icon/design.md gate要件追記 | 2026-07-14 16:30 | DONE | PR #2907 | ddadf67abb9f4c89ae755b45b5de68b2718fbc09 | |
+| release/icon-design-maint-fix | docs/specs/design-tokens-ssot/color/icon/design.md 維持の仕組み欄整備 | 2026-07-14 17:33 | DONE | PR #2908 | f7d56f7dffd88584820d0a8629e3052031992abe | |
+| release/db-ssot-step2-note-and-step1-kickoff | （記入してください） | 2026-07-14 17:49 | DONE | | | |
+| release/db-ssot-handover-20260714 | （記入してください） | 2026-07-14 21:39 | IN_PROGRESS | | | |
+| release/color-tokens-ssot-merge | （記入してください） | 2026-07-14 21:51 | IN_PROGRESS | | | |
+| release/feed-translation-tobe-kgi2 | （記入してください） | 2026-07-15 00:44 | DONE | | | |
+| release/hex-c3-tokenize | （記入してください） | 2026-07-15 04:36 | IN_PROGRESS | | | |
+| release/txn-flow-ben1-design | 便1 design.md 配置（lead起点の親子構造確立） | 2026-07-15 05:25 | DONE | PR #2913 | f8de2bc5d53e5fbd6ffff653e704d42dc7a942cc | merged: PR #2913 / f8de2bc5d53e5fbd6ffff653e704d42dc7a942cc |
+| release/color-token-dedup | （記入してください） | 2026-07-15 06:29 | IN_PROGRESS | | | |
+| release/txn-flow-ben1-design-amend | 便1 design.md 追記（§4-4 ON DELETE確定＋§11 ソフトデリート予約） | 2026-07-15 09:38 | DONE | PR #2915 | 55ded567af588ea45cc3493db76341a609547a7c | merged: PR #2915 / 55ded567af588ea45cc3493db76341a609547a7c |
+| release/inventory-analytics-tobe-kgi | （記入してください） | 2026-07-15 09:44 | DONE | | | |
+| release/txn-flow-ben1-convlog-fk | （記入してください） | 2026-07-15 15:29 | DONE | | | |
+| release/management-center-theme | （記入してください） | 2026-07-15 15:30 | DONE | | | |
+| release/inbox-invoice-form-send-spec | （記入してください） | 2026-07-15 15:39 | DONE | | | |
+| release/color-dup2-alias | （記入してください） | 2026-07-15 15:39 | IN_PROGRESS | | | |
+| release/color-ssot-evidence | 色トークン SSOT 完成エビデンス（基準SHA: 36de75ea） | 2026-07-15 16:41 | DONE | #2921 | 6d614858 | merged: PR #2921 / 6d61485815e291279bd09913da9c7931986bb6b9 |
+| release/txn-flow-ben1-reserve3 | （記入してください） | 2026-07-15 16:42 | IN_PROGRESS | | | |
+| release/management-center-role-theme | （記入してください） | 2026-07-15 16:52 | DONE | | | |
+| release/inbox-invoice-form-send-design | （記入してください） | 2026-07-15 17:05 | DONE | | | |
+| release/management-center-shift-theme | （記入してください） | 2026-07-15 22:45 | DONE | | | |
+| release/guard-tsx-style-color | （記入してください） | 2026-07-15 22:46 | IN_PROGRESS | | | |
+| release/evidence-2924-guard-gap | （記入してください） | 2026-07-15 23:44 | DONE | | | |
+| release/color-evidence-update | （記入してください） | 2026-07-16 00:03 | IN_PROGRESS | | | |
+| release/evidence-2924-repro-2927 | （記入してください） | 2026-07-16 04:02 | DONE | | | |
+| release/management-center-report-theme | （記入してください） | 2026-07-16 04:07 | DONE | | | |
+| release/design-partner-s6-guard-lesson | （記入してください） | 2026-07-16 04:34 | DONE | | | |
+| release/component-ssot-plan | UI部品の金型化 全体計画書 | 2026-07-16 23:10 | DONE | #2930 | main | merged: PR #2930 / a5ce9b79 |
+| release/session-handoff | （記入してください） | 2026-07-16 23:39 | IN_PROGRESS | | | |
+| release/session-handoff-v2 | （記入してください） | 2026-07-17 00:05 | IN_PROGRESS | | | |
+| release/management-center-compensation-theme | （記入してください） | 2026-07-17 07:09 | DONE | | | |
+| release/dp-sec6-gate-lessons | design-partner.md §6 関所教訓5行追記 | 2026-07-18 20:12 | DONE | #2952 | main | merged: PR #2952 / 8aa93fac9ba937ca3378a7aa4488673b1f777150 |
+| release/session-handoff-refresh | （記入してください） | 2026-07-18 12:17 | IN_PROGRESS | | | |
+| release/claude-md-size-fix | （記入してください） | 2026-07-18 13:51 | DONE | | | |
+| release/ledger-guard-ben3-1 | （記入してください） | 2026-07-18 14:29 | DONE | | | |
+| release/management-center-invoice-info-theme | （記入してください） | 2026-07-18 14:48 | DONE | | | |
+| release/page-title-d1 | ページタイトル金型 D1 追記（recon証跡・相互参照） | 2026-07-18 14:53 | DONE | #2941 | main | merged: PR #2941 / 0cfba1a2 |
+| release/ledger-done-2942 | （記入してください） | 2026-07-18 16:00 | DONE | | | |
+| release/infra-exporters-persist | exporters/promtail デプロイ導線恒久化（node-exporter/promtail 起動 + heavy-exporters profiles） | 2026-07-18 16:16 | DONE | #2945 | main | merged: PR #2945 / 21c400ef |
+| release/strict-test-red | （記入してください） | 2026-07-18 16:45 | IN_PROGRESS | | | |
+| release/strict-test-green | （記入してください） | 2026-07-18 16:48 | IN_PROGRESS | | | |
+| release/cleanup-strict-test-branches | （記入してください） | 2026-07-18 16:52 | IN_PROGRESS | | | |
+| release/ledger-done-2948 | （記入してください） | 2026-07-18 17:15 | DONE | | | |
+| release/page-title-d2a | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 | 2026-07-18 17:22 | DONE | #2950 | main | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 |
+| release/ledger-guard-ben3-2 | （記入してください） | 2026-07-18 19:54 | IN_PROGRESS | | | |
+
 ---
 
 ## 記入例
