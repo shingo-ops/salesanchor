@@ -25,6 +25,7 @@ import { CompanyDiscordTab } from "./CompanyDiscordTab";
 import { CompanyConvLogsTab } from "./CompanyConvLogsTab";
 import { CompanyAddressModal } from "./CompanyAddressModal";
 import { typeLabel } from "./company-detail.types";
+import { PageLayout } from "../../components/PageLayout";
 
 export default function CompanyDetailPage() {
   const { t } = useTranslation();
@@ -143,48 +144,50 @@ export default function CompanyDetailPage() {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
+    <div className="page-container-detail">
+      <PageLayout
+        titleText={company.name}
+        headerLeft={
           <Button size="sm" variant="secondary" onClick={() => navigate("/companies")}>&larr; {t("common.back")}</Button>
-          <h1>{company.name}</h1>
-        </div>
-        <div className="page-header-actions">
-          {canEdit && company.lead_id && (
-            <>
-              <Button
-                size="sm"
-                onClick={handleGenerateRegLink}
-                disabled={regLinkLoading || isAlreadyRegistered}
-                title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
-              >
-                {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
-              </Button>
-              {isAlreadyRegistered && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleGenerateAddrLink}
-                    disabled={addrLinkLoading}
-                  >
-                    {addrLinkLoading ? t("common.loading") : t("registration.generateAddressLink")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleGenerateChangeBillingLink}
-                    disabled={changeBillingLinkLoading}
-                  >
-                    {changeBillingLinkLoading ? t("common.loading") : t("registration.generateChangeBillingLink")}
-                  </Button>
-                </>
-              )}
-            </>
-          )}
-          <span className={`status-badge status-${company.status}`}>{company.status}</span>
-        </div>
-      </div>
+        }
+        headerAction={
+          <div className="page-header-actions">
+            {canEdit && company.lead_id && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateRegLink}
+                  disabled={regLinkLoading || isAlreadyRegistered}
+                  title={isAlreadyRegistered ? t("registration.alreadyRegisteredGate") : undefined}
+                >
+                  {regLinkLoading ? t("common.loading") : isAlreadyRegistered ? t("registration.registeredLabel") : t("registration.generateLink")}
+                </Button>
+                {isAlreadyRegistered && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleGenerateAddrLink}
+                      disabled={addrLinkLoading}
+                    >
+                      {addrLinkLoading ? t("common.loading") : t("registration.generateAddressLink")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleGenerateChangeBillingLink}
+                      disabled={changeBillingLinkLoading}
+                    >
+                      {changeBillingLinkLoading ? t("common.loading") : t("registration.generateChangeBillingLink")}
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+            <span className={`status-badge status-${company.status}`}>{company.status}</span>
+          </div>
+        }
+      >
 
       {regLinkUrl && (
         <div className="info-banner" style={{ marginBottom: "var(--spacing-4)", wordBreak: "break-all" }}>
@@ -377,6 +380,7 @@ export default function CompanyDetailPage() {
         }}
         onCancel={() => setMergeModalOpen(false)}
       />
+      </PageLayout>
     </div>
   );
 }

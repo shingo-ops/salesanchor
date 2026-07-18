@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { PageLayout } from "../../components/PageLayout";
 
 interface InvoiceItem {
   id: number;
@@ -182,10 +183,9 @@ export default function InvoiceDetailPage() {
   const invoiceTotalWeight = invoice.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <h2>{t("invoices.title")} — {invoice.invoice_number || `#${invoice.id}`}</h2>
+    <PageLayout
+      titleText={`${t("invoices.title")} — ${invoice.invoice_number || `#${invoice.id}`}`}
+      headerAction={
         <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
           {invoice.status === "draft" && hasPermission("invoices.create") && (
             <button className="btn-primary" onClick={() => doAction("issue")}>{t("invoices.issueAction")}</button>
@@ -205,7 +205,8 @@ export default function InvoiceDetailPage() {
           <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
           <button className="btn-secondary" onClick={() => navigate("/invoices/new")}>{t("common.back")}</button>
         </div>
-      </div>
+      }
+    >
 
       {error && <div className="error-message">{error}</div>}
 
@@ -336,6 +337,6 @@ export default function InvoiceDetailPage() {
           {invoice.amount_usd != null && <tr><td colSpan={6} style={{ textAlign: "right", color: "var(--text-muted)" }}>{t("invoices.usdConvert")}</td><td style={{ color: "var(--text-muted)" }}>${invoice.amount_usd.toLocaleString()}</td></tr>}
         </tfoot>
       </table>
-    </div>
+    </PageLayout>
   );
 }
