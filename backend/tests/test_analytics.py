@@ -51,20 +51,22 @@ async def _seed_leads(client, count: int = 3, prefix: str = "Lead"):
 
 async def _seed_deals(client, pairs, statuses=None):
     """商談を作成して返す"""
+    from tests.helpers_txn import create_deal
     if statuses is None:
         statuses = ["open", "open", "won"]
     deals = []
     for i, status in enumerate(statuses):
         pair = pairs[i % len(pairs)]
-        res = await client.post("/api/v1/deals", json={
-            "lead_id": pair[2],
-            "company_id": pair[0],
-            "contact_id": pair[1],
-            "title": f"Deal{i+1}",
-            "amount": (i + 1) * 100000,
-            "status": status,
-        })
-        deals.append(res.json())
+        deal_id = await create_deal(
+            client,
+            pair[2],
+            company_id=pair[0],
+            contact_id=pair[1],
+            title=f"Deal{i+1}",
+            amount=(i + 1) * 100000,
+            status=status,
+        )
+        deals.append({"id": deal_id, "status": status})
     return deals
 
 
