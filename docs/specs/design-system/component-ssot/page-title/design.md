@@ -7,6 +7,7 @@
 recon実測SHA: origin/main 29c8decb58b2c9db255ab93b9e228ebe058970be（2026-07-18）
 
 ## 1. recon（file:line 実測・要点）
+recon証跡: docs/handoff/page-title/recon.md（対象ADR: ADR-067。色変更なし・ダークモード規約の維持確認）
 - 金型は既に在る: frontend/src/components/PageLayout.tsx:24-35 が h2.text-page-title（title=navKey）/ subtitleKey / headerAction を提供。利用ページ63。
 - タイトル文字列のSSOTも在る: frontend/src/hooks/usePageTitle.ts が src/config/routeTitles.ts を正として参照（サイドバーと同一キー）。
 - 生h1/h2は pages 配下に20件。内訳（役割仕分け）:
