@@ -171,6 +171,22 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./secrets/alertmanager-discord-webhook:/etc/alertmanager/secrets/discord-webhook:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "127.0.0.1:9093:9093"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
   loki:
     # ログ集約: アプリ VPS の Promtail (docker-compose.exporters.yml) が
     # discord-gateway コンテナのログを収集し、SSH 逆トンネル経由で push。
