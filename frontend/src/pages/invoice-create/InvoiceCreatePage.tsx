@@ -12,6 +12,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import {
@@ -214,10 +215,10 @@ export default function InvoiceCreatePage() {
   };
 
   return (
-    <div className="page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax -- 作成ページ(route param 無し)は navKey 制約対象外 */}
-        <h2>{t("invoices.createTitle")}</h2>
+    <PageLayout
+      titleText={t("invoices.createTitle")}
+      subtitleKey="invoices.createSubtitle"
+      headerAction={
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>
             {t("nav.tenantProfile")}
@@ -226,7 +227,8 @@ export default function InvoiceCreatePage() {
             {t("common.back")}
           </button>
         </div>
-      </div>
+      }
+    >
 
       {error && <div className="error-message">{error}</div>}
 
@@ -437,6 +439,6 @@ export default function InvoiceCreatePage() {
           </div>
         </form>
       )}
-    </div>
+    </PageLayout>
   );
 }

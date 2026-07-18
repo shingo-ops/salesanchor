@@ -891,6 +891,7 @@
     "branchNameLabel": "Branch name (if multiple locations)",
     "countryCodeWithHint": "Country code (ISO 2-letter)",
     "deleteConfirmMessage": "Delete \"{{name}}\" ({{code}})? Cannot delete if related deals, orders, quotes, invoices, or contacts exist.",
+    "detailSubtitle": "View and edit company profile, addresses, contacts, and channels",
     "subtitle": "Manage client information and addresses.",
     "convHistory": {
       "tabLabel": "Conversation History",
@@ -1368,6 +1369,7 @@
     "status_expired": "Expired",
     "itemsRequired": "Please enter product name and unit price for each line item",
     "fedexEstimate": "FedEx estimate",
+    "detailSubtitle": "Review the quote and send, approve, or convert it to an invoice",
     "subtitle": "Create, send, and track quotes.",
     "fx": {
       "fetchRate": "Fetch exchange rate",
@@ -1376,6 +1378,8 @@
   },
   "invoices": {
     "subtitle": "Create and manage invoices.",
+    "detailSubtitle": "Review the invoice and issue, record payment, or void it",
+    "createSubtitle": "Create a new invoice",
     "title": "Invoices",
     "createTitle": "Create Invoice",
     "fromInventory": "From inventory",
