@@ -39,6 +39,23 @@ KPI: 達成KGI数 ◯/6
 - 段階③（削除）: 全参照0を実測確認後、migrationでdeals削除（バックアップ→dry-run→PO自筆GO→実行→検算）
 - 各段階は独立の便で recon→design→実装→GO を踏む。段階③は危険操作（migrations）
 
+## 4.5 段階①の差分設計（PO確定・2026-07-18）
+
+### 移す列・捨てる列（PO確定）
+- leadsへ追加する3列: amount NUMERIC(15,2)・currency VARCHAR(10) DEFAULT 'JPY'・expected_close_date DATE
+- 移さない（段階③で消滅）: title・probability・deal_code。理由: 1リード=商談1回のため案件名はリード名で代替、probabilityは温度感で代替済み、deal_codeはlead_codeが既存
+
+### 書き込み経路の停止（recon 2026-07-18・origin/main 81165c7）
+- 経路1: leads.py:719-833 convert_lead — deals INSERT（765行）を廃し、leads.status='negotiating'遷移＋amount/currency/expected_close_date の直接保存に書き換え。アトミッククレームは converted_deal_id から status 遷移条件へ変更
+- 経路2: deals.py:168 INSERT・351 UPDATE — 新規作成APIを405封鎖（段階②で読み替え完了までUPDATE系は温存）
+- 経路3: companies.py:454/760 会社マージ時のdeals更新 — 段階②で除去（段階①では温存）
+- フロント: LeadsPage.tsx の商談化モーダルから会社・担当者・案件名入力を除去し、金額・通貨・完了予定日入力へ簡素化
+
+### 段階①の受入基準
+- 商談化操作後、dealsの行数増分=0（KGI D1）
+- leadsに3列が実在（KGI D2）
+- 既存テスト緑＋商談化の新テスト（3列保存の実測）追加
+
 ## 5. 弊害・トレードオフ（空欄不可）
 
 - 工期が長い（複数便）。ただし段階①完了時点で新規データの二重化は止まる
