@@ -31,6 +31,12 @@
 5. 便3-2の対象: pre-commit の台帳例外（frontend/.husky/pre-commit:17-21 当時）と
    本体 active-work.md の凍結ヘッダ不在。本便で封鎖・追記する。
 
+## 設計書側の根拠（file:line）
+- 便分解の定義: docs/specs/ledger-guard/design-phase2.md:29
+- 便3の内容定義: docs/specs/ledger-guard/design-phase2.md:45
+- 本体凍結の方針: docs/specs/ledger-guard/design-phase2.md:18
+- 受け入れ基準表: docs/specs/ledger-guard/design-phase2.md:53
+
 ## 既存ADR検索の結果
 - git grep -i "ledger" docs/adr/ 済み。直接の該当ADRなし。
   隣接: ADR-114（worktree回収・DONE行は消さず残す原則）を本設計が踏襲。
