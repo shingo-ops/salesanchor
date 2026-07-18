@@ -54,3 +54,7 @@
 
 - 完了後の監視: `gh pr checks` と本番反映後の alertmanager / Loki 確認
 - 次フェーズへの引き継ぎ: Discord secret の配置確認と運用手順化
+
+A-6追記: uptime-kumaは1.23系を採用(2.3.0はsocket.io API非互換を実測)。
+監視4件(node-exporter/Loki/Alertmanager/Prometheus)＋Discord通知をAPI自動登録で構成。
+トンネル死活の直接監視は将来課題。

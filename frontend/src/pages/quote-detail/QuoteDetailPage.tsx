@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { PageLayout } from "../../components/PageLayout";
 
 interface FxRateResult {
   currency: string;
@@ -121,10 +122,10 @@ export default function QuoteDetailPage() {
   const quoteTotalWeight = quote.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <h2>{t("quotes.title")} — {quote.quote_code || `#${quote.id}`}</h2>
+    <PageLayout
+      titleText={`${t("quotes.title")} — ${quote.quote_code || `#${quote.id}`}`}
+      subtitleKey="quotes.detailSubtitle"
+      headerAction={
         <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
           {quote.status === "draft" && hasPermission("quotes.update") && (
             <button className="btn-primary" onClick={() => doAction("send")}>{t("quotes.send")}</button>
@@ -146,7 +147,8 @@ export default function QuoteDetailPage() {
           <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
           <button className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.back")}</button>
         </div>
-      </div>
+      }
+    >
 
       {error && <div className="error-message">{error}</div>}
 
@@ -212,6 +214,6 @@ export default function QuoteDetailPage() {
           <tr><td colSpan={6} style={{ textAlign: "right", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{t("quotes.total")}</td><td style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{fmt(quote.total_amount)} {quote.currency}</td></tr>
         </tfoot>
       </table>
-    </div>
+    </PageLayout>
   );
 }
