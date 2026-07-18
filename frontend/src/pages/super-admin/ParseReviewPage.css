@@ -28,19 +28,6 @@
    受信本文は折りたたまず常時表示する (旧 <details> トグルを撤去)。横スクロールを
    極力避けるため、左は本文を折り返し、右 (明細テーブル) は専用スクロールボックスで
    内部スクロールさせる。 */
-/* この管理画面は情報量が多いため、ページ最大幅の制限を外して横幅を広く使う
-   (右カラムの明細テーブルの横スクロールを抑える)。 */
-.page.super-admin-parse-review-page {
-  max-width: none;
-}
-
-/* 「一覧へ戻る」ボタンが右上固定の .avatar-btn と重ならないよう、
-   PageLayout の .page-layout-header と同じアバタークリアランスを確保する。
-   （本ページは詳細ページ=navKey 非対応のため PageLayout を使わず生の .page-header を使用） */
-.page.super-admin-parse-review-page .page-header {
-  padding-right: var(--page-header-avatar-clearance);
-}
-
 .review-split {
   display: flex;
   gap: var(--space-4);
