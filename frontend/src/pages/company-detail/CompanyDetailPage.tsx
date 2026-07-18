@@ -147,6 +147,7 @@ export default function CompanyDetailPage() {
     <div className="page-container-detail">
       <PageLayout
         titleText={company.name}
+        subtitleKey="companies.detailSubtitle"
         headerLeft={
           <Button size="sm" variant="secondary" onClick={() => navigate("/companies")}>&larr; {t("common.back")}</Button>
         }

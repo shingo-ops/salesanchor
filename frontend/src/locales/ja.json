@@ -891,6 +891,7 @@
     "branchNameLabel": "支店名（複数拠点がある場合）",
     "countryCodeWithHint": "国コード（ISO 2文字）",
     "deleteConfirmMessage": "「{{name}}」({{code}}) を削除しますか？ 関連する商談・注文・見積・請求書・担当者がある場合は削除できません。",
+    "detailSubtitle": "会社の基本情報・住所・担当者・チャネルを確認・編集します",
     "subtitle": "クライアントの基本情報と住所を管理します。",
     "convHistory": {
       "tabLabel": "会話履歴",
@@ -1368,6 +1369,7 @@
     "status_expired": "期限切れ",
     "itemsRequired": "各明細行に商品名と単価を入力してください",
     "fedexEstimate": "FedEx見積もり",
+    "detailSubtitle": "見積りの内容確認と送付・承認・請求書化の操作を行います",
     "subtitle": "見積書を作成・送付・状況管理できます。",
     "fx": {
       "fetchRate": "為替レートを取得",
@@ -1376,6 +1378,8 @@
   },
   "invoices": {
     "subtitle": "請求書の作成と管理ができます。",
+    "detailSubtitle": "請求書の内容確認と発行・入金・取消の操作を行います",
+    "createSubtitle": "新しい請求書を作成します",
     "title": "請求書管理",
     "createTitle": "請求書作成",
     "fromInventory": "在庫表から作成",

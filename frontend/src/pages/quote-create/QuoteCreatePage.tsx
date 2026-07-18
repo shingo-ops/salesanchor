@@ -135,7 +135,7 @@ export default function QuoteCreatePage() {
   };
 
   return (
-    <PageLayout titleText={t("quotes.newQuote")}>
+    <PageLayout titleText={t("quotes.newQuote")} subtitleKey="quotes.createSubtitle">
 
       {error && <div className="error-message">{error}</div>}
 

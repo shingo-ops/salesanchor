@@ -124,6 +124,7 @@ export default function QuoteDetailPage() {
   return (
     <PageLayout
       titleText={`${t("quotes.title")} — ${quote.quote_code || `#${quote.id}`}`}
+      subtitleKey="quotes.detailSubtitle"
       headerAction={
         <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
           {quote.status === "draft" && hasPermission("quotes.update") && (

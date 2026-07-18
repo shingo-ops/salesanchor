@@ -217,6 +217,7 @@ export default function InvoiceCreatePage() {
   return (
     <PageLayout
       titleText={t("invoices.createTitle")}
+      subtitleKey="invoices.createSubtitle"
       headerAction={
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>

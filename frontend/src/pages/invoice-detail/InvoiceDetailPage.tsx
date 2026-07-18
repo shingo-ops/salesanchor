@@ -185,6 +185,7 @@ export default function InvoiceDetailPage() {
   return (
     <PageLayout
       titleText={`${t("invoices.title")} — ${invoice.invoice_number || `#${invoice.id}`}`}
+      subtitleKey="invoices.detailSubtitle"
       headerAction={
         <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
           {invoice.status === "draft" && hasPermission("invoices.create") && (
