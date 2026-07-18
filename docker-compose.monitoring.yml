@@ -213,7 +213,8 @@ services:
       - no-new-privileges:true
 
   uptime-kuma:
-    image: louislam/uptime-kuma:2.3.0
+    # 1.23系固定: 自動登録API(uptime-kuma-api)が2.xと非互換のため(2026-07-18実測)。2.x移行はAPI互換確認後に別便
+    image: louislam/uptime-kuma:1.23.16
     volumes:
       - uptime_kuma_data:/app/data
     ports:
