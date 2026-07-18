@@ -118,3 +118,4 @@ ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全�
 ## UIガバナンス遵守（ADR-144）
 UI部品新設時は必ず `components/` の金型を先確認。生select/生input/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
 実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。
+<!-- strict-test filler line to exceed 120 -->
