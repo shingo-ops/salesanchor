@@ -218,6 +218,7 @@
 | feature/morimoto/advisor-phase1-pr3-customer-contact | （記入してください） | 2026-06-20 02:15 | IN_PROGRESS | | | |
 | feature/morimoto/advisor-phase1-pr4-new-goal-advice | （記入してください） | 2026-06-20 03:30 | IN_PROGRESS | | | |
 | feature/morimoto/external-api-change-detect-ci | detector/workflow を修正し、PR #2387 で `discord` / `firebase` 検出、PR #2388 で外部 API 変更なし skip を GitHub Actions 実機で確認済み | 2026-06-20 09:11 | REVIEW | #2387 | | codex/prc-external-api-ci, codex/external-api-unrelated-docs-ci |
+| release/session-handoff-resume | 色実装立て直しの現在地を引き継ぎ | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | feature/morimoto/advisor-phase1-pr5-goal-advisor-ui | 目標設定逆算アドバイザーUIの実装と PR 化 | 2026-06-20 21:13 | DONE | #2390 |  | merged #2390 |
 | feature/morimoto/discord-bot-token-6 | （記入してください） | 2026-06-26 07:39 | IN_PROGRESS | | | |
 | release/lead-edit-select-only | （記入してください） | 2026-06-26 07:58 | DONE | | | |
