@@ -25,6 +25,7 @@
 | [レポート](./report/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
 | [報酬管理](./compensation/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
 | [請求書発行情報](./invoice-info/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
+| [外部連携](./external-integrations/README.md) | あるべき姿・KGI確定 2026-07-19 |
 | リード | 未着手 |
 | 顧客 | 未着手（CSV機能あり・CRM機能は顧客管理テーマと別） |
 | 商品マスタ | 未着手（CSV機能あり） |
