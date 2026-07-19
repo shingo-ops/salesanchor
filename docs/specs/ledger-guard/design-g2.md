@@ -23,3 +23,10 @@ T3: 本店(main)・注入なし・引数なし実行 → 警告表示=0件（実
 
 ## 先に言う弊害
 警告のみで強制力はない（強制は第1弾のcommitガードが担当。役割分担）。
+
+## G2.2 本店鮮度検査（2026-07-19 追加）
+- 検知: executor-preflight.sh が本店HEADとorigin/mainの差を実測し、閾値（既定30・G22_THRESHOLDで注入可）超で警告。
+- 併記: 台帳以外の未保存が有れば「ff-pull不能の可能性・本店掃除便を検討」を表示。
+- 段階導入: 警告のみ（exit値不変）。停止化は実績を見て別GO。
+- 根拠実測: 2026-07-18〜19にstale本店起因の空振り2回（旧版new-worktree.shで単票不生成／lessons-view.sh偽MISSING）。
+- 受け入れ基準: | 本店stale状態で警告1件以上 | preflight --check 実測 | ／| 閾値注入で警告0件 | G22_THRESHOLD=100000 実測 | ／| exit値不変 | --check のexit=0 |

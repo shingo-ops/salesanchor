@@ -76,6 +76,21 @@ fi
 
 echo "=============================================="
 if [ "$fail" -eq 0 ]; then
+# --- G2.2: 本店鮮度検査（警告のみ・停止しない。設計: docs/specs/ledger-guard/design-g2.md §G2.2） ---
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
+if [[ "${GIT_COMMON_DIR}" = /* ]]; then HONTEN="$(dirname "${GIT_COMMON_DIR}")"; else HONTEN="$(git rev-parse --show-toplevel 2>/dev/null)"; fi
+git -C "${HONTEN}" fetch --prune --quiet 2>/dev/null || true
+BEHIND="$(git -C "${HONTEN}" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+FRESH_THRESHOLD="${G22_THRESHOLD:-30}"
+if [ "${BEHIND}" -gt "${FRESH_THRESHOLD}" ]; then
+  echo "[G2.2 WARN] 本店(${HONTEN})が origin/main より ${BEHIND} コミット遅れています"
+  DIRTY="$(git -C "${HONTEN}" status --porcelain | grep -vc "active-work" || true)"
+  if [ "${DIRTY}" -gt 0 ]; then
+    echo "[G2.2 WARN] 本店に台帳以外の未保存 ${DIRTY} 件あり — ff-pull不能の可能性。本店掃除便を検討してください"
+  else
+    echo "[G2.2 INFO] 未保存は台帳系のみ — 本店で git pull --ff-only origin main で追従可能"
+  fi
+fi
   echo "PREFLIGHT OK — 作業続行可"
   exit 0
 else
