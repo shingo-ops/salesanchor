@@ -12,6 +12,8 @@
 - ルート定義 path=: 106件（frontend/src/App.tsx:142-360）/ navigate(): 86件
 
 ## 2. ヘッダー中身の全件仕分け表（42/42・検算一致）
+主要引用（file:line・関所書式）: frontend/src/pages/bots/BotsPage.tsx:197 / frontend/src/pages/schedule/SchedulePageImpl.tsx:1107 / frontend/src/pages/company-detail/CompanyDetailPage.tsx:151 / frontend/src/pages/dashboard/FollowUpsPage.tsx:141 / frontend/src/pages/inbox/InboxPage.tsx:78 / frontend/src/config/routeTitles.ts:13 / frontend/src/App.tsx:142
+※§2表の短縮表記（bots:197等）は上記フルパスの略記。
 | 型 | 説明 | 件数 | 該当（file:line） |
 |---|---|---|---|
 | A1 標準型 | page-header-actions＋主ボタン1個 | 16 | bots:197 / purchase-orders:180 / suppliers:102 / invoices:123 / quotes:89 / leads:270 / staff-reports:52 / deals:221 / buddy:48 / teams:174 / staff:214 / erp:52 / shifts:47 / badges:43 / notifications:46 / orders:63(変数46) |
