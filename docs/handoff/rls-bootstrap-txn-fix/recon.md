@@ -28,6 +28,6 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|---|---|---|
-| 1 | 同一 `conn` 化の実装で sales_form の FK 競合が消えるか | `test_rls_bootstrap_ordering.py` の実測 | ✅ 解消済み |
+| 1 | 同一 `conn` 化の実装で sales_form の FK 競合が消えるか | `backend/tests/test_rls_bootstrap_ordering.py` の実測 | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
