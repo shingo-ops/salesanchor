@@ -62,6 +62,7 @@
 | テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
+| サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
