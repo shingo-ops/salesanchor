@@ -1,0 +1,34 @@
+name: Lessons Guard
+# 教訓の直接追記検知: design-partner.md §6本文への追記PRに警告コメントを出す（初期は警告のみ・停止化は別GO）
+# 設計: docs/specs/lessons-guard/design.md §1（KGI-L5の実体）
+on:
+  pull_request:
+    paths:
+      - 'docs/ai-agents/design-partner.md'
+permissions:
+  pull-requests: write
+jobs:
+  warn-direct-lesson-edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect §6 body additions
+        id: detect
+        run: |
+          git fetch origin ${{ github.base_ref }} --quiet
+          ADDED=$(git diff "origin/${{ github.base_ref }}...HEAD" -- docs/ai-agents/design-partner.md | awk '/^@@/{h=$0} /^\+[^+]/{print h"\t"$0}' | grep -c "## 6\." || true)
+          SEC6_TOUCH=$(git diff "origin/${{ github.base_ref }}...HEAD" --unified=0 -- docs/ai-agents/design-partner.md | grep -c "^+- " || true)
+          echo "sec6_added=${SEC6_TOUCH}" >> "$GITHUB_OUTPUT"
+      - name: Warn on PR
+        if: steps.detect.outputs.sec6_added != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ **Lessons Guard（警告のみ）**: design-partner.md への箇条書き追加を検知しました。教訓の追記は本文直接でなく `docs/ai-agents/lessons.d/` へのポスト（1便1ファイル）が正規経路です（docs/specs/lessons-guard/design.md）。清書便・教訓以外の正当な変更であればこの警告は無視して構いません。'
+            })
