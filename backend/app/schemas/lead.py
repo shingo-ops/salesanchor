@@ -223,6 +223,9 @@ class LeadResponse(BaseModel):
     customer_type: str | None
     response_speed: str | None
     monthly_forecast: Decimal | None
+    amount: Decimal | None
+    currency: str | None
+    expected_close_date: date | None
     prospect_rank: str | None
     assigned_to: int | None
     converted_deal_id: int | None
@@ -273,10 +276,12 @@ class LeadStatsResponse(BaseModel):
 
 
 class LeadConvertRequest(BaseModel):
-    """リード→案件変換リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
+    """リード→案件変換リクエスト（company/contact/title は互換窓として受理する）"""
     company_id: int = Field(ge=1, description="会社ID")
     contact_id: int = Field(ge=1, description="担当者ID")
     title: str = Field(min_length=1, max_length=255, description="案件タイトル")
     amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    currency: str = Field(default="JPY", max_length=10, description="通貨")
+    expected_close_date: date | None = Field(default=None, description="成約予定日")
     assigned_to: int | None = Field(default=None, ge=1, description="担当者（省略時はリードの担当者を引き継ぐ）")
     notes: str | None = Field(default=None, max_length=5000)

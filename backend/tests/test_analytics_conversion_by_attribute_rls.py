@@ -52,6 +52,9 @@ async def _ensure_foreign_schema(admin_engine) -> None:
                 assigned_to INTEGER,
                 converted_deal_id INTEGER,
                 monthly_forecast NUMERIC(15, 2),
+                amount NUMERIC(15, 2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
@@ -82,6 +85,9 @@ async def _ensure_work_schema(admin_engine) -> None:
                 assigned_to INTEGER,
                 converted_deal_id INTEGER,
                 monthly_forecast NUMERIC(15, 2),
+                amount NUMERIC(15, 2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))

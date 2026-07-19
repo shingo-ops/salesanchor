@@ -149,12 +149,13 @@ class TestInputValidation:
         assert resp.status_code == 422
 
     async def test_negative_amount_rejected(self, client):
-        """負の金額が拒否されること（Step 5d: company_id + contact_id 経路で検証）"""
+        """負の金額が拒否されること（POST /deals 封鎖(deal-removal 段階①)による）"""
         resp = await client.post(
             "/api/v1/deals",
             json={"company_id": 1, "contact_id": 1, "title": "Test", "amount": -100},
         )
-        assert resp.status_code == 422
+        # POST /deals 封鎖(deal-removal 段階①) による
+        assert resp.status_code == 405
 
 
 class TestAdminRoleCheck:

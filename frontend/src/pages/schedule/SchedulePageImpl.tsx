@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { PageLayout } from "../../components/PageLayout";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
@@ -1099,126 +1100,127 @@ export default function SchedulePage() {
 
   return (
     <div className="schedule-page">
-      <header className="schedule-shell__header">
-        {/* #5/#6: 左ブロック（brand + 今日/‹›/期間ラベル）。faviconは削除し、navを左へ移動 */}
-        <div className="schedule-shell__header-left">
-          <div className="schedule-shell__brand">
-            <h1 className="schedule-shell__title">{t("schedule.title")}</h1>
-          </div>
-          <div className="schedule-nav">
-            <Button variant="secondary" size="sm" onClick={() => navigatePeriod("today")}>{t("schedule.today")}</Button>
-            <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.prevPeriod")} onClick={() => navigatePeriod("prev")}>
-              ‹
-            </Button>
-            <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.nextPeriod")} onClick={() => navigatePeriod("next")}>
-              ›
-            </Button>
-          </div>
-          <span className="schedule-shell__range">{viewLabel}</span>
-        </div>
-
-        {/* 右ブロック（ツール類のみ） */}
-        <div className="schedule-shell__toolbar">
-          <Button
-            variant="ghost"
-            size="md"
-            iconOnly
-            className="schedule-shell__icon-button"
-            aria-label={t("common.search")}
-          >
-            <SearchIcon size={18} aria-hidden="true" />
-          </Button>
-          {canManageOwners && (
+      <PageLayout
+        navKey="nav.schedule"
+        subtitleKey="schedule.subtitle"
+        noScroll
+        headerLeft={
+          <>
+            <div className="schedule-nav">
+              <Button variant="secondary" size="sm" onClick={() => navigatePeriod("today")}>{t("schedule.today")}</Button>
+              <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.prevPeriod")} onClick={() => navigatePeriod("prev")}>
+                ‹
+              </Button>
+              <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.nextPeriod")} onClick={() => navigatePeriod("next")}>
+                ›
+              </Button>
+            </div>
+            <span className="schedule-shell__range">{viewLabel}</span>
+          </>
+        }
+        headerAction={
+          <div className="schedule-shell__toolbar">
             <Button
               variant="ghost"
               size="md"
               iconOnly
               className="schedule-shell__icon-button"
-              aria-label={t("schedule.settings")}
-              onClick={() => navigate("/schedule/settings")}
+              aria-label={t("common.search")}
             >
-              <SettingsIcon size={18} aria-hidden="true" />
+              <SearchIcon size={18} aria-hidden="true" />
             </Button>
-          )}
-          <div className="schedule-view-switch" role="group" aria-label={t("schedule.viewSelect")}>
-            {(["day", "week", "month"] as const).map((nextView) => (
-              <button
-                key={nextView}
-                type="button"
-                className={`schedule-view-switch__button${view === nextView ? " schedule-view-switch__button--active" : ""}`}
-                aria-pressed={view === nextView}
-                onClick={() => setView(nextView)}
+            {canManageOwners && (
+              <Button
+                variant="ghost"
+                size="md"
+                iconOnly
+                className="schedule-shell__icon-button"
+                aria-label={t("schedule.settings")}
+                onClick={() => navigate("/schedule/settings")}
               >
-                {t(`schedule.${nextView}View`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <div className="schedule-shell__content">
-        <ScheduleSidebar
-          currentMonth={currentMonth}
-          selectedDate={anchorDate}
-          owners={owners}
-          visibleOwnerIds={visibleOwnerIds}
-          onToggleOwner={toggleOwner}
-          onCreate={() => openCreate(anchorDate, null)}
-          onJumpToDate={jumpToDate}
-          onShiftMonth={shiftMonth}
-          canManageOthers={canManageOwners}
-        />
-
-        <main className="schedule-main">
-          {banner && (
-            <div className={banner.type === "success" ? "success-banner" : "error-banner"}>
-              {banner.message}
-              <button
-                onClick={() => setBanner(null)}
-                className="schedule-banner__close"
-                aria-label={t("common.close")}
-              >
-                ×
-              </button>
+                <SettingsIcon size={18} aria-hidden="true" />
+              </Button>
+            )}
+            <div className="schedule-view-switch" role="group" aria-label={t("schedule.viewSelect")}>
+              {(["day", "week", "month"] as const).map((nextView) => (
+                <button
+                  key={nextView}
+                  type="button"
+                  className={`schedule-view-switch__button${view === nextView ? " schedule-view-switch__button--active" : ""}`}
+                  aria-pressed={view === nextView}
+                  onClick={() => setView(nextView)}
+                >
+                  {t(`schedule.${nextView}View`)}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+        }
+      >
+        <div className="schedule-shell__content">
+          <ScheduleSidebar
+            currentMonth={currentMonth}
+            selectedDate={anchorDate}
+            owners={owners}
+            visibleOwnerIds={visibleOwnerIds}
+            onToggleOwner={toggleOwner}
+            onCreate={() => openCreate(anchorDate, null)}
+            onJumpToDate={jumpToDate}
+            onShiftMonth={shiftMonth}
+            canManageOthers={canManageOwners}
+          />
 
-          {(loading || demoState === "loading") && demoState !== "empty" ? <LoadingState /> : (
-            <div className="schedule-main__surface">
-              {error && (
-                <div className="schedule-error">
-                  {error}
-                </div>
-              )}
-              {view === "month" ? (
-                <ScheduleMonthGrid
-                  cells={viewDays}
-                  monthDate={anchorDate}
-                  events={timedEvents.concat(allDayEvents)}
-                  visibleOwnerIds={visibleOwnerIds}
-                  ownerByUserId={ownerByUserId}
-                  currentOwnerUserId={currentOwnerUserId}
-                  onSelectDay={(date, rect) => openCreate(date, rect)}
-                  onSelectEvent={(item, rect) => openDetail(item, rect)}
-                />
-              ) : (
-                <div ref={gridScrollRef} className="schedule-grid__viewport">
-                  <ScheduleWeekGrid
-                    days={viewDays}
+          <main className="schedule-main">
+            {banner && (
+              <div className={banner.type === "success" ? "success-banner" : "error-banner"}>
+                {banner.message}
+                <button
+                  onClick={() => setBanner(null)}
+                  className="schedule-banner__close"
+                  aria-label={t("common.close")}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {(loading || demoState === "loading") && demoState !== "empty" ? <LoadingState /> : (
+              <div className="schedule-main__surface">
+                {error && (
+                  <div className="schedule-error">
+                    {error}
+                  </div>
+                )}
+                {view === "month" ? (
+                  <ScheduleMonthGrid
+                    cells={viewDays}
+                    monthDate={anchorDate}
                     events={timedEvents.concat(allDayEvents)}
                     visibleOwnerIds={visibleOwnerIds}
                     ownerByUserId={ownerByUserId}
                     currentOwnerUserId={currentOwnerUserId}
-                    currentTime={currentTime}
-                    onSelectSlot={(date, rect) => openCreate(date, rect)}
+                    onSelectDay={(date, rect) => openCreate(date, rect)}
                     onSelectEvent={(item, rect) => openDetail(item, rect)}
                   />
-                </div>
-              )}
-            </div>
-          )}
-        </main>
-      </div>
+                ) : (
+                  <div ref={gridScrollRef} className="schedule-grid__viewport">
+                    <ScheduleWeekGrid
+                      days={viewDays}
+                      events={timedEvents.concat(allDayEvents)}
+                      visibleOwnerIds={visibleOwnerIds}
+                      ownerByUserId={ownerByUserId}
+                      currentOwnerUserId={currentOwnerUserId}
+                      currentTime={currentTime}
+                      onSelectSlot={(date, rect) => openCreate(date, rect)}
+                      onSelectEvent={(item, rect) => openDetail(item, rect)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
+      </PageLayout>
 
       {popover && (
         <SchedulePopover

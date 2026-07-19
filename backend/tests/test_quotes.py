@@ -72,13 +72,14 @@ class TestQuotesCRUD:
     async def test_create_quote_with_deal(self, client):
         """案件IDを紐付けて見積もりを作成できる"""
         company_id, contact_id, lead_id = await _create_company_contact(client)
-        deal_res = await client.post("/api/v1/deals", json={
-            "lead_id": lead_id,
-            "company_id": company_id,
-            "contact_id": contact_id,
-            "title": "見積テスト案件",
-        })
-        deal_id = deal_res.json()["id"]
+        from tests.helpers_txn import create_deal
+        deal_id = await create_deal(
+            client,
+            lead_id,
+            company_id=company_id,
+            contact_id=contact_id,
+            title="見積テスト案件",
+        )
 
         data = await _create_quote(client, company_id, contact_id, deal_id=deal_id)
         assert data["deal_id"] == deal_id

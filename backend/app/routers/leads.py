@@ -63,7 +63,7 @@ router = APIRouter()
 _LEAD_COLUMNS = """
     id, lead_code, customer_name, company_name, email, phone,
     channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
-    response_speed, monthly_forecast, prospect_rank, assigned_to,
+    response_speed, monthly_forecast, amount, currency, expected_close_date, prospect_rank, assigned_to,
     converted_deal_id, notes, created_at, updated_at,
     next_action, next_action_date, challenge, meeting_memo, meeting_impression,
     cs_memo, sales_form, competitor_check, per_order_amount, monthly_frequency,
@@ -724,16 +724,13 @@ async def convert_lead(
     current_user: User = Depends(get_current_user),
 ):
     """
-    リードを商談化する。新しいdealを作成し、leadを'negotiating'ステータスに更新＋リンクする。
+    リードを商談化する。deals は作成せず、lead に商談情報を直接保存する。
 
     同時実行対策:
-      - deal作成後、`UPDATE leads ... WHERE converted_deal_id IS NULL` で
-        アトミックにクレーム。並行変換でクレームに失敗した場合は
-        作成済みdealと共にrollbackして409を返す。
+      - `UPDATE leads ... WHERE status != 'negotiating'` でアトミックにクレーム。
+        並行変換でクレームに失敗した場合は rollback して 409 を返す。
     """
     leads_t = tenant_table_ref(db, tenant_id, "leads")
-    contacts_t = tenant_table_ref(db, tenant_id, "contacts")
-    deals_t = tenant_table_ref(db, tenant_id, "deals")
     lead_result = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} WHERE id = :id"),
         {"id": lead_id},
@@ -741,69 +738,27 @@ async def convert_lead(
     lead_row = lead_result.mappings().first()
     if not lead_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
-    if lead_row["converted_deal_id"] is not None:
+    if lead_row["status"] == "negotiating":
         # 早期409（UXのため）。完全な保証は下のUPDATEで行う。
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このリードは既に商談中です")
 
-    # Step 5d: contact / company の存在 + 所属一致確認のみ
-    contact_check = await db.execute(
-        text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"),
-        {"id": data.contact_id},
-    )
-    contact_row = contact_check.first()
-    if not contact_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
-    if contact_row[0] != data.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="指定された担当者は指定会社に所属していません",
-        )
-
-    # 新案件作成（company_id + contact_id ベース）
-    deal_result = await db.execute(
-        text(f"""
-            INSERT INTO {deals_t} (
-                tenant_id, company_id, contact_id, lead_id, title, amount,
-                currency, status, stage, probability, assigned_to, notes
-            )
-            VALUES (
-                :tenant_id, :company_id, :contact_id, :lead_id, :title, :amount,
-                'JPY', 'open', 'open', 10, :assigned_to, :notes
-            )
-            RETURNING id
-        """),
-        {
-            "tenant_id": tenant_id,
-            "company_id": data.company_id,
-            "contact_id": data.contact_id,
-            "lead_id": lead_id,
-            "title": data.title,
-            "amount": data.amount,
-            # 担当者はリクエストで指定されたもの優先、省略時はリードの担当者を引き継ぐ
-            "assigned_to": data.assigned_to if data.assigned_to is not None else lead_row["assigned_to"],
-            "notes": data.notes,
-        },
-    )
-    new_deal_id = deal_result.scalar_one()
-    await db.execute(
-        text(f"UPDATE {deals_t} SET deal_code = :code WHERE id = :id"),
-        {"code": f"DL-{new_deal_id:05d}", "id": new_deal_id},
-    )
-
-    # アトミッククレーム: converted_deal_id IS NULL の場合のみ更新する
-    # 並行リクエストで既に商談中になっていた場合は0行返却 → 例外で全ロールバック
     updated = await db.execute(
         text(f"""
             UPDATE {leads_t}
-            SET status = 'negotiating', converted_deal_id = :deal_id, updated_at = NOW()
-            WHERE id = :id AND converted_deal_id IS NULL
+            SET status = 'negotiating', amount = :amount, currency = :currency,
+                expected_close_date = :expected_close_date, updated_at = NOW()
+            WHERE id = :id AND status != 'negotiating'
             RETURNING {_LEAD_COLUMNS}
         """),
-        {"id": lead_id, "deal_id": new_deal_id},
+        {
+            "id": lead_id,
+            "amount": data.amount,
+            "currency": data.currency,
+            "expected_close_date": data.expected_close_date,
+        },
     )
     row = updated.mappings().first()
     if not row:
-        # 並行リクエストが先にクレームした。作成したdealも一緒にrollbackする。
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -814,17 +769,11 @@ async def convert_lead(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="convert", table_name="leads", record_id=lead_id,
         old_data=dict(lead_row),
-        new_data={"converted_deal_id": new_deal_id, "status": "negotiating"},
-    )
-    await record_audit_log(
-        db=db, tenant_id=tenant_id, user_id=current_user.id,
-        action="create", table_name="deals", record_id=new_deal_id,
         new_data={
-            "title": data.title,
-            "company_id": data.company_id,
-            "contact_id": data.contact_id,
-            "lead_id": lead_id,
-            "amount": str(data.amount) if data.amount is not None else None,
+            "status": "negotiating",
+            "amount": data.amount,
+            "currency": data.currency,
+            "expected_close_date": data.expected_close_date,
         },
     )
     await db.commit()

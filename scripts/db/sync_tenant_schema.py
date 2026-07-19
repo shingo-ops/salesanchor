@@ -357,6 +357,7 @@ async def _apply_catchup_to_tenant(
         # Discord 顧客メッセージング（受信箱連携）
         ("091_add_leads_discord_messaging_columns.sql",    "091: leads Discord DM カラム"),
         ("092_add_meta_messages_discord_index.sql",        "092: meta_messages discord インデックス"),
+        ("20260718_100000_leads_add_deal_columns.sql",     "20260718: leads 商談列追加"),
     ]
 
     for sql_file, desc in public_migrations:

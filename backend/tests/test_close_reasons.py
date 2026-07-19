@@ -20,7 +20,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _create_deal(client) -> int:
-    from tests.helpers_txn import create_lead
+    from tests.helpers_txn import create_deal, create_lead
     lead_id = await create_lead(client)
     company_res = await client.post("/api/v1/companies", json={"name": "理由テスト株式会社", "lead_id": lead_id})
     company_id = company_res.json()["id"]
@@ -28,10 +28,13 @@ async def _create_deal(client) -> int:
         "company_id": company_id, "name": "担当者", "email": "test-cr@example.com",
     })
     contact_id = contact_res.json()["id"]
-    deal_res = await client.post("/api/v1/deals", json={
-        "lead_id": lead_id, "company_id": company_id, "contact_id": contact_id, "title": "理由テスト商談",
-    })
-    return deal_res.json()["id"]
+    return await create_deal(
+        client,
+        lead_id,
+        company_id=company_id,
+        contact_id=contact_id,
+        title="理由テスト商談",
+    )
 
 
 class TestCloseReasonsAPI:

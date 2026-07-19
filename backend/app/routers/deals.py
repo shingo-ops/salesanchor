@@ -13,7 +13,7 @@ from __future__ import annotations
   2026-06-04: C-1 — lost_reason_code（選択式失注理由）追加
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +28,7 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
-from app.schemas.deal import DealCreate, DealResponse, DealUpdate
+from app.schemas.deal import DealResponse, DealUpdate
 from app.services.audit import record_audit_log
 
 router = APIRouter()
@@ -135,91 +135,14 @@ async def get_deal(
 
 @router.post(
     "/deals",
-    response_model=DealResponse,
-    status_code=201,
-    dependencies=[Depends(require_permission("deals.create"))],
 )
 async def create_deal(
-    data: DealCreate,
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
+    request: Request,
 ):
-    """商談を登録する（deal_codeは自動採番）"""
-    deals_t = tenant_table_ref(db, tenant_id, "deals")
-    contacts_t = tenant_table_ref(db, tenant_id, "contacts")
-    leads_t = tenant_table_ref(db, tenant_id, "leads")
-    # 便1a: lead 必須（背骨）。company/contact は任意（フォーム入力後に紐づく）
-    lead_check = await db.execute(text(f"SELECT id FROM {leads_t} WHERE id = :id"), {"id": data.lead_id})
-    if not lead_check.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
-    if data.contact_id is not None:
-        contact_check = await db.execute(
-            text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"), {"id": data.contact_id})
-        contact_row = contact_check.first()
-        if not contact_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
-        if data.company_id is None or contact_row[0] != data.company_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                detail="指定された担当者は指定会社に所属していません")
-
-    result = await db.execute(
-        text(f"""
-            INSERT INTO {deals_t} (
-                tenant_id, company_id, contact_id, lead_id,
-                title, amount, currency,
-                status, stage, probability,
-                assigned_to, expected_close_date, notes, lead_source
-            )
-            VALUES (
-                :tenant_id, :company_id, :contact_id, :lead_id,
-                :title, :amount, :currency,
-                :status, :stage, :probability,
-                :assigned_to, :expected_close_date, :notes, :lead_source
-            )
-            RETURNING id
-        """),
-        {
-            "tenant_id": tenant_id,
-            "company_id": data.company_id,
-            "contact_id": data.contact_id,
-            "lead_id": data.lead_id,
-            "title": data.title,
-            "amount": data.amount,
-            "currency": data.currency.value,
-            "status": data.status.value,
-            "stage": data.stage.value,
-            "probability": data.probability,
-            "assigned_to": data.assigned_to,
-            "expected_close_date": data.expected_close_date,
-            "notes": data.notes,
-            "lead_source": data.lead_source,
-        },
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="deals新規作成は廃止(deal-removal 段階①)",
     )
-    new_id = result.scalar_one()
-
-    # deal_code = DL-00001 形式で自動採番（Python側で生成してDB非依存）
-    await db.execute(
-        text(f"UPDATE {deals_t} SET deal_code = :code WHERE id = :id"),
-        {"code": f"DL-{new_id:05d}", "id": new_id},
-    )
-
-    fetched = await db.execute(
-        text(f"SELECT {_DEAL_COLUMNS} FROM {deals_t} WHERE id = :id"),
-        {"id": new_id},
-    )
-    row = fetched.mappings().first()
-
-    await record_audit_log(
-        db=db, tenant_id=tenant_id, user_id=current_user.id,
-        action="create", table_name="deals", record_id=new_id,
-        new_data=data.model_dump(exclude_none=True, mode="json"),
-    )
-    await db.commit()
-    await reset_tenant_context(db, tenant_id)
-    await invalidate_dashboard_cache(tenant_id)
-
-    return DealResponse(**row)
 
 
 @router.patch(

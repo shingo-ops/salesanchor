@@ -493,6 +493,8 @@ run_sql migrations/20260629_020000_drop_products_condition_unit.sql
 # 便1b: conversation_logs の背骨必須化（echo穴埋め + 遡及backfill + NOT NULL）
 run_sql migrations/20260703_020000_conv_backbone_ben1b.sql
 run_sql migrations/20260715_100000_add_conversation_logs_lead_fk.sql
+# deals廃止 段階①: leads へ商談列追加
+run_sql migrations/20260718_100000_leads_add_deal_columns.sql
 
 # 便2: order_items 新設＋仕入接続
 run_sql migrations/20260703_030000_order_items_ben2.sql

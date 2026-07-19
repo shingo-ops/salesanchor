@@ -23,6 +23,7 @@
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
+| release/sched-padding-fix | スケジュール外枠の二重余白解消（schedule.css padding 削除） | 2026-07-19 10:50 | IN_PROGRESS | | main | base=origin/main・frontend/css |
 | release/infra-alert-delivery | 通知配達係 Alertmanager 追加＋誤報掃除（Discord 集約・重い exporter 隔離） | 2026-07-18 19:48 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |
 | release/agent-complete-design-lessons | エージェント完結の設計体制(To-Be) 教訓便（起因ラベル・#2761記帳・5W2H-002） | 2026-07-03 12:46 | DONE | #2764 | main | merged: PR #2764 / 2ed5826a |
@@ -47,6 +48,7 @@
 | release/db-ssot-leads-dead-columns-decision | leads未使用疑い7列をSSOT化完了後の削除候補としてメモ | 2026-07-14 06:19 | DONE | #2904 | main | merged: PR #2904 / 9b75c7d268909818a3dc2e7995d76befe76159fd |
 | release/dp-sec6-ledger-done-branch | design-partner §6 の台帳DONE化教訓追記 | 2026-07-18 16:24 | IN_PROGRESS | | main | dp-sec6-ledger-done |
 | release/deal-removal-stage1-design | deal-removal 段階①の差分設計（README・design.md） | 2026-07-18 17:02 | DONE | #2948 | main | merged: PR #2948 / 28bb3bda6913177b3add8971756202d505214b70 |
+| release/deal-removal-stage1-impl-be | deal-removal 段階①のバックエンド実装（leads 3列追加・商談化でdeals書き込み停止） | 2026-07-18 17:30 | DONE | #2956 | main | merged: PR #2956 / d9c58814aae510139d88fede5238a208ac49c2d4 |
 | release/db-ssot-deal-removal-design | deals廃止設計の正本化（README・design.md） | 2026-07-18 15:48 | DONE | #2942 | main | merged: PR #2942 / 82d5c2132a7d5c6701c48c4000c743d090c33854 |
 | release/i18n-missing-key-guard | i18n 全 prefix CI ガード（check-i18n-dashboard-schedule → check-i18n-missing-keys リネーム＋全prefix対応） | 2026-06-26 | DONE | #2646 | main | merged #2646 |
 | feature/morimoto/fedex-guide-step1-7-cta | FedEx ETD ガイド 1-7 保存成功後 CTA テキスト追加（FE のみ・ADR-027） | 2026-06-26 | IN_PROGRESS | #2625 | | base=develop |
@@ -291,7 +293,7 @@
 | release/executor-preamble | （記入してください） | 2026-07-04 03:58 | DONE | | | |
 | release/order-management-design | 受注管理(業務画面)design.md+SVG3枚の収納 | 2026-07-04 04:10 | DONE | #2779 | main | merged: PR #2779 / 96fcae90529be713391ed61100ab25ee6203fa96 |
 | release/inbox-records-salvage | （記入してください） | 2026-07-04 10:34 | IN_PROGRESS | | | |
-| release/design-partner-lesson-20260708 | （記入してください） | 2026-07-08 06:26 | IN_PROGRESS | | | 正本先約 design-partner.md / GO=未採番 / 単独便 |
+| release/design-partner-lesson-20260708 | design-partner.md §6.5 優先順位ルール追記 | 2026-07-08 06:26 | DONE | #2847 | main | merged 2026-07-07 / 台帳残骸を2026-07-19に事後DONE化 |
 | release/color-tokens-ssot-recon | （記入してください） | 2026-07-09 02:55 | IN_PROGRESS | | | |
 | release/worktree-sync-guard-consolidated | worktree/台帳整合性チェックの再発防止 | 2026-07-14 16:02 | DONE | #2905 | main | merged: PR #2905 / 16bd04eca9466486e04332119e779c4c489405e6 |
 | ―（掃き出し便 2026-07-18: 以下61行は未コミット退避分の保全・出所 salesanchor-evacuation/20260718-202133）― | | | | | | |
@@ -356,6 +358,7 @@
 | release/ledger-done-2948 | （記入してください） | 2026-07-18 17:15 | DONE | | | |
 | release/page-title-d2a | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 | 2026-07-18 17:22 | DONE | #2950 | main | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 |
 | release/ledger-guard-ben3-2 | （記入してください） | 2026-07-18 19:54 | IN_PROGRESS | | | |
+| release/rls-bootstrap-txn-fix | rls_bootstrap を同一トランザクション化 + 再発防止テスト | 2026-07-19 00:00 | IN_PROGRESS | | main | rls-bootstrap-fix |
 
 ---
 
