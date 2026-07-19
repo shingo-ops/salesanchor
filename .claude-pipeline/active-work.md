@@ -292,7 +292,7 @@
 | release/executor-preamble | （記入してください） | 2026-07-04 03:58 | DONE | | | |
 | release/order-management-design | 受注管理(業務画面)design.md+SVG3枚の収納 | 2026-07-04 04:10 | DONE | #2779 | main | merged: PR #2779 / 96fcae90529be713391ed61100ab25ee6203fa96 |
 | release/inbox-records-salvage | （記入してください） | 2026-07-04 10:34 | IN_PROGRESS | | | |
-| release/design-partner-lesson-20260708 | （記入してください） | 2026-07-08 06:26 | IN_PROGRESS | | | 正本先約 design-partner.md / GO=未採番 / 単独便 |
+| release/design-partner-lesson-20260708 | design-partner.md §6.5 優先順位ルール追記 | 2026-07-08 06:26 | DONE | #2847 | main | merged 2026-07-07 / 台帳残骸を2026-07-19に事後DONE化 |
 | release/color-tokens-ssot-recon | （記入してください） | 2026-07-09 02:55 | IN_PROGRESS | | | |
 | release/worktree-sync-guard-consolidated | worktree/台帳整合性チェックの再発防止 | 2026-07-14 16:02 | DONE | #2905 | main | merged: PR #2905 / 16bd04eca9466486e04332119e779c4c489405e6 |
 | ―（掃き出し便 2026-07-18: 以下61行は未コミット退避分の保全・出所 salesanchor-evacuation/20260718-202133）― | | | | | | |
