@@ -2,7 +2,8 @@
  * Button 金型 補助スタイル（Task 1C）
  *
  * 既存の btn-* クラスに上乗せする修飾子のみ定義。
- * btn-primary / btn-secondary / btn-ghost / btn-danger 本体は components.css に存在。
+ * btn-primary / btn-secondary / btn-ghost / btn-danger / btn-outline 本体は components.css に存在。
+ * btn-tab はこのファイルで新設する。
  * このファイルは「サイズ修飾子」「状態修飾子」「レイアウト修飾子」だけを担う。
  *
  * ADR-067: 全カラーは CSS 変数参照のみ（hex ハードコード禁止）
@@ -24,6 +25,33 @@
   padding: var(--space-3) var(--space-6);
   font-size: var(--font-md);
   min-height: var(--btn-min-height-lg, 48px);
+}
+
+/* tab: schedule-view-switch__button と同じ sm 相当の切替ボタン規格 */
+.btn-tab {
+  min-height: var(--comp-input-height-sm);
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+
+.btn-tab:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.btn-tab:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn-tab.comp-btn--active {
+  background: var(--link-active-bg);
+  color: var(--accent);
+  font-weight: var(--font-weight-semi);
 }
 
 /* md はデフォルト。各 btn-* の padding がそのまま適用される */
