@@ -22,6 +22,9 @@
 | D4 | 失注理由（deal_close_reasons）がlead_id参照で維持され、既存データが失われない | 移設後の行数=移設前の行数 | 1 |
 | D5 | dealsテーブルが全テナントから削除されている | \dt 実測でdeals不在 | 1 |
 | D6 | 分析・ダッシュボードのdeals参照コードが0件 | git grep "FROM deals" = 0 | 0件 |
+| D7 | quotes.deal_idがlead_id参照に置換され既存見積が失われない | 移設後の行数=移設前の行数 | 1 |
+| D8 | conversation_logs.deal_idを読むコードが0件 | git grep実測 | 0件 |
+| D9 | leads.converted_deal_idを読むコードが0件 | git grep実測 | 0件 |
 
 KPI: 達成KGI数 ◯/6
 
@@ -55,6 +58,39 @@ KPI: 達成KGI数 ◯/6
 - 商談化操作後、dealsの行数増分=0（KGI D1）
 - leadsに3列が実在（KGI D2）
 - 既存テスト緑＋商談化の新テスト（3列保存の実測）追加
+
+## 4.6 段階②の差分設計（PO確定・2026-07-20）
+
+### 読み替えの原則（PO決定の記録）
+- leadは全ての親。商談局面の出来事（見積・失注理由・会話ログ）はリードにぶら下げる
+- 注文（請求書発行時点）は成約後の出来事なので会社にぶら下げる（KGI D3どおり）
+- 「全部リードにぶら下げる」案は検討のうえ不採用（注文の既存company_id活用・意味の整合・移行量の理由。2026-07-20 PO確認）
+
+### 付け替え正解表
+| 対象 | 現状 | 付け替え先 | データ移行 | KGI |
+|---|---|---|---|---|
+| orders.deal_id（NOT NULL FK） | dealsの子 | company_id参照（既存列活用・deal_id依存を除去） | 有 | `D3` |
+| deal_close_reasons.deal_id | dealsの子 | lead_id参照へ移設（移設後行数=移設前行数・ロス厳禁） | 有 | `D4` |
+| quotes.deal_id | dealsの子 | lead_id参照へ | 有 | `D7` |
+| conversation_logs.deal_id | 列のみ・FKなし | lead_id（PR #2917でFK敷設済み）。deal_id列は読み取り0化のみ、列削除は段階③ | 無 | `D8` |
+| leads.converted_deal_id | dealsへのFK（循環） | 読み取り0化のみ。列・FKの物理削除は段階③migrationに同乗 | 無 | `D9` |
+
+### 共用経路7本の扱い（recon 2026-07-20実測 MAIN e0c34762）
+- leads.py:745-779: 段階①改修済み。converted_deal_id参照が残れば0化（D9）
+- deals.py:137-145,356-381: 失注理由更新をlead_id参照へ（D4）。UPDATE系は読み替え完了後に405封鎖
+- orders.py:443-510: deal_id経由の会社導出を廃止しcompany_id直参照へ（D3）
+- quotes.py:175-215: deal_id存在確認をlead_id存在確認へ（D7）
+- companies.py:454,760: 会社マージ時のdeals更新を除去（§4.5経路3の予約どおり）
+- contacts.py:791-810: deals付け替え部分のみ除去。担当者概念廃止テーマとは範囲分離・リンクのみ
+- conv_log_writer.py:117-131: deals由来のcompany_id補完をleads由来へ（D8）
+
+### 着手順と手続き
+P（表示・分析の読み替え）→ Q（orders D3）→ R（データ移設 D4/D7）。Rは危険migration＝バックアップ→dry-run（ROLLBACK検算）→PO自筆GO→実行→検算。R着手直前に詳細recon（行数・NULL・dealsのlead_id欠損＝孤児の件数）を実測してから移行SQLを確定する。
+
+### 弊害・トレードオフ
+- スコープが§4記載の2件から5件に増え工期が伸びる。ただし段階③の削除ブロッカーを先に解消できる
+- dealsにlead_id=NULL行が存在した場合、D4/D7の移設先が決まらない。Rの詳細reconで件数実測後に扱いを決める
+- /dealsページの画面導線の畳み方は未確定。Pブロック設計時に別途1決定
 
 ## 5. 弊害・トレードオフ（空欄不可）
 
