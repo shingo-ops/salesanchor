@@ -148,9 +148,6 @@ export default function CompanyDetailPage() {
       <PageLayout
         titleText={company.name}
         subtitleKey="companies.detailSubtitle"
-        headerLeft={
-          <Button size="sm" variant="secondary" onClick={() => navigate("/companies")}>&larr; {t("common.back")}</Button>
-        }
         headerAction={
           <div className="page-header-actions">
             {canEdit && company.lead_id && (
