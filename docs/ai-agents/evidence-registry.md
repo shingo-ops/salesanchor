@@ -1325,6 +1325,32 @@ follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親
   decision: "5点をrelease/agent-guardrails-bcで実装、process-artifacts gate緑通過、GO原文『GO』（shingo-ops 2026-07-05）を経てPOがmerge commitでマージ。C便は使い捨てクローンで動作実測しmain文言発火を確認"
   follow_up: "本店をmainへ戻す片付け／フック阻止力の修理（BLOCKED後も実行継続・EV-20260703-003残課題）／dangling-route gate誤検知対策"
 
+id: EV-20260720-001
+date: 2026-07-20
+agent: Codex
+task: サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1)
+scope: prod1 未使用Dockerイメージ19部品の名指し削除（docker rmi・force不使用）
+evidence:
+  - type: command
+    reference: "GO記録（Shingo / 2026-07-20 / GO）"
+    summary: "直前1世代3件を保持し、削除対象19件は公開倉庫/GitHubから再入手可能であることを確認した"
+  - type: command
+    reference: "docker rmi（対象19件を名指し・force不使用）"
+    summary: "未使用イメージ19部品を削除し、稼働中・直前1世代・幽霊部品・要判断は除外した。前便の19件中13件を実行し、残り7部品8ラベルを継続便で完了した"
+  - type: command
+    reference: "docker images --no-trunc --format '{{.ID}}' | sort -u | wc -l"
+    summary: "削除後イメージ数=17"
+  - type: command
+    reference: "docker ps --format '{{.Names}}\\t{{.Status}}'"
+    summary: "稼働コンテナ13台がすべてUp、healthy表示対象もhealthyであることを確認した"
+  - type: command
+    reference: "df -h /; docker system df"
+    summary: "ディスク使用量27GB→20GB（7GB回収）、イメージ在庫16.2GB→8.2GBを実測した"
+confidence: high
+tradeoff: "名指し19部品だけを削除し、volume・コンテナ・prune全種には触れなかったため、型4.4GBと空き箱168個（2GB）は残置した"
+decision: "POのGO（Shingo / 2026-07-20 / GO）を根拠に、未使用Dockerイメージ19部品を名指し削除した"
+follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係規定拡張＋死活通知）は未実装。prod2の秘密入り.bak散乱は別便。事故なし・サービス無停止"
+
 ## EV-20260715-2924 : スコープガードがblock記録した直後にマージが成立（経路未捕捉）
 
 - 事象: PR #2924（inbox/invoice-form-send To-Be design）のマージで、手元ガードがblockを記録したにもかかわらずマージが成立。成立コマンドがエージェントログに残っていない。
