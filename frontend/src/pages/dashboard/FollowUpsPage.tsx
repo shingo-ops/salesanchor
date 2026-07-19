@@ -138,15 +138,6 @@ export default function FollowUpsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.followUpTitle"
-      headerAction={
-        <button
-          type="button"
-          className="fu-back-btn"
-          onClick={() => navigate("/")}
-        >
-          ← {t("nav.dashboard")}
-        </button>
-      }
     >
       {/* セグメントフィルタチップ */}
       <div className="fu-filter-row">

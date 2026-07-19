@@ -14,7 +14,7 @@
  *   - 編集は delta_qty / notes / product_id (Sprint 7 で追加) をインライン可能。
  */
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -192,7 +192,6 @@ function detailToDrafts(detail: ParseReviewDetail): RowDraft[] {
 export default function ParseReviewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
 
   const [detail, setDetail] = useState<ParseReviewDetail | null>(null);
@@ -395,15 +394,6 @@ export default function ParseReviewPage() {
       <PageLayout
         titleText={t("superAdmin.inbound.review.title")}
         subtitleKey="superAdmin.inbound.review.subtitle"
-        headerAction={
-          <button
-            onClick={() => navigate("/super-admin/inbound")}
-            className="btn-secondary"
-            data-testid="review-back-link"
-          >
-            {t("superAdmin.inbound.review.backToList")}
-          </button>
-        }
       >
 
       {/* Sprint 9 / F9 v1.2 AC9.6: Phase A 並走中の常時表示 warning banner。
