@@ -30,7 +30,6 @@
   gap: var(--schedule-shell-gap);
   min-height: 0;
   height: 100%; /* fill .app-content so page-level overflow-y never fires */
-  padding: var(--page-padding-y) var(--page-padding-x); /* #1: 他ページ共通ガター（24px）と揃える */
 }
 
 .schedule-shell__range {
