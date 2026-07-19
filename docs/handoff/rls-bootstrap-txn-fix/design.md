@@ -40,7 +40,7 @@
 | 手順 | 内容 | 状態 |
 |---|---|---|
 | 1 | `bootstrap_tenant_schema()` を同一 `conn` 化 | 完了 |
-| 2 | `test_rls_bootstrap_ordering.py` を追加 | 完了 |
+| 2 | `backend/tests/test_rls_bootstrap_ordering.py` を追加 | 完了 |
 | 3 | `pytest backend/tests/test_priority_prospects_pg_rls.py backend/tests/test_rls_bootstrap_ordering.py -q --no-cov -o addopts=''` を実行 | 完了 |
 | 4 | PR #2966 の本文を新規 docs パスへ更新 | 進行中 |
 
