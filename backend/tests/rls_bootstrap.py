@@ -143,10 +143,19 @@ async def tenant_schema_lock(admin_engine, tenant_id: int):
 
 async def bootstrap_public_products(admin_engine) -> None:
     """public.products とその周辺の前提 migration を冪等に適用する。"""
-    for filename in _PG_BOOTSTRAP_MIGRATIONS:
-        await _apply_migration(admin_engine, filename)
-
     async with admin_engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:namespace, 0)"),
+            {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
+        )
+        try:
+            await _bootstrap_public_shared(conn)
+        finally:
+            with suppress(Exception):
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, 0)"),
+                    {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
+                )
         fk_exists = await conn.scalar(
             text("""
                 SELECT 1
@@ -157,7 +166,7 @@ async def bootstrap_public_products(admin_engine) -> None:
                   AND rel.relname = 'products'
                   AND c.conname = 'fk_products_tcg_type'
             """)
-    )
+        )
     assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
