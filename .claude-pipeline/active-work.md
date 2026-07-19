@@ -21,6 +21,7 @@
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
+| release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
 | release/sched-padding-fix | スケジュール外枠の二重余白解消（schedule.css padding 削除） | 2026-07-19 10:50 | IN_PROGRESS | | main | base=origin/main・frontend/css |
@@ -360,7 +361,8 @@
 | release/ledger-guard-ben3-2 | （記入してください） | 2026-07-18 19:54 | IN_PROGRESS | | | |
 | release/rls-bootstrap-txn-fix | rls_bootstrap を同一トランザクション化 + 再発防止テスト | 2026-07-19 00:00 | DONE | #2966 | main | merged: PR #2966 / ad918b2dde8b336c71dd0c5a9b66499e04cb7815 |
 | release/ledger-done-2966 | rls-bootstrap-fix の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2972 | main | 台帳DONE便自身の登録 |
-| release/process-hardening-ideal | process-hardening のあるべき姿起票 | 2026-07-19 | IN_PROGRESS | | main | process-hardening-ideal |
+| release/ledger-done-2976 | process-hardening の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2976 | main | 台帳DONE便自身の登録 |
+| release/process-hardening-ideal | process-hardening のあるべき姿起票 | 2026-07-19 | DONE | #2976 | main | merged: PR #2976 / 697782d0fed9118ac2014e92bab48f3b151750fb |
 
 ---
 
