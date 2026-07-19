@@ -43,15 +43,13 @@ export default function NotificationsPage() {
     <PageLayout
       navKey="nav.notifications"
       subtitleKey="settings.subtitle"
-      headerAction={
-        hasPermission("notifications.manage") ? (
-          <div className="page-header-actions">
-            <button className="btn-primary" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>
-          </div>
-        ) : undefined
-      }
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("notifications.manage") ? (
+        <div className="page-content-actions">
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>
+        </div>
+      ) : undefined}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}

@@ -171,15 +171,15 @@ export default function TeamsPage() {
     <PageLayout
       navKey="nav.teams"
       subtitleKey="teams.subtitle"
-      headerAction={hasPermission("teams.create") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("teams.create") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
             {t("teams.newTeam")}
           </button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal

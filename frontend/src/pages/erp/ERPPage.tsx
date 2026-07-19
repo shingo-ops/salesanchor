@@ -49,15 +49,15 @@ export default function ERPPage() {
     <PageLayout
       navKey="nav.dataManagement"
       subtitleKey="erp.subtitle"
-      headerAction={hasPermission("erp.sync") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("erp.sync") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={exportInvoices} disabled={exporting}>
             {exporting ? t("erp.exporting") : t("erp.exportInvoices")}
           </button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("erp.syncLogs")}</h3>
       {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
         const columns: DataTableColumn<SyncLog>[] = [
