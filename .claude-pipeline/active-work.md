@@ -359,6 +359,7 @@
 | release/page-title-d2a | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 | 2026-07-18 17:22 | DONE | #2950 | main | merged: PR #2950 / 73150e7f5733641ec1c13a00fdd6af413edd0df5 |
 | release/ledger-guard-ben3-2 | （記入してください） | 2026-07-18 19:54 | IN_PROGRESS | | | |
 | release/rls-bootstrap-txn-fix | rls_bootstrap を同一トランザクション化 + 再発防止テスト | 2026-07-19 00:00 | DONE | #2966 | main | merged: PR #2966 / ad918b2dde8b336c71dd0c5a9b66499e04cb7815 |
+| release/ledger-done-2966 | rls-bootstrap-fix の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2972 | main | 台帳DONE便自身の登録 |
 
 ---
 
