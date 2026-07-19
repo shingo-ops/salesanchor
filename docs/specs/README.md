@@ -17,6 +17,7 @@
 | GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
+| └ ページヘッダー金型v2（page-header-v2。ヘッダーの住人表・番人・移行計画） | [design-system/component-ssot/page-header-v2/design.md](design-system/component-ssot/page-header-v2/design.md) | design起草済 2026-07-19・実装前 |
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
 | └ ページヘッダー金型v2（page-header-v2。ヘッダー枠の中身と並びの統一＋階層パンくず＋位置ズレ番人） | [design-system/component-ssot/page-header-v2/README.md](design-system/component-ssot/page-header-v2/README.md) | あるべき姿・KGI承認済・recon完了 2026-07-19 |
 | デザイントークンSSOT化（色・文字・アイコン・コンポーネント・文字サイズ・値・アニメーション・グラフ・ページ構成の索引化・重複排除） | [design-tokens-ssot/README.md](design-tokens-ssot/README.md) | あるべき姿・KGI承認済 2026-07-09 |
