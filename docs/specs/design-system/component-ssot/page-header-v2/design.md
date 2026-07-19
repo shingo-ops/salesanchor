@@ -2,7 +2,7 @@
 
 > この文書は何か（専門用語なしの1行]:
 > ヘッダーに置いてよい物・置いてはいけない物のルール表と、破りを機械で見つける番人の設計。
-> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: ../../../../handoff/page-header-v2/recon.md
+> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: docs/handoff/page-header-v2/recon.md / 対象ADR: ADR-149
 
 出所: 設計セッション 2026-07-19（PO決定・ideal-state.md 改訂1〜3）。実測SHA: recon.md 参照。
 
@@ -66,15 +66,20 @@ check-page-layout.js の兄弟として新設し、CI（design-token-guard 系 w
 - 兄テーマ page-title（#2937〜#2965）の「金型独占＋関所」方式を踏襲。全数調査→検算→一括移行の型も同一。
 - Google Admin / macOS System Settings のヘッダー（題名＋設定のみ・実行は本文）に整合（ADR-069 管理センターの採用方式とも一致）。
 
-## 7. 受入基準（KGIとの紐づけ）
-- KGI①: recon.md §3 の階層地図＝ルート106件の層別（済・本設計では参照のみ）
-- KGI②③⑦⑧: 番人(c)(d)(e)(b)の赤ゼロ＋全数調査の再実施で検算 0/0
-- KGI④: 本書 §1-2 の存在（=1）
-- KGI⑤: 移行便完了後の全数調査で違反 0（検算つき）
-- KGI⑥: §3 受入の違反サンプル赤実測（=1）
+## 7. 受入基準（各基準に検証方法を紐づけ）
+| 基準 | 検証方法 |
+|---|---|
+| KGI② 親名併記ページ 0 | 番人(c)＋全数調査の再実施（検算つき） |
+| KGI③ 戻るボタン 0 | 番人(c)＋grep全数 0/0 |
+| KGI④ 規格表が在る | 本書 §1-§2 の存在（=1） |
+| KGI⑤ 規格違反 0 | 移行便完了後の全数調査（検算つき） |
+| KGI⑥ 番人が赤を出す | 違反サンプルブランチで(a)〜(e)各1件の赤を実測 |
+| KGI⑦ font-xl 0 | 番人(d)＋grep 0 |
+| KGI⑧ 生button 0 | 番人(b)＋grep全数 0/0 |
+検証の根拠recon: docs/handoff/page-header-v2/recon.md（file:line 全数調査・42/42検算）
 
 ## 8. 維持の仕組み（空欄不可）
-- 守り手: frontend/scripts/check-page-header.js（便6で新設）＋ .github/workflows の該当ガード
+- 守り手: 人手で守る（理由: 番人 frontend/scripts/check-page-header.js は便6で新設予定・未実装）。便6完了後に本欄を番人パスへ更新する。
 - 対象: ヘッダー住人規格・ボタン金型・位置（外枠padding）・題名字体
 - 便6完了までの間: 人手で守る（理由: 番人未実装。実装便のレビューで本書 §1 を照合する）
 
