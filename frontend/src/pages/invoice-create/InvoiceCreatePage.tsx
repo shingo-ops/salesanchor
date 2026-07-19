@@ -223,9 +223,6 @@ export default function InvoiceCreatePage() {
           <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>
             {t("nav.tenantProfile")}
           </button>
-          <button className="btn-secondary" onClick={() => navigate("/invoices")}>
-            {t("common.back")}
-          </button>
         </div>
       }
     >

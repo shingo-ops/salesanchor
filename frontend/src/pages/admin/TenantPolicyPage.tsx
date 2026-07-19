@@ -13,7 +13,6 @@
  *   migrations/20260604_050000_add_tenant_policy_columns.sql
  */
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -54,19 +53,7 @@ const emptyForm: FormState = {
 
 export default function TenantPolicyPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-
-  const backAction = (
-    <button
-      type="button"
-      className="btn-secondary"
-      onClick={() => navigate(-1)}
-      data-testid="tenant-policy-back"
-    >
-      {t("common.back")}
-    </button>
-  );
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -144,7 +131,7 @@ export default function TenantPolicyPage() {
 
   if (!canView) {
     return (
-      <PageLayout navKey="nav.tenantPolicy" headerAction={backAction}>
+      <PageLayout navKey="nav.tenantPolicy">
         <div className="error-message">
           {t("tenantPolicy.permissionRequired")}
         </div>
@@ -156,7 +143,6 @@ export default function TenantPolicyPage() {
     <PageLayout
       navKey="nav.tenantPolicy"
       subtitleKey="tenantPolicy.subtitle"
-      headerAction={backAction}
     >
       {loading ? (
         <div className="loading">{t("common.loading")}</div>
