@@ -59,6 +59,7 @@
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
 | 認証・権限・ロール | （仕様書未作成・関連: ADR-023, 032, 138） | 未 |
 | テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
+| 権限・秘密SSOT化（secrets-permission-ssot。鍵・権限を1冊の台帳で管理し置き間違いを警報） | [secrets-permission-ssot/README.md](secrets-permission-ssot/README.md) | あるべき姿確定・KGI確定 2026-07-20 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
