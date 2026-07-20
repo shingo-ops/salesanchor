@@ -367,6 +367,7 @@
 | release/rls-bootstrap-txn-fix | rls_bootstrap を同一トランザクション化 + 再発防止テスト | 2026-07-19 00:00 | DONE | #2966 | main | merged: PR #2966 / ad918b2dde8b336c71dd0c5a9b66499e04cb7815 |
 | release/ledger-done-2966 | rls-bootstrap-fix の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2972 | main | 台帳DONE便自身の登録 |
 | release/ledger-done-2976 | process-hardening の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2976 | main | 台帳DONE便自身の登録 |
+| release/ledger-done-2988 | deal-removal stage2 の台帳DONE化 | 2026-07-20 | IN_PROGRESS | #2988 | main | 台帳DONE便自身の登録 |
 | release/process-hardening-ideal | process-hardening のあるべき姿起票 | 2026-07-19 | DONE | #2976 | main | merged: PR #2976 / 697782d0fed9118ac2014e92bab48f3b151750fb |
 
 ---
