@@ -45,13 +45,13 @@ export default function BuddyPage() {
     <PageLayout
       navKey="nav.buddy"
       subtitleKey="buddy.subtitle"
-      headerAction={hasPermission("buddy.manage") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("buddy.manage") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => setShowForm(true)}>{t("buddy.newPair")}</button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}

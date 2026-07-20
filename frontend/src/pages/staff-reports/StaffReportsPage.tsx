@@ -49,11 +49,6 @@ export default function StaffReportsPage() {
     <PageLayout
       navKey="nav.reports"
       subtitleKey="reports.subtitle"
-      headerAction={hasPermission("staff_reports.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("common.add")}</button>
-        </div>
-      ) : undefined}
     >
       <div className="filter-bar">
         <Select
@@ -66,6 +61,11 @@ export default function StaffReportsPage() {
           }))}
         />
       </div>
+      {hasPermission("staff_reports.create") ? (
+        <div className="page-content-actions">
+          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("common.add")}</button>
+        </div>
+      ) : undefined}
       {error && <div className="error-message">{error}</div>}
       <Modal
         open={showForm}

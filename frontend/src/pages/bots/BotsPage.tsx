@@ -194,15 +194,15 @@ export default function BotsPage() {
     <PageLayout
       navKey="nav.bots"
       subtitleKey="bots.subtitle"
-      headerAction={hasPermission("bots.create") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("bots.create") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
             {t("bots.newBot")}
           </button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
 
       {newApiKey && (
         <div className="notice" style={{ padding: "var(--space-4)", background: "var(--warning-bg)", border: "1px solid var(--warning-text)", borderRadius: "var(--radius-sm)", margin: "16px 0" }}>

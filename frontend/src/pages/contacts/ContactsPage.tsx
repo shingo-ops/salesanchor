@@ -238,31 +238,34 @@ export default function ContactsPage() {
   };
 
   const pendingDedupCount = contacts.filter((c) => c.status === "pending_dedup_review").length;
+  const headerAction = (
+    <div className="page-header-actions">
+      {pendingDedupCount > 0 && (
+        <span className="dedup-summary">
+          {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
+        </span>
+      )}
+    </div>
+  );
+  const pageContentActions = hasPermission("customers.create") ? (
+    <div className="page-content-actions">
+      <button
+        className="btn-primary"
+        onClick={() => {
+          setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
+          setShowCreate(true);
+        }}
+      >
+        + {t("contacts.newContact")}
+      </button>
+    </div>
+  ) : undefined;
 
   return (
     <PageLayout
       navKey="nav.contacts"
       subtitleKey="contacts.subtitle"
-      headerAction={
-        <div className="page-header-actions">
-          {pendingDedupCount > 0 && (
-            <span className="dedup-summary">
-              {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
-            </span>
-          )}
-          {hasPermission("customers.create") && (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
-                setShowCreate(true);
-              }}
-            >
-              + {t("contacts.newContact")}
-            </button>
-          )}
-        </div>
-      }
+      headerAction={headerAction}
     >
       <div className="filter-bar">
         <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="search-input">
@@ -281,6 +284,7 @@ export default function ContactsPage() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+      {pageContentActions}
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal

@@ -344,44 +344,48 @@ export default function CompaniesPage() {
 
   // PR #145 Q2: pending_dedup_review の件数を一覧サマリで提示し、解消フローへの導線を強める
   const pendingDedupCount = companies.filter((c) => c.status === "pending_dedup_review").length;
+  const headerAction = (
+    <div className="page-header-actions">
+      {pendingDedupCount > 0 && (
+        <span className="dedup-summary">
+          {t("companies.pendingDedupCount", { count: pendingDedupCount })}
+        </span>
+      )}
+      <input
+        type="text"
+        placeholder={t("companies.searchPlaceholder")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-input"
+      />
+    </div>
+  );
+  const pageContentActions = hasPermission("customers.create") ? (
+    <div className="page-content-actions">
+      <button
+        className="btn-primary"
+        onClick={() => {
+          setCreateForm(emptyForm);
+          setActiveTab("basic");
+          setPhoneError(null);
+          setAddressesDirty(false);
+          setShowCreate(true);
+        }}
+      >
+        + {t("companies.newCompany")}
+      </button>
+    </div>
+  ) : undefined;
 
   return (
     <PageLayout
       navKey="nav.companies"
       subtitleKey="companies.subtitle"
-      headerAction={
-        <div className="page-header-actions">
-          {pendingDedupCount > 0 && (
-            <span className="dedup-summary">
-              {t("companies.pendingDedupCount", { count: pendingDedupCount })}
-            </span>
-          )}
-          <input
-            type="text"
-            placeholder={t("companies.searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="search-input"
-          />
-          {hasPermission("customers.create") && (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setCreateForm(emptyForm);
-                setActiveTab("basic");
-                setPhoneError(null);
-                setAddressesDirty(false);
-                setShowCreate(true);
-              }}
-            >
-              + {t("companies.newCompany")}
-            </button>
-          )}
-        </div>
-      }
+      headerAction={headerAction}
     >
 
       {error && <div className="error-banner">{error}</div>}
+      {pageContentActions}
 
       {loading ? (
         <p>{t("common.loading")}</p>
