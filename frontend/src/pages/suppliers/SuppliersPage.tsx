@@ -99,13 +99,13 @@ export default function SuppliersPage() {
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
-      headerAction={hasPermission("suppliers.create") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("suppliers.create") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal

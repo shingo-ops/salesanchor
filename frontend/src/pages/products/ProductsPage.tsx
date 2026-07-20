@@ -183,8 +183,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     load();
   };
 
-  const headerAction = hasPermission("products.create") || hasPermission("products.delete") ? (
-    <div className="page-header-actions" style={{ display: "flex", gap: "var(--space-2)" }}>
+  const pageContentButtons = hasPermission("products.create") || hasPermission("products.delete") ? (
+    <>
       {hasPermission("products.create") && (
         <button
           type="button"
@@ -205,11 +205,19 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
           {t("common.delete")}
         </button>
       )}
+    </>
+  ) : undefined;
+  const pageContentActions = pageContentButtons ? (
+    <div className="page-content-actions">
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        {pageContentButtons}
+      </div>
     </div>
   ) : undefined;
 
   const body = (
     <>
+      {!embedded && pageContentActions}
       <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
         <input type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
         {tcgTypes.length > 0 && (
@@ -239,7 +247,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
           </button>
         )}
         {/* 埋め込み時はページタイトルが無いので操作ボタン（新規登録・削除）を検索バー右端に配置 */}
-        {embedded && headerAction && <div style={{ marginLeft: "auto" }}>{headerAction}</div>}
+        {embedded && pageContentButtons && <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-2)" }}>{pageContentButtons}</div>}
       </div>
       {reorderMode && (
         <div
@@ -457,7 +465,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     return <div className="page page--full" data-testid="products-master-embedded">{body}</div>;
   }
   return (
-    <PageLayout navKey="nav.products" subtitleKey="products.subtitle" headerAction={headerAction}>
+    <PageLayout navKey="nav.products" subtitleKey="products.subtitle">
       {body}
     </PageLayout>
   );

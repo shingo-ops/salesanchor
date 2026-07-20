@@ -218,20 +218,6 @@ export default function DealsPage() {
     <PageLayout
       navKey="nav.deals"
       subtitleKey="deals.subtitle"
-      headerAction={hasPermission("deals.create") ? (
-        <div className="page-header-actions">
-          <button
-            className="btn-primary"
-            onClick={() => {
-              setShowCreate(true);
-              setCreateForm(emptyCreateForm);
-              resetCreateSelector();
-            }}
-          >
-            {t("deals.newDeal")}
-          </button>
-        </div>
-      ) : undefined}
     >
       <div className="filter-bar">
         <Select
@@ -244,6 +230,20 @@ export default function DealsPage() {
           }))}
         />
       </div>
+      {hasPermission("deals.create") ? (
+        <div className="page-content-actions">
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setShowCreate(true);
+              setCreateForm(emptyCreateForm);
+              resetCreateSelector();
+            }}
+          >
+            {t("deals.newDeal")}
+          </button>
+        </div>
+      ) : undefined}
 
       {error && <div className="error-message">{error}</div>}
 

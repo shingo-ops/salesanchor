@@ -44,13 +44,13 @@ export default function ShiftsPage() {
     <PageLayout
       navKey="nav.shifts"
       subtitleKey="shifts.subtitle"
-      headerAction={hasPermission("shifts.manage") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("shifts.manage") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
