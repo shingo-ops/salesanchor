@@ -26,8 +26,8 @@ async def _create_order(client, order_number="ORD-FIN-1"):
     })
     assert ct.status_code == 201, ct.text
     res = await client.post("/api/v1/orders", json={
-        "deal_id": deal_id,
         "company_id": company_id,
+        "deal_id": deal_id,
         "contact_id": ct.json()["id"],
         "order_number": order_number,
     })

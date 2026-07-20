@@ -492,7 +492,7 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
-    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
+    deal_id INTEGER REFERENCES {schema}.deals(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',

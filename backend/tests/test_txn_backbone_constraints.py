@@ -3,7 +3,7 @@
 設計正本: docs/handoff/txn-flow-asis-recon/design.md（便1a）
 - deals.lead_id 必須化
 - companies.lead_id 必須化
-- orders.deal_id 必須化（company は deal から自動導出）
+- orders.company_id 必須化（deal_id は互換窓）
 """
 
 import pytest
@@ -32,8 +32,8 @@ class TestBackboneConstraintsNegative:
         })
         assert res.status_code == 422
 
-    async def test_create_order_without_deal_rejected(self, client):
-        """deal_id 欠落の POST /orders は 422"""
+    async def test_create_order_without_company_rejected(self, client):
+        """company_id 欠落の POST /orders は 422"""
         res = await client.post("/api/v1/orders", json={
             "order_number": "ORD-NO-DEAL",
         })
@@ -42,14 +42,14 @@ class TestBackboneConstraintsNegative:
 
 # ────────────────────────────────────────────
 # 正順ライフサイクル通しテスト
-# lead → deal(companyなし) → company(deal_id指定) → order(deal_idのみ)
+# lead → deal(companyなし) → company(deal_id指定) → order(company_id 直参照)
 # ────────────────────────────────────────────
 
 class TestBackboneLifecycleNormalized:
     """正順ライフサイクル: 背骨が繋がった注文が作れる"""
 
     async def test_lifecycle_order_normalized(self, client):
-        """lead→deal(company未定)→company(deal_id指定で紐づけ)→order(deal_idのみ・company自動導出)"""
+        """lead→deal(company未定)→company(deal_id指定で紐づけ)→order(company_id 直参照)"""
 
         # (1) lead 作成
         lead_res = await client.post("/api/v1/leads", json={
@@ -76,8 +76,9 @@ class TestBackboneLifecycleNormalized:
         assert deal_check.json()["company_id"] == company_id, \
             f"deal.company_id 未更新: {deal_check.json()}"
 
-        # (4) order 作成（deal_id のみ・company は自動導出）
+        # (4) order 作成（company_id 直参照・deal_id は互換窓）
         order_res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "order_number": f"ORD-BEN1A-{lead_id}",
         })
