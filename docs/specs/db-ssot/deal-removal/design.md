@@ -26,7 +26,7 @@
 | D8 | conversation_logs.deal_idを読むコードが0件 | git grep実測 | 0件 |
 | D9 | leads.converted_deal_idを読むコードが0件 | git grep実測 | 0件 |
 
-KPI: 達成KGI数 ◯/6
+KPI: 達成KGI数 ◯/9
 
 ## 3. recon（実測・2026-07-18・origin/main ff093ab）
 
@@ -69,11 +69,11 @@ KPI: 達成KGI数 ◯/6
 ### 付け替え正解表
 | 対象 | 現状 | 付け替え先 | データ移行 | KGI |
 |---|---|---|---|---|
-| orders.deal_id（NOT NULL FK） | dealsの子 | company_id参照（既存列活用・deal_id依存を除去） | 有 | `D3` |
-| deal_close_reasons.deal_id | dealsの子 | lead_id参照へ移設（移設後行数=移設前行数・ロス厳禁） | 有 | `D4` |
-| quotes.deal_id | dealsの子 | lead_id参照へ | 有 | `D7` |
-| conversation_logs.deal_id | 列のみ・FKなし | lead_id（PR #2917でFK敷設済み）。deal_id列は読み取り0化のみ、列削除は段階③ | 無 | `D8` |
-| leads.converted_deal_id | dealsへのFK（循環） | 読み取り0化のみ。列・FKの物理削除は段階③migrationに同乗 | 無 | `D9` |
+| orders.deal_id（NOT NULL FK） | dealsの子 | company_id参照（既存列活用・deal_id依存を除去） | 有 | D3 |
+| deal_close_reasons.deal_id | dealsの子 | lead_id参照へ移設（移設後行数=移設前行数・ロス厳禁） | 有 | D4 |
+| quotes.deal_id | dealsの子 | lead_id参照へ | 有 | D7 |
+| conversation_logs.deal_id | 列のみ・FKなし | lead_id（PR #2917でFK敷設済み）。deal_id列は読み取り0化のみ、列削除は段階③ | 無 | D8 |
+| leads.converted_deal_id | dealsへのFK（循環） | 読み取り0化のみ。列・FKの物理削除は段階③migrationに同乗 | 無 | D9 |
 
 ### 共用経路7本の扱い（recon 2026-07-20実測 MAIN e0c34762）
 - leads.py:745-779: 段階①改修済み。converted_deal_id参照が残れば0化（D9）
