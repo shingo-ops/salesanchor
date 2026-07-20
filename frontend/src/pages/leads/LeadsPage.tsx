@@ -267,11 +267,6 @@ export default function LeadsPage() {
     <PageLayout
       navKey="nav.leadsSection"
       subtitleKey="leads.subtitle"
-      headerAction={hasPermission("leads.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
-        </div>
-      ) : undefined}
     >
       <div className="filter-bar">
         <Select
@@ -284,6 +279,11 @@ export default function LeadsPage() {
           }))}
         />
       </div>
+      {hasPermission("leads.create") ? (
+        <div className="page-content-actions">
+          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
+        </div>
+      ) : undefined}
 
       {error && <div className="error-message">{error}</div>}
 

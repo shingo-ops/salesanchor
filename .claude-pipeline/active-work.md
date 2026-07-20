@@ -24,6 +24,7 @@
 | release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
+| release/header-ben3a-listpages | 一覧系の新規作成/実行ボタンを本文一覧直上へ移動（便3a） | 2026-07-19 22:50 | IN_PROGRESS | | main | base=origin/main・frontend/listpages |
 | release/sched-padding-fix | スケジュール外枠の二重余白解消（schedule.css padding 削除） | 2026-07-19 10:50 | IN_PROGRESS | | main | base=origin/main・frontend/css |
 | release/infra-alert-delivery | 通知配達係 Alertmanager 追加＋誤報掃除（Discord 集約・重い exporter 隔離） | 2026-07-18 19:48 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |

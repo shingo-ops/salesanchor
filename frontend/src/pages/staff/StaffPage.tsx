@@ -211,15 +211,15 @@ export default function StaffPage() {
     <PageLayout
       navKey="nav.staff"
       subtitleKey="staff.subtitle"
-      headerAction={hasPermission("staff.create") ? (
-        <div className="page-header-actions">
+    >
+      {error && <div className="error-message">{error}</div>}
+      {hasPermission("staff.create") ? (
+        <div className="page-content-actions">
           <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
             {t("staff.newStaff")}
           </button>
         </div>
       ) : undefined}
-    >
-      {error && <div className="error-message">{error}</div>}
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
