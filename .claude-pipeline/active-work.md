@@ -28,6 +28,7 @@
 | release/page-header-v2-rev5-fix | ページヘッダー金型v2 改訂5本文の是正追記 | 2026-07-20 | DONE | #3000 | main | merged: PR #3000 / bdb8e4c847643077dcd03ece86f5e7d2dd49d7a6 |
 | release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
 | release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
+| release/toolbar-leads | リード1画面を操作台ContentToolbarへ差し替え | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/rev5-tidy | 教訓重複8行の削除＋改訂5を時系列末尾へ移動 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
@@ -55,7 +56,8 @@
 | release/db-ssot-money-consolidation | 金額の集約 設計図追加 | 2026-07-10 15:49 | DONE | #2876 | main | merged: PR #2876 |
 | release/db-ssot-impl-plan | 本丸実装の計画 追加 | 2026-07-11 06:52 | DONE | #2883 | main | merged: PR #2883 / e75da4cf |
 | release/db-ssot-leads-dead-columns-decision | leads未使用疑い7列をSSOT化完了後の削除候補としてメモ | 2026-07-14 06:19 | DONE | #2904 | main | merged: PR #2904 / 9b75c7d268909818a3dc2e7995d76befe76159fd |
-| release/dp-sec6-ledger-done-branch | design-partner §6 の台帳DONE化教訓追記 | 2026-07-18 16:24 | IN_PROGRESS | | main | dp-sec6-ledger-done |
+| release/dp-sec6-ledger-done-branch | design-partner §6 の台帳DONE化教訓追記 | 2026-07-18 16:24 | DONE | #2944 | main | merged: PR #2944 / 81165c73a7a7ae71dc8e8326b0c465d88ba37db9 |
+| release/dp-sec6-20260720-lessons | design-partner.md §6 の本日教訓追記 | 2026-07-20 | IN_PROGRESS | | main | dp-sec6-20260720 |
 | release/deal-removal-stage1-design | deal-removal 段階①の差分設計（README・design.md） | 2026-07-18 17:02 | DONE | #2948 | main | merged: PR #2948 / 28bb3bda6913177b3add8971756202d505214b70 |
 | release/deal-removal-stage1-impl-be | deal-removal 段階①のバックエンド実装（leads 3列追加・商談化でdeals書き込み停止） | 2026-07-18 17:30 | DONE | #2956 | main | merged: PR #2956 / d9c58814aae510139d88fede5238a208ac49c2d4 |
 | release/db-ssot-deal-removal-design | deals廃止設計の正本化（README・design.md） | 2026-07-18 15:48 | DONE | #2942 | main | merged: PR #2942 / 82d5c2132a7d5c6701c48c4000c743d090c33854 |
