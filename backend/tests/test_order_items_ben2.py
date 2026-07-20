@@ -68,7 +68,7 @@ async def _create_txn_chain(client, db_session, order_number="ORD-TEST-1", **ord
     lead_id = await create_lead(client)
     company_id = await create_company(client, lead_id)
     deal_id = await _insert_deal(db_session, company_id=company_id, lead_id=lead_id)
-    res = await client.post("/api/v1/orders", json={"deal_id": deal_id, "order_number": order_number, **order_kw})
+    res = await client.post("/api/v1/orders", json={"company_id": company_id, "deal_id": deal_id, "order_number": order_number, **order_kw})
     assert res.status_code == 201, res.text
     return {"lead_id": lead_id, "deal_id": deal_id, "company_id": company_id, "order_id": res.json()["id"]}
 
