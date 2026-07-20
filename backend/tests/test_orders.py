@@ -1,7 +1,6 @@
 """注文管理API（orders）のテスト
 
-Phase 1-B-2 Step 5d 以降は会社 + 担当者 (company_id + contact_id) を必須とする。
-便1a: orders.deal_id 必須（company は deal から自動導出）。
+D3: orders.company_id 直参照（deal_id は互換窓）。
 """
 
 import pytest
@@ -29,6 +28,7 @@ class TestOrdersCRUD:
         company_id, contact_id, deal_id = await _create_company_contact(client)
 
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "contact_id": contact_id,
             "order_number": "ORD-001",
@@ -45,22 +45,29 @@ class TestOrdersCRUD:
         assert data["deal_id"] == deal_id
 
     async def test_create_order_without_deal(self, client):
-        """deal_id 省略は 422（便1a: deal_id 必須）"""
+        """company_id があれば deal_id 省略でも作成できる（D3）"""
+        company_id, _, _ = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "order_number": "ORD-NODEAL",
             "total_amount": 10000,
         })
-        assert res.status_code == 422
+        assert res.status_code == 201
+        body = res.json()
+        assert body["company_id"] == company_id
+        assert body["deal_id"] is None
 
     async def test_create_order_duplicate_number(self, client):
         """注文番号の重複は409"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "contact_id": contact_id,
             "order_number": "ORD-DUP",
         })
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "contact_id": contact_id,
             "order_number": "ORD-DUP",
@@ -71,6 +78,7 @@ class TestOrdersCRUD:
         """存在しない担当者IDは400"""
         company_id, _, deal_id = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "contact_id": 99999,
             "order_number": "ORD-INVALID",
@@ -79,7 +87,9 @@ class TestOrdersCRUD:
 
     async def test_create_order_invalid_deal(self, client):
         """存在しない案件IDは400"""
+        company_id, _, _ = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": 99999,
             "order_number": "ORD-BADDEAL",
         })
@@ -89,10 +99,12 @@ class TestOrdersCRUD:
         """注文一覧を取得できる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-LIST-1",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-LIST-2",
         })
@@ -105,11 +117,13 @@ class TestOrdersCRUD:
         """ステータスでフィルタリングできる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-PEND",
             "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-SHIP",
             "status": "awaiting_shipping",
@@ -123,6 +137,7 @@ class TestOrdersCRUD:
         """注文詳細を取得できる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         create_res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-DETAIL",
         })
@@ -136,6 +151,7 @@ class TestOrdersCRUD:
         """注文ステータスを更新できる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         create_res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-UPD",
         })
@@ -151,6 +167,7 @@ class TestOrdersCRUD:
         """Decimal(total_amount)とEnum(status)を同時更新できる（asyncpg encoder対策の回帰テスト）"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         create_res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-UPD-FULL",
         })
@@ -171,6 +188,7 @@ class TestOrdersCRUD:
         """注文を削除できる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         create_res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-DEL",
         })
@@ -190,6 +208,7 @@ class TestOrdersValidation:
         """注文番号なしは422"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
         })
         assert res.status_code == 422
@@ -205,6 +224,7 @@ class TestOrdersValidation:
         """負の金額は422"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id,
             "contact_id": contact_id,
             "order_number": "ORD-NEG",
@@ -220,10 +240,12 @@ class TestOrdersListSearchSort:
         """search で order_number 部分一致できる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-ALPHA-001",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-BRAVO-002",
         })
@@ -240,10 +262,12 @@ class TestOrdersListSearchSort:
         co_a, ct_a, deal_a = await _create_company_contact(client, "アルファ商事")
         co_b, ct_b, deal_b = await _create_company_contact(client, "ベータ工業")
         await client.post("/api/v1/orders", json={
+            "company_id": co_a,
             "deal_id": deal_a, "contact_id": ct_a,
             "order_number": "ORD-CO-SEARCH-A",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": co_b,
             "deal_id": deal_b, "contact_id": ct_b,
             "order_number": "ORD-CO-SEARCH-B",
         })
@@ -260,10 +284,12 @@ class TestOrdersListSearchSort:
         co_a, ct_a, deal_a = await _create_company_contact(client, "DisplayCoA")
         co_b, ct_b, deal_b = await _create_company_contact(client, "DisplayCoB")
         await client.post("/api/v1/orders", json={
+            "company_id": co_a,
             "deal_id": deal_a, "contact_id": ct_a,
             "order_number": "ORD-CT-A",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": co_b,
             "deal_id": deal_b, "contact_id": ct_b,
             "order_number": "ORD-CT-B",
         })
@@ -280,6 +306,7 @@ class TestOrdersListSearchSort:
         """search が空白のみは無視され全件返る"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-BLANK-1",
         })
@@ -292,6 +319,7 @@ class TestOrdersListSearchSort:
         """LIKE メタ文字 (%, _) はエスケープされ、リテラル一致になる"""
         company_id, contact_id, deal_id = await _create_company_contact(client, "EscapeCo")
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-NORMAL-1",
         })
@@ -306,14 +334,17 @@ class TestOrdersListSearchSort:
         """total_amount で降順ソートできる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-SORT-LOW", "total_amount": 1000,
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-SORT-HIGH", "total_amount": 999999,
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-SORT-MID", "total_amount": 50000,
         })
@@ -334,10 +365,12 @@ class TestOrdersListSearchSort:
         """total_amount で昇順ソートできる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-ASC-A", "total_amount": 5000,
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-ASC-B", "total_amount": 100,
         })
@@ -353,10 +386,12 @@ class TestOrdersListSearchSort:
         """status でソートできる（文字列辞書順）"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-ST-PEND", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-ST-DEL", "status": "completed",
         })
@@ -391,6 +426,7 @@ class TestOrdersListSearchSort:
         """レスポンスに company_name / contact_display_name が含まれる"""
         company_id, contact_id, deal_id = await _create_company_contact(client, "JoinTestCo")
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-JOIN-1",
         })
@@ -411,14 +447,17 @@ class TestOrdersGroupCounts:
         """OrderStatus 全値 + total が返る、件数 0 のステータスも 0 で含まれる"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-GC-1", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-GC-2", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-GC-3", "status": "awaiting_shipping",
         })
@@ -442,14 +481,17 @@ class TestOrdersGroupCounts:
         co_a, ct_a, deal_a = await _create_company_contact(client, "GroupSearchA")
         co_b, ct_b, deal_b = await _create_company_contact(client, "GroupSearchB")
         await client.post("/api/v1/orders", json={
+            "company_id": co_a,
             "deal_id": deal_a, "contact_id": ct_a,
             "order_number": "ORD-GS-A1", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": co_a,
             "deal_id": deal_a, "contact_id": ct_a,
             "order_number": "ORD-GS-A2", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": co_b,
             "deal_id": deal_b, "contact_id": ct_b,
             "order_number": "ORD-GS-B1", "status": "awaiting_shipping",
         })
@@ -469,10 +511,12 @@ class TestOrdersGroupCounts:
         """?status= を一緒に指定すると、そのステータスだけ件数が乗る"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-GCF-1", "status": "awaiting_payment",
         })
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-GCF-2", "status": "awaiting_shipping",
         })
@@ -557,6 +601,7 @@ class TestOrderStatusSixValues:
         """POST /orders で status='confirmed' は 422（Pydantic enum 違反）"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-J1-REJ",
             "status": "confirmed",
@@ -567,6 +612,7 @@ class TestOrderStatusSixValues:
         """PATCH /orders/{id} で status='confirmed' も 422"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-J1-PATCH-REJ",
         })
@@ -664,6 +710,7 @@ class TestOrdersPaidFlow:
         """新規受注は paid_at=None（未払い）。"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         res = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-PAID-NULL",
         })
@@ -674,6 +721,7 @@ class TestOrdersPaidFlow:
         """PATCH /orders/{id}/paid で支払済 → 未払いに戻せる。"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-PAID-TOGGLE",
         })
@@ -693,6 +741,7 @@ class TestOrdersPaidFlow:
         """ボディ省略時は paid=True（支払済にする）が既定。"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-PAID-DEFAULT",
         })
@@ -711,6 +760,7 @@ class TestOrdersPaidFlow:
 
         company_id, contact_id, deal_id = await _create_company_contact(client)
         cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-PAID-PERM",
         })
@@ -728,6 +778,7 @@ class TestOrdersPaidFlow:
         currency / paid_at が含まれる（発送情報未登録なら shipping_* は None）。"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-LIST-FIELDS",
         })
@@ -757,6 +808,7 @@ class TestSalesOrdersEndpoint:
         """受注 + 売上情報があれば revenue / cost / gross / rate が集計される。"""
         company_id, contact_id, deal_id = await _create_company_contact(client)
         cre = await client.post("/api/v1/orders", json={
+            "company_id": company_id,
             "deal_id": deal_id, "contact_id": contact_id,
             "order_number": "ORD-SALES-AGG",
         })

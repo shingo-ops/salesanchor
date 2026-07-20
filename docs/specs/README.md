@@ -17,9 +17,8 @@
 | GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
-| └ ページヘッダー金型v2（page-header-v2。ヘッダーの住人表・番人・移行計画） | [design-system/component-ssot/page-header-v2/design.md](design-system/component-ssot/page-header-v2/design.md) | design起草済 2026-07-19・実装前 |
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
-| └ ページヘッダー金型v2（page-header-v2。ヘッダー枠の中身と並びの統一＋階層パンくず＋位置ズレ番人） | [design-system/component-ssot/page-header-v2/README.md](design-system/component-ssot/page-header-v2/README.md) | あるべき姿・KGI承認済・recon完了 2026-07-19 |
+| └ ページヘッダー金型v2（page-header-v2。ヘッダー枠の中身と並びの統一＋階層パンくず＋位置ズレ番人） | [design-system/component-ssot/page-header-v2/README.md](design-system/component-ssot/page-header-v2/README.md) | あるべき姿改訂5済・便1〜3a本番反映済・操作台実装前 2026-07-20 |
 | デザイントークンSSOT化（色・文字・アイコン・コンポーネント・文字サイズ・値・アニメーション・グラフ・ページ構成の索引化・重複排除） | [design-tokens-ssot/README.md](design-tokens-ssot/README.md) | あるべき姿・KGI承認済 2026-07-09 |
 | └ カレンダー色CSS変数化（schedule の 7 カレンダー色） | [design-tokens-ssot/color/calendar/README.md](design-tokens-ssot/color/calendar/README.md) | 公開 |
 | └ アイコン色の用途別トークン集約（10箇所の色決定ポイントをカテゴリ別に束ねる） | [design-tokens-ssot/color/icon/README.md](design-tokens-ssot/color/icon/README.md) | 公開 |
@@ -55,11 +54,12 @@
 | 為替レート | （仕様書未作成・関連ADR: ADR-148） | 未 |
 | 翻訳送信・グロッサリ（接点: conversation_logs。会話ログの紐付けは取引フロー） | [inbox/translation-glossary/README.md](inbox/translation-glossary/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
 | 帳票・フォーム送付（見積・請求書・フォームの送付導線。中身の作りは quote-invoice、入金確認は受注管理を参照） | [inbox/invoice-form-send/README.md](inbox/invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
-| 定型文(message-templates。人が書く文章ひな型の設定画面と受信箱からの呼び出し。AI翻訳は translation-glossary が正本・独立) | [inbox/message-templates/README.md](inbox/message-templates/README.md) | 仕様書あり(KGI承認済み・design未) |
+| 定型文(message-templates。人が書く文章ひな型の設定画面と受信箱からの呼び出し。AI翻訳は translation-glossary が正本・独立) | [inbox/message-templates/README.md](inbox/message-templates/README.md) | 仕様書あり(KGI承認済み・To-Be design済・recon未) |
 | Discord連携 | （仕様書未作成・関連: ADR-009, 014, 100, 091） | 未 |
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
 | 認証・権限・ロール | （仕様書未作成・関連: ADR-023, 032, 138） | 未 |
 | テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
+| 権限・秘密SSOT化（secrets-permission-ssot。鍵・権限を1冊の台帳で管理し置き間違いを警報） | [secrets-permission-ssot/README.md](secrets-permission-ssot/README.md) | あるべき姿確定・KGI確定 2026-07-20 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |

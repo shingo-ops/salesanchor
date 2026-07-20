@@ -22,8 +22,13 @@
 |-----------|--------------|---------|------|-----|------|------|
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | IN_PROGRESS | | main | base=origin/main・docs-only |
+| release/page-header-v2-rev5-fix | ページヘッダー金型v2 改訂5本文の是正追記 | 2026-07-20 | DONE | #3000 | main | merged: PR #3000 / bdb8e4c847643077dcd03ece86f5e7d2dd49d7a6 |
+| release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
+| release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
+| release/rev5-tidy | 教訓重複8行の削除＋改訂5を時系列末尾へ移動 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
+| release/header-ben3a-listpages | 一覧系の新規作成/実行ボタンを本文一覧直上へ移動（便3a） | 2026-07-19 22:50 | IN_PROGRESS | | main | base=origin/main・frontend/listpages |
 | release/sched-padding-fix | スケジュール外枠の二重余白解消（schedule.css padding 削除） | 2026-07-19 10:50 | IN_PROGRESS | | main | base=origin/main・frontend/css |
 | release/infra-alert-delivery | 通知配達係 Alertmanager 追加＋誤報掃除（Discord 集約・重い exporter 隔離） | 2026-07-18 19:48 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/agent-complete-design | エージェント完結の設計体制(To-Be) 3ファイル標準への分割と索引登録 | 2026-07-03 06:43 | DONE | #2757 | main | merged: PR #2757 / f965e8e6 |

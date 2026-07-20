@@ -86,16 +86,16 @@ export default function QuotesPage() {
     <PageLayout
       navKey="nav.quotesInvoices"
       subtitleKey="quotes.subtitle"
-      headerAction={hasPermission("quotes.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</button>
-        </div>
-      ) : undefined}
     >
       <nav className="tab-nav">
         <button className="tab-active">{t("nav.quoteHistory")}</button>
         <button onClick={() => navigate("/invoices")}>{t("nav.invoices")}</button>
       </nav>
+      {hasPermission("quotes.create") ? (
+        <div className="page-content-actions">
+          <button className="btn-primary" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</button>
+        </div>
+      ) : undefined}
 
       {/* ステータス絞り込み: プルダウンを廃止し、表と同じバッジをボタン化。
           押すと該当ステータスのみ表示（再度押すと全件に戻す）。承認済/却下は対象外。 */}

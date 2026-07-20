@@ -120,18 +120,16 @@ export default function InvoicesPage() {
     <PageLayout
       navKey="nav.quotesInvoices"
       subtitleKey="invoices.subtitle"
-      headerAction={
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => navigate("/invoices/new")}>
-            {t("invoices.createTitle")}
-          </button>
-        </div>
-      }
     >
       <nav className="tab-nav">
         <button onClick={() => navigate("/quotes")}>{t("nav.quoteHistory")}</button>
         <button className="tab-active">{t("nav.invoices")}</button>
       </nav>
+      <div className="page-content-actions">
+        <button className="btn-primary" onClick={() => navigate("/invoices/new")}>
+          {t("invoices.createTitle")}
+        </button>
+      </div>
 
       <div className="filter-bar">
         <SelectControl

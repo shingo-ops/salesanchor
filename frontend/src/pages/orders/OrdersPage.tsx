@@ -44,7 +44,7 @@ export default function OrdersPage() {
   } = state;
 
   const newOrderButton = hasPermission("orders.create") ? (
-    <div className="page-header-actions">
+    <div className="page-content-actions">
       <button
         className="btn-primary"
         onClick={() => {
@@ -60,7 +60,7 @@ export default function OrdersPage() {
   ) : null;
 
   return (
-    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" noScroll headerAction={newOrderButton}>
+    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" noScroll>
       <div className="hub-shell">
         {/* 左サブナビ: ステータスフィルタ */}
         <nav className="hub-subnav" aria-label={t("orders.title")}>
@@ -89,6 +89,7 @@ export default function OrdersPage() {
 
         {/* 右コンテンツエリア */}
         <div className="hub-content" style={{ overflowY: "auto", padding: "var(--space-4)" }}>
+          {newOrderButton}
           <OrdersFilterBar
             searchInput={searchInput}
             setSearchInput={setSearchInput}
