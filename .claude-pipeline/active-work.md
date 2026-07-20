@@ -22,6 +22,9 @@
 |-----------|--------------|---------|------|-----|------|------|
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | IN_PROGRESS | | main | base=origin/main・docs-only |
+| release/secrets-permission-ssot | 権限・秘密SSOT化テーマの正本化 | 2026-07-20 | DONE | #3006 | main | merged: PR #3006 / e0b46756c4752fef520babdb61cbf6ebb9b57cf4 |
+| release/deal-removal-stage2-q-orders | deal-removal stage2-Q: orders deal_id dependency removed | 2026-07-20 | DONE | #2995 | main | merged: PR #2995 / d791de092a07bdff7718442470c1063103873243 |
+| release/ledger-done-2988 | ledger-done: register #2988 | 2026-07-20 | DONE | #2993 | main | merged: PR #2993 / d791de092a07bdff7718442470c1063103873243 |
 | release/page-header-v2-rev5-fix | ページヘッダー金型v2 改訂5本文の是正追記 | 2026-07-20 | DONE | #3000 | main | merged: PR #3000 / bdb8e4c847643077dcd03ece86f5e7d2dd49d7a6 |
 | release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
 | release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |

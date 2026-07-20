@@ -64,7 +64,7 @@ write_blackboard(){
       echo "# HELP f2_cleanup_last_success_timestamp F2 cleanup last full-success unix time"
       echo "# TYPE f2_cleanup_last_success_timestamp gauge"
       echo "f2_cleanup_last_success_timestamp $(date +%s)"
-    } > "$tmp" && mv "$tmp" "$TEXTFILE_DIR/f2_cleanup.prom" && log "BLACKBOARD updated"
+    } > "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$TEXTFILE_DIR/f2_cleanup.prom" && log "BLACKBOARD updated"
   else
     log "BLACKBOARD skipped (FAIL=${FAIL})"
   fi
