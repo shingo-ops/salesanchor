@@ -14,7 +14,7 @@
 ## 構成
 - [ideal-state.md](ideal-state.md) — あるべき姿(PO自筆・書き換え禁止)
 - [kgi.md](kgi.md) — KGI 6項目(PO承認済み 2026-07-19)
-- design.md — To-Be設計(次便で作成予定)
+- design.md — To-Be設計(2026-07-19)
 
 ## ステータス
 - 2026-07-19: ideal-state・KGI をPO承認。To-Be design・recon は未着手。
