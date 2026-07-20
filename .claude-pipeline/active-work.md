@@ -22,6 +22,13 @@
 |-----------|--------------|---------|------|-----|------|------|
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | IN_PROGRESS | | main | base=origin/main・PO GO済み |
 | release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | IN_PROGRESS | | main | base=origin/main・docs-only |
+| release/secrets-permission-ssot | 権限・秘密SSOT化テーマの正本化 | 2026-07-20 | DONE | #3006 | main | merged: PR #3006 / e0b46756c4752fef520babdb61cbf6ebb9b57cf4 |
+| release/deal-removal-stage2-q-orders | deal-removal stage2-Q: orders deal_id dependency removed | 2026-07-20 | DONE | #2995 | main | merged: PR #2995 / d791de092a07bdff7718442470c1063103873243 |
+| release/ledger-done-2988 | ledger-done: register #2988 | 2026-07-20 | DONE | #2993 | main | merged: PR #2993 / d791de092a07bdff7718442470c1063103873243 |
+| release/page-header-v2-rev5-fix | ページヘッダー金型v2 改訂5本文の是正追記 | 2026-07-20 | DONE | #3000 | main | merged: PR #3000 / bdb8e4c847643077dcd03ece86f5e7d2dd49d7a6 |
+| release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
+| release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
+| release/rev5-tidy | 教訓重複8行の削除＋改訂5を時系列末尾へ移動 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/page-title-design | ページタイトル設計図一式（component-ssot 優先1） | 2026-07-18 00:00 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/page-title-d2b | 詳細・作成5ページのページ題名を金型へ一括統一（便2b/D2） | 2026-07-18 23:43 | DONE | #2955 | main | merged: PR #2955 / 9a815e38705775bbe0d8b3ebb3376afae27c69dd |
 | release/header-ben3a-listpages | 一覧系の新規作成/実行ボタンを本文一覧直上へ移動（便3a） | 2026-07-19 22:50 | IN_PROGRESS | | main | base=origin/main・frontend/listpages |
@@ -363,6 +370,7 @@
 | release/rls-bootstrap-txn-fix | rls_bootstrap を同一トランザクション化 + 再発防止テスト | 2026-07-19 00:00 | DONE | #2966 | main | merged: PR #2966 / ad918b2dde8b336c71dd0c5a9b66499e04cb7815 |
 | release/ledger-done-2966 | rls-bootstrap-fix の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2972 | main | 台帳DONE便自身の登録 |
 | release/ledger-done-2976 | process-hardening の台帳DONE化 | 2026-07-19 | IN_PROGRESS | #2976 | main | 台帳DONE便自身の登録 |
+| release/ledger-done-2988 | deal-removal stage2 の台帳DONE化 | 2026-07-20 | IN_PROGRESS | #2988 | main | 台帳DONE便自身の登録 |
 | release/process-hardening-ideal | process-hardening のあるべき姿起票 | 2026-07-19 | DONE | #2976 | main | merged: PR #2976 / 697782d0fed9118ac2014e92bab48f3b151750fb |
 
 ---

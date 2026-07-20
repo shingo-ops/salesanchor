@@ -450,28 +450,26 @@ async def create_order(
 ):
     """注文を登録する"""
     orders_t = tenant_table_ref(db, tenant_id, "orders")
+    companies_t = tenant_table_ref(db, tenant_id, "companies")
     contacts_t = tenant_table_ref(db, tenant_id, "contacts")
     deals_t = tenant_table_ref(db, tenant_id, "deals")
-    # 便1a: deal 必須（背骨）。company は deal から自動導出（S2）
-    deal_row = (await db.execute(
-        text(f"SELECT company_id FROM {deals_t} WHERE id = :id"), {"id": data.deal_id})).first()
-    if not deal_row:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された商談が存在しません")
-    derived_company_id = deal_row[0]
-    if derived_company_id is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-            detail="この商談にはまだ会社が登録されていません（先に登録フォームで会社を作成してください）")
-    if data.company_id is not None and data.company_id != derived_company_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-            detail="company_id が商談の会社と一致しません（省略可・自動導出されます）")
+    company_row = (await db.execute(
+        text(f"SELECT id FROM {companies_t} WHERE id = :id"), {"id": data.company_id})).first()
+    if not company_row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された会社が存在しません")
+    if data.deal_id is not None:
+        deal_row = (await db.execute(
+            text(f"SELECT id FROM {deals_t} WHERE id = :id"), {"id": data.deal_id})).first()
+        if not deal_row:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された商談が存在しません")
     if data.contact_id is not None:
         contact_row = (await db.execute(
             text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"), {"id": data.contact_id})).first()
         if not contact_row:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された担当者が存在しません")
-        if contact_row[0] != derived_company_id:
+        if contact_row[0] != data.company_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                detail="指定された担当者は商談の会社に所属していません")
+                detail="指定された担当者は会社に所属していません")
 
     # 注文番号の重複チェック
     dup = await db.execute(
@@ -497,7 +495,7 @@ async def create_order(
         """),
         {
             "tenant_id": tenant_id,
-            "company_id": derived_company_id,
+            "company_id": data.company_id,
             "contact_id": data.contact_id,
             "deal_id": data.deal_id,
             "invoice_id": data.invoice_id,

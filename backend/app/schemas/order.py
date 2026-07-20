@@ -47,9 +47,9 @@ class OrderStatus(str, Enum):
 
 
 class OrderCreate(BaseModel):
-    """注文登録リクエスト（便1a: deal_id 必須・company は deal から自動導出）"""
-    deal_id: int = Field(ge=1, description="商談ID（必須・便1a。company は deal から自動導出）")
-    company_id: int | None = Field(default=None, ge=1, description="非推奨：指定時は deal.company_id と一致必須")
+    """注文登録リクエスト（D3: company_id 直参照・deal_id は互換窓）"""
+    company_id: int = Field(ge=1, description="会社ID（必須・D3 の正）")
+    deal_id: int | None = Field(default=None, ge=1, description="互換窓：指定時のみ存在確認する")
     contact_id: int | None = Field(default=None, ge=1, description="担当者ID（指定時のみ所属検査）")
     invoice_id: int | None = Field(default=None, ge=1)
     order_number: str = Field(min_length=1, max_length=100)

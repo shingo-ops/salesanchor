@@ -1,5 +1,5 @@
 """便1a: 背骨必須化に伴うテスト用生成チェーン（lead→deal→company→order）。
-既存テストのローカルヘルパーから呼ぶ。実装契約: lead必須(deal/company)・deal必須(order)。
+既存テストのローカルヘルパーから呼ぶ。実装契約: lead必須(deal/company)・order は company_id 直参照。
 
 便1 stage1 では POST /api/v1/deals が封鎖されるため、create_deal は
 テストDBへ direct insert する。
@@ -80,6 +80,6 @@ async def create_txn_chain(client, order_number="ORD-TEST-1", **order_kw):
     lead_id = await create_lead(client)
     deal_id = await create_deal(client, lead_id)
     company_id = await create_company(client, lead_id, deal_id=deal_id)
-    r = await client.post("/api/v1/orders", json={"deal_id": deal_id, "order_number": order_number, **order_kw})
+    r = await client.post("/api/v1/orders", json={"company_id": company_id, "deal_id": deal_id, "order_number": order_number, **order_kw})
     assert r.status_code == 201, r.text
     return {"lead_id": lead_id, "deal_id": deal_id, "company_id": company_id, "order_id": r.json()["id"]}

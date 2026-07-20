@@ -337,8 +337,8 @@ async def _create_order(client, order_number="ORD-COM-1", status_value="awaiting
     res = await client.post(
         "/api/v1/orders",
         json={
-            "deal_id": deal_id,
             "company_id": company_id,
+            "deal_id": deal_id,
             "contact_id": ct.json()["id"],
             "order_number": order_number,
             "status": status_value,

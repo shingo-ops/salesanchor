@@ -8,9 +8,10 @@
 
 ## ステータス
 - ①旧型イメージ削除: 完了(PR #2980 MERGED・7GB回収)
-- ③掃除係の職務拡張・④死活通知: 設計中
+- ③④: design.md作成済み・改修PR待ち
 - 空き箱(volume)163個削除・prod2の.bak廃棄: 未着手(独立便)
 
 ## 子文書
 - [あるべき姿](./ideal-state.md)
 - [KGI](./kgi.md)
+- [design（③④）](./design.md)
