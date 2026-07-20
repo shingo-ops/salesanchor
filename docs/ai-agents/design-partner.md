@@ -266,6 +266,14 @@ design（③設計）は、PO自筆の「理想の設計図（あるべき姿）
 - --auto（自動マージ予約）はリポジトリ設定に依存し使えない場合がある。マージの標準形は「NEWHEAD名指しで gh run list --commit の全緑実測→gh pr merge --merge」とする（2026-07-20 enablePullRequestAutoMerge拒否で実測）。
 - SVGのGitHub表示の合否は「参照元がレンダリングされる画面（design.md 等の blob）」で判定する。PRの差分（Files changed）画面はSVGを画像化せず「invalid」と表示することがあり、偽陰性を招く（2026-07-20 message-templates で差分画面がinvalid・design.md画面では4枚正常表示を実測）。
 - 障害対応は「読み取り診断で原因確定→最小修理→検算→GO→実行」の順を守り、原因未特定のまま本番へ対処（再起動・隔離・再実行）しない。監視アラートと目前の障害が同一原因とは限らない（2026-07-20 キャパオーバー疑いをdf/load実測で棄却・真因は鍵）。
+- 危険変更PRのマージ拒否「N of N required status checks are expected」は必須チェック不足でなくstrict(PRがmainより古い)が原因のことがある。マージ系は「origin/main取り込み→新SHA再採点→マージ」を標準手順に含める(2026-07-20 #2988/#2995)。
+- 必須status checkの個数は記憶でなくruleset実測で確認する(記憶12個・実測11個。2026-07-20)。
+- 全テナント一律ALTERのmigrationはschema名決め打ちを禁止し、information_schemaから動的列挙＋存在チェック＋冪等化する。決め打ちはCIのまっさら環境でrelation does not existで落ちる(2026-07-20 #2995)。
+- dry-runのROLLBACK検算は「実行前の状態」を先に実測してから期待値を決める。事前測定なしの一律期待値はドリフト環境で偽の不一致を生む(2026-07-20 tenant_006)。
+- 実行主体に権限・秘密を明示せず既定依存する設計は権限エラーを量産する。DDL含むスクリプトはadmin接続を明示(2026-07-20 setup_review_tenant.pyがsalesanchor_appでCREATE不可。同日権限/秘密問題3件連続→secrets-permission-ssotテーマ新設)。
+- GitHub Actions障害中はマージのみ保留し設計・recon・実装は進める。再run/空コミットは行列を伸ばし逆効果。復旧観測は状態ページのweb_fetch実測(2026-07-20)。
+- 台帳の予約は実物とズレる(MERGED済みなのにIN_PROGRESS残骸)。同一正本への着手が先約で止まったら、まず先約の生死を実測してから相乗り/破棄を決める(2026-07-20 dp-sec6-ledger-done-branch)。
+- 別セッションの報告が本セッションのカード応答として貼られることがある。宛先ラベルとカード内容の一致を確認してから検収する(2026-07-20)。
 - ブランチ載せ替え・新規作成のカードは、このrepoのmain向けPR規則（base-branch-guard: head は `release/*` または `hotfix/*` のみ許可）に沿った接頭辞を明示する。feature名を指定するとmain向けで弾かれPR作り直しになる（2026-07-05 #2810→#2811で実測）。
 
 - 実物確認カードは、パスの実在を問う前に「作業ブランチの明示（git rev-parse --abbrev-ref HEAD）＋origin/mainの最新化（git fetch --prune）」を先に置く。別ブランチ上の古い像を実物と誤認し、存在するファイルを「消えた」と誤断する（2026-07-06 #2820準備でmain上に在るtranslation-glossaryを不在と4往復誤認）。
