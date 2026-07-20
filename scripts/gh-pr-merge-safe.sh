@@ -89,7 +89,37 @@ echo "✅ PR所有権確認: PR #${OWNED_PR} (ブランチ: ${CURRENT_BRANCH})"
 echo "   gh pr merge ${OWNED_PR} $*"
 echo ""
 
-gh pr merge "${OWNED_PR}" "$@"
+# --- MERGE_RETRY: not up to date 自動追従（最大2回・正規手順の機械化） ---
+merge_with_retry() {
+  local attempt out
+  for attempt in 0 1 2; do
+    if [ "${attempt}" -gt 0 ]; then
+      echo "[MERGE_RETRY] 追従を実行します（試行 ${attempt}/2）"
+      git fetch --prune --quiet
+      if ! git merge origin/main --no-edit; then
+        echo "[MERGE_RETRY] STOP: コンフリクト。自動解決はしません。git status を確認してください。"
+        git status --porcelain
+        return 1
+      fi
+      git push || return 1
+      echo "[MERGE_RETRY] 最新HEADのchecks全緑を待ちます"
+      gh pr checks "${OWNED_PR}" --watch || {
+        echo "[MERGE_RETRY] STOP: checksにfailあり。--log-failed を確認してください。"
+        return 1
+      }
+    fi
+    out="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)" && { echo "${out}"; return 0; }
+    echo "${out}"
+    if ! echo "${out}" | grep -q "not up to date"; then
+      echo "[MERGE_RETRY] STOP: not up to date 以外の拒否。リトライしません。"
+      return 1
+    fi
+  done
+  echo "[MERGE_RETRY] STOP: 2回の追従でも拒否。mainの前進が速すぎます。手動確認してください。"
+  return 1
+}
+
+merge_with_retry "$@"
 
 # ── マージ成功後: worktreeを自動クリーンアップ ───────────────────────────────
 CLEANUP_SCRIPT="${MAIN_REPO_ROOT}/scripts/cleanup-worktree.sh"
