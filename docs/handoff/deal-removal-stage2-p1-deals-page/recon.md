@@ -19,7 +19,7 @@
 
 ## ページ本体の扱い
 
-- `frontend/src/pages/deals/DealsPage.tsx`、`frontend/src/pages/deals/DealEditPage.tsx`、`frontend/src/pages/deals/DealFormFields.tsx` は削除対象。詳細な差分は PR 本体で追う。
+- frontend/src/pages/deals/DealsPage.tsx、frontend/src/pages/deals/DealEditPage.tsx、frontend/src/pages/deals/DealFormFields.tsx は削除対象。詳細な差分は PR 本体で追う。
 
 ## 不明点リスト
 
