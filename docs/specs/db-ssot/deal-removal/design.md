@@ -92,6 +92,29 @@ P（表示・分析の読み替え）→ Q（orders D3）→ R（データ移設
 - dealsにlead_id=NULL行が存在した場合、D4/D7の移設先が決まらない。Rの詳細reconで件数実測後に扱いを決める
 - /dealsページの画面導線の畳み方は未確定。Pブロック設計時に別途1決定
 
+## 4.7 段階②Rブロックの差分設計（PO確定・2026-07-21）
+
+### 紐づけの原則
+- deal_close_reasons.lead_id / quotes.lead_id を最終的な正とする。段階③で deals を削るときも、Rブロックの読み取りは lead へ寄せる
+- 現行 migration は nullable で `lead_id` を追加し、既存の壊れた行を抱えたままでも適用できるようにする。tenant_006 の 8 行を本番適用前に整理した後、別 migration で NOT NULL 化して最終形へ進める
+- deal_id 列は段階③まで温存し、移行期は lead_id と併存させる
+
+### 実測根拠（recon 2026-07-21）
+- deal_close_reasons: tenant_004 = 0 行、tenant_006 = 8 行
+- deal_close_reasons の 8 行は、紐づく deals.lead_id が全て NULL のため移設先の lead が決まらない
+- quotes: 全テナント 0 行
+- したがって、deal_close_reasons は既存 8 行を整理してから NOT NULL 化、quotes は空なので追加直後から lead_id を書ける
+
+### KGI の検算
+- D4: deal_close_reasons の行数が移設前後で不変。lead_id を FK で保持し、NULL の行を本番適用前に整理した後で NOT NULL 化する
+- D7: quotes の行数が移設前後で不変。lead_id を company/deal の正しい親から導出して保存する
+- D8: conversation_logs.deal_id 読み取り 0 件は維持。R ブロックとは独立
+
+### 弊害・トレードオフ
+- lead_id を nullable で入れるため、最終形にするには tenant_006 の 8 行整理と別 migration が必要
+- ただし、FK を先に入れておけば壊れた行と正しい行を DB 制約で切り分けやすくなる。最終的な NOT NULL は本番適用便の cleanup 後に機械的に課す
+- /deals 廃止と同時に分析・見積の読み替えを進めるため、R ブロックのコードと migration は P/Q ブロックと独立に検証する
+
 ## 5. 弊害・トレードオフ（空欄不可）
 
 - 工期が長い（複数便）。ただし段階①完了時点で新規データの二重化は止まる

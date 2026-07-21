@@ -815,13 +815,13 @@ class TestReasons:
 
         # won deal with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
-            VALUES (9001, 999, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
-        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
+            VALUES (9001, 999, :lead_id, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
+        """), {"lead_id": reason_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
         # is_primary=1: 主因
         await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9001, 1, 1)
-        """))
+            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9001, :lead_id, 1, 1)
+        """), {"lead_id": reason_lead_id})
         await db_session.commit()
 
         res = await client.get(f"/api/v1/analytics/reasons?month={this_month}")
@@ -859,21 +859,21 @@ class TestReasons:
 
         # won deal — close_reason ID=1 ('在庫・品揃え', type='won')
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
-            VALUES (9011, 999, :co_id, :ct_id, 'WonDeal', 50000, 'won', :dt, :dt)
-        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9011, 999, :lead_id, :co_id, :ct_id, 'WonDeal', 50000, 'won', :dt, :dt)
+        """), {"lead_id": filter_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
         await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9011, 1, 1)
-        """))
+            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9011, :lead_id, 1, 1)
+        """), {"lead_id": filter_lead_id})
 
         # lost deal — close_reason ID=4 ('価格が合わなかった', type='lost')
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
-            VALUES (9012, 999, :co_id, :ct_id, 'LostDeal', 50000, 'lost', :dt, :dt)
-        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, created_at)
+            VALUES (9012, 999, :lead_id, :co_id, :ct_id, 'LostDeal', 50000, 'lost', :dt, :dt)
+        """), {"lead_id": filter_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
         await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, reason_id, is_primary) VALUES (9012, 4, 1)
-        """))
+            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9012, :lead_id, 4, 1)
+        """), {"lead_id": filter_lead_id})
         await db_session.commit()
 
         # ?type=won — '在庫・品揃え' のみ

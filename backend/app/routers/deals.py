@@ -185,6 +185,12 @@ async def update_deal(
     if is_closing:
         # closed_at を自動セット
         update_data["closed_at_now"] = True  # UPDATE 句で NOW() を埋め込む（後で処理）
+        deal_lead_id = old_row["lead_id"]
+        if deal_lead_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="成約/失注遷移時は対象商談の lead_id が必要です",
+            )
         # close_reasons 必須チェック
         if not close_reasons_input:
             raise HTTPException(
@@ -301,11 +307,13 @@ async def update_deal(
                 )
             await db.execute(
                 text(f"""
-                    INSERT INTO {deal_close_reasons_t} (deal_id, reason_id, is_primary)
-                    VALUES (:did, :rid, :is_primary)
-                    ON CONFLICT (deal_id, reason_id) DO UPDATE SET is_primary = EXCLUDED.is_primary
+                    INSERT INTO {deal_close_reasons_t} (deal_id, lead_id, reason_id, is_primary)
+                    VALUES (:did, :lid, :rid, :is_primary)
+                    ON CONFLICT (deal_id, reason_id) DO UPDATE
+                    SET lead_id = EXCLUDED.lead_id,
+                        is_primary = EXCLUDED.is_primary
                 """),
-                {"did": deal_id, "rid": reason["reason_id"], "is_primary": reason["is_primary"]},
+                {"did": deal_id, "lid": deal_lead_id, "rid": reason["reason_id"], "is_primary": reason["is_primary"]},
             )
 
     await record_audit_log(

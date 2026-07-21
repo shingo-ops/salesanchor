@@ -91,6 +91,7 @@ class QuoteResponse(BaseModel):
     id: int
     quote_code: str | None
     deal_id: int | None
+    lead_id: int | None
     company_id: int
     contact_id: int | None
     currency: str
