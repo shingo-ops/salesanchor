@@ -26,7 +26,7 @@
 | `/deals` 一覧・編集ページがフロントから消えている | `rg -n "DealsPage|DealEditPage|DealFormFields|pages/deals" frontend/src/` がテスト文字列 1 件を除き 0 |
 | `/deals` 導線が残っていない | `rg -n '\"/deals\"|/deals/' frontend/src/` が 0 |
 | frontend のビルドが通る | `npm run build` |
-| shell の既存検証が壊れていない | Playwright `desktop-shell.spec.ts` / `mobile-shell.spec.ts` |
+| shell の既存検証が壊れていない | Playwright desktop-shell.spec.ts / mobile-shell.spec.ts |
 
 ---
 
@@ -42,3 +42,7 @@
 - `ManagementCenterPage` の `/deals` 導線だけを外し、`DesktopShell` の権限項目は触らない。
 - ページ本体 3 ファイルは削除するが、`statusPresentation.test.ts` の文字列テストは残す。
 
+## 5. 維持の仕組み
+
+- 守り手: .github/workflows/process-artifacts-gate.yml
+- 対象: recon/design の欠落、/deals 削除の宣言漏れ、実 diff との不整合
