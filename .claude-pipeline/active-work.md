@@ -27,6 +27,7 @@
 | release/ledger-done-2988 | ledger-done: register #2988 | 2026-07-20 | DONE | #2993 | main | merged: PR #2993 / d791de092a07bdff7718442470c1063103873243 |
 | release/page-header-v2-rev5-fix | ページヘッダー金型v2 改訂5本文の是正追記 | 2026-07-20 | DONE | #3000 | main | merged: PR #3000 / bdb8e4c847643077dcd03ece86f5e7d2dd49d7a6 |
 | release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
+| release/field-size-tokens | 入力部品 寸法金型トークン新設 | 2026-07-21 | IN_PROGRESS | | main | base=origin/main・docs-only |
 | release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/toolbar-leads | リード1画面を操作台ContentToolbarへ差し替え | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
 | release/rev5-tidy | 教訓重複8行の削除＋改訂5を時系列末尾へ移動 | 2026-07-20 | IN_PROGRESS | | | 本カード作業中 |
