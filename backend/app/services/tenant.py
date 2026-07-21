@@ -821,6 +821,7 @@ CREATE TABLE IF NOT EXISTS {schema}.quotes (
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     quote_code VARCHAR(20),
     deal_id INTEGER REFERENCES {schema}.deals(id),
+    lead_id INTEGER REFERENCES {schema}.leads(id),
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_quotes_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_quotes_contact REFERENCES {schema}.contacts(id),
@@ -842,6 +843,29 @@ CREATE TABLE IF NOT EXISTS {schema}.quotes (
 );
 CREATE INDEX IF NOT EXISTS idx_quotes_company_id ON {schema}.quotes (company_id);
 CREATE INDEX IF NOT EXISTS idx_quotes_contact_id ON {schema}.quotes (contact_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_lead_id ON {schema}.quotes (lead_id);
+
+-- 成約・失注理由マスタ
+CREATE TABLE IF NOT EXISTS {schema}.close_reasons (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(10) NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (type, label)
+);
+
+CREATE TABLE IF NOT EXISTS {schema}.deal_close_reasons (
+    id SERIAL PRIMARY KEY,
+    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
+    lead_id INTEGER REFERENCES {schema}.leads(id),
+    reason_id INTEGER NOT NULL REFERENCES {schema}.close_reasons(id),
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (deal_id, reason_id)
+);
+CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_deal_id ON {schema}.deal_close_reasons (deal_id);
+CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_lead_id ON {schema}.deal_close_reasons (lead_id);
 
 -- 見積明細
 CREATE TABLE IF NOT EXISTS {schema}.quote_items (

@@ -1942,7 +1942,7 @@ async def reasons_summary(
     target_year, target_month = _parse_month(month, today)
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
 
-    deal_assign = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    deal_assign = "AND l.assigned_to = :uid" if scope == "mine" else ""
     scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
     type_filter = "AND cr.type = :rtype" if type is not None else ""
     type_params: dict = {"rtype": type} if type is not None else {}
@@ -1957,6 +1957,7 @@ async def reasons_summary(
             FROM deal_close_reasons dcr
             JOIN close_reasons cr ON cr.id = dcr.reason_id
             JOIN deals d ON d.id = dcr.deal_id
+            LEFT JOIN leads l ON l.id = COALESCE(dcr.lead_id, d.lead_id)
             WHERE d.closed_at >= :start AND d.closed_at < :end
               AND d.closed_at IS NOT NULL
             {type_filter}
@@ -1985,6 +1986,7 @@ async def reasons_summary(
                 d.closed_at
             FROM deals d
             JOIN deal_close_reasons dcr ON dcr.deal_id = d.id AND dcr.is_primary
+            LEFT JOIN leads l ON l.id = COALESCE(dcr.lead_id, d.lead_id)
             JOIN close_reasons cr ON cr.id = dcr.reason_id
             WHERE d.closed_at >= :start AND d.closed_at < :end
               AND d.closed_at IS NOT NULL
