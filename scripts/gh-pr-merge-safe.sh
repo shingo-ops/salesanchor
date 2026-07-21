@@ -110,8 +110,43 @@ merge_with_retry() {
     fi
     out="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)" && { echo "${out}"; return 0; }
     echo "${out}"
-    if ! echo "${out}" | grep -q "not up to date"; then
-      echo "[MERGE_RETRY] STOP: not up to date 以外の拒否。リトライしません。"
+    # 拒否種別を判定
+    if echo "${out}" | grep -q "not up to date"; then
+      : # 従来どおり: 次ループ冒頭で追従する
+    elif echo "${out}" | grep -qE "cannot be cleanly created|merge conflict"; then
+      echo "[MERGE_RETRY] STOP: コンフリクト。自動解決はしません。手動確認してください。"
+      return 1
+    elif echo "${out}" | grep -qE "rule violations|required status check|is not mergeable"; then
+      # RULE_WAIT: 判定待ち（GitHubの再判定が追いついていない）。追従はせず、判定確定を待って同一HEADで再マージ
+      echo "[MERGE_RETRY][RULE_WAIT] 判定待ちの可能性。確定を待って再マージします（最大3回・各30秒）"
+      rw_ok=0
+      for rw in 1 2 3; do
+        sleep 30
+        MSTATE="$(gh pr view "${OWNED_PR}" --json mergeStateStatus -q .mergeStateStatus 2>/dev/null)"
+        echo "[MERGE_RETRY][RULE_WAIT] 試行 ${rw}/3 mergeStateStatus=${MSTATE}"
+        rwout="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)"
+        if [ $? -eq 0 ]; then echo "${rwout}"; rw_ok=1; break; fi
+        echo "${rwout}"
+        # 待っても種別が変わった（not up to date化＝main前進）なら外ループの追従へ委ねる
+        if echo "${rwout}" | grep -q "not up to date"; then
+          echo "[MERGE_RETRY][RULE_WAIT] main前進を検知。追従フローへ戻ります"
+          break
+        fi
+        # コンフリクト化したら即停止
+        if echo "${rwout}" | grep -qE "cannot be cleanly created|merge conflict"; then
+          echo "[MERGE_RETRY] STOP: 判定待ち中にコンフリクト化。手動確認してください。"
+          return 1
+        fi
+      done
+      [ "${rw_ok}" -eq 1 ] && return 0
+      # 3回待っても通らず、not up to dateでもない → 恒久的な必須チェック不足等。停止して人へ
+      if ! echo "${rwout}" | grep -q "not up to date"; then
+        echo "[MERGE_RETRY] STOP: 判定待ちリトライ後も拒否。必須チェック不足等の可能性。手動確認してください。"
+        return 1
+      fi
+    else
+      echo "[MERGE_RETRY] STOP: 未知の拒否。安全のため停止します。"
+      echo "${out}"
       return 1
     fi
   done
