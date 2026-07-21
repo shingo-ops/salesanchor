@@ -451,3 +451,4 @@
 | release/rls-bootstrap-public-lock | rls_bootstrap 共有部分をグローバルlockで直列化 | 2026-07-21 | DONE | #3024 | main | merged: PR #3024 / 321ab36ca4f6977a7f34af0510f1477af79c8121 |
 | release/deal-removal-stage2-r-leadid | deal-removal stage2-R: deal_close_reasons/quotes lead_id参照化 | 2026-07-21 | DONE | #3018 | main | merged: PR #3018 / 0cbd18fb12299680c82eb66198fb37f88e68d507 |
 | release/lessons-sec6-dedup | design-partner.md清書予約 | 2026-07-22 | IN_PROGRESS | | main | |
+| release/server-resource-final-wrapup | handoff追記予約 | 2026-07-22 | IN_PROGRESS | | main | |
