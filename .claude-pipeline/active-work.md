@@ -445,3 +445,4 @@
 | docs/product-master-spec-v2 | 商品マスタ あるべき姿 設計書（docs-only）develop起点 v2 | 2026-06-30 | DONE | #2695 |  | merged #2695 |
 | release/morimoto/fx-rate-ssot-wt | 為替レート SSOT 実装（自動取得 Celery Beat・super-admin UI） | 2026-06-28 | IN_PROGRESS | | main | migration + Celery task + API + frontend |
 | feature/morimoto/wall0-ddl-commit | 壁0+壁2: create_tenant_schema DDL commit + set_config app.tenant_id | 2026-06-29 | DONE | #2690 | develop | PR #2690 クローズ・不採用 |
+| release/server-resource-lessons | lessons.d新設・handoff新設予約 | 2026-07-21 | IN_PROGRESS | | main | |
