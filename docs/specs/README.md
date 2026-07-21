@@ -19,6 +19,7 @@
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
 | └ ページヘッダー金型v2（page-header-v2。ヘッダー枠の中身と並びの統一＋階層パンくず＋位置ズレ番人） | [design-system/component-ssot/page-header-v2/README.md](design-system/component-ssot/page-header-v2/README.md) | あるべき姿改訂5済・便1〜3a本番反映済・操作台実装前 2026-07-20 |
+| └ 入力部品 寸法金型（field-size。プルダウン・入力欄の高さ3段×幅3段を独立選択で統一） | [design-system/component-ssot/field-size/README.md](design-system/component-ssot/field-size/README.md) | あるべき姿確定・KGI/design骨子済・実装前 2026-07-21 |
 | デザイントークンSSOT化（色・文字・アイコン・コンポーネント・文字サイズ・値・アニメーション・グラフ・ページ構成の索引化・重複排除） | [design-tokens-ssot/README.md](design-tokens-ssot/README.md) | あるべき姿・KGI承認済 2026-07-09 |
 | └ カレンダー色CSS変数化（schedule の 7 カレンダー色） | [design-tokens-ssot/color/calendar/README.md](design-tokens-ssot/color/calendar/README.md) | 公開 |
 | └ アイコン色の用途別トークン集約（10箇所の色決定ポイントをカテゴリ別に束ねる） | [design-tokens-ssot/color/icon/README.md](design-tokens-ssot/color/icon/README.md) | 公開 |
