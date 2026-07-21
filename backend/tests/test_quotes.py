@@ -59,11 +59,12 @@ class TestQuotesCRUD:
 
     async def test_create_quote(self, client):
         """見積もりを新規作成できる"""
-        company_id, contact_id, _ = await _create_company_contact(client)
+        company_id, contact_id, lead_id = await _create_company_contact(client)
         data = await _create_quote(client, company_id, contact_id)
 
         assert data["company_id"] == company_id
         assert data["contact_id"] == contact_id
+        assert data["lead_id"] == lead_id
         assert data["status"] == "draft"
         assert data["quote_code"].startswith("QT-")
         assert len(data["items"]) == 1
@@ -83,6 +84,7 @@ class TestQuotesCRUD:
 
         data = await _create_quote(client, company_id, contact_id, deal_id=deal_id)
         assert data["deal_id"] == deal_id
+        assert data["lead_id"] == lead_id
 
     async def test_list_quotes(self, client):
         """見積もり一覧を取得できる"""
@@ -420,6 +422,7 @@ class TestQuoteResponseSchema:
             "id": 1,
             "quote_code": "Q-001",
             "deal_id": None,
+            "lead_id": None,
             "company_id": 10,
             "contact_id": 20,
             "currency": "JPY",
