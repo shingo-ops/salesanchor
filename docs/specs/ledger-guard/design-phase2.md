@@ -4,7 +4,7 @@
 > 全員が同じ1枚に書く台帳を「1ブランチ1ファイル＋束ね表示」に分割し、
 > 消し合い・追いかけっこを構造ごと無くすための設計図。
 
-- 参照: [recon.md](./recon.md)／便3現在地: docs/handoff/ledger-guard/recon.md（17読者の実測・相互参照）／[ideal-state.md](./ideal-state.md) 2項
+- 参照: [recon.md](./recon.md)／便3現在地: docs/handoff/ledger-guard/recon.md（17読者の実測・相互参照）／[ideal-state.md](./ideal-state.md) 2項／台帳ポスト追跡recon: docs/handoff/ledger-postfile-tracking/recon.md（2026-07-21 .gitignore更新漏れ修正便）
   ／[kgi.md](./kgi.md) G3〜G6／[design-phase1.md](./design-phase1.md)
 - 関連ADR: ADR-114（worktree回収。DONE行は消さず残す原則を本設計も踏襲）
 
