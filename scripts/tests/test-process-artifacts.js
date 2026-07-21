@@ -609,6 +609,34 @@ test('AC6: 書類のみのPRは自動スキップ（pass）', () => {
   assert.ok(result.stdout.includes('自動スキップ'));
 });
 
+// ── 柱2: 正本を含む書類PRは自動スキップさせない（宣言照合へ到達） ──────────────
+test('柱2-欠落版: 正本(.md)を触る書類PRで宣言なし → fail想定', () => {
+  const result = runScript({
+    CHANGED_FILES: 'docs/ai-agents/design-partner.md',
+    PR_NUMBER: '9999',
+    MOCK_PR_BODY: '### 標準ワークフロー確認\n（宣言なし）',
+  });
+  assert.notStrictEqual(result.code, 0, `正本変更で宣言なしは fail すべき: stdout=${result.stdout}`);
+});
+
+test('柱2-充足版: 正本(.md)を触り触る/削除欄が実diffと一致 → pass想定', () => {
+  const result = runScript({
+    CHANGED_FILES: 'docs/ai-agents/design-partner.md',
+    PR_NUMBER: '9999',
+    MOCK_PR_BODY: '### 標準ワークフロー確認\n触るファイル: docs/ai-agents/design-partner.md\n削除するファイル: docs/ai-agents/design-partner.md\n対象ADR: ADR-121',
+  });
+  assert.strictEqual(result.code, 0, `正本変更で宣言完備は pass すべき: stdout=${result.stdout} stderr=${result.stderr}`);
+});
+
+test('柱2-中立版: 正本を含まない純書類PR → 従来どおり自動スキップ(pass)', () => {
+  const result = runScript({
+    CHANGED_FILES: 'docs/handoff/some-work/notes.md',
+    PR_NUMBER: '9999',
+    MOCK_PR_BODY: '',
+  });
+  assert.strictEqual(result.code, 0, `正本を含まない純書類はスキップ pass すべき: stdout=${result.stdout}`);
+});
+
 // ── 追加テスト: latest main 既存パスとの二重定義検出 ─────────────────────────────
 console.log('\n【二重定義検出テスト】');
 
