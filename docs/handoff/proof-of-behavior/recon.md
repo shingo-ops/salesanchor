@@ -14,3 +14,8 @@
 ## 設計送り（design便で決める）
 - 「### 動作実測」欄の必須化を hasDangerous 分岐（:814付近）に相乗りさせる形。
 - 段階導入（警告→停止）の切替方法。
+
+## 追補: MERGE_RETRY 判定待ち対応（2026-07-21・衝突源③根絶やし）
+- 穴: gh-pr-merge-safe.sh の merge_with_retry は「not up to date以外は即停止」で、rule violations（GitHub再判定待ち）もコンフリクトと同扱いで諦めていた（recon実測 113-114行・3031で3回発火）。
+- 対策: 拒否種別を4分類。not up to date=追従／rule violations・required check=RULE_WAIT（30秒×最大3回・同一HEADで判定確定待ち）／コンフリクト=即停止（自動解決禁止）／未知=停止（安全側）。
+- 動作実測: 改修後、意図的にmain前進を作り判定待ちを誘発してRULE_WAIT発火を生ログ確認（配備≠完了）。
