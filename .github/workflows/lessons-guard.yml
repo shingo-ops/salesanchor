@@ -1,8 +1,9 @@
 name: Lessons Guard
-# 教訓の直接追記検知: design-partner.md §6本文への追記PRに警告コメントを出す（初期は警告のみ・停止化は別GO）
+# 教訓の直接追記検知: design-partner.md §6本文への追記PRを停止する（lessons-cleanup ラベルで清書便のみ例外・2026-07-21停止化）
 # 設計: docs/specs/lessons-guard/design.md §1（KGI-L5の実体）
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - 'docs/ai-agents/design-partner.md'
 permissions:
@@ -21,8 +22,14 @@ jobs:
           ADDED=$(git diff "origin/${{ github.base_ref }}...HEAD" -- docs/ai-agents/design-partner.md | awk '/^@@/{h=$0} /^\+[^+]/{print h"\t"$0}' | grep -c "## 6\." || true)
           SEC6_TOUCH=$(git diff "origin/${{ github.base_ref }}...HEAD" --unified=0 -- docs/ai-agents/design-partner.md | grep -c "^+- " || true)
           echo "sec6_added=${SEC6_TOUCH}" >> "$GITHUB_OUTPUT"
-      - name: Warn on PR
-        if: steps.detect.outputs.sec6_added != '0'
+      - name: Enforce (block direct §6 edits unless cleanup-labeled)
+        if: steps.detect.outputs.sec6_added != '0' && !contains(github.event.pull_request.labels.*.name, 'lessons-cleanup')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('❌ Lessons Guard: design-partner.md §6本文への直接追記は禁止です。教訓は docs/ai-agents/lessons.d/ へ1便1ファイルのポストで追加してください（docs/specs/lessons-guard/design.md）。§6本文への正当な移植（清書便）の場合のみ、このPRに lessons-cleanup ラベルを付けてください。');
+      - name: Note cleanup-labeled pass
+        if: steps.detect.outputs.sec6_added != '0' && contains(github.event.pull_request.labels.*.name, 'lessons-cleanup')
         uses: actions/github-script@v7
         with:
           script: |
@@ -30,5 +37,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: '⚠️ **Lessons Guard（警告のみ）**: design-partner.md への箇条書き追加を検知しました。教訓の追記は本文直接でなく `docs/ai-agents/lessons.d/` へのポスト（1便1ファイル）が正規経路です（docs/specs/lessons-guard/design.md）。清書便・教訓以外の正当な変更であればこの警告は無視して構いません。'
+              body: '✅ Lessons Guard: lessons-cleanup ラベルを確認。清書便として§6本文追記を許可します。'
             })
