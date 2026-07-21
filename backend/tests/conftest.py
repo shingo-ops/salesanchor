@@ -823,6 +823,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 quote_code VARCHAR(20),
                 deal_id INTEGER REFERENCES deals(id),
+                lead_id INTEGER REFERENCES leads(id),
                 company_id INTEGER NOT NULL REFERENCES companies(id),
                 contact_id INTEGER REFERENCES contacts(id),
                 currency VARCHAR(10) DEFAULT 'JPY',
@@ -1188,6 +1189,7 @@ async def setup_test_db(test_engine):
             CREATE TABLE IF NOT EXISTS deal_close_reasons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 deal_id INTEGER NOT NULL REFERENCES deals(id),
+                lead_id INTEGER REFERENCES leads(id),
                 reason_id INTEGER NOT NULL REFERENCES close_reasons(id),
                 is_primary INTEGER NOT NULL DEFAULT 0,
                 UNIQUE (deal_id, reason_id)

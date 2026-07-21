@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { Modal } from "../../components/Modal";
 import { DataTable } from "../../components/DataTable";
@@ -46,9 +47,9 @@ export default function NotificationsPage() {
     >
       {error && <div className="error-message">{error}</div>}
       {hasPermission("notifications.manage") ? (
-        <div className="page-content-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>
-        </div>
+        <ContentToolbar
+          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>}
+        />
       ) : undefined}
       <Modal
         open={showForm}
