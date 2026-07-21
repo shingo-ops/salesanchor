@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { DataTable, DataTableColumn } from "../../components/DataTable";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { SelectControl } from "../../components/Select";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 
@@ -125,22 +126,22 @@ export default function InvoicesPage() {
         <button onClick={() => navigate("/quotes")}>{t("nav.quoteHistory")}</button>
         <button className="tab-active">{t("nav.invoices")}</button>
       </nav>
-      <div className="page-content-actions">
-        <button className="btn-primary" onClick={() => navigate("/invoices/new")}>
-          {t("invoices.createTitle")}
-        </button>
-      </div>
-
-      <div className="filter-bar">
-        <SelectControl
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          options={INVOICE_STATUSES.map((s) => ({ value: s, label: t(`invoices.status_${s}`) }))}
-          placeholder={t("invoices.allStatuses")}
-          size="sm"
-          style={{ minWidth: "12rem" }}
-        />
-      </div>
+      <ContentToolbar
+        left={
+          <SelectControl
+            className="field-h-md field-w-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={INVOICE_STATUSES.map((s) => ({ value: s, label: t(`invoices.status_${s}`) }))}
+            placeholder={t("invoices.allStatuses")}
+          />
+        }
+        right={
+          <button className="btn-primary field-h-md" onClick={() => navigate("/invoices/new")}>
+            {t("invoices.createTitle")}
+          </button>
+        }
+      />
 
       {error && <div className="error-message">{error}</div>}
 
