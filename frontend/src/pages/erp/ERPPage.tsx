@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -52,11 +53,13 @@ export default function ERPPage() {
     >
       {error && <div className="error-message">{error}</div>}
       {hasPermission("erp.sync") ? (
-        <div className="page-content-actions">
-          <button className="btn-primary" onClick={exportInvoices} disabled={exporting}>
-            {exporting ? t("erp.exporting") : t("erp.exportInvoices")}
-          </button>
-        </div>
+        <ContentToolbar
+          right={
+            <button className="btn-primary field-h-md" onClick={exportInvoices} disabled={exporting}>
+              {exporting ? t("erp.exporting") : t("erp.exportInvoices")}
+            </button>
+          }
+        />
       ) : undefined}
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("erp.syncLogs")}</h3>
       {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
