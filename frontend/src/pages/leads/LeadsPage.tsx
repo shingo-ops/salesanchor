@@ -272,6 +272,7 @@ export default function LeadsPage() {
       <ContentToolbar
         left={
           <Select
+            className="field-h-md field-w-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             placeholder={t("leads.allStatuses")}
@@ -282,7 +283,7 @@ export default function LeadsPage() {
           />
         }
         right={hasPermission("leads.create") ? (
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
         ) : undefined}
       />
 
