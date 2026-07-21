@@ -448,3 +448,5 @@
 | feature/morimoto/wall0-ddl-commit | 壁0+壁2: create_tenant_schema DDL commit + set_config app.tenant_id | 2026-06-29 | DONE | #2690 | develop | PR #2690 クローズ・不採用 |
 | release/lessons-guard-enforce | lessons-guard.yml/design.md予約 | 2026-07-21 | DONE | | main | |
 | release/server-resource-lessons | lessons.d新設・handoff新設予約 | 2026-07-21 | DONE | | main | |
+| release/rls-bootstrap-public-lock | rls_bootstrap 共有部分をグローバルlockで直列化 | 2026-07-21 | DONE | #3024 | main | merged: PR #3024 / 321ab36ca4f6977a7f34af0510f1477af79c8121 |
+| release/deal-removal-stage2-r-leadid | deal-removal stage2-R: deal_close_reasons/quotes lead_id参照化 | 2026-07-21 | DONE | #3018 | main | merged: PR #3018 / 0cbd18fb12299680c82eb66198fb37f88e68d507 |
