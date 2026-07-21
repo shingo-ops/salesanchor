@@ -13,7 +13,6 @@ DECLARE
     schema_rec RECORD;
     applied_quotes INTEGER := 0;
     applied_close_reasons INTEGER := 0;
-    has_deals_lead_id BOOLEAN;
 BEGIN
     FOR schema_rec IN
         SELECT schema_name
@@ -21,14 +20,6 @@ BEGIN
          WHERE schema_name LIKE 'tenant_%'
          ORDER BY schema_name
     LOOP
-        SELECT EXISTS (
-            SELECT 1
-              FROM information_schema.columns
-             WHERE table_schema = schema_rec.schema_name
-               AND table_name = 'deals'
-               AND column_name = 'lead_id'
-        ) INTO has_deals_lead_id;
-
         IF EXISTS (
             SELECT 1
               FROM information_schema.tables
@@ -46,27 +37,6 @@ BEGIN
                     'ALTER TABLE %I.quotes ADD COLUMN lead_id INTEGER',
                     schema_rec.schema_name
                 );
-            END IF;
-
-            IF has_deals_lead_id THEN
-                EXECUTE format($q$
-                    UPDATE %I.quotes q
-                       SET lead_id = COALESCE(
-                           (SELECT d.lead_id FROM %I.deals d WHERE d.id = q.deal_id),
-                           (SELECT c.lead_id FROM %I.companies c WHERE c.id = q.company_id)
-                       )
-                     WHERE q.lead_id IS NULL
-                $q$, schema_rec.schema_name, schema_rec.schema_name, schema_rec.schema_name);
-            ELSE
-                EXECUTE format($q$
-                    UPDATE %I.quotes q
-                       SET lead_id = (
-                           SELECT c.lead_id
-                             FROM %I.companies c
-                            WHERE c.id = q.company_id
-                       )
-                     WHERE q.lead_id IS NULL
-                $q$, schema_rec.schema_name, schema_rec.schema_name);
             END IF;
 
             IF NOT EXISTS (
@@ -101,16 +71,6 @@ BEGIN
                     'ALTER TABLE %I.deal_close_reasons ADD COLUMN lead_id INTEGER',
                     schema_rec.schema_name
                 );
-            END IF;
-
-            IF has_deals_lead_id THEN
-                EXECUTE format($q$
-                    UPDATE %I.deal_close_reasons dcr
-                       SET lead_id = d.lead_id
-                      FROM %I.deals d
-                     WHERE dcr.deal_id = d.id
-                       AND dcr.lead_id IS NULL
-                $q$, schema_rec.schema_name, schema_rec.schema_name);
             END IF;
 
             IF NOT EXISTS (
