@@ -19,6 +19,8 @@
   align-items: center;
   gap: var(--space-3);
   flex-shrink: 0;
+  /* 左スロットが空でもボタンを右端へ固定（フィルタ有無で配置を統一） */
+  margin-left: auto;
 }
 /* 空スロットは場所を取らない（フィルタ無しページ＝右ボタンだけ右端） */
 .content-toolbar__left:empty,
