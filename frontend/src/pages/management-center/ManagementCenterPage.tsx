@@ -46,7 +46,6 @@ export default function ManagementCenterPage() {
       key: "data",
       titleKey: "managementCenter.sectionData",
       items: [
-        { to: "deals",          labelKey: "nav.deals",          visible: hasPermission("deals.view") },
         { to: "suppliers",      labelKey: "nav.suppliers",      visible: hasPermission("suppliers.view") },
         { to: "purchase-orders", labelKey: "nav.purchaseOrders", visible: hasPermission("purchase_orders.view") },
         { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },
