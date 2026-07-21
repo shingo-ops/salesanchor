@@ -4,7 +4,25 @@
 > 今のプルダウン・入力欄の高さと幅が、どこにどんな値で散らばっているかを実測した記録。
 > 親: [../../specs/design-system/component-ssot/field-size/README.md](../../specs/design-system/component-ssot/field-size/README.md)
 
-実測SHA: <関門0のorigin/main SHA>
+実測SHA: 51c9d1263bbff537de7c1ffedaab6d491927085b
+
+## 主要引用（path:N）
+- `frontend/src/components/FormField.css:49`
+- `frontend/src/components/FormField.css:75`
+- `frontend/src/components/FormField.css:89`
+- `frontend/src/components/FormField.css:139`
+- `frontend/src/components/FormField.css:164`
+- `frontend/src/components/FormField.css:195`
+- `frontend/src/components.css:166`
+- `frontend/src/components.css:172`
+- `frontend/src/components/Select.tsx:15`
+- `frontend/src/components/Select.tsx:25`
+- `frontend/src/components/Select.tsx:36`
+- `frontend/src/components/Select.tsx:45`
+- `frontend/src/pages/leads/LeadsPage.tsx:272`
+- `frontend/src/pages/leads/LeadsPage.tsx:274`
+- `frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx:182`
+- `frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx:196`
 
 ## 高さの現状（3系統）
 - md既定: min-height指定なし・padding依存（frontend/src/components/FormField.css:47-51）
