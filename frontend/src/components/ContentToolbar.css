@@ -7,7 +7,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
-  padding-right: var(--space-1);
+  padding-right: var(--space-3);
 }
 .content-toolbar__left {
   display: flex;
