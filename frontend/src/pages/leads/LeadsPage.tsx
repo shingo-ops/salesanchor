@@ -21,6 +21,7 @@ import MergeLeadModal from "../../components/MergeLeadModal";
 import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { Select } from "../../components/Select";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
 import { PageLayout } from "../../components/PageLayout";
@@ -268,22 +269,22 @@ export default function LeadsPage() {
       navKey="nav.leadsSection"
       subtitleKey="leads.subtitle"
     >
-      <div className="filter-bar">
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          placeholder={t("leads.allStatuses")}
-          options={LEAD_STATUSES.map((s) => ({
-            value: s,
-            label: translateLeadStatus(s),
-          }))}
-        />
-      </div>
-      {hasPermission("leads.create") ? (
-        <div className="page-content-actions">
+      <ContentToolbar
+        left={
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            placeholder={t("leads.allStatuses")}
+            options={LEAD_STATUSES.map((s) => ({
+              value: s,
+              label: translateLeadStatus(s),
+            }))}
+          />
+        }
+        right={hasPermission("leads.create") ? (
           <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
-        </div>
-      ) : undefined}
+        ) : undefined}
+      />
 
       {error && <div className="error-message">{error}</div>}
 
