@@ -26,7 +26,7 @@
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | `/deals` 削除で frontend のビルドと型が壊れないか | `npm run build` | ✅ 解消済み |
-| 2 | shell 系の既存 Playwright 赤が本 PR の阻害要因か | `mobile-shell.spec.ts` は main 時点で既存・非必須と ruleset 実測で確認 | ✅ 解消済み |
+| 2 | shell 系の既存 Playwright 赤が本 PR の阻害要因か | mobile-shell.spec.ts は main 時点で既存・非必須と ruleset 実測で確認 | ✅ 解消済み |
 | 3 | backend 変更が必要か | 今回の /deals 廃止は frontend 導線の削除に限定して backend 無変更で成立 | ✅ 解消済み |
 
 **未解決ゼロ確認**: 全て解消済み
