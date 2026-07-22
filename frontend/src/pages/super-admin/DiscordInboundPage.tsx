@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 
 interface InboundListItem {
@@ -213,16 +214,18 @@ export default function DiscordInboundPage() {
       navKey="nav.superAdminInbound"
       subtitleKey="superAdmin.inbound.subtitle"
     >
-      <div className="page-content-actions">
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={openImport}
-          data-testid="open-import-from-inbound"
-        >
-          {t("products.importFromInbound")}
-        </button>
-      </div>
+      <ContentToolbar
+        right={
+          <button
+            type="button"
+            className="btn-secondary field-h-md"
+            onClick={openImport}
+            data-testid="open-import-from-inbound"
+          >
+            {t("products.importFromInbound")}
+          </button>
+        }
+      />
 
       {error && (
         <div className="error-message" role="alert">
