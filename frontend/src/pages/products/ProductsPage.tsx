@@ -16,6 +16,7 @@ import { api, ApiError } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product } from "./products.types";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
@@ -207,48 +208,44 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       )}
     </>
   ) : undefined;
-  const pageContentActions = pageContentButtons ? (
-    <div className="page-content-actions">
-      <div style={{ display: "flex", gap: "var(--space-2)" }}>
-        {pageContentButtons}
-      </div>
-    </div>
-  ) : undefined;
 
   const body = (
     <>
-      {!embedded && pageContentActions}
-      <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
-        <input type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
-        {tcgTypes.length > 0 && (
-          <select
-            value={tcgType}
-            onChange={(e) => { setTcgType(e.target.value); setPage(1); }}
-            aria-label={t("products.filterByTcgType")}
-            data-testid="products-tcg-type-filter"
-          >
-            <option value="">{t("products.allTcgTypes")}</option>
-            {tcgTypes.map((tt) => (
-              <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
-            ))}
-          </select>
-        )}
-        {/* 行ドラッグ並び替えモード切替（ON で手動順表示＋ドラッグ可） */}
-        {hasPermission("products.update") && (
-          <button
-            type="button"
-            className={reorderMode ? "btn-primary btn-sm" : "btn-sm"}
-            onClick={toggleReorderMode}
-            aria-pressed={reorderMode}
-            data-testid="products-reorder-toggle"
-            title={t("products.reorderHint")}
-          >
-            {reorderMode ? t("products.reorderModeOn") : t("products.reorderMode")}
-          </button>
-        )}
-        {/* 埋め込み時はページタイトルが無いので操作ボタン（新規登録・削除）を検索バー右端に配置 */}
-        {embedded && pageContentButtons && <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-2)" }}>{pageContentButtons}</div>}
-      </div>
+      <ContentToolbar
+        left={
+          <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
+            <input className="field-h-md field-w-sm" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+            {tcgTypes.length > 0 && (
+              <select
+                className="field-h-md field-w-sm"
+                value={tcgType}
+                onChange={(e) => { setTcgType(e.target.value); setPage(1); }}
+                aria-label={t("products.filterByTcgType")}
+                data-testid="products-tcg-type-filter"
+              >
+                <option value="">{t("products.allTcgTypes")}</option>
+                {tcgTypes.map((tt) => (
+                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
+                ))}
+              </select>
+            )}
+            {/* 行ドラッグ並び替えモード切替（ON で手動順表示＋ドラッグ可） */}
+            {hasPermission("products.update") && (
+              <button
+                type="button"
+                className={reorderMode ? "btn-primary btn-sm" : "btn-sm"}
+                onClick={toggleReorderMode}
+                aria-pressed={reorderMode}
+                data-testid="products-reorder-toggle"
+                title={t("products.reorderHint")}
+              >
+                {reorderMode ? t("products.reorderModeOn") : t("products.reorderMode")}
+              </button>
+            )}
+          </div>
+        }
+        right={pageContentButtons}
+      />
       {reorderMode && (
         <div
           className="info-message"

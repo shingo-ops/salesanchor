@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { ContentToolbar } from "../../components/ContentToolbar";
 
 interface MasterRow {
   id: number;
@@ -207,27 +208,32 @@ function MasterListEditor({ source }: { source: MasterDataSource }) {
       {error && <div className="error-message">{error}</div>}
 
       {/* 検索 */}
-      <form
-        className="search-bar"
-        style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSearch(searchInput.trim());
-        }}
-      >
-        <input
-          type="text"
-          placeholder={t("superAdmin.attrMasters.searchPlaceholder")}
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        <button type="submit" className="btn-secondary">{t("common.search")}</button>
-        {search && (
-          <button type="button" className="btn-sm" onClick={() => { setSearch(""); setSearchInput(""); }}>
-            {t("common.clear")}
-          </button>
-        )}
-      </form>
+      <ContentToolbar
+        left={
+          <form
+            className="search-bar"
+            style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearch(searchInput.trim());
+            }}
+          >
+            <input
+              className="field-h-md field-w-sm"
+              type="text"
+              placeholder={t("superAdmin.attrMasters.searchPlaceholder")}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit" className="btn-secondary field-h-md">{t("common.search")}</button>
+            {search && (
+              <button type="button" className="btn-sm" onClick={() => { setSearch(""); setSearchInput(""); }}>
+                {t("common.clear")}
+              </button>
+            )}
+          </form>
+        }
+      />
 
       {/* 追加 / 編集フォーム（名称のみ） */}
       <form
