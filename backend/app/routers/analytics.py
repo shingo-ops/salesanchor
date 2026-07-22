@@ -1012,6 +1012,26 @@ def _normalize_attribute_value(axis_name: str, raw_value: object | None) -> str 
         return value.upper()
     return value
 
+
+async def _lead_conversion_status_expr(db: AsyncSession) -> str:
+    """RLS/fixture 差で leads.status が無い環境でも成約判定を組み立てる。"""
+    bind = db.get_bind()
+    if bind is not None and getattr(bind.dialect, "name", "") == "sqlite":
+        return "l.status"
+    result = await db.execute(
+        text("""
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'leads'
+              AND column_name = 'status'
+            LIMIT 1
+        """)
+    )
+    if result.scalar_one_or_none() is not None:
+        return "l.status"
+    return "CASE WHEN l.converted_deal_id IS NOT NULL THEN 'existing_customer' ELSE 'lead' END"
+
 async def _fetch_attribute_conversion_axis(
     db: AsyncSession,
     value_expr: str,
@@ -1020,12 +1040,13 @@ async def _fetch_attribute_conversion_axis(
     overall_rate: float,
 ) -> AttributeConversionAxis:
     """属性1軸分の集計を返す。"""
+    status_expr = await _lead_conversion_status_expr(db)
     result = await db.execute(
         text(f"""
             SELECT
                 {value_expr} AS value,
                 COUNT(*) AS n,
-                COUNT(*) FILTER (WHERE l.status = 'existing_customer') AS conversions
+                COUNT(*) FILTER (WHERE {status_expr} = 'existing_customer') AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
@@ -1058,11 +1079,12 @@ async def _fetch_attribute_conversion_summary(
     scope_params: dict[str, object],
 ) -> tuple[float, AttributeConversionResponse]:
     """属性別成約率の全体値と5軸集計をまとめて返す。"""
+    status_expr = await _lead_conversion_status_expr(db)
     overall_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS n,
-                COUNT(*) FILTER (WHERE l.status = 'existing_customer') AS conversions
+                COUNT(*) FILTER (WHERE {status_expr} = 'existing_customer') AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
