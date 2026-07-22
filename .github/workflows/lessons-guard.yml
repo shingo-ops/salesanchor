@@ -1,11 +1,9 @@
 name: Lessons Guard
-# 教訓の直接追記検知: design-partner.md §6本文への追記PRを停止する（lessons-cleanup ラベルで清書便のみ例外・2026-07-21停止化）
+# 教訓の直接追記検知: 全PRで起動し、design-partner.md §6本文への追記PRのみ停止する（非接触PRは緑・lessons-cleanupラベルで清書便は例外・2026-07-22全PR起動化）
 # 設計: docs/specs/lessons-guard/design.md §1（KGI-L5の実体）
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    paths:
-      - 'docs/ai-agents/design-partner.md'
 permissions:
   pull-requests: write
 jobs:
