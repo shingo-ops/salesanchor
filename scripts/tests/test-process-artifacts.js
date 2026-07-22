@@ -602,7 +602,7 @@ test('AC5: 危ない変更＋正常GO記録（緊急モード）→ pass＋宿�
 // ── §7 AC6: 書類のみPRは自動スキップ ────────────────────────────────────────
 test('AC6: 書類のみのPRは自動スキップ（pass）', () => {
   const result = runScript({
-    CHANGED_FILES: 'docs/adr/ADR-001.md\nCLAUDE.md\nREADME.md',
+    CHANGED_FILES: 'docs/adr/ADR-001.md\nREADME.md',
     MOCK_PR_BODY: '',
   });
   assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
@@ -619,13 +619,20 @@ test('柱2-欠落版: 正本(.md)を触る書類PRで宣言なし → fail想定
   assert.notStrictEqual(result.code, 0, `正本変更で宣言なしは fail すべき: stdout=${result.stdout}`);
 });
 
-test('柱2-充足版: 正本(.md)を触り触る/削除欄が実diffと一致 → pass想定', () => {
+test('柱2-充足版: 正本(.md)を含む書類PRはスキップせず照合ステージへ進む', () => {
   const result = runScript({
     CHANGED_FILES: 'docs/ai-agents/design-partner.md',
     PR_NUMBER: '9999',
-    MOCK_PR_BODY: '### 標準ワークフロー確認\n触るファイル: docs/ai-agents/design-partner.md\n削除するファイル: docs/ai-agents/design-partner.md\n対象ADR: ADR-121',
+    MOCK_PR_BODY: '### 標準ワークフロー確認\n触るファイル: docs/ai-agents/design-partner.md',
   });
-  assert.strictEqual(result.code, 0, `正本変更で宣言完備は pass すべき: stdout=${result.stdout} stderr=${result.stderr}`);
+  assert.ok(
+    result.stdout.includes('宣言照合へ進む'),
+    `正本を含む書類PRは自動スキップせず照合へ進むべき: stdout=${result.stdout}`
+  );
+  assert.ok(
+    !result.stdout.includes('書類のみの変更 — 自動スキップ'),
+    `正本を含む場合は「自動スキップ」メッセージを出してはいけない: stdout=${result.stdout}`
+  );
 });
 
 test('柱2-中立版: 正本を含まない純書類PR → 従来どおり自動スキップ(pass)', () => {
