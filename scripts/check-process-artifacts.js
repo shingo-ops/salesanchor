@@ -50,6 +50,18 @@ const DOCS_PATTERNS = [
   /^\.github\/(?!workflows\/)/,
 ];
 
+// ─── 正本ファイル（書類のみでも照合を飛ばさない・柱2 design-pillar2.md）──────
+const CANONICAL_DOCS_PATTERNS = [
+  /^docs\/specs\/.*\/ideal-state\.md$/,
+  /^docs\/specs\/.*\/kgi\.md$/,
+  /^docs\/ai-agents\/(?!lessons\.d\/).*\.md$/,
+  /^(CLAUDE|AGENTS)\.md$/,
+];
+
+function hasCanonicalDoc(files) {
+  return files.some(f => CANONICAL_DOCS_PATTERNS.some(r => r.test(f)));
+}
+
 const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
@@ -668,9 +680,12 @@ function main() {
 
   const { hasDangerous, hasRealCode, hasDocsOnly } = classifyChanges(changedFiles);
 
-  if (hasDocsOnly) {
+  if (hasDocsOnly && !hasCanonicalDoc(changedFiles)) {
     console.log('✅ 書類のみの変更 — 自動スキップ（pass）');
     process.exit(0);
+  }
+  if (hasDocsOnly && hasCanonicalDoc(changedFiles)) {
+    console.log('ℹ️ 書類のみだが正本を含む — 宣言照合へ進む（柱2）');
   }
 
   const addedFiles = getAddedFiles();
@@ -861,6 +876,7 @@ function main() {
 module.exports = {
   classifyFile,
   classifyChanges,
+  hasCanonicalDoc,
   hasUserImpactingChange,
   isUserImpactingFile,
   getExternalApiChangeReport,
