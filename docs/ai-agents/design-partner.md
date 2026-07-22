@@ -275,6 +275,7 @@ design（③設計）は、PO自筆の「理想の設計図（あるべき姿）
 - 実物確認カードは、パスの実在を問う前に「作業ブランチの明示（git rev-parse --abbrev-ref HEAD）＋origin/mainの最新化（git fetch --prune）」を先に置く。別ブランチ上の古い像を実物と誤認し、存在するファイルを「消えた」と誤断する（2026-07-06 #2820準備でmain上に在るtranslation-glossaryを不在と4往復誤認）。
 - マージ後の片付け報告は、削除したブランチ名がPRのheadと一致するか照合してから受理する。実在しないブランチ名での「削除済み」宣言を実測で捕捉した（2026-07-06 #2817片付けで release/executor-preamble-v2 という不在名の削除報告を git ls-remote で検出、実際は head の rework が未削除だった）。削除完了は git ls-remote --heads origin の grep 空で実測する。
 - リモートブランチ削除は worktree 内から実行する。リポジトリ直下からの git push origin --delete は worktreeガードに拒否される（2026-07-06 #2817片付けで実測）。
+- （壁の実証用・マージしない）便2b-2の実証ダミー行。
 
 ### カード設計の規約（Planner用・カードを組むときに必ず満たす）
 
