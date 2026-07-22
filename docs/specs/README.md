@@ -9,6 +9,7 @@
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
+| reaper 自動掃除（worktree の自動回収） | [reaper-auto-cleanup/README.md](reaper-auto-cleanup/README.md) | あるべき姿・KGI・recon・design済 2026-07-22 |
 | 文書の親子構造 標準ルール化 | doc-parent-child/README.md (doc-parent-child/README.md) | 公開 |
 | 商品マスタ | [product-master/README.md](product-master/README.md) | 公開 |
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 |
