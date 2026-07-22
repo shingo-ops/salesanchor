@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { sortQuotes } from "./quotesSort";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
@@ -91,50 +92,52 @@ export default function QuotesPage() {
         <button className="tab-active">{t("nav.quoteHistory")}</button>
         <button onClick={() => navigate("/invoices")}>{t("nav.invoices")}</button>
       </nav>
-      {hasPermission("quotes.create") ? (
-        <div className="page-content-actions">
-          <button className="btn-primary" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</button>
-        </div>
-      ) : undefined}
 
       {/* ステータス絞り込み: プルダウンを廃止し、表と同じバッジをボタン化。
           押すと該当ステータスのみ表示（再度押すと全件に戻す）。承認済/却下は対象外。 */}
-      <div className="filter-bar" style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
-        <button
-          type="button"
-          className={statusFilter === "" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
-          data-testid="quotes-filter-all"
-          aria-pressed={statusFilter === ""}
-          onClick={() => setStatusFilter("")}
-        >
-          {t("quotes.allStatuses")}
-        </button>
-        {FILTER_STATUSES.map((s) => {
-          const active = statusFilter === s;
-          return (
+      <ContentToolbar
+        left={
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
             <button
-              key={s}
               type="button"
-              data-testid={`quotes-filter-${s}`}
-              aria-pressed={active}
-              onClick={() => setStatusFilter(active ? "" : s)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                // 単一ステータス選択中は非選択を淡く表示して選択を強調
-                opacity: statusFilter === "" || active ? 1 : 0.4,
-                outline: active ? "2px solid var(--accent)" : "none",
-                outlineOffset: "2px",
-                borderRadius: "var(--radius-pill)",
-              }}
+              className={statusFilter === "" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+              data-testid="quotes-filter-all"
+              aria-pressed={statusFilter === ""}
+              onClick={() => setStatusFilter("")}
             >
-              <span className={`badge badge-${getStatusPresentation("quote", s).badgeVariant}`}>{t(`quotes.status_${s}`)}</span>
+              {t("quotes.allStatuses")}
             </button>
-          );
-        })}
-      </div>
+            {FILTER_STATUSES.map((s) => {
+              const active = statusFilter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  data-testid={`quotes-filter-${s}`}
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(active ? "" : s)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    // 単一ステータス選択中は非選択を淡く表示して選択を強調
+                    opacity: statusFilter === "" || active ? 1 : 0.4,
+                    outline: active ? "2px solid var(--accent)" : "none",
+                    outlineOffset: "2px",
+                    borderRadius: "var(--radius-pill)",
+                  }}
+                >
+                  <span className={`badge badge-${getStatusPresentation("quote", s).badgeVariant}`}>{t(`quotes.status_${s}`)}</span>
+                </button>
+              );
+            })}
+          </div>
+        }
+        right={hasPermission("quotes.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</button>
+        ) : undefined}
+      />
 
       {error && <div className="error-message">{error}</div>}
 
