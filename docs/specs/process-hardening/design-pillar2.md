@@ -52,3 +52,21 @@
 - 実装は check-process-artifacts.js（関所本体）改変＝危険操作。PO自筆GO必須。
 - 順序: 先にペアテストを書く → わざと欠落版で赤を確認 → 本体にCANONICAL条件を追加 → 充足版で緑を確認。
 - 柱1（再採点漏れ）と同一ファイル群のため、柱2実装の後に柱1を続ける（kgi.md 実装順序1）。
+
+## 10. 受け入れ基準（表）
+
+| 基準 | 検証方法 |
+|---|---|
+| 正本を含む書類PRが自動スキップされない | scripts/tests/test-process-artifacts.js 柱2-充足版（「宣言照合へ進む」出力を確認） |
+| 正本を宣言なしで触るPRは fail する | 同 柱2-欠落版（exit≠0 を確認） |
+| 正本を含まない純書類PRは従来どおりスキップ | 同 柱2-中立版（exit=0 を確認） |
+| 台帳(active-work.md)単独PRを巻き込まない | 正本4パターンへの非該当を grep で実測 |
+| 本番の関所に正本ガードが載っている | refs/remotes/origin/main の scripts/check-process-artifacts.js:54,688 を実測 |
+
+## 11. 外部・過去事例の参照と我々への応用
+
+該当なし＋理由: 本件はリポジトリ固有の関所（process-artifacts gate）内部条件の修正であり、外部の一般事例に直接の対応物がない。過去事例としては本リポジトリ内の DANGEROUS_PATTERNS による自己保護（STANDARD-WORKFLOW.md・process-artifacts-gate.yml・PULL_REQUEST_TEMPLATE.md）が同型であり、その思想を正本一般へ拡張する形で応用した（ADR-121）。
+
+## 12. recon（本設計の実測記録）
+
+docs/handoff/pillar2-canonical-docs/recon.md（file:line 引用つき・対象ADR: ADR-121）
