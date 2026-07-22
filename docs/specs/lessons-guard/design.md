@@ -46,6 +46,9 @@
 - lessons-guard は §6本文への箇条書き追記（`^+- ` 検知）を exit 1 で停止する。
 - 例外: PRに `lessons-cleanup` ラベルが付く場合のみ通す（清書便＝ポストの§6本文移植）。清書便はこのラベルを必須とする。
 - 物理的マージ阻止は便2bで ruleset の必須チェックに warn-direct-lesson-edit（job名）を登録して完成する。便2a単独では赤表示のみ（必須未登録）。
+- （2026-07-22 便2b-1）トリガーの paths制限を除去し全PRで起動。検知ロジックは design-partner.md 限定差分を数えるため、非接触PRは sec6_added=0 で enforce非起動＝緑。これにより ruleset必須登録(便2b-2)しても非接触PRが凍結しない。
+- 必須登録の前提: 全PRで warn-direct-lesson-edit の check-run が生成される状態を作ること。paths限定のままの必須登録は非接触PR全凍結を招く(#3027で実測)。
+- 便2b-2: ruleset id=15777895 に context "warn-direct-lesson-edit" を追加(11→12件)。本便(2b-1)の3試験合格が着手条件。
 
 ## 5. 維持の仕組み
 
