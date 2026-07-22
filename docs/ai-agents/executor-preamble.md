@@ -27,3 +27,4 @@
 - 編集を始める前（新規worktreeでも、既存worktreeへの追加コミットでも）、対象ファイルの現在の内容を git diff origin/main -- <対象ファイル> で確認し、直前に本店へマージされた変更が土台に反映されているか確かめること。反映されていない古い内容を土台に編集を始めない。
 - PRをマージする前、.claude-pipeline/active-work.md にこの作業の行が存在するか確認する。worktree作成時に自動登録された行がある場合、マージ完了時に同じ行をDONE化して報告に含めること。登録された行が見当たらない場合は、その旨を完了報告に明記し、別途追記する。
 PR作成前に、`git diff origin/main --name-only` で変更した全ファイルを列挙し、その全パスがPR本文の「触るファイル:」「削除するファイル:」両欄に記載されていることを照合してからpushする。両欄は各1行・カンマまたは改行区切りのplain path（注記を同じ行に付けない）。
+- 書類だけのPRでも、正本（docs/specs/**/ideal-state.md・docs/specs/**/kgi.md・docs/ai-agents/*.md（lessons.d除く）・CLAUDE.md・AGENTS.md）を1件でも含む場合、関所は自動スキップせず宣言照合を行う（「書類だけだから宣言不要」は不可）。関所は該当時に「書類のみだが正本を含む — 宣言照合へ進む（柱2）」と出力する。根拠: docs/specs/process-hardening/design-pillar2.md
