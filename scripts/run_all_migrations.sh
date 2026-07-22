@@ -500,6 +500,7 @@ run_sql migrations/20260718_100000_leads_add_deal_columns.sql
 run_sql migrations/20260720_100000_orders_deal_id_drop_not_null.sql
 run_sql migrations/20260721_100000_close_reasons_quotes_add_lead_id.sql
 run_sql migrations/20260721_120000_close_reasons_quotes_leadid_notnull.sql
+run_sql migrations/20260723_120000_dcr_dealid_nullable.sql
 
 # 便2: order_items 新設＋仕入接続
 run_sql migrations/20260703_030000_order_items_ben2.sql
