@@ -18,8 +18,8 @@ PO: しんご
 
 - ideal-state.md（あるべき姿・PO自筆）
 - kgi.md（KGI K1〜K10）
-- recon.md（現在地・7観点・file:line 実物）
-- design.md（技術How・弊害・維持の仕組み）
+- recon（現在地・7観点）: ../../handoff/reaper-auto-cleanup/recon.md
+- design（技術How・弊害・維持の仕組み）: ../../handoff/reaper-auto-cleanup/design.md
 
 ## 上位方針
 
