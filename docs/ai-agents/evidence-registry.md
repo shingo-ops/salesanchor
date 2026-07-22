@@ -1370,3 +1370,13 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
 - 追加欠陥（ログ信頼性）: マージ前後のログ行数が同一（`LOG_LINES_BEFORE=LOG_LINES_AFTER=40924`）にもかかわらず、`gh_scope_blocked for 2927` の行がログに存在。行数と内容が不整合＝`agent-events.jsonl` を監査の一次証拠に使う前に、記録の整合性自体の検証が必要。
 - 引き継ぎ（優先度・ガード層テーマへ）: (1)`gh pr merge` の全経路をガードで捕捉（網羅性）、(2)成立イベントのログ捕捉（監査性）、(3)ログ書き込みの整合性（行数と内容の一致）。本子テーマ（invoice-form-send）のスコープ外。
 - EV-20260720-001: new-worktree.sh が「走査行のみ表示して沈黙する」事象の原因を bash -x 実測で確定。原因は内部で呼ぶ reaper-worktree.sh の排他制御(「[reaper] another instance is running; skip.」)で、並行セッション稼働時に出力が途切れる。worktree 作成自体は続行される場合と作成されない場合がある(2026-07-19〜20 に3回再現、うち2回は作成済み・1回は未作成)。worktree数上限(100)は無関係(実測81)。対処: 作成未確認時は bash -x で全記録を取り停止する運用。恒久対処は worktree 運用テーマの延長で道具改修便を起票予定。実測記録は release/local-hooks-ssot-spec 便のカード報告に全文あり。
+
+## 2026-07-22: reaper 配線ズレ修正とK1動作確認（EV-20260722-001）
+
+  reference: "PR #3043 mergeCommit=9a7f2995e8a59c7352e6f6ee81b46f8c796ebf22 ／ 仕様書 PR #3044 mergeCommit=5165d73a3a2d2483bb16ce6b0fac3a462d9519be"
+  scope: ".github/workflows/reaper-schedule.yml への REAPER_WORKTREES_DIR 注入（6行追記・削除0）"
+  problem: "定期 reaper が self-hosted runner の actions/checkout により _work 配下で実行され、git-common-dir が _work 側を指すため本店の worktree 登録を共有せず、対象0件のまま毎日空振りしていた（2026-07-20 実測: Working directory is /Users/tanizawashingo/actions-runner-shingo/_work/salesanchor/salesanchor ／ 対象 worktree 数: 0 件）。"
+  fix: "reaper 実行ステップに REAPER_WORKTREES_DIR=/Users/tanizawashingo/worktrees/salesanchor を env 注入。reaper 本体・checkout 構成は変更していない。"
+  kgi: "K1（定期reaperが本店の実worktreeを走査）合格。マージ後の dry-run 実測で 対象 worktree 数 = 91 件（修正前は 0 件）。同 dry-run で main/develop の削除候補混入なし、使用中作業台（release/reaper-scan-dir-fix・release/reaper-auto-cleanup-spec）も候補外、既知の異物3件と main-rls-bootstrap-ordering も候補外を全数確認。"
+  note: "採用案は 2026-07-22 に手動 dry-run で有効性を実証済みの最小変更。checkout 廃止案・reaper 本体自衛案は未実測のため不採用。"
+  open: "K2〜K10 未達。実削除（K5/K6）は未実測。dry-run 実行中にフォルダ実数が 95→93、削除候補が 2→0 に変動したが、削除主体は未特定（別セッション または ops/launchd/jp.salesanchor.reaper-onlogin.plist の自動起動が候補）。凍結前提が実際には成立していなかった（測定中に origin/main が 9a7f2995 から 058388cf へ前進）。"
