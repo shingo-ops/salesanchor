@@ -50,24 +50,30 @@ async def _seed_leads(client, count: int = 3, prefix: str = "Lead"):
 
 
 async def _seed_deals(client, pairs, statuses=None):
-    """商談を作成して返す"""
-    from tests.helpers_txn import create_deal
+    """リードの状態を商談相当に更新して返す"""
+    from tests.helpers_txn import _resolve_db_session
     if statuses is None:
-        statuses = ["open", "open", "won"]
-    deals = []
+        statuses = ["negotiating", "negotiating", "existing_customer"]
+    db_session = await _resolve_db_session(client)
+    leads = []
     for i, status in enumerate(statuses):
         pair = pairs[i % len(pairs)]
-        deal_id = await create_deal(
-            client,
-            pair[2],
-            company_id=pair[0],
-            contact_id=pair[1],
-            title=f"Deal{i+1}",
-            amount=(i + 1) * 100000,
-            status=status,
-        )
-        deals.append({"id": deal_id, "status": status})
-    return deals
+        await db_session.execute(text("""
+            UPDATE leads
+               SET status = :status,
+                   amount = :amount,
+                   expected_close_date = :expected_close_date,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE id = :lead_id
+        """), {
+            "status": status,
+            "amount": (i + 1) * 100000,
+            "expected_close_date": date.today(),
+            "lead_id": pair[2],
+        })
+        leads.append({"id": pair[2], "status": status})
+    await db_session.commit()
+    return leads
 
 
 async def _seed_orders(client, pairs, count: int = 3):
@@ -238,18 +244,18 @@ class TestFunnel:
     async def test_funnel_with_data(self, client, db_session):
         """データ投入時にファネル数値が正しい"""
         pairs = await _seed_companies_and_contacts(client)
-        # リード 3件（1件コンバート済み）
-        await _seed_leads(client, 3)
-        # 商談: open 2件, won 1件
-        await _seed_deals(client, pairs, ["open", "open", "won"])
+        # リード 3件（active 2件、existing_customer 1件）
+        await _seed_deals(client, pairs, ["negotiating", "negotiating", "existing_customer"])
 
         res = await client.get("/api/v1/analytics/funnel")
         assert res.status_code == 200
         data = res.json()
-        # リードは 3件以上作成（_seed_companies_and_contacts 分のリードも含む）
-        assert data["leads"]["actual"] >= 3
-        # 進行中商談（open の 2件）
+        # リードは 3件（_seed_companies_and_contacts 3件をそのまま状態更新）
+        assert data["leads"]["actual"] == 3
+        assert data["conversion"]["converted"] == 1
+        # 進行中リード（negotiating の 2件）
         assert data["active"]["count"] == 2
+        assert data["closed"]["won"] == 1
 
 
 # ─────────────────────────────────────────────
@@ -298,12 +304,15 @@ class TestFollowUps:
         """), {"co_id": co1_id, "ct_id": ct1_id, "dt": old_date})
         await db_session.commit()
 
-        # 成約案件: 40日前に won（won_no_order に該当）
+        # 成約リード: 40日前に existing_customer（won_no_order に該当）
         won_date = str(date.today() - timedelta(days=40))
         await db_session.execute(text("""
-            INSERT INTO deals (tenant_id, company_id, contact_id, title, amount, status, closed_at, updated_at, created_at)
-            VALUES (999, :co_id, :ct_id, 'WonDeal', 100000, 'won', :dt, :dt, :dt)
-        """), {"co_id": co2_id, "ct_id": ct2_id, "dt": won_date})
+            UPDATE leads
+               SET status = 'existing_customer',
+                   updated_at = :dt,
+                   amount = 100000
+             WHERE id = :lead_id
+        """), {"lead_id": lead2_id, "dt": won_date})
         await db_session.commit()
 
         res = await client.get("/api/v1/analytics/follow-ups")
@@ -595,8 +604,15 @@ class TestChannels:
 
     async def test_channels_gross_margin_calculated(self, client, db_session):
         """channels.gross_margin が 0.0 固定でなく order_financials から実計算されること"""
-        from tests.helpers_txn import create_lead
-        chgross_lead_id = await create_lead(client, "ChGrossCo")
+        chgross_lead = await client.post("/api/v1/leads", json={
+            "customer_name": "ChGrossCo",
+            "channel_type": "instagram",
+            "initiative": "inbound",
+            "status": "existing_customer",
+            "amount": 500000,
+        })
+        assert chgross_lead.status_code == 201, chgross_lead.text
+        chgross_lead_id = chgross_lead.json()["id"]
         co = await client.post("/api/v1/companies", json={"name": "ChGrossCo", "lead_id": chgross_lead_id})
         co_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
@@ -607,21 +623,10 @@ class TestChannels:
         today = date.today()
         this_month = str(today)[:7]
 
-        # inbound/instagram リードを作成し、deal に変換し、order + order_financials を紐付ける
-        # Lead → deal (converted_deal_id) → order (deal_id) → order_financials
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, closed_at, created_at)
-            VALUES (9100, 999, :co_id, :ct_id, 'ChGrossDeal', 500000, 'won', :dt, :dt)
+            INSERT INTO orders (id, tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
+            VALUES (9910, 999, :co_id, :ct_id, 'CHGROSS-001', 300000, 'pending', :dt)
         """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
-        await db_session.execute(text("""
-            INSERT INTO leads (tenant_id, customer_name, channel_type, initiative, status,
-                               converted_deal_id, created_at)
-            VALUES (999, 'ChGrossLead', 'instagram', 'inbound', 'converted', 9100, :dt)
-        """), {"dt": str(today)})
-        await db_session.execute(text("""
-            INSERT INTO orders (id, tenant_id, company_id, deal_id, order_number, total_amount, status, created_at)
-            VALUES (9910, 999, :co_id, 9100, 'CHGROSS-001', 300000, 'pending', :dt)
-        """), {"co_id": co_id, "dt": str(today)})
         # purchase_cost=100000, ad_cost=20000 → cost_total=120000 → gross=300000-120000=180000
         await db_session.execute(text("""
             INSERT INTO order_financials (order_id, tenant_id, revenue_amount, purchase_cost, ad_cost)
@@ -664,18 +669,15 @@ class TestConversionByAttribute:
         """team / mine の差、n、収縮率、overall_rate が返る"""
         today = date.today()
 
-        await db_session.execute(text("""
-            INSERT INTO leads (
-                tenant_id, customer_name, channel_type, country, sales_form,
-                temperature, response_speed, assigned_to, converted_deal_id, created_at
-            )
-            VALUES
-                (999, 'AttrLead1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, 1001, :dt),
-                (999, 'AttrLead2', 'instagram', 'JP', 'physical_store', 'Warm', '3日以内', 999, NULL, :dt),
-                (999, 'AttrLead3', 'cold_call', 'US', 'ec_site', 'Cold', '3日超', 999, NULL, :dt),
-                (999, 'AttrLead4', 'cold_call', 'US', 'other', 'Hot', '24h以内', 321, 1002, :dt)
-        """), {"dt": str(today)})
-        await db_session.commit()
+        for payload in [
+            {"customer_name": "AttrLead1", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 999, "status": "existing_customer"},
+            {"customer_name": "AttrLead2", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Warm", "response_speed": "3日以内", "assigned_to": 999, "status": "lead"},
+            {"customer_name": "AttrLead3", "channel_type": "messenger", "country": "US", "sales_form": "ec_site", "temperature": "Cold", "response_speed": "3日超", "assigned_to": 999, "status": "lead"},
+            {"customer_name": "AttrLead4", "channel_type": "messenger", "country": "US", "sales_form": "other", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 321, "status": "existing_customer"},
+        ]:
+            payload["created_at"] = str(today)
+            res = await client.post("/api/v1/leads", json=payload)
+            assert res.status_code == 201, res.text
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200
@@ -683,15 +685,15 @@ class TestConversionByAttribute:
 
         assert team["channel_type"]["overall_rate"] == pytest.approx(0.5, abs=1e-4)
         instagram = {row["value"]: row for row in team["channel_type"]["items"]}["instagram"]
-        cold_call = {row["value"]: row for row in team["channel_type"]["items"]}["cold_call"]
+        messenger = {row["value"]: row for row in team["channel_type"]["items"]}["messenger"]
         assert instagram["n"] == 2
         assert instagram["conversions"] == 1
         assert instagram["raw_rate"] == pytest.approx(0.5, abs=1e-4)
         assert instagram["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
-        assert cold_call["n"] == 2
-        assert cold_call["conversions"] == 1
-        assert cold_call["raw_rate"] == pytest.approx(0.5, abs=1e-4)
-        assert cold_call["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert messenger["n"] == 2
+        assert messenger["conversions"] == 1
+        assert messenger["raw_rate"] == pytest.approx(0.5, abs=1e-4)
+        assert messenger["smoothed_rate"] == pytest.approx(0.5, abs=1e-4)
 
         country = {row["value"]: row for row in team["country"]["items"]}
         assert country["JP"]["n"] == 2
@@ -709,10 +711,10 @@ class TestConversionByAttribute:
         assert mine_channels["instagram"]["conversions"] == 1
         assert mine_channels["instagram"]["raw_rate"] == pytest.approx(0.5, abs=1e-4)
         assert mine_channels["instagram"]["smoothed_rate"] == pytest.approx((1 + 10 * (1 / 3)) / 12, abs=1e-4)
-        assert mine_channels["cold_call"]["n"] == 1
-        assert mine_channels["cold_call"]["conversions"] == 0
-        assert mine_channels["cold_call"]["raw_rate"] == pytest.approx(0.0, abs=1e-4)
-        assert mine_channels["cold_call"]["smoothed_rate"] == pytest.approx((0 + 10 * (1 / 3)) / 11, abs=1e-4)
+        assert mine_channels["messenger"]["n"] == 1
+        assert mine_channels["messenger"]["conversions"] == 0
+        assert mine_channels["messenger"]["raw_rate"] == pytest.approx(0.0, abs=1e-4)
+        assert mine_channels["messenger"]["smoothed_rate"] == pytest.approx((0 + 10 * (1 / 3)) / 11, abs=1e-4)
 
         mine_country = {row["value"]: row for row in mine["country"]["items"]}
         assert mine_country["JP"]["n"] == 2
@@ -740,18 +742,15 @@ class TestPriorityProspects:
         """team の smoothed_rate 平均、中央値代替、降順、欠軸除外を検証"""
         today = date.today()
 
-        await db_session.execute(text("""
-            INSERT INTO leads (
-                tenant_id, customer_name, channel_type, country, sales_form,
-                temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
-            )
-            VALUES
-                (999, 'PriorityLead1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, 1001, 100, :dt),
-                (999, 'PriorityLead2', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', 999, NULL, 300, :dt),
-                (999, 'PriorityLead3', 'cold_call', 'US', NULL, 'Cold', '3日超', 999, NULL, NULL, :dt),
-                (999, 'PriorityLead4', 'messenger', 'CA', 'online', 'Warm', '3日以内', 321, 2001, 9999, :dt)
-        """), {"dt": str(today)})
-        await db_session.commit()
+        for payload in [
+            {"customer_name": "PriorityLead1", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 999, "status": "existing_customer", "monthly_forecast": 100},
+            {"customer_name": "PriorityLead2", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 999, "status": "lead", "monthly_forecast": 300},
+            {"customer_name": "PriorityLead3", "channel_type": "phone", "country": "US", "sales_form": None, "temperature": "Cold", "response_speed": "3日超", "assigned_to": 999, "status": "lead", "monthly_forecast": None},
+            {"customer_name": "PriorityLead4", "channel_type": "messenger", "country": "CA", "sales_form": "online", "temperature": "Warm", "response_speed": "3日以内", "assigned_to": 321, "status": "existing_customer", "monthly_forecast": 9999},
+        ]:
+            payload["created_at"] = str(today)
+            res = await client.post("/api/v1/leads", json=payload)
+            assert res.status_code == 201, res.text
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200
@@ -802,7 +801,13 @@ class TestReasons:
     async def test_reasons_with_data(self, client, db_session):
         """成約理由付き商談で reasons と memos が返る"""
         from tests.helpers_txn import create_lead
-        reason_lead_id = await create_lead(client, "ReasonCo")
+        reason_lead = await client.post("/api/v1/leads", json={
+            "customer_name": "ReasonCo",
+            "status": "existing_customer",
+            "notes": "品揃えが豊富でした",
+        })
+        assert reason_lead.status_code == 201, reason_lead.text
+        reason_lead_id = reason_lead.json()["id"]
         co = await client.post("/api/v1/companies", json={"name": "ReasonCo", "lead_id": reason_lead_id})
         co_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
@@ -813,14 +818,9 @@ class TestReasons:
         today = date.today()
         this_month = str(today)[:7]
 
-        # won deal with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
+        # won lead with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, close_reason_memo, created_at)
-            VALUES (9001, 999, :lead_id, :co_id, :ct_id, 'ReasonDeal', 100000, 'won', :dt, '品揃えが豊富でした', :dt)
-        """), {"lead_id": reason_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
-        # is_primary=1: 主因
-        await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9001, :lead_id, 1, 1)
+            INSERT INTO deal_close_reasons (lead_id, reason_id, is_primary) VALUES (:lead_id, 1, 1)
         """), {"lead_id": reason_lead_id})
         await db_session.commit()
 
@@ -835,10 +835,10 @@ class TestReasons:
         assert first["primary_count"] == 1
         assert first["secondary_count"] == 0
 
-        # memos: deal_id / primary_label / memo / closed_at
+        # memos: deal_id(lead_id) / primary_label / memo / closed_at
         assert len(data["memos"]) >= 1
         memo = data["memos"][0]
-        assert memo["deal_id"] == 9001
+        assert memo["deal_id"] == reason_lead_id
         assert memo["primary_label"] == "在庫・品揃え"
         assert memo["memo"] == "品揃えが豊富でした"
         assert memo["closed_at"] == str(today)
@@ -857,22 +857,14 @@ class TestReasons:
         today = date.today()
         this_month = str(today)[:7]
 
-        # won deal — close_reason ID=1 ('在庫・品揃え', type='won')
+        # won lead — close_reason ID=1 ('在庫・品揃え', type='won')
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, created_at)
-            VALUES (9011, 999, :lead_id, :co_id, :ct_id, 'WonDeal', 50000, 'won', :dt, :dt)
-        """), {"lead_id": filter_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
-        await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9011, :lead_id, 1, 1)
+            INSERT INTO deal_close_reasons (lead_id, reason_id, is_primary) VALUES (:lead_id, 1, 1)
         """), {"lead_id": filter_lead_id})
 
-        # lost deal — close_reason ID=4 ('価格が合わなかった', type='lost')
+        # lost lead — close_reason ID=4 ('価格が合わなかった', type='lost')
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, lead_id, company_id, contact_id, title, amount, status, closed_at, created_at)
-            VALUES (9012, 999, :lead_id, :co_id, :ct_id, 'LostDeal', 50000, 'lost', :dt, :dt)
-        """), {"lead_id": filter_lead_id, "co_id": co_id, "ct_id": ct_id, "dt": str(today)})
-        await db_session.execute(text("""
-            INSERT INTO deal_close_reasons (deal_id, lead_id, reason_id, is_primary) VALUES (9012, :lead_id, 4, 1)
+            INSERT INTO deal_close_reasons (lead_id, reason_id, is_primary) VALUES (:lead_id, 4, 1)
         """), {"lead_id": filter_lead_id})
         await db_session.commit()
 
@@ -965,14 +957,14 @@ class TestWeeklyAdvisorDefensive:
         await _ensure_data_access_events_table(db_session)
         await _ensure_conversation_logs_table(db_session)
 
-        from tests.helpers_txn import create_lead
-
         reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead", "status": "existing_customer"})
         reorder_lead_id = reorder_lead.json()["id"]
         churn_lead = await client.post("/api/v1/leads", json={"customer_name": "Churn Lead", "status": "existing_customer"})
         churn_lead_id = churn_lead.json()["id"]
-        comm_temp_lead_id = await create_lead(client, "Tokyo Trading Co.")
-        other_temp_lead_id = await create_lead(client, "Other Scope Co.")
+        comm_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Tokyo Trading Co.", "status": "existing_customer"})
+        comm_temp_lead_id = comm_temp_lead.json()["id"]
+        other_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Other Scope Co.", "status": "existing_customer"})
+        other_temp_lead_id = other_temp_lead.json()["id"]
 
         reorder_co = await client.post("/api/v1/companies", json={"name": "Blue Ocean Co.", "lead_id": reorder_lead_id})
         reorder_co_id = reorder_co.json()["id"]
@@ -983,6 +975,11 @@ class TestWeeklyAdvisorDefensive:
         other_co = await client.post("/api/v1/companies", json={"name": "Other Scope Co.", "lead_id": other_temp_lead_id})
         other_co_id = other_co.json()["id"]
 
+        # scope=mine の判定は company.sales_rep_id で行う
+        await db_session.execute(text("UPDATE companies SET sales_rep_id = 999 WHERE id = :id"), {"id": reorder_co_id})
+        await db_session.execute(text("UPDATE companies SET sales_rep_id = 999 WHERE id = :id"), {"id": churn_co_id})
+        await db_session.execute(text("UPDATE companies SET sales_rep_id = 999 WHERE id = :id"), {"id": comm_co_id})
+        await db_session.execute(text("UPDATE companies SET sales_rep_id = 321 WHERE id = :id"), {"id": other_co_id})
         # comm_co は lead なし状態をシミュレート（lead_id を NULL にリセット）
         await db_session.execute(text(
             "UPDATE companies SET lead_id = NULL WHERE id = :id"
@@ -999,41 +996,22 @@ class TestWeeklyAdvisorDefensive:
         other_ct_id = other_ct.json()["id"]
 
         await db_session.execute(text("""
-            INSERT INTO deals (id, tenant_id, company_id, contact_id, title, amount, status, assigned_to, created_at, updated_at)
+            INSERT INTO orders (tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
             VALUES
-                (9101, 999, :reorder_co, :reorder_ct, 'Reorder Deal', 380000, 'won', 999, :d20, :d20),
-                (9102, 999, :churn_co, :churn_ct, 'Churn Deal', 350000, 'won', 999, :d20, :d20),
-                (9103, 999, :comm_co, :comm_ct, 'Comm Deal', 280000, 'won', 999, :d10, :d10),
-                (9104, 999, :other_co, :other_ct, 'Other Deal', 500000, 'won', 321, :d10, :d10)
-        """), {
-            "reorder_co": reorder_co_id,
-            "reorder_ct": reorder_ct_id,
-            "churn_co": churn_co_id,
-            "churn_ct": churn_ct_id,
-            "comm_co": comm_co_id,
-            "comm_ct": comm_ct_id,
-            "other_co": other_co_id,
-            "other_ct": other_ct_id,
-            "d20": str(today - timedelta(days=20)),
-            "d10": str(today - timedelta(days=10)),
-        })
-        await db_session.execute(text("""
-            INSERT INTO orders (tenant_id, company_id, contact_id, deal_id, order_number, total_amount, status, created_at)
-            VALUES
-                (999, :reorder_co, :reorder_ct, 9101, 'R-001', 380000, 'awaiting_payment', :d60),
-                (999, :reorder_co, :reorder_ct, 9101, 'R-002', 380000, 'awaiting_payment', :d40),
-                (999, :reorder_co, :reorder_ct, 9101, 'R-003', 380000, 'awaiting_payment', :d20),
+                (999, :reorder_co, :reorder_ct, 'R-001', 380000, 'awaiting_payment', :d60),
+                (999, :reorder_co, :reorder_ct, 'R-002', 380000, 'awaiting_payment', :d40),
+                (999, :reorder_co, :reorder_ct, 'R-003', 380000, 'awaiting_payment', :d20),
 
-                (999, :churn_co, :churn_ct, 9102, 'C-001', 350000, 'awaiting_payment', :d170),
-                (999, :churn_co, :churn_ct, 9102, 'C-002', 350000, 'awaiting_payment', :d150),
-                (999, :churn_co, :churn_ct, 9102, 'C-003', 350000, 'awaiting_payment', :d130),
-                (999, :churn_co, :churn_ct, 9102, 'C-004', 350000, 'awaiting_payment', :d20),
+                (999, :churn_co, :churn_ct, 'C-001', 350000, 'awaiting_payment', :d170),
+                (999, :churn_co, :churn_ct, 'C-002', 350000, 'awaiting_payment', :d150),
+                (999, :churn_co, :churn_ct, 'C-003', 350000, 'awaiting_payment', :d130),
+                (999, :churn_co, :churn_ct, 'C-004', 350000, 'awaiting_payment', :d20),
 
-                (999, :comm_co, :comm_ct, 9103, 'M-001', 280000, 'awaiting_payment', :d60),
-                (999, :comm_co, :comm_ct, 9103, 'M-002', 280000, 'awaiting_payment', :d30),
-                (999, :comm_co, :comm_ct, 9103, 'M-003', 280000, 'awaiting_payment', :d10),
+                (999, :comm_co, :comm_ct, 'M-001', 280000, 'awaiting_payment', :d60),
+                (999, :comm_co, :comm_ct, 'M-002', 280000, 'awaiting_payment', :d30),
+                (999, :comm_co, :comm_ct, 'M-003', 280000, 'awaiting_payment', :d10),
 
-                (999, :other_co, :other_ct, 9104, 'O-001', 500000, 'awaiting_payment', :d10)
+                (999, :other_co, :other_ct, 'O-001', 500000, 'awaiting_payment', :d10)
         """), {
             "reorder_co": reorder_co_id,
             "reorder_ct": reorder_ct_id,

@@ -30,6 +30,10 @@ from app.services.time import _jst_month_range_utc
 
 router = APIRouter()
 
+LEAD_ACTIVE_STATUSES = ("lead", "negotiating", "follow_up_short", "follow_up_long")
+LEAD_CLOSED_STATUSES = ("existing_customer", "lost")
+LEAD_TERMINAL_STATUSES = LEAD_CLOSED_STATUSES + ("out_of_scope",)
+
 
 class ConversionEntry(BaseModel):
     user_id: int
@@ -94,7 +98,7 @@ async def conversion_analysis(
             l.assigned_to AS user_id,
             u.username,
             COUNT(*) AS lead_count,
-            COUNT(l.converted_deal_id) AS converted_count
+            COUNT(*) FILTER (WHERE l.status = 'existing_customer') AS converted_count
         FROM leads l
         LEFT JOIN public.users u ON u.id = l.assigned_to
         WHERE l.assigned_to IS NOT NULL
@@ -135,7 +139,11 @@ async def stalled_deals_report(
     """指定日数以上更新のない停滞案件を検出"""
     # 全オープン案件数
     total_result = await db.execute(
-        text("SELECT COUNT(*) FROM deals WHERE status NOT IN ('won', 'lost')")
+        text("""
+            SELECT COUNT(*)
+            FROM leads
+            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+        """)
     )
     total_open = total_result.scalar() or 0
 
@@ -144,12 +152,20 @@ async def stalled_deals_report(
     # SQLite 互換の julianday() は使わない（本番は PG のみ、SQLite テストは別件で baseline 故障中）。
     result = await db.execute(
         text("""
-            SELECT id, title, company_id, amount, stage, status, updated_at,
-                   (CURRENT_DATE - updated_at::date)::INTEGER AS days_stalled
-            FROM deals
-            WHERE status NOT IN ('won', 'lost')
-              AND (CURRENT_DATE - updated_at::date) >= :threshold
-            ORDER BY updated_at ASC
+            SELECT
+                l.id,
+                COALESCE(c.name, l.company_name, l.customer_name) AS title,
+                c.id AS company_id,
+                l.amount,
+                l.status AS stage,
+                l.status,
+                l.updated_at,
+                (CURRENT_DATE - l.updated_at::date)::INTEGER AS days_stalled
+            FROM leads l
+            LEFT JOIN companies c ON c.lead_id = l.id
+            WHERE l.status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+              AND (CURRENT_DATE - l.updated_at::date) >= :threshold
+            ORDER BY l.updated_at ASC
         """),
         {"threshold": threshold_days},
     )
@@ -307,8 +323,9 @@ async def landing_forecast(
     """
     今月の着地予測。
 
-    計算式: Σ(deal.amount × deal.probability / 100)
-    対象: status NOT IN ('won', 'lost') AND expected_close_date の月 = 今月
+    計算式: Σ(leads.amount)
+    対象: status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+          AND expected_close_date の月 = 今月
     """
     today = date.today()
     month_start = today.replace(day=1)
@@ -320,10 +337,10 @@ async def landing_forecast(
     result = await db.execute(
         text("""
             SELECT
-                COALESCE(SUM(amount * probability / 100.0), 0) AS forecast_amount,
+                COALESCE(SUM(amount), 0) AS forecast_amount,
                 COUNT(*) AS open_deal_count
-            FROM deals
-            WHERE status NOT IN ('won', 'lost')
+            FROM leads
+            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
               AND expected_close_date >= :start
               AND expected_close_date < :end
         """),
@@ -335,8 +352,8 @@ async def landing_forecast(
     won_result = await db.execute(
         text("""
             SELECT COALESCE(SUM(amount), 0) AS won_amount
-            FROM deals
-            WHERE status = 'won'
+            FROM leads
+            WHERE status = 'existing_customer'
               AND updated_at >= :start AND updated_at < :end
         """),
         {"start": month_start, "end": month_end},
@@ -484,7 +501,7 @@ async def dashboard_summary(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS converted,
                 COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded
             FROM leads
             WHERE {date_filter}
@@ -498,14 +515,14 @@ async def dashboard_summary(
     lead_excluded = int(lr.get("excluded", 0) or 0)
     cv_rate = round(lead_converted / lead_total * 100, 1) if lead_total > 0 else 0.0
 
-    # 商談集計
+    # 商談集計（実体は leads の状態で表現）
     deal_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE status NOT IN ('won', 'lost')) AS active,
-                COUNT(*) FILTER (WHERE status = 'won') AS won
-            FROM deals
+                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')) AS active,
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS won
+            FROM leads
             WHERE {date_filter}
             {assign_filter_deals}
         """),
@@ -542,7 +559,7 @@ async def dashboard_summary(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS converted
             FROM leads
             WHERE {date_filter}
             {assign_filter_leads}
@@ -557,10 +574,10 @@ async def dashboard_summary(
     prev_deal_result = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE status NOT IN ('won', 'lost')) AS active,
-                COUNT(*) FILTER (WHERE status = 'won') AS won,
+                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')) AS active,
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS won,
                 COUNT(*) AS total
-            FROM deals
+            FROM leads
             WHERE {date_filter}
             {assign_filter_deals}
         """),
@@ -825,8 +842,8 @@ async def monthly_revenue(
     won_result = await db.execute(
         text("""
             SELECT COALESCE(SUM(amount), 0) AS won
-            FROM deals
-            WHERE status = 'won'
+            FROM leads
+            WHERE status = 'existing_customer'
               AND updated_at >= :start AND updated_at < :end
         """),
         {"start": month_start, "end": range_end_m},
@@ -835,9 +852,9 @@ async def monthly_revenue(
 
     open_result = await db.execute(
         text("""
-            SELECT COALESCE(SUM(amount * probability / 100.0), 0) AS weighted
-            FROM deals
-            WHERE status NOT IN ('won', 'lost')
+            SELECT COALESCE(SUM(amount), 0) AS weighted
+            FROM leads
+            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
               AND expected_close_date >= :start
               AND expected_close_date < :end
         """),
@@ -995,6 +1012,26 @@ def _normalize_attribute_value(axis_name: str, raw_value: object | None) -> str 
         return value.upper()
     return value
 
+
+async def _lead_conversion_status_expr(db: AsyncSession) -> str:
+    """RLS/fixture 差で leads.status が無い環境でも成約判定を組み立てる。"""
+    bind = db.get_bind()
+    if bind is not None and getattr(bind.dialect, "name", "") == "sqlite":
+        return "l.status"
+    result = await db.execute(
+        text("""
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'leads'
+              AND column_name = 'status'
+            LIMIT 1
+        """)
+    )
+    if result.scalar_one_or_none() is not None:
+        return "l.status"
+    return "CASE WHEN l.converted_deal_id IS NOT NULL THEN 'existing_customer' ELSE 'lead' END"
+
 async def _fetch_attribute_conversion_axis(
     db: AsyncSession,
     value_expr: str,
@@ -1003,12 +1040,13 @@ async def _fetch_attribute_conversion_axis(
     overall_rate: float,
 ) -> AttributeConversionAxis:
     """属性1軸分の集計を返す。"""
+    status_expr = await _lead_conversion_status_expr(db)
     result = await db.execute(
         text(f"""
             SELECT
                 {value_expr} AS value,
                 COUNT(*) AS n,
-                COUNT(l.converted_deal_id) AS conversions
+                COUNT(*) FILTER (WHERE {status_expr} = 'existing_customer') AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
@@ -1041,11 +1079,12 @@ async def _fetch_attribute_conversion_summary(
     scope_params: dict[str, object],
 ) -> tuple[float, AttributeConversionResponse]:
     """属性別成約率の全体値と5軸集計をまとめて返す。"""
+    status_expr = await _lead_conversion_status_expr(db)
     overall_result = await db.execute(
         text(f"""
             SELECT
                 COUNT(*) AS n,
-                COUNT(l.converted_deal_id) AS conversions
+                COUNT(*) FILTER (WHERE {status_expr} = 'existing_customer') AS conversions
             FROM leads l
             WHERE 1 = 1
             {lead_assign}
@@ -1084,7 +1123,7 @@ async def conversion_by_attribute_summary(
     """
     リード属性別の成約率を all-time で返す read-only 集計。
 
-    - 成約定義: leads.converted_deal_id IS NOT NULL
+    - 成約定義: leads.status = 'existing_customer'
     - 5軸: channel_type / country / sales_form / temperature / response_speed
     - 率は 0〜1 の小数で返す
     """
@@ -1123,11 +1162,9 @@ async def funnel_stages(
     # scope filter
     if scope == "mine":
         assign_filter_leads = "AND assigned_to = :uid"
-        assign_filter_deals = "AND assigned_to = :uid"
         extra_params: dict = {"uid": current_user.id}
     else:
         assign_filter_leads = ""
-        assign_filter_deals = ""
         extra_params = {}
 
     base_params = {"start": start_utc, "end": end_utc, **extra_params}
@@ -1138,7 +1175,7 @@ async def funnel_stages(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                SUM(CASE WHEN converted_deal_id IS NOT NULL THEN 1 ELSE 0 END) AS converted
+                SUM(CASE WHEN status = 'existing_customer' THEN 1 ELSE 0 END) AS converted
             FROM leads
             WHERE created_at >= :start AND created_at < :end
             {assign_filter_leads}
@@ -1156,10 +1193,10 @@ async def funnel_stages(
             SELECT
                 COUNT(*) AS cnt,
                 COALESCE(SUM(amount), 0) AS amount
-            FROM deals
-            WHERE status NOT IN ('won', 'lost')
+            FROM leads
+            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
               AND created_at >= :start AND created_at < :end
-            {assign_filter_deals}
+            {assign_filter_leads}
         """),
         base_params,
     )
@@ -1171,13 +1208,12 @@ async def funnel_stages(
     closed_result = await db.execute(
         text(f"""
             SELECT
-                SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) AS won,
+                SUM(CASE WHEN status = 'existing_customer' THEN 1 ELSE 0 END) AS won,
                 SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) AS lost
-            FROM deals
-            WHERE closed_at >= :start AND closed_at < :end
-              AND closed_at IS NOT NULL
-              AND status IN ('won', 'lost')
-            {assign_filter_deals}
+            FROM leads
+            WHERE updated_at >= :start AND updated_at < :end
+              AND status IN ('existing_customer', 'lost')
+            {assign_filter_leads}
         """),
         base_params,
     )
@@ -1216,11 +1252,10 @@ async def funnel_stages(
     won_amount_result = await db.execute(
         text(f"""
             SELECT COALESCE(SUM(amount), 0) AS won_amount
-            FROM deals
-            WHERE status = 'won'
-              AND closed_at >= :start AND closed_at < :end
-              AND closed_at IS NOT NULL
-            {assign_filter_deals}
+            FROM leads
+            WHERE status = 'existing_customer'
+              AND updated_at >= :start AND updated_at < :end
+            {assign_filter_leads}
         """),
         base_params,
     )
@@ -1295,13 +1330,13 @@ async def follow_ups_summary(
     threshold_30 = today - timedelta(days=30)
     threshold_45 = today - timedelta(days=45)
 
-    # scope filter for deals
-    deal_assign_filter = "AND d.assigned_to = :uid" if scope == "mine" else ""
+    # scope filter for companies/leads
+    deal_assign_filter = "AND COALESCE(c.sales_rep_id, l.assigned_to) = :uid" if scope == "mine" else ""
     scope_params: dict = {"uid": current_user.id} if scope == "mine" else {}
 
     # ── 1. order_stopped: 最終発注から30日超 ──
     stopped_result = await db.execute(
-        text("""
+        text(f"""
             SELECT
                 c.id AS company_id,
                 c.name,
@@ -1309,9 +1344,10 @@ async def follow_ups_summary(
                 u.username AS assignee
             FROM companies c
             JOIN orders o ON o.company_id = c.id
-            LEFT JOIN deals d ON d.company_id = c.id AND d.status NOT IN ('lost')
-            LEFT JOIN users u ON u.id = d.assigned_to
+            LEFT JOIN leads l ON l.id = c.lead_id
+            LEFT JOIN users u ON u.id = COALESCE(c.sales_rep_id, l.assigned_to)
             WHERE o.company_id IS NOT NULL
+              {deal_assign_filter}
             GROUP BY c.id, c.name, u.username
             HAVING MAX(o.created_at) < :threshold
             ORDER BY MAX(o.created_at) ASC
@@ -1333,7 +1369,7 @@ async def follow_ups_summary(
 
     # ── 2. no_repeat_after_first: 初回発注から45日以内に2回目なし ──
     no_repeat_result = await db.execute(
-        text("""
+        text(f"""
             SELECT
                 c.id AS company_id,
                 c.name,
@@ -1342,9 +1378,10 @@ async def follow_ups_summary(
                 u.username AS assignee
             FROM companies c
             JOIN orders o ON o.company_id = c.id
-            LEFT JOIN deals d ON d.company_id = c.id AND d.status NOT IN ('lost')
-            LEFT JOIN users u ON u.id = d.assigned_to
+            LEFT JOIN leads l ON l.id = c.lead_id
+            LEFT JOIN users u ON u.id = COALESCE(c.sales_rep_id, l.assigned_to)
             WHERE o.company_id IS NOT NULL
+              {deal_assign_filter}
             GROUP BY c.id, c.name, u.username
             HAVING COUNT(o.id) = 1
               AND MIN(o.created_at) < :threshold_now
@@ -1370,24 +1407,23 @@ async def follow_ups_summary(
     won_no_order_result = await db.execute(
         text(f"""
             SELECT
-                d.company_id,
+                c.id AS company_id,
                 c.name,
-                d.closed_at,
+                l.updated_at AS closed_at,
                 u.username AS assignee
-            FROM deals d
-            JOIN companies c ON c.id = d.company_id
-            LEFT JOIN users u ON u.id = d.assigned_to
-            WHERE d.status = 'won'
-              AND d.company_id IS NOT NULL
-              AND d.closed_at IS NOT NULL
-              AND d.closed_at < :threshold
+            FROM leads l
+            JOIN companies c ON c.lead_id = l.id
+            LEFT JOIN users u ON u.id = COALESCE(c.sales_rep_id, l.assigned_to)
+            WHERE l.status = 'existing_customer'
+              AND l.updated_at IS NOT NULL
+              AND l.updated_at < :threshold
               AND NOT EXISTS (
                   SELECT 1 FROM orders o
-                  WHERE o.company_id = d.company_id
-                    AND o.created_at >= d.closed_at
+                  WHERE o.company_id = c.id
+                    AND o.created_at >= l.updated_at
               )
             {deal_assign_filter}
-            ORDER BY d.closed_at ASC
+            ORDER BY l.updated_at ASC
         """),
         {"threshold": threshold_30, **scope_params},
     )
@@ -1489,12 +1525,14 @@ async def revenue_summary(
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
     elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
 
-    # scope で orders を絞る: mine は deal 経由で assigned_to
+    # scope で orders を絞る: mine は company.sales_rep_id / lead.assigned_to 経由
     if scope == "mine":
-        order_scope_join = "JOIN deals od ON od.id = o.deal_id AND od.assigned_to = :uid"
+        order_scope_join = "LEFT JOIN leads l ON l.id = c.lead_id"
+        order_scope_filter = "AND COALESCE(c.sales_rep_id, l.assigned_to) = :uid"
         order_scope_params: dict = {"uid": current_user.id}
     else:
         order_scope_join = ""
+        order_scope_filter = ""
         order_scope_params = {}
 
     # ── 目標値 ──
@@ -1525,8 +1563,10 @@ async def revenue_summary(
         text(f"""
             SELECT COALESCE(SUM(o.total_amount), 0) AS actual
             FROM orders o
+            LEFT JOIN companies c ON c.id = o.company_id
             {order_scope_join}
             WHERE o.created_at >= :start AND o.created_at < :end
+            {order_scope_filter}
         """),
         {"start": start_utc, "end": end_utc, **order_scope_params},
     )
@@ -1542,9 +1582,11 @@ async def revenue_summary(
                 SUM(o.total_amount) AS total_amount,
                 MIN(o.created_at) AS first_ever
             FROM orders o
+            LEFT JOIN companies c ON c.id = o.company_id
             {order_scope_join}
             WHERE o.company_id IS NOT NULL
               AND o.created_at >= :start AND o.created_at < :end
+              {order_scope_filter}
             GROUP BY o.company_id
         """),
         {"start": start_utc, "end": end_utc, **order_scope_params},
@@ -1595,9 +1637,11 @@ async def revenue_summary(
                     + COALESCE(f.refund_amount, 0)
                 ) ELSE 0 END), 0) AS total_cost
             FROM orders o
+            LEFT JOIN companies c ON c.id = o.company_id
             {order_scope_join}
             LEFT JOIN order_financials f ON f.order_id = o.id
             WHERE o.created_at >= :start AND o.created_at < :end
+            {order_scope_filter}
         """),
         {"start": start_utc, "end": end_utc, **order_scope_params},
     )
@@ -1699,15 +1743,10 @@ async def channels_summary(
                 l.initiative,
                 COALESCE(l.channel_type, 'unknown') AS channel,
                 COUNT(*) AS leads,
-                COUNT(l.converted_deal_id) AS converted,
-                COUNT(DISTINCT d.id) AS total_deals,
-                SUM(CASE WHEN d.status = 'won' THEN 1 ELSE 0 END) AS won,
-                COALESCE(
-                    AVG(CASE WHEN d.status = 'won' THEN d.amount ELSE NULL END),
-                    0
-                ) AS avg_order_value
+                COUNT(*) FILTER (WHERE l.status = 'existing_customer') AS converted,
+                COUNT(*) FILTER (WHERE l.status = 'existing_customer') AS won,
+                COALESCE(AVG(CASE WHEN l.status = 'existing_customer' THEN l.amount ELSE NULL END), 0) AS avg_order_value
             FROM leads l
-            LEFT JOIN deals d ON d.id = l.converted_deal_id
             WHERE l.created_at >= :start AND l.created_at < :end
               AND l.initiative IN ('inbound', 'outbound')
             {lead_assign}
@@ -1718,7 +1757,7 @@ async def channels_summary(
     )
     rows_raw = result.mappings().all()
 
-    # ── 粗利: lead → deal → order → order_financials（二重カウント回避のため別クエリ）──
+    # ── 粗利: lead → company → order → order_financials（二重カウント回避のため別クエリ）──
     margin_result = await db.execute(
         text(f"""
             SELECT
@@ -1738,8 +1777,8 @@ async def channels_summary(
                     - COALESCE(f.refund_amount, 0)
                 ) ELSE 0 END), 0.0) AS gross_margin_amount
             FROM leads l
-            JOIN deals d ON d.id = l.converted_deal_id
-            JOIN orders o ON o.deal_id = d.id
+            JOIN companies c ON c.lead_id = l.id
+            JOIN orders o ON o.company_id = c.id
             LEFT JOIN order_financials f ON f.order_id = o.id
             WHERE l.created_at >= :start AND l.created_at < :end
               AND l.initiative IN ('inbound', 'outbound')
@@ -1757,10 +1796,9 @@ async def channels_summary(
     for row in rows_raw:
         leads = int(row["leads"] or 0)
         converted = int(row["converted"] or 0)
-        total_deals = int(row["total_deals"] or 0)
         won = int(row["won"] or 0)
         conversion_rate = round(converted / leads * 100, 1) if leads > 0 else 0.0
-        win_rate = round(won / total_deals * 100, 1) if total_deals > 0 else 0.0
+        win_rate = round(won / leads * 100, 1) if leads > 0 else 0.0
         ini = row["initiative"]
         ch = row["channel"]
         rows.append(ChannelRow(
@@ -1956,10 +1994,8 @@ async def reasons_summary(
                 SUM(CASE WHEN dcr.is_primary THEN 0 ELSE 1 END) AS secondary_count
             FROM deal_close_reasons dcr
             JOIN close_reasons cr ON cr.id = dcr.reason_id
-            JOIN deals d ON d.id = dcr.deal_id
-            LEFT JOIN leads l ON l.id = COALESCE(dcr.lead_id, d.lead_id)
-            WHERE d.closed_at >= :start AND d.closed_at < :end
-              AND d.closed_at IS NOT NULL
+            JOIN leads l ON l.id = dcr.lead_id
+            WHERE l.updated_at >= :start AND l.updated_at < :end
             {type_filter}
             {deal_assign}
             GROUP BY cr.label
@@ -1976,25 +2012,22 @@ async def reasons_summary(
         for row in agg_result.mappings().all()
     ]
 
-    # ── メモ: 主因ラベル + deal_id + close_reason_memo + closed_at ──
+    # ── メモ: 主因ラベル + lead_id + memo + closed_at ──
     memo_result = await db.execute(
         text(f"""
             SELECT
-                d.id AS deal_id,
+                dcr.lead_id AS deal_id,
                 cr.label AS primary_label,
-                d.close_reason_memo AS memo,
-                d.closed_at
-            FROM deals d
-            JOIN deal_close_reasons dcr ON dcr.deal_id = d.id AND dcr.is_primary
-            LEFT JOIN leads l ON l.id = COALESCE(dcr.lead_id, d.lead_id)
+                COALESCE(NULLIF(l.notes, ''), NULLIF(l.meeting_memo, ''), NULLIF(l.cs_memo, '')) AS memo,
+                l.updated_at AS closed_at
+            FROM deal_close_reasons dcr
+            JOIN leads l ON l.id = dcr.lead_id
             JOIN close_reasons cr ON cr.id = dcr.reason_id
-            WHERE d.closed_at >= :start AND d.closed_at < :end
-              AND d.closed_at IS NOT NULL
-              AND d.close_reason_memo IS NOT NULL
-              AND d.close_reason_memo != ''
+            WHERE l.updated_at >= :start AND l.updated_at < :end
+              AND COALESCE(NULLIF(l.notes, ''), NULLIF(l.meeting_memo, ''), NULLIF(l.cs_memo, '')) IS NOT NULL
             {type_filter}
             {deal_assign}
-            ORDER BY d.closed_at DESC
+            ORDER BY l.updated_at DESC
             LIMIT 20
         """),
         {"start": start_utc, "end": end_utc, **type_params, **scope_params},
@@ -2167,10 +2200,10 @@ async def weekly_advisor_defensive(
     current_start, current_end, previous_start, previous_end = _advisor_period_bounds(period, today)
 
     if scope == "mine":
-        scope_join = "JOIN deals d ON d.id = o.deal_id AND d.assigned_to = :uid"
+        scope_filter = "AND COALESCE(c.sales_rep_id, l.assigned_to) = :uid"
         scope_params: dict = {"uid": current_user.id}
     else:
-        scope_join = ""
+        scope_filter = ""
         scope_params = {}
 
     combined_result = await db.execute(
@@ -2183,10 +2216,11 @@ async def weekly_advisor_defensive(
                 COALESCE(o.total_amount, 0) AS total_amount
             FROM orders o
             LEFT JOIN companies c ON c.id = o.company_id
-            {scope_join}
+            LEFT JOIN leads l ON l.id = c.lead_id
             WHERE o.company_id IS NOT NULL
               AND o.created_at >= :previous_start
               AND o.created_at < :current_end
+              {scope_filter}
             ORDER BY o.company_id, o.created_at, o.id
         """),
         {"previous_start": previous_start, "current_end": current_end, **scope_params},
