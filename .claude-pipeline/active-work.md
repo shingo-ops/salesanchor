@@ -453,3 +453,4 @@
 | release/lessons-sec6-dedup | design-partner.md清書予約 | 2026-07-22 | IN_PROGRESS | | main | |
 | release/server-resource-final-wrapup | handoff追記予約 | 2026-07-22 | IN_PROGRESS | | main | |
 | release/lessons-guard-allpr | lessons-guard.yml/design.md予約 | 2026-07-22 | IN_PROGRESS | | main | |
+| release/wall-complete-record | handoff追記予約 | 2026-07-22 | IN_PROGRESS | | main | |
