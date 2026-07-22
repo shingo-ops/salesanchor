@@ -454,3 +454,4 @@
 | release/server-resource-final-wrapup | handoff追記予約 | 2026-07-22 | IN_PROGRESS | | main | |
 | release/lessons-guard-allpr | lessons-guard.yml/design.md予約 | 2026-07-22 | IN_PROGRESS | | main | |
 | release/wall-complete-record | handoff追記予約 | 2026-07-22 | IN_PROGRESS | | main | |
+| release/ledger-done-3052 | PR #3052 analytics 修正の台帳DONE化 | 2026-07-22 | DONE | #3052 | main | merged #3052 |
