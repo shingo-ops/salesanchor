@@ -17,65 +17,17 @@ async def _create_supplier(client, name: str) -> int:
     return res.json()["id"]
 
 
-async def _insert_deal(
-    db_session,
-    *,
-    company_id,
-    lead_id,
-    title="テスト商談",
-    amount=1000000,
-    currency="JPY",
-    status="open",
-    stage="open",
-    probability=10,
-    assigned_to=None,
-    expected_close_date=None,
-    notes="重要案件",
-    lead_source=None,
-):
-    result = await db_session.execute(
-        text("""
-            INSERT INTO deals (
-                tenant_id, company_id, contact_id, lead_id,
-                title, amount, currency, status, stage, probability,
-                assigned_to, expected_close_date, notes, lead_source
-            ) VALUES (
-                999, :company_id, NULL, :lead_id,
-                :title, :amount, :currency, :status, :stage, :probability,
-                :assigned_to, :expected_close_date, :notes, :lead_source
-            )
-        """),
-        {
-            "company_id": company_id,
-            "lead_id": lead_id,
-            "title": title,
-            "amount": amount,
-            "currency": currency,
-            "status": status,
-            "stage": stage,
-            "probability": probability,
-            "assigned_to": assigned_to,
-            "expected_close_date": expected_close_date,
-            "notes": notes,
-            "lead_source": lead_source,
-        },
-    )
-    await db_session.commit()
-    return result.lastrowid
-
-
-async def _create_txn_chain(client, db_session, order_number="ORD-TEST-1", **order_kw):
+async def _create_txn_chain(client, order_number="ORD-TEST-1", **order_kw):
     lead_id = await create_lead(client)
     company_id = await create_company(client, lead_id)
-    deal_id = await _insert_deal(db_session, company_id=company_id, lead_id=lead_id)
-    res = await client.post("/api/v1/orders", json={"company_id": company_id, "deal_id": deal_id, "order_number": order_number, **order_kw})
+    res = await client.post("/api/v1/orders", json={"company_id": company_id, "order_number": order_number, **order_kw})
     assert res.status_code == 201, res.text
-    return {"lead_id": lead_id, "deal_id": deal_id, "company_id": company_id, "order_id": res.json()["id"]}
+    return {"lead_id": lead_id, "company_id": company_id, "order_id": res.json()["id"]}
 
 
 class TestOrderItemsBen2:
     async def test_order_multiple_items(self, client, db_session):
-        txn = await _create_txn_chain(client, db_session, order_number="ORD-BEN2-001")
+        txn = await _create_txn_chain(client, order_number="ORD-BEN2-001")
         product_id = await _create_product(client, "便2商品A")
 
         res = await client.post(
@@ -112,7 +64,7 @@ class TestOrderItemsBen2:
         assert [item["order_id"] for item in items] == [txn["order_id"], txn["order_id"]]
 
     async def test_split_purchase_links(self, client, db_session):
-        txn = await _create_txn_chain(client, db_session, order_number="ORD-BEN2-LINK")
+        txn = await _create_txn_chain(client, order_number="ORD-BEN2-LINK")
         product_id = await _create_product(client, "便2分割商品")
         supplier_id = await _create_supplier(client, "便2仕入先")
 

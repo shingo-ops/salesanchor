@@ -70,22 +70,6 @@ class TestQuotesCRUD:
         assert len(data["items"]) == 1
         assert data["items"][0]["product_name"] == "テスト商品A"
 
-    async def test_create_quote_with_deal(self, client):
-        """案件IDを紐付けて見積もりを作成できる"""
-        company_id, contact_id, lead_id = await _create_company_contact(client)
-        from tests.helpers_txn import create_deal
-        deal_id = await create_deal(
-            client,
-            lead_id,
-            company_id=company_id,
-            contact_id=contact_id,
-            title="見積テスト案件",
-        )
-
-        data = await _create_quote(client, company_id, contact_id, deal_id=deal_id)
-        assert data["deal_id"] == deal_id
-        assert data["lead_id"] == lead_id
-
     async def test_list_quotes(self, client):
         """見積もり一覧を取得できる"""
         company_id, contact_id, _ = await _create_company_contact(client)

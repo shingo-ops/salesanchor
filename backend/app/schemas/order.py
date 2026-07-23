@@ -47,9 +47,8 @@ class OrderStatus(str, Enum):
 
 
 class OrderCreate(BaseModel):
-    """注文登録リクエスト（D3: company_id 直参照・deal_id は互換窓）"""
+    """注文登録リクエスト（D3: company_id 直参照）"""
     company_id: int = Field(ge=1, description="会社ID（必須・D3 の正）")
-    deal_id: int | None = Field(default=None, ge=1, description="互換窓：指定時のみ存在確認する")
     contact_id: int | None = Field(default=None, ge=1, description="担当者ID（指定時のみ所属検査）")
     invoice_id: int | None = Field(default=None, ge=1)
     order_number: str = Field(min_length=1, max_length=100)
@@ -63,10 +62,9 @@ class OrderCreate(BaseModel):
 
 
 class OrderUpdate(BaseModel):
-    # 注意: company_id / contact_id / deal_id / invoice_id は
+    # 注意: company_id / contact_id / invoice_id は
     # 作成後の変更を禁止（FK 整合性保護ポリシー）。router の _UPDATABLE_COLUMNS にも含まない。
     # schema にも出さないことで API コントラクトと router 挙動を一致させる。
-    deal_id: int | None = Field(default=None, ge=1)
     invoice_id: int | None = Field(default=None, ge=1)
     order_number: str | None = Field(default=None, min_length=1, max_length=100)
     total_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
@@ -129,7 +127,6 @@ class OrderResponse(BaseModel):
     id: int
     company_id: int
     contact_id: int | None
-    deal_id: int | None
     invoice_id: int | None
     order_number: str
     total_amount: Decimal | None
