@@ -440,7 +440,6 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 company_id INTEGER REFERENCES companies(id),
                 contact_id INTEGER REFERENCES contacts(id),
-                deal_id INTEGER REFERENCES deals(id),
                 invoice_id INTEGER,
                 order_number VARCHAR(100) NOT NULL,
                 total_amount NUMERIC(15, 2),

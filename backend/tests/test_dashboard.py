@@ -8,7 +8,7 @@ import pytest
 
 async def _seed_data(client):
     """テスト用データを投入するヘルパー"""
-    from tests.helpers_txn import create_deal, create_lead
+    from tests.helpers_txn import create_lead
     # 会社 + 担当者ペア 3 組
     pairs = []
     for name in ["顧客A", "顧客B", "顧客C"]:
@@ -20,19 +20,6 @@ async def _seed_data(client):
             "display_name": f"{name}の担当",
         })
         pairs.append((company_id, ct.json()["id"]))
-
-    # 案件: open 2件, won 1件
-    for idx, (company_id, contact_id) in enumerate(pairs, start=1):
-        lead_id = await create_lead(client, f"案件{idx}")
-        await create_deal(
-            client,
-            lead_id,
-            company_id=company_id,
-            contact_id=contact_id,
-            title=f"案件{idx}",
-            amount=idx * 100000,
-            status="won" if idx == 3 else "open",
-        )
 
     # 注文: pending 2件, confirmed 1件
     await client.post("/api/v1/orders", json={

@@ -109,14 +109,14 @@ def _sanitize_search(keyword: str | None) -> str | None:
     return _LIKE_ESCAPE_RE.sub(r"\\\1", cleaned)
 
 _SELECT_COLS = """
-    id, company_id, contact_id, deal_id, invoice_id, order_number,
+    id, company_id, contact_id, invoice_id, order_number,
     total_amount, currency, status,
     shipping_carrier, shipping_fee, tracking_number,
     shipped_at, delivered_at, shipping_country,
     paid_at, notes, created_at, updated_at
 """
 
-# company_id / contact_id / deal_id / invoice_id は作成後の変更を禁止（FK整合性保護）
+# company_id / contact_id / invoice_id は作成後の変更を禁止（FK整合性保護）
 _UPDATABLE_COLUMNS = {
     "order_number", "total_amount", "currency", "status",
     "shipping_carrier", "shipping_fee", "tracking_number",
@@ -247,7 +247,7 @@ async def list_orders(
     result = await db.execute(
         text(f"""
             SELECT
-                o.id, o.company_id, o.contact_id, o.deal_id, o.invoice_id,
+                o.id, o.company_id, o.contact_id, o.invoice_id,
                 o.order_number, o.total_amount, o.currency, o.status,
                 o.shipping_carrier, o.shipping_fee, o.tracking_number,
                 o.shipped_at, o.delivered_at, o.shipping_country,
@@ -452,16 +452,10 @@ async def create_order(
     orders_t = tenant_table_ref(db, tenant_id, "orders")
     companies_t = tenant_table_ref(db, tenant_id, "companies")
     contacts_t = tenant_table_ref(db, tenant_id, "contacts")
-    deals_t = tenant_table_ref(db, tenant_id, "deals")
     company_row = (await db.execute(
         text(f"SELECT id FROM {companies_t} WHERE id = :id"), {"id": data.company_id})).first()
     if not company_row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された会社が存在しません")
-    if data.deal_id is not None:
-        deal_row = (await db.execute(
-            text(f"SELECT id FROM {deals_t} WHERE id = :id"), {"id": data.deal_id})).first()
-        if not deal_row:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された商談が存在しません")
     if data.contact_id is not None:
         contact_row = (await db.execute(
             text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"), {"id": data.contact_id})).first()
@@ -482,12 +476,12 @@ async def create_order(
     result = await db.execute(
         text(f"""
             INSERT INTO {orders_t} (
-                tenant_id, company_id, contact_id, deal_id, invoice_id, order_number,
+                tenant_id, company_id, contact_id, invoice_id, order_number,
                 total_amount, currency, status,
                 shipping_carrier, shipping_fee, shipping_country, notes
             )
             VALUES (
-                :tenant_id, :company_id, :contact_id, :deal_id, :invoice_id, :order_number,
+                :tenant_id, :company_id, :contact_id, :invoice_id, :order_number,
                 :total_amount, :currency, :status,
                 :shipping_carrier, :shipping_fee, :shipping_country, :notes
             )
@@ -497,7 +491,6 @@ async def create_order(
             "tenant_id": tenant_id,
             "company_id": data.company_id,
             "contact_id": data.contact_id,
-            "deal_id": data.deal_id,
             "invoice_id": data.invoice_id,
             "order_number": data.order_number,
             "total_amount": data.total_amount,
