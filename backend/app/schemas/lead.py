@@ -97,6 +97,15 @@ class SalesFormOptionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CloseReasonRef(BaseModel):
+    """失注理由の参照（リード更新時に渡す）"""
+    reason_id: int = Field(ge=1, description="close_reasons.id")
+    is_primary: bool = Field(default=False, description="主因フラグ（必ず1件だけ True）")
+
+
+# ---------------------------------------------------------------------------
+
+
 class LeadCreate(BaseModel):
     """リード登録リクエスト"""
     customer_name: str = Field(min_length=1, max_length=255)
@@ -169,6 +178,9 @@ class LeadUpdate(BaseModel):
     sales_form: str | None = Field(default=None, max_length=100)
     # ADR-108 Phase B-1: 複数選択（_UPDATABLE_COLUMNS 外・leads.py で個別処理）
     sales_form_selections: list[SalesFormSelectionCreate] | None = None
+    # 失注時の理由登録（deal_close_reasons に lead_id で保存）
+    close_reason_memo: str | None = Field(default=None, max_length=1000, description="失注メモ")
+    close_reasons: list[CloseReasonRef] | None = Field(default=None, description="失注理由（主因1件必須）")
     competitor_check: bool | None = None
     per_order_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     monthly_frequency: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
