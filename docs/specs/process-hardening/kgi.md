@@ -22,12 +22,12 @@
 
 ## 柱1 検査結果の取り違え・マージ経路（旧柱1＋旧柱4を統合）
 
-前提実測: 安全ラッパー gh-pr-merge-safe.sh に自動追従(MERGE_RETRY)と判定待ち再試行(RULE_WAIT)は実装済み。ただし前提となる .pr-number が worktree に存在せず（全worktree実測0件）、new-worktree.sh も生成しないため、ラッパーが使用不能の状態にある。問題は同一SHA上に複数の採点が併存し古い採点を読むこと（本セッション実測: eaf60f49に3件・11aa179dに2件）。recon: docs/handoff/pillar1-merge-path/recon.md
+前提実測: 安全ラッパー gh-pr-merge-safe.sh に自動追従(MERGE_RETRY)と判定待ち再試行(RULE_WAIT)は実装済み。ただし前提となる .pr-number が worktree に存在せず（全worktree実測0件）、new-worktree.sh も生成しないため、ラッパーが使用不能の状態にある。問題は同一SHA上に複数の採点が併存し古い採点を読むこと（本セッション実測: eaf60f49に3件・11aa179dに2件）。recon: docs/handoff/pillar1-merge-path/recon.md なお素のマージ経路を物理的に塞ぐ件（旧柱1-b）は、対象が ~/.claude/scripts/gh-scope-guard.sh というリポジトリ外の個人側検問であり、docs/specs/local-hooks-ssot/README.md が「process-hardening はCI関所側が守備範囲」と明記しているため、同テーマの H6 へ委譲する（実測: #2924・#2927 でblocked後にマージ成立が2回再現）。
 
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
 | 柱1-a | PR作成後に .pr-number が確実に生成される | メモ無しでマージを試み中断される=1 | 1 |
-| 柱1-b | マージが安全ラッパー経由に限定される | ラッパーを経由せずマージできる経路数 | 0 |
+| 柱1-b | （委譲）マージ経路の物理的強制は個人側検問の守備範囲のため local-hooks-ssot の H6 へ移管。本柱では扱わない | 委譲先の明記あり=1 | 1 |
 | 柱1-c | 同一SHAに複数結果がある場合、最新の結論のみを採用する | 古い結論を仕込み不採用=1 | 1 |
 | 柱1-d | 欠落版・充足版のペアテストで実測した | 両方実測=1 | 1 |
 
