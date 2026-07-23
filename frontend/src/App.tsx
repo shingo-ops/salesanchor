@@ -56,7 +56,6 @@ import ChannelsPage from "./pages/channels/ChannelsPage";
 import OAuthCallbackPage from "./pages/oauth-callback/OAuthCallbackPage";
 import InboxPage from "./pages/inbox/InboxPage";
 import ComingSoonPage from "./pages/coming-soon/ComingSoonPage";
-import IntegrationPlaceholderPage from "./pages/integrations/IntegrationPlaceholderPage";
 import GoogleDriveIntegrationPage from "./pages/integrations/GoogleDriveIntegrationPage";
 import CarrierIntegrationPage from "./pages/integrations/CarrierIntegrationPage";
 import CarrierSetupGuidePage from "./pages/integrations/CarrierSetupGuidePage";
@@ -343,8 +342,6 @@ function App() {
                     <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
                     <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
                     <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
-                    <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
-                    <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />

@@ -127,8 +127,6 @@
     "integrationFedex": "FedEx",
     "integrationDhl": "DHL",
     "integrationUps": "UPS",
-    "integrationYamato": "ヤマト運輸",
-    "integrationSagawa": "佐川急便",
     "integrationPaypal": "PayPal",
     "commissionSettings": "報酬設定",
     "channels": "チャンネル",
