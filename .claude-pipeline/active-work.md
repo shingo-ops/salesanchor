@@ -458,3 +458,4 @@
 | release/ledger-done-3052 | PR #3052 analytics 修正の台帳DONE化 | 2026-07-22 | DONE | #3052 | main | merged #3052 |
 | release/loss-reasons-to-leads | 失注理由の登録をリード側へ移設（recon/design docs） | 2026-07-23 | DONE | #3061 | main | merged: PR #3061 / 0a62655c5efca9ed81892b1a60b7e751b3e28b44 |
 | release/loss-reasons-to-leads-ledger-done | release/loss-reasons-to-leads の台帳DONE化 | 2026-07-23 | DONE | #3061 | main | merged: PR #3061 / 0a62655c5efca9ed81892b1a60b7e751b3e28b44 |
+| release/session-final-handoff | handoff追記予約 | 2026-07-23 | IN_PROGRESS | | main | |
