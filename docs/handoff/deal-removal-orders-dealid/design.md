@@ -4,6 +4,27 @@
 >
 > 親: [deal-removal design](../../specs/db-ssot/deal-removal/design.md)
 
+**対象ADR**: ADR-121
+**recon**: [docs/handoff/deal-removal-orders-dealid/recon.md](recon.md)
+
+## 外部・過去事例の参照と我々への応用
+
+外部事例は該当なし。今回は既存のdeal-removal段階②の手順を延長するコード側変更であり、#2995のorders.deal_id NOT NULL解除、#3013の/deals画面廃止、#3052のanalytics読み替えという既存実装の結果を前提にするため、追加の外部事例は不要と判断した。
+
+- 既存事例: #2995（orders.deal_id NOT NULL解除）→ 注文を商談に依存させないDB前提を利用する。
+- 既存事例: #3013（/deals画面廃止）→ 注文画面からdeal_idを除去する。
+- 既存事例: #3052（analytics読み替え）→ 商談参照を残さない範囲を確認する。
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| 注文APIがdeal_idを受け付けない | `rg -n "deal_id" backend/app/routers/orders.py backend/app/schemas/order.py` が0件 |
+| 画面がdeal_idを送らない | `rg -rn "deal_id" frontend/src/pages/orders/` が0件 |
+| テスト補助create_dealが廃止されている | `rg -rn "from tests.helpers_txn import.*create_deal|create_deal\\(" backend/tests/` が0件 |
+| 既存の検証が維持されている | backend全体テストで既存3件以外に赤がないことを確認 |
+| 本番データに影響しない | 本番orders 26行・deal_id非NULL 0件（実測） |
+
 ## 方針
 
 注文の正本となる関係をcompany_idへ統一する。
