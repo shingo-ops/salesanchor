@@ -24,18 +24,7 @@ vi.mock("../../components/CountryCombobox", () => ({
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
-  }) => (
-    <div>
-      {/* ui-allow: test-only input mock for CountryCombobox (#3064) */}
-    <input
-      id={id}
-      aria-label={id}
-      value={value}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
-    />
-    </div>
-  ),
+  }) => <div data-testid={id} />,
 }));
 
 describe("LeadFormFields", () => {
