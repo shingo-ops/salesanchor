@@ -8,11 +8,17 @@
   gap: var(--space-3);
   margin-bottom: var(--space-3);
   padding-right: var(--space-3);
+  /* 中身の有無に関わらず場所を確保する（全ページで表の開始位置を揃える） */
+  min-height: var(--field-h-md);
+  /* 切り詰めて改行させない（2段になるのを防ぐ） */
+  flex-wrap: nowrap;
 }
 .content-toolbar__left {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 .content-toolbar__right {
   display: flex;
@@ -25,5 +31,5 @@
 /* 空スロットは場所を取らない（フィルタ無しページ＝右ボタンだけ右端） */
 .content-toolbar__left:empty,
 .content-toolbar__right:empty {
-  display: none;
+  min-height: var(--field-h-md);
 }
