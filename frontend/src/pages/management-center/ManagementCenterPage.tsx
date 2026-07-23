@@ -60,8 +60,6 @@ export default function ManagementCenterPage() {
         { to: "integrations/fedex",        labelKey: "nav.integrationFedex",       visible: hasPermission("erp.view") },
         { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: hasPermission("erp.view") },
         { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: hasPermission("erp.view") },
-        { to: "integrations/yamato",       labelKey: "nav.integrationYamato",      visible: hasPermission("erp.view") },
-        { to: "integrations/sagawa",       labelKey: "nav.integrationSagawa",      visible: hasPermission("erp.view") },
         { to: "integrations/paypal",       labelKey: "nav.integrationPaypal",      visible: hasPermission("erp.view") },
       ],
     },
