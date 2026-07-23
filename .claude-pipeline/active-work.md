@@ -20,6 +20,7 @@
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
+| release/reaper-concurrency-design | reaper並行実行の構造問題と改善設計の引き継ぎ追記 | 2026-07-23 14:33 | IN_PROGRESS | | main | base=origin/main・handoff追記予約 |
 | release/infra-uptime-kuma-v1 | uptime-kuma 1.23系への載せ替え（API自動登録互換） | 2026-07-18 21:00 | DONE | | main | base=origin/main・PO GO済み |
 | release/resource-optimization-evidence | サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1) | 2026-07-20 | DONE | | main | base=origin/main・docs-only |
 | release/secrets-permission-ssot | 権限・秘密SSOT化テーマの正本化 | 2026-07-20 | DONE | #3006 | main | merged: PR #3006 / e0b46756c4752fef520babdb61cbf6ebb9b57cf4 |
