@@ -25,6 +25,8 @@ vi.mock("../../components/CountryCombobox", () => ({
     onChange: (value: string) => void;
     placeholder?: string;
   }) => (
+    <div>
+      {/* ui-allow: test-only input mock for CountryCombobox (#3064) */}
     <input
       id={id}
       aria-label={id}
@@ -32,6 +34,7 @@ vi.mock("../../components/CountryCombobox", () => ({
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
     />
+    </div>
   ),
 }));
 

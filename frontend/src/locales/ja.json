@@ -632,6 +632,10 @@
   },
   "leads": {
     "title": "リード管理",
+    "lostReason": "失注理由（詳細）",
+    "lostReasonPlaceholder": "その他の失注理由を入力してください",
+    "lostReasonCode": "失注理由",
+    "lostReasonCodePlaceholder": "失注理由を選択",
     "newLead": "新規登録",
     "editLead": "リード編集",
     "newLeadTitle": "新規リード登録",
