@@ -167,18 +167,15 @@ class TestDealsCRUD:
         assert res.json()["title"] == "詳細テスト案件"
 
     async def test_update_deal_status(self, client, db_session):
-        """案件のステータスを更新できる（won遷移: close_reasons必須）"""
+        """案件のステータスを更新できる"""
         company_id, contact_id, lead_id = await _create_company_contact(client)
         deal_id = await _insert_deal(db_session, company_id=company_id, contact_id=contact_id, lead_id=lead_id, title="進行中")
 
         res = await client.patch(f"/api/v1/deals/{deal_id}", json={
             "status": "won",
-            "close_reason_memo": "在庫が揃っていた",
-            "close_reasons": [{"reason_id": 1, "is_primary": True}],
         })
         assert res.status_code == 200
         assert res.json()["status"] == "won"
-        assert res.json()["close_reason_memo"] == "在庫が揃っていた"
 
     async def test_update_deal_with_date_and_amount(self, client, db_session):
         """date(expected_close_date)とDecimal(amount)を同時更新できる（asyncpg encoder対策の回帰テスト）"""

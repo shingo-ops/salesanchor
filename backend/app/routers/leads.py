@@ -37,6 +37,7 @@ from app.schemas.lead import (
     LeadCreate,
     LeadResponse,
     LeadStatsResponse,
+    LeadStatus,
     LeadUpdate,
     SalesFormOptionResponse,
     SalesFormSelectionResponse,
@@ -510,8 +511,10 @@ async def update_lead(
     update_data = data.model_dump(exclude_unset=True)
     # ADR-108 Phase B-1: sales_form_selections は _UPDATABLE_COLUMNS 外で個別処理
     sales_form_selections_data = update_data.pop("sales_form_selections", None)
+    close_reason_memo = update_data.pop("close_reason_memo", None)
+    close_reasons_input = update_data.pop("close_reasons", None)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
-    if not update_data and sales_form_selections_data is None:
+    if not update_data and sales_form_selections_data is None and close_reasons_input is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
 
     # Enum→文字列変換
@@ -527,6 +530,29 @@ async def update_lead(
             update_data["channel_type"],
             existing_value=old_row["channel_type"],
         )
+
+    new_status_raw = update_data.get("status")
+    new_status = _enum_to_str(new_status_raw)
+    old_status = old_row["status"]
+    is_lost_transition = new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
+
+    if is_lost_transition:
+        if not close_reasons_input:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="失注遷移時は close_reasons（主因1件必須）が必要です",
+            )
+        primary_count = sum(1 for r in close_reasons_input if r.get("is_primary"))
+        if primary_count != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"主因（is_primary: true）はちょうど1件必要です（{primary_count}件指定）",
+            )
+        if not close_reason_memo:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="失注遷移時は close_reason_memo が必要です",
+            )
 
     # prospect_rank再計算（リード属性のいずれかが変わった場合）
     rank_fields = {"temperature", "estimated_scale", "customer_type", "response_speed", "monthly_forecast"}
@@ -564,6 +590,32 @@ async def update_lead(
         )
         row = result.mappings().first()
         update_data["id"] = lead_id
+
+    if close_reasons_input and is_lost_transition:
+        close_reasons_t = tenant_table_ref(db, tenant_id, "close_reasons")
+        deal_close_reasons_t = tenant_table_ref(db, tenant_id, "deal_close_reasons")
+
+        await db.execute(
+            text(f"DELETE FROM {deal_close_reasons_t} WHERE lead_id = :lid"),
+            {"lid": lead_id},
+        )
+        for reason in close_reasons_input:
+            reason_check = await db.execute(
+                text(f"SELECT id FROM {close_reasons_t} WHERE id = :rid AND is_active = true"),
+                {"rid": reason["reason_id"]},
+            )
+            if not reason_check.first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"close_reason id={reason['reason_id']} が見つかりません",
+                )
+            await db.execute(
+                text(f"""
+                    INSERT INTO {deal_close_reasons_t} (lead_id, reason_id, is_primary)
+                    VALUES (:lid, :rid, :is_primary)
+                """),
+                {"lid": lead_id, "rid": reason["reason_id"], "is_primary": reason["is_primary"]},
+            )
 
     # ADR-108 Phase B-1: sales_form_selections 更新
     if sales_form_selections_data is not None:
@@ -634,6 +686,10 @@ async def update_lead(
     audit_new_data = dict(update_data)
     if sales_form_selections_data is not None:
         audit_new_data["sales_form_selections"] = sales_form_selections_data
+    if close_reason_memo is not None:
+        audit_new_data["close_reason_memo"] = close_reason_memo
+    if close_reasons_input is not None:
+        audit_new_data["close_reasons"] = close_reasons_input
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="update", table_name="leads", record_id=lead_id,
