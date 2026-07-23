@@ -29,6 +29,7 @@
 | release/page-header-v2-ideal-rev5 | ページヘッダー金型v2 改訂5（操作台金型・design/README追記） | 2026-07-20 | DONE | #2998 | main | merged: PR #2998 / eb111a010cdc1a8aa389ade98a87de8f6cd61460 |
 | release/field-size-tokens | 入力部品 寸法金型トークン新設 | 2026-07-21 | DONE | | main | base=origin/main・docs-only |
 | release/field-size-leads | リードの操作台に寸法金型を適用 | 2026-07-21 | DONE | | main | base=origin/main・frontend/leads |
+| release/lead-loss-reason-ui | リード画面に失注理由の入力欄を新設（フロント） | 2026-07-23 11:45 JST | IN_PROGRESS | | | branch registered for push |
 | release/toolbar-edge-4px | 操作台の最右ボタンに4px右余白を金型化 | 2026-07-21 | DONE | | main | base=origin/main・frontend/content-toolbar |
 | release/toolbar-part | 操作台ContentToolbar部品の新設 | 2026-07-20 | DONE | | | 本カード作業中 |
 | release/toolbar-leads | リード1画面を操作台ContentToolbarへ差し替え | 2026-07-20 | DONE | | | 本カード作業中 |
