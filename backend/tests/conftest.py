@@ -821,7 +821,6 @@ async def setup_test_db(test_engine):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 quote_code VARCHAR(20),
-                deal_id INTEGER REFERENCES deals(id),
                 lead_id INTEGER REFERENCES leads(id),
                 company_id INTEGER NOT NULL REFERENCES companies(id),
                 contact_id INTEGER REFERENCES contacts(id),

@@ -364,17 +364,6 @@ class TestQuotesValidation:
         })
         assert res.status_code == 400
 
-    async def test_deal_not_found(self, client):
-        """存在しない deal_id は 404"""
-        company_id, contact_id, _ = await _create_company_contact(client,"案件なし会社")
-        res = await client.post("/api/v1/quotes", json={
-            "company_id": company_id,
-            "contact_id": contact_id,
-            "deal_id": 99999,
-            "items": [{"product_name": "x", "quantity": 1, "unit_price": "100.00"}],
-        })
-        assert res.status_code == 404
-
     async def test_negative_unit_price(self, client):
         """負の unit_price は 422"""
         company_id, contact_id, _ = await _create_company_contact(client,"負金額会社")
@@ -405,7 +394,6 @@ class TestQuoteResponseSchema:
         row = {
             "id": 1,
             "quote_code": "Q-001",
-            "deal_id": None,
             "lead_id": None,
             "company_id": 10,
             "contact_id": 20,
