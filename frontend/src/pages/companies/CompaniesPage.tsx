@@ -352,13 +352,6 @@ export default function CompaniesPage() {
           {t("companies.pendingDedupCount", { count: pendingDedupCount })}
         </span>
       )}
-      <input
-        type="text"
-        placeholder={t("companies.searchPlaceholder")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="search-input"
-      />
     </div>
   );
   const pageContentActions = hasPermission("customers.create") ? (
@@ -384,7 +377,18 @@ export default function CompaniesPage() {
     >
 
       {error && <div className="error-banner">{error}</div>}
-      <ContentToolbar right={pageContentActions} />
+      <ContentToolbar
+        left={
+          <input
+            type="text"
+            className="search-input field-h-md field-w-md"
+            placeholder={t("companies.searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        }
+        right={pageContentActions}
+      />
 
       {loading ? (
         <p>{t("common.loading")}</p>
