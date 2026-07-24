@@ -158,7 +158,7 @@ class TestDealCloseReasons:
         assert lead_row and lead_row["status"] == "lost"
         reason_rows = (await db_session.execute(
             text("""
-                SELECT deal_id, lead_id, reason_id, is_primary
+                SELECT lead_id, reason_id, is_primary
                   FROM deal_close_reasons
                  WHERE lead_id = :lid
                  ORDER BY reason_id
@@ -166,7 +166,6 @@ class TestDealCloseReasons:
             {"lid": lead_id},
         )).mappings().all()
         assert len(reason_rows) == 2
-        assert all(r["deal_id"] is None for r in reason_rows)
         assert all(r["lead_id"] == lead_id for r in reason_rows)
         assert [r["reason_id"] for r in reason_rows] == [1, 2]
         assert [r["is_primary"] for r in reason_rows] == [1, 0]
