@@ -466,5 +466,5 @@
 | release/orders-drop-dealid | orders.deal_id 列とFKの削除migration | 2026-07-24 | DONE | #3078 | main | merged: PR #3078 / fa6997cc2f8b535a3c00b00f9bec501eabe8c512 |
 | release/ledger-orders-drop-dealid-done | PR #3078 マージに伴う台帳DONE記録 | 2026-07-24 | IN_PROGRESS | | main | |
 | release/quotes-drop-dealid | quotes.deal_id 列とFKの本番削除（GO・検算） | 2026-07-24 | DONE | #3088 | main | merged: PR #3088 / ded5e94b78c0f3e25d52d1f1f076f224c3df77aa |
-| release/deal-removal-dcr-dealid | deal_close_reasons.deal_id コード側除去（reservation: dr-dcr-dealid） | 2026-07-24 | IN_PROGRESS | | main | base=origin/main・PR作成まで |
+| release/deal-removal-dcr-dealid | deal_close_reasons.deal_id コード側除去（reservation: dr-dcr-dealid） | 2026-07-24 | DONE | #3093 | main | merged: PR #3093 / ea3c2f15483c6ccdc53950fc93bb5c1c3a3313f2 |
 | release/dp-sec0-standard | design-partner.md §0 標準設定追記 | 2026-07-24 | IN_PROGRESS |  | main | 正本先約 design-partner.md / GO=未採番 / 単独便 |
