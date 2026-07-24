@@ -1186,11 +1186,10 @@ async def setup_test_db(test_engine):
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS deal_close_reasons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                deal_id INTEGER REFERENCES deals(id),
                 lead_id INTEGER REFERENCES leads(id),
                 reason_id INTEGER NOT NULL REFERENCES close_reasons(id),
                 is_primary INTEGER NOT NULL DEFAULT 0,
-                UNIQUE (deal_id, reason_id)
+                UNIQUE (lead_id, reason_id)
             )
         """))
         # Google Drive 連携設定テーブル（中重要度 audit テスト用）
