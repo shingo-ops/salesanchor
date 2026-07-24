@@ -12,7 +12,7 @@ recon: docs/handoff/pillar1-merge-path/recon.md
 ## 2. 直す対象（recon実測・file:line）
 - `scripts/gh-pr-merge-safe.sh:41` が .pr-number の存在を要求するが、生成が手順化されておらず全worktreeで0件だった（本セッション実測）。
 - `scripts/register-pr.sh:59` が鍵を生成する実体。ただし案内書に呼び出し指示が無い（grep実測: executor-preamble・executor-checklist・CLAUDE.md に記載ゼロ）。
-- `scripts/gh-pr-create-safe.sh:90` がPR作成の入口。ここを出た後に鍵を作る手順が欠けている。
+- `scripts/gh-pr-create-safe.sh` は gh pr create を4箇所（22・56・69・90行）で実行し、うち3箇所は直後に exit する。CI経路（22行）は register-pr.sh 自身がスキップするため対象外。鍵生成は 56・69・90 の直後に必要。
 - `scripts/gh-pr-merge-safe.sh:106` の checks 待ちは同一SHA上の古い結果も対象に含む（本セッション実測: 同一SHAに success と failure と cancelled が併存）。
 - 手本: `.github/workflows/discord-ci-notify.yml:60` が特定SHAに紐づく check-runs のみを取得している。
 

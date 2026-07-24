@@ -54,6 +54,7 @@ if [ -z "$BASE_VALUE" ]; then
   echo "   gh pr create --base main $*"
   echo ""
   gh pr create --base main "$@"
+  bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
   exit $?
 fi
 
@@ -67,6 +68,7 @@ if [ "$BASE_VALUE" = "main" ]; then
     echo "✅ ${ACTUAL_HEAD} → main のリリース/ホットフィックスPR: 許可"
     echo ""
     gh pr create "$@"
+    bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
     exit $?
   fi
 
@@ -88,3 +90,4 @@ fi
 
 # ── その他のベース → そのまま通過 ───────────────────────────────
 gh pr create "$@"
+bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
