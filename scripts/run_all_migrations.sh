@@ -507,6 +507,9 @@ run_sql migrations/20260703_030000_order_items_ben2.sql
 
 # orders.deal_id と対応するFKを全tenantから削除（冪等）
 run_sql migrations/20260724_074500_drop_orders_deal_id.sql
+
+# quotes.deal_id と対応するFKを全tenantから削除（冪等）
+run_sql migrations/20260724_131500_quotes_drop_deal_id.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
