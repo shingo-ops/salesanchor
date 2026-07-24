@@ -20,6 +20,7 @@
     "check:nav-sync": "node scripts/check-nav-title-sync.js",
     "check:claude-size": "node scripts/check-claude-size.js",
     "check:page-layout": "node scripts/check-page-layout.js",
+    "check:content-toolbar": "node scripts/check-content-toolbar.js",
     "check:page-folder": "node scripts/check-page-folder.js",
     "check:icon-sync": "node scripts/check-icon-sync.js",
     "check:i18n-missing-keys": "node scripts/check-i18n-missing-keys.js",
@@ -40,7 +41,7 @@
     "check:status-direct-writes": "node scripts/check-status-direct-writes.js",
     "test:unit": "vitest run --config vitest.unit.config.ts --project unit",
     "test:coverage": "vitest run --config vitest.unit.config.ts --project unit --coverage",
-    "check:all": "concurrently --kill-others-on-fail --max-processes 6 \"npm run check:claude-size\" \"npm run lint\" \"npm run check:css-colors\" \"npm run check:dark-parity\" \"npm run check:jsx-emoji\" \"npm run check:css-var-fallbacks\" \"npm run check:css-values\" \"npm run check:nav-sync\" \"npm run check:page-layout\" \"npm run check:page-folder\" \"npm run check:icon-sync\" \"npm run check:i18n-missing-keys\" \"npm run check:css-fixed-position\" \"npm run check:breakpoint-sync\" \"npm run check:mobile-responsive-structure2\" \"npm run check:page-size\" \"npm run check:stories\" \"npm run check:color-token-sync\" \"npm run check:onboarding-doc\" \"npm run check:concurrently\" \"npm run check:sidebar-outline\" \"npm run check:stylelint\" \"npm run check:css-class-naming\" \"npm run check:status-direct-writes\"",
+    "check:all": "concurrently --kill-others-on-fail --max-processes 6 \"npm run check:claude-size\" \"npm run lint\" \"npm run check:css-colors\" \"npm run check:dark-parity\" \"npm run check:jsx-emoji\" \"npm run check:css-var-fallbacks\" \"npm run check:css-values\" \"npm run check:nav-sync\" \"npm run check:page-layout\" \"npm run check:content-toolbar\" \"npm run check:page-folder\" \"npm run check:icon-sync\" \"npm run check:i18n-missing-keys\" \"npm run check:css-fixed-position\" \"npm run check:breakpoint-sync\" \"npm run check:mobile-responsive-structure2\" \"npm run check:page-size\" \"npm run check:stories\" \"npm run check:color-token-sync\" \"npm run check:onboarding-doc\" \"npm run check:concurrently\" \"npm run check:sidebar-outline\" \"npm run check:stylelint\" \"npm run check:css-class-naming\" \"npm run check:status-direct-writes\"",
     "prepare": "cd .. && husky frontend/.husky",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
