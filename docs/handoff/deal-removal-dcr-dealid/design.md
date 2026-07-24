@@ -6,6 +6,8 @@
 
 実測: [recon.md](recon.md)
 
+相互参照（process-artifacts gate）: `docs/handoff/deal-removal-dcr-dealid/recon.md`
+
 ## 対象ADR
 
 ADR-121
