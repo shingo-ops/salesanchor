@@ -510,6 +510,9 @@ run_sql migrations/20260724_074500_drop_orders_deal_id.sql
 
 # quotes.deal_id と対応するFKを全tenantから削除（冪等）
 run_sql migrations/20260724_131500_quotes_drop_deal_id.sql
+
+# deal-removal: deal_close_reasons の deal_id 依存を撤去し、lead_id/reason_id を一意化
+run_sql migrations/20260724_170000_dcr_drop_deal_id.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
