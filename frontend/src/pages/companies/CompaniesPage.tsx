@@ -17,6 +17,7 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { DataTable } from "../../components/DataTable";
@@ -361,20 +362,18 @@ export default function CompaniesPage() {
     </div>
   );
   const pageContentActions = hasPermission("customers.create") ? (
-    <div className="page-content-actions">
-      <button
-        className="btn-primary"
-        onClick={() => {
-          setCreateForm(emptyForm);
-          setActiveTab("basic");
-          setPhoneError(null);
-          setAddressesDirty(false);
-          setShowCreate(true);
-        }}
-      >
-        + {t("companies.newCompany")}
-      </button>
-    </div>
+    <button
+      className="btn-primary field-h-md"
+      onClick={() => {
+        setCreateForm(emptyForm);
+        setActiveTab("basic");
+        setPhoneError(null);
+        setAddressesDirty(false);
+        setShowCreate(true);
+      }}
+    >
+      + {t("companies.newCompany")}
+    </button>
   ) : undefined;
 
   return (
@@ -385,7 +384,7 @@ export default function CompaniesPage() {
     >
 
       {error && <div className="error-banner">{error}</div>}
-      {pageContentActions}
+      <ContentToolbar right={pageContentActions} />
 
       {loading ? (
         <p>{t("common.loading")}</p>
