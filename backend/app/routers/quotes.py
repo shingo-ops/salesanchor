@@ -41,7 +41,7 @@ from app.services.audit import record_audit_log
 router = APIRouter()
 
 _QUOTE_COLUMNS = """
-    id, quote_code, deal_id, lead_id, company_id, contact_id, currency,
+    id, quote_code, lead_id, company_id, contact_id, currency,
     subtotal, shipping_fee, tax_amount, total_amount,
     status, validity_date, shipping_country, shipping_carrier,
     delivery_info, pdf_url, notes, created_by,
@@ -77,7 +77,6 @@ async def list_quotes(
     status_filter: str | None = Query(default=None, alias="status"),
     company_id: int | None = Query(default=None),
     contact_id: int | None = Query(default=None),
-    deal_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
@@ -95,10 +94,6 @@ async def list_quotes(
     if contact_id:
         conditions.append("q.contact_id = :contact_id")
         params["contact_id"] = contact_id
-    if deal_id:
-        conditions.append("q.deal_id = :did")
-        params["did"] = deal_id
-
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     # 見積履歴の「顧客」「営業担当」表示用に会社名 / 担当者名 / 起票ユーザー名を JOIN で付与する。
     # companies / contacts はテナントスキーマ（search_path 解決）、users は public 固定。
@@ -181,22 +176,7 @@ async def create_quote(
             detail="指定された担当者は指定会社に所属していません",
         )
 
-    # 案件存在確認（指定時のみ）
     quote_lead_id = company_lead_id
-    if data.deal_id:
-        deal = await db.execute(text("SELECT lead_id FROM deals WHERE id = :id"), {"id": data.deal_id})
-        deal_row = deal.first()
-        if not deal_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された案件が見つかりません")
-        deal_lead_id = deal_row[0]
-        if deal_lead_id is not None:
-            if quote_lead_id is not None and quote_lead_id != deal_lead_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="指定された案件と会社の lead が一致していません",
-                )
-            quote_lead_id = deal_lead_id
-
     if quote_lead_id is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="見積もりには lead_id が必要です")
 
@@ -211,19 +191,19 @@ async def create_quote(
     header_result = await db.execute(
         text("""
             INSERT INTO quotes (
-                tenant_id, deal_id, lead_id, company_id, contact_id, currency,
+                tenant_id, lead_id, company_id, contact_id, currency,
                 subtotal, shipping_fee, tax_amount, total_amount,
                 status, validity_date, shipping_country, shipping_carrier,
                 delivery_info, notes, created_by
             ) VALUES (
-                :tid, :did, :lid, :company_id, :contact_id, :currency,
+                :tid, :lid, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
                 'draft', :validity, :country, :carrier,
                 :delivery, :notes, :created_by
             ) RETURNING id
         """),
         {
-            "tid": tenant_id, "did": data.deal_id, "lid": quote_lead_id,
+            "tid": tenant_id, "lid": quote_lead_id,
             "company_id": data.company_id, "contact_id": data.contact_id,
             "currency": data.currency, "subtotal": subtotal, "shipping": shipping,
             "tax": tax, "total": total, "validity": validity,

@@ -21,7 +21,6 @@ import type { DataTableColumn, SortDir } from "../../components/DataTable";
 interface Quote {
   id: number;
   quote_code: string | null;
-  deal_id: number | null;
   // Step 5d: 旧 customer_id を撤去、company_id を必須化
   company_id: number;
   contact_id: number | null;
