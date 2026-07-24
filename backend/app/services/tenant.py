@@ -858,13 +858,11 @@ CREATE TABLE IF NOT EXISTS {schema}.close_reasons (
 
 CREATE TABLE IF NOT EXISTS {schema}.deal_close_reasons (
     id SERIAL PRIMARY KEY,
-    deal_id INTEGER NOT NULL REFERENCES {schema}.deals(id),
     lead_id INTEGER REFERENCES {schema}.leads(id),
     reason_id INTEGER NOT NULL REFERENCES {schema}.close_reasons(id),
     is_primary INTEGER NOT NULL DEFAULT 0,
-    UNIQUE (deal_id, reason_id)
+    UNIQUE (lead_id, reason_id)
 );
-CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_deal_id ON {schema}.deal_close_reasons (deal_id);
 CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_lead_id ON {schema}.deal_close_reasons (lead_id);
 
 -- 見積明細
