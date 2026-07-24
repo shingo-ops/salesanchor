@@ -25,20 +25,20 @@ export function OrdersFilterBar({
   const { t } = useTranslation();
 
   return (
-    <div
-      className="filter-bar"
-      style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-4)" }}
-    >
+      <div
+        style={{ display: "flex", gap: "var(--space-2)", flexWrap: "nowrap", alignItems: "center" }}
+      >
       <input
         type="search"
+        className="field-h-md field-w-md"
         aria-label={t("orders.title")}
         placeholder={t("common.search")}
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
-        style={{ flex: "1 1 240px", minWidth: "var(--col-width-medium)" }}
         data-testid="orders-search-input"
       />
       <select
+        className="field-h-md field-w-sm"
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value)}
         aria-label={t("common.filter")}
@@ -50,6 +50,7 @@ export function OrdersFilterBar({
       </select>
       <button
         type="button"
+        className="field-h-md"
         onClick={toggleSortOrder}
         aria-label={sortOrder === "desc" ? "↓" : "↑"}
         data-testid="orders-sort-order"
