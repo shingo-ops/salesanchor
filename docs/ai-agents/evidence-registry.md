@@ -1380,3 +1380,13 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   kgi: "K1（定期reaperが本店の実worktreeを走査）合格。マージ後の dry-run 実測で 対象 worktree 数 = 91 件（修正前は 0 件）。同 dry-run で main/develop の削除候補混入なし、使用中作業台（release/reaper-scan-dir-fix・release/reaper-auto-cleanup-spec）も候補外、既知の異物3件と main-rls-bootstrap-ordering も候補外を全数確認。"
   note: "採用案は 2026-07-22 に手動 dry-run で有効性を実証済みの最小変更。checkout 廃止案・reaper 本体自衛案は未実測のため不採用。"
   open: "K2〜K10 未達。実削除（K5/K6）は未実測。dry-run 実行中にフォルダ実数が 95→93、削除候補が 2→0 に変動したが、削除主体は未特定（別セッション または ops/launchd/jp.salesanchor.reaper-onlogin.plist の自動起動が候補）。凍結前提が実際には成立していなかった（測定中に origin/main が 9a7f2995 から 058388cf へ前進）。"
+
+## 2026-07-24: lessons-guard 範囲限定化の本番実証 訓練F/G/H（EV-20260724-001）
+
+  reference: "PR #3068（訓練F・CLOSED / mergedAt=null）／ PR #3070（訓練G・CLOSED / mergedAt=null）／ 教訓ポスト PR #3072 mergeCommit=89710660aa893dfd9e24e030af4278aee1dc51f4"
+  scope: "本番PRによる動作実証のみ。正本 docs/ai-agents/design-partner.md への恒久変更ゼロ（ダミー行入りPR 2本は未マージでクローズ）。恒久追加は docs/ai-agents/lessons.d/20260724-guard-drill-verification.md（19行）のみ。"
+  problem: "範囲限定 #3060（検知を §6開始行〜§7開始行の手前に限定）は手元検証5試験のみで、本番での動作が未実証だった。"
+  fix: "対照実験3本を本番PRで実施。F=§6-5 に箇条書き1行 ／ G=§7 に箇条書き1行 ／ H=F のPRに lessons-cleanup ラベル付与。"
+  kgi: "F合格: SEC6_START=173 / SEC7_START=329 / SEC6_ADDED=1、warn-direct-lesson-edit=FAILURE、gh pr merge が 'the base branch policy prohibits the merge' で拒否（run 30039245397）。G合格: SEC6_ADDED=0、conclusion=SUCCESS、mergeStateStatus=UNSTABLE（run 30042043713）。H合格: SEC6_ADDED=1 を保ったまま conclusion=SUCCESS、ログに '✅ Lessons Guard: lessons-cleanup ラベルを確認'（新run 30042870942・旧run 30039245397 と別番号を実測）。"
+  note: "F と G は process-artifacts gate が赤という条件まで同一で、差はダミー行の位置のみ。ruleset id=15777895 の必須チェック12件に warn-direct-lesson-edit は含まれ process-artifacts gate は含まれないため、マージ拒否はガード単独の効果と確定。PR #3072 の mergedAt=2026-07-23T22:10:30Z は UTC 表記で JST では 2026-07-24 07:10。"
+  open: "訓練ブランチ3本のリモート削除は git push origin --delete が手元検問（worktree外／マージ済みブランチ）に拒否され、PO許可のうえ gh api -X DELETE で実施。台帳 .claude-pipeline/active-work.d/ の release-lg-scope-drill-f・-g・release-lessons-drill-fgh は origin/main に未コミットで本店の作業ツリーにのみ存在し、消し込み未実施。範囲限定の恒久維持を機械で保証する仕組みは未設計（本実証は一度きりの人手確認）。"
