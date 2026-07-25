@@ -9,6 +9,7 @@ DECLARE
     has_deal_unique BOOLEAN;
     has_deal_index BOOLEAN;
     has_deal_id BOOLEAN;
+    has_lead_id BOOLEAN;
     has_lead_unique BOOLEAN;
     fk_applied INTEGER := 0;
     deal_unique_applied INTEGER := 0;
@@ -103,23 +104,35 @@ BEGIN
 
         SELECT EXISTS (
             SELECT 1
-            FROM pg_constraint con
-            JOIN pg_class c ON c.oid = con.conrelid
+            FROM pg_attribute a
+            JOIN pg_class c ON c.oid = a.attrelid
             JOIN pg_namespace n ON n.oid = c.relnamespace
             WHERE n.nspname = schema_rec.nspname
               AND c.relname = 'deal_close_reasons'
-              AND con.contype = 'u'
-              AND con.conkey = ARRAY[
-                  (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'lead_id' AND NOT a.attisdropped),
-                  (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'reason_id' AND NOT a.attisdropped)
-              ]::smallint[]
-        ) INTO has_lead_unique;
-        IF NOT has_lead_unique THEN
-            EXECUTE format(
-                'ALTER TABLE %I.deal_close_reasons ADD CONSTRAINT deal_close_reasons_lead_id_reason_id_key UNIQUE (lead_id, reason_id)',
-                schema_rec.nspname
-            );
-            lead_unique_applied := lead_unique_applied + 1;
+              AND a.attname = 'lead_id'
+              AND NOT a.attisdropped
+        ) INTO has_lead_id;
+        IF has_lead_id THEN
+            SELECT EXISTS (
+                SELECT 1
+                FROM pg_constraint con
+                JOIN pg_class c ON c.oid = con.conrelid
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = schema_rec.nspname
+                  AND c.relname = 'deal_close_reasons'
+                  AND con.contype = 'u'
+                  AND con.conkey = ARRAY[
+                      (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'lead_id' AND NOT a.attisdropped),
+                      (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'reason_id' AND NOT a.attisdropped)
+                  ]::smallint[]
+            ) INTO has_lead_unique;
+            IF NOT has_lead_unique THEN
+                EXECUTE format(
+                    'ALTER TABLE %I.deal_close_reasons ADD CONSTRAINT deal_close_reasons_lead_id_reason_id_key UNIQUE (lead_id, reason_id)',
+                    schema_rec.nspname
+                );
+                lead_unique_applied := lead_unique_applied + 1;
+            END IF;
         END IF;
 
         RAISE NOTICE 'dcr_drop_deal_id: %: fk=%, deal_unique=%, deal_index=%, deal_id=%, lead_unique=%',
@@ -128,7 +141,11 @@ BEGIN
             CASE WHEN has_deal_unique THEN 'applied' ELSE 'skipped' END,
             CASE WHEN has_deal_index THEN 'applied' ELSE 'skipped' END,
             CASE WHEN has_deal_id THEN 'applied' ELSE 'skipped' END,
-            CASE WHEN has_lead_unique THEN 'skipped' ELSE 'applied' END;
+            CASE
+                WHEN NOT has_lead_id THEN 'skipped_no_lead_id'
+                WHEN has_lead_unique THEN 'skipped'
+                ELSE 'applied'
+            END;
     END LOOP;
 
     RAISE NOTICE 'dcr_drop_deal_id summary: tenants=%, fk_applied=%, deal_unique_applied=%, deal_index_applied=%, deal_id_applied=%, lead_unique_applied=%',
