@@ -134,18 +134,22 @@ export default function FxRatePage() {
             <tr data-testid="fx-rate-row">
               <td>{rate.currency}</td>
               <td data-testid="fx-rate-value">
-                {rate.rate_jpy.toLocaleString("ja-JP", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 4,
-                })}
-                {" "}
-                {t("common.yen")}
+                {rate.rate_jpy != null ? (
+                  <>
+                    {rate.rate_jpy.toLocaleString("ja-JP", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 4,
+                    })}
+                    {" "}
+                    {t("common.yen")}
+                  </>
+                ) : "-"}
               </td>
               <td style={{ fontSize: "var(--font-sm)" }}>
-                {rate.fetched_at.replace("T", " ").slice(0, 19)} UTC
+                {rate.fetched_at ? `${rate.fetched_at.replace("T", " ").slice(0, 19)} UTC` : "-"}
               </td>
               <td style={{ fontSize: "var(--font-sm)" }}>
-                {rate.updated_at.replace("T", " ").slice(0, 19)} UTC
+                {rate.updated_at ? `${rate.updated_at.replace("T", " ").slice(0, 19)} UTC` : "-"}
               </td>
             </tr>
           </tbody>
