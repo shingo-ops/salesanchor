@@ -103,7 +103,7 @@ merge_with_retry() {
       fi
       git push || return 1
       echo "[MERGE_RETRY] 最新HEADのchecks全緑を待ちます"
-      gh pr checks "${OWNED_PR}" --watch || {
+      gh pr checks "${OWNED_PR}" --watch --required || {
         echo "[MERGE_RETRY] STOP: checksにfailあり。--log-failed を確認してください。"
         return 1
       }
