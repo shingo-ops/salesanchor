@@ -422,8 +422,8 @@ async def _fetch_actuals(
     r = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
-                COUNT(*) AS total
+                COUNT(*) FILTER (WHERE status IN ('negotiating', 'existing_customer', 'lost')) AS converted,
+                COUNT(*) FILTER (WHERE status NOT IN ('out_of_scope', 'disqualified')) AS total
             FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end

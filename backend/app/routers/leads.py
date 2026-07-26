@@ -65,7 +65,7 @@ _LEAD_COLUMNS = """
     id, lead_code, customer_name, company_name, email, phone,
     channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
     response_speed, monthly_forecast, amount, currency, expected_close_date, prospect_rank, assigned_to,
-    converted_deal_id, notes, created_at, updated_at,
+    notes, created_at, updated_at,
     next_action, next_action_date, challenge, meeting_memo, meeting_impression,
     cs_memo, sales_form, competitor_check, per_order_amount, monthly_frequency,
     nickname, country, target_titles,
@@ -2420,8 +2420,8 @@ async def merge_leads(
     認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。
 
     guard（v1）:
-        loser.converted_deal_id IS NOT NULL → 400 ブロック。
-        master が existing_customer / converted_deal_id 非NULL は許可（＝既存客への再接続）。
+        loser.status != 'lead' → 400 ブロック。
+        master の状態は許可。
 
     処理順序（同一トランザクション）:
       1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
@@ -2476,15 +2476,13 @@ async def merge_leads(
             detail=f"loser リード (id={loser_id}) が見つかりません",
         )
 
-    # 2) guard: loser が converted 済みなら v1 ブロック
-    #    master が existing_customer / converted_deal_id 非NULL は許可（既存客への再接続）
-    if loser_row["converted_deal_id"] is not None:
+    # 2) guard: lead 状態以外の loser は統合しない
+    if loser_row["status"] != "lead":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"loser リード (id={loser_id}) は既に案件化済みです（converted_deal_id="
-                f"{loser_row['converted_deal_id']}）。"
-                "成約済みリードを loser にすることは v1 ではサポートしていません。"
+                f"loser リード (id={loser_id}) は統合できない状態です（status={loser_row['status']}）。"
+                "lead 状態以外のリードを loser にすることはサポートしていません。"
             ),
         )
 
@@ -2541,7 +2539,7 @@ async def merge_leads(
         {"master": master_id, "loser": loser_id},
     )).rowcount or 0
 
-    # 7) loser 削除（converted_deal_id は guard で NULL を確認済み）
+    # 7) loser 削除（status が lead であることを guard 済み）
     await db.execute(
         text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
         {"loser": loser_id, "tenant_id": tenant_id},

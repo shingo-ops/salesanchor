@@ -240,7 +240,6 @@ class LeadResponse(BaseModel):
     expected_close_date: date | None
     prospect_rank: str | None
     assigned_to: int | None
-    converted_deal_id: int | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

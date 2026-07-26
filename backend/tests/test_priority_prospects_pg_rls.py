@@ -8,7 +8,7 @@ rls_bootstrap で本番 migration 順のテナントスキーマを構築し、�
   - low_sample フラグ（n < SHRINK_K=10 の軸に付与）
   - テナント分離（RLS ポリシーで他テナントリードは不可視）
   - scope=mine（assigned_to = current_user.id のみ）
-  - converted_deal_id 基準 ＝ #2452 の集計を流用（Track B 不含）
+  - lead_status 基準 ＝ #2452 の集計を流用（Track B 不含）
 
 実行条件:
   RLS_ADMIN_DATABASE_URL (or TEST_PG_URL) / RLS_TEST_DATABASE_URL が設定済みの場合のみ。
@@ -106,51 +106,25 @@ async def test_priority_prospects_pg_rls_all_requirements():
     test_app.dependency_overrides[get_current_tenant] = _override_get_current_tenant
 
     inserted_ids: list[int] = []
-    origin_lead_ids: list[int] = []  # deals の出自 lead（クリーンアップ用・unpack 対象外）
 
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
             # 1. 本番 migration 順でテナントスキーマを構築
             await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
 
-            # 2. leads.converted_deal_id FK 参照先となる deals を先に挿入
-            #    （fk_leads_converted_deal: leads.converted_deal_id → deals.id）
-            #    ben1a: deals.lead_id NOT NULL のため出自 lead を先に作成する
-            async with admin_engine.begin() as conn:
-                origin_result = await conn.execute(
-                    text(f"""
-                        INSERT INTO {_SCHEMA}.leads (tenant_id, customer_name)
-                        VALUES (:tid, 'PP-DealOrigin-1001'),
-                               (:tid, 'PP-DealOrigin-2001')
-                        RETURNING id
-                    """),
-                    {"tid": _TENANT_ID},
-                )
-                origin_lead_ids.extend(int(r) for r in origin_result.scalars().all())
-
-                await conn.execute(
-                    text(f"""
-                        INSERT INTO {_SCHEMA}.deals (id, tenant_id, title, lead_id)
-                        VALUES (1001, :tid, 'PP-Deal-1001', :lid1),
-                               (2001, :tid, 'PP-Deal-2001', :lid2)
-                        ON CONFLICT (id) DO NOTHING
-                    """),
-                    {"tid": _TENANT_ID, "lid1": origin_lead_ids[0], "lid2": origin_lead_ids[1]},
-                )
-
-            # 3. リードを挿入（admin 権限で直接 INSERT）
+            # 2. リードを挿入（admin 権限で直接 INSERT）
             async with admin_engine.begin() as conn:
                 result = await conn.execute(
                     text(f"""
                         INSERT INTO {_SCHEMA}.leads (
                             tenant_id, customer_name,
                             channel_type, country, sales_form, temperature, response_speed,
-                            assigned_to, converted_deal_id, monthly_forecast
+                            assigned_to, status, monthly_forecast
                         ) VALUES
-                            (:tid, 'PP-Lead-A', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid,       1001, 100),
-                            (:tid, 'PP-Lead-B', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid,       NULL, 300),
-                            (:tid, 'PP-Lead-C', 'cold_call',  'US', NULL,             'Cold', '3日超',   :uid,      NULL, NULL),
-                            (:tid, 'PP-Lead-D', 'messenger',  'CA', 'online',          'Warm', '3日以内', :other_uid, 2001, 9999)
+                            (:tid, 'PP-Lead-A', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid,       'existing_customer', 100),
+                            (:tid, 'PP-Lead-B', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid,       'lead', 300),
+                            (:tid, 'PP-Lead-C', 'cold_call',  'US', NULL,             'Cold', '3日超',   :uid,      'lead', NULL),
+                            (:tid, 'PP-Lead-D', 'messenger',  'CA', 'online',          'Warm', '3日以内', :other_uid, 'lead', 9999)
                         RETURNING id
                     """),
                     {"tid": _TENANT_ID, "uid": _USER_ID, "other_uid": _OTHER_USER_ID},
@@ -237,7 +211,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
                             temperature VARCHAR(20),
                             response_speed VARCHAR(20),
                             assigned_to INTEGER,
-                            converted_deal_id INTEGER,
+                            status VARCHAR(50) NOT NULL DEFAULT 'lead',
                             monthly_forecast NUMERIC(15, 2),
                             amount NUMERIC(15, 2),
                             currency VARCHAR(10) DEFAULT 'JPY',
@@ -271,11 +245,11 @@ async def test_priority_prospects_pg_rls_all_requirements():
                             INSERT INTO {foreign_schema}.leads (
                                 tenant_id, customer_name,
                                 channel_type, country, sales_form, temperature, response_speed,
-                                assigned_to, converted_deal_id, monthly_forecast
+                                assigned_to, status, monthly_forecast
                             ) VALUES (
                                 998, 'Foreign-Lead',
                                 'instagram', 'JP', 'physical_store', 'Hot', '24h以内',
-                                :uid, NULL, 99999
+                                :uid, 'lead', 99999
                             )
                             RETURNING id
                         """),
@@ -321,7 +295,7 @@ async def test_priority_prospects_pg_rls_all_requirements():
         test_app.dependency_overrides.clear()
         with suppress(Exception):
             async with admin_engine.begin() as conn:
-                for iid in inserted_ids + origin_lead_ids:
+                for iid in inserted_ids:
                     await conn.execute(
                         text(f"DELETE FROM {_SCHEMA}.leads WHERE id = :id"),
                         {"id": iid},
