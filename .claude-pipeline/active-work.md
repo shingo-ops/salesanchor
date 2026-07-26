@@ -469,3 +469,5 @@
 | release/deal-removal-dcr-dealid | deal_close_reasons.deal_id コード側除去（reservation: dr-dcr-dealid） | 2026-07-24 | DONE | #3093 | main | merged: PR #3093 / ea3c2f15483c6ccdc53950fc93bb5c1c3a3313f2 |
 | release/dp-sec0-standard | design-partner.md §0 標準設定追記 | 2026-07-24 | DONE | #3092 | main | merged: PR #3092 / c5113b54f9b56851cd785e1603fda9600961953d |
 | release/dp-preamble-canon | 設計パートナー常設指示の逐語原本を新設 | 2026-07-24 | IN_PROGRESS |  | main | 正本先約 design-partner.md / GO=未採番 / 単独便 |
+| release/deal-removal-converted-b1 | converted_deal_id コード側置換（reservation: dr-converted-b1） | 2026-07-26 | DONE | #3106 | main | merged: PR #3106 / ea9d5178de0c63be11202ebceb8d461635491715 |
+| release/leads-drop-converted-dealid | leads.converted_deal_id 列とFK削除（reservation: dr-leads-converted-b2） | 2026-07-26 | DONE | #3110 | main | merged: PR #3110 / 2792561a1da34d522cba44236e6af231d50b6ac4 |

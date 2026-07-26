@@ -1014,23 +1014,11 @@ def _normalize_attribute_value(axis_name: str, raw_value: object | None) -> str 
 
 
 async def _lead_conversion_status_expr(db: AsyncSession) -> str:
-    """RLS/fixture 差で leads.status が無い環境でも成約判定を組み立てる。"""
+    """lead_status を成約判定に使う。"""
     bind = db.get_bind()
     if bind is not None and getattr(bind.dialect, "name", "") == "sqlite":
         return "l.status"
-    result = await db.execute(
-        text("""
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema = current_schema()
-              AND table_name = 'leads'
-              AND column_name = 'status'
-            LIMIT 1
-        """)
-    )
-    if result.scalar_one_or_none() is not None:
-        return "l.status"
-    return "CASE WHEN l.converted_deal_id IS NOT NULL THEN 'existing_customer' ELSE 'lead' END"
+    return "l.status"
 
 async def _fetch_attribute_conversion_axis(
     db: AsyncSession,

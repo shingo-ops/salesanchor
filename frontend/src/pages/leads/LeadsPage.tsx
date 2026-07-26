@@ -56,7 +56,6 @@ interface Lead {
   monthly_forecast: number | null;
   prospect_rank: string | null;
   assigned_to: number | null;
-  converted_deal_id: number | null;
   notes: string | null;
   country: string | null;
   created_at: string;
@@ -497,10 +496,10 @@ export default function LeadsPage() {
           )},
           { key: "actions", header: t("leads.actions"), renderCell: (l) => (
             <span className="actions" onClick={(e) => e.stopPropagation()}>
-              {hasPermission("leads.convert") && !l.converted_deal_id && (
+              {hasPermission("leads.convert") && l.status === "lead" && (
                 <button className="btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</button>
               )}
-              {hasPermission("leads.delete") && !l.converted_deal_id && (
+              {hasPermission("leads.delete") && l.status === "lead" && (
                 <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</button>
               )}
               {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</button>}
