@@ -124,6 +124,10 @@ merge_with_retry() {
         sleep 30
         MSTATE="$(gh pr view "${OWNED_PR}" --json mergeStateStatus -q .mergeStateStatus 2>/dev/null)"
         echo "[MERGE_RETRY][RULE_WAIT] 試行 ${rw}/3 mergeStateStatus=${MSTATE}"
+        if [ "${MSTATE}" = "BEHIND" ]; then
+          echo "[MERGE_RETRY][RULE_WAIT] BEHIND を検出。待機せず追従フローへ戻ります"
+          break
+        fi
         rwout="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)"
         if [ $? -eq 0 ]; then echo "${rwout}"; rw_ok=1; break; fi
         echo "${rwout}"

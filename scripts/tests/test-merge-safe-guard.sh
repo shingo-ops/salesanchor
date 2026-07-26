@@ -68,6 +68,31 @@ else
   ng "充足版: 通過しなかった"
 fi
 
+# ── BEHIND検出テスト: RULE_WAITに入っても待機せず追従へ戻る ──────────────
+BEHIND_MOCK="${TMP}/mock-behind"
+mkdir -p "${BEHIND_MOCK}"
+cat > "${BEHIND_MOCK}/gh" << 'GHEOF'
+#!/bin/bash
+if [[ "$*" == *"pr merge"* ]]; then
+  echo "X Pull request is not mergeable: rule violations found"
+  exit 1
+fi
+if [[ "$*" == *"mergeStateStatus"* ]]; then
+  echo "BEHIND"
+  exit 0
+fi
+echo ""
+exit 0
+GHEOF
+chmod +x "${BEHIND_MOCK}/gh"
+echo "9999" > "${SANDBOX}/.pr-number"
+OUT_BEHIND="$( cd "${SANDBOX}" && PATH="${BEHIND_MOCK}:${PATH}" bash "${WRAPPER}" --merge 2>&1 )"
+if echo "${OUT_BEHIND}" | grep -q "BEHIND を検出"; then
+  ok "BEHIND検出: 待機せず追従フローへ戻る"
+else
+  ng "BEHIND検出: 専用メッセージ無し"
+fi
+
 echo ""
 echo "結果: PASS=${PASS} FAIL=${FAIL}"
 if [ "${FAIL}" -eq 0 ]; then echo "ALL PASS"; exit 0; else exit 1; fi
