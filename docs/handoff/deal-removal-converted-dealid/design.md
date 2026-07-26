@@ -1,6 +1,6 @@
 # converted_deal_id を状態で判定する設計
 
-リードがどの段階にあるかを、古い商談IDではなくリード自身の状態で判定する変更です。親設計: [deal-removal design](../../specs/db-ssot/deal-removal/design.md)。調査: [recon.md](recon.md)。対象ADR: ADR-121。
+リードがどの段階にあるかを、古い商談IDではなくリード自身の状態で判定する変更です。親設計: [deal-removal design](../../specs/db-ssot/deal-removal/design.md)。調査: docs/handoff/deal-removal-converted-dealid/recon.md。対象ADR: ADR-121。
 
 ## 外部・過去事例の参照と我々への応用
 
@@ -18,4 +18,5 @@
 
 ## 維持の仕組み
 
-守り手は process-artifacts gate、対象は converted_deal_id への再依存である。
+守り手: process-artifacts gate
+対象: converted_deal_id への再依存
