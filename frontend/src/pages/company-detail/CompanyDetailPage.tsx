@@ -66,7 +66,6 @@ export default function CompanyDetailPage() {
     return (
       <div className="page-container">
         <p>{t("common.noData")}</p>
-        <Button variant="secondary" onClick={() => navigate("/companies")}>{t("common.back")}</Button>
       </div>
     );
   }
