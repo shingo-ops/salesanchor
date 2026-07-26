@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 
 interface FxRate {
@@ -86,19 +87,21 @@ export default function FxRatePage() {
     <PageLayout
       navKey="nav.superAdminFxRate"
       subtitleKey="superAdmin.fxRate.subtitle"
-      headerAction={
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          data-testid="fx-rate-refresh-btn"
-        >
-          <RefreshIcon size={16} aria-hidden="true" />
-          {refreshing ? t("common.loading") : t("superAdmin.fxRate.refreshBtn")}
-        </button>
-      }
     >
+      <ContentToolbar
+        right={
+          <button
+            type="button"
+            className="btn-primary field-h-md"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            data-testid="fx-rate-refresh-btn"
+          >
+            <RefreshIcon size={16} aria-hidden="true" />
+            {refreshing ? t("common.loading") : t("superAdmin.fxRate.refreshBtn")}
+          </button>
+        }
+      />
       {error && (
         <div className="error-message" role="alert" data-testid="fx-rate-error">
           {error}
