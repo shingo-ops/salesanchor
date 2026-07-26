@@ -13,6 +13,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 
 interface FxRateResult {
   currency: string;
@@ -124,30 +125,31 @@ export default function QuoteDetailPage() {
     <PageLayout
       titleText={`${t("quotes.title")} — ${quote.quote_code || `#${quote.id}`}`}
       subtitleKey="quotes.detailSubtitle"
-      headerAction={
-        <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
-          {quote.status === "draft" && hasPermission("quotes.update") && (
-            <button className="btn-primary" onClick={() => doAction("send")}>{t("quotes.send")}</button>
-          )}
-          {quote.status === "sent" && hasPermission("quotes.approve") && (
-            <>
-              <button className="btn-primary" onClick={() => doAction("approve")}>{t("quotes.approve")}</button>
-              <button className="btn-danger" onClick={() => doAction("reject")}>{t("quotes.reject")}</button>
-            </>
-          )}
-          {quote.status === "approved" && hasPermission("invoices.create") && (
-            <button className="btn-primary" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</button>
-          )}
-          {quote.currency !== "JPY" && (
-            <button className="btn-secondary" onClick={handleFetchFxRate} disabled={fxLoading}>
-              {fxLoading ? t("common.loading") : t("quotes.fx.fetchRate")}
-            </button>
-          )}
-          <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
-          <button className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.back")}</button>
-        </div>
-      }
     >
+      <ContentToolbar
+        right={
+          <>
+            {quote.status === "draft" && hasPermission("quotes.update") && (
+              <button className="btn-primary field-h-md" onClick={() => doAction("send")}>{t("quotes.send")}</button>
+            )}
+            {quote.status === "sent" && hasPermission("quotes.approve") && (
+              <>
+                <button className="btn-primary field-h-md" onClick={() => doAction("approve")}>{t("quotes.approve")}</button>
+                <button className="btn-danger field-h-md" onClick={() => doAction("reject")}>{t("quotes.reject")}</button>
+              </>
+            )}
+            {quote.status === "approved" && hasPermission("invoices.create") && (
+              <button className="btn-primary field-h-md" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</button>
+            )}
+            {quote.currency !== "JPY" && (
+              <button className="btn-secondary field-h-md" onClick={handleFetchFxRate} disabled={fxLoading}>
+                {fxLoading ? t("common.loading") : t("quotes.fx.fetchRate")}
+              </button>
+            )}
+            <button className="btn-secondary field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
+          </>
+        }
+      />
 
       {error && <div className="error-message">{error}</div>}
 
