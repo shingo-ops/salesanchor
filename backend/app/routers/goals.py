@@ -377,25 +377,26 @@ async def _fetch_actuals(
     )
     revenue = float(r.scalar() or 0)
 
-    # 商談数（期間内に作成された商談）
+    # 商談数（期間内に商談段階へ入ったリード）
     r = await db.execute(
         text(f"""
             SELECT COUNT(*) AS val
-            FROM deals
+            FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end
+              AND status IN ('negotiating', 'existing_customer', 'lost')
         """),
         params,
     )
     deal_count = float(r.scalar() or 0)
 
-    # 成約率（期間内の成約 / 期間内の商談）
+    # 成約率（期間内に決着したリードのうち成約した割合）
     r = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE status = 'won') AS won,
-                COUNT(*) AS total
-            FROM deals
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS won,
+                COUNT(*) FILTER (WHERE status IN ('existing_customer', 'lost')) AS total
+            FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end
         """),
