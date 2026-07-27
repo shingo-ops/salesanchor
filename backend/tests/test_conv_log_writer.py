@@ -5,7 +5,7 @@
   2. write_conversation_log のシグネチャが設計 doc と合致している
   3. 冪等キー: ON CONFLICT 節が SQL に含まれる（grep 検証）
   4. direction バリデーション: 'inbound' / 'outbound' 以外の値をスキップできる構造か
-  5. _get_company_id_for_lead: AsyncMock で None を返す（案件なしの場合）
+  5. _get_company_id_for_lead: AsyncMock で None を返す（会社なしの場合）
   6. _get_contact_id_for_lead: AsyncMock で None を返す（contact なしの場合）
   7. _get_contact_id_for_lead: contact がある場合 id を返す
   8. write_conversation_log: AsyncMock セッションで正常パスが通る
@@ -68,6 +68,8 @@ def test_sql_has_on_conflict():
     assert "ON CONFLICT (external_message_id)" in content
     assert "DO NOTHING" in content
     assert "contact_id" in content
+    assert "FROM companies" in content
+    assert "FROM deals" not in content
 
 
 # ---------------------------------------------------------------------------
@@ -92,10 +94,10 @@ def test_direction_values_in_callers():
 
 
 # ---------------------------------------------------------------------------
-# 5. _get_company_id_for_lead: 案件なしのとき None を返す
+# 5. _get_company_id_for_lead: 会社なしのとき None を返す
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_get_company_id_no_deal():
+async def test_get_company_id_no_company():
     from app.services.conv_log_writer import _get_company_id_for_lead
 
     mock_result = MagicMock()
