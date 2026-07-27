@@ -1,7 +1,7 @@
 # ADR-150: エージェント担当領域を「窓」の明示リストで管理する
 
 ## Status
-Proposed
+Accepted（GO: Shingo 2026-07-26）
 
 ## 背景
 

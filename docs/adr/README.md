@@ -167,7 +167,7 @@
 | [ADR-147](./ADR-147-common-6roles-standardization.md) | ADR-147: 共通6ロール標準化（マネージャー・仕入れ・発送追加） | Accepted | — | — |
 | [ADR-148](./ADR-148-fx-rate-ssot.md) | ADR-148: 為替レート SSOT（public.app_fx_rates） | — | — | — |
 | [ADR-149](./ADR-149-submenu-ssot-link-mode.md) | ADR-149: サイドメニューの共通部品(SubMenu)へのSSOT集約とリンク型対応 | Accepted | — | 2026-06-28 |
-| [ADR-150](./ADR-150-agent-domain-windows.md) | ADR-150: エージェント担当領域を「窓」の明示リストで管理する | Proposed | — | 2026-07-26 |
+| [ADR-150](./ADR-150-agent-domain-windows.md) | ADR-150: エージェント担当領域を「窓」の明示リストで管理する | Accepted | — | 2026-07-26 |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 
