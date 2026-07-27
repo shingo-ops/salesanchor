@@ -1390,3 +1390,13 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   kgi: "F合格: SEC6_START=173 / SEC7_START=329 / SEC6_ADDED=1、warn-direct-lesson-edit=FAILURE、gh pr merge が 'the base branch policy prohibits the merge' で拒否（run 30039245397）。G合格: SEC6_ADDED=0、conclusion=SUCCESS、mergeStateStatus=UNSTABLE（run 30042043713）。H合格: SEC6_ADDED=1 を保ったまま conclusion=SUCCESS、ログに '✅ Lessons Guard: lessons-cleanup ラベルを確認'（新run 30042870942・旧run 30039245397 と別番号を実測）。"
   note: "F と G は process-artifacts gate が赤という条件まで同一で、差はダミー行の位置のみ。ruleset id=15777895 の必須チェック12件に warn-direct-lesson-edit は含まれ process-artifacts gate は含まれないため、マージ拒否はガード単独の効果と確定。PR #3072 の mergedAt=2026-07-23T22:10:30Z は UTC 表記で JST では 2026-07-24 07:10。"
   open: "訓練ブランチ3本のリモート削除は git push origin --delete が手元検問（worktree外／マージ済みブランチ）に拒否され、PO許可のうえ gh api -X DELETE で実施。台帳 .claude-pipeline/active-work.d/ の release-lg-scope-drill-f・-g・release-lessons-drill-fgh は origin/main に未コミットで本店の作業ツリーにのみ存在し、消し込み未実施。範囲限定の恒久維持を機械で保証する仕組みは未設計（本実証は一度きりの人手確認）。"
+
+## 2026-07-28: 作業台滞留の真因と reaper 対策の適用時点（EV-20260728-001）
+
+  reference: "定期run 30216232301（2026-07-26T19:08:45Z・conclusion=success）／対策コミット 9e462249／main合流 d87be6f2（2026-07-26T22:13:16+09:00）／検証時 origin/main=693d654da80d864ec79cfe0681dc78ba8b53f926"
+  scope: "reaper 自動掃除テーマの現状把握のみ。コード・ワークフローへの変更ゼロ。読み取り実測のみ。"
+  problem: "作業台が95個前後で減らない。原因が片付け忘れか機械側かが未確定だった。"
+  fix: "本エントリは実測記録であり変更なし。真因は台帳（.claude-pipeline/）の未コミット差分により reaper のチェック2（未保存保護・scripts/reaper-worktree.sh:154-157）が発動し続けること。対策 9e462249 は main に合流済み（merge-base --is-ancestor 9e462249 693d654d = exit 0）。"
+  kgi: "2026-07-27 04:08 JST の定期run 30216232301 は旧 main 1d9ae8cc で実行され、merge-base --is-ancestor 9e462249 1d9ae8cc = exit 1 のため対策未適用だった。同runの内訳は 対象88件／IN_PROGRESS・未マージ23件／未保存50件／未マージ12件／削除対象3件で、実削除は0件（3件とも『既に存在しないか登録解除済み』）。"
+  note: "本店 /Users/tanizawashingo/salesanchor の作業コピーは HEAD=d9a73243・origin/main=693d654d で434コミット遅れ、未保存23件。手元 scripts/reaper-worktree.sh は claude-pipeline 出現2件（main版は5件）で対策未反映。ゆえに手元 dry-run は旧版を実行し未保存50件・削除対象0件となった。定期実行は actions/checkout で毎回 origin/main を取り直すため本店の遅れの影響を受けない（run 30216232301 のログに e7a53a24..1d9ae8cc を実測）。"
+  open: "①対策適用後の実削除件数は未実測。②台帳を除外した独自集計は both=2／dirty_only=7／unpushed_only=21／clean=57（87 worktree中）だが、reaper の未push判定3経路（scripts/reaper-worktree.sh:147-183）のうち1経路のみで測った値であり reaper と同一物差しではない。③数の三者不一致: git worktree list=97／実フォルダ=94／reaper走査=87＋異物3。K2・K3 未実装の実害。④scripts/dev/executor-preflight.sh:70 は 2>/dev/null || true で失敗理由を破棄し、通信失敗と main 消失を区別せず同一メッセージを出す。疎通検査は api.github.com（25行）、main 存在確認は origin URL の github.com（70行）で宛先が異なる。⑤.claude-pipeline/active-work.md:23 の release/reaper-concurrency-design は IN_PROGRESS だが PR #3066 が 2026-07-23T05:51:08Z に MERGED 済みの残骸。"
