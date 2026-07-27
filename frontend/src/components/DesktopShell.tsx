@@ -182,7 +182,7 @@ export default function DesktopShell() {
   const showManagementCenter = hasAny(
     "staff.view", "teams.view", "roles.view", "bots.view",
     "shifts.view", "channels.view", "erp.view", "orders.view",
-    "customers.view", "deals.view", "suppliers.view", "purchase_orders.view",
+    "customers.view", "suppliers.view", "purchase_orders.view",
     "tenant.profile.view",
   );
 

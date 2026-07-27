@@ -30,8 +30,7 @@ class TestUnauthenticatedAccess:
     PROTECTED_ENDPOINTS = [
         ("GET", "/api/v1/companies"),
         ("POST", "/api/v1/companies"),
-        ("GET", "/api/v1/deals"),
-        ("POST", "/api/v1/deals"),
+        # deal-removal 便C: /api/v1/deals エンドポイント廃止済み
         ("GET", "/api/v1/orders"),
         ("POST", "/api/v1/orders"),
         ("GET", "/api/v1/dashboard"),
@@ -148,14 +147,7 @@ class TestInputValidation:
         )
         assert resp.status_code == 422
 
-    async def test_negative_amount_rejected(self, client):
-        """負の金額が拒否されること（POST /deals 封鎖(deal-removal 段階①)による）"""
-        resp = await client.post(
-            "/api/v1/deals",
-            json={"company_id": 1, "contact_id": 1, "title": "Test", "amount": -100},
-        )
-        # POST /deals 封鎖(deal-removal 段階①) による
-        assert resp.status_code == 405
+    # deal-removal 便C: test_negative_amount_rejected は /deals エンドポイント廃止に伴い削除
 
 
 class TestAdminRoleCheck:
