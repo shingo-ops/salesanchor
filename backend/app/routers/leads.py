@@ -2427,7 +2427,7 @@ async def merge_leads(
       1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
       2. guard チェック
       3. loser の lead_channels 行を補完（lead_channels から gap 分を拾う）
-      4. FK 付け替え: companies / contacts / deals の lead_id → master
+      4. FK 付け替え: companies / contacts の lead_id → master
       5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）
       6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）
       7. loser 削除
@@ -2446,7 +2446,6 @@ async def merge_leads(
     mm_t = tenant_table_ref(db, tenant_id, "meta_messages")
     co_t = tenant_table_ref(db, tenant_id, "companies")
     ct_t = tenant_table_ref(db, tenant_id, "contacts")
-    dl_t = tenant_table_ref(db, tenant_id, "deals")
 
     # 1) master / loser を昇順 FOR UPDATE ロック（デッドロック防止）
     low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
@@ -2486,7 +2485,7 @@ async def merge_leads(
             ),
         )
 
-    # 3) FK 付け替え: companies / contacts / deals（NO ON DELETE のため先に付け替え）
+    # 3) FK 付け替え: companies / contacts（NO ON DELETE のため先に付け替え）
     reassigned_companies = (await db.execute(
         text(f"UPDATE {co_t} SET lead_id = :master WHERE lead_id = :loser"),
         {"master": master_id, "loser": loser_id},
@@ -2494,11 +2493,6 @@ async def merge_leads(
 
     reassigned_contacts = (await db.execute(
         text(f"UPDATE {ct_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    reassigned_deals = (await db.execute(
-        text(f"UPDATE {dl_t} SET lead_id = :master WHERE lead_id = :loser"),
         {"master": master_id, "loser": loser_id},
     )).rowcount or 0
 
@@ -2558,7 +2552,6 @@ async def merge_leads(
         "loser_customer_name": loser_row["customer_name"],
         "reassigned_companies": reassigned_companies,
         "reassigned_contacts": reassigned_contacts,
-        "reassigned_deals": reassigned_deals,
         "reassigned_messages": reassigned_messages,
         "reassigned_channels": reassigned_channels,
         "reason": body.reason,
@@ -2581,9 +2574,9 @@ async def merge_leads(
 
     logger.info(
         "[merge_leads] tenant=%d master=%d ← loser=%d "
-        "(companies=%d contacts=%d deals=%d messages=%d channels=%d)",
+        "(companies=%d contacts=%d messages=%d channels=%d)",
         tenant_id, master_id, loser_id,
-        reassigned_companies, reassigned_contacts, reassigned_deals,
+        reassigned_companies, reassigned_contacts,
         reassigned_messages, reassigned_channels,
     )
 
