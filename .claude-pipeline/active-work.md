@@ -472,4 +472,4 @@
 | release/deal-removal-converted-b1 | converted_deal_id コード側置換（reservation: dr-converted-b1） | 2026-07-26 | DONE | #3106 | main | merged: PR #3106 / ea9d5178de0c63be11202ebceb8d461635491715 |
 | release/leads-drop-converted-dealid | leads.converted_deal_id 列とFK削除（reservation: dr-leads-converted-b2） | 2026-07-26 | DONE | #3110 | main | merged: PR #3110 / 2792561a1da34d522cba44236e6af231d50b6ac4 |
 | release/deal-removal-serviceA | サービス層の deals 参照を lead_status ベースへ（reservation: dr-serviceA） | 2026-07-27 | IN_PROGRESS | | main | |
-| release/deal-removal-serviceB | 会社統計の商談表示とleads統合のdeals参照を削除（reservation: dr-serviceB） | 2026-07-27 | IN_PROGRESS | | main | |
+| release/deal-removal-serviceB | 会社統計の商談表示とleads統合のdeals参照を削除（reservation: dr-serviceB） | 2026-07-27 | DONE | #3123 | main | merged: PR #3123 / 3f076d55871cfb3df985cf8897cc3f028fe09ef0 |
