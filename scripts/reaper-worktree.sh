@@ -151,7 +151,10 @@ for _IDX in "${!WT_PATHS[@]}"; do
   # git status は HEAD なしの fresh init でも動く（untracked files を検出可能）
   if git -C "${WORKTREE_PATH}" status >/dev/null 2>&1; then
     # a. 未コミット・未ステージ確認
-    if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null)" ]; then
+    # 2026-07-25 対策A: 台帳(.claude-pipeline/)のみの変更は未保存保護から除外する。
+    # 理由: 完了記録が worktree 側の台帳に未コミットで残り、マージ済みの机が永続保護されていた。
+    # 実測(origin/main=1bbd338): 未保存37件中28件が .claude-pipeline/ のみ・手書き混入0件。台帳以外があれば従来どおり保護。
+    if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null | grep -v '\.claude-pipeline/')" ]; then
       UNSAVED=1
     fi
 
