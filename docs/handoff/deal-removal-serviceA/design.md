@@ -1,7 +1,7 @@
 # サービス層から商談テーブルへの依存をなくし、リード状態で同じ業務判断をする
 
 親設計: [deal-removal design](../../specs/db-ssot/deal-removal/design.md)  
-調査: [recon.md](./recon.md)
+調査: [recon.md](./recon.md)（docs/handoff/deal-removal-serviceA/recon.md）
 
 対象ADR: ADR-121
 
@@ -34,4 +34,5 @@ deals を正本として数えていたサービス層を、leads の状態へ�
 
 ## 維持の仕組み
 
-守り手は process-artifacts gate とCIである。対象はサービス層への `deals` 再参照であり、対象4ファイルへの実行時SQLの再混入をレビュー・テストで検出する。
+守り手: scripts/check-process-artifacts.js とCI
+対象: サービス層への `deals` 再参照。対象4ファイルへの実行時SQLの再混入をレビュー・テストで検出する。
