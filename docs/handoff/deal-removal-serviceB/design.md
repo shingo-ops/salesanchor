@@ -4,6 +4,8 @@
 
 調査: [recon.md](./recon.md)
 
+相互参照: docs/handoff/deal-removal-serviceB/recon.md
+
 対象ADR: ADR-121
 
 ## 方針
