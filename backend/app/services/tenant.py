@@ -422,45 +422,8 @@ CREATE TABLE IF NOT EXISTS {schema}.lead_playbook (
 CREATE INDEX IF NOT EXISTS idx_lead_playbook_active
     ON {schema}.lead_playbook (tenant_id) WHERE is_active = TRUE;
 
--- 商談データ
-CREATE TABLE IF NOT EXISTS {schema}.deals (
-    id SERIAL PRIMARY KEY,
-    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    deal_code VARCHAR(20),
-    -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
-    --   新テナント作成時も customer_id 列を作らない（新 B2B モデル唯一の正）。
-    -- CONSTRAINT 名は migration 032 と合わせる（verify の FK 存在 check が新旧テナントで揃うように）
-    company_id INTEGER CONSTRAINT fk_deals_company REFERENCES {schema}.companies(id),
-    contact_id INTEGER CONSTRAINT fk_deals_contact REFERENCES {schema}.contacts(id),
-    lead_id INTEGER NOT NULL REFERENCES {schema}.leads(id),
-    title VARCHAR(255) NOT NULL,
-    amount NUMERIC(15, 2),
-    currency VARCHAR(10) DEFAULT 'JPY',
-    status VARCHAR(50) DEFAULT 'open',
-    stage VARCHAR(50) DEFAULT 'open',
-    probability INTEGER DEFAULT 10,
-    assigned_to INTEGER,
-    expected_close_date DATE,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_deals_company_id ON {schema}.deals (company_id);
-CREATE INDEX IF NOT EXISTS idx_deals_contact_id ON {schema}.deals (contact_id);
-
--- リード→案件への逆参照FK（leads作成時点ではdealsが未存在のため後から追加）
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'fk_leads_converted_deal'
-          AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
-    ) THEN
-        ALTER TABLE {schema}.leads
-            ADD CONSTRAINT fk_leads_converted_deal
-            FOREIGN KEY (converted_deal_id) REFERENCES {schema}.deals(id);
-    END IF;
-END $$;
+-- 便D-1: deals テーブルDDL・インデックス・FK は新規テナント作成定義から除去済み（2026-07-28）
+-- deals テーブル本体の DROP は便E で実施。既存テナントの deals は便D-1 では触らない。
 
 -- Phase 1-B-2: companies.lead_id / contacts.lead_id → leads.id
 DO $$
@@ -1204,7 +1167,7 @@ CREATE TABLE IF NOT EXISTS {schema}.own_inventory (
 # 親テーブルのRLSを経由した保護を追加することで防御の二重化を実現する。
 _RLS_ENABLE_SQL = """
 -- ADR-089 Sprint 5: customers は廃止済。RLS は companies 体系のみ。
-ALTER TABLE {schema}.deals ENABLE ROW LEVEL SECURITY;
+-- 便D-1: deals RLS は除去済み（deals テーブルは便E で DROP 予定）
 ALTER TABLE {schema}.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -1259,10 +1222,7 @@ _RLS_POLICY_SQL = """
 DO $$
 BEGIN
     -- ADR-089 Sprint 5: tenant_isolation_customers 削除済（customers テーブル廃止）
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_deals' AND schemaname = '{schema_raw}') THEN
-        CREATE POLICY tenant_isolation_deals ON {schema}.deals
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
-    END IF;
+    -- 便D-1: tenant_isolation_deals 削除済（deals テーブルは便E で DROP 予定）
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_orders' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_orders ON {schema}.orders
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
