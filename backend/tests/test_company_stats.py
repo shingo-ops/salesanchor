@@ -28,7 +28,6 @@ SELECT
     COALESCE(SUM(i.total_amount), 0) AS total_deal_amount,
     COUNT(DISTINCT i.id)              AS paid_invoice_count,
     MAX(i.paid_at)                    AS last_paid_at,
-    COUNT(DISTINCT d.id)              AS deal_count,
     0                                 AS conversation_count,
     NULL                              AS last_conversation_at
 FROM companies c
@@ -36,9 +35,10 @@ LEFT JOIN invoices i
     ON i.company_id = c.id
     AND i.paid_at IS NOT NULL
     AND i.voided_at IS NULL
-LEFT JOIN deals d ON d.company_id = c.id
 GROUP BY c.id
 """
+# 便D-1: deals テーブル廃止に伴い deal_count と LEFT JOIN deals を除去（2026-07-28）
+# total_deal_amount は請求書ベースの集計（deals 非依存）のため検証は継続
 
 
 # ---------------------------------------------------------------------------
