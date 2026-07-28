@@ -80,3 +80,51 @@ git ls-remote --heads origin main = 8dfd80a0 / origin develop = 1b9a93b7 で
 対策適用後も作業台が減らないのは、保護判定の問題ではなく削除経路の問題である。
 design.md のかたまり①（REAPER_WORKTREES_DIR 注入）は走査先のみを本店に向けており、
 削除先は変更していない。design.md の弊害欄に本項目の記載はない。
+
+## 事実7: 現在唯一機能している削除経路（2026-07-28 実測）
+
+scripts/new-worktree.sh:67 — bash "${REAPER_SCRIPT}" --execute 2>/dev/null || true
+本店版・origin/main 版とも同一（65・67・82行）。作業台を作るたびに実削除が走る。
+実フォルダ数の推移: 96（未明）→ 95（04時台）→ 94（16:14）。
+
+## 事実8: 常駐・定期の別経路は関与していない
+
+launchctl list: jp.salesanchor.reaper-onlogin は登録済みだが PID なし。
+~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist は RunAtLoad のみ・
+Interval キーなし・KeepAlive false。
+ログ /Users/tanizawashingo/Library/Logs/reaper-onlogin.log の最終更新は 2026-07-24 11:37。
+crontab -l は no crontab（exit 1）。
+
+## 事実9: ロック残骸による全停止（実害）
+
+/tmp/reaper-worktree.lock.d が 2026-07-28 16:14:39 に作成され、17:04 時点で
+プロセス不在・中身空のまま残存（約50分）。
+scripts/reaper-worktree.sh:31-35 により、ロック在中の掃除機は
+「another instance is running; skip.」で無言終了する。
+この間に作業台は 94 から 95 に増えたが、削除は発生しなかった。
+GO #reaper-lock-release により rmdir で解除（rmdir_exit=0）。
+
+## 事実10: 手元経路での実削除が成功（K5 実測・2026-07-28 21:37 JST）
+
+release-deal-removal-serviceD（対策版・claude-pipeline 出現5）から
+環境変数なしで bash scripts/reaper-worktree.sh --execute を実行。
+
+dry-run 検算: 対象90件／IN_PROGRESS・未マージ35件／未保存24件／未マージ7件／削除対象24件。
+削除候補24件に main・develop の完全一致は 0 件（grep -cx で実測）。
+
+実行結果: フォルダ削除 24件／ブランチ削除 24件／フォルダ削除スキップ 0件。
+実フォルダ 95 から 72、登録簿 100 から 76。
+実行後 main・develop は手元・リモートとも残存。ロック残存なし。
+
+未確定: フォルダ削除24件に対し実フォルダは23件減。差1件の原因は未特定。
+
+## 事実11: 実行方式による差
+
+前面実行はログ 3,955 バイトで完走（2回）。
+背景実行（nohup）はログ 0 バイトで終了しロックを残した（1回）。原因は未特定。
+
+## 構造（事実7〜11の追加分）
+
+Actions 経由（走査=本店・削除=_work）では削除0件、手元経路（走査・削除とも本店）では
+24件成功した。事実3の構造が実測で裏づけられた。
+K5（即時掃除が実際に消す）は手元経路で達成。Actions 経路は未達。
