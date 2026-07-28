@@ -476,3 +476,5 @@
 | release/ledger-serviceB-done | 便B（会社統計の商談表示削除）のDONE記録（reservation: ledger-serviceB） | 2026-07-27 | IN_PROGRESS | | main | 台帳のみ |
 | release/deal-removal-serviceC | /deals API本体とフロント画面の削除（reservation: dr-serviceC） | 2026-07-28 | DONE | #3129 | main | merged: PR #3129 / d8ac9d4b334c74fe128bef5de0ae922481ee08d3 |
 | release/ledger-serviceC-done | 便C（/deals API・フロント画面削除）のDONE記録 | 2026-07-28 | IN_PROGRESS | | main | 台帳のみ |
+| release/deal-removal-serviceD | 便D-1: deals DDL/RLS/ビュー定義/catch-up migration のコード側除去（reservation: dr-serviceD） | 2026-07-28 | DONE | #3133 | main | merged: PR #3133 / 37c0822492b4a060ae6743954c1b7d9b83e9d7e8 |
+| release/ledger-serviceD-done | 便D-1（deals DDL/RLS/catch-up除去）のDONE記録 | 2026-07-28 | IN_PROGRESS | | main | 台帳のみ |
