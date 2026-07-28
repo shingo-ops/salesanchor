@@ -474,3 +474,5 @@
 | release/deal-removal-serviceA | サービス層の deals 参照を lead_status ベースへ（reservation: dr-serviceA） | 2026-07-27 | IN_PROGRESS | | main | |
 | release/deal-removal-serviceB | 会社統計の商談表示とleads統合のdeals参照を削除（reservation: dr-serviceB） | 2026-07-27 | DONE | #3123 | main | merged: PR #3123 / 3f076d55871cfb3df985cf8897cc3f028fe09ef0 |
 | release/ledger-serviceB-done | 便B（会社統計の商談表示削除）のDONE記録（reservation: ledger-serviceB） | 2026-07-27 | IN_PROGRESS | | main | 台帳のみ |
+| release/deal-removal-serviceC | /deals API本体とフロント画面の削除（reservation: dr-serviceC） | 2026-07-28 | DONE | #3129 | main | merged: PR #3129 / d8ac9d4b334c74fe128bef5de0ae922481ee08d3 |
+| release/ledger-serviceC-done | 便C（/deals API・フロント画面削除）のDONE記録 | 2026-07-28 | IN_PROGRESS | | main | 台帳のみ |
