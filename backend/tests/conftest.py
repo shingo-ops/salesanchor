@@ -408,31 +408,7 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        # 案件テーブル（Step 5d: 旧 customer_id 列削除済）
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS deals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL DEFAULT 999,
-                deal_code VARCHAR(20),
-                company_id INTEGER REFERENCES companies(id),
-                contact_id INTEGER REFERENCES contacts(id),
-                lead_id INTEGER REFERENCES leads(id),
-                title VARCHAR(255) NOT NULL,
-                amount NUMERIC(15, 2),
-                currency VARCHAR(10) DEFAULT 'JPY',
-                status VARCHAR(50) DEFAULT 'open',
-                stage VARCHAR(50) DEFAULT 'open',
-                probability INTEGER DEFAULT 10,
-                assigned_to INTEGER,
-                expected_close_date DATE,
-                notes TEXT,
-                lead_source VARCHAR(50),
-                closed_at TIMESTAMP,
-                close_reason_memo TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        # 便D-1: deals テーブルDDL 除去済み（2026-07-28）。DROP は便E。
         # 注文テーブル（Step 5d: 旧 customer_id 列削除済）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS orders (
@@ -1362,7 +1338,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM orders"))
         await conn.execute(text("DELETE FROM products"))
         await conn.execute(text("DELETE FROM deal_close_reasons"))
-        await conn.execute(text("DELETE FROM deals"))
+        # 便D-1: DELETE FROM deals 除去済み（deals テーブルはテスト環境に存在しない）
         await conn.execute(text("DELETE FROM close_reasons"))
         # ADR-138: デフォルト理由を再投入（テスト間の独立性確保）
         await conn.execute(text("""
