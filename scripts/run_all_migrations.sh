@@ -516,6 +516,9 @@ run_sql migrations/20260724_170000_dcr_drop_deal_id.sql
 
 # leads.converted_deal_id と対応するFKを全tenantから削除（冪等）
 run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
+
+# 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
+run_sql migrations/20260729_043520_drop_deals.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
