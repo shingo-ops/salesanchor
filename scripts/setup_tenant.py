@@ -216,10 +216,9 @@ async def _apply_catchup_migrations(engine, tenant_id: int, schema_name: str) ->
         ("20260612_100000_add_contact_channel_unique.sql", "SA-04: contact_channel UNIQUE + guild_id"),
         # SA-04: company_discord.guild_id 追加
         ("20260612_110000_add_company_discord_guild_id.sql", "SA-04: company_discord.guild_id"),
-        # ADR-138 §D1-1: deals.closed_at 追加
-        ("20260613_010000_funnel_deals_closed_at.sql",         "ADR-138 D1-1: deals.closed_at"),
-        # ADR-138 §D1-2: close_reasons / deal_close_reasons + deals.lost_reason* 廃止
-        ("20260613_020000_funnel_close_reasons.sql",           "ADR-138 D1-2: close_reasons"),
+        # 便D-1: 20260613_010000（deals.closed_at）・20260613_020000（close_reasons/deals操作）は
+        # deals テーブルに依存するため除去済み（2026-07-28）。
+        # close_reasons・deal_close_reasons は tenant.py DDL に含まれるため新規テナントへの影響なし。
         # ADR-138 §D1-3: leads.source 廃止 + channel_type / initiative 追加
         ("20260613_030000_funnel_leads_initiative_channel.sql","ADR-138 D1-3: leads channel_type"),
         # ADR-138 §D1-4: goals.kpi_type CHECK 拡張
