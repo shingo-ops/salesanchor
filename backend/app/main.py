@@ -37,7 +37,6 @@ from app.routers import (
     countries,  # Foundation F1: 国台帳 (public.countries)
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
-    deals,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
     discord_auto_setup,  # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
     discord_channel_invite,  # ADR-091 KPI5: チャンネル招待メッセージ送信 API
@@ -273,10 +272,6 @@ app.include_router(
 # SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
 app.include_router(
     contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
-    dependencies=[Depends(get_current_tenant)],
-)
-app.include_router(
-    deals.router, prefix="/api/v1", tags=["deals"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-138 PR3: 成約・失注理由マスタ CRUD

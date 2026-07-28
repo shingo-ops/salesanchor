@@ -1542,7 +1542,8 @@ async def client(db_session):
     from contextlib import ExitStack
     _audit_targets = [
         # ADR-089 Sprint 3: app.routers.customers 廃止済み
-        "app.routers.deals", "app.routers.orders",
+        # deal-removal 便C: app.routers.deals 廃止済み
+        "app.routers.orders",
         "app.routers.order_financials",
         "app.routers.order_shipping_details",
         "app.routers.order_purchase_details",
