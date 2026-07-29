@@ -65,8 +65,10 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     existing_customer: { bucket: "success", badgeVariant: "won",         labelKey: "leads.statusCode.existing_customer" },
     follow_up_short:   { bucket: "warning", badgeVariant: "pending",     labelKey: "leads.statusCode.follow_up_short" },
     follow_up_long:    { bucket: "warning", badgeVariant: "pending",     labelKey: "leads.statusCode.follow_up_long" },
-    lost:              { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.lost" },
-    out_of_scope:      { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.out_of_scope" },
+    lost:                      { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.lost" },
+    out_of_scope:              { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.out_of_scope" },
+    lead_out_of_scope:         { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.lead_out_of_scope" },
+    negotiating_out_of_scope:  { bucket: "danger",  badgeVariant: "lost",        labelKey: "leads.statusCode.negotiating_out_of_scope" },
   },
 
   quote: {
