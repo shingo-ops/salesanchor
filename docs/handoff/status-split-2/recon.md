@@ -24,5 +24,5 @@
 
 ## ADR 検索結果
 
-- ADR-109: status SSOT（`docs/adr/ADR-109-lead-status-immutable-codes.md`）
-- ADR-121: テナントスキーマ移行パターン
+- ADR-109: status SSOT（`docs/adr/ADR-109-leads-status-ssot-immutable-codes.md`）
+- ADR-121: process-artifacts gate（`docs/adr/ADR-121-sop-process-artifacts-gate.md`）

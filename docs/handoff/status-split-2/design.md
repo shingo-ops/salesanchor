@@ -9,7 +9,7 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-- ADR-109 status SSOT 化パターン → status 追加時のフロント対応は statusPresentation.ts への entry 追加が定跡。同じパターンで lead_out_of_scope / negotiating_out_of_scope を追加。
+- docs/adr/ADR-109-leads-status-ssot-immutable-codes.md の status SSOT 化パターン → status 追加時のフロント対応は statusPresentation.ts への entry 追加が定跡。同じパターンで lead_out_of_scope / negotiating_out_of_scope を追加。
 - 過去事例: `lost` / `out_of_scope` の既存エントリが `danger/lost` バッジを使う実績 → 新2値も同じ bucket/badgeVariant を適用することで UI 一貫性を担保。
 
 ---
@@ -54,8 +54,8 @@
 
 ## 維持の仕組み
 
-- 守り手: CI `Frontend lint & custom checks` / `Lint & Dark Mode Check` （変更後の型エラー・スタイル違反を検出）
-- 守り手: `process-artifacts gate`（PR本文の宣言と実変更ファイルの一致を強制）
+- 守り手: .github/workflows/frontend-check.yml（TypeScript 型エラー・ESLint 違反を検出）
+- 守り手: .github/workflows/ui-governance-gate.yml（PR 本文の宣言と実変更ファイルの一致を強制）
 - 対象: 新ステータス追加時に statusPresentation.ts と inbox.types.ts の両方を更新し忘れると、バッジ未定義またはアーカイブタブ未表示が発生する。
 
 ---
