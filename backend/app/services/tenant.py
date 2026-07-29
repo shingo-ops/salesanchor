@@ -72,7 +72,6 @@ DEFAULT_ROLES = [
             "dashboard.view", "reports.view", "reports.export",
             "customers.view", "customers.update",
             "leads.view", "leads.create", "leads.update", "leads.delete", "leads.convert",
-            "deals.view", "deals.update",
             "orders.view",
             "teams.view", "teams.manage_members",
             "roles.view",
@@ -100,7 +99,6 @@ DEFAULT_ROLES = [
             "dashboard.view", "reports.view",
             "customers.view", "customers.create", "customers.update",
             "leads.view", "leads.create", "leads.update", "leads.convert",
-            "deals.view", "deals.create", "deals.update",
             "orders.view", "orders.create", "orders.update",
             # Phase 2
             "products.view",
@@ -124,7 +122,6 @@ DEFAULT_ROLES = [
             "dashboard.view", "reports.view",
             "customers.view", "customers.update",
             "leads.view",
-            "deals.view",
             "orders.view",
             "teams.view",
             # Phase 2

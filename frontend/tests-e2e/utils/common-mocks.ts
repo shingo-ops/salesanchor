@@ -18,7 +18,6 @@ export const ALL_PERMISSIONS = [
   "quotes.view",
   "quotes.create",
   "invoices.view",
-  "deals.view",
   "suppliers.view",
   "purchase_orders.view",
   "staff.view",
