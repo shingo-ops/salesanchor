@@ -2,7 +2,7 @@
 
 > この文書は何か（専門用語なしの1行）:
 > プルダウン・入力欄の高さと幅を、選べる金型（各3段）で決めるルール表と移行計画。
-> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: docs/handoff/field-size/recon.md / 対象ADR: 該当なし（寸法金型のADRは未起案。2026-07-29 実測で docs/adr 配下および FEATURE-INDEX.md に該当0件）
+> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: docs/handoff/field-size/recon.md / 対象ADR: ADR-144（UI共通部品の遵守ガバナンス。上位方針として適用）。寸法金型固有のADRは未起案（2026-07-29 実測で docs/adr 配下および FEATURE-INDEX.md に field-size・入力部品・寸法金型 の該当0件）
 
 ## 1. 寸法金型の規格（高さ3段×幅3段・独立選択）
 
