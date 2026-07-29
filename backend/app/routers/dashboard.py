@@ -98,11 +98,11 @@ async def get_dashboard(
     result = await db.execute(text("""
         SELECT
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'out_of_scope')) AS open_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'lead_out_of_scope', 'negotiating_out_of_scope')) AS open_count,
             COUNT(*) FILTER (WHERE type = 'Inbound') AS inbound,
             COUNT(*) FILTER (WHERE type = 'Outbound') AS outbound,
-            COUNT(*) FILTER (WHERE status IN ('negotiating', 'existing_customer', 'lost')) AS converted,
-            COUNT(*) FILTER (WHERE status NOT IN ('out_of_scope', 'disqualified')) AS conversion_denominator
+            COUNT(*) FILTER (WHERE status IN ('negotiating', 'existing_customer', 'lost', 'negotiating_out_of_scope')) AS converted,
+            COUNT(*) FILTER (WHERE status NOT IN ('lead_out_of_scope', 'negotiating_out_of_scope')) AS conversion_denominator
         FROM leads
     """))
     lead_row = result.mappings().first() or {}
