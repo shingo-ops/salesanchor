@@ -1,4 +1,4 @@
-# 柱3-a/b design — テストスキーマ複製の検出
+# 柱3-a/b/c design — テストスキーマ複製の検出と一覧固定
 
 > この文書は何か（専門用語なしの1行）:
 > テスト用ファイルが本番テーブル定義を新しくコピーしたら機械が気づいて止める、その作り方を決めた設計。
@@ -13,8 +13,9 @@ recon: docs/handoff/pillar3-test-schema-dup/recon.md
 ## 2. 対象KGI（本便が満たすもの）
 - 柱3-a: テストの独自CREATE TABLEの新規増加を機械が検出して止める。
 - 柱3-b: 検出パターンが変種（IF NOT EXISTS有無・引用符違い・スキーマ接頭辞・記述形式4種）を取りこぼさない。
+- 柱3-c: 既存の複製一覧を固定し、照合で変化を検出する。
 - 柱3-e: 欠落版・充足版のペアテストで実測（柱3-a/bの検証方法）。
-（柱3-c 一覧固定・柱3-d 同伴警告は別便）
+（柱3-d 同伴警告は別便）
 
 ## 3. recon根拠（実測・固定SHA）
 実測SHA: 2771fba288b30d2535f64bc2b5a1504e33e375ca / 186b6db0f90c9a32f25a9a1569f3e9160262ab61 / d62a3af18c008ca29a9d577bbac630bf127841b8（3点で同値）
@@ -55,11 +56,17 @@ recon: docs/handoff/pillar3-test-schema-dup/recon.md
 4. dbapi_conn.execute 経由
 いずれも 4-2 の文字列リテラル走査で捕捉される。execute の書き方に依存しない。
 
+### 4-5 既存複製一覧の固定と照合（柱3-c）
+- 一覧ファイル: docs/specs/process-hardening/pillar3-inventory.md（生成SHA記載・機械生成）。
+- --write-inventory \<sha\> \<path\>: 指定SHAを名乗る一覧ファイルを生成する。
+- --check-inventory \<path\> \<sha\>: 一覧ファイルのSHAと実測SHAを照合し、件数・ファイルセットが変化したら exit 1。
+- CI に --check-inventory ステップを追加する（.github/workflows/test-schema-dup-gate.yml 40行目）。
+
 ## 5. 弊害・トレードオフ（空欄不可）
 - CIワークフローとスクリプトの変更を伴うため危険変更に当たり、PO自筆GOを要する。
 - 既存のペアテスト（63行・JavaScript）は言語が変わるため作り直しとなる。旧テストの資産は引き継がない。
 - AS構文を対象外とするため、将来 AS 構文で本物の複製が増えても本ゲートは検出しない。列の書き写しではないため柱3の主目的（列追加の連鎖）には該当しないが、穴が残ることを明記する。
-- テーブル名が変数で書かれている箇所は、名前が {expr} として記録される。実測2件（backend/tests/test_rls_invariants.py、backend/tests/test_rls_translation_glossary.py）。件数の計上には影響しないため柱3-a/b は成立するが、柱3-c の一覧では2件が名前不明となる。
+- テーブル名が変数で書かれている箇所は、名前が {expr} として記録される。実測3件（backend/tests/test_rls_carrier_credentials.py、backend/tests/test_rls_invariants.py、backend/tests/test_rls_translation_glossary.py）。件数の計上には影響しないため柱3-a/b は成立するが、柱3-c の一覧では3件が名前不明となる。
 - IF がテーブル名として混入した旧不具合の真因は未解明である。当該実装はリポジトリ・全履歴・一時領域のいずれにも存在せず、追跡不能と実測確定した。本設計はASTにより名前抽出の経路自体を変え、加えてペアテストで IF 混入ゼロを常時検査することで再発を防ぐ。
 
 ## 6. 外部・過去事例の参照と我々への応用
@@ -78,11 +85,14 @@ recon: docs/handoff/pillar3-test-schema-dup/recon.md
 | 実データ全件で検算する | ペアテストの real-parse-failed が空（読めないファイル0件） |
 | 新規複製を仕込んだPRで赤になる | ペアテストの pair-violation-exit1 が PASS（exit 1） |
 | 既存の緑PRが赤化しない | ペアテストの pair-clean-exit0 が PASS（exit 0） |
+| 既存複製一覧が生成できる | --write-inventory を実行し pillar3-inventory.md が 29ファイル・71件のヘッダーで出力される |
+| 一覧照合が緑になる | --check-inventory を pillar3-inventory.md と HEAD_SHA で実行し exit 0 になる |
 
 ## 8. 維持の仕組み
 - 守り手: .github/workflows/test-schema-dup-gate.yml
 - 対象: テストへの新規スキーマ複製が増えること
 - 守り手（本設計docの改変防止）: .github/workflows/process-artifacts-gate.yml
+- 守り手（既存複製一覧の変化検出）: docs/specs/process-hardening/pillar3-inventory.md + --check-inventory ステップ（CI）
 - 補足: 本ゲートは現時点で必須チェックではない。必須化は安定確認後に別途PO GOで判断する。
 
 ## 9. 接触面分析（6面）
