@@ -519,6 +519,9 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
+
+# deals-perms-rename: deals.* 権限行を本番DBから削除（CASCADE で role_permissions 70行も自動削除）
+run_sql migrations/20260729_170000_drop_deals_permissions.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

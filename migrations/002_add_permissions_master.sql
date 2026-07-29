@@ -5,6 +5,7 @@
 --
 -- 変更履歴:
 --   2026-04-16: 初版作成（Discord式カスタムロール対応）
+--   2026-07-29: deals.* 4行を除去（deals廃止 deals-perms-rename・既存テナントは別migration）
 
 CREATE TABLE IF NOT EXISTS public.permissions (
     id SERIAL PRIMARY KEY,
@@ -41,11 +42,6 @@ INSERT INTO public.permissions (key, resource, action, description, category) VA
     ('leads.update', 'leads', 'update', 'リード情報の編集', 'リード'),
     ('leads.delete', 'leads', 'delete', 'リードの削除', 'リード'),
     ('leads.convert', 'leads', 'convert', 'リードの案件化', 'リード'),
-    -- 案件管理
-    ('deals.view', 'deals', 'view', '案件一覧の閲覧', '案件'),
-    ('deals.create', 'deals', 'create', '案件の登録', '案件'),
-    ('deals.update', 'deals', 'update', '案件情報の編集', '案件'),
-    ('deals.delete', 'deals', 'delete', '案件の削除', '案件'),
     -- 注文管理
     ('orders.view', 'orders', 'view', '注文一覧の閲覧', '注文'),
     ('orders.create', 'orders', 'create', '注文の登録', '注文'),
