@@ -21,15 +21,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-python@v5
         with:
-          node-version: '22'
+          python-version: '3.12'
 
       - name: Run test-schema-dup gate
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/check-test-schema-dup.js
+        run: python3 scripts/check_test_schema_dup.py
 
       - name: Run test-schema-dup tests
-        run: node scripts/tests/test-check-test-schema-dup.js
+        run: python3 scripts/tests/test_check_test_schema_dup.py

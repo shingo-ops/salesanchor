@@ -2,7 +2,7 @@
 
 > この文書は何か（専門用語なしの1行）:
 > プルダウン・入力欄の高さと幅を、選べる金型（各3段）で決めるルール表と移行計画。
-> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: docs/handoff/field-size/recon.md / 対象ADR: ADR-149
+> 親（あるべき姿＋KGI）: [README.md](./README.md) / recon: docs/handoff/field-size/recon.md / 対象ADR: 該当なし（寸法金型のADRは未起案。2026-07-29 実測で docs/adr 配下および FEATURE-INDEX.md に該当0件）
 
 ## 1. 寸法金型の規格（高さ3段×幅3段・独立選択）
 
@@ -31,6 +31,7 @@
 | 便D | 生select 38画面の寄せ | 生selectをSelect金型へ段階置換（別テーマ相当の規模・要分割） |
 | 便E | 番人新設 | 手書きwidth/height直書きを検出するCI関所（KGI⑥） |
 
+進捗（2026-07-29 実測・main=d62a3af18c008ca29a9d577bbac630bf127841b8）: 便A完了（frontend/src/tokens.css:162-167 に6変数・frontend/src/components/field-size.css 20行・frontend/src/index.css:2 で読込）。便B完了（frontend/src/pages/leads/LeadsPage.tsx:302,313）。便C完了（ContentToolbar 使用26ページ中、入力部品を持つ25ページに金型適用済み。frontend/src/pages/dashboard/FollowUpsPage.tsx は入力部品を持たないため対象外）。便D・便E 未着手。
 ## 3. 弊害・トレードオフ（空欄不可）
 - 選択肢が9通り（高3×幅3）で現場が迷う余地。緩和: 用途別の推奨組をdesignに例示。
 - 生select 38画面の金型寄せは大工事。便Dは単独テーマ化も検討（規模次第）。
