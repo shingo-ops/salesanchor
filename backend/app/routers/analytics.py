@@ -32,7 +32,7 @@ router = APIRouter()
 
 LEAD_ACTIVE_STATUSES = ("lead", "negotiating", "follow_up_short", "follow_up_long")
 LEAD_CLOSED_STATUSES = ("existing_customer", "lost")
-LEAD_TERMINAL_STATUSES = LEAD_CLOSED_STATUSES + ("out_of_scope",)
+LEAD_TERMINAL_STATUSES = LEAD_CLOSED_STATUSES + ("lead_out_of_scope", "negotiating_out_of_scope")
 
 
 class ConversionEntry(BaseModel):
@@ -142,7 +142,7 @@ async def stalled_deals_report(
         text("""
             SELECT COUNT(*)
             FROM leads
-            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+            WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
         """)
     )
     total_open = total_result.scalar() or 0
@@ -163,7 +163,7 @@ async def stalled_deals_report(
                 (CURRENT_DATE - l.updated_at::date)::INTEGER AS days_stalled
             FROM leads l
             LEFT JOIN companies c ON c.lead_id = l.id
-            WHERE l.status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+            WHERE l.status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
               AND (CURRENT_DATE - l.updated_at::date) >= :threshold
             ORDER BY l.updated_at ASC
         """),
@@ -271,7 +271,7 @@ async def followup_reminders(
             FROM leads
             WHERE next_action_date IS NOT NULL
               AND next_action_date <= :upcoming_end
-              AND status NOT IN ('lost', 'out_of_scope', 'existing_customer')
+              AND status NOT IN ('lost', 'lead_out_of_scope', 'negotiating_out_of_scope', 'existing_customer')
             ORDER BY next_action_date ASC
         """),
         {"upcoming_end": upcoming_end},
@@ -324,7 +324,7 @@ async def landing_forecast(
     今月の着地予測。
 
     計算式: Σ(leads.amount)
-    対象: status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+    対象: status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
           AND expected_close_date の月 = 今月
     """
     today = date.today()
@@ -340,7 +340,7 @@ async def landing_forecast(
                 COALESCE(SUM(amount), 0) AS forecast_amount,
                 COUNT(*) AS open_deal_count
             FROM leads
-            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+            WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
               AND expected_close_date >= :start
               AND expected_close_date < :end
         """),
@@ -502,7 +502,7 @@ async def dashboard_summary(
             SELECT
                 COUNT(*) AS total,
                 COUNT(*) FILTER (WHERE status = 'existing_customer') AS converted,
-                COUNT(*) FILTER (WHERE status = 'out_of_scope') AS excluded
+                COUNT(*) FILTER (WHERE status IN ('lead_out_of_scope', 'negotiating_out_of_scope')) AS excluded
             FROM leads
             WHERE {date_filter}
             {assign_filter_leads}
@@ -520,7 +520,7 @@ async def dashboard_summary(
         text(f"""
             SELECT
                 COUNT(*) AS total,
-                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')) AS active,
+                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')) AS active,
                 COUNT(*) FILTER (WHERE status = 'existing_customer') AS won
             FROM leads
             WHERE {date_filter}
@@ -574,7 +574,7 @@ async def dashboard_summary(
     prev_deal_result = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')) AS active,
+                COUNT(*) FILTER (WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')) AS active,
                 COUNT(*) FILTER (WHERE status = 'existing_customer') AS won,
                 COUNT(*) AS total
             FROM leads
@@ -854,7 +854,7 @@ async def monthly_revenue(
         text("""
             SELECT COALESCE(SUM(amount), 0) AS weighted
             FROM leads
-            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+            WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
               AND expected_close_date >= :start
               AND expected_close_date < :end
         """),
@@ -1182,7 +1182,7 @@ async def funnel_stages(
                 COUNT(*) AS cnt,
                 COALESCE(SUM(amount), 0) AS amount
             FROM leads
-            WHERE status NOT IN ('existing_customer', 'lost', 'out_of_scope')
+            WHERE status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
               AND created_at >= :start AND created_at < :end
             {assign_filter_leads}
         """),
