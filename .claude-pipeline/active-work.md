@@ -481,3 +481,4 @@
 | release/deal-removal-drop | 便E: DROP TABLE deals 本番適用＋コード記録（reservation: dr-drop-deals） | 2026-07-29 | DONE | #3136 | main | merged: PR #3136 / 8c0a70c931355296689d3c4ccf726005e0a01dd8 |
 | release/ledger-drop-deals-done | 便E（DROP TABLE deals）のDONE記録 | 2026-07-29 | IN_PROGRESS | | main | 台帳のみ |
 | release/status-split-2 | フロント表示の2値対応（バッジ・絞り込み・インボックス処理） | 2026-07-29 | DONE | #3139 | main | merged: PR #3139 / 5ba4a79d56bffc5bbd7a291eb9c22cc87aa3d1a6 |
+| release/status-split-3 | KPI/analytics/dashboard の out_of_scope → 2値置換（便3） | 2026-07-29 | IN_PROGRESS | | main | reservation: status-split-3 |
