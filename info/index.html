@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ドロップシッピング型B2B営業の顧客対応・在庫・見積・請求・受注・発送・分析を一つにつなぐSalesAnchorのご案内。">
+  <meta name="theme-color" content="#0a1628">
+  <title>SalesAnchor｜B2B営業を、ひとつの流れに</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Noto+Sans+JP:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #ffffff;
+      --navy: #0a1628;
+      --navy-2: #10233f;
+      --blue: #1877f2;
+      --blue-dark: #1158b5;
+      --blue-soft: #e7f3ff;
+      --ink: #162235;
+      --muted: #5d6b7d;
+      --tint: #f3f6fa;
+      --line: #dbe3ee;
+      --green: #0b8f62;
+      --amber: #a85d00;
+      --red: #bd3f2a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      background: #e8edf4;
+      color: var(--ink);
+      font-family: 'Noto Sans JP', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+    svg { display: block; }
+    .num { font-family: 'Barlow Condensed', sans-serif; }
+    .stage { width: min(1080px, 100vw); margin: 0 auto; overflow: hidden; }
+    .poster { width: 1080px; transform-origin: top left; background: var(--paper); overflow: hidden; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 64px 52px 54px;
+      color: #fff;
+      background:
+        radial-gradient(circle at 86% 12%, rgba(24,119,242,.32), transparent 28%),
+        radial-gradient(circle at 6% 92%, rgba(96,165,250,.13), transparent 32%),
+        linear-gradient(145deg, #07101e 0%, #0a1628 52%, #102b50 100%);
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 390px;
+      height: 390px;
+      right: -130px;
+      bottom: -205px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 50%;
+      box-shadow: 0 0 0 58px rgba(255,255,255,.025), 0 0 0 116px rgba(255,255,255,.018);
+    }
+    .brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 38px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #1e3a8a;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    }
+    .brand-mark svg { width: 29px; height: 29px; }
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 42px;
+      align-items: end;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 19px;
+      padding: 7px 13px;
+      border: 1px solid rgba(96,165,250,.45);
+      border-radius: 999px;
+      color: #bfdbfe;
+      background: rgba(24,119,242,.15);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .13em;
+    }
+    .hero h1 {
+      max-width: 670px;
+      font-size: 53px;
+      font-weight: 900;
+      line-height: 1.25;
+      letter-spacing: -.025em;
+    }
+    .hero h1 em { color: #60a5fa; font-style: normal; }
+    .hero .lead {
+      max-width: 670px;
+      margin-top: 22px;
+      color: #cad6e7;
+      font-size: 18px;
+      line-height: 1.9;
+    }
+    .hero-card {
+      padding: 23px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+    }
+    .hero-card .overline { color: #93c5fd; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+    .hero-card .big { margin-top: 8px; font-size: 42px; line-height: 1; font-weight: 700; }
+    .hero-card .big span { color: #60a5fa; }
+    .hero-card p { margin-top: 13px; color: #c5d2e4; font-size: 13px; line-height: 1.75; }
+    .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      color: #dbe8f7;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status i { width: 7px; height: 7px; border-radius: 50%; background: #34d399; }
+
+    .section { padding: 52px; }
+    .section-label {
+      display: inline-block;
+      margin-bottom: 14px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .22em;
+    }
+    .section-title {
+      font-size: 36px;
+      line-height: 1.42;
+      color: var(--navy);
+      font-weight: 900;
+      letter-spacing: -.02em;
+    }
+    .section-title em { color: var(--blue); font-style: normal; }
+    .section-copy { margin-top: 13px; color: var(--muted); font-size: 16px; line-height: 1.85; }
+
+    .problem { background: #fff; }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 30px;
+    }
+    .problem-card {
+      position: relative;
+      min-height: 162px;
+      padding: 22px 22px 20px 76px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--tint);
+    }
+    .problem-card.wide { grid-column: 1 / -1; min-height: 145px; }
+    .problem-card .index {
+      position: absolute;
+      left: 19px;
+      top: 20px;
+      color: #c8d3e0;
+      font-size: 39px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .problem-card h3 { color: var(--navy); font-size: 18px; font-weight: 900; line-height: 1.55; }
+    .problem-card p { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+    .problem-card strong { color: var(--red); }
+    .problem-verdict {
+      margin-top: 22px;
+      padding: 15px 18px;
+      border-left: 5px solid var(--red);
+      border-radius: 0 8px 8px 0;
+      background: #fff3f0;
+      color: var(--navy);
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.75;
+    }
+    .problem-verdict strong { color: var(--red); }
+
+    .pivot {
+      padding: 31px 52px;
+      color: #fff;
+      background: linear-gradient(90deg, var(--blue-dark), var(--blue));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 30px;
+    }
+    .pivot .before, .pivot .after { flex: 1; }
+    .pivot .cap { color: #bfdbfe; font-size: 11px; font-weight: 800; letter-spacing: .15em; }
+    .pivot .phrase { margin-top: 7px; font-size: 24px; font-weight: 900; line-height: 1.5; }
+    .pivot .arrow { flex: none; font-size: 35px; color: #dbeafe; }
+
+    .solution { background: var(--tint); }
+    .flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 32px;
+    }
+    .flow::before {
+      content: '';
+      position: absolute;
+      top: 37px;
+      left: 5%;
+      right: 5%;
+      height: 2px;
+      background: #b9d9ff;
+    }
+    .flow-step { position: relative; z-index: 1; text-align: center; }
+    .flow-icon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 13px;
+      border: 6px solid var(--tint);
+      border-radius: 50%;
+      background: var(--navy);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      box-shadow: 0 0 0 2px #b9d9ff;
+    }
+    .flow-step:nth-child(2n) .flow-icon { background: var(--blue-dark); }
+    .flow-step h3 { color: var(--navy); font-size: 13px; font-weight: 900; line-height: 1.55; }
+    .flow-step p { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+
+    .unified-card {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 26px;
+      align-items: center;
+      margin-top: 34px;
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 10px 32px rgba(10,22,40,.08);
+    }
+    .unified-card .claim { font-size: 24px; font-weight: 900; line-height: 1.55; color: var(--navy); }
+    .unified-card .claim em { color: var(--blue); font-style: normal; }
+    .data-map { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .data-pill {
+      padding: 11px 10px;
+      border: 1px solid #cfe2fb;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .benefits { background: #fff; }
+    .benefit-list { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+    .benefit {
+      display: grid;
+      grid-template-columns: 82px 300px 45px 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 19px 22px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 5px 20px rgba(10,22,40,.045);
+    }
+    .benefit-mark {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--navy);
+      font-size: 25px;
+      font-weight: 900;
+    }
+    .benefit .old { color: var(--muted); font-size: 15px; font-weight: 700; line-height: 1.55; }
+    .benefit .arrow { color: #9aabc0; font-size: 25px; text-align: center; }
+    .benefit .new { color: var(--navy); font-size: 17px; font-weight: 900; line-height: 1.55; }
+    .benefit .new span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 500; line-height: 1.6; }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      padding: 0 52px 52px;
+      background: #fff;
+    }
+    .fact {
+      min-height: 170px;
+      padding: 27px 24px;
+      color: #fff;
+      background: var(--navy);
+      text-align: center;
+    }
+    .fact:first-child { border-radius: 12px 0 0 12px; }
+    .fact:last-child { border-radius: 0 12px 12px 0; }
+    .fact .small { color: #9db1c7; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
+    .fact .value { margin-top: 11px; color: #fff; font-size: 37px; font-weight: 700; line-height: 1.1; }
+    .fact .value em { color: #60a5fa; font-style: normal; }
+    .fact p { margin-top: 12px; color: #aebdd0; font-size: 11px; line-height: 1.65; }
+
+    .integrations { padding: 48px 52px; color: #fff; background: var(--navy-2); }
+    .integrations .section-label { color: #9db1c7; border-color: #314966; }
+    .integrations .section-title { color: #fff; }
+    .integrations .section-copy { color: #b8c5d5; }
+    .logo-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 28px; }
+    .logo-chip {
+      min-height: 76px;
+      padding: 14px 8px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,.055);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 7px;
+      text-align: center;
+      color: #e4edf8;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .logo-chip span { color: #7bb5ff; font-size: 18px; line-height: 1; }
+    .integration-note { margin-top: 14px; color: #8fa4bc; font-size: 11px; line-height: 1.7; }
+
+    .cta {
+      padding: 50px 52px 56px;
+      text-align: center;
+      color: var(--navy);
+      background: #fff;
+    }
+    .cta .anchor {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 17px;
+      border-radius: 14px;
+      background: #1e3a8a;
+      display: grid;
+      place-items: center;
+    }
+    .cta .anchor svg { width: 40px; height: 40px; }
+    .cta h2 { font-size: 32px; font-weight: 900; line-height: 1.45; }
+    .cta p { margin: 12px auto 0; max-width: 660px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+    .cta-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 11px; margin-top: 25px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 190px;
+      padding: 12px 18px;
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      color: #fff;
+      background: var(--blue);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .button.secondary { color: var(--blue-dark); background: #fff; }
+    .disclaimer {
+      margin-top: 27px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: #8491a2;
+      font-size: 10px;
+      line-height: 1.75;
+    }
+
+    .br-mobile { display: none; }
+
+    @media (max-width: 767px) {
+      .stage { width: 100%; }
+      .poster { width: 100%; transform: none !important; }
+      .br-mobile { display: inline; }
+
+      .hero { padding: 34px 20px 36px; }
+      .brand { margin-bottom: 27px; font-size: 17px; }
+      .brand-mark { width: 36px; height: 36px; }
+      .brand-mark svg { width: 25px; height: 25px; }
+      .hero-grid { grid-template-columns: 1fr; gap: 25px; }
+      .hero h1 { font-size: 34px; line-height: 1.35; }
+      .hero .lead { font-size: 14px; line-height: 1.85; }
+      .hero-card { padding: 19px; }
+      .hero-card .big { font-size: 34px; }
+      .status-row { margin-top: 18px; }
+
+      .section { padding: 36px 20px; }
+      .section-title { font-size: 27px; }
+      .section-copy { font-size: 14px; }
+      .problem-grid { grid-template-columns: 1fr; gap: 10px; margin-top: 24px; }
+      .problem-card, .problem-card.wide { grid-column: auto; min-height: 0; padding: 18px 16px 18px 62px; }
+      .problem-card .index { left: 15px; top: 18px; font-size: 31px; }
+      .problem-card h3 { font-size: 16px; }
+      .problem-card p { font-size: 12px; }
+      .problem-verdict { font-size: 14px; }
+
+      .pivot { padding: 27px 20px; display: block; text-align: center; }
+      .pivot .phrase { font-size: 20px; }
+      .pivot .arrow { margin: 13px 0; transform: rotate(90deg); }
+
+      .flow { grid-template-columns: 1fr; gap: 8px; }
+      .flow::before { top: 30px; bottom: 30px; left: 30px; right: auto; width: 2px; height: auto; }
+      .flow-step { display: grid; grid-template-columns: 60px 1fr; column-gap: 14px; text-align: left; align-items: center; }
+      .flow-icon { width: 60px; height: 60px; margin: 0; border-width: 5px; font-size: 20px; grid-row: 1 / 3; }
+      .flow-step h3 { font-size: 14px; align-self: end; }
+      .flow-step p { font-size: 11px; align-self: start; }
+      .unified-card { grid-template-columns: 1fr; padding: 20px; }
+      .unified-card .claim { font-size: 20px; }
+      .data-map { grid-template-columns: repeat(2, 1fr); }
+      .data-pill { font-size: 11px; }
+
+      .benefit { grid-template-columns: 50px 1fr 24px; gap: 10px; padding: 14px; }
+      .benefit-mark { width: 48px; height: 48px; font-size: 20px; grid-row: 1 / 3; }
+      .benefit .old { font-size: 13px; }
+      .benefit .arrow { font-size: 18px; }
+      .benefit .new { grid-column: 2 / 4; font-size: 15px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+      .facts { grid-template-columns: 1fr; gap: 1px; padding: 0 20px 36px; }
+      .fact { min-height: 0; padding: 22px 18px; }
+      .fact:first-child { border-radius: 10px 10px 0 0; }
+      .fact:last-child { border-radius: 0 0 10px 10px; }
+      .fact .value { font-size: 32px; }
+
+      .integrations { padding: 36px 20px; }
+      .logo-row { grid-template-columns: repeat(2, 1fr); }
+      .logo-chip:last-child { grid-column: 1 / -1; }
+
+      .cta { padding: 38px 20px 42px; }
+      .cta h2 { font-size: 25px; }
+      .cta p { font-size: 13px; }
+      .button { width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <article class="poster">
+      <header class="hero">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none">
+              <path d="M32 12v40M20 25l12-13 12 13M21 42q11 13 22 0" stroke="#eff6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span>SalesAnchor</span>
+        </div>
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">DROPSHIPPING × B2B SALES</div>
+            <h1>分断された営業業務を、<br><em>ひとつの流れ</em>に。</h1>
+            <p class="lead">顧客との会話から在庫確認、見積・請求、受注、仕入れ、発送、分析まで。SalesAnchorは、ドロップシッピング型B2B営業の「確認」と「手入力」を減らす業務基盤です。</p>
+            <div class="status-row" aria-label="現在確認できる主な連携状況">
+              <span class="status"><i></i>Meta・Discord連携</span>
+              <span class="status"><i></i>WeGo在庫を1日4回更新</span>
+              <span class="status"><i></i>顧客カルテで情報共有</span>
+            </div>
+          </div>
+          <aside class="hero-card">
+            <div class="overline">CORE VALUE</div>
+            <div class="big num">5つの分断 <span>→ 1つ</span></div>
+            <p>受信箱・在庫・帳票・受注・顧客管理を、同じ顧客データでつなぎます。</p>
+          </aside>
+        </div>
+      </header>
+
+      <section class="section problem">
+        <div class="section-label">PROBLEM</div>
+        <h2 class="section-title">売上が増えるほど、<br><em>営業以外の確認作業</em>も増えていく。</h2>
+        <p class="section-copy">課題は一つの作業ではありません。複数ツールに散らばった情報を、人が何度も確認し直すことです。</p>
+
+        <div class="problem-grid">
+          <article class="problem-card">
+            <span class="index num">01</span>
+            <h3>複数の受信箱を巡回</h3>
+            <p>スタッフが外部ツールへ個別ログイン。複数チャネルと担当者の間で、対応状況が分断されます。</p>
+          </article>
+          <article class="problem-card">
+            <span class="index num">02</span>
+            <h3>LINEを目視して在庫確認</h3>
+            <p>問い合わせのたびにグループを確認。在庫状況を読み取り、記録し直す手間が発生します。</p>
+          </article>
+          <article class="problem-card">
+            <span class="index num">03</span>
+            <h3>見積・請求書を手入力</h3>
+            <p>顧客、商品、状態、数量、価格を転記し、PDFを都度発行。在庫との整合確認も必要です。</p>
+          </article>
+          <article class="problem-card">
+            <span class="index num">04</span>
+            <h3>受注後の進捗を個別管理</h3>
+            <p>入金、仕入れ、発送ラベル、発送状況を注文ごとに追跡。集中時ほど漏れのリスクが上がります。</p>
+          </article>
+          <article class="problem-card wide">
+            <span class="index num">05</span>
+            <h3>顧客情報が担当者の中に残る</h3>
+            <p>属性や発注傾向、過去の経緯を毎回確認。顧客が増えるほどフォローアップと担当変更時の引き継ぎに時間がかかります。</p>
+          </article>
+        </div>
+
+        <div class="problem-verdict">情報が別々にあるため、同じ内容を何度も確認・転記する。<strong>本来「商談」に使う時間が、営業事務に奪われています。</strong></div>
+      </section>
+
+      <section class="pivot" aria-label="SalesAnchorによる変化">
+        <div class="before">
+          <div class="cap">BEFORE</div>
+          <div class="phrase">人がツールを巡回し、<br>情報をつなぎ直す</div>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="after">
+          <div class="cap">WITH SALESANCHOR</div>
+          <div class="phrase">データがつながり、<br>次の業務へそのまま進む</div>
+        </div>
+      </section>
+
+      <section class="section solution">
+        <div class="section-label">SOLUTION</div>
+        <h2 class="section-title">問い合わせから分析まで、<br><em>一気通貫でつなぐ。</em></h2>
+        <p class="section-copy">営業活動の前後にある作業を、同じ顧客・商品・注文データで連携します。</p>
+
+        <div class="flow" aria-label="SalesAnchorの一気通貫フロー">
+          <article class="flow-step">
+            <div class="flow-icon">受</div>
+            <h3>統合受信箱</h3>
+            <p>Meta・Discord</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">在</div>
+            <h3>在庫同期</h3>
+            <p>WeGo情報を更新</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">客</div>
+            <h3>顧客登録</h3>
+            <p>入力フォーム発行</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">書</div>
+            <h3>見積・請求</h3>
+            <p>在庫と顧客を反映</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">注</div>
+            <h3>受注管理</h3>
+            <p>入金・仕入れ</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">送</div>
+            <h3>発送連携</h3>
+            <p>ラベル・配送状況</p>
+          </article>
+          <article class="flow-step">
+            <div class="flow-icon">析</div>
+            <h3>営業分析</h3>
+            <p>顧客・国・成約率</p>
+          </article>
+        </div>
+
+        <div class="unified-card">
+          <div class="claim">一度登録した情報を、<br><em>次の業務でも使う。</em></div>
+          <div class="data-map" aria-label="つながるデータ">
+            <div class="data-pill">顧客情報</div>
+            <div class="data-pill">会話履歴</div>
+            <div class="data-pill">在庫情報</div>
+            <div class="data-pill">見積・請求</div>
+            <div class="data-pill">受注・入金</div>
+            <div class="data-pill">仕入れ・発送</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section benefits">
+        <div class="section-label">SALES VALUE</div>
+        <h2 class="section-title">確認する営業から、<br><em>提案する営業</em>へ。</h2>
+        <div class="benefit-list">
+          <article class="benefit">
+            <div class="benefit-mark">話</div>
+            <div class="old">外部ツールへ<br>スタッフが個別ログイン</div>
+            <div class="arrow">→</div>
+            <div class="new">アプリ内の統合受信箱で対応<span>会話と顧客カルテを同じ画面で確認</span></div>
+          </article>
+          <article class="benefit">
+            <div class="benefit-mark">在</div>
+            <div class="old">LINEを開いて<br>問い合わせごとに目視確認</div>
+            <div class="arrow">→</div>
+            <div class="new">同期された在庫をアプリで検索<span>WeGoの在庫情報を現在1日4回更新</span></div>
+          </article>
+          <article class="benefit">
+            <div class="benefit-mark">書</div>
+            <div class="old">顧客・商品情報を<br>帳票へ何度も手入力</div>
+            <div class="arrow">→</div>
+            <div class="new">登録情報から見積・請求へ<span>在庫と顧客が入った状態からPDFを発行</span></div>
+          </article>
+          <article class="benefit">
+            <div class="benefit-mark">進</div>
+            <div class="old">注文ごとに<br>入金・仕入れ・発送を確認</div>
+            <div class="arrow">→</div>
+            <div class="new">段階別に状況と次の作業を表示<span>集中時もオーダー単位で進捗を共有</span></div>
+          </article>
+          <article class="benefit">
+            <div class="benefit-mark">客</div>
+            <div class="old">担当者の記憶から<br>顧客傾向を引き継ぐ</div>
+            <div class="arrow">→</div>
+            <div class="new">カルテと履歴をチームで共有<span>発注傾向を次の提案とフォローに活用</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="facts" aria-label="SalesAnchorの特徴">
+        <article class="fact">
+          <div class="small">MESSAGING</div>
+          <div class="value num"><em>Meta</em> + Discord</div>
+          <p>現在の外部メッセージ連携</p>
+        </article>
+        <article class="fact">
+          <div class="small">INVENTORY SYNC</div>
+          <div class="value num">1日 <em>4回</em></div>
+          <p>現在のWeGo在庫更新頻度</p>
+        </article>
+        <article class="fact">
+          <div class="small">ONE DATA FLOW</div>
+          <div class="value num">営業 <em>→</em> 分析</div>
+          <p>同じデータを後工程まで活用</p>
+        </article>
+      </section>
+
+      <section class="integrations">
+        <div class="section-label">INTEGRATIONS</div>
+        <h2 class="section-title">顧客対応だけでなく、<br>決済・配送・業務ツールへ。</h2>
+        <p class="section-copy">SalesAnchorを中心に、B2B営業の周辺サービスとの連携を広げます。</p>
+        <div class="logo-row" aria-label="主な連携対象">
+          <div class="logo-chip"><span>∞</span>Meta</div>
+          <div class="logo-chip"><span>◉</span>Discord</div>
+          <div class="logo-chip"><span>G</span>Google</div>
+          <div class="logo-chip"><span>P</span>PayPal</div>
+          <div class="logo-chip"><span>F</span>FedEx</div>
+          <div class="logo-chip"><span>D</span>DHL</div>
+          <div class="logo-chip"><span>＋</span>External API</div>
+        </div>
+        <p class="integration-note">※ 各連携の提供状況・利用条件は個別にご案内します。掲載内容には開発中・段階提供の機能を含みます。</p>
+      </section>
+
+      <footer class="cta">
+        <div class="anchor" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none">
+            <path d="M32 12v40M20 25l12-13 12 13M21 42q11 13 22 0" stroke="#eff6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>営業を増やす前に、<br class="br-mobile">営業が動ける仕組みを。</h2>
+        <p>複数の受信箱、在庫確認、帳票作成、受注後の管理。SalesAnchorは、ドロップシッピング型B2B営業の分断を一つずつつなぎます。</p>
+        <div class="cta-actions">
+          <a class="button" href="mailto:support@salesanchor.jp?subject=SalesAnchor%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87">導入・デモを相談する</a>
+          <a class="button secondary" href="https://salesanchor.jp/">公式サイトを見る</a>
+        </div>
+        <div class="disclaimer">本ページはSalesAnchorが解決を目指す業務課題と提供価値を示す概要資料です。機能には現在提供中、一部提供、開発中のものが含まれます。導入時に利用可能な機能・外部連携・運用条件は個別にご確認ください。</div>
+      </footer>
+    </article>
+  </main>
+
+  <script>
+    (function () {
+      var BASE = 1080;
+      var stage = document.querySelector('.stage');
+      var poster = document.querySelector('.poster');
+      function fit() {
+        if (window.innerWidth < 768) {
+          poster.style.transform = 'none';
+          stage.style.height = 'auto';
+          return;
+        }
+        var width = Math.min(window.innerWidth, BASE);
+        var scale = width / BASE;
+        poster.style.transform = 'scale(' + scale + ')';
+        stage.style.height = (poster.offsetHeight * scale) + 'px';
+      }
+      window.addEventListener('resize', fit);
+      window.addEventListener('load', fit);
+      fit();
+    }());
+  </script>
+</body>
+</html>
