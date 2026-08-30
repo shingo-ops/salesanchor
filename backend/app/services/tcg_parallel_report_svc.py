@@ -11,8 +11,6 @@ DB への書き込みは一切行わない（compat-v1 を上書きしない）�
 from __future__ import annotations
 
 import logging
-import re
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.tcg_analyzer_svc import (
     match_pid_name_first,
     resolve_unit,
-    resolve_condition,
 )
 
 logger = logging.getLogger(__name__)

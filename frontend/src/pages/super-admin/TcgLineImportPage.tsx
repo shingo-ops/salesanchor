@@ -189,9 +189,9 @@ export default function TcgLineImportPage() {
     >
       {/* ─── アップロードフォーム ─── */}
       <section style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
           ファイルのアップロード
-        </h2>
+        </h3>
 
         {/* ドロップゾーン */}
         <div
@@ -278,7 +278,7 @@ export default function TcgLineImportPage() {
           style={{
             padding: "0.5rem 1.5rem",
             background: uploading || !selectedFile ? "var(--color-disabled)" : "var(--color-primary)",
-            color: "#fff",
+            color: "var(--on-accent)",
             border: "none",
             borderRadius: "4px",
             cursor: uploading || !selectedFile ? "not-allowed" : "pointer",
@@ -304,15 +304,15 @@ export default function TcgLineImportPage() {
             marginBottom: "2rem",
             padding: "1rem 1.25rem",
             borderRadius: "8px",
-            border: `1px solid ${result.status === "already_imported" ? "var(--color-warning-border, #d4a017)" : "var(--color-success-border, #2d8a4e)"}`,
-            background: result.status === "already_imported" ? "var(--color-warning-bg, #fff8e1)" : "var(--color-success-bg, #f0faf4)",
+            border: `1px solid ${result.status === "already_imported" ? "var(--color-warning-border)" : "var(--color-success-border)"}`,
+            background: result.status === "already_imported" ? "var(--color-warning-bg)" : "var(--color-success-bg)",
           }}
         >
-          <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
             {result.status === "already_imported"
               ? "このファイルは既にインポート済みです"
               : "取り込み完了"}
-          </h2>
+          </h3>
           {result.status === "imported" && (
             <ul style={{ margin: "0 0 0.75rem 0", paddingLeft: "1.25rem" }}>
               <li>メッセージ数: {result.message_count}</li>
@@ -327,7 +327,7 @@ export default function TcgLineImportPage() {
           )}
           {result.unresolved_display_names.length > 0 && (
             <details>
-              <summary style={{ cursor: "pointer", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-warning, #b7860a)" }}>
+              <summary style={{ cursor: "pointer", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-warning)" }}>
                 未登録仕入元 ({result.unresolved_display_names.length} 名)
               </summary>
               <ul style={{ marginTop: "0.5rem", paddingLeft: "1.25rem" }}>
@@ -344,9 +344,9 @@ export default function TcgLineImportPage() {
 
       {/* ─── アップロード履歴 ─── */}
       <section>
-        <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
           アップロード履歴
-        </h2>
+        </h3>
 
         {historyLoading && (
           <p style={{ color: "var(--text-secondary)" }}>読み込み中...</p>
@@ -394,7 +394,7 @@ export default function TcgLineImportPage() {
                       style={{
                         ...tdStyle,
                         textAlign: "right",
-                        color: job.unresolved_count > 0 ? "var(--color-warning, #b7860a)" : undefined,
+                        color: job.unresolved_count > 0 ? "var(--color-warning)" : undefined,
                       }}
                     >
                       {job.unresolved_count}
@@ -406,9 +406,9 @@ export default function TcgLineImportPage() {
                           padding: "0.15rem 0.5rem",
                           borderRadius: "999px",
                           fontSize: "0.75rem",
-                          background: job.status === "ok" ? "var(--color-success-bg, #f0faf4)" : "var(--color-error-bg, #fff0f0)",
-                          color: job.status === "ok" ? "var(--color-success, #2d8a4e)" : "var(--color-error)",
-                          border: `1px solid ${job.status === "ok" ? "var(--color-success-border, #2d8a4e)" : "var(--color-error-border, #c00)"}`,
+                          background: job.status === "ok" ? "var(--color-success-bg)" : "var(--color-error-bg)",
+                          color: job.status === "ok" ? "var(--color-success)" : "var(--color-error)",
+                          border: `1px solid ${job.status === "ok" ? "var(--color-success-border)" : "var(--color-error-border)"}`,
                         }}
                       >
                         {job.status}

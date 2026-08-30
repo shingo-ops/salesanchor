@@ -48,7 +48,7 @@ from app.routers import (
     duplicates,
     erp,
     fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
-goals,  # ダッシュボード強化: 目標管理
+    goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
     integrations,  # API連携 (Googleドライブ 保存テスト 等)
@@ -90,6 +90,8 @@ goals,  # ダッシュボード強化: 目標管理
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
+    tcg_line_import,  # MIG-04 Phase 2: LINE エクスポートアップロード取り込み
+    tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
@@ -99,8 +101,6 @@ goals,  # ダッシュボード強化: 目標管理
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
-from app.routers import tcg_line_import  # MIG-04 Phase 2: LINE エクスポートアップロード取り込み
-from app.routers import tcg_parallel_report  # MIG-04 Phase 4: 並行運用比較レポート
 from app.services import encryption as _encryption  # Phase 1-D Sprint 2: lifespan fail-fast
 
 # 本番環境では Swagger UI を無効化（API仕様の露出を防ぐ）

@@ -251,4 +251,11 @@ export default [{
   rules: {
     'local/no-japanese-literal': 'off',
   },
+}, // i18n ルール除外: MIG-04 TCG 管理ページ（super-admin 専用・内部運用ツール）
+// TCG 並行運用・LINE取り込みページは日本語 UI が必須の内部管理ページ。ADR-027 対象外。
+{
+  files: ['src/pages/super-admin/Tcg*.{ts,tsx}'],
+  rules: {
+    'local/no-japanese-literal': 'off',
+  },
 }, ...storybook.configs["flat/recommended"]];

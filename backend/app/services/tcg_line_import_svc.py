@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select, text, update
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # ---------------------------------------------------------------------------

@@ -136,6 +136,15 @@
   /* デザイントークン拡張（フォールバック hex 排除のため追加） */
   --success: #2e7d32;
   --color-warning: #c08a00;
+  --color-warning-bg: #fff8e1;
+  --color-warning-border: #d4a017;
+  --color-success: #2d8a4e;
+  --color-success-bg: #f0faf4;
+  --color-success-border: #2d8a4e;
+  --color-error: #c00000;
+  --color-error-bg: #fff0f0;
+  --color-error-border: #c00000;
+  --table-header-bg: #e8eaf6;
   --bg-disabled: #f7f7f7;
   /* 在庫数0の行背景（在庫表）。白い在庫あり行と明確に区別できる濃いめのグレー。
      文字は全不透明のまま視認性を確保するため、行を薄くするのではなく背景濃淡で示す。 */
@@ -324,6 +333,15 @@
   /* デザイントークン拡張（ダーク） */
   --success: #4ade80;
   --color-warning: #fde68a;
+  --color-warning-bg: #3b2500;
+  --color-warning-border: #fde68a;
+  --color-success: #4ade80;
+  --color-success-bg: #052e16;
+  --color-success-border: #4ade80;
+  --color-error: #ff8080;
+  --color-error-bg: #2d0000;
+  --color-error-border: #ff8080;
+  --table-header-bg: #1e2240;
   --bg-disabled: #2d3b52;
   /* 在庫数0の行背景（ダーク）。サーフェス(#1e293b)より明確に沈めて区別する。
      旧値#19222fはsurfaceと近すぎて差が弱かったため、ページ背景(#0f172a)と被らない

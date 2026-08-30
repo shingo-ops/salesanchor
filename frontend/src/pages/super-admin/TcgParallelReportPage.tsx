@@ -7,6 +7,7 @@
  *   - is_super_admin=false なら 403 メッセージを表示
  */
 import { useEffect, useState } from "react";
+import { TABLE_ICONS } from "../../constants/icons";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
@@ -103,34 +104,34 @@ export default function TcgParallelReportPage() {
   };
 
   const diffColor = (diff: number) => {
-    if (diff > 5) return "#2e7d32";
-    if (diff > 0) return "#388e3c";
-    if (diff < -5) return "#c62828";
-    if (diff < 0) return "#e53935";
-    return "#555";
+    if (diff > 5) return "var(--success)";
+    if (diff > 0) return "var(--success)";
+    if (diff < -5) return "var(--color-error)";
+    if (diff < 0) return "var(--danger)";
+    return "var(--text-secondary)";
   };
 
   if (superAdminLoading) return <PageLayout title="並行運用比較レポート">読み込み中…</PageLayout>;
   if (!isSuperAdmin) {
     return (
       <PageLayout title="並行運用比較レポート">
-        <p style={{ color: "#c00" }}>このページは super_admin 専用です。</p>
+        <p style={{ color: "var(--color-error)" }}>このページは super_admin 専用です。</p>
       </PageLayout>
     );
   }
 
   return (
     <PageLayout title="並行運用比較レポート (MIG-04 Phase 4)">
-      <div style={{ maxWidth: 1100, fontFamily: "monospace" }}>
+      <div style={{ maxWidth: "var(--modal-xwide-w)", fontFamily: "monospace" }}>
         {/* ヘッダー説明 */}
-        <div style={{ background: "#f5f5f5", padding: "10px 14px", borderRadius: 4, marginBottom: 16 }}>
+        <div style={{ background: "var(--bg-primary)", padding: "10px 14px", borderRadius: 4, marginBottom: 16 }}>
           <p style={{ margin: "4px 0", fontSize: 13 }}>
             <strong>compat-v1</strong>: GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）
           </p>
           <p style={{ margin: "4px 0", fontSize: 13 }}>
             <strong>name-first-v1</strong>: サーバー新エンジン（インメモリ計算・キーワード最長一致）
           </p>
-          <p style={{ margin: "4px 0", fontSize: 13, color: "#666" }}>
+          <p style={{ margin: "4px 0", fontSize: 13, color: "var(--text-muted)" }}>
             ※ DB への書き込みなし。レポートは読み取り専用。
           </p>
         </div>
@@ -145,7 +146,7 @@ export default function TcgParallelReportPage() {
         </button>
 
         {error && (
-          <p style={{ color: "#c00", marginBottom: 12 }}>{error}</p>
+          <p style={{ color: "var(--color-error)", marginBottom: 12 }}>{error}</p>
         )}
 
         {/* サマリー */}
@@ -154,7 +155,7 @@ export default function TcgParallelReportPage() {
             <h3 style={{ margin: "0 0 8px" }}>全体サマリー</h3>
             <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ background: "#e8eaf6" }}>
+                <tr style={{ background: "var(--table-header-bg)" }}>
                   <th style={thStyle}>指標</th>
                   <th style={thStyle}>compat-v1 (GAS)</th>
                   <th style={thStyle}>name-first-v1 (Server)</th>
@@ -199,19 +200,19 @@ export default function TcgParallelReportPage() {
             <h3 style={{ margin: "0 0 8px" }}>仕入元別比較</h3>
             <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
               <thead>
-                <tr style={{ background: "#e8eaf6" }}>
+                <tr style={{ background: "var(--table-header-bg)" }}>
                   <th
                     style={{ ...thStyle, cursor: "pointer" }}
                     onClick={() => handleSort("sp_code")}
                   >
-                    SP_CODE{sortBy === "sp_code" ? (sortDesc ? " ▼" : " ▲") : ""}
+                    SP_CODE{sortBy === "sp_code" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
                   <th style={thStyle}>仕入元名</th>
                   <th
                     style={{ ...thStyle, cursor: "pointer" }}
                     onClick={() => handleSort("total")}
                   >
-                    件数{sortBy === "total" ? (sortDesc ? " ▼" : " ▲") : ""}
+                    件数{sortBy === "total" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
                   <th style={thStyle}>compat-v1 PID%</th>
                   <th style={thStyle}>nf-v1 PID%</th>
@@ -219,7 +220,7 @@ export default function TcgParallelReportPage() {
                     style={{ ...thStyle, cursor: "pointer" }}
                     onClick={() => handleSort("diff")}
                   >
-                    差分{sortBy === "diff" ? (sortDesc ? " ▼" : " ▲") : ""}
+                    差分{sortBy === "diff" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
                   <th style={thStyle}>compat unit%</th>
                   <th style={thStyle}>nf unit%</th>
@@ -229,10 +230,10 @@ export default function TcgParallelReportPage() {
                 {sortedSuppliers.map((row, i) => (
                   <tr
                     key={row.sp_code}
-                    style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}
+                    style={{ background: i % 2 === 0 ? "var(--bg-surface)" : "var(--bg-subtle)" }}
                   >
                     <td style={tdStyle}>{row.sp_code}</td>
-                    <td style={{ ...tdStyle, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ ...tdStyle, maxWidth: "var(--max-width-truncate)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {row.supplier_name}
                     </td>
                     <td style={{ ...tdStyle, textAlign: "right" }}>{row.total}</td>
@@ -251,13 +252,13 @@ export default function TcgParallelReportPage() {
                 ))}
               </tbody>
             </table>
-            <p style={{ fontSize: 11, color: "#888", marginTop: 8 }}>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
               差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。
             </p>
           </div>
         )}
 
-        {loading && <p style={{ color: "#666" }}>計算中（DB 読み取り + インメモリ照合）…</p>}
+        {loading && <p style={{ color: "var(--text-muted)" }}>計算中（DB 読み取り + インメモリ照合）…</p>}
       </div>
     </PageLayout>
   );
@@ -268,7 +269,7 @@ export default function TcgParallelReportPage() {
 // ---------------------------------------------------------------------------
 
 const thStyle: React.CSSProperties = {
-  border: "1px solid #ccc",
+  border: "1px solid var(--border-color)",
   padding: "6px 10px",
   textAlign: "left",
   fontSize: 12,
@@ -276,7 +277,7 @@ const thStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = {
-  border: "1px solid #eee",
+  border: "1px solid var(--border-light)",
   padding: "4px 8px",
   fontSize: 12,
 };
