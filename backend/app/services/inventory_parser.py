@@ -211,6 +211,8 @@ PRICE_PLAIN_RE = re.compile(
 # ¥/￥プレフィックス単価: "¥52,000" "¥17,500/BOX" "￥16,700"
 # (倉田:ボックス/¥52,000、T:¥17,500/BOX、モノウリ:¥16,400、達也:￥16,700)
 PRICE_YEN_PREFIX_RE = re.compile(r"[¥￥]\s*([0-9][0-9,]{0,12}(?:\.\d+)?)")
+# 「単価：576,000」形式（SAMURAI-T等: 別行に単価を記載するフォーマット）
+TANKA_RE = re.compile(r"単価\s*[：:]\s*([0-9][0-9,]{2,12}(?:\.\d+)?)")
 # 「11,800×30BOX」「14,800×200箱」「14,000×190BOX」「19,800x 8BOX」
 # 単価 × 数量 + 単位
 PRICE_MUL_QTY_RE = re.compile(
@@ -501,6 +503,10 @@ def _extract_unit_quantity_price(line: str) -> tuple[int | None, str | None, Dec
         yen_prefix_match = PRICE_YEN_PREFIX_RE.search(line)
         if yen_prefix_match:
             price = _parse_decimal(yen_prefix_match.group(1))
+    if price is None:
+        tanka_match = TANKA_RE.search(line)
+        if tanka_match:
+            price = _parse_decimal(tanka_match.group(1))
 
     # 「数量」キーワード形式（@ 単価表記の後で出現する場合がある）
     if qty is None:

@@ -806,3 +806,34 @@ class TestYenPrefixPriceDetection:
         qty, unit, price = _extract_unit_quantity_price("30BOX@11,900円")
         assert price == D("11900")
         assert qty == 30
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: 単価：price 形式（SP0018 SAMURAI-T）
+# ---------------------------------------------------------------------------
+
+
+class TestTankaSeparatorFormat:
+    """「単価：N」形式の単価検出（VS-02 Format Rule 2）。"""
+
+    def test_sp0018_tanka_basic(self):
+        """SAMURAI-T: '単価：576,000' → price=576000。"""
+        qty, unit, price = _extract_unit_quantity_price("単価：576,000")
+        assert price == D("576000")
+
+    def test_sp0018_tanka_ascii_colon(self):
+        """'単価:3,100' (ASCII コロン) → price=3100。"""
+        qty, unit, price = _extract_unit_quantity_price("単価:3,100")
+        assert price == D("3100")
+
+    def test_sp0018_tanka_with_context(self):
+        """'単価：74,000' → price=74000, qty は None (数量は別行)。"""
+        qty, unit, price = _extract_unit_quantity_price("単価：74,000")
+        assert price == D("74000")
+        assert qty is None
+
+    def test_sp0018_suuryo_line_still_yields_qty(self):
+        """数量行 '数量：10カートン' → qty=10, unit='case' (既存動作確認)。"""
+        qty, unit, price = _extract_unit_quantity_price("数量：10カートン")
+        assert qty == 10
+        assert unit == "case"
