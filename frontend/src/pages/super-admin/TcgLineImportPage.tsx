@@ -237,6 +237,7 @@ export default function TcgLineImportPage() {
             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               取り込み開始（省略可）
             </span>
+            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3165) */}
             <input
               type="text"
               placeholder="YYYY-MM-DD HH:MM:00"
@@ -255,6 +256,7 @@ export default function TcgLineImportPage() {
             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               取り込み終了（省略可）
             </span>
+            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3165) */}
             <input
               type="text"
               placeholder="YYYY-MM-DD HH:MM:00"
