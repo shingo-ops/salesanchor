@@ -99,6 +99,7 @@ goals,  # ダッシュボード強化: 目標管理
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
+from app.routers import tcg_line_import  # MIG-04 Phase 2: LINE エクスポートアップロード取り込み
 from app.services import encryption as _encryption  # Phase 1-D Sprint 2: lifespan fail-fast
 
 # 本番環境では Swagger UI を無効化（API仕様の露出を防ぐ）
@@ -548,6 +549,11 @@ app.include_router(
 app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# MIG-04 Phase 2: LINE エクスポートアップロード取り込み（is_super_admin 限定、router 内で require_super_admin ガード）
+app.include_router(
+    tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 
