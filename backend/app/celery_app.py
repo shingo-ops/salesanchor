@@ -32,6 +32,7 @@ celery_app = Celery(
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
+        "app.tasks.tcg_extraction",      # MIG-04 Phase 3: Gemini 抽出 + 照合
     ],
 )
 
