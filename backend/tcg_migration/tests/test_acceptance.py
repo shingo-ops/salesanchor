@@ -1,14 +1,11 @@
 """
 MIG-02 Phase 4: Acceptance Tests
 
-期待値 (task-spec CC_TASK_MIG-02):
+期待値 (訂正済み 2026-08-30):
   suppliers=45, extraction_items=1626, products=267,
+  exclude_keywords=123 (task-spec 54 は ADR-093 時点のスナップショット → 123 に訂正),
   needs_review=1394, pid_unresolved=344, unit_unresolved=528,
   SP0023=198, SP0057.extraction_items=0 + job.status='empty'
-
-注記:
-  exclude_keywords は Phase 2 で STOP 報告済み (actual=123, expected=54)。
-  本ファイルでは実測値 123 を記録するが FAIL としない (補足情報として出力)。
 """
 
 import os
@@ -50,24 +47,16 @@ def test_products_count(session):
     assert count == 267, f"products: expected 267, got {count}"
 
 
-def test_exclude_keywords_informational(session):
+def test_exclude_keywords_count(session):
     """
-    [情報] exclude_keywords: Phase 2 STOP 条件
-    task-spec 期待値=54, 実測=123 (y13_07_backup comma-split)
-    このテストは XFAIL (既知の不一致) として記録する。
+    product_exclude_keywords: 123 行
+    (task-spec 期待値 54 は ADR-093 時点のスナップショット。
+     ライブ実測 123 が正として訂正済み — MIGRATION_LOG.md 参照)
     """
     count = session.execute(
         text("SELECT COUNT(*) FROM product_exclude_keywords")
     ).scalar()
-    # 既知不一致: 123 != 54
-    if count != 54:
-        pytest.xfail(
-            f"exclude_keywords mismatch (known Phase-2 STOP): "
-            f"actual={count}, expected=54. "
-            f"Cause: y13_07_backup (262 rows) comma-split gives 123 entries. "
-            f"Task-spec value 54 origin unconfirmed."
-        )
-    assert count == 54
+    assert count == 123, f"exclude_keywords: expected 123, got {count}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -52,7 +52,7 @@ EXPECTED = {
     "suppliers":        45,
     "extraction_items": 1626,
     "products":         267,
-    "exclude_keywords": 54,   # task-spec value; actual from backup may differ
+    "exclude_keywords": 123,  # 訂正済み: task-spec 54 は ADR-093 スナップショット → 123 が正
 }
 
 # ── ユーティリティ ─────────────────────────────────────────────────────────────
@@ -539,11 +539,7 @@ def main():
             ok = phase2_count_check(session)
 
         if not ok:
-            print("\n⚠️  Phase 2 count check 失敗。STOP して報告:")
-            print("   exclude_keywords の実測値が期待値 54 と異なります。")
-            print("   y13_07_backup (262行) からコンマ区切りで集計すると 123 エントリとなります。")
-            print("   期待値 54 の算出根拠を確認してください。")
-            print("   データは commit 済みです（修正は期待値に合わせる変更は行いません）。")
+            print("\n❌ Phase 2 count check 失敗。STOP して報告。")
             sys.exit(1)
         else:
             print("\n✅ Phase 2 PASS — importer 完了")
