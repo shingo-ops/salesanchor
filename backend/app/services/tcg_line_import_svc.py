@@ -405,6 +405,8 @@ async def import_line_export(
             ),
             {"id": str(new_ej_id), "smid": str(new_sm_id)},
         )
+        # Celery タスクを非同期起動（Redis 未起動時はスキップ）
+        _enqueue_extraction(str(new_sm_id))
 
     # --- 6. import_jobs に記録 ---
     import_job_id = uuid.uuid4()
@@ -440,3 +442,31 @@ async def import_line_export(
         "unresolved_display_names": unresolved_display_names,
         "import_job_id": str(import_job_id),
     }
+
+
+# ---------------------------------------------------------------------------
+# Celery タスクエンキュー（Redis 未起動時は no-op）
+# ---------------------------------------------------------------------------
+
+
+def _enqueue_extraction(source_message_id: str) -> None:
+    """
+    extract_source_message_task を非同期でエンキューする。
+
+    Redis が起動していない場合は kombu.exceptions.OperationalError を
+    握りつぶしてスキップする。
+    """
+    try:
+        from app.tasks.tcg_extraction import extract_source_message_task  # noqa: PLC0415
+
+        if extract_source_message_task is not None:
+            extract_source_message_task.delay(source_message_id)
+    except Exception as exc:  # noqa: BLE001
+        # Redis 未起動時など Celery への接続失敗は警告ログのみ
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).warning(
+            "[tcg_line_import] Celery enqueue skipped for sm=%s: %s",
+            source_message_id,
+            exc,
+        )
