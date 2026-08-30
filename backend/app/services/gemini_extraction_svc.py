@@ -2,13 +2,13 @@
 MIG-04 Phase 3: Gemini 抽出サービス。
 
 RawExtractionV2.js (GAS) の RAW_EXTRACTION_V2_PROMPT_TEXT を Python に移植し、
-Gemini 2.5 Flash で LINE メッセージから商品明細を抽出する。
+Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
 
 設計:
-  - google.generativeai SDK を使用（inventory_parser_llm.py と同一パターン）
+  - google-genai SDK (新) を使用
   - temperature=0 で冪等性を確保
   - GEMINI_API_KEY 環境変数必須
-  - 同期 API (generate_content) を使用（Celery タスク内から呼ぶため）
+  - 同期 API (models.generate_content) を使用（Celery タスク内から呼ぶため）
 """
 from __future__ import annotations
 
@@ -68,60 +68,60 @@ def format_prompt_input(raw_text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _get_genai():
-    """google.generativeai を遅延 import して返す。"""
+def _get_genai_client():
+    """google.genai.Client を生成して返す。"""
     try:
-        import google.generativeai as genai  # type: ignore[import-untyped]
+        from google import genai  # type: ignore[import-untyped]
+        from google.genai import types as _types  # noqa: F401
     except ImportError as exc:
         raise RuntimeError(
-            "google-generativeai がインストールされていません。"
+            "google-genai がインストールされていません: pip install google-genai"
         ) from exc
-    return genai
-
-
-def _ensure_api_key() -> str:
-    key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not key:
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
         raise RuntimeError(
             "GEMINI_API_KEY が未設定です。Gemini 抽出は実行できません。"
         )
-    return key
+    return genai.Client(api_key=api_key)
 
 
 # ---------------------------------------------------------------------------
 # コア: Gemini API 呼び出し
 # ---------------------------------------------------------------------------
 
+_GEMINI_MODEL = "gemini-3.6-flash"
+
 
 def call_gemini_extraction(raw_text: str) -> str:
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
 
-    モデル: gemini-2.5-flash
+    モデル: gemini-3.6-flash（GAS 側デフォルトと同一）
     temperature: 0
-    同期 SDK (generate_content) を使用。
+    同期 SDK (models.generate_content) を使用。
 
     Raises:
         RuntimeError: GEMINI_API_KEY 未設定 / API 呼び出し失敗
     """
-    api_key = _ensure_api_key()
-    genai = _get_genai()
-    genai.configure(api_key=api_key)
+    from google.genai import types as genai_types  # type: ignore[import-untyped]
+
+    client = _get_genai_client()
 
     prompt_input = format_prompt_input(raw_text)
     full_prompt = f"{PROMPT_TEXT}\n\n{prompt_input}"
 
-    model = genai.GenerativeModel(
-        "gemini-2.5-flash",
-        generation_config={"temperature": 0},
-    )
-
     logger.info(
-        "[gemini_extraction] calling Gemini API, text_len=%d", len(raw_text)
+        "[gemini_extraction] calling Gemini API, model=%s text_len=%d",
+        _GEMINI_MODEL,
+        len(raw_text),
     )
 
     try:
-        response = model.generate_content(full_prompt)
+        response = client.models.generate_content(
+            model=_GEMINI_MODEL,
+            contents=full_prompt,
+            config=genai_types.GenerateContentConfig(temperature=0),
+        )
     except Exception as exc:
         logger.exception("[gemini_extraction] API call failed: %s", exc)
         raise RuntimeError(f"Gemini API 呼び出し失敗: {exc}") from exc
