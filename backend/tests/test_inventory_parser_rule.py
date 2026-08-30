@@ -755,3 +755,54 @@ class TestOfferTypeShipTimingDetection:
     def test_digit_boundary_no_false_match(self):
         """数字境界: 「発売12日前」の末尾 '2日前' を ship_timing に誤判定しない（Reviewer PR#1445）。"""
         assert _extract_offer_type_ship_timing("発売12日前発送 BOX @10,000") == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: ¥/￥プレフィックス単価 + 個単位
+# (SP0007 倉田・SP0033 T・SP0037 モノウリ・SP0178 達也)
+# ---------------------------------------------------------------------------
+
+from app.services.inventory_parser import _extract_unit_quantity_price  # noqa: E402
+from decimal import Decimal as D  # noqa: E402
+
+
+class TestYenPrefixPriceDetection:
+    """¥/￥ プレフィックス形式の単価検出（VS-02 Format Rule 1）。"""
+
+    def test_sp0007_slash_yen_prefix(self):
+        """倉田: 'ボックス/¥52,000' → price=52000 が取れる。"""
+        qty, unit, price = _extract_unit_quantity_price("ボックス/¥52,000")
+        assert price == D("52000")
+
+    def test_sp0007_pack_yen_prefix(self):
+        """倉田: 'パック/¥450' → price=450。"""
+        qty, unit, price = _extract_unit_quantity_price("パック/¥450")
+        assert price == D("450")
+
+    def test_sp0033_yen_slash_unit(self):
+        """T: '¥17,500/BOX' → price=17500。"""
+        qty, unit, price = _extract_unit_quantity_price("¥17,500/BOX")
+        assert price == D("17500")
+
+    def test_sp0037_bullet_yen_zaiko(self):
+        """モノウリ: '●ストームエメラルダ　¥16,400　在庫20個' → price=16400, qty=20。"""
+        qty, unit, price = _extract_unit_quantity_price("●ストームエメラルダ　¥16,400　在庫20個")
+        assert price == D("16400")
+        assert qty == 20
+
+    def test_sp0178_full_width_yen_prefix(self):
+        """達也: '■単価（税込）：￥16,700' → price=16700。"""
+        qty, unit, price = _extract_unit_quantity_price("■単価（税込）：￥16,700")
+        assert price == D("16700")
+
+    def test_ko_unit_detection(self):
+        """'個' が piece 単位として検出できる: '在庫20個' → qty=20, unit='piece'。"""
+        qty, unit, price = _extract_unit_quantity_price("在庫20個")
+        assert qty == 20
+        assert unit == "piece"
+
+    def test_existing_yen_suffix_unaffected(self):
+        """既存の円サフィックス形式が引き続き動作する（回帰テスト）。"""
+        qty, unit, price = _extract_unit_quantity_price("30BOX@11,900円")
+        assert price == D("11900")
+        assert qty == 30
