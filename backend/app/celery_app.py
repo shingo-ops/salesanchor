@@ -32,6 +32,7 @@ celery_app = Celery(
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
+        "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
     ],
 )
 
@@ -140,5 +141,12 @@ celery_app.conf.beat_schedule = {
     "update-fx-rate-evening": {
         "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
         "schedule": crontab(hour=18, minute=0),  # JST 18:00
+    },
+    # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し（AM02:00 JST）
+    # 書き込み先: spreadsheetId 1IBIpge6Qz2arq93OHmRFnCGBMj2kVhrgEjtY8c5ecus（固定）
+    # 自動作成なし・TCG_SHEETS_SA_KEY_FILE 未設定時はスキップ
+    "tcg-mirror-daily-write": {
+        "task": "app.tasks.tcg_mirror.run_tcg_mirror_write",
+        "schedule": crontab(hour=2, minute=30),  # JST 02:30（refresh-all-avatars の30分後）
     },
 }
