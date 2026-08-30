@@ -837,3 +837,39 @@ class TestTankaSeparatorFormat:
         qty, unit, price = _extract_unit_quantity_price("数量：10カートン")
         assert qty == 10
         assert unit == "case"
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: N単位：price コロン区切り形式（SP0011 星野）
+# ---------------------------------------------------------------------------
+
+
+class TestColonQtyPriceFormat:
+    """「N単位：価格」コロン区切り形式の検出（VS-02 Format Rule 3）。"""
+
+    def test_sp0011_pack_colon(self):
+        """星野: '500Pack：2,500' → qty=500, unit='pack', price=2500。"""
+        qty, unit, price = _extract_unit_quantity_price("500Pack：2,500")
+        assert qty == 500
+        assert unit == "pack"
+        assert price == D("2500")
+
+    def test_sp0011_ko_unit_colon(self):
+        """星野: '8個：7,800' → qty=8, unit='piece', price=7800。"""
+        qty, unit, price = _extract_unit_quantity_price("8個：7,800")
+        assert qty == 8
+        assert unit == "piece"
+        assert price == D("7800")
+
+    def test_sp0011_box_colon(self):
+        """星野: '80BOX：16,000' → qty=80, unit='box', price=16000。"""
+        qty, unit, price = _extract_unit_quantity_price("80BOX：16,000")
+        assert qty == 80
+        assert unit == "box"
+        assert price == D("16000")
+
+    def test_sp0011_with_extra_text(self):
+        """コロン後テキスト付き: '100枚：1,100（届き次第発送）' → price=1100。"""
+        qty, unit, price = _extract_unit_quantity_price("100枚：1,100（届き次第発送）")
+        assert price == D("1100")
+        assert qty == 100

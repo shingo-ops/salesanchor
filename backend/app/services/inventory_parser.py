@@ -213,6 +213,12 @@ PRICE_PLAIN_RE = re.compile(
 PRICE_YEN_PREFIX_RE = re.compile(r"[¥￥]\s*([0-9][0-9,]{0,12}(?:\.\d+)?)")
 # 「単価：576,000」形式（SAMURAI-T等: 別行に単価を記載するフォーマット）
 TANKA_RE = re.compile(r"単価\s*[：:]\s*([0-9][0-9,]{2,12}(?:\.\d+)?)")
+# 「N単位：価格」コロン区切り形式（星野: "500Pack：2,500" "80BOX：16,000" "8個：7,800"）
+# 行末近くに価格を置くため末尾の追加テキストも許容する
+COLON_QTY_PRICE_RE = re.compile(
+    rf"(\d{{1,5}})\s*({_UNIT_TOKEN_GROUP})\s*[：:]\s*([0-9][0-9,]{{2,12}}(?:\.\d+)?)",
+    re.IGNORECASE,
+)
 # 「11,800×30BOX」「14,800×200箱」「14,000×190BOX」「19,800x 8BOX」
 # 単価 × 数量 + 単位
 PRICE_MUL_QTY_RE = re.compile(
@@ -458,11 +464,25 @@ def _extract_unit_quantity_price(line: str) -> tuple[int | None, str | None, Dec
     """行から (quantity, unit, unit_price) を抽出。
 
     優先順位:
+      0) 「N単位：価格」コロン区切り (例 "500Pack：2,500") → 全部一度に取れる
       1) 「PRICE × QTY UNIT」(例 "11,800円×30BOX") → 全部一度に取れる
       2) 「@PRICE」(単価のみ) + 「数量N」(数量のみ) → 後段で組み合わせ
       3) 「QTY UNIT @PRICE」(例 "30BOX@7,100円") → 全部取れる
       4) 数量・単位だけ取れる場合、単価は別の方法で探索
     """
+    # ケース0: N単位：価格 (例 "500Pack：2,500", "8個：7,800", "80BOX：16,000")
+    m0 = COLON_QTY_PRICE_RE.search(line)
+    if m0:
+        price = _parse_decimal(m0.group(3))
+        if price is not None and price >= Decimal("100"):
+            try:
+                qty = int(m0.group(1))
+            except ValueError:
+                qty = None
+            unit_raw = m0.group(2)
+            unit = DEFAULT_UNIT_NORMALIZATION.get(unit_raw, unit_raw)
+            return qty, unit, price
+
     # ケース1: PRICE × QTY UNIT
     m = PRICE_MUL_QTY_RE.search(line)
     if m:
