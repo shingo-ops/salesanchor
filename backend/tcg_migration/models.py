@@ -48,9 +48,6 @@ class TcgSupplier(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     channels = relationship("SupplierChannel", back_populates="supplier")
-    source_messages = relationship("SourceMessage", back_populates="supplier_channel",
-                                   primaryjoin="TcgSupplier.id == foreign(SupplierChannel.supplier_id)",
-                                   viewonly=True)
 
 
 class SupplierChannel(Base):
