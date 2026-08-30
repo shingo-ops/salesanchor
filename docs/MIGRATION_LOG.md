@@ -136,6 +136,24 @@ GAS 運用（LINE エクスポートファイル → Gemini 抽出 → 商品照
 
 ---
 
+### CI 運用ルール（2026-08-30 追加）
+
+**push 前に必ずローカルで以下を実行し、全て green を確認してから push すること。**
+
+```bash
+# バックエンド変更時
+cd backend && ruff check app/ && make lint-ci
+
+# フロントエンド変更時
+cd frontend && npm run check:all
+
+# main 行き PR は release/* ブランチを経由すること（base-branch-guard）
+```
+
+詳細: `docs/CI_REQUIREMENTS.md`
+
+---
+
 ### 次フェーズへの申し送り事項
 
 1. **name-first-v1 キーワード整備**: PID解決率 78.8% → 52.0% の差は主にキーワード不足。
