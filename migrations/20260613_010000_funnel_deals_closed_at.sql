@@ -14,6 +14,7 @@
 -- 作成日: 2026-06-12
 -- 関連: docs/handoff/funnel-dashboard-stage1/design.md §2.1
 --       docs/adr/ADR-138-funnel-dashboard-stage1.md §D1-1
+-- ガード: deals テーブルが存在しないスキーマはスキップ（deals 廃止後の新テナント対応）
 
 DO $$
 DECLARE
@@ -25,6 +26,16 @@ BEGIN
         WHERE nspname ~ '^tenant_\d+$'
         ORDER BY nspname
     LOOP
+        -- deals テーブルが存在しない場合はスキップ
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_rec.schema_name
+              AND table_name = 'deals'
+        ) THEN
+            RAISE NOTICE 'Migration 101: skipping schema %: deals table does not exist', schema_rec.schema_name;
+            CONTINUE;
+        END IF;
+
         RAISE NOTICE 'Migration 101: adding deals.closed_at to schema %', schema_rec.schema_name;
 
         EXECUTE format(
