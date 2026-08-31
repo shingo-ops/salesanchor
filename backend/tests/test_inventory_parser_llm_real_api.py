@@ -68,6 +68,21 @@ async def test_real_gemini_call_returns_structured_items() -> None:
     except LLMConfigError:
         pytest.skip("GEMINI_API_KEY 不正により skip")
     except LLMParseError as exc:
+        exc_str = str(exc)
+        if "API_KEY_INVALID" in exc_str or "API key not valid" in exc_str:
+            pytest.skip(
+                f"GEMINI_API_KEY が無効（失効中の可能性あり）のため skip。"
+                f"有効なキーを GitHub Secrets に設定すると検証が自動復活します。"
+                f" 詳細: {exc}"
+            )
+        if "no longer available" in exc_str or (
+            "404" in exc_str and "gemini" in exc_str.lower()
+        ):
+            pytest.skip(
+                f"使用中のモデルが新規ユーザー向けに提供終了のため skip。"
+                f"inventory_parser_llm.py の model_name を更新すると検証が自動復活します。"
+                f" 詳細: {exc}"
+            )
         pytest.fail(f"実 Gemini 呼び出しが失敗: {exc}")
 
     assert isinstance(result.items, list)

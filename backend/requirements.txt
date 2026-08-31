@@ -35,6 +35,8 @@ pypdf>=4.0.0,<6.0.0
 google-api-python-client>=2.100.0,<3.0.0
 google-auth-oauthlib>=1.2.0,<2.0.0
 google-auth-httplib2>=0.2.0,<1.0.0
+# MIG-05 Task 3: TCG ミラーシート書き出し（salesanchor-drive SA）
+gspread>=6.0,<7.0
 # Sprint 3 (monitoring): FastAPI メトリクスを /metrics エンドポイントで Prometheus に公開
 # rate_limit.py / audit.py の _SKIP_PATHS で除外済み
 prometheus-client==0.25.0
