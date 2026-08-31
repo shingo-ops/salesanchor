@@ -69,7 +69,7 @@ export default function TcgParallelReportPage() {
       const res = await api.get<ParallelReportResponse>(
         "/api/v1/tcg/parallel-report"
       );
-      setReport(res.data);
+      setReport(res);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(`レポート取得失敗: ${msg}`);
@@ -111,17 +111,17 @@ export default function TcgParallelReportPage() {
     return "var(--text-secondary)";
   };
 
-  if (superAdminLoading) return <PageLayout title="並行運用比較レポート">読み込み中…</PageLayout>;
+  if (superAdminLoading) return <PageLayout navKey="nav.superAdminTcgParallelReport">読み込み中…</PageLayout>;
   if (!isSuperAdmin) {
     return (
-      <PageLayout title="並行運用比較レポート">
+      <PageLayout navKey="nav.superAdminTcgParallelReport">
         <p style={{ color: "var(--color-error)" }}>このページは super_admin 専用です。</p>
       </PageLayout>
     );
   }
 
   return (
-    <PageLayout title="並行運用比較レポート (MIG-04 Phase 4)">
+    <PageLayout navKey="nav.superAdminTcgParallelReport">
       <div style={{ maxWidth: "var(--modal-xwide-w)", fontFamily: "monospace" }}>
         {/* ヘッダー説明 */}
         <div style={{ background: "var(--bg-primary)", padding: "10px 14px", borderRadius: 4, marginBottom: 16 }}>
