@@ -135,3 +135,54 @@ validity = datetime.now(_JST).date() + timedelta(days=data.validity_days)
 JST 月末深夜の FedEx API 呼び出しで出荷日が1日前後する可能性があった。
 なお、PR #3184 の FedEx 変更が `test_fedex_rates.py` の2件を新規失敗させており、
 この副作用は別途確認・対処が必要（CI 未 green 状態）。
+
+---
+
+## [2026-09-01] fedex_rates.py ship_date を JST 基準とした判断（案X採用）
+
+### 背景
+
+PR #3184 で `_fetch_transit_days()` の `today = date.today()` を
+`today = datetime.now(ZoneInfo("Asia/Tokyo")).date()`（JST）に変更したことで、
+`test_fedex_rates.py` の2件が新規失敗した。
+
+失敗の原因: テスト側が `delivery = date.today() + timedelta(days=N)`（UTC基準）で
+配送日を生成していたが、`_fetch_transit_days` は JST の `today` から transit_days を
+`(delivery_date - today).days` で計算するため、JST深夜（UTC前日）に1日ズレた。
+
+### 採用: 案X（JST基準を維持・テストを修正）
+
+**根拠:**
+
+1. **`origin_cc = "JP"` 固定**
+   本実装は日本発送専用（`origin_cc` は定数 `"JP"`）。FedEx API における
+   `shipDateStamp` はタイムゾーン情報を持たない plain date 文字列であり、
+   FedEx は **発送元のローカル日付** として解釈する。日本発送 = JST が正解。
+
+2. **ship_date と transit_days の整合性**
+   ```python
+   ship_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")  # 翌日
+   transit_days = (delivery_date - today).days                    # 今日起点
+   ```
+   両者とも `today` を基準にしており、UTC 基準で計算すると JST 深夜（00:00〜09:00）に
+   `ship_date` が実際の JST 日付より1日前になり、返却される `transit_days` も
+   「昨日（UTC）からの日数」になって過大な値を返す。
+
+3. **従来の実務影響（旧: UTC 基準）**
+   JST 深夜（00:00〜09:00）に見積を発行した場合、以下のズレが発生していた:
+   - `ship_date` = JST 当日ではなく前日 → FedEx に「今日発送」ではなく「昨日発送」を送信
+   - `transit_days` = 1日多く算出 → 配送リードタイム見積が1日過大
+
+4. **案Y（UTC基準に戻す）を採用しない理由**
+   UTC基準に戻すと「正しい動作（JST日付）」から意図的に後退させることになり、
+   日本ユーザーへの実務正確性より CI 通過を優先する本末転倒な選択となる。
+
+### テスト修正内容
+
+`test_fedex_rates.py` に `_today_jst()` ヘルパーを追加し、
+delivery date の生成を `_today_jst() + timedelta(days=N)` に変更。
+FedEx が N日後配達を返せば `transit_days == N` という test intent は変わらない。
+
+### 対応 PR
+
+PR #3184（`fix(analytics): JST基準の今日取得に統一`）に含めてリリース。
