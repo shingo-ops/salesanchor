@@ -1902,9 +1902,11 @@ async def _send_discord_message(
     # 未設定の場合のみ DM チャンネル（discord_dm_channel_id）へ送る。
     # Discord API はどちらも /channels/{id}/messages で送信できる。
     ch_q = await db.execute(
-        text(f"SELECT discord_user_id, discord_dm_channel_id, "
-             "discord_guild_channel_id FROM {leads_t} "
-             "WHERE id = :id AND tenant_id = :tenant_id"),
+        text(
+            f"SELECT discord_user_id, discord_dm_channel_id,"
+            f" discord_guild_channel_id FROM {leads_t}"
+            f" WHERE id = :id AND tenant_id = :tenant_id"
+        ),
         {"id": lead_id, "tenant_id": tenant_id},
     )
     ch_row = ch_q.first()
