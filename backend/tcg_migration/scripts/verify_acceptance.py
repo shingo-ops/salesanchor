@@ -41,98 +41,101 @@ def _count(cur: psycopg2.extensions.cursor, sql: str, params: tuple = ()) -> int
     return cur.fetchone()[0]
 
 
+# TCG解析システムは tenant_004 専用スキーマ。全 SQL はこの定数で修飾する
+TCG_SCHEMA = "tenant_004"
+
 CHECKS = [
     # (ラベル, SQL, 期待値)
     (
         "tcg_suppliers = 45",
-        "SELECT COUNT(*) FROM tcg_suppliers",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.tcg_suppliers",
         45,
     ),
     (
         "extraction_items = 1626",
-        "SELECT COUNT(*) FROM extraction_items",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_items",
         1626,
     ),
     (
         "tcg_products = 267",
-        "SELECT COUNT(*) FROM tcg_products",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.tcg_products",
         267,
     ),
     (
         "product_exclude_keywords = 123",
-        "SELECT COUNT(*) FROM product_exclude_keywords",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.product_exclude_keywords",
         123,
     ),
     (
         "analysis_results = 1626",
-        "SELECT COUNT(*) FROM analysis_results",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results",
         1626,
     ),
     (
         "needs_review = 1394",
-        "SELECT COUNT(*) FROM analysis_results WHERE needs_review",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results WHERE needs_review",
         1394,
     ),
     (
         "pid_unresolved = 344",
-        "SELECT COUNT(*) FROM analysis_results WHERE NOT pid_resolved",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results WHERE NOT pid_resolved",
         344,
     ),
     (
         "unit_unresolved = 528",
-        "SELECT COUNT(*) FROM analysis_results WHERE NOT unit_resolved",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results WHERE NOT unit_resolved",
         528,
     ),
     (
         "engine_version = compat-v1 (全行)",
-        "SELECT COUNT(*) FROM analysis_results WHERE engine_version != 'compat-v1'",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results WHERE engine_version != 'compat-v1'",
         0,
     ),
     (
         "SP0023 analysis_results = 198",
-        """
-        SELECT COUNT(*) FROM analysis_results ar
-        JOIN extraction_items ei ON ei.id = ar.extraction_item_id
-        JOIN extraction_jobs  ej ON ej.id = ei.extraction_job_id
-        JOIN source_messages  sm ON sm.id = ej.source_message_id
-        JOIN supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN tcg_suppliers s ON s.id = sc.supplier_id
+        f"""
+        SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_results ar
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+        JOIN {TCG_SCHEMA}.extraction_jobs  ej ON ej.id = ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages  sm ON sm.id = ej.source_message_id
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0023'
         """,
         198,
     ),
     (
         "SP0057 extraction_items = 0",
-        """
-        SELECT COUNT(*) FROM extraction_items ei
-        JOIN extraction_jobs ej ON ej.id = ei.extraction_job_id
-        JOIN source_messages sm ON sm.id = ej.source_message_id
-        JOIN supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN tcg_suppliers s ON s.id = sc.supplier_id
+        f"""
+        SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_items ei
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0057'
         """,
         0,
     ),
     (
         "SP0004 extraction_items = 91",
-        """
-        SELECT COUNT(*) FROM extraction_items ei
-        JOIN extraction_jobs ej ON ej.id = ei.extraction_job_id
-        JOIN source_messages sm ON sm.id = ej.source_message_id
-        JOIN supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN tcg_suppliers s ON s.id = sc.supplier_id
+        f"""
+        SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_items ei
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0004'
         """,
         91,
     ),
     (
         "SP0011 extraction_items = 14",
-        """
-        SELECT COUNT(*) FROM extraction_items ei
-        JOIN extraction_jobs ej ON ej.id = ei.extraction_job_id
-        JOIN source_messages sm ON sm.id = ej.source_message_id
-        JOIN supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN tcg_suppliers s ON s.id = sc.supplier_id
+        f"""
+        SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_items ei
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0011'
         """,
         14,
@@ -140,14 +143,15 @@ CHECKS = [
     # import_jobs スキーマ確認
     (
         "import_jobs テーブル存在",
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'import_jobs'",
+        f"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'import_jobs' AND table_schema = '{TCG_SCHEMA}'",
         1,
     ),
     (
         "extraction_jobs.prompt_version カラム存在",
-        """
+        f"""
         SELECT COUNT(*) FROM information_schema.columns
         WHERE table_name = 'extraction_jobs' AND column_name = 'prompt_version'
+          AND table_schema = '{TCG_SCHEMA}'
         """,
         1,
     ),

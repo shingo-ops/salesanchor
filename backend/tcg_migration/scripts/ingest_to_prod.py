@@ -40,6 +40,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# TCG解析システムは tenant_004 専用スキーマ。全ターゲット SQL はこの定数で修飾する
+TCG_SCHEMA = "tenant_004"
+
 # ---------------------------------------------------------------------------
 # 投入テーブル順序（FK 依存順）
 # ---------------------------------------------------------------------------
@@ -144,7 +147,7 @@ def _ingest_table(
     placeholders = ", ".join(["%s"] * len(cols))
     conflict_col = CONFLICT_KEY.get(table, "id")
     sql = (
-        f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders}) '
+        f'INSERT INTO {TCG_SCHEMA}."{table}" ({col_list}) VALUES ({placeholders}) '
         f"ON CONFLICT ({conflict_col}) DO NOTHING"
     )
 
@@ -158,8 +161,8 @@ def _ingest_table(
     return source_count, inserted
 
 
-def _count(cur: psycopg2.extensions.cursor, table: str) -> int:
-    cur.execute(f'SELECT COUNT(*) FROM "{table}"')  # noqa: S608
+def _count(cur: psycopg2.extensions.cursor, table: str, schema: str = "public") -> int:
+    cur.execute(f'SELECT COUNT(*) FROM {schema}."{table}"')  # noqa: S608
     return cur.fetchone()[0]
 
 
@@ -210,7 +213,7 @@ def _ingest_source_messages(
     col_list = ", ".join(f'"{c}"' for c in cols_no_sb)
     placeholders = ", ".join(["%s"] * len(cols_no_sb))
     sql_insert = (
-        f"INSERT INTO source_messages ({col_list}) VALUES ({placeholders}) "
+        f"INSERT INTO {TCG_SCHEMA}.source_messages ({col_list}) VALUES ({placeholders}) "
         f"ON CONFLICT (id) DO NOTHING"
     )
 
@@ -222,7 +225,7 @@ def _ingest_source_messages(
     # Pass 2: superseded_by を更新
     if sb_updates:
         sql_update = (
-            "UPDATE source_messages SET superseded_by = %s "
+            f"UPDATE {TCG_SCHEMA}.source_messages SET superseded_by = %s "
             "WHERE id = %s AND superseded_by IS NULL"
         )
         with tgt_conn.cursor() as tgt_cur:
@@ -255,11 +258,11 @@ SUMMARY_TABLES = [
 ]
 
 
-def _print_counts(label: str, cur: psycopg2.extensions.cursor) -> None:
+def _print_counts(label: str, cur: psycopg2.extensions.cursor, schema: str = "public") -> None:
     print(f"\n--- {label} ---")
     for t in SUMMARY_TABLES:
         try:
-            n = _count(cur, t)
+            n = _count(cur, t, schema=schema)
             print(f"  {t:<40} {n:>6}")
         except Exception as e:
             print(f"  {t:<40} ERROR: {e}")
@@ -300,7 +303,7 @@ def main() -> None:
             sys.exit(1)
         tgt_conn = _connect(prod_url)
         with tgt_conn.cursor() as tgt_cur:
-            _print_counts("ターゲット DB 現状", tgt_cur)
+            _print_counts("ターゲット DB 現状", tgt_cur, schema=TCG_SCHEMA)
         tgt_conn.close()
         src_conn.close()
         return
@@ -316,7 +319,7 @@ def main() -> None:
 
     # 投入前件数
     with tgt_conn.cursor() as tgt_cur:
-        _print_counts("投入前 ターゲット DB", tgt_cur)
+        _print_counts("投入前 ターゲット DB", tgt_cur, schema=TCG_SCHEMA)
 
     results: dict[str, tuple[int, int]] = {}
 
@@ -334,7 +337,7 @@ def main() -> None:
 
     # 投入後件数
     with tgt_conn.cursor() as tgt_cur:
-        _print_counts("投入後 ターゲット DB", tgt_cur)
+        _print_counts("投入後 ターゲット DB", tgt_cur, schema=TCG_SCHEMA)
 
     print("\n=== 投入サマリー ===")
     print(f"  {'テーブル':<40} {'ソース':>8}")
