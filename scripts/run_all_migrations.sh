@@ -519,6 +519,9 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
+
+# MIG-04: TCG 仕入れ解析パイプライン用テーブル 18 本（public スキーマ・deals廃止非依存）
+run_sql migrations/20260831_100000_create_tcg_analysis_tables.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
