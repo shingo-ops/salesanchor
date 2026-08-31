@@ -17,6 +17,9 @@
 -- 作成日: 2026-06-12
 -- 関連: docs/handoff/funnel-dashboard-stage1/design.md §2.2
 --       docs/adr/ADR-138-funnel-dashboard-stage1.md §D1-2
+-- ガード: deals テーブルが存在しないスキーマはスキップ（deals 廃止後の新テナント対応）
+--         後続マイグレーション (20260721, 20260724) は deal_close_reasons/close_reasons の
+--         存在確認ガードを持つため、スキップしても migration chain は破綻しない。
 
 DO $$
 DECLARE
@@ -29,6 +32,17 @@ BEGIN
         WHERE nspname ~ '^tenant_\d+$'
         ORDER BY nspname
     LOOP
+        -- deals テーブルが存在しない場合はスキップ
+        -- (deal_close_reasons は deals への FK を持つため deals なしでは作成不可)
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_rec.schema_name
+              AND table_name = 'deals'
+        ) THEN
+            RAISE NOTICE 'Migration 102: skipping schema %: deals table does not exist', schema_rec.schema_name;
+            CONTINUE;
+        END IF;
+
         RAISE NOTICE 'Migration 102: processing schema %', schema_rec.schema_name;
 
         -- ── 1. close_reasons マスタテーブル ──────────────────────────────────
