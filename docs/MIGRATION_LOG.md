@@ -67,8 +67,71 @@ CI ログには `audit.py:232 データアクセスイベント記録に失敗` 
 【推測】テストが依存するシード/フィクスチャデータが CI PostgreSQL 環境で生成されていない可能性。
 コードの変更ではなく、CI 環境側（DB セットアップ）の問題である可能性が高い。
 
+### 根本原因（確定）
+
+`analytics.py` が `date.today()`（UTC）で「今月」を判定していたため、CI が
+`15:00 UTC 以降`（= JST 翌日 00:00 以降）に実行されると JST 月次範囲と不一致になっていた。
+
+- CI 成功ラン 12:36 UTC: `date.today() = Aug 31` → August JST range `[Jul-31 15:00, Aug-31 15:00)` UTC → leads at 12:36 UTC ✓
+- CI 失敗ラン 17:00 UTC: `date.today() = Aug 31` → August JST range `[Jul-31 15:00, Aug-31 15:00)` UTC → leads at 17:00 UTC ✗（15:00 超過）
+
+修正: PR #3184 で `_today_jst()` ヘルパー導入（`datetime.now(ZoneInfo("Asia/Tokyo")).date()`）。
+
 ### 対応方針
 
-- 修正は別タスク（このログは調査記録のみ）
-- 優先度: CI 全赤のため早期対応推奨
-- 調査起点: `backend/tests/test_analytics.py` のフィクスチャ定義、`conftest.py` の DB セットアップ処理
+- PR #3184（`fix(analytics): JST基準の今日取得に統一`）で修正済み
+- CI 全 green 後にしんごさんがマージ予定
+
+---
+
+## [2026-09-01] JST/UTC 境界バグの影響範囲（5ファイル）
+
+PR #3184 の調査過程で、`date.today()`（UTC基準）の使用が analytics.py だけでなく
+backend 全体に存在することが判明した。
+
+### 影響ファイル一覧
+
+| ファイル | 行 | 用途 | 実務への影響 |
+|---|---|---|---|
+| `backend/app/routers/analytics.py` | 10箇所 | 月次集計のデフォルト月判定 | **高**: CI 失敗として顕在化 |
+| `backend/app/routers/goals.py` | 2箇所 | 目標期間の週番号・月判定 | **中**: 月末 0:00〜9:00 JST に翌月目標参照 |
+| `backend/app/routers/quotes.py` | 1箇所 | 見積有効期限（today + validity_days） | **中**: 月末 0:00〜9:00 JST に有効期限日付が前日になる可能性 |
+| `backend/app/services/fedex_rates.py` | 1箇所 | 出荷日（today + 1 → ship_date） | **中**: 月末 0:00〜9:00 JST に ship_date が前日 + 1 = 当日になりトランジット日数にズレ |
+| `backend/app/tasks/sa02_recon_monitor.py` | 1箇所 | 日次突合バッチの「当日」判定 | **低**: バッチは AM8:00 JST 実行のためズレは通常発生しない |
+
+### 発見の経緯
+
+1. PR #3181 の CI 失敗（test_analytics.py 4件）を調査
+2. 当初「deals 廃止の影響」と仮説（外れ）
+3. 成功ラン(12:36 UTC)と失敗ラン(17:00 UTC)のコード差分を確認→ backend 変更なし
+4. `_jst_month_range_utc()` の範囲と `date.today()` のズレを特定
+5. backend 全体の `date.today()` を走査 → 5ファイル15箇所に同パターン確認
+
+### quotes.py（見積有効期限）の実務影響
+
+```python
+# 旧（UTC基準）
+validity = date.today() + timedelta(days=data.validity_days)
+# 例: JST 02:00 Sep 1（= UTC Aug 31）に30日有効で作成
+#     date.today() = Aug 31 (UTC) → validity = Sep 30
+# 正しくは JST Sep 1 + 30日 = Oct 1
+
+# 新（JST基準）
+validity = datetime.now(_JST).date() + timedelta(days=data.validity_days)
+# date.today() = Sep 1 (JST) → validity = Oct 1 ✓
+```
+
+月末 JST 深夜（0:00〜9:00）に見積を発行した場合、有効期限が1日早まるリスクがあった。
+
+### fedex_rates.py（出荷日）の実務影響
+
+```python
+# ship_date = (today + 1).strftime(...)
+# today が UTC Aug 31（= JST Sep 1 00:03）の場合:
+#   旧: ship_date = Sep 1  → transit_days = delivery - Sep 1
+#   新: ship_date = Sep 2  → transit_days = delivery - Sep 2（1日少ない）
+```
+
+JST 月末深夜の FedEx API 呼び出しで出荷日が1日前後する可能性があった。
+なお、PR #3184 の FedEx 変更が `test_fedex_rates.py` の2件を新規失敗させており、
+この副作用は別途確認・対処が必要（CI 未 green 状態）。
