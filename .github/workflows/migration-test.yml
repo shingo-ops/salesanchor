@@ -1013,23 +1013,18 @@ jobs:
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
-          CREATE TABLE IF NOT EXISTS tenant_002.conversation_logs (
-              id           SERIAL PRIMARY KEY,
-              tenant_id    INTEGER NOT NULL,
-              company_id   INTEGER,
-              occurred_at  TIMESTAMPTZ NOT NULL,
-              channel_type VARCHAR(30) NOT NULL,
-              created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          );
+          -- conversation_logs は migration 20260604_090000 が CREATE するため、ここでは作成しない。
+          -- invoices は {schema} テンプレート形式の migration が作成するため、run_sql に含まれず手動定義が必要。
           CREATE TABLE IF NOT EXISTS tenant_002.invoices (
-              id           SERIAL PRIMARY KEY,
-              tenant_id    INTEGER NOT NULL,
-              company_id   INTEGER,
-              total_amount NUMERIC(15,2),
-              paid_at      TIMESTAMPTZ,
-              voided_at    TIMESTAMPTZ,
-              created_at   TIMESTAMPTZ DEFAULT NOW(),
-              updated_at   TIMESTAMPTZ DEFAULT NOW()
+              id                  SERIAL PRIMARY KEY,
+              tenant_id           INTEGER NOT NULL,
+              company_id          INTEGER,
+              total_amount        NUMERIC(15,2),
+              status              VARCHAR(30) NOT NULL DEFAULT 'draft',
+              paid_at             TIMESTAMPTZ,
+              voided_at           TIMESTAMPTZ,
+              created_at          TIMESTAMPTZ DEFAULT NOW(),
+              updated_at          TIMESTAMPTZ DEFAULT NOW()
           );
           TENANT_SQL
 
