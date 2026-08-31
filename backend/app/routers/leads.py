@@ -1897,23 +1897,29 @@ async def _send_discord_message(
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
 
-    # discord_dm_channel_id を leads から取得
+    # 送信先チャンネルを leads から取得する。
+    # チケット専用チャンネル（discord_guild_channel_id）を優先し、
+    # 未設定の場合のみ DM チャンネル（discord_dm_channel_id）へ送る。
+    # Discord API はどちらも /channels/{id}/messages で送信できる。
     ch_q = await db.execute(
-        text(f"SELECT discord_user_id, discord_dm_channel_id FROM {leads_t} "
-             "WHERE id = :id AND tenant_id = :tenant_id"),
+        text(
+            f"SELECT discord_user_id, discord_dm_channel_id,"
+            f" discord_guild_channel_id FROM {leads_t}"
+            f" WHERE id = :id AND tenant_id = :tenant_id"
+        ),
         {"id": lead_id, "tenant_id": tenant_id},
     )
     ch_row = ch_q.first()
-    if ch_row is None or not ch_row[1]:
+    if ch_row is None or (not ch_row[1] and not ch_row[2]):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Discord DM チャンネルが設定されていません。"
-                "顧客から先にメッセージを受信すると自動設定されます。"
+                "Discord の送信先チャンネルが設定されていません。"
+                "顧客がチケットを開くか、先にメッセージを送ると自動設定されます。"
             ),
         )
     discord_user_id = ch_row[0]
-    dm_channel_id = str(ch_row[1])
+    dm_channel_id = str(ch_row[2]) if ch_row[2] else str(ch_row[1])
 
     # Discord Bot API で送信
     try:
