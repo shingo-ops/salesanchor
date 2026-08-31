@@ -13,8 +13,11 @@ from __future__ import annotations
     （resolver / customer 経路廃止、company_id + contact_id を唯一の正に）
 """
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -185,7 +188,7 @@ async def create_quote(
     shipping = data.shipping_fee or Decimal(0)
     tax = data.tax_amount or Decimal(0)
     total = subtotal + shipping + tax
-    validity = date.today() + timedelta(days=data.validity_days)
+    validity = datetime.now(_JST).date() + timedelta(days=data.validity_days)
 
     # ヘッダー作成
     header_result = await db.execute(

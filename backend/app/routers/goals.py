@@ -10,7 +10,8 @@ from __future__ import annotations
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -37,8 +38,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _today_jst() -> date:
+    return datetime.now(_JST).date()
+
+
 def _current_week_num() -> int:
-    return date.today().isocalendar()[1]
+    return _today_jst().isocalendar()[1]
 
 
 def _achievement_rate(actual: float, target: float) -> float:
@@ -268,7 +276,7 @@ async def get_goal_summary(
     tab='individual': user_id（未指定は current_user.id）の個人目標
     tab='team':       team_id のチーム目標
     """
-    today = date.today()
+    today = _today_jst()
     current_month = today.month
     current_year = today.year
     current_week = _current_week_num()
