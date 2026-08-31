@@ -32,6 +32,29 @@ def _schema(tenant_id: int) -> str:
     return f"tenant_{tenant_id:03d}"
 
 
+def _extract_first_attachment(message: Any) -> tuple[str | None, str | None]:
+    """Discord メッセージから最初の添付の URL と種別を取り出す。
+
+    添付が無ければ (None, None)。
+    種別は content_type の先頭語から image / video / audio / file に丸める。
+    Meta 経路（webhook.py）の attachment_url / attachment_type と同じ意味で使う。
+    """
+    attachments = getattr(message, "attachments", None) or []
+    if not attachments:
+        return None, None
+    first = attachments[0]
+    url = getattr(first, "url", None)
+    if not url:
+        return None, None
+    content_type = getattr(first, "content_type", None) or ""
+    head = content_type.split("/")[0]
+    if head in ("image", "video", "audio"):
+        kind = head
+    else:
+        kind = "file"
+    return str(url), kind
+
+
 async def _lookup_ticket_channel_lead(
     db: AsyncSession,
     *,
@@ -130,14 +153,18 @@ async def process_ticket_channel_message(
             )
             return True
 
+        attachment_url, attachment_type = _extract_first_attachment(message)
+
         schema = _schema(tenant_id)
         insert_sql = text(f"""
             INSERT INTO {schema}.meta_messages
                 (tenant_id, lead_id, platform, sender_id, sender_name,
-                 message_text, direction, message_id, created_at, original_language)
+                 message_text, direction, message_id, created_at, original_language,
+                 attachment_url, attachment_type)
             VALUES
                 (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                 :message_text, 'inbound', :message_id, :created_at, :original_language)
+                 :message_text, 'inbound', :message_id, :created_at, :original_language,
+                 :attachment_url, :attachment_type)
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
             RETURNING id
@@ -151,6 +178,8 @@ async def process_ticket_channel_message(
             "message_id": message_id,
             "created_at": received_at,
             "original_language": infer_original_language(message_text),
+            "attachment_url": attachment_url,
+            "attachment_type": attachment_type,
         }
 
         result = await db.execute(insert_sql, insert_params)
