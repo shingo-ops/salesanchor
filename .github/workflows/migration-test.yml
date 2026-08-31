@@ -984,7 +984,18 @@ jobs:
           -- deals テーブルを意図的に作成しない。
           -- companies は migration 028 が CREATE TABLE するため、ここでは作成しない。
           -- migration 028 の実行条件: leads AND staff が両方存在すること。
+          -- meta_messages は migration 092 が pg_namespace 走査で INDEX 作成するため必要。
           CREATE SCHEMA IF NOT EXISTS tenant_002;
+          CREATE TABLE IF NOT EXISTS tenant_002.meta_messages (
+              id           SERIAL PRIMARY KEY,
+              tenant_id    INTEGER      NOT NULL DEFAULT 1,
+              lead_id      INTEGER,
+              platform     VARCHAR(20)  NOT NULL DEFAULT 'messenger',
+              sender_id    VARCHAR(100) NOT NULL,
+              message_text TEXT,
+              direction    VARCHAR(10)  NOT NULL DEFAULT 'inbound',
+              created_at   TIMESTAMPTZ  DEFAULT NOW()
+          );
           CREATE TABLE IF NOT EXISTS tenant_002.leads (
               id              SERIAL PRIMARY KEY,
               tenant_id       INTEGER      NOT NULL,
