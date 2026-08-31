@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 MIRROR_SPREADSHEET_ID = "1IBIpge6Qz2arq93OHmRFnCGBMj2kVhrgEjtY8c5ecus"
 
+# TCG解析システムは tenant_004 専用スキーマ。全SQLはこの定数で修飾する
+TCG_SCHEMA = "tenant_004"
+
 _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.readonly",
@@ -106,7 +109,7 @@ def _get_or_add_worksheet(sh: Any, title: str, rows: int = 300, cols: int = 30) 
 async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             p.product_id,
             p.product_name,
@@ -117,8 +120,8 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
             u.name AS unit_name,
             p.standard_purchase_price,
             p.note
-        FROM tcg_products p
-        LEFT JOIN units u ON u.id = p.unit_id
+        FROM {TCG_SCHEMA}.tcg_products p
+        LEFT JOIN {TCG_SCHEMA}.units u ON u.id = p.unit_id
         ORDER BY p.product_id
     """))
     rows = result.fetchall()
@@ -133,14 +136,14 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             p.product_id,
             p.product_name,
             'search' AS keyword_type,
             k.keyword
-        FROM product_search_keywords k
-        JOIN tcg_products p ON p.id = k.product_id
+        FROM {TCG_SCHEMA}.product_search_keywords k
+        JOIN {TCG_SCHEMA}.tcg_products p ON p.id = k.product_id
         ORDER BY p.product_id, k.keyword
         UNION ALL
         SELECT
@@ -148,8 +151,8 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
             p.product_name,
             'exclude',
             k.keyword
-        FROM product_exclude_keywords k
-        JOIN tcg_products p ON p.id = k.product_id
+        FROM {TCG_SCHEMA}.product_exclude_keywords k
+        JOIN {TCG_SCHEMA}.tcg_products p ON p.id = k.product_id
         ORDER BY p.product_id, k.keyword
     """))
     rows = result.fetchall()
@@ -161,15 +164,15 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             s.code,
             s.name,
             s.contact_name,
             sc.channel_type,
             sc.channel_identifier
-        FROM tcg_suppliers s
-        LEFT JOIN supplier_channels sc ON sc.supplier_id = s.id
+        FROM {TCG_SCHEMA}.tcg_suppliers s
+        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = s.id
         ORDER BY s.code, sc.channel_type
     """))
     rows = result.fetchall()
@@ -181,19 +184,19 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             s.code,
             s.name,
             COUNT(DISTINCT ei.id) AS extraction_items,
             COUNT(DISTINCT ar.id) AS analysis_results,
             SUM(CASE WHEN ar.needs_review THEN 1 ELSE 0 END) AS needs_review
-        FROM tcg_suppliers s
-        LEFT JOIN supplier_channels sc ON sc.supplier_id = s.id
-        LEFT JOIN source_messages sm ON sm.supplier_channel_id = sc.id
-        LEFT JOIN extraction_jobs ej ON ej.source_message_id = sm.id
-        LEFT JOIN extraction_items ei ON ei.extraction_job_id = ej.id
-        LEFT JOIN analysis_results ar ON ar.extraction_item_id = ei.id
+        FROM {TCG_SCHEMA}.tcg_suppliers s
+        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = s.id
+        LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+        LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
         GROUP BY s.code, s.name
         ORDER BY s.code
     """))
@@ -206,7 +209,7 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             t.table_name,
             c.column_name,
@@ -216,7 +219,7 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
         FROM information_schema.tables t
         JOIN information_schema.columns c
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
-        WHERE t.table_schema = 'public'
+        WHERE t.table_schema = '{TCG_SCHEMA}'
           AND t.table_name IN (
             'tcg_suppliers', 'supplier_channels', 'tcg_products',
             'product_search_keywords', 'product_exclude_keywords',
