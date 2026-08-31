@@ -17,6 +17,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from statistics import median
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -29,6 +30,13 @@ from app.models import User
 from app.services.time import _jst_month_range_utc
 
 router = APIRouter()
+
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _today_jst() -> date:
+    """JST 基準の「今日」を返す。date.today() (UTC) の代替。"""
+    return datetime.now(_JST).date()
 
 LEAD_ACTIVE_STATUSES = ("lead", "negotiating", "follow_up_short", "follow_up_long")
 LEAD_CLOSED_STATUSES = ("existing_customer", "lost")
@@ -260,7 +268,7 @@ async def followup_reminders(
     - due_today: 今日が期限
     - upcoming: 今後7日以内
     """
-    today = date.today()
+    today = _today_jst()
     upcoming_end = today + timedelta(days=7)
 
     result = await db.execute(
@@ -327,7 +335,7 @@ async def landing_forecast(
     対象: status NOT IN ('existing_customer', 'lost', 'lead_out_of_scope', 'negotiating_out_of_scope')
           AND expected_close_date の月 = 今月
     """
-    today = date.today()
+    today = _today_jst()
     month_start = today.replace(day=1)
     if today.month == 12:
         month_end = today.replace(year=today.year + 1, month=1, day=1)
@@ -462,7 +470,7 @@ async def dashboard_summary(
     以前は date.today() - timedelta(30) だったため UTC/JST 差（最大9時間）で
     月初・月末のデータが漏れていた。_jst_month_range_utc() を適用。
     """
-    today = date.today()
+    today = _today_jst()
     if period == "1m":
         # ⚠️ 挙動変更: JST 暦月境界（UTC aware datetime）に統一。
         # 以前は date.today() - timedelta(30) だったため UTC/JST 差（最大9時間）で
@@ -770,7 +778,7 @@ async def monthly_revenue(
     - 1w / 1m  → 日次（daily）: 日別 actual のみ（forecast なし）
     - 3m / 6m / 12m → 月次（monthly）: 月別 actual + 当月 forecast/remaining
     """
-    today = date.today()
+    today = _today_jst()
     granularity, count = _PERIOD_CHART_MAP.get(period, ("monthly", 6))
 
     if granularity == "daily":
@@ -1141,7 +1149,7 @@ async def funnel_stages(
     目標値は goals テーブルから取得（未設定時は 0）。
     """
     _validate_scope(scope)
-    today = date.today()
+    today = _today_jst()
     target_year, target_month = _parse_month(month, today)
     month_str = f"{target_year:04d}-{target_month:02d}"
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
@@ -1312,7 +1320,7 @@ async def follow_ups_summary(
     - won_no_order: 成約後未発注（成約後30日超で発注なし）
     """
     _validate_scope(scope)
-    today = date.today()
+    today = _today_jst()
     items: list[FollowUpCustomer] = []
     # 境界日を Python 側で計算（date オブジェクトのまま渡す・str 変換禁止）
     threshold_30 = today - timedelta(days=30)
@@ -1508,7 +1516,7 @@ async def revenue_summary(
     - uncosted_orders: purchase_cost が NULL の注文数
     """
     _validate_scope(scope)
-    today = date.today()
+    today = _today_jst()
     target_year, target_month = _parse_month(month, today)
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
     elapsed_pct = _month_elapsed_pct(today) if (target_year == today.year and target_month == today.month) else 100
@@ -1717,7 +1725,7 @@ async def channels_summary(
     initiative IN ('inbound','outbound') のみ返す（frontend が initiative_short キーを使用）。
     """
     _validate_scope(scope)
-    today = date.today()
+    today = _today_jst()
     target_year, target_month = _parse_month(month, today)
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
 
@@ -1964,7 +1972,7 @@ async def reasons_summary(
     _validate_scope(scope)
     if type is not None and type not in ("won", "lost"):
         raise HTTPException(status_code=422, detail="type は won または lost で指定してください")
-    today = date.today()
+    today = _today_jst()
     target_year, target_month = _parse_month(month, today)
     start_utc, end_utc = _jst_month_range_utc(target_year, target_month)
 
@@ -2184,7 +2192,7 @@ async def weekly_advisor_defensive(
 ):
     """守り3種の打ち手を score 降順で返す read-only 集計 API。"""
     _validate_scope(scope)
-    today = date.today()
+    today = _today_jst()
     current_start, current_end, previous_start, previous_end = _advisor_period_bounds(period, today)
 
     if scope == "mine":
