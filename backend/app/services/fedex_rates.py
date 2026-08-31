@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -413,7 +414,7 @@ def _fetch_transit_days(
     Returns:
         {serviceType: transit_days} — transit_days = (delivery_date - today).days
     """
-    today = date.today()
+    today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
     ship_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
     weight_val = float(weight_kg)
 

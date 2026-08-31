@@ -12,10 +12,23 @@ NOTE:
   FILTER 系 EP は skip し、PostgreSQL 統合テストで検証する。
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import text
+
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _today_jst() -> date:
+    """JST 基準の今日を返す（analytics EP の _today_jst() と対応）。"""
+    return datetime.now(_JST).date()
+
+
+def _today_utc() -> date:
+    """UTC の今日を返す（SQLite CURRENT_TIMESTAMP の日付部分と一致）。"""
+    return datetime.now(timezone.utc).date()
 
 # ─────────────────────────────────────────────
 # ヘルパー
@@ -620,13 +633,13 @@ class TestChannels:
         })
         ct_id = ct.json()["id"]
 
-        today = date.today()
-        this_month = str(today)[:7]
+        today_jst = _today_jst()
+        this_month = str(today_jst)[:7]
 
         await db_session.execute(text("""
             INSERT INTO orders (id, tenant_id, company_id, contact_id, order_number, total_amount, status, created_at)
             VALUES (9910, 999, :co_id, :ct_id, 'CHGROSS-001', 300000, 'pending', :dt)
-        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today)})
+        """), {"co_id": co_id, "ct_id": ct_id, "dt": str(today_jst)})
         # purchase_cost=100000, ad_cost=20000 → cost_total=120000 → gross=300000-120000=180000
         await db_session.execute(text("""
             INSERT INTO order_financials (order_id, tenant_id, revenue_amount, purchase_cost, ad_cost)
@@ -815,8 +828,8 @@ class TestReasons:
         })
         ct_id = ct.json()["id"]
 
-        today = date.today()
-        this_month = str(today)[:7]
+        today_jst = _today_jst()
+        this_month = str(today_jst)[:7]
 
         # won lead with close reason (ID=1: '在庫・品揃え', type='won') + one-liner memo
         await db_session.execute(text("""
@@ -836,12 +849,13 @@ class TestReasons:
         assert first["secondary_count"] == 0
 
         # memos: deal_id(lead_id) / primary_label / memo / closed_at
+        # closed_at は SQLite が UTC で記録するため UTC 日付で比較する
         assert len(data["memos"]) >= 1
         memo = data["memos"][0]
         assert memo["deal_id"] == reason_lead_id
         assert memo["primary_label"] == "在庫・品揃え"
         assert memo["memo"] == "品揃えが豊富でした"
-        assert memo["closed_at"] == str(today)
+        assert memo["closed_at"] == str(_today_utc())
 
     async def test_reasons_type_filter(self, client, db_session):
         """?type=won / ?type=lost で close_reasons.type による絞り込みが効く"""
@@ -854,8 +868,7 @@ class TestReasons:
         })
         ct_id = ct.json()["id"]
 
-        today = date.today()
-        this_month = str(today)[:7]
+        this_month = str(_today_jst())[:7]
 
         # won lead — close_reason ID=1 ('在庫・品揃え', type='won')
         await db_session.execute(text("""
