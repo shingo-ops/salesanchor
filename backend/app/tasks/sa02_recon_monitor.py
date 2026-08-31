@@ -13,7 +13,7 @@ meta_messages と conversation_logs の当日新規件数を全テナント合�
 
 import logging
 import os
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
