@@ -983,26 +983,32 @@ jobs:
           -- [146] v_company_stats SSOT / [148][149] funnel migrations のガード検証用。
           -- deals テーブルを意図的に作成しない。
           -- companies は migration 028 が CREATE TABLE するため、ここでは作成しない。
-          -- migration 028 の実行条件: leads AND staff が両方存在すること。
-          -- meta_messages は migration 092 が pg_namespace 走査で INDEX 作成するため必要。
+          -- conversation_logs は migration 20260604_090000 が CREATE するため、ここでは作成しない。
+          -- それ以外は tenant_001 と同じテーブルセット（deals のみ欠落）。
           CREATE SCHEMA IF NOT EXISTS tenant_002;
-          CREATE TABLE IF NOT EXISTS tenant_002.meta_messages (
-              id           SERIAL PRIMARY KEY,
-              tenant_id    INTEGER      NOT NULL DEFAULT 1,
-              lead_id      INTEGER,
-              platform     VARCHAR(20)  NOT NULL DEFAULT 'messenger',
-              sender_id    VARCHAR(100) NOT NULL,
-              message_text TEXT,
-              direction    VARCHAR(10)  NOT NULL DEFAULT 'inbound',
-              created_at   TIMESTAMPTZ  DEFAULT NOW()
+          CREATE TABLE IF NOT EXISTS tenant_002.roles (
+              id          SERIAL PRIMARY KEY,
+              tenant_id   INTEGER      NOT NULL DEFAULT 1,
+              name        VARCHAR(100) NOT NULL,
+              color       VARCHAR(7)   DEFAULT '#6c757d',
+              priority    INTEGER      NOT NULL DEFAULT 0,
+              is_system   BOOLEAN      DEFAULT FALSE,
+              description VARCHAR(500),
+              created_at  TIMESTAMPTZ  DEFAULT NOW(),
+              updated_at  TIMESTAMPTZ  DEFAULT NOW(),
+              UNIQUE(tenant_id, name)
           );
-          CREATE TABLE IF NOT EXISTS tenant_002.leads (
-              id              SERIAL PRIMARY KEY,
-              tenant_id       INTEGER      NOT NULL,
-              full_name       VARCHAR(255),
-              status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
-              created_at      TIMESTAMPTZ  DEFAULT NOW(),
-              updated_at      TIMESTAMPTZ  DEFAULT NOW()
+          CREATE TABLE IF NOT EXISTS tenant_002.role_permissions (
+              id            SERIAL PRIMARY KEY,
+              role_id       INTEGER NOT NULL REFERENCES tenant_002.roles(id) ON DELETE CASCADE,
+              permission_id INTEGER NOT NULL,
+              UNIQUE(role_id, permission_id)
+          );
+          CREATE TABLE IF NOT EXISTS tenant_002.user_roles (
+              id          SERIAL PRIMARY KEY,
+              user_id     INTEGER NOT NULL,
+              role_id     INTEGER NOT NULL REFERENCES tenant_002.roles(id) ON DELETE CASCADE,
+              assigned_at TIMESTAMPTZ DEFAULT NOW()
           );
           CREATE TABLE IF NOT EXISTS tenant_002.staff (
               id         SERIAL PRIMARY KEY,
@@ -1013,18 +1019,115 @@ jobs:
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
-          -- conversation_logs は migration 20260604_090000 が CREATE するため、ここでは作成しない。
-          -- invoices は {schema} テンプレート形式の migration が作成するため、run_sql に含まれず手動定義が必要。
+          CREATE TABLE IF NOT EXISTS tenant_002.leads (
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER      NOT NULL,
+              full_name       VARCHAR(255),
+              customer_name   VARCHAR(255),
+              source          VARCHAR(50),
+              status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
+              discord_user_id VARCHAR(64),
+              created_at      TIMESTAMPTZ  DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ  DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_002.meta_messages (
+              id           SERIAL PRIMARY KEY,
+              tenant_id    INTEGER      NOT NULL DEFAULT 1,
+              lead_id      INTEGER      REFERENCES tenant_002.leads(id) ON DELETE SET NULL,
+              platform     VARCHAR(20)  NOT NULL DEFAULT 'messenger',
+              sender_id    VARCHAR(100) NOT NULL,
+              sender_name  VARCHAR(200),
+              message_text TEXT,
+              direction    VARCHAR(10)  NOT NULL DEFAULT 'inbound',
+              raw_payload  JSONB,
+              created_at   TIMESTAMPTZ  DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_002.lead_channels (
+              id           SERIAL PRIMARY KEY,
+              lead_id      INTEGER      NOT NULL REFERENCES tenant_002.leads(id),
+              platform     VARCHAR(50)  NOT NULL,
+              external_id  VARCHAR(255) NOT NULL,
+              display_name VARCHAR(255),
+              created_at   TIMESTAMPTZ  DEFAULT NOW(),
+              UNIQUE (platform, external_id)
+          );
+          -- deals テーブルは意図的に作成しない（deals 廃止後の新規テナント相当）
+          CREATE TABLE IF NOT EXISTS tenant_002.quotes (
+              id              SERIAL PRIMARY KEY,
+              tenant_id       INTEGER NOT NULL,
+              quote_code      VARCHAR(50),
+              company_id      INTEGER,
+              contact_id      INTEGER,
+              lead_id         INTEGER REFERENCES tenant_002.leads(id),
+              currency        VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal        NUMERIC(15,2),
+              shipping_fee    NUMERIC(15,2),
+              tax_amount      NUMERIC(15,2),
+              total_amount    NUMERIC(15,2),
+              status          VARCHAR(30) NOT NULL DEFAULT 'draft',
+              validity_date   DATE,
+              notes           TEXT,
+              created_at      TIMESTAMPTZ DEFAULT NOW(),
+              updated_at      TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_002.quote_items (
+              id              SERIAL PRIMARY KEY,
+              quote_id        INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
+          );
           CREATE TABLE IF NOT EXISTS tenant_002.invoices (
               id                  SERIAL PRIMARY KEY,
               tenant_id           INTEGER NOT NULL,
+              invoice_number      VARCHAR(50),
+              quote_id            INTEGER,
               company_id          INTEGER,
+              contact_id          INTEGER,
+              currency            VARCHAR(10) NOT NULL DEFAULT 'JPY',
+              subtotal            NUMERIC(15,2),
+              shipping_fee        NUMERIC(15,2),
+              tax_amount          NUMERIC(15,2),
               total_amount        NUMERIC(15,2),
+              exchange_rate_jpy   NUMERIC(15,4),
+              exchange_rate_usd   NUMERIC(15,4),
+              amount_jpy          NUMERIC(15,2),
+              amount_usd          NUMERIC(15,2),
+              payment_method      VARCHAR(50),
               status              VARCHAR(30) NOT NULL DEFAULT 'draft',
+              branch_number       INTEGER NOT NULL DEFAULT 1,
+              pdf_url             TEXT,
+              erp_key             VARCHAR(20),
+              issued_at           TIMESTAMPTZ,
+              due_date            DATE,
               paid_at             TIMESTAMPTZ,
               voided_at           TIMESTAMPTZ,
+              void_reason         TEXT,
+              notes               TEXT,
+              created_by          INTEGER,
               created_at          TIMESTAMPTZ DEFAULT NOW(),
               updated_at          TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS tenant_002.invoice_items (
+              id              SERIAL PRIMARY KEY,
+              invoice_id      INTEGER NOT NULL,
+              product_id      INTEGER,
+              product_name    VARCHAR(255),
+              name_en         VARCHAR(255),
+              condition       VARCHAR(50),
+              unit            VARCHAR(50),
+              quantity        INTEGER NOT NULL DEFAULT 1,
+              unit_price      NUMERIC(15,2) NOT NULL DEFAULT 0,
+              weight          NUMERIC(10,3),
+              subtotal        NUMERIC(15,2),
+              sort_order      INTEGER NOT NULL DEFAULT 0
           );
           TENANT_SQL
 
