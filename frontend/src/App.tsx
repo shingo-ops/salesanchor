@@ -85,6 +85,7 @@ import PhaseSwitchPage from "./pages/super-admin/PhaseSwitchPage";
 import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
+import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -297,6 +298,11 @@ function App() {
                   <Route
                     path="/super-admin/fx-rate"
                     element={<FxRatePage />}
+                  />
+                  {/* MIG-04 Phase 4: 並行運用比較レポート (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-parallel-report"
+                    element={<TcgParallelReportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
