@@ -230,22 +230,22 @@ class TestFunnel:
             INSERT INTO team_members (team_id, user_id) VALUES (1, 999)
         """))
 
-        today = date.today()
+        today_jst = _today_jst()  # funnel EP が _today_jst() で月を判定するため揃える
         # lead_count 目標
         await db_session.execute(text("""
             INSERT INTO goals (user_id, team_id, period_type, period_year, period_num, kpi_type, target_value, created_by)
             VALUES (NULL, 1, 'monthly', :year, :month, 'lead_count', 30, 999)
-        """), {"year": today.year, "month": today.month})
+        """), {"year": today_jst.year, "month": today_jst.month})
         # revenue 目標
         await db_session.execute(text("""
             INSERT INTO goals (user_id, team_id, period_type, period_year, period_num, kpi_type, target_value, created_by)
             VALUES (NULL, 1, 'monthly', :year, :month, 'revenue', 5000000, 999)
-        """), {"year": today.year, "month": today.month})
+        """), {"year": today_jst.year, "month": today_jst.month})
         # won_count 目標
         await db_session.execute(text("""
             INSERT INTO goals (user_id, team_id, period_type, period_year, period_num, kpi_type, target_value, created_by)
             VALUES (NULL, 1, 'monthly', :year, :month, 'won_count', 10, 999)
-        """), {"year": today.year, "month": today.month})
+        """), {"year": today_jst.year, "month": today_jst.month})
         await db_session.commit()
 
         res = await client.get("/api/v1/analytics/funnel")
