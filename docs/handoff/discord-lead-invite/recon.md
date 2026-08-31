@@ -14,7 +14,7 @@
 
 ---
 
-## `oauth_state.py` 変更前後
+## `backend/app/services/oauth_state.py` 変更前後
 
 ### 変更前（シグネチャ）
 
@@ -63,11 +63,11 @@ if extra:
 
 | suite | 件数 | 結果 |
 |-------|------|------|
-| test_oauth_state.py | 14 | PASS |
-| test_oauth_state_extra.py | 6 | PASS |
-| test_discord_oauth.py | 9 | PASS |
-| test_meta_oauth_endpoints.py | 21 | PASS |
-| test_502_paths.py | 3 | PASS |
+| backend/tests/test_oauth_state.py | 14 | PASS |
+| backend/tests/test_oauth_state_extra.py | 6 | PASS |
+| backend/tests/test_discord_oauth.py | 9 | PASS |
+| backend/tests/test_meta_oauth_endpoints.py | 21 | PASS |
+| backend/tests/test_502_paths.py | 3 | PASS |
 
 ---
 
