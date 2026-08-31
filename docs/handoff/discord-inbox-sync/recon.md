@@ -1,8 +1,9 @@
 # recon: 受信箱からチケットチャンネルへ送信＋添付の受信に対応
 
 ## 対象ADR
-- ADR-091: Discord Bot スコープ定義（`docs/adr/ADR-091-discord-bot-scope.md`）
-- ADR-146 B方式: 単一共有 DISCORD_BOT_TOKEN（`docs/adr/ADR-146-discord-bot-token-sharing.md`）
+- ADR-091: Discord Bot スコープ定義（`docs/adr/ADR-091-discord-bot-scope-definition.md`）
+- ADR-146 B方式（共通Bot1台・guild_id振り分け）はコード内コメントで参照されているが、
+  docs/adr/ 配下に対応する文書は存在しない（2026-08-31 実測・0件）。
 
 ## 変更ファイルと根拠
 
@@ -28,7 +29,7 @@
 ## 既存コードの参照
 
 - `meta_messages` テーブルの `attachment_url`, `attachment_type` 列:
-  マイグレーション `backend/migrations/versions/0100_*.py` にて既存定義済み
+  `migrations/100_add_meta_messages_image_columns.sql` にて既存定義済み
 - `discord_guild_channel_id` 列: `backend/app/routers/leads.py` 内 `_create_ticket_channel` で書込済み
 - `_extract_first_attachment` の設計参考: `backend/app/discord_gateway/dm_writer.py`（添付なし経路）
 - `discord_sender.send_discord_dm` は `/channels/{channel_id}/messages` を送信先として受け取るため、

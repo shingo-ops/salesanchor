@@ -1,8 +1,8 @@
 # design: 受信箱からチケットチャンネルへ送信＋添付の受信に対応
 
 ## 対象ADR
-- ADR-091: `docs/adr/ADR-091-discord-bot-scope.md`
-- ADR-146: `docs/adr/ADR-146-discord-bot-token-sharing.md`
+- ADR-091: `docs/adr/ADR-091-discord-bot-scope-definition.md`
+- ADR-146 はコード内コメントでのみ参照され、docs/adr/ 配下に文書は存在しない（2026-08-31 実測）。
 
 ## recon 参照
 `docs/handoff/discord-inbox-sync/recon.md`
@@ -39,6 +39,16 @@ Meta 経路（webhook.py）と同じカラム設計を踏襲。
 ## 外部・過去事例
 - Discord REST API `/channels/{channel_id}/messages`: DM チャンネルとギルドチャンネルで同一エンドポイント（公式 API v10 仕様）
 - Meta Messenger webhook.py の `attachment_url` / `attachment_type` 設計を踏襲（プロジェクト内事例）
+
+## 維持の仕組み
+
+- 守り手: `backend/tests/test_discord_ticket_attachment.py`
+- 対象: `_extract_first_attachment` の戻り値仕様（添付なし・image・file・URL欠落の分岐）が
+  壊れると、顧客の添付が受信箱に出なくなる。
+- 送信先の切替（チケットチャンネル優先・DMフォールバック）は
+  `backend/tests/test_message_send.py` が守る。
+- 実動作の確認は人手で守る。理由: Discord 実環境との往復は自動テストで再現できないため、
+  tenant_006 での往復確認を別途行う。
 
 ## GO記録
 
