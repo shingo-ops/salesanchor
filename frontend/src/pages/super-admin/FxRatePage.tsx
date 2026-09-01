@@ -115,7 +115,7 @@ export default function FxRatePage() {
 
       {fetching ? (
         <div>{t("common.loading")}</div>
-      ) : rate === null ? (
+      ) : rate === null || rate.rate_jpy == null ? (
         <div className="empty-state-message" data-testid="fx-rate-no-data">
           {t("superAdmin.fxRate.noData")}
         </div>

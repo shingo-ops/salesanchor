@@ -347,6 +347,12 @@ app.include_router(
     quotes.router, prefix="/api/v1", tags=["quotes"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 為替レート SSOT を invoices より先に登録し FastAPI first-match で勝たせる。
+# invoices.router にも /fx-rate/{currency} があるが、こちらが優先されることで
+# FxRatePage / QuoteDetailPage ともに rate_jpy キーを返す SSOT endpoint を使う。
+app.include_router(
+    fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
+)
 app.include_router(
     invoices.router, prefix="/api/v1", tags=["invoices"],
     dependencies=[Depends(get_current_tenant)],
@@ -517,11 +523,6 @@ app.include_router(
 # テナント論理削除 / 物理削除
 app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
-)
-
-# 為替レート SSOT: GET /api/v1/fx-rate/{currency} + POST /api/v1/super-admin/fx-rate/refresh
-app.include_router(
-    fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
 )
 
 # Google Calendar 連携
