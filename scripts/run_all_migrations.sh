@@ -528,6 +528,9 @@ run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
 
 # MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
+
+# attachment-storage 便2: 添付ファイル保管台帳 (tenant_NNN.lead_attachments) + RLS
+run_sql migrations/20260902_100000_create_lead_attachments.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
