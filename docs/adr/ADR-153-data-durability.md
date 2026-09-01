@@ -15,7 +15,10 @@
 
 ## 背景（2026-09-01 実測）
 
-- prod1 の crontab に S3 転送のジョブは登録されているが、AWS CLI が prod1 に存在せず、2026-08-23 から 09-01 まで10日連続で転送が失敗していた。
+- prod1 の crontab に S3 転送のジョブは登録されているが、AWS CLI が prod1 に存在しない。転送が成功したのは 2026-05-26 と 05-27 の2回のみで、2026-05-28 から 09-01 まで成功0回である（2026-09-01 に s3_backup.log 全256行の先頭を実測。初版の「10日連続」は末尾40行のみを根拠とした誤記であり訂正した）。
+- 失敗時の通知は DISCORD_WEBHOOK_OPS が設定されているときのみ動くが、prod1 の .env にも crontab にも当該変数は無く、約3か月の失敗は通知されなかった。
+- 添付ファイル用ボリューム attachments_data は docker-compose.yml に定義済みだが、backup.sh は pg_dump のみを行うためバックアップ対象外である。
+- prod1 の .env は GitHub の追跡下に無く（追跡されているのは .env.example のみ）、METADATA_FERNET_KEY を含む約55の鍵名を持つ。
 - prod2 に crontab は無く、バックアップ関連ディレクトリも存在しない。
 - したがって同一時点のコピーは prod1 ローカルの1箇所のみである。
 - PostgreSQL は archive_mode = off であり、時点復旧の土台が無い。
