@@ -269,7 +269,7 @@ async def run_auto_setup(
             guild_id=guild_id,
             bot_token=bot_token,
             permission_overwrites=_member_announcements_overwrites(
-                guild_id, member_role_id, partner_role_id, staff_role_id
+                guild_id, member_role_id, staff_role_id, bot_user_id=bot_user_id
             ),
         )
         steps.append(step)
@@ -287,7 +287,7 @@ async def run_auto_setup(
             guild_id=guild_id,
             bot_token=bot_token,
             permission_overwrites=_partner_announcements_overwrites(
-                guild_id, partner_role_id, staff_role_id
+                guild_id, partner_role_id, staff_role_id, bot_user_id=bot_user_id
             ),
         )
         steps.append(step)
@@ -671,8 +671,8 @@ def _ticket_ch_overwrites(
 def _member_announcements_overwrites(
     guild_id: str,
     member_role_id: str | None,
-    partner_role_id: str | None,
     staff_role_id: str | None,
+    bot_user_id: str = "",
 ) -> list[dict[str, Any]]:
     """member-announcements 権限設計（design.md §2 参照）。
 
@@ -698,18 +698,20 @@ def _member_announcements_overwrites(
             "allow": str(_VIEW_CHANNEL | _READ_MESSAGE_HISTORY),
             "deny": str(_SEND_MESSAGES),
         })
-    if partner_role_id:
-        overwrites.append({
-            "id": partner_role_id,
-            "type": 0,
-            "allow": str(_VIEW_CHANNEL | _READ_MESSAGE_HISTORY),
-            "deny": str(_SEND_MESSAGES),
-        })
     if staff_role_id:
         overwrites.append({
             "id": staff_role_id,
             "type": 0,
             "allow": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY),
+            "deny": "0",
+        })
+    if bot_user_id:
+        # bot 自身が member-announcements に書き込めるよう member overwrite を追加（type=1）。
+        # カテゴリの @everyone deny SEND が継承されるため（前例 _ticket_ch_overwrites と同パターン）。
+        overwrites.append({
+            "id": bot_user_id,
+            "type": 1,
+            "allow": str(_SEND_MESSAGES),
             "deny": "0",
         })
     return overwrites
@@ -719,6 +721,7 @@ def _partner_announcements_overwrites(
     guild_id: str,
     partner_role_id: str | None,
     staff_role_id: str | None,
+    bot_user_id: str = "",
 ) -> list[dict[str, Any]]:
     """partner-announcements: Partner view可・Staff送信可。"""
     overwrites: list[dict[str, Any]] = [
@@ -741,6 +744,14 @@ def _partner_announcements_overwrites(
             "id": staff_role_id,
             "type": 0,
             "allow": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY),
+            "deny": "0",
+        })
+    if bot_user_id:
+        # bot 自身が partner-announcements に書き込めるよう member overwrite を追加（type=1）。
+        overwrites.append({
+            "id": bot_user_id,
+            "type": 1,
+            "allow": str(_SEND_MESSAGES),
             "deny": "0",
         })
     return overwrites
