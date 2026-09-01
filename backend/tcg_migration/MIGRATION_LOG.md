@@ -12,6 +12,43 @@ GAS → サーバー移植の実施済み・未対応一覧。
 | 2026-09-01 | `product_search_keywords` / `product_exclude_keywords` 再インポート (593件/128件 + UNIQUE制約) | release/tcg-keyword-matching |
 | 2026-09-01 | kubun 状態解決エンジン v2 実装 (name-first-v2-cond-r4): `resolve_unit_v2` / `resolve_condition_v2` / R1〜R4 移植 + migration (conditions に priority/search_kw/exclude_kw 追加 + seed) | release/tcg-keyword-matching / PR #3188 |
 | 2026-09-01 | R5:パック既定 追加 (`applyPackConditionDefault` 移植) + `load_condition_entries` ORDER BY code ASC タイブレーカー修正 | release/tcg-cond-r5-fix / PR #3190 |
+| 2026-09-01 | E3a (`recoverUnitFromProductName`) + E5 (`recalcConditionFromResolvedUnit`) 移植 — dry-run 専用。migration: analysis_results に unit_basis 等 4列追加 | release/tcg-e3a-e5-unit-recovery |
+
+---
+
+## E3a + E5 実装 (2026-09-01)
+
+### GAS → Python 関数対応表
+
+| GAS 関数 | GAS ファイル:行 | Python 関数 | Python ファイル |
+|----------|----------------|------------|----------------|
+| `unitRecoveryNorm_` | AnalysisV2UnitRecovery.gs:30-32 | `unit_recovery_norm()` | tcg_unit_recovery_svc.py:119-127 |
+| `unitRecoveryBuildTerms_` | AnalysisV2UnitRecovery.gs:91-104 | `build_unit_recovery_terms()` | tcg_unit_recovery_svc.py:134-170 |
+| `unitRecoveryFindTerm_` | AnalysisV2UnitRecovery.gs:40-59 | `find_term()` | tcg_unit_recovery_svc.py:177-212 |
+| `recoverUnitFromProductName` | AnalysisV2UnitRecovery.gs:134-276 | `recover_unit_from_product_name()` | tcg_unit_recovery_svc.py:219-332 |
+| `condRecalcCollectTargets_` | AnalysisV2ConditionRecalc.gs:86-138 | `recalc_condition_from_recovered_unit()` | tcg_unit_recovery_svc.py:339-459 |
+| `recalcConditionFromResolvedUnit` | AnalysisV2ConditionRecalc.gs:217-276 | (同上、dry-run のみ) | (同上) |
+
+### E2/E4 除外理由
+
+- **E2** (`applyUnitInferenceToAnalysisV2`): 価格帯テーブルから unit を推定するフェーズ。
+  unit_inferred 列のみに書き込み、condition には影響しない。
+  GAS 側でも E3a の後に実行されるため、E3a が先行する必要あり。
+  現時点では影響行 0 のため未実装（将来タスク T-3 残置）。
+
+- **E4** (`inferUnitFromCondition`): condition_canonical が Box/Pack 系の行から unit を逆引き。
+  現在のデータセットで対象行 0 件のため未実装（将来タスク T-3 残置）。
+
+### PM0264 について
+
+PM0264 はルール上 E3a で回収されるべき行。GAS 側では E3a 未実行（実行漏れ）のため
+GAS 実測値にはカウントされていない。Python 実装では正しく回収され、
+GAS 側で E3a を再実行すれば一致する見込み。
+
+### PM0263-PM0265 (30周年カード) の注意
+
+PM0263/PM0264/PM0265（30周年カード）は過去にも「マスタ未登録に戻る」問題が発生した商品群。
+商品マスタ側の is_active フラグやコード変更に注意が必要。
 
 ---
 
@@ -48,14 +85,15 @@ migration で ALTER TABLE が不要だった理由もこれ（列は存在し、
 - **影響**: 装飾記号 (■●▲等) を含む商品名・状態テキストの照合精度
 - **優先度**: 中
 
-### T-3: 単位証拠ルール E2/E3 移植（実測影響: 11行）
+### T-3: 単位証拠ルール E2/E3/E4/E5 移植（実測影響: 11→12行）
 
-- **GAS 実装**: `AnalysisV2UnitRecovery.gs` (E3: 商品名から unit 復旧) / `AnalysisV2UnitInference.gs` (E2: 価格帯から unit 推定) / `AnalysisV2UnitFromCondition.gs` (condition 逆引き) / `AnalysisV2ConditionRecalc.gs` (unit 復旧後の condition 再計算)
-- **影響実測**: dry-run 1626件中 11件が GAS と異なる（v2: FLAG_SINGLE / GAS: Sealed box 5件 + Searched pack 6件）
-  - 5件: 商品名に box 含む行 (例: `'OP-13 box'`, `'白箱'`) → GAS は商品名から unit=箱系 を推定
-  - 6件: 商品名に パック 含む行 (例: `'ストームエメラルダ パック'`) → GAS は商品名から unit=パック系 を推定 → R5 適用
-- **サーバー現状**: `resolve_unit_v2()` は alias lookup のみ。商品名からの unit 推定は未実装
-- **優先度**: 低〜中（11件 = 0.68%。現状許容範囲）
+- **GAS 実装**: `AnalysisV2UnitRecovery.gs` (E3a: 商品名から unit 復旧) / `AnalysisV2UnitInference.gs` (E2: 価格帯から unit 推定) / `AnalysisV2UnitFromCondition.gs` (E4: condition 逆引き) / `AnalysisV2ConditionRecalc.gs` (E5: unit 復旧後の condition 再計算)
+- **E3a + E5 実装済み** (release/tcg-e3a-e5-unit-recovery): dry-run 専用。DB 書き込みなし
+  - E3a: NAME_RECOVERY:* = 12行 (ﾊﾟｯｸ:6, box:3, BOX:2, 箱:1)
+  - E5: R4:単位既定:単位不明 → condition 再計算
+- **E2 未実装**: 価格帯推定 (unit_inferred のみ・condition 非影響・対象行は将来データ依存)
+- **E4 未実装**: condition 逆引き (対象行 0 件)
+- **優先度**: 低〜中（残 E2/E4 は影響行 0 件）
 
 ### T-4: condition_aliases 大文字小文字の統一
 
@@ -86,12 +124,12 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 | `AnalysisV2.gs` | Phase 0-3 | 解析V2シート作成・照合実行 (PID/unit/condition 解決の統括) | `analyze_extraction_job()` in `tcg_analyzer_svc.py` | ✅ 実装済み (PR #3188) |
 | `AnalysisV2PackCondition.gs` | Phase 3 後処理 | R5:パック既定 — unit=パック系(UN0003) かつ FLAG_SINGLE 行を Searched pack に変換 | `resolve_condition_v2` R5 ブロック | ✅ 実装済み (PR #3190) |
 | `AnalysisV2UnitInference.gs` | Phase 3 | 価格帯テーブルから unit を推定 (E2: PRICE_BAND) → 解析V2 X-AA列に書き込み | 未実装 | ❌ T-3: 低〜中優先度 |
-| `AnalysisV2UnitRecovery.gs` | Phase 3 | 商品名から unit を復旧 (NAME_RECOVERY:*) / 未解決行に UNIT_UNRESOLVED フラグ | 未実装 | ❌ T-3: 低〜中優先度 |
-| `AnalysisV2UnitFromCondition.gs` | Phase 3 後処理 | condition_canonical が Box/Pack 系 の行から unit を逆引き導出 | 未実装 | ❌ T-3: 低〜中優先度 |
-| `AnalysisV2ConditionRecalc.gs` | Phase 3 後処理 | `unit_basis='NAME_RECOVERY:*'` かつ `R4:単位既定:単位不明` 行の condition を再計算 | 未実装 | ❌ T-3 依存: UnitRecovery 実装後に検討 |
+| `AnalysisV2UnitRecovery.gs` | Phase 3 | 商品名から unit を復旧 (NAME_RECOVERY:*) / 未解決行に UNIT_UNRESOLVED フラグ | `recover_unit_from_product_name()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
+| `AnalysisV2UnitFromCondition.gs` | Phase 3 後処理 | condition_canonical が Box/Pack 系 の行から unit を逆引き導出 | 未実装 | ❌ T-3: 低〜中優先度 (対象行 0) |
+| `AnalysisV2ConditionRecalc.gs` | Phase 3 後処理 | `unit_basis='NAME_RECOVERY:*'` かつ `R4:単位既定:単位不明` 行の condition を再計算 | `recalc_condition_from_recovered_unit()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
 | `AnalysisV2Dedup.gs` | 運用メンテ | 解析V2 の重複行 (照合日時='2026-08-23' 始まり) を削除 | 不要 (DB は冪等 UPSERT) | ✅ 移植不要 |
 
-### dry-run 最終結果 (2026-09-01, PR #3190 適用後)
+### dry-run 最終結果 (2026-09-01, PR #3190 適用後 / E3a+E5 適用前)
 
 | condition_canonical | GAS実測 | v2 (after) | 差分 | 備考 |
 |--------------------|---------|------------|------|------|
@@ -109,3 +147,13 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 
 basis 分布 (v2 after):
 - R1: 32, R2: 29, R3: 88, R4: 1423, R5: 54
+
+### E3a+E5 dry-run 期待結果
+
+E3a (NAME_RECOVERY) 期待分布:
+- ﾊﾟｯｸ: 6, box: 3, BOX: 2, 箱: 1 = 合計 12行
+
+E5 (condition 再計算) 後の期待分布:
+- FLAG_SINGLE: 763, Sealed box: 469, Case: 217, No shrink box: 71
+- Searched pack: 61, Damaged case: 17, Unsearched pack: 12
+- Damaged sealed box: 11, Opened box: 5
