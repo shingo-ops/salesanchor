@@ -28,7 +28,7 @@
 
 ### v1 compat エンジン実装確認
 
-v1 は `gemini_all.json` の `sys_v.get("condition")` を直接コピーしていた（GAS出力=R5適用済みを引き写し）。
+v1 は gemini_all.json の sys_v.get("condition") を直接コピーしていた（GAS出力=R5適用済みを引き写し）。
 Python 側に R5 相当ロジックは存在しなかった。
 
-- 確認箇所: `git show cd45c309:backend/tcg_migration/compat_engine.py`
+- 確認箇所: git show cd45c309:backend/tcg_migration/compat_engine.py

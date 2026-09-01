@@ -8,6 +8,8 @@
 
 `backend/app/services/tcg_analyzer_svc.py` の `resolve_condition_v2` / `load_condition_entries` を修正し、GAS との乖離を解消する。
 
+recon: docs/handoff/tcg-cond-r5-fix/recon.md
+
 ## 受け入れ基準
 
 | 基準 | 検証方法 |
@@ -40,12 +42,19 @@ ORDER BY c.priority ASC,
          c.code ASC   -- 追加
 ```
 
+## 外部・過去事例の参照と我々への応用
+
+GAS の `applyPackConditionDefault`（AnalysisV2PackCondition.gs）が移植元。GAS 実測値 R5=60件をベースラインとし、Python v2 実装の R5=54件（T-3 残6件は unit 未解決による既知制限）が許容範囲内であることを dry-run 1626件で確認した。
+過去事例: PR #3188 (name-first-v2-cond-r4) で移植した R1〜R4 ロジックを踏台として本修正を実施。
+
 ## 弊害・リスク
 
 - DB変更なし（ロジックのみ）
 - 既存テスト 83件で回帰検証済み
 
 ## 維持の仕組み
+
+守り手: backend/tests/test_tcg_keyword_matching.py（pytest、.github/workflows/backend-ci.yml で毎 PR 実行）
 
 - `backend/tests/test_tcg_keyword_matching.py` — R5 単体テスト 4件、SHURI→PERI 順テスト 1件を追加
 - `backend/tcg_migration/MIGRATION_LOG.md` — T-3 実測影響（11件）と AnalysisV2*.gs 棚卸しを記録
