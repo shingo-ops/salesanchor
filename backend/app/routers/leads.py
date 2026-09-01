@@ -1321,6 +1321,75 @@ async def get_message_attachment_url(
         )
     platform = msg_row[0]
 
+    # Discord は Bot Token でメッセージを取り直す（CDN URL 期限切れ対応）。
+    # Meta と認証方式・エンドポイントが異なるため、入口を共有したまま処理を分岐する。
+    if platform == "discord":
+        import os as _os
+
+        from app.services.discord_rest import DiscordAPIError, discord_api_request
+
+        bot_token = _os.environ.get("DISCORD_BOT_TOKEN") or None
+        if not bot_token:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Discord Bot Token が設定されていません",
+            )
+
+        ch_q = await db.execute(
+            text(
+                f"SELECT discord_guild_channel_id FROM {leads_t} "
+                "WHERE id = :id AND tenant_id = :tenant_id"
+            ),
+            {"id": lead_id, "tenant_id": tenant_id},
+        )
+        ch_row = ch_q.first()
+        if ch_row is None or not ch_row[0]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+        channel_id = str(ch_row[0])
+
+        try:
+            dc_msg = await discord_api_request(
+                method="GET",
+                path=f"/channels/{channel_id}/messages/{message_id}",
+                bot_token=bot_token,
+                expected_statuses=(200,),
+            )
+        except DiscordAPIError as exc:
+            logger.warning("[attachment-url] Discord 取得失敗 msg=%s: %s", message_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+
+        attachments = (dc_msg or {}).get("attachments") or []
+        fresh_discord_url = attachments[0].get("url") if attachments else None
+        if not fresh_discord_url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+
+        await db.execute(
+            text(
+                f"UPDATE {meta_messages_t} SET attachment_url = :url "
+                "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+            ),
+            {
+                "url": fresh_discord_url,
+                "message_id": message_id,
+                "lead_id": lead_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        await db.commit()
+        from app.tenant.context import reset_tenant_context as _reset_ctx
+        await _reset_ctx(db, tenant_id)
+
+        return {"url": fresh_discord_url}
+
     # tenant_meta_config から page_access_token を取得・復号
     tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
     if platform == "messenger":
