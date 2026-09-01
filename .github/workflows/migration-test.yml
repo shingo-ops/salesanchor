@@ -532,6 +532,13 @@ jobs:
               created_by   INTEGER     NOT NULL,
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
+
+          -- public.current_tenant_id(): migration 014 で本番作成済み。
+          --   RLS ポリシー（lead_attachments 等）が参照するため、ここで作成する。
+          CREATE OR REPLACE FUNCTION public.current_tenant_id()
+          RETURNS INTEGER LANGUAGE SQL STABLE AS $$
+              SELECT current_setting('app.tenant_id', true)::INTEGER
+          $$;
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
