@@ -39,11 +39,23 @@ GAS → サーバー移植の実施済み・未対応一覧。
 - **E4** (`inferUnitFromCondition`): condition_canonical が Box/Pack 系の行から unit を逆引き。
   現在のデータセットで対象行 0 件のため未実装（将来タスク T-3 残置）。
 
-### PM0264 について
+### PM0264 について（実機確認 2026-09-02 訂正）
 
-PM0264 はルール上 E3a で回収されるべき行。GAS 側では E3a 未実行（実行漏れ）のため
-GAS 実測値にはカウントされていない。Python 実装では正しく回収され、
-GAS 側で E3a を再実行すれば一致する見込み。
+**誤判断（前セッション）**: 「PM0264 はルール上回収されるべき」と判断していた。
+
+**事実（実機確認）**:
+```sql
+SELECT code, japanese_title FROM tenant_004.tcg_products
+WHERE code IN ('PM0263','PM0264','PM0265');
+-- PM0263 | 30th CELEBRATION
+-- PM0264 | FUTURISTIC BOX    ← 'BOX' を含む
+-- PM0265 | 30th CELEBRATION プレミアムデッキセット
+```
+
+**結論**: PM0264.japanese_title = 'FUTURISTIC BOX' → A-2 除外が適用される（norm_term='BOX' ∈ norm_jp）。
+GAS 側も masterRec=undefined ではなく A-2 以前の問題（E3a 再実行漏れ）だったが、
+Python 側は tcg_products.japanese_title で正しく A-2 を適用するため **回収しない**。
+GAS・Python ともに 11件で完全一致する。
 
 ### PM0263-PM0265 (30周年カード) の注意
 
@@ -88,8 +100,8 @@ migration で ALTER TABLE が不要だった理由もこれ（列は存在し、
 ### T-3: 単位証拠ルール E2/E3/E4/E5 移植（実測影響: 11→12行）
 
 - **GAS 実装**: `AnalysisV2UnitRecovery.gs` (E3a: 商品名から unit 復旧) / `AnalysisV2UnitInference.gs` (E2: 価格帯から unit 推定) / `AnalysisV2UnitFromCondition.gs` (E4: condition 逆引き) / `AnalysisV2ConditionRecalc.gs` (E5: unit 復旧後の condition 再計算)
-- **E3a + E5 実装済み** (release/tcg-e3a-e5-unit-recovery): dry-run 専用。DB 書き込みなし
-  - E3a: NAME_RECOVERY:* = 12行 (ﾊﾟｯｸ:6, box:3, BOX:2, 箱:1)
+- **E3a + E5 実装済み** (release/tcg-e3a-e5-unit-recovery / PR #3200): dry-run 専用。DB 書き込みなし
+  - E3a: NAME_RECOVERY:* = 11行 (ﾊﾟｯｸ:6, box:3, BOX:1, 箱:1) — GAS 実測と一致
   - E5: R4:単位既定:単位不明 → condition 再計算
 - **E2 未実装**: 価格帯推定 (unit_inferred のみ・condition 非影響・対象行は将来データ依存)
 - **E4 未実装**: condition 逆引き (対象行 0 件)
@@ -148,12 +160,14 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 basis 分布 (v2 after):
 - R1: 32, R2: 29, R3: 88, R4: 1423, R5: 54
 
-### E3a+E5 dry-run 期待結果
+### E3a+E5 dry-run 期待結果（2026-09-02 実機確認で確定）
 
-E3a (NAME_RECOVERY) 期待分布:
-- ﾊﾟｯｸ: 6, box: 3, BOX: 2, 箱: 1 = 合計 12行
+E3a (NAME_RECOVERY) 期待分布（GAS 実測と完全一致）:
+- ﾊﾟｯｸ: 6, box: 3, BOX: 1 (PM0263), 箱: 1 = 合計 **11行**
+- PM0264 は A-2 除外（jp_title='FUTURISTIC BOX' に 'BOX' 含む）
 
-E5 (condition 再計算) 後の期待分布:
-- FLAG_SINGLE: 763, Sealed box: 469, Case: 217, No shrink box: 71
+E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
+- FLAG_SINGLE: 764, Sealed box: 468, Case: 217, No shrink box: 71
 - Searched pack: 61, Damaged case: 17, Unsearched pack: 12
 - Damaged sealed box: 11, Opened box: 5
+- **一致率: 1626/1626 = 100%**
