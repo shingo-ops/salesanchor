@@ -90,6 +90,7 @@ goals,  # ダッシュボード強化: 目標管理
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
+    tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
@@ -548,6 +549,11 @@ app.include_router(
 app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# MIG-04 Phase 4: 並行運用比較レポート（is_super_admin 限定）
+app.include_router(
+    tcg_parallel_report.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 
