@@ -466,6 +466,9 @@ run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
 # D-1: public.inventory(B在庫) を v2形へ収束（冪等・本番no-op）。180000(L221)が offer_key を再作成するため末尾で除去。ADR-143。
 run_sql migrations/20260624_140000_converge_inventory_v2.sql
 
+# SA-02 G1b 追補: v_company_stats の集計元を conversation_logs → meta_messages に変更
+run_sql migrations/20260626_000000_fix_v_company_stats_to_meta_messages.sql
+
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
 run_sql migrations/20260626_100000_add_outbound_draft_message_link.sql
 

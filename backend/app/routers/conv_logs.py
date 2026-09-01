@@ -1,15 +1,16 @@
 """SA-02 Stage 3: 手動会話ログ API。
 
 エンドポイント:
-  POST   /api/v1/leads/{lead_id}/conv-logs        — 手動記録の作成
-  GET    /api/v1/leads/{lead_id}/conv-logs        — lead別 会話ログ一覧
-  PATCH  /api/v1/leads/{lead_id}/conv-logs/{log_id} — 手動記録の編集
-  DELETE /api/v1/leads/{lead_id}/conv-logs/{log_id} — 手動記録の論理削除
+  POST   /api/v1/leads/{lead_id}/conv-logs        — 手動記録の作成（保存先: meta_messages）
+  GET    /api/v1/leads/{lead_id}/conv-logs        — lead別 会話ログ一覧（旧 conversation_logs）
+  PATCH  /api/v1/leads/{lead_id}/conv-logs/{log_id} — 手動記録の編集（conversation_logs）
+  DELETE /api/v1/leads/{lead_id}/conv-logs/{log_id} — 手動記録の論理削除（conversation_logs）
 
-設計原則（ADR-096・SA-02-design.md §3）:
+設計原則（ADR-096・SA-02-design.md §3 / SA-02 G1b 導線修復）:
   - connection_type='auto' のチャネルには手動入力不可（入口排他）
   - 削除は論理削除のみ（deleted_at SET）。物理削除なし。
-  - 保存・編集時に translate_inbound を発火（try/except で非致命的）
+  - 新規保存は meta_messages に is_manual=true で INSERT（受信箱一覧に表示するため）
+  - 翻訳は enqueue_inbound_translation 経由（Celery → message_translations）
   - 編集・削除は record_audit_log で履歴を残す（record_audit_log 流用）
 """
 from __future__ import annotations
@@ -34,6 +35,7 @@ from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
 from app.services.conv_log_writer import _get_company_id_for_lead
+from app.services.inbound_translation import enqueue_inbound_translation
 
 logger = logging.getLogger(__name__)
 
@@ -252,22 +254,23 @@ async def create_conv_log(
 
     schema = f"tenant_{tenant_id:03d}"
 
-    # 重複チェック: 同一 lead_id + channel_type + content_text + occurred_at ±1h + deleted_at IS NULL
+    # 重複チェック: 同一 lead_id + platform + message_text + occurred_at ±1h + is_manual=true
     if not body.allow_duplicate:
         dup_result = await db.execute(
             text(
-                f"SELECT id, occurred_at FROM {schema}.conversation_logs "
+                f"SELECT id, occurred_at FROM {schema}.meta_messages "
                 f"WHERE lead_id = :lead_id "
-                f"  AND channel_type = :channel_type "
-                f"  AND content_text = :content_text "
+                f"  AND platform = :platform "
+                f"  AND message_text = :message_text "
+                f"  AND is_manual = true "
                 f"  AND deleted_at IS NULL "
                 f"  AND occurred_at BETWEEN :oc_min AND :oc_max "
                 f"LIMIT 1"
             ),
             {
                 "lead_id": lead_id,
-                "channel_type": body.channel_type,
-                "content_text": body.content_text.strip(),
+                "platform": body.channel_type,
+                "message_text": body.content_text.strip(),
                 "oc_min": body.occurred_at - timedelta(hours=1),
                 "oc_max": body.occurred_at + timedelta(hours=1),
             },
@@ -286,47 +289,65 @@ async def create_conv_log(
 
     company_id = await _get_company_id_for_lead(db, lead_id)
 
+    # meta_messages に INSERT（is_manual=true）。
+    # sender_id は NOT NULL のため手動記録用の合成値を使う（migration 020000 の流儀に従う）。
+    # message_id は UNIQUE 制約があるため NULL で INSERT し、返却 id を使って直後に UPDATE する。
     result = await db.execute(
         text(
-            f"INSERT INTO {schema}.conversation_logs "
-            f"(tenant_id, lead_id, company_id, channel_type, direction, content_text, "
-            f" occurred_at, recorded_by_user_id) "
-            f"VALUES (:tenant_id, :lead_id, :company_id, :channel_type, :direction, :content_text, "
-            f"        :occurred_at, :user_id) "
+            f"INSERT INTO {schema}.meta_messages "
+            f"(tenant_id, lead_id, company_id, platform, sender_id, "
+            f" message_text, direction, occurred_at, recorded_by_user_id, is_manual) "
+            f"VALUES (:tenant_id, :lead_id, :company_id, :platform, :sender_id, "
+            f"        :message_text, :direction, :occurred_at, :user_id, true) "
             f"RETURNING id"
         ),
         {
             "tenant_id": tenant_id,
             "lead_id": lead_id,
             "company_id": company_id,
-            "channel_type": body.channel_type,
+            "platform": body.channel_type,
+            "sender_id": f"manual:{lead_id}",
+            "message_text": body.content_text,
             "direction": body.direction,
-            "content_text": body.content_text,
             "occurred_at": body.occurred_at,
             "user_id": current_user.id,
         },
     )
-    log_id = result.scalar_one()
+    meta_id = result.scalar_one()
+
+    # message_id を合成キーで埋める（翻訳キャッシュキー + dedup 用）
+    synthesized_message_id = f"manual_{meta_id}"
+    await db.execute(
+        text(f"UPDATE {schema}.meta_messages SET message_id = :message_id WHERE id = :id"),
+        {"message_id": synthesized_message_id, "id": meta_id},
+    )
+
     await record_audit_log(
-        db, tenant_id, current_user.id, "create", "conversation_logs",
-        record_id=log_id,
+        db, tenant_id, current_user.id, "create", "meta_messages",
+        record_id=meta_id,
         new_data={
             "lead_id": lead_id,
             "company_id": company_id,
-            "channel_type": body.channel_type,
+            "platform": body.channel_type,
             "direction": body.direction,
-            "content_text": body.content_text,
+            "message_text": body.content_text,
             "occurred_at": body.occurred_at.isoformat(),
+            "is_manual": True,
         },
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
 
-    # 翻訳を非同期発火（失敗しても 201 を返す）
-    if body.content_text:
-        await _fire_translation(db, tenant_id, log_id, body.content_text, body.direction)
+    # 翻訳を Celery 経由で enqueue（失敗しても 201 を返す）
+    if body.content_text and body.direction == "inbound":
+        enqueue_inbound_translation(
+            "meta_messages",
+            synthesized_message_id,
+            body.content_text,
+            tenant_id=tenant_id,
+        )
 
-    return {"id": log_id}
+    return {"id": meta_id}
 
 
 # ---------------------------------------------------------------------------
