@@ -110,6 +110,7 @@ services:
       - SMOKE_SERVICE_EMAIL=${SMOKE_SERVICE_EMAIL:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+      - attachments_data:/data/attachments
     depends_on:
       postgres:
         condition: service_healthy
@@ -407,6 +408,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  attachments_data:
 
 networks:
   frontnet:
