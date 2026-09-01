@@ -46,13 +46,9 @@ Mock session でロジック層のみを切り出し、GAS 仕様書と 1:1 で�
 | `recover_unit_from_product_name` | `recoverUnitFromProductName` | AnalysisV2UnitRecovery.gs:134-276 |
 | `recalc_condition_from_recovered_unit` | `recalcConditionFromRecoveredUnit` | AnalysisV2ConditionRecalc.gs:217-276 |
 
-## 外部・過去事例と応用
+## 外部・過去事例の参照と我々への応用
 
-### 該当なし（理由）
-
-本タスクは GAS→Python 移植の動作一致検証であり、外部事例を参照するより
-GAS ソースコード（AnalysisV2UnitRecovery.gs / AnalysisV2ConditionRecalc.gs）との
-直接対照が適切。GAS コードを仕様書として扱い、テストで 1:1 検証済み。
+- 該当なし：今回は GAS→Python 移植の動作一致検証であり、外部ライブラリや過去事例の調査は不要。GAS ソースコード（AnalysisV2UnitRecovery.gs / AnalysisV2ConditionRecalc.gs）を仕様書として直接対照し、Mock session で 1:1 検証する方針。
 
 ## 維持の仕組み
 
