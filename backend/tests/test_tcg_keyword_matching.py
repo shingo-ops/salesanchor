@@ -15,10 +15,13 @@ from __future__ import annotations
 import pytest
 
 from app.services.tcg_analyzer_svc import (
+    app_kubun_matches,
     match_keyword,
     match_one_kw,
     match_pid_name_first,
     normalize_en,
+    resolve_condition_v2,
+    resolve_unit_v2,
     token_and_match,
 )
 
@@ -306,3 +309,390 @@ class TestMatchPidNameFirst:
             {},
         )
         assert resolved is False
+
+
+# ---------------------------------------------------------------------------
+# app_kubun_matches (GAS appKubunMatches_ 移植)
+# ---------------------------------------------------------------------------
+
+class TestAppKubunMatches:
+    """GAS appKubunMatches_ (investigate2.gs:9583-9596) との一致確認"""
+
+    def test_empty_app_kubun_matches_all(self):
+        assert app_kubun_matches("", "箱系大") is True
+        assert app_kubun_matches("", "パック系") is True
+        assert app_kubun_matches("", "") is True
+
+    def test_hakokei_dai_matches_hakokei_dai(self):
+        assert app_kubun_matches("箱系大", "箱系大") is True
+
+    def test_hakokei_dai_does_not_match_hakokei(self):
+        # kubun='箱系' だけでは '箱系大' の条件を満たさない
+        assert app_kubun_matches("箱系大", "箱系") is False
+
+    def test_hakokei_matches_hakokei_only(self):
+        # '箱系' 条件: "箱系" in kubun AND "箱系大" NOT in kubun
+        assert app_kubun_matches("箱系", "箱系") is True
+
+    def test_hakokei_does_not_match_hakokei_dai(self):
+        # kubun='箱系大' は '箱系大' を含むので '箱系' 条件ではマッチしない
+        assert app_kubun_matches("箱系", "箱系大") is False
+
+    def test_tani_fumei_matches_fumei(self):
+        assert app_kubun_matches("単位不明", "不明") is True
+
+    def test_tani_fumei_matches_empty_kubun(self):
+        assert app_kubun_matches("単位不明", "") is True
+
+    def test_tani_fumei_does_not_match_tandpin(self):
+        # '単品系' は '不明' でも '' でもない
+        assert app_kubun_matches("単位不明", "単品系") is False
+
+    def test_pack_kei_matches_pack_kei(self):
+        assert app_kubun_matches("パック系", "パック系") is True
+
+    def test_pack_kei_does_not_match_hakokei(self):
+        assert app_kubun_matches("パック系", "箱系大") is False
+
+    def test_combo_app_kubun_matches_one(self):
+        # '枚系,単位不明' — 枚系 in 単品系? No. 単位不明: '単品系' not in ('不明','') → False
+        assert app_kubun_matches("枚系,単位不明", "単品系") is False
+
+    def test_combo_app_kubun_matches_fumei(self):
+        # '枚系,単位不明' → 単位不明 条件で kubun='不明' にマッチ
+        assert app_kubun_matches("枚系,単位不明", "不明") is True
+
+
+# ---------------------------------------------------------------------------
+# resolve_unit_v2
+# ---------------------------------------------------------------------------
+
+# テスト用エイリアスマップ（DB不要）
+_UNIT_ALIAS_TO_INFO: dict = {
+    "Case": ("Case", "箱系大"),
+    "ケース": ("Case", "箱系大"),
+    "case": ("Case", "箱系大"),
+    "Box": ("Box", "箱系"),
+    "ボックス": ("Box", "箱系"),
+    "Piece": ("Piece", "単品系"),
+    "枚": ("Piece", "単品系"),
+    "Pack": ("Pack", "パック系"),
+}
+
+
+class TestResolveUnitV2:
+    """resolve_unit_v2 の動作確認"""
+
+    def test_exact_match_returns_canonical_and_kubun(self):
+        canonical, kubun, resolved = resolve_unit_v2("Case", _UNIT_ALIAS_TO_INFO)
+        assert canonical == "Case"
+        assert kubun == "箱系大"
+        assert resolved is True
+
+    def test_japanese_alias_resolves(self):
+        canonical, kubun, resolved = resolve_unit_v2("ケース", _UNIT_ALIAS_TO_INFO)
+        assert canonical == "Case"
+        assert kubun == "箱系大"
+        assert resolved is True
+
+    def test_lowercase_fallback(self):
+        # "CASE" は大文字だが lowercase map で "case" にヒット
+        canonical, kubun, resolved = resolve_unit_v2("CASE", _UNIT_ALIAS_TO_INFO)
+        assert canonical == "Case"
+        assert kubun == "箱系大"
+        assert resolved is True
+
+    def test_piece_unit_returns_tanpin_kubun(self):
+        canonical, kubun, resolved = resolve_unit_v2("Piece", _UNIT_ALIAS_TO_INFO)
+        assert canonical == "Piece"
+        assert kubun == "単品系"
+        assert resolved is True
+
+    def test_unknown_unit_returns_fumei(self):
+        # 未知語 → (raw, '不明', False)
+        canonical, kubun, resolved = resolve_unit_v2("謎の単位", _UNIT_ALIAS_TO_INFO)
+        assert canonical == "謎の単位"
+        assert kubun == "不明"
+        assert resolved is False
+
+    def test_empty_string_returns_none(self):
+        canonical, kubun, resolved = resolve_unit_v2("", _UNIT_ALIAS_TO_INFO)
+        assert canonical is None
+        assert kubun == ""
+        assert resolved is False
+
+    def test_whitespace_only_returns_none(self):
+        canonical, kubun, resolved = resolve_unit_v2("   ", _UNIT_ALIAS_TO_INFO)
+        assert canonical is None
+        assert kubun == ""
+        assert resolved is False
+
+
+# ---------------------------------------------------------------------------
+# resolve_condition_v2
+# ---------------------------------------------------------------------------
+
+# GAS 実データに基づくテスト用 condEntries（load_condition_entries 相当）
+# priority ASC → app_kubun 長 DESC でソート済み
+_COND_ENTRIES = [
+    # priority=1
+    {
+        "cond_id": "uuid-cn0008",
+        "code": "CN0008",
+        "canonical": "FLAG_SINGLE",
+        "priority": 1,
+        "app_kubun": "枚系,単位不明",
+        "search_kw": "PSA,BGS,CGC,ARS,鑑定,SAR,SR,UR,CHR,プロモ,連番,単品,枚",
+        "exclude_kw": "",
+    },
+    # priority=2, app_kubun長 DESC: パック系(4) > 箱系大(3) > 箱系大(3) > 箱系(2)
+    {
+        "cond_id": "uuid-cn0010",
+        "code": "CN0010",
+        "canonical": "Searched pack",
+        "priority": 2,
+        "app_kubun": "パック系",
+        "search_kw": "サーチ済,サーチ済み",
+        "exclude_kw": "未サーチ,サーチ痕なし",
+    },
+    {
+        "cond_id": "uuid-cn0002",
+        "code": "CN0002",
+        "canonical": "Damaged case",
+        "priority": 2,
+        "app_kubun": "箱系大",
+        "search_kw": "傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B",
+        "exclude_kw": "",
+    },
+    {
+        "cond_id": "uuid-cn0009",
+        "code": "CN0009",
+        "canonical": "Opened case",
+        "priority": 2,
+        "app_kubun": "箱系大",
+        "search_kw": "カートンテープカット,テープカット済,テープカット,テープ切",
+        "exclude_kw": "",
+    },
+    {
+        "cond_id": "uuid-cn0004",
+        "code": "CN0004",
+        "canonical": "Damaged sealed box",
+        "priority": 2,
+        "app_kubun": "箱系",
+        "search_kw": "傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B",
+        "exclude_kw": "",
+    },
+    # priority=3, app_kubun='' (全適用)
+    {
+        "cond_id": "uuid-cn0005",
+        "code": "CN0005",
+        "canonical": "No shrink box",
+        "priority": 3,
+        "app_kubun": "",
+        "search_kw": "シュリなし,シュリ無し,シュリ無,シュリンクなし,シュリンク無し,シュリンク無,no shrink",
+        "exclude_kw": "",
+    },
+    {
+        "cond_id": "uuid-cn0006",
+        "code": "CN0006",
+        "canonical": "Opened box",
+        "priority": 3,
+        "app_kubun": "",
+        "search_kw": "ペリ無,ペリなし,ペリ無し,ぺりぺり無し,ぺりぺり無,検品のため一度開封済み,確認のため開封済み",
+        "exclude_kw": "",
+    },
+    {
+        "cond_id": "uuid-cn0007",
+        "code": "CN0007",
+        "canonical": "Unsearched pack",
+        "priority": 3,
+        "app_kubun": "",
+        "search_kw": "未サーチ,サーチなし,サーチ痕なし,サーチ痕無し,サーチ無し",
+        "exclude_kw": "[サーチ済み]",
+    },
+    # priority=4, app_kubun長 DESC: 箱系大(3) > 箱系(2)
+    {
+        "cond_id": "uuid-cn0001",
+        "code": "CN0001",
+        "canonical": "Case",
+        "priority": 4,
+        "app_kubun": "箱系大",
+        "search_kw": "通常品,[通常品]",
+        "exclude_kw": "傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B",
+    },
+    {
+        "cond_id": "uuid-cn0003",
+        "code": "CN0003",
+        "canonical": "Sealed box",
+        "priority": 4,
+        "app_kubun": "箱系",
+        "search_kw": "通常品,[通常品],未開封,新品未開封,新品,シュリンク付き,シュリ付,シュリ付き,シュリンクあり,シュリ有り,シュリ有",
+        "exclude_kw": "傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B",
+    },
+]
+
+_COND_UUID_MAP = {e["canonical"]: e["cond_id"] for e in _COND_ENTRIES}
+
+
+class TestResolveConditionV2:
+    """
+    GAS resolveCondition_ R1〜R4 ロジック移植の動作確認。
+    DB接続不要 — _COND_ENTRIES でモック。
+    """
+
+    # --- R1: flagNote ---
+
+    def test_r1_flag_note_prepended_when_box_contains_single_kw(self):
+        # kubun='箱系大'（isBoxOrCase=True）+ raw_state に SR（FLAG_SINGLE 語）を含む
+        # → flagNote が basis に付く。最終マッチは R4:通常品（Case）
+        canonical, cond_id, basis = resolve_condition_v2(
+            "SR 通常品", "", "箱系大", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Case"
+        assert cond_id == "uuid-cn0001"
+        assert "単品語あり・要確認" in basis
+        assert "SR" in basis
+        assert "R4" in basis
+
+    def test_r1_no_flag_note_when_not_box(self):
+        # kubun='単品系'（isBoxOrCase=False）→ flagNote は付かない
+        # FLAG_SINGLE 語があっても basis に "単品語あり" は出ない
+        canonical, cond_id, basis = resolve_condition_v2(
+            "SR", "", "単品系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert "単品語あり" not in basis
+
+    # --- R2: ダメージ語 ---
+
+    def test_r2_damaged_case_with_hakokei_dai(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "傷み", "", "箱系大", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Damaged case"
+        assert cond_id == "uuid-cn0002"
+        assert basis.startswith("R2:")
+
+    def test_r2_damaged_sealed_box_with_hakokei(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "箱痛み", "", "箱系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Damaged sealed box"
+        assert cond_id == "uuid-cn0004"
+        assert basis.startswith("R2:")
+
+    def test_r2_damage_kw_ignored_for_pack_kei(self):
+        # パック系 + 傷み → R2 Damaged case/sealed box の appKubun が不一致 → R3/R4b へ
+        canonical, cond_id, basis = resolve_condition_v2(
+            "傷み", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        # Damage 語は '箱系大'/'箱系' の条件 → パック系では R2 はスキップ
+        assert canonical != "Damaged case"
+        assert canonical != "Damaged sealed box"
+
+    # --- R3: 特殊語（シュリなし / ペリなし / 未サーチ） ---
+
+    def test_r3_no_shrink_box(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "シュリなし", "", "箱系大", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "No shrink box"
+        assert cond_id == "uuid-cn0005"
+        assert basis.startswith("R3:")
+
+    def test_r3_opened_box(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "ペリ無し", "", "箱系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Opened box"
+        assert cond_id == "uuid-cn0006"
+        assert basis.startswith("R3:")
+
+    def test_r3_unsearched_pack(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "未サーチ", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Unsearched pack"
+        assert cond_id == "uuid-cn0007"
+        assert basis.startswith("R3:")
+
+    def test_r3_searched_pack_excluded_by_unsearched(self):
+        # CN0007 exclude_kw=['[サーチ済み]'] で '[サーチ済み]' を除外
+        # 'サーチ痕なし' が raw_state にある → CN0007 exclude_kw に 'サーチ痕なし'... wait
+        # CN0007 exclude_kw='[サーチ済み]' — これは '[サーチ済み]' という文字列
+        # raw_state='[サーチ済み] 未サーチ' → exclude_kw=['[サーチ済み]'] → [... ']' hit?
+        # Actually let's test: raw_state='[サーチ済み]' → CN0007 search='未サーチ,...' → no hit anyway
+        # Better test: exclude blocks CN0010 Searched pack
+        canonical, cond_id, basis = resolve_condition_v2(
+            "サーチ痕なし", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        # 'サーチ痕なし' → CN0010 exclude_kw に '未サーチ,サーチ痕なし' があるので除外
+        # CN0007 search_kw に 'サーチ痕なし' あり → Unsearched pack
+        assert canonical == "Unsearched pack"
+
+    # --- R4a: data-driven ---
+
+    def test_r4a_case_tsujohin(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "通常品", "", "箱系大", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Case"
+        assert cond_id == "uuid-cn0001"
+        assert "R4" in basis
+        assert "通常品" in basis
+
+    def test_r4a_sealed_box_mikaifuu(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "未開封", "", "箱系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Sealed box"
+        assert cond_id == "uuid-cn0003"
+        assert "R4" in basis
+
+    # --- R4b: code fallback ---
+
+    def test_r4b_empty_state_hakokei_dai_returns_case(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "箱系大", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Case"
+        assert basis == "R4:単位既定"
+
+    def test_r4b_empty_state_hakokei_returns_sealed_box(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "箱系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Sealed box"
+        assert basis == "R4:単位既定"
+
+    def test_r4b_empty_state_tanpin_returns_flag_single(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "単品系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4:単位既定" in basis
+
+    def test_r4b_empty_state_fumei_returns_flag_single(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "不明", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "FLAG_SINGLE"
+
+    # --- CN0008 Piece シナリオ（ユーザー要件必須）---
+    # raw_state に FLAG_SINGLE 語 (PSA10) があり kubun='単品系' の場合：
+    #   - R1 pre-pass: isBoxOrCase=False → flagNote なし
+    #   - Main loop: CN0008 appKubun='枚系,単位不明' vs kubun='単品系':
+    #       '枚系' in '単品系'? No ('単品系' != '枚系' substring)
+    #       '単位不明': '単品系' in ('不明','')? No
+    #       → False → CN0008 は main loop でマッチしない
+    #   - R4b fallback: kubun='単品系' → FLAG_SINGLE
+    # GAS の動作と一致 (R4 経由)
+
+    def test_cn0008_piece_reaches_flag_single_via_r4_not_main_loop(self):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "PSA10", "", "単品系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "FLAG_SINGLE"
+        # main loop ではなく R4b 経由なので basis は "R4:単位既定:単位不明"
+        assert "R4:単位既定" in basis
+        # flagNote は付かない（isBoxOrCase=False）
+        assert "単品語あり" not in basis

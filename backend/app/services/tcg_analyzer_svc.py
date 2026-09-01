@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v2"
+ENGINE_VERSION = "name-first-v2-cond-r4"
 
 # TCG解析システムは tenant_004 専用スキーマ
 TCG_SCHEMA = "tenant_004"
@@ -44,7 +44,7 @@ TCG_SCHEMA = "tenant_004"
 
 def load_lookup_maps(
     session: Session,
-) -> tuple[dict, dict, dict, dict, dict]:
+) -> tuple[dict, dict, dict, dict, dict, dict]:
     """
     照合に必要なルックアップマップを一括ロードする。
 
@@ -82,6 +82,23 @@ def load_lookup_maps(
     for canonical, uid in list(unit_canonical_to_uuid.items()):
         unit_alias_to_canonical.setdefault(canonical, canonical)
 
+    # --- 単位エイリアス → (canonical, kubun) --- ※ resolve_unit_v2 用
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ua.alias_text, u.canonical, u.kubun, u.id
+            FROM {TCG_SCHEMA}.unit_aliases ua
+            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            WHERE u.is_active = TRUE
+            """
+        )
+    ).fetchall()
+    unit_alias_to_info: dict[str, tuple[str, str]] = {}
+    for alias_text, canonical, kubun, uid in rows:
+        unit_alias_to_info[alias_text] = (canonical, kubun or "")
+    for canonical in list(unit_canonical_to_uuid.keys()):
+        unit_alias_to_info.setdefault(canonical, (canonical, unit_alias_to_info.get(canonical, (canonical, ""))[1]))
+
     # --- 状態エイリアス → canonical + UUID ---
     rows = session.execute(
         text(
@@ -109,6 +126,7 @@ def load_lookup_maps(
         unit_canonical_to_uuid,
         cond_alias_to_canonical,
         cond_canonical_to_uuid,
+        unit_alias_to_info,
     )
 
 
@@ -372,6 +390,7 @@ def resolve_condition(
 ) -> Optional[str]:
     """
     raw_state → canonical または None。
+    旧実装（alias lookup のみ）。resolve_condition_v2 に置き換え済み。
     """
     if not raw_state or not raw_state.strip():
         return None
@@ -387,6 +406,174 @@ def resolve_condition(
     if lower in lower_map:
         return lower_map[lower]
 
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 状態解決 v2: GAS resolveCondition_ R1〜R4 ロジック移植
+# ---------------------------------------------------------------------------
+
+
+def load_condition_entries(session: Session) -> list[dict]:
+    """
+    priority > 0 の conditions 行を condEntries として返す。
+    priority ASC → app_kubun 長 DESC でソート済み（resolveCondition_ と同順）。
+
+    GAS 対照: readConditionMaster() condEntries 構築 (investigate2.gs:8118-8125)
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT c.id, c.code, c.canonical, c.priority,
+                   c.app_kubun, c.search_kw, c.exclude_kw
+            FROM {TCG_SCHEMA}.conditions c
+            WHERE c.is_active = TRUE
+              AND c.priority IS NOT NULL
+              AND c.priority > 0
+            ORDER BY c.priority ASC,
+                     length(COALESCE(c.app_kubun, '')) DESC
+            """
+        )
+    ).fetchall()
+    return [
+        {
+            "cond_id": str(r[0]),
+            "code": r[1],
+            "canonical": r[2],
+            "priority": r[3],
+            "app_kubun": r[4] or "",
+            "search_kw": r[5] or "",
+            "exclude_kw": r[6] or "",
+        }
+        for r in rows
+    ]
+
+
+def app_kubun_matches(app_kubun_str: str, kubun: str) -> bool:
+    """
+    状態マスタの適用区分（カンマ区切り）と実際の kubun を照合する。
+
+    GAS 対照: appKubunMatches_(appKubunStr, kubun) (investigate2.gs:9583-9596)
+      空欄 = 全適用
+      '箱系大': kubun に '箱系大' を含む
+      '箱系'  : kubun に '箱系' を含み '箱系大' を含まない
+      '単位不明': kubun === '不明' or ''
+      その他   : kubun に kbn を含む（'パック系' 等）
+    """
+    if not app_kubun_str or not app_kubun_str.strip():
+        return True  # 空 = 全適用
+    for kbn in app_kubun_str.split(","):
+        kbn = kbn.strip()
+        if not kbn:
+            continue
+        if kbn == "箱系大":
+            if "箱系大" in kubun:
+                return True
+        elif kbn == "箱系":
+            if "箱系" in kubun and "箱系大" not in kubun:
+                return True
+        elif kbn == "単位不明":
+            if kubun in ("不明", ""):
+                return True
+        else:
+            if kbn in kubun:
+                return True
+    return False
+
+
+def resolve_unit_v2(
+    raw_unit: str,
+    unit_alias_to_info: dict[str, tuple[str, str]],
+) -> tuple[Optional[str], str, bool]:
+    """
+    raw_unit → (canonical, kubun, resolved)。
+    未知語は (raw_unit, '不明', False)。空は (None, '', False)。
+
+    GAS 対照: resolveUnit_() (investigate2.gs:9547-9561)
+      完全一致 → aliasMap[w]
+      小文字一致 → aliasMap[keys[i]]
+      未知語 → {canonical: w, kubun: '不明', unitId: ''}
+      null/'(なし)' → null
+    """
+    if not raw_unit or not raw_unit.strip():
+        return (None, "", False)
+    stripped = raw_unit.strip()
+    if stripped in unit_alias_to_info:
+        canonical, kubun = unit_alias_to_info[stripped]
+        return (canonical, kubun, True)
+    lower = stripped.lower()
+    lower_map = {k.lower(): v for k, v in unit_alias_to_info.items()}
+    if lower in lower_map:
+        canonical, kubun = lower_map[lower]
+        return (canonical, kubun, True)
+    return (stripped, "不明", False)
+
+
+def resolve_condition_v2(
+    raw_state: str,
+    raw_product_name: str,
+    kubun: str,
+    cond_entries: list[dict],
+    cond_canonical_to_uuid: dict,
+) -> tuple[Optional[str], Optional[str], str]:
+    """
+    (canonical, cond_id, basis) を返す。
+
+    GAS 対照: resolveCondition_(stateWord, prodName, unitResult, cm)
+              (investigate2.gs:9609-9661)
+
+    R1 (priority=1): FLAG_SINGLE 語 — isBoxOrCase のとき flagNote を付ける
+    R2 (priority=2): ダメージ/開封語 — appKubun で区分絞込
+    R3 (priority=3): 特殊語（シュリなし / ペリなし / 未サーチ）
+    R4a(priority=4): data-driven（通常品 / 未開封等）
+    R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
+    """
+    text_combined = (raw_state or "") + " " + (raw_product_name or "")
+    is_box_or_case = "箱系" in kubun  # 箱系大 も '箱系' を含む
+
+    # --- R1 pre-pass: isBoxOrCase のとき FLAG_SINGLE 語を検査 → flagNote ---
+    flag_note = ""
+    if is_box_or_case:
+        for e in cond_entries:
+            if e["priority"] != 1:
+                continue
+            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+            hit, matched_kw = match_keyword(text_combined, s_kws, [])
+            if hit:
+                flag_note = f"単品語あり・要確認({matched_kw})"
+                break
+
+    # --- Main loop (priority ASC, app_kubun 長 DESC — load_condition_entries でソート済み) ---
+    for e in cond_entries:
+        if not app_kubun_matches(e["app_kubun"], kubun):
+            continue
+        s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+        x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+        hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        if not hit:
+            continue
+        prefix = f"{flag_note}," if flag_note else ""
+        basis = f"{prefix}R{e['priority']}:{matched_kw}"
+        return (e["canonical"], e["cond_id"], basis)
+
+    # --- R4 code fallback: kubun のみで分岐 ---
+    b4_prefix = f"{flag_note}," if flag_note else ""
+    b4 = b4_prefix + "R4:単位既定"
+    if "箱系大" in kubun:
+        cid = _find_cond_id(cond_entries, "CN0001") or cond_canonical_to_uuid.get("Case")
+        return ("Case", cid, b4)
+    if "箱系" in kubun:
+        cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
+        return ("Sealed box", cid, b4)
+    cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
+    return ("FLAG_SINGLE", cid, b4 + ":単位不明")
+
+
+def _find_cond_id(cond_entries: list[dict], code: str) -> Optional[str]:
+    """condEntries から code で cond_id を引く。"""
+    for e in cond_entries:
+        if e["code"] == code:
+            return e["cond_id"]
     return None
 
 
@@ -442,8 +629,10 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         unit_canonical_to_uuid,
         cond_alias_to_canonical,
         cond_canonical_to_uuid,
+        unit_alias_to_info,
     ) = load_lookup_maps(session)
 
+    cond_entries = load_condition_entries(session)
     search_kw, exclude_kw = load_product_keywords(session)
     product_codes = list(product_code_to_uuid.keys())
 
@@ -487,17 +676,16 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         if pid_resolved:
             stats["pid_resolved"] += 1
 
-        # 単位解決
-        unit_canonical, unit_resolved = resolve_unit(raw_unit, unit_alias_to_canonical)
+        # 単位解決 v2
+        unit_canonical, kubun, unit_resolved = resolve_unit_v2(raw_unit, unit_alias_to_info)
         unit_uuid = unit_canonical_to_uuid.get(unit_canonical) if unit_canonical else None
 
         if unit_resolved:
             stats["unit_resolved"] += 1
 
-        # 状態解決
-        condition_canonical = resolve_condition(raw_state, cond_alias_to_canonical)
-        condition_uuid = (
-            cond_canonical_to_uuid.get(condition_canonical) if condition_canonical else None
+        # 状態解決 v2
+        condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
+            raw_state, raw_product_name, kubun, cond_entries, cond_canonical_to_uuid
         )
 
         # 数量・価格正規化
@@ -598,7 +786,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                 "unit_resolved": unit_resolved,
                 "condition_id": condition_uuid,
                 "condition_canonical": condition_canonical,
-                "condition_basis": condition_canonical,
+                "condition_basis": condition_basis_str,
                 "quantity_normalized": quantity_normalized,
                 "price_normalized": price_normalized,
                 "needs_review": needs_review,
@@ -621,12 +809,16 @@ __all__ = [
     "ENGINE_VERSION",
     "load_lookup_maps",
     "load_product_keywords",
+    "load_condition_entries",
     "normalize_en",
     "token_and_match",
     "match_one_kw",
     "match_keyword",
     "match_pid_name_first",
+    "app_kubun_matches",
     "resolve_unit",
+    "resolve_unit_v2",
     "resolve_condition",
+    "resolve_condition_v2",
     "analyze_extraction_job",
 ]
