@@ -66,6 +66,7 @@
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
+| 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
