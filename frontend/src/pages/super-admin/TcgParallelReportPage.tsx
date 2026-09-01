@@ -67,7 +67,7 @@ export default function TcgParallelReportPage() {
     setError("");
     try {
       const res = await api.get<ParallelReportResponse>(
-        "/api/v1/tcg/parallel-report"
+        "/tcg/parallel-report"
       );
       setReport(res);
     } catch (e: unknown) {
