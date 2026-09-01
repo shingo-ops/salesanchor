@@ -10,6 +10,20 @@ GAS → サーバー移植の実施済み・未対応一覧。
 |------|------|------------|
 | 2026-09-01 | `normalizeEn_` / `matchOneKw_` / `tokenAndMatch_` / `matchKeyword_` 移植 (name-first-v2) | release/tcg-keyword-matching |
 | 2026-09-01 | `product_search_keywords` / `product_exclude_keywords` 再インポート (593件/128件 + UNIQUE制約) | release/tcg-keyword-matching |
+| 2026-09-01 | kubun 状態解決エンジン v2 実装 (name-first-v2-cond-r4): `resolve_unit_v2` / `resolve_condition_v2` / R1〜R4 移植 + migration (conditions に priority/search_kw/exclude_kw 追加 + seed) | release/tcg-keyword-matching / PR #3188 |
+
+---
+
+## 訂正記録 (2026-09-01)
+
+**誤報告**: 「`units.kubun` 列が本番 DB に存在しない」と前セッションで報告した。
+
+**事実**: `units.kubun` 列は既存かつ全 8 行に値投入済み（UN0001:箱系大 〜 UN0008:条件つき）。
+
+**実際に欠けていたのは**: Python コード（旧 `load_lookup_maps()`）が `units.kubun` を SELECT していなかったこと。
+migration で ALTER TABLE が不要だった理由もこれ（列は存在し、値も正しかった）。
+
+今回の v2 実装で `load_lookup_maps()` に `unit_alias_to_info`（alias → (canonical, kubun)）クエリを追加し、解決済み。
 
 ---
 
