@@ -668,7 +668,7 @@ def _print_dry_run_results(
     print("=" * 60)
 
     print()
-    print(f"--- E3a: recover_unit_from_product_name ---")
+    print("--- E3a: recover_unit_from_product_name ---")
     print(f"  Success: {e3a_result['success']}")
     print(f"  Would recover: {e3a_result['updated_count']} rows")
     if e3a_result.get("aborted"):
@@ -694,7 +694,7 @@ def _print_dry_run_results(
             )
 
     print()
-    print(f"--- E5: recalc_condition_from_recovered_unit ---")
+    print("--- E5: recalc_condition_from_recovered_unit ---")
     print(f"  Success: {e5_result['success']}")
     print(f"  Targets: {e5_result['target_count']}")
     print(f"  Would change: {e5_result['changed_count']}")
