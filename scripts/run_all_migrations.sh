@@ -531,6 +531,9 @@ run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 
 # TCG MIG-04 E3a/E5: analysis_results に unit_inferred/unit_basis/unit_confidence/unit_infer_reason 追加（additive-only・冪等）
 run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
+
+# attachment-storage 便2: 添付ファイル保管台帳 (tenant_NNN.lead_attachments) + RLS
+run_sql migrations/20260902_100000_create_lead_attachments.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
