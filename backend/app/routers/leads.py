@@ -1884,12 +1884,14 @@ async def _send_discord_message(
     text_body: str,
     current_user,
 ) -> dict:
-    """Discord DM 経由でメッセージを送信し、meta_messages に outbound 行を INSERT して返す。
+    """Discord のチケット専用チャンネルへ送信し、meta_messages に outbound 行を INSERT して返す。
 
     messaging_window 制約なし（Discord は 24h 制限を持たない）。
-    discord_dm_channel_id が未設定（顧客からのメッセージ受信前）の場合は 409。
+    discord_guild_channel_id が未設定（顧客がチケットを開く前）の場合は 409。
     Bot Token が未設定の場合も 409。
     Discord API エラーは 502。
+
+    DM 経路は廃止方針のため discord_dm_channel_id は参照しない。
     """
     from app.services.discord_sender import DiscordSendError, send_discord_dm
 
@@ -1897,29 +1899,27 @@ async def _send_discord_message(
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
 
-    # 送信先チャンネルを leads から取得する。
-    # チケット専用チャンネル（discord_guild_channel_id）を優先し、
-    # 未設定の場合のみ DM チャンネル（discord_dm_channel_id）へ送る。
-    # Discord API はどちらも /channels/{id}/messages で送信できる。
+    # 送信先はチケット専用チャンネル（discord_guild_channel_id）のみ。
+    # Discord API は /channels/{id}/messages で送信できる。
     ch_q = await db.execute(
         text(
-            f"SELECT discord_user_id, discord_dm_channel_id,"
+            f"SELECT discord_user_id,"
             f" discord_guild_channel_id FROM {leads_t}"
             f" WHERE id = :id AND tenant_id = :tenant_id"
         ),
         {"id": lead_id, "tenant_id": tenant_id},
     )
     ch_row = ch_q.first()
-    if ch_row is None or (not ch_row[1] and not ch_row[2]):
+    if ch_row is None or not ch_row[1]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 "Discord の送信先チャンネルが設定されていません。"
-                "顧客がチケットを開くか、先にメッセージを送ると自動設定されます。"
+                "顧客がチケットを開くと自動設定されます。"
             ),
         )
     discord_user_id = ch_row[0]
-    dm_channel_id = str(ch_row[2]) if ch_row[2] else str(ch_row[1])
+    dm_channel_id = str(ch_row[1])
 
     # Discord Bot API で送信
     try:

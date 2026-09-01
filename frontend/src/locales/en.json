@@ -967,7 +967,7 @@
     "messagePlaceholder": "Type a message... (Enter to send, Shift+Enter for new line)",
     "sendDisabled7d": "Messaging window has expired (7 days). Cannot send messages.",
     "discordNotLinked": "Discord not linked",
-    "discordDmChannelMissing": "You can reply after the customer sends a message",
+    "discordChannelMissing": "You can reply once the customer opens a ticket",
     "attachImage": "Attach image",
     "imagePreviewAlt": "Attached image preview",
     "removeAttachment": "Remove attachment",
