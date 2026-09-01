@@ -696,3 +696,54 @@ class TestResolveConditionV2:
         assert "R4:単位既定" in basis
         # flagNote は付かない（isBoxOrCase=False）
         assert "単品語あり" not in basis
+
+    # --- R5: パック既定 (GAS: applyPackConditionDefault, AnalysisV2PackCondition.gs) ---
+    # kubun=パック系(UN0003) かつ R4b で FLAG_SINGLE になる行は R5 で Searched pack に変換。
+    # GAS 実測: basisDist R5=60件, Searched pack=61件 (残1件はキーワード直接マッチ)。
+
+    def test_r5_pack_kubun_empty_state_returns_searched_pack(self):
+        # raw_state='' + kubun='パック系' → main loop 不一致 → R4b → R5:パック既定
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Searched pack"
+        assert cond_id == "uuid-cn0010"
+        assert basis == "R5:パック既定"
+
+    def test_r5_pack_kubun_with_unmatched_state_returns_searched_pack(self):
+        # raw_state='買取品'（どのキーワードにも一致しない）+ kubun='パック系' → R5
+        canonical, cond_id, basis = resolve_condition_v2(
+            "買取品", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Searched pack"
+        assert basis == "R5:パック既定"
+
+    def test_r5_not_applied_to_tanpin_kei(self):
+        # 単品系は R5 対象外 → FLAG_SINGLE のまま
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", "単品系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4:単位既定" in basis
+
+    def test_r5_not_applied_when_keyword_already_matched(self):
+        # サーチ済み → CN0010 の search_kw にヒット → R2/main ループで Searched pack (basis=R2: ではなく R2:サーチ済み)
+        # R5 より前にキーワードマッチが発火するので basis は R5 ではない
+        canonical, cond_id, basis = resolve_condition_v2(
+            "サーチ済み", "", "パック系", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "Searched pack"
+        assert "R5" not in basis  # キーワードマッチ経由なので R5 basis ではない
+
+    # --- ORDER BY タイブレーカー: CN0005 (No shrink box) が CN0006 (Opened box) より先 ---
+    # GAS 根拠: investigate2.gs:9705-9710 — SHURI チェックが PERI より先に実行される。
+    # _COND_ENTRIES は code ASC 順 (CN0005→CN0006) で定義済み。
+
+    def test_r3_shuri_wins_over_peri_when_both_present(self):
+        # 'シュリなし　ペリなし' — 両キーワードが存在するとき CN0005 (No shrink box) が先にヒット
+        canonical, cond_id, basis = resolve_condition_v2(
+            "シュリなし\u3000ペリなし", "", "条件つき", _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "No shrink box"
+        assert cond_id == "uuid-cn0005"
+        assert "R3:シュリなし" in basis

@@ -417,9 +417,11 @@ def resolve_condition(
 def load_condition_entries(session: Session) -> list[dict]:
     """
     priority > 0 の conditions 行を condEntries として返す。
-    priority ASC → app_kubun 長 DESC でソート済み（resolveCondition_ と同順）。
+    priority ASC → app_kubun 長 DESC → code ASC でソート済み（resolveCondition_ と同順）。
 
     GAS 対照: readConditionMaster() condEntries 構築 (investigate2.gs:8118-8125)
+    code ASC タイブレーカーは GAS の R3 条件処理順（SHURI→PERI: CN0005→CN0006）を保証する。
+    GAS 根拠: investigate2.gs:9705-9710 で No shrink box (CN0005) を Opened box (CN0006) より先に判定。
     """
     rows = session.execute(
         text(
@@ -431,7 +433,8 @@ def load_condition_entries(session: Session) -> list[dict]:
               AND c.priority IS NOT NULL
               AND c.priority > 0
             ORDER BY c.priority ASC,
-                     length(COALESCE(c.app_kubun, '')) DESC
+                     length(COALESCE(c.app_kubun, '')) DESC,
+                     c.code ASC
             """
         )
     ).fetchall()
@@ -565,6 +568,14 @@ def resolve_condition_v2(
     if "箱系" in kubun:
         cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
         return ("Sealed box", cid, b4)
+
+    # --- R5: パック既定 (GAS: applyPackConditionDefault, AnalysisV2PackCondition.gs:66-180) ---
+    # unit=パック系(UN0003) かつ R4b で FLAG_SINGLE になった行を Searched pack に変換する。
+    # GAS 実測: basisDist R5=60件、UN0003 の Searched pack=61件（残1件はキーワード直接マッチ）。
+    if kubun == "パック系":
+        cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
+        return ("Searched pack", cid, b4_prefix + "R5:パック既定")
+
     cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
     return ("FLAG_SINGLE", cid, b4 + ":単位不明")
 
