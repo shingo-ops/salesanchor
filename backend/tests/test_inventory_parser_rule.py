@@ -755,3 +755,121 @@ class TestOfferTypeShipTimingDetection:
     def test_digit_boundary_no_false_match(self):
         """数字境界: 「発売12日前」の末尾 '2日前' を ship_timing に誤判定しない（Reviewer PR#1445）。"""
         assert _extract_offer_type_ship_timing("発売12日前発送 BOX @10,000") == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: ¥/￥プレフィックス単価 + 個単位
+# (SP0007 倉田・SP0033 T・SP0037 モノウリ・SP0178 達也)
+# ---------------------------------------------------------------------------
+
+from app.services.inventory_parser import _extract_unit_quantity_price  # noqa: E402
+from decimal import Decimal as D  # noqa: E402
+
+
+class TestYenPrefixPriceDetection:
+    """¥/￥ プレフィックス形式の単価検出（VS-02 Format Rule 1）。"""
+
+    def test_sp0007_slash_yen_prefix(self):
+        """倉田: 'ボックス/¥52,000' → price=52000 が取れる。"""
+        qty, unit, price = _extract_unit_quantity_price("ボックス/¥52,000")
+        assert price == D("52000")
+
+    def test_sp0007_pack_yen_prefix(self):
+        """倉田: 'パック/¥450' → price=450。"""
+        qty, unit, price = _extract_unit_quantity_price("パック/¥450")
+        assert price == D("450")
+
+    def test_sp0033_yen_slash_unit(self):
+        """T: '¥17,500/BOX' → price=17500。"""
+        qty, unit, price = _extract_unit_quantity_price("¥17,500/BOX")
+        assert price == D("17500")
+
+    def test_sp0037_bullet_yen_zaiko(self):
+        """モノウリ: '●ストームエメラルダ　¥16,400　在庫20個' → price=16400, qty=20。"""
+        qty, unit, price = _extract_unit_quantity_price("●ストームエメラルダ　¥16,400　在庫20個")
+        assert price == D("16400")
+        assert qty == 20
+
+    def test_sp0178_full_width_yen_prefix(self):
+        """達也: '■単価（税込）：￥16,700' → price=16700。"""
+        qty, unit, price = _extract_unit_quantity_price("■単価（税込）：￥16,700")
+        assert price == D("16700")
+
+    def test_ko_unit_detection(self):
+        """'個' が piece 単位として検出できる: '在庫20個' → qty=20, unit='piece'。"""
+        qty, unit, price = _extract_unit_quantity_price("在庫20個")
+        assert qty == 20
+        assert unit == "piece"
+
+    def test_existing_yen_suffix_unaffected(self):
+        """既存の円サフィックス形式が引き続き動作する（回帰テスト）。"""
+        qty, unit, price = _extract_unit_quantity_price("30BOX@11,900円")
+        assert price == D("11900")
+        assert qty == 30
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: 単価：price 形式（SP0018 SAMURAI-T）
+# ---------------------------------------------------------------------------
+
+
+class TestTankaSeparatorFormat:
+    """「単価：N」形式の単価検出（VS-02 Format Rule 2）。"""
+
+    def test_sp0018_tanka_basic(self):
+        """SAMURAI-T: '単価：576,000' → price=576000。"""
+        qty, unit, price = _extract_unit_quantity_price("単価：576,000")
+        assert price == D("576000")
+
+    def test_sp0018_tanka_ascii_colon(self):
+        """'単価:3,100' (ASCII コロン) → price=3100。"""
+        qty, unit, price = _extract_unit_quantity_price("単価:3,100")
+        assert price == D("3100")
+
+    def test_sp0018_tanka_with_context(self):
+        """'単価：74,000' → price=74000, qty は None (数量は別行)。"""
+        qty, unit, price = _extract_unit_quantity_price("単価：74,000")
+        assert price == D("74000")
+        assert qty is None
+
+    def test_sp0018_suuryo_line_still_yields_qty(self):
+        """数量行 '数量：10カートン' → qty=10, unit='case' (既存動作確認)。"""
+        qty, unit, price = _extract_unit_quantity_price("数量：10カートン")
+        assert qty == 10
+        assert unit == "case"
+
+
+# ---------------------------------------------------------------------------
+# VS-02 フォーマットルール: N単位：price コロン区切り形式（SP0011 星野）
+# ---------------------------------------------------------------------------
+
+
+class TestColonQtyPriceFormat:
+    """「N単位：価格」コロン区切り形式の検出（VS-02 Format Rule 3）。"""
+
+    def test_sp0011_pack_colon(self):
+        """星野: '500Pack：2,500' → qty=500, unit='pack', price=2500。"""
+        qty, unit, price = _extract_unit_quantity_price("500Pack：2,500")
+        assert qty == 500
+        assert unit == "pack"
+        assert price == D("2500")
+
+    def test_sp0011_ko_unit_colon(self):
+        """星野: '8個：7,800' → qty=8, unit='piece', price=7800。"""
+        qty, unit, price = _extract_unit_quantity_price("8個：7,800")
+        assert qty == 8
+        assert unit == "piece"
+        assert price == D("7800")
+
+    def test_sp0011_box_colon(self):
+        """星野: '80BOX：16,000' → qty=80, unit='box', price=16000。"""
+        qty, unit, price = _extract_unit_quantity_price("80BOX：16,000")
+        assert qty == 80
+        assert unit == "box"
+        assert price == D("16000")
+
+    def test_sp0011_with_extra_text(self):
+        """コロン後テキスト付き: '100枚：1,100（届き次第発送）' → price=1100。"""
+        qty, unit, price = _extract_unit_quantity_price("100枚：1,100（届き次第発送）")
+        assert price == D("1100")
+        assert qty == 100
