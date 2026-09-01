@@ -34,7 +34,7 @@ interface Props {
   sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
-  discordDmChannelMissing: boolean;
+  discordChannelMissing: boolean;
   trimmedDraft: string;
   submitSend: (opts?: { draftId?: number }) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -59,7 +59,7 @@ export function InboxMessageThread({
   handleMarkUnread, handleExclude, handleDeleteLead,
   showKartePanel, openKartePanel, closeKartePanel, inboxSettings,
   messageListRef,
-  draft, setDraft, sending, sendError, sendErrorReason, sendErrorCode, sendDisabled, canSend, discordDmChannelMissing,
+  draft, setDraft, sending, sendError, sendErrorReason, sendErrorCode, sendDisabled, canSend, discordChannelMissing,
   trimmedDraft, submitSend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
@@ -530,8 +530,8 @@ export function InboxMessageThread({
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleKeyDownGuarded}
                 placeholder={
-                  discordDmChannelMissing
-                    ? t("inbox.discordDmChannelMissing")
+                  discordChannelMissing
+                    ? t("inbox.discordChannelMissing")
                     : canSend
                       ? t("inbox.messagePlaceholder")
                       : t("inbox.sendDisabled7d")
@@ -582,8 +582,8 @@ export function InboxMessageThread({
               onClick={checkAndSend}
               disabled={sendDisabled && !attachedFile}
               title={
-                discordDmChannelMissing
-                  ? t("inbox.discordDmChannelMissing")
+                discordChannelMissing
+                  ? t("inbox.discordChannelMissing")
                   : !canSend
                     ? t("inbox.sendDisabled7d")
                     : trimmedDraft.length === 0 && !attachedFile

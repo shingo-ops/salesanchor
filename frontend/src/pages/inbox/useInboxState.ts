@@ -111,7 +111,7 @@ export interface UseInboxStateReturn {
   sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
-  discordDmChannelMissing: boolean;
+  discordChannelMissing: boolean;
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
   submitSend: (opts?: { draftId?: number }) => Promise<void>;
@@ -605,10 +605,11 @@ export function useInboxState(): UseInboxStateReturn {
   // ---------------------------------------------------------------------------
 
   const messagingWindow: MessagingWindow | undefined = messagesData?.messaging_window;
-  // AC1.5: Discord DM channel が未設定の場合は送信不可
+  // Discord はチケット専用チャンネル（discord_guild_channel_id）のみを送信先とする。
+  // DM 経路は廃止方針のため discord_dm_channel_id は参照しない。
   const currentPlatform = messagesData?.lead?.platform ?? null;
-  const discordDmChannelMissing = currentPlatform === "discord" && !leadDetail?.discord_dm_channel_id;
-  const canSend = !!messagingWindow?.can_send_at_all && !discordDmChannelMissing;
+  const discordChannelMissing = currentPlatform === "discord" && !leadDetail?.discord_guild_channel_id;
+  const canSend = !!messagingWindow?.can_send_at_all && !discordChannelMissing;
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
 
@@ -880,7 +881,7 @@ export function useInboxState(): UseInboxStateReturn {
     sendErrorCode,
     sendDisabled,
     canSend,
-    discordDmChannelMissing,
+    discordChannelMissing,
     trimmedDraft,
     messagingWindow,
     submitSend,

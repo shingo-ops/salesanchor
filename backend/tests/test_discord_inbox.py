@@ -227,20 +227,22 @@ async def _insert_discord_lead(
     tenant_id: int = 999,
     discord_user_id: str = "USER123",
     discord_dm_channel_id: str | None = "DM-CH-123",
+    discord_guild_channel_id: str | None = "GUILD-CH-456",
 ):
     await db_session.execute(text("""
         INSERT INTO leads
             (id, tenant_id, lead_code, customer_name, channel_type, initiative, type, status,
-             discord_user_id, discord_dm_channel_id)
+             discord_user_id, discord_dm_channel_id, discord_guild_channel_id)
         VALUES
             (:id, :tenant_id, :code, 'Discord Customer', 'discord', 'inbound', 'prospect', 'lead',
-             :discord_user_id, :discord_dm_channel_id)
+             :discord_user_id, :discord_dm_channel_id, :discord_guild_channel_id)
     """), {
         "id": lead_id,
         "tenant_id": tenant_id,
         "code": f"LD-{lead_id:05d}",
         "discord_user_id": discord_user_id,
         "discord_dm_channel_id": discord_dm_channel_id,
+        "discord_guild_channel_id": discord_guild_channel_id,
     })
     await db_session.commit()
 
@@ -377,14 +379,15 @@ async def test_send_discord_dm_raises_when_token_missing(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_send_discord_returns_409_when_no_dm_channel(app_client, db_session):
-    """discord_dm_channel_id が未設定の lead に送信 → 409。
+    """discord_guild_channel_id が未設定の lead に送信 → 409。
 
-    顧客からのDM受信前は dm_channel_id が NULL のため、送信経路が開けない。
+    顧客がチケットを開く前は guild_channel_id が NULL のため、送信経路が開けない。
     local import された send_discord_dm は 409 到達前に呼ばれないため、patch 不要。
     """
     await _insert_discord_lead(
         db_session, lead_id=1,
         discord_dm_channel_id=None,  # 未設定
+        discord_guild_channel_id=None,  # 未設定（新方針: チケットチャンネルのみを見る）
     )
 
     resp = await app_client.post(

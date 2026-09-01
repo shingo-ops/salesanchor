@@ -967,7 +967,7 @@
     "messagePlaceholder": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
     "sendDisabled7d": "メッセージウィンドウが期限切れ（7日）。メッセージを送信できません。",
     "discordNotLinked": "Discord未連携",
-    "discordDmChannelMissing": "顧客からのメッセージを受信後に返信できます",
+    "discordChannelMissing": "顧客がチケットを開くと返信できます",
     "attachImage": "画像を添付",
     "imagePreviewAlt": "添付画像プレビュー",
     "removeAttachment": "添付を削除",
