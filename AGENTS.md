@@ -96,6 +96,7 @@ bash scripts/aeon-dispatch.sh generator --auto   # 自動承認モード
 ## 実行役 preflight
 
 - 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
+- **作業開始時にリポジトリを確認**: `git remote -v` で `shingo-ops/salesanchor` を確認。crm-app 作業を誤って salesanchor リポジトリで行わないこと（#3149 教訓: salesanchor に crm-app 監査ファイルを誤配置）
 
 ---
 
