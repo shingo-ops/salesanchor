@@ -160,14 +160,74 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 basis 分布 (v2 after):
 - R1: 32, R2: 29, R3: 88, R4: 1423, R5: 54
 
-### E3a+E5 dry-run 期待結果（2026-09-02 実機確認で確定）
+### E3a+E5 干实机 dry-run 結果（2026-09-02）
 
-E3a (NAME_RECOVERY) 期待分布（GAS 実測と完全一致）:
-- ﾊﾟｯｸ: 6, box: 3, BOX: 1 (PM0263), 箱: 1 = 合計 **11行**
-- PM0264 は A-2 除外（jp_title='FUTURISTIC BOX' に 'BOX' 含む）
+**背景**: PR #3200 マージ・デプロイ後に `dry_run_unit_recovery.py` を VPS 実行。
 
-E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
-- FLAG_SINGLE: 764, Sealed box: 468, Case: 217, No shrink box: 71
-- Searched pack: 61, Damaged case: 17, Unsearched pack: 12
-- Damaged sealed box: 11, Opened box: 5
-- **一致率: 1626/1626 = 100%**
+```
+--- E3a: recover_unit_from_product_name ---
+  Success: True
+  Would recover: 0 rows
+
+--- E5: recalc_condition_from_recovered_unit ---
+  Success: True
+  Targets: 0 / Would change: 0
+
+--- Full condition distribution (after E3a+E5) ---
+  FLAG_SINGLE: 764 / Sealed box: 468 / Case: 217 / No shrink box: 71
+  Searched pack: 61 / Damaged case: 17 / Unsearched pack: 12
+  Damaged sealed box: 11 / Opened box: 5
+```
+
+**E3a 0件の理由（事実）**:
+- `analysis_results.updated_at` = 全行 `2026-08-30 11:33:05` — DB の `condition_canonical` は GAS が書き込んだ値
+- GAS は E3a 込みで 11件を解決済み（`unit_resolved=TRUE`）
+- Python E3a の前提（`unit_resolved=FALSE`）を満たす行がゼロ → 0件は正常動作
+
+**condition 分布 — GAS 実測との対比**:
+
+| condition_canonical | GAS実測 | 実機DB | 差分 |
+|---|---|---|---|
+| FLAG_SINGLE | 764 | 764 | ✅ 0 |
+| Sealed box | 468 | 468 | ✅ 0 |
+| Case | 217 | 217 | ✅ 0 |
+| No shrink box | 71 | 71 | ✅ 0 |
+| Searched pack | 61 | 61 | ✅ 0 |
+| Damaged case | 17 | 17 | ✅ 0 |
+| Unsearched pack | 12 | 12 | ✅ 0 |
+| Damaged sealed box | 11 | 11 | ✅ 0 |
+| Opened box | 5 | 5 | ✅ 0 |
+| **合計** | **1626** | **1626** | **100%** |
+
+**実際に機能するタイミング**: サーバー側で新規解析ジョブ（Python `analyze_extraction_job()`）を実行し、unit_resolved=FALSE のまま PID が解決された行が発生したとき。
+
+---
+
+### E3a+E5 合成データ検証（2026-09-02）
+
+実データでは E3a 対象 0件のため、合成データでロジック動作を検証。
+テストファイル: `backend/tests/test_e3a_e5_integration.py` (27件)
+
+**テスト結果 — 27/27 PASSED**:
+
+| テストクラス | 件数 | 検証内容 |
+|---|---|---|
+| `TestE3aRecovery` | 5 | box / ﾊﾟｯｸ / 白箱 / BOX / カートン 回収 |
+| `TestE3aExclusions` | 9 | A-2除外 / unit_resolved=T / raw_unit≠'' / pid未解決 / end-match失敗 / スーツケース special / ケース空白前 / 商品名空 |
+| `TestE3aSafetyLimit` | 2 | 101件→abort / 100件→OK |
+| `TestGAS11CaseReproduction` | 4 | ﾊﾟｯｸ×6/box×3/BOX×1/箱×1 = 11件 / PM0264 A-2除外 |
+| `TestE5Integration` | 5 | 箱系→Sealed box / パック系→Searched pack / R4以外スキップ / 201件→abort / 空入力 |
+| `TestGAS11EndToEnd` | 2 | 11件変化 / Sealed box+5 / Searched pack+6 の分布確認 |
+
+**GAS 11件再現（TestGAS11CaseReproduction）**:
+- 入力: ﾊﾟｯｸ×6 / box×3 / BOX×1 (PM0263) / 箱×1 = 12行入力（PM0264 A-2除外1件含む）
+- 結果: 11件回収、PM0264 除外確認 ✅
+- 内訳: ﾊﾟｯｸ:6 / box:3 / BOX:1 / 箱:1 ✅
+
+**GAS 11件 E5 後の分布変化（TestGAS11EndToEnd）**:
+- FLAG_SINGLE 11件 → Sealed box +5 (box×3 + BOX×1 + 箱×1) / Searched pack +6 (ﾊﾟｯｸ×6)
+- GAS dry-run 実測と同方向 ✅
+
+**補足（test_hako_kanji の注意）**:
+"パック 箱" は find_term が 'パック' を先にヒットし end-match 失敗でスキップされる（GAS 準拠）。
+'箱' だけを含む "白箱" で正しく回収される。これは GAS との完全一致動作。
