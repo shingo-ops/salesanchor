@@ -148,7 +148,7 @@ PO決定事項（2026-07-08）:
 | 7 | --calendar-shipping-color | --color-red-600 | #d93025 | #f28b82 |
 | 8 | --calendar-billing-color | --color-amber-500 | #f29900 | #f8d66d |
 | 9 | --calendar-billing-tint | --color-amber-100 | #fef3c7 | #362a08 |
-| 10 | --calendar-release-color | --color-gray-600 | #5f6368 | #94a3b8 |
+| 10 | --calendar-release-color | --color-slate-600 | #5f6368 | #94a3b8 |
 | 11 | --calendar-holiday-color | --color-violet-700 | #7e22ce | #b771f4 |
 | 12 | --calendar-holiday-tint | --color-violet-50 | #f5f3ff | #1e1b4b |
 | 13 | --calendar-holiday-text | --color-violet-800 | #6b21a8 | #e9d5ff |
