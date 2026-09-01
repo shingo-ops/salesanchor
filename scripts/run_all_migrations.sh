@@ -520,6 +520,12 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
+# TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
+run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
+
+# TCG MIG-04: conditions に R1〜R4 解決列追加 + seed（additive-only・冪等）
+run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
+
 # MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 echo ""
