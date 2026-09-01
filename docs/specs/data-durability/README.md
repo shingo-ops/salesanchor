@@ -6,6 +6,9 @@
 
 - [ideal-state.md](ideal-state.md) — あるべき姿（POの言葉のみ・正本）
 - [kgi.md](kgi.md) — 合格条件を数で書いたもの
+- [../../handoff/data-durability-spec/recon.md](../../handoff/data-durability-spec/recon.md) — 2026-09-01 時点の現状調査
+- [../../handoff/data-durability-spec/design.md](../../handoff/data-durability-spec/design.md) — 起票便の設計記録
+- [../../adr/ADR-153-data-durability.md](../../adr/ADR-153-data-durability.md) — 独立テーマ化と目標値の設計判断
 
 ## このテーマが扱うもの
 
