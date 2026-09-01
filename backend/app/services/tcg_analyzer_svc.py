@@ -7,13 +7,21 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v1"
+エンジンバージョン: "name-first-v2"
+
+キーワード照合エンジン (name-first-v2):
+  GAS investigate2.gs の matchKeyword_ を正として移植。
+  - normalizeEn_  : 全角英数記号(U+FF01-FF60) → 半角ASCII + 小文字化
+  - matchOneKw_   : 純ASCII語は単語境界正規表現、日本語混じりは tokenAndMatch_
+  - tokenAndMatch_: キーワードを空白トークン分割して全トークンAND照合
+  - matchKeyword_ : normalizeEn_ → 除外KW → 検索KW（カンマ区切り各語を matchOneKw_）
 
 TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
 """
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -23,7 +31,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v1"
+ENGINE_VERSION = "name-first-v2"
 
 # TCG解析システムは tenant_004 専用スキーマ
 TCG_SCHEMA = "tenant_004"
@@ -154,6 +162,124 @@ def load_product_keywords(
 
 
 # ---------------------------------------------------------------------------
+# キーワード照合エンジン (GAS investigate2.gs 移植)
+# ---------------------------------------------------------------------------
+
+# 全角英数記号 U+FF01-FF60 → 半角 ASCII U+0021-0060 への変換オフセット
+_FULLWIDTH_OFFSET = 0xFEE0
+
+# 純ASCII語判定: 0x20-0x7E のみで構成
+_RE_PURE_ASCII = re.compile(r"^[\x20-\x7e]+$")
+
+# 単語境界: 前後が [a-z] でない位置
+# GAS: /(?<![a-z])word(?![a-z])/ — Python は (?<![a-z]) lookbehind OK
+_RE_WORD_BOUNDARY_TEMPLATE = r"(?<![a-z]){word}(?![a-z])"
+
+
+def normalize_en(s: str) -> str:
+    """
+    全角英数記号(U+FF01–FF60) → 半角ASCII(U+0021–0060) に変換し小文字化する。
+
+    GAS 対照: investigate2.gs:9569 normalizeEn_
+      return (s || '').replace(/[\\uFF01-\\uFF60]/g,
+        c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toLowerCase();
+    """
+    result = []
+    for ch in (s or ""):
+        cp = ord(ch)
+        if 0xFF01 <= cp <= 0xFF60:
+            result.append(chr(cp - _FULLWIDTH_OFFSET))
+        else:
+            result.append(ch)
+    return "".join(result).lower()
+
+
+def token_and_match(kw: str, norm_text: str) -> bool:
+    """
+    日本語混じりキーワードの順不同トークンAND照合。
+
+    GAS 対照: investigate2.gs:9730 tokenAndMatch_
+      var kwNorm = normalizeEn_(kw);
+      var tokens = kwNorm.split(/\\s+/).filter(t => t.length > 0);
+      return tokens.every(t => normText.indexOf(t) >= 0);
+
+    kw を normalize_en した上で空白分割し、全トークンが norm_text に含まれれば True。
+    """
+    kw_norm = normalize_en(kw)
+    tokens = [t for t in re.split(r"\s+", kw_norm) if t]
+    if not tokens:
+        return False
+    return all(t in norm_text for t in tokens)
+
+
+def match_one_kw(kw: str, norm_text: str) -> bool:
+    """
+    1キーワードの照合。純ASCII語は単語境界、日本語混じりは token_and_match。
+
+    GAS 対照: investigate2.gs:9977 matchOneKw_
+      if (/^[\\x20-\\x7e]+$/.test(kw)) {
+        var kwl = kw.toLowerCase().replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+        return /(?<![a-z])kwl(?![a-z])/.test(normText);
+      }
+      return tokenAndMatch_(kw, normText);
+    """
+    if not kw:
+        return False
+    if _RE_PURE_ASCII.match(kw):
+        kwl = re.escape(kw.lower())
+        pattern = _RE_WORD_BOUNDARY_TEMPLATE.format(word=kwl)
+        return bool(re.search(pattern, norm_text))
+    return token_and_match(kw, norm_text)
+
+
+def match_keyword(
+    text_raw: str,
+    search_kw_str: list[str],
+    exclude_kw_str: list[str],
+) -> tuple[bool, Optional[str]]:
+    """
+    商品名に対して検索KW/除外KWを照合し (hit, matched_kw) を返す。
+
+    GAS 対照: investigate2.gs:9995 matchKeyword_
+      var normText = normalizeEn_(text);
+      // 除外語チェック
+      if (excludeKwStr) {
+        var excl = String(excludeKwStr).split(',').some(kw => {
+          kw = kw.trim(); return kw && matchOneKw_(kw, normText); });
+        if (excl) return { hit: false, matchedKw: null };
+      }
+      // 検索語なし = 全マッチ
+      if (!searchKwStr) return { hit: true, matchedKw: '(既定)' };
+      // 検索語照合（カンマ区切り各語をmatchOneKw_）
+      ...
+
+    Args:
+      text_raw      : 照合対象の生テキスト
+      search_kw_str : 検索キーワードのリスト（DB から個別行で渡す）
+      exclude_kw_str: 除外キーワードのリスト（同上）
+
+    Returns:
+      (hit, matched_kw_or_None)
+    """
+    norm_text = normalize_en(text_raw)
+
+    # 除外語チェック（1語でも hit したら除外）
+    for kw in exclude_kw_str:
+        if kw and match_one_kw(kw, norm_text):
+            return False, None
+
+    # 検索語なし = 全マッチ（GAS と同様）
+    if not search_kw_str:
+        return True, "(既定)"
+
+    for kw in search_kw_str:
+        if kw and match_one_kw(kw, norm_text):
+            return True, kw
+
+    return False, None
+
+
+# ---------------------------------------------------------------------------
 # キーワード照合
 # ---------------------------------------------------------------------------
 
@@ -184,23 +310,11 @@ def match_pid_name_first(
         kws = search_kw.get(code, [])
         ex_kws = exclude_kw.get(code, [])
 
-        best_match: Optional[str] = None
-        best_len = 0
-
-        for kw in kws:
-            if kw in raw_name and len(kw) > best_len:
-                best_match = kw
-                best_len = len(kw)
-
-        if best_match is None:
+        hit, matched_kw = match_keyword(raw_name, kws, ex_kws)
+        if not hit or matched_kw is None:
             continue
 
-        # 除外キーワードチェック
-        excluded = any(ex_kw in raw_name for ex_kw in ex_kws)
-        if excluded:
-            continue
-
-        candidates.append((code, best_match, best_len))
+        candidates.append((code, matched_kw, len(matched_kw)))
 
     if not candidates:
         return (None, "NONE", False, [])
@@ -507,6 +621,10 @@ __all__ = [
     "ENGINE_VERSION",
     "load_lookup_maps",
     "load_product_keywords",
+    "normalize_en",
+    "token_and_match",
+    "match_one_kw",
+    "match_keyword",
     "match_pid_name_first",
     "resolve_unit",
     "resolve_condition",
