@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-09-01 / ADR 総数: 154 件
+最終更新: 2026-09-02 / ADR 総数: 155 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -171,6 +171,7 @@
 | [ADR-151](./ADR-151-jst-date-basis.md) | ADR-151: バックエンド全域で「今日」の基準を JST に統一 | Accepted | — | — |
 | [ADR-152](./ADR-152-frontend-api-path-no-prefix.md) | ADR-152: フロントエンド API 呼び出しパスに /api/v1 プレフィックスを含めない | Accepted | — | — |
 | [ADR-153](./ADR-153-data-durability.md) | ADR-153: データ保全を独立テーマとして立て、時点復旧10分・復旧半日・3拠点を目標に置く | Accepted | — | — |
+| [ADR-154](./ADR-154-tcg-parity02-gas-python-migration.md) | ADR-154: TCG PARITY-02 — GAS Phase 3 解析パイプラインを Python サーバーへ移植する | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 
