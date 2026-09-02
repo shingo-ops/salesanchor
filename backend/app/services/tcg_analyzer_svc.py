@@ -130,6 +130,27 @@ def load_lookup_maps(
     )
 
 
+def load_product_kubun_type_map(session: Session) -> dict[str, str]:
+    """
+    商品コード → 商品区分 kubun_type マップをロードする。
+    product_category_id が NULL の商品は含まない。
+
+    GAS 対照: filterProductMasterByUnitCategoryV2_ 用の商品区分情報
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT p.code, pc.kubun_type
+            FROM {TCG_SCHEMA}.tcg_products p
+            JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
+            WHERE p.is_active = TRUE
+              AND p.product_category_id IS NOT NULL
+            """
+        )
+    ).fetchall()
+    return {r[0]: r[1] for r in rows}
+
+
 def load_product_keywords(
     session: Session,
 ) -> tuple[dict, dict]:
@@ -300,6 +321,30 @@ def match_keyword(
 # ---------------------------------------------------------------------------
 # キーワード照合
 # ---------------------------------------------------------------------------
+
+
+def filter_product_codes_by_unit_kubun(
+    product_codes: list[str],
+    kubun: str,
+    product_code_to_kubun_type: dict[str, str],
+) -> list[str]:
+    """
+    unit kubun に基づいて商品コードリストを絞り込む。
+
+    GAS 対照: filterProductMasterByUnitCategoryV2_ (SystemResolverV2.gs)
+      '箱系' / '箱系大' (UC_BOX / UC_CARTON) → kubun_type='箱系' の商品に限定
+      その他 → 絞り込みなし（全商品を返す）
+
+    フィルタ後に候補がゼロになった場合はフォールバックとして全商品を返す。
+    """
+    if "箱系" not in kubun:
+        return product_codes
+
+    filtered = [
+        c for c in product_codes
+        if product_code_to_kubun_type.get(c) == "箱系"
+    ]
+    return filtered if filtered else product_codes
 
 
 def match_pid_name_first(
@@ -646,6 +691,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     cond_entries = load_condition_entries(session)
     search_kw, exclude_kw = load_product_keywords(session)
     product_codes = list(product_code_to_uuid.keys())
+    product_code_to_kubun_type = load_product_kubun_type_map(session)
 
     # extraction_items を取得
     rows = session.execute(
@@ -678,21 +724,26 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         raw_unit = raw_unit or ""
         raw_state = raw_state or ""
 
-        # 商品照合
-        matched_code, pid_basis, pid_resolved, candidates = match_pid_name_first(
-            raw_product_name, product_codes, search_kw, exclude_kw
-        )
-        product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
-
-        if pid_resolved:
-            stats["pid_resolved"] += 1
-
-        # 単位解決 v2
+        # 単位解決 v2（商品フィルタより先に実行）
         unit_canonical, kubun, unit_resolved = resolve_unit_v2(raw_unit, unit_alias_to_info)
         unit_uuid = unit_canonical_to_uuid.get(unit_canonical) if unit_canonical else None
 
         if unit_resolved:
             stats["unit_resolved"] += 1
+
+        # unit kubun で商品コードを絞り込み（GAS: filterProductMasterByUnitCategoryV2_）
+        filtered_codes = filter_product_codes_by_unit_kubun(
+            product_codes, kubun, product_code_to_kubun_type
+        )
+
+        # 商品照合
+        matched_code, pid_basis, pid_resolved, candidates = match_pid_name_first(
+            raw_product_name, filtered_codes, search_kw, exclude_kw
+        )
+        product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
+
+        if pid_resolved:
+            stats["pid_resolved"] += 1
 
         # 状態解決 v2
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
@@ -819,6 +870,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 __all__ = [
     "ENGINE_VERSION",
     "load_lookup_maps",
+    "load_product_kubun_type_map",
     "load_product_keywords",
     "load_condition_entries",
     "normalize_en",
@@ -826,6 +878,7 @@ __all__ = [
     "match_one_kw",
     "match_keyword",
     "match_pid_name_first",
+    "filter_product_codes_by_unit_kubun",
     "app_kubun_matches",
     "resolve_unit",
     "resolve_unit_v2",
