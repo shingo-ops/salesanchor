@@ -542,6 +542,9 @@ run_sql migrations/20260902_110000_tcg_classification_masters.sql
 run_sql migrations/20260902_110100_tcg_products_classification_ids.sql
 
 
+# PARITY-02 A-2: 単位証拠ルール 4件 seed（tcg_unit_evidence_rules 新規テーブル・冪等）
+run_sql migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql
+
 # PARITY-02 A-3: 注記マスタ 22件 seed（tcg_note_master 新規テーブル・冪等）
 run_sql migrations/20260903_130000_tcg_note_master_t004.sql
 # TCG PARITY-02 A-4: ステータスマスタ 9件（tenant_004 専用・冪等）
