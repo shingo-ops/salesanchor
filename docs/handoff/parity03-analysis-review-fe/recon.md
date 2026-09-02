@@ -64,7 +64,7 @@ L310-311:
 
 ## 既存 ADR との整合
 
-- ADR-027: 全 UI 文字列 `t("key")` 経由。`ja.json`/`en.json` に `superAdminTcgAnalysisReview` 追加
-- ADR-067: CSS は component-scoped vars + project token (`--border`, `--bg-surface`, `--accent` 等)
-- ADR-120: `StatusBadge.tsx` の `badge-${tone}` は `// status-ssot-exempt: review issue tone` 免除
+- ADR-027: 全 UI 文字列 t("key") 経由。ja.json/en.json に superAdminTcgAnalysisReview キー追加
+- ADR-067: CSS は component-scoped vars + project token (--border, --bg-surface, --accent 等)
+- ADR-120: StatusBadge.tsx の badge-${tone} は status-ssot-exempt: review issue tone 免除
 - ADR-154: GAS 解析レビュー UI → React 段階移植（第1段階: 読み取り専用）
