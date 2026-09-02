@@ -40,6 +40,16 @@
 set -euo pipefail
 export TZ=Asia/Tokyo
 
+REPO_DIR="${REPO_DIR:-/home/ubuntu/salesanchor}"
+
+# .env を読み込み（DISCORD_WEBHOOK_OPS 等を環境変数に反映）
+if [ -f "${REPO_DIR}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${REPO_DIR}/.env"
+  set +a
+fi
+
 # 失敗時にDiscord通知（DISCORD_WEBHOOK_OPS が設定されている場合のみ）
 trap 'if [ -n "${DISCORD_WEBHOOK_OPS:-}" ]; then
   curl -s -X POST "$DISCORD_WEBHOOK_OPS" \
