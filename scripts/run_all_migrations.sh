@@ -534,6 +534,12 @@ run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
 
 # attachment-storage 便2: 添付ファイル保管台帳 (tenant_NNN.lead_attachments) + RLS
 run_sql migrations/20260902_100000_create_lead_attachments.sql
+
+# TCG MIG-04: 分類マスタ 4テーブル作成＋GAS実データ seed（tenant_004 専用・冪等）
+run_sql migrations/20260902_110000_tcg_classification_masters.sql
+
+# TCG MIG-04: tcg_products に分類 ID FK を設定し 268件全行を GAS 実データで更新（冪等）
+run_sql migrations/20260902_110100_tcg_products_classification_ids.sql
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
