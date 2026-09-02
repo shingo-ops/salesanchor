@@ -84,27 +84,40 @@ docs/adr/FEATURE-INDEX.md 全文にもデータ保全の行は無し。
 |---|---|---|
 | 1 障害の10分前まで戻せる | 不可 | archive_mode = off により時点復旧の土台が無い |
 | 2 半日以内に戻せる | 未測定 | 復旧演習を実施していない |
-| 3 コピーが3つある | 1 | prod1 ローカルのみ。prod2 に無く、S3 は 2026-05-28 以降 成功0回 |
-| 4 離れた場所に1つある | 0 | prod1・prod2 とも AS9371 SAKURA Internet Inc.・Osaka |
+| 3 コピーが3つある | 2 | prod1 ローカル＋AWS S3 ap-northeast-1。stage 2 でS3転送成功（2026-09-02 21:36 JST） |
+| 4 離れた場所に1つある | 1 | AWS S3 ap-northeast-1（東京リージョン、AWS 事業者・さくらとは別） |
 | 5 全データが対象に入っている | 1/3 | 層1（DB）のみ。層2（添付画像）と層3（環境設定・鍵）は対象外 |
-| 6 失敗が届く | 0 | DISCORD_WEBHOOK_OPS が未設定のため、約3か月の失敗が通知されなかった |
+| 6 失敗が届く | 1/1 | stage 1 で DISCORD_WEBHOOK_OPS を .env に設定・わざと失敗テスト通知確認済み（2026-09-02） |
 | 7 復旧を1度やって見せる | 0 | 実施記録が無い |
 | 8 演習が続く | 0 | 同上 |
+
+## サーバー実測（stage 2: 2026-09-02）
+
+2026-09-02 JST 実測（AWS CLI v2 導入・S3 転送検証）:
+
+| 観測点 | 結果 |
+|---|---|
+| AWS CLI バージョン | aws-cli/2.36.37（ホームディレクトリインストール /home/ubuntu/.local/bin/aws） |
+| sts get-caller-identity | Account: 471112735025 / iam-user: salesanchor-backup-user（鍵有効確認） |
+| s3 ls salesanchor-backups | 存在確認 OK（2026-05-27 以前のオブジェクトが残存） |
+| backup_to_s3.sh 手動実行結果 | OK: サイズ一致（780878 bytes） |
+| S3 格納ファイル | salesanchor_db_20260902_205535.sql.gz（762.6 KiB） |
+| cron PATH 対応 | export PATH="/home/ubuntu/.local/bin:${PATH}" を backup_to_s3.sh 冒頭に追加（PR #3220 → merged） |
 
 ## 不明点リスト
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | S3転送がいつから失敗しているか | s3_backup.log 全体を読む | 解消（2026-05-28 から） |
-| 2 | ~/.aws/credentials の鍵が今も有効か | AWS CLI 導入後に sts get-caller-identity | 未解消 |
-| 3 | バケット salesanchor-backups が実在するか | AWS CLI 導入後に s3 ls | 未解消 |
+| 2 | ~/.aws/credentials の鍵が今も有効か | AWS CLI 導入後に sts get-caller-identity | 解消（有効: account 471112735025・iam-user salesanchor-backup-user 確認） |
+| 3 | バケット salesanchor-backups が実在するか | AWS CLI 導入後に s3 ls | 解消（実在確認: 2026-05-27 以前のオブジェクトも残存） |
 | 4 | 3:00 以外の時刻のバックアップの出所 | deploy.yml の該当箇所を読む | 解消（Pre-deploy DB backup） |
 | 5 | 添付画像の保存先の現況 | docker-compose.yml を読む | 解消（attachments_data・バックアップ対象外） |
 | 6 | 環境設定と鍵のサーバー上の実体 | prod1 の .env を確認 | 解消（実在・GitHub外・復号鍵を含む） |
 | 7 | prod1 と prod2 が同一建物か | さくらインターネットの提供情報を確認 | 未解消 |
 | 8 | バックアップ失敗の通知が誰かに届いているか | DISCORD_WEBHOOK_OPS の設定を確認 | 解消（未設定・届いていない） |
 
-**未解決ゼロ確認**: 未解消3件（#2・#3・#7）。#2 と #3 は prod1 への AWS CLI 導入を伴うため、本 recon では解消しない。#7 は外部情報の確認による。
+**未解決ゼロ確認**: 未解消1件（#7 のみ）。#2・#3 は stage 2 で AWS CLI 導入・S3接続検証により解消（2026-09-02）。#7 は外部情報の確認が必要（さくらインターネット提供情報）。
 
 ## 補足
 
