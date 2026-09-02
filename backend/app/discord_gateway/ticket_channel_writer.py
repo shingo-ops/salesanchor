@@ -267,7 +267,7 @@ async def process_ticket_channel_message(
             )
             if saved_path is not None and saved_size is not None:
                 try:
-                    await db.execute(
+                    result_la = await db.execute(
                         text(f"""
                             INSERT INTO {schema}.lead_attachments
                                 (tenant_id, lead_id, message_id, platform,
@@ -276,6 +276,7 @@ async def process_ticket_channel_message(
                                 (:tenant_id, :lead_id, :message_id, 'discord',
                                  :file_path, :file_size, :content_type, :original_filename)
                             ON CONFLICT (message_id) DO NOTHING
+                                RETURNING id
                         """),
                         {
                             "tenant_id": tenant_id,
@@ -287,6 +288,30 @@ async def process_ticket_channel_message(
                             "original_filename": original_filename,
                         },
                     )
+                    attachment_row = result_la.first()
+                    if attachment_row is not None:
+                        attachment_id = int(attachment_row[0])
+                        serve_url = (
+                            f"/api/v1/leads/{lead.lead_id}"
+                            f"/attachments/{attachment_id}"
+                        )
+                        await db.execute(
+                            text(f"""
+                                UPDATE {schema}.meta_messages
+                                   SET attachment_url = :url
+                                 WHERE message_id = :message_id
+                                   AND tenant_id = :tenant_id
+                            """),
+                            {
+                                "url": serve_url,
+                                "message_id": message_id,
+                                "tenant_id": tenant_id,
+                            },
+                        )
+                        logger.info(
+                            "[attachment-save] 配信URL設定 tenant=%s lead=%s id=%s url=%s",
+                            tenant_id, lead.lead_id, attachment_id, serve_url,
+                        )
                     await db.commit()
                 except Exception:
                     logger.warning(
