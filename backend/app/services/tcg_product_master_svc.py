@@ -534,10 +534,10 @@ async def reanalyze_extraction_job(extraction_job_id: str) -> dict[str, Any]:
 
     GAS: refreshShadowReviewV2 相当（ただし全件ではなく 1 ジョブ限定）。
 
-    ロールバック手順:
-      analysis_results は UPSERT (冪等) のため、正しい商品マスタで
-      analyze_extraction_job を再度呼ぶことで以前の解析結果に上書きできる。
-      ただし「直前の状態」に戻す方法はない。before の値を記録して比較すること。
+    ⚠️  ロールバック手順:
+      再解析は Python エンジンで上書きする。GAS が計算した値には戻らない。
+      実行前に analysis_results_gas_baseline_YYYYMMDD テーブルで全行を退避し、
+      復元時は ON CONFLICT DO UPDATE で元行を差し戻すこと（routers 側 docstring 参照）。
     """
     if not _SYNC_DB_URL:
         raise ValueError("DATABASE_URL not configured for sync session")

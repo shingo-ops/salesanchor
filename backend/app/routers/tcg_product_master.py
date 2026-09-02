@@ -285,9 +285,33 @@ async def reanalyze_job(
     指定ジョブの analysis_results を再解析・UPSERT する。
     実行前の集計値を before に、実行後の stats を after に返す。
 
-    ロールバック手順:
-      analysis_results は UPSERT (冪等) のため、正しい商品マスタ状態で
-      再度呼ぶことで再計算できる。before の値を記録して乖離を確認すること。
+    ⚠️  ロールバック手順:
+      再解析は Python エンジンで上書きする。GAS が計算した値には戻らない。
+      実行前に必ず tenant_004.analysis_results_gas_baseline_YYYYMMDD を作成し、
+      GAS 時点の全行を退避すること。
+
+      退避方法:
+        CREATE TABLE tenant_004.analysis_results_gas_baseline_20260903
+        AS SELECT * FROM tenant_004.analysis_results;
+
+      復元方法:
+        INSERT INTO tenant_004.analysis_results
+          SELECT * FROM tenant_004.analysis_results_gas_baseline_20260903
+          WHERE extraction_item_id IN (
+            SELECT id FROM tenant_004.extraction_items
+            WHERE extraction_job_id = '<対象ジョブID>'
+          )
+        ON CONFLICT (extraction_item_id) DO UPDATE
+          SET pid_resolved   = EXCLUDED.pid_resolved,
+              unit_resolved  = EXCLUDED.unit_resolved,
+              needs_review   = EXCLUDED.needs_review,
+              product_id     = EXCLUDED.product_id,
+              pid_basis      = EXCLUDED.pid_basis,
+              unit           = EXCLUDED.unit,
+              condition      = EXCLUDED.condition,
+              status         = EXCLUDED.status,
+              note           = EXCLUDED.note,
+              exclusion      = EXCLUDED.exclusion;
     """
     try:
         result = await reanalyze_extraction_job(extraction_job_id)
