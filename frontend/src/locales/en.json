@@ -2247,7 +2247,9 @@
       "backToList": "← Back to list",
       "noItems": "No analysis items.",
       "correctPhase3": "Correct → (Phase 3)",
-      "superAdminOnly": "This page is restricted to super_admin."
+      "superAdminOnly": "This page is restricted to super_admin.",
+      "loadMore": "Load more ({{remaining}} left)",
+      "showingCount": "Showing {{shown}} / {{total}}"
     },
     "dex": {
       "title": "Pokemon / Trainer Dex",

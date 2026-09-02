@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
+  /* page-level scroll (PageLayout .page-layout-content overflow-y: auto) handles scrolling */
 }
 
 .supplier-detail-view-header {
@@ -29,30 +29,60 @@
   font-weight: normal;
 }
 
+/* GAS supplier-detail.css:1-5 — 2-column master-detail grid */
 .supplier-detail-view-body {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: var(--space-4);
-  overflow: hidden;
-  flex: 1;
+  grid-template-columns: clamp(320px, 28vw, 480px) minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
 }
 
+/* GAS supplier-detail.css:7-17 — sticky source pane within page-level scroll */
+.supplier-detail-view-body .source-raw {
+  position: sticky;
+  top: var(--space-3);
+  align-self: start;
+  height: calc(100vh - 140px);
+  max-height: none;
+  min-height: 420px;
+  min-width: 0;
+  padding: var(--space-3);
+  border-right: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+/* GAS supplier-detail.css:19-20 */
 .supplier-detail-items {
-  overflow-y: auto;
+  min-width: 0;
+  padding: 0 var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
+/* card per item — GAS supplier-detail.css:22 .item-with-action */
 .supplier-detail-item-row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
+/* GAS supplier-detail.css:24-25 .item-actions */
 .supplier-detail-item-actions {
   display: flex;
   justify-content: flex-end;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.supplier-detail-load-more {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4) 0;
 }
 
 .supplier-detail-correct-btn {
@@ -64,3 +94,60 @@
   cursor: not-allowed;
   color: var(--text-secondary);
 }
+
+/* ── ItemComparison field styles (analysis-review.css is loaded only by the old review page)
+   These mirror .tcg-analysis-review rules scoped to .supplier-detail-items. ── */
+
+.supplier-detail-items .item-comparison { padding: var(--space-3); }
+
+/* GAS style.css h3 header row */
+.supplier-detail-items .item-head-grid h3 {
+  font-size: var(--font-xs);
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.supplier-detail-items .inline-badges {
+  display: inline-flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+.supplier-detail-items .aligned-fields { align-items: stretch; }
+
+/* GAS style.css — label:value row inside each comparison field */
+.supplier-detail-items .comparison-field {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--space-2);
+  min-height: var(--space-10);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+}
+
+.supplier-detail-items .comparison-field b,
+.supplier-detail-items .comparison-extra b {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.supplier-detail-items .comparison-field small,
+.supplier-detail-items .comparison-extra small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--font-2xs);
+  margin-top: var(--space-1);
+}
+
+/* extra metadata area at bottom of each item */
+.supplier-detail-items .item-extra-grid { padding-top: var(--space-2); }
+
+.supplier-detail-items .comparison-extra {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.supplier-detail-items .system-extra { display: grid; gap: var(--space-2); }
