@@ -237,3 +237,27 @@ GAS 側が受信日時を記録していなかったため（LINE Bot の受信�
 ### 将来ガイダンス
 
 将来 LINE から直接取り込む（GAS を経由しない）実装を行う際は、受信時刻を `source_messages.received_at` に記録すること。
+
+---
+
+## PARITY-02 A-4 ステータスマスタ確定記録 (2026-09-03)
+
+### 件数確認
+
+gspread 直接取得（スプレッドシート「ステータスマスタ」タブ）で **9行** を確認。
+
+| status_ID | canonical | MatchType | Effect | Priority |
+|---|---|---|---|---|
+| ST0001 | Pre-order | REGEX | OUTPUT | 10 |
+| ST0002 | Pre-order | REGEX | OUTPUT | 20 |
+| ST0003 | Pre-order | REGEX | OUTPUT | 30 |
+| ST0004 | In Stock | DEFAULT | OUTPUT | 999 |
+| ST0010 | Sold out | LITERAL | EXCLUDE | 10 |
+| ST0011 | Sold out | LITERAL | EXCLUDE | 20 |
+| ST0012 | Sold out | LITERAL | EXCLUDE | 30 |
+| ST0013 | Sold out | LITERAL | EXCLUDE | 40 |
+| ST0014 | Sold out | LITERAL | EXCLUDE | 50 |
+
+- 旧セッションで「5件」と報告したのは誤り（コード内シード値を参照）
+- 実データ 9行を正とする
+- migration `20260903_150000_tcg_status_master_t004.sql` は 9行で作成済み（PR #3211）
