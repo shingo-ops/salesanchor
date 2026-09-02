@@ -209,3 +209,39 @@ E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
 - Searched pack: 61, Damaged case: 17, Unsearched pack: 12
 - Damaged sealed box: 11, Opened box: 5
 - **一致率: 1626/1626 = 100%**
+
+---
+
+## 調査誤り記録（訂正） (2026-09-03)
+
+### Generations 商品データ不在確認
+
+前セッションが出力した「NONE 180件リスト」に「スタートデッキ Generationsのイーブイズ」「スタートデッキ Generationsのリザードン」等の Generations 系商品が含まれていた。
+しかし、これらは実際のデータベースに存在しない。以下の直接 SQL クエリにより確認済み。
+
+```sql
+SELECT COUNT(*) FROM tenant_004.extraction_items
+WHERE raw_product_name ILIKE '%Generations%';
+-- → 0 rows
+
+SELECT COUNT(*) FROM tenant_004.source_messages
+WHERE raw_text ILIKE '%Generations%';
+-- → 0 rows
+```
+
+また、ポケモンカード公式サイト（https://www.pokemon-card.com/ex/svm/index.html）の確認により、
+Generations のイーブイズ・リザードンは公式9種に存在しない。
+
+**原因推定**: 前セッションの 180件リストは、本番デプロイ前の dry-run スクリプトが
+異なるタイミングのデータ状態またはモックデータを参照して生成したものと推定される。
+
+### NONE 件数の変化
+
+| タイミング | NONE 件数 | 備考 |
+|-----------|----------|------|
+| 前セッション dry-run | 180件 | データ誤り含む（Generations 等が混入） |
+| 本番デプロイ後（現在値） | **195件** | `analysis_results.pid_basis='NONE'` のユニーク `raw_product_name` |
+
+増分（+15件）は本番 `analyze_extraction_job` 実行後に追加された仕入データの取込分と推定される。
+
+**現在の NONE 正値: 195件**（2026-09-03 時点・本番 DB 実測値）
