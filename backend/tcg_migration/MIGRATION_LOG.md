@@ -136,9 +136,14 @@ GAS-Python 対照表で差異を発見した場合は、その場で以下のい
 - **E3a + E5 実装済み** (release/tcg-e3a-e5-unit-recovery / PR #3200): dry-run 専用。DB 書き込みなし
   - E3a: NAME_RECOVERY:* = 11行 (ﾊﾟｯｸ:6, box:3, BOX:1, 箱:1) — GAS 実測と一致
   - E5: R4:単位既定:単位不明 → condition 再計算
-- **E2 未実装**: 価格帯推定 (unit_inferred のみ・condition 非影響・対象行は将来データ依存)
+- **E2 実装不要と判定（2026-09-03）**:
+  - 調査: `raw_product_name` に `@価格×数量` / `¥価格×数量` 等の価格×数量パターン **0件**（現行データセット全件走査）
+  - `unit_resolved=FALSE` 528件の `raw_unit` 分布: (空) **495件** / 冊: 17件 / CTN: 4件 / 他
+  - unit 未解決 495件の真因は「原文（raw_unit）に単位語が記載されていない」こと。E2 が解決できる行は **0件**
+  - `AnalysisV2UnitInference` / `UnitInference` クラスは**実装不要**
+  - 将来、raw_product_name に価格×数量パターンを含む仕入データが増えた場合は再検討
 - **E4 未実装**: condition 逆引き (対象行 0 件)
-- **優先度**: 低〜中（残 E2/E4 は影響行 0 件）
+- **優先度**: 低（E2 は実装不要確定・E4 は影響行 0 件）
 
 ### T-4: condition_aliases 大文字小文字の統一
 
@@ -168,7 +173,7 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 |----------|---------|---------|-------------|---------|
 | `AnalysisV2.gs` | Phase 0-3 | 解析V2シート作成・照合実行 (PID/unit/condition 解決の統括) | `analyze_extraction_job()` in `tcg_analyzer_svc.py` | ✅ 実装済み (PR #3188) |
 | `AnalysisV2PackCondition.gs` | Phase 3 後処理 | R5:パック既定 — unit=パック系(UN0003) かつ FLAG_SINGLE 行を Searched pack に変換 | `resolve_condition_v2` R5 ブロック | ✅ 実装済み (PR #3190) |
-| `AnalysisV2UnitInference.gs` | Phase 3 | 価格帯テーブルから unit を推定 (E2: PRICE_BAND) → 解析V2 X-AA列に書き込み | 未実装 | ❌ T-3: 低〜中優先度 |
+| `AnalysisV2UnitInference.gs` | Phase 3 | 価格帯テーブルから unit を推定 (E2: PRICE_BAND) → 解析V2 X-AA列に書き込み | 実装不要と判定 | ❌ T-3: 実装不要（raw_product_name に価格×数量パターン 0件） |
 | `AnalysisV2UnitRecovery.gs` | Phase 3 | 商品名から unit を復旧 (NAME_RECOVERY:*) / 未解決行に UNIT_UNRESOLVED フラグ | `recover_unit_from_product_name()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
 | `AnalysisV2UnitFromCondition.gs` | Phase 3 後処理 | condition_canonical が Box/Pack 系 の行から unit を逆引き導出 | 未実装 | ❌ T-3: 低〜中優先度 (対象行 0) |
 | `AnalysisV2ConditionRecalc.gs` | Phase 3 後処理 | `unit_basis='NAME_RECOVERY:*'` かつ `R4:単位既定:単位不明` 行の condition を再計算 | `recalc_condition_from_recovered_unit()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
