@@ -14,6 +14,7 @@ GAS → サーバー移植の実施済み・未対応一覧。
 | 2026-09-01 | R5:パック既定 追加 (`applyPackConditionDefault` 移植) + `load_condition_entries` ORDER BY code ASC タイブレーカー修正 | release/tcg-cond-r5-fix / PR #3190 |
 | 2026-09-01 | E3a (`recoverUnitFromProductName`) + E5 (`recalcConditionFromResolvedUnit`) 移植 — dry-run 専用。migration: analysis_results に unit_basis 等 4列追加 | release/tcg-e3a-e5-unit-recovery |
 | 2026-09-03 | PARITY-02 Phase D 統合: C-1/C-7/Status + C-3/C-6 (E3a+E5) + C-4/C-5 (E3b+E4) を `analyze_extraction_job` に統合 / ENGINE_VERSION 統一: `name-first-v2` / GAS Phase 3 実行順序: 正規化→照合→E3a→E5→E3b→E4 | release/tcg-parity02-phase-d-integrate |
+| 2026-09-03 | `match_keyword()` GAS 準拠修正: キーワード未登録商品を候補にしない (`!srchStr → return`) / MULTI 1340→46件、pid_resolved 286→1294件（79.6%） | release/tcg-parity02-match-keyword-fix |
 
 ---
 
@@ -75,6 +76,37 @@ PM0263/PM0264/PM0265（30周年カード）は過去にも「マスタ未登録�
 migration で ALTER TABLE が不要だった理由もこれ（列は存在し、値も正しかった）。
 
 今回の v2 実装で `load_lookup_maps()` に `unit_alias_to_info`（alias → (canonical, kubun)）クエリを追加し、解決済み。
+
+---
+
+## 指摘済み差異の追跡失敗記録（教訓）
+
+### 経緯
+
+`match_keyword()` の `search_kw_str 空 → 全マッチ` 差異は、Phase D 統合前の
+GAS-Python 対照表作成セッション（2026-09-03 前半）で既に指摘されていた。
+
+```
+GAS: investigate2.gs:10048 matchPid_
+  if (!pid || !srchStr) return;  ← キーワード未登録の商品はスキップ
+Python: if not search_kw_str: return True, "(既定)"  ← 全ヒット（誤）
+```
+
+にもかかわらず Phase D PR（#3218）に修正が含まれないまま main マージされた。
+Phase E 測定（2026-09-03）で MULTI 1340件という数字が出て初めて発見・修正された。
+
+### 原因
+
+対照表の差異は口頭指摘に留まり、**タスクとして残置されなかった**。
+MIGRATION_LOG の `未対応タスク（T-N）` セクションへの登録がなかったため
+次の実装担当が把握できなかった。
+
+### 再発防止策
+
+GAS-Python 対照表で差異を発見した場合は、その場で以下のいずれかを行う:
+1. 即時修正して PR に含める
+2. 修正できない場合は MIGRATION_LOG の `未対応タスク` に番号を振って登録する
+   - 対応必須フラグ（`TODO: 実装前に修正必要`）を明記する
 
 ---
 
