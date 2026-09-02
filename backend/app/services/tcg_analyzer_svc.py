@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v2-cond-r4"
+ENGINE_VERSION = "name-first-v2-cond-r4-c1c7"
 
 # TCG解析システムは tenant_004 専用スキーマ
 TCG_SCHEMA = "tenant_004"
@@ -662,6 +662,259 @@ def _parse_numeric(raw: str) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
+# C-1: 正規化ルール
+# ---------------------------------------------------------------------------
+
+
+def load_normalization_rules(session: Session) -> dict[str, list[dict]]:
+    """
+    tcg_normalization_rules から enabled=TRUE の行をロードし、
+    {field: [rules sorted by priority ASC]} を返す。
+    テーブルが存在しない場合は空 dict を返す（graceful fallback）。
+
+    GAS 対照: normalizeTextField_ (SystemResolverV2.gs:197)
+    """
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT field, rule_type, from_val, to_val, priority
+                FROM {TCG_SCHEMA}.tcg_normalization_rules
+                WHERE enabled = TRUE
+                ORDER BY field, priority ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_normalization_rules not found, C-1 skipped: %s", exc)
+        return {}
+
+    result: dict[str, list[dict]] = {}
+    for field, rule_type, from_val, to_val, priority in rows:
+        if field not in result:
+            result[field] = []
+        result[field].append(
+            {
+                "rule_type": rule_type,
+                "from_val": from_val or "",
+                "to_val": to_val or "",
+                "priority": priority,
+            }
+        )
+    return result
+
+
+def apply_field_normalization(raw: str, field_rules: list[dict]) -> str:
+    """
+    フィールド値に正規化ルールを適用する（priority ASC 順適用済み前提）。
+
+    - REMOVE        : from_val をリテラル文字列として削除
+    - REPLACE       : from_val → to_val リテラル置換
+    - REGEX_REPLACE : from_val を正規表現として to_val で置換
+                      GAS 式バックリファレンス $N → Python \\N に変換
+
+    GAS 対照: normalizeTextField_ (SystemResolverV2.gs:197)
+    """
+    result = raw or ""
+    for rule in field_rules:
+        rt = rule["rule_type"]
+        fv = rule["from_val"]
+        tv = rule["to_val"]
+        if not fv and rt != "REGEX_REPLACE":
+            continue
+        try:
+            if rt == "REMOVE":
+                result = result.replace(fv, "")
+            elif rt == "REPLACE":
+                result = result.replace(fv, tv)
+            elif rt == "REGEX_REPLACE":
+                # GAS $N → Python \N バックリファレンス変換
+                tv_py = re.sub(r"\$(\d+)", r"\\\1", tv)
+                result = re.sub(fv, tv_py, result)
+        except re.error:
+            logger.warning(
+                "[tcg_analyzer] normalization regex error: rt=%s from=%r", rt, fv
+            )
+    return result.strip()
+
+
+# ---------------------------------------------------------------------------
+# C-7: 注記生成
+# ---------------------------------------------------------------------------
+
+
+def load_note_master(session: Session) -> list[dict]:
+    """
+    tcg_note_master から enabled=TRUE の行を priority ASC でロード。
+    テーブルが存在しない場合は空リストを返す（graceful fallback）。
+
+    GAS 対照: _NOTE_MASTER_ROWS_ (investigate2.gs:14994-15134)
+    """
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT id, label_ja, search_keywords, exclude_keywords, priority
+                FROM {TCG_SCHEMA}.tcg_note_master
+                WHERE enabled = TRUE
+                ORDER BY priority ASC, id ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_note_master not found, C-7 skipped: %s", exc)
+        return []
+
+    return [
+        {
+            "id": r[0],
+            "label_ja": r[1],
+            "search_keywords": [k.strip() for k in (r[2] or "").split(",") if k.strip()],
+            "exclude_keywords": [k.strip() for k in (r[3] or "").split(",") if k.strip()],
+        }
+        for r in rows
+    ]
+
+
+def build_note_ja(raw_memo: str, note_entries: list[dict]) -> Optional[str]:
+    """
+    raw_memo に対して注記マスタを照合し、マッチした label_ja をカンマ区切りで返す。
+    マッチなし・入力空・マスタ空は None。
+
+    matchKeyword_ を再利用して search_keywords / exclude_keywords を照合。
+
+    GAS 対照: buildNoteJA_ (investigate2.gs)
+    """
+    if not raw_memo or not note_entries:
+        return None
+
+    labels: list[str] = []
+    for entry in note_entries:
+        hit, _ = match_keyword(
+            raw_memo,
+            entry["search_keywords"],
+            entry["exclude_keywords"],
+        )
+        if hit:
+            labels.append(entry["label_ja"])
+
+    return ",".join(labels) if labels else None
+
+
+# ---------------------------------------------------------------------------
+# ステータス解決 v2
+# ---------------------------------------------------------------------------
+
+
+def load_status_master(session: Session) -> list[dict]:
+    """
+    tcg_status_master から enabled=TRUE の行を effect ASC, priority ASC でロード。
+    テーブルが存在しない場合は空リストを返す（graceful fallback → 'active' 固定）。
+
+    GAS 対照: resolveStatusV2_ 用マスタ
+    """
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT status_id, canonical, search_pattern, exclude_pattern,
+                       priority, match_type, effect
+                FROM {TCG_SCHEMA}.tcg_status_master
+                WHERE enabled = TRUE
+                ORDER BY effect ASC, priority ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_status_master not found, status='active' default: %s", exc)
+        return []
+
+    return [
+        {
+            "canonical": r[1],
+            "search_pattern": r[2] or "",
+            "priority": r[4],
+            "match_type": r[5],
+            "effect": r[6],
+        }
+        for r in rows
+    ]
+
+
+def _match_status_pattern(text_val: str, pattern: str, match_type: str) -> bool:
+    """
+    ステータスパターン照合。
+    LITERAL: 大文字小文字を区別しない部分一致
+    REGEX  : 正規表現マッチ
+    DEFAULT: 常に True（空パターン時）
+    """
+    if match_type == "DEFAULT":
+        return True
+    if not pattern:
+        return False
+    if match_type == "LITERAL":
+        return pattern.lower() in text_val.lower()
+    if match_type == "REGEX":
+        try:
+            return bool(re.search(pattern, text_val))
+        except re.error:
+            return False
+    return False
+
+
+def resolve_status_v2(
+    raw_state: str,
+    status_entries: list[dict],
+) -> tuple[str, Optional[str]]:
+    """
+    raw_state に対してステータスマスタを適用し (status, exclusion) を返す。
+
+    優先順位:
+    1. EXCLUDE effect エントリ（priority ASC）: マッチ → exclusion='excluded'
+    2. OUTPUT effect エントリ（REGEX/LITERAL のみ、priority ASC）: マッチ → status=canonical
+    3. DEFAULT フォールバック: status=canonical（通常 'In Stock'）
+
+    マスタ空の場合は ('active', None)（後方互換）。
+
+    GAS 対照: resolveStatusV2_
+    """
+    if not status_entries:
+        return ("active", None)
+
+    text_val = raw_state or ""
+
+    # 1. EXCLUDE（在庫切れ系）: 優先チェック
+    for entry in sorted(
+        (e for e in status_entries if e["effect"] == "EXCLUDE"),
+        key=lambda e: e["priority"],
+    ):
+        if _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            return (entry["canonical"], "excluded")
+
+    # 2. OUTPUT（Pre-order 等）: REGEX/LITERAL のみ
+    for entry in sorted(
+        (
+            e
+            for e in status_entries
+            if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"
+        ),
+        key=lambda e: e["priority"],
+    ):
+        if _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            return (entry["canonical"], None)
+
+    # 3. DEFAULT フォールバック
+    for entry in status_entries:
+        if entry["match_type"] == "DEFAULT":
+            return (entry["canonical"], None)
+
+    return ("active", None)
+
+
+# ---------------------------------------------------------------------------
 # 照合メイン
 # ---------------------------------------------------------------------------
 
@@ -693,11 +946,18 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     product_codes = list(product_code_to_uuid.keys())
     product_code_to_kubun_type = load_product_kubun_type_map(session)
 
-    # extraction_items を取得
+    # C-1: 正規化ルール（テーブル未存在時は空 dict → ルールなしで続行）
+    norm_rules = load_normalization_rules(session)
+    # C-7: 注記マスタ（テーブル未存在時は空リスト → note_ja = NULL）
+    note_entries = load_note_master(session)
+    # ステータスマスタ（テーブル未存在時は空リスト → 'active' 固定）
+    status_entries = load_status_master(session)
+
+    # extraction_items を取得（raw_memo は C-7 注記生成に使用）
     rows = session.execute(
         text(
             f"""
-            SELECT id, raw_product_name, raw_quantity, raw_price, raw_unit, raw_state
+            SELECT id, raw_product_name, raw_quantity, raw_price, raw_unit, raw_state, raw_memo
             FROM {TCG_SCHEMA}.extraction_items
             WHERE extraction_job_id = :ej_id
             ORDER BY line_start, id
@@ -717,15 +977,26 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             raw_price,
             raw_unit,
             raw_state,
+            raw_memo,
         ) = row
 
         stats["total"] += 1
         raw_product_name = raw_product_name or ""
         raw_unit = raw_unit or ""
         raw_state = raw_state or ""
+        raw_memo = raw_memo or ""
+
+        # C-1: 正規化ルール適用（各フィールドを解決前に正規化）
+        norm_product_name = apply_field_normalization(
+            raw_product_name, norm_rules.get("PRODUCT_NAME", [])
+        )
+        norm_unit = apply_field_normalization(raw_unit, norm_rules.get("UNIT", []))
+        norm_condition = apply_field_normalization(raw_state, norm_rules.get("CONDITION", []))
+        norm_status = apply_field_normalization(raw_state, norm_rules.get("STATUS", []))
+        norm_memo = apply_field_normalization(raw_memo, norm_rules.get("NOTE", []))
 
         # 単位解決 v2（商品フィルタより先に実行）
-        unit_canonical, kubun, unit_resolved = resolve_unit_v2(raw_unit, unit_alias_to_info)
+        unit_canonical, kubun, unit_resolved = resolve_unit_v2(norm_unit, unit_alias_to_info)
         unit_uuid = unit_canonical_to_uuid.get(unit_canonical) if unit_canonical else None
 
         if unit_resolved:
@@ -738,17 +1009,23 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 商品照合
         matched_code, pid_basis, pid_resolved, candidates = match_pid_name_first(
-            raw_product_name, filtered_codes, search_kw, exclude_kw
+            norm_product_name, filtered_codes, search_kw, exclude_kw
         )
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
 
         if pid_resolved:
             stats["pid_resolved"] += 1
 
-        # 状態解決 v2
+        # 状態解決 v2（正規化済み CONDITION テキストを使用）
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
-            raw_state, raw_product_name, kubun, cond_entries, cond_canonical_to_uuid
+            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid
         )
+
+        # C-7: 注記生成（正規化済み NOTE テキストを使用）
+        note_ja = build_note_ja(norm_memo, note_entries)
+
+        # ステータス解決（正規化済み STATUS テキストを使用）
+        status_val, exclusion_val = resolve_status_v2(norm_status, status_entries)
 
         # 数量・価格正規化
         quantity_normalized = _parse_numeric(raw_quantity or "")
@@ -808,9 +1085,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     :condition_basis,
                     :quantity_normalized,
                     :price_normalized,
-                    NULL,
-                    'active',
-                    NULL,
+                    :note_ja,
+                    :status,
+                    :exclusion,
                     :needs_review,
                     :review_reasons,
                     :engine_version,
@@ -830,6 +1107,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     condition_basis     = EXCLUDED.condition_basis,
                     quantity_normalized = EXCLUDED.quantity_normalized,
                     price_normalized    = EXCLUDED.price_normalized,
+                    note_ja             = EXCLUDED.note_ja,
+                    status              = EXCLUDED.status,
+                    exclusion           = EXCLUDED.exclusion,
                     needs_review        = EXCLUDED.needs_review,
                     review_reasons      = EXCLUDED.review_reasons,
                     engine_version      = EXCLUDED.engine_version,
@@ -851,6 +1131,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                 "condition_basis": condition_basis_str,
                 "quantity_normalized": quantity_normalized,
                 "price_normalized": price_normalized,
+                "note_ja": note_ja,
+                "status": status_val,
+                "exclusion": exclusion_val,
                 "needs_review": needs_review,
                 "review_reasons": review_reasons_str,
                 "engine_version": ENGINE_VERSION,
@@ -873,6 +1156,9 @@ __all__ = [
     "load_product_kubun_type_map",
     "load_product_keywords",
     "load_condition_entries",
+    "load_normalization_rules",
+    "load_note_master",
+    "load_status_master",
     "normalize_en",
     "token_and_match",
     "match_one_kw",
@@ -884,5 +1170,8 @@ __all__ = [
     "resolve_unit_v2",
     "resolve_condition",
     "resolve_condition_v2",
+    "apply_field_normalization",
+    "build_note_ja",
+    "resolve_status_v2",
     "analyze_extraction_job",
 ]

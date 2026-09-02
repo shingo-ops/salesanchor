@@ -13,6 +13,9 @@ GAS → サーバー移植の実施済み・未対応一覧。
 | 2026-09-01 | kubun 状態解決エンジン v2 実装 (name-first-v2-cond-r4): `resolve_unit_v2` / `resolve_condition_v2` / R1〜R4 移植 + migration (conditions に priority/search_kw/exclude_kw 追加 + seed) | release/tcg-keyword-matching / PR #3188 |
 | 2026-09-01 | R5:パック既定 追加 (`applyPackConditionDefault` 移植) + `load_condition_entries` ORDER BY code ASC タイブレーカー修正 | release/tcg-cond-r5-fix / PR #3190 |
 | 2026-09-01 | E3a (`recoverUnitFromProductName`) + E5 (`recalcConditionFromResolvedUnit`) 移植 — dry-run 専用。migration: analysis_results に unit_basis 等 4列追加 | release/tcg-e3a-e5-unit-recovery |
+| 2026-09-03 | PARITY-02 A-4 確定: ステータスマスタ 9行（ST0001-ST0004 / ST0010-ST0014）。旧セッション「5件（ST0001-ST0005）」は誤り。スプレッドシート実データ 9行を正とする | release/parity02-a4-status-master |
+| 2026-09-03 | PARITY-02 C-3+C-6: `apply_unit_recovery_for_job` 追加 / `analyze_extraction_job` に E3a+E5 後処理コール追加 / ENGINE_VERSION: name-first-v2-cond-r4-e3a-e5 | release/tcg-parity02-c3c6-unit-recovery |
+| 2026-09-03 | PARITY-02 C-1+C-7+Status: 正規化ルール適用 / 注記生成 / ステータス解決を `analyze_extraction_job` に組み込み / ENGINE_VERSION: name-first-v2-cond-r4-c1c7 | release/tcg-parity02-c1c7-normalize-note |
 
 ---
 
