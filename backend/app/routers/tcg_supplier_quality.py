@@ -33,13 +33,13 @@ router = APIRouter()
 
 
 class SupplierQualitySummary(BaseModel):
-    supplierId: str
-    supplierName: str
-    analysisCount: int
-    needsReviewCount: int
-    productIdUnresolvedCount: int
-    unitUnresolvedCount: int
-    conditionFallbackCount: int | None  # GAS と同じく null 固定
+    supplier_id: str
+    supplier_name: str
+    analysis_count: int
+    needs_review_count: int
+    product_id_unresolved_count: int
+    unit_unresolved_count: int
+    condition_fallback_count: int | None  # GAS と同じく null 固定
 
 
 class SupplierQualitySummariesResponse(BaseModel):
@@ -50,10 +50,10 @@ class SupplierQualitySummariesResponse(BaseModel):
 class SupplierSourceResponse(BaseModel):
     ok: bool
     found: bool
-    sourceMessageId: str
-    supplierId: str
-    supplierName: str
-    rawText: str
+    source_message_id: str
+    supplier_id: str
+    supplier_name: str
+    raw_text: str
 
 
 # ---------------------------------------------------------------------------
