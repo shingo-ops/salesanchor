@@ -895,7 +895,7 @@ def apply_unit_recovery_for_job(
             "e3a_recovered": len(e3a_updates),
             "e5_changed": 0,
             "aborted": False,
-            "message": f"E3a: 0 recovered, E5: skipped",
+            "message": "E3a: 0 recovered, E5: skipped",
         }
 
     (
