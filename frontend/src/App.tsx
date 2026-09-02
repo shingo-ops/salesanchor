@@ -86,6 +86,7 @@ import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
+import TcgAnalysisReviewPage from "./pages/super-admin/TcgAnalysisReviewPage";  // PARITY-03 第1段階
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -303,6 +304,11 @@ function App() {
                   <Route
                     path="/super-admin/tcg-parallel-report"
                     element={<TcgParallelReportPage />}
+                  />
+                  {/* PARITY-03 第1段階: 解析レビュー (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-analysis-review"
+                    element={<TcgAnalysisReviewPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
