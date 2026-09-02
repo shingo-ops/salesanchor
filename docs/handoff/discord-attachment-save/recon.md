@@ -1,87 +1,68 @@
-# recon: attachment-storage 便3（Discord添付ファイル受信時保存）
+# recon — Discord添付の自社保存（便3）
 
-## 調査日: 2026-09-02
+> この文書は何か（専門用語なしの1行）:
+> 顧客がDiscordに送った画像を自分たちのサーバーに保管する処理を作る前に、
+> 今のコードがどうなっているかを実際に見て記録したもの。
 
----
+対象ADR: docs/adr/ADR-091-discord-bot-scope-definition.md
+親テーマ: docs/specs/attachment-storage/README.md
 
-## 1. 既存ADR検索
+## 実測（2026-09-02）
 
-```
-git grep -i "attachment" docs/adr/
-```
+### 受信処理の現状
 
-- `docs/adr/ADR-091-attachment-storage.md` — 自社保管方針の根拠ADR（便1〜5の設計）
-- `docs/adr/FEATURE-INDEX.md` に `attachment-storage` 索引あり
+`backend/app/discord_gateway/ticket_channel_writer.py`（206行）
 
----
+- 12行目: `from sqlalchemy import text`
+- 17行目: `from app.auth.dependencies import set_tenant_context`
+- 33行目: `def _extract_first_attachment(message)` の定義。
+  Discord メッセージから最初の添付の URL と種別を取り出す。
+  戻り値は `(url, kind)`。kind は image / video / audio / file。
+- 58行目: `async def _lookup_ticket_channel_lead(...)` の定義。
+  `discord_guild_channel_id` から lead を引く。
+- 87行目: `async def process_ticket_channel_message(...)` の定義。
+- 122行目: `await set_tenant_context(db, tenant_id)` を実行済み。
+  同一トランザクション内では追加のテナント設定は不要。
+- 156行目: `attachment_url, attachment_type = _extract_first_attachment(message)`
+- 159行目以降: `meta_messages` への INSERT。
+  `ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO NOTHING`。
 
-## 2. 起点ファイル
+### HTTPクライアントの既存の使い方
 
-| ファイル | 目的 |
-|---|---|
-| `backend/app/discord_gateway/ticket_channel_writer.py` | チケットチャンネルの受信メッセージを `meta_messages` に保存し翻訳をenqueueする |
-| `backend/app/services/discord_sender.py` | httpx パターンの参考（`_TIMEOUT_SEC`, `async with httpx.AsyncClient`） |
-| `backend/app/auth/dependencies.py:255` | `set_tenant_context` / `reset_tenant_context` |
-| `migrations/20260902_100000_create_lead_attachments.sql` | `lead_attachments` テーブル定義（便2・PR#3199でマージ済み） |
+`backend/app/services/discord_sender.py`
 
----
+- 20行目: `import httpx`
+- 25行目: `_TIMEOUT_SEC = 10.0`
+- 69行目: `async with httpx.AsyncClient(timeout=_TIMEOUT_SEC) as client:`
 
-## 3. ticket_channel_writer.py の処理フロー（変更前）
+### テナント文脈の設定
 
-```
-process_ticket_channel_message
-  └─ _lookup_ticket_channel_lead    # channel_id → lead
-  └─ bot/webhook チェック
-  └─ inbound チェック（author == discord_user_id）
-  └─ _extract_first_attachment      # (url, kind) を取得
-  └─ INSERT INTO meta_messages      # ON CONFLICT DO NOTHING
-  └─ enqueue_inbound_translation    # 本文があれば翻訳キュー投入
-```
+`backend/app/auth/dependencies.py:255` `async def set_tenant_context(db, tenant_id)`
 
-変更後は `enqueue_inbound_translation` の前に `_save_attachment_to_disk` と `INSERT INTO lead_attachments` を挟む。
+`SET search_path` / `SET app.tenant_id` / `SET app.is_operator` を一括設定する。
+生の `SET search_path` を書くことは CI grep チェックが禁止している。
 
----
+### 保存先の前提
 
-## 4. lead_attachments テーブル（`backend/app/discord_gateway/ticket_channel_writer.py` で使用）
+- 便1（PR #3195）で `attachments_data` ボリュームを backend にマウント済み。
+  `docker inspect astro-webapp-backend-1` の Mounts に
+  `/data/attachments` (rw) を実測確認済み。
+- 便2（PR #3199）で `tenant_XXX.lead_attachments` を5テナントに作成済み。
+  migration 実行ログで tenant_001 / 003 / 004 / 005 / 006 の作成完了を確認済み。
 
-```sql
--- tenant_XXX.lead_attachments（5テナント作成済み・便2で確認）
-id              BIGSERIAL PRIMARY KEY
-tenant_id       INTEGER NOT NULL
-lead_id         BIGINT NOT NULL REFERENCES leads(id) ON DELETE CASCADE
-message_id      VARCHAR(64) UNIQUE
-platform        VARCHAR(32) NOT NULL
-file_path       TEXT NOT NULL              -- 相対パス（ATTACHMENT_ROOT 基準）
-file_size       BIGINT NOT NULL
-content_type    VARCHAR(128)
-original_filename TEXT
-created_at      TIMESTAMPTZ DEFAULT now()
-updated_at      TIMESTAMPTZ DEFAULT now()
-```
+### Discord CDN の挙動（2026-09-01 実測）
 
----
+- ブラウザから `cdn.discordapp.com` へのリクエストが 503（6回すべて再現）。
+- 同じURLをサーバー（prod1）から取得すると 200（3回とも成功・295679バイト）。
+- 署名パラメータ `ex` は翌日の日時であり、期限切れではない。
 
-## 5. 環境変数・定数
+## 本便で変更する箇所
 
-| 変数 | デフォルト | 説明 |
-|---|---|---|
-| `ATTACHMENT_ROOT` | `/data/attachments` | ホスト bind-mount ポイント（便1で追加・確認済み） |
-| `_DOWNLOAD_TIMEOUT_SEC` | `30.0` | httpx タイムアウト |
+`backend/app/discord_gateway/ticket_channel_writer.py` のみ。
 
----
+- import に `os` / `pathlib.Path` / `httpx` を追加
+- `_save_attachment_to_disk` を新設
+- `meta_messages` INSERT の後、翻訳キューの前に保存処理を挿入
 
-## 6. テナント状況（2026-09-02実測）
-
-- テナント: 001, 003, 004, 005, 006（002はスキーマなし）
-- `lead_attachments` テーブル: 5テナントに作成済み
-- 既存添付データ: tenant_006 に3件（CDN URLのみ保存・ファイル未保存）
-- `/data/attachments`: コンテナ内に存在（空）
-
----
-
-## 7. 影響範囲
-
-- 変更ファイル: `ticket_channel_writer.py` のみ
-- 呼び出し元: `backend/app/discord_gateway/event_handler.py`（`process_ticket_channel_message` を呼ぶ）
-- 追加依存: `httpx`（既存 `requirements.txt` に含まれる）, `pathlib`（標準）
-- DB: `lead_attachments` テーブルへの INSERT のみ（`meta_messages` の既存処理は無変更）
+既存の `_extract_first_attachment` / `_lookup_ticket_channel_lead` /
+`meta_messages` への INSERT は変更しない。
