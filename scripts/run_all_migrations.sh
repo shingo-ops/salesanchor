@@ -547,6 +547,9 @@ run_sql migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql
 # TCG PARITY-02 A-4: ステータスマスタ 9件（tenant_004 専用・冪等）
 run_sql migrations/20260903_150000_tcg_status_master_t004.sql
 
+# TCG PARITY-02 A-1: 正規化ルール 135件（tenant_004 専用・冪等）
+run_sql migrations/20260903_160000_tcg_normalization_rules_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
