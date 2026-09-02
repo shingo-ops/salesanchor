@@ -9,41 +9,38 @@
 
 ## 実測（2026-09-02）
 
-### 既存ワークフローが機能していない
+### 既存ワークフローが main では発火しない
 
-対象ファイル: .github/workflows/active-work-auto-done.yml
+.github/workflows/active-work-auto-done.yml:9 のトリガーが develop 限定である。
+main へのマージでは発火しない。
 
-- トリガーが develop ブランチ限定。main マージでは発火しない。
-- 更新先が .claude-pipeline/active-work.md（本体）固定。
-  .claude-pipeline/active-work.d/ の単票は対象外。
-- checkout の ref も push 先も develop。
-- ADR-114 の時代に作られたまま、ledger-guard 第2弾の書き先分割に追随していない。
+同ファイル:42 の更新先が本体の台帳ファイル固定であり、
+1ブランチ1ファイルの単票は対象外である。
+
+checkout の ref も push 先も develop になっている。
+ADR-114 の時代に作られたまま、ledger-guard 第2弾の書き先分割に追随していない。
 
 ### 別経路の自動化は commit しない
 
-対象ファイル: scripts/cleanup-worktree.sh
-
-マージ後に ledger-update.sh を呼んで DONE 化する。ただし commit も push もしない。
-その結果、本店に未追跡の台帳が 222 件溜まっていた（2026-09-02 実測）。
+scripts/cleanup-worktree.sh:52 がマージ後に台帳を DONE 化する。
+ただし commit も push もしないため、本店に残るだけである。
+その結果、未追跡の台帳が 222 件溜まっていた（2026-09-02 実測）。
 
 ### 窓口スクリプトは Actions からも使える
 
-対象ファイル: scripts/ledger-update.sh
+scripts/ledger-update.sh:12 と scripts/ledger-update.sh:13 で、
+環境変数により対象の場所を差し替えられる。
 
-12行目と13行目で、環境変数 ACTIVE_WORK_FILE と ACTIVE_WORK_DIR により
-対象の場所を差し替えられる。
-
-18行目で active-work.d 配下の単票を優先し、
-無ければ ledger-lookup.sh 経由で本体を見る。
+scripts/ledger-update.sh:18 で単票を優先し、
+無ければ本体を見る仕組みになっている。
 
 ### 関所は台帳のみの変更を素通しする
 
-対象ファイル: scripts/check-process-artifacts.js
+scripts/check-process-artifacts.js:43 の分類定義に、
+拡張子が md のファイルを書類とみなすパターンがある。
+台帳ファイルは拡張子が md のため書類に分類される。
 
-43行目の DOCS_PATTERNS に、拡張子が md のファイルを docs とみなすパターンがある。
-台帳ファイルは拡張子が md のため docs に分類される。
-
-683行目で、書類のみの変更かつ正本を含まない場合に
+scripts/check-process-artifacts.js:683 で、書類のみの変更かつ正本を含まない場合に
 「書類のみの変更 — 自動スキップ（pass）」を出力して終了する。
 
 つまり台帳のみのPRは GO記録の検証に到達しない。
@@ -62,12 +59,10 @@ ruleset 15777895（main branch protection）の実測値:
 
 ### PR自動作成の前例がある
 
-対象ファイル: .github/workflows/brand-asset-monitor.yml
-
-220行目に gh pr create の使用例がある。
-ただしそちらは GITHUB_TOKEN を使っている。
+.github/workflows/brand-asset-monitor.yml:220 に PR 自動作成の使用例がある。
+ただしそちらは既定のトークンを使っている。
 
 ## 本便で追加する箇所
 
 .github/workflows/ledger-auto-done-main.yml を新規作成する。
-既存の .github/workflows/active-work-auto-done.yml は変更しない。
+既存の .github/workflows/active-work-auto-done.yml:9 は変更しない。
