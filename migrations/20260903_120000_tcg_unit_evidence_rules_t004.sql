@@ -9,6 +9,16 @@ DECLARE
     _count  INTEGER;
 BEGIN
     -- -------------------------------------------------------------------------
+    -- ガード: tenant_004 が存在しない場合はスキップ（CI 環境対応）
+    -- -------------------------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_namespace WHERE nspname = _schema
+    ) THEN
+        RAISE NOTICE 'migration 20260903_120000: schema % does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
+    -- -------------------------------------------------------------------------
     -- テーブル作成（additive-only / IF NOT EXISTS）
     -- -------------------------------------------------------------------------
     EXECUTE format($ddl$
