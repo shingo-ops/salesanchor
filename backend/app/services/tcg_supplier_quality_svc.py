@@ -50,13 +50,13 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     rows = (await db.execute(text(sql))).fetchall()
     return [
         {
-            "supplierId": row.supplier_id,
-            "supplierName": row.supplier_name,
-            "analysisCount": row.analysis_count,
-            "needsReviewCount": row.needs_review_count,
-            "productIdUnresolvedCount": row.product_id_unresolved_count,
-            "unitUnresolvedCount": row.unit_unresolved_count,
-            "conditionFallbackCount": None,  # Q8実測不能 — GAS と同じく null 固定
+            "supplier_id": row.supplier_id,
+            "supplier_name": row.supplier_name,
+            "analysis_count": row.analysis_count,
+            "needs_review_count": row.needs_review_count,
+            "product_id_unresolved_count": row.product_id_unresolved_count,
+            "unit_unresolved_count": row.unit_unresolved_count,
+            "condition_fallback_count": None,  # Q8実測不能 — GAS と同じく null 固定
         }
         for row in rows
     ]
@@ -87,16 +87,16 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
         return {
             "ok": True,
             "found": False,
-            "sourceMessageId": "",
-            "supplierId": supplier_id,
-            "supplierName": "",
-            "rawText": "",
+            "source_message_id": "",
+            "supplier_id": supplier_id,
+            "supplier_name": "",
+            "raw_text": "",
         }
     return {
         "ok": True,
         "found": True,
-        "sourceMessageId": row.source_message_id,
-        "supplierId": row.supplier_id or supplier_id,
-        "supplierName": row.supplier_name or "",
-        "rawText": row.raw_text or "",
+        "source_message_id": row.source_message_id,
+        "supplier_id": row.supplier_id or supplier_id,
+        "supplier_name": row.supplier_name or "",
+        "raw_text": row.raw_text or "",
     }

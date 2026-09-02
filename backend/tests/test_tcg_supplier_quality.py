@@ -21,33 +21,33 @@ pytestmark = pytest.mark.asyncio
 
 _DUMMY_SUMMARIES = [
     {
-        "supplierId": "SP0001",
-        "supplierName": "仕入元A",
-        "analysisCount": 10,
-        "needsReviewCount": 3,
-        "productIdUnresolvedCount": 2,
-        "unitUnresolvedCount": 1,
-        "conditionFallbackCount": None,
+        "supplier_id": "SP0001",
+        "supplier_name": "仕入元A",
+        "analysis_count": 10,
+        "needs_review_count": 3,
+        "product_id_unresolved_count": 2,
+        "unit_unresolved_count": 1,
+        "condition_fallback_count": None,
     },
     # items=0 の仕入元（SP0057/Hiroshi 相当）
     {
-        "supplierId": "SP0057",
-        "supplierName": "Hiroshi",
-        "analysisCount": 0,
-        "needsReviewCount": 0,
-        "productIdUnresolvedCount": 0,
-        "unitUnresolvedCount": 0,
-        "conditionFallbackCount": None,
+        "supplier_id": "SP0057",
+        "supplier_name": "Hiroshi",
+        "analysis_count": 0,
+        "needs_review_count": 0,
+        "product_id_unresolved_count": 0,
+        "unit_unresolved_count": 0,
+        "condition_fallback_count": None,
     },
 ]
 
 _DUMMY_SOURCE = {
     "ok": True,
     "found": True,
-    "sourceMessageId": "bbbbbbbb-0000-0000-0000-000000000001",
-    "supplierId": "SP0001",
-    "supplierName": "仕入元A",
-    "rawText": "ポケモンカード SV1a 1BOX 5000円",
+    "source_message_id": "bbbbbbbb-0000-0000-0000-000000000001",
+    "supplier_id": "SP0001",
+    "supplier_name": "仕入元A",
+    "raw_text": "ポケモンカード SV1a 1BOX 5000円",
 }
 
 
@@ -117,13 +117,13 @@ async def test_supplier_quality_summaries_response_shape(fake_super_admin_overri
     assert len(body["summaries"]) == 2
     s = body["summaries"][0]
     for key in (
-        "supplierId",
-        "supplierName",
-        "analysisCount",
-        "needsReviewCount",
-        "productIdUnresolvedCount",
-        "unitUnresolvedCount",
-        "conditionFallbackCount",
+        "supplier_id",
+        "supplier_name",
+        "analysis_count",
+        "needs_review_count",
+        "product_id_unresolved_count",
+        "unit_unresolved_count",
+        "condition_fallback_count",
     ):
         assert key in s, f"{key} missing"
 
@@ -141,10 +141,10 @@ async def test_zero_items_supplier_included(fake_super_admin_override):
         ) as client:
             resp = await client.get("/api/v1/tcg/supplier-quality-summaries")
     body = resp.json()
-    supplier_ids = [s["supplierId"] for s in body["summaries"]]
+    supplier_ids = [s["supplier_id"] for s in body["summaries"]]
     assert "SP0057" in supplier_ids, "SP0057 (items=0) がサマリーに含まれていない"
-    hiroshi = next(s for s in body["summaries"] if s["supplierId"] == "SP0057")
-    assert hiroshi["analysisCount"] == 0
+    hiroshi = next(s for s in body["summaries"] if s["supplier_id"] == "SP0057")
+    assert hiroshi["analysis_count"] == 0
 
 
 async def test_supplier_source_response_shape(fake_super_admin_override):
@@ -163,10 +163,10 @@ async def test_supplier_source_response_shape(fake_super_admin_override):
     for key in (
         "ok",
         "found",
-        "sourceMessageId",
-        "supplierId",
-        "supplierName",
-        "rawText",
+        "source_message_id",
+        "supplier_id",
+        "supplier_name",
+        "raw_text",
     ):
         assert key in body, f"{key} missing"
     assert body["found"] is True
