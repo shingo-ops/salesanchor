@@ -2,6 +2,24 @@
 
 > 作成: 2026-09-03 / 作業者: Hikky-dev
 
+**対象ADR**: ADR-154  
+**recon**: docs/handoff/parity02-phase-d-integrate/recon.md
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+- 事例1: GAS → Python 移植（本プロジェクト過去実績）→ 応用: 同パターンで解析パイプラインを移植。ENGINE_VERSION 文字列で実行系を追跡し、dry-run で数値一致を確認する手法を踏襲。
+- 事例2: ADR-135（本番スクリプト変更 GO 必須）→ 応用: 今回は DB マイグレーションなし・ロジックのみのため graceful fallback を設け、マスタ未投入時も本番が壊れない設計を採用。
+
+---
+
+## 維持の仕組み
+
+- ENGINE_VERSION: 各 analyze_extraction_job 実行で analysis_results に記録。バージョン不一致行をクエリで検出できる。
+- 既存テスト（pytest -x -q）で主要ロジックをカバー。新規マスタ追加時は dry-run スクリプトで事前検証してから投入する。
+- C ブランチ (#3213/#3214/#3217) は Phase D マージ後に close し、Phase D 1本がすべての実装を含む状態を維持する。
+
 ---
 
 ## 目的
