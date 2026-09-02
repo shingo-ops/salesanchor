@@ -16,6 +16,8 @@
 
 ## 維持の仕組み
 
+守り手: backend/tests/test_tcg_keyword_matching.py
+
 - `test_tcg_keyword_matching.py::test_empty_search_kw_returns_no_match` で `search_kw=[]` の挙動を恒久的に保護する。
 - MIGRATION_LOG.md（`backend/tcg_migration/MIGRATION_LOG.md`）に「指摘済み差異追跡失敗の教訓」を追記し、差異発見時は即修正またはタスク登録を義務化した。
 - ENGINE_VERSION は Phase D のまま変更しない（同一ロジック修正のため）。

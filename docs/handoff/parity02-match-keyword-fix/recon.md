@@ -39,7 +39,7 @@ if (!pid || !srchStr) return;  ← キーワード未登録はスキップ
 ### 影響調査
 
 - `match_keyword` の呼び出し元: `tcg_analyzer_svc.py:373`, `tcg_analyzer_svc.py:586`, `tcg_analyzer_svc.py:597`
-- `match_keyword` は `__all__` にエクスポート: `tcg_analyzer_svc.py:1118`
+- `match_keyword` は `__all__` にエクスポート: `backend/app/services/tcg_analyzer_svc.py:1118`
 - テスト: `backend/tests/test_tcg_keyword_matching.py`
 
 ---
