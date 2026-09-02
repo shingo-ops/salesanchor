@@ -165,7 +165,7 @@ export function InboxMessageThread({
     const messages = messagesData?.messages ?? [];
     for (const m of messages) {
       const url = m.attachment_url;
-      if (!url || !url.startsWith("/api/")) continue;
+      if (!url || !url.startsWith("/leads/")) continue;
       if (blobFetchedRef.current.has(m.id)) continue;
       blobFetchedRef.current.add(m.id);
       api
@@ -402,7 +402,7 @@ export function InboxMessageThread({
                   </div>
                 )}
                 {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
-                  msg.attachment_url?.startsWith("/api/") ? (
+                  msg.attachment_url?.startsWith("/leads/") ? (
                     blobUrl[msg.id] ? (
                       <img
                         src={blobUrl[msg.id]}
