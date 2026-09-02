@@ -271,6 +271,8 @@ services:
   discord-gateway:
     build: ./backend
     command: python -m app.discord_gateway.main
+    volumes:
+      - attachments_data:/data/attachments
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DISCORD_GATEWAY_LOG_LEVEL=${DISCORD_GATEWAY_LOG_LEVEL:-INFO}
