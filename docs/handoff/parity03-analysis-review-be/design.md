@@ -2,7 +2,8 @@
 
 作成日: 2026-09-02  
 ブランチ: release/parity03-analysis-review-be  
-参照: [recon.md](./recon.md)
+参照: docs/handoff/parity03-analysis-review-be/recon.md  
+対象ADR: ADR-154（GAS→Python マイグレーション方針）
 
 ---
 
@@ -69,10 +70,10 @@ FE (fetch)
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 GAS `google.script.run.*` → REST API 移植パターン:  
-既存 PARITY-01 (tcg_parallel_report.py) と同一方針。`require_super_admin` + `AsyncSession` 依存注入。
+既存 PARITY-01 (`backend/app/services/tcg_parallel_report_svc.py`) と同一方針。`require_super_admin` + `AsyncSession` 依存注入。ADR-154 方針に従い読み取り専用 API を先行移植し、フロントエンドから fetch() で直接呼び出す構成とする。
 
 ---
 
