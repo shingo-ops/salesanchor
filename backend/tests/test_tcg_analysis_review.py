@@ -121,7 +121,7 @@ async def test_list_analysis_results_response_shape(fake_super_admin_override):
     from app.main import app
 
     with patch(
-        "app.services.tcg_analysis_review_svc.fetch_analysis_results",
+        "app.routers.tcg_analysis_review.fetch_analysis_results",
         new=AsyncMock(return_value=_DUMMY_FETCH_RESULT),
     ):
         async with AsyncClient(
@@ -170,7 +170,7 @@ async def test_status_counts_response_shape(fake_super_admin_override):
     from app.main import app
 
     with patch(
-        "app.services.tcg_analysis_review_svc.fetch_status_counts",
+        "app.routers.tcg_analysis_review.fetch_status_counts",
         new=AsyncMock(return_value=_DUMMY_COUNTS),
     ):
         async with AsyncClient(
@@ -191,7 +191,7 @@ async def test_status_tab_invalid_falls_back_to_all(fake_super_admin_override):
     from app.main import app
 
     with patch(
-        "app.services.tcg_analysis_review_svc.fetch_analysis_results",
+        "app.routers.tcg_analysis_review.fetch_analysis_results",
         new=AsyncMock(return_value=_DUMMY_FETCH_RESULT),
     ):
         async with AsyncClient(
