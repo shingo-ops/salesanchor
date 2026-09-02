@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { api } from "../../lib/api";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { translateMessage } from "../../lib/messages";
 import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
@@ -101,6 +102,10 @@ export function InboxMessageThread({
   // 受信画像 URL 再取得（CDN 期限切れ対応）
   const [resolvedUrl, setResolvedUrl] = useState<Record<number, string>>({});
   const retriedRef = useRef<Set<number>>(new Set());
+  // 自社配信APIの画像は Authorization ヘッダーが要るため img src に直接渡せない。
+  // Blob で取得して objectURL に変換したものをここへ入れる（attachment-storage 便4b）。
+  const [blobUrl, setBlobUrl] = useState<Record<number, string>>({});
+  const blobFetchedRef = useRef<Set<number>>(new Set());
   // ライトボックス（原寸表示）
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const openLightbox = useCallback((url: string) => setLightboxUrl(url), []);
@@ -153,6 +158,34 @@ export function InboxMessageThread({
     setResolvedUrl({});
     retriedRef.current = new Set();
   }, [selectedLeadId]);
+
+  // 自社配信APIの添付を Blob で取得して objectURL 化する。
+  // 取得済みのものは再取得しない。アンマウント時に objectURL を解放する。
+  useEffect(() => {
+    const messages = messagesData?.messages ?? [];
+    for (const m of messages) {
+      const url = m.attachment_url;
+      if (!url || !url.startsWith("/api/")) continue;
+      if (blobFetchedRef.current.has(m.id)) continue;
+      blobFetchedRef.current.add(m.id);
+      api
+        .getBlob(url)
+        .then((blob) => {
+          setBlobUrl((prev) => ({ ...prev, [m.id]: URL.createObjectURL(blob) }));
+        })
+        .catch(() => {
+          // 取得できなければプレースホルダのまま
+        });
+    }
+  }, [messagesData]);
+
+  useEffect(() => {
+    return () => {
+      for (const u of Object.values(blobUrl)) {
+        URL.revokeObjectURL(u);
+      }
+    };
+  }, [blobUrl]);
 
   const handleAttachmentError = useCallback(
     async (msgDbId: number, msgMetaId: string | null) => {
@@ -369,7 +402,22 @@ export function InboxMessageThread({
                   </div>
                 )}
                 {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
-                  retriedRef.current.has(msg.id) && !resolvedUrl[msg.id] ? (
+                  msg.attachment_url?.startsWith("/api/") ? (
+                    blobUrl[msg.id] ? (
+                      <img
+                        src={blobUrl[msg.id]}
+                        alt={t("inbox.imagePreviewAlt")}
+                        className="msg-attachment-img"
+                        style={{ cursor: "zoom-in" }}
+                        onClick={() => openLightbox(blobUrl[msg.id])}
+                      />
+                    ) : (
+                      <span className="msg-attachment-placeholder">
+                        <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+                        {t("inbox.imagePreviewAlt")}
+                      </span>
+                    )
+                  ) : retriedRef.current.has(msg.id) && !resolvedUrl[msg.id] ? (
                     <span className="msg-attachment-placeholder">
                       <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
                       {t("inbox.imageExpired")}
