@@ -39,12 +39,14 @@
 
 /* GAS supplier-detail.css:7-17 — sticky source pane within page-level scroll */
 .supplier-detail-view-body .source-raw {
+  --tcg-sq-source-min-h: 420px; /* component-local token: min height when viewport is short */
+  --tcg-sq-sticky-offset: 140px; /* component-local token: approx header+title height */
   position: sticky;
   top: var(--space-3);
   align-self: start;
-  height: calc(100vh - 140px);
+  height: calc(100vh - var(--tcg-sq-sticky-offset));
   max-height: none;
-  min-height: 420px;
+  min-height: var(--tcg-sq-source-min-h);
   min-width: 0;
   padding: var(--space-3);
   border-right: 1px solid var(--border);
