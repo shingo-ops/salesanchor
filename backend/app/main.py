@@ -90,6 +90,7 @@ goals,  # ダッシュボード強化: 目標管理
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
+    tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     teams,
     tenant_admin_inventory_visibility,
@@ -549,6 +550,11 @@ app.include_router(
 app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_review.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # MIG-04 Phase 4: 並行運用比較レポート（is_super_admin 限定）
