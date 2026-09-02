@@ -540,6 +540,10 @@ run_sql migrations/20260902_110000_tcg_classification_masters.sql
 
 # TCG MIG-04: tcg_products に分類 ID FK を設定し 268件全行を GAS 実データで更新（冪等）
 run_sql migrations/20260902_110100_tcg_products_classification_ids.sql
+
+# PARITY-02 A-7: products_logistics 廃止（DROP TABLE・PO承認済み・冪等）
+run_sql migrations/20260903_140000_drop_products_logistics_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

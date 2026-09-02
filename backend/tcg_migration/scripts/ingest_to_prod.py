@@ -51,7 +51,7 @@ TABLE_ORDER = [
     "tcg_suppliers",
     "supplier_channels",
     "tcg_products",
-    "products_logistics",
+    # products_logistics: PARITY-02 A-7 で廃止（2列のみ・実データなし）
     "product_search_keywords",
     "product_exclude_keywords",
     "units",
@@ -69,10 +69,7 @@ TABLE_ORDER = [
 ]
 
 # ON CONFLICT のターゲット列（デフォルト: id）
-# products_logistics は product_id が PK
-CONFLICT_KEY: dict[str, str] = {
-    "products_logistics": "product_id",
-}
+CONFLICT_KEY: dict[str, str] = {}
 
 # ---------------------------------------------------------------------------
 # 接続ヘルパー

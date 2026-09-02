@@ -61,7 +61,7 @@ DB_TABLE_DESCRIPTIONS = {
     "tcg_suppliers":            ("仕入元マスタ",        "旧: 仕入元マスタ シート"),
     "supplier_channels":        ("仕入元チャネル",       "旧: 仕入元マスタ シート（LINE ID 列）"),
     "tcg_products":             ("商品マスタ",           "旧: 商品マスタV2 シート"),
-    "products_logistics":       ("商品物流情報",         "旧: 商品マスタV2 シート（物流列）"),
+    # products_logistics: PARITY-02 A-7 で廃止（2列のみ・実データなし）
     "product_search_keywords":  ("商品検索キーワード",   "旧: 商品マスタV2 列内"),
     "product_exclude_keywords": ("商品除外キーワード",   "旧: 商品マスタV2 列内"),
     "units":                    ("単位マスタ",           "旧: 単位マスタ シート"),
@@ -276,7 +276,7 @@ def _fetch_db_structure(cur: Any) -> tuple[list[str], list[list]]:
         WHERE t.table_schema = 'public'
           AND t.table_name IN (
             'tcg_suppliers','supplier_channels','tcg_products',
-            'products_logistics','product_search_keywords','product_exclude_keywords',
+            'product_search_keywords','product_exclude_keywords',
             'units','unit_aliases','conditions','condition_aliases',
             'source_messages','extraction_jobs','extraction_items',
             'analysis_results','unparsed_lines','item_notes','import_jobs','audit_log'
