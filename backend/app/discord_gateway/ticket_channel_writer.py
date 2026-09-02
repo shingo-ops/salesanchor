@@ -291,8 +291,11 @@ async def process_ticket_channel_message(
                     attachment_row = result_la.first()
                     if attachment_row is not None:
                         attachment_id = int(attachment_row[0])
+                        # API_BASE（/api/v1）はクライアント側が付ける。
+                        # ここで付けると frontend の api.getBlob で二重になる
+                        # （2026-09-02 に /api/v1/api/v1/... で 404 を実測）。
                         serve_url = (
-                            f"/api/v1/leads/{lead.lead_id}"
+                            f"/leads/{lead.lead_id}"
                             f"/attachments/{attachment_id}"
                         )
                         await db.execute(
