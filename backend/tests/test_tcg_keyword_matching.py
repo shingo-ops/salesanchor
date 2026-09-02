@@ -208,11 +208,17 @@ class TestMatchKeyword:
         assert hit is False
         assert kw is None
 
-    def test_empty_search_kw_returns_all_match(self):
-        # GAS: searchKwStr が空 → '(既定)' でhit
+    def test_empty_search_kw_returns_no_match(self):
+        # GAS: matchPid_(!srchStr) → return でスキップ。キーワード未登録商品は候補にしない
         hit, kw = match_keyword("任意テキスト", [], [])
-        assert hit is True
-        assert kw == "(既定)"
+        assert hit is False
+        assert kw is None
+
+    def test_empty_search_kw_with_text_returns_no_match(self):
+        # キーワード未登録商品はいかなる商品名でも候補にならない
+        hit, kw = match_keyword("スタートデッキGenerations", [], [])
+        assert hit is False
+        assert kw is None
 
     def test_ascii_word_boundary(self):
         # "AR" が "CARD" にヒットしない
