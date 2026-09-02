@@ -151,7 +151,7 @@
     "superAdminInventoryOffers": "仕入元現在オファー",
     "superAdminFxRate": "為替レート管理",
     "superAdminTcgParallelReport": "並行運用比較レポート",
-    "superAdminTcgAnalysisReview": "解析レビュー",
+    "superAdminTcgSupplierQuality": "仕入元サマリー",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -2233,6 +2233,21 @@
         "code": "種別コード",
         "addBtn": "種別を追加"
       }
+    },
+    "supplierQuality": {
+      "columns": {
+        "supplierName": "仕入元",
+        "analysisCount": "解析",
+        "needsReviewCount": "要確認",
+        "productIdUnresolvedCount": "商品ID未解決",
+        "unitUnresolvedCount": "単位未解決",
+        "conditionFallbackCount": "状態未解決（集計準備中）"
+      },
+      "conditionPending": "集計準備中",
+      "backToList": "← 一覧に戻る",
+      "noItems": "解析アイテムはありません。",
+      "correctPhase3": "修正する → (Phase 3)",
+      "superAdminOnly": "このページは super_admin 専用です。"
     },
     "dex": {
       "title": "ポケモン / トレーナー図鑑",

@@ -1,8 +1,7 @@
 """
 PARITY-03: 解析レビュー API サービス層。
 
-GAS の getAnalysisReviewPage / previewAnalysisReviewStatusTabs に相当する
-解析結果一覧・タブ件数取得ロジック。
+GAS の getAnalysisReviewPage に相当する解析結果一覧取得ロジック。
 
 TCG 解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
 DB 書き込みは行わない（読み取り専用）。
@@ -126,58 +125,6 @@ def _compute_issues(
 
 
 # ---------------------------------------------------------------------------
-# ステータスタブ件数（A-2）
-# ---------------------------------------------------------------------------
-
-
-async def fetch_status_counts(
-    db: AsyncSession,
-    *,
-    query: str | None = None,
-    provider: str | None = None,
-) -> dict[str, int]:
-    """タブ別件数を 1 クエリで取得する。フィルタは query / provider のみ。"""
-    where, params = _build_where(
-        query=query,
-        provider=provider,
-        status_tab="ALL",
-        review_only=False,
-        unregistered_only=False,
-        unresolved_unit_only=False,
-    )
-    sql = f"""
-        SELECT
-            COUNT(*) AS all_count,
-            COUNT(*) FILTER (
-                WHERE NOT ar.pid_resolved
-                   OR NOT ar.unit_resolved
-                   OR ar.exclusion IS NOT NULL
-            ) AS needs_review,
-            COUNT(*) FILTER (WHERE ar.pid_basis = 'NONE') AS master_unregistered,
-            COUNT(*) FILTER (WHERE ts.id IS NULL) AS supplier_unregistered,
-            COUNT(*) FILTER (WHERE NOT ar.pid_resolved) AS pid_unresolved,
-            COUNT(*) FILTER (
-                WHERE ar.pid_resolved
-                  AND ar.unit_resolved
-                  AND ar.exclusion IS NULL
-            ) AS normal_completed
-        {_BASE_FROM}
-        {where}
-    """
-    row = (await db.execute(text(sql), params)).fetchone()
-    if row is None:
-        return {}
-    return {
-        "ALL": row.all_count,
-        "NEEDS_REVIEW": row.needs_review,
-        "PRODUCT_MASTER_UNREGISTERED": row.master_unregistered,
-        "SUPPLIER_UNREGISTERED": row.supplier_unregistered,
-        "PRODUCT_ID_UNRESOLVED": row.pid_unresolved,
-        "NORMAL_COMPLETED": row.normal_completed,
-    }
-
-
-# ---------------------------------------------------------------------------
 # 解析結果一覧（A-1）
 # ---------------------------------------------------------------------------
 
@@ -193,6 +140,7 @@ async def fetch_analysis_results(
     review_only: bool = False,
     unregistered_only: bool = False,
     unresolved_unit_only: bool = False,
+    strip_raw_text: bool = False,
 ) -> dict:
     """
     解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
@@ -299,9 +247,9 @@ async def fetch_analysis_results(
             }
         )
 
-    status_tab_counts = await fetch_status_counts(
-        db, query=query, provider=provider
-    )
+    if strip_raw_text:
+        for item in items:
+            item["raw_text"] = ""
 
     return {
         "items": items,
@@ -310,5 +258,4 @@ async def fetch_analysis_results(
         "offset": offset,
         "limit": limit,
         "providers": providers,
-        "status_tab_counts": status_tab_counts,
     }

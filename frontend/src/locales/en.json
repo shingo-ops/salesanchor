@@ -151,7 +151,7 @@
     "superAdminInventoryOffers": "Supplier Offers",
     "superAdminFxRate": "FX Rate Management",
     "superAdminTcgParallelReport": "Parallel Engine Report",
-    "superAdminTcgAnalysisReview": "Analysis Review",
+    "superAdminTcgSupplierQuality": "Supplier Quality",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -2233,6 +2233,21 @@
         "code": "Type Code",
         "addBtn": "Add Type"
       }
+    },
+    "supplierQuality": {
+      "columns": {
+        "supplierName": "Supplier",
+        "analysisCount": "Analysis",
+        "needsReviewCount": "Needs Review",
+        "productIdUnresolvedCount": "Product ID Unresolved",
+        "unitUnresolvedCount": "Unit Unresolved",
+        "conditionFallbackCount": "Condition Unresolved (pending)"
+      },
+      "conditionPending": "Pending",
+      "backToList": "← Back to list",
+      "noItems": "No analysis items.",
+      "correctPhase3": "Correct → (Phase 3)",
+      "superAdminOnly": "This page is restricted to super_admin."
     },
     "dex": {
       "title": "Pokemon / Trainer Dex",

@@ -5,10 +5,7 @@ PARITY-03 第1段階: 解析レビュー API。
   GET /api/v1/tcg/analysis-results
     認証: require_super_admin
     解析結果一覧（GAS: getAnalysisReviewPage 相当）
-
-  GET /api/v1/tcg/analysis-results/status-counts
-    認証: require_super_admin
-    タブ別件数（GAS: previewAnalysisReviewStatusTabs 相当）
+    SupplierDetailPage から provider フィルタで使用
 """
 from __future__ import annotations
 
@@ -18,10 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
-from app.services.tcg_analysis_review_svc import (
-    fetch_analysis_results,
-    fetch_status_counts,
-)
+from app.services.tcg_analysis_review_svc import fetch_analysis_results
 
 router = APIRouter()
 
@@ -62,15 +56,6 @@ class AnalysisResultItem(BaseModel):
     review_issues: list[str]
 
 
-class StatusTabCounts(BaseModel):
-    ALL: int = 0
-    NEEDS_REVIEW: int = 0
-    PRODUCT_MASTER_UNREGISTERED: int = 0
-    SUPPLIER_UNREGISTERED: int = 0
-    PRODUCT_ID_UNRESOLVED: int = 0
-    NORMAL_COMPLETED: int = 0
-
-
 class AnalysisResultsResponse(BaseModel):
     items: list[AnalysisResultItem]
     total: int
@@ -78,11 +63,6 @@ class AnalysisResultsResponse(BaseModel):
     offset: int
     limit: int
     providers: list[str]
-    status_tab_counts: StatusTabCounts
-
-
-class StatusCountsResponse(BaseModel):
-    status_tab_counts: StatusTabCounts
 
 
 # ---------------------------------------------------------------------------
@@ -98,17 +78,18 @@ _STATUS_TABS = {
 @router.get(
     "/tcg/analysis-results",
     response_model=AnalysisResultsResponse,
-    summary="解析結果一覧（PARITY-03 第1段階）",
+    summary="解析結果一覧（SupplierDetailPage から provider フィルタで使用）",
 )
 async def list_analysis_results(
     query: str | None = Query(default=None, description="商品名・仕入元・商品IDの部分一致検索"),
     provider: str | None = Query(default=None, description="仕入元名で絞り込み"),
     status_tab: str = Query(default="ALL", description="タブ絞り込み"),
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=10, ge=1, le=100),
-    review_only: bool = Query(default=False, description="要確認のみ"),
-    unregistered_only: bool = Query(default=False, description="マスタ未登録のみ"),
-    unresolved_unit_only: bool = Query(default=False, description="単位未解決のみ"),
+    limit: int = Query(default=10, ge=1, le=500),
+    review_only: bool = Query(default=False),
+    unregistered_only: bool = Query(default=False),
+    unresolved_unit_only: bool = Query(default=False),
+    strip_raw_text: bool = Query(default=False, description="raw_text を省略（SupplierDetailPage 用）"),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> AnalysisResultsResponse:
@@ -125,6 +106,7 @@ async def list_analysis_results(
         review_only=review_only,
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
+        strip_raw_text=strip_raw_text,
     )
     return AnalysisResultsResponse(
         items=data["items"],
@@ -133,20 +115,4 @@ async def list_analysis_results(
         offset=data["offset"],
         limit=data["limit"],
         providers=data["providers"],
-        status_tab_counts=StatusTabCounts(**data["status_tab_counts"]),
     )
-
-
-@router.get(
-    "/tcg/analysis-results/status-counts",
-    response_model=StatusCountsResponse,
-    summary="解析結果タブ件数（PARITY-03 第1段階）",
-)
-async def get_status_counts(
-    query: str | None = Query(default=None),
-    provider: str | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_super_admin),
-) -> StatusCountsResponse:
-    counts = await fetch_status_counts(db, query=query, provider=provider)
-    return StatusCountsResponse(status_tab_counts=StatusTabCounts(**counts))
