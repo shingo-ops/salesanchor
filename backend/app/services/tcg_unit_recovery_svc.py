@@ -724,6 +724,300 @@ def _print_dry_run_results(
     print("=" * 60)
 
 
+# ---------------------------------------------------------------------------
+# Production entry point: apply E3a + E5 for a single extraction job
+# ---------------------------------------------------------------------------
+
+
+def apply_unit_recovery_for_job(
+    session: Session,
+    extraction_job_id: str,
+    tenant_schema: str = "tenant_004",
+) -> dict:
+    """
+    E3a + E5 をジョブ単位で実行し、DB に結果を書き込む（本番用）。
+
+    GAS 対照: recoverUnitFromProductName + recalcConditionFromResolvedUnit
+              (AnalysisV2UnitRecovery.gs / AnalysisV2ConditionRecalc.gs)
+
+    処理順序:
+      1. E3a: extraction_job_id の analysis_results のうち unit_resolved=FALSE・raw_unit='' の行を
+             商品名末尾の単位語で復旧 → unit_id / unit_canonical / unit_resolved / unit_basis を UPDATE
+      2. E5:  E3a 復旧行のうち condition_basis='R4:単位既定:単位不明' の行で condition を再計算 → UPDATE
+
+    Args:
+        session: 同期 SQLAlchemy Session（呼び出し元でコミット済みであること）
+        extraction_job_id: 処理対象の extraction_job UUID 文字列
+        tenant_schema: テナントスキーマ名
+
+    Returns:
+        {
+          e3a_recovered: int,   # E3a で実際に unit を復旧した行数
+          e5_changed: int,      # E5 で condition を変更した行数
+          aborted: bool,        # 安全装置上限超過で中止したか
+          message: str,
+        }
+    """
+    unit_terms = build_unit_recovery_terms()
+    if not unit_terms:
+        return {
+            "e3a_recovered": 0,
+            "e5_changed": 0,
+            "aborted": False,
+            "message": "unit master has no active entries — skipped",
+        }
+
+    # --- E3a: 対象行を取得（当該ジョブのみ） ---
+    rows = session.execute(
+        text(
+            f"""
+            SELECT
+                ar.id                AS ar_id,
+                ar.unit_resolved,
+                ar.pid_resolved,
+                ar.product_id,
+                ei.raw_unit,
+                ei.raw_product_name,
+                tp.japanese_title
+            FROM {tenant_schema}.analysis_results ar
+            JOIN {tenant_schema}.extraction_items ei
+                ON ei.id = ar.extraction_item_id
+            LEFT JOIN {tenant_schema}.tcg_products tp
+                ON tp.id = ar.product_id
+            WHERE ei.extraction_job_id = :job_id
+            ORDER BY ar.id
+            """
+        ),
+        {"job_id": extraction_job_id},
+    ).fetchall()
+
+    e3a_updates: list[dict] = []
+
+    for row in rows:
+        (
+            ar_id,
+            unit_resolved,
+            pid_resolved,
+            product_id,
+            raw_unit,
+            raw_product_name,
+            japanese_title,
+        ) = row
+
+        if unit_resolved:
+            continue
+        if str(raw_unit or "").strip():
+            continue
+        if not pid_resolved:
+            continue
+        product_name = str(raw_product_name or "").strip()
+        if not product_name:
+            continue
+
+        matched = find_term(product_name, unit_terms)
+        if not matched:
+            continue
+
+        norm_pn = unit_recovery_norm(product_name)
+        norm_term = unit_recovery_norm(matched["term"])
+        if norm_term and not norm_pn.endswith(norm_term):
+            continue
+
+        if norm_term == _CASE_TERM_NFKC:
+            pre_pn = norm_pn[: len(norm_pn) - len(norm_term)]
+            if pre_pn and not re.search(r"[\s\u3000]$", pre_pn):
+                continue
+
+        if product_id and japanese_title:
+            norm_jp = unit_recovery_norm(japanese_title)
+            if norm_term in norm_jp:
+                continue
+
+        e3a_updates.append(
+            {
+                "ar_id": str(ar_id),
+                "unit_id": matched["unit_id"],
+                "unit_canonical": matched["canonical"],
+                "kubun": matched["kubun"],
+                "unit_basis": f"NAME_RECOVERY:{matched['term']}",
+            }
+        )
+
+    if len(e3a_updates) > E3A_MAX_RECOVER:
+        logger.warning(
+            "[unit_recovery] job=%s E3a safety abort: %d rows (limit %d)",
+            extraction_job_id,
+            len(e3a_updates),
+            E3A_MAX_RECOVER,
+        )
+        return {
+            "e3a_recovered": 0,
+            "e5_changed": 0,
+            "aborted": True,
+            "message": (
+                f"E3a safety abort: {len(e3a_updates)} rows exceed limit "
+                f"{E3A_MAX_RECOVER}"
+            ),
+        }
+
+    # E3a DB 書き込み
+    for upd in e3a_updates:
+        session.execute(
+            text(
+                f"""
+                UPDATE {tenant_schema}.analysis_results
+                SET
+                    unit_id        = :unit_id,
+                    unit_canonical = :unit_canonical,
+                    unit_resolved  = TRUE,
+                    unit_basis     = :unit_basis
+                WHERE id = :ar_id
+                """
+            ),
+            {
+                "unit_id": upd["unit_id"],
+                "unit_canonical": upd["unit_canonical"],
+                "unit_basis": upd["unit_basis"],
+                "ar_id": upd["ar_id"],
+            },
+        )
+
+    if e3a_updates:
+        logger.info(
+            "[unit_recovery] job=%s E3a recovered %d rows",
+            extraction_job_id,
+            len(e3a_updates),
+        )
+
+    # --- E5: condition 再計算 ---
+    if not e3a_updates:
+        return {
+            "e3a_recovered": len(e3a_updates),
+            "e5_changed": 0,
+            "aborted": False,
+            "message": f"E3a: 0 recovered, E5: skipped",
+        }
+
+    (
+        _,
+        _,
+        _,
+        _,
+        cond_canonical_to_uuid,
+        _,
+    ) = load_lookup_maps(session)
+    cond_entries = load_condition_entries(session)
+
+    ar_ids = [upd["ar_id"] for upd in e3a_updates]
+    placeholders = ", ".join(f":id_{i}" for i in range(len(ar_ids)))
+    params: dict = {f"id_{i}": ar_id for i, ar_id in enumerate(ar_ids)}
+
+    current_rows = session.execute(
+        text(
+            f"""
+            SELECT ar.id, ar.condition_basis, ar.condition_canonical,
+                   ei.raw_state, ei.raw_product_name
+            FROM {tenant_schema}.analysis_results ar
+            JOIN {tenant_schema}.extraction_items ei
+                ON ei.id = ar.extraction_item_id
+            WHERE ar.id IN ({placeholders})
+            """
+        ),
+        params,
+    ).fetchall()
+
+    current_map: dict[str, dict] = {}
+    for row in current_rows:
+        current_map[str(row[0])] = {
+            "condition_basis": str(row[1] or ""),
+            "condition_canonical": str(row[2] or ""),
+            "raw_state": str(row[3] or ""),
+            "raw_product_name": str(row[4] or ""),
+        }
+
+    e3a_map = {upd["ar_id"]: upd for upd in e3a_updates}
+    target_basis = "R4:単位既定:単位不明"
+    e5_changes: list[dict] = []
+
+    for ar_id, detail in e3a_map.items():
+        current = current_map.get(ar_id)
+        if not current or current["condition_basis"] != target_basis:
+            continue
+
+        new_canonical, new_cond_id, new_basis = resolve_condition_v2(
+            current["raw_state"],
+            current["raw_product_name"],
+            detail["kubun"],
+            cond_entries,
+            cond_canonical_to_uuid,
+        )
+
+        if new_canonical != current["condition_canonical"]:
+            e5_changes.append(
+                {
+                    "ar_id": ar_id,
+                    "new_cond_id": new_cond_id,
+                    "new_canonical": new_canonical,
+                    "new_basis": new_basis,
+                }
+            )
+
+    if len(e5_changes) > E5_MAX_ROWS:
+        logger.warning(
+            "[unit_recovery] job=%s E5 safety abort: %d changes (limit %d)",
+            extraction_job_id,
+            len(e5_changes),
+            E5_MAX_ROWS,
+        )
+        return {
+            "e3a_recovered": len(e3a_updates),
+            "e5_changed": 0,
+            "aborted": True,
+            "message": (
+                f"E3a recovered {len(e3a_updates)}, "
+                f"E5 safety abort: {len(e5_changes)} changes exceed limit "
+                f"{E5_MAX_ROWS}"
+            ),
+        }
+
+    for chg in e5_changes:
+        session.execute(
+            text(
+                f"""
+                UPDATE {tenant_schema}.analysis_results
+                SET
+                    condition_id        = :cond_id,
+                    condition_canonical = :canonical,
+                    condition_basis     = :basis
+                WHERE id = :ar_id
+                """
+            ),
+            {
+                "cond_id": chg["new_cond_id"],
+                "canonical": chg["new_canonical"],
+                "basis": chg["new_basis"],
+                "ar_id": chg["ar_id"],
+            },
+        )
+
+    if e5_changes:
+        logger.info(
+            "[unit_recovery] job=%s E5 changed %d conditions",
+            extraction_job_id,
+            len(e5_changes),
+        )
+
+    return {
+        "e3a_recovered": len(e3a_updates),
+        "e5_changed": len(e5_changes),
+        "aborted": False,
+        "message": (
+            f"E3a: {len(e3a_updates)} recovered, "
+            f"E5: {len(e5_changes)} conditions changed"
+        ),
+    }
+
+
 __all__ = [
     "unit_recovery_norm",
     "build_unit_recovery_terms",
@@ -731,6 +1025,7 @@ __all__ = [
     "recover_unit_from_product_name",
     "recalc_condition_from_recovered_unit",
     "run_unit_recovery_dry_run",
+    "apply_unit_recovery_for_job",
     "E3A_MAX_RECOVER",
     "E5_MAX_ROWS",
 ]

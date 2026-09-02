@@ -31,7 +31,10 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v2-cond-r4"
+# NOTE: apply_unit_recovery_for_job is imported lazily inside analyze_extraction_job
+# to avoid circular imports (tcg_unit_recovery_svc imports from tcg_analyzer_svc).
+
+ENGINE_VERSION = "name-first-v2-cond-r4-e3a-e5"
 
 # TCG解析システムは tenant_004 専用スキーマ
 TCG_SCHEMA = "tenant_004"
@@ -860,6 +863,16 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         )
 
     session.commit()
+
+    # --- E3a + E5 後処理（単位復旧・状態再計算）---
+    # lazy import: tcg_unit_recovery_svc → tcg_analyzer_svc の循環インポートを回避
+    from app.services.tcg_unit_recovery_svc import apply_unit_recovery_for_job  # noqa: PLC0415
+
+    recovery = apply_unit_recovery_for_job(session, extraction_job_id, TCG_SCHEMA)
+    if recovery["e3a_recovered"] or recovery["e5_changed"]:
+        session.commit()
+    stats["e3a_recovered"] = recovery["e3a_recovered"]
+    stats["e5_changed"] = recovery["e5_changed"]
 
     logger.info(
         "[tcg_analyzer] extraction_job=%s stats=%s", extraction_job_id, stats

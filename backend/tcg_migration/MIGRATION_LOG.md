@@ -171,3 +171,53 @@ E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
 - Searched pack: 61, Damaged case: 17, Unsearched pack: 12
 - Damaged sealed box: 11, Opened box: 5
 - **一致率: 1626/1626 = 100%**
+
+---
+
+## PARITY-02 A-4 ステータスマスタ確定記録 (2026-09-03)
+
+### 件数確認
+
+gspread 直接取得（スプレッドシート「ステータスマスタ」タブ）で **9行** を確認。
+
+| status_ID | canonical | MatchType | Effect | Priority |
+|---|---|---|---|---|
+| ST0001 | Pre-order | REGEX | OUTPUT | 10 |
+| ST0002 | Pre-order | REGEX | OUTPUT | 20 |
+| ST0003 | Pre-order | REGEX | OUTPUT | 30 |
+| ST0004 | In Stock | DEFAULT | OUTPUT | 999 |
+| ST0010 | Sold out | LITERAL | EXCLUDE | 10 |
+| ST0011 | Sold out | LITERAL | EXCLUDE | 20 |
+| ST0012 | Sold out | LITERAL | EXCLUDE | 30 |
+| ST0013 | Sold out | LITERAL | EXCLUDE | 40 |
+| ST0014 | Sold out | LITERAL | EXCLUDE | 50 |
+
+- 旧セッションで「5件」と報告したのは誤り（コード内シード値を参照）
+- 実データ 9行を正とする
+- migration `20260903_150000_tcg_status_master_t004.sql` は 9行で作成済み（PR #3211）
+
+
+---
+
+## PARITY-02 Phase C: C-3+C-6 E3a+E5 本番組み込み (2026-09-03)
+
+### 変更内容
+
+PR: #3213 (release/tcg-parity02-c3c6-unit-recovery)
+
+- `tcg_unit_recovery_svc.py`: `apply_unit_recovery_for_job(session, extraction_job_id, tenant_schema)` を追加
+  - E3a: 当該ジョブの unit_resolved=FALSE・raw_unit=''・pid_resolved=TRUE 行を商品名末尾で復旧 → UPDATE
+  - E5: E3a 復旧行のうち condition_basis='R4:単位既定:単位不明' の行で condition を再計算 → UPDATE
+  - 安全装置: E3A_MAX_RECOVER=100 / E5_MAX_ROWS=200 を超えたら abort
+- `tcg_analyzer_svc.py`: `analyze_extraction_job` に E3a+E5 後処理コールを追加
+  - メインループ commit 後に `apply_unit_recovery_for_job` を呼び出し
+  - 復旧があった場合のみ追加 commit
+  - stats に `e3a_recovered` / `e5_changed` を追加
+  - ENGINE_VERSION: `name-first-v2-cond-r4` → `name-first-v2-cond-r4-e3a-e5`
+
+### 設計判断
+
+- E3a/E5 は GAS 同様にメイン解析の後処理として実行（per-item ではなくバッチ）
+- 循環インポート（tcg_unit_recovery_svc ↔ tcg_analyzer_svc）を lazy import で回避
+- 安全装置上限超過は中止のみ（ロールバックなし）— E3a 書き込み前に abort するため整合性を保つ
+
