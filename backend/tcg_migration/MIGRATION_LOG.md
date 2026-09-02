@@ -136,9 +136,14 @@ GAS-Python 対照表で差異を発見した場合は、その場で以下のい
 - **E3a + E5 実装済み** (release/tcg-e3a-e5-unit-recovery / PR #3200): dry-run 専用。DB 書き込みなし
   - E3a: NAME_RECOVERY:* = 11行 (ﾊﾟｯｸ:6, box:3, BOX:1, 箱:1) — GAS 実測と一致
   - E5: R4:単位既定:単位不明 → condition 再計算
-- **E2 未実装**: 価格帯推定 (unit_inferred のみ・condition 非影響・対象行は将来データ依存)
+- **E2 実装不要と判定（2026-09-03）**:
+  - 調査: `raw_product_name` に `@価格×数量` / `¥価格×数量` 等の価格×数量パターン **0件**（現行データセット全件走査）
+  - `unit_resolved=FALSE` 528件の `raw_unit` 分布: (空) **495件** / 冊: 17件 / CTN: 4件 / 他
+  - unit 未解決 495件の真因は「原文（raw_unit）に単位語が記載されていない」こと。E2 が解決できる行は **0件**
+  - `AnalysisV2UnitInference` / `UnitInference` クラスは**実装不要**
+  - 将来、raw_product_name に価格×数量パターンを含む仕入データが増えた場合は再検討
 - **E4 未実装**: condition 逆引き (対象行 0 件)
-- **優先度**: 低〜中（残 E2/E4 は影響行 0 件）
+- **優先度**: 低（E2 は実装不要確定・E4 は影響行 0 件）
 
 ### T-4: condition_aliases 大文字小文字の統一
 
@@ -168,7 +173,7 @@ GAS 解析パイプラインを構成する 7 ファイルの役割・移植状�
 |----------|---------|---------|-------------|---------|
 | `AnalysisV2.gs` | Phase 0-3 | 解析V2シート作成・照合実行 (PID/unit/condition 解決の統括) | `analyze_extraction_job()` in `tcg_analyzer_svc.py` | ✅ 実装済み (PR #3188) |
 | `AnalysisV2PackCondition.gs` | Phase 3 後処理 | R5:パック既定 — unit=パック系(UN0003) かつ FLAG_SINGLE 行を Searched pack に変換 | `resolve_condition_v2` R5 ブロック | ✅ 実装済み (PR #3190) |
-| `AnalysisV2UnitInference.gs` | Phase 3 | 価格帯テーブルから unit を推定 (E2: PRICE_BAND) → 解析V2 X-AA列に書き込み | 未実装 | ❌ T-3: 低〜中優先度 |
+| `AnalysisV2UnitInference.gs` | Phase 3 | 価格帯テーブルから unit を推定 (E2: PRICE_BAND) → 解析V2 X-AA列に書き込み | 実装不要と判定 | ❌ T-3: 実装不要（raw_product_name に価格×数量パターン 0件） |
 | `AnalysisV2UnitRecovery.gs` | Phase 3 | 商品名から unit を復旧 (NAME_RECOVERY:*) / 未解決行に UNIT_UNRESOLVED フラグ | `recover_unit_from_product_name()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
 | `AnalysisV2UnitFromCondition.gs` | Phase 3 後処理 | condition_canonical が Box/Pack 系 の行から unit を逆引き導出 | 未実装 | ❌ T-3: 低〜中優先度 (対象行 0) |
 | `AnalysisV2ConditionRecalc.gs` | Phase 3 後処理 | `unit_basis='NAME_RECOVERY:*'` かつ `R4:単位既定:単位不明` 行の condition を再計算 | `recalc_condition_from_recovered_unit()` in `tcg_unit_recovery_svc.py` | ✅ 実装済み (dry-run) |
@@ -204,3 +209,39 @@ E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
 - Searched pack: 61, Damaged case: 17, Unsearched pack: 12
 - Damaged sealed box: 11, Opened box: 5
 - **一致率: 1626/1626 = 100%**
+
+---
+
+## 調査誤り記録（訂正） (2026-09-03)
+
+### Generations 商品データ不在確認
+
+前セッションが出力した「NONE 180件リスト」に「スタートデッキ Generationsのイーブイズ」「スタートデッキ Generationsのリザードン」等の Generations 系商品が含まれていた。
+しかし、これらは実際のデータベースに存在しない。以下の直接 SQL クエリにより確認済み。
+
+```sql
+SELECT COUNT(*) FROM tenant_004.extraction_items
+WHERE raw_product_name ILIKE '%Generations%';
+-- → 0 rows
+
+SELECT COUNT(*) FROM tenant_004.source_messages
+WHERE raw_text ILIKE '%Generations%';
+-- → 0 rows
+```
+
+また、ポケモンカード公式サイト（https://www.pokemon-card.com/ex/svm/index.html）の確認により、
+Generations のイーブイズ・リザードンは公式9種に存在しない。
+
+**原因推定**: 前セッションの 180件リストは、本番デプロイ前の dry-run スクリプトが
+異なるタイミングのデータ状態またはモックデータを参照して生成したものと推定される。
+
+### NONE 件数の変化
+
+| タイミング | NONE 件数 | 備考 |
+|-----------|----------|------|
+| 前セッション dry-run | 180件 | データ誤り含む（Generations 等が混入） |
+| 本番デプロイ後（現在値） | **195件** | `analysis_results.pid_basis='NONE'` のユニーク `raw_product_name` |
+
+増分（+15件）は本番 `analyze_extraction_job` 実行後に追加された仕入データの取込分と推定される。
+
+**現在の NONE 正値: 195件**（2026-09-03 時点・本番 DB 実測値）
