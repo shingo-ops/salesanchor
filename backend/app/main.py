@@ -48,7 +48,7 @@ from app.routers import (
     duplicates,
     erp,
     fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
-goals,  # ダッシュボード強化: 目標管理
+    goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
     integrations,  # API連携 (Googleドライブ 保存テスト 等)
