@@ -1269,6 +1269,66 @@ async def translate_message_endpoint(
 
 
 @router.get(
+    "/leads/{lead_id}/attachments/{attachment_id}",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def serve_lead_attachment(
+    lead_id: int,
+    attachment_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """自社ディスクに保管した添付ファイルを返す（attachment-storage 便4）。
+
+    Discord CDN の署名付きURLはブラウザから読めず約24時間で失効するため、
+    受信時に自社へ保存した実体をこのAPI経由で配信する。
+
+    RLS により他テナントの行は見えない。
+    実体が存在しない場合は 404。
+    """
+    from pathlib import Path as _Path
+
+    from starlette.responses import FileResponse
+
+    attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
+    row_q = await db.execute(
+        text(
+            f"SELECT file_path, content_type, original_filename"
+            f" FROM {attachments_t}"
+            f" WHERE id = :id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"id": attachment_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    row = row_q.first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="attachment_not_found",
+        )
+
+    import os as _os
+
+    root = _os.environ.get("ATTACHMENT_ROOT", "/data/attachments")
+    abs_path = _Path(root) / str(row[0])
+    if not abs_path.is_file():
+        logger.warning(
+            "[attachment-serve] 実体が不在 tenant=%s lead=%s id=%s path=%s",
+            tenant_id, lead_id, attachment_id, row[0],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="attachment_file_missing",
+        )
+
+    return FileResponse(
+        path=str(abs_path),
+        media_type=row[1] or "application/octet-stream",
+        filename=row[2] or abs_path.name,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@router.get(
     "/leads/{lead_id}/messages/{message_id}/attachment-url",
     dependencies=[Depends(require_permission("messaging.view"))],
 )
