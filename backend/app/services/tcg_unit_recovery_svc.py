@@ -724,6 +724,187 @@ def _print_dry_run_results(
     print("=" * 60)
 
 
+# ---------------------------------------------------------------------------
+# C-4: E3b — UNIT_UNRESOLVED フラグ
+# ---------------------------------------------------------------------------
+
+
+def apply_unit_unresolved_flag_for_job(
+    session: Session,
+    extraction_job_id: str,
+    tenant_schema: str = "tenant_004",
+) -> dict:
+    """
+    E3b: E3a 実行後も unit_resolved=FALSE のままの行に unit_basis='UNIT_UNRESOLVED' をセット。
+
+    unit_resolved は FALSE のまま維持する（解決できていないことを明示）。
+    GAS 対照: AnalysisV2UnitRecovery.gs — UNIT_UNRESOLVED 書き込みブロック
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ar.id
+            FROM {tenant_schema}.analysis_results ar
+            JOIN {tenant_schema}.extraction_items ei
+                ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :job_id
+              AND ar.unit_resolved = FALSE
+            ORDER BY ar.id
+            """
+        ),
+        {"job_id": extraction_job_id},
+    ).fetchall()
+
+    flagged = 0
+    for row in rows:
+        ar_id = str(row[0])
+        session.execute(
+            text(
+                f"""
+                UPDATE {tenant_schema}.analysis_results
+                SET unit_basis = 'UNIT_UNRESOLVED'
+                WHERE id = :ar_id
+                """
+            ),
+            {"ar_id": ar_id},
+        )
+        flagged += 1
+
+    if flagged:
+        logger.info(
+            "[unit_recovery] job=%s E3b flagged %d UNIT_UNRESOLVED rows",
+            extraction_job_id,
+            flagged,
+        )
+
+    return {
+        "flagged": flagged,
+        "message": f"E3b: {flagged} rows flagged as UNIT_UNRESOLVED",
+    }
+
+
+# ---------------------------------------------------------------------------
+# C-5: E4 — 状態から単位逆引き
+# ---------------------------------------------------------------------------
+
+
+def apply_unit_from_condition_for_job(
+    session: Session,
+    extraction_job_id: str,
+    tenant_schema: str = "tenant_004",
+) -> dict:
+    """
+    E4: unit_resolved=FALSE かつ condition_canonical 確定済みの行で、
+    condition.app_kubun の先頭値から unit を逆引きして unit を解決する。
+
+    app_kubun が複数の kubun を持つ場合は先頭値のみ使用。
+    同一 kubun に unit が複数あれば一意でないためスキップ。
+    現データセットで対象行 0 件。
+
+    GAS 対照: AnalysisV2UnitFromCondition.gs — inferUnitFromCondition
+    """
+    # condition canonical → 先頭 kubun
+    cond_rows = session.execute(
+        text(
+            f"""
+            SELECT canonical, app_kubun
+            FROM {tenant_schema}.conditions
+            WHERE is_active = TRUE
+              AND app_kubun IS NOT NULL
+              AND app_kubun != ''
+            """
+        )
+    ).fetchall()
+    cond_to_kubun: dict[str, str] = {}
+    for canonical, app_kubun in cond_rows:
+        first_kubun = (app_kubun or "").split(",")[0].strip()
+        if first_kubun:
+            cond_to_kubun[canonical] = first_kubun
+
+    if not cond_to_kubun:
+        return {"resolved": 0, "message": "E4: no condition→kubun map, skipped"}
+
+    # kubun → (unit_id, unit_canonical) — 衝突時は None でマーク
+    unit_rows = session.execute(
+        text(
+            f"""
+            SELECT kubun, id, canonical
+            FROM {tenant_schema}.units
+            WHERE is_active = TRUE AND kubun IS NOT NULL
+            """
+        )
+    ).fetchall()
+    kubun_to_unit: dict[str, Optional[tuple[str, str]]] = {}
+    for kubun, uid, canonical in unit_rows:
+        if kubun in kubun_to_unit:
+            kubun_to_unit[kubun] = None  # 複数 unit → 逆引き不可
+        else:
+            kubun_to_unit[kubun] = (str(uid), canonical)
+
+    # 対象行: unit_resolved=FALSE AND condition_canonical 確定済み
+    target_rows = session.execute(
+        text(
+            f"""
+            SELECT ar.id, ar.condition_canonical
+            FROM {tenant_schema}.analysis_results ar
+            JOIN {tenant_schema}.extraction_items ei
+                ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :job_id
+              AND ar.unit_resolved = FALSE
+              AND ar.condition_canonical IS NOT NULL
+              AND ar.condition_canonical != ''
+            ORDER BY ar.id
+            """
+        ),
+        {"job_id": extraction_job_id},
+    ).fetchall()
+
+    resolved = 0
+    for row in target_rows:
+        ar_id, condition_canonical = str(row[0]), str(row[1] or "")
+        if not condition_canonical:
+            continue
+        kubun = cond_to_kubun.get(condition_canonical)
+        if not kubun:
+            continue
+        unit_info = kubun_to_unit.get(kubun)
+        if not unit_info:
+            continue  # 未登録 or 衝突
+
+        unit_id, unit_canonical = unit_info
+        session.execute(
+            text(
+                f"""
+                UPDATE {tenant_schema}.analysis_results
+                SET
+                    unit_id        = :unit_id,
+                    unit_canonical = :unit_canonical,
+                    unit_resolved  = TRUE,
+                    unit_basis     = 'COND_INFERRED'
+                WHERE id = :ar_id
+                """
+            ),
+            {
+                "unit_id": unit_id,
+                "unit_canonical": unit_canonical,
+                "ar_id": ar_id,
+            },
+        )
+        resolved += 1
+
+    if resolved:
+        logger.info(
+            "[unit_recovery] job=%s E4 inferred unit for %d rows",
+            extraction_job_id,
+            resolved,
+        )
+
+    return {
+        "resolved": resolved,
+        "message": f"E4: {resolved} rows resolved via condition→unit inference",
+    }
+
+
 __all__ = [
     "unit_recovery_norm",
     "build_unit_recovery_terms",
@@ -731,6 +912,8 @@ __all__ = [
     "recover_unit_from_product_name",
     "recalc_condition_from_recovered_unit",
     "run_unit_recovery_dry_run",
+    "apply_unit_unresolved_flag_for_job",
+    "apply_unit_from_condition_for_job",
     "E3A_MAX_RECOVER",
     "E5_MAX_ROWS",
 ]

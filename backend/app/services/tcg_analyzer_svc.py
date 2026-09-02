@@ -31,7 +31,11 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v2-cond-r4"
+ENGINE_VERSION = "name-first-v2-cond-r4-e3b-e4"
+
+# NOTE: apply_unit_unresolved_flag_for_job / apply_unit_from_condition_for_job は
+# 循環インポート回避のため analyze_extraction_job 内で lazy import する
+# (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
 
 # TCG解析システムは tenant_004 専用スキーマ
 TCG_SCHEMA = "tenant_004"
@@ -860,6 +864,20 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         )
 
     session.commit()
+
+    # --- E3b + E4 後処理（未解決フラグ・状態→単位逆引き）---
+    # lazy import: tcg_unit_recovery_svc → tcg_analyzer_svc の循環インポートを回避
+    from app.services.tcg_unit_recovery_svc import (  # noqa: PLC0415
+        apply_unit_from_condition_for_job,
+        apply_unit_unresolved_flag_for_job,
+    )
+
+    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, TCG_SCHEMA)
+    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, TCG_SCHEMA)
+    if e3b["flagged"] or e4["resolved"]:
+        session.commit()
+    stats["e3b_flagged"] = e3b["flagged"]
+    stats["e4_resolved"] = e4["resolved"]
 
     logger.info(
         "[tcg_analyzer] extraction_job=%s stats=%s", extraction_job_id, stats
