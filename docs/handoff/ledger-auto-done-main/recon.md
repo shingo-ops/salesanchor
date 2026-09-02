@@ -11,61 +11,63 @@
 
 ### 既存ワークフローが機能していない
 
-`.github/workflows/active-work-auto-done.yml`
+対象ファイル: .github/workflows/active-work-auto-done.yml
 
-- トリガーが `branches: [develop]` のみ。main マージでは発火しない。
-- 更新先が `.claude-pipeline/active-work.md`（本体）固定。
-  `.claude-pipeline/active-work.d/` の単票は対象外。
-- checkout の `ref: develop`、push 先も develop。
+- トリガーが develop ブランチ限定。main マージでは発火しない。
+- 更新先が .claude-pipeline/active-work.md（本体）固定。
+  .claude-pipeline/active-work.d/ の単票は対象外。
+- checkout の ref も push 先も develop。
 - ADR-114 の時代に作られたまま、ledger-guard 第2弾の書き先分割に追随していない。
 
 ### 別経路の自動化は commit しない
 
-`scripts/cleanup-worktree.sh` がマージ後に `ledger-update.sh --status DONE` を
-実行する。ただし commit / push はしない。
+対象ファイル: scripts/cleanup-worktree.sh
+
+マージ後に ledger-update.sh を呼んで DONE 化する。ただし commit も push もしない。
 その結果、本店に未追跡の台帳が 222 件溜まっていた（2026-09-02 実測）。
 
 ### 窓口スクリプトは Actions からも使える
 
-`scripts/ledger-update.sh:12-13`
+対象ファイル: scripts/ledger-update.sh
 
-- `LEDGER_FILE="${ACTIVE_WORK_FILE:-...}"`
-- `LEDGER_DIR="${ACTIVE_WORK_DIR:-...}"`
+12行目と13行目で、環境変数 ACTIVE_WORK_FILE と ACTIVE_WORK_DIR により
+対象の場所を差し替えられる。
 
-環境変数で対象を差し替えられる。
-
-`scripts/ledger-update.sh:18` で `.d/` の単票を優先し、
-無ければ `ledger-lookup.sh` 経由で本体を見る。
+18行目で active-work.d 配下の単票を優先し、
+無ければ ledger-lookup.sh 経由で本体を見る。
 
 ### 関所は台帳のみの変更を素通しする
 
-`scripts/check-process-artifacts.js:43` の `DOCS_PATTERNS` に
-`.md` 拡張子のパターンがある。台帳ファイルは `.md` のため docs に分類される。
+対象ファイル: scripts/check-process-artifacts.js
 
-`scripts/check-process-artifacts.js:683`
+43行目の DOCS_PATTERNS に、拡張子が md のファイルを docs とみなすパターンがある。
+台帳ファイルは拡張子が md のため docs に分類される。
 
-- `if (hasDocsOnly && !hasCanonicalDoc(changedFiles))` で
-  「書類のみの変更 — 自動スキップ（pass）」となり `process.exit(0)`。
+683行目で、書類のみの変更かつ正本を含まない場合に
+「書類のみの変更 — 自動スキップ（pass）」を出力して終了する。
 
 つまり台帳のみのPRは GO記録の検証に到達しない。
 
 ### main は直接 push できない
 
-ruleset 15777895（main branch protection）
+ruleset 15777895（main branch protection）の実測値:
 
-- `You can bypass: never`
-- `bypass_actors` は空
-- rules に `pull_request` が含まれる
-- `required_status_checks` は12件、`strict_required_status_checks_policy: true`
+- You can bypass: never
+- bypass_actors は空
+- rules に pull_request が含まれる
+- required_status_checks は12件
+- strict_required_status_checks_policy は true
 
-したがって Actions も PR を経由する必要がある。
+したがって GitHub Actions も PR を経由する必要がある。
 
 ### PR自動作成の前例がある
 
-`.github/workflows/brand-asset-monitor.yml:220` に `gh pr create` の使用例がある。
-ただしそちらは `secrets.GITHUB_TOKEN` を使っている。
+対象ファイル: .github/workflows/brand-asset-monitor.yml
+
+220行目に gh pr create の使用例がある。
+ただしそちらは GITHUB_TOKEN を使っている。
 
 ## 本便で追加する箇所
 
-`.github/workflows/ledger-auto-done-main.yml` を新規作成する。
-既存の `active-work-auto-done.yml` は変更しない。
+.github/workflows/ledger-auto-done-main.yml を新規作成する。
+既存の .github/workflows/active-work-auto-done.yml は変更しない。
