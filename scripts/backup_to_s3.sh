@@ -42,6 +42,9 @@ export TZ=Asia/Tokyo
 
 REPO_DIR="${REPO_DIR:-/home/ubuntu/salesanchor}"
 
+# AWS CLI v2 がホームディレクトリインストールの場合に PATH を補完（cron環境対応）
+export PATH="/home/ubuntu/.local/bin:${PATH}"
+
 # .env を読み込み（DISCORD_WEBHOOK_OPS 等を環境変数に反映）
 if [ -f "${REPO_DIR}/.env" ]; then
   set -a

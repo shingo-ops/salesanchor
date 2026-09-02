@@ -1293,6 +1293,22 @@ async def setup_test_db(test_engine):
                 PRIMARY KEY (tenant_id, feature_key)
             )
         """))
+        # attachment-storage 便4: 添付ファイル保管台帳（SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS lead_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                lead_id INTEGER NOT NULL,
+                message_id TEXT NOT NULL UNIQUE,
+                platform TEXT NOT NULL DEFAULT 'discord',
+                file_path TEXT NOT NULL,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                content_type TEXT,
+                original_filename TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield
 
 
