@@ -204,3 +204,36 @@ E5 (condition 再計算) 後の期待分布（= GAS 実測と完全一致）:
 - Searched pack: 61, Damaged case: 17, Unsearched pack: 12
 - Damaged sealed box: 11, Opened box: 5
 - **一致率: 1626/1626 = 100%**
+
+---
+
+## source_messages.received_at 全件 NULL 確認記録 (2026-09-02)
+
+### 事実
+
+- `tenant_004.source_messages` の `received_at` カラムは全306件が `NULL`
+- DDL: `received_at TIMESTAMPTZ`（nullable、DEFAULT なし）
+- 306件すべて NULL であることを本番 DB で実確認済み
+
+### 原因
+
+GAS 側が受信日時を記録していなかったため（LINE Bot の受信時刻を GAS スクリプトが保存する処理が存在しない）。  
+投入パイプライン（`ingest_*.py`）は GAS データをそのまま DB に写すため、元が NULL のまま投入されている。
+
+### 補足（「GAS と等価」報告の訂正）
+
+前セッションで「受信タイムスタンプは GAS と等価」と報告したが、これは誤りを含む表現だった。  
+正確には「GAS 側にも値がなく、DB 側も NULL → 両方とも空（＝等価ではあるが有効な値は存在しない）」が正しい。
+
+### 影響
+
+`received_at` ベースの時系列分析（「何時ごろ仕入れリストが来るか」等）は現状で不可能。
+
+### 代替
+
+`extraction_jobs.created_at`（`NOT NULL DEFAULT NOW()`）= パイプライン処理日時は利用可能。  
+時系列分析が必要な場合は `extraction_jobs.created_at` を使うこと。
+
+### 将来ガイダンス
+
+将来 LINE から直接取り込む（GAS を経由しない）実装を行う際は、受信時刻を `source_messages.received_at` に記録すること。
