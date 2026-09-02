@@ -282,18 +282,12 @@ def match_keyword(
     """
     商品名に対して検索KW/除外KWを照合し (hit, matched_kw) を返す。
 
-    GAS 対照: investigate2.gs:9995 matchKeyword_
-      var normText = normalizeEn_(text);
-      // 除外語チェック
-      if (excludeKwStr) {
-        var excl = String(excludeKwStr).split(',').some(kw => {
-          kw = kw.trim(); return kw && matchOneKw_(kw, normText); });
-        if (excl) return { hit: false, matchedKw: null };
-      }
-      // 検索語なし = 全マッチ
-      if (!searchKwStr) return { hit: true, matchedKw: '(既定)' };
-      // 検索語照合（カンマ区切り各語をmatchOneKw_）
-      ...
+    GAS 対照: investigate2.gs:10048 matchPid_
+      if (!pid || !srchStr) return;  ← キーワード未登録の商品はスキップ
+
+    注: GAS matchKeyword_（investigate2.gs:9995）の searchKwStr 空 = 全マッチ
+        は matchPid_ レベルで上位ガードされており、実際には
+        キーワード未登録の商品は候補にならない。Python も同動作に統一。
 
     Args:
       text_raw      : 照合対象の生テキスト
@@ -310,9 +304,9 @@ def match_keyword(
         if kw and match_one_kw(kw, norm_text):
             return False, None
 
-    # 検索語なし = 全マッチ（GAS と同様）
+    # 検索語未登録の商品は候補にしない（GAS: matchPid_ !srchStr → return）
     if not search_kw_str:
-        return True, "(既定)"
+        return False, None
 
     for kw in search_kw_str:
         if kw and match_one_kw(kw, norm_text):
