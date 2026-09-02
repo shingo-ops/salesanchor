@@ -1,1 +1,9 @@
-.item-comparison--readonly .item-head-grid,.item-comparison--readonly .aligned-fields,.item-comparison--readonly .item-extra-grid{grid-template-columns:minmax(300px,1fr) minmax(320px,1.05fr)}
+/* GAS item-comparison-readonly.css — readOnly 2-column override (Gemini | System) */
+/* stylelint-disable-next-line no-descending-specificity -- intentional: overrides 3-col from analysis-review.css */
+.item-comparison--readonly .item-head-grid,
+.item-comparison--readonly .aligned-fields,
+.item-comparison--readonly .item-extra-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.05fr);
+  column-gap: var(--space-3);
+}

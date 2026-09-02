@@ -5,6 +5,8 @@ import { ItemComparison, type AnalysisReviewItem } from './ItemComparison';
 import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
 import './supplier-detail-view.css';
 
+const PAGE_SIZE = 20;
+
 interface SourceApiResponse {
   found: boolean;
   source_message_id: string;
@@ -27,6 +29,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const [rawText, setRawText] = useState('');
   const [sourceMessageId, setSourceMessageId] = useState('');
   const [items, setItems] = useState<AnalysisReviewItem[]>([]);
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [jump, setJump] = useState<SourceLineJump | undefined>();
@@ -40,6 +43,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
     setRawText('');
     setSourceMessageId('');
     setItems([]);
+    setDisplayCount(PAGE_SIZE);
     sourceLoaded.current = false;
     itemsLoaded.current = false;
     const checkDone = () => { if (sourceLoaded.current && itemsLoaded.current) setLoading(false); };
@@ -61,6 +65,9 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
     setJump({ line, requestId: jumpSequence.current });
   };
 
+  const visibleItems = items.slice(0, displayCount);
+  const remaining = items.length - displayCount;
+
   return (
     <div className="supplier-detail-view">
       <div className="supplier-detail-view-header">
@@ -74,7 +81,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
           <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={items.length} jump={jump} />
           <section className="supplier-detail-items">
             {items.length === 0 && <p>{t("superAdmin.supplierQuality.noItems")}</p>}
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <div key={item.extraction_item_id} className="supplier-detail-item-row">
                 <ItemComparison item={item} readOnly={true} onJumpToSourceLine={jumpToLine} />
                 <div className="supplier-detail-item-actions">
@@ -83,6 +90,13 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
                 </div>
               </div>
             ))}
+            {remaining > 0 && (
+              <div className="supplier-detail-load-more">
+                <button type="button" className="supplier-detail-back" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
+                  {t("superAdmin.supplierQuality.loadMore", { remaining })}
+                </button>
+              </div>
+            )}
           </section>
         </div>
       )}

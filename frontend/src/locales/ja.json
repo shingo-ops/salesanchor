@@ -2247,7 +2247,9 @@
       "backToList": "← 一覧に戻る",
       "noItems": "解析アイテムはありません。",
       "correctPhase3": "修正する → (Phase 3)",
-      "superAdminOnly": "このページは super_admin 専用です。"
+      "superAdminOnly": "このページは super_admin 専用です。",
+      "loadMore": "さらに読み込む（{{remaining}}件）",
+      "showingCount": "{{shown}} / {{total}} 件表示中"
     },
     "dex": {
       "title": "ポケモン / トレーナー図鑑",
