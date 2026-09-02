@@ -91,8 +91,8 @@ from app.routers import (
     super_admin_tenants,
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
-    tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
