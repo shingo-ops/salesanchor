@@ -496,14 +496,94 @@ def _run_reanalyze_sync(extraction_job_id: str) -> dict[str, Any]:
     同期 SQLAlchemy Session で analyze_extraction_job を実行する。
     asyncio.to_thread で呼ばれるため同期関数。
 
-    戻り値: {before: {...}, after: {...}}
+    戻り値: {before: {...}, after: {...}, run_id: str}
     """
-    from app.services.tcg_analyzer_svc import analyze_extraction_job  # lazy import
+    from app.services.tcg_analyzer_svc import (  # lazy import
+        ENGINE_VERSION,
+        analyze_extraction_job,
+    )
 
     engine = create_engine(_SYNC_DB_URL, echo=False, pool_pre_ping=True)
     Session = sessionmaker(engine, expire_on_commit=False)
 
     with Session() as session:
+        # ── HIST Step 1: analysis_runs に1行 INSERT（started_at = NOW()）──
+        run_id_row = session.execute(
+            text(
+                f"""
+                INSERT INTO {TCG_SCHEMA}.analysis_runs
+                    (extraction_job_id, run_type, triggered_by, engine_version)
+                VALUES
+                    (:job_id, 'R1_API', 'api', :engine)
+                RETURNING id
+                """
+            ),
+            {"job_id": extraction_job_id, "engine": ENGINE_VERSION},
+        ).fetchone()
+        session.commit()
+        run_id = str(run_id_row[0])
+
+        # ── HIST Step 2: 再解析前スナップショットを analysis_run_snapshots に INSERT ──
+        session.execute(
+            text(
+                f"""
+                INSERT INTO {TCG_SCHEMA}.analysis_run_snapshots (
+                    run_id,
+                    analysis_result_id,
+                    extraction_item_id,
+                    product_id,
+                    pid_resolved,
+                    pid_basis,
+                    unit_id,
+                    unit_canonical,
+                    unit_resolved,
+                    condition_id,
+                    condition_canonical,
+                    condition_basis,
+                    quantity_normalized,
+                    price_normalized,
+                    note_ja,
+                    status,
+                    exclusion,
+                    needs_review,
+                    review_reasons,
+                    engine_version,
+                    computed_at,
+                    updated_at
+                )
+                SELECT
+                    :run_id,
+                    ar.id,
+                    ar.extraction_item_id,
+                    ar.product_id,
+                    ar.pid_resolved,
+                    ar.pid_basis,
+                    ar.unit_id,
+                    ar.unit_canonical,
+                    ar.unit_resolved,
+                    ar.condition_id,
+                    ar.condition_canonical,
+                    ar.condition_basis,
+                    ar.quantity_normalized,
+                    ar.price_normalized,
+                    ar.note_ja,
+                    ar.status,
+                    ar.exclusion,
+                    ar.needs_review,
+                    ar.review_reasons,
+                    ar.engine_version,
+                    ar.computed_at,
+                    ar.updated_at
+                FROM {TCG_SCHEMA}.analysis_results ar
+                JOIN {TCG_SCHEMA}.extraction_items ei
+                    ON ei.id = ar.extraction_item_id
+                WHERE ei.extraction_job_id = :job_id
+                """
+            ),
+            {"run_id": run_id, "job_id": extraction_job_id},
+        )
+        session.commit()
+
         # before: 現行 analysis_results のサマリー
         before_row = session.execute(
             text(
@@ -532,8 +612,52 @@ def _run_reanalyze_sync(extraction_job_id: str) -> dict[str, Any]:
         # 再解析（UPSERT — 元には戻せないので before を返す）
         after = analyze_extraction_job(session, extraction_job_id)
 
+        # ── HIST Step 3: MULTI / NONE カウントを取得 ──
+        status_row = session.execute(
+            text(
+                f"""
+                SELECT
+                    SUM(CASE WHEN ar.status = 'MULTI' THEN 1 ELSE 0 END) AS multi_count,
+                    SUM(CASE WHEN ar.status = 'NONE'  THEN 1 ELSE 0 END) AS none_count
+                FROM {TCG_SCHEMA}.analysis_results ar
+                JOIN {TCG_SCHEMA}.extraction_items ei
+                    ON ei.id = ar.extraction_item_id
+                WHERE ei.extraction_job_id = :job_id
+                """
+            ),
+            {"job_id": extraction_job_id},
+        ).fetchone()
+
+        # ── HIST Step 4: analysis_runs を completed_at・stats で UPDATE ──
+        session.execute(
+            text(
+                f"""
+                UPDATE {TCG_SCHEMA}.analysis_runs
+                SET
+                    completed_at  = NOW(),
+                    total         = :total,
+                    pid_resolved  = :pid_resolved,
+                    unit_resolved = :unit_resolved,
+                    needs_review  = :needs_review,
+                    multi_count   = :multi_count,
+                    none_count    = :none_count
+                WHERE id = :run_id
+                """
+            ),
+            {
+                "run_id": run_id,
+                "total": after.get("total", 0),
+                "pid_resolved": after.get("pid_resolved", 0),
+                "unit_resolved": after.get("unit_resolved", 0),
+                "needs_review": after.get("needs_review", 0),
+                "multi_count": int(status_row.multi_count or 0),
+                "none_count": int(status_row.none_count or 0),
+            },
+        )
+        session.commit()
+
     engine.dispose()
-    return {"before": before, "after": after}
+    return {"before": before, "after": after, "run_id": run_id}
 
 
 async def reanalyze_extraction_job(extraction_job_id: str) -> dict[str, Any]:
