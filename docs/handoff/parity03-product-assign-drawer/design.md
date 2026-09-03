@@ -56,11 +56,17 @@
 | ステップ | 内容 | 担当 |
 |---------|------|------|
 | 1 | recon.md / design.md 作成 | Dev |
-| 2 | reviewIssues.ts に PRODUCT_CONFIRMED 追加 | Dev |
-| 3 | tcg_analysis_review_svc.py に product_title / product_uuid / product_confirmed 追加 | Dev |
-| 4 | tcg_product_master_svc.py + router に product_uuid 追加 | Dev |
-| 5 | item_corrections_svc.py に analysis_results UPDATE 追加 | Dev |
-| 6 | ProductMasterDrawer.tsx に ProductAssignSection 追加 | Dev |
-| 7 | SupplierDetailView.tsx から MASTER_ISSUE_IDS 条件を削除 | Dev |
+| 2 | frontend/src/features/tcg-analysis-review/reviewIssues.ts に PRODUCT_CONFIRMED 追加 | Dev |
+| 3 | backend/app/services/tcg_analysis_review_svc.py に product_title / product_uuid / product_confirmed 追加 | Dev |
+| 4 | backend/app/services/tcg_product_master_svc.py + router に product_uuid 追加 | Dev |
+| 5 | backend/app/services/item_corrections_svc.py に analysis_results UPDATE 追加 | Dev |
+| 6 | frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx に ProductAssignSection 追加 | Dev |
+| 7 | frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx から MASTER_ISSUE_IDS 条件を削除 | Dev |
 | 8 | i18n キー追加 (ja/en) | Dev |
 | 9 | CI green 確認 → PO GO → merge | PO |
+
+---
+
+## 維持の仕組み
+
+守り手: 人手で守る（product_confirmed 判定ロジックは backend/tests/test_tcg_product_master.py の test_search_ok で担保。MANUAL 保護は backend/tests/test_tcg_manual_pid_guard.py でカバー。CI pytest-run-internal が常時 green であることを確認すること）
