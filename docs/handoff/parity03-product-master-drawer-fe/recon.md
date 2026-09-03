@@ -29,16 +29,16 @@ ADR-067 (CSS デザイントークン): component-scoped vars 使用。
 
 | ファイル | 変更種別 | 主要行 |
 |---|---|---|
-| `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx` | 新規作成 | 1-407 |
-| `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx` | 修正 | 10,38,91-95,109 |
-| `frontend/src/features/tcg-analysis-review/supplier-detail-view.css` | 修正 | 107-313 |
+| `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:1` | 新規作成 | 1-407 |
+| `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:10` | 修正 | 10,38,91-95,109 |
+| `frontend/src/features/tcg-analysis-review/supplier-detail-view.css:107` | 修正 | 107-313 |
 
 ---
 
 ## 触らないファイル
 
-- `analysis-review.css` — PR #3232 で削除済み
-- `AnalysisReviewWorkspace.tsx` — PR #3232 で削除済み
+- analysis-review.css（PR #3232 で削除済み・本 PR は変更しない）
+- AnalysisReviewWorkspace.tsx（PR #3232 で削除済み・本 PR は変更しない）
 
 ---
 
@@ -48,4 +48,4 @@ ADR-067 (CSS デザイントークン): component-scoped vars 使用。
 |---|---|
 | #3239 | BE Phase 3 API 実装 |
 | #3243 | item_corrections テーブル追加 |
-| mark/english_title PR | nullable カラム migration |
+| #3246 | mark/english_title nullable カラム migration |

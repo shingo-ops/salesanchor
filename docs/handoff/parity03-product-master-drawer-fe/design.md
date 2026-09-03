@@ -7,63 +7,45 @@
 
 ---
 
-## 目的
+## 外部・過去事例の参照と我々への応用
 
-GAS `ProductMasterDrawer.tsx` を React に移植し、仕入元詳細ページの  
-「修正する → (Phase 3)」ボタンからドロワーを開けるようにする。
-
----
-
-## KGI
-
-仕入元詳細ページで `review_issues` に `PRODUCT_MASTER_UNREGISTERED` / `PRODUCT_ID_UNRESOLVED` / `EXCLUDED` を持つアイテムに対して、ドロワーが正常に開き、各モードの操作が完了できること。
+- 今回は GAS ProductMasterDrawer.tsx の直接移植のため、外部設計参照は不要。
+  GAS 実装（google.script.run → api.get/api.post 差し替え）を唯一の設計根拠とする。
 
 ---
 
-## コンポーネント構成
+## 受け入れ基準
 
-```
-SupplierDetailView
-└── ProductMasterDrawer（overlay: fixed drawer）
-    ├── pmd-backdrop（クリックで閉じる）
-    └── pmd-drawer（aside）
-        ├── pmd-head（タイトル・閉じるボタン）
-        └── pmd-body
-            └── MasterMaintenanceSection（review_issues でモード切替）
-                ├── RegistrationSection（PRODUCT_MASTER_UNREGISTERED）
-                ├── SearchKeywordSection（PRODUCT_ID_UNRESOLVED）
-                └── ExcludedSection（EXCLUDED）
-```
+| 基準 | 検証方法 |
+|------|---------|
+| PRODUCT_MASTER_UNREGISTERED のアイテムで「修正する」ボタンが表示される | Shingo 画面確認 |
+| ボタン押下で商品マスタ新規登録フォームが開く（RegistrationSection） | Shingo 画面確認 |
+| PRODUCT_ID_UNRESOLVED のアイテムで検索KW追記フォームが開く（SearchKeywordSection） | Shingo 画面確認 |
+| EXCLUDED のアイテムで除外対象メッセージが表示される（ExcludedSection） | Shingo 画面確認 |
+| マスタ課題のないアイテムには「修正する」ボタンが表示されない | Shingo 画面確認 |
+| バックドロップクリックでドロワーが閉じる | Shingo 画面確認 |
+| 登録完了後に「登録が完了しました」メッセージが表示される | Shingo 画面確認（B-3 API 結線後） |
+| KW追記完了後に「検索キーワードを追記しました」が表示される | Shingo 画面確認（B-5 API 結線後） |
 
 ---
 
-## API マッピング
+## 技術 How・KPI
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/tcg/products/registration-form` | GET | B-1: 登録フォーム（ルックアップ選択肢取得） |
-| `/tcg/products/check-duplicates` | POST | B-2: 重複候補チェック |
-| `/tcg/products` | POST | B-3: 商品マスタ新規登録 |
-| `/tcg/products/search` | GET | B-4: 商品名検索 |
-| `/tcg/products/:id/search-keywords` | POST | B-5: 検索KW追記 |
-
----
-
-## CSS 設計
-
-- クラスプレフィックス: `pmd-*`（既存 CSS との衝突回避）
-- 値はすべて CSS 変数（ADR-067）
+- CSS クラスプレフィックス `pmd-*` でスコープ分離（既存 CSS との衝突なし）
 - コンポーネントローカルトークン: `--pmd-max-w: 480px`、`--pmd-textarea-min-h: 72px`
-- stylelint `no-descending-specificity` 対応: `pmd-*` セクションを `.supplier-detail-items` より前に配置
+- ADR-067: 全 CSS 値を CSS 変数（`var(--...)`）で記述。ハードコード値禁止
 
 ---
 
-## 検証方法
+## 弊害・トレードオフ
 
-| KGI項目 | 観測可能な事象 |
-|---|---|
-| PRODUCT_MASTER_UNREGISTERED | 「修正する」ボタン押下 → 商品マスタ新規登録フォームが表示される |
-| PRODUCT_ID_UNRESOLVED | 「修正する」ボタン押下 → マスタ検索・検索KW追記フォームが表示される |
-| EXCLUDED | 「修正する」ボタン押下 → 除外対象メッセージが表示される |
-| 登録完了 | 「商品マスタに登録」→「登録が完了しました」メッセージ表示 |
-| KW追記完了 | 「キーワードを追記」→「検索キーワードを追記しました」メッセージ表示 |
+- mark / english_title フィールドは BE migration 完了まで空文字列で送信される（nullable）
+- Playwright E2E が全停止中（if: false / 2026-06-01〜）のため自動テストなし → Shingo 画面確認で代替
+
+---
+
+## 維持の仕組み
+
+- ADR-067 CSS チェック（CI）で design token 逸脱を自動検出
+- stylelint `no-descending-specificity` で CSS 特異度の逆転を自動検出
+- BE API 変更時は ProductMasterDrawer.tsx の API パスと型定義を合わせて更新
