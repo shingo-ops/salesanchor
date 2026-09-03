@@ -2336,6 +2336,7 @@ async def send_lead_image_message(
         # 送信画像も自社ディスクへ保存する（attachment-storage 便6・PO決定 2026-09-03）。
         # 受信と同じ形式で置き、lead_attachments に記録する。
         # 保存に失敗しても送信は成功として扱う。受信側と同じ設計。
+        dc_attachment_saved = False
         if dc_msg_id:
             try:
                 from pathlib import Path
@@ -2369,6 +2370,7 @@ async def send_lead_image_message(
                         "original_filename": dc_filename,
                     },
                 )
+                dc_attachment_saved = True
                 logger.info(
                     "[attachment-save] 送信画像を保存 tenant=%s lead=%s msg=%s bytes=%s path=%s",
                     tenant_id, lead_id, dc_msg_id, len(file_bytes), _rel_path,
@@ -2402,6 +2404,7 @@ async def send_lead_image_message(
             "lead_id": lead_id,
             "platform": "discord",
             "attachment_type": "image",
+            "attachment_saved": dc_attachment_saved,
         }
 
     if platform not in ("messenger", "instagram"):
