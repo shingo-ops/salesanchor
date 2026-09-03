@@ -2,4 +2,4 @@ branch: release/csp-blob-img-src
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/csp-blob-img-src | （記入してください） | 2026-09-03 09:05 | IN_PROGRESS | | | |
+| release/csp-blob-img-src | （記入してください） | 2026-09-03 09:05 | DONE | 3240 | | |
