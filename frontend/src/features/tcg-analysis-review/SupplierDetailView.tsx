@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { ItemComparison, type AnalysisReviewItem } from './ItemComparison';
+import { ProductMasterDrawer } from './ProductMasterDrawer';
 import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
 import './supplier-detail-view.css';
 
@@ -33,9 +34,18 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [jump, setJump] = useState<SourceLineJump | undefined>();
+  const [masterDrawerItem, setMasterDrawerItem] = useState<AnalysisReviewItem | undefined>();
+  const [refreshKey, setRefreshKey] = useState(0);
   const jumpSequence = useRef(0);
   const sourceLoaded = useRef(false);
   const itemsLoaded = useRef(false);
+
+  const refreshItems = () => {
+    const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
+    api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
+      .then((res) => { setItems(res.items || []); })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -58,7 +68,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
       .then((res) => { setItems(res.items || []); })
       .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { itemsLoaded.current = true; checkDone(); });
-  }, [supplierId, supplierName]);
+  }, [supplierId, supplierName, refreshKey]);
 
   const jumpToLine = (line: number) => {
     jumpSequence.current += 1;
@@ -69,37 +79,45 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const remaining = items.length - displayCount;
 
   return (
-    <div className="supplier-detail-view">
-      <div className="supplier-detail-view-header">
-        <button type="button" className="supplier-detail-back" onClick={onBack}>{t("superAdmin.supplierQuality.backToList")}</button>
-        <h2>{supplierName} <span className="supplier-detail-id">{supplierId}</span></h2>
-      </div>
-      {loading && <p>{t("common.loading")}</p>}
-      {error   && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
-      {!loading && !error && (
-        <div className="supplier-detail-view-body">
-          <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={items.length} jump={jump} />
-          <section className="supplier-detail-items">
-            {items.length === 0 && <p>{t("superAdmin.supplierQuality.noItems")}</p>}
-            {visibleItems.map((item) => (
-              <div key={item.extraction_item_id} className="supplier-detail-item-row">
-                <ItemComparison item={item} readOnly={true} onJumpToSourceLine={jumpToLine} />
-                <div className="supplier-detail-item-actions">
-                  {/* Phase 2: ProductMasterDrawer は Phase 3 以降で実装 */}
-                  <button type="button" className="supplier-detail-correct-btn" disabled={true}>{t("superAdmin.supplierQuality.correctPhase3")}</button>
-                </div>
-              </div>
-            ))}
-            {remaining > 0 && (
-              <div className="supplier-detail-load-more">
-                <button type="button" className="supplier-detail-back" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
-                  {t("superAdmin.supplierQuality.loadMore", { remaining })}
-                </button>
-              </div>
-            )}
-          </section>
+    <>
+      <div className="supplier-detail-view">
+        <div className="supplier-detail-view-header">
+          <button type="button" className="supplier-detail-back" onClick={onBack}>{t("superAdmin.supplierQuality.backToList")}</button>
+          <h2>{supplierName} <span className="supplier-detail-id">{supplierId}</span></h2>
         </div>
+        {loading && <p>{t("common.loading")}</p>}
+        {error   && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
+        {!loading && !error && (
+          <div className="supplier-detail-view-body">
+            <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={items.length} jump={jump} />
+            <section className="supplier-detail-items">
+              {items.length === 0 && <p>{t("superAdmin.supplierQuality.noItems")}</p>}
+              {visibleItems.map((item) => (
+                <div key={item.extraction_item_id} className="supplier-detail-item-row">
+                  <ItemComparison item={item} readOnly={true} onJumpToSourceLine={jumpToLine} />
+                  <div className="supplier-detail-item-actions">
+                    <button type="button" className="supplier-detail-correct-btn" onClick={() => setMasterDrawerItem(item)}>{t("superAdmin.supplierQuality.correctPhase3")}</button>
+                  </div>
+                </div>
+              ))}
+              {remaining > 0 && (
+                <div className="supplier-detail-load-more">
+                  <button type="button" className="supplier-detail-back" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
+                    {t("superAdmin.supplierQuality.loadMore", { remaining })}
+                  </button>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+      {masterDrawerItem && (
+        <ProductMasterDrawer
+          item={masterDrawerItem}
+          onClose={() => setMasterDrawerItem(undefined)}
+          onSaved={() => { setMasterDrawerItem(undefined); setRefreshKey((k) => k + 1); }}
+        />
       )}
-    </div>
+    </>
   );
 }

@@ -56,6 +56,7 @@ from app.routers import (
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
@@ -92,6 +93,7 @@ from app.routers import (
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
@@ -553,9 +555,19 @@ app.include_router(
     dependencies=[Depends(get_current_tenant)],
 )
 
+# PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
+app.include_router(
+    item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
 app.include_router(
     tcg_analysis_review.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 Phase 3: 商品マスタ登録 API（require_super_admin 限定）
+app.include_router(
+    tcg_product_master.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）

@@ -22,6 +22,7 @@ _ISSUE_UNIT_UNRESOLVED = "UNIT_UNRESOLVED"
 _ISSUE_EXCLUDED = "EXCLUDED"
 _ISSUE_MASTER_UNREGISTERED = "PRODUCT_MASTER_UNREGISTERED"
 _ISSUE_SUPPLIER_UNREGISTERED = "SUPPLIER_UNREGISTERED"
+_ISSUE_PRODUCT_CONFIRMED = "PRODUCT_CONFIRMED"
 
 # ---------------------------------------------------------------------------
 # 共通 FROM 句（全クエリで再利用）
@@ -109,6 +110,7 @@ def _compute_issues(
     unit_resolved: bool,
     exclusion: str | None,
     supplier_registered: bool,
+    product_confirmed: bool = False,
 ) -> list[str]:
     issues: list[str] = []
     if not pid_resolved:
@@ -121,6 +123,8 @@ def _compute_issues(
         issues.append(_ISSUE_EXCLUDED)
     if not supplier_registered:
         issues.append(_ISSUE_SUPPLIER_UNREGISTERED)
+    if product_confirmed:
+        issues.append(_ISSUE_PRODUCT_CONFIRMED)
     return issues
 
 
@@ -187,6 +191,8 @@ async def fetch_analysis_results(
             ei.line_start,
             ei.line_end,
             p.code                               AS product_code,
+            p.japanese_title                     AS product_title,
+            ar.product_id::text                  AS product_uuid,
             ar.pid_resolved,
             ar.pid_basis,
             ar.unit_canonical,
@@ -195,7 +201,16 @@ async def fetch_analysis_results(
             ar.note_ja,
             ar.status,
             ar.exclusion,
-            (ts.id IS NOT NULL)                  AS supplier_registered
+            (ts.id IS NOT NULL)                  AS supplier_registered,
+            COALESCE(
+                (SELECT ic.system_value = ic.human_value
+                 FROM {TCG_SCHEMA}.item_corrections ic
+                 WHERE ic.extraction_item_id = ei.id
+                   AND ic.field_name = 'product_id'
+                 ORDER BY ic.corrected_at DESC
+                 LIMIT 1),
+                FALSE
+            )                                    AS product_confirmed
         {_BASE_FROM}
         {where}
         ORDER BY sm.received_at DESC, ei.line_start ASC
@@ -228,6 +243,8 @@ async def fetch_analysis_results(
                 },
                 "system": {
                     "product_id": row.product_code or "",
+                    "product_title": row.product_title or "",
+                    "product_uuid": row.product_uuid or "",
                     "pid_resolved": "YES" if row.pid_resolved else "NO",
                     "pid_basis": row.pid_basis or "",
                     "unit": row.unit_canonical or "",
@@ -243,6 +260,7 @@ async def fetch_analysis_results(
                     unit_resolved=row.unit_resolved,
                     exclusion=row.exclusion,
                     supplier_registered=row.supplier_registered,
+                    product_confirmed=bool(row.product_confirmed),
                 ),
             }
         )

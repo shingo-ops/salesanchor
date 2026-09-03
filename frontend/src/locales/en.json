@@ -2247,10 +2247,25 @@
       "conditionPending": "Pending",
       "backToList": "← Back to list",
       "noItems": "No analysis items.",
-      "correctPhase3": "Correct → (Phase 3)",
+      "correctPhase3": "Edit",
       "superAdminOnly": "This page is restricted to super_admin.",
       "loadMore": "Load more ({{remaining}} left)",
-      "showingCount": "Showing {{shown}} / {{total}}"
+      "showingCount": "Showing {{shown}} / {{total}}",
+      "productAssign": {
+        "title": "Change Product Assignment",
+        "currentProduct": "Current product",
+        "noProduct": "Not assigned",
+        "searchPlaceholder": "Enter product name",
+        "searchBtn": "Search",
+        "searching": "Searching…",
+        "noResults": "No results",
+        "changeBtn": "Change product",
+        "changing": "Changing…",
+        "changed": "Product changed (will reflect on next analysis)",
+        "confirmBtn": "Mark as confirmed",
+        "confirming": "Saving…",
+        "confirmed": "Marked as confirmed"
+      }
     },
     "dex": {
       "title": "Pokemon / Trainer Dex",

@@ -1,0 +1,17 @@
+/* StatusBadge — tcg-analysis-review 専用バッジ部品
+ * クラス名を固有化（.tcg-status-badge）することで他画面の .badge-* と衝突しない。
+ * 将来 frontend/src/components/ に移せばプロジェクト全体で使える金型になる。
+ * 参照: docs/handoff/parity03-product-assign-drawer/design.md § 将来の移行
+ */
+
+.tcg-status-badge {
+  display: inline-block;
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-2xs);
+  font-weight: 600;
+}
+
+.tcg-status-badge--warning { background: var(--warning-bg-subtle); color: var(--warning); }
+.tcg-status-badge--danger  { background: var(--danger-bg-subtle);  color: var(--danger); }
+.tcg-status-badge--success { background: var(--success-bg-subtle); color: var(--success); }
