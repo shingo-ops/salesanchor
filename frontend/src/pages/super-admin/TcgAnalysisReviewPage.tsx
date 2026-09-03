@@ -67,7 +67,7 @@ export default function TcgAnalysisReviewPage() {
   const [noteState] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
   const [noteDiagnostics] = useState<Record<string, undefined>>({});
   const [corrections, setCorrections] = useState<Record<string, CorrectionValues>>({});
-  const [correctionState] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
+  const [correctionState, setCorrectionState] = useState<Record<string, 'idle' | 'saving' | 'saved' | 'error'>>({});
   const [sourceJumps, setSourceJumps] = useState<Record<string, SourceLineJump>>({});
   const jumpSequence = useRef(0);
 
@@ -105,6 +105,37 @@ export default function TcgAnalysisReviewPage() {
     setCorrections((current) => ({ ...current, [id]: { ...(current[id] || emptyCorrections()), [key]: value } }));
   };
 
+  const saveCorrection = async (item: AnalysisReviewItem) => {
+    const id = item.extraction_item_id;
+    const values = corrections[id] || emptyCorrections();
+    const mapping: Array<{ corrKey: keyof CorrectionValues; fieldName: string; geminiKey: string }> = [
+      { corrKey: 'corrected_product_name', fieldName: 'name', geminiKey: 'name' },
+      { corrKey: 'corrected_quantity', fieldName: 'quantity', geminiKey: 'quantity' },
+      { corrKey: 'corrected_price', fieldName: 'price', geminiKey: 'price' },
+      { corrKey: 'corrected_unit', fieldName: 'unit', geminiKey: 'unit' },
+      { corrKey: 'corrected_condition', fieldName: 'state', geminiKey: 'state' },
+      { corrKey: 'corrected_memo', fieldName: 'memo', geminiKey: 'memo' },
+    ];
+    const fields = mapping
+      .filter(({ corrKey }) => values[corrKey].trim())
+      .map(({ corrKey, fieldName, geminiKey }) => ({
+        field_name: fieldName,
+        system_value: item.gemini[geminiKey] || '',
+        human_value: values[corrKey],
+      }));
+
+    setCorrectionState((s) => ({ ...s, [id]: 'saving' }));
+    try {
+      await api.post<{ ok: boolean; saved: number }>(
+        `/tcg/items/${encodeURIComponent(id)}/corrections`,
+        { source_message_id: item.source_message_id, fields },
+      );
+      setCorrectionState((s) => ({ ...s, [id]: 'saved' }));
+    } catch {
+      setCorrectionState((s) => ({ ...s, [id]: 'error' }));
+    }
+  };
+
   const jumpToSourceLine = (sourceMessageId: string, line: number) => {
     jumpSequence.current += 1;
     setSourceJumps((jumps) => ({ ...jumps, [sourceMessageId]: { line, requestId: jumpSequence.current } }));
@@ -138,7 +169,7 @@ export default function TcgAnalysisReviewPage() {
         notes={notes}
         offset={offset}
         onCorrectionChange={updateCorrection}
-        onCorrectionSave={() => {}}
+        onCorrectionSave={saveCorrection}
         onNextPage={() => setOffset(offset + (data?.limit || 0))}
         onNoteChange={() => {}}
         onNoteSave={() => {}}

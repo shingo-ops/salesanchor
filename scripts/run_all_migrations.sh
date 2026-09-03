@@ -553,6 +553,9 @@ run_sql migrations/20260903_150000_tcg_status_master_t004.sql
 # TCG PARITY-02 A-1: 正規化ルール 135件（tenant_004 専用・冪等）
 run_sql migrations/20260903_160000_tcg_normalization_rules_t004.sql
 
+# PARITY-03 Phase 3 Stage 3: 修正履歴テーブル（tenant_004 専用・冪等）
+run_sql migrations/20260903_170000_item_corrections_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
