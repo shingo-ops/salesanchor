@@ -56,6 +56,7 @@ from app.routers import (
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
@@ -551,6 +552,11 @@ app.include_router(
 app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
+app.include_router(
+    item_corrections.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
