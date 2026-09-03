@@ -560,7 +560,7 @@ run_sql migrations/20260903_180000_tcg_products_mark_en_t004.sql
 run_sql migrations/20260903_170000_item_corrections_t004.sql
 
 # DIST-01 A': NR0008 全角＠除去ルール追加（price_normalized NULL 91→3件）
-run_sql migrations/20260903_190000_tcg_normalization_rules_nr0008.sql
+run_sql migrations/20260903_190000_tcg_normalization_rules_nr0136.sql
 
 # DIST-01 B: 配信先マスタ（tenant_004 専用・冪等）
 run_sql migrations/20260903_200000_tcg_distribution_targets_t004.sql
