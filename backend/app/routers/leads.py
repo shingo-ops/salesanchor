@@ -2216,10 +2216,148 @@ async def send_lead_image_message(
         platform = channel_type_str
 
     if platform == "discord":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Discord への画像送信はサポートされていません",
+        import os as _os
+
+        from app.services.discord_rest import DiscordAPIError, discord_api_request_with_file
+
+        bot_token = _os.environ.get("DISCORD_BOT_TOKEN") or None
+        if not bot_token:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Discord Bot Token が設定されていません",
+            )
+
+        ch_q = await db.execute(
+            text(
+                f"SELECT discord_guild_channel_id FROM {leads_t} "
+                "WHERE id = :id AND tenant_id = :tenant_id"
+            ),
+            {"id": lead_id, "tenant_id": tenant_id},
         )
+        ch_row = ch_q.first()
+        if ch_row is None or not ch_row[0]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Discord チャンネルが設定されていません",
+            )
+        channel_id = str(ch_row[0])
+
+        dc_filename = image.filename or f"image.{content_type.split('/')[-1]}"
+
+        try:
+            dc_msg = await discord_api_request_with_file(
+                channel_id=channel_id,
+                bot_token=bot_token,
+                file_bytes=file_bytes,
+                filename=dc_filename,
+                content_type=content_type,
+            )
+        except DiscordAPIError as exc:
+            logger.warning("Discord image send failed lead=%s: %s", lead_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Discord への画像送信に失敗しました",
+            )
+
+        dc_msg_id = dc_msg.get("id")
+
+        # sent_by_staff_id 解決
+        dc_sent_by_staff_id: Optional[int] = None
+        if current_user.email:
+            try:
+                sr = await db.execute(
+                    text(f"SELECT id FROM {staff_t} WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
+                    {"email": current_user.email},
+                )
+                row = sr.first()
+                if row:
+                    dc_sent_by_staff_id = int(row[0])
+            except Exception:
+                dc_sent_by_staff_id = None
+
+        dc_insert_params = {
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "platform": "discord",
+            "sender_id": None,
+            "message_id": dc_msg_id,
+            "recipient_id": channel_id,
+            "messaging_type": None,
+            "message_tag": None,
+            "sent_by_staff_id": dc_sent_by_staff_id,
+            "page_id": None,
+            "attachment_type": "image",
+        }
+        dc_insert_result = await db.execute(
+            text(f"""
+                INSERT INTO {meta_messages_t} (
+                    tenant_id, lead_id, platform, sender_id, message_text,
+                    direction, message_id, recipient_id,
+                    messaging_type, message_tag, sent_by_staff_id, page_id,
+                    attachment_type, created_at
+                )
+                VALUES (
+                    :tenant_id, :lead_id, :platform, :sender_id, '',
+                    'outbound', :message_id, :recipient_id,
+                    :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
+                    :attachment_type, NOW()
+                )
+                RETURNING id, created_at
+            """),
+            dc_insert_params,
+        )
+        dc_new_row = dc_insert_result.first()
+        if dc_new_row is None:
+            await db.execute(
+                text(f"""
+                    INSERT INTO {meta_messages_t} (
+                        tenant_id, lead_id, platform, sender_id, message_text,
+                        direction, message_id, recipient_id,
+                        messaging_type, message_tag, sent_by_staff_id, page_id,
+                        attachment_type, created_at
+                    )
+                    VALUES (
+                        :tenant_id, :lead_id, :platform, :sender_id, '',
+                        'outbound', :message_id, :recipient_id,
+                        :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
+                        :attachment_type, NOW()
+                    )
+                """),
+                dc_insert_params,
+            )
+            last_id_row = await db.execute(text("SELECT last_insert_rowid(), CURRENT_TIMESTAMP"))
+            new_id_row = last_id_row.first()
+            dc_new_id = int(new_id_row[0]) if new_id_row else 0
+            dc_new_created_at = new_id_row[1] if new_id_row else None
+        else:
+            dc_new_id = int(dc_new_row[0])
+            dc_new_created_at = dc_new_row[1]
+
+        await _record_send_audit_safely(
+            db, tenant_id=tenant_id, user_id=current_user.id,
+            action="discord_image_sent", record_id=dc_new_id,
+            new_data={
+                "lead_id": lead_id,
+                "platform": "discord",
+                "message_id": dc_msg_id,
+                "attachment_type": "image",
+            },
+        )
+        await db.commit()
+        from app.tenant.context import reset_tenant_context as _reset_ctx
+        await _reset_ctx(db, tenant_id)
+
+        return {
+            "id": dc_new_id,
+            "message_id": dc_msg_id,
+            "messaging_type": None,
+            "message_tag": None,
+            "sent_at": _meta_msg_format_dt(dc_new_created_at),
+            "lead_id": lead_id,
+            "platform": "discord",
+            "attachment_type": "image",
+        }
+
     if platform not in ("messenger", "instagram"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
