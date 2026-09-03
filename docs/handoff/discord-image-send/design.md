@@ -1,105 +1,100 @@
-# design: Discord 画像送信（attachment-storage 便6）
+# 設計 — Discord への画像送信（便6）
 
-設計日: 2026-09-03  
-参照 recon: `docs/handoff/discord-image-send/recon.md`  
-参照 ADR: ADR-091 (attachment-storage), ADR-072 (reset_tenant_context)
+> この文書は何か（専門用語なしの1行）:
+> 受信箱から画像を Discord へ送り、その画像も自社に残すための作り方。
 
-## KGI
+対象ADR: ADR-091
+recon: docs/handoff/discord-image-send/recon.md
+親テーマ: docs/specs/attachment-storage/README.md
 
-受信箱の Discord スレッドから画像を Discord チャンネルへ送信でき、  
-送信画像が `lead_attachments` テーブルおよびディスクに保存される。
+## 1. あるべき姿
 
-## KPI / 完了定義
+顧客が送った画像やファイルが、いつ見返しても受信箱に残っている。
+こちらから送った画像も同じように残る。
+
+## 2. recon（実測）
+
+docs/handoff/discord-image-send/recon.md を参照。要点は次の4つ。
+
+- 画面とAPIの入口は既にある。Discord だけが 400 で拒否されていた。
+- テキスト送信の Discord 分岐に前例がある。
+- 受信の保存関数は URL からのダウンロード専用で、送信には使えない。
+- 既存テストが 400 を期待しており、実装変更で壊れる。
+
+## 3. design（技術How）
+
+PO決定（2026-09-03）は次の5点である。
+
+1. 8MB上限で弾く。backend の既存処理をそのまま使う。
+2. 送信画像も自社保存する。形式は受信と同じ。
+3. 送信失敗時はエラーを返し、記録も残す。
+4. meta_messages に direction=outbound で記録する。
+5. 保存だけが失敗した場合は送信成功として扱う。
+   ただし応答に成否を含め、画面に警告を出す。
+
+保存先のパスは受信と同じ形式にする。
+Discord が返す message_id を使う。
+
+保存処理は meta_messages への記録の後に置く。
+try で囲み、失敗しても送信結果を返す。
+
+## 4. 外部・過去事例の参照と我々への応用
+
+Discord の Create Message は multipart form data でファイルを受け取る。
+ファイルは files という接頭辞のフォーム値として送り、
+Content-Disposition にファイル名を含める必要がある。
+
+payload_json を使う場合、file 以外のフォーム値はすべて無視される。
+本実装は payload_json を使わず files のみを送る。
+
+Discord の ID は snowflake 形式で、Discord 全体で一意であることが
+公式ドキュメントに明記されている。HTTP API では文字列として返る。
+
+したがって送信で得る message_id は受信のものと衝突しない。
+lead_attachments の message_id には UNIQUE 制約があるが、抵触しない。
+
+部分的な失敗については、800人以上のバックエンド技術者を対象にした
+2023年の調査で、約6割が最初の1年で本番環境の静かな不整合に
+遭遇したと報告されている。
+
+一括処理APIの設計指針では、複雑さが増しても呼び出し側に
+何が成功して何が失敗したかを伝えるべきとされている。
+
+APIが正常に見えながら壊れている典型例として、
+成功応答を返しながら不完全なデータを返す状態が挙げられている。
+
+我々への応用: 送信は成功したが保存が失敗した場合、
+警告ログだけで済ませると画面には送信済みと出て画像は残らない。
+本設計は応答に保存の成否を含め、画面に警告を出す。
+
+## 5. 弊害・トレードオフ
+
+- 弊害: 保存に失敗しても Discord への送信は取り消せない。
+  警告を出すのみで、自動の復旧手段は持たない。
+- 弊害: 保存先ディレクトリで送受信の区別がつかない。
+  meta_messages の direction 列で判別する。
+- 弊害: Discord の8MB上限は無料枠の値である。
+  サーバーブーストで上限が上がる場合、実際には送れる画像も弾く。
+- トレードオフ: 受信の保存関数を再利用せず、同等の処理を書く。
+  引数の形が違うため共通化すると両方が複雑になる。
+
+## 6. 受入基準
 
 | 基準 | 検証方法 |
-|------|---------|
-| `DISCORD_BOT_TOKEN` 未設定 → 409 | pytest `test_no_meta_config_returns_409` (messenger) / 409チェックは共通コード |
-| `discord_guild_channel_id` 未設定 → 404 | pytest `test_discord_without_channel_returns_404` |
-| Discord API 呼び出し成功 → 201 + `meta_messages` outbound 行 | CI pytest 全 PASS |
-| 送信画像が `lead_attachments` に保存される | `test_discord_d2.py` or 結合テスト（便7以降） |
-| 保存失敗時も送信成功として返す | try/except + WARNING ログ（ユニットテスト対象外・ログで確認） |
+|---|---|
+| ファイル送信の関数がある | grep で discord_api_request_with_file が1件以上 |
+| 保存処理がある | grep で 送信画像を保存 が1件 |
+| 応答に成否を含める | grep で attachment_saved が backend に1件以上 |
+| 画面が成否を見る | grep で attachment_saved が frontend に1件以上 |
+| 壊れたテストを是正した | 旧テスト名が0件 |
+| 既存テストを壊していない | pytest が全 pass |
+| 実環境で送信できる | 受信箱から画像を送り Discord に届くことを確認する |
+| 送信画像が保存される | 保存先にファイルが増えることを確認する |
 
-## 設計方針
+## 7. 維持の仕組み
 
-### Discord API 呼び出し
-
-既存 `discord_api_request_with_file()` (`discord_rest.py:139`) を利用。  
-multipart POST で `files[0]` キーにファイルを添付。  
-リトライは discord_rest.py の共通レジリエンスレイヤーに委譲。
-
-### attachment 保存（便6）
-
-- 受信側 (`ticket_channel_writer.py:42` `_save_attachment_to_disk`) と同一の保存形式を採用。
-- 保存先: `ATTACHMENT_ROOT/tenant_{id:03d}/lead_{lead_id}/{discord_message_id}{ext}`
-- `lead_attachments.message_id` は UNIQUE 制約 → `ON CONFLICT (message_id) DO NOTHING` で冪等。
-- **保存失敗は警告ログのみ・送信成功扱い**（受信側と同じ設計決定）。
-
-### meta_messages INSERT
-
-- `direction='outbound'`, `platform='discord'`, `attachment_type='image'`
-- RETURNING 未対応 SQLite 環境向けに `SELECT last_insert_rowid()` フォールバックあり。
-
-### ADR-072 遵守
-
-`db.commit()` 直後に `reset_tenant_context(db, tenant_id)` を実行（`leads.py:2347-2348`）。
-
-## 外部事例
-
-Discord Bot multipart upload: 公式ドキュメント  
-`POST /channels/{channel_id}/messages` + `multipart/form-data` (`files[0]` key)  
-添付ファイルは 8MB 上限（`leads.py:_MAX_IMAGE_BYTES = 8 * 1024 * 1024` で事前チェック済み）。
-
-## 弊害・リスク
-
-| リスク | 対策 |
-|--------|------|
-| Discord API 一時障害 | discord_rest.py の 5xx 指数バックオフ (最大 5回) |
-| ATTACHMENT_ROOT 未設定 | デフォルト `/data/attachments`・失敗は WARNING のみ |
-| message_id 重複 (リトライ時) | `ON CONFLICT (message_id) DO NOTHING` |
-
-## 触るファイル
-
-- `backend/app/routers/leads.py` — 送信実装 + attachment 保存ブロック追加
-- `backend/tests/test_message_image_send.py` — テスト修正 (400→404, DISCORD_BOT_TOKEN patch)
-
-## 削除するファイル
-
-- `backend/app/routers/leads.py` — 変更あり（deletions ≥ 1）
-
-## 8. 保存失敗の可視化（PO決定 2026-09-03・追記）
-
-送信は成功したが自社保管だけが失敗した場合、応答に attachment_saved を含め、
-画面に警告を表示する。送信自体は成功として扱う。
-
-### 判断の根拠（外部事例）
-
-複数のサービスにまたがる処理で一部だけが失敗する状態は
-部分的な失敗と呼ばれ、広く知られた問題である。
-
-800人以上のバックエンド技術者を対象にした2023年の調査では、
-約60%がマイクロサービスに取り組んだ最初の1年で
-本番環境において静かな不整合に遭遇したと報告されている。
-不注意ではなく、既定のツールでは複数サービスにまたがる
-原子的な操作が本質的に難しいためとされている。
-
-APIが正常に見えながら壊れていることがあり、その典型例が
-成功応答を返しているのに不完全なデータを返している場合とされている。
-
-一括処理APIの設計指針として、複雑さが増しても
-クライアントに何が成功して何が失敗したかの実行可能な情報を
-渡すべきとされている。
-
-### 我々への応用
-
-Discord への送信は取り消せない。全体をエラーにすると
-送信済みなのにエラー表示となり、再送による二重投稿を招く。
-
-警告ログのみに留めると、画面には送信済みと出て
-自社には残らない状態が静かに続く。
-
-したがって送信は成功として扱いつつ、保管の失敗を応答に含める。
-
-### 残る限界
-
-失敗したことが分かるだけで、復旧手段は無い。
-後から再保存する仕組みは本便に含めない。
+- 守り手: 人手で守る
+- 理由: Discord への実送信を伴うため、
+  現在のテスト基盤では外部APIとの往復を再現できない。
+- 対象: 送信画像が自社に保存されなくなること。
+- 検知方法: PO による実機確認。受信箱から画像を送り、保存先を確認する。
