@@ -55,7 +55,7 @@ ADR-154（GAS→Python 段階移植）: `docs/adr/ADR-154-tcg-parity02-gas-pytho
 
 ## 確認済みバッジ実装方針
 
-GAS `reviewIssues.ts` に "confirmed" の概念なし → 新設。
+GAS `frontend/src/features/tcg-analysis-review/reviewIssues.ts` に "confirmed" の概念なし → 新設。
 
 - `PRODUCT_CONFIRMED` を `AtomicReviewIssueId` に追加（`tone: 'success'`, `label: '確認済み'`）
 - `needsReviewIssueIds` には含めない（問題バッジではない）
