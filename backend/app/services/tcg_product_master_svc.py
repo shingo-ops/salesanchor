@@ -73,6 +73,8 @@ async def fetch_registration_form(
         "extraction_item_id": row.extraction_item_id,
         "source_message_id": row.source_message_id,
         "raw_name": row.raw_name or "",
+        "mark": "",
+        "english_title": "",
     }
 
     # ── 分類マスタ一覧（有効行のみ） ──────────────────────────────────────
@@ -287,6 +289,8 @@ async def create_product(
     release_date: str | None,
     search_keywords: str,
     exclude_keywords: str,
+    mark: str = "",
+    english_title: str = "",
 ) -> dict[str, Any]:
     """
     GAS: createProductMasterV2FromAnalysisReview 相当。
@@ -333,11 +337,11 @@ async def create_product(
             INSERT INTO {TCG_SCHEMA}.tcg_products
                 (code, japanese_title, release_date, category_class,
                  division_id, work_id, manufacturer_id, product_category_id,
-                 is_active)
+                 mark, english_title, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
-                 TRUE)
+                 :mark, :english_title, TRUE)
             RETURNING id::text AS id
             """
         ),
@@ -350,6 +354,8 @@ async def create_product(
             "work_id": work_id,
             "manufacturer_id": manufacturer_id,
             "product_category_id": product_category_id,
+            "mark": mark.strip() or None,
+            "english_title": english_title.strip() or None,
         },
     )
     new_row = product_row.fetchone()

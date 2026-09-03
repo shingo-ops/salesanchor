@@ -44,6 +44,8 @@ class RegistrationFormItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
     raw_name: str
+    mark: str = ""
+    english_title: str = ""
 
 
 class RegistrationFormResponse(BaseModel):
@@ -94,6 +96,8 @@ class CreateProductRequest(BaseModel):
     search_keywords: str = ""
     exclude_keywords: str = ""
     release_date: str = ""
+    mark: str = ""
+    english_title: str = ""
 
 
 class CreateProductOkResponse(BaseModel):
@@ -220,6 +224,8 @@ async def create_product_master(
             release_date=body.release_date or None,
             search_keywords=body.search_keywords,
             exclude_keywords=body.exclude_keywords,
+            mark=body.mark,
+            english_title=body.english_title,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e

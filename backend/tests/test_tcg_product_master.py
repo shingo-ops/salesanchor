@@ -27,6 +27,8 @@ _FORM_DATA = {
         "extraction_item_id": "aaaaaaaa-0000-0000-0000-000000000001",
         "source_message_id": "bbbbbbbb-0000-0000-0000-000000000001",
         "raw_name": "ポケモン SV1a 1BOX",
+        "mark": "",
+        "english_title": "",
     },
     "lookups": {
         "division_id": [{"id": "cccc-0001", "name": "TCG"}],
@@ -165,6 +167,8 @@ async def test_registration_form_ok(super_admin_override):
     assert r.status_code == 200
     body = r.json()
     assert body["item"]["raw_name"] == "ポケモン SV1a 1BOX"
+    assert "mark" in body["item"]
+    assert "english_title" in body["item"]
     assert "division_id" in body["lookups"]
     assert body["lookups"]["division_id"][0]["name"] == "TCG"
 
@@ -269,6 +273,34 @@ async def test_create_product_ok(super_admin_override):
     body = r.json()
     assert body["ok"] is True
     assert body["product_id"] == "PM0042"
+
+
+async def test_create_product_with_mark_english_title(super_admin_override):
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.create_product",
+        new=AsyncMock(return_value=_CREATE_OK),
+    ) as mock_create:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products",
+                json={
+                    "extraction_item_id": "aaaa",
+                    "source_message_id": "bbbb",
+                    "division_id": "cccc",
+                    "work_id": "dddd",
+                    "manufacturer_id": "eeee",
+                    "product_category_id": "ffff",
+                    "japanese_title": "新作SV42",
+                    "mark": "MMD",
+                    "english_title": "Mask of Change",
+                },
+            )
+    assert r.status_code == 200
+    assert mock_create.call_args.kwargs["mark"] == "MMD"
+    assert mock_create.call_args.kwargs["english_title"] == "Mask of Change"
 
 
 async def test_create_product_duplicate(super_admin_override):
