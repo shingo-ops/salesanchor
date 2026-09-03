@@ -42,6 +42,24 @@ GAS → サーバー移植の実施済み・未対応一覧。
 
 ---
 
+## CI 既知 flaky: rls_bootstrap.py pg_type 競合状態 (2026-09-03)
+
+### 概要
+
+- テスト: `tests/test_rls_bootstrap_ordering.py::test_rls_bootstrap_schema_and_migration_share_one_transaction`
+- エラー: `asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "pg_type_typname_nsp_index" — Key (typname, typnamespace)=(tcg_type_master, 2200) already exists.`
+- 原因: `rls_bootstrap.py:_bootstrap_public_shared()` が `085_create_tcg_type_master.sql` を実行する際、pytest-xdist の並列ワーカーが advisory lock を正しく取得できず `CREATE TABLE IF NOT EXISTS` が同時実行される競合状態（pre-existing）
+- PR #3243 の変更（`rls_bootstrap.py` 非変更）とは無関係。発見契機: PR #3243 CI 実行時
+- 発生頻度: 不定期（直前コミット `6daa2d5a` は PASS、空コミット再実行で FAIL）
+
+### 対応方針
+
+- 修正は別タスクとして残置（今は着手しない）
+- 候補修正: `rls_bootstrap.py:_bootstrap_public_shared()` の CREATE TABLE 実行を `EXCEPTION WHEN duplicate_table THEN NULL` でラップする
+- 発生時は空コミットで CI 再実行すれば通る可能性が高い（3回連続失敗で要調査）
+
+---
+
 ## E3a + E5 実装 (2026-09-01)
 
 ### GAS → Python 関数対応表

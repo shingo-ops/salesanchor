@@ -556,6 +556,9 @@ run_sql migrations/20260903_160000_tcg_normalization_rules_t004.sql
 # PARITY-03: tcg_products に mark / english_title 列を追加し 268件を充填（冪等）
 run_sql migrations/20260903_180000_tcg_products_mark_en_t004.sql
 
+# PARITY-03 Phase 3 Stage 3: 修正履歴テーブル（tenant_004 専用・冪等）
+run_sql migrations/20260903_170000_item_corrections_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
