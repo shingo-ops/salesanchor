@@ -2333,6 +2333,52 @@ async def send_lead_image_message(
             dc_new_id = int(dc_new_row[0])
             dc_new_created_at = dc_new_row[1]
 
+        # 送信画像も自社ディスクへ保存する（attachment-storage 便6・PO決定 2026-09-03）。
+        # 受信と同じ形式で置き、lead_attachments に記録する。
+        # 保存に失敗しても送信は成功として扱う。受信側と同じ設計。
+        if dc_msg_id:
+            try:
+                from pathlib import Path
+                _att_root = _os.environ.get("ATTACHMENT_ROOT", "/data/attachments")
+                _ext = ""
+                if dc_filename and "." in dc_filename:
+                    _ext = "." + dc_filename.rsplit(".", 1)[1][:10]
+                _rel_path = f"tenant_{tenant_id:03d}/lead_{lead_id}/{dc_msg_id}{_ext}"
+                _abs_path = Path(_att_root) / _rel_path
+                _abs_path.parent.mkdir(parents=True, exist_ok=True)
+                _abs_path.write_bytes(file_bytes)
+
+                attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
+                await db.execute(
+                    text(f"""
+                        INSERT INTO {attachments_t}
+                            (tenant_id, lead_id, message_id, platform,
+                             file_path, file_size, content_type, original_filename)
+                        VALUES
+                            (:tenant_id, :lead_id, :message_id, 'discord',
+                             :file_path, :file_size, :content_type, :original_filename)
+                        ON CONFLICT (message_id) DO NOTHING
+                    """),
+                    {
+                        "tenant_id": tenant_id,
+                        "lead_id": lead_id,
+                        "message_id": str(dc_msg_id),
+                        "file_path": _rel_path,
+                        "file_size": len(file_bytes),
+                        "content_type": content_type,
+                        "original_filename": dc_filename,
+                    },
+                )
+                logger.info(
+                    "[attachment-save] 送信画像を保存 tenant=%s lead=%s msg=%s bytes=%s path=%s",
+                    tenant_id, lead_id, dc_msg_id, len(file_bytes), _rel_path,
+                )
+            except Exception:
+                logger.warning(
+                    "[attachment-save] 送信画像の保存失敗 tenant=%s lead=%s msg=%s",
+                    tenant_id, lead_id, dc_msg_id, exc_info=True,
+                )
+
         await _record_send_audit_safely(
             db, tenant_id=tenant_id, user_id=current_user.id,
             action="discord_image_sent", record_id=dc_new_id,

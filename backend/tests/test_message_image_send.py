@@ -316,18 +316,19 @@ async def test_lead_not_found_returns_404(app_client):
 
 
 @pytest.mark.asyncio
-async def test_discord_platform_returns_400(app_client):
+async def test_discord_without_channel_returns_404(app_client):
+    """discord_guild_channel_id 未設定リードへの送信は 404 を返す。"""
     ac, db, fernet = app_client
     await db.execute(
         text("INSERT INTO leads (id, tenant_id, channel_type, customer_name) VALUES (1, 999, 'discord', 'Test')"),
     )
     await _insert_inbound(db, 999, 1, "discord")
-    resp = await ac.post(
-        "/api/v1/leads/1/messages/image",
-        files={"image": ("img.jpeg", _make_image_bytes(), "image/jpeg")},
-    )
-    assert resp.status_code == 400, resp.text
-    assert "Discord" in resp.json()["detail"]
+    with patch.dict(os.environ, {"DISCORD_BOT_TOKEN": "fake_token_for_test"}):
+        resp = await ac.post(
+            "/api/v1/leads/1/messages/image",
+            files={"image": ("img.jpeg", _make_image_bytes(), "image/jpeg")},
+        )
+    assert resp.status_code == 404, resp.text
 
 
 @pytest.mark.asyncio
