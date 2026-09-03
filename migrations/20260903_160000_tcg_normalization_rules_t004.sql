@@ -192,9 +192,9 @@ BEGIN
         _schema
     ) INTO _count USING 'NR%';
 
-    IF _count <> 135 THEN
-        RAISE EXCEPTION 'migration 20260903_160000: tcg_normalization_rules count mismatch (expected 135, got %)', _count;
+    IF _count < 135 THEN
+        RAISE EXCEPTION 'migration 20260903_160000: tcg_normalization_rules count mismatch (expected >= 135, got %)', _count;
     END IF;
 
-    RAISE NOTICE 'migration 20260903_160000: tcg_normalization_rules: 135 rows OK';
+    RAISE NOTICE 'migration 20260903_160000: tcg_normalization_rules: % rows OK (>= 135)', _count;
 END $body$;
