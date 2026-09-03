@@ -49,3 +49,18 @@
 - ADR-067 CSS チェック（CI）で design token 逸脱を自動検出
 - stylelint `no-descending-specificity` で CSS 特異度の逆転を自動検出
 - BE API 変更時は ProductMasterDrawer.tsx の API パスと型定義を合わせて更新
+
+---
+
+## 将来の差し替え予定（TODO）
+
+### EXCLUDED モードの案内文（ExcludedSection）
+
+現在の文言:
+> 除外キーワードの確認・変更は 商品マスタV2 シートの Exclude Keywords 列から直接行ってください。
+
+この文言は GAS 実装の移植どおりだが、**サーバー移行完了後は誤った案内になる**。  
+除外キーワードをサーバー側（管理画面 or API）で編集できるようになった時点で  
+`ProductMasterDrawer.tsx:373-374` の文言を差し替えること。
+
+差し替えトリガー: 除外キーワード編集 API（`PATCH /tcg/products/:id/exclude-keywords` 相当）が実装されたとき。
