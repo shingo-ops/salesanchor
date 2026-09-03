@@ -202,12 +202,14 @@ async def fetch_analysis_results(
             ar.status,
             ar.exclusion,
             (ts.id IS NOT NULL)                  AS supplier_registered,
-            EXISTS (
-                SELECT 1
-                FROM {TCG_SCHEMA}.item_corrections ic
-                WHERE ic.extraction_item_id = ei.id
-                  AND ic.field_name = 'product_id'
-                  AND ic.system_value = ic.human_value
+            COALESCE(
+                (SELECT ic.system_value = ic.human_value
+                 FROM {TCG_SCHEMA}.item_corrections ic
+                 WHERE ic.extraction_item_id = ei.id
+                   AND ic.field_name = 'product_id'
+                 ORDER BY ic.corrected_at DESC
+                 LIMIT 1),
+                FALSE
             )                                    AS product_confirmed
         {_BASE_FROM}
         {where}

@@ -40,7 +40,12 @@ _FORM_DATA = {
 
 _SEARCH_DATA = {
     "candidates": [
-        {"product_id": "PM0001", "japanese_title": "SV1a", "search_keywords": "sv1a,SV1a"},
+        {
+            "product_id": "PM0001",
+            "product_uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+            "japanese_title": "SV1a",
+            "search_keywords": "sv1a,SV1a",
+        },
     ]
 }
 
