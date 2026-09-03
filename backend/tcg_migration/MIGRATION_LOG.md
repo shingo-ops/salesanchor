@@ -15,6 +15,48 @@ GAS → サーバー移植の実施済み・未対応一覧。
 | 2026-09-01 | E3a (`recoverUnitFromProductName`) + E5 (`recalcConditionFromResolvedUnit`) 移植 — dry-run 専用。migration: analysis_results に unit_basis 等 4列追加 | release/tcg-e3a-e5-unit-recovery |
 | 2026-09-03 | PARITY-02 Phase D 統合: C-1/C-7/Status + C-3/C-6 (E3a+E5) + C-4/C-5 (E3b+E4) を `analyze_extraction_job` に統合 / ENGINE_VERSION 統一: `name-first-v2` / GAS Phase 3 実行順序: 正規化→照合→E3a→E5→E3b→E4 | release/tcg-parity02-phase-d-integrate |
 | 2026-09-03 | `match_keyword()` GAS 準拠修正: キーワード未登録商品を候補にしない (`!srchStr → return`) / MULTI 1340→46件、pid_resolved 286→1294件（79.6%） | release/tcg-parity02-match-keyword-fix |
+| 2026-09-03 | PARITY-03 Phase 3: tcg_products に mark/english_title 列追加・268商品データ投入（シート直読み）。充填率: mark 239/268 (89.2%), english_title 251/268 (93.7%) | PR #3246 |
+| 2026-09-03 | PARITY-03 Phase 3 BE: 商品マスタ登録 API (B-1〜B-5 + R-1) + mark/english_title B-1/B-3対応 | PR #3239 |
+| 2026-09-03 | PARITY-03 Phase 3 item_corrections: 修正履歴テーブル作成（append-only, field単位）| PR #3243 |
+
+---
+
+## mark/english_title 充填率 調査メモ (2026-09-03)
+
+### PR #3246 調査値（シート直読み）
+
+- 取得方法: `clasp run y1406DumpProductMasterV2Page` を 3バッチで実行（~/sqr07_work）
+- mark: NULL **29件** / filled 239件 (89.2%)
+- english_title: NULL **17件** / filled 251件 (93.7%)
+
+### セッション3 文書ベース値（参考）
+
+- mark: NULL 20件 (92.5%)
+- english_title: NULL 7件 (97.4%)
+
+### 差異の記録
+
+- 差異: mark +9件、english_title +10件（実測の方が NULL が多い）
+- 差異の原因: **【未確認】** シートへの追加 or 集計範囲の違いによる可能性
+- 採用値: **シートの実測値を正とした**（コードベースのシード値ではなく clasp 直読み値）
+
+---
+
+## CI 既知 flaky: rls_bootstrap.py pg_type 競合状態 (2026-09-03)
+
+### 概要
+
+- テスト: `tests/test_rls_bootstrap_ordering.py::test_rls_bootstrap_schema_and_migration_share_one_transaction`
+- エラー: `asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "pg_type_typname_nsp_index" — Key (typname, typnamespace)=(tcg_type_master, 2200) already exists.`
+- 原因: `rls_bootstrap.py:_bootstrap_public_shared()` が `085_create_tcg_type_master.sql` を実行する際、pytest-xdist の並列ワーカーが advisory lock を正しく取得できず `CREATE TABLE IF NOT EXISTS` が同時実行される競合状態（pre-existing）
+- PR #3243 の変更（`rls_bootstrap.py` 非変更）とは無関係。発見契機: PR #3243 CI 実行時
+- 発生頻度: 不定期（直前コミット `6daa2d5a` は PASS、空コミット再実行で FAIL）
+
+### 対応方針
+
+- 修正は別タスクとして残置（今は着手しない）
+- 候補修正: `rls_bootstrap.py:_bootstrap_public_shared()` の CREATE TABLE 実行を `EXCEPTION WHEN duplicate_table THEN NULL` でラップする
+- 発生時は空コミットで CI 再実行すれば通る可能性が高い（3回連続失敗で要調査）
 
 ---
 
