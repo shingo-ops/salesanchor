@@ -3,11 +3,12 @@
 
 /* コンポーネント固有サイジング — ADR-067: グローバルトークンに相当値なし */
 .tcg-analysis-review {
-  --tcg-ar-sheet-min-w: 1780px;
-  --tcg-ar-raw-max-h:    720px;
-  --tcg-ar-raw-min-w:    320px;
-  --tcg-ar-col-label-w:  110px;
-  --tcg-ar-note-min-h:    72px;
+  --tcg-ar-sheet-min-w:   1780px;
+  --tcg-ar-raw-max-h:      720px;
+  --tcg-ar-raw-min-w:      320px;
+  --tcg-ar-col-label-w:    110px;
+  --tcg-ar-note-min-h:      72px;
+  --tcg-ar-drawer-max-w:   480px;
 }
 
 .tcg-analysis-review { padding: var(--space-5); }
@@ -227,3 +228,215 @@
 .tcg-analysis-review .note-error,
 .tcg-analysis-review .error { color: var(--danger); }
 .tcg-analysis-review .empty { color: var(--text-secondary); }
+
+/* ── ProductMasterDrawer ─────────────────────────────────────────────────── */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: var(--z-backdrop);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(var(--tcg-ar-drawer-max-w), 100vw);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.drawer-head h2 {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-head button {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--font-lg);
+  line-height: 1;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.drawer-body h3 {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+.drawer-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.drawer-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+.drawer-field input,
+.drawer-field textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--space-2);
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.drawer-field textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.drawer-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.drawer-actions button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.drawer-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drawer-note {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.drawer-result {
+  background: var(--accent-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.drawer-result h4 {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+}
+
+.drawer-result p,
+.drawer-result small {
+  margin: 0;
+  font-size: var(--font-xs);
+}
+
+.drawer-warning {
+  background: var(--danger-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.drawer-warning h3,
+.drawer-warning strong { color: var(--danger); }
+
+.drawer-warning p,
+.drawer-warning small {
+  margin: 0;
+  font-size: var(--font-xs);
+}
+
+.search-candidate {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.search-candidate button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+}
+
+.search-candidate small {
+  color: var(--text-secondary);
+  font-size: var(--font-2xs);
+}
+
+.search-candidate--selected {
+  border-color: var(--accent);
+  background: var(--accent-bg-subtle);
+}
+
+/* 商品マスタを修正 → ボタン（ItemComparison内） */
+.tcg-analysis-review .btn-master-drawer {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent-bg-subtle);
+  color: var(--accent);
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  font-size: var(--font-xs);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tcg-analysis-review .btn-master-drawer:hover {
+  background: var(--accent);
+  color: var(--bg-surface);
+}
