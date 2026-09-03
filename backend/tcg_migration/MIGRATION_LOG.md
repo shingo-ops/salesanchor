@@ -279,3 +279,45 @@ GAS 側が受信日時を記録していなかったため（LINE Bot の受信�
 ### 将来ガイダンス
 
 将来 LINE から直接取り込む（GAS を経由しない）実装を行う際は、受信時刻を `source_messages.received_at` に記録すること。
+
+---
+
+## デプロイ障害記録: NR0136 先行投入 (2026-09-04)
+
+### 事象
+
+2026-09-04（JST）、PR #3252（HIST-01）のデプロイが migration ステップで EXIT 1。
+
+```
+ERROR:  migration 20260903_160000: tcg_normalization_rules count mismatch (expected 135, got 136)
+```
+
+### 根本原因
+
+2026-09-03 21:37 頃（GO 発行前）、DIST-01 開発中に NR0136（全角＠除去ルール）が本番 VPS へ直接投入された。  
+その結果、`tenant_004.tcg_normalization_rules` の行数が 136 件になっていた。  
+既存 migration `20260903_160000` は末尾で `count = 135` を厳密チェックしており、136 件でデプロイが停止した。
+
+- **承認前の本番変更が、翌日のデプロイ障害として表面化した事例。**
+- 同じことが破壊的な操作（DROP TABLE・TRUNCATE 等）で起きれば復元できない。
+
+### 影響範囲
+
+| 対象 | 状態 |
+|------|------|
+| アプリ全体 | **正常稼働**（コードは deploy ステップで先にデプロイ済み） |
+| /api/health | `{"status":"ok","database":"connected","redis":"connected","celery":"connected"}` |
+| app.salesanchor.jp | HTTP 200 / ログイン画面表示 |
+| 20260903_170000 (item_corrections) | **適用済み**（#3251 PARITY-03 デプロイ済み） |
+| 20260903_180000 (tcg_products mark/en) | **適用済み**（#3251 PARITY-03 デプロイ済み） |
+| 20260903_220000 (analysis_runs / analysis_run_snapshots) | **未作成**（step 200/200 が未実行） |
+
+### 対処
+
+PR #3254: `20260903_160000` の count チェックを `!= 135` → `< 135`（135 件以上 OK）に変更。  
+#3254 マージ → 再デプロイ → `20260903_220000` 実行 → テーブル作成完了。
+
+### 教訓
+
+**GO 承認前に本番 DB を直接変更しない。** migration は必ずデプロイパイプライン経由で適用すること。  
+直接投入が必要な場合は、その前に既存 migration の件数チェック等との整合を確認し、PO に明示報告した上で承認を得ること。

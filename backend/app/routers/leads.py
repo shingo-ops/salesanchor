@@ -2279,7 +2279,9 @@ async def send_lead_image_message(
             "tenant_id": tenant_id,
             "lead_id": lead_id,
             "platform": "discord",
-            "sender_id": None,
+            # meta_messages.sender_id は NOT NULL である。
+            # 既存のテキスト送信と同じ値を入れる（2026-09-04 に None で 500 を実測）。
+            "sender_id": f"bot:{tenant_id}",
             "message_id": dc_msg_id,
             "recipient_id": channel_id,
             "messaging_type": None,
