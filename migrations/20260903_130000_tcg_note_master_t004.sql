@@ -329,13 +329,16 @@ BEGIN
     $q$, _schema);
 
     -- -------------------------------------------------------------------------
-    -- 件数確認（22件でなければ RAISE EXCEPTION）
+    -- 件数確認（このmigrationが挿入した NJ001〜NJ022 の22件を確認）
+    -- BETWEEN で担当範囲を限定することで、後から追加された行に影響されない
     -- -------------------------------------------------------------------------
-    EXECUTE format('SELECT count(*) FROM %I.tcg_note_master', _schema)
-        INTO _count;
+    EXECUTE format(
+        'SELECT count(*) FROM %I.tcg_note_master WHERE id BETWEEN $1 AND $2',
+        _schema
+    ) INTO _count USING 'NJ001', 'NJ022';
     IF _count != 22 THEN
-        RAISE EXCEPTION 'tcg_note_master: 期待22件、実際%件', _count;
+        RAISE EXCEPTION 'tcg_note_master: 期待22件、実際%件 (NJ001-NJ022)', _count;
     END IF;
 
-    RAISE NOTICE 'tcg_note_master: % 件確認 OK', _count;
+    RAISE NOTICE 'tcg_note_master: 22 件確認 OK (NJ001-NJ022)';
 END $body$;

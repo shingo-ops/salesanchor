@@ -134,16 +134,17 @@ BEGIN
     $q$, _schema);
 
     -- -------------------------------------------------------------------------
-    -- COUNT 検証（9件でなければ RAISE EXCEPTION）
+    -- COUNT 検証（このmigrationが挿入したST0001〜ST0014の9件を確認）
+    -- ST0005〜ST0009が欠番のためBETWEENは使えない。IN()で担当IDを明示する
     -- -------------------------------------------------------------------------
     EXECUTE format(
-        'SELECT count(*) FROM %I.tcg_status_master WHERE status_id LIKE $1',
+        'SELECT count(*) FROM %I.tcg_status_master WHERE status_id = ANY($1)',
         _schema
-    ) INTO _count USING 'ST%';
+    ) INTO _count USING ARRAY['ST0001','ST0002','ST0003','ST0004','ST0010','ST0011','ST0012','ST0013','ST0014'];
 
     IF _count <> 9 THEN
         RAISE EXCEPTION 'migration 20260903_150000: tcg_status_master count mismatch (expected 9, got %)', _count;
     END IF;
 
-    RAISE NOTICE 'migration 20260903_150000: tcg_status_master: 9 rows OK';
+    RAISE NOTICE 'migration 20260903_150000: tcg_status_master: 9 rows OK (ST0001-ST0004,ST0010-ST0014)';
 END $body$;

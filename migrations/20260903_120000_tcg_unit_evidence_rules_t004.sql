@@ -123,13 +123,21 @@ BEGIN
     $q$, _schema);
 
     -- -------------------------------------------------------------------------
-    -- 件数確認（4件でなければ RAISE EXCEPTION）
+    -- 件数確認（このmigrationが挿入した4件を確認）
+    -- id = ANY($1) で担当IDを明示することで、後から追加された行に影響されない
     -- -------------------------------------------------------------------------
-    EXECUTE format('SELECT count(*) FROM %I.tcg_unit_evidence_rules', _schema)
-        INTO _count;
+    EXECUTE format(
+        'SELECT count(*) FROM %I.tcg_unit_evidence_rules WHERE id = ANY($1)',
+        _schema
+    ) INTO _count USING ARRAY[
+        'UER_E2_PRICE_X_QTY_UNIT',
+        'UER_E2_AT_PRICE_X_QTY_UNIT',
+        'UER_E2_CURRENCY_PRICE_X_QTY_UNIT',
+        'UER_E3'
+    ];
     IF _count != 4 THEN
         RAISE EXCEPTION 'tcg_unit_evidence_rules: 期待4件、実際%件', _count;
     END IF;
 
-    RAISE NOTICE 'tcg_unit_evidence_rules: % 件確認 OK', _count;
+    RAISE NOTICE 'tcg_unit_evidence_rules: 4 件確認 OK (UER_E2_*, UER_E3)';
 END $body$;

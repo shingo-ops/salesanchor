@@ -185,16 +185,17 @@ BEGIN
     $ins$, _schema);
 
     -- -------------------------------------------------------------------------
-    -- COUNT 検証（135件でなければ RAISE EXCEPTION）
+    -- COUNT 検証（このmigrationが挿入した NR0001〜NR0135 の135件を確認）
+    -- BETWEEN で担当範囲を限定することで、後から追加された行に影響されない
     -- -------------------------------------------------------------------------
     EXECUTE format(
-        'SELECT count(*) FROM %I.tcg_normalization_rules WHERE normalization_rule_id LIKE $1',
+        'SELECT count(*) FROM %I.tcg_normalization_rules WHERE normalization_rule_id BETWEEN $1 AND $2',
         _schema
-    ) INTO _count USING 'NR%';
+    ) INTO _count USING 'NR0001', 'NR0135';
 
-    IF _count < 135 THEN
-        RAISE EXCEPTION 'migration 20260903_160000: tcg_normalization_rules count mismatch (expected >= 135, got %)', _count;
+    IF _count <> 135 THEN
+        RAISE EXCEPTION 'migration 20260903_160000: tcg_normalization_rules count mismatch (expected 135, got %)', _count;
     END IF;
 
-    RAISE NOTICE 'migration 20260903_160000: tcg_normalization_rules: % rows OK (>= 135)', _count;
+    RAISE NOTICE 'migration 20260903_160000: tcg_normalization_rules: 135 rows OK (NR0001-NR0135)';
 END $body$;
