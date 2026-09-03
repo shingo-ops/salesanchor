@@ -848,10 +848,72 @@ def resolve_status_v2(raw_state: str, status_entries: list[dict]) -> tuple[str, 
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# MANUAL 保護ヘルパー（R-1 再解析で人間の修正を守る）
+# ---------------------------------------------------------------------------
+
+
+def _load_manual_pid_locks(
+    session: Session, extraction_job_id: str
+) -> dict[str, tuple]:
+    """
+    extraction_job の analysis_results から pid_basis='MANUAL' の行を取得し、
+    {extraction_item_id(str): (product_id, pid_basis)} のマップを返す。
+
+    再解析時にこのマップを参照し、MANUAL 行の product_id / pid_resolved / pid_basis
+    を上書きしないようにする（人間の修正が再解析で消えるのを防ぐ）。
+
+    unit / condition / quantity / price の MANUAL 保護は、対応するドロワー実装時に
+    unit_basis 等の列を追加してから同様のパターンで追加する（現時点では列が存在しない）。
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ar.extraction_item_id::text AS item_id,
+                   ar.product_id,
+                   ar.pid_basis
+            FROM {TCG_SCHEMA}.analysis_results ar
+            JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej_id
+              AND ar.pid_basis = 'MANUAL'
+            """
+        ),
+        {"ej_id": extraction_job_id},
+    ).fetchall()
+    return {r.item_id: (r.product_id, r.pid_basis) for r in rows}
+
+
+def _apply_pid_guard(
+    manual_locks: dict[str, tuple],
+    item_id: str,
+    computed_product_uuid: object,
+    computed_pid_resolved: bool,
+    computed_pid_basis: str,
+) -> tuple:
+    """
+    MANUAL ロック済み行は再解析エンジンの計算結果より人間の判定を優先する。
+
+    Args:
+        manual_locks: _load_manual_pid_locks() の戻り値
+        item_id: extraction_item_id (str)
+        computed_*: エンジンが計算した値
+
+    Returns:
+        (product_uuid, pid_resolved, pid_basis) — MANUAL 行は locked 値、それ以外は computed 値
+    """
+    if item_id in manual_locks:
+        locked_product_id, locked_pid_basis = manual_locks[item_id]
+        return locked_product_id, True, locked_pid_basis
+    return computed_product_uuid, computed_pid_resolved, computed_pid_basis
+
+
 def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     """
     extraction_job の全 extraction_items に対して照合を実行し、
     analysis_results を INSERT/UPDATE (冪等) する。
+
+    MANUAL 保護: pid_basis='MANUAL' の行は再解析でも product_id / pid_resolved / pid_basis
+    を上書きしない（_load_manual_pid_locks / _apply_pid_guard 参照）。
 
     Args:
         session: 同期 SQLAlchemy Session
@@ -860,6 +922,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     Returns:
         {total, pid_resolved, unit_resolved, needs_review}
     """
+    # MANUAL ロック: 再解析で人間の修正を守る（pid_basis='MANUAL' の行）
+    manual_locks = _load_manual_pid_locks(session, extraction_job_id)
+
     # ルックアップマップをロード
     (
         product_code_to_uuid,
@@ -938,6 +1003,11 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             norm_product_name, filtered_codes, search_kw, exclude_kw
         )
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
+
+        # MANUAL 保護: 人間が直した product_id は再解析エンジンで上書きしない
+        product_uuid, pid_resolved, pid_basis = _apply_pid_guard(
+            manual_locks, str(item_id), product_uuid, pid_resolved, pid_basis
+        )
 
         if pid_resolved:
             stats["pid_resolved"] += 1
