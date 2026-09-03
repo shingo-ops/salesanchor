@@ -541,9 +541,11 @@ export function InboxMessageThread({
       <div className="inbox-send-area sticky-bottom-bar">
         {sendError && (
           <div className="inbox-send-error" role="alert">
-            {sendErrorReason === "window_closed"
-              ? t("inbox.sendError.windowClosed")
-              : sendErrorReason === "permission_denied"
+            {sendErrorReason === "attachment_not_saved"
+              ? t("inbox.sendError.attachmentNotSaved")
+              : sendErrorReason === "window_closed"
+                ? t("inbox.sendError.windowClosed")
+                : sendErrorReason === "permission_denied"
                 ? t("inbox.sendError.permissionDenied")
                 : sendErrorReason === "rate_limited"
                   ? t("inbox.sendError.rateLimited")

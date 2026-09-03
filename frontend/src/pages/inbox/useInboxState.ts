@@ -621,9 +621,15 @@ export function useInboxState(): UseInboxStateReturn {
     setSending(true);
     try {
       if (attachedFile) {
-        await sendImageMessage(selectedLeadId, attachedFile);
+        const imgRes = await sendImageMessage(selectedLeadId, attachedFile);
         clearAttachment();
         setDraft("");
+        // 送信は成功したが自社保管に失敗した場合を可視化する（PO決定 2026-09-03）。
+        // 静かに失われることを防ぐため、送信成功のまま警告だけを出す。
+        if ((imgRes as { attachment_saved?: boolean }).attachment_saved === false) {
+          setSendErrorReason("attachment_not_saved");
+          setSendError("attachment_not_saved");
+        }
       } else {
         await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");

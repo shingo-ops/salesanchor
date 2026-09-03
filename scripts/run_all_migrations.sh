@@ -568,6 +568,9 @@ run_sql migrations/20260903_200000_tcg_distribution_targets_t004.sql
 # DIST-01 C: 配信全体設定（tenant_004 専用・冪等）
 run_sql migrations/20260903_210000_tcg_distribution_settings_t004.sql
 
+# HIST-01: 再解析履歴テーブル（analysis_runs / analysis_run_snapshots・tenant_004 専用・冪等）
+run_sql migrations/20260903_220000_create_tcg_analysis_history_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"

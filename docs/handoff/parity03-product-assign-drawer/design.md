@@ -70,3 +70,8 @@
 ## 維持の仕組み
 
 守り手: 人手で守る（product_confirmed 判定ロジックは backend/tests/test_tcg_product_master.py の test_search_ok で担保。MANUAL 保護は backend/tests/test_tcg_manual_pid_guard.py でカバー。CI pytest-run-internal が常時 green であることを確認すること）
+
+## 将来の移行メモ
+
+`frontend/src/features/tcg-analysis-review/components/StatusBadge.tsx` と `status-badge.css` は tcg-analysis-review 専用として実装（#3249 バッジ色修正）。
+クラス名を `.tcg-status-badge / .tcg-status-badge--{tone}` と固有化しているため、将来 `frontend/src/components/` に移動すればプロジェクト全体で使える金型になる。移動時は import パスを更新するのみでスタイルの変更は不要。
