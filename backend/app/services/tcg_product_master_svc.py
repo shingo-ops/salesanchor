@@ -125,6 +125,7 @@ async def search_products_by_name(
             f"""
             SELECT
                 p.code          AS product_id,
+                p.id::text      AS product_uuid,
                 p.japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
@@ -145,6 +146,7 @@ async def search_products_by_name(
     candidates = [
         {
             "product_id": r.product_id,
+            "product_uuid": r.product_uuid,
             "japanese_title": r.japanese_title,
             "search_keywords": r.search_keywords,
         }

@@ -60,6 +60,7 @@ class ProductCandidate(BaseModel):
 
 class SearchCandidate(BaseModel):
     product_id: str
+    product_uuid: str
     japanese_title: str
     search_keywords: str
 

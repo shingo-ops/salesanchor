@@ -4,15 +4,17 @@
  * GAS ProductMasterDrawer.tsx を移植。
  * google.script.run → api.get / api.post に差し替え。
  *
- * 3モード:
+ * 4モード:
  *   PRODUCT_MASTER_UNREGISTERED → RegistrationSection
  *   PRODUCT_ID_UNRESOLVED       → SearchKeywordSection
  *   EXCLUDED                    → ExcludedSection
+ *   解決済み（上記なし）          → ProductAssignSection（商品割り当て変更・確認済み記録）
  *
  * API パスは /tcg/... から書く（api クライアントが /api/v1 を付与する）。
  * mark / english_title は配信機能用列（ADR: BE 側で migration 追加予定）。
  */
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import type { AnalysisReviewItem } from './ItemComparison';
 
@@ -377,19 +379,133 @@ function ExcludedSection({ item }: { item: AnalysisReviewItem }) {
   );
 }
 
+// ── 商品割り当て変更セクション（解決済み行） ──────────────────────────────────
+
+type AssignCandidate = { product_id: string; product_uuid: string; japanese_title: string; search_keywords: string };
+
+function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onSaved?: () => void }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [candidates, setCandidates] = useState<AssignCandidate[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<AssignCandidate>();
+  const [status, setStatus] = useState<'idle' | 'changing' | 'changed' | 'confirming' | 'confirmed' | 'error'>('idle');
+  const [error, setError] = useState('');
+
+  const search = () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    setCandidates([]);
+    setSelected(undefined);
+    const params = new URLSearchParams({ query });
+    api.get<{ candidates: AssignCandidate[] }>(`/tcg/products/search?${params.toString()}`)
+      .then((result) => { setCandidates(result.candidates); setSearching(false); })
+      .catch(() => { setSearching(false); });
+  };
+
+  const postCorrection = (humanValue: string) => {
+    return api.post<{ ok: boolean; saved: number }>(
+      `/tcg/items/${encodeURIComponent(item.extraction_item_id)}/corrections`,
+      {
+        source_message_id: item.source_message_id,
+        fields: [{ field_name: 'product_id', system_value: item.system.product_uuid || '', human_value: humanValue }],
+      },
+    );
+  };
+
+  const changeProduct = () => {
+    if (!selected) return;
+    setStatus('changing');
+    setError('');
+    postCorrection(selected.product_uuid)
+      .then(() => { setStatus('changed'); onSaved?.(); })
+      .catch((reason: unknown) => { setStatus('error'); setError(String((reason as Error)?.message || reason)); });
+  };
+
+  const markConfirmed = () => {
+    const currentUuid = item.system.product_uuid || '';
+    if (!currentUuid) return;
+    setStatus('confirming');
+    setError('');
+    postCorrection(currentUuid)
+      .then(() => { setStatus('confirmed'); onSaved?.(); })
+      .catch((reason: unknown) => { setStatus('error'); setError(String((reason as Error)?.message || reason)); });
+  };
+
+  const currentCode = item.system.product_id || '';
+  const currentTitle = item.system.product_title || '';
+  const busy = status === 'changing' || status === 'confirming';
+
+  if (status === 'changed' || status === 'confirmed') {
+    const msg = status === 'changed'
+      ? t('superAdmin.supplierQuality.productAssign.changed')
+      : t('superAdmin.supplierQuality.productAssign.confirmed');
+    return <div className="pmd-result"><strong>{msg}</strong></div>;
+  }
+
+  return (
+    <>
+      <h3>{t('superAdmin.supplierQuality.productAssign.title')}</h3>
+      <div className="pmd-result">
+        <p><b>{t('superAdmin.supplierQuality.productAssign.currentProduct')}</b></p>
+        <p>{currentCode ? `${currentCode}  ${currentTitle}` : t('superAdmin.supplierQuality.productAssign.noProduct')}</p>
+      </div>
+      <div className="pmd-fields">
+        <label className="pmd-field">
+          {t('superAdmin.supplierQuality.productAssign.searchPlaceholder')}
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
+            placeholder={t('superAdmin.supplierQuality.productAssign.searchPlaceholder')}
+          />
+        </label>
+      </div>
+      <div className="pmd-actions">
+        <button type="button" disabled={!query.trim() || searching} onClick={search}>
+          {searching ? t('superAdmin.supplierQuality.productAssign.searching') : t('superAdmin.supplierQuality.productAssign.searchBtn')}
+        </button>
+      </div>
+      {candidates.length === 0 && !searching && query && (
+        <p className="pmd-note">{t('superAdmin.supplierQuality.productAssign.noResults')}</p>
+      )}
+      {candidates.map((c) => (
+        <div
+          key={c.product_uuid}
+          className={`pmd-search-candidate${selected?.product_uuid === c.product_uuid ? ' pmd-search-candidate--selected' : ''}`}
+        >
+          <button type="button" onClick={() => setSelected(c === selected ? undefined : c)}>
+            <strong>{c.product_id}</strong>  {c.japanese_title}
+          </button>
+          {c.search_keywords && <small>{c.search_keywords}</small>}
+        </div>
+      ))}
+      {error && <p className="pmd-error">{error}</p>}
+      <div className="pmd-actions">
+        <button type="button" disabled={!selected || busy} onClick={changeProduct}>
+          {status === 'changing' ? t('superAdmin.supplierQuality.productAssign.changing') : t('superAdmin.supplierQuality.productAssign.changeBtn')}
+        </button>
+        <button type="button" disabled={!item.system.product_uuid || busy} onClick={markConfirmed}>
+          {status === 'confirming' ? t('superAdmin.supplierQuality.productAssign.confirming') : t('superAdmin.supplierQuality.productAssign.confirmBtn')}
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── バッジに応じてセクションを切り替え ─────────────────────────────────────
 
-function MasterMaintenanceSection({ item }: { item: AnalysisReviewItem }) {
+function MasterMaintenanceSection({ item, onSaved }: { item: AnalysisReviewItem; onSaved?: () => void }) {
   const issues = item.review_issues || [];
   if (issues.includes('PRODUCT_MASTER_UNREGISTERED')) return <RegistrationSection item={item} />;
   if (issues.includes('PRODUCT_ID_UNRESOLVED')) return <SearchKeywordSection item={item} />;
   if (issues.includes('EXCLUDED')) return <ExcludedSection item={item} />;
-  return null;
+  return <ProductAssignSection item={item} onSaved={onSaved} />;
 }
 
 // ── ドロワー本体 ──────────────────────────────────────────────────────────────
 
-export function ProductMasterDrawer({ item, onClose }: { item: AnalysisReviewItem; onClose: () => void }) {
+export function ProductMasterDrawer({ item, onClose, onSaved }: { item: AnalysisReviewItem; onClose: () => void; onSaved?: () => void }) {
   return (
     <>
       <div className="pmd-backdrop" onClick={onClose} />
@@ -399,7 +515,7 @@ export function ProductMasterDrawer({ item, onClose }: { item: AnalysisReviewIte
           <button type="button" onClick={onClose} aria-label="閉じる">×</button>
         </div>
         <div className="pmd-body">
-          <MasterMaintenanceSection item={item} />
+          <MasterMaintenanceSection item={item} onSaved={onSaved} />
         </div>
       </aside>
     </>

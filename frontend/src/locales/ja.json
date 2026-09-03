@@ -2246,10 +2246,25 @@
       "conditionPending": "集計準備中",
       "backToList": "← 一覧に戻る",
       "noItems": "解析アイテムはありません。",
-      "correctPhase3": "修正する → (Phase 3)",
+      "correctPhase3": "修正する",
       "superAdminOnly": "このページは super_admin 専用です。",
       "loadMore": "さらに読み込む（{{remaining}}件）",
-      "showingCount": "{{shown}} / {{total}} 件表示中"
+      "showingCount": "{{shown}} / {{total}} 件表示中",
+      "productAssign": {
+        "title": "商品の割り当て変更",
+        "currentProduct": "現在の商品",
+        "noProduct": "未割り当て",
+        "searchPlaceholder": "商品名を入力",
+        "searchBtn": "検索",
+        "searching": "検索中…",
+        "noResults": "検索結果なし",
+        "changeBtn": "商品を変更する",
+        "changing": "変更中…",
+        "changed": "商品を変更しました（次回解析で反映）",
+        "confirmBtn": "確認済みとして記録",
+        "confirming": "記録中…",
+        "confirmed": "確認済みとして記録しました"
+      }
     },
     "dex": {
       "title": "ポケモン / トレーナー図鑑",

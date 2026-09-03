@@ -51,5 +51,23 @@ async def save_corrections(
             },
         )
 
+        # product_id 変更時のみ analysis_results を同一トランザクションで更新
+        # human_value は product UUID 文字列。system_value と異なる場合のみ更新（確認済みは除く）
+        if (
+            field["field_name"] == "product_id"
+            and field["human_value"]
+            and field["human_value"] != field.get("system_value", "")
+        ):
+            await db.execute(
+                text(
+                    f"UPDATE {_SCHEMA}.analysis_results "
+                    "SET product_id   = :new_pid::uuid, "
+                    "    pid_basis    = 'MANUAL', "
+                    "    pid_resolved = TRUE "
+                    "WHERE extraction_item_id = :eid::uuid"
+                ),
+                {"new_pid": field["human_value"], "eid": extraction_item_id},
+            )
+
     await db.commit()
     return {"saved": len(fields)}

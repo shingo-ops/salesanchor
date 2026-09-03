@@ -7,7 +7,6 @@ import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
 import './supplier-detail-view.css';
 
 const PAGE_SIZE = 20;
-const MASTER_ISSUE_IDS = ['PRODUCT_MASTER_UNREGISTERED', 'PRODUCT_ID_UNRESOLVED', 'EXCLUDED'];
 
 interface SourceApiResponse {
   found: boolean;
@@ -36,9 +35,17 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const [error, setError] = useState('');
   const [jump, setJump] = useState<SourceLineJump | undefined>();
   const [masterDrawerItem, setMasterDrawerItem] = useState<AnalysisReviewItem | undefined>();
+  const [refreshKey, setRefreshKey] = useState(0);
   const jumpSequence = useRef(0);
   const sourceLoaded = useRef(false);
   const itemsLoaded = useRef(false);
+
+  const refreshItems = () => {
+    const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
+    api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
+      .then((res) => { setItems(res.items || []); })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -61,7 +68,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
       .then((res) => { setItems(res.items || []); })
       .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { itemsLoaded.current = true; checkDone(); });
-  }, [supplierId, supplierName]);
+  }, [supplierId, supplierName, refreshKey]);
 
   const jumpToLine = (line: number) => {
     jumpSequence.current += 1;
@@ -88,11 +95,9 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
               {visibleItems.map((item) => (
                 <div key={item.extraction_item_id} className="supplier-detail-item-row">
                   <ItemComparison item={item} readOnly={true} onJumpToSourceLine={jumpToLine} />
-                  {(item.review_issues || []).some((id) => MASTER_ISSUE_IDS.includes(id)) && (
-                    <div className="supplier-detail-item-actions">
-                      <button type="button" className="supplier-detail-correct-btn" onClick={() => setMasterDrawerItem(item)}>{t("superAdmin.supplierQuality.correctPhase3")}</button>
-                    </div>
-                  )}
+                  <div className="supplier-detail-item-actions">
+                    <button type="button" className="supplier-detail-correct-btn" onClick={() => setMasterDrawerItem(item)}>{t("superAdmin.supplierQuality.correctPhase3")}</button>
+                  </div>
                 </div>
               ))}
               {remaining > 0 && (
@@ -106,7 +111,13 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
           </div>
         )}
       </div>
-      {masterDrawerItem && <ProductMasterDrawer item={masterDrawerItem} onClose={() => setMasterDrawerItem(undefined)} />}
+      {masterDrawerItem && (
+        <ProductMasterDrawer
+          item={masterDrawerItem}
+          onClose={() => setMasterDrawerItem(undefined)}
+          onSaved={() => { setMasterDrawerItem(undefined); setRefreshKey((k) => k + 1); }}
+        />
+      )}
     </>
   );
 }

@@ -1,12 +1,13 @@
-export type AtomicReviewIssueId = 'PRODUCT_ID_UNRESOLVED' | 'UNIT_UNRESOLVED' | 'EXCLUDED' | 'PRODUCT_MASTER_UNREGISTERED' | 'SUPPLIER_UNREGISTERED';
-export type ReviewIssuePresentation = { id: AtomicReviewIssueId | 'NEEDS_REVIEW'; label: string; tone: 'warning' | 'danger'; visible: boolean };
+export type AtomicReviewIssueId = 'PRODUCT_ID_UNRESOLVED' | 'UNIT_UNRESOLVED' | 'EXCLUDED' | 'PRODUCT_MASTER_UNREGISTERED' | 'SUPPLIER_UNREGISTERED' | 'PRODUCT_CONFIRMED';
+export type ReviewIssuePresentation = { id: AtomicReviewIssueId | 'NEEDS_REVIEW'; label: string; tone: 'warning' | 'danger' | 'success'; visible: boolean };
 
 export const REVIEW_ISSUES: Record<AtomicReviewIssueId, ReviewIssuePresentation> = {
   PRODUCT_ID_UNRESOLVED: { id: 'PRODUCT_ID_UNRESOLVED', label: '商品ID未解決', tone: 'danger', visible: false },
   UNIT_UNRESOLVED: { id: 'UNIT_UNRESOLVED', label: '単位未解決', tone: 'warning', visible: true },
   EXCLUDED: { id: 'EXCLUDED', label: '除外対象', tone: 'danger', visible: true },
   PRODUCT_MASTER_UNREGISTERED: { id: 'PRODUCT_MASTER_UNREGISTERED', label: '商品マスタ未登録', tone: 'danger', visible: true },
-  SUPPLIER_UNREGISTERED: { id: 'SUPPLIER_UNREGISTERED', label: '仕入元未登録', tone: 'warning', visible: true }
+  SUPPLIER_UNREGISTERED: { id: 'SUPPLIER_UNREGISTERED', label: '仕入元未登録', tone: 'warning', visible: true },
+  PRODUCT_CONFIRMED: { id: 'PRODUCT_CONFIRMED', label: '確認済み', tone: 'success', visible: true },
 };
 
 const needsReviewIssueIds: AtomicReviewIssueId[] = ['PRODUCT_ID_UNRESOLVED', 'UNIT_UNRESOLVED', 'EXCLUDED'];
