@@ -1,11 +1,16 @@
 -- PARITY-03 Phase 3: tcg_products に mark / english_title 列を追加し
 -- GAS 商品マスタV2（268件）から充填する（冪等）。
 --
--- 充填率:
---   mark:          239/268 (89.2%)  NULL = GAS が空欄または '-'
---   english_title: 245/268 (91.4%)  NULL = 同上
+-- 充填率（2026-09-03 シート直読み）:
+--   mark:          239/268 (89.2%)  NULL=29件 = GAS が空欄または '-'
+--   english_title: 251/268 (93.7%)  NULL=17件 = 同上
 --
--- 投入元: clasp run y1406DumpProductMasterV2Page (2026-09-03 取得)
+-- 投入元: clasp run y1406DumpProductMasterV2Page (2026-09-03 取得、3バッチ合計268件)
+-- 取得コマンド:
+--   cd ~/sqr07_work
+--   clasp run y1406DumpProductMasterV2Page --params '[1, 90]'
+--   clasp run y1406DumpProductMasterV2Page --params '[91, 90]'
+--   clasp run y1406DumpProductMasterV2Page --params '[181, 90]'
 
 DO $body$
 DECLARE
@@ -114,7 +119,7 @@ BEGIN
         ('PM0060', 'S6H', 'Silver Lance'),
         ('PM0061', 'S6K', 'Jet-Black Geist'),
         ('PM0062', 'S6a', 'Eevee Heroes'),
-        ('PM0063', 'SP', NULL),
+        ('PM0063', 'SP', 'Eevee Heroes Eevee''s Set'),
         ('PM0064', 'SGG', 'High Class Deck Gangar VMAX'),
         ('PM0065', 'SGI', 'High Class Deck Intereon VMAX'),
         ('PM0066', 'SGD', 'High Class Deck Double box Gangar VMAX & Intereon VMAX'),
@@ -229,8 +234,8 @@ BEGIN
         ('PM0175', 'MA', 'Premium Trainer Box MEGA'),
         ('PM0176', 'PCJ', 'Mega Symphonia Pokemon Center set'),
         ('PM0177', 'PCJ', 'Mega Brave Pokemon Center set'),
-        ('PM0178', 'PROMO', NULL),
-        ('PM0179', 'PROMO', 'ONE PIECE DAY’25 Promo '),
+        ('PM0178', 'PROMO', 'Pikachu McDonald''s Promo'),
+        ('PM0179', 'PROMO', 'ONE PIECE DAY’25 Promo'),
         ('PM0180', 'OP-12', 'LEGACY OF THE MASTER'),
         ('PM0181', 'OP-13', 'CARRYING ON HIS WILL'),
         ('PM0182', 'SP', 'Special Box Tohoku'),
@@ -286,10 +291,10 @@ BEGIN
         ('PM0232', NULL, 'The First Chapter'),
         ('PM0233', NULL, 'Rise of the Floodborn'),
         ('PM0234', NULL, 'Into the Inklands'),
-        ('PM0235', NULL, NULL),
+        ('PM0235', NULL, 'Ursula''s Return'),
         ('PM0236', NULL, 'Shimmering Skies'),
         ('PM0237', NULL, 'Azurite Sea'),
-        ('PM0238', NULL, NULL),
+        ('PM0238', NULL, 'Archazia''s Island'),
         ('PM0239', NULL, 'Reign of Jafar'),
         ('PM0240', NULL, 'Fabled'),
         ('PM0241', NULL, 'Whispers in the Well'),
@@ -302,7 +307,7 @@ BEGIN
         ('PM0248', 'ROTA', 'Rage of the Abyss'),
         ('PM0249', 'SUDA', 'Supreme Darkness'),
         ('PM0250', 'ALIN', 'Alliance Insight'),
-        ('PM0251', 'DUAD', NULL),
+        ('PM0251', 'DUAD', 'Duelist''s Advance'),
         ('PM0252', 'DOOD', 'Doom of Dimensions'),
         ('PM0253', 'BPRO', 'Burst Protocol'),
         ('PM0254', 'BLZD', 'Blazing Dominion'),
@@ -317,13 +322,13 @@ BEGIN
         ('PM0263', NULL, NULL),
         ('PM0264', NULL, NULL),
         ('PM0265', NULL, NULL),
-        ('PM0266', 'OP-17', NULL),
+        ('PM0266', 'OP-17', 'The World''s Strongest Warriors'),
         ('PM0267', NULL, NULL),
         ('PM0268', NULL, '4th Anniversary! Four Emperors Treasure Get Campaign Pack')
         ) AS v(code, mark, english_title)
         WHERE t.code = v.code
     $dml$, _schema);
 
-    RAISE NOTICE 'migration 20260903_180000: mark/english_title populated for 268 products';
+    RAISE NOTICE 'migration 20260903_180000: mark/english_title UPDATE complete (268 rows)';
 END;
 $body$;
