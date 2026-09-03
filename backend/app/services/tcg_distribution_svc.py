@@ -163,8 +163,14 @@ async def fetch_output_rows(
 ) -> list[list[str]]:
     """
     配信対象行を10列で取得する。
-    フィルター: pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
+    フィルター:
+      pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
+      AND price_normalized IS NOT NULL  ← 価格未解決行を除外
     include_flag_single=True のとき FLAG_SINGLE も含める。
+
+    注意: 現在の全レコードは engine_version='compat-v1'（GAS計算値）。
+    正規化ルール（NR0001〜NR0136）は新エンジン再解析まで未適用。
+    再解析後は価格 NULL が減り配信件数が変動する。
     """
     # include_flag_single=True のとき FLAG_SINGLE だけは通す。他の FLAG_* は常に除外。
     if include_flag_single:
@@ -203,6 +209,7 @@ async def fetch_output_rows(
             ON p.id = ar.product_id
         WHERE ar.pid_resolved = TRUE
           AND ar.unit_resolved = TRUE
+          AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
         ORDER BY ts.name NULLS LAST, p.code NULLS LAST, ar.id
     """)
@@ -251,6 +258,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         FROM {TCG_SCHEMA}.analysis_results ar
         WHERE ar.pid_resolved = TRUE
           AND ar.unit_resolved = TRUE
+          AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
     """))
     output_count = count_result.scalar()
@@ -274,7 +282,13 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
                 WHERE ar.condition_canonical NOT LIKE 'FLAG_%'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = FALSE)
-                AS exc_both
+                AS exc_both,
+            COUNT(*) FILTER (
+                WHERE ar.pid_resolved = TRUE
+                  AND ar.unit_resolved = TRUE
+                  AND ar.condition_canonical NOT LIKE 'FLAG_%'
+                  AND ar.price_normalized IS NULL)
+                AS exc_price
         FROM {TCG_SCHEMA}.analysis_results ar
     """))
     excl = excl_result.mappings().one()
@@ -290,6 +304,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
             "pid_unresolved_only": excl["exc_pid_only"],
             "unit_unresolved_only": excl["exc_unit_only"],
             "both_unresolved": excl["exc_both"],
+            "price_unresolved": excl["exc_price"],
         },
         "flag_gate": gate_status,
         "settings": settings,
