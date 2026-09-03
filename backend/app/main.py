@@ -56,6 +56,7 @@ goals,  # ダッシュボード強化: 目標管理
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
@@ -90,7 +91,6 @@ goals,  # ダッシュボード強化: 目標管理
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
-    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     teams,
