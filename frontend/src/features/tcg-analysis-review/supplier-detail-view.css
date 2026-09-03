@@ -104,6 +104,213 @@
   color: var(--bg-surface);
 }
 
+/* ── ProductMasterDrawer (pmd-*) ─────────────────────────────────────────── */
+/* コンポーネント固有トークン — ADR-067: グローバルトークンに相当値なし        */
+/* NOTE: このセクションは .supplier-detail-items の高特異度ルールより前に置く   */
+/*       （stylelint no-descending-specificity 対応）                         */
+.pmd-drawer {
+  --pmd-max-w: 480px;
+  --pmd-textarea-min-h: 72px; /* テキストエリア最小高（--textarea-min-h:80px より小さい専用値）*/
+}
+
+/* ── block selectors（特異度 0,0,0 〜 0,1,0） ──────────────────────────── */
+.pmd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: var(--z-backdrop);
+}
+
+.pmd-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(var(--pmd-max-w), 100vw);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pmd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.pmd-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pmd-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pmd-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+.pmd-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.pmd-note {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.pmd-result {
+  background: var(--accent-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pmd-warning {
+  background: var(--danger-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pmd-error { color: var(--danger); }
+
+.pmd-search-candidate {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pmd-search-candidate--selected {
+  border-color: var(--accent);
+  background: var(--accent-bg-subtle);
+}
+
+/* ── compound selectors（特異度 0,1,1）— .supplier-detail-items の前に置くこと ── */
+.pmd-head h2 {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pmd-head button {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--font-lg);
+  line-height: 1;
+}
+
+.pmd-body h3 {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+.pmd-field input,
+.pmd-field textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--space-2);
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pmd-field textarea {
+  min-height: var(--pmd-textarea-min-h);
+  resize: vertical;
+}
+
+.pmd-actions button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.pmd-result h4 {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+}
+
+.pmd-result p,
+.pmd-result small {
+  margin: 0;
+  font-size: var(--font-xs);
+}
+
+.pmd-warning h3,
+.pmd-warning strong { color: var(--danger); }
+
+.pmd-warning p,
+.pmd-warning small {
+  margin: 0;
+  font-size: var(--font-xs);
+}
+
+/* pmd-search-candidate の子セレクタ（0,1,1）は .pmd-actions button:disabled（0,2,1）より前 */
+.pmd-search-candidate button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+}
+
+.pmd-search-candidate small {
+  color: var(--text-secondary);
+  font-size: var(--font-2xs);
+}
+
+/* ── compound selectors（特異度 0,2,1） ────────────────────────────────── */
+.pmd-actions button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
 /* ── ItemComparison field styles (analysis-review.css is loaded only by the old review page)
    These mirror .tcg-analysis-review rules scoped to .supplier-detail-items. ── */
 
@@ -160,204 +367,3 @@
 }
 
 .supplier-detail-items .system-extra { display: grid; gap: var(--space-2); }
-
-/* ── ProductMasterDrawer (pmd-*) ─────────────────────────────────────────── */
-/* コンポーネント固有トークン — ADR-067: グローバルトークンに相当値なし */
-.pmd-drawer {
-  --pmd-max-w: 480px;
-  --pmd-textarea-min-h: 72px; /* テキストエリア最小高（--textarea-min-h:80px より小さい専用値）*/
-}
-
-.pmd-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay-bg);
-  z-index: var(--z-backdrop);
-}
-
-.pmd-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100dvh;
-  width: min(var(--pmd-max-w), 100vw);
-  background: var(--bg-surface);
-  border-left: 1px solid var(--border);
-  z-index: var(--z-modal);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.pmd-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
-  flex-shrink: 0;
-}
-
-.pmd-head h2 {
-  font-size: var(--font-sm);
-  font-weight: 600;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pmd-head button {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  padding: var(--space-1) var(--space-2);
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: var(--font-lg);
-  line-height: 1;
-}
-
-.pmd-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.pmd-body h3 {
-  font-size: var(--font-sm);
-  font-weight: 600;
-  margin: 0 0 var(--space-2);
-}
-
-.pmd-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.pmd-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--font-sm);
-  font-weight: 500;
-}
-
-.pmd-field input,
-.pmd-field textarea {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  padding: var(--space-2);
-  font: inherit;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.pmd-field textarea {
-  min-height: var(--pmd-textarea-min-h);
-  resize: vertical;
-}
-
-.pmd-actions {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.pmd-actions button {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.pmd-actions button:disabled {
-  opacity: var(--opacity-disabled);
-  cursor: not-allowed;
-}
-
-.pmd-note {
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-}
-
-.pmd-result {
-  background: var(--accent-bg-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.pmd-result h4 {
-  font-size: var(--font-xs);
-  font-weight: 600;
-  margin: 0 0 var(--space-1);
-  color: var(--text-secondary);
-}
-
-.pmd-result p,
-.pmd-result small {
-  margin: 0;
-  font-size: var(--font-xs);
-}
-
-.pmd-warning {
-  background: var(--danger-bg-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.pmd-warning h3,
-.pmd-warning strong { color: var(--danger); }
-
-.pmd-warning p,
-.pmd-warning small {
-  margin: 0;
-  font-size: var(--font-xs);
-}
-
-.pmd-error { color: var(--danger); }
-
-.pmd-search-candidate {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.pmd-search-candidate button {
-  background: transparent;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: var(--text-primary);
-}
-
-.pmd-search-candidate small {
-  color: var(--text-secondary);
-  font-size: var(--font-2xs);
-}
-
-.pmd-search-candidate--selected {
-  border-color: var(--accent);
-  background: var(--accent-bg-subtle);
-}
