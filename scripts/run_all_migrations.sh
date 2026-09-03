@@ -559,6 +559,9 @@ run_sql migrations/20260903_180000_tcg_products_mark_en_t004.sql
 # PARITY-03 Phase 3 Stage 3: 修正履歴テーブル（tenant_004 専用・冪等）
 run_sql migrations/20260903_170000_item_corrections_t004.sql
 
+# HIST-01: 再解析履歴テーブル（analysis_runs / analysis_run_snapshots・tenant_004 専用・冪等）
+run_sql migrations/20260903_220000_create_tcg_analysis_history_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
