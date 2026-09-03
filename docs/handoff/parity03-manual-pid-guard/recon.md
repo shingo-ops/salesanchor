@@ -14,8 +14,8 @@ ADR-045（additive-only migration）: 本PR は migration なし（ロジック�
 
 ## 問題の実態
 
-`tcg_analyzer_svc.py` の `analyze_extraction_job` が実行する UPSERT が
-`analysis_results.product_id / pid_resolved / pid_basis` を無条件上書きする。
+tcg_analyzer_svc.py の analyze_extraction_job が実行する UPSERT が
+analysis_results.product_id / pid_resolved / pid_basis を無条件上書きする。
 
 ```python
 # 変更前: 無条件上書き
