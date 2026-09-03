@@ -4,6 +4,38 @@ CC_TASK_AUTO-01 自律実装の記録。各デプロイの根拠・検証・戻�
 
 ---
 
+## PARITY-03 Phase 3 — tcg_products mark/english_title 追加 (2026-09-03)
+
+### PR #3246: migration 20260903_180000_tcg_products_mark_en_t004.sql
+
+**マージ前バックアップ必須（PO実施）:**
+```sql
+CREATE TABLE tenant_004.tcg_products_bak_20260903
+AS SELECT * FROM tenant_004.tcg_products;
+
+-- 件数確認（268件以上あること）
+SELECT COUNT(*) FROM tenant_004.tcg_products_bak_20260903;
+```
+
+**復元 SQL（rollback 時）:**
+```sql
+-- 1. 列を削除
+ALTER TABLE tenant_004.tcg_products DROP COLUMN IF EXISTS mark;
+ALTER TABLE tenant_004.tcg_products DROP COLUMN IF EXISTS english_title;
+
+-- 2. または backup から全件 COPY 復元:
+-- TRUNCATE tenant_004.tcg_products CASCADE;
+-- INSERT INTO tenant_004.tcg_products SELECT * FROM tenant_004.tcg_products_bak_20260903;
+```
+
+**充填率（2026-09-03 シート直読み）:**
+- mark: 239/268 filled, NULL 29件 (89.2%)
+- english_title: 251/268 filled, NULL 17件 (93.7%)
+
+**GO記録:** GO発行者: Shingo / 日時: 2026-09-03 / GO原文: "GO を3本発行しました"
+
+---
+
 ## Phase 0 — GAS レイアウト根拠の確立 (2026-09-03)
 
 参照元: `sqr07_work/analysis-review-ui/src/` (最終更新 2026-08-30、sqr06より新)
@@ -160,3 +192,72 @@ FE の `analysis-review.css` は `.tcg-analysis-review` スコープのため、
 
 git revert 17192936e090404c23ac8bba054a46d958bfbf31
 → PR を作成 → CI green → マージ でデプロイ前の状態に戻る
+
+---
+
+## AUTO-02-BE: PARITY-03 Phase 3 BE — 商品マスタ登録・再解析 API (2026-09-03)
+
+- PR: #3239 (Draft)
+- ブランチ: release/parity03-product-master-drawer-be
+- コミット: 44185e42
+- 変更ファイル:
+  - backend/app/services/tcg_product_master_svc.py (新規)
+  - backend/app/routers/tcg_product_master.py (新規)
+  - backend/app/main.py (ルーター登録)
+  - backend/tests/test_tcg_product_master.py (新規, 16 tests PASS)
+
+### R-1 再解析 recon 結果
+
+| 調査項目 | 結果 |
+|---------|------|
+| analyze_extraction_job の存在 | tcg_analyzer_svc.py:851 に存在（sync Session） |
+| HTTP エンドポイントの有無 | なし（backend/app/routers/ 全件 grep で確認） |
+| GAS 相当機能 | ShadowReviewV2.gs:87 refreshShadowReviewV2（全件対象） |
+| 本実装の対象 | 1ジョブ限定 / UPSERT |
+
+### R-1 安全装置の確認
+
+| 確認項目 | 結果 |
+|---------|------|
+| 行単位の事前保存 | ❌ なし（集計値 before のみ）。行単位復元はベースラインテーブルで対応 |
+| 一括実行（45ジョブ）防止 | ✅ URL パスに extraction_job_id 必須。一括実行不可 |
+
+### GAS ベースラインスナップショット（実行済み・2026-09-03）
+
+```sql
+-- 実行済み（本番 DB: jarvis_db）
+CREATE TABLE tenant_004.analysis_results_gas_baseline_20260903
+AS SELECT * FROM tenant_004.analysis_results;
+-- → SELECT 1626（件数確認済み）
+```
+
+**復元用テーブル**: `tenant_004.analysis_results_gas_baseline_20260903`（1626行・変更不可・削除禁止）
+
+**復元 SQL**（対象ジョブを GAS 時点に戻す場合）:
+
+```sql
+INSERT INTO tenant_004.analysis_results
+  SELECT * FROM tenant_004.analysis_results_gas_baseline_20260903
+  WHERE extraction_item_id IN (
+    SELECT id FROM tenant_004.extraction_items
+    WHERE extraction_job_id = '<対象ジョブID>'
+  )
+ON CONFLICT (extraction_item_id) DO UPDATE
+  SET pid_resolved   = EXCLUDED.pid_resolved,
+      unit_resolved  = EXCLUDED.unit_resolved,
+      needs_review   = EXCLUDED.needs_review,
+      product_id     = EXCLUDED.product_id,
+      pid_basis      = EXCLUDED.pid_basis,
+      unit           = EXCLUDED.unit,
+      condition      = EXCLUDED.condition,
+      status         = EXCLUDED.status,
+      note           = EXCLUDED.note,
+      exclusion      = EXCLUDED.exclusion;
+```
+
+### ロールバック手順（訂正済み）
+
+- 再解析（R-1）は Python エンジンで上書きする
+- **GAS が計算した値には戻らない**（「再度呼べば復元可能」という記述は誤り・docstring 修正済み）
+- 復元は上記 SQL でベースラインテーブルから差し戻す
+
