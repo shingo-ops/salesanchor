@@ -48,8 +48,8 @@
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| 1 | `tcg_analyzer_svc.py` に `_load_manual_pid_locks` / `_apply_pid_guard` 追加 | Dev |
-| 2 | `analyze_extraction_job` に guard 呼び出しを追加 | Dev |
-| 3 | `test_tcg_manual_pid_guard.py` 5 テスト追加 | Dev |
+| 1 | tcg_analyzer_svc.py に `_load_manual_pid_locks` / `_apply_pid_guard` 追加 | Dev |
+| 2 | analyze_extraction_job に guard 呼び出しを追加 | Dev |
+| 3 | test_tcg_manual_pid_guard.py 5 テスト追加 | Dev |
 | 4 | CI green 確認 → PO GO → merge | PO |
 | 5 | ドロワー実装PR（product_id MANUAL 割り当て）で pid_basis='MANUAL' をセット | 後続PR |

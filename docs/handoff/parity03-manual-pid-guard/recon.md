@@ -45,9 +45,17 @@ DO UPDATE SET
 | フィールド | 保護可否 | 理由 |
 |---|---|---|
 | `product_id / pid_resolved / pid_basis` | ✅ 本PRで対応 | `pid_basis='MANUAL'` の仕組みあり |
-| `condition_id / condition_canonical / condition_basis` | 🔜 延期 | `condition_basis='MANUAL'` は列があるが、ドロワーで手動設定する仕組みが未実装 |
-| `unit_id / unit_canonical / unit_resolved` | 🔜 延期 | `unit_basis` 列が存在しない（ドロワー実装時に migration + 保護を追加） |
-| `quantity_normalized / price_normalized` | 🔜 延期 | `_basis` 列が存在しない |
+| `unit_id / unit_canonical / unit_resolved / unit_basis` | 🔜 延期 | `unit_basis` 列は存在（`migrations/20260901_120000_add_unit_inference_columns_t004.sql`）。ドロワーで unit を手動設定する仕組みを実装する際に `unit_basis='MANUAL'` 運用を定義し、保護を追加する |
+| `condition_id / condition_canonical / condition_basis` | 🔜 延期 | `condition_basis` 列は存在。ドロワーで手動設定する仕組みを実装する際に `condition_basis='MANUAL'` 運用を定義し、保護を追加する |
+| `quantity_normalized / price_normalized` | 🔜 延期 | `_basis` 列が存在しない。手動修正機能追加前に migration で basis 列を追加してから保護を設計する |
+
+## ⚠️ ドロワーで unit / condition / quantity / price の修正機能を追加する前に必須
+
+- unit 修正: `unit_basis='MANUAL'` をセットし、`_load_manual_pid_locks` と同等の `_load_manual_unit_locks` を `analyze_extraction_job` に追加すること
+- condition 修正: `condition_basis='MANUAL'` をセットし、同等の保護を `analyze_extraction_job` に追加すること
+- quantity / price 修正: basis 列 migration 後に保護設計すること
+
+**保護なしで修正機能を出すと再解析で消える。修正機能の PR を作成する前に保護を先行すること。**
 
 ---
 
