@@ -92,6 +92,7 @@ from app.routers import (
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
@@ -556,6 +557,11 @@ app.include_router(
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
 app.include_router(
     tcg_analysis_review.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 Phase 3: 商品マスタ登録 API（require_super_admin 限定）
+app.include_router(
+    tcg_product_master.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
