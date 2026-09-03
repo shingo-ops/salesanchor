@@ -7,8 +7,8 @@
 
 ## 既存 ADR 検索結果
 
-ADR-067（デザイントークン強制）: `docs/adr/ADR-067-design-tokens.md`
-StatusBadge は `badge-${tone}` CSS クラスを参照しているが、`warning`/`danger`/`success` トーン用クラスが未定義。
+ADR-067（デザイントークン強制）: `docs/adr/ADR-067-design-token-enforcement.md`
+StatusBadge は badge-${tone} CSS クラスを参照しているが、warning/danger/success トーン用クラスが未定義。
 
 ---
 
@@ -24,6 +24,6 @@ StatusBadge は `badge-${tone}` CSS クラスを参照しているが、`warning
 
 ## 触らない範囲
 
-- `StatusBadge.tsx` — コンポーネント側は変更不要（クラス参照は正しい）
-- `reviewIssues.ts` — tone 値の定義は変更不要
+- StatusBadge.tsx — コンポーネント側は変更不要（クラス参照は正しい）
+- reviewIssues.ts — tone 値の定義は変更不要
 - `backend/` — CSS 追加のみでバックエンド影響なし
