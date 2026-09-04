@@ -7,6 +7,7 @@ DIST-01 Phase 2 テスト。
      #2:    タブ不存在 → RuntimeError（自動作成しない）
      #4:    タブ名不一致 → RuntimeError
      #5:    DIST_ROW_LIMIT 超過 → RuntimeError
+     #8:    再解析未完了 runs あり → 配信中止（run_id + started_at をエラーに含む）
   B. fetch_output_rows FLAG_SINGLE フィルター（バグ修正確認）
      include_flag_single=False → NOT LIKE 'FLAG_%' のみ
      include_flag_single=True  → FLAG_SINGLE を通す OR 条件を含む
@@ -182,6 +183,66 @@ def test_write_to_target_ok():
     written = ws.append_rows.call_args[0][0]
     assert written[0] == DIST_HEADERS  # ヘッダーが先頭
     assert written[1] == rows[0]
+
+
+# ---------------------------------------------------------------------------
+# A-8. 安全装置 #8: 再解析完了チェック（run_distribution サービスレベル）
+# ---------------------------------------------------------------------------
+
+
+async def test_run_distribution_blocks_when_pending_analysis_runs():
+    """安全装置 #8: completed_at IS NULL の runs があれば配信を中止する。
+    エラーメッセージに run_id と started_at が含まれること。"""
+    from datetime import datetime, timezone
+
+    from app.services.tcg_distribution_svc import run_distribution
+
+    pending_run_id = "11111111-0000-0000-0000-000000000001"
+    pending_started = datetime(2026, 9, 4, 0, 59, 0, tzinfo=timezone.utc)
+
+    mock_row = {"id": pending_run_id, "started_at": pending_started}
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = [mock_row]
+
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result)
+
+    result = await run_distribution(db)
+
+    assert result["output_count"] == 0
+    assert len(result["errors"]) == 1
+    err_msg = result["errors"][0]["error"]
+    assert pending_run_id in err_msg, f"run_id が含まれていない: {err_msg}"
+    assert "2026-09-04T00:59:00" in err_msg, f"started_at が含まれていない: {err_msg}"
+    assert "再解析未完了" in err_msg
+
+
+async def test_run_distribution_proceeds_when_no_pending_runs():
+    """安全装置 #8: pending runs がゼロなら配信ロジックへ進む（設定ロードを呼ぶ）。"""
+    from app.services.tcg_distribution_svc import run_distribution
+
+    # pending = 0
+    mock_result_empty = MagicMock()
+    mock_result_empty.mappings.return_value.all.return_value = []
+
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result_empty)
+
+    with patch(
+        "app.services.tcg_distribution_svc.load_distribution_settings",
+        new=AsyncMock(return_value={"include_flag_single": "false"}),
+    ), patch(
+        "app.services.tcg_distribution_svc.fetch_output_rows",
+        new=AsyncMock(return_value=[]),
+    ), patch(
+        "app.services.tcg_distribution_svc.list_targets",
+        new=AsyncMock(return_value=[]),
+    ):
+        result = await run_distribution(db)
+
+    # アクティブな配信先なし → errors に「配信先なし」エラーが入るが、#8 ではない
+    assert result["output_count"] == 0
+    assert all("再解析未完了" not in e["error"] for e in result["errors"])
 
 
 # ---------------------------------------------------------------------------
