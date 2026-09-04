@@ -18,6 +18,7 @@ DIST-01: TCG 在庫配信サービス層。
   #5 書き込み行数を DIST_ROW_LIMIT（5000）で上限制限
   #6 失敗時 Discord 通知
   #7 配信履歴（日時・件数・成否）を DB に記録
+  #8 再解析未完了（analysis_runs.completed_at IS NULL）があれば配信中止
 """
 from __future__ import annotations
 
@@ -626,6 +627,7 @@ async def run_distribution(
     全アクティブ配信先（または特定 target_id）へ配信を実行する。
 
     手順:
+      0. 再解析完了チェック（安全装置 #8）
       1. 設定ロード
       2. 出力データ取得（確定フィルター）
       3. 配信先取得
@@ -634,6 +636,35 @@ async def run_distribution(
       6. 失敗があれば Discord 通知（安全装置 #6）
     """
     started_at = datetime.now(timezone.utc)
+
+    # 0. 再解析完了チェック（安全装置 #8）
+    # analysis_runs に completed_at IS NULL の行があれば配信を中止する。
+    # 再解析中に配信すると、unit_resolved が未確定の行が含まれる可能性がある。
+    pending_rows = (
+        await db.execute(
+            text(
+                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_runs"
+                " WHERE completed_at IS NULL ORDER BY started_at LIMIT 10"
+            )
+        )
+    ).mappings().all()
+    if pending_rows:
+        details = [
+            {"run_id": str(r["id"]), "started_at": r["started_at"].isoformat()}
+            for r in pending_rows
+        ]
+        msg = (
+            f"安全装置 #8: 再解析未完了の runs が {len(pending_rows)} 件あります。"
+            f" 完了を待ってから配信を実行してください。未完了: {details}"
+        )
+        logger.warning("[dist] %s", msg)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": msg}],
+        }
 
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
