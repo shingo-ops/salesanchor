@@ -82,14 +82,15 @@
 /* 無効行 */
 .dist-table tr.dist-row--inactive td {
   color: var(--text-secondary);
-  opacity: 0.7;
+  opacity: var(--opacity-muted);
 }
 
 /* 最終結果: エラー表示 */
 .dist-result--error {
+  --dist-result-max-w: 220px; /* component-local: 最終結果列の最大幅 */
   color: var(--color-error);
   font-size: var(--font-xs);
-  max-width: 220px;
+  max-width: var(--dist-result-max-w);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -152,7 +153,7 @@
 }
 
 .dist-btn:disabled {
-  opacity: 0.5;
+  opacity: var(--opacity-archived);
   cursor: not-allowed;
 }
 
@@ -162,7 +163,7 @@
 }
 
 .dist-btn--primary:hover:not(:disabled) {
-  opacity: 0.85;
+  opacity: var(--opacity-secondary);
 }
 
 .dist-btn--ghost {
@@ -380,11 +381,12 @@
 }
 
 .dist-dialog {
+  --dist-dialog-max-w: 440px; /* component-local: 確認ダイアログの最大幅 */
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  width: min(440px, 100%);
+  width: min(var(--dist-dialog-max-w), 100%);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
