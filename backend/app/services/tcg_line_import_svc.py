@@ -195,15 +195,17 @@ def build_provider_entries(
     resolved_messages: list[dict],
 ) -> list[dict]:
     """
-    同一 sp_code のメッセージを timestamp 昇順ソートして _MSG_SEPARATOR で結合。
+    同一 sp_code のメッセージを timestamp 昇順ソートし、
+    最新の 1 件のみを raw_text として採用する（SQR-05）。
 
     戻り値:
         [{
             "sp_code": str,
             "canonical_name": str,
-            "raw_text": str,        # "\n\n" 結合済み
-            "received_at": str,     # 最初の timestamp "YYYY-MM-DD HH:MM:00"
+            "raw_text": str,               # 最新メッセージ本文のみ（SQR-05）
+            "received_at": str,            # 最初の timestamp "YYYY-MM-DD HH:MM:00"
             "sha256": str,
+            "skipped_message_count": int,  # 棄却したメッセージ数（最新以外）
         }]
     """
     # sp_code ごとにグループ化
@@ -216,11 +218,13 @@ def build_provider_entries(
 
     entries: list[dict] = []
     for code, msgs in groups.items():
-        # timestamp 昇順ソート
+        # timestamp 昇順ソート → 末尾が最新
         sorted_msgs = sorted(msgs, key=lambda m: m["timestamp"])
-        raw_text = _MSG_SEPARATOR.join(m["body"] for m in sorted_msgs)
+        latest_msg = sorted_msgs[-1]
+        raw_text = latest_msg["body"]
         received_at = sorted_msgs[0]["timestamp"]
         canonical_name = sorted_msgs[0]["canonical_name"]
+        skipped_message_count = len(sorted_msgs) - 1
 
         entries.append(
             {
@@ -229,6 +233,7 @@ def build_provider_entries(
                 "raw_text": raw_text,
                 "received_at": received_at,
                 "sha256": sha256_text(raw_text),
+                "skipped_message_count": skipped_message_count,
             }
         )
     return entries
@@ -291,6 +296,7 @@ async def import_line_export(
             "provider_count": 0,
             "unresolved_count": 0,
             "unresolved_display_names": [],
+            "skipped_message_count": 0,
             "import_job_id": str(existing[0]),
         }
 
@@ -327,6 +333,7 @@ async def import_line_export(
     provider_count = len(provider_entries)
     unresolved_count = len(unresolved)
     unresolved_display_names = [u["display_name"] for u in unresolved]
+    skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
     # --- 5. source_messages / extraction_jobs へ INSERT ---
     for entry in provider_entries:
@@ -461,6 +468,7 @@ async def import_line_export(
         "provider_count": provider_count,
         "unresolved_count": unresolved_count,
         "unresolved_display_names": unresolved_display_names,
+        "skipped_message_count": skipped_message_count,
         "import_job_id": str(import_job_id),
     }
 

@@ -40,6 +40,7 @@ class ImportResultResponse(BaseModel):
     provider_count: int
     unresolved_count: int
     unresolved_display_names: list[str]
+    skipped_message_count: int           # SQR-05: 最新以外で棄却されたメッセージ総数
     import_job_id: str
 
 
