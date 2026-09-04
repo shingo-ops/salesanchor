@@ -96,7 +96,7 @@
 }
 
 .dist-result--ok {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success);
   font-size: var(--font-xs);
 }
 
@@ -182,7 +182,7 @@
 }
 
 .dist-btn--danger:hover:not(:disabled) {
-  background: var(--color-error-bg-subtle, rgba(220,38,38,0.08));
+  background: var(--color-error-bg-subtle);
 }
 
 /* ── ドロワー（登録/編集フォーム）─────────────────── */
@@ -350,7 +350,7 @@
 
 /* ── エラー案内（アクセス失敗時） ─────────────────── */
 .dist-access-error {
-  background: var(--color-error-bg-subtle, rgba(220,38,38,0.06));
+  background: var(--color-error-bg-subtle);
   border: 1px solid var(--color-error);
   border-radius: var(--radius-md);
   padding: var(--space-3);
@@ -434,7 +434,7 @@
 }
 
 .dist-run-result-item--ok {
-  color: var(--color-success, #16a34a);
+  color: var(--color-success);
 }
 
 .dist-run-result-item--error {
@@ -447,13 +447,4 @@
   text-align: center;
   color: var(--text-secondary);
   font-size: var(--font-sm);
-}
-
-/* ── ライト/ダーク対応が必要な色変数の補完 ─────────── */
-:root {
-  --color-success: #16a34a;
-}
-
-:root.force-dark {
-  --color-success: #4ade80;
 }
