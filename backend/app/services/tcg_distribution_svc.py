@@ -346,7 +346,7 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
             ON ic.extraction_item_id = ar.extraction_item_id
             AND ic.corrected_at >= NOW() - INTERVAL '30 days'
         WHERE ar.condition_canonical = 'FLAG_SINGLE'
-          AND ar.created_at >= NOW() - INTERVAL '30 days'
+          AND ar.updated_at >= NOW() - INTERVAL '30 days'
     """))
     gate = gate_result.mappings().one()
     total = gate["total_flag"] or 0
