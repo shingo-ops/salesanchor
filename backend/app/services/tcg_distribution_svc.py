@@ -38,12 +38,13 @@ TCG_SCHEMA = "tenant_004"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・11列）
+# 出力ヘッダー（確定・12列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
     "Japanese Title",
     "English Title",
+    "Series",
     "Condition",
     "Unit Price",
     "Quantity",
@@ -185,7 +186,7 @@ async def fetch_output_rows(
     include_flag_single: bool = False,
 ) -> list[list[str]]:
     """
-    配信対象行を10列で取得する。
+    配信対象行を12列で取得する。
     フィルター:
       pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
       AND price_normalized IS NOT NULL  ← 価格未解決行を除外
@@ -211,6 +212,7 @@ async def fetch_output_rows(
             COALESCE(p.mark, '')                                    AS mark,
             COALESCE(p.japanese_title, '')                          AS japanese_title,
             COALESCE(p.english_title, '')                           AS english_title,
+            COALESCE(ser.display_name, '')                          AS series,
             ar.condition_canonical                                   AS condition,
             COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
             COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
@@ -231,6 +233,8 @@ async def fetch_output_rows(
             ON ts.id = sc.supplier_id
         LEFT JOIN {TCG_SCHEMA}.tcg_products p
             ON p.id = ar.product_id
+        LEFT JOIN {TCG_SCHEMA}.tcg_series ser
+            ON ser.id = p.work_id
         WHERE ar.pid_resolved = TRUE
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
@@ -246,6 +250,7 @@ async def fetch_output_rows(
             row["mark"],
             row["japanese_title"],
             row["english_title"],
+            row["series"],
             row["condition"],
             row["unit_price"],
             row["quantity"],

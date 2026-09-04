@@ -171,7 +171,7 @@ def test_write_to_target_ok():
 
     creds = MagicMock()
     target = {"spreadsheet_id": "sid", "sheet_name": "Sheet1", "name": "test"}
-    rows = [["2026-09-03 10:00:00", "", "ピカチュウ", "", "NM", "500", "1", "", "", "2025-08-01", "A社"]]
+    rows = [["2026-09-03 10:00:00", "", "ピカチュウ", "", "Pokemon", "NM", "500", "1", "", "", "2025-08-01", "A社"]]
 
     with patch("app.services.tcg_distribution_svc._log_sheet_permissions"):
         result = _write_to_target_sync(gc, creds, target, rows)
