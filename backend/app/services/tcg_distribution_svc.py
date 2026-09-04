@@ -143,6 +143,27 @@ def _log_sheet_permissions(spreadsheet_id: str, creds: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 安全装置 #1 前段: スプレッドシートアクセス確認（読み取りのみ・書き込みなし）
+# ---------------------------------------------------------------------------
+
+async def verify_spreadsheet_access(spreadsheet_id: str) -> dict:
+    """
+    登録前にスプレッドシートへのアクセスを確認する（読み取りのみ）。
+    - SA クライアントを構築し spreadsheetId の存在・ID 一致を検証する。
+    - 成功: {"accessible": True, "title": "<シートタイトル>"}
+    - 失敗: {"accessible": False, "error": "<エラーメッセージ>"}
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        gc = await loop.run_in_executor(None, _build_gspread_client)
+        sh = await loop.run_in_executor(None, _verify_spreadsheet_id, gc, spreadsheet_id)
+        title = sh.title
+        return {"accessible": True, "title": title}
+    except Exception as exc:  # noqa: BLE001
+        return {"accessible": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
 # E. 設定ロード
 # ---------------------------------------------------------------------------
 

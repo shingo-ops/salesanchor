@@ -87,6 +87,7 @@ import ManagementCenterPage from "./pages/management-center/ManagementCenterPage
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
+import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -309,6 +310,11 @@ function App() {
                   <Route
                     path="/super-admin/tcg-supplier-quality"
                     element={<TcgSupplierQualityPage />}
+                  />
+                  {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-distribution"
+                    element={<TcgDistributionPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>

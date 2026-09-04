@@ -152,6 +152,7 @@
     "superAdminFxRate": "FX Rate Management",
     "superAdminTcgParallelReport": "Parallel Engine Report",
     "superAdminTcgSupplierQuality": "Supplier Quality",
+    "superAdminTcgDistribution": "Distribution Targets",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -3200,5 +3201,64 @@
     "outbound": "Outbound Sales",
     "inbound_short": "Customer-led",
     "outbound_short": "Company-led"
+  },
+  "distributionTarget": {
+    "page": {
+      "subtitle": "Manage distribution spreadsheets and run delivery",
+      "newBtn": "New Target"
+    },
+    "preview": {
+      "candidateUnit": " delivery candidates",
+      "excFlag": "FLAG excluded",
+      "excPid": "PID unresolved",
+      "excUnit": "Unit unresolved",
+      "excBoth": "Both unresolved",
+      "excPrice": "Price unresolved",
+      "runAll": "Run All",
+      "runAllLabel": "Run distribution to all active targets",
+      "running": "Running...",
+      "confirmTitle": "Confirm: Run All",
+      "confirmBody": "Distribute {{count}} items to all active targets. Continue?",
+      "resultTitle": "Distribution Result",
+      "rowsWritten": " rows written"
+    },
+    "list": {
+      "empty": "No distribution targets registered. Click \"New Target\" to add one.",
+      "colName": "Client Name",
+      "colSheetId": "Sheet ID",
+      "colSheetName": "Tab Name",
+      "colStatus": "Status",
+      "colLastAt": "Last Run",
+      "colLastCount": "Count",
+      "colLastResult": "Result",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "runBtn": "Run",
+      "disableBtn": "Disable",
+      "confirmRunTitle": "Confirm Distribution",
+      "confirmRunBody": "Run distribution to \"{{name}}\"?",
+      "confirmDisableTitle": "Confirm Disable",
+      "confirmDisableBody": "Disable \"{{name}}\"? Distribution will be skipped. You can re-enable it via Edit."
+    },
+    "form": {
+      "titleNew": "Register Target",
+      "titleEdit": "Edit Target",
+      "saNoticeLabel": "Share with Service Account",
+      "saNoticeBody": "Share this spreadsheet with the address below as an Editor.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "name": "Client Name",
+      "namePlaceholder": "e.g. Treasure Island JP",
+      "spreadsheetId": "Spreadsheet ID",
+      "spreadsheetIdPlaceholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "spreadsheetIdHint": "The ID found in the Google Sheets URL (20+ alphanumeric, hyphen, underscore)",
+      "sheetName": "Tab Name",
+      "sheetNamePlaceholder": "e.g. 在庫集計",
+      "isActive": "Enable this target",
+      "errorRequired": "Required",
+      "errorSpreadsheetIdFormat": "Invalid Spreadsheet ID format (20+ alphanumeric, hyphen, underscore)",
+      "accessErrorTitle": "Cannot access this sheet",
+      "accessErrorGeneric": "Failed to access the spreadsheet"
+    }
   }
 }
