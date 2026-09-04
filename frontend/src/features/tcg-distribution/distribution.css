@@ -97,7 +97,7 @@
 }
 
 .dist-result--ok {
-  color: var(--color-success);
+  color: var(--success);
   font-size: var(--font-xs);
 }
 
@@ -436,7 +436,7 @@
 }
 
 .dist-run-result-item--ok {
-  color: var(--color-success);
+  color: var(--success);
 }
 
 .dist-run-result-item--error {
