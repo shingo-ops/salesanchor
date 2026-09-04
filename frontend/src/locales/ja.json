@@ -971,6 +971,7 @@
     "discordNotLinked": "Discord未連携",
     "discordChannelMissing": "顧客がチケットを開くと返信できます",
     "attachImage": "画像を添付",
+    "dropImageHere": "ここに画像をドロップ",
     "imagePreviewAlt": "添付画像プレビュー",
     "removeAttachment": "添付を削除",
     "imageSent": "画像",

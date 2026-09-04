@@ -971,6 +971,7 @@
     "discordNotLinked": "Discord not linked",
     "discordChannelMissing": "You can reply once the customer opens a ticket",
     "attachImage": "Attach image",
+    "dropImageHere": "Drop image here",
     "imagePreviewAlt": "Attached image preview",
     "removeAttachment": "Remove attachment",
     "imageSent": "Image",
