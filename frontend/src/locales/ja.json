@@ -147,6 +147,7 @@
     "discordAnnounce": "Discordアナウンス",
     "superAdminFxRate": "為替レート管理",
     "superAdminTcgParallelReport": "並行運用比較レポート",
+    "superAdminTcgLineImport": "インポート",
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "account": "アカウント",

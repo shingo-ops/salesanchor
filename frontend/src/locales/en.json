@@ -147,6 +147,7 @@
     "discordAnnounce": "Discord Announce",
     "superAdminFxRate": "FX Rate Management",
     "superAdminTcgParallelReport": "Parallel Engine Report",
+    "superAdminTcgLineImport": "Import",
     "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
     "account": "Account",
