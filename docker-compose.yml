@@ -93,6 +93,7 @@ services:
       # この行が無いと .env に値があっても os.getenv が空になり、LLM が
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
@@ -200,6 +201,7 @@ services:
       # backend(docker-compose.yml:93-94) と同パターンで渡す。
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
