@@ -32,7 +32,7 @@
 - `App.tsx`: 4ページの import・standalone route・nested route を削除。ParseReviewPage は保持
 - 翻訳ファイル: 削除4キーを除去。`superAdminTcgSupplierQuality` 表示名を「解析精度管理」に更新
 - `routeTitles.ts`: 削除ルート3件を除去（`/super-admin/masters` 他）
-- backend は一切変更しない（`super_admin_phase_switch.py` は ParseReviewPage が使用中のため残置）
+- backend は一切変更しない（`backend/app/routers/super_admin_phase_switch.py` は ParseReviewPage が使用中のため残置）
 
 ---
 

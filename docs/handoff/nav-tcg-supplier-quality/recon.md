@@ -38,11 +38,11 @@ SQ-01時点に存在したが SQ-02 で削除した5ファイル:
 
 | ページ名 | ルートパス | コンポーネントファイル |
 |---------|-----------|---------------------|
-| SaaS管理マスタ | `/super-admin/masters` | `frontend/src/pages/super-admin/MastersPage.tsx`（削除済み） |
-| Discord受信箱 | `/super-admin/inbound` | `frontend/src/pages/super-admin/DiscordInboundPage.tsx`（削除済み） |
-| フェーズ切替 | `/super-admin/phase-switch` | `frontend/src/pages/super-admin/PhaseSwitchPage.tsx`（削除済み） |
-| 在庫オファー | `/super-admin/inventory-offers` | `frontend/src/pages/super-admin/InventoryOffersPage.tsx`（削除済み） |
-| (内部タブ) | MastersPage子要素 | `frontend/src/pages/super-admin/SupplierParseStatsTab.tsx`（削除済み） |
+| SaaS管理マスタ | `/super-admin/masters` | frontend/src/pages/super-admin/MastersPage.tsx（削除済み） |
+| Discord受信箱 | `/super-admin/inbound` | frontend/src/pages/super-admin/DiscordInboundPage.tsx（削除済み） |
+| フェーズ切替 | `/super-admin/phase-switch` | frontend/src/pages/super-admin/PhaseSwitchPage.tsx（削除済み） |
+| 在庫オファー | `/super-admin/inventory-offers` | frontend/src/pages/super-admin/InventoryOffersPage.tsx（削除済み） |
+| (内部タブ) | MastersPage子要素 | frontend/src/pages/super-admin/SupplierParseStatsTab.tsx（削除済み） |
 
 ### 3. ParseReviewPage が phase-switch バックエンドAPIを参照している事実
 
@@ -50,15 +50,15 @@ SQ-01時点に存在したが SQ-02 で削除した5ファイル:
 ```
 /super-admin/phase-switch/${me.tenant_id}
 ```
-を呼び出している。このバックエンドAPIは PhaseSwitchPage が使っていた同じエンドポイント。ParseReviewPage は独自にこのAPIを参照するため、PhaseSwitchPage 削除後もバックエンド `super_admin_phase_switch.py` は削除不可。
+を呼び出している。このバックエンドAPIは PhaseSwitchPage が使っていた同じエンドポイント。ParseReviewPage は独自にこのAPIを参照するため、PhaseSwitchPage 削除後もバックエンド `backend/app/routers/super_admin_phase_switch.py` は削除不可。
 
 ### 4. SupplierParseStatsTab の参照元
 
-SQ-01調査時: `SupplierParseStatsTab` は `MastersPage.tsx` からのみ import されていた。他コンポーネントからの参照なし。MastersPage 削除とともに孤立するため、共に削除対象とした。
+SQ-01調査時: `SupplierParseStatsTab` は MastersPage.tsx からのみ import されていた。他コンポーネントからの参照なし。MastersPage 削除とともに孤立するため、共に削除対象とした。
 
 ### 5. テストファイルの不存在
 
-SQ-01 時点で削除対象5ファイルに対応するテストファイル（`*.test.tsx` 等）は存在しなかった。削除による既存テストの破壊リスクなし。
+SQ-01 時点で削除対象5ファイルに対応するテストファイル（*.test.tsx 等）は存在しなかった。削除による既存テストの破壊リスクなし。
 
 ### 6. 翻訳キー（`frontend/src/locales/ja.json:148`）
 
