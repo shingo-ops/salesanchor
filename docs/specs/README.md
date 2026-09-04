@@ -68,6 +68,7 @@
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
+| Discordリアクション（discord-reaction。受信箱でDiscordと同じように絵文字を付ける・見る） | discord-reaction/README.md | あるべき姿・KGI確定 2026-09-04 |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
