@@ -32,11 +32,11 @@
 **Stage 1 が触らないもの:**
 - `analysis_results` — `tcg_extraction.py → analyze_extraction_job()` 経由のみ。このファイルを含まない。
 - `extraction_items` — 同上
-- `tcg_extraction.py`, `gemini_extraction_svc.py`, `tcg_analyzer_svc.py` — 含まない
-- `celery_app.py` の `include` リスト — stage 1 は tcg_extraction task を登録しない
+- tcg_extraction.py, gemini_extraction_svc.py, tcg_analyzer_svc.py — 含まない
+- celery_app.py の include リスト — stage 1 は tcg_extraction task を登録しない
 
 ### `_enqueue_extraction` の挙動
-- `tcg_extraction.py` が worker に未登録のため、stage 1 では Celery エンキューは no-op（例外をキャッチしてログのみ）
+- tcg_extraction.py が worker に未登録のため、stage 1 では Celery エンキューは no-op（例外をキャッチしてログのみ）
 - Redis/Celery は本番で稼働中だが、task が登録されるのは stage 2 以降
 
 ### マイグレーション確認

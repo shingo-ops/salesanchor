@@ -1,7 +1,7 @@
 # MIG-04 Stage 1: LINE エクスポート取り込み — 設計書
 
 作成日: 2026-09-05  
-ADR 参照: ADR-027, ADR-067, ADR-072  
+ADR 参照: ADR-027, ADR-067, ADR-072, ADR-154  
 recon 参照: `docs/handoff/tcg-line-import-stage1/recon.md`
 
 ---
@@ -10,8 +10,8 @@ recon 参照: `docs/handoff/tcg-line-import-stage1/recon.md`
 
 **LINE GAS からサーバーサイドへの取り込みパイプライン（stage 1）が本番で動作し、`source_messages` + `extraction_jobs` + `import_jobs` に正しく書き込まれること**
 
-KPI（PO が画面・ログで一義に判定できる粒度）:
-| KPI | 検証方法 |
+受け入れ基準（PO が画面・ログで一義に判定できる粒度）:
+| 基準 | 検証方法 |
 |-----|---------|
 | POST /api/v1/tcg/line-import が 200 を返す | curl or UI アップロード |
 | import_jobs に行が追加される | `SELECT * FROM import_jobs ORDER BY created_at DESC LIMIT 1` |
@@ -104,7 +104,7 @@ git revert <merge-commit>
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 GAS → Python LINE パーサの移植は日本国内 B2B SaaS で一般的。主なパターン:
 - Celery + Redis で非同期 Gemini 抽出（本実装の stage 2 相当）
 - SHA-256 冪等化は LINE Bot SDK の公式推奨パターンに準拠
