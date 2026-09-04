@@ -335,7 +335,7 @@ async def import_line_export(
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
         channel_row = await db.execute(
             text(
-                """
+                f"""
                 SELECT sc.id
                 FROM {TCG_SCHEMA}.supplier_channels sc
                 JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
@@ -358,7 +358,7 @@ async def import_line_export(
         # 既存の active source_message を supersede
         existing_active = await db.execute(
             text(
-                """
+                f"""
                 SELECT id FROM {TCG_SCHEMA}.source_messages
                 WHERE supplier_channel_id = :scid AND is_active = TRUE
                 """
@@ -375,7 +375,7 @@ async def import_line_export(
             old_id = old_rec[0]
             await db.execute(
                 text(
-                    """
+                    f"""
                     UPDATE {TCG_SCHEMA}.source_messages
                     SET superseded_by = :new_id, is_active = FALSE
                     WHERE id = :old_id
@@ -395,7 +395,7 @@ async def import_line_export(
         # 新しい source_message を INSERT
         await db.execute(
             text(
-                """
+                f"""
                 INSERT INTO {TCG_SCHEMA}.source_messages
                   (id, supplier_channel_id, raw_text, raw_sha256,
                    received_at, superseded_by, is_active, created_at)
@@ -417,7 +417,7 @@ async def import_line_export(
         new_ej_id = uuid.uuid4()
         await db.execute(
             text(
-                """
+                f"""
                 INSERT INTO {TCG_SCHEMA}.extraction_jobs
                   (id, source_message_id, status, prompt_version, created_at)
                 VALUES
@@ -433,7 +433,7 @@ async def import_line_export(
     import_job_id = uuid.uuid4()
     await db.execute(
         text(
-            """
+            f"""
             INSERT INTO {TCG_SCHEMA}.import_jobs
               (id, filename, raw_sha256, message_count, provider_count,
                unresolved_count, uploaded_by, status, created_at)

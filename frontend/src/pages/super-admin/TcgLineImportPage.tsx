@@ -212,6 +212,7 @@ export default function TcgLineImportPage() {
             transition: "border-color 0.2s, background 0.2s",
           }}
         >
+          {/* ui-allow: 非表示ファイル入力はドロップゾーン専用ref用途、汎用コンポーネント非対象 (#3285) */}
           <input
             ref={fileInputRef}
             type="file"
@@ -239,7 +240,7 @@ export default function TcgLineImportPage() {
             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               {t("tcgLineImport.windowHoursLabel")}
             </span>
-            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (PR-3165) */}
+            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
             <input
               type="number"
               min="0"
@@ -260,7 +261,7 @@ export default function TcgLineImportPage() {
             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               {t("tcgLineImport.windowStartLabel")}
             </span>
-            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (PR-3165) */}
+            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
             <input
               type="text"
               placeholder="YYYY-MM-DD HH:MM:00"
@@ -281,7 +282,7 @@ export default function TcgLineImportPage() {
             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
               {t("tcgLineImport.windowEndLabel")}
             </span>
-            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (PR-3165) */}
+            {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
             <input
               type="text"
               placeholder="YYYY-MM-DD HH:MM:00"
