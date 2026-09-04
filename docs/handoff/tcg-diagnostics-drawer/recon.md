@@ -7,8 +7,8 @@ DiagnosticsDrawerコンポーネントを新規作成してDBデータ健全性�
 
 ## 既存ADR検索結果
 
-- `docs/adr/ADR-154-tcg-super-admin-readonly-diagnostics.md` — 既存: 診断APIの認可・固定SQLポリシー
-- `docs/adr/ADR-144-ui-governance.md` — 既存: UIガバナンス（components/金型先確認）
+- `docs/adr/ADR-154-tcg-parity02-gas-python-migration.md` — 既存: TCGパリティ02 GAS→Python移行
+- `docs/adr/ADR-144-ui-component-governance.md` — 既存: UIガバナンス（components/金型先確認）
 
 ## 実装対象ファイル
 
@@ -25,7 +25,7 @@ DiagnosticsDrawerコンポーネントを新規作成してDBデータ健全性�
 ### PageLayout headerAction パターン
 
 - `frontend/src/components/PageLayout.tsx` — `headerAction?: React.ReactNode` prop を受け取り `<div className="page-layout-header-right">` に配置
-- 例: `frontend/src/pages/super-admin/SupplierQualityList.tsx` — headerAction に Button を渡すパターン
+- 例: `frontend/src/features/tcg-analysis-review/SupplierQualityList.tsx` — headerAction に Button を渡すパターン
 
 ### Drawer コンポーネント
 
