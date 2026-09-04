@@ -44,13 +44,13 @@ DIST_HEADERS = [
     "Mark",
     "Japanese Title",
     "English Title",
-    "Series",
     "Condition",
     "Unit Price",
     "Quantity",
     "Note_JA",
     "Status",
     "Release Date",
+    "Series",
     "提供者",
 ]
 
@@ -212,13 +212,13 @@ async def fetch_output_rows(
             COALESCE(p.mark, '')                                    AS mark,
             COALESCE(p.japanese_title, '')                          AS japanese_title,
             COALESCE(p.english_title, '')                           AS english_title,
-            COALESCE(ser.display_name, '')                          AS series,
             ar.condition_canonical                                   AS condition,
             COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
             COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
+            COALESCE(ser.display_name, '')                          AS series,
             COALESCE(ts.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
@@ -250,13 +250,13 @@ async def fetch_output_rows(
             row["mark"],
             row["japanese_title"],
             row["english_title"],
-            row["series"],
             row["condition"],
             row["unit_price"],
             row["quantity"],
             row["note_ja"],
             row["status"],
             row["release_date"],
+            row["series"],
             row["provider"],
         ]
         for row in rows
