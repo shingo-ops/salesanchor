@@ -23,7 +23,7 @@ ADR-154 方針（GAS→Python 段階移植）の延長実施。PARITY-03 固有 
 exact_title OR same_cls（work_id AND manufacturer_id AND product_category_id）
 ```
 
-GAS 実装（`~/db01_work/ProductMasterV2Registration.js` lines 77-88）:
+GAS 実装（~/db01_work/ProductMasterV2Registration.js lines 77-88、リポジトリ外）:
 ```
 exactTitle OR (sameClassification AND (sameMark OR sameSearch))
 ```

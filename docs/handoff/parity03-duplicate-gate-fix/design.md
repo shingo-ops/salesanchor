@@ -60,5 +60,5 @@
 
 ## 維持の仕組み
 
-守り手: `test_build_dup_*` 4件が `_build_duplicate_candidates` の境界値を網羅。GAS ロジックが変更された場合、このテストが変更の起点となる。  
+守り手: `backend/tests/test_tcg_product_master.py` — `test_build_dup_*` 4件が `_build_duplicate_candidates` の境界値を網羅。GAS ロジックが変更された場合、このテストが変更の起点となる。  
 人手で守る: GAS 実装との定期突合（PARITY-03 フェーズレビュー時）。
