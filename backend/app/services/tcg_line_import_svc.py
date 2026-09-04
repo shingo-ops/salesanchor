@@ -3,6 +3,8 @@ MIG-04 Phase 2: LINE エクスポートファイル取り込みサービス。
 
 GAS の Latest24LineImport.js (parseLatest24LineExport / resolveSuppliers /
 buildProviderEntries / importLineExport) と同等のロジックを Python に移植。
+
+TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
 """
 from __future__ import annotations
 
@@ -18,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # ---------------------------------------------------------------------------
 # 定数
 # ---------------------------------------------------------------------------
+
+TCG_SCHEMA = "tenant_004"
 
 # 日付行: "2026.08.26 月曜日" など
 _DATE_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\s+.+$")
@@ -276,7 +280,7 @@ async def import_line_export(
     file_sha256 = sha256_text(export_text)
 
     existing_row = await db.execute(
-        text("SELECT id, status FROM import_jobs WHERE raw_sha256 = :sha256"),
+        text(f"SELECT id, status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
         {"sha256": file_sha256},
     )
     existing = existing_row.fetchone()
@@ -312,7 +316,7 @@ async def import_line_export(
 
     # --- 3. サプライヤー解決 ---
     suppliers_rows = await db.execute(
-        text("SELECT code, name FROM tcg_suppliers WHERE is_active = TRUE")
+        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
     )
     db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
 
@@ -333,8 +337,8 @@ async def import_line_export(
             text(
                 """
                 SELECT sc.id
-                FROM supplier_channels sc
-                JOIN tcg_suppliers ts ON ts.id = sc.supplier_id
+                FROM {TCG_SCHEMA}.supplier_channels sc
+                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
                 WHERE ts.code = :code
                   AND sc.channel = 'line'
                   AND sc.is_active = TRUE
@@ -355,7 +359,7 @@ async def import_line_export(
         existing_active = await db.execute(
             text(
                 """
-                SELECT id FROM source_messages
+                SELECT id FROM {TCG_SCHEMA}.source_messages
                 WHERE supplier_channel_id = :scid AND is_active = TRUE
                 """
             ),
@@ -372,7 +376,7 @@ async def import_line_export(
             await db.execute(
                 text(
                     """
-                    UPDATE source_messages
+                    UPDATE {TCG_SCHEMA}.source_messages
                     SET superseded_by = :new_id, is_active = FALSE
                     WHERE id = :old_id
                     """
@@ -392,7 +396,7 @@ async def import_line_export(
         await db.execute(
             text(
                 """
-                INSERT INTO source_messages
+                INSERT INTO {TCG_SCHEMA}.source_messages
                   (id, supplier_channel_id, raw_text, raw_sha256,
                    received_at, superseded_by, is_active, created_at)
                 VALUES
@@ -414,7 +418,7 @@ async def import_line_export(
         await db.execute(
             text(
                 """
-                INSERT INTO extraction_jobs
+                INSERT INTO {TCG_SCHEMA}.extraction_jobs
                   (id, source_message_id, status, prompt_version, created_at)
                 VALUES
                   (:id, :smid, 'pending', NULL, now())
@@ -430,7 +434,7 @@ async def import_line_export(
     await db.execute(
         text(
             """
-            INSERT INTO import_jobs
+            INSERT INTO {TCG_SCHEMA}.import_jobs
               (id, filename, raw_sha256, message_count, provider_count,
                unresolved_count, uploaded_by, status, created_at)
             VALUES
