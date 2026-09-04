@@ -71,6 +71,10 @@ export function InboxMessageThread({
 
   // 画像添付（ファイル選択 UI）
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 添付後に入力欄へフォーカスを戻すための参照。
+  // クリップボタンにフォーカスが残ると Enter がボタン押下になり、
+  // ファイル選択が再度開く（2026-09-04 に実測）。
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputId = useId();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -84,6 +88,7 @@ export function InboxMessageThread({
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
     setAttachedFile(file);
     e.target.value = "";
+    textareaRef.current?.focus();
   }, [setAttachedFile]);
 
   // ドラッグ&ドロップでの画像添付（PO決定 2026-09-04）。
@@ -96,6 +101,7 @@ export function InboxMessageThread({
     if (!file.type.startsWith("image/")) return;
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
     setAttachedFile(file);
+    textareaRef.current?.focus();
   }, [setAttachedFile]);
 
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLElement>) => {
@@ -640,6 +646,7 @@ export function InboxMessageThread({
             </div>
             <div className="send-input-wrap">
               <textarea
+                ref={textareaRef}
                 className="inbox-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
