@@ -38,3 +38,9 @@ Google Sheets への数値書き込みで小数点を除去するには SQL 側�
 ## 戻し方
 
 `ROUND(x)::bigint::text` → `x::text` に戻す（1行変更×2）。
+
+## 維持の仕組み
+
+- 配信列定義は `DIST_HEADERS` 定数で一元管理されており、カラム追加時に型変換漏れが起きにくい構造
+- スプレッドシートへの書き込みは `_write_to_target_sync` が一括管理。型変換は SQL 層で完結させる方針（ADR-154 §出力形式）
+- 回帰防止: `pytest -k test_fetch_output_rows` がカラム型を検証（整数文字列かどうか）
