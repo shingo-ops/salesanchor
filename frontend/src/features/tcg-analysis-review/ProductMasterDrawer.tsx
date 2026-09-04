@@ -99,6 +99,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
     exclude_keywords: '',
   });
   const [candidates, setCandidates] = useState<DupCandidate[]>([]);
+  const [confirmed, setConfirmed] = useState(false);
   const [status, setStatus] = useState<'loading' | 'ready' | 'checking' | 'saving' | 'saved' | 'error'>('loading');
   const [error, setError] = useState('');
   const [issuedProductId, setIssuedProductId] = useState('');
@@ -106,6 +107,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   const setValue = (key: keyof RegistrationValues, value: string) => {
     setValues((c) => ({ ...c, [key]: value }));
     setCandidates([]);
+    setConfirmed(false);
   };
 
   useEffect(() => {
@@ -144,7 +146,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   };
 
   const save = () => {
-    if (!required || candidates.length) return;
+    if (!required || (candidates.length && !confirmed)) return;
     setStatus('saving');
     setError('');
     api.post<{ ok: boolean; product_id?: string; code?: string; candidates?: DupCandidate[] }>(
@@ -153,11 +155,13 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
         extraction_item_id: item.extraction_item_id,
         source_message_id: item.source_message_id,
         ...values,
+        force: confirmed,
       }
     )
       .then((result) => {
         if (!result.ok) {
           setCandidates(result.candidates || []);
+          setConfirmed(false);
           setStatus('ready');
           return;
         }
@@ -229,10 +233,20 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
           </section>
           {candidates.length > 0 && (
             <section className="pmd-warning">
+              {/* eslint-disable-next-line local/no-japanese-literal -- UI label */}
               <strong>既存商品の可能性があります（確認してください）</strong>
               {candidates.map((c) => (
                 <p key={c.product_id}>{c.product_id}: {c.japanese_title}</p>
               ))}
+              <label className="pmd-confirm-check">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                />
+                {/* eslint-disable-next-line local/no-japanese-literal -- UI label */}
+                重複候補を確認しました（新規商品です）
+              </label>
             </section>
           )}
           {error && <p className="pmd-error">登録エラー: {error}</p>}
@@ -246,7 +260,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
             </button>
             <button
               type="button"
-              disabled={!required || candidates.length > 0 || status === 'saving'}
+              disabled={!required || (candidates.length > 0 && !confirmed) || status === 'saving'}
               onClick={save}
             >
               {status === 'saving' ? '登録中…' : '商品マスタに登録'}
