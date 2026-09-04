@@ -37,7 +37,7 @@ TCG_SCHEMA = "tenant_004"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・10列）
+# 出力ヘッダー（確定・11列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
@@ -48,6 +48,7 @@ DIST_HEADERS = [
     "Quantity",
     "Note_JA",
     "Status",
+    "Release Date",
     "提供者",
 ]
 
@@ -193,6 +194,7 @@ async def fetch_output_rows(
             COALESCE(ar.quantity_normalized::text, '')              AS quantity,
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
+            COALESCE(p.release_date::text, '')                      AS release_date,
             COALESCE(ts.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
@@ -211,7 +213,7 @@ async def fetch_output_rows(
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
-        ORDER BY ts.name NULLS LAST, p.code NULLS LAST, ar.id
+        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.code NULLS LAST
     """)
 
     result = await db.execute(sql)
@@ -227,6 +229,7 @@ async def fetch_output_rows(
             row["quantity"],
             row["note_ja"],
             row["status"],
+            row["release_date"],
             row["provider"],
         ]
         for row in rows
