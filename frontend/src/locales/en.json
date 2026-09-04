@@ -2265,6 +2265,28 @@
         "confirmed": "Marked as confirmed"
       }
     },
+    "diagnostics": {
+      "buttonLabel": "Data health check",
+      "drawerTitle": "DB data health check",
+      "noRows": "No data",
+      "sections": {
+        "supplierChannels": "Supplier channels",
+        "suppliers": "Suppliers",
+        "supplierNameDupes": "Supplier name duplicates",
+        "orphanMessages": "Orphan messages"
+      },
+      "columns": {
+        "supplier_code": "Supplier code",
+        "supplier_name": "Supplier name",
+        "channel_count": "Channel count",
+        "code": "Code",
+        "name": "Name",
+        "is_active": "Active",
+        "name_lower": "Name (lowercase)",
+        "cnt": "Count",
+        "null_channel_count": "No-channel count"
+      }
+    },
     "dex": {
       "title": "Pokemon / Trainer Dex",
       "kinds": {

@@ -2265,6 +2265,28 @@
         "confirmed": "確認済みとして記録しました"
       }
     },
+    "diagnostics": {
+      "buttonLabel": "データ健全性チェック",
+      "drawerTitle": "DBデータ健全性チェック",
+      "noRows": "データなし",
+      "sections": {
+        "supplierChannels": "仕入元チャンネル数",
+        "suppliers": "仕入元一覧",
+        "supplierNameDupes": "仕入元名重複",
+        "orphanMessages": "孤立メッセージ"
+      },
+      "columns": {
+        "supplier_code": "仕入元コード",
+        "supplier_name": "仕入元名",
+        "channel_count": "チャンネル数",
+        "code": "コード",
+        "name": "名称",
+        "is_active": "有効",
+        "name_lower": "名称（小文字）",
+        "cnt": "件数",
+        "null_channel_count": "チャンネルなし件数"
+      }
+    },
     "dex": {
       "title": "ポケモン / トレーナー図鑑",
       "kinds": {

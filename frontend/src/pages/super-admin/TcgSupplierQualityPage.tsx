@@ -13,14 +13,17 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
+import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
 import type { SupplierQualitySummary } from "../../features/tcg-analysis-review/supplierQuality";
 
 export default function TcgSupplierQualityPage() {
   const { t } = useTranslation();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
   const [selected, setSelected] = useState<SupplierQualitySummary | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
 
   if (superAdminLoading) {
     return <PageLayout navKey="nav.superAdminTcgSupplierQuality">{t("common.loading")}</PageLayout>;
@@ -33,8 +36,14 @@ export default function TcgSupplierQualityPage() {
     );
   }
 
+  const headerAction = (
+    <Button variant="ghost" size="md" onClick={() => setDiagOpen(true)}>
+      {t("superAdmin.diagnostics.buttonLabel")}
+    </Button>
+  );
+
   return (
-    <PageLayout navKey="nav.superAdminTcgSupplierQuality">
+    <PageLayout navKey="nav.superAdminTcgSupplierQuality" headerAction={headerAction}>
       {selected ? (
         <SupplierDetailView
           supplierId={selected.supplierId}
@@ -44,6 +53,7 @@ export default function TcgSupplierQualityPage() {
       ) : (
         <SupplierQualityList onSelectSupplier={setSelected} />
       )}
+      <DiagnosticsDrawer open={diagOpen} onClose={() => setDiagOpen(false)} />
     </PageLayout>
   );
 }
