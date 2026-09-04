@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
-from app.services.tcg_line_import_svc import import_line_export
+from app.services.tcg_line_import_svc import TCG_SCHEMA, import_line_export
 
 router = APIRouter()
 
@@ -149,11 +149,11 @@ async def list_import_history(
     """import_jobs を created_at 降順で最大 200 件返す。"""
     rows = await db.execute(
         text(
-            """
+            f"""
             SELECT id, filename, raw_sha256, message_count, provider_count,
                    unresolved_count, uploaded_by, status,
                    created_at AT TIME ZONE 'UTC' AS created_at
-            FROM import_jobs
+            FROM {TCG_SCHEMA}.import_jobs
             ORDER BY created_at DESC
             LIMIT 200
             """
@@ -195,9 +195,9 @@ async def get_latest_unresolved(
     """
     row = await db.execute(
         text(
-            """
+            f"""
             SELECT id, unresolved_count
-            FROM import_jobs
+            FROM {TCG_SCHEMA}.import_jobs
             ORDER BY created_at DESC
             LIMIT 1
             """
