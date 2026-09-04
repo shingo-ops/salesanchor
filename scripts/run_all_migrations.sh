@@ -571,6 +571,7 @@ run_sql migrations/20260903_210000_tcg_distribution_settings_t004.sql
 # HIST-01: 再解析履歴テーブル（analysis_runs / analysis_run_snapshots・tenant_004 専用・冪等）
 run_sql migrations/20260903_220000_create_tcg_analysis_history_t004.sql
 run_sql migrations/20260904_160000_tcg_magazine_promo_products_t004.sql
+run_sql migrations/20260905_010000_tcg_pokemon_master_batch1_t004.sql
 
 echo ""
 echo "============================================"
