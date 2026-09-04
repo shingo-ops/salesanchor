@@ -33,6 +33,7 @@ celery_app = Celery(
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
+        "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
     ],
 )
 
