@@ -2373,6 +2373,39 @@ async def send_lead_image_message(
                     },
                 )
                 dc_attachment_saved = True
+
+                # 保存した画像を受信箱に表示するため、配信URLを設定する。
+                # 受信時と同じ形式（API_BASE はクライアント側が付ける）。
+                _att_row = await db.execute(
+                    text(f"""
+                        SELECT id FROM {attachments_t}
+                         WHERE message_id = :message_id
+                           AND tenant_id = :tenant_id
+                    """),
+                    {"message_id": str(dc_msg_id), "tenant_id": tenant_id},
+                )
+                _att_first = _att_row.first()
+                if _att_first is not None:
+                    _serve_url = (
+                        f"/leads/{lead_id}/attachments/{int(_att_first[0])}"
+                    )
+                    await db.execute(
+                        text(f"""
+                            UPDATE {meta_messages_t}
+                               SET attachment_url = :url
+                             WHERE message_id = :message_id
+                               AND tenant_id = :tenant_id
+                        """),
+                        {
+                            "url": _serve_url,
+                            "message_id": str(dc_msg_id),
+                            "tenant_id": tenant_id,
+                        },
+                    )
+                    logger.info(
+                        "[attachment-save] 送信画像の配信URL設定 tenant=%s lead=%s url=%s",
+                        tenant_id, lead_id, _serve_url,
+                    )
                 logger.info(
                     "[attachment-save] 送信画像を保存 tenant=%s lead=%s msg=%s bytes=%s path=%s",
                     tenant_id, lead_id, dc_msg_id, len(file_bytes), _rel_path,

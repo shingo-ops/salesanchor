@@ -91,6 +91,15 @@ export function InboxMessageThread({
     clearAttachment();
   }, [clearAttachment]);
 
+  // 送信後に attachedFile が消えたらプレビューも消す。
+  // clearAttachment は useInboxState 側で attachedFile のみを消すため、
+  // ここで previewUrl を追従させる（2026-09-04 に残留を実測）。
+  useEffect(() => {
+    if (attachedFile === null) {
+      setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    }
+  }, [attachedFile]);
+
   // 会話切り替えで添付プレビューをリセット
   useEffect(() => {
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
