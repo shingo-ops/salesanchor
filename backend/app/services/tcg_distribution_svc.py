@@ -189,8 +189,8 @@ async def fetch_output_rows(
             COALESCE(p.japanese_title, '')                          AS japanese_title,
             COALESCE(p.english_title, '')                           AS english_title,
             ar.condition_canonical                                   AS condition,
-            COALESCE(ar.price_normalized::text, '')                 AS unit_price,
-            COALESCE(ar.quantity_normalized::text, '')              AS quantity,
+            COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
+            COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(ts.name, '')                                   AS provider
