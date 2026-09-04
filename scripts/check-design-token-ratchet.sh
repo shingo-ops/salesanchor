@@ -22,7 +22,7 @@ count_hex_in_ref_file() {
   fi
 
   local matches
-  matches=$(git show "${ref}:${file}" 2>/dev/null | grep -oE '#[0-9a-fA-F]{3,8}\b' || true)
+  matches=$(git show "${ref}:${file}" 2>/dev/null | sed -E 's/\(#[0-9]+\)//g' | grep -oE '#[0-9a-fA-F]{3,8}\b' || true)
   if [ -z "${matches}" ]; then
     echo 0
   else
