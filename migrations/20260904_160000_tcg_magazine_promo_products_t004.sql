@@ -107,10 +107,12 @@ BEGIN
 
     -- 5. 除外キーワードの追加（PM0190 が Vol.21 を拾わないようにする）
     EXECUTE format($q$
-        INSERT INTO %I.product_exclude_keywords (product_id, keyword)
-        VALUES ($1, 'ヒロインズ')
+        INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)
+        SELECT $1, 'ヒロインズ', COALESCE(MAX(position), 0) + 1
+          FROM %I.product_exclude_keywords
+         WHERE product_id = $1
         ON CONFLICT DO NOTHING
-    $q$, _schema) USING v_pm0190;
+    $q$, _schema, _schema) USING v_pm0190;
 
     -- 6. 検証: 担当範囲だけを数える
     EXECUTE format($q$

@@ -17,6 +17,8 @@
 | 本番SQL実行の固定化 | SSH直書きで引用符が剥がれ構文エラー | 2026-07-19 段階①dry-runで実測 |
 | テスト用スキーマ定義の集約 | tenant.pyの列追加がテスト側複製に反映漏れ | 2026-07-18 #2956で179件連鎖 |
 | 検証ヘルパーのSHA紐づけ | 成功済みrun IDの取り違いで緑/赤を誤認 | 2026-07-19 #2966で実測 |
+| CIのテナントスキーマ不足 | tenant_004向けmigrationがCIで実行されず本番が初回実行になる | 2026-09-04 実測。migration-test.yml 全1394行に tenant_004 は0件。対象12本・うち書き込み7本。PR #3268 でデプロイ停止。recon: docs/handoff/ci-tenant-schema-blindspot/recon.md |
+| .pr-number 未生成の再現 | 柱1-a が未達のままマージが2回中断 | 2026-09-04 実測。PR #3268 と PR #3272 で gh-pr-merge-safe.sh が中断 |
 
 ## 維持の仕組み
 - 本テーマのファイル変更はPR＋PO承認のみ。process-artifacts gate が通過を管理。
