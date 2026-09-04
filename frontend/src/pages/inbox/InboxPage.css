@@ -429,6 +429,35 @@
   overflow: hidden;
   background: var(--bg-surface);
   min-width: 0;
+  /* ドロップ用オーバーレイの基準（2026-09-04 追加） */
+  position: relative;
+}
+
+/* ドラッグ&ドロップの受け入れ表示。
+   スレッド内に限定するため fixed ではなく absolute を使う。 */
+.inbox-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  opacity: var(--opacity-dim, 0.92);
+  pointer-events: none;
+}
+
+.inbox-drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  color: var(--accent);
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-medium);
 }
 /* Meta実測: padding=12px 0, border-bottom=1px solid rgba(203,210,217,0.6), h=81px */
 .inbox-center-header {
