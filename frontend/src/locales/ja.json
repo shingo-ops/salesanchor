@@ -3278,5 +3278,37 @@
       "accessErrorTitle": "このシートにアクセスできません",
       "accessErrorGeneric": "シートへのアクセスに失敗しました"
     }
+  },
+  "tcgLineImport": {
+    "pageTitle": "LINE エクスポート取り込み",
+    "loading": "読み込み中...",
+    "notSuperAdmin": "この画面には中央 admin 権限が必要です。",
+    "uploadSection": "ファイルのアップロード",
+    "dropZoneHint": ".txt ファイルをドロップ、またはクリックして選択",
+    "windowHoursLabel": "取り込み幅（時間, 0=全件）",
+    "windowStartLabel": "取り込み開始（省略可）",
+    "windowEndLabel": "取り込み終了（省略可）",
+    "uploading": "取り込み中...",
+    "uploadButton": "アップロード",
+    "errorSelectFile": "ファイルを選択してください",
+    "errorTxtOnly": ".txt ファイルを選択してください",
+    "errorUploadFailed": "アップロードに失敗しました",
+    "errorHistoryFailed": "履歴の取得に失敗しました",
+    "alreadyImported": "このファイルは既にインポート済みです",
+    "importComplete": "取り込み完了",
+    "messageCount": "メッセージ数",
+    "providerCount": "仕入元数",
+    "unresolvedCount": "未解決送信者数",
+    "unresolvedSendersLabel": "未登録仕入元",
+    "unresolvedUnit": "名",
+    "historySection": "アップロード履歴",
+    "noHistory": "履歴がありません",
+    "colFilename": "ファイル名",
+    "colMessageCount": "メッセージ数",
+    "colProviderCount": "仕入元数",
+    "colUnresolved": "未解決数",
+    "colUploadedBy": "アップロード者",
+    "colStatus": "ステータス",
+    "colDate": "日時"
   }
 }

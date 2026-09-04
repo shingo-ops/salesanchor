@@ -3278,5 +3278,37 @@
       "accessErrorTitle": "Cannot access this sheet",
       "accessErrorGeneric": "Failed to access the spreadsheet"
     }
+  },
+  "tcgLineImport": {
+    "pageTitle": "LINE Export Import",
+    "loading": "Loading...",
+    "notSuperAdmin": "This page requires central admin permission.",
+    "uploadSection": "Upload File",
+    "dropZoneHint": "Drop a .txt file here, or click to select",
+    "windowHoursLabel": "Window hours (0=all)",
+    "windowStartLabel": "Window start (optional)",
+    "windowEndLabel": "Window end (optional)",
+    "uploading": "Importing...",
+    "uploadButton": "Upload",
+    "errorSelectFile": "Please select a file",
+    "errorTxtOnly": "Please select a .txt file",
+    "errorUploadFailed": "Upload failed",
+    "errorHistoryFailed": "Failed to load history",
+    "alreadyImported": "This file has already been imported",
+    "importComplete": "Import complete",
+    "messageCount": "Message count",
+    "providerCount": "Provider count",
+    "unresolvedCount": "Unresolved senders",
+    "unresolvedSendersLabel": "Unresolved senders",
+    "unresolvedUnit": "",
+    "historySection": "Upload history",
+    "noHistory": "No history",
+    "colFilename": "Filename",
+    "colMessageCount": "Messages",
+    "colProviderCount": "Providers",
+    "colUnresolved": "Unresolved",
+    "colUploadedBy": "Uploaded by",
+    "colStatus": "Status",
+    "colDate": "Date"
   }
 }

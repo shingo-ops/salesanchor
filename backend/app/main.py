@@ -94,6 +94,7 @@ from app.routers import (
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
     tcg_distribution,  # DIST-01: TCG 在庫配信
+    tcg_line_import,  # MIG-04 Stage 1: LINE エクスポート取り込み
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
@@ -590,6 +591,11 @@ app.include_router(
 # DIST-01: TCG 在庫配信
 app.include_router(
     tcg_distribution.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Stage 1: LINE エクスポート取り込み（is_super_admin 限定）
+app.include_router(
+    tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 
