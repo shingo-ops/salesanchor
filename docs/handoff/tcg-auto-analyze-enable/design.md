@@ -59,7 +59,7 @@ VPS の `.env` に明示行がなくても ON になる。OFF にしたい場合
 
 ### deploy.yml との関係
 
-`deploy.yml:206〜231` の `sed` ブロックに `TCG_AUTO_ANALYZE` は含まれていない。  
+`.github/workflows/deploy.yml:206〜231` の `sed` ブロックに `TCG_AUTO_ANALYZE` は含まれていない。  
 よって deploy 時も `.env` 内の既存値は保持される（sed が触らない）。  
 デフォルト値 `1` は compose 起動時にコンテナへ渡されるため、`.env` への追記は不要。
 
