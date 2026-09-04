@@ -13,7 +13,7 @@
 - 取得対象ファイル:
   - `backend/app/services/gemini_extraction_svc.py`（274 行）
   - `backend/app/tasks/tcg_extraction.py`（266 行）
-  - `backend/tcg_migration/tests/test_mig04_acceptance.py`（389 行）
+  - backend/tcg_migration/tests/test_mig04_acceptance.py（389 行、移植元のみ・本 PR に含まない）
 
 ### 関連 ADR
 ```
@@ -50,7 +50,7 @@ GAS の ExtractOnly 関数が本番の抽出経路であり、その設計に合
 
 ### スキーマ修飾（IMP-05 教訓）
 
-PR #3165 の `tcg_extraction.py` は `text(...)` に f-string がなく、SQL 中に `{TCG_SCHEMA}` が文字どおり残っていた（IMP-05 で6箇所を確認）。
+PR #3165 の `backend/app/tasks/tcg_extraction.py` は `text(...)` に f-string がなく、SQL 中に `{TCG_SCHEMA}` が文字どおり残っていた（IMP-05 で6箇所を確認）。
 
 Stage 2 対策:
 1. 全 4 件の `text()` 呼び出しを `text(f"...")` / `text(f"""...""")` に変更（確認済み）
@@ -58,13 +58,13 @@ Stage 2 対策:
 
 ### 解析発火フラグ調査
 
-移植元 `tcg_extraction.py` は `status='done'` で無条件に `analyze_extraction_job` を呼ぶ設計。  
+移植元 `backend/app/tasks/tcg_extraction.py` は `status='done'` で無条件に `analyze_extraction_job` を呼ぶ設計。  
 Stage 2 では環境変数 `TCG_AUTO_ANALYZE=1` のときのみ発火（既定 OFF）。  
 既存 `docker-compose.yml` への変数追加は今回対象外（既定 OFF のため不要）。
 
 ### lint_tenant_schema.py
 
-`backend/scripts/lint_tenant_schema.py` は現存しない（`ls backend/scripts/` で確認）。  
+backend/scripts/lint_tenant_schema.py は現存しない（ls backend/scripts/ で確認）。  
 代替: テスト `test_tcg_extraction_sql_has_schema_prefix` + `test_tcg_line_import_svc_sql_has_schema_prefix` で SQL 文字列を機械検査。
 
 ### マイグレーション確認
@@ -79,4 +79,4 @@ Stage 2 が書くテーブル `extraction_jobs`, `extraction_items`, `source_mes
 | `backend/app/celery_app.py` | include リストに 1 行追記（既存 11 タスク不変） |
 | `backend/requirements.txt` | `google-genai>=1.0.0` を追記（`google-generativeai` は削除しない） |
 
-`tcg_analyzer_svc.py` は変更しない（origin/main の v2 をそのまま呼ぶ）。
+`backend/app/services/tcg_analyzer_svc.py` は変更しない（origin/main の v2 をそのまま呼ぶ）。

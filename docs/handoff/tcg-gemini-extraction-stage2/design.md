@@ -1,7 +1,7 @@
 # MIG-04 Stage 2: Gemini 抽出移植 — 設計書
 
 作成日: 2026-09-05  
-ADR 参照: ADR-154  
+ADR 参照: ADR-154-tcg-parity02-gas-python-migration  
 recon 参照: `docs/handoff/tcg-gemini-extraction-stage2/recon.md`
 
 ---
@@ -139,6 +139,8 @@ git revert <merge-commit>
 ---
 
 ## 維持の仕組み + 守り手
+
+守り手: backend/tests/test_tcg_gemini_extraction.py（18件・CI で自動実行）
 
 | 層 | 仕組み | 守り手 |
 |----|--------|--------|
