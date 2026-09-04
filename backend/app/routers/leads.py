@@ -1445,7 +1445,7 @@ async def get_message_attachment_url(
             },
         )
         await db.commit()
-        from app.tenant.context import reset_tenant_context as _reset_ctx
+        from app.auth.dependencies import reset_tenant_context as _reset_ctx
         await _reset_ctx(db, tenant_id)
 
         return {"url": fresh_discord_url}
@@ -1513,7 +1513,7 @@ async def get_message_attachment_url(
         {"url": fresh_url, "message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
     )
     await db.commit()
-    from app.tenant.context import reset_tenant_context
+    from app.auth.dependencies import reset_tenant_context
     await reset_tenant_context(db, tenant_id)
 
     return {"url": fresh_url}
@@ -2394,7 +2394,7 @@ async def send_lead_image_message(
             },
         )
         await db.commit()
-        from app.tenant.context import reset_tenant_context as _reset_ctx
+        from app.auth.dependencies import reset_tenant_context as _reset_ctx
         await _reset_ctx(db, tenant_id)
 
         return {
