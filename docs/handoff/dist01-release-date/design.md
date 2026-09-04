@@ -36,11 +36,19 @@ ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.code NULLS LAST
 - スプレッドシートの列数が10→11に変わるため、既存シートを上書きする場合は旧フォーマットとの並びに注意
 - `fetch_preview_data` は別関数・別クエリのため影響なし
 
+## 外部・過去事例の参照と我々への応用
+
+- Google Sheets への列追加はヘッダー行を clear + append_rows で毎回上書きする方式のため、列数増加はシート側で自動追従される（既存データとの不整合なし）
+- PostgreSQL の `ORDER BY ... NULLS LAST` は標準 SQL 挙動。NULL 率 8.8% を末尾に集約することで大半の行は発売日順に表示される
+- `tcg_products.release_date` は DATE 型。`::text` キャストで `YYYY-MM-DD` 形式の文字列として出力される（gspread は文字列として書き込み、Sheets 側でセル書式を適用可能）
+
 ## 戻し方
 
 `"Release Date"` 行を `DIST_HEADERS` から削除し、SELECT と ORDER BY と返却リストを元に戻す（4箇所）。
 
 ## 維持の仕組み
+
+守り手: DIST_HEADERS 列数 = fetch_output_rows 返却リスト列数のアサーション（テストで担保）
 
 - `DIST_HEADERS` 定数と `fetch_output_rows` の SELECT/返却リストを常に同数・同順で管理する
 - 列追加時は `DIST_HEADERS`・SELECT・返却リストの3点セットを同時に変更する（ADR-154 §出力形式）
