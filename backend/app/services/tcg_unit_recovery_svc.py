@@ -65,49 +65,49 @@ _CT_BOUNDARY_RE_TEMPLATE = (
 # GAS: 00_Constants.gs / investigate2.gs:5454 _UNIT_MASTER_ROWS_
 _UNIT_MASTER_ROWS = [
     {
-        "unit_id": "UN0001",
+        "unit_id": "c5a6371d-5296-45a3-913f-72f6315b4bb9",  # UN0001 Case
         "canonical": "Case",
         "kubun": "箱系大",
         "aliases": "case,CASE,Case,carton,CARTON,Carton,ct,CT,Ct,カートン,ケース,ｶｰﾄﾝ,ｹｰｽ",
     },
     {
-        "unit_id": "UN0002",
+        "unit_id": "8e980434-eeff-4233-be5c-bcd0ba1db992",  # UN0002 Box
         "canonical": "Box",
         "kubun": "箱系",
         "aliases": "box,BOX,Box,ボックス,箱,ﾎﾞｯｸｽ",
     },
     {
-        "unit_id": "UN0003",
+        "unit_id": "225a8677-b1eb-4cb4-b2f0-4df5827d899a",  # UN0003 Pack
         "canonical": "Pack",
         "kubun": "パック系",
         "aliases": "pack,PACK,Pack,パック,ﾊﾟｯｸ",
     },
     {
-        "unit_id": "UN0004",
+        "unit_id": "fb707fad-d096-439c-b1af-d411a4a7d18a",  # UN0004 Piece
         "canonical": "Piece",
         "kubun": "枚系",
         "aliases": "piece,PIECE,Piece,pcs,PCS,Pcs,枚",
     },
     {
-        "unit_id": "UN0005",
+        "unit_id": "9fffcb6c-9a77-4e89-b862-6c9868cfaf34",  # UN0005 Set
         "canonical": "Set",
         "kubun": "セット系",
         "aliases": "set,SET,Set,セット,ｾｯﾄ",
     },
     {
-        "unit_id": "UN0006",
+        "unit_id": "07724cb8-085b-4ed0-b852-84ee20ce9f3c",  # UN0006 本
         "canonical": "本",
         "kubun": "除外",
         "aliases": "",
     },
     {
-        "unit_id": "UN0007",
+        "unit_id": "0df9b0c2-ac24-44b6-8dad-a10477c11b76",  # UN0007 点
         "canonical": "点",
         "kubun": "数量専用",
         "aliases": "",
     },
     {
-        "unit_id": "UN0008",
+        "unit_id": "599b72ae-0aa2-4b76-b957-e7ce93369bf5",  # UN0008 個
         "canonical": "個",
         "kubun": "条件つき",
         "aliases": "",
