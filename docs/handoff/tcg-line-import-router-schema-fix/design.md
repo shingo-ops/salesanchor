@@ -8,7 +8,7 @@ recon 参照: `docs/handoff/tcg-line-import-router-schema-fix/recon.md`
 
 ## KGI
 
-**`tcg_line_import.py` の全 SQL が `tenant_004.` スキーマ修飾済みになり、`test_tcg_schema_qualification.py` が GREEN になること**
+**`backend/app/routers/tcg_line_import.py` の全 SQL が `tenant_004.` スキーマ修飾済みになり、`backend/tests/test_tcg_schema_qualification.py` が GREEN になること**
 
 受け入れ基準（PO が画面・ログで一義に判定できる粒度）:
 | 基準 | 検証方法 |
@@ -104,7 +104,7 @@ migration なし・DB 変更なし。
 ## 外部・過去事例の参照と我々への応用
 
 - IMP-05（PR #3285）で同種バグを 6 箇所修正済み（サービス層）。ルーター層が取り残された教訓。
-- 再発防止テスト (`test_tcg_schema_qualification.py`) を追加し、IMP-09 マージ後に `tcg_extraction.py` 等を追記する拡張ポイントを用意。
+- 再発防止テスト (`backend/tests/test_tcg_schema_qualification.py`) を追加し、IMP-09 マージ後に tcg_extraction.py 等を追記する拡張ポイントを用意。
 
 ## 維持の仕組み
 

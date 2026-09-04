@@ -74,4 +74,4 @@ text("""
 
 `backend/tests/test_tcg_line_import.py` — 29 件（DB 不要、全 PASS）
 → router エンドポイント自体のテストはなし（サービス層のみ）
-→ 本カードで `test_tcg_schema_qualification.py` を追加して静的検証
+→ 本カードで `backend/tests/test_tcg_schema_qualification.py` を追加して静的検証
