@@ -188,11 +188,8 @@ export default function DesktopShell() {
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
-    { to: "/super-admin/masters",          labelKey: "nav.superAdminMasters" },
-    { to: "/super-admin/inbound",          labelKey: "nav.superAdminInbound" },
-    { to: "/super-admin/inventory-offers", labelKey: "nav.superAdminInventoryOffers" },
-    { to: "/super-admin/phase-switch",     labelKey: "nav.superAdminPhaseSwitch" },
-    { to: "/super-admin/fx-rate",          labelKey: "nav.superAdminFxRate" },
+    { to: "/super-admin/tcg-supplier-quality", labelKey: "nav.superAdminTcgSupplierQuality" },
+    { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
   ] : [];
 
   const moreItems: NavItem[] = [];
