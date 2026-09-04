@@ -167,14 +167,18 @@ def _build_duplicate_candidates(
     work_id: str,
     manufacturer_id: str,
     product_category_id: str,
+    mark: str = "",
+    search_keywords: str = "",
 ) -> list[dict]:
     """
-    GAS productMasterV2RegistrationCandidates_ 相当。
+    GAS productMasterV2RegistrationCandidates_ 相当（1対1移植）。
 
-    exact title match OR same-classification match を候補とする。
-    GAS の mark/search_keywords 照合は DB 側に mark 列が無いため省略。
+    exact title match OR (same-classification AND (same-mark OR same-search_keywords))
+    GAS 準拠: mark / search_keywords いずれも空のときは same_cls のみでは候補にならない。
     """
     normalized = japanese_title.strip().lower()
+    mark_v = mark.strip()
+    skw_v = search_keywords.strip()
     candidates = []
     for r in rows:
         exact_title = r.japanese_title.lower() == normalized
@@ -183,7 +187,9 @@ def _build_duplicate_candidates(
             and r.manufacturer_id == manufacturer_id
             and r.product_category_id == product_category_id
         )
-        if exact_title or same_cls:
+        same_mark = bool(mark_v) and getattr(r, "mark", "") == mark_v
+        same_search = bool(skw_v) and getattr(r, "search_keywords", "") == skw_v
+        if exact_title or (same_cls and (same_mark or same_search)):
             candidates.append(
                 {"product_id": r.product_id, "japanese_title": r.japanese_title}
             )
@@ -199,11 +205,14 @@ async def check_duplicates(
     work_id: str,
     manufacturer_id: str,
     product_category_id: str,
+    mark: str = "",
+    search_keywords: str = "",
 ) -> dict[str, Any]:
     """
     GAS: checkProductMasterV2RegistrationDuplicates 相当。
 
     title 近似 OR 同一分類の商品を最大 10 件返す。
+    mark / search_keywords で GAS 準拠フィルタリングを行う。
     """
     rows = await db.execute(
         text(
@@ -213,8 +222,15 @@ async def check_duplicates(
                 p.japanese_title,
                 p.work_id::text           AS work_id,
                 p.manufacturer_id::text   AS manufacturer_id,
-                p.product_category_id::text AS product_category_id
+                p.product_category_id::text AS product_category_id,
+                COALESCE(p.mark, '')      AS mark,
+                COALESCE(
+                    STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
+                    ''
+                )                         AS search_keywords
             FROM {TCG_SCHEMA}.tcg_products p
+            LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
+                ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND (
                 p.japanese_title ILIKE :title_pattern
@@ -224,6 +240,9 @@ async def check_duplicates(
                     AND p.product_category_id::text = :product_category_id
                 )
               )
+            GROUP BY
+                p.id, p.code, p.japanese_title,
+                p.work_id, p.manufacturer_id, p.product_category_id, p.mark
             ORDER BY p.japanese_title
             LIMIT 20
             """
@@ -241,6 +260,8 @@ async def check_duplicates(
         work_id=work_id,
         manufacturer_id=manufacturer_id,
         product_category_id=product_category_id,
+        mark=mark,
+        search_keywords=search_keywords,
     )
     return {"candidates": candidates}
 
@@ -293,25 +314,30 @@ async def create_product(
     exclude_keywords: str,
     mark: str = "",
     english_title: str = "",
+    force: bool = False,
 ) -> dict[str, Any]:
     """
     GAS: createProductMasterV2FromAnalysisReview 相当。
 
-    1. 重複チェック（重複あり → 早期 return）
+    1. 重複チェック（重複あり かつ force=False → 早期 return）
     2. PM コード採番
     3. tcg_products に INSERT
     4. product_search_keywords / product_exclude_keywords に INSERT
     5. post-write gate
+
+    force=True: GAS ソフトブロック準拠。重複候補があっても登録を続行する。
     """
-    # 重複チェック
+    # 重複チェック（force=True なら DUPLICATE_CANDIDATE で弾かない）
     dup_result = await check_duplicates(
         db,
         japanese_title=japanese_title,
         work_id=work_id,
         manufacturer_id=manufacturer_id,
         product_category_id=product_category_id,
+        mark=mark,
+        search_keywords=search_keywords,
     )
-    if dup_result["candidates"]:
+    if dup_result["candidates"] and not force:
         return {
             "ok": False,
             "code": "DUPLICATE_CANDIDATE",

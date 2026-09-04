@@ -77,6 +77,7 @@ class DuplicateCheckRequest(BaseModel):
     manufacturer_id: str
     product_category_id: str
     japanese_title: str
+    mark: str = ""
     search_keywords: str = ""
     exclude_keywords: str = ""
     release_date: str = ""
@@ -99,6 +100,7 @@ class CreateProductRequest(BaseModel):
     release_date: str = ""
     mark: str = ""
     english_title: str = ""
+    force: bool = False
 
 
 class CreateProductOkResponse(BaseModel):
@@ -192,6 +194,8 @@ async def check_product_duplicates(
         work_id=body.work_id,
         manufacturer_id=body.manufacturer_id,
         product_category_id=body.product_category_id,
+        mark=body.mark,
+        search_keywords=body.search_keywords,
     )
     return DuplicateCheckResponse(**data)
 
@@ -227,6 +231,7 @@ async def create_product_master(
             exclude_keywords=body.exclude_keywords,
             mark=body.mark,
             english_title=body.english_title,
+            force=body.force,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
