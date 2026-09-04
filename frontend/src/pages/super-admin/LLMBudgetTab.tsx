@@ -5,7 +5,6 @@
  *   - public.tenant_llm_budgets の一覧 + 編集
  *   - 各 tenant の monthly_budget_usd / current_month_usd / hard_stop / notify_admin
  *   - Jarvis 運用 admin（is_super_admin=true）のみ操作可（API 側で require_super_admin）
- *   - テナント admin は MastersPage 側で 403 ガード
  *
  * 変更履歴:
  *   2026-05-22: 初版（Sprint 4）
