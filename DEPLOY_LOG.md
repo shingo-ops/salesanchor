@@ -98,6 +98,87 @@ Claude Code はこれを "PreToolUse hook blocked" として扱い、以降の *
 
 ---
 
+### インシデント記録: 再解析完了前に配信を実行（2026-09-04）
+
+**事象:**
+6ジョブの再解析（00:59 UTC 開始）が `completed_at=NULL` のまま完了を確認せずに配信スクリプトを実行した。
+その後 02:39 UTC に再解析が正常完了し、配信対象が確定した。
+
+**実測値（2026-09-04 12:xx JST 確認）:**
+
+```
+ dist_ok | unit_ng | flag_c | price_null | pid_ng
+---------+---------+--------+------------+--------
+     718 |      23 |    553 |          1 |    332
+```
+
+- スプレッドシート（在庫テスト）: 719行（ヘッダー1行 + データ718行）= DBと一致
+- ヘッダー: `['投稿日時', 'Mark', 'Japanese Title', 'English Title', 'Condition', 'Unit Price', 'Quantity', 'Note_JA', 'Status', 'Release Date', '提供者']`（11列）
+
+**analysis_runs 実行記録（6ジョブ分）:**
+
+```
+started_at (UTC)                | completed_at (UTC)             | total | unit_resolved
+--------------------------------+--------------------------------+-------+--------------
+2026-09-04 00:59:37〜00:59:45  | NULL                           |       |        ← 失敗
+2026-09-04 02:39:54〜02:39:55  | 02:39:54〜02:39:55 (完了)      |  各種 |     各種   ← 成功
+```
+
+**手順の問題:**
+再解析スクリプトを呼び出した後、`analysis_runs.completed_at IS NULL = 0` になるまで待たずに配信を実行した。
+この順序の乱れにより、再解析前の状態で配信が実行されるリスクがあった（今回は最終的に718件で一致）。
+
+**改善措置:**
+配信実行前の必須確認クエリを手順書に追加する（下記「配信前チェック手順」参照）。
+
+---
+
+### 残存: unit_ng 23件（raw_unit 空欄・自動解決不可）
+
+6ジョブ再解析完了後も unit_ng が残っている。所属ジョブと件数:
+
+```
+ job_id                                | unit_ng_count
+---------------------------------------+---------------
+ 653a6494-eeec-4c73-8862-fd98963c9723 |             9  ← 6ジョブ対象外
+ cc8dabf8-617c-4808-93fa-c13663e972af |             8  ← 6ジョブ対象外
+ 6844d51a-471e-4201-b290-7ba730ae8528 |             2  ← 6ジョブ対象外
+ 2b80c4ba-cd81-4bcc-a483-c3773cf4dcd7 |             1  ← 6ジョブ対象外
+ e5d6a3c3-14b4-491d-b4db-5806311ef41c |             1  ← 6ジョブ内（ストームエメラルダ）
+ ef572b32-1914-4ede-87de-dc1cf1dcafe3 |             1  ← 6ジョブ内（ストームエメラルダ）
+ 8e726700-aa69-43e4-b87e-f8627cce762d |             1  ← 6ジョブ対象外
+```
+
+- 6ジョブ内: 2件（`raw_product_name='ストームエメラルダ'`, `raw_unit=''`, `unit_basis='UNIT_UNRESOLVED'`）
+- 6ジョブ外: 21件（上位ジョブ 653a6494:9件, cc8dabf8:8件）
+- 原因: 元データ（`raw_unit`）が空欄のため再解析でも `unit_canonical` を導出できない
+- 対応: 手動での unit 補完が必要。自動解決は不可。現状は配信対象外（718件に含まれない）
+
+---
+
+### 配信前チェック手順（必須）
+
+再解析 → 配信 の間に以下を必ず実行すること:
+
+```sql
+-- pending が 0 になってから配信を実行する
+SELECT COUNT(*) AS pending
+FROM tenant_004.analysis_runs
+WHERE completed_at IS NULL;
+```
+
+期待値: `pending = 0`
+
+```bash
+# コマンド例
+docker exec astro-webapp-postgres-1 psql -U jarvis -d jarvis_db \
+  -c "SELECT COUNT(*) AS pending FROM tenant_004.analysis_runs WHERE completed_at IS NULL;"
+```
+
+pending > 0 の場合は再解析完了を待ってから配信を実行すること。
+
+---
+
 ## PARITY-03 Phase 3 — tcg_products mark/english_title 追加 (2026-09-03)
 
 ### PR #3246: migration 20260903_180000_tcg_products_mark_en_t004.sql
