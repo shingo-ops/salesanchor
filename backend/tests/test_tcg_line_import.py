@@ -1071,3 +1071,90 @@ def test_discard_stale_no_rows():
         result = discard_stale_pending_jobs()
 
     assert result == {"discarded_count": 0}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [IMP-39] ルーター順序 / datetime 型 修正の回帰テスト
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_history_route_before_job_id_route():
+    """
+    GET /tcg/line-import/history は GET /tcg/line-import/{import_job_id} より前に定義されること。
+
+    FastAPI はルートを定義順に評価するため、固定パスが可変パスより後にあると
+    'history' が UUID パラメータとして誤評価される（IMP-39 で本番障害として発覚）。
+    """
+    from app.routers.tcg_line_import import router
+
+    get_routes = [r for r in router.routes if hasattr(r, "methods") and "GET" in r.methods]
+    paths = [r.path for r in get_routes]
+
+    history_idx = next((i for i, p in enumerate(paths) if p == "/tcg/line-import/history"), None)
+    job_id_idx = next((i for i, p in enumerate(paths) if p == "/tcg/line-import/{import_job_id}"), None)
+
+    assert history_idx is not None, "/tcg/line-import/history がルーターに存在しない"
+    assert job_id_idx is not None, "/tcg/line-import/{import_job_id} がルーターに存在しない"
+    assert history_idx < job_id_idx, (
+        f"/history (idx={history_idx}) が /{{import_job_id}} (idx={job_id_idx}) より後に定義されている。"
+        "固定パスは可変パスより前に定義すること"
+    )
+
+
+def test_pending_route_before_job_id_route():
+    """
+    GET /tcg/line-import/pending は GET /tcg/line-import/{import_job_id} より前に定義されること。
+    """
+    from app.routers.tcg_line_import import router
+
+    get_routes = [r for r in router.routes if hasattr(r, "methods") and "GET" in r.methods]
+    paths = [r.path for r in get_routes]
+
+    pending_idx = next((i for i, p in enumerate(paths) if p == "/tcg/line-import/pending"), None)
+    job_id_idx = next((i for i, p in enumerate(paths) if p == "/tcg/line-import/{import_job_id}"), None)
+
+    assert pending_idx is not None, "/tcg/line-import/pending がルーターに存在しない"
+    assert job_id_idx is not None, "/tcg/line-import/{import_job_id} がルーターに存在しない"
+    assert pending_idx < job_id_idx, (
+        f"/pending (idx={pending_idx}) が /{{import_job_id}} (idx={job_id_idx}) より後に定義されている"
+    )
+
+
+async def test_import_window_start_passed_as_datetime():
+    """
+    import_line_export が import_jobs に INSERT するとき、
+    window_start / window_end が文字列ではなく datetime オブジェクトで渡されること。
+
+    asyncpg は TIMESTAMPTZ カラムへの文字列代入を拒否する（IMP-39 で本番障害として発覚）。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    db = _make_db_mock([("SP0001", "仕入元A")])
+    captured_ws: list = []
+
+    orig_execute = db.execute
+
+    async def capturing_execute(stmt, params=None):
+        sql = str(stmt)
+        if params and "import_jobs" in sql and "window_start" in sql and "INSERT" in sql:
+            captured_ws.append(params.get("ws"))
+        return await orig_execute(stmt, params)
+
+    db.execute = capturing_execute
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=24,   # window_start を自動計算させる
+        )
+
+    assert len(captured_ws) == 1, "import_jobs への INSERT が実行されていない"
+    ws_val = captured_ws[0]
+    assert isinstance(ws_val, datetime), (
+        f"window_start は datetime 型で渡す必要があるが {type(ws_val).__name__} が渡された（IMP-39）"
+    )

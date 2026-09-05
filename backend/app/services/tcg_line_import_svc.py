@@ -531,6 +531,11 @@ async def import_line_export(
 
         enqueued_ids = await _write_source_messages(db, provider_entries)
 
+        # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す
+        # （asyncpg は文字列を拒否する: IMP-39 で本番障害として発覚）
+        ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
+        we_dt = datetime.strptime(effective_window_end, "%Y-%m-%d %H:%M:%S") if effective_window_end else None
+
         await db.execute(
             text(
                 f"""
@@ -551,8 +556,8 @@ async def import_line_export(
                 "msg_count": message_count,
                 "prov_count": provider_count,
                 "uploaded_by": uploaded_by,
-                "ws": effective_window_start,
-                "we": effective_window_end,
+                "ws": ws_dt,
+                "we": we_dt,
             },
         )
 
@@ -575,6 +580,11 @@ async def import_line_export(
     else:
         # 5-b. 未解決あり: source_messages を1件も書かず保留
         # 解決済みの仕入元も含め全件が保留になる（意図した挙動）
+
+        # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す（IMP-39 是正）
+        ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
+        we_dt = datetime.strptime(effective_window_end, "%Y-%m-%d %H:%M:%S") if effective_window_end else None
+
         await db.execute(
             text(
                 f"""
@@ -595,8 +605,8 @@ async def import_line_export(
                 "msg_count": message_count,
                 "unresolved_count": unresolved_count,
                 "uploaded_by": uploaded_by,
-                "ws": effective_window_start,
-                "we": effective_window_end,
+                "ws": ws_dt,
+                "we": we_dt,
                 "pending_messages": json.dumps(messages, ensure_ascii=False),
                 "unresolved_names": json.dumps(unresolved_display_names, ensure_ascii=False),
             },
