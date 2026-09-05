@@ -2274,7 +2274,11 @@
         "supplierChannels": "Supplier channels",
         "suppliers": "Suppliers",
         "supplierNameDupes": "Supplier name duplicates",
-        "orphanMessages": "Orphan messages"
+        "orphanMessages": "Orphan messages",
+        "extractionErrors": "Extraction errors",
+        "extractionPending": "Extraction pending",
+        "extractionRunningStale": "Extraction stalled (running >10 min)",
+        "analysisMissing": "Analysis missing (done jobs)"
       },
       "columns": {
         "supplier_code": "Supplier code",
@@ -2285,7 +2289,16 @@
         "is_active": "Active",
         "name_lower": "Name (lowercase)",
         "cnt": "Count",
-        "null_channel_count": "No-channel count"
+        "null_channel_count": "No-channel count",
+        "id": "ID",
+        "source_message_id": "Message ID",
+        "error_message": "Error message",
+        "prompt_version": "Prompt version",
+        "created_at": "Created at",
+        "age_minutes": "Age (minutes)",
+        "extraction_job_id": "Extraction job ID",
+        "item_count": "Item count",
+        "extracted_at": "Extracted at"
       }
     },
     "dex": {
