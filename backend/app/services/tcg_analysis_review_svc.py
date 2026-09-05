@@ -11,7 +11,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数

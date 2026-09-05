@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
