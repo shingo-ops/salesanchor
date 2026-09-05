@@ -26,12 +26,12 @@
 ### 標準ワークフロー確認
 
 - [ ] 免除（自律クラフト：<理由>）
-- recon: <!-- docs/handoff/<仕事名>/recon.md（実ファイルが必要） -->
-- 設計: <!-- docs/handoff/<仕事名>/design.md（実ファイルが必要） -->
-- 対象ADR: <!-- design.md の ADR 参照と同じ文字列にする -->
+- recon: <!-- docs/handoff/<仕事名>/recon.md（実ファイル必須） -->
+- 設計: <!-- docs/handoff/<仕事名>/design.md（実ファイル必須） -->
+- 対象ADR: <!-- design.md の ADR 参照と同じ文字列。ls docs/adr/ で実在確認 -->
 - 設計仕様書（あるべき姿）: <!-- 参照/新規作成した docs/specs/<領域>/README.md へのリンク。索引: docs/specs/README.md。該当が無い開発は「対象外」 -->
-- 触るファイル: <!-- 半角コロンと同じ行にカンマ区切り。改行して箇条書きにしない。例: backend/app/a.py, docs/handoff/x/recon.md -->
-- 削除するファイル: <!-- 1行でも変更・削除した行があるファイルをすべて列挙。追加のみなら「なし」 -->
+- 触るファイル: <!-- 半角コロンと同じ行にカンマ区切り。改行・箇条書き不可。例: backend/app/a.py, docs/handoff/x/recon.md -->
+- 削除するファイル: <!-- 1行でも変更・削除した行があるファイルを全列挙。追加のみなら「なし」 -->
 
 <!-- 書類のみのPRは「書類のみ」と記入してスキップ可 -->
 <!-- 危険変更（migrations/deploy.yml/本番scripts）は認可承認者のApproveが別途必要 -->
