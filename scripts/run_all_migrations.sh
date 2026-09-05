@@ -583,8 +583,8 @@ run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
 # RECORD-01: 直接SQL復旧の記録（SP0007/SP0184 name修正・SP0203/SP0204 新規登録）（tenant_004 専用・冪等）
 run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
 
-# QA-01: tenant_006 に TCG 全テーブル 27 本を作成 + 分類マスタ seed + テスト仕入元 3 件（QA 専用・冪等）
-run_sql migrations/20260906_100000_create_tcg_tables_t006.sql
+# QA-03: tenant_001 に TCG 全テーブル 27 本を作成 + 分類マスタ seed + テスト仕入元 3 件（QA 専用・冪等）
+run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
 
 echo ""
 echo "============================================"

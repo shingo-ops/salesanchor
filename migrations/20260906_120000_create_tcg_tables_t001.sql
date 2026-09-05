@@ -1,21 +1,20 @@
--- Migration: 20260906_100000_create_tcg_tables_t006
+-- Migration: 20260906_120000_create_tcg_tables_t001
 --
--- 目的: tenant_006 スキーマに TCG 解析パイプライン全テーブル（27 本）を作成し、
+-- 目的: tenant_001 スキーマに TCG 解析パイプライン全テーブル（27 本）を作成し、
 --       QA に必要な最小限のマスタ（分類 4 テーブル + テスト仕入元 3 件）を seed する。
 --
 -- 設計判断:
---   - 1 本に集約: t006 はすべてのテーブルが存在しないため、
---     _t004 の ALTER TABLE 列追加を最終形として CREATE TABLE に内包できる。
---     複数ファイルの実行順依存を管理するより安全。
+--   - 1 本に集約: 分散した _t004 ALTER TABLE を最終形として CREATE TABLE に内包。
 --   - 既存 _t004 ファイルには一切触らない（本番適用済みのため）。
 --   - スキーマ名を _schema 変数化 + %I で管理（_t004 と同じ作法）。
---   - tcg_products: FK 制約（division/work/manufacturer/product_category）は
---     分類 4 テーブルを先に作成しているため、CREATE TABLE 時点から宣言。
+--   - CREATE SCHEMA は不要: tenant_001 は既存（68 テーブルあり）。
+--   - 検算は自分が作成した 27 テーブルのみを AND table_name IN (...) で限定カウント。
+--     （スキーマ全件カウント禁止: tenant_001 に CRM 系 68 本が既存のため正確な数にならない）
 --
--- 冪等性: CREATE SCHEMA IF NOT EXISTS / CREATE TABLE IF NOT EXISTS / ON CONFLICT DO NOTHING
+-- 冪等性: CREATE TABLE IF NOT EXISTS / ON CONFLICT DO NOTHING
 --
 -- _t004 との差異:
---   - スキーマ: tenant_006（tenant_004 には一切影響なし）
+--   - スキーマ: tenant_001（tenant_004 には一切影響なし）
 --   - seed データ: 分類マスタのみ（_t004 の 268 商品・60 仕入元はコピーしない）
 --   - テスト仕入元: SP9001/SP9002/SP9003 + LINE チャンネル各 1 件
 --
@@ -23,14 +22,17 @@
 
 DO $$
 DECLARE
-    _schema TEXT := 'tenant_006';
+    _schema TEXT := 'tenant_001';
 BEGIN
 
     -- ================================================================
-    -- 0. スキーマ作成
+    -- 0. スキーマ存在ガード（tenant_001 は既存・作成しない）
     -- ================================================================
-    EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', _schema);
-    RAISE NOTICE '20260906_100000: schema % created (or already existed)', _schema;
+    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = _schema) THEN
+        RAISE NOTICE '20260906_120000: schema % does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+    RAISE NOTICE '20260906_120000: schema % confirmed', _schema;
 
     -- ================================================================
     -- 1. 独立テーブル（FK なし / 自己参照のみ）
@@ -547,7 +549,7 @@ BEGIN
             ON %I.analysis_run_snapshots (run_id)
     $q$, _schema);
 
-    RAISE NOTICE '20260906_100000: 27 テーブル作成完了 (schema %)', _schema;
+    RAISE NOTICE '20260906_120000: 27 テーブル作成完了 (schema %)', _schema;
 
     -- ================================================================
     -- 8. Seed: 分類マスタ（FK 参照に必要な最小限）
@@ -594,7 +596,7 @@ BEGIN
         ON CONFLICT (code) DO NOTHING
     $q$, _schema);
 
-    RAISE NOTICE '20260906_100000: 分類マスタ seed 完了（tcg_major_categories:3 / tcg_series:11 / tcg_manufacturers:5 / tcg_product_categories:2）';
+    RAISE NOTICE '20260906_120000: 分類マスタ seed 完了（tcg_major_categories:3 / tcg_series:11 / tcg_manufacturers:5 / tcg_product_categories:2）';
 
     -- ================================================================
     -- 9. Seed: テスト仕入元 3 件 + LINE チャンネル（QA 専用）
@@ -621,10 +623,10 @@ BEGIN
           )
     $q$, _schema, _schema, _schema);
 
-    RAISE NOTICE '20260906_100000: テスト仕入元 seed 完了（SP9001/SP9002/SP9003 + LINE チャンネル各 1 件）';
+    RAISE NOTICE '20260906_120000: テスト仕入元 seed 完了（SP9001/SP9002/SP9003 + LINE チャンネル各 1 件）';
 
     -- ================================================================
-    -- 10. 検算: tenant_006 のテーブル一覧を出力
+    -- 10. 検算: 今回作成した TCG 27 テーブルのみをカウント
     --
     --     期待するテーブル一覧（27 本）:
     --       analysis_results, analysis_run_snapshots, analysis_runs,
@@ -637,6 +639,9 @@ BEGIN
     --       tcg_major_categories, tcg_manufacturers, tcg_product_categories,
     --       tcg_products, tcg_series, tcg_suppliers,
     --       unit_aliases, units, unparsed_lines
+    --
+    --     注意: tenant_001 には CRM 系テーブルが 68 本以上既存するため、
+    --           スキーマ全件カウントは使用禁止。名前リストで限定する。
     -- ================================================================
     DECLARE
         _table_count INTEGER;
@@ -644,14 +649,26 @@ BEGIN
         SELECT COUNT(*) INTO _table_count
         FROM information_schema.tables
         WHERE table_schema = _schema
-          AND table_type   = 'BASE TABLE';
+          AND table_type   = 'BASE TABLE'
+          AND table_name IN (
+              'analysis_results', 'analysis_run_snapshots', 'analysis_runs',
+              'audit_log', 'condition_aliases', 'conditions',
+              'extraction_items', 'extraction_jobs',
+              'import_jobs', 'item_corrections', 'item_notes',
+              'product_exclude_keywords', 'product_search_keywords', 'products_logistics',
+              'source_messages', 'supplier_channels',
+              'tcg_distribution_settings', 'tcg_distribution_targets',
+              'tcg_major_categories', 'tcg_manufacturers', 'tcg_product_categories',
+              'tcg_products', 'tcg_series', 'tcg_suppliers',
+              'unit_aliases', 'units', 'unparsed_lines'
+          );
 
-        RAISE NOTICE '20260906_100000: schema % テーブル数 = % (期待値: 27)', _schema, _table_count;
+        RAISE NOTICE '20260906_120000: schema % TCG テーブル数 = % (期待値: 27)', _schema, _table_count;
 
         IF _table_count <> 27 THEN
-            RAISE EXCEPTION '20260906_100000: テーブル数が 27 ではありません: %', _table_count;
+            RAISE EXCEPTION '20260906_120000: TCG テーブル数が 27 ではありません: %', _table_count;
         END IF;
     END;
 
-    RAISE NOTICE '20260906_100000: 完了。schema % に 27 テーブル作成・seed 完了', _schema;
+    RAISE NOTICE '20260906_120000: 完了。schema % に TCG 27 テーブル作成・seed 完了', _schema;
 END $$;

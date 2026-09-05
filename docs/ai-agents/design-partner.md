@@ -370,3 +370,32 @@ design（③設計）は、PO自筆の「理想の設計図（あるべき姿）
 - 色トークンの正本は docs/specs/design-tokens-ssot/（PO承認2026-07-09・open台帳方式）。docs/specs/design-system/ の便0.5（カレンダー色・ロール色の命名確定）はその傘下。色パーツの差分設計・実装はdesign-tokens-ssot側を正本とし、design-system側で重複着手しない。recon正本は docs/handoff/color-tokens-ssot/recon.md（PR #2864マージ済）。
 
 「ファイルが無い」報告は、worktreeの鮮度差で誤検知しうる: git fetchは参照情報のみ更新し、worktree実体は追随しない。fetch済みでも ls/find だけで「無い」と判定すると誤報告になる（2026-07-12 db-ssot分類マスタreconで2回実測、3回目の横断findで実在確認）。「無い」報告前に git show origin/main:<path> で本店へ直接確認する運用に変更。
+
+---
+
+## 9. テナントの用途（2026-09-06 確定）
+
+migration やコード変更でスキーマを指定する前に、必ずこの表を参照する。
+
+| id | tenant_name | tenant_code | 用途 | 触ってよいか |
+|----|-------------|-------------|------|-------------|
+| 1 | テスト株式会社 | test-corp | QA / TCG 動作確認用。TCG テーブルあり（migration 20260906_120000 適用済み）。contacts=0 | ○ |
+| 3 | 権限確認用 | perm-check-zzz | 権限テスト用 | 原則触らない |
+| 4 | HIGH LIFE JPN | highlife-jpn | 本番。contacts=52・4 ユーザー | migration 経由のみ・PO GO 必須 |
+| 5 | テストテナント2 | test-tenant-2 | 用途不明。contacts=0 | 触らない（用途確認前）|
+| 6 | Sales Anchor App Review | tenant-review | Meta App Review 撮影専用。contacts=8・settings に qa_smoke_seed_at あり | 触らない（QA 用途禁止）|
+
+**未使用 ID**: id=2, 7, 8, 9 は public.tenants に行が存在しない（2026-09-06 実測）。
+
+### TCG QA の操作規則
+
+- TCG 機能の QA は **TCG_SCHEMA=tenant_001** を指定して実行する
+- tenant_001 のテスト仕入元: **SP9001 / SP9002 / SP9003**（LINE チャンネル各 1 件）
+- 本番（tenant_004）と QA（tenant_001）以外に TCG テーブルは存在しない
+- tenant_006 は Meta App Review 専用。TCG 未適用・QA 禁止
+
+### 教訓（2026-09-05〜06）
+
+- テナントを選ぶ前に `public.tenants` と `docs/` を確認する
+- スキーマ全件カウントは禁止（CRM 系テーブルが混在するため）
+- migration の検算は `AND table_name IN (...)` で今回作成した対象のみを数える
