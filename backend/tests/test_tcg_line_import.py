@@ -23,6 +23,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services.tcg_line_import_svc import (
+    JST,
     build_provider_entries,
     import_line_export,
     parse_line_export,
@@ -668,6 +669,89 @@ def test_split_sender_unresolved_falls_back_to_first_space():
     assert len(user_msgs) == 1
     assert user_msgs[0]["display_name"] == "とも"
     assert user_msgs[0]["body"] == "本文テキスト"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# received_at のタイムゾーン（JST として保存）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_jst_constant_is_plus9():
+    """JST 定数が +09:00 であること。"""
+    assert JST.utcoffset(None) == timedelta(hours=9)
+
+
+def test_received_at_parsed_as_jst_not_utc():
+    """
+    "2026-09-03 01:19:00" を受け取ったとき、
+    保存される datetime の tzinfo が +09:00 であり UTC (+00:00) でないこと。
+
+    根拠: GAS latest24Iso_() が JST のローカル時刻文字列を返す。
+    .replace(tzinfo=UTC) のままでは配信 SQL の AT TIME ZONE 'Asia/Tokyo' で
+    +9h ずれて表示される（DIST-R3）。
+    """
+    timestamp_str = "2026-09-03 01:19:00"
+    dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
+    assert dt.utcoffset() == timedelta(hours=9), (
+        f"expected +09:00, got {dt.utcoffset()}"
+    )
+    assert dt.utcoffset() != timedelta(0), (
+        "UTC として保存されている: 配信 SQL の AT TIME ZONE 'Asia/Tokyo' で +9h ずれる"
+    )
+
+
+async def test_received_at_stored_as_jst_in_insert():
+    """
+    import_line_export が DB に渡す received_at パラメータが JST (+09:00) であること。
+
+    GAS の latest24Iso_() は JST ローカル時刻文字列を返す。
+    .replace(tzinfo=UTC) で保存すると配信 SQL の AT TIME ZONE 'Asia/Tokyo' により
+    表示が +9h ずれる（DIST-R3）。
+    正しくは JST aware datetime として保存し、配信 SQL は現状維持とする（ADR-154 GAS 再現）。
+    """
+    export_text = (
+        "2026.09.03 水曜日\n"
+        "1:19 仕入元A 商品X 100円\n"
+    )
+    received_at_params: list = []
+
+    async def tracked_execute(stmt, params=None):
+        sql = str(stmt)
+        result = MagicMock()
+        if params and isinstance(params, dict) and "received_at" in params:
+            received_at_params.append(params["received_at"])
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql:
+            result.fetchone.return_value = ("test-channel-id",)
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchall.return_value = []
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = tracked_execute
+    db.commit = AsyncMock()
+
+    await import_line_export(
+        db=db,
+        filename="test.txt",
+        export_text=export_text,
+        uploaded_by=None,
+        window_hours=0,
+    )
+
+    assert len(received_at_params) >= 1, "received_at が DB に渡されなかった"
+    dt = received_at_params[0]
+    assert dt is not None, "received_at が None（ValueError でフォールバック）"
+    assert dt.utcoffset() == timedelta(hours=9), (
+        f"expected +09:00, got {dt.utcoffset()}: "
+        "UTC として保存されると配信 SQL の AT TIME ZONE 'Asia/Tokyo' で +9h ずれる"
+    )
 
 
 def test_split_sender_no_prefix_false_match():
