@@ -49,6 +49,36 @@ _PIPE = "｜"
 # RAW_SOURCE_LINE_SPAN パターン: L0001-L0002 または L0001
 _SPAN_RE = re.compile(r"^L(\d+)(?:-L(\d+))?$")
 
+# ---------------------------------------------------------------------------
+# セキュリティ: エラーメッセージ sanitize
+# ---------------------------------------------------------------------------
+
+_HTTP_STATUS_RE = re.compile(r"\b([45]\d{2})\b")
+
+_HTTP_REASONS: dict[int, str] = {
+    400: "リクエストエラー",
+    401: "認証エラー",
+    403: "アクセス拒否",
+    429: "レート制限超過",
+    500: "サーバーエラー",
+    503: "サービス利用不可",
+}
+
+
+def _safe_error_message(exc: Exception) -> str:
+    """例外からAPIキーを除いた安全なエラーメッセージを生成する。
+
+    HTTPステータスコードが検出できる場合は「理由 (HTTP NNN)」形式を返す。
+    それ以外は key= パターンを伏せ字にする。
+    """
+    msg = str(exc)
+    m = _HTTP_STATUS_RE.search(msg)
+    if m:
+        code = int(m.group(1))
+        reason = _HTTP_REASONS.get(code, "HTTPエラー")
+        return f"{reason} (HTTP {code})"
+    return re.sub(r"key=[^\s&'\"<>]+", "(APIキー省略)", msg)
+
 
 # ---------------------------------------------------------------------------
 # ユーティリティ: 行アノテーション
@@ -130,7 +160,7 @@ def call_gemini_extraction(raw_text: str) -> str:
         )
     except Exception as exc:
         logger.exception("[gemini_extraction] API call failed: %s", exc)
-        raise RuntimeError(f"Gemini API 呼び出し失敗: {exc}") from exc
+        raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
     logger.info(
@@ -265,7 +295,7 @@ def extract_message(raw_text: str) -> dict:
             "prompt_version": PROMPT_VERSION,
             "items": [],
             "raw_response": "",
-            "error_message": str(exc),
+            "error_message": _safe_error_message(exc),
         }
 
 
@@ -277,4 +307,5 @@ __all__ = [
     "extract_message",
     "annotate_lines",
     "format_prompt_input",
+    "_safe_error_message",
 ]

@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app.services.gemini_extraction_svc import extract_message
+from app.services.gemini_extraction_svc import _safe_error_message, extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
             "status": "error",
             "items_count": 0,
             "analysis_stats": None,
-            "error_message": str(exc),
+            "error_message": _safe_error_message(exc),
         }
     finally:
         session.close()
