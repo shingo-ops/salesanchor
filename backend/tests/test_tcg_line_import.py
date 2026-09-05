@@ -300,8 +300,8 @@ def test_build_groups_by_sp_code():
     assert sp_codes == {"SP0001", "SP0002"}
 
 
-def test_build_separator_between_messages():
-    """複数メッセージは \\n\\n で結合される（SQR-05）。"""
+def test_build_latest_only_with_two_messages():
+    """複数メッセージは最新1件のみが raw_text になる（SQR-05）。"""
     resolved_messages = [
         {
             "sp_code": "SP0001", "canonical_name": "仕入元A",
@@ -315,11 +315,12 @@ def test_build_separator_between_messages():
         },
     ]
     entries = build_provider_entries(resolved_messages)
-    assert entries[0]["raw_text"] == "msg1\n\nmsg2"
+    assert entries[0]["raw_text"] == "msg2"
+    assert entries[0]["skipped_message_count"] == 1
 
 
 def test_build_timestamp_ascending_order():
-    """received_at は timestamp 昇順の最初のメッセージを使う。"""
+    """received_at は最初のタイムスタンプ、raw_text は最新（最後）のメッセージ本文（SQR-05）。"""
     resolved_messages = [
         {
             "sp_code": "SP0001", "canonical_name": "仕入元A",
@@ -335,7 +336,7 @@ def test_build_timestamp_ascending_order():
     entries = build_provider_entries(resolved_messages)
     assert len(entries) == 1
     assert entries[0]["received_at"] == "2026-08-01 10:00:00"
-    assert entries[0]["raw_text"].startswith("最初のメッセージ")
+    assert entries[0]["raw_text"] == "後のメッセージ"
 
 
 def test_build_sha256_computed():
@@ -368,6 +369,44 @@ def test_build_single_message():
 def test_build_empty_input():
     """空リスト入力で空リストを返す。"""
     assert build_provider_entries([]) == []
+
+
+def test_build_latest_only_with_three_messages():
+    """同一仕入元に3件あるとき、最新1件のみが raw_text になる（SQR-05）。"""
+    resolved_messages = [
+        {
+            "sp_code": "SP0001", "canonical_name": "仕入元A",
+            "timestamp": "2026-08-01 10:00:00", "body": "1件目",
+            "display_name": "仕入元A", "is_system_event": False,
+        },
+        {
+            "sp_code": "SP0001", "canonical_name": "仕入元A",
+            "timestamp": "2026-08-01 10:05:00", "body": "2件目",
+            "display_name": "仕入元A", "is_system_event": False,
+        },
+        {
+            "sp_code": "SP0001", "canonical_name": "仕入元A",
+            "timestamp": "2026-08-01 10:10:00", "body": "3件目（最新）",
+            "display_name": "仕入元A", "is_system_event": False,
+        },
+    ]
+    entries = build_provider_entries(resolved_messages)
+    assert len(entries) == 1
+    assert entries[0]["raw_text"] == "3件目（最新）"
+    assert entries[0]["skipped_message_count"] == 2
+
+
+def test_build_skipped_message_count_single():
+    """メッセージが1件のときは skipped_message_count == 0。"""
+    resolved_messages = [
+        {
+            "sp_code": "SP0001", "canonical_name": "仕入元A",
+            "timestamp": "2026-08-01 10:00:00", "body": "唯一のメッセージ",
+            "display_name": "仕入元A", "is_system_event": False,
+        }
+    ]
+    entries = build_provider_entries(resolved_messages)
+    assert entries[0]["skipped_message_count"] == 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
