@@ -87,6 +87,7 @@ docker run -d \
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:size=67108864 \
   --volume "${REPO_DIR}/firebase-credentials.json:/app/firebase-credentials.json:ro" \
+  --volume "${REPO_DIR}/tcg-sheets-sa.json:${REPO_DIR}/tcg-sheets-sa.json:ro" \
   --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
   --env-file "${REPO_DIR}/.env" \
   --env GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json \
