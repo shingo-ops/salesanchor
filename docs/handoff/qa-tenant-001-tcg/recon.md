@@ -86,3 +86,4 @@ PR #3317 は `migrations/20260906_100000_create_tcg_tables_t006.sql` の検算�
 ## 守り手
 
 人手で守る（migration 実行後の RAISE NOTICE のテーブル数=27 を目視確認）。
+
