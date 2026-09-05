@@ -30,8 +30,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # ---------------------------------------------------------------------------
 # 定数
 # ---------------------------------------------------------------------------
-
 from app.tcg_config import TCG_SCHEMA
+
 JST = timezone(timedelta(hours=9))
 
 # 日付行: "2026.08.26 月曜日" など
