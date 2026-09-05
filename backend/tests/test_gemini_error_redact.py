@@ -20,7 +20,7 @@ class TestSafeErrorMessage:
     def test_key_pattern_is_redacted(self):
         """key=<値> が伏せ字になること（URLクエリパラメータ形式）。"""
         exc = Exception(
-            "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=AIzaSyABCD1234 returned 429"
+            "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=FAKE-TEST-KEY-ONLY returned 429"
         )
         result = _safe_error_message(exc)
         assert "key=" not in result
@@ -79,7 +79,7 @@ class TestExtractMessageErrorRedact:
         """
         fake_exc = Exception(
             "POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
-            "?key=AIzaSyABCD1234EFGH5678 returned 429"
+            "?key=FAKE-TEST-KEY-ONLY returned 429"
         )
 
         with patch(
