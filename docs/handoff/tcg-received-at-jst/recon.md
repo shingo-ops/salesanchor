@@ -37,7 +37,7 @@ DB には `01:19:00+09:00` として保存済み。配信 SQL の `AT TIME ZONE 
 
 - `tenant_004.source_messages` の `received_at` カラムは移行時点で全306件 NULL
 - GAS スプレッドシートにも `received_at` に相当するデータなし
-- `ingest_to_prod.py` はソース側の値をそのままコピーするため NULL が伝播
+- `backend/tcg_migration/scripts/ingest_to_prod.py` はソース側の値をそのままコピーするため NULL が伝播
 
 ### tcg_line_import_svc.py:435 が UTC として保存していた（修正前）
 
@@ -81,4 +81,4 @@ COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
 | `backend/app/services/tcg_line_import_svc.py:435` | tzinfo 変更 | `.replace(tzinfo=timezone.utc)` → `.replace(tzinfo=JST)` |
 | `backend/tests/test_tcg_line_import.py` | テスト追加 | JST 定数・変換・DB パラメータの3件 |
 
-配信 SQL（`tcg_distribution_svc.py`）は変更しない。
+配信 SQL（`backend/app/services/tcg_distribution_svc.py`）は変更しない。
