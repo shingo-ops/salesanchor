@@ -10,7 +10,7 @@
 
 ### DDL の FK 制約（DEFERRABLE 未指定）
 
-`backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231`:
+`migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231`:
 
 ```sql
 superseded_by       UUID
@@ -39,7 +39,7 @@ Step 2 の UPDATE 直後に FK チェックが走り、`new_sm_id` がまだ存�
 対象 `supplier_channel_id` に `is_active = TRUE` の `source_messages` レコードが既存の場合のみ。
 既存レコードがない場合は UPDATE ループが 0 回で通過するため発生しない。
 
-`backend/tcg_migration/scripts/ingest_to_prod.py` および `write_mirror_once.py` による
+`backend/tcg_migration/scripts/ingest_to_prod.py` および `backend/tcg_migration/scripts/write_mirror_once.py` による
 移行データが本番の `tenant_004.source_messages` に存在する場合、初回アップロードで発火する。
 
 ### backend ログが取れなかった理由
@@ -85,5 +85,5 @@ rollback が発生した場合に extract タスクが DB に存在しない `so
 
 ## 既存 ADR 調査
 
-- `docs/adr/ADR-154`（TCG LINE インポートパイプライン設計）— MIG-04 全体設計。FK 順序制約の記述なし。
-- `docs/adr/ADR-072`（テナントスキーマ）— write 系: db.commit() 後 reset_tenant_context() 必須。本 PR 変更外。
+- `docs/adr/ADR-154-tcg-parity02-gas-python-migration.md`（TCG LINE インポートパイプライン設計）— MIG-04 全体設計。FK 順序制約の記述なし。
+- `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md`（テナントスキーマ）— write 系: db.commit() 後 reset_tenant_context() 必須。本 PR 変更外。
