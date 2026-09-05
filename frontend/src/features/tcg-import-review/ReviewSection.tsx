@@ -260,6 +260,16 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
               {/* 既存割り当て展開パネル */}
               {!isResolved && mode === "assign" && (
                 <div style={{ marginTop: "0.75rem" }}>
+                  <p
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--color-warning)",
+                      marginBottom: "0.5rem",
+                      marginTop: 0,
+                    }}
+                  >
+                    {t("tcgLineImport.assignWarning", { displayName: name })}
+                  </p>
                   {/* ui-allow: super-admin専用確認ページ、汎用コンポーネント対象外 (#3306) */}
                   <input
                     type="text"

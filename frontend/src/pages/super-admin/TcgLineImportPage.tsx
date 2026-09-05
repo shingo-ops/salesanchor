@@ -1,7 +1,7 @@
 /**
  * /super-admin/tcg-import — LINE エクスポートファイルのアップロード取り込み UI
  *
- * MIG-04 Stage 1 + 確認工程（#3306）:
+ * MIG-04 Stage 1 + 確認工程 (#3306):
  *   - ファイルドロップゾーン または input[type=file] (.txt のみ)
  *   - window_hours / window_start / window_end 入力フォーム（省略可）
  *   - アップロードボタン → 結果表示（取り込み済み / 未解決一覧 / 確認工程）

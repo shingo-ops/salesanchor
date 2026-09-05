@@ -3333,6 +3333,7 @@
     "reviewSection": "Review Stage",
     "reviewInstructions": "There are unregistered suppliers. Register all before starting extraction.",
     "assignToExisting": "Assign to existing",
+    "assignWarning": "The selected supplier's registered name will be overwritten with \"{{displayName}}\".",
     "createNew": "Create new",
     "searchSupplier": "Search supplier...",
     "noSuppliersFound": "No matching suppliers found",
