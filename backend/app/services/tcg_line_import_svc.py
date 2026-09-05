@@ -13,7 +13,7 @@ import_jobs に pending_messages / window / unresolved_names を保存して保�
 
 【JST 窓計算】
 窓は JST の現在時刻を基準に計算する（旧実装は UTC 基準で実質 33h になっていた）。
-#3305 未マージのため、本ファイルに JST_TZ 定数を定義する。
+JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用する。
 """
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,9 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # ---------------------------------------------------------------------------
 
 TCG_SCHEMA = "tenant_004"
-
-# JST タイムゾーン（#3305 未マージのためここで定義。マージ後は共通定数に統一予定）
-JST_TZ = ZoneInfo("Asia/Tokyo")
+JST = timezone(timedelta(hours=9))
 
 # 日付行: "2026.08.26 月曜日" など
 _DATE_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\s+.+$")
@@ -108,7 +105,7 @@ def _compute_window(
     """
     effective_start = window_start
     if effective_start is None and window_hours > 0:
-        cutoff_jst = datetime.now(JST_TZ) - timedelta(hours=window_hours)
+        cutoff_jst = datetime.now(JST) - timedelta(hours=window_hours)
         effective_start = cutoff_jst.strftime("%Y-%m-%d %H:%M:%S")
     return effective_start, window_end
 
@@ -377,7 +374,7 @@ async def _write_source_messages(
         try:
             received_at_dt = datetime.strptime(
                 entry["received_at"], "%Y-%m-%d %H:%M:%S"
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=JST)
         except ValueError:
             received_at_dt = None
 
