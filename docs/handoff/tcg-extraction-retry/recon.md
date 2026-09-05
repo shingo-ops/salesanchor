@@ -15,7 +15,7 @@ Celery は起動中であったが Gemini API が 429 を返し続けたため�
 ## 既存 ADR 検索結果
 
 - `docs/adr/ADR-154-tcg-parity02-gas-python-migration.md` — 固定 SQL 診断 API の設計根拠（SELECT のみ・`_ALLOWED_KEYS` frozenset）
-- `docs/adr/ADR-072-write-endpoint-tenant-context-reset.md` — write endpoint の `db.commit()` 直後 `reset_tenant_context()` 必須
+- ADR-072（tenant schema prefix enforcement） / ADR-131（tenant context auto-reset） — write endpoint の `db.commit()` 直後 `reset_tenant_context()` 必須
   - **本タスクでは**: retry エンドポイントは `set_tenant_context()` を経由しない（TCG_SCHEMA 直指定）ため `reset_tenant_context()` 不要と判断
 - `docs/adr/ADR-027-ui-internationalization.md` — i18n 強制（`t("key")` 経由必須）
 - `docs/adr/ADR-144-ui-component-governance.md` — UI ガバナンス（生 Button 禁止・コンポーネント使用必須）
