@@ -3328,6 +3328,26 @@
     "colUnresolved": "未解決数",
     "colUploadedBy": "アップロード者",
     "colStatus": "ステータス",
-    "colDate": "日時"
+    "colReviewStatus": "確認状態",
+    "colDate": "日時",
+    "reviewSection": "確認工程",
+    "reviewInstructions": "未登録の仕入元があります。全員を登録してから抽出を開始してください。",
+    "assignToExisting": "既存仕入元に割り当て",
+    "assignWarning": "選択した仕入元の登録名が「{{displayName}}」に書き換わります。",
+    "createNew": "新規登録",
+    "searchSupplier": "仕入元を検索...",
+    "noSuppliersFound": "該当する仕入元が見つかりません",
+    "resolved": "登録済み",
+    "startExtraction": "抽出を開始",
+    "committing": "処理中...",
+    "commitError": "まだ未解決の仕入元があります",
+    "commitSuccess": "抽出キューに追加しました",
+    "errorResolveFailed": "登録に失敗しました",
+    "pendingJobsSection": "保留中のジョブ",
+    "noPendingJobs": "保留中のジョブはありません",
+    "reviewStatusOk": "完了",
+    "reviewStatusPending": "確認待ち",
+    "reviewStatusDiscarded": "破棄済み",
+    "openReview": "確認する"
   }
 }

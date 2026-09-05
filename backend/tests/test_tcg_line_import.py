@@ -1,5 +1,5 @@
 """
-MIG-04 Stage 1: tcg_line_import_svc の単体テスト（DB 不要）。
+MIG-04 Stage 1 & REVIEW-STAGE: tcg_line_import_svc の単体テスト（DB 不要）。
 
 テスト対象:
   - parse_line_export: 日付行 / 時刻行 / 継続行 / システムイベント / エッジケース
@@ -10,20 +10,27 @@ MIG-04 Stage 1: tcg_line_import_svc の単体テスト（DB 不要）。
   - resolve_suppliers: 完全一致（GAS byName[displayName] 準拠）/ 未解決 / 全員未解決
   - build_provider_entries: グループ化 / タイムスタンプ昇順 / SHA256
   - sha256_text: 冪等性
-  - window_hours 自動計算: window_start が None かつ window_hours>0 で cutoff が設定される
+  - window_hours 自動計算: window_start が None かつ window_hours>0 で JST 基準 cutoff が設定される
   - import_line_export: supersede の実行順序（INSERT before UPDATE）
   - import_line_export: _enqueue_extraction は db.commit() の後に呼ばれること
+  [REVIEW-STAGE]
+  - 未解決0件 → 従来どおり source_messages が書かれ、エンキューされる（review_status='ok'）
+  - 未解決1件以上 → source_messages が1件も書かれない、review_status='pending_review'、エンキューされない
+  - 窓が JST 基準であること（_compute_window 境界テスト）
+  - 破棄タスク → 24h 超の pending_review が discarded になる
 """
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
 from app.services.tcg_line_import_svc import (
     JST,
+    _compute_window,
     build_provider_entries,
     import_line_export,
     parse_line_export,
@@ -778,3 +785,289 @@ def test_split_sender_no_prefix_false_match():
         "「仕入元A」への短縮誤マッチが発生した（最長一致ソートが機能していない）"
     )
     assert user_msgs[0]["body"] == "本文テキスト"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [REVIEW-STAGE] _compute_window: JST 基準の窓計算
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_compute_window_jst_basis():
+    """
+    window_hours=24 のとき cutoff が JST 基準であること。
+
+    旧実装: datetime.now(timezone.utc) - timedelta(hours=24) → UTC 基準で実質 33h（DIST-R3）
+    新実装: datetime.now(JST)       - timedelta(hours=24) → JST 基準で正確に 24h
+
+    検証方法:
+      JST 現在時刻の 24h 前より 1 秒前のタイムスタンプを作り、
+      _compute_window の戻り値 window_start がそれより「後」であることを確認する。
+      UTC ベースの旧実装なら cutoff が 9h 古いため、このタイムスタンプが通過してしまう。
+    """
+    now_jst = datetime.now(JST)
+    # JST 24h 前のちょうど 1 秒前（= 24h1s 前）
+    just_outside_jst = (now_jst - timedelta(hours=24, seconds=1)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    effective_start, _ = _compute_window(24, None, None)
+    assert effective_start is not None
+    # 境界: 24h1s 前は cutoff より前 → フィルタで除外されるはず
+    assert just_outside_jst < effective_start, (
+        f"JST 24h+1s 前({just_outside_jst}) が window_start({effective_start}) 以降になっている。"
+        "UTC 基準の旧実装になっている可能性がある（DIST-R3）"
+    )
+
+
+def test_compute_window_explicit_start_not_overridden():
+    """window_start が明示されているとき window_hours の自動計算は行われない。"""
+    explicit = "2026-08-01 10:00:00"
+    effective_start, _ = _compute_window(24, explicit, None)
+    assert effective_start == explicit
+
+
+def test_compute_window_zero_hours_disables_filter():
+    """window_hours=0 のとき effective_start が None（フィルタ無効）になる。"""
+    effective_start, _ = _compute_window(0, None, None)
+    assert effective_start is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [REVIEW-STAGE] import_line_export: 未解決0件 / 未解決あり 分岐
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
+    """
+    import_line_export 用の DB モックを生成する。
+    supplier_rows: [(code, name), ...]
+    """
+    async def tracked_execute(stmt, params=None):
+        sql = str(stmt)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None          # 未取り込み
+        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = supplier_rows
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = ("test-channel-id",)
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchall.return_value = []            # 既存 active なし
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = tracked_execute
+    db.commit = AsyncMock()
+    return db
+
+
+async def test_import_zero_unresolved_writes_source_messages():
+    """
+    未解決0件のとき source_messages が書かれ、エンキューされ、
+    review_status='ok' が返ること。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    db = _make_db_mock([("SP0001", "仕入元A")])
+    sqls: list[str] = []
+
+    orig_execute = db.execute
+
+    async def capturing_execute(stmt, params=None):
+        sqls.append(str(stmt))
+        return await orig_execute(stmt, params)
+
+    db.execute = capturing_execute
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction") as mock_enqueue:
+        result = await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert result["review_status"] == "ok"
+    assert result["unresolved_count"] == 0
+    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+        "source_messages への INSERT が実行されていない"
+    mock_enqueue.assert_called_once()
+    db.commit.assert_called_once()
+
+
+async def test_import_unresolved_does_not_write_source_messages():
+    """
+    未解決1件以上のとき source_messages が1件も書かれず、
+    エンキューされず、review_status='pending_review' が返ること。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 未登録ユーザー 商品X 100円\n"
+    )
+    db = _make_db_mock([])   # 仕入元マスタ空 → 全員未解決
+    sqls: list[str] = []
+
+    orig_execute = db.execute
+
+    async def capturing_execute(stmt, params=None):
+        sqls.append(str(stmt))
+        return await orig_execute(stmt, params)
+
+    db.execute = capturing_execute
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction") as mock_enqueue:
+        result = await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert result["review_status"] == "pending_review"
+    assert result["unresolved_count"] == 1
+    assert result["provider_count"] == 0
+    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+        "pending_review なのに source_messages への INSERT が実行された"
+    mock_enqueue.assert_not_called()
+    db.commit.assert_called_once()   # import_jobs 保存の commit は1回
+
+
+async def test_import_partial_unresolved_also_blocks():
+    """
+    解決済み仕入元が混在していても、未解決が1件でもあれば保留になること。
+    （解決済みの分も含めて全件保留）
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"   # 解決済み
+        "10:05 未登録ユーザー 商品Y\n"  # 未解決
+    )
+    db = _make_db_mock([("SP0001", "仕入元A")])
+    sqls: list[str] = []
+
+    orig_execute = db.execute
+
+    async def capturing_execute(stmt, params=None):
+        sqls.append(str(stmt))
+        return await orig_execute(stmt, params)
+
+    db.execute = capturing_execute
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction") as mock_enqueue:
+        result = await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert result["review_status"] == "pending_review"
+    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls)
+    mock_enqueue.assert_not_called()
+
+
+async def test_import_unresolved_stores_pending_messages():
+    """
+    保留時に pending_messages（JSON）と unresolved_names が import_jobs に渡されること。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 未登録ユーザー 商品X 100円\n"
+    )
+    db = _make_db_mock([])
+    captured_params: list[dict] = []
+
+    orig_execute = db.execute
+
+    async def capturing_execute(stmt, params=None):
+        sql = str(stmt)
+        if params and "pending_messages" in sql:
+            captured_params.append(dict(params))
+        return await orig_execute(stmt, params)
+
+    db.execute = capturing_execute
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert len(captured_params) == 1, "pending_messages を含む INSERT が1件実行されていない"
+    p = captured_params[0]
+    assert p["pending_messages"] is not None
+    msgs = json.loads(p["pending_messages"])
+    assert len(msgs) == 1
+    assert msgs[0]["display_name"] == "未登録ユーザー"
+    names = json.loads(p["unresolved_names"])
+    assert names == ["未登録ユーザー"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [REVIEW-STAGE] 破棄タスク
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_discard_stale_pending_jobs_calls_update():
+    """
+    discard_stale_pending_jobs が UPDATE ... SET review_status='discarded' を発行すること。
+    """
+    from app.tasks.tcg_import_discard import discard_stale_pending_jobs
+
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = [("job-uuid-1",), ("job-uuid-2",)]
+
+    mock_session = MagicMock()
+    mock_session.__enter__ = MagicMock(return_value=mock_session)
+    mock_session.__exit__ = MagicMock(return_value=False)
+    mock_session.execute.return_value = mock_result
+
+    mock_Session = MagicMock(return_value=mock_session)
+
+    with (
+        patch("app.tasks.tcg_import_discard._get_sync_engine"),
+        patch("app.tasks.tcg_import_discard.sessionmaker", return_value=mock_Session),
+    ):
+        result = discard_stale_pending_jobs()
+
+    assert result == {"discarded_count": 2}
+    mock_session.execute.assert_called_once()
+    sql = str(mock_session.execute.call_args[0][0])
+    assert "discarded" in sql
+    assert "pending_review" in sql
+    assert "24 hours" in sql
+    mock_session.commit.assert_called_once()
+
+
+def test_discard_stale_no_rows():
+    """対象行が0件のとき {"discarded_count": 0} を返す。"""
+    from app.tasks.tcg_import_discard import discard_stale_pending_jobs
+
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = []
+
+    mock_session = MagicMock()
+    mock_session.__enter__ = MagicMock(return_value=mock_session)
+    mock_session.__exit__ = MagicMock(return_value=False)
+    mock_session.execute.return_value = mock_result
+
+    mock_Session = MagicMock(return_value=mock_session)
+
+    with (
+        patch("app.tasks.tcg_import_discard._get_sync_engine"),
+        patch("app.tasks.tcg_import_discard.sessionmaker", return_value=mock_Session),
+    ):
+        result = discard_stale_pending_jobs()
+
+    assert result == {"discarded_count": 0}

@@ -5,10 +5,20 @@ GAS の Latest24LineImport.js (parseLatest24LineExport / resolveSuppliers /
 buildProviderEntries / importLineExport) と同等のロジックを Python に移植。
 
 TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
+
+【確認工程】
+未解決の仕入元が 1 件以上のとき source_messages を書かず、
+import_jobs に pending_messages / window / unresolved_names を保存して保留にする。
+確認後に POST /{import_job_id}/commit で書き込みを再開する。
+
+【JST 窓計算】
+窓は JST の現在時刻を基準に計算する（旧実装は UTC 基準で実質 33h になっていた）。
+JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用する。
 """
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -76,6 +86,28 @@ def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
     # GAS フォールバックと同等: 最初のスペースで分割
     parts = tail.split(" ", 1)
     return parts[0], parts[1] if len(parts) > 1 else ""
+
+
+def _compute_window(
+    window_hours: int,
+    window_start: str | None,
+    window_end: str | None,
+) -> tuple[str | None, str | None]:
+    """
+    JST 基準の窓を計算して (effective_start, effective_end) を返す。
+
+    window_start が明示されている場合はそのまま使う。
+    window_start が None かつ window_hours > 0 の場合、
+    JST 現在時刻から window_hours 時間前を cutoff として計算する。
+
+    旧実装は UTC 基準のため JST +9h と合算して実質 33h になっていた（DIST-R3）。
+    この関数は JST 基準のため正確に 24h（指定値）になる。
+    """
+    effective_start = window_start
+    if effective_start is None and window_hours > 0:
+        cutoff_jst = datetime.now(JST) - timedelta(hours=window_hours)
+        effective_start = cutoff_jst.strftime("%Y-%m-%d %H:%M:%S")
+    return effective_start, window_end
 
 
 # ---------------------------------------------------------------------------
@@ -285,109 +317,22 @@ def build_provider_entries(
 
 
 # ---------------------------------------------------------------------------
-# メイン取り込み関数
+# source_messages / extraction_jobs への書き込み（import と commit で共有）
 # ---------------------------------------------------------------------------
 
 
-async def import_line_export(
+async def _write_source_messages(
     db: AsyncSession,
-    filename: str,
-    export_text: str,
-    uploaded_by: str | None,
-    window_start: str | None = None,
-    window_end: str | None = None,
-    window_hours: int = 24,
-) -> dict[str, Any]:
+    provider_entries: list[dict],
+) -> list[str]:
     """
-    LINE エクスポートファイルを取り込む。
-
-    1. ファイル全体の sha256 で冪等化チェック
-    2. tcg_suppliers 先行取得（parse_line_export に渡す名前リストを構築）
-    3. parse_line_export → システムイベント除外 → ウィンドウフィルタ
-    4. サプライヤー解決（完全一致）
-    5. provider_entries 構築
-    6. 各 sp_code の source_messages を supersede + 新規 INSERT + extraction_jobs INSERT
-    7. import_jobs に記録
-    8. 結果を返す
-
-    Args:
-        window_start: 明示的な開始 timestamp (YYYY-MM-DD HH:MM:00 以上)。
-                      未指定かつ window_hours>0 の場合は自動計算。
-        window_end:   明示的な終了 timestamp (YYYY-MM-DD HH:MM:00 未満)。
-        window_hours: 自動 24h ウィンドウの幅（時間単位）。
-                      0 を指定するとウィンドウフィルタを無効化してファイル全体を取り込む。
+    provider_entries を source_messages / extraction_jobs に書き込む。
 
     Returns:
-        {
-            "status": "imported" | "already_imported",
-            "message_count": int,
-            "provider_count": int,
-            "unresolved_count": int,
-            "unresolved_display_names": list[str],
-            "import_job_id": str,
-        }
+        エンキュー対象の source_message_id リスト
     """
-    # --- 1. 冪等化チェック ---
-    file_sha256 = sha256_text(export_text)
-
-    existing_row = await db.execute(
-        text(f"SELECT id, status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
-        {"sha256": file_sha256},
-    )
-    existing = existing_row.fetchone()
-    if existing:
-        return {
-            "status": "already_imported",
-            "message_count": 0,
-            "provider_count": 0,
-            "unresolved_count": 0,
-            "unresolved_display_names": [],
-            "skipped_message_count": 0,
-            "import_job_id": str(existing[0]),
-        }
-
-    # --- 2. マスタ先行取得（parse_line_export に渡すため冪等チェック直後に実行）---
-    # GAS は parseLatest24LineExport の引数に supplierRows を渡す設計のため、
-    # Python も parse 前にマスタを取得する。
-    suppliers_rows = await db.execute(
-        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
-    )
-    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
-    # parse に渡す名前リスト（長さ降順ソート = GAS の latest24NameMatcher_ と同等）
-    supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
-
-    # --- 3. パース & フィルタ ---
-    all_messages = parse_line_export(export_text, supplier_names)
-
-    # システムイベント除外
-    messages = [m for m in all_messages if not m["is_system_event"]]
-
-    # ウィンドウ自動計算: window_start 未指定かつ window_hours > 0 の場合
-    effective_window_start = window_start
-    if effective_window_start is None and window_hours > 0:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
-        effective_window_start = cutoff.strftime("%Y-%m-%d %H:%M:%S")
-
-    # ウィンドウフィルタ（指定がある場合のみ）
-    if effective_window_start:
-        messages = [m for m in messages if m["timestamp"] >= effective_window_start]
-    if window_end:
-        messages = [m for m in messages if m["timestamp"] < window_end]
-
-    message_count = len(messages)
-
-    # --- 4. サプライヤー解決（完全一致: GAS の byName[displayName] と同等）---
-    resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
-
-    # --- 5. プロバイダエントリ構築 ---
-    provider_entries = build_provider_entries(resolved_msgs)
-    provider_count = len(provider_entries)
-    unresolved_count = len(unresolved)
-    unresolved_display_names = [u["display_name"] for u in unresolved]
-    skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
-
-    # --- 6. source_messages / extraction_jobs へ INSERT ---
     enqueued_ids: list[str] = []
+
     for entry in provider_entries:
         sp_code = entry["sp_code"]
 
@@ -409,12 +354,10 @@ async def import_line_export(
         channel_rec = channel_row.fetchone()
 
         if channel_rec is None:
-            # supplier_channel が存在しない場合はスキップ（supplier 未登録 or channel 未設定）
             continue
 
         supplier_channel_id = channel_rec[0]
 
-        # 既存の active source_message を supersede
         existing_active = await db.execute(
             text(
                 f"""
@@ -426,10 +369,8 @@ async def import_line_export(
         )
         active_records = existing_active.fetchall()
 
-        # 新しい source_message の ID を先に確定
         new_sm_id = uuid.uuid4()
 
-        # received_at を datetime に変換
         try:
             received_at_dt = datetime.strptime(
                 entry["received_at"], "%Y-%m-%d %H:%M:%S"
@@ -437,9 +378,6 @@ async def import_line_export(
         except ValueError:
             received_at_dt = None
 
-        # 新しい source_message を INSERT（FK制約のため UPDATE より先に行う）
-        # superseded_by REFERENCES source_messages(id) は NOT DEFERRABLE のため、
-        # UPDATE で new_sm_id を参照する前に INSERT が必要。
         await db.execute(
             text(
                 f"""
@@ -460,7 +398,6 @@ async def import_line_export(
             },
         )
 
-        # 既存レコードを supersede（INSERT の後に実行して FK 違反を回避）
         for old_rec in active_records:
             old_id = old_rec[0]
             await db.execute(
@@ -474,7 +411,6 @@ async def import_line_export(
                 {"new_id": str(new_sm_id), "old_id": str(old_id)},
             )
 
-        # extraction_jobs を pending で INSERT
         new_ej_id = uuid.uuid4()
         await db.execute(
             text(
@@ -487,48 +423,197 @@ async def import_line_export(
             ),
             {"id": str(new_ej_id), "smid": str(new_sm_id)},
         )
-        # commit 後にエンキューするため ID を蓄積
         enqueued_ids.append(str(new_sm_id))
 
-    # --- 7. import_jobs に記録 ---
-    import_job_id = uuid.uuid4()
-    await db.execute(
-        text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.import_jobs
-              (id, filename, raw_sha256, message_count, provider_count,
-               unresolved_count, uploaded_by, status, created_at)
-            VALUES
-              (:id, :filename, :sha256, :msg_count, :prov_count,
-               :unresolved_count, :uploaded_by, 'ok', now())
-            """
-        ),
+    return enqueued_ids
+
+
+# ---------------------------------------------------------------------------
+# メイン取り込み関数
+# ---------------------------------------------------------------------------
+
+
+async def import_line_export(
+    db: AsyncSession,
+    filename: str,
+    export_text: str,
+    uploaded_by: str | None,
+    window_start: str | None = None,
+    window_end: str | None = None,
+    window_hours: int = 24,
+) -> dict[str, Any]:
+    """
+    LINE エクスポートファイルを取り込む。
+
+    1. ファイル全体の sha256 で冪等化チェック
+    2. tcg_suppliers 先行取得（parse_line_export に渡す名前リストを構築）
+    3. parse_line_export → システムイベント除外 → JST 基準窓フィルタ
+    4. サプライヤー解決（完全一致）→ resolved / unresolved に分ける
+    5-a. unresolved 0 件: source_messages INSERT + commit + エンキュー
+    5-b. unresolved 1 件以上: source_messages を書かず pending_review で保留
+    6. 結果を返す（review_status と import_job_id を含む）
+
+    Args:
+        window_start: 明示的な開始 timestamp (YYYY-MM-DD HH:MM:00 以上)。
+                      未指定かつ window_hours>0 の場合は JST 基準で自動計算。
+        window_end:   明示的な終了 timestamp (YYYY-MM-DD HH:MM:00 未満)。
+        window_hours: 自動ウィンドウ幅（時間単位）。
+                      0 を指定するとウィンドウフィルタを無効化してファイル全体を取り込む。
+
+    Returns:
         {
-            "id": str(import_job_id),
-            "filename": filename,
-            "sha256": file_sha256,
-            "msg_count": message_count,
-            "prov_count": provider_count,
-            "unresolved_count": unresolved_count,
-            "uploaded_by": uploaded_by,
-        },
+            "status": "imported" | "already_imported",
+            "review_status": "ok" | "pending_review",
+            "message_count": int,
+            "provider_count": int,
+            "unresolved_count": int,
+            "unresolved_display_names": list[str],
+            "skipped_message_count": int,
+            "import_job_id": str,
+        }
+    """
+    # --- 1. 冪等化チェック ---
+    file_sha256 = sha256_text(export_text)
+
+    existing_row = await db.execute(
+        text(f"SELECT id, status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
+        {"sha256": file_sha256},
+    )
+    existing = existing_row.fetchone()
+    if existing:
+        return {
+            "status": "already_imported",
+            "review_status": "ok",
+            "message_count": 0,
+            "provider_count": 0,
+            "unresolved_count": 0,
+            "unresolved_display_names": [],
+            "skipped_message_count": 0,
+            "import_job_id": str(existing[0]),
+        }
+
+    # --- 2. マスタ先行取得 ---
+    suppliers_rows = await db.execute(
+        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
+    )
+    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
+    supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
+
+    # --- 3. パース & フィルタ ---
+    all_messages = parse_line_export(export_text, supplier_names)
+    messages = [m for m in all_messages if not m["is_system_event"]]
+
+    # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）
+    effective_window_start, effective_window_end = _compute_window(
+        window_hours, window_start, window_end
     )
 
-    await db.commit()
+    if effective_window_start:
+        messages = [m for m in messages if m["timestamp"] >= effective_window_start]
+    if effective_window_end:
+        messages = [m for m in messages if m["timestamp"] < effective_window_end]
 
-    # DB commit 後にエンキュー（commit 前の enqueue は rollback 時に孤立タスクが生じる）
-    for sm_id in enqueued_ids:
-        _enqueue_extraction(sm_id)
+    message_count = len(messages)
 
-    return {
-        "status": "imported",
-        "message_count": message_count,
-        "provider_count": provider_count,
-        "unresolved_count": unresolved_count,
-        "unresolved_display_names": unresolved_display_names,
-        "skipped_message_count": skipped_message_count,
-        "import_job_id": str(import_job_id),
-    }
+    # --- 4. サプライヤー解決 ---
+    resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
+    unresolved_count = len(unresolved)
+    unresolved_display_names = [u["display_name"] for u in unresolved]
+
+    # --- 5. 分岐 ---
+    import_job_id = uuid.uuid4()
+
+    if unresolved_count == 0:
+        # 5-a. 全件解決済み: 書き込み → commit → エンキュー
+        provider_entries = build_provider_entries(resolved_msgs)
+        provider_count = len(provider_entries)
+        skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
+
+        enqueued_ids = await _write_source_messages(db, provider_entries)
+
+        await db.execute(
+            text(
+                f"""
+                INSERT INTO {TCG_SCHEMA}.import_jobs
+                  (id, filename, raw_sha256, message_count, provider_count,
+                   unresolved_count, uploaded_by, status, review_status, created_at,
+                   window_start, window_end)
+                VALUES
+                  (:id, :filename, :sha256, :msg_count, :prov_count,
+                   0, :uploaded_by, 'ok', 'ok', now(),
+                   :ws, :we)
+                """
+            ),
+            {
+                "id": str(import_job_id),
+                "filename": filename,
+                "sha256": file_sha256,
+                "msg_count": message_count,
+                "prov_count": provider_count,
+                "uploaded_by": uploaded_by,
+                "ws": effective_window_start,
+                "we": effective_window_end,
+            },
+        )
+
+        await db.commit()
+
+        for sm_id in enqueued_ids:
+            _enqueue_extraction(sm_id)
+
+        return {
+            "status": "imported",
+            "review_status": "ok",
+            "message_count": message_count,
+            "provider_count": provider_count,
+            "unresolved_count": 0,
+            "unresolved_display_names": [],
+            "skipped_message_count": skipped_message_count,
+            "import_job_id": str(import_job_id),
+        }
+
+    else:
+        # 5-b. 未解決あり: source_messages を1件も書かず保留
+        # 解決済みの仕入元も含め全件が保留になる（意図した挙動）
+        await db.execute(
+            text(
+                f"""
+                INSERT INTO {TCG_SCHEMA}.import_jobs
+                  (id, filename, raw_sha256, message_count, provider_count,
+                   unresolved_count, uploaded_by, status, review_status, created_at,
+                   window_start, window_end, pending_messages, unresolved_names)
+                VALUES
+                  (:id, :filename, :sha256, :msg_count, 0,
+                   :unresolved_count, :uploaded_by, 'ok', 'pending_review', now(),
+                   :ws, :we, :pending_messages, :unresolved_names)
+                """
+            ),
+            {
+                "id": str(import_job_id),
+                "filename": filename,
+                "sha256": file_sha256,
+                "msg_count": message_count,
+                "unresolved_count": unresolved_count,
+                "uploaded_by": uploaded_by,
+                "ws": effective_window_start,
+                "we": effective_window_end,
+                "pending_messages": json.dumps(messages, ensure_ascii=False),
+                "unresolved_names": json.dumps(unresolved_display_names, ensure_ascii=False),
+            },
+        )
+
+        await db.commit()
+
+        return {
+            "status": "imported",
+            "review_status": "pending_review",
+            "message_count": message_count,
+            "provider_count": 0,
+            "unresolved_count": unresolved_count,
+            "unresolved_display_names": unresolved_display_names,
+            "skipped_message_count": 0,
+            "import_job_id": str(import_job_id),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -549,7 +634,6 @@ def _enqueue_extraction(source_message_id: str) -> None:
         if extract_source_message_task is not None:
             extract_source_message_task.delay(source_message_id)
     except Exception as exc:  # noqa: BLE001
-        # Redis 未起動時など Celery への接続失敗は警告ログのみ
         import logging  # noqa: PLC0415
 
         logging.getLogger(__name__).warning(
