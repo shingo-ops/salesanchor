@@ -7,7 +7,7 @@ IMP-32 で特定した二重計上リスク: `source_messages` を参照する 3
 
 ## 根本原因の確認（IMP-32 特定済み）
 
-### supersede の仕組み（ADR-154 / `tcg_line_import_svc.py`）
+### supersede の仕組み（ADR-154 / `backend/app/services/tcg_line_import_svc.py`）
 
 再アップロード時:
 
@@ -29,9 +29,9 @@ IMP-32 で特定した二重計上リスク: `source_messages` を参照する 3
 
 ### DDL 確認
 
-`migrations/20260831_110000_create_tcg_analysis_tables_t004.sql`:
+`migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:220`:
 
-- `source_messages.is_active BOOLEAN NOT NULL DEFAULT TRUE`（l. 220 付近）
+- `source_messages.is_active BOOLEAN NOT NULL DEFAULT TRUE`
 - `source_messages.superseded_by UUID REFERENCES %I.source_messages(id)`（FK あり、DEFERRABLE なし）
 - `source_messages.raw_sha256` には **UNIQUE 制約なし**（重複アップロードは is_active で区別）
 - `import_jobs.raw_sha256` には UNIQUE 制約あり（同内容の再 import job 生成を防ぐ）
@@ -45,9 +45,9 @@ IMP-32 で特定した二重計上リスク: `source_messages` を参照する 3
 
 | ファイル | 変更行数 | 呼び出し元 |
 |---|---|---|
-| `tcg_supplier_quality_svc.py` | +3 | `backend/app/routers/tcg_supplier_quality.py` のみ |
-| `tcg_distribution_svc.py` | +1 | `backend/app/routers/tcg_distribution.py` のみ |
-| `tcg_analysis_review_svc.py` | +1 | `backend/app/routers/tcg_analysis_review.py` のみ |
-| `tests/test_tcg_is_active_filter.py` | 新規 97 行 | CI テスト |
+| `backend/app/services/tcg_supplier_quality_svc.py` | +3 | `backend/app/routers/tcg_supplier_quality.py` のみ |
+| `backend/app/services/tcg_distribution_svc.py` | +1 | `backend/app/routers/tcg_distribution.py` のみ |
+| `backend/app/services/tcg_analysis_review_svc.py` | +1 | `backend/app/routers/tcg_analysis_review.py` のみ |
+| `backend/tests/test_tcg_is_active_filter.py` | 新規 97 行 | CI テスト |
 
 DB 書き込みなし（全サービスは読み取り専用）。
