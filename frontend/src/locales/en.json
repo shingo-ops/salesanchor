@@ -3328,6 +3328,26 @@
     "colUnresolved": "Unresolved",
     "colUploadedBy": "Uploaded by",
     "colStatus": "Status",
-    "colDate": "Date"
+    "colReviewStatus": "Review Status",
+    "colDate": "Date",
+    "reviewSection": "Review Stage",
+    "reviewInstructions": "There are unregistered suppliers. Register all before starting extraction.",
+    "assignToExisting": "Assign to existing",
+    "assignWarning": "The selected supplier's registered name will be overwritten with \"{{displayName}}\".",
+    "createNew": "Create new",
+    "searchSupplier": "Search supplier...",
+    "noSuppliersFound": "No matching suppliers found",
+    "resolved": "Registered",
+    "startExtraction": "Start Extraction",
+    "committing": "Processing...",
+    "commitError": "Some suppliers are still unresolved",
+    "commitSuccess": "Extraction enqueued",
+    "errorResolveFailed": "Registration failed",
+    "pendingJobsSection": "Pending Jobs",
+    "noPendingJobs": "No pending jobs",
+    "reviewStatusOk": "Complete",
+    "reviewStatusPending": "Pending Review",
+    "reviewStatusDiscarded": "Discarded",
+    "openReview": "Review"
   }
 }
