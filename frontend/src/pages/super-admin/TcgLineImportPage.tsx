@@ -1,10 +1,12 @@
 /**
  * /super-admin/tcg-import — LINE エクスポートファイルのアップロード取り込み UI
  *
- * MIG-04 Stage 1:
+ * MIG-04 Stage 1 + 確認工程（#3306）:
  *   - ファイルドロップゾーン または input[type=file] (.txt のみ)
  *   - window_hours / window_start / window_end 入力フォーム（省略可）
- *   - アップロードボタン → 結果表示（取り込み済み / 未解決一覧）
+ *   - アップロードボタン → 結果表示（取り込み済み / 未解決一覧 / 確認工程）
+ *   - review_status='pending_review' のとき ReviewSection を表示
+ *   - 保留中ジョブ一覧（GET /api/v1/tcg/line-import/pending）
  *   - アップロード履歴テーブル（GET /api/v1/tcg/line-import/history）
  *   - is_super_admin=false なら 403 メッセージを表示
  */
@@ -13,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
+import { ReviewSection } from "../../features/tcg-import-review/ReviewSection";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -20,6 +23,7 @@ import { api } from "../../lib/api";
 
 interface ImportResultResponse {
   status: "imported" | "already_imported";
+  review_status: "ok" | "pending_review";
   message_count: number;
   provider_count: number;
   unresolved_count: number;
@@ -36,6 +40,19 @@ interface ImportJobResponse {
   unresolved_count: number;
   uploaded_by: string | null;
   status: string;
+  review_status: string;
+  created_at: string;
+}
+
+interface PendingJobDetail {
+  id: string;
+  filename: string;
+  message_count: number;
+  unresolved_count: number;
+  unresolved_names: string[];
+  window_start: string | null;
+  window_end: string | null;
+  review_status: string;
   created_at: string;
 }
 
@@ -64,6 +81,11 @@ export default function TcgLineImportPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
+  // 保留中ジョブ状態
+  const [pendingJobs, setPendingJobs] = useState<PendingJobDetail[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [selectedPendingId, setSelectedPendingId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ---------------------------------------------------------------------------
@@ -83,10 +105,23 @@ export default function TcgLineImportPage() {
     }
   }, [t]);
 
+  const loadPendingJobs = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const data = await api.get<PendingJobDetail[]>("/tcg/line-import/pending");
+      setPendingJobs(data);
+    } catch {
+      // 保留ジョブ取得失敗は非致命的・サイレント
+    } finally {
+      setPendingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isSuperAdmin) return;
     void loadHistory();
-  }, [isSuperAdmin, loadHistory]);
+    void loadPendingJobs();
+  }, [isSuperAdmin, loadHistory, loadPendingJobs]);
 
   // ---------------------------------------------------------------------------
   // ファイル選択
@@ -154,6 +189,7 @@ export default function TcgLineImportPage() {
       );
       setResult(data);
       void loadHistory();
+      void loadPendingJobs();
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : t("tcgLineImport.errorUploadFailed"));
     } finally {
@@ -328,7 +364,19 @@ export default function TcgLineImportPage() {
       </section>
 
       {/* ─── 取り込み結果 ─── */}
-      {result && (
+      {result && result.review_status === "pending_review" && (
+        <ReviewSection
+          importJobId={result.import_job_id}
+          unresolvedNames={result.unresolved_display_names}
+          onCommitSuccess={() => {
+            setResult(null);
+            void loadHistory();
+            void loadPendingJobs();
+          }}
+        />
+      )}
+
+      {result && result.review_status !== "pending_review" && (
         <section
           style={{
             marginBottom: "2rem",
@@ -372,6 +420,90 @@ export default function TcgLineImportPage() {
         </section>
       )}
 
+      {/* ─── 保留中ジョブ ─── */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
+          {t("tcgLineImport.pendingJobsSection")}
+        </h3>
+
+        {pendingLoading && (
+          <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
+        )}
+
+        {!pendingLoading && pendingJobs.length === 0 && (
+          <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.noPendingJobs")}</p>
+        )}
+
+        {pendingJobs.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {pendingJobs.map((job) => (
+              <div key={job.id}>
+                <div
+                  style={{
+                    padding: "0.75rem 1rem",
+                    border: "1px solid var(--color-warning-border)",
+                    borderRadius: selectedPendingId === job.id ? "6px 6px 0 0" : "6px",
+                    background: "var(--color-warning-bg)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: "0.9rem", marginRight: "0.75rem" }}>
+                      {job.filename}
+                    </span>
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                      {t("tcgLineImport.unresolvedCount")}: {job.unresolved_count}
+                      {" · "}
+                      {new Date(job.created_at).toLocaleString("ja-JP")}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setSelectedPendingId((prev) => (prev === job.id ? null : job.id))
+                    }
+                    style={{
+                      padding: "0.3rem 0.85rem",
+                      border: "1px solid var(--color-warning-border)",
+                      borderRadius: "4px",
+                      background: selectedPendingId === job.id ? "var(--color-warning)" : "var(--bg-primary)",
+                      color: selectedPendingId === job.id ? "var(--on-accent)" : "var(--text-primary)",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {t("tcgLineImport.openReview")}
+                  </button>
+                </div>
+                {selectedPendingId === job.id && (
+                  <div
+                    style={{
+                      border: "1px solid var(--color-warning-border)",
+                      borderTop: "none",
+                      borderRadius: "0 0 6px 6px",
+                    }}
+                  >
+                    <ReviewSection
+                      importJobId={job.id}
+                      unresolvedNames={job.unresolved_names}
+                      onCommitSuccess={() => {
+                        setSelectedPendingId(null);
+                        void loadHistory();
+                        void loadPendingJobs();
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* ─── アップロード履歴 ─── */}
       <section>
         <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
@@ -406,6 +538,7 @@ export default function TcgLineImportPage() {
                   <th style={thStyle}>{t("tcgLineImport.colUnresolved")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colUploadedBy")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colStatus")}</th>
+                  <th style={thStyle}>{t("tcgLineImport.colReviewStatus")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colDate")}</th>
                 </tr>
               </thead>
@@ -445,6 +578,9 @@ export default function TcgLineImportPage() {
                       </span>
                     </td>
                     <td style={tdStyle}>
+                      <ReviewStatusBadge status={job.review_status} t={t} />
+                    </td>
+                    <td style={tdStyle}>
                       {new Date(job.created_at).toLocaleString("ja-JP")}
                     </td>
                   </tr>
@@ -474,3 +610,47 @@ const tdStyle: React.CSSProperties = {
   padding: "0.5rem 0.75rem",
   verticalAlign: "top",
 };
+
+// ---------------------------------------------------------------------------
+// ReviewStatusBadge
+// ---------------------------------------------------------------------------
+
+function ReviewStatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
+  const colorMap: Record<string, { bg: string; color: string; border: string }> = {
+    ok: {
+      bg: "var(--color-success-bg)",
+      color: "var(--color-success)",
+      border: "var(--color-success-border)",
+    },
+    pending_review: {
+      bg: "var(--color-warning-bg)",
+      color: "var(--color-warning)",
+      border: "var(--color-warning-border)",
+    },
+    discarded: {
+      bg: "var(--color-error-bg)",
+      color: "var(--color-error)",
+      border: "var(--color-error-border)",
+    },
+  };
+  const c = colorMap[status] ?? colorMap["ok"];
+  const labelMap: Record<string, string> = {
+    ok: t("tcgLineImport.reviewStatusOk"),
+    pending_review: t("tcgLineImport.reviewStatusPending"),
+    discarded: t("tcgLineImport.reviewStatusDiscarded"),
+  };
+  return (
+    <span
+      style={{
+        padding: "0.15rem 0.5rem",
+        borderRadius: "999px",
+        fontSize: "0.75rem",
+        background: c.bg,
+        color: c.color,
+        border: `1px solid ${c.border}`,
+      }}
+    >
+      {labelMap[status] ?? status}
+    </span>
+  );
+}
