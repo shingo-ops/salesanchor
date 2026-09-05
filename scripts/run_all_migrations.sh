@@ -580,6 +580,9 @@ run_sql migrations/20260905_140000_import_jobs_review_stage_t004.sql
 # SUP-R2: 仕入元 15件 新規登録（SP0188〜SP0202）+ LINE チャンネル行（tenant_004 専用・冪等）
 run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
 
+# RECORD-01: 直接SQL復旧の記録（SP0007/SP0184 name修正・SP0203/SP0204 新規登録）（tenant_004 専用・冪等）
+run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
