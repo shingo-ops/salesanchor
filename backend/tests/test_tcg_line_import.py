@@ -553,12 +553,14 @@ async def test_source_message_insert_before_update_supersede():
         window_hours=0,  # フィルタなし: 全メッセージを取り込む
     )
 
+    from app.tcg_config import TCG_SCHEMA as _SCHEMA
+
     insert_pos = next(
-        (i for i, sql in enumerate(call_sqls) if "INSERT INTO tenant_004.source_messages" in sql),
+        (i for i, sql in enumerate(call_sqls) if f"INSERT INTO {_SCHEMA}.source_messages" in sql),
         None,
     )
     update_pos = next(
-        (i for i, sql in enumerate(call_sqls) if "UPDATE tenant_004.source_messages" in sql and "superseded_by" in sql),
+        (i for i, sql in enumerate(call_sqls) if f"UPDATE {_SCHEMA}.source_messages" in sql and "superseded_by" in sql),
         None,
     )
 

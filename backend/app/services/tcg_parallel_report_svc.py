@@ -25,8 +25,7 @@ from app.services.tcg_analyzer_svc import (
 logger = logging.getLogger(__name__)
 
 # TCG解析システムは tenant_004 専用スキーマ
-TCG_SCHEMA = "tenant_004"
-
+from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # ルックアップマップのロード（非同期版）
