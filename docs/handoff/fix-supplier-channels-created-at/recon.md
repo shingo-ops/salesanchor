@@ -60,14 +60,14 @@ CREATE TABLE IF NOT EXISTS %I.supplier_channels (
 
 `grep -rn "supplier_channels" backend/app/ --include="*.py"` 結果:
 
-- `tcg_line_import.py:512` — INSERT（本 PR で修正）
-- `tcg_mirror.py:175,195` — LEFT JOIN（SELECT のみ・変更不要）
-- `tcg_diagnostics_svc.py:51` — JOIN（SELECT のみ・変更不要）
-- `tcg_parallel_report_svc.py:186` — JOIN（SELECT のみ・変更不要）
-- `tcg_analysis_review_svc.py:36` — JOIN（SELECT のみ・変更不要）
-- `tcg_line_import_svc.py:398` — FROM（SELECT のみ・変更不要）
-- `tcg_supplier_quality_svc.py:42,80` — JOIN（SELECT のみ・変更不要）
-- `tcg_distribution_svc.py:230` — JOIN（SELECT のみ・変更不要）
+- `backend/app/routers/tcg_line_import.py:512` — INSERT（本 PR で修正）
+- backend/app/tasks/tcg_mirror.py:175,195 — LEFT JOIN（SELECT のみ・変更不要）
+- backend/app/services/tcg_diagnostics_svc.py:51 — JOIN（SELECT のみ・変更不要）
+- backend/app/services/tcg_parallel_report_svc.py:186 — JOIN（SELECT のみ・変更不要）
+- backend/app/services/tcg_analysis_review_svc.py:36 — JOIN（SELECT のみ・変更不要）
+- backend/app/services/tcg_line_import_svc.py:398 — FROM（SELECT のみ・変更不要）
+- backend/app/services/tcg_supplier_quality_svc.py:42,80 — JOIN（SELECT のみ・変更不要）
+- backend/app/services/tcg_distribution_svc.py:230 — JOIN（SELECT のみ・変更不要）
 
 **INSERT/UPDATE は 1 箇所のみ。**
 
