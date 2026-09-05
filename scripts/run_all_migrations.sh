@@ -587,6 +587,12 @@ run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
 # tenant_006 は Meta App Review 専用（QA 禁止）→ QA は tenant_001 を使用
 run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
 
+# IMPORT-01: 商品マスタCSV取り込み履歴（tcg_product_import_jobs / tcg_product_import_rows・tenant_004 専用・冪等）
+run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
+
+# IMPORT-01 QA: 同上（tenant_001 専用・冪等）
+run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
