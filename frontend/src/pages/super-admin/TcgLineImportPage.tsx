@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 
 // ---------------------------------------------------------------------------
@@ -302,22 +303,16 @@ export default function TcgLineImportPage() {
         </div>
 
         {/* アップロードボタン */}
-        <button
+        <Button
           onClick={handleUpload}
-          disabled={uploading || !selectedFile}
-          style={{
-            padding: "0.5rem 1.5rem",
-            background: uploading || !selectedFile ? "var(--color-disabled)" : "var(--color-primary)",
-            color: "var(--on-accent)",
-            border: "none",
-            borderRadius: "4px",
-            cursor: uploading || !selectedFile ? "not-allowed" : "pointer",
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}
+          variant="primary"
+          size="sm"
+          disabled={!selectedFile}
+          loading={uploading}
+          loadingText={t("tcgLineImport.uploading")}
         >
-          {uploading ? t("tcgLineImport.uploading") : t("tcgLineImport.uploadButton")}
-        </button>
+          {t("tcgLineImport.uploadButton")}
+        </Button>
 
         {/* エラー */}
         {uploadError && (
