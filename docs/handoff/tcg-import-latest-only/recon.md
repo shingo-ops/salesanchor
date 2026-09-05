@@ -9,7 +9,7 @@ Python 版 `backend/app/services/tcg_line_import_svc.py` に移植されてい�
 
 ### GAS 側 変更（SQR-05 / PR #279、2026-08-30）
 
-`~/sqr01_work/tcg-inventory-parser/Latest24LineImport.js` の `buildLatest24Dataset` (line 88):
+tcg-inventory-parser の `buildLatest24Dataset` (line 88):
 
 ```diff
 - var raw = rows.map(function(m) { return m.body; }).join(LATEST24_SEPARATOR_);
