@@ -101,8 +101,8 @@ class PendingJobDetail(BaseModel):
 
 class ResolveRequest(BaseModel):
     display_name: str
-    action: str            # "assign" | "create"
-    supplier_code: str     # assign: 既存仕入元コード / create: 任意（採番で上書き）
+    action: str                          # "assign" | "create"
+    supplier_code: Optional[str] = None  # assign: 既存仕入元コード（必須）/ create: 不要（採番）
 
 
 class ResolveResponse(BaseModel):
@@ -430,12 +430,15 @@ async def resolve_supplier(
         current_names = json.loads(current_names)
 
     if body.display_name not in current_names:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"'{body.display_name}' は unresolved_names に含まれていません",
-        )
+        # 既に解決済み（二重クリック・二重 mount 等）: 冪等に現状を返す
+        return ResolveResponse(success=True, remaining_unresolved=current_names)
 
     if body.action == "assign":
+        if not body.supplier_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="action='assign' のとき supplier_code は必須です",
+            )
         # 対象仕入元の name を display_name に差し替え
         sup_row = await db.execute(
             text(

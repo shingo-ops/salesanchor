@@ -1160,3 +1160,79 @@ async def test_import_window_start_passed_as_datetime():
     assert isinstance(ws_val, datetime), (
         f"window_start は datetime 型で渡す必要があるが {type(ws_val).__name__} が渡された（IMP-39）"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REVIEW-R2: resolve エンドポイントのバリデーションテスト
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_resolve_request_create_no_supplier_code_is_valid():
+    """
+    action='create' では supplier_code を省略できる（REVIEW-R2 fix）。
+
+    修正前: supplier_code: str（必須）→ 省略すると Pydantic が ValidationError を送出（= HTTP 422）
+    修正後: supplier_code: Optional[str] = None → 省略しても ValidationError が発生しない
+    """
+    from app.routers.tcg_line_import import ResolveRequest
+
+    req = ResolveRequest(display_name="仕入元A", action="create")
+    assert req.supplier_code is None
+
+
+async def test_resolve_assign_without_supplier_code_raises_400():
+    """
+    action='assign' で supplier_code=None → HTTPException 400（REVIEW-R2 fix）。
+
+    Pydantic は通過するが、エンドポイント内バリデーションで弾く。
+    """
+    from fastapi import HTTPException as FastAPIHTTPException
+
+    from app.routers.tcg_line_import import ResolveRequest, resolve_supplier
+
+    # DB mock: job exists, pending_review, "仕入元A" は unresolved_names にある
+    job_result = MagicMock()
+    job_result.fetchone = MagicMock(return_value=("pending_review", json.dumps(["仕入元A"])))
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=job_result)
+
+    body = ResolveRequest(display_name="仕入元A", action="assign", supplier_code=None)
+
+    with pytest.raises(FastAPIHTTPException) as exc_info:
+        await resolve_supplier(
+            import_job_id="00000000-0000-0000-0000-000000000001",
+            body=body,
+            db=db,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "supplier_code" in exc_info.value.detail
+
+
+async def test_resolve_already_resolved_is_idempotent():
+    """
+    display_name が unresolved_names に存在しない場合 → 200 + remaining_unresolved を返す（冪等）。
+
+    修正前: 404 Not Found を送出
+    修正後: ResolveResponse(success=True, remaining_unresolved=current_names) を返す
+    """
+    from app.routers.tcg_line_import import ResolveRequest, resolve_supplier
+
+    # DB: "仕入元A" はすでに除去済み（unresolved_names に含まれていない）
+    job_result = MagicMock()
+    job_result.fetchone = MagicMock(return_value=("pending_review", json.dumps(["仕入元B"])))
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=job_result)
+
+    body = ResolveRequest(display_name="仕入元A", action="assign", supplier_code="SP0001")
+
+    result = await resolve_supplier(
+        import_job_id="00000000-0000-0000-0000-000000000001",
+        body=body,
+        db=db,
+    )
+
+    assert result.success is True
+    assert result.remaining_unresolved == ["仕入元B"]
+    # DB commit は呼ばれない（変更なし）
+    db.commit.assert_not_called()

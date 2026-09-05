@@ -6,10 +6,11 @@
  * 動作:
  *   - GET /api/v1/tcg/diagnostics/suppliers で登録済み仕入元一覧を取得
  *   - 未解決名ごとに「既存割り当て」または「新規登録」を選択して resolve
+ *   - resolve 成功後: GET /tcg/line-import/{id} で unresolved_names を再取得（DB 正規状態を反映）
  *   - 全員解決済みになったら「抽出を開始」ボタンを有効化
  *   - POST /api/v1/tcg/line-import/{id}/commit → onCommitSuccess()
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 
@@ -29,6 +30,10 @@ interface DiagnosticsResponse {
   rows: SupplierRow[];
 }
 
+interface JobDetail {
+  unresolved_names: string[];
+}
+
 export interface ReviewSectionProps {
   importJobId: string;
   unresolvedNames: string[];
@@ -46,6 +51,9 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [suppliersError, setSuppliersError] = useState("");
+
+  // 未解決名リスト（props 初期値 → resolve 成功後に DB 再取得で更新）
+  const [currentUnresolvedNames, setCurrentUnresolvedNames] = useState<string[]>(unresolvedNames);
 
   // 各未解決名の状態
   const [modes, setModes] = useState<Record<string, "assign" | "create">>({});
@@ -77,6 +85,19 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
   }, [t]);
 
   // ---------------------------------------------------------------------------
+  // DB 再取得: resolve 成功後に unresolved_names を正規状態に更新
+  // ---------------------------------------------------------------------------
+
+  const refreshUnresolved = useCallback(async () => {
+    try {
+      const data = await api.get<JobDetail>(`/tcg/line-import/${importJobId}`);
+      setCurrentUnresolvedNames(data.unresolved_names);
+    } catch {
+      // 再取得失敗は非致命的: ローカル Set のまま継続
+    }
+  }, [importJobId]);
+
+  // ---------------------------------------------------------------------------
   // resolve: 既存割り当て
   // ---------------------------------------------------------------------------
 
@@ -90,6 +111,7 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
         supplier_code: supplierCode,
       });
       setResolved((prev) => new Set([...prev, displayName]));
+      await refreshUnresolved();
     } catch (e: unknown) {
       setResolveErrors((prev) => ({
         ...prev,
@@ -113,6 +135,7 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
         action: "create",
       });
       setResolved((prev) => new Set([...prev, displayName]));
+      await refreshUnresolved();
     } catch (e: unknown) {
       setResolveErrors((prev) => ({
         ...prev,
@@ -145,7 +168,8 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
   // 計算値
   // ---------------------------------------------------------------------------
 
-  const allResolved = resolved.size >= unresolvedNames.length;
+  // DB 再取得後の currentUnresolvedNames を正とする（ローカル Set はオプティミスティック用）
+  const allResolved = currentUnresolvedNames.length === 0;
 
   // ---------------------------------------------------------------------------
   // レンダリング
@@ -176,9 +200,9 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
         {t("tcgLineImport.reviewInstructions")}
       </p>
 
-      {/* 未解決名リスト */}
+      {/* 未解決名リスト（DB 再取得後は currentUnresolvedNames が正）*/}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-        {unresolvedNames.map((name) => {
+        {currentUnresolvedNames.map((name) => {
           const isResolved = resolved.has(name);
           const mode = modes[name];
           const isResolving = resolving[name] ?? false;
