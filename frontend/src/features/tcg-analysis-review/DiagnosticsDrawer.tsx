@@ -7,10 +7,14 @@
  *
  * セクション順: supplier-channels（最多参照）→ suppliers → supplier-name-dupes → orphan-messages
  *              → extraction-errors → extraction-pending → extraction-running-stale → analysis-missing
+ *
+ * extraction-errors / extraction-pending セクションには再実行ボタンを表示する。
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
+import { toast } from "../../components/loading/Toast";
 import { api } from "../../lib/api";
 
 type Row = Record<string, unknown>;
@@ -20,13 +24,15 @@ interface SectionProps {
   titleKey: string;
   open: boolean;
   highlight?: (row: Row) => boolean;
+  onRetry?: (rows: Row[]) => Promise<void>;
 }
 
-function DiagnosticsSection({ diagKey, titleKey, open, highlight }: SectionProps) {
+function DiagnosticsSection({ diagKey, titleKey, open, highlight, onRetry }: SectionProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -49,22 +55,48 @@ function DiagnosticsSection({ diagKey, titleKey, open, highlight }: SectionProps
       });
   }, [diagKey, open]);
 
+  const handleRetryClick = () => {
+    if (!onRetry || retrying) return;
+    setRetrying(true);
+    onRetry(rows).finally(() => setRetrying(false));
+  };
+
   const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
 
   return (
     <section style={{ marginBottom: "1.5rem" }}>
-      <h3
+      <div
         style={{
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          color: "var(--color-text-sub)",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginBottom: "0.5rem",
         }}
       >
-        {t(titleKey)}
-      </h3>
+        <h3
+          style={{
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            color: "var(--color-text-sub)",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+            margin: 0,
+          }}
+        >
+          {t(titleKey)}
+        </h3>
+        {onRetry && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleRetryClick}
+            loading={retrying}
+            disabled={retrying}
+          >
+            {t("superAdmin.diagnostics.retryButton")}
+          </Button>
+        )}
+      </div>
 
       {loading && <p style={{ color: "var(--color-text-sub)" }}>{t("common.loading")}</p>}
 
@@ -149,6 +181,44 @@ export function DiagnosticsDrawer({
 }) {
   const { t } = useTranslation();
 
+  const handleRetryPending = async (_rows: Row[]) => {
+    if (!window.confirm(t("superAdmin.diagnostics.retryConfirmPending"))) return;
+    try {
+      const res = await api.post<{ enqueued: number; skipped: number }>(
+        "/tcg/diagnostics/retry-extraction",
+        { scope: "pending" },
+      );
+      toast.success(
+        t("superAdmin.diagnostics.retrySuccess", {
+          enqueued: res.enqueued,
+          skipped: res.skipped,
+        }),
+      );
+    } catch {
+      toast.error(t("superAdmin.diagnostics.retryError"));
+    }
+  };
+
+  const handleRetryErrors = async (rows: Row[]) => {
+    if (!window.confirm(t("superAdmin.diagnostics.retryConfirmErrors"))) return;
+    const jobIds = rows.map((r) => String(r.id)).filter(Boolean).slice(0, 50);
+    if (!jobIds.length) return;
+    try {
+      const res = await api.post<{ enqueued: number; skipped: number }>(
+        "/tcg/diagnostics/retry-extraction",
+        { job_ids: jobIds },
+      );
+      toast.success(
+        t("superAdmin.diagnostics.retrySuccess", {
+          enqueued: res.enqueued,
+          skipped: res.skipped,
+        }),
+      );
+    } catch {
+      toast.error(t("superAdmin.diagnostics.retryError"));
+    }
+  };
+
   return (
     <Drawer open={open} onClose={onClose} title={t("superAdmin.diagnostics.drawerTitle")}>
       <DiagnosticsSection
@@ -179,11 +249,13 @@ export function DiagnosticsDrawer({
         diagKey="extraction-errors"
         titleKey="superAdmin.diagnostics.sections.extractionErrors"
         open={open}
+        onRetry={handleRetryErrors}
       />
       <DiagnosticsSection
         diagKey="extraction-pending"
         titleKey="superAdmin.diagnostics.sections.extractionPending"
         open={open}
+        onRetry={handleRetryPending}
       />
       <DiagnosticsSection
         diagKey="extraction-running-stale"

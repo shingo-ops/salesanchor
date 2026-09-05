@@ -5,11 +5,14 @@ DB-A2: TCG 診断 API テスト。
   - 認証なし → 401/403
   - 未知のキー → 400（許可キー一覧をエラーメッセージに含む）
   - 8つの許可キーそれぞれ → 200 + 想定形状の JSON
+  - retry-extraction → 200 + enqueued/skipped
+  - retry-extraction: done/running は skipped に計上
+  - retry-extraction: super_admin 以外は 403
 """
 from __future__ import annotations
 
 import os
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -313,3 +316,66 @@ async def test_analysis_missing_returns_200(super_admin_override):
     assert body["rows"][0]["item_count"] == 3
     assert "extraction_job_id" in body["rows"][0]
     assert "extracted_at" in body["rows"][0]
+
+
+# ---------------------------------------------------------------------------
+# retry-extraction エンドポイント
+# ---------------------------------------------------------------------------
+
+
+async def test_retry_extraction_scope_pending_returns_200(super_admin_override):
+    """scope=pending で 200 が返り、enqueued/skipped を含む JSON になること。"""
+    from app.main import app
+
+    mock_result = {"enqueued": 3, "skipped": 0}
+
+    with patch(
+        "app.routers.tcg_diagnostics.retry_extraction",
+        new=AsyncMock(return_value=mock_result),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                "/api/v1/tcg/diagnostics/retry-extraction",
+                json={"scope": "pending"},
+            )
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enqueued"] == 3
+    assert body["skipped"] == 0
+
+
+async def test_retry_extraction_job_ids_done_running_are_skipped(super_admin_override):
+    """done/running のジョブは skipped に計上され、enqueued に含まれないこと。"""
+    from app.main import app
+
+    # done=1, running=1 → skipped=2, pending=1 → enqueued=1
+    mock_result = {"enqueued": 1, "skipped": 2}
+
+    with patch(
+        "app.routers.tcg_diagnostics.retry_extraction",
+        new=AsyncMock(return_value=mock_result),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                "/api/v1/tcg/diagnostics/retry-extraction",
+                json={"job_ids": ["uuid-done", "uuid-running", "uuid-pending"]},
+            )
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enqueued"] == 1
+    assert body["skipped"] == 2
+
+
+async def test_retry_extraction_requires_super_admin():
+    """super_admin 以外は 403 が返ること。"""
+    from app.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/v1/tcg/diagnostics/retry-extraction",
+            json={"scope": "pending"},
+        )
+
+    assert r.status_code in (401, 403)
