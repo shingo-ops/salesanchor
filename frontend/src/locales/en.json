@@ -2299,7 +2299,12 @@
         "extraction_job_id": "Extraction job ID",
         "item_count": "Item count",
         "extracted_at": "Extracted at"
-      }
+      },
+      "retryButton": "Retry",
+      "retryConfirmPending": "Re-enqueue all pending extraction jobs? (up to 50)",
+      "retryConfirmErrors": "Re-enqueue the displayed error jobs? (up to 50)",
+      "retrySuccess": "Enqueued: {{enqueued}} / Skipped: {{skipped}}",
+      "retryError": "Retry failed (Celery may be unavailable)."
     },
     "dex": {
       "title": "Pokemon / Trainer Dex",

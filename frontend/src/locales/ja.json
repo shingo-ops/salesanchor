@@ -2299,7 +2299,12 @@
         "extraction_job_id": "抽出ジョブID",
         "item_count": "アイテム数",
         "extracted_at": "抽出日時"
-      }
+      },
+      "retryButton": "再実行",
+      "retryConfirmPending": "pending 状態のジョブを全件再実行しますか？（最大50件）",
+      "retryConfirmErrors": "表示中のエラージョブを再実行しますか？（最大50件）",
+      "retrySuccess": "再実行キュー追加: {{enqueued}}件 / スキップ: {{skipped}}件",
+      "retryError": "再実行に失敗しました（Celery 未接続の可能性があります）"
     },
     "dex": {
       "title": "ポケモン / トレーナー図鑑",
