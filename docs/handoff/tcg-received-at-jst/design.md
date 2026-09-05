@@ -1,80 +1,60 @@
-# DIST-R3 design: received_at JST 保存修正
+# Phase 3 設計 — tcg-received-at-jst
 
-## 修正方針
-
-**ADR-154（GAS Phase 3 解析パイプラインの Python 移植）に沿った修正。**
-GAS の `latest24Iso_()` が JST ローカル時刻文字列を返す仕様に合わせ、
-Python 側でも JST aware datetime として保存する。配信 SQL は現状維持。
+**対象ADR**: ADR-154
+**recon**: docs/handoff/tcg-received-at-jst/recon.md
+**日付**: 2026-09-05
+**担当**: Hikky-dev
 
 ---
 
-## KGI / KPI
+## 外部・過去事例の参照と我々への応用
+
+- 事例: backend/tcg_migration/MIGRATION_LOG.md（2026-09-04 手動取り込み実施記録）にて、同プロジェクト内の手動スクリプト `tcg_line_ingest.py` が `JST = timezone(timedelta(hours=9))` + `.replace(tzinfo=JST)` で同一問題を解決済み → 我々への応用: API サービス側も同じパターンで統一する
+
+---
+
+## 受け入れ基準
 
 | 基準 | 検証方法 |
 |---|---|
-| 新規取り込み分の `posted_at` が GAS 登録時刻と一致する | 取り込み後に配信エンドポイントを叩き、`posted_at` 列の時刻を GAS の `first_timestamp` と目視比較 |
-| 手動スクリプト分50件（既存 JST 保存済み）の `posted_at` が変化しない | 修正前後で配信出力を比較（件数・時刻とも一致） |
-| 移行306件（NULL）の `posted_at` が空欄のまま | NULL は COALESCE で空欄として表示され続ける |
+| JST 定数が +09:00 である | `pytest tests/test_tcg_line_import.py::test_jst_constant_is_plus9` |
+| `"2026-09-03 01:19:00"` を変換した datetime の utcoffset が +09:00 である | `pytest tests/test_tcg_line_import.py::test_received_at_parsed_as_jst_not_utc` |
+| DB に渡す received_at パラメータの tzinfo が +09:00 である | `pytest tests/test_tcg_line_import.py::test_received_at_stored_as_jst_in_insert` |
 
 ---
 
-## 変更詳細
+## 技術 How・KPI
 
-### 1. JST 定数の定義
-
-`backend/app/services/tcg_line_import_svc.py` の定数セクションに追加。
-手動スクリプト（MIGRATION_LOG.md:409）の作法に合わせ `timezone(timedelta(hours=9))` で定義する。
-
-```python
-JST = timezone(timedelta(hours=9))
-```
-
-`timezone` と `timedelta` は既存の `from datetime import ...` インポートに含まれる（変更不要）。
-
-### 2. tzinfo 変更（1行）
-
-`backend/app/services/tcg_line_import_svc.py:435`（旧行番号）
-
-```python
-# before
-).replace(tzinfo=timezone.utc)
-
-# after
-).replace(tzinfo=JST)
-```
-
-### 3. 配信 SQL は変更しない
-
-`tcg_distribution_svc.py` の `AT TIME ZONE 'Asia/Tokyo'` は現状維持。
-JST aware で保存することで、手動スクリプト分50件と同一の動作になる。
+- KPI: 新規取り込み後の `posted_at` 列が LINE エクスポートの時刻と一致する（0h ずれ）
+- 技術選択: `timezone(timedelta(hours=9))` を定数化（手動スクリプトと同一作法・ADR-154 GAS 再現準拠）
 
 ---
 
-## 影響範囲
+## 弊害・トレードオフ
 
-| 対象 | 影響 |
-|---|---|
-| 新規取り込み分（import_line_export API 経由） | `received_at` が JST として保存され、`posted_at` が正確になる |
-| 手動スクリプト分50件（既存 `+09:00` 保存済み） | 変更なし |
-| 移行306件（NULL） | 変更なし（NULL のまま・空欄表示） |
-| 配信 SQL（tcg_distribution_svc.py） | 変更なし |
+- 影響範囲は `import_line_export` API 経由の新規取り込み分のみ
+- 手動スクリプト分50件（既存 JST 保存済み）・移行306件（NULL）は変化なし
+- 配信 SQL の `AT TIME ZONE 'Asia/Tokyo'` は現状維持（JST aware で保存することで正常動作）
 
 ---
 
-## 外部事例
+## 計画票
 
-MIGRATION_LOG.md（2026-09-04 手動取り込み実施記録）の手動スクリプトが同一パターンで実装済み。
-本修正はその移植を API サービスに適用したものである。
-
----
-
-## 戻し方
-
-`.replace(tzinfo=JST)` を `.replace(tzinfo=timezone.utc)` に戻す1行。
-DB への影響: 戻した後の新規取り込み分のみ UTC 保存に戻る。既存データは不変。
+| ステップ | 内容 | 担当 |
+|---|---|---|
+| 1 | `JST = timezone(timedelta(hours=9))` 定数追加 | Generator |
+| 2 | `.replace(tzinfo=JST)` に変更（1行） | Generator |
+| 3 | テスト3件追加（RED→GREEN 確認済み） | Generator |
 
 ---
 
-## recon 参照
+## 維持の仕組み
 
-`docs/handoff/tcg-received-at-jst/recon.md`
+守り手: backend/tests/test_tcg_line_import.py（test_received_at_stored_as_jst_in_insert が DB パラメータの tzinfo を毎回検証）
+
+---
+
+## 継続
+
+- 完了後の監視: 次回取り込み後に配信シートの `posted_at` 列を目視確認
+- 移行306件の NULL 解消は別タスク（GAS 側にソースデータなし・優先度低）
