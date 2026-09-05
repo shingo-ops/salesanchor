@@ -1,7 +1,9 @@
 # design: tcg-import-review-fix
 
 設計日: 2026-09-05  
-担当: Hikky-dev (REVIEW-R2)
+担当: Hikky-dev (REVIEW-R2)  
+対象ADR: ADR-154  
+recon: docs/handoff/tcg-import-review-fix/recon.md
 
 ---
 
@@ -134,14 +136,13 @@ DB 状態と一致して有効化される。
 
 ---
 
-## 外部事例（なし）
+## 外部・過去事例の参照と我々への応用
 
-本修正は HTTP 冪等性（RFC 7231）と React state の単一ソース・オブ・トゥルース原則に基づく。  
-外部事例の調査は不要と判断。
+該当なし：本修正は HTTP 冪等性（RFC 7231）と React state の単一ソース・オブ・トゥルース原則に基づくバグ修正。外部事例の参照は不要と判断（422/404の仕様上の誤りと二重マウントの設計上の誤りの修正のみ）。
 
 ---
 
-## 守り手
+## 維持の仕組み
 
-- テスト3件が CI で常時検証（create/assign バリデーション + 冪等性）
-- 二重マウントのフィルタは TcgLineImportPage に集約（ReviewSection は呼び出し側に依存しない）
+守り手: `backend/tests/test_tcg_line_import.py`（create/assign バリデーション + 冪等性を常時 CI 検証）  
+守り手: `frontend/src/pages/super-admin/TcgLineImportPage.tsx`（二重マウントのフィルタを集約・ReviewSection 側に漏れない設計）
