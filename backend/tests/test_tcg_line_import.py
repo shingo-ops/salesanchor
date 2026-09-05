@@ -7,16 +7,20 @@ MIG-04 Stage 1: tcg_line_import_svc の単体テスト（DB 不要）。
   - build_provider_entries: グループ化 / タイムスタンプ昇順 / SHA256
   - sha256_text: 冪等性
   - window_hours 自動計算: window_start が None かつ window_hours>0 で cutoff が設定される
+  - import_line_export: supersede の実行順序（INSERT before UPDATE）
+  - import_line_export: _enqueue_extraction は db.commit() の後に呼ばれること
 """
 from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.services.tcg_line_import_svc import (
     build_provider_entries,
+    import_line_export,
     parse_line_export,
     resolve_suppliers,
     sha256_text,
@@ -474,3 +478,142 @@ def test_window_start_explicit_overrides_auto():
     filtered = [m for m in messages if m["timestamp"] >= effective]
     assert len(filtered) == 1
     assert filtered[0]["body"] == "after"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# import_line_export: supersede の実行順序（INSERT before UPDATE）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def test_source_message_insert_before_update_supersede():
+    """
+    INSERT INTO source_messages は UPDATE source_messages SET superseded_by より
+    先に実行されること。
+
+    根拠:
+      backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231
+        superseded_by UUID REFERENCES tenant_004.source_messages(id)
+      DEFERRABLE 未指定 = NOT DEFERRABLE INITIALLY IMMEDIATE。
+      UPDATE で new_sm_id を参照する前に INSERT が済んでいない場合、
+      ForeignKeyViolation が発生する。
+
+    発生条件:
+      対象 supplier_channel_id に is_active=TRUE の source_message が既存の場合のみ。
+      本テストでは fetchall が ("test-old-sm-id",) を返すことでその状態を再現する。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    call_sqls: list[str] = []
+
+    async def tracked_execute(stmt, params=None):
+        sql = str(stmt)
+        call_sqls.append(sql)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            # 冪等化チェック: 未取り込み
+            result.fetchone.return_value = None
+        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+            # サプライヤー一覧（プレフィックス一致で "仕入元A" を解決）
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql:
+            # チャンネル取得: 1件あり
+            result.fetchone.return_value = ("test-channel-id",)
+        elif "source_messages" in sql and "SELECT" in sql:
+            # 既存 active レコード: 1件あり（supersede が走る条件）
+            result.fetchall.return_value = [("test-old-sm-id",)]
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = tracked_execute
+    db.commit = AsyncMock()
+
+    await import_line_export(
+        db=db,
+        filename="test.txt",
+        export_text=export_text,
+        uploaded_by=None,
+        window_hours=0,  # フィルタなし: 全メッセージを取り込む
+    )
+
+    insert_pos = next(
+        (i for i, sql in enumerate(call_sqls) if "INSERT INTO tenant_004.source_messages" in sql),
+        None,
+    )
+    update_pos = next(
+        (i for i, sql in enumerate(call_sqls) if "UPDATE tenant_004.source_messages" in sql and "superseded_by" in sql),
+        None,
+    )
+
+    assert insert_pos is not None, "INSERT INTO source_messages が呼ばれなかった"
+    assert update_pos is not None, "UPDATE source_messages SET superseded_by が呼ばれなかった"
+    assert insert_pos < update_pos, (
+        f"INSERT (位置 {insert_pos}) が UPDATE (位置 {update_pos}) より後: "
+        "superseded_by FK は NOT DEFERRABLE のため ForeignKeyViolation が発生する"
+    )
+
+
+async def test_enqueue_called_after_commit():
+    """
+    _enqueue_extraction は db.commit() の後に呼ばれること。
+
+    根拠: commit 前にエンキューすると、その後 rollback が発生した場合に
+          DB に存在しない source_message_id で extract タスクが実行される。
+          commit 後エンキューにより孤立タスク（orphan task）を防ぐ。
+
+    検証方法: call_order リストに "commit" / "enqueue" をタイムスタンプ順で追記し、
+              "commit" が "enqueue" より先に来ることを assert する。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    call_order: list[str] = []
+
+    async def tracked_execute(stmt, params=None):
+        result = MagicMock()
+        sql = str(stmt)
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql:
+            result.fetchone.return_value = ("test-channel-id",)
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchall.return_value = [("test-old-sm-id",)]
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    async def tracked_commit():
+        call_order.append("commit")
+
+    db = MagicMock()
+    db.execute = tracked_execute
+    db.commit = tracked_commit
+
+    with patch(
+        "app.services.tcg_line_import_svc._enqueue_extraction",
+        side_effect=lambda sm_id: call_order.append("enqueue"),
+    ):
+        await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert "commit" in call_order, "db.commit() が呼ばれなかった"
+    assert "enqueue" in call_order, "_enqueue_extraction が呼ばれなかった"
+    commit_pos = call_order.index("commit")
+    enqueue_pos = call_order.index("enqueue")
+    assert commit_pos < enqueue_pos, (
+        f"_enqueue_extraction (位置 {enqueue_pos}) が db.commit (位置 {commit_pos}) より先: "
+        "rollback 時に孤立タスクが発生する"
+    )

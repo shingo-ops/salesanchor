@@ -336,6 +336,7 @@ async def import_line_export(
     skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
     # --- 5. source_messages / extraction_jobs へ INSERT ---
+    enqueued_ids: list[str] = []
     for entry in provider_entries:
         sp_code = entry["sp_code"]
 
@@ -377,20 +378,6 @@ async def import_line_export(
         # 新しい source_message の ID を先に確定
         new_sm_id = uuid.uuid4()
 
-        # 既存レコードを supersede
-        for old_rec in active_records:
-            old_id = old_rec[0]
-            await db.execute(
-                text(
-                    f"""
-                    UPDATE {TCG_SCHEMA}.source_messages
-                    SET superseded_by = :new_id, is_active = FALSE
-                    WHERE id = :old_id
-                    """
-                ),
-                {"new_id": str(new_sm_id), "old_id": str(old_id)},
-            )
-
         # received_at を datetime に変換
         try:
             received_at_dt = datetime.strptime(
@@ -399,7 +386,9 @@ async def import_line_export(
         except ValueError:
             received_at_dt = None
 
-        # 新しい source_message を INSERT
+        # 新しい source_message を INSERT（FK制約のため UPDATE より先に行う）
+        # superseded_by REFERENCES source_messages(id) は NOT DEFERRABLE のため、
+        # UPDATE で new_sm_id を参照する前に INSERT が必要。
         await db.execute(
             text(
                 f"""
@@ -420,6 +409,20 @@ async def import_line_export(
             },
         )
 
+        # 既存レコードを supersede（INSERT の後に実行して FK 違反を回避）
+        for old_rec in active_records:
+            old_id = old_rec[0]
+            await db.execute(
+                text(
+                    f"""
+                    UPDATE {TCG_SCHEMA}.source_messages
+                    SET superseded_by = :new_id, is_active = FALSE
+                    WHERE id = :old_id
+                    """
+                ),
+                {"new_id": str(new_sm_id), "old_id": str(old_id)},
+            )
+
         # extraction_jobs を pending で INSERT
         new_ej_id = uuid.uuid4()
         await db.execute(
@@ -433,8 +436,8 @@ async def import_line_export(
             ),
             {"id": str(new_ej_id), "smid": str(new_sm_id)},
         )
-        # Celery タスクを非同期起動（Redis 未起動時はスキップ）
-        _enqueue_extraction(str(new_sm_id))
+        # commit 後にエンキューするため ID を蓄積
+        enqueued_ids.append(str(new_sm_id))
 
     # --- 6. import_jobs に記録 ---
     import_job_id = uuid.uuid4()
@@ -461,6 +464,10 @@ async def import_line_export(
     )
 
     await db.commit()
+
+    # DB commit 後にエンキュー（commit 前の enqueue は rollback 時に孤立タスクが生じる）
+    for sm_id in enqueued_ids:
+        _enqueue_extraction(sm_id)
 
     return {
         "status": "imported",

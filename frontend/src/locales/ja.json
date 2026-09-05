@@ -2274,7 +2274,11 @@
         "supplierChannels": "仕入元チャンネル数",
         "suppliers": "仕入元一覧",
         "supplierNameDupes": "仕入元名重複",
-        "orphanMessages": "孤立メッセージ"
+        "orphanMessages": "孤立メッセージ",
+        "extractionErrors": "抽出エラー",
+        "extractionPending": "抽出待ち（pending）",
+        "extractionRunningStale": "抽出スタック（running 10分超）",
+        "analysisMissing": "照合未実行（done 済み）"
       },
       "columns": {
         "supplier_code": "仕入元コード",
@@ -2285,7 +2289,16 @@
         "is_active": "有効",
         "name_lower": "名称（小文字）",
         "cnt": "件数",
-        "null_channel_count": "チャンネルなし件数"
+        "null_channel_count": "チャンネルなし件数",
+        "id": "ID",
+        "source_message_id": "メッセージID",
+        "error_message": "エラー内容",
+        "prompt_version": "プロンプトバージョン",
+        "created_at": "作成日時",
+        "age_minutes": "経過時間（分）",
+        "extraction_job_id": "抽出ジョブID",
+        "item_count": "アイテム数",
+        "extracted_at": "抽出日時"
       }
     },
     "dex": {

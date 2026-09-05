@@ -6,6 +6,7 @@
  * 1つが失敗しても他のセクションは正常表示される。
  *
  * セクション順: supplier-channels（最多参照）→ suppliers → supplier-name-dupes → orphan-messages
+ *              → extraction-errors → extraction-pending → extraction-running-stale → analysis-missing
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -173,6 +174,28 @@ export function DiagnosticsDrawer({
         titleKey="superAdmin.diagnostics.sections.orphanMessages"
         open={open}
         highlight={(row) => Number(row.null_channel_count) !== 0}
+      />
+      <DiagnosticsSection
+        diagKey="extraction-errors"
+        titleKey="superAdmin.diagnostics.sections.extractionErrors"
+        open={open}
+      />
+      <DiagnosticsSection
+        diagKey="extraction-pending"
+        titleKey="superAdmin.diagnostics.sections.extractionPending"
+        open={open}
+      />
+      <DiagnosticsSection
+        diagKey="extraction-running-stale"
+        titleKey="superAdmin.diagnostics.sections.extractionRunningStale"
+        open={open}
+        highlight={() => true}
+      />
+      <DiagnosticsSection
+        diagKey="analysis-missing"
+        titleKey="superAdmin.diagnostics.sections.analysisMissing"
+        open={open}
+        highlight={() => true}
       />
     </Drawer>
   );

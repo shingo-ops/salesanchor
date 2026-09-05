@@ -4,7 +4,7 @@ DB-A2: TCG 診断 API テスト。
 カバー:
   - 認証なし → 401/403
   - 未知のキー → 400（許可キー一覧をエラーメッセージに含む）
-  - 4つの許可キーそれぞれ → 200 + 想定形状の JSON
+  - 8つの許可キーそれぞれ → 200 + 想定形状の JSON
 """
 from __future__ import annotations
 
@@ -39,11 +39,51 @@ _ORPHAN_MESSAGES_ROWS = [
     {"null_channel_count": 5},
 ]
 
+_EXTRACTION_ERRORS_ROWS = [
+    {
+        "id": "ej-uuid-001",
+        "source_message_id": "sm-uuid-001",
+        "error_message": "Gemini API timeout",
+        "prompt_version": "v1.0",
+        "created_at": "2026-09-01T10:00:00Z",
+    },
+]
+
+_EXTRACTION_PENDING_ROWS = [
+    {
+        "id": "ej-uuid-002",
+        "source_message_id": "sm-uuid-002",
+        "created_at": "2026-09-01T11:00:00Z",
+    },
+]
+
+_EXTRACTION_RUNNING_STALE_ROWS = [
+    {
+        "id": "ej-uuid-003",
+        "source_message_id": "sm-uuid-003",
+        "created_at": "2026-09-01T09:00:00Z",
+        "age_minutes": 65,
+    },
+]
+
+_ANALYSIS_MISSING_ROWS = [
+    {
+        "extraction_job_id": "ej-uuid-004",
+        "source_message_id": "sm-uuid-004",
+        "item_count": 3,
+        "extracted_at": "2026-09-01T12:00:00Z",
+    },
+]
+
 _KEY_MOCK_MAP = {
     "suppliers": _SUPPLIERS_ROWS,
     "supplier-name-dupes": _SUPPLIER_NAME_DUPES_ROWS,
     "supplier-channels": _SUPPLIER_CHANNELS_ROWS,
     "orphan-messages": _ORPHAN_MESSAGES_ROWS,
+    "extraction-errors": _EXTRACTION_ERRORS_ROWS,
+    "extraction-pending": _EXTRACTION_PENDING_ROWS,
+    "extraction-running-stale": _EXTRACTION_RUNNING_STALE_ROWS,
+    "analysis-missing": _ANALYSIS_MISSING_ROWS,
 }
 
 # ---------------------------------------------------------------------------
@@ -94,7 +134,16 @@ async def test_unknown_key_returns_400(super_admin_override):
     body = r.json()
     detail = body.get("detail", "")
     # 許可キーの一覧がエラーメッセージに含まれていること
-    for key in ("suppliers", "supplier-name-dupes", "supplier-channels", "orphan-messages"):
+    for key in (
+        "suppliers",
+        "supplier-name-dupes",
+        "supplier-channels",
+        "orphan-messages",
+        "extraction-errors",
+        "extraction-pending",
+        "extraction-running-stale",
+        "analysis-missing",
+    ):
         assert key in detail, f"Expected '{key}' in error detail: {detail}"
 
 
@@ -182,3 +231,85 @@ async def test_orphan_messages_returns_200(super_admin_override):
     assert body["key"] == "orphan-messages"
     assert len(body["rows"]) == 1
     assert body["rows"][0]["null_channel_count"] == 5
+
+
+async def test_extraction_errors_returns_200(super_admin_override):
+    """`extraction-errors` キーが 200 を返し、id/source_message_id/error_message/prompt_version/created_at を持つこと。"""
+    from app.main import app
+
+    with patch(
+        "app.routers.tcg_diagnostics.run_diagnostic",
+        new=AsyncMock(return_value=_EXTRACTION_ERRORS_ROWS),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/v1/tcg/diagnostics/extraction-errors")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["key"] == "extraction-errors"
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["error_message"] == "Gemini API timeout"
+    assert "prompt_version" in body["rows"][0]
+    assert "source_message_id" in body["rows"][0]
+
+
+async def test_extraction_pending_returns_200(super_admin_override):
+    """`extraction-pending` キーが 200 を返し、id/source_message_id/created_at を持つこと。"""
+    from app.main import app
+
+    with patch(
+        "app.routers.tcg_diagnostics.run_diagnostic",
+        new=AsyncMock(return_value=_EXTRACTION_PENDING_ROWS),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/v1/tcg/diagnostics/extraction-pending")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["key"] == "extraction-pending"
+    assert len(body["rows"]) == 1
+    assert "source_message_id" in body["rows"][0]
+    assert "created_at" in body["rows"][0]
+
+
+async def test_extraction_running_stale_returns_200(super_admin_override):
+    """`extraction-running-stale` キーが 200 を返し、id/source_message_id/created_at/age_minutes を持つこと。"""
+    from app.main import app
+
+    with patch(
+        "app.routers.tcg_diagnostics.run_diagnostic",
+        new=AsyncMock(return_value=_EXTRACTION_RUNNING_STALE_ROWS),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/v1/tcg/diagnostics/extraction-running-stale")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["key"] == "extraction-running-stale"
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["age_minutes"] == 65
+    assert "source_message_id" in body["rows"][0]
+
+
+async def test_analysis_missing_returns_200(super_admin_override):
+    """`analysis-missing` キーが 200 を返し、extraction_job_id/source_message_id/item_count/extracted_at を持つこと。"""
+    from app.main import app
+
+    with patch(
+        "app.routers.tcg_diagnostics.run_diagnostic",
+        new=AsyncMock(return_value=_ANALYSIS_MISSING_ROWS),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/v1/tcg/diagnostics/analysis-missing")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["key"] == "analysis-missing"
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["item_count"] == 3
+    assert "extraction_job_id" in body["rows"][0]
+    assert "extracted_at" in body["rows"][0]

@@ -22,6 +22,10 @@ _ALLOWED_KEYS: frozenset[str] = frozenset(
         "supplier-name-dupes",
         "supplier-channels",
         "orphan-messages",
+        "extraction-errors",
+        "extraction-pending",
+        "extraction-running-stale",
+        "analysis-missing",
     }
 )
 
@@ -53,6 +57,52 @@ _QUERIES: dict[str, str] = {
         SELECT COUNT(*) AS null_channel_count
         FROM {TCG_SCHEMA}.source_messages
         WHERE supplier_channel_id IS NULL
+    """,
+    "extraction-errors": f"""
+        SELECT ej.id,
+               ej.source_message_id,
+               ej.error_message,
+               ej.prompt_version,
+               ej.created_at
+        FROM {TCG_SCHEMA}.extraction_jobs ej
+        WHERE ej.status = 'error'
+        ORDER BY ej.created_at DESC
+        LIMIT 100
+    """,
+    "extraction-pending": f"""
+        SELECT ej.id,
+               ej.source_message_id,
+               ej.created_at
+        FROM {TCG_SCHEMA}.extraction_jobs ej
+        WHERE ej.status = 'pending'
+        ORDER BY ej.created_at ASC
+        LIMIT 100
+    """,
+    "extraction-running-stale": f"""
+        SELECT ej.id,
+               ej.source_message_id,
+               ej.created_at,
+               ROUND(EXTRACT(EPOCH FROM (NOW() - ej.created_at)) / 60) AS age_minutes
+        FROM {TCG_SCHEMA}.extraction_jobs ej
+        WHERE ej.status = 'running'
+          AND ej.created_at < NOW() - INTERVAL '10 minutes'
+        ORDER BY ej.created_at ASC
+    """,
+    "analysis-missing": f"""
+        SELECT ej.id AS extraction_job_id,
+               ej.source_message_id,
+               COUNT(ei.id) AS item_count,
+               ej.extracted_at
+        FROM {TCG_SCHEMA}.extraction_jobs ej
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+        WHERE ej.status = 'done'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM {TCG_SCHEMA}.analysis_results ar
+              WHERE ar.extraction_item_id = ei.id
+          )
+        GROUP BY ej.id, ej.source_message_id, ej.extracted_at
+        ORDER BY ej.extracted_at DESC
     """,
 }
 
