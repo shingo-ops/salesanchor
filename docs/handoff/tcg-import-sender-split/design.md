@@ -1,5 +1,7 @@
 # design: tcg-import-sender-split
 
+参照 recon: docs/handoff/tcg-import-sender-split/recon.md
+
 ## 目的
 
 `parse_line_export` の送信者名切り出しロジックを GAS `latest24SplitHeader_` に合わせる。
@@ -59,15 +61,20 @@ parse 内と resolve 内の2回 DB アクセスを 1 回に削減する副次効
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 GAS `latest24SplitHeader_` 実装（`Latest24LineImport.js`）を正典として採用。
 Python 実装は GAS のロジックを一対一で再現する。
 
+過去の教訓: プレフィックス前方一致（旧 resolve_suppliers）は "仕入元A（別支店）" のような
+付随情報付きの表示名と誤マッチするリスクがあった。GAS は完全一致のため、Python も揃える。
+
 ---
 
-## 守り手
+## 維持の仕組み
 
-本 PR 以降、`_split_sender` / `resolve_suppliers` を変更する際は:
+守り手: backend/tests/test_tcg_line_import.py
+
+`_split_sender` / `resolve_suppliers` を変更する際は:
 - GAS `Latest24LineImport.js` との差分を確認すること
 - `test_split_sender_*` 3テストが RED にならないこと
