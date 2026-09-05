@@ -574,6 +574,9 @@ run_sql migrations/20260904_160000_tcg_magazine_promo_products_t004.sql
 run_sql migrations/20260905_010000_tcg_pokemon_master_batch1_t004.sql
 run_sql migrations/20260905_020000_tcg_fix_product_names_t004.sql
 
+# SUP-R2: 仕入元 15件 新規登録（SP0188〜SP0202）+ LINE チャンネル行（tenant_004 専用・冪等）
+run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
