@@ -644,9 +644,21 @@ BEGIN
         SELECT COUNT(*) INTO _table_count
         FROM information_schema.tables
         WHERE table_schema = _schema
-          AND table_type   = 'BASE TABLE';
+          AND table_type   = 'BASE TABLE'
+          AND table_name IN (
+              'analysis_results', 'analysis_run_snapshots', 'analysis_runs',
+              'audit_log', 'condition_aliases', 'conditions',
+              'extraction_items', 'extraction_jobs',
+              'import_jobs', 'item_corrections', 'item_notes',
+              'product_exclude_keywords', 'product_search_keywords', 'products_logistics',
+              'source_messages', 'supplier_channels',
+              'tcg_distribution_settings', 'tcg_distribution_targets',
+              'tcg_major_categories', 'tcg_manufacturers', 'tcg_product_categories',
+              'tcg_products', 'tcg_series', 'tcg_suppliers',
+              'unit_aliases', 'units', 'unparsed_lines'
+          );
 
-        RAISE NOTICE '20260906_100000: schema % テーブル数 = % (期待値: 27)', _schema, _table_count;
+        RAISE NOTICE '20260906_100000: schema % TCG テーブル数 = % (期待値: 27)', _schema, _table_count;
 
         IF _table_count <> 27 THEN
             RAISE EXCEPTION '20260906_100000: テーブル数が 27 ではありません: %', _table_count;

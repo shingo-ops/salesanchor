@@ -87,3 +87,40 @@ git grep -i "tenant_006\|qa.*tenant\|schema.*qa" docs/adr/ -- "*.md"
 ## 守り手
 
 人手で守る（migration 実行後に RAISE NOTICE のテーブル数=27 を目視確認）。
+
+---
+
+## 2026-09-05 デプロイ失敗・教訓（QA-01b）
+
+### 失敗概要
+
+PR #3315（QA-01）をマージ後のデプロイで migration が RAISE EXCEPTION により失敗。
+
+```
+NOTICE:  20260906_100000: schema tenant_006 テーブル数 = 95 (期待値: 27)
+ERROR:   20260906_100000: テーブル数が 27 ではありません: 95
+```
+
+### 原因
+
+`tenant_006` スキーマには、CRM 系 migration により既に 68 本以上のテーブルが存在していた。
+（公開テナント "Sales Anchor App Review" / id=6 として登録済み）
+
+検算クエリが `information_schema.tables WHERE table_schema = _schema` で全件カウントしたため、
+TCG 27 本 + CRM 既存 68 本 = 95 本が返り RAISE EXCEPTION が発火。
+
+### ロールバック状態
+
+DO ブロック全体がロールバック。CREATE TABLE / seed データともに未コミット。
+中途半端な状態は残っていない（冪等性は保たれる）。
+
+### 修正内容（QA-01b）
+
+検算クエリに `AND table_name IN ('analysis_results', ..., 'unparsed_lines')` を追加し、
+今回作成した TCG 27 テーブルのみをカウントするよう限定。
+テーブル名リストは同ファイルの `CREATE TABLE IF NOT EXISTS %I.TABLE_NAME` から機械的に抽出。
+
+### 教訓
+
+migration の検算は「自分が作成した対象のみを数える」。
+スキーマ全件カウントは他の migration の影響を受けるため使用禁止。
