@@ -44,6 +44,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
         LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
         LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
         LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
+        WHERE sm.is_active = TRUE
         GROUP BY sc.id, ts.code, ts.name
         ORDER BY COALESCE(ts.name, '') ASC
     """
@@ -79,7 +80,8 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
         WHERE ts.code = :supplier_id
-        ORDER BY sm.id
+          AND sm.is_active = TRUE
+        ORDER BY sm.received_at DESC NULLS LAST
         LIMIT 1
     """
     row = (await db.execute(text(sql), {"supplier_id": supplier_id})).fetchone()

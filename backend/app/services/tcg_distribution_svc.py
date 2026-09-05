@@ -226,7 +226,7 @@ async def fetch_output_rows(
         JOIN {TCG_SCHEMA}.extraction_jobs ej
             ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm
-            ON sm.id = ej.source_message_id
+            ON sm.id = ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
         LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
