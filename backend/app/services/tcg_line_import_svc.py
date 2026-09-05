@@ -377,20 +377,6 @@ async def import_line_export(
         # 新しい source_message の ID を先に確定
         new_sm_id = uuid.uuid4()
 
-        # 既存レコードを supersede
-        for old_rec in active_records:
-            old_id = old_rec[0]
-            await db.execute(
-                text(
-                    f"""
-                    UPDATE {TCG_SCHEMA}.source_messages
-                    SET superseded_by = :new_id, is_active = FALSE
-                    WHERE id = :old_id
-                    """
-                ),
-                {"new_id": str(new_sm_id), "old_id": str(old_id)},
-            )
-
         # received_at を datetime に変換
         try:
             received_at_dt = datetime.strptime(
@@ -399,7 +385,9 @@ async def import_line_export(
         except ValueError:
             received_at_dt = None
 
-        # 新しい source_message を INSERT
+        # 新しい source_message を INSERT（FK制約のため UPDATE より先に行う）
+        # superseded_by REFERENCES source_messages(id) は NOT DEFERRABLE のため、
+        # UPDATE で new_sm_id を参照する前に INSERT が必要。
         await db.execute(
             text(
                 f"""
@@ -419,6 +407,20 @@ async def import_line_export(
                 "received_at": received_at_dt,
             },
         )
+
+        # 既存レコードを supersede（INSERT の後に実行して FK 違反を回避）
+        for old_rec in active_records:
+            old_id = old_rec[0]
+            await db.execute(
+                text(
+                    f"""
+                    UPDATE {TCG_SCHEMA}.source_messages
+                    SET superseded_by = :new_id, is_active = FALSE
+                    WHERE id = :old_id
+                    """
+                ),
+                {"new_id": str(new_sm_id), "old_id": str(old_id)},
+            )
 
         # extraction_jobs を pending で INSERT
         new_ej_id = uuid.uuid4()
