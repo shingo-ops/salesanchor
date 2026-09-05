@@ -146,3 +146,74 @@ def test_no_literal_tcg_schema_placeholder():
                 )
 
     assert not errors, "\n".join(errors)
+
+
+def test_supplier_channels_insert_columns_match_ddl():
+    """
+    tcg_line_import.py の supplier_channels INSERT に DDL 外の列がないことを確認。
+
+    方式: DDL から列名を抽出し、INSERT 列リストと照合する（静的解析）。
+
+    RED:   created_at など DDL 外の列を含む INSERT がある場合
+    GREEN: DDL の列（id/supplier_id/channel/external_id/is_active）のみの場合
+    """
+    # --- DDL から supplier_channels の列名を抽出 ---
+    ddl_path = (
+        _REPO_ROOT
+        / "migrations/20260831_110000_create_tcg_analysis_tables_t004.sql"
+    )
+    assert ddl_path.exists(), f"DDL ファイルが存在しません: {ddl_path}"
+    ddl_source = ddl_path.read_text(encoding="utf-8")
+
+    # CREATE TABLE supplier_channels (...) ブロックを括弧の深さで抽出
+    start_match = re.search(
+        r"CREATE TABLE IF NOT EXISTS %I\.supplier_channels\s*\(",
+        ddl_source,
+    )
+    assert start_match, "DDL に supplier_channels テーブルが見つかりません"
+
+    body_start = start_match.end()  # 開き括弧の次
+    depth = 1
+    pos = body_start
+    while pos < len(ddl_source) and depth > 0:
+        if ddl_source[pos] == "(":
+            depth += 1
+        elif ddl_source[pos] == ")":
+            depth -= 1
+        pos += 1
+    ddl_block = ddl_source[body_start : pos - 1]  # 最後の ) を除く
+
+    # 列名抽出: 先頭が識別子（CONSTRAINT/REFERENCES/PRIMARY/UNIQUE 以外）の行
+    _DDL_SKIP = {"constraint", "references", "primary", "unique", "check", "foreign"}
+    ddl_columns: set[str] = set()
+    for line in ddl_block.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        col_name = line.split()[0].lower()
+        if col_name and col_name.isidentifier() and col_name not in _DDL_SKIP:
+            ddl_columns.add(col_name)
+
+    assert ddl_columns, "DDL から列名を抽出できませんでした"
+
+    # --- router から supplier_channels INSERT 列リストを抽出 ---
+    router_path = _REPO_ROOT / "backend/app/routers/tcg_line_import.py"
+    assert router_path.exists(), f"router ファイルが存在しません: {router_path}"
+    router_source = router_path.read_text(encoding="utf-8")
+
+    insert_match = re.search(
+        r"INSERT INTO [^\n]*supplier_channels\s*\n\s*\(([^)]+)\)",
+        router_source,
+        re.DOTALL,
+    )
+    assert insert_match, "router に supplier_channels の INSERT 文が見つかりません"
+    insert_cols_str = insert_match.group(1)
+    insert_columns = {c.strip().lower() for c in insert_cols_str.split(",")}
+
+    # --- DDL 外の列を検出 ---
+    extra_cols = insert_columns - ddl_columns
+    assert not extra_cols, (
+        f"supplier_channels INSERT に DDL 外の列があります: {extra_cols}\n"
+        f"DDL 列: {sorted(ddl_columns)}\n"
+        f"INSERT 列: {sorted(insert_columns)}"
+    )
