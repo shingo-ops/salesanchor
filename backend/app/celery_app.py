@@ -34,6 +34,7 @@ celery_app = Celery(
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
+        "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
     ],
 )
 
@@ -149,5 +150,11 @@ celery_app.conf.beat_schedule = {
     "tcg-mirror-daily-write": {
         "task": "app.tasks.tcg_mirror.run_tcg_mirror_write",
         "schedule": crontab(hour=2, minute=30),  # JST 02:30（refresh-all-avatars の30分後）
+    },
+    # REVIEW-STAGE: 24h 超過の pending_review ジョブを discarded に更新（1時間ごと）
+    # pending_messages（JSONB）を NULL にして監査行は残す
+    "discard-stale-pending-import-jobs": {
+        "task": "app.tasks.tcg_import_discard.discard_stale_pending_jobs",
+        "schedule": crontab(minute=0),  # 毎時0分
     },
 }
