@@ -436,7 +436,10 @@ export default function TcgLineImportPage() {
 
         {pendingJobs.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {pendingJobs.map((job) => (
+            {/* アップロード結果で既に表示中の job は pending 一覧から除外（二重 ReviewSection 防止）*/}
+            {pendingJobs
+              .filter((job) => !(result?.review_status === "pending_review" && result.import_job_id === job.id))
+              .map((job) => (
               <div key={job.id}>
                 <div
                   style={{
