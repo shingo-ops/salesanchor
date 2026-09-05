@@ -510,9 +510,9 @@ async def resolve_supplier(
             text(
                 f"""
                 INSERT INTO {TCG_SCHEMA}.supplier_channels
-                  (id, supplier_id, channel, is_active, created_at)
+                  (id, supplier_id, channel, is_active)
                 VALUES
-                  (:id, :supplier_id, 'line', TRUE, now())
+                  (:id, :supplier_id, 'line', TRUE)
                 """
             ),
             {"id": str(new_sc_id), "supplier_id": str(new_supplier_id)},
