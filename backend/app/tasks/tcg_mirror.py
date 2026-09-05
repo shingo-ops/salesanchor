@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 MIRROR_SPREADSHEET_ID = "1IBIpge6Qz2arq93OHmRFnCGBMj2kVhrgEjtY8c5ecus"
 
 # TCG解析システムは tenant_004 専用スキーマ。全SQLはこの定数で修飾する
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",

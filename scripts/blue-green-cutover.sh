@@ -91,6 +91,7 @@ docker run -d \
   --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
   --env-file "${REPO_DIR}/.env" \
   --env GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json \
+  --env TCG_SCHEMA="${TCG_SCHEMA:-tenant_004}" \
   --log-driver json-file \
   --log-opt max-size=20m \
   --log-opt max-file=5 \

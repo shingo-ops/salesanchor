@@ -37,7 +37,7 @@ ENGINE_VERSION = "name-first-v2"
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
 
 # TCG解析システムは tenant_004 専用スキーマ
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 
 # ---------------------------------------------------------------------------

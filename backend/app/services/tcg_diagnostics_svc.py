@@ -17,7 +17,7 @@ from typing import Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # 許可キー一覧（完全一致のみ受理）

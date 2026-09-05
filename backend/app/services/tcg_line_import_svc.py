@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # 定数
 # ---------------------------------------------------------------------------
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 JST = timezone(timedelta(hours=9))
 
 # 日付行: "2026.08.26 月曜日" など
