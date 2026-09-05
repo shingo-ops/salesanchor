@@ -584,6 +584,7 @@ run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
 run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
 
 # QA-03: tenant_001 に TCG 全テーブル 27 本を作成 + 分類マスタ seed + テスト仕入元 3 件（QA 専用・冪等）
+# tenant_006 は Meta App Review 専用（QA 禁止）→ QA は tenant_001 を使用
 run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
 
 echo ""
