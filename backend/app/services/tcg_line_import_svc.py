@@ -46,16 +46,56 @@ def sha256_text(text_content: str) -> str:
     return hashlib.sha256(text_content.encode("utf-8")).hexdigest()
 
 
+def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
+    """
+    GAS の latest24SplitHeader_ と同等ロジック。
+
+    仕入元マスタ名（長さ降順）で前方一致を試し、
+    一致すれば (name, rest_body) を返す。
+    一致しなければ最初のスペースで分割（GAS のフォールバックと同等）。
+
+    Args:
+        tail:         時刻行から時刻部分を除いた残り文字列（例: "倉田 和博 本文..."）
+        sorted_names: tcg_suppliers.name を長さ降順に並べたリスト
+
+    Returns:
+        (display_name, body)
+
+    GAS 参照:
+        latest24SplitHeader_ — Latest24LineImport.js:23-37
+        if (tail === name) → exact match
+        if (tail.indexOf(name + ' ') === 0) → prefix+space match
+        else → split at first space
+    """
+    for name in sorted_names:
+        if tail == name:
+            return name, ""
+        if tail.startswith(name + " "):
+            return name, tail[len(name) + 1:]
+    # GAS フォールバックと同等: 最初のスペースで分割
+    parts = tail.split(" ", 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
 # ---------------------------------------------------------------------------
 # パーサ
 # ---------------------------------------------------------------------------
 
 
-def parse_line_export(export_text: str) -> list[dict]:
+def parse_line_export(
+    export_text: str,
+    supplier_names: list[str] | None = None,
+) -> list[dict]:
     """
     LINE エクスポートテキストをメッセージ単位に分解する。
 
-    GAS の parseLatest24LineExport と同等ロジック（supplierRows なし版）。
+    GAS の parseLatest24LineExport と同等ロジック。
+
+    Args:
+        export_text:    LINE エクスポートファイルの全文字列
+        supplier_names: tcg_suppliers.name の一覧（長さ降順ソート済み）。
+                        渡すと GAS の latest24SplitHeader_ と同等の送信者名切り出しを行う。
+                        None または空リストの場合は最初のスペースで分割（後方互換）。
 
     戻り値:
         [{
@@ -65,6 +105,7 @@ def parse_line_export(export_text: str) -> list[dict]:
             "is_system_event": bool,
         }]
     """
+    sorted_names: list[str] = supplier_names or []
     current_date: str | None = None
     messages: list[dict] = []
     current_msg: dict | None = None
@@ -97,13 +138,15 @@ def parse_line_export(export_text: str) -> list[dict]:
             minute = int(time_m.group(2))
             rest = time_m.group(3)
 
-            # "送信者名 本文" を分割（最初のスペースが境界）
-            parts = rest.split(" ", 1)
-            display_name = parts[0] if len(parts) >= 1 else ""
-            body = parts[1] if len(parts) >= 2 else ""
+            # GAS の latest24SplitHeader_ と同等:
+            # マスタ名で前方一致 → 一致しなければ最初のスペースで分割
+            display_name, body = _split_sender(rest, sorted_names)
 
             timestamp = f"{current_date} {hour:02d}:{minute:02d}:00"
-            is_system = bool(_SYSTEM_EVENT_RE.search(body))
+            # GAS と同等: displayName + firstBody の連結に対してシステムイベント判定
+            # (Latest24LineImport.js:73)
+            check_str = display_name + (" " + body if body else "")
+            is_system = bool(_SYSTEM_EVENT_RE.search(check_str))
 
             current_msg = {
                 "timestamp": timestamp,
@@ -116,9 +159,10 @@ def parse_line_export(export_text: str) -> list[dict]:
         # 継続行（時刻・日付・空行のどれでもない行）
         if current_msg is not None:
             current_msg["body"] = current_msg["body"] + _MSG_SEPARATOR + line
-            # システムイベント再判定
+            # システムイベント再判定（継続行込みで再チェック）
+            check_str = current_msg["display_name"] + " " + current_msg["body"]
             current_msg["is_system_event"] = bool(
-                _SYSTEM_EVENT_RE.search(current_msg["body"])
+                _SYSTEM_EVENT_RE.search(check_str)
             )
 
     # 最後のメッセージを確定
@@ -138,33 +182,33 @@ def resolve_suppliers(
     db_suppliers: list[dict],
 ) -> tuple[list[dict], list[dict]]:
     """
-    最長一致優先プレフィックスマッチで display_name → (sp_code, canonical_name) を解決。
+    display_name の完全一致で (sp_code, canonical_name) を解決。
+
+    parse_line_export が supplier_names を使って送信者名を確定した後は、
+    display_name はマスタ名そのものになるため完全一致で十分。
+    これは GAS の `spId: byName[m.displayName] || ''`（Latest24LineImport.js:74）
+    と同等。
 
     Args:
         messages: parse_line_export の戻り値（is_system_event=False のみを渡すこと）
-        db_suppliers: [{"code": str, "name": str}, ...] — tcg_suppliers 全件
+        db_suppliers: [{"code": str, "name": str}, ...] — tcg_suppliers is_active=TRUE 全件
 
     Returns:
         (resolved, unresolved)
         resolved:   [{...message, "sp_code": str, "canonical_name": str}]
         unresolved: [{"display_name": str, "timestamps": list[str]}]
     """
-    # 最長一致のため name 長で降順ソート
-    sorted_suppliers = sorted(db_suppliers, key=lambda s: len(s["name"]), reverse=True)
+    # 完全一致辞書（GAS の byName と同等）
+    name_to_supplier: dict[str, dict] = {s["name"]: s for s in db_suppliers}
 
     resolved: list[dict] = []
     unresolved_map: dict[str, list[str]] = {}  # display_name → timestamp list
 
     for msg in messages:
         dn = msg["display_name"]
-        matched_code: str | None = None
-        matched_name: str | None = None
-
-        for sup in sorted_suppliers:
-            if dn.startswith(sup["name"]):
-                matched_code = sup["code"]
-                matched_name = sup["name"]
-                break
+        sup = name_to_supplier.get(dn)
+        matched_code: str | None = sup["code"] if sup else None
+        matched_name: str | None = sup["name"] if sup else None
 
         if matched_code:
             resolved.append(
@@ -257,12 +301,13 @@ async def import_line_export(
     LINE エクスポートファイルを取り込む。
 
     1. ファイル全体の sha256 で冪等化チェック
-    2. parse_line_export → システムイベント除外 → ウィンドウフィルタ
-    3. tcg_suppliers 全件取得 → サプライヤー解決
-    4. provider_entries 構築
-    5. 各 sp_code の source_messages を supersede + 新規 INSERT + extraction_jobs INSERT
-    6. import_jobs に記録
-    7. 結果を返す
+    2. tcg_suppliers 先行取得（parse_line_export に渡す名前リストを構築）
+    3. parse_line_export → システムイベント除外 → ウィンドウフィルタ
+    4. サプライヤー解決（完全一致）
+    5. provider_entries 構築
+    6. 各 sp_code の source_messages を supersede + 新規 INSERT + extraction_jobs INSERT
+    7. import_jobs に記録
+    8. 結果を返す
 
     Args:
         window_start: 明示的な開始 timestamp (YYYY-MM-DD HH:MM:00 以上)。
@@ -300,8 +345,18 @@ async def import_line_export(
             "import_job_id": str(existing[0]),
         }
 
-    # --- 2. パース & フィルタ ---
-    all_messages = parse_line_export(export_text)
+    # --- 2. マスタ先行取得（parse_line_export に渡すため冪等チェック直後に実行）---
+    # GAS は parseLatest24LineExport の引数に supplierRows を渡す設計のため、
+    # Python も parse 前にマスタを取得する。
+    suppliers_rows = await db.execute(
+        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
+    )
+    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
+    # parse に渡す名前リスト（長さ降順ソート = GAS の latest24NameMatcher_ と同等）
+    supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
+
+    # --- 3. パース & フィルタ ---
+    all_messages = parse_line_export(export_text, supplier_names)
 
     # システムイベント除外
     messages = [m for m in all_messages if not m["is_system_event"]]
@@ -320,22 +375,17 @@ async def import_line_export(
 
     message_count = len(messages)
 
-    # --- 3. サプライヤー解決 ---
-    suppliers_rows = await db.execute(
-        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
-    )
-    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
-
+    # --- 4. サプライヤー解決（完全一致: GAS の byName[displayName] と同等）---
     resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
 
-    # --- 4. プロバイダエントリ構築 ---
+    # --- 5. プロバイダエントリ構築 ---
     provider_entries = build_provider_entries(resolved_msgs)
     provider_count = len(provider_entries)
     unresolved_count = len(unresolved)
     unresolved_display_names = [u["display_name"] for u in unresolved]
     skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
-    # --- 5. source_messages / extraction_jobs へ INSERT ---
+    # --- 6. source_messages / extraction_jobs へ INSERT ---
     enqueued_ids: list[str] = []
     for entry in provider_entries:
         sp_code = entry["sp_code"]
@@ -439,7 +489,7 @@ async def import_line_export(
         # commit 後にエンキューするため ID を蓄積
         enqueued_ids.append(str(new_sm_id))
 
-    # --- 6. import_jobs に記録 ---
+    # --- 7. import_jobs に記録 ---
     import_job_id = uuid.uuid4()
     await db.execute(
         text(
