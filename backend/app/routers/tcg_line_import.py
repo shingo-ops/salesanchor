@@ -190,6 +190,10 @@ async def upload_line_export(
 
 # ---------------------------------------------------------------------------
 # エンドポイント: 一覧 / 詳細 / 保留一覧
+#
+# 【重要】固定パス（/history, /pending, /unresolved）は可変パス（/{import_job_id}）
+# より前に定義する。FastAPI はルートを定義順に評価するため、可変パスが先にあると
+# 固定パス文字列が UUID パラメータとして誤評価される（IMP-39 で本番障害として発覚）。
 # ---------------------------------------------------------------------------
 
 
@@ -239,57 +243,6 @@ async def list_pending_jobs(
             )
         )
     return result
-
-
-@router.get(
-    "/tcg/line-import/{import_job_id}",
-    response_model=PendingJobDetail,
-    dependencies=[Depends(require_super_admin)],
-    tags=["super-admin"],
-    summary="保留中ジョブの詳細を返す",
-)
-async def get_pending_job(
-    import_job_id: str,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    指定 import_job_id の保留中ジョブの詳細を返す。
-    pending_messages の本文は返さない（サイズが大きいため）。
-    """
-    row = await db.execute(
-        text(
-            f"""
-            SELECT id, filename, message_count, unresolved_count,
-                   unresolved_names,
-                   window_start AT TIME ZONE 'UTC' AS window_start,
-                   window_end   AT TIME ZONE 'UTC' AS window_end,
-                   review_status,
-                   created_at   AT TIME ZONE 'UTC' AS created_at
-            FROM {TCG_SCHEMA}.import_jobs
-            WHERE id = :job_id
-            """
-        ),
-        {"job_id": import_job_id},
-    )
-    rec = row.fetchone()
-    if rec is None:
-        raise HTTPException(status_code=404, detail="import_job が見つかりません")
-
-    names = rec[4] if rec[4] is not None else []
-    if isinstance(names, str):
-        names = json.loads(names)
-
-    return PendingJobDetail(
-        id=str(rec[0]),
-        filename=rec[1],
-        message_count=rec[2],
-        unresolved_count=rec[3],
-        unresolved_names=names,
-        window_start=rec[5].isoformat() if rec[5] and hasattr(rec[5], "isoformat") else (str(rec[5]) if rec[5] else None),
-        window_end=rec[6].isoformat() if rec[6] and hasattr(rec[6], "isoformat") else (str(rec[6]) if rec[6] else None),
-        review_status=rec[7],
-        created_at=rec[8].isoformat() if hasattr(rec[8], "isoformat") else str(rec[8]),
-    )
 
 
 @router.get(
@@ -371,6 +324,57 @@ async def get_latest_unresolved(
         import_job_id=str(rec[0]),
         unresolved_count=rec[1],
         unresolved_display_names=names,
+    )
+
+
+@router.get(
+    "/tcg/line-import/{import_job_id}",
+    response_model=PendingJobDetail,
+    dependencies=[Depends(require_super_admin)],
+    tags=["super-admin"],
+    summary="保留中ジョブの詳細を返す",
+)
+async def get_pending_job(
+    import_job_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    指定 import_job_id の保留中ジョブの詳細を返す。
+    pending_messages の本文は返さない（サイズが大きいため）。
+    """
+    row = await db.execute(
+        text(
+            f"""
+            SELECT id, filename, message_count, unresolved_count,
+                   unresolved_names,
+                   window_start AT TIME ZONE 'UTC' AS window_start,
+                   window_end   AT TIME ZONE 'UTC' AS window_end,
+                   review_status,
+                   created_at   AT TIME ZONE 'UTC' AS created_at
+            FROM {TCG_SCHEMA}.import_jobs
+            WHERE id = :job_id
+            """
+        ),
+        {"job_id": import_job_id},
+    )
+    rec = row.fetchone()
+    if rec is None:
+        raise HTTPException(status_code=404, detail="import_job が見つかりません")
+
+    names = rec[4] if rec[4] is not None else []
+    if isinstance(names, str):
+        names = json.loads(names)
+
+    return PendingJobDetail(
+        id=str(rec[0]),
+        filename=rec[1],
+        message_count=rec[2],
+        unresolved_count=rec[3],
+        unresolved_names=names,
+        window_start=rec[5].isoformat() if rec[5] and hasattr(rec[5], "isoformat") else (str(rec[5]) if rec[5] else None),
+        window_end=rec[6].isoformat() if rec[6] and hasattr(rec[6], "isoformat") else (str(rec[6]) if rec[6] else None),
+        review_status=rec[7],
+        created_at=rec[8].isoformat() if hasattr(rec[8], "isoformat") else str(rec[8]),
     )
 
 
