@@ -3,7 +3,11 @@ MIG-04 Stage 1: tcg_line_import_svc の単体テスト（DB 不要）。
 
 テスト対象:
   - parse_line_export: 日付行 / 時刻行 / 継続行 / システムイベント / エッジケース
-  - resolve_suppliers: プレフィックス最長一致 / 未解決 / 全員未解決
+  - parse_line_export: GAS latest24SplitHeader_ 準拠の送信者名切り出し
+      - マスタに「倉田 和博」があるとき「12:00 倉田 和博 本文」→ display_name=「倉田 和博」
+      - マスタにない「とも」は最初のスペースで切り出し
+      - 「仕入元A」と「仕入元AB社」の両方がマスタにあるとき誤マッチしない
+  - resolve_suppliers: 完全一致（GAS byName[displayName] 準拠）/ 未解決 / 全員未解決
   - build_provider_entries: グループ化 / タイムスタンプ昇順 / SHA256
   - sha256_text: 冪等性
   - window_hours 自動計算: window_start が None かつ window_hours>0 で cutoff が設定される
@@ -189,7 +193,7 @@ def test_resolve_exact_match():
 
 
 def test_resolve_prefix_match():
-    """プレフィックス一致でサプライヤーが解決される（display_name が name で始まる場合）。"""
+    """完全一致のみ解決される（プレフィックス一致は unresolved 扱い）。GAS byName[displayName] と同等。"""
     messages = [
         {
             "timestamp": "2026-08-01 10:00:00",
@@ -200,8 +204,9 @@ def test_resolve_prefix_match():
     ]
     db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
-    assert len(resolved) == 1
-    assert resolved[0]["sp_code"] == "SP0001"
+    assert len(resolved) == 0
+    assert len(unresolved) == 1
+    assert unresolved[0]["display_name"] == "仕入元A（別支店）"
 
 
 def test_resolve_longest_prefix_wins():
@@ -617,3 +622,75 @@ async def test_enqueue_called_after_commit():
         f"_enqueue_extraction (位置 {enqueue_pos}) が db.commit (位置 {commit_pos}) より先: "
         "rollback 時に孤立タスクが発生する"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# parse_line_export — GAS latest24SplitHeader_ 準拠の送信者名切り出し
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_split_sender_multiword_master_name():
+    """
+    マスタに「倉田 和博」（スペース含む複合語）があるとき、
+    「12:00 倉田 和博 本文テキスト」の display_name が「倉田 和博」になること。
+
+    根拠: GAS latest24SplitHeader_ は tail.indexOf(name + ' ') === 0 でマスタ名を
+          優先確定する。従来の Python は split(' ', 1) で「倉田」のみを取り出してしまい、
+          resolve_suppliers での完全一致が成立しなかった。
+
+    GAS 参照: Latest24LineImport.js:31-32
+    """
+    export = "2026.08.01 金曜日\n12:00 倉田 和博 本文テキスト\n"
+    supplier_names = ["倉田 和博"]
+
+    msgs = parse_line_export(export, supplier_names)
+    user_msgs = [m for m in msgs if not m["is_system_event"]]
+
+    assert len(user_msgs) == 1
+    assert user_msgs[0]["display_name"] == "倉田 和博", (
+        f"display_name={user_msgs[0]['display_name']!r}: "
+        "マスタ名「倉田 和博」で前方一致すべきだが最初のスペースで分割された"
+    )
+    assert user_msgs[0]["body"] == "本文テキスト"
+
+
+def test_split_sender_unresolved_falls_back_to_first_space():
+    """
+    マスタにない送信者「とも」は従来どおり最初のスペースで分割されること。
+
+    GAS 参照: latest24SplitHeader_ のフォールバック（Latest24LineImport.js:35-36）
+    """
+    export = "2026.08.01 金曜日\n12:00 とも 本文テキスト\n"
+    supplier_names = ["倉田 和博"]  # 「とも」はマスタにない
+
+    msgs = parse_line_export(export, supplier_names)
+    user_msgs = [m for m in msgs if not m["is_system_event"]]
+
+    assert len(user_msgs) == 1
+    assert user_msgs[0]["display_name"] == "とも"
+    assert user_msgs[0]["body"] == "本文テキスト"
+
+
+def test_split_sender_no_prefix_false_match():
+    """
+    「仕入元A」と「仕入元AB社」の両方がマスタにあるとき、
+    「12:00 仕入元AB社 本文」の display_name が「仕入元AB社」になること。
+
+    最長一致（GAS の latest24NameMatcher_ = 長さ降順ソート）により、
+    短い「仕入元A」がプレフィックスとして誤マッチしないことを検証する。
+    「仕入元AB社」は「仕入元A 」で始まらないため「仕入元A」にはマッチしない。
+
+    GAS 参照: Latest24LineImport.js:23-24（コメント "Longest name wins..."）
+    """
+    export = "2026.08.01 金曜日\n12:00 仕入元AB社 本文テキスト\n"
+    # 長さ降順: 「仕入元AB社」(6文字) → 「仕入元A」(4文字)
+    supplier_names = ["仕入元AB社", "仕入元A"]
+
+    msgs = parse_line_export(export, supplier_names)
+    user_msgs = [m for m in msgs if not m["is_system_event"]]
+
+    assert len(user_msgs) == 1
+    assert user_msgs[0]["display_name"] == "仕入元AB社", (
+        f"display_name={user_msgs[0]['display_name']!r}: "
+        "「仕入元A」への短縮誤マッチが発生した（最長一致ソートが機能していない）"
+    )
+    assert user_msgs[0]["body"] == "本文テキスト"
