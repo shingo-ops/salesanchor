@@ -336,6 +336,7 @@ async def import_line_export(
     skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
     # --- 5. source_messages / extraction_jobs へ INSERT ---
+    enqueued_ids: list[str] = []
     for entry in provider_entries:
         sp_code = entry["sp_code"]
 
@@ -435,8 +436,8 @@ async def import_line_export(
             ),
             {"id": str(new_ej_id), "smid": str(new_sm_id)},
         )
-        # Celery タスクを非同期起動（Redis 未起動時はスキップ）
-        _enqueue_extraction(str(new_sm_id))
+        # commit 後にエンキューするため ID を蓄積
+        enqueued_ids.append(str(new_sm_id))
 
     # --- 6. import_jobs に記録 ---
     import_job_id = uuid.uuid4()
@@ -463,6 +464,10 @@ async def import_line_export(
     )
 
     await db.commit()
+
+    # DB commit 後にエンキュー（commit 前の enqueue は rollback 時に孤立タスクが生じる）
+    for sm_id in enqueued_ids:
+        _enqueue_extraction(sm_id)
 
     return {
         "status": "imported",

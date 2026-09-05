@@ -8,12 +8,13 @@ MIG-04 Stage 1: tcg_line_import_svc の単体テスト（DB 不要）。
   - sha256_text: 冪等性
   - window_hours 自動計算: window_start が None かつ window_hours>0 で cutoff が設定される
   - import_line_export: supersede の実行順序（INSERT before UPDATE）
+  - import_line_export: _enqueue_extraction は db.commit() の後に呼ばれること
 """
 from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -553,4 +554,66 @@ async def test_source_message_insert_before_update_supersede():
     assert insert_pos < update_pos, (
         f"INSERT (位置 {insert_pos}) が UPDATE (位置 {update_pos}) より後: "
         "superseded_by FK は NOT DEFERRABLE のため ForeignKeyViolation が発生する"
+    )
+
+
+async def test_enqueue_called_after_commit():
+    """
+    _enqueue_extraction は db.commit() の後に呼ばれること。
+
+    根拠: commit 前にエンキューすると、その後 rollback が発生した場合に
+          DB に存在しない source_message_id で extract タスクが実行される。
+          commit 後エンキューにより孤立タスク（orphan task）を防ぐ。
+
+    検証方法: call_order リストに "commit" / "enqueue" をタイムスタンプ順で追記し、
+              "commit" が "enqueue" より先に来ることを assert する。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    call_order: list[str] = []
+
+    async def tracked_execute(stmt, params=None):
+        result = MagicMock()
+        sql = str(stmt)
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql:
+            result.fetchone.return_value = ("test-channel-id",)
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchall.return_value = [("test-old-sm-id",)]
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    async def tracked_commit():
+        call_order.append("commit")
+
+    db = MagicMock()
+    db.execute = tracked_execute
+    db.commit = tracked_commit
+
+    with patch(
+        "app.services.tcg_line_import_svc._enqueue_extraction",
+        side_effect=lambda sm_id: call_order.append("enqueue"),
+    ):
+        await import_line_export(
+            db=db,
+            filename="test.txt",
+            export_text=export_text,
+            uploaded_by=None,
+            window_hours=0,
+        )
+
+    assert "commit" in call_order, "db.commit() が呼ばれなかった"
+    assert "enqueue" in call_order, "_enqueue_extraction が呼ばれなかった"
+    commit_pos = call_order.index("commit")
+    enqueue_pos = call_order.index("enqueue")
+    assert commit_pos < enqueue_pos, (
+        f"_enqueue_extraction (位置 {enqueue_pos}) が db.commit (位置 {commit_pos}) より先: "
+        "rollback 時に孤立タスクが発生する"
     )

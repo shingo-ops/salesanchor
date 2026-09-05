@@ -48,6 +48,33 @@ IMP-24 で `docker compose logs --tail=150 backend` を実行したが出力 0 �
 同タイミングで `celery-worker` が 00:18:50 → 00:25:20 に再起動していた。
 backend コンテナも同時期に再起動し、ログが消えた可能性が高い（2コマンド制限内での確定不可）。
 
+## 追加発見: commit 前エンキュー問題
+
+### 現象（修正前）
+
+`backend/app/services/tcg_line_import_svc.py:439`（修正前行番号）:
+
+```python
+# for old_rec ループ内
+_enqueue_extraction(str(new_sm_id))  # ← db.commit() より前に呼ばれていた
+```
+
+`await db.commit()` は `:465`（修正前）にあり、`_enqueue_extraction` の呼び出しよりも後。
+Celery タスクが発行された時点では DB トランザクションがまだ確定していない。
+
+### リスク
+
+`db.commit()` 前に `_enqueue_extraction` が呼ばれると、
+rollback が発生した場合に extract タスクが DB に存在しない `source_message_id` で実行される（孤立タスク）。
+本番では Redis エラーで握りつぶされているため顕在化していないが、設計上の欠陥。
+
+### 修正
+
+- ループ内: `enqueued_ids.append(str(new_sm_id))` で ID を蓄積
+- `await db.commit()` の直後に `for sm_id in enqueued_ids: _enqueue_extraction(sm_id)`
+
+守り手: `backend/tests/test_tcg_line_import.py::test_enqueue_called_after_commit`
+
 ## 影響範囲
 
 - 修正ファイル: `backend/app/services/tcg_line_import_svc.py`
