@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # ---------------------------------------------------------------------------
 
 TCG_SCHEMA = "tenant_004"
+JST = timezone(timedelta(hours=9))
 
 # 日付行: "2026.08.26 月曜日" など
 _DATE_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\s+.+$")
@@ -432,7 +433,7 @@ async def import_line_export(
         try:
             received_at_dt = datetime.strptime(
                 entry["received_at"], "%Y-%m-%d %H:%M:%S"
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=JST)
         except ValueError:
             received_at_dt = None
 
