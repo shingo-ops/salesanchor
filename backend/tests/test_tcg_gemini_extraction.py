@@ -25,6 +25,7 @@ from app.services.gemini_extraction_svc import (
     format_prompt_input,
     parse_extraction_response,
 )
+from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -325,7 +326,7 @@ def test_auto_analyze_on_calls_analyze(monkeypatch):
 def _extract_sql_strings_from_source(source: str) -> list[str]:
     """
     ソースコード中の text(...) 呼び出し内の SQL 文字列を抽出する。
-    f-string の場合は {TCG_SCHEMA} を 'tenant_004' に展開して検査する。
+    f-string の場合は {TCG_SCHEMA} を TCG_SCHEMA の実際の値に展開して検査する。
     """
     import re
 
@@ -344,14 +345,14 @@ def _extract_sql_strings_from_source(source: str) -> list[str]:
         for m in re.finditer(pat, source, re.DOTALL):
             sql = m.group(1)
             # {TCG_SCHEMA} を実際の値に展開（f-string のシミュレーション）
-            sql = sql.replace("{TCG_SCHEMA}", "tenant_004")
+            sql = sql.replace("{TCG_SCHEMA}", _TCG_SCHEMA)
             sqls.append(sql)
     return sqls
 
 
 def test_tcg_extraction_sql_has_schema_prefix():
     """
-    tcg_extraction.py の全 text(...) SQL 文字列が tenant_004. を含み、
+    tcg_extraction.py の全 text(...) SQL 文字列が TCG_SCHEMA. を含み、
     {TCG_SCHEMA} が文字どおり残っていないこと。
     (IMP-05: 6 箇所が f 無しで {TCG_SCHEMA} が置換されなかった教訓)
     """
@@ -363,8 +364,8 @@ def test_tcg_extraction_sql_has_schema_prefix():
     assert sqls, "tcg_extraction.py に text() SQL が見つからない（実装漏れの可能性）"
 
     for sql in sqls:
-        assert "tenant_004." in sql, (
-            f"SQL に 'tenant_004.' が含まれていない:\n{sql[:200]}"
+        assert f"{_TCG_SCHEMA}." in sql, (
+            f"SQL に '{_TCG_SCHEMA}.' が含まれていない:\n{sql[:200]}"
         )
         assert "{TCG_SCHEMA}" not in sql, (
             f"SQL に未展開の '{{TCG_SCHEMA}}' が残っている（f-string 忘れ）:\n{sql[:200]}"
@@ -383,8 +384,8 @@ def test_tcg_line_import_svc_sql_has_schema_prefix():
 
     # tcg_line_import_svc は text(f"...") 形式を使用
     for sql in sqls:
-        assert "tenant_004." in sql, (
-            f"tcg_line_import_svc.py の SQL に 'tenant_004.' が含まれていない:\n{sql[:200]}"
+        assert f"{_TCG_SCHEMA}." in sql, (
+            f"tcg_line_import_svc.py の SQL に '{_TCG_SCHEMA}.' が含まれていない:\n{sql[:200]}"
         )
         assert "{TCG_SCHEMA}" not in sql, (
             f"tcg_line_import_svc.py の SQL に未展開の '{{TCG_SCHEMA}}' が残っている:\n{sql[:200]}"

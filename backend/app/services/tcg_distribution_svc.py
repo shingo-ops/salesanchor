@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
