@@ -2,9 +2,14 @@
 branch: release/tcg-import-hotfix-imp39
 date: 2026-09-05
 card: IMP-39
+adr: ADR-154
+recon: docs/handoff/tcg-import-review-hotfix/recon.md
 ---
 
 # design: TCG LINE import ホットフィックス（IMP-39）
+
+関連 ADR: [ADR-154](../../../../docs/adr/ADR-154-tcg-line-import-matching.md)
+実測・問題記録: [recon.md](recon.md)
 
 ## KGI
 
@@ -64,10 +69,23 @@ git revert HEAD  # 本 PR のコミットを revert
 
 migration は含まない。戻しリスクなし。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-FastAPI 公式ドキュメント "Path Parameters" — 「パスが重なる場合、最初に宣言されたルートが優先される」と明記。
-asyncpg 公式 — PostgreSQL 型マッピング: `TIMESTAMPTZ` → Python `datetime.datetime`（aware）。
+| 事例 | 内容 | 我々への応用 |
+|------|------|-------------|
+| FastAPI 公式 "Path Parameters" | 「パスが重なる場合、最初に宣言されたルートが優先される」と明記。可変パスは任意の文字列にマッチするため、固定パスは先に置く必要がある | `/history`, `/pending`, `/unresolved` を `/{import_job_id}` より前に移動。今後固定パスを追加する場合も同様のルールを適用 |
+| asyncpg 公式ドキュメント | `TIMESTAMPTZ` → Python `datetime.datetime`（aware）の型マッピングが明記。文字列は型エラー | `_compute_window` 戻り値（str）を INSERT 直前で `datetime.strptime` 変換するパターンを確立 |
+
+## 維持の仕組み
+
+| 仕組み | 対象バグ | 検証タイミング |
+|--------|---------|--------------|
+| `test_history_route_before_job_id_route` | バグ 1（ルーター順序） | 毎 CI（pytest） |
+| `test_pending_route_before_job_id_route` | バグ 1（ルーター順序） | 毎 CI（pytest） |
+| `test_import_window_start_passed_as_datetime` | バグ 2（datetime 型） | 毎 CI（pytest） |
+| コメント `# 【重要】固定パスは可変パスより前` | バグ 1（知識継承） | コードレビュー時 |
+
+将来ルーターに新しい固定パスを追加するときは、`/{import_job_id}` より前に置くこと。
 
 ## 守り手
 
