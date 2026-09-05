@@ -1,5 +1,8 @@
 # SEC-01 design: Gemini エラーメッセージ sanitize
 
+recon: docs/handoff/sec-gemini-error-redact/recon.md  
+ADR: ADR-075
+
 ## KGI
 
 DB `extraction_jobs.error_message` に `key=<値>` が保存されない。
@@ -37,26 +40,22 @@ DB `extraction_jobs.error_message` に `key=<値>` が保存されない。
 | 503 | サービス利用不可 |
 | その他 4xx/5xx | HTTPエラー |
 
-### 適用箇所
+### 適用箇所（ADR-075: Secrets は GitHub Secrets のみ・エラーメッセージにも適用）
 
 1. `call_gemini_extraction()` → RuntimeError を raise するとき
 2. `extract_message()` → except で error_message を設定するとき
 3. `extract_and_analyze_source_message()` → outer except で error_message を設定するとき
 
-### 外部事例
-
-Google Gemini SDK は `google.api_core.exceptions.ResourceExhausted` 等を送出し、メッセージにリクエスト URL（`?key=<value>` 付き）を含める実装になっている。同様の sanitize パターンは OpenAI SDK wrapper 等でも広く採用されている。
-
-### 守り手
-
-- `backend/tests/test_gemini_error_redact.py` の 11 件のテストが regression guard として機能する
-- CI (pytest) が通ること
-
-### 弊害
+### 弊害・戻し方
 
 - エラーログ（logger.exception）には生の例外が残る（ログはローテートされるが永続化されない）
 - デバッグ時は `extraction_jobs.error_message` だけでは詳細不明になるが、ログで補える
+- 戻し方: `_safe_error_message()` を削除し `str(exc)` に戻す（1コミット）
 
-### 戻し方
+## 外部・過去事例の参照と我々への応用
 
-`_safe_error_message()` を削除し、`str(exc)` に戻す（1コミットで完全に戻せる）
+Google Gemini SDK は `google.api_core.exceptions.ResourceExhausted` 等を送出し、メッセージにリクエスト URL（`?key=<value>` 付き）を含める実装になっている（ADR-075 が定める「Secrets は GitHub Secrets のみ」の趣旨をエラーメッセージにも適用）。同様の sanitize パターンは OpenAI SDK wrapper 等でも広く採用されている（`error.message` の API キー除去は業界標準）。
+
+## 維持の仕組み
+
+守り手: backend/tests/test_gemini_error_redact.py（11件・CI必須パス）
