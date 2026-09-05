@@ -21,7 +21,7 @@
 |------|---------|
 | SaaS管理者メニューに「インポート」が先頭に表示される | Evaluator（Playwright: `nav[aria-label="saas-admin"] li:first-child` のテキストが「インポート」） |
 | 既存2項目（解析精度管理・為替レート管理）が保持されている | Playwright: サイドバー要素に `superAdminTcgSupplierQuality` / `superAdminFxRate` が存在 |
-| `check-i18n-missing-keys.js` が PASSED | `node scripts/check-i18n-missing-keys.js` → 0エラー |
+| `frontend/scripts/check-i18n-missing-keys.js` が PASSED | `frontend/scripts/check-i18n-missing-keys.js` → 0エラー |
 | `tsc --noEmit` が 0 エラーで完了する | CI `frontend-build` ジョブ green |
 | `vite build` が成功する | CI `frontend-build` ジョブ green |
 | ja.json / en.json に `superAdminTcgLineImport` キーが追加されている | `grep "superAdminTcgLineImport" frontend/src/locales/*.json` → 2件（ja/en） |
@@ -35,7 +35,7 @@
 - `locales/ja.json`: `nav.superAdminTcgLineImport` = `"インポート"` を追加
 - `locales/en.json`: `nav.superAdminTcgLineImport` = `"Import"` を追加
 - `App.tsx` / backend / migration: **一切変更しない**（ルートは #3285 で追加済み）
-- `routeTitles.ts`: **変更しない**（`check-nav-title-sync.js` の `EXCLUDE_DIRS: super-admin` により対象外）
+- `frontend/src/config/routeTitles.ts`: **変更しない**（`frontend/scripts/check-nav-title-sync.js` の `EXCLUDE_DIRS: super-admin` により対象外）
 
 ---
 
@@ -51,7 +51,7 @@
 |---------|------|------|
 | 1 | `DesktopShell.tsx` saasAdminItems 先頭に `tcg-line-import` 追加 | Generator |
 | 2 | `locales/ja.json` / `en.json` に `superAdminTcgLineImport` キー追加 | Generator |
-| 3 | `check-i18n-missing-keys.js` / `check-nav-title-sync.js` / `tsc` / `vite build` で確認 | Generator |
+| 3 | `frontend/scripts/check-i18n-missing-keys.js` / `frontend/scripts/check-nav-title-sync.js` / `tsc` / `vite build` で確認 | Generator |
 
 ---
 
@@ -64,4 +64,4 @@
 
 ## 維持の仕組み
 
-守り手: CI（`frontend-build`）が `tsc --noEmit` / `vite build` を毎PR実行する。`check-i18n-missing-keys.js` が ja/en キーの同一性を強制する（ADR-027）。メニュー項目数をテストで固定する仕組みは現時点で存在しないため、項目増減はPRレビュー時に目視確認する。
+守り手: frontend/scripts/check-i18n-missing-keys.js（ja/en のキー数一致を検査）メニュー項目数をテストで固定する仕組みは現時点で存在しないため、項目増減はPRレビュー時に目視確認する。

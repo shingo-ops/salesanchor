@@ -14,7 +14,7 @@
 | `frontend/src/components/DesktopShell.tsx:190` | `saasAdminItems` 配列定義（変更前: 2項目 tcg-supplier-quality / fx-rate） |
 | `frontend/src/locales/ja.json:150` | `superAdminTcgSupplierQuality` キー（挿入直前行。新キーはここの上に追加） |
 | `frontend/src/locales/en.json:150` | 同上（英語版） |
-| `frontend/src/config/routeTitles.ts` | super-admin の tcg-supplier-quality / fx-rate に対応するエントリなし — `check-nav-title-sync.js` は `EXCLUDE_DIRS: super-admin` のため対象外 |
+| `frontend/src/config/routeTitles.ts` | super-admin の tcg-supplier-quality / fx-rate に対応するエントリなし — `frontend/scripts/check-nav-title-sync.js` は `EXCLUDE_DIRS: super-admin` のため対象外 |
 | `frontend/scripts/check-nav-title-sync.js:32` | `EXCLUDE_DIRS` に `super-admin` が含まれる（routeTitles.ts 登録不要の根拠） |
 
 ---
@@ -43,7 +43,7 @@ const EXCLUDE_DIRS = new Set([
 ]);
 ```
 
-→ `check-nav-title-sync` の検査対象外。`routeTitles.ts` 登録は**不要**。
+→ `frontend/scripts/check-nav-title-sync.js` の検査対象外。`frontend/src/config/routeTitles.ts` 登録は**不要**。
 
 ## 3. 翻訳キーの既存状況
 
@@ -68,7 +68,7 @@ const EXCLUDE_DIRS = new Set([
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | `check-nav-title-sync.js` が `super-admin` ルートに対して `routeTitles.ts` 登録を要求するか | `frontend/scripts/check-nav-title-sync.js:32` の `EXCLUDE_DIRS` を確認 | ✅ 解消済み（不要） |
+| 1 | `frontend/scripts/check-nav-title-sync.js` が `super-admin` ルートに対して `frontend/src/config/routeTitles.ts` 登録を要求するか | `frontend/scripts/check-nav-title-sync.js:32` の `EXCLUDE_DIRS` を確認 | ✅ 解消済み（不要） |
 | 2 | `nav.superAdminTcgLineImport` キーが既存か | `grep -n "superAdminTcgLineImport" frontend/src/locales/*.json` → 0件 | ✅ 解消済み（存在しない） |
 
 **未解決ゼロ確認**: 全て解消済み
