@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 
 // ---------------------------------------------------------------------------
@@ -196,9 +197,11 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
       <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
         {t("tcgLineImport.reviewSection")}
       </h3>
-      <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-        {t("tcgLineImport.reviewInstructions")}
-      </p>
+      {!allResolved && (
+        <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
+          {t("tcgLineImport.reviewInstructions")}
+        </p>
+      )}
 
       {/* 未解決名リスト（DB 再取得後は currentUnresolvedNames が正）*/}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
@@ -245,39 +248,27 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
               {!isResolved && (
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {/* 既存割り当てボタン */}
-                  {/* ui-allow: super-admin専用確認ページ、汎用コンポーネント対象外 (#3306) */}
-                  <button
+                  <Button
+                    variant="tab"
+                    active={mode === "assign"}
                     onClick={() =>
                       setModes((prev) => ({
                         ...prev,
                         [name]: prev[name] === "assign" ? undefined as unknown as "assign" : "assign",
                       }))
                     }
-                    style={{
-                      ...actionBtnStyle,
-                      background: mode === "assign" ? "var(--color-primary)" : "var(--bg-primary)",
-                      color: mode === "assign" ? "var(--on-accent)" : "var(--text-primary)",
-                      border: `1px solid ${mode === "assign" ? "var(--color-primary)" : "var(--border-color)"}`,
-                    }}
                   >
                     {t("tcgLineImport.assignToExisting")}
-                  </button>
+                  </Button>
 
                   {/* 新規登録ボタン */}
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => void handleCreate(name)}
                     disabled={isResolving}
-                    style={{
-                      ...actionBtnStyle,
-                      background: "var(--bg-primary)",
-                      color: "var(--text-primary)",
-                      border: "1px solid var(--border-color)",
-                      opacity: isResolving ? 0.5 : 1,
-                      cursor: isResolving ? "not-allowed" : "pointer",
-                    }}
                   >
                     {t("tcgLineImport.createNew")}
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -329,28 +320,17 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
                       </p>
                     ) : (
                       filtered.map((s) => (
-                        <button
+                        <Button
                           key={s.code}
+                          variant="secondary"
                           onClick={() => void handleAssign(name, s.code)}
                           disabled={isResolving}
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "0.4rem 0.75rem",
-                            background: "none",
-                            border: "none",
-                            borderBottom: "1px solid var(--border-color)",
-                            cursor: isResolving ? "not-allowed" : "pointer",
-                            fontSize: "0.85rem",
-                            color: "var(--text-primary)",
-                          }}
                         >
                           <span style={{ fontWeight: 500 }}>{s.name}</span>
                           <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                             {s.code}
                           </span>
-                        </button>
+                        </Button>
                       ))
                     )}
                   </div>
@@ -368,22 +348,13 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
       </div>
 
       {/* 抽出開始ボタン */}
-      <button
+      <Button
+        variant="primary"
         onClick={() => void handleCommit()}
         disabled={!allResolved || committing || commitSuccess}
-        style={{
-          padding: "0.5rem 1.5rem",
-          background: allResolved && !committing && !commitSuccess ? "var(--color-primary)" : "var(--color-disabled)",
-          color: "var(--on-accent)",
-          border: "none",
-          borderRadius: "4px",
-          cursor: allResolved && !committing && !commitSuccess ? "pointer" : "not-allowed",
-          fontSize: "0.9rem",
-          fontWeight: 600,
-        }}
       >
         {committing ? t("tcgLineImport.committing") : t("tcgLineImport.startExtraction")}
-      </button>
+      </Button>
 
       {commitError && (
         <p style={{ color: "var(--color-error)", marginTop: "0.75rem", marginBottom: 0 }}>
@@ -412,10 +383,3 @@ const sectionStyle: React.CSSProperties = {
   background: "var(--color-warning-bg)",
 };
 
-const actionBtnStyle: React.CSSProperties = {
-  padding: "0.35rem 0.85rem",
-  borderRadius: "4px",
-  fontSize: "0.85rem",
-  fontWeight: 500,
-  cursor: "pointer",
-};
