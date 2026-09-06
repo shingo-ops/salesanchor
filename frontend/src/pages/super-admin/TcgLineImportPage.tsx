@@ -16,6 +16,7 @@ import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
 import { ReviewSection } from "../../features/tcg-import-review/ReviewSection";
+import { Button } from "../../components/Button";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -238,12 +239,12 @@ export default function TcgLineImportPage() {
           onDrop={onDrop}
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${isDragging ? "var(--color-primary)" : "var(--border-color)"}`,
+            border: `2px dashed ${isDragging ? "var(--accent)" : "var(--border-color)"}`,
             borderRadius: "8px",
             padding: "2rem",
             textAlign: "center",
             cursor: "pointer",
-            background: isDragging ? "var(--color-primary-subtle)" : "var(--bg-secondary)",
+            background: isDragging ? "var(--accent-bg-subtle)" : "var(--bg-subtle)",
             marginBottom: "1rem",
             transition: "border-color 0.2s, background 0.2s",
           }}
@@ -338,22 +339,7 @@ export default function TcgLineImportPage() {
         </div>
 
         {/* アップロードボタン */}
-        <button
-          onClick={handleUpload}
-          disabled={uploading || !selectedFile}
-          style={{
-            padding: "0.5rem 1.5rem",
-            background: uploading || !selectedFile ? "var(--color-disabled)" : "var(--color-primary)",
-            color: "var(--on-accent)",
-            border: "none",
-            borderRadius: "4px",
-            cursor: uploading || !selectedFile ? "not-allowed" : "pointer",
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}
-        >
-          {uploading ? t("tcgLineImport.uploading") : t("tcgLineImport.uploadButton")}
-        </button>
+        <Button variant="primary" onClick={handleUpload} disabled={uploading || !selectedFile}>{uploading ? t("tcgLineImport.uploading") : t("tcgLineImport.uploadButton")}</Button>
 
         {/* エラー */}
         {uploadError && (
