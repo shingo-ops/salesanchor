@@ -34,6 +34,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.services.gemini_extraction_svc import _safe_error_message
+
 logger = logging.getLogger(__name__)
 
 
@@ -271,7 +273,7 @@ async def parse_with_gemini(
     except LLMParseError:
         raise
     except Exception as exc:  # noqa: BLE001 - SDK 例外を一元的に LLMParseError 化
-        logger.exception("[llm_parser] Gemini call failed: %s", exc)
+        logger.exception("[llm_parser] Gemini call failed: %s", _safe_error_message(exc))
         raise LLMParseError(f"Gemini API 呼び出し失敗: {exc}") from exc
 
     text_payload = getattr(response, "text", "") or ""

@@ -29,6 +29,7 @@ from app.services.inventory_parser_llm import (
     LLMParseError,
 )
 from app.services.llm_budget import BudgetStatus, check_budget, record_cost
+from app.services.gemini_extraction_svc import _safe_error_message
 from app.services.translation_glossary import GlossaryEntry, format_glossary_for_prompt, load_glossary
 
 logger = logging.getLogger(__name__)
@@ -413,7 +414,7 @@ async def _call_gemini(
             loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(None, model.generate_content, prompt)
     except Exception as exc:
-        logger.exception("[message_translator] Gemini call failed (model=%s): %s", model_name, exc)
+        logger.exception("[message_translator] Gemini call failed (model=%s): %s", model_name, _safe_error_message(exc))
         raise LLMParseError(f"Gemini API 呼び出し失敗: {exc}") from exc
 
     text_payload = getattr(response, "text", "") or ""
