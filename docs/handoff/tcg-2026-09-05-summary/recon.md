@@ -55,7 +55,7 @@
 `docker-compose.yml` の `environment` セクションおよび `volumes` セクションは **backend コンテナに効かない**。
 
 - `TCG_AUTO_ANALYZE=true` を docker-compose.yml に書いても無効（#3292 原因）
-- `tcg-sheets-sa.json` のボリュームマウントを docker-compose.yml に書いても無効（#3304 原因）
+- tcg-sheets-sa.json のボリュームマウントを docker-compose.yml に書いても無効（#3304 原因）
 - 対策: `scripts/blue-green-cutover.sh` の `docker run` 呼び出しに `-e` フラグ・`-v` フラグを直接追加すること
 
 確認コマンド: `grep -n "docker run" scripts/blue-green-cutover.sh`
