@@ -590,6 +590,9 @@ run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
 # SEC-01: extraction_jobs.error_message に残る Gemini APIキー付きURL 24行を定型文に置換（tenant_004 専用・冪等）
 run_sql migrations/20260906_230000_redact_extraction_error_keys_t004.sql
 
+# NOTE-EXPAND-A: tcg_note_master 固定札26件追加＋既存2行の検索語更新（tenant_004 専用・冪等）
+run_sql migrations/20260907_100000_tcg_note_master_expand_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
