@@ -24,12 +24,12 @@ from typing import Any, Sequence
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.gemini_extraction_svc import _safe_error_message
 from app.services.inventory_parser_llm import (
     LLMConfigError,
     LLMParseError,
 )
 from app.services.llm_budget import BudgetStatus, check_budget, record_cost
-from app.services.gemini_extraction_svc import _safe_error_message
 from app.services.translation_glossary import GlossaryEntry, format_glossary_for_prompt, load_glossary
 
 logger = logging.getLogger(__name__)
