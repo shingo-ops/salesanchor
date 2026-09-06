@@ -28,7 +28,7 @@
 
 ## 3. 対象範囲
 
-- 対象テナント: tenant_004（本番）／ tenant_006（QA・先に試す）
+- 対象テナント: tenant_004（本番）／ tenant_001（QA）。テナントの用途は docs/ai-agents/design-partner.md 9節が正本。tenant_006 は Meta App Review 専用であり QA に使わない。
 - 触るテーブル: tcg_products / product_search_keywords / product_exclude_keywords（いずれもINSERTのみ）
 - 新設テーブル: tcg_product_import_jobs / tcg_product_import_rows
 - 触らないもの: analysis_results（別セッション担当）／既存の create_product・check_duplicates のコード（ADR-154の制約下）／既存 import_jobs（LINE取り込み専用・用途が違う）
@@ -42,9 +42,9 @@
 | 3 | migration（履歴2テーブル新設） | 要 |
 | 4 | backend（取り込みAPI） | 要 |
 | 5 | frontend（一覧ページ・取り込み画面・メニュー・翻訳） | 要 |
-| 6 | tenant_006 で見本CSVを試す → tenant_004 で44件 | 要 |
+| 6 | tenant_001 で見本CSVを試す → tenant_004 で44件 | 要 |
 
-便6は、QAで通ってから本番に進む。順序を飛ばさない。
+便6は、QAで通ってから本番に進む。順序を飛ばさない。前提だった tenant_001 への TCG テーブル作成は migrations/20260906_120000_create_tcg_tables_t001.sql で適用済み（実測: tenant_001 に tcg_products ほか TCG 7 テーブルが存在）。
 
 ## 5. design（技術How・実装は別便）
 
@@ -145,10 +145,10 @@ raw_sha256 の UNIQUE は既存 import_jobs から採る。同じファイルを
 - ①③④: 画面を開いて実際に操作し、結果を記録する。
 - ②: 画面の総件数と、tenant_004.tcg_products の実測行数が一致すること。
 - ⑤: 取り込み系のコードを走査し、preview を経ずに INSERT へ到達する経路が無いこと。
-- ⑥: 止める判定11種それぞれを1行ずつ含む見本CSVを作り、止めるべき行が全て止まること。tenant_006 で実測する。
+- ⑥: 止める判定11種それぞれを1行ずつ含む見本CSVを作り、止めるべき行が全て止まること。tenant_001 で実測する。
 - ⑦: 取り込み1回につき tcg_product_import_jobs が1行、tcg_product_import_rows がCSVの行数ぶん増えること。
 - ⑧: Frontend lint が緑であること。
-- ⑨: sword-shield-catalog.md の44件をCSVにして、tenant_006 で44件、tenant_004 で44件が入ること。
+- ⑨: sword-shield-catalog.md の44件をCSVにして、tenant_001 で44件、tenant_004 で44件が入ること。
 
 ## 9. 維持の仕組み
 
@@ -164,3 +164,9 @@ raw_sha256 の UNIQUE は既存 import_jobs から採る。同じファイルを
 - ④データ: tcg_products / product_search_keywords / product_exclude_keywords に INSERT が増える。analysis_results には触れない。
 - ⑤本番: tenant_004 に新テーブル2本を migration で追加する。既存テーブルの構造は変えない。
 - ⑥外部: 影響なし（外部APIを呼ばない）。
+
+## 11. 訂正の記録
+
+- 2026-09-06: QA先を tenant_006 から tenant_001 に訂正した。理由は、tenant_006 が Meta アプリ審査専用のテナント（public.tenants で実測・contacts 8件・稼働中）であり、空のQA環境ではなかったため。テナントの用途は docs/ai-agents/design-partner.md 9節が正本であり、tenant_001 が QA・TCG 動作確認用、tenant_006 は Meta App Review 専用で QA 禁止と定められている。
+- 同日、tenant_006 に TCG テーブル27本を作る migration（PR #3315）が本番デプロイで失敗し、PR #3318 で取り消された。失敗の直接原因は、migration 末尾に「スキーマ内の全テーブル数が27であること」という検算を入れたこと。tenant_006 には CRM 系のテーブルが既に68本あり、68 + 27 = 95 となって例外が発火した。トランザクション全体が巻き戻ったため、DBへの変更は残っていない。
+- 教訓: migration にテーブル全体の件数一致チェックを書かない。自分が作った範囲の名前だけを数える。本テーマの migration にもこの原則を適用する。
