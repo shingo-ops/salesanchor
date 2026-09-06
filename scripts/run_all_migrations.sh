@@ -587,6 +587,9 @@ run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
 # tenant_006 は Meta App Review 専用（QA 禁止）→ QA は tenant_001 を使用
 run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
 
+# NOTE-EXPAND-A: tcg_note_master 固定札26件追加＋既存2行の検索語更新（tenant_004 専用・冪等）
+run_sql migrations/20260907_100000_tcg_note_master_expand_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
