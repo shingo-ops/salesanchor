@@ -483,3 +483,4 @@
 | release/status-split-2 | フロント表示の2値対応（バッジ・絞り込み・インボックス処理） | 2026-07-29 | DONE | #3139 | main | merged: PR #3139 / 5ba4a79d56bffc5bbd7a291eb9c22cc87aa3d1a6 |
 | release/status-split-3 | KPI/analytics/dashboard の out_of_scope → 2値置換（便3） | 2026-07-29 | DONE | #3141 | main | merged: PR #3141 / 6e65dbbc80cd3b901e462ba10f22bfff0aaf4b0c |
 | release/pillar3-ast-rebuild | 柱3-a/b 検出をAST方式へ作り直し（本体・ペアテスト・CI・設計・KGI分母29） | 2026-07-29 | IN_PROGRESS |  | main | 正本先約 kgi.md / GO=未採番 / 単独便 |
+| release/qa-env-tenant001-design | QA環境（tenant_001）第1段 design.md を起案 | 2026-09-06 | IN_PROGRESS | #3328 | main | docs のみ・マージは PO GO 待ち |
