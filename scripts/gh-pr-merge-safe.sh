@@ -126,6 +126,9 @@ merge_with_retry() {
         echo "[MERGE_RETRY][RULE_WAIT] 試行 ${rw}/3 mergeStateStatus=${MSTATE}"
         if [ "${MSTATE}" = "BEHIND" ]; then
           echo "[MERGE_RETRY][RULE_WAIT] BEHIND を検出。待機せず追従フローへ戻ります"
+          # BEHIND は break で 131行に到達しないため rwout が未設定になる。
+          # 147行の判定を通して外側の追従フローへ戻すために明示的にセットする。
+          rwout="not up to date"
           break
         fi
         rwout="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)"
