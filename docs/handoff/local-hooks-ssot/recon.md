@@ -7,7 +7,7 @@
 - 仕事名: local-hooks-ssot
 - 日付: 2026-09-07
 - 実測時の origin/main SHA: a984735808aedafdcf6336a7414c669b09d4ca21（機体側ファイルは同日 23:40 JST 時点。§1 の repo 側 settings.json のみ f156bccf 時点）
-- 対象ADR: ADR-042（関連: ADR-074）
+- 対象ADR: ADR-042（Claude Code 運用ガードレール強化）／関連: ADR-074（Worktree 強制によるエージェントPR混入防止）
 - 担当: 設計パートナー（実測は実装役カード H-01〜H-05 の生出力による）
 - 区分（STANDARD-WORKFLOW 1.8）: 既存の延長・修正（索引登録済み・あるべき姿とKGI承認済み 2026-07-20・recon 未作成）
 
@@ -15,20 +15,13 @@
 
 ## 0. 既存ADR検索の結果
 
-実測 SHA: 9a197df8c9416314d01c3c638966a953f080f73b（H-06 手順2）
+- `git grep -il -E "hook|guard|PreToolUse|worktree|検問" -- docs/adr/` → 30件（head 上限に達したため全件ではない。SHA 9a197df8 時点）: ADR-018・024・025・026・029・034・035・038・039・042・046・069・074・075・077・082・086・089・091・095・098・101・107・114・116・119・131・132・134・136。
+- `docs/adr/FEATURE-INDEX.md:42`: 「Claude Code 運用ガードレール / SessionStart hook」→ ADR-042。
+- ADR-042（2026-05-19 Accepted）: `.claude/settings.json` の deny/ask 不在・PR ベースブランチ検証不在・main 保護不在を、運用ルール明文化＋機械的ガードレールで解決すると決定。
+- ADR-074（2026-05-26 Accepted）: 並行エージェントのPR混入を worktree 強制で防ぐと決定。worktree-only-guard.sh の根拠。
+- ADR-114: worktree 自動掃除（dev-continuity recon 柱2 が参照）。
 
-`git grep -il -E "hook|guard|PreToolUse|worktree|検問" origin/main -- docs/adr/` で 30件（head -n 30 上限到達）hit。上位ファイル: ADR-018・ADR-024・ADR-025・ADR-026・ADR-029・ADR-034・ADR-035・ADR-038・ADR-039・ADR-042・ADR-046・ADR-069・ADR-074・ADR-075・ADR-077・ADR-082・ADR-086・ADR-089・ADR-091・ADR-095・ADR-098・ADR-101・ADR-107・ADR-114・ADR-116・ADR-119・ADR-131・ADR-132・ADR-134・ADR-136。
-
-`docs/adr/FEATURE-INDEX.md` の一致（行42）:
-`| Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |`
-
-直接関連 ADR:
-- **ADR-042**（guardrails-and-release-flow, Accepted 2026-05-19）: Claude Code 運用ガードレール強化。`.claude/settings.json` への deny/ask リスト追加・SessionStart hook 整備を決定。
-- **ADR-074**（worktree-agent-enforcement, Accepted 2026-05-26）: Worktree 強制によるエージェント PR 混入防止。PreToolUse guard の配線を定める。
-
-`docs/handoff/dev-continuity/recon.md`（2026-07-04）の ADR 言及: ADR-114（worktree-auto-cleanup）のみ。検問5本に直接紐づく ADR の記載はなし。
-
-判定: 対象 ADR は **ADR-042・ADR-074** の2本。新規 ADR 起案は不要（既存 ADR の実装状態の recon）。
+事実: 機体側 hook 5本の中身・変更手順・記録形式を定めたADRは、本検索の範囲では見つかっていない。ADR-042 は「hook を置く」ことを決めたが、「hook の正本をどこに置き、どう一致を保つか」は決めていない。
 
 ---
 
