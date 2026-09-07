@@ -90,7 +90,7 @@ async def test_real_gemini_call_returns_structured_items() -> None:
     assert result.input_tokens > 0, "input_tokens should be > 0 for real API call"
     assert result.output_tokens > 0, "output_tokens should be > 0 for real API call"
     # モデル名が記録される
-    assert result.model == "gemini-2.5-flash"
+    assert result.model == "gemini-3.5-flash-lite"
     # raw response が JSON
     assert result.raw_response_text.strip().startswith("{")
 

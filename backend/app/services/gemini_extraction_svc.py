@@ -159,7 +159,7 @@ def call_gemini_extraction(raw_text: str) -> str:
             config=genai_types.GenerateContentConfig(temperature=0),
         )
     except Exception as exc:
-        logger.exception("[gemini_extraction] API call failed: %s", exc)
+        logger.exception("[gemini_extraction] API call failed: %s", _safe_error_message(exc))
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
@@ -289,7 +289,7 @@ def extract_message(raw_text: str) -> dict:
             "error_message": None,
         }
     except Exception as exc:  # noqa: BLE001
-        logger.exception("[gemini_extraction] extract_message failed: %s", exc)
+        logger.exception("[gemini_extraction] extract_message failed: %s", _safe_error_message(exc))
         return {
             "status": "error",
             "prompt_version": PROMPT_VERSION,
