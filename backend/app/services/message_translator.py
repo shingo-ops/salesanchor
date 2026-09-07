@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 # Config (env override 可能。方針は固定: 送信=最上位必須)
 # ---------------------------------------------------------------------------
 
-MODEL_RECEIVE: str = os.getenv("TRANSLATION_MODEL_RECEIVE", "gemini-2.5-flash")
-MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-2.5-flash-lite")
+MODEL_RECEIVE: str = os.getenv("TRANSLATION_MODEL_RECEIVE", "gemini-3.5-flash-lite")
+MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-3.5-flash-lite")
 CONF_THRESHOLD_RECEIVE: float = float(
     os.getenv("TRANSLATION_CONFIDENCE_THRESHOLD_RECEIVE", "0.70")
 )

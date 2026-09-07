@@ -359,7 +359,7 @@ class TestPromptAndSchema:
             knowledge_snapshot=[],
         )
         kwargs = genai.GenerativeModel.call_args.kwargs
-        assert kwargs.get("model_name") == "gemini-2.5-flash"
+        assert kwargs.get("model_name") == "gemini-3.5-flash-lite"
 
     @pytest.mark.asyncio
     async def test_knowledge_snapshot_top30_included(self) -> None:
@@ -636,7 +636,7 @@ class TestHybridParseInventoryMessage:
                     ],
                     input_tokens=1200,
                     output_tokens=350,
-                    model="gemini-2.5-flash",
+                    model="gemini-3.5-flash-lite",
                 )
             ),
         ):

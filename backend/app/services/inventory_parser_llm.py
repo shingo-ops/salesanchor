@@ -86,7 +86,7 @@ class LLMParseResult:
     # Gemini usage metadata からの token 数 (record_cost に渡す)
     input_tokens: int = 0
     output_tokens: int = 0
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3.5-flash-lite"
     raw_response_text: str = ""  # debug 用
 
 
@@ -222,7 +222,7 @@ async def parse_with_gemini(
     knowledge_snapshot: list[dict[str, Any]],
     language: str = "ja",
     *,
-    model_name: str = "gemini-2.5-flash",
+    model_name: str = "gemini-3.5-flash-lite",
 ) -> LLMParseResult:
     """unparsed 行を Gemini 2.5 Flash で再解析する。
 
