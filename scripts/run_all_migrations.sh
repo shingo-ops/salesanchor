@@ -594,6 +594,9 @@ run_sql migrations/20260906_230000_redact_extraction_error_keys_t004.sql
 run_sql migrations/20260907_100000_tcg_note_master_expand_t004.sql
 run_sql migrations/20260907_120000_tcg_dist_stale_jobs_terminate_t004.sql
 
+# KW-HYGIENE: 商品マスタ キーワード整備 11項目（除外語の自己矛盾解消・壁追加・PM0146無効化）（tenant_004 専用・冪等）
+run_sql migrations/20260907_140000_tcg_keyword_hygiene_t004.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
