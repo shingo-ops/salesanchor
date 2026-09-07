@@ -38,6 +38,8 @@ from app.models import User
 from app.schemas.order import (
     OrderCreate,
     OrderGroupCountsResponse,
+    OrderItemCreate,
+    OrderItemResponse,
     OrderListResponse,
     OrderPaidStatusUpdate,
     OrderResponse,
@@ -107,14 +109,14 @@ def _sanitize_search(keyword: str | None) -> str | None:
     return _LIKE_ESCAPE_RE.sub(r"\\\1", cleaned)
 
 _SELECT_COLS = """
-    id, company_id, contact_id, deal_id, invoice_id, order_number,
+    id, company_id, contact_id, invoice_id, order_number,
     total_amount, currency, status,
     shipping_carrier, shipping_fee, tracking_number,
     shipped_at, delivered_at, shipping_country,
     paid_at, notes, created_at, updated_at
 """
 
-# company_id / contact_id / deal_id / invoice_id は作成後の変更を禁止（FK整合性保護）
+# company_id / contact_id / invoice_id は作成後の変更を禁止（FK整合性保護）
 _UPDATABLE_COLUMNS = {
     "order_number", "total_amount", "currency", "status",
     "shipping_carrier", "shipping_fee", "tracking_number",
@@ -154,6 +156,25 @@ def _build_orders_filters(
         )
         params["search"] = f"%{sanitized}%"
     return conditions, params
+
+
+async def _get_order_items(db: AsyncSession, tenant_id: int, order_id: int) -> list[dict]:
+    order_items_t = tenant_table_ref(db, tenant_id, "order_items")
+    result = await db.execute(
+        text(
+            f"""
+            SELECT
+                id, order_id, product_id, product_name, name_en, condition, unit, sku,
+                quantity, unit_price, subtotal, weight, hs_code, usd_unit_value,
+                exchange_rate_usd, sort_order
+            FROM {order_items_t}
+            WHERE order_id = :order_id
+            ORDER BY sort_order, id
+            """
+        ),
+        {"order_id": order_id},
+    )
+    return [dict(row) for row in result.mappings().all()]
 
 
 @router.get("/orders", response_model=list[OrderListResponse],
@@ -226,7 +247,7 @@ async def list_orders(
     result = await db.execute(
         text(f"""
             SELECT
-                o.id, o.company_id, o.contact_id, o.deal_id, o.invoice_id,
+                o.id, o.company_id, o.contact_id, o.invoice_id,
                 o.order_number, o.total_amount, o.currency, o.status,
                 o.shipping_carrier, o.shipping_fee, o.tracking_number,
                 o.shipped_at, o.delivered_at, o.shipping_country,
@@ -334,6 +355,91 @@ async def get_order(
     return OrderResponse(**row)
 
 
+@router.get(
+    "/orders/{order_id}/items",
+    response_model=list[OrderItemResponse],
+    dependencies=[Depends(require_permission("orders.view"))],
+)
+async def list_order_items(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    exists = await db.execute(
+        text(f"SELECT id FROM {orders_t} WHERE id = :id"),
+        {"id": order_id},
+    )
+    if exists.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+    return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
+
+
+@router.post(
+    "/orders/{order_id}/items",
+    response_model=list[OrderItemResponse],
+    status_code=201,
+    dependencies=[Depends(require_permission("orders.update"))],
+)
+async def create_order_items(
+    order_id: int,
+    items: list[OrderItemCreate],
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    orders_t = tenant_table_ref(db, tenant_id, "orders")
+    order_items_t = tenant_table_ref(db, tenant_id, "order_items")
+    if not items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="items を1件以上指定してください")
+    exists = await db.execute(
+        text(f"SELECT id FROM {orders_t} WHERE id = :id"),
+        {"id": order_id},
+    )
+    if exists.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+
+    for item in items:
+        await db.execute(
+            text(
+                f"""
+                INSERT INTO {order_items_t} (
+                    tenant_id, order_id, product_id, product_name, name_en, condition, unit,
+                    sku, quantity, unit_price, subtotal, weight, hs_code, usd_unit_value,
+                    exchange_rate_usd, sort_order
+                )
+                VALUES (
+                    :tenant_id, :order_id, :product_id, :product_name, :name_en, :condition, :unit,
+                    :sku, :quantity, :unit_price, :subtotal, :weight, :hs_code, :usd_unit_value,
+                    :exchange_rate_usd, :sort_order
+                )
+                """
+            ),
+            {
+                "tenant_id": tenant_id,
+                "order_id": order_id,
+                "product_id": item.product_id,
+                "product_name": item.product_name,
+                "name_en": item.name_en,
+                "condition": item.condition,
+                "unit": item.unit,
+                "sku": item.sku,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "subtotal": item.subtotal,
+                "weight": item.weight,
+                "hs_code": item.hs_code,
+                "usd_unit_value": item.usd_unit_value,
+                "exchange_rate_usd": item.exchange_rate_usd,
+                "sort_order": item.sort_order,
+            },
+        )
+
+    await db.commit()
+    return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
+
+
 @router.post("/orders", response_model=OrderResponse, status_code=201,
              dependencies=[Depends(require_permission("orders.create"))])
 async def create_order(
@@ -344,27 +450,20 @@ async def create_order(
 ):
     """注文を登録する"""
     orders_t = tenant_table_ref(db, tenant_id, "orders")
+    companies_t = tenant_table_ref(db, tenant_id, "companies")
     contacts_t = tenant_table_ref(db, tenant_id, "contacts")
-    deals_t = tenant_table_ref(db, tenant_id, "deals")
-    # Step 5d: contact / company の存在 + 所属一致確認のみ
-    contact_check = await db.execute(
-        text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"),
-        {"id": data.contact_id},
-    )
-    contact_row = contact_check.first()
-    if not contact_row:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された担当者が存在しません")
-    if contact_row[0] != data.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="指定された担当者は指定会社に所属していません",
-        )
-
-    # 商談の存在確認（指定された場合）
-    if data.deal_id:
-        deal = await db.execute(text(f"SELECT id FROM {deals_t} WHERE id = :id"), {"id": data.deal_id})
-        if not deal.first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された商談が存在しません")
+    company_row = (await db.execute(
+        text(f"SELECT id FROM {companies_t} WHERE id = :id"), {"id": data.company_id})).first()
+    if not company_row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された会社が存在しません")
+    if data.contact_id is not None:
+        contact_row = (await db.execute(
+            text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"), {"id": data.contact_id})).first()
+        if not contact_row:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された担当者が存在しません")
+        if contact_row[0] != data.company_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                detail="指定された担当者は会社に所属していません")
 
     # 注文番号の重複チェック
     dup = await db.execute(
@@ -377,12 +476,12 @@ async def create_order(
     result = await db.execute(
         text(f"""
             INSERT INTO {orders_t} (
-                tenant_id, company_id, contact_id, deal_id, invoice_id, order_number,
+                tenant_id, company_id, contact_id, invoice_id, order_number,
                 total_amount, currency, status,
                 shipping_carrier, shipping_fee, shipping_country, notes
             )
             VALUES (
-                :tenant_id, :company_id, :contact_id, :deal_id, :invoice_id, :order_number,
+                :tenant_id, :company_id, :contact_id, :invoice_id, :order_number,
                 :total_amount, :currency, :status,
                 :shipping_carrier, :shipping_fee, :shipping_country, :notes
             )
@@ -392,7 +491,6 @@ async def create_order(
             "tenant_id": tenant_id,
             "company_id": data.company_id,
             "contact_id": data.contact_id,
-            "deal_id": data.deal_id,
             "invoice_id": data.invoice_id,
             "order_number": data.order_number,
             "total_amount": data.total_amount,

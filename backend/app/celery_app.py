@@ -31,6 +31,10 @@ celery_app = Celery(
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
+        "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
+        "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
+        "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
+        "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
     ],
 )
 
@@ -128,5 +132,29 @@ celery_app.conf.beat_schedule = {
     "review-mail-discord-notifier": {
         "task": "app.tasks.review_mail_monitor.check_review_mail_inbox",
         "schedule": 300.0,  # 5分
+    },
+    # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rates に UPSERT
+    # 外部 API: open.er-api.com（API キー不要）。失敗時は前回値を残して警告ログのみ。
+    "update-fx-rate-morning": {
+        "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
+        "schedule": crontab(hour=6, minute=0),  # JST 6:00（timezone=Asia/Tokyo が適用済み）
+    },
+    # 為替レート SSOT: USD/JPY を毎日 PM6:00 JST にも取得（夕方レート反映）
+    "update-fx-rate-evening": {
+        "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
+        "schedule": crontab(hour=18, minute=0),  # JST 18:00
+    },
+    # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し（AM02:00 JST）
+    # 書き込み先: spreadsheetId 1IBIpge6Qz2arq93OHmRFnCGBMj2kVhrgEjtY8c5ecus（固定）
+    # 自動作成なし・TCG_SHEETS_SA_KEY_FILE 未設定時はスキップ
+    "tcg-mirror-daily-write": {
+        "task": "app.tasks.tcg_mirror.run_tcg_mirror_write",
+        "schedule": crontab(hour=2, minute=30),  # JST 02:30（refresh-all-avatars の30分後）
+    },
+    # REVIEW-STAGE: 24h 超過の pending_review ジョブを discarded に更新（1時間ごと）
+    # pending_messages（JSONB）を NULL にして監査行は残す
+    "discard-stale-pending-import-jobs": {
+        "task": "app.tasks.tcg_import_discard.discard_stale_pending_jobs",
+        "schedule": crontab(minute=0),  # 毎時0分
     },
 }

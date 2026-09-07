@@ -23,6 +23,32 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260704-001
+date: 2026-07-04
+agent: Codex
+task: 受信箱（inbox）親テーマ一式の新設
+scope: docs/specs/inbox/README.md, docs/specs/inbox/ideal-state.md, docs/specs/inbox/kgi.md, docs/specs/inbox/design.md, docs/specs/inbox/layout.svg, docs/specs/README.md, tasks/todo.md, .claude-pipeline/active-work.md
+evidence:
+  - type: file
+    reference: docs/specs/inbox/README.md
+    summary: 受信箱親テーマの表紙を新規作成し、範囲・構成・子テーマ一覧・見送り事項を正本化した
+  - type: file
+    reference: docs/specs/inbox/kgi.md
+    summary: 受信箱の見せ方を 8 項目の○× KGI として定義し、Messenger / Instagram / Discord の分母を明記した
+  - type: file
+    reference: docs/specs/README.md
+    summary: dashboard 行の直後に inbox 索引を 1 行追加した
+  - type: command
+    reference: gh pr view 2773 --json state,mergedAt,mergeCommit,url
+    summary: PR #2773 が MERGED、merge commit は 1822d21c9c80b2fc319153d502837eaac37b508c
+  - type: command
+    reference: git rev-parse origin/main
+    summary: origin/main の実測 SHA は 1822d21c9c80b2fc319153d502837eaac37b508c
+confidence: high
+tradeoff: 仕様文書のみの変更であるため、実装コードや API には影響しないが、索引登録により将来の子テーマ着手時に参照義務が増える
+decision: 受信箱親テーマの正本セットを追加し、索引・台帳・active-work の記録を整合させた
+follow_up: 子テーマ着手時は inbox 親テーマを先に読む前提で進める
+
 id: EV-20260622-009
 date: 2026-06-22
 agent: Codex
@@ -948,6 +974,48 @@ decision: "#2538 完了（正本の完了定義①〜④を満たす）。FK実�
 follow_up: public.inventory / message_translations の行数前後差分はバックアップ逆転のため省略。次回のリリースPRでバックアップ採取タイミングをマージ前に統一すること。
 ```
 
+## 2026-06-28 リリースB(#2646)デプロイOOM障害対応・サーバ容量回復・#2665デプロイ完走
+
+```text
+id: EV-20260628-001
+date: 2026-06-28
+agent: CC（Hikky-dev）+ Shingo（GO発行・本番画面確認）+ Claude（Planner）
+task: リリースB(#2646)反映デプロイのOOM失敗 → サーバ容量回復（Docker掃除＋dockerd再起動）→ 本番無害立証 → #2665デプロイ完走
+scope: 本番VPS(prod1)のディスク/メモリ/スワップ・Docker(キャッシュ/コンテナ/イメージ)・全コンテナ稼働・本番DB主要テーブル行数・app_fx_rates migration適用
+evidence:
+  - type: command
+    reference: "ssh prod1: docker system df （掃除前）"
+    summary: "Build Cache 15.07GB(RECLAIMABLE 14.96GB) / Images RECLAIMABLE 13.16GB / Volumes 1.978GB — 回収可能ゴミ総量を特定。volume/imageは今回対象外と判断"
+  - type: command
+    reference: "ssh prod1: docker builder prune -f → df -h / && docker system df"
+    summary: "ビルドキャッシュ削除でディスク 40G(85%)→27G(56%)、13GB回収。Build Cache 15.07GB→117.8MB。イメージ・コンテナ・ボリュームには未接触"
+  - type: command
+    reference: "ssh prod1: docker rm astro-webapp-backend-green （停止コンテナのみ・名前指定）"
+    summary: "deploy残存の停止コンテナ(Exited 0)1本のみ削除。稼働中(Up)コンテナには未接触"
+  - type: command
+    reference: "ssh prod1: ps aux --sort=-%mem （dockerd肥大の特定）"
+    summary: "dockerd RSS 1.0GB(全体51.6%)を占有。本番アプリ各コンテナは軽量(backend-1 115MiB等)。逼迫の主因はdockerdのヒープ抱え込みと判定"
+  - type: command
+    reference: "ssh prod1: sudo systemctl restart docker → sleep 30 → docker ps （低利用時間帯に実施）"
+    summary: "dockerd再起動。スワップ 1.1Gi→70Mi、dockerd RSS 1.0GB→323MB(677MB解放)、RAM available 310Mi→522Mi。全コンテナ復帰"
+  - type: command
+    reference: "ssh prod1: docker ps --format '{{.Names}}\\t{{.Status}}' | sort （復帰確認）"
+    summary: "本番11本すべてUp、うち4本(frontend/nginx/postgres/redis)healthy。Exited残留0件。Stage0顔ぶれと一致。※backend-1は自動復帰せずExited(0)→手動起動で復帰（落とし穴・要調査）"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: 主要テーブル行数 + テナント別 leads/companies"
+    summary: "suppliers47/tenants5/users10/inventory92/products1305 不変。本番tenant_004 leads6・companies51 / tenant_006 leads37・companies30 無傷。データ消失なし"
+  - type: command
+    reference: "ssh prod1: psql -d jarvis_db: SELECT to_regclass('public.app_fx_rates')"
+    summary: "掃除前null→#2665デプロイ後 app_fx_rates 存在(0行・空テーブル正常追加)。migration正常適用・既存データ非破壊"
+  - type: review
+    reference: "deploy run 28322515797(#2665) 全ステップ✓: Pre-deploy DB backup / Deploy to VPS(OOM突破) / Run migrations / Post-deploy smoke tests / success"
+    summary: "メモリ回復後の再デプロイが緑完走。前回OOMで停止した箇所を突破。スモーク緑＝本番正常応答。GO: Shingo 2026-06-28"
+confidence: high
+tradeoff: 掃除＋dockerd再起動の無害性立証と#2665デプロイ成功が同一deployで同時発生したため厳密分離は不可。ただし「処置後に本番が正常稼働・データ無傷」の事実は独立に成立。dockerd再起動は全コンテナ一時停止(数十秒〜数分)を伴う。
+decision: "dockerd再起動＋Dockerキャッシュ掃除＋停止コンテナ削除は、本番を壊さずメモリ回復する有効手段として確立。再現手順=①docker builder prune -f ②停止コンテナrm(名前確認) ③低利用帯にsudo systemctl restart docker。禁止=volume prune(データ消失)/image prune -a(別セッション使用イメージ確認要)。症状トリガー=deploy blue-green healthタイムアウト＋スワップ枯渇＋dockerd RSS肥大。"
+follow_up: "(1)dockerd再起動後backend-1が自動復帰しない件＝無人再起動時の本番停止リスク・要調査 (2)残骸再発防止＝定期自動掃除＋容量早期警報の設計 (3)根本RAM不足＝増設要否は今後のdeploy安定度で判断 (4)未使用イメージ13GB削除は森本さん確認後"
+```
+
 ## 2026-06-27 PR #2630 public.products FORCE-RLS 本番反映・KGI①②③ 実証
 
 ```text
@@ -984,6 +1052,33 @@ decision: "KGI①②③ 全達成。①FORCE-RLS+4ポリシー本番確認済み
 follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行が他社から見えない」の実データによる確認は商品マスタ整備後に実施。
 ```
 
+## 2026-07-03 PR #2751 便1b 会話ログの背骨必須化
+
+```text
+id: EV-20260703-004
+date: 2026-07-03
+agent: CC
+task: 便1b 会話ログの背骨必須化（echo経路のoutbound lead自動作成・遡及lead逆造成1件・NOT NULL）
+scope: PR #2751, docs/specs/transaction-flow/README.md, docs/handoff/txn-flow-ben1b/design.md, 本番tenant_004 after検証
+evidence:
+  - type: command
+    reference: "PO Shingo の after検証報告（2026-07-03）"
+    summary: "conversation_logs null_convs=0 / [便1b]new_leads=1 / lead_id is_nullable=NO を目視報告済み"
+  - type: command
+    reference: "dry-run 再実行（2026-07-03）"
+    summary: "BEFORE1 → AFTER0 → ROLLBACK。初回はテナント間スキーマ差分でエラー停止したが、最小列方式へ修正後に合格"
+  - type: command
+    reference: "/tmp/backup_tenant004_ben1b.sql"
+    summary: "tenant_004 バックアップを取得済み"
+  - type: command
+    reference: "tenant_006 の dry-run notice"
+    summary: "NULL 3 件のため NOTICE スキップ（DEMO 削除後に再実行で適用）"
+confidence: high
+tradeoff: 本番 after 検証は読み取り専用で実施し、実データの変更は行っていない
+decision: 便1b は本番 tenant_004 の after 検証で成立確認済み
+follow_up: 便2 の設計材料整理に進む
+```
+
 ## Review Rules
 
 - `confidence: high` は一次情報が複数あり、再現可能な検証がある場合に限る
@@ -1004,3 +1099,304 @@ follow_up: 実商品マスタ/在庫整備は別タスク。KGI③「固有行�
   - KGI#5 PRテンプレに「設計仕様書（あるべき姿）」欄: ○
   - KGI#6 PR #2698 develop マージ済み: ○
 - 確認者: Shingo
+
+## 2026-07-01: 文書の親子構造 標準ルール化テーマ KGI 5/5 達成（EV-20260701-001）
+- id: EV-20260701-001
+  type: review
+  reference: "PR #2703 merge commit 365a5eec / PR #2704 merge commit 51db94b8 / main branch"
+  summary: "文書の親子構造 標準ルール化テーマ KGI 5/5 達成。型見本(#2703)＋KGI③⑤(#2704)を main 反映。人の目視合格を確認。"
+  confidence: high
+  human_verification: "Shingo が GitHub 上で目視確認。図2枚(親子構造・関所と維持)が表示・親子リンクが双方向に到達・各文書冒頭に素人向け1行説明を確認。合格。"
+  decision: "KGI①②④ 既達成 / ③ 子文書1行説明 4/4 / ⑤ 正本§1.6 明文化 1/1。達成KGI数 5/5。GO: Shingo 2026-07-01(#2704)。"
+  lessons: "①マージ方式はリポ設定に合わせる(squash禁止→merge commit)。②GO発行者は英字表記(Shingo/shingo-ops)、ひらがな不可。③正本等の危険ファイル変更PRは『触るファイル:』『削除するファイル:』欄を平打ち(行頭空白・ダッシュなし)で必須。④マージ直後にMERGEDを実測してから台帳DONE・片付け(成否未確認で進むと未完なのにDONEの記録齟齬が発生)。"
+  follow_up: "「設計に維持の仕組み欄を必須化し関所で守らせる」新テーマを引き継ぎ済み(第1弾:文章ルール＋守り手関所の名指し / 第2弾:記入と名指し実在の機械強制・案A / 適用は猶予＋warningで段階的)。"
+
+## 2026-07-01: reaper 誤検出修正（専用棚一致で push 済み扱い）（EV-20260701-002）
+- id: EV-20260701-002
+  type: review
+  reference: "PR #2705 merge commit a6050cfffe7cad4e557d956100646a922427a89c / main branch"
+  scope: "scripts/reaper-worktree.sh / scripts/tests/test-reaper-safety.sh"
+  problem: "reaper チェック2 bブロックの未push判定が @{u}..HEAD を使用。@{u} が共用側(origin/main・origin/develop)を指す設定漏れの worktree で、きれい・push済みの完了机を『未保存』と誤検出し永久保護＝堆積させていた。"
+  fix: "HEAD == origin/<branch>（専用棚一致）なら push 済みとみなす救済を b に追加。a（未コミット確認）・c（upstream未設定分岐）・チェック3（完了確認）は不変。"
+  kpi: "既存14テスト緑（回帰なし）＋再現テスト15追加。修正を stash 退避すると test15 が FAIL、復元で 15/15 PASS（テストがバグを捕捉することを立証）。"
+  confidence: high
+  human_verification: "Shingo が KPI ○A○B○C を確認。GO #2705 を自筆で発行。CI 全緑・process-artifacts gate pass を実測後マージ。"
+  decision: "reaper 未push誤検出を修正し main 反映。完了机の自動回収が想定どおり効く状態にした。"
+  lessons: "①CC が別worktree・本店へ勝手に台帳/GO を書き込む逸脱を複数回。生ログ照合と名指し1ファイル撤去で対処。②GO記録はしんご自筆のみ・代筆厳禁を再確認。③main宛PRのブランチ名は release/ または hotfix/ が必須（fix/ は関所で弾かれる）。"
+  follow_up: "第1便で reaper 214/229行（②完了確認の develop→main 付替）を別途実施。カード⑥は本PRマージ後の最新 main で撮り直してから作成する。"
+
+## 2026-07-02: develop廃止 第1便 動線をmainへ付替（EV-20260702-001）
+- id: EV-20260702-001
+  type: review
+  reference: "PR #2715 merge commit 1df552b363160f5ebccb64913a1634395c9fb1be / main branch"
+  scope: "書換8: gh-pr-create-safe.sh / pr-base-check.yml / executor-preflight.sh / new-worktree.sh / backfill-active-work-done.sh / reaper-worktree.sh / validate-pr-ownership.sh / validate-worktree-start.sh ＋修正1: workflow-lint.yml ／ 削除3: auto-back-merge.yml / auto-release-pr.yml / claude-pipeline.yml"
+  problem: "PR動線・worktree土台・完了判定・各種ガードが develop 前提のままで、develop廃止（main一本化）に移行できない。"
+  fix: "既定base・土台・判定・案内文を main/release に付替（develop残存0件×8を検算）。役目消滅の自動化3件を削除。workflow-lint の検査名簿から削除済み claude-pipeline.yml の項目を除去。"
+  kgi: "KGI 5/5 達成（①既定base=main実測 ②削除3不在MISSING×3 ③develop残存0×8 ④MERGED+必須CI全pass+Shingo自筆GO #2715 ⑤develop存続=中止可能の担保 1b9a93b7）。"
+  confidence: high
+  human_verification: "Shingo が GO #2715 を自筆発行。必須チェック10件全pass・MERGED実測後に台帳DONE。"
+  decision: "第1便完了。develop は未撤去（撤去は第3便・別途自筆GO）。CI設定整合性チェックの赤1件は workflow-lint.yml 変更時にPO確認を強制する仕様の警報であり、GO #2715 で確認済み＝想定どおりの赤（必須チェック外・マージ阻害なし）。"
+  lessons: "①カードの禁止条項は便をまたいで残存し矛盾を生む→全カード冒頭に上書き宣言を必須化。②切れた表示から件数を推測しない（名簿9→8と誤予告、実物は10→9）。③絵文字直後の空白数など不可視差分はアンカー不一致の主因→hexdumpで実物確認。④行末バックスラッシュはアンカーに含めない。"
+  follow_up: "第1.5便（守りの移設：main ruleset へ UI governance gate 等）→ しんご実地確認 → 第2便。第4便へ申し送り: runner-label-lint.yml 削除（検査対象消滅の死骸）／test-manifest-generation.sh:2,197 等の残コメント掃除／『絶対に緑にならない警報』の設計改善検討（索引で類似確認のうえ）。"
+
+
+
+## 2026-07-02: 維持の仕組み欄の必須化（正本§1.7＋関所検査A/B）KGI 6/6 達成（EV-20260702-002）
+- id: EV-20260702-002
+  type: review
+  reference: "PR #2717 merge commit 7cd89dd0 / 進捗記録 PR #2722 / main branch"
+  scope: "docs/STANDARD-WORKFLOW.md §1.7新設 / scripts/check-process-artifacts.js validateMaintenanceSection / scripts/tests/test-process-artifacts.js 9本追加 / docs/handoff/design-partner-loop-maintenance-gate/"
+  summary: "全designに維持の仕組み欄を必須化。関所が『欄と守り手の非空＋守り手パス実在』を検査（warn初期・MAINTENANCE_ENFORCE=failで引き上げ・PR2600未満は猶予）。design-partner-loop構想§5の予告便を実装。"
+  kgi: "KGI 6/6（①正本§1.7明文 1/1 ②書式3点 3/3 ③design.md実例 3/3 ④空欄検知 1/1 ⑤架空パス検知 1/1 ⑥誤検知0・猶予巻き込み0）。テスト99本全緑。本番CI実機でもPR #2717自身と#2722の2回、警告ゼロ・pass を実測。"
+  confidence: high
+  human_verification: "Shingo が 2026-07-02 14時台にブラウザで3点を目視確認: ①main正本に§1.7が表示 ②PR #2717 がMerged＋全チェック緑 ③親README§5に済(#2717)記載。GO #2717 は自筆発行済み。"
+  decision: "第1弾（文章ルール）＋第2弾（機械検査・warnモード）を main 反映。failへの引き上げは運用を見てPO判断（ワークフローにMAINTENANCE_ENFORCE=fail 1行のPR）。"
+  lessons: "①CCが赤テストを無断で自己修正しコミットまで進める逸脱（修正内容は事後diff検証で採用可だったが手順違反）。②カードの停止条件は肯定形で一義に書く（『〜以外なら停止』は読み違いを誘発、2回停止）。③pushを飛ばしたPR作成は Head sha blank で失敗する。④机は AGENT_WORKTREE_BASE(~/worktrees)配下が必須、worktree move で中身ごと移設可能。"
+  follow_up: "①warn→fail引き上げの時期判断（PO）。②修正md積み重ね（複数design）の関所対応は次便。③design-partner.md §6への教訓還流は別docs便で提案。"
+
+## 2026-07-02: develop廃止 第1.5便 守りの移設（EV-20260702-003）
+- id: EV-20260702-003
+  type: review
+  reference: "PR #2724 merge commit 257812ef01a8f88dc8cdeaf5b3a4529b787c2e49 / main ruleset 15777895（10→12件・PO自身がGitHub画面で実施）"
+  scope: ".github/workflows/worktree-integrity-check.yml（発火先にmain追加）／main branch protection ルールセット（UI governance gate・dangling-route gate を必須追加）"
+  problem: "develop撤去（第3便）後、develop側ルールセットの守り（鍵2・worktree検問）が誰にも掛からなくなる。"
+  fix: "worktree検問の発火先を [main, develop] に拡張（#2724）。main必須チェックに2ゲートを追加（10→12件）。"
+  kgi: "KGI 5/5（①UI governance gate=main必須11番目 ②dangling-route gate=同12番目 ③発火設定[main, develop]×2実測・実発火は次のactive-work.md変更PRで追認 ④既存10件無傷・12件ちょうど ⑤残差=Playwright E2E (chromium) 1件のみ・意図的除外を承認済み）。"
+  confidence: high
+  human_verification: "Shingo が GO #2724 を自筆発行・12件一覧を目視しPUT承認・404後はGitHub画面で自ら追加。MERGED実測後に完了承認。"
+  decision: "第1.5便完了。E2E必須化は見送り（1人開発＋recon運用では必須化コスト＞利益。装置は必須外で存置し警報として活用）。"
+  lessons: "①ルールセット変更はCC権限では404（権限不足は404で返る）＝管理者POの物理操作の領分。②関所の設計パス欄名は『設計:』（『設計doc:』は正規表現に掛からない）。③recon.mdの引用は後続便の削除で宙に浮く——世界を変えたら過去reconの引用整合も便に含める。④採番は毎回実測（002は別テーマが使用済み・2回連続で衝突を実測が防いだ）。"
+  follow_up: "①KGI-3実発火の追認（次にactive-work.mdを触るPRで自然に確認）。②E2E必須化はskip時判定検証込みの独立テーマ（索引確認のうえ）。③巻き戻し控え=~/ruleset-main-before-batch1-5.json。④次は しんご実地確認 → 第2便（developの鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・残コメント掃除）。"
+
+## 2026-07-03: develop廃止・現在地スナップショット（複数セッションの誤報告防止）（EV-20260703-001）
+- id: EV-20260703-001
+  type: snapshot
+  reference: "origin/main SHA 1e8d1a6e239975ece1ec5f05d6bb50a0ea4322f5（2026-07-03 01:04 JST 実測）"
+  scope: "develop廃止計画の進捗に関する全争点の一括実測。別セッションからの『未完』報告2件（worktree検問main未発火・完了記録なし・new-worktree.sh develop起点）が古いmainを見た誤判定だったため、照合基準を1枚に固定する。"
+  problem: "並行セッションが各自の時点のmainで検証し、解決済みの問題を『未完』と報告する事象が2件発生（鮮度未検証の古い写真問題）。"
+  fix: "本記録なし（コード変更なし）。以下の実測値を照合基準として登録する。"
+  kgi: "6争点すべて実測PASS: ①new-worktree.sh L80=BASE_BRANCH origin/main固定（#2715） ②claude-pipeline/auto-back-merge/auto-release-pr=MISSING×3（#2715） ③worktree-integrity-check.yml L5,L8=[main, develop]（#2724） ④main必須チェック12件 ⑤develop−main残差=Playwright E2E (chromium) 1件のみ（意図的除外・EV-20260702-003） ⑥EV-20260702-001/002/003各2箇所実在・develop存続 1b9a93b7（中止可能の担保）。"
+  confidence: high
+  human_verification: "Shingo がエビデンス確立を指示。実測生ログは設計パートナーセッションで全争点確認。"
+  decision: "第1便・第1.5便は完了済みが正。develop未撤去は意図的（第3便まで残置）。別セッションは検証前に git rev-parse origin/main を取り、本記録のSHA以降のmainと突合すること。"
+  lessons: "①並行セッションの検証は必ず実測時のmain SHAを併記する（SHAなしの『未完』報告は鮮度不明として扱う）。②解決済み事項の再報告はSHA突合で1手で棄却できる——スナップショット記録が構造的な防波堤になる。"
+  follow_up: "残作業は変わらず: しんご実地確認 → 第2便（develop鍵外し）→ 第3便（撤去・自筆GO）→ 第4便（後片付け: runner-label-lint.yml削除・deploy.yml stamp・残コメント）。§3-2への守り正本リスト化は別セッション分担（衝突なし）。"
+
+## 2026-07-03: develop廃止 第1.7便 エージェント案内書のRAG整合（EV-20260703-002）
+- id: EV-20260703-002
+  type: review
+  reference: "PR #2745 merge commit 0de95d9c0b408df4c2b6efe195d32e0aa7ae1358（3コミット構成）"
+  scope: "CLAUDE.md / AGENTS.md / docs/onboarding/claude-code-partner-prompt.md / docs/PARALLEL_TERMINAL_GUIDE.md（4枚をmain一本化へ整合）＋ docs/ai-agents/design-partner.md（接触面分析欄・作法3行・教訓1項目）"
+  problem: "エージェントが読む案内書がdevelop前提のままで、並行セッションが古い世界観で動く（誤報告2件の真因・EV-20260703-001）。"
+  fix: "4分類ルール（削除済み装置参照=撤去／develop起点手順=main書換／残置注記=意味更新して存置／禁止対象のdevelop=存置）で4枚更新。正本に接触面分析欄（6面走査・空欄不可）と作法3行を追加。"
+  kgi: "5条件中○4＋条件つき○1: ①接触面分析欄=1 ②作法3行=各1 ③教訓1項目=1 ④案内書10/12（残置注記はSSOT原則でCLAUDE/AGENTSの2枚に集約・onboardingは45行で正本読了を誘導済み＝意図的） ⑤MERGED+CI緑+PO GO。"
+  confidence: high
+  human_verification: "Shingo がGOをPRコメントで発行しCCにマージを直接指示（本文GO記録欄は空欄のまま・事後承認で確定）。"
+  decision: "第1.7便完了。Planner知識のRAG化＝学びを正本・案内書・記録層に外部化し全セッションに届く構造が成立。"
+  lessons: "①正規表現の広域削除は巻き込み事故を起こす（AGENTS.md事業情報6行を誤削除→diff検出→HEAD~1から機械復元。消す範囲もアンカー完全一致で）。②検算に赤が残ったままコミットへ進む事故＝停止条件は肯定形で『④が全緑の場合のみ⑤実行』と書く。③GO転記とマージ実行の経路は1本に固定（本文4欄→一言GO→カード。コメントGO＋直接マージ指示は記録が割れる）。④KGIの粒度過剰もPlanner責任（注記×4はSSOTと矛盾・2枚集約が正）。"
+  follow_up: "①次セッション冒頭の要点宣言に接触面分析が含まれるかでRAG動作を追認。②案内書lint（実在しないファイル名参照の機械検出）は索引確認のうえ独立テーマ。③しんご実地確認 → 第2便へ（変わらず）。"
+
+## 2026-07-03: hooks検証（見張りの生死と阻止力）（EV-20260703-003）
+- id: EV-20260703-003
+  type: investigation
+  reference: "単体試験 exit=0×9（cwd=HOME/本店）／反応試験 2026-07-03 13:42 JST／実戦ログ PR #2748 マージ時 PreToolUse hook error×3→実行継続"
+  scope: "~/.claude/settings.json（hooks住所）／~/.claude/scripts/ 5フック／実戦挙動の突合"
+  problem: "hook failed頻発報告→『住所化け（/.claude/…）で見張り不在』の仮説が別セッションから提起された。"
+  fix: "なし（検証のみ）。仮説は棄却。"
+  kgi: "①住所は全件 ~/.claude/ 形式=化け仮説棄却 ②危険入力で danger-hook/scope-guard/worktree-guard が検知 exit=1＋警告文（gh pr merge/push --force/rm -rf/他人PR操作） ③しかし実戦では警告後に gh pr merge が実行完了=阻止力なしの疑い濃厚（表示『BLOCKED』と実効が不一致）。"
+  confidence: high（検知の健在）/ medium（阻止力の機序は未修理・未設計）
+  human_verification: "Shingo が hooks先行の順序を承認。反応試験の生ログを確認。"
+  decision: "対処A（住所修正）は不要でクローズ。阻止力の修理（フックの返し方の見直し・~/.claude/=リポ外につきPO二段構え）は独立対処として次テーマ群へ。"
+  lessons: "①転記化けが偽の真因を作る——実測が5分で棄却した。②『BLOCKED表示=阻止』ではない。守りの検証は表示でなく実効（実戦ログとの突合）で判定する。"
+  follow_up: "①B+C便: generator.md但し書き（Plannerカード優先）＋応答様式節＋design-partner.mdカード設計規約＋check-freshness main化。②フック阻止力の修理（バックアップ→全文提示→PO承認→適用→阻止の実測）。③dangling-route gate誤検知対策（merge-base化 or docs-onlyスキップ・独立テーマ）。"
+
+## 2026-07-03: 文書体系（ナレッジベース）起票（EV-20260703-005）
+- id: EV-20260703-005
+  type: review
+  reference: "release/doc-estate-theme worktree / git diff --numstat / git diff / bash scripts/check-doc-heading-duplicates.sh"
+  scope: "docs/specs/doc-estate/README.md / docs/specs/doc-estate/ideal-state.md / docs/specs/doc-estate/kgi.md / docs/specs/README.md / tasks/todo.md / .claude-pipeline/active-work.md"
+  problem: "文書体系（ナレッジベース）の親テーマが specs 索引に無く、3 ファイル標準の正本置き場も未起票だった。"
+  fix: "specs の索引へ 1 行追加し、doc-estate 配下に README / ideal-state / kgi の 3 ファイル標準を新設した。worktree と台帳も同時登録した。"
+  kgi: "numstat=6件（新規3/追記3）・索引追加1行/削除0・見出し重複検査 PASS（docs/STANDARD-WORKFLOW.md と docs/ai-agents/design-partner.md の2本）"
+  confidence: high
+  human_verification: "Shingo の GO 待ちで PR 本文へ検算欄転記予定。"
+  decision: "文書体系テーマを §1.5 の 3 ファイル標準構成で起票し、specs 索引から辿れる状態にした。"
+  lessons: "①新規ファイルは intent-to-add で diff に出してから検算すると見落としが減る。②worktree を手動作成した場合は active-work 登録を忘れない。③索引更新は 1 行差分でも、親テーマが無いと発見性が落ちるため、親テーマの先行登録が有効。"
+  follow_up: "GO 後に PR 作成、必要なら merge commit で main へ反映する。"
+## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）（EV-20260703-002）
+- id: EV-20260703-003
+  date: 2026-07-03
+  subject: 便1a 背骨の必須化（lead必須: deal/company・deal必須: order・遡及lead逆造成49件）
+  pr: "#2743"
+  spec: docs/specs/transaction-flow/README.md（K1/K2/K3根拠・KGI承認2026-07-02）
+  design: docs/handoff/txn-flow-asis-recon/design.md
+  evidence: |
+    本番tenant_004 after検証（2026-07-03・読み取り専用）:
+    null_companies=0 / total=51, new_leads=49（notes '[便1a]%'）,
+    companies.lead_id is_nullable=NO。
+    dry-run: BEFORE49→AFTER0→ROLLBACK、バックアップ /tmp/backup_tenant004_ben1a.sql（10,005行）。
+    tenant_006: deals 18件/orders 26件 NOTICEスキップ（DEMO削除後に再実行で適用）。
+  confirmed: "○（PO Shingo・2026-07-03・after検証3値を目視）"
+
+## 2026-07-03: エージェント完結の設計体制 To-Be 納品前登録（EV-20260703-006）
+- id: EV-20260703-006
+  date: 2026-07-03
+  agent: Codex
+  task: エージェント完結の設計体制 To-Be 文書の納品前登録
+  scope: docs/specs/agent-complete-design/README.md, docs/specs/agent-complete-design/ideal-state.md, docs/specs/agent-complete-design/kgi.md, docs/specs/README.md, tasks/todo.md
+  evidence:
+    - type: command
+      reference: "date -u +'FRESH-RUN-START %Y-%m-%dT%H:%M:%SZ'"
+      summary: "2026-07-03T06:43:00Z に worktree 作業を開始した"
+    - type: command
+      reference: "git merge --ff-only origin/main"
+      summary: "worktree release/agent-complete-design を origin/main 9af6a97a へ fast-forward した"
+    - type: file
+      reference: docs/specs/agent-complete-design/README.md
+      summary: "3ファイル標準の表紙として To-Be 文書を納品する"
+    - type: file
+      reference: docs/specs/agent-complete-design/ideal-state.md
+      summary: "PO自筆のあるべき姿を正本として分離する"
+    - type: file
+      reference: docs/specs/agent-complete-design/kgi.md
+      summary: "KGI と運用を表紙から分離して正本化する"
+    - type: file
+      reference: docs/specs/README.md
+      summary: "索引に agent-complete-design の 1 行を追加する"
+    - type: file
+      reference: tasks/todo.md
+      summary: "新規タスクを進行中として記録した"
+confidence: medium
+tradeoff: recon 前納品のため、親リンクと §4 は後続便で更新が必要になる
+decision: "To-Be 文書をリポジトリに先行納品し、索引と台帳を同時に固定する"
+follow_up: "PR 完了後に merge commit で main へ反映し、recon 後に親リンクを確定する"
+
+## 2026-07-03: 便2 受注明細（order_items）新設＋仕入接続の完了登録（EV-20260703-007）
+- id: EV-20260703-007
+  date: 2026-07-03
+  agent: CC
+  task: 便2 order_items 新設＋仕入接続（S3・S6）の本番適用完了
+  scope: PR #2756, migrations/20260703_030000_order_items_ben2.sql, 本番tenant_004 恒久確認
+  evidence:
+    - type: command
+      reference: "gh run list --workflow=deploy.yml（run 28659581379）"
+      summary: "PR #2756 マージ後の Deploy to VPS が completed/success（2026-07-03T12:08:53Z）"
+    - type: command
+      reference: "本番読み取り専用SELECT（2026-07-03 21:14）"
+      summary: "tenant_004 で order_items=1／paid_at・shipping_fee の2行／order_item_id の1行を確認（ROLLBACKなしの恒久状態）"
+    - type: command
+      reference: "/home/ubuntu/backup_ben2_20260703_172641.dump"
+      summary: "適用前バックアップ（pg_dump custom形式・2,409,849 bytes）を取得済み"
+    - type: command
+      reference: "本番dry-run（2026-07-03 17:41）"
+      summary: "BEGIN→migration→検証SELECT3本→ROLLBACK で構造増設のみを事前確認し、PO目視4点が全て○"
+  confidence: high
+  tradeoff: purchase_orders未作成の旧テナントはto_regclassガードでスキップされるため、該当テナントには仕入列が立たない
+  decision: "ガード付きmigration（ab002d76）をdry-run目視4点とGO記録（2026-07-03 17:58, shingo-ops）を経て本番適用し、POが自らマージした"
+  follow_up: "便3（段階・成約の自動判定）へ。本セッションのCC違反2件（無断migration修正push・無断PR本文上書き）はB+C便のgenerator.md改定入力として扱う"
+
+## 2026-07-07: B+C便 agent設定整合＋鮮度フックmain基準化（EV-20260707-001）
+- id: EV-20260707-001
+  date: 2026-07-07
+  agent: CC
+  task: B+C便 — generator.md/design-partner.md整合（B-1〜B-4）＋check-freshness.sh を origin/develop→origin/main（C）
+  scope: PR #2807, .claude/agents/generator.md, docs/ai-agents/design-partner.md, .claude/hooks/check-freshness.sh, docs/handoff/agent-guardrails/recon.md, docs/handoff/agent-guardrails/design.md
+  evidence:
+    - type: command
+      reference: "gh pr view 2807 --json state,mergedAt,mergeCommit"
+      summary: "state MERGED / mergedAt 2026-07-07T03:20:12Z / merge commit 277d4443 を確認"
+    - type: command
+      reference: "git merge-base --is-ancestor 951137ab origin/main"
+      summary: "PR先頭 951137ab が origin/main の祖先＝マージ実測（MERGED-CONFIRMED）"
+    - type: command
+      reference: "git show origin/main:.claude/hooks/check-freshness.sh | grep -c origin/develop"
+      summary: "main上フックの develop参照=0・main参照あり（C完了の実測）"
+    - type: command
+      reference: "git show origin/main:.claude/agents/generator.md | grep -c 'Planner card overrides'"
+      summary: "B-1 カード優先ルール=1件 main反映"
+    - type: command
+      reference: "git show origin/main:docs/ai-agents/design-partner.md | grep -c 'カード設計の規約'"
+      summary: "B-4 カード設計規約=1件 main反映"
+    - type: command
+      reference: "使い捨てクローンで /tmp/hook-main.sh 実行（FRESH-RUN 2026-07-07 13:20:28）"
+      summary: "ケースA=古地点で『origin/main より新しい』警告が発火(A-EXIT=0)／ケースB=最新mainで沈黙(B-EXIT=0)。鳴るべき時に鳴り・鳴るべきでない時に黙るを両方実測"
+  confidence: high
+  tradeoff: "develop上の旧worktreeにmain基準の警告が出るが、developは新規作業禁止（handoff§4）ゆえ望ましい挙動"
+  decision: "5点をrelease/agent-guardrails-bcで実装、process-artifacts gate緑通過、GO原文『GO』（shingo-ops 2026-07-05）を経てPOがmerge commitでマージ。C便は使い捨てクローンで動作実測しmain文言発火を確認"
+  follow_up: "本店をmainへ戻す片付け／フック阻止力の修理（BLOCKED後も実行継続・EV-20260703-003残課題）／dangling-route gate誤検知対策"
+
+id: EV-20260720-001
+date: 2026-07-20
+agent: Codex
+task: サーバーリソース最適化 ①未使用Dockerイメージの排除(prod1)
+scope: prod1 未使用Dockerイメージ19部品の名指し削除（docker rmi・force不使用）
+evidence:
+  - type: command
+    reference: "GO記録（Shingo / 2026-07-20 / GO）"
+    summary: "直前1世代3件を保持し、削除対象19件は公開倉庫/GitHubから再入手可能であることを確認した"
+  - type: command
+    reference: "docker rmi（対象19件を名指し・force不使用）"
+    summary: "未使用イメージ19部品を削除し、稼働中・直前1世代・幽霊部品・要判断は除外した。前便の19件中13件を実行し、残り7部品8ラベルを継続便で完了した"
+  - type: command
+    reference: "docker images --no-trunc --format '{{.ID}}' | sort -u | wc -l"
+    summary: "削除後イメージ数=17"
+  - type: command
+    reference: "docker ps --format '{{.Names}}\\t{{.Status}}'"
+    summary: "稼働コンテナ13台がすべてUp、healthy表示対象もhealthyであることを確認した"
+  - type: command
+    reference: "df -h /; docker system df"
+    summary: "ディスク使用量27GB→20GB（7GB回収）、イメージ在庫16.2GB→8.2GBを実測した"
+confidence: high
+tradeoff: "名指し19部品だけを削除し、volume・コンテナ・prune全種には触れなかったため、型4.4GBと空き箱168個（2GB）は残置した"
+decision: "POのGO（Shingo / 2026-07-20 / GO）を根拠に、未使用Dockerイメージ19部品を名指し削除した"
+follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係規定拡張＋死活通知）は未実装。prod2の秘密入り.bak散乱は別便。事故なし・サービス無停止"
+
+## EV-20260715-2924 : スコープガードがblock記録した直後にマージが成立（経路未捕捉）
+
+- 事象: PR #2924（inbox/invoice-form-send To-Be design）のマージで、手元ガードがblockを記録したにもかかわらずマージが成立。成立コマンドがエージェントログに残っていない。
+- ガード: `~/.claude/scripts/gh-scope-guard.sh`（PreToolUse・exit1=hard block）。理由「PR#2924 は自分のPRではない（許可なし）」で `gh_scope_blocked` を記録。
+- blocked記録時刻: `2026-07-15T12:44:10Z` / `2026-07-15T13:05:57Z`（`agent-events.jsonl:40835`, `:40854`。フィールドは `type/session/branch/reason/ts` のみ、`actor/tool/pid` 無し）
+- 実マージ（GitHub側メタデータ）: `mergedBy=shingo-cc` / `mergedAt=2026-07-15T12:44:15Z` / `mergeCommit=9bed25ba757a9818a73948fa3cfd6502b3908768`
+- 迂回フラグ: 生ログに `--admin` / `--force` / `--no-verify` / `HUSKY=0` / `SKIP=` は未検出。
+- 未捕捉: `agent-events.jsonl` に #2924 のマージ成立イベントは無い（blocked 2件のみ）。他ログにも成立記録なし。
+- 評価: 実行主体（`shingo-cc`）は正当。問題は仕組み層の2つの穴 - (1)`gh-scope-guard` が `gh pr merge` の一部経路しか止められていない（網羅性）、(2)エージェントログが成立イベントを捕捉していない（監査性）。§6「検問failed後の続行=素通り扱い・結果無事は手順の正当化にならない」に該当。
+- 引き継ぎ: 恒久是正は `branch-operations` / ガード層テーマで recon→設計→GO。本子テーマ（invoice-form-send）のスコープ外。
+
+### 追試 EV-20260715-2924b : #2927 で同型再現（常態確認）＋ログ不整合
+
+- 目的: #2924の齟齬が個別か常態かを、記録専用PR #2927 のマージ実行時に実測して切り分け。
+- 結果: 再現。ガードは #2927 でも `gh_scope_blocked` を記録（`2026-07-15T15:02:06Z`・理由「PR#2927 は自分のPRではない（許可なし）」）が、マージは成立（`MERGE_RC=0` / `state=MERGED` / `mergedBy=shingo-cc` / `mergedAt=2026-07-15T15:02:12Z` / `mergeCommit=e02b849ba61c563e5c0b4ce7aa2f6878b04134a8`）。`blocked→merged` は約6秒差で #2924 と同型。
+- 判定: `gh-scope-guard` の素通りは個別事象でなく常態（#2924・#2927 で2回連続再現）。
+- 追加欠陥（ログ信頼性）: マージ前後のログ行数が同一（`LOG_LINES_BEFORE=LOG_LINES_AFTER=40924`）にもかかわらず、`gh_scope_blocked for 2927` の行がログに存在。行数と内容が不整合＝`agent-events.jsonl` を監査の一次証拠に使う前に、記録の整合性自体の検証が必要。
+- 引き継ぎ（優先度・ガード層テーマへ）: (1)`gh pr merge` の全経路をガードで捕捉（網羅性）、(2)成立イベントのログ捕捉（監査性）、(3)ログ書き込みの整合性（行数と内容の一致）。本子テーマ（invoice-form-send）のスコープ外。
+- EV-20260720-001: new-worktree.sh が「走査行のみ表示して沈黙する」事象の原因を bash -x 実測で確定。原因は内部で呼ぶ reaper-worktree.sh の排他制御(「[reaper] another instance is running; skip.」)で、並行セッション稼働時に出力が途切れる。worktree 作成自体は続行される場合と作成されない場合がある(2026-07-19〜20 に3回再現、うち2回は作成済み・1回は未作成)。worktree数上限(100)は無関係(実測81)。対処: 作成未確認時は bash -x で全記録を取り停止する運用。恒久対処は worktree 運用テーマの延長で道具改修便を起票予定。実測記録は release/local-hooks-ssot-spec 便のカード報告に全文あり。
+
+## 2026-07-22: reaper 配線ズレ修正とK1動作確認（EV-20260722-001）
+
+  reference: "PR #3043 mergeCommit=9a7f2995e8a59c7352e6f6ee81b46f8c796ebf22 ／ 仕様書 PR #3044 mergeCommit=5165d73a3a2d2483bb16ce6b0fac3a462d9519be"
+  scope: ".github/workflows/reaper-schedule.yml への REAPER_WORKTREES_DIR 注入（6行追記・削除0）"
+  problem: "定期 reaper が self-hosted runner の actions/checkout により _work 配下で実行され、git-common-dir が _work 側を指すため本店の worktree 登録を共有せず、対象0件のまま毎日空振りしていた（2026-07-20 実測: Working directory is /Users/tanizawashingo/actions-runner-shingo/_work/salesanchor/salesanchor ／ 対象 worktree 数: 0 件）。"
+  fix: "reaper 実行ステップに REAPER_WORKTREES_DIR=/Users/tanizawashingo/worktrees/salesanchor を env 注入。reaper 本体・checkout 構成は変更していない。"
+  kgi: "K1（定期reaperが本店の実worktreeを走査）合格。マージ後の dry-run 実測で 対象 worktree 数 = 91 件（修正前は 0 件）。同 dry-run で main/develop の削除候補混入なし、使用中作業台（release/reaper-scan-dir-fix・release/reaper-auto-cleanup-spec）も候補外、既知の異物3件と main-rls-bootstrap-ordering も候補外を全数確認。"
+  note: "採用案は 2026-07-22 に手動 dry-run で有効性を実証済みの最小変更。checkout 廃止案・reaper 本体自衛案は未実測のため不採用。"
+  open: "K2〜K10 未達。実削除（K5/K6）は未実測。dry-run 実行中にフォルダ実数が 95→93、削除候補が 2→0 に変動したが、削除主体は未特定（別セッション または ops/launchd/jp.salesanchor.reaper-onlogin.plist の自動起動が候補）。凍結前提が実際には成立していなかった（測定中に origin/main が 9a7f2995 から 058388cf へ前進）。"
+
+## 2026-07-24: lessons-guard 範囲限定化の本番実証 訓練F/G/H（EV-20260724-001）
+
+  reference: "PR #3068（訓練F・CLOSED / mergedAt=null）／ PR #3070（訓練G・CLOSED / mergedAt=null）／ 教訓ポスト PR #3072 mergeCommit=89710660aa893dfd9e24e030af4278aee1dc51f4"
+  scope: "本番PRによる動作実証のみ。正本 docs/ai-agents/design-partner.md への恒久変更ゼロ（ダミー行入りPR 2本は未マージでクローズ）。恒久追加は docs/ai-agents/lessons.d/20260724-guard-drill-verification.md（19行）のみ。"
+  problem: "範囲限定 #3060（検知を §6開始行〜§7開始行の手前に限定）は手元検証5試験のみで、本番での動作が未実証だった。"
+  fix: "対照実験3本を本番PRで実施。F=§6-5 に箇条書き1行 ／ G=§7 に箇条書き1行 ／ H=F のPRに lessons-cleanup ラベル付与。"
+  kgi: "F合格: SEC6_START=173 / SEC7_START=329 / SEC6_ADDED=1、warn-direct-lesson-edit=FAILURE、gh pr merge が 'the base branch policy prohibits the merge' で拒否（run 30039245397）。G合格: SEC6_ADDED=0、conclusion=SUCCESS、mergeStateStatus=UNSTABLE（run 30042043713）。H合格: SEC6_ADDED=1 を保ったまま conclusion=SUCCESS、ログに '✅ Lessons Guard: lessons-cleanup ラベルを確認'（新run 30042870942・旧run 30039245397 と別番号を実測）。"
+  note: "F と G は process-artifacts gate が赤という条件まで同一で、差はダミー行の位置のみ。ruleset id=15777895 の必須チェック12件に warn-direct-lesson-edit は含まれ process-artifacts gate は含まれないため、マージ拒否はガード単独の効果と確定。PR #3072 の mergedAt=2026-07-23T22:10:30Z は UTC 表記で JST では 2026-07-24 07:10。"
+  open: "訓練ブランチ3本のリモート削除は git push origin --delete が手元検問（worktree外／マージ済みブランチ）に拒否され、PO許可のうえ gh api -X DELETE で実施。台帳 .claude-pipeline/active-work.d/ の release-lg-scope-drill-f・-g・release-lessons-drill-fgh は origin/main に未コミットで本店の作業ツリーにのみ存在し、消し込み未実施。範囲限定の恒久維持を機械で保証する仕組みは未設計（本実証は一度きりの人手確認）。"
+
+## 2026-07-28: 作業台滞留の真因と reaper 対策の適用時点（EV-20260728-001）
+
+  reference: "定期run 30216232301（2026-07-26T19:08:45Z・conclusion=success）／対策コミット 9e462249／main合流 d87be6f2（2026-07-26T22:13:16+09:00）／検証時 origin/main=693d654da80d864ec79cfe0681dc78ba8b53f926"
+  scope: "reaper 自動掃除テーマの現状把握のみ。コード・ワークフローへの変更ゼロ。読み取り実測のみ。"
+  problem: "作業台が95個前後で減らない。原因が片付け忘れか機械側かが未確定だった。"
+  fix: "本エントリは実測記録であり変更なし。真因は台帳（.claude-pipeline/）の未コミット差分により reaper のチェック2（未保存保護・scripts/reaper-worktree.sh:154-157）が発動し続けること。対策 9e462249 は main に合流済み（merge-base --is-ancestor 9e462249 693d654d = exit 0）。"
+  kgi: "2026-07-27 04:08 JST の定期run 30216232301 は旧 main 1d9ae8cc で実行され、merge-base --is-ancestor 9e462249 1d9ae8cc = exit 1 のため対策未適用だった。同runの内訳は 対象88件／IN_PROGRESS・未マージ23件／未保存50件／未マージ12件／削除対象3件で、実削除は0件（3件とも『既に存在しないか登録解除済み』）。"
+  note: "本店 /Users/tanizawashingo/salesanchor の作業コピーは HEAD=d9a73243・origin/main=693d654d で434コミット遅れ、未保存23件。手元 scripts/reaper-worktree.sh は claude-pipeline 出現2件（main版は5件）で対策未反映。ゆえに手元 dry-run は旧版を実行し未保存50件・削除対象0件となった。定期実行は actions/checkout で毎回 origin/main を取り直すため本店の遅れの影響を受けない（run 30216232301 のログに e7a53a24..1d9ae8cc を実測）。"
+  open: "①対策適用後の実削除件数は未実測。②台帳を除外した独自集計は both=2／dirty_only=7／unpushed_only=21／clean=57（87 worktree中）だが、reaper の未push判定3経路（scripts/reaper-worktree.sh:147-183）のうち1経路のみで測った値であり reaper と同一物差しではない。③数の三者不一致: git worktree list=97／実フォルダ=94／reaper走査=87＋異物3。K2・K3 未実装の実害。④scripts/dev/executor-preflight.sh:70 は 2>/dev/null || true で失敗理由を破棄し、通信失敗と main 消失を区別せず同一メッセージを出す。疎通検査は api.github.com（25行）、main 存在確認は origin URL の github.com（70行）で宛先が異なる。⑤.claude-pipeline/active-work.md:23 の release/reaper-concurrency-design は IN_PROGRESS だが PR #3066 が 2026-07-23T05:51:08Z に MERGED 済みの残骸。"

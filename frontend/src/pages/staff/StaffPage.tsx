@@ -20,6 +20,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -211,15 +212,15 @@ export default function StaffPage() {
     <PageLayout
       navKey="nav.staff"
       subtitleKey="staff.subtitle"
-      headerAction={hasPermission("staff.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
-            {t("staff.newStaff")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      <ContentToolbar
+        right={hasPermission("staff.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+            {t("staff.newStaff")}
+          </button>
+        ) : undefined}
+      />
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal

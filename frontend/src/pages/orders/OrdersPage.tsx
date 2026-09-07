@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import ConfirmModal from "../../components/ConfirmModal";
 import ShippingDetailPanel from "../../components/ShippingDetailPanel";
@@ -44,23 +45,21 @@ export default function OrdersPage() {
   } = state;
 
   const newOrderButton = hasPermission("orders.create") ? (
-    <div className="page-header-actions">
-      <button
-        className="btn-primary"
-        onClick={() => {
-          setShowForm(true);
-          setEditId(null);
-          setForm(emptyForm);
-          resetSelector();
-        }}
-      >
-        {t("orders.newOrder")}
-      </button>
-    </div>
+    <button
+      className="btn-primary field-h-md"
+      onClick={() => {
+        setShowForm(true);
+        setEditId(null);
+        setForm(emptyForm);
+        resetSelector();
+      }}
+    >
+      {t("orders.newOrder")}
+    </button>
   ) : null;
 
   return (
-    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" noScroll headerAction={newOrderButton}>
+    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" noScroll>
       <div className="hub-shell">
         {/* 左サブナビ: ステータスフィルタ */}
         <nav className="hub-subnav" aria-label={t("orders.title")}>
@@ -89,15 +88,20 @@ export default function OrdersPage() {
 
         {/* 右コンテンツエリア */}
         <div className="hub-content" style={{ overflowY: "auto", padding: "var(--space-4)" }}>
-          <OrdersFilterBar
-            searchInput={searchInput}
-            setSearchInput={setSearchInput}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            sortOrder={sortOrder}
-            toggleSortOrder={toggleSortOrder}
-            STATUS_LABELS={STATUS_LABELS}
-            SORT_OPTIONS={SORT_OPTIONS}
+          <ContentToolbar
+            left={
+              <OrdersFilterBar
+                searchInput={searchInput}
+                setSearchInput={setSearchInput}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                sortOrder={sortOrder}
+                toggleSortOrder={toggleSortOrder}
+                STATUS_LABELS={STATUS_LABELS}
+                SORT_OPTIONS={SORT_OPTIONS}
+              />
+            }
+            right={newOrderButton}
           />
 
           {error && <div className="error-message">{error}</div>}

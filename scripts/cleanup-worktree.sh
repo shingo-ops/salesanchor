@@ -50,33 +50,13 @@ git -C "${MAIN_REPO_ROOT}" branch -D "${BRANCH}" 2>/dev/null && \
   echo "⚠️  ブランチ削除スキップ（既に存在しない可能性あり）"
 
 # ── active-work.md のエントリを DONE に更新（ADR-114: 行は消さず残す）────────
-ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md"
-if [ -f "${ACTIVE_WORK_FILE}" ]; then
-  python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-
-filepath, branch = sys.argv[1], sys.argv[2]
-
-with open(filepath, encoding="utf-8") as f:
-    content = f.read()
-
-lines = content.splitlines(keepends=True)
-new_lines = []
-updated = False
-for line in lines:
-    if branch in line and line.strip().startswith('|') and 'IN_PROGRESS' in line:
-        line = line.replace('IN_PROGRESS', 'DONE', 1)
-        updated = True
-    new_lines.append(line)
-
-new_content = ''.join(new_lines)
-if updated:
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-    print(f"✅ active-work.md → DONE に更新しました: {branch}")
-else:
-    print(f"ℹ️  active-work.md 更新不要（既に DONE または行なし）: {branch}")
-PYEOF
+ROWC="$(bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null || true)"
+if echo "${ROWC}" | grep -q "IN_PROGRESS"; then
+  bash "$(dirname "$0")/ledger-update.sh" "${BRANCH}" --status DONE > /dev/null \
+    && echo "✅ active-work.md → DONE に更新しました: ${BRANCH}" \
+    || echo "⚠️  active-work.md DONE 更新失敗: ${BRANCH}"
+else
+  echo "ℹ️  active-work.md 更新不要（既に DONE または行なし）: ${BRANCH}"
 fi
 
 # ── worktree prune ───────────────────────────────────────────────────────────

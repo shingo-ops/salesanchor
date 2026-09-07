@@ -19,6 +19,7 @@ import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -194,15 +195,15 @@ export default function BotsPage() {
     <PageLayout
       navKey="nav.bots"
       subtitleKey="bots.subtitle"
-      headerAction={hasPermission("bots.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
-            {t("bots.newBot")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      <ContentToolbar
+        right={hasPermission("bots.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+            {t("bots.newBot")}
+          </button>
+        ) : undefined}
+      />
 
       {newApiKey && (
         <div className="notice" style={{ padding: "var(--space-4)", background: "var(--warning-bg)", border: "1px solid var(--warning-text)", borderRadius: "var(--radius-sm)", margin: "16px 0" }}>

@@ -37,7 +37,6 @@ from app.routers import (
     countries,  # Foundation F1: 国台帳 (public.countries)
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
-    deals,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
     discord_auto_setup,  # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
     discord_channel_invite,  # ADR-091 KPI5: チャンネル招待メッセージ送信 API
@@ -48,7 +47,8 @@ from app.routers import (
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
-goals,  # ダッシュボード強化: 目標管理
+    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
+    goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
     integrations,  # API連携 (Googleドライブ 保存テスト 等)
@@ -56,6 +56,7 @@ goals,  # ダッシュボード強化: 目標管理
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
@@ -90,6 +91,13 @@ goals,  # ダッシュボード強化: 目標管理
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
+    tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
+    tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
+    tcg_distribution,  # DIST-01: TCG 在庫配信
+    tcg_line_import,  # MIG-04 Stage 1: LINE エクスポート取り込み
+    tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
+    tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
@@ -272,10 +280,6 @@ app.include_router(
 # SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
 app.include_router(
     contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
-    dependencies=[Depends(get_current_tenant)],
-)
-app.include_router(
-    deals.router, prefix="/api/v1", tags=["deals"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-138 PR3: 成約・失注理由マスタ CRUD
@@ -522,6 +526,11 @@ app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+# 為替レート SSOT: GET /api/v1/fx-rate/{currency} + POST /api/v1/super-admin/fx-rate/refresh
+app.include_router(
+    fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
+)
+
 # Google Calendar 連携
 # public_router: callback + webhook は Bearer トークンなし（認証不要）
 app.include_router(google_calendar.public_router, prefix="/api/v1", tags=["google-calendar"])
@@ -547,6 +556,46 @@ app.include_router(
 app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
+app.include_router(
+    item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_review.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 Phase 3: 商品マスタ登録 API（require_super_admin 限定）
+app.include_router(
+    tcg_product_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
+app.include_router(
+    tcg_supplier_quality.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# DB-A2: TCG 診断 API（固定 SQL 方式・require_super_admin 限定）
+app.include_router(
+    tcg_diagnostics.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Phase 4: 並行運用比較レポート（is_super_admin 限定）
+app.include_router(
+    tcg_parallel_report.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# DIST-01: TCG 在庫配信
+app.include_router(
+    tcg_distribution.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Stage 1: LINE エクスポート取り込み（is_super_admin 限定）
+app.include_router(
+    tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 

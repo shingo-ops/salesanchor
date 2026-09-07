@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
@@ -138,30 +139,25 @@ export default function FollowUpsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.followUpTitle"
-      headerAction={
-        <button
-          type="button"
-          className="fu-back-btn"
-          onClick={() => navigate("/")}
-        >
-          ← {t("nav.dashboard")}
-        </button>
-      }
     >
-      {/* セグメントフィルタチップ */}
-      <div className="fu-filter-row">
-        {segmentFilters.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className={`fu-filter-chip${filter === f.key ? " active" : ""} fu-chip--${f.key}`}
-            onClick={() => { setFilter(f.key); setPage(1); }}
-          >
-            {f.label}
-            <span className="fu-chip-count">{counts[f.key]}</span>
-          </button>
-        ))}
-      </div>
+      <ContentToolbar
+        left={
+          /* セグメントフィルタチップ */
+          <div className="fu-filter-row">
+            {segmentFilters.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={`fu-filter-chip${filter === f.key ? " active" : ""} fu-chip--${f.key}`}
+                onClick={() => { setFilter(f.key); setPage(1); }}
+              >
+                {f.label}
+                <span className="fu-chip-count">{counts[f.key]}</span>
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* DataTable */}
       {loading ? (

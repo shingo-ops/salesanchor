@@ -43,26 +43,26 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ## ブランチ運用ルール
 
-- 作業前に `develop` から `feature/morimoto/<英語で簡潔>` ブランチを作成
-- **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh feature/morimoto/<topic> --claude` で独立ディレクトリを作成（詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
+- 作業前に `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止。新規作業は release/* のみ。develop はロールバック用に残置。正: `docs/specs/branch-operations/README.md §3-3`）
+- **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。正典: `docs/specs/branch-operations/README.md §3-3`／詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
 - **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
 - `develop` / `main` への直接コミット禁止
-- 完了後 `gh pr create` でPR作成 → レビュー後 `develop` へマージ
+- 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
 - **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
-- **develop → main も PR 経由**（直push禁止・Branch Protection で強制）
-  - `gh pr create --base main --head develop --draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない
+- **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
+  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
   - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
-- **develop にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで feature ブランチで待機し develop にマージしない。develop は待合室ではない。
+- **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
 - **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）単独。Hikky-devのApproveバイパスは廃止
-- **リリース PR 作成時**は `git diff main...develop --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
+- **リリース PR 作成時**は `git diff main...HEAD --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
 
-### develop 消失防止（無料運用）
+### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 
 - GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
 - `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
 - `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
-- `./scripts/dev/executor-preflight.sh` は `origin/main` と `origin/develop` の存在を毎回確認する
+- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
 - もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
 
 ---
@@ -114,7 +114,7 @@ ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全�
 6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
 7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）
 8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
-
 **ファイル全体が 90 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
 ## UIガバナンス遵守（ADR-144）
 UI部品新設時は必ず `components/` の金型を先確認。生select/生input/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
+実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。

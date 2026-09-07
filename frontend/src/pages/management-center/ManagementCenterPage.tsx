@@ -46,7 +46,6 @@ export default function ManagementCenterPage() {
       key: "data",
       titleKey: "managementCenter.sectionData",
       items: [
-        { to: "deals",          labelKey: "nav.deals",          visible: hasPermission("deals.view") },
         { to: "suppliers",      labelKey: "nav.suppliers",      visible: hasPermission("suppliers.view") },
         { to: "purchase-orders", labelKey: "nav.purchaseOrders", visible: hasPermission("purchase_orders.view") },
         { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },
@@ -61,8 +60,6 @@ export default function ManagementCenterPage() {
         { to: "integrations/fedex",        labelKey: "nav.integrationFedex",       visible: hasPermission("erp.view") },
         { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: hasPermission("erp.view") },
         { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: hasPermission("erp.view") },
-        { to: "integrations/yamato",       labelKey: "nav.integrationYamato",      visible: hasPermission("erp.view") },
-        { to: "integrations/sagawa",       labelKey: "nav.integrationSagawa",      visible: hasPermission("erp.view") },
         { to: "integrations/paypal",       labelKey: "nav.integrationPaypal",      visible: hasPermission("erp.view") },
       ],
     },
@@ -105,7 +102,7 @@ export default function ManagementCenterPage() {
   return (
     <PageLayout navKey="nav.managementCenter" subtitleKey="managementCenter.subtitle" noScroll>
       <div className="hub-shell">
-        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-148） */}
+        {/* 左サブナビ（共通部品 SubMenu に集約 / ADR-149） */}
         <SubMenu
           variant="grouped"
           className="hub-subnav"

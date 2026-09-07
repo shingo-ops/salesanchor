@@ -25,6 +25,7 @@ class POItemInput(BaseModel):
     product_id: int = Field(ge=1)
     quantity: int = Field(ge=1)
     unit_cost: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    order_item_id: int | None = Field(default=None, ge=1)
 
 
 class POCreate(BaseModel):
@@ -44,6 +45,7 @@ class POItemResponse(BaseModel):
     unit_cost: Decimal
     subtotal: Decimal
     sort_order: int
+    order_item_id: int | None = None
 
     model_config = {"from_attributes": True}
 

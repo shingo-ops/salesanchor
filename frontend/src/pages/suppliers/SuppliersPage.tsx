@@ -8,6 +8,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
@@ -99,13 +100,13 @@ export default function SuppliersPage() {
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
-      headerAction={hasPermission("suppliers.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("suppliers.create") ? (
+        <ContentToolbar
+          right={<button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>}
+        />
+      ) : undefined}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal

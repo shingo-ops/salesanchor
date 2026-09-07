@@ -1,0 +1,40 @@
+name: Test Schema Dup Gate
+
+# テスト（backend/tests/）が本番テーブル定義を新規にコピー（独自 CREATE TABLE 増加）
+# したら検出して PR をブロックする。柱3-a/b（docs/specs/process-hardening/design-pillar3.md）。
+# ※ 必須ではない（non-mandatory）。安定確認後に Ruleset 追加を別途 GO で判断する。
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  gate:
+    name: test-schema-dup gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run test-schema-dup gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_test_schema_dup.py
+
+      - name: Run test-schema-dup tests
+        run: python3 scripts/tests/test_check_test_schema_dup.py
+
+      - name: Check pillar3 inventory
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_test_schema_dup.py --check-inventory docs/specs/process-hardening/pillar3-inventory.md "$HEAD_SHA"

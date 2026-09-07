@@ -14,11 +14,12 @@
  *   - 編集は delta_qty / notes / product_id (Sprint 7 で追加) をインライン可能。
  */
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
+import { PageLayout } from "../../components/PageLayout";
 import "./ParseReviewPage.css";
 
 interface ReviewItem {
@@ -191,7 +192,6 @@ function detailToDrafts(detail: ParseReviewDetail): RowDraft[] {
 export default function ParseReviewPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
 
   const [detail, setDetail] = useState<ParseReviewDetail | null>(null);
@@ -376,15 +376,13 @@ export default function ParseReviewPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="page">
-        <div className="page-header">
-          {/* eslint-disable-next-line no-restricted-syntax -- 詳細ページ（route param あり）は PageLayout の navKey 制約対象外 */}
-          <h2>{t("superAdmin.inbound.review.title")}</h2>
+      <div className="super-admin-parse-review-page">
+        <PageLayout titleText={t("superAdmin.inbound.review.title")}>
+          <div className="error-message" role="alert">
+            {t("superAdmin.accessDenied")}
+          </div>
+        </PageLayout>
         </div>
-        <div className="error-message" role="alert">
-          {t("superAdmin.accessDenied")}
-        </div>
-      </div>
     );
   }
 
@@ -392,21 +390,11 @@ export default function ParseReviewPage() {
     detail?.parse_status === "approved" || detail?.parse_status === "rejected";
 
   return (
-    <div className="page super-admin-parse-review-page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <h2>{t("superAdmin.inbound.review.title")}</h2>
-        <p className="page-subtitle">
-          {t("superAdmin.inbound.review.subtitle")}
-        </p>
-        <button
-          onClick={() => navigate("/super-admin/inbound")}
-          className="btn-secondary"
-          data-testid="review-back-link"
-        >
-          {t("superAdmin.inbound.review.backToList")}
-        </button>
-      </div>
+    <div className="super-admin-parse-review-page">
+      <PageLayout
+        titleText={t("superAdmin.inbound.review.title")}
+        subtitleKey="superAdmin.inbound.review.subtitle"
+      >
 
       {/* Sprint 9 / F9 v1.2 AC9.6: Phase A 並走中の常時表示 warning banner。
           QA r7 SM-4: Phase A のときのみ表示。Phase B (通常運用) では非表示。 */}
@@ -922,6 +910,7 @@ export default function ParseReviewPage() {
           )}
         </>
       )}
+      </PageLayout>
     </div>
   );
 }

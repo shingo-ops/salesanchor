@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 import { Select } from "../../components/Select";
 
@@ -49,23 +50,24 @@ export default function StaffReportsPage() {
     <PageLayout
       navKey="nav.reports"
       subtitleKey="reports.subtitle"
-      headerAction={hasPermission("staff_reports.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("common.add")}</button>
-        </div>
-      ) : undefined}
     >
-      <div className="filter-bar">
-        <Select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          placeholder={t("common.all")}
-          options={Object.entries(TYPE_LABELS).map(([k, v]) => ({
-            value: k,
-            label: v,
-          }))}
-        />
-      </div>
+      <ContentToolbar
+        left={
+          <Select
+            className="field-h-md field-w-sm"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            placeholder={t("common.all")}
+            options={Object.entries(TYPE_LABELS).map(([k, v]) => ({
+              value: k,
+              label: v,
+            }))}
+          />
+        }
+        right={hasPermission("staff_reports.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("common.add")}</button>
+        ) : undefined}
+      />
       {error && <div className="error-message">{error}</div>}
       <Modal
         open={showForm}

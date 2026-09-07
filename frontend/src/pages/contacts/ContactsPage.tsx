@@ -18,6 +18,7 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { STATUS_ICONS } from "../../constants/icons";
@@ -238,47 +239,53 @@ export default function ContactsPage() {
   };
 
   const pendingDedupCount = contacts.filter((c) => c.status === "pending_dedup_review").length;
+  const headerAction = (
+    <div className="page-header-actions">
+      {pendingDedupCount > 0 && (
+        <span className="dedup-summary">
+          {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
+        </span>
+      )}
+    </div>
+  );
+  const pageContentActions = hasPermission("customers.create") ? (
+    <button
+      className="btn-primary field-h-md"
+      onClick={() => {
+        setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
+        setShowCreate(true);
+      }}
+    >
+      + {t("contacts.newContact")}
+    </button>
+  ) : undefined;
 
   return (
     <PageLayout
       navKey="nav.contacts"
       subtitleKey="contacts.subtitle"
-      headerAction={
-        <div className="page-header-actions">
-          {pendingDedupCount > 0 && (
-            <span className="dedup-summary">
-              {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
-            </span>
-          )}
-          {hasPermission("customers.create") && (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
-                setShowCreate(true);
-              }}
-            >
-              + {t("contacts.newContact")}
-            </button>
-          )}
-        </div>
-      }
+      headerAction={headerAction}
     >
-      <div className="filter-bar">
-        <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="search-input">
-          <option value="">{t("contacts.allCompanies")}</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder={t("contacts.searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
-      </div>
+      <ContentToolbar
+        left={
+          <>
+            <select className="search-input field-h-md field-w-sm" value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
+              <option value="">{t("contacts.allCompanies")}</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder={t("contacts.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="search-input field-h-md field-w-sm"
+            />
+          </>
+        }
+        right={pageContentActions}
+      />
 
       {error && <div className="error-banner">{error}</div>}
 

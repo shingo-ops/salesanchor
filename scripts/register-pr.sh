@@ -63,30 +63,7 @@ echo "✅ .pr-number に保存しました: ${WORKTREE_DIR}/.pr-number"
 if [ -f "${ACTIVE_WORK_FILE}" ]; then
   # ブランチ行の PR# 列（6列目）を更新する
   # テーブル形式: | branch | area | date | status | PR# | notes |
-  python3 - "${ACTIVE_WORK_FILE}" "${CURRENT_BRANCH}" "${PR_NUMBER}" <<'PYEOF'
-import sys, re
-
-filepath, branch, pr_num = sys.argv[1], sys.argv[2], sys.argv[3]
-
-with open(filepath, encoding="utf-8") as f:
-    lines = f.readlines()
-
-updated = False
-for i, line in enumerate(lines):
-    # ブランチ名が完全一致するテーブル行を探す
-    if f"| {branch} |" in line and not line.strip().startswith("|---"):
-        parts = line.split("|")
-        if len(parts) >= 7:  # 6列テーブル（| col1 | col2 | ... | col6 | で8要素）
-            parts[5] = f" {pr_num} "  # PR# 列（0-indexで5番目: ''|branch|area|date|status|PR#|notes|''）
-            lines[i] = "|".join(parts)
-            updated = True
-            break
-
-with open(filepath, "w", encoding="utf-8") as f:
-    f.writelines(lines)
-
-sys.exit(0 if updated else 1)
-PYEOF
+  ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-update.sh" "${CURRENT_BRANCH}" --pr "${PR_NUMBER}" > /dev/null
   if [ $? -eq 0 ]; then
     echo "✅ active-work.md の PR# 列を更新しました: #${PR_NUMBER}"
   else

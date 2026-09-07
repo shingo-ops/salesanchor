@@ -76,6 +76,9 @@ _LEAD_DDL = """
         customer_type VARCHAR(20),
         response_speed VARCHAR(20),
         monthly_forecast NUMERIC(15,2),
+        amount NUMERIC(15,2),
+        currency VARCHAR(10) DEFAULT 'JPY',
+        expected_close_date DATE,
         prospect_rank VARCHAR(20),
         assigned_to INTEGER,
         converted_deal_id INTEGER,
@@ -128,6 +131,8 @@ _META_MESSAGES_DDL = """
         error_message TEXT,
         seen_at TIMESTAMP,
         seen_by_staff_id INTEGER,
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """

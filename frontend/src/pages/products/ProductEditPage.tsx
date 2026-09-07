@@ -14,6 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product, FormState, AttrOption } from "./products.types";
 import { emptyForm, normalizeMaterial } from "./products.types";
 
@@ -169,11 +170,11 @@ export default function ProductEditPage() {
     }
   };
 
-  const headerAction = (
-    <div className="page-header-actions">
+  const pageActions = (
+    <>
       <button
         type="button"
-        className="btn-secondary"
+        className="btn-secondary field-h-md"
         onClick={() => navigate(-1)}
         disabled={saving}
       >
@@ -182,21 +183,21 @@ export default function ProductEditPage() {
       <button
         form="product-edit-page-form"
         type="submit"
-        className="btn-primary"
+        className="btn-primary field-h-md"
         disabled={saving || loading}
         data-testid="product-edit-save"
       >
         {saving ? t("common.saving") : isNew ? t("common.register") : t("common.update")}
       </button>
-    </div>
+    </>
   );
 
   return (
     <PageLayout
       navKey="nav.products"
       subtitleKey={isNew ? "products.newProduct" : "products.editProduct"}
-      headerAction={headerAction}
     >
+      <ContentToolbar right={pageActions} />
       {loading && <div className="loading">{t("common.loading")}</div>}
       {error && <div className="error-message">{error}</div>}
 

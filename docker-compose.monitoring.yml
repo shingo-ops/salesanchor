@@ -171,6 +171,22 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./secrets/alertmanager-discord-webhook:/etc/alertmanager/secrets/discord-webhook:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "127.0.0.1:9093:9093"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
   loki:
     # ログ集約: アプリ VPS の Promtail (docker-compose.exporters.yml) が
     # discord-gateway コンテナのログを収集し、SSH 逆トンネル経由で push。
@@ -197,7 +213,8 @@ services:
       - no-new-privileges:true
 
   uptime-kuma:
-    image: louislam/uptime-kuma:2.3.0
+    # 1.23系固定: 自動登録API(uptime-kuma-api)が2.xと非互換のため(2026-07-18実測)。2.x移行はAPI互換確認後に別便
+    image: louislam/uptime-kuma:1.23.16
     volumes:
       - uptime_kuma_data:/app/data
     ports:

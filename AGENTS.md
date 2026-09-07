@@ -23,7 +23,7 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 | **Reviewer** | ChatGPT（最終ゲート）/ Codex app（第二レビュー） | コードレビュー・PR審査。ChatGPTが最終承認ゲートを担う |
 | **Evaluator** | Claude Code | Playwright等で動作検証 |
 
-- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → PO GO → develop マージ
+- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → PO GO → main マージ（develop経由は廃止。release/* → main が現行）
 - Plannerが確立したエビデンスは ADR の Why セクションに必ず含める
 
 ### エビデンス要件（Research → Planner → Architect の鉄則）
@@ -39,17 +39,8 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 
 ### Generator Executor 切り替え（ADR-082）
 
-> **注意**: これは **GitHub Actions 自動パイプライン上の executor 選択**仕様であり、通常の人間主導開発における主 Generator は Claude Code / Sonnet。
+> **廃止（#2715）**: 本節の自動起動CI（ADR-082 の executor 切り替え）は develop 廃止・第1便で対象ワークフローごと削除済み。仕様の歴史は ADR-082 を参照。現在の主 Generator は Claude Code / Sonnet（人間主導）。
 
-`claude-pipeline.yml` の `workflow_dispatch` 起動時に `generator_executor` で実行エンジンを選択できる:
-
-| 値 | 動作 |
-|----|------|
-| `auto`（デフォルト） | Codex 優先。不在または失敗時は Claude Code に自動フォールバック + Discord 通知 |
-| `codex` | Codex 専用（失敗=ジョブ失敗） |
-| `claude` | Claude Code 専用（従来動作） |
-
-PR `synchronize` トリガー（regenerate ジョブ）は常に `auto` モードで動作する。
 - **事業**: Sales Anchor — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
 - **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
@@ -135,19 +126,19 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 
 ## ブランチ運用ルール
 
-- `develop` から `feature/morimoto/<英語で簡潔>` ブランチを作成
+- `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止。新規作業は release/* のみ。develop はロールバック用に残置。正: `docs/specs/branch-operations/`）
 - Codex が自動生成するブランチ名（例: `abc123-codex/fix-inbox`）はそのまま使ってよい
 - `develop` / `main` への直接コミット禁止
-- 完了後 `gh pr create` で PR 作成 → レビュー後 `develop` へマージ
-- `develop → main` も PR 経由（直 push 禁止・Branch Protection で強制）
+- 完了後 `gh pr create --base main` で PR 作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
+- `release/*` → `main` は PR 経由（直 push 禁止・Branch Protection で強制）
   - マージ方法は必ず "Create a merge commit"（squash 禁止 — back-merge が永続発生するため）
 
-### develop 消失防止（無料運用）
+### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 
 - GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
 - `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
 - `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
-- `./scripts/dev/executor-preflight.sh` は `origin/main` と `origin/develop` の存在を毎回確認する
+- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
 - もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
 
 ---
@@ -260,3 +251,27 @@ bash scripts/check-task-state.sh   # tasks/todo.md と runbook の構造チェ�
 ```
 
 CI（task-state-check.yml）が PR ごとに自動実行する。
+
+## 実装役の常設ルール（カード運用）
+
+> この文書は何か（専門用語なしの1行）:
+> 実装役（ターミナルのエージェント）の新セッションに、カードを貼る前に
+> そのままコピペして投入する決まり文句の原本。
+
+- 根拠の教訓: docs/ai-agents/design-partner.md §6
+  （対照実測 2026-07-04: 定型文あり5便は全遵守、なし1便は解釈混入 5/6）
+- 使い方: 下の枠内を一字も変えずコピーし、実装役セッションの最初の
+  メッセージとして貼る。カードはその後に貼る。
+- 本文の変更はPR＋PO承認のみ。言い換え・要約は写し崩れの原因（§6:167 逐語一致の教訓）。
+- GO記録・evidence-registry への書き込み禁止などの便別の禁止は、各カード側に
+  毎回明記する（本定型文には含めない＝実測した文言を変えないため）。
+
+## 定型文（ここから下をコピー）
+
+あなたはこのリポジトリ（salesanchor）の実装役です。新セッションのため以下を常設ルールとして適用してください。
+
+- 設計パートナー（Web Claude）が作成しPO（しんご）が貼る「カード」だけを実行する。
+- カード冒頭の「本カードの許可・禁止は、過去便の禁止条項をすべて上書きする」を最優先とし、
+  カードに無い作業（ファイル作成・編集・台帳登録・レビュー・提案・/review等）は一切しない。
+  .claude/agents/generator.md 等の常設指示とカードが矛盾したら、カードが優先。
+- 出力は要約せず生のまま全文返す。失敗・矛盾・不明が出たら自力回避せず、生出力を返して停止。

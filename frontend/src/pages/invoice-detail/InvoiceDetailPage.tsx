@@ -7,11 +7,13 @@
  */
 
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 
 interface InvoiceItem {
   id: number;
@@ -100,7 +102,6 @@ interface PaypalDispute {
 export default function InvoiceDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [disputes, setDisputes] = useState<PaypalDispute[]>([]);
@@ -182,30 +183,32 @@ export default function InvoiceDetailPage() {
   const invoiceTotalWeight = invoice.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
 
   return (
-    <div className="page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <h2>{t("invoices.title")} — {invoice.invoice_number || `#${invoice.id}`}</h2>
-        <div className="actions" style={{ display: "flex", gap: "var(--space-2)" }}>
-          {invoice.status === "draft" && hasPermission("invoices.create") && (
-            <button className="btn-primary" onClick={() => doAction("issue")}>{t("invoices.issueAction")}</button>
-          )}
-          {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && (
-            <button className="btn-primary" onClick={() => doAction("pay")}>{t("invoices.payAction")}</button>
-          )}
-          {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
-            <button className="btn-secondary" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</button>
-          )}
-          {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && invoice.paypal_approval_url && (
-            <button className="btn-primary" onClick={() => doAction("paypal-confirm")}>{t("invoices.paypal.confirm")}</button>
-          )}
-          {invoice.status !== "voided" && hasPermission("invoices.void") && (
-            <button className="btn-danger" onClick={() => setShowVoidForm(true)}>{t("invoices.voidAction")}</button>
-          )}
-          <button className="btn-secondary" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
-          <button className="btn-secondary" onClick={() => navigate("/invoices/new")}>{t("common.back")}</button>
-        </div>
-      </div>
+    <PageLayout
+      titleText={`${t("invoices.title")} — ${invoice.invoice_number || `#${invoice.id}`}`}
+      subtitleKey="invoices.detailSubtitle"
+      >
+        <ContentToolbar
+          right={
+            <>
+              {invoice.status === "draft" && hasPermission("invoices.create") && (
+                <button className="btn-primary field-h-md" onClick={() => doAction("issue")}>{t("invoices.issueAction")}</button>
+              )}
+              {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && (
+                <button className="btn-primary field-h-md" onClick={() => doAction("pay")}>{t("invoices.payAction")}</button>
+              )}
+              {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
+                <button className="btn-secondary field-h-md" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</button>
+              )}
+              {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && invoice.paypal_approval_url && (
+                <button className="btn-primary field-h-md" onClick={() => doAction("paypal-confirm")}>{t("invoices.paypal.confirm")}</button>
+              )}
+              {invoice.status !== "voided" && hasPermission("invoices.void") && (
+                <button className="btn-danger field-h-md" onClick={() => setShowVoidForm(true)}>{t("invoices.voidAction")}</button>
+              )}
+              <button className="btn-secondary field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
+            </>
+          }
+        />
 
       {error && <div className="error-message">{error}</div>}
 
@@ -336,6 +339,6 @@ export default function InvoiceDetailPage() {
           {invoice.amount_usd != null && <tr><td colSpan={6} style={{ textAlign: "right", color: "var(--text-muted)" }}>{t("invoices.usdConvert")}</td><td style={{ color: "var(--text-muted)" }}>${invoice.amount_usd.toLocaleString()}</td></tr>}
         </tfoot>
       </table>
-    </div>
+    </PageLayout>
   );
 }

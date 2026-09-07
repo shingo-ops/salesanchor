@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     company_code VARCHAR(20) NOT NULL,
-    lead_id INTEGER,                                   -- FK は leads 作成後に付与
+    lead_id INTEGER NOT NULL,                          -- FK は leads 作成後に付与（便1a）
     name VARCHAR(255) NOT NULL,
     name_en VARCHAR(255),
     normalized_name VARCHAR(255),
@@ -360,6 +360,9 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     customer_type VARCHAR(50),
     response_speed VARCHAR(20),
     monthly_forecast NUMERIC(15, 2),
+    amount NUMERIC(15, 2),
+    currency VARCHAR(10) DEFAULT 'JPY',
+    expected_close_date DATE,
     prospect_rank VARCHAR(10),
     assigned_to INTEGER,
     converted_deal_id INTEGER,
@@ -419,45 +422,8 @@ CREATE TABLE IF NOT EXISTS {schema}.lead_playbook (
 CREATE INDEX IF NOT EXISTS idx_lead_playbook_active
     ON {schema}.lead_playbook (tenant_id) WHERE is_active = TRUE;
 
--- 商談データ
-CREATE TABLE IF NOT EXISTS {schema}.deals (
-    id SERIAL PRIMARY KEY,
-    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    deal_code VARCHAR(20),
-    -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
-    --   新テナント作成時も customer_id 列を作らない（新 B2B モデル唯一の正）。
-    -- CONSTRAINT 名は migration 032 と合わせる（verify の FK 存在 check が新旧テナントで揃うように）
-    company_id INTEGER CONSTRAINT fk_deals_company REFERENCES {schema}.companies(id),
-    contact_id INTEGER CONSTRAINT fk_deals_contact REFERENCES {schema}.contacts(id),
-    lead_id INTEGER REFERENCES {schema}.leads(id),
-    title VARCHAR(255) NOT NULL,
-    amount NUMERIC(15, 2),
-    currency VARCHAR(10) DEFAULT 'JPY',
-    status VARCHAR(50) DEFAULT 'open',
-    stage VARCHAR(50) DEFAULT 'open',
-    probability INTEGER DEFAULT 10,
-    assigned_to INTEGER,
-    expected_close_date DATE,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_deals_company_id ON {schema}.deals (company_id);
-CREATE INDEX IF NOT EXISTS idx_deals_contact_id ON {schema}.deals (contact_id);
-
--- リード→案件への逆参照FK（leads作成時点ではdealsが未存在のため後から追加）
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'fk_leads_converted_deal'
-          AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
-    ) THEN
-        ALTER TABLE {schema}.leads
-            ADD CONSTRAINT fk_leads_converted_deal
-            FOREIGN KEY (converted_deal_id) REFERENCES {schema}.deals(id);
-    END IF;
-END $$;
+-- 便D-1: deals テーブルDDL・インデックス・FK は新規テナント作成定義から除去済み（2026-07-28）
+-- deals テーブル本体の DROP は便E で実施。既存テナントの deals は便D-1 では触らない。
 
 -- Phase 1-B-2: companies.lead_id / contacts.lead_id → leads.id
 DO $$
@@ -489,7 +455,6 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
-    deal_id INTEGER REFERENCES {schema}.deals(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
     status VARCHAR(50) DEFAULT 'pending',
@@ -817,7 +782,7 @@ CREATE TABLE IF NOT EXISTS {schema}.quotes (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     quote_code VARCHAR(20),
-    deal_id INTEGER REFERENCES {schema}.deals(id),
+    lead_id INTEGER REFERENCES {schema}.leads(id),
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
     company_id INTEGER CONSTRAINT fk_quotes_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_quotes_contact REFERENCES {schema}.contacts(id),
@@ -839,6 +804,27 @@ CREATE TABLE IF NOT EXISTS {schema}.quotes (
 );
 CREATE INDEX IF NOT EXISTS idx_quotes_company_id ON {schema}.quotes (company_id);
 CREATE INDEX IF NOT EXISTS idx_quotes_contact_id ON {schema}.quotes (contact_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_lead_id ON {schema}.quotes (lead_id);
+
+-- 成約・失注理由マスタ
+CREATE TABLE IF NOT EXISTS {schema}.close_reasons (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(10) NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (type, label)
+);
+
+CREATE TABLE IF NOT EXISTS {schema}.deal_close_reasons (
+    id SERIAL PRIMARY KEY,
+    lead_id INTEGER REFERENCES {schema}.leads(id),
+    reason_id INTEGER NOT NULL REFERENCES {schema}.close_reasons(id),
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (lead_id, reason_id)
+);
+CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_lead_id ON {schema}.deal_close_reasons (lead_id);
 
 -- 見積明細
 CREATE TABLE IF NOT EXISTS {schema}.quote_items (
@@ -910,6 +896,56 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     sort_order INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS {schema}.order_items (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    order_id INTEGER NOT NULL,
+    product_id INTEGER REFERENCES public.products(id),
+    product_name VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+    condition VARCHAR(50),
+    unit VARCHAR(20),
+    sku VARCHAR(100),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(15, 2) NOT NULL,
+    subtotal NUMERIC(15, 2) NOT NULL,
+    weight NUMERIC(10, 3),
+    hs_code VARCHAR(20),
+    usd_unit_value NUMERIC(15, 2),
+    exchange_rate_usd NUMERIC(12, 4),
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON {schema}.order_items (order_id);
+
+DO $order_items_fk$
+BEGIN
+    IF to_regclass('{schema}.orders') IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'fk_order_items_order'
+              AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
+        ) THEN
+            ALTER TABLE {schema}.order_items
+                ADD CONSTRAINT fk_order_items_order
+                FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE;
+        END IF;
+    END IF;
+END $order_items_fk$;
+
+DO $order_items_trigger$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'trg_order_items_updated_at'
+          AND tgrelid = '{schema}.order_items'::regclass
+    ) THEN
+        CREATE TRIGGER trg_order_items_updated_at BEFORE UPDATE ON {schema}.order_items
+            FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
+    END IF;
+END $order_items_trigger$;
+
 -- === Phase 3: 仕入れ・調達管理 ===
 
 CREATE TABLE IF NOT EXISTS {schema}.suppliers (
@@ -951,6 +987,8 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
     total_amount NUMERIC(15, 2) DEFAULT 0,
     ordered_at TIMESTAMPTZ,
     received_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    shipping_fee NUMERIC(15, 2) DEFAULT 0,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -964,6 +1002,7 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
+    order_item_id INTEGER REFERENCES {schema}.order_items(id),
     sort_order INTEGER DEFAULT 0
 );
 
@@ -1128,8 +1167,9 @@ CREATE TABLE IF NOT EXISTS {schema}.own_inventory (
 # 親テーブルのRLSを経由した保護を追加することで防御の二重化を実現する。
 _RLS_ENABLE_SQL = """
 -- ADR-089 Sprint 5: customers は廃止済。RLS は companies 体系のみ。
-ALTER TABLE {schema}.deals ENABLE ROW LEVEL SECURITY;
+-- 便D-1: deals RLS は除去済み（deals テーブルは便E で DROP 予定）
 ALTER TABLE {schema}.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.roles ENABLE ROW LEVEL SECURITY;
@@ -1182,12 +1222,13 @@ _RLS_POLICY_SQL = """
 DO $$
 BEGIN
     -- ADR-089 Sprint 5: tenant_isolation_customers 削除済（customers テーブル廃止）
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_deals' AND schemaname = '{schema_raw}') THEN
-        CREATE POLICY tenant_isolation_deals ON {schema}.deals
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
-    END IF;
+    -- 便D-1: tenant_isolation_deals 削除済（deals テーブルは便E で DROP 予定）
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_orders' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_orders ON {schema}.orders
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_items' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_items ON {schema}.order_items
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_audit_logs' AND schemaname = '{schema_raw}') THEN
@@ -1653,13 +1694,10 @@ async def create_tenant_schema(
     """
     await ddl_db.execute(text(grant_sql))
 
-    # 4. システムロール（オーナー/メンバー）をシード（DML → db）
-    await seed_system_roles(db, safe_id, schema_name)
-
-    # 4b. F3: 標準 channel_masters をシード（DML → db）
-    await seed_default_channel_masters(db, safe_id, schema_name)
-
     # 5. F16-FU2: meta_page_routing 同期トリガをセットアップ（DDL → admin_db）
+    # ★壁0修正: DDL を step4(DML)より前に集約する。admin_db を commit する前に
+    # db セッションから seed_* で tenant_X.* を参照すると 42P01 になるため、
+    # 全 DDL をここで終わらせてから commit する。
     # 既存テナントへの適用は scripts/migrate_meta_page_routing.py が担当する。
     # 新規テナントは public.meta_page_routing 表 (migration 043) が既に存在する前提。
     trigger_sql = _META_PAGE_ROUTING_TRIGGER_SQL.format(
@@ -1668,40 +1706,82 @@ async def create_tenant_schema(
     )
     await _execute_statements_preserving_do_blocks(ddl_db, trigger_sql)
 
-    # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
-    #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
-    #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
-    #
-    #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
-    #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
-    #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
-    #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
-    #    外側トランザクションを生かしたまま警告ログを出す。
+    # ★壁0修正: 全 DDL をここで確定する。
+    # admin_db が db と別オブジェクト（SA-18 Phase2 で注入される別 AsyncSession）の場合のみ
+    # commit して、db セッションから tenant_X.* が可視化されるようにする。
+    # admin_db が None（= db にフォールバック）または db と同一オブジェクト
+    # （テスト用 bootstrap_tenant_schema が conn=db=admin_db で渡すケース）の場合は
+    # 同一接続内なので commit 不要（context manager に任せる）。
+    if admin_db is not None and ddl_db is not db:
+        await ddl_db.commit()
+
+    # DDL commit 後に DML が失敗した場合、DDL は不可逆なためスキーマが孤立する。
+    # 以下の try/except で例外時に DROP SCHEMA CASCADE して孤立ゼロを維持する。
     try:
-        async with db.begin_nested():
-            await db.execute(
-                text(
-                    "INSERT INTO public.tenant_settings "
-                    "(tenant_id, spreadsheet_phase, "
-                    " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
-                    " quote_validity_days, default_currency, document_language, "
-                    " duty_incoterms, issue_mode) "
-                    "VALUES (:tid, 'A', "
-                    " 'none', 0, 0, "
-                    " 1, 'JPY', 'en', "
-                    " 'DAP', 'pdf') "
-                    "ON CONFLICT (tenant_id) DO NOTHING"
-                ),
-                {"tid": safe_id},
-            )
-    except Exception as exc:
-        # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
-        # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
-        logger.warning(
-            "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
-            safe_id,
-            exc,
+        # ★壁2修正: seed_* が salesanchor_app で tenant_X.* に INSERT できるよう
+        # RLS 用セッション変数を設定する。SET文はバインド変数を受け付けないため
+        # set_config() を使用（第3引数 true = トランザクション内のみ有効）。
+        await db.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"),
+            {"tid": str(safe_id)},
         )
+
+        # 4. システムロール（オーナー/メンバー）をシード（DML → db）
+        await seed_system_roles(db, safe_id, schema_name)
+
+        # 4b. F3: 標準 channel_masters をシード（DML → db）
+        await seed_default_channel_masters(db, safe_id, schema_name)
+
+        # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
+        #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
+        #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
+        #
+        #    SAVEPOINT ガード: 単純な except Exception: pass はトランザクションを ABORTED 状態に
+        #    しても Python 側に伝播させない（PG: "current transaction is aborted"）ため、
+        #    外側トランザクションの COMMIT が実質 ROLLBACK になりスキーマが消える。
+        #    begin_nested() で SAVEPOINT を切り、失敗時はそこだけロールバックして
+        #    外側トランザクションを生かしたまま警告ログを出す。
+        try:
+            async with db.begin_nested():
+                await db.execute(
+                    text(
+                        "INSERT INTO public.tenant_settings "
+                        "(tenant_id, spreadsheet_phase, "
+                        " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
+                        " quote_validity_days, default_currency, document_language, "
+                        " duty_incoterms, issue_mode) "
+                        "VALUES (:tid, 'A', "
+                        " 'none', 0, 0, "
+                        " 1, 'JPY', 'en', "
+                        " 'DAP', 'pdf') "
+                        "ON CONFLICT (tenant_id) DO NOTHING"
+                    ),
+                    {"tid": safe_id},
+                )
+        except Exception as exc:
+            # migration 070 未適用環境（テスト・開発）では tenant_settings が存在しないため skip。
+            # SAVEPOINT がロールバックされるだけで外側トランザクションは生き残る。
+            logger.warning(
+                "tenant_settings seed skipped for tenant %d (migration 070 not applied?): %s",
+                safe_id,
+                exc,
+            )
+
+    except Exception:
+        # DML 失敗: DDL は既に commit 済みのためスキーマが孤立する前に DROP する。
+        # admin_db が None または db と同一オブジェクトの場合は db.rollback() で巻き戻るので不要。
+        if admin_db is not None and ddl_db is not db:
+            try:
+                await ddl_db.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+                await ddl_db.commit()
+                logger.warning("Dropped orphan schema %s after DML failure", schema_name)
+            except Exception as drop_exc:
+                logger.error(
+                    "Failed to drop orphan schema %s: %s",
+                    schema_name,
+                    drop_exc,
+                )
+        raise
 
     # commitは呼び出し元で行う（監査ログ等と一括でcommitするため）
     return schema_name

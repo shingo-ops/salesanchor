@@ -1,0 +1,30 @@
+
+<svg width="820" height="440" viewBox="0 0 820 440" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="820" height="440" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="408" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">管理センター</text>
+
+  <text x="36" y="66" font-size="9" fill="#888780" letter-spacing="0.5">チーム管理</text>
+  <rect x="16" y="76" width="200" height="30" fill="#e6f1fb"/>
+  <rect x="16" y="76" width="3" height="30" fill="#378add"/>
+  <text x="40" y="95" font-size="12" fill="#0c447c" font-weight="600">スタッフ</text>
+  <text x="40" y="126" font-size="12" fill="#5f5e5a">ロール</text>
+  <text x="40" y="152" font-size="12" fill="#5f5e5a">シフト</text>
+  <text x="40" y="178" font-size="12" fill="#5f5e5a">レポート</text>
+  <text x="40" y="204" font-size="12" fill="#5f5e5a">報酬管理</text>
+  <text x="40" y="230" font-size="12" fill="#5f5e5a">請求書発行情報</text>
+
+  <text x="36" y="256" font-size="9" fill="#888780" letter-spacing="0.5">データ管理</text>
+  <text x="40" y="278" font-size="12" fill="#5f5e5a">リード</text>
+  <text x="40" y="304" font-size="12" fill="#5f5e5a">顧客</text>
+  <text x="40" y="330" font-size="12" fill="#5f5e5a">商品マスタ</text>
+  <text x="40" y="356" font-size="12" fill="#5f5e5a">仕入先</text>
+
+  <text x="36" y="382" font-size="9" fill="#888780" letter-spacing="0.5">外部連携</text>
+  <text x="40" y="400" font-size="12" fill="#5f5e5a">Google</text>
+  <text x="120" y="400" font-size="12" fill="#5f5e5a">メッセージ</text>
+
+  <text x="500" y="220" font-size="12" fill="#888780" text-anchor="middle">選択した項目に応じて、右側にデータテーブル型</text>
+  <text x="500" y="238" font-size="12" fill="#888780" text-anchor="middle">（チーム管理・データ管理）または接続設定型（外部連携）の画面が表示される</text>
+</svg>

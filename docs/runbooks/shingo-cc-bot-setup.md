@@ -10,7 +10,7 @@
 ```
 [人間] shingo-cc アカウント作成 & PAT発行
   ↓
-[人間] .claude-access.env に PAT を書く
+[人間] gh に shingo-cc の認証を登録
   ↓
 [CC]  gh auth 切り替え & 動作確認
   ↓
@@ -78,17 +78,16 @@
 
 ---
 
-### Step 4: .claude-access.env に PAT を保存
+### Step 4: 認証情報の保管先を準備
 
-CC に渡すため、ローカル専用ファイルに書く（**git追跡・チャット記載禁止**）:
+CC に渡すため、認証情報は各自の安全な保管先に置く（**git追跡・チャット記載禁止**）:
 
 ```bash
-# ターミナルで実行（~/ = ホームディレクトリ）
-echo 'SHINGO_CC_PAT=github_pat_ここにコピーしたトークンを貼り付け' >> ~/.claude-access.env
-chmod 600 ~/.claude-access.env
+# 端末上で、認証情報を gh に登録済みであることを確認
+gh auth status
 ```
 
-> 確認: `cat ~/.claude-access.env | grep SHINGO_CC_PAT` でトークンが見えれば OK。
+> 確認: 以後の切り替えは `gh auth switch --hostname github.com --user shingo-cc` で行う。
 
 ---
 
@@ -97,24 +96,23 @@ chmod 600 ~/.claude-access.env
 CC（このチャット）に以下のメッセージを送る:
 
 ```
-.claude-access.env に SHINGO_CC_PAT を書いた。shingo-cc に gh 認証を切り替えて、テスト PR で確認して。
+shingo-cc の認証登録が完了した。shingo-cc に gh 認証を切り替えて、テスト PR で確認して。
 ```
 
 ---
 
 ## Part 2: CC がやる手順（Claude Code）
 
-> ⚠️ **前提**: Part 1 が完了し、`~/.claude-access.env` に `SHINGO_CC_PAT` が書かれていること
+> ⚠️ **前提**: Part 1 が完了し、gh に shingo-cc の認証が登録されていること
 
 ### Step 6: gh auth を shingo-cc に切り替え
 
 ```bash
-# PAT 読み込みと gh 認証切り替え
-source ~/.claude-access.env
-echo "${SHINGO_CC_PAT}" | gh auth login --hostname github.com --with-token
+# 切り替え
+gh auth switch --hostname github.com --user shingo-cc
 
 # 確認
-gh auth status
+gh auth status --active
 # → "Logged in to github.com account shingo-cc" と表示されれば OK
 ```
 
@@ -148,15 +146,14 @@ gh pr create \
 
 1. shingo-cc アカウントで `https://github.com/settings/personal-access-tokens` を開く
 2. `shingo-cc-2026` を選択 → 「Regenerate token」
-3. 新トークンを `~/.claude-access.env` の値に上書き
-4. CC に再度 Part 2 を実施させる
+3. CC に再度 Part 2 を実施させる
 
 ### ロールバック（緊急時）
 
 ```bash
-# shingo-ops に戻す（Shingo の PAT が ~/.claude-access.env に SHINGO_OPS_PAT として保存済みの場合）
-source ~/.claude-access.env
-echo "${SHINGO_OPS_PAT}" | gh auth login --hostname github.com --with-token
+# shingo-ops に戻す
+gh auth switch --hostname github.com --user shingo-ops
+gh auth status --active
 ```
 
 ---

@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import ConfirmModal from "../../components/ConfirmModal";
 import PurchaseOrdersFormModal, { POLineItem } from "./PurchaseOrdersFormModal";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -177,13 +178,6 @@ export default function PurchaseOrdersPage() {
     <PageLayout
       navKey="nav.purchaseOrders"
       subtitleKey="purchaseOrders.subtitle"
-      headerAction={hasPermission("purchase_orders.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" data-testid="po-new-btn" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>
-            {t("purchaseOrders.newPO")}
-          </button>
-        </div>
-      ) : undefined}
     >
       <PurchaseOrdersFormModal
         open={showNewModal}
@@ -193,12 +187,19 @@ export default function PurchaseOrdersPage() {
         initialItems={poInitial?.items}
         pickerless={poInitial != null}
       />
-      <div className="filter-bar">
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="">{t("purchaseOrders.allStatuses")}</option>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-      </div>
+      <ContentToolbar
+        left={
+          <select className="field-h-md field-w-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="">{t("purchaseOrders.allStatuses")}</option>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        }
+        right={hasPermission("purchase_orders.create") ? (
+          <button className="btn-primary field-h-md" data-testid="po-new-btn" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>
+            {t("purchaseOrders.newPO")}
+          </button>
+        ) : undefined}
+      />
       {error && <div className="error-message">{error}</div>}
       {info && <div className="info-message" data-testid="po-info">{info}</div>}
       {loading ? <div className="loading">{t("common.loading")}</div> : (() => {

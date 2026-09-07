@@ -1,0 +1,35 @@
+# Sales Anchor アプリ全体 — 設計仕様書（表紙）
+
+> この文書は何か（専門用語なしの1行）:
+> PO（しんご）が実現したい Sales Anchor アプリ全体の完成イメージを、PO自筆の言葉のまま収めた正本。個別ページの詳しい設計図（子テーマ）は全部ここからたどる。
+
+- あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
+- KGIと運用: [kgi.md](./kgi.md)
+- 親: 索引 [docs/specs/README.md](../README.md)
+- ステータス: KGI承認済 2026-07-04（PO原文収録済み）
+
+## 参照ルール
+
+- KGI承認済みテーマと本書の記述が重なる箇所は、承認済みテーマ側が正。
+- 未整備領域は本テーマの記述を正とする。
+- ideal-state.md は PO 自筆の原文のみを収録し、Planner / Generator は書き換えない。
+
+## 対象範囲
+
+この親テーマの下にぶら下がる子テーマは次のとおり。
+
+| 子テーマ | 状態 |
+|---|---|
+| [受信箱](../inbox/README.md) | KGI承認済 2026-07-04・design.md完成 |
+| [顧客管理](../customer-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-10（独立テーマとして起票） |
+| [受注管理](../order-management/README.md) | design承認・収納済み 2026-07-04（子: unpaid完成） |
+| [売上管理](../sales-management/README.md) | あるべき姿・KGI・To-Be確定 2026-07-09（独立テーマとして起票） |
+| [管理センター](../management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15（独立テーマとして起票） |
+| [プロフィール・アカウント設定](../profile-account-settings/README.md) | あるべき姿・KGI・To-Be確定 2026-07-11（独立テーマとして起票） |
+| 在庫（ページ） | 原文未・追記待ち |
+| [見積もり・請求書（ページ）](../quote-invoice/README.md) | あるべき姿・KGI確定 2026-07-08（独立テーマとして起票） |
+
+## 維持の仕組み
+
+- 本表紙・ideal-state.md・kgi.md の変更は、PO 承認を伴う PR で行う。
+- 子テーマは必要に応じて別ファイルとして切り出し、親の記述と重複しすぎないようにする。

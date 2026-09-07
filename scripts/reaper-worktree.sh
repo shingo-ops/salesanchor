@@ -3,7 +3,7 @@
 #
 # 安全条件（非交渉・すべて満たした部屋だけ削除）:
 #   ① 未コミット・未push がゼロ（絶対保護・最優先）
-#   ② active-work.md が DONE、または gh で PR がマージ済み（develop or main）
+#   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
@@ -135,24 +135,10 @@ for _IDX in "${!WT_PATHS[@]}"; do
 
   # ── チェック 1: active-work.md のステータス ──────────────────────────────
   ACTIVE_STATUS="NOT_FOUND"
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    ACTIVE_STATUS=$(python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-filepath, branch = sys.argv[1], sys.argv[2]
-try:
-    content = open(filepath, encoding="utf-8").read()
-    for line in content.splitlines():
-        if branch in line and line.strip().startswith('|'):
-            cols = [c.strip() for c in line.split('|')]
-            # 7列フォーマット: '' branch area date status pr main note ''
-            if len(cols) >= 6 and cols[1] == branch:
-                print(cols[4])
-                sys.exit(0)
-    print("NOT_FOUND")
-except Exception:
-    print("ERROR")
-PYEOF
-2>/dev/null || echo "ERROR")
+  ROW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null)"
+  if [ -n "${ROW}" ]; then
+    ACTIVE_STATUS="$(echo "${ROW}" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
+    [ -z "${ACTIVE_STATUS}" ] && ACTIVE_STATUS="ERROR"
   fi
 
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
@@ -165,14 +151,23 @@ PYEOF
   # git status は HEAD なしの fresh init でも動く（untracked files を検出可能）
   if git -C "${WORKTREE_PATH}" status >/dev/null 2>&1; then
     # a. 未コミット・未ステージ確認
-    if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null)" ]; then
+    # 2026-07-25 対策A: 台帳(.claude-pipeline/)のみの変更は未保存保護から除外する。
+    # 理由: 完了記録が worktree 側の台帳に未コミットで残り、マージ済みの机が永続保護されていた。
+    # 実測(origin/main=1bbd338): 未保存37件中28件が .claude-pipeline/ のみ・手書き混入0件。台帳以外があれば従来どおり保護。
+    if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null | grep -v '\.claude-pipeline/')" ]; then
       UNSAVED=1
     fi
 
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. upstream 設定済みなら @{u}..HEAD で比較
+      #    ただし専用棚 origin/<branch> と HEAD が一致していれば push 済みとみなす
+      #    （@{u} が共用側（main 等）を指す設定漏れによる誤検出を防ぐ）
       if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
-        if [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+        OWN_REMOTE=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
+        HEAD_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
+        if [ -n "${OWN_REMOTE}" ] && [ "${HEAD_SHA}" = "${OWN_REMOTE}" ]; then
+          :  # 専用棚と一致 → push 済み。UNSAVED=0 のまま（保護しない）
+        elif [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
           UNSAVED=1
         fi
       else
@@ -204,14 +199,14 @@ PYEOF
 
   if [ "${IS_DONE}" -eq 0 ]; then
     # gh で PR マージ済み確認（squash マージでも機能）
-    # develop または main へのマージを検知（hotfix/release の main マージも対象）
+    # main へのマージを検知（release/hotfix の main マージも対象）
     # エラー時は 0 扱い（安全側）
     MERGED_COUNT=$(gh pr list \
       --repo "${REPO_NAME}" \
       --state merged \
       --head "${BRANCH}" \
       --json number,baseRefName \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main")] | length' \
+      --jq '[.[] | select(.baseRefName == "main")] | length' \
       2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -226,7 +221,7 @@ PYEOF
       --state closed \
       --head "${BRANCH}" \
       --json number,baseRefName,mergedAt \
-      --jq '[.[] | select(.baseRefName == "develop" or .baseRefName == "main") | select(.mergedAt == null)] | length' \
+      --jq '[.[] | select(.baseRefName == "main") | select(.mergedAt == null)] | length' \
       2>/dev/null || echo "0")
     [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -269,6 +264,61 @@ if [ "${#SKIP_NOT_MERGED[@]}" -gt 0 ]; then
   echo ""
 fi
 
+# ── ゴースト検出（git 未登録の実体ディレクトリ）──────────────────────────────
+# ~/worktrees/<repo>/ を走査し、git worktree list に登録されていないディレクトリを警告する
+# 2026-09-05: 5件・830MB のゴーストが発生。reaper は git worktree list 経由のため
+#             git 登録が外れた実体ディレクトリを永久に検出できなかった。本ブロックで補完する。
+# ★ 削除はしない。警告のみ。
+_GHOST_SCAN_DIR="${HOME}/worktrees/$(basename "${MAIN_REPO_ROOT}")"
+
+# 登録済み worktree パスを収集
+_REGISTERED_WT_PATHS=()
+while IFS= read -r _LINE; do
+  case "${_LINE}" in
+    worktree\ *) _REGISTERED_WT_PATHS+=("${_LINE#worktree }") ;;
+  esac
+done < <(git -C "${MAIN_REPO_ROOT}" worktree list --porcelain 2>/dev/null)
+
+GHOST_COUNT=0
+GHOST_TOTAL_KB=0
+GHOST_ENTRIES=()
+
+if [ -d "${_GHOST_SCAN_DIR}" ]; then
+  for _GDIR in "${_GHOST_SCAN_DIR}"/*/; do
+    [ -d "${_GDIR}" ] || continue
+    _GDIR_PATH="${_GDIR%/}"
+    _IS_REG=0
+    for _REGP in "${_REGISTERED_WT_PATHS[@]}"; do
+      if [ "${_GDIR_PATH}" = "${_REGP}" ]; then
+        _IS_REG=1
+        break
+      fi
+    done
+    if [ "${_IS_REG}" -eq 0 ]; then
+      _SIZE_KB=$(du -sk "${_GDIR_PATH}" 2>/dev/null | awk '{print $1}')
+      _SIZE_MB=$(awk "BEGIN {printf \"%.1f\", ${_SIZE_KB:-0}/1024}")
+      GHOST_ENTRIES+=("${_GDIR_PATH} (${_SIZE_MB} MB)")
+      GHOST_COUNT=$(( GHOST_COUNT + 1 ))
+      GHOST_TOTAL_KB=$(( GHOST_TOTAL_KB + ${_SIZE_KB:-0} ))
+    fi
+  done
+fi
+
+echo "=== ゴースト検出 ==="
+echo "   走査: ${_GHOST_SCAN_DIR}"
+echo ""
+if [ "${GHOST_COUNT}" -eq 0 ]; then
+  echo "👻 GHOST: 0件"
+else
+  for _GE in "${GHOST_ENTRIES[@]}"; do
+    echo "   👻 GHOST: ${_GE}"
+  done
+  _TOTAL_MB=$(awk "BEGIN {printf \"%.1f\", ${GHOST_TOTAL_KB}/1024}")
+  echo ""
+  echo "⚠️  GHOST 合計: ${GHOST_COUNT} 件 / ${_TOTAL_MB} MB（手動確認してください）"
+fi
+echo ""
+
 if [ "${#WILL_DELETE[@]}" -eq 0 ]; then
   echo "✅ 削除対象なし"
   exit 0
@@ -308,32 +358,12 @@ for ENTRY in "${WILL_DELETE[@]}"; do
     echo "    ✅ ブランチ削除: ${BRANCH}" || \
     echo "    ⚠️  ブランチ削除スキップ"
 
-  # active-work.md を DONE に更新（行は消さず残す）
-  if [ -f "${ACTIVE_WORK_FILE}" ]; then
-    python3 - "${ACTIVE_WORK_FILE}" "${BRANCH}" <<'PYEOF'
-import sys
-
-filepath, branch = sys.argv[1], sys.argv[2]
-with open(filepath, encoding="utf-8") as f:
-    content = f.read()
-
-lines = content.splitlines(keepends=True)
-new_lines = []
-updated = False
-for line in lines:
-    if branch in line and line.strip().startswith('|') and 'IN_PROGRESS' in line:
-        line = line.replace('IN_PROGRESS', 'DONE', 1)
-        updated = True
-    new_lines.append(line)
-
-new_content = ''.join(new_lines)
-if updated:
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-    print(f"    ✅ active-work.md → DONE: {branch}")
-else:
-    print(f"    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: {branch}")
-PYEOF
+  # active-work.md を DONE に更新（行は消さず残す・窓口経由）
+  ROWW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null || true)"
+  if echo "${ROWW}" | grep -q "IN_PROGRESS"; then
+    ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-update.sh" "${BRANCH}" --status DONE > /dev/null       && echo "    ✅ active-work.md → DONE: ${BRANCH}"       || echo "    ⚠️  active-work.md DONE 更新失敗: ${BRANCH}"
+  else
+    echo "    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: ${BRANCH}"
   fi
 
   DELETED=$(( DELETED + 1 ))

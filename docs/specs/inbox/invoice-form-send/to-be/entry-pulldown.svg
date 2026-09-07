@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="290" viewBox="0 0 520 290" font-family="sans-serif">
+<rect width="520" height="290" fill="#FFFFFF"/>
+<rect x="20" y="20" width="480" height="252" rx="14" fill="#FFFFFF" stroke="#D8DCE1"/>
+<circle cx="52" cy="56" r="18" fill="#F0F1F3"/>
+<text x="52" y="61" font-size="13" fill="#6B7480" text-anchor="middle">山</text>
+<text x="82" y="52" font-size="14" font-weight="600" fill="#1F2933">山田貿易</text>
+<text x="82" y="70" font-size="12" fill="#6B7480">顧客フォーム入力済み（例）</text>
+<rect x="40" y="92" width="440" height="38" rx="8" fill="#FFFFFF" stroke="#2A9D8F"/>
+<text x="56" y="116" font-size="14" fill="#1D6A5E">請求書・フォームを送る</text>
+<polygon points="452,112 462,112 457,106" fill="#2A9D8F"/>
+<rect x="40" y="138" width="440" height="124" rx="8" fill="#FFFFFF" stroke="#D8DCE1"/>
+<text x="56" y="158" font-size="13" fill="#1F2933">見積もり</text>
+<text x="464" y="158" font-size="11" fill="#6B7480" text-anchor="end">作成ページへ</text>
+<line x1="40" y1="169" x2="480" y2="169" stroke="#EDEFF2"/>
+<text x="56" y="189" font-size="13" fill="#1F2933">請求書</text>
+<text x="464" y="189" font-size="11" fill="#6B7480" text-anchor="end">作成ページへ</text>
+<line x1="40" y1="200" x2="480" y2="200" stroke="#EDEFF2"/>
+<text x="56" y="220" font-size="13" fill="#1F2933">請求先情報追加</text>
+<text x="464" y="220" font-size="11" fill="#6B7480" text-anchor="end">リンクを送付</text>
+<line x1="40" y1="231" x2="480" y2="231" stroke="#EDEFF2"/>
+<text x="56" y="251" font-size="13" fill="#1F2933">配送先情報追加</text>
+<text x="464" y="251" font-size="11" fill="#6B7480" text-anchor="end">リンクを送付</text>
+</svg>

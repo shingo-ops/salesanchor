@@ -113,7 +113,8 @@ class CompanyCreate(BaseModel):
         default=None, max_length=20,
         description="CO-00001 形式。未指定ならサーバー側で自動採番",
     )
-    lead_id: int | None = Field(default=None, description="出自リード（任意）")
+    lead_id: int = Field(ge=1, description="出自リード（必須・便1a）")
+    deal_id: int | None = Field(default=None, ge=1, description="紐づける商談ID（指定時 deal.company_id をセット）")
     sales_rep_id: int | None = Field(default=None, description="担当スタッフ id")
     name: str = Field(min_length=1, max_length=255)
     name_en: str | None = Field(default=None, max_length=255)
@@ -194,10 +195,8 @@ class CompanyResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     # 読み取り専用集計（v_company_stats から JOIN。ビューが存在しない環境では None）
-    total_deal_amount: Optional[Decimal] = None
     paid_invoice_count: Optional[int] = None
     last_paid_at: Optional[datetime] = None
-    deal_count: Optional[int] = None
     conversation_count: Optional[int] = None
     last_conversation_at: Optional[datetime] = None
 

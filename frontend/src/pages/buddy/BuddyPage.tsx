@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 
 interface Pair { id: number; coach_user_id: number; mentee_user_id: number; is_active: boolean; started_at: string; ended_at: string | null; notes: string | null; }
@@ -45,13 +46,13 @@ export default function BuddyPage() {
     <PageLayout
       navKey="nav.buddy"
       subtitleKey="buddy.subtitle"
-      headerAction={hasPermission("buddy.manage") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("buddy.newPair")}</button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("buddy.manage") ? (
+        <ContentToolbar
+          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("buddy.newPair")}</button>}
+        />
+      ) : undefined}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
