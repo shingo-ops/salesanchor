@@ -484,3 +484,4 @@
 | release/status-split-3 | KPI/analytics/dashboard の out_of_scope → 2値置換（便3） | 2026-07-29 | DONE | #3141 | main | merged: PR #3141 / 6e65dbbc80cd3b901e462ba10f22bfff0aaf4b0c |
 | release/pillar3-ast-rebuild | 柱3-a/b 検出をAST方式へ作り直し（本体・ペアテスト・CI・設計・KGI分母29） | 2026-07-29 | IN_PROGRESS |  | main | 正本先約 kgi.md / GO=未採番 / 単独便 |
 | release/merge-safe-behind-fix | gh-pr-merge-safe.sh BEHIND検出時追従フロー誤停止バグ修正 | 2026-09-07 | IN_PROGRESS | #3338 | main | docs のみ・マージは PO GO 待ち |
+| release/tcg-dist-stale-jobs-terminate | 滞留 extraction_jobs 12件を終端化する migration | 2026-09-07 | IN_PROGRESS |  | main | CARD-PMG-STALE-MIG-16R |
