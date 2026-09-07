@@ -671,6 +671,34 @@ async def run_distribution(
             "errors": [{"target_id": None, "error": msg}],
         }
 
+    # 0-b. 抽出・解析の未完了チェック（安全装置 #8b）
+    # extraction_jobs に未完了のジョブが残っている間は配信しない。
+    # 終端扱い: done / empty / error（これらは待っても変わらないため止めない）。
+    unfinished = (
+        await db.execute(
+            text(
+                f"SELECT status, count(*) AS cnt FROM {TCG_SCHEMA}.extraction_jobs"
+                " WHERE status IN ('pending', 'running', 'extracted')"
+                " GROUP BY status ORDER BY status"
+            )
+        )
+    ).mappings().all()
+    if unfinished:
+        breakdown = {r["status"]: r["cnt"] for r in unfinished}
+        total_unfinished = sum(breakdown.values())
+        msg = (
+            f"安全装置 #8b: 未完了の extraction_jobs が {total_unfinished} 件あります。"
+            f" 完了を待ってから配信を実行してください。内訳: {breakdown}"
+        )
+        logger.warning("[dist] %s", msg)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": msg}],
+        }
+
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
