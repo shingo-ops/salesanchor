@@ -12,3 +12,6 @@
 | ディスク残量 → ENOSPC で worktree 作成が中途半端に失敗 | 手順0で `df -h .`。2Gi 未満なら止める | CARD-BENCH-PR-01 |
 | マージ後 `cleanup-worktree.sh` が worktree とブランチを自動削除する | 削除される前提で、必要なファイルは先に退避 | 実測（gh-pr-merge-safe.sh 末尾） |
 
+| new-worktree.sh の出力を head や tail に通す → 完了行が遅れて届き、次手順の ls が作成前に走って無いと誤判定する | 出力はパイプに通さない。判定は ls -1d と git worktree list の両方で行う | 別セッション実測・同型2回 |
+| new-worktree.sh は reaper が全 worktree を走査してから作成に入る（2026-09-08 実測で64件） | 出力の見た目で成否を決めない。次手順で実在を確かめる | 実測 |
+| new-worktree.sh はディレクトリが既に在ると fatal で失敗する。ブランチ作成は成功した後なので、ブランチだけが残る | 作る前に ls -1d で実在を確かめる | 別セッション報告・本セッション未検証 |
