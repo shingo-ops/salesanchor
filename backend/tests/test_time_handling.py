@@ -10,7 +10,9 @@ recon:  docs/handoff/time-handling-ssot/recon.md
      先例: backend/tests/test_tcg_schema_qualification.py
 
 規則は精度で2段に分ける（design.md §3-3）。
-本ファイルに実装するのは「停止させる規則」T1〜T3 のみ。
+本ファイルに実装するのは「停止させる規則」T1・T3 のみ。
+T2 は 2026-09-08 の実測で精度0%（検出2件・真の違反0件）だったため除去した。
+同種の誤りは境界テスト（design.md §3-4）で捕捉する。
 警告規則 T4・T5 は人が読むため、機械強制しない。
 
 導入順序（design.md §4）:
@@ -66,48 +68,6 @@ def test_t1_no_utcnow():
 
     assert not violations, (
         "T1 違反: utcnow() は使わない。datetime.now(timezone.utc) を使うこと。\n"
-        + "\n".join(violations)
-    )
-
-
-def test_t2_no_blind_tzinfo_assignment():
-    """
-    T2: 解釈直後に、確認なしでタイムゾーンを決めつけない。
-
-    strptime / fromisoformat の直後に .replace(tzinfo=...) を書く形は、
-    元の値が何時間帯かを確認せずに決めつけている。
-    外部から受けた文字列が日本時間だった場合、値がずれる。
-
-    安全な形（検出しない）:
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-
-    危険な形（検出する）:
-        dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
-
-    根拠: recon.md §6-1（16箇所中、危険は1箇所）
-    """
-    violations: list[str] = []
-    # strptime( または fromisoformat( から 200 文字以内に .replace(tzinfo= が続く形
-    pattern = re.compile(
-        r"\b(?:strptime|fromisoformat)\s*\("
-        r"[^;]{0,200}?"
-        r"\.replace\s*\(\s*tzinfo\s*=",
-        re.DOTALL,
-    )
-
-    for rel, source in _python_sources():
-        for m in pattern.finditer(source):
-            # 直前 300 文字に tzinfo is None の確認があれば安全とみなす
-            start = m.start()
-            prefix = source[max(0, start - 300) : start]
-            if "tzinfo is None" in prefix:
-                continue
-            violations.append(f"{rel}:{_line_of(source, start)}")
-
-    assert not violations, (
-        "T2 違反: 解釈直後に確認なしで tzinfo を決めつけている。\n"
-        "元の値の時間帯を確認するか、services/time.py の変換関数を通すこと。\n"
         + "\n".join(violations)
     )
 
