@@ -1,0 +1,15 @@
+CARD-SAMPLE-GOOD-01
+
+受領確認
+  最初の応答で「受領。」と1行返してから開始する。
+
+停止時の報告
+  実行画面に出たエラー出力を全文チャットへ貼る。
+
+手順0
+  cd ~/salesanchor && pwd > "/tmp/CC報告ファイル/sample.txt"
+
+手順1
+  cd ~/salesanchor && git status --porcelain >> "/tmp/CC報告ファイル/sample.txt"
+
+END OF CARD
