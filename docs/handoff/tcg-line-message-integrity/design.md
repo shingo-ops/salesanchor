@@ -126,3 +126,50 @@ TCG_AUTO_ANALYZE は本番 worker で 1（2026-09-07 実測）。
 | 1 | 2026-09-04 の429がなぜ起きたか | Gemini 側のログは取得できない | 未解消・追跡打ち切り |
 | 2 | SEC-01 migration の24行と実測27件の差 | 別テーマで再測 | 未解消 |
 | 3 | 失敗したジョブの再実行履歴が残らない設計の是正 | 別テーマ（A-5）で扱う | 未解消 |
+---
+
+## 10. 実行結果（2026-09-08 実測）
+
+### 便2（migration・PR #3365）
+
+マージ 2026-09-08T08:24:22Z / mergeCommit 1deec7bb / デプロイ run 34204321626 success。
+適用後: ジョブ a6c1d827 が status=pending・error_message=NULL。
+「レート制限超過 (HTTP 429)」の件数が 16 から 15 に減少。他の型は不変。
+
+### 便3（抽出の1回実行）
+
+本番 celery-worker で extract_and_analyze_source_message('2336edf3-...') を1回実行。
+結果: status=done / items_count=28 / extracted_at 2026-09-08 11:57:52。
+analysis_stats: total 28 / pid_resolved 20 / unit_resolved 27 / needs_review 8 /
+e3a_recovered 0 / e5_changed 0 / e3b_flagged 1 / e4_resolved 0。
+429 は再現しなかった。
+
+CARD-LMI-EXEC-01 は ModuleNotFoundError で抽出に到達せず停止した（Gemini 未呼び出し）。
+原因: docker exec -w /app はカレントディレクトリのみ変更し sys.path に影響しない。
+/tmp のスクリプトを実行すると sys.path 先頭が /tmp になる。
+CARD-LMI-EXEC-02 で -e PYTHONPATH=/app を付与して解決。
+
+### 受け入れ基準の照合（5 の表に対応）
+
+| 基準 | 結果 |
+|---|---|
+| ジョブ a6c1d827 の status が done | 充足 |
+| 2336edf3 の extraction_items が1件以上 | 充足（28件） |
+| 2336edf3 の analysis_results が1件以上 | 充足（28件） |
+| 他の55件の error ジョブが変化しない | 充足（error 56件のまま） |
+| 配信行数が増える | 充足（657 から 677） |
+
+5基準すべて充足。便5に進む条件を満たした。
+
+### 配信行数の基準点の更新
+
+652（2026-09-07 実測）は並行取込により 657 へ変動していた。抽出実行後は 677。
+以降の比較は 677 を基準点とする。ただし並行取込で常時変動するため、
+事後確認では SP0136 に紐づく行数で測る。
+
+### 便5 の設計根拠（superseded_by）
+
+tcg_line_import_svc.py:407 は SET superseded_by = :new_id, is_active = FALSE を同時に行う。
+DB 実測: is_active=FALSE の 771 行すべてが superseded_by を持ち、
+is_active=TRUE の 92 行すべてが NULL。例外 0 件。
+よって掃除 migration も superseded_by を同時に設定し、この不変条件を保つ。
