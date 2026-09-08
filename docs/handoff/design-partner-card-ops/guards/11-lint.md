@@ -33,3 +33,6 @@
 ---
 
 | L26 | マージ後の手順に worktree パスの cd がある | 06-merge |
+| L26 | マージ後の手順に worktree パスの cd がある | 06-merge |
+| L27 | gh pr edit または gh pr view に数字を直書きしている | 05-pr |
+| L28 | 手順の外に実行を依頼する散文がある | 00-common |

@@ -14,7 +14,7 @@ admin は明示的に PATCH を選ぶ。
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -159,7 +159,7 @@ def _project_inventory_rows(
                 unit_price=int(row["unit_price"] or 0),
                 quantity=int(row["quantity"] or 0),
                 tcg_type=row.get("tcg_type"),
-                offered_at=row.get("offered_at") or datetime.utcnow(),
+                offered_at=row.get("offered_at") or datetime.now(timezone.utc),
                 is_best=best_flag,
                 best_reason_category=reason_category,
                 best_reason=reason,
