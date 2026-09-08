@@ -19,7 +19,7 @@
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
 | K1 | 時刻変換の正本が1か所に定まっている | `ZoneInfo("Asia/Tokyo")` の定義箇所数（backend/app 配下） | 1 |
-| K2 | 取り込みの3か所が正本経由になっている | `tcg_line_import_svc.py` と `tcg_line_import.py` に残る、正本を通らない時刻変換の数 | 0 |
+| K2 | 取り込みの3か所が正本経由になっている | `backend/app/services/tcg_line_import_svc.py` と `backend/app/routers/tcg_line_import.py` に残る、正本を通らない時刻変換の数 | 0 |
 | K3 | 非推奨APIが残っていない | `utcnow()` の出現数（backend/app 配下） | 0 |
 | K4 | 誤りを機械で止める検査が動いている | 時刻検査テストが存在し CI で実行される | 在る=1 |
 | K5 | 入口から出口までの結果が保証されている | 境界テストの本数（日本時間の入力→UTC保存→JST表示を検証） | 1本以上 |
@@ -35,17 +35,17 @@ KPI: 達成KGI数 ◯/5
 - 日本時間の文字列を受け取り、UTC の aware datetime を返す関数
 - UTC の aware datetime を受け取り、日本時間の表示用文字列を返す関数
 
-既存の `JST = ZoneInfo("Asia/Tokyo")`（`time.py:26`）を唯一の定義とし、`goals.py:41`・`analytics.py:34`・`quotes.py:20` の `_JST` 重複を、この import に置き換える。
+既存の `JST = ZoneInfo("Asia/Tokyo")`（`backend/app/services/time.py:26`）を唯一の定義とし、`backend/app/routers/goals.py:41`・`backend/app/routers/analytics.py:34`・`backend/app/routers/quotes.py:20` の `_JST` 重複を、この import に置き換える。
 
 ### 3-2. 取り込みの3か所を正本経由にする
 
 | 箇所 | 現状 | 変更後 |
 |---|---|---|
-| `tcg_line_import_svc.py:433-435` | `strptime` 直後に `.replace(tzinfo=timezone.utc)` | 正本の変換関数を通す（日本時間として解釈しUTCへ変換） |
-| `tcg_line_import_svc.py:367-372` | UTC起点の文字列と日本時間文字列を文字列比較 | 両辺を aware datetime に揃えて比較する |
-| `tcg_line_import.py:156` | `created_at AT TIME ZONE 'UTC'` | `AT TIME ZONE` を外し、`timestamptz` のまま `isoformat()` で返す |
+| `backend/app/services/tcg_line_import_svc.py:433-435` | `strptime` 直後に `.replace(tzinfo=timezone.utc)` | 正本の変換関数を通す（日本時間として解釈しUTCへ変換） |
+| `backend/app/services/tcg_line_import_svc.py:367-372` | UTC起点の文字列と日本時間文字列を文字列比較 | 両辺を aware datetime に揃えて比較する |
+| `backend/app/routers/tcg_line_import.py:156` | `created_at AT TIME ZONE 'UTC'` | `AT TIME ZONE` を外し、`timestamptz` のまま `isoformat()` で返す |
 
-`tcg_line_import.py:156` の変更により、APIの返す文字列にオフセットが付く。フロントエンドは `toLocaleString` で表示しているため、オフセット付きの値を正しく日本時間で描画する。
+`backend/app/routers/tcg_line_import.py:156` の変更により、APIの返す文字列にオフセットが付く。フロントエンドは `toLocaleString` で表示しているため、オフセット付きの値を正しく日本時間で描画する。
 
 ### 3-3. 静的検査を作る
 
@@ -65,7 +65,7 @@ KPI: 達成KGI数 ◯/5
 
 | 規則 | 検出対象 | 備考 |
 |---|---|---|
-| T4 | `ZoneInfo("Asia/Tokyo")` の `time.py` 以外での定義 | K1 達成後は 0 になる |
+| T4 | `ZoneInfo("Asia/Tokyo")` の `backend/app/services/time.py` 以外での定義 | K1 達成後は 0 になる |
 | T5 | `datetime.now(timezone.utc)` の結果を文字列に整形して比較に使う形 | 正当な用途が多い |
 
 T2 の判定基準は recon §6-1 の実測に基づく。安全な15箇所はいずれも直前に `if 値.tzinfo is None:` の確認があり、危険な1箇所のみ確認がない。
@@ -90,13 +90,13 @@ CI のテスト実行を、UTC 以外のタイムゾーンでも1回走らせる
 
 ## 5. 弊害・トレードオフ（空欄不可）
 
-- `tcg_line_import.py:156` の変更により、APIの返す日時文字列の形式が変わる。フロントエンドが古い形式を前提にしていた場合、表示が壊れる可能性がある。フロントエンドの実装を確認してから変更する。
-- `_JST` の3重複解消は、`goals.py`・`analytics.py`・`quotes.py` に触る。いずれも今回の不具合とは別の場所であり、変更の必要がないコードに手を入れることになる。動作は変わらないが、レビュー範囲が広がる。
+- `backend/app/routers/tcg_line_import.py:156` の変更により、APIの返す日時文字列の形式が変わる。フロントエンドが古い形式を前提にしていた場合、表示が壊れる可能性がある。フロントエンドの実装を確認してから変更する。
+- `_JST` の3重複解消は、`backend/app/routers/goals.py`・`backend/app/routers/analytics.py`・`backend/app/routers/quotes.py` に触る。いずれも今回の不具合とは別の場所であり、変更の必要がないコードに手を入れることになる。動作は変わらないが、レビュー範囲が広がる。
 - T2 の検査は正規表現による構文照合であり、`strptime` と `.replace(tzinfo=` の間に複数行が挟まる書き方は検出できない。完全ではない。
 - 検査規則を追加すると、正当な理由で違反せざるを得ない箇所が将来出る。ADR-144 の `ui-allow` と同じく、理由と番号を添えた許可の印を用意する必要がある。理由なしの例外は認めない。
 - テストを複数のタイムゾーンで走らせると、CI の実行時間が増える。
 
-## 6. 外部・過去事例
+## 6. 外部・過去事例と応用
 
 ### 6-1. 不具合の分布は実測されている
 
@@ -163,7 +163,7 @@ whenever および heliclockter は、aware と naive を別々の型にする�
 
 ## 8. 維持の仕組み
 
-- 守り手1: `backend/tests/test_time_handling.py` が、停止規則T1〜T3の違反を CI で止める。
+守り手: `backend/tests/test_time_handling.py` が、停止規則T1〜T3の違反を CI で止める。
 - 守り手2: 境界テストが、書き方に関係なく結果の誤りを止める。
 - 守り手3: CI をUTC以外のタイムゾーンでも実行し、単一タイムゾーン環境が誤りを隠す状態を解消する。
 - 未確立（正直な明記）: 警告規則T4・T5は人が読む。機械強制はしない。誤検知が多いため。
@@ -175,7 +175,7 @@ whenever および heliclockter は、aware と naive を別々の型にする�
 - 機械: CI に検査テストが1本増える。`migration-full-dryrun` には影響しない。DB migration は発生しない。
 - データ: tenant_004 の既存 `source_messages.received_at` に、9時間ずれた値が保存されている可能性がある。過去データの補正は本設計の範囲外とし、別途判断する。
 - 本番: バックエンドのデプロイが必要。DB スキーマ変更はなし。
-- 外部: 配信先のGoogleスプレッドシート（tcg-client-viewer）。`tcg_distribution_svc.py:210` は既に `AT TIME ZONE 'Asia/Tokyo'` で正しく変換しており、本設計では触らない。
+- 外部: 配信先のGoogleスプレッドシート（tcg-client-viewer）。`backend/app/services/tcg_distribution_svc.py:210` は既に `AT TIME ZONE 'Asia/Tokyo'` で正しく変換しており、本設計では触らない。
 
 ## 10. 範囲外（このテーマで扱わない）
 
