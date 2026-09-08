@@ -331,10 +331,17 @@ BEGIN
     -- -------------------------------------------------------------------------
     -- 件数確認（22件でなければ RAISE EXCEPTION）
     -- -------------------------------------------------------------------------
-    EXECUTE format('SELECT count(*) FROM %I.tcg_note_master', _schema)
-        INTO _count;
+    -- 本ファイルが投入する NJ001〜NJ022 の範囲のみを数える（テーブル全体は数えない）
+    -- 2026-09-07 修正: 全体件数チェックは後続 migration の行追加で必ず落ちるため範囲指定へ変更
+    EXECUTE format(
+        'SELECT count(*) FROM %I.tcg_note_master WHERE id = ANY($1)', _schema
+    ) INTO _count USING ARRAY[
+        'NJ001','NJ002','NJ003','NJ004','NJ005','NJ006','NJ007','NJ008',
+        'NJ009','NJ010','NJ011','NJ012','NJ013','NJ014','NJ015','NJ016',
+        'NJ017','NJ018','NJ019','NJ020','NJ021','NJ022'
+    ];
     IF _count != 22 THEN
-        RAISE EXCEPTION 'tcg_note_master: 期待22件、実際%件', _count;
+        RAISE EXCEPTION 'tcg_note_master: 期待22件（NJ001-NJ022）、実際%件', _count;
     END IF;
 
     RAISE NOTICE 'tcg_note_master: % 件確認 OK', _count;

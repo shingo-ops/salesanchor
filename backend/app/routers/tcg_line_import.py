@@ -213,10 +213,10 @@ async def list_pending_jobs(
             f"""
             SELECT id, filename, message_count, unresolved_count,
                    unresolved_names,
-                   window_start AT TIME ZONE 'UTC' AS window_start,
-                   window_end   AT TIME ZONE 'UTC' AS window_end,
+                   window_start,
+                   window_end,
                    review_status,
-                   created_at   AT TIME ZONE 'UTC' AS created_at
+                   created_at
             FROM {TCG_SCHEMA}.import_jobs
             WHERE review_status = 'pending_review'
             ORDER BY created_at DESC
@@ -261,7 +261,7 @@ async def list_import_history(
             f"""
             SELECT id, filename, raw_sha256, message_count, provider_count,
                    unresolved_count, uploaded_by, status, review_status,
-                   created_at AT TIME ZONE 'UTC' AS created_at
+                   created_at
             FROM {TCG_SCHEMA}.import_jobs
             ORDER BY created_at DESC
             LIMIT 200
@@ -347,10 +347,10 @@ async def get_pending_job(
             f"""
             SELECT id, filename, message_count, unresolved_count,
                    unresolved_names,
-                   window_start AT TIME ZONE 'UTC' AS window_start,
-                   window_end   AT TIME ZONE 'UTC' AS window_end,
+                   window_start,
+                   window_end,
                    review_status,
-                   created_at   AT TIME ZONE 'UTC' AS created_at
+                   created_at
             FROM {TCG_SCHEMA}.import_jobs
             WHERE id = :job_id
             """

@@ -9,7 +9,7 @@ ADR-107 (ADR-SA-14): 分析エージェント(A) 顧客優先度付け — API�
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
@@ -123,7 +123,7 @@ async def override_priority_score(
             "oscore": body.override_score,
             "onote": body.override_note,
             "uid": current_user.id,
-            "now": datetime.utcnow(),
+            "now": datetime.now(timezone.utc),
             "lid": lead_id,
         },
     )
@@ -240,7 +240,7 @@ async def override_message_label(
         {
             "label": body.label.value,
             "uid": current_user.id,
-            "now": datetime.utcnow(),
+            "now": datetime.now(timezone.utc),
             "lid": label_id,
             "flid": lead_id,
         },
