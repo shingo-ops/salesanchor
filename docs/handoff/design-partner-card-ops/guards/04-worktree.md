@@ -17,3 +17,4 @@
 | new-worktree.sh はディレクトリが既に在ると fatal で失敗する。ブランチ作成は成功した後なので、ブランチだけが残る | 作る前に ls -1d で実在を確かめる | 別セッション報告・本セッション未検証 |
 | 追加の push で git push だけを使う | PR 作成時に -u を付けても、後続の push で忘れると上流が main を指して拒否される。毎回 git push -u origin HEAD を使う | 2026-09-08 実測・同一ブランチで両方 |
 | new-worktree.sh のオプション | CLAUDE.md と本ファイルで --claude の要否が食い違っている。推測でどちらかを採らない。正本は CLAUDE.md。本セッションでは --claude なしで5回成功している | 2026-09-08 別セッション報告 |
+| 本店が `main` 以外でも `new-worktree.sh` は警告だけで reaper・fetch・台帳登録へ進む | 作成カードの最初に `git branch --show-current` と `git rev-parse HEAD origin/main` を別手順で記録し、`main` かつ両SHA一致でなければ停止する。その後に空き容量・作成先未存在を確認してから `new-worktree.sh` を実行する | scripts/new-worktree.sh:28-34、CARD-DEVELOP-WHO-01 / CARD-DEVELOP-AUTO-01（2026-09-09 実測） |
