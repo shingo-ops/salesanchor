@@ -14,3 +14,4 @@
 | 検出語にコメント文中の語（`DELETE`）→ 説明文に当たって止まる | 検出語は本文に現れない形にする | CV-22（未検証） |
 
 | PR 本文の修正で全文を運ぶ | gh pr view --json body で現物を落とし sed で該当行を置換して gh pr edit で戻す | 2026-09-07 実測 |
+| 既存ファイルへの「末尾に追記する」を散文で頼む → 実行役が `apply_patch` を選び、目印にする行が見つからず `apply_patch verification failed: Failed to find expected lines` | 追記する本文も**ファイルで渡し**、`cat <追記ファイル> >> <対象ファイル>` で連結する。検算は `wc -l` と `tail -3`。差分適用は使わない | 2026-09-08 実測（CARD-PMG-KW-V4b 手順6） |
