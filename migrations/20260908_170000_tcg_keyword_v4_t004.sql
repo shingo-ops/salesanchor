@@ -29,6 +29,15 @@ DECLARE
     _n_ek    int;
     _missing text;
 BEGIN
+    -- CI の単体実行テストは空のDBにこのファイルだけを流す。
+    -- 前提テーブルが無いときは何もせず抜ける（ADR-115: 2回実行テスト対応）。
+    IF to_regclass(_schema || '.tcg_products') IS NULL
+       OR to_regclass(_schema || '.product_search_keywords') IS NULL
+       OR to_regclass(_schema || '.product_exclude_keywords') IS NULL THEN
+        RAISE NOTICE '20260908_170000: 前提テーブルが無いためスキップしました（schema=%）', _schema;
+        RETURN;
+    END IF;
+
     -- 対象商品が全て存在するか先に確認する
     EXECUTE format($f$
         SELECT string_agg(c, ', ')
