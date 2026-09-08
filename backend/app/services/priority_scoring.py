@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -404,7 +404,7 @@ async def _compute_and_persist(
         won_deals_ref_count=won_n,
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     await db.execute(
         text(
             """
