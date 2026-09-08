@@ -1,4 +1,5 @@
 CARD-SAMPLE-GOOD-01
+読んだ節: guards/00-common.md
 
 受領確認
   最初の応答で「受領。」と1行返してから開始する。

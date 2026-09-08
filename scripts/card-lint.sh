@@ -177,6 +177,27 @@ if grep -q '"[^"]*`[^"]*"' "${CMDFILE}"; then
   report "L25" "バッククォートを含む文字列" "コマンド置換と解釈される"
 fi
 
+# ── L29: カード冒頭に「読んだ節」の書き出しが無い ─────────────────────────
+if ! grep -q "読んだ節" "${CARD}"; then
+  report "L29" "読んだ節の書き出しなし" "guards のどれを引いたかを冒頭に書く"
+fi
+
+# ── L30: commit と push があるのに確認が無い ───────────────────────────────
+if grep -q "git commit" "${CMDFILE}"; then
+  if grep -q -e "git push" -e "gh-pr-create-safe.sh" "${CMDFILE}"; then
+    if ! grep -q "git log" "${CMDFILE}"; then
+      report "L30" "commit の実在を確かめていない" "git log で確認する手順を入れる"
+    fi
+  fi
+fi
+
+# ── L31: マージの出力を報告に残していない ─────────────────────────────────
+if grep -q "gh-pr-merge-safe.sh" "${CMDFILE}"; then
+  if ! grep "gh-pr-merge-safe.sh" "${CMDFILE}" | grep -q ">>"; then
+    report "L31" "マージの出力を残していない" "報告ファイルへリダイレクトする"
+  fi
+fi
+
 # ── 判定 ───────────────────────────────────────────────────────────────────
 if [ "${VIOLATIONS}" -gt 0 ]; then
   echo "違反 ${VIOLATIONS} 件。このカードは投入しない。"
