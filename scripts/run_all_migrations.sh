@@ -607,3 +607,6 @@ echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
 echo "============================================"
+
+# LMI-SP0136-REQUEUE: SP0136 の残す1件の抽出ジョブを error→pending に戻す（tenant_004 専用・冪等）
+run_sql migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql
