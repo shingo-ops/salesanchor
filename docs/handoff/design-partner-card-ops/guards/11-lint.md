@@ -36,3 +36,6 @@
 | L26 | マージ後の手順に worktree パスの cd がある | 06-merge |
 | L27 | gh pr edit または gh pr view に数字を直書きしている | 05-pr |
 | L28 | 手順の外に実行を依頼する散文がある | 00-common |
+| L29 | カード冒頭に「読んだ節」の書き出しが無い | 00-common |
+| L30 | git commit と push か PR 作成があるのに git log が無い | 00-common |
+| L31 | gh-pr-merge-safe.sh の出力を報告に残していない | 06-merge |

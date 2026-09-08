@@ -24,3 +24,7 @@
 | gh-pr-merge-safe.sh --merge はマージ成功後に cleanup-worktree.sh を呼び、ローカルの worktree とブランチのみ削除する。リモートブランチは残る | マージ後の手順を同一カードに置くなら cd 先をリポジトリ直下にする。リモートを消すには別の worktree から git push origin --delete を実行し、git ls-remote --heads origin が空であることで確認する | 実測3件・2026-09-07 と 09-08 |
 | BLOCKED と BEHIND を混同する | BLOCKED は必須チェックがまだ報告されていない状態で、待てばよい。BEHIND は main に追いついていない状態で、追従が要る。pytest は約2分かかるため追従直後は BLOCKED になる | 2026-09-08 実測 |
 | CI の確認手段 | PO が画面で見る場合と、カードで gh pr checks を叩く場合がある。PO が見ているとは限らないので、設計パートナーは確認カードを用意しておく。どちらで確認したかをマージカードの背景に書く | 2026-09-08 PO 判断 |
+| CLEAN を確認してからマージまでに時間が空く | その間に他セッションのマージで main が進み BEHIND になる。確認とマージを同じカードに入れ、続けて実行する | 2026-09-08 実測 |
+| マージの出力を報告に残さない | cleanup-worktree.sh の台帳更新がどの分岐を通ったかが分からなくなる。gh-pr-merge-safe.sh の出力は必ず報告ファイルへリダイレクトする | 2026-09-08 実測 |
+| 台帳が DONE にならない | cleanup-worktree.sh が「更新不要（既に DONE または行なし）」を出すが、台帳は IN_PROGRESS のまま。ledger-update.sh 自体は手動実行で正しく動く。順序の入れ替えを 2026-09-08 に投入済み。次のマージで検証する | 原因未確定 |
+| cleanup-worktree.sh の呼び出し元 | MAIN_REPO_ROOT/scripts から呼ばれるため、worktree を削除してもスクリプト自体は消えない。ただし gh-pr-merge-safe.sh は worktree の中で実行されるので、削除でカレントディレクトリが消える | 2026-09-08 実測 |
