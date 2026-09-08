@@ -25,7 +25,7 @@
 
 過去2回はいずれも該当箇所を名指しで個別修正しており、再発を止める機械的な仕組みは置かれていない。
 
-ADR-151 の「対象」欄（`docs/adr/ADR-151-jst-date-basis.md`）には、`analytics.py`（10箇所）、`goals.py`（2箇所）、`quotes.py`、`fedex_rates.py`、`sa02_recon_monitor.py` が名指しで列挙されている。
+ADR-151 の「対象」欄（`docs/adr/ADR-151-jst-date-basis.md`）には、`backend/app/routers/analytics.py`（10箇所）、`backend/app/routers/goals.py`（2箇所）、`backend/app/routers/quotes.py`、`backend/app/services/fedex_rates.py`、`backend/app/tasks/sa02_recon_monitor.py` が名指しで列挙されている。
 
 ## 3. 既存の正本と、その普及状況
 
@@ -42,7 +42,7 @@ ADR-151 の「対象」欄（`docs/adr/ADR-151-jst-date-basis.md`）には、`an
 - `backend/app/routers/order_commissions.py:63`
 - `backend/app/routers/analytics.py:30`
 
-`time.py` の `JST` 定数を参照しているファイルは0件。
+`backend/app/services/time.py` の `JST` 定数を参照しているファイルは0件。
 
 代わりに同一定義が3箇所に重複している。
 
@@ -99,7 +99,7 @@ DBの保存形式そのものは正しい。誤りはアプリケーション側
 
 ### 5-3. `source_messages` の構造（誤解の訂正記録）
 
-`source_messages` は「メッセージ1件=1行」ではなく「仕入元1社=1行」である。取り込みのたびに、その仕入元の既存行を `is_active=FALSE` にして差し替える（`tcg_line_import_svc.py:416-421` および `:462-469`）。
+`source_messages` は「メッセージ1件=1行」ではなく「仕入元1社=1行」である。取り込みのたびに、その仕入元の既存行を `is_active=FALSE` にして差し替える（`backend/app/services/tcg_line_import_svc.py:416-421` および `:462-469`）。
 
 2026-09-08 02:01 の取り込みでは48行（仕入元48社ぶん）が作成され、01:01 の回の48行のうち46行が無効化された。
 
@@ -149,7 +149,7 @@ Python 3.12 で非推奨。タイムゾーン情報を持たない値を返す�
 
 ### 6-5. `datetime.now(` — 40箇所
 
-うち `ZoneInfo("Asia/Tokyo")` または `_JST` を使うもの: `goals.py:45`、`analytics.py:39`、`quotes.py:191`、`sa02_recon_monitor.py:50`、`fedex_rates.py:417`。
+うち `ZoneInfo("Asia/Tokyo")` または `_JST` を使うもの: `backend/app/routers/goals.py:45`、`backend/app/routers/analytics.py:39`、`backend/app/routers/quotes.py:191`、`backend/app/tasks/sa02_recon_monitor.py:50`、`backend/app/services/fedex_rates.py:417`。
 
 残りは `timezone.utc` を指定しており、単独では誤りと断定できない。誤りとなるのは §4-2 のように日本時間と比較する場合のみ。
 
@@ -177,4 +177,4 @@ Python 3.12 で非推奨。タイムゾーン情報を持たない値を返す�
 
 理由: guards.md の対象は「カードを出すときにどこで止まるか」であり、収録済みの事例はすべてガード・フック・関所・実行役の挙動である。アプリケーションコードの規約を入れると、作業の種類で引く §0 の対応表の構造が崩れる。
 
-同種の規範は `guards/00-common.md` に一般形（実行環境の値を実測せずにカードへ書かない）として既に存在する。
+同種の規範は `docs/handoff/design-partner-card-ops/guards/00-common.md` に一般形（実行環境の値を実測せずにカードへ書かない）として既に存在する。
