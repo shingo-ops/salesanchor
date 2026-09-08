@@ -39,16 +39,6 @@ if [ -f "${WORKTREE_ID_FILE}" ]; then
   rm -f "${WORKTREE_ID_FILE}"
 fi
 
-# ── worktree 削除（メインリポジトリから実行）─────────────────────────────────
-git -C "${MAIN_REPO_ROOT}" worktree remove --force "${WORKTREE_DIR}" 2>/dev/null && \
-  echo "✅ worktree削除完了: ${WORKTREE_DIR}" || \
-  echo "⚠️  worktree削除スキップ（既に存在しない可能性あり）"
-
-# ── ローカルブランチ削除 ─────────────────────────────────────────────────────
-git -C "${MAIN_REPO_ROOT}" branch -D "${BRANCH}" 2>/dev/null && \
-  echo "✅ ブランチ削除完了: ${BRANCH}" || \
-  echo "⚠️  ブランチ削除スキップ（既に存在しない可能性あり）"
-
 # ── active-work.md のエントリを DONE に更新（ADR-114: 行は消さず残す）────────
 ROWC="$(bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null || true)"
 if echo "${ROWC}" | grep -q "IN_PROGRESS"; then
@@ -58,6 +48,16 @@ if echo "${ROWC}" | grep -q "IN_PROGRESS"; then
 else
   echo "ℹ️  active-work.md 更新不要（既に DONE または行なし）: ${BRANCH}"
 fi
+
+# ── worktree 削除（メインリポジトリから実行）─────────────────────────────────
+git -C "${MAIN_REPO_ROOT}" worktree remove --force "${WORKTREE_DIR}" 2>/dev/null && \
+  echo "✅ worktree削除完了: ${WORKTREE_DIR}" || \
+  echo "⚠️  worktree削除スキップ（既に存在しない可能性あり）"
+
+# ── ローカルブランチ削除 ─────────────────────────────────────────────────────
+git -C "${MAIN_REPO_ROOT}" branch -D "${BRANCH}" 2>/dev/null && \
+  echo "✅ ブランチ削除完了: ${BRANCH}" || \
+  echo "⚠️  ブランチ削除スキップ（既に存在しない可能性あり）"
 
 # ── worktree prune ───────────────────────────────────────────────────────────
 git -C "${MAIN_REPO_ROOT}" worktree prune 2>/dev/null || true
