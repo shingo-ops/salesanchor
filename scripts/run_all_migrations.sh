@@ -610,3 +610,4 @@ echo "============================================"
 
 # LMI-SP0136-REQUEUE: SP0136 の残す1件の抽出ジョブを error→pending に戻す（tenant_004 専用・冪等）
 run_sql migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql
+run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
