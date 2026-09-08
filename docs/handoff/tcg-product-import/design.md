@@ -142,17 +142,23 @@ raw_sha256 の UNIQUE は既存 import_jobs から採る。同じファイルを
 
 ## 8. 受入基準
 
-- ①③④: 画面を開いて実際に操作し、結果を記録する。
-- ②: 画面の総件数と、tenant_004.tcg_products の実測行数が一致すること。
-- ⑤: 取り込み系のコードを走査し、preview を経ずに INSERT へ到達する経路が無いこと。
-- ⑥: 止める判定11種それぞれを1行ずつ含む見本CSVを作り、止めるべき行が全て止まること。tenant_001 で実測する。
-- ⑦: 取り込み1回につき tcg_product_import_jobs が1行、tcg_product_import_rows がCSVの行数ぶん増えること。
-- ⑧: Frontend lint が緑であること。
-- ⑨: sword-shield-catalog.md の44件をCSVにして、tenant_001 で44件、tenant_004 で44件が入ること。
+本便の実測の根拠は docs/handoff/tcg-product-import/recon.md にある。
+
+| 基準 | 検証方法 |
+|---|---|
+| SaaS管理者メニューに商品マスタが出る | 画面を開いて項目の有無を記録する |
+| 一覧が登録済み商品を全件見せる | 画面の総件数と tcg_products の実測行数が一致すること |
+| ヘッダーのCSVボタンで取り込み画面が開く | 画面を開いて操作し結果を記録する |
+| ファイルをドラッグして受け取れる | 画面を開いて操作し結果を記録する |
+| 確認を経ずに書き込む経路が無い | backend/app/routers/tcg_product_import.py を走査し preview の指紋照合を経ない INSERT 経路が無いこと |
+| 不正な行を止めて名指しで見せる | 止める判定を1行ずつ含む見本CSVで、止めるべき行が全て止まること |
+| 取り込みの履歴が残る | 取り込み1回につき tcg_product_import_jobs が1行、tcg_product_import_rows が行数ぶん増えること |
+| 新規ファイルに日本語の直書きが無い | Frontend lint が緑であること |
+| 調査済みカタログを取り込める | sword-shield-catalog.md の44件が tenant_001 と tenant_004 で44件入ること |
 
 ## 9. 維持の仕組み
 
-- 守り手: preview を経ない commit を作らないこと（コードレビューとKGI⑤の走査）。Frontend lint（文言の直書き）。tcg_product_import_jobs.raw_sha256 の UNIQUE（同一ファイルの二重取り込み）。
+- 守り手: backend/app/routers/tcg_product_import.py の commit 経路が preview の指紋照合を必須にしている。migrations/20260906_130000_create_tcg_product_import_history_t004.sql の一意索引が同一ファイルの二重取り込みを止める。backend/tests/test_tcg_product_import.py が認証と指紋不一致を検査する。
 - 対象: 承認を経ない本番書き込みと、質の悪いキーワードの流入。
 - 人手併用: 5-4 の警告は押し切れる。キーワードの質は最終的にPOの目視で担保する。機械は「他の商品にも当たる」ことまでは測れるが、それが正しいかは測れないため。
 
