@@ -12,10 +12,15 @@ GAS 対応行:
 """
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.services.tcg_analyzer_svc import (
     app_kubun_matches,
+    build_note_ja,
+    build_review_reasons,
+    load_note_master,
     match_keyword,
     match_one_kw,
     match_pid_name_first,
@@ -24,6 +29,27 @@ from app.services.tcg_analyzer_svc import (
     resolve_unit_v2,
     token_and_match,
 )
+
+
+def _note_entry(
+    note_id: str,
+    label_ja: str,
+    *,
+    match_type: str = "LITERAL",
+    search_keywords: list[str] | None = None,
+    exclude_keywords: list[str] | None = None,
+    search_pattern: str = "",
+    label_template: str = "",
+) -> dict:
+    return {
+        "id": note_id,
+        "label_ja": label_ja,
+        "match_type": match_type,
+        "search_keywords": search_keywords or [],
+        "exclude_keywords": exclude_keywords or [],
+        "search_pattern": search_pattern,
+        "label_template": label_template,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +269,210 @@ class TestMatchKeyword:
         hit, matched = match_keyword("ポケモン", ["ドラゴン", "ポケモン", "遊戯王"], [])
         assert hit is True
         assert matched == "ポケモン"
+
+
+# ---------------------------------------------------------------------------
+# build_note_ja / build_review_reasons (NOTE-B2)
+# ---------------------------------------------------------------------------
+
+class TestLoadNoteMaster:
+    def test_loads_regex_fields(self):
+        session = MagicMock()
+        session.execute.return_value.fetchall.return_value = [
+            (
+                "NJ030",
+                "指定日発送",
+                "",
+                "完売",
+                2,
+                "REGEX",
+                r"(\d{1,2})/(\d{1,2})発送",
+                "$1/$2発送",
+            )
+        ]
+
+        assert load_note_master(session) == [
+            {
+                "id": "NJ030",
+                "label_ja": "指定日発送",
+                "search_keywords": [],
+                "exclude_keywords": ["完売"],
+                "match_type": "REGEX",
+                "search_pattern": r"(\d{1,2})/(\d{1,2})発送",
+                "label_template": "$1/$2発送",
+            }
+        ]
+        statement = str(session.execute.call_args.args[0])
+        assert "match_type, search_pattern, label_template" in statement
+
+
+_EXISTING_LITERAL_NOTE_CASES = [
+    ("NJ001", "検品開封済み", "検品のため", ["テープカット", "カートンテープカット"]),
+    ("NJ002", "プロモ付き", "プロモ付", ["プロモ無し", "プロモなし", "プロモ無", "雑誌プロモ", "カードセット"]),
+    ("NJ003", "プロモなし", "プロモ無し", ["プロモ付", "プロモ入り"]),
+    ("NJ004", "再販品", "再販", ["初版", "初回生産"]),
+    ("NJ005", "初版品", "初版", ["再販", "再版"]),
+    ("NJ006", "ダメージ", "ダメージ", []),
+    ("NJ007", "スジ", "スジ", ["スペースジャグラー"]),
+    ("NJ008", "凹み", "凹み", []),
+    ("NJ009", "潰れ", "潰れ", []),
+    ("NJ010", "破れ・破損", "破れ", []),
+    ("NJ011", "反り", "反り", []),
+    ("NJ012", "傷・キズ", "キズ", ["傷み", "箱痛み"]),
+    ("NJ013", "汚れ", "汚れ", []),
+    ("NJ014", "箱痛み", "箱痛み", []),
+    ("NJ015", "被りあり", "被りあり", ["被りなし", "重複なし"]),
+    ("NJ016", "被りなし", "被りなし", ["被りあり"]),
+    ("NJ017", "ランダム", "ランダム", ["完全ランダム", "被りなし"]),
+    ("NJ018", "完全ランダム", "完全ランダム", []),
+    ("NJ019", "白箱", "白箱", []),
+    ("NJ020", "スリーブ入り", "スリーブ入り", ["スリーブ無し", "スリーブなし"]),
+    ("NJ021", "本付き", "本付き", []),
+    ("NJ022", "雑誌付き", "雑誌付き", []),
+    ("NJ023", "発売日発送", "発売日発送", ["前日", "翌日", "時まで", "注文で", "注文確定"]),
+    ("NJ024", "発売日前日発送", "発売日前日", []),
+    ("NJ025", "発売日翌日発送", "発売日翌日", ["受注の翌日"]),
+    ("NJ026", "即日発送可", "即日発送", []),
+    ("NJ027", "入荷次第発送", "入荷次第", []),
+    ("NJ028", "発送日要相談", "発送日要相談", []),
+    ("NJ029", "国内発送のみ", "国内発送のみ", []),
+    ("NJ035", "買取品", "買取品", []),
+    ("NJ036", "問屋品", "問屋", []),
+    ("NJ037", "店舗品", "店舗仕入", []),
+    ("NJ038", "正規流通品", "正規流通", []),
+    ("NJ039", "サーチ済の可能性", "サーチ済", ["サーチ痕無", "サーチ痕なし", "サーチ跡無", "未サーチ"]),
+    ("NJ040", "未サーチ", "未サーチ", []),
+    ("NJ041", "伝票跡", "伝票跡", []),
+    ("NJ042", "テープ跡", "テープ跡", ["テープカット"]),
+    ("NJ043", "ラベル跡", "ラベル跡", []),
+    ("NJ044", "シリアル切り取り", "シリアル切り取り", ["シリアルのみ"]),
+    ("NJ045", "カートン数字記載", "数字の記載", []),
+    ("NJ046", "段ボール傷", "段ボール傷", []),
+    ("NJ047", "B品", "B品", []),
+    ("NJ048", "上部切り取り", "上部切り取り", []),
+    ("NJ049", "美品", "美品", []),
+    ("NJ050", "カートン発送可", "カートン可", []),
+    ("NJ054", "大口割引可", "大口", []),
+    ("NJ055", "写真掲載可", "写真掲載可", []),
+    ("NJ056", "SNS投稿不可", "SNSへの投稿不可", []),
+]
+
+
+@pytest.mark.parametrize(
+    ("note_id", "label_ja", "representative_memo", "exclude_keywords"),
+    _EXISTING_LITERAL_NOTE_CASES,
+)
+def test_existing_48_literal_note_outputs_are_preserved(
+    note_id: str,
+    label_ja: str,
+    representative_memo: str,
+    exclude_keywords: list[str],
+):
+    entries = [
+        _note_entry(
+            note_id,
+            label_ja,
+            search_keywords=[representative_memo],
+            exclude_keywords=exclude_keywords,
+        )
+    ]
+    assert build_note_ja(representative_memo, entries) == label_ja
+
+
+class TestBuildNoteJa:
+    def test_literal_behavior_is_preserved(self):
+        entries = [
+            _note_entry("NJ063", "予約商品", search_keywords=["予約商品", "予約品"])
+        ]
+        assert build_note_ja("予約商品です", entries) == "予約商品"
+
+    def test_regex_normalizes_fullwidth_date_and_expands_groups(self):
+        entries = [
+            _note_entry(
+                "NJ030",
+                "指定日発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})[/月](\d{1,2})日?.{0,4}?(発送|出荷)",
+                label_template="$1/$2発送",
+            )
+        ]
+        assert build_note_ja("９／１６（水）発送", entries) == "9/16発送"
+
+    def test_optional_capture_is_preserved(self):
+        entries = [
+            _note_entry(
+                "NJ033",
+                "到着後発送",
+                match_type="REGEX",
+                search_pattern=r"到着後\s*(\d{1,2})日以内発送(目安)?",
+                label_template="到着後$1日以内発送$2",
+            )
+        ]
+        assert build_note_ja("到着後3日以内発送目安", entries) == "到着後3日以内発送目安"
+
+    def test_exclusion_wall_prevents_broad_date_duplicate(self):
+        entries = [
+            _note_entry(
+                "NJ051",
+                "日付前後発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})/(\d{1,2})前後(発送|入荷)",
+                label_template="$1/$2前後発送",
+                exclude_keywords=["完売"],
+            ),
+            _note_entry(
+                "NJ030",
+                "指定日発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})[/月](\d{1,2})日?.{0,4}?(発送|出荷)",
+                label_template="$1/$2発送",
+                exclude_keywords=["完売", "前後", "までに", "〜", "~", "ー", "-"],
+            ),
+        ]
+        assert build_note_ja("9/12前後発送", entries) == "9/12前後発送"
+
+    def test_exclusion_wall_can_leave_compound_memo_unmatched(self):
+        entries = [
+            _note_entry(
+                "NJ031",
+                "日付範囲発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})月(\d{1,2})日[〜~ー-](\d{1,2})日出荷",
+                label_template="$1/$2〜$1/$3発送",
+                exclude_keywords=["完売"],
+            )
+        ]
+        assert build_note_ja("9月16日〜18日出荷は完売", entries) is None
+
+    def test_invalid_regex_is_ignored(self):
+        entries = [
+            _note_entry(
+                "BROKEN",
+                "壊れた札",
+                match_type="REGEX",
+                search_pattern="(",
+                label_template="$1",
+            )
+        ]
+        assert build_note_ja("任意のメモ", entries) is None
+
+
+class TestBuildReviewReasons:
+    def test_unmatched_nonempty_memo_is_added(self):
+        assert build_review_reasons(True, [], "未分類メモ", None) == ["note_unmatched"]
+
+    def test_matched_note_does_not_add_reason(self):
+        assert build_review_reasons(True, [], "9/16発送", "9/16発送") == []
+
+    def test_blank_memo_does_not_add_reason(self):
+        assert build_review_reasons(True, [], "   ", None) == []
+
+    def test_existing_reasons_keep_order_before_note_unmatched(self):
+        assert build_review_reasons(False, ["PM1", "PM2"], "未分類メモ", None) == [
+            "pid_unresolved",
+            "multi_candidate",
+            "note_unmatched",
+        ]
 
 
 # ---------------------------------------------------------------------------
