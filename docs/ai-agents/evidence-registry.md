@@ -1400,3 +1400,9 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   kgi: "2026-07-27 04:08 JST の定期run 30216232301 は旧 main 1d9ae8cc で実行され、merge-base --is-ancestor 9e462249 1d9ae8cc = exit 1 のため対策未適用だった。同runの内訳は 対象88件／IN_PROGRESS・未マージ23件／未保存50件／未マージ12件／削除対象3件で、実削除は0件（3件とも『既に存在しないか登録解除済み』）。"
   note: "本店 /Users/tanizawashingo/salesanchor の作業コピーは HEAD=d9a73243・origin/main=693d654d で434コミット遅れ、未保存23件。手元 scripts/reaper-worktree.sh は claude-pipeline 出現2件（main版は5件）で対策未反映。ゆえに手元 dry-run は旧版を実行し未保存50件・削除対象0件となった。定期実行は actions/checkout で毎回 origin/main を取り直すため本店の遅れの影響を受けない（run 30216232301 のログに e7a53a24..1d9ae8cc を実測）。"
   open: "①対策適用後の実削除件数は未実測。②台帳を除外した独自集計は both=2／dirty_only=7／unpushed_only=21／clean=57（87 worktree中）だが、reaper の未push判定3経路（scripts/reaper-worktree.sh:147-183）のうち1経路のみで測った値であり reaper と同一物差しではない。③数の三者不一致: git worktree list=97／実フォルダ=94／reaper走査=87＋異物3。K2・K3 未実装の実害。④scripts/dev/executor-preflight.sh:70 は 2>/dev/null || true で失敗理由を破棄し、通信失敗と main 消失を区別せず同一メッセージを出す。疎通検査は api.github.com（25行）、main 存在確認は origin URL の github.com（70行）で宛先が異なる。⑤.claude-pipeline/active-work.md:23 の release/reaper-concurrency-design は IN_PROGRESS だが PR #3066 が 2026-07-23T05:51:08Z に MERGED 済みの残骸。"
+
+- EV-20260910-PMG-IMPORT-SSOT:
+  theme: "インポート・解析・配信の統合 第1段階"
+  evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
+  observed: "base=8206ba2844921c1efb3ca4fd647230e76bb0c5c6。仕入元・実際の投稿日時・本文一致のみ再利用する方針にPOが合意。ローカルPostgreSQL 16の専用テストDBで検証。本番実測は引き継ぎ資料によるもので本セッションでは未実施。"
+  open: "新PRのマージ・本番適用・実配信は未承認。UI・配信履歴・解析attemptは後続便。最終テスト結果とPR状態はテーマdesign.md参照。"
