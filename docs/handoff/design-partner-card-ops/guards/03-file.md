@@ -14,4 +14,6 @@
 | 検出語にコメント文中の語（`DELETE`）→ 説明文に当たって止まる | 検出語は本文に現れない形にする | CV-22（未検証） |
 
 | PR 本文の修正で全文を運ぶ | gh pr view --json body で現物を落とし sed で該当行を置換して gh pr edit で戻す | 2026-09-07 実測 |
+| PRテンプレートの未記入プレースホルダ行をカード内の patch 本文へそのまま載せる → card-lint L02 がカード全文から検出して実行前停止 | PR本文作成カードでは未記入プレースホルダを patch の文脈に含めず、プレースホルダを含まない既存行だけを基準に編集する | CARD-PMG-FLOW-PR-CREATE-01（2026-09-09 実測） |
+| card-lint 回避のため apply_patch の既存基準行を省略・言い換えする → expected lines が現物と一致せず停止 | 基準行は git show origin/main で直前実測した文字列を逐語一致で使う。危険な文字列を含む行は基準に選ばない | CARD-PMG-FLOW-GUARD-FIX-03（2026-09-09 実測） |
 | 既存ファイルへの「末尾に追記する」を散文で頼む → 実行役が `apply_patch` を選び、目印にする行が見つからず `apply_patch verification failed: Failed to find expected lines` | 追記する本文も**ファイルで渡し**、`cat <追記ファイル> >> <対象ファイル>` で連結する。検算は `wc -l` と `tail -3`。差分適用は使わない | 2026-09-08 実測（CARD-PMG-KW-V4b 手順6） |
