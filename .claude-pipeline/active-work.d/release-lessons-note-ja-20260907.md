@@ -2,4 +2,4 @@ branch: release/lessons-note-ja-20260907
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/lessons-note-ja-20260907 | 教訓ポスト（lessons.d） | 2026-09-07 | IN_PROGRESS | | | 文書のみ・1便1ファイル |
+| release/lessons-note-ja-20260907 | 教訓ポスト（lessons.d） | 2026-09-07 | DONE | 3337 | | 文書のみ・1便1ファイル |
