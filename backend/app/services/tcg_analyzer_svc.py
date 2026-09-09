@@ -733,7 +733,8 @@ def load_note_master(session: Session) -> list[dict]:
         rows = session.execute(
             text(
                 f"""
-                SELECT id, label_ja, search_keywords, exclude_keywords, priority
+                SELECT id, label_ja, search_keywords, exclude_keywords, priority,
+                       match_type, search_pattern, label_template
                 FROM {TCG_SCHEMA}.tcg_note_master
                 WHERE enabled = TRUE ORDER BY priority ASC, id ASC
                 """
@@ -749,21 +750,78 @@ def load_note_master(session: Session) -> list[dict]:
             "label_ja": r[1],
             "search_keywords": [k.strip() for k in (r[2] or "").split(",") if k.strip()],
             "exclude_keywords": [k.strip() for k in (r[3] or "").split(",") if k.strip()],
+            "match_type": r[5] or "LITERAL",
+            "search_pattern": r[6] or "",
+            "label_template": r[7] or "",
         }
         for r in rows
     ]
 
 
+def _expand_note_label(template: str, match: re.Match[str]) -> str:
+    """REGEX 札の ``$1`` 形式の捕捉参照を展開する。"""
+
+    def replace_group(reference: re.Match[str]) -> str:
+        group_index = int(reference.group(1))
+        try:
+            return match.group(group_index) or ""
+        except IndexError:
+            return reference.group(0)
+
+    return re.sub(r"\$(\d+)", replace_group, template)
+
+
 def build_note_ja(raw_memo: str, note_entries: list[dict]) -> Optional[str]:
-    """match_keyword 再利用。マッチした label_ja をカンマ連結。GAS: buildNoteJA_"""
+    """LITERAL/REGEX 札にマッチした日本語ラベルをカンマ連結する。"""
     if not raw_memo or not note_entries:
         return None
+    norm_memo = normalize_en(raw_memo)
     labels = []
     for entry in note_entries:
-        hit, _ = match_keyword(raw_memo, entry["search_keywords"], entry["exclude_keywords"])
-        if hit:
-            labels.append(entry["label_ja"])
+        match_type = entry.get("match_type", "LITERAL")
+        if match_type != "REGEX":
+            hit, _ = match_keyword(
+                raw_memo, entry["search_keywords"], entry["exclude_keywords"]
+            )
+            if hit:
+                labels.append(entry["label_ja"])
+            continue
+
+        if any(match_one_kw(kw, norm_memo) for kw in entry["exclude_keywords"]):
+            continue
+        pattern = entry.get("search_pattern", "")
+        if not pattern:
+            continue
+        try:
+            regex_match = re.search(pattern, norm_memo)
+        except re.error:
+            logger.warning(
+                "[tcg_analyzer] note regex error: id=%s pattern=%r",
+                entry.get("id"),
+                pattern,
+            )
+            continue
+        if regex_match:
+            template = entry.get("label_template") or entry["label_ja"]
+            labels.append(_expand_note_label(template, regex_match))
     return ",".join(labels) if labels else None
+
+
+def build_review_reasons(
+    pid_resolved: bool,
+    candidates: list[str],
+    raw_memo: str,
+    note_ja: Optional[str],
+) -> list[str]:
+    """解析行を人手確認へ送る理由を安定した順序で返す。"""
+    reasons: list[str] = []
+    if not pid_resolved:
+        reasons.append("pid_unresolved")
+    if len(candidates) > 1:
+        reasons.append("multi_candidate")
+    if raw_memo.strip() and not note_ja:
+        reasons.append("note_unmatched")
+    return reasons
 
 
 # ---------------------------------------------------------------------------
@@ -959,11 +1017,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         status_val, exclusion_val = resolve_status_v2(norm_status, status_entries)
 
         # needs_review 判定
-        review_reasons: list[str] = []
-        if not pid_resolved:
-            review_reasons.append("pid_unresolved")
-        if len(candidates) > 1:
-            review_reasons.append("multi_candidate")
+        review_reasons = build_review_reasons(
+            pid_resolved, candidates, raw_memo, note_ja
+        )
         needs_review = len(review_reasons) > 0
 
         if needs_review:
@@ -1126,6 +1182,7 @@ __all__ = [
     "apply_field_normalization",
     "load_note_master",
     "build_note_ja",
+    "build_review_reasons",
     "load_status_master",
     "resolve_status_v2",
     "analyze_extraction_job",
