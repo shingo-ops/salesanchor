@@ -201,6 +201,8 @@ P8 NJ053  ([0-9０-９]+)で括り
 | apply_field_normalization | REGEX_REPLACE の to_val で $N 後方参照が使える | RECON-09b |
 | NOTE 欄の既存正規化 | 29本。装飾記号 REMOVE 21本のほか、優先度 1000〜1060 に日付整形 7本が既に在る | RECON-09b |
 | needs_review の理由 | pid_unresolved / multi_candidate の2つのみ | RECON-09b |
+| tcg_note_master の実列 | tenant_004にlabel_enが実在しNOT NULL。match_type / search_pattern / label_templateは未追加 | CARD-PMG-NOTE-MIG-RECON-01b |
+| tenant_001の空テスト | tcg_note_masterとtcg_normalization_rulesは両方とも存在しない | CARD-PMG-NOTE-MIG-RECON-01b |
 
 ### B2-3. マスタ列の追加（tcg_note_master）
 
@@ -317,12 +319,12 @@ CARD-PMG-NOTE-SIM-01 で得た raw_memo 280種・2,277行に、本節の正規�
 
 | 便 | 内容 | 危険パス | GO |
 |---|---|---|---|
-| 1 | migration: tcg_note_master 列追加 + 正規化ルール追加/修正 + 札の追加/変更（tenant_001 → tenant_004） | migrations/ | 要 |
+| 1 | migration: tcg_note_master 列追加 + 正規化ルール追加/修正 + 札の追加/変更（tenant_004専用） | migrations/ | 要 |
 | 2 | コード: build_note_ja / load_note_master / needs_review + テスト（test_tcg_keyword_matching.py に build_note_ja のテストを追加。現在0件） | backend/app/services/, backend/tests/ | 要 |
 | 3 | 再解析（別セッション担当） | analysis_results 書き込み | 要 |
 | 4 | 効果の実測（B2-9 の試算値との突き合わせ） | 読み取りのみ | 不要 |
 
-再解析だけを先に走らせる案（37.8% → 61.2%・コード変更なし）は PO へ提示済み、判断待ち。
+先行再解析は行わない。便1・便2の反映後に便3で1回だけ再解析する（PO決定 2026-09-09）。
 
 ### B2-12. 受け入れ基準と検証方法
 
@@ -340,5 +342,3 @@ CARD-PMG-NOTE-SIM-01 で得た raw_memo 280種・2,277行に、本節の正規�
 - raw_state の等級表記（状態A-・通常品・状態B）を Note_JA に出すか（別決定）
 - 〆 を札にするか（〆メッセージの別テーマと調整）
 - 空で残る250件・80種の個別判断（PO 指示により保留）
-- 便1の migration で tenant_001 に tcg_note_master が存在するか（空テストのため未確認）
-- tcg_note_master に label_en 列が実在するか（§8 受入基準に「NJ023〜NJ056 の label_en が全行非空」があるが、RECON-04 の SELECT に含めておらず未実測）。実在するなら B2-5・B2-6 の新札15本に label_en を足す。PO の希望（日本語と英語の両対応）に沿うため、便1の migration までに確定させる
