@@ -265,3 +265,71 @@ PM0099 の網が「スノーハザード&クレイバースト…」の順のた
 | IP007 | Weiss Schwarz | 10 |
 | IP005 / IP006 | ユニオンアリーナ / ガンダム | 3 / 3 |
 | IP008 / IP009 / IP011 | デジモン / ホロライブ / クロススターズ | 0 |
+
+---
+
+## 2026-09-09 取り込みから Gemini 抽出・解析までの経路
+
+出所: CARD-PMG-FLOW-RECON-01 / -02 / -03 / -04（読み取りのみ・DB接続なし）。
+実測時の origin/main SHA は便ごとに動いた: 060ac986 → 764c2167 → 038df9f9。
+本節の file:line は 038df9f9 時点の値である。
+
+### 1. ファイル単位の冪等化がある
+
+- backend/app/services/tcg_line_import_svc.py:448 「ファイル全体の sha256 で冪等化チェック」
+- 同:476 file_sha256 = sha256_text(export_text)
+- 同:479 SELECT id, status FROM import_jobs WHERE raw_sha256 = :sha256
+- 一致する行が在れば status="already_imported" を返し、source_messages も extraction_jobs も書かない。
+
+### 2. メッセージ単位の重複判定は存在しない
+
+- 窓フィルタは同:181 と :183 の timestamp 比較のみ。取り込み済みか否かは見ていない。
+- 窓は同:176 の _compute_window(window_hours, window_start, window_end) で決まる。window_hours=0 で無効化。
+- 同:37 JST = timezone(timedelta(hours=9))。同:17 に「旧実装は UTC 基準で実質 33h」との記載がある。
+
+### 3. 仕入元ごとに1通だけ採用する（SQR-05）
+
+- 同:271 build_provider_entries。sorted_msgs = sorted(msgs, key=lambda m: m["timestamp"]) の昇順、
+  latest_msg = sorted_msgs[-1]、raw_text = latest_msg["body"]。採用されるのは最新の1件。
+- skipped_message_count = len(sorted_msgs) - 1。残りは採用されない。
+- received_at = sorted_msgs[0]["timestamp"]（最古）。canonical_name も sorted_msgs[0] から取る。
+  事実: source_messages.received_at に入る時刻は、raw_text の投稿時刻ではなく窓内最古の投稿時刻である。
+  本テーマでは是正しない。time-handling-ssot へ引き渡す。
+- sha256 は採用した1件の本文に対して計算され、同:396 で source_messages.raw_sha256 に入る。重複判定には使われない。
+- skipped_message_count は import_jobs の INSERT 列（同:211 から :214）に含まれない。DBに残らない。
+
+### 4. 取り込みは世代交代を起こす
+
+- 同:364 SELECT id FROM source_messages WHERE supplier_channel_id = :scid AND is_active = TRUE
+  （時刻・本文の条件は無い）
+- 新しい id を uuid4 で作り、同:384 で INSERT する（is_active = TRUE）。
+- 同:406 で上記の従来行を superseded_by = 新id / is_active = FALSE に更新する。
+- 同:418 で extraction_jobs に status='pending' を1件 INSERT する。
+- 配信と確認画面は sm.is_active = TRUE で絞る
+  （tcg_distribution_svc.py:229 / tcg_analysis_review_svc.py:35）。
+  よって前回取り込み分は、analysis_results が残っていても画面と配信に出ない。
+
+### 5. Gemini 抽出の対象は新着のみ
+
+- backend/app/tasks/tcg_extraction.py の _run_extraction は
+  WHERE ej.source_message_id = :smid AND ej.status = 'pending'
+  ORDER BY ej.created_at DESC LIMIT 1 で1件だけ取る。
+- status='done' のジョブを再び読む経路は無い。再抽出は
+  backend/app/routers/tcg_diagnostics.py:14 の再エンキュー（status を pending に戻す）でのみ起きる。
+
+### 6. システム解析の対象は当該ジョブのみ
+
+- backend/app/services/tcg_analyzer_svc.py:850 analyze_extraction_job(session, extraction_job_id)。
+- extraction_items を WHERE extraction_job_id = :ej_id で取得する。
+- 同:974 analysis_results を UPSERT する（extraction_item_id に UNIQUE 制約）。
+- 呼び出しは tcg_extraction.py:225。TCG_AUTO_ANALYZE=1 かつ final_status が done のときのみ。
+- 全件を再解析する経路はコード内に無い。単一ジョブ再解析は
+  tcg_product_master_svc.py:689 reanalyze_extraction_job。
+
+### 7. 本節で確認していないこと
+
+- 未解決の仕入元が在るときの保留と commit 経路の実装。
+  router 側 tcg_line_import.py:621 が同じ _write_source_messages を呼ぶことのみ確認した。
+- skipped_message_count が本番で何件発生しているかの実測値。
+- 世代交代で is_active = FALSE になった source_messages の実測件数。
+- parse_line_export の実装（同一投稿者の連続投稿をどう1件に区切るか）。
