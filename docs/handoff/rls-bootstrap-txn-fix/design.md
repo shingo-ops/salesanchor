@@ -1,3 +1,7 @@
+---
+mode: handoff
+---
+
 # Design — rls-bootstrap txn fix
 
 **対象ADR**: ADR-108  
@@ -57,3 +61,53 @@
 
 - 今回の修理はテスト基盤固有の競合を潰す段階で止める。
 - sales_form 系 migration の出自は ADR-108 に従い、今後の構築順序変更も同じ `conn` 前提で扱う。
+
+
+## 2026-09-10追補: テスト準備を要求tenantへ限定する設計
+
+### 目的とWhy
+
+PR #3397を止めた既存テスト基盤の干渉を解消する。利用者画面の変更は0件。
+根拠はrecon追補の同一失敗2件と、全schema走査・部分schema作成の実物照合。
+旧設計の同一接続・既存lock・正本migration使用を維持し、準備対象だけを限定する。
+
+### 対象・変更前後
+
+backend/tests/rls_bootstrap.py と test_rls_bootstrap_ordering.py、および本テーマの設計・recon・tasks/todo.md・evidence-registry.md。
+前: tenant用2migrationを全tenantへ適用。後: 呼び出しで要求された1tenantのみへ適用。
+本番migration、製品サービス、PR #3385、商品取り込みPR #3397、CI設定、既存skipは変更しない。
+
+### 実装契約
+
+- 許可するSQLは既存tenant用2ファイルのみ。元のWHERE行を改行・字下げ込みで1箇所確認し、AND nspname = 数値tenant名を追加する。コメント中のrollback行は対象外。
+- tenant名はtenant_とASCII数字のみ。未知ファイル・対象行0/複数・不正schemaはValueErrorで停止する。
+- tenant用migrationを対象schemaなしで実行する呼び出しも拒否。public用既存経路は維持する。
+- 既存接続・transaction・lockの取得解放は維持する。
+- 実PG試験は既存の3テーブル実在とleads外部キーを維持し、別schemaなし/空のtenant_9951ありの2条件で実行する。後者のテーブル数は0件のまま。
+- 別schemaはCREATE成功時だけfinallyで削除する。存在していた領域を先に消して試験を通さない。
+
+### 受入条件と検証
+
+| 条件 | 検証 |
+|---|---|
+| 部分schemaが存在してもbootstrap成功 | 実PostgreSQLの既存試験を2条件で実行 |
+| 別schemaへのテーブル追加0件 | information_schema.tablesのCOUNTが0 |
+| 対象の3表・FKが維持 | 既存の実体照合assertを維持 |
+| 正本の条件以外は変更0文字 | 2ファイルの加工結果から追加条件を除くと原文と完全一致 |
+| 原文変更・重複・不正schema・未知migrationを拒否 | 正常2例、WHERE変更/重複各2例、不正名4例、未知1例 |
+| 全体との整合 | backend ruff、GitHub pytest-run-internalと必要チェックが当該HEADで成功 |
+
+### 代替案・弊害・維持
+
+全テストへの共通lock追加は、無関係なfixtureも変更し、書き込み範囲の広さを残すため不採用。
+テストskipや再実行だけによる回避は、原因を残すため不採用。
+正本SQLの本番動作変更はテスト修理の範囲を超えるため不採用。
+採用案はSQLの既知行に依存するため、元ファイルの字下げ変更でも止まる。その際は2正常例・否定例・実PG回帰を更新して確認する。汎用SQL解析器ではない。
+維持担当は本テスト基盤の変更者、監視は既存backend CI。取り消す場合は本PRをrevertし、全tenant走査の干渉が戻ることを明記する。
+
+### 自己審査
+
+2026-09-10 APPROVE（設計合格）。同一AIによるPlanner→Architectの自己審査で、独立した第二者レビューではない。
+根拠: 既存同一接続条件を維持し、変更対象2本を固定し、実障害条件を実PG試験へ含めた。
+未解決: 実装後のCI結果は未取得。これは設計合格であり、テスト成功・PR提出・マージ完了を意味しない。
+POの別件修正指示に基づく。番号付きGOを創作しない。
