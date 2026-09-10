@@ -49,7 +49,7 @@ PM0200の「コロ」追加は冪等なdata migrationとし、PM0285や新規商
 
 検証作業
 設計§10.3の表をすべて検証し、ケース名・期待・実測・合否を対応させる。29は過去保存行相当の入力数であり、Gemini正答数として流用しない。
-PostgreSQL統合試験はローカルのテストDBで実行する。既存のTCG抽出・解析・配信テストも実行する。Dockerが使えなければ統合試験をPASSとせず、未実施を報告して停止する。
+PostgreSQL統合試験はローカルDocker、または既存のGitHub CIの使い捨てPostgreSQL 16で実行する。既存のTCG抽出・解析・配信テストも実行する。ローカルDockerがない場合はローカルpytestを実行せず、静的検査後にready PRを作って既存CIへ進む。統合試験を省略・SQLite代用・skipのままPASS扱いにしない。CIでも実行できない場合は未実施と根拠を報告して停止する。
 Gemini実験は匿名化した標本だけを用い、形式失敗・正答・不明・誤分類を別計測する。失敗や正例の取りこぼしを隠して受入済みとしない。
 
 手順4
@@ -62,7 +62,7 @@ Gemini実験は匿名化した標本だけを用い、形式失敗・正答・�
   cd /Users/tanizawashingo/worktrees/salesanchor/release-line-work-matching-v3 && git diff --check
 
 PR作業
-検証完了後に実際に変更したファイルだけをコミットする。コミットの実在は `git log -1 --format=%H` で確認してからpushする。
+ローカルで実行可能な検査を完了後、実際に変更したファイルだけをコミットする。Dockerがない場合はCI実行に必要なready PR起票を先行してよい。CIで新規PostgreSQL統合試験が実行され成功したことを確認するまで、検証完了とはしない。コミットの実在は `git log -1 --format=%H` で確認してからpushする。
 公式 `scripts/gh-pr-create-safe.sh` の手順でmain向けready PRを作る。PR本文は実在する本文ファイルを作り `--body-file` で渡す。文書承認・実装GOと本番GOを混同しない。
 良い記載例: `### 標準ワークフロー確認` の中に `設計: docs/handoff/tcg-product-master-growth/design-keyword.md` を置く。
 禁止形: 対象ADR・recon・設計を別セクションへ平打ちする。触るファイルには実際の変更パスを全件宣言する。
@@ -71,5 +71,46 @@ PR作業
 完了報告と停止
 報告冒頭は「本報告はカード CARD-LINE-WORK-MATCHING-V3-01 の実行結果である」。完了報告の本文に実行した検証の生出力を全文含め、PR URL・HEAD・差分ファイル・検証ケースの結果・未実施項目を設計パートナーへ返す。
 停止時は停止した手順番号／最後のコマンド／停止理由とエラー生出力を返す。契約矛盾や必要ファイルの追加は設計側へ戻し、実装役で設計を変えない。
+
+
+
+補正記録（2026-09-10）
+停止分類: カード不備。設計§10.3はCIでのPostgreSQL検証を許可していたが、本カードがローカルDocker不在で一律停止としていたため整合させた。
+実測: Dockerコマンドなし（exit127）、標準配置3箇所にも実体なし。製品変更前に停止した。
+CI根拠: `.github/workflows/test.yml` のpytest-runはPostgreSQL16/Redis7を起動し、`RLS_ADMIN_DATABASE_URL`を設定してbackendのpytest全件を実行する。`backend/pyproject.toml` のtestpathsはtests。CI変更は不要。
+実装テストはCIのこの接続情報を使い、使い捨てテストDB／名前空間に限定する。同時に走る他の試験や本番へ影響しないことを検証する。
+Gemini実測の認証が利用できない場合は認証情報を探索・開示せず、匿名化標本と期待値を準備し、実測未了をPRへ明記する。コード・DB統合検証は続行可能だが、本番反映可とはしない（設計§10.3の本番前実測条件を維持）。
+本補正で製品の仕様・受入条件・CI設定・本番権限は変更しない。実装役1名の委任はPOから受領済み。
+
+追加補正（設計側指示）: 未一致のpid_basisは厳密に `NONE` を維持する。既存 `backend/app/services/tcg_analysis_review_svc.py:77,94,118` の完全一致条件を壊さないため。作品制約の表示は成功・複数候補時に付け、未一致の履歴は作品原文2列とengine_versionで追跡する。UIファイルの追加変更はしない。
+
+検証環境補足: 試験のDB削除命令を含むファイル作成が不可逆操作ガードに拒否されたため、削除処理を取り除いた。CIの使い捨てサービス内だけでランダムな試験DBを作り、サービス終了時の廃棄に委ねる。GITHUB_ACTIONS・接続host・試験用DB名を検証し、本番・QA・ローカルDBには実行しない。ガード解除なし。
+
+追加所有（設計側指示）: `backend/tests/test_gemini_error_redact.py` の正常応答fixtureを9列へ更新する。既存test_success_has_no_error_messageは新規extract_messageに7列を渡しており、厳格v3契約と矛盾するため。秘密情報の秘匿検証は維持し、旧7列は旧パーサのテストで保持する。
+
+実行結果（2026-09-10）: ready PR https://github.com/shingo-ops/salesanchor/pull/3393 を提出。Python3.12静的検査、task-state、card-lint、diff検査を完了。PostgreSQL統合と既存回帰はCI確認待ち。Gemini APIキー未設定のため匿名標本の実測は未了。製品マージ・本番DB変更・配信は未実施。
+
+有限の追加実測（設計側指示）: 既存CIのGemini認証を利用できるか、一時計測テストを1コミットだけ追加して確認する。匿名6メッセージ・期待8明細を実行し、安全な集計だけをログへ出す。キー不在は未実施を明記。CI完了まで他pushをせず、結果取得後に一時計測テストを除去する。将来のCIに外部API呼び出しを常設しない。
+
+一時計測の検証修正: ff8098eeのCIは2425 passedだが、xdistによりcapsys.disabledの集計stdoutが残らず、8件正解と未実施を区別できなかった。既存artifactは0件。設計側指示で安全な集計JSONをUserWarningへ変更し、最大6メッセージの再計測を1回だけ行う。初回集計は取得不能として保存し、2回呼び出した可能性を隠さない。
+
+最終実測記録: EV-20260910-LINE-ACCURACY-08の追補を参照。既存CIのPostgreSQL統合6テストを含む2424 passedを確認。Gemini実測2（6b489af4 / run34426443315）は匿名8明細中、作品特定7＋不明保持1が期待どおり、誤分類・形式失敗・欠落・過剰・API失敗0。初回ff8098eeは集計取得不能で母数に含めない。一時計測除去SHA b2700dd0dd04f3ad0e5733d902f3d6980bc8e2ec。rootは指摘修正とGitHub生集計を読み取り確認済み。最終CIと新PR固有GOは別の状態として管理する。
+
+2026-09-10 GO受領追記: PO原文「GO #3393」を受領しPR本文へ転記済み。バックアップ一覧のSSH読み取り要求は監視情報だけを返し、直前バックアップ未確認。最新mainとの再照合も次工程へ残す。承認の再取得は不要。マージ・本番反映は未実施。
+
+適用順補正の追加カード（2026-09-10、設計§10.2.1）
+本項は前記の一括マージに優先する。PO原文「マージ」は #3393 に対して受領済みだが、安全な順序を満たすまで保留する。
+実装役1名の既存委任の範囲で、承認済み差分の先行PRを作成する。追加のサブエージェント、本番DB直接操作、マージは禁止。
+担当は同じ実装役。所有対象は既存2本のmigrationとrunner末尾登録、必要な当該台帳のみ。他者変更を戻さない。
+preflight後、公式new-worktree.shで最新origin/mainから release/line-work-matching-schema-first を作成する。既存worktreeを再利用・破壊しない。
+source SHAは ceb0d73fb8e00033b7d4762fc99c57b918d3d491。2本のSQLを逐語一致で複製し、runnerは新worktreeの最新版を保持してこの2本の登録だけを末尾へ追加する。アプリコード・CI設定・deploy.ymlは一切変更しない。
+先行PRの変更対象は migrations/20260910_160000_tcg_work_evidence.sql、migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql、scripts/run_all_migrations.sh の3件。既存mainに同一SQLがあれば重複作成せず報告し、異なる同名SQLなら停止する。
+受入は元SQLとのSHA256一致、runnerの登録順と一回性、bash構文・diff検査・既存CI。既存PostgreSQL実測の証拠は元PRのjob102713887406を参照。テスト定義を複製せず、先行PR固有のCI結果と過去実測を区別する。
+公式gh-pr-create-safe.shでmain向けready PRを提出し、対象・目的・あるべき姿・設計§10.2.1・元PR #3393との順序・触るファイル3件・バックアップ手順・検証証拠を本文へ記す。新PRのGOは未受領と明記し、GO原文を創作しない。
+提出後、全ての技術チェックを確認して設計パートナーへPR番号/HEAD/実差分/検証を返す。新PRのGO記録を要するチェックは承認待ちと区別して停止。#3393にも先行PRのURLを記録する。新PRと #3393 のどちらもマージしない。
+
+先行PR実行結果: #3398（8ef86fd0）提出、差分3ファイル。SQL2本の逐語一致をrootも確認。先行PR固有Backend2374 passed/93 skipped、実DB migration実行・全件ドライラン成功。先行PRのGO記録だけ未了。#3393も未マージ。詳細はEV-20260910-LINE-ACCURACY-08同日追補。
+
+2026-09-10先行反映完了: PO原文「GO #3398」受領後に760532a9でマージ。deploy run34430261411成功、直前バックアップ4.5M生成と2SQLのDO成功をrootが確認。#3393へmain取り込み済み、既存GOとマージ依頼に基づく最終CI・マージへ進む。詳細はEV-20260910-LINE-ACCURACY-08。
 
 END OF CARD
