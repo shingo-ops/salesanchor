@@ -1956,3 +1956,21 @@ latest ls-remote mainは3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1feへ進行。上�
 ### EV-20260910-FRONTEND-MOLD-16: 統合許可と既存PR採否
 
 PO原文: 「今回のフロントエンドのSSOTに関するものはまとめられるものはまとめて良い、ただし不具合発生時に原因が分かるように分離したほうが良いものは分離して順番にマージしてくれ」。重複PRを理由とする停止を解除。migration.mdに7PRの再利用・既反映・不採用を記録。基準main3bdf33d5。#2668の部品3blob一致、5色PRは延べ28/実14ファイルの変更行を担当が実PRdiffで照合。選択背景と文字の同色化・未定義calendar色参照を採らない。CIは最後、PO目視は完成後。新製品実装/PRマージ未着手、まず調査と計画の文書PR化を進める。
+
+
+### EV-20260910-FRONTEND-MOLD-17: 文書PRマージと操作契約の補完
+
+GitHub PR #3407は2026-09-10T09:15:15Zにmerge commit d715d998877e899206ba9bb4f82c726fc3175b30でマージ済み。gh pr viewのstate=MERGEDを設計担当が確認。最終HEAD f8c4b19fの文書レビューAPPROVE受領、設計担当が全checksの成功/対象外skipを確認し公式gh-pr-merge-safe.shで実行。これは文書PRの合格で、全体製品設計の合格・製品実装結果ではない。公式cleanupで旧worktree削除と台帳DONEを確認。
+
+新作業場所release/frontend-ssot-contractsは上記main起点。preflight成功、3bdf33d5からfrontend/scripts/.githubの差分0を直接確認。design.md §Zに入力577箇所の全属性、ボタン411箇所の分類と移管案、DOM/ref/送信の保持条件、アイコン生成器の契約を追補。委任担当の読み取り報告はevidence-20260910/*-semantic-audit.md/jsonおよびremaining-components-audit.md/jsonへ保存。UI目視・実装テストの実行結果とは区別する。
+
+全体設計REVISE維持。残件はCard/Badge等の特殊用途と最終CIの所有元・CSS検査契約。製品コード変更0。CI追加は最後、目視は完成後PO。新たなPO決定や番号付きGOを創作していない。
+
+
+### EV-20260910-FRONTEND-MOLD-18: 全体設計自己審査とAPI矛盾解消
+
+設計担当がPlanner作成後にArchitectとして同一AI自己審査APPROVE。独立した全体設計レビューではない。根拠はdesign.md §AA。限定APIレビューの4指摘（裸本体とアイコン、Select appearance互換、EmptyState内包DOM、Tabsの二重callback）を修正。React.MouseEventを変換しない本文も設計担当が直接確認。
+
+CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinner属性を追加照合。限定CIの有限propertyと部品寸法除外を確定、受入C01〜C27。調査担当の報告と設計担当の直接差分/文書検査を区別し、未実装テストを実行済みとしない。最新origin/main0be59e5290cab4149aa5451920317f8fa7f7564cと3bdf33d5のfrontend差分0を直接確認。
+
+次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。

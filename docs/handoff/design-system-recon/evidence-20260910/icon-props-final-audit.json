@@ -1,0 +1,2080 @@
+[
+  {
+    "file": "frontend/src/components/Button.tsx",
+    "line": 81,
+    "name": "Spinner",
+    "attrs": {
+      "size": "\"sm\"",
+      "onAccent": "{variant === \"primary\"}"
+    },
+    "imports": [
+      "import { Spinner } from \"./loading\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DataTable.tsx",
+    "line": 209,
+    "name": "TABLE_ICONS.sortAsc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from '../constants/icons';"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DataTable.tsx",
+    "line": 210,
+    "name": "TABLE_ICONS.sortDesc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from '../constants/icons';"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DataTable.tsx",
+    "line": 212,
+    "name": "TABLE_ICONS.sortAsc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from '../constants/icons';"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 77,
+    "name": "NAV_ICONS.chevronDown",
+    "attrs": {
+      "size": "{ICON.sm}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 228,
+    "name": "NAV_ICONS.dashboard",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 238,
+    "name": "NAV_ICONS.schedule",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 249,
+    "name": "LeadChatIcon",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 269,
+    "name": "NAV_ICONS.inventory",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 281,
+    "name": "NAV_ICONS.purchaseOrders",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 299,
+    "name": "NAV_ICONS.fileText",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 315,
+    "name": "NAV_ICONS.leads",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 326,
+    "name": "NAV_ICONS.orders",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 339,
+    "name": "NAV_ICONS.sales",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 352,
+    "name": "NAV_ICONS.commissions",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 363,
+    "name": "NAV_ICONS.admin",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 376,
+    "name": "NAV_ICONS.saasAdmin",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 389,
+    "name": "NAV_ICONS.more",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 417,
+    "name": "NAV_ICONS.logout",
+    "attrs": {
+      "size": "{18}"
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 444,
+    "name": "NAV_ICONS.close",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 455,
+    "name": "ACCOUNT_ICONS.profile",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 466,
+    "name": "THEME_ICONS.light",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 467,
+    "name": "THEME_ICONS.dark",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 475,
+    "name": "GlobeIcon",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/DesktopShell.tsx",
+    "line": 483,
+    "name": "NAV_ICONS.logout",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS, THEME_ICONS, GlobeIcon, LeadChatIcon, ACCOUNT_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/Drawer.tsx",
+    "line": 158,
+    "name": "X",
+    "attrs": {
+      "size": "{20}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, ArrowTopRight } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/EmptyState.stories.tsx",
+    "line": 24,
+    "name": "PAGE_ICONS.inboxEmpty",
+    "attrs": {
+      "size": "{ICON.xl}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/EmptyState.stories.tsx",
+    "line": 32,
+    "name": "NAV_ICONS.leads",
+    "attrs": {
+      "size": "{ICON.xl}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/EmptyState.stories.tsx",
+    "line": 41,
+    "name": "NAV_ICONS.search",
+    "attrs": {
+      "size": "{ICON.lg}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+    "line": 168,
+    "name": "Icon",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"bold\"",
+      "aria-hidden": "\"true\"",
+      "style": "{{ marginRight: \"var(--space-2)\", flexShrink: 0 }}"
+    },
+    "imports": [
+      "import { Check, X } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 123,
+    "name": "NAV_ICONS.dashboard",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 131,
+    "name": "NAV_ICONS.schedule",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 139,
+    "name": "NAV_ICONS.fileText",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 149,
+    "name": "NAV_ICONS.leads",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 157,
+    "name": "ACCOUNT_ICONS.profile",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 205,
+    "name": "THEME_ICONS.light",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 207,
+    "name": "THEME_ICONS.dark",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 220,
+    "name": "GlobeIcon",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 231,
+    "name": "NAV_ICONS.logout",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 248,
+    "name": "LeadChatIcon",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 267,
+    "name": "NAV_ICONS.inventory",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 281,
+    "name": "NAV_ICONS.orders",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/MobileShell.tsx",
+    "line": 293,
+    "name": "NAV_ICONS.more",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import {\n  NAV_ICONS,\n  THEME_ICONS,\n  GlobeIcon,\n  LeadChatIcon,\n  ACCOUNT_ICONS,\n} from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/Modal.tsx",
+    "line": 137,
+    "name": "X",
+    "attrs": {
+      "size": "{20}"
+    },
+    "imports": [
+      "import { X }              from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/NavDropdown.tsx",
+    "line": 53,
+    "name": "NAV_ICONS.chevronDown",
+    "attrs": {
+      "size": "{12}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS } from \"../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/NavItemList.stories.tsx",
+    "line": 18,
+    "name": "NAV_ICONS.dashboard",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/NavItemList.stories.tsx",
+    "line": 24,
+    "name": "NAV_ICONS.leads",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/NavItemList.stories.tsx",
+    "line": 31,
+    "name": "NAV_ICONS.more",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/NavItemList.stories.tsx",
+    "line": 34,
+    "name": "NAV_ICONS.help",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/NavItemList.stories.tsx",
+    "line": 35,
+    "name": "NAV_ICONS.settings",
+    "attrs": {
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { NAV_ICONS } from '../constants/icons';"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/components/loading/Drawer.tsx",
+    "line": 33,
+    "name": "CloseIcon",
+    "attrs": {
+      "className": "\"sa-drawer__close-icon\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/loading/ProgressBar.tsx",
+    "line": 36,
+    "name": "CheckIcon",
+    "attrs": {
+      "className": "\"sa-progress-circular__icon\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/loading/ProgressBar.tsx",
+    "line": 54,
+    "name": "CheckIcon",
+    "attrs": {
+      "className": "\"sa-progress__check\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/loading/SaveIndicator.tsx",
+    "line": 15,
+    "name": "Spinner",
+    "attrs": {
+      "size": "\"sm\"",
+      "label": "\"Saving\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/loading/SaveIndicator.tsx",
+    "line": 21,
+    "name": "CheckIcon",
+    "attrs": {
+      "className": "\"sa-save__icon\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/components/loading/Toast.tsx",
+    "line": 40,
+    "name": "CheckIcon",
+    "attrs": {},
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/constants/icons.tsx",
+    "line": 100,
+    "name": "HeroIcon",
+    "attrs": {
+      "ref": "{ref}",
+      "width": "{size}",
+      "height": "{size}",
+      "color": "{color}",
+      "className": "{className}",
+      "style": "{style}"
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/constants/icons.tsx",
+    "line": 320,
+    "name": "EnvelopeIcon",
+    "attrs": {
+      "width": "{iconSize}",
+      "height": "{iconSize}",
+      "color": "\"white\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/constants/icons.tsx",
+    "line": 408,
+    "name": "ChatBubbleOvalLeftOutlineIcon",
+    "attrs": {
+      "width": "{size}",
+      "height": "{size}",
+      "className": "{className}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+    "line": 128,
+    "name": "INBOX_ACTION_ICONS.send",
+    "attrs": {
+      "size": "{16}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+    "line": 138,
+    "name": "Check",
+    "attrs": {
+      "size": "{16}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+    "line": 144,
+    "name": "Warning",
+    "attrs": {
+      "size": "{16}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+    "line": 141,
+    "name": "NAV_ICONS.close",
+    "attrs": {
+      "size": "{20}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "line": 133,
+    "name": "Check",
+    "attrs": {
+      "size": "{12}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, INBOX_ACTION_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "line": 164,
+    "name": "SCHEDULE_POPOVER_ICONS.edit",
+    "attrs": {
+      "size": "{14}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, INBOX_ACTION_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "line": 178,
+    "name": "INBOX_ACTION_ICONS.send",
+    "attrs": {
+      "size": "{14}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, INBOX_ACTION_ICONS, Check, Warning } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+    "line": 15,
+    "name": "ACCOUNT_ICONS.preferences",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { ACCOUNT_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+    "line": 71,
+    "name": "ACCOUNT_ICONS.profile",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { ACCOUNT_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+    "line": 59,
+    "name": "ACCOUNT_ICONS.security",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { ACCOUNT_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/admin/AdminHubPage.tsx",
+    "line": 72,
+    "name": "Icon",
+    "attrs": {
+      "size": "{22}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { ADMIN_HUB_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+    "line": 172,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/bots/BotsPage.tsx",
+    "line": 210,
+    "name": "STATUS_ICONS.warning",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+    "line": 341,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}"
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+    "line": 343,
+    "name": "STATUS_ICONS.warning",
+    "attrs": {
+      "size": "{ICON.sm}"
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+    "line": 344,
+    "name": "STATUS_ICONS.error",
+    "attrs": {
+      "size": "{ICON.sm}"
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+    "line": 382,
+    "name": "STATUS_ICONS.warning",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/coming-soon/ComingSoonPage.tsx",
+    "line": 25,
+    "name": "PAGE_ICONS.comingSoon",
+    "attrs": {
+      "size": "{64}"
+    },
+    "imports": [
+      "import { PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+    "line": 50,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+    "line": 119,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+    "line": 388,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.stories.tsx",
+    "line": 67,
+    "name": "DashboardIcons.goalFlag",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from '../../constants/icons'"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.stories.tsx",
+    "line": 97,
+    "name": "DashboardIcons.goalDone",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from '../../constants/icons'"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 291,
+    "name": "ArrowIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "size": "{12}"
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 475,
+    "name": "BellIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 525,
+    "name": "CalendarCheckIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "size": "{14}",
+      "className": "\"db-followup-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 541,
+    "name": "FlagIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 548,
+    "name": "ArrowRightIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "size": "{14}"
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 631,
+    "name": "TrendUpIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+    "line": 318,
+    "name": "PriorityIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+    "line": 278,
+    "name": "WeeklyIcon",
+    "attrs": {
+      "aria-hidden": "\"true\"",
+      "className": "\"db-section-icon\""
+    },
+    "imports": [
+      "import { DashboardIcons } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/BadgeSection.tsx",
+    "line": 46,
+    "name": "PAGE_ICONS.settingsSolid",
+    "attrs": {
+      "size": "{10}"
+    },
+    "imports": [
+      "import { X, PAGE_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/BadgeSection.tsx",
+    "line": 47,
+    "name": "X",
+    "attrs": {
+      "size": "{10}"
+    },
+    "imports": [
+      "import { X, PAGE_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 87,
+    "name": "X",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 90,
+    "name": "X",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 93,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 101,
+    "name": "X",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 104,
+    "name": "PAGE_ICONS.settingsSolid",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 107,
+    "name": "INBOX_ACTION_ICONS.delete",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 115,
+    "name": "X",
+    "attrs": {
+      "size": "{ICON.lg}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 118,
+    "name": "PAGE_ICONS.settingsSolid",
+    "attrs": {
+      "size": "{ICON.lg}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 136,
+    "name": "PAGE_ICONS.settingsSolid",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 139,
+    "name": "NAV_ICONS.more",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 142,
+    "name": "NAV_ICONS.close",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 152,
+    "name": "INBOX_ACTION_ICONS.markUnread",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 155,
+    "name": "INBOX_ACTION_ICONS.exclude",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 158,
+    "name": "INBOX_ACTION_ICONS.delete",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 168,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 171,
+    "name": "INBOX_ACTION_ICONS.translate",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+    "line": 174,
+    "name": "INBOX_ACTION_ICONS.send",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+    "line": 24,
+    "name": "PAGE_ICONS.inboxEmptyOutline",
+    "attrs": {
+      "size": "{ICON.xl}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+    "line": 34,
+    "name": "NAV_ICONS.leads",
+    "attrs": {
+      "size": "{ICON.xl}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+    "line": 58,
+    "name": "NAV_ICONS.search",
+    "attrs": {
+      "size": "{ICON.lg}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+    "line": 68,
+    "name": "NAV_ICONS.filter",
+    "attrs": {
+      "size": "{ICON.lg}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+    "line": 78,
+    "name": "NAV_ICONS.fileText",
+    "attrs": {
+      "size": "{ICON.lg}"
+    },
+    "imports": [
+      "import { PAGE_ICONS, NAV_ICONS } from \"../../../constants/icons\";"
+    ],
+    "fixture": true
+  },
+  {
+    "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+    "line": 164,
+    "name": "CheckIcon",
+    "attrs": {
+      "size": "{14}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 60,
+    "name": "NAV_ICONS.search",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "className": "\"inbox-search-icon\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 76,
+    "name": "NAV_ICONS.filter",
+    "attrs": {
+      "size": "{13}",
+      "weight": "\"fill\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 109,
+    "name": "INBOX_ACTION_ICONS.markRead",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 113,
+    "name": "INBOX_ACTION_ICONS.markUnread",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 117,
+    "name": "INBOX_ACTION_ICONS.exclude",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 121,
+    "name": "INBOX_ACTION_ICONS.delete",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 219,
+    "name": "PlatformIcon",
+    "attrs": {
+      "platform": "{conv.platform}",
+      "size": "{ICON.base}"
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 127,
+    "name": "NAV_ICONS.close",
+    "attrs": {
+      "size": "{ICON.md}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { ACCOUNT_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 474,
+    "name": "ACCOUNT_ICONS.security",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\"",
+      "className": "\"karte-lock-icon\""
+    },
+    "imports": [
+      "import { ACCOUNT_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 316,
+    "name": "PAGE_ICONS.inboxEmpty",
+    "attrs": {
+      "size": "{ICON.xl}",
+      "weight": "\"fill\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 335,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.xl}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 384,
+    "name": "INBOX_ACTION_ICONS.markUnread",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 391,
+    "name": "PAGE_ICONS.kartePanel",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 404,
+    "name": "NAV_ICONS.more",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"bold\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 410,
+    "name": "INBOX_ACTION_ICONS.markUnread",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 415,
+    "name": "INBOX_ACTION_ICONS.exclude",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 420,
+    "name": "INBOX_ACTION_ICONS.delete",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 426,
+    "name": "PAGE_ICONS.kartePanel",
+    "attrs": {
+      "size": "{ICON.base}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 487,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 493,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 508,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 545,
+    "name": "INBOX_ACTION_ICONS.translate",
+    "attrs": {
+      "size": "{14}",
+      "weight": "\"fill\"",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 638,
+    "name": "INBOX_ACTION_ICONS.delete",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 684,
+    "name": "INBOX_ACTION_ICONS.attach",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 697,
+    "name": "INBOX_ACTION_ICONS.translate",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 716,
+    "name": "INBOX_ACTION_ICONS.send",
+    "attrs": {
+      "size": "{ICON.base}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxPage.tsx",
+    "line": 71,
+    "name": "PAGE_ICONS.settingsSolid",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { PAGE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+    "line": 89,
+    "name": "NAV_ICONS.close",
+    "attrs": {
+      "size": "{ICON.md}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/inbox/SalesFormMultiSelect.tsx",
+    "line": 114,
+    "name": "NAV_ICONS.chevronDown",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\"",
+      "className": "\"sales-form-caret\""
+    },
+    "imports": [
+      "import { NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+    "line": 58,
+    "name": "Check",
+    "attrs": {
+      "size": "{14}"
+    },
+    "imports": [
+      "import { Check } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/roles/RolesPage.tsx",
+    "line": 423,
+    "name": "CategoryIcon",
+    "attrs": {
+      "size": "{ICON.md}"
+    },
+    "imports": [
+      "import type { LucideIcon } from \"../../constants/icons\";",
+      "import { CATEGORY_ICONS, STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/roles/RolesPage.tsx",
+    "line": 472,
+    "name": "STATUS_ICONS.warning",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import type { LucideIcon } from \"../../constants/icons\";",
+      "import { CATEGORY_ICONS, STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 226,
+    "name": "EditIcon",
+    "attrs": {
+      "size": "{18}"
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 236,
+    "name": "DeleteIcon",
+    "attrs": {
+      "size": "{18}"
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 240,
+    "name": "CloseIcon",
+    "attrs": {
+      "size": "{18}"
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 448,
+    "name": "AddIcon",
+    "attrs": {
+      "size": "{18}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 1130,
+    "name": "SearchIcon",
+    "attrs": {
+      "size": "{18}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 1141,
+    "name": "SettingsIcon",
+    "attrs": {
+      "size": "{18}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+    "line": 189,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+    "line": 244,
+    "name": "STATUS_ICONS.check",
+    "attrs": {
+      "size": "{ICON.sm}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { STATUS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "line": 100,
+    "name": "RefreshIcon",
+    "attrs": {
+      "size": "{16}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { SCHEDULE_SETTINGS_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgDistributionPage.tsx",
+    "line": 62,
+    "name": "NAV_ICONS.add",
+    "attrs": {
+      "size": "{16}",
+      "aria-hidden": "\"true\""
+    },
+    "imports": [
+      "import { NAV_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 208,
+    "name": "TABLE_ICONS.sortDesc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 208,
+    "name": "TABLE_ICONS.sortAsc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 215,
+    "name": "TABLE_ICONS.sortDesc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 215,
+    "name": "TABLE_ICONS.sortAsc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 223,
+    "name": "TABLE_ICONS.sortDesc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 223,
+    "name": "TABLE_ICONS.sortAsc",
+    "attrs": {
+      "size": "{12}"
+    },
+    "imports": [
+      "import { TABLE_ICONS } from \"../../constants/icons\";"
+    ],
+    "fixture": false
+  }
+]

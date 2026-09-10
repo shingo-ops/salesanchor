@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| フロントエンド金型化・再測定 | Agent | 統合許可受領、旧7PRの採否確定。原因別の順次マージ計画保存。全体設計REVISE | 調査・移行計画を文書PR化し、残る公開API/全件対応を確定して実装。CIは最後 | docs/specs/design-system/ci-guard-design.md / docs/handoff/design-system-recon/evidence-20260910/ci-executor-recon-report.json / EV-20260910-FRONTEND-MOLD-16 | 2026-09-10 |
+| フロントエンド金型化・再測定 | Agent | 文書PR #3407マージ済み。全体設計自己審査APPROVE、操作/外観/最後のCI契約を確定。製品未着手 | 設計文書PRを保存・レビュー・マージし、ICON5値同値生成から原因別実装。CIは最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-18 / https://github.com/shingo-ops/salesanchor/pull/3407 | 2026-09-10 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
