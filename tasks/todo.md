@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | PR #3400実装・読み取りレビュー済み。Backend2459 passed、実DB技術CI成功。process-artifactsのみ番号付きPO原文不足で拒否 | GO #3400の原文が必要（包括的事前承認は受領済み）。迂回せずマージ保留。反映後、残存running2job復旧→再解析完了→接続3シート配信。次周商品15誤判定・状態1誤判定の検証へ | docs/handoff/tcg-product-master-growth/recon.md / EV-20260910-LINE-ACCURACY-08 / PR #3393 deploy34430833637 | 2026-09-10 |
@@ -92,7 +93,8 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
-| インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+
 
 
 ## DB準備テストの領域分離（2026-09-10）

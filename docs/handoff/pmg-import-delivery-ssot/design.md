@@ -9,6 +9,9 @@ recon: docs/handoff/pmg-import-delivery-ssot/recon.md
 対象ADR: ADR-113, ADR-154, ADR-072
 日付: 2026-09-10
 
+
+> 現在地（後続解析便）: 文書PR #3396のマージ承認受領、自己審査REVISE、実装未着手。最新の初回導入案は末尾「既存読取領域を利用する改訂案」。新規mountを追加してnginxを再作成する前案は比較記録であり、採用案ではない。第1段階の設計合格や過去GOを後続便へ流用しない。
+
 ## PO合意と範囲
 
 POは「同じ仕入元・実際の投稿日時・本文が完全一致した場合だけ、同じ投稿として再利用する方針でよいですか？」への回答として「合意」と発言した（2026-09-10 本セッション）。
@@ -274,3 +277,454 @@ NOTE_JAの全件再解析、辞書改善、取込単位配信はこの画面統�
 +CIのtest-schema-dup gateがテスト内の独自テーブル定義を検出したため、既存TCG初期migrationとreview-stage migrationをテストschemaに適用する形に変更。ガードの変更・例外追加なし。
 +正式migrationから作る実DBでも68件通過（2.08秒）。新規テスト内の複製テーブル定義は0。確認範囲・外部通信禁止・本番未適用は維持。
 +
+
+## 2026-09-10 後続便: 解析実行記録の設計草案
+
+この節は、解析の成功・失敗・結果不明を画面で見分けられるようにする設計案。
+親: [商品マスタ](../../specs/product-master/README.md)。根拠: [recon.md](recon.md)の同日後続便節。
+対象ADR: ADR-113、ADR-154、ADR-072。mode: handoffで引き渡すための草案。第1段階のAPPROVE・GO #3386・GO #3390は本便の実装承認ではない。
+
+### 目的と境界
+
+自動と手動を同じanalysis_runsへ記録し、結果と成功記録を同じ保存処理で確定する。記録済み実行について二重適用0回、途中失敗時の部分更新0件、旧記録からの成功推定0件を受入目標とする。
+今回扱うのは実行記録、進捗/明細APIへの接続、既存配信停止判定との整合。配信履歴・内容固定・全画面統合は後続。商品判定v3・辞書改善・NOTE_JA全件再解析・本番データ修復は含めない。
+
+### 正本と追加データ（提案名・未実装）
+
+analysis_resultsは現在結果、analysis_runsは実行履歴、analysis_run_snapshotsは再解析前の履歴として維持する。
+analysis_runsへ以下をnullableで追加。旧行を推測で埋めない。
+
+| 項目 | 契約 |
+|---|---|
+| execution_state | queued / running / succeeded / failed / unknown。旧行NULLはlegacy_unrecorded |
+| request_key | schema内UNIQUEの文字列。自動はauto:<extraction_job_uuid>。手動はクライアントUUID。旧行NULL可 |
+| request_fingerprint | job_id・run_type・retry_ofの一致確認。同じkeyの別要求は409 |
+| attempt_no | ジョブ行ロック内で採番。新規同一job内UNIQUE。旧行NULL |
+| retry_of | 明示再試行元run。同一schema・同一jobだけ。成功runを再試行しない |
+| execution_started_at / finished_at | 実行開始・結果確定/不明化の時刻。既存started_atは受付日時として維持 |
+| owner_token / heartbeat_at | 実行所有者とDB時刻による生存記録 |
+| error_code | 固定コードのみ。例外本文、DSN、元投稿を保存しない |
+| result_summary | 成功時のbefore/afterをJSONBで保持し、同一keyへの応答を現在結果から再計算しない |
+| resolved_by_run_id | 未解決の失敗/unknownが後続の同一job成功で解消された参照。古い失敗状態は書き換えない |
+
+completed_atは新規では成功時だけ設定。失敗を成功したように見せるためには設定しない。旧列・旧値は維持する。
+analysis_resultsへlast_successful_run_idをnullable追加。同じトランザクションで結果の出どころを保存。旧結果はNULLのまま。
+同一schemaにtcg_pipeline_guard（id=1だけの行）を新設する案。状態の正本ではなく、解析と配信準備の同時実行を調整するためだけに使う。全ての新FKは同一schema。新規参照を理由に既存履歴を連鎖削除しない。
+
+### 保存と実行の順序
+
+1. 抽出ジョブの取得はpending条件付きUPDATE RETURNINGで所有を確保し、更新0件の再配達は新たなGemini抽出を開始しない。抽出中の復旧自体は本便で自動化しない。
+2. 自動解析ONかつ抽出doneの場合、抽出結果・done・queuedのanalysis_runを同じトランザクションで保存する。抽出doneなのに解析予定が未記録となる隙間をなくす。OFF/empty/errorはrunを作らず、それぞれ未実行理由を表示する。過去行は設定値から理由を推定しない。
+3. 自動・手動は共通のexecute_analysis_runを呼ぶ。queuedのclaimだけを許可し、同一jobで別runが実行中なら新規実行を始めない。終端runの同一key再送はその履歴を返し、処理を繰り返さない。
+4. runningとowner_token・開始時刻を短い取引で保存。その後、guardの共有ロック→extraction_jobs行の排他ロックの順で取得し、run状態・ownerを再確認する。確認不一致なら結果を書かない。
+5. 再解析前snapshot、商品解析、E3a/E5→E3b→E4、最終値からの統計再集計、last_successful_run_id、succeeded/completed_atを1トランザクションで保存する。解析関数内の3か所のcommitを共通実行処理へ移す。通常アプリの自動・手動2呼出しを同時に移行する。
+6. 任意マスタ欠落の互換は維持する。3ローダーのsession全体rollbackを局所的なSAVEPOINTへ置き換える。空への代替を認めるのは該当任意テーブル欠落（SQLSTATE 42P01）のみ。接続断・権限不備・列欠落は失敗へ伝え、成功にしない。
+7. 例外では結果取引をrollback後、別取引で同じownerかつrunningのrunだけfailedへ変更する。接続不能等で失敗記録も保存できなければrunningが残り、後述の照合でunknownになる。新接続で結果処理だけを勝手に続行しない。
+
+### 再配達・明示再試行・停止時
+
+- queuedはDBを再開点とし、queueへ送る前にcommitする。enqueueに失敗してもrunは消さない。新規の定期処理がqueuedを再送するが、実行側claimで二重適用を防ぐ。配送回数と解析attemptを分ける。
+- Celeryのtask IDだけをrequest keyにしない。公式仕様上、retryは同じtask IDを使用するため、明示再試行の区別にはDBのrequest keyとretry_ofを使う。
+- failed/unknownは自動再試行しない。明示要求の新keyで新runを作り、retry_ofに元runを残す。unknownからの再試行もjobロックと元所有者の無効化を確認してから実行する。
+- 生存更新15秒、期限180秒、照合周期60秒を草案値とする。これらは成功率の実測値ではない。周期遅延があるため検出時間の上限は保証しない。
+- runningの期限切れだけでは書き換えない。照合処理がguard共有→job行をNOWAITで取得し、期限と状態を再確認できた場合だけunknownへ遷移させ、ownerを無効化する。jobを実行者が保持中なら状態確認中と表示して停止判定を維持する。
+- 結果取引の最後にownerとrunning条件を再確認して成功を確定する。照合で所有権を失った処理は成功記録も結果もcommitできない。
+- queuedの長期待機はqueued_delayedとして表示し、成功・失敗にしない。
+
+### 実行管理の配置とDB接続（草案の具体化）
+
+共通処理はbackend/app/services/tcg_analysis_run_svc.py。新規taskモジュールtcg_analysis_runs.pyにrun_id指定の実行タスクとtickを定義し、celery_app.pyのinclude/beatへ登録する。tickは60秒ごと、queuedのenqueueとrunning期限切れの照合だけを行い、failed/unknownを実行しない。配送前のqueued選択は安定したstarted_at/id順・上限100件とし、反復処理する。queue停止時もDBのqueuedを維持する。
+heartbeatは実行中だけ別スレッド・別Sessionで15秒ごとに実施する。解析結果のSessionを別スレッドと共有しない。UPDATE条件はid/owner_token/running、時計はDB。処理終了時は停止イベントを設定しスレッドを終了する。heartbeat接続の障害は成功の根拠にせず、結果取引のowner条件とDBロックを最終的な排他条件とする。
+同期DB用のsession factoryを共通サービスに集約し、自動・手動・tickで同じTCG_SCHEMAと接続設定を使う。既存TCG_DB_URL優先の接続契約は勝手に削除しない。実際の接続先とAPIの接続先の一致を稼働環境で確認してから有効化する。異なる場合は本設計を合格にせず接続設定の設計へ戻す。接続情報そのものを履歴・画面に出力しない。
+
+### 配信との整合（停止方針は今回PO合意、詳細設計は草案）
+
+従来の未完了抽出pending/running/extractedによる停止と既存商品除外条件を維持する。要確認商品が1件あるだけで全体を止める条件は追加しない。
+配信準備はguard排他ロック取得後に未完了判定と現行候補取得を行い、メモリ上の出力を組み立ててからロックを解放する。run受付/解析更新は共有ロックを使う。外部送信中にDBロックを持ち続ける設計にはしない。実行時の恒久snapshot・二重配信排他は後続配信便で扱う。
+未完了run条件案: 旧行はcompleted_at NULLかつresolved_byなし、新行はqueued/running/unknown、または未解消failed。同じjobの後続成功時だけ過去failed/unknownを解消済みにする。過去の失敗自体は表示に残す。
+自動解析のfailedも全体配信を止めると、従来は未記録だった失敗で配信が止まる。これは現行の完全同一動作ではない。POへ「自動解析が失敗した場合、その解析をやり直して成功するまで、全体配信を止める方針でよいですか？」と確認し、1件の失敗でも全体配信が待機する影響を説明した。PO原文「進める」を、この方針への合意として受け取った（2026-09-10）。実装・実配信・本番変更のGOではない。
+
+### 画面へ渡すAPI契約案
+
+既存progressのanalysis.unit=extraction_itemと商品件数を維持。新たにanalysis.executions（unit=extraction_job、latest_states、recorded_jobs、unrecorded_jobs）を追加し、商品数とrun数を混ぜない。各jobの最大attempt_noの状態を最新状態とし、履歴件数は別欄。旧行しかなければunrecorded、成功に読み替えない。
+itemsにはlatest_analysis_run_id / analysis_execution_state / result_run_idを追加。失敗runと直前の保存済み結果を併記できるようにする。既存のscope/as_of/coverageと単一読取時点の契約を維持。
+既存手動reanalyze APIはbefore/afterを維持してrun_idを追加。任意のIdempotency-Key（UUID形式）を受け、同じkeyは同じrun。未指定の旧クライアントはサーバーでUUIDを作るため通信断後の同一要求再送保証は対象外。新画面は必ずkeyを生成・保持する。
+履歴参照はGET /tcg/extraction-jobs/{job_id}/analysis-runs（offset>=0、limit=1..100、attempt_no DESC NULLS LAST、started_at/idで安定順）を提案。require_super_admin・設定TCG_SCHEMAを継承し、404で別schemaを推測させない。
+再試行は同じPOSTに任意query retry_of（UUID）を追加する。新画面は履歴のfailed/unknownを選び、「この解析だけを再試行する。配信はしない」を確認して新しいIdempotency-Keyで送る。retry_ofは同じjobのfailed/unknownだけ有効。未解決失敗があるのにretry_ofなしなら409 recovery_required。同時実行中のjobへの別key要求は409 analysis_busyとし、新runを作らない。
+同一keyのsucceededは保存済result_summaryとrun_idを200で返す。queued/runningは409 analysis_in_progress（run_id、state、Retry-After: 5）を返し、GETで確認する。failed/unknownは409 analysis_retry_requiredと元run_idを返す。新規の実処理で捕捉した失敗は500 analysis_failedとrun_idを返し、生の例外は返さない。keyのfingerprint不一致は409 idempotency_conflict。UUID形式不正は422、権限は既存403、job不在/別schemaは404。DB接続不成立時は503とし成功の空レスポンスを返さない。
+GET履歴にはscope/as_of、最新状態、result_summary、error_code、retry_of、resolved_byと時刻を含め、owner_tokenと生の例外は返さない。新画面で通信断時は同じkeyを保持し再送する。UI実装は後続便でこの契約を利用する。
+
+### 移行・影響ファイル・戻し方
+
+追加migrationは既存のTCG表を持つtenant_NNNのみ対象。tenant_001/004と後発TCG有効化に適用する。CRM一般テナントにTCG表を新設しない。migration登録は既存公式経路を使用し、本セッションでscripts/deploy/CIを変更しない。
+候補: backend/app/services/tcg_analysis_run_svc.py（新規）、backend/app/tasks/tcg_analysis_runs.py（新規）、tcg_analyzer_svc.py、tcg_product_master_svc.py、tcg_import_progress.py、tcg_distribution_svc.py、tasks/tcg_extraction.py、routers/tcg_product_master.py、celery_app.py、追加migrationと対応試験。
+旧workerが残ると新ロック・履歴を無視して書けるため、API/worker全経路の切替と旧実行の排出を確認してから記録を有効化する。稼働サービス名と配布順序は下記の追加確認を参照。旧実行の排出と停止時間は未確認。新旧混在でも安全と宣言しない。
+APIとworkerのDB接続先一致も有効化の前提。TCG_DB_URLとDATABASE_URLが別DBを向く状態では履歴正本が分裂するため有効化しない。旧データの成功backfillは行わない。
+戻す場合は新規受付を止め、実行中runを確認してからアプリを戻し、追加列・履歴を保持する。実行中のまま旧workerへ戻す手順は許可しない。実運用手順は実機確認後に確定する。
+
+### 受入条件と検証方法（未実施）
+
+| 基準 | 検証方法 |
+|---|---|
+| 自動・手動の成功が同じrun構造で記録される | 両入口を実PostgreSQLで実行しrunと結果参照を突合 |
+| 同一keyを2接続で送ってrun1件・結果適用1回 | 独立接続の同時実行試験 |
+| 同じkeyの別job要求は409、更新0件 | APIとDBを突合 |
+| 明示再試行は新run、元failed/unknownは履歴に残る | retry_ofと解消参照を検査 |
+| 3つの旧commit境界で失敗しても部分更新0件 | 各処理段階に故障を注入し全結果の前後一致 |
+| 3任意マスタ欠落で実行履歴が消えない | 実DBのSAVEPOINT・履歴保存を確認 |
+| 接続・権限・列欠落を成功にしない | 故障別のfailed/unknownと結果rollbackを確認 |
+| worker停止は成功にならずunknown、再送で再解析しない | 別プロセス停止、期限とjobロックを制御 |
+| 生存中の処理を期限だけで奪わない | ロック保持中の照合と遅延worker試験 |
+| 成功commit直後の停止・再配達で適用1回 | 成功DB記録と再配達を突合 |
+| 配信と受付/解析の競合で途中結果を選ばない | 2接続の実行順を固定し候補取得・停止を検証。外部送信はstub |
+| 旧run・旧結果を成功と誤表示しない | NULL、旧未完了、完全記録0件の3型でAPI確認 |
+| 商品数と実行数を混ぜず最新runと結果来歴を返す | 1job複数商品・複数attemptを用いた集計試験 |
+| DB/schema境界・既存/後発migration一致 | 正式migrationを適用する既存の実DB試験基盤を拡張 |
+
+### Why・代替案・根拠の適用限界
+
+途中保存3か所、自動履歴保存なし、手動だけの履歴、任意マスタ照会rollback3か所という実コードが、結果と成功を同時保存する変更の直接根拠。履歴だけ追加する案では途中結果が残るため採らない。全解析を再実行する案は旧データを変えるため対象外。
+PostgreSQLの行ロックは取引終了まで保持される。SQLAlchemy2のSAVEPOINTは外側の取引を保ちながら局所rollbackする仕組み。Celery retryは同じtask IDを使う。これらは仕様の根拠であり、この製品の実装が動いた証明ではない。
+- https://www.postgresql.org/docs/16/explicit-locking.html
+- https://docs.sqlalchemy.org/en/20/orm/session_transaction.html
+- https://docs.celeryq.dev/en/stable/userguide/tasks.html
+確認日2026-09-10。Context7利用不可のため公式資料で代替。外部導入事例は不要。今回必要な数値は再配達/部分更新の件数であり、他社の改善率から成功を推定しない。
+弊害: 1job分の結果をまとめて保存するためロック保持時間が増える。失敗/不明の未解決中は全体配信が止まり得る。処理時間と混雑時の実測は実装試験で記録する。
+
+### 設計自己審査
+
+REVISE（修正必要、実装カード発行不可）。同一AIによる自己審査であり独立レビューではない。
+解消した点: 途中commit、任意マスタrollback、同一要求と再試行の識別、停止workerの所有権確認、旧データの非推定、配信準備とのロック順序を草案へ明記。
+未解決: 旧worker排出・切替手順の実機確認。API/workerの接続設定による実DB一致は下記の読取診断で確認した。自動解析failedで全体配信を止める方針と成功時の解除は今回PO合意として追記した。
+再試行APIと実行中応答、heartbeatのSession分離、tickの配置は本節に具体化済み。残件は読み取り調査で確認し、停止・本番変更は別承認。文書上の接続設定だけを実機の一致と扱わない。
+
+### 維持の仕組み（後続便）
+
+守り手: backend/tests/test_tcg_gemini_extraction.py、backend/tests/test_tcg_distribution.py、backend/tests/test_tcg_import_progress_pg.pyと実装時に追加する実行記録試験。実装役が故障・競合試験を維持し、PO指定Reviewerが結果を確認する。既存CIは .github/workflows/test.yml と .github/workflows/migration-guard.yml。未追加の試験が現在のCIで強制済みとは扱わない。
+
+
+### 配布順序の追加確認と分割案（2026-09-10）
+
+.github/workflows/deploy.yml:149-158 はコード配布→migration→最終確認の順。:319-335 はAPIをblue-greenで切り替えた後、worker/beatを再作成する。scripts/blue-green-cutover.sh:147-150 は旧APIを最大40秒で停止する。これらは現在のコード順序であり、本セッションでは実行していない。
+したがって追加テーブルを無条件に読む新コードとmigrationを同じ便で出すだけでは、テーブル未作成・新旧worker混在の時間帯を安全に扱えない。配布スクリプトを独断変更せず、次の分割で設計する。
+
+1. 追加migrationのみ先行。既存コードが使わない表・列を追加し、影響・schema適用を検証する。マージ/本番はそのPRの別GO。
+2. 実行管理コードを未有効の状態で配布する。guardにtracking_mode（legacy/paused/tracked、初期legacy）を提案追加。全新入口はlegacy時に既存処理を維持し、trackedだけで新履歴を使用する。設定表が未作成でも新履歴を使用しない。
+3. 新版API・worker・beatの実体とDB接続一致を確認後、pausedにして新規の取込確定・再解析・配信とworkerの新規claimを一時停止する。状態参照は継続する。処理中の排出を確認し、追跡不能な旧実行があれば有効化しない。
+4. 同じ確認済み環境でtrackedへ切り替え、旧pendingは新しい実行管理で処理する。停止と有効化は本番操作のため別の明示GOが必要。
+
+pausedへの遷移と受付の競合はguard排他/共有ロックで直列化する。新APIの停止時応答は503 pipeline_paused。workerはpendingを保持し後で再配達する。旧版はこの制御を知らないため、旧版が残る状態で本機構による停止を保証しない。
+具体的な稼働サービス・バージョン・旧実行の検査方法は、許可された読取ができてから確定する。現時点の設計審査はREVISEを維持する。
+
+
+### DB接続先の実測確認（2026-09-10、読取のみ）
+
+人間用SSH鍵の使用を「今回のDB接続先確認に限る」と説明して許可を求め、PO原文「進める」を受領。その範囲で診断を実行しexit0。
+API・worker・beatの各稼働コンテナ内に作った診断用接続で、transaction_read_only=onが3/3、DB識別値のSHA256一致が3/3、TCG_SCHEMA=tenant_004が3/3、対象4表の存在が各4/4だった。生の接続情報は出力していない。コマンド・出力と限界はrecon.md同日節に保存。
+
+これはコンテナの環境設定から開いた診断用接続の一致であり、稼働中プロセスが既に保持する接続・全worker個体・配布版・処理中件数の確認ではない。beatにDB利用処理が存在することの証明にも使わない。PR #3386の全migration適用・本番反映完了も本診断の対象外。
+設計自己審査はREVISEを維持。接続設定の相違という未確認事項は解消したが、旧実行の排出を判断する検査と切替手順は未確定。設計全体のPO承認、実装カード発行、実装着手、本番切替は未実施。
+
+
+### 切替前確認の具体化と先行案の修正（2026-09-10）
+
+先行分割案の「新版を配布した後にpausedとして旧実行を排出」だけでは、最初の新版配布時の強制終了を防げない。.github/workflows/deploy.yml:331-335はworker/beatをdocker rm -fで削除する。したがって、この案単独で初回移行の途中中断0件を保証することは撤回する。コード変更や本番操作は行っていない。
+
+docker-compose.yml:190-192のworkerはconcurrency=2で、backend/app/celery_app.py:20-36に翻訳・メール・保守等とTCGタスクが同居する。worker全体の停止を「TCGだけ止まる」と説明してはいけない。TCG解析だけのactive=0も、この配布処理が消す全実行の安全確認にはならない。
+
+#### 実装役に渡す切替確認表（未実装・未実測）
+
+| 段階 | 必要な観測と合格条件 | 不成立時 |
+|---|---|---|
+| 対象の固定 | 配布対象のcommit、サービス、全コンテナID、イメージID、起動時刻を記録。旧greenや別名workerも一覧から分類し、未分類0件 | 有効化しない。名前3件だけの検査を流用しない |
+| コード実体 | API/全worker/beatの対象コードを配布対象commitのファイルハッシュと比較し、対象ごと一致。イメージ名やホストgit HEADだけでは合格にしない | 不一致・読取不可を未確認として停止 |
+| DB/schema | 全書込経路の接続設定で同じDB/schemaと必要な列・制約・guard1行を確認。既存の3接続診断はDB一致だけの証拠 | 4表の存在だけでmigration完了にしない |
+| 新規受付の停止 | 実際のAPI各入口で新規取込確定・再解析・配信が拒否され、DB更新/外部送信0件となることを試験。停止の開始時刻と対象を保存 | POへの作業自粛依頼だけを機械的な排他の証拠にしない |
+| workerの排出 | 全workerから応答があり、実行中・予約済み・遅延予約の各タスクを分類。新規投入/取得の抑止が成立した状態で実行中0件を確認する | 無応答を0件にしない。待機時間満了を強制終了の許可にしない |
+| DBとの突合 | extraction_jobsのrunning/extracted、旧analysis_runsのcompleted_at NULLをID単位で分類。残存結果から成功へ補正しない | 孤立した旧実行は個別調査。自動成功backfill・一括状態書換えをしない |
+| 送信中の排出 | 同期配信要求と外部送信が終わっている証拠を確認する。現行last_*だけでは送信中0件と判定しない | 完了を観測できない送信があれば切替停止 |
+| 再開 | 配布/必要検査成功後の別承認でtrackedへ変更。旧queued/pendingはIDを保持して再開し、新旧要求を混ぜない | queue purgeや全件再解析で整合を取り直さない |
+
+各欄は将来実行する検査契約であり、現在通過済みではない。取得方法の実機確認・停止制御の実装試験が必要。Dockerの環境値全文、task引数/本文、SQL本文、認証情報は根拠へ出力しない。必要な件数・ID・状態・コード版だけを残す。
+
+#### 次の設計判断
+
+推奨候補は、初回切替に受付の一時停止と実行中処理の完了待ちを設けること。ただし現行の共有workerを止めると翻訳等にも待ちが生じ得る。停止対象・時間は未確定であり、短時間/TCG限定と約束しない。無停止を必須とする案は、共有workerの配布/タスク分離まで別途設計が必要となる。
+この一時停止を許容する方針は未合意。本番停止を実行する承認とは分けてPOに確認する。方針が合意されても、停止制御の初回導入手順と再開条件が未確認のまま実装カードは発行しない。
+
+#### 自己審査の更新
+
+REVISEを維持。接続設定の一致は確認済み。追加で「初回配布が排出確認より先になる穴」と「共有workerの他業務への影響」を明確化した。受入条件に、全worker無応答時の停止、新規投入と排出の競合、送信中の切替拒否、旧版混在時の有効化拒否を追加する。これらの試験は未実施。
+
+
+### 初回一時停止方針のPO合意と具体化（2026-09-10）
+
+確認した質問: 「初回切替で一時停止を許容する方針で、設計を進めてよいですか？ 実際の本番停止の承認とは分けます。」
+説明した影響: 新規受付を止めて実行中の完了を待つ。共有する翻訳等にも待ちが生じ得る。停止時間は未確認。
+PO返答原文: 「GO」。承認対象はこの設計方針だけ。PR #3396のマージ、実装開始、人間用SSH鍵の追加利用、本番停止・再起動・変更には流用しない。前節の「一時停止方針は未合意」はこの記録により更新する。具体的な操作・所要時間は引き続き草案。
+
+#### 停止の漏れを防ぐ対象範囲
+
+APIの登録はbackend/app/main.py:569-604（/api/v1）、商品分類の管理入口は:456。対象候補は /api/v1/tcg/ と /api/v1/super-admin/tcg/ 配下。入口ごとの副作用を確認し、少なくとも次を停止する。
+
+| 入口 | 必要な理由・根拠 |
+|---|---|
+| LINE upload/resolve/commit | 取込記録・仕入元・投稿を変更。tcg_line_import.py:125,387,550 |
+| 商品CSV commit・商品作成・キーワード追加 | 解析が読む商品情報が変わる。tcg_product_import.py:153、tcg_product_master.py:208,246 |
+| 単一job再解析・抽出再試行 | 解析実行や再投入を始める。tcg_product_master.py:287、tcg_diagnostics.py:88 |
+| 配信run（全体/単一）・配信先/設定変更 | 外部送信と対象条件を変更。tcg_distribution.py:94,120,135,163,172,197 |
+| series/types作成・変更・削除 | TCG参照マスタ変更。super_admin_tcg.py:72,103,133,171,203,233 |
+
+HTTPメソッドだけで無副作用と判定せず、読取入口・previewはサービスまで確認してから通す。既存の状態参照を残す方針は維持するが、初回の旧版用受付遮断では読取も止める案を比較対象として残す。読取停止まで今回GOで承認済みとは扱わない。
+定期側では抽出だけでなく、保留破棄（tcg_import_discard.py:57）と外部ミラー書出し（tcg_mirror.py）も照合対象。未知の書込経路があれば停止範囲の確定前に調べる。
+
+#### 既存版にも効く受付遮断の候補と条件
+
+新版のtracking_modeだけでは旧版の初回停止を制御できない。候補はAPIより手前でTCG書込入口を遮断する方式。nginx/nginx.conf:71,259にはapp/api両ホストがあり、両方を対象にする。legacyホストは:44でappへ転送する現行ファイルを確認したが、本番の設定一致は未確認。
+既存nginxは設定ファイル単体のbind mount（docker-compose.yml:11）。ADR-137ではinodeの相違によりreloadだけでは新内容を読めない事例がある。従って「ホストファイル編集→reload」だけを手順として採択しない。コンテナが読む設定・構文検査・実際の拒否応答・復旧手段まで設計・試験してから採否を決める。nginxや運用スクリプトをこのセッションで変更しない。
+遮断は配布中も維持する必要があり、deployによる設定置換や再作成で解除される方式は不採択。既存の内部直接呼出し・手作業・別workerはHTTP遮断だけでは止まらないため、全writer調査と合わせる。
+
+#### 処理完了待ちの順序案（操作未承認・未実行）
+
+1. 対象HEAD・全writer・必要な退避/復旧手段・停止期間の担当を確定し、その操作カードに対する本番GOを受領してから開始する。
+2. 初回用の受付遮断を適用し、両公開ホストの対象入口で新規副作用0件を確認する。既に受付済みのAPI処理は別に完了を待つ。
+3. 定期投入を停止し、共有workerの新規取得を止め、実行中を完了まで待つ。queue内の待機要求は削除しない。翻訳等の共有業務の待機を記録する。
+4. 自然終了を確認してから配布処理を許可する。時間切れ・無応答・孤立したDB状態を強制終了や成功への書換えで解消しない。移行を中断し、受付遮断を維持するか解除するかは事前の復旧条件で決める。
+5. 旧APIの完了・外部送信の完了を確認し、コード/DDL/接続/新規実行管理を検査する。新workerが起動直後にlegacy処理を始めないよう、起動前からpausedが有効な構成を必要条件とする。初期値legacyのまま起動して後からpausedにする順は採らない。
+6. 記録済み対象に対する別の再開承認と検査を経てtrackedにし、受付遮断を解除する。再開後の待機要求・実行履歴・外部送信0件の確認方法を操作カードへ明記する。確認目的の実配信はしない。
+
+Celery公式Workers GuideはTERMで実行中完了待ちを行う仕様を記載する。ただしREMAP_SIGTERM=SIGQUITなら即時停止側となり、5.6では完了待ち中のheartbeat動作変更も記載される。依存宣言>=5.4.0から稼働版の挙動を決めない。Docker stopは期限後にSIGKILLへ進むため、既定タイムアウト付き停止を完了待ち保証として使わない。稼働版・設定・PID1へのシグナル伝達・予約タスクの扱いを模擬環境で確かめるまで、停止コマンドを正式カードにしない。
+
+仕様の出典（2026-09-10、Context7検索0件のため公式資料で代替）:
+- https://docs.celeryq.dev/en/stable/userguide/workers.html （仕様確認時5.6.3。稼働版とは区別）
+- https://docs.docker.com/reference/cli/docker/container/stop/
+- https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#return
+
+追加の受入条件: 両公開入口の遮断漏れ0件、配布中の遮断解除0件、旧worker残存時の有効化0件、停止待ち期限切れ時の強制終了0件、新worker起動直後のlegacy実行0件。全て未実施。
+
+自己審査: REVISE。一時停止の事業判断は解消。残件は初回受付遮断の採用方式、全writer/稼働版の実機照合、既存API/送信中処理の完了観測、停止・復旧の模擬試験。今回GOを技術方式全体の合格とは扱わない。
+
+
+### 受付遮断方式の絞り込みと次の読取（2026-09-10）
+
+deploy.yml:182-184はホストをorigin/mainへresetし、:360-374はnginx設定変更時にコンテナを再作成する。従って作業中だけ追跡済みnginx.confを書き換える案は、配布中も遮断維持という条件を満たせないため不採択。単にreloadを追加しても解決しない。
+採用候補は、配布・rollbackが消さない停止状態と、それを読む入口制御を先に設ける方式。停止状態が読めない場合は対象書込を拒否する。停止状態の保存先/権限/初回導入/両ホストの制御を確定し、再作成・rollback中の遮断維持を試験してから採択する。既存本番の設定を未確認のまま、新しいnginx設定や運用コードを実装役へ渡さない。
+
+処理完了について、tcg_product_master_svc.py:520以降は同期解析を別スレッドで実行し、tcg_distribution_svc.py:410以降も外部書込をthread executorで実行する。HTTP応答・切断・DBの非activeだけで処理完了とは判定しない。API処理が使う実行方式と稼働版を照合し、必要な完了観測を決める。
+
+本番確認案は /tmp/pmg-cutover-runtime-readonly.py。Docker版、全稼働コンテナ名、対象projectのコンテナID/イメージID/状態/開始時刻/サービス名、API/worker/beatのCelery・Uvicorn・SQLAlchemy版、PID1の実行名、TERM置換の有無、対象コード7ファイルとnginx設定のSHA256だけを取得する。環境変数全文・認証情報・task引数・ログ・DB内容は出力せず、データ更新・再起動・signal送信・Celery制御を行わない。
+対象project以外の稼働名も確認し、未分類のworker候補を残さないための入口にする。名前一覧だけで外部ホストを含む全writerを網羅したとは判定しない。これは稼働版/設定の照合用であり、排出実行や処理中0件の証拠ではない。
+診断のAST構文チェック成功、SHA256=8e355d21acc44058e43febf28532d64ddfbd9d7935c670857c939d904ac8e3fa。未実行。本環境にはdockerコマンドがなく（exit127）、コンテナ模擬試験は未実施。人間用SSH鍵の前回許可はDB接続先診断だけなので、今回の読取には対象を明示した別許可を求める。設計自己審査REVISEを維持する。
+
+
+### 稼働版照合を受けた設計自己審査（2026-09-10）
+
+許可された読取診断exit0。API/worker/beatのインストール済みCelery5.6.3、Uvicorn0.34.0、SQLAlchemy2.0.38を確認。対象コード7ファイルは3コンテナで手元と21/21一致、nginx設定ファイルも一致した。worker/beatのPID1実行名celery、診断環境のREMAP_SIGTERM未設定を確認。詳細のID・起動時刻・hashと限界はrecon.md「稼働版・構成の読取結果」。
+
+解消した未確認: コンテナに入っている対象コード、インストール済み版、nginxのマウント先ファイルとの一致。Celery停止案の参照を5.6.3へ合わせられるが、実際の停止試験成功とは扱わない。nginxファイルの一致だけで受付遮断機構が存在するとは扱わない。
+残件を次の3項目に整理する。
+1. 配布/rollback中にも維持される初回受付遮断の具体的な保存先・導入・復旧方法。
+2. HTTP切断後も動き得る別スレッド処理と外部配信の完了を、旧版で確認する方法。
+3. 全writerの境界確認と、停止/予約要求保持/再開の模擬試験。ローカルDocker不在のため試験環境は未確保。
+これらが未解決なのでREVISEを維持する。実装カードを発行せず、本番停止も行わない。稼働版/対象コードの確認は繰り返さず、次の調査は上記残件へ限定する。
+
+
+### 初回切替方式の改訂案と検証仕様（2026-09-10）
+
+これまでの候補を、以下の段階方式へ絞る。これは審査中の技術案であり、実装/本番操作カードではない。
+
+**受付制御の案**: 停止状態は配布checkout外の専用ディレクトリで保持し、nginxへディレクトリ単位で読取専用mountする。具体候補はホスト/var/lib/salesanchor/pmg-cutover、コンテナ/etc/salesanchor/pmg-cutover。プロジェクト管理の通常設定はその状態を参照するだけとし、deployで停止状態を初期化しない。所有者は本番操作を承認された運用担当、アプリ/nginxからの書込不可。製品DBの解析状態とこの運用上の受付制御を混同しない。
+拒否を既定とし、明示的な受付許可状態が確認できる場合だけ対象書込を通す。読取不能・状態欠落時も通してしまう単なる「停止ファイルが存在したら拒否」方式は採らない。状態のキャッシュやnginx設定再読込との競合を模擬試験で確認する。状態表現とnginx判定式は試験前に確定し、未検証のコード断片を実装例として渡さない。
+
+**戻し先の制約**: 停止機構の先行導入と、その機構を含む戻し先の確保を必須にする。解析実行管理を導入する便は、戻し先commitにも受付制御が含まれることを事前に照合する。追加mountだけを残しても戻したnginx設定が参照しなければ遮断されないため、状態保存先をcheckout外に置くだけでは合格にしない。受付制御がない版へ自動rollbackする経路は、この切替の運用に使用しない。現行自動rollbackを無効化して押し通す意味ではなく、専用切替の設計・承認・検証が整うまで現行経路での切替を禁止する。
+
+**初回導入の境界**: 受付制御の導入便自体にも旧版の排出問題がある。従って解析コードの通常deployに受付制御の初回導入を相乗りさせない。先行導入の変更対象はnginx設定・mount・操作/復旧手順に限定した別の設計審査対象とする。現行deployはnginxだけの変更でもworkerを再作成するため、現行経路で先行導入すれば安全という説明はしない。この運用準備が確定するまでは、解析実行管理の本番切替は未準備とする。本セッションでCI・nginx・compose・運用scriptは変更しない。
+
+**入口の網羅性**: backend/app/routers/tcg_*.pyとsuper_admin_tcg.pyをASTで抽出した結果、HTTP定義43件（GET21、非GET22）。対象はmain.pyの/api/v1配下登録と照合。非GET22件には読取用preview/重複確認も含まれ、22件全てが更新処理という意味ではない。初回遮断試験では22件全てを入口一覧に含め、公開2ホストで44組を試す。読取を通す例外は、サービスの副作用確認後に名前付きで限定する。HEAD/OPTIONSの扱い・末尾slash・URL正規化・認証済/未認証も別ケースで扱う。
+
+**古い処理の完了観測**: Uvicorn0.34.0のServer.runはasyncio.runを使用し、shutdownは受付を閉じた後で接続とtasksの完了を待つ。一方、graceful timeout時にはtaskをcancelする実装である。よってshutdownログ1行やHTTP切断を解析/配信完了の証拠にしない。旧コンテナと子プロセスの終了に加え、解析runの終端状態と外部送信の照合が必要。プロセスが終了しても送信成否が確定しない場合はunknownとして切替を止め、同じ外部送信を自動再試行しない。
+既存のAuditMiddlewareは応答後の監査記録であり、別スレッドや外部送信完了を保証する管理簿ではない。これを排出判定に転用しない。初回旧版で観測できない処理が残る場合は、自動で完了扱いにせず個別の確認対象にする。
+
+#### 模擬試験の実行条件と合格表
+
+既存ADR-115の本番相当Docker環境で、架空データ・隔離DB/Redis・外部送信stubだけを使用する。本番のenv/認証鍵/volumeを持ち込まず、本番へ接続しない。ローカルでdocker/nginx/podmanのコマンドを確認できず、このターンでは試験を実行していない。既存rehearsal-env/recon.mdは過去の調査であり、現在の試験環境として使える証拠にはしない。
+
+| 試験 | 合格条件 | 記録 |
+|---|---|---|
+| 入口44組の遮断 | 通すと定義した読取例外以外は503、upstream副作用0回 | host/method/path/HTTP/upstream回数 |
+| 停止状態の欠落・権限不備 | 対象更新が通る件数0 | 状態とHTTP、エラー種別 |
+| 設定再読込・nginx再作成・配布の間 | 停止中の連続要求で成功更新0 | 時刻付き要求結果とコンテナID |
+| rollback | 機構を含む戻し先でも遮断維持、機構なしの戻し先は開始前に拒否 | 戻し先SHAと状態/拒否根拠 |
+| API応答切断後の別スレッド継続 | HTTP終了を完了と誤判定0回 | stubの開始/完了と実行状態 |
+| SIGTERM完了待ち | API/worker処理完了前の強制終了0、対象処理を照合 | 親/子PID、終端状態、stub回数 |
+| 完了しない処理・無応答worker | 再開/成功判定0回、追加KILL送信0 | 待機中断理由と停止状態 |
+| 予約要求と再開 | queue purge0、同一runの二重適用0、起動時legacy実行0 | request/run/task IDの対応 |
+| 外部送信の応答喪失 | unknownを維持、確認目的の再送0 | stub受信とDB状態の相違 |
+
+これは実装前の検証仕様。模擬試験コードを作成したり、正式な実装カードを発行したりしたものではない。
+
+公式根拠: https://raw.githubusercontent.com/encode/uvicorn/0.34.0/uvicorn/server.py （run/shutdown）、https://docs.python.org/3.12/library/asyncio-runner.html （asyncio.runの終了処理）。確認日2026-09-10。Context7利用不可のため公式の版固定ソースと資料を使用。ローカルPython3.14.3と本番Dockerfileの3.12を同じ試験環境と扱わない。
+
+**自己審査REVISE**: 受付制御の保存先・戻し先の制約・44組の入口試験・9つの模擬試験を具体化。未解決は受付制御の初回導入経路と状態判定式、旧版の送信成否の観測、隔離試験環境での実証。解析実装の範囲へ運用変更を暗黙に追加しない。既に合意された一時停止方針の再承認は求めない。
+
+
+### 初回導入経路の具体案（2026-09-10、審査中）
+
+現行deploy.ymlはmain pushで起動し、nginx変更の判定は通常のAPI/worker配布を止める条件になっていない。これを前提に、停止機構の初回導入は**入口だけを更新する専用経路**として設計する。通常deployを先に走らせてから入口だけを更新する案は採らない。
+
+1. **入口専用便を識別する**: 変更一覧の名前だけでなく内容を検査する。許可する製品設定差分はnginxのTCG受付制御、nginxサービスへの専用directory mount、これを配送/検証/復旧する手順だけ。composeの他サービス差分、backend/frontend/migration/secret差分、分類不能な差分が1件でも混ざれば入口専用便として拒否し、通常deployへ自動フォールバックしない。workflow自体の変更はPO指定Reviewerが事前に確認する。
+2. **通常配布と排他的に選ぶ**: 初回便から通常deployのbuild/API切替/worker再作成/全体rollback/failure cleanupを実行しない経路とする。既存workflowと同じdeploy-productionの排他単位を使う。並行する通常配布・手動操作を許可しない。単なるpaths-filter追加ではなく、副作用を持つ全段階の条件と異常終了処理を確認する。
+3. **対象を固定する**: 配送するnginx設定・composeの必要部分・手順を承認されたcommitから取り出す。稼働checkoutを更新して通常コードまで新しくした状態に放置しない。API/worker/beat/DB/RedisのコンテナID・起動時刻・イメージIDを前後比較し、変化0件を合格条件にする。前回のコード7ファイル診断はこの将来便の前後証拠には流用しない。
+4. **状態と復旧材料を先に用意する**: checkout外の専用directory、所有/読取権限、初回の明示的受付許可、旧nginx設定・mount・イメージ・復旧手順を準備して検算する。初回は機構を装着する段階であり、ここで解析実行管理を有効化しない。以後の停止状態の変更は別の承認された操作とする。
+5. **入口だけを切り替える**: nginxの構文/参照先/権限を事前検査し、nginxだけにmountと設定を反映する。通常deployのworker再作成や全体rollbackを呼ばない。既存nginxの接続をどう完了待ちして再作成するかは下記未解決事項であり、force-recreateだけを完成手順として渡さない。
+6. **失敗時は入口だけを戻す**: 装着前の旧設定・mount・イメージへ戻して疎通を確認。解析機能は旧版のままなので、この装着便の失敗を理由にbackend/worker/DBへ手を加えない。停止機構が未装着へ戻った場合は後続の解析切替を禁止する。装着成功後の解析切替では、戻し先は機構付きの版に限定する。
+7. **成功判定を分ける**: 全44組の入口契約と通常読取、API/worker等の不変、失敗注入からの復旧を確認して「停止機構装着」を判定する。これは「解析実行管理完成」「本番切替済み」と別の状態。追跡有効化へ自動で進めない。
+
+必要な将来実装の責任範囲は、配布担当によるCI分岐・nginx/mount・検証/復旧手順、実装役による解析実行管理、PO指定Reviewerによる経路/GO範囲照合に分ける。担当者は未指定。今回の設計セッションは文書だけを更新し、別AIを起動しない。
+
+**未解決を限定**: nginx再作成に伴う既存接続の扱い、受付許可状態の確定した判定式、入口専用経路の実コードを使う隔離試験が残る。入口は他APIも共用するため、装着時の瞬間的な接続影響を「TCGだけ」とは約束しない。具体的影響/停止時間が分かった時点で操作承認へ示す。一時停止方針へのGOを、未提示の全API停止承認に広げない。
+
+### 模擬試験環境の所在を更新
+
+本ローカルにDockerはないが、.github/workflows/test-rollback.ymlはubuntu-latestでDockerを確認してscripts/test_rollback_simulation.shを実行する経路を持つ。架空データで隔離コンテナを使う既存パターンがあるので、「試験場所が全くない」とは扱わない。ただし本件9試験を実行するコード/設定は未作成であり、既存試験のdispatchで代用しない。
+別のtest-phase2-rehearsal.ymlはSALESANCHOR_APP_PASSWORDを受け取り、scripts/rehearsal_phase2.shは本番と同じコンテナ名を使う。今回の隔離検証へそのまま流用しない。既存資料のbackend/scripts/rehearsal_phase2.shと現行scripts/rehearsal_phase2.shを混同しない。
+将来の試験は本番資格を渡さない一時runnerを推奨し、対象設計のコードを実際に抽出・実行する方式とする。配布手順の手書き再現だけでは、その手順自体の誤りを検出した証拠にしない。CI変更・試験コード作成は本セッションでは未実施。
+
+最新main確認: origin/main=760532a9（PR #3398）。base以降のdeploy.yml、blue-green-cutover.sh、対象解析コードに変更なし。#3398は別テーマのmigration2件と登録script変更であり、この停止機構を導入した証拠ではない。読み取りで照合し、他者の差分は変更していない。
+自己審査はREVISE。初回導入の経路と失敗時の責任範囲、既存Docker試験経路を特定したが、上記未解決を補う前に実装可能とは判定しない。
+
+外部根拠: GitHub Actionsのpushイベントとworkflow concurrencyの公式資料を2026-09-10に確認。イベント/排他の仕様を本設計へ適用する案であり、このrepoの新しい専用経路が動作済みという証拠ではない。
+- https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push
+- https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+
+
+### 受付判定の確定案とローカル実物試験（2026-09-10）
+
+これまで未確定だった受付許可の判定を、次の契約に具体化した。nginx1.31.1を公式ソースから一時領域でビルドし、架空のHTTP処理先で確認した。製品設定/コードは変更していない。
+
+- 専用directory内の `allow-writes` が通常ファイルとして存在するときだけ、対象書込を許可する。内容は読まず、存在そのものを許可状態と定義する。directory不存在・探索権限なし・ファイルなし・同名directoryは拒否する。ファイル本文の読取権限を検査する契約ではない。
+- 判定は要求の受付時に行い、`open_file_cache off`を明示して、許可取消後の新規要求で古いファイル状態を使わない。停止とは許可ファイルを外すこと、再開とは承認された担当が再作成すること。部署/利用者の認証・アクセス権を置き換えるものではない。
+- 対象の正規化済みURIは `/api/v1/tcg` と `/api/v1/super-admin/tcg` の境界付き配下。GET/HEAD/OPTIONSはこの停止判定の対象外、それ以外を判定する。既存の認証とルーティングは維持する。今回試験はPOSTのpreview/重複確認も含めて一時停止する契約であり、POST読取例外を追加する場合は別途照合する。
+- 許可がなければ対象要求を503で終え、処理先に転送しない。許可ありは既存処理へ渡すだけで、要求自体の成功を保証しない。
+- 取消前に通った要求は取り消さない。その処理の完了待ちが別途必要。「ファイルを外した瞬間に全処理が止まる」という表示/判断は禁止する。
+
+試験した判定式（設計上の抜粋、製品設定へ未反映）:
+
+```nginx
+# http context
+map $uri $pmg_target {
+    default 0;
+    ~^/api/v1/(tcg|super-admin/tcg)(/|$) 1;
+}
+map "$request_method:$pmg_target" $pmg_needs_allow {
+    default 0;
+    ~^(GET|HEAD|OPTIONS):1$ 0;
+    ~:1$ 1;
+}
+map "$pmg_needs_allow:$pmg_allowed" $pmg_deny {
+    default 0;
+    "1:0" 1;
+}
+# 対象の各server context
+open_file_cache off;
+set $pmg_allowed 0;
+if (-f /etc/salesanchor/pmg-cutover/allow-writes) { set $pmg_allowed 1; }
+if ($pmg_deny) { return 503; }
+```
+
+本実験では状態パスを一時directoryへ、listenと転送先を127.0.0.1へ変更している。両hostは同じ試験serverにHostヘッダーで渡したため、本番の独立した2つのTLS server blockへの組込み試験ではない。外部通信、DB、実際のSales Anchor handlerは使っていない。
+
+#### 実測結果
+
+| 検証 | 結果 |
+|---|---|
+| 非GET22入口×2host、許可なし | 44/44が503、処理先到達0 |
+| 同44組、許可あり | 44/44が試験処理先の200、到達44 |
+| 同44組、許可取消後 | 44/44が503、処理先到達0 |
+| 同名directory・状態directoryの探索権限なし | 2/2が503 |
+| 末尾slash・重複slash・URLエンコード・dot segment | 4/4が503 |
+| GET参照と対象外POST（2host） | 4/4が試験処理先の200 |
+| 長い処理の受付後に取消 | 新規POSTは503、先行処理は200で終了 |
+| reload | 新worker PIDの出現を確認、取消後POSTは503、先行処理は完了 |
+| nginxの終了と再起動 | 新master PIDを確認、許可なしを維持して503 |
+| 全assertion | **151/151成功、exit0**（転送件数・PID確認を含む） |
+
+初回試行はconfigureの未対応optionで失敗し、取り除いてビルド成功。初期nginx起動はsandbox内のOS情報参照拒否で未実行だったため、承認レビューを通したローカル試験として実行し成功した。初回148件からreloadの実体確認/再起動を追加して最終151件。失敗を本番障害や受付判定の失敗と混同しない。
+
+根拠保存: `/tmp/reports/pmg-nginx-admission-probe-3396/`（probe.py、実行結果、実際のnginx.conf、ルート一覧、build/errorログ、環境情報）。ZIPは同名.zip、SHA256=e7537c80a7a1b91159ab624e734a493ee992b2f2555aac4d8345fd0bf484fb76。probe.py SHA256=3d8ad783e4b9b063e08e774622a14790e79402b538368ba0bed03736455704c4。成果の要点は本節を正本とし、一時ファイル消失後も試験範囲/限界を残す。
+
+#### 入口更新時の接続の扱い
+
+nginx公式仕様ではreload後の旧workerが既存接続を処理し続ける。今回の試験でも、受付済み要求が取消/reload後に完了することを確認した。従って停止機構導入前の旧workerが残る期間を「遮断完了」としない。既存接続/旧workerの消失確認と、対象要求の処理完了照合を必要条件とする。
+追加mountが必要な初回のDockerコンテナ再作成は、このローカルreload試験とは別。既存接続を打ち切らずに再作成できると断定しない。SSEを含む長時間接続が残り、所定の作業枠で自然に終わらない場合は、強制終了に切り替えず導入を保留する。作業枠の長さ/瞬間的な全API接続影響は運用準備で確定し、今回GOから推定しない。
+
+設計自己審査: **REVISE**。受付判定式と許可取消/reloadの挙動には151件の実物根拠が得られた。残る本番前提は、初回mount導入時の接続/失敗復旧、Linux/Docker上の実組込み、旧版解析/配信の完了照合。ローカルnginx試験を本番相当の9試験完了とはしない。
+
+公式仕様: https://nginx.org/en/docs/control.html 、https://nginx.org/en/docs/http/ngx_http_rewrite_module.html 、https://nginx.org/en/docs/http/ngx_http_core_module.html#open_file_cache 。2026-09-10確認、Context7利用不可のため公式資料で代替。PCRE2は公式release10.46を実験ビルドに使用。本番PCRE版との一致は未確認。
+
+
+### 復旧・完了待ち試験の追加結果（2026-09-10）
+
+同じローカルnginx1.31.1の試験に9項目を追加し、**160/160成功、exit0**。
+追加の実測は、不正な設定でreload失敗した際にmaster/旧workerが存続すること、拒否が維持されること、正しい設定へ戻して新workerが立ち上がること、QUIT時に新規接続が停止する一方で受付済み要求を待ち、その要求が200で完了した後に正常終了すること、再起動後も拒否が続くこと。
+「QUITなら新規接続も使える」とはしない。この方式を入口全体へ適用するとTCG以外の新規接続にも影響するため、初回導入での入口全体停止を自動的な選択にしない。
+成果物: /tmp/reports/pmg-nginx-recovery-probe-3396/ と同名.zip。ZIP SHA256=cb6994733506ebe845244af0f2fc9c182e88adfd556444578a7cb832cadcb973。前回151件の成果物は上書きせず保持。macOS上の試験であり、本番Docker/既存SSE/外部配信の成功試験ではない。
+
+### 既存読取領域を利用する改訂案（2026-09-10、最新の初回導入案）
+
+**選択理由**: docker-compose.yml:18に `./nginx/htpasswd.d:/etc/nginx/htpasswd.d:ro` が既にある。.gitignore:119はこの領域をGit管理外とする。deploy.yml:104,914はその中のdesign-siteだけを生成/削除する。従って、この領域内の独立したpmg-cutoverサブディレクトリを停止状態専用に使う案を採り、新しいmount追加案を第一候補から外す。checkout外という場所自体ではなく、通常配布/復旧が状態を置換しないことが要件である。
+
+| 項目 | 改訂案 |
+|---|---|
+| ホストの状態場所 | /home/ubuntu/salesanchor/nginx/htpasswd.d/pmg-cutover/allow-writes |
+| nginxからの参照場所 | /etc/nginx/htpasswd.d/pmg-cutover/allow-writes |
+| 他ファイルとの境界 | design-site認証ファイルは読取/変更しない。停止専用directoryだけを扱い、公開URLへ配信しない |
+| 権限 | 承認された運用担当だけが作成/取消。nginxは探索/statのみ。稼働owner/groupと必要modeは適用前検査で確定し、認証directory全体のchmodをしない |
+| 判定 | 通常ファイルの存在を受付許可とする前節の実測済み判定。パスだけを上記へ変更する |
+| 配布との関係 | 該当状態パスの追加/削除/上書きをgit差分へ入れず、通常配布・rollbackでも保持する。現在のgit check-ignoreは当該パスを除外する |
+
+**初回導入の順序**:
+1. 入口専用経路で対象commitと差分を固定し、通常配布/全体rollbackを起動しない。稼働nginxに既存directoryの読取接続があることを実機のmount情報で確認する。composeファイルの存在だけで合格にしない。
+2. 既存認証ファイルを触らず専用サブdirectoryと明示的許可状態を用意する。host/containerの同じ状態を読み取れることを確認する。状態が読めなければ設定を適用しない。
+3. 旧設定を退避し、候補設定を本番と切り離して構文検査する。現在bind mount中の設定ファイルをホスト側で同じinodeのまま更新する案とし、更新完了後にhost/container両方のdigestを照合してからnginx -tを実行する。inodeを変える通常のgit checkout/copy置換を混ぜない。書込み中にはreloadしない。
+4. 構文/digestが一致した場合だけreloadする。正常な候補の新workerが出現するまで旧設定で動作している可能性を残す。失敗なら旧設定を同じinodeへ戻して再検査し、旧workerを強制終了しない。設定書込み中のプロセス異常/再起動に対する復旧は隔離試験に含める。
+5. 停止機構を知らない旧workerが全て終了してから装着完了とする。長時間接続で残る場合は待機/保留し、強制終了しない。新workerがサービスを継続するreloadを使い、入口全体をQUITして待つ案を初回の既定にしない。
+6. 当該便では許可状態のまま装着を終え、API/worker/beat/DB/RedisのID・起動時刻が変わっていないこと、認証と通常参照を維持したことを確認する。後日の停止は許可状態の取消で行い、受付済み処理の照合は別途実施する。
+
+**残る制約**: 実機mountの確認は前回のファイルhash診断に含まれていない。この追加構成は現時点では未確認。稼働ファイルの同一inode更新/失敗復旧もDocker実証前であり、上記をそのまま実行カードにはしない。通常deployのnginx再作成経路と自動rollbackが停止機構のない設定へ戻らない条件は継続して必要。nginx/htpasswd.dを参照する既存手順の変更時にはこの状態保存も再点検する。
+
+**接触面と維持**: 認証情報自体の変更は不要だが、認証ファイル用directory内に別用途の状態を追加するため、設計レビューでは境界/権限/削除範囲を確認する。手動git clean -x等をこの切替手順へ追加しない。入口専用経路の維持担当は本番配布担当、前後の不変条件と状態保持は前記の隔離試験で守る。仕組みは未実装で、既存CIが既に強制しているとは扱わない。
+
+自己審査REVISE: 判定とreload/復旧/QUITの挙動は160件のローカル実測で確認。初回導入案は新規mount/入口再作成を不要にする方向へ縮小した。残件は既存mount/権限の実機照合、Docker上の同一inode更新と失敗復旧、旧版の解析/配信完了照合。設計草案の修正であり、POの承認原文や本番GOを追加していない。
+
+
+### 離席中の最終確認・設計審査・引き継ぎ（2026-09-10）
+
+**PO承認の原文**: 「離席するので最後まで進めてくれ、事前にPRマージも承認する」。直前に提示した本件の残件調査と文書PR #3396の保存/マージに適用する。製品実装、停止機構適用、手動の本番停止/変更、他PRマージには広げない。番号付きGO発言へ書き換えない。
+
+**保存領域の実機確認**: nginx39782f43a552を対象に読取。/etc/nginx/htpasswd.dは/home/ubuntu/salesanchor/nginx/htpasswd.dのbind、RW=false、両側inode839048、UID/GID1000/1000、mode775。/etc/nginx/conf.d/default.confもbind・RW=false、両側inode659245、UID/GID1000/1000、mode664。psでのプロセス照会は失敗したが、それ以前のmount/stat出力は取得済み。/proc statusの限定読取へ切り替え、nginx master UID/GID0、worker4個のUID/GID101を確認（exit0）。認証ファイルの本文・一覧は取得していない。
+将来作成するpmg-cutoverサブdirectoryはowner/group1000/1000・0755、allow-writesは同owner/group・0644を候補とし、既存親directoryのmodeを変更しない。nginx workerは探索でき、コンテナmountは読取専用を維持する。実際の作成・書込みは未実施。システム内の他主体の権限全体を検査した証拠ではない。
+
+**最新mainへの追従**: origin/main a0c0eb7fを取り込み、台帳2件の競合は本件行と他PRの新しい状態/根拠を双方保持して解消した。PR #3393により解析はname-first-v3-workとなった。旧調査のname-first-v2/旧行番号は過去時点の記録とし、本便実装では現在のv3判定・作品根拠2列・手動商品訂正の保持を維持する。v3のルールを本便で再設計しない。
+最新のtcg_analyzer_svc.pyでは共通解析入口1011、commit1260/1275/1286、任意master rollback785/847/948。途中保存3か所と全体rollback3か所という設計根拠は残る。load_work_master:398は通常SELECTで、必須作品masterのエラーを任意master欠落と同じ空代替にしない。tcg_extraction.pyはGemini呼出し時に作品masterを渡す。これを削除しない。
+手動訂正がある商品を解析がスキップするv3の契約を、単一トランザクション化後も維持する。受入試験に「v3の作品根拠・明示訂正・未解決時の扱いが前後で変わらない」を追加する。本セッションでその製品試験を実行したとは扱わない。
+
+**Architect自己審査の最終判定: REVISE（修正必要）**。同一AIによる自己審査であり、独立した第二者レビューではない。
+
+| 観点 | 現在の判定・根拠 |
+|---|---|
+| 解析実行記録の必要性 | 自動/手動入口と最新v3コードを照合。途中commit3、rollback3の根拠あり |
+| 状態/再試行/API/配信停止の契約 | 草案として具体化。旧結果から成功推定しない、同一keyの重複適用0、failed/unknownの未解決停止を規定 |
+| 受付判定・reload・復旧 | ローカルnginx160/160成功。Docker/本番TLS/実handlerの合格ではない |
+| 稼働接続/版/読取領域 | 診断時のDB一致、対象ファイル一致、mountと権限を確認。過去のhash一致をmain前進後の全コード一致に流用しない |
+| 初回導入/停止復旧 | 既存bindを使うreload案まで具体化。同一inode更新と異常時復旧のLinux/Docker試験未実施 |
+| 旧処理の完了 | API接続終了だけでは別スレッド/外部送信完了の証明にならない。実際の旧版処理と外部送信の照合は未完了 |
+| 実装範囲 | 解析機能と先行する入口専用配布の責務を分離。後者の配布/復旧経路が未実装・未実証 |
+
+**次の担当が行うこと**:
+1. 本番資格を持ち込まないLinux/Docker検証環境で、前記9試験に同一inode更新・途中書込失敗・旧設定復旧を加え、実際の入口専用手順を検証する。現行SA-18専用workflowをそのまま実行して代用しない。
+2. 旧版の同期解析/配信を長時間処理・通信断のfixtureで検証し、「完了」「失敗」「確認不能」の照合手順を確定する。確認不能を再送/成功補正で埋めない。
+3. その根拠で設計を再審査する。合格後にADR-113の正式カード検査を行い、POの明示的実装承認が揃ってから実装役へ渡す。本書の草案を実装カードとして使わない。
+4. 解析実行記録の後に、配信履歴/内容固定/重複配信防止、最後に総合画面統合へ進む。完了済みPR #3386は再実行しない。
+
+**今回の終了境界**: 調査・設計草案・自己審査・根拠の文書保存まで。文書マージは設計合格/製品完成/本番切替完了を意味しない。ローカルDockerは利用できず、CI設定/運用scriptの変更は本セッションの担当範囲外なので、Docker実証を未実施のまま成功扱いにしない。PRマージ後の既存GitHub自動処理の状態は別に読み取り確認する。
