@@ -2048,6 +2048,15 @@ PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO�
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
 
+
+## EV-20260911-PMG-VISUAL-HIERARCHY
+
+POの認知負荷軽減依頼に基づく表示改善。根拠: docs/handoff/pmg-import-delivery-ssot/design.md と recon.md の2026-09-11表示節。3つの公開設計指針と実物部品/状態契約を照合、自己審査APPROVEは表示範囲だけ。Terraへの正式カード発行前。実装・視覚/動作試験・PRマージ・本番反映は未完了。
+
+EV-20260911-PMG-VISUAL-HIERARCHY実装検証: 正式カード検査成功後Terraが製品7ファイルを実装。rootがunit143件/E2E8件/build/check:all成功とPC/390px明暗画像を確認。詳細はdesign末尾。表示改善のみコード/視覚レビューAPPROVE。PR/CI/番号付きGOの確認へ、本番未反映。
+
+PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
+
 ### EV-20260910-FRONTEND-MOLD-21: カレンダー実行契約再審査
 
 ### 次便の実行条件確認（2026-09-10）
@@ -2063,3 +2072,5 @@ Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check
 Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をreadyで作成し公式登録完了。実装commit b35807504a87015aed52a99d6791f9774b2f8293、製品5hash一致、限定第二レビューAPPROVE適用をroot確認。stage19/PR全体22ファイル。CI確認中、番号付きGO未受領。過去GO3420を流用せず、全体の形/配色統一とPOによる理解しやすさの評価は未完と区別する。
 
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
+
+PR #3424 GO追補: 本セッションでPO原文「GO #3424」を受領。2026-09-11 08:10 JSTは受領確認の記録時刻。PR本文へ本人原文を転記。main76c6dff9の共通Button変更を取り込み、双方の根拠登録を保持して追記競合を解消。DB変更なし・バックアップ該当なし。最新HEADの検証後に公式マージする。

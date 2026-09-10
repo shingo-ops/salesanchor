@@ -90,8 +90,18 @@ export default function TcgLineImportPage() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [selectedPendingId, setSelectedPendingId] = useState<string | null>(null);
   const [selectedImportId, setSelectedImportId] = useState(() => new URLSearchParams(window.location.search).get("import_job_id"));
+  const [uploadOpen, setUploadOpen] = useState(() => !new URLSearchParams(window.location.search).get("import_job_id"));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  const openUpload = () => {
+    setUploadOpen(true);
+    requestAnimationFrame(() => {
+      uploadDetailsRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+      uploadDetailsRef.current?.querySelector("summary")?.focus();
+    });
+  };
 
   // ---------------------------------------------------------------------------
   // 履歴取得
@@ -130,6 +140,7 @@ export default function TcgLineImportPage() {
 
   const selectImport = (id: string) => {
     setSelectedImportId(id || null);
+    setUploadOpen(!id);
     const url = new URL(window.location.href);
     if (id) url.searchParams.set("import_job_id", id); else url.searchParams.delete("import_job_id");
     window.history.replaceState(null, "", url);
@@ -247,9 +258,28 @@ export default function TcgLineImportPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <PageLayout titleText={t("tcgLineImport.pageTitle")}>
+    <PageLayout titleText={t("tcgLineImport.pageTitle")} headerAction={selectedImportId ? <Button variant="secondary" onClick={openUpload}>{t("tcgLineImport.newFileDetails")}</Button> : undefined}>
+      {selectedImportId && <section style={{ marginBottom: "2rem" }}>
+        <h3>{t("pmgWorkflow.title")}</h3>
+        <Select
+          value={selectedImportId}
+          onChange={(event) => selectImport(event.target.value)}
+          aria-label={t("pmgWorkflow.selectImport")}
+          options={[
+            { value: "", label: t("pmgWorkflow.selectImport") },
+            ...Array.from(new Map([
+              [selectedImportId, selectedImportId] as const,
+              ...(result ? [[result.import_job_id, result.import_job_id] as const] : []),
+              ...history.map((job) => [job.id, job.filename] as const),
+            ]).entries()).map(([value, label]) => ({ value, label })),
+          ]}
+        />
+        <ImportWorkflowPanel key={selectedImportId} importJobId={selectedImportId} />
+      </section>}
       {/* ─── アップロードフォーム ─── */}
-      <section style={{ marginBottom: "2rem" }}>
+      <details ref={uploadDetailsRef} open={uploadOpen} onToggle={(event) => setUploadOpen(event.currentTarget.open)} style={{ marginBottom: "2rem" }}>
+        <summary style={{ cursor: "pointer", fontWeight: 600, marginBottom: "1rem" }}>{t("tcgLineImport.newFileDetails")}</summary>
+      <section>
         <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
           {t("tcgLineImport.uploadSection")}
         </h3>
@@ -370,6 +400,7 @@ export default function TcgLineImportPage() {
           </p>
         )}
       </section>
+      </details>
 
       {/* ─── 取り込み結果 ─── */}
       {result && result.review_status === "pending_review" && (
@@ -428,7 +459,7 @@ export default function TcgLineImportPage() {
         </section>
       )}
 
-      <section style={{ marginBottom: "2rem" }}>
+      {!selectedImportId && <section style={{ marginBottom: "2rem" }}>
         <h3>{t("pmgWorkflow.title")}</h3>
         <Select
           value={selectedImportId ?? ""}
@@ -444,7 +475,7 @@ export default function TcgLineImportPage() {
           ]}
         />
         <ImportWorkflowPanel key={selectedImportId ?? "none"} importJobId={selectedImportId} />
-      </section>
+      </section>}
       <section style={{ marginBottom: "2rem" }}>
         <p>{t("pmgWorkflow.distributionScope")}</p>
         <p>{t("pmgWorkflow.distributionHistoryLimit")}</p>
