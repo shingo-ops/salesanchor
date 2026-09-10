@@ -99,8 +99,8 @@ class P:
 
     def cfg(s, bad=False):
         sv = "\n".join(
-            f"""server {{ listen 443 ssl;server_name {h};ssl_certificate /probe/cert;ssl_certificate_key /probe/key;set $allowed 0;if (-f /etc/nginx/htpasswd.d/pmg-cutover/allow-writes) {{ set $allowed 1; }}if ($deny) {{ return 503; }}location / {{proxy_pass http://{s.f}:8080;}}}}"""
-            for h in ("app.probe.test", "api.probe.test")
+            f"""server {{ listen {port} ssl;server_name {h};ssl_certificate /probe/cert;ssl_certificate_key /probe/key;set $allowed 0;if (-f /etc/nginx/htpasswd.d/pmg-cutover/allow-writes) {{ set $allowed 1; }}if ($deny) {{ return 503; }}location / {{proxy_pass http://{s.f}:8080;}}}}"""
+            for h, port in (("app.probe.test", 443), ("api.probe.test", 444))
         )
         return f"""events {{}}\nhttp {{error_log /dev/stderr notice;open_file_cache off;map $uri $target {{default 0;~^/api/v1/(tcg|super-admin/tcg)(/|$) 1;}}map "$request_method:$target" $needs {{default 0;~^(GET|HEAD|OPTIONS):1$ 0;~:1$ 1;}}map "$needs:$allowed" $deny {{default 0;"1:0" 1;}}{sv}{"INVALID;" if bad else ""}}}"""
 
@@ -145,8 +145,7 @@ class P:
             s.net,
         ).stdout.strip()
         s.fi = s.d(
-            "run",
-            "-d",
+            "create",
             "--name",
             s.f,
             "--label",
@@ -161,9 +160,9 @@ class P:
             "python",
             "/x.py",
         ).stdout.strip()
+        s.d("start", s.fi)
         s.i = s.d(
-            "run",
-            "-d",
+            "create",
             "--name",
             s.n,
             "--label",
@@ -171,7 +170,7 @@ class P:
             "--network",
             s.net,
             "-p",
-            "127.0.0.1::443",
+            "127.0.0.1::444",
             "-p",
             "127.0.0.1::443",
             "-v",
@@ -182,9 +181,10 @@ class P:
             f"{ROOT}:/probe:ro",
             IMAGE,
         ).stdout.strip()
+        s.d("start", s.i)
         inspection = json.loads(s.d("inspect", s.i).stdout)[0]
         ports = inspection["NetworkSettings"].get("Ports") or {}
-        if "443/tcp" not in ports:
+        if not {"443/tcp", "444/tcp"} <= set(ports):
             diagnostic = {
                 "State": inspection.get("State"),
                 "HostConfig.PortBindings": inspection.get("HostConfig", {}).get(
@@ -193,9 +193,17 @@ class P:
                 "NetworkSettings.Ports": ports,
             }
             raise AssertionError(
-                "missing 443/tcp published binding: " + json.dumps(diagnostic)
+                "missing TLS published binding: " + json.dumps(diagnostic)
             )
-        b = ports["443/tcp"]
+        ok(
+            "one binding per TLS port",
+            all(
+                isinstance(ports.get(key), list) and len(ports[key]) == 1
+                for key in ("443/tcp", "444/tcp")
+            ),
+            repr(ports),
+        )
+        b = [ports["443/tcp"][0], ports["444/tcp"][0]]
         ok(
             "two loopback random TLS ports",
             len(b) == 2

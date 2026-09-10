@@ -252,3 +252,5 @@ Terraの編集に対し自動承認レビューが利用上限エラーで拒否
 PR #3408 HEAD098dd48aのpush/PR両試験は接続口取得でKeyError 443/tcp、assertion実行前に停止。PR run34459276866/job102812962329、Docker28.0.4、nginx digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。成功扱いしない。
 同版の公式実装 https://github.com/moby/moby/blob/v28.0.4/libnetwork/endpoint.go#L698-L706 はinternal networkでProgramExternalConnectivityを実行しない。試験が指定した--internalとホスト公開ポート取得は整合していなかった。独立した通常bridgeへ修正し、公開先127.0.0.1とランダムポートの検査を維持する。外部通信を遮断するネットワークとは称さない。試験要求先はlocalhost/同networkの架空処理先のみで、資格情報を渡さない。修正後の実動確認はCIで行う。
 Context7は利用可能ツールに存在せず、PO許可済みの公式資料直接確認を使用。PR本文の削除行申告もdesign.mdを列挙して修正した。
+
+修正後HEADd6da86d3のrun34459910899/job102815014890は、nginxに同一443ポート公開を2回指定した箇所でaddress already in use。ネットワーク設定処理まで進んだがassertion0件。TLSの2serverを内部443/444に分けて公開するfixtureへ修正する。createでID取得後にstartする手順に分け、起動失敗時にも自作containerのIDを保持して後始末する。製品構成の変更ではない。
