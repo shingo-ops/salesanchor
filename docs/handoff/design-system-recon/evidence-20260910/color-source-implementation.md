@@ -18,3 +18,5 @@ Generatorが実行し、設計担当が生ログとJSON・実ファイルhashを
 初回ブラウザー導入の失敗はcolor-source-browser-install-mismatch.txtに保存。npxが@playwright/test1.59.1へ解決し、直接依存playwright1.60.0が要求するChromium1223と不一致だった。直接依存CLIの正規installで解消。依存ファイル・期待値の変更や実行ファイルの強制差し替えなし。
 
 比較は実PlatformIconソースを使う局所fixtureであり、全ページの祖先CSS/全SVGパス描画の網羅やPO目視を意味しない。実画面の目視は完成後PO。新CIは全体移行後、calendarと部品APIは別便。PR/リモートCI/マージは未完了、代理GOは未有効。coverage生成物は削除せず/tmpへ退避した。
+
+PR #3420追補: 最新main統合後も製品7hash一致、第二レビューAPPROVE適用確認。既存new-token25宣言とratchet対象7ファイルはroot直接実行成功。PR全差分の検査で保存ログの末尾空白を検出したため、color-source-checks.txtの369行だけ末尾空白を除去。本文/数値/結果を保持。整形前ログSHA256 7792109fd53a8642c9112c1d60cc6702f825efa8af6e92d69ded8af9e1524ee0、原出力は/tmp/frontend-mold-recon-20260910/CARD-COLOR-SOURCE-IMPLEMENT-01-checks.logに保持。
