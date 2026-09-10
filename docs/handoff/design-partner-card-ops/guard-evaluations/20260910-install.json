@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "base_commit": "89ad29ae3a8c3142db36b204e04f48e085803b29",
+  "changes": [
+    {
+      "path": ".github/workflows/guard-authoring-gate.yml",
+      "old_blob": null,
+      "new_blob": "2aeef15d6fb1040c7539a38afd89c6619a550435"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guard-authoring-design.md",
+      "old_blob": null,
+      "new_blob": "16e610fc56af00b3a3860a059d1e6cec78ab4804"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guard-authoring-recon.md",
+      "old_blob": null,
+      "new_blob": "6069bcab4975573240f1c8c401e73b4cfcffb203"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards.md",
+      "old_blob": "729b5f889daa87c8cf10b62bacb23facd6e01110",
+      "new_blob": "79af0129b88b34f237294b78c8572e79591491bc"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/12-guard-authoring.md",
+      "old_blob": null,
+      "new_blob": "948217078c31e9597dd1e9e4c2062b971a04bfe6"
+    },
+    {
+      "path": "scripts/check-guard-evaluations.js",
+      "old_blob": null,
+      "new_blob": "5f27ad5384249c6bb47ce1f3b62c173002a6bbcb"
+    },
+    {
+      "path": "scripts/run-guard-evaluation.js",
+      "old_blob": null,
+      "new_blob": "a17dfc8b9bd87f953b29f581635c65219ece6479"
+    },
+    {
+      "path": "scripts/tests/test-guard-evaluations.js",
+      "old_blob": null,
+      "new_blob": "ebbdaeace982ce953bf47a1125547b4bf9cf4170"
+    }
+  ],
+  "reads": [
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards.md",
+      "ref": "base",
+      "blob": "729b5f889daa87c8cf10b62bacb23facd6e01110"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/00-common.md",
+      "ref": "base",
+      "blob": "1399886bbeb7e95c949065ddbb137eecc72dc589"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/11-lint.md",
+      "ref": "base",
+      "blob": "ad2281fc4fc1e833c87570600316ef1ea8251b01"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/12-guard-authoring.md",
+      "ref": "head",
+      "blob": "948217078c31e9597dd1e9e4c2062b971a04bfe6"
+    }
+  ],
+  "assessment": {
+    "purpose": "ガード変更前の弊害・代替案・維持方法と版の照合を必須結果として検査する。設置フェーズのみ。",
+    "impact": "guards/card-lintと本ゲート自身の8対象ファイル。通常docs/frontend/backendは対象外3例で成功。製品変更0件。",
+    "false_positives": "文書だけの表記変更にも評価が必要。documentation理由で実行試験を省略できる。main前進時は再照合する。",
+    "future_costs": "全main向けPRで信頼側の短いjobを実行。必須化後の障害はPRを止め得るため先に未必須で試行する。",
+    "alternatives": "process-artifacts全体のmain必須化は影響が広い。既存検査内への追加は早期終了5箇所の取りこぼしがあるため専用結果とした。",
+    "decision": "設置設計APPROVE（同一AI自己審査）。PO原文GO #3401を受領。追加修正#3402は実PG2467成功/93skip・全CI成功でマージ。実イベントと管理者の限定必須化は未実施。",
+    "rollback": "未必須の設置は通常の取消PRで戻す。必須化後の廃止はPO/管理者が限定contextを外してから評価付き取消PR。設定を無断変更しない。",
+    "owner": "guards変更者が評価と試験を維持。レビュー担当が内容確認。PO/管理者が必須設定と解除を判断する。",
+    "normal_example": "実Gitの対象外3例、版一致、読書照合、正常/否定ログ一致、浅いcloneからheadをcheckoutせず検査する試験を含む。",
+    "violation_example": "評価欠落、blob/base/read不一致、検証不足、自己削除、symlink、更新中のPRへの古い結果送信を拒否するassertを含む。"
+  },
+  "verification": {
+    "kind": "logic",
+    "normal": {
+      "command": "node --test scripts/tests/test-guard-evaluations.js",
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "report_path": "docs/handoff/design-partner-card-ops/guard-evaluations/20260910-install-tests.txt",
+      "report_blob": "db1a4fceea918e1ce76d9209994aab8fcce3786e"
+    },
+    "negative": {
+      "command": "node --test scripts/tests/test-guard-evaluations.js",
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "report_path": "docs/handoff/design-partner-card-ops/guard-evaluations/20260910-install-tests.txt",
+      "report_blob": "db1a4fceea918e1ce76d9209994aab8fcce3786e"
+    }
+  }
+}
