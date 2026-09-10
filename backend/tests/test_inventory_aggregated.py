@@ -6,7 +6,7 @@
      テーブルはフィクスチャ内で自前 bootstrap（CI は RLS_ADMIN_DATABASE_URL で通過）。
      - 配線E2E: in_stock seed -> エンドポイントが best-pick 行を返す
      - 境界: supplier_name / reason / raw が応答に含まれない
-     - タブ: ?category=pokemon で pokemon のみ絞り込み
+     - タブ: ?category=pokemon_booster_box で pokemon_booster_box のみ絞り込み
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def test_pivot_empty_results():
 
 
 def test_pivot_single_result():
-    from app.services.inventory_aggregated_service import _ProductMeta, _pivot
+    from app.services.inventory_aggregated_service import _pivot, _ProductMeta
     from app.services.inventory_aggregation import AggregationResult
 
     product = _ProductMeta(product_id=1, name="テスト商品A", tcg_type="pokemon")
@@ -70,8 +70,8 @@ def test_pivot_single_result():
 
 def test_build_aggregation_offers_maps_series_from_product_name():
     from app.services.inventory_aggregated_service import (
-        _ProductMeta,
         _build_aggregation_offers,
+        _ProductMeta,
     )
     from app.services.inventory_search import OfferSummary
 
@@ -260,12 +260,12 @@ async def seed_aggregated_dataset():
             )
         ).scalar_one()
 
-        # products: 2 pokemon + 1 yugioh
+        # products: 2 pokemon_booster_box + 1 yugioh
         poke1_id = (
             await conn.execute(
                 text(
                     "INSERT INTO public.products (name, tcg_type, is_archived) "
-                    "VALUES (:n, 'pokemon', false) RETURNING id"
+                    "VALUES (:n, 'pokemon_booster_box', false) RETURNING id"
                 ),
                 {"n": f"ポケカA_{tag}"},
             )
@@ -274,7 +274,7 @@ async def seed_aggregated_dataset():
             await conn.execute(
                 text(
                     "INSERT INTO public.products (name, tcg_type, is_archived) "
-                    "VALUES (:n, 'pokemon', false) RETURNING id"
+                    "VALUES (:n, 'pokemon_booster_box', false) RETURNING id"
                 ),
                 {"n": f"ポケカB_{tag}"},
             )
@@ -415,7 +415,7 @@ async def test_aggregated_endpoint_returns_best_pick_rows(
         assert "rows" in data_resp
 
         tabs = data_resp["tabs"]
-        assert "pokemon" in tabs
+        assert "pokemon_booster_box" in tabs
         assert "yugioh" in tabs
 
         poke1_rows = [r for r in data_resp["rows"] if r["series"] == data["poke1_name"]]
@@ -440,20 +440,21 @@ async def test_aggregated_endpoint_returns_best_pick_rows(
 async def test_aggregated_endpoint_category_filter(
     seed_aggregated_dataset,
 ):
-    """タブ: ?category=pokemon で pokemon のみ返す。"""
+    """タブ: ?category=pokemon_booster_box で pokemon_booster_box のみ返す。"""
     data = seed_aggregated_dataset
 
     async with _make_app_client(data["engine"]) as client:
-        resp = await client.get("/api/v1/inventory/aggregated?category=pokemon")
+        resp = await client.get("/api/v1/inventory/aggregated?category=pokemon_booster_box")
         assert resp.status_code == 200, resp.text
         data_resp = resp.json()
 
         rows = data_resp["rows"]
-        assert all(r["tcg_type"] == "pokemon" for r in rows), (
-            f"category=pokemon でも pokemon 以外の行がある: {rows}"
+        assert {data["poke1_name"], data["poke2_name"]} <= {r["series"] for r in rows}
+        assert all(r["tcg_type"] == "pokemon_booster_box" for r in rows), (
+            f"category=pokemon_booster_box でも pokemon_booster_box 以外の行がある: {rows}"
         )
         yugi_rows = [r for r in rows if r["series"] == data["yugi_name"]]
-        assert not yugi_rows, "pokemon フィルタで yugioh 商品が返ってきた"
+        assert not yugi_rows, "pokemon_booster_box フィルタで yugioh 商品が返ってきた"
 
 
 @pytest.mark.asyncio

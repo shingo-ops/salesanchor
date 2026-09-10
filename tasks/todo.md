@@ -93,3 +93,10 @@
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+
+
+## DB準備テストの領域分離（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399提出。領域限定試験はエラーなし、別の在庫fixtureが3エラー。正規codeへの準備データ修正中 | 別PRの実PG/全CIを確認し、PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
