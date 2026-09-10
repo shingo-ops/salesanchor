@@ -1,5 +1,8 @@
 -- CARD-LINE-KEYWORD-GUARDS-01: tenant_004 only; validate all before mutation.
--- A single DO statement is one transaction, including all three dictionary edits.
+-- Configure timeouts before DO starts; settings expire with this transaction.
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
 DO $body$
 DECLARE
     table_count integer;
@@ -64,3 +67,4 @@ BEGIN
     END LOOP;
 END;
 $body$;
+COMMIT;

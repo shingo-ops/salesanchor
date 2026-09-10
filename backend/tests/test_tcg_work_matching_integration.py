@@ -336,6 +336,7 @@ def test_false_positive_guards_identity_mismatch_preserves_all(pg, code, field):
         before = guard_snapshot(connection, ("tenant_004",))
         with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
             cursor.execute((MIGRATIONS / GUARDS).read_text())
+        cursor.execute("ROLLBACK")
     assert guard_snapshot(connection, ("tenant_004",)) == before
 
 
@@ -354,6 +355,7 @@ def test_false_positive_guards_duplicate_preserves_all(pg, code, table, word):
         before = guard_snapshot(connection, ("tenant_004",))
         with pytest.raises(psycopg2.errors.RaiseException, match="duplicate target keyword"):
             cursor.execute((MIGRATIONS / GUARDS).read_text())
+        cursor.execute("ROLLBACK")
     assert guard_snapshot(connection, ("tenant_004",)) == before
 
 
@@ -365,6 +367,31 @@ def test_false_positive_guards_absent_tables_noop(pg):
         cursor.execute((MIGRATIONS / GUARDS).read_text())
         cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_004'")
         assert cursor.fetchone()[0] == 0
+
+
+def test_false_positive_guards_lock_timeout_preserves_dictionary_and_settings(pg):
+    connection, engine, _ = pg
+    seed_guard_dictionary(connection, "tenant_004")
+    before = guard_snapshot(connection, ("tenant_004",))
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        settings = cursor.fetchone()
+        blocker = engine.raw_connection()
+        try:
+            with blocker.cursor() as blocking_cursor:
+                blocking_cursor.execute("LOCK TABLE tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE")
+            with pytest.raises(psycopg2.errors.LockNotAvailable, match="lock timeout"):
+                cursor.execute((MIGRATIONS / GUARDS).read_text())
+            cursor.execute("ROLLBACK")
+        finally:
+            blocker.rollback()
+            blocker.close()
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
+        assert guard_snapshot(connection, ("tenant_004",)) == before
+        cursor.execute((MIGRATIONS / GUARDS).read_text())
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
 
 
 @pytest.mark.parametrize("table", ["tcg_products", "tcg_series", "tcg_product_categories",
@@ -379,6 +406,7 @@ def test_false_positive_guards_partial_structure_stops(pg, table):
             with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
                 cursor.execute((MIGRATIONS / GUARDS).read_text())
         finally:
+            cursor.execute("ROLLBACK")
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
     assert guard_snapshot(connection, ("tenant_004",)) == before
 
