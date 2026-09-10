@@ -7,7 +7,7 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v3-work"
+エンジンバージョン: "name-first-v4-condition-note"
 作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
 
 キーワード照合エンジン (name-first-v2):
@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v3-work"
+ENGINE_VERSION = "name-first-v4-condition-note"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -662,6 +662,8 @@ def resolve_condition_v2(
     kubun: str,
     cond_entries: list[dict],
     cond_canonical_to_uuid: dict,
+    *,
+    raw_memo: str = "",
 ) -> tuple[Optional[str], Optional[str], str]:
     """
     (canonical, cond_id, basis) を返す。
@@ -717,6 +719,17 @@ def resolve_condition_v2(
     # unit=パック系(UN0003) かつ R4b で FLAG_SINGLE になった行を Searched pack に変換する。
     # GAS 実測: basisDist R5=60件、UN0003 の Searched pack=61件（残1件はキーワード直接マッチ）。
     if kubun == "パック系":
+        # Only the pack default can consult memo; explicit state/name wins above.
+        for entry in cond_entries:
+            if entry["code"] != "CN0007" or entry["priority"] <= 0:
+                continue
+            if not app_kubun_matches(entry["app_kubun"], kubun):
+                continue
+            search = [k.strip() for k in entry["search_kw"].split(",") if k.strip()]
+            exclude = [k.strip() for k in entry["exclude_kw"].split(",") if k.strip()]
+            hit, keyword = match_keyword(raw_memo, search, exclude)
+            if hit:
+                return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
         cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
         return ("Searched pack", cid, b4_prefix + "R5:パック既定")
 
@@ -874,17 +887,20 @@ def _expand_note_label(template: str, match: re.Match[str]) -> str:
     return re.sub(r"\$(\d+)", replace_group, template)
 
 
-def build_note_ja(raw_memo: str, note_entries: list[dict]) -> Optional[str]:
-    """LITERAL/REGEX 札にマッチした日本語ラベルをカンマ連結する。"""
-    if not raw_memo or not note_entries:
+def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "") -> Optional[str]:
+    """Memo-only legacy notes; STATE_LITERAL explicitly also reads state."""
+    if not (raw_memo or raw_state) or not note_entries:
         return None
     norm_memo = normalize_en(raw_memo)
     labels = []
     for entry in note_entries:
         match_type = entry.get("match_type", "LITERAL")
+        if not raw_memo and match_type != "STATE_LITERAL":
+            continue
         if match_type != "REGEX":
+            note_input = f"{raw_memo}\n{raw_state}" if match_type == "STATE_LITERAL" else raw_memo
             hit, _ = match_keyword(
-                raw_memo, entry["search_keywords"], entry["exclude_keywords"]
+                note_input, entry["search_keywords"], entry["exclude_keywords"]
             )
             if hit:
                 labels.append(entry["label_ja"])
@@ -1103,6 +1119,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         norm_condition = apply_field_normalization(raw_state, norm_rules.get("CONDITION", []))
         norm_status = apply_field_normalization(raw_state, norm_rules.get("STATUS", []))
         norm_memo = apply_field_normalization(raw_memo, norm_rules.get("NOTE", []))
+        condition_memo = apply_field_normalization(raw_memo, norm_rules.get("CONDITION", []))
+        note_state = apply_field_normalization(raw_state, norm_rules.get("NOTE", []))
 
         # 単位解決 v2（商品フィルタより先に実行）— 正規化済み norm_unit を使用
         unit_canonical, kubun, unit_resolved = resolve_unit_v2(norm_unit, unit_alias_to_info)
@@ -1133,7 +1151,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 状態解決 v2 — 正規化済み norm_condition を使用
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
-            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid
+            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid,
+            raw_memo=condition_memo,
         )
 
         # 数量・価格正規化
@@ -1142,7 +1161,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # C-7: 注記生成 — 正規化済み norm_memo を使用
         # GAS: buildNoteJA_ (SystemResolverV2.gs)
-        note_ja = build_note_ja(norm_memo, note_entries)
+        note_ja = build_note_ja(norm_memo, note_entries, raw_state=note_state)
 
         # ステータス解決 v2 — 正規化済み norm_status を使用
         # GAS: resolveStatusV2_ (SystemResolverV2.gs)

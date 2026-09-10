@@ -746,3 +746,34 @@ Context7はツール一覧で利用不可。PO許可済み代替として[gsprea
 補足: 上記の全量は07:30:24Zの固定1425明細。後続の新着や復旧で増える明細は別の母集団として比較する。原文を含むJSONは/private/tmpに保持しGitへ複製しない。
 
 状態の追加対照: 語を列挙する候補抽出だけでは「ダメージ(大)/(小)」を拾えなかったため、全1425件を状態判定関数で比較した。保存済みの最終単位を固定した局所再現は1425件不一致0。備考を加えると17件（Damaged caseへ14件、Damaged sealed boxへ2件、Opened boxへ1件）が変化し、他1408件の状態は不変。各17件の原文行範囲も直接読み、損傷/開封表記を確認した。これは全解析パイプラインの再現ではないため、単位再計算・否定文・別商品の備考混入などの回帰検証は残る。17件を次の設計用候補として `/private/tmp/line-state-memo-all-function-contrast.json` に保存。前記3件を含む拡張結果であり、3+17件とは数えない。伝票/テープ跡の2件の定義は引き続き未確認。
+
+
+## 2026-09-10 #3403復旧後の抽出完了と配信前確認
+
+- PR #3403: GitHubでMERGED、2026-09-10 17:43:53 JST、merge SHA 3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1feを直接確認。Deploy to VPS 34456746721 success。後続の本番HEAD d715d998（#3407）はdocs-only差分、deploy34459619587 success。/api/healthはstatus ok、database/redis/celery connected。誤って/healthを照会した404は正規の健康確認結果には使わない。
+- 本番2jobはmigration所定のerror・復旧マーカー。原本active/superseded、items0を再照合し、既存retry_extractionへ有効job bfa07018-9b34-42b6-990a-017e3c1cf140だけを渡した。応答enqueued1/skipped0。無効旧job6da3ca68-651e-4ff6-8316-1c9135508ad2はerrorのまま再実行していない。
+- workerのTCG_AUTO_ANALYZE=1を直接確認。対象jobは2026-09-10 18:28:22 JSTにdone、prompt raw-extraction-v3-work-p1。18明細・18解析、全件name-first-v3-work、error_message NULL。後続確認で未完了jobs0/analysis_runs0。
+- 原文と18明細を照合。商品名・価格・数量の抽出を確認し、2件の状態/備考問題を検出した。これを全体精度100%としない。PSA数量600と括弧内40×16の不一致は原文自体の記載であり、AIが推測で補正しない。該当行はFLAG_SINGLEかつ単位未確定で配信対象外。
+- 2026-09-10 18:28:49 JST、3接続（山崎涼太郎・無料トライアルシート・配信テスト）の在庫集計の値/数式を退避。接続ID・spreadsheet ID・tabが先行退避と全件一致、各674行＋12列ヘッダー、3接続の値一致、数式0。include_flag_single=falseを確認。新たな配信予定445行。旧674との差は異なる時点/対象のため精度改善率に換算しない。
+
+### 配信前に見つかった2件
+
+| 商品 | 原文/抽出 | 現在の配信値 | 訂正候補・状態 |
+|---|---|---|---|
+| PM0268 4周年!四皇トレジャーゲット キャンペーンパック | raw_memo=※未サーチ品 | condition=Searched pack、note=未サーチ | CN0007 Unsearched packが実マスタに存在。備考を状態入力とした純関数対照でSearched→Unsearchedを確認。実DB値は未変更 |
+| PM0141 新たなる皇帝 | raw_state=伝票剥がし跡あり | condition=Case、note=NULL | 「通常カートン＋備考へ原文記載」か「傷ありカートン＋備考へ原文記載」かをPOへ1問提示、回答待ち。定義を推測しない |
+
+明細ID: PM0268=43da051f-e482-4e85-8ced-7f09154b7a0a、PM0141=d9d46717-6cd6-4fa4-9159-084ac342d799。いずれも有効source afbc08d1-cf3b-43be-87e5-4b7200144b6c配下。個別の訂正を行うなら対象ID、原値、原文、条件UUID、変更行数、訂正履歴、再解析時の保持/再発まで明記した設計と正規カードが必要。
+
+原因実物: tcg_analyzer_svc.py:678の状態入力はstate+nameだけ、:719のパック既定はSearched pack、:1145の注記入力はmemoだけ。tcg_distribution_svc.py:215,218は解析結果の状態/注記を直接配信する。item_corrections_svc.py:54以降で配信元へ反映するのはproduct_idだけ。条件訂正を保存しても配信元を直したことにはならない。
+
+検証の区別: rootが本番ジョブ/原文/18解析/3シート退避/条件マスタと純関数対照を直接実行。既存実装担当はコード読取だけで、別の状態/注記訂正経路がないことを回答。新しい実装・本番訂正・配信を実行した報告ではない。調査途中の誤ったテーブル名とSyncSessionLocal importは失敗し、本番変更なし。実在するconditionsと_get_sync_sessionをコードで確認して読取を完了。
+
+ローカル証拠（原文/シート実体は公開gitに入れない）: /private/tmp/line-recovery-retry-preflight.json、line-recovery-retry-receipt.json、line-recovery-raw-and-state.json、line-recovery-condition-master.json、line-three-sheets-pre-distribution.json、line-recovery-pre-distribution-verification.json、line-recovery-final-job-check.json。
+
+現在地: マージ/本番反映/有効1件再解析完了、3接続退避完了、配信未実施。次の一手: POに提示した状態分類1件の回答を受け、原文に沿う状態/備考の訂正経路を設計・検証してから3接続へ配信。安全装置#8/#8bの解除・DB直書きによる迂回・不明な分類の創作は行わない。以前の「GO #3403待ち」は当時の記録であり現在の停止理由ではない。
+
+
+### 配信前2件のPO決定と限定設計（2026-09-10）
+
+PO原文「通常カートンだがNOTE_JAに記載」を受領。伝票剥がし跡ありはCase維持・NOTE_JAへ記載と確定。状態/備考の全件参照案204変更に対し、限定案は1443明細中2変更/1441不変、既存再現不一致0、否定を含む11対照成功。実マスタ73行のNJ041伝票跡を保持し新NJ079にSTATE_LITERALを設定する案、CN0007の否定除外追加を設計§13へ記録。自己審査APPROVEは限定設計だけで、実装試験/配信完了を意味しない。証拠 /private/tmp/line-condition-note-focused-contrast.json。純関数対照の範囲・今後の実DBパイプライン試験を区別した。
