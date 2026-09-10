@@ -256,3 +256,11 @@ Context7は利用可能ツールに存在せず、PO許可済みの公式資料�
 修正後HEADd6da86d3のrun34459910899/job102815014890は、nginxに同一443ポート公開を2回指定した箇所でaddress already in use。ネットワーク設定処理まで進んだがassertion0件。TLSの2serverを内部443/444に分けて公開するfixtureへ修正する。createでID取得後にstartする手順に分け、起動失敗時にも自作containerのIDを保持して後始末する。製品構成の変更ではない。
 
 HEAD6b38e094のPR試験run34460163845/job102815839208（GitHub試験merge SHA24ad0ec6）は、受付拒否・更新・不正reload・起動失敗検出まで進み、復元後restart TLSでConnectionRefused/timeout。起動前に記憶したランダム公開ポートを再利用していた。再起動後のinspectを再取得・同じ公開範囲検査を実施し、前後の値を結果へ残して原因を照合する。失敗時点のログだけで再起動後のポート値は確認できておらず、タイムアウト延長で代用しない。
+
+### Linux/Docker実測結果と差分審査（2026-09-10）
+
+HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job102816671239は99/99 assertion成功、errors0、exit0。設計担当がActionsログの結果JSONを直接取得して確認した（他者の報告だけではない）。Docker28.0.4、Python3.12.14、nginx1.31.1 digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。
+再起動前app/api公開ポート32769/32770、再起動後32773/32774を実測。前回の古い接続口再使用が整合しないことを確認し、再取得で復元後TLSと拒否維持が成功した。
+同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
+根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
+試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。

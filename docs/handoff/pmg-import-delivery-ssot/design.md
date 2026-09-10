@@ -763,3 +763,11 @@ Architect自己審査: APPROVE（本節の隔離試験実装だけ）。根拠�
 公式仕様確認: Context7利用不可のため2026-09-10に https://docs.docker.com/engine/storage/bind-mounts/ と https://nginx.org/en/docs/control.html を直接確認。
 
 試験ネットワーク補足（2026-09-10）: Docker28.0.4のinternal networkは外部接続設定を行わず、初回CIで公開ポートを取得できなかった（recon同日節）。通常の専用bridgeを使い、公開先を127.0.0.1に限定する。外向き通信の遮断保証は設けないが、試験の送信先はlocalhostと架空処理先に固定し、実資格を与えない。必須assertionは維持する。この試験fixture修正を自己審査APPROVEとし、製品設計REVISEは維持する。
+
+### Linux/Docker実測結果と差分審査（2026-09-10）
+
+HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job102816671239は99/99 assertion成功、errors0、exit0。設計担当がActionsログの結果JSONを直接取得して確認した（他者の報告だけではない）。Docker28.0.4、Python3.12.14、nginx1.31.1 digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。
+再起動前app/api公開ポート32769/32770、再起動後32773/32774を実測。前回の古い接続口再使用が整合しないことを確認し、再取得で復元後TLSと拒否維持が成功した。
+同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
+根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
+試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。

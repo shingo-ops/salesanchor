@@ -1963,3 +1963,5 @@ PMG切替設計の未確認条件を検証する隔離便。正本: docs/handoff
 PO実装担当指定「codex terra」、マージ/デプロイ指示と作業場所例外「許可する進める」を区別して記録。製品設計REVISE、試験実装だけ自己審査APPROVE。Terraの旧コルーチン取消試験14/14成功を設計担当が再実行確認。Docker検証は実装/CI待ち。本番状態変更なし。
 
 PMG追補: 17:41 JST、本番読取で既往running2件のID一致・items0を確認。応答worker1台のactive/reserved/scheduled各0。DB更新/配信なし。Terra利用上限停止によりDocker試験は未完成・未提出。詳細は上記recon末尾。
+
+PMG追補: PR #3408 HEAD879aa1f4、Actions run34460419959/job102816671239を直接確認しDocker試験99/99成功・errors0。試験差分審査APPROVE、製品設計REVISE/画面未完成。失敗3段階と修正根拠・版/digest・結果zip hashは上記design/reconのLinux/Docker実測結果節。マージ/自動deployは次の確認対象。
