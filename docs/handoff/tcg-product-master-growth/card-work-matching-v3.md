@@ -94,4 +94,6 @@ Gemini実測の認証が利用できない場合は認証情報を探索・開�
 
 一時計測の検証修正: ff8098eeのCIは2425 passedだが、xdistによりcapsys.disabledの集計stdoutが残らず、8件正解と未実施を区別できなかった。既存artifactは0件。設計側指示で安全な集計JSONをUserWarningへ変更し、最大6メッセージの再計測を1回だけ行う。初回集計は取得不能として保存し、2回呼び出した可能性を隠さない。
 
+最終実測記録: EV-20260910-LINE-ACCURACY-08の追補を参照。既存CIのPostgreSQL統合6テストを含む2424 passedを確認。Gemini実測2（6b489af4 / run34426443315）は匿名8明細中、作品特定7＋不明保持1が期待どおり、誤分類・形式失敗・欠落・過剰・API失敗0。初回ff8098eeは集計取得不能で母数に含めない。一時計測除去SHA b2700dd0dd04f3ad0e5733d902f3d6980bc8e2ec。rootは指摘修正とGitHub生集計を読み取り確認済み。最終CIと新PR固有GOは別の状態として管理する。
+
 END OF CARD
