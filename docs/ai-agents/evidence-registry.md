@@ -2086,3 +2086,7 @@ Deploy to VPS run34478228420/job102874182347はsuccess。事前DBバックアッ
 証拠: /tmp/reports/TH-L1-3404-MERGED.json、TH-L1-3404-MERGE-PROOF.json、TH-L1-3404-GO3-CHECK.json、TH-L1-3404-GO3-MERGE.txt、TH-L1-3404-DEPLOY-FINAL-RUN.json、TH-L1-3404-DEPLOY-JOBS.json、TH-L1-3404-PROD-VERIFY.txt、TH-L1-3404-PROD-STATE.txt、TH-L1-3404-API-HEALTH.json、TH-L1-3404-RESULT.json。
 
 L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapperでL1worktree/ローカルbranchを整理、公式ledger-lookupでDONEを確認。GOフロー設計PR #3418は別テーマとして未マージ、全体設計REVISE、ガード/委任経路は未実装のまま。
+
+## EV-20260910-GO-ACTIVATION-IDENTITY
+
+PO/repoの数値IDとworkflow runのactor/triggering_actorを直接照合。根拠 /tmp/reports/TH-GO-PO-IDENTITY.json、TH-GO-REPO-IDENTITY.json、TH-L1-3404-DEPLOY-FINAL-RUN.json。正式委任の開始時本人操作案と再実行/期限境界をdesign.mdへ追記。全体REVISE、代理GO未有効。

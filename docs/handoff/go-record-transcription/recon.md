@@ -443,3 +443,7 @@ Deploy to VPS run34478228420/job102874182347はsuccess。事前DBバックアッ
 証拠: /tmp/reports/TH-L1-3404-MERGED.json、TH-L1-3404-MERGE-PROOF.json、TH-L1-3404-GO3-CHECK.json、TH-L1-3404-GO3-MERGE.txt、TH-L1-3404-DEPLOY-FINAL-RUN.json、TH-L1-3404-DEPLOY-JOBS.json、TH-L1-3404-PROD-VERIFY.txt、TH-L1-3404-PROD-STATE.txt、TH-L1-3404-API-HEALTH.json、TH-L1-3404-RESULT.json。
 
 L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapperでL1worktree/ローカルbranchを整理、公式ledger-lookupでDONEを確認。GOフロー設計PR #3418は別テーマとして未マージ、全体設計REVISE、ガード/委任経路は未実装のまま。
+
+## 2026-09-10 正式委任の識別情報を実測
+
+PO id246949427、repo id1192164258をGitHub APIで確認。実deploy runのactor/triggering_actorはともにshingo-cc id239116221で、PO本人有効化とは区別。公式context仕様の再実行時の差を確認してdesign.mdへ型・時刻境界・復旧の試験案6件を追記。新機能実装/外部変更0件。
