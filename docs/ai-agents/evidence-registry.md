@@ -2122,3 +2122,7 @@ PO原文「セッション上で委任した時点でGOを出せる権限を移�
 ## EV-20260911-GO-DELEGATION-PROOF
 
 本セッションの元委任user記録2026-09-10T12:11:22.302Zを読取。受信記録基準の24時間は翌12:11:22.302Zまで、再確認で延長しない。生ログ全文ではなく関連3発話と各行hashをreconへ保存。hashは本人認証ではない。委任判定19ケース/重複登録4条件成功、期限比較変異を検出。designに独立した承認処理と本番失敗後の復旧枠を具体化。全体自己審査REVISE、実App/検査実装未実施。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-DELEGATION-SOURCE.json、TH-GO-DELEGATION-MODEL-RESULT.json。
+
+## EV-20260911-GO-BOUNDARY-RECOVERY
+
+制御repo独立起動・Issue転記受付・状態正本への限定書込の案をdesignへ具体化。既存wrapperはActions時exit0、GO/予約照合なし。sandboxはpullのみで実機変更可能とはしない。復旧モデル8状態/9遷移で通常列へ戻る7操作経路を確認、誤解放変異を検出。全体自己審査REVISE・実装/設定変更0件。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-RECOVERY-MODEL-RESULT.json。

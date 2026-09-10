@@ -705,3 +705,68 @@ print(json.dumps({'decision_cases':results,'idempotency_assertions':4,
                             'No API, parsing, durable concurrency or credential tests.',
                             'Synthetic GO input is not an issued GO.']},ensure_ascii=False,indent=2))
 ```
+
+## 2026-09-11 承認受付・権限と復旧枠の確認
+
+preflight成功、作業開始時tracked clean、HEADはorigin/main比10 ahead/0 behind。sandbox GET結果は /tmp/reports/TH-GO-BOUNDARY-SANDBOX.json: repo_id1363676622、public、pullのみ、push/adminなし。merge wrapperを直接読み、CI時exit0とGO/予約検査なしを確認。
+
+Context7公開ツール0件のため公式資料で代替（2026-09-11 JST）。[issuesイベント](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#issues) はdefault branch上workflowから起動、[GITHUB_TOKEN](https://docs.github.com/en/actions/concepts/security/github_token) はworkflowのあるrepoに限定、[permissions構文](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions) は指定外をnoneにする。この仕様から独立起動+読取資格の設計案を作成。実際の書込拒否/Issue受付成功は未検証。外部企業の成果事例はこの権限仕様の根拠に使わない。
+
+復旧モデル実行exit0、8状態/9遷移、復旧後通常列への7操作経路、変異版の誤解放を検出。SHA256 31391c1805bf37ea17f6b36ea0ac2bf3eaf071b8781cdb18da759a6dbc2824a4。実機成功ではない。再現ソース:
+
+```python
+"""Abstract recovery design, no credentials, network or product changes."""
+from collections import deque
+import json
+# phase, active, unresolved transport, waiting normal tickets
+START=('UNKNOWN','original',True,('normal1','normal2'))
+def edges(s,unsafe=False):
+ p,a,u,q=s
+ if p=='UNKNOWN':
+  yield 'confirm_failure_and_all_runs_stopped',('BLOCKED',a,False,q)
+ if p=='BLOCKED':
+  # Abstract prerequisites: distinct repair approval, CI and exact-head GO verified.
+  yield 'approve_and_transfer_shared_slot',('FIX_READY','repair',False,q)
+ if p=='FIX_READY':
+  yield 'persist_send',('FIX_IN_FLIGHT',a,True,q)
+  yield 'premerge_failure',('BLOCKED','original',False,q)
+ if p=='FIX_IN_FLIGHT':
+  yield 'confirm_merge',('FIX_DEPLOY',a,False,q)
+ if p=='FIX_DEPLOY':
+  yield 'confirm_deploy_failed',('BLOCKED','original',False,q)
+  yield 'confirm_deploy_and_actual_revision',('VERIFIED',a,False,q)
+ if p=='VERIFIED':
+  # Explicit restart decision after root-cause verification, not health alone.
+  yield 'save_restart_decision',('RESUMED','none',False,q)
+ if p=='RESUMED' and q:
+  yield 'normal_head_acquires',('NORMAL',q[0],False,q[1:])
+ if unsafe and p in ('UNKNOWN','BLOCKED','FIX_IN_FLIGHT','FIX_DEPLOY'):
+  yield 'BUG_normal_starts_while_blocked',('NORMAL',q[0],u,q[1:])
+def violation(s,trace):
+ p,a,u,q=s
+ if u and p not in ('UNKNOWN','FIX_IN_FLIGHT'):
+  return 'unknown_operation_released'
+ if p=='NORMAL' and 'save_restart_decision' not in trace:
+  return 'normal_released_without_recovery'
+ if p!='NORMAL' and q!=START[3]:
+  return 'waiting_order_changed'
+ return None
+def explore(unsafe=False):
+ pending=deque([(START,[])]);seen={START};count=0;success=None
+ while pending:
+  s,t=pending.popleft()
+  error=violation(s,t)
+  if error:return dict(valid=False,error=error,trace=t)
+  if s[0]=='NORMAL':success=t
+  for event,n in edges(s,unsafe):
+   count+=1
+   if n not in seen:seen.add(n);pending.append((n,t+[event]))
+ return dict(valid=True,states=len(seen),edges=count,recovery_to_normal=success)
+safe=explore();mutant=explore(True)
+assert safe['valid'] and safe['recovery_to_normal']
+assert not mutant['valid']
+assert safe['recovery_to_normal'][-1]=='normal_head_acquires'
+# Removal of the repair lane recreates the stopped-queue dead end.
+assert not any(event=='normal_head_acquires' for event,_ in edges(('BLOCKED','original',False,START[3])))
+print(json.dumps({'safe':safe,'mutant':mutant,'limits':['Approval/CI/revision facts assumed verified.','Atomic shared-slot transition assumed.','One incident and one repair identity; retry IDs, APIs, and real CAS excluded.']},indent=2))
+```
