@@ -2057,3 +2057,7 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 ## EV-20260910-GUARD-ENFORCED
 
 2026-09-10、POの管理アカウント利用GO後、shingo-opsのadmin=trueを確認してruleset15777895へguard-authoring/evaluation（GitHub Actions15368）だけ追加。既存12件・strict・適用先・例外0件を保持。設定前後JSONと実イベント証跡は docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md から参照。未報告BLOCKED、評価欠落0b532e9fは必須FAILURE/BLOCKED、復元fb083494は13必須SUCCESS/CLEAN。試験#3405は未マージ閉鎖。設置#3401は23413b10でマージ・deploy34452331125成功、実配備SHAとHTTP200を確認済み。自己審査APPROVE、独立第二者レビューではない。既往失敗を保持し、製品画面・実データ取り込みの完了とは区別。
+
+## EV-20260910-GO-REV3-PR
+
+設計草案PR #3418提出をAPIと登録ファイルで確認。初回HEAD0546b8b8、文書6ファイルのみ。自己審査REVISE・実装未着手・委任未有効。証拠 /tmp/reports/TH-GO-REV3-PR-CONFIRM.json。

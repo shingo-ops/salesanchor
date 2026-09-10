@@ -176,3 +176,7 @@ POの委任依頼を受領。実物モードはLINE限定・代理GO未有効で
 ## 2026-09-10 委任範囲の追加確認
 
 GO制度そのものを含む委任の意図をPOが確認。対象確認を再要求しない。正式有効化/代理GO経路は未整備。design.md冒頭に現在の合意・実物・残件と実装前の順序を集約。deploy.ymlが実行時origin/mainへ更新する実測制約を追記。全体REVISE、文書草案提出の準備中。
+
+## 設計改訂3の提出（2026-09-10）
+
+https://github.com/shingo-ops/salesanchor/pull/3418 を作成し、.pr-numberとhead指定検索で一致確認。初回HEAD0546b8b86358a2d5d182dab9b39de829d01dd7a9。差分は設計・調査・台帳6ファイルのみ。card-lintのDraft禁止に従い通常PRとして提出したが、内容は設計草案、同一AI自己審査REVISE。制度実装・代理GO有効化・マージの承認を兼ねない。main由来の台帳追記は双方保持、同由来の他テーマログの末尾空白は変更せず本PR差分をmain基準で検査。検査ログは /tmp/reports/TH-GO-REV3-PR-CARD-LINT.txt、TH-GO-REV3-PUBLISH-DESIGN-CHECK.json、TH-GO-REV3-FINAL-TASK-CHECK.txt。
