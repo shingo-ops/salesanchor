@@ -340,3 +340,12 @@ rootはPlanner/Architectを同一AIとして担当し、製品編集はPO指定C
 - root目視: PCの日本語一覧表、390pxの英語暗色表、工程内訳のラベルを確認。25枚の長い明細カードは一覧表へ修正済み。元の単位/状態/メモ/正規化値は行内詳細に保持。スマホでは表内だけ横スクロールしページ全体は横にはみ出さない。
 - 撮影先: `/tmp/reports/pmg-screen-completion/desktop-table-ja.png`、`mobile-table-en.png`。アプリ内スクロール/固定ナビの影響で画面外要素を含むelement/fullPage画像は目視合格の根拠に用いず、対象を実際にスクロールしたviewport画像を使用する。
 - 配信画像の初回は試験のmock不足で404表示となった。配信成功系/確認操作は別のE2Eで成功済み。撮影用fixtureも有効な既存API応答へ揃え、該当E2E1件成功・desktop-distribution-ja.pngの配信候補/全件配信ボタン/全体範囲をrootが再撮影画像で確認済み。
+
+### PR3416リリースの一次情報
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3416 。最終head6459e7ca、MERGED17ebe93f、mergedAt2026-09-10T12:24:21Z。最終検査37success/8skip。
+- GO記録後の検査でDesktopShell.tsxの省略引用が不在判定になったため、実在するfrontend/src/components/DesktopShell.tsxへ修正。正式process-artifacts全検査をローカルとCIで通過。製品コード変更なし。
+- deploy run34476536034/job102868559798 success。実ログ2026-09-10T12:25:06ZのHEAD17ebe93f、12:27:27ZのDeployment completed successfullyを照合。事前バックアップ/Finalize/Verify success、SA-19 smoke skipped。
+- 公開Appのindex-i0HIAxuW.jsのSHA256 adc6e6c79bf4adb70f057fce2552b2fce1a3cca9e0629616984ba50c87e46f3b。pmg-workflow__table/distributionScope/import_job_idの存在を確認。https://api.salesanchor.jp/api/health はok/database connected/redis connected/celery connected。
+- Python標準urllibはローカルCA設定不足でTLS検証に失敗した。証明書検証は無効化せず、OSの証明書を使用するcurlで正常取得した。
+- UIの操作試験はローカル模擬APIの5件。稼働環境では公開ファイル/health/配備ログを確認し、管理者の実データ操作や実配信を実行したとは称しない。
