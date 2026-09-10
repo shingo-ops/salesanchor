@@ -723,3 +723,24 @@ PO原文「GO #3400」を受領しPR本文へ転記。追加原文「› 次に�
 ローカル実行証拠（生原文・接続IDをGitに含めない）: `/private/tmp/line-reanalysis-before.json`、`line-reanalysis-after.json`、`line-reanalysis-diff.json`、`line-reanalyze-execution.jsonl`、`line-reanalysis-verification.json`、`line-distribution-attempt.json`、`line-loop-worker-inspect.json`。各ファイルは/private/tmp配下。今回の調査・実行はrootによる直接確認であり、独立した第二者レビューとは称さない。
 
 文書検証: git diff --check、bash scripts/check-task-state.shは成功。次の復旧案は未承認・未実装のため、復旧機能の試験成功や設計合格は宣言しない。
+
+## 2026-09-10 復旧実装中の並行確認
+
+前節の復旧方針にPO原文「進める」、追加原文「› › 次に進む、また離席するのでPRマージとデプロイまで進めてくれ」を受領。07:38:28Zに2件の同一性・running・items0を再確認。無効sourceの後継ID、有効sourceの後継NULLも確認。workerのactive/reserved/scheduledは各0。設計§12を自己審査APPROVE、正式カード検査後に既存実装担当へ渡した。実装PRは https://github.com/shingo-ops/salesanchor/pull/3403 。本番直接更新・permit発行・追加エージェントはない。
+
+### 配信前検証の準備
+
+既存サービスの認証経路で全3接続を読み取り、ID・在庫集計タブを照合。3シートともデータ674行・12列（ヘッダ含む675行）で値は完全一致。SHA256は `1fa4605ca28c175759631271b1141640fbf20c4524afa55603b188a2453e8564`（JSON UTF-8・ensure_ascii=False・区切り空白なし）。式として取得したセルで先頭=は0件。退避先は `/private/tmp/line-three-sheets-before.json`。現時点の配信候補は432行だが未完了1原文の復旧前プレビューであり、最終配信件数ではない。既存674行との母集団・時点が異なるため、その差を今回修正による減少と断定しない。配信直前に再度対象・内容を確認して退避する。
+
+Context7はツール一覧で利用不可。PO許可済み代替として[gspread公式Worksheet資料](https://docs.gspread.org/en/latest/api/models/worksheet.html#worksheet.get_all_values)で読取メソッドを確認。表示資料は6.1.2、本番実物は6.2.1のため本番inspect.signatureでもvalue_render_option/pad_values等の対応を照合した。UNFORMATTED_VALUEで値、FORMULAで式を退避した。書き込みは行っていない。既存配信は全targetへ同じ12列をRAWで渡すため、配信後は3シート間の一致と、配信対象行の多重集合を照合する（同順位行の順序だけで誤判定しない）。
+
+### 次周の商品名15件・状態候補5件
+
+- 再解析後の全1425明細に対し、確定BOX商品かつ名称/状態/備考にSAR/AR/PSA/BGS/CGC/ARSの表記を含む行を再検出。該当15行は全て前節のトウホク/フクオカPSA6〜9、raw_unit=枚、condition=FLAG_SINGLE。既存配信設定では対象外。
+- 実コードtcg_analyzer_svc.py:323〜344は「箱系」単位のときだけBOX商品に絞り、それ以外は全候補を返す。DBの「枚」aliasはPiece/単品系。単位が枚でもBOX候補が残ることを確認。単位フィルタの全区分への変更は今回の復旧範囲外。
+- 辞書案はPM0182/PM0189へPSA除外各1件。現在DBの判定再現は1425/1425不一致0。対照では対象15件のみNONE、他1410件不変、正式名称293件の判定変化0、名称/状態/備考×PSA/PSA6/PSA10/psa9/非該当部分文字列の36対照が全成功。`line-psa-expanded-contrast.json`へ保存。これは読み取りの対照結果であり、新たな本番辞書変更ではない。
+- 状態の全量候補抽出では、Sealed box/Caseなのに名称/状態/備考に開封・損傷等の表記がある5行を検出。3行は既存状態辞書の語が備考にあるが、状態判定へ備考が渡されず通常BOXになる。既存関数の局所比較で、OP-17の凹み/破れ2行はDamaged sealed box、プレシャスコレクターボックスの検品開封1行はOpened boxとなる。現在保存の判定と局所再現は5/5一致。対象ID・根拠は `line-state-memo-contrast.json`。
+- 残る2行は「箱にテープ剥がし跡」（商品未確定）と「伝票貼り付けあり」（商品確定）。現在状態マスタに該当語がなく、備考追加だけでも状態は変わらない。これらを損傷扱いにする事業上の定義は未確認。PO判断なしの語追加をしない。
+- 備考を状態判定へ一般適用した場合の正常例・否定文・送料/免責文・区分間の影響は未検証。局所3件の改善だけで全体設計合格を出さない。状態の本番修正は未実施。
+
+補足: 上記の全量は07:30:24Zの固定1425明細。後続の新着や復旧で増える明細は別の母集団として比較する。原文を含むJSONは/private/tmpに保持しGitへ複製しない。
