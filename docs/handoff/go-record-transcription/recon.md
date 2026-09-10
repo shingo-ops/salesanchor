@@ -183,3 +183,28 @@ bypass_actorsフィールドは返らなかった。公式APIはrulesetへのwri
 L1のpytest20 passed等は他者報告であり本セッションの実行結果ではない。マージスクリプトの本番実行、GitHub設定変更、製品テストは実施していない。
 
 作業報告の保存先は/tmp/reports/TH-GO-SCOPE-AGREEMENT-20260910.txt、TH-GO-FLOW-RESUME-20260910.txt、TH-GO-FLOW-DESIGN-RECON-20260910.txt。環境依存ファイルのため、本節に再調査できるコマンドと主要結果を残す。
+
+## 2026-09-10 改訂2の追加調査
+
+基点: 87e5748b1dab5b062f991a263fa6ac692653877d。Context7は利用不可、起動指示の許可に従いGitHub公式を直接確認。作業報告は /tmp/reports/TH-GO-REV2- 接頭辞で保存。
+
+- gh pr view 3388: MERGED、mergedAt=2026-09-10T01:09:40Z、mergeCommit=5316315fa1356d637a54d23ac2ad7ffe270260fd。台帳IN_PROGRESSの残存と文書マージ済みを区別する。他セッションのrelease/ledger-done-3388があるため旧作業行の変更は重複して行わない。
+- gh api repos/shingo-ops/salesanchor/rulesets/15777895: active、current_user_can_bypass=never、bypass_actors非表示。repo API: owner.type=User、permissions.admin=false/push=true。例外一覧は未確認。秘密値の取得・認証切替なし。
+- scripts/check-process-artifacts.js:265 と scripts/check-process-artifacts.js:293: パースと検証は純粋関数として既に分離。発行者は部分一致、日時は存在確認、GOは部分正規表現。厳密化の必要性は残る。
+- .github/workflows/process-artifacts-gate.yml:9: editedを既に含む。同ファイル:29ではPR側checkoutでスクリプトを実行するため、新しい特権入口へそのまま転用しない。
+- docs/adr/ADR-136-cc-bot-github-identity.md:49: チャットGO方式が正規。GitHub Approveの必須化を復活させる設計ではない。関連runbook shingo-cc-bot-setupは旧セットアップの手順で、専用Appの稼働記録ではない。
+
+公式仕様（全件2026-09-10参照、外部導入事例ではなくAPI/機能の契約）:
+
+1. [merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request): 同期mergeはshaを条件指定できる。本文の版一致条件は公開パラメータにない。GET→mergeの間の本文編集を原子的に排除できないという判断はこの契約からの推論。
+2. [workflow_dispatch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch): branch/tagを指定して起動できる。mainにファイルがあるだけでは実行refを制限できない。
+3. [Environment設定](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments): Branch/Tag型を分けて許可し、保護条件成立後に限定secretを使用できる。公開個人repoで利用可。個人repoで設定する主体は所有者。
+4. [Environmentのref制限](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments): GITHUB_REFを対象に制限する。Protected branches onlyは保護branch未設定時に全許可になるため、この案ではBranch型mainの明示指定を検討する。
+5. [App認証](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation): installation tokenは対象repoと権限を絞れ、1時間で期限切れ。鍵そのものの更新運用とは区別する。
+6. [特権workflowの安全な利用](https://docs.github.com/en/actions/reference/security/secure-use): 未信頼のPRコードcheckoutを特権処理で実行しない。
+7. [Ruleset API](https://docs.github.com/en/rest/repos/rules#get-a-repository-ruleset): bypass_actorsはrulesetへのwrite権限がある場合のみ表示。非表示を例外なしと扱わない。
+
+7観点の差分: 目的=GO確定境界が残課題、画面=通常マージ拒否候補、データ=GOの確定記録候補、処理=main限定専用job候補、外部=App/Environment/Ruleset、守り=ref/資格隔離と否定試験、運用=POの鍵管理受諾・取消期限未合意。設計はdesign.md改訂2へ接続。
+実測していないもの: 新App作成、専用job起動、Environment制限、競合の実merge、workflow変更PRに必要な追加権限。製品テストも本便では実行していない。
+
+追加の観測: 改訂2提示後のPO原文「合意」を受領。直前に提示したAの取消期限への合意としてREADMEへ逐語保存し、design.mdの受入条件に反映。追加の実機試験は行っていない。
