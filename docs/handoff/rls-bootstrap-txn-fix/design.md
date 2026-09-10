@@ -124,3 +124,34 @@ How: PostgreSQL部分のseed2件・category要求・期待値と説明を正規c
 受入条件: 元の実PG3件が成功し、2件のポケモン商品存在・遊戯王除外・内部情報非公開を維持。全CIが当該HEADで成功する。
 自己審査APPROVE（同一AI）。根拠はreconの正本SQL・APIの等値比較・CIの3エラー。元の2ファイル限定案からテスト1ファイルを追加したことを明記する。
 失敗時はマージ保留。盲目的な再実行は行わない。
+
+
+## 2026-09-10追補: inventoryテストの共有DDLを同じロックで保護する
+
+### 目的・Why・範囲
+
+PR #3401のCI job102738726326で、public.suppliers作成時にpg_type_typname_nsp_index重複が1件発生（2435成功/93skip）。同一backend treeの直前jobは成功。正確な競合相手はログだけでは未確定。
+共有DDLを行う4経路が既存public_bootstrap_lockへ参加していないことは実物で確認。POは追加の別PR修正とマージ・デプロイを本チャットで指示した。GO #3401を別PRの番号付きGOに書き換えない。
+対象はbackend/tests/のtest_inventory_parser_real_samples.py、test_inventory_sprint1_migrations.py、test_products_tcg_type_fk.py、test_inventory_aggregated.pyと新規test_inventory_bootstrap_lock.py。製品・本番migration・CI・共通ロック実装は変更しない。
+
+### 実装契約・代替案・弊害
+
+- parserの_ensure_inventory_schema、sprint1の_apply_public_migrations、productsの_bootstrap_public_productsを、既存public_bootstrap_lock(engine)で囲む。
+- aggregatedは準備用eng.beginより前に同じロックを取り、transaction完了後に解放する。yield後のテスト実行・cleanupまで保持しない。
+- 独立transaction・既存DDL・既存assert・例外判定の意味を維持。SQLSTATE23505を無視する対処や再実行で緑を引く対処は採らない。
+- 4経路のDDL準備を直列化するため並列速度が落ちる可能性がある。全pytestを直列化せず、共有領域の準備だけを保護する。
+- 既存ロックは別接続を1本使う。4経路のengineはpool_size/max_overflowの制限を指定していない。今後pool_size=1/max_overflow=0へ変更するなら接続枯渇を再評価する。
+- 解消できるのは同ロックへ参加する経路同士の競合。すべてのDB競合が解消したとはしない。
+
+### 検証・維持・自己審査
+
+| 条件 | 検証 |
+|---|---|
+| 4経路がtransaction開始前からDDLまで同じロックを持つ | 実関数ASTを隔離ロードし、ロック所有を要求する接続で確認 |
+| 例外時にも解放し、23505を握り潰さない | 各4経路に通常例外と23505を注入、同一例外が伝播しunlockまで到達（8例） |
+| 修正なしを確実に検出する | 修正前4関数を同じ検査へ通し、全4件がlock不在で拒否されることを確認 |
+| 実際のDB準備と既存機能を維持する | GitHubのPython3.12・PostgreSQLを含む全体pytestと必要CIを確認 |
+
+試作: 8直接検査成功、修正前4関数すべて拒否。/tmp/reports/INVENTORY-BOOTSTRAP-PROTOTYPE-TESTS-01.txt。Python3.14での直接関数検査であり、ローカルpytest/PGは未実行。Python3.12側にpytestは無く、ローカル成功と扱わない。
+守り手: backend/tests/test_inventory_bootstrap_lock.py。変更者が4経路と共通ロックの契約を維持する。既存specの受入assertを緩めない。
+Planner→Architect同一AI自己審査: APPROVE（上記限定修正、2026-09-10）。独立した第二者レビューではない。マージ可否は実PG/CI成功を確認後に判定する。
