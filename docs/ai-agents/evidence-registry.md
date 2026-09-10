@@ -1538,6 +1538,13 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 ```
 
 - EV-20260910-GO-FLOW-SCOPE:
+  app_form_recon: "実登録画面の項目/権限を読取照合。PEM端末ダウンロードと端末保存禁止案の不整合を発見、鍵発行停止。マージ/デプロイ依頼はGOフロー/L1の対象回答待ち。両head branchのPR検索0件。設計REVISE、外部変更なし。証拠 /tmp/reports/TH-GO-NEXT-SCOPE-RESULT.txt。"
+  sandbox_created: "https://github.com/shingo-ops/salesanchor-go-gate-sandbox を承認範囲でブラウザ作成。repo_id 1363676622、Public/main/README.mdのみをshingo-ccのGETで照合。初期HEAD a815d94c535f59fae6415b881296d64ef17bf6c7。App/鍵/設定変更なし、全体REVISE。証拠 /tmp/reports/TH-GO-SANDBOX-CREATED-VERIFY.json。"
+  browser_connection: "POの接続/作成依頼に従い利用可能なPlaywright接続でGitHub /new を開き、ログイン画面への遷移を実測。接続成功・POログイン待ち。repo未作成、資格情報読出しなし。証拠 /tmp/reports/TH-GO-BROWSER-CONNECT-RESULT.json。"
+  sandbox_creation_approval: "PO原文『進める』を初期READMEのみの公開repo1件作成承認としてREADMEへ記録。Browser必須操作ツール0件、PO画面からの作成未実施。承認不足ではない。資格切替/PO資格のCLI書込み使用なし。報告 /tmp/reports/TH-GO-SANDBOX-CREATE-RESULT.txt。"
+  preparation_card: "検証入出力・8失敗注入位置・試験PR10本/成功merge上限7本を具体化。repo初期作成手順/読取カードの限定自己審査APPROVE、全体REVISE。card-lint exit0/構文PASS、4JSON記録を実測。repo/main GET404、空きは未確認、外部作成0件。証拠 /tmp/reports/TH-GO-PREP-CARD-RESULT.txt。"
+  validation_plan: "専用repo/App/4保護ルール・権限上限・費用条件・13試験群・担当/停止条件をdesign.mdに保存。GitHub統合試験合格0件、外部作成0件。計画/全体REVISE、検証コード仕様と正式カードは未完了。参照 /tmp/reports/TH-GO-VALIDATION-PLAN-RESULT.txt。"
+  revision3: "PR #3394 MERGEDをAPI確認。GO確定JSON・保存先・保存失敗時送信禁止・結果不明時再送禁止を草案化。POの一時認証読取GO後にmain Ruleset例外0件・旧Branch Protectionなしを実測し、例外の不明は解消。通常認証shingo-ccを維持。再実行8状態・保守5項目を追補2に整理。コミット追加時はmain取り込みのみでも再GO、へのPO原文『進める』をREADMEに記録。後続PO原文『GO』で専用App方式とPO管理責任を採択。App作成/設定変更は別承認、実装未着手。状態branch案を追加しローカルGitの競合拒否等6/6確認（GitHub実機ではない）。設計自己審査REVISE。参照: design.md改訂3追補/recon.md調査記録。"
   revision2: "PR #3388 MERGEDをAPI確認。基点87e5748b。専用jobはBranch main限定Environment+App候補。本文の原子的照合はmerge APIにないためGO確定境界A/Bを提案。その後PO原文『合意』によりAの取消期限のみ採択、逐語記録はREADME。App運用や再GO等の方式全体は未採択。自己審査REVISE。詳細はdesign.md改訂2/recon.md追加調査。文書PR https://github.com/shingo-ops/salesanchor/pull/3394 はOPEN/readyで提出、マージ未実施。"
   theme: "GO記録転記・マージ前検査（既存テーマ延長）"
   evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
@@ -1594,3 +1601,37 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
 
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
+
+## EV-20260910-L1-3404-REGO
+
+POは対象を確認する質問へ「両方とも許可する」と回答。GOフロー修正とL1時刻統一のマージ・デプロイまでを対象として確定した。GOフロー設計全体のREVISE、App鍵受渡し未確定は維持する。
+
+L1は既存実装を確認しPR https://github.com/shingo-ops/salesanchor/pull/3404 を作成。対象はFedEx/SA-02のJST定数参照2ファイル（5行追加・4行削除）。PO原文「GO #3404」をHEAD e4f88d5b7bf2583c43fb3782294a6b61229e9112への承認として受領し、4欄へ転記。必須CI12件とGO転記後process-artifacts gate成功をAPIで確認した。ローカルruff/構文解析/diffチェックは成功。引継ぎのpytest20件成功は他者報告であり、今回のローカル再実行ではない。ローカルBanditはPython3.14の内部エラーがあり全静的検査成功とは扱わない。GitHub上のbackend lint/pytestは成功。
+
+マージ直前にmainがPR #3403で前進しBEHINDとなったため、マージwrapperは実行せず停止。mainを通常取り込み、de9d474aa60886a5c0563a80bd772e89de200517をpushした。差分は同じ2ファイル、5行追加・4行削除。旧GOはPR本文の過去HEAD記録へ移し、現HEADに適用しないと明記した。合意済みの再GO条件に従い、最新CI確認と再GOが必要。L1は実装済み・PR提出済み・旧HEADのみPO承認済み・マージ/本番反映未実施。設計文書はローカル草案であり改訂3のPR未提出。
+
+根拠: /tmp/reports/TH-L1-3404-AFTER-GO.json、TH-L1-3404-MAIN-RULES.json、TH-L1-3404-PRE-MERGE.json、TH-L1-3404-MAIN-ADVANCE.txt、TH-L1-3404-MAIN-SYNC-2.txt、TH-L1-3404-SYNCED.json、TH-L1-3404-PUSH-2.txt、TH-L1-3404-REGO-PENDING-EDIT.txt。マージカードはcard-lintのL31に従い追記出力へ修正後、違反0件（L24警告のみ）。
+
+## EV-20260910-GO-QUEUE-DEFAULT
+
+PO原文「それをデフォルトの設定として実装したい、ガードに追加できる？」を受領。設計保存先 docs/handoff/go-record-transcription/design.md 末尾。preflight成功、基点5386d664、origin/main読取3bdf33d5。既存merge wrapper:93-161はPR単位の追従再試行。origin/mainのguards/12-guard-authoring.mdを読み、実装時の評価契約を確認。自己審査REVISE、ガード本体/CI変更0件。次予約の解放時点をPOへ提示。
+
+## EV-20260910-GO-QUEUE-EVENTS
+
+予約番号とActionsの起動順を分離する設計推論、公式イベント仕様、追加否定試験6件をdocs/handoff/go-record-transcription/design.md末尾へ保存。Context7利用不可・公式資料代替。実機試験0件、自己審査REVISE。L1最新HEAD3e7b28b6の必須CI12/12成功は /tmp/reports/TH-L1-3404-NEXT-CI.json。再GO・マージ未実施。
+
+## EV-20260910-GO-QUEUE-DEPLOY-RELEASE
+
+PO原文「OK」は本番デプロイ成功後の次予約解放への合意。design.md末尾に提示文と原文、DEPLOY_WAIT/DEPLOYED契約、否定/正常6試験を記録。既存deploy.ymlをorigin/mainから読取。全体REVISE・製品/CI未変更。preflight証拠 /tmp/reports/TH-GO-DEPLOY-RELEASE-PREFLIGHT.txt。
+
+## EV-20260910-GO-QUEUE-PRIORITY
+
+POの失敗時返却への「合意」と緊急優先追加依頼をdesign.md現行節へ記録。契約・ガード文案・9試験を具体化、同一AI自己審査REVISE。実装0、外部設定変更0。L1 GO転記済み、main前進でBEHIND。証拠 /tmp/reports/TH-L1-3404-GO2-MSTATE.json。
+
+## EV-20260910-CXASTRAGO-SCOPE
+
+POのcxastrago同条件の委任依頼と、ローカルshell/prompt・PR #3406の草案・既存GO検査の照合をdesign.md末尾へ記録。代理GO未有効、24時間未開始。合成入力2ケースの現状検証は /tmp/reports/TH-CXASTRAGO-VALIDATOR-CHECK.json。役割切替/agent起動/代理GO発行0件。
+
+## EV-20260910-GO-DELEGATION-SCOPE-CONFIRMED
+
+GO制度変更を委任対象へ含むPO意図の確認を受領。原文と現行契約はdocs/handoff/go-record-transcription/design.md冒頭。委任正式有効化/代理GO発行は0件。deploy.ymlの実行時main取得を一次資料で確認し本番SHAの証拠限界を明記。全体自己審査REVISE。
