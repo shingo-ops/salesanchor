@@ -119,6 +119,3 @@ if (require.main === module) {
   }
   catch (error) { console.error(error.message); process.exitCode = 1; }
 }
-
-// Intentional runtime negative probe; never merge.
-module.exports.validate = () => ({ok: true, kind: "intentional-runtime-probe"});
