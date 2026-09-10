@@ -1411,4 +1411,5 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   theme: "GO記録転記・マージ前検査（既存テーマ延長）"
   evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
   observed: "2026-09-10 PO返答『合意』はGitHub画面・直接CLIのマージ制限まで含む設計範囲への合意。main=60132b058ba52f24afdb50d683a216d88f5fdd59。Rulesetの必須12チェックにprocess-artifacts gateなし。既存GO validatorの純粋関数試験5/5 PASS。"
+  publication: "文書公開・PR提出へのPO GOを受領。https://github.com/shingo-ops/salesanchor/pull/3388 をOPEN/ready、base=main、head=release/go-flow-designで確認。マージ未実施。"
   open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更・マージは未承認。"
