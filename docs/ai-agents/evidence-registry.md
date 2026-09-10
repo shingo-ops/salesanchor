@@ -1662,6 +1662,10 @@ PO原文「GO #3400」を受領・PR本文へ転記。公式マージ済み（07
 
 全3接続のrun_distributionは07:32:05Zに安全装置#8bで書込み前停止、running2件、results=[]。配信未完了。PO追加指示「↳ 不明点は推測で進めることを禁止するので停止して質問してくれ」を受け、不明な終了原因や復旧扱いを創作しない。2件を中断記録し有効1件のみ再実行する復旧案はPO確認待ち、未実装。資料: recon末尾、line-reanalysis-verification.json、line-distribution-attempt.json（/private/tmp）。
 
+### 中断2件復旧案の承認・設計（2026-09-10）
+
+前節の復旧方針にPO原文「進める」、追加原文「› › 次に進む、また離席するのでPRマージとデプロイまで進めてくれ」を受領。07:38:28Zに2件の状態・source対応・items0・有効性を再照合。design-keyword §12に対象固定、事前検証、2件のみerror記録、再投入は有効1件のみ、既存配信停止条件の維持を設計。Architect自己審査APPROVE（同一AI）、実装・機能試験未了。正式card-interrupted-jobs-recovery.mdをcard-lint成功（L24警告のみ）、task-state/diff検査成功の上、既存実装担当1名へ引き継ぐ。追加エージェントなし。
+
 ## EV-20260910-WORKTREE-PRESERVE
 
 - 対象: 作成時の既存作業場所保持指定の設計草案。
