@@ -1559,6 +1559,17 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
 
 
+## EV-20260910-WORKTREE-PRESERVE
+
+- 対象: 作成時の既存作業場所保持指定の設計草案。
+- 根拠: docs/handoff/branch-operations/recon.md / design.md の2026-09-10節。
+- base: 6e1335725bb8dfdf390125c4caf5a93f705f4821。
+- 文書保存限定の例外として専用worktreeを直接作成。UUID発行・分割台帳登録・既存の開始/所有検査がexit0。回収処理なし。
+- 設計自己審査: APPROVE（同一AI）。正式仕様承認・実装担当の作業場所・正式カード検査は未了。製品・運用スクリプト・CIは変更なし。
+- 未実施: 保持指定の機能試験、実装、マージ、本番操作。
+- 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。変更は設計・調査・台帳・根拠登録の4ファイル。実装の機能試験ではない。
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3390 （Draft、base=main、head=release/worktree-preserve-design）。公式register-pr.shで番号登録成功。ローカルprocess-artifacts gateも実diffとPR草案本文を使用してexit0。GitHub CIは別途確認する。
+
 ## EV-20260910-GUARDS-DOC — guards文書と実装の対応整理
 
 - 日付: 2026-09-10。実測基点: 6e1335725bb8dfdf390125c4caf5a93f705f4821。
@@ -1569,3 +1580,5 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - 自己審査: 文書変更の受入条件に適合。設計担当と審査担当は同一AIであり独立レビューではない。PR #3389で提出。初回HEAD e2c76412のCIは失敗・実行中なし（成功33件・スキップ9件）。pytest等の内部jobは文書変更のためスキップであり、製品テスト実行済みとは扱わない。最終マージ状態はPR #3389のmergedAt/mergeCommitで確認する。
 - 未実施: ガード追加の評価ゲート（依頼4）、商品取り込みサービスのスキーマ検査追加（依頼6）、frontend実装、tenant_001試行とtenant_004の44件取り込み。
 - 外部事例: 既存スクリプトとの文書照合で判定できる保守変更のため不要。
+
+PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみのマージ承認。製品実装・本番・後続PRの承認ではない。mainのPR #3389による別テーマの追記を保持して競合解消。

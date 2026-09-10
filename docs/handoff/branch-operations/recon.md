@@ -77,3 +77,70 @@ develop 参照を含むファイル: `.github/workflows/` と `scripts/` で計 
 ## 7. 補足
 
 本 recon は `origin/main` の実物のみを根拠とする。本店リポジトリの乗り上げ・散らかり（別途「本店リポ片付け」引き継ぎ書で管理）には触れていない。
+
+
+## 2026-09-10: 作成時に既存worktreeを保持する指定
+
+本節は、新しい作業場所を作る操作が既存の作業場所を削除する理由を確認した記録。
+親: [ブランチ運用](../../specs/branch-operations/README.md)。設計: [design.md](design.md)の同日節。
+確認対象: origin/main=6e1335725bb8dfdf390125c4caf5a93f705f4821。HEADとの差分は本調査対象の作成スクリプト・削除スクリプト・親仕様にはない。
+
+### 1. 全体像
+
+- scripts/new-worktree.sh:20-21 は第1引数をブランチ、第2引数を起動指定として読む。
+- scripts/new-worktree.sh:65-67 は作成前に reaper-worktree.sh --execute を無条件で呼ぶ。
+- scripts/new-worktree.sh:90-108 はfetch後、origin/main起点で新規worktreeを作る。
+
+### 2. 共用部品
+
+ここでの部品は作成・回収・担当台帳・所有検証のスクリプトを指す。
+- scripts/new-worktree.sh:117-156 はフック設定、UUIDと分割台帳の作成を担う。
+- scripts/validate-worktree-start.sh:61 は登録先の作業場所ルートを検証する。
+- scripts/validate-pr-ownership.sh:92 は ledger-lookup.sh で担当登録を参照する。
+
+### 3. 非共用部品
+
+- scripts/new-worktree.sh:74-87 は上限到達時にも回収スクリプトをdry-runで呼び、回収の実行を案内する。
+- scripts/new-worktree.sh:166 は第2引数が --claude の場合だけ別セッションを起動する。未対応オプションを拒否する分岐はない。
+
+### 4. ルールの所在
+
+- docs/specs/branch-operations/README.md:42 は作成の唯一の正規入口を new-worktree.sh とする。
+- docs/adr/ADR-114-worktree-auto-cleanup.md「4. フォルダを自動削除」は作成前回収を記載。ステータスはProposed（改訂）であり、旧develop等の記述は現行仕様より優先しない。
+- docs/PARALLEL_TERMINAL_GUIDE.md:102 は作成時と夜間の自動削除を記載。
+
+### 5. 維持の仕組み
+
+- scripts/tests/test-reaper-safety.sh:1-13 は削除候補判定の試験を列挙する。作成の保持指定を試すものではない。
+- .github/workflows と scripts/tests で new-worktree / test-reaper-safety / test-ledger-helpers を検索した範囲では、今回の保持指定の試験・CI登録はない。仕様追加前なので機能試験は未実施。
+
+### 6. あるべき姿との対照
+
+| 目的 | 現状 | 対照 |
+|---|---|---|
+| origin/main起点・担当登録を保つ | 現行作成処理に存在 | 一致 |
+| 今回の作成操作が既存worktreeを削除しない | 作成前に実削除を呼ぶ | 不足 |
+| 上限を超えて作成しない | 既定100、作成前判定あり | 一致 |
+| 指定ミスで削除しない | 未対応指定を拒否しない | 不足 |
+| 定期回収を継続する | 別経路の回収あり。今回変更対象外 | 維持 |
+
+### 7. ノイズと境界
+
+製品画面、配信、本番、secrets、回収判定そのものは変更対象外。過去ADRの162件等を現在値に使わない。
+本調査前の `git worktree list --porcelain` 集計は登録63件、本店を除き62件。既定上限100は脚本の値であり、同時実行下の将来件数を保証しない。
+旧作業場所の永久保持や、別プロセスによる削除防止は本指定の保証に含めない。
+
+### 今回の文書保存限定例外と実測
+
+直前の質問は「今回の設計文書保存に限り、削除を呼ばずに専用作業場所を直接作成し、識別番号・担当登録と既存チェックを揃える例外を承認しますか？」。
+POの返答原文: 「このセッションでは素人にも分かるように簡潔に話してくれ、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら
+進める」。
+設計担当はこれを文書保存限定の例外承認として受け取り、実行前にその解釈を明示した。恒久ルール変更・実装・マージのGOではない。
+
+- executor-preflight.sh: exit 0。
+- git fetch origin main: exit 0。
+- git worktree add -b release/worktree-preserve-design /Users/tanizawashingo/worktrees/salesanchor/release-worktree-preserve-design origin/main: exit 0、HEAD 6e133572。
+- 新規 .worktree-id のUUID: aa2835a1-4c5e-4c93-b2c8-453df97d5dfa。既存ファイルを上書きしないexclusive createで作成。
+- 新規分割台帳を登録。公式作成処理と同じ core.hooksPath=frontend/.husky を設定。
+- validate-worktree-start.sh / validate-pr-ownership.sh: ともに exit 0。
+- reaper、新AIセッション、製品実装は実行していない。本店の既存AGENTS.md変更を編集していない。
