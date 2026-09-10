@@ -1654,6 +1654,14 @@ PO原文「承認する、修正から」「本番反映まで実施してくれ
 
 Backend run34432985860/job102732312951で2459 passed/93 skipped/coverage61.51%、rootが直接確認。SQL/回帰・実DBmigration技術CI成功。read-onlyレビューで3操作と単一トランザクション・timeout・全件原状保持検証を確認。process-artifacts job102732666119だけが番号付きGO原文を要求し拒否。包括的承認は受領済みだがPO原文を創作せず、当該PRのマージ前に停止。新しい状態調査依頼・接続3件・active1386明細・追加商品誤判定15行・開封済み→Sealed box1行・残存running2jobはrecon末尾に根拠付きで保存。再解析・配信は未実施。
 
+### #3400反映・再解析実行と配信停止（2026-09-10）
+
+PO原文「GO #3400」を受領・PR本文へ転記。公式マージ済み（07:24:27Z、d21599c72126dc450a70b7aad2a86b2ef3a412a3）。deploy34449800503/job102782709121成功、反映前DBバックアップ4.7M、今回SQL実行、SA-19 smoke、VPSの同SHA・health200をrootが直接確認。本番辞書は検索1減/除外2増、他の語・順序不変。既存migrationの49UUID再発行を今回単体の保持試験とは区別してreconへ記録。
+
+既存再解析経路で有効原文のdone79job/1425明細を実行、79run完了・1425snapshot・明細ID追加欠落0。設計標本10誤一致は全件NONEへ。別途、旧v2の77行で商品コード変化（型番根拠71行とvol.1の1行がNONE、候補変化5行）。自動確定1011→937は正答率ではない。状態変更0。原文・比較結果はローカル退避、詳細recon末尾。
+
+全3接続のrun_distributionは07:32:05Zに安全装置#8bで書込み前停止、running2件、results=[]。配信未完了。PO追加指示「↳ 不明点は推測で進めることを禁止するので停止して質問してくれ」を受け、不明な終了原因や復旧扱いを創作しない。2件を中断記録し有効1件のみ再実行する復旧案はPO確認待ち、未実装。資料: recon末尾、line-reanalysis-verification.json、line-distribution-attempt.json（/private/tmp）。
+
 ## EV-20260910-WORKTREE-PRESERVE
 
 - 対象: 作成時の既存作業場所保持指定の設計草案。
