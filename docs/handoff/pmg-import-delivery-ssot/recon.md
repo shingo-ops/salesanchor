@@ -191,3 +191,8 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 - test-rollback.ymlはubuntu-latestでDockerを確認しscripts/test_rollback_simulation.shを実行。test-phase2-rehearsal.ymlは本番secretを注入しscripts/rehearsal_phase2.shを呼ぶ別の経路。どちらも本件の停止機構試験ではなく、このセッションでは実行していない。
 - 最新origin/main=760532a9。PR #3398はmigration2件/登録のみで、deploy.ymlと対象解析コードの差分0。既存の配布/解析調査の根拠を変更する差分ではない。
 - PR #3396 HEAD642da564のGitHubチェックはpass32/skipping8。本件新機能の試験成功とは扱わない。
+
+### nginx受付判定のローカル実測（2026-09-10）
+
+公式nginx1.31.1とPCRE2-10.46を/tmpに取得し、Apple clang15.0.0でビルド。Python3.14.3の架空HTTP処理先と127.0.0.1で試験。最終151/151 assertion成功・exit0。対象44組の許可なし/あり/取消後、状態directory探索不能、URI正規化、reloadの新worker出現、旧要求完了、再起動後の拒否維持を確認。
+試験の全結果/実際の設定/ハーネス/ログは/tmp/reports/pmg-nginx-admission-probe-3396/、永続する要約とhashはdesign.md同日節。これはmacOS上の受付判定試験でありDocker/TLS/本番handlerの試験ではない。製品コード・CI・nginx設定・本番の変更なし。

@@ -593,3 +593,68 @@ deploy.yml:182-184はホストをorigin/mainへresetし、:360-374はnginx設定
 外部根拠: GitHub Actionsのpushイベントとworkflow concurrencyの公式資料を2026-09-10に確認。イベント/排他の仕様を本設計へ適用する案であり、このrepoの新しい専用経路が動作済みという証拠ではない。
 - https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push
 - https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+
+
+### 受付判定の確定案とローカル実物試験（2026-09-10）
+
+これまで未確定だった受付許可の判定を、次の契約に具体化した。nginx1.31.1を公式ソースから一時領域でビルドし、架空のHTTP処理先で確認した。製品設定/コードは変更していない。
+
+- 専用directory内の `allow-writes` が通常ファイルとして存在するときだけ、対象書込を許可する。内容は読まず、存在そのものを許可状態と定義する。directory不存在・探索権限なし・ファイルなし・同名directoryは拒否する。ファイル本文の読取権限を検査する契約ではない。
+- 判定は要求の受付時に行い、`open_file_cache off`を明示して、許可取消後の新規要求で古いファイル状態を使わない。停止とは許可ファイルを外すこと、再開とは承認された担当が再作成すること。部署/利用者の認証・アクセス権を置き換えるものではない。
+- 対象の正規化済みURIは `/api/v1/tcg` と `/api/v1/super-admin/tcg` の境界付き配下。GET/HEAD/OPTIONSはこの停止判定の対象外、それ以外を判定する。既存の認証とルーティングは維持する。今回試験はPOSTのpreview/重複確認も含めて一時停止する契約であり、POST読取例外を追加する場合は別途照合する。
+- 許可がなければ対象要求を503で終え、処理先に転送しない。許可ありは既存処理へ渡すだけで、要求自体の成功を保証しない。
+- 取消前に通った要求は取り消さない。その処理の完了待ちが別途必要。「ファイルを外した瞬間に全処理が止まる」という表示/判断は禁止する。
+
+試験した判定式（設計上の抜粋、製品設定へ未反映）:
+
+```nginx
+# http context
+map $uri $pmg_target {
+    default 0;
+    ~^/api/v1/(tcg|super-admin/tcg)(/|$) 1;
+}
+map "$request_method:$pmg_target" $pmg_needs_allow {
+    default 0;
+    ~^(GET|HEAD|OPTIONS):1$ 0;
+    ~:1$ 1;
+}
+map "$pmg_needs_allow:$pmg_allowed" $pmg_deny {
+    default 0;
+    "1:0" 1;
+}
+# 対象の各server context
+open_file_cache off;
+set $pmg_allowed 0;
+if (-f /etc/salesanchor/pmg-cutover/allow-writes) { set $pmg_allowed 1; }
+if ($pmg_deny) { return 503; }
+```
+
+本実験では状態パスを一時directoryへ、listenと転送先を127.0.0.1へ変更している。両hostは同じ試験serverにHostヘッダーで渡したため、本番の独立した2つのTLS server blockへの組込み試験ではない。外部通信、DB、実際のSales Anchor handlerは使っていない。
+
+#### 実測結果
+
+| 検証 | 結果 |
+|---|---|
+| 非GET22入口×2host、許可なし | 44/44が503、処理先到達0 |
+| 同44組、許可あり | 44/44が試験処理先の200、到達44 |
+| 同44組、許可取消後 | 44/44が503、処理先到達0 |
+| 同名directory・状態directoryの探索権限なし | 2/2が503 |
+| 末尾slash・重複slash・URLエンコード・dot segment | 4/4が503 |
+| GET参照と対象外POST（2host） | 4/4が試験処理先の200 |
+| 長い処理の受付後に取消 | 新規POSTは503、先行処理は200で終了 |
+| reload | 新worker PIDの出現を確認、取消後POSTは503、先行処理は完了 |
+| nginxの終了と再起動 | 新master PIDを確認、許可なしを維持して503 |
+| 全assertion | **151/151成功、exit0**（転送件数・PID確認を含む） |
+
+初回試行はconfigureの未対応optionで失敗し、取り除いてビルド成功。初期nginx起動はsandbox内のOS情報参照拒否で未実行だったため、承認レビューを通したローカル試験として実行し成功した。初回148件からreloadの実体確認/再起動を追加して最終151件。失敗を本番障害や受付判定の失敗と混同しない。
+
+根拠保存: `/tmp/reports/pmg-nginx-admission-probe-3396/`（probe.py、実行結果、実際のnginx.conf、ルート一覧、build/errorログ、環境情報）。ZIPは同名.zip、SHA256=e7537c80a7a1b91159ab624e734a493ee992b2f2555aac4d8345fd0bf484fb76。probe.py SHA256=3d8ad783e4b9b063e08e774622a14790e79402b538368ba0bed03736455704c4。成果の要点は本節を正本とし、一時ファイル消失後も試験範囲/限界を残す。
+
+#### 入口更新時の接続の扱い
+
+nginx公式仕様ではreload後の旧workerが既存接続を処理し続ける。今回の試験でも、受付済み要求が取消/reload後に完了することを確認した。従って停止機構導入前の旧workerが残る期間を「遮断完了」としない。既存接続/旧workerの消失確認と、対象要求の処理完了照合を必要条件とする。
+追加mountが必要な初回のDockerコンテナ再作成は、このローカルreload試験とは別。既存接続を打ち切らずに再作成できると断定しない。SSEを含む長時間接続が残り、所定の作業枠で自然に終わらない場合は、強制終了に切り替えず導入を保留する。作業枠の長さ/瞬間的な全API接続影響は運用準備で確定し、今回GOから推定しない。
+
+設計自己審査: **REVISE**。受付判定式と許可取消/reloadの挙動には151件の実物根拠が得られた。残る本番前提は、初回mount導入時の接続/失敗復旧、Linux/Docker上の実組込み、旧版解析/配信の完了照合。ローカルnginx試験を本番相当の9試験完了とはしない。
+
+公式仕様: https://nginx.org/en/docs/control.html 、https://nginx.org/en/docs/http/ngx_http_rewrite_module.html 、https://nginx.org/en/docs/http/ngx_http_core_module.html#open_file_cache 。2026-09-10確認、Context7利用不可のため公式資料で代替。PCRE2は公式release10.46を実験ビルドに使用。本番PCRE版との一致は未確認。
