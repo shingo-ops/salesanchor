@@ -479,7 +479,7 @@ migration候補: migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
 
 - CN0007: canonical Unsearched pack、既存search_kwを保持。exclude_kwの既存「[サーチ済み]」を保持し、未サーチではない、未サーチではありません、未サーチとは限らない、未サーチ保証なし、未サーチ保証無し、サーチ済を重複なく追加する。明示的な否定やサーチ済混在を、未サーチ肯定として増やさない。
 - NJ041: label_ja伝票跡、search_keywords伝票跡,伝票痕,伝票剥がし跡、既存属性を保持。exclude_keywordsへ伝票剥がし跡ありを1回追加し、新札との二重表示を防ぐ。
-- NJ079を1件追加: label_ja=伝票剥がし跡あり、label_en=Shipping label removal marks、enabled=true、search_keywords=伝票剥がし跡あり、exclude_keywords=空、category=跡痕系、priority=1、match_type=STATE_LITERAL、search_pattern/label_template=NULL。id衝突時に異なる内容を上書きせず停止する。
+- NJ079を1件追加: label_ja=伝票剥がし跡あり、label_en=Shipping label removal marks、enabled=true、search_keywords=伝票剥がし跡あり、exclude_keywords=伝票剥がし跡ありません,伝票剥がし跡ありではない,伝票剥がし跡ありではありません、category=跡痕系、priority=1、match_type=STATE_LITERAL、search_pattern/label_template=NULL。id衝突時に異なる内容を上書きせず停止する。
 
 CN0007/NJ041は不在・別ラベル・別canonical・予期しない原値なら例外。既に期待する適用後値なら変更0件。原値/適用後値が混在しても未適用部分だけに適用し、二重追加しない。対象外のマスタ行・ID・順序・属性は不変。既存テナント以外への札配布や新規テナントへの自動複製は本便対象外（コードの追加引数は空が既定であり、旧札は動作維持）。
 
@@ -487,7 +487,7 @@ CN0007/NJ041は不在・別ラベル・別canonical・予期しない原値な�
 
 - 実PostgreSQLで正規マスタ・実analyze_extraction_jobを使用。匿名の18明細相当fixtureに今回2例を含め、再解析前後の差を比較する。製品/作品ID・価格・数量・status・単位は全件不変。状態変化1、注記変化1、残16明細の状態/注記不変。
 - 「※未サーチ品」が備考にあるPackはUnsearched pack。memo不在/否定/サーチ済混在/配送後破損免責を未サーチにしない。明示サーチ済を備考だけで覆さず、BOX/Case/未知単位・他状態優先も保持。
-- Case＋raw_state伝票剥がし跡ありはCaseのままNOTE_JAが原文どおり。memoのみ/両欄同語でも新札1つ。伝票跡（一般語）には従来NJ041が作用。伝票剥がし跡なし/商品名にだけ存在する場合は新札を出さない。
+- Case＋raw_state伝票剥がし跡ありはCaseのままNOTE_JAが原文どおり。memoのみ/両欄同語でも新札1つ。伝票跡（一般語）には従来NJ041が作用。伝票剥がし跡なし/伝票剥がし跡ありません/伝票剥がし跡ありではない/伝票剥がし跡ありではありません/商品名にだけ存在する場合は新札を出さない。
 - LITERAL/REGEXの既存結果、捕捉ラベル展開、exclude、priority、raw_state任意引数未指定の既存呼出しを維持。
 - migration初回/再実行/部分適用/ID衝突/対象不在/片方表不在/他テナント/対象外行保持/ロック制限を実DBで検証。異常時はトランザクション全体を保持。
 - 履歴付き再解析サービスを2回実行して結果が同じで履歴が残ること、既存fetch_output_rowsへUnsearched pack/NOTE_JAが反映されることを実DBで確認。実Google Sheetsへの試験書込みはCIで行わない。
@@ -500,3 +500,6 @@ CN0007/NJ041は不在・別ラベル・別canonical・予期しない原値な�
 守り手: データ定義はconditions/tcg_note_master、処理はtcg_analyzer_svc、否定/実DB試験は既存のkeyword_matching/work_matching_integration。新たなサブエージェントは起動せず、既存のLINE実装担当だけにカードで所有範囲を渡す。rootは文書・差分確認・承認済みの本番運用を担当。
 
 技術CI/差分確認→正規GO確認→マージ/デプロイ→マスタの2更新1追加確認→既存履歴付き再解析を対象job bfa07018-9b34-42b6-990a-017e3c1cf140に1回→18解析・2訂正・未完了0を確認→3シート再退避→run_distributionで3接続配信→各行/件数/DB履歴を照合。新たな矛盾や追加の対象が出たら配信を止めて報告する。再解析失敗をdoneへ偽装しない。
+
+
+§13改訂1（実装中の追加否定照合）: 「伝票剥がし跡ありません」は検索語「伝票剥がし跡あり」に部分一致するため、新NJ079の除外3語と否定試験を上記に追加した。肯定語を増やすだけで否定まで肯定と扱わないための修正。同一AI再審査APPROVE、対象とPO分類は不変。実装担当へ改訂を通知する。
