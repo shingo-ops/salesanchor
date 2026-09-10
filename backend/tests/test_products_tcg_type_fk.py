@@ -6,6 +6,10 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from app.auth.dependencies import get_current_tenant, get_current_user
+from app.database import get_db
+from app.models import User
+from app.routers import products as products_router
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -13,10 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.auth.dependencies import get_current_tenant, get_current_user
-from app.database import get_db
-from app.models import User
-from app.routers import products as products_router
+from tests.rls_bootstrap import public_bootstrap_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -103,22 +104,23 @@ async def _apply_migration(admin_engine, filename: str) -> None:
 
 
 async def _bootstrap_public_products(admin_engine) -> None:
-    for filename in _PG_BOOTSTRAP_MIGRATIONS:
-        await _apply_migration(admin_engine, filename)
+    async with public_bootstrap_lock(admin_engine):
+        for filename in _PG_BOOTSTRAP_MIGRATIONS:
+            await _apply_migration(admin_engine, filename)
 
-    async with admin_engine.connect() as conn:
-        fk_exists = await conn.scalar(
-            text("""
-                SELECT 1
-                FROM pg_constraint c
-                JOIN pg_class rel ON rel.oid = c.conrelid
-                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-                WHERE nsp.nspname = 'public'
-                  AND rel.relname = 'products'
-                  AND c.conname = 'fk_products_tcg_type'
-            """)
-        )
-    assert fk_exists == 1, "FK migration が public.products に適用されていません"
+        async with admin_engine.connect() as conn:
+            fk_exists = await conn.scalar(
+                text("""
+                    SELECT 1
+                    FROM pg_constraint c
+                    JOIN pg_class rel ON rel.oid = c.conrelid
+                    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                    WHERE nsp.nspname = 'public'
+                      AND rel.relname = 'products'
+                      AND c.conname = 'fk_products_tcg_type'
+                """)
+            )
+        assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:

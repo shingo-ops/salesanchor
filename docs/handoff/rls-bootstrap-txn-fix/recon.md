@@ -56,3 +56,13 @@ PR #3399 HEAD 2e4365ad、run 34431379811 / job 102727444240: 2429 passed / 93 sk
 migrations/085_create_tcg_type_master.sqlはpokemon_booster_boxを登録し、20260616_000000_fix_tcg_type_dedup.sqlは旧pokemonを統合・削除する。
 backend/app/services/inventory_aggregated_service.py:40-42はcategoryをtcg_typeへ等値照合する。テストのseed・要求・期待値を同じ正規値にすれば、既存APIの意味を変えずに照合できる。
 現行active-work.dでtest_inventory_aggregated / inventory/aggregated / inventory-aggregationに対応するIN_PROGRESS/REVIEW予約は0件。
+
+
+## 2026-09-10 inventory共有DDLの未保護経路
+
+基点d21599c7。backend/tests/test_inventory_parser_real_samples.py:200、test_inventory_sprint1_migrations.py:99、test_products_tcg_type_fk.py:105、test_inventory_aggregated.py:144の4経路は共有public作成を行うがロック呼び出しなし。backend/tests/rls_bootstrap.py:40の既存ロックは20260623/1のsession advisory lockを取得しfinallyで解放する。
+backend/pyproject.toml:65はxdistの-n auto/--dist=loadfile。異なるファイル間の共有準備は並行し得る。実失敗は/tmp/reports/GUARD-EVAL-3401-pytest-failure.log、job102738726326。競合相手の個体は未確認。
+Context7 MCPは利用不可。許可済みの公式資料による代替確認（2026-09-10）:
+- PostgreSQL16 https://www.postgresql.org/docs/16/explicit-locking.html#ADVISORY-LOCKS : advisory lockは同じ規則に参加する側の協調が必要。session lockは明示解除またはsession終了まで保持。
+- SQLAlchemy2 https://docs.sqlalchemy.org/en/20/core/pooling.html : async engineはAsyncAdaptedQueuePoolを使い、QueuePoolの既定pool_sizeは5。4経路のcreate_async_engineはpool_size/max_overflow指定なし（各ファイル:62/94/146/155）。
+外部導入事例は不要。既存不具合ログ、4経路の実物、修正前を拒否する回帰検査を直接の根拠にする。実失敗の再現確率や速度改善値は創作しない。
