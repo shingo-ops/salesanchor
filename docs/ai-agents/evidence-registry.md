@@ -1406,3 +1406,9 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
   observed: "base=8206ba2844921c1efb3ca4fd647230e76bb0c5c6。仕入元・実際の投稿日時・本文一致のみ再利用する方針にPOが合意。ローカルPostgreSQL 16の専用テストDBで検証。本番実測は引き継ぎ資料によるもので本セッションでは未実施。"
   open: "新PRのマージ・本番適用・実配信は未承認。UI・配信履歴・解析attemptは後続便。最終テスト結果とPR状態はテーマdesign.md参照。"
+
+- EV-20260910-GO-FLOW-SCOPE:
+  theme: "GO記録転記・マージ前検査（既存テーマ延長）"
+  evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
+  observed: "2026-09-10 PO返答『合意』はGitHub画面・直接CLIのマージ制限まで含む設計範囲への合意。main=60132b058ba52f24afdb50d683a216d88f5fdd59。Rulesetの必須12チェックにprocess-artifacts gateなし。既存GO validatorの純粋関数試験5/5 PASS。"
+  open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更・マージは未承認。"
