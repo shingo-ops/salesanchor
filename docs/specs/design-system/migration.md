@@ -83,3 +83,86 @@ PO承認: 2026-07-05初版／2026-07-06改訂（網羅reconで色の真数36・�
 - 守り手: design-token-guard.yml/check-design-token-ratchet.sh（便0b稼働中）＋領域ペア関所（便1c/2/5/6-guardで順次）＋部品台帳満数方式
 - 対象: 生値ベタ書き・部品重複定義・台帳未登録の新部品・素の<table>/<h1>/空状態の新規
 - 未確立（正直な明記）: 領域ペア関所は各guard便完了まで人が守る。
+
+
+## 2026-09-10 表39か所の移行対応案
+
+基準6e133572。origin/main=864ace729fe45a1b254fa2c3b8f66baa547d57faを取得し、frontend全体・design-system既存文書・UI検査本体との差分0を確認。製品未変更。
+
+移行方式: 既存DataTableは公開propsを維持して内部を共通Table表示部品へ接続。他の38か所は行構造とコールバックを維持したままTable表示部品へ置換する案。全てをDataTableのcolumns形式へ組み替えない。新規の通常一覧はDataTableを優先する。外観CSSは下層の一つを共有するため、入口が2つでも外観の正本は増えない。
+
+根拠: [全表コールバック](../../handoff/design-system-recon/evidence-20260910/table-behaviors.json)。全on属性を構文抽出し、onSelectも対象。表外の操作・呼出関数内部・権限判定の網羅的動作検証ではない。下表は移行対応の設計案で、移行完了表ではない。
+
+| ID | 使用箇所（frontend/src以下） | 移行先 | 維持・確認する内容 | 状態 |
+|---|---|---|---|---|
+| TB-01 | components/CommissionPanel.tsx:186 | Table共通表示・既存行構造維持 | 担当割当の空値→null/数値変換、割当解除 | 設計対応済・実表示未検証 |
+| TB-02 | components/DataTable.tsx:168 | DataTable内部→Table共通表示 | 既存sort/全選択/行選択/行クリック・キー操作を維持。ページ送りはtable外なので別途既存propsを維持 | 設計対応済・実表示未検証 |
+| TB-03 | components/FedExRateModal.tsx:329 | Table共通表示・既存行構造維持 | 料金・通貨・service_typeを選択してモーダルを閉じる | 設計対応済・実表示未検証 |
+| TB-04 | components/MergeCompanyModal.tsx:197 | Table共通表示・既存行構造維持 | 会社IDと選択時snapshotを行/ラジオ双方で更新 | 設計対応済・実表示未検証 |
+| TB-05 | components/MergeContactModal.tsx:195 | Table共通表示・既存行構造維持 | 連絡先IDと選択時snapshotを行/ラジオ双方で更新 | 設計対応済・実表示未検証 |
+| TB-06 | components/MergeLeadModal.tsx:184 | Table共通表示・既存行構造維持 | リードIDと選択時snapshotを行/ラジオ双方で更新 | 設計対応済・実表示未検証 |
+| TB-07 | features/tcg-analysis-review/DiagnosticsDrawer.tsx:115 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値・見出し・空状態を比較 | 設計対応済・実表示未検証 |
+| TB-08 | features/tcg-distribution/DistributionTargetList.tsx:81 | Table共通表示・既存行構造維持 | 配信先編集・実行確認・無効化確認へ同じtargetを渡す | 設計対応済・実表示未検証 |
+| TB-09 | pages/admin/ChannelMastersPage.tsx:80 | Table共通表示・既存行構造維持 | 同じchannel IDで削除処理を呼ぶ | 設計対応済・実表示未検証 |
+| TB-10 | pages/admin/InventoryVisibilityPage.tsx:132 | Table共通表示・既存行構造維持 | role IDと項目キーで切替、当該roleを保存 | 設計対応済・実表示未検証 |
+| TB-11 | pages/badges/BadgesPage.tsx:76 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値と列順を比較 | 設計対応済・実表示未検証 |
+| TB-12 | pages/buddy/BuddyPage.tsx:75 | Table共通表示・既存行構造維持 | 対象pair IDで終了処理、空状態の結合列を維持 | 設計対応済・実表示未検証 |
+| TB-13 | pages/buddy/BuddyPage.tsx:91 | Table共通表示・既存行構造維持 | 表内のonイベントなし。空状態の結合列を維持 | 設計対応済・実表示未検証 |
+| TB-14 | pages/commission-settings/CommissionSettingsPage.tsx:189 | Table共通表示・既存行構造維持 | role別typeと数値valueを更新 | 設計対応済・実表示未検証 |
+| TB-15 | pages/company-detail/CompanyAddressesTab.tsx:30 | Table共通表示・既存行構造維持 | 住所編集と削除確認へ同じ住所を渡す | 設計対応済・実表示未検証 |
+| TB-16 | pages/company-detail/CompanyContactsTab.tsx:102 | Table共通表示・既存行構造維持 | 連絡先のチャンネル追加・編集・統合・削除確認を維持 | 設計対応済・実表示未検証 |
+| TB-17 | pages/inventory/InventoryPage.tsx:501 | Table共通表示・既存行構造維持 | 在庫IDによる選択と条件付き列・空状態を維持 | 設計対応済・実表示未検証 |
+| TB-18 | pages/invoice-create/InvoiceCreatePage.tsx:257 | Table共通表示・既存行構造維持 | 請求作成に使う見積IDを読み込む | 設計対応済・実表示未検証 |
+| TB-19 | pages/invoice-create/InvoiceCreatePage.tsx:322 | Table共通表示・既存行構造維持 | 明細の入力・単位変更時の重量更新・削除・数値/null変換を維持 | 設計対応済・実表示未検証 |
+| TB-20 | pages/invoice-detail/InvoiceDetailPage.tsx:243 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値と列順を比較 | 設計対応済・実表示未検証 |
+| TB-21 | pages/invoice-detail/InvoiceDetailPage.tsx:305 | Table共通表示・既存行構造維持 | 合計/重量/送料/税/通貨と条件付き換算行を維持 | 設計対応済・実表示未検証 |
+| TB-22 | pages/products/ProductsPage.tsx:286 | Table共通表示・既存行構造維持 | 商品2行・同一商品ゼブラ・名前sort・選択伝播停止・権限付き編集・drag順変更 | 設計対応済・実表示未検証 |
+| TB-23 | pages/purchase-orders/PurchaseOrdersFormModal.tsx:165 | Table共通表示・既存行構造維持 | 発注明細の商品名/数量/原価更新と削除を維持 | 設計対応済・実表示未検証 |
+| TB-24 | pages/quote-create/QuoteCreatePage.tsx:170 | Table共通表示・既存行構造維持 | 見積明細の入力・単位連動重量・削除・数値/null変換を維持 | 設計対応済・実表示未検証 |
+| TB-25 | pages/quote-detail/QuoteDetailPage.tsx:175 | Table共通表示・既存行構造維持 | 小計/重量/送料/税/合計とcolSpan6を維持 | 設計対応済・実表示未検証 |
+| TB-26 | pages/staff-reports/StaffReportsPage.tsx:99 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値・空状態を比較 | 設計対応済・実表示未検証 |
+| TB-27 | pages/super-admin/DexTab.tsx:343 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値と列順を比較 | 設計対応済・実表示未検証 |
+| TB-28 | pages/super-admin/FxRatePage.tsx:123 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値と列順を比較 | 設計対応済・実表示未検証 |
+| TB-29 | pages/super-admin/KnowledgeAliasesTab.tsx:352 | Table共通表示・既存行構造維持 | ルールIDの有効切替と編集を維持 | 設計対応済・実表示未検証 |
+| TB-30 | pages/super-admin/KnowledgeAliasesTab.tsx:430 | Table共通表示・既存行構造維持 | 別名IDの有効切替と編集を維持 | 設計対応済・実表示未検証 |
+| TB-31 | pages/super-admin/LLMBudgetTab.tsx:120 | Table共通表示・既存行構造維持 | 当該予算の編集開始と空状態を維持 | 設計対応済・実表示未検証 |
+| TB-32 | pages/super-admin/ParseReviewPage.tsx:494 | Table共通表示・既存行構造維持 | draftのskipped/condition/unit/offer_type/ship_timing/数量/単価/別名/メモ、商品onSelectを維持 | 設計対応済・実表示未検証 |
+| TB-33 | pages/super-admin/ProductMastersTab.tsx:267 | Table共通表示・既存行構造維持 | canDrag条件・drag ID・drop順変更・編集・削除を維持 | 設計対応済・実表示未検証 |
+| TB-34 | pages/super-admin/SuppliersAdminTab.tsx:241 | Table共通表示・既存行構造維持 | 仕入元IDの選択と編集を維持 | 設計対応済・実表示未検証 |
+| TB-35 | pages/super-admin/SuppliersAdminTab.tsx:348 | Table共通表示・既存行構造維持 | ルーティングIDの削除を維持 | 設計対応済・実表示未検証 |
+| TB-36 | pages/super-admin/TcgLineImportPage.tsx:515 | Table共通表示・既存行構造維持 | 表内のonイベントなし。表示値と列順を比較 | 設計対応済・実表示未検証 |
+| TB-37 | pages/super-admin/TcgParallelReportPage.tsx:156 | Table共通表示・既存行構造維持 | 表内のonイベントなし。colSpanの集計/空状態を比較 | 設計対応済・実表示未検証 |
+| TB-38 | pages/super-admin/TcgParallelReportPage.tsx:201 | Table共通表示・既存行構造維持 | sp_code/total/diffのsortキーを維持 | 設計対応済・実表示未検証 |
+| TB-39 | pages/super-admin/TcgSeriesTab.tsx:331 | Table共通表示・既存行構造維持 | 当該シリーズの編集・IDによる削除を維持 | 設計対応済・実表示未検証 |
+
+受入の共通条件: 移行前後で同じfixtureの列順/表示値/行キー/結合セル/空状態が一致。上表の各操作は同じ対象ID・値で同じ処理を呼ぶ。機能を持たない行に架空の操作試験を足さない。light/dark・390/767/768/1279/1280pxで共通外観と折り返し・スクロールを確認。
+
+未解決を明示: 初期の38か所分の行外観（ゼブラ・警告・無効化・強調等）を共通の許可propsへ対応させるCSS照合と、実表示は未完。構文の対応表39/39を、実装可能39/39・検証完了39/39とは宣言しない。代表の固定表示契約はdesign.md §Sを参照。
+
+
+### 表示属性の移管先
+
+[239属性の対応表](../../handoff/design-system-recon/evidence-20260910/table-appearance-mapping.json)にstyle180/className59を登録。Table共通props・列指定・外側配置・子部品へ移す案。対象239件の移管先未割当0、実装未着手。
+
+
+## 2026-09-10 既存PRの採用・分離計画
+
+POはSSOT関連を統合可能、原因を追えるものは分離して順番マージと指定。読み取り担当2名の報告を設計担当が照合して採用範囲を定める。基準main: 3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1fe。旧PRの直接マージは行わず、最新mainから必要差分を再構成する。
+
+| PR | 扱い | 根拠・保持する内容 |
+|---|---|---|
+| #2668 | Select部品は既反映。再適用しない | Select.tsx/FormField.css/Select.stories.tsxの3blobがmainとHEADで一致。main履歴4c670259。InvoicesPageの現在のContentToolbarを維持し旧filter-barへ戻さない |
+| #2895 | アイコン専用色の同値aliasを材料便で再利用 | components.cssのicon-btn、EmptyState.css、icons.tsx/platform-icon.cssの対、DashboardPage.cssの装飾、InboxPage.cssの検索/ロック。16用途全てを無条件追加しない |
+| #2911 | #2895との重複は1回のみ。用途を保つaliasと未使用色整理だけ再利用 | サイドバーの背景と文字を全てaccentにする変更は不採用。影の色変換は同値保証確認後の別材料便。CLAUDE.md削除や不整合なrecon参照は採らない |
+| #2914 | 同値alias5件を材料便へ統合 | indicator明暗・sidebar active border明暗・light active color。linkを#1a73e8へ変更する1件は色変更なので不採用 |
+| #2919 | 同値alias4件を同じ材料便へ統合 | sidebar-bg→bg-surface、accent-bg→accentの明暗。#2911の重複は再適用しない |
+| #2889 | カレンダーの21用途を別PRで再構成 | 7分類×color/tint/text、ID/ラベル/業務処理を保持。未定義color-blue-800参照、releaseの前景/背景同色化、既存色からの変更は採らず現行値から用途表を作る |
+| #2926 | 実装は不採用。目的を最後のCI便へ | タイトルwarnに対してexit1。列挙失敗exit0/読取失敗skip/同じ行のvar参照で別の直色を見逃すため完成品として再利用しない |
+
+#2911/#2895共通10ファイルの製品変更行は同一（読み取り担当がgh pr diffとmerge-base→HEAD diffを対照）。5色PRの製品変更は延べ28ファイル/重複除外14ファイル。元の変更行の既反映0、ただし別PRである#2668の3blob一致とは区別する。詳細の全changed product file照合は追加調査記録に残す。
+
+Badgeの文字全体、sidebar/mobileのナビ項目全体、GoogleCalendarStatusBarのバー文字はアイコン専用用途へ付け替えない。各部品の用途色を保持する。GoogleCalendarStatusBarのuseEffect依存追加は色移行と分離し、本テーマでは採らない。
+
+legacy --cal-*21名前×明暗の削除は参照0の最終全域調査が通ってから材料便で扱う。var参照0だけで動的参照なしと断定しない。
+
+戻しやすさ: 同値alias/アイコン数値生成/カレンダー色/部品本体/使用先移行/CIを別の変更単位にし、各PRのmain SHAと検証ログを記録する。後継の採用結果が確定する前に旧PRをcloseしない。

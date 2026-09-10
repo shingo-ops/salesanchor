@@ -8,10 +8,11 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
+| フロントエンド金型化・再測定 | Agent | 文書PR #3407マージ済み。全体設計自己審査APPROVE、操作/外観/最後のCI契約を確定。製品未着手 | 設計文書PRを保存・レビュー・マージし、ICON5値同値生成から原因別実装。CIは最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-18 / https://github.com/shingo-ops/salesanchor/pull/3407 | 2026-09-10 |
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、画面実装未着手 | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
-| LINE解析精度・正常完了の誤商品調査 | Agent | #3400本番反映・79job/1425明細再解析済み。中断2件復旧PR #3403実装/技術CI成功（2499 passed・復旧32ケース）。番号付きGO原文不足だけでマージ停止 | GO #3403原文受領後に前提再確認→反映→有効1件再実行→完了後3接続配信。値/式の退避済み。次周の商品15件（全量対照済み）・状態候補5件（うち3件備考参照で改善、2件定義未確認）を保持 | design-keyword.md §12.5 / recon.md 末尾 / EV-20260910-LINE-ACCURACY-08 / PR #3403 / Backend34451813934 / process job102789028541 | 2026-09-10 |
+| LINE解析精度・正常完了の誤商品調査 | Agent | #3403マージ/本番反映、有効1件18明細/18解析完了。未完了0。3接続退避済み、445行配信予定。新たに状態/備考2件の問題を確認、配信未実施 | POがCase維持/NOTE_JA記載を確定。設計§13限定2件修正を実装・実DB再解析試験、反映後3シート配信と照合 | recon.md「#3403復旧後の抽出完了と配信前確認」 / EV-20260910-LINE-ACCURACY-08 / PR #3403 / Deploy34456746721 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
 | GOフロー統一（既存GO転記テーマの延長） | 設計担当 | 文書PR #3388マージ確認済み。改訂2でGO取消期限AにPO合意。文書PR #3394提出済み、自己審査REVISE | 保護例外・App運用・再GO条件と確定記録の契約を確定 | docs/handoff/go-record-transcription/design.md 改訂2 / recon.md、PR #3388・#3394、EV-20260910-GO-FLOW-SCOPE | 2026-09-10 |
 | 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
@@ -94,6 +95,8 @@
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG入口配布・旧処理照合設計 | 設計担当 | PR #3410文書マージ/自動deploy成功。過去全件復元を必須にしない訂正と配布保留契約を草案化、自己審査REVISE | 通常デプロイも保留する範囲のPO判断待ち。複数SSHの所有制御と切替境界の観測手段を確定 | EV-20260910-PMG-BARRIER-CONTRACT / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-10 |
 
 
 
