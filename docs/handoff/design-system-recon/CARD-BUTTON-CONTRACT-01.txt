@@ -1,0 +1,49 @@
+CARD-BUTTON-CONTRACT-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-BUTTON-CONTRACT-01
+照合§5.5: 1○実パス、2○本便PR作成なし、3○親へ全文、4○Button操作/処理中契約、5○公式作業台origin/main起点、6○ADの具体契約、7○既存67利用/5ファイル実測。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、design-partner.md§5.5。
+担当Generator。あなたは他者と並行、他者変更を戻さない。rootは文書/台帳を担当。製品5ファイルだけ所有。
+作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source`
+基準HEAD: `86cbb7e804c37f94b8fc36906c0c223beb98d152`（main57eb951eを統合、製品はmainと同一）。root未commit文書あり。
+正本: `docs/specs/design-system/design.md` §AD自己審査APPROVE、既存Q/Z/AA。
+対象:
+- `frontend/src/components/Button.tsx`
+- `frontend/src/components/loading/Spinner.tsx`
+- `frontend/src/loading-animations.css`
+- 新規 `frontend/src/components/Button.test.tsx`
+- 新規 `frontend/src/components/loading/Spinner.test.tsx`
+許可: 上記実装と有意味な操作/props試験、既存lockでnpm ci、既存Playwright版の正規Chromium導入、/tmpへの実ブラウザーfixture/実行ログ/画像保存。
+禁止: その他製品、既存Button.css/components.css/色値/サイズ/画面側変更、依存manifest/lock/CI/backend/API/DB/secrets変更、GO原文創作、commit/push/PR/merge/deploy、別AI起動。
+公式treeとbrowser cacheの書込は正規require_escalated申請可。自動承認レビュー拒否は迂回せず親へ停止報告。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && git rev-parse HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && git diff --exit-code HEAD -- frontend
+期待: 基準一致・製品事前差分0。文書差分保持。
+
+実装契約: ADを逐条実装。ButtonはforwardRefで同native button、type既定なし/既存rest順維持。Spinner tone=inherit decorative=true。Spinner通常color/onAccent/labelは維持、inheritはcolor/onAccentより優先し全枠currentColor/上辺transparent。decorativeはrole/labelなしaria-hidden。Spinner自身から既存loading-animations.cssをimport。回転/サイズ/通常色は既存保持。
+試験: ref DOM/focus、native form所属/type省略と明示/name/value、click/submit/stopPropagation、6variantとactive/disabled/loading/native aria、children/loadingText/iconOnly名前、Spinner通常/onAccent/inherit+color競合/decorative、SaveIndicator既存利用契約。
+実ブラウザー: actual TSXとCSSを用いローカルfixtureで6variantのclick/Enter/Space各1回、disabled/loading各0、props切替時ref保持、明暗でinherit4辺（上透明/他currentColor）と通常/onAccent対照、reduced-motion回転なしを検証。期待値は原契約を根拠に固定し共有fallback偽一致を避ける。CSS/アプリ実物を書き換えて試験しない。現行Button外観/190色対比は今回変更していないため合格を主張しない。
+
+手順1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source/frontend && npm ci
+期待: 既存lock維持。正規導入後の修正/試験を進める。
+ブラウザー導入が必要な場合: npxは別版へ解決し得るため、実require(playwright)の版/CLIを確認しnode node_modules/playwright/cli.js install chromiumを使う（前便の実測教訓）。
+
+手順2
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source/frontend && npm run test:unit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source/frontend && npm run build-storybook
+期待: 全exit0。実ブラウザー試験も実行しスクリプト/実測値/結果を/tmp/frontend-button-contract-20260911へ保存。既存警告と今回エラーを区別。失敗/不明/対象超過は親へ報告し、期待値/ゲートを独断変更しない。
+
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && git diff --stat -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-calendar-source && git diff --exit-code HEAD -- frontend/package.json frontend/package-lock.json frontend/src/index.css frontend/src/tokens.css frontend/src/components/Button.css frontend/src/components.css
+期待: 製品5ファイルだけ・既存ファイル削除0。実装ファイル行数/hashと実行全結果を報告。
+報告冒頭: 本報告はカード CARD-BUTTON-CONTRACT-01 の実行結果である。
+親へ生出力全文、長いログは/tmp/frontend-button-contract-20260911配下の実在ファイルを添える。停止時は手順番号/最後のコマンド/理由。全画面目視と将来の外観統一は未完と明示。
+END OF CARD

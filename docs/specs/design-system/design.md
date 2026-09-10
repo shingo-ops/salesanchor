@@ -988,3 +988,44 @@ layoutClassNameの許可propertyと部品ごとの寸法禁止は[最終CI契約
 既存check:all、ビルド、必要な既存CIを実行し、新token本文の4項目は実施後に正規テンプレで記載する。新CIは設置しない。検証用原稿・前後比較結果を既存recon根拠へ保存し、検証失敗を隠さない。通常のCI成功だけを同値の証明としない。
 
 Architect自己審査: APPROVE（この7ファイルの同値移管契約）。設計担当がPlanner記述後に同一AIとして審査し、候補9宣言・8用途・使用9記録、全50CSSで対象上書き0、静的API書込検出0と照合した。独立した第二者設計審査とは称しない。実ブラウザー比較・製品実装・製品第二レビューはこれから実行する受入条件で、設計合格をそれらの実行済みとしない。外部導入事例は不要（自社の既存色の同値移管を実物で比較する変更のため）。
+
+### AC. 2026-09-11 読み取りやすさの追加方針と実装順序
+
+PO原文「進める、離席するので最後まで完走させて結果を報告してくれ」を、直前に提示したカレンダー保留・共通部品先行の続行指示として受領。さらに「心理学、脳科学、認知科学的に人間がパット見て何が書いてあるかを理解しやすい表示にしてくれ」を受領。POの新しいGO番号や効果の実測値を生成しない。
+
+既存のSSOT設計に、読み取りやすさの確認を加える。業務文言の意味、操作/保存条件、APIは維持。新しい装飾や字体の導入自体を目的にしない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 見出し・本文・補助情報の役割が揃う | 既存type/weight/spacing tokensと意味的見出しの使用を代表画面で確認。情報の序列をページ独自CSSで逆転させない |
+| 操作・状態は色だけに依存しない | ボタンの翻訳済み動作文言、選択/処理中のaria属性、危険操作文言を確認。ラベル欠落0 |
+| 有効な通常文字のコントラスト4.5:1以上 | 既存P/Qの状態表とブラウザーcomputed色で再測定。大文字例外3:1/非活性例外を通常文字の達成数へ混ぜない |
+| 情報のまとまりと余白を揃える | 関連する見出し/入力/説明を同じ部品内に置き、間隔は既存spacing tokensで管理。200%拡大と390px表示で文字/操作の欠落0を確認 |
+| 分かりやすさを実装検査だけで実証したと言わない | 完成後POが対象画面で目的・現在状態・次の操作を説明できるか確認。未実施はPO確認待ち。理解秒数/改善率/脳活動の効果は未測定 |
+
+根拠（2026-09-11公式資料確認）: [W3C Cognitive Clear Content](https://www.w3.org/WAI/WCAG2/supplemental/objectives/o3-clear-content/)は短い文章・明確な文言・余白/前景分離の補助指針（規範のWCAG必須条項ではない）。[WCAG Contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)は4.5:1/大文字3:1と非活性等の例外を説明。[Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html)は色以外の手掛かりを要求。これは規格/指針の根拠で、Sales Anchorの理解速度改善を実測した事例ではない。外部導入の効果数値は採用しない。Context7は提供ツールに存在せず、必要なAPI確認は許可済み公式資料を代替使用する。
+
+Planner追補後、同一AIがArchitectとして方針の整合を自己審査APPROVE。個々の部品実装の合格やPO完成画面確認とは区別する。既存全体設計Z/AA、P/QのButtonとSpinner契約を維持し、実物差分の再監査後に本体便をカード化する。カレンダーはMOLD-21の理由で保留、既存CIは維持し追加は最後。
+
+### AD. Button機能契約と読み込み表示の先行便（2026-09-11）
+
+57eb951eのButton再監査は実使用67箇所/18ファイル、className18、style/ref/spread各0、type明示26・省略41（stories/test/spec/design-preview除外、design-system含む）。CompanyDetailの6個はcompany-forms.cssのtab/activeに依存。外観全体の切替はこれらの移管と一緒に別便で行う。この便はQ/Zで承認設計済みのrefと読み込み表示に限定し、寸法/色/variantクラスを変えない。これは最終外観統一の完了ではなく、必要な機能契約を先に満たす段階。
+
+所有製品: components/Button.tsx、components/loading/Spinner.tsx、loading-animations.css。新規検証: components/Button.test.tsx、components/loading/Spinner.test.tsx（すべてfrontend/src以下）。新CI/依存/翻訳/画面側変更なし。検証用ブラウザーfixtureは/tmpに限定。
+
+ButtonはforwardRef<HTMLButtonElement, ButtonProps>で同じnative buttonへrefを渡す。propsからtypeの既定を足さず、className/style/nativeイベント/既存aria上書き順を維持。6variant、size、fullWidth、iconOnly、active、children/loadingText、disabled||loadingの条件を維持。Spinnerへtone=inherit、decorative=trueを渡し、loading時も翻訳済み既存の名前とaria-busyを保つ。新onKeyDownや自動focus移動を追加しない。
+
+Spinnerにtone?:'default'|'inherit'とdecorative?:booleanを追加。従来のsize/onAccent/className/label/colorはこの互換便では維持。未使用color口を閉じるのは最終API移管便とし、未宣言の破壊的変更を混在させない。inheritはonAccent/colorより優先し、styleによる旧borderTopColor指定を使わない。CSSは全枠currentColor、上辺transparent。通常/onAccentは既存head/track tokenを保持。decorative時はaria-hidden=trueでrole/aria-labelなし。非decorativeの既定Loading/role=statusは維持し、新規UI文言は追加しない。Spinner自身から既存../../loading-animations.cssをimportし、アプリ/Storybookで同じ正本へ到達。既存main importは重複定義ではなく同モジュールの読み込みであり保持する。
+
+| 基準 | 検証方法 |
+|---|---|
+| refが同buttonに到達、外部form/type/name/value/イベントの保持 | DOM unitでref.current、focus、form所属、click/submitとstopPropagationを検証 |
+| busy時disabledで追加発火0、元名/指定loadingText/アイコン操作名を保持 | DOM unitと実ブラウザーでclick/Enter/Space、props反映後を検証 |
+| inheritは全枠前景色・上辺透明、onAccent/colorより優先 | DOM props試験と実ブラウザーcomputed border色を明暗で比較、通常/onAccentを対照 |
+| decorativeは読み上げ重複なし、通常Spinner/SaveIndicator互換 | role/label/aria-hiddenと既存使用先差分0を確認 |
+| reduced-motion時回転停止、6variant操作回数1/無効0 | 実ブラウザーでprefers-reduced-motionとnative keyboard操作。外観全体/コントラスト190組は後続外観便 |
+| 既存UI/依存/CI変更0 | diff範囲5ファイル、check:all/build/unit/Storybookと既存CIを実施 |
+
+React公式forwardRef/APIとW3C Button Patternを2026-09-11確認。React19のref-as-propへ独断移行せず、実repo React18契約を維持する。外部の理解速度改善事例は不要（ネイティブ操作/読み上げの既存設計契約を具体化する便）。
+
+6面: 人=読み込み状態の重複読み上げと視認性、エージェント=固定5ファイル所有と実検査、機械=既存CI維持、データ=DB/API非接触、本番=通常PR経由で部品反映、外部=外部API非接触。守り手は新規unitと既存check:all/build/CI、表示は局所ブラウザー比較と完成後PO。Planner作成後に同一AI Architect自己審査APPROVE。操作契約は既存設計の具体化であり、新規事業判断/PO最終目視を代替しない。
