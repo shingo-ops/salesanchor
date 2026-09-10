@@ -2016,3 +2016,8 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 ## EV-20260910-GUARD-ENFORCED
 
 2026-09-10、POの管理アカウント利用GO後、shingo-opsのadmin=trueを確認してruleset15777895へguard-authoring/evaluation（GitHub Actions15368）だけ追加。既存12件・strict・適用先・例外0件を保持。設定前後JSONと実イベント証跡は docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md から参照。未報告BLOCKED、評価欠落0b532e9fは必須FAILURE/BLOCKED、復元fb083494は13必須SUCCESS/CLEAN。試験#3405は未マージ閉鎖。設置#3401は23413b10でマージ・deploy34452331125成功、実配備SHAとHTTP200を確認済み。自己審査APPROVE、独立第二者レビューではない。既往失敗を保持し、製品画面・実データ取り込みの完了とは区別。
+
+
+## EV-20260910-LINE-PROMPT-RETENTION-01
+
+POのGemini精度改善依頼。rootが匿名実API比較28呼出しを直接実行。現行12/14・改善14/14試験合格、各52明細。共通見出し発送日欠落を2回改善。設計§15のprompt/version限定変更を自己審査APPROVE、§14全体はREVISE。製品未変更。正本docs/handoff/tcg-product-master-growth/design-keyword.mdとprompt-retention-evaluation.json。トークン使用量・本番正解率は未測定。
