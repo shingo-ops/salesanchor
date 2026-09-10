@@ -620,3 +620,7 @@ run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
 
 # PMG import progress: TCG schemas only, additive, no backfill
 run_sql migrations/20260910_010000_tcg_import_message_links.sql
+
+# LINE work evidence before v3 code; dictionary filter is independently idempotent.
+run_sql migrations/20260910_160000_tcg_work_evidence.sql
+run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql

@@ -8,9 +8,9 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399の検証・マージ後に本PRへ取り込む。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
+| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
-| LINE解析精度・正常完了の誤商品調査 | Agent | 実装GO受領。本番DBをread-only確認、作品誤判定29中有効4。設計自己審査APPROVE・カード検査通過、文書PR #3387提出済み | 設計・ADR追加案の文書承認後、カードを実装役へ渡す。製品実装・本番反映は未着手 | docs/handoff/tcg-product-master-growth/design-keyword.md §10 / EV-20260910-LINE-ACCURACY-06 / https://github.com/shingo-ops/salesanchor/pull/3387 | 2026-09-10 |
+| LINE解析精度・正常完了の誤商品調査 | Agent | PR #3393実装・読み取りレビュー済み。PostgreSQL統合を含む2424 passed。Gemini匿名実測8明細（作品7＋不明保持1）正答、誤分類0。一時ライブ試験はb2700dd0で除去 | #3398は固有GO受領・760532a9でマージ・本番deploy run34430261411成功。直前backup4.5M・SQL2本成功を直接確認。#3393はmain取り込み済み、受領済みGO/マージ依頼に基づき最終CI確認後マージ・反映確認へ進む。旧データ一括修復は対象外 | docs/handoff/tcg-product-master-growth/card-work-matching-v3.md / EV-20260910-LINE-ACCURACY-08 / https://github.com/shingo-ops/salesanchor/pull/3393 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
 | GOフロー統一（既存GO転記テーマの延長） | 設計担当 | 文書PR #3388マージ確認済み。改訂2でGO取消期限AにPO合意。文書PR #3394提出済み、自己審査REVISE | 保護例外・App運用・再GO条件と確定記録の契約を確定 | docs/handoff/go-record-transcription/design.md 改訂2 / recon.md、PR #3388・#3394、EV-20260910-GO-FLOW-SCOPE | 2026-09-10 |
 | 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
@@ -93,3 +93,10 @@
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+
+
+## DB準備テストの領域分離（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |

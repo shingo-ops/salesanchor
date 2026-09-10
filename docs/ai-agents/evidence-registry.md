@@ -1560,6 +1560,81 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
 
 
+```text
+id: EV-20260910-LINE-ACCURACY-07
+date: 2026-09-10
+agent: Codex (design partner)
+task: 実装カードのCI検証経路補正
+scope: カード・台帳のみ。製品の仕様と試験基準は維持
+evidence:
+  - type: command
+    reference: 実装役 /root/implement_line_work_matching の停止報告
+    summary: preflight成功、worktree release/line-work-matching-v3作成、Docker不存在exit127、製品変更0で停止
+  - type: file
+    reference: .github/workflows/test.yml:123 / .github/workflows/test.yml:224 / backend/pyproject.toml:54
+    summary: 既存CIはPostgreSQL16とRLS_ADMIN_DATABASE_URLを用意してtests全件を実行。設計§10.3でCI経路は許可済み
+confidence: high
+tradeoff: ローカルpytestは未実施と明示し、CIで実統合試験が実行された証拠を必須にする。Gemini実測不可は本番反映の未完了条件として保持
+decision: 一律停止のカード不備を修正し、実装・ローカル静的検査・ready PR・既存CIの順で再開可能とする。追加の実装GOは不要
+follow_up: 実装役が再開し、新規統合試験の実行成功と実測未了の区別を報告する
+```
+
+
+## EV-20260910-LINE-ACCURACY-08
+
+- 対象: CARD-LINE-WORK-MATCHING-V3-01の実装・検証準備（Generator）。
+- 基点: 6e1335725bb8dfdf390125c4caf5a93f705f4821。設計PR #3387のMERGEDとmergeCommitをghで再確認。
+- 実装: v3厳格9列と旧7列パーサ、作品原文2列保存、同一明細の作品根拠検証、作品ID候補制約、作品不明時の型番だけの確定拒否、商品名・状態・備考を独立に除外確認、商品訂正記録のある行スキップ。未一致basisは既存UI互換のNONEを維持。
+- migration: 2本を正規runner末尾へ追加。構造は追加専用、PM0200は名称とIP001の検算後にコロを追加、商品登録・再解析は含まない。
+- 実行: Python3.12でmake lint-ci exit0（ruff PASS、Bandit High0、mypy警告運用）。初回Python3.14のBandit内部例外はPASSに含めない。task-state PASS、card-lint exit0（長文警告あり）、git diff --check PASS、6 Pythonファイルの構文解析PASS。ローカルpytest未実行。
+- PostgreSQL: CIの使い捨てサービス内に試験ごとのDBを作る統合試験を追加。まだ実行前でありPASSとはしない。GITHUB_ACTIONS、localhost、jarvis_test_dbを必須条件とする。
+- 安全: テストDB削除命令を含むファイル作成がガード拒否。削除命令を除去し、CIサービス終了に廃棄を委ねる。ガード解除・本番接続なし。
+- Gemini: GEMINI_API_KEYの設定有無のみ確認しFalse。6匿名メッセージ・8期待明細をテスト内に準備。live形式失敗／正答／不明／誤分類はすべて未計測。モデル精度改善を実測済みとは扱わない。
+- 次: ready PRと既存CI。設計PRのGOを新しい実装PR番号のGOへ流用せず、本番前実測とマージ承認を残条件として区別する。
+
+- PR提出: https://github.com/shingo-ops/salesanchor/pull/3393 （OPEN、ready、初回HEAD 13fae233250d49c434c673450e60772d026293b7）。2026-09-10 01:28 UTC提出。push由来のtask-state/active-work checksは成功、Backend Testsは確認待ち。
+- 設計パートナーの読み取り検算報告（Generatorの実DB試験とは別）: 最新有効マスタへ正しいガンダムUUIDを入力した29保存行相当は異作品確定0、未解決29。PM0200コロ追加後、コロちゃお商品名3保存行はPM0285、備考のみ1行は未解決、通常名1件はPM0200。AST抽出関数による局所検算であり、Gemini実測・DBmigration実行結果ではない。
+
+### 2026-09-10 実装受入の実測結果
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3393 。実装マージ・本番DB更新・既存一括再解析・配信は未実施。
+- PostgreSQLと既存回帰: HEAD 6a0de8e39db70fcd523941143d444e099d511fb6、Backend Tests run34425902051 / job102710979427で2424 passed、93 skipped、302 warnings、64.61秒。新規統合6テストはskipなし、CI・ローカル接続先制約をassertし、試験ごとの使い捨てDBで正規SQLを実行した。
+- 実DB受入: 作品を付けた過去29保存行相当で異作品確定0・未解決29、作品なし型番29入力で確定0。通常名1→PM0200、コロちゃお名3→PM0285、備考のみ1→NONE/要確認。限定版2種・曖昧コロは通常確定0。ワンピースEB01正常対照→PM0123。商品訂正3項目の再解析・後処理後の変更0。配信候補取得で未解決が除かれることを確認（送信なし）。
+- migration: 既存TCG表・表なし・将来作成後・再実行、nullable TEXT2列、PM0200既存5語保持＋コロ1語、名前/作品不一致時の例外停止を実PostgreSQLで検証。テストに定義を手書きした非必須ケースはスキーマ複製検査に拒否され除去し、正規migrationによる必須検証を維持した。
+- Gemini実測1: HEAD ff8098eec27dbcdadb60d2d4a02b15e462b2cf42 / run34426151237 / job102711720864。2425 passedだがxdistで集計stdoutを取得できず、正答数の証拠に採用しない。artifact0件。
+- Gemini実測2: HEAD 6b489af4d6fbc05f600eacce35bf07a1d849f7bf / run34426443315 / job102712624432。UserWarning集計のstatus=measuredを確認。6匿名メッセージ・期待8明細・抽出8明細、作品特定正答7＋作品不明保持正答1。形式失敗0・API失敗0・欠落0・過剰0・未知化0・誤分類0。既存停止スイッチ・mockキー除外を尊重。最大12メッセージのAPI呼び出し可能性を記録し、初回を正答母数へ合算しない。
+- 実測2の生集計: `{"api_failures":0,"correct":8,"excess_items":0,"expected_items":8,"expected_unknown_correct":1,"format_failures":0,"messages":6,"missing_items":0,"observed_items":8,"status":"measured","unknown":0,"wrong":0}`。一般のLINE全件の正答率を示す標本ではない。
+- 一時計測の除去SHA: b2700dd0dd04f3ad0e5733d902f3d6980bc8e2ec。匿名標本と単体モックは保持し、今回追加したlive呼び出しを最終ツリーから除去。CI・secrets変更なし。
+- 設計パートナー（root）の読み取り確認: v3空出力のヘッダー不足、NONEの既存UI互換、旧7列正常fixtureの指摘修正を確認し、製品差分に追加の阻害所見なし。上記CI生集計もrootがGitHubから直接確認。これは実装差分の読み取り確認であり、同一AIによる設計自己審査を独立した設計第二者レビューとは称さない。
+- 最終残条件: 一時計測除去後の最終CIを確認する。process-artifactsは新PR固有のPO GO未受領により失敗（GO記録なし）。設計PR #3387のGOを流用せず、本PRのGOとマージ・本番反映は別判断として待つ。
+
+
+### 2026-09-10 PR #3393のGO受領
+
+- PO原文: 「GO #3393」。本セッションで受領し、PR本文のGO記録4欄へ原文どおり転記。発話の時分は未取得のため創作しない。
+- 対象HEAD: 348d0a6bf6fc906f9866ec8bf36e96a8419e8645。GitHubでOPENを確認。既存の検証記録と本文を保持した。
+- バックアップ: docs/B-09_restore_test_procedure.md Step 1の一覧をSSHで要求したが、2026-09-10 11:05 JSTの監視情報だけが返った。バックアップの実在・時刻・整合性は未確認。接続制限の解除や迂回なし。
+- 承認受領とバックアップ確認・マージ・本番反映を区別する。承認の再取得は不要。バックアップ未確認と最新main再確認が残条件。本ターンの製品変更・DB更新・マージなし。
+
+### マージ前の適用順不整合を検出（2026-09-10）
+
+PO原文「マージ」を受領。最新main取り込みは文書7件のみで競合なし、製品差分不変。HEAD ceb0d73fをpushし再検査中に、deploy.yml:335のworker起動が:458のSQL適用より先と実物確認。本設計§10.2の順序と不整合のため、マージ前に停止した。先の実装レビューの確認不足として記録する。補正と自己審査は設計§10.2.1、実装役への指示は既存カード末尾。元PRのGO/マージ依頼を取消扱いにせず、先行PRの固有GOを流用・創作しない。新たな製品仕様・本番直接操作・CI変更はない。
+
+### DB先行PR #3398の提出と検証（2026-09-10）
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3398 、HEAD 8ef86fd09cbd7407c791d9ee6db1cfce9541c604。差分3ファイル54追加・削除0。rootも2SQLのsource ceb0d73fとの逐語一致を検算した。
+- SHA256: 構造SQL afdfbf530d075b1beba5d9d91cc2110da1588e94120d8342a041f479a6b72b28、辞書SQL 458857fd40b5dfefd07a0a4b602197f0215ae5a24cf88d582c54bc51deb1c149。
+- 先行PR固有CI: Backend job102721200901で2374 passed/93 skipped/82.33秒。migration run34429300255のSQL実DB実行・全件ドライランも成功。rootはGitHubの実出力を確認した。失敗は先行PR固有GO記録欠落（job102721175226）のみ。
+- バックアップ参考: 既存deploy run34427083170/job102714500644で2026-09-10 10:51:19 JST salesanchor_db_20260910_105115.sql.gz(4.5M)生成成功を確認。今回反映直前の取得・実物/復元検証とは区別する。先行PRの自動反映もDB変更前に既存のバックアップ工程を実行する。
+- 停止位置: 先行PR固有のGO受領前。#3393のGOとマージ依頼は保持し、再取得しない。新規PRへ承認を流用せず、#3398の適用完了確認後に #3393を進める。どちらも本ターン未マージ。
+
+### DB先行反映完了（2026-09-10）
+
+- PO原文「GO #3398」を本セッションで受領（発話の時分は未取得）。公式merge wrapperで #3398 を2026-09-10T02:38:46Zにマージ。merge SHA 760532a9a57c4661672468e26beed8d071b6f6d4。
+- 本番自動反映 run34430261411 / job102724106081 は success。rootがGitHub APIとログを直接確認。11:39:26 JSTに salesanchor_db_20260910_113923.sql.gz（4.5M）生成成功。復元試験は未実施。
+- 同ログの [222/223] 20260910_160000_tcg_work_evidence.sql と [223/223] 20260910_160100_tcg_normal_deck_coro_exclusion.sql はともに DO、Migrations done（02:41:55Z）。スモーク・最終確認を含むdeploy全体が成功。
+- #3393 はこのmainを競合なく取り込み、差分は実装・試験・文書11ファイル。DB先行条件を満たしたため、既存の「GO #3393」「マージ」に基づいて最新HEADの全CI確認後にマージする。既存結果の一括修復・再解析は行わない。
+
 ## EV-20260910-WORKTREE-PRESERVE
 
 - 対象: 作成時の既存作業場所保持指定の設計草案。
@@ -1596,6 +1671,19 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
 
 
+## EV-20260910-RLS-SCOPE
+
+- 根拠: docs/handoff/rls-bootstrap-txn-fix/recon.md / design.md の2026-09-10追補。
+- PR #3397のrun 34429316341で同一failureを2回確認。変更はテスト基盤2ファイルと既存記録4文書に限定。
+- 同一AIの設計自己審査APPROVE。実PG検証・PR提出・マージは未実施。POの番号付きGOは創作していない。
+- 報告先: /tmp/reports/RLS-SCOPE-PREFLIGHT-20260910.txt、RLS-SCOPE-WORKTREE-01.txt。
+
+- 実装提出: https://github.com/shingo-ops/salesanchor/pull/3399。初回HEAD 8104fd7f。純粋関数正常2例・拒否9例、ruff・書式・台帳検査成功。手元でpytestは未実行。設計のADR-113参照漏れをローカル成果物検査で検出し追補。CI・マージは後続確認。
+
+- CI HEAD 2e4365ad: 2429 passed / 93 skipped / 3 errors（在庫fixtureの旧pokemon code）。テスト1ファイルを対象へ追加し正規pokemon_booster_boxへ照合、空応答防止も追加。設計/recon追補で同一AI自己審査。マージ未実施。
+
+- 最終確認: PR #3399は2026-09-10T03:07:34ZにMERGED、merge 7e3dd6565bc8b239ee09967961326fd096fb72fe。最終HEAD feae3d97、実PGを含む2432 passed / 93 skipped、coverage 61.52%、必須12件成功。worktree回収・台帳DONEを確認。上の未マージ記述はその時点の履歴。
+
 ## EV-20260910-TCG-SCHEMA-IMPL
 
 - 設計: PR #3392、docs/handoff/tcg-product-import/design.md §12。recon.md追補を照合。
@@ -1613,3 +1701,5 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 原因の接触面: backend/tests/rls_bootstrap.py:232の全テナントmigrationと、backend/tests/test_tcg_import_progress_pg.py:47のTCG専用一時schema。具体的な並列タイミングは未実測。別件の修正候補は /tmp/reports/TCG-SCHEMA-3397-CI-BLOCKER.md。禁止対象や追加コードには変更していない。
 
 - 別件のDB準備テスト修正をPR #3399へ提出。実DBで判明した在庫fixture旧codeも同PRのテスト内で補正中。現時点で両PRとも未マージ。
+
+- PR #3397へマージ済み#3399を取り込み。商品サービス・設計payloadは変更せず、当該PRの全CIを再確認する。#3397は未マージ。
