@@ -349,3 +349,22 @@ rootはPlanner/Architectを同一AIとして担当し、製品編集はPO指定C
 - 公開Appのindex-i0HIAxuW.jsのSHA256 adc6e6c79bf4adb70f057fce2552b2fce1a3cca9e0629616984ba50c87e46f3b。pmg-workflow__table/distributionScope/import_job_idの存在を確認。https://api.salesanchor.jp/api/health はok/database connected/redis connected/celery connected。
 - Python標準urllibはローカルCA設定不足でTLS検証に失敗した。証明書検証は無効化せず、OSの証明書を使用するcurlで正常取得した。
 - UIの操作試験はローカル模擬APIの5件。稼働環境では公開ファイル/health/配備ログを確認し、管理者の実データ操作や実配信を実行したとは称しない。
+
+
+### 2026-09-10 確認待ち取込の仕入元5件登録
+
+PO原文「新規登録する」を、直前に提示した5名それぞれの新規登録の承認として実行。対象は import_job_id `f030f2e6-d6ce-46f5-ad45-c5f0ced9b866` のみ。POの残タスク委任とPRマージ承認は受領したが、cxastragoの代理GO経路を有効化したとは扱わない。
+
+本番読取専用照会（transaction_read_only=on、2026-09-10 14:37:54 UTC）で91投稿、pending_review、未解決5名、messages_linked_at=NULLを確認。登録前に対象状態、同名仕入元0件、稼働中resolve_supplierのコード本文SHA256 `7ffaa0bebbeb7c802ed74d4c231a376188ebb5d43575229e27b1b0dd8a843128`を照合。最初のAST照合は不一致で書込前に停止し、本番コード本文を読み直して本文一致による検査へ修正した。
+
+POが許可したSSH経路で、稼働中APIの既存resolve_supplierへaction=createを5回渡した。HTTP経由の認証付き画面操作ではなく、SSH上の管理操作として既存関数を直接実行した。対象jobと仕入元表を各登録中ロックし、状態変化・同名追加時には停止する。コード改変、解析開始、配信は実行0回。
+
+| 新規コード | 名前 | LINE接続登録数 |
+|---|---|---|
+| SP0241 | Ryum. | 1 |
+| SP0242 | 谷村 | 1 |
+| SP0243 | Ty事務員 | 1 |
+| SP0244 | 板谷よしみつ | 1 |
+| SP0245 | 鈴木（板谷STAFFアカウント） | 1 |
+
+直接実行した検証: /tmp/pmg-register-five.py の外側/内側Python構文検査成功、check exit0、apply exit0。登録応答の残件数4→3→2→1→0、登録後の読取専用照会で上記5コード・各LINE接続1件・unresolved_count=0を確認。review_status=pending_review、messages_linked_at=NULLは維持。次は取込確定と抽出開始の運用工程であり、仕入元登録だけで解析済みと扱わない。製品履歴/切替設計のREVISEは継続。
