@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| フロントエンド金型化・再測定 | Agent | PR #3412マージ済み。ICON5値保持の生成化完了。同値カラー7ファイル実装・局所比較と121試験成功 | PR #3420のPO原文GO #3420を受領。最新HEADのCI確認後に公式マージ。cxastrago同条件の委任を受領、代理GO経路は未有効。CI追加は最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-20 / https://github.com/shingo-ops/salesanchor/pull/3412 | 2026-09-10 |
+| フロントエンド金型化・再測定 | Agent | PR #3412/#3420マージ済み。カレンダー21色移管は既存CIとの矛盾により限定REVISE、製品未変更 | PO続行を受領。読み取りやすさの方針を追補し、Button本体を監査・カード化。CI追加は最後 | docs/handoff/design-system-recon/evidence-20260910/calendar-source-audit.md / EV-20260910-FRONTEND-MOLD-21 | 2026-09-10 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
