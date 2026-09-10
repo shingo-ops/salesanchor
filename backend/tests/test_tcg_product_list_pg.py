@@ -1,5 +1,6 @@
 """Real query semantics for the product management list, in a rolled-back schema."""
 import os
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -24,10 +25,25 @@ async def test_all_products_search_and_pagination(monkeypatch):
             transaction = await conn.begin()
             try:
                 await conn.execute(text(f"CREATE SCHEMA {schema}"))
-                await conn.execute(text(f"CREATE TABLE {schema}.tcg_products (id int PRIMARY KEY, code text, japanese_title text, english_title text, mark text, release_date date, is_active bool)"))
-                await conn.execute(text(f"CREATE TABLE {schema}.product_search_keywords (product_id int, keyword text)"))
-                await conn.execute(text(f"INSERT INTO {schema}.tcg_products VALUES (1,'PM01','Alpha','','A',NULL,true),(2,'PM02','Alpha hidden','','B',NULL,false),(3,'PM03','Beta','','C',NULL,true)"))
-                await conn.execute(text(f"INSERT INTO {schema}.product_search_keywords VALUES (2,'hidden')"))
+                migrations = Path(__file__).resolve().parents[2] / "migrations"
+                for name in (
+                    "20260831_110000_create_tcg_analysis_tables_t004.sql",
+                    "20260903_180000_tcg_products_mark_en_t004.sql",
+                ):
+                    sql = (migrations / name).read_text().replace("tenant_004", schema)
+                    await conn.exec_driver_sql(sql)
+                await conn.execute(text(
+                    f"INSERT INTO {schema}.tcg_products "
+                    "(code,japanese_title,category_class,is_active) VALUES "
+                    "('PM01','Alpha','Box',true),"
+                    "('PM02','Alpha hidden','Box',false),"
+                    "('PM03','Beta','Box',true)"
+                ))
+                await conn.execute(text(
+                    f"INSERT INTO {schema}.product_search_keywords "
+                    "(product_id,keyword,position) "
+                    f"SELECT id,'hidden',0 FROM {schema}.tcg_products WHERE code='PM02'"
+                ))
                 async with AsyncSession(bind=conn) as db:
                     first = await routes.list_products(query="", limit=1, offset=0, db=db, _user={})
                     second = await routes.list_products(query="", limit=1, offset=1, db=db, _user={})
