@@ -460,6 +460,7 @@ def test_temporary_live_work_measurement(capsys):
     """Finite card-authorized measurement; never print credentials or API errors."""
     import json
     import logging
+    import warnings
     from app.services.tcg_analyzer_svc import resolve_work_evidence
 
     metrics = dict(messages=6, expected_items=8, observed_items=0,
@@ -473,8 +474,8 @@ def test_temporary_live_work_measurement(capsys):
     elif os.getenv("GEMINI_API_KEY", "").startswith("test-"):
         stop_reason = "not_run_mock_key"
     if stop_reason:
-        with capsys.disabled():
-            print("LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status=stop_reason, **metrics)))
+        aggregate = "LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status=stop_reason, **metrics))
+        warnings.warn(aggregate, UserWarning)
         return
     works = [
         dict(id="2fe437c0-5a47-4311-9b94-0c107f64adcd", display_name="Pokemon", alt_name="ポケモン"),
@@ -511,8 +512,8 @@ def test_temporary_live_work_measurement(capsys):
                     metrics["wrong"] += 1
     finally:
         logging.disable(prior_logging)
-    with capsys.disabled():
-        print("LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status="measured", **metrics), sort_keys=True))
+    aggregate = "LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status="measured", **metrics), sort_keys=True)
+    warnings.warn(aggregate, UserWarning)
     assert metrics["correct"] == 8 and not any(metrics[k] for k in
         ("format_failures", "api_failures", "missing_items", "excess_items", "unknown", "wrong")), "Live acceptance incomplete; see safe aggregate metrics"
 # END TEMPORARY LIVE MEASUREMENT
