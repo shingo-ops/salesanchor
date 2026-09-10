@@ -2027,3 +2027,23 @@ EV-20260910-PMG-SCREEN-CONNECT追補: PR #3416を提出（https://github.com/shi
 EV-20260910-PMG-SCREEN-CONNECT GO追補: PO原文「GO #3416」を受領。受領後記録時刻2026-09-10 21:17 JST。対象HEAD ca1dc79bc9a9661a39baae21e0952c890e7522c7の検査は37成功/8対象外skip、唯一の失敗は番号付きGO記録欠落（job102865146997）。承認をPR本文へ転記し、記録文書更新後のHEADで再確認してマージ/通常デプロイを確認する。DB変更なし・バックアップ確認は該当なし。
 
 EV-20260910-PMG-SCREEN-CONNECTリリース完了: PR #3416は最終head6459e7ca・37success/8skip確認後、17ebe93fでMERGED（2026-09-10T12:24:21Z）。deploy34476536034/job102868559798 success、実配備HEAD17ebe93f、公開JS index-i0HIAxuW.jsと新画面コード、health ok/DB・Redis・Celery connectedをrootが直接確認。詳細/限界/実行しなかった試験はdesign/recon末尾。本番の実配信・管理者実データ操作は未実行。ページ接続完了と、未実装の新解析実行記録・全配信履歴/切替設計REVISEを区別する。
+
+### EV-20260910-FRONTEND-MOLD-20: 第1実装便マージと次の同値カラー集約
+
+PR #3412は2026-09-10T11:31:17Z、merge commit6d3e348614d675c533cc46fefddb03544f581e8cでMERGED。設計担当がGitHubのstate/mergedAt/mergeCommitを直接確認。最終HEAD254ab96fはCI38成功/対象外8、第二レビューAPPROVE適用確認。PO原文GO #3412を転記済みで公式merge/cleanup成功、active-work.dはDONE。ICON5値保持とCSS正本からの生成が実装済み。全体の画面統一完了とはしない。
+
+PO原文「離席するのでcxastragoモードと同じ条件で権限委譲するので進めてくれ」を受領。本セッションの対象は引き続きfrontend SSOT。ローカルcxastrago.zshとsalesanchor-astra-go.mdを読み取り、条件は有効化から24時間・不明/失敗/範囲外停止・代理判断の明記、現状はGO委任有効化待ち/期間未開始と確認。PR3406はOPENで委任承認経路未実装。最新main4734fe7fのGO検査もPO表記のみで、代理GO対応を確認できない。委任指示を受領した事実と、機械的有効化を区別し、PO名義GOを創作しない。承認経路の変更は本frontend便で行わない。
+
+既存の実装・レビュー・段階別PRの承認を根拠に、公式release/frontend-color-sourceをorigin/main4734fe7fから作成、preflight成功。旧PR2895/2911/2914/2919の採用差分を既存migrationに従って再測定する。calendar21用途・部品API・新CIは別便。新しい24時間期間を自己設定・再開延長しない。
+
+EV-20260910-FRONTEND-MOLD-20追補: 7製品原稿の限定第二レビューAPPROVE。manifest7件一致、既存9宣言/新16宣言/使用CSS7箇所/mail属性とCSSの対だけと別担当が確認。ブラウザー原稿は静的25ペアと実ソース変換を通過した補助実行後、Chromium1223未導入で起動できなかった。失敗ログを保存し、正式実装便で既存Playwright指定ブラウザーを正規導入して検証する。未実施を成功扱いしない。
+
+EV-20260910-FRONTEND-MOLD-20追補: 7製品を原稿hash一致で反映しrootが全件確認。npm ci成功後、npxのplaywrightが@playwright/test1.59.1へ解決し、比較の直接依存playwright1.60.0とブラウザー版がずれることをrealpath/package version/executablePathで実測。依存設定や期待値を変えず直接依存のCLIでChromium1223を導入するカードへ修正。失敗を保存し、検証結果は再開後に確認する。
+
+同値カラー便の検証完了追補: Generator実行の通常ブラウザー比較は静的25/色50/表示60ペア一致、既存check:all・build・test:coverage（14ファイル121試験）・build-storybookは全exit0。rootが生ログ/JSONと7製品hashを直接確認。詳細はdocs/handoff/design-system-recon/evidence-20260910/color-source-implementation.md。PR/リモートCI/マージ未完、目視は完成後PO、代理GO未有効。
+
+EV-20260910-FRONTEND-MOLD-20提出追補: 実装commit48924bd4を通常push済み。safe-createの自動審査は25ファイル公開承認不足として一度拒否。rootがGitHub APIで同じ25ファイルが既に公開済みであることを確認し、新規ファイル送信を伴わないPR本文作成として正規再審査を受け許可された。公式safe-create/register-pr成功、PR #3420提出済み。main df3c2a47との文書競合はmain全文と本便追補を保持して解消。製品7hash不変、他者の製品変更を保持。代理GOは未有効、番号付きGO未受領。
+
+PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO記録なしでFAILURE。rootがGitHubログを直接確認。代理GO未対応を名前の偽装で通さず、POのGO #3420待ち。残りの技術CIは確認中。マージ/本番反映未実施。
+
+PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。

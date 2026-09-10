@@ -971,3 +971,20 @@ layoutClassNameの許可propertyと部品ごとの寸法禁止は[最終CI契約
 #### 状態と承認の区別
 
 設計案作成済み・全体設計自己審査済み。POから実装担当への委任と順次マージの依頼を受領しているが、具体的なPR番号付きGOやADR改訂のPO自筆承認を創作しない。文書PR #3407はマージ済み、本節は次の文書PRへ保存する。製品実装・自動テスト・PO目視・製品PRマージ・デプロイは未実施。この設計合格をそれらの完了・承認の代わりにはしない。
+
+
+### AB. 同値カラー材料便の確定範囲（2026-09-10）
+
+全体自己審査§AA後、第1実装便PR3412はマージ済み。次便は既存migrationの旧PR採否に従い、[候補全件表](../../handoff/design-system-recon/evidence-20260910/color-source-audit.md)と[実測JSON](../../handoff/design-system-recon/evidence-20260910/color-source-audit.json)の7製品ファイルに限定する。基準4734fe7f。これは同値の定義移管で、部品のAPI/大きさ/操作/画面構造を変える便ではない。
+
+- index.cssの既存9宣言を同値参照へ置換。indicator、sidebar active border、light active color、sidebar-bg、accent-bg。新しい固定色は追加しない。
+- icon-action/action-hover/action-danger/empty/decorative/search/status-success/platform-mailの8用途名を明暗各1定義で追加。具体的参照先と明暗値は上記候補全件表のとおり。元の汎用tokenを値の正本とし、用途名はaliasだけにする。
+- components.cssのicon-btn通常/hover/danger-hover、EmptyStateのアイコン、Dashboard装飾、Inbox検索/ロックを対応用途名へ移す。見出し全体の文字色や一般ナビ文字へ広げない。
+- mail/emailのPlatformIconは既存EnvelopeIconのcolor属性whiteだけを除き、既存mailラッパーにcolor:var(--icon-platform-mail)を追加する。既存DOM、Math.round(size*0.7)、width/height、aria-hidden、他platform分岐を保持する。既存--on-accentを参照し、未定義--on-solidは使わない。
+- calendar21用途、未使用token削除、影のcolor-mix化、リンク/背景/文字の配色変更、useEffect修正、Iconの汎用style/ref/API再編、CI変更は別便。新しい見た目の判断を混載しない。
+
+受入: 候補全件の明暗解決値が変更前後一致、参照欠落/循環0、変更箇所のブラウザーcomputed colorを明暗と画面幅390/1280で比較する。icon-btnは通常/hover/danger-hover、mail/emailは実コンポーネントのSVG描画色と数値寸法/ARIAを確認。対応表の旧token利用と新alias利用を比較し、暗黙の黒fallbackを一致と誤認しない。ブラウザー比較は局所fixtureの技術試験で、全画面のPO目視完了とは称しない。
+
+既存check:all、ビルド、必要な既存CIを実行し、新token本文の4項目は実施後に正規テンプレで記載する。新CIは設置しない。検証用原稿・前後比較結果を既存recon根拠へ保存し、検証失敗を隠さない。通常のCI成功だけを同値の証明としない。
+
+Architect自己審査: APPROVE（この7ファイルの同値移管契約）。設計担当がPlanner記述後に同一AIとして審査し、候補9宣言・8用途・使用9記録、全50CSSで対象上書き0、静的API書込検出0と照合した。独立した第二者設計審査とは称しない。実ブラウザー比較・製品実装・製品第二レビューはこれから実行する受入条件で、設計合格をそれらの実行済みとしない。外部導入事例は不要（自社の既存色の同値移管を実物で比較する変更のため）。
