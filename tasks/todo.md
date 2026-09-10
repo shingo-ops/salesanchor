@@ -94,6 +94,7 @@
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件成功。Docker試験の修正をTerraで再開。running2件の復旧は別セッション担当 | Docker試験の差分レビュー・隔離CIを実施し、切替設計の残件へ反映 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
 
 
 

@@ -1769,3 +1769,11 @@ PO原文「離席するので最後まで進めてくれ、事前にPRマージ�
 ## EV-20260910-INVENTORY-LOCK
 
 POの追加別PR修正・マージ・デプロイ指示を受領（GO #3401は#3401にのみ転記）。4つの共有DDL経路を既存lockへ参加させる限定修正を自己審査。試作8直接検査成功・修正前4関数拒否。Python3.14、実PG/CIは未実施。設計・調査はdocs/handoff/rls-bootstrap-txn-fix/design.mdとrecon.mdへ追補。実ログ /tmp/reports/INVENTORY-BOOTSTRAP-PROTOTYPE-TESTS-01.txt。
+
+
+## EV-20260910-PMG-CUTOVER-PROBE
+
+PMG切替設計の未確認条件を検証する隔離便。正本: docs/handoff/pmg-import-delivery-ssot/design.md / recon.md / card-cutover-probe.md。
+PO実装担当指定「codex terra」、マージ/デプロイ指示と作業場所例外「許可する進める」を区別して記録。製品設計REVISE、試験実装だけ自己審査APPROVE。Terraの旧コルーチン取消試験14/14成功を設計担当が再実行確認。Docker検証は実装/CI待ち。本番状態変更なし。
+
+PMG追補: 17:41 JST、本番読取で既往running2件のID一致・items0を確認。応答worker1台のactive/reserved/scheduled各0。DB更新/配信なし。Terra利用上限停止によりDocker試験は未完成・未提出。詳細は上記recon末尾。
