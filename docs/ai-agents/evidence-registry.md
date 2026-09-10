@@ -2061,3 +2061,14 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 ## EV-20260910-GO-REV3-PR
 
 設計草案PR #3418提出をAPIと登録ファイルで確認。初回HEAD0546b8b8、文書6ファイルのみ。自己審査REVISE・実装未着手・委任未有効。証拠 /tmp/reports/TH-GO-REV3-PR-CONFIRM.json。
+
+## EV-20260910-PMG-SCREEN-CONNECT
+
+2026-09-10 base4f1c2b81。POは説明後に「承認する…確立したならページ作成まですすめる」と承認（全文はdesign最終節）。本番切替時の一時停止/他の更新待機の方針採用、個別本番停止ではない。
+既存progress/items、coverage/NULL契約、ページ/共通APIと権限を実ファイルで確認。検索漏れを訂正。新履歴や切替導入とは独立した既存API接続ページのみ自己審査APPROVE。カードCARD-PMG-SCREEN-CONNECT-01を正式card-lint exit0で検査後Terraへ委任。rootは製品コードを書かない。実装ccc105ad、main4734fe7f統合4619e7a8。root検証build/check:all exit0、unit133件成功、模擬API E2E5件成功・PC/390px英語暗色画像を確認。ページ接続差分APPROVE、親設計REVISE。PR/CI/本番反映は別の状態として記録する。
+
+EV-20260910-PMG-SCREEN-CONNECT追補: PR #3416を提出（https://github.com/shingo-ops/salesanchor/pull/3416）。最新main統合後にrootでbuild/check:all/unit133件とE2E5件を再確認、いずれも成功。根拠台帳の競合は両セッションの全文を保持して解消。画面接続は実装済み・差分確認済み、CI確認中、未マージ・本番未反映。番号付きGO原文未受領。
+
+EV-20260910-PMG-SCREEN-CONNECT GO追補: PO原文「GO #3416」を受領。受領後記録時刻2026-09-10 21:17 JST。対象HEAD ca1dc79bc9a9661a39baae21e0952c890e7522c7の検査は37成功/8対象外skip、唯一の失敗は番号付きGO記録欠落（job102865146997）。承認をPR本文へ転記し、記録文書更新後のHEADで再確認してマージ/通常デプロイを確認する。DB変更なし・バックアップ確認は該当なし。
+
+EV-20260910-PMG-SCREEN-CONNECTリリース完了: PR #3416は最終head6459e7ca・37success/8skip確認後、17ebe93fでMERGED（2026-09-10T12:24:21Z）。deploy34476536034/job102868559798 success、実配備HEAD17ebe93f、公開JS index-i0HIAxuW.jsと新画面コード、health ok/DB・Redis・Celery connectedをrootが直接確認。詳細/限界/実行しなかった試験はdesign/recon末尾。本番の実配信・管理者実データ操作は未実行。ページ接続完了と、未実装の新解析実行記録・全配信履歴/切替設計REVISEを区別する。

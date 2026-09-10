@@ -304,3 +304,48 @@ PO「次を進める」を受領。既存保持の作成手順を継続し、rel
 | SA-18リハーサルはdeploy本文を抽出して実行する別経路 | .github/workflows/test-phase2-rehearsal.yml:36、scripts/rehearsal_phase2.sh | 名前がtestでも本件の無資格fixtureと同一視しない |
 
 Context7利用不可。2026-09-10にGitHub公式concurrency資料を直接確認: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。同groupの実行中排他はjob終了後のホスト保留を維持しない。既定ではpendingの置換があり、全PRが順番に必ず配布される保証とも異なる。本便ではconcurrency設定を変えない。
+
+## ページ接続の再照合と承認（2026-09-10、4f1c2b81）
+
+PR3413/deploy34470161574はsuccess。POの方針採用・根拠確立後のページ作成承認をdesign最終節に原文保存。本番停止承認ではない。新worktreeでpreflight/開始/所有検査exit0、本店の他者AGENTS.md変更保持。
+backend/app/services/tcg_import_progress.py:36,49,129、routers/tcg_line_import.py:653-666、tests/test_tcg_import_progress_pg.py:149-235を照合。GETは実在し、NULL/coverage/ページングを既に提供。Terraの検索漏れによる不存在報告をrootが実ファイルで訂正させた。
+frontend/src/pages/super-admin/TcgLineImportPage.tsxの履歴/入力/ReviewSection、TcgDistributionPage.tsxのPageLayoutとPreview/TargetList/Form、features/tcg-distribution/distributionApi.ts:95-124、lib/api.tsのGET限定retryを照合。配信runの永続履歴は未提供。既存GET/操作に限定した画面接続を独立設計として自己審査APPROVE。親設計の切替/実行履歴はREVISE。
+frontend-designスキルを適用し既存の業務部品/色/フォントを優先。新しい外部ライブラリ/API仕様は導入しない。実装は指定Codex Terra。製品編集はカード検査後。
+
+### ページ接続検証中の訂正（2026-09-10）
+
+- 正式画面URLは `frontend/src/App.tsx:294` と `frontend/src/components/DesktopShell.tsx:191` の `/super-admin/tcg-line-import`。ページ先頭コメントの `/super-admin/tcg-import` は古く、初回E2Eで3件が経路不一致となった。routingを変更せずコメントとE2Eを修正し、再実行でURL復元/ページング・非管理者要求0の2件が成功。配信試験はaria-label不一致を検出し修正中。
+- `migrations/20260906_120000_create_tcg_tables_t001.sql:426-427` の正規化数量/価格はNUMERIC。itemsのJSON数値として型を照合する。
+- 検証中に取込切替の旧値表示、未翻訳キー、配信部品未接続を発見しTerraへ修正を委任。buildだけを完成根拠にせず、競合・空/未記録・配信確認の試験と視覚検証を実施する。
+
+### ページ接続の差分レビュー（2026-09-10）
+
+rootはPlanner/Architectを同一AIとして担当し、製品編集はPO指定Codex Terraへ委任した。以下はページ接続便の検証範囲。親の解析実行履歴・永続配信履歴・本番切替は含めない。
+
+| 受入 | 確認する根拠 | 現段階 |
+|---|---|---|
+| 1/2 未記録と0、抽出失敗と残存結果 | ImportWorkflowPanel.test.tsx / 実APIのcoverage/null契約 | 対象unit成功。root全体unit133件成功も確認 |
+| 3/4/5 旧応答・非表示・更新失敗 | useImportWorkflow.test.tsx / key・世代・allSettled | 遅延ID/inflight抑止/世代破棄8件成功のTerra報告、root全体unit133件成功 |
+| 6/7 ページング・URL選択 | tcg-import-workflow.spec.ts | root E2Eで成功。25行・offset25・最終next無効を確認 |
+| 8/9/10 権限・配信範囲・確認前送信0 | 同E2E / lib/api.tsのGETのみ再試行 | root E2Eで成功。503後5秒経過してもPOST1回だけを確認 |
+| 11 既存操作維持 | TcgLineImportPage/TcgDistributionPageの差分、共有Workspace | 元の取込・保留確定処理と配信API・確認ダイアログは維持。日時/見出しのみ表示調整 |
+| 12 ja/en・明暗・狭幅 | locale同一キー、check:all、PC/390px画像 | 静的検査成功報告。root E2Eで390px暗色英語/PC日本語を確認、一覧表画像を目視確認 |
+
+既存配信機能のread-only移設を超える再試行・自動送信・バックエンド/DB変更はない。共有Workspaceは権限判定後だけマウントし、選択import IDをpropsにもAPIにも渡さない。実行ID/履歴がないというレビュー指摘は親設計の未完了事実として維持し、本便のページに架空データを加えない。
+
+### ページ接続のローカル検証結果（2026-09-10）
+
+- root実行: `npm run test:unit` 16ファイル/133件成功。`PORT=5193 npx playwright test tests-e2e/tcg-import-workflow.spec.ts --workers=1` 5件成功。すべて模擬APIで、実際の配信・本番操作は0。
+- Terra実行の報告: 最終一覧表変更後のbuild/check:all/unitがexit0。rootもmain4734fe7f統合後にbuild/check:allをexit0、unit133件成功と確認した。
+- root目視: PCの日本語一覧表、390pxの英語暗色表、工程内訳のラベルを確認。25枚の長い明細カードは一覧表へ修正済み。元の単位/状態/メモ/正規化値は行内詳細に保持。スマホでは表内だけ横スクロールしページ全体は横にはみ出さない。
+- 撮影先: `/tmp/reports/pmg-screen-completion/desktop-table-ja.png`、`mobile-table-en.png`。アプリ内スクロール/固定ナビの影響で画面外要素を含むelement/fullPage画像は目視合格の根拠に用いず、対象を実際にスクロールしたviewport画像を使用する。
+- 配信画像の初回は試験のmock不足で404表示となった。配信成功系/確認操作は別のE2Eで成功済み。撮影用fixtureも有効な既存API応答へ揃え、該当E2E1件成功・desktop-distribution-ja.pngの配信候補/全件配信ボタン/全体範囲をrootが再撮影画像で確認済み。
+
+### PR3416リリースの一次情報
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3416 。最終head6459e7ca、MERGED17ebe93f、mergedAt2026-09-10T12:24:21Z。最終検査37success/8skip。
+- GO記録後の検査でDesktopShell.tsxの省略引用が不在判定になったため、実在するfrontend/src/components/DesktopShell.tsxへ修正。正式process-artifacts全検査をローカルとCIで通過。製品コード変更なし。
+- deploy run34476536034/job102868559798 success。実ログ2026-09-10T12:25:06ZのHEAD17ebe93f、12:27:27ZのDeployment completed successfullyを照合。事前バックアップ/Finalize/Verify success、SA-19 smoke skipped。
+- 公開Appのindex-i0HIAxuW.jsのSHA256 adc6e6c79bf4adb70f057fce2552b2fce1a3cca9e0629616984ba50c87e46f3b。pmg-workflow__table/distributionScope/import_job_idの存在を確認。https://api.salesanchor.jp/api/health はok/database connected/redis connected/celery connected。
+- Python標準urllibはローカルCA設定不足でTLS検証に失敗した。証明書検証は無効化せず、OSの証明書を使用するcurlで正常取得した。
+- UIの操作試験はローカル模擬APIの5件。稼働環境では公開ファイル/health/配備ログを確認し、管理者の実データ操作や実配信を実行したとは称しない。

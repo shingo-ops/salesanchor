@@ -425,3 +425,7 @@ PO原文: 「離席するのでcxastragoモードと同じ条件で権限委譲�
 ## 2026-09-10 委任範囲確認後の整理
 
 GO制度変更まで含むというPO確認をdesign.md冒頭へ原文で保存。origin/mainのdeploy.yml:177,183-184,572を読み、runのhead_sha固定ではないことを確認。現行mainと設計branchのGOテーマ3文書に差分なし、evidence-registry/todoには他テーマの更新あり。追従時に保持する。製品/CI/本番操作なし。
+
+## 2026-09-10 L1優先での追従と文書競合解消
+
+POの「進める」を受領し、L1はpreflight後にmainを通常取り込み。HEAD45b9ae3677153002952bceee77a63972484d47c4、差分2ファイル+5/-4、diffチェック成功、push済み。既存GOを過去HEAD記録へ移し、現HEAD再GO待ちを明記。設計PR #3418はevidence-registryの末尾追記のみ競合し、双方を保持。証拠 /tmp/reports/TH-L1-3404-FINAL-SYNC.txt、TH-L1-3404-FINAL-SYNC-PUSH.txt、TH-L1-3404-FINAL-SYNC-BODY-EDIT.txt、TH-GO-3418-SYNC.txt。マージ・デプロイ未実行。
