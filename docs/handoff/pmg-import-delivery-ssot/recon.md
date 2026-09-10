@@ -286,3 +286,21 @@ Context7の利用可能ツール0件。許可済み代替により2026-09-10に�
 - https://docs.python.org/3.12/library/concurrent.futures.html
 
 索引からADR-113、ADR-115、ADR-137-nginx-config-deploy-reliabilityを照合。ADR-137の同番号別文書へ誤参照しない。ADR-115の旧版復帰が新しい拒否制御を消す場合には従来の自動復旧を成功と判定できないため、設計の不変条件へ明記した。本番読取/変更、旧2件復旧、外部API送信を本便では行っていない。
+
+## 配布保留契約と観測範囲の確定調査（2026-09-10、base 411df652）
+
+PO「次を進める」を受領。既存保持の作成手順を継続し、release/pmg-cutover-barrier-contractのUUID/台帳を登録、preflight/開始/所有検査exit0。mainの他者AGENTS.md変更を保持。PR3410のdeploy34468628611はmerge411df652と一致しsuccessを再確認。
+設計担当rootが配布経路を読み、PO指定Terraには旧処理観測の読取だけを委任した。Terraは既存配信のclear/appendとlast_*上書き、実行中thread台帳の不存在を報告。rootは別途audit/ログ収集設定と既存の移行契約を照合した。製品コード・本番変更0。
+検索文字列に含まれた破壊操作名にPreToolUseが反応し検索を拒否。操作の許可券発行やフック無効化をせず、対象ファイルをsedで読み取った。破壊操作未実行。
+
+| 観測 | 根拠 | 限界/結論 |
+|---|---|---|
+| 旧配信はtarget単位のlast_*を上書き、thread台帳なし | backend/app/services/tcg_distribution_svc.py:602,762 | 全過去実行や同期処理中一覧はここから復元できない（Terra読取） |
+| HTTP監査はcall_next後、書込かつstatus<500が記録条件 | backend/app/middleware/audit.py:106,130 | 応答記録は実行中threadの一覧や外部成功証明にならない |
+| APIのコンテナログは20m×5、Loki設定retention30d | docker-compose.yml:140、monitoring/loki/loki-config.yaml:29 | ファイル上の設定値。稼働反映/欠落なしは未確認、過去全件保証ではない |
+| 既存移行契約はlast_*を導入前の最新記録として表示 | docs/handoff/pmg-import-delivery-ssot/design.md:178 | 過去run復元は既に対象外。過去全件復元を切替前提に加えない |
+| 通常配布にはLP同期、認証ファイル更新、コード/環境変更が分かれて存在 | .github/workflows/deploy.yml:76,92,161 | API切替直前だけの検問では通常配布全体を止めたことにならない |
+| API切替と非API再作成、復旧は別箇所 | .github/workflows/deploy.yml:324,331,572、scripts/blue-green-cutover.sh:59,149 | 共通検問が必要な実接触点を特定。既存手動入口の全稼働調査は未完 |
+| SA-18リハーサルはdeploy本文を抽出して実行する別経路 | .github/workflows/test-phase2-rehearsal.yml:36、scripts/rehearsal_phase2.sh | 名前がtestでも本件の無資格fixtureと同一視しない |
+
+Context7利用不可。2026-09-10にGitHub公式concurrency資料を直接確認: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。同groupの実行中排他はjob終了後のホスト保留を維持しない。既定ではpendingの置換があり、全PRが順番に必ず配布される保証とも異なる。本便ではconcurrency設定を変えない。

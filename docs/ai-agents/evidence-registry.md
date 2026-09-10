@@ -1991,3 +1991,7 @@ CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinne
 
 2026-09-10、base b36041ed。PO「次を進めるPRマージまで」。既存保持の作成例外と設計文書PRマージの承認として記録。起点main・UUID・担当台帳・preflight/開始/所有検査を確認。製品実装なし。
 PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実nginxと独自試験の差、外部clear/append2呼出しと後置DB記録、40秒stopと通常rollbackを読み取り、design最終節に8受入条件・段階別復旧・旧実行分類を保存。根拠の行番号と公式資料はrecon「入口配布・旧処理照合の再調査」。I1〜I8未実施。自己審査REVISE、実装カード未発行、画面未完成。
+
+## EV-20260910-PMG-BARRIER-CONTRACT
+
+base411df652、2026-09-10。PR3410/deploy34468628611成功確認。rootは配布/監査/ログ設定、Terraは旧配信観測を読取。実装変更なし。既存design:178の過去run非生成に従い、全過去復元を切替前提にする読み方を訂正。配布保留6分類、初期化順序、検問位置を草案化。通常配布も止める影響はPOへ質問中・採用未決。自己審査REVISE、実装カード未発行。根拠はdesign/recon最終節。
