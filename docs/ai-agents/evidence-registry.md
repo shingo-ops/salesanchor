@@ -2048,6 +2048,22 @@ PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO�
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
 
+### EV-20260910-FRONTEND-MOLD-21: カレンダー実行契約再審査
+
+### 次便の実行条件確認（2026-09-10）
+
+PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668eのCI38成功/8対象外、公式merge/cleanup完了を直接確認。次便はこのmain起点。カレンダー21値/20固有色の移管と既存ファイル単位hex増加禁止が衝突し、限定契約を自己審査REVISE。製品未変更。根拠: docs/handoff/design-system-recon/evidence-20260910/calendar-source-audit.md。推奨は色移管保留→共通部品先行、POの順序判断待ち。CIを変更・迂回しない。
+
+### EV-20260911-FRONTEND-MOLD-22: 読み取りやすさと部品先行
+
+POの続行と認知的に理解しやすい表示の要求を受領。design.md§ACへ根拠/基準/測定限界を保存。カレンダーを保留しButton本体の実物再監査へ。実装未着手、CI変更なし、番号付きGOは別途本人原文を確認。
+
+Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check/build/Storybook成功。rootが局所browser操作18/表示18/reduced9と最終console.error0を直接確認。初回fixture二重入口警告を保持し実path統一で再測定。詳細はdocs/handoff/design-system-recon/evidence-20260910/button-contract-implementation.md。PR/CI/マージ未完、全体外観・PO理解速度未検証。
+
+Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をreadyで作成し公式登録完了。実装commit b35807504a87015aed52a99d6791f9774b2f8293、製品5hash一致、限定第二レビューAPPROVE適用をroot確認。stage19/PR全体22ファイル。CI確認中、番号付きGO未受領。過去GO3420を流用せず、全体の形/配色統一とPOによる理解しやすさの評価は未完と区別する。
+
+PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
+
 
 ## EV-20260910-PRODUCT-UI-TAKEOVER
 
