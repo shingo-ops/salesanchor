@@ -110,8 +110,8 @@ class TestExtractMessageErrorRedact:
     def test_success_has_no_error_message(self):
         """正常時は error_message が None。"""
         fake_response = (
-            "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
-            "テスト商品｜1｜100｜個｜｜｜L0001\n"
+            "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n"
+            "テスト商品｜1｜100｜個｜｜｜L0001｜｜\n"
         )
 
         with patch(
