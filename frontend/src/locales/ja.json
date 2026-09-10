@@ -147,7 +147,7 @@
     "discordAnnounce": "Discordアナウンス",
     "superAdminFxRate": "為替レート管理",
     "superAdminTcgParallelReport": "並行運用比較レポート",
-    "superAdminTcgLineImport": "インポート",
+    "superAdminTcgLineImport": "取込・解析・配信",
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "account": "アカウント",
@@ -3260,7 +3260,7 @@
       "rowsWritten": " 件 書き込みました"
     },
     "list": {
-      "empty": "配信先が登録されていません。右上の「新規登録」から追加してください。",
+      "empty": "配信先が登録されていません。「新規登録」から追加してください。",
       "colName": "クライアント名",
       "colSheetId": "シートID",
       "colSheetName": "タブ名",
@@ -3299,7 +3299,7 @@
     }
   },
   "tcgLineImport": {
-    "pageTitle": "LINE エクスポート取り込み",
+    "pageTitle": "取込・解析・配信",
     "loading": "読み込み中...",
     "notSuperAdmin": "この画面には中央 admin 権限が必要です。",
     "uploadSection": "ファイルのアップロード",
@@ -3307,6 +3307,7 @@
     "windowHoursLabel": "取り込み幅（時間, 0=全件）",
     "windowStartLabel": "取り込み開始（省略可）",
     "windowEndLabel": "取り込み終了（省略可）",
+    "windowDatetimePlaceholder": "YYYY-MM-DD HH:mm:00",
     "uploading": "取り込み中...",
     "uploadButton": "アップロード",
     "errorSelectFile": "ファイルを選択してください",
@@ -3330,6 +3331,7 @@
     "colStatus": "ステータス",
     "colReviewStatus": "確認状態",
     "colDate": "日時",
+    "colDateJst": "日時（JST）",
     "reviewSection": "確認工程",
     "reviewInstructions": "未登録の仕入元があります。全員を登録してから抽出を開始してください。",
     "assignToExisting": "既存仕入元に割り当て",
@@ -3349,5 +3351,94 @@
     "reviewStatusPending": "確認待ち",
     "reviewStatusDiscarded": "破棄済み",
     "openReview": "確認する"
+  },
+  "pmgWorkflow": {
+    "selectImport": "取り込みを選択",
+    "title": "取り込み・解析の進捗",
+    "coverage": "関連記録",
+    "asOf": "最終取得（JST）",
+    "refresh": "再取得",
+    "stale": "取得失敗。前回の表示を保持しています",
+    "fetchFailed": "取得に失敗しました",
+    "stage": {
+      "import": "取り込み",
+      "extraction": "Gemini抽出",
+      "analysis": "システム解析"
+    },
+    "unit": "単位",
+    "unitValue": {
+      "source_message": "投稿",
+      "extraction_job": "抽出ジョブ",
+      "extraction_item": "抽出対象",
+      "unknown": "未記録"
+    },
+    "coverageValue": {
+      "complete": "関連記録あり",
+      "pending_review": "確認待ち",
+      "discarded": "破棄済み",
+      "legacy_unknown": "記録なし",
+      "unknown": "未記録"
+    },
+    "reason": {
+      "associationNotRecorded": "取込と投稿の関連記録がありません",
+      "unknown": "理由は記録されていません"
+    },
+    "unknown": "未記録",
+    "total": "対象数",
+    "analysisUnrecorded": "解析実行の記録はありません",
+    "filter": "絞り込み",
+    "filterAll": "すべて",
+    "filterReview": "要確認",
+    "filterError": "抽出エラー",
+    "previous": "前へ",
+    "next": "次へ",
+    "distributionScope": "配信対象：現在の全体データ",
+    "distributionHistoryLimit": "表示は最新記録。全配信履歴は未記録",
+    "distributionCurrentResponse": "配信操作後の結果は、この画面で受け取った今回の応答です。",
+    "distributionLatestSavedRecord": "配信先一覧の最終配信・件数・結果は、各配信先に保存された最新記録です。",
+    "extractionStates": "抽出状態（待機・実行中・成功・対象なし・失敗）",
+    "analysisFacts": "解析（結果あり・結果なし・要確認）",
+    "resultPresent": "解析結果あり",
+    "resultMissing": "解析結果なし",
+    "noItems": "この条件に一致する明細はありません",
+    "extraction": {
+      "completed": "抽出完了（成功・対象なし・失敗の合計）",
+      "done": "抽出成功",
+      "empty": "対象なし",
+      "error": "抽出エラー",
+      "pending": "待機中",
+      "running": "実行中",
+      "residualItems": "抽出エラーでも残った明細",
+      "residualResults": "抽出エラーでも残った解析結果"
+    },
+    "analysis": {
+      "resultPresent": "解析結果あり",
+      "resultMissing": "解析結果なし",
+      "needsReview": "要確認"
+    },
+    "item": {
+      "product": "商品名",
+      "extractionStatus": "抽出状態",
+      "note": "メモ",
+      "reasons": "要確認の理由",
+      "raw": "元データ（数量 / 価格）",
+      "rawDetails": "元データ（状態 / メモ）",
+      "normalized": "解析結果（数量 / 価格）",
+      "result": "解析結果",
+      "details": "詳細"
+    },
+    "extractionStatus": {
+      "done": "完了",
+      "empty": "対象なし",
+      "error": "エラー",
+      "pending": "待機中",
+      "running": "実行中",
+      "unknown": "未記録"
+    },
+    "reviewReason": {
+      "pid_unresolved": "商品を特定できない",
+      "multi_candidate": "商品候補が複数",
+      "note_unmatched": "メモの変換先が見つからない"
+    }
   }
 }

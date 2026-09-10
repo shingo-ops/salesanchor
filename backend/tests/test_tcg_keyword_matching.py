@@ -770,6 +770,65 @@ _COND_ENTRIES = [
 _COND_UUID_MAP = {e["canonical"]: e["cond_id"] for e in _COND_ENTRIES}
 
 
+_MEMO_NEGATIONS = "[サーチ済み],未サーチではない,未サーチではありません,未サーチとは限らない,未サーチ保証なし,未サーチ保証無し,サーチ済"
+_STATE_NEGATIONS = ["伝票剥がし跡ありません", "伝票剥がし跡ありではない", "伝票剥がし跡ありではありません"]
+
+
+@pytest.mark.parametrize("memo,expected", [
+    ("※未サーチ品", "Unsearched pack"), ("サーチ痕なし", "Unsearched pack"),
+    ("", "Searched pack"), ("未サーチではない", "Searched pack"),
+    ("未サーチではありません", "Searched pack"), ("未サーチとは限らない", "Searched pack"),
+    ("未サーチ保証なし", "Searched pack"), ("未サーチ保証無し", "Searched pack"),
+    ("未サーチ サーチ済み混在", "Searched pack"), ("配送後の破損は保証しません", "Searched pack"),
+])
+def test_condition_memo_pack_default_only(memo, expected):
+    entries = [dict(e, exclude_kw=_MEMO_NEGATIONS) if e["code"] == "CN0007" else e for e in _COND_ENTRIES]
+    actual = resolve_condition_v2("", "商品", "パック系", entries, _COND_UUID_MAP, raw_memo=memo)
+    assert actual[0] == expected
+    assert actual[2].startswith("R3:MEMO:") if expected == "Unsearched pack" else actual[2] == "R5:パック既定"
+
+
+@pytest.mark.parametrize("state,kubun", [("", "箱系"), ("", "箱系大"), ("", "不明"),
+                                               ("サーチ済み", "パック系"), ("ペリなし", "パック系")])
+def test_condition_memo_preserves_existing_decision(state, kubun):
+    entries = [*_COND_ENTRIES, {"code": "CN0010", "cond_id": "searched", "canonical": "Searched pack",
+                               "priority": 4, "app_kubun": "パック系", "search_kw": "サーチ済", "exclude_kw": ""}]
+    baseline = resolve_condition_v2(state, "商品", kubun, entries, _COND_UUID_MAP)
+    assert resolve_condition_v2(state, "商品", kubun, entries, _COND_UUID_MAP, raw_memo="未サーチ") == baseline
+
+
+def test_condition_memo_missing_or_disabled_priority_master():
+    entries = [e for e in _COND_ENTRIES if e["code"] != "CN0007"]
+    assert resolve_condition_v2("", "商品", "パック系", entries, {}, raw_memo="未サーチ")[0] == "Searched pack"
+    disabled = dict(next(e for e in _COND_ENTRIES if e["code"] == "CN0007"), priority=0)
+    assert resolve_condition_v2("", "商品", "パック系", [*entries, disabled], {}, raw_memo="未サーチ")[0] == "Searched pack"
+
+
+@pytest.mark.parametrize("memo,state,expected", [
+    ("", "伝票剥がし跡あり", "伝票剥がし跡あり"),
+    ("伝票剥がし跡あり", "", "伝票剥がし跡あり"),
+    ("伝票剥がし跡あり", "伝票剥がし跡あり", "伝票剥がし跡あり"),
+    ("伝票跡", "", "伝票跡"), ("", "伝票跡", None),
+    ("", "伝票剥がし跡なし", None),
+    *[("", word, None) for word in _STATE_NEGATIONS],
+    ("", "", None),
+])
+def test_state_literal_note_scope_and_negation(memo, state, expected):
+    notes = [{"id": "NJ041", "label_ja": "伝票跡", "match_type": "LITERAL",
+              "search_keywords": ["伝票跡", "伝票痕", "伝票剥がし跡"], "exclude_keywords": ["伝票剥がし跡あり"]},
+             {"id": "NJ079", "label_ja": "伝票剥がし跡あり", "match_type": "STATE_LITERAL",
+              "search_keywords": ["伝票剥がし跡あり"], "exclude_keywords": _STATE_NEGATIONS}]
+    assert build_note_ja(memo, notes, raw_state=state) == expected
+
+
+def test_state_does_not_feed_legacy_regex_or_literal():
+    notes = [{"id": "legacy", "label_ja": "旧札", "match_type": "LITERAL",
+              "search_keywords": ["伝票跡"], "exclude_keywords": []},
+             {"id": "regex", "label_ja": "空", "match_type": "REGEX", "search_pattern": "^$",
+              "search_keywords": [], "exclude_keywords": []}]
+    assert build_note_ja("", notes, raw_state="伝票跡") is None
+
+
 class TestResolveConditionV2:
     """
     GAS resolveCondition_ R1〜R4 ロジック移植の動作確認。
