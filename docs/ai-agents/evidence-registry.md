@@ -1995,3 +1995,8 @@ PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実
 ## EV-20260910-PMG-BARRIER-CONTRACT
 
 base411df652、2026-09-10。PR3410/deploy34468628611成功確認。rootは配布/監査/ログ設定、Terraは旧配信観測を読取。実装変更なし。既存design:178の過去run非生成に従い、全過去復元を切替前提にする読み方を訂正。配布保留6分類、初期化順序、検問位置を草案化。通常配布も止める影響はPOへ質問中・採用未決。自己審査REVISE、実装カード未発行。根拠はdesign/recon最終節。
+
+## EV-20260910-PMG-SCREEN-CONNECT
+
+2026-09-10 base4f1c2b81。POは説明後に「承認する…確立したならページ作成まですすめる」と承認（全文はdesign最終節）。本番切替時の一時停止/他の更新待機の方針採用、個別本番停止ではない。
+既存progress/items、coverage/NULL契約、ページ/共通APIと権限を実ファイルで確認。検索漏れを訂正。新履歴や切替導入とは独立した既存API接続ページのみ自己審査APPROVE。カードCARD-PMG-SCREEN-CONNECT-01を正式card-lint exit0で検査後Terraへ委任。rootは製品コードを書かない。親設計REVISE、完成結果はまだ未検証。
