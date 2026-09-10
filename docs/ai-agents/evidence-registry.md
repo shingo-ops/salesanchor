@@ -1983,6 +1983,11 @@ CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinne
 
 次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。
 
+## EV-20260910-PMG-INTEGRATION-DESIGN
+
+2026-09-10、base b36041ed。PO「次を進めるPRマージまで」。既存保持の作成例外と設計文書PRマージの承認として記録。起点main・UUID・担当台帳・preflight/開始/所有検査を確認。製品実装なし。
+PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実nginxと独自試験の差、外部clear/append2呼出しと後置DB記録、40秒stopと通常rollbackを読み取り、design最終節に8受入条件・段階別復旧・旧実行分類を保存。根拠の行番号と公式資料はrecon「入口配布・旧処理照合の再調査」。I1〜I8未実施。自己審査REVISE、実装カード未発行、画面未完成。
+
 ### EV-20260910-FRONTEND-MOLD-19: 設計文書マージと数値アイコン実装便
 
 PR #3409は2026-09-10T09:56:27Z、merge commit b36041ed9fa69881886c431d05d586cf09e82f56でMERGED。設計担当がgh pr viewで直接確認。最終HEAD586ba4e3の全CI成功/対象外skipと限定文書レビューAPPROVEを確認し公式mergeスクリプトを実行。全体設計は同一AI自己審査であり、独立した第二者設計審査とは称しない。
