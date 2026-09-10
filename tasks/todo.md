@@ -82,3 +82,9 @@
 - `更新日`: YYYY-MM-DD 形式
 
 完了したタスクは「完了（直近）」テーブルに移動する。30日超過行は削除可。
+
+## PMG インポート関連・進捗（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |

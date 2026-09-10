@@ -617,3 +617,6 @@ run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
 
 # NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
 run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
+
+# PMG import progress: TCG schemas only, additive, no backfill
+run_sql migrations/20260910_010000_tcg_import_message_links.sql
