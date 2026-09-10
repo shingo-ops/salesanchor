@@ -1618,3 +1618,5 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3396 （Draft、base=main、head=release/pmg-analysis-run-design）。register-pr.sh成功、.pr-numberと現行分割台帳へ3396登録。設計REVISEの草案提出であり、実装・マージ・本番GOは未受領。
 
 - 切替設計の更新: deploy.yml:331-335のworker強制削除と共有Celery構成を照合。配布後pausedだけでは初回強制終了を防げないため先行案の保証を撤回し、8段階の検査/停止条件をdesign.mdへ追加。初回一時停止方針は未合意、REVISE維持。本番追加接続・実装なし。PR #3396 HEAD e7da4a85のチェックはpass31/skipping9。
+
+- PO原文「GO」: 初回切替で一時停止を許容する設計方針に対する返答。質問・影響・承認範囲をdesign.mdへ保存。本番停止/実装/PRマージ/追加SSH利用の承認ではない。入口表・初回遮断の制約・6段階の停止/再開案を具体化し、REVISE維持。

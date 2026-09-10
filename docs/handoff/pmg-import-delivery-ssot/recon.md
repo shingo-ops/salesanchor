@@ -129,3 +129,11 @@ Context7は利用可能ツールの名前・説明を検索したが0件。起�
 - docs/runbooks配下をtcg/drain/停止/メンテナンス/Celery/revokeで検索した範囲では本件の排出手順を確認できなかった。検索範囲外にも存在しないとは断定しない。
 - 本番追加接続はしていない。前回の人間用鍵の許可はDB接続先診断だけとして維持する。
 - PR #3396 HEAD e7da4a85947dc9b6f05e23ff4c93382fee640ee9のGitHubチェック: pass31、skipping9、失敗/待機0。文書PRの検査であり解析実行管理の製品試験完了ではない。
+
+### 初回停止の追加根拠（2026-09-10）
+
+- main.py:456,569-604とTCG各routerを照合し、商品変更・分類変更・抽出retryも停止候補に追加。詳細のfile:lineはdesign.mdの入口表。
+- nginx/nginx.conf:71,259の2公開ホストと:44のlegacy転送、docker-compose.yml:11の単体bind mountを確認。ADR-130/137を読み、reloadだけで設定反映したと断定できない制約を確認。
+- backend/Dockerfile末尾はuvicorn workers=2。稼働プロセス数・既存要求完了は未確認。backend/app内のmaintenance/READ_ONLY等の検索では本件の初回停止機構を確認できず、保守タスク等が該当した。不存在の証明とはしない。
+- Context7ツール検索0件。Celery Workers Guide、Docker stop、nginx returnの公式資料を確認。停止仕様とバージョン依存をdesignへ記録。ライブラリの本番版を照会したとは扱わない。
+- 一時停止方針へのPO原文「GO」を受領。説明した一時停止/共有業務待機の許容だけであり、本番操作・追加SSH利用はしていない。
