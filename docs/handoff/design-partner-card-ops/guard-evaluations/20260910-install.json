@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "base_commit": "1d1f796f1b6bf55072c41c6acbd784ab3249970d",
+  "base_commit": "89ad29ae3a8c3142db36b204e04f48e085803b29",
   "changes": [
     {
       "path": ".github/workflows/guard-authoring-gate.yml",
@@ -71,7 +71,7 @@
     "false_positives": "文書だけの表記変更にも評価が必要。documentation理由で実行試験を省略できる。main前進時は再照合する。",
     "future_costs": "全main向けPRで信頼側の短いjobを実行。必須化後の障害はPRを止め得るため先に未必須で試行する。",
     "alternatives": "process-artifacts全体のmain必須化は影響が広い。既存検査内への追加は早期終了5箇所の取りこぼしがあるため専用結果とした。",
-    "decision": "設置設計APPROVE（同一AI自己審査）。正式GO未受領。実イベントと管理者の限定必須化は未実施であり採用完了としない。",
+    "decision": "設置設計APPROVE（同一AI自己審査）。PO原文GO #3401を受領。追加修正#3402は実PG2467成功/93skip・全CI成功でマージ。実イベントと管理者の限定必須化は未実施。",
     "rollback": "未必須の設置は通常の取消PRで戻す。必須化後の廃止はPO/管理者が限定contextを外してから評価付き取消PR。設定を無断変更しない。",
     "owner": "guards変更者が評価と試験を維持。レビュー担当が内容確認。PO/管理者が必須設定と解除を判断する。",
     "normal_example": "実Gitの対象外3例、版一致、読書照合、正常/否定ログ一致、浅いcloneからheadをcheckoutせず検査する試験を含む。",
