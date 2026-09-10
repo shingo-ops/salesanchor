@@ -47,3 +47,7 @@ Generatorのgit push申請は具体的送信先・payloadへの承認未確認�
 公開送信許可の追補: 設計担当が公開リポジトリshingo-ops/salesanchorへの14ファイル（実装5＋設計・検証文書9）送信可否を質問し、PO原文「許可する」を受領した。この許可で公開送信を再開する。番号付きGOやADR承認の代筆には使用しない。
 
 公開送信許可後のpushが成功し、PR #3412を提出。main411df652の他テーマ文書を保持して台帳/根拠台帳の競合を解消。製品5ファイルは40ff3365と同一で、CIを確認中。
+
+PR #3412 HEAD e739c9f146004c298910e25b1f99e1573bc0cc95のGitHub checksを設計担当が直接確認: SUCCESS37/SKIPPED8/FAILURE1。残る失敗はprocess-artifacts gate（job102847686397）の「GO記録セクションがない」だけ。Frontend lint & custom checks、Storybook、Karte Visual Gateを含む技術チェックは成功。限定第二レビューは同HEADに適用可を確認済み。公開送信許可は受領済みだが、番号付きGO原文を創作せずGO #3412のPO原文を確認する。DB変更なし、バックアップ確認は該当なし。新実装マージ/本番反映未実施。
+
+PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻としてPR本文へ転記し、公式validateGORecordのエラー0を確認。バックアップはDB変更なしのため該当なし。最新main追従後のHEADでCIを確認してマージする。承認を実施済みマージと混同しない。
