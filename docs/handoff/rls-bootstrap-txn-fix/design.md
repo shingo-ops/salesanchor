@@ -4,7 +4,7 @@ mode: handoff
 
 # Design — rls-bootstrap txn fix
 
-**対象ADR**: ADR-108  
+**対象ADR**: ADR-108、ADR-113
 **recon**: docs/handoff/rls-bootstrap-txn-fix/recon.md  
 **日付**: 2026-07-19  
 **担当**: Planner
@@ -111,3 +111,5 @@ backend/tests/rls_bootstrap.py と test_rls_bootstrap_ordering.py、および本
 根拠: 既存同一接続条件を維持し、変更対象2本を固定し、実障害条件を実PG試験へ含めた。
 未解決: 実装後のCI結果は未取得。これは設計合格であり、テスト成功・PR提出・マージ完了を意味しない。
 POの別件修正指示に基づく。番号付きGOを創作しない。
+
+実装提出: PR #3399。Python 3.12の純粋関数正常2例・拒否9例、ruff・書式・台帳検査成功。実PG/CIは未完了。

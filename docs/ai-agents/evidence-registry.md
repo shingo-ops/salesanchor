@@ -1602,3 +1602,5 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - PR #3397のrun 34429316341で同一failureを2回確認。変更はテスト基盤2ファイルと既存記録4文書に限定。
 - 同一AIの設計自己審査APPROVE。実PG検証・PR提出・マージは未実施。POの番号付きGOは創作していない。
 - 報告先: /tmp/reports/RLS-SCOPE-PREFLIGHT-20260910.txt、RLS-SCOPE-WORKTREE-01.txt。
+
+- 実装提出: https://github.com/shingo-ops/salesanchor/pull/3399。初回HEAD 8104fd7f。純粋関数正常2例・拒否9例、ruff・書式・台帳検査成功。手元でpytestは未実行。設計のADR-113参照漏れをローカル成果物検査で検出し追補。CI・マージは後続確認。
