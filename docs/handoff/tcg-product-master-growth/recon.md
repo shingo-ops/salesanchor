@@ -637,3 +637,36 @@ POの「全てDBにある進める」を受領し、既存の接続定型で本�
 - `/private/tmp/line-postdeploy-master.json` SHA256 `d63fc233af2f4275ea8a6acf96ed62f8298aab2c0a1920afb5cd998087bcac4c`
 - `/private/tmp/line-postdeploy-probes.json` SHA256 `3f92474330a638a6e8db5fe272b98164035a9156002f0a12b933e97bb5d5d700`
 - `/private/tmp/line-postdeploy-final-status.json` SHA256 `986b2181b13b50fe4fed38307264416451c511d73c337358cad397d62f3634b0`
+
+## 2026-09-10 辞書修正案の対照検証（12:03 JST標本）
+
+PO「進める」に基づき、初回5件だけの局所試験から拡張。read_only=onで最新マスタ・正規化・単位・区分とv3全745明細を取得（DB count745、LIMIT3000未到達、取得03:03:04.045857Z）。反映SHA864ace72の純関数をAST抽出し、商品名/状態/備考の正規化、単位区分による候補制限、作品根拠検証、商品照合までを実行。保存済みproduct_id相当コード・pid_resolvedとの不一致は0/745。DB更新、Gemini呼び出し、後処理込みの全体再解析は未実施。
+
+初案（PM0230のvol.1削除＋PM0199への点あり検索語2語＋除外2語）では10明細が変化。しかし合成境界例「BASE SHOP vol.10」「BASE SHOP vol.11」「リミテッドカードコレクション vol.10」がPM0199へ誤確定した。初回5例のみの試験ではこの副作用を検出できていなかった。現行ASCII境界は前後の英字のみを見る（tcg_analyzer_svc.py:215–277）、日本語混在語は部分文字列ANDなので数字の後続を拒否しない。この初案はREVISE、検索語追加を撤回する。
+
+修正案は3操作だけ: PM0230の検索vol.1単独削除、PM0104に除外マスターボールミラー追加、PM0184に除外スペシャルデッキセット追加。最新745明細中10行が誤商品からNONEへ変化、残り735行の商品コード・確定可否・候補集合は不変。全有効293商品の正式名称を当該作品IDで照合した際の結果も293/293不変（全293商品が正解したという意味ではない）。正常例・状態/備考除外・Vol.10/11等の境界合成例16/16が期待どおり。全体正答率や未観測入力への完全性を保証しない。
+
+変化10行の内訳: BASE SHOP/リミテッドカードコレクション4、LIMIT OVER SPECIAL PACK1、プレミアムカードコレクション3、151シングル1、複数デッキセット1。追加5行も原文の商品行を確認。現行PM0230「推しの子トライアルデッキ」と異なる商品である。商品コードと確定可否の不変735行には、他の未検出誤判定が含まれ得るため「735件正答」とは呼ばない。
+
+トレードオフ: 安全案はBASE SHOP4行も正しい商品へ自動確定せず、要確認へ送る。特定できない商品の正しい新規登録、Vol番号の境界判定、装飾作品見出し、BOX共通フィルタは別課題。過去の保存結果は辞書だけでは自動修正されない。
+
+変化行IDと確認した入力:
+
+- `05158657-3a10-4426-9a38-7268eff23961`: リミテッドカードコレクション Vol.1 → NONE
+- `0b4291b7-083f-401c-a0ba-c6fab3b4497e`: ■スペシャルデッキセットMEGA メガオーダイル・メガカイリュー・メガゲンガー → NONE
+- `0d5ee233-2ba0-4c1f-ae5a-422e2a3b043b`: マスターボールミラー151のみ → NONE
+- `19eae84d-6754-4c34-b33c-f96817be8ea9`: リミテッドカードコレクションvol.1 → NONE
+- `3e6bbbc1-6cc9-4194-9eb0-babab18d5cdc`: LIMIT OVER SPECIAL PACK Vol.1 → NONE
+- `40667fc5-5bd8-4ed1-bd0f-119b68682a6c`: BASE SHOP リミテッドカードコレクションvol.1 → NONE
+- `451c2bff-609e-420e-b4d0-0ddbf8e04e89`: BASE SHOP vol.1 → NONE
+- `a1a65e52-bc61-4e7d-a165-a428e9580420`: プレミアムカードコレクション  – 6 assort vol.1 - → NONE
+- `abf5866d-01c3-4d58-8d81-400e2e2439e2`: プレミアムカードコレクション- ベストセレクションvol.1 - → NONE
+- `dd252d27-e2d5-40dd-9a99-119275bc6e90`: プレミアムカードコレクション 6 assort vol.1 → NONE
+
+ローカル検証証拠（生原文をGitへ格納しない）:
+
+- `/private/tmp/line-dictionary-audit-context.json` SHA256 `05808fe80c29f081facdd8787a4f71341de89618a209945b43f6ab8a4ea48dac`
+- `/private/tmp/line-dictionary-audit-rows.json` SHA256 `4c6570e82a93060c264e98673b9d094e20eb36cc23796a642cbcc6c6619bd9d5`
+- `/private/tmp/line-dictionary-contrast.py` SHA256 `a9387734448885323f89d520227fad3a55e7b0189cbca56059e5337f68188aaa`
+- `/private/tmp/line-dictionary-contrast.json` SHA256 `d9ce9894aca1b28966807b130a2a6db5fae9692f1dabd26f436eb79051f6cc8a`
+- `/private/tmp/line-dictionary-safe-contrast.json` SHA256 `238e212872cf61265f1f0ad35715b70ac791ef748f0b338ce6c8809c625e89c4`
