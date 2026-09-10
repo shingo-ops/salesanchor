@@ -168,3 +168,7 @@ Badgeの文字全体、sidebar/mobileのナビ項目全体、GoogleCalendarStatu
 legacy --cal-*21名前×明暗の削除は参照0の最終全域調査が通ってから材料便で扱う。var参照0だけで動的参照なしと断定しない。
 
 戻しやすさ: 同値alias/アイコン数値生成/カレンダー色/部品本体/使用先移行/CIを別の変更単位にし、各PRのmain SHAと検証ログを記録する。後継の採用結果が確定する前に旧PRをcloseしない。
+
+### 次便の実行条件確認（2026-09-10）
+
+PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668eのCI38成功/8対象外、公式merge/cleanup完了を直接確認。次便はこのmain起点。カレンダー21値/20固有色の移管と既存ファイル単位hex増加禁止が衝突し、限定契約を自己審査REVISE。製品未変更。根拠: docs/handoff/design-system-recon/evidence-20260910/calendar-source-audit.md。推奨は色移管保留→共通部品先行、POの順序判断待ち。CIを変更・迂回しない。
