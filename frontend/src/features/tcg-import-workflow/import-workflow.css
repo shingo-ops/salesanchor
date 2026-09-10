@@ -1,8 +1,18 @@
 .pmg-workflow { display: grid; gap: var(--space-4); }
 .pmg-workflow__header, .pmg-workflow__pager, .pmg-workflow__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pmg-workflow__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .pmg-workflow__stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .pmg-workflow__stage { padding: var(--space-3); border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); }
 .pmg-workflow__stage h4 { margin: 0; }
+.pmg-workflow__metric { font-size: var(--font-3xl); font-weight: 700; margin: var(--space-2) 0; }
+.pmg-workflow__metric span { font-size: var(--font-sm); font-weight: 400; color: var(--text-secondary); }
+.pmg-workflow__progress { width: 100%; accent-color: var(--info); }
+.pmg-workflow .pmg-workflow__badge-readable.comp-badge { color: var(--text-primary); }
+.pmg-workflow__conclusion { margin: var(--space-2) 0 0; font-size: var(--font-xl); }
+.pmg-workflow .pmg-workflow__summary-badge.comp-badge { font-size: var(--font-xl); font-weight: 700; }
+.pmg-workflow .pmg-workflow__review-badge.comp-badge { font-size: var(--font-lg); font-weight: 700; }
+.pmg-workflow__caption { margin: var(--space-1) 0; color: var(--text-secondary); font-size: var(--font-sm); }
+.pmg-workflow__details summary { cursor: pointer; font-weight: 600; }
 .pmg-workflow__stage-facts { display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: var(--font-sm); color: var(--text-secondary); }
 .pmg-workflow__stage-facts p, .pmg-workflow__table p { margin: 0; }
 .pmg-workflow__table-wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); }

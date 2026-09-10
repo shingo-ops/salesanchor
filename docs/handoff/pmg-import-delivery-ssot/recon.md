@@ -373,3 +373,6 @@ POが許可したSSH経路で、稼働中APIの既存resolve_supplierへaction=c
 ### 2026-09-11 進捗表示の情報階層調査
 
 起点origin/main57eb951e。専用release/pmg-progress-visual-hierarchy、preflight成功。他者のAGENTS.md変更を保持。Terra読取報告とrootによるImportWorkflowPanel/Badge/ProgressBar/CSS照合で、8行の抽出内訳と主要値が同じ強さで並ぶことを確認。既存Badge5variantを利用可能。ProgressBarは100%で成功色/Doneになるため本件の終了割合へそのまま採用しない。外部根拠と検証可能な7条件はdesign末尾。スクリーンショットの51/37/14/1019/313は状態fixtureとして利用し、本番の現在値とは断定しない。
+
+
+進捗表示改善の最終実測: root直接実行の全unit143件、E2E8件、build/check:allは成功。詳細と初回失敗の区別、3viewport画像はdesignの「表示改善の実装・最終レビュー」。本番操作なし。共通部品/集計契約を維持して要確認導線と情報階層を変更した。

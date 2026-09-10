@@ -2052,3 +2052,5 @@ PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受�
 ## EV-20260911-PMG-VISUAL-HIERARCHY
 
 POの認知負荷軽減依頼に基づく表示改善。根拠: docs/handoff/pmg-import-delivery-ssot/design.md と recon.md の2026-09-11表示節。3つの公開設計指針と実物部品/状態契約を照合、自己審査APPROVEは表示範囲だけ。Terraへの正式カード発行前。実装・視覚/動作試験・PRマージ・本番反映は未完了。
+
+EV-20260911-PMG-VISUAL-HIERARCHY実装検証: 正式カード検査成功後Terraが製品7ファイルを実装。rootがunit143件/E2E8件/build/check:all成功とPC/390px明暗画像を確認。詳細はdesign末尾。表示改善のみコード/視覚レビューAPPROVE。PR/CI/番号付きGOの確認へ、本番未反映。

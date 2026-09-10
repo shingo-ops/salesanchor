@@ -967,3 +967,17 @@ APPROVE（この表示改善のみ、同一AIによる自己審査）。実API�
 
 
 表示審査の補足（実装着手後の色照合）: index.cssの既存soft Badge色から相対輝度で計算するとsuccessはlight7.30/dark9.28、warning7.86/10.47、danger5.70/9.67、info4.01/6.38、neutral6.10/4.04。通常文字4.5:1の基準（https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html）に対しinfoライトとneutralダークは不足。本ページで使うinfo/neutral Badgeの文字だけclassNameで既存text-primaryへ合わせる。共通部品/色tokenは変更せず背景の意味色を保持する。描画後にも実色で照合する。この補足を含む表示設計は自己審査APPROVE。
+
+
+実画像レビューによる仕上げ: 主結論Badgeは既存font-xl/太字、要確認はfont-lgで上部に置く。Badge内部font-xsに親の見出しサイズが負けることをPC画像で観測したためページ用classで指定する。解析の主値はresults_presentなので、見出し「解析結果」・caption「解析結果あり」とし、抽出対象の総数と区別する。実行履歴未記録は処理詳細内に保存し、抽出の成功/対象なし/エラーの3値は常時表示。選択済みでは明細25行より後のuploadへ辿りにくいため、PageLayout.headerActionのsecondaryボタンで既存detailsを開き移動/フォーカスする。新しい業務処理/APIは追加しない。
+
+
+### 表示改善の実装・最終レビュー（2026-09-11）
+
+Terraが正式カード許可の製品7ファイルを実装、rootが中間差分と最終画面を確認。中間に数値欠落を0と扱う分岐、Badge詳細度による文字サイズ/色上書き不成立、0件と未記録の混同を指摘し修正。API/hooks/共通部品/トークン/Backend/DBの変更0。unknown・負数・不整合・取得失敗・前回値・pending/破棄済み等を成功へ補正しない。既知エラーは別の件数が欠けていても保持。
+
+root直接実行: build成功、check:all成功（既存219warnings/0errors）、全unit16files/143tests成功、Playwright8tests成功25.6秒。操作試験は既存5件を維持し、upload開閉/入力保持、headerから開く/フォーカス、要確認filter=needs_review/offset=0、390pxの導線viewport内、light info/dark neutralの実描画文字色・コントラスト4.5以上を追加。最初の色試験はrgbとhexの文字列表現差で1失敗、同形式へ直し再試験8/8成功。製品側の色検査を免除していない。
+
+rootが直接見た画像: /tmp/reports/pmg-progress-visual/tcg-import-workflow-desktop-ja-viewport.png、tcg-import-workflow-mobile-overview-ja-viewport.png、tcg-import-workflow-mobile-dark-en-overview-viewport.png。fixtureの51/37/14/1019/313で概要と要確認導線が先に見える。画像はローカル模擬APIの検証で、本番の現在値や本番反映の証明ではない。心理学/脳科学的な理解時間の実測は未実施。
+
+表示改善のコード/視覚レビューAPPROVE（root、実装Terraと区別）。親の新履歴/切替REVISEは継続。設計・実装・ローカル検証完了、PR/CI確認へ進む。番号付きGOは創作せず、本番反映済みとは宣言しない。
