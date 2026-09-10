@@ -32,7 +32,10 @@ PO: しんご
 ## CI補強の詳細設計
 
 POからCI補強方針への「合意進める」を受領。全体の具体的設計・実装開始の一括承認とは扱わない。
-- [ci-guard-design.md](ci-guard-design.md) — 検査不能時の誤合格防止。第一便のみ同一AI自己審査APPROVE、実装未着手。
+- [ci-guard-design.md](ci-guard-design.md) — 検査不能時の誤合格防止。当該CI設計単体は同一AI自己審査APPROVE、実装は画面統一の後・最後に実施。
 
 - [ci-registry-design.md](ci-registry-design.md) — 共通部品の所有元と移行残件の管理案。自己審査REVISE。
-- [実装前確認カード](../../handoff/design-system-recon/CARD-FRONTEND-MOLD-CI-RECON-01.txt) — 読み取りのみ・カード検査済み・別セッション未起動。
+- [実装前確認カード](../../handoff/design-system-recon/CARD-FRONTEND-MOLD-CI-RECON-01.txt) — 読み取りのみ・カード検査済み・委任実測完了（既存22成功と誤合格再現）。
+
+
+現在地: 調査・設計草案PR #3407提出済み。全体設計はREVISE。POは実装/レビュー担当への委任と順次マージを許可、完成後の目視を担当する。既存7PRの採否はmigration.md末尾、実施順序はdesign.md §Y。製品実装は未着手。

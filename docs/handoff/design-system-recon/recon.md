@@ -297,7 +297,7 @@ ADR索引 `docs/adr/README.md:76` / `:82` / `:165` から所在確認。ADR-073�
 - 同ゲート関数を117ファイルへ適用: select65 / input233 / tab38。例外と検出対象がAST集計と異なる。最終移行件数ではない。
 - UI governanceテストは自分で実行し22 passed / 0 failed。
 - `.github/workflows/frontend-check.yml:34` はcheck:all、`:88` はStorybook build。GitHubの現在の必須検査登録は未確認。
-- `frontend/tests-e2e/funnel-dashboard-subpages.spec.ts:129`、`karte-visual-gate.spec.ts:401` 等には画像比較が実在。「画像検査なし」とは言わない。今回は未実行・全画面網羅も未確認。
+- `frontend/tests-e2e/funnel-dashboard-subpages.spec.ts:129`、`frontend/tests-e2e/karte-visual-gate.spec.ts:401` 等には画像比較が実在。「画像検査なし」とは言わない。今回は未実行・全画面網羅も未確認。
 
 ### 6. 設計図との対照
 
@@ -402,7 +402,7 @@ components配下にToggle/Switch名の部品ファイルは見つからない。
 
 ### EV-20260910-FRONTEND-MOLD-04: CI強制の実設定確認
 
-GitHub main rules APIでUI governance gateの必須登録を確認。workflowの非必須コメントは現状と不一致。最新main 5386d664と調査対象frontend/3 workflows/2検査本体の差分0。既存UI検査テスト22成功/0失敗。根拠: docs/handoff/design-system-recon/evidence-20260910/main-rules-20260910.json、ui-governance-recheck.log。docs/specs/design-system/design.md §Nに対照試験12組・必須job拡張・取得失敗の扱いを設計。POの続行とCI追加要求を記録。草案・自己審査REVISE、CI未変更・実装未着手。
+GitHub main rules APIでUI governance gateの必須登録を確認。workflowの非必須コメントは現状と不一致。最新main 5386d664と調査対象frontend/3 workflows/2検査本体の差分0。既存UI検査テスト22成功/0失敗。根拠: docs/handoff/design-system-recon/evidence-20260910/main-rules-20260910.json、ui-governance-recheck.txt。docs/specs/design-system/design.md §Nに対照試験12組・必須job拡張・取得失敗の扱いを設計。POの続行とCI追加要求を記録。草案・自己審査REVISE、CI未変更・実装未着手。
 
 
 ### EV-20260910-FRONTEND-MOLD-05: 誤合格の再現と第一便設計

@@ -192,7 +192,7 @@ KGI①〜⑥に加え、本設計図の完成条件として次を満たす:
 ①人: PO承認＋各便の画面確認。②エージェント: 索引経由で全設計セッションへ周知。③機械: 領域ペア関所を順次新設。④データ: 影響なし。⑤本番: 便0.5〜7はUI直結（同値置換で緩和）。⑥外部: 影響なし。
 
 ## 維持の仕組み
-- 守り手: design-token-guard.yml/check-design-token-ratchet.sh（便0b稼働中）＋領域ペア関所（migration便1c/2/5/6-guard）＋部品台帳満数方式。
+- 守り手: `.github/workflows/design-token-guard.yml` / `scripts/check-design-token-ratchet.sh`（便0b稼働中）＋領域ペア関所（migration便1c/2/5/6-guard）＋部品台帳満数方式。
 - 対象: 生値ベタ書き・部品重複・パレット直参照・素の<table>/<h1>/空状態の新規。
 - 未確立（正直な明記）: 領域ペア関所は各guard便完了まで人が守る。
 
@@ -430,7 +430,7 @@ PO応答原文: 「進める、CIでルールが守られる仕組みもなけ�
 - `scripts/check-ui-governance.js:39`はpagesだけが対象。select/input一部/自作tabsの件数増加を検査し、button/table/textareaは対象外。`:51`と`:66`ではgit取得失敗を空結果にする経路がある。解析不能や取得失敗を「違反なし」にしてはならない。
 - `scripts/check-design-token-ratchet.sh`はhex件数比較。`.github/workflows/design-token-guard.yml`の対象パスはfrontend/srcだけ。検査自身だけを変更するPRの起動条件も不足。
 - `frontend/scripts/check-css-hardcoded-colors.js:24`はbasenameによる正本除外、変数定義行を除外。`frontend/scripts/check-stories-count.js`は直下の見本ファイル存在だけを見る。
-- 今回実行した既存検査テストは22成功/0失敗。[出力](../../handoff/design-system-recon/evidence-20260910/ui-governance-recheck.log)。以下の新規検査は未実装・未実行。
+- 今回実行した既存検査テストは22成功/0失敗。[出力](../../handoff/design-system-recon/evidence-20260910/ui-governance-recheck.txt)。以下の新規検査は未実装・未実行。
 
 #### 検査の責務と配置案
 
@@ -766,3 +766,15 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 各PRは変更前のmain SHA、採用した旧PRの差分、対象ファイル、維持する操作、検証コマンド/出力、戻し対象のcommitを記録する。前PRのレビューと必須チェックが通りマージされた後、そのmainから次PRを作る。マージ方法はmerge commit。旧PRのcloseは同等の変更の採用/不採用理由と後継PRが確定した後に行い、理由なく閉じない。
 
 目視は完成後にPOが担当し、PO確認待ちを明記する。CI/自動テストをPO目視で代用しない。全体設計の自己審査REVISEは未調査の意味分類・公開API互換と旧PR採用表を詰めてから再判定する。
+
+
+## 文書保存時の受け入れ基準
+
+調査正本: docs/handoff/design-system-recon/recon.md。以下は調査・設計草案を保存する文書PRの受入条件であり、製品実装の合格とは区別する。全体設計の未決事項は残件として明記する。
+
+| 基準 | 検証方法 |
+|---|---|
+| 根拠ファイルがPRに含まれる | git ls-treeと参照先の実在を照合 |
+| 製品変更が混ざらない | mainとの差分でfrontend/backend/scripts/workflowsが0 |
+| 台帳で最新の合意と未完を区別 | 最新の実施順序・PO目視移管・旧PR採否を照合 |
+| 証拠の構造を壊さない | JSON解析とTSV全セルの読み戻し一致を確認 |

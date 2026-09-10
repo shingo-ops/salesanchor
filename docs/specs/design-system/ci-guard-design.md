@@ -23,7 +23,7 @@ POの「合意進める」は、CI補強方針への合意・設計続行とし�
 - 同`:66`: git diff失敗を空配列に置換。
 - 同`:311`: 対象数0ならexit0。
 - 実行再現2件: 存在しないBASE=`0000000000000000000000000000000000000000`/HEAD=`HEAD`と、正常BASE/HEAD=`HEAD`の両方がexit0・対象0・skip出力。[再現ログ](../../handoff/design-system-recon/evidence-20260910/ci-invalid-ref-repro.json)。読み取りだけで再現し製品を改変していない。
-- 既存22テストは検出関数中心で上記エラー経路の回帰を検出しない。[22件結果](../../handoff/design-system-recon/evidence-20260910/ui-governance-recheck.log)。
+- 既存22テストは検出関数中心で上記エラー経路の回帰を検出しない。[22件結果](../../handoff/design-system-recon/evidence-20260910/ui-governance-recheck.txt)。
 - 既存必須jobは`.github/workflows/ui-governance-gate.yml:32`で同テストを先に実行する。新しいworkflow・依存追加・Ruleset変更なしで回帰試験を運用に載せられる。
 
 この再現はCI本番で常に比較が壊れているという意味ではない。壊れた入力を成功扱いする分岐の証拠。

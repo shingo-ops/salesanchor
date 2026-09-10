@@ -1,0 +1,37 @@
+
+=== UI Governance Gate: 自動テスト ===
+
+T1: 生 <select> 検出
+  ✅ 生 <select> は検出される
+T2: 複数行 <input type="search"> 検出（F-E1 回帰テスト）
+  ✅ 複数行 type="search" は検出される
+T3: <input type="checkbox"> 非検出
+  ✅ type="checkbox" は検出されない
+T4: className="data-table" 非検出（table 除外）
+  ✅ "data-table" は検出されない
+T5: className="my-tabs" 検出
+  ✅ "my-tabs" は検出される
+T6: 有効な ui-allow 付き生select → 除外
+  ✅ 有効な ui-allow 付き生select は除外される
+T7: 番号なし ui-allow → 無効＝除外されない
+  ✅ 番号なし ui-allow は無効で除外されない
+
+追加テスト:
+  ✅ type 省略の <input> は検出される
+  ✅ type="text" は検出される
+  ✅ type="date" は非検出
+  ✅ type="number" は非検出
+  ✅ type="time" は非検出
+  ✅ 複数行 type="text" は検出される
+  ✅ "tab-nav" は検出される
+  ✅ "table-container" は非検出
+  ✅ template literal "db-tab..." は検出される
+  ✅ 同行 ui-allow は除外される（同行コメントも有効）
+  ✅ ui-allow: 理由 (#123) → 有効
+  ✅ ui-allow: 番号なし → 無効
+  ✅ ui-allow: 理由なし → 無効
+  ✅ <InputField> コンポーネントは非検出
+  ✅ <Selection> コンポーネントは非検出
+
+=== 結果: 22 passed / 0 failed ===
+
