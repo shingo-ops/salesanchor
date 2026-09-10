@@ -18,6 +18,8 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 
+from tests.rls_bootstrap import public_bootstrap_lock
+
 # CI は TEST_PG_URL を未設定（comment in test.yml）→ RLS_ADMIN_DATABASE_URL に fallback。
 # jarvis ロールは DDL 権限あり → テーブル自前 bootstrap が可能。
 _PG_URL = os.getenv("TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -155,7 +157,7 @@ async def seed_aggregated_dataset():
     eng = create_async_engine(_PG_URL, echo=False)
 
     # ── テーブル bootstrap (IF NOT EXISTS → 冪等) ──────────────────────────
-    async with eng.begin() as conn:
+    async with public_bootstrap_lock(eng), eng.begin() as conn:
         await conn.execute(
             text("""
                 CREATE TABLE IF NOT EXISTS public.suppliers (
@@ -359,14 +361,13 @@ def _make_app_client(pg_engine):
     - get_current_tenant / get_current_user: モック
     - load_user_permissions: モジュールレベルでパッチ（Depends 経由でなく直呼びのため）
     """
-    from httpx import ASGITransport, AsyncClient
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from sqlalchemy.orm import sessionmaker
-
     from app.auth.dependencies import get_current_tenant, get_current_user
     from app.database import get_db
     from app.main import app
     from app.models import User
+    from httpx import ASGITransport, AsyncClient
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
 
     async_session = sessionmaker(pg_engine, class_=AsyncSession, expire_on_commit=False)
 
