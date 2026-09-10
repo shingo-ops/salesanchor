@@ -207,3 +207,60 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 
 PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」を受領。直前に提示した保存領域/権限の読取と文書PR3396の保存/マージに適用。/tmp/pmg-cutover-mount-readonly.pyでnginxの対象bind2件とstatを取得。最後のps照会のみ失敗し全体exit1。取得できたmount/statと失敗を分離した。/tmp/pmg-nginx-process-readonly.pyの/proc Name/Uid/Gid限定読取はexit0。本文・認証ファイル・DBデータ・設定変更なし。詳細数値はdesignの最終確認節。
 最新main a0c0eb7fを取り込み。PR3393のv3作品根拠/訂正保持を読み、3commit/3rollbackが残ることを再確認。PR3399など他PRの台帳更新を保持して文書競合を解消。以前のコードhash診断を最新版の一致証拠とは扱わない。
+
+
+## 2026-09-10: Terraによる旧処理取消の隔離実測と次便準備
+
+origin/main 89ad29aeで新規作業場所を作成。先のd21599c7以降はinventory系テスト/文書だけの変更で、対象の解析/配信2サービスのSHA256一致を確認した。
+Codex TerraはPython3.12で実物のrun_distribution/reanalyze_extraction_jobをAST抽出し、そのままコンパイル。DB/資格/外部送信境界だけを架空実装へ置き換えて4シナリオを実行した。
+初版は12assertion。設計担当は開始Eventの待機結果が未検査と指摘し、開始済みを検査する2件を追加。最終14/14成功、設計担当も同じハーネスを再実行しPASS assertions=14を確認した。
+通常配信は成功記録、戻り値の送信エラーはエラー記録/通知。取消ケースでは開始確認後に待機taskをcancelし、その後に同期処理を解放。架空送信/解析は終了し、配信結果のDB記録は0件だった。
+これは呼出し側の取消と同期処理の完了が異なることの証拠。実Sheetsへの送信完了、本番DBの状態、Uvicorn停止時の実態を証明しない。HTTP終了だけから旧配信の完了を推定しない契約を維持する。
+根拠: /tmp/reports/pmg-legacy-completion-probe/RESULTS.md、probe_legacy_completion.py、run.log。run.log SHA256=e1c292a152364da624044a5bd9ae544f76c41ff85b6316b44c40c20094d6cfd5。
+配信ソースSHA256=6a63cf5245113bb7ac678a5c993c00098c9bd1f71d7a09fc8eadee4aa289166c、再解析ソースSHA256=ec12593ef7d6ea90920a32518450b97ecd74821d415dcb5acdfcef5aac02af53。
+
+現行new-worktree.sh:65-67は回収を実行するまま。既存保持オプションは文書PR3390だけで未実装。POに今回の作成例外を確認し「許可する進める」を受領した。
+新規release/pmg-cutover-rehearsal、UUID c4aca19e-0e68-4a1c-acd7-f37c63d92ff9。担当台帳登録・フック設定、validate-worktree-start/validate-pr-ownership通過。既存worktreeの削除0件。本店AGENTS.mdの他者変更は保持した。
+Docker実行環境はローカルに見つからず、既存test-rollback.ymlのubuntu-latest/Docker経路を参照した。製品/既存配布処理を変更せず、新規隔離CIで検証する設計を作成。正式card-lint exit0を確認してTerraへ試験2ファイルだけを委任した。
+製品設計の自己審査REVISEは維持。隔離試験を実装する設計だけAPPROVE。新規試験CIはまだ実行しておらず、Docker成功とは扱わない。
+
+
+### 配信安全装置8bの問い合わせ・本番読取（2026-09-10 17:41 JST）
+
+POから「running2件で配信不可、今回の影響か」の問い合わせを受領。本便のgit差分は未コミット、当該headのPR一覧は空。製品変更/マージ/デプロイ未実施であり、本便の未公開試験は原因ではない。過去の他PRや停止そのものの原因を否定した証拠ではない。
+本番API経由の接続設定でdefault_transaction_read_only=on、SHOW transaction_read_only=on、statement_timeout=5000を確認してSELECTのみ実施。DB時刻2026-09-10 08:41:47.993282+00、pending/extracted0、running2。
+- 6da3ca68-651e-4ff6-8316-1c9135508ad2: source b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2、元データ無効、items0。
+- bfa07018-9b34-42b6-990a-017e3c1cf140: source afbc08d1-cf3b-43be-87e5-4b7200144b6c、元データ有効、items0。
+両方created_at=2026-09-10 02:49:21.105805+00、extracted_at/prompt_version NULL。docs/handoff/tcg-product-master-growth/recon.md:682の既往2IDと一致。本文や資格情報は取得/記録しない。
+Celeryの読取inspectはcelery@19d5a281d647の1台から応答、active/reserved/scheduledは各0件。未確認の別worker/同期処理が存在しない証拠へ広げない。
+現行tcg_distribution_svc.py:674-700は未完了jobがあれば配信前に中断する。tcg_diagnostics_svc.py:138,186の再試行対象はpending/errorだけで、running2件は対象外。安全装置を無効化せず、元データの有効/無効を分けた復旧設計が必要。DB状態変更・再実行・外部配信は未実施。停止原因は未確認。
+診断実体: /tmp/pmg-running-two-readonly.py、/tmp/pmg-worker-presence-readonly.py。どちらもexit0、資格情報本文の出力なし。
+
+### 実装担当停止
+
+Terraの初回混雑は再試行で解消し、取消試験14件まで実施。その後Docker試験のコードレビューを差し戻し、修正継続を依頼したが、モデル利用上限エラーで停止。新規2ファイルは実装途中、Docker試験未実施、コードレビュー未合格。指定外モデルへの切替はしていない。再開時はカード契約との照合から続け、未完成差分をPR/マージしない。
+
+
+### 実装再開・他セッションとの境界
+
+PO原文「復旧は別セッションが対応しているので再開してくれ上限は解消した」を受領。running2件の復旧は本便から除外し、DB状態変更・再実行・配信を行わない。
+Terraの編集に対し自動承認レビューが利用上限エラーで拒否。拒否をPOへ説明して、同じ隔離試験ファイルの編集再試行について返答「許可する」を受領した後、同じTerraで編集を再開した。自動審査/安全フックの無効化なし。
+追加のPO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」を受領。既承認のマージ/デプロイ範囲で、試験実装・差分レビュー・CIへ進む。未完成コードや未検証の製品設計はマージしない。
+
+### Docker初回CIの失敗と試験ネットワーク修正（2026-09-10）
+
+PR #3408 HEAD098dd48aのpush/PR両試験は接続口取得でKeyError 443/tcp、assertion実行前に停止。PR run34459276866/job102812962329、Docker28.0.4、nginx digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。成功扱いしない。
+同版の公式実装 https://github.com/moby/moby/blob/v28.0.4/libnetwork/endpoint.go#L698-L706 はinternal networkでProgramExternalConnectivityを実行しない。試験が指定した--internalとホスト公開ポート取得は整合していなかった。独立した通常bridgeへ修正し、公開先127.0.0.1とランダムポートの検査を維持する。外部通信を遮断するネットワークとは称さない。試験要求先はlocalhost/同networkの架空処理先のみで、資格情報を渡さない。修正後の実動確認はCIで行う。
+Context7は利用可能ツールに存在せず、PO許可済みの公式資料直接確認を使用。PR本文の削除行申告もdesign.mdを列挙して修正した。
+
+修正後HEADd6da86d3のrun34459910899/job102815014890は、nginxに同一443ポート公開を2回指定した箇所でaddress already in use。ネットワーク設定処理まで進んだがassertion0件。TLSの2serverを内部443/444に分けて公開するfixtureへ修正する。createでID取得後にstartする手順に分け、起動失敗時にも自作containerのIDを保持して後始末する。製品構成の変更ではない。
+
+HEAD6b38e094のPR試験run34460163845/job102815839208（GitHub試験merge SHA24ad0ec6）は、受付拒否・更新・不正reload・起動失敗検出まで進み、復元後restart TLSでConnectionRefused/timeout。起動前に記憶したランダム公開ポートを再利用していた。再起動後のinspectを再取得・同じ公開範囲検査を実施し、前後の値を結果へ残して原因を照合する。失敗時点のログだけで再起動後のポート値は確認できておらず、タイムアウト延長で代用しない。
+
+### Linux/Docker実測結果と差分審査（2026-09-10）
+
+HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job102816671239は99/99 assertion成功、errors0、exit0。設計担当がActionsログの結果JSONを直接取得して確認した（他者の報告だけではない）。Docker28.0.4、Python3.12.14、nginx1.31.1 digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。
+再起動前app/api公開ポート32769/32770、再起動後32773/32774を実測。前回の古い接続口再使用が整合しないことを確認し、再取得で復元後TLSと拒否維持が成功した。
+同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
+根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
+試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。
