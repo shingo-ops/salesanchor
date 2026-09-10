@@ -1982,3 +1982,8 @@ GitHub PR #3407は2026-09-10T09:15:15Zにmerge commit d715d998877e899206ba9bb4f8
 CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinner属性を追加照合。限定CIの有限propertyと部品寸法除外を確定、受入C01〜C27。調査担当の報告と設計担当の直接差分/文書検査を区別し、未実装テストを実行済みとしない。最新origin/main0be59e5290cab4149aa5451920317f8fa7f7564cと3bdf33d5のfrontend差分0を直接確認。
 
 次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。
+
+## EV-20260910-PMG-INTEGRATION-DESIGN
+
+2026-09-10、base b36041ed。PO「次を進めるPRマージまで」。既存保持の作成例外と設計文書PRマージの承認として記録。起点main・UUID・担当台帳・preflight/開始/所有検査を確認。製品実装なし。
+PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実nginxと独自試験の差、外部clear/append2呼出しと後置DB記録、40秒stopと通常rollbackを読み取り、design最終節に8受入条件・段階別復旧・旧実行分類を保存。根拠の行番号と公式資料はrecon「入口配布・旧処理照合の再調査」。I1〜I8未実施。自己審査REVISE、実装カード未発行、画面未完成。
