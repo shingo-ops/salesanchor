@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| worktree作成時の既存保持指定（設計） | Agent | 文書4件を保存、差分・台帳チェック通過。仕様草案を同一AIで自己審査、実装未着手 | 草案レビューと正式仕様承認。実装担当の作業場所を確定してからカード発行 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
+| worktree作成時の既存保持指定（設計） | Agent | Draft PR #3390提出。文書4件のみ、差分・台帳・成果物検査通過。実装未着手 | PR #3390のCI確認と草案レビュー。正式仕様承認・実装担当の作業場所確定後にカード発行 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | 実装GO受領。本番DBをread-only確認、作品誤判定29中有効4。設計自己審査APPROVE・カード検査通過、文書PR #3387提出済み | 設計・ADR追加案の文書承認後、カードを実装役へ渡す。製品実装・本番反映は未着手 | docs/handoff/tcg-product-master-growth/design-keyword.md §10 / EV-20260910-LINE-ACCURACY-06 / https://github.com/shingo-ops/salesanchor/pull/3387 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
 | 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |

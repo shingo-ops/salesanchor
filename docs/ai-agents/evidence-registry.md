@@ -1561,3 +1561,4 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - 設計自己審査: APPROVE（同一AI）。正式仕様承認・実装担当の作業場所・正式カード検査は未了。製品・運用スクリプト・CIは変更なし。
 - 未実施: 保持指定の機能試験、実装、マージ、本番操作。
 - 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。変更は設計・調査・台帳・根拠登録の4ファイル。実装の機能試験ではない。
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3390 （Draft、base=main、head=release/worktree-preserve-design）。公式register-pr.shで番号登録成功。ローカルprocess-artifacts gateも実diffとPR草案本文を使用してexit0。GitHub CIは別途確認する。
