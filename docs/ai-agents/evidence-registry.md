@@ -1537,6 +1537,13 @@ decision: 最新DB未確認の障害は解消。設計・ADR追加案・カー�
 follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージェントは起動していない
 ```
 
+- EV-20260910-GO-FLOW-SCOPE:
+  theme: "GO記録転記・マージ前検査（既存テーマ延長）"
+  evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
+  observed: "2026-09-10 PO返答『合意』はGitHub画面・直接CLIのマージ制限まで含む設計範囲への合意。main=60132b058ba52f24afdb50d683a216d88f5fdd59。Rulesetの必須12チェックにprocess-artifacts gateなし。既存GO validatorの純粋関数試験5/5 PASS。"
+  publication: "文書公開・PR提出へのPO GOを受領。https://github.com/shingo-ops/salesanchor/pull/3388 をOPEN/ready、base=main、head=release/go-flow-designで確認。マージ未実施。"
+  open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更は未承認。文書PRのGO #3388は受領済み、マージ成立は確認前。"
+
 - EV-20260910-PMG-IMPORT-SSOT:
   theme: "インポート・解析・配信の統合 第1段階"
   evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
