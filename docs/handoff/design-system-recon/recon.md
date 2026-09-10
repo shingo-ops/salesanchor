@@ -508,3 +508,16 @@ GitHub PR #3407は2026-09-10T09:15:15Zにmerge commit d715d998877e899206ba9bb4f8
 CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinner属性を追加照合。限定CIの有限propertyと部品寸法除外を確定、受入C01〜C27。調査担当の報告と設計担当の直接差分/文書検査を区別し、未実装テストを実行済みとしない。最新origin/main0be59e5290cab4149aa5451920317f8fa7f7564cと3bdf33d5のfrontend差分0を直接確認。
 
 次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。
+
+
+## 2026-09-10 数値アイコン実装便
+
+文書PR #3409はmerge b36041ed9で保存済み。ICON5値を保持する生成器と35試験の実装を検収。詳細・実行者/確認者の区別は [実装検収](evidence-20260910/icon-source-implementation.md)。製品PR・CI・マージは後続。画面全体未完、CI追加は最後。
+
+実装commit40ff3365は保存済み。pushは公開repoへの製品/内部文書送信に対する自動承認レビュー拒否で停止。送信先と14ファイルの実測確認後も拒否が残り、公開送信承認待ち。詳細は上記実装検収末尾。
+
+公開repoへの14ファイル送信についてPO原文「許可する」を受領し再開。実装PR提出とCIを確認する。
+
+PR #3412 HEAD e739c9f146004c298910e25b1f99e1573bc0cc95のGitHub checksを設計担当が直接確認: SUCCESS37/SKIPPED8/FAILURE1。残る失敗はprocess-artifacts gate（job102847686397）の「GO記録セクションがない」だけ。Frontend lint & custom checks、Storybook、Karte Visual Gateを含む技術チェックは成功。限定第二レビューは同HEADに適用可を確認済み。公開送信許可は受領済みだが、番号付きGO原文を創作せずGO #3412のPO原文を確認する。DB変更なし、バックアップ確認は該当なし。新実装マージ/本番反映未実施。
+
+PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻としてPR本文へ転記し、公式validateGORecordのエラー0を確認。バックアップはDB変更なしのため該当なし。最新main追従後のHEADでCIを確認してマージする。承認を実施済みマージと混同しない。
