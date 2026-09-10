@@ -9,7 +9,7 @@
 - 日付: 2026-09-05
 - 対象ADR: ADR-154
 - 担当: architect
-- 状態: 実測完了・design 未着手
+- 状態: 以下は2026-09-05の調査記録。2026-09-10のテスト調査は末尾追補、設計は design.md を参照。
 
 ## 既存ADR検索結果
 
@@ -102,3 +102,34 @@
 
 - backend/app/services/tcg_product_master_svc.py（703行）。tcg_products.category_class と is_active は NOT NULL かつ既定値なし（実測）だが、ルーターにもフォームにも現れない。このサービスが何を入れているかは未確認。design 前に読む。
 - tcg_major_categories / tcg_series / tcg_manufacturers / tcg_product_categories の中身（コード体系）。テーブルの存在のみ確認済み。
+
+## 2026-09-10 スキーマ修飾テスト調査（依頼6）
+
+本追補の対象は静的検査だけ。上の古い画面・DB・API状態を現在の完了事実として再利用しない。
+設計: docs/handoff/tcg-product-import/design.md §12。対象ADR: ADR-113、ADR-154。
+基点: 87e5748b1dab5b062f991a263fa6ac692653877d
+
+| ファイル | 全行数 | Git blob | text呼び出し行 |
+|---|---|---|---|
+| backend/app/routers/tcg_line_import.py | 666 | 73cf8607889b38c2d2c9e0eafb816e517effcea0 | 213, 261, 305, 347, 411, 445, 459, 475, 484, 497, 511, 531, 572, 604, 627 |
+| backend/app/services/tcg_line_import_svc.py | 698 | b69e4562101fcde08cbc6aa71c8a92c739662e74 | 344, 368, 384, 404, 427, 439, 463, 516, 521, 539, 580, 606, 634 |
+| backend/app/services/tcg_product_import_svc.py | 486 | cf9c28b5b86de610e79414be5c50bf7f0525a0f6 | 167, 181, 286, 384, 402, 425 |
+| backend/tests/test_tcg_schema_qualification.py | 219 | 3df3de6ea6307326a20d5c37bddc16c8b0120dd3 | 検査コード |
+
+商品サービスは全486行を読み、末尾まで確認。167行の動的表はLOOKUP_TABLESの4表。286行のSQLは後続文字列のJOINを含む。修飾は計7か所。
+backend/tests/test_tcg_schema_qualification.py:28 の抽出は先頭文字列のみ、:55 の判定は直前14文字内の部分一致。後続JOINの未修飾と動的tableの未修飾を見落とすことを、原本を変更せずにメモリ上の変異で再現した。
+.github/workflows/test.yml:114 のpytest-run-internalはbackend変更時に実行し、:241 の全体pytestで本ファイルを収集する。:250 の集約チェックは文書変更時にも成功するため、実行の証拠を区別する。
+
+### 設計資料の検証
+
+- 資料: schema-test-proposal.py.txt。SHA-256: cb7e8f26eca8cd5e1bb630f6e88b249c411f60fbb41a68949fdbda0e0757c7eb
+- Python 3.12.8で資料の7テスト関数を直接実行し7/7成功。ruff check --config backend/pyproject.toml --no-cacheで成功。
+- 検証はPython標準ライブラリでソースを読むだけ。pytest・conftest・DBは未実行。backendの製品テストには未反映。
+- 修飾除去7例、動的表4正常/4異常、抽出回帰10例、未解決3例、動的前提変更3例を含む。詳細の再現手順はdesign.md §12と資料本文。
+- 実行記録: /tmp/reports/GUARDS-PMG-DESIGN-20260910/schema-proposal-python312-results.json（初回試験の基点c3eaa3d5）。上記4ファイルの内容は本追補基点まで変更なし。
+- 外部事例不要。Context7利用不可のため、PO許可の代替としてPython 3.12公式ast資料を直接確認。
+
+### 既定入口での文書作業
+
+mainとorigin/mainの一致を確認し、new-worktree.shでrelease/tcg-schema-test-designを作成。別手順でディレクトリとgit登録を確認後に移動した。
+標準reaperは、未保存なし・origin/mainに統合済みを確認したrelease/worktree-preserve-designを1件回収した。未保存12件は保護された。保持指定の新機能はまだ実装されておらず使っていない。

@@ -983,3 +983,90 @@ class TestResolveConditionV2:
         assert canonical == "No shrink box"
         assert cond_id == "uuid-cn0005"
         assert "R3:シュリなし" in basis
+
+
+# CARD-LINE-WORK-MATCHING-V3-01: work evidence and product-only gates.
+from app.services.tcg_analyzer_svc import (
+    is_model_keyword, match_pid_with_work, resolve_work_evidence,
+)
+
+WORKS = [
+    dict(id="pokemon", display_name="Pokemon", alt_name="ポケモン"),
+    dict(id="onepiece", display_name="One Piece", alt_name="ワンピース"),
+    dict(id="gundam", display_name="GUNDAM", alt_name="ガンダム"),
+]
+
+
+@pytest.mark.parametrize("keyword,expected", [
+    ("EB01", True), ("EB-01", True), ("EB - 01", True), ("S8a-G", True),
+    ("ＥＢ０１", True), ("EB01 special", False), ("151", False), ("AR", False),
+    ("THE BEST vol.2", False), ("MEGA スタートデッキ100", False),
+])
+def test_model_keyword_contract(keyword, expected):
+    assert is_model_keyword(keyword) is expected
+
+
+@pytest.mark.parametrize("name,source,start,end,work,span,expected", [
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0001", "gundam"),
+    ("EB01", "【ガンダム】\nEB01", 2, 2, "ガンダム", "L0001", "gundam"),
+    ("EB01", "[GUNDAM]\nEB01", 2, 2, "GUNDAM", "L0001", "gundam"),
+    ("EB01", "ガンダム EB01\nEB01", 2, 2, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ワンピース", "L0002", "onepiece"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ポケモン", "L0002", "pokemon"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ガンダム", "L0001", None),
+    ("ガンダム ワンピース EB01", "ガンダム ワンピース EB01", 1, 1, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nEB01", 2, 2, "GUNDAM", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0099", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "未知", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "", "", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, None, None, "gundam"),
+    ("EB01", "ガンダム\nEB01", 2, 2, None, None, None),
+])
+def test_work_scope(name, source, start, end, work, span, expected):
+    assert resolve_work_evidence(name, source, start, end, work, span, WORKS) == expected
+
+
+def test_inactive_duplicate_and_unsplit_aliases_rejected():
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], is_active=False)]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 WORKS + [dict(WORKS[2], id="duplicate")]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], alt_name="ガンダム|Gundam")]) is None
+
+
+def test_work_constraint_does_not_fallback_or_resolve_code_only():
+    kw = {"OP": ["EB01"], "NO_WORK": ["EB01"]}
+    for work in ("gundam", None):
+        result = match_pid_with_work("EB01", list(kw), kw, {}, work_id=work,
+                                     product_work_ids={"OP": "onepiece"})
+        assert result == (None, "NONE", False, [])
+    assert match_pid_with_work("ワンピース EB01", list(kw), kw, {}, work_id="onepiece",
+                               product_work_ids={"OP": "onepiece"})[0] == "OP"
+
+
+def test_unknown_work_checks_all_matching_keywords():
+    for kws in (["EB01", "メモリアルコレクション"], ["メモリアルコレクション", "EB01"]):
+        result = match_pid_with_work("EB01 メモリアルコレクション", ["OP"], {"OP": kws}, {},
+                                     work_id=None, product_work_ids={})
+        assert result[0] == "OP" and result[2] is True
+        assert "SK:メモリアルコレクション" in result[1]
+
+
+@pytest.mark.parametrize("state,memo,excluded", [("PSA10", "", True), ("", "コロちゃお", True), ("", "", False)])
+def test_exclusions_are_item_fields_only(state, memo, excluded):
+    result = match_pid_with_work("スタートデッキ100", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ", "PSA10"]}, work_id=None,
+                                 product_work_ids={}, raw_state=state, raw_memo=memo)
+    assert result[2] is not excluded
+
+
+def test_and_exclusion_never_crosses_fields_and_memo_not_search_input():
+    result = match_pid_with_work("スタートデッキ100 コロ", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ 限定"]}, work_id=None,
+                                 product_work_ids={}, raw_memo="限定")
+    assert result[2] is True
+    result = match_pid_with_work("不明", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]}, {},
+                                 work_id=None, product_work_ids={}, raw_memo="スタートデッキ100")
+    assert result[2] is False

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
@@ -64,8 +65,29 @@ async def _apply_migration(admin_engine, filename: str) -> None:
         await _apply_migration_on_conn(conn, filename)
 
 
-async def _apply_migration_on_conn(conn, filename: str) -> None:
+def _scope_tenant_migration(sql: str, filename: str, schema_name: str) -> str:
+    """テスト用の正本SQLを、要求された一つの数値テナントに限定する。"""
+    selectors = {
+        "20260611_100000_create_channel_masters.sql": "\n        WHERE nspname ~ '^tenant_\\d+$'\n",
+        "20260614_100000_create_sales_form_tables.sql": "\n    WHERE nspname LIKE 'tenant_%'\n",
+    }
+    if not re.fullmatch(r"tenant_[0-9]+", schema_name):
+        raise ValueError("Invalid test tenant schema")
+    if filename not in selectors:
+        raise ValueError("Unknown tenant bootstrap migration")
+    selector = selectors[filename]
+    if sql.count(selector) != 1:
+        raise ValueError("Canonical tenant selector changed; review required")
+    scoped = selector.rstrip("\n") + f" AND nspname = '{schema_name}'\n"
+    return sql.replace(selector, scoped, 1)
+
+
+async def _apply_migration_on_conn(conn, filename: str, *, schema_name: str | None = None) -> None:
     sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+    if schema_name is not None:
+        sql = _scope_tenant_migration(sql, filename, schema_name)
+    elif filename in _TENANT_BOOTSTRAP_MIGRATIONS:
+        raise ValueError("Tenant bootstrap migration requires a target schema")
     # exec_driver_sql はPrepared Statementプロトコルを使うため
     # マルチ命令SQLを含む migration ファイルで失敗する。
     # asyncpgのraw接続でSimple Query プロトコルを使う。
@@ -185,7 +207,7 @@ async def bootstrap_public_products(admin_engine) -> None:
                       AND rel.relname = 'products'
                       AND c.conname = 'fk_products_tcg_type'
                 """)
-        )
+            )
         assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
@@ -229,7 +251,7 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                 await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
                 schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
                 for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
-                    await _apply_migration_on_conn(conn, filename)
+                    await _apply_migration_on_conn(conn, filename, schema_name=schema_name)
         finally:
             with suppress(Exception):
                 await conn.execute(
