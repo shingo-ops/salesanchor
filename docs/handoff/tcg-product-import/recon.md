@@ -133,3 +133,37 @@ backend/tests/test_tcg_schema_qualification.py:28 の抽出は先頭文字列の
 
 mainとorigin/mainの一致を確認し、new-worktree.shでrelease/tcg-schema-test-designを作成。別手順でディレクトリとgit登録を確認後に移動した。
 標準reaperは、未保存なし・origin/mainに統合済みを確認したrelease/worktree-preserve-designを1件回収した。未保存12件は保護された。保持指定の新機能はまだ実装されておらず使っていない。
+
+
+## 2026-09-10 商品マスタ画面の引継ぎ確認
+
+基点: origin/main a5e5a250aabe2e244ebf64c24bef40b5db40541c。PO「引き継いで良い」を受領した既存 release/tcg-product-import-ui を引き継いだ。実行役preflight成功。9e263fcaから上記基点へfast-forward成功。製品コードの編集、実取り込み、PR作成は未実施。
+
+- 未追跡2ファイルを原本のまま保存: /tmp/reports/PRODUCT-UI-TAKEOVER-BACKUP-01/。manifest.jsonにSHA-256・サイズ・記録時刻を保存し、更新前後とも原本一致を確認。TcgProductImportPreview.tsx=7b49f98ad1c24940fff0d6d3678e24e162815d1c69af9a222ce8ae472a42057a、TcgProductMasterPage.tsx=b47367f75804526a90e6bdf0443e9f6206d0d3905dfc96a2d7fe7fe8ab04fa3d。
+- frontend/src/pages/super-admin/TcgProductMasterPage.tsx:21 が参照する TcgProductImportPanel は存在しない。未追跡の実装は一覧とpreviewの2ファイルのみ。App.tsxのルートとDesktopShell.tsxのメニューに商品マスタ追加なし。build/test未実施。画面完成と扱わない。
+- backend/app/routers/tcg_product_import.py:65 は /tcg/products/list。設計5-2の /tcg/products と異なる。:80と:92はis_active=TRUE条件を持ち、非表示商品を除外する。設計2の全件/DB全行数一致とは対象が異なる。本番の非表示件数は今回未測定。
+- backend/app/tcg_config.py:20 の既定はtenant_004。リクエストごとのQA切替ではない。tenant_001試行に本番全体の環境設定を切り替える手順を推測で作らない。
+- docs/handoff/tcg-product-master-growth/sword-shield-catalog.md §3に6商品分の未確定項目、§5にキーワード設計・衝突シミュレーション未実施の記載。古い記載だけで現在も未実施と断定しない。実取り込み前に最新証拠を確認する。
+- GitHubでrelease/tcg-product-import-uiのPR検索は0件。#3416/#3419はMERGEDだがLINE取込・解析・配信の総合画面とその記録であり、商品マスタCSV画面の完成証拠ではない。
+
+委任: PO「離席するのでcxastragoモードと同じ条件で権限委譲する」、商品マスタ画面・取り込み試行への適用確認に「合っている」を受領。有効化から24時間という条件を変更しない。対応する承認経路は未有効のため開始/終了日時や代理GOを自己発行していない。保護解除、secrets変更、別セッション起動の許可には転用しない。
+
+関連ADR検索: docs/adr/FEATURE-INDEX.mdの在庫/商品マスタ領域とADR-154を確認。今回の値・件数はローカルファイル/Git/PR検索の観測。外部仕様や商品情報を今回検証したとはしない。
+
+
+## 2026-09-11 画面実装とローカル検証
+
+POが全件表示を承認し、離席中の完遂を依頼。実装は既存release/tcg-product-import-uiで継続。APIのis_active条件2箇所を除去し、商品作成/解析/DB定義は変更していない。frontend/src/pages/super-admin/TcgProductMasterPage.tsxの一覧とTcgProductImportPage.tsxの独立取込画面、features/tcg-product-import配下、App/DesktopShell/ja/enを追加更新。
+
+| 直接実行した検証 | 結果・根拠 |
+|---|---|
+| 単体テスト | 2ファイル10件成功。PRODUCT-UI-FIX-VERIFY-02.txt。確認前commitなし、同じFile/digest、二重クリック1回、ファイル変更時確認破棄、全行拒否、通信失敗時再送禁止、pending中drop、権限拒否、ページング/検索、古い応答破棄 |
+| TypeScript/本番ビルド | 成功。初回はテストのArray.atが既存ターゲット非対応で失敗、sliceへ修正して成功。設定は変更しない |
+| frontend check:all | 成功。既存を含むlint警告219件あり、警告0とは称さない。PRODUCT-UI-STATIC-01.txt |
+| Playwright Chromium | 2件成功。一覧→CSV確認→登録と非管理者拒否。API/authはモック、実登録ではない。PRODUCT-UI-E2E-01.txt |
+| Python ruff | 一覧ルーターと新規PGテストの2ファイル成功。初回はキャッシュ書込権限エラー、許可済みworktree権限で同一コマンド成功 |
+| 視覚確認 | /tmp/reports/product-csv-result.pngをAIが閲覧。結果件数・受付番号・一覧への戻りを表示。POの実機確認ではない |
+
+DockerコマンドはこのMacに存在しないためローカルpytestは実行していない。追加PGテストは専用localhost jarvis_test_dbのランダムスキーマをトランザクション内で作り、最後にrollbackする。非表示行を含むtotal・ページ送り・大小文字検索・0件を実SQLで検証する。CIでの実行はこれから確認する。
+
+未実施: PR/CI、本番反映、tenant_001の実取り込み、44件カタログの最新再照合とtenant_004登録。実装結果自己レビューは、承認済み全件条件・API認証の維持・読み取りSQLの範囲・CSV確認の固定・再送抑止を確認。CI/実DB成功前に完成とはしない。

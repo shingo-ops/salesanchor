@@ -2047,3 +2047,13 @@ EV-20260910-FRONTEND-MOLD-20提出追補: 実装commit48924bd4を通常push済�
 PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO記録なしでFAILURE。rootがGitHubログを直接確認。代理GO未対応を名前の偽装で通さず、POのGO #3420待ち。残りの技術CIは確認中。マージ/本番反映未実施。
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
+
+
+## EV-20260910-PRODUCT-UI-TAKEOVER
+
+2026-09-10。商品マスタ画面の既存作業場所をPO承認で引継ぎ。基点a5e5a250。未追跡2ファイルの複製・SHA-256一致とfast-forward後の保持を直接確認。報告 /tmp/reports/PRODUCT-UI-TAKEOVER-BACKUP-01/manifest.json、/tmp/reports/PRODUCT-UI-TAKEOVER-SYNC-01.txt。設計の全件条件とAPIのis_active絞込みが不一致。設計13節の自己審査REVISE。製品編集・build・画面試験・QA/本番投入・実装PRは未実施。委任意思受領と代理GO経路の有効化は別。
+
+
+## EV-20260911-PRODUCT-UI-IMPLEMENT
+
+商品マスタ全件表示（非表示含む）をPO承認。既存worktree引継ぎ後に一覧/CSV確認登録画面・メニュー/翻訳・一覧SQLを実装。直接検証: frontend単体10件、PlaywrightモックE2E2件、check:all、build、対象ruff成功。詳細はdocs/handoff/tcg-product-import/recon.mdの2026-09-11節。報告/tmp/reports/PRODUCT-UI-FIX-VERIFY-02.txt・PRODUCT-UI-E2E-01.txt・PRODUCT-UI-STATIC-01.txt。Docker不在でローカルPG未実行。PR/CI、本番反映、QA/44件投入は未実施。代理GO承認経路未有効、PO原文の番号付きGOを代筆しない。
