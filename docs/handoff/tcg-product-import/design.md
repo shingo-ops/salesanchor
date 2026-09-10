@@ -216,7 +216,7 @@ Python標準astでtext(...)の引数を式全体として読む。既存2対象�
 | 未解決の式を無視しない | 変数引数・未知の補間・呼び出し0件の3例を拒否 |
 | 動的表の前提変更を検知する | マッピング変更・ループ元変更・ループ内再代入の3例を拒否 |
 | 既存DDL整合試験を維持 | 既存関数本文の一致と実行成功を確認 |
-| 実装後のCIを確認する | test.ymlのpytest-run-internalとlint-backendが実行・成功。集約チェックのみで判定しない |
+| 実装後のCIを確認する | test.ymlのpytest-run-internalとlint-backend-internalが実行・成功。集約チェックのみで判定しない |
 
 実装役はDockerと既定開発依存が使える環境で対象pytestを実行し、通常のbackend CIを確認する。DBがない環境でconftestを迂回した結果を正式pytest結果と称さない。
 設計時はPython 3.12.8で資料の7関数を直接実行して7/7成功し、ruffも成功した。pytest・DB実行の結果ではない。

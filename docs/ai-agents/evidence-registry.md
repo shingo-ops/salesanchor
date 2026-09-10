@@ -1591,3 +1591,5 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 設計資料 schema-test-proposal.py.txt をPython 3.12.8で直接検証し7関数成功。製品側pytest実行・テスト反映ではない。正常/否定試験の範囲と限界は設計に明記。
 - 同一AI自己審査APPROVE（限定した静的検査）。PO発話や個別GOは創作しない。実装カード未発行・製品コード未変更。
 - 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
+
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
