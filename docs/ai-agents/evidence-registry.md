@@ -1990,3 +1990,7 @@ PR #3409は2026-09-10T09:56:27Z、merge commit b36041ed9fa69881886c431d05d586cf0
 同mergeを起点に公式new-worktree.shでrelease/frontend-icon-sourceを作成、preflight成功。CARD-ICON-SOURCE-IMPLEMENT-01をcard-lint exit0で検査してGeneratorへ委任。ICON5値14/16/20/24/48を保つ数値生成だけを本便とし、配色・部品API・画面移行・CI追加は別便。原稿レビューのCLI回帰と途中書込/rename失敗検証の不足を追加試験へ反映。製品検証/PR/マージの結果は完了後追記し、準備段階では合格としない。PO目視は完成後。
 
 EV-20260910-FRONTEND-MOLD-19追補: Generatorの35試験（Node24/22各35成功、失敗0/skip0）、npm ci/check:all/build成功の生ログを設計担当が確認。製品差分第二レビューAPPROVE。詳細とhashはdocs/handoff/design-system-recon/evidence-20260910/icon-source-implementation.md。PR/CI/マージ未完、画面目視は完成後PO。
+
+EV-20260910-FRONTEND-MOLD-19追補: 実装commit40ff3365保存済み。公開repo shingo-ops/salesanchorへの通常pushが自動承認レビューで2回拒否。具体的な製品5/文書9ファイルの公開送信について明示承認不足との判定。詳細は実装検収の末尾。push/PR/実装マージ未実施、POへ公開送信承認を確認する。迂回なし。
+
+公開送信許可の追補: 設計担当が公開リポジトリshingo-ops/salesanchorへの14ファイル（実装5＋設計・検証文書9）送信可否を質問し、PO原文「許可する」を受領した。この許可で公開送信を再開する。番号付きGOやADR承認の代筆には使用しない。

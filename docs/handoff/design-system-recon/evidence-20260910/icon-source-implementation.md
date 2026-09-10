@@ -35,3 +35,13 @@ Generator実行のgenerate、--check、check:all、buildは全てexit0。設計�
 - `frontend/package.json`: `a488d3194212b14bc99ae10d4c22fcc40657035cf1b040f7103fb27bb7ae3dde`
 - `frontend/package-lock.json`: `80ff7fcc88ab4afaf615b19fbdce15a4759ecb0e79d27f3d6d392367de8fb10c`
 - `frontend/src/constants/iconSizes.ts`: `a2bf8725c00588cf8cf8946effbcfb061b4d5daca3f4fccc62014b66c36b52ad`
+
+## 公開送信の自動承認レビュー停止
+
+実装commitは40ff33651ca143b88e4901fef7506bf138f01f1d、14ファイル（製品5、文書9）、ファイル削除0。commit後に記録hash5件の一致と作業差分0を設計担当が確認した。
+
+Generatorのgit push申請は具体的送信先・payloadへの承認未確認を理由に拒否。設計担当がorigin=https://github.com/shingo-ops/salesanchor.git、GitHub APIのisPrivate=false、viewerPermission=WRITE、既存PR3409と同一repo、送信差分14ファイルを実物確認し正規再審査へ提出したが、公開先へ製品コードと内部設計・検証文書を送ることへの明示承認不足として再度拒否された。最初の実装時OS拒否とは別の自動承認レビュー拒否である。
+
+制限解除や迂回は行わず停止。push/PR作成/新実装マージは未実施。技術検証は完了しており、上記公開repoへ製品5ファイルと設計・カード・検証ログ等の文書9ファイルを送信する承認をPOへ求める。文書PR3407/3409の既往マージは取り消されていない。後続画面移行・CI追加は未着手。
+
+公開送信許可の追補: 設計担当が公開リポジトリshingo-ops/salesanchorへの14ファイル（実装5＋設計・検証文書9）送信可否を質問し、PO原文「許可する」を受領した。この許可で公開送信を再開する。番号付きGOやADR承認の代筆には使用しない。
