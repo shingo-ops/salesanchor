@@ -88,4 +88,5 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
+| guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書修正を作成。PR未提出・未マージ | 文書検算・CI確認後にPRをマージ。評価ゲート（4）と商品取り込みテスト（6）は未実装の別便 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
