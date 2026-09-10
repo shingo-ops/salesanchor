@@ -1765,3 +1765,11 @@ PO原文「離席するので最後まで進めてくれ、事前にPRマージ�
 依頼4の実ファイル配置後検証: 67成功/失敗0/skip0（24.77秒）。証跡 docs/handoff/design-partner-card-ops/guard-evaluations/20260910-install-tests.txt。YAML/設計形式/維持欄/引用先/台帳構造も成功。GitHub CIと実イベント、必須化は未実施。
 
 依頼4の設置PR提出: https://github.com/shingo-ops/salesanchor/pull/3401 。head 3306df2a76368e8ab522cac366b282c824af9cfd、.pr-number一致を直接確認。実Gitの8対象blobと評価JSON照合成功。PR本文ADR表記の不一致を修正し再照合成功。CI確認中・正式GO未受領・未マージ・必須化未実施。
+
+### 依頼4・PR #3401のCI停止（2026-09-10）
+
+- 検証対象head: eb42433b7de5df6bab00fba02e2b15018b5e5fca。新ゲート67成功/0失敗（job102738677559）。
+- 全体PG試験job102738726326は2435成功/1失敗/93skip。tests/test_inventory_parser_real_samples.py::test_ac3_2_parse_real_supplier_sample[1]でpublic.suppliers作成時のpg_type_typname_nsp_index重複。ログ: /tmp/reports/GUARD-EVAL-3401-pytest-failure.log。
+- 直前head3306df2aの全体PG job102738212532はsuccess。両headとbaseでbackend差分0。断続的な競合が原因候補であり、競合相手と再現条件は未確定。
+- 実物: backend/tests/test_inventory_parser_real_samples.py:200 の準備処理はpublic_bootstrap_lockを使っていない。共有ロックはbackend/tests/rls_bootstrap.py:40にある。既存エラーを握り潰さず、同じロックへ参加させる案を別件で検証する。backendファイルは変更していない。
+- process-artifacts job102738677035は番号付きGO記録欠落でfailure。PRは未マージ・未必須化。失敗原因未解決のままマージしない。
