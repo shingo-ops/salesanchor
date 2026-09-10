@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | PR #3393実装・読み取りレビュー済み。PostgreSQL統合を含む2424 passed。Gemini匿名実測8明細（作品7＋不明保持1）正答、誤分類0。一時ライブ試験はb2700dd0で除去 | #3398は固有GO受領・760532a9でマージ・本番deploy run34430261411成功。直前backup4.5M・SQL2本成功を直接確認。#3393はmain取り込み済み、受領済みGO/マージ依頼に基づき最終CI確認後マージ・反映確認へ進む。旧データ一括修復は対象外 | docs/handoff/tcg-product-master-growth/card-work-matching-v3.md / EV-20260910-LINE-ACCURACY-08 / https://github.com/shingo-ops/salesanchor/pull/3393 | 2026-09-10 |
@@ -92,7 +93,8 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
-| インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+
 
 
 ## DB準備テストの領域分離（2026-09-10）

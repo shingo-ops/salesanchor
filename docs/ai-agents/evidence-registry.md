@@ -1671,6 +1671,44 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
 
 
+## EV-20260910-PMG-ANALYSIS-RUN
+
+- base: 5d26b70a186479e32e5105ac2e04b92b38eeacec。
+- 根拠: docs/handoff/pmg-import-delivery-ssot/recon.md 後続便節（7観点）。
+- 成果: 同テーマdesign.mdへ解析履歴・原子的保存・再配達・配信停止の草案を追記。自己審査REVISE。API応答・再試行・heartbeat/tickの配置まで具体化。未決は配信方針のPO判断と稼働接続先/切替確認の2項目。
+- PR #3386のMERGEDとmerge SHA 60132b05をGitHubで再確認。画面未完成、本番反映は未確認。
+- 今回のPO原文「合意」は削除なしの文書作業場所作成を許可するものとして受領。UUIDと分割台帳を登録し、開始/所有チェックexit0。
+- 製品実装、DB変更、実配信、機能試験は未実施。外部事例の改善率は使用しない。
+
+- 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。製品の故障注入・実DB競合試験は未実施。
+
+- 方針追記: 解析失敗時は同じ解析の再試行が成功するまで全体配信停止。影響説明後のPO原文「進める」を合意として受領。実装/本番GOとは分離。
+- 実機確認: 制限付きSSHは監視出力へ置換されDB接続確認は未達。制限解除や人間用鍵へ切替なし。読取診断案はローカル準備済み、未実行。配布順序からmigration先行・追跡未有効配布・排出確認後有効化の分割案を追記。REVISEを維持。
+
+- DB読取診断の後続結果（2026-09-10）: 今回の接続先確認に限る人間用SSH鍵の使用についてPO原文「進める」を受領し、診断exit0。api/worker/beatの診断接続はreadonly=on各3/3、DB識別SHA256一致3/3、tenant_004各3/3、対象4表各4/4。詳細コマンド・出力要約・限界はrecon.md「DB接続先の読取診断結果」。生の認証情報は出力せず、SQLはSHOW/SELECTのみ。
+- 現在の残件: 旧実行の排出・切替検査。DB接続設定の一致は確認済みだが既存プロセス接続や全worker個体、配布版、PR #3386本番反映は未確認。REVISE、設計全体承認・実装カード・実装は未着手。
+
+- 文書提出時の停止: 専用worktreeでのgit add/commit要求がPreToolUse hookにより `BLOCKED: create a feature branch before committing.` で拒否。再確認したpwdはrelease-pmg-analysis-run-design作業場所、git statusはrelease/pmg-analysis-run-designで文書4件未ステージ。原因未確定。フックを無効化・迂回していない。文書は保存済み、コミット・PR提出は未実施。git diff --checkとcheck-task-state.shはexit0。
+
+- 文書提出の停止解消: ~/.claude/scripts/worktree-only-guard.shはPWDを既定とし、コマンド先頭cdだけを対象作業場所として解釈する実装だった。先頭cdで専用worktreeを明示して同じフック下でコミット672cf97e成功。フックや権限設定は変更していない。
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3396 （Draft、base=main、head=release/pmg-analysis-run-design）。register-pr.sh成功、.pr-numberと現行分割台帳へ3396登録。設計REVISEの草案提出であり、実装・マージ・本番GOは未受領。
+
+- 切替設計の更新: deploy.yml:331-335のworker強制削除と共有Celery構成を照合。配布後pausedだけでは初回強制終了を防げないため先行案の保証を撤回し、8段階の検査/停止条件をdesign.mdへ追加。初回一時停止方針は未合意、REVISE維持。本番追加接続・実装なし。PR #3396 HEAD e7da4a85のチェックはpass31/skipping9。
+
+- PO原文「GO」: 初回切替で一時停止を許容する設計方針に対する返答。質問・影響・承認範囲をdesign.mdへ保存。本番停止/実装/PRマージ/追加SSH利用の承認ではない。入口表・初回遮断の制約・6段階の停止/再開案を具体化し、REVISE維持。
+
+- 受付遮断の候補整理: deploy.yml:182-184,360-374の照合から、一時的な追跡設定書換え案を不採択。稼働版/コンテナ/コード指紋だけの読取診断を準備しAST確認成功、本番未実行。ローカルDockerなし（exit127）。追加SSH許可は未受領、REVISE。
+
+- 稼働版/構成読取へのPO原文「許可」を受領し準備済み診断を実行、exit0。Docker29.4.0、3コンテナでCelery5.6.3/Uvicorn0.34.0/SQLAlchemy2.0.38、対象7コード21/21とnginx設定hash一致。recon.md同日結果に記録。ディスク上の対象ファイルの一致であり全プロセス状態/本番反映完了の証明ではない。処理件数・停止・更新・配信は未実施。REVISEの残件を3項目へ整理。
+
+- 切替設計の具体化: ASTでHTTP定義43（GET21/非GET22）を抽出、2ホスト44組を試験仕様化。停止状態をcheckout外に置く案だけではrollback後の遮断維持を保証できないため、停止機構を含む戻し先と初回導入の別審査を必要条件に追加。9つの模擬試験表を保存、未実行。REVISE維持、製品/運用コード変更なし。
+
+- 初回導入案を入口専用7段階へ具体化。API/workerの前後ID不変、通常配布と全体rollbackを呼ばない条件、機構のない版へ戻った際の後続切替禁止を記録。GitHub上の既存Docker試験経路を確認したが本件9試験は未作成/未実行。最新main760532a9を読取照合。REVISE、文書のみ。
+
+- nginx受付判定実測: /tmpの公式nginx1.31.1/PCRE2-10.46をローカルビルドし、架空処理先で151/151成功、exit0。許可なし/あり/取消後の44組とreload/再起動等。ZIP SHA256=e7537c80a7a1b91159ab624e734a493ee992b2f2555aac4d8345fd0bf484fb76。実測範囲と未検証のDocker/TLS/本番処理をdesign/reconへ分離して保存。REVISE維持。製品/運用コード変更なし。
+
+- 復旧試験を9件追加して160/160成功。ZIP SHA256=cb6994733506ebe845244af0f2fc9c182e88adfd556444578a7cb832cadcb973。既存nginx/htpasswd.dの独立サブdirectoryを使う案をcompose/.gitignore/deployと照合し、初回新規mount/再作成を不要にする方向へ改訂。認証ファイル変更・本番接続なし。実機mount/権限とDocker実証は未確認、REVISE。
+
 ## EV-20260910-RLS-SCOPE
 
 - 根拠: docs/handoff/rls-bootstrap-txn-fix/recon.md / design.md の2026-09-10追補。
@@ -1703,3 +1741,7 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 別件のDB準備テスト修正をPR #3399へ提出。実DBで判明した在庫fixture旧codeも同PRのテスト内で補正中。現時点で両PRとも未マージ。
 
 - PR #3397へマージ済み#3399を取り込み。商品サービス・設計payloadは変更せず、当該PRの全CIを再確認する。#3397は未マージ。
+
+### PMG解析実行記録の最終保存と承認範囲（2026-09-10）
+
+PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」。直前の本件残件調査・文書PR #3396のマージ承認として受領。GO #3396という発話を創作せず、製品実装/本番停止/他PRの承認へ広げない。実機mount/statとプロセスUIDの読取、最新main a0c0eb7fのv3解析/訂正保持を照合して文書へ反映。自己審査REVISE。ローカル160件は成功、Dockerと旧版外部送信の完了照合は未実施。正式実装カードは発行しない。
