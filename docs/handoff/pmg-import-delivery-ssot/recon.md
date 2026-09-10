@@ -202,3 +202,8 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 /tmp/pmg-nginx-recovery-y5544801/probe.pyはexit0、160/160。不正設定reload失敗後の旧worker存続/拒否維持と復旧、QUIT中の新規接続停止/受付済み要求完了/正常終了等を追加確認した。成果物hashはdesign.md同日節。
 停止状態の別候補をcompose.yml:18、.gitignore:119、deploy.yml:104,914と照合。git check-ignore -v nginx/htpasswd.d/pmg-cutover/allow-writesは.gitignore:119に一致。deploy/scripts内のhtpasswd.d参照を検索した範囲で生成/削除対象はdesign-siteであり、専用サブdirectoryはまだ存在すると確認したものではない。前回本番診断はmountやowner/modeを取得していない。追加SSH接続なし。
 既存Dockerの一般的な6パスを確認したが存在せず、ローカルDocker試験未実施。PR #3396 HEADddcf962bのチェックはpass33/skipping8。
+
+### 離席中の残件読取と最新main照合（2026-09-10）
+
+PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」を受領。直前に提示した保存領域/権限の読取と文書PR3396の保存/マージに適用。/tmp/pmg-cutover-mount-readonly.pyでnginxの対象bind2件とstatを取得。最後のps照会のみ失敗し全体exit1。取得できたmount/statと失敗を分離した。/tmp/pmg-nginx-process-readonly.pyの/proc Name/Uid/Gid限定読取はexit0。本文・認証ファイル・DBデータ・設定変更なし。詳細数値はdesignの最終確認節。
+最新main a0c0eb7fを取り込み。PR3393のv3作品根拠/訂正保持を読み、3commit/3rollbackが残ることを再確認。PR3399など他PRの台帳更新を保持して文書競合を解消。以前のコードhash診断を最新版の一致証拠とは扱わない。

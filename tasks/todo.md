@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| PMG解析実行記録（後続設計） | Agent | 解析失敗時の全体配信停止にPO合意。許可済み読取診断で3コンテナのDB接続先一致を確認。設計REVISE、草案PR #3396提出済み。フックの作業場所指定を修正してコミット成功、実装未着手 | 初回一時停止方針GO受領。許可済み実機読取で稼働版・コード21/21・nginx設定一致を確認。ローカルnginx160/160成功。既存読取directoryを使うreload案へ縮小。実機mount/権限、Dockerでの更新/復旧、旧版処理完了を照合して再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 後続便節 / EV-20260910-PMG-ANALYSIS-RUN | 2026-09-10 |
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | PR #3393実装・読み取りレビュー済み。PostgreSQL統合を含む2424 passed。Gemini匿名実測8明細（作品7＋不明保持1）正答、誤分類0。一時ライブ試験はb2700dd0で除去 | #3398は固有GO受領・760532a9でマージ・本番deploy run34430261411成功。直前backup4.5M・SQL2本成功を直接確認。#3393はmain取り込み済み、受領済みGO/マージ依頼に基づき最終CI確認後マージ・反映確認へ進む。旧データ一括修復は対象外 | docs/handoff/tcg-product-master-growth/card-work-matching-v3.md / EV-20260910-LINE-ACCURACY-08 / https://github.com/shingo-ops/salesanchor/pull/3393 | 2026-09-10 |
