@@ -2114,3 +2114,7 @@ EV-20260910-FRONTEND-MOLD-20提出追補: 実装commit48924bd4を通常push済�
 PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO記録なしでFAILURE。rootがGitHubログを直接確認。代理GO未対応を名前の偽装で通さず、POのGO #3420待ち。残りの技術CIは確認中。マージ/本番反映未実施。
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
+
+## EV-20260911-GO-SESSION-DELEGATION
+
+PO原文「セッション上で委任した時点でGOを出せる権限を移譲されたと認識して良い」と後続「GO」を受領。追加GitHub有効化案を撤回し、セッション委任成立と検査未対応を分離。design.md最新節に原文・期限非延長・4欄と委任参照・受入条件を保存。同一AI自己審査REVISE、検査実装未着手。元委任の発話時刻は未確認であり、記録時刻で再開しない。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-SESSION-PREFLIGHT.txt。

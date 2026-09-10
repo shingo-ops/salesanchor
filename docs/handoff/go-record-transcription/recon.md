@@ -562,3 +562,7 @@ report = {
 Path('/tmp/reports/TH-GO-QUEUE-MODEL-RESULT.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report, indent=2))
 ```
+
+## 2026-09-11 セッション委任の承認起点更新
+
+PO原文と新しい権限判断はdesign.md「セッション委任の成立」に逐語保存。現物確認: scripts/check-process-artifacts.js:36はshingo-ops/Shingoのみ、:293-330は発行者の部分一致・日時の長さ・GO番号・バックアップ欄を検査する。代理の委任ID/期限/取消は検査しない。この現状に名前を合わせて迂回しない。guards/05-pr.md:21-22はGO前の欄なしと危険/利用者影響時の必須が残る。製品/検査変更0件。外部事例・API仕様調査は不要（POの承認条件変更とローカル実装の照合）。preflight成功、追跡ファイルcleanで開始、HEADとorigin/mainは8 ahead/0 behind。関連専用runbookは検索で発見なし。観測時刻と元の発話時刻は分離。
