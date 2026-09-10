@@ -99,4 +99,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| RLS bootstrapの他領域干渉解消 | Codex | PR #3399提出。静的検証済み、実PG検証とマージは未実施 | 別PRの実PG/全CIを確認し、PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399提出。領域限定試験はエラーなし、別の在庫fixtureが3エラー。正規codeへの準備データ修正中 | 別PRの実PG/全CIを確認し、PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |

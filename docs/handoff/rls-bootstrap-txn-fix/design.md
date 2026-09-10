@@ -113,3 +113,14 @@ backend/tests/rls_bootstrap.py と test_rls_bootstrap_ordering.py、および本
 POの別件修正指示に基づく。番号付きGOを創作しない。
 
 実装提出: PR #3399。Python 3.12の純粋関数正常2例・拒否9例、ruff・書式・台帳検査成功。実PG/CIは未完了。
+
+
+### 実PG検証後の準備データ修正（2026-09-10）
+
+CIで在庫fixtureの外部キー違反3件を確認したため、同じDB準備テスト整備としてbackend/tests/test_inventory_aggregated.pyを対象へ追加する。
+How: PostgreSQL部分のseed2件・category要求・期待値と説明を正規codeのpokemon_booster_boxに合わせる。純Pythonの汎用pivot試験は維持する。
+フィルタ結果が空でもall()で通る弱点を避け、seedしたポケモン商品2件が応答に存在することも確認する。
+代替の旧code再登録・FK削除・skipは正本や検査を弱めるため採らない。本番SQL・製品API・既存bootstrapのロックは変更しない。
+受入条件: 元の実PG3件が成功し、2件のポケモン商品存在・遊戯王除外・内部情報非公開を維持。全CIが当該HEADで成功する。
+自己審査APPROVE（同一AI）。根拠はreconの正本SQL・APIの等値比較・CIの3エラー。元の2ファイル限定案からテスト1ファイルを追加したことを明記する。
+失敗時はマージ保留。盲目的な再実行は行わない。

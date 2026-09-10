@@ -46,3 +46,13 @@
 - 旧release/rls-bootstrap-txn-fixの台帳はIN_PROGRESSだがPR #2966はMERGED、登録worktreeとopen PRなし。残存branchの未統合非merge commitは0件。旧台帳の状態は本便で書き換えない。
 - 外部事例は不要。既存SQL・CI失敗と再現テストで判定する。新規ライブラリ/APIの導入や仕様変更はない。
 - 手元はDocker/pytest依存がない。純粋な文字列変換と構文を確認し、実PostgreSQLの成功判定はCIに残す。
+
+
+### CIで追加確認した準備データの不整合
+
+PR #3399 HEAD 2e4365ad、run 34431379811 / job 102727444240: 2429 passed / 93 skipped / 3 errors、84.95秒。
+エラー3件はbackend/tests/test_inventory_aggregated.pyの実PG fixture。INSERTしたpokemonがtcg_type_masterに存在せずfk_products_tcg_type違反。
+対象領域限定の回帰試験にはエラーなし。CIログを/tmp/reports/RLS-SCOPE-3399-pytest-failure.logへ保存。
+migrations/085_create_tcg_type_master.sqlはpokemon_booster_boxを登録し、20260616_000000_fix_tcg_type_dedup.sqlは旧pokemonを統合・削除する。
+backend/app/services/inventory_aggregated_service.py:40-42はcategoryをtcg_typeへ等値照合する。テストのseed・要求・期待値を同じ正規値にすれば、既存APIの意味を変えずに照合できる。
+現行active-work.dでtest_inventory_aggregated / inventory/aggregated / inventory-aggregationに対応するIN_PROGRESS/REVIEW予約は0件。
