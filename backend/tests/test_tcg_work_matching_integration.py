@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_distribution_svc as distribution
+from app.services import tcg_diagnostics_svc as diagnostics
 from app.tasks import tcg_extraction as extraction
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -244,6 +245,187 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
         assert cursor.fetchone() == ("PM0123", True, "name-first-v3-work")
+
+
+RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"
+RECOVERY_JOBS = ["6da3ca68-651e-4ff6-8316-1c9135508ad2", "bfa07018-9b34-42b6-990a-017e3c1cf140"]
+RECOVERY_SOURCES = ["b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2", "afbc08d1-cf3b-43be-87e5-4b7200144b6c"]
+RECOVERY_SUCCESSOR = "3a4633b1-82a6-4ce5-8694-053cd637c5f6"
+RECOVERY_ERROR = "LINE-RECOVERY-20260910: interrupted job; PO-approved recovery"
+
+
+def seed_recovery(connection, schema="tenant_004", count=2):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        for i, source in enumerate([RECOVERY_SUCCESSOR, *RECOVERY_SOURCES]):
+            raw = f"Anonymous product list {i}"
+            cursor.execute(sql.SQL("INSERT INTO {}.source_messages(id,raw_text,raw_sha256,is_active,superseded_by) VALUES (%s,%s,%s,%s,%s)").format(sql.Identifier(schema)),
+                (source, raw, hashlib.sha256(raw.encode()).hexdigest(), i != 1, RECOVERY_SUCCESSOR if i == 1 else None))
+        for job, source in zip(RECOVERY_JOBS[:count], RECOVERY_SOURCES[:count]):
+            cursor.execute(sql.SQL("INSERT INTO {}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'running','2026-09-10T02:49:21.105805Z')").format(sql.Identifier(schema)), (job, source))
+        cursor.execute(sql.SQL("INSERT INTO {}.extraction_jobs(source_message_id,status) VALUES (%s,'running')").format(sql.Identifier(schema)), (RECOVERY_SUCCESSOR,))
+
+
+def recovery_snapshot(connection, schemas=("tenant_004",)):
+    result = {}
+    with connection.cursor() as cursor:
+        for schema in schemas:
+            for table in ("source_messages", "extraction_jobs", "extraction_items"):
+                cursor.execute(sql.SQL("SELECT row_to_json(t)::text FROM {}.{} t ORDER BY id").format(sql.Identifier(schema), sql.Identifier(table)))
+                result[schema, table] = cursor.fetchall()
+    return result
+
+
+def test_interrupted_recovery_exact_changes_repeat_and_single_retry(pg, monkeypatch):
+    import json
+
+    connection, _, async_url = pg
+    for schema in ("tenant_004", "tenant_904"):
+        seed_recovery(connection, schema)
+    before = recovery_snapshot(connection, ("tenant_004", "tenant_904"))
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+    after = recovery_snapshot(connection, ("tenant_004", "tenant_904"))
+    for key, rows in before.items():
+        if key != ("tenant_004", "extraction_jobs"):
+            assert rows == after[key]
+            continue
+        expected = []
+        for (serialized,) in rows:
+            row = json.loads(serialized)
+            if row["id"] in RECOVERY_JOBS:
+                row.update(status="error", error_message=RECOVERY_ERROR)
+            expected.append(row)
+        assert expected == [json.loads(row[0]) for row in after[key]]
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+    assert recovery_snapshot(connection, ("tenant_004", "tenant_904")) == after
+
+    queued = []
+    monkeypatch.setattr(diagnostics, "TCG_SCHEMA", "tenant_004")
+    monkeypatch.setattr(extraction.extract_source_message_task, "apply_async", lambda **kw: queued.append(kw))
+
+    async def retry():
+        engine = create_async_engine(async_url)
+        try:
+            async with AsyncSession(engine) as session:
+                return await diagnostics.retry_extraction(session, job_ids=[RECOVERY_JOBS[1]], scope=None)
+        finally:
+            await engine.dispose()
+    assert asyncio.run(retry()) == {"enqueued": 1, "skipped": 0}
+    assert queued == [{"args": (RECOVERY_SOURCES[1],), "countdown": 0}]
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id::text,status,error_message FROM tenant_004.extraction_jobs WHERE id=ANY(%s::uuid[]) ORDER BY id", (RECOVERY_JOBS,))
+        assert cursor.fetchall() == [(RECOVERY_JOBS[0], "error", RECOVERY_ERROR), (RECOVERY_JOBS[1], "pending", RECOVERY_ERROR)]
+    retried = recovery_snapshot(connection, ("tenant_004", "tenant_904"))
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+    assert recovery_snapshot(connection, ("tenant_004", "tenant_904")) == retried
+
+
+@pytest.mark.parametrize("index", [0, 1])
+@pytest.mark.parametrize("field", ["source_message_id", "created_at", "is_active", "superseded_by", "extracted_at", "prompt_version", "error_message", "items"])
+def test_interrupted_recovery_precondition_failure_preserves_all(pg, index, field):
+    connection, _, _ = pg
+    seed_recovery(connection)
+    with connection.cursor() as cursor:
+        if field == "items":
+            cursor.execute("INSERT INTO tenant_004.extraction_items(extraction_job_id,raw_product_name) VALUES (%s,'Anonymous item')", (RECOVERY_JOBS[index],))
+        elif field == "is_active":
+            cursor.execute("UPDATE tenant_004.source_messages SET is_active=NOT is_active WHERE id=%s", (RECOVERY_SOURCES[index],))
+        elif field == "superseded_by":
+            cursor.execute("UPDATE tenant_004.source_messages SET superseded_by=%s WHERE id=%s", (None if index == 0 else RECOVERY_SUCCESSOR, RECOVERY_SOURCES[index]))
+        else:
+            value = {"source_message_id": RECOVERY_SUCCESSOR, "created_at": "2026-09-10T02:49:22Z",
+                     "extracted_at": "2026-09-10T03:00:00Z", "prompt_version": "v3", "error_message": "already attempted"}[field]
+            cursor.execute(sql.SQL("UPDATE tenant_004.extraction_jobs SET {}=%s WHERE id=%s").format(sql.Identifier(field)), (value, RECOVERY_JOBS[index]))
+        before = recovery_snapshot(connection)
+        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch|precondition mismatch"):
+            cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        cursor.execute("ROLLBACK")
+    assert recovery_snapshot(connection) == before
+
+
+@pytest.mark.parametrize("status", ["done", "empty", "error", "pending"])
+@pytest.mark.parametrize("index", [0, 1])
+def test_interrupted_recovery_nonrunning_retained(pg, status, index):
+    connection, _, _ = pg
+    seed_recovery(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("UPDATE tenant_004.extraction_jobs SET status=%s,error_message='retained',prompt_version='v3',extracted_at=now() WHERE id=%s", (status, RECOVERY_JOBS[index]))
+        cursor.execute("SELECT row_to_json(j)::text FROM tenant_004.extraction_jobs j WHERE id=%s", (RECOVERY_JOBS[index],))
+        before = cursor.fetchone()
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        cursor.execute("SELECT row_to_json(j)::text FROM tenant_004.extraction_jobs j WHERE id=%s", (RECOVERY_JOBS[index],))
+        assert cursor.fetchone() == before
+        cursor.execute("SELECT status,error_message FROM tenant_004.extraction_jobs WHERE id=%s", (RECOVERY_JOBS[1-index],))
+        assert cursor.fetchone() == ("error", RECOVERY_ERROR)
+
+
+@pytest.mark.parametrize("count", [0, 1])
+def test_interrupted_recovery_absent_job_contract(pg, count):
+    connection, _, _ = pg
+    seed_recovery(connection, count=count)
+    before = recovery_snapshot(connection)
+    with connection.cursor() as cursor:
+        if count == 1:
+            with pytest.raises(psycopg2.errors.RaiseException, match="one target job missing"):
+                cursor.execute((MIGRATIONS / RECOVERY).read_text())
+            cursor.execute("ROLLBACK")
+        else:
+            cursor.execute((MIGRATIONS / RECOVERY).read_text())
+    assert recovery_snapshot(connection) == before
+
+
+def test_interrupted_recovery_absent_tables_noop(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        cursor.execute("CREATE SCHEMA tenant_004")
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_004'")
+        assert cursor.fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("table", ["source_messages", "extraction_jobs", "extraction_items"])
+def test_interrupted_recovery_partial_tables_fail(pg, table):
+    connection, _, _ = pg
+    seed_recovery(connection)
+    before = recovery_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(table)))
+        try:
+            with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
+                cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        finally:
+            cursor.execute("ROLLBACK")
+            cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
+    assert recovery_snapshot(connection) == before
+
+
+def test_interrupted_recovery_lock_timeout_and_settings(pg):
+    connection, engine, _ = pg
+    seed_recovery(connection)
+    before = recovery_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        settings = cursor.fetchone()
+        blocker = engine.raw_connection()
+        try:
+            with blocker.cursor() as other:
+                other.execute("LOCK TABLE tenant_004.extraction_items IN SHARE ROW EXCLUSIVE MODE")
+            with pytest.raises(psycopg2.errors.LockNotAvailable, match="lock timeout"):
+                cursor.execute((MIGRATIONS / RECOVERY).read_text())
+            cursor.execute("ROLLBACK")
+        finally:
+            blocker.rollback()
+            blocker.close()
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
+        assert recovery_snapshot(connection) == before
+        cursor.execute((MIGRATIONS / RECOVERY).read_text())
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
 
 
 def seed_guard_dictionary(connection, schema):
