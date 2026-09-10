@@ -770,6 +770,65 @@ _COND_ENTRIES = [
 _COND_UUID_MAP = {e["canonical"]: e["cond_id"] for e in _COND_ENTRIES}
 
 
+_MEMO_NEGATIONS = "[サーチ済み],未サーチではない,未サーチではありません,未サーチとは限らない,未サーチ保証なし,未サーチ保証無し,サーチ済"
+_STATE_NEGATIONS = ["伝票剥がし跡ありません", "伝票剥がし跡ありではない", "伝票剥がし跡ありではありません"]
+
+
+@pytest.mark.parametrize("memo,expected", [
+    ("※未サーチ品", "Unsearched pack"), ("サーチ痕なし", "Unsearched pack"),
+    ("", "Searched pack"), ("未サーチではない", "Searched pack"),
+    ("未サーチではありません", "Searched pack"), ("未サーチとは限らない", "Searched pack"),
+    ("未サーチ保証なし", "Searched pack"), ("未サーチ保証無し", "Searched pack"),
+    ("未サーチ サーチ済み混在", "Searched pack"), ("配送後の破損は保証しません", "Searched pack"),
+])
+def test_condition_memo_pack_default_only(memo, expected):
+    entries = [dict(e, exclude_kw=_MEMO_NEGATIONS) if e["code"] == "CN0007" else e for e in _COND_ENTRIES]
+    actual = resolve_condition_v2("", "商品", "パック系", entries, _COND_UUID_MAP, raw_memo=memo)
+    assert actual[0] == expected
+    assert actual[2].startswith("R3:MEMO:") if expected == "Unsearched pack" else actual[2] == "R5:パック既定"
+
+
+@pytest.mark.parametrize("state,kubun", [("", "箱系"), ("", "箱系大"), ("", "不明"),
+                                               ("サーチ済み", "パック系"), ("ペリなし", "パック系")])
+def test_condition_memo_preserves_existing_decision(state, kubun):
+    entries = [*_COND_ENTRIES, {"code": "CN0010", "cond_id": "searched", "canonical": "Searched pack",
+                               "priority": 4, "app_kubun": "パック系", "search_kw": "サーチ済", "exclude_kw": ""}]
+    baseline = resolve_condition_v2(state, "商品", kubun, entries, _COND_UUID_MAP)
+    assert resolve_condition_v2(state, "商品", kubun, entries, _COND_UUID_MAP, raw_memo="未サーチ") == baseline
+
+
+def test_condition_memo_missing_or_disabled_priority_master():
+    entries = [e for e in _COND_ENTRIES if e["code"] != "CN0007"]
+    assert resolve_condition_v2("", "商品", "パック系", entries, {}, raw_memo="未サーチ")[0] == "Searched pack"
+    disabled = dict(next(e for e in _COND_ENTRIES if e["code"] == "CN0007"), priority=0)
+    assert resolve_condition_v2("", "商品", "パック系", [*entries, disabled], {}, raw_memo="未サーチ")[0] == "Searched pack"
+
+
+@pytest.mark.parametrize("memo,state,expected", [
+    ("", "伝票剥がし跡あり", "伝票剥がし跡あり"),
+    ("伝票剥がし跡あり", "", "伝票剥がし跡あり"),
+    ("伝票剥がし跡あり", "伝票剥がし跡あり", "伝票剥がし跡あり"),
+    ("伝票跡", "", "伝票跡"), ("", "伝票跡", None),
+    ("", "伝票剥がし跡なし", None),
+    *[("", word, None) for word in _STATE_NEGATIONS],
+    ("", "", None),
+])
+def test_state_literal_note_scope_and_negation(memo, state, expected):
+    notes = [{"id": "NJ041", "label_ja": "伝票跡", "match_type": "LITERAL",
+              "search_keywords": ["伝票跡", "伝票痕", "伝票剥がし跡"], "exclude_keywords": ["伝票剥がし跡あり"]},
+             {"id": "NJ079", "label_ja": "伝票剥がし跡あり", "match_type": "STATE_LITERAL",
+              "search_keywords": ["伝票剥がし跡あり"], "exclude_keywords": _STATE_NEGATIONS}]
+    assert build_note_ja(memo, notes, raw_state=state) == expected
+
+
+def test_state_does_not_feed_legacy_regex_or_literal():
+    notes = [{"id": "legacy", "label_ja": "旧札", "match_type": "LITERAL",
+              "search_keywords": ["伝票跡"], "exclude_keywords": []},
+             {"id": "regex", "label_ja": "空", "match_type": "REGEX", "search_pattern": "^$",
+              "search_keywords": [], "exclude_keywords": []}]
+    assert build_note_ja("", notes, raw_state="伝票跡") is None
+
+
 class TestResolveConditionV2:
     """
     GAS resolveCondition_ R1〜R4 ロジック移植の動作確認。
@@ -983,3 +1042,90 @@ class TestResolveConditionV2:
         assert canonical == "No shrink box"
         assert cond_id == "uuid-cn0005"
         assert "R3:シュリなし" in basis
+
+
+# CARD-LINE-WORK-MATCHING-V3-01: work evidence and product-only gates.
+from app.services.tcg_analyzer_svc import (
+    is_model_keyword, match_pid_with_work, resolve_work_evidence,
+)
+
+WORKS = [
+    dict(id="pokemon", display_name="Pokemon", alt_name="ポケモン"),
+    dict(id="onepiece", display_name="One Piece", alt_name="ワンピース"),
+    dict(id="gundam", display_name="GUNDAM", alt_name="ガンダム"),
+]
+
+
+@pytest.mark.parametrize("keyword,expected", [
+    ("EB01", True), ("EB-01", True), ("EB - 01", True), ("S8a-G", True),
+    ("ＥＢ０１", True), ("EB01 special", False), ("151", False), ("AR", False),
+    ("THE BEST vol.2", False), ("MEGA スタートデッキ100", False),
+])
+def test_model_keyword_contract(keyword, expected):
+    assert is_model_keyword(keyword) is expected
+
+
+@pytest.mark.parametrize("name,source,start,end,work,span,expected", [
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0001", "gundam"),
+    ("EB01", "【ガンダム】\nEB01", 2, 2, "ガンダム", "L0001", "gundam"),
+    ("EB01", "[GUNDAM]\nEB01", 2, 2, "GUNDAM", "L0001", "gundam"),
+    ("EB01", "ガンダム EB01\nEB01", 2, 2, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ワンピース", "L0002", "onepiece"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ポケモン", "L0002", "pokemon"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ガンダム", "L0001", None),
+    ("ガンダム ワンピース EB01", "ガンダム ワンピース EB01", 1, 1, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nEB01", 2, 2, "GUNDAM", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0099", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "未知", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "", "", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, None, None, "gundam"),
+    ("EB01", "ガンダム\nEB01", 2, 2, None, None, None),
+])
+def test_work_scope(name, source, start, end, work, span, expected):
+    assert resolve_work_evidence(name, source, start, end, work, span, WORKS) == expected
+
+
+def test_inactive_duplicate_and_unsplit_aliases_rejected():
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], is_active=False)]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 WORKS + [dict(WORKS[2], id="duplicate")]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], alt_name="ガンダム|Gundam")]) is None
+
+
+def test_work_constraint_does_not_fallback_or_resolve_code_only():
+    kw = {"OP": ["EB01"], "NO_WORK": ["EB01"]}
+    for work in ("gundam", None):
+        result = match_pid_with_work("EB01", list(kw), kw, {}, work_id=work,
+                                     product_work_ids={"OP": "onepiece"})
+        assert result == (None, "NONE", False, [])
+    assert match_pid_with_work("ワンピース EB01", list(kw), kw, {}, work_id="onepiece",
+                               product_work_ids={"OP": "onepiece"})[0] == "OP"
+
+
+def test_unknown_work_checks_all_matching_keywords():
+    for kws in (["EB01", "メモリアルコレクション"], ["メモリアルコレクション", "EB01"]):
+        result = match_pid_with_work("EB01 メモリアルコレクション", ["OP"], {"OP": kws}, {},
+                                     work_id=None, product_work_ids={})
+        assert result[0] == "OP" and result[2] is True
+        assert "SK:メモリアルコレクション" in result[1]
+
+
+@pytest.mark.parametrize("state,memo,excluded", [("PSA10", "", True), ("", "コロちゃお", True), ("", "", False)])
+def test_exclusions_are_item_fields_only(state, memo, excluded):
+    result = match_pid_with_work("スタートデッキ100", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ", "PSA10"]}, work_id=None,
+                                 product_work_ids={}, raw_state=state, raw_memo=memo)
+    assert result[2] is not excluded
+
+
+def test_and_exclusion_never_crosses_fields_and_memo_not_search_input():
+    result = match_pid_with_work("スタートデッキ100 コロ", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ 限定"]}, work_id=None,
+                                 product_work_ids={}, raw_memo="限定")
+    assert result[2] is True
+    result = match_pid_with_work("不明", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]}, {},
+                                 work_id=None, product_work_ids={}, raw_memo="スタートデッキ100")
+    assert result[2] is False

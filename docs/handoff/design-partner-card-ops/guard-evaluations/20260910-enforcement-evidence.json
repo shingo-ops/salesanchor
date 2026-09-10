@@ -1,0 +1,187 @@
+{
+  "negative": {
+    "headRefOid": "0b532e9ff26a4b6dca0f786cb1d595b0ab2062e6",
+    "baseRefOid": "6d3e348614d675c533cc46fefddb03544f581e8c",
+    "mergeStateStatus": "BLOCKED"
+  },
+  "positive": {
+    "headRefOid": "fb083494956470a7d4eed877d98fe19542266162",
+    "baseRefOid": "6d3e348614d675c533cc46fefddb03544f581e8c",
+    "mergeStateStatus": "CLEAN"
+  },
+  "negative_required": [
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982462/job/102853871343",
+      "name": "マイグレーションSQL 実行テスト（実DB）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982493/job/102853843676",
+      "name": "テナントスキーマ整合性チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982268/job/102853803503",
+      "name": "Lint & Dark Mode Check (ADR-067)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982316/job/102853805817",
+      "name": "pytest (SQLite + PostgreSQL RLS)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982384/job/102853769025",
+      "name": "CLAUDE.md line count check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982458/job/102853768398",
+      "name": "UI governance gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982299/job/102853767628",
+      "name": "ADR index is up to date",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982410/job/102853768289",
+      "name": "warn-direct-lesson-edit",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982085/job/102853766785",
+      "name": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982416/job/102853768422",
+      "name": "gitleaks（シークレット漏洩検出）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982331/job/102853768373",
+      "name": "ADR-072 tenant schema lint (strict mode)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471982241/job/102853766992",
+      "name": "dangling-route gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34471981605",
+      "name": "guard-authoring/evaluation",
+      "state": "FAILURE"
+    }
+  ],
+  "positive_required": [
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204533/job/102854532939",
+      "name": "Lint & Dark Mode Check (ADR-067)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204472/job/102854525457",
+      "name": "pytest (SQLite + PostgreSQL RLS)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204485/job/102854514695",
+      "name": "テナントスキーマ整合性チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204488/job/102854520178",
+      "name": "マイグレーションSQL 実行テスト（実DB）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204548/job/102854481645",
+      "name": "ADR-072 tenant schema lint (strict mode)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204569/job/102854480379",
+      "name": "UI governance gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204567/job/102854480599",
+      "name": "dangling-route gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204456/job/102854479450",
+      "name": "warn-direct-lesson-edit",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204517/job/102854480204",
+      "name": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204482/job/102854479885",
+      "name": "gitleaks（シークレット漏洩検出）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204527/job/102854480088",
+      "name": "CLAUDE.md line count check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472204419/job/102854479240",
+      "name": "ADR index is up to date",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34472201126",
+      "name": "guard-authoring/evaluation",
+      "state": "SUCCESS"
+    }
+  ],
+  "unreported": [
+    {
+      "baseRefOid": "6d3e348614d675c533cc46fefddb03544f581e8c",
+      "headRefOid": "0b532e9ff26a4b6dca0f786cb1d595b0ab2062e6",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": []
+    },
+    {
+      "baseRefOid": "6d3e348614d675c533cc46fefddb03544f581e8c",
+      "headRefOid": "0b532e9ff26a4b6dca0f786cb1d595b0ab2062e6",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": []
+    },
+    {
+      "baseRefOid": "6d3e348614d675c533cc46fefddb03544f581e8c",
+      "headRefOid": "0b532e9ff26a4b6dca0f786cb1d595b0ab2062e6",
+      "mergeStateStatus": "BLOCKED",
+      "statusCheckRollup": [
+        {
+          "__typename": "CheckRun",
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "detailsUrl": "https://github.com/shingo-ops/salesanchor/actions/runs/34471979733/job/102853759332",
+          "name": "format-check",
+          "startedAt": "2026-09-10T11:34:11Z",
+          "status": "QUEUED",
+          "workflowName": "active-work lint"
+        },
+        {
+          "__typename": "CheckRun",
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "detailsUrl": "https://github.com/shingo-ops/salesanchor/actions/runs/34471979782/job/102853759317",
+          "name": "check",
+          "startedAt": "2026-09-10T11:34:11Z",
+          "status": "QUEUED",
+          "workflowName": "task state check"
+        }
+      ]
+    }
+  ]
+}

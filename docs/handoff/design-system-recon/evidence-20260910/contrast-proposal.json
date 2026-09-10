@@ -1,0 +1,37 @@
+[
+  {
+    "name": "current-dark-primary",
+    "foreground": "#ffffff",
+    "background": "#5b8dd9",
+    "ratio": 3.356385476387444,
+    "normal_text_pass": false
+  },
+  {
+    "name": "proposed-dark-primary",
+    "foreground": "#0f172a",
+    "background": "#5b8dd9",
+    "ratio": 5.3189763477974425,
+    "normal_text_pass": true
+  },
+  {
+    "name": "proposed-dark-hover",
+    "foreground": "#0f172a",
+    "background": "#4d7fc8",
+    "ratio": 4.408157286757003,
+    "normal_text_pass": false
+  },
+  {
+    "name": "current-light-danger",
+    "foreground": "#e53e3e",
+    "background": "#ffffff",
+    "ratio": 4.125564439655856,
+    "normal_text_pass": false
+  },
+  {
+    "name": "proposed-light-danger",
+    "foreground": "#9b2c2c",
+    "background": "#ffffff",
+    "ratio": 7.525923747624473,
+    "normal_text_pass": true
+  }
+]

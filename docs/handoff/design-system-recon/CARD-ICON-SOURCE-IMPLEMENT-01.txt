@@ -1,0 +1,58 @@
+CARD-ICON-SOURCE-IMPLEMENT-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 最初に「受領。CARD-ICON-SOURCE-IMPLEMENT-01」と返す。
+照合結果 §5.5: 1○ パスは実行本文で固定、2○ この便はPRなし・後続ready、3○ 親への全文ログ、4○ 数値アイコン生成だけ、5○ 新規origin/main起点の登録済みtree、6○ PR書式対象外、7○ 原稿実測と27試験・5値を検収。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、およびdesign-partner.md §5.5。
+目的: design.md §Z/AA自己審査APPROVE済みの数値アイコン生成を実装する。
+担当: Generator。コードベースでは他者も作業中。他者の変更を戻さない。
+作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source`。公式new-worktreeでorigin/mainから作成済みであることを実行前に確認。
+根拠: PR3409 merge b36041ed9fa69881886c431d05d586cf09e82f56。
+所有: frontend/scripts/generate-icon-sizes.js、frontend/scripts/test-generate-icon-sizes.js、frontend/package.json、frontend/package-lock.json、frontend/src/constants/iconSizes.ts の5ファイルのみ。
+添付原稿: `/tmp/frontend-mold-recon-20260910/icon-source-payload/generate-icon-sizes.js` 実測125行、`/tmp/frontend-mold-recon-20260910/icon-source-payload/test-generate-icon-sizes.js` 実測151行、`/tmp/frontend-mold-recon-20260910/icon-source-payload/package-edit.py` 実測54行。
+この3原稿を反映。test-generate-icon-sizes.jsのみ、下記レビュー指摘の追加試験を本カードでコード作成委任する。設計再解釈・別の見た目変更は禁止。
+追加試験: 子プロセスで通常CLI生成、--check一致/不一致、未知/重複引数、別CWDを実行し、実際の終了値と出力保持を確認する。OS一時ディレクトリにscriptとfixtureを配置し、依存は製品treeのインストール済みPostCSSへ解決する。製品sourceをfixtureで書き換えない。
+追加試験: Node標準mock等でfs/promisesのwriteFile途中失敗とrename失敗を再現し、旧出力保持、exitCode2、当該一時ファイル除去を確認する。子プロセス等でmock汚染を分離する。production生成器へのテスト都合のAPI追加は禁止。実現が未定義なら親へ相談。
+追加後の件数/行数は実測し、元27成功に加えて追加ケースの名称と結果を報告。
+親は文書・台帳を担当。製品担当は文書を編集しない。
+禁止: tokens.css値変更、その他UI、既存check:all/check-icon-sync/workflow変更、backend、運用、secrets、commit/push/PR/merge/deploy、GO創作、別AI起動。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && ./scripts/dev/executor-preflight.sh
+期待: PREFLIGHT OK、exit0。失敗時は変更せず親へ報告。
+
+手順1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && git status --short --untracked-files=no
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && git merge-base --is-ancestor b36041ed9fa69881886c431d05d586cf09e82f56 HEAD
+期待: 製品差分なし、根拠commit祖先exit0。差分がある場合は上書きせず親へ報告。
+
+手順2
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && cp /tmp/frontend-mold-recon-20260910/icon-source-payload/generate-icon-sizes.js frontend/scripts/generate-icon-sizes.js
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && cp /tmp/frontend-mold-recon-20260910/icon-source-payload/test-generate-icon-sizes.js frontend/scripts/test-generate-icon-sizes.js
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && python3 /tmp/frontend-mold-recon-20260910/icon-source-payload/package-edit.py frontend/package.json
+期待: 原稿同一の2ファイル、packageは指定scripts3件+postcss完全一致8.5.15のみ。
+
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && npm install
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && npm run generate:icon-sizes
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && node --test scripts/test-generate-icon-sizes.js
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && node scripts/generate-icon-sizes.js --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && npm run build
+期待: 元27試験および追加試験成功skip0、生成/check成功exit0、既存チェックとビルドexit0。警告と失敗は原文記録。npm audit修正はしない。
+
+手順4
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && git diff --stat
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && git diff -- frontend/package.json frontend/src/constants/iconSizes.ts
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source && wc -l frontend/scripts/generate-icon-sizes.js frontend/scripts/test-generate-icon-sizes.js
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend && node --version
+期待: ICON sm/md/base/lg/xlが14/16/20/24/48のまま、既存ファイル削除0、生成器原稿125行、試験は元151行に追加した実測行数。実測との差は記録して親が判断する。
+
+完了報告冒頭: 「本報告はカード CARD-ICON-SOURCE-IMPLEMENT-01 の実行結果である」。
+親への完了報告本文に生出力を全文含める。長いログは `/tmp/frontend-mold-recon-20260910/` の便名付きログへ保存し実在パスを付ける。
+停止条件: 権限/安全ガード拒否、所有外変更が必要、設計未定義、他者差分との衝突。解除・迂回せず停止した手順番号/最後のコマンド/理由を親へ返す。
+検証失敗時は生出力を保存し、独断修正をせず親へ返す。不可逆操作はこの便では実行しない。
+追補: 公式worktreeはworkspace-write外のため、承認済み所有範囲の変更はexec_commandのsandbox_permissions=require_escalatedと目的説明を使う正規申請を許可する。OSのOperation not permittedだけを自動承認レビュー拒否と混同しない。実際の承認拒否は迂回せず停止。
+Node22の検証はfrontend内で npm exec --yes --package=node@22 -- node --test scripts/test-generate-icon-sizes.js を追加実行する。確認版v22.23.2。製品依存やCI設定は変更しない。
+追加レビュー指示: npm installが加えた無関係なpeer変更とoptional2依存削除は採らない。baselineのpostcss8.5.15を実測確認し、lockはroot devDependencies.postcss追加だけへ限定してnpm ciで検証する。追加試験のstderr期待は実装のCannot write generated icon sizesへ合わせ、本体文言を変えない。
+END OF CARD
