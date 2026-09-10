@@ -2020,4 +2020,6 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 ## EV-20260910-PMG-SCREEN-CONNECT
 
 2026-09-10 base4f1c2b81。POは説明後に「承認する…確立したならページ作成まですすめる」と承認（全文はdesign最終節）。本番切替時の一時停止/他の更新待機の方針採用、個別本番停止ではない。
-既存progress/items、coverage/NULL契約、ページ/共通APIと権限を実ファイルで確認。検索漏れを訂正。新履歴や切替導入とは独立した既存API接続ページのみ自己審査APPROVE。カードCARD-PMG-SCREEN-CONNECT-01を正式card-lint exit0で検査後Terraへ委任。rootは製品コードを書かない。親設計REVISE、完成結果はまだ未検証。
+既存progress/items、coverage/NULL契約、ページ/共通APIと権限を実ファイルで確認。検索漏れを訂正。新履歴や切替導入とは独立した既存API接続ページのみ自己審査APPROVE。カードCARD-PMG-SCREEN-CONNECT-01を正式card-lint exit0で検査後Terraへ委任。rootは製品コードを書かない。実装ccc105ad、main4734fe7f統合4619e7a8。root検証build/check:all exit0、unit133件成功、模擬API E2E5件成功・PC/390px英語暗色画像を確認。ページ接続差分APPROVE、親設計REVISE。PR/CI/本番反映は別の状態として記録する。
+
+EV-20260910-PMG-SCREEN-CONNECT追補: PR #3416を提出（https://github.com/shingo-ops/salesanchor/pull/3416）。最新main統合後にrootでbuild/check:all/unit133件とE2E5件を再確認、いずれも成功。根拠台帳の競合は両セッションの全文を保持して解消。画面接続は実装済み・差分確認済み、CI確認中、未マージ・本番未反映。番号付きGO原文未受領。

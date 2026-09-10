@@ -336,7 +336,7 @@ rootはPlanner/Architectを同一AIとして担当し、製品編集はPO指定C
 ### ページ接続のローカル検証結果（2026-09-10）
 
 - root実行: `npm run test:unit` 16ファイル/133件成功。`PORT=5193 npx playwright test tests-e2e/tcg-import-workflow.spec.ts --workers=1` 5件成功。すべて模擬APIで、実際の配信・本番操作は0。
-- Terra実行の報告: 最終一覧表変更後のbuild/check:all/unitがexit0。rootは最新main統合後に再検査する。
+- Terra実行の報告: 最終一覧表変更後のbuild/check:all/unitがexit0。rootもmain4734fe7f統合後にbuild/check:allをexit0、unit133件成功と確認した。
 - root目視: PCの日本語一覧表、390pxの英語暗色表、工程内訳のラベルを確認。25枚の長い明細カードは一覧表へ修正済み。元の単位/状態/メモ/正規化値は行内詳細に保持。スマホでは表内だけ横スクロールしページ全体は横にはみ出さない。
 - 撮影先: `/tmp/reports/pmg-screen-completion/desktop-table-ja.png`、`mobile-table-en.png`。アプリ内スクロール/固定ナビの影響で画面外要素を含むelement/fullPage画像は目視合格の根拠に用いず、対象を実際にスクロールしたviewport画像を使用する。
-- 配信画像の初回は試験のmock不足で404表示となった。配信成功系/確認操作は別のE2Eで成功済み。撮影用fixtureも有効な既存API応答へ揃えて再撮影する。
+- 配信画像の初回は試験のmock不足で404表示となった。配信成功系/確認操作は別のE2Eで成功済み。撮影用fixtureも有効な既存API応答へ揃え、該当E2E1件成功・desktop-distribution-ja.pngの配信候補/全件配信ボタン/全体範囲をrootが再撮影画像で確認済み。
