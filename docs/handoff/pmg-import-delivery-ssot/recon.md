@@ -177,3 +177,10 @@ API/worker/beatのイメージIDはそれぞれ異なる。イメージ全体の
 
 nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76aabaa29b88cc16a0e99db2df31b731abbfe1fcb3f6cedaa8557938a9で一致。
 限界: ディスク上のファイル・インストール済みパッケージ・診断プロセスの環境を確認した。既存プロセスが読み込んだ全module/設定、全イメージ内容、他ホストやコンテナ外のwriter、処理中/予約件数、DBの列やmigration、配信の完了は未確認。nginx設定ファイル一致は、稼働masterが既にその版を読み込んでいる証明ではない。PR #3386の全本番反映を断定しない。診断による停止・更新・配信なし。
+
+### 入口一覧と復旧経路の追加照合（2026-09-10）
+
+- Python ASTでtcg_*.pyとsuper_admin_tcg.pyのrouter decoratorsを抽出: 定義43件、GET21/非GET22。結果は/tmp/pmg-tcg-routes-readonly.json。サービス副作用や本番ルート網羅の検証結果ではない。main.pyの/api/v1登録と合わせ、公開2ホスト×非GET22の44組を試験対象にした。
+- backend/app/middleware/audit.py:106以降はcall_next後の記録。完了待ち専用の実行管理ではない。Uvicorn0.34.0公式server.pyのrun/shutdownも確認し、timeout時のcancelを成功扱いしない条件を追加。公式_compat.pyの同tag取得は404で、根拠には使わない。
+- ADR-115は自動rollbackと本番相当Docker試験を規定する。受付停止の状態だけが残っても、旧設定が参照しなければ遮断を維持できないため、制御を含む戻し先の確保を設計条件に追加。
+- docker/nginx/podmanを本ローカル環境で確認できず、Pythonは3.14.3。Dockerfileの3.12と相違するため、本番相当の停止試験は未実施。
