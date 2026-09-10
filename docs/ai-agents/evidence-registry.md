@@ -1583,3 +1583,14 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - 外部事例: 既存スクリプトとの文書照合で判定できる保守変更のため不要。
 
 PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみのマージ承認。製品実装・本番・後続PRの承認ではない。mainのPR #3389による別テーマの追記を保持して競合解消。
+
+
+## EV-20260910-TCG-SCHEMA-DESIGN
+
+- 基点: 87e5748b1dab5b062f991a263fa6ac692653877d。設計と根拠: docs/handoff/tcg-product-import/design.md §12、recon.md追補。
+- 商品サービス全486行・text6呼び出し・修飾7箇所・動的参照4表を確認。既存2対象は維持。
+- 設計資料 schema-test-proposal.py.txt をPython 3.12.8で直接検証し7関数成功。製品側pytest実行・テスト反映ではない。正常/否定試験の範囲と限界は設計に明記。
+- 同一AI自己審査APPROVE（限定した静的検査）。PO発話や個別GOは創作しない。実装カード未発行・製品コード未変更。
+- 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
+
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
