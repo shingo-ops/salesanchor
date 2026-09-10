@@ -1,0 +1,47 @@
+CARD-COLOR-SOURCE-PREP-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 最初に「受領。CARD-COLOR-SOURCE-PREP-01」と返す。
+照合§5.5: 1○実パス、2○本便PRなし、3○親へ全文ログ、4○同値カラー原稿だけ、5○公式新規treeの基準固定、6○成果物パス固定、7○実測候補9宣言/8用途/7ファイル。
+読んだ節: guards/00-common.md・03-file.md・04-worktree.md・11-lint.md、design-partner.md§5.5。
+担当: Generator。原稿作成を委任する。コードベースでは他者も作業中。他者編集を戻さない。rootは正式文書・台帳を担当。
+読取元: `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source`、基準4734fe7f353a07df7ac1608b362f1d61524c79ab。
+根拠: docs/specs/design-system/design.md§AB（同一AI自己審査APPROVE）、根拠color-source-audit.md/json、color-source-gates.md。
+出力所有: `/tmp/frontend-mold-recon-20260910/color-source-payload` 配下のみ。製品ファイルへコピーする後続便とは分ける。
+
+原稿作成を許可する7ファイル（frontend以下の相対構造をoutにも保つ）:
+frontend/src/index.css
+frontend/src/components.css
+frontend/src/components/EmptyState.css
+frontend/src/pages/dashboard/DashboardPage.css
+frontend/src/pages/inbox/InboxPage.css
+frontend/src/constants/icons.tsx
+frontend/src/constants/platform-icon.css
+追加の原稿: verify-color-source.mjs（局所ブラウザー前後比較用）、README.md（原稿行数/hash/実行した検証・未実施・ログ）。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git rev-parse HEAD
+期待: PREFLIGHT OKと指定基準一致。root所有の未commit文書差分は製品衝突ではない。
+
+製品原稿の契約:
+- 元7ファイルを読み、監査JSONの既存9宣言/使用先9記録だけを置換し、新8用途の明暗16宣言を追加する。名称・参照先は確定表どおり。
+- 他のtoken、selector、コメント、空行の整理をしない。stylelintに従う。token新定義は既存index.cssの:root/:root.force-darkに追加。hex値を増やさずvar参照だけ。
+- EnvelopeIconのcolor属性whiteだけを削除し、mailラッパーのCSSへcolor:var(--icon-platform-mail)を追加する。Math.round/DOM/ARIA/全platform分岐を保持。
+- 未使用削除、calendar、配色変更、shadow、useEffect、API再編、CI変更はしない。
+
+比較検証原稿の契約:
+- 基準git showで得る7ファイルと提案原稿を比較。対象ルートを引数で指定する。製品コードの検証用書換えやgit作業台の追加をしない。
+- 明暗の全候補token参照解決値、欠落/循環0を確認。JSON表の旧値とも照合し、両方黒fallbackの偽一致を拒否する。
+- Playwright/Chromiumで明暗×viewport390/1280の局所fixtureを比較。actual getComputedStyleと期待値、前後一致を記録する。
+- icon-btn通常/hover/danger-hover、comp-empty__icon、db-section-icon、inbox-search-icon、karte-lock-icon、PlatformIconのmail/emailを含める。mailは実ソースから実コンポーネントをrenderしてSVG色・寸法・aria-hiddenの保持を確認（手書きSVGを実コンポーネント検証とは称しない）。
+- 実コンポーネントのロードに使うテスト用変換は一時領域またはメモリだけに限定する。基準と提案の両実ソースを別々に評価し、架空の一致を作らない。
+- 表示比べは局所fixtureの技術試験で、全画面PO目視とは区別。期待ケース数は原稿完成後に実測する。
+- 原稿段階で通常依存解決が未準備なら未実施を記録し、後続npm ci後に実行する。既存mainのnode_modulesとブラウザーcacheを読取利用する場合は補助検証と明記。npm install/製品編集は本便では禁止。
+- ライブラリAPIを仕様確認する場合Context7を優先する。現在利用不可なら事実を記録し、POが許可した公式資料による代替を使う。未確認仕様へ依存した成功宣言をしない。
+
+禁止: 製品treeへの反映、npm install/ci、commit/push/PR/merge/deploy、GO原文創作、承認経路変更、別AI起動。
+正規権限申請は許可範囲の原稿・一時fixture・ブラウザー検証のみ可能。拒否を解除・迂回しない。
+停止: 未定義の設計判断/所有外編集/権限レビュー拒否が必要なら親へ手順・コマンド・生出力・理由を返す。数値の違いは対象名と実測を記録して親判断。
+報告冒頭: 「本報告はカード CARD-COLOR-SOURCE-PREP-01 の実行結果である」。
+親への完了本文に全ログを含め、長いものはout内のREADMEから生ログファイルへ参照。7製品原稿のline/hash/旧差分、検証原稿の実行結果と未実施を区別。
+END OF CARD

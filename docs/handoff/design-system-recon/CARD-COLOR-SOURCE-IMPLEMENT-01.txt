@@ -1,0 +1,63 @@
+CARD-COLOR-SOURCE-IMPLEMENT-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 最初に「受領。CARD-COLOR-SOURCE-IMPLEMENT-01」と返す。
+照合§5.5: 1○実在パス、2○本便PRなし、3○親へ全文ログ、4○同値カラー7ファイルだけ、5○公式tree基準固定、6○原稿/hash列挙、7○9宣言/8用途/7ファイルと実測行数。
+読んだ節: guards/00-common.md・03-file.md・04-worktree.md・11-lint.md、design-partner.md§5.5。
+担当: Generator。製品7ファイルの反映と検証を委任。あなたは他者と並行。rootは文書/台帳を担当し、他者の変更を戻さない。
+作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source`。公式origin/main起点4734fe7f353a07df7ac1608b362f1d61524c79ab。
+根拠: design.md§AB自己審査APPROVE、7原稿の限定第二レビューAPPROVE、color-source-audit.md/json。ブラウザー比較は未実施。
+所有7ファイルと実測原稿（原稿root `/tmp/frontend-mold-recon-20260910/color-source-payload`）:
+- `frontend/src/components/EmptyState.css`: 原稿75行、SHA256 `810e8464b4f728fdfc30210606b334c1e6d90ab4ec4ad1b0e37445f8c41e91a3`
+- `frontend/src/components.css`: 原稿920行、SHA256 `b5825713fb365cba07f60b00dc589b638e21d859dd34c5163202be89d0c833d4`
+- `frontend/src/constants/icons.tsx`: 原稿409行、SHA256 `0217103b0de96319d1d6feec8e236c2702c5f069d9fd8556064f3c7d1c536395`
+- `frontend/src/constants/platform-icon.css`: 原稿30行、SHA256 `c5cb3bf24a0d94e32d02d0245d3a34b11aa3f5fda38d027b00ad0e95bd5d0d26`
+- `frontend/src/index.css`: 原稿426行、SHA256 `51cf670b4f617e0da642caab8e597ec435e11bc569969fc91998d9509ddb0537`
+- `frontend/src/pages/dashboard/DashboardPage.css`: 原稿555行、SHA256 `680c81426cdf6fb40faa16b05df515306e1fedbcb9945d93505baeb2aeedb6ca`
+- `frontend/src/pages/inbox/InboxPage.css`: 原稿1747行、SHA256 `c63ac05ad99d8e9f8fea52ddd0a40864665025dc4dd29c60796d3c7ff5c26a95`
+検証原稿: `/tmp/frontend-mold-recon-20260910/color-source-payload/verify-color-source.mjs` 203行。補助実行で静的25ペアは通過、Chromium1223未導入でブラウザー未実行。
+
+許可: 上記7製品ファイルへの原稿同一反映、npm ciによる既存lock依存導入、Playwright既存版が指定するChromium導入、局所ブラウザー比較、既存checks/build。ログ/fixtureは/tmp配下、node_modulesと既定browser cacheは通常の検証準備で利用可。
+禁止: その他の製品/依存manifest/lock変更、CI/運用/backend/API/DB/secrets変更、GO原文創作、commit/push/PR/merge/deploy、別AI起動。
+公式tree/browser cacheの書込に必要な正規require_escalated申請はこの範囲で許可。自動承認レビュー拒否は迂回せず停止。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git rev-parse HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git diff --exit-code HEAD -- frontend
+期待: PREFLIGHT OK、基準HEAD一致、製品の事前差分0。rootの文書変更は保持。原稿のhashも列挙値と照合し、不一致は親へ報告する。
+
+手順1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/components/EmptyState.css frontend/src/components/EmptyState.css
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/components.css frontend/src/components.css
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/constants/icons.tsx frontend/src/constants/icons.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/constants/platform-icon.css frontend/src/constants/platform-icon.css
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/index.css frontend/src/index.css
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/pages/dashboard/DashboardPage.css frontend/src/pages/dashboard/DashboardPage.css
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && cp /tmp/frontend-mold-recon-20260910/color-source-payload/frontend/src/pages/inbox/InboxPage.css frontend/src/pages/inbox/InboxPage.css
+期待: コピー先7ファイルが原稿と同一、他の製品変更なし。
+
+手順2
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && node node_modules/playwright/cli.js install chromium
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm exec --yes --package=node@22.23.2 -- node /tmp/frontend-mold-recon-20260910/color-source-payload/verify-color-source.mjs /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/docs/handoff/design-system-recon/evidence-20260910/color-source-audit.json
+期待: 通常依存解決による比較PASS。静的25ペア、ブラウザーtoken50ペア/表示60ペアが全一致（原稿から数えた期待、実際のcase名/値を記録して親確認）。途中でブラウザー起動不能/比較不一致なら成功とせず親へ報告。勝手な期待値変更/試験削除/実装変更は禁止。
+
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend && npm run build-storybook
+期待: 各exit0。既存警告は生ログ記録し、無関係な修正はしない。生成ICON5値は変えない。
+
+手順4
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git diff --stat -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git diff --exit-code HEAD -- frontend/package.json frontend/package-lock.json frontend/src/tokens.css frontend/src/constants/iconSizes.ts
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source && git status --short
+期待: 対象7製品以外の変更0、既存ファイル削除0、原稿hash一致。行数の相違は対象名と記録を返して親判断。
+
+停止時: 手順番号・最後のコマンド・生出力・理由を親へ返す。既存CI/比較失敗/未定義条件を自己解釈で通さない。環境不足なら実装不具合とは区別して報告する。
+報告冒頭: 「本報告はカード CARD-COLOR-SOURCE-IMPLEMENT-01 の実行結果である」。
+親への本文に全ログ。長いログは /tmp/frontend-mold-recon-20260910/CARD-COLOR-SOURCE-IMPLEMENT-01 の便名を付けたファイルへ保存して実在パスを添える。全画面目視は未実施と明示する。
+再開追補: rootが実物を確認。node_modules/.bin/playwrightは@playwright/test1.59.1のCLIだが、比較のrequire(playwright)は直接依存1.60.0でChromium1223を要求していた。上の導入コマンドを直接依存1.60.0のCLIへ修正し、手順2のブラウザー導入から再開する。npm ci/原稿反映の繰返し不要。依存設定と試験期待値は変更しない。これは版の実測に基づく正規導入で、未検証の実行パス差し替えやガード迂回ではない。
+END OF CARD
