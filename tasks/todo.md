@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| LINE解析精度・正常完了の誤商品調査 | Agent | 実装GO受領。本番DBをread-only確認、作品誤判定29中有効4。設計自己審査APPROVE・カード検査通過、文書PR準備 | 設計・ADR追加案の文書承認後、カードを実装役へ渡す。製品実装・本番反映は未着手 | docs/handoff/tcg-product-master-growth/design-keyword.md §10 / EV-20260910-LINE-ACCURACY-06 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
 | 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
 | Chromatic 完全撤去 | Agent | npm依存・プラグイン・コメント除去済み（PR #chromatic-full-removal）。完了定義: `git grep -i chromatic -- ':!docs/' 0件 + ビルド成功` | PR GO待ち | `docs/handoff/chromatic-full-removal/` | 2026-06-24 |
