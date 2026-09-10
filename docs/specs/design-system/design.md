@@ -1006,3 +1006,26 @@ PO原文「進める、離席するので最後まで完走させて結果を報
 根拠（2026-09-11公式資料確認）: [W3C Cognitive Clear Content](https://www.w3.org/WAI/WCAG2/supplemental/objectives/o3-clear-content/)は短い文章・明確な文言・余白/前景分離の補助指針（規範のWCAG必須条項ではない）。[WCAG Contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)は4.5:1/大文字3:1と非活性等の例外を説明。[Use of Color](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html)は色以外の手掛かりを要求。これは規格/指針の根拠で、Sales Anchorの理解速度改善を実測した事例ではない。外部導入の効果数値は採用しない。Context7は提供ツールに存在せず、必要なAPI確認は許可済み公式資料を代替使用する。
 
 Planner追補後、同一AIがArchitectとして方針の整合を自己審査APPROVE。個々の部品実装の合格やPO完成画面確認とは区別する。既存全体設計Z/AA、P/QのButtonとSpinner契約を維持し、実物差分の再監査後に本体便をカード化する。カレンダーはMOLD-21の理由で保留、既存CIは維持し追加は最後。
+
+### AD. Button機能契約と読み込み表示の先行便（2026-09-11）
+
+57eb951eのButton再監査は実使用67箇所/18ファイル、className18、style/ref/spread各0、type明示26・省略41（stories/test/spec/design-preview除外、design-system含む）。CompanyDetailの6個はcompany-forms.cssのtab/activeに依存。外観全体の切替はこれらの移管と一緒に別便で行う。この便はQ/Zで承認設計済みのrefと読み込み表示に限定し、寸法/色/variantクラスを変えない。これは最終外観統一の完了ではなく、必要な機能契約を先に満たす段階。
+
+所有製品: components/Button.tsx、components/loading/Spinner.tsx、loading-animations.css。新規検証: components/Button.test.tsx、components/loading/Spinner.test.tsx（すべてfrontend/src以下）。新CI/依存/翻訳/画面側変更なし。検証用ブラウザーfixtureは/tmpに限定。
+
+ButtonはforwardRef<HTMLButtonElement, ButtonProps>で同じnative buttonへrefを渡す。propsからtypeの既定を足さず、className/style/nativeイベント/既存aria上書き順を維持。6variant、size、fullWidth、iconOnly、active、children/loadingText、disabled||loadingの条件を維持。Spinnerへtone=inherit、decorative=trueを渡し、loading時も翻訳済み既存の名前とaria-busyを保つ。新onKeyDownや自動focus移動を追加しない。
+
+Spinnerにtone?:'default'|'inherit'とdecorative?:booleanを追加。従来のsize/onAccent/className/label/colorはこの互換便では維持。未使用color口を閉じるのは最終API移管便とし、未宣言の破壊的変更を混在させない。inheritはonAccent/colorより優先し、styleによる旧borderTopColor指定を使わない。CSSは全枠currentColor、上辺transparent。通常/onAccentは既存head/track tokenを保持。decorative時はaria-hidden=trueでrole/aria-labelなし。非decorativeの既定Loading/role=statusは維持し、新規UI文言は追加しない。Spinner自身から既存../../loading-animations.cssをimportし、アプリ/Storybookで同じ正本へ到達。既存main importは重複定義ではなく同モジュールの読み込みであり保持する。
+
+| 基準 | 検証方法 |
+|---|---|
+| refが同buttonに到達、外部form/type/name/value/イベントの保持 | DOM unitでref.current、focus、form所属、click/submitとstopPropagationを検証 |
+| busy時disabledで追加発火0、元名/指定loadingText/アイコン操作名を保持 | DOM unitと実ブラウザーでclick/Enter/Space、props反映後を検証 |
+| inheritは全枠前景色・上辺透明、onAccent/colorより優先 | DOM props試験と実ブラウザーcomputed border色を明暗で比較、通常/onAccentを対照 |
+| decorativeは読み上げ重複なし、通常Spinner/SaveIndicator互換 | role/label/aria-hiddenと既存使用先差分0を確認 |
+| reduced-motion時回転停止、6variant操作回数1/無効0 | 実ブラウザーでprefers-reduced-motionとnative keyboard操作。外観全体/コントラスト190組は後続外観便 |
+| 既存UI/依存/CI変更0 | diff範囲5ファイル、check:all/build/unit/Storybookと既存CIを実施 |
+
+React公式forwardRef/APIとW3C Button Patternを2026-09-11確認。React19のref-as-propへ独断移行せず、実repo React18契約を維持する。外部の理解速度改善事例は不要（ネイティブ操作/読み上げの既存設計契約を具体化する便）。
+
+6面: 人=読み込み状態の重複読み上げと視認性、エージェント=固定5ファイル所有と実検査、機械=既存CI維持、データ=DB/API非接触、本番=通常PR経由で部品反映、外部=外部API非接触。守り手は新規unitと既存check:all/build/CI、表示は局所ブラウザー比較と完成後PO。Planner作成後に同一AI Architect自己審査APPROVE。操作契約は既存設計の具体化であり、新規事業判断/PO最終目視を代替しない。

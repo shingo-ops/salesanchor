@@ -542,3 +542,7 @@ PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668e�
 ### EV-20260911-FRONTEND-MOLD-22: 読み取りやすさと部品先行
 
 POの続行と認知的に理解しやすい表示の要求を受領。design.md§ACへ根拠/基準/測定限界を保存。カレンダーを保留しButton本体の実物再監査へ。実装未着手、CI変更なし、番号付きGOは別途本人原文を確認。
+
+Button機能先行便: 67利用/追加class18の監査で、外観の一括変更は旧タブ/ナビ寸法に影響すると確認。design.md§ADのref/処理中表示5ファイル便へ限定しCARD-BUTTON-CONTRACT-01を検査してGeneratorへ委任。実物根拠はevidence-20260910/button-contract-recheck.md。実装結果未確認。
+
+Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check/build/Storybook成功。rootが局所browser操作18/表示18/reduced9と最終console.error0を直接確認。初回fixture二重入口警告を保持し実path統一で再測定。詳細はdocs/handoff/design-system-recon/evidence-20260910/button-contract-implementation.md。PR/CI/マージ未完、全体外観・PO理解速度未検証。
