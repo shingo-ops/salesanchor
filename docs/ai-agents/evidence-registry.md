@@ -2090,3 +2090,7 @@ L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapper
 ## EV-20260910-GO-ACTIVATION-IDENTITY
 
 PO/repoの数値IDとworkflow runのactor/triggering_actorを直接照合。根拠 /tmp/reports/TH-GO-PO-IDENTITY.json、TH-GO-REPO-IDENTITY.json、TH-L1-3404-DEPLOY-FINAL-RUN.json。正式委任の開始時本人操作案と再実行/期限境界をdesign.mdへ追記。全体REVISE、代理GO未有効。
+
+## EV-20260910-GO-QUEUE-MODEL
+
+固定3ticketの抽象モデル333状態/639遷移で安全条件違反0。未確定送信を解放する欠落版は5操作で違反を検出。原子的直列化と有効な承認入力を仮定した限定検査で、実CAS/GitHub/本人性/期限/再受付の実装合格ではない。ソース/前提はrecon.md末尾、結果 /tmp/reports/TH-GO-QUEUE-MODEL-RESULT.json。全体REVISE。

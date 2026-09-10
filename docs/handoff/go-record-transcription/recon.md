@@ -447,3 +447,118 @@ L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapper
 ## 2026-09-10 正式委任の識別情報を実測
 
 PO id246949427、repo id1192164258をGitHub APIで確認。実deploy runのactor/triggering_actorはともにshingo-cc id239116221で、PO本人有効化とは区別。公式context仕様の再実行時の差を確認してdesign.mdへ型・時刻境界・復旧の試験案6件を追記。新機能実装/外部変更0件。
+
+## 予約モデルの有限状態検査（2026-09-10）
+
+POはcxastrago同条件の委任を再度明示した。既に確認した委任意図/制度変更を含む範囲を保持し、同じ確認は繰り返さない。正式有効化経路未完成のため代理GOは発行せず、許可済みの設計実証を進めた。前便のGitHub本人有効化案への個別同意が得られたとは記録しない。
+
+/tmp/reports/TH-GO-QUEUE-MODEL.py は製品コードから独立したローカル設計モデル。通信/資格/本番変更なし。固定3ticket、待機順、active ticket、送信未確定の有無を状態とし、受付・取得・CI/GO準備完了・確定失敗返却・PO優先・送信・マージ成立・deploy成功/失敗を列挙した。
+
+観測: 安全側モデルは333状態・639遷移を全探索し、予約重複/待機状態の不一致/処理主体の複数化/未確定送信の解放の違反0件。全9種類の遷移が1回以上探索されたこともassertした。意図的に未確定送信の予約解放を許す欠落版は、受付→取得→CI/GO準備完了→送信→誤解放の5操作でunknown_send_releasedを検出した。欠落版が赤になることを確認し、合格が空振りになっていないことを限定的に確認した。
+
+前提: 状態遷移が原子的に直列化されること、GO/CI/優先承認の入力が既に正しく検証されていること。この前提をGitHubの実装が満たす証明ではない。再受付/重複request ID/実CAS/本人性/期限/HTTP/権限/実デプロイ/無限の優先要求による飢餓は対象外。3ticketを超える無制限の状態空間へ外挿しない。
+
+実行: python3 /tmp/reports/TH-GO-QUEUE-MODEL.py、exit0。結果 /tmp/reports/TH-GO-QUEUE-MODEL-RESULT.json。ソースSHA256 8039e155dca67758704045e2135d27e45c9d4803fa0d9b56c2fee7dbf428e80c。再現用ソースはrecon.md末尾に保存する。判定は「この抽象モデルの限定検査成功」。全体の自己審査REVISE、代理GO未有効、製品/ガード/CI未実装を維持する。
+
+### 再現用モデル（実装ではなく設計検証用）
+
+```python
+"""Design model only. No network, GitHub calls, credentials, or product mutations."""
+from collections import deque, Counter
+import hashlib
+import json
+from pathlib import Path
+
+# State: phases, waiting order, active ticket, outstanding send flags.
+INITIAL = (('NEW',) * 3, (), -1, (False,) * 3)
+
+def transitions(s, unsafe=False):
+    phases, queue, active, outstanding = s
+    for i, phase in enumerate(phases):
+        options = []
+        if phase == 'NEW':
+            options.append(('enqueue', 'WAITING', queue + (i,), active, outstanding))
+        if phase == 'WAITING':
+            if active == -1 and queue[0] == i:
+                options.append(('acquire', 'PREPARING', queue[1:], i, outstanding))
+            if queue[0] != i:
+                # Abstract input: a valid, verified PO priority decision.
+                options.append(('priority', phase, (i,) + tuple(x for x in queue if x != i), active, outstanding))
+        if i == active:
+            if phase == 'PREPARING':
+                # Abstract prerequisite: latest CI and actual GO already validated.
+                options.append(('ci_and_go_ready', 'READY', queue, active, outstanding))
+            if phase in ('PREPARING', 'READY'):
+                options.append(('confirmed_premerge_failure', 'FAILED', queue, -1, outstanding))
+            if phase == 'READY':
+                flags = list(outstanding); flags[i] = True
+                options.append(('send', 'IN_FLIGHT', queue, active, tuple(flags)))
+            if phase == 'IN_FLIGHT':
+                flags = list(outstanding); flags[i] = False
+                options.append(('merge_confirmed', 'DEPLOY_WAIT', queue, active, tuple(flags)))
+                if unsafe:
+                    options.append(('BUG_release_unknown_send', 'FAILED', queue, -1, outstanding))
+            if phase == 'DEPLOY_WAIT':
+                options.append(('deploy_success_saved', 'COMPLETE', queue, -1, outstanding))
+                options.append(('deploy_failed', 'DEPLOY_BLOCKED', queue, active, outstanding))
+        for name, newphase, q, a, flags in options:
+            updated = list(phases); updated[i] = newphase
+            yield f'{name}:{i}', (tuple(updated), q, a, flags)
+
+
+def violation(s):
+    phases, queue, active, outstanding = s
+    if len(queue) != len(set(queue)):
+        return 'duplicate_waiting_ticket'
+    if set(queue) != {i for i, p in enumerate(phases) if p == 'WAITING'}:
+        return 'queue_phase_mismatch'
+    processing = [i for i, p in enumerate(phases) if p in ('PREPARING', 'READY', 'IN_FLIGHT', 'DEPLOY_WAIT', 'DEPLOY_BLOCKED')]
+    if processing != ([] if active == -1 else [active]):
+        return 'multiple_or_orphaned_processing'
+    if sum(outstanding) > 1:
+        return 'multiple_outstanding_merges'
+    for i, flag in enumerate(outstanding):
+        if flag and (active != i or phases[i] != 'IN_FLIGHT'):
+            return 'unknown_send_released'
+    return None
+
+
+def explore(unsafe=False):
+    seen = {INITIAL: None}
+    pending = deque([INITIAL])
+    edges = 0
+    counts = Counter()
+    while pending:
+        state = pending.popleft()
+        err = violation(state)
+        if err:
+            trace = []
+            current = state
+            while seen[current] is not None:
+                prev, event = seen[current]
+                trace.append(event); current = prev
+            return {'valid': False, 'violation': err, 'counterexample': trace[::-1], 'states_seen': len(seen), 'edges': edges}
+        for event, nxt in transitions(state, unsafe):
+            edges += 1
+            counts[event.split(':')[0]] += 1
+            if nxt not in seen:
+                seen[nxt] = (state, event)
+                pending.append(nxt)
+    return {'valid': True, 'states_checked': len(seen), 'edges': edges, 'event_counts': dict(counts)}
+
+safe, mutant = explore(), explore(True)
+assert safe['valid'] and not mutant['valid']
+assert mutant['violation'] == 'unknown_send_released'
+# Non-vacuity: every intended transition family must actually have been explored.
+assert all(safe['event_counts'].get(k, 0) > 0 for k in ['enqueue','priority','acquire','ci_and_go_ready','confirmed_premerge_failure','send','merge_confirmed','deploy_success_saved','deploy_failed'])
+report = {
+    'kind': 'bounded abstract design model, not implementation/integration test',
+    'ticket_count': 3,
+    'assumptions': ['atomic serialized state transitions', 'verified GO/CI and PO priority modeled as valid inputs'],
+    'excluded': ['re-enqueue with new ID', 'deduplication', 'real storage CAS', 'identity/expiry', 'network', 'GitHub rules and deployment', 'liveness/fairness under unbounded priority requests'],
+    'safe': safe, 'intentionally_broken_control': mutant,
+    'source_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+}
+Path('/tmp/reports/TH-GO-QUEUE-MODEL-RESULT.json').write_text(json.dumps(report, indent=2))
+print(json.dumps(report, indent=2))
+```
