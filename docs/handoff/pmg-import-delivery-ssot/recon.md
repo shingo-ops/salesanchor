@@ -264,3 +264,25 @@ HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job10281
 同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
 根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
 試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。
+
+## 入口配布・旧処理照合の再調査（2026-09-10、base b36041ed）
+
+PO原文「次を進めるPRマージまで」。直前に提示した既存保持の作業場所例外と次の設計文書PRに適用。製品実装や個別の本番停止を実行した記録ではない。preflight・開始/所有検査exit0。release/pmg-cutover-integration-designをorigin/mainから作成、回収処理実行0。元作業場所の.worktree-idは読取時に存在しなかった。削除原因は未調査で断定しない。本店AGENTS.mdの他者変更を保持。
+
+PR #3408はGitHubでMERGEDを再確認。merge0be59e5290cab4149aa5451920317f8fa7f7564c、2026-09-10T09:27:18Z。deploy34460726589は同SHAでsuccess。今回ローカルでDocker試験を再実行したものではない。既存CI99項目の結果は先行節の根拠を利用する。
+
+| 観測事実 | 実物の根拠 | 設計への制約 |
+|---|---|---|
+| 試験は独自生成の2TLS serverを443/444に配置する | tests/pmg_cutover_probe.py:100 | 本番nginx全設定を読んだ統合試験ではない |
+| 本番app/apiそれぞれに認証・stream・一般APIのlocationがある | nginx/nginx.conf:71,96,112,132,151,259,282,298,318,337 | fixtureで参照GET200でも実認証入口の挙動保証にならない |
+| 旧配信の外部変更はclearとappendの2呼出し | backend/app/services/tcg_distribution_svc.py:463,465 | 間の失敗は外部変更なしと断定できない |
+| 外部処理終了後にDB結果を保存する | backend/app/services/tcg_distribution_svc.py:762,773 | 外部成功/DB未記録の窓があり、last_resultだけで未実行とも成功とも推定しない |
+| API切替はnginx reload後に旧backendを40秒でstopする | scripts/blue-green-cutover.sh:144,149 | 旧実行の排出を証明する専用手順にはそのまま使えない |
+| 通常配布は同時実行groupを持つがhost側のPMG保留を参照しない | .github/workflows/deploy.yml:15,184,371,572 | 専用jobが失敗終了した後、後続の通常配布が停止状態を消さない仕組みが別途必要 |
+
+Context7の利用可能ツール0件。許可済み代替により2026-09-10に公式資料を直接確認した。Docker stopは猶予後SIGKILL、nginx reload後の旧workerは既存clientを処理、Pythonの実行中Futureはcancelで止められない。これは仕様と既存取消14件の整合根拠であり、本番旧実行が存在しないという証明ではない。
+- https://docs.docker.com/reference/cli/docker/container/stop/
+- https://nginx.org/en/docs/control.html
+- https://docs.python.org/3.12/library/concurrent.futures.html
+
+索引からADR-113、ADR-115、ADR-137-nginx-config-deploy-reliabilityを照合。ADR-137の同番号別文書へ誤参照しない。ADR-115の旧版復帰が新しい拒否制御を消す場合には従来の自動復旧を成功と判定できないため、設計の不変条件へ明記した。本番読取/変更、旧2件復旧、外部API送信を本便では行っていない。

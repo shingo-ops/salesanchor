@@ -9,7 +9,7 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
 | フロントエンド金型化・再測定 | Agent | 文書PR #3407マージ済み。全体設計自己審査APPROVE、操作/外観/最後のCI契約を確定。製品未着手 | 設計文書PRを保存・レビュー・マージし、ICON5値同値生成から原因別実装。CIは最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-18 / https://github.com/shingo-ops/salesanchor/pull/3407 | 2026-09-10 |
-| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、画面実装未着手 | PR #3408をマージし、入口専用配布と旧処理完了の未確認条件を解消して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、画面実装未着手 | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | #3403マージ/本番反映、有効1件18明細/18解析完了。未完了0。3接続退避済み、445行配信予定。新たに状態/備考2件の問題を確認、配信未実施 | POがCase維持/NOTE_JA記載を確定。設計§13限定2件修正を実装・実DB再解析試験、反映後3シート配信と照合 | recon.md「#3403復旧後の抽出完了と配信前確認」 / EV-20260910-LINE-ACCURACY-08 / PR #3403 / Deploy34456746721 | 2026-09-10 |
@@ -95,7 +95,8 @@
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
-| PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408の試験差分審査合格。running2件の復旧は別セッション担当 | 最終HEADのCI確認後にPRマージ・自動deploy結果を確認。製品切替設計はREVISEを維持 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG入口配布・旧処理照合設計 | 設計担当 | 既存配布/外部書込境界を再照合。8受入条件と失敗時遷移を草案化、自己審査REVISE | 文書PRを検査・マージ。永続保留の導入経路と旧実行の全件照合手段を確定する | EV-20260910-PMG-INTEGRATION-DESIGN / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-10 |
 
 
 
