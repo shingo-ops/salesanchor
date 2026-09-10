@@ -1,0 +1,1977 @@
+{
+  "scope": "synthetic live Gemini comparison; not production accuracy",
+  "api_calls": 28,
+  "model": "gemini-3.6-flash",
+  "temperature": 0,
+  "works": [],
+  "cases": [
+    {
+      "id": "between",
+      "raw": "商品アルファ\n9/18（金）発送\n100BOX 24,000円",
+      "expected": [
+        {
+          "name": "商品アルファ",
+          "qty": "100",
+          "price": "24,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "9/18（金）発送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "two_prices",
+      "raw": "商品ベータ\n10BOX 28,000円（発売日発送）\n20BOX 27,000円（9/20発送）",
+      "expected": [
+        {
+          "name": "商品ベータ",
+          "qty": "10",
+          "price": "28,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "発売日発送"
+          ]
+        },
+        {
+          "name": "商品ベータ",
+          "qty": "20",
+          "price": "27,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "9/20発送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "neighbor",
+      "raw": "商品ガンマ\n9/21発送\n5BOX 10,000円\n商品デルタ\n3BOX 8,000円",
+      "expected": [
+        {
+          "name": "商品ガンマ",
+          "qty": "5",
+          "price": "10,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "9/21発送"
+          ]
+        },
+        {
+          "name": "商品デルタ",
+          "qty": "3",
+          "price": "8,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": []
+        }
+      ]
+    },
+    {
+      "id": "state_negation",
+      "raw": "商品イプシロン\nシュリンク付き・箱に凹みなし\n2BOX 12,000円\n届き次第発送",
+      "expected": [
+        {
+          "name": "商品イプシロン",
+          "qty": "2",
+          "price": "12,000",
+          "unit": "BOX",
+          "state": [
+            "シュリンク付き",
+            "箱に凹みなし"
+          ],
+          "memo": [
+            "届き次第発送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "state_and_shipping",
+      "raw": "商品ゼータ\n箱に凹みあり\n4カートン 90,000円\n発送日要相談\n※配送後の破損は保証対象外",
+      "expected": [
+        {
+          "name": "商品ゼータ",
+          "qty": "4",
+          "price": "90,000",
+          "unit": "カートン",
+          "state": [
+            "箱に凹みあり"
+          ],
+          "memo": [
+            "発送日要相談"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heading",
+      "raw": "【以下2商品は9/22発送】\n商品エータ 3BOX 11,000円\n商品シータ 7BOX 13,000円",
+      "expected": [
+        {
+          "name": "商品エータ",
+          "qty": "3",
+          "price": "11,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "9/22発送"
+          ]
+        },
+        {
+          "name": "商品シータ",
+          "qty": "7",
+          "price": "13,000",
+          "unit": "BOX",
+          "state": [],
+          "memo": [
+            "9/22発送"
+          ]
+        }
+      ]
+    }
+  ],
+  "short_grade": {
+    "baseline": {
+      "runs": 12,
+      "passed_runs": 10,
+      "checks": [
+        {
+          "case": "between",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "two_prices",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "neighbor",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "state_negation",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "state_and_shipping",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "heading",
+          "repeat": 0,
+          "errors": [
+            "raw_memo:missing:9/22発送",
+            "raw_memo:missing:9/22発送"
+          ]
+        },
+        {
+          "case": "between",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "two_prices",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "neighbor",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "state_negation",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "state_and_shipping",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "heading",
+          "repeat": 1,
+          "errors": [
+            "raw_memo:missing:9/22発送",
+            "raw_memo:missing:9/22発送"
+          ]
+        }
+      ]
+    },
+    "candidate": {
+      "runs": 12,
+      "passed_runs": 12,
+      "checks": [
+        {
+          "case": "between",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "two_prices",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "neighbor",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "state_negation",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "state_and_shipping",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "heading",
+          "repeat": 0,
+          "errors": []
+        },
+        {
+          "case": "between",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "two_prices",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "neighbor",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "state_negation",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "state_and_shipping",
+          "repeat": 1,
+          "errors": []
+        },
+        {
+          "case": "heading",
+          "repeat": 1,
+          "errors": []
+        }
+      ]
+    }
+  },
+  "long_input": "お世話になっております\n\n17時まで当日発送可能です\n\n『試験商品01』\n\n10/16（金）発送\n\n10BOX ：5,000\n\n『試験商品02』\n\n10Pack：5,000 （届き次第発送）\n\n『試験商品03』\n\n10Pack：5,000\n\n『試験商品04』\n\n10個：5,000\n\n『試験商品05』\n\n未開封\n\n10枚：5,000\n\n『試験商品06』\n\n10Pack：5,000 ※買取品\n\n『試験商品07』\n\n10Pack：5,000 ※買取品\n\n『試験商品08』\n\n10BOX:5,000\n\n『試験商品09』\n\n10BOX：5,000\n\n『試験商品10』\n\n10BOX：5,000\n\n『試験商品11』\n\n10BOX:5,000\n\n『試験商品12』\n\n10BOX：5,000\n\n『試験商品13』\n\n10BOX：5,000\n\n『試験商品14』\n\n10BOX：5,000\n\n『試験商品15』\n\n10BOX：5,000\n\n『試験商品16』\n\n10BOX：5,000\n\n『試験商品17』\n\n10BOX ：5,000\n\n・弊社買取品\n\n・発送地　試験地域\n\n・国内送料：1000円\n\n・転送サービス（1000円/1梱包）\n\n・適格請求書発行事業者です。\n\n・運送会社引渡し後の破損や遅延等の問題は、こちらでの保証は承れませんので、ご了承ください。",
+  "long_grade": {
+    "baseline": [
+      {
+        "repeat": 0,
+        "items": 17,
+        "errors": []
+      },
+      {
+        "repeat": 1,
+        "items": 17,
+        "errors": []
+      }
+    ],
+    "candidate": [
+      {
+        "repeat": 0,
+        "items": 17,
+        "errors": []
+      },
+      {
+        "repeat": 1,
+        "items": 17,
+        "errors": []
+      }
+    ]
+  },
+  "short_responses": {
+    "baseline": [
+      {
+        "case": "between",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 20.39,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品アルファ",
+              "raw_quantity": "100",
+              "raw_price": "24,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/18（金）発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品アルファ｜100｜24,000円｜BOX｜｜9/18（金）発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "two_prices",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 7.78,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "10",
+              "raw_price": "28,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "（発売日発送）",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "20",
+              "raw_price": "27,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "（9/20発送）",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ベータ｜10｜28,000円｜BOX｜｜（発売日発送）｜L0001-L0002｜｜\n商品ベータ｜20｜27,000円｜BOX｜｜（9/20発送）｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "neighbor",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 12.01,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ガンマ",
+              "raw_quantity": "5",
+              "raw_price": "10,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/21発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品デルタ",
+              "raw_quantity": "3",
+              "raw_price": "8,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 4,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ガンマ｜5｜10,000円｜BOX｜｜9/21発送｜L0001-L0003｜｜\n商品デルタ｜3｜8,000円｜BOX｜｜｜L0004-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_negation",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 9.33,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品イプシロン",
+              "raw_quantity": "2",
+              "raw_price": "12,000円",
+              "raw_unit": "BOX",
+              "raw_state": "シュリンク付き・箱に凹みなし",
+              "raw_memo": "届き次第発送",
+              "line_start": 1,
+              "line_end": 4,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品イプシロン｜2｜12,000円｜BOX｜シュリンク付き・箱に凹みなし｜届き次第発送｜L0001-L0004｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_and_shipping",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 13.87,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ゼータ",
+              "raw_quantity": "4",
+              "raw_price": "90,000円",
+              "raw_unit": "カートン",
+              "raw_state": "箱に凹みあり",
+              "raw_memo": "発送日要相談 ※配送後の破損は保証対象外",
+              "line_start": 1,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ゼータ｜4｜90,000円｜カートン｜箱に凹みあり｜発送日要相談 ※配送後の破損は保証対象外｜L0001-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "heading",
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 11.78,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品エータ",
+              "raw_quantity": "3",
+              "raw_price": "11,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 2,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品シータ",
+              "raw_quantity": "7",
+              "raw_price": "13,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 3,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品エータ｜3｜11,000円｜BOX｜｜｜L0002｜｜\n商品シータ｜7｜13,000円｜BOX｜｜｜L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "between",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 10.43,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品アルファ",
+              "raw_quantity": "100",
+              "raw_price": "24,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/18（金）発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品アルファ｜100｜24,000円｜BOX｜｜9/18（金）発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "two_prices",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 13.15,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "10",
+              "raw_price": "28,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "発売日発送",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "20",
+              "raw_price": "27,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/20発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ベータ｜10｜28,000円｜BOX｜｜発売日発送｜L0001-L0002｜｜\n商品ベータ｜20｜27,000円｜BOX｜｜9/20発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "neighbor",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 11.74,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ガンマ",
+              "raw_quantity": "5",
+              "raw_price": "10,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/21発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品デルタ",
+              "raw_quantity": "3",
+              "raw_price": "8,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 4,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ガンマ｜5｜10,000円｜BOX｜｜9/21発送｜L0001-L0003｜｜\n商品デルタ｜3｜8,000円｜BOX｜｜｜L0004-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_negation",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 7.62,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品イプシロン",
+              "raw_quantity": "2",
+              "raw_price": "12,000円",
+              "raw_unit": "BOX",
+              "raw_state": "シュリンク付き・箱に凹みなし",
+              "raw_memo": "届き次第発送",
+              "line_start": 1,
+              "line_end": 4,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品イプシロン｜2｜12,000円｜BOX｜シュリンク付き・箱に凹みなし｜届き次第発送｜L0001-L0004｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_and_shipping",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 17.63,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ゼータ",
+              "raw_quantity": "4",
+              "raw_price": "90,000円",
+              "raw_unit": "カートン",
+              "raw_state": "箱に凹みあり",
+              "raw_memo": "発送日要相談 ※配送後の破損は保証対象外",
+              "line_start": 1,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ゼータ｜4｜90,000円｜カートン｜箱に凹みあり｜発送日要相談 ※配送後の破損は保証対象外｜L0001-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "heading",
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 8.88,
+        "prompt_sha": "338f0b8c0ad94657aa89363141d58413be992cf09064fbcd53cdff27488618f9",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品エータ",
+              "raw_quantity": "3",
+              "raw_price": "11,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 2,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品シータ",
+              "raw_quantity": "7",
+              "raw_price": "13,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 3,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品エータ｜3｜11,000円｜BOX｜｜｜L0002｜｜\n商品シータ｜7｜13,000円｜BOX｜｜｜L0003｜｜",
+          "error_message": null
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "case": "between",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 18.61,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品アルファ",
+              "raw_quantity": "100",
+              "raw_price": "24,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/18（金）発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品アルファ｜100｜24,000円｜BOX｜｜9/18（金）発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "two_prices",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 9.1,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "10",
+              "raw_price": "28,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "発売日発送",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "20",
+              "raw_price": "27,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/20発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ベータ｜10｜28,000円｜BOX｜｜発売日発送｜L0001-L0002｜｜\n商品ベータ｜20｜27,000円｜BOX｜｜9/20発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "neighbor",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 5.0,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ガンマ",
+              "raw_quantity": "5",
+              "raw_price": "10,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/21発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品デルタ",
+              "raw_quantity": "3",
+              "raw_price": "8,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 4,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ガンマ｜5｜10,000円｜BOX｜｜9/21発送｜L0001-L0003｜｜\n商品デルタ｜3｜8,000円｜BOX｜｜｜L0004-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_negation",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 9.61,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品イプシロン",
+              "raw_quantity": "2",
+              "raw_price": "12,000円",
+              "raw_unit": "BOX",
+              "raw_state": "シュリンク付き・箱に凹みなし",
+              "raw_memo": "届き次第発送",
+              "line_start": 1,
+              "line_end": 4,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品イプシロン｜2｜12,000円｜BOX｜シュリンク付き・箱に凹みなし｜届き次第発送｜L0001-L0004｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_and_shipping",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 13.45,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ゼータ",
+              "raw_quantity": "4",
+              "raw_price": "90,000円",
+              "raw_unit": "カートン",
+              "raw_state": "箱に凹みあり",
+              "raw_memo": "発送日要相談",
+              "line_start": 1,
+              "line_end": 4,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ゼータ｜4｜90,000円｜カートン｜箱に凹みあり｜発送日要相談｜L0001-L0004｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "heading",
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 15.76,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品エータ",
+              "raw_quantity": "3",
+              "raw_price": "11,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/22発送",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品シータ",
+              "raw_quantity": "7",
+              "raw_price": "13,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/22発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品エータ｜3｜11,000円｜BOX｜｜9/22発送｜L0001-L0002｜｜\n商品シータ｜7｜13,000円｜BOX｜｜9/22発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "between",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 6.17,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品アルファ",
+              "raw_quantity": "100",
+              "raw_price": "24,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/18（金）発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品アルファ｜100｜24,000円｜BOX｜｜9/18（金）発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "two_prices",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 22.4,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "10",
+              "raw_price": "28,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "（発売日発送）",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品ベータ",
+              "raw_quantity": "20",
+              "raw_price": "27,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "（9/20発送）",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ベータ｜10｜28,000円｜BOX｜｜（発売日発送）｜L0001-L0002｜｜\n商品ベータ｜20｜27,000円｜BOX｜｜（9/20発送）｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "neighbor",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 10.78,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ガンマ",
+              "raw_quantity": "5",
+              "raw_price": "10,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/21発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品デルタ",
+              "raw_quantity": "3",
+              "raw_price": "8,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 4,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ガンマ｜5｜10,000円｜BOX｜｜9/21発送｜L0001-L0003｜｜\n商品デルタ｜3｜8,000円｜BOX｜｜｜L0004-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_negation",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 10.68,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品イプシロン",
+              "raw_quantity": "2",
+              "raw_price": "12,000円",
+              "raw_unit": "BOX",
+              "raw_state": "シュリンク付き・箱に凹みなし",
+              "raw_memo": "届き次第発送",
+              "line_start": 1,
+              "line_end": 4,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品イプシロン｜2｜12,000円｜BOX｜シュリンク付き・箱に凹みなし｜届き次第発送｜L0001-L0004｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "state_and_shipping",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 27.28,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品ゼータ",
+              "raw_quantity": "4",
+              "raw_price": "90,000円",
+              "raw_unit": "カートン",
+              "raw_state": "箱に凹みあり",
+              "raw_memo": "発送日要相談 ※配送後の破損は保証対象外",
+              "line_start": 1,
+              "line_end": 5,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品ゼータ｜4｜90,000円｜カートン｜箱に凹みあり｜発送日要相談 ※配送後の破損は保証対象外｜L0001-L0005｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "case": "heading",
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 14.09,
+        "prompt_sha": "4e6b2b55b989b1388362adc423896869dc6b88717cfdec6e31f7df9e8c0ca3be",
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "商品エータ",
+              "raw_quantity": "3",
+              "raw_price": "11,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/22発送",
+              "line_start": 1,
+              "line_end": 2,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "商品シータ",
+              "raw_quantity": "7",
+              "raw_price": "13,000円",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "9/22発送",
+              "line_start": 1,
+              "line_end": 3,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n商品エータ｜3｜11,000円｜BOX｜｜9/22発送｜L0001-L0002｜｜\n商品シータ｜7｜13,000円｜BOX｜｜9/22発送｜L0001-L0003｜｜",
+          "error_message": null
+        }
+      }
+    ]
+  },
+  "long_responses": {
+    "baseline": [
+      {
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 27.71,
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "『試験商品01』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "10/16（金）発送",
+              "line_start": 5,
+              "line_end": 9,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品02』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "（届き次第発送）",
+              "line_start": 11,
+              "line_end": 13,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品03』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 15,
+              "line_end": 17,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品04』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "個",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 19,
+              "line_end": 21,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品05』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "枚",
+              "raw_state": "未開封",
+              "raw_memo": "",
+              "line_start": 23,
+              "line_end": 27,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品06』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 29,
+              "line_end": 31,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品07』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 33,
+              "line_end": 35,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品08』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 37,
+              "line_end": 39,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品09』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 41,
+              "line_end": 43,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品10』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 45,
+              "line_end": 47,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品11』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 49,
+              "line_end": 51,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品12』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 53,
+              "line_end": 55,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品13』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 57,
+              "line_end": 59,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品14』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 61,
+              "line_end": 63,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品15』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 65,
+              "line_end": 67,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品16』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 69,
+              "line_end": 71,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品17』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 73,
+              "line_end": 75,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n『試験商品01』｜10｜5,000｜BOX｜｜10/16（金）発送｜L0005-L0009｜｜\n『試験商品02』｜10｜5,000｜Pack｜｜（届き次第発送）｜L0011-L0013｜｜\n『試験商品03』｜10｜5,000｜Pack｜｜｜L0015-L0017｜｜\n『試験商品04』｜10｜5,000｜個｜｜｜L0019-L0021｜｜\n『試験商品05』｜10｜5,000｜枚｜未開封｜｜L0023-L0027｜｜\n『試験商品06』｜10｜5,000｜Pack｜｜※買取品｜L0029-L0031｜｜\n『試験商品07』｜10｜5,000｜Pack｜｜※買取品｜L0033-L0035｜｜\n『試験商品08』｜10｜5,000｜BOX｜｜｜L0037-L0039｜｜\n『試験商品09』｜10｜5,000｜BOX｜｜｜L0041-L0043｜｜\n『試験商品10』｜10｜5,000｜BOX｜｜｜L0045-L0047｜｜\n『試験商品11』｜10｜5,000｜BOX｜｜｜L0049-L0051｜｜\n『試験商品12』｜10｜5,000｜BOX｜｜｜L0053-L0055｜｜\n『試験商品13』｜10｜5,000｜BOX｜｜｜L0057-L0059｜｜\n『試験商品14』｜10｜5,000｜BOX｜｜｜L0061-L0063｜｜\n『試験商品15』｜10｜5,000｜BOX｜｜｜L0065-L0067｜｜\n『試験商品16』｜10｜5,000｜BOX｜｜｜L0069-L0071｜｜\n『試験商品17』｜10｜5,000｜BOX｜｜｜L0073-L0075｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 28.56,
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "『試験商品01』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "10/16（金）発送",
+              "line_start": 5,
+              "line_end": 9,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品02』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "（届き次第発送）",
+              "line_start": 11,
+              "line_end": 13,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品03』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 15,
+              "line_end": 17,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品04』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "個",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 19,
+              "line_end": 21,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品05』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "枚",
+              "raw_state": "未開封",
+              "raw_memo": "",
+              "line_start": 23,
+              "line_end": 27,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品06』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 29,
+              "line_end": 31,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品07』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 33,
+              "line_end": 35,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品08』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 37,
+              "line_end": 39,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品09』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 41,
+              "line_end": 43,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品10』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 45,
+              "line_end": 47,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品11』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 49,
+              "line_end": 51,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品12』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 53,
+              "line_end": 55,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品13』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 57,
+              "line_end": 59,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品14』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 61,
+              "line_end": 63,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品15』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 65,
+              "line_end": 67,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品16』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 69,
+              "line_end": 71,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品17』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 73,
+              "line_end": 75,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n『試験商品01』｜10｜5,000｜BOX｜｜10/16（金）発送｜L0005-L0009｜｜\n『試験商品02』｜10｜5,000｜Pack｜｜（届き次第発送）｜L0011-L0013｜｜\n『試験商品03』｜10｜5,000｜Pack｜｜｜L0015-L0017｜｜\n『試験商品04』｜10｜5,000｜個｜｜｜L0019-L0021｜｜\n『試験商品05』｜10｜5,000｜枚｜未開封｜｜L0023-L0027｜｜\n『試験商品06』｜10｜5,000｜Pack｜｜※買取品｜L0029-L0031｜｜\n『試験商品07』｜10｜5,000｜Pack｜｜※買取品｜L0033-L0035｜｜\n『試験商品08』｜10｜5,000｜BOX｜｜｜L0037-L0039｜｜\n『試験商品09』｜10｜5,000｜BOX｜｜｜L0041-L0043｜｜\n『試験商品10』｜10｜5,000｜BOX｜｜｜L0045-L0047｜｜\n『試験商品11』｜10｜5,000｜BOX｜｜｜L0049-L0051｜｜\n『試験商品12』｜10｜5,000｜BOX｜｜｜L0053-L0055｜｜\n『試験商品13』｜10｜5,000｜BOX｜｜｜L0057-L0059｜｜\n『試験商品14』｜10｜5,000｜BOX｜｜｜L0061-L0063｜｜\n『試験商品15』｜10｜5,000｜BOX｜｜｜L0065-L0067｜｜\n『試験商品16』｜10｜5,000｜BOX｜｜｜L0069-L0071｜｜\n『試験商品17』｜10｜5,000｜BOX｜｜｜L0073-L0075｜｜",
+          "error_message": null
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "variant": "candidate",
+        "repeat": 0,
+        "seconds": 30.08,
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "『試験商品01』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "10/16（金）発送",
+              "line_start": 5,
+              "line_end": 9,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品02』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "（届き次第発送）",
+              "line_start": 11,
+              "line_end": 13,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品03』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 15,
+              "line_end": 17,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品04』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "個",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 19,
+              "line_end": 21,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品05』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "枚",
+              "raw_state": "未開封",
+              "raw_memo": "",
+              "line_start": 23,
+              "line_end": 27,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品06』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 29,
+              "line_end": 31,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品07』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 33,
+              "line_end": 35,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品08』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 37,
+              "line_end": 39,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品09』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 41,
+              "line_end": 43,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品10』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 45,
+              "line_end": 47,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品11』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 49,
+              "line_end": 51,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品12』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 53,
+              "line_end": 55,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品13』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 57,
+              "line_end": 59,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品14』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 61,
+              "line_end": 63,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品15』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 65,
+              "line_end": 67,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品16』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 69,
+              "line_end": 71,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品17』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 73,
+              "line_end": 75,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n『試験商品01』｜10｜5,000｜BOX｜｜10/16（金）発送｜L0005-L0009｜｜\n『試験商品02』｜10｜5,000｜Pack｜｜（届き次第発送）｜L0011-L0013｜｜\n『試験商品03』｜10｜5,000｜Pack｜｜｜L0015-L0017｜｜\n『試験商品04』｜10｜5,000｜個｜｜｜L0019-L0021｜｜\n『試験商品05』｜10｜5,000｜枚｜未開封｜｜L0023-L0027｜｜\n『試験商品06』｜10｜5,000｜Pack｜｜※買取品｜L0029-L0031｜｜\n『試験商品07』｜10｜5,000｜Pack｜｜※買取品｜L0033-L0035｜｜\n『試験商品08』｜10｜5,000｜BOX｜｜｜L0037-L0039｜｜\n『試験商品09』｜10｜5,000｜BOX｜｜｜L0041-L0043｜｜\n『試験商品10』｜10｜5,000｜BOX｜｜｜L0045-L0047｜｜\n『試験商品11』｜10｜5,000｜BOX｜｜｜L0049-L0051｜｜\n『試験商品12』｜10｜5,000｜BOX｜｜｜L0053-L0055｜｜\n『試験商品13』｜10｜5,000｜BOX｜｜｜L0057-L0059｜｜\n『試験商品14』｜10｜5,000｜BOX｜｜｜L0061-L0063｜｜\n『試験商品15』｜10｜5,000｜BOX｜｜｜L0065-L0067｜｜\n『試験商品16』｜10｜5,000｜BOX｜｜｜L0069-L0071｜｜\n『試験商品17』｜10｜5,000｜BOX｜｜｜L0073-L0075｜｜",
+          "error_message": null
+        }
+      },
+      {
+        "variant": "candidate",
+        "repeat": 1,
+        "seconds": 23.05,
+        "result": {
+          "status": "done",
+          "prompt_version": "raw-extraction-v3-work-p1",
+          "items": [
+            {
+              "raw_product_name": "『試験商品01』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "10/16（金）発送",
+              "line_start": 5,
+              "line_end": 9,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品02』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "（届き次第発送）",
+              "line_start": 11,
+              "line_end": 13,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品03』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 15,
+              "line_end": 17,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品04』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "個",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 19,
+              "line_end": 21,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品05』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "枚",
+              "raw_state": "未開封",
+              "raw_memo": "",
+              "line_start": 23,
+              "line_end": 27,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品06』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 29,
+              "line_end": 31,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品07』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "Pack",
+              "raw_state": "",
+              "raw_memo": "※買取品",
+              "line_start": 33,
+              "line_end": 35,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品08』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 37,
+              "line_end": 39,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品09』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 41,
+              "line_end": 43,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品10』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 45,
+              "line_end": 47,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品11』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 49,
+              "line_end": 51,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品12』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 53,
+              "line_end": 55,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品13』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 57,
+              "line_end": 59,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品14』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 61,
+              "line_end": 63,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品15』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 65,
+              "line_end": 67,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品16』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 69,
+              "line_end": 71,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            },
+            {
+              "raw_product_name": "『試験商品17』",
+              "raw_quantity": "10",
+              "raw_price": "5,000",
+              "raw_unit": "BOX",
+              "raw_state": "",
+              "raw_memo": "",
+              "line_start": 73,
+              "line_end": 75,
+              "raw_work_name": "",
+              "raw_work_source_line_span": ""
+            }
+          ],
+          "raw_response": "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n『試験商品01』｜10｜5,000｜BOX｜｜10/16（金）発送｜L0005-L0009｜｜\n『試験商品02』｜10｜5,000｜Pack｜｜（届き次第発送）｜L0011-L0013｜｜\n『試験商品03』｜10｜5,000｜Pack｜｜｜L0015-L0017｜｜\n『試験商品04』｜10｜5,000｜個｜｜｜L0019-L0021｜｜\n『試験商品05』｜10｜5,000｜枚｜未開封｜｜L0023-L0027｜｜\n『試験商品06』｜10｜5,000｜Pack｜｜※買取品｜L0029-L0031｜｜\n『試験商品07』｜10｜5,000｜Pack｜｜※買取品｜L0033-L0035｜｜\n『試験商品08』｜10｜5,000｜BOX｜｜｜L0037-L0039｜｜\n『試験商品09』｜10｜5,000｜BOX｜｜｜L0041-L0043｜｜\n『試験商品10』｜10｜5,000｜BOX｜｜｜L0045-L0047｜｜\n『試験商品11』｜10｜5,000｜BOX｜｜｜L0049-L0051｜｜\n『試験商品12』｜10｜5,000｜BOX｜｜｜L0053-L0055｜｜\n『試験商品13』｜10｜5,000｜BOX｜｜｜L0057-L0059｜｜\n『試験商品14』｜10｜5,000｜BOX｜｜｜L0061-L0063｜｜\n『試験商品15』｜10｜5,000｜BOX｜｜｜L0065-L0067｜｜\n『試験商品16』｜10｜5,000｜BOX｜｜｜L0069-L0071｜｜\n『試験商品17』｜10｜5,000｜BOX｜｜｜L0073-L0075｜｜",
+          "error_message": null
+        }
+      }
+    ]
+  }
+}
