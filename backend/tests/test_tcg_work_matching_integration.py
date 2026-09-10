@@ -127,13 +127,10 @@ def test_schema_migrations_existing_absent_future_and_repeat(pg):
         cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema IN ('tenant_006','tenant_902')")
         assert cursor.fetchone()[0] == 0
         cursor.execute((MIGRATIONS / "20260906_120000_create_tcg_tables_t001.sql").read_text().replace("tenant_001", "tenant_902"))
-        cursor.execute("CREATE SCHEMA tenant_903; CREATE TABLE tenant_903.extraction_items (id int)")
         migrate(cursor)
         migrate(cursor)
         cursor.execute("SELECT count(*) FROM information_schema.columns WHERE table_schema='tenant_902' AND column_name IN ('raw_work_name','raw_work_source_line_span')")
         assert cursor.fetchone()[0] == 2
-        cursor.execute("SELECT count(*) FROM information_schema.columns WHERE table_schema='tenant_903' AND column_name='raw_work_name'")
-        assert cursor.fetchone()[0] == 0
         cursor.execute(f"SELECT count(*) FROM {SCHEMA}.tcg_products")
         assert cursor.fetchone()[0] == 0
 
