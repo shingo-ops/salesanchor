@@ -1965,3 +1965,20 @@ PO実装担当指定「codex terra」、マージ/デプロイ指示と作業場
 PMG追補: 17:41 JST、本番読取で既往running2件のID一致・items0を確認。応答worker1台のactive/reserved/scheduled各0。DB更新/配信なし。Terra利用上限停止によりDocker試験は未完成・未提出。詳細は上記recon末尾。
 
 PMG追補: PR #3408 HEAD879aa1f4、Actions run34460419959/job102816671239を直接確認しDocker試験99/99成功・errors0。試験差分審査APPROVE、製品設計REVISE/画面未完成。失敗3段階と修正根拠・版/digest・結果zip hashは上記design/reconのLinux/Docker実測結果節。マージ/自動deployは次の確認対象。
+
+### EV-20260910-FRONTEND-MOLD-17: 文書PRマージと操作契約の補完
+
+GitHub PR #3407は2026-09-10T09:15:15Zにmerge commit d715d998877e899206ba9bb4f82c726fc3175b30でマージ済み。gh pr viewのstate=MERGEDを設計担当が確認。最終HEAD f8c4b19fの文書レビューAPPROVE受領、設計担当が全checksの成功/対象外skipを確認し公式gh-pr-merge-safe.shで実行。これは文書PRの合格で、全体製品設計の合格・製品実装結果ではない。公式cleanupで旧worktree削除と台帳DONEを確認。
+
+新作業場所release/frontend-ssot-contractsは上記main起点。preflight成功、3bdf33d5からfrontend/scripts/.githubの差分0を直接確認。design.md §Zに入力577箇所の全属性、ボタン411箇所の分類と移管案、DOM/ref/送信の保持条件、アイコン生成器の契約を追補。委任担当の読み取り報告はevidence-20260910/*-semantic-audit.md/jsonおよびremaining-components-audit.md/jsonへ保存。UI目視・実装テストの実行結果とは区別する。
+
+全体設計REVISE維持。残件はCard/Badge等の特殊用途と最終CIの所有元・CSS検査契約。製品コード変更0。CI追加は最後、目視は完成後PO。新たなPO決定や番号付きGOを創作していない。
+
+
+### EV-20260910-FRONTEND-MOLD-18: 全体設計自己審査とAPI矛盾解消
+
+設計担当がPlanner作成後にArchitectとして同一AI自己審査APPROVE。独立した全体設計レビューではない。根拠はdesign.md §AA。限定APIレビューの4指摘（裸本体とアイコン、Select appearance互換、EmptyState内包DOM、Tabsの二重callback）を修正。React.MouseEventを変換しない本文も設計担当が直接確認。
+
+CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinner属性を追加照合。限定CIの有限propertyと部品寸法除外を確定、受入C01〜C27。調査担当の報告と設計担当の直接差分/文書検査を区別し、未実装テストを実行済みとしない。最新origin/main0be59e5290cab4149aa5451920317f8fa7f7564cと3bdf33d5のfrontend差分0を直接確認。
+
+次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。

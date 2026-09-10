@@ -2,6 +2,8 @@
 
 > この文書は何か（専門用語なしの1行）: 画面の色・部品の設計図を1ヵ所に集め、1ヵ所直せば全ページが変わる仕組みの作り方。この図だけで実装者が迷わず作れる粒度で書く（この文書以降で新たな仕様決定を発生させない）。
 
+> 最新状態（2026-09-10）: 追加全体設計は末尾§AAで自己審査APPROVE。過去のREVISE記録は調査履歴。POの具体的ADR承認・製品実装結果とは区別する。
+
 親（あるべき姿＋KGI）: [README.md](README.md)／現状実測: [full-recon.md](../../handoff/design-system-recon/full-recon.md)
 
 ## 0. この設計図の使い方（design定義・PO確定）
@@ -778,3 +780,194 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 | 製品変更が混ざらない | mainとの差分でfrontend/backend/scripts/workflowsが0 |
 | 台帳で最新の合意と未完を区別 | 最新の実施順序・PO目視移管・旧PR採否を照合 |
 | 証拠の構造を壊さない | JSON解析とTSV全セルの読み戻し一致を確認 |
+
+### Z. 実物照合後の共通部品契約（2026-09-10、設計担当案）
+
+本節は§A〜Yの調査から導いた最新の実装契約案。PO発話の代筆ではない。全体設計の自己審査は末尾で別判定し、文書保存・個別仕様の確定を製品完成とはしない。基準main `d715d998877e899206ba9bb4f82c726fc3175b30`。`git diff --name-only 3bdf33d5 HEAD -- frontend scripts .github` の出力0で既存入力調査の製品基準との一致を確認。
+
+#### 分離する理由と責任
+
+材料値、部品の外観、画面の業務処理を別の責任にする。SSOTは全てを1ファイルに詰める意味ではなく、同じ値・同じ外観の手編集元を1つにする意味。色はindex.cssのテーマ別定義、寸法はtokens.css、アイコン名はconstants/icons.tsx、各部品の外観は各部品CSSを正本とする。ページは値の写しを持たず、用途名・部品propsを参照する。既存ファイルを活用し別のデザインライブラリは導入しない。
+
+同値の色aliasとアイコン数値生成を別PRとし、配色変更はさらに分ける。Button本体と利用画面、入力本体と利用画面、Table本体と各表、Overlay外観と業務イベントを分ける。各PRで問題が起きた場合、そのPRのmerge commitと依存する後続便が戻し対象。前提を含むPRだけ単独で戻して後続を壊さない。変更対象を共有する便は並行マージしない。
+
+#### 入力本体：DOMと値の互換
+
+根拠: [全577要素・属性の調査](../../handoff/design-system-recon/evidence-20260910/input-semantic-audit.md)、同名JSON。実測577は共通部品内部3を含む。8か所のref、onChange566/onBlur39/onKeyDown10/onFocus6、全74selectのchildrenを記録した。
+
+- TextField.tsx/Textarea.tsxに裸のTextFieldControl/TextareaControlを公開。Select.tsxの既存SelectControlを拡張。裸の部品は元と同じinput/select/textareaを1つ返し、div/labelを増やさない。既存ラベル付き部品はその本体を使用し、classNameが外側divに付く既存仕様を維持する。
+- React18のforwardRefでnative DOM自体を返す。関数refも転送する。DataTableのindeterminate、検索欄のgetBoundingClientRect、添付のclick/files、送信欄のfocusを保存する。ImperativeHandleで別オブジェクトに置き換えない。
+- native属性・イベント・value/defaultValue/checked/defaultCheckedを同じ要素へ渡す。未指定を空文字やfalseで補わない。typeのurl/text、email/text、number/text分岐は元の式を維持する。数値化・整形・API呼出しを共通部品へ移さない。
+- SelectControlはoptionsモードとchildrenモードを排他的な型にする。既存options/placeholder処理は維持。childrenモードは元のReactNodeをそのまま出力し、選択肢・空値・disabled・順番・key・value・条件分岐を再生成しない。placeholderの選択肢も新設しない。
+- size=sm/md/lgは部品寸法。input/selectのnative数値sizeはnativeSizeで受け、同要素のsizeへ渡す。textareaはnativeSizeを受けず、rows/colsを維持する。既存明示native sizeは0だが型の意味を混ぜない。
+- CheckboxControl43とToggle8を区別する。RadioControl7、RangeControl1、FileInputControl4、ColorInputControl2は別の専用owner。ファイル入力へvalueを追加しない。色選択のデータ値はUI色トークンへ置き換えない。
+
+#### 入力外観：上書き口を限定
+
+色・枠・角丸・文字・focus/disabledはFormField.cssが所有する。154のclass属性と60のstyle属性（138プロパティ）の移管先は入力JSONで追跡する。利用元の任意class/styleによる内部外観上書きを最終公開APIに残さない。
+
+| 本体props | 契約 |
+|---|---|
+| invalid?: boolean | 既存エラー条件のまま外観へ接続。aria-invalidは既存の明示属性を透過し、自動付与/上書きしない |
+| status?: normal/saved | 保存完了表示の既存条件を使用。invalid優先 |
+| textStyle?: normal/secondary/code、emphasis?: normal/strong | 既存文字の用途を表す。任意font/color値は受けない |
+| appearance?: standard/embedded | TextFieldControl/TextareaControlだけ。embeddedは親が枠を所有。本体に枠を重ねない。SelectControlの既存field/bareは別契約として維持 |
+| leadingInset?: boolean | TextFieldControlだけ。既存の外側アイコン分の余白を確保し、input内にアイコンを描画しない。既存アイコンDOMは外側ownerに残す |
+| emptyDatePlaceholder?: boolean | 空の日付だけ既存のネイティブ文字非表示を維持。値ありで非表示にしない |
+| resize?: none/vertical/both | textareaだけ。未指定は現行本体の規則を維持 |
+| visibility?: visible/sr-only/hidden | FileInputControlだけ。既存のsr-onlyとdisplay:noneを混同しない |
+
+配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
+
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール40×22px、つまみ16px、端の間隔3px、ON時移動18px、操作領域44pxの案を維持する。
+
+#### ボタンの操作契約
+
+根拠: [411件の分類・対応](../../handoff/design-system-recon/evidence-20260910/button-semantic-audit.md)。通常操作とタブ・絞り込み・会話選択・カレンダー座標操作を分類し、全native buttonを通常Buttonへ置換しない。
+
+Buttonはnative buttonを維持し、forwardRefとnativeイベント属性を透過する。type省略143件へ一律type=buttonを追加しない。既存submit61、外部form4、stopPropagation18の契約を保持する。disabled/loadingや送信ガードを外観統一のために書き換えない。ButtonLinkはnative anchorの外観共有であり、href/target/rel/downloadと通常のリンク操作を保持する。anchorにbuttonのdisabled属性を付けて無効化できたとは扱わない。
+
+Button外観はButton.cssを唯一の定義元にし、components.cssの重複btn宣言は利用先移行と整合して削除する。寸法mdはfield-h-md=36pxを用いる統一案で、既存btn-min-height-md=40pxと同値の移動ではない。iconOnlyは28/36/44pxの正方形、角丸6px。通常lgのmin-height48pxがiconOnlyを押し広げないようmin-heightも同じ値にする。モバイルでは幅・高さ・最小高さをすべて44pxにする。通常ボタンとアイコンだけのボタンを同じ寸法計算で処理しない。
+
+フィルターをTabsのroleへ変えない。Tabsはパネル切替だけ。再クリック解除するフィルターと解除しない選択を別の状態契約として維持する。FedexのcurrentTarget.closest、カレンダーのgetBoundingClientRect、DataTableのtarget.closestが依存するDOM・イベントを維持する。外側配置は入力と同様の限定された配置入口で扱う。
+
+#### Overlay：共通の見た目と異なる開閉動作
+
+通常Modal/Drawerとloading配下の同名部品を名前だけで置換しない。共通header/title/body/footerの外観をcomponents/Overlay.cssへ集約し、各既存CSSは位置・サイズ・アニメーション・モバイル配置を保持する。
+
+通常Modalは閉じるとunmount、loading Modalは閉じてもmountする既存差を維持する。通常Modalのtitle:string必須とloading Modalの任意ReactNodeを維持する。通常Drawerのfooter/fullpage/testidとloading Drawerのaria-hidden/SSR guardを維持する。閉じるボタンの新設、focus trap、Esc、body lock、複数重なりの修正を外観PRへ混載しない。特殊ダイアログへ通常Modalの動作を自動注入しない。
+
+#### アイコン数値生成の仕様
+
+tokens.cssの--icon-sm/md/base/lg/xlを手編集正本にする。constants/iconSizes.tsは生成物とし、ICONの5キーとIconSize型を維持する。現行14/16/20/24/48の値を変更しない。PlatformIconのMath.roundによる比率計算を壊すためCSS文字列を渡す案は採らない。
+
+生成器はfrontend/scripts/generate-icon-sizes.js。PostCSSを直接devDependencyへ宣言し、lock更新を同じPRに含める。トークン値はトップレベルの単独:root宣言に各1件、正の有限px数値だけを受理する。対象5名の欠落・重複・条件内再定義・別selector再定義・式/別単位・CSS解析失敗は非ゼロ、出力を書き換えない。全項目を検証した後に同一ディレクトリの一時ファイルへ一定順序・一定書式で書き込み、成功時だけrenameで置換する。同値なら書き込まない。
+
+通常コマンドは生成、--checkは書き込まず完全一致を検査する。dev/buildの開始前に生成を接続し、開発中のtoken変更後は再生成して数値利用元を更新する。常駐watchは今回増設しない。最後のCI便で--checkを接続し、生成忘れを不合格にする。既存check-icon-syncは移行中維持し、未実装の--fixを生成済みと呼ばない。
+
+生成器試験: 現行5値一致、同入力で同出力、値1つ変更で対応キーだけ変更、欠落、重複、条件再定義、rem/var/calc、壊れたCSS、出力不能、--check不一致で変更0。失敗時に以前の有効な生成物が残ることも確認する。
+
+#### グラフ：用途色の直接参照
+
+Dashboardの実績と残量は--chart-actualと--chart-remainingへ集約する案。実績はaccentのalias、残量は現行のalpha40相当をテーマ別の用途色として定義し、ページで文字列を連結しない。Bar.fillへvar(--chart-actual/remaining)を渡す。数値集計・tooltip・軸・ラベルは変更しない。
+
+採用根拠はRecharts3.8.1実物のBar→RectangleのSVG props透過と公式同版ソース。DOMへfill文字列を透過する経路を確認したが、PO目視の代用とはしない。実装時は明暗切替でfill属性がCSS参照のまま、固定6桁色へ戻らないことをテストし、生成された画面の最終目視はPO確認待ちと記録する。
+
+#### 資料と確認の限界
+
+Context7 MCPは利用可能ツール一覧に存在しない。PO許可の代替として2026-09-10に[React forwardRef公式](https://react.dev/reference/react/forwardRef)、[PostCSS API](https://postcss.org/api/)、[Recharts3.8.1 Rectangle](https://raw.githubusercontent.com/recharts/recharts/v3.8.1/src/shape/Rectangle.tsx)を確認。Reactの現行文書は19の注記があるが本製品は18のためforwardRefを用いる。採用版を今回更新する判断ではない。企業の改善率は今回のDOM互換の証拠にならないため外部導入事例は使わない。
+
+#### 今回の自己審査
+
+REVISE。入力の全属性と参照先、ボタン分類、生成器の失敗条件、Overlayの既存動作を具体化した。残るCard/Badge/Tabs等の全公開API・全ボタン外観対応・最後のCI所有元と動的CSSの検査契約を照合中。未決を実装担当の独断へ渡さない。PO目視は完成後であり、目視待ち自体を設計停止理由にはしない。製品実装未着手。
+
+#### Card・Badge・Tabs・EmptyStateの公開契約案
+
+[実物照合](../../handoff/design-system-recon/evidence-20260910/remaining-components-audit.md)では既存製品使用はCard3/Badge10/Tabs0/EmptyState0。部品が存在するだけで旧class経路の移行が済んだとはしない。§A以前の「追加作業不要」という過去記載を全体完了の根拠にしない。
+
+Cardはasをdiv/section/articleだけに限定し元のタグ・children・native属性/refを維持する。interactiveは外観であり、既存にないrole・tabIndex・キー操作を自動追加しない。状態付きカードは用途別adapterで条件を保持し、共通surfaceへtone/outlineToneを渡す。bottleneck/urgent/step done/completeを同じactiveに潰さない。既存Card3件のうち2件のmarginBottomは共通の配置入口へ移す。
+
+Badgeはspanのままtitle/aria/data/events/refを透過。表示文字や業務ステータスを共通部品へ埋め込まない。同値移管の見た目は現在のbadgeVariantと実CSSの対応を使い、既存statusPresentationへ表示用写像を追加する。prospectRankの仮Cはbucket=neutralでも現行pendingがwarning色のため、warning表示を保持する。論理bucket/API/ラベルを変更しない。appearanceにplain（枠/背景なしの数値・注釈）とcount（未読数）を追加する案。未読数の絶対配置は利用先の配置責任、桁数増加を切り捨てない。role.color等のデータ色は専用adapterが既存の背景式とvar(--on-accent)の前景をdataBackground/dataForegroundへ渡し、Badge素材を利用する。前景の自動算出や値補正を新設しない。通常UIの固定色をdataColorに流して免除しない。
+
+Tabsはパネル切替だけに使用。既存items/activeKey/onChangeとdisabled/count=0表示を維持する。onChange(key,event)へReact.MouseEvent<HTMLButtonElement>を変換せず第2引数で渡し（event.nativeEventへ変換しない）、既存のkeyだけを受けるcallbackも互換維持する。項目別onClickは追加しない。既存イベント処理とkey更新を利用元の1つのonChangeへ元と同じ順序で移し、1クリックにつき1回だけ呼ぶ。disabled時は呼ばない。aria-controls/panelIdは実在パネルと接続する場合だけ付ける。ページ移動・絞り込みは用途別adapterで既存nav/button/anchorの意味を保持して外観だけを共有する。新しい矢印キー選択やフォーカス自動移動をこの外観PRで追加しない。
+
+EmptyStateはdiv本体のaria/data/testidを透過し、title/descriptionは既存string型とp要素を維持する。ブロックを含む既存詳細は新しいdetails?:ReactNodeをdiv内に出力する。pをtitle/descriptionへ入れず、元の詳細DOMをdetailsへ保持する。TableEmptyがtd/colSpanを所有し、その内側に表示を置く。loading配下の互換入口は旧truthy条件を維持し、通常部品の!=null条件との差を失わない。InboxKartePanelの同じright-panel-empty classでも会話未選択とloadingProfileは別の用途であり、後者は待機表示の共通部品を使う。
+
+#### 最後のCIの方針更新
+
+CIは全体の画面移行後に設置する。今回の合格条件は全対象に未移行0・検査不能0。一時的なbaselineや件数増加だけの判定で移行完了を示さない。所有元は完全moduleパスとexportとnative要素種類で限定し、componentsフォルダ丸ごとの免除はしない。装飾値の正本と部品の所有CSSへの参照を検査する。
+
+旧check-ui-governance.jsの22ケースにはui-allow免除やtable非検出の期待が含まれる。したがってci-guard-design.mdの「旧22期待を維持して読取だけ修復する」案を最終CIへそのまま適用しない。最終全件検査で取得不能をexit2へする契約を継承し、旧期待の変更はADR-144改訂案と対照試験へ明記する。先行CI実装は行わない。
+
+任意のJavaScriptの意味・全divがカードかをCIだけで完全判定するとは約束しない。公開API型、限定された構文検査、移行表、コードレビューを組み合わせる。動的座標・顧客色・HTML表示には既存用途の専用adapterを設けるが、新しい値補正・fallback・業務上の制限を外観統一へ混載しない。新しい本人認証APIや承認操作は今回増やさない。
+
+上記は設計案の補完。特殊用途の全件写像とCIの有限な検査契約を照合中であり、全体自己審査REVISEを維持する。
+
+
+#### CSSの限定照合による補完
+
+[selector対応表](../../handoff/design-system-recon/evidence-20260910/selector-impact-audit.md)は今回変更するclass/nativeタグに該当する314候補・27 CSSファイルを対象とした。:not内のcheckbox/radio指定を肯定条件と取り違えた初版4件を、設計担当の指摘とselector構文の再解析で訂正。修正後の表を正本とし、無関係な全selector照合を完了条件に膨らませない。
+
+- CSSI-0209: InboxのTextareaControlはembedded/resize=none。枠0・padding0・transparent・line-height1.4を共通入力用途へ、flex1/min-width0を同nativeの配置入口へ移す。
+- CSSI-0231: 右パネルSelectControlはindicator=none。現行appearance:noneと矢印なしを維持し、矢印DOMや外側wrapperを追加しない。
+- CSSI-0233: 右パネルTextareaControlはresize=none、最小高さは同nativeの配置入口で既存inbox-textarea-min-hを参照。
+- CSSI-0038: DataTable選択欄の外観はCheckboxControlの所有へ移し、indeterminateと選択処理は保持。
+- karte-toggle-btnの表示/非表示と1279px条件は同buttonの配置専用classに維持する。
+
+状態Cardの追加契約: doneはemphasis=mutedで既存opacity-muted、urgentは左3px danger、completeは全周2px accent、bottleneckはwarning枠と既存hover/focus accentを保持。全て既存条件の写像であり、状態を統合しない。Table行のopacity変更案をCardへ流用しない。
+
+
+#### 限定文書レビュー4指摘の修正
+
+leadingInsetは余白だけでnative1要素契約を維持する。SelectControlのappearanceは既存field/bare、既定bareを維持し、fieldの既存wrapper幅/size条件とbareの幅autoを保存する。TextFieldControl/TextareaControlのstandard/embeddedをSelectへ横展開しない。Selectのindicator=noneは両appearanceで矢印を消す独立軸、未指定は各既存表示を維持する。
+
+TabsのbuttonAttributesはnative属性からrole/type/aria-selected/disabled/className/style/onClickを除外する。これらは本体が所有する。onChange(key,event)だけがクリックの処理入口で、既存callback内のpreventDefault/stopPropagationをそのまま保存する。新たにdefaultPreventedでkey更新を自動抑止する仕組みを設けず、既存利用元の処理を一度だけ呼ぶ。aria-controlsとdata-testid等は項目属性で透過する。
+
+配置入口はlayoutClassName?:stringに統一し、共通部品のclassName/styleを最終公開APIから外す。文字列の各classに対応する配置宣言が検査対象CSS内に存在し、配置の許可propertyだけであることを最後のCIが確認する。途中移行中のclassName互換口は全利用先移管後に閉じる。既存FieldのlayoutClassNameは外側div、裸Control/Button等は同nativeへ付ける。任意装飾classを配置名と言い換えて免除しない。
+
+EmptyStateのdetailsはdescriptionの後・actionの前のdiv。未指定ならDOMを増やさない。既存string表示/条件を維持し、詳細ブロックがない移行先へ不要なdetailsを追加しない。
+
+
+#### 動的な配置・色と最後の検査の責任
+
+[最後のCI契約と27受入ID](../../handoff/design-system-recon/evidence-20260910/final-ci-contract-audit.md)、[動的指定172項目](../../handoff/design-system-recon/evidence-20260910/dynamic-style-fixed-audit.json)を設計入力とする。113は共通外観、38は既存の配置/幅/数値処理、13は利用者色の既存入口、8はカレンダー用途色に割当済み。172はstyle属性数や違反数ではない。位置計算を全て新しいadapterへ寄せず、元の関数・式を保持する。
+
+共通部品への自由なstyle/classNameは移管後に閉じ、一般ページの配置styleは維持する。座標のclamp/fallback等を新設しない。既存のrole/owner色は実在する関数とpropertyを限定した名前付き入口で受ける。新たな独立ラッパーは不要。完全パス+exportName+必要な既存implementationBindingの登録で、同ファイルの別機能へ許可を広げない。
+
+CheckboxControlの寸法は既存--size-checkbox=16px、smは--size-checkbox-sm=14pxを参照する。既存のnative選択挙動、indeterminate、入力name/valueを保持する。RadioControlはradioのnative挙動を維持し、チェックボックス/トグルへ置換しない。
+
+各実装便の台帳には元の対応ID、最終module/export/必要なimplementationBinding、所有CSS、nativeTag/type、実行した検証を記録する。これは最終CI登録への入力であり、未移行を許すbaselineではない。最後に対応表の全IDと実装済み台帳を突合し、未移行0・対応なし0を確認してから登録表を確定する。実装前の設計段階に実行結果や生成後行番号を創作しない。
+
+
+#### Icon/Spinner最終契約と名前の固定
+
+[Icon/Spinnerの実物照合](../../handoff/design-system-recon/evidence-20260910/icon-props-final-audit.md)を受領。通常Iconの外部styleは1件だけで同SVGの配置classへ移す。外部color/ref/spreadは0だが既存forwardRef契約は保持。PlatformIconの数値sizeと丸め式、LeadChatIconの数値20は保持する。通常Iconのstyle/colorとSpinnerの未使用color入口は、全参照0確認後に閉じる。PlatformIcon内部のwidth/height計算は許可する名前付き所有元に残す。
+
+mailのwhiteはindex.cssの新しい用途名--icon-platform-mailから既存--on-accent（両テーマ#ffffff）を参照する。調査案の--on-solidは現在存在しないため、その参照だけを追加する実装は採らない。画像URL/比率/altと既存DOMはこの同値移管で変えない。
+
+Spinner tone=inheritはonAccentより優先し、全枠currentColor・上辺transparentで回転を示す。通常/onAccentのhead/track tokenは従来どおり。Button内だけdecorative=trueを使い、SaveIndicatorの既存sm/label/通常toneは維持する。調査案の「inheritでも旧trackを残す」は本契約で採用しない。
+
+通常Iconのaria属性未転送の修正は、数値生成/同値材料PRへ混載せず、Icon公開APIの移行便に分ける。aria-hidden/aria-label/aria-labelledby/aria-describedby/role/focusableを必要な型で明示透過し、style/colorを復活させる汎用restは作らない。refは同SVGへ渡す。これは現在の出力との意図した属性変更としてDOM試験する。
+
+トグルの正規名はcomponents/Toggle.tsxのToggle。調査表のSwitch表記は意味分類名であり別部品を新設しない。表の正規公開名はcomponents/table/Table.tsxからTableViewport、Table、TableHead、TableBody、TableFoot、TableRow、TableHeaderCell、TableCell、TableEmpty。TableViewportが外枠/スクロールを持ち、Tableはnative tableを返す。TableEmptyがtd/colSpanを持つ。
+
+本物のTabsとページ移動/絞込みの外観共有はTabControl（Tabs.tsx）を内部の共通button表示ownerにする。role/ariaは用途側で既存に合わせて渡し、見た目が似ているだけでrole=tabを追加しない。既存Button variant=tabの互換APIは維持するが、新しい用途をこのARIA既定へ強制しない。
+
+layoutClassNameの許可propertyと部品ごとの寸法禁止は[最終CI契約](../../handoff/design-system-recon/evidence-20260910/final-ci-contract-audit.md)の有限リストを正本とする。C26/C27で配置のみの許可と装飾・共通寸法上書きの拒否を対照する。一般ページの動的styleへ同じ制限を広げない。
+
+### AA. 全体設計の自己審査（2026-09-10）
+
+判定: **APPROVE（設計合格）**。Plannerとして作成後、同じ設計担当AIがArchitectとして審査した。独立した第二者による全体設計レビューではない。限定APIレビューは別担当の読み取り補助を使用した。
+
+この判定の対象は§V以降の最新順序、§P/Qのボタン配色・操作、§R〜Uの39表/239属性、§Zの最新公開契約と対応表、最新CI契約およびADR-144改訂案。§A〜Yと§Z途中に残るREVISEは調査中の履歴であり、以下の解消記録をもって現時点の判定を更新する。過去のPO承認済本文を新しいPO発言として書き換えない。
+
+| 審査項目 | 根拠と判定 |
+|---|---|
+| 入力のDOM・イベント・値 | 577要素の属性/ref8と全74select childrenを照合。裸本体・forwardRef・options/children排他・native type/sizeの責任を確定 |
+| ボタンの用途と外観 | 411件の対応、type省略143/submit61/外部form4/stopPropagation18を保持。通常操作とタブ/絞り込み/カレンダーを区別 |
+| CSS適用先 | 314候補/27ファイルを限定照合。:not誤分類4件を訂正、入力3契約とCheckbox所有移管を確定 |
+| 表の構造と操作 | 39表と239属性の対応。rowSpan/colSpan/tfoot/編集/選択/並べ替えを保持し、DataTableと表示部品の外観を共有 |
+| Card/Badge/空状態等 | 279候補を用途分類、動的Badge33箇所166状態を照合。仮Cのwarning表示とデータ色前景を保持、待機を空状態へ誤分類しない |
+| 動的配置と色 | 172項目を113外観/38配置・数値/13利用者色/8用途色へ写像。位置計算の全面移動と新入力制約を採らない |
+| 公開APIの矛盾 | leadingInset、Select field/bare、EmptyState detailsのdiv、Tabs単一callback/React.MouseEvent透過に修正。未実装テストを設計完了の前提にはしない |
+| 材料の互換 | 数値ICON5キーはCSSから生成し既存数値計算を維持。DashboardはSVG fill透過経路を確認し用途色へ接続。未確認のcolor-mixへの置換は採らない |
+| 旧PRの扱い | 7PRの採否表で既反映/再利用/不採用を区別。古いbranch全体を上書き適用しない |
+| CI・ADR | 全UI移行後に27受入IDの限定検査。旧22期待維持案を後続全件検査へ読み替えず置換点をADR改訂案に明記 |
+
+#### 実装の受け入れ条件
+
+| 基準 | 検証方法 |
+|---|---|
+| 各材料は手編集元1つ、既存値の同値移管と配色変更を別PRで追跡 | token定義/参照の差分、ICON5値と生成物一致、用途色対応表 |
+| 操作の式・DOM/ref/type/formが保持される | 対応IDごとの差分レビューと送信/選択/添付/ref/無効時の部品テスト |
+| 共通部品の公開APIと全呼出しが一致する | TypeScript検査、既存check:all、対象部品の意味のあるunit/DOMテスト |
+| 39表/411ボタン/577入力の移管結果を取りこぼさない | 初期対応IDと各便の実装台帳を突合。元の共通内部は違反数へ水増ししない |
+| 明暗・状態・文字長の見本が同じ定義を読む | Storybookのglobal CSS読み込みを実アプリと一致、部品状態の見本/ビルド、指定色再計算 |
+| CIが未移行と検査不能を合格にしない | 全移行後にC01〜C27の対照fixtureと実CI。既存必須チェックも維持 |
+| POが完成画面を確認できる | 原因別PRの変更箇所一覧と見本/対象ページを提示。目視はPO確認待ちとして区別 |
+
+実装カードはこの設計の限定範囲・ファイル所有・正確な手順・停止条件を記載し、正式card-lintと手作業チェックを通してから渡す。初回は既存5値を変えない数値アイコン生成、次に材料の同値alias、部品本体、利用画面、最後にCIの順。各PRの結果を確認し、先行PRマージ後のmainを次便の基準にする。
+
+#### 状態と承認の区別
+
+設計案作成済み・全体設計自己審査済み。POから実装担当への委任と順次マージの依頼を受領しているが、具体的なPR番号付きGOやADR改訂のPO自筆承認を創作しない。文書PR #3407はマージ済み、本節は次の文書PRへ保存する。製品実装・自動テスト・PO目視・製品PRマージ・デプロイは未実施。この設計合格をそれらの完了・承認の代わりにはしない。
