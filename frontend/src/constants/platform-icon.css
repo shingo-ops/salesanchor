@@ -13,6 +13,7 @@
 /* Mail: Google レッド */
 .platform-icon-wrap--mail {
   background: var(--platform-mail-bg);
+  color: var(--icon-platform-mail);
 }
 
 /* Squircle（Instagram等）: 角丸四角形クリッピング・サーフェス背景（ライト:白 / ダーク:反転） */

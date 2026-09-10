@@ -29,15 +29,15 @@
   --link: #1e3a8a;               /* ナビゲーションリンク */
   --link-active-bg: #ebeff8;
   --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
-  --indicator: #1e3a8a;          /* 選択中インジケーター（会話リスト等） */
+  --indicator: var(--accent);          /* 選択中インジケーター（会話リスト等） */
 
   /* サイドバー */
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: var(--bg-surface);
   --sidebar-border: #E4E4E7;
   --sidebar-item-hover-bg: #ebeff8;
   --sidebar-item-active-bg: #ebeff8;
-  --sidebar-item-active-color: #1e3a8a;
-  --sidebar-item-active-border: #1e3a8a;
+  --sidebar-item-active-color: var(--accent);
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed: 54px;
   --sidebar-width-expanded: 240px;
 
@@ -144,7 +144,7 @@
   --bg-row-zero-stock-hover: #d6dde8;
   --border-color: #cccccc;
   --border-light: #eeeeee;
-  --accent-bg: #1e3a8a;
+  --accent-bg: var(--accent);
   --bg-badge: #eeeeff;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125） */
@@ -185,6 +185,14 @@
   --calendar-status-ok-text:     #1e7e34;
   --calendar-status-error-bg:    #fce8e6;
   --calendar-status-error-text:  #c5221f;
+  --icon-action: var(--text-secondary);
+  --icon-action-hover: var(--text-primary);
+  --icon-action-danger: var(--danger);
+  --icon-empty: var(--text-muted);
+  --icon-decorative: var(--accent);
+  --icon-search: var(--text-secondary);
+  --icon-status-success: var(--success-text);
+  --icon-platform-mail: var(--on-accent);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
@@ -223,7 +231,7 @@
   --link: #7baee0;
   --link-active-bg: #1e3a8a;
   --avatar-bg: #334155;          /* アバター背景（ダーク） */
-  --indicator: #5b8dd9;          /* 選択中インジケーター（ダーク） */
+  --indicator: var(--accent);          /* 選択中インジケーター（ダーク） */
 
   --danger: #f87171;
   --danger-bg: #4c1d1d;
@@ -304,12 +312,12 @@
   --inbox-bulk-icon-color: var(--text-primary);     /* 一括操作アイコン色（SSoT） */
 
   /* サイドバー（ダーク / ADR-067） */
-  --sidebar-bg:                 #1e293b;
+  --sidebar-bg:                 var(--bg-surface);
   --sidebar-border:             #334155;
   --sidebar-item-hover-bg:      #1e3a8a;
   --sidebar-item-active-bg:     #1e3a8a;
   --sidebar-item-active-color:  #93c5fd;
-  --sidebar-item-active-border: #5b8dd9;
+  --sidebar-item-active-border: var(--accent);
   --sidebar-width-collapsed:    54px;   /* ライトと同値（パリティ維持） */
   --sidebar-width-expanded:     240px;  /* ライトと同値（パリティ維持） */
 
@@ -334,7 +342,7 @@
   --bg-row-zero-stock-hover: #1b2536;
   --border-color: #475569;
   --border-light: #334155;
-  --accent-bg: #5b8dd9;
+  --accent-bg: var(--accent);
   --bg-badge: #3b2d5c;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125 ダーク） */
@@ -375,6 +383,14 @@
   --calendar-status-ok-text:     #4ade80;
   --calendar-status-error-bg:    #4c1d1d;
   --calendar-status-error-text:  #f87171;
+  --icon-action: var(--text-secondary);
+  --icon-action-hover: var(--text-primary);
+  --icon-action-danger: var(--danger);
+  --icon-empty: var(--text-muted);
+  --icon-decorative: var(--accent);
+  --icon-search: var(--text-secondary);
+  --icon-status-success: var(--success-text);
+  --icon-platform-mail: var(--on-accent);
   --accent-bright:               var(--calendar-today-bg);
   --schedule-calendar-item-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
   --schedule-color-swatch-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);

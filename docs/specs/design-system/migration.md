@@ -2,6 +2,8 @@
 
 > この文書は何か（専門用語なしの1行）: 散らかった今の画面を、1ヵ所直せば全ページ変わる理想形へ、壊さず順番に寄せる工事計画。
 
+> 現行順序（2026-09-10）: 全体設計→共通部品と画面移行→最後にCI追加。旧§1〜3の関所先行/領域ペア計画・古い件数は当時の履歴で、今回の実装順には適用しない。最新の契約はdesign.md §Z/AAと本書末尾の既存PR採否を参照。PO目視は完成後に実施する。
+
 親: [README.md](README.md)／理想: [design.md](design.md)／現状実測: [recon.md](../../handoff/design-system-recon/recon.md)・[網羅recon full-recon.md](../../handoff/design-system-recon/full-recon.md)
 PO承認: 2026-07-05初版／2026-07-06改訂（網羅reconで色の真数36・表28件・関所隙間5つが判明し便構成を再編）
 

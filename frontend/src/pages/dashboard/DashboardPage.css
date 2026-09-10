@@ -97,7 +97,7 @@
 }
 
 .db-section-icon {
-  color: var(--accent);
+  color: var(--icon-decorative);
   flex-shrink: 0;
   width: var(--icon-base);
   height: var(--icon-base);

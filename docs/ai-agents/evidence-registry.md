@@ -2016,3 +2016,17 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 ## EV-20260910-GUARD-ENFORCED
 
 2026-09-10、POの管理アカウント利用GO後、shingo-opsのadmin=trueを確認してruleset15777895へguard-authoring/evaluation（GitHub Actions15368）だけ追加。既存12件・strict・適用先・例外0件を保持。設定前後JSONと実イベント証跡は docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md から参照。未報告BLOCKED、評価欠落0b532e9fは必須FAILURE/BLOCKED、復元fb083494は13必須SUCCESS/CLEAN。試験#3405は未マージ閉鎖。設置#3401は23413b10でマージ・deploy34452331125成功、実配備SHAとHTTP200を確認済み。自己審査APPROVE、独立第二者レビューではない。既往失敗を保持し、製品画面・実データ取り込みの完了とは区別。
+
+### EV-20260910-FRONTEND-MOLD-20: 第1実装便マージと次の同値カラー集約
+
+PR #3412は2026-09-10T11:31:17Z、merge commit6d3e348614d675c533cc46fefddb03544f581e8cでMERGED。設計担当がGitHubのstate/mergedAt/mergeCommitを直接確認。最終HEAD254ab96fはCI38成功/対象外8、第二レビューAPPROVE適用確認。PO原文GO #3412を転記済みで公式merge/cleanup成功、active-work.dはDONE。ICON5値保持とCSS正本からの生成が実装済み。全体の画面統一完了とはしない。
+
+PO原文「離席するのでcxastragoモードと同じ条件で権限委譲するので進めてくれ」を受領。本セッションの対象は引き続きfrontend SSOT。ローカルcxastrago.zshとsalesanchor-astra-go.mdを読み取り、条件は有効化から24時間・不明/失敗/範囲外停止・代理判断の明記、現状はGO委任有効化待ち/期間未開始と確認。PR3406はOPENで委任承認経路未実装。最新main4734fe7fのGO検査もPO表記のみで、代理GO対応を確認できない。委任指示を受領した事実と、機械的有効化を区別し、PO名義GOを創作しない。承認経路の変更は本frontend便で行わない。
+
+既存の実装・レビュー・段階別PRの承認を根拠に、公式release/frontend-color-sourceをorigin/main4734fe7fから作成、preflight成功。旧PR2895/2911/2914/2919の採用差分を既存migrationに従って再測定する。calendar21用途・部品API・新CIは別便。新しい24時間期間を自己設定・再開延長しない。
+
+EV-20260910-FRONTEND-MOLD-20追補: 7製品原稿の限定第二レビューAPPROVE。manifest7件一致、既存9宣言/新16宣言/使用CSS7箇所/mail属性とCSSの対だけと別担当が確認。ブラウザー原稿は静的25ペアと実ソース変換を通過した補助実行後、Chromium1223未導入で起動できなかった。失敗ログを保存し、正式実装便で既存Playwright指定ブラウザーを正規導入して検証する。未実施を成功扱いしない。
+
+EV-20260910-FRONTEND-MOLD-20追補: 7製品を原稿hash一致で反映しrootが全件確認。npm ci成功後、npxのplaywrightが@playwright/test1.59.1へ解決し、比較の直接依存playwright1.60.0とブラウザー版がずれることをrealpath/package version/executablePathで実測。依存設定や期待値を変えず直接依存のCLIでChromium1223を導入するカードへ修正。失敗を保存し、検証結果は再開後に確認する。
+
+同値カラー便の検証完了追補: Generator実行の通常ブラウザー比較は静的25/色50/表示60ペア一致、既存check:all・build・test:coverage（14ファイル121試験）・build-storybookは全exit0。rootが生ログ/JSONと7製品hashを直接確認。詳細はdocs/handoff/design-system-recon/evidence-20260910/color-source-implementation.md。PR/リモートCI/マージ未完、目視は完成後PO、代理GO未有効。
