@@ -314,7 +314,7 @@ frontend-designスキルを適用し既存の業務部品/色/フォントを優
 
 ### ページ接続検証中の訂正（2026-09-10）
 
-- 正式画面URLは `frontend/src/App.tsx:294` と `DesktopShell.tsx:191` の `/super-admin/tcg-line-import`。ページ先頭コメントの `/super-admin/tcg-import` は古く、初回E2Eで3件が経路不一致となった。routingを変更せずコメントとE2Eを修正し、再実行でURL復元/ページング・非管理者要求0の2件が成功。配信試験はaria-label不一致を検出し修正中。
+- 正式画面URLは `frontend/src/App.tsx:294` と `frontend/src/components/DesktopShell.tsx:191` の `/super-admin/tcg-line-import`。ページ先頭コメントの `/super-admin/tcg-import` は古く、初回E2Eで3件が経路不一致となった。routingを変更せずコメントとE2Eを修正し、再実行でURL復元/ページング・非管理者要求0の2件が成功。配信試験はaria-label不一致を検出し修正中。
 - `migrations/20260906_120000_create_tcg_tables_t001.sql:426-427` の正規化数量/価格はNUMERIC。itemsのJSON数値として型を照合する。
 - 検証中に取込切替の旧値表示、未翻訳キー、配信部品未接続を発見しTerraへ修正を委任。buildだけを完成根拠にせず、競合・空/未記録・配信確認の試験と視覚検証を実施する。
 
