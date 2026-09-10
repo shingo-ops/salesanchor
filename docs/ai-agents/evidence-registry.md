@@ -1816,3 +1816,15 @@ PO原文「離席するので最後まで進めてくれ、事前にPRマージ�
 POの追加別PR修正・マージ・デプロイ指示を受領（GO #3401は#3401にのみ転記）。4つの共有DDL経路を既存lockへ参加させる限定修正を自己審査。試作8直接検査成功・修正前4関数拒否。Python3.14、実PG/CIは未実施。設計・調査はdocs/handoff/rls-bootstrap-txn-fix/design.mdとrecon.mdへ追補。実ログ /tmp/reports/INVENTORY-BOOTSTRAP-PROTOTYPE-TESTS-01.txt。
 
 追補（2026-09-10）: PO原文「次に進む、また離席するのでPRマージとデプロイまで進めてくれ」「GO #3401」を受領し#3401本文へ転記。時刻は未提供のため創作していない。追加修正#3402は89ad29ae3a8c3142db36b204e04f48e085803b29で07:46:50Zにマージ。head9a869d8a、実PG job102787311020は2467 passed/93 skipped、coverage61.52%、87.11秒。全CIと必須12成功、worktree回収・台帳DONE。#3401へmain取り込み時の台帳2件の独立追記を両方保持。最終設置CI/デプロイ/実イベント/限定必須化は別途確認する。
+
+
+## EV-20260910-LINE-GO-DELEGATION
+
+- 対象: 既存GOフローの子テーマ、LINE解析改善の期限付き委任。
+- PO確認文: 「この条件を正式な設計の前提として採用してよいですか？」、返答原文「OK」。条件全文は docs/handoff/go-record-transcription/line-delegation.md「POの願いと合意原文」に保存。
+- 調査基点: origin/main 3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1fe。preflight成功。現行validateGORecordを直接実行しPO表記受理/AI表記拒否のassert 2/2成功。新モードの検証ではない。
+- 親の改訂3作業場所に未保存5ファイルを確認。読み取りのみで保持。別作業の記録を自分の実機確認と混同しない。
+- 保存先: docs/handoff/go-record-transcription/line-delegation.md。索引はdocs/specs/README.mdの既存GOテーマ行。親ファイルへの並行編集を避け同テーマ内の追補とした。
+- 自己審査: REVISE。同一AI。委任保存先・主体・取消/実行境界・専用経路の実機試験は未確定。設計前提合意済み、製品実装/CI設定変更/有効化は未実施。
+
+- 追加依頼によりcxastraを保持してローカルcxastrago入口を登録。専用zsh関数/専用追補プロンプトを作成、.zshrcにsourceを追記。既存保持をバイト照合。構文検査と模擬8ケース成功、新login shellで両関数認識。GO委任は未有効・期間未開始。詳細/ハッシュ/履歴保存制限はline-delegation.md末尾。
