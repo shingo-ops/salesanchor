@@ -1681,3 +1681,25 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 実装提出: https://github.com/shingo-ops/salesanchor/pull/3399。初回HEAD 8104fd7f。純粋関数正常2例・拒否9例、ruff・書式・台帳検査成功。手元でpytestは未実行。設計のADR-113参照漏れをローカル成果物検査で検出し追補。CI・マージは後続確認。
 
 - CI HEAD 2e4365ad: 2429 passed / 93 skipped / 3 errors（在庫fixtureの旧pokemon code）。テスト1ファイルを対象へ追加し正規pokemon_booster_boxへ照合、空応答防止も追加。設計/recon追補で同一AI自己審査。マージ未実施。
+
+- 最終確認: PR #3399は2026-09-10T03:07:34ZにMERGED、merge 7e3dd6565bc8b239ee09967961326fd096fb72fe。最終HEAD feae3d97、実PGを含む2432 passed / 93 skipped、coverage 61.52%、必須12件成功。worktree回収・台帳DONEを確認。上の未マージ記述はその時点の履歴。
+
+## EV-20260910-TCG-SCHEMA-IMPL
+
+- 設計: PR #3392、docs/handoff/tcg-product-import/design.md §12。recon.md追補を照合。
+- 基点: 5386d664f40aa826e7e3d943b87bb65697d49165。TCG-SCHEMA-EDIT-01の正式card-lintと本文確認後に実装。
+- 対象: backend/tests/test_tcg_schema_qualification.py。設計資料とSHA-256一致（cb7e8f26eca8cd5e1bb630f6e88b249c411f60fbb41a68949fdbda0e0757c7eb）。
+- Python 3.12で7関数の直接実行成功。実ソースの修飾除去7例、動的4表の正常/異常各4例を含む。ruff checkとgit diff --check成功。
+- 既存DDL列照合関数を維持。商品サービス・DB・CI・運用スクリプトは変更しない。
+- 手元はDockerコマンドなし、Python 3.12にpytest未導入。直接関数実行を正式pytest結果とは扱わない。PRのpytest-run-internalとlint-backend-internalの実行成功が必要。
+- ユーザーはこのセッションを実装担当へ切り替え、実装→PR→検証→条件を満たせばマージする確認に「進める」と返答。番号付きGOは創作・転記していない。
+- 評価ゲート（依頼4）、商品マスタfrontend、QA試行と44件の本番取り込みは本PR対象外。
+
+- 実装提出: https://github.com/shingo-ops/salesanchor/pull/3397。変更はテスト1件・状態記録3件。公式wrapperで番号登録成功。CIは確認中であり、マージ済みとは扱わない。
+
+- CI停止: 最終HEAD 0c8c643eのrun 34429316341で、test_rls_bootstrap_ordering.pyのtenant_871.leads欠落が初回と再実行で発生。各2377 passed / 1 failed / 93 skipped。同じ実装を含む直前HEAD 780460b2のpytestは成功。差分は文書2件だけ。マージ保留、追加再実行なし。
+- 原因の接触面: backend/tests/rls_bootstrap.py:232の全テナントmigrationと、backend/tests/test_tcg_import_progress_pg.py:47のTCG専用一時schema。具体的な並列タイミングは未実測。別件の修正候補は /tmp/reports/TCG-SCHEMA-3397-CI-BLOCKER.md。禁止対象や追加コードには変更していない。
+
+- 別件のDB準備テスト修正をPR #3399へ提出。実DBで判明した在庫fixture旧codeも同PRのテスト内で補正中。現時点で両PRとも未マージ。
+
+- PR #3397へマージ済み#3399を取り込み。商品サービス・設計payloadは変更せず、当該PRの全CIを再確認する。#3397は未マージ。

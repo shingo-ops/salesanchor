@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| 商品取り込みのスキーマ修飾検査（依頼6） | 設計担当 | 文書PR #3392提出済み・同一AI自己審査APPROVE。資料7関数の直接試験成功。製品テスト未変更 | 文書PR確認後、正式カード検査を経て実装役へ渡す | docs/handoff/tcg-product-import/design.md §12 / recon.md追補 / EV-20260910-TCG-SCHEMA-DESIGN | 2026-09-10 |
+| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | PR #3393実装・読み取りレビュー済み。PostgreSQL統合を含む2424 passed。Gemini匿名実測8明細（作品7＋不明保持1）正答、誤分類0。一時ライブ試験はb2700dd0で除去 | #3398は固有GO受領・760532a9でマージ・本番deploy run34430261411成功。直前backup4.5M・SQL2本成功を直接確認。#3393はmain取り込み済み、受領済みGO/マージ依頼に基づき最終CI確認後マージ・反映確認へ進む。旧データ一括修復は対象外 | docs/handoff/tcg-product-master-growth/card-work-matching-v3.md / EV-20260910-LINE-ACCURACY-08 / https://github.com/shingo-ops/salesanchor/pull/3393 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
@@ -99,4 +99,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| RLS bootstrapの他領域干渉解消 | Codex | PR #3399提出。領域限定試験はエラーなし、別の在庫fixtureが3エラー。正規codeへの準備データ修正中 | 別PRの実PG/全CIを確認し、PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
