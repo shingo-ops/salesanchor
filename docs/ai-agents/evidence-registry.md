@@ -1763,3 +1763,5 @@ PO原文「離席するので最後まで進めてくれ、事前にPRマージ�
 - この記録は設置PR・マージ・機械強制・POの個別GOを完了扱いにしない。
 
 依頼4の実ファイル配置後検証: 67成功/失敗0/skip0（24.77秒）。証跡 docs/handoff/design-partner-card-ops/guard-evaluations/20260910-install-tests.txt。YAML/設計形式/維持欄/引用先/台帳構造も成功。GitHub CIと実イベント、必須化は未実施。
+
+依頼4の設置PR提出: https://github.com/shingo-ops/salesanchor/pull/3401 。head 3306df2a76368e8ab522cac366b282c824af9cfd、.pr-number一致を直接確認。実Gitの8対象blobと評価JSON照合成功。PR本文ADR表記の不一致を修正し再照合成功。CI確認中・正式GO未受領・未マージ・必須化未実施。

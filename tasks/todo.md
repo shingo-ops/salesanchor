@@ -108,4 +108,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| guards変更の必読・弊害・トレードオフ評価 | Codex | 設置設計自己審査済み・実装後67検査成功。PR提出準備中、機械強制は未実施 | 実装PRを検証・提出し正式GO確認。設置後の試行と管理者による限定必須化を分ける | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
+| guards変更の必読・弊害・トレードオフ評価 | Codex | 設置PR #3401提出済み。自己審査・実装後67検査成功。CI確認中、機械強制は未実施 | 実装PRを検証・提出し正式GO確認。設置後の試行と管理者による限定必須化を分ける | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
