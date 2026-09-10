@@ -1982,3 +1982,11 @@ GitHub PR #3407は2026-09-10T09:15:15Zにmerge commit d715d998877e899206ba9bb4f8
 CSS314候補、動的Badge33箇所166状態、動的style172項目、Icon/Spinner属性を追加照合。限定CIの有限propertyと部品寸法除外を確定、受入C01〜C27。調査担当の報告と設計担当の直接差分/文書検査を区別し、未実装テストを実行済みとしない。最新origin/main0be59e5290cab4149aa5451920317f8fa7f7564cと3bdf33d5のfrontend差分0を直接確認。
 
 次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカード検査。製品実装未着手、CIは最後。ADR-144の追補はProposedで、PO自筆の承認/番号付きGOを代筆しない。
+
+### EV-20260910-FRONTEND-MOLD-19: 設計文書マージと数値アイコン実装便
+
+PR #3409は2026-09-10T09:56:27Z、merge commit b36041ed9fa69881886c431d05d586cf09e82f56でMERGED。設計担当がgh pr viewで直接確認。最終HEAD586ba4e3の全CI成功/対象外skipと限定文書レビューAPPROVEを確認し公式mergeスクリプトを実行。全体設計は同一AI自己審査であり、独立した第二者設計審査とは称しない。
+
+同mergeを起点に公式new-worktree.shでrelease/frontend-icon-sourceを作成、preflight成功。CARD-ICON-SOURCE-IMPLEMENT-01をcard-lint exit0で検査してGeneratorへ委任。ICON5値14/16/20/24/48を保つ数値生成だけを本便とし、配色・部品API・画面移行・CI追加は別便。原稿レビューのCLI回帰と途中書込/rename失敗検証の不足を追加試験へ反映。製品検証/PR/マージの結果は完了後追記し、準備段階では合格としない。PO目視は完成後。
+
+EV-20260910-FRONTEND-MOLD-19追補: Generatorの35試験（Node24/22各35成功、失敗0/skip0）、npm ci/check:all/build成功の生ログを設計担当が確認。製品差分第二レビューAPPROVE。詳細とhashはdocs/handoff/design-system-recon/evidence-20260910/icon-source-implementation.md。PR/CI/マージ未完、画面目視は完成後PO。
