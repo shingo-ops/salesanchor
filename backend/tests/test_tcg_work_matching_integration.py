@@ -244,3 +244,147 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
         assert cursor.fetchone() == ("PM0123", True, "name-first-v3-work")
+
+
+def seed_guard_dictionary(connection, schema):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
+                    [("vol.1", 3)], [("マスターボールミラー", 8)])]
+        for code, title, work, category, search, exclude in products:
+            cursor.execute(sql.SQL("""INSERT INTO {}.tcg_products
+                (code,japanese_title,category_class,is_active,work_id,product_category_id)
+                SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
+                {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING id""").format(
+                    *[sql.Identifier(schema)] * 3), (code, title, work, category))
+            pid = cursor.fetchone()[0]
+            for table, entries in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
+                for word, position in entries:
+                    cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
+                        sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+
+
+def guard_snapshot(connection, schemas=("tenant_004", "tenant_903")):
+    result = {}
+    with connection.cursor() as cursor:
+        for schema in schemas:
+            for table in ("product_search_keywords", "product_exclude_keywords"):
+                cursor.execute(sql.SQL("SELECT k.id,k.product_id,k.keyword,k.position,p.code FROM {}.{} k JOIN {}.tcg_products p ON p.id=k.product_id ORDER BY k.id").format(
+                    sql.Identifier(schema), sql.Identifier(table), sql.Identifier(schema)))
+                result[schema, table] = cursor.fetchall()
+    return result
+
+
+def test_false_positive_guards_exact_changes_idempotency_and_26_inputs(pg, monkeypatch):
+    connection, engine, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_guard_dictionary(connection, schema)
+    monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    codes = [product[0] for product in GUARD_PRODUCTS]
+
+    def evaluate(cases):
+        with Session(engine) as session:
+            search, exclude = analyzer.load_product_keywords(session)
+        return [analyzer.match_pid_with_work(name, codes, search, exclude,
+                    work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
+                for name, state, memo in cases]
+
+    wrong = [(name, "", "") for name, _ in GUARD_WRONG_INPUTS]
+    assert len(wrong) == 10 and len(GUARD_CONTROLS) == 16
+    previous = evaluate(wrong)
+    assert [row[0] for row in previous] == [code for _, code in GUARD_WRONG_INPUTS]
+    assert all(row[2] for row in previous)
+    old_controls = evaluate([row[:3] for row in GUARD_CONTROLS])
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / GUARDS).read_text())
+    after = guard_snapshot(connection)
+    search_key = ("tenant_004", "product_search_keywords")
+    exclude_key = ("tenant_004", "product_exclude_keywords")
+    assert after[search_key] == [r for r in before[search_key] if not (r[4] == "PM0230" and r[2] == "vol.1")]
+    assert len(before[search_key]) - len(after[search_key]) == 1
+    assert set(before[exclude_key]).issubset(set(after[exclude_key]))
+    added = set(after[exclude_key]) - set(before[exclude_key])
+    assert {(r[4], r[2], r[3]) for r in added} == {
+        ("PM0104", "マスターボールミラー", 28), ("PM0184", "スペシャルデッキセット", 2)}
+    for table in ("product_search_keywords", "product_exclude_keywords"):
+        assert before["tenant_903", table] == after["tenant_903", table]
+        assert [r for r in before["tenant_004", table] if r[4] == "PM_OTHER"] == [
+            r for r in after["tenant_004", table] if r[4] == "PM_OTHER"]
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / GUARDS).read_text())
+    assert guard_snapshot(connection) == after
+    assert evaluate(wrong) == [(None, "NONE", False, [])] * 10
+    current = evaluate([row[:3] for row in GUARD_CONTROLS])
+    for old, actual, (_, _, _, expected) in zip(old_controls, current, GUARD_CONTROLS):
+        if expected:
+            assert actual == old and actual[0] == expected and actual[2]
+        else:
+            assert actual == (None, "NONE", False, [])
+
+
+@pytest.mark.parametrize("code", ["PM0230", "PM0104", "PM0184"])
+@pytest.mark.parametrize("field", ["japanese_title", "work_id", "product_category_id", "code"])
+def test_false_positive_guards_identity_mismatch_preserves_all(pg, code, field):
+    connection, _, _ = pg
+    seed_guard_dictionary(connection, "tenant_004")
+    with connection.cursor() as cursor:
+        if field in ("work_id", "product_category_id"):
+            cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}=NULL WHERE code=%s").format(sql.Identifier(field)), (code,))
+        else:
+            cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}='different' WHERE code=%s").format(sql.Identifier(field)), (code,))
+        before = guard_snapshot(connection, ("tenant_004",))
+        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
+            cursor.execute((MIGRATIONS / GUARDS).read_text())
+    assert guard_snapshot(connection, ("tenant_004",)) == before
+
+
+@pytest.mark.parametrize("code,table,word", [
+    ("PM0230", "product_search_keywords", "vol.1"),
+    ("PM0104", "product_exclude_keywords", "マスターボールミラー"),
+    ("PM0184", "product_exclude_keywords", "スペシャルデッキセット"),
+])
+def test_false_positive_guards_duplicate_preserves_all(pg, code, table, word):
+    connection, _, _ = pg
+    seed_guard_dictionary(connection, "tenant_004")
+    with connection.cursor() as cursor:
+        for _ in range(1 if code == "PM0230" else 2):
+            cursor.execute(sql.SQL("INSERT INTO tenant_004.{}(id,product_id,keyword,position) SELECT %s,id,%s,99 FROM tenant_004.tcg_products WHERE code=%s").format(sql.Identifier(table)),
+                           (str(uuid4()), word, code))
+        before = guard_snapshot(connection, ("tenant_004",))
+        with pytest.raises(psycopg2.errors.RaiseException, match="duplicate target keyword"):
+            cursor.execute((MIGRATIONS / GUARDS).read_text())
+    assert guard_snapshot(connection, ("tenant_004",)) == before
+
+
+def test_false_positive_guards_absent_tables_noop(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / GUARDS).read_text())
+        cursor.execute("CREATE SCHEMA tenant_004")
+        cursor.execute((MIGRATIONS / GUARDS).read_text())
+        cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_004'")
+        assert cursor.fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("table", ["tcg_products", "tcg_series", "tcg_product_categories",
+                                 "product_search_keywords", "product_exclude_keywords"])
+def test_false_positive_guards_partial_structure_stops(pg, table):
+    connection, _, _ = pg
+    seed_guard_dictionary(connection, "tenant_004")
+    before = guard_snapshot(connection, ("tenant_004",))
+    with connection.cursor() as cursor:
+        cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(table)))
+        try:
+            with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
+                cursor.execute((MIGRATIONS / GUARDS).read_text())
+        finally:
+            cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
+    assert guard_snapshot(connection, ("tenant_004",)) == before
+
+
+# Dictionary fixtures contain product labels only, with newly generated IDs.
+GUARDS = "20260910_170000_tcg_keyword_false_positive_guards.sql"
+GUARD_PRODUCTS = [('PM0104', 'ポケモンカード151', 'IP001', 'PC_BOX', [('ポケモンカード151', 2), ('151', 1)], [('vol.3', 1), ('hope', 3), ('jumbo', 6), ('surprised', 4), ('slim', 5), ('収集啦', 17), ('fat', 7), ('礼盒', 27), ('journey', 2)]), ('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', [('メガゲンガー', 1), ('メガゲンガーex', 4), ('MEGAゲンガーex', 2), ('MEGAゲンガー', 3)], [('MEGディアンシー', 1)]), ('PM0230', 'トライアルデッキ 【推しの子】', 'IP007', 'PC_SINGLE', [('OSK', 3), ('推しの子', 1), ('oshi no ko', 2), ('vol.1', 5), ('trial deck', 4)], [])]
+GUARD_WRONG_INPUTS = [('リミテッドカードコレクション Vol.1', 'PM0230'), ('■スペシャルデッキセットMEGA メガオーダイル・メガカイリュー・メガゲンガー', 'PM0184'), ('マスターボールミラー151のみ', 'PM0104'), ('リミテッドカードコレクションvol.1', 'PM0230'), ('LIMIT OVER SPECIAL PACK Vol.1', 'PM0230'), ('BASE SHOP リミテッドカードコレクションvol.1', 'PM0230'), ('BASE SHOP vol.1', 'PM0230'), ('プレミアムカードコレクション  – 6 assort vol.1 -', 'PM0230'), ('プレミアムカードコレクション- ベストセレクションvol.1 -', 'PM0230'), ('プレミアムカードコレクション 6 assort vol.1', 'PM0230')]
+GUARD_CONTROLS = [('推しの子 vol.1', '', '', 'PM0230'), ('推しの子', '', '', 'PM0230'), ('ポケモンカード151', '', '', 'PM0104'), ('151', '', '', 'PM0104'), ('スターターセットMEGA メガゲンガーex', '', '', 'PM0184'), ('BASE SHOP vol.1', '', '', None), ('リミテッドカードコレクション Vol.1', '', '', None), ('151', 'マスターボールミラー', '', None), ('151', '', 'マスターボールミラー', None), ('メガゲンガー', 'スペシャルデッキセット', '', None), ('メガゲンガー', '', 'スペシャルデッキセット', None), ('vol.1', '', '', None), ('BASE SHOP vol.10', '', '', None), ('BASE SHOP vol.11', '', '', None), ('リミテッドカードコレクション vol.10', '', '', None), ('BASE SHOP vol.2', '', '', None)]
