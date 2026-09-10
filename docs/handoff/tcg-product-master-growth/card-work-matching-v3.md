@@ -111,4 +111,6 @@ source SHAは ceb0d73fb8e00033b7d4762fc99c57b918d3d491。2本のSQLを逐語一�
 
 先行PR実行結果: #3398（8ef86fd0）提出、差分3ファイル。SQL2本の逐語一致をrootも確認。先行PR固有Backend2374 passed/93 skipped、実DB migration実行・全件ドライラン成功。先行PRのGO記録だけ未了。#3393も未マージ。詳細はEV-20260910-LINE-ACCURACY-08同日追補。
 
+2026-09-10先行反映完了: PO原文「GO #3398」受領後に760532a9でマージ。deploy run34430261411成功、直前バックアップ4.5M生成と2SQLのDO成功をrootが確認。#3393へmain取り込み済み、既存GOとマージ依頼に基づく最終CI・マージへ進む。詳細はEV-20260910-LINE-ACCURACY-08。
+
 END OF CARD
