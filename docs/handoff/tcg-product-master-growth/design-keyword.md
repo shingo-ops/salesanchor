@@ -397,3 +397,56 @@ SQLはtenant_004だけを対象に1トランザクションで3操作。tenant_0
 PR #3400 / 検証HEAD772a09b776eef9f3cfcc729efa7d1be0160a7b6d。Backend run34432985860/job102732312951:2459 passed/93 skipped/302 warnings、88.71秒、coverage61.51%。新規23テストケースはCI使い捨てPostgreSQLで実行、匿名10と合成16を含む。rootもSQL・試験差分・GitHubログを読み取り確認し、追加阻害所見なし。製品ファイル3件は設計どおり。技術チェック成功と本番反映は別の状態。
 
 現時点の停止: process-artifacts gate job102732666119がPO原文「承認する、修正から」「本番反映まで実施してくれ、」を番号付きGOではないとして拒否した。scripts/check-process-artifacts.jsはGO原文中の対象PR番号一致を要求する。包括的なマージ事前承認は受領済みだが、「GO #3400」の原文は未受領。PO原文の代筆、ゲート変更、管理者マージは行わない。安全なファイル編集はapply_patchで成功し、先のshell保存時の誤検知は解消済み。マージ・今回の本番変更・再解析・配信は未実施。
+
+## 12. 配信を止める中断2ジョブの限定復旧（2026-09-10）
+
+### 12.1 目的・承認・根拠
+
+§11は#3400で本番反映・79job/1425明細再解析まで完了（recon末尾）。全3接続への配信は安全装置#8bで停止した。安全装置を維持して中断2件を復旧し、有効な原文1件の抽出・解析完了後に3接続へ配信できる状態にする。
+
+POへ「無効になった旧メッセージ1件は再実行せず、有効な1件だけを復旧する。成功扱いには書き換えない」と提示し、原文「進める」を受領。追加原文「› › 次に進む、また離席するのでPRマージとデプロイまで進めてくれ」を受領。これが復旧・実装・PR・マージ・デプロイの対象承認。日付2026-09-10 JST、時分は未取得。旧PRの番号付きGOは流用しない。
+
+07:38:28ZのSELECTで2jobはrunning、items各0、extracted_at/error_messageはNULL。作成時刻は両方2026-09-10T02:49:21.105805Z。前後のCelery inspectはactive/reserved/scheduled各0。既存taskはpendingだけを処理し、retry_extractionはpending/errorのみ・running/doneをskipする（tcg_extraction.py:116、tcg_diagnostics_svc.py:184）。中断原因は未確認。タイムアウト等と断定しない。
+
+| job ID | source ID | 原文の有効性 | 復旧後 |
+|---|---|---|---|
+| 6da3ca68-651e-4ff6-8316-1c9135508ad2 | b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2 | false、superseded_by=3a4633b1-82a6-4ce5-8694-053cd637c5f6 | 中断をerrorとして記録、再実行・再有効化しない |
+| bfa07018-9b34-42b6-990a-017e3c1cf140 | afbc08d1-cf3b-43be-87e5-4b7200144b6c | true、superseded_by=NULL | 中断をerrorとして記録、反映後に既存retry_extractionでこの1件だけ再実行 |
+
+有効原文は837文字の商品一覧、無効原文は10文字の終了表記。内容はline-recovery-source.jsonに退避しGitへは含めない。外部導入事例は不要。今回の根拠は固定2件のDB観測、既存サービス、既存復旧migrationの実物（20260907_120000、20260908_130000）である。
+
+### 12.2 実装契約・対象外
+
+製品変更は `migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql`、runner末尾の1登録、既存 `backend/tests/test_tcg_work_matching_integration.py` の追加試験だけ。アプリ・API・Gemini・配信の実装やCI・secrets・他tenant・他job・原文・商品/状態辞書を変更しない。本番直接更新は行わず、退避と既存migration経路を使う。
+
+SQLはBEGIN→SET LOCAL lock_timeout=5s/statement_timeout=30s→DO→COMMIT。対象表source_messages/extraction_jobs/extraction_itemsが全て不在なら変更0。一部欠落は例外。3表へSHARE ROW EXCLUSIVEロック取得後に事前条件を検証し、後続の同時変更と競合させない。
+
+1. 固定job IDが両方不在なら変更0（新規環境）。片方のみなら例外。両方のsource ID・created_atは上表と完全一致が必須。
+2. running以外のjobは変更しない。既にdone/empty/error/pendingになったjobを再度中断させない。この条件により後日deployが繰り返しても復旧済みの再実行は生じない。
+3. runningのjobについてのみ、上表のis_active/superseded_by、extracted_at=NULL、prompt_version=NULL、error_message=NULL、items0、作成から10分以上を検証。一つでも違えば、2件とも変更せず例外。
+4. すべての検証後、固定IDのrunningだけstatus=error、error_message=`LINE-RECOVERY-20260910: interrupted job; PO-approved recovery`へ変更。他の列を保持する。期待変更件数は直前に検証したrunning件数（0〜2）であり、件数不一致ならトランザクション全体を失敗させる。
+5. ジョブをdoneへ書き換えない。行削除・抽出item生成・Celery enqueueはmigration内に入れない。SQL再実行は変更0。復旧済みjobが再度runningだが条件が違う場合も例外として二重実行を防ぐ。
+
+lock/statement timeoutの仕様根拠は§11.9で確認済みのPostgreSQL16公式資料を再利用する。新しいライブラリ契約は導入しない。
+
+### 12.3 反映・再実行・配信（root担当）
+
+実装役は実DB試験・PR提出で停止。rootが差分とCIを確認。マージ直前にworkerのactive/reserved/scheduled、2jobと原文・itemsを再確認。対象の実行/予約があれば終了を待つ。応答不能・前提ずれは停止する。PO原文の番号要件が拒否された場合も代筆・迂回しない。
+
+既存deployの直前DBバックアップ成功、当該migration成功、backend healthを確認。その後有効jobの現状を読む。error/pendingかつitems0なら既存retry_extractionをjob_ids=[有効jobの固定ID]、scope=Noneで1回呼ぶ。already done/emptyなら再投入せず結果を検証。予想外の状態・応答不明で盲目的再送しない。
+
+無効sourceはfalseのまま、既存明細は保持。有効sourceの抽出は新規items生成のため、doneかつitems>0と全itemの解析保存を確認し、原文の商品・価格・数量・状態との照合を行う。empty/errorなら商品一覧の抽出未達として配信を停止し原因確認。未完了run/jobが0であることを確認し、既存3シートのタブ内容を退避して既存run_distributionを全targetへ実行する。3件の書込結果と実値を照合。検証不足の新商品/状態ルール追加は混載しない。
+
+### 12.4 受入・自己審査
+
+CI使い捨てPostgreSQLで、2件の初回変更と他列/他job/他tenant保持、再実行0、対象0skip・1件欠落fail、3表全不在skip・一部欠落fail、ID対応/created_at/有効性/後継ID/抽出時刻/prompt/error/itemsの各ずれで全件原状保持、running以外の保持、競合ロックtimeoutと設定復帰を確認する。既存retry_extractionの1件限定enqueueはモデル通信をmockし、有効jobだけpendingになること、無効jobがerrorのまま保たれることを実DBで確認する。既存配信安全装置の試験も維持する。ローカルDockerなしはCIで実行し、未実行を合格としない。
+
+Architect自己審査: APPROVE（同一AIの設計審査、独立レビューではない）。固定2件・既存状態遷移への復帰・全件事前検証・単一トランザクション・再実行0・既存配信停止条件維持により範囲と受入が明確。未解決の中断原因はこの限定復旧で原因修正済みと扱わない。採用しなかった案は、runningを成功にする案（未抽出を隠す）、無効原文も再実行する案（POの対象外）、恒久的な自動中断検知追加（対象拡大）。再発防止の恒久設計は別件。
+
+維持担当: 既存実装担当がSQL/既存試験を保守し、rootが反映・復旧・配信の一次証拠をrecon/evidence/tasksへ保存。新たなrunning残存は既存diagnosticsの10分超検出で観測する。今回の中断終了が将来の発生防止まで保証するとはしない。
+
+### 12.5 実装検証・提出位置
+
+PR #3403 / 製品検証HEAD `be4bf045a1c5dabc62cfaa5a125b4590e66fb432`。Backend run34451813934/job102789066448は2499 passed / 93 skipped / 302 warnings、78.65秒、coverage61.60%。復旧追加32ケースはskipなし。実DBmigration run34451813639を含む技術CI成功。rootもSQL・試験差分と上記ログを直接確認し、設計契約からの逸脱・追加阻害指摘なし。全文ログは/private/tmp/line-interrupted-recovery-execution-report.md。
+
+POのマージ・デプロイ承認は受領済みだが、process-artifacts run34451813776/job102789028541は受領原文が「GO #3403」形式ではないため拒否。当該番号付き原文は未受領。過去のGO #3400を転用せず、番号を代筆せず、マージ前に停止。本復旧の本番反映・有効1件の再実行・3接続への配信は未実施。
