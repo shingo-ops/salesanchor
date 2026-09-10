@@ -1,0 +1,1156 @@
+[
+  {
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "line": 186,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "select",
+        "line": 204
+      },
+      {
+        "tag": "button",
+        "line": 227
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 204
+      },
+      {
+        "name": "onClick",
+        "line": 227
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/DataTable.tsx",
+    "line": 168,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{columns.length + (selectable ? 1 : 0)}",
+        "line": 226
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 173
+      },
+      {
+        "tag": "button",
+        "line": 197
+      },
+      {
+        "tag": "input",
+        "line": 261
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 173
+      },
+      {
+        "name": "onClick",
+        "line": 197
+      },
+      {
+        "name": "onClick",
+        "line": 239
+      },
+      {
+        "name": "onKeyDown",
+        "line": 239
+      },
+      {
+        "name": "onChange",
+        "line": 261
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "line": 329,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 364
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "line": 197,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 220
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 208
+      },
+      {
+        "name": "onChange",
+        "line": 220
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "line": 195,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 219
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 206
+      },
+      {
+        "name": "onChange",
+        "line": 219
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "line": 184,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 207
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 195
+      },
+      {
+        "name": "onChange",
+        "line": 207
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "line": 115,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "line": 81,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 157
+      },
+      {
+        "tag": "button",
+        "line": 170
+      },
+      {
+        "tag": "button",
+        "line": 184
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 157
+      },
+      {
+        "name": "onClick",
+        "line": 170
+      },
+      {
+        "name": "onClick",
+        "line": 184
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+    "line": 80,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 97
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 97
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+    "line": 132,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 151
+      },
+      {
+        "tag": "button",
+        "line": 161
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 151
+      },
+      {
+        "name": "onClick",
+        "line": 161
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "line": 76,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "line": 75,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 87
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 84
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 84
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "line": 91,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{4}",
+        "line": 102
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "line": 189,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "select",
+        "line": 205
+      },
+      {
+        "tag": "input",
+        "line": 218
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 205
+      },
+      {
+        "name": "onChange",
+        "line": 218
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+    "line": 30,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 52
+      },
+      {
+        "tag": "button",
+        "line": 53
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 52
+      },
+      {
+        "name": "onClick",
+        "line": 53
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+    "line": 102,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 124
+      },
+      {
+        "name": "onClick",
+        "line": 129
+      },
+      {
+        "name": "onClick",
+        "line": 132
+      },
+      {
+        "name": "onClick",
+        "line": 136
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "line": 501,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{visibleColCount}",
+        "line": 525
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 533
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 533
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "line": 257,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 271
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 271
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "line": 322,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 340
+      },
+      {
+        "tag": "input",
+        "line": 347
+      },
+      {
+        "tag": "input",
+        "line": 365
+      },
+      {
+        "tag": "input",
+        "line": 369
+      },
+      {
+        "tag": "input",
+        "line": 382
+      },
+      {
+        "tag": "input",
+        "line": 385
+      },
+      {
+        "tag": "input",
+        "line": 388
+      },
+      {
+        "tag": "button",
+        "line": 393
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 340
+      },
+      {
+        "name": "onChange",
+        "line": 347
+      },
+      {
+        "name": "onChange",
+        "line": 365
+      },
+      {
+        "name": "onChange",
+        "line": 369
+      },
+      {
+        "name": "onChange",
+        "line": 382
+      },
+      {
+        "name": "onChange",
+        "line": 385
+      },
+      {
+        "name": "onChange",
+        "line": 388
+      },
+      {
+        "name": "onClick",
+        "line": 393
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "line": 243,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "line": 305,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 333
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 334
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 335
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 336
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 337
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 338
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 339
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "footer": true
+  },
+  {
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "line": 286,
+    "spans": [
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 292
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 299
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 351
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 361
+      },
+      {
+        "name": "colSpan",
+        "value": "{9}",
+        "line": 396
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 352
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 304
+      },
+      {
+        "name": "onDragStart",
+        "line": 340
+      },
+      {
+        "name": "onDragOver",
+        "line": 340
+      },
+      {
+        "name": "onDrop",
+        "line": 340
+      },
+      {
+        "name": "onClick",
+        "line": 340
+      },
+      {
+        "name": "onClick",
+        "line": 351
+      },
+      {
+        "name": "onChange",
+        "line": 352
+      },
+      {
+        "name": "onDragStart",
+        "line": 375
+      },
+      {
+        "name": "onDragOver",
+        "line": 375
+      },
+      {
+        "name": "onDrop",
+        "line": 375
+      },
+      {
+        "name": "onClick",
+        "line": 375
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "line": 165,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 188
+      },
+      {
+        "tag": "input",
+        "line": 191
+      },
+      {
+        "tag": "input",
+        "line": 194
+      },
+      {
+        "tag": "button",
+        "line": 201
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 188
+      },
+      {
+        "name": "onChange",
+        "line": 191
+      },
+      {
+        "name": "onChange",
+        "line": 194
+      },
+      {
+        "name": "onClick",
+        "line": 201
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "line": 170,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 189
+      },
+      {
+        "tag": "input",
+        "line": 196
+      },
+      {
+        "tag": "input",
+        "line": 214
+      },
+      {
+        "tag": "input",
+        "line": 218
+      },
+      {
+        "tag": "input",
+        "line": 231
+      },
+      {
+        "tag": "input",
+        "line": 234
+      },
+      {
+        "tag": "input",
+        "line": 237
+      },
+      {
+        "tag": "button",
+        "line": 242
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 189
+      },
+      {
+        "name": "onChange",
+        "line": 196
+      },
+      {
+        "name": "onChange",
+        "line": 214
+      },
+      {
+        "name": "onChange",
+        "line": 218
+      },
+      {
+        "name": "onChange",
+        "line": 231
+      },
+      {
+        "name": "onChange",
+        "line": 234
+      },
+      {
+        "name": "onChange",
+        "line": 237
+      },
+      {
+        "name": "onClick",
+        "line": 242
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "line": 175,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 211
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 212
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 213
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 214
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 215
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "footer": true
+  },
+  {
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "line": 99,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 111
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/DexTab.tsx",
+    "line": 343,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "line": 123,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 352,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{8}",
+        "line": 367
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 372
+      },
+      {
+        "tag": "button",
+        "line": 387
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 372
+      },
+      {
+        "name": "onClick",
+        "line": 387
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 430,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 442
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 447
+      },
+      {
+        "tag": "button",
+        "line": 459
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 447
+      },
+      {
+        "name": "onClick",
+        "line": 459
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "line": 120,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{9}",
+        "line": 161
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 148
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 148
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 494,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{8}",
+        "line": 516
+      },
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 705
+      },
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 753
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 535
+      },
+      {
+        "tag": "select",
+        "line": 574
+      },
+      {
+        "tag": "select",
+        "line": 595
+      },
+      {
+        "tag": "select",
+        "line": 616
+      },
+      {
+        "tag": "select",
+        "line": 637
+      },
+      {
+        "tag": "input",
+        "line": 658
+      },
+      {
+        "tag": "input",
+        "line": 675
+      },
+      {
+        "tag": "input",
+        "line": 777
+      },
+      {
+        "tag": "input",
+        "line": 804
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 535
+      },
+      {
+        "name": "onChange",
+        "line": 574
+      },
+      {
+        "name": "onChange",
+        "line": 595
+      },
+      {
+        "name": "onChange",
+        "line": 616
+      },
+      {
+        "name": "onChange",
+        "line": 637
+      },
+      {
+        "name": "onChange",
+        "line": 658
+      },
+      {
+        "name": "onChange",
+        "line": 675
+      },
+      {
+        "name": "onChange",
+        "line": 777
+      },
+      {
+        "name": "onChange",
+        "line": 804
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "line": 267,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{4}",
+        "line": 279
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 295
+      },
+      {
+        "tag": "button",
+        "line": 298
+      }
+    ],
+    "events": [
+      {
+        "name": "onDragStart",
+        "line": 283
+      },
+      {
+        "name": "onDragOver",
+        "line": 283
+      },
+      {
+        "name": "onDrop",
+        "line": 283
+      },
+      {
+        "name": "onClick",
+        "line": 295
+      },
+      {
+        "name": "onClick",
+        "line": 298
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "line": 241,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 269
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 257
+      },
+      {
+        "tag": "button",
+        "line": 265
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 257
+      },
+      {
+        "name": "onClick",
+        "line": 265
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "line": 348,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{3}",
+        "line": 366
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 362
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 362
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "line": 515,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 156,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{2}",
+        "line": 168
+      },
+      {
+        "name": "colSpan",
+        "value": "{2}",
+        "line": 189
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 201,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 204
+      },
+      {
+        "name": "onClick",
+        "line": 211
+      },
+      {
+        "name": "onClick",
+        "line": 219
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "line": 331,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 359
+      },
+      {
+        "tag": "button",
+        "line": 364
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 359
+      },
+      {
+        "name": "onClick",
+        "line": 364
+      }
+    ],
+    "footer": false
+  }
+]

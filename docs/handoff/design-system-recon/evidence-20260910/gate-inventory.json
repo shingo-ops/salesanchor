@@ -1,0 +1,711 @@
+{
+  "counts": {
+    "select": 65,
+    "input": 233,
+    "tab": 38
+  },
+  "rows": [
+    {
+      "file": "frontend/src/pages/account-settings/AccountSettingsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+      "select": 0,
+      "input": 6,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/AdminHubPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 2
+    },
+    {
+      "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+      "select": 0,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "select": 0,
+      "input": 8,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "select": 3,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "select": 1,
+      "input": 5,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/archives/ArchivesPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/bots/BotEditPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/bots/BotFormFields.tsx",
+      "select": 0,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "select": 3,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/coming-soon/ComingSoonPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "select": 1,
+      "input": 23,
+      "tab": 4
+    },
+    {
+      "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressModal.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "select": 1,
+      "input": 10,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyChannelsTab.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyConvLogsTab.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 7
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "select": 0,
+      "input": 4,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "select": 0,
+      "input": 6,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "select": 3,
+      "input": 8,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/crm/CustomerHubPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "select": 2,
+      "input": 0,
+      "tab": 3
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FollowUpsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelLeadsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelReasonsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 3
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelRevenuePage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/erp/ERPPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "select": 5,
+      "input": 5,
+      "tab": 3
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 2
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "select": 4,
+      "input": 6,
+      "tab": 3
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxSettingsModal.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inbox/SalesFormMultiSelect.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierSetupGuidePage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "select": 1,
+      "input": 5,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "select": 0,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 2
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+      "select": 0,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "select": 0,
+      "input": 4,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/management-center/ManagementCenterPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "select": 0,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "select": 9,
+      "input": 5,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "select": 1,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "select": 1,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "select": 1,
+      "input": 5,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 2
+    },
+    {
+      "file": "frontend/src/pages/register/CountryCombobox.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "select": 0,
+      "input": 9,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "select": 0,
+      "input": 8,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "select": 0,
+      "input": 17,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/sales/SalesPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "select": 1,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "select": 2,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+      "select": 0,
+      "input": 8,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "select": 0,
+      "input": 8,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "select": 1,
+      "input": 5,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "select": 6,
+      "input": 5,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "select": 4,
+      "input": 2,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "select": 0,
+      "input": 11,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgDistributionPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "select": 2,
+      "input": 5,
+      "tab": 1
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSupplierQualityPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierEditPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+      "select": 0,
+      "input": 3,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+      "select": 0,
+      "input": 1,
+      "tab": 0
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "select": 0,
+      "input": 0,
+      "tab": 0
+    }
+  ]
+}
