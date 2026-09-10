@@ -2047,3 +2047,8 @@ EV-20260910-FRONTEND-MOLD-20提出追補: 実装commit48924bd4を通常push済�
 PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO記録なしでFAILURE。rootがGitHubログを直接確認。代理GO未対応を名前の偽装で通さず、POのGO #3420待ち。残りの技術CIは確認中。マージ/本番反映未実施。
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
+
+
+## EV-20260911-PMG-VISUAL-HIERARCHY
+
+POの認知負荷軽減依頼に基づく表示改善。根拠: docs/handoff/pmg-import-delivery-ssot/design.md と recon.md の2026-09-11表示節。3つの公開設計指針と実物部品/状態契約を照合、自己審査APPROVEは表示範囲だけ。Terraへの正式カード発行前。実装・視覚/動作試験・PRマージ・本番反映は未完了。
