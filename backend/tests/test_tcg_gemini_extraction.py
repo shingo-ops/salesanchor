@@ -465,9 +465,16 @@ def test_temporary_live_work_measurement(capsys):
     metrics = dict(messages=6, expected_items=8, observed_items=0,
                    format_failures=0, api_failures=0, missing_items=0, excess_items=0,
                    correct=0, unknown=0, wrong=0, expected_unknown_correct=0)
-    if not os.getenv("GEMINI_API_KEY", "").strip():
+    stop_reason = None
+    if os.getenv("SKIP_REAL_LLM_TESTS", "").lower() in ("1", "true", "yes"):
+        stop_reason = "not_run_disabled"
+    elif not os.getenv("GEMINI_API_KEY", "").strip():
+        stop_reason = "not_run_no_key"
+    elif os.getenv("GEMINI_API_KEY", "").startswith("test-"):
+        stop_reason = "not_run_mock_key"
+    if stop_reason:
         with capsys.disabled():
-            print("LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status="not_run_no_key", **metrics)))
+            print("LINE_WORK_LIVE_MEASUREMENT " + json.dumps(dict(status=stop_reason, **metrics)))
         return
     works = [
         dict(id="2fe437c0-5a47-4311-9b94-0c107f64adcd", display_name="Pokemon", alt_name="ポケモン"),
