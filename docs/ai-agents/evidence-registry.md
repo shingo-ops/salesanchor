@@ -1594,3 +1594,15 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
 
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
+
+
+## EV-20260910-TCG-SCHEMA-IMPL
+
+- 設計: PR #3392、docs/handoff/tcg-product-import/design.md §12。recon.md追補を照合。
+- 基点: 5386d664f40aa826e7e3d943b87bb65697d49165。TCG-SCHEMA-EDIT-01の正式card-lintと本文確認後に実装。
+- 対象: backend/tests/test_tcg_schema_qualification.py。設計資料とSHA-256一致（cb7e8f26eca8cd5e1bb630f6e88b249c411f60fbb41a68949fdbda0e0757c7eb）。
+- Python 3.12で7関数の直接実行成功。実ソースの修飾除去7例、動的4表の正常/異常各4例を含む。ruff checkとgit diff --check成功。
+- 既存DDL列照合関数を維持。商品サービス・DB・CI・運用スクリプトは変更しない。
+- 手元はDockerコマンドなし、Python 3.12にpytest未導入。直接関数実行を正式pytest結果とは扱わない。PRのpytest-run-internalとlint-backend-internalの実行成功が必要。
+- ユーザーはこのセッションを実装担当へ切り替え、実装→PR→検証→条件を満たせばマージする確認に「進める」と返答。番号付きGOは創作・転記していない。
+- 評価ゲート（依頼4）、商品マスタfrontend、QA試行と44件の本番取り込みは本PR対象外。
