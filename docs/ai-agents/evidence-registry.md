@@ -1550,3 +1550,14 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - process-artifactsのローカル検算は合格。初回はローカル証跡パスの表記とADR参照不足を検出し修正した。card-lint exit0（非停止のL24警告7件）、task-state、diffチェックも成功。
 - main更新3コミットは文書作業ブランチへ通常のmergeで取り込み、競合した台帳・索引は双方を保存。rebaseはガードで拒否されたため実施せず、許可の自己発行も行っていない。
 - GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
+
+
+## EV-20260910-WORKTREE-PRESERVE
+
+- 対象: 作成時の既存作業場所保持指定の設計草案。
+- 根拠: docs/handoff/branch-operations/recon.md / design.md の2026-09-10節。
+- base: 6e1335725bb8dfdf390125c4caf5a93f705f4821。
+- 文書保存限定の例外として専用worktreeを直接作成。UUID発行・分割台帳登録・既存の開始/所有検査がexit0。回収処理なし。
+- 設計自己審査: APPROVE（同一AI）。正式仕様承認・実装担当の作業場所・正式カード検査は未了。製品・運用スクリプト・CIは変更なし。
+- 未実施: 保持指定の機能試験、実装、マージ、本番操作。
+- 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。変更は設計・調査・台帳・根拠登録の4ファイル。実装の機能試験ではない。
