@@ -563,3 +563,33 @@ deploy.yml:182-184はホストをorigin/mainへresetし、:360-374はnginx設定
 公式根拠: https://raw.githubusercontent.com/encode/uvicorn/0.34.0/uvicorn/server.py （run/shutdown）、https://docs.python.org/3.12/library/asyncio-runner.html （asyncio.runの終了処理）。確認日2026-09-10。Context7利用不可のため公式の版固定ソースと資料を使用。ローカルPython3.14.3と本番Dockerfileの3.12を同じ試験環境と扱わない。
 
 **自己審査REVISE**: 受付制御の保存先・戻し先の制約・44組の入口試験・9つの模擬試験を具体化。未解決は受付制御の初回導入経路と状態判定式、旧版の送信成否の観測、隔離試験環境での実証。解析実装の範囲へ運用変更を暗黙に追加しない。既に合意された一時停止方針の再承認は求めない。
+
+
+### 初回導入経路の具体案（2026-09-10、審査中）
+
+現行deploy.ymlはmain pushで起動し、nginx変更の判定は通常のAPI/worker配布を止める条件になっていない。これを前提に、停止機構の初回導入は**入口だけを更新する専用経路**として設計する。通常deployを先に走らせてから入口だけを更新する案は採らない。
+
+1. **入口専用便を識別する**: 変更一覧の名前だけでなく内容を検査する。許可する製品設定差分はnginxのTCG受付制御、nginxサービスへの専用directory mount、これを配送/検証/復旧する手順だけ。composeの他サービス差分、backend/frontend/migration/secret差分、分類不能な差分が1件でも混ざれば入口専用便として拒否し、通常deployへ自動フォールバックしない。workflow自体の変更はPO指定Reviewerが事前に確認する。
+2. **通常配布と排他的に選ぶ**: 初回便から通常deployのbuild/API切替/worker再作成/全体rollback/failure cleanupを実行しない経路とする。既存workflowと同じdeploy-productionの排他単位を使う。並行する通常配布・手動操作を許可しない。単なるpaths-filter追加ではなく、副作用を持つ全段階の条件と異常終了処理を確認する。
+3. **対象を固定する**: 配送するnginx設定・composeの必要部分・手順を承認されたcommitから取り出す。稼働checkoutを更新して通常コードまで新しくした状態に放置しない。API/worker/beat/DB/RedisのコンテナID・起動時刻・イメージIDを前後比較し、変化0件を合格条件にする。前回のコード7ファイル診断はこの将来便の前後証拠には流用しない。
+4. **状態と復旧材料を先に用意する**: checkout外の専用directory、所有/読取権限、初回の明示的受付許可、旧nginx設定・mount・イメージ・復旧手順を準備して検算する。初回は機構を装着する段階であり、ここで解析実行管理を有効化しない。以後の停止状態の変更は別の承認された操作とする。
+5. **入口だけを切り替える**: nginxの構文/参照先/権限を事前検査し、nginxだけにmountと設定を反映する。通常deployのworker再作成や全体rollbackを呼ばない。既存nginxの接続をどう完了待ちして再作成するかは下記未解決事項であり、force-recreateだけを完成手順として渡さない。
+6. **失敗時は入口だけを戻す**: 装着前の旧設定・mount・イメージへ戻して疎通を確認。解析機能は旧版のままなので、この装着便の失敗を理由にbackend/worker/DBへ手を加えない。停止機構が未装着へ戻った場合は後続の解析切替を禁止する。装着成功後の解析切替では、戻し先は機構付きの版に限定する。
+7. **成功判定を分ける**: 全44組の入口契約と通常読取、API/worker等の不変、失敗注入からの復旧を確認して「停止機構装着」を判定する。これは「解析実行管理完成」「本番切替済み」と別の状態。追跡有効化へ自動で進めない。
+
+必要な将来実装の責任範囲は、配布担当によるCI分岐・nginx/mount・検証/復旧手順、実装役による解析実行管理、PO指定Reviewerによる経路/GO範囲照合に分ける。担当者は未指定。今回の設計セッションは文書だけを更新し、別AIを起動しない。
+
+**未解決を限定**: nginx再作成に伴う既存接続の扱い、受付許可状態の確定した判定式、入口専用経路の実コードを使う隔離試験が残る。入口は他APIも共用するため、装着時の瞬間的な接続影響を「TCGだけ」とは約束しない。具体的影響/停止時間が分かった時点で操作承認へ示す。一時停止方針へのGOを、未提示の全API停止承認に広げない。
+
+### 模擬試験環境の所在を更新
+
+本ローカルにDockerはないが、.github/workflows/test-rollback.ymlはubuntu-latestでDockerを確認してscripts/test_rollback_simulation.shを実行する経路を持つ。架空データで隔離コンテナを使う既存パターンがあるので、「試験場所が全くない」とは扱わない。ただし本件9試験を実行するコード/設定は未作成であり、既存試験のdispatchで代用しない。
+別のtest-phase2-rehearsal.ymlはSALESANCHOR_APP_PASSWORDを受け取り、scripts/rehearsal_phase2.shは本番と同じコンテナ名を使う。今回の隔離検証へそのまま流用しない。既存資料のbackend/scripts/rehearsal_phase2.shと現行scripts/rehearsal_phase2.shを混同しない。
+将来の試験は本番資格を渡さない一時runnerを推奨し、対象設計のコードを実際に抽出・実行する方式とする。配布手順の手書き再現だけでは、その手順自体の誤りを検出した証拠にしない。CI変更・試験コード作成は本セッションでは未実施。
+
+最新main確認: origin/main=760532a9（PR #3398）。base以降のdeploy.yml、blue-green-cutover.sh、対象解析コードに変更なし。#3398は別テーマのmigration2件と登録script変更であり、この停止機構を導入した証拠ではない。読み取りで照合し、他者の差分は変更していない。
+自己審査はREVISE。初回導入の経路と失敗時の責任範囲、既存Docker試験経路を特定したが、上記未解決を補う前に実装可能とは判定しない。
+
+外部根拠: GitHub Actionsのpushイベントとworkflow concurrencyの公式資料を2026-09-10に確認。イベント/排他の仕様を本設計へ適用する案であり、このrepoの新しい専用経路が動作済みという証拠ではない。
+- https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push
+- https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency

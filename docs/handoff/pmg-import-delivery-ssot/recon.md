@@ -184,3 +184,10 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 - backend/app/middleware/audit.py:106以降はcall_next後の記録。完了待ち専用の実行管理ではない。Uvicorn0.34.0公式server.pyのrun/shutdownも確認し、timeout時のcancelを成功扱いしない条件を追加。公式_compat.pyの同tag取得は404で、根拠には使わない。
 - ADR-115は自動rollbackと本番相当Docker試験を規定する。受付停止の状態だけが残っても、旧設定が参照しなければ遮断を維持できないため、制御を含む戻し先の確保を設計条件に追加。
 - docker/nginx/podmanを本ローカル環境で確認できず、Pythonは3.14.3。Dockerfileの3.12と相違するため、本番相当の停止試験は未実施。
+
+### 初回専用経路と試験基盤の照合（2026-09-10）
+
+- deploy.yml:3-16のmain push/排他、:331-335のworker再作成、:360-374のnginx再作成、:531以降のFinalize/rollbackを読取。nginxのみ更新してAPI/workerを維持する経路は確認できなかった。専用経路では全体rollback/failure cleanupも切り分ける必要がある。
+- test-rollback.ymlはubuntu-latestでDockerを確認しscripts/test_rollback_simulation.shを実行。test-phase2-rehearsal.ymlは本番secretを注入しscripts/rehearsal_phase2.shを呼ぶ別の経路。どちらも本件の停止機構試験ではなく、このセッションでは実行していない。
+- 最新origin/main=760532a9。PR #3398はmigration2件/登録のみで、deploy.ymlと対象解析コードの差分0。既存の配布/解析調査の根拠を変更する差分ではない。
+- PR #3396 HEAD642da564のGitHubチェックはpass32/skipping8。本件新機能の試験成功とは扱わない。
