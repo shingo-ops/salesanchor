@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
-import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
+import { CALENDARS, CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import "../schedule.css";
@@ -209,7 +209,7 @@ function SchedulePopover({
             {meta && (
               <span
                 className="schedule-category-chip"
-                style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
+                style={{ background: meta.tintVar, color: meta.textVar }}
               >
                 {t(meta.labelKey)}
               </span>
@@ -642,7 +642,7 @@ function ScheduleWeekGrid({
                     {meta && (
                       <span
                         className="schedule-category-chip"
-                        style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar), marginLeft: "var(--space-2)" }}
+                        style={{ background: meta.tintVar, color: meta.textVar, marginLeft: "var(--space-2)" }}
                       >
                         {t(meta.labelKey)}
                       </span>
@@ -712,7 +712,7 @@ function ScheduleWeekGrid({
                       {meta && (
                         <span
                           className="schedule-category-chip"
-                          style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
+                          style={{ background: meta.tintVar, color: meta.textVar }}
                         >
                           {t(meta.labelKey)}
                         </span>
@@ -795,7 +795,7 @@ function ScheduleMonthGrid({
                       {meta && (
                         <span
                           className="schedule-category-chip"
-                          style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar), marginLeft: "var(--space-1)" }}
+                          style={{ background: meta.tintVar, color: meta.textVar, marginLeft: "var(--space-1)" }}
                         >
                           {t(meta.labelKey)}
                         </span>
