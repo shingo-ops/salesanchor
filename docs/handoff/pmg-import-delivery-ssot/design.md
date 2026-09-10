@@ -761,3 +761,5 @@ CIはpull_request（本2ファイル変更時）と当該releaseブランチへ�
 
 Architect自己審査: APPROVE（本節の隔離試験実装だけ）。根拠は既存CI/composeの実物と前節160件のローカル検証。本番投入設計はREVISE。審査は同一AIであり独立レビューではない。未検証の製品設計を実装可能に読み替えない。
 公式仕様確認: Context7利用不可のため2026-09-10に https://docs.docker.com/engine/storage/bind-mounts/ と https://nginx.org/en/docs/control.html を直接確認。
+
+試験ネットワーク補足（2026-09-10）: Docker28.0.4のinternal networkは外部接続設定を行わず、初回CIで公開ポートを取得できなかった（recon同日節）。通常の専用bridgeを使い、公開先を127.0.0.1に限定する。外向き通信の遮断保証は設けないが、試験の送信先はlocalhostと架空処理先に固定し、実資格を与えない。必須assertionは維持する。この試験fixture修正を自己審査APPROVEとし、製品設計REVISEは維持する。

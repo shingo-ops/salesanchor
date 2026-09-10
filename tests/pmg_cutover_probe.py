@@ -140,7 +140,6 @@ class P:
         s.net_id = s.d(
             "network",
             "create",
-            "--internal",
             "--label",
             "pmg.cutover.probe=" + s.t,
             s.net,
@@ -183,9 +182,20 @@ class P:
             f"{ROOT}:/probe:ro",
             IMAGE,
         ).stdout.strip()
-        b = json.loads(
-            s.d("inspect", s.i, "--format", "{{json .NetworkSettings.Ports}}").stdout
-        )["443/tcp"]
+        inspection = json.loads(s.d("inspect", s.i).stdout)[0]
+        ports = inspection["NetworkSettings"].get("Ports") or {}
+        if "443/tcp" not in ports:
+            diagnostic = {
+                "State": inspection.get("State"),
+                "HostConfig.PortBindings": inspection.get("HostConfig", {}).get(
+                    "PortBindings"
+                ),
+                "NetworkSettings.Ports": ports,
+            }
+            raise AssertionError(
+                "missing 443/tcp published binding: " + json.dumps(diagnostic)
+            )
+        b = ports["443/tcp"]
         ok(
             "two loopback random TLS ports",
             len(b) == 2
