@@ -117,3 +117,15 @@ Context7は利用可能ツールの名前・説明を検索したが0件。起�
 | beat / astro-webapp-celery-beat-1 | on | tenant_004 | 同4表（4/4） |
 
 判定: 診断時点の3コンテナの接続設定から、同じDB・schemaへの接続に成功した。既存アプリ接続、全worker個体、稼働コード版、処理中件数、列やmigrationの適用は調べていない。4表の存在だけからPR #3386本番反映済みとは断定しない。旧実行の排出と切替手順の確認は残る。製品試験は未実行。
+
+
+### 切替の追加読取（2026-09-10）
+
+- .github/workflows/deploy.yml:331-335: API切替後にfrontend/celery-worker/celery-beat/discord-gatewayをdocker rm -fで削除して再作成。処理完了待ちの検査はこの箇所にない。
+- docker-compose.yml:190-192: workerは1サービス定義、concurrency=2。これは構成定義であり実機の全worker数ではない。
+- backend/app/celery_app.py:20-36: TCGと翻訳・メール・保守等を同じCeleryアプリに登録。停止影響をTCGだけに限定する根拠はない。
+- scripts/blue-green-cutover.sh:147-150: 旧APIの停止は40秒指定。その時間内に全手動解析・外部配信が必ず完了する実測はない。
+- backend/app/tasks/tcg_import_discard.py:57は保留ジョブの更新commit。tcg_mirror.pyはミラーシートへ書く別タスク。解析2入口だけの確認では全ての関連書込・外部送信を網羅しない。
+- docs/runbooks配下をtcg/drain/停止/メンテナンス/Celery/revokeで検索した範囲では本件の排出手順を確認できなかった。検索範囲外にも存在しないとは断定しない。
+- 本番追加接続はしていない。前回の人間用鍵の許可はDB接続先診断だけとして維持する。
+- PR #3396 HEAD e7da4a85947dc9b6f05e23ff4c93382fee640ee9のGitHubチェック: pass31、skipping9、失敗/待機0。文書PRの検査であり解析実行管理の製品試験完了ではない。

@@ -1616,3 +1616,5 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 
 - 文書提出の停止解消: ~/.claude/scripts/worktree-only-guard.shはPWDを既定とし、コマンド先頭cdだけを対象作業場所として解釈する実装だった。先頭cdで専用worktreeを明示して同じフック下でコミット672cf97e成功。フックや権限設定は変更していない。
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3396 （Draft、base=main、head=release/pmg-analysis-run-design）。register-pr.sh成功、.pr-numberと現行分割台帳へ3396登録。設計REVISEの草案提出であり、実装・マージ・本番GOは未受領。
+
+- 切替設計の更新: deploy.yml:331-335のworker強制削除と共有Celery構成を照合。配布後pausedだけでは初回強制終了を防げないため先行案の保証を撤回し、8段階の検査/停止条件をdesign.mdへ追加。初回一時停止方針は未合意、REVISE維持。本番追加接続・実装なし。PR #3396 HEAD e7da4a85のチェックはpass31/skipping9。
