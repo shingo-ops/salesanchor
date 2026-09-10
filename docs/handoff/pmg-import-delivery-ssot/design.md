@@ -10,7 +10,7 @@ recon: docs/handoff/pmg-import-delivery-ssot/recon.md
 日付: 2026-09-10
 
 
-> 現在地: 切替中の配布保留方針と、根拠確立後のページ作成はPO承認済み。末尾の既存API接続ページをTerraが実装済み、rootがコード差分・模擬API試験・PC/狭幅画像を確認済み。新解析実行記録・永続配信履歴・本番切替の設計はREVISEを継続。今回のページは未マージ・未デプロイ。
+> 現在地: 切替中の配布保留方針と、根拠確立後のページ作成はPO承認済み。末尾の既存API接続ページをTerraが実装済み、rootがコード差分・模擬API試験・PC/狭幅画像を確認済み。新解析実行記録・永続配信履歴・本番切替の設計はREVISEを継続。ページ接続PR #3416はマージ・本番反映済み（末尾の完了記録）。
 
 ## PO合意と範囲
 
@@ -914,3 +914,10 @@ Architect自己審査APPROVEは本節の既存API接続ページだけ。実API/
 本便の差分確認APPROVE。既存GETと配信部品の接続・表示契約・旧応答無効化・POST自動再送なしの範囲に限定する。新解析実行記録/永続配信履歴/切替全体のREVISEは継続。PR #3416提出済み。CI確認を進める。POの番号付きGOは創作せず、本番反映済みとは記録しない。
 
 ページ接続便GO: PO原文「GO #3416」を受領（受領後記録時刻2026-09-10 21:17 JST）。当該PRのマージと通常デプロイの確認を進める。新実行履歴/切替全体のREVISEを解除せず、将来の本番停止操作には流用しない。
+
+### ページ接続便のマージ・本番反映完了（2026-09-10）
+
+PO原文GO #3416に基づき、最終HEAD6459e7ca1a71bfead06f561826496fe6384ac8e7の37成功/8対象外skip・失敗0、CLEANと所有権を確認。2026-09-10T12:24:21Z、merge commit17ebe93f9259e5d5930cc6f7c26f90f14f433ea5でマージした。
+[本番デプロイ34476536034](https://github.com/shingo-ops/salesanchor/actions/runs/34476536034)はsuccess。実配備ログのHEAD is now at17ebe93f、事前バックアップ・コンテナ更新・Finalize・Verify成功を確認。SA-19 smokeは対象外skipで、実行成功と扱わない。
+公開Appのscriptはindex-CU1MBcSm.jsからindex-i0HIAxuW.jsへ更新。新JSのSHA256はadc6e6c79bf4adb70f057fce2552b2fce1a3cca9e0629616984ba50c87e46f3b、進捗表/配信範囲/取込IDのコード存在を確認。公開API healthはstatus ok、database/redis/celery connected。rootがコマンド結果を直接確認した。管理者ログイン後の実データ画面操作・実配信は行っていない。
+状態: ページ接続の設計/PO承認/実装/検証/PRマージ/本番反映は完了。新しい解析実行記録・永続配信履歴・将来の本番切替は未実装、設計REVISE継続。確認方法は管理者で「取込・解析・配信」画面を再読込し取込を選択、既存記録の進捗/明細と全体配信境界を見る。
