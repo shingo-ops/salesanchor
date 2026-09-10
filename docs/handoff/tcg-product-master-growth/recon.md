@@ -772,3 +772,8 @@ Context7はツール一覧で利用不可。PO許可済み代替として[gsprea
 ローカル証拠（原文/シート実体は公開gitに入れない）: /private/tmp/line-recovery-retry-preflight.json、line-recovery-retry-receipt.json、line-recovery-raw-and-state.json、line-recovery-condition-master.json、line-three-sheets-pre-distribution.json、line-recovery-pre-distribution-verification.json、line-recovery-final-job-check.json。
 
 現在地: マージ/本番反映/有効1件再解析完了、3接続退避完了、配信未実施。次の一手: POに提示した状態分類1件の回答を受け、原文に沿う状態/備考の訂正経路を設計・検証してから3接続へ配信。安全装置#8/#8bの解除・DB直書きによる迂回・不明な分類の創作は行わない。以前の「GO #3403待ち」は当時の記録であり現在の停止理由ではない。
+
+
+### 配信前2件のPO決定と限定設計（2026-09-10）
+
+PO原文「通常カートンだがNOTE_JAに記載」を受領。伝票剥がし跡ありはCase維持・NOTE_JAへ記載と確定。状態/備考の全件参照案204変更に対し、限定案は1443明細中2変更/1441不変、既存再現不一致0、否定を含む11対照成功。実マスタ73行のNJ041伝票跡を保持し新NJ079にSTATE_LITERALを設定する案、CN0007の否定除外追加を設計§13へ記録。自己審査APPROVEは限定設計だけで、実装試験/配信完了を意味しない。証拠 /private/tmp/line-condition-note-focused-contrast.json。純関数対照の範囲・今後の実DBパイプライン試験を区別した。
