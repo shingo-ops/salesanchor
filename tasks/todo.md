@@ -125,4 +125,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装済み。単体10件・E2E2件・静的チェック/build成功。PG/本番未検証 | PR起票・CI実DB確認。正規GO検査とQAを満たしてから反映/44件取り込み | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装済み。単体10件・E2E2件・静的チェック/build成功。PG/本番未検証 | PR #3422提出済み。CI実DB確認と番号付きGO検査が残る。候補資料の仮置き値も再照合してからQA/本番投入 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
