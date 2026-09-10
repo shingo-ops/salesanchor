@@ -1,0 +1,3793 @@
+[
+  {
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "line": 186,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "select",
+        "line": 204
+      },
+      {
+        "tag": "button",
+        "line": 227
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 204,
+        "value": "{(e) => {\n                            const v = e.target.value;\n                            handleAssign(key, v === \"\" ? null : Number(v));\n                          }}"
+      },
+      {
+        "name": "onClick",
+        "line": 227,
+        "value": "{() => handleUnassign(key)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 186
+      },
+      {
+        "tag": "table",
+        "name": "data-testid",
+        "value": "\"commission-table\"",
+        "line": 186
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"20%\" }}",
+        "line": 189
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"45%\" }}",
+        "line": 190
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"20%\" }}",
+        "line": 191
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"15%\" }}",
+        "line": 192
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`commission-row-${key}`}",
+        "line": 201
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`commission-staff-${key}`}",
+        "line": 204
+      },
+      {
+        "tag": "td",
+        "name": "data-testid",
+        "value": "{`commission-amount-${key}`}",
+        "line": 222
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm\"",
+        "line": 227
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`commission-unassign-${key}`}",
+        "line": 227
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"text-muted\"",
+        "line": 237
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/DataTable.tsx",
+    "line": 168,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{columns.length + (selectable ? 1 : 0)}",
+        "line": 226
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 173
+      },
+      {
+        "tag": "button",
+        "line": 197
+      },
+      {
+        "tag": "input",
+        "line": 261
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 173,
+        "value": "{toggleAll}"
+      },
+      {
+        "name": "onClick",
+        "line": 197,
+        "value": "{() => handleSort(col.key)}"
+      },
+      {
+        "name": "onClick",
+        "line": 239,
+        "value": "{clickable ? (e: MouseEvent<HTMLTableRowElement>) => {\n                    if (isInteractiveTarget(e)) return;\n                    onRowClick(row);\n                  } : undefined}"
+      },
+      {
+        "name": "onKeyDown",
+        "line": 239,
+        "value": "{clickable ? (e: KeyboardEvent<HTMLTableRowElement>) => {\n                    if (e.key !== 'Enter' && e.key !== ' ') return;\n                    if (isInteractiveTarget(e)) return;\n                    e.preventDefault();\n                    onRowClick(row);\n                  } : undefined}"
+      },
+      {
+        "name": "onChange",
+        "line": 261,
+        "value": "{() => toggleRow(key)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"comp-table__table\"",
+        "line": 168
+      },
+      {
+        "tag": "tr",
+        "name": "className",
+        "value": "\"comp-table__head-row\"",
+        "line": 170
+      },
+      {
+        "tag": "th",
+        "name": "className",
+        "value": "\"comp-table__th comp-table__th--check\"",
+        "line": 172
+      },
+      {
+        "tag": "input",
+        "name": "className",
+        "value": "\"comp-table__check\"",
+        "line": 173
+      },
+      {
+        "tag": "th",
+        "name": "className",
+        "value": "\"comp-table__th\"",
+        "line": 186
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{col.width ? { width: col.width } : undefined}",
+        "line": 186
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "{[\n                      'comp-table__sort-btn',\n                      sortKey === col.key ? 'comp-table__sort-btn--active' : '',\n                    ].filter(Boolean).join(' ')}",
+        "line": 197
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"comp-table__sort-icon\"",
+        "line": 206
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"comp-table__empty\"",
+        "line": 226
+      },
+      {
+        "tag": "tr",
+        "name": "className",
+        "value": "{[\n                    'comp-table__row',\n                    isSelected ? 'comp-table__row--selected' : '',\n                    clickable ? 'comp-table__row--clickable' : '',\n                    rowClassName ? rowClassName(row) : '',\n                  ].filter(Boolean).join(' ')}",
+        "line": 239
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"comp-table__td comp-table__td--check\"",
+        "line": 260
+      },
+      {
+        "tag": "input",
+        "name": "className",
+        "value": "\"comp-table__check\"",
+        "line": 261
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"comp-table__td\"",
+        "line": 271
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "line": 329,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 364,
+        "value": "{() => {\n                          onSelectRate(r.fee, r.currency, r.service_type);\n                          handleClose();\n                        }}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\", borderCollapse: \"collapse\", fontSize: \"14px\" }}",
+        "line": 329
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ borderBottom: \"2px solid var(--border)\" }}",
+        "line": 331
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"left\", padding: \"8px 4px\" }}",
+        "line": 332
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"left\", padding: \"8px 4px\" }}",
+        "line": 333
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+        "line": 334
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+        "line": 335
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+        "line": 336
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+        "line": 337
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ borderBottom: \"1px solid var(--border)\" }}",
+        "line": 342
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"8px 4px\" }}",
+        "line": 346
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"8px 4px\" }}",
+        "line": 349
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+        "line": 352
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", padding: \"8px 4px\", fontWeight: 600 }}",
+        "line": 357
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+        "line": 360
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+        "line": 363
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "line": 197,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 220
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 208,
+        "value": "{() => {\n                          setSelectedId(c.id);\n                          setSelectedSnapshot(c);\n                        }}"
+      },
+      {
+        "name": "onChange",
+        "line": 220,
+        "value": "{() => {\n                              setSelectedId(c.id);\n                              setSelectedSnapshot(c);\n                            }}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 197
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: 0 }}",
+        "line": 197
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: 'var(--col-width-checkbox)' }}",
+        "line": 200
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+        "line": 208
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`status-badge status-${c.status}`}",
+        "line": 233
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "line": 195,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 219
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 206,
+        "value": "{() => {\n                          setSelectedId(c.id);\n                          setSelectedSnapshot(c);\n                        }}"
+      },
+      {
+        "name": "onChange",
+        "line": 219,
+        "value": "{() => {\n                              setSelectedId(c.id);\n                              setSelectedSnapshot(c);\n                            }}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 195
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: 0 }}",
+        "line": 195
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\" }}",
+        "line": 198
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+        "line": 206
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`badge badge-${getStatusPresentation(\"contact\", c.status).badgeVariant}`}",
+        "line": 232
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "line": 184,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 207
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 195,
+        "value": "{() => {\n                          setSelectedId(c.id);\n                          setSelectedSnapshot(c);\n                        }}"
+      },
+      {
+        "name": "onChange",
+        "line": 207,
+        "value": "{() => {\n                              setSelectedId(c.id);\n                              setSelectedSnapshot(c);\n                            }}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 184
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: 0 }}",
+        "line": 184
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: 'var(--col-width-checkbox)' }}",
+        "line": 187
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+        "line": 195
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`badge badge-${getStatusPresentation(\"lead\", c.status).badgeVariant}`}",
+        "line": 220
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "line": 115,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{\n              width: \"100%\",\n              borderCollapse: \"collapse\",\n              fontSize: \"0.8125rem\",\n            }}",
+        "line": 115
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{\n                      textAlign: \"left\",\n                      padding: \"0.25rem 0.5rem\",\n                      borderBottom: \"1px solid var(--color-border)\",\n                      color: \"var(--color-text-sub)\",\n                      fontWeight: 600,\n                      whiteSpace: \"nowrap\",\n                    }}",
+        "line": 125
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{\n                      isHighlighted\n                        ? { color: \"var(--color-error)\", fontWeight: 500 }\n                        : undefined\n                    }",
+        "line": 145
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{\n                          padding: \"0.25rem 0.5rem\",\n                          borderBottom: \"1px solid var(--color-border)\",\n                        }}",
+        "line": 154
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "line": 81,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 157
+      },
+      {
+        "tag": "button",
+        "line": 170
+      },
+      {
+        "tag": "button",
+        "line": 184
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 157,
+        "value": "{() => setEditTarget(target)}"
+      },
+      {
+        "name": "onClick",
+        "line": 170,
+        "value": "{() => setConfirm({ type: \"run\", target })}"
+      },
+      {
+        "name": "onClick",
+        "line": 184,
+        "value": "{() => setConfirm({ type: \"disable\", target })}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"dist-table\"",
+        "line": 81
+      },
+      {
+        "tag": "tr",
+        "name": "className",
+        "value": "{target.is_active ? \"\" : \"dist-row--inactive\"}",
+        "line": 98
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"dist-sheet-id\"",
+        "line": 101
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`dist-badge ${target.is_active ? \"dist-badge--active\" : \"dist-badge--inactive\"}`}",
+        "line": 107
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-xs)\", color: \"var(--text-secondary)\", whiteSpace: \"nowrap\" }}",
+        "line": 113
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", textAlign: \"right\" }}",
+        "line": 123
+      },
+      {
+        "tag": "div",
+        "name": "className",
+        "value": "\"dist-result--ok\"",
+        "line": 132
+      },
+      {
+        "tag": "div",
+        "name": "className",
+        "value": "\"dist-result--error\"",
+        "line": 138
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"dist-result--ok\"",
+        "line": 145
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"dist-result--error\"",
+        "line": 147
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ color: \"var(--text-secondary)\", fontSize: \"var(--font-xs)\" }}",
+        "line": 152
+      },
+      {
+        "tag": "div",
+        "name": "className",
+        "value": "\"dist-actions\"",
+        "line": 156
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"dist-btn dist-btn--ghost\"",
+        "line": 157
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"dist-btn dist-btn--primary\"",
+        "line": 170
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"dist-btn dist-btn--danger\"",
+        "line": 184
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+    "line": 80,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 97
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 97,
+        "value": "{() => handleDelete(ch.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"channel-masters-table\"",
+        "line": 80
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+    "line": 132,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 151
+      },
+      {
+        "tag": "button",
+        "line": 161
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 151,
+        "value": "{() => toggle(row.role_id, k)}"
+      },
+      {
+        "name": "onClick",
+        "line": 161,
+        "value": "{() => saveRole(row)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 132
+      },
+      {
+        "tag": "table",
+        "name": "data-testid",
+        "value": "\"visibility-matrix\"",
+        "line": 132
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`vis-${row.role_id}-${k}`}",
+        "line": 151
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-primary\"",
+        "line": 161
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ marginLeft: \"var(--space-2)\", color: \"var(--success)\" }}",
+        "line": 171
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "line": 76,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 76
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: \"var(--space-6)\" }}",
+        "line": 76
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: i < 3 ? \"var(--font-weight-bold)\" : \"var(--font-weight-normal)\" }}",
+        "line": 81
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 84
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "line": 75,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 87
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 84
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 84,
+        "value": "{() => endPair(p.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 75
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: \"var(--space-6)\" }}",
+        "line": 75
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`badge badge-${p.is_active ? \"won\" : \"lost\"}`}",
+        "line": 82
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"actions\"",
+        "line": 84
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 84
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 87
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "line": 91,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{4}",
+        "line": 102
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 91
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`badge badge-${f.feedback_type === \"Good\" ? \"won\" : \"lost\"}`}",
+        "line": 98
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 102
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "line": 189,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "select",
+        "line": 205
+      },
+      {
+        "tag": "input",
+        "line": 218
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 205,
+        "value": "{(e) =>\n                              updateRole(role, { type: e.target.value as RateType })\n                            }"
+      },
+      {
+        "name": "onChange",
+        "line": 218,
+        "value": "{(e) =>\n                              updateRole(role, { value: Number(e.target.value) })\n                            }"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 189
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"20%\" }}",
+        "line": 192
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"30%\" }}",
+        "line": 193
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"30%\" }}",
+        "line": 194
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`settings-row-${role}`}",
+        "line": 202
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`settings-type-${role}`}",
+        "line": 205
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`settings-value-${role}`}",
+        "line": 218
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+    "line": 30,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 52
+      },
+      {
+        "tag": "button",
+        "line": 53
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 52,
+        "value": "{() => openAddressEdit(a)}"
+      },
+      {
+        "name": "onClick",
+        "line": 53,
+        "value": "{() => setAddrDeleteTarget(a)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 30
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm\"",
+        "line": 52
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 53
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+    "line": 102,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 124,
+        "value": "{() => openChannelForm(c)}"
+      },
+      {
+        "name": "onClick",
+        "line": 129,
+        "value": "{() => openContactEdit(c)}"
+      },
+      {
+        "name": "onClick",
+        "line": 132,
+        "value": "{() => openMergeModal(c)}"
+      },
+      {
+        "name": "onClick",
+        "line": 136,
+        "value": "{() => setContactDeleteTarget(c)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 102
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "{`status-badge status-${c.status}`}",
+        "line": 122
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "line": 501,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{visibleColCount}",
+        "line": 525
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 533
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 533,
+        "value": "{() => toggleSelect(it.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 501
+      },
+      {
+        "tag": "table",
+        "name": "data-testid",
+        "value": "\"inventory-table\"",
+        "line": 501
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\", fontSize: \"var(--font-md)\" }}",
+        "line": 501
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+        "line": 509
+      },
+      {
+        "tag": "td",
+        "name": "data-testid",
+        "value": "\"inventory-empty\"",
+        "line": 525
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`inventory-row-${it.id}`}",
+        "line": 531
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\" }}",
+        "line": 532
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`inventory-row-${it.id}-select`}",
+        "line": 533
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge\"",
+        "line": 542
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 546
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 548
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge badge-negotiating\"",
+        "line": 560
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 565
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 571
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 573
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 578
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "line": 257,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 271
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 271,
+        "value": "{() => loadQuoteForEdit(q.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 257
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`invoice-quote-${q.id}`}",
+        "line": 267
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-primary\"",
+        "line": 271
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`invoice-edit-from-quote-${q.id}`}",
+        "line": 271
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "line": 322,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 340
+      },
+      {
+        "tag": "input",
+        "line": 347
+      },
+      {
+        "tag": "input",
+        "line": 365
+      },
+      {
+        "tag": "input",
+        "line": 369
+      },
+      {
+        "tag": "input",
+        "line": 382
+      },
+      {
+        "tag": "input",
+        "line": 385
+      },
+      {
+        "tag": "input",
+        "line": 388
+      },
+      {
+        "tag": "button",
+        "line": 393
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 340,
+        "value": "{(e) => updateItem(i, \"name_en\", e.target.value || null)}"
+      },
+      {
+        "name": "onChange",
+        "line": 347,
+        "value": "{(e) => updateItem(i, \"product_name\", e.target.value)}"
+      },
+      {
+        "name": "onChange",
+        "line": 365,
+        "value": "{(e) => updateItem(i, \"condition\", e.target.value || null)}"
+      },
+      {
+        "name": "onChange",
+        "line": 369,
+        "value": "{(e) => {\n                          const nextUnit = e.target.value || null;\n                          updateItem(i, \"unit\", nextUnit);\n                          updateItem(i, \"weight\", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));\n                        }}"
+      },
+      {
+        "name": "onChange",
+        "line": 382,
+        "value": "{(e) => updateItem(i, \"quantity\", Number(e.target.value))}"
+      },
+      {
+        "name": "onChange",
+        "line": 385,
+        "value": "{(e) => updateItem(i, \"unit_price\", Number(e.target.value))}"
+      },
+      {
+        "name": "onChange",
+        "line": 388,
+        "value": "{(e) => updateItem(i, \"weight\", e.target.value ? Number(e.target.value) : null)}"
+      },
+      {
+        "name": "onClick",
+        "line": 393,
+        "value": "{() => removeItem(i)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 322
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ minWidth: \"var(--table-min-width-base)\" }}",
+        "line": 322
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}`}",
+        "line": 337
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ minWidth: \"var(--table-col-product-name-min-w)\" }}",
+        "line": 338
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"100%\", minWidth: \"var(--input-width-product-name)\", fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 340
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-name-en`}",
+        "line": 340
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"100%\", minWidth: \"var(--input-width-product-name)\", marginTop: \"var(--space-1)\", fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 347
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-name`}",
+        "line": 347
+      },
+      {
+        "tag": "div",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-zero-stock-warning`}",
+        "line": 355
+      },
+      {
+        "tag": "div",
+        "name": "className",
+        "value": "\"warning-message\"",
+        "line": 355
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ marginTop: \"var(--space-1)\", color: \"var(--color-warning)\", fontSize: \"var(--font-sm)\" }}",
+        "line": 355
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-weight)\" }}",
+        "line": 365
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-condition`}",
+        "line": 365
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-weight)\" }}",
+        "line": 369
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-unit`}",
+        "line": 369
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-qty)\" }}",
+        "line": 382
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-qty`}",
+        "line": 382
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-year)\" }}",
+        "line": 385
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-weight)\" }}",
+        "line": 388
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`invoice-item-row-${i}-weight`}",
+        "line": 388
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+        "line": 390
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 393
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "line": 243,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\", fontSize: \"var(--font-sm)\", borderCollapse: \"collapse\" }}",
+        "line": 243
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ textAlign: \"left\", color: \"var(--text-secondary)\" }}",
+        "line": 245
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 246
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 247
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 248
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 249
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 255
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 256
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 257
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ padding: \"var(--space-1)\" }}",
+        "line": 258
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "line": 305,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 333
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 334
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 335
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 336
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 337
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 338
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 339
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 305
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: \"var(--space-6)\" }}",
+        "line": 305
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 316
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 317
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 328
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 333
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 333
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 334
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 335
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 336
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+        "line": 337
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+        "line": 337
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", color: \"var(--text-muted)\" }}",
+        "line": 338
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ color: \"var(--text-muted)\" }}",
+        "line": 338
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", color: \"var(--text-muted)\" }}",
+        "line": 339
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ color: \"var(--text-muted)\" }}",
+        "line": 339
+      }
+    ],
+    "footer": true
+  },
+  {
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "line": 286,
+    "spans": [
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 292
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 299
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 351
+      },
+      {
+        "name": "rowSpan",
+        "value": "{2}",
+        "line": 361
+      },
+      {
+        "name": "colSpan",
+        "value": "{9}",
+        "line": 396
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 352
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 304,
+        "value": "{toggleNameSort}"
+      },
+      {
+        "name": "onDragStart",
+        "line": 340,
+        "value": "{reorderMode ? () => { dragId.current = p.id; } : undefined}"
+      },
+      {
+        "name": "onDragOver",
+        "line": 340,
+        "value": "{reorderMode ? (e) => e.preventDefault() : undefined}"
+      },
+      {
+        "name": "onDrop",
+        "line": 340,
+        "value": "{reorderMode ? () => onReorderDrop(p.id) : undefined}"
+      },
+      {
+        "name": "onClick",
+        "line": 340,
+        "value": "{() => { if (!reorderMode && hasPermission(\"products.update\")) navigate(`/admin/products/${p.id}/edit`); }}"
+      },
+      {
+        "name": "onClick",
+        "line": 351,
+        "value": "{(e) => e.stopPropagation()}"
+      },
+      {
+        "name": "onChange",
+        "line": 352,
+        "value": "{() => toggleSelect(p.id)}"
+      },
+      {
+        "name": "onDragStart",
+        "line": 375,
+        "value": "{reorderMode ? () => { dragId.current = p.id; } : undefined}"
+      },
+      {
+        "name": "onDragOver",
+        "line": 375,
+        "value": "{reorderMode ? (e) => e.preventDefault() : undefined}"
+      },
+      {
+        "name": "onDrop",
+        "line": 375,
+        "value": "{reorderMode ? () => onReorderDrop(p.id) : undefined}"
+      },
+      {
+        "name": "onClick",
+        "line": 375,
+        "value": "{() => { if (!reorderMode && hasPermission(\"products.update\")) navigate(`/admin/products/${p.id}/edit`); }}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 286
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\" }}",
+        "line": 286
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\", cursor: \"help\" }}",
+        "line": 292
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ minWidth: \"10rem\" }}",
+        "line": 302
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ cursor: \"pointer\", userSelect: \"none\", minWidth: \"22rem\" }}",
+        "line": 304
+      },
+      {
+        "tag": "th",
+        "name": "data-testid",
+        "value": "\"products-sort-name\"",
+        "line": 304
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ marginLeft: \"var(--space-1)\", color: \"var(--text-secondary)\" }}",
+        "line": 311
+      },
+      {
+        "tag": "tr",
+        "name": "className",
+        "value": "\"product-row-top\"",
+        "line": 340
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ ...rowStyle, cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined) }}",
+        "line": 340
+      },
+      {
+        "tag": "tr",
+        "name": "data-product-stripe",
+        "value": "{stripe}",
+        "line": 340
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`product-row-${p.id}`}",
+        "line": 340
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", verticalAlign: \"middle\" }}",
+        "line": 351
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`product-select-${p.id}`}",
+        "line": 352
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ verticalAlign: \"middle\" }}",
+        "line": 361
+      },
+      {
+        "tag": "img",
+        "name": "style",
+        "value": "{{ width: 'var(--icon-lg)', height: 'var(--icon-lg)', marginRight: \"var(--space-1)\", objectFit: \"cover\", verticalAlign: \"middle\", borderRadius: \"var(--radius-xs)\" }}",
+        "line": 366
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge badge-lost\"",
+        "line": 368
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ marginLeft: \"var(--space-6px)\" }}",
+        "line": 368
+      },
+      {
+        "tag": "tr",
+        "name": "className",
+        "value": "\"product-row-bottom\"",
+        "line": 375
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ ...rowStyle, cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined) }}",
+        "line": 375
+      },
+      {
+        "tag": "tr",
+        "name": "data-product-stripe",
+        "value": "{stripe}",
+        "line": 375
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ whiteSpace: \"nowrap\" }}",
+        "line": 386
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 396
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "line": 165,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 188
+      },
+      {
+        "tag": "input",
+        "line": 191
+      },
+      {
+        "tag": "input",
+        "line": 194
+      },
+      {
+        "tag": "button",
+        "line": 201
+      }
+    ],
+    "events": [
+      {
+        "name": "onSelect",
+        "line": 181,
+        "value": "{(c) => onPickProduct(i, c)}"
+      },
+      {
+        "name": "onChange",
+        "line": 188,
+        "value": "{(e) => updateItem(i, \"product_name\", e.target.value)}"
+      },
+      {
+        "name": "onChange",
+        "line": 191,
+        "value": "{(e) => updateItem(i, \"quantity\", Number(e.target.value))}"
+      },
+      {
+        "name": "onChange",
+        "line": 194,
+        "value": "{(e) => updateItem(i, \"unit_cost\", Number(e.target.value))}"
+      },
+      {
+        "name": "onClick",
+        "line": 201,
+        "value": "{() => removeItem(i)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 165
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ minWidth: \"var(--table-col-min-width)\" }}",
+        "line": 168
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`po-item-row-${i}`}",
+        "line": 178
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ minWidth: \"var(--table-col-min-width)\" }}",
+        "line": 180
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ minWidth: \"var(--min-width-input-sm)\" }}",
+        "line": 188
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-qty)\" }}",
+        "line": 191
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"var(--input-width-year)\" }}",
+        "line": 194
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+        "line": 196
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 201
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "line": 170,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 189
+      },
+      {
+        "tag": "input",
+        "line": 196
+      },
+      {
+        "tag": "input",
+        "line": 214
+      },
+      {
+        "tag": "input",
+        "line": 218
+      },
+      {
+        "tag": "input",
+        "line": 231
+      },
+      {
+        "tag": "input",
+        "line": 234
+      },
+      {
+        "tag": "input",
+        "line": 237
+      },
+      {
+        "tag": "button",
+        "line": 242
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 189,
+        "value": "{(e) => updateItem(i, \"name_en\", e.target.value || null)}"
+      },
+      {
+        "name": "onChange",
+        "line": 196,
+        "value": "{(e) => updateItem(i, \"product_name\", e.target.value)}"
+      },
+      {
+        "name": "onChange",
+        "line": 214,
+        "value": "{(e) => updateItem(i, \"condition\", e.target.value || null)}"
+      },
+      {
+        "name": "onChange",
+        "line": 218,
+        "value": "{(e) => {\n                        const nextUnit = e.target.value || null;\n                        updateItem(i, \"unit\", nextUnit);\n                        updateItem(i, \"weight\", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));\n                      }}"
+      },
+      {
+        "name": "onChange",
+        "line": 231,
+        "value": "{(e) => updateItem(i, \"quantity\", Number(e.target.value))}"
+      },
+      {
+        "name": "onChange",
+        "line": 234,
+        "value": "{(e) => updateItem(i, \"unit_price\", Number(e.target.value))}"
+      },
+      {
+        "name": "onChange",
+        "line": 237,
+        "value": "{(e) => updateItem(i, \"weight\", e.target.value ? Number(e.target.value) : null)}"
+      },
+      {
+        "name": "onClick",
+        "line": 242,
+        "value": "{() => removeItem(i)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 170
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ minWidth: 'var(--table-min-width-base)' }}",
+        "line": 170
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}`}",
+        "line": 185
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ minWidth: 'var(--table-col-product-name-min-w)' }}",
+        "line": 186
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"100%\", minWidth: 'var(--input-width-product-name)', fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 189
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-name-en`}",
+        "line": 189
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"100%\", minWidth: 'var(--input-width-product-name)', marginTop: \"var(--space-1)\", fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 196
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-name`}",
+        "line": 196
+      },
+      {
+        "tag": "div",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-zero-stock-warning`}",
+        "line": 204
+      },
+      {
+        "tag": "div",
+        "name": "className",
+        "value": "\"warning-message\"",
+        "line": 204
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ marginTop: \"var(--space-1)\", color: \"var(--color-warning)\", fontSize: \"var(--font-sm)\" }}",
+        "line": 204
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: 'var(--input-width-weight)' }}",
+        "line": 214
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-condition`}",
+        "line": 214
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: 'var(--input-width-weight)' }}",
+        "line": 218
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-unit`}",
+        "line": 218
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: 'var(--input-width-qty)' }}",
+        "line": 231
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-qty`}",
+        "line": 231
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: 'var(--input-width-year)' }}",
+        "line": 234
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: 'var(--input-width-weight)' }}",
+        "line": 237
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`quote-item-row-${i}-weight`}",
+        "line": 237
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+        "line": 239
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 242
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "line": 175,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 211
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 212
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 213
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 214
+      },
+      {
+        "name": "colSpan",
+        "value": "{6}",
+        "line": 215
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 175
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ marginBottom: \"var(--space-6)\" }}",
+        "line": 175
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 194
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-secondary)\" }}",
+        "line": 195
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 206
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 211
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+        "line": 211
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 212
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 213
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 214
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+        "line": 215
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+        "line": 215
+      }
+    ],
+    "footer": true
+  },
+  {
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "line": 99,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 111
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 99
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"mono\"",
+        "line": 104
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge badge-negotiating\"",
+        "line": 105
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge badge-won\"",
+        "line": 108
+      },
+      {
+        "tag": "span",
+        "name": "className",
+        "value": "\"badge badge-pending\"",
+        "line": 108
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 111
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/DexTab.tsx",
+    "line": 343,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 343
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "line": 123,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 123
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\", marginTop: \"var(--space-4)\" }}",
+        "line": 123
+      },
+      {
+        "tag": "table",
+        "name": "data-testid",
+        "value": "\"fx-rate-table\"",
+        "line": 123
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "\"fx-rate-row\"",
+        "line": 137
+      },
+      {
+        "tag": "td",
+        "name": "data-testid",
+        "value": "\"fx-rate-value\"",
+        "line": 139
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\" }}",
+        "line": 151
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\" }}",
+        "line": 154
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 352,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{8}",
+        "line": 367
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 372
+      },
+      {
+        "tag": "button",
+        "line": 387
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 372,
+        "value": "{() => toggleRule(r.id)}"
+      },
+      {
+        "name": "onClick",
+        "line": 387,
+        "value": "{() => openEditRule(r)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 352
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+        "line": 355
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 367
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`rule-row-${r.id}`}",
+        "line": 370
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\" }}",
+        "line": 371
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`rule-select-${r.id}`}",
+        "line": 372
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 386
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm\"",
+        "line": 387
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`rule-edit-${r.id}`}",
+        "line": 387
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 430,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{5}",
+        "line": 442
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 447
+      },
+      {
+        "tag": "button",
+        "line": 459
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 447,
+        "value": "{() => toggleAlias(a.id)}"
+      },
+      {
+        "name": "onClick",
+        "line": 459,
+        "value": "{() => openEditAlias(a)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 430
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+        "line": 433
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 442
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`alias-row-${a.id}`}",
+        "line": 445
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\" }}",
+        "line": 446
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`alias-select-${a.id}`}",
+        "line": 447
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 458
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm\"",
+        "line": 459
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`alias-edit-${a.id}`}",
+        "line": 459
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "line": 120,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{9}",
+        "line": 161
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 148
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 148,
+        "value": "{() => startEdit(b)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 120
+      },
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ width: \"100%\", marginTop: \"var(--space-4)\" }}",
+        "line": 120
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`llm-budget-row-${b.tenant_id}`}",
+        "line": 136
+      },
+      {
+        "tag": "td",
+        "name": "data-testid",
+        "value": "{`llm-budget-used-${b.tenant_id}`}",
+        "line": 140
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\" }}",
+        "line": 146
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-secondary\"",
+        "line": 148
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`llm-budget-edit-${b.tenant_id}`}",
+        "line": 148
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\", padding: \"var(--space-4)\" }}",
+        "line": 161
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 494,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{8}",
+        "line": 516
+      },
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 705
+      },
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 753
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 535
+      },
+      {
+        "tag": "select",
+        "line": 574
+      },
+      {
+        "tag": "select",
+        "line": 595
+      },
+      {
+        "tag": "select",
+        "line": 616
+      },
+      {
+        "tag": "select",
+        "line": 637
+      },
+      {
+        "tag": "input",
+        "line": 658
+      },
+      {
+        "tag": "input",
+        "line": 675
+      },
+      {
+        "tag": "input",
+        "line": 777
+      },
+      {
+        "tag": "input",
+        "line": 804
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 535,
+        "value": "{(e) =>\n                                updateDraft(idx, { skipped: e.target.checked })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 574,
+        "value": "{(e) =>\n                                updateDraft(idx, { condition: e.target.value })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 595,
+        "value": "{(e) =>\n                                updateDraft(idx, { unit: e.target.value })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 616,
+        "value": "{(e) =>\n                                updateDraft(idx, { offer_type: e.target.value })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 637,
+        "value": "{(e) =>\n                                updateDraft(idx, { ship_timing: e.target.value })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 658,
+        "value": "{(e) =>\n                                updateDraft(idx, { quantity_offered: e.target.value })\n                              }"
+      },
+      {
+        "name": "onChange",
+        "line": 675,
+        "value": "{(e) =>\n                                updateDraft(idx, { unit_price: e.target.value })\n                              }"
+      },
+      {
+        "name": "onSelect",
+        "line": 720,
+        "value": "{(c: PickedProduct) =>\n                                    updateDraft(idx, {\n                                      product_id: c.product_id,\n                                      selected_product_name: c.name,\n                                    })\n                                  }"
+      },
+      {
+        "name": "onChange",
+        "line": 777,
+        "value": "{(e) =>\n                                    updateDraft(idx, { alias_text: e.target.value })\n                                  }"
+      },
+      {
+        "name": "onChange",
+        "line": 804,
+        "value": "{(e) =>\n                                    updateDraft(idx, { notes: e.target.value })\n                                  }"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 494
+      },
+      {
+        "tag": "table",
+        "name": "data-testid",
+        "value": "\"review-table\"",
+        "line": 494
+      },
+      {
+        "tag": "th",
+        "name": "className",
+        "value": "\"review-col-skip\"",
+        "line": 499
+      },
+      {
+        "tag": "td",
+        "name": "data-testid",
+        "value": "\"review-empty\"",
+        "line": 516
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}`}",
+        "line": 523
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{\n                            row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined\n                          }",
+        "line": 523
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"review-col-skip\"",
+        "line": 534
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-skip`}",
+        "line": 535
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"review-col-product\"",
+        "line": 548
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ minWidth: \"10rem\", maxWidth: \"16rem\" }}",
+        "line": 548
+      },
+      {
+        "tag": "div",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-product-name`}",
+        "line": 550
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontWeight: \"var(--font-weight-semi)\", marginBottom: \"var(--space-1)\" }}",
+        "line": 550
+      },
+      {
+        "tag": "span",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-missing-product`}",
+        "line": 559
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ color: \"var(--danger)\", fontSize: \"var(--font-sm)\", fontWeight: \"var(--font-weight-medium)\" }}",
+        "line": 559
+      },
+      {
+        "tag": "span",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-product-id`}",
+        "line": 567
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{ color: \"var(--text-primary)\", fontSize: \"var(--font-sm)\" }}",
+        "line": 567
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-condition`}",
+        "line": 574
+      },
+      {
+        "tag": "select",
+        "name": "style",
+        "value": "{{ width: \"6rem\" }}",
+        "line": 574
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-unit`}",
+        "line": 595
+      },
+      {
+        "tag": "select",
+        "name": "style",
+        "value": "{{ width: \"5.5rem\" }}",
+        "line": 595
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-offer-type`}",
+        "line": 616
+      },
+      {
+        "tag": "select",
+        "name": "style",
+        "value": "{{ width: \"6rem\" }}",
+        "line": 616
+      },
+      {
+        "tag": "select",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-ship-timing`}",
+        "line": 637
+      },
+      {
+        "tag": "select",
+        "name": "style",
+        "value": "{{ width: \"6rem\" }}",
+        "line": 637
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-quantity-offered`}",
+        "line": 658
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"4.5rem\" }}",
+        "line": 658
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-unit-price`}",
+        "line": 675
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"6rem\" }}",
+        "line": 675
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-picker-row`}",
+        "line": 696
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{\n                              row.skipped\n                                ? { opacity: \"var(--opacity-skipped)\", background: \"var(--bg-disabled)\" }\n                                : undefined\n                            }",
+        "line": 696
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"review-col-skip\"",
+        "line": 704
+      },
+      {
+        "tag": "div",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-selected-product`}",
+        "line": 708
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-sm)\", color: \"var(--text-primary)\", marginBottom: \"var(--space-1)\" }}",
+        "line": 708
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ fontSize: \"var(--font-xs)\", color: \"var(--text-secondary)\", marginBottom: \"var(--space-1)\" }}",
+        "line": 716
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{ width: \"min(100%, 40rem)\" }}",
+        "line": 719
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-memo-row`}",
+        "line": 740
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{\n                            row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined\n                          }",
+        "line": 740
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"review-col-skip\"",
+        "line": 751
+      },
+      {
+        "tag": "div",
+        "name": "style",
+        "value": "{{\n                                display: \"flex\",\n                                flexWrap: \"wrap\",\n                                alignItems: \"center\",\n                                gap: \"var(--space-2) var(--space-4)\",\n                              }}",
+        "line": 754
+      },
+      {
+        "tag": "label",
+        "name": "style",
+        "value": "{{\n                                  display: \"flex\",\n                                  alignItems: \"center\",\n                                  gap: \"var(--space-2)\",\n                                }}",
+        "line": 762
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{\n                                    color: \"var(--text-secondary)\",\n                                    whiteSpace: \"nowrap\",\n                                  }}",
+        "line": 769
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-alias`}",
+        "line": 777
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ width: \"12rem\" }}",
+        "line": 777
+      },
+      {
+        "tag": "label",
+        "name": "style",
+        "value": "{{\n                                  display: \"flex\",\n                                  alignItems: \"center\",\n                                  gap: \"var(--space-2)\",\n                                  flex: \"1 1 16rem\",\n                                }}",
+        "line": 788
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{\n                                    color: \"var(--text-secondary)\",\n                                    whiteSpace: \"nowrap\",\n                                  }}",
+        "line": 796
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`review-row-${idx}-notes`}",
+        "line": 804
+      },
+      {
+        "tag": "input",
+        "name": "style",
+        "value": "{{ flex: 1 }}",
+        "line": 804
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "line": 267,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{4}",
+        "line": 279
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 295
+      },
+      {
+        "tag": "button",
+        "line": 298
+      }
+    ],
+    "events": [
+      {
+        "name": "onDragStart",
+        "line": 283,
+        "value": "{canDrag ? () => { dragId.current = r.id; } : undefined}"
+      },
+      {
+        "name": "onDragOver",
+        "line": 283,
+        "value": "{canDrag ? (e) => e.preventDefault() : undefined}"
+      },
+      {
+        "name": "onDrop",
+        "line": 283,
+        "value": "{canDrag ? () => onDrop(r.id) : undefined}"
+      },
+      {
+        "name": "onClick",
+        "line": 295,
+        "value": "{() => startEdit(r)}"
+      },
+      {
+        "name": "onClick",
+        "line": 298,
+        "value": "{() => remove(r.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 267
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+        "line": 272
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+        "line": 273
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 279
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`master-row-${r.id}`}",
+        "line": 283
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{canDrag ? { cursor: \"grab\" } : undefined}",
+        "line": 283
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-secondary btn-sm\"",
+        "line": 295
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-danger btn-sm\"",
+        "line": 298
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "line": 241,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{7}",
+        "line": 269
+      }
+    ],
+    "controls": [
+      {
+        "tag": "input",
+        "line": 257
+      },
+      {
+        "tag": "button",
+        "line": 265
+      }
+    ],
+    "events": [
+      {
+        "name": "onChange",
+        "line": 257,
+        "value": "{() => toggleSelect(s.id)}"
+      },
+      {
+        "name": "onClick",
+        "line": 265,
+        "value": "{() => openEdit(s)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 241
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+        "line": 244
+      },
+      {
+        "tag": "tr",
+        "name": "data-testid",
+        "value": "{`supplier-row-${s.id}`}",
+        "line": 255
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"center\" }}",
+        "line": 256
+      },
+      {
+        "tag": "input",
+        "name": "data-testid",
+        "value": "{`supplier-select-${s.id}`}",
+        "line": 257
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 264
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm\"",
+        "line": 265
+      },
+      {
+        "tag": "button",
+        "name": "data-testid",
+        "value": "{`supplier-edit-${s.id}`}",
+        "line": 265
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 269
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "line": 348,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{3}",
+        "line": 366
+      }
+    ],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 362
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 362,
+        "value": "{() => deleteRouting(r.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 348
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ textAlign: \"right\" }}",
+        "line": 361
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-sm btn-danger\"",
+        "line": 362
+      },
+      {
+        "tag": "td",
+        "name": "className",
+        "value": "\"empty\"",
+        "line": 366
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "line": 515,
+    "spans": [],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{\n                width: \"100%\",\n                borderCollapse: \"collapse\",\n                fontSize: \"0.85rem\",\n              }}",
+        "line": 515
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ borderBottom: \"2px solid var(--border-color)\" }}",
+        "line": 523
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 524
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 525
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 526
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 527
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 528
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 529
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 530
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 531
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ borderBottom: \"1px solid var(--border-color)\" }}",
+        "line": 536
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 540
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 543
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 544
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{\n                        ...tdStyle,\n                        textAlign: \"right\",\n                        color: job.unresolved_count > 0 ? \"var(--color-warning)\" : undefined,\n                      }}",
+        "line": 545
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 554
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 555
+      },
+      {
+        "tag": "span",
+        "name": "style",
+        "value": "{{\n                          padding: \"0.15rem 0.5rem\",\n                          borderRadius: \"999px\",\n                          fontSize: \"0.75rem\",\n                          background: job.status === \"ok\" ? \"var(--color-success-bg)\" : \"var(--color-error-bg)\",\n                          color: job.status === \"ok\" ? \"var(--color-success)\" : \"var(--color-error)\",\n                          border: `1px solid ${job.status === \"ok\" ? \"var(--color-success-border)\" : \"var(--color-error-border)\"}`,\n                        }}",
+        "line": 556
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 569
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 572
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 156,
+    "spans": [
+      {
+        "name": "colSpan",
+        "value": "{2}",
+        "line": 168
+      },
+      {
+        "name": "colSpan",
+        "value": "{2}",
+        "line": 189
+      }
+    ],
+    "controls": [],
+    "events": [],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ borderCollapse: \"collapse\", fontSize: 13 }}",
+        "line": 156
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ background: \"var(--table-header-bg)\" }}",
+        "line": 158
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 159
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 160
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 161
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 162
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 167
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 168
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 169
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 172
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 173
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 174
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}",
+        "line": 175
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 180
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 181
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 182
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}",
+        "line": 183
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 188
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 189
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 190
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "line": 201,
+    "spans": [],
+    "controls": [],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 204,
+        "value": "{() => handleSort(\"sp_code\")}"
+      },
+      {
+        "name": "onClick",
+        "line": 211,
+        "value": "{() => handleSort(\"total\")}"
+      },
+      {
+        "name": "onClick",
+        "line": 219,
+        "value": "{() => handleSort(\"diff\")}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "style",
+        "value": "{{ borderCollapse: \"collapse\", fontSize: 12, width: \"100%\" }}",
+        "line": 201
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ background: \"var(--table-header-bg)\" }}",
+        "line": 203
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+        "line": 204
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 210
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+        "line": 211
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 217
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 218
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+        "line": 219
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 225
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{thStyle}",
+        "line": 226
+      },
+      {
+        "tag": "tr",
+        "name": "style",
+        "value": "{{ background: i % 2 === 0 ? \"var(--bg-surface)\" : \"var(--bg-subtle)\" }}",
+        "line": 231
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{tdStyle}",
+        "line": 235
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, maxWidth: \"var(--max-width-truncate)\", overflow: \"hidden\", textOverflow: \"ellipsis\", whiteSpace: \"nowrap\" }}",
+        "line": 236
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 239
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 240
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 241
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\", color: diffColor(row.pid_pct_diff), fontWeight: \"bold\" }}",
+        "line": 242
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 245
+      },
+      {
+        "tag": "td",
+        "name": "style",
+        "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+        "line": 248
+      }
+    ],
+    "footer": false
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "line": 331,
+    "spans": [],
+    "controls": [
+      {
+        "tag": "button",
+        "line": 359
+      },
+      {
+        "tag": "button",
+        "line": 364
+      }
+    ],
+    "events": [
+      {
+        "name": "onClick",
+        "line": 359,
+        "value": "{() => startEdit(it)}"
+      },
+      {
+        "name": "onClick",
+        "line": 364,
+        "value": "{() => remove(it.id)}"
+      }
+    ],
+    "appearance": [
+      {
+        "tag": "table",
+        "name": "className",
+        "value": "\"data-table\"",
+        "line": 331
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+        "line": 341
+      },
+      {
+        "tag": "th",
+        "name": "style",
+        "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+        "line": 344
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-secondary\"",
+        "line": 359
+      },
+      {
+        "tag": "button",
+        "name": "className",
+        "value": "\"btn-danger-link\"",
+        "line": 364
+      }
+    ],
+    "footer": false
+  }
+]
