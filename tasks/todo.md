@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| PMG解析実行記録（後続設計） | Agent | 解析失敗時の全体配信停止にPO合意。許可済み読取診断で3コンテナのDB接続先一致を確認。設計REVISE、草案PR #3396提出済み。フックの作業場所指定を修正してコミット成功、実装未着手 | 初回一時停止方針GO受領。旧版にも効く受付遮断・完了観測・復旧の方式を確定して再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 後続便節 / EV-20260910-PMG-ANALYSIS-RUN | 2026-09-10 |
+| PMG解析実行記録（後続設計） | Agent | 解析失敗時の全体配信停止にPO合意。許可済み読取診断で3コンテナのDB接続先一致を確認。設計REVISE、草案PR #3396提出済み。フックの作業場所指定を修正してコミット成功、実装未着手 | 初回一時停止方針GO受領。稼働版/構成の読取診断に必要な限定SSH許可を確認。配布中も残る受付遮断・完了観測・復旧を確定して再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 後続便節 / EV-20260910-PMG-ANALYSIS-RUN | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 設計担当 | 文書PR #3392提出済み・同一AI自己審査APPROVE。資料7関数の直接試験成功。製品テスト未変更 | 文書PR確認後、正式カード検査を経て実装役へ渡す | docs/handoff/tcg-product-import/design.md §12 / recon.md追補 / EV-20260910-TCG-SCHEMA-DESIGN | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | 実装GO受領。本番DBをread-only確認、作品誤判定29中有効4。設計自己審査APPROVE・カード検査通過、文書PR #3387提出済み | 設計・ADR追加案の文書承認後、カードを実装役へ渡す。製品実装・本番反映は未着手 | docs/handoff/tcg-product-master-growth/design-keyword.md §10 / EV-20260910-LINE-ACCURACY-06 / https://github.com/shingo-ops/salesanchor/pull/3387 | 2026-09-10 |

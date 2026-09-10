@@ -137,3 +137,11 @@ Context7は利用可能ツールの名前・説明を検索したが0件。起�
 - backend/Dockerfile末尾はuvicorn workers=2。稼働プロセス数・既存要求完了は未確認。backend/app内のmaintenance/READ_ONLY等の検索では本件の初回停止機構を確認できず、保守タスク等が該当した。不存在の証明とはしない。
 - Context7ツール検索0件。Celery Workers Guide、Docker stop、nginx returnの公式資料を確認。停止仕様とバージョン依存をdesignへ記録。ライブラリの本番版を照会したとは扱わない。
 - 一時停止方針へのPO原文「GO」を受領。説明した一時停止/共有業務待機の許容だけであり、本番操作・追加SSH利用はしていない。
+
+### 配布中の遮断維持の照合（2026-09-10）
+
+- deploy.yml:182-184,360-374のreset/設定再作成を照合。一時的に追跡ファイルを書換える案は配布で失われ得るため不採択。
+- APIの同期解析・外部配信は別スレッドを使用する実装。HTTP応答だけでその終了を判定しない（design.md同日節）。
+- ローカルdocker versionはcommand not found、exit127。Docker試験を行ったとは報告しない。
+- 稼働版/構成の読取診断を/tmp/pmg-cutover-runtime-readonly.pyに準備、AST確認のみ成功。本番未実行。許可範囲を広げて人間用鍵を再使用していない。
+- PR #3396 HEAD 6ba0ebf8のGitHubチェックはpass31/skipping9。新たな実装試験の成功ではない。
