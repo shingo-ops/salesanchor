@@ -36,6 +36,7 @@ recon before write は、リポジトリと DB だけでなく、実行環境の
 | gh コマンドを使う | guards/00-common.md → guards/09-gh.md |
 | 実行役が交代した | guards/10-executor.md |
 | カードを出す前（毎回） | guards/11-lint.md の検査式に自分で通す |
+| ガード・カード検査を追加/変更/削除する | guards/00-common.md → guards/12-guard-authoring.md → 対象guards → guards/11-lint.md |
 
 ---
 

@@ -9,7 +9,7 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ承認受領。自己審査REVISE、ローカルnginx160/160成功、実機mount/権限確認。実装未着手 | 文書PRの最終CI/マージ結果を確認。Linux/Docker更新・復旧と旧処理完了を実証後、設計再審査・正式カード検査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
-| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | 実装PR #3397未マージ。直接7関数・ruff成功。CIは既存DB準備テストが2回失敗（各2377 passed / 1 failed / 93 skipped） | 別件修正PR #3399はマージ済み、本PRへ取り込み。CI全通過までマージしない | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
+| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | #3400本番反映・79job/1425明細再解析済み。中断2件復旧PR #3403実装/技術CI成功（2499 passed・復旧32ケース）。番号付きGO原文不足だけでマージ停止 | GO #3403原文受領後に前提再確認→反映→有効1件再実行→完了後3接続配信。値/式の退避済み。次周の商品15件（全量対照済み）・状態候補5件（うち3件備考参照で改善、2件定義未確認）を保持 | design-keyword.md §12.5 / recon.md 末尾 / EV-20260910-LINE-ACCURACY-08 / PR #3403 / Backend34451813934 / process job102789028541 | 2026-09-10 |
 | Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
@@ -104,8 +104,14 @@
 | RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
 
 
+## ガード評価ゲート（依頼4、2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| guards変更の必読・弊害・トレードオフ評価 | Codex | GO #3401受領・追加修正#3402マージ済み（2467成功/93skip）。設置PRの最終CI再確認中 | 最新mainとの評価整合とCIを確認し設置・デプロイ。実イベント確認後、限定必須化は管理者判断 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
+
 ## Inventory共有テーブル準備（2026-09-10）
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| inventory準備の共通ロック参加 | Codex | 追加修正承認受領・自己審査済み。試作8成功、修正前4拒否 | 別PRの実PG/CIを確認してマージし、#3401へ反映する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | #3401へ取り込み済み。既定デプロイと設置PRの最終確認を続ける | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |

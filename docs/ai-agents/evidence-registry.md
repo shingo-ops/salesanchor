@@ -1784,6 +1784,35 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」。直前の本件残件調査・文書PR #3396のマージ承認として受領。GO #3396という発話を創作せず、製品実装/本番停止/他PRの承認へ広げない。実機mount/statとプロセスUIDの読取、最新main a0c0eb7fのv3解析/訂正保持を照合して文書へ反映。自己審査REVISE。ローカル160件は成功、Dockerと旧版外部送信の完了照合は未実施。正式実装カードは発行しない。
 
 
+## EV-20260910-TCG-SCHEMA-MERGED
+
+- PR #3397は2026-09-10T03:14:22ZにMERGED、merge a0c0eb7f36b3d7a6b181d70dc36713ed9a7b7409。
+- 最終HEAD a3bc636e、run 34432333829 / pytest job 102730284300: 2436 passed / 93 skipped、coverage61.52%。必須12件成功。手元7関数実行とは分けて確認。
+- 商品サービスは変更なし、静的テストは設計payloadとSHA256一致。worktree/ローカルbranch回収・台帳DONEを実在で確認。依頼4は未完了。
+
+## EV-20260910-GUARD-EVAL
+
+- 根拠: docs/handoff/design-partner-card-ops/guard-authoring-recon.md / guard-authoring-design.md。
+- 基点a0c0eb7f、試作67/67成功。設置フェーズの同一AI自己審査APPROVE、独立レビューではない。
+- 現接続のadmin/maintainはfalse、bypass_actorsは未返却。保護設定は変更していない。GitHubでの実イベント・必須化は未検証。
+- 作業場所release/guard-authoring-gate、UUID0452cd58-83fa-4422-9f1c-a538a2cc536c、作成時65件走査・回収0。旧3353台帳は推測で完了化していない。
+- /tmp/reports/GUARD-EVAL-PROTOTYPE-04.log、GUARD-EVAL-MAIN-RULESET-BEFORE.json、GUARD-EVAL-WORKTREE-VERIFIED.json。
+- この記録は設置PR・マージ・機械強制・POの個別GOを完了扱いにしない。
+
+依頼4の実ファイル配置後検証: 67成功/失敗0/skip0（24.77秒）。証跡 docs/handoff/design-partner-card-ops/guard-evaluations/20260910-install-tests.txt。YAML/設計形式/維持欄/引用先/台帳構造も成功。GitHub CIと実イベント、必須化は未実施。
+
+依頼4の設置PR提出: https://github.com/shingo-ops/salesanchor/pull/3401 。head 3306df2a76368e8ab522cac366b282c824af9cfd、.pr-number一致を直接確認。実Gitの8対象blobと評価JSON照合成功。PR本文ADR表記の不一致を修正し再照合成功。CI確認中・正式GO未受領・未マージ・必須化未実施。
+
+### 依頼4・PR #3401のCI停止（2026-09-10）
+
+- 検証対象head: eb42433b7de5df6bab00fba02e2b15018b5e5fca。新ゲート67成功/0失敗（job102738677559）。
+- 全体PG試験job102738726326は2435成功/1失敗/93skip。tests/test_inventory_parser_real_samples.py::test_ac3_2_parse_real_supplier_sample[1]でpublic.suppliers作成時のpg_type_typname_nsp_index重複。ログ: /tmp/reports/GUARD-EVAL-3401-pytest-failure.log。
+- 直前head3306df2aの全体PG job102738212532はsuccess。両headとbaseでbackend差分0。断続的な競合が原因候補であり、競合相手と再現条件は未確定。
+- 実物: backend/tests/test_inventory_parser_real_samples.py:200 の準備処理はpublic_bootstrap_lockを使っていない。共有ロックはbackend/tests/rls_bootstrap.py:40にある。既存エラーを握り潰さず、同じロックへ参加させる案を別件で検証する。backendファイルは変更していない。
+- process-artifacts job102738677035は番号付きGO記録欠落でfailure。PRは未マージ・未必須化。失敗原因未解決のままマージしない。
+
 ## EV-20260910-INVENTORY-LOCK
 
 POの追加別PR修正・マージ・デプロイ指示を受領（GO #3401は#3401にのみ転記）。4つの共有DDL経路を既存lockへ参加させる限定修正を自己審査。試作8直接検査成功・修正前4関数拒否。Python3.14、実PG/CIは未実施。設計・調査はdocs/handoff/rls-bootstrap-txn-fix/design.mdとrecon.mdへ追補。実ログ /tmp/reports/INVENTORY-BOOTSTRAP-PROTOTYPE-TESTS-01.txt。
+
+追補（2026-09-10）: PO原文「次に進む、また離席するのでPRマージとデプロイまで進めてくれ」「GO #3401」を受領し#3401本文へ転記。時刻は未提供のため創作していない。追加修正#3402は89ad29ae3a8c3142db36b204e04f48e085803b29で07:46:50Zにマージ。head9a869d8a、実PG job102787311020は2467 passed/93 skipped、coverage61.52%、87.11秒。全CIと必須12成功、worktree回収・台帳DONE。#3401へmain取り込み時の台帳2件の独立追記を両方保持。最終設置CI/デプロイ/実イベント/限定必須化は別途確認する。
