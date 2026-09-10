@@ -19,3 +19,5 @@
 | 自分で書いた guards を引かずにカードを出す | カード冒頭に「読んだ節」とその照合結果を書き出す。書き出しの無い照合は行われなかったものとみなす | 2026-09-08 実測・同じ規則を3回踏んだ |
 | 報告に無い出力を成功と扱う | commit や push や PR 作成は、git log や .pr-number の実在を確かめてから次へ進む。報告に出ていないものは確認できていない | 2026-09-08 実測・失敗に気づかず進んだ |
 | zsh で未一致のワイルドカード（例: `~/Library/Logs/reaper*.log`）を使う → リダイレクトより前に `no matches found` で停止 | 列挙は `find <dir> -name '<pattern>' -print` にし、パターンを引用する。存在しないこともあり得るログに未引用の `*` を使わない | CARD-REAPER-RECON-01（2026-09-09 実測） |
+
+<!-- Runtime negative probe: evaluation intentionally absent; never merge. -->
