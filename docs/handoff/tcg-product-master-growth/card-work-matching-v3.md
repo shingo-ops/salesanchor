@@ -98,4 +98,15 @@ Gemini実測の認証が利用できない場合は認証情報を探索・開�
 
 2026-09-10 GO受領追記: PO原文「GO #3393」を受領しPR本文へ転記済み。バックアップ一覧のSSH読み取り要求は監視情報だけを返し、直前バックアップ未確認。最新mainとの再照合も次工程へ残す。承認の再取得は不要。マージ・本番反映は未実施。
 
+適用順補正の追加カード（2026-09-10、設計§10.2.1）
+本項は前記の一括マージに優先する。PO原文「マージ」は #3393 に対して受領済みだが、安全な順序を満たすまで保留する。
+実装役1名の既存委任の範囲で、承認済み差分の先行PRを作成する。追加のサブエージェント、本番DB直接操作、マージは禁止。
+担当は同じ実装役。所有対象は既存2本のmigrationとrunner末尾登録、必要な当該台帳のみ。他者変更を戻さない。
+preflight後、公式new-worktree.shで最新origin/mainから release/line-work-matching-schema-first を作成する。既存worktreeを再利用・破壊しない。
+source SHAは ceb0d73fb8e00033b7d4762fc99c57b918d3d491。2本のSQLを逐語一致で複製し、runnerは新worktreeの最新版を保持してこの2本の登録だけを末尾へ追加する。アプリコード・CI設定・deploy.ymlは一切変更しない。
+先行PRの変更対象は migrations/20260910_160000_tcg_work_evidence.sql、migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql、scripts/run_all_migrations.sh の3件。既存mainに同一SQLがあれば重複作成せず報告し、異なる同名SQLなら停止する。
+受入は元SQLとのSHA256一致、runnerの登録順と一回性、bash構文・diff検査・既存CI。既存PostgreSQL実測の証拠は元PRのjob102713887406を参照。テスト定義を複製せず、先行PR固有のCI結果と過去実測を区別する。
+公式gh-pr-create-safe.shでmain向けready PRを提出し、対象・目的・あるべき姿・設計§10.2.1・元PR #3393との順序・触るファイル3件・バックアップ手順・検証証拠を本文へ記す。新PRのGOは未受領と明記し、GO原文を創作しない。
+提出後、全ての技術チェックを確認して設計パートナーへPR番号/HEAD/実差分/検証を返す。新PRのGO記録を要するチェックは承認待ちと区別して停止。#3393にも先行PRのURLを記録する。新PRと #3393 のどちらもマージしない。
+
 END OF CARD
