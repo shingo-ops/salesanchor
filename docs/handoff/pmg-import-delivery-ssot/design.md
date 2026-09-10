@@ -274,3 +274,150 @@ NOTE_JAの全件再解析、辞書改善、取込単位配信はこの画面統�
 +CIのtest-schema-dup gateがテスト内の独自テーブル定義を検出したため、既存TCG初期migrationとreview-stage migrationをテストschemaに適用する形に変更。ガードの変更・例外追加なし。
 +正式migrationから作る実DBでも68件通過（2.08秒）。新規テスト内の複製テーブル定義は0。確認範囲・外部通信禁止・本番未適用は維持。
 +
+
+## 2026-09-10 後続便: 解析実行記録の設計草案
+
+この節は、解析の成功・失敗・結果不明を画面で見分けられるようにする設計案。
+親: [商品マスタ](../../specs/product-master/README.md)。根拠: [recon.md](recon.md)の同日後続便節。
+対象ADR: ADR-113、ADR-154、ADR-072。mode: handoffで引き渡すための草案。第1段階のAPPROVE・GO #3386・GO #3390は本便の実装承認ではない。
+
+### 目的と境界
+
+自動と手動を同じanalysis_runsへ記録し、結果と成功記録を同じ保存処理で確定する。記録済み実行について二重適用0回、途中失敗時の部分更新0件、旧記録からの成功推定0件を受入目標とする。
+今回扱うのは実行記録、進捗/明細APIへの接続、既存配信停止判定との整合。配信履歴・内容固定・全画面統合は後続。商品判定v3・辞書改善・NOTE_JA全件再解析・本番データ修復は含めない。
+
+### 正本と追加データ（提案名・未実装）
+
+analysis_resultsは現在結果、analysis_runsは実行履歴、analysis_run_snapshotsは再解析前の履歴として維持する。
+analysis_runsへ以下をnullableで追加。旧行を推測で埋めない。
+
+| 項目 | 契約 |
+|---|---|
+| execution_state | queued / running / succeeded / failed / unknown。旧行NULLはlegacy_unrecorded |
+| request_key | schema内UNIQUEの文字列。自動はauto:<extraction_job_uuid>。手動はクライアントUUID。旧行NULL可 |
+| request_fingerprint | job_id・run_type・retry_ofの一致確認。同じkeyの別要求は409 |
+| attempt_no | ジョブ行ロック内で採番。新規同一job内UNIQUE。旧行NULL |
+| retry_of | 明示再試行元run。同一schema・同一jobだけ。成功runを再試行しない |
+| execution_started_at / finished_at | 実行開始・結果確定/不明化の時刻。既存started_atは受付日時として維持 |
+| owner_token / heartbeat_at | 実行所有者とDB時刻による生存記録 |
+| error_code | 固定コードのみ。例外本文、DSN、元投稿を保存しない |
+| result_summary | 成功時のbefore/afterをJSONBで保持し、同一keyへの応答を現在結果から再計算しない |
+| resolved_by_run_id | 未解決の失敗/unknownが後続の同一job成功で解消された参照。古い失敗状態は書き換えない |
+
+completed_atは新規では成功時だけ設定。失敗を成功したように見せるためには設定しない。旧列・旧値は維持する。
+analysis_resultsへlast_successful_run_idをnullable追加。同じトランザクションで結果の出どころを保存。旧結果はNULLのまま。
+同一schemaにtcg_pipeline_guard（id=1だけの行）を新設する案。状態の正本ではなく、解析と配信準備の同時実行を調整するためだけに使う。全ての新FKは同一schema。新規参照を理由に既存履歴を連鎖削除しない。
+
+### 保存と実行の順序
+
+1. 抽出ジョブの取得はpending条件付きUPDATE RETURNINGで所有を確保し、更新0件の再配達は新たなGemini抽出を開始しない。抽出中の復旧自体は本便で自動化しない。
+2. 自動解析ONかつ抽出doneの場合、抽出結果・done・queuedのanalysis_runを同じトランザクションで保存する。抽出doneなのに解析予定が未記録となる隙間をなくす。OFF/empty/errorはrunを作らず、それぞれ未実行理由を表示する。過去行は設定値から理由を推定しない。
+3. 自動・手動は共通のexecute_analysis_runを呼ぶ。queuedのclaimだけを許可し、同一jobで別runが実行中なら新規実行を始めない。終端runの同一key再送はその履歴を返し、処理を繰り返さない。
+4. runningとowner_token・開始時刻を短い取引で保存。その後、guardの共有ロック→extraction_jobs行の排他ロックの順で取得し、run状態・ownerを再確認する。確認不一致なら結果を書かない。
+5. 再解析前snapshot、商品解析、E3a/E5→E3b→E4、最終値からの統計再集計、last_successful_run_id、succeeded/completed_atを1トランザクションで保存する。解析関数内の3か所のcommitを共通実行処理へ移す。通常アプリの自動・手動2呼出しを同時に移行する。
+6. 任意マスタ欠落の互換は維持する。3ローダーのsession全体rollbackを局所的なSAVEPOINTへ置き換える。空への代替を認めるのは該当任意テーブル欠落（SQLSTATE 42P01）のみ。接続断・権限不備・列欠落は失敗へ伝え、成功にしない。
+7. 例外では結果取引をrollback後、別取引で同じownerかつrunningのrunだけfailedへ変更する。接続不能等で失敗記録も保存できなければrunningが残り、後述の照合でunknownになる。新接続で結果処理だけを勝手に続行しない。
+
+### 再配達・明示再試行・停止時
+
+- queuedはDBを再開点とし、queueへ送る前にcommitする。enqueueに失敗してもrunは消さない。新規の定期処理がqueuedを再送するが、実行側claimで二重適用を防ぐ。配送回数と解析attemptを分ける。
+- Celeryのtask IDだけをrequest keyにしない。公式仕様上、retryは同じtask IDを使用するため、明示再試行の区別にはDBのrequest keyとretry_ofを使う。
+- failed/unknownは自動再試行しない。明示要求の新keyで新runを作り、retry_ofに元runを残す。unknownからの再試行もjobロックと元所有者の無効化を確認してから実行する。
+- 生存更新15秒、期限180秒、照合周期60秒を草案値とする。これらは成功率の実測値ではない。周期遅延があるため検出時間の上限は保証しない。
+- runningの期限切れだけでは書き換えない。照合処理がguard共有→job行をNOWAITで取得し、期限と状態を再確認できた場合だけunknownへ遷移させ、ownerを無効化する。jobを実行者が保持中なら状態確認中と表示して停止判定を維持する。
+- 結果取引の最後にownerとrunning条件を再確認して成功を確定する。照合で所有権を失った処理は成功記録も結果もcommitできない。
+- queuedの長期待機はqueued_delayedとして表示し、成功・失敗にしない。
+
+### 実行管理の配置とDB接続（草案の具体化）
+
+共通処理はbackend/app/services/tcg_analysis_run_svc.py。新規taskモジュールtcg_analysis_runs.pyにrun_id指定の実行タスクとtickを定義し、celery_app.pyのinclude/beatへ登録する。tickは60秒ごと、queuedのenqueueとrunning期限切れの照合だけを行い、failed/unknownを実行しない。配送前のqueued選択は安定したstarted_at/id順・上限100件とし、反復処理する。queue停止時もDBのqueuedを維持する。
+heartbeatは実行中だけ別スレッド・別Sessionで15秒ごとに実施する。解析結果のSessionを別スレッドと共有しない。UPDATE条件はid/owner_token/running、時計はDB。処理終了時は停止イベントを設定しスレッドを終了する。heartbeat接続の障害は成功の根拠にせず、結果取引のowner条件とDBロックを最終的な排他条件とする。
+同期DB用のsession factoryを共通サービスに集約し、自動・手動・tickで同じTCG_SCHEMAと接続設定を使う。既存TCG_DB_URL優先の接続契約は勝手に削除しない。実際の接続先とAPIの接続先の一致を稼働環境で確認してから有効化する。異なる場合は本設計を合格にせず接続設定の設計へ戻す。接続情報そのものを履歴・画面に出力しない。
+
+### 配信との整合（停止方針は今回PO合意、詳細設計は草案）
+
+従来の未完了抽出pending/running/extractedによる停止と既存商品除外条件を維持する。要確認商品が1件あるだけで全体を止める条件は追加しない。
+配信準備はguard排他ロック取得後に未完了判定と現行候補取得を行い、メモリ上の出力を組み立ててからロックを解放する。run受付/解析更新は共有ロックを使う。外部送信中にDBロックを持ち続ける設計にはしない。実行時の恒久snapshot・二重配信排他は後続配信便で扱う。
+未完了run条件案: 旧行はcompleted_at NULLかつresolved_byなし、新行はqueued/running/unknown、または未解消failed。同じjobの後続成功時だけ過去failed/unknownを解消済みにする。過去の失敗自体は表示に残す。
+自動解析のfailedも全体配信を止めると、従来は未記録だった失敗で配信が止まる。これは現行の完全同一動作ではない。POへ「自動解析が失敗した場合、その解析をやり直して成功するまで、全体配信を止める方針でよいですか？」と確認し、1件の失敗でも全体配信が待機する影響を説明した。PO原文「進める」を、この方針への合意として受け取った（2026-09-10）。実装・実配信・本番変更のGOではない。
+
+### 画面へ渡すAPI契約案
+
+既存progressのanalysis.unit=extraction_itemと商品件数を維持。新たにanalysis.executions（unit=extraction_job、latest_states、recorded_jobs、unrecorded_jobs）を追加し、商品数とrun数を混ぜない。各jobの最大attempt_noの状態を最新状態とし、履歴件数は別欄。旧行しかなければunrecorded、成功に読み替えない。
+itemsにはlatest_analysis_run_id / analysis_execution_state / result_run_idを追加。失敗runと直前の保存済み結果を併記できるようにする。既存のscope/as_of/coverageと単一読取時点の契約を維持。
+既存手動reanalyze APIはbefore/afterを維持してrun_idを追加。任意のIdempotency-Key（UUID形式）を受け、同じkeyは同じrun。未指定の旧クライアントはサーバーでUUIDを作るため通信断後の同一要求再送保証は対象外。新画面は必ずkeyを生成・保持する。
+履歴参照はGET /tcg/extraction-jobs/{job_id}/analysis-runs（offset>=0、limit=1..100、attempt_no DESC NULLS LAST、started_at/idで安定順）を提案。require_super_admin・設定TCG_SCHEMAを継承し、404で別schemaを推測させない。
+再試行は同じPOSTに任意query retry_of（UUID）を追加する。新画面は履歴のfailed/unknownを選び、「この解析だけを再試行する。配信はしない」を確認して新しいIdempotency-Keyで送る。retry_ofは同じjobのfailed/unknownだけ有効。未解決失敗があるのにretry_ofなしなら409 recovery_required。同時実行中のjobへの別key要求は409 analysis_busyとし、新runを作らない。
+同一keyのsucceededは保存済result_summaryとrun_idを200で返す。queued/runningは409 analysis_in_progress（run_id、state、Retry-After: 5）を返し、GETで確認する。failed/unknownは409 analysis_retry_requiredと元run_idを返す。新規の実処理で捕捉した失敗は500 analysis_failedとrun_idを返し、生の例外は返さない。keyのfingerprint不一致は409 idempotency_conflict。UUID形式不正は422、権限は既存403、job不在/別schemaは404。DB接続不成立時は503とし成功の空レスポンスを返さない。
+GET履歴にはscope/as_of、最新状態、result_summary、error_code、retry_of、resolved_byと時刻を含め、owner_tokenと生の例外は返さない。新画面で通信断時は同じkeyを保持し再送する。UI実装は後続便でこの契約を利用する。
+
+### 移行・影響ファイル・戻し方
+
+追加migrationは既存のTCG表を持つtenant_NNNのみ対象。tenant_001/004と後発TCG有効化に適用する。CRM一般テナントにTCG表を新設しない。migration登録は既存公式経路を使用し、本セッションでscripts/deploy/CIを変更しない。
+候補: backend/app/services/tcg_analysis_run_svc.py（新規）、backend/app/tasks/tcg_analysis_runs.py（新規）、tcg_analyzer_svc.py、tcg_product_master_svc.py、tcg_import_progress.py、tcg_distribution_svc.py、tasks/tcg_extraction.py、routers/tcg_product_master.py、celery_app.py、追加migrationと対応試験。
+旧workerが残ると新ロック・履歴を無視して書けるため、API/worker全経路の切替と旧実行の排出を確認してから記録を有効化する。稼働サービス名と配布順序は下記の追加確認を参照。旧実行の排出と停止時間は未確認。新旧混在でも安全と宣言しない。
+APIとworkerのDB接続先一致も有効化の前提。TCG_DB_URLとDATABASE_URLが別DBを向く状態では履歴正本が分裂するため有効化しない。旧データの成功backfillは行わない。
+戻す場合は新規受付を止め、実行中runを確認してからアプリを戻し、追加列・履歴を保持する。実行中のまま旧workerへ戻す手順は許可しない。実運用手順は実機確認後に確定する。
+
+### 受入条件と検証方法（未実施）
+
+| 基準 | 検証方法 |
+|---|---|
+| 自動・手動の成功が同じrun構造で記録される | 両入口を実PostgreSQLで実行しrunと結果参照を突合 |
+| 同一keyを2接続で送ってrun1件・結果適用1回 | 独立接続の同時実行試験 |
+| 同じkeyの別job要求は409、更新0件 | APIとDBを突合 |
+| 明示再試行は新run、元failed/unknownは履歴に残る | retry_ofと解消参照を検査 |
+| 3つの旧commit境界で失敗しても部分更新0件 | 各処理段階に故障を注入し全結果の前後一致 |
+| 3任意マスタ欠落で実行履歴が消えない | 実DBのSAVEPOINT・履歴保存を確認 |
+| 接続・権限・列欠落を成功にしない | 故障別のfailed/unknownと結果rollbackを確認 |
+| worker停止は成功にならずunknown、再送で再解析しない | 別プロセス停止、期限とjobロックを制御 |
+| 生存中の処理を期限だけで奪わない | ロック保持中の照合と遅延worker試験 |
+| 成功commit直後の停止・再配達で適用1回 | 成功DB記録と再配達を突合 |
+| 配信と受付/解析の競合で途中結果を選ばない | 2接続の実行順を固定し候補取得・停止を検証。外部送信はstub |
+| 旧run・旧結果を成功と誤表示しない | NULL、旧未完了、完全記録0件の3型でAPI確認 |
+| 商品数と実行数を混ぜず最新runと結果来歴を返す | 1job複数商品・複数attemptを用いた集計試験 |
+| DB/schema境界・既存/後発migration一致 | 正式migrationを適用する既存の実DB試験基盤を拡張 |
+
+### Why・代替案・根拠の適用限界
+
+途中保存3か所、自動履歴保存なし、手動だけの履歴、任意マスタ照会rollback3か所という実コードが、結果と成功を同時保存する変更の直接根拠。履歴だけ追加する案では途中結果が残るため採らない。全解析を再実行する案は旧データを変えるため対象外。
+PostgreSQLの行ロックは取引終了まで保持される。SQLAlchemy2のSAVEPOINTは外側の取引を保ちながら局所rollbackする仕組み。Celery retryは同じtask IDを使う。これらは仕様の根拠であり、この製品の実装が動いた証明ではない。
+- https://www.postgresql.org/docs/16/explicit-locking.html
+- https://docs.sqlalchemy.org/en/20/orm/session_transaction.html
+- https://docs.celeryq.dev/en/stable/userguide/tasks.html
+確認日2026-09-10。Context7利用不可のため公式資料で代替。外部導入事例は不要。今回必要な数値は再配達/部分更新の件数であり、他社の改善率から成功を推定しない。
+弊害: 1job分の結果をまとめて保存するためロック保持時間が増える。失敗/不明の未解決中は全体配信が止まり得る。処理時間と混雑時の実測は実装試験で記録する。
+
+### 設計自己審査
+
+REVISE（修正必要、実装カード発行不可）。同一AIによる自己審査であり独立レビューではない。
+解消した点: 途中commit、任意マスタrollback、同一要求と再試行の識別、停止workerの所有権確認、旧データの非推定、配信準備とのロック順序を草案へ明記。
+未解決: 旧worker排出・切替手順の実機確認。API/workerの接続設定による実DB一致は下記の読取診断で確認した。自動解析failedで全体配信を止める方針と成功時の解除は今回PO合意として追記した。
+再試行APIと実行中応答、heartbeatのSession分離、tickの配置は本節に具体化済み。残件は読み取り調査で確認し、停止・本番変更は別承認。文書上の接続設定だけを実機の一致と扱わない。
+
+### 維持の仕組み（後続便）
+
+守り手: backend/tests/test_tcg_gemini_extraction.py、backend/tests/test_tcg_distribution.py、backend/tests/test_tcg_import_progress_pg.pyと実装時に追加する実行記録試験。実装役が故障・競合試験を維持し、PO指定Reviewerが結果を確認する。既存CIは .github/workflows/test.yml と .github/workflows/migration-guard.yml。未追加の試験が現在のCIで強制済みとは扱わない。
+
+
+### 配布順序の追加確認と分割案（2026-09-10）
+
+.github/workflows/deploy.yml:149-158 はコード配布→migration→最終確認の順。:319-335 はAPIをblue-greenで切り替えた後、worker/beatを再作成する。scripts/blue-green-cutover.sh:147-150 は旧APIを最大40秒で停止する。これらは現在のコード順序であり、本セッションでは実行していない。
+したがって追加テーブルを無条件に読む新コードとmigrationを同じ便で出すだけでは、テーブル未作成・新旧worker混在の時間帯を安全に扱えない。配布スクリプトを独断変更せず、次の分割で設計する。
+
+1. 追加migrationのみ先行。既存コードが使わない表・列を追加し、影響・schema適用を検証する。マージ/本番はそのPRの別GO。
+2. 実行管理コードを未有効の状態で配布する。guardにtracking_mode（legacy/paused/tracked、初期legacy）を提案追加。全新入口はlegacy時に既存処理を維持し、trackedだけで新履歴を使用する。設定表が未作成でも新履歴を使用しない。
+3. 新版API・worker・beatの実体とDB接続一致を確認後、pausedにして新規の取込確定・再解析・配信とworkerの新規claimを一時停止する。状態参照は継続する。処理中の排出を確認し、追跡不能な旧実行があれば有効化しない。
+4. 同じ確認済み環境でtrackedへ切り替え、旧pendingは新しい実行管理で処理する。停止と有効化は本番操作のため別の明示GOが必要。
+
+pausedへの遷移と受付の競合はguard排他/共有ロックで直列化する。新APIの停止時応答は503 pipeline_paused。workerはpendingを保持し後で再配達する。旧版はこの制御を知らないため、旧版が残る状態で本機構による停止を保証しない。
+具体的な稼働サービス・バージョン・旧実行の検査方法は、許可された読取ができてから確定する。現時点の設計審査はREVISEを維持する。
+
+
+### DB接続先の実測確認（2026-09-10、読取のみ）
+
+人間用SSH鍵の使用を「今回のDB接続先確認に限る」と説明して許可を求め、PO原文「進める」を受領。その範囲で診断を実行しexit0。
+API・worker・beatの各稼働コンテナ内に作った診断用接続で、transaction_read_only=onが3/3、DB識別値のSHA256一致が3/3、TCG_SCHEMA=tenant_004が3/3、対象4表の存在が各4/4だった。生の接続情報は出力していない。コマンド・出力と限界はrecon.md同日節に保存。
+
+これはコンテナの環境設定から開いた診断用接続の一致であり、稼働中プロセスが既に保持する接続・全worker個体・配布版・処理中件数の確認ではない。beatにDB利用処理が存在することの証明にも使わない。PR #3386の全migration適用・本番反映完了も本診断の対象外。
+設計自己審査はREVISEを維持。接続設定の相違という未確認事項は解消したが、旧実行の排出を判断する検査と切替手順は未確定。設計全体のPO承認、実装カード発行、実装着手、本番切替は未実施。

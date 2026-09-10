@@ -1593,3 +1593,23 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
 
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
+
+
+## EV-20260910-PMG-ANALYSIS-RUN
+
+- base: 5d26b70a186479e32e5105ac2e04b92b38eeacec。
+- 根拠: docs/handoff/pmg-import-delivery-ssot/recon.md 後続便節（7観点）。
+- 成果: 同テーマdesign.mdへ解析履歴・原子的保存・再配達・配信停止の草案を追記。自己審査REVISE。API応答・再試行・heartbeat/tickの配置まで具体化。未決は配信方針のPO判断と稼働接続先/切替確認の2項目。
+- PR #3386のMERGEDとmerge SHA 60132b05をGitHubで再確認。画面未完成、本番反映は未確認。
+- 今回のPO原文「合意」は削除なしの文書作業場所作成を許可するものとして受領。UUIDと分割台帳を登録し、開始/所有チェックexit0。
+- 製品実装、DB変更、実配信、機能試験は未実施。外部事例の改善率は使用しない。
+
+- 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。製品の故障注入・実DB競合試験は未実施。
+
+- 方針追記: 解析失敗時は同じ解析の再試行が成功するまで全体配信停止。影響説明後のPO原文「進める」を合意として受領。実装/本番GOとは分離。
+- 実機確認: 制限付きSSHは監視出力へ置換されDB接続確認は未達。制限解除や人間用鍵へ切替なし。読取診断案はローカル準備済み、未実行。配布順序からmigration先行・追跡未有効配布・排出確認後有効化の分割案を追記。REVISEを維持。
+
+- DB読取診断の後続結果（2026-09-10）: 今回の接続先確認に限る人間用SSH鍵の使用についてPO原文「進める」を受領し、診断exit0。api/worker/beatの診断接続はreadonly=on各3/3、DB識別SHA256一致3/3、tenant_004各3/3、対象4表各4/4。詳細コマンド・出力要約・限界はrecon.md「DB接続先の読取診断結果」。生の認証情報は出力せず、SQLはSHOW/SELECTのみ。
+- 現在の残件: 旧実行の排出・切替検査。DB接続設定の一致は確認済みだが既存プロセス接続や全worker個体、配布版、PR #3386本番反映は未確認。REVISE、設計全体承認・実装カード・実装は未着手。
+
+- 文書提出時の停止: 専用worktreeでのgit add/commit要求がPreToolUse hookにより `BLOCKED: create a feature branch before committing.` で拒否。再確認したpwdはrelease-pmg-analysis-run-design作業場所、git statusはrelease/pmg-analysis-run-designで文書4件未ステージ。原因未確定。フックを無効化・迂回していない。文書は保存済み、コミット・PR提出は未実施。git diff --checkとcheck-task-state.shはexit0。

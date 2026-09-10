@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| PMG解析実行記録（後続設計） | Agent | 解析失敗時の全体配信停止にPO合意。許可済み読取診断で3コンテナのDB接続先一致を確認。設計REVISE、文書保存済み。コミットはPreToolUseに拒否されPR未提出、実装未着手 | コミット拒否の原因確認。旧実行の排出・切替検査を具体化して再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 後続便節 / EV-20260910-PMG-ANALYSIS-RUN | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 設計担当 | 文書PR #3392提出済み・同一AI自己審査APPROVE。資料7関数の直接試験成功。製品テスト未変更 | 文書PR確認後、正式カード検査を経て実装役へ渡す | docs/handoff/tcg-product-import/design.md §12 / recon.md追補 / EV-20260910-TCG-SCHEMA-DESIGN | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
 | LINE解析精度・正常完了の誤商品調査 | Agent | 実装GO受領。本番DBをread-only確認、作品誤判定29中有効4。設計自己審査APPROVE・カード検査通過、文書PR #3387提出済み | 設計・ADR追加案の文書承認後、カードを実装役へ渡す。製品実装・本番反映は未着手 | docs/handoff/tcg-product-master-growth/design-keyword.md §10 / EV-20260910-LINE-ACCURACY-06 / https://github.com/shingo-ops/salesanchor/pull/3387 | 2026-09-10 |
@@ -92,4 +93,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
-| インポート関連・進捗 第1段階 | Agent | PR #3386提出・ローカル68件通過、マージ未実施 | CI確認・レビュー・PO GO確認 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
