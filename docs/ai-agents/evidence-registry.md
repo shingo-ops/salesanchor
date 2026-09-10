@@ -1542,3 +1542,11 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
   evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
   observed: "base=8206ba2844921c1efb3ca4fd647230e76bb0c5c6。仕入元・実際の投稿日時・本文一致のみ再利用する方針にPOが合意。ローカルPostgreSQL 16の専用テストDBで検証。本番実測は引き継ぎ資料によるもので本セッションでは未実施。"
   open: "新PRのマージ・本番適用・実配信は未承認。UI・配信履歴・解析attemptは後続便。最終テスト結果とPR状態はテーマdesign.md参照。"
+
+
+文書提出の追記（EV-20260910-LINE-ACCURACY-06）:
+- PR: https://github.com/shingo-ops/salesanchor/pull/3387 — OPEN、main向け、head=release/line-analysis-accuracy-reconを `gh pr view` で確認。
+- 文書7件のみの差分。設計とADR追加案は文書レビュー中。実装役未起動、製品実装・本番DB更新・本番反映なし。
+- process-artifactsのローカル検算は合格。初回はローカル証跡パスの表記とADR参照不足を検出し修正した。card-lint exit0（非停止のL24警告7件）、task-state、diffチェックも成功。
+- main更新3コミットは文書作業ブランチへ通常のmergeで取り込み、競合した台帳・索引は双方を保存。rebaseはガードで拒否されたため実施せず、許可の自己発行も行っていない。
+- GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
