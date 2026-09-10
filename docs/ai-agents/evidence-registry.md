@@ -2118,3 +2118,7 @@ PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受�
 ## EV-20260911-GO-SESSION-DELEGATION
 
 PO原文「セッション上で委任した時点でGOを出せる権限を移譲されたと認識して良い」と後続「GO」を受領。追加GitHub有効化案を撤回し、セッション委任成立と検査未対応を分離。design.md最新節に原文・期限非延長・4欄と委任参照・受入条件を保存。同一AI自己審査REVISE、検査実装未着手。元委任の発話時刻は未確認であり、記録時刻で再開しない。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-SESSION-PREFLIGHT.txt。
+
+## EV-20260911-GO-DELEGATION-PROOF
+
+本セッションの元委任user記録2026-09-10T12:11:22.302Zを読取。受信記録基準の24時間は翌12:11:22.302Zまで、再確認で延長しない。生ログ全文ではなく関連3発話と各行hashをreconへ保存。hashは本人認証ではない。委任判定19ケース/重複登録4条件成功、期限比較変異を検出。designに独立した承認処理と本番失敗後の復旧枠を具体化。全体自己審査REVISE、実App/検査実装未実施。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-DELEGATION-SOURCE.json、TH-GO-DELEGATION-MODEL-RESULT.json。

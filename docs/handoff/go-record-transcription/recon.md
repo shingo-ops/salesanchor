@@ -566,3 +566,142 @@ print(json.dumps(report, indent=2))
 ## 2026-09-11 セッション委任の承認起点更新
 
 PO原文と新しい権限判断はdesign.md「セッション委任の成立」に逐語保存。現物確認: scripts/check-process-artifacts.js:36はshingo-ops/Shingoのみ、:293-330は発行者の部分一致・日時の長さ・GO番号・バックアップ欄を検査する。代理の委任ID/期限/取消は検査しない。この現状に名前を合わせて迂回しない。guards/05-pr.md:21-22はGO前の欄なしと危険/利用者影響時の必須が残る。製品/検査変更0件。外部事例・API仕様調査は不要（POの承認条件変更とローカル実装の照合）。preflight成功、追跡ファイルcleanで開始、HEADとorigin/mainは8 ahead/0 behind。関連専用runbookは検索で発見なし。観測時刻と元の発話時刻は分離。
+
+## 2026-09-11 元委任の一次記録と限定モデル
+
+読み取り対象は該当セッションのJSONLのみ。隣のguardianログは元ユーザー発話ではないため証拠に採用しない。9月11日ディレクトリの検索は不存在で失敗し、実在する9月10日の記録を確認した。外部へセッション全文は送信しない。source receiptの根拠抜粋:
+
+```json
+{
+  "source_path": "/Users/tanizawashingo/.codex/sessions/2026/09/10/rollout-2026-09-10T09-26-28-01a088b5-751b-7981-8c33-881468480fdf.jsonl",
+  "session_id": "01a088b5-751b-7981-8c33-881468480fdf",
+  "records": [
+    {
+      "line": 2648,
+      "timestamp": "2026-09-10T12:11:22.302Z",
+      "role": "user",
+      "text": "離席するのでcxastragoモードと同じ条件で権限委譲するので進めてくれ",
+      "record_sha256": "87c1841e94153402b607c236eb924d2e63b25b45921dbc0128d6b2d73f653938"
+    },
+    {
+      "line": 3211,
+      "timestamp": "2026-09-10T14:33:02.751Z",
+      "role": "user",
+      "text": "› › 離席するのでcxastragoモードと同じ条件で権限委譲する",
+      "record_sha256": "6763bba4d4d49f1de77f1b7ac68d21d0b31536ad4d0615d383d72ba0d6249ac3"
+    },
+    {
+      "line": 3394,
+      "timestamp": "2026-09-10T22:33:22.965Z",
+      "role": "user",
+      "text": "セッション上で委任した時点でGOを出せる権限を移譲されたと認識して良い",
+      "record_sha256": "ea7445929d42f5df647bab5e88445c3c4de40ab72c5e669bb7328ec5c2723629"
+    }
+  ],
+  "earliest_direct_delegation_observed_in_this_log": "2026-09-10T12:11:22.302Z",
+  "expiry_if_using_this_record": "2026-09-11T12:11:22.302000+00:00",
+  "limits": [
+    "Timestamp is local receipt record, not independently attested server message time.",
+    "Hash detects record change; it does not prove PO identity.",
+    "No inference about earlier messages outside this session log.",
+    "Later reconfirmations do not reset expiry."
+  ]
+}
+```
+
+Context7公開ツールは0件のため許可済み公式資料で代替。確認日2026-09-11 JST。GitHub公式 [再利用workflowのcontext](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations) はcallerに関連付くcontext/tokenを説明する。ここから、別repoにworkflowファイルを置くだけでは独立した権限境界の証明にならない、と設計上推論した。独立起動案の実機成功は未確認。[rulesetsの利用可能ルール](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets) のRestrict updates等を確認したが、本番に適用済みとは扱わない。外部成功事例は不要（承認境界の仕様/実物確認であり成果改善率を主張しない）。
+
+モデルは通信/資格操作なし。python3 /tmp/reports/TH-GO-DELEGATION-MODEL.py exit0、19判定ケース+4重複登録assert、期限比較変異検出。source SHA256 742cb9d139a3e556502b33a708095e65f395b2ae7a7a4cc518cdf6be31c519c3。再現用source（設計モデルであり製品実装ではない）:
+
+```python
+"""Design model only: trusted receipt and current facts are inputs, not proven here."""
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+import json
+
+START = datetime(2026, 9, 10, 12, 11, 22, 302000, tzinfo=timezone.utc)
+BASE = dict(grant='g1', start=START, expiry=START+timedelta(hours=24),
+            revoked=False, receipt_verified=True, scope={'go-flow'},
+            principal='session-ai', policy='fixed-v1')
+REQUEST = dict(grant='g1', now=START+timedelta(hours=1), topic='go-flow',
+               principal='session-ai', policy='fixed-v1', pr=3418,
+               go_pr=3418, head='a'*40, go_head='a'*40,
+               reviewed=True, ci=True, evidence=True)
+
+def decide(g, r):
+    if not g['receipt_verified'] or not r['evidence']:
+        return 'evidence'
+    if g['start'] is None or g['expiry'] is None:
+        return 'unknown-time'
+    if g['expiry'] != g['start']+timedelta(hours=24):
+        return 'period'
+    if not g['start'] <= r['now'] < g['expiry']:
+        return 'time'
+    if g['revoked']:
+        return 'revoked'
+    if (g['grant'],g['principal'],g['policy']) != (r['grant'],r['principal'],r['policy']):
+        return 'identity'
+    if r['topic'] not in g['scope']:
+        return 'scope'
+    if r['pr'] != r['go_pr'] or r['head'] != r['go_head']:
+        return 'target'
+    if not r['reviewed'] or not r['ci']:
+        return 'quality'
+    return 'allow'
+
+CASES = [
+ ('normal',{}, {},'allow'),
+ ('before',{}, {'now':START-timedelta(microseconds=1)},'time'),
+ ('at-start',{}, {'now':START},'allow'),
+ ('before-expiry',{}, {'now':START+timedelta(hours=24)-timedelta(microseconds=1)},'allow'),
+ ('at-expiry',{}, {'now':START+timedelta(hours=24)},'time'),
+ ('after-expiry',{}, {'now':START+timedelta(hours=25)},'time'),
+ ('unknown-start',{'start':None},{},'unknown-time'),
+ ('extended',{'expiry':START+timedelta(hours=25)},{},'period'),
+ ('cancelled',{'revoked':True},{},'revoked'),
+ ('unverified-source',{'receipt_verified':False},{},'evidence'),
+ ('missing-evidence',{}, {'evidence':False},'evidence'),
+ ('wrong-grant',{}, {'grant':'g2'},'identity'),
+ ('wrong-ai',{}, {'principal':'other'},'identity'),
+ ('changed-policy',{}, {'policy':'pr-new-policy'},'identity'),
+ ('scope',{}, {'topic':'unrelated'},'scope'),
+ ('wrong-pr',{}, {'go_pr':3404},'target'),
+ ('main-catchup',{}, {'head':'b'*40},'target'),
+ ('no-review',{}, {'reviewed':False},'quality'),
+ ('failed-ci',{}, {'ci':False},'quality'),
+]
+results=[]
+for name,gdelta,rdelta,expected in CASES:
+    g=deepcopy(BASE);g.update(gdelta);r=deepcopy(REQUEST);r.update(rdelta)
+    actual=decide(g,r)
+    assert actual==expected,(name,actual,expected)
+    results.append(dict(name=name,expected=expected,actual=actual))
+# Idempotent grant ingestion preserves the original record; conflicting reuse is refused.
+store={}
+def register(g):
+    key=g['grant']
+    if key in store:
+        if store[key]!=g:
+            return 'conflict'
+        return 'duplicate'
+    store[key]=deepcopy(g)
+    return 'created'
+assert register(BASE)=='created'
+assert register(deepcopy(BASE))=='duplicate'
+changed=deepcopy(BASE);changed.update(start=START+timedelta(hours=1),expiry=START+timedelta(hours=25))
+assert register(changed)=='conflict'
+assert store['g1']==BASE
+# Mutation check: an inclusive expiry comparator would accept the rejected boundary.
+import inspect
+mutant_source=inspect.getsource(decide).replace('def decide(', 'def mutant_decide(', 1).replace("r['now'] < g['expiry']", "r['now'] <= g['expiry']", 1)
+namespace={'timedelta':timedelta}
+exec(mutant_source,namespace)
+boundary=deepcopy(REQUEST);boundary['now']=BASE['expiry']
+assert decide(BASE,boundary)=='time'
+assert namespace['mutant_decide'](BASE,boundary)=='allow'
+print(json.dumps({'decision_cases':results,'idempotency_assertions':4,
+                  'expiry_mutant_detected':True,
+                  'limits':['Trusted receipt, clock, CI and review facts assumed.',
+                            'No API, parsing, durable concurrency or credential tests.',
+                            'Synthetic GO input is not an issued GO.']},ensure_ascii=False,indent=2))
+```
