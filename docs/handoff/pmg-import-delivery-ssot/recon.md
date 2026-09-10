@@ -196,3 +196,9 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 
 公式nginx1.31.1とPCRE2-10.46を/tmpに取得し、Apple clang15.0.0でビルド。Python3.14.3の架空HTTP処理先と127.0.0.1で試験。最終151/151 assertion成功・exit0。対象44組の許可なし/あり/取消後、状態directory探索不能、URI正規化、reloadの新worker出現、旧要求完了、再起動後の拒否維持を確認。
 試験の全結果/実際の設定/ハーネス/ログは/tmp/reports/pmg-nginx-admission-probe-3396/、永続する要約とhashはdesign.md同日節。これはmacOS上の受付判定試験でありDocker/TLS/本番handlerの試験ではない。製品コード・CI・nginx設定・本番の変更なし。
+
+### 復旧160件と既存mount候補の照合（2026-09-10）
+
+/tmp/pmg-nginx-recovery-y5544801/probe.pyはexit0、160/160。不正設定reload失敗後の旧worker存続/拒否維持と復旧、QUIT中の新規接続停止/受付済み要求完了/正常終了等を追加確認した。成果物hashはdesign.md同日節。
+停止状態の別候補をcompose.yml:18、.gitignore:119、deploy.yml:104,914と照合。git check-ignore -v nginx/htpasswd.d/pmg-cutover/allow-writesは.gitignore:119に一致。deploy/scripts内のhtpasswd.d参照を検索した範囲で生成/削除対象はdesign-siteであり、専用サブdirectoryはまだ存在すると確認したものではない。前回本番診断はmountやowner/modeを取得していない。追加SSH接続なし。
+既存Dockerの一般的な6パスを確認したが存在せず、ローカルDocker試験未実施。PR #3396 HEADddcf962bのチェックはpass33/skipping8。
