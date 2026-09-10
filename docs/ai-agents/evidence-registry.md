@@ -1608,3 +1608,8 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 評価ゲート（依頼4）、商品マスタfrontend、QA試行と44件の本番取り込みは本PR対象外。
 
 - 実装提出: https://github.com/shingo-ops/salesanchor/pull/3397。変更はテスト1件・状態記録3件。公式wrapperで番号登録成功。CIは確認中であり、マージ済みとは扱わない。
+
+- CI停止: 最終HEAD 0c8c643eのrun 34429316341で、test_rls_bootstrap_ordering.pyのtenant_871.leads欠落が初回と再実行で発生。各2377 passed / 1 failed / 93 skipped。同じ実装を含む直前HEAD 780460b2のpytestは成功。差分は文書2件だけ。マージ保留、追加再実行なし。
+- 原因の接触面: backend/tests/rls_bootstrap.py:232の全テナントmigrationと、backend/tests/test_tcg_import_progress_pg.py:47のTCG専用一時schema。具体的な並列タイミングは未実測。別件の修正候補は /tmp/reports/TCG-SCHEMA-3397-CI-BLOCKER.md。禁止対象や追加コードには変更していない。
+
+- 別件のDB準備テスト修正をPR #3399へ提出。実DBで判明した在庫fixture旧codeも同PRのテスト内で補正中。現時点で両PRとも未マージ。
