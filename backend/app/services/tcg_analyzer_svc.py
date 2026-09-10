@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v2"
+ENGINE_VERSION = "name-first-v3-work"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -392,6 +392,108 @@ def match_pid_name_first(
     parts = "/".join(f"PM.{c}" for c in codes[:5])
     pid_basis = f"MULTI({parts}):要確認"[:100]
     return (best_code, pid_basis, False, codes)
+
+
+def load_work_master(session: Session) -> list[dict]:
+    """Active game/work names only; alt_name is a single value, never a list."""
+    rows = session.execute(text(
+        f"SELECT id, display_name, alt_name FROM {TCG_SCHEMA}.tcg_series WHERE is_active = TRUE"
+    )).fetchall()
+    return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
+
+
+def resolve_work_evidence(
+    raw_name: str, raw_text: str, line_start: int, line_end: int,
+    raw_work_name: str | None, raw_work_span: str | None, works: list[dict],
+) -> str | None:
+    """Accept only an explicit item name or the nearest independent work heading.
+
+    NULL/NULL means historical seven-column data. Empty v3 evidence is unknown.
+    A fabricated, ambiguous, or out-of-range citation is never repaired.
+    """
+    aliases: dict[str, set[str]] = {}
+    for work in works:
+        if not work.get("is_active", True):
+            continue
+        for name in (work["display_name"], work.get("alt_name")):
+            if name and normalize_en(name).strip():
+                aliases.setdefault(normalize_en(name).strip(), set()).add(str(work["id"]))
+
+    direct = {wid for name, ids in aliases.items()
+              if match_one_kw(name, normalize_en(raw_name)) for wid in ids}
+    if raw_work_name is None and raw_work_span is None:
+        return next(iter(direct)) if len(direct) == 1 else None
+    if not raw_work_name or not raw_work_span or len(direct) > 1:
+        return None
+    ids = aliases.get(normalize_en(raw_work_name).strip(), set())
+    if len(ids) != 1:
+        return None
+    work_id = next(iter(ids))
+    span = re.fullmatch(r"L(\d+)(?:-L(\d+))?", raw_work_span)
+    lines = raw_text.split("\n")
+    if not span:
+        return None
+    start = int(span[1])
+    end = int(span[2] or span[1])
+    if not (1 <= start <= end <= len(lines) and 1 <= line_start <= line_end <= len(lines)):
+        return None
+    if not any(raw_work_name in line for line in lines[start - 1:end]):
+        return None
+    if direct:
+        # A name citation must belong to this item, not another message line.
+        return work_id if (direct == ids and line_start <= start <= end <= line_end
+                           and raw_work_name in raw_name) else None
+
+    # Only standalone headings establish scope. Product rows never do.
+    nearest: tuple[int, set[str]] | None = None
+    for number, line in enumerate(lines[:line_start - 1], 1):
+        heading = line.strip()
+        if ((heading.startswith("【") and heading.endswith("】"))
+                or (heading.startswith("[") and heading.endswith("]"))):
+            heading = heading[1:-1].strip()
+        heading_ids = aliases.get(normalize_en(heading), set())
+        if heading_ids:
+            nearest = (number, heading_ids)
+    if nearest and start == end == nearest[0] and nearest[1] == ids:
+        return work_id
+    return None
+
+
+_MODEL_KEYWORD_RE = re.compile(r"[a-z0-9]+(?:\s*[-/]\s*[a-z0-9]+)*")
+
+
+def is_model_keyword(keyword: str) -> bool:
+    normalized = normalize_en(keyword)
+    return bool(_MODEL_KEYWORD_RE.fullmatch(normalized)
+                and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
+
+
+def match_pid_with_work(
+    raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
+    *, work_id: str | None, product_work_ids: dict[str, str | None],
+    raw_state: str = "", raw_memo: str = "",
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
+    fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
+    eligible: dict[str, list[str]] = {}
+    for code in product_codes:
+        if work_id is not None and product_work_ids.get(code) != work_id:
+            continue
+        if any(kw and match_one_kw(kw, field)
+               for kw in exclude_kw.get(code, []) for field in fields):
+            continue
+        matched = [kw for kw in search_kw.get(code, [])
+                   if kw and match_one_kw(kw, fields[0])
+                   and (work_id is not None or not is_model_keyword(kw))]
+        if matched:
+            eligible[code] = matched
+    matched_code, basis, resolved, candidates = match_pid_name_first(
+        raw_name, list(eligible), eligible, {},
+    )
+    if basis == "NONE":
+        return matched_code, basis, resolved, candidates  # review UI uses exact NONE
+    constraint = f"WORK:{work_id}" if work_id else "WORK:UNKNOWN"
+    return matched_code, f"{constraint}|{basis}"[:100], resolved, candidates
 
 
 # ---------------------------------------------------------------------------
@@ -932,6 +1034,12 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     product_codes = list(product_code_to_uuid.keys())
     product_code_to_kubun_type = load_product_kubun_type_map(session)
 
+    works = load_work_master(session)
+    work_rows = session.execute(text(
+        f"SELECT code, work_id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+    )).fetchall()
+    product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
+
     # C-1/C-7/Status マスタをロード（graceful fallback: テーブル不在時は空で続行）
     norm_rules = load_normalization_rules(session)
     note_entries = load_note_master(session)
@@ -941,17 +1049,25 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     rows = session.execute(
         text(
             f"""
-            SELECT id, raw_product_name, raw_quantity, raw_price, raw_unit, raw_state, raw_memo
-            FROM {TCG_SCHEMA}.extraction_items
-            WHERE extraction_job_id = :ej_id
-            ORDER BY line_start, id
+            SELECT ei.id, ei.raw_product_name, ei.raw_quantity, ei.raw_price,
+                   ei.raw_unit, ei.raw_state, ei.raw_memo,
+                   ei.raw_work_name, ei.raw_work_source_line_span,
+                   ei.line_start, ei.line_end, sm.raw_text,
+                   EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections ic
+                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id')
+            FROM {TCG_SCHEMA}.extraction_items ei
+            JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            WHERE ei.extraction_job_id = :ej_id
+            ORDER BY ei.line_start, ei.id
             """
         ),
         {"ej_id": extraction_job_id},
     ).fetchall()
 
     now = datetime.now(timezone.utc)
-    stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
+    stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0,
+             "skipped_product_corrections": 0}
 
     for row in rows:
         (
@@ -962,9 +1078,18 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             raw_unit,
             raw_state,
             raw_memo,
+            raw_work_name,
+            raw_work_span,
+            line_start,
+            line_end,
+            source_text,
+            has_product_correction,
         ) = row
 
         stats["total"] += 1
+        if has_product_correction:
+            stats["skipped_product_corrections"] += 1
+            continue
         raw_product_name = raw_product_name or ""
         raw_unit = raw_unit or ""
         raw_state = raw_state or ""
@@ -991,8 +1116,14 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         )
 
         # 商品照合 — 正規化済み norm_product_name を使用
-        matched_code, pid_basis, pid_resolved, candidates = match_pid_name_first(
-            norm_product_name, filtered_codes, search_kw, exclude_kw
+        work_id = resolve_work_evidence(
+            raw_product_name, source_text or "", line_start, line_end,
+            raw_work_name, raw_work_span, works,
+        )
+        matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
+            norm_product_name, filtered_codes, search_kw, exclude_kw,
+            work_id=work_id, product_work_ids=product_work_ids,
+            raw_state=norm_condition, raw_memo=norm_memo,
         )
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
 

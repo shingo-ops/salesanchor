@@ -49,7 +49,7 @@ PM0200の「コロ」追加は冪等なdata migrationとし、PM0285や新規商
 
 検証作業
 設計§10.3の表をすべて検証し、ケース名・期待・実測・合否を対応させる。29は過去保存行相当の入力数であり、Gemini正答数として流用しない。
-PostgreSQL統合試験はローカルのテストDBで実行する。既存のTCG抽出・解析・配信テストも実行する。Dockerが使えなければ統合試験をPASSとせず、未実施を報告して停止する。
+PostgreSQL統合試験はローカルDocker、または既存のGitHub CIの使い捨てPostgreSQL 16で実行する。既存のTCG抽出・解析・配信テストも実行する。ローカルDockerがない場合はローカルpytestを実行せず、静的検査後にready PRを作って既存CIへ進む。統合試験を省略・SQLite代用・skipのままPASS扱いにしない。CIでも実行できない場合は未実施と根拠を報告して停止する。
 Gemini実験は匿名化した標本だけを用い、形式失敗・正答・不明・誤分類を別計測する。失敗や正例の取りこぼしを隠して受入済みとしない。
 
 手順4
@@ -62,7 +62,7 @@ Gemini実験は匿名化した標本だけを用い、形式失敗・正答・�
   cd /Users/tanizawashingo/worktrees/salesanchor/release-line-work-matching-v3 && git diff --check
 
 PR作業
-検証完了後に実際に変更したファイルだけをコミットする。コミットの実在は `git log -1 --format=%H` で確認してからpushする。
+ローカルで実行可能な検査を完了後、実際に変更したファイルだけをコミットする。Dockerがない場合はCI実行に必要なready PR起票を先行してよい。CIで新規PostgreSQL統合試験が実行され成功したことを確認するまで、検証完了とはしない。コミットの実在は `git log -1 --format=%H` で確認してからpushする。
 公式 `scripts/gh-pr-create-safe.sh` の手順でmain向けready PRを作る。PR本文は実在する本文ファイルを作り `--body-file` で渡す。文書承認・実装GOと本番GOを混同しない。
 良い記載例: `### 標準ワークフロー確認` の中に `設計: docs/handoff/tcg-product-master-growth/design-keyword.md` を置く。
 禁止形: 対象ADR・recon・設計を別セクションへ平打ちする。触るファイルには実際の変更パスを全件宣言する。
@@ -71,5 +71,21 @@ PR作業
 完了報告と停止
 報告冒頭は「本報告はカード CARD-LINE-WORK-MATCHING-V3-01 の実行結果である」。完了報告の本文に実行した検証の生出力を全文含め、PR URL・HEAD・差分ファイル・検証ケースの結果・未実施項目を設計パートナーへ返す。
 停止時は停止した手順番号／最後のコマンド／停止理由とエラー生出力を返す。契約矛盾や必要ファイルの追加は設計側へ戻し、実装役で設計を変えない。
+
+
+
+補正記録（2026-09-10）
+停止分類: カード不備。設計§10.3はCIでのPostgreSQL検証を許可していたが、本カードがローカルDocker不在で一律停止としていたため整合させた。
+実測: Dockerコマンドなし（exit127）、標準配置3箇所にも実体なし。製品変更前に停止した。
+CI根拠: `.github/workflows/test.yml` のpytest-runはPostgreSQL16/Redis7を起動し、`RLS_ADMIN_DATABASE_URL`を設定してbackendのpytest全件を実行する。`backend/pyproject.toml` のtestpathsはtests。CI変更は不要。
+実装テストはCIのこの接続情報を使い、使い捨てテストDB／名前空間に限定する。同時に走る他の試験や本番へ影響しないことを検証する。
+Gemini実測の認証が利用できない場合は認証情報を探索・開示せず、匿名化標本と期待値を準備し、実測未了をPRへ明記する。コード・DB統合検証は続行可能だが、本番反映可とはしない（設計§10.3の本番前実測条件を維持）。
+本補正で製品の仕様・受入条件・CI設定・本番権限は変更しない。実装役1名の委任はPOから受領済み。
+
+追加補正（設計側指示）: 未一致のpid_basisは厳密に `NONE` を維持する。既存 `backend/app/services/tcg_analysis_review_svc.py:77,94,118` の完全一致条件を壊さないため。作品制約の表示は成功・複数候補時に付け、未一致の履歴は作品原文2列とengine_versionで追跡する。UIファイルの追加変更はしない。
+
+検証環境補足: 試験のDB削除命令を含むファイル作成が不可逆操作ガードに拒否されたため、削除処理を取り除いた。CIの使い捨てサービス内だけでランダムな試験DBを作り、サービス終了時の廃棄に委ねる。GITHUB_ACTIONS・接続host・試験用DB名を検証し、本番・QA・ローカルDBには実行しない。ガード解除なし。
+
+追加所有（設計側指示）: `backend/tests/test_gemini_error_redact.py` の正常応答fixtureを9列へ更新する。既存test_success_has_no_error_messageは新規extract_messageに7列を渡しており、厳格v3契約と矛盾するため。秘密情報の秘匿検証は維持し、旧7列は旧パーサのテストで保持する。
 
 END OF CARD

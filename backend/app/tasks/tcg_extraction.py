@@ -27,7 +27,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from app.services.gemini_extraction_svc import _safe_error_message, extract_message
-from app.services.tcg_analyzer_svc import analyze_extraction_job
+from app.services.tcg_analyzer_svc import analyze_extraction_job, load_work_master
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     logger.info(
         "[tcg_extraction] calling Gemini for ej=%s", extraction_job_id
     )
-    result = extract_message(raw_text)
+    result = extract_message(raw_text, works=load_work_master(session))
 
     items = result["items"]
     final_status = result["status"]  # done / empty / error
@@ -165,6 +165,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                         line_start, line_end,
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
+                        raw_work_name, raw_work_source_line_span,
                         created_at
                     )
                     VALUES (
@@ -172,6 +173,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                         :line_start, :line_end,
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
+                        :raw_work_name, :raw_work_source_line_span,
                         now()
                     )
                     """
@@ -187,6 +189,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                     "raw_unit": item["raw_unit"] or None,
                     "raw_state": item["raw_state"] or None,
                     "raw_memo": item["raw_memo"] or None,
+                    "raw_work_name": item.get("raw_work_name"),
+                    "raw_work_source_line_span": item.get("raw_work_source_line_span"),
                 },
             )
             items_inserted += 1

@@ -1550,3 +1550,36 @@ follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージ�
 - process-artifactsのローカル検算は合格。初回はローカル証跡パスの表記とADR参照不足を検出し修正した。card-lint exit0（非停止のL24警告7件）、task-state、diffチェックも成功。
 - main更新3コミットは文書作業ブランチへ通常のmergeで取り込み、競合した台帳・索引は双方を保存。rebaseはガードで拒否されたため実施せず、許可の自己発行も行っていない。
 - GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
+
+
+```text
+id: EV-20260910-LINE-ACCURACY-07
+date: 2026-09-10
+agent: Codex (design partner)
+task: 実装カードのCI検証経路補正
+scope: カード・台帳のみ。製品の仕様と試験基準は維持
+evidence:
+  - type: command
+    reference: 実装役 /root/implement_line_work_matching の停止報告
+    summary: preflight成功、worktree release/line-work-matching-v3作成、Docker不存在exit127、製品変更0で停止
+  - type: file
+    reference: .github/workflows/test.yml:123 / .github/workflows/test.yml:224 / backend/pyproject.toml:54
+    summary: 既存CIはPostgreSQL16とRLS_ADMIN_DATABASE_URLを用意してtests全件を実行。設計§10.3でCI経路は許可済み
+confidence: high
+tradeoff: ローカルpytestは未実施と明示し、CIで実統合試験が実行された証拠を必須にする。Gemini実測不可は本番反映の未完了条件として保持
+decision: 一律停止のカード不備を修正し、実装・ローカル静的検査・ready PR・既存CIの順で再開可能とする。追加の実装GOは不要
+follow_up: 実装役が再開し、新規統合試験の実行成功と実測未了の区別を報告する
+```
+
+
+## EV-20260910-LINE-ACCURACY-08
+
+- 対象: CARD-LINE-WORK-MATCHING-V3-01の実装・検証準備（Generator）。
+- 基点: 6e1335725bb8dfdf390125c4caf5a93f705f4821。設計PR #3387のMERGEDとmergeCommitをghで再確認。
+- 実装: v3厳格9列と旧7列パーサ、作品原文2列保存、同一明細の作品根拠検証、作品ID候補制約、作品不明時の型番だけの確定拒否、商品名・状態・備考を独立に除外確認、商品訂正記録のある行スキップ。未一致basisは既存UI互換のNONEを維持。
+- migration: 2本を正規runner末尾へ追加。構造は追加専用、PM0200は名称とIP001の検算後にコロを追加、商品登録・再解析は含まない。
+- 実行: Python3.12でmake lint-ci exit0（ruff PASS、Bandit High0、mypy警告運用）。初回Python3.14のBandit内部例外はPASSに含めない。task-state PASS、card-lint exit0（長文警告あり）、git diff --check PASS、6 Pythonファイルの構文解析PASS。ローカルpytest未実行。
+- PostgreSQL: CIの使い捨てサービス内に試験ごとのDBを作る統合試験を追加。まだ実行前でありPASSとはしない。GITHUB_ACTIONS、localhost、jarvis_test_dbを必須条件とする。
+- 安全: テストDB削除命令を含むファイル作成がガード拒否。削除命令を除去し、CIサービス終了に廃棄を委ねる。ガード解除・本番接続なし。
+- Gemini: GEMINI_API_KEYの設定有無のみ確認しFalse。6匿名メッセージ・8期待明細をテスト内に準備。live形式失敗／正答／不明／誤分類はすべて未計測。モデル精度改善を実測済みとは扱わない。
+- 次: ready PRと既存CI。設計PRのGOを新しい実装PR番号のGOへ流用せず、本番前実測とマージ承認を残条件として区別する。
