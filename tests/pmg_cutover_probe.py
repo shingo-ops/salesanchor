@@ -213,6 +213,7 @@ class P:
         s.ports = dict(
             zip(("app.probe.test", "api.probe.test"), [int(x["HostPort"]) for x in b])
         )
+        ok("published TLS bindings", True, json.dumps(s.ports, sort_keys=True))
         m = json.loads(s.d("inspect", s.i, "--format", "{{json .Mounts}}").stdout)
         q = [x for x in m if x["Source"] in (str(s.conf), str(ROOT / "htpasswd.d"))]
         ok(
@@ -248,6 +249,41 @@ class P:
             "config host/container SHA256",
             container_digest == hashlib.sha256(s.conf.read_bytes()).hexdigest(),
             container_digest,
+        )
+
+    def refresh_ports(s):
+        inspection = json.loads(s.d("inspect", s.i).stdout)[0]
+        ports = inspection["NetworkSettings"].get("Ports") or {}
+        ok(
+            "restart has TLS bindings",
+            {"443/tcp", "444/tcp"} <= set(ports),
+            repr(ports),
+        )
+        ok(
+            "restart one binding per TLS port",
+            all(
+                isinstance(ports.get(key), list) and len(ports[key]) == 1
+                for key in ("443/tcp", "444/tcp")
+            ),
+            repr(ports),
+        )
+        bindings = [ports["443/tcp"][0], ports["444/tcp"][0]]
+        ok(
+            "restart TLS bindings are unique loopback",
+            len({item["HostPort"] for item in bindings}) == 2
+            and all(item["HostIp"] == "127.0.0.1" for item in bindings),
+            repr(bindings),
+        )
+        s.ports = dict(
+            zip(
+                ("app.probe.test", "api.probe.test"),
+                (int(item["HostPort"]) for item in bindings),
+            )
+        )
+        ok(
+            "refreshed published TLS bindings",
+            True,
+            json.dumps(s.ports, sort_keys=True),
         )
 
     def get(s, h, m, p):
@@ -403,6 +439,7 @@ def main():
         ok("bad restart logs invalid config", bool(p.new_error(restart_log)))
         p.rewrite(p.good.read_text())
         p.d("start", p.i)
+        p.refresh_ports()
         wait("restart TLS", lambda: p.get("app.probe.test", "GET", "/") == 200)
         p.verify_bind_view()
         for path in paths:
