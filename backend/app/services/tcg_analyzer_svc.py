@@ -7,7 +7,8 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v2"
+エンジンバージョン: "name-first-v3-work"
+作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
 
 キーワード照合エンジン (name-first-v2):
   GAS investigate2.gs の matchKeyword_ を正として移植。

@@ -1583,3 +1583,6 @@ follow_up: 実装役が再開し、新規統合試験の実行成功と実測未
 - 安全: テストDB削除命令を含むファイル作成がガード拒否。削除命令を除去し、CIサービス終了に廃棄を委ねる。ガード解除・本番接続なし。
 - Gemini: GEMINI_API_KEYの設定有無のみ確認しFalse。6匿名メッセージ・8期待明細をテスト内に準備。live形式失敗／正答／不明／誤分類はすべて未計測。モデル精度改善を実測済みとは扱わない。
 - 次: ready PRと既存CI。設計PRのGOを新しい実装PR番号のGOへ流用せず、本番前実測とマージ承認を残条件として区別する。
+
+- PR提出: https://github.com/shingo-ops/salesanchor/pull/3393 （OPEN、ready、初回HEAD 13fae233250d49c434c673450e60772d026293b7）。2026-09-10 01:28 UTC提出。push由来のtask-state/active-work checksは成功、Backend Testsは確認待ち。
+- 設計パートナーの読み取り検算報告（Generatorの実DB試験とは別）: 最新有効マスタへ正しいガンダムUUIDを入力した29保存行相当は異作品確定0、未解決29。PM0200コロ追加後、コロちゃお商品名3保存行はPM0285、備考のみ1行は未解決、通常名1件はPM0200。AST抽出関数による局所検算であり、Gemini実測・DBmigration実行結果ではない。
