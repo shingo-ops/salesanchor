@@ -1995,3 +1995,8 @@ PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実
 ## EV-20260910-PMG-BARRIER-CONTRACT
 
 base411df652、2026-09-10。PR3410/deploy34468628611成功確認。rootは配布/監査/ログ設定、Terraは旧配信観測を読取。実装変更なし。既存design:178の過去run非生成に従い、全過去復元を切替前提にする読み方を訂正。配布保留6分類、初期化順序、検問位置を草案化。通常配布も止める影響はPOへ質問中・採用未決。自己審査REVISE、実装カード未発行。根拠はdesign/recon最終節。
+
+
+## EV-20260910-LINE-ACCURACY-09
+
+PO原文GO #3411受領。PR3411 merge4f1c2b81、Deploy34470611116成功、DBバックアップgzip検証成功。条件/注記マスタ期待値一致。本番18明細履歴付き再解析run f7b8f3ef-d5fc-4e25-bfce-6e34dd918697 completed/18snapshots、指定2件のみ訂正。3シート各445行配信ok、20:24:50 JST読戻し全行一致。rootの直接実行。詳細と限定範囲はdocs/handoff/tcg-product-master-growth/recon.md「#3411 本番マスタ修正・再解析・3シート配信完了」。PSA15件/状態候補17件は次周未実装。

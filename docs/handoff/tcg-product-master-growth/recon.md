@@ -777,3 +777,30 @@ Context7はツール一覧で利用不可。PO許可済み代替として[gsprea
 ### 配信前2件のPO決定と限定設計（2026-09-10）
 
 PO原文「通常カートンだがNOTE_JAに記載」を受領。伝票剥がし跡ありはCase維持・NOTE_JAへ記載と確定。状態/備考の全件参照案204変更に対し、限定案は1443明細中2変更/1441不変、既存再現不一致0、否定を含む11対照成功。実マスタ73行のNJ041伝票跡を保持し新NJ079にSTATE_LITERALを設定する案、CN0007の否定除外追加を設計§13へ記録。自己審査APPROVEは限定設計だけで、実装試験/配信完了を意味しない。証拠 /private/tmp/line-condition-note-focused-contrast.json。純関数対照の範囲・今後の実DBパイプライン試験を区別した。
+
+
+## 2026-09-10 #3411 本番マスタ修正・再解析・3シート配信完了
+
+PO原文「GO #3411」を本セッションで受領。PR #3411 は2026-09-10 20:18:34 JSTにMERGED、merge SHA `4f1c2b813761d0739aeae4b77804b61ea5d10856`。main追従は他テーマ文書4ファイルだけ、製品差分は変更なし。最終HEAD980a0b2eのBackend CI job102848565296を直接読み、2544 passed/93 skipped、coverage61.77%、95.61秒を確認。process-artifactsの番号付きGOチェックも成功。先のGO不足による停止は解消済み。
+
+Deploy run34470611116/job102849379303成功。バックアップ `salesanchor_db_20260910_201919.sql.gz`（5028793 bytes）は本番でgzip -t成功。226/226番SQLで今回migrationを実行、SA-19 smoke全成功、20:22:19 JSTにdeploy完了。VPS HEADはmerge SHAと一致、/api/healthはstatus ok、DB/Redis/Celery connected。
+
+### マスタと本番再解析の直接確認
+
+- 本番conditions10行、既存注記73行を設計時の期待値と全フィールド照合。CN0007除外語とNJ041二重表示除外の2更新、NJ079追加以外の差は0。注記は74行。これは条件/注記マスタの照合であり、全商品辞書UUID不変の宣言ではない。
+- 再解析直前の18抽出明細/18解析は反映前退避と一致。対象sourceは有効・supersededなし、job done。未完了jobs/runs各0。
+- 既存 `_run_reanalyze_sync` を対象job bfa07018-9b34-42b6-990a-017e3c1cf140へ1回実行。run `f7b8f3ef-d5fc-4e25-bfce-6e34dd918697` completed、履歴18行。18件がname-first-v4-condition-noteとなった。
+- PM0268の該当1明細はSearched pack→Unsearched pack、根拠R3:MEMO:未サーチ。NOTE_JA未サーチは維持。
+- PM0141の該当1明細はCase維持、NOTE_JA NULL→伝票剥がし跡あり。PO決定と一致。
+- 抽出明細の全フィールド不変。解析は計算日時/versionを除き対象2明細のcondition/NOTE_JAだけ変化し、残り16明細不変。商品・単位・価格・数量・status等も不変。確定商品15/18、単位16/18、要確認3/18は前後同じで、全18件の正解認定ではない。
+- 純関数の1443件対照（指定2変更/1441不変）と、テストDBの18明細2回/36履歴は本番再解析とは区別する。今回本番は1回/18履歴。
+
+### 全3シートの配信・読戻し
+
+20:24:28 JSTから既存run_distributionを全active targetへ1回実行。山崎涼太郎、無料トライアルシート、配信テストの在庫集計へ各445行、3/3 ok、errors0。安全装置#8/#8b、FLAG_SINGLE除外設定を維持。直前に既存各674行と数式を退避し、接続ID/タブが既存3接続と一致することを確認。
+
+20:24:50 JSTの読戻しで各446行（見出し1+明細445）、12列、全行が配信直前プレビューの多重集合と一致、3シートの行順/値も一致。対象2件の修正内容を配信プレビューで確認。DBのlast_distributed_count=445、last_result=okも3接続で確認。旧674行との差を精度改善率とは扱わない。今回の実シート確認は値/式の照合であり、画面の視覚検証ではない。
+
+根拠はrootが直接実行したGitHub API、SSH読取、既存再解析/配信サービス、実シート読戻し。実装担当の試験報告だけで完了認定していない。ローカル証拠は `/private/tmp/line-3411-` 接頭辞のpredeploy/postdeploy/postreanalysis、history-check、reanalysis-receipt/diff、sheets-before/after、distribution-receipt、delivery-verification各JSONとdeploy.log。顧客原文・接続先ID・シート実体はGitへ掲載しない。
+
+状態: 設計審査済み（同一AI自己審査）、PO GO済み、製品PRマージ済み、本番反映済み、マスタ照合済み、本番再解析済み、3シート配信/読戻し済み。次周のPSA誤商品15件・備考由来の状態候補17件は前節の別課題として残り、今回修正済みとは扱わない。
