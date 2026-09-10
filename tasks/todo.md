@@ -108,10 +108,10 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| guards変更の必読・弊害・トレードオフ評価 | Codex | GO #3401受領・追加修正#3402マージ済み（2467成功/93skip）。設置PRの最終CI再確認中 | 最新mainとの評価整合とCIを確認し設置・デプロイ。実イベント確認後、限定必須化は管理者判断 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
+| guards変更の必読・弊害・トレードオフ評価 | Codex | #3401マージ・デプロイ成功。#3405で正常1例・否定2例を実測。必須化未了 | 管理者による設定照合・限定必須化と設定後試行。検証PRはマージ禁止 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
 
 ## Inventory共有テーブル準備（2026-09-10）
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | #3401へ取り込み済み。既定デプロイと設置PRの最終確認を続ける | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | 既定deploy34451686912成功を確認。#3401へ取り込み・設置済み。追加変更なし | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |

@@ -1816,3 +1816,8 @@ PO原文「離席するので最後まで進めてくれ、事前にPRマージ�
 POの追加別PR修正・マージ・デプロイ指示を受領（GO #3401は#3401にのみ転記）。4つの共有DDL経路を既存lockへ参加させる限定修正を自己審査。試作8直接検査成功・修正前4関数拒否。Python3.14、実PG/CIは未実施。設計・調査はdocs/handoff/rls-bootstrap-txn-fix/design.mdとrecon.mdへ追補。実ログ /tmp/reports/INVENTORY-BOOTSTRAP-PROTOTYPE-TESTS-01.txt。
 
 追補（2026-09-10）: PO原文「次に進む、また離席するのでPRマージとデプロイまで進めてくれ」「GO #3401」を受領し#3401本文へ転記。時刻は未提供のため創作していない。追加修正#3402は89ad29ae3a8c3142db36b204e04f48e085803b29で07:46:50Zにマージ。head9a869d8a、実PG job102787311020は2467 passed/93 skipped、coverage61.52%、87.11秒。全CIと必須12成功、worktree回収・台帳DONE。#3401へmain取り込み時の台帳2件の独立追記を両方保持。最終設置CI/デプロイ/実イベント/限定必須化は別途確認する。
+
+
+## EV-20260910-GUARD-RUNTIME
+
+#3401 merge23413b10・deploy34452331125成功、実配備HEAD一致、公開health HTTP200/DB・Redis・Celery接続成功。#3402 deploy34451686912成功。#3405で対象外success、評価欠落failure、PR側検査器の常時成功化もfailureを実測。詳細と完全SHA・実runリンクは docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md。試験2ファイルをmainとblob一致へ復元済み。復元後CIは次便確認。管理権限なし、限定必須化未実施。設計自己審査と実イベント検証を独立レビュー・全件完了・管理設定完了へ読み替えない。
