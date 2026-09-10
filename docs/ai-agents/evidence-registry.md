@@ -1995,8 +1995,3 @@ PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実
 ## EV-20260910-PMG-BARRIER-CONTRACT
 
 base411df652、2026-09-10。PR3410/deploy34468628611成功確認。rootは配布/監査/ログ設定、Terraは旧配信観測を読取。実装変更なし。既存design:178の過去run非生成に従い、全過去復元を切替前提にする読み方を訂正。配布保留6分類、初期化順序、検問位置を草案化。通常配布も止める影響はPOへ質問中・採用未決。自己審査REVISE、実装カード未発行。根拠はdesign/recon最終節。
-
-
-## EV-20260910-GUARD-RUNTIME
-
-#3401 merge23413b10・deploy34452331125成功、実配備HEAD一致、公開health HTTP200/DB・Redis・Celery接続成功。#3402 deploy34451686912成功。#3405で対象外success、評価欠落failure、PR側検査器の常時成功化もfailureを実測。詳細と完全SHA・実runリンクは docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md。試験2ファイルをmainとblob一致へ復元済み。復元後CIは次便確認。管理権限なし、限定必須化未実施。設計自己審査と実イベント検証を独立レビュー・全件完了・管理設定完了へ読み替えない。
