@@ -193,3 +193,6 @@ PR #3422のhead1fd8a4d0244197d6d208e047b3b465d5cdb26e39でCIは40成功・6対�
 唯一の失敗はprocess-artifacts gate job103077053336。実際の番号付きGOを受領してからPR本文へ転記する規則による拒否。PO原文GO #3422は未受領。代理承認の経路も有効化されていないため代筆・迂回はしない。生ログ: /tmp/reports/PRODUCT-UI-CI-APPROVAL-FINAL.log。
 
 実装・ローカル検証・上記headの技術CI・PR提出は完了。マージ、本番反映、tenant_001試行、tenant_004の44件登録は未実施。次は番号付きGO受領後、最終headのCI再確認、公式マージ・配備確認。実データ投入は候補情報/重複/キーワード/QA経路の確認が別途必要。
+
+
+2026-09-11 最終再検査追補: PR #3422 head e2f1063d（前headから文書3件のみ変更）のCIは38成功/6skip/3失敗。backend job103078793511は2544 passed/93 skipped/1 failed。失敗は既存test_inventory_parser_llm_real_api.py::test_real_gemini_call_returns_structured_itemsで、Gemini APIがHTTP429とYour prepayment credits are depletedを返した。集約pytestも失敗。GO記録欠落も継続。前headの2545成功を最終headの成功と混同しない。ログ/tmp/reports/PRODUCT-UI-CI-PYTEST-REPEAT.log。課金・secrets・CI変更、無意味な再試行、マージ/配備は実行しない。外部サービス復旧と番号付きGOが必要。この追補はローカル文書commitに保存し、再CIを無用に起動しないためpushは保留。PR本文には同じ停止理由を反映する。
