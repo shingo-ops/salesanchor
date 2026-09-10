@@ -34,4 +34,3 @@ T7: 番号なし ui-allow → 無効＝除外されない
   ✅ <Selection> コンポーネントは非検出
 
 === 結果: 22 passed / 0 failed ===
-

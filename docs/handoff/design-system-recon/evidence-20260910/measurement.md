@@ -32,3 +32,5 @@ const custom=rows.filter(r=>r.tag==='Button'&&r.attrs.style);console.log('Button
 既存チェック: `cd frontend && node scripts/<checks.jsonのcheck名>.js`。終了コードはchecks.json、全文は各log。
 `node scripts/tests/test-ui-governance.js` は22 passed / 0 failed。
 gate-inventory.jsonは既存ゲートのcountSelect/countInput/countTab関数を117ファイルへ直接適用した結果。CLIのPR差分検査を全体検査と呼んでいない。
+
+保存形式の注記: ui-governance-recheck.txtは末尾の空行のみ除去したテキスト表示用の記録。テスト名・判定・途中の出力は変更していない。担当の別実行はci-executor-recon-report.jsonに結合出力を保存。
