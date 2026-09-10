@@ -267,3 +267,10 @@ NOTE_JAの全件再解析、辞書改善、取込単位配信はこの画面統�
 - 実DBテストは既存CIのRLS_ADMIN_DATABASE_URLでも稼働し、ローカル限定・テストDB名の検査をして隔離schemaを使う。CI設定変更なし。
 - 本番の既存全テナントへの適用検証は未実施。ローカルの既存相当2schemaと後発1schemaで追加列・FK・再適用を検証した。
 - マージ・本番適用・人による画面確認は未実施。本番GOは記録していない。
+
+## PR提出・テスト定義の是正
++
++PR: https://github.com/shingo-ops/salesanchor/pull/3386 （OPEN、main向け）。実装commit aa74625c8283cf159d0dd620949995bfe6acc1c1。
++CIのtest-schema-dup gateがテスト内の独自テーブル定義を検出したため、既存TCG初期migrationとreview-stage migrationをテストschemaに適用する形に変更。ガードの変更・例外追加なし。
++正式migrationから作る実DBでも68件通過（2.08秒）。新規テスト内の複製テーブル定義は0。確認範囲・外部通信禁止・本番未適用は維持。
++

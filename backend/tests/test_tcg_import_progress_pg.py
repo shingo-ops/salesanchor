@@ -27,6 +27,14 @@ pytestmark = pytest.mark.skipif(not URL, reason="PMG_TEST_PG_URL must identify a
 SCHEMA = "tenant_871"
 
 
+def provision_tcg(cursor,schema):
+    # Execute canonical migrations, changing only the isolated test schema target.
+    migrations=Path(__file__).resolve().parents[2]/"migrations"
+    for name in ("20260831_110000_create_tcg_analysis_tables_t004.sql",
+                 "20260905_140000_import_jobs_review_stage_t004.sql"):
+        cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
+
+
 @pytest_asyncio.fixture
 async def pg(monkeypatch):
     url = make_url(URL)
@@ -39,33 +47,9 @@ async def pg(monkeypatch):
         c.execute("DROP SCHEMA IF EXISTS tenant_871 CASCADE; DROP SCHEMA IF EXISTS tenant_872 CASCADE")
         c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
         for schema in (SCHEMA, "tenant_872"):
-            c.execute(f"""
-                CREATE TABLE {schema}.tcg_suppliers(id uuid PRIMARY KEY, code text, name text, is_active boolean);
-                CREATE TABLE {schema}.supplier_channels(id uuid PRIMARY KEY, supplier_id uuid REFERENCES {schema}.tcg_suppliers(id), channel text, is_active boolean);
-                CREATE TABLE {schema}.import_jobs(
-                    id uuid PRIMARY KEY, filename text, raw_sha256 text UNIQUE, message_count int,
-                    provider_count int, unresolved_count int, uploaded_by text, status text, review_status text,
-                    created_at timestamptz DEFAULT now(), window_start timestamptz, window_end timestamptz,
-                    pending_messages jsonb, unresolved_names jsonb);
-                CREATE TABLE {schema}.source_messages(
-                    id uuid PRIMARY KEY, supplier_channel_id uuid REFERENCES {schema}.supplier_channels(id),
-                    raw_text text NOT NULL, raw_sha256 text NOT NULL, received_at timestamptz,
-                    superseded_by uuid REFERENCES {schema}.source_messages(id), is_active boolean,
-                    created_at timestamptz DEFAULT now());
-                CREATE TABLE {schema}.extraction_jobs(
-                    id uuid PRIMARY KEY, source_message_id uuid REFERENCES {schema}.source_messages(id),
-                    status text, prompt_version text, created_at timestamptz DEFAULT now());
-                CREATE TABLE {schema}.extraction_items(
-                    id uuid PRIMARY KEY, extraction_job_id uuid REFERENCES {schema}.extraction_jobs(id),
-                    raw_product_name text, raw_quantity text, raw_price text, raw_unit text, raw_state text,
-                    raw_memo text, created_at timestamptz DEFAULT now());
-                CREATE TABLE {schema}.analysis_results(
-                    id uuid PRIMARY KEY, extraction_item_id uuid UNIQUE REFERENCES {schema}.extraction_items(id),
-                    note_ja text, needs_review boolean, review_reasons text, status text, exclusion text,
-                    quantity_normalized numeric, price_normalized numeric);
-                INSERT INTO {schema}.tcg_suppliers VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true);
-                INSERT INTO {schema}.supplier_channels VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true);
-            """)
+            provision_tcg(c,schema)
+            c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
+            c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
         migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
         c.execute(migration.read_text())
         c.execute(migration.read_text())
@@ -182,7 +166,7 @@ async def test_constraints_and_cross_schema_fk(pg):
         c.execute(f"SELECT id FROM {SCHEMA}.source_messages")
         message=str(c.fetchone()[0])
         other=str(uuid4())
-        c.execute("INSERT INTO tenant_872.import_jobs(id) VALUES (%s)",(other,))
+        c.execute("INSERT INTO tenant_872.import_jobs(id,filename,raw_sha256) VALUES (%s,'test','foreign')",(other,))
         c.execute("SELECT count(*) FROM information_schema.columns WHERE table_schema IN ('tenant_871','tenant_872') AND column_name IN ('messages_linked_at','line_posted_at')")
         assert c.fetchone()[0]==4
     for jid,mid,kind in ((other,message,"created"),(a["import_job_id"],message,"invalid"),(a["import_job_id"],message,"created")):
@@ -198,8 +182,8 @@ async def test_unknown_zero_pending_and_foreign_id(pg):
     legacy=str(uuid4())
     foreign=str(uuid4())
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.import_jobs(id,review_status) VALUES (%s,'ok')",(legacy,))
-        c.execute("INSERT INTO tenant_872.import_jobs(id,review_status) VALUES (%s,'ok')",(foreign,))
+        c.execute(f"INSERT INTO {SCHEMA}.import_jobs(id,review_status,filename,raw_sha256) VALUES (%s,'ok','test','legacy')",(legacy,))
+        c.execute("INSERT INTO tenant_872.import_jobs(id,review_status,filename,raw_sha256) VALUES (%s,'ok','test','legacy')",(foreign,))
     async with AsyncSession(engine) as db:
         z=await progress.read_progress(db,zero["import_job_id"])
         assert z["coverage"]=="complete" and z["messages"]["total"]==0
@@ -226,7 +210,7 @@ async def test_errors_results_reasons_and_pagination(pg):
         for i in range(166):
             item=str(uuid4())
             c.execute(f"INSERT INTO {SCHEMA}.extraction_items(id,extraction_job_id,raw_product_name) VALUES (%s,%s,'card')",(item,str(jobs[i%57])))
-            c.execute(f"INSERT INTO {SCHEMA}.analysis_results(id,extraction_item_id,note_ja,needs_review,review_reasons) VALUES (%s,%s,'予約 9/20',%s,%s)",(str(uuid4()),item,i==0,'reason_a,reason_b' if i==0 else None))
+            c.execute(f"INSERT INTO {SCHEMA}.analysis_results(id,extraction_item_id,note_ja,needs_review,review_reasons,pid_resolved,unit_resolved,engine_version) VALUES (%s,%s,'予約 9/20',%s,%s,false,false,'test')",(str(uuid4()),item,i==0,'reason_a,reason_b' if i==0 else None))
     async with AsyncSession(engine) as db:
         r=await progress.read_progress(db,job["import_job_id"])
         assert r["extraction"]["failed"]==57
@@ -314,12 +298,12 @@ async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers VALUES (%s,'SP2','Bob',true)",('00000000-0000-0000-0000-000000000003',))
+        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers(id,code,name,is_active) VALUES (%s,'SP2','Bob',true)",('00000000-0000-0000-0000-000000000003',))
     with pytest.raises(ValueError,match="no active LINE channel"):
         await upload(engine,export(sender="Bob"))
     assert count(conn,"import_jobs")==1
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels VALUES (%s,%s,'line',true)",('00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000003'))
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(id,supplier_id,channel,is_active) VALUES (%s,%s,'line',true)",('00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000003'))
     await upload(engine,export(sender="Bob"))
     assert count(conn,"source_messages")==2
 
@@ -328,7 +312,8 @@ async def test_later_tcg_schema_provisioning(pg):
     _,conn,_=pg
     migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
     with conn.cursor() as c:
-        c.execute("CREATE SCHEMA tenant_873; CREATE TABLE tenant_873.import_jobs(id uuid PRIMARY KEY); CREATE TABLE tenant_873.source_messages(id uuid PRIMARY KEY,supplier_channel_id uuid,raw_sha256 text)")
+        c.execute("CREATE SCHEMA tenant_873")
+        provision_tcg(c,"tenant_873")
         try:
             c.execute(migration.read_text())
             c.execute("SELECT count(*) FROM information_schema.columns WHERE table_schema='tenant_873' AND column_name IN ('messages_linked_at','line_posted_at')")
