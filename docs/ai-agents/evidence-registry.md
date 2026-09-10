@@ -2017,6 +2017,17 @@ PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻�
 
 2026-09-10、POの管理アカウント利用GO後、shingo-opsのadmin=trueを確認してruleset15777895へguard-authoring/evaluation（GitHub Actions15368）だけ追加。既存12件・strict・適用先・例外0件を保持。設定前後JSONと実イベント証跡は docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md から参照。未報告BLOCKED、評価欠落0b532e9fは必須FAILURE/BLOCKED、復元fb083494は13必須SUCCESS/CLEAN。試験#3405は未マージ閉鎖。設置#3401は23413b10でマージ・deploy34452331125成功、実配備SHAとHTTP200を確認済み。自己審査APPROVE、独立第二者レビューではない。既往失敗を保持し、製品画面・実データ取り込みの完了とは区別。
 
+## EV-20260910-PMG-SCREEN-CONNECT
+
+2026-09-10 base4f1c2b81。POは説明後に「承認する…確立したならページ作成まですすめる」と承認（全文はdesign最終節）。本番切替時の一時停止/他の更新待機の方針採用、個別本番停止ではない。
+既存progress/items、coverage/NULL契約、ページ/共通APIと権限を実ファイルで確認。検索漏れを訂正。新履歴や切替導入とは独立した既存API接続ページのみ自己審査APPROVE。カードCARD-PMG-SCREEN-CONNECT-01を正式card-lint exit0で検査後Terraへ委任。rootは製品コードを書かない。実装ccc105ad、main4734fe7f統合4619e7a8。root検証build/check:all exit0、unit133件成功、模擬API E2E5件成功・PC/390px英語暗色画像を確認。ページ接続差分APPROVE、親設計REVISE。PR/CI/本番反映は別の状態として記録する。
+
+EV-20260910-PMG-SCREEN-CONNECT追補: PR #3416を提出（https://github.com/shingo-ops/salesanchor/pull/3416）。最新main統合後にrootでbuild/check:all/unit133件とE2E5件を再確認、いずれも成功。根拠台帳の競合は両セッションの全文を保持して解消。画面接続は実装済み・差分確認済み、CI確認中、未マージ・本番未反映。番号付きGO原文未受領。
+
+EV-20260910-PMG-SCREEN-CONNECT GO追補: PO原文「GO #3416」を受領。受領後記録時刻2026-09-10 21:17 JST。対象HEAD ca1dc79bc9a9661a39baae21e0952c890e7522c7の検査は37成功/8対象外skip、唯一の失敗は番号付きGO記録欠落（job102865146997）。承認をPR本文へ転記し、記録文書更新後のHEADで再確認してマージ/通常デプロイを確認する。DB変更なし・バックアップ確認は該当なし。
+
+EV-20260910-PMG-SCREEN-CONNECTリリース完了: PR #3416は最終head6459e7ca・37success/8skip確認後、17ebe93fでMERGED（2026-09-10T12:24:21Z）。deploy34476536034/job102868559798 success、実配備HEAD17ebe93f、公開JS index-i0HIAxuW.jsと新画面コード、health ok/DB・Redis・Celery connectedをrootが直接確認。詳細/限界/実行しなかった試験はdesign/recon末尾。本番の実配信・管理者実データ操作は未実行。ページ接続完了と、未実装の新解析実行記録・全配信履歴/切替設計REVISEを区別する。
+
 ### EV-20260910-FRONTEND-MOLD-20: 第1実装便マージと次の同値カラー集約
 
 PR #3412は2026-09-10T11:31:17Z、merge commit6d3e348614d675c533cc46fefddb03544f581e8cでMERGED。設計担当がGitHubのstate/mergedAt/mergeCommitを直接確認。最終HEAD254ab96fはCI38成功/対象外8、第二レビューAPPROVE適用確認。PO原文GO #3412を転記済みで公式merge/cleanup成功、active-work.dはDONE。ICON5値保持とCSS正本からの生成が実装済み。全体の画面統一完了とはしない。
@@ -2030,3 +2041,5 @@ EV-20260910-FRONTEND-MOLD-20追補: 7製品原稿の限定第二レビューAPPR
 EV-20260910-FRONTEND-MOLD-20追補: 7製品を原稿hash一致で反映しrootが全件確認。npm ci成功後、npxのplaywrightが@playwright/test1.59.1へ解決し、比較の直接依存playwright1.60.0とブラウザー版がずれることをrealpath/package version/executablePathで実測。依存設定や期待値を変えず直接依存のCLIでChromium1223を導入するカードへ修正。失敗を保存し、検証結果は再開後に確認する。
 
 同値カラー便の検証完了追補: Generator実行の通常ブラウザー比較は静的25/色50/表示60ペア一致、既存check:all・build・test:coverage（14ファイル121試験）・build-storybookは全exit0。rootが生ログ/JSONと7製品hashを直接確認。詳細はdocs/handoff/design-system-recon/evidence-20260910/color-source-implementation.md。PR/リモートCI/マージ未完、目視は完成後PO、代理GO未有効。
+
+EV-20260910-FRONTEND-MOLD-20提出追補: 実装commit48924bd4を通常push済み。safe-createの自動審査は25ファイル公開承認不足として一度拒否。rootがGitHub APIで同じ25ファイルが既に公開済みであることを確認し、新規ファイル送信を伴わないPR本文作成として正規再審査を受け許可された。公式safe-create/register-pr成功、PR #3420提出済み。main df3c2a47との文書競合はmain全文と本便追補を保持して解消。製品7hash不変、他者の製品変更を保持。代理GOは未有効、番号付きGO未受領。

@@ -1,0 +1,17 @@
+.pmg-workflow { display: grid; gap: var(--space-4); }
+.pmg-workflow__header, .pmg-workflow__pager, .pmg-workflow__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.pmg-workflow__stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.pmg-workflow__stage { padding: var(--space-3); border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); }
+.pmg-workflow__stage h4 { margin: 0; }
+.pmg-workflow__stage-facts { display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: var(--font-sm); color: var(--text-secondary); }
+.pmg-workflow__stage-facts p, .pmg-workflow__table p { margin: 0; }
+.pmg-workflow__table-wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.pmg-workflow__table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: var(--font-sm); background: var(--bg-primary); }
+.pmg-workflow__table th, .pmg-workflow__table td { padding: var(--space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-color); }
+.pmg-workflow__table th { white-space: nowrap; color: var(--text-secondary); font-weight: 600; }
+.pmg-workflow__table tbody tr:last-child td { border-bottom: 0; }
+.pmg-workflow__table details { min-width: max-content; }
+.pmg-workflow__table summary { cursor: pointer; color: var(--text-secondary); }
+.pmg-workflow__error { color: var(--color-error); }
+.pmg-workflow__empty { color: var(--text-secondary); }
+@media (width <= 767px) { .pmg-workflow__stages { grid-template-columns: 1fr; } }
