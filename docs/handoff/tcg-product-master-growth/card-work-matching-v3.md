@@ -90,4 +90,6 @@ Gemini実測の認証が利用できない場合は認証情報を探索・開�
 
 実行結果（2026-09-10）: ready PR https://github.com/shingo-ops/salesanchor/pull/3393 を提出。Python3.12静的検査、task-state、card-lint、diff検査を完了。PostgreSQL統合と既存回帰はCI確認待ち。Gemini APIキー未設定のため匿名標本の実測は未了。製品マージ・本番DB変更・配信は未実施。
 
+有限の追加実測（設計側指示）: 既存CIのGemini認証を利用できるか、一時計測テストを1コミットだけ追加して確認する。匿名6メッセージ・期待8明細を実行し、安全な集計だけをログへ出す。キー不在は未実施を明記。CI完了まで他pushをせず、結果取得後に一時計測テストを除去する。将来のCIに外部API呼び出しを常設しない。
+
 END OF CARD
