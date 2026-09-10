@@ -1,0 +1,76 @@
+name: Sealed settings transfer
+on:
+  push:
+    branches: [release/sealed-settings-transfer]
+    paths: [.github/workflows/sealed-settings-transfer.yml]
+permissions: {}
+concurrency:
+  group: sealed-settings-transfer
+  cancel-in-progress: false
+jobs:
+  seal:
+    if: github.repository_id == '1192164258' && github.actor == 'shingo-ops'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Install verified encryption dependencies
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/transfer-requirements.txt" <<'REQUIREMENTS'
+          PyNaCl==1.6.2 --hash=sha256:fe9847ca47d287af41e82be1dd5e23023d3c31a951da134121ab02e42ac218c9 --hash=sha256:44081faff368d6c5553ccf55322ef2819abb40e25afaec7e740f159f74813634 --hash=sha256:bc4a36b28dd72fb4845e5d8f9760610588a96d5a51f01d84d8c6ff9849968c14 --hash=sha256:22de65bb9010a725b0dac248f353bb072969c94fa8d6b1f34b87d7953cf7bbe4 --hash=sha256:8a66d6fb6ae7661c58995f9c6435bda2b1e68b54b598a6a10247bfcdadac996c --hash=sha256:c8a231e36ec2cab018c4ad4358c386e36eede0319a0c41fed24f840b1dac59f6
+          cffi==2.0.0 --hash=sha256:3e17ed538242334bf70832644a32a7aae3d83b57567f9fd60a26257e992b79ba
+          pycparser==2.23 --hash=sha256:e5c6e8d3fbad53479cab09ac03729e0a9faf2bee3db8208a550daf5af81a5934
+          REQUIREMENTS
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r "$RUNNER_TEMP/transfer-requirements.txt"
+      - name: Seal exactly two settings for the destination
+        shell: python
+        env:
+          DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
+          FEDEX_SMOKE_ENABLED: ${{ secrets.FEDEX_SMOKE_ENABLED }}
+        run: |
+          import base64, json, os, sys
+          from pathlib import Path
+          from nacl.public import PublicKey, SealedBox
+
+          def main():
+              if (os.environ['GITHUB_REPOSITORY_ID'] != '1192164258'
+                  or os.environ['GITHUB_REF'] != 'refs/heads/release/sealed-settings-transfer'
+                  or os.environ['GITHUB_EVENT_NAME'] != 'push'
+                  or os.environ['GITHUB_ACTOR'] != 'shingo-ops'
+                  or os.environ['GITHUB_RUN_ATTEMPT'] != '1'):
+                  raise ValueError('SOURCE_IDENTITY')
+              box = SealedBox(PublicKey(base64.b64decode('vUkvGYUdWqcdH0bIWcYzIhXZ+gliJDsj3pfq3Gkcnlg=', validate=True)))
+              ciphertext = {}
+              for name in ('DISCORD_WEBHOOK_OWNER_PING', 'FEDEX_SMOKE_ENABLED'):
+                  value = os.environ.pop(name)
+                  if not value or len(value.encode()) > 8192:
+                      raise ValueError('SOURCE_VALUE')
+                  ciphertext[name] = base64.b64encode(box.encrypt(value.encode())).decode()
+              packet = {
+                  'schema_version': 1, 'source_repository_id': 1192164258,
+                  'target_repository_id': 1363334692, 'key_id': '3380204578043523366',
+                  'run_id': int(os.environ['GITHUB_RUN_ID']),
+                  'run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+                  'head_sha': os.environ['GITHUB_SHA'], 'ciphertext': ciphertext,
+              }
+              path = Path(os.environ['RUNNER_TEMP']) / 'sealed-settings.json'
+              fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+              with os.fdopen(fd, 'w') as f:
+                  json.dump(packet, f)
+              print('SEALED_SETTINGS_READY')
+          try:
+              main()
+          except Exception:
+              print('SEALED_SETTINGS_FAILED')
+              sys.exit(2)
+      - name: Retain encrypted packet briefly
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sealed-settings-${{ github.run_id }}
+          path: ${{ runner.temp }}/sealed-settings.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
