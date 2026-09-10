@@ -30,15 +30,16 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.services.tcg_import_progress import read_items, read_progress
 from app.services.tcg_line_import_svc import (
     TCG_SCHEMA,
     _enqueue_extraction,
@@ -573,6 +574,7 @@ async def commit_pending_job(
             SELECT review_status, pending_messages, window_start, window_end
             FROM {TCG_SCHEMA}.import_jobs
             WHERE id = :job_id
+            FOR UPDATE
             """
         ),
         {"job_id": import_job_id},
@@ -618,7 +620,7 @@ async def commit_pending_job(
     provider_entries = build_provider_entries(resolved_msgs)
     provider_count = len(provider_entries)
 
-    enqueued_ids = await _write_source_messages(db, provider_entries)
+    enqueued_ids = await _write_source_messages(db, provider_entries, import_job_id)
 
     # import_jobs を更新
     await db.execute(
@@ -628,7 +630,8 @@ async def commit_pending_job(
             SET review_status = 'ok',
                 provider_count = :prov_count,
                 unresolved_count = 0,
-                pending_messages = NULL
+                pending_messages = NULL,
+                messages_linked_at = now()
             WHERE id = :job_id
             """
         ),
@@ -645,3 +648,19 @@ async def commit_pending_job(
         provider_count=provider_count,
         enqueued_count=len(enqueued_ids),
     )
+
+
+@router.get("/tcg/line-import/{import_job_id}/progress", dependencies=[Depends(require_super_admin)], tags=["super-admin"])
+async def get_import_progress(import_job_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    return await read_progress(db, str(import_job_id))
+
+
+@router.get("/tcg/line-import/{import_job_id}/items", dependencies=[Depends(require_super_admin)], tags=["super-admin"])
+async def get_import_items(
+    import_job_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    filter_by: Literal["all", "needs_review", "extraction_error"] = Query("all", alias="filter"),
+    db: AsyncSession = Depends(get_db),
+):
+    return await read_items(db, str(import_job_id), limit, offset, filter_by)

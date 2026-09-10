@@ -126,3 +126,8 @@
 - [作品IDによる商品特定・除外語の設計案](../../handoff/tcg-product-master-growth/design-keyword.md#10-db確認後の実装契約案9の未確認事項を更新)（§10。文書レビュー中）
 
 - [作品判定の実装カード案](../../handoff/tcg-product-master-growth/card-work-matching-v3.md)（文書承認後に有効）
+
+## 関連する開発記録
+
+- [インポート・解析・配信の統合設計（第1段階）](../../handoff/pmg-import-delivery-ssot/design.md)
+- [同テーマの実物確認](../../handoff/pmg-import-delivery-ssot/recon.md)

@@ -39,6 +39,14 @@ from app.services.tcg_line_import_svc import (
 )
 
 
+@pytest.fixture(autouse=True)
+def no_external_extraction_queue():
+    # Unit tests must never connect to a broker or enqueue a real Gemini task.
+    # Individual queue-order tests can override this spy with their own patch.
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        yield
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # sha256_text
 # ─────────────────────────────────────────────────────────────────────────────
@@ -534,6 +542,7 @@ async def test_source_message_insert_before_update_supersede():
             # チャンネル取得: 1件あり
             result.fetchone.return_value = ("test-channel-id",)
         elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None  # No posting-identity match in this fixture.
             # 既存 active レコード: 1件あり（supersede が走る条件）
             result.fetchall.return_value = [("test-old-sm-id",)]
         else:
@@ -599,6 +608,7 @@ async def test_enqueue_called_after_commit():
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
         elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None  # No posting-identity match in this fixture.
             result.fetchall.return_value = [("test-old-sm-id",)]
         else:
             result.fetchone.return_value = None
@@ -736,6 +746,7 @@ async def test_received_at_stored_as_jst_in_insert():
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
         elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None  # No posting-identity match in this fixture.
             result.fetchall.return_value = []
         else:
             result.fetchone.return_value = None
@@ -854,6 +865,7 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
         elif "supplier_channels" in sql and "SELECT" in sql:
             result.fetchone.return_value = ("test-channel-id",)
         elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None  # No posting-identity match in this fixture.
             result.fetchall.return_value = []            # 既存 active なし
         else:
             result.fetchone.return_value = None

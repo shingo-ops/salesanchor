@@ -1536,3 +1536,9 @@ tradeoff: 保存行全体と有効原文を区別。GAS一致と正解一致を�
 decision: 最新DB未確認の障害は解消。設計・ADR追加案・カードを文書レビューへ出す
 follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージェントは起動していない
 ```
+
+- EV-20260910-PMG-IMPORT-SSOT:
+  theme: "インポート・解析・配信の統合 第1段階"
+  evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
+  observed: "base=8206ba2844921c1efb3ca4fd647230e76bb0c5c6。仕入元・実際の投稿日時・本文一致のみ再利用する方針にPOが合意。ローカルPostgreSQL 16の専用テストDBで検証。本番実測は引き継ぎ資料によるもので本セッションでは未実施。"
+  open: "新PRのマージ・本番適用・実配信は未承認。UI・配信履歴・解析attemptは後続便。最終テスト結果とPR状態はテーマdesign.md参照。"
