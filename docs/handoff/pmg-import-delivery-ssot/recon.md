@@ -145,3 +145,35 @@ Context7は利用可能ツールの名前・説明を検索したが0件。起�
 - ローカルdocker versionはcommand not found、exit127。Docker試験を行ったとは報告しない。
 - 稼働版/構成の読取診断を/tmp/pmg-cutover-runtime-readonly.pyに準備、AST確認のみ成功。本番未実行。許可範囲を広げて人間用鍵を再使用していない。
 - PR #3396 HEAD 6ba0ebf8のGitHubチェックはpass31/skipping9。新たな実装試験の成功ではない。
+
+
+### 稼働版・構成の読取結果（2026-09-10）
+
+承認: 「本番の稼働版・コンテナ一覧・設定とコードの一致確認。この読み取り確認に限り、人間用SSH鍵を使用してよいですか。更新・停止・再起動・配信は行わない」と説明した質問に、PO原文「許可」。診断対象以外への許可として扱わない。
+実行コマンド: `ssh -i /Users/tanizawashingo/.ssh/manual-only/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10 ubuntu@49.212.137.46 'python3 -' < /tmp/pmg-cutover-runtime-readonly.py` → exit0。実行直前に診断ファイルのSHA256が準備時の8e355d21acc44058e43febf28532d64ddfbd9d7935c670857c939d904ac8e3faと一致した。
+
+| 対象 | 実測 |
+|---|---|
+| Docker client/server | 両方29.4.0 |
+| API（7b6a0d641833） | running、起動2026-09-10T01:51:34.091810063Z、PID1実行名uvicorn |
+| worker（d69fa4e27f98） | running、起動2026-09-10T01:52:09.466315736Z、PID1実行名celery |
+| beat（56a615bcadbb） | running、起動2026-09-10T01:52:09.462362811Z、PID1実行名celery |
+| 3コンテナ内のインストール済み版 | Celery5.6.3 / Uvicorn0.34.0 / SQLAlchemy2.0.38が3/3一致 |
+| TERM置換の環境設定 | 診断プロセスから見たREMAP_SIGTERMは3/3未設定 |
+| nginx（39782f43a552） | running、設定ファイルのSHA256が手元と一致 |
+| 稼働名一覧 | 当該Docker daemonで13件、うちastro-webappラベル対象12件、残りpushgateway。別名worker/旧greenという名前は一覧にない |
+
+API/worker/beatのイメージIDはそれぞれ異なる。イメージ全体の同一性を主張せず、コンテナ内7ファイルのSHA256をローカルbranch HEAD 0b218a94の同ファイルと比較して21/21一致を確認。
+
+| backend/からの相対パス | SHA256（3コンテナと手元が一致） |
+|---|---|
+| app/main.py | c2f7ff4ff0e9b81b7a9a2bbd2707f3bd4e6812cc4b2048cbe605ae5ba96703c8 |
+| app/celery_app.py | 759ab157063c6ebda436f85f504f7e95d65463bb83ac9eeaeebefdd08e619e4a |
+| app/tasks/tcg_extraction.py | 85d435184dbb8594a23df2a617f01c9ce1857f27c288f69ff3fc3601ab966330 |
+| app/tasks/tcg_import_discard.py | b4c5f66bfff9a101139fe12c1ce0704de5ecc7b185e77269d4235d77db762c15 |
+| app/services/tcg_product_master_svc.py | ec12593ef7d6ea90920a32518450b97ecd74821d415dcb5acdfcef5aac02af53 |
+| app/services/tcg_distribution_svc.py | 6a63cf5245113bb7ac678a5c993c00098c9bd1f71d7a09fc8eadee4aa289166c |
+| app/services/tcg_analyzer_svc.py | 292f355e9ed04d5feb1f30064a27733b49df934d189f3e5ab69a614591eedc08 |
+
+nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76aabaa29b88cc16a0e99db2df31b731abbfe1fcb3f6cedaa8557938a9で一致。
+限界: ディスク上のファイル・インストール済みパッケージ・診断プロセスの環境を確認した。既存プロセスが読み込んだ全module/設定、全イメージ内容、他ホストやコンテナ外のwriter、処理中/予約件数、DBの列やmigration、配信の完了は未確認。nginx設定ファイル一致は、稼働masterが既にその版を読み込んでいる証明ではない。PR #3386の全本番反映を断定しない。診断による停止・更新・配信なし。
