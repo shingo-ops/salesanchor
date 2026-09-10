@@ -12,10 +12,15 @@ GAS 対応行:
 """
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.services.tcg_analyzer_svc import (
     app_kubun_matches,
+    build_note_ja,
+    build_review_reasons,
+    load_note_master,
     match_keyword,
     match_one_kw,
     match_pid_name_first,
@@ -24,6 +29,27 @@ from app.services.tcg_analyzer_svc import (
     resolve_unit_v2,
     token_and_match,
 )
+
+
+def _note_entry(
+    note_id: str,
+    label_ja: str,
+    *,
+    match_type: str = "LITERAL",
+    search_keywords: list[str] | None = None,
+    exclude_keywords: list[str] | None = None,
+    search_pattern: str = "",
+    label_template: str = "",
+) -> dict:
+    return {
+        "id": note_id,
+        "label_ja": label_ja,
+        "match_type": match_type,
+        "search_keywords": search_keywords or [],
+        "exclude_keywords": exclude_keywords or [],
+        "search_pattern": search_pattern,
+        "label_template": label_template,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +269,210 @@ class TestMatchKeyword:
         hit, matched = match_keyword("ポケモン", ["ドラゴン", "ポケモン", "遊戯王"], [])
         assert hit is True
         assert matched == "ポケモン"
+
+
+# ---------------------------------------------------------------------------
+# build_note_ja / build_review_reasons (NOTE-B2)
+# ---------------------------------------------------------------------------
+
+class TestLoadNoteMaster:
+    def test_loads_regex_fields(self):
+        session = MagicMock()
+        session.execute.return_value.fetchall.return_value = [
+            (
+                "NJ030",
+                "指定日発送",
+                "",
+                "完売",
+                2,
+                "REGEX",
+                r"(\d{1,2})/(\d{1,2})発送",
+                "$1/$2発送",
+            )
+        ]
+
+        assert load_note_master(session) == [
+            {
+                "id": "NJ030",
+                "label_ja": "指定日発送",
+                "search_keywords": [],
+                "exclude_keywords": ["完売"],
+                "match_type": "REGEX",
+                "search_pattern": r"(\d{1,2})/(\d{1,2})発送",
+                "label_template": "$1/$2発送",
+            }
+        ]
+        statement = str(session.execute.call_args.args[0])
+        assert "match_type, search_pattern, label_template" in statement
+
+
+_EXISTING_LITERAL_NOTE_CASES = [
+    ("NJ001", "検品開封済み", "検品のため", ["テープカット", "カートンテープカット"]),
+    ("NJ002", "プロモ付き", "プロモ付", ["プロモ無し", "プロモなし", "プロモ無", "雑誌プロモ", "カードセット"]),
+    ("NJ003", "プロモなし", "プロモ無し", ["プロモ付", "プロモ入り"]),
+    ("NJ004", "再販品", "再販", ["初版", "初回生産"]),
+    ("NJ005", "初版品", "初版", ["再販", "再版"]),
+    ("NJ006", "ダメージ", "ダメージ", []),
+    ("NJ007", "スジ", "スジ", ["スペースジャグラー"]),
+    ("NJ008", "凹み", "凹み", []),
+    ("NJ009", "潰れ", "潰れ", []),
+    ("NJ010", "破れ・破損", "破れ", []),
+    ("NJ011", "反り", "反り", []),
+    ("NJ012", "傷・キズ", "キズ", ["傷み", "箱痛み"]),
+    ("NJ013", "汚れ", "汚れ", []),
+    ("NJ014", "箱痛み", "箱痛み", []),
+    ("NJ015", "被りあり", "被りあり", ["被りなし", "重複なし"]),
+    ("NJ016", "被りなし", "被りなし", ["被りあり"]),
+    ("NJ017", "ランダム", "ランダム", ["完全ランダム", "被りなし"]),
+    ("NJ018", "完全ランダム", "完全ランダム", []),
+    ("NJ019", "白箱", "白箱", []),
+    ("NJ020", "スリーブ入り", "スリーブ入り", ["スリーブ無し", "スリーブなし"]),
+    ("NJ021", "本付き", "本付き", []),
+    ("NJ022", "雑誌付き", "雑誌付き", []),
+    ("NJ023", "発売日発送", "発売日発送", ["前日", "翌日", "時まで", "注文で", "注文確定"]),
+    ("NJ024", "発売日前日発送", "発売日前日", []),
+    ("NJ025", "発売日翌日発送", "発売日翌日", ["受注の翌日"]),
+    ("NJ026", "即日発送可", "即日発送", []),
+    ("NJ027", "入荷次第発送", "入荷次第", []),
+    ("NJ028", "発送日要相談", "発送日要相談", []),
+    ("NJ029", "国内発送のみ", "国内発送のみ", []),
+    ("NJ035", "買取品", "買取品", []),
+    ("NJ036", "問屋品", "問屋", []),
+    ("NJ037", "店舗品", "店舗仕入", []),
+    ("NJ038", "正規流通品", "正規流通", []),
+    ("NJ039", "サーチ済の可能性", "サーチ済", ["サーチ痕無", "サーチ痕なし", "サーチ跡無", "未サーチ"]),
+    ("NJ040", "未サーチ", "未サーチ", []),
+    ("NJ041", "伝票跡", "伝票跡", []),
+    ("NJ042", "テープ跡", "テープ跡", ["テープカット"]),
+    ("NJ043", "ラベル跡", "ラベル跡", []),
+    ("NJ044", "シリアル切り取り", "シリアル切り取り", ["シリアルのみ"]),
+    ("NJ045", "カートン数字記載", "数字の記載", []),
+    ("NJ046", "段ボール傷", "段ボール傷", []),
+    ("NJ047", "B品", "B品", []),
+    ("NJ048", "上部切り取り", "上部切り取り", []),
+    ("NJ049", "美品", "美品", []),
+    ("NJ050", "カートン発送可", "カートン可", []),
+    ("NJ054", "大口割引可", "大口", []),
+    ("NJ055", "写真掲載可", "写真掲載可", []),
+    ("NJ056", "SNS投稿不可", "SNSへの投稿不可", []),
+]
+
+
+@pytest.mark.parametrize(
+    ("note_id", "label_ja", "representative_memo", "exclude_keywords"),
+    _EXISTING_LITERAL_NOTE_CASES,
+)
+def test_existing_48_literal_note_outputs_are_preserved(
+    note_id: str,
+    label_ja: str,
+    representative_memo: str,
+    exclude_keywords: list[str],
+):
+    entries = [
+        _note_entry(
+            note_id,
+            label_ja,
+            search_keywords=[representative_memo],
+            exclude_keywords=exclude_keywords,
+        )
+    ]
+    assert build_note_ja(representative_memo, entries) == label_ja
+
+
+class TestBuildNoteJa:
+    def test_literal_behavior_is_preserved(self):
+        entries = [
+            _note_entry("NJ063", "予約商品", search_keywords=["予約商品", "予約品"])
+        ]
+        assert build_note_ja("予約商品です", entries) == "予約商品"
+
+    def test_regex_normalizes_fullwidth_date_and_expands_groups(self):
+        entries = [
+            _note_entry(
+                "NJ030",
+                "指定日発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})[/月](\d{1,2})日?.{0,4}?(発送|出荷)",
+                label_template="$1/$2発送",
+            )
+        ]
+        assert build_note_ja("９／１６（水）発送", entries) == "9/16発送"
+
+    def test_optional_capture_is_preserved(self):
+        entries = [
+            _note_entry(
+                "NJ033",
+                "到着後発送",
+                match_type="REGEX",
+                search_pattern=r"到着後\s*(\d{1,2})日以内発送(目安)?",
+                label_template="到着後$1日以内発送$2",
+            )
+        ]
+        assert build_note_ja("到着後3日以内発送目安", entries) == "到着後3日以内発送目安"
+
+    def test_exclusion_wall_prevents_broad_date_duplicate(self):
+        entries = [
+            _note_entry(
+                "NJ051",
+                "日付前後発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})/(\d{1,2})前後(発送|入荷)",
+                label_template="$1/$2前後発送",
+                exclude_keywords=["完売"],
+            ),
+            _note_entry(
+                "NJ030",
+                "指定日発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})[/月](\d{1,2})日?.{0,4}?(発送|出荷)",
+                label_template="$1/$2発送",
+                exclude_keywords=["完売", "前後", "までに", "〜", "~", "ー", "-"],
+            ),
+        ]
+        assert build_note_ja("9/12前後発送", entries) == "9/12前後発送"
+
+    def test_exclusion_wall_can_leave_compound_memo_unmatched(self):
+        entries = [
+            _note_entry(
+                "NJ031",
+                "日付範囲発送",
+                match_type="REGEX",
+                search_pattern=r"(\d{1,2})月(\d{1,2})日[〜~ー-](\d{1,2})日出荷",
+                label_template="$1/$2〜$1/$3発送",
+                exclude_keywords=["完売"],
+            )
+        ]
+        assert build_note_ja("9月16日〜18日出荷は完売", entries) is None
+
+    def test_invalid_regex_is_ignored(self):
+        entries = [
+            _note_entry(
+                "BROKEN",
+                "壊れた札",
+                match_type="REGEX",
+                search_pattern="(",
+                label_template="$1",
+            )
+        ]
+        assert build_note_ja("任意のメモ", entries) is None
+
+
+class TestBuildReviewReasons:
+    def test_unmatched_nonempty_memo_is_added(self):
+        assert build_review_reasons(True, [], "未分類メモ", None) == ["note_unmatched"]
+
+    def test_matched_note_does_not_add_reason(self):
+        assert build_review_reasons(True, [], "9/16発送", "9/16発送") == []
+
+    def test_blank_memo_does_not_add_reason(self):
+        assert build_review_reasons(True, [], "   ", None) == []
+
+    def test_existing_reasons_keep_order_before_note_unmatched(self):
+        assert build_review_reasons(False, ["PM1", "PM2"], "未分類メモ", None) == [
+            "pid_unresolved",
+            "multi_candidate",
+            "note_unmatched",
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -753,3 +983,90 @@ class TestResolveConditionV2:
         assert canonical == "No shrink box"
         assert cond_id == "uuid-cn0005"
         assert "R3:シュリなし" in basis
+
+
+# CARD-LINE-WORK-MATCHING-V3-01: work evidence and product-only gates.
+from app.services.tcg_analyzer_svc import (
+    is_model_keyword, match_pid_with_work, resolve_work_evidence,
+)
+
+WORKS = [
+    dict(id="pokemon", display_name="Pokemon", alt_name="ポケモン"),
+    dict(id="onepiece", display_name="One Piece", alt_name="ワンピース"),
+    dict(id="gundam", display_name="GUNDAM", alt_name="ガンダム"),
+]
+
+
+@pytest.mark.parametrize("keyword,expected", [
+    ("EB01", True), ("EB-01", True), ("EB - 01", True), ("S8a-G", True),
+    ("ＥＢ０１", True), ("EB01 special", False), ("151", False), ("AR", False),
+    ("THE BEST vol.2", False), ("MEGA スタートデッキ100", False),
+])
+def test_model_keyword_contract(keyword, expected):
+    assert is_model_keyword(keyword) is expected
+
+
+@pytest.mark.parametrize("name,source,start,end,work,span,expected", [
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0001", "gundam"),
+    ("EB01", "【ガンダム】\nEB01", 2, 2, "ガンダム", "L0001", "gundam"),
+    ("EB01", "[GUNDAM]\nEB01", 2, 2, "GUNDAM", "L0001", "gundam"),
+    ("EB01", "ガンダム EB01\nEB01", 2, 2, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nワンピース\nEB01", 3, 3, "ワンピース", "L0002", "onepiece"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ポケモン", "L0002", "pokemon"),
+    ("ポケモン 商品", "ガンダム\nポケモン 商品", 2, 2, "ガンダム", "L0001", None),
+    ("ガンダム ワンピース EB01", "ガンダム ワンピース EB01", 1, 1, "ガンダム", "L0001", None),
+    ("EB01", "ガンダム\nEB01", 2, 2, "GUNDAM", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "ガンダム", "L0099", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "未知", "L0001", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, "", "", None),
+    ("ガンダム EB01", "ガンダム EB01", 1, 1, None, None, "gundam"),
+    ("EB01", "ガンダム\nEB01", 2, 2, None, None, None),
+])
+def test_work_scope(name, source, start, end, work, span, expected):
+    assert resolve_work_evidence(name, source, start, end, work, span, WORKS) == expected
+
+
+def test_inactive_duplicate_and_unsplit_aliases_rejected():
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], is_active=False)]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 WORKS + [dict(WORKS[2], id="duplicate")]) is None
+    assert resolve_work_evidence("ガンダム EB01", "", 1, 1, None, None,
+                                 [dict(WORKS[2], alt_name="ガンダム|Gundam")]) is None
+
+
+def test_work_constraint_does_not_fallback_or_resolve_code_only():
+    kw = {"OP": ["EB01"], "NO_WORK": ["EB01"]}
+    for work in ("gundam", None):
+        result = match_pid_with_work("EB01", list(kw), kw, {}, work_id=work,
+                                     product_work_ids={"OP": "onepiece"})
+        assert result == (None, "NONE", False, [])
+    assert match_pid_with_work("ワンピース EB01", list(kw), kw, {}, work_id="onepiece",
+                               product_work_ids={"OP": "onepiece"})[0] == "OP"
+
+
+def test_unknown_work_checks_all_matching_keywords():
+    for kws in (["EB01", "メモリアルコレクション"], ["メモリアルコレクション", "EB01"]):
+        result = match_pid_with_work("EB01 メモリアルコレクション", ["OP"], {"OP": kws}, {},
+                                     work_id=None, product_work_ids={})
+        assert result[0] == "OP" and result[2] is True
+        assert "SK:メモリアルコレクション" in result[1]
+
+
+@pytest.mark.parametrize("state,memo,excluded", [("PSA10", "", True), ("", "コロちゃお", True), ("", "", False)])
+def test_exclusions_are_item_fields_only(state, memo, excluded):
+    result = match_pid_with_work("スタートデッキ100", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ", "PSA10"]}, work_id=None,
+                                 product_work_ids={}, raw_state=state, raw_memo=memo)
+    assert result[2] is not excluded
+
+
+def test_and_exclusion_never_crosses_fields_and_memo_not_search_input():
+    result = match_pid_with_work("スタートデッキ100 コロ", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]},
+                                 {"NORMAL": ["コロ 限定"]}, work_id=None,
+                                 product_work_ids={}, raw_memo="限定")
+    assert result[2] is True
+    result = match_pid_with_work("不明", ["NORMAL"], {"NORMAL": ["スタートデッキ100"]}, {},
+                                 work_id=None, product_work_ids={}, raw_memo="スタートデッキ100")
+    assert result[2] is False

@@ -21,4 +21,4 @@
 | `ls`/`find` だけで「無い」と判定 | `git show origin/main:<path>` で本店に確認してから言う | design-partner.md §8 |
 | `timeout` が macOS に無い → exit 127 | 使わない | CG-07e（未検証） |
 | 行番号を停止条件にする | 記録のみ。停止は不可逆操作にだけ付ける | §5.5-11/12 |
-
+| 別ディレクトリからブランチ差分だけを見て worktree がクリーンと判断する → 未コミット・未追跡・staged 変更を見落とす | 対象 worktree 自身に cd して git status --short --untracked-files=all / git diff --name-status / git diff --cached --name-status を直接確認する | CARD-PMG-FLOW-PR-01B / 01C（2026-09-09 実測） |

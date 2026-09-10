@@ -309,6 +309,7 @@ def build_provider_entries(
                 "canonical_name": canonical_name,
                 "raw_text": raw_text,
                 "received_at": received_at,
+                "line_posted_at": latest_msg["timestamp"],
                 "sha256": sha256_text(raw_text),
                 "skipped_message_count": skipped_message_count,
             }
@@ -324,6 +325,7 @@ def build_provider_entries(
 async def _write_source_messages(
     db: AsyncSession,
     provider_entries: list[dict],
+    import_job_id: str | None = None,
 ) -> list[str]:
     """
     provider_entries を source_messages / extraction_jobs に書き込む。
@@ -333,7 +335,8 @@ async def _write_source_messages(
     """
     enqueued_ids: list[str] = []
 
-    for entry in provider_entries:
+    # Stable lock order prevents deadlocks between overlapping import files.
+    for entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
         sp_code = entry["sp_code"]
 
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
@@ -346,7 +349,9 @@ async def _write_source_messages(
                 WHERE ts.code = :code
                   AND sc.channel = 'line'
                   AND sc.is_active = TRUE
+                ORDER BY sc.id
                 LIMIT 1
+                FOR UPDATE OF sc
                 """
             ),
             {"code": sp_code},
@@ -354,9 +359,26 @@ async def _write_source_messages(
         channel_rec = channel_row.fetchone()
 
         if channel_rec is None:
-            continue
+            raise ValueError("Resolved supplier has no active LINE channel")
 
         supplier_channel_id = channel_rec[0]
+        # Legacy rows have no proven posting timestamp and must not be inferred.
+        posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
+        reused = await db.execute(
+            text(f"""
+                SELECT id FROM {TCG_SCHEMA}.source_messages
+                WHERE supplier_channel_id = :scid AND line_posted_at = :posted_at
+                  AND raw_sha256 = :sha256 AND raw_text = :body
+            """),
+            {"scid": str(supplier_channel_id), "posted_at": posted_at,
+             "sha256": entry["sha256"], "body": entry["raw_text"]},
+        )
+        reused_row = reused.fetchone()
+        if reused_row:
+            if import_job_id is not None:
+                await _link_message(db, import_job_id, str(reused_row[0]), "reused")
+            # Do not reactivate historical messages or re-enqueue failed jobs.
+            continue
 
         existing_active = await db.execute(
             text(
@@ -383,10 +405,10 @@ async def _write_source_messages(
                 f"""
                 INSERT INTO {TCG_SCHEMA}.source_messages
                   (id, supplier_channel_id, raw_text, raw_sha256,
-                   received_at, superseded_by, is_active, created_at)
+                   received_at, superseded_by, is_active, created_at, line_posted_at)
                 VALUES
                   (:id, :scid, :raw_text, :sha256,
-                   :received_at, NULL, TRUE, now())
+                   :received_at, NULL, TRUE, now(), :posted_at)
                 """
             ),
             {
@@ -395,6 +417,7 @@ async def _write_source_messages(
                 "raw_text": entry["raw_text"],
                 "sha256": entry["sha256"],
                 "received_at": received_at_dt,
+                "posted_at": posted_at,
             },
         )
 
@@ -423,6 +446,8 @@ async def _write_source_messages(
             ),
             {"id": str(new_ej_id), "smid": str(new_sm_id)},
         )
+        if import_job_id is not None:
+            await _link_message(db, import_job_id, str(new_sm_id), "created")
         enqueued_ids.append(str(new_sm_id))
 
     return enqueued_ids
@@ -431,6 +456,18 @@ async def _write_source_messages(
 # ---------------------------------------------------------------------------
 # メイン取り込み関数
 # ---------------------------------------------------------------------------
+
+
+async def _link_message(db: AsyncSession, job_id: str, message_id: str, kind: str) -> None:
+    await db.execute(
+        text(f"""
+            INSERT INTO {TCG_SCHEMA}.import_job_messages
+                (import_job_id, source_message_id, relation_kind)
+            VALUES (:job_id, :message_id, :kind)
+            ON CONFLICT (import_job_id, source_message_id) DO NOTHING
+        """),
+        {"job_id": job_id, "message_id": message_id, "kind": kind},
+    )
 
 
 async def import_line_export(
@@ -474,16 +511,21 @@ async def import_line_export(
     """
     # --- 1. 冪等化チェック ---
     file_sha256 = sha256_text(export_text)
+    # Serialize the check/insert pair even before an import_jobs row exists.
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"{TCG_SCHEMA}:line-import:{file_sha256}"},
+    )
 
     existing_row = await db.execute(
-        text(f"SELECT id, status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
+        text(f"SELECT id, status, review_status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
         {"sha256": file_sha256},
     )
     existing = existing_row.fetchone()
     if existing:
         return {
             "status": "already_imported",
-            "review_status": "ok",
+            "review_status": existing[2],
             "message_count": 0,
             "provider_count": 0,
             "unresolved_count": 0,
@@ -529,8 +571,6 @@ async def import_line_export(
         provider_count = len(provider_entries)
         skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
-        enqueued_ids = await _write_source_messages(db, provider_entries)
-
         # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す
         # （asyncpg は文字列を拒否する: IMP-39 で本番障害として発覚）
         ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
@@ -561,6 +601,11 @@ async def import_line_export(
             },
         )
 
+        enqueued_ids = await _write_source_messages(db, provider_entries, str(import_job_id))
+        await db.execute(
+            text(f"UPDATE {TCG_SCHEMA}.import_jobs SET messages_linked_at = now() WHERE id = :id"),
+            {"id": str(import_job_id)},
+        )
         await db.commit()
 
         for sm_id in enqueued_ids:

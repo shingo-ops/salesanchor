@@ -10,8 +10,8 @@ Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
   - GEMINI_API_KEY 環境変数必須
   - 同期 API (models.generate_content) を使用（Celery タスク内から呼ぶため）
 
-GAS との整合:
-  - プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + input（GAS RawExtractionV2.js と完全一致）
+既存APIとの互換:
+  - プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + input（v3では作品マスタ参照を追加）
   - モデル: gemini-3.6-flash / temperature=0
 """
 from __future__ import annotations
@@ -26,20 +26,26 @@ logger = logging.getLogger(__name__)
 # プロンプト定数
 # ---------------------------------------------------------------------------
 
-PROMPT_VERSION = "raw-extraction-v2-p1"
+PROMPT_VERSION = "raw-extraction-v3-work-p1"
 
 PROMPT_TEXT = (
-    "あなたは原文から事実だけを抽出する。分類、翻訳、要約、ID付与、正準化、状態の推測は禁止。"
+    "あなたは原文から事実だけを抽出する。翻訳、要約、ID付与、正準化、状態・作品の推測は禁止。"
     "入力行の先頭にある[L0001]形式のLine IDはSystemが付与した位置情報である。新しいIDを作らず、入力にあるIDだけを使え。"
-    "各商品明細を1行ずつ、次の7列を全角パイプで区切って出力せよ。"
-    "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
+    "各商品明細を1行ずつ、次の9列を全角パイプで区切って出力せよ。"
+    "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN\n"
     "RAW_PRODUCT_NAME: 原文にある商品名。RAW_QUANTITY: 原文にある数量。RAW_PRICE: 原文にある価格。"
     "RAW_UNIT: 数量に直接対応する単位・販売形態だけ。通貨は絶対に入れない。原文に単位がなければ空欄。"
     "RAW_STATE: 原文にある状態語だけ。なければ空欄。RAW_MEMO: その商品の補足として原文にある語だけ。なければ空欄。"
     "RAW_SOURCE_LINE_SPAN: 商品明細に対応する入力Line IDの連続範囲をL0001-L0002形式で返せ。"
     "商品名と数量・価格が別の物理行なら、それらを含む最小の連続範囲を返せ。"
+    "RAW_WORK_NAME: 原文にある作品・ゲームブランドの表記をそのまま返せ。"
+    "RAW_WORK_SOURCE_LINE_SPAN: その表記が実在するLine IDを返せ。"
+    "商品名自身に作品があれば優先する。なければ最も近い先行する独立作品見出しだけを使え。"
+    "独立見出しは行全体が作品の表示名か別名と一致するもの（外側の【】または[]は除いてよい）。"
+    "他の商品行にある作品を引き継ぐな。複数作品の矛盾、未知の表記、型番だけのときは作品2列を両方空欄にせよ。"
+    "作品の別名を翻訳・生成しない。作品マスタの候補があっても原文に根拠がなければ空欄にせよ。"
     "Category、product_id、Conditionの正準値、Status、Note_JA、Note_EN、FLAG、route、その他のIDは出力禁止。"
-    "1行目は必ずRAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPANと出力せよ。"
+    "1行目は必ずRAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPANと出力せよ。"
     "ヘッダー以外の説明文、Markdown、JSONは出力禁止。"
 )
 
@@ -126,13 +132,13 @@ def _get_genai_client():
 _GEMINI_MODEL = "gemini-3.6-flash"
 
 
-def call_gemini_extraction(raw_text: str) -> str:
+def call_gemini_extraction(raw_text: str, works: list[dict] | None = None) -> str:
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
 
     モデル: gemini-3.6-flash（GAS 側デフォルトと同一）
     temperature: 0
-    プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + prompt_input（GAS と完全一致）
+    プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + prompt_input（v3では作品マスタ参照を追加）
     同期 SDK (models.generate_content) を使用。
 
     Raises:
@@ -143,8 +149,15 @@ def call_gemini_extraction(raw_text: str) -> str:
     client = _get_genai_client()
 
     prompt_input = format_prompt_input(raw_text)
-    # GAS RawExtractionV2.js と完全一致: PROMPT_TEXT + '\n\n原文:\n' + input
-    full_prompt = f"{PROMPT_TEXT}\n\n原文:\n{prompt_input}"
+    # v3作品参照の付加前の原文連結: PROMPT_TEXT + '\n\n原文:\n' + input
+    work_names = [
+        {"display_name": w["display_name"], "alt_name": w.get("alt_name")}
+        for w in (works or []) if w.get("is_active", True)
+    ]
+    import json
+
+    reference = json.dumps(work_names, ensure_ascii=False)
+    full_prompt = f"{PROMPT_TEXT}\n作品マスタ（参照値）:{reference}\n\n原文:\n{prompt_input}"
 
     logger.info(
         "[gemini_extraction] calling Gemini API, model=%s text_len=%d",
@@ -174,7 +187,9 @@ def call_gemini_extraction(raw_text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
+def parse_extraction_response(
+    response_text: str, raw_text: str, *, version: int = 2,
+) -> list[dict]:
     """
     Gemini の出力テキスト（パイプ区切りテーブル）をパースして items リストを返す。
 
@@ -192,6 +207,12 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
       ...
     ]
     """
+    if version not in (2, 3):
+        raise ValueError("Unsupported extraction format")
+    expected_columns = 9 if version == 3 else 7
+    header = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN"
+    if version == 3:
+        header += "｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
     max_line = len(raw_text.split("\n"))
     items: list[dict] = []
     header_seen = False
@@ -203,12 +224,16 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
 
         # ヘッダー行をスキップ
         if not header_seen:
+            if version == 3 and line != header:
+                raise ValueError("v3 extraction header must contain the exact 9 columns")
             if "RAW_PRODUCT_NAME" in line:
                 header_seen = True
             continue
 
         cols = line.split(_PIPE)
-        if len(cols) != 7:
+        if len(cols) != expected_columns:
+            if version == 3:
+                raise ValueError(f"v3 extraction expected 9 columns, got {len(cols)}")
             logger.warning(
                 "[gemini_extraction] schema error: expected 7 cols, got %d: %r",
                 len(cols),
@@ -224,7 +249,9 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
             raw_state,
             raw_memo,
             raw_span,
-        ) = [c.strip() for c in cols]
+        ) = [c.strip() for c in cols[:7]]
+        raw_work_name = cols[7].strip() if version == 3 else None
+        raw_work_span = cols[8].strip() if version == 3 else None
 
         # RAW_SOURCE_LINE_SPAN パース
         span_m = _SPAN_RE.match(raw_span.strip())
@@ -232,6 +259,8 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
             line_start = int(span_m.group(1))
             line_end = int(span_m.group(2)) if span_m.group(2) else line_start
         else:
+            if version == 3:
+                raise ValueError("v3 extraction has an invalid product source span")
             # パース不能の span は警告のみ、先頭行扱いで続行
             logger.warning(
                 "[gemini_extraction] unparseable span: %r", raw_span
@@ -239,6 +268,9 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
             line_start = 1
             line_end = 1
 
+        if version == 3 and not (1 <= line_start <= line_end <= max_line):
+            raise ValueError("v3 extraction product source span is outside the source")
+        # 旧7列の位置補正を維持。v3の作品根拠は補正せず保存し、解析時に検証する。
         # クランプ
         line_start = max(1, min(line_start, max_line))
         line_end = max(line_start, min(line_end, max_line))
@@ -253,9 +285,13 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
                 "raw_memo": raw_memo,
                 "line_start": line_start,
                 "line_end": line_end,
+                "raw_work_name": raw_work_name,
+                "raw_work_source_line_span": raw_work_span,
             }
         )
 
+    if version == 3 and not header_seen:
+        raise ValueError("v3 extraction response has no header")
     return items
 
 
@@ -264,7 +300,7 @@ def parse_extraction_response(response_text: str, raw_text: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def extract_message(raw_text: str) -> dict:
+def extract_message(raw_text: str, works: list[dict] | None = None) -> dict:
     """
     1 通の raw_text を Gemini で抽出する。
 
@@ -278,8 +314,8 @@ def extract_message(raw_text: str) -> dict:
       }
     """
     try:
-        response_text = call_gemini_extraction(raw_text)
-        items = parse_extraction_response(response_text, raw_text)
+        response_text = call_gemini_extraction(raw_text, works=works)
+        items = parse_extraction_response(response_text, raw_text, version=3)
         status = "done" if items else "empty"
         return {
             "status": status,

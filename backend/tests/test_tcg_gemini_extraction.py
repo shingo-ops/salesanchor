@@ -184,7 +184,7 @@ def test_extract_message_done(monkeypatch):
     """正常ケース: items が返れば status='done'。"""
     monkeypatch.setattr(
         "app.services.gemini_extraction_svc.call_gemini_extraction",
-        lambda raw_text: _VALID_RESPONSE,
+        lambda raw_text, **kwargs: _v3_response(_VALID_RESPONSE),
     )
     result = extract_message("行A\n行B\n行C")
     assert result["status"] == "done"
@@ -196,7 +196,7 @@ def test_extract_message_empty(monkeypatch):
     """Gemini がヘッダーのみ返した場合は status='empty'。"""
     monkeypatch.setattr(
         "app.services.gemini_extraction_svc.call_gemini_extraction",
-        lambda raw_text: "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n",
+        lambda raw_text, **kwargs: _V3_HEADER + "\n",
     )
     result = extract_message("行A")
     assert result["status"] == "empty"
@@ -205,7 +205,7 @@ def test_extract_message_empty(monkeypatch):
 
 def test_extract_message_error_on_api_failure(monkeypatch):
     """API 失敗時は status='error' でエラーメッセージを返す。"""
-    def raise_error(raw_text):
+    def raise_error(raw_text, **kwargs):
         raise RuntimeError("API timeout")
 
     monkeypatch.setattr(
@@ -243,7 +243,7 @@ def test_auto_analyze_off_skips_analyze(monkeypatch):
     mock_session = _make_mock_session()
     analyze_called = []
 
-    def mock_extract(raw_text):
+    def mock_extract(raw_text, **kwargs):
         return {
             "status": "done",
             "prompt_version": "v1",
@@ -284,7 +284,7 @@ def test_auto_analyze_on_calls_analyze(monkeypatch):
     mock_session = _make_mock_session()
     analyze_called = []
 
-    def mock_extract(raw_text):
+    def mock_extract(raw_text, **kwargs):
         return {
             "status": "done",
             "prompt_version": "v1",
@@ -390,3 +390,66 @@ def test_tcg_line_import_svc_sql_has_schema_prefix():
         assert "{TCG_SCHEMA}" not in sql, (
             f"tcg_line_import_svc.py の SQL に未展開の '{{TCG_SCHEMA}}' が残っている:\n{sql[:200]}"
         )
+
+
+_V3_HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
+
+
+def _v3_response(old_response):
+    lines = old_response.strip().split("\n")
+    return _V3_HEADER + "\n" + "\n".join(line + "｜｜" for line in lines[1:])
+
+
+@pytest.mark.parametrize("response", [
+    "", "   ", "商品A｜1｜100｜BOX｜｜｜L0001｜｜", _VALID_RESPONSE,
+    _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001",
+    _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001｜｜\n壊れた｜行",
+])
+def test_v3_format_failure_saves_no_partial_items(monkeypatch, response):
+    monkeypatch.setattr("app.services.gemini_extraction_svc.call_gemini_extraction",
+                        lambda *args, **kwargs: response)
+    result = extract_message("商品A")
+    assert result["status"] == "error"
+    assert result["items"] == []
+
+
+@pytest.mark.parametrize("span", ["L0000", "L0099", "L0002-L0001", "bad"])
+def test_v3_product_span_never_clamped(span):
+    with pytest.raises(ValueError):
+        parse_extraction_response(_V3_HEADER + f"\nガンダム EB01｜1｜100｜BOX｜｜｜{span}｜ガンダム｜L0001",
+                                  "ガンダム EB01", version=3)
+
+
+def test_v3_work_evidence_roundtrip_without_repair():
+    row = "ガンダム EB01｜1｜100｜BOX｜｜｜L0001｜ガンダム｜L0099"
+    item = parse_extraction_response(_V3_HEADER + "\n" + row, "ガンダム EB01", version=3)[0]
+    assert item["raw_work_name"] == "ガンダム"
+    assert item["raw_work_source_line_span"] == "L0099"  # analyzer rejects, never clamps
+    assert parse_extraction_response(_VALID_RESPONSE, "a\nb\nc")[0]["raw_work_name"] is None
+
+
+def test_work_master_reaches_prompt_without_database_ids(monkeypatch):
+    from app.services import gemini_extraction_svc as svc
+    client = MagicMock()
+    client.models.generate_content.return_value.text = _V3_HEADER
+    monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+    svc.call_gemini_extraction("ガンダム EB01", works=[
+        dict(id="secret-database-id", display_name="GUNDAM", alt_name="ガンダム"),
+        dict(id="inactive-id", display_name="inactive-work", is_active=False),
+    ])
+    prompt = client.models.generate_content.call_args.kwargs["contents"]
+    assert '"display_name": "GUNDAM"' in prompt and '[L0001] ガンダム EB01' in prompt
+    assert "secret-database-id" not in prompt and "inactive-work" not in prompt
+
+
+# Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
+# A live run must report format errors / correct / unknown / wrong independently.
+LIVE_WORK_SAMPLES = [
+    ("ポケモン スタートデッキ100 1BOX 1000円", ["ポケモン"]),
+    ("ワンピース EB01 1BOX 1000円", ["ワンピース"]),
+    ("ガンダム EB01 1BOX 1000円", ["ガンダム"]),
+    ("【ガンダム】\nEB01 1BOX 1000円", ["ガンダム"]),
+    ("【ポケモン】\nスタートデッキ100 1BOX 1000円\n[ワンピース]\nEB01 1BOX 1000円\nガンダム\nEB01 2BOX 2000円",
+     ["ポケモン", "ワンピース", "ガンダム"]),
+    ("EB01 1BOX 1000円", [""]),
+]

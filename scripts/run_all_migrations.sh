@@ -614,3 +614,14 @@ run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
 
 # LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
 run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
+
+# NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
+run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
+
+# PMG import progress: TCG schemas only, additive, no backfill
+run_sql migrations/20260910_010000_tcg_import_message_links.sql
+
+# LINE work evidence before v3 code; dictionary filter is independently idempotent.
+run_sql migrations/20260910_160000_tcg_work_evidence.sql
+run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
+run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql

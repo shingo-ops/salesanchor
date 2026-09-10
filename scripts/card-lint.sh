@@ -178,7 +178,7 @@ if grep -q '"[^"]*`[^"]*"' "${CMDFILE}"; then
 fi
 
 # ── L29: カード冒頭に「読んだ節」の書き出しが無い ─────────────────────────
-if ! grep -q "読んだ節" "${CARD}"; then
+if ! grep -q "guards/" "${CARD}"; then
   report "L29" "読んだ節の書き出しなし" "guards のどれを引いたかを冒頭に書く"
 fi
 
