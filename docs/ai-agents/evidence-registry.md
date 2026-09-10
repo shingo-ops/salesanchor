@@ -1594,6 +1594,20 @@ follow_up: 実装役が再開し、新規統合試験の実行成功と実測未
 - PR提出: https://github.com/shingo-ops/salesanchor/pull/3393 （OPEN、ready、初回HEAD 13fae233250d49c434c673450e60772d026293b7）。2026-09-10 01:28 UTC提出。push由来のtask-state/active-work checksは成功、Backend Testsは確認待ち。
 - 設計パートナーの読み取り検算報告（Generatorの実DB試験とは別）: 最新有効マスタへ正しいガンダムUUIDを入力した29保存行相当は異作品確定0、未解決29。PM0200コロ追加後、コロちゃお商品名3保存行はPM0285、備考のみ1行は未解決、通常名1件はPM0200。AST抽出関数による局所検算であり、Gemini実測・DBmigration実行結果ではない。
 
+### 2026-09-10 実装受入の実測結果
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3393 。実装マージ・本番DB更新・既存一括再解析・配信は未実施。
+- PostgreSQLと既存回帰: HEAD 6a0de8e39db70fcd523941143d444e099d511fb6、Backend Tests run34425902051 / job102710979427で2424 passed、93 skipped、302 warnings、64.61秒。新規統合6テストはskipなし、CI・ローカル接続先制約をassertし、試験ごとの使い捨てDBで正規SQLを実行した。
+- 実DB受入: 作品を付けた過去29保存行相当で異作品確定0・未解決29、作品なし型番29入力で確定0。通常名1→PM0200、コロちゃお名3→PM0285、備考のみ1→NONE/要確認。限定版2種・曖昧コロは通常確定0。ワンピースEB01正常対照→PM0123。商品訂正3項目の再解析・後処理後の変更0。配信候補取得で未解決が除かれることを確認（送信なし）。
+- migration: 既存TCG表・表なし・将来作成後・再実行、nullable TEXT2列、PM0200既存5語保持＋コロ1語、名前/作品不一致時の例外停止を実PostgreSQLで検証。テストに定義を手書きした非必須ケースはスキーマ複製検査に拒否され除去し、正規migrationによる必須検証を維持した。
+- Gemini実測1: HEAD ff8098eec27dbcdadb60d2d4a02b15e462b2cf42 / run34426151237 / job102711720864。2425 passedだがxdistで集計stdoutを取得できず、正答数の証拠に採用しない。artifact0件。
+- Gemini実測2: HEAD 6b489af4d6fbc05f600eacce35bf07a1d849f7bf / run34426443315 / job102712624432。UserWarning集計のstatus=measuredを確認。6匿名メッセージ・期待8明細・抽出8明細、作品特定正答7＋作品不明保持正答1。形式失敗0・API失敗0・欠落0・過剰0・未知化0・誤分類0。既存停止スイッチ・mockキー除外を尊重。最大12メッセージのAPI呼び出し可能性を記録し、初回を正答母数へ合算しない。
+- 実測2の生集計: `{"api_failures":0,"correct":8,"excess_items":0,"expected_items":8,"expected_unknown_correct":1,"format_failures":0,"messages":6,"missing_items":0,"observed_items":8,"status":"measured","unknown":0,"wrong":0}`。一般のLINE全件の正答率を示す標本ではない。
+- 一時計測の除去SHA: b2700dd0dd04f3ad0e5733d902f3d6980bc8e2ec。匿名標本と単体モックは保持し、今回追加したlive呼び出しを最終ツリーから除去。CI・secrets変更なし。
+- 設計パートナー（root）の読み取り確認: v3空出力のヘッダー不足、NONEの既存UI互換、旧7列正常fixtureの指摘修正を確認し、製品差分に追加の阻害所見なし。上記CI生集計もrootがGitHubから直接確認。これは実装差分の読み取り確認であり、同一AIによる設計自己審査を独立した設計第二者レビューとは称さない。
+- 最終残条件: 一時計測除去後の最終CIを確認する。process-artifactsは新PR固有のPO GO未受領により失敗（GO記録なし）。設計PR #3387のGOを流用せず、本PRのGOとマージ・本番反映は別判断として待つ。
+
+
 ## EV-20260910-WORKTREE-PRESERVE
 
 - 対象: 作成時の既存作業場所保持指定の設計草案。
@@ -1628,17 +1642,3 @@ PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみの
 - 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
 
 - 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
-
-
-### 2026-09-10 実装受入の実測結果
-
-- PR: https://github.com/shingo-ops/salesanchor/pull/3393 。実装マージ・本番DB更新・既存一括再解析・配信は未実施。
-- PostgreSQLと既存回帰: HEAD 6a0de8e39db70fcd523941143d444e099d511fb6、Backend Tests run34425902051 / job102710979427で2424 passed、93 skipped、302 warnings、64.61秒。新規統合6テストはskipなし、CI・ローカル接続先制約をassertし、試験ごとの使い捨てDBで正規SQLを実行した。
-- 実DB受入: 作品を付けた過去29保存行相当で異作品確定0・未解決29、作品なし型番29入力で確定0。通常名1→PM0200、コロちゃお名3→PM0285、備考のみ1→NONE/要確認。限定版2種・曖昧コロは通常確定0。ワンピースEB01正常対照→PM0123。商品訂正3項目の再解析・後処理後の変更0。配信候補取得で未解決が除かれることを確認（送信なし）。
-- migration: 既存TCG表・表なし・将来作成後・再実行、nullable TEXT2列、PM0200既存5語保持＋コロ1語、名前/作品不一致時の例外停止を実PostgreSQLで検証。テストに定義を手書きした非必須ケースはスキーマ複製検査に拒否され除去し、正規migrationによる必須検証を維持した。
-- Gemini実測1: HEAD ff8098eec27dbcdadb60d2d4a02b15e462b2cf42 / run34426151237 / job102711720864。2425 passedだがxdistで集計stdoutを取得できず、正答数の証拠に採用しない。artifact0件。
-- Gemini実測2: HEAD 6b489af4d6fbc05f600eacce35bf07a1d849f7bf / run34426443315 / job102712624432。UserWarning集計のstatus=measuredを確認。6匿名メッセージ・期待8明細・抽出8明細、作品特定正答7＋作品不明保持正答1。形式失敗0・API失敗0・欠落0・過剰0・未知化0・誤分類0。既存停止スイッチ・mockキー除外を尊重。最大12メッセージのAPI呼び出し可能性を記録し、初回を正答母数へ合算しない。
-- 実測2の生集計: `{"api_failures":0,"correct":8,"excess_items":0,"expected_items":8,"expected_unknown_correct":1,"format_failures":0,"messages":6,"missing_items":0,"observed_items":8,"status":"measured","unknown":0,"wrong":0}`。一般のLINE全件の正答率を示す標本ではない。
-- 一時計測の除去SHA: b2700dd0dd04f3ad0e5733d902f3d6980bc8e2ec。匿名標本と単体モックは保持し、今回追加したlive呼び出しを最終ツリーから除去。CI・secrets変更なし。
-- 設計パートナー（root）の読み取り確認: v3空出力のヘッダー不足、NONEの既存UI互換、旧7列正常fixtureの指摘修正を確認し、製品差分に追加の阻害所見なし。上記CI生集計もrootがGitHubから直接確認。これは実装差分の読み取り確認であり、同一AIによる設計自己審査を独立した設計第二者レビューとは称さない。
-- 最終残条件: 一時計測除去後の最終CIを確認する。process-artifactsは新PR固有のPO GO未受領により失敗（GO記録なし）。設計PR #3387のGOを流用せず、本PRのGOとマージ・本番反映は別判断として待つ。
