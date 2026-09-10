@@ -125,4 +125,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装・PR #3422提出済み。単体10件/E2E2件/build成功。head1fd8a4d0の技術CI成功、backend2545成功/93skip。本番未反映 | 最終head e2f1063dでGemini前払残高枯渇により既存実API試験失敗。外部サービス復旧と番号付きGO待ち。マージ/配備・QA/44件登録未実施 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装・PR #3422提出済み。単体10件/E2E2件/build成功。head1fd8a4d0の技術CI成功、backend2545成功/93skip。本番未反映 | 最終head e2f1063dでGemini前払残高枯渇により既存実API試験失敗。GO #3422受領済み。外部サービス復旧・検査成功待ち。マージ/配備・QA/44件登録未実施 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
