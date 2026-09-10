@@ -981,3 +981,5 @@ root直接実行: build成功、check:all成功（既存219warnings/0errors）�
 rootが直接見た画像: /tmp/reports/pmg-progress-visual/tcg-import-workflow-desktop-ja-viewport.png、tcg-import-workflow-mobile-overview-ja-viewport.png、tcg-import-workflow-mobile-dark-en-overview-viewport.png。fixtureの51/37/14/1019/313で概要と要確認導線が先に見える。画像はローカル模擬APIの検証で、本番の現在値や本番反映の証明ではない。心理学/脳科学的な理解時間の実測は未実施。
 
 表示改善のコード/視覚レビューAPPROVE（root、実装Terraと区別）。親の新履歴/切替REVISEは継続。設計・実装・ローカル検証完了、PR/CI確認へ進む。番号付きGOは創作せず、本番反映済みとは宣言しない。
+
+PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
