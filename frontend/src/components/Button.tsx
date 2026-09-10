@@ -13,6 +13,7 @@
  * variant規格: primary=本文主操作(1画面1個)・secondary=補助・ghost=設定系(ヘッダー可)・tab=切替(選択中のみネイビー)。ヘッダー内でprimary禁止。フォルム上書き・インラインstyle禁止。正本: docs/specs/design-system/component-ssot/page-header-v2/design.md §2
  */
 
+import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Spinner } from "./loading";
 import "./Button.css";
@@ -44,7 +45,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   tab:       "btn-tab",
 };
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = "primary",
   size = "md",
   fullWidth = false,
@@ -57,7 +58,7 @@ export function Button({
   disabled,
   "aria-label": ariaLabel,
   ...rest
-}: ButtonProps) {
+}, ref) {
   const isTab = variant === "tab";
   const classes = [
     VARIANT_CLASS[variant],
@@ -71,6 +72,7 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       className={classes}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
@@ -78,8 +80,8 @@ export function Button({
       aria-label={ariaLabel}
       {...rest}
     >
-      {loading && <Spinner size="sm" onAccent={variant === "primary"} />}
+      {loading && <Spinner size="sm" tone="inherit" decorative />}
       {loading ? (loadingText ?? children) : children}
     </button>
   );
-}
+});
