@@ -119,6 +119,14 @@
 - **子（開発計画書）**：現状・課題・移行手順・調査項目。理想を現実にどう実現したかの履歴。
 - この親に各子をぶら下げることで、設計書（理想）から開発履歴（実現）まできれいにたどれる。
 
+## 関連する調査記録
+
+- [商品辞書の育成・LINE解析精度の調査](../../handoff/tcg-product-master-growth/recon.md)（現状と未確認事項。仕様の決定ではない）
+
+- [作品IDによる商品特定・除外語の設計案](../../handoff/tcg-product-master-growth/design-keyword.md#10-db確認後の実装契約案9の未確認事項を更新)（§10。文書レビュー中）
+
+- [作品判定の実装カード案](../../handoff/tcg-product-master-growth/card-work-matching-v3.md)（文書承認後に有効）
+
 ## 関連する開発記録
 
 - [インポート・解析・配信の統合設計（第1段階）](../../handoff/pmg-import-delivery-ssot/design.md)

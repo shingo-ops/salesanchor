@@ -23,6 +23,56 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260910-LINE-ACCURACY-02
+date: 2026-09-10
+agent: Codex (design partner)
+task: 保存済みLINE解析で実際に別商品となった行を一覧化
+scope: docs/handoff/tcg-product-master-growth/recon.md の2026-09-10追加調査
+evidence:
+  - type: command
+    reference: python3 /private/tmp/line-saved-misclassification-audit-20260910.py
+    summary: 8/26保存済み解析1,086行と出力1,086行をdataRowで結合し商品ID・抽出名不一致0。原文まで確認した誤商品20行、全行pid_resolved=YES、うちFLAG_SINGLE15行
+  - type: file
+    reference: /private/tmp/line-confirmed-misclassifications-20260910.json
+    summary: 保存行番号、保存商品ID、根拠、対応原文の記録番号と実行番号、入力3ファイルのSHA256を保存。原文の照合先は全20行で1件ずつ。7行は保存SPAN外に商品名があり、実際の原文行番号を別記
+  - type: external
+    reference: https://www.gundam-gcg.com/jp/products/eb01.html
+    summary: Eternal Nexus EB01がガンダムの商品であることを確認
+  - type: external
+    reference: https://ws-tcg.com/products/nik_bp2/
+    summary: NIKKE Vol.2がヴァイスシュヴァルツの商品であることを確認
+confidence: high
+tradeoff: highは当該バックアップの保存済み誤商品20行について。現本番の残存件数・配信実績・全体の誤り率は未確認。無作為標本ではなく疑わしい表記の抽出確認
+decision: 少なくとも20行の誤商品を確認して記録。UA18BTとPC02BTの表記不一致は誤商品確定に含めない
+follow_up: 現本番の保存済み判定と最新マスタを認可済み経路で読み取り、過去記録との差を確認
+```
+
+```text
+id: EV-20260910-LINE-ACCURACY-01
+date: 2026-09-10
+agent: Codex (design partner, read-only investigation)
+task: LINE解析のボトルネックと解決済み行の誤商品条件を確認
+scope: docs/handoff/tcg-product-master-growth/recon.md の2026-09-10追記
+evidence:
+  - type: command
+    reference: git ls-remote origin refs/heads/main
+    summary: 8206ba2844921c1efb3ca4fd647230e76bb0c5c6 を固定してコードを確認
+  - type: command
+    reference: /private/tmp/line-accuracy-audit-20260910.json
+    summary: 手元マスタ293商品で別商品単独1件。9/8変更値のメモリ適用では0件。末尾数字2付き表記の第1弾単独一致条件は両条件で再現。本番の保存済み誤判定ではない
+  - type: command
+    reference: /private/tmp/line-accuracy-parser-probes-20260910.json
+    summary: 列数不正の部分欠落でもdone、不正SPANの先頭補正、万円・範囲の数値誤変換を合成入力で再現
+  - type: command
+    reference: gh pr view 3248 --json number,state,headRefOid,title,url
+    summary: 人の判定を保護するPRはOPEN、head d074db1ae6d9120f669177810d2ecca153b66879
+confidence: medium
+tradeoff: 固定コードの挙動は実測済みだが、最新マスタ・AI抽出・保存済み判定を接続した本番監査は未実施。旧バックアップや単独一致率を正解率に読み替えない
+decision: 調査暫定。設計審査・PO承認・実装開始・マージは行わない
+follow_up: 認可済み読み取り経路で正常完了行を含む原文と判定を突き合わせる
+```
+
+```text
 id: EV-20260704-001
 date: 2026-07-04
 agent: Codex
@@ -1401,15 +1451,109 @@ follow_up: "型4.4GB・空き箱168個（2GB）は未処理。③④（掃除係
   note: "本店 /Users/tanizawashingo/salesanchor の作業コピーは HEAD=d9a73243・origin/main=693d654d で434コミット遅れ、未保存23件。手元 scripts/reaper-worktree.sh は claude-pipeline 出現2件（main版は5件）で対策未反映。ゆえに手元 dry-run は旧版を実行し未保存50件・削除対象0件となった。定期実行は actions/checkout で毎回 origin/main を取り直すため本店の遅れの影響を受けない（run 30216232301 のログに e7a53a24..1d9ae8cc を実測）。"
   open: "①対策適用後の実削除件数は未実測。②台帳を除外した独自集計は both=2／dirty_only=7／unpushed_only=21／clean=57（87 worktree中）だが、reaper の未push判定3経路（scripts/reaper-worktree.sh:147-183）のうち1経路のみで測った値であり reaper と同一物差しではない。③数の三者不一致: git worktree list=97／実フォルダ=94／reaper走査=87＋異物3。K2・K3 未実装の実害。④scripts/dev/executor-preflight.sh:70 は 2>/dev/null || true で失敗理由を破棄し、通信失敗と main 消失を区別せず同一メッセージを出す。疎通検査は api.github.com（25行）、main 存在確認は origin URL の github.com（70行）で宛先が異なる。⑤.claude-pipeline/active-work.md:23 の release/reaper-concurrency-design は IN_PROGRESS だが PR #3066 が 2026-07-23T05:51:08Z に MERGED 済みの残骸。"
 
+
+```text
+id: EV-20260910-LINE-ACCURACY-03
+date: 2026-09-10
+agent: Codex (design partner)
+task: LINE商品取り違えの要因分析
+scope: 過去保存20誤商品、固定SHAコード、旧マスタ＋9/8変更値のメモリ再現
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/recon.md §2026-09-10要因分析
+    summary: 区分ID実在、除外入力は商品名のみ、exSARとSARの境界不一致を確認
+  - type: command
+    reference: /private/tmp/line-factor-analysis-20260910.py / /private/tmp/line-single-filters-20260910.json
+    summary: 再現18誤判定中13行は除外語なし。単品11行のSAR/AR/PSA10除外は名のみ1行、仮の名＋状態7行で一致
+confidence: medium
+tradeoff: 備考の封入説明や否定まで単純除外すると正しいBOXを失う可能性。最新本番と正例で未検証
+decision: 区分別共通除外と同一商品行の状態・備考の参照を設計方向の草案に記録。設計合格・PO承認・実装GOではない
+follow_up: 現本番マスタ区分と正常BOX実例で誤一致防止・取りこぼしを対に検証
+```
+
+
+```text
+id: EV-20260910-LINE-ACCURACY-04
+date: 2026-09-10
+agent: Codex (Planner then Architect, self-review)
+task: 作品抽出・通常版コロ除外の実装準備
+scope: 設計文書のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md §9
+    summary: PO実装依頼受領、作品seedのIP001/IP002/IP006と抽出・保存契約を確認。設計草案とREVISE判定
+  - type: command
+    reference: /private/tmp/line-coro-exclusion-20260910.json
+    summary: 現行関数にコロ除外を追加した局所検算4件。通常名1件維持、限定2種と曖昧名1件を除外
+confidence: medium
+tradeoff: 現本番マスタ未取得。抽出保存契約と既存ADRの整合確定が必要
+decision: 未解決前提を残すため実装カード未発行。製品実装未着手
+follow_up: 契約確定、最新マスタ確認、設計整合検査と正式カードチェック
+```
+
+
+```text
+id: EV-20260910-LINE-ACCURACY-05
+date: 2026-09-10
+agent: Codex (design partner)
+task: GO受領後の作品抽出契約具体化
+scope: 設計文書のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md §GO受領後の契約具体化
+    summary: 作品9列・保存2カラム・旧7列互換・作品証拠・型番語・訂正保護の境界を具体化。PO発話GOを原文のまま記録
+  - type: file
+    reference: backend/app/tasks/tcg_extraction.py:163 / backend/app/services/tcg_analyzer_svc.py:1080
+    summary: 保存経路と既存判定の上書きを確認。新規行と既存一括再解析を分離
+confidence: medium
+tradeoff: 現本番マスタの読み取り経路が未提供。migrationの新規TCG経路とADR整合の審査が残る
+decision: 実装GO受領済み、設計REVISE継続、カード未発行、製品未変更
+follow_up: 最新マスタの読み取り先確認、適用経路の設計、正式カードチェック
+```
+
+
+```text
+id: EV-20260910-LINE-ACCURACY-06
+date: 2026-09-10
+agent: Codex (Planner → Architect self-review)
+task: 本番DBの作品・商品照合と実装準備
+scope: tenant_004 read-only SELECT、設計・ADR追加案・カードのみ
+evidence:
+  - type: command
+    reference: /private/tmp/line-current-master-20260910.json / /private/tmp/line-current-counts-20260910.json
+    summary: transaction_read_only=on。296商品、有効293のwork_id NULL0、11作品、2区分。ガンダム誤判定29中有効原文4、コロちゃお誤判定4中有効0、コロコロ未解決21中有効1
+  - type: command
+    reference: /private/tmp/line-current-candidate-probes-20260910.json
+    summary: 既知のガンダム作品で絞ると29行相当のPM0123誤一致を防止。備考のみ限定版1行も除外入力拡張でNONE。Gemini実測ではない
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md §10
+    summary: 実装契約の自己審査APPROVE。文書承認と本番反映は別工程。未登録コロコロ版は自動新規登録しない
+  - type: command
+    reference: bash scripts/card-lint.sh docs/handoff/tcg-product-master-growth/card-work-matching-v3.md
+    summary: exit0、L24長文の非ブロッキング警告7件。task-stateとdiffチェックも成功
+confidence: high
+tradeoff: 保存行全体と有効原文を区別。GAS一致と正解一致を区別。モデル実測と製品実装・統合試験は未実施
+decision: 最新DB未確認の障害は解消。設計・ADR追加案・カードを文書レビューへ出す
+follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージェントは起動していない
+```
+
 - EV-20260910-PMG-IMPORT-SSOT:
   theme: "インポート・解析・配信の統合 第1段階"
   evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
   observed: "base=8206ba2844921c1efb3ca4fd647230e76bb0c5c6。仕入元・実際の投稿日時・本文一致のみ再利用する方針にPOが合意。ローカルPostgreSQL 16の専用テストDBで検証。本番実測は引き継ぎ資料によるもので本セッションでは未実施。"
   open: "新PRのマージ・本番適用・実配信は未承認。UI・配信履歴・解析attemptは後続便。最終テスト結果とPR状態はテーマdesign.md参照。"
 
+
+文書提出の追記（EV-20260910-LINE-ACCURACY-06）:
+- PR: https://github.com/shingo-ops/salesanchor/pull/3387 — OPEN、main向け、head=release/line-analysis-accuracy-reconを `gh pr view` で確認。
+- 文書7件のみの差分。設計とADR追加案は文書レビュー中。実装役未起動、製品実装・本番DB更新・本番反映なし。
+- process-artifactsのローカル検算は合格。初回はローカル証跡パスの表記とADR参照不足を検出し修正した。card-lint exit0（非停止のL24警告7件）、task-state、diffチェックも成功。
+- main更新3コミットは文書作業ブランチへ通常のmergeで取り込み、競合した台帳・索引は双方を保存。rebaseはガードで拒否されたため実施せず、許可の自己発行も行っていない。
+- GitHub CIは提出時点で実行中。ローカル合格をGitHub CI全通過に読み替えない。
+
 - EV-20260910-GO-FLOW-SCOPE:
   theme: "GO記録転記・マージ前検査（既存テーマ延長）"
   evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
   observed: "2026-09-10 PO返答『合意』はGitHub画面・直接CLIのマージ制限まで含む設計範囲への合意。main=60132b058ba52f24afdb50d683a216d88f5fdd59。Rulesetの必須12チェックにprocess-artifacts gateなし。既存GO validatorの純粋関数試験5/5 PASS。"
   publication: "文書公開・PR提出へのPO GOを受領。https://github.com/shingo-ops/salesanchor/pull/3388 をOPEN/ready、base=main、head=release/go-flow-designで確認。マージ未実施。"
-  open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更・マージは未承認。"
+  open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更は未承認。文書PRのGO #3388は受領済み、マージ成立は確認前。"
