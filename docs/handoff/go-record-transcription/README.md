@@ -180,3 +180,17 @@ GO制度そのものを含む委任の意図をPOが確認。対象確認を再�
 ## 設計改訂3の提出（2026-09-10）
 
 https://github.com/shingo-ops/salesanchor/pull/3418 を作成し、.pr-numberとhead指定検索で一致確認。初回HEAD0546b8b86358a2d5d182dab9b39de829d01dd7a9。差分は設計・調査・台帳6ファイルのみ。card-lintのDraft禁止に従い通常PRとして提出したが、内容は設計草案、同一AI自己審査REVISE。制度実装・代理GO有効化・マージの承認を兼ねない。main由来の台帳追記は双方保持、同由来の他テーマログの末尾空白は変更せず本PR差分をmain基準で検査。検査ログは /tmp/reports/TH-GO-REV3-PR-CARD-LINT.txt、TH-GO-REV3-PUBLISH-DESIGN-CHECK.json、TH-GO-REV3-FINAL-TASK-CHECK.txt。
+
+## L1 PR #3404の本番反映完了（2026-09-10）
+
+PO原文「GO #3404」をHEAD45b9ae3677153002952bceee77a63972484d47c4へ受領。受領確認21:40 JST、GO4欄へ転記。最新の必須13件とprocess-artifacts gate成功、CLEANを確認して既存gh-pr-merge-safe.shへ --merge --match-head-commit を渡した。GitHub実測: mergedAt2026-09-10T12:42:19Z、mergeCommit df3c2a47ed8a89de86246af834b89329133f86d6。親に承認HEADを含み、差分はFedEx/SA-02の2ファイル+5/-4だけ。
+
+Deploy to VPS run34478228420/job102874182347はsuccess。事前DBバックアップ、既存マイグレーション、SA-19 smoke、FedEx Rates smoke、Finalize、Verify deploymentの成功をActions APIで確認。新しいDB変更を本PRへ追加したわけではない。
+
+今回直接実行した本番読取: prod1の /home/ubuntu/salesanchor のHEADがmergeCommitと一致。稼働astro-webapp-backend-1内の /app/app/services/fedex_rates.py と /app/app/tasks/sa02_recon_monitor.py のSHA256が承認HEAD由来の2値と一致。コンテナState.Statusはrunning。https://api.salesanchor.jp/api/health はstatus ok、database/redis/celery connected。DockerのHealthフィールドが存在せず最初のinspectはexit1となったため、成功扱いせずState.Statusのみの再読取とAPI healthを分離した。本文やログへsecretを出力していない。
+
+承認ファイルhash: fedex_rates.py=1d6c6fc464e553318c15324122aced896d5212ff645caa26d03f795ed6ae7812、sa02_recon_monitor.py=2767f444270a938e53a5ad3496e9454fd7880b2e24b9543919c59429302b4876。
+
+証拠: /tmp/reports/TH-L1-3404-MERGED.json、TH-L1-3404-MERGE-PROOF.json、TH-L1-3404-GO3-CHECK.json、TH-L1-3404-GO3-MERGE.txt、TH-L1-3404-DEPLOY-FINAL-RUN.json、TH-L1-3404-DEPLOY-JOBS.json、TH-L1-3404-PROD-VERIFY.txt、TH-L1-3404-PROD-STATE.txt、TH-L1-3404-API-HEALTH.json、TH-L1-3404-RESULT.json。
+
+L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapperでL1worktree/ローカルbranchを整理、公式ledger-lookupでDONEを確認。GOフロー設計PR #3418は別テーマとして未マージ、全体設計REVISE、ガード/委任経路は未実装のまま。
