@@ -1996,6 +1996,27 @@ PR3408のmerge0be59e52、deploy34460726589 successをGitHubから再確認。実
 
 base411df652、2026-09-10。PR3410/deploy34468628611成功確認。rootは配布/監査/ログ設定、Terraは旧配信観測を読取。実装変更なし。既存design:178の過去run非生成に従い、全過去復元を切替前提にする読み方を訂正。配布保留6分類、初期化順序、検問位置を草案化。通常配布も止める影響はPOへ質問中・採用未決。自己審査REVISE、実装カード未発行。根拠はdesign/recon最終節。
 
+### EV-20260910-FRONTEND-MOLD-19: 設計文書マージと数値アイコン実装便
+
+PR #3409は2026-09-10T09:56:27Z、merge commit b36041ed9fa69881886c431d05d586cf09e82f56でMERGED。設計担当がgh pr viewで直接確認。最終HEAD586ba4e3の全CI成功/対象外skipと限定文書レビューAPPROVEを確認し公式mergeスクリプトを実行。全体設計は同一AI自己審査であり、独立した第二者設計審査とは称しない。
+
+同mergeを起点に公式new-worktree.shでrelease/frontend-icon-sourceを作成、preflight成功。CARD-ICON-SOURCE-IMPLEMENT-01をcard-lint exit0で検査してGeneratorへ委任。ICON5値14/16/20/24/48を保つ数値生成だけを本便とし、配色・部品API・画面移行・CI追加は別便。原稿レビューのCLI回帰と途中書込/rename失敗検証の不足を追加試験へ反映。製品検証/PR/マージの結果は完了後追記し、準備段階では合格としない。PO目視は完成後。
+
+EV-20260910-FRONTEND-MOLD-19追補: Generatorの35試験（Node24/22各35成功、失敗0/skip0）、npm ci/check:all/build成功の生ログを設計担当が確認。製品差分第二レビューAPPROVE。詳細とhashはdocs/handoff/design-system-recon/evidence-20260910/icon-source-implementation.md。PR/CI/マージ未完、画面目視は完成後PO。
+
+EV-20260910-FRONTEND-MOLD-19追補: 実装commit40ff3365保存済み。公開repo shingo-ops/salesanchorへの通常pushが自動承認レビューで2回拒否。具体的な製品5/文書9ファイルの公開送信について明示承認不足との判定。詳細は実装検収の末尾。push/PR/実装マージ未実施、POへ公開送信承認を確認する。迂回なし。
+
+公開送信許可の追補: 設計担当が公開リポジトリshingo-ops/salesanchorへの14ファイル（実装5＋設計・検証文書9）送信可否を質問し、PO原文「許可する」を受領した。この許可で公開送信を再開する。番号付きGOやADR承認の代筆には使用しない。
+
+PR #3412 HEAD e739c9f146004c298910e25b1f99e1573bc0cc95のGitHub checksを設計担当が直接確認: SUCCESS37/SKIPPED8/FAILURE1。残る失敗はprocess-artifacts gate（job102847686397）の「GO記録セクションがない」だけ。Frontend lint & custom checks、Storybook、Karte Visual Gateを含む技術チェックは成功。限定第二レビューは同HEADに適用可を確認済み。公開送信許可は受領済みだが、番号付きGO原文を創作せずGO #3412のPO原文を確認する。DB変更なし、バックアップ確認は該当なし。新実装マージ/本番反映未実施。
+
+PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受領後記録時刻としてPR本文へ転記し、公式validateGORecordのエラー0を確認。バックアップはDB変更なしのため該当なし。最新main追従後のHEADでCIを確認してマージする。承認を実施済みマージと混同しない。
+
+
+## EV-20260910-GUARD-ENFORCED
+
+2026-09-10、POの管理アカウント利用GO後、shingo-opsのadmin=trueを確認してruleset15777895へguard-authoring/evaluation（GitHub Actions15368）だけ追加。既存12件・strict・適用先・例外0件を保持。設定前後JSONと実イベント証跡は docs/handoff/design-partner-card-ops/guard-evaluations/20260910-runtime.md から参照。未報告BLOCKED、評価欠落0b532e9fは必須FAILURE/BLOCKED、復元fb083494は13必須SUCCESS/CLEAN。試験#3405は未マージ閉鎖。設置#3401は23413b10でマージ・deploy34452331125成功、実配備SHAとHTTP200を確認済み。自己審査APPROVE、独立第二者レビューではない。既往失敗を保持し、製品画面・実データ取り込みの完了とは区別。
+
 ## EV-20260910-PMG-SCREEN-CONNECT
 
 2026-09-10 base4f1c2b81。POは説明後に「承認する…確立したならページ作成まですすめる」と承認（全文はdesign最終節）。本番切替時の一時停止/他の更新待機の方針採用、個別本番停止ではない。

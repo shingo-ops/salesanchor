@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| フロントエンド金型化・再測定 | Agent | 文書PR #3407マージ済み。全体設計自己審査APPROVE、操作/外観/最後のCI契約を確定。製品未着手 | 設計文書PRを保存・レビュー・マージし、ICON5値同値生成から原因別実装。CIは最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-18 / https://github.com/shingo-ops/salesanchor/pull/3407 | 2026-09-10 |
+| フロントエンド金型化・再測定 | Agent | 全体設計自己審査APPROVE、文書PR #3407/#3409マージ済み。ICON5値の同値生成は35試験成功・差分第二レビューAPPROVE | PR #3412にPO原文GO #3412を受領・記録済み。最新main追従後CIを確認してマージ。CI追加は最後 | docs/specs/design-system/design.md / EV-20260910-FRONTEND-MOLD-19 / https://github.com/shingo-ops/salesanchor/pull/3412 | 2026-09-10 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、画面実装未着手 | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
@@ -93,7 +93,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| guards文書の手順・採番整合（依頼1〜3） | Agent | worktree分便・L32人手照合・L24/L25/L26の文書整合とローカル検算済み。PR #3389で提出 | 評価ゲート（4）と商品取り込みテスト（6）の設計・実装を別便で進める。文書便のマージ状態はPR #3389を確認 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
+| guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
 | PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
 | PMG入口配布・旧処理照合設計 | 設計担当 | PR #3410文書マージ/自動deploy成功。過去全件復元を必須にしない訂正と配布保留契約を草案化、自己審査REVISE | 本番切替時の保留方針をPO承認済み。複数SSHの所有制御と切替境界の観測手段を確定 | EV-20260910-PMG-BARRIER-CONTRACT / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-10 |
@@ -105,17 +105,17 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397を再検証する | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397マージ済み（a0c0eb7f）。以後は既存テストで維持 | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
 
 
 ## ガード評価ゲート（依頼4、2026-09-10）
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| guards変更の必読・弊害・トレードオフ評価 | Codex | GO #3401受領・追加修正#3402マージ済み（2467成功/93skip）。設置PRの最終CI再確認中 | 最新mainとの評価整合とCIを確認し設置・デプロイ。実イベント確認後、限定必須化は管理者判断 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
+| guards変更の必読・弊害・トレードオフ評価 | Codex | #3401マージ/配備済み。限定必須化済み。評価欠落BLOCKED、復元後13必須成功/CLEAN。試行#3405閉鎖 | 本文書PRで実測結果を正式保存。以後はガード変更時の評価と版照合を維持 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
 
 ## Inventory共有テーブル準備（2026-09-10）
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | #3401へ取り込み済み。既定デプロイと設置PRの最終確認を続ける | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | deploy34451686912成功、#3401へ取込み・設置済み。追加変更なし | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
