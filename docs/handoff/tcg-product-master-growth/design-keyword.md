@@ -388,3 +388,12 @@ SQLはtenant_004だけを対象に1トランザクションで3操作。tenant_0
 §11.3の「TCG表群がない環境」はtenant_004に対象TCG表が1つもない場合の変更0とする。一部だけ存在する場合は不完全な構造として例外停止し、欠落を黙認しない。対象表はtcg_products、tcg_series、tcg_product_categories、product_search_keywords、product_exclude_keywords。実装担当が曖昧さを補完しないため明記した整合補足であり、3操作の変更範囲は同じ。
 
 正式カード: card-keyword-false-positive-guards.md。設計合格の上でPO承認済み、実装・実DB試験・本番確認の実績は別途記録する。
+
+
+### 11.9 実装時補足と検証（2026-09-10）
+
+同時に辞書を変更する処理との競合を避けるため、対象5表へSHARE ROW EXCLUSIVEのロックを取得してから同一性を検証する。待ち続けないよう、BEGIN→SET LOCAL lock_timeout=5s/statement_timeout=30s→DO→COMMITの単一トランザクションとする。設定を外へ残さない。Context7は利用不可で、実装担当が許可済み代替のPostgreSQL16公式runtime-config-client.htmlを確認し、DO実行前に設定する構成を採用。競合ロックの5秒timeout、全辞書と接続設定の原状保持も実DB試験で確認した。
+
+PR #3400 / 検証HEAD772a09b776eef9f3cfcc729efa7d1be0160a7b6d。Backend run34432985860/job102732312951:2459 passed/93 skipped/302 warnings、88.71秒、coverage61.51%。新規23テストケースはCI使い捨てPostgreSQLで実行、匿名10と合成16を含む。rootもSQL・試験差分・GitHubログを読み取り確認し、追加阻害所見なし。製品ファイル3件は設計どおり。技術チェック成功と本番反映は別の状態。
+
+現時点の停止: process-artifacts gate job102732666119がPO原文「承認する、修正から」「本番反映まで実施してくれ、」を番号付きGOではないとして拒否した。scripts/check-process-artifacts.jsはGO原文中の対象PR番号一致を要求する。包括的なマージ事前承認は受領済みだが、「GO #3400」の原文は未受領。PO原文の代筆、ゲート変更、管理者マージは行わない。安全なファイル編集はapply_patchで成功し、先のshell保存時の誤検知は解消済み。マージ・今回の本番変更・再解析・配信は未実施。

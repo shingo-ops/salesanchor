@@ -670,3 +670,24 @@ PO「進める」に基づき、初回5件だけの局所試験から拡張。re
 - `/private/tmp/line-dictionary-contrast.py` SHA256 `a9387734448885323f89d520227fad3a55e7b0189cbca56059e5337f68188aaa`
 - `/private/tmp/line-dictionary-contrast.json` SHA256 `d9ce9894aca1b28966807b130a2a6db5fae9692f1dabd26f436eb79051f6cc8a`
 - `/private/tmp/line-dictionary-safe-contrast.json` SHA256 `238e212872cf61265f1f0ad35715b70ac791ef748f0b338ce6c8809c625e89c4`
+
+## 2026-09-10 継続改善と再解析・配信の事前調査
+
+POはPRマージ、本番反映後の再解析、完了後の接続3シートへの配信と改善ループを明示承認。さらに原文「商品名のご検出が完了したら状態のご検出も確認してくれ、同じループで進めてくれ」を受領。商品名の原文照合を先行し、状態の原文照合へ続ける。未知の新商品定義など事業判断は保留する。
+
+- 接続先はDB実物で有効3件。各tabは在庫集計。最後の配信は3件とも674行・ok。新規接続作成や設定変更は不要。ID等はローカルline-loop-operations-preflight.json。既存run_distributionは全有効targetへ書き込む。再解析未完了、抽出pending/running/extracted、タブ不在、上限超過で停止し、この安全装置を維持する。既存タブ全置換なので、実行直前にタブ/出力を退避・比較し、3件の実値を検算する。まだ配信していない。
+- 有効原文の全明細は1386（count1386/取得1386、LIMIT3000未到達）。engine内訳v3=745、v2=641。今回の再解析は既存reanalyze_extraction_job経路で辞書を反映し、analysis_runs/analysis_run_snapshotsを残す。Gemini再抽出と名称照合だけの再解析を区別する。旧GAS時点の退避テーブル実在は既往調査で確認済みだが、今回実行前の退避確認はまだ必要。
+- 次周の商品名候補: トウホクPSA7/8とフクオカPSA6/7/9がBOX商品へ誤確定、各表記3行・計15行。原文のシングル/PSA見出しと枚数・鑑定表記を直接照合。全15行の保存状態はFLAG_SINGLEで、include_flag_single=falseの現在設定では配信対象外。PM0182/PM0189へPSA除外を加えるメモリ比較は15行→NONE、他1371行の比較結果不変。これは追加案の局所比較であり、正式名称・境界・更新競合の検証や正式設計は未了。初回3操作へ混載していない。
+- 状態の確認済み問題: id d54d7243-8485-49fc-981a-c90b1ee4cf3d プレシャスコレクターボックスはraw_state=開封済み、raw_memo=(検品のため一度開封済み)、raw_unit=BOX、保存condition=Sealed box/R4単位既定。既存CN0006は「検品のため一度開封済み」「確認のため開封済み」を検索語に持つが、状態判定入力は商品名＋状態で、備考は渡されない。単純に開封済みを全区分へ登録するとシングルや外箱だけの開封もBOX扱いする可能性が未検証のため、未承認の語追加や即時修正はしない。
+- 配信を止める残存job2件: 6da3ca68-651e-4ff6-8316-1c9135508ad2（source b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2、原文無効）とbfa07018-9b34-42b6-990a-017e3c1cf140（source afbc08d1-cf3b-43be-87e5-4b7200144b6c、原文有効）。両方created_at=2026-09-10T02:49:21.105805Z、running、items0、extracted_at/prompt_versionなし。Celery inspectのactive/reserved/scheduledはすべて空。現行workerログの指定ID/timeout検索は該当なしで、終了原因は未確認。単なる成功への状態書換えは禁止。既存diagnostics.retry_extractionはrunningを対象外とするため、正式な復旧設計が必要。旧stale終端化migrationと1行requeue migrationに前例があるが、古い固定IDのスクリプトを流用実行しない。
+
+現在地: #3400技術検証・root読み取りレビュー済み、番号付きGOの機械要件でマージ停止。次は当該承認記録を満たして反映確認し、残存jobの復旧を別途設計・検証、再解析完了後に全3シートへ配信。商品名追加候補と状態の改善は、原文・正常例との対照検証を揃えた順に進める。
+
+ローカル証拠（原文・接続情報をGitへ格納しない）:
+
+- `/private/tmp/line-keyword-guards-before.json` SHA256 `b8539d0df63bd9e7502181c5499cbf3cde58bebf6c5e0b734e4f83393395e772`
+- `/private/tmp/line-loop-operations-preflight.json` SHA256 `38c6b8fab85840e9a7e0451de949ac3f9256a4fddb4aba6e5392b8c933505dcd`
+- `/private/tmp/line-loop-active-before.json` SHA256 `a52f558f55e71def1bedf3aecb4c87d832e1dc638773b0d515243b369130a336`
+- `/private/tmp/line-loop-psa-proposal.json` SHA256 `855da1dbe3a39be650e435dceb03ca9033b2a6a02fb6ba918830b0aaec587fc3`
+- `/private/tmp/line-stale-running-jobs.json` SHA256 `1ef480bd87dec0d05556acabc51f3df8c36fd14a2037bb72cceb1ee7cd661f54`
+- `/private/tmp/line-state-master.json` SHA256 `10b38426d34d18ea3745bd2bf8a716c866408439ba3f55ddfa64756c76601ebb`
