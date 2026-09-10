@@ -10,7 +10,7 @@ recon: docs/handoff/pmg-import-delivery-ssot/recon.md
 日付: 2026-09-10
 
 
-> 現在地（後続解析便）: 文書PR #3396のマージ承認受領、自己審査REVISE、実装未着手。最新の初回導入案は末尾「既存読取領域を利用する改訂案」。新規mountを追加してnginxを再作成する前案は比較記録であり、採用案ではない。第1段階の設計合格や過去GOを後続便へ流用しない。
+> 現在地（後続解析便）: 文書PR #3396マージ済み。製品設計は自己審査REVISE、製品実装未着手。末尾のLinux/Docker隔離検証便だけ設計合格・Terra実装中。初回導入案は既存読取領域を使う方式。過去GOや隔離試験合格を製品設計合格へ流用しない。
 
 ## PO合意と範囲
 
@@ -728,3 +728,46 @@ nginx公式仕様ではreload後の旧workerが既存接続を処理し続ける
 4. 解析実行記録の後に、配信履歴/内容固定/重複配信防止、最後に総合画面統合へ進む。完了済みPR #3386は再実行しない。
 
 **今回の終了境界**: 調査・設計草案・自己審査・根拠の文書保存まで。文書マージは設計合格/製品完成/本番切替完了を意味しない。ローカルDockerは利用できず、CI設定/運用scriptの変更は本セッションの担当範囲外なので、Docker実証を未実施のまま成功扱いにしない。PRマージ後の既存GitHub自動処理の状態は別に読み取り確認する。
+
+
+### Linux/Docker隔離検証便（2026-09-10、mode: handoff）
+
+本節は未検証の切替機構を本番から切り離して検証するための試験実装設計。親の製品設計はREVISEのまま。
+PO原文: 「次に進む、また離席するのでPRマージとデプロイまで進めてくれ」。担当切替確認への返答「担当して良い」、実装モデル指定「codex terra」。設計担当は実装せず、Codex Terraへ委任する。
+作業場所例外の質問への返答「許可する進める」を受領。release/pmg-cutover-rehearsalをorigin/main 89ad29ae起点で作成。既存worktree削除なし、UUID・分割台帳・フックを登録し、開始/所有検査を通過した。旧GOを転用していない。
+
+目的: 同一ファイルへの設定更新と拒否状態の持続・異常復旧について、Linuxコンテナで観測可能な証拠を得る。試験成功を製品切替完了としない。
+対象ファイルは tests/pmg_cutover_probe.py と .github/workflows/pmg-cutover-probe.yml の新規2件。製品nginx設定・deploy.yml・compose・DB・本番scripts・secretsは変更しない。
+既存test-rollback.ymlにubuntu-latest/Docker隔離試験の実例がある。docker-compose.ymlのnginx:1.31.1を使用し、実際のimage digestとDocker版を出力する。独立したネットワークと一時directory、ランダムなcontainer名を使う。停止/削除は自分で作成した試験container/networkだけをIDで照合して行い、他資源を列挙して一括操作しない。
+
+#### 試験契約
+
+- Python3.12標準ライブラリとDocker CLI、runnerのopensslを用いる。実データ/実資格なし。localhost以外のAPIへ送信しない。image取得以外の外部接続を試験に要求しない。
+- 同じホスト一時directory内に専用状態directoryと通常ファイルの設定を作り、nginxへread-only bindする。設定ファイル単体と状態directoryのmount種別/RW=false、host/containerのinode/digestを検査する。
+- 前節の判定式を試験fixtureに含める。TLS serverをapp/apiの2個に分け、自己署名証明書でSNI/Hostを一致させた要求を送る。転送先は独立した架空HTTPサーバーで、到達件数を記録する。製品認証の試験ではない。
+- 許可なし→許可あり→取消を両hostの2経路（tcg/super-admin/tcg）で照合。対象POSTは503/200/503、拒否時の転送0。参照GETと対象外POSTの200を維持する。許可と同名directoryは拒否する。
+- 稼働設定を同一inodeのまま更新し、host/container digest一致、nginx -t成功、新worker出現を確認してreloadを判定する。停止状態を維持する。
+- 不正設定へ更新した場合はnginx -t失敗。reloadを試験しても旧workerが残り拒否を維持することを検査。退避済み設定を同一inodeへ戻し構文成功・新worker出現・拒否持続を確認する。
+- 途中まで書かれた不正設定の状態で試験containerを停止・再起動する。起動失敗を明示して記録し、退避設定の復元後に起動でき拒否が持続することを検査する。復元前の入口停止を「無停止成功」とは扱わない。
+- 長時間の架空要求が開始したことをEvent等で確認してから許可取消とreload。新規対象POSTは503、受付済みの要求は解放後200で完了する。固定sleepだけで処理開始/終了を推定しない。
+- 全assertionの名前/成否、試験対象commit、版、digest、例外の全文を結果JSON/ログへ保存する。必須シナリオ欠落やDocker不在は非0終了し、skip成功にしない。
+
+CIはpull_request（本2ファイル変更時）と当該releaseブランチへのpushで起動する。permissionsはcontents:read、ubuntu-latest、Python3.12、timeout-minutes:15。本番secrets/SSH/deploy環境を指定しない。失敗時も結果をartifactへ保存する。既存checkの無効化なし。
+対象試験コード自体をCIで実行するが、将来の本番配布scriptを検証した証拠にはならない。入口専用配布経路と旧処理の完了照合は引き続き別の未了条件。
+
+代替: ローカルmacOS試験のみではDocker bind/restartの証拠不足。既存SA-18試験の流用は対象が異なる。専用隔離試験を選択する。実行時間/Actions利用枠を消費するが、本番データの読書きは0件。
+維持担当: Terraが試験を実装、設計担当が差分とCI結果を確認する。将来配布担当は本試験を必要に応じ実手順の回帰試験へ更新する。外部企業の実績値は不要。ローカル契約と実コンテナの成否で判断する。
+接触面: POには成否と限界を報告、実装役には本節の契約を渡す。CIに隔離job追加、DB/本番/外部配信への接触なし。mainマージによる既存自動deployは別に実行状況を確認する。
+
+Architect自己審査: APPROVE（本節の隔離試験実装だけ）。根拠は既存CI/composeの実物と前節160件のローカル検証。本番投入設計はREVISE。審査は同一AIであり独立レビューではない。未検証の製品設計を実装可能に読み替えない。
+公式仕様確認: Context7利用不可のため2026-09-10に https://docs.docker.com/engine/storage/bind-mounts/ と https://nginx.org/en/docs/control.html を直接確認。
+
+試験ネットワーク補足（2026-09-10）: Docker28.0.4のinternal networkは外部接続設定を行わず、初回CIで公開ポートを取得できなかった（recon同日節）。通常の専用bridgeを使い、公開先を127.0.0.1に限定する。外向き通信の遮断保証は設けないが、試験の送信先はlocalhostと架空処理先に固定し、実資格を与えない。必須assertionは維持する。この試験fixture修正を自己審査APPROVEとし、製品設計REVISEは維持する。
+
+### Linux/Docker実測結果と差分審査（2026-09-10）
+
+HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job102816671239は99/99 assertion成功、errors0、exit0。設計担当がActionsログの結果JSONを直接取得して確認した（他者の報告だけではない）。Docker28.0.4、Python3.12.14、nginx1.31.1 digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。
+再起動前app/api公開ポート32769/32770、再起動後32773/32774を実測。前回の古い接続口再使用が整合しないことを確認し、再取得で復元後TLSと拒否維持が成功した。
+同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
+根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
+試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。

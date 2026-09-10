@@ -1957,6 +1957,14 @@ latest ls-remote mainは3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1feへ進行。上�
 
 PO原文: 「今回のフロントエンドのSSOTに関するものはまとめられるものはまとめて良い、ただし不具合発生時に原因が分かるように分離したほうが良いものは分離して順番にマージしてくれ」。重複PRを理由とする停止を解除。migration.mdに7PRの再利用・既反映・不採用を記録。基準main3bdf33d5。#2668の部品3blob一致、5色PRは延べ28/実14ファイルの変更行を担当が実PRdiffで照合。選択背景と文字の同色化・未定義calendar色参照を採らない。CIは最後、PO目視は完成後。新製品実装/PRマージ未着手、まず調査と計画の文書PR化を進める。
 
+## EV-20260910-PMG-CUTOVER-PROBE
+
+PMG切替設計の未確認条件を検証する隔離便。正本: docs/handoff/pmg-import-delivery-ssot/design.md / recon.md / card-cutover-probe.md。
+PO実装担当指定「codex terra」、マージ/デプロイ指示と作業場所例外「許可する進める」を区別して記録。製品設計REVISE、試験実装だけ自己審査APPROVE。Terraの旧コルーチン取消試験14/14成功を設計担当が再実行確認。Docker検証は実装/CI待ち。本番状態変更なし。
+
+PMG追補: 17:41 JST、本番読取で既往running2件のID一致・items0を確認。応答worker1台のactive/reserved/scheduled各0。DB更新/配信なし。Terra利用上限停止によりDocker試験は未完成・未提出。詳細は上記recon末尾。
+
+PMG追補: PR #3408 HEAD879aa1f4、Actions run34460419959/job102816671239を直接確認しDocker試験99/99成功・errors0。試験差分審査APPROVE、製品設計REVISE/画面未完成。失敗3段階と修正根拠・版/digest・結果zip hashは上記design/reconのLinux/Docker実測結果節。マージ/自動deployは次の確認対象。
 
 ### EV-20260910-FRONTEND-MOLD-17: 文書PRマージと操作契約の補完
 
