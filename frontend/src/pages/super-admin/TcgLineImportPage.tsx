@@ -1,5 +1,5 @@
 /**
- * /super-admin/tcg-import — LINE エクスポートファイルのアップロード取り込み UI
+ * /super-admin/tcg-line-import — LINE エクスポートファイルのアップロード取り込み UI
  *
  * MIG-04 Stage 1 + 確認工程 (#3306):
  *   - ファイルドロップゾーン または input[type=file] (.txt のみ)
@@ -17,6 +17,9 @@ import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
 import { ReviewSection } from "../../features/tcg-import-review/ReviewSection";
 import { Button } from "../../components/Button";
+import { Select } from "../../components/Select";
+import { ImportWorkflowPanel } from "../../features/tcg-import-workflow/ImportWorkflowPanel";
+import { DistributionWorkspace } from "../../features/tcg-distribution/DistributionWorkspace";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -62,7 +65,7 @@ interface PendingJobDetail {
 // ---------------------------------------------------------------------------
 
 export default function TcgLineImportPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
 
   // アップロードフォーム状態
@@ -86,6 +89,7 @@ export default function TcgLineImportPage() {
   const [pendingJobs, setPendingJobs] = useState<PendingJobDetail[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [selectedPendingId, setSelectedPendingId] = useState<string | null>(null);
+  const [selectedImportId, setSelectedImportId] = useState(() => new URLSearchParams(window.location.search).get("import_job_id"));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,6 +127,23 @@ export default function TcgLineImportPage() {
     void loadHistory();
     void loadPendingJobs();
   }, [isSuperAdmin, loadHistory, loadPendingJobs]);
+
+  const selectImport = (id: string) => {
+    setSelectedImportId(id || null);
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set("import_job_id", id); else url.searchParams.delete("import_job_id");
+    window.history.replaceState(null, "", url);
+  };
+
+  const formatJst = (value: string) => new Intl.DateTimeFormat(i18n.language, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+    timeZoneName: "short",
+  }).format(new Date(value));
 
   // ---------------------------------------------------------------------------
   // ファイル選択
@@ -189,6 +210,7 @@ export default function TcgLineImportPage() {
         formData,
       );
       setResult(data);
+      selectImport(data.import_job_id);
       void loadHistory();
       void loadPendingJobs();
     } catch (e) {
@@ -301,7 +323,7 @@ export default function TcgLineImportPage() {
             {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
             <input
               type="text"
-              placeholder="YYYY-MM-DD HH:MM:00"
+              placeholder={t("tcgLineImport.windowDatetimePlaceholder")}
               value={windowStart}
               onChange={(e) => setWindowStart(e.target.value)}
               style={{
@@ -322,7 +344,7 @@ export default function TcgLineImportPage() {
             {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
             <input
               type="text"
-              placeholder="YYYY-MM-DD HH:MM:00"
+              placeholder={t("tcgLineImport.windowDatetimePlaceholder")}
               value={windowEnd}
               onChange={(e) => setWindowEnd(e.target.value)}
               style={{
@@ -406,6 +428,29 @@ export default function TcgLineImportPage() {
         </section>
       )}
 
+      <section style={{ marginBottom: "2rem" }}>
+        <h3>{t("pmgWorkflow.title")}</h3>
+        <Select
+          value={selectedImportId ?? ""}
+          onChange={(event) => selectImport(event.target.value)}
+          aria-label={t("pmgWorkflow.selectImport")}
+          options={[
+            { value: "", label: t("pmgWorkflow.selectImport") },
+            ...Array.from(new Map([
+              ...(selectedImportId ? [[selectedImportId, selectedImportId] as const] : []),
+              ...(result ? [[result.import_job_id, result.import_job_id] as const] : []),
+              ...history.map((job) => [job.id, job.filename] as const),
+            ]).entries()).map(([value, label]) => ({ value, label })),
+          ]}
+        />
+        <ImportWorkflowPanel key={selectedImportId ?? "none"} importJobId={selectedImportId} />
+      </section>
+      <section style={{ marginBottom: "2rem" }}>
+        <p>{t("pmgWorkflow.distributionScope")}</p>
+        <p>{t("pmgWorkflow.distributionHistoryLimit")}</p>
+        <DistributionWorkspace />
+      </section>
+
       {/* ─── 保留中ジョブ ─── */}
       <section style={{ marginBottom: "2rem" }}>
         <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>
@@ -447,7 +492,7 @@ export default function TcgLineImportPage() {
                     <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                       {t("tcgLineImport.unresolvedCount")}: {job.unresolved_count}
                       {" · "}
-                      {new Date(job.created_at).toLocaleString("ja-JP")}
+                      {formatJst(job.created_at)}
                     </span>
                   </div>
                   <button
@@ -528,7 +573,7 @@ export default function TcgLineImportPage() {
                   <th style={thStyle}>{t("tcgLineImport.colUploadedBy")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colStatus")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colReviewStatus")}</th>
-                  <th style={thStyle}>{t("tcgLineImport.colDate")}</th>
+                  <th style={thStyle}>{t("tcgLineImport.colDateJst")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -570,7 +615,7 @@ export default function TcgLineImportPage() {
                       <ReviewStatusBadge status={job.review_status} t={t} />
                     </td>
                     <td style={tdStyle}>
-                      {new Date(job.created_at).toLocaleString("ja-JP")}
+                      {formatJst(job.created_at)}
                     </td>
                   </tr>
                 ))}
