@@ -1537,6 +1537,13 @@ decision: 最新DB未確認の障害は解消。設計・ADR追加案・カー�
 follow_up: 文書PR承認後にカードを実装役へ渡す。サブエージェントは起動していない
 ```
 
+- EV-20260910-GO-FLOW-SCOPE:
+  theme: "GO記録転記・マージ前検査（既存テーマ延長）"
+  evidence: "docs/handoff/go-record-transcription/README.md / recon.md / design.md"
+  observed: "2026-09-10 PO返答『合意』はGitHub画面・直接CLIのマージ制限まで含む設計範囲への合意。main=60132b058ba52f24afdb50d683a216d88f5fdd59。Rulesetの必須12チェックにprocess-artifacts gateなし。既存GO validatorの純粋関数試験5/5 PASS。"
+  publication: "文書公開・PR提出へのPO GOを受領。https://github.com/shingo-ops/salesanchor/pull/3388 をOPEN/ready、base=main、head=release/go-flow-designで確認。マージ未実施。"
+  open: "方式は自己審査REVISE。bypass_actorsは現在の権限では非表示。本文競合・専用主体・適用境界は未確定。実装・Ruleset・secrets変更は未承認。文書PRのGO #3388は受領済み、マージ成立は確認前。"
+
 - EV-20260910-PMG-IMPORT-SSOT:
   theme: "インポート・解析・配信の統合 第1段階"
   evidence: "docs/handoff/pmg-import-delivery-ssot/recon.md / docs/handoff/pmg-import-delivery-ssot/design.md / backend/tests/test_tcg_import_progress_pg.py"
@@ -1586,3 +1593,38 @@ follow_up: 実装役が再開し、新規統合試験の実行成功と実測未
 
 - PR提出: https://github.com/shingo-ops/salesanchor/pull/3393 （OPEN、ready、初回HEAD 13fae233250d49c434c673450e60772d026293b7）。2026-09-10 01:28 UTC提出。push由来のtask-state/active-work checksは成功、Backend Testsは確認待ち。
 - 設計パートナーの読み取り検算報告（Generatorの実DB試験とは別）: 最新有効マスタへ正しいガンダムUUIDを入力した29保存行相当は異作品確定0、未解決29。PM0200コロ追加後、コロちゃお商品名3保存行はPM0285、備考のみ1行は未解決、通常名1件はPM0200。AST抽出関数による局所検算であり、Gemini実測・DBmigration実行結果ではない。
+
+## EV-20260910-WORKTREE-PRESERVE
+
+- 対象: 作成時の既存作業場所保持指定の設計草案。
+- 根拠: docs/handoff/branch-operations/recon.md / design.md の2026-09-10節。
+- base: 6e1335725bb8dfdf390125c4caf5a93f705f4821。
+- 文書保存限定の例外として専用worktreeを直接作成。UUID発行・分割台帳登録・既存の開始/所有検査がexit0。回収処理なし。
+- 設計自己審査: APPROVE（同一AI）。正式仕様承認・実装担当の作業場所・正式カード検査は未了。製品・運用スクリプト・CIは変更なし。
+- 未実施: 保持指定の機能試験、実装、マージ、本番操作。
+- 文書検証: git diff --check / bash scripts/check-task-state.sh はexit0。変更は設計・調査・台帳・根拠登録の4ファイル。実装の機能試験ではない。
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3390 （Draft、base=main、head=release/worktree-preserve-design）。公式register-pr.shで番号登録成功。ローカルprocess-artifacts gateも実diffとPR草案本文を使用してexit0。GitHub CIは別途確認する。
+
+## EV-20260910-GUARDS-DOC — guards文書と実装の対応整理
+
+- 日付: 2026-09-10。実測基点: 6e1335725bb8dfdf390125c4caf5a93f705f4821。
+- 依頼1〜3: 作成便と移動便の分離を04-worktree.mdへ記録。元の逸脱はPO引き継ぎであり、本便の実測と区別した。
+- scripts/card-lint.sh:169-177のL24（警告のみ）・L25に文書を対応させ、L26同内容2行を1行に整理。
+- 同スクリプトにL32の機械実装はない。L32行・L02補足・冒頭説明を人手照合と整合させる。L29は変更しない。
+- 検算: 文書のL01〜L33が順に各1行、重複・欠番ゼロ。差分は文書と作業記録のみ。実行時の判定式・製品コード・CI・DBに変更なし。
+- 自己審査: 文書変更の受入条件に適合。設計担当と審査担当は同一AIであり独立レビューではない。PR #3389で提出。初回HEAD e2c76412のCIは失敗・実行中なし（成功33件・スキップ9件）。pytest等の内部jobは文書変更のためスキップであり、製品テスト実行済みとは扱わない。最終マージ状態はPR #3389のmergedAt/mergeCommitで確認する。
+- 未実施: ガード追加の評価ゲート（依頼4）、商品取り込みサービスのスキーマ検査追加（依頼6）、frontend実装、tenant_001試行とtenant_004の44件取り込み。
+- 外部事例: 既存スクリプトとの文書照合で判定できる保守変更のため不要。
+
+PR #3390承認記録（2026-09-10）: PO原文「GO #3390」。文書PRのみのマージ承認。製品実装・本番・後続PRの承認ではない。mainのPR #3389による別テーマの追記を保持して競合解消。
+
+
+## EV-20260910-TCG-SCHEMA-DESIGN
+
+- 基点: 87e5748b1dab5b062f991a263fa6ac692653877d。設計と根拠: docs/handoff/tcg-product-import/design.md §12、recon.md追補。
+- 商品サービス全486行・text6呼び出し・修飾7箇所・動的参照4表を確認。既存2対象は維持。
+- 設計資料 schema-test-proposal.py.txt をPython 3.12.8で直接検証し7関数成功。製品側pytest実行・テスト反映ではない。正常/否定試験の範囲と限界は設計に明記。
+- 同一AI自己審査APPROVE（限定した静的検査）。PO発話や個別GOは創作しない。実装カード未発行・製品コード未変更。
+- 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVISEであり、mainの既存process-artifacts全体を必須化する安全性が確定したとは扱わない。
+
+- 文書提出: https://github.com/shingo-ops/salesanchor/pull/3392。公式wrapperでPR番号登録済み。実装コードは0件。マージ結果はPRのmergedAt/mergeCommitで別途確認する。
