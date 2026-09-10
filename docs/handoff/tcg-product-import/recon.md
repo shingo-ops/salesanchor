@@ -184,3 +184,12 @@ PR #3422: https://github.com/shingo-ops/salesanchor/pull/3422 。初回head23520
 | 候補#37 コロコロ版 | 公式商品情報の発売日は2022年1月15日頃。配送は2022年3月下旬頃/8月下旬頃。候補表の2021-12-17は通常版からの仮置きで、公式の商品情報と一致しない | https://www.pokemon-card.com/info/003230.html 。発売日と配送日を別に扱う。「頃」を確定日へ変換して登録しない |
 
 候補全44件の再確認完了ではない。#6/#25/#31その他の最新照合、現在DBとの重複、キーワード衝突、QA実行経路、バックアップを未確認のまま実登録しない。既存カタログ正本を本便で上書きしない。
+
+
+## 2026-09-11 CI確定・承認待ち
+
+PR #3422のhead1fd8a4d0244197d6d208e047b3b465d5cdb26e39でCIは40成功・6対象外skip・1失敗。backend job103077025941は2545 passed / 93 skipped / 302 warnings、PostgreSQL用環境変数ありの全体試験を確認。個別試験名は静粛ログに出ないため、新規試験単独の実行ログとは区別する。test-schema-dupの拒否は解消済み。生ログ: /tmp/reports/PRODUCT-UI-CI-PYTEST-FINAL.log。
+
+唯一の失敗はprocess-artifacts gate job103077053336。実際の番号付きGOを受領してからPR本文へ転記する規則による拒否。PO原文GO #3422は未受領。代理承認の経路も有効化されていないため代筆・迂回はしない。生ログ: /tmp/reports/PRODUCT-UI-CI-APPROVAL-FINAL.log。
+
+実装・ローカル検証・上記headの技術CI・PR提出は完了。マージ、本番反映、tenant_001試行、tenant_004の44件登録は未実施。次は番号付きGO受領後、最終headのCI再確認、公式マージ・配備確認。実データ投入は候補情報/重複/キーワード/QA経路の確認が別途必要。

@@ -125,4 +125,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装済み。単体10件・E2E2件・静的チェック/build成功。PG/本番未検証 | PR #3422提出済み。CI実DB確認と番号付きGO検査が残る。候補資料の仮置き値も再照合してからQA/本番投入 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+| 商品マスタ一覧・CSV画面 | Agent | 全件表示PO承認、画面/API実装・PR #3422提出済み。単体10件/E2E2件/build成功。head1fd8a4d0の技術CI成功、backend2545成功/93skip。本番未反映 | 番号付きGO待ち（承認CI拒否）。受領後最終head確認→マージ/配備。候補情報とQA経路確認後にtenant_001試行/tenant_004登録 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
