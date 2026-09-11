@@ -586,3 +586,9 @@ Icon便提出停止: CARD-ICON-CONTRACT-PR-01手順2のpre-commitが既存依存
 
 
 PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、ready OPEN、提出HEAD cfb3068b49429672d63dbb84d41be483f40b4bfc、公式.pr-number登録をroot直接確認。製品4/文書24ファイル、保存前検査を迂回せずcommit成功。最新179試験/8表示同値の検収と4hashを維持。番号付きGOは未受領、リモートCI確認が次の一手。マージ/デプロイは未実施。
+
+
+Button外観便開始: PR3427 mergeb16a4224を確認、最新main e81dd3ecとのfrontend差分0。実物70利用/外部class18/raw352を再測定。design.md§AGに旧rawを保持する段階移管と受入条件を保存。根拠evidence-20260910/button-appearance-usage.md。実装未着手、新CIは最後。
+
+
+2026-09-11 Button外観検収追補（EV-20260911-FRONTEND-MOLD-25）: 70利用/外部class0、旧raw352コード不変、配色190・寸法1080・raw440前後同値。検収記録: docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md。補助検収/PRは継続、全画面完了ではない。

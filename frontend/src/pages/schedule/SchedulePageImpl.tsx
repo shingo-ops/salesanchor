@@ -444,7 +444,7 @@ function ScheduleSidebar({
   return (
     <aside className="schedule-sidebar">
       <section className="schedule-sidebar__section schedule-sidebar__section--action">
-        <Button variant="primary" className="schedule-sidebar__create" onClick={onCreate}>
+        <Button variant="primary" fullWidth onClick={onCreate}>
           <AddIcon size={18} aria-hidden="true" />
           {t("schedule.create")}
         </Button>
@@ -458,7 +458,6 @@ function ScheduleSidebar({
               variant="ghost"
               size="sm"
               iconOnly
-              className="schedule-mini-calendar__nav-button"
               aria-label={t("schedule.prevMonth")}
               onClick={() => onShiftMonth(-1)}
             >
@@ -468,7 +467,6 @@ function ScheduleSidebar({
               variant="ghost"
               size="sm"
               iconOnly
-              className="schedule-mini-calendar__nav-button"
               aria-label={t("schedule.nextMonth")}
               onClick={() => onShiftMonth(1)}
             >
@@ -1108,10 +1106,10 @@ export default function SchedulePage() {
           <>
             <div className="schedule-nav">
               <Button variant="secondary" size="sm" onClick={() => navigatePeriod("today")}>{t("schedule.today")}</Button>
-              <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.prevPeriod")} onClick={() => navigatePeriod("prev")}>
+              <Button variant="ghost" size="sm" iconOnly aria-label={t("schedule.prevPeriod")} onClick={() => navigatePeriod("prev")}>
                 ‹
               </Button>
-              <Button variant="ghost" size="sm" iconOnly className="schedule-nav__icon-button" aria-label={t("schedule.nextPeriod")} onClick={() => navigatePeriod("next")}>
+              <Button variant="ghost" size="sm" iconOnly aria-label={t("schedule.nextPeriod")} onClick={() => navigatePeriod("next")}>
                 ›
               </Button>
             </div>
@@ -1124,7 +1122,6 @@ export default function SchedulePage() {
               variant="ghost"
               size="md"
               iconOnly
-              className="schedule-shell__icon-button"
               aria-label={t("common.search")}
             >
               <SearchIcon size={18} aria-hidden="true" />
@@ -1134,7 +1131,6 @@ export default function SchedulePage() {
                 variant="ghost"
                 size="md"
                 iconOnly
-                className="schedule-shell__icon-button"
                 aria-label={t("schedule.settings")}
                 onClick={() => navigate("/schedule/settings")}
               >
