@@ -2334,3 +2334,8 @@ TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8�
 準備Draft PR #3433: https://github.com/shingo-ops/salesanchor/pull/3433。作成head346f7d72、.pr-numberとhead指定一覧の一致を直接確認。製品ファイル差分0、文書5件のみ。実装役へTH-PRODUCT-DATE-TABS-IMPL-01を提示できる状態。自動起動/実装実行は行っていない。後続実装は同じPRを更新し、実装完了までマージしない。
 
 EV-20260911-PRODUCT-DATE-TABS実装追補: POが実装役1名への委任を承認し、カード範囲の7製品ファイルを実装した。開始時preflight/差分0確認。画面単体14 passed、Chromium E2E5 passed（API/authモック）、対象ruff/厳格eslint/build/diff成功。check:allはexit0（0errors/221warnings、追加試験3警告は修正後に対象eslint/単体成功）。make lint-ciはexit0だがmypy診断153件を警告扱いで保持。正式PG/HTTP試験はDocker不在で未実行、CI/QA実接続/配備も未実施。実測表はrecon同日実装追補、生出力は/tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。ローカル実装の記録であり、実装コミットの公開/GO/マージは行っていない。
+
+
+### 2026-09-11 PR #3433 の公開・マージGO受領
+
+PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21.255931+00:00（記録時の実測であり発話時刻の推定ではない）。対象はPR #3433の商品マスタ発売日順・作品タブ。ローカル実装12e6b13cを確認し、main 7606ca9a041e315b81040373e8f4ddebbc562133へ追従。競合はtasks/todo.mdの2テーマの行で、本テーマの実装行とmain側の金型化行を保持。製品ファイルの競合なし。公開後の実PG/CI、配備結果とtenant_001実接続確認は、GOの受領と分けて記録する。
