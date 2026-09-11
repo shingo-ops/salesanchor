@@ -2150,3 +2150,12 @@ Why: 利用不可の2.5に代えて利用できた3.1を選ぶ。通常のテキ
 
 
 実装追補: 3.1既定2箇所・単価追加・費用assert3件を反映、対象4Pythonのruffとdiff検査成功。GitHub GEMINI_API_KEY更新操作exit0、updatedAt=2026-09-11T01:45:14Zを直接確認。生報告/tmp/reports/LITE31-KEY-SWAP-01.txt。次回以降のdeployで本番へ展開される経路であり、本番反映は未確認。CIは新キーで検証予定、GO #3425未受領。
+
+
+## 2026-09-11 3.1変更・新キーのCI検証結果
+
+PR #3425の製品head e606ce4fad444331677d34852b7a61cca06d95f0を検証。Backend Tests run34552094629/job103116973038は2544passed・93skipped・302warnings（91.84秒）。従前2543passed/94skippedに対して成功1増・skip1減で、既存実API試験のモデル不可/認証不可等の固定skip警告は0。モデル/費用・既存全試験のCI成功と、実データ精度の未検証を区別する。生ログ/tmp/reports/LITE31-PYTEST-01.log、SHA256 837725e72484fe4eb4e17bb1123f465a83fce6b98471f3f0669424fc461702ee。
+
+PR全チェック34success/8skipped/1failure。唯一の失敗process-artifacts gate job103116955933はGO記録セクション欠落を明示。コード品質の検査失敗ではない。新たなGO #3425は未受領。GitHub Secret更新完了、製品コードはPR提出済み、本番モデル変更と本番キー反映は未確認。PRマージ・本番デプロイは本便未実施。差分の自己レビュー済み、独立レビューではない。次の一手はPOのGO #3425受領後に正式な記録・最新チェック・マージ/デプロイ確認。
+
+この検証後追記は不要な再API実行を避け文書だけのローカルcommitで保持し、同内容をPR本文にも保存する。GO受領後の次便で文書commitもpushする。現行PR検証結果と未push文書を混同しない。
