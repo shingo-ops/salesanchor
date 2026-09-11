@@ -80,7 +80,23 @@ async def test_real_gemini_call_returns_structured_items() -> None:
         if "no longer available" in exc_str or (
             "404" in exc_str and "gemini" in exc_str.lower()
         ):
-            warnings.warn("Real Gemini validation skipped: requested model unavailable", RuntimeWarning)
+            # 固定ラベルのみを出し、APIキーを含み得る例外本文は出力しない。
+            diagnostic_phrases = {
+                "new_users": "new users",
+                "no_longer_available": "no longer available",
+                "not_found": "not found",
+                "unsupported_method": "not supported for generatecontent",
+                "api_v1beta": "v1beta",
+                "http_404": "404",
+            }
+            diagnostic = ", ".join(
+                f"{label}={phrase in exc_str.lower()}"
+                for label, phrase in diagnostic_phrases.items()
+            )
+            warnings.warn(
+                f"Real Gemini validation skipped: requested model unavailable ({diagnostic})",
+                RuntimeWarning,
+            )
             pytest.skip(
                 f"使用中のモデルが新規ユーザー向けに提供終了のため skip。"
                 f"inventory_parser_llm.py の model_name を更新すると検証が自動復活します。"
