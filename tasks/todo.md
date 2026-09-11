@@ -94,6 +94,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
+| ワンピース商品追加・解析対策 | 設計・実装担当 | PR #3434提出、GitHub2586成功/95skip、必須13成功。登録26候補静的検査成功 | 番号付きGO記録で手順検査を解消しマージ/配備。書籍区分など33候補の確認継続 | docs/handoff/tcg-product-master-growth/design-keyword.md §15 | 2026-09-11 |
 | guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
 | PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
