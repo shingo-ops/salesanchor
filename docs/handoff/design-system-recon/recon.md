@@ -561,3 +561,6 @@ Callback便実装追補: 新規7回帰の変更前は通知先差替え1件だ�
 
 
 Callback便PR提出: https://github.com/shingo-ops/salesanchor/pull/3426 をready作成し公式登録成功。commit218706338a2f6822c269a4fbb5401d6b919ddae4、12files、前回停止原因だった保存前eslintも成功。rootがPR/HEAD/.pr-number/台帳を直接確認。限定第二レビューAPPROVEと製品2hash一致、CI確認中。番号付きGO未受領、マージ未実施。Icon便は本PR先行マージ後に再開。
+
+
+PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
