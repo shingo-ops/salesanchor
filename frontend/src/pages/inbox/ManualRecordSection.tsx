@@ -20,9 +20,10 @@ interface ChannelMaster {
 interface Props {
   leadId: number;
   currentPlatform: string | null;
+  onSaved?: () => void;
 }
 
-export function ManualRecordSection({ leadId, currentPlatform }: Props) {
+export function ManualRecordSection({ leadId, currentPlatform, onSaved }: Props) {
   const { t } = useTranslation();
   const [manualChannels, setManualChannels] = useState<ChannelMaster[]>([]);
   const [isManualContext, setIsManualContext] = useState(false);
@@ -80,6 +81,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
       setContentText("");
       setOccurredAt(new Date().toISOString().slice(0, 16));
       setSavedCount((c) => c + 1);
+      onSaved?.();
     } catch (err: unknown) {
       const httpStatus = (err as { response?: { status?: number } }).response?.status;
       if (httpStatus === 409) {
@@ -90,7 +92,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [contentText, channelType, occurredAt, leadId, t]);
+  }, [contentText, channelType, occurredAt, leadId, t, onSaved]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

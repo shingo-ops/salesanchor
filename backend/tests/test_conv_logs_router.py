@@ -159,7 +159,7 @@ async def test_create_conv_log_company_id_in_insert():
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=42)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()) as mock_audit,
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+        patch("app.routers.conv_logs.enqueue_inbound_translation", new=MagicMock()),
     ):
         result = await create_conv_log(
             lead_id=10, body=body,
@@ -168,7 +168,8 @@ async def test_create_conv_log_company_id_in_insert():
 
     assert result == {"id": 200}
     # INSERT の params に company_id=42 が含まれていることを確認
-    insert_call_params = mock_db.execute.call_args[0][1]
+    # execute 呼び出し順: [0]=dup check SELECT, [1]=INSERT into meta_messages, [2]=UPDATE message_id
+    insert_call_params = mock_db.execute.call_args_list[1][0][1]
     assert insert_call_params["company_id"] == 42
     # audit log の new_data にも company_id が含まれること
     audit_new_data = mock_audit.call_args[1]["new_data"]
@@ -202,7 +203,7 @@ async def test_create_conv_log_no_company_id_does_not_error():
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+        patch("app.routers.conv_logs.enqueue_inbound_translation", new=MagicMock()),
     ):
         result = await create_conv_log(
             lead_id=99, body=body,
@@ -210,7 +211,8 @@ async def test_create_conv_log_no_company_id_does_not_error():
         )
 
     assert result == {"id": 201}
-    insert_call_params = mock_db.execute.call_args[0][1]
+    # execute 呼び出し順: [0]=dup check SELECT, [1]=INSERT into meta_messages, [2]=UPDATE message_id
+    insert_call_params = mock_db.execute.call_args_list[1][0][1]
     assert insert_call_params["company_id"] is None
 
 
@@ -349,7 +351,7 @@ async def test_create_conv_log_force_skips_duplicate_check():
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+        patch("app.routers.conv_logs.enqueue_inbound_translation", new=MagicMock()),
     ):
         result = await create_conv_log(
             lead_id=10, body=body,
@@ -358,8 +360,12 @@ async def test_create_conv_log_force_skips_duplicate_check():
 
     # 重複チェックをスキップして INSERT が実行され 201 が返る
     assert result == {"id": 100}
-    # execute は INSERT のみ（重複チェック SELECT なし）
-    mock_db.execute.assert_called_once()
+    # allow_duplicate=True → dup check SELECT をスキップ → INSERT + UPDATE の2回のみ
+    # (allow_duplicate=False なら dup check SELECT が先頭に入り3回になる)
+    assert mock_db.execute.call_count == 2
+    # 1回目の呼び出しが INSERT（sender_id あり）であり dup check SELECT でないことを確認
+    first_call_params = mock_db.execute.call_args_list[0][0][1]
+    assert "sender_id" in first_call_params
 
 
 @pytest.mark.asyncio
@@ -446,7 +452,7 @@ async def test_create_conv_log_company_id_in_insert_params():
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=42)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+        patch("app.routers.conv_logs.enqueue_inbound_translation", new=MagicMock()),
     ):
         result = await create_conv_log(
             lead_id=10, body=body,
@@ -454,7 +460,8 @@ async def test_create_conv_log_company_id_in_insert_params():
         )
 
     assert result == {"id": 55}
-    call_params = mock_db.execute.call_args[0][1]
+    # execute 呼び出し順: [0]=dup check SELECT, [1]=INSERT into meta_messages, [2]=UPDATE message_id
+    call_params = mock_db.execute.call_args_list[1][0][1]
     assert call_params["company_id"] == 42
 
 
@@ -531,7 +538,7 @@ async def test_create_conv_log_no_company_id_still_returns_201():
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
+        patch("app.routers.conv_logs.enqueue_inbound_translation", new=MagicMock()),
     ):
         result = await create_conv_log(
             lead_id=10, body=body,
@@ -539,5 +546,6 @@ async def test_create_conv_log_no_company_id_still_returns_201():
         )
 
     assert result == {"id": 57}
-    call_params = mock_db.execute.call_args[0][1]
+    # execute 呼び出し順: [0]=dup check SELECT, [1]=INSERT into meta_messages, [2]=UPDATE message_id
+    call_params = mock_db.execute.call_args_list[1][0][1]
     assert call_params["company_id"] is None

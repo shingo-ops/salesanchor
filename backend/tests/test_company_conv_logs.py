@@ -20,8 +20,10 @@ async def test_list_company_conv_logs_returns_logs():
     mock_user.id = 1
 
     # 1件のログを返す mock
+    # 列順: id, contact_id, lead_id, channel_type, direction, content_text,
+    #       translated_text, occurred_at, recorded_by_user_id, contact_display_name, is_manual
     occurred = datetime(2026, 6, 11, 10, 0, tzinfo=timezone.utc)
-    mock_row = (42, 5, None, "phone", "inbound", "テスト内容", None, occurred, 1, "田中 太郎")
+    mock_row = (42, 5, None, "phone", "inbound", "テスト内容", None, occurred, 1, "田中 太郎", False)
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [mock_row]
     mock_db = AsyncMock()
