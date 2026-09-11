@@ -1,0 +1,50 @@
+CARD-ICON-CONTRACT-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-ICON-CONTRACT-01
+照合§5.5: 1○実パス、2○本便PRなし、3○親へ全文、4○通常Icon公開契約、5○公式origin/main作業台、6○AE具体契約、7○152 JSX監査/4ファイル限定。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、design-partner.md§5.5（guardsはdocs/handoff/design-partner-card-ops配下）。
+担当Generator。あなたは他者と並行、他者の変更を戻さない。rootは文書/台帳を担当。次の製品4ファイルだけ所有。
+作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract`
+基準HEAD: `76c6dff98e3fa68f47c381d044e86fd0564d9509`（公式origin/main起点、root文書差分あり）。
+正本: `docs/specs/design-system/design.md` §AE 自己審査APPROVE、既存§Z/AA。`docs/handoff/design-system-recon/evidence-20260910/icon-contract-recheck.md`。
+対象:
+- `frontend/src/constants/icons.tsx`
+- `frontend/src/components/GoogleCalendarStatusBar.tsx`
+- 新規 `frontend/src/components/GoogleCalendarStatusBar.css`
+- 新規 `frontend/src/constants/icons.test.tsx`
+許可: 上記実装/有意味なDOM・型互換試験、既存lockでnpm ci、実ブラウザーfixture/ログを `/tmp/frontend-icon-contract-20260911/` へ保存。
+禁止: その他製品、Spinner/Button、PlatformIcon/LeadChatIcon本体、色値/寸法値/状態文言/通信変更、依存manifest/lock/CI/backend/API/DB/secrets変更、GO創作、commit/push/PR/merge/deploy、別AI起動。
+公式treeの書込と既存ブラウザー導入は正規require_escalated申請可。自動承認レビュー拒否は迂回せず親へ停止報告。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && git rev-parse HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && git diff --exit-code HEAD -- frontend
+期待: 基準一致、製品差分0。root文書差分保持。
+
+手順1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract/frontend && npm ci
+期待: exit0、lock変更0。ライブラリ仕様はContext7なしのため正規公式資料と既存lock配布物へ照合（AEの確認済み仕様）。
+
+実装手順: AEを逐条実装する。IconPropsのcolor/style除去、SVGPropsのPickで6属性だけ追加。hiから6属性を明示転送、aria-hidden既定true（undefined含む）、false/文字列false保持。ref/size/weight/classNameは保持、任意rest追加なし。
+配置はGoogleCalendarStatusBarのIcon.style2宣言を同SVGのclassNameへ移し、新同名CSSをimport。CSS .google-calendar-status-icon-layout はmargin-right:var(--space-2); flex-shrink:0だけ。親のstyle/通信/操作は保持する。
+試験手順: 既存HeroiconsをmockせずDOMでsize既定24/数値/文字列・SVG ref・ARIA6属性・未指定/undefined/true/false/文字列false・再renderの属性解除を検査。型としてstyle/color拒否（型検査の対象に含むコードでts-expect-error）、既存size/ref互換を検査。
+実ブラウザー手順: 前後actual Icon/CSSの明暗×幅390/1280×接続/切断8条件でサイズ/右余白/flex-shrink/親color継承/hiddenを比較。期待値は前実物で確認し、CSS未読込を一致と誤認しない。ARIA転送は意図した変更として別検証。
+fixture正規パスは `/private/tmp/frontend-icon-contract-20260911/fixture`、出力はその外へ。入口URL1、console.error0/pageerror0を確認（前便/tmpと/private/tmp二重入口の教訓）。
+通常Iconの外部style/colorを型ベースで再走査し0を確認。新試験専用の拒否用propsは実運用と区別して一覧へ記す。Platform/LeadChat既存部分差分0を確認。
+
+手順2
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract/frontend && npm run test:unit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract/frontend && npm run build-storybook
+期待: 全exit0、失敗時は対象の名前を報告。試験数は実行結果を記載し見積らない。既存警告と新エラーを区別。失敗/不明/範囲超過は停止し期待値/ゲートを独断変更しない。
+
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && git diff --stat -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-contract && git diff --exit-code HEAD -- frontend/package.json frontend/package-lock.json frontend/src/index.css frontend/src/tokens.css frontend/src/components/Button.tsx frontend/src/components/loading/Spinner.tsx
+期待: 製品4ファイルだけ、ファイル削除0。各ファイルの行数/hashと全検証結果を保存・報告。
+報告冒頭: 本報告はカード CARD-ICON-CONTRACT-01 の実行結果である。
+親への完了報告本文に生出力全文、長いログは `/tmp/frontend-icon-contract-20260911/` の実在ファイルを添える。停止時は手順番号/最後のコマンド/理由。全画面統一とPO目視は未完と明示。
+END OF CARD

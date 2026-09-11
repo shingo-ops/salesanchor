@@ -597,7 +597,33 @@ run_sql migrations/20260907_120000_tcg_dist_stale_jobs_terminate_t004.sql
 # KW-HYGIENE: 商品マスタ キーワード整備 11項目（除外語の自己矛盾解消・壁追加・PM0146無効化）（tenant_004 専用・冪等）
 run_sql migrations/20260907_140000_tcg_keyword_hygiene_t004.sql
 
+# IMPORT-01: 商品マスタCSV取り込み履歴（tenant_004 専用・冪等）
+run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
+
+# IMPORT-01 QA: 同上（tenant_001 専用・冪等）
+run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
 echo "============================================"
+
+# LMI-SP0136-REQUEUE: SP0136 の残す1件の抽出ジョブを error→pending に戻す（tenant_004 専用・冪等）
+run_sql migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql
+run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
+
+# LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
+run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
+
+# NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
+run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
+
+# PMG import progress: TCG schemas only, additive, no backfill
+run_sql migrations/20260910_010000_tcg_import_message_links.sql
+
+# LINE work evidence before v3 code; dictionary filter is independently idempotent.
+run_sql migrations/20260910_160000_tcg_work_evidence.sql
+run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
+run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
+run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
+run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql

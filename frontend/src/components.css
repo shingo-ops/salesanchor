@@ -744,14 +744,14 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  color: var(--icon-action);
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast);
   flex-shrink: 0;
 }
 /* stylelint-disable-next-line no-descending-specificity -- intentional: base hover after scoped hover */
-.icon-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
-.icon-btn.danger:hover { background: var(--danger-bg); color: var(--danger); }
+.icon-btn:hover { background: var(--bg-subtle); color: var(--icon-action-hover); }
+.icon-btn.danger:hover { background: var(--danger-bg); color: var(--icon-action-danger); }
 
 /* --- Tab Bar / Tab Item --- */
 .tab-bar {

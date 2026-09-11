@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "../constants/icons";
 import { api } from "../lib/api";
+import "./GoogleCalendarStatusBar.css";
 
 /**
  * connected    : 接続中
@@ -78,7 +79,7 @@ export function GoogleCalendarStatusBar({
       });
       onStatusChange?.(false);
     }
-  }, [onStatusChange]);
+  }, [onStatusChange, onSyncStatusChange]);
 
   useEffect(() => {
     checkStatus();
@@ -169,7 +170,7 @@ export function GoogleCalendarStatusBar({
         size={14}
         weight="bold"
         aria-hidden="true"
-        style={{ marginRight: "var(--space-2)", flexShrink: 0 }}
+        className="google-calendar-status-icon-layout"
       />
       <span style={{ flex: 1 }}>{cfg.message}</span>
       {cfg.action}

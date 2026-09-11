@@ -1,0 +1,66 @@
+name: Guard authoring evaluation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/handoff/design-partner-card-ops/guards.md'
+      - 'docs/handoff/design-partner-card-ops/guards/**'
+      - 'docs/handoff/design-partner-card-ops/guard-authoring-*.md'
+      - 'scripts/card-lint.sh'
+      - 'scripts/tests/card-lint/**'
+      - 'scripts/check-guard-evaluations.js'
+      - 'scripts/run-guard-evaluation.js'
+      - 'scripts/tests/test-guard-evaluations.js'
+      - '.github/workflows/guard-authoring-gate.yml'
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guard-authoring-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  unit:
+    if: github.event_name == 'pull_request'
+    name: guard-authoring unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: node --test scripts/tests/test-guard-evaluations.js
+
+  evaluate:
+    if: github.event_name == 'pull_request_target'
+    name: evaluate guard authoring from main
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      # PRのheadをcheckoutしない。取得したheadのファイルはgit blobとして読むだけ。
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Evaluate committed evidence and publish to the exact head
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/run-guard-evaluation.js
