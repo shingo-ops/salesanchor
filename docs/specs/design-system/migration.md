@@ -172,3 +172,20 @@ legacy --cal-*21名前×明暗の削除は参照0の最終全域調査が通っ�
 ### 次便の実行条件確認（2026-09-10）
 
 PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668eのCI38成功/8対象外、公式merge/cleanup完了を直接確認。次便はこのmain起点。カレンダー21値/20固有色の移管と既存ファイル単位hex増加禁止が衝突し、限定契約を自己審査REVISE。製品未変更。根拠: docs/handoff/design-system-recon/evidence-20260910/calendar-source-audit.md。推奨は色移管保留→共通部品先行、POの順序判断待ち。CIを変更・迂回しない。
+
+
+### 2026-09-11 現在の実装順序・検収記録
+
+上記「POの順序判断待ち」は2026-09-10時点の履歴。その後の続行指示に基づき、design.md§AC/ADの共通部品先行を実施。カレンダー色は保留、新CIは全画面移行後。
+
+| 変更単位 | 保存済み根拠 | 現在状態 |
+|---|---|---|
+| ICON5数値生成 | PR3412 merge6d3e3486 / icon-source-implementation.md | マージ済み、数値同値 |
+| カラー同値alias | PR3420 mergea5e5a250 / color-source-implementation.md | マージ済み、静的25/色50/表示60比較 |
+| Button ref/処理中Spinner | PR3423 merge76c6dff9 / button-contract-implementation.md | マージ済み、操作/Spinner各18・reduced9、最終CI38成功/8対象外 |
+| 通常Icon API | design.md§AE / icon-contract-recheck.md | PR3426反映後main5de8afa1で4ファイル再検収済み。厳格lint/179試験/表示8条件成功、PR提出へ |
+
+根拠ファイルはdocs/handoff/design-system-recon/evidence-20260910配下。各便の既存部品所有元は継承し、通常Iconはfrontend/src/constants/icons.tsxのhiと公開Icon各export、値はtokens.css/生成iconSizes.ts、色は既存用途CSS。唯一の配置移管先はGoogleCalendarStatusBar.cssの同SVG配置2宣言。これは全画面移行完了やclassName入口全閉鎖の証拠ではない。型監査の152 JSX/118実運用分類はIconProps経路の分母で、全アイコン種別の総数ではない。
+
+
+2026-09-11再開: 前提callback修正PR3426をmerge5de8afa1でマージ済み。Icon便を同mainへ復元して再検証へ進む。旧「別PR修正の順序PO判断待ち」は履歴、現在は最新基準の検証/PRが次の一手。新CIは全画面移行後。

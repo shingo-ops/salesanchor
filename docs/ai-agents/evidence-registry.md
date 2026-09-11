@@ -2103,6 +2103,36 @@ EV-20260911-FRONTEND-MOLD-24 PR追補: https://github.com/shingo-ops/salesanchor
 PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
 
 
+```text
+id: EV-20260911-FRONTEND-MOLD-23
+date: 2026-09-11
+agent: root design partner / overlay_contract_audit read-only
+task: 通常Icon公開入口の限定
+scope: frontend Icon API、唯一styleの同値配置移管
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/icon-contract-recheck.md
+    summary: main76c6dff9、152 JSX/118実運用分類、style1/color0、Heroicons既定hidden衝突実測
+  - type: file
+    reference: docs/specs/design-system/design.md §AE
+    summary: mode handoff、4ファイル所有、ARIA6属性限定/hidden既定保持、同一AI自己審査APPROVE
+confidence: high
+tradeoff: className互換は持越し、全体の色/形/認知効果は未検証
+decision: 正式カード検査後に既存Generatorへ委任。CI追加は最後
+follow_up: 実装、型/DOM/ブラウザー同値比較、第二レビュー、PR。番号付きGOを創作しない
+```
+
+EV-20260911-FRONTEND-MOLD-23 実装追補: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.mdへ検収を保存。Generator実行の162試験・既存check/build/Storybook・局所ブラウザー8同値をroot読取確認。rootが型名依存の0件監査を不採用とし、修正版で元152対象欠落0を独立JSON突合。限定第二レビュー対象4hash一致。新PR/番号付きGO/リモートCI/マージは未完。
+
+EV-20260911-FRONTEND-MOLD-23 提出停止追補: pre-commitのmax-warnings=0により既存GoogleCalendarStatusBar依存不足1警告でgit commit exit1。rootが基準76c6dff9本文を同eslint stdinへ入力し同警告/exit1を再現。製品4hash/162試験/8比較の事実とは別に提出条件REVISE。詳細icon-contract-implementation.mdとicon-contract-commit-block.txt。commit/PRなし、既存不備別PR先行のPO判断待ち。
+
+
+EV-20260911-FRONTEND-MOLD-23 最新基準追補: 前提PR3426 merge5de8afa1を取り込み、通常Icon4製品を再検収。Generator実行の厳格lint/179試験/checkall/build/Storybook全exit0、局所8同値。rootが監査対象152→163欠落0/追加test11/既存属性差分1と4hashを照合。根拠: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節、icon-contract-resume-evidence.json。旧基準の結果と区別。PR提出前、GO/マージは未完。
+
+
+PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、ready OPEN、提出HEAD cfb3068b49429672d63dbb84d41be483f40b4bfc、公式.pr-number登録をroot直接確認。製品4/文書24ファイル、保存前検査を迂回せずcommit成功。最新179試験/8表示同値の検収と4hashを維持。番号付きGOは未受領、リモートCI確認が次の一手。マージ/デプロイは未実施。
+
+
 ## EV-20260911-INVENTORY-LITE25
 
 POが在庫補助解析を2.5 Flash-Liteへ変更するよう依頼。理由はPO報告のレガシー精度実績と単価削減。現行精度比較は未実施。既存docs/handoff/llm-model-3-5-flash-lite/design.mdとrecon.mdへ限定契約・自己審査・適用限界を記録。専用release/inventory-lite25、基点eefa9143。
@@ -2162,6 +2192,9 @@ PR全チェック34success/8skipped/1failure。唯一の失敗process-artifacts 
 
 
 PR #3425 GO受領: PO原文「GO #3425」。2026-09-11 10:55 JSTは受領後記録時刻。コードhead e606ce4fの34success/8skip/残1failureはGO欠落と実測。既存PRへ本人原文を転記し、文書追補をpush後、最新チェックを確認して公式マージする。Mac一時キーファイルはGitHub登録後に削除し不存在確認。平文一時保存だった点をPOへ明示。VPSの現行.env方式は維持。
+
+
+PR #3427 GO受領: PO原文「GO #3427」。2026-09-11 12:23 JSTは受領後記録時刻。head2031cfa3のCI37成功/8対象外/残1失敗はGO記録欠落と確認済み。rootが製品4SHA256と検収manifestの一致を再確認。本人原文をPR本文へ転記し、最新CI確認後に公式マージする。DB変更なし、バックアップ該当なし。
 
 
 ## EV-20260910-PRODUCT-UI-TAKEOVER

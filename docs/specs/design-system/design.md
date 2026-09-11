@@ -1060,3 +1060,43 @@ React公式forwardRef/APIとW3C Button Patternを2026-09-11確認。React19のre
 根拠: React公式useCallbackは関数内で参照するreactive値を依存へ含める契約、useEffectは依存変更時に古いcleanup後に新しいsetupを実行する契約。Context7 MCPは利用可能一覧0のため起動指示の許可に従い公式資料を直接確認。https://react.dev/reference/react/useCallback / https://react.dev/reference/react/useEffect （2026-09-11確認）。現行資料のReact Compiler/useEffectEvent等は導入せずrepo React18.3.1/既存hooksを維持する。
 
 外部導入事例は不要（自社の既存警告と古いcallbackの参照を回帰試験で確認する限定修正）。守り手は新規回帰試験・既存frontend-check.yml・保存前eslint。API/DB/backendは非接触、画面配色/心理学的効果は本便の対象外。Planner作成後、同一AIがArchitectとして既存仕様・実物・検証可能性を自己審査APPROVE。独立した第二者の設計審査とは称しない。製品実装・試験結果・PR番号付きGOは後続の実績として別記する。
+
+
+### AE. 通常Iconの公開入口を限定する便（2026-09-11）
+
+対象は§Zの通常Icon契約。PR #3423のButton機能便（merge76c6dff98e3fa68f47c381d044e86fd0564d9509、CI38成功/8対象外）後のmainを基準とする。新しい画面配色・大きさ・業務動作は本便に含めない。カレンダー用途色移管は引き続き保留、全体移行後にCIを設置する。
+
+目的: 各画面から通常Iconへ任意の色・styleを渡す入口を閉じ、既存の用途CSSと共通の寸法定義へ揃える。既存の読み上げ属性が共通アダプターで消える問題も同じ公開API内で修正する。利用者の理解速度や脳活動への効果は未測定。
+
+変更範囲はfrontend/src/constants/icons.tsx、components/GoogleCalendarStatusBar.tsx、新規components/GoogleCalendarStatusBar.css、新規constants/icons.test.tsxの4ファイル。後者CSSは既存配置2宣言の所有元であり、新たな値の保管庫を作らない。Spinner、Button、PlatformIcon実装、LeadChatIcon実装、依存、CI、翻訳、API/DBは対象外。
+
+通常IconPropsからcolorとstyleだけを除く。size number|string、既定24、weightの受理と無視、className、既存exportとforwardRefを保持する。SVGPropsのPickでaria-hidden、aria-label、aria-labelledby、aria-describedby、role、focusableだけを追加し、hiから明示転送する。任意rest転送は禁止。aria-hiddenは未指定/undefinedならtrueを明示し、既存Heroiconsの装飾扱いを保持する。falseおよび文字列falseはそのまま渡す。ラベルからhiddenを自動反転しない。role/labelを使う意味のある画像は呼出側がaria-hidden=falseを指定する契約で、全アイコンへの説明の自動追加はしない。
+
+GoogleCalendarStatusBarの唯一のIcon.style（marginRight=var(--space-2)、flexShrink=0）は同じSVGのclassNameへ移す。新規GoogleCalendarStatusBar.cssを当該TSXからimportし、.google-calendar-status-icon-layoutでmargin-right:var(--space-2); flex-shrink:0のみ所有する。size14/weight/aria-hidden、親のcfg.color、status文言、操作、通信とタイマーを維持。wrapperを増やさない。既存周囲のstyleは本便で変更しない。
+
+受入条件:
+- 通常Iconの外部style/color指定はともに0。型経由/動的Iconの利用を含め再照合し、対象名を保存する。
+- unitでdefault24/数値/文字列size、同SVG ref、currentColor継承、許可ARIA6属性、未指定/undefined/true/falseのhidden、再renderで属性解除を確認する。型検査でstyle/colorの拒否、size/refの互換を確認する。
+- 実ブラウザーで明暗×幅390/1280×接続/切断の8条件を変更前後比較。実Iconと実CSSで幅/高さ/右余白/flex-shrink/親からの色継承/装飾hiddenが一致する。全ページ目視とは区別する。
+- 既存unit/check:all/build/Storybookを実行、製品差分4ファイル、依存/CI/固定色変更0を確認する。aria属性の出力修正は意図した差分として同値比較から区別する。
+
+代替案: 汎用rest転送はstyle/color入口を再開するため不採用。未指定aria-hiddenをundefinedのまま転送するとHeroicons既定を消すため不採用。すべてのIconを読み上げ対象へ変える案は既存装飾を重複読み上げさせるため不採用。classNameの全面閉鎖は既存用途CSS全移管を要するため本便では行わず、全SSOT完了とは称しない。
+
+Context7 MCPは利用可能一覧に存在しないため、PO起動指示の代替許可でReact公式common componentsとHeroicons公式v2.2.0生成コードを参照する。React現行資料をrepoのReact18.3.1/lockのHeroicons2.2.0および配布物へ照合し、依存更新はしない。公式生成物URLの404は仕様根拠にせず、取得できたscripts/build.jsと配布実物を使う。外部導入事例は不要（既存props/出力/配置の限定契約を実物比較する変更のため）。
+
+根拠URL: https://react.dev/reference/react-dom/components/common / https://github.com/tailwindlabs/heroicons/blob/v2.2.0/scripts/build.js （2026-09-11確認）。守り手は当該unitと既存check/build/CI、配置同値は局所ブラウザー比較。既存移行表への実装所有元登録は検収後に記録する。Planner作成後、同じroot AIによるArchitect自己審査APPROVE。限定読み取り担当の最新型照合152 JSX/実運用分類118箇所39ファイル、style1/color0/ref0/spread0、hidden86件true、その他対象ARIA0を根拠とする。独立した第二者の全体設計審査とは称しない。唯一styleのCalendarStatusBarは現在storiesからのみ参照されるため、今回の配置移管を本番画面の見やすさ改善済みと説明しない。PO自筆承認/番号付きGOは創作しない。
+
+
+#### AE提出時の実行条件差し戻し（2026-09-11）
+
+AE実装/ローカル検証/限定第二レビューは完了したが、保存前eslintが既存GoogleCalendarStatusBarの依存不足警告で停止。基準mainでも再現し今回導入ではない。全体check:allの警告許容だけでは提出可能性の証明にならなかった。便の提出条件はREVISE、実装を退行/検査迂回させない。詳細と別PR修正の未承認案は[検収記録](../../handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md)。依存配列修正はAEの対象外につき、混載せずPOへ順序判断を戻す。全体設計の自己審査と本便提出条件を区別する。
+
+
+#### AE再開時の整合確認（2026-09-11）
+
+AFの前提修正PR #3426はmerge5de8afa1f97b67ebaebe186fed3d9751bbf2fcd7、PO原文GO #3426受領後の最終CI38成功/8対象外を経てマージ済み。これを本Icon便のGOへ流用しない。最新mainに未保存のIcon変更を復元し、StatusBarが旧Icon実装にcallback依存修正1行だけを加えた内容と完全一致することをroot確認。製品競合0、文書4競合はmain本文と元base以降の追補を両方保持した。
+
+AEの4ファイル契約自体は変更しない。mainの並行進捗表示修正も保持し、新main5de8afa1を基準に利用監査を再取得する。元の0件監査を採用せず、型宣言元で前後両方を追跡する。既存全検査/厳格保存前lint/明暗幅状態8条件の再実行と限定第二レビューを受けて提出する。設計担当による同一AI整合自己審査APPROVE、実装再検収はこれから。全画面統一やPO認知評価は未完。
+
+
+AE再検収完了: 基準5de8afa1で厳格lint/179試験/既存check/build/Storybook成功、前後152→163の欠落0、局所8表示同値を確認。旧提出条件REVISEの原因は先行PR3426で解消、当該便の提出条件をAPPROVEへ更新する。同一AIによる設計自己審査と限定コード第二レビューを区別。根拠: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節。新番号付きGO/全画面完了を意味しない。

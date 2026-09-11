@@ -13,7 +13,7 @@
 
 import "./platform-icon.css";
 import { forwardRef } from "react";
-import type { CSSProperties, ComponentType, SVGProps, ForwardRefExoticComponent, RefAttributes } from "react";
+import type { ComponentType, SVGProps, ForwardRefExoticComponent, RefAttributes } from "react";
 
 // ============================================================
 // アイコン型定義（@phosphor-icons/react 依存を排除した独自定義）
@@ -22,11 +22,9 @@ import type { CSSProperties, ComponentType, SVGProps, ForwardRefExoticComponent,
 /** アイコンコンポーネントが受け取る props */
 export type IconProps = {
   size?: number | string;
-  color?: string;
   weight?: string;  // Heroicons では無視（solid 固定）
   className?: string;
-  style?: CSSProperties;
-};
+} & Pick<SVGProps<SVGSVGElement>, "aria-hidden" | "aria-label" | "aria-labelledby" | "aria-describedby" | "role" | "focusable">;
 
 /** アイコンコンポーネント型 — 全 ICON_* 定数の値型 */
 export type Icon = ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>;
@@ -91,19 +89,24 @@ import {
 } from "@heroicons/react/24/outline";
 
 /**
- * Heroicons コンポーネントを Icon API（size/weight/color props）に変換するアダプター。
+ * Heroicons コンポーネントを Icon API（size/weight/ARIA props）に変換するアダプター。
  * weight は受け取るが無視（solid 固定）。
  */
 function hi(HeroIcon: ComponentType<SVGProps<SVGSVGElement>>): Icon {
   const Wrapped = forwardRef<SVGSVGElement, IconProps>(
-    ({ size = 24, color, className, style }, ref) => (
+    ({ size = 24, className, "aria-hidden": ariaHidden = true, "aria-label": ariaLabel,
+      "aria-labelledby": ariaLabelledBy, "aria-describedby": ariaDescribedBy, role, focusable }, ref) => (
       <HeroIcon
         ref={ref}
         width={size}
         height={size}
-        color={color}
         className={className}
-        style={style}
+        aria-hidden={ariaHidden}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        role={role}
+        focusable={focusable}
       />
     )
   );

@@ -564,3 +564,25 @@ Callback便PR提出: https://github.com/shingo-ops/salesanchor/pull/3426 をread
 
 
 PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
+
+
+## 2026-09-11 PR3423マージと通常Icon公開契約便
+
+PR #3423はmerge76c6dff98e3fa68f47c381d044e86fd0564d9509、2026-09-10T23:01:52ZにMERGED。rootが38成功/8対象外、公式cleanup/DONEを直接確認。最新origin/main同SHAを取得し、公式release/frontend-icon-contract作業台を作成。main本店の他者AGENTS.md等は保持。
+
+次便は既存§Zの通常Icon公開契約を§AEへ具体化。最新型監査152 JSX/118実運用分類、style1/color0を確認し同一AI自己審査APPROVE。根拠[再照合](evidence-20260910/icon-contract-recheck.md)。読みやすさ§ACを維持し、色/形の全画面統一完了とは区別。新CIは最後。製品実装/新PR/番号付きGOは未実施。
+
+
+Icon便ローカル検収: 製品4ファイル、単体19ファイル162試験、既存check/build/Storybook各exit0、ブラウザー8条件同値。型名依存の監査0件をroot指摘で不採用とし、宣言出所を追跡して152元対象の欠落0・追加test11を確認。詳細[検収](evidence-20260910/icon-contract-implementation.md)。限定コード第二レビューAPPROVE、4hash一致。新PR/番号付きGO/リモートCI/マージは未完。
+
+
+Icon便提出停止: CARD-ICON-CONTRACT-PR-01手順2のpre-commitが既存依存不足警告1件でexit1。rootがmain76c6dff9でも同警告/exit1を再現。実装担当は処理変更/検査迂回せず停止、HEAD据置・commit/push/PRなし。次は既存不備を別PRで先に直す順序のPO判断。根拠icon-contract-implementation.md最新節/同commit-block.txt。実装とログは専用worktreeに保持、CI新規追加なし。
+
+
+2026-09-11 Icon便再開: PR3426のMERGED/main5de8afa1を確認。23filesを独立コピーとstash8ced54b1f7085b6c2f706da445e6af60e3e18dcfへ保存、公式既存treeでmainへff後に復元。製品競合0、文書4競合はmain全文+元base以降の追補を保持し解消。tasksの他テーマ行はmainから保持。操作ログ/tmp/frontend-icon-resume-20260911/integration.log、復元前hashは同before-manifest.json。次は新基準で再検証。
+
+
+通常Icon再開検収: main5de8afa1を基準に20files179試験/厳格lint/既存check/build/Storybook exit0。型宣言元監査で152→163・欠落0/実運用118、局所表示8同値。詳細: evidence-20260910/icon-contract-implementation.md 最新基準節。rootは実行者のログと現物4hashを直接照合。新PR/GOは次工程、CI新設は最後。
+
+
+PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、ready OPEN、提出HEAD cfb3068b49429672d63dbb84d41be483f40b4bfc、公式.pr-number登録をroot直接確認。製品4/文書24ファイル、保存前検査を迂回せずcommit成功。最新179試験/8表示同値の検収と4hashを維持。番号付きGOは未受領、リモートCI確認が次の一手。マージ/デプロイは未実施。
