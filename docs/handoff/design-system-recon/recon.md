@@ -606,3 +606,26 @@ EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをr
 2026-09-11 AI PR #3435提出済み https://github.com/shingo-ops/salesanchor/pull/3435 （ready、HEAD3935e17d）。main ec173b7e通常統合、今回製品差分Modal2のみ・hash不変。root統合unit200件成功。CI確認中、番号付きGO/マージ/PO目視未完。AH16保留、新CI最後。
 
 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。
+
+
+### 2026-09-11 AH再開（PR3435マージ後）
+
+先行PR #3435は2026-09-11T09:07:09Zにmerge adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70bでマージ済み。rootがGitHub APIのMERGEDと最終HEAD9780f1dcのCI38成功/8対象外を直接確認。PO目視・本番反映は未確認。
+
+PO原文「進めてくれ」を受領し、同mergeを起点にrelease/frontend-shared-button-migrationを公式手順で作成。AHの6TSXは退避基準7606ca9aから差分0、Button本体とModal.tsxも差分0、Modal.cssは先行wrap1行だけを確認。再監査でも旧先頭btn332/専用20、AH16原文一致。7退避案は未検証扱いで復元後の操作/表示検収へ進む。新CIは全画面統一後、最後。
+
+CARD-RAW-SHARED-RESUME-02は正式card-lint exit0（長行警告のみ）。Generatorは6TSXと回帰試験の7製品のみ、rootは設計・検収・記録を担当する。AHの製品契約変更なし。Planner追補後、同一AI Architectとして再開前提の整合を自己審査APPROVE。AHの提出合格は実検証と限定第二レビュー後に別途判定し、現時点で未完。新PR番号付きGOは未受領。
+
+
+2026-09-11 AJ分割: CommissionPanel3利用は390px英語の横overflow528→537pxと輪郭欠けを実測したため、表統一便へ保留。残5部品13利用を先行、目標Button70→83/旧btn332→319。20単独操作試験は成功、全体coverageとbuildは未合格。詳細design.md§AJ。新CI最後、PO目視未確認。
+
+
+## 再起動時の入口（2026-09-11 PO保存指示）
+
+PO原文「再起動するからここまでを保存して記録してくれ」により中断保存。
+**コードは6部品16利用の作業途中。AJ設計の13利用への分離はまだ製品へ適用していない。**
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration
+ブランチ: release/frontend-shared-button-migration
+基準: adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b（PR3435マージ済み）。
+
+再開手順と全証跡: [再起動引き継ぎ](evidence-20260910/ah-restart.md)。新規PR未提出・本便GO未受領・マージ未実施。新CIは最後。PO目視/本番反映は未確認。
