@@ -778,3 +778,9 @@ GitHubアプリのget_profileはshingo-ops/id246949427、get_repoはrepo13636766
 Context7不在につき公式 [Contents API](https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents) と [issuesイベント](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#issues) を2026-09-11 JSTに確認。workflow変更にはAPI権限条件があり、repoメタデータ表示だけでは成功を保証しない。issues openedのworkflowはdefault branch上に必要なため、準備PRだけでは実機試験を始められない。
 
 /tmp/reports/TH-GO-INTAKE-P1-VERIFY.py が同梱workflow案のPythonを抽出し13ケースを確認。actionlint /tmp/reports/TH-GO-INTAKE-P1-WORKFLOW.txt exit0。結果は TH-GO-INTAKE-P1-LOCAL-RESULT.json、TH-GO-INTAKE-P1-ACTIONLINT.txt。workflow SHA256 e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26。試験用コードは設計案のtxtであり、リポジトリのCIとして設置していない。
+
+## 2026-09-11 P1実行停止と設計PR保存
+
+P1カード手順1/2成功。入力SHA256一致、sandbox main a815d94c535f59fae6415b881296d64ef17bf6c7、同名branch/file/PRなしをGET確認。手順3 github_create_branchは403 Resource not accessible by integration。再GETのmatching refsとPR一覧は空。CLIや別資格による再試行は0件。証拠 /tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json。repoメタデータのpush/admin trueと、この連携の実書込権限を区別する。
+
+POは直前に提示した#3418について「追従してPRマージを実行」と指示。文書保存の差分審査は同一AIで行い、製品差分なし・全体設計REVISEと未実装を明示して保存する。マージ済みの事実はAPI確認後の報告に記録し、ここでは先取りしない。別の移植先のコード/文書をこのPRへ取り込んでいない。
