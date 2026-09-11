@@ -120,3 +120,10 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | deploy34451686912成功、#3401へ取込み・設置済み。追加変更なし | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+
+
+## 在庫補助解析モデル変更
+
+| テーマ | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 在庫補助解析2.5 Flash-Lite | Agent | モデル変更実装済み・対象ruff/台帳検査成功 | PR提出・CI確認。実APIと現行精度は未確認 | EV-20260911-INVENTORY-LITE25 / docs/handoff/llm-model-3-5-flash-lite/recon.md | 2026-09-11 |

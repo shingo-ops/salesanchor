@@ -38,3 +38,10 @@ models/gemini-3.6-flash を使うよう促す内容。翻訳は成立してい�
 - gemini-3.5-flash-lite の料金は公開情報の参照値であり、請求実績で裏を取っていない。
 - 送信英訳に Flash-Lite を使うことによる訳質の変化。
 - TCG 抽出（gemini-3.6-flash）を将来どう扱うか。
+
+
+## 2026-09-11 在庫補助解析2.5 LiteへのPO変更依頼
+
+基点eefa9143。既定モデルはinventory_parser_llm.py:91,227の3.5 Lite。呼出側inventory_parser.py:1034は結果modelを予算計算へ渡す。llm_budget.py:67に2.5 Liteの単価登録済み。翻訳とTCG抽出は別用途。POはレガシーで2.5 Liteの精度を確保できたと報告し、変更を明示依頼。モデル比較の実測や現行精度合格を創作しない。設計追補の限定契約を自己審査APPROVE。ローカルDocker不在のためpytestはCIで確認する。PR3422のGOを本便へ流用しない。
+
+実装追補: 既定モデル2箇所を変更し、SDK指定と結果model・料金0.50USD/各100万tokenの既存試験を更新。実APIテストは結果modelで費用算出。対象ruff成功、既存テストimport指摘を整理して再検査。台帳/diff検査成功。Docker不在でローカルpytest未実行。生報告/tmp/reports/LITE25-VERIFY-02.txt。製品差分自己レビュー済み、独立レビューではない。実API・現行精度・本番反映未検証。

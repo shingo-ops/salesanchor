@@ -2074,3 +2074,8 @@ Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をready�
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
 
 PR #3424 GO追補: 本セッションでPO原文「GO #3424」を受領。2026-09-11 08:10 JSTは受領確認の記録時刻。PR本文へ本人原文を転記。main76c6dff9の共通Button変更を取り込み、双方の根拠登録を保持して追記競合を解消。DB変更なし・バックアップ該当なし。最新HEADの検証後に公式マージする。
+
+
+## EV-20260911-INVENTORY-LITE25
+
+POが在庫補助解析を2.5 Flash-Liteへ変更するよう依頼。理由はPO報告のレガシー精度実績と単価削減。現行精度比較は未実施。既存docs/handoff/llm-model-3-5-flash-lite/design.mdとrecon.mdへ限定契約・自己審査・適用限界を記録。専用release/inventory-lite25、基点eefa9143。

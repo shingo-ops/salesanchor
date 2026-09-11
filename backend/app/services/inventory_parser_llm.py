@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 """
-spec.md v1.1 F4 / Sprint 4: LLM フォールバック解析 (Gemini 2.5 Flash)。
+spec.md v1.1 F4 / Sprint 4: LLM フォールバック解析 (Gemini 2.5 Flash-Lite)。
 
 F3 ルールベース解析 (`inventory_parser.parse_raw_content`) が unparsed[] を
-返した行のみを Gemini 2.5 Flash に投げ、構造化抽出して items[] にマージする
+返した行のみを Gemini 2.5 Flash-Lite に投げ、構造化抽出して items[] にマージする
 ための薄い service レイヤ。
 
 設計思想:
@@ -23,7 +23,7 @@ F3 ルールベース解析 (`inventory_parser.parse_raw_content`) が unparsed[
 
 参照:
   - .claude-pipeline/spec.md F4 (L139-155)
-  - memory: project_jarvis_llm_gemini.md (Gemini 2.5 Flash 確定)
+  - docs/handoff/llm-model-3-5-flash-lite/design.md (2026-09-11 在庫補助解析変更)
   - migration 059 (discord_inbound_messages.llm_cost_usd 列)
   - migration 062 (tenant_llm_budgets テーブル)
 """
@@ -88,7 +88,7 @@ class LLMParseResult:
     # Gemini usage metadata からの token 数 (record_cost に渡す)
     input_tokens: int = 0
     output_tokens: int = 0
-    model: str = "gemini-3.5-flash-lite"
+    model: str = "gemini-2.5-flash-lite"
     raw_response_text: str = ""  # debug 用
 
 
@@ -224,9 +224,9 @@ async def parse_with_gemini(
     knowledge_snapshot: list[dict[str, Any]],
     language: str = "ja",
     *,
-    model_name: str = "gemini-3.5-flash-lite",
+    model_name: str = "gemini-2.5-flash-lite",
 ) -> LLMParseResult:
-    """unparsed 行を Gemini 2.5 Flash で再解析する。
+    """unparsed 行を Gemini 2.5 Flash-Lite で再解析する。
 
     Args:
         unparsed_lines: rule_v1 が解けなかった行
@@ -234,7 +234,7 @@ async def parse_with_gemini(
         knowledge_snapshot: 中央 knowledge_rules の参考スナップショット
             [{"pattern": ..., "normalized_to": ..., "category": ...}, ...]
         language: 'ja' / 'en' (default ja)
-        model_name: 'gemini-2.5-flash' (default、別モデルは別 ADR)
+        model_name: 'gemini-2.5-flash-lite' (default、別モデルは別 ADR)
 
     Returns:
         LLMParseResult: items + token 使用量
