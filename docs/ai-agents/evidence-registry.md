@@ -2192,3 +2192,6 @@ PR全チェック34success/8skipped/1failure。唯一の失敗process-artifacts 
 
 
 PR #3425 GO受領: PO原文「GO #3425」。2026-09-11 10:55 JSTは受領後記録時刻。コードhead e606ce4fの34success/8skip/残1failureはGO欠落と実測。既存PRへ本人原文を転記し、文書追補をpush後、最新チェックを確認して公式マージする。Mac一時キーファイルはGitHub登録後に削除し不存在確認。平文一時保存だった点をPOへ明示。VPSの現行.env方式は維持。
+
+
+PR #3427 GO受領: PO原文「GO #3427」。2026-09-11 12:23 JSTは受領後記録時刻。head2031cfa3のCI37成功/8対象外/残1失敗はGO記録欠落と確認済み。rootが製品4SHA256と検収manifestの一致を再確認。本人原文をPR本文へ転記し、最新CI確認後に公式マージする。DB変更なし、バックアップ該当なし。

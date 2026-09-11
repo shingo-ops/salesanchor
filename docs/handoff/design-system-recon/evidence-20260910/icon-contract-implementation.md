@@ -74,3 +74,11 @@ PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、rea
 
 
 PR3427提出後のmain追従: 並行PR3425のmerge4774d774を取り込む。追加main差分はbackend4/文書4、frontend差分0。根拠台帳1件の追補競合を双方の全文を保持して解消。既検収frontendツリーは同一、backendは最新mainと同一。今回のフロントエンド変更へbackend差分を追加したものではない。最新HEADのCIを再確認する。
+
+
+PR3427最終確認（GO前）: head2031cfa30241bee576f34b540a3b4d0e6fa2af63、GitHub checksは37成功/8対象外/1失敗。唯一の失敗process-artifacts gateはjob103121703805のログでGO記録セクション欠落と直接確認。新番号付きGOは未受領、技術検査は成功、未マージ。根拠: /tmp/frontend-icon-resume-20260911/pr-checks-list.json と process-artifacts.log、https://github.com/shingo-ops/salesanchor/actions/runs/34553691458/job/103121703805 。製品frontendはcfb3068bと同一、backendは最新main4774d774と同一をroot git diff exit0で確認。台帳は公式ledger-updateでREVIEW。送信の初回自動審査拒否は送信先/WRITE/既承認範囲の追加確認後に同じ正規審査で承認され解消済み。
+
+この最終CI追記とtasks現在状態はローカル保存し、不要な再CIを避けGO受領後の記録commitに含める。リモート検証対象2031cfa3と未commit文書2件を区別する。PO画面確認/全画面移行は未実施、新CI設置は最後。
+
+
+PR #3427 GO受領: PO原文「GO #3427」。2026-09-11 12:23 JSTは受領後記録時刻。head2031cfa3のCI37成功/8対象外/残1失敗はGO記録欠落と確認済み。rootが製品4SHA256と検収manifestの一致を再確認。本人原文をPR本文へ転記し、最新CI確認後に公式マージする。DB変更なし、バックアップ該当なし。
