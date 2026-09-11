@@ -918,3 +918,14 @@
 }
 .toggle-switch input:checked + .toggle-switch-slider { background: var(--accent); }
 .toggle-switch input:checked + .toggle-switch-slider::before { transform: translateX(18px); }
+
+/* Legacy raw buttons: retain the previous Button.css mobile contract until migration. */
+@media (max-width: 767px) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  .btn-outline {
+    min-height: var(--btn-min-height-mobile, 44px);
+  }
+}

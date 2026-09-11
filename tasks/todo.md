@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| フロントエンド金型化・再測定 | Agent | PR3412/3420/3423/3426マージ済み。Icon4ファイルをmain5de8afa1で再検収、179試験/厳格lint/既存check/build/Storybook成功。局所表示8同値、既存152利用欠落0、限定第二レビュー確認済み | Icon便PR #3427、head2031cfa3のCI37成功/8対象外。残1失敗はGO記録欠落のみ。GO #3427受領済み。本人原文を記録し、最新CI後に公式マージ。新CIは全画面移行後 | docs/specs/design-system/design.md §AE/AF / docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節 / PR3426 merge5de8afa1 | 2026-09-11 |
+| フロントエンド金型化・再測定 | Agent | PR3412/3420/3423/3426/3427マージ済み。Button外観70利用の実装・限定コード審査済み、配色190/寸法1080/raw440同値成功 | Button外観の補助検収も完了。PR提出、最新CI確認。全画面移行と新CIは後続 | docs/specs/design-system/design.md §AG / docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md | 2026-09-11 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
