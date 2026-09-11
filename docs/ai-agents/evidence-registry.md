@@ -2388,3 +2388,23 @@ tradeoff: 実HTTP/本物User/実DB成功は未検証。部分登録・履歴空�
 decision: design§15自己審査APPROVE。PO合意はサンプル形式と設計進行のみ。詳細案実装/GOは未承認
 follow_up: 詳細案を提示し、実装承認後に正式カード検査・引き継ぎ。44件投入は別段階
 ```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-CARD
+date: 2026-09-12
+agent: Codex design partner
+task: PO承認済み商品CSV設計の正式実装カード準備
+scope: docs/handoff/tcg-product-import・既存台帳
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md 2026-09-12承認追記
+    summary: 設計承認とカード準備へのPO原文「進める」を記録。GO・自動起動に読み替えない
+  - type: command
+    reference: bash scripts/card-lint.sh docs/handoff/tcg-product-import/card-template-impl.md
+    summary: exit0・違反0・長行警告4件。18手順/実在パス/既存7+新規1ファイル/出力未使用を追加照合
+confidence: high
+tradeoff: 同一AI自己照合。Docker不在、実DB検証は未実行のため実装後CIに残す
+decision: 正式カード準備済み、実装役未起動、製品未変更
+follow_up: 実装役の差分と生報告を読み取り確認。公開・実DB検証は後続便
+```

@@ -142,4 +142,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 10列見出しのみ＋説明の形式はPO「進める」。文書草案PR #3436提出（8a5cb636）・design§15自己審査APPROVE。隔離parser0行/0エラー、endpoint get例外/commit0回再現。製品未実装 | 詳細案をPO確認へ提示。実装承認後、正式カードを検査して実装役へ渡す | docs/handoff/tcg-product-import/design.md §15 / recon.md同日再開調査 / EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN | 2026-09-11 |
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 10列見出しのみ＋説明の形式はPO「進める」。PR #3436 design§15をPO「進める」で承認。正式カード作成・lint違反0・18手順照合済み。専用実装worktree準備済み。製品未実装 | CARD-PRODUCT-CSV-TEMPLATE-IMPL-01を実装役へ渡し、8ファイル差分とローカル検証報告を受け取る。実DB検証は後続CI | docs/handoff/tcg-product-import/design.md §15 / recon.md同日再開調査 / EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN | 2026-09-12 |

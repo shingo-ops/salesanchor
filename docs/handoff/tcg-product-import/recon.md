@@ -356,3 +356,12 @@ Context7 MCPは利用可能ツール一覧に存在しないため起動指示�
 外部導入事例は不要。仕様の可否確認を、実装後の動作成功と取り違えない。
 
 保存結果: 設計文書4ファイルを8a5cb636として専用releaseブランチへコミット・pushし、草案PR https://github.com/shingo-ops/salesanchor/pull/3436 を提出。task-state/diff検査成功、製品ファイル変更0。最初のcommit要求はhookが作業場所指定を本店mainと判断して拒否し、git操作前に停止。明示cdで専用releaseブランチを読取確認後、同じ文書だけを通常経路でコミット成功。ガード変更なし。設計合格と詳細案PO承認/製品実装/マージは区別する。正式実装カードは実装承認後に作成・card-lintと人手照合を経て発行するため本便は未発行。
+
+
+### 2026-09-12 正式実装カードの検査
+
+PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKIPPEDと直接確認。mainはgit ls-remoteでadc8bc4dのまま。reaperの事前確認とnew-worktree実行はいずれも削除対象0。公式作成コマンドが終了した後、別操作でrelease/product-import-template-implのディレクトリ・git登録・HEAD/origin/mainの一致・status空を確認した。実装先preflight成功。本店のAGENTS.mdや既存変更は保持。
+
+カード: card-template-impl.md。card-lint exit0、違反0、L24長行警告4件。18手順の連続性、全cd先の実在、既存7製品ファイルと新規1資産、設計/recon入力、未使用報告先、未作成venv、英字を含む未確定目印0、END OF CARDを機械補助で確認。L20/26/27/28/32等の未実装項目は同一AIで本文照合した。設計8ファイルとAC1〜7を保持し、範囲内編集/検査失敗修正、DB未検証、秘密の伏せ方、停止/再開/報告を明記。独立レビューではない。
+
+今回の実装用作業場所は /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl。製品コードは未変更、実装担当は未起動、実装カードは作成・検査済み。Docker情報照会はソケット不在でexit1。カードでは既知条件としてpytestを実行しない旨を明記し、正式CIでの実DB検査を後続へ残した。
