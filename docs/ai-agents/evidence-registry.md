@@ -2324,3 +2324,5 @@ EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-1
 EV-20260911-PRODUCT-DATE-TABS引継ぎ: PO原文「次を進める」を、直前の実装開始/カード作成・引継ぎ確認への承認として受領。#3431マージa66e9382確認済み。専用実装worktreeは6c55e40d起点、対象7ファイル差分0、preflight成功。TH-PRODUCT-DATE-TABS-IMPL-01.txtを作成。製品変更/依存導入/試験/実装エージェント起動は未実施。Docker socket不存在のためPG実行環境の制約をカードへ明記。承認済み設計の条件を緩めず、正式PG/CI/QA/製品GOを後続条件として維持する。
 
 TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
+
+準備Draft PR #3433: https://github.com/shingo-ops/salesanchor/pull/3433。作成head346f7d72、.pr-numberとhead指定一覧の一致を直接確認。製品ファイル差分0、文書5件のみ。実装役へTH-PRODUCT-DATE-TABS-IMPL-01を提示できる状態。自動起動/実装実行は行っていない。後続実装は同じPRを更新し、実装完了までマージしない。
