@@ -2309,3 +2309,20 @@ EV-20260911-FRONTEND-MOLD-25: Button外観統一。PO原文GOを次便開始と�
 ## EV-20260911-GO-3418-DOC-MERGE
 
 PO原文「追従してPRマージを実行」を、提示済み#3418の文書保存指示として受領。main追従、文書差分/必要検査後に公式wrapperでマージしAPI確認する。全体設計REVISEを維持し機能完成とはしない。P1は実装承認後のbranch作成API403で停止、branch/workflow/PR未作成を再GET確認済み。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json。
+
+
+商品マスタメニュー配置追補: PO位置指定を受領。既存設計/reconの2026-09-11メニュー配置節へ保存。DesktopShell既存1行移動、権限/URL維持。新規PR/本番反映は未実施。
+
+
+商品マスタ配置PR #3429提出済み: https://github.com/shingo-ops/salesanchor/pull/3429 。commit6e289bd9、製品変更はDesktopShell既存1行移動。対象eslint/build/台帳/diff成功、既存4項目と移動先/権限維持を自己レビュー。CI確認中、番号付きGO未受領、本番配置は未反映。生報告/tmp/reports/PRODUCT-MENU-PR-01.txt。
+
+
+## EV-20260911-PRODUCT-DATE-TABS
+
+2026-09-11。商品一覧の発売日降順と作品タブの依頼を受領。「販売日」は既存「発売日」かの確認へPOは「進める」と回答。基点b6644187、専用release/product-master-date-tabs-design、preflight成功、開始時差分0・mainとの距離0/0。実物根拠はdocs/handoff/tcg-product-import/recon.md同日追補、詳細案はdesign.md §14、親はdocs/specs/product-master/README.md §8。コード順・50件ページ・DATE/UUID・tcg_seriesの定義と共通Tabsを直接照合。Context7利用不可のため公式資料を直接確認した。報告は/tmp/reports/TH-PRODUCT-DATE-TABS-ENTRY.json、TH-PRODUCT-DATE-TABS-DESIGN-PREFLIGHT.txt。製品コード/DB/CI/本番に変更なし。詳細設計はPO確認前の提案で、実装移行承認・カード発行・実装検証とは区別する。
+
+同一AIのArchitect自己審査はAPPROVE（設計品質のみ）。9受入条件、7変更対象、既存試験/CI、親仕様/ADRを照合。文書検査エラー0・task-state成功・diff-check成功。報告 TH-PRODUCT-DATE-TABS-DOC-CHECK.json / TH-PRODUCT-DATE-TABS-TASK-CHECK.txt。PO詳細承認と実装承認は未受領。正式カード未発行、製品テスト未実施。
+
+確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
+
+EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。

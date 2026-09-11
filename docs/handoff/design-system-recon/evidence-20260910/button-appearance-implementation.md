@@ -56,3 +56,6 @@ PR #3432 提出済み: https://github.com/shingo-ops/salesanchor/pull/3432、rea
 
 
 PR初回CIの申告形式補正: head7e511f25のFrontend job103170627838はcheckall/tsc成功後、check:new-tokensでPR本文の所定チェック欄欠落によりexit1。rootの提出書式不備。設計§AGの追加理由と既存用途保持を再確認し、root自身のcheck:dark-parityは134変数すべて対応・exit0。本文4項目追加後の初回ローカル検査は、説明文内の「色トークンは」をチェック行と誤認してexit1。後続手順が失敗値を確認せず進み成功と先行記録したため、この記述を訂正する。説明の意味を保って「部品専用の色定義を追加する理由は」へ言い換え、実base=main/head=release/frontend-button-appearance/最終本文を渡したcheck-new-tokens.jsで追加宣言19件検出・exit0を実際に確認。製品/CI/期待値の変更なし。元CIログは/tmp/frontend-button-appearance-20260911/ci-review-frontend.log、初回失敗ログnew-token-body-check.log、最終成功ログnew-token-body-check-final.log。本文のGO記録は未追加であり、当該承認検査は別途待機。
+
+
+最新main a66e9382追従: PR3429のDesktopShell管理者メニュー配列1要素の順移動とPR3431文書を保持。tasks競合はmainの新テーマ行を残し、本テーマだけ最新のPR3432状態を維持。14製品hash全一致、Button利用の追加なし。main追加のDesktopShell以外frontend差分0をroot確認。最終統合HEADの既存CIを再確認する。

@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 商品マスタの発売日順・作品タブ（設計） | Agent | PR #3431にPO原文GO #3431受領。設計§14・自己審査APPROVE。文書マージ前確認中、実装未着手 | 文書PRのマージを確認し、レビュー済み設計の正式カードを作成・検査する | docs/handoff/tcg-product-import/design.md §14 / recon.md同日追補 / EV-20260911-PRODUCT-DATE-TABS | 2026-09-11 |
 | フロントエンド金型化・再測定 | Agent | Button外観70利用のPR #3432提出済み。実装・限定コード/証跡審査済み、189試験・配色190/寸法1080/raw440同値・focus72成功 | 最新CI確認後、当該PRの番号付きGOを受領してマージ。全画面移行と新CIは後続 | https://github.com/shingo-ops/salesanchor/pull/3432 / docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md | 2026-09-11 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
@@ -133,4 +134,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 商品マスタ一覧・CSV画面 | Agent | PR #3422実装・GO受領済み。main4774d774統合、API接続停止の対応済み。対象コード不変・台帳と文言双方保持確認 | 最新CI成功後にマージ・デプロイと本番応答/配布資産を確認。CSV実登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+| 商品マスタ一覧・CSV画面 | Agent | PR #3422はdd9d3abfマージ・deploy34558334380成功、公開資産の2ルート/health確認済み。PO指定で既存サイドメニューを解析精度管理直下へ移動 | 配置変更PR #3429提出、eslint/build成功。最新CIと番号付きGOを確認して本番反映。CSV試行/44件登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
