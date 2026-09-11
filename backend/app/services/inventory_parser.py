@@ -156,7 +156,7 @@ class ParseResult:
 # 「カートン / Carton / CASE / case / ケース / CT」→ "case"
 # 「パック / pack / Pack」→ "pack"
 # 「set / セット」→ "set"
-# 「枚」→ "piece"
+# 「枚 / 個」→ "piece"
 DEFAULT_UNIT_NORMALIZATION: dict[str, str] = {
     "box": "box",
     "Box": "box",
@@ -180,6 +180,7 @@ DEFAULT_UNIT_NORMALIZATION: dict[str, str] = {
     "set": "set",
     "セット": "set",
     "枚": "piece",
+    "個": "piece",
 }
 
 # 「<num> <unit>」または「<unit> <num>」両対応の単位 token 集合。
@@ -206,6 +207,17 @@ QUANTITY_KEYWORD_RE = re.compile(r"(?:数量|qty|Qty|QTY|数)[\s=:]*?(\d{1,5})")
 PRICE_AT_RE = re.compile(r"[@＠]\s*([0-9][0-9,]{0,12}(?:\.\d+)?)")
 PRICE_PLAIN_RE = re.compile(
     r"([0-9][0-9,]{2,12}(?:\.\d+)?)\s*(?:円|JPY|￥|¥)",
+)
+# ¥/￥プレフィックス単価: "¥52,000" "¥17,500/BOX" "￥16,700"
+# (倉田:ボックス/¥52,000、T:¥17,500/BOX、モノウリ:¥16,400、達也:￥16,700)
+PRICE_YEN_PREFIX_RE = re.compile(r"[¥￥]\s*([0-9][0-9,]{0,12}(?:\.\d+)?)")
+# 「単価：576,000」形式（SAMURAI-T等: 別行に単価を記載するフォーマット）
+TANKA_RE = re.compile(r"単価\s*[：:]\s*([0-9][0-9,]{2,12}(?:\.\d+)?)")
+# 「N単位：価格」コロン区切り形式（星野: "500Pack：2,500" "80BOX：16,000" "8個：7,800"）
+# 行末近くに価格を置くため末尾の追加テキストも許容する
+COLON_QTY_PRICE_RE = re.compile(
+    rf"(\d{{1,5}})\s*({_UNIT_TOKEN_GROUP})\s*[：:]\s*([0-9][0-9,]{{2,12}}(?:\.\d+)?)",
+    re.IGNORECASE,
 )
 # 「11,800×30BOX」「14,800×200箱」「14,000×190BOX」「19,800x 8BOX」
 # 単価 × 数量 + 単位
@@ -452,11 +464,25 @@ def _extract_unit_quantity_price(line: str) -> tuple[int | None, str | None, Dec
     """行から (quantity, unit, unit_price) を抽出。
 
     優先順位:
+      0) 「N単位：価格」コロン区切り (例 "500Pack：2,500") → 全部一度に取れる
       1) 「PRICE × QTY UNIT」(例 "11,800円×30BOX") → 全部一度に取れる
       2) 「@PRICE」(単価のみ) + 「数量N」(数量のみ) → 後段で組み合わせ
       3) 「QTY UNIT @PRICE」(例 "30BOX@7,100円") → 全部取れる
       4) 数量・単位だけ取れる場合、単価は別の方法で探索
     """
+    # ケース0: N単位：価格 (例 "500Pack：2,500", "8個：7,800", "80BOX：16,000")
+    m0 = COLON_QTY_PRICE_RE.search(line)
+    if m0:
+        price = _parse_decimal(m0.group(3))
+        if price is not None and price >= Decimal("100"):
+            try:
+                qty = int(m0.group(1))
+            except ValueError:
+                qty = None
+            unit_raw = m0.group(2)
+            unit = DEFAULT_UNIT_NORMALIZATION.get(unit_raw, unit_raw)
+            return qty, unit, price
+
     # ケース1: PRICE × QTY UNIT
     m = PRICE_MUL_QTY_RE.search(line)
     if m:
@@ -493,6 +519,14 @@ def _extract_unit_quantity_price(line: str) -> tuple[int | None, str | None, Dec
         plain_match = PRICE_PLAIN_RE.search(line)
         if plain_match:
             price = _parse_decimal(plain_match.group(1))
+    if price is None:
+        yen_prefix_match = PRICE_YEN_PREFIX_RE.search(line)
+        if yen_prefix_match:
+            price = _parse_decimal(yen_prefix_match.group(1))
+    if price is None:
+        tanka_match = TANKA_RE.search(line)
+        if tanka_match:
+            price = _parse_decimal(tanka_match.group(1))
 
     # 「数量」キーワード形式（@ 単価表記の後で出現する場合がある）
     if qty is None:
