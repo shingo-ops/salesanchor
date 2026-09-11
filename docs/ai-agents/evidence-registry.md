@@ -2127,6 +2127,15 @@ PO原文「セッション上で委任した時点でGOを出せる権限を移�
 
 制御repo独立起動・Issue転記受付・状態正本への限定書込の案をdesignへ具体化。既存wrapperはActions時exit0、GO/予約照合なし。sandboxはpullのみで実機変更可能とはしない。復旧モデル8状態/9遷移で通常列へ戻る7操作経路を確認、誤解放変異を検出。全体自己審査REVISE・実装/設定変更0件。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-RECOVERY-MODEL-RESULT.json。
 
+
+## EV-20260911-PMG-VISUAL-HIERARCHY
+
+POの認知負荷軽減依頼に基づく表示改善。根拠: docs/handoff/pmg-import-delivery-ssot/design.md と recon.md の2026-09-11表示節。3つの公開設計指針と実物部品/状態契約を照合、自己審査APPROVEは表示範囲だけ。Terraへの正式カード発行前。実装・視覚/動作試験・PRマージ・本番反映は未完了。
+
+EV-20260911-PMG-VISUAL-HIERARCHY実装検証: 正式カード検査成功後Terraが製品7ファイルを実装。rootがunit143件/E2E8件/build/check:all成功とPC/390px明暗画像を確認。詳細はdesign末尾。表示改善のみコード/視覚レビューAPPROVE。PR/CI/番号付きGOの確認へ、本番未反映。
+
+PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
+
 ### EV-20260910-FRONTEND-MOLD-21: カレンダー実行契約再審査
 
 ### 次便の実行条件確認（2026-09-10）
@@ -2146,3 +2155,5 @@ PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受�
 ## EV-20260911-GO-INTAKE-P1-READY
 
 既存sandboxの合成受付workflow準備PRに範囲を限定した設計とカードを作成。actionlint/ローカル13ケース成功。同一AIの限定設計審査APPROVE、実行承認前。全体REVISEを維持。GitHubアプリのrepo書込表示とworkflow API実権限は区別し、403時は停止。成果物 docs/handoff/go-record-transcription/intake-p1-workflow.txt、TH-GO-INTAKE-P1-PR-01.txt。
+
+PR #3424 GO追補: 本セッションでPO原文「GO #3424」を受領。2026-09-11 08:10 JSTは受領確認の記録時刻。PR本文へ本人原文を転記。main76c6dff9の共通Button変更を取り込み、双方の根拠登録を保持して追記競合を解消。DB変更なし・バックアップ該当なし。最新HEADの検証後に公式マージする。

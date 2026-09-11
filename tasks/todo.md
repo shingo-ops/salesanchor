@@ -98,6 +98,7 @@
 | PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
 | PMG入口配布・旧処理照合設計 | 設計担当 | PR #3410文書マージ/自動deploy成功。過去全件復元を必須にしない訂正と配布保留契約を草案化、自己審査REVISE | 本番切替時の保留方針をPO承認済み。複数SSHの所有制御と切替境界の観測手段を確定 | EV-20260910-PMG-BARRIER-CONTRACT / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-10 |
 | PMG総合ページ接続 | root / Codex Terra | PR #3416マージ17ebe93f・deploy34476536034成功。unit133件/E2E5件、公開JSとhealth確認済み | 対象取込91投稿の未解決5名をPO承認で新規登録、残件0を本番照会。次は取込確定・抽出開始。解析実行/永続配信履歴/本番切替の設計REVISEは継続 | EV-20260910-PMG-SCREEN-CONNECT / docs/handoff/pmg-import-delivery-ssot/card-screen-connect.md | 2026-09-10 |
+| PMG進捗画面の見やすさ改善 | root / Codex Terra | PR #3424提出済み。unit143/E2E8/build/check:all成功、初回HEADのCIは承認記録以外成功 | GO #3424受領済み。最新main統合後のテスト/CIを確認してマージ。本番未反映 | EV-20260911-PMG-VISUAL-HIERARCHY / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-11 |
 
 
 

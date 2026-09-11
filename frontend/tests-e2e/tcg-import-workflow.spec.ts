@@ -10,9 +10,9 @@ const progress = {
   coverage: "complete",
   review_status: "ok",
   reason: null,
-  messages: { unit: "source_message", total: 50, created: 50, reused: 0, inactive: 0, without_extraction_job: 0 },
-  extraction: { unit: "extraction_job", total: 2, completed: 2, pending: 0, running: 0, succeeded: 2, empty: 0, failed: 0, residual_items_on_error: 0, residual_results_on_error: 0 },
-  analysis: { unit: "extraction_item", total: 50, results_present: 49, results_missing: 1, needs_review: 1, execution_state: "unrecorded" },
+  messages: { unit: "source_message", total: 51, created: 51, reused: 0, inactive: 0, without_extraction_job: 0 },
+  extraction: { unit: "extraction_job", total: 51, completed: 51, pending: 0, running: 0, unknown: 0, succeeded: 37, empty: 14, failed: 0, residual_items_on_error: 0, residual_results_on_error: 0 },
+  analysis: { unit: "extraction_item", total: 1019, results_present: 1019, results_missing: 0, needs_review: 313, execution_state: "unrecorded" },
 };
 
 const items = (offset: number) => ({
@@ -99,12 +99,15 @@ test.describe("TCG import workflow", () => {
     await expect(page.getByText("fixture NOTE_JA 0")).toBeVisible();
     await expect(page.getByText("商品を特定できない, 商品候補が複数, メモの変換先が見つからない")).toBeVisible();
     await expect(page.locator(".pmg-workflow__table tbody tr")).toHaveCount(25);
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/tcg-import-workflow-desktop-ja.png", fullPage: true });
+    await expect(page.getByText("抽出終了")).toBeVisible();
+    await expect(page.getByRole("button", { name: "要確認の明細を見る" })).toBeVisible();
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-desktop-ja.png", fullPage: true });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-desktop-ja-viewport.png" });
     await page.locator(".pmg-workflow__table tbody tr").first().scrollIntoViewIfNeeded();
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/desktop-table-ja.png" });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/desktop-table-ja.png" });
     await page.getByText("配信対象：現在の全体データ").scrollIntoViewIfNeeded();
     await expect(page.getByRole("button", { name: "全アクティブ配信先へ配信を実行" })).toBeVisible();
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/desktop-distribution-ja.png" });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/desktop-distribution-ja.png" });
     await expect.poll(() => itemRequests).toContain("?limit=25&offset=0&filter=all");
 
     const nextPage = page.getByRole("button", { name: /次へ|Next/ });
@@ -227,18 +230,118 @@ test.describe("TCG import workflow", () => {
     await expect(page.getByText("Distribution scope: current global data")).toBeVisible();
     await expect(page.getByText(/Last fetched \(JST\)/)).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-mobile-dark-en-overview-viewport.png" });
     const menuBackdrop = page.locator(".mobile-more-backdrop");
     if (await menuBackdrop.isVisible()) {
       await menuBackdrop.click({ position: { x: 1, y: 1 } });
       await expect(menuBackdrop).toHaveCount(0);
     }
     await page.locator(".pmg-workflow__table tbody tr").first().scrollIntoViewIfNeeded();
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/mobile-table-en.png" });
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/tcg-import-workflow-mobile-dark-en.png", fullPage: true });
-    await page.locator(".pmg-workflow").screenshot({ path: "/tmp/reports/pmg-screen-completion/tcg-import-workflow-mobile-dark-en-panel.png" });
-    await page.screenshot({ path: "/tmp/reports/pmg-screen-completion/tcg-import-workflow-mobile-dark-en-viewport.png" });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/mobile-table-en.png" });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-mobile-dark-en.png", fullPage: true });
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-mobile-dark-en-viewport.png" });
 
     await page.getByRole("button", { name: "New Target" }).click();
     await expect(page.getByRole("heading", { name: "Register Target" })).toBeVisible();
+  });
+
+  test("未選択では取込フォームを開き、入力値を保ったまま開閉できる", async ({ page }) => {
+    await installAuthBypass(page);
+    await mockApi(page, baseMocks(true));
+
+    await page.goto("/super-admin/tcg-line-import");
+    const uploadDetails = page.locator("details").filter({ has: page.getByText("新しいファイルを取り込む") });
+    await expect(uploadDetails).toHaveAttribute("open", "");
+    const hours = uploadDetails.locator('input[type="number"]');
+    await hours.fill("48");
+    await uploadDetails.locator("summary").click();
+    await expect(uploadDetails).not.toHaveAttribute("open", "");
+    await uploadDetails.locator("summary").press("Enter");
+    await expect(uploadDetails).toHaveAttribute("open", "");
+    await expect(hours).toHaveValue("48");
+  });
+
+  test("選択済みでは概要を先に表示し、要確認導線が filter を初期offsetで選択する", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installAuthBypass(page);
+    const itemRequests: string[] = [];
+    await mockApi(page, {
+      ...baseMocks(true),
+      [`GET /tcg/line-import/${importId}/progress`]: progress,
+      [`GET /tcg/line-import/${importId}/items`]: (route) => {
+        const url = new URL(route.request().url());
+        itemRequests.push(url.search);
+        return route.fulfill({ contentType: "application/json", body: JSON.stringify(items(Number(url.searchParams.get("offset") ?? "0"))) });
+      },
+    });
+
+    await page.goto(`/super-admin/tcg-line-import?import_job_id=${importId}`);
+    const uploadDetails = page.locator("details").filter({ has: page.getByText("新しいファイルを取り込む") });
+    await expect(uploadDetails).not.toHaveAttribute("open", "");
+    const reviewAction = page.getByRole("button", { name: "要確認の明細を見る" });
+    await expect(reviewAction).toBeVisible();
+    expect(await reviewAction.evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight)).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.screenshot({ path: "/tmp/reports/pmg-progress-visual/tcg-import-workflow-mobile-overview-ja-viewport.png" });
+    await page.getByRole("button", { name: "新しいファイルを取り込む" }).click();
+    await expect(uploadDetails).toHaveAttribute("open", "");
+    await expect(uploadDetails.locator("summary")).toBeFocused();
+    await reviewAction.click();
+    await expect.poll(() => itemRequests).toContain("?limit=25&offset=0&filter=needs_review");
+    await expect(page.getByLabel("絞り込み")).toHaveValue("needs_review");
+  });
+
+  test("info light と neutral dark の Badge は本文色で読める", async ({ page, browser }) => {
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...baseMocks(true),
+      [`GET /tcg/line-import/${importId}/progress`]: { ...progress, extraction: { ...progress.extraction, completed: 1, total: 3, succeeded: 1, empty: 0, pending: 1, running: 1 } },
+      [`GET /tcg/line-import/${importId}/items`]: items(0),
+    });
+    await page.goto(`/super-admin/tcg-line-import?import_job_id=${importId}`);
+    const readableColor = (selector: string) => page.locator(selector).evaluate((element) => {
+      const reference = document.createElement("span");
+      reference.style.color = "var(--text-primary)";
+      document.body.append(reference);
+      const color = getComputedStyle(element).color;
+      const primary = getComputedStyle(reference).color;
+      const values = (value: string) => value.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number) ?? [];
+      const luminance = (rgb: number[]) => rgb.map((value) => {
+        const normalized = value / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      }).reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index], 0);
+      const background = getComputedStyle(element).backgroundColor;
+      const ratio = (first: number, second: number) => (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+      return { color, primary, contrast: ratio(luminance(values(color)), luminance(values(background))) };
+    });
+    const infoColors = await readableColor(".pmg-workflow__badge-readable.comp-badge--info");
+    expect(infoColors.color).toBe(infoColors.primary);
+    expect(infoColors.contrast).toBeGreaterThanOrEqual(4.5);
+
+    const darkContext = await browser.newContext({ colorScheme: "dark", viewport: { width: 390, height: 844 } });
+    const darkPage = await darkContext.newPage();
+    await installAuthBypass(darkPage);
+    await mockApi(darkPage, {
+      ...baseMocks(true),
+      "GET /staff/me": {
+        id: 1,
+        primary_email: "review@salesanchor.jp",
+        locale: "en",
+        theme: "dark",
+        ui_preferences: { dark_mode: false, show_chat_menu: true, show_sales_menu: true, show_settings_menu: true, show_admin_menu: true, show_sidebar: true },
+      },
+      [`GET /tcg/line-import/${importId}/progress`]: { ...progress, coverage: "legacy_unknown" },
+      [`GET /tcg/line-import/${importId}/items`]: items(0),
+    });
+    await darkPage.goto(`/super-admin/tcg-line-import?import_job_id=${importId}`);
+    await expect(darkPage.locator("html")).toHaveClass(/force-dark/);
+    const neutralColors = await darkPage.locator(".pmg-workflow__badge-readable.comp-badge--neutral").evaluate((element) => {
+      const reference = document.createElement("span");
+      reference.style.color = "var(--text-primary)";
+      document.body.append(reference);
+      return { color: getComputedStyle(element).color, primary: getComputedStyle(reference).color };
+    });
+    expect(neutralColors.color).toBe(neutralColors.primary);
+    await darkContext.close();
   });
 });
