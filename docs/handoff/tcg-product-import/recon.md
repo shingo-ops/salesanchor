@@ -216,3 +216,55 @@ PO原文「その前にサイドメニューから開ける状態にしてくれ
 
 
 商品マスタ配置PR #3429提出済み: https://github.com/shingo-ops/salesanchor/pull/3429 。commit6e289bd9、製品変更はDesktopShell既存1行移動。対象eslint/build/台帳/diff成功、既存4項目と移動先/権限維持を自己レビュー。CI確認中、番号付きGO未受領、本番配置は未反映。生報告/tmp/reports/PRODUCT-MENU-PR-01.txt。
+
+
+## 2026-09-11 発売日順と作品タブの調査
+
+対象: 商品マスタ一覧の追加設計。基点 b6644187c55a3dc58df0bc7e7a4dbba870c186a9、専用ブランチ release/product-master-date-tabs-design。preflight成功、開始時差分0、HEAD対origin/mainは0/0。報告は /tmp/reports/TH-PRODUCT-DATE-TABS-DESIGN-PREFLIGHT.txt と TH-PRODUCT-DATE-TABS-ENTRY.json。既存台帳は古い状態を含むため完了の証明に使わない。公式ledger-viewで本テーマの作業登録を確認する。
+
+### 観点1 全体像
+
+- backend/app/routers/tcg_product_import.py:65: GET /tcg/products/list。:70 のquery/limit/offset、:76 のrequire_super_adminを使い、:93 は商品コード降順。countとitemsは同じ検索条件で、商品is_activeの除外なし。
+- frontend/src/pages/super-admin/TcgProductMasterPage.tsx:20: 1ページ50件、:26 の状態はquery/pageのみ、:35 のURLでサーバーへページ指定。:45 はrelease_date列、:50 は検索欄。作品絞込み・タブはない。
+- migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:82: 商品表の定義。release_dateはDATEかつNULL可、work_idはUUIDかつNULL可、codeは一意。商品一覧で取引の売却日時は使っていない。
+
+### 観点2 共用部品
+
+- frontend/src/components/Tabs.tsx:37: items/activeKey/onChange等の契約。:61 のtablist、:76 のtab、aria-selected、buttonを備える。frontend/src/components/Tabs.css:24 の既存横スクロールと色変数を再利用できる。
+- backend/app/services/tcg_product_master_svc.py:85: work_idの参照先はTCG_SCHEMA.tcg_series。migrations/20260902_110000_tcg_classification_masters.sql:39 にid/code/display_name/alt_name/is_active、:94 に11作品のseed定義。IP001/Pokemon/ポケモンとIP002/One Piece/ワンピースがある。これはリポジトリ内定義の11件であり、本番の現行件数を実測したものではない。
+
+### 観点3 非共用部品・使えない入口
+
+- backend/app/routers/tcg_product_master.py:141: registration-formはextraction_item_idとsource_message_idが必須。backend/app/services/tcg_product_master_svc.py:67 で元明細の存在・未解決を検査する。無関係なIDや空文字で作品候補だけを取得する用途には使えない。
+- backend/app/routers/super_admin_tcg.py:63: 同名に近い別のシリーズAPIはpublic.tcg_series_masterを読む。work_idの参照先と異なるため本設計では利用しない。
+
+### 観点4 ルールの所在
+
+- docs/adr/ADR-113-two-mode-dev-flow.md:80: 実物確認→設計→整合検査→実装の順序。本書の調査後、design.md §14を作成して自己審査する。
+- docs/adr/ADR-027-ui-internationalization.md:50: 業務データの翻訳は対象外。固定UI文言は日英キー、作品名は既存DBデータとして扱う。ADR-144の共通部品再利用に従う。ADR-154の登録・重複照合・解析ロジックは本変更の対象外。
+- backend/app/tcg_config.py:23: TCG_SCHEMAの形式検査。入力からスキーマを選ばせず既存設定を使う。QAはtenant_001、本番はtenant_004という現行境界を維持する。
+
+### 観点5 維持の仕組み
+
+- backend/tests/test_tcg_product_list_pg.py:18: 専用DB/localhost確認、:26 から一時スキーマをrollbackする実PGテスト。現在は全件3件・検索・コード順ページングを検査する。発売日/作品の検査はまだない。作品表のmigrationは現在のfixtureに含まれない。
+- frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx:14: 非管理者、:19 ページ/検索、:28 遅着応答を検査。frontend/tests-e2e/tcg-product-import.spec.ts:6: 一覧からCSVへの既存導線と非管理者拒否。新契約ではモックのworks追加が必要。
+- .github/workflows/test.yml:222: RLS_TEST_DATABASE_URL/:224 RLS_ADMIN_DATABASE_URLを用意し、:241 でpytest全体を実行。skip0確認が必要で、集約チェック成功だけでは追加PG試験成功としない。
+
+### 観点6 設計図との対照
+
+| 依頼・既存条件 | 現状 | 分類 |
+|---|---|---|
+| 発売日の新しい順 | 商品コード降順 | 不足 |
+| 作品タブで絞る | 作品情報はDB定義にあるが一覧UI/APIに指定なし | 不足 |
+| 絞込み後も新しい順 | 作品絞込み未実装 | 不足 |
+| 管理者限定・全件管理・検索・50件ページ・CSV導線 | ページ/API/既存§13契約に実在 | 一致・維持 |
+
+今回新たに削除を検討する余剰はない。根拠: frontend/src/pages/super-admin/TcgProductMasterPage.tsx:48 の既存管理操作と本設計の境界。
+
+### 観点7 ノイズと境界・未確認
+
+- backend/app/routers/super_admin_tcg.py:2 のpublicのシリーズとtenantの作品を区別。migrationsのseedを本番の現在値と断定しない。非公開移植リポジトリのコード・文書は参照/転送していない。
+- 本番DBの実件数、NULL日付件数、work_id未設定/孤立件数、性能、実画面は本調査では未測定。設計はこれらの件数に依存せず扱いを定義し、実装後の隔離PG試験とtenant_001画面確認を完了条件とする。本番データの修正・migration・取込実行は対象外。
+- Context7 MCPは公開ツール一覧に存在せず利用不可。起動指示の代替許可により2026-09-11にPostgreSQL 16 ORDER BY、FastAPI query/extra data types、SQLAlchemy 2 textの公式資料を直接確認。出典と適用はdesign.md §14に記す。製品のテストは今回未実行。
+
+次: docs/handoff/tcg-product-import/design.md §14の詳細案をPO確認へ渡す。独立したレビューや実装完了とは扱わない。
