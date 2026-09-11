@@ -136,3 +136,10 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | 商品マスタ一覧・CSV画面 | Agent | PR #3422はdd9d3abfマージ・deploy34558334380成功、公開資産の2ルート/health確認済み。PO指定で既存サイドメニューを解析精度管理直下へ移動 | 配置変更PR #3429提出、eslint/build成功。最新CIと番号付きGOを確認して本番反映。CSV試行/44件登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+
+
+## 商品CSVサンプルと登録者情報（2026-09-11）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 10列見出しのみ＋説明の形式はPO「進める」。既存design§15作成・自己審査APPROVE。隔離parser0行/0エラー、endpoint get例外/commit0回再現。製品未実装 | 詳細案をPO確認へ提示。実装承認後、正式カードを検査して実装役へ渡す | docs/handoff/tcg-product-import/design.md §15 / recon.md同日再開調査 / EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN | 2026-09-11 |

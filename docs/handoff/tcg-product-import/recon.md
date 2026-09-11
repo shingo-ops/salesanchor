@@ -299,3 +299,58 @@ PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21
 
 
 PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。
+
+
+### 2026-09-11 空のサンプルCSVと登録者情報の再開調査
+
+基点: adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b。git ls-remoteのmainとorigin/main一致。PR #3433はGitHubでMERGED、merge ec173b7e31f079b10993a60abcdae456e516b319、mergedAt 2026-09-11T08:26:02Zを再確認。本番配備の再検証は未実施。
+引き継ぎは /Users/tanizawashingo/Documents/SalesAnchor-handoffs/SA-CSV-RESUME-20260911-201030/README.md を読んだ。前便の再現・配備報告と今回直接の検証を分ける。関連runbookはdocs/runbooksのファイル名検索で本CSV専用が見つからず、既存design/reconを継続先とする。
+
+#### 1. 全体像
+
+frontend/src/pages/super-admin/TcgProductImportPage.tsx:14 が管理者だけPanelを表示。frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx:28 にpreview、:37にcommit、:65にファイル選択領域。backend/app/routers/tcg_product_import.py:181が登録入口。ダウンロード操作は現状ない。
+
+#### 2. 共用部品
+
+本調査の部品は画面部品・CSV定数・認証依存。frontend/src/components/Button.tsx:56が標準Button、ContentToolbar.tsxが操作配置。backend/app/services/tcg_product_import_svc.py:40に列定義10個、:54に必須5個、:119にparse_rows。backend/app/auth/dependencies.py:453-481はUserを受け取りUserを返す。backend/app/models.py:22-34にid/email/is_super_admin。
+
+#### 3. 非共用部品
+
+backend/app/routers/tcg_product_import.py:199だけが登録者をuser.getで読む。backend/tests/test_tcg_product_import.py:52,70,84は辞書を認証fixtureにしている。成功commit HTTP試験がない。frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx:7のCSV fixtureは2列で、画面試験用の偽物でありCSV仕様根拠にならない。汎用CSV基盤への拡張は不要。
+
+#### 4. ルールの所在
+
+docs/adr/ADR-113-two-mode-dev-flow.md（handoff、How忠実実装）、ADR-027（日英）、ADR-154（解析移植）とfrontend/AGENTS.md、backend/AGENTS.md、docs/STANDARD-WORKFLOW.md:76の既存延長区分を照合。本CSV限定修正は解析移植を変えない。既存designの「ADR-154によりcreate_productを変更しない」という境界も保持する。docs/specs/design-system/component-ssot/page-header-v2/design.md:45以降の本文補助操作に合わせてButton secondaryを採用。
+
+#### 5. 維持の仕組み
+
+backend/tests/test_tcg_product_import.py:28以降は未認証/preview/指紋不一致/拡張子を守るがUserによる成功経路に穴がある。.github/workflows/test.yml:206-241はPG込みpytest、frontend-check.yml:34はcheck:all。既存frontend単体とfrontend/tests-e2e/tcg-product-import.spec.ts:12以降を拡張する。テンプレートと列定義の一致は未実装であり今の守り手はない。
+
+#### 6. 設計図との対照
+
+| 合意した姿/既存契約 | 現状 | 判定 |
+|---|---|---|
+| 10列空CSV＋入力説明 | Panel:65に選択/書式のみ、保存導線なし | 不足 |
+| 認証済み管理者のCSV登録 | User返却に対してrouter:199でget | 不足 |
+| 確認したFile/digestで明示登録 | Panel:37-50 | 一致（UI契約） |
+| 失敗後の無条件再送を避ける | Panel:49のuncertainロック | 一致 |
+| 見本商品0行 | 新設ファイル未実装 | 不足 |
+
+今回の範囲に除去対象の余剰はない。親仕様の全機能再監査ではない。
+
+#### 7. ノイズと境界
+
+backend/app/services/tcg_product_import_svc.py:469の商品登録後、:476のrecord_rowが別commit（:417）。履歴完全追跡・全件rollbackは保証しない。digest一致は人の承認証明ではない。44件・3シート・LINE委任を今回の登録成功や操作権限へ換算しない。台帳には古いIN_PROGRESSが残るが、PR #3433のDONE/mergedは今回直接確認した。migration用worktreeの未保存はmigration2ファイル、product-tabs-table-designのstatusは空で、本設計2文書の新しい予約は確認されなかった。他者の編集は変更しない。
+
+#### 今回直接行った隔離検算
+
+現行ソースをPython ASTで取り出し、decode_csv/parse_rowsのみをcsv/ioとともに実行。BOM＋10列見出し＋CRLFの入力は rows=[]、file_errors=[]。商品行0・エラー0をassertしてPASS。CSV製品ファイルはまだ作成していない。
+同じ基点のcommit_import_endpoint本体をASTで取り出し、IOだけAsyncMockへ差替え、属性を持つSimpleNamespace(email,id)で実行。AttributeError（get無し）を再現、commit_importのawait0回をassert。HTTP・本物のUserモデル・認証・DBを実行した証拠ではない。実装後AC5で本物のUser/HTTPを検証する。pytestは実行していない。
+
+#### 仕様参照と限界
+
+Context7 MCPは利用可能ツール一覧に存在しないため起動指示の公式資料代替を適用。2026-09-11に直接確認:
+- https://vite.dev/guide/assets#the-public-directory — public資産は開発時ルート配信、build時distへそのままコピー。frontend/vite.config.ts:11以降もpublicDir/baseの変更なし。
+- https://html.spec.whatwg.org/multipage/links.html#downloading-resources — 同一オリジンのdownload指定による保存。
+- https://developer.mozilla.org/en-US/docs/Web/API/HTMLAnchorElement/download — download値だけでは実際の保存成功を保証しない。E2Eで実ファイルを確認する。
+外部導入事例は不要。仕様の可否確認を、実装後の動作成功と取り違えない。

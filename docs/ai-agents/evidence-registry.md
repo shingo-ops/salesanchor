@@ -2365,3 +2365,26 @@ PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skip
 EV-20260911-FRONTEND-MOLD-29: AI PR3435 ready提出を.pr-number/head指定一覧/APIで一致確認。main ec173b7e統合3935e17d、2製品hash不変、root統合unit200成功。証拠modal-footer-implementation.md/root-main-verification.json/post-main-unit.log。CI確認中、GO #3435未受領・マージ/PO目視未完。
 
 EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。 証拠: PR https://github.com/shingo-ops/salesanchor/pull/3435 のGO記録と検収記録。
+
+
+```text
+id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
+date: 2026-09-11
+agent: Codex design partner (Planner then Architect; same AI)
+task: 空CSVサンプルとUser型不整合の限定修正設計
+scope: tcg-product-import既存design/recon・台帳のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md 同日再開調査
+    summary: adc8bc4d基点、10列/必須5列、User返却とget不一致を照合。前便報告と今回の直接検算を区別
+  - type: command
+    reference: AST隔離検算（reconに入力・対象関数・assert結果を記載）
+    summary: BOM見出し10列を現行parse_rowsへ渡し0行/0エラー。現行endpointでget AttributeError・commit await0回を再現
+  - type: external
+    reference: https://vite.dev/guide/assets#the-public-directory
+    summary: Context7利用不可のため公式資料代替。public資産の配信/build経路を確認
+confidence: high
+tradeoff: 実HTTP/本物User/実DB成功は未検証。部分登録・履歴空白・digest承認証明の限界を保持
+decision: design§15自己審査APPROVE。PO合意はサンプル形式と設計進行のみ。詳細案実装/GOは未承認
+follow_up: 詳細案を提示し、実装承認後に正式カード検査・引き継ぎ。44件投入は別段階
+```
