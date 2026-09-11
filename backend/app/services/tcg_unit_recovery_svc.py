@@ -729,6 +729,27 @@ def _print_dry_run_results(
 # ---------------------------------------------------------------------------
 
 
+def find_terminal_unit(text_str: str, terms: list[dict]) -> Optional[dict]:
+    """Select an explicit terminal sale unit; never use a word inside the title."""
+    normalized = unit_recovery_norm(text_str)
+    normalized = re.sub(
+        r"\(\d+(?:BOX|Box|box|箱|個|パック|pack|PACK)入(?:り)?\)$",
+        "", normalized,
+    ).rstrip()
+    for term in terms:
+        token = unit_recovery_norm(term["term"])
+        if not token or not normalized.endswith(token):
+            continue
+        prefix = normalized[:-len(token)]
+        if re.match(r"[A-Za-z]", token) and prefix and re.search(r"[A-Za-z0-9]$", prefix):
+            continue
+        if token == _CASE_TERM_NFKC and prefix and not prefix[-1].isspace():
+            continue
+        if find_term(normalized, [term]):
+            return term
+    return None
+
+
 def apply_unit_recovery_for_job(
     session: Session,
     extraction_job_id: str,
@@ -803,19 +824,11 @@ def apply_unit_recovery_for_job(
         if not product_name:
             continue
 
-        matched = find_term(product_name, unit_terms)
+        matched = find_terminal_unit(product_name, unit_terms)
         if not matched:
             continue
 
-        norm_pn = unit_recovery_norm(product_name)
         norm_term = unit_recovery_norm(matched["term"])
-        if norm_term and not norm_pn.endswith(norm_term):
-            continue
-
-        if norm_term == _CASE_TERM_NFKC:
-            pre_pn = norm_pn[: len(norm_pn) - len(norm_term)]
-            if pre_pn and not re.search(r"[\s\u3000]$", pre_pn):
-                continue
 
         if product_id and japanese_title:
             norm_jp = unit_recovery_norm(japanese_title)

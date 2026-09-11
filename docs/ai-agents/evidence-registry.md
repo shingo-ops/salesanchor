@@ -2326,3 +2326,10 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
 
 EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。
+
+
+## EV-20260911-ONEPIECE-COMPLETION
+
+PO原文「全て完了させてくれ」、登録範囲回答「単独販売の商品とセットまで（推奨）」を受領。今回の公開送信制限はPO原文「解析コード・設計文書は社外秘→これは一旦解除」で一時解除。顧客原文・実データ・秘密情報の公開許可には拡張しない。
+
+専用release/onepiece-analysis-completionはorigin/main 7606ca9a起点、preflight成功。設計design-keyword.md §15/改訂1の同一AI自己審査APPROVE、カード形式検査成功。製品3ファイルへ数字境界、末尾単位、単独完売備考、配信除外、商品区分IDに基づくBOX除外を実装。関連110試験成功、先行336試験成功。固定1630の区分参照切替による判定変化0。登録API経由の新規BOXのPSA誤一致を変更前の実DBで1件再現し修正後合格。全体試験実行中、未コミット・PR未提出・未配備。26候補の参照コード静的検査blocking0、残33の確認継続。DB登録・本番再解析・配信は未実施。

@@ -245,7 +245,7 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
-        assert cursor.fetchone() == ("PM0123", True, "name-first-v5-box-heading")
+        assert cursor.fetchone() == ("PM0123", True, "name-first-v6-master-safety")
 
 
 RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"

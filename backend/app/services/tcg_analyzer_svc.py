@@ -7,7 +7,7 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v5-box-heading"
+エンジンバージョン: "name-first-v6-master-safety"
 作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
 
 キーワード照合エンジン (name-first-v2):
@@ -34,7 +34,7 @@ from app.services.tcg_product_guards import single_card_marker, work_heading_evi
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v5-box-heading"
+ENGINE_VERSION = "name-first-v6-master-safety"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -478,6 +478,20 @@ def is_model_keyword(keyword: str) -> bool:
                 and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
 
 
+def match_product_keyword(kw: str, normalized_text: str) -> bool:
+    """Keep number-suffixed product tokens distinct without changing note/state matching."""
+    if not match_one_kw(kw, normalized_text):
+        return False
+    normalized = normalize_en(kw)
+    tokens = [normalized] if _RE_PURE_ASCII.fullmatch(kw) else normalized.split()
+    for token in tokens:
+        if re.search(r"[0-9]$", token):
+            left = r"(?<![a-z0-9])" if re.match(r"[a-z0-9]", token) else ""
+            if not re.search(left + re.escape(token) + r"(?![a-z0-9])", normalized_text):
+                return False
+    return True
+
+
 def match_pid_with_work(
     raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
     *, work_id: str | None, product_work_ids: dict[str, str | None],
@@ -494,11 +508,11 @@ def match_pid_with_work(
             continue
         if work_id is not None and product_work_ids.get(code) != work_id:
             continue
-        if any(kw and match_one_kw(kw, field)
+        if any(kw and match_product_keyword(kw, field)
                for kw in exclude_kw.get(code, []) for field in fields):
             continue
         matched = [kw for kw in search_kw.get(code, [])
-                   if kw and match_one_kw(kw, fields[0])
+                   if kw and match_product_keyword(kw, fields[0])
                    and (work_id is not None or not is_model_keyword(kw))]
         if matched:
             eligible[code] = matched
@@ -1005,7 +1019,9 @@ def _match_status_pattern(text_val: str, pattern: str, match_type: str) -> bool:
     return False
 
 
-def resolve_status_v2(raw_state: str, status_entries: list[dict]) -> tuple[str, Optional[str]]:
+def resolve_status_v2(
+    raw_state: str, status_entries: list[dict], *, raw_memo: str = "",
+) -> tuple[str, Optional[str]]:
     """
     1. EXCLUDE（在庫切れ）優先 → (canonical, 'excluded')
     2. OUTPUT REGEX/LITERAL → (canonical, None)
@@ -1019,7 +1035,12 @@ def resolve_status_v2(raw_state: str, status_entries: list[dict]) -> tuple[str, 
         (e for e in status_entries if e["effect"] == "EXCLUDE"),
         key=lambda e: e["priority"],
     ):
-        if _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+        memo_exact = (
+            entry["match_type"] == "LITERAL"
+            and bool(entry["search_pattern"])
+            and (raw_memo or "").strip().casefold() == entry["search_pattern"].strip().casefold()
+        )
+        if memo_exact or _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
             return (entry["canonical"], "excluded")
     for entry in sorted(
         (e for e in status_entries if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"),
@@ -1070,7 +1091,14 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
     )).fetchall()
     product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
-    product_category_classes = {r[0]: r[2] or "" for r in work_rows}
+    # Registration stores the work label in category_class. The referenced product
+    # category is authoritative for Box guards; legacy rows without it keep fallback.
+    product_category_classes = {
+        row[0]: (
+            "Box" if product_code_to_kubun_type[row[0]] in {"箱系", "箱系大"} else ""
+        ) if row[0] in product_code_to_kubun_type else (row[2] or "")
+        for row in work_rows
+    }
 
     # C-1/C-7/Status マスタをロード（graceful fallback: テーブル不在時は空で続行）
     norm_rules = load_normalization_rules(session)
@@ -1185,7 +1213,10 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # ステータス解決 v2 — 正規化済み norm_status を使用
         # GAS: resolveStatusV2_ (SystemResolverV2.gs)
-        status_val, exclusion_val = resolve_status_v2(norm_status, status_entries)
+        status_val, exclusion_val = resolve_status_v2(
+            norm_status, status_entries,
+            raw_memo=apply_field_normalization(raw_memo or "", norm_rules.get("STATUS", [])),
+        )
 
         # needs_review 判定
         review_reasons = build_review_reasons(
