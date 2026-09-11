@@ -120,3 +120,10 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | deploy34451686912成功、#3401へ取込み・設置済み。追加変更なし | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+
+
+## 在庫補助解析モデル変更
+
+| テーマ | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 在庫補助解析3.1 Flash-Lite | Agent | 3.1へ実装更新・対象ruff成功。GitHub GEMINI_API_KEYをPO提供キーへ更新済み（01:45:14Z） | PR #3425 head e606ce4f: CI2544成功/93skip、唯一の失敗はGO未記録。GO #3425受領済み。最新CI後に正式マージ/デプロイ確認。本番反映未確認 | EV-20260911-INVENTORY-LITE25 / docs/handoff/llm-model-3-5-flash-lite/recon.md | 2026-09-11 |
