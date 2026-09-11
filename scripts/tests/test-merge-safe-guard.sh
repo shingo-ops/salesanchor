@@ -92,6 +92,11 @@ if echo "${OUT_BEHIND}" | grep -q "BEHIND を検出"; then
 else
   ng "BEHIND検出: 専用メッセージ無し"
 fi
+if echo "${OUT_BEHIND}" | grep -q "追従を実行します"; then
+  ok "BEHIND検出後: 外側ループの追従フローが開始される"
+else
+  ng "BEHIND検出後: 追従フローが開始されなかった"
+fi
 
 echo ""
 echo "結果: PASS=${PASS} FAIL=${FAIL}"
