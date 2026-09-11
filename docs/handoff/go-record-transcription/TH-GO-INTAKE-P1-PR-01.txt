@@ -1,0 +1,67 @@
+読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、03-file.md、05-pr.md、11-lint.md、12-guard-authoring.md。
+照合結果: 実在パス、受領確認、停止報告、PR番号は返却値を使う。MCP操作欄はcard-lintのshell検査対象外なので別途人手照合する。
+
+TH-GO-INTAKE-P1-PR-01
+mode: handoff
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 許可はPOが本カードの検証用CI作成を明示承認した後だけ有効。未承認なら実行せず停止する。
+
+担当: このカードを承認後に受け取った検証実装担当。設計担当からの自動切替・新サブエージェント起動を含まない。
+目的: 鍵を使わない合成受付試験用workflowを、検証repoだけのPRとして提出する。
+対象: shingo-ops/salesanchor-go-gate-sandbox（repo_id1363676622）。
+対象外: salesanchor製品repoの実装/マージ、GO発行、App/鍵/secret/権限/保護設定変更、PRマージ、試験Issueの作成。
+出力: 専用branch release/go-intake-probe-p1 と新規workflow1ファイルのPR、非秘密の結果JSON。
+既存の同名branch/同名ファイル/同目的PRがあれば上書きせず、その内容を報告して停止する。
+
+実在する入力:
+/Users/tanizawashingo/worktrees/salesanchor/release-go-flow-design-rev3/docs/handoff/go-record-transcription/intake-p1-workflow.txt
+/tmp/reports/TH-GO-INTAKE-P1-LOCAL-RESULT.json
+/tmp/reports/TH-GO-INTAKE-P1-ACTIONLINT.txt
+実在する作業場所:
+/Users/tanizawashingo/worktrees/salesanchor/release-go-flow-design-rev3
+予定する新設先（現存ファイルではない）:
+検証repoの .github/workflows/go-intake-probe-p1.yml
+
+手順1 preflightと入力の照合
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-flow-design-rev3 && ./scripts/dev/executor-preflight.sh --check
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-flow-design-rev3 && shasum -a 256 docs/handoff/go-record-transcription/intake-p1-workflow.txt
+期待する結果: preflight成功。hashはe2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26。
+
+手順2 接続主体と対象を確認
+MCP: github_get_profile と github_get_repo(repository_full_name=shingo-ops/salesanchor-go-gate-sandbox)。
+期待する結果: 接続アプリ主体id246949427、repo id1363676622、owner id246949427、default_branch main、archived false、push true。
+CLIのshingo-ccと接続アプリの主体を混同しない。権限表示だけでworkflow作成権限ありと断定しない。
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-flow-design-rev3 && gh api repos/shingo-ops/salesanchor-go-gate-sandbox/branches/main --jq '{name,sha:.commit.sha}'
+期待する結果: main SHA a815d94c535f59fae6415b881296d64ef17bf6c7。異なれば設計担当へ戻して停止する。
+
+手順3 同名対象の不存在を確認してbranchを作成
+MCP読取またはCLI GETでbranch release/go-intake-probe-p1 と対象ファイルの不存在を確認する。403や取得不明を不存在に変換しない。
+MCP: github_create_branch。
+入力: repository_full_name=shingo-ops/salesanchor-go-gate-sandbox、branch_name=release/go-intake-probe-p1、sha=a815d94c535f59fae6415b881296d64ef17bf6c7。
+返却されたrefとSHAをGETで再確認する。base_refを同時指定しない。拒否時は資格を切り替えて回避しない。
+
+手順4 検証workflow1ファイルを作成
+MCP: github_create_file。
+入力: repository_full_name=shingo-ops/salesanchor-go-gate-sandbox、branch=release/go-intake-probe-p1、path=.github/workflows/go-intake-probe-p1.yml。
+message=test: add synthetic GO intake probe。
+contentは手順1の実在入力ファイルのUTF-8全文を構造化引数へ渡す。sourceを書き換えたりshellへ展開しない。
+返却commit SHAをGETし、作成したfileの取得内容hashが手順1と一致することを確認する。
+403/権限不足/内容不一致なら失敗結果と作成済みbranchの有無を残して停止する。
+
+手順5 検証repoへPRを提出
+MCP: github_create_pull_request。
+入力: repository_full_name=shingo-ops/salesanchor-go-gate-sandbox、head=release/go-intake-probe-p1、base=main、draft=false。
+title=test: synthetic GO intake probe P1。
+body=合成Issueの受付だけを検査する準備PR。書込権限・App鍵・checkout・外部actionなし。actionlintとローカル13ケース成功。実機試験0件、GO発行0件、製品変更0件。設計根拠はsalesanchor PR #3418。マージは別の確認工程。
+PR番号とURLはAPI返却値を使う。salesanchorのPR番号を流用しない。
+このsandboxにはsalesanchorのgh-pr-create-safe.sh/台帳がないため、検証repoに限定した接続アプリのPR APIを使用する。製品repoの入口規則を変更しない。
+
+手順6 結果を確認して停止
+MCP/CLI読取でPRのrepo/head/base、差分が新設workflow1件だけ、HEADが手順4のcommitに一致、state OPENを確認する。
+/tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json へ主体/対象ID、branch、commit、PR番号/URL、file hash、確認結果だけを保存する。
+PR作成で本カードは完了。マージ・Issue起票・GO発行へ進まない。本文の原文/秘密値を報告へ追加しない。
+
+停止と再開: 失敗は /tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json に操作・理由・作成済み成果物を記録する。
+手順N完了後に中断した場合は、新カードを作らず、手順N+1以降だけ順に実行し既存報告へ追記する。
+報告パスは一字一句そのまま使用する。他者の変更を上書きせず、許可外の後片付け・権限変更はしない。
+END OF CARD
