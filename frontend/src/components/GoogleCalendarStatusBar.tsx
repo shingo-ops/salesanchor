@@ -78,7 +78,7 @@ export function GoogleCalendarStatusBar({
       });
       onStatusChange?.(false);
     }
-  }, [onStatusChange]);
+  }, [onStatusChange, onSyncStatusChange]);
 
   useEffect(() => {
     checkStatus();
