@@ -59,3 +59,11 @@ PR初回CIの申告形式補正: head7e511f25のFrontend job103170627838はcheck
 
 
 最新main a66e9382追従: PR3429のDesktopShell管理者メニュー配列1要素の順移動とPR3431文書を保持。tasks競合はmainの新テーマ行を残し、本テーマだけ最新のPR3432状態を維持。14製品hash全一致、Button利用の追加なし。main追加のDesktopShell以外frontend差分0をroot確認。最終統合HEADの既存CIを再確認する。
+
+
+最終CI（番号付きGO前）: PR3432 head bb504c21f7a33fee74b38ef95884e4a072730fea は37成功/8対象外/1失敗、待機0。唯一の失敗はprocess-artifacts gateのGO記録欠落（job103172348396の原ログをroot/限定担当が確認）。Frontendの所定チェック19宣言・coverage189試験は成功、Karteも成功。root自身も統合状態でnpm run test:coverageを実行し22files189tests・exit0。根拠/tmp/frontend-button-appearance-20260911/final-pr-checks.json、ci-review-final-frontend.log、ci-review-final-process-artifacts.log、root-final-coverage.log。全画面目視や本番反映の検証ではない。
+
+現在はPOの当該PR番号付きGO待ち、未マージ。最終CI記録とtasks更新はローカル保存し、不要なCI再起動を避け、GO受領後の保存へ含める。リモート検証対象bb504c21と未コミット文書2件を区別する。
+
+
+PO原文「GO #3432」受領。2026-09-11 16:27 JSTは受領後記録時刻。rootが14製品hashと検収manifestの全一致を再確認。承認記録を本人原文のままPR本文へ転記し、最新main追従・CI成功後に公式マージする。DB変更なし。root生成coverageは/tmp/frontend-button-appearance-20260911/coverage-finalへ退避。
