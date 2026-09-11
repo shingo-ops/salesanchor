@@ -2219,3 +2219,6 @@ EV-20260911-PRODUCT-UI-IMPLEMENT追補: PR #3422 head1fd8a4d0は技術CI40成功
 
 
 商品マスタメニュー配置追補: PO位置指定を受領。既存設計/reconの2026-09-11メニュー配置節へ保存。DesktopShell既存1行移動、権限/URL維持。新規PR/本番反映は未実施。
+
+
+商品マスタ配置PR #3429提出済み: https://github.com/shingo-ops/salesanchor/pull/3429 。commit6e289bd9、製品変更はDesktopShell既存1行移動。対象eslint/build/台帳/diff成功、既存4項目と移動先/権限維持を自己レビュー。CI確認中、番号付きGO未受領、本番配置は未反映。生報告/tmp/reports/PRODUCT-MENU-PR-01.txt。
