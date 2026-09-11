@@ -2312,3 +2312,5 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 同一AIのArchitect自己審査はAPPROVE（設計品質のみ）。9受入条件、7変更対象、既存試験/CI、親仕様/ADRを照合。文書検査エラー0・task-state成功・diff-check成功。報告 TH-PRODUCT-DATE-TABS-DOC-CHECK.json / TH-PRODUCT-DATE-TABS-TASK-CHECK.txt。PO詳細承認と実装承認は未受領。正式カード未発行、製品テスト未実施。
 
 確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
+
+EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。
