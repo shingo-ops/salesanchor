@@ -20,6 +20,19 @@ URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
 
 
+async def create_product_schema(conn, schema):
+    """Build every disposable schema from the same production migrations."""
+    await conn.execute(text(f"CREATE SCHEMA {schema}"))
+    migrations = Path(__file__).resolve().parents[2] / "migrations"
+    for name in (
+        "20260831_110000_create_tcg_analysis_tables_t004.sql",
+        "20260903_180000_tcg_products_mark_en_t004.sql",
+        "20260902_110000_tcg_classification_masters.sql",
+    ):
+        sql = (migrations / name).read_text().replace("tenant_004", schema)
+        await conn.exec_driver_sql(sql)
+
+
 @pytest_asyncio.fixture
 async def product_db(monkeypatch):
     url = make_url(URL)
@@ -31,15 +44,7 @@ async def product_db(monkeypatch):
         async with engine.connect() as conn:
             transaction = await conn.begin()
             try:
-                await conn.execute(text(f"CREATE SCHEMA {schema}"))
-                migrations = Path(__file__).resolve().parents[2] / "migrations"
-                for name in (
-                    "20260831_110000_create_tcg_analysis_tables_t004.sql",
-                    "20260903_180000_tcg_products_mark_en_t004.sql",
-                    "20260902_110000_tcg_classification_masters.sql",
-                ):
-                    sql = (migrations / name).read_text().replace("tenant_004", schema)
-                    await conn.exec_driver_sql(sql)
+                await create_product_schema(conn, schema)
                 async with AsyncSession(bind=conn) as db:
                     yield db, schema
             finally:
@@ -92,8 +97,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
         ), {"code": code, "active": active, "release": release, "work": work})
     # A same-named table in another disposable schema must not supply rows.
     other = schema + "_other"
-    await db.execute(text(f"CREATE SCHEMA {other}"))
-    await db.execute(text(f"CREATE TABLE {other}.tcg_products (LIKE {schema}.tcg_products INCLUDING DEFAULTS)"))
+    await create_product_schema(await db.connection(), other)
     await db.execute(text(
         f"INSERT INTO {other}.tcg_products (code,japanese_title,category_class,is_active) "
         "VALUES ('WRONG','Shared','Box',true)"
