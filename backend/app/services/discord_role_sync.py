@@ -159,14 +159,6 @@ async def sync_lead_discord_role(
         )
         return
 
-    if new_scale not in _SCALE_TO_COLUMN:
-        # Medium など: マッピングなし → スキップ (info のみ)
-        logger.info(
-            "[discord_role_sync] skip: no role mapping for scale='%s' lead=%d",
-            new_scale, lead_id,
-        )
-        return
-
     bot_token = _get_bot_token()
     if not bot_token:
         logger.warning(
@@ -187,6 +179,44 @@ async def sync_lead_discord_role(
 
     scale_to_role = {"Small": small_role_name, "Large": large_role_name}
     managed_role_names = frozenset(scale_to_role.values())
+
+    if new_scale not in _SCALE_TO_COLUMN:
+        # 不明（NULL/Medium 等）→ 既存の管理ロール（大口/小口）を全剥奪して終了（KGI③）。
+        # 付与は行わない。剥奪失敗時は failed を記録（success と誤記録しない）。
+        try:
+            all_roles = await discord_api_request(
+                method="GET", path=f"/guilds/{guild_id}/roles",
+                bot_token=bot_token, expected_statuses=(200,),
+            ) or []
+            managed_ids = {
+                str(r["id"]) for r in all_roles
+                if r.get("name") in managed_role_names
+            }
+            member = await discord_api_request(
+                method="GET",
+                path=f"/guilds/{guild_id}/members/{discord_user_id}",
+                bot_token=bot_token, expected_statuses=(200,),
+            ) or {}
+            current_role_ids = {str(r) for r in member.get("roles", [])}
+            for rid in managed_ids & current_role_ids:
+                await discord_api_request(
+                    method="DELETE",
+                    path=f"/guilds/{guild_id}/members/{discord_user_id}/roles/{rid}",
+                    bot_token=bot_token, expected_statuses=(204,),
+                )
+            logger.info(
+                "[discord_role_sync] revoke(unknown scale) tenant=%d lead=%d user=%s",
+                tenant_id, lead_id, discord_user_id,
+            )
+            await _update_sync_status(tenant_id, lead_id, "success")
+        except DiscordAPIError as exc:
+            logger.error(
+                "[discord_role_sync] revoke failed tenant=%d lead=%d user=%s: %s",
+                tenant_id, lead_id, discord_user_id, exc,
+            )
+            await _update_sync_status(tenant_id, lead_id, "failed")
+        return
+
     role_name = scale_to_role[new_scale]
 
     try:
