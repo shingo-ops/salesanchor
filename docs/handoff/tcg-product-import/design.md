@@ -273,3 +273,14 @@ Context7は利用不可。起動指示の代替許可に従い [Python 3.12公�
 - ADR-144（docs/adr/ADR-144-ui-component-governance.md）: 一覧と取込は既存PageLayout、検索はTextField、一覧はDataTableを再利用する。新規共通部品やCI例外は追加しない。
 
 PR本文の参照ADRに対応する本書の参照漏れを補正した。実装契約・製品コードの変更はない。GO検査はjob103082848317でpass、同jobの設計参照2件欠落を本追補で修正。Gemini実API試験の失敗は別の未解決事項として維持する。
+
+
+## 2026-09-11 商品マスタのメニュー配置
+
+PO原文「その前にサイドメニューから開ける状態にしてくれ、saas管理者メニューの解析精度管理の下に配置」。基点e81dd3ecのDesktopShell.tsx:190-195では商品マスタがSaaS管理者配列の先頭に存在し、既存routeも本番配布済み。ja.jsonのnav.superAdminTcgSupplierQualityは「解析精度管理」。
+
+差分設計: DesktopShell.tsxの既存商品マスタ項目1行を解析精度管理の直後へ移動する。順序は取込・解析・配信、解析精度管理、商品マスタ、為替レート管理。既存to=/super-admin/tcg-product-master、labelKey、isSuperAdmin条件、他3項目を維持。API・DB・翻訳キー追加なし。理由はPOが指定した場所から既存画面を見つけられるようにするため。既存先頭維持は希望位置と異なるため不採用。
+
+受入は指定順序・項目4件各1回・既存URL/権限制御の維持を差分で照合し、対象lint/buildと既存CIを確認する。並べ替えをなぞる新規テストは増やさない。守り手はDesktopShellの既存ナビ表示とfrontendのnav/i18n/型チェック。リスクは表示位置が変わることのみで、誤った場合は当該1行を戻すPRで復元できる。外部事例は不要、自社メニュー実物とPOの位置指定で判断可能。ライブラリ/API仕様変更なし。
+
+同一AIのPlanner→Architect自己審査APPROVE（この1行の移動のみ）。独立レビューや番号付きGOではない。新規PRの正式GOは別途必要。新メニューの本番配置は未反映。
