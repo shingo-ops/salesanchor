@@ -47,3 +47,6 @@ models/gemini-3.6-flash を使うよう促す内容。翻訳は成立してい�
 実装追補: 既定モデル2箇所を変更し、SDK指定と結果model・料金0.50USD/各100万tokenの既存試験を更新。実APIテストは結果modelで費用算出。対象ruff成功、既存テストimport指摘を整理して再検査。台帳/diff検査成功。Docker不在でローカルpytest未実行。生報告/tmp/reports/LITE25-VERIFY-02.txt。製品差分自己レビュー済み、独立レビューではない。実API・現行精度・本番反映未検証。
 
 在庫補助解析2.5 Lite変更はcommit be42f18e、PR #3425へ提出済み（https://github.com/shingo-ops/salesanchor/pull/3425）。CI確認中・GO未受領・本番未反映。PR3422のUI変更とは別便。報告/tmp/reports/LITE25-PR-01.txt。
+
+
+最終検証（2026-09-11）: PR #3425 head e60f555e、backend job103106398328は2543成功/94skip。ただし実API試験がrequested model unavailableとしてskipしたことをwarning生ログで直接確認（404または提供不可文字列の既存判定）。2.5 Liteが現在のCIキーで利用できたとは扱わない。ログ/tmp/reports/LITE25-PYTEST-SKIP-EVIDENCE.log、結果LITE25-FINAL-02.json。実装・理由記録は完了、本番未反映。運用採用はREVISE: 対象プロジェクトでの提供可否解決が必要。旧環境の利用実績は現在のキーでの提供を保証しない。GO未受領。停止記録の文書commitは再CIを避けローカル保存、PR本文にも同内容を保存する。
