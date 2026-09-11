@@ -296,3 +296,6 @@ POが実装役1名への委任を承認し、TH-PRODUCT-DATE-TABS-IMPL-01を実�
 ### 2026-09-11 PR #3433 の公開・マージGO受領
 
 PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21.255931+00:00（記録時の実測であり発話時刻の推定ではない）。対象はPR #3433の商品マスタ発売日順・作品タブ。ローカル実装12e6b13cを確認し、main 7606ca9a041e315b81040373e8f4ddebbc562133へ追従。競合はtasks/todo.mdの2テーマの行で、本テーマの実装行とmain側の金型化行を保持。製品ファイルの競合なし。公開後の実PG/CI、配備結果とtenant_001実接続確認は、GOの受領と分けて記録する。
+
+
+PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。

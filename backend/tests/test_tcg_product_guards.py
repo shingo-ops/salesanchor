@@ -67,7 +67,7 @@ def load_matching_functions():
     source = (Path(__file__).parents[1] / "app/services/tcg_analyzer_svc.py").read_text()
     names = {"normalize_en", "token_and_match", "match_one_kw", "match_keyword",
              "match_pid_name_first", "is_model_keyword", "match_pid_with_work",
-             "resolve_work_evidence"}
+             "resolve_work_evidence", "match_product_keyword"}
     nodes = [n for n in ast.parse(source).body
              if isinstance(n, ast.FunctionDef) and n.name in names]
     namespace = dict(re=re, Optional=Optional, _FULLWIDTH_OFFSET=0xFEE0,
