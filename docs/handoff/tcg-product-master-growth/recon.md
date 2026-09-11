@@ -1,5 +1,8 @@
 # recon — TCG商品マスタ育成
 
+> ローカル証跡の扱い: /private/tmp配下のline-*ファイルは開発端末で保管する外部証跡です。保管名・既存SHA256は保持し、リポジトリ内コードの引用とは区別して記載します。顧客原文を含む証跡はGitへ追加しません。CIがこれらの内容を再検証したという意味ではありません。
+
+
 この文書は何か（専門用語なしの1行）: 商品の辞書を増やして自動判別の精度を上げる作業に入る前に、今どうなっているかを実測だけで書き出した現状報告。
 
 親（設計仕様書）へのリンク: ../../specs/product-master/README.md
@@ -633,10 +636,10 @@ POの「全てDBにある進める」を受領し、既存の接続定型で本�
 
 ローカル証拠（原文を含むためGitには格納しない）:
 
-- `/private/tmp/line-postdeploy-rows.json` SHA256 `7cb48132a116e59acea286627c562ce3786d680775e342677d7a09bfff990b51`
-- `/private/tmp/line-postdeploy-master.json` SHA256 `d63fc233af2f4275ea8a6acf96ed62f8298aab2c0a1920afb5cd998087bcac4c`
-- `/private/tmp/line-postdeploy-probes.json` SHA256 `3f92474330a638a6e8db5fe272b98164035a9156002f0a12b933e97bb5d5d700`
-- `/private/tmp/line-postdeploy-final-status.json` SHA256 `986b2181b13b50fe4fed38307264416451c511d73c337358cad397d62f3634b0`
+- /private/tmp/line-postdeploy-rows.json SHA256 `7cb48132a116e59acea286627c562ce3786d680775e342677d7a09bfff990b51`
+- /private/tmp/line-postdeploy-master.json SHA256 `d63fc233af2f4275ea8a6acf96ed62f8298aab2c0a1920afb5cd998087bcac4c`
+- /private/tmp/line-postdeploy-probes.json SHA256 `3f92474330a638a6e8db5fe272b98164035a9156002f0a12b933e97bb5d5d700`
+- /private/tmp/line-postdeploy-final-status.json SHA256 `986b2181b13b50fe4fed38307264416451c511d73c337358cad397d62f3634b0`
 
 ## 2026-09-10 辞書修正案の対照検証（12:03 JST標本）
 
@@ -665,11 +668,11 @@ PO「進める」に基づき、初回5件だけの局所試験から拡張。re
 
 ローカル検証証拠（生原文をGitへ格納しない）:
 
-- `/private/tmp/line-dictionary-audit-context.json` SHA256 `05808fe80c29f081facdd8787a4f71341de89618a209945b43f6ab8a4ea48dac`
-- `/private/tmp/line-dictionary-audit-rows.json` SHA256 `4c6570e82a93060c264e98673b9d094e20eb36cc23796a642cbcc6c6619bd9d5`
-- `/private/tmp/line-dictionary-contrast.py` SHA256 `a9387734448885323f89d520227fad3a55e7b0189cbca56059e5337f68188aaa`
-- `/private/tmp/line-dictionary-contrast.json` SHA256 `d9ce9894aca1b28966807b130a2a6db5fae9692f1dabd26f436eb79051f6cc8a`
-- `/private/tmp/line-dictionary-safe-contrast.json` SHA256 `238e212872cf61265f1f0ad35715b70ac791ef748f0b338ce6c8809c625e89c4`
+- /private/tmp/line-dictionary-audit-context.json SHA256 `05808fe80c29f081facdd8787a4f71341de89618a209945b43f6ab8a4ea48dac`
+- /private/tmp/line-dictionary-audit-rows.json SHA256 `4c6570e82a93060c264e98673b9d094e20eb36cc23796a642cbcc6c6619bd9d5`
+- /private/tmp/line-dictionary-contrast.py SHA256 `a9387734448885323f89d520227fad3a55e7b0189cbca56059e5337f68188aaa`
+- /private/tmp/line-dictionary-contrast.json SHA256 `d9ce9894aca1b28966807b130a2a6db5fae9692f1dabd26f436eb79051f6cc8a`
+- /private/tmp/line-dictionary-safe-contrast.json SHA256 `238e212872cf61265f1f0ad35715b70ac791ef748f0b338ce6c8809c625e89c4`
 
 ## 2026-09-10 継続改善と再解析・配信の事前調査
 
@@ -685,12 +688,12 @@ POはPRマージ、本番反映後の再解析、完了後の接続3シートへ
 
 ローカル証拠（原文・接続情報をGitへ格納しない）:
 
-- `/private/tmp/line-keyword-guards-before.json` SHA256 `b8539d0df63bd9e7502181c5499cbf3cde58bebf6c5e0b734e4f83393395e772`
-- `/private/tmp/line-loop-operations-preflight.json` SHA256 `38c6b8fab85840e9a7e0451de949ac3f9256a4fddb4aba6e5392b8c933505dcd`
-- `/private/tmp/line-loop-active-before.json` SHA256 `a52f558f55e71def1bedf3aecb4c87d832e1dc638773b0d515243b369130a336`
-- `/private/tmp/line-loop-psa-proposal.json` SHA256 `855da1dbe3a39be650e435dceb03ca9033b2a6a02fb6ba918830b0aaec587fc3`
-- `/private/tmp/line-stale-running-jobs.json` SHA256 `1ef480bd87dec0d05556acabc51f3df8c36fd14a2037bb72cceb1ee7cd661f54`
-- `/private/tmp/line-state-master.json` SHA256 `10b38426d34d18ea3745bd2bf8a716c866408439ba3f55ddfa64756c76601ebb`
+- /private/tmp/line-keyword-guards-before.json SHA256 `b8539d0df63bd9e7502181c5499cbf3cde58bebf6c5e0b734e4f83393395e772`
+- /private/tmp/line-loop-operations-preflight.json SHA256 `38c6b8fab85840e9a7e0451de949ac3f9256a4fddb4aba6e5392b8c933505dcd`
+- /private/tmp/line-loop-active-before.json SHA256 `a52f558f55e71def1bedf3aecb4c87d832e1dc638773b0d515243b369130a336`
+- /private/tmp/line-loop-psa-proposal.json SHA256 `855da1dbe3a39be650e435dceb03ca9033b2a6a02fb6ba918830b0aaec587fc3`
+- /private/tmp/line-stale-running-jobs.json SHA256 `1ef480bd87dec0d05556acabc51f3df8c36fd14a2037bb72cceb1ee7cd661f54`
+- /private/tmp/line-state-master.json SHA256 `10b38426d34d18ea3745bd2bf8a716c866408439ba3f55ddfa64756c76601ebb`
 
 ## 2026-09-10 #3400本番反映・再解析の実行結果
 
@@ -720,7 +723,7 @@ PO原文「GO #3400」を受領しPR本文へ転記。追加原文「› 次に�
 - POへ確認する復旧案（未承認・未実装）: 2件を成功扱いにせず中断として記録したうえで、有効な原文1件だけを再実行する。無効な旧原文1件は再配信しない。実行前にworkerの実行/予約がないこと、対象ID・作成時刻・items0・原文有効性・退避を再確認し、対象を限定した復旧設計・検証を行う。停止原因をこの案の説明で創作しない。
 - 作品未取得の旧データを補う方法と、商品/状態の次の修正は設計未了。今回は#3400反映・再解析済み、配信未完了。改善ループ全体の完了とはしない。
 
-ローカル実行証拠（生原文・接続IDをGitに含めない）: `/private/tmp/line-reanalysis-before.json`、`line-reanalysis-after.json`、`line-reanalysis-diff.json`、`line-reanalyze-execution.jsonl`、`line-reanalysis-verification.json`、`line-distribution-attempt.json`、`line-loop-worker-inspect.json`。各ファイルは/private/tmp配下。今回の調査・実行はrootによる直接確認であり、独立した第二者レビューとは称さない。
+ローカル実行証拠（生原文・接続IDをGitに含めない）: /private/tmp/line-reanalysis-before.json、line-reanalysis-after.json、line-reanalysis-diff.json、`line-reanalyze-execution.jsonl`、line-reanalysis-verification.json、line-distribution-attempt.json、line-loop-worker-inspect.json。各ファイルは/private/tmp配下。今回の調査・実行はrootによる直接確認であり、独立した第二者レビューとは称さない。
 
 文書検証: git diff --check、bash scripts/check-task-state.shは成功。次の復旧案は未承認・未実装のため、復旧機能の試験成功や設計合格は宣言しない。
 
@@ -730,7 +733,7 @@ PO原文「GO #3400」を受領しPR本文へ転記。追加原文「› 次に�
 
 ### 配信前検証の準備
 
-既存サービスの認証経路で全3接続を読み取り、ID・在庫集計タブを照合。3シートともデータ674行・12列（ヘッダ含む675行）で値は完全一致。SHA256は `1fa4605ca28c175759631271b1141640fbf20c4524afa55603b188a2453e8564`（JSON UTF-8・ensure_ascii=False・区切り空白なし）。式として取得したセルで先頭=は0件。退避先は `/private/tmp/line-three-sheets-before.json`。現時点の配信候補は432行だが未完了1原文の復旧前プレビューであり、最終配信件数ではない。既存674行との母集団・時点が異なるため、その差を今回修正による減少と断定しない。配信直前に再度対象・内容を確認して退避する。
+既存サービスの認証経路で全3接続を読み取り、ID・在庫集計タブを照合。3シートともデータ674行・12列（ヘッダ含む675行）で値は完全一致。SHA256は `1fa4605ca28c175759631271b1141640fbf20c4524afa55603b188a2453e8564`（JSON UTF-8・ensure_ascii=False・区切り空白なし）。式として取得したセルで先頭=は0件。退避先は /private/tmp/line-three-sheets-before.json。現時点の配信候補は432行だが未完了1原文の復旧前プレビューであり、最終配信件数ではない。既存674行との母集団・時点が異なるため、その差を今回修正による減少と断定しない。配信直前に再度対象・内容を確認して退避する。
 
 Context7はツール一覧で利用不可。PO許可済み代替として[gspread公式Worksheet資料](https://docs.gspread.org/en/latest/api/models/worksheet.html#worksheet.get_all_values)で読取メソッドを確認。表示資料は6.1.2、本番実物は6.2.1のため本番inspect.signatureでもvalue_render_option/pad_values等の対応を照合した。UNFORMATTED_VALUEで値、FORMULAで式を退避した。書き込みは行っていない。既存配信は全targetへ同じ12列をRAWで渡すため、配信後は3シート間の一致と、配信対象行の多重集合を照合する（同順位行の順序だけで誤判定しない）。
 
@@ -738,14 +741,14 @@ Context7はツール一覧で利用不可。PO許可済み代替として[gsprea
 
 - 再解析後の全1425明細に対し、確定BOX商品かつ名称/状態/備考にSAR/AR/PSA/BGS/CGC/ARSの表記を含む行を再検出。該当15行は全て前節のトウホク/フクオカPSA6〜9、raw_unit=枚、condition=FLAG_SINGLE。既存配信設定では対象外。
 - 実コードtcg_analyzer_svc.py:323〜344は「箱系」単位のときだけBOX商品に絞り、それ以外は全候補を返す。DBの「枚」aliasはPiece/単品系。単位が枚でもBOX候補が残ることを確認。単位フィルタの全区分への変更は今回の復旧範囲外。
-- 辞書案はPM0182/PM0189へPSA除外各1件。現在DBの判定再現は1425/1425不一致0。対照では対象15件のみNONE、他1410件不変、正式名称293件の判定変化0、名称/状態/備考×PSA/PSA6/PSA10/psa9/非該当部分文字列の36対照が全成功。`line-psa-expanded-contrast.json`へ保存。これは読み取りの対照結果であり、新たな本番辞書変更ではない。
-- 状態の全量候補抽出では、Sealed box/Caseなのに名称/状態/備考に開封・損傷等の表記がある5行を検出。3行は既存状態辞書の語が備考にあるが、状態判定へ備考が渡されず通常BOXになる。既存関数の局所比較で、OP-17の凹み/破れ2行はDamaged sealed box、プレシャスコレクターボックスの検品開封1行はOpened boxとなる。現在保存の判定と局所再現は5/5一致。対象ID・根拠は `line-state-memo-contrast.json`。
+- 辞書案はPM0182/PM0189へPSA除外各1件。現在DBの判定再現は1425/1425不一致0。対照では対象15件のみNONE、他1410件不変、正式名称293件の判定変化0、名称/状態/備考×PSA/PSA6/PSA10/psa9/非該当部分文字列の36対照が全成功。line-psa-expanded-contrast.jsonへ保存。これは読み取りの対照結果であり、新たな本番辞書変更ではない。
+- 状態の全量候補抽出では、Sealed box/Caseなのに名称/状態/備考に開封・損傷等の表記がある5行を検出。3行は既存状態辞書の語が備考にあるが、状態判定へ備考が渡されず通常BOXになる。既存関数の局所比較で、OP-17の凹み/破れ2行はDamaged sealed box、プレシャスコレクターボックスの検品開封1行はOpened boxとなる。現在保存の判定と局所再現は5/5一致。対象ID・根拠は line-state-memo-contrast.json。
 - 残る2行は「箱にテープ剥がし跡」（商品未確定）と「伝票貼り付けあり」（商品確定）。現在状態マスタに該当語がなく、備考追加だけでも状態は変わらない。これらを損傷扱いにする事業上の定義は未確認。PO判断なしの語追加をしない。
 - 備考を状態判定へ一般適用した場合の正常例・否定文・送料/免責文・区分間の影響は未検証。局所3件の改善だけで全体設計合格を出さない。状態の本番修正は未実施。
 
 補足: 上記の全量は07:30:24Zの固定1425明細。後続の新着や復旧で増える明細は別の母集団として比較する。原文を含むJSONは/private/tmpに保持しGitへ複製しない。
 
-状態の追加対照: 語を列挙する候補抽出だけでは「ダメージ(大)/(小)」を拾えなかったため、全1425件を状態判定関数で比較した。保存済みの最終単位を固定した局所再現は1425件不一致0。備考を加えると17件（Damaged caseへ14件、Damaged sealed boxへ2件、Opened boxへ1件）が変化し、他1408件の状態は不変。各17件の原文行範囲も直接読み、損傷/開封表記を確認した。これは全解析パイプラインの再現ではないため、単位再計算・否定文・別商品の備考混入などの回帰検証は残る。17件を次の設計用候補として `/private/tmp/line-state-memo-all-function-contrast.json` に保存。前記3件を含む拡張結果であり、3+17件とは数えない。伝票/テープ跡の2件の定義は引き続き未確認。
+状態の追加対照: 語を列挙する候補抽出だけでは「ダメージ(大)/(小)」を拾えなかったため、全1425件を状態判定関数で比較した。保存済みの最終単位を固定した局所再現は1425件不一致0。備考を加えると17件（Damaged caseへ14件、Damaged sealed boxへ2件、Opened boxへ1件）が変化し、他1408件の状態は不変。各17件の原文行範囲も直接読み、損傷/開封表記を確認した。これは全解析パイプラインの再現ではないため、単位再計算・否定文・別商品の備考混入などの回帰検証は残る。17件を次の設計用候補として /private/tmp/line-state-memo-all-function-contrast.json に保存。前記3件を含む拡張結果であり、3+17件とは数えない。伝票/テープ跡の2件の定義は引き続き未確認。
 
 
 ## 2026-09-10 #3403復旧後の抽出完了と配信前確認
