@@ -1080,7 +1080,8 @@ def test_model_keyword_contract(keyword, expected):
     ("ガンダム EB01", "ガンダム EB01", 1, 1, "未知", "L0001", None),
     ("ガンダム EB01", "ガンダム EB01", 1, 1, "", "", None),
     ("ガンダム EB01", "ガンダム EB01", 1, 1, None, None, "gundam"),
-    ("EB01", "ガンダム\nEB01", 2, 2, None, None, None),
+    # v5: missing evidence uses the explicit independent raw work heading.
+    ("EB01", "ガンダム\nEB01", 2, 2, None, None, "gundam"),
 ])
 def test_work_scope(name, source, start, end, work, span, expected):
     assert resolve_work_evidence(name, source, start, end, work, span, WORKS) == expected
