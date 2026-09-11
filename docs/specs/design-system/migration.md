@@ -201,3 +201,5 @@ PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668e�
 EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをroot実測（ja左端-30.140625、en-20.484375、旧24）。AH提出条件REVISE、未検証7ファイルを退避予定。先行AIはModal footer折返し＋見本の2製品に限定。通常footer実運用3/見本2を監査し、局所wrap28条件の左右欠け0を確認。詳細design.md§AIとraw-shared-footer-probe/全利用監査。実装/最終検収/新PR未完。
 
 2026-09-11 AI先行実装検収済み: 共通Modal footer wrapと見本2製品。560前後比較/輪郭448/Story4、root189unit等品質5項目成功、限定レビューAPPROVE。PR提出準備中。AH16移管は退避した未検証案、旧通常btn332の減少はまだ0。新CI最後。根拠: [AI検収](../../handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md)。
+
+2026-09-11 AI PR #3435提出済み https://github.com/shingo-ops/salesanchor/pull/3435 （ready、HEAD3935e17d）。main ec173b7e通常統合、今回製品差分Modal2のみ・hash不変。root統合unit200件成功。CI確認中、番号付きGO/マージ/PO目視未完。AH16保留、新CI最後。

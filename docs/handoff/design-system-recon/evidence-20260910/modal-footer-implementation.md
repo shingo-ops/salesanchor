@@ -22,3 +22,11 @@ Planner/Architectの設計は同じroot AIの自己審査。上記限定レビ�
 限界: Chromiumとモックによる局所検査。640pxは200%相当の幅で実zoomではない。任意長文・任意金額・全本番画面の確認ではない。全体coverageは5.91%であり、189件を全アプリ網羅とは称しない。POの画面確認は未実施。新CIは追加せず、画面統一後の設置順を維持する。
 
 状態: 設計・実装・限定検収済み。新PR提出準備中、今回の番号付きGO・マージ・本番反映は未実施。後続AH16移管は先行PRマージ後に最新mainで再検証する。
+
+## PR提出・main統合追補
+
+[PR #3435](https://github.com/shingo-ops/salesanchor/pull/3435)をreadyで提出（提出HEAD3935e17da88485f9977da612b4bae72f16357e07）。main ec173b7eを通常mergeし、製品2hash不変・backend/商品マスタ/翻訳のPR差分0を確認。共通台帳2競合はフロント行を今回最新版、それ以外をmain最新版に保持。旧商品マスタ設計行はmain側で削除済みなので復活させない。root-main-verification.jsonで全行検算。
+
+統合状態のunitをroot再実行し22files/200tests成功（post-main-unit.log）。以前の189件は統合前の結果として保持。作業場所をworkdir引数のみ指定した台帳操作は保護フックに拒否されたが未実行。公式のcmd先頭cdで正しいreleaseを指定して統合した。権限/フック変更なし。
+
+現状態: PR提出済み、CI確認中。今回GO #3435は未受領、マージ/本番反映/PO目視は未実施。AH16移管はこのPRのマージ後に再開、新CI最後。

@@ -602,3 +602,5 @@ EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをr
 2026-09-11 AI検査棚卸し: 製品2ファイルの厳格lint/189 unit/既存checkall/build/Storybookはroot実行exit0。実3footer比較原稿のv1は余白内侵入、v2はshrinkによる内部折返しを一行同値条件に誤分類して停止。原稿・生ログ・前後結果をevidence-20260910/modal-browser系へ保存。設計§AI CARD03で縮小前必要幅による分類へ訂正、最終ブラウザー未完。
 
 2026-09-11 AI最終検収: v4全560pair/輪郭448/Enter・Space6/Story4成功、root品質5項目成功、限定review APPROVE。詳細: [検収記録](evidence-20260910/modal-footer-implementation.md)。原失敗と修正方法は設計AIに残し、同一AI自己審査と限定他担当レビューを区別。PR番号付きGO/マージ/PO目視は未完。
+
+2026-09-11 AI PR #3435提出済み https://github.com/shingo-ops/salesanchor/pull/3435 （ready、HEAD3935e17d）。main ec173b7e通常統合、今回製品差分Modal2のみ・hash不変。root統合unit200件成功。CI確認中、番号付きGO/マージ/PO目視未完。AH16保留、新CI最後。
