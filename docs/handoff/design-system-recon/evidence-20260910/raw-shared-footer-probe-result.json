@@ -1,0 +1,642 @@
+[
+  {
+    "width": 390,
+    "lang": "ja",
+    "stage": "before",
+    "footer": {
+      "left": 0,
+      "right": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 24,
+        "right": 185.046875,
+        "width": 161.046875,
+        "clientWidth": 159,
+        "scrollWidth": 159,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 197.046875,
+        "right": 292.453125,
+        "width": 95.40625,
+        "clientWidth": 93,
+        "scrollWidth": 93,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 304.453125,
+        "right": 366,
+        "width": 61.546875,
+        "clientWidth": 62,
+        "scrollWidth": 62,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "lang": "ja",
+    "stage": "after",
+    "footer": {
+      "left": 0,
+      "right": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": -30.140625,
+        "right": 164.921875,
+        "width": 195.0625,
+        "clientWidth": 193,
+        "scrollWidth": 193,
+        "inside": false
+      },
+      {
+        "text": "キャンセル",
+        "left": 176.921875,
+        "right": 285.40625,
+        "width": 108.484375,
+        "clientWidth": 106,
+        "scrollWidth": 106,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 297.40625,
+        "right": 366,
+        "width": 68.59375,
+        "clientWidth": 67,
+        "scrollWidth": 67,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "stage": "before",
+    "footer": {
+      "left": 0,
+      "right": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 24,
+        "right": 168.734375,
+        "width": 144.734375,
+        "clientWidth": 143,
+        "scrollWidth": 143,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 180.734375,
+        "right": 267.5625,
+        "width": 86.828125,
+        "clientWidth": 85,
+        "scrollWidth": 85,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 279.5625,
+        "right": 366,
+        "width": 86.4375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "stage": "after",
+    "footer": {
+      "left": 0,
+      "right": 390,
+      "clientWidth": 390,
+      "scrollWidth": 390
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": -20.484375,
+        "right": 162.015625,
+        "width": 182.5,
+        "clientWidth": 181,
+        "scrollWidth": 181,
+        "inside": false
+      },
+      {
+        "text": "Cancel",
+        "left": 174.015625,
+        "right": 262.5,
+        "width": 88.484375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 274.5,
+        "right": 366,
+        "width": 91.5,
+        "clientWidth": 90,
+        "scrollWidth": 90,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 767,
+    "lang": "ja",
+    "stage": "before",
+    "footer": {
+      "left": 0,
+      "right": 767,
+      "clientWidth": 767,
+      "scrollWidth": 767
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 335.5,
+        "right": 536.75,
+        "width": 201.25,
+        "clientWidth": 199,
+        "scrollWidth": 199,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 548.75,
+        "right": 662.1875,
+        "width": 113.4375,
+        "clientWidth": 111,
+        "scrollWidth": 111,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 674.1875,
+        "right": 743,
+        "width": 68.8125,
+        "clientWidth": 69,
+        "scrollWidth": 69,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 767,
+    "lang": "ja",
+    "stage": "after",
+    "footer": {
+      "left": 0,
+      "right": 767,
+      "clientWidth": 767,
+      "scrollWidth": 767
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 346.859375,
+        "right": 541.921875,
+        "width": 195.0625,
+        "clientWidth": 193,
+        "scrollWidth": 193,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 553.921875,
+        "right": 662.40625,
+        "width": 108.484375,
+        "clientWidth": 106,
+        "scrollWidth": 106,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 674.40625,
+        "right": 743,
+        "width": 68.59375,
+        "clientWidth": 67,
+        "scrollWidth": 67,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 767,
+    "lang": "en",
+    "stage": "before",
+    "footer": {
+      "left": 0,
+      "right": 767,
+      "clientWidth": 767,
+      "scrollWidth": 767
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 366.84375,
+        "right": 545.734375,
+        "width": 178.890625,
+        "clientWidth": 177,
+        "scrollWidth": 177,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 557.734375,
+        "right": 644.5625,
+        "width": 86.828125,
+        "clientWidth": 85,
+        "scrollWidth": 85,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 656.5625,
+        "right": 743,
+        "width": 86.4375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 767,
+    "lang": "en",
+    "stage": "after",
+    "footer": {
+      "left": 0,
+      "right": 767,
+      "clientWidth": 767,
+      "scrollWidth": 767
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 356.515625,
+        "right": 539.015625,
+        "width": 182.5,
+        "clientWidth": 181,
+        "scrollWidth": 181,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 551.015625,
+        "right": 639.5,
+        "width": 88.484375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 651.5,
+        "right": 743,
+        "width": 91.5,
+        "clientWidth": 90,
+        "scrollWidth": 90,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "lang": "ja",
+    "stage": "before",
+    "footer": {
+      "left": 16,
+      "right": 752,
+      "clientWidth": 736,
+      "scrollWidth": 736
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 320.5,
+        "right": 521.75,
+        "width": 201.25,
+        "clientWidth": 199,
+        "scrollWidth": 199,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 533.75,
+        "right": 647.1875,
+        "width": 113.4375,
+        "clientWidth": 111,
+        "scrollWidth": 111,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 659.1875,
+        "right": 728,
+        "width": 68.8125,
+        "clientWidth": 69,
+        "scrollWidth": 69,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "lang": "ja",
+    "stage": "after",
+    "footer": {
+      "left": 16,
+      "right": 752,
+      "clientWidth": 736,
+      "scrollWidth": 736
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 331.859375,
+        "right": 526.921875,
+        "width": 195.0625,
+        "clientWidth": 193,
+        "scrollWidth": 193,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 538.921875,
+        "right": 647.40625,
+        "width": 108.484375,
+        "clientWidth": 106,
+        "scrollWidth": 106,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 659.40625,
+        "right": 728,
+        "width": 68.59375,
+        "clientWidth": 67,
+        "scrollWidth": 67,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "lang": "en",
+    "stage": "before",
+    "footer": {
+      "left": 16,
+      "right": 752,
+      "clientWidth": 736,
+      "scrollWidth": 736
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 351.84375,
+        "right": 530.734375,
+        "width": 178.890625,
+        "clientWidth": 177,
+        "scrollWidth": 177,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 542.734375,
+        "right": 629.5625,
+        "width": 86.828125,
+        "clientWidth": 85,
+        "scrollWidth": 85,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 641.5625,
+        "right": 728,
+        "width": 86.4375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "lang": "en",
+    "stage": "after",
+    "footer": {
+      "left": 16,
+      "right": 752,
+      "clientWidth": 736,
+      "scrollWidth": 736
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 341.515625,
+        "right": 524.015625,
+        "width": 182.5,
+        "clientWidth": 181,
+        "scrollWidth": 181,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 536.015625,
+        "right": 624.5,
+        "width": 88.484375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 636.5,
+        "right": 728,
+        "width": 91.5,
+        "clientWidth": 90,
+        "scrollWidth": 90,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "lang": "ja",
+    "stage": "before",
+    "footer": {
+      "left": 200,
+      "right": 1080,
+      "clientWidth": 880,
+      "scrollWidth": 880
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 648.5,
+        "right": 849.75,
+        "width": 201.25,
+        "clientWidth": 199,
+        "scrollWidth": 199,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 861.75,
+        "right": 975.1875,
+        "width": 113.4375,
+        "clientWidth": 111,
+        "scrollWidth": 111,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 987.1875,
+        "right": 1056,
+        "width": 68.8125,
+        "clientWidth": 69,
+        "scrollWidth": 69,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "lang": "ja",
+    "stage": "after",
+    "footer": {
+      "left": 200,
+      "right": 1080,
+      "clientWidth": 880,
+      "scrollWidth": 880
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV ダウンロード",
+        "left": 659.859375,
+        "right": 854.921875,
+        "width": 195.0625,
+        "clientWidth": 193,
+        "scrollWidth": 193,
+        "inside": true
+      },
+      {
+        "text": "キャンセル",
+        "left": 866.921875,
+        "right": 975.40625,
+        "width": 108.484375,
+        "clientWidth": 106,
+        "scrollWidth": 106,
+        "inside": true
+      },
+      {
+        "text": "更新",
+        "left": 987.40625,
+        "right": 1056,
+        "width": 68.59375,
+        "clientWidth": 67,
+        "scrollWidth": 67,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "lang": "en",
+    "stage": "before",
+    "footer": {
+      "left": 200,
+      "right": 1080,
+      "clientWidth": 880,
+      "scrollWidth": 880
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 679.84375,
+        "right": 858.734375,
+        "width": 178.890625,
+        "clientWidth": 177,
+        "scrollWidth": 177,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 870.734375,
+        "right": 957.5625,
+        "width": 86.828125,
+        "clientWidth": 85,
+        "scrollWidth": 85,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 969.5625,
+        "right": 1056,
+        "width": 86.4375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "lang": "en",
+    "stage": "after",
+    "footer": {
+      "left": 200,
+      "right": 1080,
+      "clientWidth": 880,
+      "scrollWidth": 880
+    },
+    "buttons": [
+      {
+        "text": "eLogi CSV Download",
+        "left": 669.515625,
+        "right": 852.015625,
+        "width": 182.5,
+        "clientWidth": 181,
+        "scrollWidth": 181,
+        "inside": true
+      },
+      {
+        "text": "Cancel",
+        "left": 864.015625,
+        "right": 952.5,
+        "width": 88.484375,
+        "clientWidth": 86,
+        "scrollWidth": 86,
+        "inside": true
+      },
+      {
+        "text": "Update",
+        "left": 964.5,
+        "right": 1056,
+        "width": 91.5,
+        "clientWidth": 90,
+        "scrollWidth": 90,
+        "inside": true
+      }
+    ]
+  }
+]

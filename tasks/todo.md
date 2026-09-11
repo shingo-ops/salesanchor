@@ -9,7 +9,7 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
-| フロントエンド金型化・再測定 | Agent | Button外観70利用のPR #3432提出済み。実装・限定コード/証跡審査済み、189試験・配色190/寸法1080/raw440同値・focus72成功 | 最新CI37成功/8対象外。残1件はGO記録欠落のみ。GO #3432受領済み。本人原文を記録して最新main統合・最終CI・マージ。全画面移行と新CIは後続 | https://github.com/shingo-ops/salesanchor/pull/3432 / docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md | 2026-09-11 |
+| フロントエンド金型化・再測定 | Agent | PR3432マージ済み。AI共通footer2製品の実装・検収済み、PR #3435提出（560比較/輪郭448/統合unit200）、AH16移管案は退避して保留 | PO原文GO #3435受領済み。最新CI確認後にマージ。AHは最新mainで再開、新CIは最後。PO目視未実施 | docs/specs/design-system/design.md §AI / docs/handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md | 2026-09-11 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |

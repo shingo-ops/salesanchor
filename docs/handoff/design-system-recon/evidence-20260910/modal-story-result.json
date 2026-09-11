@@ -1,0 +1,142 @@
+{
+  "errors": [],
+  "frames": [
+    {
+      "lang": "ja",
+      "dark": false,
+      "wrap": "wrap",
+      "children": [
+        {
+          "text": "eLogi CSV ダウンロード",
+          "left": 50.453125,
+          "right": 245.515625,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "キャンセル",
+          "left": 257.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "更新",
+          "left": 297.40625,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "inside": true,
+          "internal": true
+        }
+      ]
+    },
+    {
+      "lang": "ja",
+      "dark": true,
+      "wrap": "wrap",
+      "children": [
+        {
+          "text": "eLogi CSV ダウンロード",
+          "left": 50.453125,
+          "right": 245.515625,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "キャンセル",
+          "left": 257.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "更新",
+          "left": 297.40625,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "inside": true,
+          "internal": true
+        }
+      ]
+    },
+    {
+      "lang": "en",
+      "dark": false,
+      "wrap": "wrap",
+      "children": [
+        {
+          "text": "eLogi CSV Download",
+          "left": 83.015625,
+          "right": 265.515625,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "Cancel",
+          "left": 277.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "Update",
+          "left": 274.5,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "inside": true,
+          "internal": true
+        }
+      ]
+    },
+    {
+      "lang": "en",
+      "dark": true,
+      "wrap": "wrap",
+      "children": [
+        {
+          "text": "eLogi CSV Download",
+          "left": 83.015625,
+          "right": 265.515625,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "Cancel",
+          "left": 277.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "inside": true,
+          "internal": true
+        },
+        {
+          "text": "Update",
+          "left": 274.5,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "inside": true,
+          "internal": true
+        }
+      ]
+    }
+  ],
+  "status": "PASS"
+}

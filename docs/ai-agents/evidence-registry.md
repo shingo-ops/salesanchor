@@ -2328,6 +2328,13 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。
 
 
+EV-20260911-FRONTEND-MOLD-26: 共通6部品16ボタンの利用先移行。基準7606ca9a（PR3432マージ済み、CI38成功/8対象外）。広域352を先頭btn-*332/専用20と訂正し、BSA002–006/025–035の原文一致を確認。根拠docs/handoff/design-system-recon/evidence-20260910/raw-shared-raw-audit.md/json、設計design.md§AH。PO原文「次を進める」を受領、設計自己審査済み・実装/新PR未完。新CIは最後。
+
+
+EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをroot実測（ja左端-30.140625、en-20.484375、旧24）。AH提出条件REVISE、未検証7ファイルを退避予定。先行AIはModal footer折返し＋見本の2製品に限定。通常footer実運用3/見本2を監査し、局所wrap28条件の左右欠け0を確認。詳細design.md§AIとraw-shared-footer-probe/全利用監査。実装/最終検収/新PR未完。
+
+- EV-20260911-FRONTEND-MOLD-28: AI共通Modal footerの実装検収。560pair/輪郭448/Story4、品質5項目exit0/189unit、限定review APPROVE、2製品hash一致。証拠: docs/handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md。Generatorはbrowser、rootは品質と結果再集計を実行。PR番号付きGO・マージ・PO目視未完。
+
 ## EV-20260911-ONEPIECE-COMPLETION
 
 PO原文「全て完了させてくれ」、登録範囲回答「単独販売の商品とセットまで（推奨）」を受領。今回の公開送信制限はPO原文「解析コード・設計文書は社外秘→これは一旦解除」で一時解除。顧客原文・実データ・秘密情報の公開許可には拡張しない。
@@ -2354,3 +2361,7 @@ PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21
 
 
 PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。
+
+EV-20260911-FRONTEND-MOLD-29: AI PR3435 ready提出を.pr-number/head指定一覧/APIで一致確認。main ec173b7e統合3935e17d、2製品hash不変、root統合unit200成功。証拠modal-footer-implementation.md/root-main-verification.json/post-main-unit.log。CI確認中、GO #3435未受領・マージ/PO目視未完。
+
+EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。 証拠: PR https://github.com/shingo-ops/salesanchor/pull/3435 のGO記録と検収記録。

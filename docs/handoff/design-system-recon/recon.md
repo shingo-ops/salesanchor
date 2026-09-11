@@ -592,3 +592,17 @@ Button外観便開始: PR3427 mergeb16a4224を確認、最新main e81dd3ecとの
 
 
 2026-09-11 Button外観検収追補（EV-20260911-FRONTEND-MOLD-25）: 70利用/外部class0、旧raw352コード不変、配色190・寸法1080・raw440前後同値。検収記録: docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md。補助検収/PRは継続、全画面完了ではない。
+
+
+EV-20260911-FRONTEND-MOLD-26: 共通6部品16ボタンの利用先移行。基準7606ca9a（PR3432マージ済み、CI38成功/8対象外）。広域352を先頭btn-*332/専用20と訂正し、BSA002–006/025–035の原文一致を確認。根拠docs/handoff/design-system-recon/evidence-20260910/raw-shared-raw-audit.md/json、設計design.md§AH。PO原文「次を進める」を受領、設計自己審査済み・実装/新PR未完。新CIは最後。
+
+
+EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをroot実測（ja左端-30.140625、en-20.484375、旧24）。AH提出条件REVISE、未検証7ファイルを退避予定。先行AIはModal footer折返し＋見本の2製品に限定。通常footer実運用3/見本2を監査し、局所wrap28条件の左右欠け0を確認。詳細design.md§AIとraw-shared-footer-probe/全利用監査。実装/最終検収/新PR未完。
+
+2026-09-11 AI検査棚卸し: 製品2ファイルの厳格lint/189 unit/既存checkall/build/Storybookはroot実行exit0。実3footer比較原稿のv1は余白内侵入、v2はshrinkによる内部折返しを一行同値条件に誤分類して停止。原稿・生ログ・前後結果をevidence-20260910/modal-browser系へ保存。設計§AI CARD03で縮小前必要幅による分類へ訂正、最終ブラウザー未完。
+
+2026-09-11 AI最終検収: v4全560pair/輪郭448/Enter・Space6/Story4成功、root品質5項目成功、限定review APPROVE。詳細: [検収記録](evidence-20260910/modal-footer-implementation.md)。原失敗と修正方法は設計AIに残し、同一AI自己審査と限定他担当レビューを区別。PR番号付きGO/マージ/PO目視は未完。
+
+2026-09-11 AI PR #3435提出済み https://github.com/shingo-ops/salesanchor/pull/3435 （ready、HEAD3935e17d）。main ec173b7e通常統合、今回製品差分Modal2のみ・hash不変。root統合unit200件成功。CI確認中、番号付きGO/マージ/PO目視未完。AH16保留、新CI最後。
+
+2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。

@@ -1,0 +1,13 @@
+{
+  "status": "未検証草案",
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "files": {
+    "ConfirmModal.tsx": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9",
+    "CommissionPanel.tsx": "00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e",
+    "PriorityScoreOverride.tsx": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc",
+    "OrderFinancialPanel.tsx": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8",
+    "PurchaseDetailPanel.tsx": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441",
+    "ShippingDetailPanel.tsx": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639",
+    "SharedButtonMigration.test.tsx": "164afcd8971ac4f5164daa082181bd2e7a2ad448cac05934524946029cfd26da"
+  }
+}

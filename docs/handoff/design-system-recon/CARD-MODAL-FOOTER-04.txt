@@ -1,0 +1,15 @@
+CARD-MODAL-FOOTER-04
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-MODAL-FOOTER-04
+読んだ節: guards/00-common.md、03-file.md、11-lint.md、design.md§AI。
+照合§5.5: 1○実tree、2○PRなし、3○親へ全文、4○比較DOM無変更測定、5○基準7606ca9a、6○一時検査のみ、7○reference同一性/本比較不変。
+担当Generator。他者と並行、root文書/製品変更なし。新AI起動禁止。
+作業tree `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared`。基準HEAD `7606ca9a041e315b81040373e8f4ddebbc562133`。
+根拠: root診断3原稿は座標が完全一致、style null→空文字だけの復元失敗。原因は未確定のため復元の成功扱いはしない。readonly審査で第3隔離page方式APPROVE、以下条件必須。
+許可は `/tmp/frontend-raw-buttons-20260911` の新v4原稿/結果/補助計測。v1/v2/v3/diagnostic各原失敗を保持。製品/正式文書/台帳/GO/commit/push/PR/merge変更禁止。localhostモックのみ。
+手順1: v3からv4を別名作成、結果出力v4。before/afterに加えreference pageを作る。referenceは同じbefore.htmlを使用、同じ外部通信遮断/エラー収集を適用。条件ごと同じviewport/theme/lang/kind/mode/amountでfresh mount（既存showのkey更新）する。
+手順2: referenceのshrink変更前に、beforeとreferenceの全footer子文言/状態/form/属性/rect/色/字体/内容幅が一致することをassert。beforeの全子属性とrectを保存。必要幅はreferenceだけで既存natural方式shrink0により測定、grow0/basisauto/固定margin/gapの照合を維持。reference測定後、本比較beforeの全子属性/rect不変を検算。afterの結果を分類に使用しない。referenceは本比較へ転用せず、次条件ではfresh mount。これにより比較対象DOMへ一時style指定を加えない。参考pageの元属性復元は不要で、旧復元assertを参考pageから外すだけ。本比較不変assertは必須。
+手順3: CARD03の限定5条件を先に実行してreference同一性/本比較不変/必要幅判定を親へ報告。成功した場合のみCARD01全条件へ。beforeとreferenceの測定でもフォント・有限transition/animationを待つ。before/afterのactual rect/色/寸法同値対象はreference由来fitsだけ。全afterの欠け/内容内/画面内/重なり/スクロール、disabled実条件/再送増加0はCARD03を継承。
+手順4: 全条件後にTab/ShiftTab/外部form送信1回、focus輪郭実測、将来Shipping3ButtonとStory実表示を行う。root品質5項目exit0は再実行しない。製品2hashを最後に出力。
+失敗時は停止し、原ログと対象名、手順番号/最後のコマンド/理由を親へ。結果を合格扱いしない。完了報告冒頭「本報告はカード CARD-MODAL-FOOTER-04 の実行結果である」。親への本文に生出力全文と実在ログリンク。後続PRはready、draft禁止、本便PRなし。
+END OF CARD
