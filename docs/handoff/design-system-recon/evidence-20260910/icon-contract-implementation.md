@@ -68,3 +68,6 @@ PR3426をmerge5de8afa1でマージ済みとroot直接確認。保留分を保存
 再現原稿: [before監査](icon-contract-resume-before-audit.cjs) / [after監査](icon-contract-resume-after-audit.cjs) / [ブラウザー](icon-contract-resume-browser.mjs)。監査は/tmpの別ディレクトリへコピーしSALESANCHOR_AUDIT_REPOを対象worktreeへ設定して実行する。browser原稿には実行時のworktreeと/tmp出力先を保持。正式保存先の横で再実行して過去根拠を上書きしない。SSR局所比較であり、本番全画面/hydrate/理解速度の試験ではない。
 
 限定第二レビュー担当は最新コードと検証内容をAPPROVE。root確認の4SHA256は今回manifestと一致し、StatusBarだけが旧Icon版から先行callback修正1行分更新、他3ファイルは旧レビュー時と同一。前提修正/並行進捗表示/翻訳/依存/CIに対する追加差分0。通常Iconの便は設計自己審査済み・実装検収済み・文書保存済み。PR/リモートCI/新番号付きGO/マージは後続で実状態を記録する。全画面統一とPO画面確認は未完。
+
+
+PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、ready OPEN、提出HEAD cfb3068b49429672d63dbb84d41be483f40b4bfc、公式.pr-number登録をroot直接確認。製品4/文書24ファイル、保存前検査を迂回せずcommit成功。最新179試験/8表示同値の検収と4hashを維持。番号付きGOは未受領、リモートCI確認が次の一手。マージ/デプロイは未実施。
