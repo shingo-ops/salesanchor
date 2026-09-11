@@ -78,6 +78,8 @@ import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
+import TcgProductMasterPage from "./pages/super-admin/TcgProductMasterPage";
+import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
 import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
@@ -269,6 +271,8 @@ function App() {
                     path="/super-admin/inbound/:id/review"
                     element={<ParseReviewPage />}
                   />
+                  <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
+                  <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
                   {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
                   <Route
                     path="/super-admin/fx-rate"

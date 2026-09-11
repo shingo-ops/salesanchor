@@ -82,3 +82,6 @@ PR3427最終確認（GO前）: head2031cfa30241bee576f34b540a3b4d0e6fa2af63、Gi
 
 
 PR #3427 GO受領: PO原文「GO #3427」。2026-09-11 12:23 JSTは受領後記録時刻。head2031cfa3のCI37成功/8対象外/残1失敗はGO記録欠落と確認済み。rootが製品4SHA256と検収manifestの一致を再確認。本人原文をPR本文へ転記し、最新CI確認後に公式マージする。DB変更なし、バックアップ該当なし。
+
+
+GO後main追従: PR3422 merge dd9d3abf の商品画面追加を保持し、根拠台帳の末尾競合1件は両方を保持して解消。root自身が統合状態でunit22ファイル189試験・check:all・buildを実行し全exit0。ログ: /tmp/frontend-icon-resume-20260911/final-main-unit.log、final-main-check.log、final-main-build.log。Icon4製品SHA256は元manifestと一致、main追加差分にIcon利用追加0、backendはmainと同一。局所表示8比較は4製品不変の先行検収結果、追加商品ページの全画面目視を行ったとは称しない。受領済みGO #3427の対象製品差分4ファイルを維持、最終CI後に公式マージする。

@@ -2195,3 +2195,24 @@ PR #3425 GO受領: PO原文「GO #3425」。2026-09-11 10:55 JSTは受領後記�
 
 
 PR #3427 GO受領: PO原文「GO #3427」。2026-09-11 12:23 JSTは受領後記録時刻。head2031cfa3のCI37成功/8対象外/残1失敗はGO記録欠落と確認済み。rootが製品4SHA256と検収manifestの一致を再確認。本人原文をPR本文へ転記し、最新CI確認後に公式マージする。DB変更なし、バックアップ該当なし。
+
+
+## EV-20260910-PRODUCT-UI-TAKEOVER
+
+2026-09-10。商品マスタ画面の既存作業場所をPO承認で引継ぎ。基点a5e5a250。未追跡2ファイルの複製・SHA-256一致とfast-forward後の保持を直接確認。報告 /tmp/reports/PRODUCT-UI-TAKEOVER-BACKUP-01/manifest.json、/tmp/reports/PRODUCT-UI-TAKEOVER-SYNC-01.txt。設計の全件条件とAPIのis_active絞込みが不一致。設計13節の自己審査REVISE。製品編集・build・画面試験・QA/本番投入・実装PRは未実施。委任意思受領と代理GO経路の有効化は別。
+
+
+## EV-20260911-PRODUCT-UI-IMPLEMENT
+
+商品マスタ全件表示（非表示含む）をPO承認。既存worktree引継ぎ後に一覧/CSV確認登録画面・メニュー/翻訳・一覧SQLを実装。直接検証: frontend単体10件、PlaywrightモックE2E2件、check:all、build、対象ruff成功。詳細はdocs/handoff/tcg-product-import/recon.mdの2026-09-11節。報告/tmp/reports/PRODUCT-UI-FIX-VERIFY-02.txt・PRODUCT-UI-E2E-01.txt・PRODUCT-UI-STATIC-01.txt。Docker不在でローカルPG未実行。PR/CI、本番反映、QA/44件投入は未実施。代理GO承認経路未有効、PO原文の番号付きGOを代筆しない。
+
+EV-20260911-PRODUCT-UI-IMPLEMENT追補: PR #3422 head1fd8a4d0は技術CI40成功/対象外6、承認検査1失敗。backend2545成功/93skip。詳細はrecon末尾と/tmp/reports/PRODUCT-UI-CI-PYTEST-FINAL.log。番号付きGO未受領でマージ/配備未実施。QA/44件登録も未実施。
+
+
+2026-09-11 最終再検査追補: PR #3422 head e2f1063d（前headから文書3件のみ変更）のCIは38成功/6skip/3失敗。backend job103078793511は2544 passed/93 skipped/1 failed。失敗は既存test_inventory_parser_llm_real_api.py::test_real_gemini_call_returns_structured_itemsで、Gemini APIがHTTP429とYour prepayment credits are depletedを返した。集約pytestも失敗。GO記録欠落も継続。前headの2545成功を最終headの成功と混同しない。ログ/tmp/reports/PRODUCT-UI-CI-PYTEST-REPEAT.log。課金・secrets・CI変更、無意味な再試行、マージ/配備は実行しない。外部サービス復旧と番号付きGOが必要。この追補はローカル文書commitに保存し、再CIを無用に起動しないためpushは保留。PR本文には同じ停止理由を反映する。
+
+
+2026-09-11 08:06 JST（受領後記録時刻）: PO原文「GO #3422」を受領。PR本文へ本人の承認を転記する。Gemini残高の復旧は未確認で、既存実API試験の失敗は未解消。番号付きGOと全検査成功を区別し、マージ/配備/実登録はまだ行わない。課金やCI設定は変更しない。
+
+
+2026-09-11 本番反映再開: PO原文「商品マスタの本番反映を実行、離席するので最後まで進めてくれデプロイ反映を完了条件とする」。GO #3422は受領済み。外部API停止は別PR #3425の3.1/キー変更とdeploy成功で対応済み。main4774d774を2a85d3d2へ統合。台帳2件はmain全文と自分の追記を保持、商品画面/APIの承認blob不変、日英両側の変更保持を照合。今回の完了条件はマージ・自動deploy成功・本番応答と配布資産確認。CSV実登録・tenant_001試行・44件本登録は本便対象外。最新CI確認中。
