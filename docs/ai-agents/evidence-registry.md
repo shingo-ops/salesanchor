@@ -2074,3 +2074,30 @@ Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をready�
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
 
 PR #3424 GO追補: 本セッションでPO原文「GO #3424」を受領。2026-09-11 08:10 JSTは受領確認の記録時刻。PR本文へ本人原文を転記。main76c6dff9の共通Button変更を取り込み、双方の根拠登録を保持して追記競合を解消。DB変更なし・バックアップ該当なし。最新HEADの検証後に公式マージする。
+
+
+```text
+id: EV-20260911-FRONTEND-MOLD-24
+date: 2026-09-11
+agent: root design partner
+task: Icon公開契約便の前提となる既存callback依存不足の分離修正
+scope: GoogleCalendarStatusBar依存1行と回帰試験
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/calendar-callback-recheck.md
+    summary: 対象blob基準と一致、保存前警告1/exit1、専用treeの公式作成確認
+  - type: file
+    reference: docs/specs/design-system/design.md §AF
+    summary: PO続行受領、回帰検証条件/非同期取消は対象外/同一AI自己審査APPROVE
+confidence: high
+tradeoff: 通知関数変更時は状態再取得とinterval再登録が起きる
+decision: Icon外観便とは分離し先行実装検証。新CIなし
+follow_up: 赤→緑の回帰試験、保存前lint、既存全検査、第二レビュー、PR。GOは別途
+```
+
+EV-20260911-FRONTEND-MOLD-24 実装追補: calendar-callback-implementation.mdへ検収保存。Generator実行の回帰7件中1赤（新通知0回）→依存1行修正→全168緑、対象厳格lint/checkall/build exit0。rootは差分/原稿/ログと2hashを確認。新CI/外観変更なし、番号付きGO/PR/マージ未実施。
+
+EV-20260911-FRONTEND-MOLD-24 PR追補: https://github.com/shingo-ops/salesanchor/pull/3426 ready OPEN、commit218706338a2f6822c269a4fbb5401d6b919ddae4をroot確認。.pr-number/台帳3426一致、12filesの通常push/公式起票登録成功。限定第二レビューAPPROVE、製品2hash一致。CI確認中・番号付きGO未受領・マージ未実施。
+
+
+PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。

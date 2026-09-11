@@ -1,3 +1,7 @@
+---
+mode: handoff
+---
+
 # 理想の設計図（design-system・PO承認済 2026-07-04／2026-07-07改訂）
 
 > この文書は何か（専門用語なしの1行）: 画面の色・部品の設計図を1ヵ所に集め、1ヵ所直せば全ページが変わる仕組みの作り方。この図だけで実装者が迷わず作れる粒度で書く（この文書以降で新たな仕様決定を発生させない）。
@@ -1029,3 +1033,30 @@ Spinnerにtone?:'default'|'inherit'とdecorative?:booleanを追加。従来のsi
 React公式forwardRef/APIとW3C Button Patternを2026-09-11確認。React19のref-as-propへ独断移行せず、実repo React18契約を維持する。外部の理解速度改善事例は不要（ネイティブ操作/読み上げの既存設計契約を具体化する便）。
 
 6面: 人=読み込み状態の重複読み上げと視認性、エージェント=固定5ファイル所有と実検査、機械=既存CI維持、データ=DB/API非接触、本番=通常PR経由で部品反映、外部=外部API非接触。守り手は新規unitと既存check:all/build/CI、表示は局所ブラウザー比較と完成後PO。Planner作成後に同一AI Architect自己審査APPROVE。操作契約は既存設計の具体化であり、新規事業判断/PO最終目視を代替しない。
+
+
+### AF. Icon便の前提となる接続状態通知の依存修正（2026-09-11）
+
+既存Icon公開契約便の保存前検査でGoogleCalendarStatusBar.tsxのuseCallback依存不足が発覚。変更前main76c6dff9でもeslint --max-warnings=0が同警告1件でexit1となることを実測した。POに「この既存不備を別PRで先に修正してよいですか」と提示後、原文「次を進める」を受領した。番号付きGOやPRマージ済みの記録とは区別する。
+
+目的: 親から通知関数onSyncStatusChangeが差し替えられた場合に、checkStatusが古い通知関数を使い続けないようにする。見た目やIcon契約の変更とは別PRとする。
+
+基準コード: frontend/src/components/GoogleCalendarStatusBar.tsxのcheckStatus内でonStatusChange/onSyncStatusChangeを参照するが、useCallbackの依存は[onStatusChange]のみ。effectはcheckStatusを依存にして初回状態確認と30_000ms間隔の定期確認を登録、cleanupはclearInterval。部品の参照は現在storiesだけで本番利用0。APIは既存GET /google-calendar/status、結果のconnected/configured判定を維持する。
+
+実装範囲は同TSXの依存配列1行を[onStatusChange, onSyncStatusChange]へ変更することと、新規同名GoogleCalendarStatusBar.test.tsxの回帰試験。CSS、Icon、翻訳、通信仕様、状態の分岐、タイマー間隔、再接続のfinally処理、依存manifest/lock/CIは変更しない。先行Icon便の未保存変更を持ち込まない。
+
+変更後は通知関数の同一性が変わるとcheckStatusが更新され、旧intervalを解除して状態の再取得とinterval1本の再登録を行う。これが意図した動作差であり、単なる無挙動の警告抑止とは説明しない。依存が同じ再描画では余計な初回再取得やinterval増殖を起こさない。既に進行中の非同期取得を取消す機能は今回追加しない。アンマウント後の未解決リクエストまで通知0と保証しない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 通知関数の差替えが最新通知へ届く | 新規DOM回帰試験を変更前コードへ先に実行し失敗を確認、1行修正後に成功。旧通知が差替え後の新しい取得結果を受けないことを確認 |
+| 既存3状態・boolean通知の意味を保持 | connected/configuredの既存3分岐と通知の引数をmock GETで検証。callback省略でも動作 |
+| 定期取得を増殖しない | fake timersで依存不変rerenderはGET増加0、依存変更後intervalは1本、30秒ごとGET1回。解決済み状態でunmount後timer0/追加定期GET0 |
+| 再接続後の状態再取得を保持 | 再接続をクリックし、onReconnect完了後のGETと最新通知、処理中disabled/終了後復帰を確認 |
+| 保存前検査と既存品質検査を通す | 対象2ファイルeslint --max-warnings=0、既存unit/check:all/build、必要なCI。新チェックの設置や警告抑止なし |
+
+代替案: 警告無効化/コミットhook迂回は採らない。通知関数をrefへ退避してeffectの再取得を抑える案は既存通知側2関数の扱いを分け、新しい契約を増やすため採らない。今回の1行依存修正を外観便へ混載しない。
+
+根拠: React公式useCallbackは関数内で参照するreactive値を依存へ含める契約、useEffectは依存変更時に古いcleanup後に新しいsetupを実行する契約。Context7 MCPは利用可能一覧0のため起動指示の許可に従い公式資料を直接確認。https://react.dev/reference/react/useCallback / https://react.dev/reference/react/useEffect （2026-09-11確認）。現行資料のReact Compiler/useEffectEvent等は導入せずrepo React18.3.1/既存hooksを維持する。
+
+外部導入事例は不要（自社の既存警告と古いcallbackの参照を回帰試験で確認する限定修正）。守り手は新規回帰試験・既存frontend-check.yml・保存前eslint。API/DB/backendは非接触、画面配色/心理学的効果は本便の対象外。Planner作成後、同一AIがArchitectとして既存仕様・実物・検証可能性を自己審査APPROVE。独立した第二者の設計審査とは称しない。製品実装・試験結果・PR番号付きGOは後続の実績として別記する。

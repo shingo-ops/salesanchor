@@ -550,3 +550,17 @@ Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check
 Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をreadyで作成し公式登録完了。実装commit b35807504a87015aed52a99d6791f9774b2f8293、製品5hash一致、限定第二レビューAPPROVE適用をroot確認。stage19/PR全体22ファイル。CI確認中、番号付きGO未受領。過去GO3420を流用せず、全体の形/配色統一とPOによる理解しやすさの評価は未完と区別する。
 
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
+
+
+## 2026-09-11 Icon便の前提修正・別PR
+
+Icon公開契約便のcommit前検査で既存GoogleCalendarStatusBar依存不足警告により停止。修正を別PR先行とする提案にPO原文「次を進める」を受領。新main eefa9143起点のrelease/calendar-status-callbackで、対象依存1行と回帰試験だけを実装する。設計§AF自己審査APPROVE、根拠[evidence-20260910/calendar-callback-recheck.md](evidence-20260910/calendar-callback-recheck.md)。前Icon便の未保存作業は別tree保持。番号付きGO/マージを創作しない。
+
+
+Callback便実装追補: 新規7回帰の変更前は通知先差替え1件だけ失敗、依存1行修正後は全19ファイル168試験成功。対象eslint --max-warnings=0とcheck:all/build成功をroot読取確認。詳細[検収](evidence-20260910/calendar-callback-implementation.md)。Icon便の未保存作業は分離保持、PR/番号付きGO/マージ未実施。
+
+
+Callback便PR提出: https://github.com/shingo-ops/salesanchor/pull/3426 をready作成し公式登録成功。commit218706338a2f6822c269a4fbb5401d6b919ddae4、12files、前回停止原因だった保存前eslintも成功。rootがPR/HEAD/.pr-number/台帳を直接確認。限定第二レビューAPPROVEと製品2hash一致、CI確認中。番号付きGO未受領、マージ未実施。Icon便は本PR先行マージ後に再開。
+
+
+PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
