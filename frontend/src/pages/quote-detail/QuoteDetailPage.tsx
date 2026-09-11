@@ -17,7 +17,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 
 interface FxRateResult {
   currency: string;
-  rate: number;
+  rate_jpy: number;
   fetched_at?: string;
 }
 
@@ -156,7 +156,7 @@ export default function QuoteDetailPage() {
       {fxRate && (
         <div style={{ background: "var(--bg-surface)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }}>
           <strong>{t("quotes.fx.rateInfo")}:</strong>
-          {" "}1 {fxRate.currency} = JPY {fxRate.rate.toLocaleString()}
+          {" "}1 {fxRate.currency} = JPY {fxRate.rate_jpy.toLocaleString()}
           {fxRate.fetched_at && <span style={{ color: "var(--text-muted)", marginLeft: "var(--space-2)" }}>({fxRate.fetched_at.slice(0, 19)}Z)</span>}
         </div>
       )}
