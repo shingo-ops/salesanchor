@@ -7,7 +7,7 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v4-condition-note"
+エンジンバージョン: "name-first-v5-box-heading"
 作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
 
 キーワード照合エンジン (name-first-v2):
@@ -30,9 +30,11 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
+
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v4-condition-note"
+ENGINE_VERSION = "name-first-v5-box-heading"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -409,8 +411,8 @@ def resolve_work_evidence(
 ) -> str | None:
     """Accept only an explicit item name or the nearest independent work heading.
 
-    NULL/NULL means historical seven-column data. Empty v3 evidence is unknown.
-    A fabricated, ambiguous, or out-of-range citation is never repaired.
+    NULL/NULL and empty/empty evidence can use a verified raw heading.
+    Partial, fabricated, ambiguous, or out-of-range citations are never repaired.
     """
     aliases: dict[str, set[str]] = {}
     for work in works:
@@ -422,8 +424,15 @@ def resolve_work_evidence(
 
     direct = {wid for name, ids in aliases.items()
               if match_one_kw(name, normalize_en(raw_name)) for wid in ids}
-    if raw_work_name is None and raw_work_span is None:
-        return next(iter(direct)) if len(direct) == 1 else None
+    if raw_work_name is None and raw_work_span is None and len(direct) == 1:
+        return next(iter(direct))
+    missing_pair = ((raw_work_name is None and raw_work_span is None)
+                    or (raw_work_name == "" and raw_work_span == ""))
+    if missing_pair and len(direct) <= 1:
+        inferred_heading = work_heading_evidence(raw_text, line_start, line_end, works)
+        if inferred_heading and (not direct or inferred_heading[0] in direct):
+            return inferred_heading[0]
+        return None
     if not raw_work_name or not raw_work_span or len(direct) > 1:
         return None
     ids = aliases.get(normalize_en(raw_work_name).strip(), set())
@@ -473,11 +482,16 @@ def match_pid_with_work(
     raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
     *, work_id: str | None, product_work_ids: dict[str, str | None],
     raw_state: str = "", raw_memo: str = "",
+    product_category_classes: dict[str, str] | None = None,
 ) -> tuple[Optional[str], str, bool, list[str]]:
     """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
     fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
     eligible: dict[str, list[str]] = {}
+    single_marker = single_card_marker(raw_name, raw_state, raw_memo)
     for code in product_codes:
+        category = (product_category_classes or {}).get(code, "") or ""
+        if single_marker and category.casefold() in {"box", "case"}:
+            continue
         if work_id is not None and product_work_ids.get(code) != work_id:
             continue
         if any(kw and match_one_kw(kw, field)
@@ -1053,9 +1067,10 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     works = load_work_master(session)
     work_rows = session.execute(text(
-        f"SELECT code, work_id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+        f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
     )).fetchall()
     product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
+    product_category_classes = {r[0]: r[2] or "" for r in work_rows}
 
     # C-1/C-7/Status マスタをロード（graceful fallback: テーブル不在時は空で続行）
     norm_rules = load_normalization_rules(session)
@@ -1143,7 +1158,12 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             norm_product_name, filtered_codes, search_kw, exclude_kw,
             work_id=work_id, product_work_ids=product_work_ids,
             raw_state=norm_condition, raw_memo=norm_memo,
+            product_category_classes=product_category_classes,
         )
+        if work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+            heading = work_heading_evidence(source_text or "", line_start, line_end, works)
+            if heading and heading[0] == work_id:
+                pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
 
         if pid_resolved:
