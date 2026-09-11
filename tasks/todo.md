@@ -126,4 +126,4 @@
 
 | テーマ | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| 在庫補助解析2.5 Flash-Lite | Agent | モデル変更実装済み・対象ruff/台帳検査成功 | PR #3425: 実APIがモデル利用不可でskipと確認。提供可否の解決待ち。GO未受領・本番未反映 | EV-20260911-INVENTORY-LITE25 / docs/handoff/llm-model-3-5-flash-lite/recon.md | 2026-09-11 |
+| 在庫補助解析2.5 Flash-Lite | Agent | モデル変更実装済み・対象ruff/台帳検査成功 | PR #3425: CI接続で新規ユーザー向け提供終了文言と404を実測。本番キーの提供可否は未確認。GO未受領・本番未反映 | EV-20260911-INVENTORY-LITE25 / docs/handoff/llm-model-3-5-flash-lite/recon.md | 2026-09-11 |
