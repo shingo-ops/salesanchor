@@ -45,3 +45,5 @@ models/gemini-3.6-flash を使うよう促す内容。翻訳は成立してい�
 基点eefa9143。既定モデルはinventory_parser_llm.py:91,227の3.5 Lite。呼出側inventory_parser.py:1034は結果modelを予算計算へ渡す。llm_budget.py:67に2.5 Liteの単価登録済み。翻訳とTCG抽出は別用途。POはレガシーで2.5 Liteの精度を確保できたと報告し、変更を明示依頼。モデル比較の実測や現行精度合格を創作しない。設計追補の限定契約を自己審査APPROVE。ローカルDocker不在のためpytestはCIで確認する。PR3422のGOを本便へ流用しない。
 
 実装追補: 既定モデル2箇所を変更し、SDK指定と結果model・料金0.50USD/各100万tokenの既存試験を更新。実APIテストは結果modelで費用算出。対象ruff成功、既存テストimport指摘を整理して再検査。台帳/diff検査成功。Docker不在でローカルpytest未実行。生報告/tmp/reports/LITE25-VERIFY-02.txt。製品差分自己レビュー済み、独立レビューではない。実API・現行精度・本番反映未検証。
+
+在庫補助解析2.5 Lite変更はcommit be42f18e、PR #3425へ提出済み（https://github.com/shingo-ops/salesanchor/pull/3425）。CI確認中・GO未受領・本番未反映。PR3422のUI変更とは別便。報告/tmp/reports/LITE25-PR-01.txt。
