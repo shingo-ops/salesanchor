@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, reset_tenant_context
 from app.database import get_admin_db, get_db
 from app.models import Tenant, User
 from app.schemas.tenant import TenantCreate, TenantResponse
@@ -64,8 +64,18 @@ async def register_tenant(
         db.add(tenant)
         await db.flush()  # IDを確定させる（commit前にIDが必要）
 
+        # seed_system_roles / seed_default_channel_masters は RLS 有効スキーマへの
+        # INSERT を含む。salesanchor_app（NOBYPASSRLS）で接続しているため、
+        # WITH CHECK が app.tenant_id と行の tenant_id を比較する。
+        # 新テナントの ID に切り替えないと 42501 になる。
+        await db.execute(text(f"SET app.tenant_id = '{int(tenant.id)}'"))
+
         # 専用スキーマを自動生成（テーブル + RLSポリシー込み）
         schema_name = await create_tenant_schema(db, tenant.id, admin_db=admin_db)
+
+        # 監査ログは呼び出し元（管理者）テナントに書くため、
+        # app.tenant_id を current_user.tenant_id に戻す。
+        await db.execute(text(f"SET app.tenant_id = '{int(current_user.tenant_id)}'"))
 
         # 監査ログ記録
         await record_audit_log(
@@ -82,6 +92,10 @@ async def register_tenant(
             },
         )
         await db.commit()
+        # ADR-072: commit 後に管理者テナントのコンテキストを再設定する。
+        # SQLAlchemy は commit 後に別コネクションを払い出す可能性があるため
+        # search_path / app.tenant_id を再 SET しておく。
+        await reset_tenant_context(db, current_user.tenant_id)
     except Exception:
         await db.rollback()
         raise
