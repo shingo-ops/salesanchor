@@ -2300,6 +2300,12 @@ EV-20260911-PRODUCT-UI-IMPLEMENT追補: PR #3422 head1fd8a4d0は技術CI40成功
 
 2026-09-11 本番反映再開: PO原文「商品マスタの本番反映を実行、離席するので最後まで進めてくれデプロイ反映を完了条件とする」。GO #3422は受領済み。外部API停止は別PR #3425の3.1/キー変更とdeploy成功で対応済み。main4774d774を2a85d3d2へ統合。台帳2件はmain全文と自分の追記を保持、商品画面/APIの承認blob不変、日英両側の変更保持を照合。今回の完了条件はマージ・自動deploy成功・本番応答と配布資産確認。CSV実登録・tenant_001試行・44件本登録は本便対象外。最新CI確認中。
 
+
+EV-20260911-FRONTEND-MOLD-25: Button外観統一。PO原文GOを次便開始として受領。基準e81dd3ec、使用70/18files、外部class18/raw352。根拠docs/handoff/design-system-recon/evidence-20260910/button-appearance-usage.md、design.md§AG。段階移管の同一AI自己審査APPROVE、実装/新番号付きGO未完。PR3427はmergeb16a4224、最終CI38成功/8対象外をroot直接確認済み。
+
+
+2026-09-11 Button外観検収追補（EV-20260911-FRONTEND-MOLD-25）: 70利用/外部class0、旧raw352コード不変、配色190・寸法1080・raw440前後同値。検収記録: docs/handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md。補助検収/PRは継続、全画面完了ではない。
+
 ## EV-20260911-GO-3418-DOC-MERGE
 
 PO原文「追従してPRマージを実行」を、提示済み#3418の文書保存指示として受領。main追従、文書差分/必要検査後に公式wrapperでマージしAPI確認する。全体設計REVISEを維持し機能完成とはしない。P1は実装承認後のbranch作成API403で停止、branch/workflow/PR未作成を再GET確認済み。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json。

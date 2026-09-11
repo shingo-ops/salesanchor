@@ -1100,3 +1100,44 @@ AEの4ファイル契約自体は変更しない。mainの並行進捗表示修�
 
 
 AE再検収完了: 基準5de8afa1で厳格lint/179試験/既存check/build/Storybook成功、前後152→163の欠落0、局所8表示同値を確認。旧提出条件REVISEの原因は先行PR3426で解消、当該便の提出条件をAPPROVEへ更新する。同一AIによる設計自己審査と限定コード第二レビューを区別。根拠: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節。新番号付きGO/全画面完了を意味しない。
+
+
+### AG. Button外観と既存70利用の統一（2026-09-11）
+
+PO原文「GO」は直前の次便Button外観開始への続行指示。新PR番号付きGOを創作しない。基準main e81dd3ec、前b16a4224とのfrontend差分0。Icon便PR3427はb16a4224でマージ済み。目的は共通Buttonの色/形/状態をButton.cssへ集約し、ページからの装飾上書きを閉じる。全体設計§P/Q/Z/AAを限定実装へ落とす。
+
+根拠: docs/handoff/design-system-recon/evidence-20260910/button-appearance-usage.md / JSON。現行Button70 JSX/18files（旧67から進捗パネル3追加）、class18/style/ref/spread0、type26明示/44省略。raw btn-*352 JSX/89filesは旧外観のまま後続へ残す。新Buttonへ一括で外観を適用しない。comp-btnのraw利用0、旧btn-tabのraw0。既存CompanyDetailの6classはCompany側raw3でも使うためcompany-forms.cssは変更しない。
+
+方式: Buttonは既存native button/ref/events/disabled/Spinnerを保ち、基底comp-btnとcomp-btn--<variant>へ切替。旧btn-*を出力しない。Button.cssは新外観の唯一の編集元。components.cssは未移行rawの互換外観のみ残し、後続移行完了時に削除する。互換を新しい第二のデザイン基準とはしない。Button.cssの旧mobile btn5種類のmin-height44px宣言はcomponents.cssへ同値移管し旧利用を保持。未使用comp-btn__spinnerとkeyframesは削除し、実Spinnerの定義には触れない。
+
+公開API: className/styleをOmitしlayoutClassName?:stringのみ同buttonへ付与。標準native残余propsの順序は維持。ページ実運用のclassName/style残0、fixtureの旧style試験は配置classと禁止型契約試験へ更新。layoutは今回既存margin-left:auto2件だけ。CompanyDetail6はvariant=tab・active既存条件・aria-pressed={undefined}で元属性なしを維持、switchTab/未保存確認は変更しない。dashboardのnowrap3を基底へ移して旧class除去、左auto2はlayoutClassName。Schedule7のclassは除去し共通角丸6pxと寸法へ。createはfullWidth、中央揃えの標準mdを採用（旧丸薬/左揃え/48pxとは意図的に異なる）。他6は既存size/iconOnly維持。検索の現在onClickなしも維持。
+
+寸法: 基底inline-flex/中央揃え/gap space-2/nowrap/box-sizing border-box、角丸comp-btn-radius=6px、font-weight-medium、line-height-tight。sm=min-height field-h-sm28/padding space-1 space-3/font-xs、md=min-height field-h-md36/padding space-2 space-5/font-base、lg=min-height新comp-btn-height-lg48/padding space-3 space-6/font-md。tabは以前同様size修飾を受けずmd、選択時font-weight-semi。枠は全variant1px、secondary/outlineのみborder色、他transparent。iconOnlyはpadding0、幅/高/最小高をsm28/md36/lg44へ、mobile≤767pxは全部44。通常mobileの最小高44、lg48を縮めない。fullWidthはwidth100%。focus-visibleは2px実線/offset2px（tokens.cssにcomp-btn-focus-width/offset）、色comp-btn-focus-color→text-primary。通常hover/activeはenabledのみ、selectedはhover/activeより優先。loadingは通常色/opacity1を保持、disabledは通常色+opacity-disabled、操作disabled条件は維持。
+
+配色は§Pの190組。index.cssでcomp-btn-primary-text/primary-hover-bg/tab-selected-text/focus-colorを両テーマに定義。素材palette-ink-deep/palette-blue-softを両テーマ各1定義へ（既存パリティ要件）。同ファイルの既存dark bg-primary/tooltip-text/calendar-today-textの同値ink3箇所とlinkのsoft1箇所を素材参照へ移す。4既存用途の色は変えず、hex数も増やさない。以前の『各1箇所』はテーマ別正本という意味へ具体化、素材を新しいファイルへ増殖させない。部品内直色禁止。非色48px/2pxはtokens.cssのみ。全体on-accent/accent-hoverは変更しない。
+
+所有製品14ファイル: frontend/src/components/Button.tsx、Button.css、Button.test.tsx、Button.stories.tsx、frontend/src/components.css、tokens.css、index.css、pages/company-detail/CompanyDetailPage.tsx、pages/dashboard/PriorityProspectsSection.tsx、WeeklyAdvisorSection.tsx、PriorityProspectsSection.css、WeeklyAdvisorSection.css、pages/schedule/SchedulePageImpl.tsx、pages/schedule.css。CSS削除は対象Buttonから除いたクラスの利用0を全srcで確認してから限定削除。旧company-formsとraw互換は保持。HeaderButton/ButtonLink/raw352/他部品/新CI/backend/依存/業務処理は対象外。
+
+| 基準 | 検証方法 |
+|---|---|
+| 70利用の既存操作を保持、装飾入口0 | 型宣言元の前後監査、type/イベント/aria差分照合、Company6はaria-pressed未出力、対象操作回帰 |
+| 配色190組が4.5以上、focus見える | 実Button+実CSS Chromiumで明暗/5背景/normal-hover-active-selectedを取得し背景合成後比率、focus輪郭と境界を測定 |
+| 寸法/disabled/loading/selectedが契約どおり | 390/767/768/1279/1280px、3size/6variant/長い日英文言、iconOnly各辺、selected hover維持、loading通常色、Tab/Enter/Space検査 |
+| raw互換と素材aliasの既存用途同値 | raw btn6種と小サイズ複合の前後computed比較（幅/明暗）、既存4用途色の前後一致 |
+| 既存品質と維持の仕組み | 対象eslint警告0、unit/checkall/build/Storybook、保存前/既存CI、hex増加0。新CIは全画面移行後 |
+
+代替: raw352の外観同時変更は操作/画面検証を混載し大き過ぎるため後続へ分離。旧classの上に新色を重ねる案はページの上書きが残るため採らない。Buttonのみの独立classと全70のAPI移管を同便にする。リスクは見た目の意図的変化、長文/狭幅/focus外周の欠け。実部品見本・対象操作・raw同値比較で検証し、PO目視は完成後。心理学的効果数値は未測定。外部事例は不要（既存契約と実部品の測定が根拠）。Context7ツール0を今回確認、既読React18/公式W3C資料の契約と現物を継承、新ライブラリなし。
+
+Planner作成後に同じAIがArchitectとして仕様/実物/既存CIを自己審査APPROVE。限定利用監査担当の段階移管指摘（70件/ariaなし/旧tab残置/raw44px）を反映済み。独立した第二者による全体設計審査とは称しない。実装/表示検証/新PRは未完、失敗時は根拠を補い提出前に再審査する。
+
+
+#### AG見本の補足・修正条件
+
+限定コード第二レビューでStorybook見本2件が同一documentのforce-darkを変更し干渉する問題を検出。設計側の隔離指定不足として補う。LightStates/DarkStates各storyにparameters.docs.story.inline=falseとheight="600px"を明示し、Docsでも別iframe内に実CSSを読む。controlsのDocs内反映制約は固定見本に影響しない、操作用Canvasは別途使用。rootが公式 https://storybook.js.org/docs/api/doc-blocks/doc-block-story とinstalled @storybook/addon-docs10.4.1 dist/blocks.js getStoryPropsのdocs.story.inline参照を確認（2026-09-11、Context7利用不可の許可済み公式代替）。実際のDocs同時表示で2iframeの別document/明暗/親document非変更を検証する。
+
+さらに実装のuseEffect cleanupがclassList.toggleのbooleanを返しtsc TS2345で停止。cleanupはブロック本体でvoidを返すよう同ファイルのみ修正する。実装不備の修正で仕様/React版を変えない。旧失敗ログは保存し、新build/Storybook/ブラウザー結果を別ログにする。コード判定REVISE、修正/測定後に再審査。先行unit189/checkall/厳格lint成功と未完の表示検証を混同しない。
+
+
+AG実装検収の保存先: [Button検収記録](../../handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md)。Story修正後の限定コード審査APPROVE、14hash一致。実Reactによる配色190/寸法1080/raw440同値は成功。raw遷移中の初回差と補助期待色の誤転記は検証原稿の不備として補正し、失敗証跡を保存。全画面/200%/PO目視とは区別し、新CIは最後のまま。
+
+AG補助検収完了: alias8同値・loading12・focus72ほか成功、製品14hash一致。限定証跡審査APPROVE。現在の提出条件をAPPROVEへ更新する。保証は局所部品と既存利用の差分に限り、全本番画面やloading後のfocus復帰を保証しない。PR/番号付きGOは未完。

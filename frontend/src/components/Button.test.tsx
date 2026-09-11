@@ -65,10 +65,10 @@ describe('Button native contract', () => {
     'retains %s classes, native props, and prevents disabled/loading callbacks', (variant) => {
       const click = vi.fn();
       const props = { variant, active: true, size: 'lg' as const, fullWidth: true,
-        className: 'caller-class', title: 'Help', 'data-testid': 'target', onClick: click };
+        layoutClassName: 'caller-class', title: 'Help', 'data-testid': 'target', onClick: click };
       const { rerender } = render(<Button {...props}>Save</Button>);
       const button = screen.getByRole('button') as HTMLButtonElement;
-      expect(button.classList.contains(`btn-${variant}`)).toBe(true);
+      expect(button.classList.contains(`comp-btn--${variant}`)).toBe(true);
       expect(button.classList.contains('comp-btn--full')).toBe(true);
       expect(button.classList.contains('caller-class')).toBe(true);
       expect(button.classList.contains('comp-btn--lg')).toBe(variant !== 'tab');
@@ -101,9 +101,18 @@ describe('Button native contract', () => {
     const button = screen.getByRole('button', { name: 'Send' });
     expect(button.classList.contains('comp-btn--icon-only')).toBe(true);
     rerender(<Button variant="tab" active aria-pressed={false} aria-busy={false}
-      style={{ marginLeft: 5 }}>Save</Button>);
+      layoutClassName="caller-layout">Save</Button>);
     expect(button.getAttribute('aria-pressed')).toBe('false');
     expect(button.getAttribute('aria-busy')).toBe('false');
-    expect(button.style.marginLeft).toBe('5px');
+    expect(button.classList.contains('caller-layout')).toBe(true);
+    expect(button.hasAttribute('style')).toBe(false);
   });
 });
+
+// Public appearance overrides are rejected; native layout/events remain supported.
+const validLayout = <Button layoutClassName="caller-layout" />;
+// @ts-expect-error Button appearance belongs to Button.css.
+const rejectedStyle = <Button style={{ marginLeft: 5 }} />;
+// @ts-expect-error Use the layout-only entry instead.
+const rejectedClassName = <Button className="caller-class" />;
+void [validLayout, rejectedStyle, rejectedClassName];

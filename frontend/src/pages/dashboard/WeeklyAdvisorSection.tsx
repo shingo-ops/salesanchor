@@ -338,7 +338,6 @@ export function WeeklyAdvisorSection() {
                           type="button"
                           variant="secondary"
                           size="sm"
-                          className="db-weekly-followup-btn"
                           onClick={() => beginFollowUp(action)}
                           data-testid="weekly-followup-open"
                         >
@@ -351,7 +350,6 @@ export function WeeklyAdvisorSection() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="db-weekly-followup-btn"
                       onClick={() => navigate(`/companies/${action.company_id}`)}
                       data-testid="weekly-company-open"
                     >
@@ -439,7 +437,7 @@ export function WeeklyAdvisorSection() {
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="db-weekly-edit-btn"
+                      layoutClassName="db-weekly-edit-btn"
                       onClick={() => beginFollowUp(action)}
                     >
                       {t("common.edit")}

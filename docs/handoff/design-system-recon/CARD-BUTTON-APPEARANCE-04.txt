@@ -1,0 +1,16 @@
+CARD-BUTTON-APPEARANCE-04
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-BUTTON-APPEARANCE-04
+照合§5.5: 1○実tree、2○PRなし、3○親へ全文、4○補助測定誤転記修正、5○同tree、6○期待契約不変、7○製品変更0。
+読んだ節: guards/00-common.md、11-lint.md、design-partner.md§5.5。
+担当Generator。root文書/他者の変更を保持、別AI禁止。
+正しい作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance
+許可: /tmp/frontend-button-appearance-20260911内の検証原稿だけ修正/再測定。製品/正式文書/台帳/依存/CI/GO/commit/push/PR/merge/deployの変更禁止。
+根拠: rootがindex.css:23 light text-primary=#1a202c、:233 dark=#f1f5f9、:14/226 focus-colorがtext-primaryを参照、Button.css:95-97 focus-visible契約を直接確認。browser-extra.mjs:25のrgb226,232,240は契約にない手転記の誤り。設計/製品は変更しない。
+1. browser-extra.mjs/log/result.jsonは失敗証跡としてそのまま保持。別名browser-extra-corrected.mjs/log/result.jsonを作る。
+2. focus色の比較はbuttonのoutlineから期待値を取らず、独立probeへcolor:var(--text-primary)を適用したcomputed色を期待とする。light/darkトークンの取得原文も保存する。輪郭2px/offset2px/solid/境界内/隣と重ならない判定は維持。
+3. 元の4用途明暗8alias、明暗12loading/Spinner、reduced-motion、明暗2幅6variant3境界のfocus72条件を全実行、errors0、PASSを確認する。失敗の握りつぶし/条件削減/製品変更は禁止。
+4. 現物製品14hashを既存manifest.jsonと照合、差異0。結果と対象名/件数を親へ報告。
+報告冒頭: 本報告はカード CARD-BUTTON-APPEARANCE-04 の実行結果である。
+親へ生出力全文と実在ログ、実行/未実行を区別。正規require_escalated可、拒否/不明/失敗は停止。
+END OF CARD
