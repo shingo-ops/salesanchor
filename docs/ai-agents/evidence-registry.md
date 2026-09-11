@@ -2048,6 +2048,15 @@ PR #3420承認ゲート確認: HEAD d168e943のjob102876642463は番号付きGO�
 
 PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09-10 23:30 JSTは受領後記録時刻。HEAD4d73be5fのCI36成功/8対象外skip、残る1失敗は番号付きGO欠落（job102877141141）とrootが確認済み。本人のGOを本文へ転記し、最新HEADのCI確認後に公式手順でマージする。DB変更なし・バックアップ確認該当なし。代理GOは使用しない。
 
+
+## EV-20260911-PMG-VISUAL-HIERARCHY
+
+POの認知負荷軽減依頼に基づく表示改善。根拠: docs/handoff/pmg-import-delivery-ssot/design.md と recon.md の2026-09-11表示節。3つの公開設計指針と実物部品/状態契約を照合、自己審査APPROVEは表示範囲だけ。Terraへの正式カード発行前。実装・視覚/動作試験・PRマージ・本番反映は未完了。
+
+EV-20260911-PMG-VISUAL-HIERARCHY実装検証: 正式カード検査成功後Terraが製品7ファイルを実装。rootがunit143件/E2E8件/build/check:all成功とPC/390px明暗画像を確認。詳細はdesign末尾。表示改善のみコード/視覚レビューAPPROVE。PR/CI/番号付きGOの確認へ、本番未反映。
+
+PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
+
 ### EV-20260910-FRONTEND-MOLD-21: カレンダー実行契約再審査
 
 ### 次便の実行条件確認（2026-09-10）
@@ -2063,6 +2072,96 @@ Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check
 Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をreadyで作成し公式登録完了。実装commit b35807504a87015aed52a99d6791f9774b2f8293、製品5hash一致、限定第二レビューAPPROVE適用をroot確認。stage19/PR全体22ファイル。CI確認中、番号付きGO未受領。過去GO3420を流用せず、全体の形/配色統一とPOによる理解しやすさの評価は未完と区別する。
 
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
+
+PR #3424 GO追補: 本セッションでPO原文「GO #3424」を受領。2026-09-11 08:10 JSTは受領確認の記録時刻。PR本文へ本人原文を転記。main76c6dff9の共通Button変更を取り込み、双方の根拠登録を保持して追記競合を解消。DB変更なし・バックアップ該当なし。最新HEADの検証後に公式マージする。
+
+
+```text
+id: EV-20260911-FRONTEND-MOLD-24
+date: 2026-09-11
+agent: root design partner
+task: Icon公開契約便の前提となる既存callback依存不足の分離修正
+scope: GoogleCalendarStatusBar依存1行と回帰試験
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/calendar-callback-recheck.md
+    summary: 対象blob基準と一致、保存前警告1/exit1、専用treeの公式作成確認
+  - type: file
+    reference: docs/specs/design-system/design.md §AF
+    summary: PO続行受領、回帰検証条件/非同期取消は対象外/同一AI自己審査APPROVE
+confidence: high
+tradeoff: 通知関数変更時は状態再取得とinterval再登録が起きる
+decision: Icon外観便とは分離し先行実装検証。新CIなし
+follow_up: 赤→緑の回帰試験、保存前lint、既存全検査、第二レビュー、PR。GOは別途
+```
+
+EV-20260911-FRONTEND-MOLD-24 実装追補: calendar-callback-implementation.mdへ検収保存。Generator実行の回帰7件中1赤（新通知0回）→依存1行修正→全168緑、対象厳格lint/checkall/build exit0。rootは差分/原稿/ログと2hashを確認。新CI/外観変更なし、番号付きGO/PR/マージ未実施。
+
+EV-20260911-FRONTEND-MOLD-24 PR追補: https://github.com/shingo-ops/salesanchor/pull/3426 ready OPEN、commit218706338a2f6822c269a4fbb5401d6b919ddae4をroot確認。.pr-number/台帳3426一致、12filesの通常push/公式起票登録成功。限定第二レビューAPPROVE、製品2hash一致。CI確認中・番号付きGO未受領・マージ未実施。
+
+
+PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
+
+
+## EV-20260911-INVENTORY-LITE25
+
+POが在庫補助解析を2.5 Flash-Liteへ変更するよう依頼。理由はPO報告のレガシー精度実績と単価削減。現行精度比較は未実施。既存docs/handoff/llm-model-3-5-flash-lite/design.mdとrecon.mdへ限定契約・自己審査・適用限界を記録。専用release/inventory-lite25、基点eefa9143。
+
+在庫補助解析2.5 Lite変更はcommit be42f18e、PR #3425へ提出済み（https://github.com/shingo-ops/salesanchor/pull/3425）。CI確認中・GO未受領・本番未反映。PR3422のUI変更とは別便。報告/tmp/reports/LITE25-PR-01.txt。
+
+
+最終検証（2026-09-11）: PR #3425 head e60f555e、backend job103106398328は2543成功/94skip。ただし実API試験がrequested model unavailableとしてskipしたことをwarning生ログで直接確認（404または提供不可文字列の既存判定）。2.5 Liteが現在のCIキーで利用できたとは扱わない。ログ/tmp/reports/LITE25-PYTEST-SKIP-EVIDENCE.log、結果LITE25-FINAL-02.json。実装・理由記録は完了、本番未反映。運用採用はREVISE: 対象プロジェクトでの提供可否解決が必要。旧環境の利用実績は現在のキーでの提供を保証しない。GO未受領。停止記録の文書commitは再CIを避けローカル保存、PR本文にも同内容を保存する。
+
+
+## 2026-09-11 現在のCI接続の拒否理由を直接確認
+
+PR #3425 head 5fa171b86638e59e433d5c4e6e08a501aaab031f、Backend Tests run34550427274/job103112026495を直接取得。固定ラベル診断は new_users=True / no_longer_available=True / http_404=True / not_found=False / unsupported_method=False / api_v1beta=False。Google呼出しの例外に新規ユーザー向け提供終了の文言が含まれることを確認。従来の一括skip表示からの推測とは区別する。全文は秘密値漏洩防止のため出力していない。
+
+実行結果2543passed・94skipped・303warnings、92.62秒。対象実API試験はskipであり、2.5 Liteによる解析成功や精度合格ではない。本番キーの利用可否・CIキーと本番キーの一致・Googleが新規利用者を判定する具体単位/解除条件は未確認。APIバージョン変更やSDK移行で解決すると断定しない。
+
+Google公式 https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite は安定版IDとStructured outputs対応を掲載。https://ai.google.dev/gemini-api/docs/deprecations は安定版の終了日未発表、preview-09-2025の終了2026-03-31を掲載。確認日2026-09-11。Context7ツールは利用不可、PO起動指示の代替許可により公式資料を直接参照。これらの公開資料は個別キーの利用を保証しない。
+
+診断追加commit2be4c372。CI開始前にmain5de8afa1との根拠台帳追記競合を双方保持して5fa171b8へ統合。本文に残る「停止記録commitはローカル保存」は前時点の記録であり、今回4cf66482もpush済み。製品コード・CI設定・secrets・本番は今回変更なし。診断は実API試験の固定警告のみ、判定と呼出回数は不変。PR未マージ、GO #3425未受領、運用採用REVISE継続。
+
+生ログ /tmp/reports/LITE25-ERROR-DIAGNOSTIC-CI.log、SHA256 0a1c1a6223e8c09f929ada43c8c407a02983974073dfce2e77d48061169b4891。GitHub https://github.com/shingo-ops/salesanchor/actions/runs/34550427274/job/103112026495 。次の確認は本番接続の提供可否と対象プロジェクトの利用条件。レガシー調査は旧利用権の比較材料であり、現接続の診断に必須ではない。キー交換・Google再認証・追加課金は実施していない。
+
+
+## 2026-09-11 3.1 Flash-Liteとレガシーキーへの変更契約
+
+PO原文「じゃあ3.1に変更して、キーもレガシーに差し替え」。直前の2.5採用契約は本追補で置き換える。2.5はCIキーとPO提供レガシーキーで404・新規ユーザー向け提供終了の文言を実測。3.1 LiteはレガシーキーでHTTP200、JSON期待値一致、入力8/出力9tokenを実測。共有キー利用の3.5 Lite（翻訳）と3.6 Flash（TCG抽出）も各1回HTTP200・非空応答。単純な接続検証であり在庫解析や翻訳精度の合格ではない。報告: /tmp/reports/LITE25-LEGACY-KEY-PROBE-02.json、LITE31-LEGACY-KEY-PROBE-01.json、LITE31-SHARED-KEY-CHECK-01.json。
+
+Why: 利用不可の2.5に代えて利用できた3.1を選ぶ。通常のテキスト入力/出力単価は100万token当たり0.25/1.50USD（Google公式 https://ai.google.dev/gemini-api/docs/pricing 、2026-09-11確認、Context7利用不可のため許可済み公式代替）。3.5の0.30/2.50より同token数なら入力約16.7%・出力40%低い。実請求額・無料/有料契約状態・実在庫精度は未確認。外部導入事例は本選択の証明に不要。
+
+実装: inventory_parser_llm.pyの既定2箇所と関連テストをgemini-3.1-flash-liteへ変更。llm_budget.pyへ3.1のテキスト単価を追加し、入力100万=0.25・出力100万=1.50・合計1.75を既存parser試験で検証する。共有DEFAULT_MODEL、翻訳/TCGのモデル名、prompt、JSON schema、予算上限、DB、CI設定は維持。
+
+キー: ADR-075に従い既存GitHub Actions repository secret GEMINI_API_KEYのみをPO提供値へ更新する。キーは標準入力で渡し値をログ・引数・文書に出さない。更新時刻を読み取り、後続CIの実API試験がskipでなく成功することを確認。deploy.yml:245が同Secretを本番へ展開するため、本番適用は正規デプロイ時に起きる。現キーはGitHubから読み戻せず、旧値への復元材料は本調査では確保していない。旧Googleキー自体を削除・失効させない。更新承認は上記PO原文、PRマージのGO #3425を創作しない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 在庫既定呼出・返却modelが3.1 Lite | 既存モックとCI実APIテスト |
+| 入出力別の費用と合計が正しい | 既存費用連携assert3件 |
+| 共有キー利用機能が接続可能 | 3.5 Lite/3.6 Flashへの固定入力各1回HTTP200実測済み |
+| 新キーで既存解析経路が成立 | CI実APIテスト、skipを成功に数えない |
+| 本番反映の状態を区別 | Secret更新とPRマージとdeploy成功を別記録 |
+
+代替: 3.5継続より単価が低く、2.5は今回拒否されたため不採用。リスクは共有キーの利用量・課金先が変わること、実データ精度/上限が未検証なこと。失敗時に既存ルール解析へ戻る挙動は維持。モデルのロールバックは別PR、キー復元には旧値を安全に再取得する必要がある。新規の秘密管理やCIを追加しない。守り手は既存parser/budget試験と本recon。
+
+同一AIによる自己審査APPROVE（この限定実装契約）。正確な既定値2箇所・料金追加・既存試験・正規Secret更新経路を確認済み。独立レビュー、現行在庫精度の合格、GO #3425、本番反映完了を意味しない。
+
+
+実装追補: 3.1既定2箇所・単価追加・費用assert3件を反映、対象4Pythonのruffとdiff検査成功。GitHub GEMINI_API_KEY更新操作exit0、updatedAt=2026-09-11T01:45:14Zを直接確認。生報告/tmp/reports/LITE31-KEY-SWAP-01.txt。次回以降のdeployで本番へ展開される経路であり、本番反映は未確認。CIは新キーで検証予定、GO #3425未受領。
+
+
+## 2026-09-11 3.1変更・新キーのCI検証結果
+
+PR #3425の製品head e606ce4fad444331677d34852b7a61cca06d95f0を検証。Backend Tests run34552094629/job103116973038は2544passed・93skipped・302warnings（91.84秒）。従前2543passed/94skippedに対して成功1増・skip1減で、既存実API試験のモデル不可/認証不可等の固定skip警告は0。モデル/費用・既存全試験のCI成功と、実データ精度の未検証を区別する。生ログ/tmp/reports/LITE31-PYTEST-01.log、SHA256 837725e72484fe4eb4e17bb1123f465a83fce6b98471f3f0669424fc461702ee。
+
+PR全チェック34success/8skipped/1failure。唯一の失敗process-artifacts gate job103116955933はGO記録セクション欠落を明示。コード品質の検査失敗ではない。新たなGO #3425は未受領。GitHub Secret更新完了、製品コードはPR提出済み、本番モデル変更と本番キー反映は未確認。PRマージ・本番デプロイは本便未実施。差分の自己レビュー済み、独立レビューではない。次の一手はPOのGO #3425受領後に正式な記録・最新チェック・マージ/デプロイ確認。
+
+この検証後追記は不要な再API実行を避け文書だけのローカルcommitで保持し、同内容をPR本文にも保存する。GO受領後の次便で文書commitもpushする。現行PR検証結果と未push文書を混同しない。
+
+
+PR #3425 GO受領: PO原文「GO #3425」。2026-09-11 10:55 JSTは受領後記録時刻。コードhead e606ce4fの34success/8skip/残1failureはGO欠落と実測。既存PRへ本人原文を転記し、文書追補をpush後、最新チェックを確認して公式マージする。Mac一時キーファイルはGitHub登録後に削除し不存在確認。平文一時保存だった点をPOへ明示。VPSの現行.env方式は維持。
 
 
 ## EV-20260910-PRODUCT-UI-TAKEOVER

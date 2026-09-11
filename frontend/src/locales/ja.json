@@ -3419,7 +3419,8 @@
     "reviewStatusOk": "完了",
     "reviewStatusPending": "確認待ち",
     "reviewStatusDiscarded": "破棄済み",
-    "openReview": "確認する"
+    "openReview": "確認する",
+    "newFileDetails": "新しいファイルを取り込む"
   },
   "pmgWorkflow": {
     "selectImport": "取り込みを選択",
@@ -3429,10 +3430,31 @@
     "refresh": "再取得",
     "stale": "取得失敗。前回の表示を保持しています",
     "fetchFailed": "取得に失敗しました",
+    "summary": {
+      "stale": "前回の表示を確認中（取得に失敗）",
+      "fetchFailed": "進捗を取得できません",
+      "waiting": "関連記録を待っています",
+      "unknown": "抽出状態は未記録です",
+      "running": "抽出中です",
+      "error": "抽出エラーがあります",
+      "finished": "抽出終了"
+    },
+    "summaryAction": {
+      "unknown": "状態が記録されるまで待つか、再取得してください。",
+      "empty": "抽出対象がないことを確認してください。",
+      "retry": "再取得して状態を確認してください。",
+      "waiting": "関連記録が作成されるまで待ってください。",
+      "pendingReview": "画面下の「保留中のジョブ」で仕入元を確認してください。",
+      "discarded": "この取込は破棄済みです。別の取込を選択してください。",
+      "legacyUnknown": "関連記録がありません。別の取込を確認してください。",
+      "running": "抽出完了を待つか、再取得してください。",
+      "error": "抽出エラーの明細を確認してください。",
+      "finished": "要確認の明細と解析結果を確認してください。"
+    },
     "stage": {
       "import": "取り込み",
       "extraction": "Gemini抽出",
-      "analysis": "システム解析"
+      "analysis": "解析結果"
     },
     "unit": "単位",
     "unitValue": {
@@ -3455,6 +3477,15 @@
     "unknown": "未記録",
     "total": "対象数",
     "analysisUnrecorded": "解析実行の記録はありません",
+    "reviewAction": "要確認の明細を見る",
+    "errorAction": "抽出エラーの明細を見る",
+    "processingDetails": "処理の詳細",
+    "messagesCreated": "新規作成メッセージ",
+    "messagesReused": "再利用メッセージ",
+    "messagesInactive": "無効メッセージ",
+    "messagesWithoutExtraction": "抽出ジョブ未作成メッセージ",
+    "extractionProgressLabel": "抽出の進捗",
+    "extractionProgressValue": "抽出終了数 {{completed}} / 総数 {{total}}",
     "filter": "絞り込み",
     "filterAll": "すべて",
     "filterReview": "要確認",
@@ -3479,6 +3510,7 @@
       "running": "実行中",
       "residualItems": "抽出エラーでも残った明細",
       "residualResults": "抽出エラーでも残った解析結果"
+      ,"emptyState": "抽出対象はありません"
     },
     "analysis": {
       "resultPresent": "解析結果あり",

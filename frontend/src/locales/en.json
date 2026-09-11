@@ -3419,7 +3419,8 @@
     "reviewStatusOk": "Complete",
     "reviewStatusPending": "Pending Review",
     "reviewStatusDiscarded": "Discarded",
-    "openReview": "Review"
+    "openReview": "Review",
+    "newFileDetails": "Import a new file"
   },
   "pmgWorkflow": {
     "selectImport": "Select import",
@@ -3429,10 +3430,31 @@
     "refresh": "Refresh",
     "stale": "Fetch failed. Previous values are retained.",
     "fetchFailed": "Fetch failed.",
+    "summary": {
+      "stale": "Showing previous values (fetch failed)",
+      "fetchFailed": "Progress is unavailable",
+      "waiting": "Waiting for an association record",
+      "unknown": "Extraction status is not recorded",
+      "running": "Extraction is running",
+      "error": "Extraction has errors",
+      "finished": "Extraction finished"
+    },
+    "summaryAction": {
+      "unknown": "Wait for the status to be recorded or refresh.",
+      "empty": "Confirm that there are no extraction targets.",
+      "retry": "Refresh to check the status.",
+      "waiting": "Wait for the association record to be created.",
+      "pendingReview": "Review suppliers in Pending Jobs below.",
+      "discarded": "This import was discarded. Select another import.",
+      "legacyUnknown": "There is no association record. Check another import.",
+      "running": "Wait for extraction to finish or refresh.",
+      "error": "Review the items with extraction errors.",
+      "finished": "Review the items needing review and the analysis results."
+    },
     "stage": {
       "import": "Import",
       "extraction": "Gemini extraction",
-      "analysis": "System analysis"
+      "analysis": "Analysis results"
     },
     "unit": "Unit",
     "unitValue": {
@@ -3455,6 +3477,15 @@
     "unknown": "Not recorded",
     "total": "Total",
     "analysisUnrecorded": "Analysis execution is not recorded",
+    "reviewAction": "View items needing review",
+    "errorAction": "View extraction errors",
+    "processingDetails": "Processing details",
+    "messagesCreated": "New messages",
+    "messagesReused": "Reused messages",
+    "messagesInactive": "Inactive messages",
+    "messagesWithoutExtraction": "Messages without extraction jobs",
+    "extractionProgressLabel": "Extraction progress",
+    "extractionProgressValue": "Extraction completed {{completed}} / total {{total}}",
     "filter": "Filter",
     "filterAll": "All",
     "filterReview": "Needs review",
@@ -3479,6 +3510,7 @@
       "running": "Running",
       "residualItems": "Items retained after an extraction error",
       "residualResults": "Analysis results retained after an extraction error"
+      ,"emptyState": "There are no extraction targets"
     },
     "analysis": {
       "resultPresent": "Analysis results present",
