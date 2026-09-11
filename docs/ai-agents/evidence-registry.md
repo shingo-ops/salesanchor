@@ -2400,3 +2400,11 @@ POの原因別分離・順次移行という既存許可に従い、BSA002/003/0
 ### EV-20260911-FRONTEND-MOLD-33 — PO再起動中断保存
 
 PO原文「再起動するからここまでを保存して記録してくれ」。現コード16移管WIP/AJ13分離未適用、型修正後20単独成功/全体未合格を区別して保存。入口docs/handoff/design-system-recon/evidence-20260910/ah-restart.md。commit/pushの実在は最終コマンド結果で確認、本便PR未提出。
+
+
+### EV-20260912-FRONTEND-AJ-CARD — 再開・13利用分割カード
+
+PO原文「進める」。対象HEAD3d6e8aa3とリモート一致、base adc8bc4d、開始時未保存0、PRなしを直接確認。
+CARD-RAW-SHARED-SPLIT-03を作成。正式card-lint exit0（長行警告5件）、shell/Python構文検査成功、Commission固定hash2件一致。
+根拠: docs/handoff/design-system-recon/recon.md「2026-09-12 AJ分割カード作成・自己審査」 / docs/handoff/design-system-recon/evidence-20260910/aj-split-card.txt。
+同一AI自己審査APPROVEは分割カードのみ。製品編集0・カード実行未着手・表示/全体品質/PR/GO/マージ未完。

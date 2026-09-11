@@ -37,3 +37,11 @@ PO原文: 「再起動するからここまでを保存して記録してくれ�
 同ディレクトリのah-restart-checkpoint.tar.gzに当該/tmp成果物、監査、限定レビュー、旧退避7案、再開カードと復元原稿を保存。ah-restart-archive-manifest.jsonは各保存ファイルのSHA256とarchive SHA256。既存/tmpを上書きせず別の一時ディレクトリへ展開し、原稿の絶対パスを対応させる。依存node_modulesは含めない。
 
 既存担当: frontend_definition_audit=Generator、ci_preflight_readonly=限定Reviewer、overlay_contract_audit=読み取り構文監査。再起動後に同担当へ接続できるとは仮定しない。新担当を起動する場合はPOの既存委任範囲・カード運用を守る。
+
+
+## 2026-09-12 再開追補
+
+[分割カード](aj-split-card.txt)を作成、正式card-lint exit0（長行警告5件）。設計担当の自己審査APPROVEはカードの範囲のみ。
+保存時の「分離カード未発行」はここで更新。カードの製品実行は未着手、現コードは16利用WIPのまま。
+次はCARD-RAW-SHARED-SPLIT-03を実装担当が実行し、Commission基準差分0と他6保持の生出力を返す。
+過去の20操作成功・全体品質失敗を今回の検証結果として流用しない。詳細根拠は親reconの2026-09-12節。
