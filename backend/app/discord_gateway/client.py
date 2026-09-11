@@ -190,7 +190,7 @@ class JarvisDiscordClient(discord.Client):
             return
 
         await interaction.followup.send(
-            f"専用チャンネルを用意しました → {channel.mention}",
+            f"We've set up a private channel just for you → {channel.mention}",
             ephemeral=True,
         )
         logger.info(

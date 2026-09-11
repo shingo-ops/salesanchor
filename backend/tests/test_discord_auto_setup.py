@@ -224,7 +224,7 @@ async def test_idempotent_skips_existing() -> None:
     _existing_button_msg = [
         {
             "id": "MSG-EXISTING",
-            "content": "サポートが必要な場合は下のボタンを押してください。",
+            "content": "Whether it's a new order or a follow-up, we're here to help — just tap below to get started.",
             "components": [{"type": 1, "components": [{"type": 2, "custom_id": "ticket_open"}]}],
         }
     ]
@@ -871,7 +871,7 @@ async def test_existing_channel_with_button_skips_button() -> None:
     existing_button_messages = [
         {
             "id": "MSG-EXISTING",
-            "content": "サポートが必要な場合は下のボタンを押してください。",
+            "content": "Whether it's a new order or a follow-up, we're here to help — just tap below to get started.",
             "components": [
                 {"type": 1, "components": [{"type": 2, "custom_id": "ticket_open"}]}
             ],

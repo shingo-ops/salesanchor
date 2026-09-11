@@ -254,7 +254,7 @@ async def deploy_ticket_button(
 
     # Discord REST API でボタンメッセージを投稿
     payload = {
-        "content": "サポートが必要な場合は下のボタンを押してください。",
+        "content": "Whether it's a new order or a follow-up, we're here to help — just tap below to get started.",
         "components": [
             {
                 "type": 1,  # ActionRow
@@ -262,7 +262,7 @@ async def deploy_ticket_button(
                     {
                         "type": 2,  # Button
                         "style": 1,  # Primary (青)
-                        "label": "チケットを開く",
+                        "label": "Open a ticket",
                         "custom_id": "ticket_open",
                         "emoji": {"name": "🎫"},
                     }
