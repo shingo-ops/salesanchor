@@ -50,3 +50,6 @@ JSONは空白だけ圧縮して保存し、測定レコードを削除してい�
 
 
 提出前main追従: b6644187（PR3418）の文書/台帳8ファイルを取り込み。根拠台帳の末尾競合1件は両方の全文を保持、tasksの別テーマ更新も保持。製品frontendは検収commit1e474d0fと同一、14hash一致、追加製品/CI/backend差分0。文書だけの統合のため製品試験は既検収結果を使用する。
+
+
+PR #3432 提出済み: https://github.com/shingo-ops/salesanchor/pull/3432、ready OPEN、提出HEAD e2d8cf409d3e7dadc716dea117b6056ab3bc3db1、公式.pr-numberとAPIをroot直接確認。検収製品14hash不変。チェックログ2ファイルは正式保存時に行末空白だけ除去し、元の生ログは/tmp/frontend-button-appearance-20260911/checks.logとchecks-resume.logに保持。現物全差分のdiffcheckで空白を発見して補正した。番号付きGO未受領、既存CI確認中、未マージ・本番反映未確認。

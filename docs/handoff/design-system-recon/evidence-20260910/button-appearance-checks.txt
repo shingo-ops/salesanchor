@@ -20,30 +20,30 @@ $ npm run check:all
 > salesanchor-frontend@1.0.0 check:all
 > concurrently --kill-others-on-fail --max-processes 6 "npm run check:claude-size" "npm run lint" "npm run check:css-colors" "npm run check:dark-parity" "npm run check:jsx-emoji" "npm run check:css-var-fallbacks" "npm run check:css-values" "npm run check:nav-sync" "npm run check:page-layout" "npm run check:content-toolbar" "npm run check:page-folder" "npm run check:icon-sync" "npm run check:i18n-missing-keys" "npm run check:css-fixed-position" "npm run check:breakpoint-sync" "npm run check:mobile-responsive-structure2" "npm run check:page-size" "npm run check:stories" "npm run check:color-token-sync" "npm run check:onboarding-doc" "npm run check:concurrently" "npm run check:sidebar-outline" "npm run check:stylelint" "npm run check:css-class-naming" "npm run check:status-direct-writes"
 
-[1] 
+[1]
 [1] > salesanchor-frontend@1.0.0 lint
 [1] > eslint src
-[1] 
-[0] 
+[1]
+[0]
 [0] > salesanchor-frontend@1.0.0 check:claude-size
 [0] > node scripts/check-claude-size.js
-[0] 
-[4] 
+[0]
+[4]
 [4] > salesanchor-frontend@1.0.0 check:jsx-emoji
 [4] > node scripts/check-jsx-emoji.js
-[4] 
-[2] 
+[4]
+[2]
 [2] > salesanchor-frontend@1.0.0 check:css-colors
 [2] > node scripts/check-css-hardcoded-colors.js
-[2] 
-[5] 
+[2]
+[5]
 [5] > salesanchor-frontend@1.0.0 check:css-var-fallbacks
 [5] > node scripts/check-css-var-fallbacks.js
-[5] 
-[3] 
+[5]
+[3]
 [3] > salesanchor-frontend@1.0.0 check:dark-parity
 [3] > node scripts/check-dark-parity.js
-[3] 
+[3]
 [2] ✅ CSS色チェック PASSED（hex・rgba 違反なし）
 [3] ✅ ダークモード変数パリティチェック PASSED (134 変数すべて対応済み)
 [3] npm run check:dark-parity exited with code 0
@@ -52,22 +52,22 @@ $ npm run check:all
 [5] ✅ CSS var フォールバックチェック PASSED
 [4] npm run check:jsx-emoji exited with code 0
 [5] npm run check:css-var-fallbacks exited with code 0
-[7] 
+[7]
 [7] > salesanchor-frontend@1.0.0 check:nav-sync
 [7] > node scripts/check-nav-title-sync.js
-[7] 
-[6] 
+[7]
+[6]
 [6] > salesanchor-frontend@1.0.0 check:css-values
 [6] > node scripts/check-css-hardcoded-values.js
-[6] 
-[8] 
+[6]
+[8]
 [8] > salesanchor-frontend@1.0.0 check:page-layout
 [8] > node scripts/check-page-layout.js
-[8] 
-[9] 
+[8]
+[9]
 [9] > salesanchor-frontend@1.0.0 check:content-toolbar
 [9] > node scripts/check-content-toolbar.js
-[9] 
+[9]
 [7] ✅ nav-title-sync チェック PASSED
 [6] ✅ CSS数値ハードコードチェック PASSED
 [6] npm run check:css-values exited with code 0
@@ -76,90 +76,90 @@ $ npm run check:all
 [8] npm run check:page-layout exited with code 0
 [9] ✅ 操作台チェック PASSED（page-content-actions の使用なし）
 [9] npm run check:content-toolbar exited with code 0
-[10] 
+[10]
 [10] > salesanchor-frontend@1.0.0 check:page-folder
 [10] > node scripts/check-page-folder.js
-[10] 
-[12] 
+[10]
+[12]
 [12] > salesanchor-frontend@1.0.0 check:i18n-missing-keys
 [12] > node scripts/check-i18n-missing-keys.js
-[12] 
-[11] 
+[12]
+[11]
 [11] > salesanchor-frontend@1.0.0 check:icon-sync
 [11] > node scripts/check-icon-sync.js
-[11] 
+[11]
 [10] ✅ ページフォルダ構造チェック PASSED
 [10] npm run check:page-folder exited with code 0
 [11] [icon-sync] ✅ All 5 icon sizes in sync (tokens.css ↔ iconSizes.ts)
 [11] npm run check:icon-sync exited with code 0
-[13] 
+[13]
 [13] > salesanchor-frontend@1.0.0 check:css-fixed-position
 [13] > node scripts/check-css-fixed-position.js
-[13] 
+[13]
 [13] ✅ CSS position:fixed チェック PASSED
 [13] npm run check:css-fixed-position exited with code 0
 [12] ✅ i18n key check PASSED (all prefixes)
 [12] npm run check:i18n-missing-keys exited with code 0
-[14] 
+[14]
 [14] > salesanchor-frontend@1.0.0 check:breakpoint-sync
 [14] > node scripts/check-breakpoint-sync.js
-[14] 
-[15] 
+[14]
+[15]
 [15] > salesanchor-frontend@1.0.0 check:mobile-responsive-structure2
 [15] > node scripts/check-mobile-responsive-structure2.js
-[15] 
+[15]
 [14] [breakpoint-sync] ✅ All 5 breakpoints in sync (tokens.css ↔ breakpoints.ts)
 [14] npm run check:breakpoint-sync exited with code 0
-[17] 
+[17]
 [17] > salesanchor-frontend@1.0.0 check:stories
 [17] > node scripts/check-stories-count.js
-[17] 
-[16] 
+[17]
+[16]
 [16] > salesanchor-frontend@1.0.0 check:page-size
 [16] > node scripts/check-page-size.js
-[16] 
+[16]
 [15] [structure2] PASSED: first-phase scope に 640px の直書きなし
 [15] npm run check:mobile-responsive-structure2 exited with code 0
 [17] ✅ check:stories — 全 38 コンポーネントに stories が存在します
 [17] npm run check:stories exited with code 0
 [16] ✅ ページサイズチェック PASSED
 [16] npm run check:page-size exited with code 0
-[18] 
+[18]
 [18] > salesanchor-frontend@1.0.0 check:color-token-sync
 [18] > node scripts/check-color-token-sync.js
-[18] 
-[19] 
+[18]
+[19]
 [19] > salesanchor-frontend@1.0.0 check:onboarding-doc
 [19] > node scripts/check-onboarding-doc.js
-[19] 
+[19]
 [18] [color-token-sync] ✅ 全 37 カラートークンが同期済み（index.css ↔ DesignSystemPage COLOR_TOKENS）
 [18] npm run check:color-token-sync exited with code 0
-[20] 
+[20]
 [20] > salesanchor-frontend@1.0.0 check:concurrently
 [20] > node scripts/check-concurrently-usage.js
-[20] 
-[21] 
+[20]
+[21]
 [21] > salesanchor-frontend@1.0.0 check:sidebar-outline
 [21] > node scripts/check-sidebar-outline.js
-[21] 
+[21]
 [19] [onboarding-doc] ✅ docs/onboarding/design-system.md が存在します
 [19] npm run check:onboarding-doc exited with code 0
 [21] [sidebar-outline] ✅ NAV_ICONS 22項目 + LeadChatIcon — 全て outline バリアント
 [21] npm run check:sidebar-outline exited with code 0
 [20] OK: check:all は concurrently を使用しています
 [20] npm run check:concurrently exited with code 0
-[22] 
+[22]
 [22] > salesanchor-frontend@1.0.0 check:stylelint
 [22] > stylelint "src/**/*.css"
-[22] 
-[23] 
+[22]
+[23]
 [23] > salesanchor-frontend@1.0.0 check:css-class-naming
 [23] > node scripts/check-css-class-naming.js
-[23] 
-[24] 
+[23]
+[24]
 [24] > salesanchor-frontend@1.0.0 check:status-direct-writes
 [24] > node scripts/check-status-direct-writes.js
-[24] 
+[24]
 [23] ✅ css-class-naming: 廃止クラス (mc-*/crm-* shell) の使用なし
 [23] npm run check:css-class-naming exited with code 0
 [24] ✅ status-direct-writes: 違反なし
@@ -167,15 +167,15 @@ $ npm run check:all
 [0] ✅ CLAUDE.md サイズチェック PASSED
 [0] npm run check:claude-size exited with code 0
 [22] npm run check:stylelint exited with code 0
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/components/DataTable.stories.tsx
 [1]   69:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
 [1]   71:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
 [1]   96:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/components/FedExRateModal.test.tsx
 [1]   151:19  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/components/PriorityScoreBadge.test.tsx
 [1]   15:28   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
 [1]   16:33   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
@@ -205,7 +205,7 @@ $ npm run check:all
 [1]   68:61   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
 [1]   69:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
 [1]   73:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/features/tcg-analysis-review/ItemComparison.tsx
 [1]   10:55    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
 [1]   10:76    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
@@ -259,7 +259,7 @@ $ npm run check:all
 [1]   23:2364  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
 [1]   23:2408  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
 [1]   23:2420  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx
 [1]    71:21  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
 [1]   175:96  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
@@ -324,7 +324,7 @@ $ npm run check:all
 [1]   526:48  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
 [1]   528:36  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
 [1]   529:62  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/features/tcg-analysis-review/SourceRawPane.tsx
 [1]   15:50   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                            local/no-japanese-literal
 [1]   28:132  warning  React Hook useEffect has a missing dependency: 'jump'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
@@ -337,7 +337,7 @@ $ npm run check:all
 [1]   30:608  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
 [1]   30:686  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
 [1]   30:784  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                            local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/features/tcg-analysis-review/reviewIssues.ts
 [1]    5:64  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]    6:52  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
@@ -346,10 +346,10 @@ $ npm run check:all
 [1]    9:64  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   10:56  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   14:80  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/i18n.ts
 [1]   43:7  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/mocks/funnelFixtures.ts
 [1]    33:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]    42:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
@@ -377,20 +377,20 @@ $ npm run check:all
 [1]   281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/pages/dashboard/FollowUpsPage.tsx
 [1]   112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
 [1]   25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/pages/goal-setting/GoalSettingPage.tsx
 [1]   224:15  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
 [1]   130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-[1] 
+[1]
 [1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/src/pages/super-admin/TcgParallelReportPage.tsx
 [1]    75:16  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
 [1]   114:86  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
@@ -413,10 +413,10 @@ $ npm run check:all
 [1]   222:20  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
 [1]   255:83  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
 [1]   261:63  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）    local/no-japanese-literal
-[1] 
+[1]
 [1] ✖ 218 problems (0 errors, 218 warnings)
 [1]   0 errors and 5 warnings potentially fixable with the `--fix` option.
-[1] 
+[1]
 [1] npm run lint exited with code 0
 EXIT 0
 $ npm run build

@@ -24,7 +24,7 @@ dist/assets/index-BQ1sb2k_.js   1,883.66 kB │ gzip: 491.53 kB
 
 [33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/firebase-auth.ts is dynamically imported by src/pages/erp/ERPPage.tsx but also statically imported by src/contexts/AuthContext.tsx, src/pages/account-settings/SecuritySection.tsx, dynamic import will not move module into another chunk.
 
-[plugin builtin:vite-reporter] 
+[plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
