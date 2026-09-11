@@ -2310,3 +2310,5 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 2026-09-11。商品一覧の発売日降順と作品タブの依頼を受領。「販売日」は既存「発売日」かの確認へPOは「進める」と回答。基点b6644187、専用release/product-master-date-tabs-design、preflight成功、開始時差分0・mainとの距離0/0。実物根拠はdocs/handoff/tcg-product-import/recon.md同日追補、詳細案はdesign.md §14、親はdocs/specs/product-master/README.md §8。コード順・50件ページ・DATE/UUID・tcg_seriesの定義と共通Tabsを直接照合。Context7利用不可のため公式資料を直接確認した。報告は/tmp/reports/TH-PRODUCT-DATE-TABS-ENTRY.json、TH-PRODUCT-DATE-TABS-DESIGN-PREFLIGHT.txt。製品コード/DB/CI/本番に変更なし。詳細設計はPO確認前の提案で、実装移行承認・カード発行・実装検証とは区別する。
 
 同一AIのArchitect自己審査はAPPROVE（設計品質のみ）。9受入条件、7変更対象、既存試験/CI、親仕様/ADRを照合。文書検査エラー0・task-state成功・diff-check成功。報告 TH-PRODUCT-DATE-TABS-DOC-CHECK.json / TH-PRODUCT-DATE-TABS-TASK-CHECK.txt。PO詳細承認と実装承認は未受領。正式カード未発行、製品テスト未実施。
+
+確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
