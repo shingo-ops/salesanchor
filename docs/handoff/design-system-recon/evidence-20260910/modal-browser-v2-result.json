@@ -1,0 +1,251 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "cases": [
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 93.6875,
+            "top": 278,
+            "bottom": 340,
+            "width": 69.6875,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 105.6875,
+            "right": 216.3125,
+            "top": 278,
+            "bottom": 340,
+            "width": 110.625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 109,
+            "clientWidth": 109,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 228.3125,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 67.6875,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 99.75,
+            "right": 170.5625,
+            "top": 240,
+            "bottom": 284,
+            "width": 70.8125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 831,
+          "scrollTop": 723,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    }
+  ],
+  "future": [],
+  "keyboard": [],
+  "errors": [],
+  "externalRequests": [],
+  "status": "FAIL",
+  "failure": "AssertionError [ERR_ASSERTION]: one-row children changed\n+ actual - expected\n\n  [\n    {\n      background: 'rgb(255, 255, 255)',\n+     bottom: 284,\n+     clientWidth: 69,\n-     bottom: 340,\n-     clientWidth: 68,\n      color: 'rgb(74, 85, 104)',\n      disabled: false,\n      font: '14.4px',\n      form: null,\n+     height: 44,\n-     height: 62,\n      inside: true,\n      insideContent: true,\n      internalText: true,\n+     left: 99.75,\n-     left: 24,\n      padding: '8px 20px',\n      radius: '4px',\n+     right: 170.5625,\n+     scrollWidth: 69,\n-     right: 93.6875,\n-     scrollWidth: 68,\n      tag: 'BUTTON',\n      text: '確定',\n+     top: 240,\n+     width: 70.8125,\n-     top: 278,\n-     width: 69.6875,\n      withinForm: null\n    },\n    {\n      background: 'rgb(255, 255, 255)',\n+     bottom: 284,\n+     clientWidth: 111,\n-     bottom: 340,\n-     clientWidth: 109,\n      color: 'rgb(74, 85, 104)',\n      disabled: false,\n      font: '14.4px',\n      form: null,\n+     height: 44,\n-     height: 62,\n      inside: true,\n      insideContent: true,\n      internalText: true,\n+     left: 182.5625,\n-     left: 105.6875,\n      padding: '8px 20px',\n      radius: '4px',\n+     right: 296,\n+     scrollWidth: 111,\n-     right: 216.3125,\n-     scrollWidth: 109,\n      tag: 'BUTTON',\n      text: 'キャンセル',\n+     top: 240,\n+     width: 113.4375,\n-     top: 278,\n-     width: 110.625,\n      withinForm: null\n    },\n    {\n      background: 'rgb(30, 58, 138)',\n+     bottom: 340,\n+     clientWidth: 69,\n-     bottom: 339,\n-     clientWidth: 68,\n      color: 'rgb(255, 255, 255)',\n      disabled: false,\n      font: '14.4px',\n      form: 'purchase-detail-form',\n+     height: 44,\n-     height: 60,\n      inside: true,\n      insideContent: true,\n      internalText: true,\n+     left: 227.1875,\n-     left: 228.3125,\n      padding: '8px 20px',\n      radius: '4px',\n      right: 296,\n+     scrollWidth: 69,\n-     scrollWidth: 68,\n      tag: 'BUTTON',\n      text: '更新',\n+     top: 296,\n+     width: 68.8125,\n-     top: 279,\n-     width: 67.6875,\n      withinForm: null\n    }\n  ]\n"
+}

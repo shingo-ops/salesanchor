@@ -1,0 +1,15 @@
+CARD-MODAL-FOOTER-02
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-MODAL-FOOTER-02
+読んだ節: guards/00-common.md、03-file.md、11-lint.md、design-partner.md§5.5。
+照合§5.5: 1○実tree、2○PRなし、3○親へ全文、4○検証条件訂正、5○既存基準7606ca9a、6○一時検査のみ、7○全条件と対象名。
+担当Generator。他者と並行、root文書/製品を変更しない。新AI起動禁止。
+既存tree `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared`、HEAD `7606ca9a041e315b81040373e8f4ddebbc562133`。
+根拠: CARD01手順3の11組目、320x360英語Purchase。before先頭left6.3125はfooter padding24内へ侵入。nowrapで1行表示されていることと、必要幅が内容領域に収まることは別。after折返しは設計どおり。
+許可: `/tmp/frontend-raw-buttons-20260911/modal-browser-v2.mjs` とv2ログ/結果/画像、新検証一時ファイル。v1原稿/失敗log/resultは保持。製品2ファイル含め製品編集禁止。正式文書/台帳/GO/commit/push/PR/merge禁止。通信モックのみ。
+手順1: 既存modal-browser.mjsを別名v2へ複製、出力先もv2に変える。measureでfooterのcomputed padding/borderを採取し、内容領域left=rect.left+borderLeftWidth+paddingLeft、right=rect.right-borderRightWidth-paddingRightを記録。
+手順2: 「1行に収まる条件」の前後座標同値は、beforeの全子要素がこの内容領域左右内かつ内部文字欠けなしの場合に適用する。before nowrapのcomputed値も保存。topの完全一致だけで行を判定しない（金額spanとbuttonは高さが異なる）。afterは既存のdialog/viewport/文字欠け/重なり判定を維持し、全子要素がfooter内容領域左右内も要求する。0.1px計算丸め許容は従来通り。意図した折返しを除外するだけで、画面外・余白侵入・重なりを許容しない。
+手順3: CARD01の全実3利用/7幅/2高さ/日英/明暗/金額/状態、スクロール/外部form/Tab/ShiftTab/focusと将来3Button/Story実表示を継続。具体金額0/123450/999999999999を保存。v1失敗を隠さず期待値誤分類と記録。製品問題か未確認なら原ログ保持し停止。
+手順4: rootが品質コマンドを担当中のため重複実行不要。最終2製品SHA256とブラウザー全結果を親へ。未実行は区別する。後続PRはready、draft禁止だが本カードはPR作成なし。
+完了報告冒頭「本報告はカード CARD-MODAL-FOOTER-02 の実行結果である」。親への本文に生出力全文と実在ログリンク。停止時は手順番号/最後のコマンド/理由/対象名。
+END OF CARD

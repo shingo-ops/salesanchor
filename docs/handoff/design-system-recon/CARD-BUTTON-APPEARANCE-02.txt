@@ -1,0 +1,19 @@
+CARD-BUTTON-APPEARANCE-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-BUTTON-APPEARANCE-02
+照合§5.5: 1○既存実パス、2○PRなし、3○親へ全文、4○build失敗/見本干渉是正、5○同tree、6○AG補足、7○Storyだけ修正。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、design-partner.md§5.5。
+担当Generator。あなたは他者と並行、root文書/他者変更を戻さない。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance
+基準 e81dd3ec。正本design.md§AG見本の補足・修正条件。前カード01の14files実装は保持。
+許可する今回の製品修正: frontend/src/components/Button.stories.tsx だけ。
+1. useEffect cleanupを `return () => { document.documentElement.classList.toggle('force-dark', previous) }` としvoid返却。TS2345の既存失敗ログを残す。
+2. LightStatesとDarkStates各々に `parameters: { docs: { story: { inline: false, height: '600px' } } }` を設定し、Docs内で独立iframeにする。公式Storybook doc-block-storyと導入済み10.4.1 blocks.js getStoryPropsをroot確認済み。グローバルpreview/CIは変更しない。
+3. 同TSX厳格eslint、build、Storybookを再実行（新logs）。unit/checkallは同Storyのみなので追加の問題がなければ成功済み結果を維持してよい。
+4. 実Storybook Docs同時表示でLight/Darkが別iframe document、明暗それぞれ正しい色、親documentを変更しないことをChromiumで実測。スクロールで全行に到達でき、console/pageerror0。
+5. 前カード01手順2/3の未完ブラウザー/寸法/操作/190色/raw互換/manifestを継続。同じ期待条件を使い、失敗に合わせ期待を弱めない。旧checks.logは上書きしない。
+禁止: 上記以外の製品修正、root文書/台帳、依存/CI/GO/commit/push/PR/merge/deploy、別AI起動。正規require_escalated可。失敗/不明/拒否は停止報告。
+検証保存先: /tmp/frontend-button-appearance-20260911/。
+報告冒頭: 本報告はカード CARD-BUTTON-APPEARANCE-02 の実行結果である。
+親へ生出力全文、未完/失敗理由と実在ログを区別する。
+END OF CARD

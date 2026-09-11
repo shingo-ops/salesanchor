@@ -101,22 +101,22 @@ export default function CompanyDetailPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="tabs">
-        <Button variant="ghost" className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => switchTab("basic")}>
+        <Button variant="tab" active={activeTab === "basic"} aria-pressed={undefined} onClick={() => switchTab("basic")}>
           {t("companies.basicInfo")}
         </Button>
-        <Button variant="ghost" className={`tab ${activeTab === "addresses" ? "active" : ""}`} onClick={() => switchTab("addresses")}>
+        <Button variant="tab" active={activeTab === "addresses"} aria-pressed={undefined} onClick={() => switchTab("addresses")}>
           {t("companies.address")} ({company.addresses.length})
         </Button>
-        <Button variant="ghost" className={`tab ${activeTab === "contacts" ? "active" : ""}`} onClick={() => switchTab("contacts")}>
+        <Button variant="tab" active={activeTab === "contacts"} aria-pressed={undefined} onClick={() => switchTab("contacts")}>
           {t("contacts.title")} ({contacts.length})
         </Button>
-        <Button variant="ghost" className={`tab ${activeTab === "channels" ? "active" : ""}`} onClick={() => switchTab("channels")}>
+        <Button variant="tab" active={activeTab === "channels"} aria-pressed={undefined} onClick={() => switchTab("channels")}>
           {t("nav.channels")} ({company.sales_channels.length})
         </Button>
-        <Button variant="ghost" className={`tab ${activeTab === "discord" ? "active" : ""}`} onClick={() => switchTab("discord")}>
+        <Button variant="tab" active={activeTab === "discord"} aria-pressed={undefined} onClick={() => switchTab("discord")}>
           {t("discord.title")}
         </Button>
-        <Button variant="ghost" className={`tab ${activeTab === "convHistory" ? "active" : ""}`} onClick={() => switchTab("convHistory")}>
+        <Button variant="tab" active={activeTab === "convHistory"} aria-pressed={undefined} onClick={() => switchTab("convHistory")}>
           {t("companies.convHistory.tabLabel")}
         </Button>
       </div>

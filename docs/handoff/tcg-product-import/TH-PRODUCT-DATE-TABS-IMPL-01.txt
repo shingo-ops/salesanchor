@@ -1,0 +1,114 @@
+読んだ節:
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards.md §0〜3
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/00-common.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/01-read.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/03-file.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/04-worktree.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/10-executor.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/guards/11-lint.md 全文
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/design-partner-card-ops/card-ops.md §1〜5・§12
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/tcg-product-import/design.md §14全体
+照合: 全コマンドのcd実在確認、目印未記入0、報告先は/tmp/reports、製品マージ/GO操作なし。
+
+カードID: TH-PRODUCT-DATE-TABS-IMPL-01
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+本カードはADR-113 handoffの忠実実装カード。手順5〜7で編集ツールによる実装・試験追加を明示的に許可する。
+設計を再解釈せず、指定ファイル内でコードを書き、失敗の原因が明らかな範囲内の修正と再検証を行う。
+設計パートナーの本セッションを実装役へ切り替える指示ではない。実行はカードを受け取った実装役が担う。
+
+目的: 商品マスタの発売日降順と作品タブを実装し、ローカルで可能な検証とコミットまで行う。
+承認: 設計PR #3431はマージ済み。実装開始/カード作成・引継ぎへの確認にPOは「次を進める」と回答した。
+設計正本: /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/tcg-product-import/design.md §14
+調査正本: /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/docs/handoff/tcg-product-import/recon.md の発売日順・作品タブ追補
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl
+ブランチ: release/product-master-date-tabs-impl
+作成時の基点: 6c55e40df3f3762880353e7c9a4f9d768f63f790
+出力の置き場: /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。パスは一字一句そのまま使う。
+生出力・exit code・手順前後の目印・変更理由・実施/未実施を報告ファイルへ編集ツールで追記してよい。
+
+許可する製品変更（7ファイル）:
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/backend/app/routers/tcg_product_import.py
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/backend/tests/test_tcg_product_list_pg.py
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend/src/pages/super-admin/TcgProductMasterPage.tsx
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend/tests-e2e/tcg-product-import.spec.ts
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend/src/locales/ja.json
+/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend/src/locales/en.json
+記録の変更許可: 同じworktreeのdocs/handoff/tcg-product-import/recon.md、tasks/todo.md、docs/ai-agents/evidence-registry.mdの本テーマに限る。
+依存準備: 同じworktree内の.venvとfrontend/node_modulesへの既存依存導入を許可する。依存定義/lockfileの変更はしない。
+
+禁止: 指定外の製品変更、DB定義/実データ/本番/CI/運用スクリプト/認証の変更、他者差分の破棄、既存ガードの無効化。
+禁止: GO記録の生成・転記、push、PR本文変更・新規PR作成・マージ・配備。このカードのコミットを確認した後の別便で公開する。
+禁止: 別エージェントの自動起動、他セッションのログ探索、非公開移植リポジトリからの転送。
+
+停止条件:
+開始時に対象ブランチ相違・他者の未保存差分・設計契約との実物不一致があれば、編集せず停止して報告する。
+製品の設計変更・指定外ファイル変更・危険操作・権限拒否が必要な場合は、その操作を止め質問する。推測・迂回は禁止。
+試験失敗は原因が本カードの変更にあると確認できた場合のみ範囲内で修正し再検証する。既存不具合は名指しして報告する。
+Docker未起動は準備時に実測済み。PG試験を未実施と記録し、frontend試験・静的検査は続ける。PG試験成功を創作しない。
+正式PG試験・CI・tenant_001実画面は次便の必須残タスク。ローカル静的検査だけで機能完成・マージ可能とはしない。
+
+受領確認: 「TH-PRODUCT-DATE-TABS-IMPL-01を受領。指定手順を順に実行し、未実施を区別して報告する。」と最初に返す。
+
+手順1 preflight。報告冒頭を「本報告はカード TH-PRODUCT-DATE-TABS-IMPL-01 の実行結果である」として作成する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && ./scripts/dev/executor-preflight.sh >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順2 変更状況。開始時は差分0であることを確認する。再開時は報告済みの自分の変更を保持する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git status --short --branch --untracked-files=all >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順3 承認設計。末尾のPO承認/引継ぎ追記も読む。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && sed -n '/^## 14. /,$p' docs/handoff/tcg-product-import/design.md >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順4 規約・実物。AGENTS.md、backend/AGENTS.md、frontend/AGENTS.md、許可製品7ファイルとrecon正本を読み取りツールで確認する。
+  期待する出力: 読んだファイル名と現在のコード順・query/page・works未実装の確認を報告する。
+手順5 backend実装。編集ツールで許可ルーターを変更する。
+  work_idの任意UUID指定と同じcount/items条件、release_date DESC NULLS LAST・code DESC、works追加を設計§14-3どおり実装する。
+  候補は有効作品または商品参照あり、code ASC、検索/ページと独立。既存認証/TCG_SCHEMA/全件管理/CSV APIは維持する。
+  期待する出力: 変更ファイル名と設計§14-3との対応。SQLの入力値はbindし、作品なしの商品を落とさない。
+手順6 frontend実装。編集ツールで許可ページと日英翻訳を変更する。
+  共通Tabs、日付順表示、作品と検索の併用、page=1リセット、最新応答だけ反映、欠落worksのエラーを設計§14-2どおり実装する。
+  日付を時刻へ変換しない。選択作品消失時に全件へ勝手に切り替えない。CSV導線/権限/既存共通部品を維持する。
+  期待する出力: 変更ファイル名、日英キーの対、残した既存動作を報告する。
+手順7 試験追加。編集ツールで許可されたPG・画面単体・E2Eの3ファイルへ設計AC1〜8を検査する試験を追加する。
+  PG fixtureは既存の隔離スキーマとrollback、作品migration適用、HTTP入力/権限検査を含める。元の回帰試験を削らない。
+  E2Eの既存モックへworksを加え、CSV導線を維持する。受入条件の期待値を弱めて通さない。
+  期待する出力: AC番号ごとの試験名。PG未実行と画面モック試験の区別を記録する。
+手順8 Python環境準備。既存.venvがある場合は利用できるPython3.12環境か読み取り確認してから再利用する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && /usr/local/bin/python3.12 -m venv .venv >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順9 既存backend依存のみを導入する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/backend && ../.venv/bin/python -m pip install -r requirements-dev.txt >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順10 既存frontend依存のみを導入する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend && npm ci >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順11 backend標準静的検査。mypyは既存Makefileで警告扱いなので、その出力も残す。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/backend && PATH='/Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/.venv/bin':$PATH make lint-ci >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順12 変更したPG試験ファイルを含むruff確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/backend && ../.venv/bin/ruff check app/routers/tcg_product_import.py tests/test_tcg_product_list_pg.py >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順13 画面単体試験。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend && npm run test:unit -- src/pages/super-admin/TcgProductMasterPage.test.tsx >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順14 frontend標準静的検査。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend && npm run check:all >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順15 frontendビルド。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend && npm run build >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順16 E2E。Chromiumが未導入の場合は、この手順のみ未実施として記録し、依存追加やガード変更で代用しない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl/frontend && npm exec -- playwright test tests-e2e/tcg-product-import.spec.ts --project=chromium >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順17 差分確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git diff --check >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順18 変更ファイルを列挙し、許可7製品ファイルと本テーマ記録のみであることを確認する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git diff --name-status >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順19 検証記録。編集ツールでrecon.md同テーマ末尾、tasks/todo.md該当行、evidence-registry.md該当テーマへ実測結果を記録する。
+  実装済みと検証済みを分け、PG/CI/QA実画面/配備は未実施と記す。既存の他テーマ記録を変更しない。
+  期待する出力: ACごとの実施/未実施/失敗、報告パス、次の手順。全体の完成宣言はしない。
+手順20 台帳検査。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && bash scripts/check-task-state.sh >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順21 許可した10ファイルだけをstageする。自分の変更以外があればこの操作を停止する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git add backend/app/routers/tcg_product_import.py backend/tests/test_tcg_product_list_pg.py frontend/src/pages/super-admin/TcgProductMasterPage.tsx frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx frontend/tests-e2e/tcg-product-import.spec.ts frontend/src/locales/ja.json frontend/src/locales/en.json docs/handoff/tcg-product-import/recon.md tasks/todo.md docs/ai-agents/evidence-registry.md
+手順22 stage後の差分検査。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git diff --cached --check >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順23 ローカル保存。必須静的検査/画面単体に未解決の失敗があれば実行しない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git commit -m 'feat: sort product master by release date and filter by work' >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+手順24 コミットの実在を確認する。pushは本カードの対象外。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-master-date-tabs-impl && git log -1 --format=fuller --stat >> /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt 2>&1
+
+報告様式:
+各手順の前後に「=== 手順番号 ===」「=== 手順番号 完了 ===」を編集ツールで報告ファイルへ記録し、生出力とexit codeを追記する。
+停止時は「停止した手順番号／最後のコマンド／理由／生出力全文」をチャットに返す。実行途中で応答を返してもカードを作り直さない。
+再開は既存報告で完了済みを確認し、その次の手順から順に実行して同じ報告へ追記する。既存報告を上書きしない。
+完走時は報告パス、実装コミット、実施した検証、PG/CI/QA等の残タスクを簡潔に返す。
+END OF CARD

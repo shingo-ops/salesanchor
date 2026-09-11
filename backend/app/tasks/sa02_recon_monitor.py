@@ -14,12 +14,12 @@ meta_messages と conversation_logs の当日新規件数を全テナント合�
 import logging
 import os
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 import httpx
 from sqlalchemy import text
 
 from app.auth.dependencies import clear_tenant_context, set_tenant_context
+from app.services.time import JST
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ async def _post_discord(content: str) -> None:
 async def _run_daily_recon() -> dict:
     from app.database import AsyncSessionLocal
 
-    today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
+    today = datetime.now(JST).date()
     today_start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
 
     meta_total = 0

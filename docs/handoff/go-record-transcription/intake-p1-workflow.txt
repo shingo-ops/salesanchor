@@ -1,0 +1,80 @@
+name: GO intake probe P1
+on:
+  issues:
+    types: [opened]
+permissions: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Classify synthetic request
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          REPO_ID = 1363676622
+          OWNER_ID = 246949427
+          ATTESTER_ID = 239116221
+
+          def unique_object(pairs):
+              result = {}
+              for key, value in pairs:
+                  if key in result:
+                      raise ValueError('duplicate key')
+                  result[key] = value
+              return result
+
+          def classify(event):
+              if not isinstance(event, dict) or event.get('action') != 'opened':
+                  return 'EVENT_INVALID'
+              repo = event.get('repository')
+              issue = event.get('issue')
+              sender = event.get('sender')
+              if not all(isinstance(x, dict) for x in (repo, issue, sender)):
+                  return 'EVENT_INVALID'
+              owner, author = repo.get('owner'), issue.get('user')
+              if not isinstance(owner, dict) or not isinstance(author, dict):
+                  return 'EVENT_INVALID'
+              if repo.get('id') != REPO_ID or owner.get('id') != OWNER_ID:
+                  return 'REPO_INVALID'
+              if sender.get('id') != ATTESTER_ID or author.get('id') != ATTESTER_ID:
+                  return 'ACTOR_INVALID'
+              if 'pull_request' in issue:
+                  return 'EVENT_INVALID'
+              body = issue.get('body')
+              if not isinstance(body, str) or len(body.encode('utf-8')) > 2048:
+                  return 'BODY_INVALID'
+              try:
+                  request = json.loads(body, object_pairs_hook=unique_object)
+              except (ValueError, RecursionError):
+                  return 'BODY_INVALID'
+              expected = {'schema_version', 'kind', 'request_id', 'target_repo_id'}
+              if not isinstance(request, dict) or set(request) != expected:
+                  return 'SCHEMA_INVALID'
+              if type(request['schema_version']) is not int or request['schema_version'] != 1:
+                  return 'SCHEMA_INVALID'
+              if request['kind'] != 'probe':
+                  return 'SCHEMA_INVALID'
+              if type(request['target_repo_id']) is not int or request['target_repo_id'] != REPO_ID:
+                  return 'TARGET_INVALID'
+              request_id = request['request_id']
+              if not isinstance(request_id, str) or re.fullmatch(r'TH-GO-P1-[A-Za-z0-9-]{1,48}', request_id) is None:
+                  return 'REQUEST_INVALID'
+              return 'ACCEPTED_PROBE'
+
+          if __name__ == '__main__':
+              try:
+                  with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as stream:
+                      event = json.load(stream)
+                  reason = classify(event)
+              except (OSError, ValueError, KeyError):
+                  reason = 'EVENT_READ_FAILED'
+              print(json.dumps({'probe': 'P1', 'reason': reason,
+                                'authorization_issued': False}))
+              sys.exit(0 if reason == 'ACCEPTED_PROBE' else 1)
+          PY

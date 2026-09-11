@@ -97,6 +97,11 @@
   border-top-color: var(--spinner-on-accent-head);
 }
 
+.sa-spinner--inherit {
+  border-color: currentColor;
+  border-top-color: transparent;
+}
+
 .sa-skeleton {
   display: block;
   border-radius: var(--radius-sm);

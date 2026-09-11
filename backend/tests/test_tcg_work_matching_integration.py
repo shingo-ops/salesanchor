@@ -22,6 +22,7 @@ from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_diagnostics_svc as diagnostics
+from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -188,11 +189,11 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
     records = [record(name, i, memo="コロちゃおバージョン" if i == 2 else "",
                       state="PSA10" if i == 3 else "") for i, name in enumerate(names, 1)]
     smid, jobid, result = run_message(connection, engine, monkeypatch, "\n".join(names), records)
-    assert result["analysis_stats"]["pid_resolved"] == 4
+    assert result["analysis_stats"]["pid_resolved"] == 3
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT ei.id,ei.line_start,p.code,ar.pid_resolved,ar.pid_basis,ar.needs_review FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id LEFT JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start", (jobid,))
         rows = cursor.fetchall()
-        assert [r[2] for r in rows] == ['PM0200', None, 'PM0285', 'PM0285', 'PM0285', None, None]
+        assert [r[2] for r in rows] == ['PM0200', None, None, 'PM0285', 'PM0285', None, None]
         assert rows[1][3:] == (False, 'NONE', True)
         corrected = rows[1][0]
         cursor.execute(f"UPDATE {SCHEMA}.analysis_results SET product_id=(SELECT id FROM {SCHEMA}.tcg_products WHERE code='PM0285'),pid_resolved=true,pid_basis='HUMAN:confirmed' WHERE extraction_item_id=%s", (corrected,))
@@ -214,7 +215,7 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
         finally:
             await async_engine.dispose()
     candidates = asyncio.run(output())  # read-only, never delivery
-    assert len(candidates) == 5
+    assert len(candidates) == 4  # PSA10 Box is excluded by the common guard
     assert sum(r[2] == NORMAL for r in candidates) == 1
 
 
@@ -244,10 +245,203 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
-        assert cursor.fetchone() == ("PM0123", True, "name-first-v3-work")
+        assert cursor.fetchone() == ("PM0123", True, "name-first-v6-master-safety")
 
 
 RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"
+CONDITION_NOTE = "20260910_200000_tcg_condition_note_delivery_t004.sql"
+
+
+def seed_condition_note(connection, schema="tenant_004"):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        for migration in ["20260903_130000_tcg_note_master_t004.sql",
+                          "20260907_100000_tcg_note_master_expand_t004.sql",
+                          "20260903_160000_tcg_normalization_rules_t004.sql",
+                          "20260903_190000_tcg_normalization_rules_nr0136.sql",
+                          "20260909_130000_tcg_note_b2_t004.sql",
+                          "20260903_220000_create_tcg_analysis_history_t004.sql"]:
+            cursor.execute((MIGRATIONS / migration).read_text().replace("tenant_004", schema))
+        cursor.execute(sql.SQL("INSERT INTO {}.conditions(code,canonical,is_active,priority,app_kubun,search_kw,exclude_kw) VALUES ('CN0007','Unsearched pack',true,3,'','未サーチ,サーチなし,サーチ痕なし,サーチ痕無し,サーチ無し','[サーチ済み]'),('CN0001','Case',true,NULL,'','',''),('CN0003','Sealed box',true,NULL,'','',''),('CN0010','Searched pack',true,NULL,'','','')").format(sql.Identifier(schema)))
+
+
+def condition_note_snapshot(connection, schemas=("tenant_004",)):
+    result = {}
+    with connection.cursor() as cursor:
+        for schema in schemas:
+            for table in ("conditions", "tcg_note_master"):
+                cursor.execute(sql.SQL("SELECT row_to_json(t)::text FROM {}.{} t ORDER BY id").format(sql.Identifier(schema), sql.Identifier(table)))
+                result[schema, table] = cursor.fetchall()
+    return result
+
+
+@pytest.mark.parametrize("partial", ["none", "condition", "old_note", "new_note"])
+def test_condition_note_master_changes_repeat_partial_and_other_tenant(pg, partial):
+    import json
+
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_905"):
+        seed_condition_note(connection, schema)
+    before = condition_note_snapshot(connection, ("tenant_004", "tenant_905"))
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+    after = condition_note_snapshot(connection, ("tenant_004", "tenant_905"))
+    for key, rows in before.items():
+        new_rows = [json.loads(r[0]) for r in after[key]]
+        old_rows = [json.loads(r[0]) for r in rows]
+        if key[0] != "tenant_004":
+            assert rows == after[key]
+        elif key[1] == "conditions":
+            for old, new in zip(old_rows, new_rows):
+                if old["code"] == "CN0007":
+                    assert len(new["exclude_kw"].split(",")) == 7
+                    new["exclude_kw"] = old["exclude_kw"]
+                assert new == old
+        else:
+            assert len(new_rows) == len(old_rows) + 1
+            for old in old_rows:
+                new = next(r for r in new_rows if r["id"] == old["id"])
+                if old["id"] == "NJ041":
+                    assert new["exclude_keywords"] == "伝票剥がし跡あり"
+                    new["exclude_keywords"] = old["exclude_keywords"]
+                assert new == old
+    with connection.cursor() as cursor:
+        if partial in ("condition", "new_note"):
+            cursor.execute("UPDATE tenant_004.conditions SET exclude_kw='[サーチ済み]' WHERE code='CN0007'")
+        if partial in ("old_note", "new_note"):
+            cursor.execute("UPDATE tenant_004.tcg_note_master SET exclude_keywords='' WHERE id='NJ041'")
+        cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+    assert condition_note_snapshot(connection, ("tenant_004", "tenant_905")) == after
+
+
+@pytest.mark.parametrize("target,field,value", [
+    ("condition", "canonical", "wrong"), ("condition", "search_kw", "wrong"),
+    ("condition", "exclude_kw", "wrong"), ("condition", "code", "missing"),
+    ("note", "label_ja", "wrong"), ("note", "search_keywords", "wrong"),
+    ("note", "exclude_keywords", "wrong"), ("note", "id", "missing"),
+    ("collision", "label_ja", "wrong"),
+])
+def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
+    connection, _, _ = pg
+    seed_condition_note(connection)
+    with connection.cursor() as cursor:
+        if target == "collision":
+            cursor.execute("INSERT INTO tenant_004.tcg_note_master(id,label_ja,label_en,priority) VALUES ('NJ079','wrong','wrong',1)")
+        else:
+            table, key, identity = ("conditions", "code", "CN0007") if target == "condition" else ("tcg_note_master", "id", "NJ041")
+            cursor.execute(sql.SQL("UPDATE tenant_004.{} SET {}=%s WHERE {}=%s").format(sql.Identifier(table), sql.Identifier(field), sql.Identifier(key)), (value, identity))
+        before = condition_note_snapshot(connection)
+        with pytest.raises(psycopg2.errors.RaiseException, match="unexpected master|identity collision"):
+            cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        cursor.execute("ROLLBACK")
+    assert condition_note_snapshot(connection) == before
+
+
+@pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
+def test_condition_note_absent_and_partial_tables(pg, missing):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        if missing is None:
+            cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        else:
+            seed_condition_note(connection)
+            before = condition_note_snapshot(connection)
+            cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(missing)))
+            try:
+                with pytest.raises(psycopg2.errors.RaiseException, match="incomplete master structure"):
+                    cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+            finally:
+                cursor.execute("ROLLBACK")
+                cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(missing)))
+            assert condition_note_snapshot(connection) == before
+
+
+def test_condition_note_lock_timeout(pg):
+    connection, engine, _ = pg
+    seed_condition_note(connection)
+    before = condition_note_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        settings = cursor.fetchone()
+        blocker = engine.raw_connection()
+        try:
+            with blocker.cursor() as other:
+                other.execute("LOCK TABLE tenant_004.tcg_note_master IN SHARE ROW EXCLUSIVE MODE")
+            with pytest.raises(psycopg2.errors.LockNotAvailable, match="lock timeout"):
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+            cursor.execute("ROLLBACK")
+        finally:
+            blocker.rollback()
+            blocker.close()
+        assert condition_note_snapshot(connection) == before
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
+        cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
+        assert cursor.fetchone() == settings
+
+
+def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch):
+    import sys
+
+    connection, engine, async_url = pg
+    seed_condition_note(connection)
+    monkeypatch.setattr(sys.modules[__name__], "SCHEMA", "tenant_004")
+    for module in (analyzer, extraction, distribution, product_master):
+        monkeypatch.setattr(module, "TCG_SCHEMA", "tenant_004")
+    monkeypatch.setattr(product_master, "_SYNC_DB_URL", str(engine.url.render_as_string(hide_password=False)))
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / STRUCTURE).read_text())
+        for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
+            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active) VALUES (%s,%s,'Box',true) RETURNING id", (code, name))
+            pid = cursor.fetchone()[0]
+            cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
+        for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
+            cursor.execute("INSERT INTO tenant_004.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id", (code, canonical, kubun))
+            cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
+    records = [record("匿名パック", 1, memo="※未サーチ品"), record("匿名箱", 2, state="伝票剥がし跡あり")]
+    records[0][3], records[1][3] = "Pack", "CASE"
+    records += [record("匿名箱", i) for i in range(3, 19)]
+    # Master absent for memo handling until migration: baseline is old behavior.
+    original = analyzer.resolve_condition_v2
+    monkeypatch.setattr(analyzer, "resolve_condition_v2", lambda *args, **kw: original(*args))
+    _, jobid, result = run_message(connection, engine, monkeypatch, "\n".join(r[0] for r in records), records)
+    assert result["analysis_stats"]["total"] == 18
+    monkeypatch.setattr(analyzer, "resolve_condition_v2", original)
+
+    def values():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT ar.product_id,ar.quantity_normalized,ar.price_normalized,ar.status,ar.unit_id,ar.unit_canonical,ar.condition_canonical,ar.note_ja FROM tenant_004.analysis_results ar JOIN tenant_004.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start", (jobid,))
+            return cursor.fetchall()
+    before = values()
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+    first = asyncio.run(product_master.reanalyze_extraction_job(jobid))
+    after = values()
+    assert before[0][6] == "Searched pack" and after[0][6] == "Unsearched pack"
+    assert before[1][6:] == ("Case", None) and after[1][6:] == ("Case", "伝票剥がし跡あり")
+    assert all(a[:6] == b[:6] for a, b in zip(before, after))
+    assert before[2:] == after[2:]
+    second = asyncio.run(product_master.reanalyze_extraction_job(jobid))
+    assert values() == after and first["run_id"] != second["run_id"]
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT count(*) FROM tenant_004.analysis_runs WHERE extraction_job_id=%s AND completed_at IS NOT NULL", (jobid,))
+        assert cursor.fetchone()[0] == 2
+        cursor.execute("SELECT count(*) FROM tenant_004.analysis_run_snapshots WHERE run_id=ANY(%s::uuid[])", ([first["run_id"], second["run_id"]],))
+        assert cursor.fetchone()[0] == 36
+
+    async def outputs():
+        async_engine = create_async_engine(async_url)
+        try:
+            async with AsyncSession(async_engine) as session:
+                return await distribution.fetch_output_rows(session)
+        finally:
+            await async_engine.dispose()
+    rows = asyncio.run(outputs())
+    assert len(rows) == 18
+    assert sum(r[4] == "Unsearched pack" for r in rows) == 1
+    assert sum(r[4] == "Case" and r[7] == "伝票剥がし跡あり" for r in rows) == 1
 RECOVERY_JOBS = ["6da3ca68-651e-4ff6-8316-1c9135508ad2", "bfa07018-9b34-42b6-990a-017e3c1cf140"]
 RECOVERY_SOURCES = ["b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2", "afbc08d1-cf3b-43be-87e5-4b7200144b6c"]
 RECOVERY_SUCCESSOR = "3a4633b1-82a6-4ce5-8694-053cd637c5f6"
@@ -598,3 +792,24 @@ GUARDS = "20260910_170000_tcg_keyword_false_positive_guards.sql"
 GUARD_PRODUCTS = [('PM0104', 'ポケモンカード151', 'IP001', 'PC_BOX', [('ポケモンカード151', 2), ('151', 1)], [('vol.3', 1), ('hope', 3), ('jumbo', 6), ('surprised', 4), ('slim', 5), ('収集啦', 17), ('fat', 7), ('礼盒', 27), ('journey', 2)]), ('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', [('メガゲンガー', 1), ('メガゲンガーex', 4), ('MEGAゲンガーex', 2), ('MEGAゲンガー', 3)], [('MEGディアンシー', 1)]), ('PM0230', 'トライアルデッキ 【推しの子】', 'IP007', 'PC_SINGLE', [('OSK', 3), ('推しの子', 1), ('oshi no ko', 2), ('vol.1', 5), ('trial deck', 4)], [])]
 GUARD_WRONG_INPUTS = [('リミテッドカードコレクション Vol.1', 'PM0230'), ('■スペシャルデッキセットMEGA メガオーダイル・メガカイリュー・メガゲンガー', 'PM0184'), ('マスターボールミラー151のみ', 'PM0104'), ('リミテッドカードコレクションvol.1', 'PM0230'), ('LIMIT OVER SPECIAL PACK Vol.1', 'PM0230'), ('BASE SHOP リミテッドカードコレクションvol.1', 'PM0230'), ('BASE SHOP vol.1', 'PM0230'), ('プレミアムカードコレクション  – 6 assort vol.1 -', 'PM0230'), ('プレミアムカードコレクション- ベストセレクションvol.1 -', 'PM0230'), ('プレミアムカードコレクション 6 assort vol.1', 'PM0230')]
 GUARD_CONTROLS = [('推しの子 vol.1', '', '', 'PM0230'), ('推しの子', '', '', 'PM0230'), ('ポケモンカード151', '', '', 'PM0104'), ('151', '', '', 'PM0104'), ('スターターセットMEGA メガゲンガーex', '', '', 'PM0184'), ('BASE SHOP vol.1', '', '', None), ('リミテッドカードコレクション Vol.1', '', '', None), ('151', 'マスターボールミラー', '', None), ('151', '', 'マスターボールミラー', None), ('メガゲンガー', 'スペシャルデッキセット', '', None), ('メガゲンガー', '', 'スペシャルデッキセット', None), ('vol.1', '', '', None), ('BASE SHOP vol.10', '', '', None), ('BASE SHOP vol.11', '', '', None), ('リミテッドカードコレクション vol.10', '', '', None), ('BASE SHOP vol.2', '', '', None)]
+
+
+@pytest.mark.parametrize("heading,state,memo,resolved", [
+    ("【ワンピース】", "", "", True),
+    ("🟡ONE PIECE在庫🟡", "", "", True),
+    ("【ワンピース】", "PSA10", "", False),
+    ("【ワンピース】", "", "SAR", False),
+    ("【ガンダム】", "", "", False),
+])
+def test_raw_heading_and_box_guard_through_analysis(pg, monkeypatch, heading, state, memo, resolved):
+    connection, engine, _ = pg
+    seed_products(connection)
+    _, jobid, result = run_message(connection, engine, monkeypatch,
+        heading + "\nEB01 1000円 1BOX", [record("EB01", 2, state=state, memo=memo)])
+    assert result["analysis_stats"]["pid_resolved"] == int(resolved)
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT ar.pid_resolved,ar.pid_basis FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
+        actual, basis = cursor.fetchone()
+        assert actual is resolved
+        if resolved:
+            assert basis.startswith("WORK_HEADER:L1|")

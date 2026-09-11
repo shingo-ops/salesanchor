@@ -207,3 +207,172 @@ nginx /etc/nginx/conf.d/default.confと手元nginx/nginx.confはSHA256=97972f76a
 
 PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」を受領。直前に提示した保存領域/権限の読取と文書PR3396の保存/マージに適用。/tmp/pmg-cutover-mount-readonly.pyでnginxの対象bind2件とstatを取得。最後のps照会のみ失敗し全体exit1。取得できたmount/statと失敗を分離した。/tmp/pmg-nginx-process-readonly.pyの/proc Name/Uid/Gid限定読取はexit0。本文・認証ファイル・DBデータ・設定変更なし。詳細数値はdesignの最終確認節。
 最新main a0c0eb7fを取り込み。PR3393のv3作品根拠/訂正保持を読み、3commit/3rollbackが残ることを再確認。PR3399など他PRの台帳更新を保持して文書競合を解消。以前のコードhash診断を最新版の一致証拠とは扱わない。
+
+
+## 2026-09-10: Terraによる旧処理取消の隔離実測と次便準備
+
+origin/main 89ad29aeで新規作業場所を作成。先のd21599c7以降はinventory系テスト/文書だけの変更で、対象の解析/配信2サービスのSHA256一致を確認した。
+Codex TerraはPython3.12で実物のrun_distribution/reanalyze_extraction_jobをAST抽出し、そのままコンパイル。DB/資格/外部送信境界だけを架空実装へ置き換えて4シナリオを実行した。
+初版は12assertion。設計担当は開始Eventの待機結果が未検査と指摘し、開始済みを検査する2件を追加。最終14/14成功、設計担当も同じハーネスを再実行しPASS assertions=14を確認した。
+通常配信は成功記録、戻り値の送信エラーはエラー記録/通知。取消ケースでは開始確認後に待機taskをcancelし、その後に同期処理を解放。架空送信/解析は終了し、配信結果のDB記録は0件だった。
+これは呼出し側の取消と同期処理の完了が異なることの証拠。実Sheetsへの送信完了、本番DBの状態、Uvicorn停止時の実態を証明しない。HTTP終了だけから旧配信の完了を推定しない契約を維持する。
+根拠: /tmp/reports/pmg-legacy-completion-probe/RESULTS.md、probe_legacy_completion.py、run.log。run.log SHA256=e1c292a152364da624044a5bd9ae544f76c41ff85b6316b44c40c20094d6cfd5。
+配信ソースSHA256=6a63cf5245113bb7ac678a5c993c00098c9bd1f71d7a09fc8eadee4aa289166c、再解析ソースSHA256=ec12593ef7d6ea90920a32518450b97ecd74821d415dcb5acdfcef5aac02af53。
+
+現行new-worktree.sh:65-67は回収を実行するまま。既存保持オプションは文書PR3390だけで未実装。POに今回の作成例外を確認し「許可する進める」を受領した。
+新規release/pmg-cutover-rehearsal、UUID c4aca19e-0e68-4a1c-acd7-f37c63d92ff9。担当台帳登録・フック設定、validate-worktree-start/validate-pr-ownership通過。既存worktreeの削除0件。本店AGENTS.mdの他者変更は保持した。
+Docker実行環境はローカルに見つからず、既存test-rollback.ymlのubuntu-latest/Docker経路を参照した。製品/既存配布処理を変更せず、新規隔離CIで検証する設計を作成。正式card-lint exit0を確認してTerraへ試験2ファイルだけを委任した。
+製品設計の自己審査REVISEは維持。隔離試験を実装する設計だけAPPROVE。新規試験CIはまだ実行しておらず、Docker成功とは扱わない。
+
+
+### 配信安全装置8bの問い合わせ・本番読取（2026-09-10 17:41 JST）
+
+POから「running2件で配信不可、今回の影響か」の問い合わせを受領。本便のgit差分は未コミット、当該headのPR一覧は空。製品変更/マージ/デプロイ未実施であり、本便の未公開試験は原因ではない。過去の他PRや停止そのものの原因を否定した証拠ではない。
+本番API経由の接続設定でdefault_transaction_read_only=on、SHOW transaction_read_only=on、statement_timeout=5000を確認してSELECTのみ実施。DB時刻2026-09-10 08:41:47.993282+00、pending/extracted0、running2。
+- 6da3ca68-651e-4ff6-8316-1c9135508ad2: source b1b58ee9-0d6a-4ed1-8034-f1d62a72b4b2、元データ無効、items0。
+- bfa07018-9b34-42b6-990a-017e3c1cf140: source afbc08d1-cf3b-43be-87e5-4b7200144b6c、元データ有効、items0。
+両方created_at=2026-09-10 02:49:21.105805+00、extracted_at/prompt_version NULL。docs/handoff/tcg-product-master-growth/recon.md:682の既往2IDと一致。本文や資格情報は取得/記録しない。
+Celeryの読取inspectはcelery@19d5a281d647の1台から応答、active/reserved/scheduledは各0件。未確認の別worker/同期処理が存在しない証拠へ広げない。
+現行tcg_distribution_svc.py:674-700は未完了jobがあれば配信前に中断する。tcg_diagnostics_svc.py:138,186の再試行対象はpending/errorだけで、running2件は対象外。安全装置を無効化せず、元データの有効/無効を分けた復旧設計が必要。DB状態変更・再実行・外部配信は未実施。停止原因は未確認。
+診断実体: /tmp/pmg-running-two-readonly.py、/tmp/pmg-worker-presence-readonly.py。どちらもexit0、資格情報本文の出力なし。
+
+### 実装担当停止
+
+Terraの初回混雑は再試行で解消し、取消試験14件まで実施。その後Docker試験のコードレビューを差し戻し、修正継続を依頼したが、モデル利用上限エラーで停止。新規2ファイルは実装途中、Docker試験未実施、コードレビュー未合格。指定外モデルへの切替はしていない。再開時はカード契約との照合から続け、未完成差分をPR/マージしない。
+
+
+### 実装再開・他セッションとの境界
+
+PO原文「復旧は別セッションが対応しているので再開してくれ上限は解消した」を受領。running2件の復旧は本便から除外し、DB状態変更・再実行・配信を行わない。
+Terraの編集に対し自動承認レビューが利用上限エラーで拒否。拒否をPOへ説明して、同じ隔離試験ファイルの編集再試行について返答「許可する」を受領した後、同じTerraで編集を再開した。自動審査/安全フックの無効化なし。
+追加のPO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」を受領。既承認のマージ/デプロイ範囲で、試験実装・差分レビュー・CIへ進む。未完成コードや未検証の製品設計はマージしない。
+
+### Docker初回CIの失敗と試験ネットワーク修正（2026-09-10）
+
+PR #3408 HEAD098dd48aのpush/PR両試験は接続口取得でKeyError 443/tcp、assertion実行前に停止。PR run34459276866/job102812962329、Docker28.0.4、nginx digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。成功扱いしない。
+同版の公式実装 https://github.com/moby/moby/blob/v28.0.4/libnetwork/endpoint.go#L698-L706 はinternal networkでProgramExternalConnectivityを実行しない。試験が指定した--internalとホスト公開ポート取得は整合していなかった。独立した通常bridgeへ修正し、公開先127.0.0.1とランダムポートの検査を維持する。外部通信を遮断するネットワークとは称さない。試験要求先はlocalhost/同networkの架空処理先のみで、資格情報を渡さない。修正後の実動確認はCIで行う。
+Context7は利用可能ツールに存在せず、PO許可済みの公式資料直接確認を使用。PR本文の削除行申告もdesign.mdを列挙して修正した。
+
+修正後HEADd6da86d3のrun34459910899/job102815014890は、nginxに同一443ポート公開を2回指定した箇所でaddress already in use。ネットワーク設定処理まで進んだがassertion0件。TLSの2serverを内部443/444に分けて公開するfixtureへ修正する。createでID取得後にstartする手順に分け、起動失敗時にも自作containerのIDを保持して後始末する。製品構成の変更ではない。
+
+HEAD6b38e094のPR試験run34460163845/job102815839208（GitHub試験merge SHA24ad0ec6）は、受付拒否・更新・不正reload・起動失敗検出まで進み、復元後restart TLSでConnectionRefused/timeout。起動前に記憶したランダム公開ポートを再利用していた。再起動後のinspectを再取得・同じ公開範囲検査を実施し、前後の値を結果へ残して原因を照合する。失敗時点のログだけで再起動後のポート値は確認できておらず、タイムアウト延長で代用しない。
+
+### Linux/Docker実測結果と差分審査（2026-09-10）
+
+HEAD879aa1f423f00ed15b9af1714f91070d813ac8f6のpush試験run34460419959/job102816671239は99/99 assertion成功、errors0、exit0。設計担当がActionsログの結果JSONを直接取得して確認した（他者の報告だけではない）。Docker28.0.4、Python3.12.14、nginx1.31.1 digest sha256:608a100c71651bf5b773c89083b4a1ad7ef4b2bd05d7a7e552271e03123692ad。
+再起動前app/api公開ポート32769/32770、再起動後32773/32774を実測。前回の古い接続口再使用が整合しないことを確認し、再取得で復元後TLSと拒否維持が成功した。
+同一inode・host/container digest、両TLS入口の許可なし/許可/取消、拒否時転送0、不正reload時の旧worker保持、途中設定の起動失敗、復元後の再起動、受付済み長時間要求の200完了を確認。自作資源の後始末エラー0。
+根拠: https://github.com/shingo-ops/salesanchor/actions/runs/34460419959/job/102816671239 。artifact10145284758、zip SHA256=7d6385d6df251f98b73fb281a219409a9c7c5ce196255225ffd9ab0b777bc889（CI保持7日）。取得結果は/tmp/reports/pmg-cutover-3408/push-results-879aa1f4.json。
+試験コードはPO指定Terra、設計/コード差分審査はroot。差分審査APPROVEは試験2ファイルのみ。独立した設計第二者レビューとは称さない。製品の初回配布手順・旧版の実送信完了照合は未実装/未確認で、親の製品設計REVISEを維持する。画面は未完成。
+
+## 入口配布・旧処理照合の再調査（2026-09-10、base b36041ed）
+
+PO原文「次を進めるPRマージまで」。直前に提示した既存保持の作業場所例外と次の設計文書PRに適用。製品実装や個別の本番停止を実行した記録ではない。preflight・開始/所有検査exit0。release/pmg-cutover-integration-designをorigin/mainから作成、回収処理実行0。元作業場所の.worktree-idは読取時に存在しなかった。削除原因は未調査で断定しない。本店AGENTS.mdの他者変更を保持。
+
+PR #3408はGitHubでMERGEDを再確認。merge0be59e5290cab4149aa5451920317f8fa7f7564c、2026-09-10T09:27:18Z。deploy34460726589は同SHAでsuccess。今回ローカルでDocker試験を再実行したものではない。既存CI99項目の結果は先行節の根拠を利用する。
+
+| 観測事実 | 実物の根拠 | 設計への制約 |
+|---|---|---|
+| 試験は独自生成の2TLS serverを443/444に配置する | tests/pmg_cutover_probe.py:100 | 本番nginx全設定を読んだ統合試験ではない |
+| 本番app/apiそれぞれに認証・stream・一般APIのlocationがある | nginx/nginx.conf:71,96,112,132,151,259,282,298,318,337 | fixtureで参照GET200でも実認証入口の挙動保証にならない |
+| 旧配信の外部変更はclearとappendの2呼出し | backend/app/services/tcg_distribution_svc.py:463,465 | 間の失敗は外部変更なしと断定できない |
+| 外部処理終了後にDB結果を保存する | backend/app/services/tcg_distribution_svc.py:762,773 | 外部成功/DB未記録の窓があり、last_resultだけで未実行とも成功とも推定しない |
+| API切替はnginx reload後に旧backendを40秒でstopする | scripts/blue-green-cutover.sh:144,149 | 旧実行の排出を証明する専用手順にはそのまま使えない |
+| 通常配布は同時実行groupを持つがhost側のPMG保留を参照しない | .github/workflows/deploy.yml:15,184,371,572 | 専用jobが失敗終了した後、後続の通常配布が停止状態を消さない仕組みが別途必要 |
+
+Context7の利用可能ツール0件。許可済み代替により2026-09-10に公式資料を直接確認した。Docker stopは猶予後SIGKILL、nginx reload後の旧workerは既存clientを処理、Pythonの実行中Futureはcancelで止められない。これは仕様と既存取消14件の整合根拠であり、本番旧実行が存在しないという証明ではない。
+- https://docs.docker.com/reference/cli/docker/container/stop/
+- https://nginx.org/en/docs/control.html
+- https://docs.python.org/3.12/library/concurrent.futures.html
+
+索引からADR-113、ADR-115、ADR-137-nginx-config-deploy-reliabilityを照合。ADR-137の同番号別文書へ誤参照しない。ADR-115の旧版復帰が新しい拒否制御を消す場合には従来の自動復旧を成功と判定できないため、設計の不変条件へ明記した。本番読取/変更、旧2件復旧、外部API送信を本便では行っていない。
+
+## 配布保留契約と観測範囲の確定調査（2026-09-10、base 411df652）
+
+PO「次を進める」を受領。既存保持の作成手順を継続し、release/pmg-cutover-barrier-contractのUUID/台帳を登録、preflight/開始/所有検査exit0。mainの他者AGENTS.md変更を保持。PR3410のdeploy34468628611はmerge411df652と一致しsuccessを再確認。
+設計担当rootが配布経路を読み、PO指定Terraには旧処理観測の読取だけを委任した。Terraは既存配信のclear/appendとlast_*上書き、実行中thread台帳の不存在を報告。rootは別途audit/ログ収集設定と既存の移行契約を照合した。製品コード・本番変更0。
+検索文字列に含まれた破壊操作名にPreToolUseが反応し検索を拒否。操作の許可券発行やフック無効化をせず、対象ファイルをsedで読み取った。破壊操作未実行。
+
+| 観測 | 根拠 | 限界/結論 |
+|---|---|---|
+| 旧配信はtarget単位のlast_*を上書き、thread台帳なし | backend/app/services/tcg_distribution_svc.py:602,762 | 全過去実行や同期処理中一覧はここから復元できない（Terra読取） |
+| HTTP監査はcall_next後、書込かつstatus<500が記録条件 | backend/app/middleware/audit.py:106,130 | 応答記録は実行中threadの一覧や外部成功証明にならない |
+| APIのコンテナログは20m×5、Loki設定retention30d | docker-compose.yml:140、monitoring/loki/loki-config.yaml:29 | ファイル上の設定値。稼働反映/欠落なしは未確認、過去全件保証ではない |
+| 既存移行契約はlast_*を導入前の最新記録として表示 | docs/handoff/pmg-import-delivery-ssot/design.md:178 | 過去run復元は既に対象外。過去全件復元を切替前提に加えない |
+| 通常配布にはLP同期、認証ファイル更新、コード/環境変更が分かれて存在 | .github/workflows/deploy.yml:76,92,161 | API切替直前だけの検問では通常配布全体を止めたことにならない |
+| API切替と非API再作成、復旧は別箇所 | .github/workflows/deploy.yml:324,331,572、scripts/blue-green-cutover.sh:59,149 | 共通検問が必要な実接触点を特定。既存手動入口の全稼働調査は未完 |
+| SA-18リハーサルはdeploy本文を抽出して実行する別経路 | .github/workflows/test-phase2-rehearsal.yml:36、scripts/rehearsal_phase2.sh | 名前がtestでも本件の無資格fixtureと同一視しない |
+
+Context7利用不可。2026-09-10にGitHub公式concurrency資料を直接確認: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency 。同groupの実行中排他はjob終了後のホスト保留を維持しない。既定ではpendingの置換があり、全PRが順番に必ず配布される保証とも異なる。本便ではconcurrency設定を変えない。
+
+## ページ接続の再照合と承認（2026-09-10、4f1c2b81）
+
+PR3413/deploy34470161574はsuccess。POの方針採用・根拠確立後のページ作成承認をdesign最終節に原文保存。本番停止承認ではない。新worktreeでpreflight/開始/所有検査exit0、本店の他者AGENTS.md変更保持。
+backend/app/services/tcg_import_progress.py:36,49,129、routers/tcg_line_import.py:653-666、tests/test_tcg_import_progress_pg.py:149-235を照合。GETは実在し、NULL/coverage/ページングを既に提供。Terraの検索漏れによる不存在報告をrootが実ファイルで訂正させた。
+frontend/src/pages/super-admin/TcgLineImportPage.tsxの履歴/入力/ReviewSection、TcgDistributionPage.tsxのPageLayoutとPreview/TargetList/Form、features/tcg-distribution/distributionApi.ts:95-124、lib/api.tsのGET限定retryを照合。配信runの永続履歴は未提供。既存GET/操作に限定した画面接続を独立設計として自己審査APPROVE。親設計の切替/実行履歴はREVISE。
+frontend-designスキルを適用し既存の業務部品/色/フォントを優先。新しい外部ライブラリ/API仕様は導入しない。実装は指定Codex Terra。製品編集はカード検査後。
+
+### ページ接続検証中の訂正（2026-09-10）
+
+- 正式画面URLは `frontend/src/App.tsx:294` と `frontend/src/components/DesktopShell.tsx:191` の `/super-admin/tcg-line-import`。ページ先頭コメントの `/super-admin/tcg-import` は古く、初回E2Eで3件が経路不一致となった。routingを変更せずコメントとE2Eを修正し、再実行でURL復元/ページング・非管理者要求0の2件が成功。配信試験はaria-label不一致を検出し修正中。
+- `migrations/20260906_120000_create_tcg_tables_t001.sql:426-427` の正規化数量/価格はNUMERIC。itemsのJSON数値として型を照合する。
+- 検証中に取込切替の旧値表示、未翻訳キー、配信部品未接続を発見しTerraへ修正を委任。buildだけを完成根拠にせず、競合・空/未記録・配信確認の試験と視覚検証を実施する。
+
+### ページ接続の差分レビュー（2026-09-10）
+
+rootはPlanner/Architectを同一AIとして担当し、製品編集はPO指定Codex Terraへ委任した。以下はページ接続便の検証範囲。親の解析実行履歴・永続配信履歴・本番切替は含めない。
+
+| 受入 | 確認する根拠 | 現段階 |
+|---|---|---|
+| 1/2 未記録と0、抽出失敗と残存結果 | ImportWorkflowPanel.test.tsx / 実APIのcoverage/null契約 | 対象unit成功。root全体unit133件成功も確認 |
+| 3/4/5 旧応答・非表示・更新失敗 | useImportWorkflow.test.tsx / key・世代・allSettled | 遅延ID/inflight抑止/世代破棄8件成功のTerra報告、root全体unit133件成功 |
+| 6/7 ページング・URL選択 | tcg-import-workflow.spec.ts | root E2Eで成功。25行・offset25・最終next無効を確認 |
+| 8/9/10 権限・配信範囲・確認前送信0 | 同E2E / lib/api.tsのGETのみ再試行 | root E2Eで成功。503後5秒経過してもPOST1回だけを確認 |
+| 11 既存操作維持 | TcgLineImportPage/TcgDistributionPageの差分、共有Workspace | 元の取込・保留確定処理と配信API・確認ダイアログは維持。日時/見出しのみ表示調整 |
+| 12 ja/en・明暗・狭幅 | locale同一キー、check:all、PC/390px画像 | 静的検査成功報告。root E2Eで390px暗色英語/PC日本語を確認、一覧表画像を目視確認 |
+
+既存配信機能のread-only移設を超える再試行・自動送信・バックエンド/DB変更はない。共有Workspaceは権限判定後だけマウントし、選択import IDをpropsにもAPIにも渡さない。実行ID/履歴がないというレビュー指摘は親設計の未完了事実として維持し、本便のページに架空データを加えない。
+
+### ページ接続のローカル検証結果（2026-09-10）
+
+- root実行: `npm run test:unit` 16ファイル/133件成功。`PORT=5193 npx playwright test tests-e2e/tcg-import-workflow.spec.ts --workers=1` 5件成功。すべて模擬APIで、実際の配信・本番操作は0。
+- Terra実行の報告: 最終一覧表変更後のbuild/check:all/unitがexit0。rootもmain4734fe7f統合後にbuild/check:allをexit0、unit133件成功と確認した。
+- root目視: PCの日本語一覧表、390pxの英語暗色表、工程内訳のラベルを確認。25枚の長い明細カードは一覧表へ修正済み。元の単位/状態/メモ/正規化値は行内詳細に保持。スマホでは表内だけ横スクロールしページ全体は横にはみ出さない。
+- 撮影先: `/tmp/reports/pmg-screen-completion/desktop-table-ja.png`、`mobile-table-en.png`。アプリ内スクロール/固定ナビの影響で画面外要素を含むelement/fullPage画像は目視合格の根拠に用いず、対象を実際にスクロールしたviewport画像を使用する。
+- 配信画像の初回は試験のmock不足で404表示となった。配信成功系/確認操作は別のE2Eで成功済み。撮影用fixtureも有効な既存API応答へ揃え、該当E2E1件成功・desktop-distribution-ja.pngの配信候補/全件配信ボタン/全体範囲をrootが再撮影画像で確認済み。
+
+### PR3416リリースの一次情報
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3416 。最終head6459e7ca、MERGED17ebe93f、mergedAt2026-09-10T12:24:21Z。最終検査37success/8skip。
+- GO記録後の検査でDesktopShell.tsxの省略引用が不在判定になったため、実在するfrontend/src/components/DesktopShell.tsxへ修正。正式process-artifacts全検査をローカルとCIで通過。製品コード変更なし。
+- deploy run34476536034/job102868559798 success。実ログ2026-09-10T12:25:06ZのHEAD17ebe93f、12:27:27ZのDeployment completed successfullyを照合。事前バックアップ/Finalize/Verify success、SA-19 smoke skipped。
+- 公開Appのindex-i0HIAxuW.jsのSHA256 adc6e6c79bf4adb70f057fce2552b2fce1a3cca9e0629616984ba50c87e46f3b。pmg-workflow__table/distributionScope/import_job_idの存在を確認。https://api.salesanchor.jp/api/health はok/database connected/redis connected/celery connected。
+- Python標準urllibはローカルCA設定不足でTLS検証に失敗した。証明書検証は無効化せず、OSの証明書を使用するcurlで正常取得した。
+- UIの操作試験はローカル模擬APIの5件。稼働環境では公開ファイル/health/配備ログを確認し、管理者の実データ操作や実配信を実行したとは称しない。
+
+
+### 2026-09-10 確認待ち取込の仕入元5件登録
+
+PO原文「新規登録する」を、直前に提示した5名それぞれの新規登録の承認として実行。対象は import_job_id `f030f2e6-d6ce-46f5-ad45-c5f0ced9b866` のみ。POの残タスク委任とPRマージ承認は受領したが、cxastragoの代理GO経路を有効化したとは扱わない。
+
+本番読取専用照会（transaction_read_only=on、2026-09-10 14:37:54 UTC）で91投稿、pending_review、未解決5名、messages_linked_at=NULLを確認。登録前に対象状態、同名仕入元0件、稼働中resolve_supplierのコード本文SHA256 `7ffaa0bebbeb7c802ed74d4c231a376188ebb5d43575229e27b1b0dd8a843128`を照合。最初のAST照合は不一致で書込前に停止し、本番コード本文を読み直して本文一致による検査へ修正した。
+
+POが許可したSSH経路で、稼働中APIの既存resolve_supplierへaction=createを5回渡した。HTTP経由の認証付き画面操作ではなく、SSH上の管理操作として既存関数を直接実行した。対象jobと仕入元表を各登録中ロックし、状態変化・同名追加時には停止する。コード改変、解析開始、配信は実行0回。
+
+| 新規コード | 名前 | LINE接続登録数 |
+|---|---|---|
+| SP0241 | Ryum. | 1 |
+| SP0242 | 谷村 | 1 |
+| SP0243 | Ty事務員 | 1 |
+| SP0244 | 板谷よしみつ | 1 |
+| SP0245 | 鈴木（板谷STAFFアカウント） | 1 |
+
+直接実行した検証: /tmp/pmg-register-five.py の外側/内側Python構文検査成功、check exit0、apply exit0。登録応答の残件数4→3→2→1→0、登録後の読取専用照会で上記5コード・各LINE接続1件・unresolved_count=0を確認。review_status=pending_review、messages_linked_at=NULLは維持。次は取込確定と抽出開始の運用工程であり、仕入元登録だけで解析済みと扱わない。製品履歴/切替設計のREVISEは継続。
+
+
+### 2026-09-11 進捗表示の情報階層調査
+
+起点origin/main57eb951e。専用release/pmg-progress-visual-hierarchy、preflight成功。他者のAGENTS.md変更を保持。Terra読取報告とrootによるImportWorkflowPanel/Badge/ProgressBar/CSS照合で、8行の抽出内訳と主要値が同じ強さで並ぶことを確認。既存Badge5variantを利用可能。ProgressBarは100%で成功色/Doneになるため本件の終了割合へそのまま採用しない。外部根拠と検証可能な7条件はdesign末尾。スクリーンショットの51/37/14/1019/313は状態fixtureとして利用し、本番の現在値とは断定しない。
+
+
+進捗表示改善の最終実測: root直接実行の全unit143件、E2E8件、build/check:allは成功。詳細と初回失敗の区別、3viewport画像はdesignの「表示改善の実装・最終レビュー」。本番操作なし。共通部品/集計契約を維持して要確認導線と情報階層を変更した。

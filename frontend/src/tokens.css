@@ -428,6 +428,9 @@
      ================================================================ */
 
   /* ボタン角丸 */
+  --comp-btn-height-lg:        48px;
+  --comp-btn-focus-width:      2px;
+  --comp-btn-focus-offset:     2px;
   --comp-btn-radius:           var(--radius-md);       /* 6px — btn-ghost 実値と一致 */
 
   /* カード角丸 */

@@ -133,3 +133,169 @@ backend/tests/test_tcg_schema_qualification.py:28 の抽出は先頭文字列の
 
 mainとorigin/mainの一致を確認し、new-worktree.shでrelease/tcg-schema-test-designを作成。別手順でディレクトリとgit登録を確認後に移動した。
 標準reaperは、未保存なし・origin/mainに統合済みを確認したrelease/worktree-preserve-designを1件回収した。未保存12件は保護された。保持指定の新機能はまだ実装されておらず使っていない。
+
+
+## 2026-09-10 商品マスタ画面の引継ぎ確認
+
+基点: origin/main a5e5a250aabe2e244ebf64c24bef40b5db40541c。PO「引き継いで良い」を受領した既存 release/tcg-product-import-ui を引き継いだ。実行役preflight成功。9e263fcaから上記基点へfast-forward成功。製品コードの編集、実取り込み、PR作成は未実施。
+
+- 未追跡2ファイルを原本のまま保存: /tmp/reports/PRODUCT-UI-TAKEOVER-BACKUP-01/。manifest.jsonにSHA-256・サイズ・記録時刻を保存し、更新前後とも原本一致を確認。TcgProductImportPreview.tsx=7b49f98ad1c24940fff0d6d3678e24e162815d1c69af9a222ce8ae472a42057a、TcgProductMasterPage.tsx=b47367f75804526a90e6bdf0443e9f6206d0d3905dfc96a2d7fe7fe8ab04fa3d。
+- frontend/src/pages/super-admin/TcgProductMasterPage.tsx:21 が参照する TcgProductImportPanel は存在しない。未追跡の実装は一覧とpreviewの2ファイルのみ。App.tsxのルートとDesktopShell.tsxのメニューに商品マスタ追加なし。build/test未実施。画面完成と扱わない。
+- backend/app/routers/tcg_product_import.py:65 は /tcg/products/list。設計5-2の /tcg/products と異なる。:80と:92はis_active=TRUE条件を持ち、非表示商品を除外する。設計2の全件/DB全行数一致とは対象が異なる。本番の非表示件数は今回未測定。
+- backend/app/tcg_config.py:20 の既定はtenant_004。リクエストごとのQA切替ではない。tenant_001試行に本番全体の環境設定を切り替える手順を推測で作らない。
+- docs/handoff/tcg-product-master-growth/sword-shield-catalog.md §3に6商品分の未確定項目、§5にキーワード設計・衝突シミュレーション未実施の記載。古い記載だけで現在も未実施と断定しない。実取り込み前に最新証拠を確認する。
+- GitHubでrelease/tcg-product-import-uiのPR検索は0件。#3416/#3419はMERGEDだがLINE取込・解析・配信の総合画面とその記録であり、商品マスタCSV画面の完成証拠ではない。
+
+委任: PO「離席するのでcxastragoモードと同じ条件で権限委譲する」、商品マスタ画面・取り込み試行への適用確認に「合っている」を受領。有効化から24時間という条件を変更しない。対応する承認経路は未有効のため開始/終了日時や代理GOを自己発行していない。保護解除、secrets変更、別セッション起動の許可には転用しない。
+
+関連ADR検索: docs/adr/FEATURE-INDEX.mdの在庫/商品マスタ領域とADR-154を確認。今回の値・件数はローカルファイル/Git/PR検索の観測。外部仕様や商品情報を今回検証したとはしない。
+
+
+## 2026-09-11 画面実装とローカル検証
+
+POが全件表示を承認し、離席中の完遂を依頼。実装は既存release/tcg-product-import-uiで継続。APIのis_active条件2箇所を除去し、商品作成/解析/DB定義は変更していない。frontend/src/pages/super-admin/TcgProductMasterPage.tsxの一覧とTcgProductImportPage.tsxの独立取込画面、features/tcg-product-import配下、App/DesktopShell/ja/enを追加更新。
+
+| 直接実行した検証 | 結果・根拠 |
+|---|---|
+| 単体テスト | 2ファイル10件成功。PRODUCT-UI-FIX-VERIFY-02.txt。確認前commitなし、同じFile/digest、二重クリック1回、ファイル変更時確認破棄、全行拒否、通信失敗時再送禁止、pending中drop、権限拒否、ページング/検索、古い応答破棄 |
+| TypeScript/本番ビルド | 成功。初回はテストのArray.atが既存ターゲット非対応で失敗、sliceへ修正して成功。設定は変更しない |
+| frontend check:all | 成功。既存を含むlint警告219件あり、警告0とは称さない。PRODUCT-UI-STATIC-01.txt |
+| Playwright Chromium | 2件成功。一覧→CSV確認→登録と非管理者拒否。API/authはモック、実登録ではない。PRODUCT-UI-E2E-01.txt |
+| Python ruff | 一覧ルーターと新規PGテストの2ファイル成功。初回はキャッシュ書込権限エラー、許可済みworktree権限で同一コマンド成功 |
+| 視覚確認 | /tmp/reports/product-csv-result.pngをAIが閲覧。結果件数・受付番号・一覧への戻りを表示。POの実機確認ではない |
+
+DockerコマンドはこのMacに存在しないためローカルpytestは実行していない。追加PGテストは専用localhost jarvis_test_dbのランダムスキーマをトランザクション内で作り、最後にrollbackする。非表示行を含むtotal・ページ送り・大小文字検索・0件を実SQLで検証する。CIでの実行はこれから確認する。
+
+未実施: PR/CI、本番反映、tenant_001の実取り込み、44件カタログの最新再照合とtenant_004登録。実装結果自己レビューは、承認済み全件条件・API認証の維持・読み取りSQLの範囲・CSV確認の固定・再送抑止を確認。CI/実DB成功前に完成とはしない。
+
+
+## 2026-09-11 PR提出・CI初回指摘と44件資料の再照合
+
+PR #3422: https://github.com/shingo-ops/salesanchor/pull/3422 。初回head2352081d。process-artifacts gateはPR番号付きGO記録が無いため拒否（job103075806588）。委任依頼は保存済みだが対応承認経路未有効。迂回やPO原文作成は行わない。
+
+初回test-schema-dup gateは、PG回帰テストが本番表定義を2箇所独自に持つ点を拒否（job103075805890）。a9210be1で既存の20260831_110000_create_tcg_analysis_tables_t004.sqlと20260903_180000_tcg_products_mark_en_t004.sqlを読む方式へ修正。ランダムな専用schemaとrollbackは維持し、正式migration/CIガードを変更していない。修正後CIは確認中。
+
+44件資料の外部確認（2026-09-11、商品情報の一次資料。導入成功事例ではない）:
+
+| 対象 | 観測事実 | 出典・適用限界 |
+|---|---|---|
+| 候補#7 トイザらス限定セット | 発売日は2019-11-29と公式記載 | https://www.pokemon-card.com/info/2019/20191110_002165.html 。商品情報の発売日欄。キーワード/既登録有無の根拠にはしない |
+| 候補#8 セブン限定セット | 発売日は2019-11-29と公式記載 | https://www.pokemon-card.com/info/2019/20191025_002144.html 。商品情報の発売日欄 |
+| 候補#37 コロコロ版 | 公式商品情報の発売日は2022年1月15日頃。配送は2022年3月下旬頃/8月下旬頃。候補表の2021-12-17は通常版からの仮置きで、公式の商品情報と一致しない | https://www.pokemon-card.com/info/003230.html 。発売日と配送日を別に扱う。「頃」を確定日へ変換して登録しない |
+
+候補全44件の再確認完了ではない。#6/#25/#31その他の最新照合、現在DBとの重複、キーワード衝突、QA実行経路、バックアップを未確認のまま実登録しない。既存カタログ正本を本便で上書きしない。
+
+
+## 2026-09-11 CI確定・承認待ち
+
+PR #3422のhead1fd8a4d0244197d6d208e047b3b465d5cdb26e39でCIは40成功・6対象外skip・1失敗。backend job103077025941は2545 passed / 93 skipped / 302 warnings、PostgreSQL用環境変数ありの全体試験を確認。個別試験名は静粛ログに出ないため、新規試験単独の実行ログとは区別する。test-schema-dupの拒否は解消済み。生ログ: /tmp/reports/PRODUCT-UI-CI-PYTEST-FINAL.log。
+
+唯一の失敗はprocess-artifacts gate job103077053336。実際の番号付きGOを受領してからPR本文へ転記する規則による拒否。PO原文GO #3422は未受領。代理承認の経路も有効化されていないため代筆・迂回はしない。生ログ: /tmp/reports/PRODUCT-UI-CI-APPROVAL-FINAL.log。
+
+実装・ローカル検証・上記headの技術CI・PR提出は完了。マージ、本番反映、tenant_001試行、tenant_004の44件登録は未実施。次は番号付きGO受領後、最終headのCI再確認、公式マージ・配備確認。実データ投入は候補情報/重複/キーワード/QA経路の確認が別途必要。
+
+
+2026-09-11 最終再検査追補: PR #3422 head e2f1063d（前headから文書3件のみ変更）のCIは38成功/6skip/3失敗。backend job103078793511は2544 passed/93 skipped/1 failed。失敗は既存test_inventory_parser_llm_real_api.py::test_real_gemini_call_returns_structured_itemsで、Gemini APIがHTTP429とYour prepayment credits are depletedを返した。集約pytestも失敗。GO記録欠落も継続。前headの2545成功を最終headの成功と混同しない。ログ/tmp/reports/PRODUCT-UI-CI-PYTEST-REPEAT.log。課金・secrets・CI変更、無意味な再試行、マージ/配備は実行しない。外部サービス復旧と番号付きGOが必要。この追補はローカル文書commitに保存し、再CIを無用に起動しないためpushは保留。PR本文には同じ停止理由を反映する。
+
+
+2026-09-11 08:06 JST（受領後記録時刻）: PO原文「GO #3422」を受領。PR本文へ本人の承認を転記する。Gemini残高の復旧は未確認で、既存実API試験の失敗は未解消。番号付きGOと全検査成功を区別し、マージ/配備/実登録はまだ行わない。課金やCI設定は変更しない。
+
+
+2026-09-11 本番反映再開: PO原文「商品マスタの本番反映を実行、離席するので最後まで進めてくれデプロイ反映を完了条件とする」。GO #3422は受領済み。外部API停止は別PR #3425の3.1/キー変更とdeploy成功で対応済み。main4774d774を2a85d3d2へ統合。台帳2件はmain全文と自分の追記を保持、商品画面/APIの承認blob不変、日英両側の変更保持を照合。今回の完了条件はマージ・自動deploy成功・本番応答と配布資産確認。CSV実登録・tenant_001試行・44件本登録は本便対象外。最新CI確認中。
+
+
+## 2026-09-11 商品マスタのメニュー配置
+
+PO原文「その前にサイドメニューから開ける状態にしてくれ、saas管理者メニューの解析精度管理の下に配置」。基点e81dd3ecのDesktopShell.tsx:190-195では商品マスタがSaaS管理者配列の先頭に存在し、既存routeも本番配布済み。ja.jsonのnav.superAdminTcgSupplierQualityは「解析精度管理」。
+
+差分設計: DesktopShell.tsxの既存商品マスタ項目1行を解析精度管理の直後へ移動する。順序は取込・解析・配信、解析精度管理、商品マスタ、為替レート管理。既存to=/super-admin/tcg-product-master、labelKey、isSuperAdmin条件、他3項目を維持。API・DB・翻訳キー追加なし。理由はPOが指定した場所から既存画面を見つけられるようにするため。既存先頭維持は希望位置と異なるため不採用。
+
+受入は指定順序・項目4件各1回・既存URL/権限制御の維持を差分で照合し、対象lint/buildと既存CIを確認する。並べ替えをなぞる新規テストは増やさない。守り手はDesktopShellの既存ナビ表示とfrontendのnav/i18n/型チェック。リスクは表示位置が変わることのみで、誤った場合は当該1行を戻すPRで復元できる。外部事例は不要、自社メニュー実物とPOの位置指定で判断可能。ライブラリ/API仕様変更なし。
+
+同一AIのPlanner→Architect自己審査APPROVE（この1行の移動のみ）。独立レビューや番号付きGOではない。新規PRの正式GOは別途必要。新メニューの本番配置は未反映。
+
+
+商品マスタ配置PR #3429提出済み: https://github.com/shingo-ops/salesanchor/pull/3429 。commit6e289bd9、製品変更はDesktopShell既存1行移動。対象eslint/build/台帳/diff成功、既存4項目と移動先/権限維持を自己レビュー。CI確認中、番号付きGO未受領、本番配置は未反映。生報告/tmp/reports/PRODUCT-MENU-PR-01.txt。
+
+
+## 2026-09-11 発売日順と作品タブの調査
+
+対象: 商品マスタ一覧の追加設計。基点 b6644187c55a3dc58df0bc7e7a4dbba870c186a9、専用ブランチ release/product-master-date-tabs-design。preflight成功、開始時差分0、HEAD対origin/mainは0/0。報告は /tmp/reports/TH-PRODUCT-DATE-TABS-DESIGN-PREFLIGHT.txt と TH-PRODUCT-DATE-TABS-ENTRY.json。既存台帳は古い状態を含むため完了の証明に使わない。公式ledger-viewで本テーマの作業登録を確認する。
+
+### 観点1 全体像
+
+- backend/app/routers/tcg_product_import.py:65: GET /tcg/products/list。:70 のquery/limit/offset、:76 のrequire_super_adminを使い、:93 は商品コード降順。countとitemsは同じ検索条件で、商品is_activeの除外なし。
+- frontend/src/pages/super-admin/TcgProductMasterPage.tsx:20: 1ページ50件、:26 の状態はquery/pageのみ、:35 のURLでサーバーへページ指定。:45 はrelease_date列、:50 は検索欄。作品絞込み・タブはない。
+- migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:82: 商品表の定義。release_dateはDATEかつNULL可、work_idはUUIDかつNULL可、codeは一意。商品一覧で取引の売却日時は使っていない。
+
+### 観点2 共用部品
+
+- frontend/src/components/Tabs.tsx:37: items/activeKey/onChange等の契約。:61 のtablist、:76 のtab、aria-selected、buttonを備える。frontend/src/components/Tabs.css:24 の既存横スクロールと色変数を再利用できる。
+- backend/app/services/tcg_product_master_svc.py:85: work_idの参照先はTCG_SCHEMA.tcg_series。migrations/20260902_110000_tcg_classification_masters.sql:39 にid/code/display_name/alt_name/is_active、:94 に11作品のseed定義。IP001/Pokemon/ポケモンとIP002/One Piece/ワンピースがある。これはリポジトリ内定義の11件であり、本番の現行件数を実測したものではない。
+
+### 観点3 非共用部品・使えない入口
+
+- backend/app/routers/tcg_product_master.py:141: registration-formはextraction_item_idとsource_message_idが必須。backend/app/services/tcg_product_master_svc.py:67 で元明細の存在・未解決を検査する。無関係なIDや空文字で作品候補だけを取得する用途には使えない。
+- backend/app/routers/super_admin_tcg.py:63: 同名に近い別のシリーズAPIはpublic.tcg_series_masterを読む。work_idの参照先と異なるため本設計では利用しない。
+
+### 観点4 ルールの所在
+
+- docs/adr/ADR-113-two-mode-dev-flow.md:80: 実物確認→設計→整合検査→実装の順序。本書の調査後、design.md §14を作成して自己審査する。
+- docs/adr/ADR-027-ui-internationalization.md:50: 業務データの翻訳は対象外。固定UI文言は日英キー、作品名は既存DBデータとして扱う。ADR-144の共通部品再利用に従う。ADR-154の登録・重複照合・解析ロジックは本変更の対象外。
+- backend/app/tcg_config.py:23: TCG_SCHEMAの形式検査。入力からスキーマを選ばせず既存設定を使う。QAはtenant_001、本番はtenant_004という現行境界を維持する。
+
+### 観点5 維持の仕組み
+
+- backend/tests/test_tcg_product_list_pg.py:18: 専用DB/localhost確認、:26 から一時スキーマをrollbackする実PGテスト。現在は全件3件・検索・コード順ページングを検査する。発売日/作品の検査はまだない。作品表のmigrationは現在のfixtureに含まれない。
+- frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx:14: 非管理者、:19 ページ/検索、:28 遅着応答を検査。frontend/tests-e2e/tcg-product-import.spec.ts:6: 一覧からCSVへの既存導線と非管理者拒否。新契約ではモックのworks追加が必要。
+- .github/workflows/test.yml:222: RLS_TEST_DATABASE_URL/:224 RLS_ADMIN_DATABASE_URLを用意し、:241 でpytest全体を実行。skip0確認が必要で、集約チェック成功だけでは追加PG試験成功としない。
+
+### 観点6 設計図との対照
+
+| 依頼・既存条件 | 現状 | 分類 |
+|---|---|---|
+| 発売日の新しい順 | 商品コード降順 | 不足 |
+| 作品タブで絞る | 作品情報はDB定義にあるが一覧UI/APIに指定なし | 不足 |
+| 絞込み後も新しい順 | 作品絞込み未実装 | 不足 |
+| 管理者限定・全件管理・検索・50件ページ・CSV導線 | ページ/API/既存§13契約に実在 | 一致・維持 |
+
+今回新たに削除を検討する余剰はない。根拠: frontend/src/pages/super-admin/TcgProductMasterPage.tsx:48 の既存管理操作と本設計の境界。
+
+### 観点7 ノイズと境界・未確認
+
+- backend/app/routers/super_admin_tcg.py:2 のpublicのシリーズとtenantの作品を区別。migrationsのseedを本番の現在値と断定しない。非公開移植リポジトリのコード・文書は参照/転送していない。
+- 本番DBの実件数、NULL日付件数、work_id未設定/孤立件数、性能、実画面は本調査では未測定。設計はこれらの件数に依存せず扱いを定義し、実装後の隔離PG試験とtenant_001画面確認を完了条件とする。本番データの修正・migration・取込実行は対象外。
+- Context7 MCPは公開ツール一覧に存在せず利用不可。起動指示の代替許可により2026-09-11にPostgreSQL 16 ORDER BY、FastAPI query/extra data types、SQLAlchemy 2 textの公式資料を直接確認。出典と適用はdesign.md §14に記す。製品のテストは今回未実行。
+
+次: docs/handoff/tcg-product-import/design.md §14の詳細案をPO確認へ渡す。独立したレビューや実装完了とは扱わない。
+
+### 2026-09-11 実装カード準備の実測
+
+PR #3431マージコミットa66e9382を新しい基点6c55e40dが包含することをgit merge-base --is-ancestorで確認。対象製品7ファイルは両コミット間の差分0。公式new-worktreeでrelease/product-master-date-tabs-implを作成、実在/ブランチ/差分0/preflight成功を確認。Docker CLIは実在するがdocker infoは接続先socket不存在でexit1。Python3.12は/usr/local/bin/python3.12、npm/nodeは実在。製品試験・依存導入は未実行。報告は/tmp/reports/TH-PRODUCT-TABS-IMPL-WORKTREE.txt、TH-PRODUCT-TABS-IMPL-PREFLIGHT.txt、TH-PRODUCT-TABS-DOCKER.txt。
+
+TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
+
+### 2026-09-11 発売日順・作品タブの実装とローカル検証
+
+POが実装役1名への委任を承認し、TH-PRODUCT-DATE-TABS-IMPL-01を実行。開始時preflight成功・指定ブランチ一致・未保存差分0。設計§14の7製品ファイルだけを変更した。APIはwork_idのUUID入力、同一の検索/作品条件によるcountとitems、release_date DESC NULLS LAST/code DESC、検索やページに独立するworksを追加。画面は既存Tabsを使い、query/作品の併用とページリセット、最新応答のみ反映、候補保持/選択消失保持、works不正時エラーを実装。DATEを時刻に変換せず、CSV/認証/全件管理を維持した。
+
+| 条件・検証 | 直接実行した結果 |
+|---|---|
+| AC1〜5 | PG/HTTP試験を既存隔離スキーマ・rollback・公式作品migrationで追加。逆転するコードと日付、未来日、同日2件、NULL/孤立、作品×検索、候補4種、53件ページ、別スキーマ、UUID/権限を検査する内容。Docker接続不可という準備時実測に従い、本便では未実行 |
+| AC6〜7・日英/DATE単体 | TcgProductMasterPage.test.tsxは14 passed。失敗/遅着/不正works/消失した選択作品も検査。APIはモック |
+| AC8 | Chromium E2E 5 passed（21.2秒）。日英名称/fallback、2作品切替、狭幅スクロール、Tab/Enter選択、CSV導線、非管理者拒否。API/authモックで実登録なし |
+| backend静的 | make lint-ci exit0、対象Python2ファイルruff成功。mypy診断153件が残る（変更ルーターの診断0）。既存Makefileの警告扱いによる終了0であり、全型検査合格とはしない |
+| frontend静的・ビルド | check:all exit0（0 errors/221 warnings）。本試験の日本語fixture由来3警告を規約どおり修正後、対象eslint --max-warnings=0成功、14単体再成功。build成功。全体の既存警告0とはしない |
+| AC9 | 正式PG skip0、CI、tenant_001の実API/実画面と性能、配備は未実施。ローカル結果だけで完成/マージ可能とはしない |
+
+生報告: /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。画像: /tmp/reports/product-tabs-ja.png、product-tabs-en.png、product-csv-result.png。5173は別worktreeのサーバーが使用中と実測したため、担当間で同じE2Eの専用PORT=5189を確認し、空き確認後に起動した。既存サーバーや設定ファイルは変更していない。待機中のps読み取りはOSに拒否され、再試行せず報告した。依存導入/検査自体の権限拒否はない。
+
+製品7ファイルと本テーマ記録3ファイルをローカル保存する。push/PR本文変更/GO生成/マージ/配備は本カードの対象外。次は実装コミットの差分確認後、準備PR #3433への公開便、正式PG/CI/QAの検証へ進む。
+
+
+### 2026-09-11 PR #3433 の公開・マージGO受領
+
+PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21.255931+00:00（記録時の実測であり発話時刻の推定ではない）。対象はPR #3433の商品マスタ発売日順・作品タブ。ローカル実装12e6b13cを確認し、main 7606ca9a041e315b81040373e8f4ddebbc562133へ追従。競合はtasks/todo.mdの2テーマの行で、本テーマの実装行とmain側の金型化行を保持。製品ファイルの競合なし。公開後の実PG/CI、配備結果とtenant_001実接続確認は、GOの受領と分けて記録する。
+
+
+PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。

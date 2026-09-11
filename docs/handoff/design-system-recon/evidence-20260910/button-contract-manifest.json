@@ -1,0 +1,27 @@
+[
+  {
+    "file": "frontend/src/components/Button.tsx",
+    "lines": 87,
+    "sha256": "1da5f5adfc8dce5c1e4a0d3ab130c076b2308bb9ac28999c18eb50ebae51727a"
+  },
+  {
+    "file": "frontend/src/components/loading/Spinner.tsx",
+    "lines": 32,
+    "sha256": "bd63a79f60b135d97ce56a33e4c994fd862eebf381413195ae7dc93d62edf84f"
+  },
+  {
+    "file": "frontend/src/loading-animations.css",
+    "lines": 551,
+    "sha256": "d222bbebef406d0fc4389624f3a399ccb1225e476c8ff9c7f250297f9ca026ba"
+  },
+  {
+    "file": "frontend/src/components/Button.test.tsx",
+    "lines": 109,
+    "sha256": "d47c6b541d97845fe54fc39b3491b92e97b7aaf07bca09cf33a586c8ec0b18a2"
+  },
+  {
+    "file": "frontend/src/components/loading/Spinner.test.tsx",
+    "lines": 55,
+    "sha256": "2888836ce77f04e72d3b67e0e3676c3ee505bea66d04a5b3f1e2ce2087495f4b"
+  }
+]

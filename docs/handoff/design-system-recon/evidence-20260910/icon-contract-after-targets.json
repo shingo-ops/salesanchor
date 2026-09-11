@@ -1,0 +1,1465 @@
+{
+  "summary": {
+    "sha": "current-worktree",
+    "typescriptVersion": "5.9.3",
+    "method": "JSX call signature props.weight declaration originates from constants/icons.tsx; tracked and new source loaded from current worktree; dependencies read from installed node_modules",
+    "exclusion": "(stories|test|spec)\\.|/design-preview/",
+    "total": 163,
+    "production": 118,
+    "productionFiles": 39,
+    "counts": {
+      "style": 0,
+      "color": 0,
+      "ref": 0,
+      "spread": 0,
+      "aria-hidden": 86,
+      "aria-label": 0,
+      "aria-labelledby": 0,
+      "aria-describedby": 0,
+      "role": 0,
+      "focusable": 0,
+      "weight": 17
+    }
+  },
+  "rows": [
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 11,
+      "tag": "Check",
+      "attrs": {
+        "ref": "{ref}",
+        "size": "{size}",
+        "weight": "\"bold\"",
+        "className": "\"usage-color\""
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 20,
+      "tag": "Check",
+      "attrs": {
+        "ref": "{ref}",
+        "size": "{20}"
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 28,
+      "tag": "Check",
+      "attrs": {}
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 33,
+      "tag": "Check",
+      "attrs": {
+        "aria-hidden": "{hidden}"
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 38,
+      "tag": "Check",
+      "attrs": {
+        "aria-hidden": "{false}",
+        "aria-label": "\"Done\"",
+        "aria-labelledby": "\"caption\"",
+        "aria-describedby": "\"description\"",
+        "role": "\"img\"",
+        "focusable": "\"false\""
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 44,
+      "tag": "Check",
+      "attrs": {}
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 50,
+      "tag": "Check",
+      "attrs": {
+        "aria-label": "\"Done\"",
+        "role": "\"img\""
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 57,
+      "tag": "Check",
+      "attrs": {
+        "spread": "valid",
+        "ref": "{ref}"
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 57,
+      "tag": "Check",
+      "attrs": {
+        "size": "{14}",
+        "ref": "{ref}"
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 59,
+      "tag": "Check",
+      "attrs": {
+        "style": "{{ marginRight: 8 }}"
+      }
+    },
+    {
+      "file": "frontend/src/constants/icons.test.tsx",
+      "line": 61,
+      "tag": "Check",
+      "attrs": {
+        "color": "\"red\""
+      }
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "line": 137,
+      "tag": "X",
+      "attrs": {
+        "size": "{20}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 77,
+      "tag": "NAV_ICONS.chevronDown",
+      "attrs": {
+        "size": "{ICON.sm}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 228,
+      "tag": "NAV_ICONS.dashboard",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 238,
+      "tag": "NAV_ICONS.schedule",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 269,
+      "tag": "NAV_ICONS.inventory",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 281,
+      "tag": "NAV_ICONS.purchaseOrders",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 299,
+      "tag": "NAV_ICONS.fileText",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 315,
+      "tag": "NAV_ICONS.leads",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 326,
+      "tag": "NAV_ICONS.orders",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 339,
+      "tag": "NAV_ICONS.sales",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 352,
+      "tag": "NAV_ICONS.commissions",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 363,
+      "tag": "NAV_ICONS.admin",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 376,
+      "tag": "NAV_ICONS.saasAdmin",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 389,
+      "tag": "NAV_ICONS.more",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 417,
+      "tag": "NAV_ICONS.logout",
+      "attrs": {
+        "size": "{18}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 444,
+      "tag": "NAV_ICONS.close",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 455,
+      "tag": "ACCOUNT_ICONS.profile",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 466,
+      "tag": "THEME_ICONS.light",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 467,
+      "tag": "THEME_ICONS.dark",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 475,
+      "tag": "GlobeIcon",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 483,
+      "tag": "NAV_ICONS.logout",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 123,
+      "tag": "NAV_ICONS.dashboard",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 131,
+      "tag": "NAV_ICONS.schedule",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 139,
+      "tag": "NAV_ICONS.fileText",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 149,
+      "tag": "NAV_ICONS.leads",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 157,
+      "tag": "ACCOUNT_ICONS.profile",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 205,
+      "tag": "THEME_ICONS.light",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 207,
+      "tag": "THEME_ICONS.dark",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 220,
+      "tag": "GlobeIcon",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 231,
+      "tag": "NAV_ICONS.logout",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 267,
+      "tag": "NAV_ICONS.inventory",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 281,
+      "tag": "NAV_ICONS.orders",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 293,
+      "tag": "NAV_ICONS.more",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 318,
+      "tag": "PriorityIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 278,
+      "tag": "WeeklyIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 291,
+      "tag": "ArrowIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 475,
+      "tag": "BellIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 525,
+      "tag": "CalendarCheckIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "size": "{14}",
+        "className": "\"db-followup-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 541,
+      "tag": "FlagIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 548,
+      "tag": "ArrowRightIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "size": "{14}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 631,
+      "tag": "TrendUpIcon",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 209,
+      "tag": "TABLE_ICONS.sortAsc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 210,
+      "tag": "TABLE_ICONS.sortDesc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 212,
+      "tag": "TABLE_ICONS.sortAsc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "line": 147,
+      "tag": "ArrowTopRight",
+      "attrs": {
+        "size": "{18}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "line": 158,
+      "tag": "X",
+      "attrs": {
+        "size": "{20}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 164,
+      "tag": "CheckIcon",
+      "attrs": {
+        "size": "{14}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 50,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 119,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 388,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 423,
+      "tag": "CategoryIcon",
+      "attrs": {
+        "size": "{ICON.md}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 472,
+      "tag": "STATUS_ICONS.warning",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 226,
+      "tag": "EditIcon",
+      "attrs": {
+        "size": "{18}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 236,
+      "tag": "DeleteIcon",
+      "attrs": {
+        "size": "{18}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 240,
+      "tag": "CloseIcon",
+      "attrs": {
+        "size": "{18}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 448,
+      "tag": "AddIcon",
+      "attrs": {
+        "size": "{18}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1130,
+      "tag": "SearchIcon",
+      "attrs": {
+        "size": "{18}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1141,
+      "tag": "SettingsIcon",
+      "attrs": {
+        "size": "{18}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 189,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 244,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 210,
+      "tag": "STATUS_ICONS.warning",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 341,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 343,
+      "tag": "STATUS_ICONS.warning",
+      "attrs": {
+        "size": "{ICON.sm}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 344,
+      "tag": "STATUS_ICONS.error",
+      "attrs": {
+        "size": "{ICON.sm}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 382,
+      "tag": "STATUS_ICONS.warning",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 60,
+      "tag": "NAV_ICONS.search",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "className": "\"inbox-search-icon\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 76,
+      "tag": "NAV_ICONS.filter",
+      "attrs": {
+        "size": "{13}",
+        "weight": "\"fill\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 109,
+      "tag": "INBOX_ACTION_ICONS.markRead",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 113,
+      "tag": "INBOX_ACTION_ICONS.markUnread",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 117,
+      "tag": "INBOX_ACTION_ICONS.exclude",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 121,
+      "tag": "INBOX_ACTION_ICONS.delete",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 316,
+      "tag": "PAGE_ICONS.inboxEmpty",
+      "attrs": {
+        "size": "{ICON.xl}",
+        "weight": "\"fill\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 335,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.xl}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 384,
+      "tag": "INBOX_ACTION_ICONS.markUnread",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 391,
+      "tag": "PAGE_ICONS.kartePanel",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 404,
+      "tag": "NAV_ICONS.more",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"bold\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 410,
+      "tag": "INBOX_ACTION_ICONS.markUnread",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 415,
+      "tag": "INBOX_ACTION_ICONS.exclude",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 420,
+      "tag": "INBOX_ACTION_ICONS.delete",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 426,
+      "tag": "PAGE_ICONS.kartePanel",
+      "attrs": {
+        "size": "{ICON.base}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 487,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 493,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 508,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 545,
+      "tag": "INBOX_ACTION_ICONS.translate",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 638,
+      "tag": "INBOX_ACTION_ICONS.delete",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 684,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 697,
+      "tag": "INBOX_ACTION_ICONS.translate",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 716,
+      "tag": "INBOX_ACTION_ICONS.send",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/SalesFormMultiSelect.tsx",
+      "line": 114,
+      "tag": "NAV_ICONS.chevronDown",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\"",
+        "className": "\"sales-form-caret\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 127,
+      "tag": "NAV_ICONS.close",
+      "attrs": {
+        "size": "{ICON.md}",
+        "weight": "\"fill\"",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 474,
+      "tag": "ACCOUNT_ICONS.security",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\"",
+        "className": "\"karte-lock-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 89,
+      "tag": "NAV_ICONS.close",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 71,
+      "tag": "PAGE_ICONS.settingsSolid",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/coming-soon/ComingSoonPage.tsx",
+      "line": 25,
+      "tag": "PAGE_ICONS.comingSoon",
+      "attrs": {
+        "size": "{64}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 58,
+      "tag": "Check",
+      "attrs": {
+        "size": "{14}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+      "line": 172,
+      "tag": "STATUS_ICONS.check",
+      "attrs": {
+        "size": "{ICON.sm}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/AdminHubPage.tsx",
+      "line": 72,
+      "tag": "Icon",
+      "attrs": {
+        "size": "{22}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+      "line": 100,
+      "tag": "RefreshIcon",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 208,
+      "tag": "TABLE_ICONS.sortDesc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 208,
+      "tag": "TABLE_ICONS.sortAsc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 215,
+      "tag": "TABLE_ICONS.sortDesc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 215,
+      "tag": "TABLE_ICONS.sortAsc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 223,
+      "tag": "TABLE_ICONS.sortDesc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 223,
+      "tag": "TABLE_ICONS.sortAsc",
+      "attrs": {
+        "size": "{12}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 128,
+      "tag": "INBOX_ACTION_ICONS.send",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 138,
+      "tag": "Check",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 144,
+      "tag": "Warning",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 141,
+      "tag": "NAV_ICONS.close",
+      "attrs": {
+        "size": "{20}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 133,
+      "tag": "Check",
+      "attrs": {
+        "size": "{12}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 164,
+      "tag": "SCHEDULE_POPOVER_ICONS.edit",
+      "attrs": {
+        "size": "{14}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 178,
+      "tag": "INBOX_ACTION_ICONS.send",
+      "attrs": {
+        "size": "{14}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionWorkspace.tsx",
+      "line": 59,
+      "tag": "NAV_ICONS.add",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgDistributionPage.tsx",
+      "line": 47,
+      "tag": "NAV_ICONS.add",
+      "attrs": {
+        "size": "{16}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+      "line": 71,
+      "tag": "ACCOUNT_ICONS.profile",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+      "line": 59,
+      "tag": "ACCOUNT_ICONS.security",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+      "line": 15,
+      "tag": "ACCOUNT_ICONS.preferences",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 87,
+      "tag": "X",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 90,
+      "tag": "X",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 93,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 101,
+      "tag": "X",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 104,
+      "tag": "PAGE_ICONS.settingsSolid",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 107,
+      "tag": "INBOX_ACTION_ICONS.delete",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 115,
+      "tag": "X",
+      "attrs": {
+        "size": "{ICON.lg}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 118,
+      "tag": "PAGE_ICONS.settingsSolid",
+      "attrs": {
+        "size": "{ICON.lg}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 136,
+      "tag": "PAGE_ICONS.settingsSolid",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 139,
+      "tag": "NAV_ICONS.more",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 142,
+      "tag": "NAV_ICONS.close",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 152,
+      "tag": "INBOX_ACTION_ICONS.markUnread",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 155,
+      "tag": "INBOX_ACTION_ICONS.exclude",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 158,
+      "tag": "INBOX_ACTION_ICONS.delete",
+      "attrs": {
+        "size": "{ICON.base}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 168,
+      "tag": "INBOX_ACTION_ICONS.attach",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 171,
+      "tag": "INBOX_ACTION_ICONS.translate",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ButtonSection.tsx",
+      "line": 174,
+      "tag": "INBOX_ACTION_ICONS.send",
+      "attrs": {
+        "size": "{ICON.md}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/BadgeSection.tsx",
+      "line": 46,
+      "tag": "PAGE_ICONS.settingsSolid",
+      "attrs": {
+        "size": "{10}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/BadgeSection.tsx",
+      "line": 47,
+      "tag": "X",
+      "attrs": {
+        "size": "{10}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+      "line": 24,
+      "tag": "PAGE_ICONS.inboxEmptyOutline",
+      "attrs": {
+        "size": "{ICON.xl}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+      "line": 34,
+      "tag": "NAV_ICONS.leads",
+      "attrs": {
+        "size": "{ICON.xl}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+      "line": 58,
+      "tag": "NAV_ICONS.search",
+      "attrs": {
+        "size": "{ICON.lg}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+      "line": 68,
+      "tag": "NAV_ICONS.filter",
+      "attrs": {
+        "size": "{ICON.lg}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/EmptyStateSection.tsx",
+      "line": 78,
+      "tag": "NAV_ICONS.fileText",
+      "attrs": {
+        "size": "{ICON.lg}"
+      }
+    },
+    {
+      "file": "frontend/src/components/EmptyState.stories.tsx",
+      "line": 24,
+      "tag": "PAGE_ICONS.inboxEmpty",
+      "attrs": {
+        "size": "{ICON.xl}"
+      }
+    },
+    {
+      "file": "frontend/src/components/EmptyState.stories.tsx",
+      "line": 32,
+      "tag": "NAV_ICONS.leads",
+      "attrs": {
+        "size": "{ICON.xl}"
+      }
+    },
+    {
+      "file": "frontend/src/components/EmptyState.stories.tsx",
+      "line": 41,
+      "tag": "NAV_ICONS.search",
+      "attrs": {
+        "size": "{ICON.lg}"
+      }
+    },
+    {
+      "file": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+      "line": 169,
+      "tag": "Icon",
+      "attrs": {
+        "size": "{14}",
+        "weight": "\"bold\"",
+        "aria-hidden": "\"true\"",
+        "className": "\"google-calendar-status-icon-layout\""
+      }
+    },
+    {
+      "file": "frontend/src/components/NavDropdown.tsx",
+      "line": 53,
+      "tag": "NAV_ICONS.chevronDown",
+      "attrs": {
+        "size": "{12}",
+        "aria-hidden": "\"true\""
+      }
+    },
+    {
+      "file": "frontend/src/components/NavItemList.stories.tsx",
+      "line": 18,
+      "tag": "NAV_ICONS.dashboard",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/NavItemList.stories.tsx",
+      "line": 24,
+      "tag": "NAV_ICONS.leads",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/NavItemList.stories.tsx",
+      "line": 31,
+      "tag": "NAV_ICONS.more",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/NavItemList.stories.tsx",
+      "line": 34,
+      "tag": "NAV_ICONS.help",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/components/NavItemList.stories.tsx",
+      "line": 35,
+      "tag": "NAV_ICONS.settings",
+      "attrs": {
+        "size": "{ICON.base}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.stories.tsx",
+      "line": 67,
+      "tag": "DashboardIcons.goalFlag",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.stories.tsx",
+      "line": 97,
+      "tag": "DashboardIcons.goalDone",
+      "attrs": {
+        "aria-hidden": "\"true\"",
+        "className": "\"db-section-icon\""
+      }
+    }
+  ]
+}

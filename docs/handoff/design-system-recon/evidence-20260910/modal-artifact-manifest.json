@@ -1,0 +1,130 @@
+{
+  "modal-prepare.cjs": {
+    "sha256": "f1367a7bca88a89da6cadc4794a3da730e038002d50c18bd68a779aeecdf3aa0",
+    "bytes": 1758
+  },
+  "modal-browser-v4.mjs": {
+    "sha256": "4c980ea333d1a04184a2f2ce3cf01c1c08ff35a699e59a5f68e0aab427f25aed",
+    "bytes": 12038
+  },
+  "modal-focus.mjs": {
+    "sha256": "198fd8123969afb72562bc6348acdab489871077d49cb7b4b3d835c7316b0c9f",
+    "bytes": 10055
+  },
+  "modal-story.mjs": {
+    "sha256": "b416b6061d3ceee8316afe348dc5071b353eca2e1990599789e712847baed680",
+    "bytes": 3235
+  },
+  "modal-summarize.py": {
+    "sha256": "81306434d070b8cb83e6db86ddbe6ab8693005a76ac97676702ce31855669b16",
+    "bytes": 3171
+  },
+  "modal-browser-v4-result.json": {
+    "sha256": "56a932a6c4305c9e4fca7a29bbc04eeb03d96b9f13e60e35860212432dba225a",
+    "bytes": 7228145
+  },
+  "modal-browser-v4.log": {
+    "sha256": "5c195b00129a37a2f861801043c89dcaf1faedd74d83f089c346db1210c27518",
+    "bytes": 153
+  },
+  "modal-browser-v4-limited-result.json": {
+    "sha256": "42ca74283fbd787cf75c847b8714013e44d527f7e4217d7beef0b4d4d91f2cc7",
+    "bytes": 61658
+  },
+  "modal-focus-result.json": {
+    "sha256": "b9057cf553e805e097f3b130ca9c3f0dab497d4b78e3fecc129b7fc33a33b281",
+    "bytes": 222979
+  },
+  "modal-focus.log": {
+    "sha256": "06ea99e3fd81822ae0ffff062e7ea970bb0a96cd0d116b137a94762b4895571a",
+    "bytes": 69
+  },
+  "modal-story-result.json": {
+    "sha256": "f2b92051ae0965ed0e97f171542c6268d3ad4a6e111b455e4aebec9c1dc3f97f",
+    "bytes": 3001
+  },
+  "modal-story.log": {
+    "sha256": "f2b92051ae0965ed0e97f171542c6268d3ad4a6e111b455e4aebec9c1dc3f97f",
+    "bytes": 3001
+  },
+  "modal-manifest.json": {
+    "sha256": "2a043dad5a897542be687a13e8d334e3f921b79d7f0216be2e228d0246789279",
+    "bytes": 527
+  },
+  "modal-summary.json": {
+    "sha256": "76c1ca0f792b034f8db174a515ddfa198eaaa9a32ef706dd26dcc8c4524a1add",
+    "bytes": 791
+  },
+  "modal-comparison.csv": {
+    "sha256": "5ace0fe82675dc178ff7bcb6a45a32af234294d3b48ecbe75210c83a2c6b79d6",
+    "bytes": 52013
+  },
+  "modal-fixture/after.tsx": {
+    "sha256": "62573944b63cb099d87245ba22e5a8265570e3c95752ed33447a098f39199f55",
+    "bytes": 262
+  },
+  "modal-fixture/before.tsx": {
+    "sha256": "bf3fbb704163b416a9e80b3dff7d957433fe1ba27d667c560d9c6714ec7cc450",
+    "bytes": 266
+  },
+  "modal-fixture/mock-firebase.ts": {
+    "sha256": "c96366f9764fc1370febfaea5cbad40551640446689ff37c2615b85a59a5c60f",
+    "bytes": 69
+  },
+  "modal-fixture/after.html": {
+    "sha256": "20d22542f8c32e62d46370241d53687b3e886f56c3d7641e05e1d1f52ee6198b",
+    "bytes": 145
+  },
+  "modal-fixture/sample.tsx": {
+    "sha256": "e72d26ffaca9bd381d0e812a5a3e842fc786911c8ca61ef9759526683301dd8a",
+    "bytes": 2373
+  },
+  "modal-fixture/before.html": {
+    "sha256": "ea63531247dcb519b1fa8778c2580c37648c9e042f4485fe53ac18d4a6575032",
+    "bytes": 146
+  },
+  "modal-fixture/mock-api.ts": {
+    "sha256": "b4135db08ff748063c8e96cf61bbccfccf3fe83d449cdcaa5c943c266ea46290",
+    "bytes": 809
+  },
+  "modal-fixture/before/PurchaseOrdersFormModal.tsx": {
+    "sha256": "b5f05b7cb448ede6e6a5508c1d1804dafd0af0491d4efaf991cc236509a26928",
+    "bytes": 8227
+  },
+  "modal-fixture/before/Modal.css": {
+    "sha256": "3d146b240304c4929f50ebdea432a3d6df0c2b6ebb0f4d76d32cdecf099a7952",
+    "bytes": 3089
+  },
+  "modal-fixture/before/PurchaseDetailPanel.tsx": {
+    "sha256": "ad833ba07e27319667b41db5ca4611330f795e52eb0343f55b89266c5749aaed",
+    "bytes": 14219
+  },
+  "modal-fixture/before/ShippingDetailPanel.tsx": {
+    "sha256": "bd16fa6d5eda4f898096b98635990015bbf7fbde2da4b38d22b25c7d3cc9ad78",
+    "bytes": 18555
+  },
+  "modal-fixture/before/Modal.tsx": {
+    "sha256": "15310f054306e12f9ae34437441b375a51369b9973123e6312aad05618af253f",
+    "bytes": 5107
+  },
+  "modal-fixture/after/PurchaseOrdersFormModal.tsx": {
+    "sha256": "b5f05b7cb448ede6e6a5508c1d1804dafd0af0491d4efaf991cc236509a26928",
+    "bytes": 8227
+  },
+  "modal-fixture/after/Modal.css": {
+    "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52",
+    "bytes": 3108
+  },
+  "modal-fixture/after/PurchaseDetailPanel.tsx": {
+    "sha256": "ad833ba07e27319667b41db5ca4611330f795e52eb0343f55b89266c5749aaed",
+    "bytes": 14219
+  },
+  "modal-fixture/after/ShippingDetailPanel.tsx": {
+    "sha256": "bd16fa6d5eda4f898096b98635990015bbf7fbde2da4b38d22b25c7d3cc9ad78",
+    "bytes": 18555
+  },
+  "modal-fixture/after/Modal.tsx": {
+    "sha256": "15310f054306e12f9ae34437441b375a51369b9973123e6312aad05618af253f",
+    "bytes": 5107
+  }
+}

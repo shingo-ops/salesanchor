@@ -7,7 +7,7 @@ backend/app/services 層に移植。
 extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
 同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
 
-エンジンバージョン: "name-first-v3-work"
+エンジンバージョン: "name-first-v6-master-safety"
 作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
 
 キーワード照合エンジン (name-first-v2):
@@ -30,9 +30,11 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
+
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v3-work"
+ENGINE_VERSION = "name-first-v6-master-safety"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -409,8 +411,8 @@ def resolve_work_evidence(
 ) -> str | None:
     """Accept only an explicit item name or the nearest independent work heading.
 
-    NULL/NULL means historical seven-column data. Empty v3 evidence is unknown.
-    A fabricated, ambiguous, or out-of-range citation is never repaired.
+    NULL/NULL and empty/empty evidence can use a verified raw heading.
+    Partial, fabricated, ambiguous, or out-of-range citations are never repaired.
     """
     aliases: dict[str, set[str]] = {}
     for work in works:
@@ -422,8 +424,15 @@ def resolve_work_evidence(
 
     direct = {wid for name, ids in aliases.items()
               if match_one_kw(name, normalize_en(raw_name)) for wid in ids}
-    if raw_work_name is None and raw_work_span is None:
-        return next(iter(direct)) if len(direct) == 1 else None
+    if raw_work_name is None and raw_work_span is None and len(direct) == 1:
+        return next(iter(direct))
+    missing_pair = ((raw_work_name is None and raw_work_span is None)
+                    or (raw_work_name == "" and raw_work_span == ""))
+    if missing_pair and len(direct) <= 1:
+        inferred_heading = work_heading_evidence(raw_text, line_start, line_end, works)
+        if inferred_heading and (not direct or inferred_heading[0] in direct):
+            return inferred_heading[0]
+        return None
     if not raw_work_name or not raw_work_span or len(direct) > 1:
         return None
     ids = aliases.get(normalize_en(raw_work_name).strip(), set())
@@ -469,22 +478,41 @@ def is_model_keyword(keyword: str) -> bool:
                 and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
 
 
+def match_product_keyword(kw: str, normalized_text: str) -> bool:
+    """Keep number-suffixed product tokens distinct without changing note/state matching."""
+    if not match_one_kw(kw, normalized_text):
+        return False
+    normalized = normalize_en(kw)
+    tokens = [normalized] if _RE_PURE_ASCII.fullmatch(kw) else normalized.split()
+    for token in tokens:
+        if re.search(r"[0-9]$", token):
+            left = r"(?<![a-z0-9])" if re.match(r"[a-z0-9]", token) else ""
+            if not re.search(left + re.escape(token) + r"(?![a-z0-9])", normalized_text):
+                return False
+    return True
+
+
 def match_pid_with_work(
     raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
     *, work_id: str | None, product_work_ids: dict[str, str | None],
     raw_state: str = "", raw_memo: str = "",
+    product_category_classes: dict[str, str] | None = None,
 ) -> tuple[Optional[str], str, bool, list[str]]:
     """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
     fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
     eligible: dict[str, list[str]] = {}
+    single_marker = single_card_marker(raw_name, raw_state, raw_memo)
     for code in product_codes:
+        category = (product_category_classes or {}).get(code, "") or ""
+        if single_marker and category.casefold() in {"box", "case"}:
+            continue
         if work_id is not None and product_work_ids.get(code) != work_id:
             continue
-        if any(kw and match_one_kw(kw, field)
+        if any(kw and match_product_keyword(kw, field)
                for kw in exclude_kw.get(code, []) for field in fields):
             continue
         matched = [kw for kw in search_kw.get(code, [])
-                   if kw and match_one_kw(kw, fields[0])
+                   if kw and match_product_keyword(kw, fields[0])
                    and (work_id is not None or not is_model_keyword(kw))]
         if matched:
             eligible[code] = matched
@@ -662,6 +690,8 @@ def resolve_condition_v2(
     kubun: str,
     cond_entries: list[dict],
     cond_canonical_to_uuid: dict,
+    *,
+    raw_memo: str = "",
 ) -> tuple[Optional[str], Optional[str], str]:
     """
     (canonical, cond_id, basis) を返す。
@@ -717,6 +747,17 @@ def resolve_condition_v2(
     # unit=パック系(UN0003) かつ R4b で FLAG_SINGLE になった行を Searched pack に変換する。
     # GAS 実測: basisDist R5=60件、UN0003 の Searched pack=61件（残1件はキーワード直接マッチ）。
     if kubun == "パック系":
+        # Only the pack default can consult memo; explicit state/name wins above.
+        for entry in cond_entries:
+            if entry["code"] != "CN0007" or entry["priority"] <= 0:
+                continue
+            if not app_kubun_matches(entry["app_kubun"], kubun):
+                continue
+            search = [k.strip() for k in entry["search_kw"].split(",") if k.strip()]
+            exclude = [k.strip() for k in entry["exclude_kw"].split(",") if k.strip()]
+            hit, keyword = match_keyword(raw_memo, search, exclude)
+            if hit:
+                return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
         cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
         return ("Searched pack", cid, b4_prefix + "R5:パック既定")
 
@@ -874,17 +915,20 @@ def _expand_note_label(template: str, match: re.Match[str]) -> str:
     return re.sub(r"\$(\d+)", replace_group, template)
 
 
-def build_note_ja(raw_memo: str, note_entries: list[dict]) -> Optional[str]:
-    """LITERAL/REGEX 札にマッチした日本語ラベルをカンマ連結する。"""
-    if not raw_memo or not note_entries:
+def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "") -> Optional[str]:
+    """Memo-only legacy notes; STATE_LITERAL explicitly also reads state."""
+    if not (raw_memo or raw_state) or not note_entries:
         return None
     norm_memo = normalize_en(raw_memo)
     labels = []
     for entry in note_entries:
         match_type = entry.get("match_type", "LITERAL")
+        if not raw_memo and match_type != "STATE_LITERAL":
+            continue
         if match_type != "REGEX":
+            note_input = f"{raw_memo}\n{raw_state}" if match_type == "STATE_LITERAL" else raw_memo
             hit, _ = match_keyword(
-                raw_memo, entry["search_keywords"], entry["exclude_keywords"]
+                note_input, entry["search_keywords"], entry["exclude_keywords"]
             )
             if hit:
                 labels.append(entry["label_ja"])
@@ -975,7 +1019,9 @@ def _match_status_pattern(text_val: str, pattern: str, match_type: str) -> bool:
     return False
 
 
-def resolve_status_v2(raw_state: str, status_entries: list[dict]) -> tuple[str, Optional[str]]:
+def resolve_status_v2(
+    raw_state: str, status_entries: list[dict], *, raw_memo: str = "",
+) -> tuple[str, Optional[str]]:
     """
     1. EXCLUDE（在庫切れ）優先 → (canonical, 'excluded')
     2. OUTPUT REGEX/LITERAL → (canonical, None)
@@ -989,7 +1035,12 @@ def resolve_status_v2(raw_state: str, status_entries: list[dict]) -> tuple[str, 
         (e for e in status_entries if e["effect"] == "EXCLUDE"),
         key=lambda e: e["priority"],
     ):
-        if _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+        memo_exact = (
+            entry["match_type"] == "LITERAL"
+            and bool(entry["search_pattern"])
+            and (raw_memo or "").strip().casefold() == entry["search_pattern"].strip().casefold()
+        )
+        if memo_exact or _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
             return (entry["canonical"], "excluded")
     for entry in sorted(
         (e for e in status_entries if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"),
@@ -1037,9 +1088,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     works = load_work_master(session)
     work_rows = session.execute(text(
-        f"SELECT code, work_id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+        f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
     )).fetchall()
     product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
+    # Registration stores the work label in category_class. The referenced product
+    # category is authoritative for Box guards; legacy rows without it keep fallback.
+    product_category_classes = {
+        row[0]: (
+            "Box" if product_code_to_kubun_type[row[0]] in {"箱系", "箱系大"} else ""
+        ) if row[0] in product_code_to_kubun_type else (row[2] or "")
+        for row in work_rows
+    }
 
     # C-1/C-7/Status マスタをロード（graceful fallback: テーブル不在時は空で続行）
     norm_rules = load_normalization_rules(session)
@@ -1103,6 +1162,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         norm_condition = apply_field_normalization(raw_state, norm_rules.get("CONDITION", []))
         norm_status = apply_field_normalization(raw_state, norm_rules.get("STATUS", []))
         norm_memo = apply_field_normalization(raw_memo, norm_rules.get("NOTE", []))
+        condition_memo = apply_field_normalization(raw_memo, norm_rules.get("CONDITION", []))
+        note_state = apply_field_normalization(raw_state, norm_rules.get("NOTE", []))
 
         # 単位解決 v2（商品フィルタより先に実行）— 正規化済み norm_unit を使用
         unit_canonical, kubun, unit_resolved = resolve_unit_v2(norm_unit, unit_alias_to_info)
@@ -1125,7 +1186,12 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             norm_product_name, filtered_codes, search_kw, exclude_kw,
             work_id=work_id, product_work_ids=product_work_ids,
             raw_state=norm_condition, raw_memo=norm_memo,
+            product_category_classes=product_category_classes,
         )
+        if work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+            heading = work_heading_evidence(source_text or "", line_start, line_end, works)
+            if heading and heading[0] == work_id:
+                pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
 
         if pid_resolved:
@@ -1133,7 +1199,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 状態解決 v2 — 正規化済み norm_condition を使用
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
-            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid
+            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid,
+            raw_memo=condition_memo,
         )
 
         # 数量・価格正規化
@@ -1142,11 +1209,14 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # C-7: 注記生成 — 正規化済み norm_memo を使用
         # GAS: buildNoteJA_ (SystemResolverV2.gs)
-        note_ja = build_note_ja(norm_memo, note_entries)
+        note_ja = build_note_ja(norm_memo, note_entries, raw_state=note_state)
 
         # ステータス解決 v2 — 正規化済み norm_status を使用
         # GAS: resolveStatusV2_ (SystemResolverV2.gs)
-        status_val, exclusion_val = resolve_status_v2(norm_status, status_entries)
+        status_val, exclusion_val = resolve_status_v2(
+            norm_status, status_entries,
+            raw_memo=apply_field_normalization(raw_memo or "", norm_rules.get("STATUS", [])),
+        )
 
         # needs_review 判定
         review_reasons = build_review_reasons(

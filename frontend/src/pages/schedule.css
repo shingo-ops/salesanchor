@@ -54,22 +54,6 @@
   gap: var(--space-2);
 }
 
-.schedule-nav__icon-button,
-.schedule-shell__icon-button {
-  padding: 0;
-  border-radius: 50%;
-}
-
-.schedule-nav__icon-button {
-  width: var(--space-9);
-  height: var(--space-9);
-}
-
-.schedule-shell__icon-button {
-  width: var(--size-icon-btn);
-  height: var(--size-icon-btn);
-}
-
 .schedule-view-switch {
   display: inline-flex;
   align-items: center;
@@ -144,15 +128,6 @@
   gap: var(--space-3);
 }
 
-.schedule-sidebar__create {
-  border-radius: var(--radius-full);
-  min-height: 3rem;
-  justify-content: flex-start;
-  padding-inline-start: var(--space-4);
-  font-weight: var(--font-weight-semi);
-  gap: var(--space-2);
-}
-
 .schedule-section__title {
   font-size: var(--font-base);
   font-weight: var(--font-weight-semi);
@@ -171,11 +146,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-.schedule-mini-calendar__nav-button {
-  width: var(--size-icon-btn-sm);
-  height: var(--size-icon-btn-sm);
 }
 
 .schedule-mini-calendar {

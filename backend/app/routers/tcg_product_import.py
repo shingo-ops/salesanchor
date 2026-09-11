@@ -22,6 +22,8 @@ tcg_product_import_svc から既存の create_product を呼ぶ。
 """
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -51,9 +53,17 @@ class ProductListItem(BaseModel):
     keyword_count: int = 0
 
 
+class ProductWork(BaseModel):
+    id: str
+    code: str
+    display_name: str
+    alt_name: str = ""
+
+
 class ProductListResponse(BaseModel):
     total: int
     items: list[ProductListItem]
+    works: list[ProductWork]
 
 
 # ---------------------------------------------------------------------------
@@ -70,16 +80,21 @@ async def list_products(
     query: str = Query(default=""),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    work_id: UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> ProductListResponse:
     like = "%" + query.strip() + "%" if query.strip() else "%"
+    condition = "(p.japanese_title ILIKE :like OR p.code ILIKE :like)"
+    params = {"like": like}
+    if work_id is not None:
+        condition += " AND p.work_id = CAST(:work_id AS uuid)"
+        params["work_id"] = str(work_id)
     total_row = await db.execute(
         text(
-            f"SELECT count(*) FROM {TCG_SCHEMA}.tcg_products "
-            f"WHERE is_active = TRUE AND (japanese_title ILIKE :like OR code ILIKE :like)"
+            f"SELECT count(*) FROM {TCG_SCHEMA}.tcg_products p WHERE {condition}"
         ),
-        {"like": like},
+        params,
     )
     total = int(total_row.fetchone()[0])
 
@@ -89,10 +104,10 @@ async def list_products(
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
             f"WHERE k.product_id = p.id) AS keyword_count "
             f"FROM {TCG_SCHEMA}.tcg_products p "
-            f"WHERE p.is_active = TRUE AND (p.japanese_title ILIKE :like OR p.code ILIKE :like) "
-            f"ORDER BY p.code DESC LIMIT :limit OFFSET :offset"
+            f"WHERE {condition} "
+            f"ORDER BY p.release_date DESC NULLS LAST, p.code DESC LIMIT :limit OFFSET :offset"
         ),
-        {"like": like, "limit": limit, "offset": offset},
+        {**params, "limit": limit, "offset": offset},
     )
     items = [
         ProductListItem(
@@ -105,7 +120,16 @@ async def list_products(
         )
         for r in rows.fetchall()
     ]
-    return ProductListResponse(total=total, items=items)
+    work_rows = await db.execute(text(
+        f"SELECT s.id, s.code, s.display_name, s.alt_name FROM {TCG_SCHEMA}.tcg_series s "
+        f"WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM {TCG_SCHEMA}.tcg_products p "
+        "WHERE p.work_id = s.id) ORDER BY s.code ASC"
+    ))
+    works = [
+        ProductWork(id=str(r[0]), code=str(r[1]), display_name=str(r[2]), alt_name=str(r[3] or ""))
+        for r in work_rows.fetchall()
+    ]
+    return ProductListResponse(total=total, items=items, works=works)
 
 
 # ---------------------------------------------------------------------------
