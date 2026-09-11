@@ -2305,6 +2305,12 @@ EV-20260911-PRODUCT-UI-IMPLEMENT追補: PR #3422 head1fd8a4d0は技術CI40成功
 PO原文「追従してPRマージを実行」を、提示済み#3418の文書保存指示として受領。main追従、文書差分/必要検査後に公式wrapperでマージしAPI確認する。全体設計REVISEを維持し機能完成とはしない。P1は実装承認後のbranch作成API403で停止、branch/workflow/PR未作成を再GET確認済み。証拠 docs/handoff/go-record-transcription/recon.md末尾、/tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json。
 
 
+商品マスタメニュー配置追補: PO位置指定を受領。既存設計/reconの2026-09-11メニュー配置節へ保存。DesktopShell既存1行移動、権限/URL維持。新規PR/本番反映は未実施。
+
+
+商品マスタ配置PR #3429提出済み: https://github.com/shingo-ops/salesanchor/pull/3429 。commit6e289bd9、製品変更はDesktopShell既存1行移動。対象eslint/build/台帳/diff成功、既存4項目と移動先/権限維持を自己レビュー。CI確認中、番号付きGO未受領、本番配置は未反映。生報告/tmp/reports/PRODUCT-MENU-PR-01.txt。
+
+
 ## EV-20260911-PRODUCT-DATE-TABS
 
 2026-09-11。商品一覧の発売日降順と作品タブの依頼を受領。「販売日」は既存「発売日」かの確認へPOは「進める」と回答。基点b6644187、専用release/product-master-date-tabs-design、preflight成功、開始時差分0・mainとの距離0/0。実物根拠はdocs/handoff/tcg-product-import/recon.md同日追補、詳細案はdesign.md §14、親はdocs/specs/product-master/README.md §8。コード順・50件ページ・DATE/UUID・tcg_seriesの定義と共通Tabsを直接照合。Context7利用不可のため公式資料を直接確認した。報告は/tmp/reports/TH-PRODUCT-DATE-TABS-ENTRY.json、TH-PRODUCT-DATE-TABS-DESIGN-PREFLIGHT.txt。製品コード/DB/CI/本番に変更なし。詳細設計はPO確認前の提案で、実装移行承認・カード発行・実装検証とは区別する。
