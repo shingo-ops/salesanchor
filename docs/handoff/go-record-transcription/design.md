@@ -10,6 +10,22 @@ status: draft
 
 現在の有効な進捗: 専用App方式・取消期限・追加commit時の再GOは合意済み。通常の次予約解放は本番デプロイ成功後。マージ前の確定失敗は順番を返し、修正後に最後尾へ再受付。PO承認の緊急PRは待機列の最前列へ移す（実行中処理を中断しない）。以下の「現行の予約契約（失敗・緊急優先）」を最新の設計方針とし、それ以前の追補は検討履歴として読む。全体自己審査REVISE、ガード/CI実装未着手。公開検証repoのみ作成確認済み、App/鍵/保護設定/実機試験は未実施。
 
+## 実機検証P1の準備PR（限定設計審査APPROVE・実行承認前）
+
+これまで実機の完了を待って設計全体を繰り返しREVISEとしていた。ADR-113が定める、現物の整合を確認して限定された実装へ渡し、実装後の試験で確かめる順序に沿い、次の一便を「合成受付workflowの準備PR」に限定する。全体の導入合格とは区別する。
+
+成果物: [検証workflow案](intake-p1-workflow.txt)、[実装カード](TH-GO-INTAKE-P1-PR-01.txt)。後者は接続済みGitHubアプリを使える担当向け。カード検査のshell対象外であるMCP操作も、公開されたtool引数と手動照合した。未実行であり、CI設定変更を禁じる設計担当の役割を自動解除しない。
+
+P1の変更は既存検証repo1363676622の新規workflow1件だけ。issues openedイベントのrepo/actor/author/schemaと固定対象を検査する。permissions空、checkout/外部action/ネットワーク呼出/secret使用なし。出力は理由コードとauthorization_issued:falseのみ。実際の委任原文やGOを入力しない。認可/永続化/予約/マージ機能を実装したと称しない。
+
+今回の実測: 接続済みGitHubアプリのprofileはshingo-ops/id246949427、repoメタデータはpush/admin true。CLIは別主体shingo-ccでpullのみ。collaborator permission APIはintegration権限不足403。この拒否を無視せず、workflow作成の実権限は未検証とする。検証mainはa815d94c535f59fae6415b881296d64ef17bf6c7、protected false。これらの事実は本番の保護を解除する根拠ではない。
+
+workflow案はactionlint成功、inline Pythonを抽出したローカル13ケースも期待結果と一致。正常、sender/author違い、repo違い、edited、壊れたJSON、サイズ超過、重複キー、余分な欄、target違い、bool版番号、コマンド文字列、配列を検査。実機の主体情報取得はこれからであり、ローカルfixtureの成功を実機成功にしない。
+
+予定実機6ケース: CLI主体で正常/壊れたJSON/対象repo違い/余分な欄/bool版番号/コマンド文字列の合成Issueを送る。正常1件のACCEPTED_PROBE、拒否5件の理由/exit1と全件authorization_issued:falseを確認する。Issue起票とworkflowの有効化は本カードの対象外で、準備PRの対象HEAD/差分を確認した後に次のカードへ進む。
+
+同一AI自己審査APPROVEは「P1準備PRの限定設計」だけ。理由: repo/入力/新設先/主体/試験/停止/報告先が具体的で、権限不足ならPRを提出せず止まる。既存製品の変更、秘密の生成、main直書き、マージを含まない。P1実装承認前、PR未提出。全体設計と本番導入はREVISEのまま。
+
 ## 承認受付と書込権限の具体案（2026-09-11）
 
 現在の設計上の選択: 制御repoで独立起動し、製品repo側のコードを実行しない。制御コードの更新・委任記録の更新・PR受付を別の権限に分ける。以下は実機検証前の設計案で、App/制御repo/資格は未作成。

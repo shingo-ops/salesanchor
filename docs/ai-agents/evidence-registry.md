@@ -2142,3 +2142,7 @@ Button契約実装追補: ADの製品3+unit2だけ実装、unit151と既存check
 Button便PR提出: https://github.com/shingo-ops/salesanchor/pull/3423 をreadyで作成し公式登録完了。実装commit b35807504a87015aed52a99d6791f9774b2f8293、製品5hash一致、限定第二レビューAPPROVE適用をroot確認。stage19/PR全体22ファイル。CI確認中、番号付きGO未受領。過去GO3420を流用せず、全体の形/配色統一とPOによる理解しやすさの評価は未完と区別する。
 
 PR #3423 GO追補: PO原文「GO #3423」を受領。2026-09-11 07:55 JSTは受領後記録時刻。前HEAD3f052a9dはCI37成功/8対象外、1失敗はGO記録欠落。製品5hashは限定第二レビューと一致をroot再確認。本人原文をPRへ転記し、最新HEADの検査後に公式マージする。DB変更なし・バックアップ該当なし。代理GO/過去GOの流用なし。
+
+## EV-20260911-GO-INTAKE-P1-READY
+
+既存sandboxの合成受付workflow準備PRに範囲を限定した設計とカードを作成。actionlint/ローカル13ケース成功。同一AIの限定設計審査APPROVE、実行承認前。全体REVISEを維持。GitHubアプリのrepo書込表示とworkflow API実権限は区別し、403時は停止。成果物 docs/handoff/go-record-transcription/intake-p1-workflow.txt、TH-GO-INTAKE-P1-PR-01.txt。

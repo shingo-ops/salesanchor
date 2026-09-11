@@ -770,3 +770,11 @@ assert safe['recovery_to_normal'][-1]=='normal_head_acquires'
 assert not any(event=='normal_head_acquires' for event,_ in edges(('BLOCKED','original',False,START[3])))
 print(json.dumps({'safe':safe,'mutant':mutant,'limits':['Approval/CI/revision facts assumed verified.','Atomic shared-slot transition assumed.','One incident and one repair identity; retry IDs, APIs, and real CAS excluded.']},indent=2))
 ```
+
+## 実機検証P1の準備と限定審査
+
+GitHubアプリのget_profileはshingo-ops/id246949427、get_repoはrepo1363676622/push/admin true。get_repo_collaborator_permission(shingo-cc)は403 Resource not accessible by integration。CLI側pullのみと区別し、APIごとの可否を一律に推測しない。baseは /tmp/reports/TH-GO-P1-SANDBOX-BASE.json。Browser skillの必要な実行toolが公開されていないため、ブラウザ操作は実施しなかった。別ブラウザで権限制限を迂回しない。
+
+Context7不在につき公式 [Contents API](https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents) と [issuesイベント](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#issues) を2026-09-11 JSTに確認。workflow変更にはAPI権限条件があり、repoメタデータ表示だけでは成功を保証しない。issues openedのworkflowはdefault branch上に必要なため、準備PRだけでは実機試験を始められない。
+
+/tmp/reports/TH-GO-INTAKE-P1-VERIFY.py が同梱workflow案のPythonを抽出し13ケースを確認。actionlint /tmp/reports/TH-GO-INTAKE-P1-WORKFLOW.txt exit0。結果は TH-GO-INTAKE-P1-LOCAL-RESULT.json、TH-GO-INTAKE-P1-ACTIONLINT.txt。workflow SHA256 e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26。試験用コードは設計案のtxtであり、リポジトリのCIとして設置していない。
