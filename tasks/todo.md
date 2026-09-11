@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| 商品マスタの発売日順・作品タブ（実装引継ぎ） | Agent | 設計PR #3431マージ済み。POが実装開始を承認。準備PR #3433に正式検査済み実装カードを保存、製品実装未着手 | 実装役がカードを順に実行する。ローカル実装/検証/コミットの後、CI実PGとQAへ進む | docs/handoff/tcg-product-import/design.md §14 / TH-PRODUCT-DATE-TABS-IMPL-01.txt / EV-20260911-PRODUCT-DATE-TABS | 2026-09-11 |
+| 商品マスタの発売日順・作品タブ（実装） | Agent | 承認設計の7ファイル実装済み。画面単体14件/E2E5件/対象ruff・eslint/build成功、標準静的終了0（mypy等の診断残存を区別）。実装コミットは未公開 | ローカル実装差分を確認後、準備PR #3433への公開便、正式PG skip0・CI・tenant_001実接続検証。製品GO/マージ/配備は後続 | docs/handoff/tcg-product-import/recon.md 同日実装追補 / /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt / EV-20260911-PRODUCT-DATE-TABS | 2026-09-11 |
 | フロントエンド金型化・再測定 | Agent | PR3412/3420/3423/3426マージ済み。Icon4ファイルをmain5de8afa1で再検収、179試験/厳格lint/既存check/build/Storybook成功。局所表示8同値、既存152利用欠落0、限定第二レビュー確認済み | Icon便PR #3427、head2031cfa3のCI37成功/8対象外。残1失敗はGO記録欠落のみ。GO #3427受領済み。本人原文を記録し、最新CI後に公式マージ。新CIは全画面移行後 | docs/specs/design-system/design.md §AE/AF / docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節 / PR3426 merge5de8afa1 | 2026-09-11 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |

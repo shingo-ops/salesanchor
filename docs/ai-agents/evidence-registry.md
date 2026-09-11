@@ -2326,3 +2326,5 @@ EV-20260911-PRODUCT-DATE-TABS引継ぎ: PO原文「次を進める」を、直�
 TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
 
 準備Draft PR #3433: https://github.com/shingo-ops/salesanchor/pull/3433。作成head346f7d72、.pr-numberとhead指定一覧の一致を直接確認。製品ファイル差分0、文書5件のみ。実装役へTH-PRODUCT-DATE-TABS-IMPL-01を提示できる状態。自動起動/実装実行は行っていない。後続実装は同じPRを更新し、実装完了までマージしない。
+
+EV-20260911-PRODUCT-DATE-TABS実装追補: POが実装役1名への委任を承認し、カード範囲の7製品ファイルを実装した。開始時preflight/差分0確認。画面単体14 passed、Chromium E2E5 passed（API/authモック）、対象ruff/厳格eslint/build/diff成功。check:allはexit0（0errors/221warnings、追加試験3警告は修正後に対象eslint/単体成功）。make lint-ciはexit0だがmypy診断153件を警告扱いで保持。正式PG/HTTP試験はDocker不在で未実行、CI/QA実接続/配備も未実施。実測表はrecon同日実装追補、生出力は/tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。ローカル実装の記録であり、実装コミットの公開/GO/マージは行っていない。
