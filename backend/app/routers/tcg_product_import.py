@@ -77,7 +77,7 @@ async def list_products(
     total_row = await db.execute(
         text(
             f"SELECT count(*) FROM {TCG_SCHEMA}.tcg_products "
-            f"WHERE is_active = TRUE AND (japanese_title ILIKE :like OR code ILIKE :like)"
+            f"WHERE (japanese_title ILIKE :like OR code ILIKE :like)"
         ),
         {"like": like},
     )
@@ -89,7 +89,7 @@ async def list_products(
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
             f"WHERE k.product_id = p.id) AS keyword_count "
             f"FROM {TCG_SCHEMA}.tcg_products p "
-            f"WHERE p.is_active = TRUE AND (p.japanese_title ILIKE :like OR p.code ILIKE :like) "
+            f"WHERE (p.japanese_title ILIKE :like OR p.code ILIKE :like) "
             f"ORDER BY p.code DESC LIMIT :limit OFFSET :offset"
         ),
         {"like": like, "limit": limit, "offset": offset},

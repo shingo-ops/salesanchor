@@ -70,6 +70,11 @@ LLM_PRICING: dict[str, dict[str, Decimal]] = {
         # $0.40 / 1M output tokens
         "output_per_token": Decimal("0.40") / Decimal("1000000"),
     },
+    "gemini-3.1-flash-lite": {
+        # Standard text pricing, USD per 1M tokens (2026-09-11).
+        "input_per_token": Decimal("0.25") / Decimal("1000000"),
+        "output_per_token": Decimal("1.50") / Decimal("1000000"),
+    },
     "gemini-3.5-flash-lite": {
         # $0.30 / 1M input tokens
         "input_per_token": Decimal("0.30") / Decimal("1000000"),
