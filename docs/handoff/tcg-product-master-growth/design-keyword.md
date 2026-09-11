@@ -551,3 +551,8 @@ CN0007/NJ041は不在・別ラベル・別canonical・予期しない原値な�
 商品区分参照への切替は既存有効商品の29件で参照元が変わるが、固定1630明細の再比較で商品/確定/候補の変化0。実装した商品専用照合の77対照成功、同じ標本で登録案に対する候補確定52を再現。登録内容の参照コードを26候補で埋め、実CSVサービスの静的検査でblocking0（型番空の警告のみ）。これはDB登録完了ではない。59候補中33は版・形態・メーカー・書籍分類等の確認を残す。書籍区分と冊の扱いはPOへ確認中で、返答を推測しない。
 
 ローカル根拠: /private/tmp/onepiece-research/completion-336-pass.log、completion-110-pass.log、registration-box-guard-before.log、category-reference-replay-private.json、registration-static-check-private.json。顧客由来の資料はPRへ含めない。今回の架空DB試験では本番データを使わず、Gemini実呼出し0、本番書込0、配信0。
+
+
+PR #3434検証追記（実装HEAD4c5d1893）: GitHub run34577363592で2586成功/95skip、coverage62.41%、必須13検査成功。ローカル初回の読み込み依存1失敗を修正し対象39件成功。全体再試験は試験DBの7.8GBが100%・空き0（DiskFull）で2472成功/25失敗/90errors/94skip。成功扱いせず上記GitHubの新DBで確認した。他者の試験DBを削除せず、このMacの共有試験環境は容量復旧まで使わない。make lint-ci終了0、mypyは既存警告運用で型エラー0ではない。
+
+process-artifacts gateは番号付きGO記録なしで失敗。一般的なマージ指示は受領済みだが、GO #3434の原文を代筆しない。未マージ・未配備。26登録候補は静的検査のみで未投入。書籍区分/冊の回答と33候補の確認は残る。本番再解析・配信未実施。
