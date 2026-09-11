@@ -236,6 +236,7 @@ async def fetch_output_rows(
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser
             ON ser.id = p.work_id
         WHERE ar.pid_resolved = TRUE
+          AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}

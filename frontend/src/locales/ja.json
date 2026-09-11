@@ -1,5 +1,6 @@
 {
   "productCsv": {
+    "allWorks": "すべて",
     "code": "商品コード",
     "title": "商品名",
     "mark": "型番",
