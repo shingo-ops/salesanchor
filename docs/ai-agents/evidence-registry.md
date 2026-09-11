@@ -2326,3 +2326,11 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
 
 EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。
+
+
+EV-20260911-FRONTEND-MOLD-26: 共通6部品16ボタンの利用先移行。基準7606ca9a（PR3432マージ済み、CI38成功/8対象外）。広域352を先頭btn-*332/専用20と訂正し、BSA002–006/025–035の原文一致を確認。根拠docs/handoff/design-system-recon/evidence-20260910/raw-shared-raw-audit.md/json、設計design.md§AH。PO原文「次を進める」を受領、設計自己審査済み・実装/新PR未完。新CIは最後。
+
+
+EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをroot実測（ja左端-30.140625、en-20.484375、旧24）。AH提出条件REVISE、未検証7ファイルを退避予定。先行AIはModal footer折返し＋見本の2製品に限定。通常footer実運用3/見本2を監査し、局所wrap28条件の左右欠け0を確認。詳細design.md§AIとraw-shared-footer-probe/全利用監査。実装/最終検収/新PR未完。
+
+- EV-20260911-FRONTEND-MOLD-28: AI共通Modal footerの実装検収。560pair/輪郭448/Story4、品質5項目exit0/189unit、限定review APPROVE、2製品hash一致。証拠: docs/handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md。Generatorはbrowser、rootは品質と結果再集計を実行。PR番号付きGO・マージ・PO目視未完。

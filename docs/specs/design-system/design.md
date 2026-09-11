@@ -1141,3 +1141,100 @@ Planner作成後に同じAIがArchitectとして仕様/実物/既存CIを自己�
 AG実装検収の保存先: [Button検収記録](../../handoff/design-system-recon/evidence-20260910/button-appearance-implementation.md)。Story修正後の限定コード審査APPROVE、14hash一致。実Reactによる配色190/寸法1080/raw440同値は成功。raw遷移中の初回差と補助期待色の誤転記は検証原稿の不備として補正し、失敗証跡を保存。全画面/200%/PO目視とは区別し、新CIは最後のまま。
 
 AG補助検収完了: alias8同値・loading12・focus72ほか成功、製品14hash一致。限定証跡審査APPROVE。現在の提出条件をAPPROVEへ更新する。保証は局所部品と既存利用の差分に限り、全本番画面やloading後のfocus復帰を保証しない。PR/番号付きGOは未完。
+
+
+### AH. 共通6部品の旧ボタン16利用を移管（2026-09-11）
+
+PO原文「次を進める」を受領。既存全体設計Z/AAとButton外観AGの利用先移行を続行する。基準7606ca9a（PR3432マージ、最終CI38成功/8対象外）。本便の新PR番号付きGOは未受領。
+
+目的: 確認画面・担当者報酬・顧客優先度・売上/仕入/発送の共通編集パネルで、通常操作16箇所を既に検収済みのButtonへ移す。色・角丸・寸法の正本はButton.cssとtokens/indexであり、各パネルに外観を作らない。
+
+観測訂正: 旧広域監査352/89filesは正規表現がdist-btn等にも一致していた。先頭btn-*クラスは332、専用クラス20。全352を旧components.css利用とする解釈を取り消す。raw-shared-raw-audit.json/mdと再現原稿に全対象を保存。タグbutton344/a7/Link1。全native button数や通常操作の総数とは区別する。
+
+| 既存ID | 実装先（frontend/src/components） | 移管先 |
+|---|---|---|
+| BSA-005/006 | ConfirmModal.tsx（2） | secondary/md、既存danger条件のdanger又はprimary/md。autoFocus・type=button維持 |
+| BSA-002/003/004 | CommissionPanel.tsx（3） | secondary/sm、primary/md、secondary/md。担当role引数・disabled・再計算・close維持 |
+| BSA-027/028/029 | PriorityScoreOverride.tsx（3） | secondary/sm、secondary/md、primary/md。起動type省略、cancel type=button、submit維持 |
+| BSA-025/026 | OrderFinancialPanel.tsx（2） | secondary/md、primary/md。cancel/submitとsaving維持 |
+| BSA-030/031/032 | PurchaseDetailPanel.tsx（3） | secondary/md、secondary/md、primary/md。外部form=purchase-detail-form、確認条件と処理維持 |
+| BSA-033/034/035 | ShippingDetailPanel.tsx（3） | secondary/md、secondary/md、primary/md。外部form=shipping-detail-form、CSV出力条件と処理維持 |
+
+全16は旧BSAの原文と空白を除き一致、追加class/style/ref/spread各0。普通btnのclassNameをvariant/sizeへ、tagをButtonへ、Button importを追加するだけ。mdは省略可だが設計上md。単独btn-sm2件は既存BSAのsecondary/sm選択に従う。変数式dangerの分岐条件を変えない。type省略1/submit4/外部form2/autoFocus1をそのまま残す。onClick・disabled・title・data-testid・childrenの翻訳/保存中条件を保持し、loading propへ置換して新Spinnerを追加しない。
+
+製品の許可範囲は上記6TSXと新規SharedButtonMigration.test.tsx（7ファイル）。その他のCSS/部品/Button本体/Modal本体/翻訳/依存/CI/backend/API/認証/課金は変更しない。API呼出し本文、条件分岐、catch/finally、数値変換、CSV処理は無変更。テストと局所fixtureの通信は完全にモックし本番・実APIへアクセスしない。
+
+CSS照合: form-actions（components.css、company-forms.css）とModal footerは親配置の所有元で、対象16に追加外観上書きなし。限定読み取り担当は固定SHAの6ソースで厳格eslint6/6成功。Modalの初回focus移動・trap・元要素復帰とConfirm autoFocusの相互作用は現物前後比較し、新しいfocus制御は足さない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 16対象の欠落0・業務本文不変 | BSA ID対応を全件保存。Button import追加/tag/class→variant/sizeだけを許容した構文前後比較で、残りの全属性/children/関数本文が一致 |
+| 共通部品へ16移行、旧332から316 | 同じ固定SHA/抽出規則で前後比較し対象名も記録。専用20とリンク8の変化0、既存共通Button70→86（実運用分類） |
+| native操作互換 | 実6部品の回帰試験。Confirmのconfirm/cancelとdanger分岐、Priority起動/cancel/save/権限なし、Commission解除role/再計算、売上submit、仕入/発送の外部form submitとdisabled/既存なし条件を検証。mock APIのURL/引数/回数、close/onSavedの結果を元コードと照合 |
+| 外部フォームと表示領域 | 実部品と実Modalをブラウザーで表示し、明暗×幅390/767/768/1279/1280の各6部品を確認。部品内だけでなく画面/モーダル内のボタンラベルの欠け、footer端、focus輪郭が切れないことを測る。元からの問題と今回差を区別し、問題があれば製品を独断修正せず設計へ戻す |
+| 操作と可視状態 | Tab/Shift+Tab、Enter/Space、disabled中の追加動作0、既存保存中文言、Confirmの前後focus観測、CSVは実通信なしのモックで確認。200%相当狭幅と長い日英文言は別記し、全画面PO評価とは称しない |
+| 既存品質・維持 | 厳格対象lint、unit/coverage、check:all、build、Storybook、PR既存CI。新CIは最後。7製品hashと限定レビュー対象を一致させる |
+
+変更前後: 旧btn-smの独自色等と通常ボタン旧寸法から、AGの共通variant/sizeへ意図して揃える。見た目を前後同値とは呼ばない。原色/寸法の変更元を増やさずButton.cssを参照するだけなので、新色トークンは不要。ロール割当ボタンは1JSXが5ロールへ繰返され、16は画面上の実DOM個数ではなくソース利用数。
+
+代替: 332全部を同時に移す案はリンク・専用操作・外部装飾の条件が異なり原因切分けを妨げる。通常6部品を同便へまとめ、リンク8・DataTableのページ送り/ソート・送信ガード・タブ/絞込みは別便とする。旧CSSは未移行316に必要なため削除しない。幅不足が出た場合、Modal共通CSS変更を本便へ自動混載しない。
+
+接触面: 人=同じ操作を共通形で表示、エージェント=この16ID/7fileカードを利用、機械=既存lint/unit/CI、データ=送信内容無変更、production=本便は承認後PRマージまで、外部=API/CSV実呼出し本文を保持し検証はモック。rollbackは本PRのmerge単位で、前提PR3432だけを戻さない。検収後にmigration.mdへID/owner/native/type/検証結果を記録する。
+
+外部事例は不要（既存16原文と実部品比較が直接根拠）。新ライブラリ/API仕様の調査・変更なし。既読React18/native契約とAGを継承。Context7依存の未確認仕様へ新たに依存しない。
+
+Planner作成後、同じroot AIがArchitectとして既存BSA/AG/実物/限定CSS照合/保存前lintを自己審査APPROVE。これは全体設計の独立第二者レビューではない。限定コードレビュー・実装検収・新PR・番号付きGOは未完。狭幅で問題が見つかればその前提を補い再審査する。
+
+
+#### AH提出条件の差し戻し
+
+16移管の作業中、rootが実Modal・実Button・実翻訳を使った発送footer局所fixtureで狭幅を測定。390pxでは旧rawの先頭左端24px、移管後は日本語-30.140625px/英語-20.484375pxとなり、Modalのoverflow:hiddenで欠ける。実発送ページ全体の操作試験ではなく同じfooter構造の局所再現。ボタン単体の内部scrollWidthだけを測ると見落とすことも記録する。根拠raw-shared-footer-probe-result.json/mjs。
+
+AHの提出条件をREVISE。Generatorは6TSX16移管＋回帰test原稿配置までで停止、試験実行/検収/commit/PRは未完。これら7ファイルをhash付きで/tmpへ退避してから先行の共通footer配置便へ切り替え、混載しない。保存した案は未検証として保持する。先行便のマージ後に最新mainでAHを再検証する。新CIの先行導入は行わない。
+
+### AI. 共通Modal footerの折返しを先行（2026-09-11）
+
+親はZ/AAの配置owner分離とAHの安全な移管。目的は複数ボタンが画面外へ押し出されることを防ぐ。POの次便続行・原因別に分離して順番にマージする指示の範囲で、前提修正だけを独立PRにする。新PR番号付きGOは創作しない。
+
+方式: frontend/src/components/Modal.cssの唯一の.comp-modal-footerへflex-wrap: wrap;を追加する。既存display:flex/align-items:center/justify-content:flex-end/gap/padding/border/flex-shrinkは維持。折返しが必要なときだけ次行を使い、DOM順・フォーカス順・外部form・API処理を変えない。Buttonの文字や寸法を小さくして収める案は採らない。非色の配置宣言なので新トークン不要。
+
+製品範囲はModal.cssとModal.stories.tsxの2ファイル。後者へResponsiveFooter見本を追加し、既存Button3つと既存shipping/common翻訳を使って幅が足りないときの折返しを再現する。既存4storyやModal.tsx/全利用ページは変えない。見本のonClickは開閉だけで外部通信0、明暗クラスを同一documentで勝手に切り替えない。新規値・新規翻訳キーなし。
+
+静的影響: 通常Modal44 JSX利用中footer指定5（実運用3/見本2）。実運用はPurchaseDetailPanel（3button）、ShippingDetailPanel（3button）、PurchaseOrdersFormModal（marginRight:autoの金額span＋2button）。loading配下の別Modalは対象外。footerclassの追加上書き0。根拠raw-shared-modal-footer-audit.md/json。折返しでfooterが高くなるため本文の残り高さが小さくなる。既存bodyのoverflow-y:autoを使い、短い画面でも本文とボタンへ到達できることを検証する。
+
+事前実測: 製品CSS変更0のブラウザー試験で、実Modalにwrapだけを注入した発送footerは旧raw/移管後Button×日英×7幅320/390/640/767/768/1279/1280の28条件で全buttonがfooter左右内・ボタン内文字欠け0。raw-shared-footer-wrap-probe-result.json。これは3実利用全部や縦方向/キーボードの最終合格ではない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 2製品のみ・操作無変更 | CSS差分はfooterのwrap1宣言、既存story本文は不変で新見本と必要importだけ追加。保留中AH7ファイルを退避hash照合後に基準へ戻し、本便差分へ含めない |
+| 発送/仕入/発注footerを保持 | 実3部品の実Modal・実CSSとモックデータで明暗/日英/320・390・767・768・1279・1280幅を確認。発注の金額0・通常値・大きな金額、保存中・既存なし状態を含め、元からの不具合と本変更を区別 |
+| 画面外/重なり/文字欠け0 | 各footer子要素のrectがdialogとviewport内、scrollWidth等だけでなく座標も比較。折返し行の上下非重複、順序を確認。1行に収まる条件では元と同じrect/色/寸法 |
+| 高さ・focus・外部form | 短い高さ360pxと通常900px、200%相当の640px幅を区別して測る。本文をスクロール可能、footer操作は表示可能、Tab/Shift+Tab順と輪郭/親境界、button.formの同一ID/submit1回を検証（通信はモック） |
+| 次便前提の解消 | 保留中の発送Button3個に相当する局所fixtureで390px日英の欠け解消を再測定。16移管を本PRへ含めない |
+| 維持 | ResponsiveFooter story buildと局所ブラウザー証跡、既存lint/checkall/build/coverage/CI。新CI追加なし、既存閾値変更なし |
+
+代替とリスク: モバイル固定縦積みは幅が足りる時にも高さを増やすため、必要な場合の折返しを選択。各ページ固有CSSはSSOTを分散させるため採らない。任意長の単一footer子要素を折る保証はこの1宣言にはなく、実データ・既存文言の範囲で確認する。金額span全体等が単独で幅を超える場合は追加設計が必要。DOM/API/業務本文無変更、data/backend/secrets/本番操作への追加影響なし。rollbackは本PR単位、AHが後続依存するのでAH反映後に本PRだけを戻さない。
+
+Context7 MCP提供0をroot確認し、PO許可の代替でW3C CSS Flexible Box Layout Module Level 1 §5.2 https://www.w3.org/TR/css-flexbox-1/#flex-wrap-property とMDN flex-wrapを2026-09-11確認。nowrapは単行、wrapは複数行。仕様説明と実際の3footer確認を区別する。外部企業事例は不要（現物の欠けと局所再現が直接根拠）。
+
+Planner追補後、同一AIがArchitectとして既存配置ownerと静的影響/実測28条件を自己審査APPROVE。限定コード/実3部品ブラウザー検収は未完、実装後に審査する。全画面統一・PO目視・AH再開・新PR番号付きGOを完了扱いしない。
+
+#### AI検証条件の明確化（製品設計変更なし）
+
+CARD01の比較原稿は、beforeのnowrap表示が1行かつdialog内であれば座標同値を要求していた。実320x360英語Purchaseの先頭left6.3125はfooter padding24へ侵入し、内容領域に収まっていないため、その判定は誤分類。CARD02では内容領域をfooter rect＋border＋paddingで求め、全子要素がその左右内に収まるbeforeに限り同値検査する。afterには全条件で内容領域内・dialog/viewport内・文字欠け0・重なり0を要求する。高さが異なる金額spanもあるためtop完全一致だけを行判定に使わない。原失敗modal-browser.log/resultを保持し、別v2で再実行。製品2差分は無変更。root自己審査APPROVE（検査期待の訂正）、最終検収未完。
+
+#### AI検査棚卸し・最終分類（CARD03、上記CARD02分類を置換）
+
+v2はbeforeが内容領域内でもflex-shrinkによりボタン内部折返し高さ62/62/60pxとなったため、内容領域内だけでは同値条件にできなかった。製品afterは44pxで2行。2度の分類不足を受け、逐次全件試験を止め測定方式を棚卸しした。Context7提供0を再確認しW3C Flex §9.3 https://www.w3.org/TR/css-flexbox-1/#algo-line を直接確認。行分割は縮小前寸法で決めるため、before実DOMの子flex-grow:0/basis:autoを確認して、別測定中だけshrink:0で必要幅を測る。子border-box幅＋固定margin＋gap（auto marginは0）の合計が内容幅内の条件だけ同値比較。測定前後でstyleと通常rectを復元照合し、フォントと有限遷移完了後の値を使う。afterは全条件で従来の領域内/文字欠け/非重複を検査する。
+
+また保存中のdisabled又は文言一致という原稿の偽陽性を廃止。実物Purchase:264-295、Shipping:340-368、PurchaseOrdersFormModal:129-143に基づき、保存中はcancel/submitがtrue、既存のconfirm/CSVはfalse、newでは先頭がtrueであることと、前後disabled配列一致・再クリック送信追加0を測る。原ログv1/v2は保持。root同一AIの自己審査APPROVE（検査設計の補正）、限定readonly担当の仕様/実物照合も採用。限定5条件の測定分類・復元を先に検算してから全条件へ。製品差分2は変更なし。
+
+#### AI実測方式の分離（CARD04、縮小前の分類原理はCARD03を継承）
+
+rootのdiagnostic/diagnostic2/diagnostic3実行では、通常rectは完全一致だが、style属性がnullから空文字へ変わり完全復元検算に失敗。原因未確定のため成功とは扱わない。比較対象DOMを一時変更する方式を廃止し、同じbefore fixtureを第3隔離pageへ表示して必要幅だけを測る。変更前referenceとbeforeの子属性/文言/状態/寸法/色/内容幅一致、reference測定前後に本比較beforeの属性/rect不変を要求。referenceにも外部通信遮断を適用し毎条件fresh mount。本比較before/afterは無変更のまま検収する。旧復元assertを外すのは使い捨てreferenceだけで、本比較の不変検査へ置換する。root自己審査APPROVE、限定readonly審査も3条件付きAPPROVE、未検証のため限定5条件から再開。製品2差分無変更。
+
+#### AI実装検収結果
+
+CARD04方式で全560組成功（reference一致/本比較不変560、自然幅同値448・折返し112）。輪郭448・Enter/Space6・外部form3・future2・Story4成功。root品質5項目exit0（22files189tests）、限定readonly最終レビューAPPROVE、製品hash2/2一致。詳細は [検収記録](../../handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md)。新PR番号付きGO/マージ/PO目視は未完。AH16移管は保留、新CIは最後。
+
+AI関連ADR照合: ADR-067の既存トークン参照、ADR-073のStorybook見本・既存checkall運用、ADR-113の設計持ち込み契約を維持。本便はADR-073全5評価軸の100%達成を主張せず、CI新設はPO指定の全画面移行後とする。

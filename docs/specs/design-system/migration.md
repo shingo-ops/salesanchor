@@ -189,3 +189,15 @@ PR #3420はmerge a5e5a250aabe2e244ebf64c24bef40b5db40541c、最終HEADc3f8668e�
 
 
 2026-09-11再開: 前提callback修正PR3426をmerge5de8afa1でマージ済み。Icon便を同mainへ復元して再検証へ進む。旧「別PR修正の順序PO判断待ち」は履歴、現在は最新基準の検証/PRが次の一手。新CIは全画面移行後。
+
+
+### 2026-09-11 PR3432完了と次便AH
+
+通常Icon PR3427はmergeb16a4224、Button外観PR3432はmerge7606ca9a041e315b81040373e8f4ddebbc562133、両便の最終CI38成功/8対象外をroot直接確認済み。Button本体外観のownerはButton.tsx/Button.css、材料tokens.css/index.css。AGの既存70利用を移管済み、操作維持の詳証はbutton-appearance-implementation.md。全raw移行完了ではない。
+
+旧raw352の表記は広い正規表現の集合。再監査で先頭btn-*332/専用20へ分解。次便AHはBSA002–006/025–035の16利用（6共通部品）。設計自己審査済み、実装/検収は未完。新CIは全画面移行後。
+
+
+EV-20260911-FRONTEND-MOLD-27: AH移管で390px発送footerの画面外欠けをroot実測（ja左端-30.140625、en-20.484375、旧24）。AH提出条件REVISE、未検証7ファイルを退避予定。先行AIはModal footer折返し＋見本の2製品に限定。通常footer実運用3/見本2を監査し、局所wrap28条件の左右欠け0を確認。詳細design.md§AIとraw-shared-footer-probe/全利用監査。実装/最終検収/新PR未完。
+
+2026-09-11 AI先行実装検収済み: 共通Modal footer wrapと見本2製品。560前後比較/輪郭448/Story4、root189unit等品質5項目成功、限定レビューAPPROVE。PR提出準備中。AH16移管は退避した未検証案、旧通常btn332の減少はまだ0。新CI最後。根拠: [AI検収](../../handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md)。

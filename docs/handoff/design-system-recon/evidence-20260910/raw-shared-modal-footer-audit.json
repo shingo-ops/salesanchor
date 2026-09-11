@@ -1,0 +1,57 @@
+{
+  "sha": "7606ca9a",
+  "directModalCalls": 44,
+  "explicitFooterCalls": 5,
+  "productionFooterCalls": 3,
+  "fixtureFooterCalls": 2,
+  "spreadCalls": [
+    {
+      "file": "frontend/src/components/Modal.stories.tsx",
+      "line": 29,
+      "production": false,
+      "defaultFooter": false
+    }
+  ],
+  "rows": [
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "footerLine": 304,
+      "definitionLine": 262,
+      "production": true,
+      "children": "Fragment: confirm, cancel, submit (3 native buttons)",
+      "special": "submit form=purchase-detail-form; disabled/title/conditional labels"
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "footerLine": 377,
+      "definitionLine": 335,
+      "production": true,
+      "children": "Fragment: CSV download, cancel, submit (3 native buttons)",
+      "special": "submit form=shipping-detail-form; disabled/title/conditional labels"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "footerLine": 149,
+      "definitionLine": 129,
+      "production": true,
+      "children": "Fragment: amount span (marginRight:auto), cancel, submit",
+      "special": "amount span includes strong currency; submit form=po-form"
+    },
+    {
+      "file": "frontend/src/components/Modal.stories.tsx",
+      "footerLine": 73,
+      "production": false,
+      "children": "Fragment: 2 common Buttons",
+      "special": "Default story also has args spread at line29; current default args have no footer"
+    },
+    {
+      "file": "frontend/src/pages/design-preview/sections/ModalSection.tsx",
+      "footerLine": 78,
+      "production": false,
+      "children": "Fragment: 2 common Buttons",
+      "special": "design preview"
+    }
+  ],
+  "cssDefinitions": 1,
+  "runtimeVerifiedByThisReviewer": false
+}

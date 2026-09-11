@@ -1,0 +1,2288 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "cases": [
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 93.6875,
+            "top": 278,
+            "bottom": 340,
+            "width": 69.6875,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 105.6875,
+            "right": 216.3125,
+            "top": 278,
+            "bottom": 340,
+            "width": 110.625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 109,
+            "clientWidth": 109,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 228.3125,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 67.6875,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 99.75,
+            "right": 170.5625,
+            "top": 240,
+            "bottom": 284,
+            "width": 70.8125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 831,
+          "scrollTop": 723,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "reference": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 93.6875,
+            "top": 278,
+            "bottom": 340,
+            "width": 69.6875,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 105.6875,
+            "right": 216.3125,
+            "top": 278,
+            "bottom": 340,
+            "width": 110.625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 109,
+            "clientWidth": 109,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 228.3125,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 67.6875,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "natural": {
+        "original": [
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          }
+        ],
+        "childrenWidths": [
+          {
+            "width": 70.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 113.4375,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 68.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          }
+        ],
+        "gap": 12,
+        "required": 277.0625,
+        "available": 272,
+        "fits": false,
+        "referenceOnly": true
+      },
+      "referenceMatched": true,
+      "beforeUnchanged": true
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "en",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 280,
+          "bottom": 360,
+          "width": 320,
+          "height": 80
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "Switch status to \"Confirmed\""
+            },
+            "tag": "BUTTON",
+            "text": "Confirm",
+            "left": 6.3125,
+            "right": 98.734375,
+            "top": 296,
+            "bottom": 340,
+            "width": 92.421875,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": false,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "Cancel",
+            "left": 110.734375,
+            "right": 197.5625,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.828125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 85,
+            "clientWidth": 85,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "Update",
+            "left": 209.5625,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.4375,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 86,
+            "clientWidth": 86,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 164,
+          "scrollHeight": 874,
+          "scrollTop": 710,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "Switch status to \"Confirmed\""
+            },
+            "tag": "BUTTON",
+            "text": "Confirm",
+            "left": 104.75,
+            "right": 197.171875,
+            "top": 240,
+            "bottom": 284,
+            "width": 92.421875,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "Cancel",
+            "left": 209.171875,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 86.828125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 85,
+            "clientWidth": 85,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "Update",
+            "left": 209.5625,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.4375,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 86,
+            "clientWidth": 86,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 874,
+          "scrollTop": 766,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "reference": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 280,
+          "bottom": 360,
+          "width": 320,
+          "height": 80
+        },
+        "content": {
+          "left": 24,
+          "right": 296,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "Switch status to \"Confirmed\""
+            },
+            "tag": "BUTTON",
+            "text": "Confirm",
+            "left": 6.3125,
+            "right": 98.734375,
+            "top": 296,
+            "bottom": 340,
+            "width": 92.421875,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": false,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "Cancel",
+            "left": 110.734375,
+            "right": 197.5625,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.828125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 85,
+            "clientWidth": 85,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "Update",
+            "left": 209.5625,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.4375,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 86,
+            "clientWidth": 86,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 164,
+          "scrollHeight": 874,
+          "scrollTop": 710,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "natural": {
+        "original": [
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          }
+        ],
+        "childrenWidths": [
+          {
+            "width": 92.421875,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 86.828125,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 86.4375,
+            "marginLeft": 0,
+            "marginRight": 0
+          }
+        ],
+        "gap": 12,
+        "required": 289.6875,
+        "available": 272,
+        "fits": false,
+        "referenceOnly": true
+      },
+      "referenceMatched": true,
+      "beforeUnchanged": true
+    },
+    {
+      "width": 1280,
+      "height": 900,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 123450,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 778.9375,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 70.8125,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 831,
+          "scrollTop": 111,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 778.9375,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 70.8125,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 831,
+          "scrollTop": 111,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "reference": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "pur-confirm",
+              "title": "ステータスを「確定済み」に切り替え"
+            },
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 778.9375,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 70.8125,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "purchase-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "pur-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 831,
+          "scrollTop": 111,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "natural": {
+        "original": [
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          }
+        ],
+        "childrenWidths": [
+          {
+            "width": 70.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 113.4375,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 68.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          }
+        ],
+        "gap": 12,
+        "required": 277.0625,
+        "available": 832,
+        "fits": true,
+        "referenceOnly": true
+      },
+      "referenceMatched": true,
+      "beforeUnchanged": true
+    },
+    {
+      "width": 1280,
+      "height": 900,
+      "dark": false,
+      "lang": "ja",
+      "kind": "shipping",
+      "mode": "existing",
+      "amount": 123450,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "ship-download-csv",
+              "title": "eLogi 用 CSV をダウンロード"
+            },
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 648.5,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 201.25,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "shipping-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "ship-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 1529,
+          "scrollTop": 809,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "ship-download-csv",
+              "title": "eLogi 用 CSV をダウンロード"
+            },
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 648.5,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 201.25,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "shipping-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "ship-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 1529,
+          "scrollTop": 809,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "reference": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 808,
+          "bottom": 884,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 16,
+          "bottom": 884,
+          "width": 880,
+          "height": 868
+        },
+        "children": [
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary",
+              "data-testid": "ship-download-csv",
+              "title": "eLogi 用 CSV をダウンロード"
+            },
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 648.5,
+            "right": 849.75,
+            "top": 824,
+            "bottom": 864,
+            "width": 201.25,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 824,
+            "bottom": 864,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "shipping-detail-form",
+              "type": "submit",
+              "class": "btn-primary",
+              "data-testid": "ship-save"
+            },
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 825,
+            "bottom": 863,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 720,
+          "scrollHeight": 1529,
+          "scrollTop": 809,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "natural": {
+        "original": [
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          }
+        ],
+        "childrenWidths": [
+          {
+            "width": 201.25,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 113.4375,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 68.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          }
+        ],
+        "gap": 12,
+        "required": 407.5,
+        "available": 832,
+        "fits": true,
+        "referenceOnly": true
+      },
+      "referenceMatched": true,
+      "beforeUnchanged": true
+    },
+    {
+      "width": 1280,
+      "height": 900,
+      "dark": false,
+      "lang": "ja",
+      "kind": "orders",
+      "mode": "existing",
+      "amount": 123450,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 644.515625,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 179.484375,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 541.03125
+        },
+        "children": [
+          {
+            "attributes": {
+              "style": "margin-right: auto;"
+            },
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 224,
+            "right": 336.890625,
+            "top": 667.71875,
+            "bottom": 693.3125,
+            "width": 112.890625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 113,
+            "clientWidth": 113,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 660.515625,
+            "bottom": 700.515625,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "po-form",
+              "type": "submit",
+              "class": "btn-primary"
+            },
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 661.515625,
+            "bottom": 699.515625,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 393,
+          "scrollHeight": 393,
+          "scrollTop": 0,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 644.515625,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "wrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 179.484375,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 541.03125
+        },
+        "children": [
+          {
+            "attributes": {
+              "style": "margin-right: auto;"
+            },
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 224,
+            "right": 336.890625,
+            "top": 667.71875,
+            "bottom": 693.3125,
+            "width": 112.890625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 113,
+            "clientWidth": 113,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 660.515625,
+            "bottom": 700.515625,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "po-form",
+              "type": "submit",
+              "class": "btn-primary"
+            },
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 661.515625,
+            "bottom": 699.515625,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 393,
+          "scrollHeight": 393,
+          "scrollTop": 0,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "reference": {
+        "footer": {
+          "left": 200,
+          "right": 1080,
+          "top": 644.515625,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 76
+        },
+        "content": {
+          "left": 224,
+          "right": 1056,
+          "paddingLeft": "24px",
+          "paddingRight": "24px",
+          "borderLeft": "0px",
+          "borderRight": "0px",
+          "flexWrap": "nowrap"
+        },
+        "dialog": {
+          "left": 200,
+          "right": 1080,
+          "top": 179.484375,
+          "bottom": 720.515625,
+          "width": 880,
+          "height": 541.03125
+        },
+        "children": [
+          {
+            "attributes": {
+              "style": "margin-right: auto;"
+            },
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 224,
+            "right": 336.890625,
+            "top": 667.71875,
+            "bottom": 693.3125,
+            "width": 112.890625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 113,
+            "clientWidth": 113,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "type": "button",
+              "class": "btn-secondary"
+            },
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 861.75,
+            "right": 975.1875,
+            "top": 660.515625,
+            "bottom": 700.515625,
+            "width": 113.4375,
+            "height": 40,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "attributes": {
+              "form": "po-form",
+              "type": "submit",
+              "class": "btn-primary"
+            },
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 987.1875,
+            "right": 1056,
+            "top": 661.515625,
+            "bottom": 699.515625,
+            "width": 68.8125,
+            "height": 38,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "insideContent": true,
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 393,
+          "scrollHeight": 393,
+          "scrollTop": 0,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "natural": {
+        "original": [
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "512.859px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": "auto"
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          },
+          {
+            "grow": "0",
+            "basis": "auto",
+            "shrink": "1",
+            "marginLeft": "0px",
+            "marginRight": "0px",
+            "inlineMarginLeft": "",
+            "inlineMarginRight": ""
+          }
+        ],
+        "childrenWidths": [
+          {
+            "width": 112.890625,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 113.4375,
+            "marginLeft": 0,
+            "marginRight": 0
+          },
+          {
+            "width": 68.8125,
+            "marginLeft": 0,
+            "marginRight": 0
+          }
+        ],
+        "gap": 12,
+        "required": 319.140625,
+        "available": 832,
+        "fits": true,
+        "referenceOnly": true
+      },
+      "referenceMatched": true,
+      "beforeUnchanged": true
+    }
+  ],
+  "future": [],
+  "keyboard": [],
+  "errors": [],
+  "externalRequests": [],
+  "status": "PASS"
+}

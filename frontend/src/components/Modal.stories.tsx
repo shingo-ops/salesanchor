@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Modal } from './Modal';
 import { Button } from './Button';
@@ -78,6 +79,26 @@ export const WithFooter: Story = {
           }
         >
           <p>フッタにアクションボタンを配置した例です。</p>
+        </Modal>
+      </>
+    );
+  },
+};
+
+export const ResponsiveFooter: Story = {
+  render: () => {
+    const [open, setOpen] = useState(false);
+    const { t } = useTranslation();
+    return (
+      <>
+        <Button variant="secondary" onClick={() => setOpen(true)}>{t('shipping.sectionShipping')}</Button>
+        <Modal open={open} onClose={() => setOpen(false)} title={t('shipping.sectionShipping')} size="xl"
+          footer={<>
+            <Button variant="secondary" onClick={() => setOpen(false)}>{t('shipping.downloadCsv')}</Button>
+            <Button variant="secondary" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
+            <Button variant="primary" onClick={() => setOpen(false)}>{t('common.update')}</Button>
+          </>}>
+          <p>{t('shipping.sectionShipping')}</p>
         </Modal>
       </>
     );
