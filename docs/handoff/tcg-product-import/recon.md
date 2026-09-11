@@ -268,3 +268,9 @@ PO原文「その前にサイドメニューから開ける状態にしてくれ
 - Context7 MCPは公開ツール一覧に存在せず利用不可。起動指示の代替許可により2026-09-11にPostgreSQL 16 ORDER BY、FastAPI query/extra data types、SQLAlchemy 2 textの公式資料を直接確認。出典と適用はdesign.md §14に記す。製品のテストは今回未実行。
 
 次: docs/handoff/tcg-product-import/design.md §14の詳細案をPO確認へ渡す。独立したレビューや実装完了とは扱わない。
+
+### 2026-09-11 実装カード準備の実測
+
+PR #3431マージコミットa66e9382を新しい基点6c55e40dが包含することをgit merge-base --is-ancestorで確認。対象製品7ファイルは両コミット間の差分0。公式new-worktreeでrelease/product-master-date-tabs-implを作成、実在/ブランチ/差分0/preflight成功を確認。Docker CLIは実在するがdocker infoは接続先socket不存在でexit1。Python3.12は/usr/local/bin/python3.12、npm/nodeは実在。製品試験・依存導入は未実行。報告は/tmp/reports/TH-PRODUCT-TABS-IMPL-WORKTREE.txt、TH-PRODUCT-TABS-IMPL-PREFLIGHT.txt、TH-PRODUCT-TABS-DOCKER.txt。
+
+TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。

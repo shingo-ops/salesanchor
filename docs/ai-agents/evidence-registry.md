@@ -2320,3 +2320,7 @@ PO原文「追従してPRマージを実行」を、提示済み#3418の文書�
 確認用Draft PR #3431: https://github.com/shingo-ops/salesanchor/pull/3431。head b1bda6297f81860ea98594a37b88d60b05af36c0で作成し、.pr-numberとhead指定のPR一覧の一致を直接確認。5文書のみの167行追加。専用worktreeをコマンドにも明示してガードを通過し、mainへの直接コミットなし。台帳のPR番号を公式register-prが登録済み。未マージ・未実装・PO詳細案確認待ち。
 
 EV-20260911-PRODUCT-DATE-TABS追記: PO原文「GO #3431」を受領。2026-09-11 06:29:55 UTCに受領確認（発話日時の推測ではない）。GitHubでPR #3431 OPEN/Draft、head334a084e、CLEAN、CI失敗0を直接確認。preflight成功・作業場所差分0。設計文書の承認/マージを実行する。正式カード未発行、商品機能の実装/配備は未着手。報告 /tmp/reports/TH-PRODUCT-3431-GO-PR.json。
+
+EV-20260911-PRODUCT-DATE-TABS引継ぎ: PO原文「次を進める」を、直前の実装開始/カード作成・引継ぎ確認への承認として受領。#3431マージa66e9382確認済み。専用実装worktreeは6c55e40d起点、対象7ファイル差分0、preflight成功。TH-PRODUCT-DATE-TABS-IMPL-01.txtを作成。製品変更/依存導入/試験/実装エージェント起動は未実施。Docker socket不存在のためPG実行環境の制約をカードへ明記。承認済み設計の条件を緩めず、正式PG/CI/QA/製品GOを後続条件として維持する。
+
+TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
