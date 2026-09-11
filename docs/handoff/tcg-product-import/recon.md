@@ -268,3 +268,34 @@ PO原文「その前にサイドメニューから開ける状態にしてくれ
 - Context7 MCPは公開ツール一覧に存在せず利用不可。起動指示の代替許可により2026-09-11にPostgreSQL 16 ORDER BY、FastAPI query/extra data types、SQLAlchemy 2 textの公式資料を直接確認。出典と適用はdesign.md §14に記す。製品のテストは今回未実行。
 
 次: docs/handoff/tcg-product-import/design.md §14の詳細案をPO確認へ渡す。独立したレビューや実装完了とは扱わない。
+
+### 2026-09-11 実装カード準備の実測
+
+PR #3431マージコミットa66e9382を新しい基点6c55e40dが包含することをgit merge-base --is-ancestorで確認。対象製品7ファイルは両コミット間の差分0。公式new-worktreeでrelease/product-master-date-tabs-implを作成、実在/ブランチ/差分0/preflight成功を確認。Docker CLIは実在するがdocker infoは接続先socket不存在でexit1。Python3.12は/usr/local/bin/python3.12、npm/nodeは実在。製品試験・依存導入は未実行。報告は/tmp/reports/TH-PRODUCT-TABS-IMPL-WORKTREE.txt、TH-PRODUCT-TABS-IMPL-PREFLIGHT.txt、TH-PRODUCT-TABS-DOCKER.txt。
+
+TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
+
+### 2026-09-11 発売日順・作品タブの実装とローカル検証
+
+POが実装役1名への委任を承認し、TH-PRODUCT-DATE-TABS-IMPL-01を実行。開始時preflight成功・指定ブランチ一致・未保存差分0。設計§14の7製品ファイルだけを変更した。APIはwork_idのUUID入力、同一の検索/作品条件によるcountとitems、release_date DESC NULLS LAST/code DESC、検索やページに独立するworksを追加。画面は既存Tabsを使い、query/作品の併用とページリセット、最新応答のみ反映、候補保持/選択消失保持、works不正時エラーを実装。DATEを時刻に変換せず、CSV/認証/全件管理を維持した。
+
+| 条件・検証 | 直接実行した結果 |
+|---|---|
+| AC1〜5 | PG/HTTP試験を既存隔離スキーマ・rollback・公式作品migrationで追加。逆転するコードと日付、未来日、同日2件、NULL/孤立、作品×検索、候補4種、53件ページ、別スキーマ、UUID/権限を検査する内容。Docker接続不可という準備時実測に従い、本便では未実行 |
+| AC6〜7・日英/DATE単体 | TcgProductMasterPage.test.tsxは14 passed。失敗/遅着/不正works/消失した選択作品も検査。APIはモック |
+| AC8 | Chromium E2E 5 passed（21.2秒）。日英名称/fallback、2作品切替、狭幅スクロール、Tab/Enter選択、CSV導線、非管理者拒否。API/authモックで実登録なし |
+| backend静的 | make lint-ci exit0、対象Python2ファイルruff成功。mypy診断153件が残る（変更ルーターの診断0）。既存Makefileの警告扱いによる終了0であり、全型検査合格とはしない |
+| frontend静的・ビルド | check:all exit0（0 errors/221 warnings）。本試験の日本語fixture由来3警告を規約どおり修正後、対象eslint --max-warnings=0成功、14単体再成功。build成功。全体の既存警告0とはしない |
+| AC9 | 正式PG skip0、CI、tenant_001の実API/実画面と性能、配備は未実施。ローカル結果だけで完成/マージ可能とはしない |
+
+生報告: /tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。画像: /tmp/reports/product-tabs-ja.png、product-tabs-en.png、product-csv-result.png。5173は別worktreeのサーバーが使用中と実測したため、担当間で同じE2Eの専用PORT=5189を確認し、空き確認後に起動した。既存サーバーや設定ファイルは変更していない。待機中のps読み取りはOSに拒否され、再試行せず報告した。依存導入/検査自体の権限拒否はない。
+
+製品7ファイルと本テーマ記録3ファイルをローカル保存する。push/PR本文変更/GO生成/マージ/配備は本カードの対象外。次は実装コミットの差分確認後、準備PR #3433への公開便、正式PG/CI/QAの検証へ進む。
+
+
+### 2026-09-11 PR #3433 の公開・マージGO受領
+
+PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21.255931+00:00（記録時の実測であり発話時刻の推定ではない）。対象はPR #3433の商品マスタ発売日順・作品タブ。ローカル実装12e6b13cを確認し、main 7606ca9a041e315b81040373e8f4ddebbc562133へ追従。競合はtasks/todo.mdの2テーマの行で、本テーマの実装行とmain側の金型化行を保持。製品ファイルの競合なし。公開後の実PG/CI、配備結果とtenant_001実接続確認は、GOの受領と分けて記録する。
+
+
+PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。

@@ -2338,3 +2338,19 @@ PO原文「全て完了させてくれ」、登録範囲回答「単独販売の
 PR #3434検証追記（実装HEAD4c5d1893）: GitHub run34577363592で2586成功/95skip、coverage62.41%、必須13検査成功。ローカル初回の読み込み依存1失敗を修正し対象39件成功。全体再試験は試験DBの7.8GBが100%・空き0（DiskFull）で2472成功/25失敗/90errors/94skip。成功扱いせず上記GitHubの新DBで確認した。他者の試験DBを削除せず、このMacの共有試験環境は容量復旧まで使わない。make lint-ci終了0、mypyは既存警告運用で型エラー0ではない。
 
 process-artifacts gateは番号付きGO記録なしで失敗。一般的なマージ指示は受領済みだが、GO #3434の原文を代筆しない。未マージ・未配備。26登録候補は静的検査のみで未投入。書籍区分/冊の回答と33候補の確認は残る。本番再解析・配信未実施。
+
+EV-20260911-PRODUCT-DATE-TABS引継ぎ: PO原文「次を進める」を、直前の実装開始/カード作成・引継ぎ確認への承認として受領。#3431マージa66e9382確認済み。専用実装worktreeは6c55e40d起点、対象7ファイル差分0、preflight成功。TH-PRODUCT-DATE-TABS-IMPL-01.txtを作成。製品変更/依存導入/試験/実装エージェント起動は未実施。Docker socket不存在のためPG実行環境の制約をカードへ明記。承認済み設計の条件を緩めず、正式PG/CI/QA/製品GOを後続条件として維持する。
+
+TH-PRODUCT-DATE-TABS-IMPL-01正式検査: card-lint exit0（L24の長行警告8件のみ）、24手順の連続性、19コマンドのcd先実在、入力フルパス実在、未記入目印0、停止/再開/報告経路、承認済み7製品ファイル境界を同一AIで手動照合。独立レビューではない。証拠 /tmp/reports/TH-PRODUCT-TABS-CARD-LINT.txt / TH-PRODUCT-TABS-CARD-REVIEW.json。task-state/diff成功。カード作成・検査済み、実装役への提示待ち、製品コード未変更。
+
+準備Draft PR #3433: https://github.com/shingo-ops/salesanchor/pull/3433。作成head346f7d72、.pr-numberとhead指定一覧の一致を直接確認。製品ファイル差分0、文書5件のみ。実装役へTH-PRODUCT-DATE-TABS-IMPL-01を提示できる状態。自動起動/実装実行は行っていない。後続実装は同じPRを更新し、実装完了までマージしない。
+
+EV-20260911-PRODUCT-DATE-TABS実装追補: POが実装役1名への委任を承認し、カード範囲の7製品ファイルを実装した。開始時preflight/差分0確認。画面単体14 passed、Chromium E2E5 passed（API/authモック）、対象ruff/厳格eslint/build/diff成功。check:allはexit0（0errors/221warnings、追加試験3警告は修正後に対象eslint/単体成功）。make lint-ciはexit0だがmypy診断153件を警告扱いで保持。正式PG/HTTP試験はDocker不在で未実行、CI/QA実接続/配備も未実施。実測表はrecon同日実装追補、生出力は/tmp/reports/TH-PRODUCT-DATE-TABS-IMPL-01.txt。ローカル実装の記録であり、実装コミットの公開/GO/マージは行っていない。
+
+
+### 2026-09-11 PR #3433 の公開・マージGO受領
+
+PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21.255931+00:00（記録時の実測であり発話時刻の推定ではない）。対象はPR #3433の商品マスタ発売日順・作品タブ。ローカル実装12e6b13cを確認し、main 7606ca9a041e315b81040373e8f4ddebbc562133へ追従。競合はtasks/todo.mdの2テーマの行で、本テーマの実装行とmain側の金型化行を保持。製品ファイルの競合なし。公開後の実PG/CI、配備結果とtenant_001実接続確認は、GOの受領と分けて記録する。
+
+
+PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。
