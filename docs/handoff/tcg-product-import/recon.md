@@ -365,3 +365,27 @@ PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKI
 カード: card-template-impl.md。card-lint exit0、違反0、L24長行警告4件。18手順の連続性、全cd先の実在、既存7製品ファイルと新規1資産、設計/recon入力、未使用報告先、未作成venv、英字を含む未確定目印0、END OF CARDを機械補助で確認。L20/26/27/28/32等の未実装項目は同一AIで本文照合した。設計8ファイルとAC1〜7を保持し、範囲内編集/検査失敗修正、DB未検証、秘密の伏せ方、停止/再開/報告を明記。独立レビューではない。
 
 今回の実装用作業場所は /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl。製品コードは未変更、実装担当は未起動、実装カードは作成・検査済み。Docker情報照会はソケット不在でexit1。カードでは既知条件としてpytestを実行しない旨を明記し、正式CIでの実DB検査を後続へ残した。
+
+
+### 2026-09-12 実装カード01の報告保存停止と02への訂正
+
+実装役は01手順6の報告保存で停止。実行役報告では、規則文書をPython文字列に埋めて保存する要求がPreToolUseに拒否された。報告対象は規則本文で実pushは要求していない。親がgit status空と01報告0バイトを直接確認。製品編集・依存導入は未着手。停止をカードの出力保存方式不足として扱った。
+
+設計担当の確認: cat AGENTS.md frontend/AGENTS.md backend/AGENTS.md を未使用報告へ直接リダイレクトする通常の読み取り保存はexit0、19080バイト。規則内容の言換え・ガード変更・権限変更なし。証跡 /tmp/reports/CARD-PRODUCT-CSV-REPORT-PROBE-20260912.txt。
+
+正式カードを02へ更新し、報告ファイルを最初に排他作成、各コマンド出力を直接追記する手順へ訂正。旧01空報告は保持。製品8ファイル/受入基準/権限拒否時停止を変更しない。委任済みの同一実装役へ02を渡す。
+
+
+### 2026-09-12 カード02の実装結果・設計担当による差分確認
+
+実装役csv_card_executorは専用release/product-import-template-implへ指定8製品ファイルの実装を残した。コミット/公開/マージ/本番操作なし。空CSVの新規1ファイル＋既存7ファイルを親がgit status --short --untracked-files=allで直接確認。
+
+実装役の生報告: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt。親は該当出力を読み、単体13 passed、E2E7 passed（10.1s）、check:all exit0、build exit0、配布CSV148バイト一致、make lint-ci exit0、diff --check exit0を確認した。これらのコマンドを実行したのは実装役であり、設計担当が再実行した結果ではない。単体初回のfs URL失敗は許可範囲内修正後13件成功。既存frontend警告218件、mypy診断153件が残り、現行Makefileはmypyを警告扱いにする。対象routerの診断は0。
+
+親が直接実施した検査: CSV実バイトがBOM＋CSV_COLUMNSの10列＋CRLFに等しく、商品行0であることをPythonでassert。productCsvの日英キー一致をassert。製品差分を読取確認しUser型/属性アクセス、既存認証条件維持、API未呼出の保存操作、既存確認/再送ロック維持、回帰試験の期待値を照合。E2E画像保存先が未作成のCI環境で失敗する点を見つけ、実装役が同じE2Eファイル内でmkdirと排他保存へ修正した。日英390pxの保存画像を親もview_imageで直接見て欠け/横はみ出しなしを確認した。
+
+手順18追加のPython2ファイルruffは、実装役の通常sandboxで.ruff_cacheの一時ファイル作成が拒否されexit2。実装役は停止した。親が同じruff checkを通常のrequire_escalated権限審査に通して実行しAll checks passed/exit0を直接確認。ガード・キャッシュ設定・製品コードの変更なし。失敗出力は02報告にそのまま保持。
+
+差分確認時の8ファイルSHA256と親の検証範囲: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-parent-review.json。画像: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-template-ja-66adc185-e167-4b5d-9e97-f6b3dc219d84.png、同template-en-c57b8428-c8dd-47c2-93f9-4d3ef104714e.png。
+
+判定: 設計範囲の差分確認で追加指摘なし。製品リリース承認ではない。AC1〜4のローカル検証、AC7のfrontend部分まで完了。AC5〜6の本物User/HTTP試験は追加済み・未実行（修正前に戻した失敗確認も未実行）。Docker不在に従いpytest・実PG・CI・本番QAは未実施。マージGO・実データ投入・再解析・配信は未承認/未実施。次は製品差分の保存・PR公開と正式CI検証を別便で行う。

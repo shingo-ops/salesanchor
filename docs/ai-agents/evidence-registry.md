@@ -2408,3 +2408,23 @@ tradeoff: 同一AI自己照合。Docker不在、実DB検証は未実行のため
 decision: 正式カード準備済み、実装役未起動、製品未変更
 follow_up: 実装役の差分と生報告を読み取り確認。公開・実DB検証は後続便
 ```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-IMPLEMENT
+date: 2026-09-12
+agent: csv_card_executor (implementation), Codex design partner (read-only review)
+task: 空CSVサンプルとUser型の限定修正
+scope: design§15の8製品ファイル、製品未コミット
+evidence:
+  - type: log
+    reference: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt
+    summary: 実装役が単体13/E2E7/build/check:all/lint-ciを実行し成功。親は生出力を確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-parent-review.json
+    summary: 親が8ファイル差分、BOM/CRLF/10列/0行、日英キー、日英画像を直接確認。Python2ファイルruffは正規権限審査後exit0
+confidence: high
+tradeoff: frontend警告218/mypy153残存。HTTP回帰/実PG/CI/本番QAは未実行、成功を主張しない
+decision: ローカル実装と差分確認済み。公開・マージ・本番操作なし
+follow_up: 別便で製品差分を保存・公開し正式CIで追加試験を検証
+```

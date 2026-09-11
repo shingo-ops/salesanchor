@@ -1,4 +1,4 @@
-CARD-PRODUCT-CSV-TEMPLATE-IMPL-01
+CARD-PRODUCT-CSV-TEMPLATE-IMPL-02
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、01-read.md、03-file.md、04-worktree.md、10-executor.md、11-lint.md。
@@ -10,7 +10,7 @@ CARD-PRODUCT-CSV-TEMPLATE-IMPL-01
 機械的転記カードではない。設計契約の変更は禁止。実行役の自動起動は本カードでは行わない。
 
 出力の置き場
-/tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-01.txt
+/tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt
 パスは一字一句そのまま使う。既存なら上書きせず停止する。
 本カードは新規である。過去の報告の再送を禁止する。
 報告にexecutor-preamble.mdの中身を含めない。表・要約・チェックマークだけの報告を禁止する。
@@ -31,36 +31,38 @@ Docker不在は確認済み。本便でpytestを実行せず「実DB検査はCI�
 停止時は手順番号・最後のコマンド・秘密を伏せた生出力を設計担当へ返す。許可追加を推測して再開しない。
 
 受領確認
-「CARD-PRODUCT-CSV-TEMPLATE-IMPL-01を受領。設計§15の8ファイルのみ実装し、公開・本番変更は行いません。」と返す。
+「CARD-PRODUCT-CSV-TEMPLATE-IMPL-02を受領。設計§15の8ファイルのみ実装し、公開・本番変更は行いません。」と返す。
 
-手順1 作業場所と基点
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git branch --show-current
+手順1 報告ファイルの新規作成
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && python3 -c 'from pathlib import Path; p=Path("/tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt"); p.parent.mkdir(parents=True,exist_ok=True); p.open("x").close()'
+旧01の空報告は保持する。本カードの出力はコマンドの直接リダイレクトで保存する。
+規則文書やログ全文をPython文字列・shellコマンド文字列へ埋め込んで再構成しない。
+各手順の開始/完了・終了コードを追記し、10MBを超えたら停止する。既存ファイルへの追記はこの新規02報告だけ許可する。
+
+手順2 作業場所と基点
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git branch --show-current >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: release/product-import-template-impl。
 
-手順2 未保存変更
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git status --short --untracked-files=all
+手順3 未保存変更
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git status --short --untracked-files=all >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 空。既存変更があれば停止。
 
-手順3 基点
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git rev-parse HEAD origin/main
+手順4 基点
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git rev-parse HEAD origin/main >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 2行ともadc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b。異なる場合は設計担当へ戻す。
 
-手順4 必須preflight
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && ./scripts/dev/executor-preflight.sh
+手順5 必須preflight
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && ./scripts/dev/executor-preflight.sh >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: PREFLIGHT OK。非ゼロ終了なら停止。
 
-手順5 規則と承認済み設計を読む
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && cat AGENTS.md frontend/AGENTS.md backend/AGENTS.md
+手順6 規則と承認済み設計を読む
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && cat AGENTS.md frontend/AGENTS.md backend/AGENTS.md >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 設計入力は /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-design/docs/handoff/tcg-product-import/design.md の§15と2026-09-12承認追記。
 調査入力は /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-design/docs/handoff/tcg-product-import/recon.md の2026-09-11再開調査。
 この2入力の読取を許可する。編集しない。ソース/テスト/部品を読む範囲は設計§15の根拠参照先まで許可する。
 
-手順6 報告ファイルの新規作成
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && python3 -c 'from pathlib import Path; p=Path("/tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-01.txt"); p.parent.mkdir(parents=True,exist_ok=True); p.open("x").close()'
-手順1〜5の生出力をここへ追記し、以降も手順の開始/完了・終了コードと生出力を保存する。10MBを超えたら停止する。
-
 手順7 依存の準備
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm ci >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 lockファイルを変更しない。既存の依存導入に限る。追加依存・バージョン変更は禁止。
 
 手順8 実装
@@ -81,47 +83,47 @@ User型/属性アクセスへ限定修正。既存認証条件・サービス・
 依存上書きはfinallyで元へ戻し、他試験を汚染しない。データ登録サービスのMock成功を実DB成功と呼ばない。
 
 手順9 対象単体試験
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run test:unit -- src/features/tcg-product-import/TcgProductImportPanel.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run test:unit -- src/features/tcg-product-import/TcgProductImportPanel.test.tsx >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 全ケース成功。AC1は実ファイルとbackendの列定義を比較し、抽出不能なら失敗する。
 
 手順10 フロント静的検査
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run check:all >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 終了0。既存警告と今回の警告を区別する。
 
 手順11 本番ビルド
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && npm run build >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 終了0。dist/templates/tcg-product-import-template.csvが存在し、元ファイルとバイト一致を読取検査する。
 
 手順12 E2Eポートの空き確認
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",5193)); s.close(); print("PORT 5193 available")'
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",5193)); s.close(); print("PORT 5193 available")' >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 既存サーバーの停止/再利用はしない。使用中なら停止して設計担当へ報告する。
 
 手順13 E2E
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && PORT=5193 npx playwright test tests-e2e/tcg-product-import.spec.ts --project chromium --workers=1 --reporter=line
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/frontend && PORT=5193 npx playwright test tests-e2e/tcg-product-import.spec.ts --project chromium --workers=1 --reporter=line >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 既存設定のwebServerを使用。対象Chromium未導入の場合だけ既存PlaywrightによるChromium導入を許可する。
 日英390pxの画面・downloadされた実バイト・操作後同じURL・API呼出0を検査する。
 画像の保存先は/tmp/reports配下の本カードIDで始まる未使用名。既存画像へ上書きしない。
 
 手順14 バックエンド静的検査の準備
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && /usr/local/bin/python3.12 -m venv .venv
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && /usr/local/bin/python3.12 -m venv .venv >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 未追跡の.venvが既に存在する場合は作り直さず停止する。製品・依存manifestは変更しない。
 
 手順15 バックエンド既存依存の導入
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && .venv/bin/python -m pip install -r requirements-dev.txt
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && .venv/bin/python -m pip install -r requirements-dev.txt >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 導入失敗を無視しない。
 
 手順16 バックエンド静的検査
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && PATH="/Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend/.venv/bin:$PATH" make lint-ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend && PATH="/Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl/backend/.venv/bin:$PATH" make lint-ci >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 期待する出力: 終了0。mypyは現行Makefileで警告扱いのため、診断を成功として隠さない。
 pytestは本便で実行しない。CIの実PG試験と本番QAは別便待ちとして報告する。
 
 手順17 差分検査
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git diff --check >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 新規CSVを含む変更一覧をgit status --shortで確認し、8ファイル以外に製品変更がないことを検算する。
 自動生成ファイルに差分があれば独断で戻さず原因と一覧を報告して停止する。
 
 手順18 完了報告
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git diff --stat
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git diff --stat >> /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt 2>&1
 全差分と試験の読取レビューを許可する。AC1〜7を実行済み/CI待ちに分け、未検証を合格にしない。
 コミット・公開は本便では行わず、変更をこのworktreeに残す。設計担当が差分と生報告を読んで次便へ渡す。
 
