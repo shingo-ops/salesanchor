@@ -71,3 +71,6 @@ PR3426をmerge5de8afa1でマージ済みとroot直接確認。保留分を保存
 
 
 PR #3427 提出確認: https://github.com/shingo-ops/salesanchor/pull/3427、ready OPEN、提出HEAD cfb3068b49429672d63dbb84d41be483f40b4bfc、公式.pr-number登録をroot直接確認。製品4/文書24ファイル、保存前検査を迂回せずcommit成功。最新179試験/8表示同値の検収と4hashを維持。番号付きGOは未受領、リモートCI確認が次の一手。マージ/デプロイは未実施。
+
+
+PR3427提出後のmain追従: 並行PR3425のmerge4774d774を取り込む。追加main差分はbackend4/文書4、frontend差分0。根拠台帳1件の追補競合を双方の全文を保持して解消。既検収frontendツリーは同一、backendは最新mainと同一。今回のフロントエンド変更へbackend差分を追加したものではない。最新HEADのCIを再確認する。
