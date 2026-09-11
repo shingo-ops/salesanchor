@@ -133,3 +133,72 @@ backend/tests/test_tcg_schema_qualification.py:28 の抽出は先頭文字列の
 
 mainとorigin/mainの一致を確認し、new-worktree.shでrelease/tcg-schema-test-designを作成。別手順でディレクトリとgit登録を確認後に移動した。
 標準reaperは、未保存なし・origin/mainに統合済みを確認したrelease/worktree-preserve-designを1件回収した。未保存12件は保護された。保持指定の新機能はまだ実装されておらず使っていない。
+
+
+## 2026-09-10 商品マスタ画面の引継ぎ確認
+
+基点: origin/main a5e5a250aabe2e244ebf64c24bef40b5db40541c。PO「引き継いで良い」を受領した既存 release/tcg-product-import-ui を引き継いだ。実行役preflight成功。9e263fcaから上記基点へfast-forward成功。製品コードの編集、実取り込み、PR作成は未実施。
+
+- 未追跡2ファイルを原本のまま保存: /tmp/reports/PRODUCT-UI-TAKEOVER-BACKUP-01/。manifest.jsonにSHA-256・サイズ・記録時刻を保存し、更新前後とも原本一致を確認。TcgProductImportPreview.tsx=7b49f98ad1c24940fff0d6d3678e24e162815d1c69af9a222ce8ae472a42057a、TcgProductMasterPage.tsx=b47367f75804526a90e6bdf0443e9f6206d0d3905dfc96a2d7fe7fe8ab04fa3d。
+- frontend/src/pages/super-admin/TcgProductMasterPage.tsx:21 が参照する TcgProductImportPanel は存在しない。未追跡の実装は一覧とpreviewの2ファイルのみ。App.tsxのルートとDesktopShell.tsxのメニューに商品マスタ追加なし。build/test未実施。画面完成と扱わない。
+- backend/app/routers/tcg_product_import.py:65 は /tcg/products/list。設計5-2の /tcg/products と異なる。:80と:92はis_active=TRUE条件を持ち、非表示商品を除外する。設計2の全件/DB全行数一致とは対象が異なる。本番の非表示件数は今回未測定。
+- backend/app/tcg_config.py:20 の既定はtenant_004。リクエストごとのQA切替ではない。tenant_001試行に本番全体の環境設定を切り替える手順を推測で作らない。
+- docs/handoff/tcg-product-master-growth/sword-shield-catalog.md §3に6商品分の未確定項目、§5にキーワード設計・衝突シミュレーション未実施の記載。古い記載だけで現在も未実施と断定しない。実取り込み前に最新証拠を確認する。
+- GitHubでrelease/tcg-product-import-uiのPR検索は0件。#3416/#3419はMERGEDだがLINE取込・解析・配信の総合画面とその記録であり、商品マスタCSV画面の完成証拠ではない。
+
+委任: PO「離席するのでcxastragoモードと同じ条件で権限委譲する」、商品マスタ画面・取り込み試行への適用確認に「合っている」を受領。有効化から24時間という条件を変更しない。対応する承認経路は未有効のため開始/終了日時や代理GOを自己発行していない。保護解除、secrets変更、別セッション起動の許可には転用しない。
+
+関連ADR検索: docs/adr/FEATURE-INDEX.mdの在庫/商品マスタ領域とADR-154を確認。今回の値・件数はローカルファイル/Git/PR検索の観測。外部仕様や商品情報を今回検証したとはしない。
+
+
+## 2026-09-11 画面実装とローカル検証
+
+POが全件表示を承認し、離席中の完遂を依頼。実装は既存release/tcg-product-import-uiで継続。APIのis_active条件2箇所を除去し、商品作成/解析/DB定義は変更していない。frontend/src/pages/super-admin/TcgProductMasterPage.tsxの一覧とTcgProductImportPage.tsxの独立取込画面、features/tcg-product-import配下、App/DesktopShell/ja/enを追加更新。
+
+| 直接実行した検証 | 結果・根拠 |
+|---|---|
+| 単体テスト | 2ファイル10件成功。PRODUCT-UI-FIX-VERIFY-02.txt。確認前commitなし、同じFile/digest、二重クリック1回、ファイル変更時確認破棄、全行拒否、通信失敗時再送禁止、pending中drop、権限拒否、ページング/検索、古い応答破棄 |
+| TypeScript/本番ビルド | 成功。初回はテストのArray.atが既存ターゲット非対応で失敗、sliceへ修正して成功。設定は変更しない |
+| frontend check:all | 成功。既存を含むlint警告219件あり、警告0とは称さない。PRODUCT-UI-STATIC-01.txt |
+| Playwright Chromium | 2件成功。一覧→CSV確認→登録と非管理者拒否。API/authはモック、実登録ではない。PRODUCT-UI-E2E-01.txt |
+| Python ruff | 一覧ルーターと新規PGテストの2ファイル成功。初回はキャッシュ書込権限エラー、許可済みworktree権限で同一コマンド成功 |
+| 視覚確認 | /tmp/reports/product-csv-result.pngをAIが閲覧。結果件数・受付番号・一覧への戻りを表示。POの実機確認ではない |
+
+DockerコマンドはこのMacに存在しないためローカルpytestは実行していない。追加PGテストは専用localhost jarvis_test_dbのランダムスキーマをトランザクション内で作り、最後にrollbackする。非表示行を含むtotal・ページ送り・大小文字検索・0件を実SQLで検証する。CIでの実行はこれから確認する。
+
+未実施: PR/CI、本番反映、tenant_001の実取り込み、44件カタログの最新再照合とtenant_004登録。実装結果自己レビューは、承認済み全件条件・API認証の維持・読み取りSQLの範囲・CSV確認の固定・再送抑止を確認。CI/実DB成功前に完成とはしない。
+
+
+## 2026-09-11 PR提出・CI初回指摘と44件資料の再照合
+
+PR #3422: https://github.com/shingo-ops/salesanchor/pull/3422 。初回head2352081d。process-artifacts gateはPR番号付きGO記録が無いため拒否（job103075806588）。委任依頼は保存済みだが対応承認経路未有効。迂回やPO原文作成は行わない。
+
+初回test-schema-dup gateは、PG回帰テストが本番表定義を2箇所独自に持つ点を拒否（job103075805890）。a9210be1で既存の20260831_110000_create_tcg_analysis_tables_t004.sqlと20260903_180000_tcg_products_mark_en_t004.sqlを読む方式へ修正。ランダムな専用schemaとrollbackは維持し、正式migration/CIガードを変更していない。修正後CIは確認中。
+
+44件資料の外部確認（2026-09-11、商品情報の一次資料。導入成功事例ではない）:
+
+| 対象 | 観測事実 | 出典・適用限界 |
+|---|---|---|
+| 候補#7 トイザらス限定セット | 発売日は2019-11-29と公式記載 | https://www.pokemon-card.com/info/2019/20191110_002165.html 。商品情報の発売日欄。キーワード/既登録有無の根拠にはしない |
+| 候補#8 セブン限定セット | 発売日は2019-11-29と公式記載 | https://www.pokemon-card.com/info/2019/20191025_002144.html 。商品情報の発売日欄 |
+| 候補#37 コロコロ版 | 公式商品情報の発売日は2022年1月15日頃。配送は2022年3月下旬頃/8月下旬頃。候補表の2021-12-17は通常版からの仮置きで、公式の商品情報と一致しない | https://www.pokemon-card.com/info/003230.html 。発売日と配送日を別に扱う。「頃」を確定日へ変換して登録しない |
+
+候補全44件の再確認完了ではない。#6/#25/#31その他の最新照合、現在DBとの重複、キーワード衝突、QA実行経路、バックアップを未確認のまま実登録しない。既存カタログ正本を本便で上書きしない。
+
+
+## 2026-09-11 CI確定・承認待ち
+
+PR #3422のhead1fd8a4d0244197d6d208e047b3b465d5cdb26e39でCIは40成功・6対象外skip・1失敗。backend job103077025941は2545 passed / 93 skipped / 302 warnings、PostgreSQL用環境変数ありの全体試験を確認。個別試験名は静粛ログに出ないため、新規試験単独の実行ログとは区別する。test-schema-dupの拒否は解消済み。生ログ: /tmp/reports/PRODUCT-UI-CI-PYTEST-FINAL.log。
+
+唯一の失敗はprocess-artifacts gate job103077053336。実際の番号付きGOを受領してからPR本文へ転記する規則による拒否。PO原文GO #3422は未受領。代理承認の経路も有効化されていないため代筆・迂回はしない。生ログ: /tmp/reports/PRODUCT-UI-CI-APPROVAL-FINAL.log。
+
+実装・ローカル検証・上記headの技術CI・PR提出は完了。マージ、本番反映、tenant_001試行、tenant_004の44件登録は未実施。次は番号付きGO受領後、最終headのCI再確認、公式マージ・配備確認。実データ投入は候補情報/重複/キーワード/QA経路の確認が別途必要。
+
+
+2026-09-11 最終再検査追補: PR #3422 head e2f1063d（前headから文書3件のみ変更）のCIは38成功/6skip/3失敗。backend job103078793511は2544 passed/93 skipped/1 failed。失敗は既存test_inventory_parser_llm_real_api.py::test_real_gemini_call_returns_structured_itemsで、Gemini APIがHTTP429とYour prepayment credits are depletedを返した。集約pytestも失敗。GO記録欠落も継続。前headの2545成功を最終headの成功と混同しない。ログ/tmp/reports/PRODUCT-UI-CI-PYTEST-REPEAT.log。課金・secrets・CI変更、無意味な再試行、マージ/配備は実行しない。外部サービス復旧と番号付きGOが必要。この追補はローカル文書commitに保存し、再CIを無用に起動しないためpushは保留。PR本文には同じ停止理由を反映する。
+
+
+2026-09-11 08:06 JST（受領後記録時刻）: PO原文「GO #3422」を受領。PR本文へ本人の承認を転記する。Gemini残高の復旧は未確認で、既存実API試験の失敗は未解消。番号付きGOと全検査成功を区別し、マージ/配備/実登録はまだ行わない。課金やCI設定は変更しない。
+
+
+2026-09-11 本番反映再開: PO原文「商品マスタの本番反映を実行、離席するので最後まで進めてくれデプロイ反映を完了条件とする」。GO #3422は受領済み。外部API停止は別PR #3425の3.1/キー変更とdeploy成功で対応済み。main4774d774を2a85d3d2へ統合。台帳2件はmain全文と自分の追記を保持、商品画面/APIの承認blob不変、日英両側の変更保持を照合。今回の完了条件はマージ・自動deploy成功・本番応答と配布資産確認。CSV実登録・tenant_001試行・44件本登録は本便対象外。最新CI確認中。
