@@ -2363,3 +2363,5 @@ PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21
 PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。
 
 EV-20260911-FRONTEND-MOLD-29: AI PR3435 ready提出を.pr-number/head指定一覧/APIで一致確認。main ec173b7e統合3935e17d、2製品hash不変、root統合unit200成功。証拠modal-footer-implementation.md/root-main-verification.json/post-main-unit.log。CI確認中、GO #3435未受領・マージ/PO目視未完。
+
+EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。 証拠: PR https://github.com/shingo-ops/salesanchor/pull/3435 のGO記録と検収記録。
