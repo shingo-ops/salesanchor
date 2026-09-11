@@ -2101,3 +2101,30 @@ EV-20260911-FRONTEND-MOLD-24 PR追補: https://github.com/shingo-ops/salesanchor
 
 
 PR #3426 GO追補: PO原文「GO #3426」を受領。2026-09-11 10:11 JSTは受領後記録時刻。前HEAD577ecf45のCI37成功/8対象外・残る1失敗はGO記録欠落。製品2hashと限定第二レビュー対象の一致をroot再確認。本人のGOをPR本文へ転記し、最新CI後に公式マージする。DB変更なし・バックアップ該当なし。
+
+
+```text
+id: EV-20260911-FRONTEND-MOLD-23
+date: 2026-09-11
+agent: root design partner / overlay_contract_audit read-only
+task: 通常Icon公開入口の限定
+scope: frontend Icon API、唯一styleの同値配置移管
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/icon-contract-recheck.md
+    summary: main76c6dff9、152 JSX/118実運用分類、style1/color0、Heroicons既定hidden衝突実測
+  - type: file
+    reference: docs/specs/design-system/design.md §AE
+    summary: mode handoff、4ファイル所有、ARIA6属性限定/hidden既定保持、同一AI自己審査APPROVE
+confidence: high
+tradeoff: className互換は持越し、全体の色/形/認知効果は未検証
+decision: 正式カード検査後に既存Generatorへ委任。CI追加は最後
+follow_up: 実装、型/DOM/ブラウザー同値比較、第二レビュー、PR。番号付きGOを創作しない
+```
+
+EV-20260911-FRONTEND-MOLD-23 実装追補: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.mdへ検収を保存。Generator実行の162試験・既存check/build/Storybook・局所ブラウザー8同値をroot読取確認。rootが型名依存の0件監査を不採用とし、修正版で元152対象欠落0を独立JSON突合。限定第二レビュー対象4hash一致。新PR/番号付きGO/リモートCI/マージは未完。
+
+EV-20260911-FRONTEND-MOLD-23 提出停止追補: pre-commitのmax-warnings=0により既存GoogleCalendarStatusBar依存不足1警告でgit commit exit1。rootが基準76c6dff9本文を同eslint stdinへ入力し同警告/exit1を再現。製品4hash/162試験/8比較の事実とは別に提出条件REVISE。詳細icon-contract-implementation.mdとicon-contract-commit-block.txt。commit/PRなし、既存不備別PR先行のPO判断待ち。
+
+
+EV-20260911-FRONTEND-MOLD-23 最新基準追補: 前提PR3426 merge5de8afa1を取り込み、通常Icon4製品を再検収。Generator実行の厳格lint/179試験/checkall/build/Storybook全exit0、局所8同値。rootが監査対象152→163欠落0/追加test11/既存属性差分1と4hashを照合。根拠: docs/handoff/design-system-recon/evidence-20260910/icon-contract-implementation.md 最新基準節、icon-contract-resume-evidence.json。旧基準の結果と区別。PR提出前、GO/マージは未完。
