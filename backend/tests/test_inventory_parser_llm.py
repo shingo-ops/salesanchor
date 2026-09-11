@@ -349,7 +349,7 @@ class TestPromptAndSchema:
         assert "items" in schema["properties"]
 
     @pytest.mark.asyncio
-    async def test_uses_gemini_2_5_flash_lite_by_default(self) -> None:
+    async def test_uses_gemini_3_1_flash_lite_by_default(self) -> None:
         response = _make_fake_response(json_payload={"items": []})
         genai = _install_fake_genai_module(response)
         result = await parse_with_gemini(
@@ -357,14 +357,16 @@ class TestPromptAndSchema:
             knowledge_snapshot=[],
         )
         kwargs = genai.GenerativeModel.call_args.kwargs
-        assert kwargs.get("model_name") == "gemini-2.5-flash-lite"
+        assert kwargs.get("model_name") == "gemini-3.1-flash-lite"
 
         from decimal import Decimal
 
         from app.services.llm_budget import calculate_cost
 
-        assert result.model == "gemini-2.5-flash-lite"
-        assert calculate_cost(1_000_000, 1_000_000, model=result.model) == Decimal("0.50")
+        assert result.model == "gemini-3.1-flash-lite"
+        assert calculate_cost(1_000_000, 0, model=result.model) == Decimal("0.25")
+        assert calculate_cost(0, 1_000_000, model=result.model) == Decimal("1.50")
+        assert calculate_cost(1_000_000, 1_000_000, model=result.model) == Decimal("1.75")
 
     @pytest.mark.asyncio
     async def test_knowledge_snapshot_top30_included(self) -> None:
@@ -641,7 +643,7 @@ class TestHybridParseInventoryMessage:
                     ],
                     input_tokens=1200,
                     output_tokens=350,
-                    model="gemini-2.5-flash-lite",
+                    model="gemini-3.1-flash-lite",
                 )
             ),
         ):

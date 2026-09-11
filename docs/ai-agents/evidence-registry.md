@@ -2124,3 +2124,29 @@ Google公式 https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite 
 診断追加commit2be4c372。CI開始前にmain5de8afa1との根拠台帳追記競合を双方保持して5fa171b8へ統合。本文に残る「停止記録commitはローカル保存」は前時点の記録であり、今回4cf66482もpush済み。製品コード・CI設定・secrets・本番は今回変更なし。診断は実API試験の固定警告のみ、判定と呼出回数は不変。PR未マージ、GO #3425未受領、運用採用REVISE継続。
 
 生ログ /tmp/reports/LITE25-ERROR-DIAGNOSTIC-CI.log、SHA256 0a1c1a6223e8c09f929ada43c8c407a02983974073dfce2e77d48061169b4891。GitHub https://github.com/shingo-ops/salesanchor/actions/runs/34550427274/job/103112026495 。次の確認は本番接続の提供可否と対象プロジェクトの利用条件。レガシー調査は旧利用権の比較材料であり、現接続の診断に必須ではない。キー交換・Google再認証・追加課金は実施していない。
+
+
+## 2026-09-11 3.1 Flash-Liteとレガシーキーへの変更契約
+
+PO原文「じゃあ3.1に変更して、キーもレガシーに差し替え」。直前の2.5採用契約は本追補で置き換える。2.5はCIキーとPO提供レガシーキーで404・新規ユーザー向け提供終了の文言を実測。3.1 LiteはレガシーキーでHTTP200、JSON期待値一致、入力8/出力9tokenを実測。共有キー利用の3.5 Lite（翻訳）と3.6 Flash（TCG抽出）も各1回HTTP200・非空応答。単純な接続検証であり在庫解析や翻訳精度の合格ではない。報告: /tmp/reports/LITE25-LEGACY-KEY-PROBE-02.json、LITE31-LEGACY-KEY-PROBE-01.json、LITE31-SHARED-KEY-CHECK-01.json。
+
+Why: 利用不可の2.5に代えて利用できた3.1を選ぶ。通常のテキスト入力/出力単価は100万token当たり0.25/1.50USD（Google公式 https://ai.google.dev/gemini-api/docs/pricing 、2026-09-11確認、Context7利用不可のため許可済み公式代替）。3.5の0.30/2.50より同token数なら入力約16.7%・出力40%低い。実請求額・無料/有料契約状態・実在庫精度は未確認。外部導入事例は本選択の証明に不要。
+
+実装: inventory_parser_llm.pyの既定2箇所と関連テストをgemini-3.1-flash-liteへ変更。llm_budget.pyへ3.1のテキスト単価を追加し、入力100万=0.25・出力100万=1.50・合計1.75を既存parser試験で検証する。共有DEFAULT_MODEL、翻訳/TCGのモデル名、prompt、JSON schema、予算上限、DB、CI設定は維持。
+
+キー: ADR-075に従い既存GitHub Actions repository secret GEMINI_API_KEYのみをPO提供値へ更新する。キーは標準入力で渡し値をログ・引数・文書に出さない。更新時刻を読み取り、後続CIの実API試験がskipでなく成功することを確認。deploy.yml:245が同Secretを本番へ展開するため、本番適用は正規デプロイ時に起きる。現キーはGitHubから読み戻せず、旧値への復元材料は本調査では確保していない。旧Googleキー自体を削除・失効させない。更新承認は上記PO原文、PRマージのGO #3425を創作しない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 在庫既定呼出・返却modelが3.1 Lite | 既存モックとCI実APIテスト |
+| 入出力別の費用と合計が正しい | 既存費用連携assert3件 |
+| 共有キー利用機能が接続可能 | 3.5 Lite/3.6 Flashへの固定入力各1回HTTP200実測済み |
+| 新キーで既存解析経路が成立 | CI実APIテスト、skipを成功に数えない |
+| 本番反映の状態を区別 | Secret更新とPRマージとdeploy成功を別記録 |
+
+代替: 3.5継続より単価が低く、2.5は今回拒否されたため不採用。リスクは共有キーの利用量・課金先が変わること、実データ精度/上限が未検証なこと。失敗時に既存ルール解析へ戻る挙動は維持。モデルのロールバックは別PR、キー復元には旧値を安全に再取得する必要がある。新規の秘密管理やCIを追加しない。守り手は既存parser/budget試験と本recon。
+
+同一AIによる自己審査APPROVE（この限定実装契約）。正確な既定値2箇所・料金追加・既存試験・正規Secret更新経路を確認済み。独立レビュー、現行在庫精度の合格、GO #3425、本番反映完了を意味しない。
+
+
+実装追補: 3.1既定2箇所・単価追加・費用assert3件を反映、対象4Pythonのruffとdiff検査成功。GitHub GEMINI_API_KEY更新操作exit0、updatedAt=2026-09-11T01:45:14Zを直接確認。生報告/tmp/reports/LITE31-KEY-SWAP-01.txt。次回以降のdeployで本番へ展開される経路であり、本番反映は未確認。CIは新キーで検証予定、GO #3425未受領。

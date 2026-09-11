@@ -2,7 +2,7 @@
 spec.md v1.1 Sprint 4 / F4 / AC4.1: 実 Gemini API への 1 経路 (CI-only)。
 
 feedback_evaluator_gap_2026_05_15.md の「SQLite モック禁止条項」遵守:
-  - 本ファイルは **実 GEMINI_API_KEY** で Gemini 2.5 Flash-Lite を 1 回呼び、
+  - 本ファイルは **実 GEMINI_API_KEY** で Gemini 3.1 Flash-Lite を 1 回呼び、
     structured output が期待スキーマで返ることを確認する。
   - DB なし (pure Gemini 呼び出しのみ)、`tenant_llm_budgets` への record は
     別途 docs/runbooks/sprint-4-real-postgres-verification.md の手順で実 Postgres
@@ -39,7 +39,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.asyncio
 async def test_real_gemini_call_returns_structured_items() -> None:
-    """実 Gemini 2.5 Flash-Lite を 1 回呼び、structured output が JSON で返ることを確認 (AC4.1)。
+    """実 Gemini 3.1 Flash-Lite を 1 回呼び、structured output が JSON で返ることを確認 (AC4.1)。
 
     確認内容:
         - 例外を投げずに完走する
@@ -109,7 +109,7 @@ async def test_real_gemini_call_returns_structured_items() -> None:
     assert result.input_tokens > 0, "input_tokens should be > 0 for real API call"
     assert result.output_tokens > 0, "output_tokens should be > 0 for real API call"
     # モデル名が記録される
-    assert result.model == "gemini-2.5-flash-lite"
+    assert result.model == "gemini-3.1-flash-lite"
     # raw response が JSON
     assert result.raw_response_text.strip().startswith("{")
 
