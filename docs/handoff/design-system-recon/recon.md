@@ -558,3 +558,6 @@ Icon公開契約便のcommit前検査で既存GoogleCalendarStatusBar依存不�
 
 
 Callback便実装追補: 新規7回帰の変更前は通知先差替え1件だけ失敗、依存1行修正後は全19ファイル168試験成功。対象eslint --max-warnings=0とcheck:all/build成功をroot読取確認。詳細[検収](evidence-20260910/calendar-callback-implementation.md)。Icon便の未保存作業は分離保持、PR/番号付きGO/マージ未実施。
+
+
+Callback便PR提出: https://github.com/shingo-ops/salesanchor/pull/3426 をready作成し公式登録成功。commit218706338a2f6822c269a4fbb5401d6b919ddae4、12files、前回停止原因だった保存前eslintも成功。rootがPR/HEAD/.pr-number/台帳を直接確認。限定第二レビューAPPROVEと製品2hash一致、CI確認中。番号付きGO未受領、マージ未実施。Icon便は本PR先行マージ後に再開。

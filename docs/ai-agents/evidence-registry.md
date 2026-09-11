@@ -2096,3 +2096,5 @@ follow_up: 赤→緑の回帰試験、保存前lint、既存全検査、第二�
 ```
 
 EV-20260911-FRONTEND-MOLD-24 実装追補: calendar-callback-implementation.mdへ検収保存。Generator実行の回帰7件中1赤（新通知0回）→依存1行修正→全168緑、対象厳格lint/checkall/build exit0。rootは差分/原稿/ログと2hashを確認。新CI/外観変更なし、番号付きGO/PR/マージ未実施。
+
+EV-20260911-FRONTEND-MOLD-24 PR追補: https://github.com/shingo-ops/salesanchor/pull/3426 ready OPEN、commit218706338a2f6822c269a4fbb5401d6b919ddae4をroot確認。.pr-number/台帳3426一致、12filesの通常push/公式起票登録成功。限定第二レビューAPPROVE、製品2hash一致。CI確認中・番号付きGO未受領・マージ未実施。
