@@ -32,7 +32,7 @@ jobs:
           assert len(raw.encode()) <= 4096
           data = json.loads(raw)
           assert isinstance(data, dict)
-          assert set(data) <= {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm'}
+          assert set(data) <= {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm', 'report_public_key'}
           assert data['action'] in ('inspect', 'create', 'commit', 'distribute')
           for key in ('device_id', 'import_job_id'):
               data[key] = str(uuid.UUID(data[key]))

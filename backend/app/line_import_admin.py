@@ -1,10 +1,16 @@
 """Fixed maintenance operations; no device key or arbitrary SQL is accepted."""
 import asyncio
+import base64
+import os
 import hashlib
 import json
 import logging
 import sys
 from uuid import UUID
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from sqlalchemy import text
 
@@ -23,7 +29,7 @@ def name_hash(name):
 def validate(data):
     if not isinstance(data, dict) or data.get('action') not in ('inspect', 'create', 'commit', 'distribute'):
         raise ValueError('invalid action')
-    if set(data) - {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm'}:
+    if set(data) - {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm', 'report_public_key'}:
         raise ValueError('unexpected fields')
     for key in ('device_id', 'import_job_id'):
         data[key] = str(UUID(data[key]))
@@ -35,7 +41,28 @@ def validate(data):
         data['target_id'] = str(UUID(data['target_id']))
         if data.get('confirm') != 'existing-global-inventory-to-selected-target':
             raise ValueError('explicit distribution scope required')
+    if 'report_public_key' in data:
+        if data['action'] != 'inspect':
+            raise ValueError('private report is inspect-only')
+        report_key(data['report_public_key'])
     return data
+
+
+def report_key(pem):
+    if not isinstance(pem, str) or len(pem) > 1200:
+        raise ValueError('invalid public key')
+    key = serialization.load_pem_public_key(pem.encode('ascii'))
+    if not isinstance(key, rsa.RSAPublicKey) or key.key_size != 4096:
+        raise ValueError('RSA 4096 public key required')
+    return key
+
+
+def seal_report(data, pem):
+    key = AESGCM.generate_key(bit_length=256)
+    nonce = os.urandom(12)
+    body = AESGCM(key).encrypt(nonce, json.dumps(data, ensure_ascii=False, default=str).encode(), b'line-import-report-v1')
+    wrapped = report_key(pem).encrypt(key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+    return {k: base64.b64encode(v).decode('ascii') for k, v in {'key': wrapped, 'nonce': nonce, 'body': body}.items()}
 
 
 def ready_for_delivery(progress):
@@ -80,7 +107,12 @@ async def operate(db, data):
         targets = await distribution.list_targets(db)
         settings = await distribution.load_distribution_settings(db)
         rows = await distribution.fetch_output_rows(db, include_flag_single=settings.get('include_flag_single', 'false').lower() == 'true')
-        return {'status': 'inspected', 'job_id': job_id, 'progress': progress,
+        private = None
+        if data.get('report_public_key'):
+            suppliers = (await db.execute(text(f'SELECT code,name,is_active FROM {TCG_SCHEMA}.tcg_suppliers ORDER BY code'))).mappings().all()
+            private = seal_report({'unresolved_names': names, 'suppliers': [dict(r) for r in suppliers],
+                                   'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active')} for t in targets]}, data['report_public_key'])
+        return {'status': 'inspected', 'private_report': private, 'job_id': job_id, 'progress': progress,
                 'unresolved_name_hashes': [name_hash(n) for n in names],
                 'message_count': job['message_count'], 'distribution_scope': 'global_inventory',
                 'output_count': len(rows), 'ready_for_delivery': ready_for_delivery(progress),

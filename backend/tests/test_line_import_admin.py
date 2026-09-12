@@ -169,3 +169,28 @@ async def test_existing_commit_rejection_is_preserved():
         with pytest.raises(HTTPException) as error:
             await admin.operate(MagicMock(), payload('commit'))
         assert error.value.status_code == 409
+
+
+def test_private_report_only_decrypts_with_local_key_and_detects_tampering():
+    import base64
+    import json
+    from cryptography.exceptions import InvalidTag
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    public = key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode()
+    report = admin.seal_report({'name': 'PRIVATE SENDER'}, public)
+    assert 'PRIVATE' not in str(report)
+    secret = key.decrypt(base64.b64decode(report['key']), padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+    body, nonce = base64.b64decode(report['body']), base64.b64decode(report['nonce'])
+    assert json.loads(AESGCM(secret).decrypt(nonce, body, b'line-import-report-v1')) == {'name': 'PRIVATE SENDER'}
+    with pytest.raises(InvalidTag):
+        AESGCM(secret).decrypt(nonce, body[:-1] + bytes([body[-1] ^ 1]), b'line-import-report-v1')
+
+
+def test_private_report_rejects_non_public_key_and_mutating_actions():
+    with pytest.raises(ValueError):
+        admin.report_key('not a public key')
+    with pytest.raises(ValueError):
+        admin.validate(payload('commit', report_public_key='not a public key'))
