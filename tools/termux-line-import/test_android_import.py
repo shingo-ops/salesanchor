@@ -53,9 +53,8 @@ class OutboxTests(unittest.TestCase):
         self.outbox = Outbox(self.root / 'state')
         self.outbox.enqueue(self.source)
         (self.outbox.base / 'config.json').write_text(json.dumps({'enabled':True,'endpoint':ENDPOINT}))
-        token = self.outbox.base / 'token.txt'
-        token.write_text('synthetic-test-token')
-        token.chmod(0o600)
+        from device_session import private_write
+        private_write(self.outbox.base / 'device.json', {'token': 'sali1_' + 'a' * 43})
 
     def tearDown(self):
         self.outbox.db.close()

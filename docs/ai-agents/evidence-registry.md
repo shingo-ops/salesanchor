@@ -2394,3 +2394,5 @@ Android実ファイル1,129件を専用パーサーで読み分け。パーサ�
 Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報で検証。Python 3.12/Termux 3.14で30テスト成功。実認証はユーザー待ち。根拠: docs/handoff/line-android-login/recon.md。
 
 端末認証追記: 資格情報なしの公開設定確認で403 / API_KEY_HTTP_REFERRER_BLOCKEDを実測。直接ログインは利用不可。パスワード入力前に停止する修正を加え33テスト成功。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認可方式変更: ユーザーがフロント後回し・インポート先行を明示。Firebase直接ログインを撤去し用途限定APIキーと管理者登録へ変更。端末23単体成功、実DB検証はCI待ち。根拠: docs/handoff/line-android-login/design.md、recon.md。

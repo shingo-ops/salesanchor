@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| Android LINE専用API・Termux送信 | Codex | PR #3443本番反映済み。端末直接loginは接続元制限で停止。33テスト成功 | Webで初回端末認可する方式への変更確認。実送信未完了 | PR #3443 / Issue #3437 / docs/handoff/line-android-import/recon.md | 2026-09-12 |
+| Android LINE専用API・Termux送信 | Codex | PR #3443本番反映済み。端末専用APIキー実装。フロント後回し、管理者登録経路と実DBテスト追加 | CI・実DB検証後、本番反映・管理者による初回端末登録・実送信 | PR #3443 / Issue #3437 / docs/handoff/line-android-import/recon.md | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | Agent | PR3432マージ済み。AI共通footer2製品の実装・検収済み、PR #3435提出（560比較/輪郭448/統合unit200）、AH16移管案は退避して保留 | PO原文GO #3435受領済み。最新CI確認後にマージ。AHは最新mainで再開、新CIは最後。PO目視未実施 | docs/specs/design-system/design.md §AI / docs/handoff/design-system-recon/evidence-20260910/modal-footer-implementation.md | 2026-09-11 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
