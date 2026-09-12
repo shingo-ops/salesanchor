@@ -5,7 +5,7 @@
 **状態**: セッション上の委任時点でGO発行権限が移る方式をPO承認（2026-09-11）。追加GitHub有効化操作は不要。全体設計は自己審査REVISE、検査実装未着手。現在の条件は [design.md](design.md)「セッション委任の成立」。以下の本人発行のみの記述は初期案であり、代理発行は最新節で区別する。
 
 
-次の一便: [P1準備PRカード](TH-GO-INTAKE-P1-PR-01.txt)。限定設計審査APPROVE、旧実行は承認後のbranch作成403で停止。最新の依存関係・状態は [design.md](design.md)「2026-09-12 実行経路の整備計画」、今回の証拠は [recon.md](recon.md)「2026-09-12 有効化設計の再開調査」と [検証結果](activation-evidence-20260912.json)。実装担当の再開時に読取を再確認し、準備PR作成までを扱う。
+次の一便: sandbox [PR #1](https://github.com/shingo-ops/salesanchor-go-gate-sandbox/pull/1)のマージ判断。2026-09-13、POの実装役1名への限定委任を受け、[P1準備PRカード](TH-GO-INTAKE-P1-PR-01.txt)を完了。親が差分1件・原本hash一致・OPENを直接確認した。実機試験0件、GO発行0件。マージ後の実機6ケースは別カード。詳細は [recon.md](recon.md)「2026-09-13 P1準備PRの限定委任と再実行」。全体設計REVISEを維持。
 
 
 ## 2026-09-11 文書保存のマージ方針

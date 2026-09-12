@@ -845,3 +845,16 @@ Context7公開ツール0件につき起動指示の代替許可を使用。
 外部導入事例は不要。自社の承認境界とAPI契約の照合であり、他社の改善率は本設計の正当性を証明しない。
 
 正式カード確認: 更新したTH-GO-INTAKE-P1-PR-01.txtはcard-lint exit0、長行警告5件（非停止）。create_branch/create_file/create_pull_requestの公開ツール引数を照合し、単一base指定、UTF-8構造化入力、head/base/readyを確認。作業場所と必須2入力は実在。カードの自動実行・別担当起動は0件。
+
+
+## 2026-09-13 P1準備PRの限定委任と再実行
+
+直前の「検証用リポジトリに受付試験のPRを1本作る作業を実装役1名へ委任してよいか」という確認に、PO原文「進めてくれ」を受領。担当go_intake_p1にTH-GO-INTAKE-P1-PR-01を渡した。所有範囲はsandboxの指定branch・workflow1件・非秘密の結果記録だけ。親は設計文書と結果の読取確認を担当する。停止条件はカードどおり、マージ・Issue作成・GO発行・権限変更・追加担当起動を含まない。委任モード全体の有効化記録には転用しない。
+
+親が直接確認: 文書PR #3440はOPEN、HEAD 8adbed9878df14458d81fa58b20589987304f1cc。作業場所の差分0、正式card-lint exit0（既存長行警告5件）。以下に実行担当の報告と親の再確認を区別して追記する。
+
+親の直接GET（2026-09-13 05:23 JST）: sandbox branch HEAD b414b7b5ba3c7196649745dea2a64bf442ff851a、同HEADのworkflow内容をContents APIから取得・decodeし、SHA256 e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26の原本一致を確認した。前回のbranch作成403と今回の成功を別試行として扱い、権限設定が変更された理由は未確認。
+
+親のPR直接確認: [sandbox PR #1](https://github.com/shingo-ops/salesanchor-go-gate-sandbox/pull/1)はOPEN・draft false、head release/go-intake-probe-p1/b414b7b5ba3c7196649745dea2a64bf442ff851a、base main/a815d94c535f59fae6415b881296d64ef17bf6c7。差分は指定workflowの新設1件（80行追加・削除0）。カードのPR作成受入条件を満たす。P1準備PR作成完了、実機試験0・GO発行0・マージ0。P1準備物の読取審査APPROVE、全体REVISEを維持。次はsandbox PR #1のマージ承認を受け、その後に別カードで実機6ケースを扱う。
+
+実装担当の報告: /tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json、observed_at 2026-09-12T20:22:55Z。preflight・主体/対象/不存在確認・branch/file/PR作成の成功を報告し、カード完了後に外部操作停止。親は報告JSONのcommit一致を読取確認。今回の18ケース再実行は行っておらず、ローカル試験の直接実施日は前節の2026-09-12。今回追加文書の台帳構造・見出し・diff検査は成功。
