@@ -11,6 +11,9 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.dialects import postgresql
+from app.models import Tenant, User
 
 from app.services import line_import_devices as svc
 
@@ -30,12 +33,11 @@ async def pg():
     engine = owner = None
     try:
         owner = await asyncpg.connect(urlunsplit(admin._replace(path='/'+name)))
-        await owner.execute('''CREATE TABLE public.tenants (id integer PRIMARY KEY, is_active boolean);
-            CREATE TABLE public.users (id integer PRIMARY KEY, email text, tenant_id integer,
-                is_active boolean, is_super_admin boolean);
-            INSERT INTO public.tenants VALUES (1,true);
-            INSERT INTO public.users VALUES (1,'test@example.invalid',1,true,true);
-            GRANT SELECT ON public.tenants,public.users TO salesanchor_app;''')
+        for model in (Tenant, User):
+            await owner.execute(str(CreateTable(model.__table__).compile(dialect=postgresql.dialect())))
+        await owner.execute("INSERT INTO public.tenants (id,tenant_name,tenant_code,is_active) VALUES (1,'Device test','device-test',true)")
+        await owner.execute("INSERT INTO public.users (id,username,email,tenant_id,is_active,is_super_admin) VALUES (1,'device-test','test@example.invalid',1,true,true)")
+        await owner.execute('GRANT SELECT ON public.tenants,public.users TO salesanchor_app')
         migration = (Path(__file__).resolve().parents[2]/'migrations/20260912_160000_line_import_devices.sql').read_text()
         await owner.execute(migration)
         await owner.execute(migration)
