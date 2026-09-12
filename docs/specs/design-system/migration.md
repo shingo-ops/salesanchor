@@ -220,3 +220,6 @@ CARD-RAW-SHARED-RESUME-02は正式card-lint exit0（長行警告のみ）。Gene
 
 
 PO再起動指示により中断保存。現コード16移管WIP、AJ13分離は未適用。再開入口: [ah-restart](../../handoff/design-system-recon/evidence-20260910/ah-restart.md)。本便PR/GO/最終検収未完。
+
+
+2026-09-12 AJ13分離実行・ローカル検収成功: BSA005/006、025〜035を共通Buttonへ移管。BSA002/003/004は基準へ復元し表統一便へ保留。各ID/owner/native type/formは構文監査保存物で全件対応、業務本文差分0。共通70→83、旧332→319、専用20/リンク8不変。220試験・表示120組・実Confirm60条件・キー10条件成功。根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md。PR/CIへ進行、正式番号付きGO・本番・PO目視未完。新CIは最後。

@@ -9,7 +9,7 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
-| フロントエンド金型化・再測定 | 設計担当 | 保存HEAD3d6e8aa3を照合、AJ分割カード作成・正式lint成功・自己審査APPROVE（カードのみ）。製品は16利用WIP、分割実行未着手 | 実装担当がCARD-RAW-SHARED-SPLIT-03を実行しCommission基準差分0/他6保持を報告。その後13利用の表示・全体品質を検収 | docs/handoff/design-system-recon/evidence-20260910/aj-split-card.txt / recon.md 2026-09-12節 / EV-20260912-FRONTEND-AJ-CARD | 2026-09-12 |
+| フロントエンド金型化・再測定 | 設計/実装担当 | AJ13分離実行、AST業務差分0・220試験・品質5項目・表示120組/実Confirm60/キー10成功。限定レビュー済み | PR提出/CI照合。今回のPO承認原文は現行の番号付きGO形式を満たさず、正式GOまでマージ/本番反映保留。新CI最後 | docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / EV-20260912-FRONTEND-AJ-VERIFY | 2026-09-12 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |

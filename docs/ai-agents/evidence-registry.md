@@ -2408,3 +2408,10 @@ PO原文「進める」。対象HEAD3d6e8aa3とリモート一致、base adc8bc4
 CARD-RAW-SHARED-SPLIT-03を作成。正式card-lint exit0（長行警告5件）、shell/Python構文検査成功、Commission固定hash2件一致。
 根拠: docs/handoff/design-system-recon/recon.md「2026-09-12 AJ分割カード作成・自己審査」 / docs/handoff/design-system-recon/evidence-20260910/aj-split-card.txt。
 同一AI自己審査APPROVEは分割カードのみ。製品編集0・カード実行未着手・表示/全体品質/PR/GO/マージ未完。
+
+
+### EV-20260912-FRONTEND-AJ-VERIFY — 13利用分割と検収
+
+PO原文「承認する、離席するのでPR．マージ、本番反映までしてくれ」。委任された担当1名がCommission復元/20操作成功を報告。rootは構文監査、全体23files220tests/品質5項目、表示120組/実Confirm60/キー10を直接実行し成功。
+根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / aj-validation-manifest.json / aj-validation-checkpoint.tar.gz。
+限定レビューAPPROVEとroot直接検算を区別。PR提出へ進むが現行GO検査は番号なしの受領原文を拒否。原文の創作なし、マージ/本番反映未実施。

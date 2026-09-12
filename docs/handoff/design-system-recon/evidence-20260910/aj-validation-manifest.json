@@ -1,0 +1,203 @@
+{
+  "productBase": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "testedSourceCheckpoint": "4bee1a5fc8600cfe7620942eb6deb734865a10f6 plus Commission baseline restoration",
+  "status": "local verification PASS; merge GO format unsatisfied",
+  "files": [
+    {
+      "path": "aj-audit.cjs",
+      "sha256": "77cd793b035f9d46c61898f1ce53b53882f3ebaa7afe65c89fcdf090c0613d79"
+    },
+    {
+      "path": "audit-result.json",
+      "sha256": "5ac33602faf003d32a1e1b8f83967bae4d2556fff92b1543b3abf015804a57be"
+    },
+    {
+      "path": "confirm-inventory.cjs",
+      "sha256": "12a9788d48878829732b2dc4e661e93f4ed019fe23d6a0a69b6b4a4f86447fbd"
+    },
+    {
+      "path": "confirm-calls.json",
+      "sha256": "5e27e91fb68617aea1aeae9625142d947fb9b9129fdecc1ba39dc915a612c363"
+    },
+    {
+      "path": "quality.py",
+      "sha256": "b44f22d6dca4a7ce6e4e26e3017e303f072bc068567008a65336cf53eaedb938"
+    },
+    {
+      "path": "quality.json",
+      "sha256": "5320891a75025a0399da88acc7407e1fdfda6b115692ece2863b2335983106c9"
+    },
+    {
+      "path": "eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "coverage.log",
+      "sha256": "a371ddf54e4a8edbbe9fc3e1e80862e9a68ec083873d49390be92d32c6ffd3a7"
+    },
+    {
+      "path": "checkall.log",
+      "sha256": "728b1cf123ff7f3320136e7edc638878ba269c7fff5b508a156d448fa046bf32"
+    },
+    {
+      "path": "build.log",
+      "sha256": "47d033fd3be27c06a97d71fff6bb56c53325a8d6ebc0959e2834572fa8bc798d"
+    },
+    {
+      "path": "storybook.log",
+      "sha256": "5ffde665a65df9acb4bf392ccf7221b0217f6dda0904a5977d74e34656f9fe72"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-browser.mjs",
+      "sha256": "cc65e6c7296277b9e1fb31fcdec28bf35975a3a280de88987c45f4ddcfe7bb25"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-browser-result.json",
+      "sha256": "59c64c98fde7409dbf06a61ae017bfda275ca4959f26720bfdbb807c27552724"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-browser-first-failure.json",
+      "sha256": "2e68c4de104f56048cfebcb70db5e7cb1e48977827c50dcde7f4f203e4f288ef"
+    },
+    {
+      "path": "frontend-shared-button-resume/prepare.cjs",
+      "sha256": "b34760cd27efd927cf0ecbddf95f5d6767135a38e25af059947b576c21d379ee"
+    },
+    {
+      "path": "frontend-shared-button-resume/sample-template.tsx",
+      "sha256": "c6aba0c1a38c3efb59cce2f838f771c2ab494b7756684e8128fb2e59f835e9cf"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-OrderFinancialPanel-390-en.png",
+      "sha256": "e91873c37cfd81939defd25a62447bfd37705f355c9defed0967425ae8b87b6c"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-ShippingDetailPanel-390-en.png",
+      "sha256": "a2a6cf02c2aaf578214708eac82cb3825f8f597bfeb1734eb2b055179ec65faa"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-PriorityScoreOverride-390-en.png",
+      "sha256": "533b036338c23ff0602c474a6bff8291b3801b95aebb32c3adab679eea9e2150"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-ConfirmModal-390-en.png",
+      "sha256": "f594d08ed1d3cc7ec75a6aede421b8fbf0d0211d909bb9117d2b4c58745fcec0"
+    },
+    {
+      "path": "frontend-shared-button-resume/aj-PurchaseDetailPanel-390-en.png",
+      "sha256": "083723eb8cb2501d6214c8bc3711eae2920f17f33e41f3e72f81b0478d78eca8"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after.tsx",
+      "sha256": "0210488a00aea63758276c395086d10c5ff51aefb914ce0d85cf3c71f15b6a69"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before.tsx",
+      "sha256": "687c673983fe85ef2a0e95d2bd97f17277291591c7dce009d01633c261348017"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-firebase.ts",
+      "sha256": "f9674d6d0532d3a775bacbc044843cd006a20919e92a66a722de33ec98792955"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after.html",
+      "sha256": "fc47552ba1ad115bcc93b3f412862acf30398e2c22698a2d39eb35728c8c2e54"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/sample.tsx",
+      "sha256": "57cfa1d006041223c21a72a5c60f95562d4820ec43d5202620ae27a1eb28833f"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-permissions.ts",
+      "sha256": "2566f68f23740d215b4485d177afb7c103b7334ab102397c7e04004aac087b3b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before.html",
+      "sha256": "92fb7bea0f79910fa1ab4d8e0ba0691d67b2104d220ad285a39baa0452a2ea7e"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-api.ts",
+      "sha256": "925f7102f97a9aecf5904382d30ef0dba32aa220612ea42e393f598d98f36678"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/PriorityScoreOverride.tsx",
+      "sha256": "2eecba42b02dde8d43b278317f5c5656ab49e33a82acd081d0fd10d85f874ca6"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/ConfirmModal.tsx",
+      "sha256": "d0a4934fd3df371a7fea29fce5304302a6698529cc3c1b9e6292594f8d417a57"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/OrderFinancialPanel.tsx",
+      "sha256": "0bc18881410095a8c76de1f4bd2d061a1c1a71df11410044f32005c631531163"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/PurchaseDetailPanel.tsx",
+      "sha256": "1deea4864989c8692f5e24fa0572ace2001fe8768b6835c7ebfbdc281bec0c95"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/ShippingDetailPanel.tsx",
+      "sha256": "f0f8c93dc8859cd09d8ddbc03294eee21f2d118f58eded1d1a48f2e0d568a7ef"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/CommissionPanel.tsx",
+      "sha256": "f835148355fb076b239c04f21ee4adfb2058fa2a5b7ec51b1347b476b1987e16"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/PriorityScoreOverride.tsx",
+      "sha256": "941f251ef33ad618919b4fefecb687dbbe46e7901aa304511e657e723385ed08"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/ConfirmModal.tsx",
+      "sha256": "a1b6ecfb7951e2ce7e17ba29f9d3f9ea9a7a20066ab8f1f26fd8e93729caf58b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/OrderFinancialPanel.tsx",
+      "sha256": "d0e38518ef2cac6ae4ebe95455b6343456d8593d52faff7658676f4730c0d581"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/PurchaseDetailPanel.tsx",
+      "sha256": "7ded15aa466d55c35b1077e18d40a6320771362cb6bc36e792a1668548529f1e"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/ShippingDetailPanel.tsx",
+      "sha256": "23ebdecbf7bbf8785dfcfe49c572ed188e548699bf64ef12df3b5ea05b45f816"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/CommissionPanel.tsx",
+      "sha256": "f835148355fb076b239c04f21ee4adfb2058fa2a5b7ec51b1347b476b1987e16"
+    }
+  ],
+  "products": [
+    {
+      "path": "frontend/src/components/ConfirmModal.tsx",
+      "sha256": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9"
+    },
+    {
+      "path": "frontend/src/components/CommissionPanel.tsx",
+      "sha256": "a225570d80f5e8eb9cba69e8c8d0ad62423b26492d14fb2c141de64344deac37"
+    },
+    {
+      "path": "frontend/src/components/PriorityScoreOverride.tsx",
+      "sha256": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc"
+    },
+    {
+      "path": "frontend/src/components/OrderFinancialPanel.tsx",
+      "sha256": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8"
+    },
+    {
+      "path": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "sha256": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441"
+    },
+    {
+      "path": "frontend/src/components/ShippingDetailPanel.tsx",
+      "sha256": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639"
+    },
+    {
+      "path": "frontend/src/components/SharedButtonMigration.test.tsx",
+      "sha256": "3f522e4f591fc36566e42eb617aa2b07bfe4820d4134bdf288c898733cc6e226"
+    }
+  ],
+  "archiveSHA256": "e36710486fa41567423f73ebfeea23903eafd3099bad6a598422df7a1685aaa3",
+  "archiveBytes": 341027
+}

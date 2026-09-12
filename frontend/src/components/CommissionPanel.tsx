@@ -17,7 +17,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
-import { Button } from "./Button";
 
 const ROLES: { key: RoleKey; labelKey: string }[] = [
   { key: "sales", labelKey: "commissions.role_sales" },
@@ -225,15 +224,15 @@ export default function CommissionPanel({
                       </td>
                       <td>
                         {row && row.staff_id !== null ? (
-                          <Button
-                            variant="secondary" size="sm"
+                          <button
+                            className="btn-sm"
                             type="button"
                             data-testid={`commission-unassign-${key}`}
                             disabled={savingRole === key}
                             onClick={() => handleUnassign(key)}
                           >
                             {t("commission.unassignBtn")}
-                          </Button>
+                          </button>
                         ) : (
                           <span className="text-muted">—</span>
                         )}
@@ -252,22 +251,22 @@ export default function CommissionPanel({
                 gap: "var(--space-2)",
               }}
             >
-              <Button
+              <button
                 type="button"
-                variant="primary"
+                className="btn-primary"
                 onClick={handleRecalc}
                 disabled={recalcing}
                 data-testid="commission-recalc"
               >
                 {recalcing ? t("commission.recalculating") : t("commission.recalc")}
-              </Button>
-              <Button
+              </button>
+              <button
                 type="button"
-                variant="secondary"
+                className="btn-secondary"
                 onClick={onClose}
               >
                 {t("common.close")}
-              </Button>
+              </button>
             </div>
           </>
         )}
