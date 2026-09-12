@@ -299,3 +299,98 @@ PO原文: 「進めてくれ GO#3433」。受領記録時刻 2026-09-11T08:11:21
 
 
 PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skipped、process-artifacts成功。試験テーブル独自複製をschema gateが拒否したため、cffe3b2eで両隔離schemaを正式migrationから生成する形へ修正。ルール変更・例外追加なし。対象ruff/正式schema gate成功。mainのPR #3434（2ac5e81a）を追従し、別テーマ証跡の追記を保持。最新統合HEADのCIを再検証する。追従前の成功を最新HEADの合格に流用しない。tenant_001実接続・人の確認は未実施。報告 /tmp/reports/TH-PRODUCT-3433-SCHEMA-FIX.txt、TH-PRODUCT-3433-PG-CI-INITIAL.txt。
+
+
+### 2026-09-11 空のサンプルCSVと登録者情報の再開調査
+
+基点: adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b。git ls-remoteのmainとorigin/main一致。PR #3433はGitHubでMERGED、merge ec173b7e31f079b10993a60abcdae456e516b319、mergedAt 2026-09-11T08:26:02Zを再確認。本番配備の再検証は未実施。
+引き継ぎは /Users/tanizawashingo/Documents/SalesAnchor-handoffs/SA-CSV-RESUME-20260911-201030/README.md を読んだ。前便の再現・配備報告と今回直接の検証を分ける。関連runbookはdocs/runbooksのファイル名検索で本CSV専用が見つからず、既存design/reconを継続先とする。
+
+#### 1. 全体像
+
+frontend/src/pages/super-admin/TcgProductImportPage.tsx:14 が管理者だけPanelを表示。frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx:28 にpreview、:37にcommit、:65にファイル選択領域。backend/app/routers/tcg_product_import.py:181が登録入口。ダウンロード操作は現状ない。
+
+#### 2. 共用部品
+
+本調査の部品は画面部品・CSV定数・認証依存。frontend/src/components/Button.tsx:56が標準Button、ContentToolbar.tsxが操作配置。backend/app/services/tcg_product_import_svc.py:40に列定義10個、:54に必須5個、:119にparse_rows。backend/app/auth/dependencies.py:453-481はUserを受け取りUserを返す。backend/app/models.py:22-34にid/email/is_super_admin。
+
+#### 3. 非共用部品
+
+backend/app/routers/tcg_product_import.py:199だけが登録者をuser.getで読む。backend/tests/test_tcg_product_import.py:52,70,84は辞書を認証fixtureにしている。成功commit HTTP試験がない。frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx:7のCSV fixtureは2列で、画面試験用の偽物でありCSV仕様根拠にならない。汎用CSV基盤への拡張は不要。
+
+#### 4. ルールの所在
+
+docs/adr/ADR-113-two-mode-dev-flow.md（handoff、How忠実実装）、ADR-027（日英）、ADR-154（解析移植）とfrontend/AGENTS.md、backend/AGENTS.md、docs/STANDARD-WORKFLOW.md:76の既存延長区分を照合。本CSV限定修正は解析移植を変えない。既存designの「ADR-154によりcreate_productを変更しない」という境界も保持する。docs/specs/design-system/component-ssot/page-header-v2/design.md:45以降の本文補助操作に合わせてButton secondaryを採用。
+
+#### 5. 維持の仕組み
+
+backend/tests/test_tcg_product_import.py:28以降は未認証/preview/指紋不一致/拡張子を守るがUserによる成功経路に穴がある。.github/workflows/test.yml:206-241はPG込みpytest、frontend-check.yml:34はcheck:all。既存frontend単体とfrontend/tests-e2e/tcg-product-import.spec.ts:12以降を拡張する。テンプレートと列定義の一致は未実装であり今の守り手はない。
+
+#### 6. 設計図との対照
+
+| 合意した姿/既存契約 | 現状 | 判定 |
+|---|---|---|
+| 10列空CSV＋入力説明 | Panel:65に選択/書式のみ、保存導線なし | 不足 |
+| 認証済み管理者のCSV登録 | User返却に対してrouter:199でget | 不足 |
+| 確認したFile/digestで明示登録 | Panel:37-50 | 一致（UI契約） |
+| 失敗後の無条件再送を避ける | Panel:49のuncertainロック | 一致 |
+| 見本商品0行 | 新設ファイル未実装 | 不足 |
+
+今回の範囲に除去対象の余剰はない。親仕様の全機能再監査ではない。
+
+#### 7. ノイズと境界
+
+backend/app/services/tcg_product_import_svc.py:469の商品登録後、:476のrecord_rowが別commit（:417）。履歴完全追跡・全件rollbackは保証しない。digest一致は人の承認証明ではない。44件・3シート・LINE委任を今回の登録成功や操作権限へ換算しない。台帳には古いIN_PROGRESSが残るが、PR #3433のDONE/mergedは今回直接確認した。migration用worktreeの未保存はmigration2ファイル、product-tabs-table-designのstatusは空で、本設計2文書の新しい予約は確認されなかった。他者の編集は変更しない。
+
+#### 今回直接行った隔離検算
+
+現行ソースをPython ASTで取り出し、decode_csv/parse_rowsのみをcsv/ioとともに実行。BOM＋10列見出し＋CRLFの入力は rows=[]、file_errors=[]。商品行0・エラー0をassertしてPASS。CSV製品ファイルはまだ作成していない。
+同じ基点のcommit_import_endpoint本体をASTで取り出し、IOだけAsyncMockへ差替え、属性を持つSimpleNamespace(email,id)で実行。AttributeError（get無し）を再現、commit_importのawait0回をassert。HTTP・本物のUserモデル・認証・DBを実行した証拠ではない。実装後AC5で本物のUser/HTTPを検証する。pytestは実行していない。
+
+#### 仕様参照と限界
+
+Context7 MCPは利用可能ツール一覧に存在しないため起動指示の公式資料代替を適用。2026-09-11に直接確認:
+- https://vite.dev/guide/assets#the-public-directory — public資産は開発時ルート配信、build時distへそのままコピー。frontend/vite.config.ts:11以降もpublicDir/baseの変更なし。
+- https://html.spec.whatwg.org/multipage/links.html#downloading-resources — 同一オリジンのdownload指定による保存。
+- https://developer.mozilla.org/en-US/docs/Web/API/HTMLAnchorElement/download — download値だけでは実際の保存成功を保証しない。E2Eで実ファイルを確認する。
+外部導入事例は不要。仕様の可否確認を、実装後の動作成功と取り違えない。
+
+保存結果: 設計文書4ファイルを8a5cb636として専用releaseブランチへコミット・pushし、草案PR https://github.com/shingo-ops/salesanchor/pull/3436 を提出。task-state/diff検査成功、製品ファイル変更0。最初のcommit要求はhookが作業場所指定を本店mainと判断して拒否し、git操作前に停止。明示cdで専用releaseブランチを読取確認後、同じ文書だけを通常経路でコミット成功。ガード変更なし。設計合格と詳細案PO承認/製品実装/マージは区別する。正式実装カードは実装承認後に作成・card-lintと人手照合を経て発行するため本便は未発行。
+
+
+### 2026-09-12 正式実装カードの検査
+
+PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKIPPEDと直接確認。mainはgit ls-remoteでadc8bc4dのまま。reaperの事前確認とnew-worktree実行はいずれも削除対象0。公式作成コマンドが終了した後、別操作でrelease/product-import-template-implのディレクトリ・git登録・HEAD/origin/mainの一致・status空を確認した。実装先preflight成功。本店のAGENTS.mdや既存変更は保持。
+
+カード: card-template-impl.md。card-lint exit0、違反0、L24長行警告4件。18手順の連続性、全cd先の実在、既存7製品ファイルと新規1資産、設計/recon入力、未使用報告先、未作成venv、英字を含む未確定目印0、END OF CARDを機械補助で確認。L20/26/27/28/32等の未実装項目は同一AIで本文照合した。設計8ファイルとAC1〜7を保持し、範囲内編集/検査失敗修正、DB未検証、秘密の伏せ方、停止/再開/報告を明記。独立レビューではない。
+
+今回の実装用作業場所は /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl。製品コードは未変更、実装担当は未起動、実装カードは作成・検査済み。Docker情報照会はソケット不在でexit1。カードでは既知条件としてpytestを実行しない旨を明記し、正式CIでの実DB検査を後続へ残した。
+
+
+### 2026-09-12 実装カード01の報告保存停止と02への訂正
+
+実装役は01手順6の報告保存で停止。実行役報告では、規則文書をPython文字列に埋めて保存する要求がPreToolUseに拒否された。報告対象は規則本文で実pushは要求していない。親がgit status空と01報告0バイトを直接確認。製品編集・依存導入は未着手。停止をカードの出力保存方式不足として扱った。
+
+設計担当の確認: cat AGENTS.md frontend/AGENTS.md backend/AGENTS.md を未使用報告へ直接リダイレクトする通常の読み取り保存はexit0、19080バイト。規則内容の言換え・ガード変更・権限変更なし。証跡 /tmp/reports/CARD-PRODUCT-CSV-REPORT-PROBE-20260912.txt。
+
+正式カードを02へ更新し、報告ファイルを最初に排他作成、各コマンド出力を直接追記する手順へ訂正。旧01空報告は保持。製品8ファイル/受入基準/権限拒否時停止を変更しない。委任済みの同一実装役へ02を渡す。
+
+
+### 2026-09-12 カード02の実装結果・設計担当による差分確認
+
+実装役csv_card_executorは専用release/product-import-template-implへ指定8製品ファイルの実装を残した。コミット/公開/マージ/本番操作なし。空CSVの新規1ファイル＋既存7ファイルを親がgit status --short --untracked-files=allで直接確認。
+
+実装役の生報告: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt。親は該当出力を読み、単体13 passed、E2E7 passed（10.1s）、check:all exit0、build exit0、配布CSV148バイト一致、make lint-ci exit0、diff --check exit0を確認した。これらのコマンドを実行したのは実装役であり、設計担当が再実行した結果ではない。単体初回のfs URL失敗は許可範囲内修正後13件成功。既存frontend警告218件、mypy診断153件が残り、現行Makefileはmypyを警告扱いにする。対象routerの診断は0。
+
+親が直接実施した検査: CSV実バイトがBOM＋CSV_COLUMNSの10列＋CRLFに等しく、商品行0であることをPythonでassert。productCsvの日英キー一致をassert。製品差分を読取確認しUser型/属性アクセス、既存認証条件維持、API未呼出の保存操作、既存確認/再送ロック維持、回帰試験の期待値を照合。E2E画像保存先が未作成のCI環境で失敗する点を見つけ、実装役が同じE2Eファイル内でmkdirと排他保存へ修正した。日英390pxの保存画像を親もview_imageで直接見て欠け/横はみ出しなしを確認した。
+
+手順18追加のPython2ファイルruffは、実装役の通常sandboxで.ruff_cacheの一時ファイル作成が拒否されexit2。実装役は停止した。親が同じruff checkを通常のrequire_escalated権限審査に通して実行しAll checks passed/exit0を直接確認。ガード・キャッシュ設定・製品コードの変更なし。失敗出力は02報告にそのまま保持。
+
+差分確認時の8ファイルSHA256と親の検証範囲: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-parent-review.json。画像: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-template-ja-66adc185-e167-4b5d-9e97-f6b3dc219d84.png、同template-en-c57b8428-c8dd-47c2-93f9-4d3ef104714e.png。
+
+判定: 設計範囲の差分確認で追加指摘なし。製品リリース承認ではない。AC1〜4のローカル検証、AC7のfrontend部分まで完了。AC5〜6の本物User/HTTP試験は追加済み・未実行（修正前に戻した失敗確認も未実行）。Docker不在に従いpytest・実PG・CI・本番QAは未実施。マージGO・実データ投入・再解析・配信は未承認/未実施。次は製品差分の保存・PR公開と正式CI検証を別便で行う。
+
+
+### 2026-09-12 公開前の改行検査
+
+新規CSVをstageした後の通常git diff --cached --checkがCRLFを末尾空白と判定した。前便は未追跡資産がgit diff --check対象外であった。設計必須のCRLFは維持し、Git公式core.whitespaceのcr-at-eolを当該検査コマンドだけに指定。blank-at-eol/blank-at-eof/space-before-tabは保持。親が同一stage差分へ直接実行しexit0を確認した。永続Git設定/ガード/CI/製品変更なし。Context7未提供のため許可された代替で https://git-scm.com/docs/git-config のcore.whitespaceを直接確認。実資産の148バイト・BOM/CRLF/10列/0行検査は別に成功済み。
