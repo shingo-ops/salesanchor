@@ -2454,3 +2454,25 @@ tradeoff: counts describe retrieval only and include reposts/cross-file overlaps
 decision: register 11 candidate groups, 8 scoped blocking conditions and 12 regression cases in design only; runtime registration=0; self-review REVISE
 follow_up: establish gold labels and price/shipping/condition/unit-specific offer identity, then finalize scoped exclusion logic, DDL/API and rollout before implementation card
 ```
+
+```text
+id: EV-20260913-LINE-STOCK-DISPLAY
+date: 2026-09-13
+agent: Codex design partner
+task: 締切の適用範囲・発送枠の既存対応・完売行の表示を確認
+scope: user-supplied files and current code read-only; design PR #3456
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md additional cutoff audit
+    summary: exact display-name headers A28/B372=400 posts, 17:30 clause in 1; explicit same-day-shipping clause in 121 posts/141 lines; 115 dates and 12 multi-time candidate dates, not a semantic inconsistency rate
+  - type: command
+    reference: current parse_extraction_response AST-isolated synthetic 2-row response
+    summary: preserves 2 rows and separate memos; AI extraction, persistent shipping-slot matching and production update not tested
+  - type: file
+    reference: backend/app/services/tcg_analysis_review_svc.py:35,72-84,238-256; backend/app/services/tcg_analyzer_svc.py:918-954
+    summary: status/note/raw memo output fields exist; active-source filtering, exclusion-to-review classification, dictionary-only note generation need explicit integration for requested display
+confidence: high
+tradeoff: same display name is not verified supplier identity; repeated posts/cross-file overlaps retained; no all-supplier uniformity or model-accuracy claim
+decision: record requested sold-out row retention in analysis list with sold-out status and possible-additional-stock memo; keep stock output excluded, self-review REVISE
+follow_up: finalize shipping-slot identity and status/note/history UI contracts and verify on labeled examples before implementation
+```

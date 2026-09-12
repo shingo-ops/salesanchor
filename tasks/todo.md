@@ -144,4 +144,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | POは対象商品のみ0・混在明細別・未記載維持に合意。現行関数3ケースと除外条件の反例2件を観測。提供原文2ファイル全1,106,390行を検索し候補11群/抑止8条件を文書登録。PR #3456、自己審査REVISE、runtime変更なし | 提供原文から正解集合を作り、販売枠（価格/発送分/状態/単位）と現在在庫の対応を照合。除外条件の接続・DDL/API/切替を確定して再審査 | docs/handoff/tcg-import-latest-only/design.md / docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STOCK-MESSAGES | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | POは対象商品のみ0・混在明細別・未記載維持に合意。現行関数3ケースと除外条件の反例2件を観測。提供原文2ファイル全1,106,390行を検索し候補11群/抑止8条件を文書登録。PR #3456。対象表示名400投稿の締切を確認。完売行は解析リスト保持・完売表示・追加可能性ありを備考へというPO指定を追記。自己審査REVISE、runtime変更なし | 提供原文から正解集合を作り、販売枠（価格/発送分/状態/単位）と現在在庫の対応を照合。除外条件の接続・DDL/API/切替を確定して再審査 | docs/handoff/tcg-import-latest-only/design.md / docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STOCK-MESSAGES | 2026-09-13 |
