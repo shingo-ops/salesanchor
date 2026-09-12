@@ -41,3 +41,12 @@ Confirm実呼出し25か所を構文走査し、動的OwnInventory3分岐を照�
 ブラウザーskillを読んだがnode_repl js実行ツールは利用不可のため、選択済みブラウザーを操作せず独立したローカルChromium検証を実行。Context7も利用不可。許可済み代替でPlaywright公式の[Keyboard](https://playwright.dev/docs/api/class-keyboard)、[Page](https://playwright.dev/docs/api/class-page)、[Network](https://playwright.dev/docs/network)を直接確認。
 
 マージの未充足条件: scripts/check-process-artifacts.js:317で番号付きGOの原文を必須としている。POの今回原文をそのままvalidateGORecordへ渡すと「GO原文の書式不正」となることを直接確認。承認意図は受領済みだが、現行経路では新PR番号のGO照合を満たしていない。ガード変更・承認偽装・代理GOはしない。PR提出/CI観測まで進め、正式GO照合までマージ/本番反映を保留する。
+
+
+### PR #3442 提出・初回CIの正式GO不足
+
+ready PR https://github.com/shingo-ops/salesanchor/pull/3442 。初回HEAD44320bd63a940420f3b9235d52b5291b8cf822e5、base main、isDraft false、.pr-number=3442を直接確認。
+main66b41766を通常統合。evidence-registry末尾の両側追記を全文保持し、製品hash7/7不変、task-state成功。
+初回process-artifacts gate job103471236394のAPIログを直接取得し、2026-09-12T01:04:40Zに「PR本文にGO記録セクションがありません」でexit1と確認。POからの依頼原文はPR本文の承認状況に保存し、GO原文欄へ番号を創作していない。
+最新CIはPRの現在HEADを参照。番号付きGO照合までmerge/deployを保留。rootの文書保存コミットは製品検収hashを変更しない。
+後続実行カード: aj-review-card.txt、aj-commit-card.txt、aj-publish-card.txt（すべて正式lint exit0、長行警告のみ）。

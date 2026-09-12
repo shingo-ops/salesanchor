@@ -1,0 +1,36 @@
+CARD-AJ-COMMIT-INTEGRATE-05
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AJ-COMMIT-INTEGRATE-05
+読んだ節: guards/00-common.md、01-read.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+照合1〜7: ○（実パス、PR非対象、全文、1目的、既存worktree、実名9ファイル、製品hash）。L32未確定の目印なし。
+担当: 同じ実装担当。rootが検収文書を作成済み。あなたは他者と並行中で、他者差分を戻さない。
+目的: 検収済みAJ13利用と証拠9ファイルをコミットして、最新mainの文書だけの更新を通常統合する。
+根拠: design.md§AJ、shared-button-implementation.mdの2026-09-12節、検証manifest。
+製品の追加編集禁止。許可: 指定9ファイルのstage/commitと、このreleaseブランチへのorigin/main通常merge。
+main差分は66b41766時点で文書6件のみとrootが実測。編集・push・PR・本番・GO代筆・保護回避・追加AI起動は禁止。
+統合で競合した場合は解消もabortもせず、競合名と生出力をrootへ返す。rootが文書だけを整理する。
+停止時は手順番号/最後のコマンド/理由/対象名/生出力全文を返す。権限拒否を迂回しない。
+
+手順0: 製品hashを確認する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 -c 'import json,pathlib,hashlib; m=json.loads(pathlib.Path("docs/handoff/design-system-recon/evidence-20260910/aj-validation-manifest.json").read_text()); [print(f["path"],hashlib.sha256(pathlib.Path(f["path"]).read_bytes()).hexdigest()) for f in m["products"]]; assert all(hashlib.sha256(pathlib.Path(f["path"]).read_bytes()).hexdigest()==f["sha256"] for f in m["products"])'
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && bash scripts/check-task-state.sh
+
+手順1: 指定9ファイルだけコミット。製品と文書本文は変更しない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git add frontend/src/components/CommissionPanel.tsx docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md docs/handoff/design-system-recon/recon.md docs/handoff/design-system-recon/evidence-20260910/ah-restart.md docs/specs/design-system/migration.md docs/ai-agents/evidence-registry.md tasks/todo.md docs/handoff/design-system-recon/evidence-20260910/aj-validation-manifest.json docs/handoff/design-system-recon/evidence-20260910/aj-validation-checkpoint.tar.gz
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --cached --stat
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git commit -m "feat: migrate thirteen shared actions to Button"
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git log -1 --format=fuller
+
+手順2: 最新参照を取得して通常統合する。fetch失敗/対象frontend変更ありなら統合前に停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git fetch origin
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --exit-code adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b origin/main -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git merge --no-edit origin/main
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git log -1 --format=fuller
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short
+
+成功条件: 保存コミット実在、統合成功または競合の正確な報告。製品hash保持。
+完了報告は「本報告はカード CARD-AJ-COMMIT-INTEGRATE-05 の実行結果である」で開始し、全生出力と各手順○×を返す。
+PRは次便でreadyとして正式wrapper利用。今回push/PR/リモートmergeはしない。
+END OF CARD

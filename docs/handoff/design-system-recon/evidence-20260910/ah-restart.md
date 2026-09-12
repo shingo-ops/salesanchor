@@ -52,3 +52,11 @@ PO原文: 「再起動するからここまでを保存して記録してくれ�
 Commission復元済み、現製品は13利用。全体220試験/品質5項目、表示120組/実ラベル60/キー10成功。旧「分割未適用」「全体未合格」は過去状態。
 根拠と制限は [実装検収](shared-button-implementation.md) の2026-09-12節、[検証manifest](aj-validation-manifest.json)。
 次は実測製品hashを保持してPR提出/CI確認。POの今回依頼は番号付きGO形式を満たさず、受理可能な正式GOまでマージ/本番反映保留。
+
+
+## 2026-09-12 PR提出・再開地点
+
+PR [#3442](https://github.com/shingo-ops/salesanchor/pull/3442) をready提出。初回HEAD44320bd6と.pr-number/remote/APIを直接照合済み。
+次は最新HEADのCIを確認し、PO本人の正式GO #3442を受領したら逐語転記して関所を再実行する。初回process-artifacts job103471236394はGO記録不在でexit1。
+今回の依頼原文だけでは現行検査を満たさないことを確認済み。代理GO・番号創作・マージ・本番反映は実施していない。製品の再修正は不要、報酬3は保留。
+最新CI/HEADはPRを正本として参照する。検証済み製品7hashはaj-validation-manifest.jsonで再照合できる。

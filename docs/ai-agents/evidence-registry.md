@@ -2434,3 +2434,10 @@ PO原文「承認する、離席するのでPR．マージ、本番反映まで�
 
 - 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
+
+
+### EV-20260912-FRONTEND-AJ-PR — PR3442提出と承認待ち
+
+ready PR https://github.com/shingo-ops/salesanchor/pull/3442 。初回44320bd6、base main、draft false、登録番号3442を直接照合。
+製品hash7/7保持。初回process-artifacts job103471236394のAPIログはGO記録なし/exit1。PO依頼原文は保持、番号創作なし。
+最新HEAD/CIはPR参照。正式番号付きGO受領・再検査前のマージ/本番反映なし。根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md。
