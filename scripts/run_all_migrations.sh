@@ -627,3 +627,6 @@ run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
 run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
 run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
 run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
+
+# Android LINE import-only device authorization (public; all tenants)
+run_sql migrations/20260912_160000_line_import_devices.sql

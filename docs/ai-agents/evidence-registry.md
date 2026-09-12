@@ -2441,3 +2441,28 @@ PO原文「承認する、離席するのでPR．マージ、本番反映まで�
 ready PR https://github.com/shingo-ops/salesanchor/pull/3442 。初回44320bd6、base main、draft false、登録番号3442を直接照合。
 製品hash7/7保持。初回process-artifacts job103471236394のAPIログはGO記録なし/exit1。PO依頼原文は保持、番号創作なし。
 最新HEAD/CIはPR参照。正式番号付きGO受領・再検査前のマージ/本番反映なし。根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md。
+## EV-20260912-LINE-ANDROID-IMPORT
+
+Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。PR #3443のCI run 34672625832で全体pytest 2,608成功/95 skip。API回帰試験成功、本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。
+
+## EV-20260912-LINE-ANDROID-LOGIN
+
+Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報で検証。Python 3.12/Termux 3.14で30テスト成功。実認証はユーザー待ち。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認証追記: 資格情報なしの公開設定確認で403 / API_KEY_HTTP_REFERRER_BLOCKEDを実測。直接ログインは利用不可。パスワード入力前に停止する修正を加え33テスト成功。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認可方式変更: ユーザーがフロント後回し・インポート先行を明示。Firebase直接ログインを撤去し用途限定APIキーと管理者登録へ変更。端末23単体成功、実DB検証はCI待ち。根拠: docs/handoff/line-android-login/design.md、recon.md。
+
+端末専用キー検証追記: CI run 34676154180成功（全体2,625 passed/95 skipped）。一時PostgreSQLの本番モデル前提表と実DDLを使用し、並行認可・失効・取消し・最小権限DMLを確認。本番反映・初回登録・実送信は未実施。
+
+## EV-20260912-LINE-DELIVERY-CONNECT
+
+PR #3445 deploy34676818835成功、端末登録34677017232成功、2ファイルimported/pending_reviewを端末応答で確認。配信接続の現状と設計は docs/handoff/line-import-delivery/recon.md / design.md。実DB再照会と解析・配信は未実施。
+
+## EV-20260912-LINE-SUPPLIER-NAMES
+
+PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect34678551826成功。39名は完全一致/正規化一致0、マスタ110件。PC前方一致候補12名は未確定。docs/handoff/line-supplier-aliases/recon.md参照。
+
+- 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
+
+全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
