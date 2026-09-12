@@ -162,12 +162,24 @@ async def run(data):
         return await operate(db, data)
 
 
+def emit_result(result):
+    payload = json.dumps(result, default=str)
+    if len(payload.encode('utf-8')) <= 16000:
+        print(payload, flush=True)
+        return
+    # SSH action log readers may drop a single large line. Keep every line bounded.
+    encoded = base64.b64encode(payload.encode('utf-8')).decode('ascii')
+    for start in range(0, len(encoded), 12000):
+        print('LINE_IMPORT_REPORT:' + encoded[start:start + 12000], flush=True)
+    print('LINE_IMPORT_REPORT_END', flush=True)
+
+
 if __name__ == '__main__':
     # Existing services log supplier names/errors; keep this public CI transport sanitized.
     logging.disable(logging.CRITICAL)
     try:
         result = asyncio.run(run(json.loads(sys.stdin.read(4097))))
-        print(json.dumps(result, default=str))
+        emit_result(result)
         if result.get('status') == 'not_confirmed':
             raise SystemExit(1)
     except Exception:

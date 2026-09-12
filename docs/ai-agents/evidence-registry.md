@@ -2406,3 +2406,5 @@ PR #3445 deploy34676818835成功、端末登録34677017232成功、2ファイル
 ## EV-20260912-LINE-SUPPLIER-NAMES
 
 PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect34678551826成功。39名は完全一致/正規化一致0、マスタ110件。PC前方一致候補12名は未確定。docs/handoff/line-supplier-aliases/recon.md参照。
+
+- 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
