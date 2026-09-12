@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 
@@ -38,7 +37,7 @@ def test_work_id_separate_from_verbatim(monkeypatch):
     assert item["resolved_work_id"] == ONE
 
 
-@pytest.mark.parametrize("bad", ["not-a-uuid", str(uuid4()), "IP002"])
+@pytest.mark.parametrize("bad", ["not-a-uuid", "33333333-3333-4333-8333-333333333333", "IP002"])
 def test_unknown_or_invalid_id_rejects_whole_response(monkeypatch, bad):
     response = HEADER + "\nOP-01｜1｜100｜BOX｜｜｜L0001｜｜｜" + ONE
     response += "\nEB01｜1｜100｜BOX｜｜｜L0001｜｜｜" + bad
