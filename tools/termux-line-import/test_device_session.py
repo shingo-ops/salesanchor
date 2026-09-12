@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import Mock
-from device_session import AuthError, Session, VERIFY, private_write
+from device_session import AuthError, Session, SCOPE, private_write
 
 
 class DeviceTests(unittest.TestCase):
@@ -19,7 +19,7 @@ class DeviceTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def start(self):
-        return 200, {'user_code': 'ABCD-EFGH', 'verification_uri': VERIFY}
+        return 200, {'user_code': 'ABCD-EFGH', 'scope': SCOPE}
 
     def test_approved_key_is_only_kept_on_device(self):
         self.transport.side_effect = [self.start(), (200, {'status': 'pending'}), (200, {'status': 'approved'})]
@@ -53,8 +53,8 @@ class DeviceTests(unittest.TestCase):
             self.session.connect()
         self.assertEqual((self.base/'device.json').read_bytes(), before)
 
-    def test_wrong_approval_site_is_rejected(self):
-        self.transport.return_value = 200, {'user_code': 'ABCD-EFGH', 'verification_uri': 'https://example.invalid'}
+    def test_wrong_permission_scope_is_rejected(self):
+        self.transport.return_value = 200, {'user_code': 'ABCD-EFGH', 'scope': 'all'}
         with self.assertRaises(AuthError):
             self.session.connect()
         self.assertFalse((self.base/'device.json').exists())

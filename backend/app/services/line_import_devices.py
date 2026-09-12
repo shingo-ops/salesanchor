@@ -62,7 +62,7 @@ async def start(db, token_hash: str, name: str, peer: str):
         raise HTTPException(409, 'device_request_conflict')
     await db.commit()
     return {'user_code': code[:4] + '-' + code[4:],
-            'verification_uri': 'https://app.salesanchor.jp/account/line-import-devices',
+            'scope': SCOPE,
             'expires_in': 600, 'interval': 5}
 
 

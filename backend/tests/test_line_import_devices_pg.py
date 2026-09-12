@@ -59,6 +59,8 @@ async def test_complete_device_lifecycle_and_revocation(pg):
     user = SimpleNamespace(id=1, email='test@example.invalid')
     async with sessions() as db:
         started = await svc.start(db, svc.digest(token), 'phone', 'local-test')
+        assert started['scope'] == svc.SCOPE
+        assert 'verification_uri' not in started
         assert (await svc.status(db, token))['status'] == 'pending'
         with pytest.raises(HTTPException): await svc.authenticate(db, token)
         approved = await svc.approve(db, user, started['user_code'])

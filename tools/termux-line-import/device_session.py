@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 
 BASE = 'https://api.salesanchor.jp/api/v1/tcg/line-devices'
-VERIFY = 'https://app.salesanchor.jp/account/line-import-devices'
+SCOPE = 'line:import:android'
 KEY = re.compile(r'^sali1_[A-Za-z0-9_-]{43}$')
 CODE = re.compile(r'^[A-Z2-9]{4}-[A-Z2-9]{4}$')
 
@@ -97,7 +97,7 @@ class Session:
             raise AuthError('端末登録の回数制限です。1時間後に再試行してください。')
         if code == 404:
             raise AuthError('端末認可APIが未導入です。反映後に再試行してください。')
-        if code != 200 or not isinstance(data, dict) or not CODE.fullmatch(data.get('user_code', '')) or data.get('verification_uri') != VERIFY:
+        if code != 200 or not isinstance(data, dict) or not CODE.fullmatch(data.get('user_code', '')) or data.get('scope') != SCOPE:
             raise AuthError('端末登録を開始できませんでした。後で再試行してください。')
         print('端末登録を開始しました。管理者側の許可処理を待っています。', flush=True)
         print('端末コード: ' + data['user_code'], flush=True)

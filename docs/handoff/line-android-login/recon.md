@@ -14,5 +14,5 @@ Firebase直接ログインは公開設定GETで403/API_KEY_HTTP_REFERRER_BLOCKED
 
 ## 現在地
 
-端末クライアント23単体テスト成功。API境界テストとPostgreSQLのDDL冪等・ライフサイクル・並行認可・失効・登録制限テストを追加。Dockerのない端末ではpytestを走らせずCIで実施する。実PostgreSQL検証はまだ未実施として扱う。
-backend make lint-ci結果とCIは更新後に記録する。端末には前便の停止するFirebase試作がまだ入っており、本番反映後にdevice_session版へ更新する。原本・未送信2件は保持、専用端末キーは未登録。実送信は未完了。
+端末クライアント23単体テスト成功。API境界テストとPostgreSQLのDDL冪等・ライフサイクル・並行認可・失効・登録制限テストを追加。Dockerのない端末ではpytestを走らせずCIで実施する。実PostgreSQL検証はCI run 34676154180で成功。一時DBに本番Tenant/Userモデルから前提表を作成し、今回DDLを2回適用した。全体2,625 passed / 95 skipped / 309 warnings。
+backend make lint-ciはruff成功、bandit高重大度0・スキップ0。mypyは既存の非ブロッキング検査。移行の全件ドライランとテナントスキーマ検査もCI成功。端末には前便の停止するFirebase試作がまだ入っており、本番反映後にdevice_session版へ更新する。原本・未送信2件は保持、専用端末キーは未登録。実送信は未完了。

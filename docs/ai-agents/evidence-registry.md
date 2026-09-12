@@ -2396,3 +2396,5 @@ Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報�
 端末認証追記: 資格情報なしの公開設定確認で403 / API_KEY_HTTP_REFERRER_BLOCKEDを実測。直接ログインは利用不可。パスワード入力前に停止する修正を加え33テスト成功。根拠: docs/handoff/line-android-login/recon.md。
 
 端末認可方式変更: ユーザーがフロント後回し・インポート先行を明示。Firebase直接ログインを撤去し用途限定APIキーと管理者登録へ変更。端末23単体成功、実DB検証はCI待ち。根拠: docs/handoff/line-android-login/design.md、recon.md。
+
+端末専用キー検証追記: CI run 34676154180成功（全体2,625 passed/95 skipped）。一時PostgreSQLの本番モデル前提表と実DDLを使用し、並行認可・失効・取消し・最小権限DMLを確認。本番反映・初回登録・実送信は未実施。
