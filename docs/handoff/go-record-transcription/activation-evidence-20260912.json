@@ -1,0 +1,121 @@
+{
+  "mode": "offline_design_probe",
+  "source_sha256": "e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26",
+  "cases": [
+    {
+      "case": "normal",
+      "expected": "ACCEPTED_PROBE",
+      "observed": "ACCEPTED_PROBE"
+    },
+    {
+      "case": "sender",
+      "expected": "ACTOR_INVALID",
+      "observed": "ACTOR_INVALID"
+    },
+    {
+      "case": "author",
+      "expected": "ACTOR_INVALID",
+      "observed": "ACTOR_INVALID"
+    },
+    {
+      "case": "repo",
+      "expected": "REPO_INVALID",
+      "observed": "REPO_INVALID"
+    },
+    {
+      "case": "owner",
+      "expected": "REPO_INVALID",
+      "observed": "REPO_INVALID"
+    },
+    {
+      "case": "edited",
+      "expected": "EVENT_INVALID",
+      "observed": "EVENT_INVALID"
+    },
+    {
+      "case": "missing_body",
+      "expected": "BODY_INVALID",
+      "observed": "BODY_INVALID"
+    },
+    {
+      "case": "bad_json",
+      "expected": "BODY_INVALID",
+      "observed": "BODY_INVALID"
+    },
+    {
+      "case": "too_large",
+      "expected": "BODY_INVALID",
+      "observed": "BODY_INVALID"
+    },
+    {
+      "case": "extra",
+      "expected": "SCHEMA_INVALID",
+      "observed": "SCHEMA_INVALID"
+    },
+    {
+      "case": "bool_version",
+      "expected": "SCHEMA_INVALID",
+      "observed": "SCHEMA_INVALID"
+    },
+    {
+      "case": "bool_target",
+      "expected": "TARGET_INVALID",
+      "observed": "TARGET_INVALID"
+    },
+    {
+      "case": "target",
+      "expected": "TARGET_INVALID",
+      "observed": "TARGET_INVALID"
+    },
+    {
+      "case": "command",
+      "expected": "REQUEST_INVALID",
+      "observed": "REQUEST_INVALID"
+    },
+    {
+      "case": "kind",
+      "expected": "SCHEMA_INVALID",
+      "observed": "SCHEMA_INVALID"
+    },
+    {
+      "case": "duplicate",
+      "expected": "BODY_INVALID",
+      "observed": "BODY_INVALID"
+    },
+    {
+      "case": "array",
+      "expected": "SCHEMA_INVALID",
+      "observed": "SCHEMA_INVALID"
+    },
+    {
+      "case": "pull_request",
+      "expected": "EVENT_INVALID",
+      "observed": "EVENT_INVALID"
+    }
+  ],
+  "passed": 18,
+  "total": 18,
+  "github_trials": 0,
+  "authorization_issued": false,
+  "base_sha": "66b417665c013fdb354d5bda63226d07a1b2182c",
+  "observed_at_utc": "2026-09-12T00:47:41Z",
+  "actionlint": "PASS",
+  "sandbox_repo_id": 1363676622,
+  "sandbox_main": "a815d94c535f59fae6415b881296d64ef17bf6c7",
+  "sandbox_root_files": [
+    "README.md"
+  ],
+  "sandbox_prs": 0,
+  "cli_subject": "shingo-cc",
+  "cli_permission": "read",
+  "connector_subject_id": 246949427,
+  "connector_repo_permissions": {
+    "push": true,
+    "admin": true
+  },
+  "connector_collaborator_query": {
+    "subject": "shingo-cc",
+    "permission": "read"
+  },
+  "write_permission_proven": false
+}
