@@ -796,7 +796,7 @@ scripts/check-process-artifacts.js:293がGO記録検査、:829/:848が危険/利
 
 ### 共用部品
 
-scripts/check-process-artifacts.js:36の本人発行者定義、:293のvalidateGORecordが既存の共用判定。P1の合成受付はintake-p1-workflow.txt:23のclassifyであり、実GOの検査として接続されていない。文書の存在を実装済みとして数えない。
+scripts/check-process-artifacts.js:36の本人発行者定義、:293のvalidateGORecordが既存の共用判定。P1の合成受付はintake-p1-workflow.txt:32のclassifyであり、実GOの検査として接続されていない。文書の存在を実装済みとして数えない。
 
 ### 非共用部品
 
@@ -808,7 +808,7 @@ ADR-113のhandoff整合検査、ADR-121の成果物ゲート、ADR-135の出荷�
 
 ### 維持の仕組み
 
-.github/workflows/process-artifacts-gate.yml:32以降は成果物検査を起動する。実権限の分離・取消/期限の実行時検査は今の文書検査だけでは守れない。get_repoのpush/admin表示をAPI成功の証明にしない。
+.github/workflows/process-artifacts-gate.yml:35以降は成果物検査を起動する。実権限の分離・取消/期限の実行時検査は今の文書検査だけでは守れない。get_repoのpush/admin表示をAPI成功の証明にしない。
 
 ### 設計図との対照
 
