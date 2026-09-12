@@ -2497,3 +2497,23 @@ tradeoff: 過去backup生成証拠であり現物存在/復元試験は未確認
 decision: POの番号付きGO判断へ。GO/マージ/本番変更は未実施
 follow_up: GO受領後に正式反映カード。配備時backup/HEAD/health/空CSV実資産の検証を完了条件とする
 ```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-GO
+date: 2026-09-13
+agent: Codex design partner
+task: PR3438 PO GO記録・正式反映カード
+scope: PR3438のマージと自動本番配備、実登録/再解析/配信は対象外
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md
+    summary: PO原文「GO #3438」を記録。以前の別番号は不採用。AI委任発行ではない
+  - type: command
+    reference: docs/handoff/tcg-product-import/card-release.md
+    summary: card-lint違反0/長行2、11手順を同一AIで照合。既存担当へ委任
+confidence: high
+tradeoff: 最新main追従CIと実配備結果はまだ未確認
+decision: 番号付きGO受領・反映便開始。設計担当の自動実装切替なし
+follow_up: merge/自動backup/配備HEAD/health/空CSV実資産で完了判定
+```
