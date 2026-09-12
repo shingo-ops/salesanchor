@@ -398,8 +398,9 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
     monkeypatch.setattr(product_master, "_SYNC_DB_URL", str(engine.url.render_as_string(hide_password=False)))
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / STRUCTURE).read_text())
+        cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active) VALUES (%s,%s,'Box',true) RETURNING id", (code, name))
+            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
