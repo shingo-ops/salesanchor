@@ -1,7 +1,7 @@
 # 画面を使わず解析・配信へ接続する
 この文書は、既存の確認・解析・配信処理を管理操作から使う方法です。
 親: [商品マスタ](../../specs/product-master/README.md)
-現在地: [recon](recon.md)。ADR-072 / ADR-154を維持。
+現在地: [recon](recon.md)（docs/handoff/line-import-delivery/recon.md）。ADR-072 / ADR-154を維持。
 
 ## 範囲
 KGIは、対象取込の確認→確定→抽出/解析の観測→指定済み配信先の更新結果を実測で確認すること。今回ユーザーは配信までの接続を依頼。未登録仕入先の同一性と実送信先は確認待ち。

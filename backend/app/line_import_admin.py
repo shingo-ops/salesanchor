@@ -42,7 +42,7 @@ def ready_for_delivery(progress):
     if progress.get('coverage') != 'complete' or progress.get('review_status') != 'ok':
         return False
     messages, extraction, analysis = (progress.get(k, {}) for k in ('messages', 'extraction', 'analysis'))
-    if not messages.get('total') or messages.get('inactive') or messages.get('without_extraction_job'):
+    if not messages.get('total') or messages.get('inactive', 1) != 0 or messages.get('without_extraction_job', 1) != 0:
         return False
     if not extraction.get('total') or not analysis.get('total'):
         return False
