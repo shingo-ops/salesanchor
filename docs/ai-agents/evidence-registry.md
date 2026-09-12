@@ -2365,3 +2365,16 @@ PR #3433 CI追補: f09d3659の実DB CI（run34578271232）は2566 passed/95 skip
 EV-20260911-FRONTEND-MOLD-29: AI PR3435 ready提出を.pr-number/head指定一覧/APIで一致確認。main ec173b7e統合3935e17d、2製品hash不変、root統合unit200成功。証拠modal-footer-implementation.md/root-main-verification.json/post-main-unit.log。CI確認中、GO #3435未受領・マージ/PO目視未完。
 
 EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。 証拠: PR https://github.com/shingo-ops/salesanchor/pull/3435 のGO記録と検収記録。
+
+## EV-20260910-LINE-GO-DELEGATION
+
+- 対象: 既存GOフローの子テーマ、LINE解析改善の期限付き委任。
+- PO確認文: 「この条件を正式な設計の前提として採用してよいですか？」、返答原文「OK」。条件全文は docs/handoff/go-record-transcription/line-delegation.md「POの願いと合意原文」に保存。
+- 調査基点: origin/main 3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1fe。preflight成功。現行validateGORecordを直接実行しPO表記受理/AI表記拒否のassert 2/2成功。新モードの検証ではない。
+- 親の改訂3作業場所に未保存5ファイルを確認。読み取りのみで保持。別作業の記録を自分の実機確認と混同しない。
+- 保存先: docs/handoff/go-record-transcription/line-delegation.md。索引はdocs/specs/README.mdの既存GOテーマ行。親ファイルへの並行編集を避け同テーマ内の追補とした。
+- 自己審査: REVISE。同一AI。委任保存先・主体・取消/実行境界・専用経路の実機試験は未確定。設計前提合意済み、製品実装/CI設定変更/有効化は未実施。
+
+- 追加依頼によりcxastraを保持してローカルcxastrago入口を登録。専用zsh関数/専用追補プロンプトを作成、.zshrcにsourceを追記。既存保持をバイト照合。構文検査と模擬8ケース成功、新login shellで両関数認識。GO委任は未有効・期間未開始。詳細/ハッシュ/履歴保存制限はline-delegation.md末尾。
+
+追補（2026-09-12、PR #3406）: PO原文「GO #3406」と未保存委任記録の統合確認への「進める」を受領。9月10日記録を原文保持し、CI run 34458348941の文書書式3エラーを補正。main追従時は他テーマの根拠登録と最新GOフロー行を保持。代理GO未有効、9月10日記録の期限延長なし。文書PRの完了はGitHub state/merge SHAで確認する。

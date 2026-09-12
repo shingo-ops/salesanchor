@@ -15,7 +15,7 @@
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 |
 | エージェント完結の設計体制 | [agent-complete-design/README.md](agent-complete-design/README.md) | 公開 |
 | 開発の無駄な停止ゼロ | [dev-continuity/README.md](dev-continuity/README.md) | 公開 |
-| GO記録の自動転記・マージ前検査 | [go-record-transcription/](../handoff/go-record-transcription/) | 設計範囲・GO取消期限PO合意 2026-09-10・方式全体は草案/自己審査REVISE |
+| GO記録の自動転記・マージ前検査 | [go-record-transcription/](../handoff/go-record-transcription/)・[LINE期限付き委任](../handoff/go-record-transcription/line-delegation.md) | 設計範囲・GO取消期限PO合意 2026-09-10・方式全体は草案/自己審査REVISE |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
