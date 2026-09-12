@@ -2384,3 +2384,10 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 
 - 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
+
+
+## EV-20260912-LINE-WORK-ID
+
+2026-09-12: PO原文「今回geminiに判断させるのは作品IDのみ、ほかは原文抽出させる」「進める」。本番読み取り293商品/8作品/作品NULL0、現promptは作品推測禁止。詳細はdocs/handoff/tcg-product-master-growth/recon.md末尾、方式案はdesign-keyword.md §16。PM0181商品名を明示依頼により意思→意志、旧値退避、UPDATE 1と再SELECT確認。検索語未変更。製品実装・再抽出・配信未実施。後続指示はテストでGemini使用禁止、本番マージ後の最新取込で抽出/解析、精度向上確認後に要確認以外を配信。代理GO有効化ではない。
+
+EV-20260912-LINE-WORK-ID実装追記: §16.10で事前実API禁止に対応。カードL29を修正して終了0、長行警告のみ。実装/静的検査/文書検査済み、ローカルDocker不在により実DBはCI前。Gemini実呼出し0、本番機能変更0。

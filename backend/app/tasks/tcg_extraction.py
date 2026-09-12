@@ -27,7 +27,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from app.services.gemini_extraction_svc import _safe_error_message, extract_message
-from app.services.tcg_analyzer_svc import analyze_extraction_job, load_work_master
+from app.services.tcg_analyzer_svc import analyze_extraction_job
+from app.services.tcg_work_reference import load_work_reference, reference_digest, reference_json
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,17 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
         session.close()
 
 
+def work_schema_ready(session: Session) -> bool:
+    count = session.execute(text(f"""
+        SELECT count(*) FROM pg_attribute
+        WHERE NOT attisdropped AND (
+            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname = 'resolved_work_id')
+            OR (attrelid = '{TCG_SCHEMA}.extraction_jobs'::regclass
+                AND attname IN ('work_reference_snapshot', 'work_reference_sha256')))
+    """)).scalar_one()
+    return count == 3
+
+
 def _run_extraction(session: Session, source_message_id: str) -> dict:
     """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
 
@@ -129,15 +141,22 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "error_message": "pending extraction_job が見つかりません",
         }
 
+    if not work_schema_ready(session):
+        return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
+                "analysis_stats": None, "error_message": "Work-ID schema migration is not ready"}
+    reference = load_work_reference(session, TCG_SCHEMA)
+    digest = reference_digest(reference)
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
     # --- 2. status = 'running' に更新 ---
     session.execute(
         text(
-            f"UPDATE {TCG_SCHEMA}.extraction_jobs SET status = 'running' WHERE id = :ej_id"
+            f"UPDATE {TCG_SCHEMA}.extraction_jobs SET status = 'running', "
+            "work_reference_snapshot=CAST(:reference AS JSONB), work_reference_sha256=:digest "
+            "WHERE id = :ej_id"
         ),
-        {"ej_id": extraction_job_id},
+        {"ej_id": extraction_job_id, "reference": reference_json(reference), "digest": digest},
     )
     session.commit()
 
@@ -145,7 +164,13 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     logger.info(
         "[tcg_extraction] calling Gemini for ej=%s", extraction_job_id
     )
-    result = extract_message(raw_text, works=load_work_master(session))
+    result = extract_message(raw_text, work_reference=reference)
+    # Never retain a DB transaction across the external call.
+    if result["status"] in ("done", "empty"):
+        current = load_work_reference(session, TCG_SCHEMA)
+        if reference_digest(current) != digest:
+            result = {**result, "status": "error", "items": [],
+                      "error_message": "Product/work reference changed during extraction"}
 
     items = result["items"]
     final_status = result["status"]  # done / empty / error
@@ -165,7 +190,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                         line_start, line_end,
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
-                        raw_work_name, raw_work_source_line_span,
+                        raw_work_name, raw_work_source_line_span, resolved_work_id,
                         created_at
                     )
                     VALUES (
@@ -173,7 +198,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                         :line_start, :line_end,
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
-                        :raw_work_name, :raw_work_source_line_span,
+                        :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
                         now()
                     )
                     """
@@ -189,6 +214,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                     "raw_unit": item["raw_unit"] or None,
                     "raw_state": item["raw_state"] or None,
                     "raw_memo": item["raw_memo"] or None,
+                    "resolved_work_id": item.get("resolved_work_id"),
                     "raw_work_name": item.get("raw_work_name"),
                     "raw_work_source_line_span": item.get("raw_work_source_line_span"),
                 },

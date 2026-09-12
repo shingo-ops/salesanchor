@@ -28,6 +28,13 @@ from app.services.gemini_extraction_svc import (
 from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
 
 
+@pytest.fixture(autouse=True)
+def isolated_reference(monkeypatch):
+    # This legacy task unit suite isolates the reference DB queries.
+    monkeypatch.setattr("app.tasks.tcg_extraction.work_schema_ready", lambda _: True)
+    monkeypatch.setattr("app.tasks.tcg_extraction.load_work_reference", lambda *_: {"works": [], "products": []})
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # annotate_lines
 # ─────────────────────────────────────────────────────────────────────────────
