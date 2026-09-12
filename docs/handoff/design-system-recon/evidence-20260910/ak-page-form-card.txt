@@ -1,0 +1,45 @@
+CARD-AK-PAGE-FORMS-01（草案・未発行）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AK-PAGE-FORMS-01
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/原文/実在パス/範囲/L32照合○。
+状態: 設計書§AKの今回PO実装承認前は実行しない。GO #3442は前便だけの承認。
+担当: POが指定するGenerator。新AIを自己起動しない。他者も作業中なので変更を戻さず調整する。
+所有: CompaniesPage.tsx、ContactsPage.tsx、SuppliersPage.tsxの監査AK-01〜12、および新規PageFormButtonMigration.test.tsxのみ。
+目的: 3画面6フォームの取消/登録/更新を12個の共通Buttonに揃える。業務処理は保持。
+根拠: docs/specs/design-system/design.md§AKとak-page-form-buttons.md、ak-form-button-audit.json。
+基準: 739f772d4cf55c1b3972c02c086a7c77b807d293。共通84、旧319、専用20、リンク8。
+許可: 指定4製品ファイルの実装とローカル検証、一時的な合成fixture/ログを/tmpへ保存。
+禁止: CSS/共有Button・Modal・Drawer/翻訳/入力/権限/API/backend/DB/依存/CI変更、commit/push/PR/merge/本番操作。
+本文のパスは一字一句そのまま使用する。設計・台帳の追記はroot担当。
+手順0: preflightと原hashを照合。指定3ページまたは共有CSSが基準と違えば編集前に停止しrootへ報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff 739f772d4cf55c1b3972c02c086a7c77b807d293 -- frontend/src/pages/companies/CompaniesPage.tsx frontend/src/pages/contacts/ContactsPage.tsx frontend/src/pages/suppliers/SuppliersPage.tsx frontend/src/components/Button.tsx frontend/src/components/Button.css frontend/src/components/Modal.css frontend/src/components/Drawer.css frontend/src/components.css frontend/src/company-forms.css
+手順1: 監査JSONのelement/attrs/parentsを実物と照合して12件だけ実装する。
+各ページへ既存../../components/Buttonのnamed importを追加。
+12対象はbutton開始/終了tagをButtonへ置換、classNameだけ除去、variantとsizeを追加する。
+cancel6はsecondary/md、submit6はprimary/md。type/disabled/onClick/childrenを逐語保持する。
+loading/fullWidth/style/layoutClassName/新しいdisabled/aria属性を追加しない。
+wrapper/form/onSubmit/hook/API本文・DOM順を編集しない。裸取消2個も監査に含まれる。
+手順2: 新規frontend/src/components/PageFormButtonMigration.test.tsxで実3ページをmountする。
+通信は全てmockしcreate/editの6フォームに合成データを使用。React部品を単純なbuttonスタブに置き換えない。
+各6フォームの成功payload/ID/method・失敗入力保持・取消書込0・入力Enterを確認。
+会社create電話検証と連絡先create会社必須、両createのpending無効化/連投防止/失敗復帰を確認。
+仕入先create/各editに無い保存ロックを今回追加しない。設計AKの状態差を保持する。
+手順3: 意図した構文差分以外0を検算し、限定試験から既存品質確認へ進む。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npx eslint src/pages/companies/CompaniesPage.tsx src/pages/contacts/ContactsPage.tsx src/pages/suppliers/SuppliersPage.tsx src/components/PageFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npm run test:unit -- src/components/PageFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design/frontend && npm run build-storybook
+手順4: 設計AKの実ページ表示192組と実Tab/ShiftTab/Enter/Space/Esc/再開を合成データで検証する。
+前後は同じ入力と翻訳/画面幅。配置probeの成功で代用しない。新規CSS/中心寄せで欠けを隠さない。
+期待する出力: 12件移管、旧10+裸2、共通96/旧309/専用20/リンク8、業務本文差分0、実ページ受入成功。
+失敗時は対象ID・最後のコマンド・原ログをrootへ返し、設計外の修理を止める。
+数値の違いは記録してrootが判定。未検証項目を成功とせず、実検収合格前の提出・本番操作禁止。
+手順5: 最終diffだけを確認して停止。保存/PRカードは別途発行する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff --stat
+出力: 本報告はカードCARD-AK-PAGE-FORMS-01の実行結果である、と開始し実行コマンド/原出力/未完事項を返す。
+END OF CARD

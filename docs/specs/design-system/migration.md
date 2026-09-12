@@ -223,3 +223,8 @@ PO再起動指示により中断保存。現コード16移管WIP、AJ13分離は
 
 
 2026-09-12 AJ13分離実行・ローカル検収成功: BSA005/006、025〜035を共通Buttonへ移管。BSA002/003/004は基準へ復元し表統一便へ保留。各ID/owner/native type/formは構文監査保存物で全件対応、業務本文差分0。共通70→83、旧332→319、専用20/リンク8不変。220試験・表示120組・実Confirm60条件・キー10条件成功。根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md。PR/CIへ進行、正式番号付きGO・本番・PO目視未完。新CIは最後。
+
+
+### 2026-09-13 AK次便草案
+
+前便AJはPR3442でマージ/本番反映済み（PR本文のdeploy34717188762実測）。次は会社/連絡先/仕入先のform-actions12件案。旧btn10と裸取消2を共通化し84→96/旧319→309（固定739f772d）。監査はak-form-button-audit.json、設計はdesign.md§AK。実装・今回PO承認未取得。表/報酬3/カレンダー色は別便、新CI最後。

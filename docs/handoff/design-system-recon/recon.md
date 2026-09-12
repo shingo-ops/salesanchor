@@ -659,3 +659,8 @@ Architect判定: **APPROVE（分割作業カードの整合性のみ）**。Plan
 13移管分割実行済み。設計担当がAST差分・Button83/旧319・全体220試験・表示120組/実Confirm60条件/キー操作10条件を直接確認。限定読取担当の報告とroot直接検証を区別した。
 詳細は [実装検収](evidence-20260910/shared-button-implementation.md) の2026-09-12節と保存manifest参照。
 POからPR/マージ/本番反映の依頼を受領。現行validateGORecordは受領原文にPR番号がないため拒否することを直接確認。番号付きGOを代筆せず、PR/CIまで進め正式承認待ちとする。
+
+
+### 2026-09-13 AKの対象選定
+
+固定739f772dで旧319・共通84を再計測。3ページ6フォームの12ボタン（旧10/裸2）を次便候補とした。実物のtype/属性/原hash、局所配置192組と失敗原稿は[evidence-20260910/ak-page-form-buttons.md](evidence-20260910/ak-page-form-buttons.md)へ保存。詳細設計はdesign.md§AK。製品差分0、PO実装承認未取得。

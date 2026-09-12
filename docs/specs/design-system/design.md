@@ -1268,3 +1268,58 @@ POの原因別分離・順次移行という既存許可に従い、BSA002/003/0
 現時点: 追加20操作試験の単独実行成功、全体coverageは時間超過等でexit1（11files failed、21tests failed/188passed、worker未起動2）、rootcheckall0、build2でテスト型不適合4件、Storybook未実行。これらを環境要因だけと断定せず再検証する。root観測load averages84.34/81.91/76.48は同時刻の事実で、失敗の原因証明ではない。
 
 代替は報酬表の配置修正を先行することだが、表の共通化を扱う既存計画と責務が重なるため本便への追加は採用しない。13移管を先に保存し、報酬3は表の移行台帳に保留と明記して抜けを防ぐ。担当はroot設計/台帳、Generator6製品、既存Reviewerの限定検収。外部導入事例は不要（自社実物の前後比較が直接根拠）。API/DB/backend/新CI/本番は非接触、rollbackはこの移管PR単位。Planner作成後に同一AI Architect自己審査APPROVE（分割設計）。実装の提出合格・新PR番号付きGO・PO目視は未完。
+
+
+### AK. 会社・連絡先・仕入先のフォーム操作12利用（2026-09-13草案）
+
+**状態: Planner設計案。今回範囲のPO承認・実装承認は未取得。設計審査は末尾に別記。** 上位のPO承認済み設計を継承する追加便であり、文書タイトルの承認を本節の承認へ読み替えない。前便GO #3442を再利用しない。
+
+目的: 会社・連絡先・仕入先の登録/編集画面下部で、取消と登録/更新が既存の標準ボタン形状になる。送信内容と操作結果を保持する。POの「残る旧ボタンの次便を進める」依頼をこの対象選定案へ具体化したもので、12件をPO発言として代筆しない。
+
+固定基準: 739f772d4cf55c1b3972c02c086a7c77b807d293。前便マージ/本番反映はPR3442の実測欄で確認済み。[調査と12原文](../../handoff/design-system-recon/evidence-20260910/ak-page-form-buttons.md)、[構文監査](../../handoff/design-system-recon/evidence-20260910/ak-form-button-audit.json)。新規ADR不要: ADR-113のhandoff手順、ADR-067の共通外観、ADR-027の翻訳、ADR-073の既存チェックを継承し契約を追加しない。
+
+#### 対象・変更の契約
+
+製品変更許可候補はCompaniesPage.tsx、ContactsPage.tsx、SuppliersPage.tsxの3ページと、新しいfrontend/src/components/PageFormButtonMigration.test.tsxのみ。いずれもfrontend/src配下。既存.form-actions直属12件（上記監査AK-01〜12）だけをbutton→Buttonへ変え、各ページへ既存../../components/Buttonのnamed importを追加する。cancel6=variant secondary、submit6=primary、size mdを明示。旧className10件を除去。クラスなし取消2件にも同じsecondaryを適用し、単なる旧btn10件の移管とは区別する。
+
+type=button6/submit6、children翻訳/条件式、onClick、disabled、form/onSubmit、DOM順、wrapper、hooks/API本文は元のまま。loading/loadingText/new disabled/aria-busy/fullWidth/layoutClassName/style追加禁止。CSS、Button/Modal/Drawer本体、フォーム入力、翻訳JSON、route、権限、backend/DB、CI、依存は変更対象外。
+
+一覧の新規起動・行編集/削除・リンク・ページ送り、専用編集ページ、会社のタブ、連絡先重複確認は後続。報酬3件は表統一便、カレンダー色は保留、新CIは全画面移行後を維持する。
+
+#### Why・代替案
+
+フォーム内12件はtype明示12/12、style/ref/form属性の追加対応0、同じform-actionsの既存配置6か所で成立する。構文上API本文を触らず移管でき、配置予備192組は欠け0。この直接根拠を既存ADRのWhyへ接続できる。通常操作319件一括は表/リンク/タブを混ぜ失敗原因の切分けを難しくするので不採用。旧btn10件だけでは同じ登録フォームの取消2件が旧外観に残るため不採用。フォームCSS先行改修は現予備調査で必要性を観測していないため不採用。
+
+#### 受入条件
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象12/12のみ・旧10+裸2 | 同じ監査で共通84→96、旧319→309、専用20/リンク8不変。全体値はこの固定SHA限定で、別便が進んだら対象要素の一致と別便増減を分けて再計算 |
+| 業務本文・属性変更0 | 対象import/tag/classNameとvariant/size以外を正規化しAST完全一致。対象3ファイルの原hashは監査JSON。テストを除く他製品diff0 |
+| 6フォームの送信・取消保持 | 合成データで会社/連絡先/仕入先のcreate/editを実ページから開く。各フォームで有効入力の送信method/url/body/対象ID、成功close/reload、失敗メッセージ/入力保持、取消の書込リクエスト0を個別検証。before/after同じデータを使用 |
+| 既存の制御を保持 | 会社create電話検証・連絡先create会社必須で書込0。会社/連絡先createのpending時2ボタンdisabled、保存中文言、重複送信0、失敗後復帰を確認。仕入先create/各editへ新たな送信ロックを追加せず、前後状態が同じことを確認 |
+| 実ページの画面内表示 | 6フォーム×6幅×ja/en×light/dark=144組。さらに会社/連絡先createのpending48組。入力欄あり実Modal/Drawerで初期horizontal overflow、スクロール到達後の文字/本体/フォーカス輪郭欠け0、前後順序一致。data/fieldsetを省いた予備原稿で代替しない |
+| キーボード・閉じる動作 | 各フォームでTab/ShiftTabにより12対象へ到達。取消/送信のEnterとSpace、入力内Enter、Esc/閉じる/再度開くを実ページで確認。programmatic focusだけをTab成功としない。変更前からのfocus不備は別記し、今回差分と混ぜない |
+| 最終品質 | 対象strict eslint、新規ページ回帰試験、既存test:coverage/check:all/build/build-storybook、最新PRの必須CIをすべて成功。既存E2Eの古い前提を流用しない。新しいCI設定は作らない |
+
+#### リスク・担当・停止条件
+
+本体paddingは外観として標準化される。form-actionsはwrapなしなので予備欠け0を実ページ全体の保証としない。実ページで幅不足・フォーカス欠けが出た場合は該当移管を提出不合格とし、測定原稿の誤りか配置ownerの前提かを調査して設計へ戻す。CSSを同便へ追加しない。既存APIの送信ロック不足は今回改善せず別課題として区別する。
+
+人=12通常操作の外観、エージェント=AK監査/カード、機械=既存CI、データ=payload不変、production=別途承認後のPR単位、外部=テストは通信mockで実書込0。維持担当はフロントエンドの既存Button owner、ページ回帰試験と既存CI。rootが設計/台帳、今後明示されたGeneratorが4製品、レビュー担当が差分・操作検収。自己審査を独立第二者レビューと称しない。
+
+rollbackは本便PRのmerge単位。前便3442や共通Button本体を単独で戻す依頼ではない。実装カード草案は正式card-lint実施後に保存し、POの今回実装承認を受けるまでは発行/実行しない。製品実装、PRマージ、本番GOは未着手。
+
+
+#### AK Architect整合審査（Planner作成後、同一AIによる自己審査）
+
+判定: **APPROVE（設計合格のみ）**。独立した第二者レビューではない。今回12件のPO承認・実装開始・PR・本番GOを兼ねない。
+
+- 既存仕様/ADR: Z/AA/AGのownerと公開Button契約、ADR-113/067/027/073に整合。今回の新仕様/依存/CIなし。
+- 範囲: 原文12件を3ファイルSHA256と照合、旧10/裸2を区別。対象外ページ・表・APIをカード禁止へ反映。最新共通84は別便の追加1件を含むことを確認した。
+- 根拠: 構文監査、CSS9hash、archive8hash、192前後組の局所配置を直接確認。初回原稿の不備144件と修正結果を別保存し、実ページ試験へ成功を拡張しない。
+- 検証可能性: 6フォームのpayload/取消/失敗/既存pending差、12対象のキーボード・実クリップ条件を明示。既存E2Eの古い編集Modal前提を流用しない。
+- 維持/戻し方: 既存Button owner・新規ページ回帰・既存CI、本便単位のrollback、前提不成立時の設計戻しを明記。
+- 機械確認: validateDesignDoc（ADR配列指定）、validateMaintenanceSection、recon引用パス検査は各エラー0。card-lint exit0（長行警告2件）、task-state/diff-check成功、製品diff0。
+
+設計合格を妨げる未解決前提なし。未実施は今回のPO承認・実装・実ページ検収・製品CIであり、各段階の着手/完了を今は宣言しない。カードは草案として保存済み・未発行。次の一手はPOへ対象12件を提示して今回の実装承認を受けること。
