@@ -217,3 +217,21 @@ async def test_source_comparison_exports_only_fingerprints_inside_encrypted_repo
     assert data['source_limit'] == 500
     assert 'private' not in str(result).replace('private_report', '')
     assert 'LIMIT 500' in str(db.execute.call_args.args[0])
+
+
+def test_large_report_roundtrips_through_bounded_log_lines(capsys):
+    import base64
+    import json
+    data = {'status': 'inspected', 'private_report': {'body': 'x' * 90000}}
+    admin.emit_result(data)
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[-1] == 'LINE_IMPORT_REPORT_END'
+    assert max(len(line) for line in lines) <= 12019
+    encoded = ''.join(line.split(':', 1)[1] for line in lines[:-1])
+    assert json.loads(base64.b64decode(encoded)) == data
+
+
+def test_small_report_preserves_existing_json_output(capsys):
+    import json
+    admin.emit_result({'status': 'committed'})
+    assert json.loads(capsys.readouterr().out) == {'status': 'committed'}

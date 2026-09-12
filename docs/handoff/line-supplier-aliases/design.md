@@ -18,3 +18,6 @@ PR #3447のRSA4096/AES256-GCM暗号化read-only照会を本番で実証済み。
 ## 維持の仕組み
 - 守り手: backend/tests/test_line_import_admin.py
 - 人手で守る: 本文・投稿日時・保存先の一意な一致に基づく確認。上限外を不在と誤認しない。
+
+## レポート出力の分割
+16KBを超えるJSONはBase64化して12000文字ずつLINE_IMPORT_REPORT行へ出し、ENDマーカーで終了。小さい応答は従来JSONを維持。受信側はEND確認・全行復元・JSON検証・暗号文の認証確認を完了して初めて読取成功とする。backend/tests/test_line_import_admin.pyで90KB往復と行長上限を検証する。暗号化した本文指紋の機密性は既存暗号化レイヤーで守り、Base64を暗号化とは扱わない。
