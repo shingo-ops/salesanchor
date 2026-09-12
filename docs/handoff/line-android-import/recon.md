@@ -26,3 +26,9 @@ Termuxクライアントの操作はtools/termux-line-import/README.mdを参照�
 ## 静的検査
 
 Python 3.12.14でmake lint-ciを実行。ruff成功、banditの高重大度0件・検査スキップ0件。mypyは非ブロッキング検査で、既存コードと未導入依存関係にエラーが残る。変更した3つのappファイルにmypyエラーはない。Dockerを利用できないためpytestはCIで検証する。check-task-state.shとcheck-doc-heading-duplicates.shは成功。
+
+## GitHubへの保存
+
+PR: https://github.com/shingo-ops/salesanchor/pull/3443 （Draft）。PCのparse_line_exportとupload_line_exportはorigin/mainとのAST比較で不変。GitHubの静的検査成功。process-artifacts gateはPR番号付きPO GOの記録待ち（CLAUDE.md:57）。マージ・本番反映は未実施。
+
+CI run 34672625832（コードcommit 6af78135）: PostgreSQLを含む全体pytestは2,608 passed / 95 skipped / 309 warnings、96.09秒。追加Android APIテストを含み成功。https://github.com/shingo-ops/salesanchor/actions/runs/34672625832 。端末から本番への送信試験とは区別する。

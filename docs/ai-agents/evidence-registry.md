@@ -2387,4 +2387,4 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 
 ## EV-20260912-LINE-ANDROID-IMPORT
 
-Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。API/DB統合と本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。
+Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。PR #3443のCI run 34672625832で全体pytest 2,608成功/95 skip。API回帰試験成功、本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。
