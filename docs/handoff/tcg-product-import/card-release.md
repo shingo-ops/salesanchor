@@ -32,8 +32,8 @@ PR本文を取得しtmpのbodyファイルに保存、### GO記録に発行者/�
 
 手順3 最新main統合
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git fetch origin
-親確認済みのmain d66923e2edad1b6c22df4cba8adf74f23b968cfcに限りgit merge --no-edit origin/mainを許可。
-追加は別画面のButton統一6ファイルと設計文書。今回の8製品/共通Button自体の変更0、商品CSV機能は変更された画面部品を参照しないことを親が確認。
+親確認済みのmain 4d30c0ba6e2138ac923c091099e262ad8d8a2e86に限りgit merge --no-edit origin/mainを許可。
+追加は別画面のButton統一6ファイルと設計文書、配信サービスの日付列1行修正とその試験/文書。配信サービスへの商品CSVの参照0を親が確認。今回の8製品/共通Button自体の変更0、商品CSV機能は変更された画面部品を参照しないことを親が確認。
 他のmain SHAなら差分を親へ戻す。git競合は解消せず停止。
 
 手順4 一致検査と公開
@@ -51,7 +51,7 @@ PR本文GO、最新HEAD、最新main、8製品SHA、12ファイル境界、全�
 wrapperは成功後に実装worktreeを削除するため、報告はtmpへ保存。独自の未保存ファイルがないことを確認し、生成依存以外の未保管ファイルがあれば停止。
 
 手順7 正式マージ
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && bash scripts/gh-pr-merge-safe.sh --merge >> /tmp/reports/SA-CSV-RELEASE-20260913.txt 2>&1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && bash scripts/gh-pr-merge-safe.sh --merge --match-head-commit "$(git rev-parse HEAD)" >> /tmp/reports/SA-CSV-RELEASE-20260913.txt 2>&1
 squash/admin/delete-branchオプションを付けない。自動再試行で未知のmain更新が見つかれば親へ報告。
 成功後は実装worktreeの存在に依存しない。以後の読取先は /Users/tanizawashingo/salesanchor とする。
 
