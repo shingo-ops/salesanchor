@@ -1,0 +1,2 @@
+#!/data/data/com.termux/files/usr/bin/bash
+exec /data/data/com.termux/files/usr/bin/python /data/data/com.termux/files/home/line-import/lib/client.py --state-dir /data/data/com.termux/files/home/line-import/state "$@"

@@ -142,3 +142,14 @@ PO原文: 「商品マスタの並びはデフォルトは販売日の新しい�
 - 作品で絞った後も発売日の新しい順を維持する。
 
 詳細案・受入条件: [既存一覧設計の追加節](../../handoff/tcg-product-import/design.md#14-発売日降順と作品タブ2026-09-11設計案)。現在地・実物根拠: [調査追補](../../handoff/tcg-product-import/recon.md#2026-09-11-発売日順と作品タブの調査)。3項目は依頼として受領済み。日付未登録やタブ候補の扱いなどの詳細は設計案であり、実装開始の承認とは区別する。
+
+## Android LINE履歴の入力追加
+
+- [設計](../../handoff/line-android-import/design.md)
+- [現状・検証](../../handoff/line-android-import/recon.md)
+
+Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)、[検証](../../handoff/line-android-login/recon.md)。
+
+- [Android取込後の管理接続](../../handoff/line-import-delivery/design.md): フロントなしで確認・解析・既存配信へ接続。実配信未確認。
+
+- [PC/Androidの仕入先名の照合](../../handoff/line-supplier-aliases/design.md): 保存投稿の指紋を用いた読取調査。
