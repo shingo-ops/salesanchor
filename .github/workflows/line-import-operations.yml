@@ -1,0 +1,54 @@
+name: LINE import operations (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_json:
+        description: Fixed action, device_id, import_job_id; create requires name_hash; distribute requires target_id and confirm
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: line-import-operations-admin
+  cancel-in-progress: false
+
+jobs:
+  operation:
+    if: github.ref == 'refs/heads/main' && (github.actor == 'shingo-cc' || github.actor == 'shingo-ops')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate fixed request
+        id: request
+        env:
+          REQUEST_JSON: ${{ inputs.request_json }}
+        run: |
+          python3 - <<'PYCODE'
+          import base64, json, os, uuid
+          raw = os.environ['REQUEST_JSON']
+          assert len(raw.encode()) <= 4096
+          data = json.loads(raw)
+          assert isinstance(data, dict)
+          assert set(data) <= {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm'}
+          assert data['action'] in ('inspect', 'create', 'commit', 'distribute')
+          for key in ('device_id', 'import_job_id'):
+              data[key] = str(uuid.UUID(data[key]))
+          encoded = base64.b64encode(json.dumps(data).encode()).decode()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('request=' + encoded + '\n')
+          PYCODE
+      - name: Run scoped import operation on VPS
+        uses: appleboy/ssh-action@v1
+        env:
+          IMPORT_REQUEST_B64: ${{ steps.request.outputs.request }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: IMPORT_REQUEST_B64
+          script: |
+            set -e
+            printf '%s' "$IMPORT_REQUEST_B64" | base64 -d | docker exec -i -w /app astro-webapp-backend-1 python -m app.line_import_admin
