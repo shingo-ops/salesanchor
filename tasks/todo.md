@@ -145,4 +145,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| 空サンプルCSV・User型の限定修正設計 | 設計担当 | PO設計承認・実装・対照検算済み。PR3438はmain5b21b3b8統合後2184092c、製品8SHA不変。CI全pytest/PG成功、本番API/App200、前回backup6.7M生成ログ確認 | PO「GO #3438」受領、反映カード検査済みで既存実装役へ委任。main d66923e2統合CI→merge→backup/配備HEAD/health/空CSV確認中。実登録/再解析/配信は対象外 | PR3438 / recon.md 2026-09-13 / EV-20260913-PRODUCT-CSV-PRE-RELEASE | 2026-09-13 |
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436は記録保存済み・未マージ。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |

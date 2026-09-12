@@ -454,3 +454,21 @@ PO原文「GO #3438」を受領。直前に提示した対象はPR3438のマー�
 反映カードのmain再照合: 実装役はfetch時にmain4d30c0baを検出して統合前に停止。親がd66923e2との差分を確認し、配信サービスの日付列created_at→computed_atの1行と回帰試験/文書だけで、商品CSVの8製品変更0・配信サービス参照0を確認した。許可mainを4d30c0baへ更新。マージコマンドには実CLI helpで確認したmatch-head-commitを加え、CI確認したローカルHEADとの不一致を拒否する。保護設定変更なし、GOは同じ製品変更に有効。
 
 GO転記後に親が本文とparseGORecordを照合し、発行者欄名が「GO発行者:」である必要を確認。カードの汎用的な欄説明を正式な4欄名へ訂正し、同じ担当へ原文/値/日時を維持した欄名修正を指示。承認の創作や検査の迂回ではない。
+
+
+### 2026-09-13 マージ実行結果
+
+実装役がGO転記、最終HEAD c454957227e6edd6bf039ea78e0633fc2194e233、main4d30c0ba、8SHA/12ファイル/clean、全実行CI成功を確認し、確認済みコメントを残した。最終CIのBackendは2684 passed/95 skipped/309 warnings/98.96s。親もGO検証関数エラー0と全実行CI成功を直接確認した。
+
+正式wrapper --merge --match-head-commitによるPR3438マージ成功。親がgh pr viewでMERGED/2026-09-13 05:46:15 JST/merge739f772d4cf55c1b3972c02c086a7c77b807d293を直接確認。実装worktreeはwrapperの通常cleanupで削除、報告と期待CSVはtmpに保持。自動配備run34718060417は同merge SHA。配備前DB backupステップSUCCESSまで親が直接確認、配備完了は後続記録と区別する。
+
+文書側はmain739f772dを取り込み。evidence-registryの他テーマ追記と本件追記、design/reconの本件追記が競合したため、双方の文字列が保存されることをassertして文書3本だけ解消。mainとの差は証拠台帳/反映カード/design/recon/todoの文書5本のみ。製品差分0、他者変更保持、台帳検査と差分検査成功。
+
+
+### 2026-09-13 本番反映完了
+
+親と実装役が配備run34718060417 SUCCESSを直接確認。親が実ログを読み、backup salesanchor_db_20260913_054655.sql.gz/6.7Mの生成成功（05:46:58 JST、ログ584行）、本番HEAD739f772d（1031行）、health成功（4677行）を照合した。今回取得されたbackupの生成証拠であり復元試験はしていない。
+
+親も本番API/App/CSVをそれぞれcurlで直接取得してHTTP200を確認。healthはDB/Redis/Celery connected。公開CSVは148バイト、SHA256 08ce5fc2137a86a0f594d0d4272fccbfa8d7b9a26ebdf245020fb742dc936929、レビュー済み期待ファイルと全バイト一致、BOM/CRLF/10列/商品0行。実装役も同じ検査を実行。
+
+正式保存した結果: [release-result.json](release-result.json)。実行主体は実装役、親はPR/CI/配備ログの読み取りと本番HTTP/CSVの直接検証を担当した。設計担当による製品実装切替・独立第三者レビュー・代理GOを行ったとは称さない。設計作成/自己審査/PO承認/文書保存/製品PR/マージ/本番反映/所定完了確認は完了。文書PR3436は保存用OPENのまま、別途マージ承認がないためマージしない。実商品登録・再解析・シート配信・本番の認証付きボタン操作は未実施。

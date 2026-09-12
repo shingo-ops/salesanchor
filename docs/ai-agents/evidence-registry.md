@@ -2616,3 +2616,26 @@ tradeoff: 最新main追従CIと実配備結果はまだ未確認
 decision: 番号付きGO受領・反映便開始。設計担当の自動実装切替なし
 follow_up: merge/自動backup/配備HEAD/health/空CSV実資産で完了判定
 ```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-RELEASE
+date: 2026-09-13
+agent: csv_card_executor (release), Codex design partner (evidence and public HTTP verification)
+task: PR3438本番反映完了
+scope: merge739f772d4cf55c1b3972c02c086a7c77b807d293
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/release-result.json
+    summary: PO GO/CI/merge/配備/backup/本番HTTPとCSVの結果を正式保存
+  - type: pr
+    reference: https://github.com/shingo-ops/salesanchor/pull/3438
+    summary: MERGED、2026-09-13 05:46:15 JST
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/34718060417
+    summary: SUCCESS、今回backup6.7M新規取得・配備HEAD739f772d・health成功を実ログ照合
+confidence: high
+tradeoff: 復元試験・本番認証付きボタン操作・商品登録は未実施。公開資産/HTTPとローカル操作検証の範囲を区別
+decision: GO3438で承認された反映と所定完了確認を完了。文書PR3436は未マージ
+follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
+```
