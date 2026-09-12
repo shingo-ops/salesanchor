@@ -93,12 +93,18 @@ def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):
     model.assert_not_called()
 
 
-def test_reference_change_saves_no_items(monkeypatch):
+@pytest.mark.parametrize("invalid", [False, True])
+def test_reference_change_saves_no_items(monkeypatch, invalid):
     session = MagicMock()
     session.execute.return_value.fetchone.return_value = ("job", "OP-01")
     monkeypatch.setattr(extraction, "work_schema_ready", lambda _: True)
     versions = iter([REF, {**REF, "products": []}])
-    monkeypatch.setattr(extraction, "load_work_reference", lambda *_: next(versions))
+    def load(*_):
+        version = next(versions)
+        if invalid and not version["products"]:
+            raise ValueError("Active product has no active work reference")
+        return version
+    monkeypatch.setattr(extraction, "load_work_reference", load)
     monkeypatch.setattr(extraction, "extract_message", lambda *a, **k: {
         "status": "done", "items": [{"raw_product_name": "OP-01"}],
         "prompt_version": "raw-extraction-v4-work-id-p1", "error_message": None})

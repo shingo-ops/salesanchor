@@ -167,10 +167,14 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     result = extract_message(raw_text, work_reference=reference)
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
-        current = load_work_reference(session, TCG_SCHEMA)
-        if reference_digest(current) != digest:
+        try:
+            current = load_work_reference(session, TCG_SCHEMA)
+            if reference_digest(current) != digest:
+                raise ValueError("Product/work reference changed during extraction")
+        except Exception as exc:
+            session.rollback()
             result = {**result, "status": "error", "items": [],
-                      "error_message": "Product/work reference changed during extraction"}
+                      "error_message": _safe_error_message(exc)}
 
     items = result["items"]
     final_status = result["status"]  # done / empty / error
