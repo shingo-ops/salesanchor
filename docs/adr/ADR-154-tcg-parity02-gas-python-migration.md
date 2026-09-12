@@ -59,3 +59,20 @@ v2のGAS一致は移植当時の検証として保存する。v3の商品判定�
 設計: docs/handoff/tcg-product-master-growth/design-keyword.md §10
 根拠: docs/handoff/tcg-product-master-growth/recon.md §2026-09-10本番DB読み取り調査
 承認状態: POの実装依頼とGOは受領済み。本追加決定案の文書承認・マージは未完了。
+
+## 追加決定案（2026-09-13・草案）: LINE在庫・〆・混在投稿の商品単位反映
+
+本節は未承認の技術方式案であり、Acceptedの旧移植履歴を書き換えない。POは〆=売り切れ=数量0、対象だけ非表示・他商品維持、原文複数保存と混在の明細別判定に合意した。DDL/API/切替方式の承認ではない。
+
+### What
+
+最新1原文による仕入元在庫全体の置換を、全原文の保存・明細単位の操作判定・現在在庫への対象限定反映へ変更する案。原文/反映履歴は保持し、商品マスタは消さない。未記載・無関係・対象不明から自動削除しない。
+
+### Why
+
+固定SHA 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15のbuild_provider_entriesを合成3ケースで直接実行し、〆・無関係文・部分在庫の3/3で先行在庫一覧が取込本文から落ちることを確認した。原文保存は既存active行を全件無効化し、配信はactive原文だけを対象にしてシートを全置換する。新しいPO要件は旧SQR-05の「最新1件だけ採用」と両立しない。分類語の追加や〆列1つでは更新粒度の問題を解決できない。
+
+### Scopeと検証状態
+
+LINE取込・分類・在庫反映・履歴・出力の接続が対象。GAS移植当時の最新1件テストは歴史として保持し、改訂実装時に新KGIへ切り替える。既存の商品マスタ/状態正規化契約は保持する。本番被害件数・新方式精度・実DB/配信検証は未確認。自己審査REVISE、実装カード未発行。
+設計: [tcg-import-latest-only/design.md](../handoff/tcg-import-latest-only/design.md)。根拠: [recon.md](../handoff/tcg-import-latest-only/recon.md)、EV-20260913-LINE-STOCK-MESSAGES。

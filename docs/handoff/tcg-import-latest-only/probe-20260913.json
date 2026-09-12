@@ -1,0 +1,93 @@
+{
+  "source_sha": "5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15",
+  "source_path": "backend/app/services/tcg_line_import_svc.py",
+  "source_sha256": "95f57a6c24eeebdd3b0eb7b214ebf8be25afaab936541124391f2beec29d1015",
+  "executed_at": "2026-09-12T20:20:21.118849+00:00",
+  "synthetic_cases": [
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A〆"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A〆",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "7277b23ca0e07b3dada49e580a5bebc9d1145c492d8aee60cde8bef4cf11d043",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "ありがとうございます"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "ありがとうございます",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "21b2ba1811e66eef3e01a48e589b379c48c9efa25b3a8354c7e883e04351ba73",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A 5個 1000円"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A 5個 1000円",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "463947ee55c16724f9c07e615485ff5fecadc5ef2e4e4466d36ce7390efa2f32",
+          "skipped_message_count": 1
+        }
+      ]
+    }
+  ],
+  "case_count": 3,
+  "db_calls": 0,
+  "external_api_calls": 0,
+  "scope": "current-function observation, not improved implementation validation"
+}

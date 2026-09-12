@@ -2410,3 +2410,28 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 - 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
+
+```text
+id: EV-20260913-LINE-STOCK-MESSAGES
+date: 2026-09-13
+agent: Codex design partner (Planner -> Architect, same-AI self-review)
+task: LINE在庫・〆・無関係・混在投稿の商品単位反映設計
+scope: docs-only; current-code read and synthetic pure-function probe
+evidence:
+  - type: command
+    reference: git ls-remote origin refs/heads/main / git rev-parse origin/main
+    summary: both 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15; preflight PASS; own worktree created with existing worktrees preserved
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json
+    summary: AST-isolated current build_provider_entries; 3 synthetic cases each retain only latest body, skipped_message_count=1; DB/API access=0
+  - type: file
+    reference: backend/app/services/tcg_line_import_svc.py:273,327,426; backend/app/services/tcg_distribution_svc.py:229,463
+    summary: latest-only selection, channel-wide source supersede, active-source output, full-sheet replacement
+  - type: adr
+    reference: docs/adr/ADR-154-tcg-parity02-gas-python-migration.md
+    summary: append proposed change and Why, preserve historical accepted migration contract
+confidence: high
+tradeoff: high applies only to fixed-code path and synthetic probe; actual production incidents, classification accuracy, live schema and rollout are unverified
+decision: PO meaning agreement recorded; technical draft self-review REVISE; no implementation card or production operation
+follow_up: inspect real-message ground truth and offer identity duplicates; finalize DDL/API/UI/rollout then re-review
+```
