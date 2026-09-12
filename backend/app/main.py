@@ -58,6 +58,7 @@ from app.routers import (
     invoices,
     item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
+    line_import_devices,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
@@ -604,6 +605,8 @@ app.include_router(
     tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+
+app.include_router(line_import_devices.router, prefix="/api/v1")
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:
