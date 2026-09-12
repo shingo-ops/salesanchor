@@ -103,3 +103,12 @@ APPROVE（この限定修正設計のみ）。同一AI自己審査であり独�
 
 守り手: .github/workflows/test.yml
 実装担当が新規test_tcg_distribution_pg.pyを維持し、Reviewerが修正前失敗/修正後成功とCIの非skipを確認する。CIにはRLS_ADMIN_DATABASE_URLがありpytestで新規ファイルが収集される。環境不足によるskipを合格にしない。設計担当が日時の意味、POが変更の採否を維持する。
+
+
+## 2026-09-12 実装委任とローカル試験環境の補正
+
+POからCodex Terra起動・ローカル実装/試験/コミットまでの限定委任について「進める」を受領し実装担当を起動した。追加エージェントは禁止、rootは設計/読取レビューを継続。新規エージェント未起動という冒頭記録は本節で更新する。
+初回実装は設計文書54c3c241、main統合8f64ebfaまで完了、コード/試験は未コミット。Docker socketなしとPython3.14/Bandit内部エラーで実PG未検証。製品不合格ではなく環境前提不足として分類し、カード02に補正した。
+実機にはPython3.12.8とColima0.10.3、停止中sa-private-ci profileがある。既存profileは触らず、今回だけのdist01-3258をCPU1/メモリ1GiB/ディスク4GiB、既定context/SSH config変更なし・mountなしで起動し、終了後停止する。Python3.12専用venvへ指定依存を導入する。
+Context7 MCPは利用可能一覧に存在しなかった。許可済み代替としてColima公式 https://github.com/abiosoft/colima と実機start/status --helpを確認した。CLIのprofile、cpus/memory/disk、activate/ssh-config/mount引数を照合。製品・CI・本番設定の変更はない。
+限定補正の自己審査APPROVE: ローカル実テストの既存目的内、他環境分離、資源上限と終了条件を固定。実PG実測結果はまだ未確認。
