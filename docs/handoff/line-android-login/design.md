@@ -34,3 +34,9 @@ SMS MFA・reCAPTCHAには未対応。Web APIキーにHTTPリファラー制限�
 - 守り手: tools/termux-line-import/test_firebase_session.py
 - 守り手: tools/termux-line-import/test_android_import.py
 - 人手で守る: 端末内のログイン入力、MFA、Sales Anchor権限、実送信確認。
+
+## 実機で判明した接続制限（2026-09-12）
+
+ユーザーの対話ログインはFirebase段階で失敗。資格情報を使わないGET /v1/projectsによる公開設定確認でHTTP 403 / API_KEY_HTTP_REFERRER_BLOCKEDを確認した。パスワードの正否は未判定。既存Web APIキーを使ったTermux直接ログインは現構成では利用できない。
+制限を解除したりRefererを偽装したりしない。CLIはパスワード入力前に公開設定の接続可否を確認し、制限を区別して停止する。生のエラー応答・キー・資格情報は表示しない。修正後33テスト成功。
+次案: 初回だけ既存Webログインで端末を認可し、以後はTermuxで送信する。当初のフロントエンド不要の合意から端末認可画面が増えるため、ユーザーへ方式変更を確認中。未実装。

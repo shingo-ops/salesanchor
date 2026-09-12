@@ -2392,3 +2392,5 @@ Android実ファイル1,129件を専用パーサーで読み分け。パーサ�
 ## EV-20260912-LINE-ANDROID-LOGIN
 
 Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報で検証。Python 3.12/Termux 3.14で30テスト成功。実認証はユーザー待ち。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認証追記: 資格情報なしの公開設定確認で403 / API_KEY_HTTP_REFERRER_BLOCKEDを実測。直接ログインは利用不可。パスワード入力前に停止する修正を加え33テスト成功。根拠: docs/handoff/line-android-login/recon.md。

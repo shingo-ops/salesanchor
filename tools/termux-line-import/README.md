@@ -1,5 +1,7 @@
 # TermuxからAndroidのLINE履歴を送る
 
+現在の直接loginは本番の接続元制限（API_KEY_HTTP_REFERRER_BLOCKED）で利用できない。パスワードを再入力しない。端末認可方式の設計確認中。サーバーの履歴APIは導入済みだが、端末からの認証付き送信は未完了。
+
 Android専用APIはPR #3443で本番反映済み。端末のloginで権限を確認してから送信を有効にする。
 設計: ../../docs/handoff/line-android-import/design.md
 

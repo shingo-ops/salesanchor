@@ -12,6 +12,7 @@ import urllib.request
 import warnings
 from pathlib import Path
 
+PROJECT = 'https://identitytoolkit.googleapis.com/v1/projects'
 SIGN_IN = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword'
 MFA = 'https://identitytoolkit.googleapis.com/v2/accounts/mfaSignIn:finalize'
 REFRESH = 'https://securetoken.googleapis.com/v1/token'
@@ -47,15 +48,43 @@ def private_read(path):
     return json.loads(path.read_text())
 
 
+def auth_failure(error):
+    # Only map known codes to our own text. Never display Google's raw response,
+    # which can contain a project key, account identifier or other sensitive data.
+    try:
+        payload = json.loads(error.read(16384)).get('error', {})
+        reasons = {item.get('reason') for item in payload.get('details', [])
+                   if isinstance(item, dict) and isinstance(item.get('reason'), str)}
+        message = payload.get('message', '')
+        code = message.split(' : ', 1)[0] if isinstance(message, str) else ''
+    except (ValueError, AttributeError, TypeError, OSError):
+        reasons, code = set(), ''
+    if 'API_KEY_HTTP_REFERRER_BLOCKED' in reasons:
+        return AuthError('接続元制限によりTermuxからの直接ログインは使えません（API_KEY_HTTP_REFERRER_BLOCKED）。パスワードの再入力は不要です。')
+    if reasons & {'API_KEY_SERVICE_BLOCKED', 'API_KEY_IP_ADDRESS_BLOCKED', 'API_KEY_ANDROID_APP_BLOCKED', 'API_KEY_INVALID', 'SERVICE_DISABLED'}:
+        return AuthError('Firebaseの接続設定により認証が拒否されました。パスワードを再入力せず、接続方式を確認してください。')
+    if code in {'INVALID_LOGIN_CREDENTIALS', 'INVALID_PASSWORD', 'EMAIL_NOT_FOUND', 'INVALID_EMAIL'}:
+        return AuthError('メールアドレスまたはパスワードを確認してください。')
+    if code in {'INVALID_CODE', 'INVALID_TOTP_CODE', 'INVALID_VERIFICATION_CODE'}:
+        return AuthError('認証アプリのコードを確認してください。')
+    if code in {'TOKEN_EXPIRED', 'INVALID_REFRESH_TOKEN', 'USER_DISABLED', 'USER_NOT_FOUND'}:
+        return AuthError('認証が失効または無効になっています。端末で再ログインしてください。')
+    if code in {'CAPTCHA_CHECK_FAILED', 'MISSING_RECAPTCHA_TOKEN', 'INVALID_RECAPTCHA_TOKEN'}:
+        return AuthError('追加のブラウザー認証が必要です。この端末用コマンドでは対応していません。')
+    if error.code == 429:
+        return AuthError('認証回数の制限です。時間をおいて再試行してください。')
+    return AuthError('認証できません。接続方式の確認が必要です。パスワードをここに共有しないでください。')
+
+
 def request(endpoint, key, payload):
-    if endpoint not in (SIGN_IN, MFA, REFRESH):
+    if endpoint not in (PROJECT, SIGN_IN, MFA, REFRESH):
         raise AuthError('認証先が不正です。')
     encoded = (urllib.parse.urlencode(payload).encode() if endpoint == REFRESH
                else json.dumps(payload).encode())
     content_type = ('application/x-www-form-urlencoded' if endpoint == REFRESH
                     else 'application/json')
     req = urllib.request.Request(endpoint + '?key=' + urllib.parse.quote(key, safe=''),
-                                 data=encoded, headers={'Content-Type': content_type})
+                                 data=None if endpoint == PROJECT else encoded, headers={'Content-Type': content_type})
     try:
         with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as response:
             data = json.loads(response.read(1024 * 1024))
@@ -63,9 +92,11 @@ def request(endpoint, key, payload):
             raise AuthError('認証応答を確認できません。')
         return data
     except urllib.error.HTTPError as error:
-        if error.code == 429:
-            raise AuthError('認証回数の制限です。時間をおいて再試行してください。') from None
-        raise AuthError('認証できません。入力・認証コード・プロジェクト設定を確認して再ログインしてください。') from None
+        try:
+            failure = auth_failure(error)
+        finally:
+            error.close()
+        raise failure from None
     except (OSError, ValueError):
         raise AuthError('認証通信に失敗しました。保存済み原本は保持されています。') from None
 
@@ -172,7 +203,8 @@ class Session:
     def interactive_login(self):
         if not sys.stdin.isatty():
             raise AuthError('Termux本体のターミナルで line-import login を実行してください。')
-        self.key()  # Fail before prompting if device configuration is missing.
+        # Detect a browser-only API key before asking for a password.
+        self.transport(PROJECT, self.key(), {})
         email = input('Sales Anchorのメールアドレス: ').strip()
         password = secret_prompt('パスワード（非表示・保存しません）: ')
         if not email or not password:

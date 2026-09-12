@@ -112,6 +112,40 @@ class SessionTests(unittest.TestCase):
                 self.session.interactive_login()
             prompt.assert_not_called()
 
+    def test_referrer_restriction_does_not_echo_remote_secrets(self):
+        import io
+        import urllib.error
+
+        from firebase_session import auth_failure
+        body = {'error': {'message': 'sensitive-account-and-key', 'details': [
+            {'reason': 'API_KEY_HTTP_REFERRER_BLOCKED'}]}}
+        err = urllib.error.HTTPError('https://example.invalid', 403, 'Forbidden', {},
+                                     io.BytesIO(json.dumps(body).encode()))
+        text = str(auth_failure(err))
+        err.close()
+        self.assertIn('API_KEY_HTTP_REFERRER_BLOCKED', text)
+        self.assertNotIn('sensitive-account-and-key', text)
+
+    def test_blocked_public_config_stops_before_password(self):
+        from firebase_session import PROJECT
+        self.transport.side_effect = AuthError('restricted')
+        with patch('firebase_session.sys.stdin.isatty', return_value=True), patch('firebase_session.secret_prompt') as password, patch('builtins.input') as email:
+            with self.assertRaises(AuthError):
+                self.session.interactive_login()
+            password.assert_not_called()
+            email.assert_not_called()
+        self.assertEqual(self.transport.call_args.args[0], PROJECT)
+
+    def test_unknown_error_body_is_not_shown(self):
+        import io
+        import urllib.error
+
+        from firebase_session import auth_failure
+        err = urllib.error.HTTPError('https://example.invalid', 400, 'Bad Request', {},
+                                     io.BytesIO(b'{"error":{"message":"private-value"}}'))
+        self.assertNotIn('private-value', str(auth_failure(err)))
+        err.close()
+
     def test_password_echo_fallback_is_blocked(self):
         import getpass
 
