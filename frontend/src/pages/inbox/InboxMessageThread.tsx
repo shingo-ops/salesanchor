@@ -71,6 +71,10 @@ export function InboxMessageThread({
 
   // 画像添付（ファイル選択 UI）
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 添付後に入力欄へフォーカスを戻すための参照。
+  // クリップボタンにフォーカスが残ると Enter がボタン押下になり、
+  // ファイル選択が再度開く（2026-09-04 に実測）。
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputId = useId();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -84,12 +88,65 @@ export function InboxMessageThread({
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
     setAttachedFile(file);
     e.target.value = "";
+    textareaRef.current?.focus();
   }, [setAttachedFile]);
+
+  // ドラッグ&ドロップでの画像添付（PO決定 2026-09-04）。
+  // スレッド全体を対象にし、ドラッグ中はオーバーレイを出す。
+  // 画像以外のファイルは無視する。
+  const [dragActive, setDragActive] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const acceptDroppedFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
+    setAttachedFile(file);
+    textareaRef.current?.focus();
+  }, [setAttachedFile]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    setDragActive(true);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+  }, []);
+
+  // dragleave は子要素をまたぐたびに発火するため、
+  // 出入りを数えて 0 になったときだけオーバーレイを消す。
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) acceptDroppedFile(file);
+  }, [acceptDroppedFile]);
 
   const handleClearAttachment = useCallback(() => {
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     clearAttachment();
   }, [clearAttachment]);
+
+  // 送信後に attachedFile が消えたらプレビューも消す。
+  // clearAttachment は useInboxState 側で attachedFile のみを消すため、
+  // ここで previewUrl を追従させる（2026-09-04 に残留を実測）。
+  useEffect(() => {
+    if (attachedFile === null) {
+      setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    }
+  }, [attachedFile]);
 
   // 会話切り替えで添付プレビューをリセット
   useEffect(() => {
@@ -265,7 +322,21 @@ export function InboxMessageThread({
   }
 
   return (
-    <main className="inbox-center">
+    <main
+      className="inbox-center"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragActive && (
+        <div className="inbox-drop-overlay" aria-hidden="true">
+          <div className="inbox-drop-overlay-inner">
+            <INBOX_ACTION_ICONS.attach size={ICON.xl} aria-hidden="true" />
+            <span>{t("inbox.dropImageHere")}</span>
+          </div>
+        </div>
+      )}
       {/* ヘッダ */}
       <header className="inbox-center-header">
         <div className="conv-avatar" style={{ flexShrink: 0 }}>
@@ -575,6 +646,7 @@ export function InboxMessageThread({
             </div>
             <div className="send-input-wrap">
               <textarea
+                ref={textareaRef}
                 className="inbox-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}

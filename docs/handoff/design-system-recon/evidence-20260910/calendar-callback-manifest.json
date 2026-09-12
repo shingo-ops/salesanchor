@@ -1,0 +1,10 @@
+{
+  "frontend/src/components/GoogleCalendarStatusBar.tsx": {
+    "sha256": "bf0c09b087b396e0eb3f938396ad5092e39f223a08c29530609aa15f4d612dd4",
+    "lines": 178
+  },
+  "frontend/src/components/GoogleCalendarStatusBar.test.tsx": {
+    "sha256": "304e1b5b002e1305c7582fd16ff2ac6e02b4b194d98c68e698313f05e6aa7124",
+    "lines": 112
+  }
+}

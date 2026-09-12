@@ -1,0 +1,26 @@
+CARD-MODAL-FOOTER-01
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-MODAL-FOOTER-01
+読んだ節: design-partner.md§5.5、design.md§AI、guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+照合§5.5: 1○実tree、2○本便PRなし、3○親へ全文、4○footer折返し、5○既存公式main起点登録、6○2製品列挙、7○退避照合/実3利用検証。
+担当Generator。あなたは他者と並行、root文書/他者変更を戻さない。別AI起動禁止。
+作業場所 `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared`、基準HEAD `7606ca9a041e315b81040373e8f4ddebbc562133`。本店を触らない。新worktree不要。
+製品変更は `frontend/src/components/Modal.css` と `frontend/src/components/Modal.stories.tsx` の2ファイルだけ。AH保留7ファイルの保存・基準復元は以下の手順1に限り許可。
+一時成果物は `/tmp/frontend-raw-buttons-20260911` の新しい名前で作る。root既存資料を上書きしない。
+禁止: その他製品/正式文書/台帳/GO/commit/push/PR/merge/deploy/CI/backend/secrets変更。実API通信禁止。localhostとモックのみ。正規require_escalated可、拒否時は親へ報告。
+手順0: 必須preflight、HEAD、対象差分を確認。root文書差分は保持。
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && ./scripts/dev/executor-preflight.sh
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git rev-parse HEAD
+手順1: あなたのAH保留分 `ConfirmModal.tsx`、`CommissionPanel.tsx`、`PriorityScoreOverride.tsx`、`OrderFinancialPanel.tsx`、`PurchaseDetailPanel.tsx`、`ShippingDetailPanel.tsx`、`SharedButtonMigration.test.tsx` を `/tmp/frontend-raw-buttons-20260911/held-raw-shared` へ全7ファイル保存し、元と保存先SHA256一致7/7を記録。6trackedの差分patchも保存。保存検算後に限り6trackedを基準HEADの正確な内容に戻し、新規testは保存先へ保持して作業treeから取り除く。全体reset/clean禁止。6tracked=基準6/6、新test非存在、バックアップ7/7を確認。不一致は停止。未検証草案と明記。
+手順2: design.md§AIに忠実にModal.cssの `.comp-modal-footer` へ `flex-wrap: wrap;` だけ追加。他宣言無変更。Modal.stories.tsxへResponsiveFooterを追加。実Button3個、既存shipping.sectionShipping/shipping.downloadCsv/common.cancel/common.update翻訳を使用。必要importと新story以外の既存4story無変更。開閉のみ。グローバル明暗クラス操作なし、新翻訳/値追加なし。
+手順3: 実PurchaseDetailPanel/ShippingDetailPanel/PurchaseOrdersFormModalを実Modal/CSSでブラウザー表示、API/認証はモック。設計AIの全受入基準を検証。明暗×日英×幅320/390/767/768/1279/1280、高さ360/900、別記の640px（200%相当・実zoomとは称さない）。金額0/通常/大額、保存中/既存なしを含める。子rectのdialog/viewport内、行の非重複、内部文字欠け0、1行で収まる前後rect/色/寸法一致。本文スクロール可能、Tab/ShiftTab順/輪郭、外部form同一ID/submit1回を測定。将来の発送Button3個fixture390px日英もwrapで欠け解消を確認。原ログ保存。実データ範囲を明記し任意長文字の保証をしない。失敗を勝手にCSS追加で直さず親へ返す。
+手順4: 既存品質検証、ログとexitを保存。CSSを写しただけの新unitは不要。
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend && npx eslint --max-warnings=0 src/components/Modal.stories.tsx
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend && npm run test:coverage
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend && npm run check:all
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend && npm run build
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend && npm run build-storybook
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git diff --check
+正常は各exit0、既存189試験成功、製品変更2のみ。Story実表示も確認。2製品SHA256 manifestを保存。生成coverageは/tmpに保管してPRへ混ぜない。失敗を成功扱いして後段へ進まない。
+完了報告冒頭「本報告はカード CARD-MODAL-FOOTER-01 の実行結果である」。親への本文に生出力全文、長い実在ログリンク。実行/未実行を区別。停止時は手順番号/最後のコマンド/理由/対象名を記す。本便PR作成なし、後続PRはreadyで起票しdraft禁止。
+END OF CARD

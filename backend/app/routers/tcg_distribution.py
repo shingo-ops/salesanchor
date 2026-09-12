@@ -62,6 +62,23 @@ class SettingUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# アクセス確認（登録前・読み取りのみ）
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/tcg/distribution/verify-access",
+    dependencies=[Depends(require_super_admin)],
+)
+async def verify_spreadsheet_access(spreadsheet_id: str):
+    """
+    指定のスプレッドシートIDへのアクセスを読み取りで確認する（書き込みなし）。
+    登録フォームの保存前チェックに使用する。
+    """
+    return await svc.verify_spreadsheet_access(spreadsheet_id)
+
+
+# ---------------------------------------------------------------------------
 # 配信先 CRUD
 # ---------------------------------------------------------------------------
 

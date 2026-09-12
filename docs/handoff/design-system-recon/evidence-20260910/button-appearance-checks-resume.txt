@@ -1,0 +1,276 @@
+$ node node_modules/eslint/bin/eslint.js src/components/Button.stories.tsx --max-warnings=0
+EXIT 0
+$ npm run build
+
+> salesanchor-frontend@1.0.0 prebuild
+> npm run generate:icon-sizes
+
+
+> salesanchor-frontend@1.0.0 generate:icon-sizes
+> node scripts/generate-icon-sizes.js
+
+
+> salesanchor-frontend@1.0.0 build
+> tsc && vite build
+
+vite v8.0.16 building client environment for production...
+[2K
+transforming...✓ 1553 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     1.08 kB │ gzip:   0.49 kB
+dist/assets/index-Dhcy_Vja.css    249.33 kB │ gzip:  37.76 kB
+dist/assets/index-BQ1sb2k_.js   1,883.66 kB │ gzip: 491.53 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/firebase-auth.ts is dynamically imported by src/pages/erp/ERPPage.tsx but also statically imported by src/contexts/AuthContext.tsx, src/pages/account-settings/SecuritySection.tsx, dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.85s
+EXIT 0
+$ npm run build-storybook
+
+> salesanchor-frontend@1.0.0 build-storybook
+> storybook build
+
+
+┌  Building storybook v10.4.6
+│
+◇  Cleaning outputDir: storybook-static
+│
+◇  Loading presets
+│
+◇  Building manager..
+│
+●  Building preview..
+│
+▲  No story files found for the specified pattern: src/**/*.mdx
+│  Vite vite v8.0.16 building client environment for production...
+[2K
+transforming...✓ 955 modules transformed.
+rendering chunks...
+computing gzip size...
+│  Vite storybook-static/iframe.html
+│  18.95 kB │ gzip:   5.28 kB
+│  storybook-static/assets/GoogleCalendarStatusBar-BICCd4DA.css
+│  0.07 kB │ gzip:   0.09 kB
+│  storybook-static/assets/icons-uggGpz-U.css
+│  0.46 kB │ gzip:   0.20 kB
+│  storybook-static/assets/ContentToolbar-Vi5U7ilP.css
+│  0.50 kB │ gzip:   0.21 kB
+│  storybook-static/assets/Card-zlGIrnB9.css
+│  0.64 kB │ gzip:   0.28 kB
+│  storybook-static/assets/EmptyState-BoNpK_04.css
+│  0.77 kB │ gzip:   0.30 kB
+│  storybook-static/assets/Drawer-Nhu3x5aQ.css
+│  1.24 kB │ gzip:   0.50 kB
+│  storybook-static/assets/Modal-mD10x2NW.css
+│  1.49 kB │ gzip:   0.54 kB
+│  storybook-static/assets/ManagementCenter-BXx7PT5h.css
+│  1.55 kB │ gzip:   0.57 kB
+│  storybook-static/assets/Tabs-4tN2gRPn.css
+│  1.62 kB │ gzip:   0.52 kB
+│  storybook-static/assets/Badge-Ba2WMlXm.css
+│  1.65 kB │ gzip:   0.43 kB
+│  storybook-static/assets/SubMenu-DKBWvIfR.css
+│  1.80 kB │ gzip:   0.61 kB
+│  storybook-static/assets/DataTable-U888vCZ7.css
+│  2.84 kB │ gzip:   0.76 kB
+│  storybook-static/assets/AccountSettings-1M8T-q8u.css
+│  2.99 kB │ gzip:   0.79 kB
+│  storybook-static/assets/FormField-gxdybP0I.css
+│  3.32 kB │ gzip:   0.96 kB
+│  storybook-static/assets/MobileShell-DF1TfgDM.css
+│  5.40 kB │ gzip:   1.20 kB
+│  storybook-static/assets/GoalSettingPage-BGaVaNM2.css
+│  9.62 kB │ gzip:   1.95 kB
+│  storybook-static/assets/Button-DaagBb4-.css
+│  12.72 kB │ gzip:   2.78 kB
+│  storybook-static/assets/DashboardPage-CbUTN7yy.css
+│  16.59 kB │ gzip:   2.44 kB
+│  storybook-static/assets/iframe-bjMGsjO7.css
+│  19.37 kB │ gzip:   5.50 kB
+│  storybook-static/assets/Schedule-DId-343e.css
+│  23.51 kB │ gzip:   3.96 kB
+│  storybook-static/assets/InboxPage-B3nyOclo.css
+│  38.47 kB │ gzip:   5.97 kB
+│  storybook-static/assets/FormField-o08Rv22m.js
+│  0.07 kB │ gzip:   0.09 kB
+│  storybook-static/assets/InboxPage-CuJyiR6S.js
+│  0.07 kB │ gzip:   0.09 kB
+│  storybook-static/assets/react-CUsyfG36.js
+│  0.08 kB │ gzip:   0.10 kB
+│  storybook-static/assets/iconSizes-CB-Mtdzy.js
+│  0.11 kB │ gzip:   0.13 kB
+│  storybook-static/assets/chunk-242VQQM5-D_TF1fLq.js
+│  0.22 kB │ gzip:   0.19 kB
+│  storybook-static/assets/chunk-S2IHWCOG-tZqbQ3Kv.js
+│  0.24 kB │ gzip:   0.17 kB
+│  storybook-static/assets/formatter-L2YTDE3Q-TuwFLkTN.js
+│  0.27 kB │ gzip:   0.22 kB
+│  storybook-static/assets/jsx-runtime-BJepLTBp.js
+│  0.71 kB │ gzip:   0.46 kB
+│  storybook-static/assets/react-18-DDEVcc_C.js
+│  1.00 kB │ gzip:   0.57 kB
+│  storybook-static/assets/GoalSettingPage.stories-DLF00ZEA.js
+│  1.46 kB │ gzip:   0.71 kB
+│  storybook-static/assets/TextField-AfxQ393g.js
+│  1.51 kB │ gzip:   0.69 kB
+│  storybook-static/assets/Textarea-e7X6VE3Y.js
+│  1.52 kB │ gzip:   0.69 kB
+│  storybook-static/assets/Badge-Ihm7KdNX.js
+│  1.92 kB │ gzip:   0.85 kB
+│  storybook-static/assets/Schedule.stories-Cjyt-Z8C.js
+│  2.05 kB │ gzip:   0.85 kB
+│  storybook-static/assets/ContactChannelLinks.stories-AjERxp90.js
+│  2.07 kB │ gzip:   1.07 kB
+│  storybook-static/assets/preload-helper-xPQekRTU.js
+│  2.34 kB │ gzip:   1.24 kB
+│  storybook-static/assets/Modal-BjTwLwJ-.js
+│  2.36 kB │ gzip:   1.05 kB
+│  storybook-static/assets/ContentToolbar.stories-De9uptue.js
+│  2.39 kB │ gzip:   1.18 kB
+│  storybook-static/assets/NavDropdown.stories-Bbe3_0Et.js
+│  2.42 kB │ gzip:   1.24 kB
+│  storybook-static/assets/ManagementCenter.stories-Dbx4VSdd.js
+│  2.43 kB │ gzip:   0.85 kB
+│  storybook-static/assets/api-Bn5jXLwV.js
+│  2.68 kB │ gzip:   1.18 kB
+│  storybook-static/assets/Select-CcZ2sHrd.js
+│  3.20 kB │ gzip:   0.95 kB
+│  storybook-static/assets/AccountSettings.stories-xJ6J9SSy.js
+│  3.32 kB │ gzip:   0.93 kB
+│  storybook-static/assets/Textarea.stories-DJbXrfQr.js
+│  3.37 kB │ gzip:   1.20 kB
+│  storybook-static/assets/PageLayout.stories-Bn0D6IIY.js
+│  3.59 kB │ gzip:   1.13 kB
+│  storybook-static/assets/PriorityScoreBadge.stories-BzUrADMJ.js
+│  3.66 kB │ gzip:   1.31 kB
+│  storybook-static/assets/NavItemList.stories-DDQ59z8R.js
+│  3.69 kB │ gzip:   1.33 kB
+│  storybook-static/assets/ConfirmModal.stories-BPY-vmKT.js
+│  3.78 kB │ gzip:   1.37 kB
+│  storybook-static/assets/TextField.stories-7CLzKFB4.js
+│  3.82 kB │ gzip:   1.28 kB
+│  storybook-static/assets/Badge.stories-DfE-bd1x.js
+│  3.95 kB │ gzip:   0.94 kB
+│  storybook-static/assets/EmptyState.stories-L9ew3jeW.js
+│  3.95 kB │ gzip:   1.61 kB
+│  storybook-static/assets/Modal.stories-BlbF3N4P.js
+│  3.99 kB │ gzip:   1.15 kB
+│  storybook-static/assets/chunk-3LY4VQVK-Ce-UCzhy.js
+│  4.03 kB │ gzip:   1.71 kB
+│  storybook-static/assets/PriorityScoreOverride.stories-CPx-PkTn.js
+│  4.20 kB │ gzip:   1.88 kB
+│  storybook-static/assets/Select.stories-DIXLXBBx.js
+│  4.54 kB │ gzip:   1.37 kB
+│  storybook-static/assets/GoogleCalendarStatusBar.stories-BT-7pHNa.js
+│  4.64 kB │ gzip:   1.89 kB
+│  storybook-static/assets/CountryCombobox.stories-u_F9pJiT.js
+│  4.82 kB │ gzip:   2.02 kB
+│  storybook-static/assets/Card.stories-Cn-8ahUD.js
+│  5.15 kB │ gzip:   1.56 kB
+│  storybook-static/assets/SubMenu.stories-DVt3Eskq.js
+│  5.19 kB │ gzip:   1.78 kB
+│  storybook-static/assets/ChannelTypeCombobox.stories-DjoYCRtm.js
+│  5.31 kB │ gzip:   2.13 kB
+│  storybook-static/assets/CommissionPanel.stories-Dlia24gF.js
+│  5.33 kB │ gzip:   2.05 kB
+│  storybook-static/assets/Drawer.stories-JHqBeREs.js
+│  5.58 kB │ gzip:   2.04 kB
+│  storybook-static/assets/OrderFinancialPanel.stories-B45U55JY.js
+│  5.90 kB │ gzip:   2.30 kB
+│  storybook-static/assets/statusPresentation-SAmMbNtZ.js
+│  6.05 kB │ gzip:   1.07 kB
+│  storybook-static/assets/CompanyContactSelector.stories-aCkuZOE5.js
+│  6.39 kB │ gzip:   2.45 kB
+│  storybook-static/assets/DesktopShell.stories-9b5N-6T2.js
+│  6.47 kB │ gzip:   1.59 kB
+│  storybook-static/assets/Tabs.stories-BwYPQlJm.js
+│  6.84 kB │ gzip:   1.99 kB
+│  storybook-static/assets/MergeCompanyModal.stories-BSgGbkf_.js
+│  7.37 kB │ gzip:   2.73 kB
+│  storybook-static/assets/MergeLeadModal.stories-9QyeCW3a.js
+│  7.41 kB │ gzip:   2.74 kB
+│  storybook-static/assets/PurchaseDetailPanel.stories-wfSAxCPL.js
+│  7.45 kB │ gzip:   2.30 kB
+│  storybook-static/assets/HeaderButton.stories-9iQvl4O2.js
+│  7.50 kB │ gzip:   1.77 kB
+│  storybook-static/assets/ContactChannelForm.stories-dvqlRJHo.js
+│  7.62 kB │ gzip:   2.76 kB
+│  storybook-static/assets/InventoryPicker.stories-BQLJevpv.js
+│  7.68 kB │ gzip:   3.29 kB
+│  storybook-static/assets/MergeContactModal.stories-DG9Cu1nv.js
+│  8.65 kB │ gzip:   3.03 kB
+│  storybook-static/assets/InboxPage.stories-DqSEDqO0.js
+│  8.84 kB │ gzip:   1.63 kB
+│  storybook-static/assets/FedExRateModal.stories-BA51GPeO.js
+│  8.98 kB │ gzip:   2.72 kB
+│  storybook-static/assets/DashboardPage.stories-B1HF741j.js
+│  9.01 kB │ gzip:   1.99 kB
+│  storybook-static/assets/Button.stories-kfq6xGRJ.js
+│  9.09 kB │ gzip:   2.21 kB
+│  storybook-static/assets/InboxHeaderMenu.stories-DDCJo8_b.js
+│  9.63 kB │ gzip:   2.16 kB
+│  storybook-static/assets/ShippingDetailPanel.stories-BBmHmPrm.js
+│  9.73 kB │ gzip:   2.84 kB
+│  storybook-static/assets/MobileShell.stories-CjtwjkA6.js
+│  10.35 kB │ gzip:   2.18 kB
+│  storybook-static/assets/InventorySearchBar.stories-BBgjoBcc.js
+│  10.45 kB │ gzip:   3.82 kB
+│  storybook-static/assets/DataTable.stories-69FTwp0c.js
+│  11.80 kB │ gzip:   4.02 kB
+│  storybook-static/assets/Button-Ch5GiJ63.js
+│  12.17 kB │ gzip:   3.72 kB
+│  storybook-static/assets/chunk-LITCR56V-w8J68Qoa.js
+│  22.01 kB │ gzip:   7.33 kB
+│  storybook-static/vite-inject-mocker-entry.js
+│  27.81 kB │ gzip:   9.63 kB
+│  storybook-static/assets/matchers-5TDFFDYO-DfTG6O73.js
+│  28.76 kB │ gzip:   9.66 kB
+│  storybook-static/assets/Color-23OOGO2C-DFTjCaeS.js
+│  30.94 kB │ gzip:  11.63 kB
+│  storybook-static/assets/WithTooltip-7X4HQR7L-B_sSi19f.js
+│  33.24 kB │ gzip:  11.67 kB
+│  storybook-static/assets/dist-CTmL5Rrd.js
+│  38.82 kB │ gzip:  14.00 kB
+│  storybook-static/assets/theming-DseUsvIz.js
+│  55.32 kB │ gzip:  21.38 kB
+│  storybook-static/assets/icons-TSIo43_w.js
+│  59.11 kB │ gzip:  14.77 kB
+│  storybook-static/assets/syntaxhighlighter-RTCFPKCB-C3PEUm9h.js
+│  76.53 kB │ gzip:  27.54 kB
+│  storybook-static/assets/react-dom-C5_zXPmC.js
+│  132.73 kB │ gzip:  43.08 kB
+│  storybook-static/assets/DocsRenderer-LL677BLK-Cu74qCnS.js
+│  184.71 kB │ gzip:  58.73 kB
+│  storybook-static/assets/components-DkTVOIRW.js
+│  548.87 kB │ gzip: 174.56 kB
+│  storybook-static/assets/axe-mFnqjVvd.js
+│  571.05 kB │ gzip: 155.78 kB
+│  storybook-static/assets/iframe-F547fUOo.js
+│  1,403.41 kB │ gzip: 411.41 kB
+
+│  Vite ✓ built in 12.48s
+│
+▲  Vite [plugin builtin:vite-reporter]
+│  (!) Some chunks are larger than 500 kB after minification. Consider:
+│  - Using dynamic import() to code-split the application
+│  - Use build.rolldownOptions.output.codeSplitting to improve chunking:
+│  https://rolldown.rs/reference/OutputOptions.codeSplitting
+│  - Adjust chunk size limit for this warning via
+│  build.chunkSizeWarningLimit.
+│
+●  Storybook collects completely anonymous usage telemetry. We use it to
+│  shape Storybook's roadmap and prioritize features. You can learn more,
+│  including how to opt out, at https://storybook.js.org/telemetry
+│
+◇  Output directory:
+│  /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend/storybook-static
+│
+└  Storybook build completed successfully
+
+EXIT 0

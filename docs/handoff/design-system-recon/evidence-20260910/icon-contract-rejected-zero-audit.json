@@ -1,0 +1,22 @@
+{
+  "sha": "current-worktree",
+  "typescriptVersion": "5.9.3",
+  "method": "JSX tag call signature parameter type text contains IconProps; tracked and new source loaded from current worktree; dependencies read from installed node_modules",
+  "exclusion": "(stories|test|spec)\\.|/design-preview/",
+  "total": 0,
+  "production": 0,
+  "productionFiles": 0,
+  "counts": {
+    "style": 0,
+    "color": 0,
+    "ref": 0,
+    "spread": 0,
+    "aria-hidden": 0,
+    "aria-label": 0,
+    "aria-labelledby": 0,
+    "aria-describedby": 0,
+    "role": 0,
+    "focusable": 0,
+    "weight": 0
+  }
+}

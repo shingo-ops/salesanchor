@@ -90,7 +90,7 @@
 4. 人が実際に動作確認を行い、不具合がないと判断している。確認内容（何を・どう確認し、問題がなかったか）を docs/ai-agents/evidence-registry.md に記録している。
 
 - **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / `backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` / **PR-C の外部API検出で見つかる変更**）は、**本番に出す前に Shingo の GO 記録が必須**。現行フローでは、release ブランチで GO を満たし、release PR で main へ昇格する。
-- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_006（QA）または tenant_001（空テスト）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。ローンチ後は別サーバーの dev 環境で事前確認に移行する。
+- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001（QA・TCG 動作確認）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。tenant_006 は Meta App Review 撮影専用テナント（QA 用途禁止）。TCG 機能の QA は TCG_SCHEMA=tenant_001 を指定して行う。ローンチ後は別サーバーの dev 環境で事前確認に移行する。
 
 次は完了と認めない。
 - 自己申告のみ（「できました」の宣言だけ）。

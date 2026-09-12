@@ -423,3 +423,174 @@ async def test_add_keyword_duplicate(super_admin_override):
     body = r.json()
     assert body["ok"] is False
     assert body["code"] == "KEYWORD_ALREADY_EXISTS"
+
+
+# ---------------------------------------------------------------------------
+# B-3: force=True — 重複候補があっても登録できる（GAS ソフトブロック準拠）
+# ---------------------------------------------------------------------------
+
+
+async def test_create_product_force_bypasses_duplicate(super_admin_override):
+    """force=True: DUPLICATE_CANDIDATE を返さず登録まで進む。"""
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.create_product",
+        new=AsyncMock(return_value=_CREATE_OK),
+    ) as mock_create:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products",
+                json={
+                    "extraction_item_id": "aaaa",
+                    "source_message_id": "bbbb",
+                    "division_id": "cccc",
+                    "work_id": "dddd",
+                    "manufacturer_id": "eeee",
+                    "product_category_id": "ffff",
+                    "japanese_title": "新作SV42",
+                    "force": True,
+                },
+            )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert mock_create.call_args.kwargs["force"] is True
+
+
+async def test_create_product_no_force_default(super_admin_override):
+    """force 未指定: False がデフォルト。重複ありなら DUPLICATE_CANDIDATE を返す。"""
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.create_product",
+        new=AsyncMock(return_value=_CREATE_DUP),
+    ) as mock_create:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products",
+                json={
+                    "extraction_item_id": "aaaa",
+                    "source_message_id": "bbbb",
+                    "division_id": "cccc",
+                    "work_id": "dddd",
+                    "manufacturer_id": "eeee",
+                    "product_category_id": "ffff",
+                    "japanese_title": "SV1a",
+                },
+            )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is False
+    assert body["code"] == "DUPLICATE_CANDIDATE"
+    assert mock_create.call_args.kwargs["force"] is False
+
+
+# ---------------------------------------------------------------------------
+# _build_duplicate_candidates: GAS 準拠ロジック単体テスト
+# ---------------------------------------------------------------------------
+
+
+def _make_row(**kwargs):
+    """MagicMock を使わず SimpleNamespace でテスト用 row を作る。"""
+    from types import SimpleNamespace
+    return SimpleNamespace(**kwargs)
+
+
+def test_build_dup_exact_title_always_matches():
+    """exactTitle: タイトル完全一致は mark/search_keywords 不問で候補になる。"""
+    from app.services.tcg_product_master_svc import _build_duplicate_candidates
+    rows = [_make_row(
+        product_id="PM0001",
+        japanese_title="ポケカ SV1a",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1a",
+        search_keywords="sv1a",
+    )]
+    candidates = _build_duplicate_candidates(
+        rows,
+        japanese_title="ポケカ SV1a",
+        work_id="w9",  # 分類が違っても
+        manufacturer_id="m9",
+        product_category_id="c9",
+        mark="",
+        search_keywords="",
+    )
+    assert len(candidates) == 1
+    assert candidates[0]["product_id"] == "PM0001"
+
+
+def test_build_dup_same_cls_no_mark_no_search_not_candidate():
+    """GAS 準拠: mark も search_keywords も空なら同一分類だけでは候補にならない。"""
+    from app.services.tcg_product_master_svc import _build_duplicate_candidates
+    rows = [_make_row(
+        product_id="PM0002",
+        japanese_title="別商品 SV1b",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1b",
+        search_keywords="",
+    )]
+    candidates = _build_duplicate_candidates(
+        rows,
+        japanese_title="最強ジャンプ5月号",  # タイトル不一致
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="",         # mark 空
+        search_keywords="",  # search_keywords 空
+    )
+    assert candidates == []
+
+
+def test_build_dup_same_cls_with_mark_matches():
+    """same_cls + same_mark: 候補になる。"""
+    from app.services.tcg_product_master_svc import _build_duplicate_candidates
+    rows = [_make_row(
+        product_id="PM0003",
+        japanese_title="別商品 SV1b",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1b",
+        search_keywords="",
+    )]
+    candidates = _build_duplicate_candidates(
+        rows,
+        japanese_title="最強ジャンプ5月号",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1b",  # mark 一致
+        search_keywords="",
+    )
+    assert len(candidates) == 1
+
+
+def test_build_dup_same_cls_mark_mismatch_no_candidate():
+    """same_cls だが mark が異なり search_keywords も空: 候補にならない。"""
+    from app.services.tcg_product_master_svc import _build_duplicate_candidates
+    rows = [_make_row(
+        product_id="PM0004",
+        japanese_title="別商品 SV1c",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1c",
+        search_keywords="",
+    )]
+    candidates = _build_duplicate_candidates(
+        rows,
+        japanese_title="全然違うタイトル",
+        work_id="w1",
+        manufacturer_id="m1",
+        product_category_id="c1",
+        mark="SV1b",  # mark 不一致
+        search_keywords="",
+    )
+    assert candidates == []

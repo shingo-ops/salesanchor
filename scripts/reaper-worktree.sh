@@ -264,6 +264,61 @@ if [ "${#SKIP_NOT_MERGED[@]}" -gt 0 ]; then
   echo ""
 fi
 
+# ── ゴースト検出（git 未登録の実体ディレクトリ）──────────────────────────────
+# ~/worktrees/<repo>/ を走査し、git worktree list に登録されていないディレクトリを警告する
+# 2026-09-05: 5件・830MB のゴーストが発生。reaper は git worktree list 経由のため
+#             git 登録が外れた実体ディレクトリを永久に検出できなかった。本ブロックで補完する。
+# ★ 削除はしない。警告のみ。
+_GHOST_SCAN_DIR="${HOME}/worktrees/$(basename "${MAIN_REPO_ROOT}")"
+
+# 登録済み worktree パスを収集
+_REGISTERED_WT_PATHS=()
+while IFS= read -r _LINE; do
+  case "${_LINE}" in
+    worktree\ *) _REGISTERED_WT_PATHS+=("${_LINE#worktree }") ;;
+  esac
+done < <(git -C "${MAIN_REPO_ROOT}" worktree list --porcelain 2>/dev/null)
+
+GHOST_COUNT=0
+GHOST_TOTAL_KB=0
+GHOST_ENTRIES=()
+
+if [ -d "${_GHOST_SCAN_DIR}" ]; then
+  for _GDIR in "${_GHOST_SCAN_DIR}"/*/; do
+    [ -d "${_GDIR}" ] || continue
+    _GDIR_PATH="${_GDIR%/}"
+    _IS_REG=0
+    for _REGP in "${_REGISTERED_WT_PATHS[@]}"; do
+      if [ "${_GDIR_PATH}" = "${_REGP}" ]; then
+        _IS_REG=1
+        break
+      fi
+    done
+    if [ "${_IS_REG}" -eq 0 ]; then
+      _SIZE_KB=$(du -sk "${_GDIR_PATH}" 2>/dev/null | awk '{print $1}')
+      _SIZE_MB=$(awk "BEGIN {printf \"%.1f\", ${_SIZE_KB:-0}/1024}")
+      GHOST_ENTRIES+=("${_GDIR_PATH} (${_SIZE_MB} MB)")
+      GHOST_COUNT=$(( GHOST_COUNT + 1 ))
+      GHOST_TOTAL_KB=$(( GHOST_TOTAL_KB + ${_SIZE_KB:-0} ))
+    fi
+  done
+fi
+
+echo "=== ゴースト検出 ==="
+echo "   走査: ${_GHOST_SCAN_DIR}"
+echo ""
+if [ "${GHOST_COUNT}" -eq 0 ]; then
+  echo "👻 GHOST: 0件"
+else
+  for _GE in "${GHOST_ENTRIES[@]}"; do
+    echo "   👻 GHOST: ${_GE}"
+  done
+  _TOTAL_MB=$(awk "BEGIN {printf \"%.1f\", ${GHOST_TOTAL_KB}/1024}")
+  echo ""
+  echo "⚠️  GHOST 合計: ${GHOST_COUNT} 件 / ${_TOTAL_MB} MB（手動確認してください）"
+fi
+echo ""
+
 if [ "${#WILL_DELETE[@]}" -eq 0 ]; then
   echo "✅ 削除対象なし"
   exit 0

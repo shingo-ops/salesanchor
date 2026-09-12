@@ -1,0 +1,57 @@
+[
+  {
+    "file": "src/company-forms.css",
+    "selectors": 57,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/components.css",
+    "selectors": 157,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/hub-shell.css",
+    "selectors": 12,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/index.css",
+    "selectors": 6,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/loading-animations.css",
+    "selectors": 76,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/mobile-shell.css",
+    "selectors": 32,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/pages-layout.css",
+    "selectors": 123,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/responsive.css",
+    "selectors": 5,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/sidebar.css",
+    "selectors": 43,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/tokens.css",
+    "selectors": 3,
+    "status": "共通CSS:全selector DOM照合未実施"
+  },
+  {
+    "file": "src/topbar.css",
+    "selectors": 31,
+    "status": "共通CSS:全selector DOM照合未実施"
+  }
+]

@@ -379,7 +379,6 @@ export function PriorityProspectsSection() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="db-priority-followup-btn"
                       onClick={() => beginFollowUp(item)}
                       data-testid="priority-followup-open"
                     >
@@ -467,7 +466,7 @@ export function PriorityProspectsSection() {
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="db-priority-edit-btn"
+                      layoutClassName="db-priority-edit-btn"
                       onClick={() => beginFollowUp(item)}
                     >
                       {t("common.edit")}

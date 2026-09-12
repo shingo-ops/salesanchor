@@ -92,8 +92,11 @@ from app.routers import (
     super_admin_tenants,
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
+    tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
     tcg_distribution,  # DIST-01: TCG 在庫配信
+    tcg_line_import,  # MIG-04 Stage 1: LINE エクスポート取り込み
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_product_import,  # IMPORT-01: 商品マスタ CSV 取り込み API
     tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
@@ -571,9 +574,19 @@ app.include_router(
     tcg_product_master.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+# IMPORT-01: 商品マスタ CSV 取り込み API（require_super_admin 限定）
+app.include_router(
+    tcg_product_import.router, prefix="/api/v1", tags=["super-admin"],
+)
+
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
 app.include_router(
     tcg_supplier_quality.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# DB-A2: TCG 診断 API（固定 SQL 方式・require_super_admin 限定）
+app.include_router(
+    tcg_diagnostics.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # MIG-04 Phase 4: 並行運用比較レポート（is_super_admin 限定）
@@ -584,6 +597,11 @@ app.include_router(
 # DIST-01: TCG 在庫配信
 app.include_router(
     tcg_distribution.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Stage 1: LINE エクスポート取り込み（is_super_admin 限定）
+app.include_router(
+    tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 

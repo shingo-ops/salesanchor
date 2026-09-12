@@ -15,7 +15,7 @@
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 |
 | エージェント完結の設計体制 | [agent-complete-design/README.md](agent-complete-design/README.md) | 公開 |
 | 開発の無駄な停止ゼロ | [dev-continuity/README.md](dev-continuity/README.md) | 公開 |
-| GO記録の自動転記 | [go-record-transcription/](../handoff/go-record-transcription/) | 草案 |
+| GO記録の自動転記・マージ前検査 | [go-record-transcription/](../handoff/go-record-transcription/)・[LINE期限付き委任](../handoff/go-record-transcription/line-delegation.md) | 設計範囲・GO取消期限PO合意 2026-09-10・方式全体は草案/自己審査REVISE |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 |
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
@@ -68,6 +68,7 @@
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
+| Discordリアクション（discord-reaction。受信箱でDiscordと同じように絵文字を付ける・見る） | discord-reaction/README.md | あるべき姿・KGI確定 2026-09-04 |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）

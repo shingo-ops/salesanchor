@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "pairs": 560,
+  "referenceMatched": 560,
+  "beforeUnchanged": 560,
+  "sameRowComparisons": 448,
+  "neededWrapConditions": 112,
+  "amounts": [
+    0,
+    123450,
+    999999999999
+  ],
+  "focusButtons": 448,
+  "keyboardEnterSpaceCases": 6,
+  "externalFormCases": 3,
+  "futureButtonsCases": 2,
+  "storyCases": 4,
+  "errors": [],
+  "externalRequests": [],
+  "limits": [
+    "640px is 200% equivalent narrow width, not actual browser zoom",
+    "Data and currency values limited to fixture amounts; no arbitrary string guarantee",
+    "Production not accessed; APIs/auth mocked",
+    "Root executed quality commands; generator executed browser checks",
+    "Previous failed v1/v2/v3/diagnostic outputs retained"
+  ]
+}

@@ -18,6 +18,7 @@ DIST-01: TCG 在庫配信サービス層。
   #5 書き込み行数を DIST_ROW_LIMIT（5000）で上限制限
   #6 失敗時 Discord 通知
   #7 配信履歴（日時・件数・成否）を DB に記録
+  #8 再解析未完了（analysis_runs.completed_at IS NULL）があれば配信中止
 """
 from __future__ import annotations
 
@@ -32,12 +33,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-TCG_SCHEMA = "tenant_004"
+from app.tcg_config import TCG_SCHEMA
 
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・10列）
+# 出力ヘッダー（確定・12列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
@@ -48,6 +49,8 @@ DIST_HEADERS = [
     "Quantity",
     "Note_JA",
     "Status",
+    "Release Date",
+    "Series",
     "提供者",
 ]
 
@@ -141,6 +144,27 @@ def _log_sheet_permissions(spreadsheet_id: str, creds: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 安全装置 #1 前段: スプレッドシートアクセス確認（読み取りのみ・書き込みなし）
+# ---------------------------------------------------------------------------
+
+async def verify_spreadsheet_access(spreadsheet_id: str) -> dict:
+    """
+    登録前にスプレッドシートへのアクセスを確認する（読み取りのみ）。
+    - SA クライアントを構築し spreadsheetId の存在・ID 一致を検証する。
+    - 成功: {"accessible": True, "title": "<シートタイトル>"}
+    - 失敗: {"accessible": False, "error": "<エラーメッセージ>"}
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        gc = await loop.run_in_executor(None, _build_gspread_client)
+        sh = await loop.run_in_executor(None, _verify_spreadsheet_id, gc, spreadsheet_id)
+        title = sh.title
+        return {"accessible": True, "title": title}
+    except Exception as exc:  # noqa: BLE001
+        return {"accessible": False, "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
 # E. 設定ロード
 # ---------------------------------------------------------------------------
 
@@ -162,7 +186,7 @@ async def fetch_output_rows(
     include_flag_single: bool = False,
 ) -> list[list[str]]:
     """
-    配信対象行を10列で取得する。
+    配信対象行を12列で取得する。
     フィルター:
       pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
       AND price_normalized IS NOT NULL  ← 価格未解決行を除外
@@ -189,10 +213,12 @@ async def fetch_output_rows(
             COALESCE(p.japanese_title, '')                          AS japanese_title,
             COALESCE(p.english_title, '')                           AS english_title,
             ar.condition_canonical                                   AS condition,
-            COALESCE(ar.price_normalized::text, '')                 AS unit_price,
-            COALESCE(ar.quantity_normalized::text, '')              AS quantity,
+            COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
+            COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
+            COALESCE(p.release_date::text, '')                      AS release_date,
+            COALESCE(ser.display_name, '')                          AS series,
             COALESCE(ts.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
@@ -200,18 +226,21 @@ async def fetch_output_rows(
         JOIN {TCG_SCHEMA}.extraction_jobs ej
             ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm
-            ON sm.id = ej.source_message_id
+            ON sm.id = ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
         LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
             ON ts.id = sc.supplier_id
         LEFT JOIN {TCG_SCHEMA}.tcg_products p
             ON p.id = ar.product_id
+        LEFT JOIN {TCG_SCHEMA}.tcg_series ser
+            ON ser.id = p.work_id
         WHERE ar.pid_resolved = TRUE
+          AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
-        ORDER BY ts.name NULLS LAST, p.code NULLS LAST, ar.id
+        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.code NULLS LAST
     """)
 
     result = await db.execute(sql)
@@ -227,6 +256,8 @@ async def fetch_output_rows(
             row["quantity"],
             row["note_ja"],
             row["status"],
+            row["release_date"],
+            row["series"],
             row["provider"],
         ]
         for row in rows
@@ -602,6 +633,7 @@ async def run_distribution(
     全アクティブ配信先（または特定 target_id）へ配信を実行する。
 
     手順:
+      0. 再解析完了チェック（安全装置 #8）
       1. 設定ロード
       2. 出力データ取得（確定フィルター）
       3. 配信先取得
@@ -610,6 +642,63 @@ async def run_distribution(
       6. 失敗があれば Discord 通知（安全装置 #6）
     """
     started_at = datetime.now(timezone.utc)
+
+    # 0. 再解析完了チェック（安全装置 #8）
+    # analysis_runs に completed_at IS NULL の行があれば配信を中止する。
+    # 再解析中に配信すると、unit_resolved が未確定の行が含まれる可能性がある。
+    pending_rows = (
+        await db.execute(
+            text(
+                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_runs"
+                " WHERE completed_at IS NULL ORDER BY started_at LIMIT 10"
+            )
+        )
+    ).mappings().all()
+    if pending_rows:
+        details = [
+            {"run_id": str(r["id"]), "started_at": r["started_at"].isoformat()}
+            for r in pending_rows
+        ]
+        msg = (
+            f"安全装置 #8: 再解析未完了の runs が {len(pending_rows)} 件あります。"
+            f" 完了を待ってから配信を実行してください。未完了: {details}"
+        )
+        logger.warning("[dist] %s", msg)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": msg}],
+        }
+
+    # 0-b. 抽出・解析の未完了チェック（安全装置 #8b）
+    # extraction_jobs に未完了のジョブが残っている間は配信しない。
+    # 終端扱い: done / empty / error（これらは待っても変わらないため止めない）。
+    unfinished = (
+        await db.execute(
+            text(
+                f"SELECT status, count(*) AS cnt FROM {TCG_SCHEMA}.extraction_jobs"
+                " WHERE status IN ('pending', 'running', 'extracted')"
+                " GROUP BY status ORDER BY status"
+            )
+        )
+    ).mappings().all()
+    if unfinished:
+        breakdown = {r["status"]: r["cnt"] for r in unfinished}
+        total_unfinished = sum(breakdown.values())
+        msg = (
+            f"安全装置 #8b: 未完了の extraction_jobs が {total_unfinished} 件あります。"
+            f" 完了を待ってから配信を実行してください。内訳: {breakdown}"
+        )
+        logger.warning("[dist] %s", msg)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": msg}],
+        }
 
     # 1. 設定ロード
     settings = await load_distribution_settings(db)

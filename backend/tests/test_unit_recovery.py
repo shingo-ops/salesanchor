@@ -101,18 +101,29 @@ class TestBuildUnitRecoveryTerms:
             assert "kubun" in t
 
     def test_ct_terms_present(self):
-        """ct/CT/Ct are aliases of Case (UN0001)"""
+        """ct/CT/Ct are aliases of Case (UN0001 → UUID c5a6371d-...)"""
         terms = build_unit_recovery_terms()
         ct_terms = [t for t in terms if t["term"] in ("ct", "CT", "Ct")]
         assert len(ct_terms) == 3
         for t in ct_terms:
             assert t["canonical"] == "Case"
-            assert t["unit_id"] == "UN0001"
+            # unit_id は DB UUID 値
+            assert t["unit_id"] == "c5a6371d-5296-45a3-913f-72f6315b4bb9"
 
     def test_includes_all_8_units(self):
         terms = build_unit_recovery_terms()
         unit_ids = set(t["unit_id"] for t in terms)
-        expected = {"UN0001", "UN0002", "UN0003", "UN0004", "UN0005", "UN0006", "UN0007", "UN0008"}
+        # _UNIT_MASTER_ROWS の unit_id は DB UUID 値（UN0001〜UN0008 のコード文字列ではない）
+        expected = {
+            "c5a6371d-5296-45a3-913f-72f6315b4bb9",  # Case
+            "8e980434-eeff-4233-be5c-bcd0ba1db992",  # Box
+            "225a8677-b1eb-4cb4-b2f0-4df5827d899a",  # Pack
+            "fb707fad-d096-439c-b1af-d411a4a7d18a",  # Piece
+            "9fffcb6c-9a77-4e89-b862-6c9868cfaf34",  # Set
+            "07724cb8-085b-4ed0-b852-84ee20ce9f3c",  # 本
+            "0df9b0c2-ac24-44b6-8dad-a10477c11b76",  # 点
+            "599b72ae-0aa2-4b76-b957-e7ce93369bf5",  # 個
+        }
         assert unit_ids == expected
 
 

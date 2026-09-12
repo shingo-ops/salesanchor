@@ -570,8 +570,60 @@ run_sql migrations/20260903_210000_tcg_distribution_settings_t004.sql
 
 # HIST-01: 再解析履歴テーブル（analysis_runs / analysis_run_snapshots・tenant_004 専用・冪等）
 run_sql migrations/20260903_220000_create_tcg_analysis_history_t004.sql
+run_sql migrations/20260904_160000_tcg_magazine_promo_products_t004.sql
+run_sql migrations/20260905_010000_tcg_pokemon_master_batch1_t004.sql
+run_sql migrations/20260905_020000_tcg_fix_product_names_t004.sql
+
+# REVIEW-STAGE: import_jobs に確認工程カラムを追加（pending_messages/window/unresolved_names/review_status）
+run_sql migrations/20260905_140000_import_jobs_review_stage_t004.sql
+
+# SUP-R2: 仕入元 15件 新規登録（SP0188〜SP0202）+ LINE チャンネル行（tenant_004 専用・冪等）
+run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
+
+# RECORD-01: 直接SQL復旧の記録（SP0007/SP0184 name修正・SP0203/SP0204 新規登録）（tenant_004 専用・冪等）
+run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
+
+# QA-03: tenant_001 に TCG 全テーブル 27 本を作成 + 分類マスタ seed + テスト仕入元 3 件（QA 専用・冪等）
+# tenant_006 は Meta App Review 専用（QA 禁止）→ QA は tenant_001 を使用
+run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
+
+# SEC-01: extraction_jobs.error_message に残る Gemini APIキー付きURL 24行を定型文に置換（tenant_004 専用・冪等）
+run_sql migrations/20260906_230000_redact_extraction_error_keys_t004.sql
+
+# NOTE-EXPAND-A: tcg_note_master 固定札26件追加＋既存2行の検索語更新（tenant_004 専用・冪等）
+run_sql migrations/20260907_100000_tcg_note_master_expand_t004.sql
+run_sql migrations/20260907_120000_tcg_dist_stale_jobs_terminate_t004.sql
+
+# KW-HYGIENE: 商品マスタ キーワード整備 11項目（除外語の自己矛盾解消・壁追加・PM0146無効化）（tenant_004 専用・冪等）
+run_sql migrations/20260907_140000_tcg_keyword_hygiene_t004.sql
+
+# IMPORT-01: 商品マスタCSV取り込み履歴（tenant_004 専用・冪等）
+run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
+
+# IMPORT-01 QA: 同上（tenant_001 専用・冪等）
+run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
 
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
 echo "============================================"
+
+# LMI-SP0136-REQUEUE: SP0136 の残す1件の抽出ジョブを error→pending に戻す（tenant_004 専用・冪等）
+run_sql migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql
+run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
+
+# LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
+run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
+
+# NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
+run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
+
+# PMG import progress: TCG schemas only, additive, no backfill
+run_sql migrations/20260910_010000_tcg_import_message_links.sql
+
+# LINE work evidence before v3 code; dictionary filter is independently idempotent.
+run_sql migrations/20260910_160000_tcg_work_evidence.sql
+run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
+run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
+run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
+run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
