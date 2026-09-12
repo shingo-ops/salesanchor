@@ -76,3 +76,9 @@ v2のGAS一致は移植当時の検証として保存する。v3の商品判定�
 
 LINE取込・分類・在庫反映・履歴・出力の接続が対象。GAS移植当時の最新1件テストは歴史として保持し、改訂実装時に新KGIへ切り替える。既存の商品マスタ/状態正規化契約は保持する。本番被害件数・新方式精度・実DB/配信検証は未確認。自己審査REVISE、実装カード未発行。
 設計: [tcg-import-latest-only/design.md](../handoff/tcg-import-latest-only/design.md)。根拠: [recon.md](../handoff/tcg-import-latest-only/recon.md)、EV-20260913-LINE-STOCK-MESSAGES。
+
+### 2026-09-13 Why追補: 語の登録だけでは誤売り切れを防げない
+
+PO提供2ファイル1,106,390行を20候補語で検索し、該当行の和集合13,105行を観測した（重複投稿を含む検索件数であり売り切れ件数ではない）。ラベル/受付の締切、一般注意、資材欠品、売り切りセール、価格別/発送分別の完売を文脈確認したため、売切候補語と対象を限定した抑止条件を対で管理する草案をdesign.md §12へ追加した。
+
+現行load_status_masterはSELECTしたexclude_patternを戻り値に含めず、resolve_status_v2も評価しない。合成マスタを使う直接検算で否定/仮定の反例2/2がexcludedになった。実マスタ値や本番誤判定率ではない。候補語の文書登録は済み、runtime登録0・自己審査REVISE継続。根拠: EV-20260913-LINE-STOCK-VOCAB、同テーマrecon/probe JSON。

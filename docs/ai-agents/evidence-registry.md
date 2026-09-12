@@ -2435,3 +2435,22 @@ tradeoff: high applies only to fixed-code path and synthetic probe; actual produ
 decision: PO meaning agreement recorded; technical draft self-review REVISE; docs PR https://github.com/shingo-ops/salesanchor/pull/3456 OPEN; no implementation card or production operation
 follow_up: inspect real-message ground truth and offer identity duplicates; finalize DDL/API/UI/rollout then re-review
 ```
+
+```text
+id: EV-20260913-LINE-STOCK-VOCAB
+date: 2026-09-13
+agent: Codex design partner (same-AI Planner/Architect)
+task: PO提供LINE原文から売切候補と誤判定防止条件を設計登録
+scope: two user-provided files read-only; aggregate/hash evidence; docs PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json vocabulary_corpus
+    summary: 2 sources; 1106390 lines; 20 literal search terms; 13105 matching-line union; 14 reviewed context positions with line hashes; no public raw transcript
+  - type: command
+    reference: same JSON status_exclusion_probe; backend/app/services/tcg_analyzer_svc.py:979-1060
+    summary: SELECT exclude_pattern discarded in loader and unused in resolver; synthetic 3 states all excluded including 2 negative/conditional cases; real DB/API calls=0
+confidence: high
+tradeoff: counts describe retrieval only and include reposts/cross-file overlaps; manual context boundary examples are not a complete labeled evaluation set or live offer mapping
+decision: register 11 candidate groups, 8 scoped blocking conditions and 12 regression cases in design only; runtime registration=0; self-review REVISE
+follow_up: establish gold labels and price/shipping/condition/unit-specific offer identity, then finalize scoped exclusion logic, DDL/API and rollout before implementation card
+```
