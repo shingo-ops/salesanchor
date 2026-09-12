@@ -1,0 +1,60 @@
+CARD-RAW-SHARED-SPLIT-03
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 最初に「受領。CARD-RAW-SHARED-SPLIT-03」と返す。
+読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、01-read.md、03-file.md、04-worktree.md、11-lint.md。
+手作業照合: design-partner.md §5.5の1〜7は○（記号引用、PR非対象、全文報告、1目的、既存作業台、具体書式、実測hash）。
+同§5.5の8〜12/L32: ○（対象名、限定出力、停止報告、実測値、表示件数は記録と安全条件を区別、未確定の目印なし）。
+目的: 設計AJどおりCommission3利用を保留し、残13利用の実装検収に進める形を作る。
+設計: docs/specs/design-system/design.md §AH/§AJ（mode: handoff）。対象ADR: ADR-113、ADR-027、ADR-067、ADR-144。
+recon: docs/handoff/design-system-recon/recon.md。再開根拠: evidence-20260910/ah-restart.md。
+担当はGenerator。別の担当も同じリポジトリを使っているため、他者の変更を戻さない。新たなサブエージェント起動は禁止。
+作業場所は既存release/frontend-shared-button-migration。起点はorigin/release/frontend-shared-button-migrationの保存コミット3d6e8aa3。
+新規worktree作成・ブランチ再作成・main取り込みは本カードに含めない。登録済みactive-work.d行を利用する。
+許可する製品編集はfrontend/src/components/CommissionPanel.tsxを基準版へ戻す1件のみ。
+残5TSXと修正済みSharedButtonMigration.test.tsxは全バイト保持。Commission試験は未移管対照として保持する。
+一時保存は手順3が作る/tmp/aj-commission-backup-で始まる専用ディレクトリのみ。パスはコマンドどおり使う。
+禁止: 他製品・CSS・翻訳・Button/Modal本体・テスト修正・依存・CI・backend・API・DB・本番変更。
+禁止: 文書/台帳/GO編集、commit/push/PR/merge/deploy、実API通信。新CIは全画面統一の最後。
+本カードは分割作業だけ。最終表示検収、全体品質、限定第二レビューは未完のまま保持する。
+PR起票は後続検収後の別カードでreadyとして正式wrapperを使う。本カードからは起票しない。
+停止条件: preflight失敗、異なる作業ブランチ、対象製品の予期しない差分、hash不一致、書込み拒否・操作失敗。
+文書だけの新規差分・行数差は記録して続行。カードに書かれた手段が失敗した場合に、別の手段で同じ目的を達することを禁止する。
+失敗したら停止し、生出力を報告する。ガード解除・迂回は禁止。通常の権限申請で拒否された場合も停止する。
+
+手順0: 開始確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && ./scripts/dev/executor-preflight.sh || exit 1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short --branch
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git rev-parse HEAD origin/main
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --name-status 3d6e8aa37f017f8b615337cd9fb60646ca5fdacb -- frontend
+期待する出力: branchはrelease/frontend-shared-button-migration。開始時frontend差分0。文書差分は保持する。
+
+手順1: 対象7製品のstaged差分と既存登録を確認。製品staged差分があれば書込み前に停止する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --cached --name-status -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && cat /Users/tanizawashingo/salesanchor/.claude-pipeline/active-work.d/release-frontend-shared-button-migration.md
+
+手順2: 残6ファイルの保存版との全バイト一致を確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 -c 'import pathlib,subprocess,hashlib; names=["ConfirmModal.tsx", "PriorityScoreOverride.tsx", "OrderFinancialPanel.tsx", "PurchaseDetailPanel.tsx", "ShippingDetailPanel.tsx", "SharedButtonMigration.test.tsx"]; files=["frontend/src/components/"+n for n in names]; pairs=[(f,pathlib.Path(f).read_bytes(),subprocess.check_output(["git","show","3d6e8aa37f017f8b615337cd9fb60646ca5fdacb:"+f])) for f in files]; [print(f,"UNCHANGED" if actual==saved else "CHANGED",hashlib.sha256(actual).hexdigest()) for f,actual,saved in pairs]; assert all(actual==saved for f,actual,saved in pairs),"preserved file mismatch"'
+期待する出力: 対象名付きUNCHANGEDが6件、exit0。
+
+手順3: Commissionの現在hashと基準hashを照合し、元の全バイトを専用/tmpへ退避後、固定基準の全文を入れる。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 -c 'import pathlib,subprocess,hashlib,tempfile; p=pathlib.Path("frontend/src/components/CommissionPanel.tsx"); old=p.read_bytes(); expected="00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e"; assert hashlib.sha256(old).hexdigest()==expected,"Commission current hash mismatch"; data=subprocess.check_output(["git","show","adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b:frontend/src/components/CommissionPanel.tsx"]); assert hashlib.sha256(data).hexdigest()=="a225570d80f5e8eb9cba69e8c8d0ad62423b26492d14fb2c141de64344deac37","base hash mismatch"; backup=pathlib.Path(tempfile.mkdtemp(prefix="aj-commission-backup-"))/p.name; backup.write_bytes(old); assert backup.read_bytes()==old; assert p.read_bytes()==old,"Commission changed during backup"; p.write_bytes(data); assert p.read_bytes()==data; print("BACKUP",backup); print("RESTORED",p,hashlib.sha256(data).hexdigest())'
+期待する出力: BACKUPと実在パス、RESTOREDと対象パスとa225570d80f5e8eb9cba69e8c8d0ad62423b26492d14fb2c141de64344deac37。exit0。
+
+手順4: Commission基準差分0と、残6の全バイト保持を検算。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --exit-code adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b -- frontend/src/components/CommissionPanel.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 -c 'import pathlib,subprocess,hashlib; names=["ConfirmModal.tsx", "PriorityScoreOverride.tsx", "OrderFinancialPanel.tsx", "PurchaseDetailPanel.tsx", "ShippingDetailPanel.tsx", "SharedButtonMigration.test.tsx"]; files=["frontend/src/components/"+n for n in names]; pairs=[(f,pathlib.Path(f).read_bytes(),subprocess.check_output(["git","show","3d6e8aa37f017f8b615337cd9fb60646ca5fdacb:"+f])) for f in files]; [print(f,"UNCHANGED" if actual==saved else "CHANGED",hashlib.sha256(actual).hexdigest()) for f,actual,saved in pairs]; assert all(actual==saved for f,actual,saved in pairs),"preserved file mismatch"'
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --name-status 3d6e8aa37f017f8b615337cd9fb60646ca5fdacb -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --check
+期待する出力: Commission基準差分なし/exit0、残6はUNCHANGED、保存時からのfrontend変更名はCommissionPanel.tsxだけ。
+
+手順5: 編集せず単独操作試験を実行。通信は保存済みテストのモックだけ。失敗時は期待条件・設定を変えず生出力で戻す。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --numstat adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b -- frontend/src/components
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm run test:unit -- src/components/SharedButtonMigration.test.tsx
+期待する出力: 保存時は20操作成功。今回は実際の件数・失敗名・exit値を報告し、過去成功を流用しない。
+
+完了報告は「本報告はカード CARD-RAW-SHARED-SPLIT-03 の実行結果である」で開始。
+設計担当への完了報告本文に生出力を全文含める。各手順○×、実行/未実行、BACKUP実在パスを添える。
+停止時は停止した手順番号・最後のコマンド・理由・対象名・生出力をそのまま返す。
+終端後は停止。Button70→83/旧btn332→319/専用20/リンク8は次の構文再監査の目標で、本カード実行だけで達成とは報告しない。
+表示・coverage・build・Storybook・最終レビュー・PR・PO GO・本番反映の完了を宣言しない。
+END OF CARD

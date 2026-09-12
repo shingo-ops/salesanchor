@@ -1,0 +1,95 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "head": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "remoteMainObserved": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "files": [
+    {
+      "file": "frontend/src/components/ConfirmModal.tsx",
+      "baseBlob": "e0dd3b84c09a606580d71608aa5cc7c7fb3147f6",
+      "headBlob": "e0dd3b84c09a606580d71608aa5cc7c7fb3147f6",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "baseBlob": "807ea3aed3b03a2db3fa14525cea8ca531c6371e",
+      "headBlob": "807ea3aed3b03a2db3fa14525cea8ca531c6371e",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/PriorityScoreOverride.tsx",
+      "baseBlob": "c908870cf0a22b2e5819be353cebfb4a14d9a354",
+      "headBlob": "c908870cf0a22b2e5819be353cebfb4a14d9a354",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/OrderFinancialPanel.tsx",
+      "baseBlob": "a963e9551ad3d7ac4d55f26230e8e144a207bde8",
+      "headBlob": "a963e9551ad3d7ac4d55f26230e8e144a207bde8",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "baseBlob": "b5f8e8b3795ea1a9a7484c1576595e0a8322ee8a",
+      "headBlob": "b5f8e8b3795ea1a9a7484c1576595e0a8322ee8a",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "baseBlob": "2f66a7d69fcc69190ba5dff33738bb80ec9975cc",
+      "headBlob": "2f66a7d69fcc69190ba5dff33738bb80ec9975cc",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "baseBlob": "6c9b49be8f1bbfc3f9ec0d63ffa2703921e24d2a",
+      "headBlob": "6c9b49be8f1bbfc3f9ec0d63ffa2703921e24d2a",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "baseBlob": "d519970d671438532606918037909beaadf7bdcf",
+      "headBlob": "d519970d671438532606918037909beaadf7bdcf",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "baseBlob": "6ae79bbe4ea7c5a1e04b7e15d9d639b17181bd42",
+      "headBlob": "6ae79bbe4ea7c5a1e04b7e15d9d639b17181bd42",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "baseBlob": "d3dcb2b94270ad410970b623ab456e1127ad2709",
+      "headBlob": "d97048616f8b65be92f1bbf5aba10c2248944457",
+      "identical": false
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "baseBlob": "ec55fc9a4c334186ced28a50e2b1fe01c2c61ed1",
+      "headBlob": "ec55fc9a4c334186ced28a50e2b1fe01c2c61ed1",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/Drawer.css",
+      "baseBlob": "81efab4ea39ea0f3213bcaa5a6f9d57889733356",
+      "headBlob": "81efab4ea39ea0f3213bcaa5a6f9d57889733356",
+      "identical": true
+    },
+    {
+      "file": "frontend/src/components/loading/Spinner.tsx",
+      "baseBlob": "f5f81e31614b5c37bc64225f41aef5caa2f4a492",
+      "headBlob": "f5f81e31614b5c37bc64225f41aef5caa2f4a492",
+      "identical": true
+    }
+  ],
+  "frontendChangedFiles": [
+    "frontend/src/components/Modal.css",
+    "frontend/src/components/Modal.stories.tsx",
+    "frontend/src/locales/en.json",
+    "frontend/src/locales/ja.json",
+    "frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx",
+    "frontend/src/pages/super-admin/TcgProductMasterPage.tsx",
+    "frontend/tests-e2e/tcg-product-import.spec.ts"
+  ],
+  "preconditionDiff": "diff --git a/frontend/src/components/Modal.css b/frontend/src/components/Modal.css\nindex d3dcb2b9..d9704861 100644\n--- a/frontend/src/components/Modal.css\n+++ b/frontend/src/components/Modal.css\n@@ -81,6 +81,7 @@\n \n .comp-modal-footer {\n   display: flex;\n+  flex-wrap: wrap;\n   align-items: center;\n   justify-content: flex-end;\n   gap: var(--space-3);\n"
+}
