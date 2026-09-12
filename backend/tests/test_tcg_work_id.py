@@ -110,3 +110,18 @@ def test_reference_change_saves_no_items(monkeypatch, invalid):
     result = extraction._run_extraction(session, "source")
     assert result["status"] == "error" and result["items_count"] == 0
     assert all("INSERT INTO" not in str(call.args[0]) for call in session.execute.call_args_list)
+
+
+def test_valid_but_conflicting_id_is_not_saved(monkeypatch):
+    session = MagicMock()
+    session.execute.return_value.fetchone.return_value = ("job", "Gundam EB01")
+    monkeypatch.setattr(extraction, "work_schema_ready", lambda _: True)
+    monkeypatch.setattr(extraction, "load_work_reference", lambda *_: REF)
+    monkeypatch.setattr(extraction, "extract_message", lambda *a, **k: {
+        "status": "done", "prompt_version": "raw-extraction-v4-work-id-p1", "error_message": None,
+        "items": [{"raw_product_name": "Gundam EB01", "line_start": 1, "line_end": 1,
+                   "resolved_work_id": ONE}]})
+    result = extraction._run_extraction(session, "source")
+    assert result["status"] == "error" and result["items_count"] == 0
+    assert "contradicts" in result["error_message"]
+    assert all("INSERT INTO" not in str(call.args[0]) for call in session.execute.call_args_list)
