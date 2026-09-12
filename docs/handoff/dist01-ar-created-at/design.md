@@ -112,3 +112,9 @@ POからCodex Terra起動・ローカル実装/試験/コミットまでの限�
 実機にはPython3.12.8とColima0.10.3、停止中sa-private-ci profileがある。既存profileは触らず、今回だけのdist01-3258をCPU1/メモリ1GiB/ディスク4GiB、既定context/SSH config変更なし・mountなしで起動し、終了後停止する。Python3.12専用venvへ指定依存を導入する。
 Context7 MCPは利用可能一覧に存在しなかった。許可済み代替としてColima公式 https://github.com/abiosoft/colima と実機start/status --helpを確認した。CLIのprofile、cpus/memory/disk、activate/ssh-config/mount引数を照合。製品・CI・本番設定の変更はない。
 限定補正の自己審査APPROVE: ローカル実テストの既存目的内、他環境分離、資源上限と終了条件を固定。実PG実測結果はまだ未確認。
+
+
+## 2026-09-12 実装検証とPR更新依頼
+
+実装510548c3でcomputed_atの1行修正と専用実PG試験を保存。修正前実DBの不存在列エラー8失敗/2成功、修正後専用+既存試験35成功/skip0をTerraが実行しrootがログ照合した。Ruff成功、Bandit高重大0/skip0。mypyは最終ログ531診断で非blocking、途中71という報告は訂正。同環境mainの全診断比較は未実施。試験専用Colima停止済み、製品依存・CI変更なし。
+PO原文「進めるPRマージして本番反映させてくれ」を受領。既存PR更新とCI確認をカード04で進める。番号付きGO原文を創作せず、現行検査の形式が揃うまでマージしない。旧updated_at案のGO記載は新HEADへ再利用しない。

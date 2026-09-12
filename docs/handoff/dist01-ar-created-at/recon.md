@@ -68,3 +68,9 @@ POに提示した未決事項は「直近30日」の基準日時1件。最後に
 削除宣言の前回指摘は誤りだった。scripts/check-process-artifacts.js:797–817はnumstatのdeletions>0を宣言対象にし、810行に1行の変更も含むと明記する。PR #3258のサービス記載は正しい。公開本文は変更していない。
 正規DDLのFKとNOT NULLを確認済み: 解析fixtureはsource_messages→extraction_jobs→extraction_items→analysis_resultsを作り、analysis_results必須booleanとengine_versionを明示する。
 自己審査APPROVEは限定設計のみ。製品・試験実装なし、代理GO・マージ・本番反映なし。
+
+
+## 2026-09-12 実装検証とPR更新依頼
+
+実装510548c3でcomputed_atの1行修正と専用実PG試験を保存。修正前実DBの不存在列エラー8失敗/2成功、修正後専用+既存試験35成功/skip0をTerraが実行しrootがログ照合した。Ruff成功、Bandit高重大0/skip0。mypyは最終ログ531診断で非blocking、途中71という報告は訂正。同環境mainの全診断比較は未実施。試験専用Colima停止済み、製品依存・CI変更なし。
+PO原文「進めるPRマージして本番反映させてくれ」を受領。既存PR更新とCI確認をカード04で進める。番号付きGO原文を創作せず、現行検査の形式が揃うまでマージしない。旧updated_at案のGO記載は新HEADへ再利用しない。
