@@ -919,3 +919,10 @@ id/code/変更前名称の全一致を条件にjapanese_titleのみ「受け継�
 
 SQLはPGOPTIONS=-c default_transaction_read_only=onを使用（上記名称1件の明示修正を除く）。初回の標準入力形式はpsql-write-guardに拒否されたため、ガードに明記された-c SELECT形式で読み取りを実施。生の顧客投稿は公開文書へ載せない。
 現在の解析値を正解ラベルとみなさず、未解決減少と誤確定増加を別々に比較する。プロンプト内のモデル名からSDKの仕様やトークン上限を推測しない。
+
+
+### PR #3441 検証・退避記録
+
+[PR #3441](https://github.com/shingo-ops/salesanchor/pull/3441)をready提出。初回CIの並列収集はランダムUUIDパラメータの不一致で失敗し固定UUIDへ訂正。run34663710924（6c47fe18）は2604成功/95skip/1失敗、coverage62.38%。唯一の失敗は旧状態/注記fixtureで新schema未準備・作品参照欠落。実migrationと架空作品参照を追加（8d245eac）。直近検証結果はPRのHEAD付きチェックを参照し、旧HEADの結果を新HEADの合格とみなさない。
+承認gate job103471510004（run34663790634）を含む各回は番号付きGO記録が無いため失敗。POの一般的な条件付き実行依頼を「GO #3441」と代筆しない。マージ/機能配備/再抽出/再解析/配信は未実施。
+本番9表（extraction_jobs/extraction_items/analysis_results/item_corrections/source_messages/tcg_products/tcg_series/product_search_keywords/product_exclude_keywords）をpg_dumpで読取退避。ローカル/private/tmp/salesanchor-line-work-before-3441.sql、17837898 bytes、SHA256 399c9e9a6df673ef888143214ab612ca7a6d8b975d38f537cdd83ef6aa284e3b。公開PRにデータ本体を含めない。一時保存であり永続退避の保証は無い。本番実行前に対象の鮮度と退避の読取可能性を再確認する。

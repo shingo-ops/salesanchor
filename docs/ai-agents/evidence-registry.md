@@ -2391,3 +2391,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-12: PO原文「今回geminiに判断させるのは作品IDのみ、ほかは原文抽出させる」「進める」。本番読み取り293商品/8作品/作品NULL0、現promptは作品推測禁止。詳細はdocs/handoff/tcg-product-master-growth/recon.md末尾、方式案はdesign-keyword.md §16。PM0181商品名を明示依頼により意思→意志、旧値退避、UPDATE 1と再SELECT確認。検索語未変更。製品実装・再抽出・配信未実施。後続指示はテストでGemini使用禁止、本番マージ後の最新取込で抽出/解析、精度向上確認後に要確認以外を配信。代理GO有効化ではない。
 
 EV-20260912-LINE-WORK-ID実装追記: §16.10で事前実API禁止に対応。カードL29を修正して終了0、長行警告のみ。実装/静的検査/文書検査済み、ローカルDocker不在により実DBはCI前。Gemini実呼出し0、本番機能変更0。
+
+EV-20260912-LINE-WORK-ID PR提出: PR #3441 ready。run34663710924は2604成功/1失敗/95skip、旧fixture不足を8d245eacで修正。最終判定はPR最新HEAD。現行gateは番号付きGO原文欠落で停止。9表17837898 bytes退避、hashはrecon末尾。Gemini実呼出し0、マージ/本番反映/再抽出/配信0。
