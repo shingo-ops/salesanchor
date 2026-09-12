@@ -15,6 +15,7 @@ import urllib.request
 import uuid
 
 from android_parser import parse_android_export
+from firebase_session import AuthError, Session
 
 ENDPOINT = 'https://api.salesanchor.jp/api/v1/tcg/line-import/android'
 MAX_BYTES = 10 * 1024 * 1024
@@ -69,12 +70,7 @@ class Outbox:
         config = json.loads((self.base / 'config.json').read_text())
         if config.get('endpoint') != ENDPOINT or config.get('enabled') is not True:
             raise ValueError('Android専用APIの導入確認後に送信を有効にしてください')
-        token_file = self.base / 'token.txt'
-        if token_file.stat().st_mode & 0o077:
-            raise ValueError('認証ファイルの権限を600にしてください')
-        token = token_file.read_text().strip()
-        if not token or '\n' in token or '\r' in token:
-            raise ValueError('認証情報を端末内で設定してください')
+        token = Session(self.base).token()
         transport = transport or post
         rows = self.db.execute("SELECT digest,attempts FROM jobs WHERE state IN ('queued','retry','auth_required') AND (retry_at <= ? OR ?)",
                                (time.time(), int(force))).fetchall()
@@ -140,7 +136,7 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', default=str(Path.home() / '.local/state/line-android-import'))
-    parser.add_argument('action', choices=['enqueue', 'send', 'status', 'set-token', 'enable'])
+    parser.add_argument('action', choices=['enqueue', 'send', 'status', 'set-token', 'enable', 'login'])
     parser.add_argument('file', nargs='?')
     args = parser.parse_args()
     outbox = Outbox(args.state_dir)
@@ -151,7 +147,7 @@ def main():
                 if not args.file:
                     raise ValueError('ファイルを指定してください')
                 print(json.dumps(outbox.enqueue(args.file), ensure_ascii=False))
-                if (outbox.base / 'config.json').exists() and (outbox.base / 'token.txt').exists():
+                if (outbox.base / 'config.json').exists() and ((outbox.base / 'token.txt').exists() or (outbox.base / 'session.json').exists()):
                     print(json.dumps(outbox.send(), ensure_ascii=False))
                 else:
                     print('原本を保存しました。API導入・認証設定後に送信できます。')
@@ -159,7 +155,11 @@ def main():
                 print(json.dumps(outbox.send(force=True), ensure_ascii=False))
             elif args.action == 'status':
                 print(json.dumps(outbox.status(), ensure_ascii=False))
+            elif args.action == 'login':
+                Session(outbox.base).interactive_login()
             elif args.action == 'set-token':
+                if (outbox.base / 'session.json').exists():
+                    raise AuthError('自動更新セッションがあります。loginで再ログインしてください。')
                 token = getpass.getpass('MFA認証済みFirebase IDトークン（非表示）: ').strip()
                 if not token or any(c.isspace() for c in token):
                     raise ValueError('認証情報が空、または形式が不正です')
@@ -170,7 +170,10 @@ def main():
             elif args.action == 'enable':
                 (outbox.base / 'config.json').write_text(json.dumps({'enabled':True,'endpoint':ENDPOINT}))
                 print('Android専用APIへの送信を有効にしました。')
-        except (ValueError, OSError, sqlite3.Error):
+        except AuthError as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        except (ValueError, OSError, sqlite3.Error, KeyError, TypeError, EOFError):
             print('処理を完了できませんでした。原本は保持されています。形式・認証・設定を確認してください。', file=sys.stderr)
             return 1
         finally:
