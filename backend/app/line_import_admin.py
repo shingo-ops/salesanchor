@@ -1,17 +1,16 @@
 """Fixed maintenance operations; no device key or arbitrary SQL is accepted."""
 import asyncio
 import base64
-import os
 import hashlib
 import json
 import logging
+import os
 import sys
 from uuid import UUID
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
 from sqlalchemy import text
 
 from app.database import AsyncSessionLocal

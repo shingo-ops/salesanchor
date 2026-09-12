@@ -174,6 +174,7 @@ async def test_existing_commit_rejection_is_preserved():
 def test_private_report_only_decrypts_with_local_key_and_detects_tampering():
     import base64
     import json
+
     from cryptography.exceptions import InvalidTag
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
