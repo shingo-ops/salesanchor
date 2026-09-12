@@ -2428,3 +2428,26 @@ tradeoff: frontend警告218/mypy153残存。HTTP回帰/実PG/CI/本番QAは未�
 decision: ローカル実装と差分確認済み。公開・マージ・本番操作なし
 follow_up: 別便で製品差分を保存・公開し正式CIで追加試験を検証
 ```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-PUBLISH
+date: 2026-09-12
+agent: csv_card_executor (publication), Codex design partner (read-only verification)
+task: 空CSVサンプルとUser型修正の製品PR公開・CI確認
+scope: PR3438、8製品＋4設計文書
+evidence:
+  - type: pr
+    reference: https://github.com/shingo-ops/salesanchor/pull/3438
+    summary: HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、OPEN、12ファイルを親が直接確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-final.json
+    summary: CI40成功/6対象外/1失敗。全pytest/PostgreSQL集約は成功。process-artifacts失敗
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-gate.json
+    summary: 手元の設計/維持/引用検査は各エラー0、GO欄欠落を検出。CIログではない
+confidence: high
+tradeoff: AC5修正前への復元失敗確認未実施。CI個別ログ/総件数/skip件数未取得。全受入完了ではない
+decision: 製品PR公開・CI確認済み。GO/マージ/本番反映は未実施
+follow_up: 残る回帰確認とCI失敗詳細を確認してからPOへマージ判断を提示
+```

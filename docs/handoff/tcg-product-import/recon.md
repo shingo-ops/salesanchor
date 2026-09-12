@@ -394,3 +394,16 @@ PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKI
 ### 2026-09-12 公開前の改行検査
 
 新規CSVをstageした後の通常git diff --cached --checkがCRLFを末尾空白と判定した。前便は未追跡資産がgit diff --check対象外であった。設計必須のCRLFは維持し、Git公式core.whitespaceのcr-at-eolを当該検査コマンドだけに指定。blank-at-eol/blank-at-eof/space-before-tabは保持。親が同一stage差分へ直接実行しexit0を確認した。永続Git設定/ガード/CI/製品変更なし。Context7未提供のため許可された代替で https://git-scm.com/docs/git-config のcore.whitespaceを直接確認。実資産の148バイト・BOM/CRLF/10列/0行検査は別に成功済み。
+
+
+### 2026-09-12 製品PR #3438の公開
+
+公開カード01により実装役が製品781257a5、main追従d21b0d26、設計根拠ff008f180e150be2241ad7d6d2d2f292a439f900を保存しpush。PR https://github.com/shingo-ops/salesanchor/pull/3438 を正式作成した。親がgh pr list/viewで番号・HEAD・8製品＋4文書の12ファイルを直接確認。main追従の追加は独立した委任文書4本、製品8ファイルは前便検証時のSHA256と一致することを実装役が再確認。未保存差分0、公開報告は /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01.txt。
+
+公開中の停止: 通常のstage差分検査のCRLF判定は前節の方法で解消。commit要求の前にログ開始処理を置いたためhookが本店mainと判断して拒否した件は、ログ保存とgit操作を別要求にし、先頭を実在する専用worktreeへのcdとした同じcommitで成功。保護設定の変更なし。
+
+CI process-artifacts gateはFAILURE。詳細ログ取得はghのローカルキャッシュ作成がoperation not permittedで停止。再試行/ガード変更は行わず、親は公開PR本文と実ファイルに既存export検証関数を適用して別途照合した。設計構造・維持の仕組み・引用パスのエラーは各0、GO記録欄欠落を検出。証拠 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-gate.json。これはローカル検査結果でありCI失敗ログではない。POのマージGO未取得につき記録を創作しない。
+
+最終CI確認: 親がgh pr view 3438のstatusCheckRollupを直接取得。HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、OPEN、SUCCESS40/SKIPPED6/FAILURE1。pytest-run-internalとpytest (SQLite + PostgreSQL RLS)はSUCCESS、run34661709205。失敗はprocess-artifacts gateのみ。対象外skipを試験成功と数えない。保存 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-final.json。CIの全suite実行定義は .github/workflows/test.yml:206、pytest -qは同:241。HTTP対象ファイルも全suiteに含まれるが、個別ケースログ・総件数・skip件数は取得していない。DB書込をモックにしたHTTP試験を本番商品登録成功とはしない。
+
+受入上の残件: AC5の修正前user.getへ戻した回帰失敗の実行確認は未実施。通常の全suite成功からこの確認まで完了したとは言わない。設計条件を勝手に削除せず残す。マージ判断前にこの確認とprocess-artifacts詳細確認を行い、その後PO GOを受領する。製品PR提出・CI確認まで実施済み、全受入完了/マージ可能/本番反映済みとは宣言しない。LINE委任も有効化待ち。
