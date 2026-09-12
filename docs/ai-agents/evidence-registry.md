@@ -2366,6 +2366,56 @@ EV-20260911-FRONTEND-MOLD-29: AI PR3435 ready提出を.pr-number/head指定一�
 
 EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原文「GO #3435」を受領。対象はPR3435の共通Modal footer修正。製品2hashは検収版と同一。最新CI確認後に正式merge、PO目視/本番確認は未実施。AH16移管はこの前提のマージ後に再開、新CIは最後。 証拠: PR https://github.com/shingo-ops/salesanchor/pull/3435 のGO記録と検収記録。
 
+
+### EV-20260911-FRONTEND-MOLD-31 — 共通16ボタン移管の再開
+
+先行PR #3435は2026-09-11T09:07:09Zにmerge adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70bでマージ済み。rootがGitHub APIのMERGEDと最終HEAD9780f1dcのCI38成功/8対象外を直接確認。PO目視・本番反映は未確認。
+
+PO原文「進めてくれ」を受領し、同mergeを起点にrelease/frontend-shared-button-migrationを公式手順で作成。AHの6TSXは退避基準7606ca9aから差分0、Button本体とModal.tsxも差分0、Modal.cssは先行wrap1行だけを確認。再監査でも旧先頭btn332/専用20、AH16原文一致。7退避案は未検証扱いで復元後の操作/表示検収へ進む。新CIは全画面統一後、最後。
+
+CARD-RAW-SHARED-RESUME-02は正式card-lint exit0（長行警告のみ）。Generatorは6TSXと回帰試験の7製品のみ、rootは設計・検収・記録を担当する。AHの製品契約変更なし。Planner追補後、同一AI Architectとして再開前提の整合を自己審査APPROVE。AHの提出合格は実検証と限定第二レビュー後に別途判定し、現時点で未完。新PR番号付きGOは未受領。
+
+
+### EV-20260911-FRONTEND-MOLD-32 — 報酬表3利用の分離
+
+根拠: 390px/英語の実CommissionPanelでは旧から横overflowがあり、body clientWidth390に対してscrollWidth528→537。解除ボタンの初期左417.46875は前後同値、右487.5→496.90625。native scrollIntoView後の右389.5→389.90625と、新Buttonの輪郭2px+offset2pxは画面端で切れる。別inventoryの強制中心寄せ後の失敗0は初期欠けの解消を示さず、提出合格に採用しない。実fixture・通信mock・画像・祖先rectを保存し、rootと限定読み取り担当が照合した。
+
+POの原因別分離・順次移行という既存許可に従い、BSA002/003/004のCommissionPanel3利用を本便から外し、後続の表統一と一緒に再設計する。表CSS/横スクロール修正をボタン移管へ混載しない。残るBSA005/006、025–035の13利用を先行する。全体の目標とCI最後は変更しない。
+
+製品許可はConfirmModal.tsx、PriorityScoreOverride.tsx、OrderFinancialPanel.tsx、PurchaseDetailPanel.tsx、ShippingDetailPanel.tsx、SharedButtonMigration.test.tsxの6ファイル。CommissionPanel.tsxは退避hashを照合して基準adc8bc4dの原文へ戻し、最終製品差分0にする。既存Commission操作試験は未移管の対照として残せるが、移管済みと数えない。
+
+| 基準 | 検証方法 |
+|---|---|
+| 13利用だけ移管、共通Button70→83、旧btn332→319 | 同じ構文監査を再実行。専用20・リンク8不変、Commission製品差分0。残5TSXは許可import/tag/class以外のAST差分0 |
+| 操作維持・試験の型互換 | 5実部品の既存/新規保存、確認/取消、外部form、disabled、CSV、初回focusと復帰を測定。既存型にテストを合わせ、型設定/期待条件は緩和しない |
+| 画面からの欠けを検出 | 明暗×日英×幅390/767/768/1279/1280、別記640pxの200%相当狭幅。初期横overflowと各対象ボタンの到達後表示を別々に記録。明示対象13の欠落0。実クリップ祖先/viewportの上下左右と輪郭を検査し、測定直前の強制中心寄せで初期問題を隠さない |
+| 長文・キーボード | Confirm実呼出しの最長ラベル組を日英で確認。実Tab/ShiftTab/Enter/Spaceの操作を検証し、programmatic focus/scrollだけの測定と区別する |
+| 最終品質 | 厳格対象lint、単独操作試験、全体coverage、既存checkall/build/Storybook/PR CI。失敗原ログを保持し、対象外不備を勝手に修正しない |
+
+現時点: 追加20操作試験の単独実行成功、全体coverageは時間超過等でexit1（11files failed、21tests failed/188passed、worker未起動2）、rootcheckall0、build2でテスト型不適合4件、Storybook未実行。これらを環境要因だけと断定せず再検証する。root観測load averages84.34/81.91/76.48は同時刻の事実で、失敗の原因証明ではない。
+
+代替は報酬表の配置修正を先行することだが、表の共通化を扱う既存計画と責務が重なるため本便への追加は採用しない。13移管を先に保存し、報酬3は表の移行台帳に保留と明記して抜けを防ぐ。担当はroot設計/台帳、Generator6製品、既存Reviewerの限定検収。外部導入事例は不要（自社実物の前後比較が直接根拠）。API/DB/backend/新CI/本番は非接触、rollbackはこの移管PR単位。Planner作成後に同一AI Architect自己審査APPROVE（分割設計）。実装の提出合格・新PR番号付きGO・PO目視は未完。
+
+
+### EV-20260911-FRONTEND-MOLD-33 — PO再起動中断保存
+
+PO原文「再起動するからここまでを保存して記録してくれ」。現コード16移管WIP/AJ13分離未適用、型修正後20単独成功/全体未合格を区別して保存。入口docs/handoff/design-system-recon/evidence-20260910/ah-restart.md。commit/pushの実在は最終コマンド結果で確認、本便PR未提出。
+
+
+### EV-20260912-FRONTEND-AJ-CARD — 再開・13利用分割カード
+
+PO原文「進める」。対象HEAD3d6e8aa3とリモート一致、base adc8bc4d、開始時未保存0、PRなしを直接確認。
+CARD-RAW-SHARED-SPLIT-03を作成。正式card-lint exit0（長行警告5件）、shell/Python構文検査成功、Commission固定hash2件一致。
+根拠: docs/handoff/design-system-recon/recon.md「2026-09-12 AJ分割カード作成・自己審査」 / docs/handoff/design-system-recon/evidence-20260910/aj-split-card.txt。
+同一AI自己審査APPROVEは分割カードのみ。製品編集0・カード実行未着手・表示/全体品質/PR/GO/マージ未完。
+
+
+### EV-20260912-FRONTEND-AJ-VERIFY — 13利用分割と検収
+
+PO原文「承認する、離席するのでPR．マージ、本番反映までしてくれ」。委任された担当1名がCommission復元/20操作成功を報告。rootは構文監査、全体23files220tests/品質5項目、表示120組/実Confirm60/キー10を直接実行し成功。
+根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / aj-validation-manifest.json / aj-validation-checkpoint.tar.gz。
+限定レビューAPPROVEとroot直接検算を区別。PR提出へ進むが現行GO検査は番号なしの受領原文を拒否。原文の創作なし、マージ/本番反映未実施。
+
 ## EV-20260910-LINE-GO-DELEGATION
 
 - 対象: 既存GOフローの子テーマ、LINE解析改善の期限付き委任。
@@ -2385,6 +2435,12 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 - 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
 
+
+### EV-20260912-FRONTEND-AJ-PR — PR3442提出と承認待ち
+
+ready PR https://github.com/shingo-ops/salesanchor/pull/3442 。初回44320bd6、base main、draft false、登録番号3442を直接照合。
+製品hash7/7保持。初回process-artifacts job103471236394のAPIログはGO記録なし/exit1。PO依頼原文は保持、番号創作なし。
+最新HEAD/CIはPR参照。正式番号付きGO受領・再検査前のマージ/本番反映なし。根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md。
 ## EV-20260912-LINE-ANDROID-IMPORT
 
 Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。PR #3443のCI run 34672625832で全体pytest 2,608成功/95 skip。API回帰試験成功、本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。
