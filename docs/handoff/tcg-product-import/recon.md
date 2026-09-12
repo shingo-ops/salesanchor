@@ -394,3 +394,86 @@ PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKI
 ### 2026-09-12 公開前の改行検査
 
 新規CSVをstageした後の通常git diff --cached --checkがCRLFを末尾空白と判定した。前便は未追跡資産がgit diff --check対象外であった。設計必須のCRLFは維持し、Git公式core.whitespaceのcr-at-eolを当該検査コマンドだけに指定。blank-at-eol/blank-at-eof/space-before-tabは保持。親が同一stage差分へ直接実行しexit0を確認した。永続Git設定/ガード/CI/製品変更なし。Context7未提供のため許可された代替で https://git-scm.com/docs/git-config のcore.whitespaceを直接確認。実資産の148バイト・BOM/CRLF/10列/0行検査は別に成功済み。
+
+
+### 2026-09-12 製品PR #3438の公開
+
+公開カード01により実装役が製品781257a5、main追従d21b0d26、設計根拠ff008f180e150be2241ad7d6d2d2f292a439f900を保存しpush。PR https://github.com/shingo-ops/salesanchor/pull/3438 を正式作成した。親がgh pr list/viewで番号・HEAD・8製品＋4文書の12ファイルを直接確認。main追従の追加は独立した委任文書4本、製品8ファイルは前便検証時のSHA256と一致することを実装役が再確認。未保存差分0、公開報告は /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01.txt。
+
+公開中の停止: 通常のstage差分検査のCRLF判定は前節の方法で解消。commit要求の前にログ開始処理を置いたためhookが本店mainと判断して拒否した件は、ログ保存とgit操作を別要求にし、先頭を実在する専用worktreeへのcdとした同じcommitで成功。保護設定の変更なし。
+
+CI process-artifacts gateはFAILURE。詳細ログ取得はghのローカルキャッシュ作成がoperation not permittedで停止。再試行/ガード変更は行わず、親は公開PR本文と実ファイルに既存export検証関数を適用して別途照合した。設計構造・維持の仕組み・引用パスのエラーは各0、GO記録欄欠落を検出。証拠 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-gate.json。これはローカル検査結果でありCI失敗ログではない。POのマージGO未取得につき記録を創作しない。
+
+最終CI確認: 親がgh pr view 3438のstatusCheckRollupを直接取得。HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、OPEN、SUCCESS40/SKIPPED6/FAILURE1。pytest-run-internalとpytest (SQLite + PostgreSQL RLS)はSUCCESS、run34661709205。失敗はprocess-artifacts gateのみ。対象外skipを試験成功と数えない。保存 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-final.json。CIの全suite実行定義は .github/workflows/test.yml:206、pytest -qは同:241。HTTP対象ファイルも全suiteに含まれるが、個別ケースログ・総件数・skip件数は取得していない。DB書込をモックにしたHTTP試験を本番商品登録成功とはしない。
+
+受入上の残件: AC5の修正前user.getへ戻した回帰失敗の実行確認は未実施。通常の全suite成功からこの確認まで完了したとは言わない。設計条件を勝手に削除せず残す。マージ判断前にこの確認とprocess-artifacts詳細確認を行い、その後PO GOを受領する。製品PR提出・CI確認まで実施済み、全受入完了/マージ可能/本番反映済みとは宣言しない。LINE委任も有効化待ち。
+
+
+### 2026-09-12 残件検証の続行
+
+PO返答原文「次を進める」を、残る回帰確認と失敗ゲート原因確認の続行として受領。マージGOとは扱わない。実装worktree preflight成功、HEAD ff008f18/未保存差分0を直接確認。最新origin/mainは66b41766で独立テーマの文書追加のみ、製品更新なし。本店の未保存変更には手を触れない。正式LINE委任文書もdraft/開始終了未設定で有効化待ち。
+
+前回のログ取得停止はghキャッシュ書込のsandbox制限。親が同じPRの通常ログ取得をrequire_escalatedの正規権限審査へ提出し成功。設定・キャッシュ場所・ガードの変更なし。最新失敗run34661932465/job103466046948の実ログは「PR本文にGO記録セクションがありません」。前便のローカル推定を実ログで裏付けた。保存 /tmp/reports/SA-CSV-REMAINING-GATE-20260912.txt。
+
+同じ正規経路でBackend CI run34661709205/job103465409882の成功ログも取得。2601 passed / 95 skipped / 301 warnings / 110.42s、対象routerのカバレッジ96%。これは既存全suite/PG実行結果であり修正前対照の結果ではない。保存 /tmp/reports/SA-CSV-BACKEND-CI-20260912.txt:1066。個別case名は集約ログに出ない。
+
+AC5対照検算: 既存実装役csv_card_executorが /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.py を実行しexit0。製品ファイルは変更せず、既存test_commit_with_real_userを直接await。元main adc8bc4dのexecuted_by式とASTを照合し、対象関数のメモリ上codeだけを旧user.get式へ交換。emailあり/id代替/両方空の3ケースすべてAttributeError「User object has no attribute get」を再現し、finallyで現行codeへ復元後は同じ3ケースすべて既存HTTP assertion成功。旧式以外の関数本体の一致と変更式1箇所をassertした。
+
+親は検算スクリプト・結果JSONを直接読み、6結果、io_attempts空、8製品SHA256前後一致をassert。HEAD ff008f18と未保存0も実装役が確認。追加mockはAuditMiddleware._record_data_access/_record_auth_eventで両条件共通。認証require_super_admin/対象HTTP assertionは変更せず、全mock・関数code・依存上書きの復帰をassert。実装役がテスト用venvへ既存requirementsを導入し、検算時は環境変数をテスト用に限定、dotenv読み込み・DB接続・外部通信を拒否して試行0を確認。
+
+証拠: /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.json（前後ハッシュと6ケース）、同.txt（実行出力）、同.py（検算手順）。Docker不在につきpytestを実行した結果ではない。これは既存試験関数直接呼出によるASGI内HTTP対照検算であり、CI全suiteの2601成功/95skipとは別の検証。DB書込・監査記録はmock、本番登録成功の証明ではない。AC5の修正前失敗確認の残件を解消。
+
+判定更新: 限定設計§15の検証残件とCI失敗原因確認は完了。設計担当による自己審査・読み取り確認であり独立第三者レビューと称さない。POの番号付きGOは未取得、マージ・本番反映・実データ登録は未実施。main pushで本番配備が起動するため、今後のマージ判断では本番への影響と直前の確認を含める（.github/workflows/deploy.yml:3）。
+
+
+### 2026-09-13 本番反映前の確認
+
+PO原文「進めてくれ」は直前説明の本番反映前確認への指示として受領し、番号付きGOには読み替えない。実装先preflight成功、PR3438はOPEN/未マージ、開始HEAD ff008f18。mainは5b21b3b8へ更新。追加は独立LINE機能等で今回の8製品ファイルとの重複0。app/main.pyの追加はline_import_devicesのimport/include_router。親がこの変更を読取照合し、既存公開カードのmain追従前提を解消して同じ実装役に統合・SHA照合・CI再確認を委任した。
+
+本番の読取確認: API /api/healthとAppトップはcurlでHTTP200。制限付きsalesanchor-claude鍵で要求したHEAD/backup一覧はForceCommandにより監視統計だけ返り、これをHEAD/backup確認済みとは扱わない。無制限鍵への変更なし。統計上はbackend/DB等のコンテナを確認、ディスク45%使用。
+
+最新成功配備run34688991647はmain5b21b3b8。正規権限審査で配備実ログを取得し、2026-09-12 19:39 JSTのsalesanchor_db_20260912_193916.sql.gz（6.7M）生成、HEAD5b21b3b8への更新、19:42 JSTのhealth check成功を直接確認。保存 /tmp/reports/SA-CSV-LATEST-DEPLOY-20260913.txt:583/:1030/:4635。これは過去配備時の生成証拠であり、現在ファイルの存在や復元試験は未確認。
+
+今回のPRはDB migration/サービス/運用スクリプト変更0。既存配備はmain pushで自動起動し、git更新前にbackup.sh実行＋ファイル存在検査があり、失敗時はset -eで停止（.github/workflows/deploy.yml:127）。健康確認失敗時は前HEADへの自動復旧処理がある（同:550）。コード復旧で後日の商品登録データを巻き戻せるとはしない。今回の配備直前バックアップは未来の処理であり未取得。GO後の配備では新しいバックアップ記録と本番HEAD/健康状態/空CSV実資産を確認して完了判定する。
+
+統合確認: 実装役がmain5b21b3b8を取り込み新HEAD2184092c4f7cafcb43188626490c892db5ed82d7をpush。親もPR JSONでHEADと既存12ファイル（8製品＋4文書）を直接確認。8製品SHAは前便の対照検算から一致。公開証跡 /tmp/reports/SA-CSV-PRE-RELEASE-20260913.txt。API health本文はstatus ok/database connected/redis connected/celery connected。本番データへの書込0。
+
+補足: 復旧文書の文字列検索要求は、検索語とパイプの組合せがPreToolUseのDB書込検知に一致して実行前に拒否された。DB操作を要求したものではないが許可解除は行わない。独立したgit diffと保存済みhealth本文の読取は別要求で成功。復旧経路の根拠はすでに読み取った既存deploy.ymlで確認しており、DB復元は行わない。
+
+最終CI: 親がgh pr viewでHEAD2184092c/OPEN/MERGEABLEと38SUCCESS/6SKIPPED/1FAILUREを保存。/tmp/reports/SA-CSV-PRE-RELEASE-FINAL-20260913.json。全pytest/PG成功、最新process-artifacts失敗run34716811945/job103615430624は実装役が正規権限審査で取得した実ログでGO欄欠落と確認。追加製品修正0。POへ提示する判断対象はPR3438マージ＋自動本番配備であり、GOの代筆はしない。
+
+実装役の最終報告: Backend run34716811995/job103615468603の実ログは2674 passed/95 skipped/309 warnings/112.94s。親は実装役の保存ログ該当行を確認。PR本文を最新HEAD/CI件数/失敗runへ更新済み、対照検算は旧HEADで実行・新HEAD8製品SHA一致と区別している。
+
+
+### 2026-09-13 POの番号付きGO受領
+
+PO原文「GO #3438」を受領。直前に提示した対象はPR3438のマージと自動本番反映、完了確認はbackup/配備HEAD/health/空CSV実資産である。直前の別番号「GO #3458」は本件の承認に用いず停止し、その後の正しい番号だけを採用した。転記用確認時刻2026-09-13 05:36:56 JST（実時刻取得）。これはAI委任GOではなくPO本人の発話の記録。
+
+再確認時のmainはd66923e2へ進んでいた。今回8製品と共通Button自体の変更0、追加は別画面部品のButton統一と設計文書であり、商品CSV機能から当該部品への参照0を確認。既存担当へ最新main統合・CI再確認・GO転記・正式merge・自動配備監視を明記したcard-release.mdを渡す。親は製品操作を担当しない。
+
+反映カードのmain再照合: 実装役はfetch時にmain4d30c0baを検出して統合前に停止。親がd66923e2との差分を確認し、配信サービスの日付列created_at→computed_atの1行と回帰試験/文書だけで、商品CSVの8製品変更0・配信サービス参照0を確認した。許可mainを4d30c0baへ更新。マージコマンドには実CLI helpで確認したmatch-head-commitを加え、CI確認したローカルHEADとの不一致を拒否する。保護設定変更なし、GOは同じ製品変更に有効。
+
+GO転記後に親が本文とparseGORecordを照合し、発行者欄名が「GO発行者:」である必要を確認。カードの汎用的な欄説明を正式な4欄名へ訂正し、同じ担当へ原文/値/日時を維持した欄名修正を指示。承認の創作や検査の迂回ではない。
+
+
+### 2026-09-13 マージ実行結果
+
+実装役がGO転記、最終HEAD c454957227e6edd6bf039ea78e0633fc2194e233、main4d30c0ba、8SHA/12ファイル/clean、全実行CI成功を確認し、確認済みコメントを残した。最終CIのBackendは2684 passed/95 skipped/309 warnings/98.96s。親もGO検証関数エラー0と全実行CI成功を直接確認した。
+
+正式wrapper --merge --match-head-commitによるPR3438マージ成功。親がgh pr viewでMERGED/2026-09-13 05:46:15 JST/merge739f772d4cf55c1b3972c02c086a7c77b807d293を直接確認。実装worktreeはwrapperの通常cleanupで削除、報告と期待CSVはtmpに保持。自動配備run34718060417は同merge SHA。配備前DB backupステップSUCCESSまで親が直接確認、配備完了は後続記録と区別する。
+
+文書側はmain739f772dを取り込み。evidence-registryの他テーマ追記と本件追記、design/reconの本件追記が競合したため、双方の文字列が保存されることをassertして文書3本だけ解消。mainとの差は証拠台帳/反映カード/design/recon/todoの文書5本のみ。製品差分0、他者変更保持、台帳検査と差分検査成功。
+
+
+### 2026-09-13 本番反映完了
+
+親と実装役が配備run34718060417 SUCCESSを直接確認。親が実ログを読み、backup salesanchor_db_20260913_054655.sql.gz/6.7Mの生成成功（05:46:58 JST、ログ584行）、本番HEAD739f772d（1031行）、health成功（4677行）を照合した。今回取得されたbackupの生成証拠であり復元試験はしていない。
+
+親も本番API/App/CSVをそれぞれcurlで直接取得してHTTP200を確認。healthはDB/Redis/Celery connected。公開CSVは148バイト、SHA256 08ce5fc2137a86a0f594d0d4272fccbfa8d7b9a26ebdf245020fb742dc936929、レビュー済み期待ファイルと全バイト一致、BOM/CRLF/10列/商品0行。実装役も同じ検査を実行。
+
+正式保存した結果: [release-result.json](release-result.json)。実行主体は実装役、親はPR/CI/配備ログの読み取りと本番HTTP/CSVの直接検証を担当した。設計担当による製品実装切替・独立第三者レビュー・代理GOを行ったとは称さない。設計作成/自己審査/PO承認/文書保存/製品PR/マージ/本番反映/所定完了確認は完了。文書PR3436は保存用OPENのまま、別途マージ承認がないためマージしない。実商品登録・再解析・シート配信・本番の認証付きボタン操作は未実施。
+
+
+### 2026-09-13 文書PR3436のマージ承認
+
+製品反映完了と文書PR3436未マージの説明後、PO原文「マージしてくれ」を受領。残る文書PR3436のマージ指示として扱う。直前確認はPR3436 OPEN/CLEAN、main739f772d、差分は文書6本のみ、実行CIすべて成功。製品コード変更なし。設計担当がこの明示指示に基づき正式マージ手順を行い、製品実装役への自動切替はしない。最終マージSHA/日時はGitHub PR3436を一次情報とする。以前の未マージ記録は当時の状態であり、この承認後の状態とは区別する。

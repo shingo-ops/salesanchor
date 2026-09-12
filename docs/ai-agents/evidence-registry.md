@@ -2466,3 +2466,176 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 - 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
+```text
+id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
+date: 2026-09-11
+agent: Codex design partner (Planner then Architect; same AI)
+task: 空CSVサンプルとUser型不整合の限定修正設計
+scope: tcg-product-import既存design/recon・台帳のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md 同日再開調査
+    summary: adc8bc4d基点、10列/必須5列、User返却とget不一致を照合。前便報告と今回の直接検算を区別
+  - type: command
+    reference: AST隔離検算（reconに入力・対象関数・assert結果を記載）
+    summary: BOM見出し10列を現行parse_rowsへ渡し0行/0エラー。現行endpointでget AttributeError・commit await0回を再現
+  - type: external
+    reference: https://vite.dev/guide/assets#the-public-directory
+    summary: Context7利用不可のため公式資料代替。public資産の配信/build経路を確認
+confidence: high
+tradeoff: 実HTTP/本物User/実DB成功は未検証。部分登録・履歴空白・digest承認証明の限界を保持
+decision: design§15自己審査APPROVE。PO合意はサンプル形式と設計進行のみ。詳細案実装/GOは未承認
+follow_up: 詳細案を提示し、実装承認後に正式カード検査・引き継ぎ。44件投入は別段階
+```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-CARD
+date: 2026-09-12
+agent: Codex design partner
+task: PO承認済み商品CSV設計の正式実装カード準備
+scope: docs/handoff/tcg-product-import・既存台帳
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md 2026-09-12承認追記
+    summary: 設計承認とカード準備へのPO原文「進める」を記録。GO・自動起動に読み替えない
+  - type: command
+    reference: bash scripts/card-lint.sh docs/handoff/tcg-product-import/card-template-impl.md
+    summary: exit0・違反0・長行警告4件。18手順/実在パス/既存7+新規1ファイル/出力未使用を追加照合
+confidence: high
+tradeoff: 同一AI自己照合。Docker不在、実DB検証は未実行のため実装後CIに残す
+decision: 正式カード準備済み、実装役未起動、製品未変更
+follow_up: 実装役の差分と生報告を読み取り確認。公開・実DB検証は後続便
+```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-IMPLEMENT
+date: 2026-09-12
+agent: csv_card_executor (implementation), Codex design partner (read-only review)
+task: 空CSVサンプルとUser型の限定修正
+scope: design§15の8製品ファイル、製品未コミット
+evidence:
+  - type: log
+    reference: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02.txt
+    summary: 実装役が単体13/E2E7/build/check:all/lint-ciを実行し成功。親は生出力を確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-parent-review.json
+    summary: 親が8ファイル差分、BOM/CRLF/10列/0行、日英キー、日英画像を直接確認。Python2ファイルruffは正規権限審査後exit0
+confidence: high
+tradeoff: frontend警告218/mypy153残存。HTTP回帰/実PG/CI/本番QAは未実行、成功を主張しない
+decision: ローカル実装と差分確認済み。公開・マージ・本番操作なし
+follow_up: 別便で製品差分を保存・公開し正式CIで追加試験を検証
+```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-PUBLISH
+date: 2026-09-12
+agent: csv_card_executor (publication), Codex design partner (read-only verification)
+task: 空CSVサンプルとUser型修正の製品PR公開・CI確認
+scope: PR3438、8製品＋4設計文書
+evidence:
+  - type: pr
+    reference: https://github.com/shingo-ops/salesanchor/pull/3438
+    summary: HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、OPEN、12ファイルを親が直接確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-final.json
+    summary: CI40成功/6対象外/1失敗。全pytest/PostgreSQL集約は成功。process-artifacts失敗
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-gate.json
+    summary: 手元の設計/維持/引用検査は各エラー0、GO欄欠落を検出。CIログではない
+confidence: high
+tradeoff: AC5修正前への復元失敗確認未実施。CI個別ログ/総件数/skip件数未取得。全受入完了ではない
+decision: 製品PR公開・CI確認済み。GO/マージ/本番反映は未実施
+follow_up: 残る回帰確認とCI失敗詳細を確認してからPOへマージ判断を提示
+```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-VERIFY
+date: 2026-09-12
+agent: csv_card_executor (contrast execution), Codex design partner (evidence review)
+task: PR3438の残件検証
+scope: HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、製品変更0
+evidence:
+  - type: log
+    reference: /tmp/reports/SA-CSV-REMAINING-GATE-20260912.txt
+    summary: 親が正規権限審査でCI実ログ取得。GO記録欄欠落が失敗原因
+  - type: log
+    reference: /tmp/reports/SA-CSV-BACKEND-CI-20260912.txt:1066
+    summary: 全suiteの2601 passed/95 skipped/301 warnings/110.42sを親が直接確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.json
+    summary: 既存HTTP試験関数直接await。旧式3ケースAttributeError、現行3成功。8製品SHA前後一致、通信/DB試行0、復帰assert成功。親はスクリプト/結果を読取確認
+confidence: high
+tradeoff: 対照検算はpytestではなくDB/監査mock付きASGI内HTTP。実商品登録の証明ではない
+decision: AC5とCI失敗原因の残件解消。PO GO未取得、マージ/本番未実施
+follow_up: 本番影響と直前確認を提示しPR3438の番号付きGO判断へ
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-PRE-RELEASE
+date: 2026-09-13
+agent: csv_card_executor (main integration), Codex design partner (read-only checks)
+task: PR3438本番反映前確認
+scope: HEAD2184092c4f7cafcb43188626490c892db5ed82d7、製品変更0
+evidence:
+  - type: command
+    reference: /tmp/reports/SA-CSV-PRE-RELEASE-FINAL-20260913.json
+    summary: 親がHEAD/OPEN/MERGEABLE/CI38成功6対象外1失敗確認。全pytest/PG成功、失敗はGO記録不足
+  - type: log
+    reference: /tmp/reports/SA-CSV-PRE-RELEASE-20260913.txt
+    summary: 実装役がmain5b21b3b8統合・製品8SHA不変・12ファイル境界・pushを確認
+  - type: log
+    reference: /tmp/reports/SA-CSV-LATEST-DEPLOY-20260913.txt:583
+    summary: 前回配備の20260912_193916.sql.gz 6.7M生成、main5b21b3b8配備/health成功を実ログ確認。本番HTTP200を別途直接確認
+confidence: high
+tradeoff: 過去backup生成証拠であり現物存在/復元試験は未確認。今回直前backupは配備時に取得する既存手順
+decision: POの番号付きGO判断へ。GO/マージ/本番変更は未実施
+follow_up: GO受領後に正式反映カード。配備時backup/HEAD/health/空CSV実資産の検証を完了条件とする
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-GO
+date: 2026-09-13
+agent: Codex design partner
+task: PR3438 PO GO記録・正式反映カード
+scope: PR3438のマージと自動本番配備、実登録/再解析/配信は対象外
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md
+    summary: PO原文「GO #3438」を記録。以前の別番号は不採用。AI委任発行ではない
+  - type: command
+    reference: docs/handoff/tcg-product-import/card-release.md
+    summary: card-lint違反0/長行2、11手順を同一AIで照合。既存担当へ委任
+confidence: high
+tradeoff: 最新main追従CIと実配備結果はまだ未確認
+decision: 番号付きGO受領・反映便開始。設計担当の自動実装切替なし
+follow_up: merge/自動backup/配備HEAD/health/空CSV実資産で完了判定
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-RELEASE
+date: 2026-09-13
+agent: csv_card_executor (release), Codex design partner (evidence and public HTTP verification)
+task: PR3438本番反映完了
+scope: merge739f772d4cf55c1b3972c02c086a7c77b807d293
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/release-result.json
+    summary: PO GO/CI/merge/配備/backup/本番HTTPとCSVの結果を正式保存
+  - type: pr
+    reference: https://github.com/shingo-ops/salesanchor/pull/3438
+    summary: MERGED、2026-09-13 05:46:15 JST
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/34718060417
+    summary: SUCCESS、今回backup6.7M新規取得・配備HEAD739f772d・health成功を実ログ照合
+confidence: high
+tradeoff: 復元試験・本番認証付きボタン操作・商品登録は未実施。公開資産/HTTPとローカル操作検証の範囲を区別
+decision: GO3438で承認された反映と所定完了確認を完了。文書PR3436は未マージ
+follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
+```
