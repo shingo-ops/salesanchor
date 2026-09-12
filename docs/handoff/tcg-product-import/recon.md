@@ -407,3 +407,20 @@ CI process-artifacts gateはFAILURE。詳細ログ取得はghのローカルキ�
 最終CI確認: 親がgh pr view 3438のstatusCheckRollupを直接取得。HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、OPEN、SUCCESS40/SKIPPED6/FAILURE1。pytest-run-internalとpytest (SQLite + PostgreSQL RLS)はSUCCESS、run34661709205。失敗はprocess-artifacts gateのみ。対象外skipを試験成功と数えない。保存 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-parent-final.json。CIの全suite実行定義は .github/workflows/test.yml:206、pytest -qは同:241。HTTP対象ファイルも全suiteに含まれるが、個別ケースログ・総件数・skip件数は取得していない。DB書込をモックにしたHTTP試験を本番商品登録成功とはしない。
 
 受入上の残件: AC5の修正前user.getへ戻した回帰失敗の実行確認は未実施。通常の全suite成功からこの確認まで完了したとは言わない。設計条件を勝手に削除せず残す。マージ判断前にこの確認とprocess-artifacts詳細確認を行い、その後PO GOを受領する。製品PR提出・CI確認まで実施済み、全受入完了/マージ可能/本番反映済みとは宣言しない。LINE委任も有効化待ち。
+
+
+### 2026-09-12 残件検証の続行
+
+PO返答原文「次を進める」を、残る回帰確認と失敗ゲート原因確認の続行として受領。マージGOとは扱わない。実装worktree preflight成功、HEAD ff008f18/未保存差分0を直接確認。最新origin/mainは66b41766で独立テーマの文書追加のみ、製品更新なし。本店の未保存変更には手を触れない。正式LINE委任文書もdraft/開始終了未設定で有効化待ち。
+
+前回のログ取得停止はghキャッシュ書込のsandbox制限。親が同じPRの通常ログ取得をrequire_escalatedの正規権限審査へ提出し成功。設定・キャッシュ場所・ガードの変更なし。最新失敗run34661932465/job103466046948の実ログは「PR本文にGO記録セクションがありません」。前便のローカル推定を実ログで裏付けた。保存 /tmp/reports/SA-CSV-REMAINING-GATE-20260912.txt。
+
+同じ正規経路でBackend CI run34661709205/job103465409882の成功ログも取得。2601 passed / 95 skipped / 301 warnings / 110.42s、対象routerのカバレッジ96%。これは既存全suite/PG実行結果であり修正前対照の結果ではない。保存 /tmp/reports/SA-CSV-BACKEND-CI-20260912.txt:1066。個別case名は集約ログに出ない。
+
+AC5対照検算: 既存実装役csv_card_executorが /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.py を実行しexit0。製品ファイルは変更せず、既存test_commit_with_real_userを直接await。元main adc8bc4dのexecuted_by式とASTを照合し、対象関数のメモリ上codeだけを旧user.get式へ交換。emailあり/id代替/両方空の3ケースすべてAttributeError「User object has no attribute get」を再現し、finallyで現行codeへ復元後は同じ3ケースすべて既存HTTP assertion成功。旧式以外の関数本体の一致と変更式1箇所をassertした。
+
+親は検算スクリプト・結果JSONを直接読み、6結果、io_attempts空、8製品SHA256前後一致をassert。HEAD ff008f18と未保存0も実装役が確認。追加mockはAuditMiddleware._record_data_access/_record_auth_eventで両条件共通。認証require_super_admin/対象HTTP assertionは変更せず、全mock・関数code・依存上書きの復帰をassert。実装役がテスト用venvへ既存requirementsを導入し、検算時は環境変数をテスト用に限定、dotenv読み込み・DB接続・外部通信を拒否して試行0を確認。
+
+証拠: /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.json（前後ハッシュと6ケース）、同.txt（実行出力）、同.py（検算手順）。Docker不在につきpytestを実行した結果ではない。これは既存試験関数直接呼出によるASGI内HTTP対照検算であり、CI全suiteの2601成功/95skipとは別の検証。DB書込・監査記録はmock、本番登録成功の証明ではない。AC5の修正前失敗確認の残件を解消。
+
+判定更新: 限定設計§15の検証残件とCI失敗原因確認は完了。設計担当による自己審査・読み取り確認であり独立第三者レビューと称さない。POの番号付きGOは未取得、マージ・本番反映・実データ登録は未実施。main pushで本番配備が起動するため、今後のマージ判断では本番への影響と直前の確認を含める（.github/workflows/deploy.yml:3）。

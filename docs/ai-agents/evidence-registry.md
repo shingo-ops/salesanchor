@@ -2451,3 +2451,26 @@ tradeoff: AC5修正前への復元失敗確認未実施。CI個別ログ/総件�
 decision: 製品PR公開・CI確認済み。GO/マージ/本番反映は未実施
 follow_up: 残る回帰確認とCI失敗詳細を確認してからPOへマージ判断を提示
 ```
+
+
+```text
+id: EV-20260912-PRODUCT-CSV-VERIFY
+date: 2026-09-12
+agent: csv_card_executor (contrast execution), Codex design partner (evidence review)
+task: PR3438の残件検証
+scope: HEAD ff008f180e150be2241ad7d6d2d2f292a439f900、製品変更0
+evidence:
+  - type: log
+    reference: /tmp/reports/SA-CSV-REMAINING-GATE-20260912.txt
+    summary: 親が正規権限審査でCI実ログ取得。GO記録欄欠落が失敗原因
+  - type: log
+    reference: /tmp/reports/SA-CSV-BACKEND-CI-20260912.txt:1066
+    summary: 全suiteの2601 passed/95 skipped/301 warnings/110.42sを親が直接確認
+  - type: command
+    reference: /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.json
+    summary: 既存HTTP試験関数直接await。旧式3ケースAttributeError、現行3成功。8製品SHA前後一致、通信/DB試行0、復帰assert成功。親はスクリプト/結果を読取確認
+confidence: high
+tradeoff: 対照検算はpytestではなくDB/監査mock付きASGI内HTTP。実商品登録の証明ではない
+decision: AC5とCI失敗原因の残件解消。PO GO未取得、マージ/本番未実施
+follow_up: 本番影響と直前確認を提示しPR3438の番号付きGO判断へ
+```
