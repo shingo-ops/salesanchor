@@ -1,0 +1,49 @@
+CARD-RAW-SHARED-RESUME-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-RAW-SHARED-RESUME-02
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md、design-partner.md§5.5。
+照合§5.5: 1○実tree、2○本便PRなし、3○親へ全文、4○16利用移管、5○公式adc8bc4d起点、6○対象7列挙、7○前後同一性/操作/表示検証。
+担当Generator。あなたは他者と並行、root文書/他者変更を戻さない。別AI起動禁止。
+作業場所は /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration 。本店は古く未保存があり触らない。
+基準HEADadc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b。依存導入は本カード内でnpm ciを実行。正しい指示はdocs/specs/design-system/design.md§AH、既存§AG/Z/AA、raw-shared-raw-audit.md/json。
+許可製品はfrontend/src/components/配下の次7だけ: ConfirmModal.tsx、CommissionPanel.tsx、PriorityScoreOverride.tsx、OrderFinancialPanel.tsx、PurchaseDetailPanel.tsx、ShippingDetailPanel.tsx、新規SharedButtonMigration.test.tsx。
+許可一時成果物は/tmp/frontend-shared-button-resume内の監査/検証原稿・fixture・ログ・画像。既存/tmp資料を上書きせず実装用の別名を使う。
+禁止: 他製品/CSS/Button本体/Modal本体/翻訳/依存定義/CI/backend/正式文書/台帳/GO/commit/push/PR/merge/deployの変更。実API/本番通信は禁止、localhostブラウザーと通信モックだけ。正規require_escalated可、拒否は親へ報告停止。
+
+手順0: preflightと基準確認。異なるHEAD/対象外既存差分は親へ報告する。rootの既存文書差分は保持。
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && ./scripts/dev/executor-preflight.sh
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git rev-parse HEAD
+
+手順1: 退避manifestの7hashと、6TSXの旧基準7606ca9aから現HEADまで差分0を確認する。不一致は停止しrootへ報告。既存原稿は未検証であり成功と扱わない。
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 /tmp/frontend-raw-buttons-20260911/restore-held-raw-shared.py
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm ci
+続けて6TSXの16箇所を既存BSA順に移管する。共通Buttonのimportを追加、native buttonの開始/終了tagをButtonへ、旧classNameをvariant/sizeへ変えるだけ。
+- ConfirmModal: BSA005 secondary/md、006 danger ? danger : primary/md、autoFocus維持。
+- CommissionPanel: BSA002 secondary/sm、003 primary/md、004 secondary/md。
+- PriorityScoreOverride: BSA027 secondary/sm（type省略維持）、028 secondary/md（button）、029 primary/md（submit）。
+- OrderFinancialPanel: BSA025 secondary/md、026 primary/md submit。
+- PurchaseDetailPanel: BSA030 secondary/md、031 secondary/md、032 primary/md submit/form=purchase-detail-form。
+- ShippingDetailPanel: BSA033 secondary/md、034 secondary/md、035 primary/md submit/form=shipping-detail-form。
+md指定は省略可。単独btn-smのsecondary選択は既存BSA承認済み。全onClick/disabled/type/form/title/autoFocus/data-testid/childrenを維持し、loading propへ置換しない。関数/数値変換/通信引数/CSV/既存状態分岐/ラベルは変更しない。追加style/class/layoutClassNameなし。
+
+手順2: SharedButtonMigration.test.tsxに実部品の意味ある回帰試験を追加。通信/権限/Firebase/token/CSVはモックし実通信を起こさない。
+- Confirm両danger分岐のconfirm/cancel、Priorityの起動/権限なし/cancel/submit、Commission担当解除roleと再計算、売上submit、仕入/発送の外部formからsubmit。
+- 既存saving/recalcing/confirming/downloading反映中のdisabled追加操作0、既存なしの確定/CSV無効、保存中文言、onSaved/onCloseの結果を確認。URL/送信引数/回数を現物から作ったfixtureと照合。入力をvalidにして通常submitを起こす。不要なwrapperや本体の新機能は追加しない。
+- CSVモックを使い、既存path/Blob出力が保たれることを確認。操作前後の既存条件を勝手に緩和しない。
+
+手順3: /tmpにbefore固定SHAとafterの構文比較を作る。16ID/tag/class→variant/size/importだけを許容し、それ以外の全属性/children/関数本文一致を確認。全体監査は同じ抽出法で先頭btn332→316、専用20/リンク8不変、共通Button実運用70→86を対象名付きで報告。誤検出は結果を消さず親へ判定依頼。
+
+手順4: 実6部品+実Modal+実CSSをChromiumで検証（通信モック）。明暗×幅390/767/768/1279/1280で表示。対象ボタンlabelが自身/画面/Modal端で切れない、外側focus輪郭4pxとfooter端・隣接の関係を測る。長い日英ラベルと200%相当の狭幅は通常表示と分け記録する。前後のConfirm focusとTab/Shift+Tab/Enter/Space、外部form関連付けを確認。前からの問題と今回の差を区別。見た目の色/寸法はAG共通値への意図的変更、同値とは主張しない。失敗は原ログ保持し、対象外CSS/Modal/文言を独断修正せず親へ戻す。
+
+手順5: 既存品質を確認し、ログを/tmpへ保存。失敗した手順以降へ成功として進めない。原失敗を残す。
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npx eslint --max-warnings=0 src/components/ConfirmModal.tsx src/components/CommissionPanel.tsx src/components/PriorityScoreOverride.tsx src/components/OrderFinancialPanel.tsx src/components/PurchaseDetailPanel.tsx src/components/ShippingDetailPanel.tsx src/components/SharedButtonMigration.test.tsx
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm run test:coverage
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm run check:all
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm run build
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration/frontend && npm run build-storybook
+cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --check
+正常: 各exit0、既存200試験と追加操作試験成功、対象7製品以外の製品変更0。7hash/行数をmanifestへ。coverage出力は/tmpへ退避して未追跡成果物に混ぜない。
+
+完了報告は「本報告はカード CARD-RAW-SHARED-RESUME-02 の実行結果である」から開始。親への本文に生出力全文、長いログは実在リンクを添える。実行/未実行と本番未確認を区別。停止時は手順番号・最後のコマンド・理由・対象名を報告。GO代筆/PR提出なし。
+前提PR3435はMERGED、共通Modal footer wrapは現基準に含まれる。AHのREVISEは提出前の実検証が必要という意味で、本カードの検証完了後にrootが再審査する。検査失敗時はログ保持・理由調査を許可。許可7ファイル内のテスト実装不備は原設計に従い修正し再検証可。製品仕様/期待値を変更する修正は停止。
+END OF CARD

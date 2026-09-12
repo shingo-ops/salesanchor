@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 interface Props {
   open: boolean;
@@ -30,15 +31,15 @@ export default function ConfirmModal({
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       <div style={{ marginBottom: "var(--space-4)", lineHeight: 1.6 }}>{message}</div>
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel}>{resolvedCancelLabel}</button>
-        <button
+        <Button type="button" variant="secondary" onClick={onCancel}>{resolvedCancelLabel}</Button>
+        <Button
           type="button"
-          className={danger ? "btn-danger" : "btn-primary"}
+          variant={danger ? "danger" : "primary"}
           onClick={onConfirm}
           autoFocus
         >
           {resolvedConfirmLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );
