@@ -389,3 +389,8 @@ PR #3436 d4f5f86fのCIは実行分すべてSUCCESS、製品試験は対象外SKI
 差分確認時の8ファイルSHA256と親の検証範囲: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-parent-review.json。画像: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-template-ja-66adc185-e167-4b5d-9e97-f6b3dc219d84.png、同template-en-c57b8428-c8dd-47c2-93f9-4d3ef104714e.png。
 
 判定: 設計範囲の差分確認で追加指摘なし。製品リリース承認ではない。AC1〜4のローカル検証、AC7のfrontend部分まで完了。AC5〜6の本物User/HTTP試験は追加済み・未実行（修正前に戻した失敗確認も未実行）。Docker不在に従いpytest・実PG・CI・本番QAは未実施。マージGO・実データ投入・再解析・配信は未承認/未実施。次は製品差分の保存・PR公開と正式CI検証を別便で行う。
+
+
+### 2026-09-12 公開前の改行検査
+
+新規CSVをstageした後の通常git diff --cached --checkがCRLFを末尾空白と判定した。前便は未追跡資産がgit diff --check対象外であった。設計必須のCRLFは維持し、Git公式core.whitespaceのcr-at-eolを当該検査コマンドだけに指定。blank-at-eol/blank-at-eof/space-before-tabは保持。親が同一stage差分へ直接実行しexit0を確認した。永続Git設定/ガード/CI/製品変更なし。Context7未提供のため許可された代替で https://git-scm.com/docs/git-config のcore.whitespaceを直接確認。実資産の148バイト・BOM/CRLF/10列/0行検査は別に成功済み。

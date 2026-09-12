@@ -35,7 +35,8 @@ GO記録待ちのCI失敗は予期される承認待ちとして区別し、GO�
 成功後に続行する。
 
 手順4 製品の保存
-design§15の8ファイルだけをgit addし、git diff --cached --check後にコミットすることを許可する。
+design§15の8ファイルだけをgit addし、git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --cached --check後にコミットすることを許可する。
+この検査だけCRを行末文字として扱う。CSVのCRLF/BOM/10列/0行を別途バイト一致で確認する。永続Git設定やCIは変更しない。
 前便検証は単体13/E2E7/build/check:all/lint-ci/対象Pythonruff成功。対象HTTP/DB試験は未実行。
 コミットフックの範囲内指摘は同じ8ファイルで修正可。依存や他者ファイルを巻き込まない。
 
