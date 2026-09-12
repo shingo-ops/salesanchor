@@ -27,7 +27,7 @@ status、.pr-number、gh pr list --head release/product-import-template-implの�
 全shell要求は実在するworktreeへのcdを先頭に置き、ログの前処理と本体要求は分ける。
 
 手順2 GO転記
-PR本文を取得しtmpのbodyファイルに保存、### GO記録に発行者/実記録日時/GO原文/バックアップ確認を記す。
+PR本文を取得しtmpのbodyファイルに保存、### GO記録に正規欄名「GO発行者:」「日時:」「GO原文:」「バックアップ確認:」を用いる。日時は実記録日時であると注記する。
 現在地をPO承認済み・マージ前へ訂正し、gh pr edit --body-fileで反映する。未取得のバックアップや配備成功は記さない。
 
 手順3 最新main統合
