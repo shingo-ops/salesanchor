@@ -2398,3 +2398,7 @@ Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報�
 端末認可方式変更: ユーザーがフロント後回し・インポート先行を明示。Firebase直接ログインを撤去し用途限定APIキーと管理者登録へ変更。端末23単体成功、実DB検証はCI待ち。根拠: docs/handoff/line-android-login/design.md、recon.md。
 
 端末専用キー検証追記: CI run 34676154180成功（全体2,625 passed/95 skipped）。一時PostgreSQLの本番モデル前提表と実DDLを使用し、並行認可・失効・取消し・最小権限DMLを確認。本番反映・初回登録・実送信は未実施。
+
+## EV-20260912-LINE-DELIVERY-CONNECT
+
+PR #3445 deploy34676818835成功、端末登録34677017232成功、2ファイルimported/pending_reviewを端末応答で確認。配信接続の現状と設計は docs/handoff/line-import-delivery/recon.md / design.md。実DB再照会と解析・配信は未実施。

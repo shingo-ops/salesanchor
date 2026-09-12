@@ -149,3 +149,5 @@ PO原文: 「商品マスタの並びはデフォルトは販売日の新しい�
 - [現状・検証](../../handoff/line-android-import/recon.md)
 
 Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)、[検証](../../handoff/line-android-login/recon.md)。
+
+- [Android取込後の管理接続](../../handoff/line-import-delivery/design.md): フロントなしで確認・解析・既存配信へ接続。実配信未確認。
