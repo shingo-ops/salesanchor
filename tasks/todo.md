@@ -144,4 +144,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | POは対象商品のみ0・混在明細別・未記載維持に合意。固定SHAの現行関数で3ケース観測。技術設計草案と自己審査REVISEを文書保存、製品実装なし | 実例と現在在庫の行識別を読取調査し、DDL/API/初期化・切替契約を確定して再審査。カードは合格後 | docs/handoff/tcg-import-latest-only/design.md / docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STOCK-MESSAGES | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | POは対象商品のみ0・混在明細別・未記載維持に合意。固定SHAの現行関数で3ケース観測。技術設計草案と自己審査REVISEを文書保存、PR #3456提出済み。製品実装なし | 実例と現在在庫の行識別を読取調査し、DDL/API/初期化・切替契約を確定して再審査。カードは合格後 | docs/handoff/tcg-import-latest-only/design.md / docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STOCK-MESSAGES | 2026-09-13 |

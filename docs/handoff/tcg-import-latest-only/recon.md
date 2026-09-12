@@ -140,6 +140,12 @@ for body in ("商品A〆", "ありがとうございます", "商品A 5個 1000�
 
 3件の合成入力を保存時に再実行し期待する現行選択結果と一致。git diff --check、ADR索引--check、check-task-state.sh、設計形式・引用パス・維持欄の検証関数が成功。相対リンク（コードブロックを除く）と旧設計/調査原文の末尾一致も確認。最初の簡易リンク検査はコード内の関数呼出しをリンクと誤検知し、検査対象をMarkdown本文へ修正して再検証した。製品テスト・AI分類精度・本番検証の成功を意味しない。
 
+## 文書PRと追加の読取確認
+
+文書PR: https://github.com/shingo-ops/salesanchor/pull/3456 （OPENを直接確認）。初回HEAD 59aeb61e9bf80501b19581a488180cda11415faf。文書コミット時のpre-commitチェックも成功。最初のcommitコマンドはworkdirを本店mainと判定した事前ガードに拒否され、専用releaseブランチの実在を再確認してgit -Cで対象を明記した通常操作で成功した。ガード変更・mainコミットなし。
+
+既存のtcg-product-master-growth/recon.mdが参照する /private/tmp/line-postdeploy-rows.json、line-loop-active-before.json、line-dictionary-audit-rows.json の3保存先を今回確認したが、3/3でファイル不在だった。過去の文書の集計値を現在在庫や実例の正解として流用しない。未確認の識別重複を埋めるには、別の認可済み保存先または本番の読み取り経路で原文と在庫を取得する必要がある。
+
 ## 10. 未確認と次の調査
 
 1. 実メッセージの分類正解と対象商品/状態/単位。現在在庫のキー候補重複、投稿時刻の同値/欠損の件数。

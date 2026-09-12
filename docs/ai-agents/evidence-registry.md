@@ -2432,6 +2432,6 @@ evidence:
     summary: append proposed change and Why, preserve historical accepted migration contract
 confidence: high
 tradeoff: high applies only to fixed-code path and synthetic probe; actual production incidents, classification accuracy, live schema and rollout are unverified
-decision: PO meaning agreement recorded; technical draft self-review REVISE; no implementation card or production operation
+decision: PO meaning agreement recorded; technical draft self-review REVISE; docs PR https://github.com/shingo-ops/salesanchor/pull/3456 OPEN; no implementation card or production operation
 follow_up: inspect real-message ground truth and offer identity duplicates; finalize DDL/API/UI/rollout then re-review
 ```
