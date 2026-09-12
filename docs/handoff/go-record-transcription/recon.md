@@ -784,3 +784,64 @@ Context7不在につき公式 [Contents API](https://docs.github.com/en/rest/rep
 P1カード手順1/2成功。入力SHA256一致、sandbox main a815d94c535f59fae6415b881296d64ef17bf6c7、同名branch/file/PRなしをGET確認。手順3 github_create_branchは403 Resource not accessible by integration。再GETのmatching refsとPR一覧は空。CLIや別資格による再試行は0件。証拠 /tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json。repoメタデータのpush/admin trueと、この連携の実書込権限を区別する。
 
 POは直前に提示した#3418について「追従してPRマージを実行」と指示。文書保存の差分審査は同一AIで行い、製品差分なし・全体設計REVISEと未実装を明示して保存する。マージ済みの事実はAPI確認後の報告に記録し、ここでは先取りしない。別の移植先のコード/文書をこのPRへ取り込んでいない。
+
+
+## 2026-09-12 有効化設計の再開調査
+
+基点66b417665c013fdb354d5bda63226d07a1b2182c、専用release/go-delegation-activation-design。preflight成功、開始時差分0。ここでいう部品は「GO判定・受付・永続状態・マージ/デプロイ入口」。親はREADME.md、設計はdesign.mdの2026-09-12節。証拠は [activation-evidence-20260912.json](activation-evidence-20260912.json)。関連runbookの固有手順は見つからず、既存handoffとV01〜V13を進捗正本にする。
+
+### 全体像
+
+scripts/check-process-artifacts.js:293がGO記録検査、:829/:848が危険/利用者影響判定からの呼出。scripts/gh-pr-merge-safe.sh:93がマージ送信、.github/workflows/deploy.yml:184が取得したorigin/mainの配備。委任grantをこの3経路へ渡す実装は本便では確認できない。
+
+### 共用部品
+
+scripts/check-process-artifacts.js:36の本人発行者定義、:293のvalidateGORecordが既存の共用判定。P1の合成受付はintake-p1-workflow.txt:23のclassifyであり、実GOの検査として接続されていない。文書の存在を実装済みとして数えない。
+
+### 非共用部品
+
+scripts/gh-pr-merge-safe.sh:20はActions内でexit0、:93の送信は既存ローカル入口。委任・取消・予約の照合は持たない。これをCIで呼ぶだけでは、新制度を実行できない。親設計の分離案と整合する。
+
+### ルールの所在
+
+ADR-113のhandoff整合検査、ADR-121の成果物ゲート、ADR-135の出荷境界、ADR-136-cc-bot-github-identity.md:49の本人GO規則を参照。親design.mdの2026-09-11セッション委任成立は方式合意、LINE追補の期限記録は別セッションの履歴。起動指示に従い本便で自己有効化・期限更新はしない。
+
+### 維持の仕組み
+
+.github/workflows/process-artifacts-gate.yml:32以降は成果物検査を起動する。実権限の分離・取消/期限の実行時検査は今の文書検査だけでは守れない。get_repoのpush/admin表示をAPI成功の証明にしない。
+
+### 設計図との対照
+
+| あるべき姿 | 現状 | 判定 |
+|---|---|---|
+| 委任意思を再承認させない | 親設計にチャット成立・追加GitHub操作不要の合意あり | 一致 |
+| 委任・本人GOを識別して検査 | 既存validatorは本人表記のみ | 不足 |
+| 正式な受付と状態保存 | sandboxはREADME.mdの1ファイル、PR0件 | 不足 |
+| 専用Appだけの送信・期限/取消照合 | App/鍵/状態保護は実機未検証 | 不足 |
+| 失敗/通信不明で二重送信しない | ローカル有限モデル・Git試験の報告あり、実機未実装 | 不足 |
+| 証拠で再開できる | P1のローカル入力・結果を今回永続保存 | 一致（P1ローカルだけ） |
+
+今回の対象内で除去すべき余剰は0件。過去の設計案は履歴として保持し、最新節を入口にする。
+
+### ノイズと境界
+
+PR #3418/#3406はGitHub APIでMERGEDを確認。#3406のmerge SHA4afb81c398d26f4c9b1321a4c70f21c50e8211fbとdeploy run34657046594 successは文書保存の証拠。運用grantの有効化、全製品の実配備確認として数えない。関連しない商品タブ、LINE抽出、L1の実装は今回非対象。
+
+### 外部状態の直接確認
+
+CLI gh api repos/shingo-ops/salesanchor-go-gate-sandboxはrepo_id1363676622/public/main/pull:true/push:false/admin:false。contentsはREADME.mdだけ、PR一覧は空。コネクタget_profileはid246949427、get_repoはpush/admin true。get_repo_collaborator_permission(shingo-cc)は今回はpermission:read（過去の同GETの403とは区別）。branch/workflowの書込試行は今回0件。過去のbranch作成403が解消したとは判定しない。
+
+P1原本hashはe2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26で既存と一致。txtからPythonを抽出し、正常、sender/author/repo/owner相違、edited、body欠落/不正/過大、余分な欄、bool版/bool対象、target、コマンド文字列、kind、重複key、配列、PR偽装の18入力を直接確認。18/18、actionlint exit0。実機試験0、GO発行0。P2の14計画ケースとは別の分母。
+
+### 公式仕様と適用限界（2026-09-12確認）
+
+Context7公開ツール0件につき起動指示の代替許可を使用。
+- [ref更新](https://docs.github.com/en/rest/git/refs#update-a-reference): force=falseはfast-forwardを要求する。単一親で作る状態履歴の競合拒否に使用する設計推論。実Appでの成功ではない。
+- [contents作成](https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents): workflowファイルの書込には追加の権限条件がある。repo表示だけで証明しない。
+- [issuesイベント](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#issues): workflowはdefault branch上に必要。準備PRと実機6ケースを別工程とする。
+- [GITHUB_TOKEN](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token): workflowのpermissionsを必要範囲に絞る。P1はpermissions空を維持し、認可発行に使用しない。
+- [merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request): head SHA条件を利用する。base/本文/委任の版を同時に固定する万能なトランザクションとは扱わない。
+
+外部導入事例は不要。自社の承認境界とAPI契約の照合であり、他社の改善率は本設計の正当性を証明しない。
+
+正式カード確認: 更新したTH-GO-INTAKE-P1-PR-01.txtはcard-lint exit0、長行警告5件（非停止）。create_branch/create_file/create_pull_requestの公開ツール引数を照合し、単一base指定、UTF-8構造化入力、head/base/readyを確認。作業場所と必須2入力は実在。カードの自動実行・別担当起動は0件。

@@ -2384,3 +2384,11 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 
 - 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
+
+
+## EV-20260912-GO-ACTIVATION-DESIGN
+
+- 基点66b417665c013fdb354d5bda63226d07a1b2182c。PO原文yes/進めるを設計継続として受領。既存親design.mdのチャット成立合意と、LINE追補の別セッション記録を区別。
+- sandbox repo1363676622はREADME.mdのみ、PR0。CLIはread、コネクタrepo表示はpush/admin true、collaborator GET(shingo-cc)はread。書込成功は未検証。
+- 既存P1原本hash不変、Python抽出18/18、actionlint成功を直接実行。docs/handoff/go-record-transcription/activation-evidence-20260912.jsonへ保存。実機0・GO発行0。
+- P1限定設計APPROVE維持、P2の記録契約と14計画ケースを作成。全体REVISE。同一AI自己審査、実装/権限変更/有効化なし。次は更新した既存P1カード。
