@@ -2402,3 +2402,7 @@ Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報�
 ## EV-20260912-LINE-DELIVERY-CONNECT
 
 PR #3445 deploy34676818835成功、端末登録34677017232成功、2ファイルimported/pending_reviewを端末応答で確認。配信接続の現状と設計は docs/handoff/line-import-delivery/recon.md / design.md。実DB再照会と解析・配信は未実施。
+
+## EV-20260912-LINE-SUPPLIER-NAMES
+
+PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect34678551826成功。39名は完全一致/正規化一致0、マスタ110件。PC前方一致候補12名は未確定。docs/handoff/line-supplier-aliases/recon.md参照。
