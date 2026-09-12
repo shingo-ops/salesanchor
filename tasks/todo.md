@@ -142,4 +142,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 10列見出しのみ＋説明の形式はPO「進める」。PR #3436 design§15をPO「進める」で承認。正式カード作成・lint違反0・18手順照合済み。実装役1名が指定8ファイル実装。単体13/E2E7/build/静的成功、設計担当の差分確認済み。製品未コミット | 製品差分を別便で保存・PR公開し、追加HTTP回帰試験と実PGを正式CIで検証する。本番未反映 | docs/handoff/tcg-product-import/design.md §15 / recon.md同日再開調査 / EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN | 2026-09-12 |
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 10列見出しのみ＋説明の形式はPO「進める」。PR #3436 design§15をPO「進める」で承認。正式カード作成・lint違反0・18手順照合済み。実装役1名が指定8ファイル実装。単体13/E2E7/build/静的成功、設計担当の差分確認済み。製品未コミット | PO「進める」で公開カードを実装役へ委任。製品PRとHTTP回帰/実PG CIを確認する。マージ/本番未承認 | docs/handoff/tcg-product-import/design.md §15 / recon.md同日再開調査 / EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN | 2026-09-12 |
