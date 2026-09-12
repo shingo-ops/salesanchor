@@ -20,6 +20,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
 from app.tcg_config import TCG_SCHEMA
 
+SOURCE_REPORT_LIMIT = 10000
 
 def name_hash(name):
     return hashlib.sha256(name.encode('utf-8')).hexdigest()
@@ -113,13 +114,14 @@ async def operate(db, data):
                 FROM {TCG_SCHEMA}.source_messages sm
                 JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
                 JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
-                WHERE sc.channel='line' ORDER BY sm.created_at DESC LIMIT 500'''))).mappings().all()
+                WHERE sc.channel='line' ORDER BY sm.created_at DESC,sm.id DESC LIMIT {SOURCE_REPORT_LIMIT + 1}'''))).mappings().all()
             fingerprints = [{'code': r['code'], 'posted_at': str(r['line_posted_at']),
                              'active': r['is_active'], 'length': len(r['raw_text']),
                              'compact_sha256': name_hash(''.join(r['raw_text'].split()))}
-                            for r in sources]
+                            for r in sources[:SOURCE_REPORT_LIMIT]]
             private = seal_report({'unresolved_names': names, 'suppliers': [dict(r) for r in suppliers],
-                                   'source_fingerprints': fingerprints, 'source_limit': 500,
+                                   'source_fingerprints': fingerprints, 'source_limit': SOURCE_REPORT_LIMIT,
+                                   'sources_truncated': len(sources) > SOURCE_REPORT_LIMIT,
                                    'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active')} for t in targets]}, data['report_public_key'])
         return {'status': 'inspected', 'private_report': private, 'job_id': job_id, 'progress': progress,
                 'unresolved_name_hashes': [name_hash(n) for n in names],
