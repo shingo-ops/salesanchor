@@ -50,3 +50,12 @@ main66b41766を通常統合。evidence-registry末尾の両側追記を全文保
 初回process-artifacts gate job103471236394のAPIログを直接取得し、2026-09-12T01:04:40Zに「PR本文にGO記録セクションがありません」でexit1と確認。POからの依頼原文はPR本文の承認状況に保存し、GO原文欄へ番号を創作していない。
 最新CIはPRの現在HEADを参照。番号付きGO照合までmerge/deployを保留。rootの文書保存コミットは製品検収hashを変更しない。
 後続実行カード: aj-review-card.txt、aj-commit-card.txt、aj-publish-card.txt（すべて正式lint exit0、長行警告のみ）。
+
+
+## 2026-09-13 PO GO受領・本番反映手続き
+
+PO原文: 「GO #3442」。受領確認時刻05:20 JST。前日のPR・マージ・本番反映依頼に対応する。代理GOではない。
+最新main 5b21b3b8を確認。main側の追加フロントエンド差分0、根拠台帳の末尾追記競合1件を双方原文保持で統合する。製品hash7件と最新HEADのCIを再確認する。
+承認記録はPR #3442本文のGO記録4欄へ逐語転記済み。マージと本番完了はPRのmergedAt/mergeCommitおよび当該SHAのdeploy run成功・公開配布物の実測で個別に確定する。
+更新前本番HTML sha256: a3a99356560878cd600c2809fa73ba5c3b46a52fd89ea90e0fb93051cd271553。JS /assets/index-G0AkBERe.js、CSS /assets/index-D-QCsmaw.css。
+最終結果の一次情報: https://github.com/shingo-ops/salesanchor/pull/3442 （実測結果を本文に追記）。未完了状態を完了と読み替えない。
