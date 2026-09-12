@@ -2384,3 +2384,7 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 
 - 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
+
+## EV-20260912-LINE-ANDROID-IMPORT
+
+Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。API/DB統合と本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。

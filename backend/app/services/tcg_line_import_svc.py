@@ -22,10 +22,12 @@ import json
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.services.tcg_line_android_parser import parse_android_export
 
 # ---------------------------------------------------------------------------
 # 定数
@@ -478,6 +480,7 @@ async def import_line_export(
     window_start: str | None = None,
     window_end: str | None = None,
     window_hours: int = 24,
+    source_format: Literal["pc", "android"] = "pc",
 ) -> dict[str, Any]:
     """
     LINE エクスポートファイルを取り込む。
@@ -509,8 +512,14 @@ async def import_line_export(
             "import_job_id": str,
         }
     """
-    # --- 1. 冪等化チェック ---
-    file_sha256 = sha256_text(export_text)
+    if source_format not in ("pc", "android"):
+        raise ValueError("Unsupported LINE export format")
+    android_messages = parse_android_export(export_text) if source_format == "android" else None
+    # Keep the legacy PC digest unchanged. Android has a separate identity so that
+    # an Android file previously misread as PC (zero messages) can be retried.
+    file_sha256 = sha256_text(
+        "line-android-v1\0" + export_text if source_format == "android" else export_text
+    )
     # Serialize the check/insert pair even before an import_jobs row exists.
     await db.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
@@ -542,7 +551,7 @@ async def import_line_export(
     supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
-    all_messages = parse_line_export(export_text, supplier_names)
+    all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
     messages = [m for m in all_messages if not m["is_system_event"]]
 
     # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）

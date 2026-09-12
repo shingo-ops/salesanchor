@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_import_progress import read_items, read_progress
+from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
     TCG_SCHEMA,
     _enqueue_extraction,
@@ -664,3 +665,40 @@ async def get_import_items(
     db: AsyncSession = Depends(get_db),
 ):
     return await read_items(db, str(import_job_id), limit, offset, filter_by)
+
+
+@router.post(
+    "/tcg/line-import/android",
+    response_model=ImportResultResponse,
+    dependencies=[Depends(require_super_admin)],
+    tags=["super-admin"],
+    summary="Android LINEのトーク履歴をTermuxから取り込む",
+)
+async def upload_android_line_export(
+    file: UploadFile = File(...),
+    window_hours: int = Form(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_super_admin),
+):
+    # Keep the original Android bytes on the client; parse tab fields on the server.
+    if not (file.filename or "").lower().endswith(".txt"):
+        raise HTTPException(status_code=400, detail="Android LINEの.txtファイルが必要です")
+    raw = await file.read(10 * 1024 * 1024 + 1)
+    if len(raw) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="ファイルは10MiB以下にしてください")
+    try:
+        export_text = raw.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise HTTPException(status_code=400, detail="UTF-8のファイルが必要です") from error
+    uploaded_by = getattr(current_user, "email", None) or getattr(current_user, "id", None)
+    try:
+        return await import_line_export(
+            db=db,
+            filename=file.filename,
+            export_text=export_text,
+            uploaded_by=str(uploaded_by) if uploaded_by is not None else None,
+            window_hours=window_hours,
+            source_format="android",
+        )
+    except AndroidExportError as error:
+        raise HTTPException(status_code=400, detail="Android LINEの履歴形式を確認してください") from error
