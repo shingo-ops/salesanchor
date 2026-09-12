@@ -2415,3 +2415,22 @@ CARD-RAW-SHARED-SPLIT-03を作成。正式card-lint exit0（長行警告5件）�
 PO原文「承認する、離席するのでPR．マージ、本番反映までしてくれ」。委任された担当1名がCommission復元/20操作成功を報告。rootは構文監査、全体23files220tests/品質5項目、表示120組/実Confirm60/キー10を直接実行し成功。
 根拠: docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / aj-validation-manifest.json / aj-validation-checkpoint.tar.gz。
 限定レビューAPPROVEとroot直接検算を区別。PR提出へ進むが現行GO検査は番号なしの受領原文を拒否。原文の創作なし、マージ/本番反映未実施。
+
+## EV-20260910-LINE-GO-DELEGATION
+
+- 対象: 既存GOフローの子テーマ、LINE解析改善の期限付き委任。
+- PO確認文: 「この条件を正式な設計の前提として採用してよいですか？」、返答原文「OK」。条件全文は docs/handoff/go-record-transcription/line-delegation.md「POの願いと合意原文」に保存。
+- 調査基点: origin/main 3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1fe。preflight成功。現行validateGORecordを直接実行しPO表記受理/AI表記拒否のassert 2/2成功。新モードの検証ではない。
+- 親の改訂3作業場所に未保存5ファイルを確認。読み取りのみで保持。別作業の記録を自分の実機確認と混同しない。
+- 保存先: docs/handoff/go-record-transcription/line-delegation.md。索引はdocs/specs/README.mdの既存GOテーマ行。親ファイルへの並行編集を避け同テーマ内の追補とした。
+- 自己審査: REVISE。同一AI。委任保存先・主体・取消/実行境界・専用経路の実機試験は未確定。設計前提合意済み、製品実装/CI設定変更/有効化は未実施。
+
+- 追加依頼によりcxastraを保持してローカルcxastrago入口を登録。専用zsh関数/専用追補プロンプトを作成、.zshrcにsourceを追記。既存保持をバイト照合。構文検査と模擬8ケース成功、新login shellで両関数認識。GO委任は未有効・期間未開始。詳細/ハッシュ/履歴保存制限はline-delegation.md末尾。
+
+追補（2026-09-12、PR #3406）: PO原文「GO #3406」と未保存委任記録の統合確認への「進める」を受領。9月10日記録を原文保持し、CI run 34458348941の文書書式3エラーを補正。main追従時は他テーマの根拠登録と最新GOフロー行を保持。代理GO未有効、9月10日記録の期限延長なし。文書PRの完了はGitHub state/merge SHAで確認する。
+
+
+### EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED
+
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」およびreview-delivery-evidence.json。実WHEREの人工192組と実修正関数7ケースを局所検査。PostgreSQL/本番試験ではない。
+- 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
