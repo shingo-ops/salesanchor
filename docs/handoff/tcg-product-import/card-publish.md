@@ -1,10 +1,10 @@
 CARD-PRODUCT-CSV-PUBLISH-01
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、01-read.md、03-file.md、05-pr.md、09-gh.md、11-lint.md。
-照合: 実在worktree、8製品ファイルの既存差分、設計文書2本の取込、commit実在確認後push、PR番号照合、GO未発行を保持。
+照合: 実在worktree、8製品ファイルの既存差分、設計文書4本の取込、commit実在確認後push、PR番号照合、GO未発行を保持。
 
 目的
-POが「製品PR作成とCI検証」の次手に「進める」と指示した。実装済み8ファイルを保存し、承認済み設計文書2本をPRに添えて公開する。
+POが「製品PR作成とCI検証」の次手に「進める」と指示した。実装済み8ファイルを保存し、承認済み設計文書4本をPRに添えて公開する。
 
 出力の置き場
 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01.txt。最初に排他的新規作成し、全操作の生出力と終了コードを直接追記する。
@@ -56,13 +56,13 @@ design§15の8ファイルだけをgit addし、git diff --cached --check後に�
 製品競合は停止。実装8ファイルに予期しない変更がないことを親のSHA256と照合する。
 
 手順9 レビュー済み設計文書の取込
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git restore --source origin/release/product-import-template-design -- docs/handoff/tcg-product-import/design.md docs/handoff/tcg-product-import/recon.md
-上記2本だけをgit add/commitして根拠を製品PRへ添える。入力元は承認済み設計§15と実装報告であり実装変更ではない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git restore --source origin/release/product-import-template-design -- docs/handoff/tcg-product-import/design.md docs/handoff/tcg-product-import/recon.md docs/handoff/tcg-product-import/card-template-impl.md docs/handoff/tcg-product-import/card-publish.md
+上記4本だけをgit add/commitして根拠を製品PRへ添える。入力元は承認済み設計§15と実装報告であり実装変更ではない。
 台帳とevidence-registryは設計担当が元の文書PRで更新するため取込不要。
 
 手順10 保存の実在
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git log -3 --oneline
-未保存差分0と、mainとの差が8製品＋2文書の10ファイルだけであることを確認する。
+未保存差分0と、mainとの差が8製品＋4文書の12ファイルだけであることを確認する。
 
 手順11 公開
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-import-template-impl && git push -u origin HEAD
@@ -70,7 +70,7 @@ design§15の8ファイルだけをgit addし、git diff --cached --check後に�
 
 手順12 PR本文作成
 /tmp/reports/CARD-PRODUCT-CSV-PUBLISH-01-body.mdを新規作成する。本文書式の組立は既存正規規則に沿って許可する。
-内容: CSV空テンプレート＋日英入力説明、User属性修正、既存認証/DB/再送制御不変、design§15、対象8製品＋2文書、実行した検査とHTTP/DB未実行を記載。
+内容: CSV空テンプレート＋日英入力説明、User属性修正、既存認証/DB/再送制御不変、design§15、対象8製品＋4文書、実行した検査とHTTP/DB未実行を記載。
 GO欄は作らない。マージ承認待ちとする。scope/削除行を含む変更ファイルをgit diffで確認し本文に正確に列挙する。
 
 手順13 正式PR作成
