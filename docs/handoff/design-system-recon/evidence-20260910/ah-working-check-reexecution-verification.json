@@ -1,0 +1,21 @@
+{
+  "script": "working-check.cjs",
+  "scriptSHA256": "58a16c2c223ee235e23cda82bccc11d535158343cecf11daf5176b7e5c3d9808",
+  "observedExitCode": 0,
+  "executionEvidence": "exec session19669 completed exit_code0",
+  "splitSingleEscapePresent": true,
+  "splitDoubleEscapePresent": false,
+  "regexSingleEscapePresent": true,
+  "regexDoubleEscapePresent": false,
+  "counts": {
+    "Button": 86,
+    "rawBroad": 336,
+    "rawBtnPrefix": 316,
+    "dedicated": 20,
+    "links": 8
+  },
+  "countsMatchPrevious": true,
+  "allASTEqual": true,
+  "allHeldHashesEqual": true,
+  "scriptEdited": false
+}

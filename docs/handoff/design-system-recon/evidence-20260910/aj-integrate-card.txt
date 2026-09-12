@@ -1,0 +1,27 @@
+CARD-AJ-INTEGRATE-07
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AJ-INTEGRATE-07
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/所有/本文原文/L32照合○。
+担当: 既存button_generator。他者も作業中。変更を戻さず双方の記録を保持する。
+目的: PO GO #3442受領後、最新mainを既存PRブランチへ統合する。
+許可: preflight、固定main 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15の統合、文書競合解消、merge commit。
+禁止: 製品の独自編集、mainへのpush、remoteマージ、本番操作、新AI、ガード迂回。
+所有: main統合のみ。rootは別途PR本文と/tmp原稿を準備する。
+根拠: mainのfrontend差分0。三者比較の競合はevidence-registry末尾の追記同士1件。
+手順0: preflight後、未保存変更0とHEAD353491b5を確認する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git rev-parse HEAD
+手順1: 固定mainを取り込む。予測済みの文書競合は次の手順へ進む。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git merge 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15 --no-edit
+手順2: 競合がdocs/ai-agents/evidence-registry.mdの末尾追記1件だけなら、oursのEV-20260912-FRONTEND-AJ-PRとtheirsのLINE追記全てを原文保持で連結し、競合記号を除去する。製品競合または予測外の競合なら停止して報告。
+手順3: 全ての製品hashを既存manifestと照合し、文書チェック後にmerge commit確定。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && bash scripts/check-task-state.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git add docs/ai-agents/evidence-registry.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git commit --no-edit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git log -1 --format=fuller
+期待する出力: 製品hash7/7保持、status空。両側の文書追記を保持したmerge commit。
+手順失敗時は停止し生出力と原因を返す。pushせずrootへ引き継ぐ。
+END OF CARD

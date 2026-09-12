@@ -791,3 +791,101 @@ PO原文「通常カートンだがNOTE_JAに記載」を受領。伝票剥が�
 resolve_status_v2はraw_stateだけを参照し、備考単独の完売を見ない。fetch_output_rowsはexclusion条件がない。単独備考のEXCLUDEと配信SQLを接続し、架空DBで完売行が取得結果に出ないことを確認。原文・抽出値は変更せず、解析値の再実行一致と手動product_id訂正保持も検証。
 
 登録候補59行のうち26行はコード参照の静的検査blocking0。他33行は版・形態・メーカー・書籍分類等を継続確認。全商品登録完了ではない。顧客原文・登録用実データはPR対象外。Gemini実呼出し0、本番書込0。設計と試験の詳細はdesign-keyword.md §15およびEV-20260911-ONEPIECE-COMPLETION。
+
+
+## 人の確認完了と配信を接続するための検証記録（2026-09-12）
+
+この追補は、未解決明細を人が確認するまで配信から外すために、既存のどこが不足しているかを実コードで確認した記録。**設計合格・製品変更ではない。**
+
+### 依頼と権限
+
+PO原文: 「システムが解析できなかったものは全て人間が確認するので要確認に回す、要確認のものは人間の確認後に配信をするので配信リストからは外しておく、人間の確認が完了した時点で配信する」。後続依頼「離席するので推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したならPRマージまで進めて良い」。
+
+後続依頼は根拠・審査・必要チェックが揃ったPRの条件付きマージ許可として扱う。今回は設計担当による**検証記録の文書PRのみ**。本番変更・製品実装・代理GO有効化・追加Gemini呼出しの許可に読み替えない。実装役への自動切替なし、サブエージェント起動なし。
+
+### 正本と検証範囲
+
+- 親: [商品マスタ仕様](../../specs/product-master/README.md)。在庫の状態・単位を商品の分類と混同しない。
+- [ADR-154](../../adr/ADR-154-tcg-parity02-gas-python-migration.md)を参照。移植履歴のAcceptedと追加提案を区別する。
+- [既存商品割当設計](../parity03-product-assign-drawer/design.md)は商品IDの変更/確認だけの契約。これを行全体の確認完了と誤認しない。
+- [既存統合設計](../pmg-import-delivery-ssot/design.md) §§3–5には配信run/target/row保存、排他、unknownを含む提案が既にある。本追補は別の配信基盤を新設しない。
+- 調査コードadc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70bと起点main4afb81c398d26f4c9b1321a4c70f21c50e8211fbのGitHub compareは4文書差分のみ。対象サービス3ファイルのSHA256も同一。証跡JSONに記録。
+- preflight成功。最新main起点の専用release/sig-review-delivery-evidenceを公式worktree手順で作成。他の未保存調査・実装差分は取り込まない。
+- 本番画面/本番設定/実DB書込み/外部シート送信は未実施。Docker統合試験なし。人工データの件数は本番障害件数ではない。
+
+### コードの観測事実
+
+| 箇所 | 事実 | 希望との差 |
+|---|---|---|
+| `backend/app/services/tcg_analysis_review_svc.py:46` | 要確認タブは商品未確定・単位未確定・exclusion非NULL。正常タブはその逆 | 状態FLAG、価格欠落、needs_reviewと共通判定ではない |
+| `backend/app/services/tcg_analyzer_svc.py:957` | needs_review理由はpid_unresolved / multi_candidate / note_unmatched | 単位・状態・価格の全体確認状態ではない |
+| `backend/app/services/tcg_distribution_svc.py:183` | 商品/単位確定、価格非NULL、非excluded、非FLAGが基本。needs_review未参照 | 人確認待ちの全件除外を保証しない |
+| 同`:203` | include_flag_single=trueでFLAG_SINGLEを許す | 本番設定値は未確認。新しい共通ゲートをこの例外で抜けない設計が必要 |
+| `backend/app/services/item_corrections_svc.py:15` | 修正履歴は全フィールド保存。解析結果更新は商品IDの変更だけ | 状態/単位/価格/数量/備考の履歴保存は配信値反映と同義でない |
+| 同`:54` | 同じ商品IDを確認したときは解析UPDATEしない | 商品確認履歴≠行全体の配信承認 |
+| `backend/app/routers/item_corrections.py:54` | super_adminのみ。field_nameは文字列、旧値/原文IDをリクエストで受ける | 完了時の版一致・対象関連・必須値をサーバーで検証する契約が必要 |
+| `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:97` | 比較欄はreadOnly=true | 全項目修正/完了の画面としては未接続 |
+| `frontend/src/features/tcg-analysis-review/ItemComparison.tsx:23` | 汎用修正保存ボタンdisabled=true | ボタン有効化だけではサーバー契約の不足を解消しない |
+| `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:420` | 商品修正/確認はcorrections API→表示更新 | その後の配信起動ではない |
+| `backend/app/services/tcg_analyzer_svc.py:1116` | 商品修正履歴のある行を再解析対象から保護 | 確認対象版と原文更新後の扱いを明確化する必要 |
+| `backend/app/services/tcg_distribution_svc.py:411` | シートをclearしてappendする全置換 | 明細追記方式ではない。途中失敗・並行実行の確認が必要 |
+| 同`:628` | 全配信先への実行、未完了run/jobガードあり | 確認待ち1件で他の正常行を止めることと、処理中ガードは別 |
+
+### 直接実行した検証
+
+[機械可読結果](review-delivery-evidence.json)は匿名人工データのみ。顧客原文・認証情報なし。
+
+1. 実関数`_build_where`で要確認条件を生成し、`fetch_output_rows`の実WHEREを抽出。商品確定2×単位確定2×exclusion3×価格2×状態2×needs_review2×数量2=**192組**をSQLiteメモリ表で照合した。
+2. 要確認176組、通常配信8組。そのうち**要確認タブと配信の両方に入る4組**（exclusionがexcluded以外の非NULLという人工条件）。**needs_review=trueで配信される4組**、**数量NULLで配信される4組**。これらは重複し得るため合算しない。**配信から外れるが要確認タブにも出ない12組**を確認。SQLiteはこのWHEREの論理確認にだけ使用し、PostgreSQL/結合/権限/実運用全体の試験とは称しない。
+3. 実`save_corrections`関数へSQL記録用の偽セッションを渡して**7ケース**確認。商品変更1件だけ解析UPDATE=1、同一商品確認/単位/状態/価格/数量/備考の6件はUPDATE=0。全7件で履歴INSERT=1、commit=1。実DBの制約・保存成功を確認した試験ではない。
+4. 192組と7ケースは成功率を算出する正解データではなく、現在の条件の不一致と更新責務を確定する対照試験。固定ソースのハッシュと再現コードを下に残す。
+
+### 効果が直接見込める順序と設計の境界
+
+**第1優先候補: 要確認と配信の共通判定。** 上記の不一致を1か所の条件へ収束させる。モデルや商品辞書の精度を上げる前に、検出済みの未解決が配信される経路と、確認一覧から漏れる経路を塞げる。ただし本番の削減件数や最終正答率は未測定であり「最も効果がある」と数値比較で断定しない。
+
+**第2候補: 全項目の確定値と確認完了。** 原文/機械値/人の修正を区別し、必須値・マスタ有効性・版一致をサーバーで検証する。修正保存と配信許可を分離。既存のsuper_admin権限を維持し、権限拡張を推測で決めない。
+
+**第3候補: 確認完了→配信待ち→接続先別結果。** 既存統合設計の配信履歴・排他に接続。確認のcommit後に起動を落としても配信待ちを失わないこと、同時確認で旧一覧が新一覧を上書きしないこと、結果不明を成功扱い/自動再送しないことを先に実証する。全体置換なので「確認した1行を追記」しない。
+
+正式設計へ進むための未解決項目: 商品・単位・状態・数量・価格・備考の確定条件と例外、手動確認の対象版/有効期間、保存先の既存schema適合、確認commitと配信待ちの原子性、接続先での結果照合とunknownの復帰手順。外部APIの原子性/冪等性は未確認のため保証しない。
+
+将来の受入検査: (a)未解決の各理由が要確認に表示され配信0、(b)同投稿の正常行は配信対象、(c)未解決のまま確認完了不可、(d)全項目修正が出力値に反映、(e)原文/修正者/時刻/対象版保存、(f)競合確認/再解析で古い値を承認しない、(g)3接続先の一部失敗を全体成功と表示しない、(h)確認保存直後の停止でも配信待ち消失0、(i)結果unknown時の二重送信防止。これらは未実行。
+
+### 同一AIの自己審査と保存判断
+
+- **検証記録のレビュー: APPROVE**。主張を実コード/192条件/7捕捉試験に限定し、数値の意味・未確認・再現手順を明示。独立した第二者レビューではない。
+- **製品設計: REVISE**。未解決の契約を残して実装カードを発行しない。文書PRが通っても実装・配信の合格とはしない。
+- 外部導入事例は今回不要。既存システムの判定差を確定するための直接証拠が対象であり、他社の成功数値はこの挙動の証明にならない。
+- 維持: 現在は人手のコードレビューと文書チェック。今回の局所検査を製品の恒久CIと呼ばない。実装時には判定共通化と確認/配信の障害試験を既存backendテストへ接続する設計が必要。
+- 文書PRのみSTANDARD-WORKFLOW §5の書類区分。マージ条件は文書差分のレビュー完了とGitHub必須チェック通過。製品の二者検証・POによる本番確認を代行したとは扱わない。
+
+### 再現用コード（リポジトリルートでPython標準ライブラリのみ、出力先は一時ディレクトリ）
+
+```python
+from pathlib import Path
+import json,ast,asyncio,hashlib,itertools,sqlite3
+W=Path.cwd()
+s=(W/'backend/app/services/tcg_analysis_review_svc.py').read_text();f=next(x for x in ast.parse(s).body if isinstance(x,ast.FunctionDef) and x.name=='_build_where');ns={};exec(compile(ast.Module(body=[f],type_ignores=[]),'source-filter','exec'),ns)
+w,_=ns['_build_where'](query=None,provider=None,status_tab='NEEDS_REVIEW',review_only=False,unregistered_only=False,unresolved_unit_only=False)
+ds=(W/'backend/app/services/tcg_distribution_svc.py').read_text();pred='WHERE ar.pid_resolved = TRUE'+ds.split('WHERE ar.pid_resolved = TRUE',1)[1].split('ORDER BY',1)[0];pred=pred.replace('{cond_filter}',"ar.condition_canonical NOT LIKE 'FLAG_%'")
+con=sqlite3.connect(':memory:');con.execute('CREATE TABLE a(id INT,pid_resolved INT,unit_resolved INT,exclusion TEXT,price_normalized REAL,condition_canonical TEXT,needs_review INT,quantity_normalized REAL)');rows=[]
+for n,(pid,unit,ex,price,cond,needs,qty) in enumerate(itertools.product([0,1],[0,1],[None,'excluded','other'],[None,100],['FLAG_SINGLE','Sealed box'],[0,1],[None,10])):rows.append((n,pid,unit,ex,price,cond,needs,qty))
+con.executemany('INSERT INTO a VALUES(?,?,?,?,?,?,?,?)',rows)
+rv={x[0] for x in con.execute('SELECT id FROM a ar '+w)};dist={x[0] for x in con.execute('SELECT id FROM a ar '+pred)}
+cases={r[0]:r for r in rows};summary={'synthetic_combinations':len(rows),'review_tab':len(rv),'distribution_default':len(dist),'both_review_and_distributed':len(rv&dist),'needs_review_true_but_distributed':sum(cases[i][6]==1 for i in dist),'quantity_null_but_distributed':sum(cases[i][7] is None for i in dist),'excluded_from_distribution_but_absent_review':len(set(cases)-rv-dist)}
+source=(W/'backend/app/services/item_corrections_svc.py').read_text();func=next(x for x in ast.parse(source).body if isinstance(x,ast.AsyncFunctionDef) and x.name=='save_corrections');env={'text':lambda x:x,'_SCHEMA':'tenant_004'};exec(compile(ast.Module(body=ast.parse('from __future__ import annotations').body+[func],type_ignores=[]),'actual-save-correction','exec'),env)
+class Capture:
+ def __init__(self):self.statements=[];self.commits=0
+ async def execute(self,s,p):self.statements.append({'sql':s,'parameters':p})
+ async def commit(self):self.commits+=1
+async def trial():
+ out=[]
+ for field,old,new in [('product_id','a','b'),('product_id','a','a'),('unit','Case','Box'),('condition','FLAG_SINGLE','Sealed box'),('price','1','2'),('quantity','1','2'),('memo','','memo')]:
+  db=Capture();await env['save_corrections'](db,extraction_item_id='fixture',source_message_id='fixture-source',fields=[{'field_name':field,'system_value':old,'human_value':new}],corrected_by='fixture-user')
+  out.append({'field':field,'changed':old!=new,'inserts':sum(x['sql'].startswith('INSERT') for x in db.statements),'analysis_updates':sum(x['sql'].startswith('UPDATE') for x in db.statements),'commits':db.commits})
+ return out
+c=asyncio.run(trial());assert c[0]['analysis_updates']==1;assert all(x['analysis_updates']==0 for x in c[1:]);assert all(x['inserts']==1 and x['commits']==1 for x in c)
+report={'method':'Actual Python functions with SQL captured; WHERE predicates on synthetic SQLite table. No Postgres, network, product writes, or model calls. Counts are combinations, not production incidents.','source_commit':'adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b','matrix':summary,'corrections':c,'files':{str(p.relative_to(W)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [W/'backend/app/services/tcg_analysis_review_svc.py',W/'backend/app/services/tcg_distribution_svc.py',W/'backend/app/services/item_corrections_svc.py']}}
+print(json.dumps(report,ensure_ascii=False,indent=2))
+```

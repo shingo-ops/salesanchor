@@ -1,0 +1,532 @@
+{
+  "status": "WIP16; AJ13 split unapplied; no final approval",
+  "files": [
+    {
+      "path": "frontend-shared-button-resume/audit-result.json",
+      "bytes": 115969,
+      "sha256": "281aad8e68664d9c358acb7f7b0d28fe0a5f00edf5cac2da1ca87a476bb36838"
+    },
+    {
+      "path": "frontend-shared-button-resume/audit.cjs",
+      "bytes": 3754,
+      "sha256": "10a976a1eb5330ede6756499168445cfdd7eccd28bdac4fc2a735be33362f6b0"
+    },
+    {
+      "path": "frontend-shared-button-resume/audit.log",
+      "bytes": 3439,
+      "sha256": "09e1406ba08c5f85d315bb1f65e4d7a87827118957b31327c26dde71917f3ad0"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-diagnostic-result.json",
+      "bytes": 228597,
+      "sha256": "44dc10c9de85f193add11100ed201c882cce7609663e25b18e0dd5510f7aec87"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-diagnostic.log",
+      "bytes": 18,
+      "sha256": "a555dfe4ab39fa3f60cf77a281d8fd4aa1668bd539ed2af1ed5135acaefb7035"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-diagnostic.mjs",
+      "bytes": 4578,
+      "sha256": "6e9e6455c720cde829d4f68de94c324ea9786b181647141c9a60d3549fedc619"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-inventory-result.json",
+      "bytes": 120528,
+      "sha256": "9b5a4ae8820c31dc760f226e34514bff1c384671fe449b71c405de6725cf7f4a"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-inventory.log",
+      "bytes": 541,
+      "sha256": "9d6921b4722a5087cf2b4c5b19c933125c8a523bf93ee210233255397a5f018d"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-inventory.mjs",
+      "bytes": 6094,
+      "sha256": "455ff52ec35d8dee8efd374b915fc938b8d8d334bbde027d985dd7b9af2bfe87"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser-result.json",
+      "bytes": 42175,
+      "sha256": "15c9bf7dc41b458d53ef3d56e255e47c62960e855515a041c7e46833ea7f03bd"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser.log",
+      "bytes": 4819,
+      "sha256": "63cd22b5e5472c1d048106537666a33f00683ee605e84c22bebd32b84e63b0d3"
+    },
+    {
+      "path": "frontend-shared-button-resume/browser.mjs",
+      "bytes": 4940,
+      "sha256": "fa3b302ca248514a4e3a66c7f44e43f8b53a610ff2b595773dcc2f52c24ac226"
+    },
+    {
+      "path": "frontend-shared-button-resume/checkpoint-process-read.json",
+      "bytes": 124,
+      "sha256": "f70f18ff42829026891f047b0ea2fc384c7bb2f3007aec72cf7de053e3f080eb"
+    },
+    {
+      "path": "frontend-shared-button-resume/coverage.log",
+      "bytes": 22918,
+      "sha256": "f76da937820005cc636a93cd00cf875c4268cf807a225802cbb4f5e5fba23d01"
+    },
+    {
+      "path": "frontend-shared-button-resume/diagnostic-after.png",
+      "bytes": 29758,
+      "sha256": "8aab49ac0504d3d60d4654bda2f7e162098a4b0501d88c780a6ace80bd948b5b"
+    },
+    {
+      "path": "frontend-shared-button-resume/diagnostic-before.png",
+      "bytes": 29195,
+      "sha256": "61ed384e1bbfcb31b59fb528c5d7b9f50f509a3a97e43cdada354f020b96fadf"
+    },
+    {
+      "path": "frontend-shared-button-resume/eslint-typefix.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend-shared-button-resume/eslint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "frontend-shared-button-resume/final-checkpoint.json",
+      "bytes": 5874,
+      "sha256": "2466e0ef1dadc497ba23e3b33ee84f8ad1b90823c9c69d73df2a8202b8bac903"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/@heroicons_react_24_outline.js",
+      "bytes": 338839,
+      "sha256": "4fb07a405b91d18ec1c880d73d031f2cd4ce1a9c0c89f6a565febfd40881c84b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/@heroicons_react_24_outline.js.map",
+      "bytes": 517867,
+      "sha256": "d93c3d33edfc4f603835e5ac97da2bc44c2e9066fe93a6650afd1a5b9f3877d7"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/@heroicons_react_24_solid.js",
+      "bytes": 383733,
+      "sha256": "25b746a1adea052286842dcc8a20dd4096ff062602a581d45d304af0afb6989b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/@heroicons_react_24_solid.js.map",
+      "bytes": 554530,
+      "sha256": "48a8177931e5d3f35b8fe2e43cd7b8667941dd02a07c8ed2ad032039bf525fd4"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/_metadata.json",
+      "bytes": 2674,
+      "sha256": "b6e0c727b911423280cace89d063b970de7bb82a3c64716640531e2752ca682b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/i18next.js",
+      "bytes": 73886,
+      "sha256": "7e4fc8854c296f1c6ee32ac3ea39c1fed551201cee465d16aa27bfb8d1ff9689"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/i18next.js.map",
+      "bytes": 135912,
+      "sha256": "494a67a23968b89bcd6a3cba27dbf442d47d37ed60b88d8f168bdb8b51ccb9b7"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/package.json",
+      "bytes": 23,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-DIIWqC3u.js",
+      "bytes": 64646,
+      "sha256": "4933455a410356d7ce291d2feab5b5ef337045010a2f22face5e2ef992bfd123"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-DIIWqC3u.js.map",
+      "bytes": 118689,
+      "sha256": "1d18128acfa13357e3b1fba60983cddd888f82516adcc095400eaace3722a5f6"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-dom-yighAVO9.js",
+      "bytes": 711771,
+      "sha256": "ae137adfe124742b7d2b4a63f63a0a7a5848247d83dee8e1d929ce3eb78a73b8"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-dom-yighAVO9.js.map",
+      "bytes": 1409547,
+      "sha256": "94e7789e7831698cacfe91abbe0d9dae75683084d0549083b584ee054d8542e4"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-dom.js",
+      "bytes": 102,
+      "sha256": "4b629aca5358dbf2bc3065d011e1f5661be9b6b98d7f7b8888904d203ca1d2a9"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-dom_client.js",
+      "bytes": 778,
+      "sha256": "dea2403b9c355b54559883eb1d076a8b20c63a1af1718cf7b91ab0d4737ebb3d"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-dom_client.js.map",
+      "bytes": 1224,
+      "sha256": "ba00143a50ff8b83b5e0728b3184bcbdb01dc31a087efa1483a899f7ec675513"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-i18next.js",
+      "bytes": 49021,
+      "sha256": "54351672de06203a5f11a34b4ac4bfbbca0b598edf254e971e9746a0ede51722"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react-i18next.js.map",
+      "bytes": 86235,
+      "sha256": "be891a90409862bd4e5c7cc812a621bcf3b5809200db7dc800f7927c59ec9fa1"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react.js",
+      "bytes": 90,
+      "sha256": "59b39654efec4f536702c3ffcfc42926cf5c51a8e3addaf7301699d513769d4d"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react_jsx-dev-runtime.js",
+      "bytes": 28981,
+      "sha256": "44f15588de97ebcc10289c89896768a517360ad46a9f6d56d6c4b0c664abd4b0"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/.vite/deps/react_jsx-dev-runtime.js.map",
+      "bytes": 57854,
+      "sha256": "b0eeaeefec5fb1939a5e753b77ff32259d7b988d2a9524498b39000e2b033c94"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/CommissionPanel.tsx",
+      "bytes": 9539,
+      "sha256": "537278de812a7f74c5d4b5a2cbbb189ade700b3e1c71475813ba3c7ccfc6eca7"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/ConfirmModal.tsx",
+      "bytes": 1443,
+      "sha256": "a1b6ecfb7951e2ce7e17ba29f9d3f9ea9a7a20066ab8f1f26fd8e93729caf58b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/OrderFinancialPanel.tsx",
+      "bytes": 10075,
+      "sha256": "d0e38518ef2cac6ae4ebe95455b6343456d8593d52faff7658676f4730c0d581"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/PriorityScoreOverride.tsx",
+      "bytes": 4272,
+      "sha256": "941f251ef33ad618919b4fefecb687dbbe46e7901aa304511e657e723385ed08"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/PurchaseDetailPanel.tsx",
+      "bytes": 14450,
+      "sha256": "7ded15aa466d55c35b1077e18d40a6320771362cb6bc36e792a1668548529f1e"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after/ShippingDetailPanel.tsx",
+      "bytes": 18786,
+      "sha256": "23ebdecbf7bbf8785dfcfe49c572ed188e548699bf64ef12df3b5ea05b45f816"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after.html",
+      "bytes": 190,
+      "sha256": "fc47552ba1ad115bcc93b3f412862acf30398e2c22698a2d39eb35728c8c2e54"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/after.tsx",
+      "bytes": 505,
+      "sha256": "0210488a00aea63758276c395086d10c5ff51aefb914ce0d85cf3c71f15b6a69"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/CommissionPanel.tsx",
+      "bytes": 9398,
+      "sha256": "f835148355fb076b239c04f21ee4adfb2058fa2a5b7ec51b1347b476b1987e16"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/ConfirmModal.tsx",
+      "bytes": 1317,
+      "sha256": "d0a4934fd3df371a7fea29fce5304302a6698529cc3c1b9e6292594f8d417a57"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/OrderFinancialPanel.tsx",
+      "bytes": 9945,
+      "sha256": "0bc18881410095a8c76de1f4bd2d061a1c1a71df11410044f32005c631531163"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/PriorityScoreOverride.tsx",
+      "bytes": 4131,
+      "sha256": "2eecba42b02dde8d43b278317f5c5656ab49e33a82acd081d0fd10d85f874ca6"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/PurchaseDetailPanel.tsx",
+      "bytes": 14326,
+      "sha256": "1deea4864989c8692f5e24fa0572ace2001fe8768b6835c7ebfbdc281bec0c95"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before/ShippingDetailPanel.tsx",
+      "bytes": 18662,
+      "sha256": "f0f8c93dc8859cd09d8ddbc03294eee21f2d118f58eded1d1a48f2e0d568a7ef"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before.html",
+      "bytes": 191,
+      "sha256": "92fb7bea0f79910fa1ab4d8e0ba0691d67b2104d220ad285a39baa0452a2ea7e"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/before.tsx",
+      "bytes": 511,
+      "sha256": "687c673983fe85ef2a0e95d2bd97f17277291591c7dce009d01633c261348017"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-api.ts",
+      "bytes": 1242,
+      "sha256": "925f7102f97a9aecf5904382d30ef0dba32aa220612ea42e393f598d98f36678"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-firebase.ts",
+      "bytes": 70,
+      "sha256": "f9674d6d0532d3a775bacbc044843cd006a20919e92a66a722de33ec98792955"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/mock-permissions.ts",
+      "bytes": 59,
+      "sha256": "2566f68f23740d215b4485d177afb7c103b7334ab102397c7e04004aac087b3b"
+    },
+    {
+      "path": "frontend-shared-button-resume/fixture/sample.tsx",
+      "bytes": 1949,
+      "sha256": "e9e289779dffeddff6feab5f6b6d65fa02d1829154258300f975a9282e05e172"
+    },
+    {
+      "path": "frontend-shared-button-resume/isolated-results.json",
+      "bytes": 198,
+      "sha256": "1bbbfe60d91b60b57e519c051aa7ccd170e386eca48d5587e7ea357e25ff1bb3"
+    },
+    {
+      "path": "frontend-shared-button-resume/isolated-src_components_Button.test.tsx.log",
+      "bytes": 283,
+      "sha256": "a8301e14c51edb9fdc95dbafdb0888eaed4b7534144b2bcc82958bf0d87b37c3"
+    },
+    {
+      "path": "frontend-shared-button-resume/isolated-src_components_FedExRateModal.test.tsx.log",
+      "bytes": 109,
+      "sha256": "c6b5ae0fcab661ac0cf0b9345cca2f8abee95f41368a3430a7f677423c6ca596"
+    },
+    {
+      "path": "frontend-shared-button-resume/prepare.cjs",
+      "bytes": 1773,
+      "sha256": "b34760cd27efd927cf0ecbddf95f5d6767135a38e25af059947b576c21d379ee"
+    },
+    {
+      "path": "frontend-shared-button-resume/provisional-manifest.json",
+      "bytes": 1361,
+      "sha256": "f1b82810862e8cb1398662a714a739cbe02b90fac7ae1fa488845945ddddde0e"
+    },
+    {
+      "path": "frontend-shared-button-resume/quality-initial-summary.json",
+      "bytes": 842,
+      "sha256": "c059905a585fcd913178fc65d32b9f037becd6c3217f4a1b9080a19dba9e3d38"
+    },
+    {
+      "path": "frontend-shared-button-resume/root-quality/build.log",
+      "bytes": 749,
+      "sha256": "d915a234b5aed46a7a2c012a2f6b13d3f68611566a57dd17c6c2f2683391b747"
+    },
+    {
+      "path": "frontend-shared-button-resume/root-quality/check-all.log",
+      "bytes": 42656,
+      "sha256": "bf231172aa79e78bad315b1b2c6994c8051874c0de23ba7b27e4412871bf472c"
+    },
+    {
+      "path": "frontend-shared-button-resume/root-quality/results.json",
+      "bytes": 247,
+      "sha256": "486d960def8d506ed7dea70ed112e1a3ea739df2d820fead02fbe09f55dc3d0c"
+    },
+    {
+      "path": "frontend-shared-button-resume/sample-template.tsx",
+      "bytes": 1629,
+      "sha256": "f0688ed96a6119151d81c1f9330dd1baef5a969b4a8ae0ff1b3cb773b035f174"
+    },
+    {
+      "path": "frontend-shared-button-resume/unit-initial.log",
+      "bytes": 581,
+      "sha256": "5d9694899bca9c7406558de0bd90c838902cf8299f1ae841a5181627fcd268c3"
+    },
+    {
+      "path": "frontend-shared-button-resume/unit-typefix.log",
+      "bytes": 282,
+      "sha256": "5099235d198ed0a2fb53491d63aeaaba967eceaa91edb0709b18148e3066fdc6"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/base-diff.json",
+      "bytes": 3811,
+      "sha256": "bac7516d5932491df1af1d626cf27e27a075bd8645dc9dafbcfbbbc6fa860b9f"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/button-appearance-audit.cjs",
+      "bytes": 3319,
+      "sha256": "acd960a28eb979010707038bc9d1f7d24a6524efc21afc66565ac1bb0315299f"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/button-run.log",
+      "bytes": 375,
+      "sha256": "c9e103243da08c357750492d1d6f11d8d3a8e3e84c66ec715a8d42ad76078e6f"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/button-usage-audit.json",
+      "bytes": 363119,
+      "sha256": "97cab55aae65e4784b9273640499b1a00b125eb4a8719a3dac78ad40d746941b"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/enrich-run.log",
+      "bytes": 12446,
+      "sha256": "c5ee35e417b69a6af272995d85cee2bbf6f06ffc99cf9bd6eb2727347e2458c8"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/finalize-run.log",
+      "bytes": 565,
+      "sha256": "a1e60f01c80a22e8db71d298ee48eacaac2c6c4a18c8660f5eb9c7ff1e40c4f5"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-audit-enrich.py",
+      "bytes": 2150,
+      "sha256": "09a2baee3920bb452d00002540f1f7e8a2643b2c2a86eeba6616ed9d5b103ae1"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-audit-finalize.py",
+      "bytes": 5080,
+      "sha256": "a277d0a29f4914fd5b8bc819d7206e3db6f647110c1058d2822d7a7bed2a78fd"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-audit.cjs",
+      "bytes": 2289,
+      "sha256": "b9b45d0f861a316e0f658fe3d9771797a85a9f57b00e3f1d716b9e5284f4f896"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-audit.json",
+      "bytes": 558049,
+      "sha256": "e29fb0bf54d9fc5c81f0757fdce07ab951aaf91b9ff5c1b74b5fd9268695baa8"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-audit.md",
+      "bytes": 8796,
+      "sha256": "3fb370a58c5f60050df069b6cb2722b3efbf4625455e7d1ad54e30d4d6349d26"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/raw-run.log",
+      "bytes": 7187,
+      "sha256": "f2138313b1ed50545e3b5741cdf6c8f980719d80a5ad5bdd20a0f4d6a0d98801"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/resume-summary.json",
+      "bytes": 1051,
+      "sha256": "7c57d8eebc181863b8ac6c5ff68da6e646e735942be89b8c18ec6412d046c5eb"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/resume-summary.md",
+      "bytes": 924,
+      "sha256": "b248c57728d02c629db0df57b7724291963cdcb2fc21e2017c346cf5cdb08ed8"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-check-reexecution-verification.json",
+      "bytes": 586,
+      "sha256": "6d5a2babe9f6089b6a10988c821aba041f227bb6a5bafccd899989a88409b25a"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-check-reexecution.log",
+      "bytes": 4042,
+      "sha256": "29f926feb7217104b06a3160d70f6a10f004641bbe001adc46c5605d0f7222b9"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-check.cjs",
+      "bytes": 5391,
+      "sha256": "58a16c2c223ee235e23cda82bccc11d535158343cecf11daf5176b7e5c3d9808"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-check.log",
+      "bytes": 4042,
+      "sha256": "29f926feb7217104b06a3160d70f6a10f004641bbe001adc46c5605d0f7222b9"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-verification.json",
+      "bytes": 134102,
+      "sha256": "18c78214c019a6bfcdfad6188438fd422944d0052c70e0566eaceea62b415436"
+    },
+    {
+      "path": "frontend-shared-button-resume-audit/working-verification.md",
+      "bytes": 1259,
+      "sha256": "8c84c55b8f288e9604572a9bc422d3d86232f682682d1a3be301f18ab591a4b7"
+    },
+    {
+      "path": "frontend-shared-button-resume-review/pre-review.md",
+      "bytes": 6031,
+      "sha256": "edc093c5c80583fc4a8960b484d893e10bf8519baefb922ce44e4c5e4e0ed1c6"
+    },
+    {
+      "path": "frontend-shared-button-resume-review/reviewed-hashes.json",
+      "bytes": 1306,
+      "sha256": "6eb547cf1e16cacdbe6d248541d659a291897602ebdadbe230291a03ef27105b"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/CommissionPanel.tsx",
+      "bytes": 9324,
+      "sha256": "00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/ConfirmModal.tsx",
+      "bytes": 1229,
+      "sha256": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/OrderFinancialPanel.tsx",
+      "bytes": 9860,
+      "sha256": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/PriorityScoreOverride.tsx",
+      "bytes": 3954,
+      "sha256": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/PurchaseDetailPanel.tsx",
+      "bytes": 14235,
+      "sha256": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/SharedButtonMigration.test.tsx",
+      "bytes": 14683,
+      "sha256": "164afcd8971ac4f5164daa082181bd2e7a2ad448cac05934524946029cfd26da"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/ShippingDetailPanel.tsx",
+      "bytes": 18570,
+      "sha256": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/manifest.json",
+      "bytes": 796,
+      "sha256": "ca5ea0addf44e5fb6a7e1c300b4b5c64eb500744475764d893847418fa3cf06c"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/tracked.patch",
+      "bytes": 10425,
+      "sha256": "2143807db56058e7e5b0e77e60df7cc079336a9bbf773b9d66f7d18a58542e4a"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/held-raw-shared/verification.log",
+      "bytes": 102,
+      "sha256": "c4b3d20a28fce45369d66d42b949d20d6eeb77ddb01cd99b8896e8b4178598c1"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/CARD-RAW-SHARED-RESUME-02.txt",
+      "bytes": 7547,
+      "sha256": "6cdca7356f510b72394c842e037dfe57d6ef6c3c7f017f3c73f22f3f8290f158"
+    },
+    {
+      "path": "frontend-raw-buttons-20260911/restore-held-raw-shared.py",
+      "bytes": 832,
+      "sha256": "8ed3b677714a58844fead49a296cbad3157954687f0247bb0017e901038ab877"
+    }
+  ],
+  "archiveSHA256": "9cb8fb7f5c8beb38f3163d21a87cf231f58360f467d65c81383ec0a8dbad3b69",
+  "archiveBytes": 1000888
+}
