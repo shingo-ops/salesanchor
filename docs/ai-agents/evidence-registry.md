@@ -2393,3 +2393,31 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 EV-20260912-LINE-WORK-ID実装追記: §16.10で事前実API禁止に対応。カードL29を修正して終了0、長行警告のみ。実装/静的検査/文書検査済み、ローカルDocker不在により実DBはCI前。Gemini実呼出し0、本番機能変更0。
 
 EV-20260912-LINE-WORK-ID PR提出: PR #3441 ready。run34663710924は2604成功/1失敗/95skip、旧fixture不足を8d245eacで修正。最終判定はPR最新HEAD。現行gateは番号付きGO原文欠落で停止。9表17837898 bytes退避、hashはrecon末尾。Gemini実呼出し0、マージ/本番反映/再抽出/配信0。
+
+2026-09-13追補: HEAD e25b09a9のBackend CI34663978933は2606 passed/95 skipped、失敗0、coverage62.53%。PO原文「進めてくれ」受領。番号付きGOへ代筆せず、最新main 5b21b3b8との文書3競合を双方保持で解消。追従後CIは再確認。マージ/本番再抽出/配信未実施。
+
+## EV-20260912-LINE-ANDROID-IMPORT
+
+Android実ファイル1,129件を専用パーサーで読み分け。パーサー単体6、Termux単体16成功。PC関数不変。PR #3443のCI run 34672625832で全体pytest 2,608成功/95 skip。API回帰試験成功、本番送信は未完了。根拠: docs/handoff/line-android-import/recon.md、backend/tests/test_tcg_line_android_parser.py、tools/termux-line-import/test_android_import.py。
+
+## EV-20260912-LINE-ANDROID-LOGIN
+
+Termuxログイン・更新・MFA・秘密情報非保存を合成資格情報で検証。Python 3.12/Termux 3.14で30テスト成功。実認証はユーザー待ち。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認証追記: 資格情報なしの公開設定確認で403 / API_KEY_HTTP_REFERRER_BLOCKEDを実測。直接ログインは利用不可。パスワード入力前に停止する修正を加え33テスト成功。根拠: docs/handoff/line-android-login/recon.md。
+
+端末認可方式変更: ユーザーがフロント後回し・インポート先行を明示。Firebase直接ログインを撤去し用途限定APIキーと管理者登録へ変更。端末23単体成功、実DB検証はCI待ち。根拠: docs/handoff/line-android-login/design.md、recon.md。
+
+端末専用キー検証追記: CI run 34676154180成功（全体2,625 passed/95 skipped）。一時PostgreSQLの本番モデル前提表と実DDLを使用し、並行認可・失効・取消し・最小権限DMLを確認。本番反映・初回登録・実送信は未実施。
+
+## EV-20260912-LINE-DELIVERY-CONNECT
+
+PR #3445 deploy34676818835成功、端末登録34677017232成功、2ファイルimported/pending_reviewを端末応答で確認。配信接続の現状と設計は docs/handoff/line-import-delivery/recon.md / design.md。実DB再照会と解析・配信は未実施。
+
+## EV-20260912-LINE-SUPPLIER-NAMES
+
+PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect34678551826成功。39名は完全一致/正規化一致0、マスタ110件。PC前方一致候補12名は未確定。docs/handoff/line-supplier-aliases/recon.md参照。
+
+- 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
+
+全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
