@@ -142,4 +142,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 設計自己審査・PO設計承認済み。8製品ファイル実装・PR #3438 ff008f18公開済み。単体13/E2E7成功、CI全suite/PG成功。CI全pytest2601成功/95skip。AC5旧式3失敗・現行3成功で残件解消 | GO記録欠落をCI実ログ確認。次は本番影響・直前確認を添えたPOの番号付きGO判断。マージ/本番未実施 | PR #3438 / docs/handoff/tcg-product-import/recon.md同日公開結果 / EV-20260912-PRODUCT-CSV-PUBLISH | 2026-09-12 |
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | PO設計承認・実装・対照検算済み。PR3438はmain5b21b3b8統合後2184092c、製品8SHA不変。CI全pytest/PG成功、本番API/App200、前回backup6.7M生成ログ確認 | 番号付きGOでPR3438マージ＋自動本番配備を判断。GO欠落以外のCI完了。今回直前backupは配備時に確認。マージ/本番未実施 | PR3438 / recon.md 2026-09-13 / EV-20260913-PRODUCT-CSV-PRE-RELEASE | 2026-09-13 |

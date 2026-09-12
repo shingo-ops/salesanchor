@@ -2474,3 +2474,26 @@ tradeoff: 対照検算はpytestではなくDB/監査mock付きASGI内HTTP。実�
 decision: AC5とCI失敗原因の残件解消。PO GO未取得、マージ/本番未実施
 follow_up: 本番影響と直前確認を提示しPR3438の番号付きGO判断へ
 ```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-PRE-RELEASE
+date: 2026-09-13
+agent: csv_card_executor (main integration), Codex design partner (read-only checks)
+task: PR3438本番反映前確認
+scope: HEAD2184092c4f7cafcb43188626490c892db5ed82d7、製品変更0
+evidence:
+  - type: command
+    reference: /tmp/reports/SA-CSV-PRE-RELEASE-FINAL-20260913.json
+    summary: 親がHEAD/OPEN/MERGEABLE/CI38成功6対象外1失敗確認。全pytest/PG成功、失敗はGO記録不足
+  - type: log
+    reference: /tmp/reports/SA-CSV-PRE-RELEASE-20260913.txt
+    summary: 実装役がmain5b21b3b8統合・製品8SHA不変・12ファイル境界・pushを確認
+  - type: log
+    reference: /tmp/reports/SA-CSV-LATEST-DEPLOY-20260913.txt:583
+    summary: 前回配備の20260912_193916.sql.gz 6.7M生成、main5b21b3b8配備/health成功を実ログ確認。本番HTTP200を別途直接確認
+confidence: high
+tradeoff: 過去backup生成証拠であり現物存在/復元試験は未確認。今回直前backupは配備時に取得する既存手順
+decision: POの番号付きGO判断へ。GO/マージ/本番変更は未実施
+follow_up: GO受領後に正式反映カード。配備時backup/HEAD/health/空CSV実資産の検証を完了条件とする
+```

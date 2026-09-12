@@ -424,3 +424,22 @@ AC5対照検算: 既存実装役csv_card_executorが /tmp/reports/CARD-PRODUCT-C
 証拠: /tmp/reports/CARD-PRODUCT-CSV-AC5-CONTRAST-01.json（前後ハッシュと6ケース）、同.txt（実行出力）、同.py（検算手順）。Docker不在につきpytestを実行した結果ではない。これは既存試験関数直接呼出によるASGI内HTTP対照検算であり、CI全suiteの2601成功/95skipとは別の検証。DB書込・監査記録はmock、本番登録成功の証明ではない。AC5の修正前失敗確認の残件を解消。
 
 判定更新: 限定設計§15の検証残件とCI失敗原因確認は完了。設計担当による自己審査・読み取り確認であり独立第三者レビューと称さない。POの番号付きGOは未取得、マージ・本番反映・実データ登録は未実施。main pushで本番配備が起動するため、今後のマージ判断では本番への影響と直前の確認を含める（.github/workflows/deploy.yml:3）。
+
+
+### 2026-09-13 本番反映前の確認
+
+PO原文「進めてくれ」は直前説明の本番反映前確認への指示として受領し、番号付きGOには読み替えない。実装先preflight成功、PR3438はOPEN/未マージ、開始HEAD ff008f18。mainは5b21b3b8へ更新。追加は独立LINE機能等で今回の8製品ファイルとの重複0。app/main.pyの追加はline_import_devicesのimport/include_router。親がこの変更を読取照合し、既存公開カードのmain追従前提を解消して同じ実装役に統合・SHA照合・CI再確認を委任した。
+
+本番の読取確認: API /api/healthとAppトップはcurlでHTTP200。制限付きsalesanchor-claude鍵で要求したHEAD/backup一覧はForceCommandにより監視統計だけ返り、これをHEAD/backup確認済みとは扱わない。無制限鍵への変更なし。統計上はbackend/DB等のコンテナを確認、ディスク45%使用。
+
+最新成功配備run34688991647はmain5b21b3b8。正規権限審査で配備実ログを取得し、2026-09-12 19:39 JSTのsalesanchor_db_20260912_193916.sql.gz（6.7M）生成、HEAD5b21b3b8への更新、19:42 JSTのhealth check成功を直接確認。保存 /tmp/reports/SA-CSV-LATEST-DEPLOY-20260913.txt:583/:1030/:4635。これは過去配備時の生成証拠であり、現在ファイルの存在や復元試験は未確認。
+
+今回のPRはDB migration/サービス/運用スクリプト変更0。既存配備はmain pushで自動起動し、git更新前にbackup.sh実行＋ファイル存在検査があり、失敗時はset -eで停止（.github/workflows/deploy.yml:127）。健康確認失敗時は前HEADへの自動復旧処理がある（同:550）。コード復旧で後日の商品登録データを巻き戻せるとはしない。今回の配備直前バックアップは未来の処理であり未取得。GO後の配備では新しいバックアップ記録と本番HEAD/健康状態/空CSV実資産を確認して完了判定する。
+
+統合確認: 実装役がmain5b21b3b8を取り込み新HEAD2184092c4f7cafcb43188626490c892db5ed82d7をpush。親もPR JSONでHEADと既存12ファイル（8製品＋4文書）を直接確認。8製品SHAは前便の対照検算から一致。公開証跡 /tmp/reports/SA-CSV-PRE-RELEASE-20260913.txt。API health本文はstatus ok/database connected/redis connected/celery connected。本番データへの書込0。
+
+補足: 復旧文書の文字列検索要求は、検索語とパイプの組合せがPreToolUseのDB書込検知に一致して実行前に拒否された。DB操作を要求したものではないが許可解除は行わない。独立したgit diffと保存済みhealth本文の読取は別要求で成功。復旧経路の根拠はすでに読み取った既存deploy.ymlで確認しており、DB復元は行わない。
+
+最終CI: 親がgh pr viewでHEAD2184092c/OPEN/MERGEABLEと38SUCCESS/6SKIPPED/1FAILUREを保存。/tmp/reports/SA-CSV-PRE-RELEASE-FINAL-20260913.json。全pytest/PG成功、最新process-artifacts失敗run34716811945/job103615430624は実装役が正規権限審査で取得した実ログでGO欄欠落と確認。追加製品修正0。POへ提示する判断対象はPR3438マージ＋自動本番配備であり、GOの代筆はしない。
+
+実装役の最終報告: Backend run34716811995/job103615468603の実ログは2674 passed/95 skipped/309 warnings/112.94s。親は実装役の保存ログ該当行を確認。PR本文を最新HEAD/CI件数/失敗runへ更新済み、対照検算は旧HEADで実行・新HEAD8製品SHA一致と区別している。
