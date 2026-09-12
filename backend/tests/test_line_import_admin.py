@@ -195,3 +195,25 @@ def test_private_report_rejects_non_public_key_and_mutating_actions():
         admin.report_key('not a public key')
     with pytest.raises(ValueError):
         admin.validate(payload('commit', report_public_key='not a public key'))
+
+
+async def test_source_comparison_exports_only_fingerprints_inside_encrypted_report():
+    db = MagicMock()
+    suppliers, sources = MagicMock(), MagicMock()
+    suppliers.mappings.return_value.all.return_value = [{'code': 'SP1', 'name': 'PRIVATE', 'is_active': True}]
+    sources.mappings.return_value.all.return_value = [{'code': 'SP1', 'raw_text': 'private\n body', 'line_posted_at': None, 'is_active': True}]
+    db.execute = AsyncMock(side_effect=[suppliers, sources])
+    with patch.object(admin, 'authorize', new=AsyncMock(return_value={'unresolved_names': ['PRIVATE'], 'message_count': 1})), \
+         patch.object(admin, 'read_progress', new=AsyncMock(return_value=ready())), \
+         patch.object(admin.distribution, 'list_targets', new=AsyncMock(return_value=[])), \
+         patch.object(admin.distribution, 'load_distribution_settings', new=AsyncMock(return_value={})), \
+         patch.object(admin.distribution, 'fetch_output_rows', new=AsyncMock(return_value=[])), \
+         patch.object(admin, 'seal_report', return_value={'body': 'encrypted'}) as seal:
+        result = await admin.operate(db, payload(report_public_key='test-public-key'))
+    data = seal.call_args.args[0]
+    assert data['source_fingerprints'][0]['compact_sha256'] == admin.name_hash('privatebody')
+    assert 'raw_text' not in data['source_fingerprints'][0]
+    assert data['source_fingerprints'][0]['posted_at'] == 'None'
+    assert data['source_limit'] == 500
+    assert 'private' not in str(result).replace('private_report', '')
+    assert 'LIMIT 500' in str(db.execute.call_args.args[0])

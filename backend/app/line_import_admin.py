@@ -109,7 +109,17 @@ async def operate(db, data):
         private = None
         if data.get('report_public_key'):
             suppliers = (await db.execute(text(f'SELECT code,name,is_active FROM {TCG_SCHEMA}.tcg_suppliers ORDER BY code'))).mappings().all()
+            sources = (await db.execute(text(f'''SELECT ts.code,sm.raw_text,sm.line_posted_at,sm.is_active
+                FROM {TCG_SCHEMA}.source_messages sm
+                JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
+                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+                WHERE sc.channel='line' ORDER BY sm.created_at DESC LIMIT 500'''))).mappings().all()
+            fingerprints = [{'code': r['code'], 'posted_at': str(r['line_posted_at']),
+                             'active': r['is_active'], 'length': len(r['raw_text']),
+                             'compact_sha256': name_hash(''.join(r['raw_text'].split()))}
+                            for r in sources]
             private = seal_report({'unresolved_names': names, 'suppliers': [dict(r) for r in suppliers],
+                                   'source_fingerprints': fingerprints, 'source_limit': 500,
                                    'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active')} for t in targets]}, data['report_public_key'])
         return {'status': 'inspected', 'private_report': private, 'job_id': job_id, 'progress': progress,
                 'unresolved_name_hashes': [name_hash(n) for n in names],
