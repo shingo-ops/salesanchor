@@ -1129,3 +1129,37 @@ Backend CI34748717910/job103701245040のログを直接取得。3286 passed、95
 商品IDの正答率は実装PR内product-space-accuracy.jsonに記録。固定729件中、全差分11を含む2投稿全19明細を原文/マスタから同一AIがラベル。正答8→18（42.1%→94.7%）、未特定10→0、既存誤商品1→1。9種セットをPM0263に結ぶ既存誤判定は未修正。無作為/盲検/独立レビューではなく、未ラベル710件を含む全体正答率ではない。
 
 本番再解析/採用/配信0、GO未受領・未マージ。CI結果はPR3481本文にも保存し、製品PRのHEADを証跡追記だけで変更しない。本記録は既存設計PR3462への追記であり、同PRのマージ承認ではない。次は対象HEADの番号付きGO確認とマージ前再検査。実装/CI成功を残存誤判定の解消と扱わない。
+
+
+## 9種セット対策の事前調査（2026-09-13）
+
+該当明細9d2b898e-5b8a-4ca0-89bc-d73127251f3aは本番READ ONLY再確認でもactive/done・PM0263・needs_review=false、supersededなし。対象商品/9個別/関連2商品計12件と検索/除外語を取得。PM0263の除外語は3件でカードセットなし。非公開/tmp/nine-set-current-private.json。
+固定729件のコピーで除外語カードセットをPM0263だけに追加しv8の実関数を使う検算。変化10件（個別9種MULTI→各単一、集合1件PM0263→NONE）、他719件の全商品照合戻り値同一。19ラベルは19正答、特定数563→571。原文/辞書コピー元の変更0、DB/Gemini0。/tmp/nine-set-exclusion-proof-private.json。個別9種は原文の共通見出し19行と内訳9行に分かれ、完全名単一行一致はfalseだったため全文を読み直して対応を確認。原文根拠の不足を文字列完全一致で隠さない。
+実装経路は既存migrations/20260910_170000_tcg_keyword_false_positive_guards.sqlとcard-keyword-false-positive-guards.md。既存runnerは明示run_sql登録方式、migrationファイルだけでは配備されない。今回も専用migration/登録1行/既存PG試験の3製品ファイルに限定。新規API/ライブラリ仕様確認なし。
+
+
+## PR3481本番反映とカードセット対策PR3483（2026-09-13）
+PO原文GO #3481を最終HEAD89d4b699f0ace4b352a022d96c5caba438f06440へ照合。35success/8skip/未完了0を確認し公式merge wrapperで2026-09-13T10:00:45Zにマージ。merge SHA6326115cc946605eebaeaeded00898f09803670a。Deploy34750745805/job103706745148はsuccess、10:04:32.5844414Z完了。backupは10:01:26.5190599Zにsalesanchor_db_20260913_190123.sql.gz（6.6M）生成を直接ログ確認。復元試験なし。
+SSH読取時点の本番HEAD6326115c、engine name-first-v8-product-space-runs、稼働analyzer SHA256 d0c5f1eec36e06469864833fe1076e7f240268016b1afe6fb413c4ddb0f687d0がgit show同commitと一致。公開health status ok/database・redis・celery connected。後続の別PR3482も10:12:31Zにマージされており、現在のHEADを6326115cと固定して宣言しない。既存データ再解析/採用/3シート配信0。GO委任の自己有効化なし。
+追加依頼の対策はPR3483（release/cardset-exclusion）。初回0fe723b8の提出後、mainのPR3482（ワンピース商品マスタ、5c0704df）との差が登録runnerで競合。mainの登録/削除をそのまま保持してカードセットmigration1行だけを追加する形で解消（2e906fd8）。mainからの実差分は許可9ファイルのみ。guard-authoringは古いbase包含不足によるerrorからsuccessへ。
+初回CIのtest-schema-dupは部分構造試験用の独自CREATE TABLEを拒否。正式provisionから作った隔離CI表の1表を別名にして欠落を再現する試験へ修正（fb41b645）。製品SQL変更なし。process-artifacts gateは新番号のGO記録欠落で停止。正式全テストの最終結果は追記待ち。
+固定コピーの追加照合10件（商品だけの非盲検同一AI評価、顧客原文/金額を転載しない）。原文根拠: 集合1件はsource9ece68fb L17-L19、個別9件はsourcedd423a78の共通見出しL19と各内訳。次表の期待商品コードは既存マスタと内訳を直接照合したもの。未特定は正しい商品登録の創作を避ける期待棄権であり商品特定成功に数えない。
+| 明細ID | 修正前候補 | 修正後/期待 |
+|---|---|---|
+| 16e6cd9e-f665-4fd9-abb1-363ebfad179e | PM0263/PM0277 | PM0277 |
+| 2751bfa0-1de7-4a59-9de4-cec05dd7e2cc | PM0263/PM0282 | PM0282 |
+| 2c7ab86e-2d33-4c7f-8b36-217a251175cd | PM0263/PM0280 | PM0280 |
+| 481b9ba9-733c-4350-b5af-a7aab74610c0 | PM0263/PM0281 | PM0281 |
+| 5bb34f3a-6b59-4a95-b28b-226e2c1434e0 | PM0263/PM0279 | PM0279 |
+| 8ac48018-317e-4ec6-8c10-cab9bce5ce60 | PM0263/PM0278 | PM0278 |
+| ce265e7a-5cca-4ea9-9196-f33f09c4f022 | PM0263/PM0284 | PM0284 |
+| ceb6e570-351a-4e41-84bd-5216d98aa38f | PM0263/PM0283 | PM0283 |
+| ee813a51-d30a-4340-a19f-b134cb48f6d9 | PM0263/PM0276 | PM0276 |
+| 9d2b898e-5b8a-4ca0-89bc-d73127251f3a | PM0263 | NONE（未特定） |
+
+
+### PR3483最終検証結果
+
+最終HEAD fb41b64538d8fb8fa4c429e4b79ef3aba105e13e、main5c0704df包含・GitHub mergeable。Backend CI34751619981/job103709049740の直接ログ: 3295 passed / 95 skipped / 309 warnings / 115.30秒 / coverage63.83%。追加9ケースも正式PostgreSQLで成功。Migration CI34751619987の実SQL/全件ドライラン/登録点検成功。全チェック37success/4skip/1failure、未完了0（PR本文追記前の観測）。唯一の失敗はprocess-artifacts gateの新番号GO記録なし。修正前テスト定義を使ったCI34751560833も3295成功だが最終確認根拠は34751619981とする。
+
+正式証跡をPR3483本文へ保存。GO #3483未受領・未マージ・本番未反映・保存済み結果未修復・再解析/配信未実施。設計自己審査と直接読んだCIログを区別し、第二者レビューとは称さない。次は対象HEADとチェック/バックアップを再確認した上でPO本人の番号付きGOを受けること。PR3481のGOと配備成功は追加PRの承認に転用しない。
