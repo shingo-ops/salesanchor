@@ -2730,37 +2730,6 @@ EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直�
 
 EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
 
-EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
-
-EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
-
-EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
-
-
-```text
-id: EV-20260913-SHINSOKU-TIMEOUT-01
-date: 2026-09-13
-agent: Codex design partner / same-AI self-review
-task: 長文抽出100秒超過と原文精度の限定検証
-scope: docs/handoff/tcg-product-master-growth/design-keyword.md 時間制限節
-evidence:
-  - type: command
-    reference: docs/handoff/tcg-product-master-growth/recon.md 時間制限節
-    summary: API99.842/136.291秒、解析0.554/0.683秒、147件/1176照合一致、DB更新0、前後SHA一致
-confidence: high for measured sample; unknown for population
-tradeoff: 有限300/330秒案は占有増。型番3商品不整合・統合配信未検証は分離
-decision: 設計自己審査APPROVE、数値/実装PO承認待ち、カード草案
-follow_up: card-lint/文書検査、PO承認後の限定実装
-```
-
-EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
-
-EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
-
-EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
-
-EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
-
 ```text
 id: EV-20260913-PRODUCT-CSV-PREFLIGHT
 date: 2026-09-13
@@ -2917,11 +2886,39 @@ EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-APPROVAL: 既存担当へのカード�
 
 EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-REVIEW: 既存実装担当が許可6ファイルの修正/試験追加、make lint-ci/4テストruff/diff-check終了0（mypy警告扱い）。親は生報告と実6SHA一致を直接確認。AST純関数検算は293名称期待tuple不一致0・従来確定劣化0・既存正解256保持・旧public関数500例不一致0・境界10一致・96設計例不一致0・R5方向別6成功。追加テストの作品ID誤りと既存import整形を限定修正して再確認。pytest/PG/CI未実施、製品公開/マージ/本番変更なし。根拠: docs/handoff/tcg-product-import/recon.md「A便の実装受領・読取確認」。
 
+EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
+
+
+```text
+id: EV-20260913-SHINSOKU-TIMEOUT-01
+date: 2026-09-13
+agent: Codex design partner / same-AI self-review
+task: 長文抽出100秒超過と原文精度の限定検証
+scope: docs/handoff/tcg-product-master-growth/design-keyword.md 時間制限節
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-product-master-growth/recon.md 時間制限節
+    summary: API99.842/136.291秒、解析0.554/0.683秒、147件/1176照合一致、DB更新0、前後SHA一致
+confidence: high for measured sample; unknown for population
+tradeoff: 有限300/330秒案は占有増。型番3商品不整合・統合配信未検証は分離
+decision: 設計自己審査APPROVE、数値/実装PO承認待ち、カード草案
+follow_up: card-lint/文書検査、PO承認後の限定実装
+```
+
+EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
+
+EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
 
 EV-20260913-PRODUCT-NAME-SPACE-PUBLISH-APPROVAL: 製品PR作成とCI正式検証の質問にPO原文「進める進める」を受領。公開カード違反0、既存/root/csv_card_executorへ委任継続。検収済み6製品ファイルと固定版d11d27b7の17文書を対象にcommit/push/PR/通常CIを許可、マージ/本番/データ変更は禁止。最新main56a1661dの空箱/状態保護は保持。根拠: docs/handoff/tcg-product-import/card-product-name-space-publish.md とreconの公開承認節。
 
-
 EV-20260913-PRODUCT-NAME-SPACE-CI: 製品PR3473/HEADe484f168、6製品+17文書/cleanを親が直接確認。Backend run34740813915/job103680104043実ログ3260passed/95skip/coverage63.82%。36チェック成功/8対象外、唯一の失敗はprocess gateの番号付きGO未記録。親もCIログと固定旧基点AST293/500/境界検算を確認。最新main配備34740608928の直近backup7.6M生成を読取確認（今回配備用ではない）。技術検証済み・GO未受領・未マージ/本番未反映。根拠: docs/handoff/tcg-product-import/recon.md「製品PR3473・正式CI完了」。
-
 
 EV-20260913-PRODUCT-NAME-SPACE-GO: PO原文「GO #3473」を受領、承認時HEADe484f168。親がpreflight/clean/.pr-number/HEADを直接照合し、確認済みmainc22ad508（6製品変更0）追従と通常merge/autodeployのカードを既存担当へ引き継ぎ。カード違反0。PO本人の承認でありAI代理GOではない。文書PR3466/B便データ操作は対象外。結果未確認、reconのGO3473節参照。
