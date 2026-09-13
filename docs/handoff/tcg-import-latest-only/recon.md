@@ -382,6 +382,14 @@ fetch後のorigin/mainはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870。専用設計
 
 設計審査ではAPI/保存先/拒否条件/状態遷移を照合。legacyのpauseとbaseline必須制約の矛盾、freeze前の未settled確認、切替候補のpaused条件、前回値支持後の候補終端化を文書内で修正した。コード/DB/モデルによる新方式の試験は0。全体設計APPROVEは同一AIの自己審査であり、実装の独立レビュー・POの切替GOではない。
 
+## 第2便の準備確認（2026-09-13）
+
+origin/main 9f5415c31104e325b38da03df8ef9acdc5973066をfetchして読取確認。既存run_all_migrations.shには20260912_170000_line_supplier_source_names.sql登録が追加されており、旧作業台を基準に削除しない。提案した20260913_230000_tcg_stock_projection.sqlは同treeに未存在。
+
+migrations/20260906_120000_create_tcg_tables_t001.sql:318/350/388/410でsupplier_channels/source_messages/extraction_items/analysis_resultsの既存FKを確認。units/conditions/tcg_productsを新規在庫のFK親とする。最新mainのbackend/tests/test_tcg_work_matching_integration.pyのpg fixtureはCI・ローカルhost・試験DB名を要求するため、ローカルでGITHUB_ACTIONSを偽装する試験コマンドはカードへ書かない。
+
+第1便の新規4ファイルは専用作業台に未存在。第2便は3ファイルと8試験群の草案で、未発行。正式試験経路と前段の検収が必要であり、形式検査のみで着手可とはしない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

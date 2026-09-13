@@ -444,6 +444,25 @@ PO原文:
 テストはunittest.TestCaseとして作りpytestでも収集可能にする。純粋部品だけのunittest実行はDB不要。全backend pytest/make testは規則どおりDocker必須であり、部品試験をその代用と報告しない。標準ライブラリだけを使い依存追加0。既存のAI呼出・原文取込・配信へ本便で接続しないため、DB移行・既存API・最新mainの並行修正との未解決依存はない。
 
 
+### 後続便の順序と開始条件
+
+第1便の部品はまだ存在せず、本セッションで実装試験を実行した記録もない。順序は次のとおり。カード番号の予約は実装の開始許可ではない。
+
+| 便 | 変更のまとまり | 開始条件 / 終了時の証拠 |
+|---|---|---|
+| 01 | 原文根拠・数量の純粋部品4ファイル | 発行済みカードの受領 / 4ファイル差分・部品試験・静的検査を設計担当へ返す |
+| 02 | 6表と2既存表追加列のmigration、登録1行、実PG制約試験 | 第1便検収、最新mainの登録行保持、正式ファイル範囲確認後に発行 / 冪等・制約・テナント隔離の実PG結果 |
+| 03 | v5抽出・原文全件保存・状態/予定判定・共通投影・inbox接続 | 01/02検収後にカード化 / K1〜K8、再解析/同時実行/遅着の実PG結果 |
+| 04 | 在庫/履歴/手動確認APIと既存画面 | 03のAPI/DB結合試験検収後にカード化 / 日英UI・完売履歴・原文対応・権限/競合試験 |
+| 05 | 固定publication・writer・停止/再試行・shadow切替準備 | 03/04検収後にカード化 / K9〜K10・3接続QA・失敗注入・切替リハーサル |
+| 本番便 | 初回切替・再解析・3先配信 | レビュー/必須CI/実物のID・hash・差分を提示した別カードとPO GO / 実際の配信結果全件照合 |
+
+第2便草案は[card-stock-storage-02.md](card-stock-storage-02.md)。前段未検収のため未発行。03以降はこの順序表だけであり、実装カードが存在するとは扱わない。マージ・本番実行を便番号だけから許可しない。
+
+第2便のFK対応: supplier_channel_id→supplier_channels.id、product_id→tcg_products.id、unit_id→units.id、condition_id→conditions.id、source_message_id→source_messages.id、extraction_item_id→extraction_items.id。新規表相互参照は§27の表名へ接続する。既存のsource/抽出行削除を新FKのRESTRICTが拒否することを負の試験に含める。metadataのJSON参照も同一source/offer/channelを検査する。
+
+新規migrationの予定名はmigrations/20260913_230000_tcg_stock_projection.sql。最新main 9f5415c31104e325b38da03df8ef9acdc5973066のtreeで未使用を確認した仮予約で、実装開始直前に再確認する。既存scripts/run_all_migrations.shのLINE送信者照合登録行を保持し、新SQLのrun_sql登録だけを追加する。登録スクリプトのロジック変更は含めない。第2便は運用スクリプトにも触るため、第1便の権限を流用しない。
+
 ## 16. 現在在庫と予定情報の反映順序（技術設計追補・2026-09-13）
 
 main追従基点 `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8`。抽出形式はv2=7列/v3=9列/v4=10列が存在する。v4のRESOLVED_WORK_IDと作品参照検証を保持し、本件のために9列へ戻さない。旧版を読めることと、新しい在庫イベントを生成してよいことは別に判定する。

@@ -2953,3 +2953,22 @@ validation: diff whitespace, card-lint, task-state, ADR-index, design/citation/m
 decision: overall design APPROVE by same-AI self-review; not independent review or PO approval; stage-1 card scope remains four new pure-component files
 follow_up: execute and review authorized stage-1 card through designated executor; issue later bounded cards and run K1-K10 product acceptance before production
 ```
+
+```text
+id: EV-20260913-LINE-STORAGE-CARD-DRAFT
+date: 2026-09-13
+agent: Codex design partner
+task: 後続便の開始条件と第2便草案
+scope: docs only; no executor started
+evidence:
+  - type: command
+    reference: origin/main 9f5415c31104e325b38da03df8ef9acdc5973066 tree/diff
+    summary: new migration filename unused; existing source-name migration registration must be preserved; CI-only PostgreSQL fixture must not be enabled by spoofing GITHUB_ACTIONS locally
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/card-stock-storage-02.md
+    summary: unissued draft, three planned files and eight PostgreSQL acceptance groups; no execution commands or start authorization
+validation: both card-lint checks exit 0 with long-line warnings; design/citation/maintenance and whitespace checks passed; stage-1 contract byte content unchanged, pinned hash refreshed, legacy suffixes retained
+tradeoff: draft format pass is not executable-card approval; first-stage implementation evidence and exact isolated PostgreSQL path are still required
+request: explicit delegation of stage 1 to another executor requested from PO; no response recorded at this save point
+follow_up: stage-1 delegation and implementation evidence; finalize storage card only after prerequisites
+```
