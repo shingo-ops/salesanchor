@@ -734,3 +734,14 @@ POへA便だけの正式設計承認を尋ねた応答「進める」をdesign �
 Docker CLIは存在するがdocker infoは/var/run/docker.sock不在で終了1。ローカルpytest/PGは実施せず既存CIで確認する契約を維持。card-lintは終了0・違反0（L24長行警告2件）、diff --checkとtask-state-checkは終了0。カードの作業場所・基点・入力設計SHA・停止条件・6ファイルとA1–A8を同一AIで照合した。
 
 先約の確認：PR3465はOPENだが対象は比較専用サービス/試験で本便6ファイルと重ならない。旧台帳のPR3400はAPIでMERGED確認（2026-09-10T07:24:27Z）。release/line-box-heading-guardsは同名PRなし、ローカル作業の先約が残るため実装開始直前にも対象の重複を確認する。古い台帳だけで未実施/完了を断定しない。
+
+
+### 文書PR提出前の停止（2026-09-13）
+
+承認済み設計とカード/証拠17ファイルを0ceb2a16に保存し、0eb20160で最新mainを統合。ADR/evidenceの末尾競合は両側を保持し、mainの全行を順序込みで維持した。PR差分はdocs配下16ファイルとtasks/todo.mdのみ、製品差分0。
+
+PR全差分への通常diff --checkはCSVの規定CRLFを45行のtrailing whitespaceとして検出した（終了2）。CSV以外16ファイルの同検査は成功、CSVはBOM/45 CRLF/44商品と保存SHA c4ba5619b293bd222bce0c65d1faab48059d5b3a24ea46c4b12eb5540eaffa1bの一致を別途確認。通常チェック全体成功とは記録しない。card-lint終了0（長行警告2）、task-state-check終了0、全JSON構文検査成功。
+
+自動承認レビューがgit push -u origin HEADを実行前に拒否。理由は全17ファイルに含むlive snapshot/CSVの送信先・機密性・個別承認が確認できず、未承認データの外部送信となる可能性があるため。拒否後のgh repo viewで送信先shingo-ops/salesanchorがPUBLICであることを確認した。
+
+本番マスタ資料には商品名だけでなく内部商品ID・有効状態・検索語・除外語が含まれる。設計保存の承認と、この内容の一般公開承認を混同せずpushを停止。履歴からの間接送信や別経路での送信は行っていない。文書PR未提出、実装未着手。次はPOへ当該資料を含む公開送信の可否を1件提示する。

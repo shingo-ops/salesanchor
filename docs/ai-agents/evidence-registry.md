@@ -2828,3 +2828,6 @@ tradeoff: B便はREVISE、製品の正式試験は実装後に必要
 decision: A便を承認済み設計として文書PR保存。実装未着手
 follow_up: 正式カード検査と文書PR提出後、実装開始・担当への委任をPOへ提示
 ```
+
+
+EV-20260913-PRODUCT-CSV-PUBLISH-HOLD: A便設計/カード/調査証拠を0ceb2a16、main追従を0eb20160にローカル保存。card-lint違反0。公開リポジトリshingo-ops/salesanchorへのpushは自動承認レビューが資料の機密性/公開承認未確認として拒否。gh repo viewでPUBLICを確認し送信停止。内部商品ID/有効状態/検索除外語を含むためPOへ公開可否を提示。PR未提出・実装未着手。詳細はdocs/handoff/tcg-product-import/recon.md「文書PR提出前の停止」。
