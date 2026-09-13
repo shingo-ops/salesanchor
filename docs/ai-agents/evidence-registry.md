@@ -2674,3 +2674,11 @@ EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審
 ### EV-20260913-FRONTEND-AK-RELEASE
 
 PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+### EV-20260913-FRONTEND-AL-DESIGN
+
+基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
+
+### EV-20260913-FRONTEND-AL-IMPLEMENTATION
+
+PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
