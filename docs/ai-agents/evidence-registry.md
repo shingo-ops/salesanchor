@@ -2936,3 +2936,5 @@ EV-20260913-PRODUCT-NAME-SPACE-RELEASE: PO GO3473に基づき正式merge8d5aa581
 EV-20260913-PRODUCT-CSV-B-PREP: PR直前までのPO指示に基づく文書準備。実取込4関数AST/メモリモデル180例期待値一致、DB接続0。商品commitと履歴commitの間、post-write ValueError時の返却件数不一致を識別。8商品変更前後と候補上書き草案を固定。実PG/QA/個別値PO確認未完了、同一AI自己審査REVISE、実行カード未発行。design§19/reconとkeyword-import-partial-audit.jsonを根拠とする。push/PR更新/製品/本番操作なし。
 
 EV-20260913-PRODUCT-CSV-ATOMIC-DESIGN: 実呼出元2箇所・commit順・pinSQLAlchemy2.0.38公式ソース・実CI一時DBfixtureを確認。CSV行の商品/語/履歴を同時確定する4ファイル案とC1–C11をdesign§20に保存。限定技術設計は同一AI自己審査APPROVE、PO採用/実装/新PG試験未実施。B便データ登録はREVISE維持。Context7不在は公式資料代替で確認。根拠keyword-import-atomic-design-evidence.json/recon。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-APPROVAL: PO原文「進める」を受領、方式採用/4ファイル実装を既存担当へ委任。公式専用作業台main1a8eed69/clean/preflight成功、正式カード違反0。Docker未接続でpytest/PGは未実施。push/PR直前停止、本番/データ変更は対象外。根拠design§20-7/recon/card-product-csv-atomic-impl.md。

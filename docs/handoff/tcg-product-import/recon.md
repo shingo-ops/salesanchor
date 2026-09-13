@@ -861,3 +861,8 @@ POのPR直前まで進行指示を受領。preflight成功、本店dirty30/226be
 PO原文「進めてくれ」を受領し、PR直前停止を維持して§20を設計。preflight成功、本店dirty31を保持。main1a8eed69に対する未取込差分0、製品未保存変更0。create_productの実呼出元2箇所、履歴helperの呼出元、commit/rollbackと現行採番、既存PG fixture/CIを直接読取。Context7未提供のため公式SQLAlchemy2.0資料とpin2.0.38ソースへ代替アクセスし、内部commitを残すnested案を除外。
 
 推奨はCSVの1行の商品・全語・created履歴を同時確定、単品の既定動作維持。commit応答不明をrollback成功と誤認しない契約、4製品ファイル案、別接続PGでC1–C11を確認する試験仕様を保存。設計限定の同一AI審査APPROVE、PO方式承認/製品実装/PG実行なし。B便はREVISE。証拠shaはkeyword-import-atomic-design-evidence.json。製品ファイルを変更せず、push/PR更新/新規PR/本番操作なし。
+
+
+### CSV整合性修正の実装委任承認（2026-09-13）
+
+方式採用と4ファイル修正の委任質問にPO原文「進める」を受領。正式カードcard-product-csv-atomic-impl.mdを作成しcard-lint終了0（長行警告2）、既存/root/csv_card_executorへ委任継続。公式new-worktreeでrelease/product-csv-atomicityを作成、HEAD/main1a8eed69一致/clean/preflight成功を直接確認。本店dirty31は保持、reaper削除対象0。Dockerはsocket未存在で接続失敗を直接確認し、pytest/実PG未実施を維持。設計SHA0806d0eb64d9d81c364f871e84e75952012794b851585952823d011457e5a8f6を固定。製品commit/push/PR作成なしで4ファイル差分・静的検査・親レビューまで。
