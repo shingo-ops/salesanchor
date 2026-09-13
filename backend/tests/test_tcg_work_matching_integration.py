@@ -250,7 +250,7 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
-        assert cursor.fetchone() == ("PM0123", True, "name-first-v7-gemini-work-id")
+        assert cursor.fetchone() == ("PM0123", True, "name-first-v8-product-space-runs")
 
 
 RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"
@@ -885,3 +885,438 @@ def test_work_id_schema_existing_future_and_repeat(pg):
         rows = cursor.fetchall()
         assert len(rows) == 6
         assert {r[1:] for r in rows} == {('resolved_work_id','uuid'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
+
+
+
+@pytest.mark.parametrize("name,state,memo,work_code,duplicate,expected", [
+    ("スターターセットV 草", "", "", "IP001", False, "resolved"),
+    ("スターターセットV　草", "", "", "IP001", False, "resolved"),
+    ("スターターセットV 草", "", "", "IP006", False, "none"),
+    ("スターターセットV 草", "PSA10", "", "IP001", False, "none"),
+    ("スターターセットV 草", "", "限定", "IP001", False, "none"),
+    ("スターターセットV 草 10箱", "", "", "IP001", False, "none"),
+    ("別商品", "", "スターターセットV 草", "IP001", False, "none"),
+    ("スターターセットV 草", "", "", "IP001", True, "multi"),
+])
+def test_space_product_match_saved_in_isolated_database(
+    pg, monkeypatch, name, state, memo, work_code, duplicate, expected,
+):
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
+            cursor.execute(f"""INSERT INTO {SCHEMA}.tcg_products
+                (code,japanese_title,category_class,is_active,work_id,product_category_id)
+                SELECT %s,'スターターセットV 草','Box',true,w.id,c.id
+                FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
+                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""", (code,))
+            product_id = cursor.fetchone()[0]
+            for table, keyword in [("product_search_keywords", "スターターセットV草"),
+                                   ("product_exclude_keywords", "限定")]:
+                cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
+                               (str(uuid4()), product_id, keyword))
+        cursor.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code=%s", (work_code,))
+        work_id = str(cursor.fetchone()[0])
+    _, jobid, result = run_message(connection, engine, monkeypatch,
+        name + " 1BOX 1000円 " + state + " " + memo,
+        [record(name, 1, state=state, memo=memo) + [work_id]], work_id_mode=True)
+    assert result["status"] == "done" and result["items_count"] == 1
+    assert result["analysis_stats"]["pid_resolved"] == int(expected == "resolved")
+    with connection.cursor() as cursor:
+        cursor.execute(f"""SELECT p.code,ar.pid_resolved,ar.pid_basis,ar.needs_review
+            FROM {SCHEMA}.analysis_results ar
+            JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+            LEFT JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id
+            WHERE ei.extraction_job_id=%s""", (jobid,))
+        code, resolved, basis, needs_review = cursor.fetchone()
+        assert resolved is (expected == "resolved")
+        if expected == "resolved":
+            assert code == "SPACE_A" and basis == f"GEMINI|WORK:{work_id}|SK:スターターセットV草"
+        elif expected == "none":
+            assert code is None and basis == "NONE" and needs_review
+        else:
+            assert needs_review and "MULTI(" in basis and "SPACE_A" in basis and "SPACE_B" in basis
+
+
+CARDSET_MIGRATION = "20260913_200000_tcg_cardset_exclusion.sql"
+CARDSET_KINDS = ["フシギダネ", "チコリータ", "キモリ", "ナエトル", "ツタージャ",
+                 "ハリマロン", "モクロー", "サルノリ", "ニャオハ"]
+
+
+def seed_cardset_dictionary(connection, schema):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        products = [
+            ("PM0263", "30th CELEBRATION", ["30th CELEBRATION"],
+             ["FUTURISTIC", "プレミアムデッキセット", "エーフィ"]),
+            ("PM0264", "FUTURISTIC BOX", ["30th CELEBRATION FUTURISTIC"], []),
+            ("PM0265", "プレミアムデッキセット", ["プレミアムデッキセット"], []),
+        ] + [(f"PM{276+i:04d}", "カードセット " + kind, ["カードセット " + kind], [])
+             for i, kind in enumerate(CARDSET_KINDS)]
+        for code, title, search, exclude in products:
+            cursor.execute(sql.SQL("""INSERT INTO {}.tcg_products
+                (code,japanese_title,category_class,is_active,work_id,product_category_id)
+                SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
+                {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""").format(
+                    *[sql.Identifier(schema)] * 3), (code, title))
+            pid = cursor.fetchone()[0]
+            for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
+                for position, word in enumerate(keywords, 5):
+                    cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
+                        sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+
+
+def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
+    connection, engine, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    def match(name, state="", memo=""):
+        with Session(engine) as session:
+            search, exclude = analyzer.load_product_keywords(session)
+        return analyzer.match_pid_with_work(name, list(search), search, exclude,
+            work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
+    bundle = "MEGA 30th CELEBRATION カードセット (9種セット)"
+    assert match(bundle)[0:3:2] == ("PM0263", True)
+    names = ["30th  CELEBRATION", "30th CELEBRATION FUTURISTIC", "30th CELEBRATION プレミアムデッキセット"]
+    controls = [match(name) for name in names]
+    individual = ["30th CELEBRATION カードセット " + kind for kind in CARDSET_KINDS]
+    assert all(not match(name)[2] for name in individual)
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    after = guard_snapshot(connection)
+    key = ("tenant_004", "product_exclude_keywords")
+    added = set(after[key]) - set(before[key])
+    assert len(added) == 1 and {(r[4], r[2], r[3]) for r in added} == {("PM0263", "カードセット", 8)}
+    assert set(before[key]).issubset(set(after[key]))
+    for other_key in before:
+        if other_key != key:
+            assert before[other_key] == after[other_key]
+    assert match(bundle) == (None, "NONE", False, [])
+    assert [match(name) for name in names] == controls
+    for i, name in enumerate(individual):
+        result = match(name)
+        assert result[0] == f"PM{276+i:04d}" and result[2] and result[3] == [f"PM{276+i:04d}"]
+    assert match("30th CELEBRATION", state="カードセット") == (None, "NONE", False, [])
+    assert match("30th CELEBRATION", memo="カードセット") == (None, "NONE", False, [])
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    assert guard_snapshot(connection) == after
+
+
+@pytest.mark.parametrize("field,value", [
+    ("japanese_title", "別商品"), ("work_id", None), ("product_category_id", None),
+    ("code", "PM_CHANGED"), ("is_active", False),
+])
+def test_cardset_identity_failure_preserves_keywords(pg, field, value):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}=%s WHERE code='PM0263'").format(sql.Identifier(field)), (value,))
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert guard_snapshot(connection) == before
+
+
+def test_cardset_duplicate_target_preserves_keywords(pg):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        for position in (8, 9):
+            cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'カードセット',%s FROM tenant_004.tcg_products WHERE code='PM0263'", (str(uuid4()), position))
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="duplicate cardset"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert guard_snapshot(connection) == before
+
+
+def test_cardset_absent_schema_and_partial_structure(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("SELECT to_regnamespace('tenant_004')")
+        assert cursor.fetchone()[0] is None
+        provision(cursor, "tenant_004")
+        cursor.execute("ALTER TABLE tenant_004.product_search_keywords RENAME TO temporarily_missing_search")
+        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+        cursor.execute("SELECT count(*) FROM tenant_004.tcg_products")
+        assert cursor.fetchone()[0] == 0
+
+
+def test_cardset_migration_registered_once():
+    runner = (MIGRATIONS.parent / "scripts/run_all_migrations.sh").read_text()
+    assert runner.splitlines().count("run_sql migrations/" + CARDSET_MIGRATION) == 1
+
+
+BUNDLE_MIGRATION = "20260913_210000_tcg_cardset_bundle_registration.sql"
+BUNDLE_SEEDS = [('PM0263',
+  '30th CELEBRATION',
+  ['30th CELEBRATION', '30thCELEBRATION', '30周年セレブレーション'],
+  ['FUTURISTIC', 'プレミアムデッキセット', 'エーフィ']),
+ ('PM0264',
+  'FUTURISTIC BOX',
+  ['30th CELEBRATION FUTURISTIC', 'FUTURISTIC BOX', 'フューチャリスティック'],
+  ['プレミアムデッキセット', 'エーフィ']),
+ ('PM0265',
+  '30th CELEBRATION プレミアムデッキセット',
+  ['30th CELEBRATION プレミアムデッキセット', 'エーフィ・ブラッキー', 'エーフィブラッキー'],
+  ['FUTURISTIC']),
+ ('PM0276', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ', ['カードセット フシギダネ'], []),
+ ('PM0277', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ', ['カードセット チコリータ'], []),
+ ('PM0278', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ', ['カードセット キモリ'], []),
+ ('PM0279', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ', ['カードセット ナエトル'], []),
+ ('PM0280', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル', ['カードセット ツタージャ'], []),
+ ('PM0281', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ', ['カードセット ハリマロン'], []),
+ ('PM0282', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ', ['カードセット モクロー'], []),
+ ('PM0283', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン', ['カードセット サルノリ'], []),
+ ('PM0284', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス', ['カードセット ニャオハ'], []),
+ ('PM0219', 'ストームエメラルダ', ['ストームエメラルダ'], [])]
+
+BUNDLE_SOURCE_NAMES = [('ストームエメラルダ', 'PM0219'),
+ ('30th CELEBRATION', 'PM0263'),
+ ('30th  CELEBRATION FUTURISTIC BOX', 'PM0264'),
+ ('MEGA 30th CELEBRATION カードセット (9種セット)', 'PM0297'),
+ ('MEGA 30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー', 'PM0265'),
+ ('30th CELEBRATION BOX', 'PM0263'),
+ ('・30th  CELEBRATION  未サーチパック\u300018日発送', 'PM0263'),
+ ('30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー\u300018日発送', 'PM0265'),
+ ('・30th  CELEBRATION  発送日要相談', 'PM0263'),
+ ('・30th  CELEBRATION FUTURISTIC\u300018日発送', 'PM0264'),
+ ('・30th  CELEBRATION FUTURISTIC\u300017日発送', 'PM0264'),
+ ('・30th  CELEBRATION  17日発送', 'PM0263'),
+ ('・30th  CELEBRATION  18日発送', 'PM0263'),
+ ('・30th  CELEBRATION  シュリンク無し\u300018日発送', 'PM0263'),
+ ('・30th  CELEBRATION  未サーチパック\u300017日発送', 'PM0263'),
+ ('30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー\u300017日発送', 'PM0265'),
+ ('・30th  CELEBRATION  16日発送', 'PM0263'),
+ ('30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー\u3000発送日要相談', 'PM0265'),
+ ('・30th  CELEBRATION  シュリンク無し\u300017日発送', 'PM0263'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ', 'PM0277'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ', 'PM0282'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル', 'PM0280'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ', 'PM0281'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ', 'PM0279'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ', 'PM0278'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス', 'PM0284'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン', 'PM0283'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ', 'PM0276')]
+
+BUNDLE_BOUNDARIES = [('MEGA 30th CELEBRATION カードセット (1種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (2種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (3種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (4種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (5種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (6種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (7種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (8種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (9種セット)', 'PM0297'),
+ ('MEGA 30th CELEBRATION カードセット (10種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (11種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (12種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (13種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (14種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (15種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (16種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (17種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (18種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (19種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット (20種セット)', None),
+ ('30th  CELEBRATION カードセット (1種セット)', None),
+ ('30th  CELEBRATION カードセット (2種セット)', None),
+ ('30th  CELEBRATION カードセット (3種セット)', None),
+ ('30th  CELEBRATION カードセット (4種セット)', None),
+ ('30th  CELEBRATION カードセット (5種セット)', None),
+ ('30th  CELEBRATION カードセット (6種セット)', None),
+ ('30th  CELEBRATION カードセット (7種セット)', None),
+ ('30th  CELEBRATION カードセット (8種セット)', None),
+ ('30th  CELEBRATION カードセット (9種セット)', 'PM0297'),
+ ('30th  CELEBRATION カードセット (10種セット)', None),
+ ('30th  CELEBRATION カードセット (11種セット)', None),
+ ('30th  CELEBRATION カードセット (12種セット)', None),
+ ('30th  CELEBRATION カードセット (13種セット)', None),
+ ('30th  CELEBRATION カードセット (14種セット)', None),
+ ('30th  CELEBRATION カードセット (15種セット)', None),
+ ('30th  CELEBRATION カードセット (16種セット)', None),
+ ('30th  CELEBRATION カードセット (17種セット)', None),
+ ('30th  CELEBRATION カードセット (18種セット)', None),
+ ('30th  CELEBRATION カードセット (19種セット)', None),
+ ('30th  CELEBRATION カードセット (20種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット（９種セット）', 'PM0297'),
+ ('◆MEGA 30th CELEBRATION カードセット (9種セット)', 'PM0297'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ', 'PM0276'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ', 'PM0277'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ', 'PM0278'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ', 'PM0279'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル', 'PM0280'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ', 'PM0281'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ', 'PM0282'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン', 'PM0283'),
+ ('ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス', 'PM0284'),
+ ('30th CELEBRATION', 'PM0263'),
+ ('30th CELEBRATION FUTURISTIC', 'PM0264'),
+ ('30th CELEBRATION プレミアムデッキセット', 'PM0265'),
+ ('別作品 カードセット (9種セット)', None),
+ ('MEGA 30th CELEBRATION カードセット', None),
+ ('MEGA 30th CELEBRATION カードセット (9種セット) FUTURISTIC', None),
+ ('MEGA 30th CELEBRATION カードセット (9種セット) プレミアムデッキセット', None)]
+
+
+def seed_bundle_dictionary(connection, schema):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        for code, title, search, exclude in BUNDLE_SEEDS:
+            cursor.execute(sql.SQL("""INSERT INTO {}.tcg_products
+                (code,japanese_title,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
+                SELECT %s,%s,'Box',true,d.id,w.id,m.id,c.id
+                FROM {}.tcg_major_categories d, {}.tcg_series w, {}.tcg_manufacturers m,
+                     {}.tcg_product_categories c
+                WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code='PC_BOX'
+                RETURNING id""").format(*[sql.Identifier(schema)] * 5), (code, title))
+            pid = cursor.fetchone()[0]
+            for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
+                for position, word in enumerate(words, 4):
+                    cursor.execute(sql.SQL("INSERT INTO {}.{} (id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
+                        sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+
+
+def bundle_snapshot(connection):
+    result = {}
+    with connection.cursor() as cursor:
+        for schema in ("tenant_004", "tenant_903"):
+            for table in ("tcg_products", "tcg_major_categories", "tcg_series", "tcg_manufacturers",
+                          "tcg_product_categories", "product_search_keywords", "product_exclude_keywords"):
+                cursor.execute(sql.SQL("SELECT to_jsonb(t) FROM {}.{} t ORDER BY id").format(
+                    sql.Identifier(schema), sql.Identifier(table)))
+                result[schema, table] = [r[0] for r in cursor.fetchall()]
+    return result
+
+
+def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monkeypatch):
+    connection, engine, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_bundle_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    before = bundle_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+    after = bundle_snapshot(connection)
+    for key, rows in before.items():
+        for row in rows:
+            assert row in after[key], (key, row)
+        if key[0] == "tenant_903" or key[1] not in ("tcg_products", "product_search_keywords", "product_exclude_keywords"):
+            assert rows == after[key]
+    new = [r for r in after["tenant_004", "tcg_products"] if r not in before["tenant_004", "tcg_products"]]
+    assert len(new) == 1 and new[0]["code"] == "PM0297"
+    assert new[0]["japanese_title"] == "MEGA 30th CELEBRATION カードセット（9種セット）"
+    assert new[0]["english_title"] is None and new[0]["release_date"] is None and new[0]["mark"] is None
+    assert len(after["tenant_004", "product_search_keywords"]) - len(before["tenant_004", "product_search_keywords"]) == 1
+    assert len(after["tenant_004", "product_exclude_keywords"]) - len(before["tenant_004", "product_exclude_keywords"]) == 13
+    monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    with Session(engine) as session:
+        search, exclude = analyzer.load_product_keywords(session)
+    assert search["PM0297"] == ["30th CELEBRATION カードセット (9種セット)"]
+    for code in ("PM0263", "PM0264", "PM0265"):
+        assert exclude[code].count("カードセット") == 1
+    for number in range(276, 285):
+        assert exclude[f"PM{number:04d}"].count("種セット") == 1
+    assert set(exclude["PM0297"]) == {"FUTURISTIC", "プレミアムデッキセット"}
+    assert len(BUNDLE_SOURCE_NAMES) == 28 and len(BUNDLE_BOUNDARIES) == 58
+    for name, expected in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES:
+        actual, _, resolved, _ = analyzer.match_pid_with_work(name, list(search), search, exclude,
+            work_id=None, product_work_ids={}, raw_state="", raw_memo="")
+        assert (actual if resolved else None) == expected, name
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+    assert bundle_snapshot(connection) == after
+
+
+@pytest.mark.parametrize("table", ["tcg_major_categories", "tcg_series", "tcg_manufacturers", "tcg_product_categories"])
+@pytest.mark.parametrize("fault", ["inactive", "missing_code"])
+def test_bundle_invalid_reference_rolls_back(pg, table, fault):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_bundle_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        field, value = ("is_active", False) if fault == "inactive" else ("code", "MISSING")
+        expected = {"tcg_major_categories": "DIV01", "tcg_series": "IP001",
+                    "tcg_manufacturers": "MK001", "tcg_product_categories": "PC_BOX"}[table]
+        cursor.execute(sql.SQL("UPDATE tenant_004.{} SET {}=%s WHERE code=%s").format(
+            sql.Identifier(table), sql.Identifier(field)), (value, expected))
+    before = bundle_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="reference missing or inactive"):
+            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert bundle_snapshot(connection) == before
+
+
+@pytest.mark.parametrize("field,value", [("japanese_title", "別商品"), ("is_active", False),
+    ("division_id", None), ("work_id", None), ("manufacturer_id", None), ("product_category_id", None),
+    ("category_class", "Single")])
+def test_bundle_existing_identity_preserved_on_failure(pg, field, value):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_bundle_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}=%s WHERE code='PM0276'").format(sql.Identifier(field)), (value,))
+    before = bundle_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch PM0276"):
+            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert bundle_snapshot(connection) == before
+
+
+@pytest.mark.parametrize("fault", ["code_collision", "same_product_other_code", "late_duplicate"])
+def test_bundle_collision_and_late_failure_are_atomic(pg, fault):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_bundle_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        if fault == "late_duplicate":
+            for position in (10, 11):
+                cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'種セット',%s FROM tenant_004.tcg_products WHERE code='PM0284'", (str(uuid4()), position))
+            message = "duplicate keyword"
+        else:
+            code, title = ("PM0297", "別商品") if fault == "code_collision" else ("PM0999", "MEGA 30th CELEBRATION カードセット（９種セット）")
+            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active) VALUES (%s,%s,'Box',true)", (code, title))
+            message = "code collision" if fault == "code_collision" else "already exists under another code"
+    before = bundle_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match=message):
+            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert bundle_snapshot(connection) == before
+
+
+def test_bundle_absent_and_partial_schema(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("SELECT to_regnamespace('tenant_004')")
+        assert cursor.fetchone()[0] is None
+        provision(cursor, "tenant_004")
+        cursor.execute("ALTER TABLE tenant_004.tcg_manufacturers RENAME TO temporarily_missing_manufacturers")
+        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
+            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+        cursor.execute("SELECT count(*) FROM tenant_004.tcg_products")
+        assert cursor.fetchone()[0] == 0
+
+
+def test_bundle_runner_registration_after_cardset_exclusion():
+    lines = (MIGRATIONS.parent / "scripts/run_all_migrations.sh").read_text().splitlines()
+    target = "run_sql migrations/" + BUNDLE_MIGRATION
+    assert lines.count(target) == 1
+    assert lines.index("run_sql migrations/" + CARDSET_MIGRATION) < lines.index(target)

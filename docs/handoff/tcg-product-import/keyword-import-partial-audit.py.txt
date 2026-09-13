@@ -1,0 +1,71 @@
+"""Read actual import orchestration via AST; all persistence is simulated in memory."""
+import ast, asyncio, hashlib, json, sys, types
+from pathlib import Path
+src=Path('backend/app/services/tcg_product_import_svc.py')
+tree=ast.parse(src.read_text()); names={'start_job','record_row','finish_job','commit_import'}
+functions=[n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name in names]
+assert len(functions)==4
+ns={'AsyncSession':object,'Any':object,'text':lambda s:s,'TCG_SCHEMA':'tenant_001','RESULT_CREATED':'created','RESULT_SKIPPED':'skipped','RESULT_ERROR':'error'}
+exec(compile(ast.Module(body=functions,type_ignores=[]),str(src),'exec'),ns)
+class Fault(RuntimeError): pass
+class Result:
+ def fetchone(self): return ['job1']
+class DB:
+ def __init__(self,kind,at): self.kind=kind;self.at=at;self.products=[];self.history=[];self.job=None;self.pending=None
+ async def execute(self,sql,p):
+  if 'INSERT INTO tenant_001.tcg_product_import_jobs' in sql:
+   if self.job: raise Fault('duplicate digest')
+   self.pending=('start',p)
+  elif 'INSERT INTO tenant_001.tcg_product_import_rows' in sql:
+   if self.kind=='history' and p['row_no']==self.at: raise Fault('history insert')
+   self.pending=('row',p)
+  elif 'UPDATE tenant_001.tcg_product_import_jobs' in sql:
+   if self.kind=='finish': raise Fault('finish')
+   self.pending=('finish',p)
+  else: raise AssertionError(sql)
+  return Result()
+ async def commit(self):
+  kind,p=self.pending
+  if kind=='start':self.job={'status':'running'}
+  elif kind=='row':self.history.append(p.copy())
+  else:self.job.update(p)
+  self.pending=None
+async def preview(db,raw,name):
+ return {'file_errors':[],'digest':'fixed','total':44,'rows':[{'row_no':str(i),'japanese_title':f'Fixture{i}','mark':'','warnings':[],'blocking':['blocked'] if db.kind=='blocked' and i==db.at else []} for i in range(1,45)]}
+async def lookups(db):return {}
+ns.update(preview=preview,load_lookup_maps=lookups,parse_rows=lambda raw:([{'row_no':str(i)} for i in range(1,45)],[]),build_payload=lambda r,l:{'row':int(r['row_no'])})
+async def create(db,force,row):
+ assert force is True
+ if db.kind=='before' and row==db.at:raise Fault('before product')
+ if db.kind=='valueerror' and row==db.at:raise ValueError('rejected')
+ db.products.append(row)
+ if db.kind=='postwrite' and row==db.at:raise Fault('post-write verification transport')
+ if db.kind=='postwrite_valueerror' and row==db.at:raise ValueError('PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED')
+ return {'product_id':f'PM{row:04}'}
+mod=types.ModuleType('app.services.tcg_product_master_svc');mod.create_product=create
+sys.modules[mod.__name__]=mod
+async def case(kind,at):
+ db=DB(kind,at);error=None;result=None
+ try:result=await ns['commit_import'](db,b'fixture','fixture.csv','audit')
+ except Fault as exc:error=str(exc)
+ before=(len(db.products),len(db.history))
+ retry=None
+ try:await ns['commit_import'](db,b'fixture','fixture.csv','audit')
+ except Fault as exc:retry=str(exc)
+ assert retry=='duplicate digest' and before==(len(db.products),len(db.history))
+ if kind=='before':assert before==(at-1,at-1)
+ if kind in ('history','postwrite'):assert before==(at,at-1)
+ if kind=='finish':assert before==(44,44) and db.job['status']=='running'
+ if kind in ('blocked','valueerror'):assert before==(43,44) and db.job['status']=='ok' and result['skipped']==1
+ if kind=='postwrite_valueerror':assert before==(44,44) and db.job['status']=='ok' and result['created']==43 and result['skipped']==1
+ if kind=='normal':assert before==(44,44) and db.job['status']=='ok'
+ return {'fault':kind,'at_row':at,'products':db.products,'history_rows':[p['row_no'] for p in db.history],'history_kinds':[p['kind'] for p in db.history],'job_status':db.job['status'],'error':error,'same_digest_retry':retry,'returned_created':None if result is None else result['created']}
+async def main():
+ cases=[await case('normal',0)]
+ for kind in ('before','history','postwrite','postwrite_valueerror'):
+  for at in range(1,45):cases.append(await case(kind,at))
+ cases.extend([await case('finish',0),await case('blocked',22),await case('valueerror',22)])
+ out={'source':str(src),'source_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'mode':'AST actual orchestration + simulated persistence, not DB/pytest/QA','case_count':len(cases),'database_connections':0,'production_writes':0,'limitations':['create_product is simulated from observed commit-before-verification order','unique-digest enforcement simulated, not SQL tested','network and real transaction failures not executed'],'cases':cases}
+ Path('/tmp/sa-csv-partial-audit.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+ print(json.dumps({k:v for k,v in out.items() if k!='cases'},ensure_ascii=False))
+asyncio.run(main())

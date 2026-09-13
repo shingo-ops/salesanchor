@@ -315,6 +315,7 @@ async def create_product(
     mark: str = "",
     english_title: str = "",
     force: bool = False,
+    commit: bool = True,
 ) -> dict[str, Any]:
     """
     GAS: createProductMasterV2FromAnalysisReview 相当。
@@ -325,6 +326,7 @@ async def create_product(
     4. product_search_keywords / product_exclude_keywords に INSERT
     5. post-write gate
 
+    commit=False: caller owns commit/rollback, including the post-write check.
     force=True: GAS ソフトブロック準拠。重複候補があっても登録を続行する。
     """
     # 重複チェック（force=True なら DUPLICATE_CANDIDATE で弾かない）
@@ -423,7 +425,8 @@ async def create_product(
                 {"pid": product_uuid, "kw": kw, "pos": pos},
             )
 
-    await db.commit()
+    if commit:
+        await db.commit()
 
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(

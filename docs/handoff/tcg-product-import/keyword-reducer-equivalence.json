@@ -1,0 +1,3558 @@
+{
+  "seed": 913,
+  "cases": 300,
+  "mismatches": 0,
+  "coverage_candidate_counts": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "scope": "in-memory design reducer vs current match_pid_name_first full tuple; no code modifications",
+  "results": [
+    {
+      "case": 0,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 1,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X2/PM.X5):要確認",
+        false,
+        [
+          "X3",
+          "X2",
+          "X5"
+        ]
+      ]
+    },
+    {
+      "case": 2,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 3,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 4,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X0):要確認",
+        false,
+        [
+          "X3",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 5,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3):要確認",
+        false,
+        [
+          "X1",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 6,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 7,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X1):要確認",
+        false,
+        [
+          "X3",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 8,
+      "candidates": 2,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X3):要確認",
+        false,
+        [
+          "X4",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 9,
+      "candidates": 4,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3/PM.X4/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X3",
+          "X4",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 10,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 11,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X3",
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 12,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:商品A限定",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 13,
+      "candidates": 3,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X0/PM.X4):要確認",
+        false,
+        [
+          "X2",
+          "X0",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 14,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2/PM.X6):要確認",
+        false,
+        [
+          "X1",
+          "X2",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 15,
+      "candidates": 3,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X6/PM.X4):要確認",
+        false,
+        [
+          "X5",
+          "X6",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 16,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 17,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 18,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 19,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X4):要確認",
+        false,
+        [
+          "X3",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 20,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1/PM.X4):要確認",
+        false,
+        [
+          "X0",
+          "X1",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 21,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X6):要確認",
+        false,
+        [
+          "X0",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 22,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 23,
+      "candidates": 5,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X0/PM.X5/PM.X3/PM.X1):要確認",
+        false,
+        [
+          "X4",
+          "X0",
+          "X5",
+          "X3",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 24,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 25,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 26,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 27,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 28,
+      "candidates": 1,
+      "result": [
+        "X4",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 29,
+      "candidates": 3,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X3/PM.X2):要確認",
+        false,
+        [
+          "X6",
+          "X3",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 30,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 31,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 32,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 33,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A限定",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 34,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:XYZ",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 35,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 36,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 37,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 38,
+      "candidates": 5,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X6/PM.X2/PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X3",
+          "X6",
+          "X2",
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 39,
+      "candidates": 3,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X6",
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 40,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 41,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 42,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 43,
+      "candidates": 3,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X1/PM.X3):要確認",
+        false,
+        [
+          "X6",
+          "X1",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 44,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X3):要確認",
+        false,
+        [
+          "X2",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 45,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 46,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 47,
+      "candidates": 2,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X4):要確認",
+        false,
+        [
+          "X6",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 48,
+      "candidates": 3,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X3/PM.X1):要確認",
+        false,
+        [
+          "X4",
+          "X3",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 49,
+      "candidates": 4,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X4/PM.X2/PM.X6):要確認",
+        false,
+        [
+          "X5",
+          "X4",
+          "X2",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 50,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 51,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 52,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 53,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 54,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 55,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 56,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:商品A",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 57,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 58,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 59,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 60,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 61,
+      "candidates": 1,
+      "result": [
+        "X4",
+        "SK:商品A",
+        true,
+        [
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 62,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 63,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 64,
+      "candidates": 4,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X3/PM.X0/PM.X6):要確認",
+        false,
+        [
+          "X5",
+          "X3",
+          "X0",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 65,
+      "candidates": 4,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X2/PM.X3/PM.X0):要確認",
+        false,
+        [
+          "X5",
+          "X2",
+          "X3",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 66,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X4/PM.X5):要確認",
+        false,
+        [
+          "X3",
+          "X4",
+          "X5"
+        ]
+      ]
+    },
+    {
+      "case": 67,
+      "candidates": 4,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2/PM.X3/PM.X6):要確認",
+        false,
+        [
+          "X1",
+          "X2",
+          "X3",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 68,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 69,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 70,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品A",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 71,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 72,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 73,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2/PM.X3):要確認",
+        false,
+        [
+          "X1",
+          "X2",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 74,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 75,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 76,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 77,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 78,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 79,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 80,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 81,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 82,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:存在しない",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 83,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 84,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X4):要確認",
+        false,
+        [
+          "X1",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 85,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 86,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 87,
+      "candidates": 3,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X3/PM.X1):要確認",
+        false,
+        [
+          "X4",
+          "X3",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 88,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X6/PM.X2):要確認",
+        false,
+        [
+          "X3",
+          "X6",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 89,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 90,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 91,
+      "candidates": 3,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X2/PM.X6):要確認",
+        false,
+        [
+          "X5",
+          "X2",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 92,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:ABC",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 93,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 94,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 95,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X3",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 96,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 97,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 98,
+      "candidates": 2,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X6):要確認",
+        false,
+        [
+          "X5",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 99,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 100,
+      "candidates": 3,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X3/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X3",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 101,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 102,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 103,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 104,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:存在しない",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 105,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品B",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 106,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 107,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X0/PM.X4):要確認",
+        false,
+        [
+          "X1",
+          "X0",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 108,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 109,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 110,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 111,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 112,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 113,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 114,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X2):要確認",
+        false,
+        [
+          "X3",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 115,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 116,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X0):要確認",
+        false,
+        [
+          "X1",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 117,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X4):要確認",
+        false,
+        [
+          "X2",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 118,
+      "candidates": 2,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X2):要確認",
+        false,
+        [
+          "X6",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 119,
+      "candidates": 6,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X6/PM.X4/PM.X0/PM.X5):要確認",
+        false,
+        [
+          "X1",
+          "X6",
+          "X4",
+          "X0",
+          "X5",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 120,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 121,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 122,
+      "candidates": 1,
+      "result": [
+        "X6",
+        "SK:XYZ",
+        true,
+        [
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 123,
+      "candidates": 3,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X3/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X3",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 124,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A限定",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 125,
+      "candidates": 5,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X0/PM.X6/PM.X3/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X0",
+          "X6",
+          "X3",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 126,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X3",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 127,
+      "candidates": 6,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1/PM.X6/PM.X4/PM.X5):要確認",
+        false,
+        [
+          "X0",
+          "X1",
+          "X6",
+          "X4",
+          "X5",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 128,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 129,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 130,
+      "candidates": 5,
+      "result": [
+        "X6",
+        "MULTI(PM.X6/PM.X5/PM.X3/PM.X1/PM.X0):要確認",
+        false,
+        [
+          "X6",
+          "X5",
+          "X3",
+          "X1",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 131,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 132,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 133,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 134,
+      "candidates": 4,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X0/PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X3",
+          "X0",
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 135,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X0):要確認",
+        false,
+        [
+          "X1",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 136,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 137,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 138,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 139,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:存在しない",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 140,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 141,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 142,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 143,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 144,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A限定",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 145,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 146,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 147,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 148,
+      "candidates": 4,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X6/PM.X5/PM.X0):要確認",
+        false,
+        [
+          "X4",
+          "X6",
+          "X5",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 149,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 150,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 151,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 152,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 153,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 154,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 155,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 156,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 157,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 158,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 159,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 160,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 161,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 162,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 163,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 164,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 165,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:XYZ",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 166,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 167,
+      "candidates": 3,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X5/PM.X3):要確認",
+        false,
+        [
+          "X4",
+          "X5",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 168,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 169,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 170,
+      "candidates": 2,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X3):要確認",
+        false,
+        [
+          "X4",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 171,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:存在しない",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 172,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 173,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 174,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:存在しない",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 175,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 176,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 177,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 178,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 179,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 180,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 181,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 182,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 183,
+      "candidates": 3,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X4/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X4",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 184,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 185,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 186,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 187,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 188,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 189,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 190,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 191,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:商品A限定",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 192,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 193,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 194,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 195,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A限定",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 196,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 197,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 198,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 199,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:商品",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 200,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 201,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 202,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 203,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 204,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 205,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品B",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 206,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品A",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 207,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X1/PM.X0):要確認",
+        false,
+        [
+          "X3",
+          "X1",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 208,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 209,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 210,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 211,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 212,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 213,
+      "candidates": 1,
+      "result": [
+        "X2",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 214,
+      "candidates": 2,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X1):要確認",
+        false,
+        [
+          "X4",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 215,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 216,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X6):要確認",
+        false,
+        [
+          "X1",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 217,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 218,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品B",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 219,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 220,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 221,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X6):要確認",
+        false,
+        [
+          "X3",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 222,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X1",
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 223,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X2):要確認",
+        false,
+        [
+          "X1",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 224,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 225,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 226,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 227,
+      "candidates": 4,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3/PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X1",
+          "X3",
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 228,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 229,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A限定",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 230,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 231,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 232,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:存在しない",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 233,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 234,
+      "candidates": 3,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X0/PM.X3):要確認",
+        false,
+        [
+          "X1",
+          "X0",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 235,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 236,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 237,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X5/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X5",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 238,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 239,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 240,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 241,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 242,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 243,
+      "candidates": 1,
+      "result": [
+        "X4",
+        "SK:XYZ",
+        true,
+        [
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 244,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 245,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品A",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 246,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 247,
+      "candidates": 2,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X0):要確認",
+        false,
+        [
+          "X3",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 248,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 249,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 250,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X6):要確認",
+        false,
+        [
+          "X1",
+          "X6"
+        ]
+      ]
+    },
+    {
+      "case": 251,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 252,
+      "candidates": 3,
+      "result": [
+        "X3",
+        "MULTI(PM.X3/PM.X0/PM.X4):要確認",
+        false,
+        [
+          "X3",
+          "X0",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 253,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 254,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 255,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 256,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 257,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 258,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 259,
+      "candidates": 3,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X4/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X4",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 260,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:XYZ",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 261,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 262,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 263,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品A",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 264,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 265,
+      "candidates": 5,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X1/PM.X2/PM.X4/PM.X3):要確認",
+        false,
+        [
+          "X5",
+          "X1",
+          "X2",
+          "X4",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 266,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 267,
+      "candidates": 4,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X3/PM.X4/PM.X2):要確認",
+        false,
+        [
+          "X0",
+          "X3",
+          "X4",
+          "X2"
+        ]
+      ]
+    },
+    {
+      "case": 268,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 269,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 270,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品B",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 271,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:商品",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 272,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:ABC",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 273,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 274,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 275,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:存在しない",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 276,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:存在しない",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 277,
+      "candidates": 1,
+      "result": [
+        "X1",
+        "SK:存在しない",
+        true,
+        [
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 278,
+      "candidates": 2,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X3):要確認",
+        false,
+        [
+          "X1",
+          "X3"
+        ]
+      ]
+    },
+    {
+      "case": 279,
+      "candidates": 4,
+      "result": [
+        "X5",
+        "MULTI(PM.X5/PM.X0/PM.X2/PM.X4):要確認",
+        false,
+        [
+          "X5",
+          "X0",
+          "X2",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 280,
+      "candidates": 2,
+      "result": [
+        "X4",
+        "MULTI(PM.X4/PM.X0):要確認",
+        false,
+        [
+          "X4",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 281,
+      "candidates": 1,
+      "result": [
+        "X4",
+        "SK:商品",
+        true,
+        [
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 282,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 283,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 284,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 285,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1/PM.X4):要確認",
+        false,
+        [
+          "X0",
+          "X1",
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 286,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 287,
+      "candidates": 3,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 288,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品A",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 289,
+      "candidates": 2,
+      "result": [
+        "X2",
+        "MULTI(PM.X2/PM.X0):要確認",
+        false,
+        [
+          "X2",
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 290,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 291,
+      "candidates": 4,
+      "result": [
+        "X1",
+        "MULTI(PM.X1/PM.X6/PM.X2/PM.X5):要確認",
+        false,
+        [
+          "X1",
+          "X6",
+          "X2",
+          "X5"
+        ]
+      ]
+    },
+    {
+      "case": 292,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 293,
+      "candidates": 2,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 294,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    },
+    {
+      "case": 295,
+      "candidates": 1,
+      "result": [
+        "X4",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X4"
+        ]
+      ]
+    },
+    {
+      "case": 296,
+      "candidates": 4,
+      "result": [
+        "X0",
+        "MULTI(PM.X0/PM.X3/PM.X2/PM.X1):要確認",
+        false,
+        [
+          "X0",
+          "X3",
+          "X2",
+          "X1"
+        ]
+      ]
+    },
+    {
+      "case": 297,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い商品名長い",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 298,
+      "candidates": 1,
+      "result": [
+        "X0",
+        "SK:商品",
+        true,
+        [
+          "X0"
+        ]
+      ]
+    },
+    {
+      "case": 299,
+      "candidates": 0,
+      "result": [
+        null,
+        "NONE",
+        false,
+        []
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+import runpy,copy,ast,json,re
+from pathlib import Path
+state=runpy.run_path('docs/handoff/tcg-product-import/keyword-revision-experiment.py.txt')
+ns=state['ns'];rows=state['rows'];work=state['work'];pokemon=state['pokemon'];active=state['active']
+sk=copy.deepcopy(state['sk']);ex=copy.deepcopy(state['ex'])
+# Data-only alternative: drop spaced synonyms from the seven short-token rows.
+for i in [1,2,3,4,5,35,44]:
+ c=f'CSV{i:02}';sk[c]=[k for k in sk[c] if not re.search(r'\s',k)]
+old=ns['match_pid_with_work']
+def resolve(f,text,w=pokemon):return f(text,list(sk),sk,ex,work_id=w,product_work_ids=work)
+data_only=[{'row':i,'result':resolve(old,r['japanese_title'])} for i,r in enumerate(rows,1) if i in [1,2,3,4,5,35,44]]
+# Design prototype, memory only. Literal full-field equality after horizontal spaces removed.
+def exact_spaceless_name(kw,raw):
+ if not kw or re.search(r'\s',kw) or not re.search(r'[\u3040-\u30ff\u3400-\u9fff]',kw):return False
+ if '\n' in raw or '\r' in raw or '\t' in raw:return False
+ return ns['normalize_en'](kw)==ns['normalize_en'](raw).replace(' ','').replace('\u3000','')
+def reduce_prevalidated(raw_name,product_codes,search_kw,exclude_kw):
+ # Mirror the existing reducer only; never rematch the raw text after exact-name eligibility.
+ candidates=[(c,search_kw[c][0],len(search_kw[c][0])) for c in product_codes if search_kw[c]]
+ candidates.sort(key=lambda x:x[2],reverse=True)
+ if not candidates:return (None,'NONE',False,[])
+ if len(candidates)==1:
+  c,k,_=candidates[0];return(c,f'SK:{k}'[:100],True,[c])
+ codes=[x[0] for x in candidates];parts='/'.join(f'PM.{c}' for c in codes[:5]);return(codes[0],f'MULTI({parts}):要確認'[:100],False,codes)
+p=Path('backend/app/services/tcg_analyzer_svc.py');tree=ast.parse(p.read_text());node=copy.deepcopy(next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='match_pid_with_work'))
+class Patch(ast.NodeTransformer):
+ def visit_Call(self,n):
+  self.generic_visit(n)
+  if isinstance(n.func,ast.Name) and n.func.id=='match_pid_name_first':n.func.id='reduce_prevalidated'
+  return n
+node=Patch().visit(node)
+class ExactOnly(ast.NodeTransformer):
+ def visit_Call(self,n):
+  self.generic_visit(n)
+  if isinstance(n.func,ast.Name) and n.func.id=='match_product_keyword' and ast.unparse(n.args[1])=='fields[0]':
+   return ast.Call(func=ast.Name(id='exact_spaceless_name',ctx=ast.Load()),args=[ast.Name(id='kw',ctx=ast.Load()),ast.Name(id='raw_name',ctx=ast.Load())],keywords=[])
+  return n
+for assignment in ast.walk(node):
+ if isinstance(assignment,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='matched' for t in assignment.targets):
+  normal=assignment.value; fallback=ExactOnly().visit(copy.deepcopy(normal))
+  assignment.value=ast.BoolOp(op=ast.Or(),values=[normal,fallback])
+ast.fix_missing_locations(node)
+proto_ns=dict(ns,exact_spaceless_name=exact_spaceless_name,reduce_prevalidated=reduce_prevalidated)
+exec(compile(ast.Module(body=[node],type_ignores=[]),'<design-prototype>','exec'),proto_ns);proto=proto_ns['match_pid_with_work']
+cases=[]
+for x in state['cases']:
+ w=active[x['code']]['work_id'] if x['group']=='existing_title' else pokemon
+ result=resolve(proto,x['text'],w)
+ cases.append(dict(x,prototype=result))
+for i in range(1,6):
+ title=rows[i-1]['japanese_title'];target=f'CSV{i:02}'
+ for label,text,w,expected in [('plain',title,pokemon,target),('joined',title.replace(' ',''),pokemon,target),('wide_space',title.replace(' ','\u3000'),pokemon,target),('repeated_space',title.replace(' ','  '),pokemon,target),('wrong_work',title,'other-work',None),('extra_qty',title+' 10箱',pokemon,None),('newline',title.replace(' ','\n'),pokemon,None),('tab',title.replace(' ','\t'),pokemon,None)]:
+  cases.append({'group':'space_boundary','text':text,'variant':label,'expected':expected,'prototype':resolve(proto,text,w)})
+fail=[x for x in cases if 'expected' in x and ((x['expected'] is None and x['prototype'][2]) or x['expected'] is not None and (x['prototype'][0]!=x['expected'] or not x['prototype'][2]))]
+regress=[x for x in cases if x['group']=='existing_title' and x['before_existing_only'][2] and x['before_existing_only'][0]==x['code'] and not(x['prototype'][2] and x['prototype'][0]==x['code'])]
+quality=ns['run_all'](sk,sk,ex);baseline=state['base_lint'];delta={k:[x for x in v[1] if x not in baseline['findings'][k][1]] for k,v in quality['findings'].items()}
+# Legacy quality doesn't include the proposed full-field equality: check its extra edges separately.
+extra_edges=[]
+for a,kws in sk.items():
+ for kw in kws:
+  for b,kws2 in sk.items():
+   if a==b:continue
+   for bk in kws2:
+    if exact_spaceless_name(kw,bk) and not ns['match_product_keyword'](kw,ns['normalize_en'](bk)):
+     extra_edges.append({'owner':a,'other':b,'keyword':kw,'other_keyword':bk})
+# Prototype quality R5 uses the same full-field predicate for search-side edges.
+def search_side_hit(kw,text):
+ return ns['match_one_kw'](kw,text) or exact_spaceless_name(kw,text)
+t=ast.parse(Path('backend/app/services/tcg_keyword_lint.py').read_text())
+n=copy.deepcopy(next(n for n in t.body if isinstance(n,ast.FunctionDef) and n.name=='check_r5_piggyback'))
+class QualityPatch(ast.NodeTransformer):
+ def visit_Call(self,n):
+  self.generic_visit(n)
+  if isinstance(n.func,ast.Name) and n.func.id=='match_one_kw' and ast.unparse(n.args[0])=='a_kw': n.func.id='search_side_hit'
+  return n
+n=QualityPatch().visit(n);ast.fix_missing_locations(n);ns['search_side_hit']=search_side_hit
+exec(compile(ast.Module(body=[n],type_ignores=[]),'<quality-prototype>','exec'),ns)
+aligned=ns['run_all'](sk,sk,ex)
+aligned_delta={k:[x for x in v[1] if x not in baseline['findings'][k][1]] for k,v in aligned['findings'].items()}
+probe=ns['check_r5_piggyback']({'A':['スターターセットV草'],'B':['スターターセットV 草']},{})
+assert any("A:" in x and "rides B:" in x for x in probe)
+out={'scope':'DESIGN PROTOTYPE ONLY; no product implementation; synthetic expectations; old quality checker is not yet aligned to new semantics','data_only_cases':data_only,'proposed_search':{f'CSV{i:02}':sk[f'CSV{i:02}'] for i in [1,2,3,4,5,35,44]},'cases':cases,'expected_failures':fail,'existing_regressions':regress,'old_quality_delta':delta,'new_exact_match_cross_edges':extra_edges,'summary':{'cases':len(cases),'expected_failures':len(fail),'existing_regressions':len(regress),'data_only_unresolved':sum(not x['result'][2] for x in data_only),'quality_delta_counts':{k:len(v) for k,v in delta.items()},'extra_exact_cross_edges':len(extra_edges)}}
+out['aligned_quality_delta']=aligned_delta
+out['quality_probe']=probe
+Path('/tmp/sa-csv-space-design.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+print('SPACE_DESIGN',json.dumps(out['summary'],ensure_ascii=False))
+print('FAILURES',json.dumps(fail,ensure_ascii=False))
+
+# A-only deployment must preserve existing matching basis when ordinary matching succeeds.
+a_cases=[]
+for c,p in state['active'].items():
+ params=dict(work_id=p['work_id'],product_work_ids=work)
+ before=old(p['japanese_title'],list(state['base_sk']),state['base_sk'],state['base_ex'],**params)
+ after=proto(p['japanese_title'],list(state['base_sk']),state['base_sk'],state['base_ex'],**params)
+ a_cases.append({'code':c,'before':before,'after':after})
+changed=[x for x in a_cases if x['before']!=x['after']]
+assert all(x['before']==x['after'] for x in a_cases if x['before'][2])
+a_result={'scope':'A only, unchanged existing 293 products; prefer ordinary keyword matches within each product','cases':a_cases,'changed_tuples':len(changed),'existing_correct':sum(x['before'][2] and x['before'][0]==x['code'] for x in a_cases),'regressions':[]}
+Path('/tmp/sa-csv-phase-a-only.json').write_text(json.dumps(a_result,ensure_ascii=False,indent=2)+'\n')
+print('A_ONLY_FINAL',len(a_cases),len(changed))

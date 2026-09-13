@@ -296,8 +296,8 @@ try:
         bind=True,
         max_retries=2,
         default_retry_delay=30,
-        time_limit=120,
-        soft_time_limit=100,
+        time_limit=330,
+        soft_time_limit=300,
     )
     def extract_source_message_task(self, source_message_id: str) -> dict:
         """

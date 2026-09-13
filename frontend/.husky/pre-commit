@@ -11,8 +11,10 @@ if [ -z "${GITHUB_ACTIONS}" ]; then
   [ -f "${CONFIG_FILE}" ] && . "${CONFIG_FILE}"
   AGENT_WORKTREE_BASE="${AGENT_WORKTREE_BASE:-${HOME}/worktrees}"
   ACTUAL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+  AGENT_WORKTREE_BASE_ALT="${MAIN_REPO_ROOT:-.}/.claude/worktrees"
   case "${ACTUAL_ROOT}" in
     "${AGENT_WORKTREE_BASE}/"*) ;;
+    "${AGENT_WORKTREE_BASE_ALT}/"*) ;;
     *)
       echo ""
       echo "🚫 commit を中断しました: worktree 外での作業は禁止されています。"

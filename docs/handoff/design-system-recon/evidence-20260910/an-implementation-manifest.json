@@ -1,0 +1,142 @@
+{
+  "base": "1a8eed69a8d4e1c17cefc7dcef579f63493b17dd",
+  "products": [
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "sha256": "8377a0a7c85edf1ddf1af232e81e7fc3d61c891d29bd7f091ee7ebb2941dcb55"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotEditPage.tsx",
+      "sha256": "c83c66d3070299a2d2379d55dc81da0dba0b76e8acf2991bd23e4f8f321d11e9"
+    },
+    {
+      "file": "frontend/src/components/BotFormButtonMigration.test.tsx",
+      "sha256": "c492625dda1be46c5fda709eae460edb3d7b6fd6dc2ed5f9c41985aee26b4b13"
+    }
+  ],
+  "archive": "an-implementation-checkpoint.tar.gz",
+  "archiveSha256": "709c294965816e1ac355915ed1540afd1cba84d633e91be8183f1621d63060c7",
+  "files": [
+    {
+      "file": "an-generator-build.log",
+      "sha256": "bae237856ec2368f5152dd889ca779781a75467da4ce115ae7622945d1d52528"
+    },
+    {
+      "file": "an-generator-checkall.log",
+      "sha256": "488769d5cf733ef6a1410e1a4d488336d5e1be05f27ff9debbcf4c6acfc170ff"
+    },
+    {
+      "file": "an-generator-coverage.log",
+      "sha256": "afa416ca5c30124035b6566d4e41a780779f496dc7f8a622235be5e3938f95df"
+    },
+    {
+      "file": "an-generator-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "an-generator-npmci.log",
+      "sha256": "28d062f256f2d9fed85ebf8f0437c63e2d50faf757667ef252218c8649c65f0c"
+    },
+    {
+      "file": "an-generator-storybook.log",
+      "sha256": "61aeff28c16303d9df50f1d770aee188f17b93565261c2bde3f52e51121daf2b"
+    },
+    {
+      "file": "an-generator-unit.log",
+      "sha256": "b98ff1c28282a722ab55061ac1c6b18680d9ebf0d9133a95d0415ee33d5e5c82"
+    },
+    {
+      "file": "browser-initial-result.json",
+      "sha256": "4eb8d583424ad76b1468bf0a110ebffe082bf891cde8a4ec19fb0c23170a0eb6"
+    },
+    {
+      "file": "browser-result.json",
+      "sha256": "a17343f241e324b9cad443ba485bbeab198b03f47f3e9e1d9c0949a10e08d46f"
+    },
+    {
+      "file": "browser-smoke.json",
+      "sha256": "4c722ce30cdce65c94abc1b09821db065e359f002095b54338205c3dc1536103"
+    },
+    {
+      "file": "browser.cjs",
+      "sha256": "6d3c6928bb0daf8c0eff35588d4ecb51cdf0e83e1bd6827f11c36ed0f4bd6f70"
+    },
+    {
+      "file": "closing-result.json",
+      "sha256": "67bbf563df57786061f7b0a6cb977719287130fab63198b3e07df9a144051740"
+    },
+    {
+      "file": "closing.cjs",
+      "sha256": "7dfb6ec6a8d08d695ef7c1554783070f0d14bb29102b0322b1426a5926dfe36b"
+    },
+    {
+      "file": "counts.cjs",
+      "sha256": "ce5a001b30f5590e272013e21a99bd9a2631a6b31f2a1eedf8e5a91f395a50d6"
+    },
+    {
+      "file": "counts.json",
+      "sha256": "60b7e8a4c767340278242911332200f8815a1298fdc733fa9ac6663d741c9f61"
+    },
+    {
+      "file": "create-pending.png",
+      "sha256": "b23a47fd302f6fd7cddfe46ec8701f0b87da3c6e843ff94d80cd880977beddee"
+    },
+    {
+      "file": "create.png",
+      "sha256": "d743151e239e203b275b13296f463aac057bd6aea2aff2ce33a576dd5eecf82a"
+    },
+    {
+      "file": "drawer.png",
+      "sha256": "6e33505a8831c688b3ac7f5474c6e271f67f744188c867bf50f05ae1e52df5d3"
+    },
+    {
+      "file": "full.png",
+      "sha256": "a8ea9f11df419bf8590b5aab688ea43788e0b11dc20f2e3825614ed00a28b4a4"
+    },
+    {
+      "file": "inverse.json",
+      "sha256": "f01bba9d75bd1460aac02eb019eb3ef9edc96b825eecff7dc52c5c01e66e7ce8"
+    },
+    {
+      "file": "operations-result.json",
+      "sha256": "838f3201eaec16cd042ee53180c57db5838005ceffef0bc6c5a2a6c144f84ca5"
+    },
+    {
+      "file": "operations.cjs",
+      "sha256": "f939e7d94272c3f3b418e37eb5c196255c6684ff89270853ac0660e9be187b27"
+    },
+    {
+      "file": "prepare.cjs",
+      "sha256": "3ebb499e9cb48468b6ef0824ecd790f9a9a70d4cc46864d1871f725ec8b3f50d"
+    },
+    {
+      "file": "server.cjs",
+      "sha256": "5731cf160b9ba5b5f10d0953c8dd7bac4b6fdfe86b6a03f410f779058f55120f"
+    },
+    {
+      "file": "shared.json",
+      "sha256": "da4192fcc8f9fac06aed69539fac5ada39d3dc7a3c0f1f48d839a143bf085251"
+    },
+    {
+      "file": "test-assumptions.json",
+      "sha256": "a8ddf5073ac6b7ef8bf553d3e1d3a17f6283f9595557846bcba8db8967292671"
+    },
+    {
+      "file": "unit-initial-failure.log",
+      "sha256": "aa1dd99d01a37843531ba143b3bd382d657aba01002f68a9e76b6e7e85f050e8"
+    },
+    {
+      "file": "verify-test-assumptions.cjs",
+      "sha256": "29c52a71984f08a7c3487b2d446998ce789654cf25f58296c20faed33e38d42b"
+    }
+  ],
+  "displayPairs": 96,
+  "operationPairs": 24,
+  "closingPairs": 6,
+  "assumptionObservations": 8,
+  "counts": {
+    "common": 120,
+    "legacy": 293
+  },
+  "unitTests": 343
+}

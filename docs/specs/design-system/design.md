@@ -1380,3 +1380,227 @@ AL形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-st
 2026-09-13 AL実装承認: 今回4件の実装承認質問へのPO原文「進めてくれ」を受領。既存button_generatorへCARD-AL-FULLPAGE-01を発行。設計担当は製品を編集せず検収/記録を担当する。新GO/本番操作は未承認。
 
 2026-09-13 AL実装検収済み: PO原文「進めてくれ」で実装承認。4ボタン移管、root逆変換2ページ一致・実表示72前後組/操作24前後組成功、実装担当266試験/品質成功を原ログ確認。共通100/旧305。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md。PR3461実装更新へ、今回番号付きGO/マージ/本番未実施。
+
+### AM. スタッフの登録・簡易編集・専用編集6ボタン（2026-09-13設計案）
+
+状態: PO原文「進める」に基づく次便設計。今回6件の実装承認は未受領。既存のあるべき姿/KGIを継承し、6件という対象選定は設計担当案。ALは製品PR3461本番反映済み、結果文書PR3463もmainへ統合済み。基準af269ae20ed2f52e6cd49ba0403ad7799e3a3870。
+
+目的: スタッフを登録・編集する3フォームの取消/登録/更新を共通Buttonへ揃え、保存内容・完了後の動作を保持する。成功は対象6/6移管・業務本文差分0・各フォームの検証成功で判定する。今回6件をPO発言として代筆せず、実装前にPOの判断を受ける。
+
+#### 実物調査と対象
+
+[対象6原文・2ページと共有7ファイルのhash](../../handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json)。TypeScript構文再測定で共通100/旧prefix305（button/Link/aを含む実運用母数）。6件成功後の期待値は106/299。検査対象除外はstories/test/spec/design-previewで既存と同じ。
+
+| 対象 | 実物の行 | 固有の保持条件 |
+|---|---|---|
+| StaffPage 登録2件 | :299〜302 | POST /staff、submitting時の取消/登録disabled、登録中文言、連投防止、staff_code空ならpayloadから除外/指定時trim |
+| StaffPage 簡易編集2件 | :321/322 | PATCH /staff/:id、6項目のみ。成功でDrawerを閉じ一覧再取得。通常編集の保存ロックなし |
+| StaffEditPage 専用編集2件 | :225/226 | PATCH /staff/:id、全項目とui_preferences6個。本人を編集したときだけ設定再取得を待ち、/staffへ遷移 |
+
+StaffPage:147〜176の登録payloadとStaffPage:179〜198の簡易編集payloadは異なる。StaffEditPage:121〜145の全項目編集も別契約。本人条件はselfStaffId !== null && Number(id) === selfStaffId。UiPrefsContext:83〜126は実API /staff/meを取得し、失敗を内部で捕捉してdefaultへ戻す。Providerなしでは:154〜165のdefault/no-opに落ちるため、それだけで本人refresh成功としない。表示テーマは同:128〜130でThemeContextへ委譲されているので、ui_preferences.dark_mode保存を即時テーマ切替の保証としない。
+
+#### 実装契約・対象外
+
+候補製品はfrontend/src/pages/staff/StaffPage.tsx、frontend/src/pages/staff/StaffEditPage.tsx、新規frontend/src/components/StaffFormButtonMigration.test.tsxの3ファイル。既存../../components/Buttonのnamed importを各ページへ追加し、監査AM-01〜06だけbutton開始/終了tagをButtonへ、旧classNameを除去、取消3=secondary、登録/更新3=primary、全size md明示。
+
+type明示6/6、disabled既存2/6、対象ボタンへのstyle/ref/form属性追加対応0。type/onClick/disabled/children/条件式、DOM順、form/onSubmit、wrapper/maxWidth、hooks/全payloadを逐語保持。Button.tsx:41〜93のnative属性転送を利用し、loading/loadingText/新disabled/aria-busy/fullWidth/style/layoutClassNameを追加しない。
+
+スタッフの権限判定、role_id・Firebase UID・UI設定の扱いは変更しない。一覧の新規起動/編集/削除/本人削除制約、行クリック/リンク、Bot、他ページ、共有部品/CSS/入力/翻訳/認証/API/DB/依存/CIは対象外。表/報酬3/カレンダー色保留、新CI最後。新規認可やアカウント変更の仕様を設計・実装しない。
+
+#### Why・代替とリスク
+
+同一スタッフ領域の3フォームで、既存Buttonへ転送できるnative属性6/6に限定し、送信処理を変更せず外観を一箇所へ寄せられる。form-actionsの配置ownerはcomponents.css:46〜51、Button.css:2〜17のnowrap/標準paddingを使用。ALの72表示組・24操作組成功はこのスタッフ画面の検収ではない。Modalの長い登録フォームと本人設定再取得は本便で個別に検証する。
+
+専用編集2件だけ先行する案は同じスタッフ編集の簡易画面に旧外観が残るので不採用。Botの6件も混ぜる案はキー発行/別payloadの責務を増やすため不採用。CSS拡張案は移管以外の影響を増やすため不採用。幅不足やfocus欠けが出たら該当移管を未合格として設計へ戻し、本便へCSS修理を加えない。
+
+外部導入事例や新ライブラリ仕様の調査は不要。新APIを導入せず、自社の原文6件・共有Button・既存状態管理と前後検証が直接根拠。新ADR不要、ADR-113/067/027/073と既存Modal/Drawer方針を継承。このWhyを既存ADRへ接続できる根拠として残す。
+
+#### 受入条件
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象6/6・業務差分0 | import/tag/class/variant/size逆変換で2ページが基準と全バイト一致。監査JSONのtype/disabled/children一致。製品差分3ファイルのみ |
+| 3フォームの保存/取消 | 実ページ・実入力・実Modal/Drawerをmountし全通信を合成mock。クリック/入力EnterでPOST/PATCHのURL・ID・全payloadと成功close/reload/遷移を確認。取消書込0、失敗時入力/エラー保持、再度開いた際の入力状態を前後比較 |
+| 登録制御 | staff_code空時のキー不在とtrim済指定値、空文字null化、role_id数値化、6設定booleanを検証。姓/名/メール/役割requiredの無効入力で送信0。登録pending中disabled2・文言維持・連投0・失敗後復帰 |
+| 本人更新の設定再取得 | 実UiPrefsProviderを使用し認証入口とAPIのみmock。初回/staff/meと更新後再取得を区別。専用編集のself/other/nullで追加再取得1/0/0を確認。selfでは完了を待って一覧へ移動。再取得失敗時もProviderが既存どおり内部捕捉して遷移することを確認。簡易編集へ本人refreshを追加しない |
+| 通常編集制御 | 簡易/専用編集へ新たな保存ロックを導入しない。pending時の対象disabled/aria-busy/文言が前後同一 |
+| 実表示 | 登録/簡易/専用の3フォーム×6幅390/640/767/768/1279/1280×日英×明暗=72前後組。さらに登録pending24組。計96組。入力を省かず実Tab/ShiftTabで対象へ到達、文字/本体/輪郭の4辺欠け0、初期横overflow増加0、並び順一致 |
+| キーボードと終了 | 各フォームの取消/送信Enter/Space、入力Enter、Escを前後比較。Modal/Drawerの閉じる/再開とfocus復帰、専用編集の一覧遷移を別々に確認。programmatic focusだけをTab成功としない |
+| 品質 | 対象strict eslint、新規ページ回帰、既存coverage/check:all/build/Storybookと最新PR必須CIを成功。新CIは作らない |
+
+96表示組は実装後の計画で、実行済みではない。ローカル合成データの検証は本番認証・実アカウント更新の検証と区別する。640pxは狭幅であり実200%zoomではない。本番のスタッフ権限/Firebase UIDを試験目的で書き換えない。
+
+#### 維持・担当・停止・戻し方
+
+外観は既存Button、配置は既存form-actions/Modal/Drawerが所有する。Generatorは指定3製品と試験、設計担当は実物照合/カード/実ページ検収/台帳、POは今回6件の実装と将来の番号付きGOを判断する。承認後に担当を確定し、この草案だけで新AIを起動しない。維持は新規ページ回帰と既存CI。本便単位で戻せる変更としDB復元なし。原hash差異/契約外修正/検証失敗は記録して設計へ戻す。
+
+#### Architect自己審査（Planner作成後）
+
+判定: APPROVE（設計合格）。同一AIの自己審査であり、独立した第二者レビューではない。
+根拠: 6原文のnative属性と共有Buttonを照合し、3種のpayload/登録ロック/本人refresh差を検証可能な形に分離。Provider外no-opの誤検収を排し、認証/APIのmock境界と実部品の検収条件を明示。権限/認証の仕様変更は含まれない。過去成功の適用限界と不成立時の停止を明記。
+設計上の未解決前提なし。今回のPO実装承認、実装、96組の実表示検収、製品CIは未実施。カードは未発行草案で、形式検査成功も実装開始承認とはしない。
+
+AM形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-state/diff-check成功、card-lint exit0（長行警告1のみ）。未発行カードam-staff-button-card.txt。製品差分0。
+
+2026-09-13 AM実装承認: 今回6件の実装承認質問へのPO原文「進める進める」を受領。既存button_generatorへCARD-AM-STAFF-01を発行。rootは製品を編集せず検収/記録を担当、新GO/マージ/本番は未承認。
+
+
+2026-09-13 AM実装検収: PO原文「進める進める」で承認、6ボタン移管。root逆変換2ページ/共有7hash一致、96表示/29操作前後組成功。担当32新規/298全体試験と品質成功を原ログ確認。共通106/旧299（最新main統合前）。根拠: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md。実装検収APPROVE。PR3468実装更新・統合後品質/CIへ、今回番号付きGO/マージ/本番未実施。
+
+
+2026-09-13 統合後確認: main b52a4defを通常merge（ad093b7b）。台帳末尾競合は両側の記録を保持し、完全同文の重複1件だけ整理。製品3hash/共有7hash不変。root直接実行で28files/311tests（coverage statements15.1%）、check:all（218warnings/0errors）、build、Storybookすべてexit0。ログはcheckpoint内am-integrated-*.log。merge時フックの対象外ItemComparison/reviewIssues既存59warningsは記録し、チェック無効化/製品修正なし。統合後の構文母数はmain108/305→本便114/299（本便+6/-6、他便追加8）。元の106/299検収結果を上書きしない。PR3468へ保存、最新GitHub CIと今回番号付きGO待ち。マージ/本番反映は未実施。
+
+
+## GO #3468受領（2026-09-13 15:26 JST記録）
+
+PO原文「GO #3468」を今回チャットで受領。承認時HEAD1c5cccf2、対象はスタッフ3フォーム6ボタンのPR3468マージと自動本番反映・反映後確認。PO本人のGOであり、未有効のAI委任による発行ではない。
+最新main c22ad508を通常統合（89d4a624）、台帳末尾競合は両側の根拠を保持。製品3/共有7hashは検収版と一致。新規API/DB/CI変更0、他便を本PRの変更と扱わない。CIが最新HEADで成功後、公式merge wrapperを使用。配備時新規backup/HEAD/health/公開6ボタンを確認する。現時点でマージ/本番未実施、反映結果はPR3468の本番反映欄へ保存する。
+
+
+## AM本番反映完了（2026-09-13）
+
+PO原文「GO #3468」に基づき、最新HEAD0829affdのCI38成功/8対象外・CLEAN、mainとの差分先行0、製品3/共有7hash一致を確認。公式wrapperでPR3468をmerge commitし本番反映を完了した。
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3468 （MERGED、2026-09-13T06:32:24Z）
+- merge: c50d719b2505c3e1d1977c4f36bdae39f14dae22
+- deploy: https://github.com/shingo-ops/salesanchor/actions/runs/34742996601 （SUCCESS、job103685769339）
+- root原ログ確認: salesanchor_db_20260913_153301.sql.gz 7.6M新規取得、配備HEAD c50d719b一致、Finalize/Verify成功。バックアップ復元試験は未実施。
+- root直接公開確認: App/公開JS/API /api/healthすべてHTTP200、database/redis/celery connected。公開/assets/index-An53UlbI.jsの3フォーム6件に取消secondary/送信primary/size md、登録disabled2・pending文言、専用編集取消先/staffを確認。SHA256 ff0f29a262ab54b44330959f9d98b49a3f0c82563183374d2734c7baca236d26。
+
+根拠と再現検査器: docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。初回ローカルPython CA不足は検証を無効化せずsystem curlへ、見出し数固定の検収器仮定は取消先との一意対応へ修正。失敗履歴をJSONに残し製品は変更していない。
+設計自己審査・PO実装承認・root検収・GO受領・実装保存・マージ・本番反映済み。本番認証付きフォーム送信とPO目視は未実施。LINE再解析/3シート配信は本便対象外。残存旧299の次便選定は別の設計作業、表/報酬3/カレンダー色保留、新CI最後。
+
+
+### AN. Bot管理3フォーム6ボタン（2026-09-13・未承認案）
+
+#### 目的・既存の合意
+
+親ideal-state.mdのPO原文「統一感のあるフロントエンドのUI/UXを実現したい」と承認済kgi.mdの共通部品一元管理を継承する。前便AMはPR3468本番反映済み、結果PR3478 main統合済み。今回「進める」は次便の調査・設計として受領し、AN製品実装承認・GOとは扱わない。
+Bot登録・簡易編集・専用編集の取消/送信6件を共通Buttonへ寄せる案。成功条件は対象6/6の移管、業務本文差分0、表示96前後組・操作契約の合格。全体KGIを6件だけで達成済みとしない。
+
+#### 観測事実と変更前後
+
+固定1a8eed69a8d4e1c17cefc7dcef579f63493b17dd。TypeScript構文測定で共通114、旧299。旧はbutton/Link/aを含みstories/test/spec/design-previewを除外。成功後の期待は120/293。原文・行・2ページhash・共有10hashはdocs/handoff/design-system-recon/evidence-20260910/an-bot-button-audit.json。
+
+| 対象 | 実物 | 保持する契約 |
+|---|---|---|
+| AN-01/02 登録 | BotsPage.tsx:259/260 | type button/submit、submitting時2件disabled、common.submitting/bots.registerIssueKey分岐 |
+| AN-03/04 簡易編集 | BotsPage.tsx:281/282 | cancel closeDrawer、submit PATCH、保存ロックなし |
+| AN-05/06 専用編集 | BotEditPage.tsx:88/95 | cancel /bots、submit PATCH、保存後/botsへ移動、保存ロックなし |
+
+BotsPage.tsx:121〜145のPOST /botsはdisplay_name/purpose/status/discord_user_id/sender_email/owner_staff_idの6項目、bot_code非空trim時だけ追加。空discord/emailはnull、ownerはparseInt。成功でcreated.api_keyをnewApiKeyへ設定、Modal閉鎖・入力リセット・一覧とstaff再取得。:208〜213のキー表示/確認ボタンは変更しない。UIの確認で表示を消すだけであり、永続保存や再取得不可をフロントだけから保証しない。
+簡易編集:149〜166と専用編集:61〜77のPATCH /bots/:idは同じ6項目。bot_code/api_keyを送らない。簡易は閉じてloadAll、専用は/botsへ遷移。Staff版の本人設定refreshは存在しない。エラー保持/通常編集pending時の有効状態を維持。
+BotFormFields.tsx:33〜95でdisplay_name/purpose/owner_staff_idがrequired、sender_emailはemail型。登録はBotsPage:224〜256の実input/selectで同条件を持つ。英語登録ラベルはen.json bots.registerIssueKey = Register (Issue API Key)で前便より長く、狭幅の確認が必要。
+Button.tsx:38/49〜87はnative属性を転送。対象6件すべてtype明示、既存disabled2件、style/ref/form指定0。Button.css:2〜17はnowrap、components.css:46〜51は右寄せflexで折返し指定なし。
+
+#### 実装範囲・対象外
+
+製品の許可候補はfrontend/src/pages/bots/BotsPage.tsx、frontend/src/pages/bots/BotEditPage.tsx、新規frontend/src/components/BotFormButtonMigration.test.tsxのみ。既存../../components/Buttonのnamed importを追加し、監査6件の開始/終了tagをButtonへ、classNameを除去、取消3 secondary/登録更新3 primary、size md明示。type/disabled/onClick/children/条件式・form・順序・wrapper・処理本文を逐語保持。逆変換で2ページの全バイト一致を確認する。
+loading/loadingText/新disabled/aria-busy/fullWidth/style/layoutClassNameを足さない。登録のネイティブselect/既存英語直書き/インラインstyleは別の移行課題として維持し今回修正しない。
+対象外5ボタン（新規起動、キー表示の確認、行編集、キー再発行、削除）とConfirmModal2個、rotate-key/delete処理、権限条件・行クリック、共有10ファイル、翻訳/認証/API/DB/secrets/CI/依存lockは変更禁止。キー発行/再発行の仕様変更と実キー発行操作は本便に含めない。
+
+#### Why・選択理由・代替・リスク
+
+3フォームが同じnative属性の共通Buttonへ転送可能（type6/6、直接style0/6）。原文逆変換で副作用処理の非変更を全バイト判定でき、1つの外観定義に6件を追加できる。登録だけは新規キー表示への遷移があるため、合成キーを返す試験でフローを独立検証する。
+編集4件だけの案は登録の旧外観が残るため、まず同じ3フォーム6件を一組とする。登録ラベルが96表示組で収まらない場合は本案をREVISEへ戻し、編集4件の先行案へ分離する。CSS拡張/文言短縮を実装役の判断で追加しない。キー再発行/削除ボタンも一括移行する案は副作用の対象を増やすので今回不採用。
+外部事例と新ライブラリ/API仕様調査は不要。既存自社部品の属性契約・対象原文が直接根拠で、AMの96組成功をAN成功の証明には使わない。新APIは導入しない。ADR-113/067/027/073を継承し、実Modalの方針はADR-122参照。新ADRは不要、Whyの根拠はこの節と監査JSONへ接続する。
+
+#### 受入条件・検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 6件移管、本文差分0 | 原文6件の属性/条件式一致、2ページ逆変換全バイト一致、共有10hash不変。製品差分は指定3ファイルのみ |
+| 登録payload/キー表示保持 | 実ページ/入力/Modalをmount、POST /botsの全payloadとbot_code空時キー不在・指定時trim、null化/owner数値化を照合。成功で合成APIキー表示、Modal閉鎖、reset、bots/staff追加GET各1。確認ボタンで表示消去、再開時入力初期値を確認。実キーを使用・保存しない |
+| 登録必須/連投/失敗 | required3条件と不正emailは送信0。pendingでdisabled2・文言保持・連投0、拒否後エラー/入力保持・解除・再試行成功。Esc/ヘッダXを独断でロックせず前後比較 |
+| 編集payload/遷移 | 簡易・専用PATCH URL/ID/6項目全一致、bot_code/api_key送信0、キー発行POST0/rotate0/delete0。成功は簡易close+一覧再取得、専用/bots遷移。失敗入力保持、保存中のdisabled/aria-busy/文言が前後同一、設定refresh追加0 |
+| 権限と非対象の保持 | 実usePermissionsをAPI合成で使用しbots.create/update/deleteの許可/拒否を確認。対象フォーム操作で再発行/削除通信0。非対象5ボタン/ConfirmModal2個は逆変換全文一致で保持を保証し、実副作用は実行しない |
+| 実表示96前後組 | 3フォーム×6幅390/640/767/768/1279/1280×日英×明暗=72組＋登録pending24組。入力を省かず実Tab/ShiftTab到達、文字/本体/フォーカス輪郭の四辺欠け0、初期横overflow増加0、順序一致。登録長ラベルを省略しない。disabledは通常状態でTab/輪郭を検証 |
+| キーボード/終了 | 全3フォーム取消/送信Enter/Space、入力Enter、Escを前後比較。Modal/Drawerのclose/reopenとfocus復帰、専用編集の一覧遷移を検査。合成キー表示/確認の操作も前後比較 |
+| 品質 | 対象3strict eslint、新規回帰、既存test:coverage/check:all/build/build-storybookと最新PR必須CI成功。失敗は原因と原ログを保存し、品質条件を弱めない |
+
+試験は実ページ/入力/Select/Button/Modal/Drawer/Router/翻訳を使い、認証入口・APIだけ合成する。全外部通信を遮断。本番Bot・実APIキー・Discord連携を試験用に操作しない。96組は実装後の計画で未実行。本番認証/全App/sidebar/PO目視とローカル検証を区別し、640pxを実200%zoomとはしない。
+
+#### 維持・担当・戻し方
+
+外観ownerはButton、配置ownerはform-actions/Modal/Drawer、回帰は新規Botページ試験と既存CI。設計担当がカード・逆変換・表示操作検収・台帳、承認後の実装担当が指定3ファイルと品質検証を担う。未承認草案だけで既存担当を起動せず新AIも起動しない。原文/hash差異・範囲外修正・検証失敗は停止し設計へ戻す。戻しは本便の製品差分revert、DB変更なし。表/報酬3/カレンダー色保留、新CIは最後。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（AN設計合格）。同一AIによる自己審査であり独立第二者レビューではない。対象6件/共有10ファイル/3送信契約/権限とキー表示の境界が実物で特定でき、逆変換・96表示組・API合成検証で受入を○×判定できる。長い登録ラベルの未検証と失敗時のREVISE条件を明示し、既存キー発行ロジックの変更を禁止した。
+設計上の未解決仕様なし。POの今回6件実装承認、製品実装、AN表示検証は未実施。カードは未発行草案。設計合格はPO承認/実装/GO/本番反映の承認を兼ねない。
+
+AN形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-state/diff-check成功、card-lint exit0（長行警告1のみ）。2ページ/共有10hash不変、製品差分0。カードは未発行草案。
+
+2026-09-13 AN実装承認: 今回6件への実装承認質問にPO原文「進める」を受領。CARD-AN-BOTS-01を既存button_generatorへ発行。rootは検収/記録、製品実装へ自動切替しない。新GO/マージ/本番未承認。
+
+AN試験前提の補足（2026-09-13）: 初回回帰32中4失敗を停止・再調査。root変更前後8観測で用途selectは非空4候補、selectedIndex=-1の負例はnative invalid/送信0、DrawerはDOM常設/権限拒否でopenクラスなしを確認。通常UIで用途を空にできるとはしない。必須属性/負例検査は維持し、DOM不存在の誤期待を開閉状態へ修正。CARD-AN-TEST-02を発行。製品変更追加0、受入条件の緩和なし。
+
+
+2026-09-13 AN実装検収: PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致、最終96表示・24操作+6閉鎖再開前後組成功。試験前提8観測で初回4失敗を試験のみ補正、担当32新規/343全体試験・品質成功を原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md。実装検収APPROVE、PR3480実装更新と最新main/CIへ、今回番号付きGO/マージ/本番未実施。
+
+### AO. チーム3フォーム6ボタン移管案（2026-09-13）
+
+状態: 設計草案。今回PO原文「進める」はAN完了後の次便調査・設計の続行。AO6件の実装承認は未受領。既存の全体目的は再承認対象にしない。mode: handoffを継承する。
+
+#### 目的・実物根拠
+
+PO合意済みの「1ヵ所直せば全ページが変わる」目的に沿い、チーム登録Modal・簡易編集Drawer・専用編集の取消/送信6件を既存Buttonへ集約する。操作と業務処理を維持し、6件移管/本文差分0を○×判定する。
+基準116b1cf667addd0b6d3b68a574641e0081dc4517。AN結果文書PR3485 merge87d29d72以後のfrontend差分0を直接確認。構文測定で共通Button120/旧btn293、期待126/287。旧母数はbutton/Link/aのbtn-*、stories/test/spec/design-preview除外。原文6件・2ページ/共有12hash・対象外6原文はdocs/handoff/design-system-recon/evidence-20260910/ao-team-button-audit.json。
+
+| 対象 | ファイル・開始行 | 変更後 |
+|---|---|---|
+| AO-01/02 登録取消/作成 | frontend/src/pages/teams/TeamsPage.tsx:200/203 | Button secondary/primary、size md |
+| AO-03/04 簡易取消/更新 | frontend/src/pages/teams/TeamsPage.tsx:221/224 | 同上 |
+| AO-05/06 専用取消/更新 | frontend/src/pages/teams/TeamEditPage.tsx:67/74 | 同上 |
+
+TeamsPage.tsx:95〜128のPOST /teamsとPATCH /teams/:idはname原値、leader_idの非空Number変換/空null、description原値/空nullの3項目のみ。作成成功はModal閉鎖・emptyFormへ初期化・GET /teams再取得、簡易成功はcloseDrawer・GET再取得。TeamEditPage.tsx:26〜55はGETでnullを空文字へ整形し、同じ3項目PATCH成功で/teamsへ戻る。全3フォームにsubmitting/保存中disabled/連投防止なし。Bot便の連投抑止を誤って追加しない。
+TeamFormFields.tsx:25〜47はname必須、leader_idは任意number/min1、descriptionはtextarea。textarea内Enterは改行のまま、入力欄Enter送信とは分ける。既存name/descriptionのtrimなしも保持する。
+TeamsPage.tsx:177/281/295はcreate/update条件、行クリックはupdateで制限。280のメンバー一覧起動はupdate条件の外、238/252のメンバー追加/削除はteams.manage_members条件。App.tsx:231〜232に専用routeがあり、TeamEditPage自身にusePermissions条件はない。新しい認可仕様を本便で加えない。
+Button.tsx:38/49〜87はnative属性を転送。対象type明示6/6、disabled/style/ref/form指定0/6。Button.css:2〜17はnowrap、components.css:46〜51は右寄せflex。TeamsPage.cssはメンバー追加formの下余白のみ。Modal.tsx:112は閉鎖時DOMなし、Drawer.tsx:130〜136はDOM常設/openクラスで判定する。既存Bot回帰は構成参考のみ、Team専用回帰はgit grepで該当0（新規追加する）。
+
+#### 実装範囲・対象外
+
+製品許可候補はTeamsPage.tsx、TeamEditPage.tsx、新規frontend/src/components/TeamFormButtonMigration.test.tsxの3件のみ。2ページへ../../components/Buttonのnamed import追加、監査AO-01〜06の開始/終了tagだけButtonへ、旧className除去、取消secondary/送信primary/size mdを明示。type/onClick/children/条件式/改行と残り本文は逐語保持。逆変換で2ページ全バイト一致を判定する。
+loading/loadingText/disabled/aria-busy/fullWidth/style/layoutClassNameやpending stateを追加しない。form順序・wrapper・入力・共有12ファイル・翻訳・依存lockは不変。対象外6ボタン（新規起動、メンバー追加、メンバー削除、メンバー一覧、行編集、チーム削除）とメンバーModal、ConfirmModal、権限/認証/route、API/DB/secrets/CIは変更禁止。実チーム/メンバー/外部APIへの書込操作も禁止。
+
+#### Why・代替・リスクと対処
+
+3フォームともnative属性6/6が既存Buttonに転送でき、共有入力は同じ1ファイル、送信は同じ3項目である。原文逆変換とAPI合成試験で、外観移管と業務処理維持を別々に判定できる。Teams6件は同じ編集対象・フォーム契約で完結する。リード等の別画面やメンバー管理まで広げる案は追加の送信契約を含むため後便、専用編集2件だけの案は同じチーム画面の旧外観4件を残すため今回は採用しない。
+保存中の連投防止が無い点は観測事実であり、この見た目移管便では仕様変更しない。合成APIのpending2回送信で前後の送信回数が同じことを確認し、本番で連投試験はしない。新たなロック追加が必要なら別の目的・設計・承認で扱う。
+狭幅やfocus欠けが発生したら設計をREVISEへ戻す。CSS拡張/文言短縮/入力省略/成功条件緩和で通さない。Drawer閉鎖をDOM不存在と誤判定しない。APIの非同期完了後の再取得も待って回数を比較する。
+外部事例・新ライブラリ/API仕様調査は不要。今回の根拠は既存社内部品と6原文の直接照合であり、ANの343試験/96表示成功をAO成功の証明へ転用しない。ADR-113/067/027/073/122の既存決定を継承し、新ADRは不要。後続ADRが必要になればこのWhyと監査JSONを根拠にする。
+
+#### 受入条件・検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 6件移管・業務本文差分0 | 全原文/属性照合、2ページ逆変換全バイト一致、共有12hash一致、対象外6原文一致。製品差分は指定3ファイルのみ。共通126/旧287（基準更新時は他便増減と分ける） |
+| 3フォームpayload維持 | 実ページとTeamFormFieldsをmount、POST/PATCH URL/ID/3項目を照合。leader空null/数値42、description空null/非空、name/descriptionの前後空白保持、is_active/member_count等の追加0。入力Enter/送信クリックで成立 |
+| 入力制約 | 各3フォームのname空、leader0、leader負数はnative invalid・送信0。leader空はvalid。textarea Enterは改行・書込0。試験はinput/textareaを実物使用 |
+| 成功・取消・失敗 | 作成close/reset/GET teams追加1、簡易close/reset/GET追加1、専用/teams遷移。取消は書込0、閉じて再開時の値/焦点を前後比較。失敗は入力・フォームを保持しエラー表示、再試行成功 |
+| pending契約保持 | 全3フォームで2ボタン有効・文言不変・新aria-busyなし。独立ケースでpending中に送信2回した前後の同一通信回数2を合成APIだけで照合。ロック追加0。取消/Esc/ヘッダX閉鎖・再開も既存挙動を比較 |
+| 権限と範囲外通信0 | 実usePermissionsに合成/me/permissionsを与えcreate/update許可拒否と行クリックを確認。Drawer拒否時はopenクラスなし。対象操作でmembersパスへの全通信0・DELETE0・/staff/meへの書込0。フルページに新permission fetch/新ガードを追加しない |
+| 実表示144前後組 | 3フォーム×6幅390/640/767/768/1279/1280×日英×明暗=通常72組＋全3フォームpending72組。入力を省略せず実Tab/ShiftTab、文字/本体/focus輪郭4辺欠け0、初期横overflow増加0、順序一致。640pxを実200%zoomと称さない |
+| 操作30前後組以上 | 各3フォームの取消Enter/Space、送信Enter/Space、入力Enter、Esc、pending、失敗の24組＋Modal/Drawerの通常X・pendingEsc・pendingX各3で6組。textarea EnterとDrawerフルページ遷移は別途試験。focus/閉鎖/再開/遷移/通信回数を同時比較 |
+| 品質 | 対象3ファイルstrict eslint、Team新規回帰、既存test:coverage/check:all/build/build-storybook、最新PR必須CI成功。未実行を合格と記録しない |
+
+実ページ/入力/Button/Modal/Drawer/Router/翻訳/usePermissionsを使用し、認証入口とAPIだけ合成。表示検収は実UiPrefsProvider使用。全外部通信を遮断し、本番書込・実認証操作なし。全App/sidebar・PO目視・本番認証付き送信とは区別する。144組と品質検証は実装後の計画で現時点未実行。
+
+#### 維持・担当・戻し方
+
+外観の担当はButton、配置はform-actions/Modal/Drawer、操作の維持は新規Team回帰と既存CI。設計担当が草案/審査/カードと直接照合、PO承認後の実装担当が指定3ファイルと品質検証を担う。カードは未発行草案、承認前の担当起動・新サブエージェント起動なし。基準原文/hash不一致、範囲外変更、検証失敗で停止し設計へ返す。本便差分revertで戻せDB復元不要。表/報酬3/カレンダー色保留、新CIは全画面統一後の最後。
+
+#### Architect自己審査（Planner草案作成後）
+
+APPROVE（AO設計合格）。同一AIの自己審査であり独立第二者レビューではない。実物再照合で原文6/type明示6/対象外6、2ページ・共有12hashが一致。3送信契約、ロック不在とメンバー操作の境界が明確で、逆変換・144表示組・合成API回帰で受入を○×判定できる。ADR-113のhandoff様式・既存Button/Modal/Drawer契約・既存品質チェックとの矛盾なし。設計/維持様式エラー0、task-state成功。
+設計上の未解決前提なし。AO実表示・操作検証は未実行で、失敗時は設計へ差し戻す。POの今回6件実装承認/製品実装/今回GOは未取得。設計合格をこれらの承認に代えない。
+
+AO審査追記: 同一AIによる設計自己審査APPROVE。原文6/type6/対象外6・2ページ/共有12hash一致、製品差分0。design/maintenanceエラー0、task-state/diff-check成功、未発行カード草案のcard-lint exit0（長行警告1のみ）。実装承認待ち、実装/144表示組未実行。
+
+
+AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件の実装承認質問へのPO原文「進める」を受領。AOの製品3ファイル・品質検証を承認済み。最新main1021268623f2dba566d953fea056ff548ae28f3aまでfrontend差分0、対象2ページ/共有12hash一致を直接確認。collaboration.list_agentsではrootのみで、従前の実装担当は現存しない。起動指示の新サブエージェント暗黙起動禁止に従い、新担当1名の委任確認待ち。rootは製品実装へ切替しない。カードは担当確定後の正式発行待ち、製品変更0。今回番号付きGO/マージ/本番承認は含まない。
+
+AO担当委任承認: 新しい実装担当1名への委任質問にPO原文「進める」を受領。CARD-AO-TEAMS-01をteam_button_generatorへ発行し、製品3件と品質検証を委任する。rootは直接照合・実表示操作検収・文書を担当。新番号GO/マージ/本番の承認は含まない。
+
+
+AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。

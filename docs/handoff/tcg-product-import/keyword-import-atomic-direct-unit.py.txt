@@ -1,0 +1,29 @@
+import ast,asyncio,hashlib,json,socket,sys
+from pathlib import Path
+from unittest.mock import AsyncMock
+sys.path.insert(0,"/tmp/sa-csv-parent-sqlalchemy")
+import pytest
+sys.path.insert(0,str(Path.cwd()/'backend'))
+def denied(*args,**kwargs):raise AssertionError('Unexpected network/DB connection')
+socket.socket.connect=denied
+p=Path('backend/tests/test_tcg_product_import.py');source=p.read_bytes();tree=ast.parse(source)
+names={'atomic_service','test_atomic_row_commit_and_counter_order','test_atomic_rejected_row_receipt_before_counter','test_atomic_stop_preserves_original_exception','test_atomic_creation_value_error_with_failed_rollback_does_not_record','test_record_row_commit_flag_defaults_to_true','test_create_product_commit_flag_and_legacy_postcheck'}
+nodes=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names]
+assert len(nodes)==7
+for n in nodes:n.decorator_list=[]
+ns={'pytest':pytest,'AsyncMock':AsyncMock};exec(compile(ast.Module(body=nodes,type_ignores=[]),str(p),'exec'),ns)
+async def main():
+ count=0
+ cases=[('test_atomic_row_commit_and_counter_order',())]+[('test_atomic_rejected_row_receipt_before_counter',(x,)) for x in [False,True]]+[('test_atomic_stop_preserves_original_exception',(p,x)) for p in ['create_sql','created_receipt','commit','blocked_receipt','error_receipt','cancel'] for x in [False,True]]+[('test_atomic_creation_value_error_with_failed_rollback_does_not_record',())]
+ for name,args in cases:
+  with pytest.MonkeyPatch.context() as m:await ns[name](ns['atomic_service'](m),*args)
+  count+=1
+ for commit in [None,False,True]:
+  await ns['test_record_row_commit_flag_defaults_to_true'](commit);count+=1
+  for fail in [False,True]:
+   with pytest.MonkeyPatch.context() as m:await ns['test_create_product_commit_flag_and_legacy_postcheck'](m,commit,fail)
+   count+=1
+ assert p.read_bytes()==source
+ result={'mode':'direct invocation of AST-selected actual test functions, not pytest runner','passed':count,'network_guard':'socket.connect rejected','source_sha256':hashlib.sha256(source).hexdigest()}
+ Path('/tmp/sa-csv-atomic-direct-unit.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n');print(json.dumps(result))
+asyncio.run(main())

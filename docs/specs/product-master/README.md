@@ -157,3 +157,8 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 - [PC/Androidの仕入先名の照合](../../handoff/line-supplier-aliases/design.md): 保存投稿の指紋を用いた読取調査。
 
 - [保存済み原文を固定する作品ID比較](../../handoff/tcg-product-master-growth/design-keyword.md#17-保存済み原文を固定した作品id比較2026-09-13-設計見直し): 比較設計自己審査済み。実装未着手、採用/全再解析/配信設計はREVISE。
+
+
+### 抽出待ち時間の限定是正案（2026-09-13・未実装）
+
+[設計・審査](../../handoff/tcg-product-master-growth/design-keyword.md) と [実測](../../handoff/tcg-product-master-growth/recon.md) の「シンソク抽出の時間制限見直し」を参照。300/330秒の限定実装は2026-09-13にPO承認済み。実装/検証中で本番未反映。型番3商品の不整合は別の未解決事項。

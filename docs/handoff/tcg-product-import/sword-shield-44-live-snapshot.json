@@ -1,0 +1,6673 @@
+{
+  "captured_files": {
+    "series": {
+      "mtime_utc": "2026-09-13T02:27:23.354955+00:00",
+      "sha256": "2f6ca027e1faa629858dedf89bc9a349ff90581344e40ba13469047214885017"
+    },
+    "major": {
+      "mtime_utc": "2026-09-13T02:27:23.506068+00:00",
+      "sha256": "63a490bacbb8cc3dcbc07b077cc4fd72edab0fa55f42e36b54169561790468a9"
+    },
+    "manufacturers": {
+      "mtime_utc": "2026-09-13T02:27:23.457602+00:00",
+      "sha256": "9d6da0ed37739525b7a19ef2d68626608dea784d3b605881042915dea7f9d349"
+    },
+    "categories": {
+      "mtime_utc": "2026-09-13T02:27:23.253798+00:00",
+      "sha256": "63742e08c17e10352673858781edbab28a876b75eeaafe5171760cc7d74fe119"
+    },
+    "products": {
+      "mtime_utc": "2026-09-13T02:27:23.595503+00:00",
+      "sha256": "57e054ec4cc9304e9987a129aa9970d59cf8d1d92c27cf7cfe42584b50b08d91"
+    },
+    "search": {
+      "mtime_utc": "2026-09-13T02:27:23.571950+00:00",
+      "sha256": "abbf77039cf0f489dfe3cdad9ec409dc49fee759659f66c8fa879f1314b065b3"
+    },
+    "exclude": {
+      "mtime_utc": "2026-09-13T02:27:23.486162+00:00",
+      "sha256": "0728e2f9f1cea5b85d569e999b580b893ec55c63eb292f6370d3407fcfcb1e76"
+    }
+  },
+  "data": {
+    "series": [
+      {
+        "code": "IP001",
+        "id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "display_name": "Pokemon",
+        "is_active": true
+      },
+      {
+        "code": "IP002",
+        "id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "display_name": "One Piece",
+        "is_active": true
+      },
+      {
+        "code": "IP003",
+        "id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "display_name": "Dragon Ball",
+        "is_active": true
+      },
+      {
+        "code": "IP004",
+        "id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "display_name": "Yu-Gi-Oh",
+        "is_active": true
+      },
+      {
+        "code": "IP005",
+        "id": "e48fbbd0-dc10-43a5-a085-becd5b0c9bb9",
+        "display_name": "Union Arena",
+        "is_active": true
+      },
+      {
+        "code": "IP006",
+        "id": "17fe2232-49b7-4989-a23d-b7d82923c7f3",
+        "display_name": "GUNDAM",
+        "is_active": true
+      },
+      {
+        "code": "IP007",
+        "id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "display_name": "Weiss Schwarz",
+        "is_active": true
+      },
+      {
+        "code": "IP008",
+        "id": "2611b380-c9b3-4db7-af3a-be82124bb182",
+        "display_name": "Digimon",
+        "is_active": true
+      },
+      {
+        "code": "IP009",
+        "id": "f6064814-eff6-4d27-92a6-342fe4301566",
+        "display_name": "hololive",
+        "is_active": true
+      },
+      {
+        "code": "IP010",
+        "id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "display_name": "LORCANA",
+        "is_active": true
+      },
+      {
+        "code": "IP011",
+        "id": "a0585b8e-967a-4a37-bd20-6e46740e1106",
+        "display_name": "Xross Stars",
+        "is_active": true
+      }
+    ],
+    "major": [
+      {
+        "code": "DIV01",
+        "id": "be06f16f-fc64-444a-ad38-1c7c6b4bb02c",
+        "is_active": true
+      },
+      {
+        "code": "DIV02",
+        "id": "df3d44b7-7eff-4ddd-b1e0-4800bc5ceef7",
+        "is_active": true
+      },
+      {
+        "code": "DIV03",
+        "id": "fa507e90-dc9b-4780-ad19-ad348cdb867f",
+        "is_active": true
+      }
+    ],
+    "manufacturers": [
+      {
+        "code": "MK001",
+        "id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "is_active": true
+      },
+      {
+        "code": "MK002",
+        "id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "is_active": true
+      },
+      {
+        "code": "MK003",
+        "id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "is_active": true
+      },
+      {
+        "code": "MK004",
+        "id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "is_active": true
+      },
+      {
+        "code": "MK005",
+        "id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "is_active": true
+      }
+    ],
+    "categories": [
+      {
+        "code": "PC_BOX",
+        "id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PC_SINGLE",
+        "id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      }
+    ],
+    "products": [
+      {
+        "code": "PM0001",
+        "japanese_title": "モンスターボールミラー",
+        "english_title": "Monster ball Miror duplicate bulk set",
+        "mark": "MMD",
+        "release_date": "2016-11-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0002",
+        "japanese_title": "RRカード",
+        "english_title": "RR duplicate bulk set",
+        "mark": "RRD",
+        "release_date": "2016-11-03",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0003",
+        "japanese_title": "RRRカード",
+        "english_title": "RRR duplicate bulk set",
+        "mark": "RRRD",
+        "release_date": "2016-11-04",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0004",
+        "japanese_title": "Sカード",
+        "english_title": "S duplicate bulk set",
+        "mark": "SD",
+        "release_date": "2016-11-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0005",
+        "japanese_title": "SRカード",
+        "english_title": "SR duplicate bulk set",
+        "mark": "SRD",
+        "release_date": "2016-11-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0006",
+        "japanese_title": "SARカード",
+        "english_title": "SAR card (duplicate)",
+        "mark": "SARD",
+        "release_date": "2016-11-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0007",
+        "japanese_title": "AR/CHR ダブりなし",
+        "english_title": "AR/CHR card (no duplicate)",
+        "mark": "ARCHRD",
+        "release_date": "2016-11-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0008",
+        "japanese_title": "AR/CHR ダブりあり",
+        "english_title": "AR/CHR  card (duplicate)",
+        "mark": "ARCHRD",
+        "release_date": "2016-11-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0009",
+        "japanese_title": "AR/CHR ダブり2枚まで",
+        "english_title": "AR/CHR card (max 2 duplicates)",
+        "mark": "ARCHRD",
+        "release_date": "2016-11-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0010",
+        "japanese_title": "ARカード ダブりなし",
+        "english_title": "AR card (no-duplicate)",
+        "mark": "ARND",
+        "release_date": "2016-11-11",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0011",
+        "japanese_title": "ARカード ダブりあり",
+        "english_title": "AR card (duplicate)",
+        "mark": "ARD",
+        "release_date": "2016-11-12",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0012",
+        "japanese_title": "コレクションサン",
+        "english_title": "Collection Sun",
+        "mark": "SM1S",
+        "release_date": "2016-12-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0013",
+        "japanese_title": "コレクションムーン",
+        "english_title": "Collection Moon",
+        "mark": "SM1M",
+        "release_date": "2016-12-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0014",
+        "japanese_title": "サン&ムーン",
+        "english_title": "Sun & Moon",
+        "mark": "SM1+",
+        "release_date": "2017-01-27",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0015",
+        "japanese_title": "キミを待つ島々",
+        "english_title": "Islands Await You",
+        "mark": "SM2L",
+        "release_date": "2017-03-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0016",
+        "japanese_title": "アローラの月光",
+        "english_title": "Alolan Moonlight",
+        "mark": "SM2K",
+        "release_date": "2017-03-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0017",
+        "japanese_title": "新たなる試練の向こう",
+        "english_title": "Beyond the New Trial",
+        "mark": "SM2+",
+        "release_date": "2017-04-21",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0018",
+        "japanese_title": "光を喰らう闇",
+        "english_title": "Dark Devourers",
+        "mark": "SM3H",
+        "release_date": "2017-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0019",
+        "japanese_title": "闘う虹を見たか",
+        "english_title": "Did You See the Fighting Rainbow?",
+        "mark": "SM3K",
+        "release_date": "2017-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0020",
+        "japanese_title": "ひかる伝説",
+        "english_title": "Shining Legends",
+        "mark": "SM3+",
+        "release_date": "2017-07-15",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0021",
+        "japanese_title": "覚醒の勇者",
+        "english_title": "Awakened Heroes",
+        "mark": "SM4S",
+        "release_date": "2017-09-15",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0022",
+        "japanese_title": "超次元の暴獣",
+        "english_title": "Transdimensional Beast",
+        "mark": "SM4A",
+        "release_date": "2017-09-15",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0023",
+        "japanese_title": "GXバトルブースト",
+        "english_title": "GX Battle Boost",
+        "mark": "SM4+",
+        "release_date": "2017-10-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0024",
+        "japanese_title": "ウルトラサン",
+        "english_title": "Ultra Sun",
+        "mark": "SM5M",
+        "release_date": "2017-12-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0025",
+        "japanese_title": "ウルトラムーン",
+        "english_title": "Ultra Moon",
+        "mark": "SM5L",
+        "release_date": "2017-12-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0026",
+        "japanese_title": "ウルトラフォース",
+        "english_title": "Ultra Force",
+        "mark": "SM5+",
+        "release_date": "2018-01-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0027",
+        "japanese_title": "禁断の光",
+        "english_title": "Forbidden Light",
+        "mark": "SM6",
+        "release_date": "2018-03-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0028",
+        "japanese_title": "ドラゴンストーム",
+        "english_title": "Dragon Storm",
+        "mark": "SM6a",
+        "release_date": "2018-04-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0029",
+        "japanese_title": "チャンピオンロード",
+        "english_title": "Champion Road",
+        "mark": "SM6b",
+        "release_date": "2018-05-03",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0030",
+        "japanese_title": "裂空のカリスマ",
+        "english_title": "Celestial Storm",
+        "mark": "SM7",
+        "release_date": "2018-06-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0031",
+        "japanese_title": "迅雷スパーク",
+        "english_title": "Thunderclap Spark",
+        "mark": "SM7a",
+        "release_date": "2018-07-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0032",
+        "japanese_title": "フェアリーライズ",
+        "english_title": "Fairy Rise",
+        "mark": "SM7b",
+        "release_date": "2018-08-03",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0033",
+        "japanese_title": "超爆インパクト",
+        "english_title": "Thunderclap Spark",
+        "mark": "SM8",
+        "release_date": "2018-09-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0034",
+        "japanese_title": "ダークオーダー",
+        "english_title": "Dark Order",
+        "mark": "SM8a",
+        "release_date": "2018-10-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0035",
+        "japanese_title": "GXウルトラシャイニー",
+        "english_title": "GX Ultra Shiny",
+        "mark": "SM8b",
+        "release_date": "2018-11-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0036",
+        "japanese_title": "ナイトユニゾン",
+        "english_title": "Night Unison",
+        "mark": "SM9",
+        "release_date": "2019-01-11",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0037",
+        "japanese_title": "フルメタルウォール",
+        "english_title": "Full Metal Wall",
+        "mark": "SM9b",
+        "release_date": "2019-02-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0038",
+        "japanese_title": "ダブルブレイズ",
+        "english_title": "Double Blaze",
+        "mark": "SM9a",
+        "release_date": "2019-03-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0039",
+        "japanese_title": "ジージーエンド",
+        "english_title": "GG End",
+        "mark": "SM10",
+        "release_date": "2019-04-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0040",
+        "japanese_title": "名探偵ピカチュウ",
+        "english_title": "Detective Pikachu",
+        "mark": "SM10b",
+        "release_date": "2019-04-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0041",
+        "japanese_title": "スカイレジェンド",
+        "english_title": "Sky Legend",
+        "mark": "SM10a",
+        "release_date": "2019-04-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0042",
+        "japanese_title": "ミラクルツイン",
+        "english_title": "Miracle Twin",
+        "mark": "SM11",
+        "release_date": "2019-05-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0043",
+        "japanese_title": "リミックスバウト",
+        "english_title": "Remix Bout",
+        "mark": "SM11a",
+        "release_date": "2019-07-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0044",
+        "japanese_title": "ドリームリーグ",
+        "english_title": "Dream League",
+        "mark": "SM11b",
+        "release_date": "2019-08-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0045",
+        "japanese_title": "オルタージェネシス",
+        "english_title": "Alter Genesis",
+        "mark": "SM12",
+        "release_date": "2019-09-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0046",
+        "japanese_title": "TAG TEAM GX タッグオールスターズ",
+        "english_title": "Tag Team GX All Stars",
+        "mark": "SM12a",
+        "release_date": "2019-10-04",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0047",
+        "japanese_title": "ソード",
+        "english_title": "Sword",
+        "mark": "S1W",
+        "release_date": "2019-12-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0048",
+        "japanese_title": "シールド",
+        "english_title": "Shield",
+        "mark": "S1H",
+        "release_date": "2019-12-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0049",
+        "japanese_title": "VMAXライジング",
+        "english_title": "VMAX Rising",
+        "mark": "S1a",
+        "release_date": "2020-02-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0050",
+        "japanese_title": "反逆クラッシュ",
+        "english_title": "Rebel Clash",
+        "mark": "S2",
+        "release_date": "2020-03-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0051",
+        "japanese_title": "爆炎ウォーカー",
+        "english_title": "Explosive Walker",
+        "mark": "S2a",
+        "release_date": "2020-04-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0052",
+        "japanese_title": "ムゲンゾーン",
+        "english_title": "Infinity Zone",
+        "mark": "S3",
+        "release_date": "2020-06-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0053",
+        "japanese_title": "伝説の鼓動",
+        "english_title": "Legendary Heartbeat",
+        "mark": "S3a",
+        "release_date": "2020-07-10",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0054",
+        "japanese_title": "仰天のボルテッカー",
+        "english_title": "Astonishing Volt Tackle",
+        "mark": "S4",
+        "release_date": "2020-09-18",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0055",
+        "japanese_title": "シャイニースターV",
+        "english_title": "Shiny Star V",
+        "mark": "S4a",
+        "release_date": "2020-11-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0056",
+        "japanese_title": "スペシャルBOX ポケモンセンターカナザワオープン記念",
+        "english_title": "Special Box Kanazawa",
+        "mark": "SP",
+        "release_date": "2020-11-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0057",
+        "japanese_title": "連撃マスター",
+        "english_title": "Rapid Strike Master",
+        "mark": "S5R",
+        "release_date": "2021-01-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0058",
+        "japanese_title": "一撃マスター",
+        "english_title": "Single Strike Master",
+        "mark": "S5I",
+        "release_date": "2021-01-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0059",
+        "japanese_title": "双璧のファイター",
+        "english_title": "Matchless Fighters",
+        "mark": "S5a",
+        "release_date": "2021-03-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0060",
+        "japanese_title": "白銀のランス",
+        "english_title": "Silver Lance",
+        "mark": "S6H",
+        "release_date": "2021-04-23",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0061",
+        "japanese_title": "漆黒のガイスト",
+        "english_title": "Jet-Black Geist",
+        "mark": "S6K",
+        "release_date": "2021-04-23",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0062",
+        "japanese_title": "イーブイヒーローズ",
+        "english_title": "Eevee Heroes",
+        "mark": "S6a",
+        "release_date": "2021-05-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0063",
+        "japanese_title": "イーブイヒーローズ イーブイズセット",
+        "english_title": "Eevee Heroes Eevee's Set",
+        "mark": "SP",
+        "release_date": "2021-05-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0064",
+        "japanese_title": "ハイクラスデッキ ゲンガーVMAX",
+        "english_title": "High Class Deck Gangar VMAX",
+        "mark": "SGG",
+        "release_date": "2021-05-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0065",
+        "japanese_title": "ハイクラスデッキ インテレオンVMAX",
+        "english_title": "High Class Deck Intereon VMAX",
+        "mark": "SGI",
+        "release_date": "2021-05-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0066",
+        "japanese_title": "ハイクラスデッキダブルBOX ゲンガーVMAX＆インテレオンVMAX",
+        "english_title": "High Class Deck Double box Gangar VMAX & Intereon VMAX",
+        "mark": "SGD",
+        "release_date": "2021-05-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0067",
+        "japanese_title": "蒼空ストリーム",
+        "english_title": "Blue Sky Stream",
+        "mark": "S7R",
+        "release_date": "2021-07-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0068",
+        "japanese_title": "摩天パーフェクト",
+        "english_title": "Skyscraping Perfection",
+        "mark": "S7D",
+        "release_date": "2021-07-09",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0069",
+        "japanese_title": "ポケモン切手BOX",
+        "english_title": "Pokémon Card Game Stamp Box - Beauty Back Moon and Pikachu",
+        "mark": "SP",
+        "release_date": "2021-08-25",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0070",
+        "japanese_title": "フュージョンアーツ",
+        "english_title": "Fusion Arts",
+        "mark": "S8",
+        "release_date": "2021-09-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0071",
+        "japanese_title": "25th Anniversary Collection",
+        "english_title": "25th Anniversary Collection",
+        "mark": "S8a",
+        "release_date": "2021-10-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0072",
+        "japanese_title": "25th Anniversary Collection プロモパック",
+        "english_title": "25th Anniversary Collection Promo pack",
+        "mark": "PROMO",
+        "release_date": "2021-10-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0073",
+        "japanese_title": "25th Aniniversary Golden Box",
+        "english_title": "25th Aniniversary Golden Box",
+        "mark": "SP",
+        "release_date": "2021-10-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0074",
+        "japanese_title": "VMAXクライマックス",
+        "english_title": "VMAX Climax",
+        "mark": "S8b",
+        "release_date": "2021-12-03",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0075",
+        "japanese_title": "スターバース",
+        "english_title": "Star Birth",
+        "mark": "S9",
+        "release_date": "2022-01-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0076",
+        "japanese_title": "バトルリージョン",
+        "english_title": "Battle Region",
+        "mark": "S9a",
+        "release_date": "2022-02-25",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0077",
+        "japanese_title": "スペースジャグラー",
+        "english_title": "Space Juggler",
+        "mark": "S10P",
+        "release_date": "2022-04-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0078",
+        "japanese_title": "タイムゲイザー",
+        "english_title": "Time Gazer",
+        "mark": "S10D",
+        "release_date": "2022-04-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0079",
+        "japanese_title": "ダークファンタズマ",
+        "english_title": "Dark Phantasma",
+        "mark": "S10a",
+        "release_date": "2022-05-13",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0080",
+        "japanese_title": "Pokemon GO",
+        "english_title": "Pokémon GO",
+        "mark": "S10b",
+        "release_date": "2022-06-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0081",
+        "japanese_title": "ロストアビス",
+        "english_title": "Lost Abyss",
+        "mark": "S11",
+        "release_date": "2022-07-15",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0082",
+        "japanese_title": "ROMANCE DAWN",
+        "english_title": "ROMANCE DAWN",
+        "mark": "OP-01",
+        "release_date": "2022-07-22",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0083",
+        "japanese_title": "白熱のアルカナ",
+        "english_title": "Incandescent Arcana",
+        "mark": "S11a",
+        "release_date": "2022-09-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0084",
+        "japanese_title": "パラダイムトリガー",
+        "english_title": "Paradigm Trigger",
+        "mark": "S12",
+        "release_date": "2022-10-21",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0085",
+        "japanese_title": "頂上決戦",
+        "english_title": "PARAMOUNT WAR",
+        "mark": "OP-02",
+        "release_date": "2022-11-04",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0086",
+        "japanese_title": "プレシャス コレクターボックス ソード&シールド",
+        "english_title": "Precious Collector Box Sword & Shield",
+        "mark": null,
+        "release_date": "2022-11-18",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0087",
+        "japanese_title": "VSTARユニバース",
+        "english_title": "VSTAR Universe",
+        "mark": "S12a",
+        "release_date": "2022-12-02",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0088",
+        "japanese_title": "スカーレットex",
+        "english_title": "Scarlet ex",
+        "mark": "SV1S",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0089",
+        "japanese_title": "バイオレットex",
+        "english_title": "Violet ex",
+        "mark": "SV1V",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0090",
+        "japanese_title": "スターターセットex ニャオハ＆ルカリオex",
+        "english_title": "Starter Set ex Sprigatito & Lucario ex",
+        "mark": "SVAM",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0091",
+        "japanese_title": "スターターセットex ホゲータ＆デンリュウex",
+        "english_title": "Starter Set ex Fuecoco & Ampharos ex",
+        "mark": "SVAL",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0092",
+        "japanese_title": "スターターセットex クワッス＆ミミッキュex",
+        "english_title": "Starter Set ex Quaxly & Mimikyu ex",
+        "mark": "SVAW",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0093",
+        "japanese_title": "プレミアムトレーナーボックスex",
+        "english_title": "Premium Trainer Box ex",
+        "mark": "SVB",
+        "release_date": "2023-01-20",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0094",
+        "japanese_title": "強大な敵",
+        "english_title": "PILLARS OF STRENGTH",
+        "mark": "OP-03",
+        "release_date": "2023-02-11",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0095",
+        "japanese_title": "トリプレットビート",
+        "english_title": "Triplet Beat",
+        "mark": "SV1a",
+        "release_date": "2023-03-10",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0096",
+        "japanese_title": "スターターセットex ピカチュウex＆パーモット",
+        "english_title": "Starter Set ex Pikachu ex & Pawmot",
+        "mark": "SVC",
+        "release_date": "2023-03-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0097",
+        "japanese_title": "スノーハザード",
+        "english_title": "Snow Hazard",
+        "mark": "SV2P",
+        "release_date": "2023-04-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0098",
+        "japanese_title": "クレイバースト",
+        "english_title": "Clay Burst",
+        "mark": "SV2D",
+        "release_date": "2023-04-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0099",
+        "japanese_title": "スノーハザード&クレイバースト ポケモンセンター・ジムセット",
+        "english_title": "Snow Hazard & Clay Burst Pokemon Center Gym Set",
+        "mark": "SP",
+        "release_date": "2023-04-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0100",
+        "japanese_title": "exスペシャルセット",
+        "english_title": "ex Special Set",
+        "mark": "SVP1",
+        "release_date": "2023-05-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0101",
+        "japanese_title": "長場 ピカチュウ",
+        "english_title": "Yu Nagaba Pikachu Promo card",
+        "mark": "PROMO",
+        "release_date": "2023-05-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0102",
+        "japanese_title": "長場 イーブイ",
+        "english_title": "Yu Nagaba Eevee Promo card",
+        "mark": "PROMO",
+        "release_date": "2023-05-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0103",
+        "japanese_title": "謀略の王国",
+        "english_title": "KINGDOMS OF INTRIGUE",
+        "mark": "OP-04",
+        "release_date": "2023-05-27",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0104",
+        "japanese_title": "ポケモンカード151",
+        "english_title": "Pokemon card 151",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0105",
+        "japanese_title": "黒炎の支配者",
+        "english_title": "Ruler of the Black Flame",
+        "mark": "SV3",
+        "release_date": "2023-07-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0106",
+        "japanese_title": "ポケモンワールドチャンピオンシップス2023横浜 記念デッキ ピカチュウ",
+        "english_title": "2023 Yokohama Commemorative Deck Pikachu",
+        "mark": "WCS23",
+        "release_date": "2023-07-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0107",
+        "japanese_title": "デッキビルドBOX 黒炎の支配者",
+        "english_title": "Deck Build Box Ruler of the Black Flame",
+        "mark": "SVF",
+        "release_date": "2023-07-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0108",
+        "japanese_title": "TANTO プロモカードパック",
+        "english_title": "TANTO Promo Card Pack",
+        "mark": "PROMO",
+        "release_date": "2023-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0109",
+        "japanese_title": "レイジングサーフ",
+        "english_title": "Raging Surf",
+        "mark": "SV3a",
+        "release_date": "2023-09-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0110",
+        "japanese_title": "スターターセット テラスタル ミュウツーex",
+        "english_title": "Starter Set Terastal Mewtwo ex",
+        "mark": "SVEM",
+        "release_date": "2023-09-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0111",
+        "japanese_title": "スターターセット テラスタル ラウドボーンex",
+        "english_title": "Starter Set Terastal Skeledirge ex",
+        "mark": "SVEL",
+        "release_date": "2023-09-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0112",
+        "japanese_title": "名探偵ピカチュウ プロモ",
+        "english_title": "Detective Pikachu Promo",
+        "mark": "PROMO",
+        "release_date": "2023-10-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0113",
+        "japanese_title": "古代の咆哮",
+        "english_title": "Ancient Roar",
+        "mark": "SV4K",
+        "release_date": "2023-10-27",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0114",
+        "japanese_title": "未来の一閃",
+        "english_title": "Future Flash",
+        "mark": "SV4M",
+        "release_date": "2023-10-27",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0115",
+        "japanese_title": "スペシャルデッキセットex フシギバナ・リザードン・カメックス",
+        "english_title": "Special Deck Set ex Venusaur, Charizard & Blastoise",
+        "mark": "SVG",
+        "release_date": "2023-11-10",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0116",
+        "japanese_title": "ポケモンカードゲーム Classic",
+        "english_title": "Pokemon card game Classic",
+        "mark": null,
+        "release_date": "2023-11-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0117",
+        "japanese_title": "シャイニートレジャーex",
+        "english_title": "Shiny Treasure ex",
+        "mark": "SV4a",
+        "release_date": "2023-12-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0118",
+        "japanese_title": "新時代の主役",
+        "english_title": "AWAKENING OF THE NEW ERA",
+        "mark": "OP-05",
+        "release_date": "2023-12-01",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0119",
+        "japanese_title": "サイバージャッジ",
+        "english_title": "Cyber Judge",
+        "mark": "SV5M",
+        "release_date": "2024-01-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0120",
+        "japanese_title": "ワイルドフォース",
+        "english_title": "Wild Force",
+        "mark": "SV5K",
+        "release_date": "2024-01-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0121",
+        "japanese_title": "スターターデッキ＆ビルドセット 古代のコライドンex",
+        "english_title": "Starter Deck & Build Set Ancient Koraidon ex",
+        "mark": "SVHK",
+        "release_date": "2024-01-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0122",
+        "japanese_title": "スターターデッキ＆ビルドセット 未来のミライドンex",
+        "english_title": "Starter Deck & Build Set Future Miraidon ex",
+        "mark": "SVHM",
+        "release_date": "2024-01-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0123",
+        "japanese_title": "メモリアルコレクション",
+        "english_title": "MEMORIAL COLLECTION",
+        "mark": "EB-01",
+        "release_date": "2024-01-27",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0124",
+        "japanese_title": "覚醒の鼓動",
+        "english_title": "Awakened Pulse",
+        "mark": "FB01",
+        "release_date": "2024-02-23",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0125",
+        "japanese_title": "バトルアカデミー",
+        "english_title": "Battle Academy",
+        "mark": "SVI",
+        "release_date": "2024-03-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0126",
+        "japanese_title": "いつでもどこでもバトルアカデミー",
+        "english_title": "Battle Academy Anytime, Anywhere",
+        "mark": "SVI",
+        "release_date": "2024-03-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0127",
+        "japanese_title": "双璧の覇者",
+        "english_title": "TWO LEGENDS",
+        "mark": "OP-06",
+        "release_date": "2024-03-15",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0128",
+        "japanese_title": "クリムゾンヘイズ",
+        "english_title": "Crimson Haze",
+        "mark": "SV5a",
+        "release_date": "2024-03-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0129",
+        "japanese_title": "変幻の仮面",
+        "english_title": "Mask of Change",
+        "mark": "SV6",
+        "release_date": "2024-04-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0130",
+        "japanese_title": "烈火の闘気",
+        "english_title": "Blazing Aura",
+        "mark": "FB02",
+        "release_date": "2024-05-10",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0131",
+        "japanese_title": "バトルマスターデッキ テラスタル リザードンex",
+        "english_title": "Battle Master Deck Terastal Charizard ex",
+        "mark": "SVJL",
+        "release_date": "2024-05-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0132",
+        "japanese_title": "バトルマスターデッキ パオジアンex",
+        "english_title": "Battle Master Deck Chien-Pao ex",
+        "mark": "SVJP",
+        "release_date": "2024-05-17",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0133",
+        "japanese_title": "ナイトワンダラー",
+        "english_title": "Night Wanderer",
+        "mark": "SV6a",
+        "release_date": "2024-06-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0134",
+        "japanese_title": "500年後の未来",
+        "english_title": "500 YEARS IN THE FUTURE",
+        "mark": "OP-07",
+        "release_date": "2024-06-28",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0135",
+        "japanese_title": "ステラミラクル",
+        "english_title": "Stellar Miracle",
+        "mark": "SV7",
+        "release_date": "2024-07-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0136",
+        "japanese_title": "デッキビルドBOX ステラミラクル",
+        "english_title": "Deck Build Box Stellar Miracle",
+        "mark": "SVK",
+        "release_date": "2024-07-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0137",
+        "japanese_title": "THE BEST",
+        "english_title": "THE BEST",
+        "mark": "PRB-01",
+        "release_date": "2024-07-27",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0138",
+        "japanese_title": "怒りの咆哮",
+        "english_title": "Raging Roar",
+        "mark": "FB03",
+        "release_date": "2024-08-02",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0139",
+        "japanese_title": "スターターセット テラスタイプ：ステラ ニンフィアex",
+        "english_title": "Starter Set Teratype: Stellar Sylveon ex",
+        "mark": "SVLN",
+        "release_date": "2024-08-30",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0140",
+        "japanese_title": "スターターセット テラスタイプ：ステラ ソウブレイズex",
+        "english_title": "Starter Set Teratype: Stellar Ceruledge ex",
+        "mark": "SVLS",
+        "release_date": "2024-08-30",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0141",
+        "japanese_title": "新たなる皇帝",
+        "english_title": "THE NEW EMPEROR",
+        "mark": "OP-09",
+        "release_date": "2024-08-31",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0142",
+        "japanese_title": "楽園ドラゴーナ",
+        "english_title": "Paradise Dragona",
+        "mark": "SV7a",
+        "release_date": "2024-09-13",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0143",
+        "japanese_title": "二つの伝説",
+        "english_title": "TWO LEGENDS",
+        "mark": "OP-08",
+        "release_date": "2024-09-13",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0144",
+        "japanese_title": "超電ブレイカー",
+        "english_title": "Super Electric Breaker",
+        "mark": "SV8",
+        "release_date": "2024-10-18",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0145",
+        "japanese_title": "限界を超えし者",
+        "english_title": "Ultra Limit",
+        "mark": "FB04",
+        "release_date": "2024-10-25",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0146",
+        "japanese_title": "スタートデッキGenerations（各種）",
+        "english_title": "Start Deck Generations (various types)",
+        "mark": "SVM",
+        "release_date": "2024-11-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": false
+      },
+      {
+        "code": "PM0147",
+        "japanese_title": "テラスタルフェスex",
+        "english_title": "Terastal Festival ex",
+        "mark": "SV8a",
+        "release_date": "2024-12-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0148",
+        "japanese_title": "バトルパートナーズ",
+        "english_title": "Battle Partners",
+        "mark": "SV9",
+        "release_date": "2025-01-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0149",
+        "japanese_title": "ナンジャモ プロモ",
+        "english_title": "Iono Promo",
+        "mark": "PROMO",
+        "release_date": "2025-01-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0150",
+        "japanese_title": "デッキビルドBOX バトルパートナーズ",
+        "english_title": "Deck Build Box Battle Partners",
+        "mark": "SVN",
+        "release_date": "2025-01-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0151",
+        "japanese_title": "コレクションファイルセット N",
+        "english_title": "Collection File Set N",
+        "mark": null,
+        "release_date": "2025-01-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0152",
+        "japanese_title": "コレクションファイルセット リーリエ",
+        "english_title": "Collection File Set Lillie",
+        "mark": null,
+        "release_date": "2025-01-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0153",
+        "japanese_title": "Anime25th collection",
+        "english_title": "ANIME 25th ANNIVERSARY",
+        "mark": "EB-02",
+        "release_date": "2025-01-25",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0154",
+        "japanese_title": "未知なる冒険",
+        "english_title": "New Adventure",
+        "mark": "FB05",
+        "release_date": "2025-02-08",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0155",
+        "japanese_title": "スターターセットex マリィのモルペコ＆オーロンゲex",
+        "english_title": "Starter Set ex Marnie’s Morpeko & Grimmsnarl ex",
+        "mark": "SVOM",
+        "release_date": "2025-02-21",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0156",
+        "japanese_title": "スターターセットex ダイゴのダンバル＆メタグロスex",
+        "english_title": "Starter Set ex Steven’s Beldum & Metagross ex",
+        "mark": "SVOD",
+        "release_date": "2025-02-21",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0157",
+        "japanese_title": "神速の拳",
+        "english_title": "A FIST OF DIVINE SPEED",
+        "mark": "OP-11",
+        "release_date": "2025-03-01",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0158",
+        "japanese_title": "熱風のアリーナ",
+        "english_title": "Heat Wave Arena",
+        "mark": "SV9a",
+        "release_date": "2025-03-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0159",
+        "japanese_title": "熱風のアリーナ プロモ",
+        "english_title": "Heat wave arena Promo card",
+        "mark": "PROMO",
+        "release_date": "2025-03-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0160",
+        "japanese_title": "王族の血統",
+        "english_title": "ROYAL BLOOD",
+        "mark": "OP-10",
+        "release_date": "2025-03-21",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0161",
+        "japanese_title": "ロケット団の栄光",
+        "english_title": "Glory of Team Rocket",
+        "mark": "SV10",
+        "release_date": "2025-04-18",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0162",
+        "japanese_title": "ゆずソフト",
+        "english_title": "Yuzusoft",
+        "mark": "OS01",
+        "release_date": "2025-04-25",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0163",
+        "japanese_title": "魔法少女にあこがれて",
+        "english_title": "Gushing over Magical Girls",
+        "mark": "OS02",
+        "release_date": "2025-04-25",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0164",
+        "japanese_title": "迫り来る脅威",
+        "english_title": "Rivals Clash",
+        "mark": "FB06",
+        "release_date": "2025-05-02",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0165",
+        "japanese_title": "ブラックボルトDX",
+        "english_title": "Black Bolt DX",
+        "mark": "SV11B(DX)",
+        "release_date": "2025-06-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0166",
+        "japanese_title": "ホワイトフレアDX",
+        "english_title": "White Flare DX",
+        "mark": "SV11W(DX)",
+        "release_date": "2025-06-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0167",
+        "japanese_title": "ブラックボルト",
+        "english_title": "Black Bolt",
+        "mark": "SV11B",
+        "release_date": "2025-06-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0168",
+        "japanese_title": "ホワイトフレア",
+        "english_title": "White Flare",
+        "mark": "SV11W",
+        "release_date": "2025-06-06",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0169",
+        "japanese_title": "HARUKAZE",
+        "english_title": "HARUKAZE",
+        "mark": "OS03",
+        "release_date": "2025-06-27",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0170",
+        "japanese_title": "MANGA BOOSTER 01",
+        "english_title": "MANGA BOOSTER 01",
+        "mark": "SB01",
+        "release_date": "2025-06-28",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0171",
+        "japanese_title": "Newtype Rising",
+        "english_title": "Newtype Rising",
+        "mark": "GD01",
+        "release_date": "2025-07-26",
+        "work_id": "17fe2232-49b7-4989-a23d-b7d82923c7f3",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0172",
+        "japanese_title": "THE BEST vol.2",
+        "english_title": "THE BEST vol.2",
+        "mark": "PRB-02",
+        "release_date": "2025-07-26",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0173",
+        "japanese_title": "メガブレイブ",
+        "english_title": "Mega Brave",
+        "mark": "M1L",
+        "release_date": "2025-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0174",
+        "japanese_title": "メガシンフォニア",
+        "english_title": "Mega Symphonia",
+        "mark": "M1S",
+        "release_date": "2025-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0175",
+        "japanese_title": "プレミアムトレーナーボックスMEGA",
+        "english_title": "Premium Trainer Box MEGA",
+        "mark": "MA",
+        "release_date": "2025-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0176",
+        "japanese_title": "メガシンフォニア ポケモンセンターセット",
+        "english_title": "Mega Symphonia Pokemon Center set",
+        "mark": "PCJ",
+        "release_date": "2025-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0177",
+        "japanese_title": "メガブレイブ ポケモンセンターセット",
+        "english_title": "Mega Brave Pokemon Center set",
+        "mark": "PCJ",
+        "release_date": "2025-08-01",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0178",
+        "japanese_title": "ピカチュウ マクドナルド プロモ",
+        "english_title": "Pikachu McDonald's Promo",
+        "mark": "PROMO",
+        "release_date": "2025-08-08",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0179",
+        "japanese_title": "ONE PIECE DAY’25 プロモ",
+        "english_title": "ONE PIECE DAY’25 Promo",
+        "mark": "PROMO",
+        "release_date": "2025-08-09",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0180",
+        "japanese_title": "師弟の絆",
+        "english_title": "LEGACY OF THE MASTER",
+        "mark": "OP-12",
+        "release_date": "2025-08-22",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0181",
+        "japanese_title": "受け継がれる意志",
+        "english_title": "CARRYING ON HIS WILL",
+        "mark": "OP-13",
+        "release_date": "2025-08-23",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0182",
+        "japanese_title": "スペシャルBOX ポケモンセンタートウホク",
+        "english_title": "Special Box Tohoku",
+        "mark": "SP",
+        "release_date": "2025-08-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0183",
+        "japanese_title": "異種族レビュアーズ",
+        "english_title": "Interspecies Reviewers",
+        "mark": "OS04",
+        "release_date": "2025-08-29",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0184",
+        "japanese_title": "スターターセットMEGA メガゲンガーex",
+        "english_title": "MEGA Starter Set Mega Gengar ex",
+        "mark": "MBG",
+        "release_date": "2025-09-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0185",
+        "japanese_title": "スターターセットMEGA メガディアンシーex",
+        "english_title": "MEGA Starter Set Mega Diancie ex",
+        "mark": "MBD",
+        "release_date": "2025-09-05",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0186",
+        "japanese_title": "スペシャルBOX ポケモンセンターヒロシマ",
+        "english_title": "Special Box Hiroshima",
+        "mark": "SP",
+        "release_date": "2025-09-18",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0187",
+        "japanese_title": "神龍への願い",
+        "english_title": "Wish for Shenron",
+        "mark": "FB07",
+        "release_date": "2025-09-19",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0188",
+        "japanese_title": "インフェルノX",
+        "english_title": "Inferno X",
+        "mark": "M2",
+        "release_date": "2025-09-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0189",
+        "japanese_title": "スペシャルBOX ポケモンセンターフクオカ",
+        "english_title": "Special Box Fukuoka",
+        "mark": "SP",
+        "release_date": "2025-09-26",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0190",
+        "japanese_title": "ONE PIECE magazine Vol.20 付録プロモ",
+        "english_title": "One Piece Magazine Vol.20",
+        "mark": "ST21-014",
+        "release_date": "2025-10-03",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0191",
+        "japanese_title": "プロモーションカードセット 2025",
+        "english_title": "Promotion card set 2025",
+        "mark": "PROMO",
+        "release_date": "2025-10-17",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0192",
+        "japanese_title": "Dual Impact",
+        "english_title": "Dual Impact",
+        "mark": "GD02",
+        "release_date": "2025-10-25",
+        "work_id": "17fe2232-49b7-4989-a23d-b7d82923c7f3",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0193",
+        "japanese_title": "Heroines edition",
+        "english_title": "HEROINES EDITION",
+        "mark": "EB-03",
+        "release_date": "2025-10-25",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0194",
+        "japanese_title": "sprite",
+        "english_title": "sprite",
+        "mark": "OS05",
+        "release_date": "2025-10-31",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0195",
+        "japanese_title": "MANGA BOOSTER 02",
+        "english_title": "MANGA BOOSTER 02",
+        "mark": "SB02",
+        "release_date": "2025-11-08",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0196",
+        "japanese_title": "蒼海の七傑",
+        "english_title": "THE AZURE SEA’S SEVEN",
+        "mark": "OP-14",
+        "release_date": "2025-11-22",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0197",
+        "japanese_title": "誇り高き戦闘民族",
+        "english_title": "SAIYAN’s PRIDE",
+        "mark": "FB08",
+        "release_date": "2025-11-24",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0198",
+        "japanese_title": "MEGAドリームex",
+        "english_title": "MEGA Dream ex",
+        "mark": "M3",
+        "release_date": "2025-11-28",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0199",
+        "japanese_title": "ONE PIECE BASE SHOP リミテッドカードコレクション VOL1",
+        "english_title": "ONE PIECE BASE SHOP Limited card collection Vol.1",
+        "mark": "PROMO",
+        "release_date": "2025-12-05",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0200",
+        "japanese_title": "MEGA スタートデッキ100 バトルコレクション",
+        "english_title": "MEGA Start Deck 100 Battle Collection",
+        "mark": "MC",
+        "release_date": "2025-12-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0201",
+        "japanese_title": "枕",
+        "english_title": "The Pillow",
+        "mark": "OS06",
+        "release_date": "2025-12-26",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0202",
+        "japanese_title": "ムニキスゼロ",
+        "english_title": "Nihil Zero",
+        "mark": "M3",
+        "release_date": "2026-01-23",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0203",
+        "japanese_title": "MEGA スペシャルカードセット メガエルレイドex",
+        "english_title": "MEGA Special Card Set Mega Gallade ex",
+        "mark": "PROMO",
+        "release_date": "2026-01-23",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0204",
+        "japanese_title": "Lose&Whisp",
+        "english_title": "Lose&Whisp",
+        "mark": "OS07",
+        "release_date": "2026-01-30",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0205",
+        "japanese_title": "Steel Requiem",
+        "english_title": "Steel Requiem",
+        "mark": "GD03",
+        "release_date": "2026-01-31",
+        "work_id": "17fe2232-49b7-4989-a23d-b7d82923c7f3",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0206",
+        "japanese_title": "EGGHEAD CRISIS",
+        "english_title": "EGGHEAD CRISIS",
+        "mark": "EB-04",
+        "release_date": "2026-01-31",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0207",
+        "japanese_title": "神の島の冒険",
+        "english_title": "Godland Adventure",
+        "mark": "OP-15",
+        "release_date": "2026-02-28",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0208",
+        "japanese_title": "学園アイドルマスター Vol.2",
+        "english_title": "Gakuen Idolmaster Vol.2",
+        "mark": "EX13BT",
+        "release_date": "2026-03-13",
+        "work_id": "e48fbbd0-dc10-43a5-a085-becd5b0c9bb9",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0209",
+        "japanese_title": "ニンジャスピナー",
+        "english_title": "Ninja Spinner",
+        "mark": "M4",
+        "release_date": "2026-03-13",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0210",
+        "japanese_title": "D.C. Re:tune",
+        "english_title": "D.C. Re:tune",
+        "mark": null,
+        "release_date": "2026-03-13",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0211",
+        "japanese_title": "俺だけレベルアップな件",
+        "english_title": "Solo Leveling",
+        "mark": "UA51BT",
+        "release_date": "2026-04-24",
+        "work_id": "e48fbbd0-dc10-43a5-a085-becd5b0c9bb9",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0212",
+        "japanese_title": "収集啦151 聚 slim（中国版）",
+        "english_title": "Pokemon 151 CN vol.4 slim",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0213",
+        "japanese_title": "収集啦151 聚 jumbo（中国版）",
+        "english_title": "Pokemon 151 CN vol.4 jumbo",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0214",
+        "japanese_title": "収集啦151 旅 slim（中国版）",
+        "english_title": "Pokemon 151 CN vol.1 slim",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0215",
+        "japanese_title": "最初的伙伴精品礼盒 御三家3箱セット（中国版）",
+        "english_title": "Pokemon 151 CN Gift Box Starter Set (3-box)",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0216",
+        "japanese_title": "最初的伙伴精品礼盒 妙蛙种子（中国版）",
+        "english_title": "Pokemon 151 CN Gift Box Bulbasaur",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0217",
+        "japanese_title": "最初的伙伴精品礼盒 小火龙（中国版）",
+        "english_title": "Pokemon 151 CN Gift Box Charmander",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0218",
+        "japanese_title": "最初的伙伴精品礼盒 杰尼龟（中国版）",
+        "english_title": "Pokemon 151 CN Gift Box Squirtle",
+        "mark": "SV2a",
+        "release_date": "2023-06-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0219",
+        "japanese_title": "ストームエメラルダ",
+        "english_title": null,
+        "mark": "M6",
+        "release_date": "2026-07-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0220",
+        "japanese_title": "アビスアイ",
+        "english_title": null,
+        "mark": "M5",
+        "release_date": "2026-05-22",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0221",
+        "japanese_title": "ワイルドブレイズ",
+        "english_title": null,
+        "mark": "XY2",
+        "release_date": "2014-03-15",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0222",
+        "japanese_title": "OP16 決戦の刻",
+        "english_title": null,
+        "mark": "OP-16",
+        "release_date": "2026-05-30",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0223",
+        "japanese_title": "遊戯王 LIMIT OVER COLLECTION THE HEROES",
+        "english_title": null,
+        "mark": "LOCH",
+        "release_date": "2026-02-28",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0224",
+        "japanese_title": "遊戯王 LIMIT OVER COLLECTION THE RIVALS",
+        "english_title": null,
+        "mark": "LOCR",
+        "release_date": "2026-03-20",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0225",
+        "japanese_title": "UNION ARENA 勝利の女神NIKKE【PC02BT】",
+        "english_title": null,
+        "mark": "PC02BT",
+        "release_date": "2026-02-13",
+        "work_id": "e48fbbd0-dc10-43a5-a085-becd5b0c9bb9",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0226",
+        "japanese_title": "FB-09",
+        "english_title": null,
+        "mark": "FB09",
+        "release_date": "2026-03-14",
+        "work_id": "389328ec-289b-49dd-a379-c03f8afd570f",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0227",
+        "japanese_title": "3rd anniversary set",
+        "english_title": null,
+        "mark": null,
+        "release_date": null,
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0228",
+        "japanese_title": "葬送のフリーレン 新装版",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2026-03-20",
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0229",
+        "japanese_title": "レトロカード バルク",
+        "english_title": "Retro card bulk",
+        "mark": null,
+        "release_date": null,
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0230",
+        "japanese_title": "トライアルデッキ 【推しの子】",
+        "english_title": "Oshi no Ko Trial Deck",
+        "mark": "OSK",
+        "release_date": null,
+        "work_id": "e330062e-fae8-4fcb-b620-3aa86c51dcfe",
+        "manufacturer_id": "3d25bbc7-0513-49f0-9e01-3f33deb8bb59",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0231",
+        "japanese_title": "ビクティニ レッドプロモ",
+        "english_title": "Victini red promo",
+        "mark": "PROMO",
+        "release_date": "2025-06-14",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0232",
+        "japanese_title": "物語のはじまり",
+        "english_title": "The First Chapter",
+        "mark": null,
+        "release_date": "2025-01-25",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0233",
+        "japanese_title": "フラッドボーンの渾沌",
+        "english_title": "Rise of the Floodborn",
+        "mark": null,
+        "release_date": "2025-03-22",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0234",
+        "japanese_title": "インクランド探訪",
+        "english_title": "Into the Inklands",
+        "mark": null,
+        "release_date": "2025-05-17",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0235",
+        "japanese_title": "逆襲のアースラ",
+        "english_title": "Ursula's Return",
+        "mark": null,
+        "release_date": "2025-07-12",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0236",
+        "japanese_title": "星々の輝き",
+        "english_title": "Shimmering Skies",
+        "mark": null,
+        "release_date": "2025-09-06",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0237",
+        "japanese_title": "大いなるアズライト",
+        "english_title": "Azurite Sea",
+        "mark": null,
+        "release_date": "2025-10-31",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0238",
+        "japanese_title": "アーケイジアと魔法の島",
+        "english_title": "Archazia's Island",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0239",
+        "japanese_title": "ジャファーの王権",
+        "english_title": "Reign of Jafar",
+        "mark": null,
+        "release_date": "2026-02-21",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0240",
+        "japanese_title": "物語のおもいで",
+        "english_title": "Fabled",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0241",
+        "japanese_title": "WHISPERS IN THE WELL",
+        "english_title": "Whispers in the Well",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": false
+      },
+      {
+        "code": "PM0242",
+        "japanese_title": "WINTERSPELL",
+        "english_title": "Winterspell",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": false
+      },
+      {
+        "code": "PM0243",
+        "japanese_title": "未知なる彼方へ!",
+        "english_title": "Wilds Unknown",
+        "mark": null,
+        "release_date": "2026-05-08",
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0244",
+        "japanese_title": "ヴァインズ・アタック!",
+        "english_title": "Attack of the Vine!",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0245",
+        "japanese_title": "ハイペリアシティ",
+        "english_title": "Hyperia City",
+        "mark": null,
+        "release_date": null,
+        "work_id": "1f8c5b4b-94f2-4149-aa6f-b09dd63d1d27",
+        "manufacturer_id": "fffd6ecf-882e-4164-be9e-ac6f18621803",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0246",
+        "japanese_title": "LEGACY OF DESTRUCTION",
+        "english_title": "Legacy of Destruction",
+        "mark": "LEDE",
+        "release_date": "2024-01-27",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0247",
+        "japanese_title": "INFINITE FORBIDDEN",
+        "english_title": "The Infinite Forbidden",
+        "mark": "INFO",
+        "release_date": "2024-04-27",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0248",
+        "japanese_title": "RAGE OF THE ABYSS",
+        "english_title": "Rage of the Abyss",
+        "mark": "ROTA",
+        "release_date": "2024-07-27",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0249",
+        "japanese_title": "SUPREME DARKNESS",
+        "english_title": "Supreme Darkness",
+        "mark": "SUDA",
+        "release_date": "2024-10-26",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0250",
+        "japanese_title": "ALLIANCE INSIGHT",
+        "english_title": "Alliance Insight",
+        "mark": "ALIN",
+        "release_date": "2025-01-25",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0251",
+        "japanese_title": "DUELIST ADVANCE",
+        "english_title": "Duelist's Advance",
+        "mark": "DUAD",
+        "release_date": "2025-04-26",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0252",
+        "japanese_title": "DOOM OF DIMENSIONS",
+        "english_title": "Doom of Dimensions",
+        "mark": "DOOD",
+        "release_date": "2025-07-26",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0253",
+        "japanese_title": "BURST PROTOCOL",
+        "english_title": "Burst Protocol",
+        "mark": "BPRO",
+        "release_date": "2025-10-25",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0254",
+        "japanese_title": "BLAZING DOMINION",
+        "english_title": "Blazing Dominion",
+        "mark": "BLZD",
+        "release_date": "2026-01-24",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0255",
+        "japanese_title": "CHAOS ORIGINS",
+        "english_title": "Chaos Origins",
+        "mark": "CORI",
+        "release_date": "2026-04-25",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0256",
+        "japanese_title": "QUARTER CENTURY CHRONICLE side:UNITY",
+        "english_title": "Quarter Century Chronicle side:Unity",
+        "mark": "QCCU",
+        "release_date": "2024-02-23",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0257",
+        "japanese_title": "QUARTER CENTURY CHRONICLE side:PRIDE",
+        "english_title": "Quarter Century Chronicle side:Pride",
+        "mark": "QCCP",
+        "release_date": "2024-03-23",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0258",
+        "japanese_title": "QUARTER CENTURY DUELIST BOX",
+        "english_title": "Quarter Century Duelist Box",
+        "mark": "QCDB",
+        "release_date": "2023-12-23",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0259",
+        "japanese_title": "QUARTER CENTURY ART COLLECTION",
+        "english_title": "Quarter Century Art Collection",
+        "mark": "QCAC",
+        "release_date": "2025-02-22",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0260",
+        "japanese_title": "BEYOND THE BRAVE",
+        "english_title": null,
+        "mark": "BETB",
+        "release_date": "2026-07-18",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0261",
+        "japanese_title": "QUARTER CENTURY LIMITED PACK",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2024-11-16",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0262",
+        "japanese_title": "QUARTER CENTURY TRINITY BOX",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2024-12-21",
+        "work_id": "1129cb04-6002-44a5-bf6f-acc609c17b9c",
+        "manufacturer_id": "fcd41cbc-73dd-4bec-8fce-f360ac95b1d2",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0263",
+        "japanese_title": "30th CELEBRATION",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2026-09-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0264",
+        "japanese_title": "FUTURISTIC BOX",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2026-09-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0265",
+        "japanese_title": "30th CELEBRATION プレミアムデッキセット",
+        "english_title": null,
+        "mark": null,
+        "release_date": "2026-09-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0266",
+        "japanese_title": "OP-17",
+        "english_title": "The World's Strongest Warriors",
+        "mark": "OP-17",
+        "release_date": "2026-08-22",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0267",
+        "japanese_title": "ONE PIECE magazine Vol.21 特集ヒロインズ 021 付録プロモ",
+        "english_title": "One Piece Magazine Vol.21 Special Feature: Heroines",
+        "mark": null,
+        "release_date": null,
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0268",
+        "japanese_title": "4周年!四皇トレジャーゲット キャンペーンパック",
+        "english_title": "4th Anniversary! Four Emperors Treasure Get Campaign Pack",
+        "mark": null,
+        "release_date": "2026-08-22",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0269",
+        "japanese_title": "ONE PIECE magazine Vol.16 付録プロモ",
+        "english_title": "One Piece Magazine Vol.16",
+        "mark": "P-028",
+        "release_date": "2023-03-02",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0270",
+        "japanese_title": "ONE PIECE magazine Vol.17 付録プロモ",
+        "english_title": "One Piece Magazine Vol.17",
+        "mark": "P-046",
+        "release_date": "2023-09-04",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0271",
+        "japanese_title": "ONE PIECE magazine 別冊 Focus on ONE PIECE FAN LETTER 付録プロモ",
+        "english_title": "ONE PIECE magazine Special Issue Focus on ONE PIECE FAN LETTER Promo Card (P-096)",
+        "mark": "P-096",
+        "release_date": "2025-06-04",
+        "work_id": "c6acce0e-fe08-446a-adae-8e9bc946b8b0",
+        "manufacturer_id": "21a18bce-af60-46b2-b5f3-8dc7df71db47",
+        "product_category_id": "614ccf45-9ca5-460c-83dd-ce3374519fd3",
+        "is_active": true
+      },
+      {
+        "code": "PM0272",
+        "japanese_title": "ポケモンカードゲーム MEGA スターターセットex イーブイex",
+        "english_title": "MEGA Starter Set ex Eevee ex",
+        "mark": "MEE",
+        "release_date": "2026-07-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0273",
+        "japanese_title": "ポケモンカードゲーム MEGA スターターセットex ゾロア＆ゾロアークex",
+        "english_title": "MEGA Starter Set ex Zorua & Zoroark ex",
+        "mark": "MEZ",
+        "release_date": "2026-07-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0274",
+        "japanese_title": "ポケモンカードゲーム MEGA スターターセットex ニャオハ＆マスカーニャex",
+        "english_title": "MEGA Starter Set ex Sprigatito & Meowscarada ex",
+        "mark": "MEM",
+        "release_date": "2026-07-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0275",
+        "japanese_title": "ポケモンカードゲーム MEGA スターターセットex 3種セット",
+        "english_title": "MEGA Starter Set ex 3-Deck Set",
+        "mark": null,
+        "release_date": "2026-07-31",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0276",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ",
+        "english_title": "30th Celebration Card Set - Bulbasaur, Charmander & Squirtle",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0277",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ",
+        "english_title": "30th Celebration Card Set - Chikorita, Cyndaquil & Totodile",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0278",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ",
+        "english_title": "30th Celebration Card Set - Treecko, Torchic & Mudkip",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0279",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ",
+        "english_title": "30th Celebration Card Set - Turtwig, Chimchar & Piplup",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0280",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル",
+        "english_title": "30th Celebration Card Set - Snivy, Tepig & Oshawott",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0281",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ",
+        "english_title": "30th Celebration Card Set - Chespin, Fennekin & Froakie",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0282",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ",
+        "english_title": "30th Celebration Card Set - Rowlet, Litten & Popplio",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0283",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン",
+        "english_title": "30th Celebration Card Set - Grookey, Scorbunny & Sobble",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0284",
+        "japanese_title": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス",
+        "english_title": "30th Celebration Card Set - Sprigatito, Fuecoco & Quaxly",
+        "mark": null,
+        "release_date": "2026-10-16",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0285",
+        "japanese_title": "ポケモンカードゲーム MEGA スタートデッキ100 バトルコレクション コロちゃおVer.",
+        "english_title": "Start Deck 100 Battle Collection CoroCiao Version",
+        "mark": "MP1",
+        "release_date": "2025-12-19",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0286",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 草 ジュナイパー",
+        "english_title": "ex Starter Deck Decidueye ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0287",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 炎 ビクティニ",
+        "english_title": "ex Starter Deck Victini ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0288",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 水 ゲッコウガ",
+        "english_title": "ex Starter Deck Greninja ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0289",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 雷 ミライドン",
+        "english_title": "ex Starter Deck Miraidon ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0290",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 超 ピクシー",
+        "english_title": "ex Starter Deck Clefable ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0291",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 闘 コライドン",
+        "english_title": "ex Starter Deck Koraidon ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0292",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 悪 ヘルガー",
+        "english_title": "ex Starter Deck Houndoom ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0293",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ 鋼 メルメタル",
+        "english_title": "ex Starter Deck Melmetal ex",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0294",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット おまかせexスタートデッキ",
+        "english_title": "Random ex Starter Deck",
+        "mark": "SVD",
+        "release_date": "2023-07-07",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0295",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ テラスタル カイリュー",
+        "english_title": "ex Starter Deck Terastal Dragonite ex",
+        "mark": "SVD",
+        "release_date": "2023-11-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      },
+      {
+        "code": "PM0296",
+        "japanese_title": "ポケモンカードゲーム スカーレット＆バイオレット exスタートデッキ テラスタル ヨクバリス",
+        "english_title": "ex Starter Deck Terastal Greedent ex",
+        "mark": "SVD",
+        "release_date": "2023-11-24",
+        "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd",
+        "manufacturer_id": "13dda636-54e3-42bb-b762-c73f16045028",
+        "product_category_id": "fbd04f56-c56f-47c4-9470-e86329ddde5e",
+        "is_active": true
+      }
+    ],
+    "search": [
+      {
+        "code": "PM0001",
+        "keyword": "モンスターボールミラー"
+      },
+      {
+        "code": "PM0002",
+        "keyword": "RR バルク"
+      },
+      {
+        "code": "PM0003",
+        "keyword": "RRR バルク"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "Sバルク"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "SRバルク"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "SAR バルク"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR CHR バルク ダブりなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR.CHR バルク ダブりなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR/CHR バルク ダブりなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR CHR バルク 被りなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR.CHR バルク 被りなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "AR/CHR バルク 被りなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "CHR バルク ダブりなし"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "CHR バルク 被りなし"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR CHR バルク ダブりあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR.CHR バルク ダブりあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR/CHR バルク ダブりあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR CHR バルク 被りあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR.CHR バルク 被りあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "AR/CHR バルク 被りあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "CHR バルク ダブりあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "CHR バルク 被りあり"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR.CHR バルク ダブり2枚まで"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR/CHR バルク ダブり2枚まで"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR CHR バルク 被り2枚まで"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR.CHR バルク 被り2枚まで"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "AR/CHR バルク 被り2枚まで"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "CHR バルク 被り2枚まで"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "AR ダブりなし"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "AR ダブり無し"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "AR 被りなし"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "AR 被り無し"
+      },
+      {
+        "code": "PM0011",
+        "keyword": "AR ダブりあり"
+      },
+      {
+        "code": "PM0011",
+        "keyword": "AR 被りあり"
+      },
+      {
+        "code": "PM0012",
+        "keyword": "コレクション サン"
+      },
+      {
+        "code": "PM0013",
+        "keyword": "コレクション ムーン"
+      },
+      {
+        "code": "PM0014",
+        "keyword": "サン&ムーン"
+      },
+      {
+        "code": "PM0015",
+        "keyword": "キミを待つ島々"
+      },
+      {
+        "code": "PM0016",
+        "keyword": "アローラ 月光"
+      },
+      {
+        "code": "PM0017",
+        "keyword": "新たなる試練"
+      },
+      {
+        "code": "PM0018",
+        "keyword": "光を喰らう闇"
+      },
+      {
+        "code": "PM0019",
+        "keyword": "闘う虹"
+      },
+      {
+        "code": "PM0020",
+        "keyword": "ひかる伝説"
+      },
+      {
+        "code": "PM0021",
+        "keyword": "覚醒の勇者"
+      },
+      {
+        "code": "PM0022",
+        "keyword": "超次元の暴獣"
+      },
+      {
+        "code": "PM0023",
+        "keyword": "バトルブースト"
+      },
+      {
+        "code": "PM0024",
+        "keyword": "ウルトラサン"
+      },
+      {
+        "code": "PM0025",
+        "keyword": "ウルトラムーン"
+      },
+      {
+        "code": "PM0026",
+        "keyword": "ウルトラフォース"
+      },
+      {
+        "code": "PM0027",
+        "keyword": "禁断の光"
+      },
+      {
+        "code": "PM0028",
+        "keyword": "ドラゴンストーム"
+      },
+      {
+        "code": "PM0029",
+        "keyword": "チャンピオンロード"
+      },
+      {
+        "code": "PM0030",
+        "keyword": "裂空のカリスマ"
+      },
+      {
+        "code": "PM0031",
+        "keyword": "迅雷スパーク"
+      },
+      {
+        "code": "PM0032",
+        "keyword": "フェアリーライズ"
+      },
+      {
+        "code": "PM0033",
+        "keyword": "超爆インパクト"
+      },
+      {
+        "code": "PM0034",
+        "keyword": "ダークオーダー"
+      },
+      {
+        "code": "PM0035",
+        "keyword": "ウルトラシャイニー"
+      },
+      {
+        "code": "PM0036",
+        "keyword": "ナイトユニゾン"
+      },
+      {
+        "code": "PM0037",
+        "keyword": "フルメタルウォール"
+      },
+      {
+        "code": "PM0038",
+        "keyword": "ダブルブレイズ"
+      },
+      {
+        "code": "PM0039",
+        "keyword": "ジージーエンド"
+      },
+      {
+        "code": "PM0040",
+        "keyword": "名探偵ピカチュウ"
+      },
+      {
+        "code": "PM0041",
+        "keyword": "スカイレジェンド"
+      },
+      {
+        "code": "PM0042",
+        "keyword": "ミラクルツイン"
+      },
+      {
+        "code": "PM0043",
+        "keyword": "リミックスバウト"
+      },
+      {
+        "code": "PM0044",
+        "keyword": "ドリームリーグ"
+      },
+      {
+        "code": "PM0045",
+        "keyword": "オルタージェネシス"
+      },
+      {
+        "code": "PM0046",
+        "keyword": "タッグオールスター"
+      },
+      {
+        "code": "PM0046",
+        "keyword": "タッグオールスターズ"
+      },
+      {
+        "code": "PM0047",
+        "keyword": "ソード"
+      },
+      {
+        "code": "PM0048",
+        "keyword": "シールド"
+      },
+      {
+        "code": "PM0049",
+        "keyword": "VMAXライジング"
+      },
+      {
+        "code": "PM0050",
+        "keyword": "反逆クラッシュ"
+      },
+      {
+        "code": "PM0051",
+        "keyword": "爆炎ウォーカー"
+      },
+      {
+        "code": "PM0052",
+        "keyword": "ムゲンゾーン"
+      },
+      {
+        "code": "PM0053",
+        "keyword": "伝説の鼓動"
+      },
+      {
+        "code": "PM0054",
+        "keyword": "仰天"
+      },
+      {
+        "code": "PM0054",
+        "keyword": "仰天ボルテッカー"
+      },
+      {
+        "code": "PM0055",
+        "keyword": "shiny v box"
+      },
+      {
+        "code": "PM0055",
+        "keyword": "シャイニースター"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "カナザワ"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "スペシャルBOX カナザワ"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "スペシャルBOX ポケセン"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "スペシャルボックス カナザワ"
+      },
+      {
+        "code": "PM0057",
+        "keyword": "連撃マスター"
+      },
+      {
+        "code": "PM0058",
+        "keyword": "一撃マスター"
+      },
+      {
+        "code": "PM0059",
+        "keyword": "双璧"
+      },
+      {
+        "code": "PM0060",
+        "keyword": "白銀"
+      },
+      {
+        "code": "PM0061",
+        "keyword": "漆黒"
+      },
+      {
+        "code": "PM0062",
+        "keyword": "イーブイヒーローズ"
+      },
+      {
+        "code": "PM0063",
+        "keyword": "イーブイズセット"
+      },
+      {
+        "code": "PM0063",
+        "keyword": "イーブイヒーローズ イーブイズセット"
+      },
+      {
+        "code": "PM0063",
+        "keyword": "イーブイヒーローズイーブイズセット"
+      },
+      {
+        "code": "PM0064",
+        "keyword": "ハイクラスデッキ ゲンガーVMAX"
+      },
+      {
+        "code": "PM0065",
+        "keyword": "ハイクラスデッキ インテレオンVMAX"
+      },
+      {
+        "code": "PM0066",
+        "keyword": "ハイクラスデッキダブルBOX ゲンガーVMAX＆インテレオンVMAX"
+      },
+      {
+        "code": "PM0066",
+        "keyword": "ハイクラスデッキダブルボックス"
+      },
+      {
+        "code": "PM0067",
+        "keyword": "蒼空"
+      },
+      {
+        "code": "PM0068",
+        "keyword": "摩天"
+      },
+      {
+        "code": "PM0069",
+        "keyword": "切手"
+      },
+      {
+        "code": "PM0069",
+        "keyword": "切手Box"
+      },
+      {
+        "code": "PM0069",
+        "keyword": "切手BOX"
+      },
+      {
+        "code": "PM0070",
+        "keyword": "フュージョンアーツ"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "25th Anniversary Collection"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "25thANNIVERSARYCOLLECTION"
+      },
+      {
+        "code": "PM0072",
+        "keyword": "25th Anniversary Collection プロモ"
+      },
+      {
+        "code": "PM0072",
+        "keyword": "25th Anniversary Collection プロモパック"
+      },
+      {
+        "code": "PM0072",
+        "keyword": "25th アニバーサリー プロモパック"
+      },
+      {
+        "code": "PM0072",
+        "keyword": "25thプロモパック"
+      },
+      {
+        "code": "PM0073",
+        "keyword": "25th Aniniversary Golden Box"
+      },
+      {
+        "code": "PM0073",
+        "keyword": "25th Goleen Box"
+      },
+      {
+        "code": "PM0073",
+        "keyword": "ゴールデンボックス"
+      },
+      {
+        "code": "PM0074",
+        "keyword": "VMAX"
+      },
+      {
+        "code": "PM0075",
+        "keyword": "スターバース"
+      },
+      {
+        "code": "PM0076",
+        "keyword": "バトルリージョン"
+      },
+      {
+        "code": "PM0077",
+        "keyword": "スペースジャグラー"
+      },
+      {
+        "code": "PM0078",
+        "keyword": "タイムゲイザ-"
+      },
+      {
+        "code": "PM0078",
+        "keyword": "タイムゲイザー"
+      },
+      {
+        "code": "PM0079",
+        "keyword": "ダークファンタズマ"
+      },
+      {
+        "code": "PM0080",
+        "keyword": "Pokemon GO"
+      },
+      {
+        "code": "PM0080",
+        "keyword": "ポケモン GO"
+      },
+      {
+        "code": "PM0080",
+        "keyword": "ポケモンGO"
+      },
+      {
+        "code": "PM0081",
+        "keyword": "ロストアビス"
+      },
+      {
+        "code": "PM0082",
+        "keyword": "OP-01"
+      },
+      {
+        "code": "PM0082",
+        "keyword": "OP01"
+      },
+      {
+        "code": "PM0082",
+        "keyword": "ROMANCE DAWN"
+      },
+      {
+        "code": "PM0082",
+        "keyword": "ROMANCE DAWN OP-01"
+      },
+      {
+        "code": "PM0082",
+        "keyword": "ロマンスドーン"
+      },
+      {
+        "code": "PM0083",
+        "keyword": "白熱"
+      },
+      {
+        "code": "PM0084",
+        "keyword": "パラダイムトリガー"
+      },
+      {
+        "code": "PM0085",
+        "keyword": "OP-02"
+      },
+      {
+        "code": "PM0085",
+        "keyword": "OP02"
+      },
+      {
+        "code": "PM0085",
+        "keyword": "頂上決戦"
+      },
+      {
+        "code": "PM0085",
+        "keyword": "頂上決戦 OP-02"
+      },
+      {
+        "code": "PM0086",
+        "keyword": "プレシャスコレクターBOX"
+      },
+      {
+        "code": "PM0086",
+        "keyword": "プレシャスコレクターボック"
+      },
+      {
+        "code": "PM0086",
+        "keyword": "プレシャス コレクターボックス"
+      },
+      {
+        "code": "PM0086",
+        "keyword": "プレシャスコレクターボックス"
+      },
+      {
+        "code": "PM0086",
+        "keyword": "プレシャスコレクターボックス ソード&シールド"
+      },
+      {
+        "code": "PM0087",
+        "keyword": "VSTAR"
+      },
+      {
+        "code": "PM0087",
+        "keyword": "VSTARユニバース"
+      },
+      {
+        "code": "PM0088",
+        "keyword": "スカーレット"
+      },
+      {
+        "code": "PM0089",
+        "keyword": "バイオレット"
+      },
+      {
+        "code": "PM0090",
+        "keyword": "ニャオハ＆ルカリオ"
+      },
+      {
+        "code": "PM0090",
+        "keyword": "ニャオハ＆ルカリオex"
+      },
+      {
+        "code": "PM0091",
+        "keyword": "ホゲータ＆デンリュウ"
+      },
+      {
+        "code": "PM0091",
+        "keyword": "ホゲータ＆デンリュウex"
+      },
+      {
+        "code": "PM0092",
+        "keyword": "クワッス＆ミミッキュ"
+      },
+      {
+        "code": "PM0092",
+        "keyword": "クワッス＆ミミッキュex"
+      },
+      {
+        "code": "PM0093",
+        "keyword": "プレミアムトレーナーボックスex"
+      },
+      {
+        "code": "PM0094",
+        "keyword": "OP-03"
+      },
+      {
+        "code": "PM0094",
+        "keyword": "OP03"
+      },
+      {
+        "code": "PM0094",
+        "keyword": "強大な敵"
+      },
+      {
+        "code": "PM0094",
+        "keyword": "強大な敵 OP-03"
+      },
+      {
+        "code": "PM0095",
+        "keyword": "トリプレットビート"
+      },
+      {
+        "code": "PM0096",
+        "keyword": "ピカチュウex＆パーモット"
+      },
+      {
+        "code": "PM0096",
+        "keyword": "ピカチュウex＆パーモットex"
+      },
+      {
+        "code": "PM0097",
+        "keyword": "スノーハザード"
+      },
+      {
+        "code": "PM0098",
+        "keyword": "クレイバースト"
+      },
+      {
+        "code": "PM0099",
+        "keyword": "スノーハザード&クレイバースト ジムセット"
+      },
+      {
+        "code": "PM0099",
+        "keyword": "スノーハザード&クレイバースト ポケセン"
+      },
+      {
+        "code": "PM0099",
+        "keyword": "スノーハザード&クレイバースト ポケモンセンター"
+      },
+      {
+        "code": "PM0100",
+        "keyword": "exスペシャルセット"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "NAGABA ピカチュウ"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "NAGABAピカチュウ"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "長場 ピカチュウ"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "長場ピカチュウ"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "長場 ピカチュウプロモ"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "NAGABA イーブイ"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "NAGABAイーブイズプロモパック"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "長場 イーブイ"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "長場イーブイ"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "長場 イーブイプロモ"
+      },
+      {
+        "code": "PM0103",
+        "keyword": "OP-04"
+      },
+      {
+        "code": "PM0103",
+        "keyword": "OP04"
+      },
+      {
+        "code": "PM0103",
+        "keyword": "謀略の王国"
+      },
+      {
+        "code": "PM0103",
+        "keyword": "謀略の王国 OP-04"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "151"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "ポケモンカード151"
+      },
+      {
+        "code": "PM0105",
+        "keyword": "黒炎"
+      },
+      {
+        "code": "PM0106",
+        "keyword": "ワールドチャンピオンシップス2023横浜"
+      },
+      {
+        "code": "PM0106",
+        "keyword": "横浜 記念デッキ"
+      },
+      {
+        "code": "PM0106",
+        "keyword": "横浜 記念デッキ ピカチュウ"
+      },
+      {
+        "code": "PM0107",
+        "keyword": "デッキビルド 黒炎の支配者"
+      },
+      {
+        "code": "PM0108",
+        "keyword": "TANTO プロモ"
+      },
+      {
+        "code": "PM0108",
+        "keyword": "TANTOプロモカードパック"
+      },
+      {
+        "code": "PM0108",
+        "keyword": "TANTO プロモパック"
+      },
+      {
+        "code": "PM0109",
+        "keyword": "レイジングサーフ"
+      },
+      {
+        "code": "PM0110",
+        "keyword": "ミュウツーex"
+      },
+      {
+        "code": "PM0111",
+        "keyword": "ラウドボーンex"
+      },
+      {
+        "code": "PM0112",
+        "keyword": "名探偵ピカチュウ プロモ"
+      },
+      {
+        "code": "PM0112",
+        "keyword": "名探偵ピカチュウプロモ"
+      },
+      {
+        "code": "PM0113",
+        "keyword": "古代の咆哮"
+      },
+      {
+        "code": "PM0114",
+        "keyword": "未来の一閃"
+      },
+      {
+        "code": "PM0115",
+        "keyword": "スペシャルデッキセットex"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "Classic"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "クラシック"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "クラシック Classic"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "ポケモン Classic"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "ポケモンカード Classic"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "ポケモンカード クラシック"
+      },
+      {
+        "code": "PM0116",
+        "keyword": "ポケモンクラシック"
+      },
+      {
+        "code": "PM0117",
+        "keyword": "shiny treasures"
+      },
+      {
+        "code": "PM0117",
+        "keyword": "シャイニートレジャー"
+      },
+      {
+        "code": "PM0118",
+        "keyword": "OP-05"
+      },
+      {
+        "code": "PM0118",
+        "keyword": "OP05"
+      },
+      {
+        "code": "PM0118",
+        "keyword": "新時代の主役"
+      },
+      {
+        "code": "PM0118",
+        "keyword": "新時代の主役 OP-05"
+      },
+      {
+        "code": "PM0119",
+        "keyword": "サイバージャッジ"
+      },
+      {
+        "code": "PM0120",
+        "keyword": "ワイルドフォース"
+      },
+      {
+        "code": "PM0121",
+        "keyword": "古代のコライドンex"
+      },
+      {
+        "code": "PM0122",
+        "keyword": "未来のミライドンex"
+      },
+      {
+        "code": "PM0123",
+        "keyword": "EB-01"
+      },
+      {
+        "code": "PM0123",
+        "keyword": "EB01"
+      },
+      {
+        "code": "PM0123",
+        "keyword": "メモリアルコレクション"
+      },
+      {
+        "code": "PM0124",
+        "keyword": "FB-01"
+      },
+      {
+        "code": "PM0124",
+        "keyword": "FB01"
+      },
+      {
+        "code": "PM0124",
+        "keyword": "覚醒の鼓動"
+      },
+      {
+        "code": "PM0125",
+        "keyword": "バトルアカデミー"
+      },
+      {
+        "code": "PM0126",
+        "keyword": "いつでもどこでも"
+      },
+      {
+        "code": "PM0127",
+        "keyword": "OP-06"
+      },
+      {
+        "code": "PM0127",
+        "keyword": "OP06"
+      },
+      {
+        "code": "PM0127",
+        "keyword": "双璧の覇者"
+      },
+      {
+        "code": "PM0127",
+        "keyword": "双璧の覇者 OP-06"
+      },
+      {
+        "code": "PM0128",
+        "keyword": "クリムゾンヘイズ"
+      },
+      {
+        "code": "PM0129",
+        "keyword": "変幻の仮面"
+      },
+      {
+        "code": "PM0130",
+        "keyword": "FB-02"
+      },
+      {
+        "code": "PM0130",
+        "keyword": "FB02"
+      },
+      {
+        "code": "PM0130",
+        "keyword": "烈火の闘気"
+      },
+      {
+        "code": "PM0131",
+        "keyword": "リザードンex"
+      },
+      {
+        "code": "PM0132",
+        "keyword": "パオジアンex"
+      },
+      {
+        "code": "PM0133",
+        "keyword": "ナイトワンダラー"
+      },
+      {
+        "code": "PM0134",
+        "keyword": "500年後の未来"
+      },
+      {
+        "code": "PM0134",
+        "keyword": "500年後の未来 OP-07"
+      },
+      {
+        "code": "PM0134",
+        "keyword": "OP-07"
+      },
+      {
+        "code": "PM0134",
+        "keyword": "OP07"
+      },
+      {
+        "code": "PM0135",
+        "keyword": "ステラミラクル"
+      },
+      {
+        "code": "PM0136",
+        "keyword": "デッキビルド ステラミラクル"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "ONE PIECE CARD THE BEST"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "PRB-01"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "PRB01"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "THE BEST"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "THE BEST PRB-01"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "ワンピース THE BEST"
+      },
+      {
+        "code": "PM0138",
+        "keyword": "FB-03"
+      },
+      {
+        "code": "PM0138",
+        "keyword": "FB03"
+      },
+      {
+        "code": "PM0138",
+        "keyword": "怒りの咆哮"
+      },
+      {
+        "code": "PM0139",
+        "keyword": "ニンフィアex"
+      },
+      {
+        "code": "PM0140",
+        "keyword": "ソウブレイズex"
+      },
+      {
+        "code": "PM0141",
+        "keyword": "OP-09"
+      },
+      {
+        "code": "PM0141",
+        "keyword": "OP09"
+      },
+      {
+        "code": "PM0141",
+        "keyword": "新たなる皇帝"
+      },
+      {
+        "code": "PM0141",
+        "keyword": "新たなる皇帝 OP-09"
+      },
+      {
+        "code": "PM0142",
+        "keyword": "楽園"
+      },
+      {
+        "code": "PM0143",
+        "keyword": "OP-08"
+      },
+      {
+        "code": "PM0143",
+        "keyword": "OP08"
+      },
+      {
+        "code": "PM0143",
+        "keyword": "二つの伝説"
+      },
+      {
+        "code": "PM0143",
+        "keyword": "二つの伝説 OP-08"
+      },
+      {
+        "code": "PM0144",
+        "keyword": "超電"
+      },
+      {
+        "code": "PM0145",
+        "keyword": "FB-04"
+      },
+      {
+        "code": "PM0145",
+        "keyword": "FB04"
+      },
+      {
+        "code": "PM0145",
+        "keyword": "限界を超えし者"
+      },
+      {
+        "code": "PM0147",
+        "keyword": "テラスタルフェス"
+      },
+      {
+        "code": "PM0148",
+        "keyword": "バトルパートナーズ"
+      },
+      {
+        "code": "PM0149",
+        "keyword": "ナンジャモ プロモ"
+      },
+      {
+        "code": "PM0149",
+        "keyword": "ナンジャモプロモ"
+      },
+      {
+        "code": "PM0150",
+        "keyword": "デッキビルド バトルパートナーズ"
+      },
+      {
+        "code": "PM0151",
+        "keyword": "コレクションファイルセット N"
+      },
+      {
+        "code": "PM0151",
+        "keyword": "コレクションファイルセットN"
+      },
+      {
+        "code": "PM0151",
+        "keyword": "ファイルセットN"
+      },
+      {
+        "code": "PM0152",
+        "keyword": "コレクションファイルセットリーリエ"
+      },
+      {
+        "code": "PM0152",
+        "keyword": "コレクションファイルリーリエ"
+      },
+      {
+        "code": "PM0152",
+        "keyword": "ファイルセット リーリエ"
+      },
+      {
+        "code": "PM0153",
+        "keyword": "Anime25th collection"
+      },
+      {
+        "code": "PM0153",
+        "keyword": "Anime25th collection EB-02"
+      },
+      {
+        "code": "PM0153",
+        "keyword": "EB-02"
+      },
+      {
+        "code": "PM0153",
+        "keyword": "EB02"
+      },
+      {
+        "code": "PM0153",
+        "keyword": "エクストラブースター Anime25th collection EB-02"
+      },
+      {
+        "code": "PM0154",
+        "keyword": "FB-05"
+      },
+      {
+        "code": "PM0154",
+        "keyword": "FB05"
+      },
+      {
+        "code": "PM0154",
+        "keyword": "未知なる冒険"
+      },
+      {
+        "code": "PM0155",
+        "keyword": "マリィのモルペコ＆オーロンゲ"
+      },
+      {
+        "code": "PM0155",
+        "keyword": "マリィのモルペコ＆オーロンゲex"
+      },
+      {
+        "code": "PM0156",
+        "keyword": "ダイゴのダンバル&メタグロス"
+      },
+      {
+        "code": "PM0156",
+        "keyword": "ダイゴのダンバル&メタグロスex"
+      },
+      {
+        "code": "PM0157",
+        "keyword": "OP-11"
+      },
+      {
+        "code": "PM0157",
+        "keyword": "OP11"
+      },
+      {
+        "code": "PM0157",
+        "keyword": "神速の拳"
+      },
+      {
+        "code": "PM0157",
+        "keyword": "神速の拳  OP-11"
+      },
+      {
+        "code": "PM0158",
+        "keyword": "熱風"
+      },
+      {
+        "code": "PM0159",
+        "keyword": "熱風アリーナ プロモ"
+      },
+      {
+        "code": "PM0159",
+        "keyword": "熱風のアリーナ プロモ"
+      },
+      {
+        "code": "PM0159",
+        "keyword": "熱風 プロモ"
+      },
+      {
+        "code": "PM0160",
+        "keyword": "OP-10"
+      },
+      {
+        "code": "PM0160",
+        "keyword": "OP10"
+      },
+      {
+        "code": "PM0160",
+        "keyword": "王族の血統"
+      },
+      {
+        "code": "PM0160",
+        "keyword": "王族の血統  OP-10"
+      },
+      {
+        "code": "PM0161",
+        "keyword": "ロケット団"
+      },
+      {
+        "code": "PM0161",
+        "keyword": "ロケット団の栄光"
+      },
+      {
+        "code": "PM0162",
+        "keyword": "ゆずソフト"
+      },
+      {
+        "code": "PM0163",
+        "keyword": "魔法少女にあこがれて"
+      },
+      {
+        "code": "PM0164",
+        "keyword": "FB-06"
+      },
+      {
+        "code": "PM0164",
+        "keyword": "FB06"
+      },
+      {
+        "code": "PM0164",
+        "keyword": "迫り来る脅威"
+      },
+      {
+        "code": "PM0165",
+        "keyword": "ブラックボルト DX"
+      },
+      {
+        "code": "PM0165",
+        "keyword": "ブラックボルトDX"
+      },
+      {
+        "code": "PM0165",
+        "keyword": "ブラックボルト デラックス"
+      },
+      {
+        "code": "PM0165",
+        "keyword": "ブラックボルトデラックス"
+      },
+      {
+        "code": "PM0166",
+        "keyword": "ホワイトフレア DX"
+      },
+      {
+        "code": "PM0166",
+        "keyword": "ホワイトフレアDX"
+      },
+      {
+        "code": "PM0166",
+        "keyword": "ホワイトフレア デラックス"
+      },
+      {
+        "code": "PM0166",
+        "keyword": "ホワイトフレアデラックス"
+      },
+      {
+        "code": "PM0167",
+        "keyword": "ブラックボルト"
+      },
+      {
+        "code": "PM0168",
+        "keyword": "ホワイトフレア"
+      },
+      {
+        "code": "PM0169",
+        "keyword": "HARUKAZE"
+      },
+      {
+        "code": "PM0170",
+        "keyword": "MANGA BOOSTER 01"
+      },
+      {
+        "code": "PM0170",
+        "keyword": "SB-01"
+      },
+      {
+        "code": "PM0170",
+        "keyword": "SB01"
+      },
+      {
+        "code": "PM0171",
+        "keyword": "GD01"
+      },
+      {
+        "code": "PM0171",
+        "keyword": "GD-01 Newtype Rising"
+      },
+      {
+        "code": "PM0171",
+        "keyword": "GD01 Newtype Rising"
+      },
+      {
+        "code": "PM0171",
+        "keyword": "Newtype Rising"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "CARD THE BEST vol.2"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "ONE PIECE CARD THE BEST vol.2"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "PRB-02"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "PRB02"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "THE BEST vol.2"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "THE BEST vol.2  PRB-02"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "MEGAブレイブ"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "メガブレイブ"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "MEGAメガシンフォニア"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "メガシンフォニア"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "MEGAトレーナーボックス"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "MEGA プレミアムトレーナーボックス"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "トレーナーボックスMEGA"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "プレミアムトレーナー MEGA"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "メガトレーナー"
+      },
+      {
+        "code": "PM0176",
+        "keyword": "メガシンフォニア ポケセン"
+      },
+      {
+        "code": "PM0176",
+        "keyword": "メガシンフォニア ポケモンセンター"
+      },
+      {
+        "code": "PM0177",
+        "keyword": "メガブレイブ ポケセン"
+      },
+      {
+        "code": "PM0177",
+        "keyword": "メガブレイブ ポケモンセンター"
+      },
+      {
+        "code": "PM0178",
+        "keyword": "ピカチュウ マクドナルド"
+      },
+      {
+        "code": "PM0178",
+        "keyword": "マクドナルド"
+      },
+      {
+        "code": "PM0178",
+        "keyword": "マクドナルドプロモ"
+      },
+      {
+        "code": "PM0178",
+        "keyword": "マクドナルドプロモパック"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ONE PIECE DAY 25"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ONE PIECE DAY’25"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ONE PIECE DAY25"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ONE PIECE DAY 25 プロモ"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ONE PIECE DAY’25プロモ"
+      },
+      {
+        "code": "PM0179",
+        "keyword": "ワンピースDAY25"
+      },
+      {
+        "code": "PM0180",
+        "keyword": "OP-12"
+      },
+      {
+        "code": "PM0180",
+        "keyword": "OP12"
+      },
+      {
+        "code": "PM0180",
+        "keyword": "師弟の絆"
+      },
+      {
+        "code": "PM0180",
+        "keyword": "師弟の絆 OP-12"
+      },
+      {
+        "code": "PM0181",
+        "keyword": "OP-13"
+      },
+      {
+        "code": "PM0181",
+        "keyword": "OP13"
+      },
+      {
+        "code": "PM0181",
+        "keyword": "受け継がれる意思"
+      },
+      {
+        "code": "PM0181",
+        "keyword": "受け継がれる意思 OP-13"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "specialty box tohoku"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "スペシャルBOXトウホク"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "スペシャルボックス トウホク"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "トウホク"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "ポケモンセンター トウホク"
+      },
+      {
+        "code": "PM0183",
+        "keyword": "interspecies reviews"
+      },
+      {
+        "code": "PM0183",
+        "keyword": "異種族レビュアーズ"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "MEGAゲンガー"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "MEGAゲンガーex"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "メガゲンガー"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "メガゲンガーex"
+      },
+      {
+        "code": "PM0185",
+        "keyword": "MEGAメガディアンシー"
+      },
+      {
+        "code": "PM0185",
+        "keyword": "MEGAメガディアンシーex"
+      },
+      {
+        "code": "PM0185",
+        "keyword": "メガディアンシー"
+      },
+      {
+        "code": "PM0185",
+        "keyword": "メガディアンシーex"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "スペシャルBOXヒロシマ"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "スペシャルボックス ヒロシマ"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "ヒロシマ"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "ポケモンセンター ヒロシマ"
+      },
+      {
+        "code": "PM0187",
+        "keyword": "FB-07"
+      },
+      {
+        "code": "PM0187",
+        "keyword": "FB07"
+      },
+      {
+        "code": "PM0187",
+        "keyword": "神龍への願い"
+      },
+      {
+        "code": "PM0188",
+        "keyword": "インフェルノ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "スペシャルBOXフクオカ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "スペシャルボックス フクオカ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "フクオカ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "ポケモンセンター フクオカ"
+      },
+      {
+        "code": "PM0190",
+        "keyword": "One Piece マガジン"
+      },
+      {
+        "code": "PM0190",
+        "keyword": "ST21-014"
+      },
+      {
+        "code": "PM0190",
+        "keyword": "ワンピース マガジン"
+      },
+      {
+        "code": "PM0190",
+        "keyword": "ワンピース マガジンプロモ"
+      },
+      {
+        "code": "PM0191",
+        "keyword": "プロモーションカードセット2025"
+      },
+      {
+        "code": "PM0191",
+        "keyword": "ワンピース プロモーションカードセット"
+      },
+      {
+        "code": "PM0192",
+        "keyword": "Dual Impact"
+      },
+      {
+        "code": "PM0192",
+        "keyword": "Dual Impact GD02"
+      },
+      {
+        "code": "PM0192",
+        "keyword": "GD-02"
+      },
+      {
+        "code": "PM0192",
+        "keyword": "GD02"
+      },
+      {
+        "code": "PM0192",
+        "keyword": "GD02 Dual Impact"
+      },
+      {
+        "code": "PM0193",
+        "keyword": "EB-03"
+      },
+      {
+        "code": "PM0193",
+        "keyword": "EB03"
+      },
+      {
+        "code": "PM0193",
+        "keyword": "EB-03 Heroines edition"
+      },
+      {
+        "code": "PM0193",
+        "keyword": "Heroines edition"
+      },
+      {
+        "code": "PM0194",
+        "keyword": "sprite"
+      },
+      {
+        "code": "PM0195",
+        "keyword": "MANGA BOOSTER 02"
+      },
+      {
+        "code": "PM0195",
+        "keyword": "SB-02"
+      },
+      {
+        "code": "PM0195",
+        "keyword": "SB02"
+      },
+      {
+        "code": "PM0196",
+        "keyword": "OP-14"
+      },
+      {
+        "code": "PM0196",
+        "keyword": "OP14"
+      },
+      {
+        "code": "PM0196",
+        "keyword": "蒼海の七傑"
+      },
+      {
+        "code": "PM0196",
+        "keyword": "蒼海の七傑 OP-14"
+      },
+      {
+        "code": "PM0197",
+        "keyword": "FB-08"
+      },
+      {
+        "code": "PM0197",
+        "keyword": "FB08"
+      },
+      {
+        "code": "PM0197",
+        "keyword": "FB08 誇り高き戦闘民族"
+      },
+      {
+        "code": "PM0197",
+        "keyword": "誇り高き戦闘民族"
+      },
+      {
+        "code": "PM0198",
+        "keyword": "MEGAドリーム"
+      },
+      {
+        "code": "PM0198",
+        "keyword": "MEGAドリームex"
+      },
+      {
+        "code": "PM0198",
+        "keyword": "メガドリーム"
+      },
+      {
+        "code": "PM0198",
+        "keyword": "メガドリームex"
+      },
+      {
+        "code": "PM0199",
+        "keyword": "ONE PIECE BASE SHOP"
+      },
+      {
+        "code": "PM0199",
+        "keyword": "ONE PIECE BASE SHOP リミテッドカードコレクション VOL1"
+      },
+      {
+        "code": "PM0199",
+        "keyword": "リミテッドカードコレクション VOL1"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "MEGAスタートデッキ"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "MEGA スタートデッキ100"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "MEGAスタートデッキ100"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "MEGA バトルコレクション"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "スタートデッキ100"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "メガ スタートデッキ100"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "メガスタートデッキ100"
+      },
+      {
+        "code": "PM0201",
+        "keyword": "Weiss Shwarz 枕"
+      },
+      {
+        "code": "PM0201",
+        "keyword": "枕"
+      },
+      {
+        "code": "PM0202",
+        "keyword": "ムニキスゼロ"
+      },
+      {
+        "code": "PM0203",
+        "keyword": "MEGA スペシャルカードセット メガエルレイドex"
+      },
+      {
+        "code": "PM0203",
+        "keyword": "スペシャルカードセット メガエルレイドex"
+      },
+      {
+        "code": "PM0203",
+        "keyword": "メガエルレイドex"
+      },
+      {
+        "code": "PM0204",
+        "keyword": "Lose&Whisp"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "GD-03"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "GD03"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "GD-03 Steel Requiem"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "GD03 Steel Requiem"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "Steel Requiem"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "Steel Requiem GD-03"
+      },
+      {
+        "code": "PM0205",
+        "keyword": "Steel Requiem GD03"
+      },
+      {
+        "code": "PM0206",
+        "keyword": "EB-04"
+      },
+      {
+        "code": "PM0206",
+        "keyword": "EB04"
+      },
+      {
+        "code": "PM0206",
+        "keyword": "EB-04 EGGHEAD CRISIS"
+      },
+      {
+        "code": "PM0206",
+        "keyword": "EGGHEAD CRISIS"
+      },
+      {
+        "code": "PM0207",
+        "keyword": "OP-15"
+      },
+      {
+        "code": "PM0207",
+        "keyword": "OP15"
+      },
+      {
+        "code": "PM0207",
+        "keyword": "OP-15 神の島の冒険"
+      },
+      {
+        "code": "PM0207",
+        "keyword": "神の島の冒険"
+      },
+      {
+        "code": "PM0208",
+        "keyword": "学園アイドルマスター Vol.2"
+      },
+      {
+        "code": "PM0209",
+        "keyword": "ニンジャスピナー"
+      },
+      {
+        "code": "PM0210",
+        "keyword": "D.C. Re:tune"
+      },
+      {
+        "code": "PM0211",
+        "keyword": "俺だけレベルアップ"
+      },
+      {
+        "code": "PM0211",
+        "keyword": "俺だけレベルアップな件"
+      },
+      {
+        "code": "PM0212",
+        "keyword": "151 vol.4 slim"
+      },
+      {
+        "code": "PM0212",
+        "keyword": "151 vol4 slim"
+      },
+      {
+        "code": "PM0212",
+        "keyword": "151 聚 slim"
+      },
+      {
+        "code": "PM0212",
+        "keyword": "151聚slim"
+      },
+      {
+        "code": "PM0213",
+        "keyword": "151 vol.4 jumbo"
+      },
+      {
+        "code": "PM0213",
+        "keyword": "151 vol4 jumbo"
+      },
+      {
+        "code": "PM0213",
+        "keyword": "151 聚 jumbo"
+      },
+      {
+        "code": "PM0214",
+        "keyword": "151 journey slim"
+      },
+      {
+        "code": "PM0214",
+        "keyword": "151 vol.1 slim"
+      },
+      {
+        "code": "PM0214",
+        "keyword": "151 vol1 slim"
+      },
+      {
+        "code": "PM0214",
+        "keyword": "151 旅 slim"
+      },
+      {
+        "code": "PM0214",
+        "keyword": "151 旅slim"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "starter gift box"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "御三家 3箱"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "御三家3箱"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "最初的伙伴 御三家"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "礼盒 御三家"
+      },
+      {
+        "code": "PM0216",
+        "keyword": "bulbasaur gift box"
+      },
+      {
+        "code": "PM0216",
+        "keyword": "妙蛙种子"
+      },
+      {
+        "code": "PM0216",
+        "keyword": "最初的伙伴 妙蛙"
+      },
+      {
+        "code": "PM0217",
+        "keyword": "charmander gift box"
+      },
+      {
+        "code": "PM0217",
+        "keyword": "小火龙"
+      },
+      {
+        "code": "PM0217",
+        "keyword": "最初的伙伴 小火龙"
+      },
+      {
+        "code": "PM0218",
+        "keyword": "squirtle gift box"
+      },
+      {
+        "code": "PM0218",
+        "keyword": "最初的伙伴 杰尼龟"
+      },
+      {
+        "code": "PM0218",
+        "keyword": "杰尼龟"
+      },
+      {
+        "code": "PM0219",
+        "keyword": "ストームエメラルダ"
+      },
+      {
+        "code": "PM0220",
+        "keyword": "アビスアイ"
+      },
+      {
+        "code": "PM0221",
+        "keyword": "ワイルドブレイズ"
+      },
+      {
+        "code": "PM0222",
+        "keyword": "OP-16"
+      },
+      {
+        "code": "PM0222",
+        "keyword": "OP16"
+      },
+      {
+        "code": "PM0222",
+        "keyword": "決戦の刻"
+      },
+      {
+        "code": "PM0223",
+        "keyword": "LIMIT OVER COLLECTION THE HEROES"
+      },
+      {
+        "code": "PM0223",
+        "keyword": "LIMIT OVER HEROES"
+      },
+      {
+        "code": "PM0223",
+        "keyword": "デュエルモンスターズ LIMIT OVER HEROES"
+      },
+      {
+        "code": "PM0223",
+        "keyword": "遊戯王 HEROES"
+      },
+      {
+        "code": "PM0224",
+        "keyword": "LIMIT OVER COLLECTION THE RIVALS"
+      },
+      {
+        "code": "PM0224",
+        "keyword": "LIMIT OVER RIVALS"
+      },
+      {
+        "code": "PM0224",
+        "keyword": "デュエルモンスターズ LIMIT OVER RIVALS"
+      },
+      {
+        "code": "PM0224",
+        "keyword": "遊戯王 RIVALS"
+      },
+      {
+        "code": "PM0225",
+        "keyword": "NIKKE"
+      },
+      {
+        "code": "PM0225",
+        "keyword": "PC02BT"
+      },
+      {
+        "code": "PM0226",
+        "keyword": "FB-09"
+      },
+      {
+        "code": "PM0226",
+        "keyword": "FB09"
+      },
+      {
+        "code": "PM0227",
+        "keyword": "3rd anniversary"
+      },
+      {
+        "code": "PM0227",
+        "keyword": "3rd anniversary set"
+      },
+      {
+        "code": "PM0228",
+        "keyword": "フリーレン 新装版"
+      },
+      {
+        "code": "PM0228",
+        "keyword": "葬送のフリーレン 新装版"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "B grade"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "bulk"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "Bグレード"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "retro"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "retro card"
+      },
+      {
+        "code": "PM0229",
+        "keyword": "レトロ"
+      },
+      {
+        "code": "PM0230",
+        "keyword": "oshi no ko"
+      },
+      {
+        "code": "PM0230",
+        "keyword": "OSK"
+      },
+      {
+        "code": "PM0230",
+        "keyword": "trial deck"
+      },
+      {
+        "code": "PM0230",
+        "keyword": "推しの子"
+      },
+      {
+        "code": "PM0231",
+        "keyword": "red promo"
+      },
+      {
+        "code": "PM0231",
+        "keyword": "victini"
+      },
+      {
+        "code": "PM0231",
+        "keyword": "victini promo"
+      },
+      {
+        "code": "PM0231",
+        "keyword": "ビクティニ"
+      },
+      {
+        "code": "PM0232",
+        "keyword": "THE FIRST CHAPTER"
+      },
+      {
+        "code": "PM0232",
+        "keyword": "ファーストチャプター"
+      },
+      {
+        "code": "PM0232",
+        "keyword": "物語のはじまり"
+      },
+      {
+        "code": "PM0233",
+        "keyword": "RISE OF THE FLOODBORN"
+      },
+      {
+        "code": "PM0233",
+        "keyword": "フラッドボーン"
+      },
+      {
+        "code": "PM0233",
+        "keyword": "フラッドボーンの渾沌"
+      },
+      {
+        "code": "PM0233",
+        "keyword": "ブラッドボーンの渾沌"
+      },
+      {
+        "code": "PM0234",
+        "keyword": "INTO THE INKLANDS"
+      },
+      {
+        "code": "PM0234",
+        "keyword": "インクランド探訪"
+      },
+      {
+        "code": "PM0234",
+        "keyword": "イングランド探訪"
+      },
+      {
+        "code": "PM0235",
+        "keyword": "URSULA'S RETURN"
+      },
+      {
+        "code": "PM0235",
+        "keyword": "URSULAS RETURN"
+      },
+      {
+        "code": "PM0235",
+        "keyword": "逆襲のアースラ"
+      },
+      {
+        "code": "PM0236",
+        "keyword": "SHIMMERING SKIES"
+      },
+      {
+        "code": "PM0236",
+        "keyword": "星々の輝き"
+      },
+      {
+        "code": "PM0237",
+        "keyword": "AZURITE SEA"
+      },
+      {
+        "code": "PM0237",
+        "keyword": "アズライト"
+      },
+      {
+        "code": "PM0237",
+        "keyword": "大いなるアズライト"
+      },
+      {
+        "code": "PM0238",
+        "keyword": "ARCHAZIA'S ISLAND"
+      },
+      {
+        "code": "PM0238",
+        "keyword": "ARCHAZIAS ISLAND"
+      },
+      {
+        "code": "PM0238",
+        "keyword": "アーケイジア"
+      },
+      {
+        "code": "PM0238",
+        "keyword": "アーケイジアと魔法の島"
+      },
+      {
+        "code": "PM0239",
+        "keyword": "REIGN OF JAFAR"
+      },
+      {
+        "code": "PM0239",
+        "keyword": "ジャファーの王権"
+      },
+      {
+        "code": "PM0240",
+        "keyword": "FABLED"
+      },
+      {
+        "code": "PM0240",
+        "keyword": "物語のおもいで"
+      },
+      {
+        "code": "PM0241",
+        "keyword": "WHISPERS IN THE WELL"
+      },
+      {
+        "code": "PM0241",
+        "keyword": "ウィスパーズ"
+      },
+      {
+        "code": "PM0242",
+        "keyword": "WINTERSPELL"
+      },
+      {
+        "code": "PM0242",
+        "keyword": "ウィンタースペル"
+      },
+      {
+        "code": "PM0243",
+        "keyword": "WILDS UNKNOWN"
+      },
+      {
+        "code": "PM0243",
+        "keyword": "未知なる彼方へ"
+      },
+      {
+        "code": "PM0244",
+        "keyword": "ATTACK OF THE VINE"
+      },
+      {
+        "code": "PM0244",
+        "keyword": "ヴァインズ・アタック"
+      },
+      {
+        "code": "PM0244",
+        "keyword": "ヴァインズアタック"
+      },
+      {
+        "code": "PM0245",
+        "keyword": "HYPERIA CITY"
+      },
+      {
+        "code": "PM0245",
+        "keyword": "ハイペリアシティ"
+      },
+      {
+        "code": "PM0245",
+        "keyword": "ハイリペアシティ"
+      },
+      {
+        "code": "PM0246",
+        "keyword": "LEDE"
+      },
+      {
+        "code": "PM0246",
+        "keyword": "LEGACY OF DESTRUCTION"
+      },
+      {
+        "code": "PM0246",
+        "keyword": "レガシー・オブ・デストラクション"
+      },
+      {
+        "code": "PM0247",
+        "keyword": "INFINITE FORBIDDEN"
+      },
+      {
+        "code": "PM0247",
+        "keyword": "INFO"
+      },
+      {
+        "code": "PM0247",
+        "keyword": "インフィニット・フォビドゥン"
+      },
+      {
+        "code": "PM0247",
+        "keyword": "インフィニットフォビドゥン"
+      },
+      {
+        "code": "PM0248",
+        "keyword": "RAGE OF THE ABYSS"
+      },
+      {
+        "code": "PM0248",
+        "keyword": "ROTA"
+      },
+      {
+        "code": "PM0248",
+        "keyword": "レイジ・オブ・ジ・アビス"
+      },
+      {
+        "code": "PM0249",
+        "keyword": "SUDA"
+      },
+      {
+        "code": "PM0249",
+        "keyword": "SUPREME DARKNESS"
+      },
+      {
+        "code": "PM0249",
+        "keyword": "スプリーム・ダークネス"
+      },
+      {
+        "code": "PM0250",
+        "keyword": "ALIN"
+      },
+      {
+        "code": "PM0250",
+        "keyword": "ALLIANCE INSIGHT"
+      },
+      {
+        "code": "PM0250",
+        "keyword": "アライアンス・インサイト"
+      },
+      {
+        "code": "PM0251",
+        "keyword": "DUAD"
+      },
+      {
+        "code": "PM0251",
+        "keyword": "DUELIST ADVANCE"
+      },
+      {
+        "code": "PM0251",
+        "keyword": "デュエリスト・アドバンス"
+      },
+      {
+        "code": "PM0252",
+        "keyword": "DOOD"
+      },
+      {
+        "code": "PM0252",
+        "keyword": "DOOM OF DIMENSIONS"
+      },
+      {
+        "code": "PM0253",
+        "keyword": "BPRO"
+      },
+      {
+        "code": "PM0253",
+        "keyword": "BURST PROTOCOL"
+      },
+      {
+        "code": "PM0254",
+        "keyword": "BLAZING DOMINION"
+      },
+      {
+        "code": "PM0254",
+        "keyword": "BLZD"
+      },
+      {
+        "code": "PM0255",
+        "keyword": "CHAOS ORIGINS"
+      },
+      {
+        "code": "PM0255",
+        "keyword": "CORI"
+      },
+      {
+        "code": "PM0256",
+        "keyword": "QCCU"
+      },
+      {
+        "code": "PM0256",
+        "keyword": "QUARTER CENTURY CHRONICLE side UNITY"
+      },
+      {
+        "code": "PM0256",
+        "keyword": "QUARTER CENTURY CHRONICLE UNITY"
+      },
+      {
+        "code": "PM0256",
+        "keyword": "クォーターセンチュリークロニクル"
+      },
+      {
+        "code": "PM0257",
+        "keyword": "QCCP"
+      },
+      {
+        "code": "PM0257",
+        "keyword": "QUARTER CENTURY CHRONICLE PRIDE"
+      },
+      {
+        "code": "PM0257",
+        "keyword": "QUARTER CENTURY CHRONICLE side PRIDE"
+      },
+      {
+        "code": "PM0258",
+        "keyword": "QCDB"
+      },
+      {
+        "code": "PM0258",
+        "keyword": "QUARTER CENTURY DUELIST BOX"
+      },
+      {
+        "code": "PM0259",
+        "keyword": "QCAC"
+      },
+      {
+        "code": "PM0259",
+        "keyword": "QUARTER CENTURY ART COLLECTION"
+      },
+      {
+        "code": "PM0259",
+        "keyword": "クォーターセンチュリー アート コレクション"
+      },
+      {
+        "code": "PM0260",
+        "keyword": "BETB"
+      },
+      {
+        "code": "PM0260",
+        "keyword": "BEYOND THE BRAVE"
+      },
+      {
+        "code": "PM0261",
+        "keyword": "QUARTER CENTURY LIMITED PACK"
+      },
+      {
+        "code": "PM0262",
+        "keyword": "QUARTER CENTURY TRINITY BOX"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "30th CELEBRATION"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "30thCELEBRATION"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "30周年セレブレーション"
+      },
+      {
+        "code": "PM0264",
+        "keyword": "30th CELEBRATION FUTURISTIC"
+      },
+      {
+        "code": "PM0264",
+        "keyword": "FUTURISTIC BOX"
+      },
+      {
+        "code": "PM0264",
+        "keyword": "フューチャリスティック"
+      },
+      {
+        "code": "PM0265",
+        "keyword": "30th CELEBRATION プレミアムデッキセット"
+      },
+      {
+        "code": "PM0265",
+        "keyword": "エーフィ・ブラッキー"
+      },
+      {
+        "code": "PM0265",
+        "keyword": "エーフィブラッキー"
+      },
+      {
+        "code": "PM0266",
+        "keyword": "OP-17"
+      },
+      {
+        "code": "PM0266",
+        "keyword": "OP17"
+      },
+      {
+        "code": "PM0266",
+        "keyword": "WORLD'S STRONGEST WARRIORS"
+      },
+      {
+        "code": "PM0266",
+        "keyword": "世界最強の戦士"
+      },
+      {
+        "code": "PM0267",
+        "keyword": "ONE PIECE magazine Vol.21"
+      },
+      {
+        "code": "PM0267",
+        "keyword": "ヒロインズ 021"
+      },
+      {
+        "code": "PM0267",
+        "keyword": "ワンピースマガジン ヒロインズ"
+      },
+      {
+        "code": "PM0268",
+        "keyword": "4周年トレジャーパック"
+      },
+      {
+        "code": "PM0268",
+        "keyword": "4周年 四皇トレジャーゲット"
+      },
+      {
+        "code": "PM0268",
+        "keyword": "四皇トレジャーゲット"
+      },
+      {
+        "code": "PM0268",
+        "keyword": "四皇トレジャーパック"
+      },
+      {
+        "code": "PM0269",
+        "keyword": "magazine Vol.16"
+      },
+      {
+        "code": "PM0269",
+        "keyword": "P-028"
+      },
+      {
+        "code": "PM0270",
+        "keyword": "magazine Vol.17"
+      },
+      {
+        "code": "PM0270",
+        "keyword": "P-046"
+      },
+      {
+        "code": "PM0271",
+        "keyword": "FAN LETTER"
+      },
+      {
+        "code": "PM0271",
+        "keyword": "P-096"
+      },
+      {
+        "code": "PM0272",
+        "keyword": "イーブイex"
+      },
+      {
+        "code": "PM0272",
+        "keyword": "スターターセットex イーブイ"
+      },
+      {
+        "code": "PM0273",
+        "keyword": "スターターセットex ゾロア"
+      },
+      {
+        "code": "PM0273",
+        "keyword": "ゾロアークex"
+      },
+      {
+        "code": "PM0274",
+        "keyword": "スターターセットex ニャオハ"
+      },
+      {
+        "code": "PM0274",
+        "keyword": "マスカーニャex"
+      },
+      {
+        "code": "PM0275",
+        "keyword": "スターターセットex 3種セット"
+      },
+      {
+        "code": "PM0275",
+        "keyword": "スターターセットex ３種セット"
+      },
+      {
+        "code": "PM0276",
+        "keyword": "カードセット フシギダネ"
+      },
+      {
+        "code": "PM0277",
+        "keyword": "カードセット チコリータ"
+      },
+      {
+        "code": "PM0278",
+        "keyword": "カードセット キモリ"
+      },
+      {
+        "code": "PM0279",
+        "keyword": "カードセット ナエトル"
+      },
+      {
+        "code": "PM0280",
+        "keyword": "カードセット ツタージャ"
+      },
+      {
+        "code": "PM0281",
+        "keyword": "カードセット ハリマロン"
+      },
+      {
+        "code": "PM0282",
+        "keyword": "カードセット モクロー"
+      },
+      {
+        "code": "PM0283",
+        "keyword": "カードセット サルノリ"
+      },
+      {
+        "code": "PM0284",
+        "keyword": "カードセット ニャオハ"
+      },
+      {
+        "code": "PM0285",
+        "keyword": "コロちゃお"
+      },
+      {
+        "code": "PM0285",
+        "keyword": "コロチャオ"
+      },
+      {
+        "code": "PM0286",
+        "keyword": "exスタートデッキ ジュナイパー"
+      },
+      {
+        "code": "PM0287",
+        "keyword": "exスタートデッキ ビクティニ"
+      },
+      {
+        "code": "PM0288",
+        "keyword": "exスタートデッキ ゲッコウガ"
+      },
+      {
+        "code": "PM0289",
+        "keyword": "exスタートデッキ ミライドン"
+      },
+      {
+        "code": "PM0290",
+        "keyword": "exスタートデッキ ピクシー"
+      },
+      {
+        "code": "PM0291",
+        "keyword": "exスタートデッキ コライドン"
+      },
+      {
+        "code": "PM0292",
+        "keyword": "exスタートデッキ ヘルガー"
+      },
+      {
+        "code": "PM0293",
+        "keyword": "exスタートデッキ メルメタル"
+      },
+      {
+        "code": "PM0294",
+        "keyword": "おまかせexスタートデッキ"
+      },
+      {
+        "code": "PM0295",
+        "keyword": "exスタートデッキ テラスタル カイリュー"
+      },
+      {
+        "code": "PM0296",
+        "keyword": "exスタートデッキ テラスタル ヨクバリス"
+      }
+    ],
+    "exclude": [
+      {
+        "code": "PM0002",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0002",
+        "keyword": "RRR"
+      },
+      {
+        "code": "PM0002",
+        "keyword": "SAR"
+      },
+      {
+        "code": "PM0002",
+        "keyword": "SR"
+      },
+      {
+        "code": "PM0002",
+        "keyword": "Sバルク"
+      },
+      {
+        "code": "PM0003",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0003",
+        "keyword": "SAR"
+      },
+      {
+        "code": "PM0003",
+        "keyword": "SR"
+      },
+      {
+        "code": "PM0003",
+        "keyword": "Sバルク"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "RR"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "RRR"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "SAR"
+      },
+      {
+        "code": "PM0004",
+        "keyword": "SR"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "RR"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "RRR"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "SAR"
+      },
+      {
+        "code": "PM0005",
+        "keyword": "Sバルク"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "RR"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "RRR"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "SR"
+      },
+      {
+        "code": "PM0006",
+        "keyword": "Sバルク"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "2枚"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "ダブりあり"
+      },
+      {
+        "code": "PM0007",
+        "keyword": "被りあり"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "2枚"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "ダブりなし"
+      },
+      {
+        "code": "PM0008",
+        "keyword": "被りなし"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "ダブりあり"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "ダブりなし"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "被りあり"
+      },
+      {
+        "code": "PM0009",
+        "keyword": "被りなし"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "ダブりあり"
+      },
+      {
+        "code": "PM0010",
+        "keyword": "被りあり"
+      },
+      {
+        "code": "PM0011",
+        "keyword": "CHR"
+      },
+      {
+        "code": "PM0011",
+        "keyword": "ダブりなし"
+      },
+      {
+        "code": "PM0011",
+        "keyword": "被りなし"
+      },
+      {
+        "code": "PM0040",
+        "keyword": "プロモ"
+      },
+      {
+        "code": "PM0047",
+        "keyword": "シールド"
+      },
+      {
+        "code": "PM0047",
+        "keyword": "プレシャス"
+      },
+      {
+        "code": "PM0048",
+        "keyword": "プレシャス"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "トウホク"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "ヒロシマ"
+      },
+      {
+        "code": "PM0056",
+        "keyword": "フクオカ"
+      },
+      {
+        "code": "PM0059",
+        "keyword": "覇者"
+      },
+      {
+        "code": "PM0062",
+        "keyword": "イーブイズセット"
+      },
+      {
+        "code": "PM0064",
+        "keyword": "インテレオンVMAX"
+      },
+      {
+        "code": "PM0065",
+        "keyword": "ゲンガーVMAX"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "25th Aniniversary Golden Box"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "25th Anniversary Collection プロモ"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "25th Anniversary Collection プロモパック"
+      },
+      {
+        "code": "PM0071",
+        "keyword": "プロモパック"
+      },
+      {
+        "code": "PM0072",
+        "keyword": "25th Golden Box"
+      },
+      {
+        "code": "PM0073",
+        "keyword": "25th Anniversary Collection"
+      },
+      {
+        "code": "PM0097",
+        "keyword": "&クレイバースト"
+      },
+      {
+        "code": "PM0097",
+        "keyword": "ジムセット"
+      },
+      {
+        "code": "PM0097",
+        "keyword": "ポケセン"
+      },
+      {
+        "code": "PM0097",
+        "keyword": "ポケモンセンター"
+      },
+      {
+        "code": "PM0098",
+        "keyword": "ジムセット"
+      },
+      {
+        "code": "PM0098",
+        "keyword": "ポケセン"
+      },
+      {
+        "code": "PM0098",
+        "keyword": "ポケモンセンター"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0101",
+        "keyword": "イーブイ"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0102",
+        "keyword": "ピカチュウ"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "fat"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "hope"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "journey"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "jumbo"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "slim"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "surprised"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "vol.3"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "マスターボールミラー"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "収集啦"
+      },
+      {
+        "code": "PM0104",
+        "keyword": "礼盒"
+      },
+      {
+        "code": "PM0105",
+        "keyword": "デッキビルド"
+      },
+      {
+        "code": "PM0105",
+        "keyword": "デッキビルドBOX 黒炎の支配者"
+      },
+      {
+        "code": "PM0108",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0112",
+        "keyword": "Box"
+      },
+      {
+        "code": "PM0112",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0115",
+        "keyword": "PSA"
+      },
+      {
+        "code": "PM0125",
+        "keyword": "いつでもどこでも"
+      },
+      {
+        "code": "PM0127",
+        "keyword": "ファイター"
+      },
+      {
+        "code": "PM0129",
+        "keyword": "オーガポン"
+      },
+      {
+        "code": "PM0135",
+        "keyword": "デッキビルド"
+      },
+      {
+        "code": "PM0135",
+        "keyword": "デッキビルドBOX ステラミラクル"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "OF XY"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "PRB-02"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "PRB02"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "vol.2"
+      },
+      {
+        "code": "PM0137",
+        "keyword": "ストレージ"
+      },
+      {
+        "code": "PM0148",
+        "keyword": "デッキビルド"
+      },
+      {
+        "code": "PM0148",
+        "keyword": "デッキビルドBOX バトルパートナーズ"
+      },
+      {
+        "code": "PM0149",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0151",
+        "keyword": "コレクションファイルセットリーリエ"
+      },
+      {
+        "code": "PM0151",
+        "keyword": "ファイルセット リーリエ"
+      },
+      {
+        "code": "PM0152",
+        "keyword": "コレクションファイルセットN"
+      },
+      {
+        "code": "PM0152",
+        "keyword": "ファイルセットN"
+      },
+      {
+        "code": "PM0158",
+        "keyword": "プロモ"
+      },
+      {
+        "code": "PM0158",
+        "keyword": "熱風のアリーナ プロモ"
+      },
+      {
+        "code": "PM0159",
+        "keyword": "Box"
+      },
+      {
+        "code": "PM0160",
+        "keyword": "師弟の絆"
+      },
+      {
+        "code": "PM0161",
+        "keyword": "アタッシュケース"
+      },
+      {
+        "code": "PM0167",
+        "keyword": "DX"
+      },
+      {
+        "code": "PM0167",
+        "keyword": "デラックス"
+      },
+      {
+        "code": "PM0168",
+        "keyword": "DX"
+      },
+      {
+        "code": "PM0168",
+        "keyword": "デラックス"
+      },
+      {
+        "code": "PM0172",
+        "keyword": "THE BEST vol.1"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "ポケセン"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "ポケモンセンター"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "ポケモンセンターセット"
+      },
+      {
+        "code": "PM0173",
+        "keyword": "メガシンフォニア"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "ポケセン"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "ポケモンセンター"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "ポケモンセンターセット"
+      },
+      {
+        "code": "PM0174",
+        "keyword": "メガブレイブ"
+      },
+      {
+        "code": "PM0175",
+        "keyword": "MEGAドリームex"
+      },
+      {
+        "code": "PM0178",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "カナザワ"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "ヒロシマ"
+      },
+      {
+        "code": "PM0182",
+        "keyword": "フクオカ"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "MEGディアンシー"
+      },
+      {
+        "code": "PM0184",
+        "keyword": "スペシャルデッキセット"
+      },
+      {
+        "code": "PM0185",
+        "keyword": "MEGAゲンガー"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "カナザワ"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "トウホク"
+      },
+      {
+        "code": "PM0186",
+        "keyword": "フクオカ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "カナザワ"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "トウホク"
+      },
+      {
+        "code": "PM0189",
+        "keyword": "ヒロシマ"
+      },
+      {
+        "code": "PM0190",
+        "keyword": "ヒロインズ"
+      },
+      {
+        "code": "PM0191",
+        "keyword": "PSA10"
+      },
+      {
+        "code": "PM0195",
+        "keyword": "MANGA BOOSTER 01"
+      },
+      {
+        "code": "PM0196",
+        "keyword": "OP-13 受け継がれる意思"
+      },
+      {
+        "code": "PM0198",
+        "keyword": "MEGAトレーナーボックス"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "ex"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "Generations"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "コロ"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "コロコロ"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "コロちゃお"
+      },
+      {
+        "code": "PM0200",
+        "keyword": "コロチャオ"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "妙蛙种子"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "小火龙"
+      },
+      {
+        "code": "PM0215",
+        "keyword": "杰尼龟"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "FUTURISTIC"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "エーフィ"
+      },
+      {
+        "code": "PM0263",
+        "keyword": "プレミアムデッキセット"
+      },
+      {
+        "code": "PM0264",
+        "keyword": "エーフィ"
+      },
+      {
+        "code": "PM0264",
+        "keyword": "プレミアムデッキセット"
+      },
+      {
+        "code": "PM0265",
+        "keyword": "FUTURISTIC"
+      },
+      {
+        "code": "PM0272",
+        "keyword": "種セット"
+      },
+      {
+        "code": "PM0273",
+        "keyword": "種セット"
+      },
+      {
+        "code": "PM0274",
+        "keyword": "種セット"
+      }
+    ]
+  },
+  "scope": "read-only product master and four lookup tables; no customer/message/auth data"
+}

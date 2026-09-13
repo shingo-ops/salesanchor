@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -256,10 +257,10 @@ export default function BotsPage() {
             <input type="email" value={createForm.sender_email} onChange={(e) => setCreateForm({ ...createForm, sender_email: e.target.value })} />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md" disabled={submitting}>
               {submitting ? t("common.submitting") : t("bots.registerIssueKey")}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -278,8 +279,8 @@ export default function BotsPage() {
             staff={staff}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

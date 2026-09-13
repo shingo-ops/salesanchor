@@ -16,6 +16,7 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
@@ -197,10 +198,10 @@ export default function TeamsPage() {
             onChange={(field, value) => setCreateForm((prev) => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">{t("common.create")}</button>
+            </Button>
+            <Button type="submit" variant="primary" size="md">{t("common.create")}</Button>
           </div>
         </form>
       </Modal>
@@ -218,10 +219,10 @@ export default function TeamsPage() {
             onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>
+            <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            </Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

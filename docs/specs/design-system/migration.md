@@ -237,3 +237,44 @@ PO原文「進める」（12件の実装承認質問への返信）を受領。C
 2026-09-13: AK PR3457本番反映、結果文書PR3460 main統合済み。次便ALは連絡先/仕入先の専用編集4件の設計案。原文監査4/4、自己審査APPROVE。実装承認/実装未着手、表/報酬3保留、新CI最後。
 
 2026-09-13 AL実装検収済み: PO原文「進めてくれ」で実装承認。4ボタン移管、root逆変換2ページ一致・実表示72前後組/操作24前後組成功、実装担当266試験/品質成功を原ログ確認。共通100/旧305。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md。PR3461実装更新へ、今回番号付きGO/マージ/本番未実施。
+
+
+2026-09-13 次便AMはスタッフ3フォーム6ボタン設計案。共通100/旧305を再測定、期待106/299。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AM実装検収: PO原文「進める進める」で承認、6ボタン移管。root逆変換2ページ/共有7hash一致、96表示/29操作前後組成功。担当32新規/298全体試験と品質成功を原ログ確認。共通106/旧299（最新main統合前）。根拠: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md。実装検収APPROVE。PR3468実装更新・統合後品質/CIへ、今回番号付きGO/マージ/本番未実施。
+
+
+2026-09-13 統合後確認: main b52a4defを通常merge（ad093b7b）。台帳末尾競合は両側の記録を保持し、完全同文の重複1件だけ整理。製品3hash/共有7hash不変。root直接実行で28files/311tests（coverage statements15.1%）、check:all（218warnings/0errors）、build、Storybookすべてexit0。ログはcheckpoint内am-integrated-*.log。merge時フックの対象外ItemComparison/reviewIssues既存59warningsは記録し、チェック無効化/製品修正なし。統合後の構文母数はmain108/305→本便114/299（本便+6/-6、他便追加8）。元の106/299検収結果を上書きしない。PR3468へ保存、最新GitHub CIと今回番号付きGO待ち。マージ/本番反映は未実施。
+
+
+## AM本番反映完了（2026-09-13）
+
+PO原文「GO #3468」に基づき、最新HEAD0829affdのCI38成功/8対象外・CLEAN、mainとの差分先行0、製品3/共有7hash一致を確認。公式wrapperでPR3468をmerge commitし本番反映を完了した。
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3468 （MERGED、2026-09-13T06:32:24Z）
+- merge: c50d719b2505c3e1d1977c4f36bdae39f14dae22
+- deploy: https://github.com/shingo-ops/salesanchor/actions/runs/34742996601 （SUCCESS、job103685769339）
+- root原ログ確認: salesanchor_db_20260913_153301.sql.gz 7.6M新規取得、配備HEAD c50d719b一致、Finalize/Verify成功。バックアップ復元試験は未実施。
+- root直接公開確認: App/公開JS/API /api/healthすべてHTTP200、database/redis/celery connected。公開/assets/index-An53UlbI.jsの3フォーム6件に取消secondary/送信primary/size md、登録disabled2・pending文言、専用編集取消先/staffを確認。SHA256 ff0f29a262ab54b44330959f9d98b49a3f0c82563183374d2734c7baca236d26。
+
+根拠と再現検査器: docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。初回ローカルPython CA不足は検証を無効化せずsystem curlへ、見出し数固定の検収器仮定は取消先との一意対応へ修正。失敗履歴をJSONに残し製品は変更していない。
+設計自己審査・PO実装承認・root検収・GO受領・実装保存・マージ・本番反映済み。本番認証付きフォーム送信とPO目視は未実施。LINE再解析/3シート配信は本便対象外。残存旧299の次便選定は別の設計作業、表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AN次便設計案: Bot3フォーム6ボタンを実物監査（BotsPage:259/260/281/282、BotEditPage:88/95）。共通114/旧299→期待120/293、共有10hashを保存。キー表示を伴う登録と通常編集の差を分離、96表示組は未実行。設計はdesign.md§AN、根拠evidence-20260910/an-bot-button-audit.json。同一AI自己審査APPROVE、今回実装承認待ち・製品未変更。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AN実装検収: PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致、最終96表示・24操作+6閉鎖再開前後組成功。試験前提8観測で初回4失敗を試験のみ補正、担当32新規/343全体試験・品質成功を原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md。実装検収APPROVE、PR3480実装更新と最新main/CIへ、今回番号付きGO/マージ/本番未実施。
+
+## AN 本番反映結果
+
+2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+2026-09-13 AO次便設計草案: チーム3フォーム6ボタン（TeamsPage200/203/221/224、TeamEditPage67/74）。基準116b1cf6で共通120/旧293→期待126/287、2ページ/共有12hash・対象外6原文を直接保存。3項目送信と保存中ロックなし、メンバー処理の対象外境界を確認。設計はdocs/specs/design-system/design.md§AO、根拠evidence-20260910/ao-team-button-audit.json。製品未変更・実装承認未受領・144表示組未実行。表/報酬3/カレンダー色保留、新CI最後。
+
+AO審査追記: 同一AIによる設計自己審査APPROVE。原文6/type6/対象外6・2ページ/共有12hash一致、製品差分0。design/maintenanceエラー0、task-state/diff-check成功、未発行カード草案のcard-lint exit0（長行警告1のみ）。実装承認待ち、実装/144表示組未実行。
+
+
+AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
