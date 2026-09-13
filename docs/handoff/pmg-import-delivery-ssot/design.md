@@ -983,3 +983,77 @@ rootが直接見た画像: /tmp/reports/pmg-progress-visual/tcg-import-workflow-
 表示改善のコード/視覚レビューAPPROVE（root、実装Terraと区別）。親の新履歴/切替REVISEは継続。設計・実装・ローカル検証完了、PR/CI確認へ進む。番号付きGOは創作せず、本番反映済みとは宣言しない。
 
 PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
+
+## 2026-09-13 3段階カードCTAの製品実装設計
+
+### 目的・承認・対象
+
+PO原文「この表示に変更してくれ」を受領。直前に確認用error.htmlで提示した取り込み/抽出/解析結果の3枚と下部CTAを製品へ反映する実装依頼。PO本人のマージGO・本番反映GOは別。mode: handoff（本書既存front matter）で本節の契約を引き渡す。再抽出デモや架空データは製品に入れない。
+
+目的: 各段階の件数と次の確認操作を同じカード内で結び付ける。取込の44投稿、抽出の44job、解析結果の762明細の異なる単位を保持し、成功37/対象なし6/失敗1を44成功と誤表示しない。例示数値をハードコードしない。
+
+対象: ImportWorkflowPanel、専用CSS/API/hooks、ja/en辞書、必要な取込スコープのSELECT endpoint/既存itemsフィルター拡張、回帰試験。対象外: DB migration、認証規則変更、解析アルゴリズム、配信候補集計修正、ダッシュボード全体、再抽出POST・配信POST、原文と確定商品マスタの全面比較機能。
+
+### Why・既存との照合
+
+ImportWorkflowPanel.tsx:68-87は上部actionsと3stageが別領域、エラーCTAはitemsをextraction_errorで絞るだけ。tcg_import_progress.py:25-32,108-132はextraction_items起点なので明細0件エラーは出せない。import_job_messagesで取込に属する投稿は既に固定されている（_scope_ctes:13-24）。source_messages.raw_text/is_active/received_atとextraction_jobs.status/error_messageが正規migrationに存在する。新しいSELECTのみにより画面から実物の投稿へ進める。error_messageはサービス例外を含み得るため生出力せず定型の未確認理由を用いる。従来の全体診断APIは取込の境界を持たず本カードには不適合。
+
+代替A: フロントのボタン配置だけ→投稿一覧と0明細エラーが確認不能なので不採用。代替B: 新しい書込/再試行UIまで同時実装→取消/二重受付/費用/進行中処理との整合の証拠が不足するため範囲外。代替C: 仕入元名で原文を引く→同じ名前の別取込と混線するため不採用。推奨は取込IDに属する投稿/jobの読み取りだけを追加する。
+
+### How：API契約
+
+すべて既存require_super_admin依存、UUIDの取込ID、TCG_SCHEMA、バインドパラメータを利用。認証実装やRLSを緩めない。SELECT1文で各応答のas_of/件数/ページを取得。既存_envelope同様、存在しない取込404、coverage未completeはtotalと配列null。pending_review/discarded/legacy_unknownを空0へ置換しない。
+
+1. GET /tcg/line-import/{import_job_id}/messages?limit=25&offset=0。limit1..100/既定25、offset>=0。
+返却: scope/as_of/coverage/review_status/reason、unit=source_message、limit/offset、total、messages配列。
+配列項目: id、raw_text、received_at、created_at、is_active、relation_kind、supplier_name（NULL可）。取込リンクから投稿を選び、supplier_channels/tcg_suppliersはLEFT JOIN。削除された仕入元で投稿を落とさない。ORDER BY created_at,idで安定ページング。本文はReactのテキスト表示、HTMLとして挿入しない。本文全体の表示はdetailsなどで折り畳む。
+2. GET /tcg/line-import/{import_job_id}/extraction-jobs?filter=error&limit=25&offset=0。filter=all|error、既定all。単位extraction_job、同じenvelope、jobs配列。
+配列項目: id、source_message_id、status、created_at、extracted_at、raw_text、supplier_name（NULL可）、item_count、error_reason_code。job起点でエラーはstatus=error、0明細も保持。item_countは相関COUNT等で件数膨張を回避。error_reason_codeはerror時unclassified、それ以外NULL。error_message/traceback/raw exceptionは返さない。ORDER BY created_at,id。
+3. 既存GET itemsのfilterにresults_presentを追加しanalysis_result_id IS NOT NULLに限定。all/needs_review/extraction_error既存互換。解析結果の全件CTAはresults_present、要確認CTAは既存needs_review。解析結果なしを全解析結果へ混ぜない。
+
+### How：UI契約
+
+既存PageLayout/Panel内に3カード、下部にCTAを同じ高さで配置、狭幅は縦並び。既存Button/Badgeと色/文字/余白トークンを利用。全UI文言はt()、ja/en同一キー。試作の独自ブランド/架空数字/原因切替は製品に含めない。
+
+- 取り込み: 「取り込んだ投稿を確認」でmessagesへ。
+- 抽出: failed>0なら主CTA「エラーN件の原因と対処を確認」でextraction-jobs/errorへ。副CTA「抽出結果をすべて見る」で既存items/allへ。エラーなしは副CTAを主の位置へ。0明細エラーもjobと原文を表示。原因「この画面では失敗理由を確認できません」、対処「対象の投稿と抽出IDを添えて調査を依頼してください」。IDは開いた詳細にだけ示す。再実行ボタンなし。
+- 解析: needs_review>0なら主CTA「要確認N明細を確認」、副CTA「解析結果N明細をすべて見る」。0要確認なら全結果CTAを主へ。欠測件数を0に置換しない。
+- 上部に重複するCTAは置かずエラー/進行中等の結論と対象カード案内を維持。「再取得」を「表示を更新」に変更。全読取だけが実行される。
+- 抽出バー: 成功/対象なし/失敗/進行中または待機の区分を色と文字で併記。完了数=成功+対象なし+失敗、総数=完了+pending+running、unknown/欠測/負数/非整数/内訳不整合時は既存と同様バーを出さない。色は既存success/error/muted/info系トークン。
+- CTA選択時はカード下の共通詳細領域の内容を切り替え、見出しへスクロールとフォーカス（tabIndex=-1）。選択中の段階と取込を明確にし、ページングoffsetを0へ戻す。
+- 取込変更時に旧データ/遅延応答を表示しない。新しいページ取得でstaleデータを新対象として使わない。GETの失敗は空0と区別、読込/再取得を表示。post/job一覧はCTA後に取得し、既存5秒ポーリングに全原文取得を追加しない。手動表示更新で開いている詳細も更新。document.hidden/cleanupの既存契約は保持する。
+- 既存items表とページングは利用可能なまま保持。抽出全件・解析全件・要確認では見出しとfilterを明示。原文/抽出値/正規化結果の関係を誤って商品マスタ正式名と称さない。
+
+### 受入条件と検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 3カード各下部CTA、日英/明暗/1440・390pxでレイアウトと操作可 | unit+Playwright画面操作/スクリーンショット |
+| 44=37+6+1を分割、欠測/不整合で成功バーなし | 既存unit回帰と追加内訳検査 |
+| 投稿CTAは取込所属原文のみ、再利用/非active/仕入元NULL保持 | 実PostgreSQL fixtureで別取込/別tenantを混ぜ検査 |
+| エラー0明細と残存明細ありの両方をjob1件ずつ表示 | 実PG検査、UI fixtureで件数/原文/未確認理由照合 |
+| 解析全件=results_present、要確認=needs_review | 実PGで結果あり/なし混在、UI送信filter検査 |
+| 404/422、limit/offset境界、未認証/非super_admin拒否 | API試験 |
+| NULL coverage/初回失敗/同対象再取得失敗/対象切替の遅延応答を区別 | hook/unit/E2E fixture |
+| 生error_messageを応答しない、原文のHTMLは実行されない | 機密らしいdummy文字列とHTMLをfixtureへ投入 |
+| CTAでPOST0回、取込/設定/解析/配信データの変更0 | E2Eリクエスト捕捉、PG前後件数/値照合 |
+| 既存必須品質検査成功 | frontend build/check:all/対象unit/E2E、backend lint-ci/実PG対象試験、PR CI |
+
+### Architect整合検査・維持
+
+判定APPROVE（この限定実装設計）。基準origin/main dd1df11cで、Terraの読み取り調査とも照合し既存との矛盾なし。根拠は既存取込リンク/coverage/正規migration/実PG fixture/既存unit・E2Eと本節の追加受入条件。新規GETを固定ルートより後に置き、試験で認証・scope・0明細を検証する。 broaderなダッシュボード/再試行/原文と商品マスタの全面比較設計のREVISEを解除しない。rootがPlannerとArchitectを順に担う同一AI自己審査であり、独立第二者レビューとは称さない。維持は既存tcg-import-workflowのunit/E2Eとtcg_import_progressのPG試験。実装はPO指定Terra、rootが最終差分/証跡照合。外部事例不要（自社API契約と回帰fixtureが直接根拠）。新ライブラリ/APIの外部仕様採用はないためContext7調査対象なし。
+
+
+### 3段階カードCTA・実装検収（2026-09-13）
+
+担当交代: POの新規担当1名への委任承認「進める」を受け、pmg_cta_completionが同じカード/作業台の未完差分を継承して完成。rootは製品を編集せず、差分・試験ログ・画像を審査した。
+
+実装: 3カード下部に主CTAの高さを揃えた確認操作、成功/対象なし/エラーの分割バー。投稿と抽出jobの取込限定GET、results_presentフィルター、詳細のページング/表示更新/遅延応答除外を追加。投稿の再利用・現在無効・受信日時を表示。明細0件の抽出エラーを表示し、生例外を公開しない。詳細の原因不明と調査依頼の重複文言を画像審査で解消。
+
+実装担当実行・root原ログ確認: frontend全unit26ファイル273件成功（対象3ファイル29件を含む）、実PostgreSQL18件成功/skip0、Playwright12件成功33.1秒、build/check:all/backend lint-ci終了0。check:allは218警告/0errors。backend lint-ciはRuff成功・Bandit high0、mypy非blocking診断532件を含むため型診断全解消とはしない。追加サービスの診断0、routerのfilename型診断は追加GET外の既存行。rootが直接git diff --check終了0、製品差分/試験コードと保存ログを照合した。rootは試験そのものの再実行を行っていない。
+
+画面は模擬APIのPC1440/狭幅390・日本語light/英語darkで確認。rootはcards-{1440,390}-{ja,en}.pngとanalysis-action-390-ja.png等を直接閲覧。縦並びの解析CTAはスクロール後viewport到達・クリック成功を試験。CTAからPOST0、JS error0、横溢れ0、原文HTML非実行。初回390jaの1失敗は辞書編集中の同URL再読み込みと重なり、固定差分では12/12成功。待機追加による試験基準緩和なし。画像の44/1019/313等はfixtureであり本番実数ではない。
+
+証跡保存先: reports/pmg-stage-card-actions/{all-unit,pg,check-final,build,backend-lint,e2e,colima-stop}.txt、cards/error/analysis-actionのPNG、verification-manifest.json（各SHA256）。専用Colima dist01-3258停止ログ確認、他者profile/本番変更なし。Gitには正式設計・試験コードを保存し、旧unfinished差分/キャッシュは含めない。
+
+最終差分/視覚審査: APPROVE（root、担当実装と照合）。限定設計の受入を満たし、PR/CI確認へ進める。新GO未受領、未マージ・本番未反映。設計審査は同一AI自己審査であり独立第二者レビューとは称さない。配信候補集計の不一致、再抽出操作、全体ダッシュボードの残設計は今回解消していない。

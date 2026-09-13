@@ -3432,7 +3432,7 @@
     "title": "取り込み・解析の進捗",
     "coverage": "関連記録",
     "asOf": "最終取得（JST）",
-    "refresh": "再取得",
+    "refresh": "表示を更新",
     "stale": "取得失敗。前回の表示を保持しています",
     "fetchFailed": "取得に失敗しました",
     "summary": {
@@ -3482,8 +3482,8 @@
     "unknown": "未記録",
     "total": "対象数",
     "analysisUnrecorded": "解析実行の記録はありません",
-    "reviewAction": "要確認の明細を見る",
-    "errorAction": "抽出エラーの明細を見る",
+    "reviewAction": "要確認{{count}}明細を確認",
+    "errorAction": "エラー{{count}}件の原因と対処を確認",
     "processingDetails": "処理の詳細",
     "messagesCreated": "新規作成メッセージ",
     "messagesReused": "再利用メッセージ",
@@ -3514,8 +3514,8 @@
       "pending": "待機中",
       "running": "実行中",
       "residualItems": "抽出エラーでも残った明細",
-      "residualResults": "抽出エラーでも残った解析結果"
-      ,"emptyState": "抽出対象はありません"
+      "residualResults": "抽出エラーでも残った解析結果",
+      "emptyState": "抽出対象はありません"
     },
     "analysis": {
       "resultPresent": "解析結果あり",
@@ -3545,6 +3545,20 @@
       "pid_unresolved": "商品を特定できない",
       "multi_candidate": "商品候補が複数",
       "note_unmatched": "メモの変換先が見つからない"
-    }
+    },
+    "viewMessages": "取り込んだ投稿を確認",
+    "viewItems": "抽出結果をすべて見る",
+    "viewResults": "解析結果{{total}}明細をすべて見る",
+    "errorUnknown": "この画面では失敗理由を確認できません。",
+    "filterResults": "解析結果あり",
+    "errorDetails": "抽出エラーの原因と対処",
+    "errorNext": "対象の投稿と抽出IDを添えて調査を依頼してください。",
+    "detailId": "記録ID",
+    "detailItems": "明細{{count}}件",
+    "stageBreakdown": "成功{{done}}・対象なし{{empty}}・エラー{{failed}}・処理中／待機{{pending}}",
+    "sourceId": "元投稿ID",
+    "activePost": "有効な投稿",
+    "inactivePost": "過去の投稿（現在は無効）",
+    "receivedAt": "受信日時（JST）"
   }
 }

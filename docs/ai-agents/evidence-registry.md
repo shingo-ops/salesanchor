@@ -2682,3 +2682,8 @@ PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、depl
 ### EV-20260913-FRONTEND-AL-IMPLEMENTATION
 
 PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
+
+
+### EV-20260913-PMG-STAGE-CTA
+
+PO原文「この表示に変更してくれ」で3カード下部CTA実装を承認、新規担当委任「進める」でpmg_cta_completionが完成。root差分/画像審査APPROVE、担当実行のunit273/実PG18skip0/E2E12成功とbuild/check/lint終了0を原ログ照合。mypy532診断は非blockingとして明記。正本docs/handoff/pmg-import-delivery-ssot/design.md/recon.md「3段階カードCTA・実装検収」、CARD-PMG-STAGE-CTA-01。reports/pmg-stage-card-actions/verification-manifest.jsonにログ/画面SHA256保存。新PR/CI確認へ。新番号付きGO未受領、マージ/本番反映未実施。

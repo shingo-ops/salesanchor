@@ -3432,7 +3432,7 @@
     "title": "Import and analysis progress",
     "coverage": "Association coverage",
     "asOf": "Last fetched (JST)",
-    "refresh": "Refresh",
+    "refresh": "Refresh display",
     "stale": "Fetch failed. Previous values are retained.",
     "fetchFailed": "Fetch failed.",
     "summary": {
@@ -3482,8 +3482,8 @@
     "unknown": "Not recorded",
     "total": "Total",
     "analysisUnrecorded": "Analysis execution is not recorded",
-    "reviewAction": "View items needing review",
-    "errorAction": "View extraction errors",
+    "reviewAction": "Review {{count}} flagged item(s)",
+    "errorAction": "Review causes and actions for {{count}} error(s)",
     "processingDetails": "Processing details",
     "messagesCreated": "New messages",
     "messagesReused": "Reused messages",
@@ -3514,8 +3514,8 @@
       "pending": "Pending",
       "running": "Running",
       "residualItems": "Items retained after an extraction error",
-      "residualResults": "Analysis results retained after an extraction error"
-      ,"emptyState": "There are no extraction targets"
+      "residualResults": "Analysis results retained after an extraction error",
+      "emptyState": "There are no extraction targets"
     },
     "analysis": {
       "resultPresent": "Analysis results present",
@@ -3545,6 +3545,20 @@
       "pid_unresolved": "Product could not be identified",
       "multi_candidate": "Multiple product candidates",
       "note_unmatched": "No conversion target found for the note"
-    }
+    },
+    "viewMessages": "View imported messages",
+    "viewItems": "View extracted items",
+    "viewResults": "View all {{total}} analysis result(s)",
+    "errorUnknown": "The cause of this failure is not available on this screen.",
+    "filterResults": "Analysis results present",
+    "errorDetails": "Extraction errors: causes and actions",
+    "errorNext": "Request an investigation with the source post and extraction ID.",
+    "detailId": "Record ID",
+    "detailItems": "{{count}} item(s)",
+    "stageBreakdown": "Succeeded {{done}}, no items {{empty}}, errors {{failed}}, running or pending {{pending}}",
+    "sourceId": "Source post ID",
+    "activePost": "Active post",
+    "inactivePost": "Historical post (currently inactive)",
+    "receivedAt": "Received at (JST)"
   }
 }
