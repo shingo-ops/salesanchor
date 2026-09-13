@@ -1018,3 +1018,13 @@ POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関�
 実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
 
 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。
+
+
+### PR #3476 マージ・配備確認（2026-09-13）
+
+- PO原文「GO #3476」を2026-09-13 15:14 JSTに受領し、PR本文のGO記録へ逐語転記。委任GOの自己有効化は行っていない。
+- HEAD bd8306ed52ecd86b947d505773bdf9ccdf2c19c1 の製品差分は時間制限2行のみ。Backend CI 34741872204成功、承認チェック34742291130成功を設計担当がGitHubから直接確認。
+- 正規マージラッパー実行成功。PR #3476は2026-09-13 15:16:21 JSTマージ済み、merge SHA c22ad508993a1c7df679d51e01f08080dc3c341d。
+- 自動配備 https://github.com/shingo-ops/salesanchor/actions/runs/34742337546 はsuccessを直接確認。
+- 本番workerへの読み取り確認で、task属性は `tcg.extract_source_message 300 330`。コンテナはrunning、起動日時2026-09-13 15:18:34 JSTでマージ後の再起動を確認。抽出APIを追加実行せず、DB・投稿状態は更新していない。
+- 状態: 設計自己審査済み／PO実装・マージ承認済み／実装・マージ・本番設定反映済み。対象投稿の本番再抽出は未実施、実投稿の解消判定は未完了。次は対象1件の再抽出完了・明細・所要時間を確認する。

@@ -2736,3 +2736,6 @@ EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進め
 EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
 
 EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
+
+
+EV-20260913-SHINSOKU-TIMEOUT-01 完了追記: PO原文「GO #3476」を2026-09-13 15:14 JST受領、PR #3476を15:16:21 JSTに正規マージ（c22ad508）。Backend CI34741872204・GO gate34742291130・配備34742337546成功を直接確認。本番worker再起動15:18:34 JST、task属性300/330秒をSSH読み取りで直接確認。対象投稿の再抽出は未実施。詳細はrecon.mdのPR #3476マージ・配備確認節。
