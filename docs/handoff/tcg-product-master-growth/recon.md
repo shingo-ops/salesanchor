@@ -1023,3 +1023,11 @@ Deploy34735713952 / job103666657661成功。ログで03:32:32 UTCにsalesanchor_
 実測診断: 本番GEMINI_API_KEY設定あり、google.genai存在、GenerateContentConfig生成と_get_genai_client生成成功、models.generate_contentメソッド存在。診断では生成APIを呼んでいない。原因をAPIキー未設定や商品判断能力と断定できない。compare_snapshotのexcept Exceptionが元の例外をMODEL_CALL_FAILEDへ置換し、今回callbackでも元例外を保存していなかったため、HTTP状態/認証/通信/制限などの切り分け根拠が失われた。診断設計不足として記録する。
 
 停止後に同一READ ONLY対照を再実行し、全入力SHA26923e04d50d83c4649c2b833fd71b6f6a48bbe3181cb42b67e79972abf7e3ec一致、762明細/保存確定602/対照不一致0/訂正0を再確認。既存入力/解析/マスタ変更0。モデル出力未取得、作品ID候補0、採用0、配信0。非公開証跡/tmp/line-work-live-private.jsonl、停止後照合/tmp/line-work-control-after-private.json。永続保管とは称さない。
+
+
+## 2026-09-13 13:41 診断再試行のAPI前停止
+
+PO「進める」で同一2明細の診断付き再試行を承認。配備ファイルSHA一致後、read_snapshotがINACTIVE_SOURCEで停止。attempts0、DB書込/採用/配信0。今回のAPI原因診断には未到達。
+READ ONLY追加調査: 旧取込536422ed-79c7-4a87-a887-09a02b97968fは44リンク/26有効/18無効かつsuperseded_byあり。旧snapshotとの差は18原文のis_active/superseded_by。対象2明細の原文8242110d-729a-43a8-a5f9-465091329c5cも無効、置換先cced581f-7368-4767-8927-710a86c0b4c1。旧ジョブdone37/empty6/error1。
+新取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0は13:36:33 JST作成、review_status=ok/unresolved_count=0、リンク確定13:36:38。観測時44リンク/44有効、done33/empty4/running2/pending5。旧18原文の置換先18件すべてが新取込にリンク。操作主体・事業理由は未確認。新対象も処理中につき比較不可。
+非公開証跡: /tmp/line-work-one-diagnostic-private.json、/tmp/line-cohort-state-private.json、/tmp/line-new-cohort-state-private.json（恒久保管ではない）。旧対象の無効解除や別対象への自動切替はしない。新確定取込の処理完了後に対象/基準を取り直す案をPOへ確認する。
