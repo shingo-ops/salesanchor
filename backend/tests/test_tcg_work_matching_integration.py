@@ -885,3 +885,54 @@ def test_work_id_schema_existing_future_and_repeat(pg):
         rows = cursor.fetchall()
         assert len(rows) == 6
         assert {r[1:] for r in rows} == {('resolved_work_id','uuid'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
+
+
+
+@pytest.mark.parametrize("name,state,memo,work_code,duplicate,expected", [
+    ("スターターセットV 草", "", "", "IP001", False, "resolved"),
+    ("スターターセットV　草", "", "", "IP001", False, "resolved"),
+    ("スターターセットV 草", "", "", "IP006", False, "none"),
+    ("スターターセットV 草", "PSA10", "", "IP001", False, "none"),
+    ("スターターセットV 草", "", "限定", "IP001", False, "none"),
+    ("スターターセットV 草 10箱", "", "", "IP001", False, "none"),
+    ("別商品", "", "スターターセットV 草", "IP001", False, "none"),
+    ("スターターセットV 草", "", "", "IP001", True, "multi"),
+])
+def test_space_product_match_saved_in_isolated_database(
+    pg, monkeypatch, name, state, memo, work_code, duplicate, expected,
+):
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
+            cursor.execute(f"""INSERT INTO {SCHEMA}.tcg_products
+                (code,japanese_title,category_class,is_active,work_id,product_category_id)
+                SELECT %s,'スターターセットV 草','Box',true,w.id,c.id
+                FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
+                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""", (code,))
+            product_id = cursor.fetchone()[0]
+            for table, keyword in [("product_search_keywords", "スターターセットV草"),
+                                   ("product_exclude_keywords", "限定")]:
+                cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
+                               (str(uuid4()), product_id, keyword))
+        cursor.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code=%s", (work_code,))
+        work_id = str(cursor.fetchone()[0])
+    _, jobid, result = run_message(connection, engine, monkeypatch,
+        name + " 1BOX 1000円 " + state + " " + memo,
+        [record(name, 1, state=state, memo=memo) + [work_id]], work_id_mode=True)
+    assert result["status"] == "done" and result["items_count"] == 1
+    assert result["analysis_stats"]["pid_resolved"] == int(expected == "resolved")
+    with connection.cursor() as cursor:
+        cursor.execute(f"""SELECT p.code,ar.pid_resolved,ar.pid_basis,ar.needs_review
+            FROM {SCHEMA}.analysis_results ar
+            JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+            LEFT JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id
+            WHERE ei.extraction_job_id=%s""", (jobid,))
+        code, resolved, basis, needs_review = cursor.fetchone()
+        assert resolved is (expected == "resolved")
+        if expected == "resolved":
+            assert code == "SPACE_A" and basis == f"GEMINI|WORK:{work_id}|SK:スターターセットV草"
+        elif expected == "none":
+            assert code is None and basis == "NONE" and needs_review
+        else:
+            assert needs_review and "MULTI(" in basis and "SPACE_A" in basis and "SPACE_B" in basis

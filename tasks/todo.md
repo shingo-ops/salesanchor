@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| シンソク抽出100秒超過の限定是正設計 | 設計パートナー | 固定2回99.842/136.291秒・原文1176照合一致、型番3商品不整合は別課題、自己審査APPROVE | PR #3476提出済み。CI結果はPR参照、番号付きマージGO待ち。本番未反映 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・recon時間制限節 | 2026-09-13 |
+| シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
 | Geminiの商品マスタ参照・作品IDのみ判断 | Agent | Client寿命修正PR3472提出、製品CI2819成功/95skip/失敗0。新取込基準729 | 番号付きGO待ち。最新HEAD検証はPR本文へ記録。本番比較/採用/配信未実施 | PR3472 / CI34739377763 / docs/handoff/tcg-product-master-growth/recon.md | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
@@ -149,3 +149,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
+| 実商品CSV登録前確認 | 設計担当 | A便の設計自己審査APPROVE・PO正式設計承認済み（6ファイル/A1–A8）。B便の既存語更新/44件登録はREVISE | 設計/カードをローカル保存・カード違反0。PO公開承認に基づくpush成功・文書PR #3466提出。A便6ファイル実装・静的検査・親の読取検算済み。正式pytest/PGは製品PRのCI待ち。公開便へ引き継ぐ、B便は確認待ち | docs/handoff/tcg-product-import/design.md §18-7 / EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL | 2026-09-13 |
