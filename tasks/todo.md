@@ -98,7 +98,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| ワンピース商品追加・解析対策 | 設計・実装担当 | 空箱PR #3470本番反映済み。25th再測定59→60/変更2、基本15例成功。追加の否定語案12例成功、設計REVISE | 最新マスタ照合後、否定4語案を含む25thカードを最終審査。未発行/未実装、再解析・配信未実施 | PR #3470 / PR #3464 / design-keyword §17改訂3 / recon「25thカード再審査」 | 2026-09-13 |
+| ワンピース商品追加・解析対策 | 設計・実装担当 | 空箱PR #3470本番反映済み。25th最新本番マスタ照合/局所27対照成功、自己設計審査APPROVE | 25th実装指示書準備済み・未発行。実装担当への本便の明示委任待ち。再解析・配信未実施 | PR #3464 / design-keyword §17改訂4 / recon「25th最終設計の本番マスタ照合」 | 2026-09-13 |
 | TCG 人確認後配信の検証記録 | 設計担当 | 実コードの人工192条件・修正関数7ケース照合済み。文書自己レビューAPPROVE、製品設計REVISE | 文書PRチェック後に条件付き許可の範囲で保存。共通判定/全項目確認/配信接続の正式設計は未完了 | docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」/EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED | 2026-09-12 |
 | guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
 | インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
