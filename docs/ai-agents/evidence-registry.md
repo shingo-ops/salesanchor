@@ -2406,3 +2406,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 P2詳細契約追補: design.mdのP2節へ7記録型・8状態遷移・整数ミリ秒期限・取消先着・保存応答不明・14試験群の入力を草案保存。sandbox state refs空・P1 workflow1件、既存validator/merge/deployの実物を直接確認。取消の正規配送/欠落検知、App/初期state/時刻取得が未確立で自己審査REVISE。P2実機0・実装0・新規承認0。根拠はrecon.md「2026-09-13 P2の実物照合」。
 
 2026-09-13 入力経路追補: codex-cli0.154.0のhelp/schema生成でuserMessage/steer応答/item通知/turn一覧の4型を直接確認。公式App Server資料と照合し、履歴readだけでは取消の完全配送を証明できないと整理。受信時記録とwriterの順序契約、I01〜I08を草案保存。根拠はrecon.md「2026-09-13 入力経路の仕様照合」。自己審査REVISE、実機接続/セッション起動/代理GO0。
+
+2026-09-13 入力hook追補: 公式Hooksと既存UserPromptSubmit command1件・card-lint-hook.shを直接確認。H0完了、H1診断部品草案を作成し構文検査成功。H1/H2実機0・hook変更0・新規セッション0。実行設計REVISE、隔離設定/正式カードが次工程。根拠はrecon.md「2026-09-13 入力フックの接続候補確認」。

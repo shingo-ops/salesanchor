@@ -1,0 +1,35 @@
+"""H1 diagnostic draft. Synthetic markers only; no grant, network or product writes."""
+import json
+import os
+import sys
+import time
+import uuid
+from pathlib import Path
+
+data = json.load(sys.stdin)
+prompt = data.get("prompt")
+modes = {"H1-PROBE-NORMAL": "normal", "H1-PROBE-BLOCK": "block",
+         "H1-PROBE-WRITE-ERROR": "write-error", "H1-PROBE-TIMEOUT": "timeout"}
+if prompt not in modes:
+    sys.exit(0)
+mode = modes[prompt]
+record = {"diagnostic": "H1", "received_ns": time.time_ns(),
+          "session_id": data.get("session_id"), "turn_id": data.get("turn_id"),
+          "event": data.get("hook_event_name"), "mode": mode,
+          "authorization_issued": False}
+dest = Path("/tmp/reports/TH-GO-HOOK-H1")
+try:
+    if mode == "write-error":
+        raise OSError("synthetic write failure")
+    dest.mkdir(parents=True, exist_ok=True)
+    with (dest / (str(uuid.uuid4()) + ".json")).open("x") as stream:
+        json.dump(record, stream)
+        stream.flush()
+        os.fsync(stream.fileno())
+except OSError:
+    print(json.dumps({"decision": "block", "reason": "H1 diagnostic storage unavailable"}))
+    sys.exit(0)
+if mode == "timeout":
+    time.sleep(10)
+if mode == "block":
+    print(json.dumps({"decision": "block", "reason": "H1 diagnostic block"}))
