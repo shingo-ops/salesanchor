@@ -17,6 +17,53 @@ const works = [
   { id: "00000000-0000-4000-8000-000000000003", code: "IP003", display_name: "Fallback Work", alt_name: " " },
 ];
 const csv = "mark,japanese_title,english_title,release_date,search_keywords,exclude_keywords,division_code,work_code,manufacturer_code,product_category_code\nA,Fixture,Fixture,2026-01-01,Fixture,,DIV01,IP001,MK001,PC_BOX\n";
+for (const locale of ["ja", "en"]) for (const width of [390, 1440]) {
+  test(`R10 update export and explicit confirmation ${locale} ${width}`, async ({ page }) => {
+    await installAuthBypass(page);
+    await page.addInitScript(lang => { document.cookie = `locale=${lang};path=/`; }, locale);
+    await page.setViewportSize({ width, height: 900 });
+    const raw = Buffer.from('\ufeffproduct_code,revision,' + csv.replace('\nA,', '\nPM01,v1:' + 'a'.repeat(64) + ',A,'));
+    let commits = 0;
+    await mockApi(page, {
+      "GET /me/permissions": permissions,
+      "GET /staff/me": { id: 1, locale, ui_preferences: { show_sidebar: false } },
+      "GET /tcg/products/list": { works, total: 61, items: [{ code: "PM01", japanese_title: "Fixture", mark: "A", keyword_count: 1 }] },
+      "GET /tcg/products/export": async route => {
+        const params = new URL(route.request().url()).searchParams;
+        expect(params.get("query")).toBe("Fixture"); expect(params.get("work_id")).toBe(works[0].id);
+        expect(params.has("limit")).toBe(false);
+        await route.fulfill({ contentType: "text/csv", body: raw });
+      },
+      "POST /tcg/products/import/preview": { filename: "update.csv", digest: "c".repeat(64), mode: "update", file_errors: [], total: 1, ok: 1, blocked: 0, updated: 1, unchanged: 0, rows: [{ row_no: "1", product_code: "PM01", japanese_title: "New fixture", mark: "A", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old fixture", after: "New fixture" }, { field: "search_keywords", before: ["old,word"], after: ["new,word", "日本語"] }] }] },
+      "POST /tcg/products/import/commit": async route => { commits++; await route.fulfill({ contentType: "application/json", body: JSON.stringify({ job_id: "update-receipt", mode: "update", total: 1, created: 0, skipped: 0, updated: 1, unchanged: 0 }) }); },
+    });
+    await page.goto("/super-admin/tcg-product-master");
+    await page.getByRole("tab", { name: locale === "ja" ? "ポケモン" : "Pokemon", exact: true }).click();
+    await page.getByRole("searchbox").fill("Fixture");
+    const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
+    await downloadButton.focus();
+    const pending = page.waitForEvent("download"); await page.keyboard.press("Enter");
+    const download = await pending;
+    expect(download.suggestedFilename()).toBe("tcg-products-update.csv");
+    const path = await download.path(); expect(path).toBeTruthy(); expect(readFileSync(path!)).toEqual(raw);
+    await page.getByRole("button", { name: /CSV取り込み|Import CSV/ }).click();
+    await page.locator('input[type="file"]').setInputFiles({ name: "update.csv", mimeType: "text/csv", buffer: raw });
+    await page.getByRole("button", { name: /内容を確認|Review contents/ }).click();
+    await expect(page.getByText(/Old fixture/)).toBeVisible(); expect(commits).toBe(0);
+    await saveScreenshot(page, `roundtrip-${locale}-${width}`);
+    if (width === 390) {
+      const before = page.getByText(/Old fixture/);
+      await before.scrollIntoViewIfNeeded();
+      await expect(before).toBeInViewport();
+      await expect(page.getByText(/new,word/)).toBeInViewport();
+      await saveScreenshot(page, `roundtrip-details-${locale}-${width}`);
+    }
+    const confirm = page.getByRole("button", { name: locale === "ja" ? "確認して更新する" : "Confirm updates", exact: true });
+    await confirm.focus(); await page.keyboard.press("Enter");
+    await expect(page.getByRole("status")).toContainText(locale === "ja" ? "更新 1件" : "Updates: 1");
+    expect(commits).toBe(1);
+  });
+}
 test("list to confirmation and registration: no commit before explicit confirmation", async ({ page }) => {
   await installAuthBypass(page);
   let commits = 0;
@@ -29,7 +76,7 @@ test("list to confirmation and registration: no commit before explicit confirmat
   });
   await page.goto("/super-admin/tcg-product-master");
   await expect(page.getByText("Fixture", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /CSV/ }).click();
+  await page.getByRole("button", { name: /CSV取り込み|Import CSV/ }).click();
   await expect(page).toHaveURL(/tcg-product-master\/import$/);
   await page.locator('input[type="file"]').setInputFiles({ name: "products.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   await page.getByRole("button", { name: /内容を確認|Review contents/ }).click();
@@ -92,7 +139,7 @@ for (const locale of ["ja", "en"]) {
     await expect(page.getByText("One Piece fixture", { exact: true })).toBeVisible();
     expect(requests[requests.length - 1].searchParams.has("work_id")).toBe(false);
     await saveScreenshot(page, "tabs-" + locale);
-    await page.getByRole("button", { name: /CSV/ }).click();
+    await page.getByRole("button", { name: /CSV取り込み|Import CSV/ }).click();
     await expect(page).toHaveURL(/tcg-product-master\/import$/);
   });
 }
