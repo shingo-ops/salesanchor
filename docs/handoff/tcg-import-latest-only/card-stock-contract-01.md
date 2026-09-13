@@ -26,7 +26,7 @@
 
 手順3: 正式設計の内容一致を確認
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-message-design && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
-    期待する出力: 12d8830404f4688594433439de4ea653b09f552184c1ed7e28d6685a5dba651f。一致した場合のみ次へ。
+    期待する出力: 8968cf8be437285f73a6498b20ac1167cf74d717ffbf1f8194f624b012a7d502。一致した場合のみ次へ。
 
 手順4: 実装
     設計文書の§15「第1便の実装境界」全文と§22/25を読み、指定した4ファイルを新規作成する。

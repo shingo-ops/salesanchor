@@ -412,6 +412,14 @@ GitHub main APIとorigin/mainは0002d110db0a91013e615fea6a2496ddf2f12e02で一�
 
 査定: 第2便のCI試験経路は同一AIの設計査定APPROVE、実装/実PG合格ではない。第1便の製品提出はdesign §15の具体案まで準備済み。担当の前便はcommit/push/PR禁止のため、同じ担当へその範囲を追加委任する確認を次のPO判断1件とする。製品PR未作成、第2便未発行、マージ/本番未実施。
 
+## 製品PR提出の完了記録（2026-09-13）
+
+追加委任確認にPO原文「進める」を受領し、同じstock_contract_01へ保存カードと提出カードを順に渡した。製品作業台release/line-stock-contractを最新origin/main 0002d110から作成し、設計文書を配置。製品commit0c90de21の4ファイルは親がgit showで全hash一致を確認。担当の部品6群/対象mypy成功と、親の実物/ログ検算を区別する。最新mainの全体lintはruff成功、Bandit High0/Low25/Medium611/skip0/内部エラー0、mypy既存領域154警告・新規0。
+
+製品PR https://github.com/shingo-ops/salesanchor/pull/3471 を提出済み。HEAD53479dbfed28ee66a8283a1fb91c7a2840e4405e、base main、remote HEADと.pr-number3471と実15ファイルを親が直接照合。最終CIは36check成功/8skip/承認チェック1失敗。pytest実ログjob103675515859を親が取得し、2769成功/95skip/309warning、100.92秒、カバレッジ63.46%（閾値60%）を確認。結果はprobeへ保存。承認チェックの実ログは番号付きGO記録の欠落。GOは創作せず停止を保持する。製品PRには第1便4ファイルと既存設計資料を含む。設計PR3456と製品PR3471を混同しない。元作業台の4ファイルも削除していない。
+
+第1便の保存/製品PR提出まで完了。第2便は未発行、DB/マージ/本番/再解析/3シート配信は未実施。次は製品PRのCI結果とPO指定の最終レビューを確認する。新規エージェントの起動や代理GOは行っていない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

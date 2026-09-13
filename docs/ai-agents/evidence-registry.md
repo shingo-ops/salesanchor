@@ -2999,3 +2999,14 @@ limitation: local Docker socket absent, PostgreSQL not executed; automatic futur
 review: same-AI APPROVE for CI validation-path design only; stage2 remains unissued
 next_decision: extend existing stage1 executor delegation to isolated worktree/copy/verification/product commit/push/PR only; no merge, DB or stage2 implementation
 ```
+
+```text
+id: EV-20260913-LINE-PRODUCT-SUBMITTED
+date: 2026-09-13
+reference: docs/handoff/tcg-import-latest-only/probe-20260913.json stage1_product_submission
+observed: product PR3471 OPEN/main/HEAD53479dbf directly verified; four product hashes match0c90de21; same executor reused under explicit additional PO delegation
+validation: worker six groups and target mypy passed; parent verified commit/file hashes and full lint log, CI36success8skip1failure; parent read pytest job103675515859:2769passed95skipped309warnings,63.46%coverage
+block: actual process gate log requires numbered PO GO; not fabricated
+state: product PR submitted; stage2/DB/merge/production/reanalysis/distribution not executed
+next: CI completion and PO-designated final review
+```
