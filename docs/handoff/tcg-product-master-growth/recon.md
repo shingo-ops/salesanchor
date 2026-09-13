@@ -2020,3 +2020,16 @@ GitHub CI34741929357/job103682999611は2835 passed /95 skipped /1 failed、118.8
 実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
 
 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。
+
+
+### 25th複合除外・実装受入完了（2026-09-13）
+
+PR #3475 OPEN、HEAD94a7f695e7a9d11dc5860ada6dea8a20580eff73。差分は委任したmigration/runner登録/既存統合テストの3ファイル、526追加。通常略称、新スペシャルセット、セット/PM0072双方の複合除外を実装。隔離DBの増分は商品1/検索3/除外12、再実行の行変更0、他テナント変更0。PM0072の同一性・既存語検査を含む異常時は変更0。最新main c22ad508の抽出task変更はsoft100→300/hard120→330のみで、照合処理の変更なしを親が読取確認。
+
+親がGitHub CI34742599601/job103684752592のログを直接取得: 2850 passed /95 skipped /失敗0、112.72秒、coverage63.81%。新規31試験instanceのskip0は実装担当の集計報告。元の全解析9行を保持し、プロモ+BOXは未特定/要確認、セット+プロモの曖昧名はBOX/Pack/未知単位の3例すべて未特定/要確認/出力0。通常プロモ+PackはPM0072、同梱備考2例はセット商品と原文備考を保持。サプライ/否定18例と空箱3欄の保留、旧v4参照変更時の拒否と結果・訂正保持、新版成功も同CIで合格。
+
+親は最終実装の語宣言と保存済みGemini抽出67件をローカル再照合: 特定59→60、変化2、基本15/15・否定12/12成功。SQL SHA256 a340879820429278f1fbca8c2072731bf91ec10e50e49c94e602c107f93ab0e2、マスタSHA256 ee099009f5c5865b196452ab09957fcf285e4d6e9e69e5cac1b7d8938ff99f0c、抽出入力SHA256 5e165443af0812b5f2c45c8b82e2c7682514bfd1cffdbcbbd005821174961693。これは商品照合関数の局所測定で、総合正答率・本番解析の実測ではない。未特定7件の解消や全投稿で誤判定0を証明しない。
+
+親の製品差分読取確認APPROVE（改訂6の限定受入）。設計審査は同一AI自己審査で、独立した第二者設計レビューではない。ローカルmake lint-ci終了0は担当報告、既存mypy非阻害エラーを型検査完全合格としない。実DB試験はGitHub CIであり親のローカル実DB実行ではない。
+
+最新PR checksは38成功/4skip/1失敗、残るprocess-artifacts gateは「PR本文に『### GO記録』セクションがありません」のみ（job103684812184、親直接確認）。番号付きGO #3475は未受領でありゲートを保持。実装・試験・既存PR更新まで完了。マージ/本番反映/追加Gemini/再解析/3シート配信は未実施。非公開証拠保存名: private-research/25th-compound-review-20260913（親の再測定、CIログ、担当全文報告）。
