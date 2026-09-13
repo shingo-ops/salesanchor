@@ -2731,3 +2731,5 @@ EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763�
 EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、アプリ呼出し1・応答13/13、全入力SHA前後一致、作品ID変化0、商品特定3→3。生成APIなしの入力コピー空白差対照は3→13、既特定3の商品変更0。原因再現であり本番改善ではない。DB書込/採用/配信0。recon14:49節参照。
+
+EV-20260913-LINE-SPACE-DESIGN: 固定729件の連続半角空白局所コピー検算552→562、既特定552の変更0、basis表記のみ5。DB/Gemini0。本番改善ではない。PR3473 a618c147との同関数重複をledger/GitHub/git showで確認、追加設計REVISE・カード未発行。recon連続空白節参照。

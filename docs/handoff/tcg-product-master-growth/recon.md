@@ -1096,3 +1096,14 @@ PO「進める」を受け、設計§17.11の新対象1投稿13明細に限定�
 根拠: tcg_analyzer_svc.py:238 normalize_enは英数幅と大小文字を変換するが連続空白を畳まない。同:274 match_one_kwは純ASCIIキーワードをescapeして空白も逐語で照合。同:516 match_pid_with_work、tcg_work_comparison_svc.py:179 match_item経路。登録検索語はPM0263「30th CELEBRATION」、PM0264「30th CELEBRATION FUTURISTIC」。原文抽出10件の「30th  CELEBRATION」は半角空白2個であり、商品マスタ不存在や作品ID未判定ではなく照合の空白差で候補0となることを再現した。正規化を共通関数へ直接追加すると状態/除外語等にも影響するため、修正設計では商品照合への適用範囲と誤一致防止を先に確認する。
 
 非公開一時証跡: /tmp/line-postfix-baseline-private.json、/tmp/line-postfix-one-diagnostic-private.json、/tmp/line-space-only-proof-private.json。顧客原文・価格をPRへ転載しない。一時領域のため恒久保存とは称さない。外部事例は不要（当該入力・稼働コードによる原因再現を根拠とする）。状態: PR3472実装/マージ/本番反映済み、実応答確認済み、当該作品ID比較の改善0、空白差の原因調査済み・修正設計未承認、採用/全再解析/配信未実施。次は原文を保持した商品照合の空白差対処について影響範囲と誤一致を調査する。新規GOや委任有効化はない。
+
+
+## 2026-09-13 連続空白対応の導入依頼と並行作業確認
+
+PO原文「とりあえず連続する空白は1つにする仕組みを導入して様子見」。連続空白対応の導入意思を受領。設計セッションの自動実装役化・新エージェント起動・番号付きマージGOとは扱わない。
+preflight成功、本店はorigin/mainより196コミット遅れ・台帳以外未保存30件。専用文書机96fe0894はclean。origin/main c22ad508にはPR3476時間制限修正が含まれていることをgit logで確認。本セッションによる本番配備確認は未実施。過去の「100秒未修正」は過去観測であり最新状態を断定する根拠にしない。
+
+固定729明細の非公開コピー（recon14:49と同じSHA）で設計案を検算。隔離Pythonプロセス内でmatch_pid_with_workの局所入力だけを変更し、連続半角空白U+0020の2個以上を1個へ変換。商品名・商品除外照合に使う状態/メモと検索/除外語のコピーへ同じ変換、RAW/マスタ本体は変更しない。結果: 商品特定552→562、既特定552の商品ID/特定boolean変更0、入力保持true、DB接続0、Gemini0。戻り値差分15件中、10件は前回の未特定からPM0263が8/PM0264が2、5件は同商品同候補でbasisの空白表記のみ変化。正解ラベル・状態/要確認全体・本番改善は未検証。非公開証跡/tmp/line-space-design-cohort-private.json（恒久保存ではない）。
+
+公式ledger-viewでrelease/product-name-space-match-implがREVIEW/PR3473と確認。GitHub直接読取ではOPEN、HEAD a618c147bac99296c46cd4647d7cec0e0ff456a6、main c22ad508取込済み。製品6ファイル中tcg_analyzer_svc.pyが本案と重複。別担当がGO3473を受領して最終CI/反映を進めている記録あり。本セッションでそのGOを流用しない。
+PR3473版tcg_analyzer_svc.py:518 match_product_name_spaceは検索語に日本語を含み空白なしの場合だけ、商品名から半角/全角空白を除いた全体一致を追加する。今回の30th CELEBRATIONは検索語に空白があり日本語がなく、この追加経路の対象外。同:527のmatch_pid_with_workは候補選択をselect_product_candidatesへ分離しており、旧版に対する本案をそのまま適用してよいとは判定しない。根拠はgit show origin/release/product-name-space-match-implの該当関数とgh pr view 3473。台帳の重複時停止規則に従い製品実装/カード発行を停止。推奨順序は3473反映後の実物を基点に本案を追加し、既存293名称/96設計例・除外/R5を回帰確認すること。
