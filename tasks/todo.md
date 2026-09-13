@@ -44,6 +44,7 @@
 | VPS runner登録（ADR-078） | PO待ち | 2026-06-15予定日到来も未実行。現在 qa-smoke 未稼働のまま | PO GOを待って `docs/runbooks/vps-runner-setup.md` に従い実行 | memory/project_vps_runner_plan.md / ADR-078 | 2026-06-17 |
 | Meta App Review 申請 | PO待ち | ドキュメント整備済み・動画未撮影 | PO が申請動画を撮影 → Agent がレビュー申請書類を提出 | memory/project_meta_app_review_progress.md | 2026-06-17 |
 | discord-gateway live受信の LLM 解析 env 注入（Issue #1154） | PO待ち | gateway は idle(bot token未設定)・DATABASE_URL/GEMINI_API_KEY 未注入を docker inspect で確認。live化した瞬間に DB接続失敗+LLM不発 | PO が live化判断 → compose の discord-gateway に DATABASE_URL/GEMINI_API_KEY 追加 + bot token 設定 + 実機確認 | Issue #1154 / docker-compose.yml | 2026-06-17 |
+| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | PR3479。2回目CI3260成功/95skip/8setup error。引数不備は解消、control初期化後の索引作成で停止 | DDL完了後の初期行挿入へ順序補正し再CI。設計追補自己審査APPROVE、実装検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-CI-02 | 2026-09-13 |
 | (follow-up) ParseReviewPage の Phase A 在庫スキップ警告コードの撤去検討 | Agent | Option Z で Discord 承認が在庫を触らなくなり phaseAWarning が発火しない dead code 化。害は無いが整理候補 | 低優先。次の在庫系PRに同梱可 | frontend ParseReviewPage.tsx (phaseWarning) | 2026-06-17 |
 
 ---
