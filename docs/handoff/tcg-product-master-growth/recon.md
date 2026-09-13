@@ -1018,3 +1018,24 @@ POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関�
 実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
 
 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。
+
+
+### PR #3476 マージ・配備確認（2026-09-13）
+
+- PO原文「GO #3476」を2026-09-13 15:14 JSTに受領し、PR本文のGO記録へ逐語転記。委任GOの自己有効化は行っていない。
+- HEAD bd8306ed52ecd86b947d505773bdf9ccdf2c19c1 の製品差分は時間制限2行のみ。Backend CI 34741872204成功、承認チェック34742291130成功を設計担当がGitHubから直接確認。
+- 正規マージラッパー実行成功。PR #3476は2026-09-13 15:16:21 JSTマージ済み、merge SHA c22ad508993a1c7df679d51e01f08080dc3c341d。
+- 自動配備 https://github.com/shingo-ops/salesanchor/actions/runs/34742337546 はsuccessを直接確認。
+- 本番workerへの読み取り確認で、task属性は `tcg.extract_source_message 300 330`。コンテナはrunning、起動日時2026-09-13 15:18:34 JSTでマージ後の再起動を確認。抽出APIを追加実行せず、DB・投稿状態は更新していない。
+- 状態: 設計自己審査済み／PO実装・マージ承認済み／実装・マージ・本番設定反映済み。対象投稿の本番再抽出は未実施、実投稿の解消判定は未完了。次は対象1件の再抽出完了・明細・所要時間を確認する。
+
+### 本番1件の再抽出・解析完了（2026-09-13）
+
+- 前節の次の一手に対しPO原文「次を進める」を受領。対象job713b8823-3148-4aec-bf43-0621fc470eb0、source27a4b1fc-19bc-4367-8da3-cae3ba44f729の再実行と結果確認に限定。追加配信・他job・製品変更は実施していない。
+- 事前SELECTでerror、items0、原文is_active=true/superseded_by=NULL。原文は先行private_snapshotと完全一致（raw単体SHA d4c1491e462e78e683c157b1b04cc57655381552834852e2a71655d4274890e2。先行input_sha256は入力集合のハッシュで別物）。Celery active/reserved/scheduledで対象0、auto_analyze=1、soft300/hard330を直接確認。
+- 管理画面のブラウザー接続は既存プロファイル使用中、browser skillに必要な実行ツールも未提供。既存設計§12.3と同じretry_extraction(job_ids=[固定ID],scope=None)をSSH経由で1回呼び出した。直前にID/状態/原文/明細0を再照合。独自SQLで成功状態を作らず、既存関数によるerror→pendingと通常Celery処理を使用。
+- 15:30:46 JST、enqueued=1/skipped=0。task91ff4091-5f77-4187-89b0-7df75b5b3870のworkerログを直接取得。15:30:47.640抽出呼出し、15:33:08.440解析開始、15:33:13.837成功、task所要146.425139秒。抽出呼出しから解析開始まで約140.8秒（保存を含む）、解析・保存約5.4秒。純粋なAPI通信時間とは区別する。
+- 事後DB確認: job=done/error_message=NULL、extraction_items147、analysis_results147、pid_resolved147/unit_resolved147/needs_review0。Condition内訳Sealed box73、Damaged sealed box74、StatusはIn Stock147。
+- 原文の独立した価格行抽出147件とline_end集合が一致、欠落・重複0。数量・価格・単位・解析後数量・解析後価格の5項目×147=735照合は差異0。事前原文行全体も不変。前回の原文照合済み抽出との商品名/数量/単位/状態/備考/行終端/作品IDは同一。raw価格のカンマ表記だけ差があり、数値147件は一致。解析の数量・価格・Condition・Status・備考・商品/単位特定フラグは前回純関数検証と一致。
+- 状態: 当該1件は通常の本番経路で抽出・解析まで完了、100秒制限による失敗の解消を実測。全投稿の300秒以内・全体正答率を保証するものではない。既知マスタ型番3商品5明細の不整合は別課題。配信処理は未実行。
+- 非公開の前後スナップショット: /private/tmp/shinsoku-retry-before-20260913.json、/private/tmp/shinsoku-retry-after-20260913.json（0600）。原文や全明細をrepoへ公開しない。
