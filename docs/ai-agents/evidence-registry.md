@@ -2932,3 +2932,5 @@ EV-20260913-PRODUCT-NAME-SPACE-CI: 製品PR3473/HEADe484f168、6製品+17文書/
 EV-20260913-PRODUCT-NAME-SPACE-GO: PO原文「GO #3473」を受領、承認時HEADe484f168。親がpreflight/clean/.pr-number/HEADを直接照合し、確認済みmainc22ad508（6製品変更0）追従と通常merge/autodeployのカードを既存担当へ引き継ぎ。カード違反0。PO本人の承認でありAI代理GOではない。文書PR3466/B便データ操作は対象外。結果未確認、reconのGO3473節参照。
 
 EV-20260913-PRODUCT-NAME-SPACE-RELEASE: PO GO3473に基づき正式merge8d5aa581（15:39:45 JST）/配備34743294988成功。親もPR API・実pytestログ3260passed/95skip/63.82%・配備HEAD・今回backup7.6M生成・公開HTTP200/DB等connectedを直接確認。6製品SHA維持は既存担当が照合。実投稿再解析/精度測定/商品登録/3シート配信/復元試験なし。文書PR3466は別途未マージ。根拠: docs/handoff/tcg-product-import/product-name-space-release-result.json とrecon完了節。
+
+EV-20260913-PRODUCT-CSV-B-PREP: PR直前までのPO指示に基づく文書準備。実取込4関数AST/メモリモデル180例期待値一致、DB接続0。商品commitと履歴commitの間、post-write ValueError時の返却件数不一致を識別。8商品変更前後と候補上書き草案を固定。実PG/QA/個別値PO確認未完了、同一AI自己審査REVISE、実行カード未発行。design§19/reconとkeyword-import-partial-audit.jsonを根拠とする。push/PR更新/製品/本番操作なし。

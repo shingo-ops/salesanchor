@@ -845,3 +845,12 @@ GO記録更新により旧process run34742742062がcancelled、後続34742756998
 詳細はproduct-name-space-release-result.json。旧release-result.jsonはPR3438用のまま保持。B便8商品更新/44登録はREVISE、再解析/3シート配信未実施。文書PR3466は後続の承認/公開・配備カード/検証記録だけのPRへmain同期し、保存更新する。文書PRのマージGOは未受領。次の一手はB便の未解決受入条件を設計相談で確定すること。
 
 後処理：製品PR本文への内部backup名等の詳細追記は実装担当側の自動承認審査で公開範囲を理由に拒否された。制限を変更せず、公開済みPR/merge/run成功と公開HTTP成功だけの追記へ縮小し、通常審査で承認・反映済みとの担当報告を受領。生報告はCARD-PRODUCT-NAME-SPACE-RELEASE-01-public-final.json。文書PR3466ではtasks/todo.mdの1行更新を削除宣言へ含め忘れprocess gateが失敗したため、実numstatに基づき本文の宣言を修正。検査設定の変更なし。
+
+
+### B便・離席中のPR直前準備（2026-09-13）
+
+POのPR直前まで進行指示を受領。preflight成功、本店dirty30/226behindを保持し既存専用文書worktreeで継続。最新main1a8eed69a8d4e1c17cefc7dcef579f63493b17ddの追加8文書を同期し、証拠台帳の双方追記を保持。既存PR3466はOPEN、今回の変更はpush/PR提出しない。
+
+設計§19に制御経路・三者照合・実行前条件・代替案・自己審査REVISEを保存。実取込4関数のASTとメモリ永続化モデルで180ケースを直接実行、期待値一致/DB接続0。実体だけ保存済み、44件保存済みでも返却43件、履歴44件でもjob runningをモデルで識別。実PG/本番障害の実測ではない。8商品変更前後と候補修正案をkeyword-b-review-plan.jsonへ固定。元CSVは不変。正式カード未発行、実装役は起動せず、製品/DB/本番変更なし。
+
+保存物はkeyword-import-partial-audit.json/.py.txt、keyword-b-review-plan.json、既存design/recon/台帳。未完了は個別値と実投稿正解、稼働QA隔離、原子的更新と実PG部分失敗検証。これらを完了と創作せず、登録可能の合格は保留。
