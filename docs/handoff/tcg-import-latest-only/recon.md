@@ -466,6 +466,14 @@ SQL SHA256 0c68042e6de9b2c205916cf7f8c2f9d138dbe845e74a6d38c2b0a7204f783efa、�
 
 親がGitHubでPR3479 https://github.com/shingo-ops/salesanchor/pull/3479、HEAD5edbe18379091057fde28eafcb7c8ea01decb05f、通常PRを確認。担当の公式wrapperによる.pr-number3479と自台帳登録も照合。main8d5aa581への別便更新により、共通台帳2件だけ競合。新SQL/試験/登録行の競合は0。自分の追記を既存文書中へ移し、他者の全記録を保持した候補2件をgit merge-fileで照合し両方終了0。製品コード不変、DB実行なし。追記位置の文書修正後にCI開始を確認する。
 
+## 第2便の初回実PG結果と検証経路の訂正（2026-09-13）
+
+親がCI job103687400896の実ログを取得。HEAD eab1609b、3260 passed/95 skipped/8 errors/309 warnings、106.81秒、coverage63.82%。新規8試験名すべてがsetup errorで列挙された。bootstrapのqueryが空tupleをcursor.executeへ渡し、SQL内の%をパラメータと解釈してIndexErrorになった。受入試験は未合格。公式Psycopgのexecute(query, vars=None)とパラメータ規則を直接確認（https://www.psycopg.org/docs/cursor.html / https://www.psycopg.org/docs/usage.html 、2026-09-13、Context7利用不可の許可済み代替）。既定値Noneの1行修正を同一AIで査定APPROVE、同じ担当へカード発行。
+
+既存migration-full-dryrun job103687353037は128 SQLの2周成功だが、.github/workflows/migration-test.yml:1306-1312,1341-1346の時期フィルターで今回のSQLは対象外。以前の「全件ドライランで本SQLも確認できる」という想定は誤り。成功を新SQLの実行証拠には使わない。新SQLのTCG有りでの実適用/反復は指定8群の隔離PGを根拠とし、全登録SQLとの組合せ実行は未確認として保持する。CI設定は変更しない。
+
+run-guard-evaluation.js:28はmainが祖先であることを要求。公開済みの自ブランチへ指定main8d5aa581を同じ担当が通常統合しHEAD3c0bc15e、親も実在を確認。新SQL/試験hashと登録1行を保持。新規GO/マージ/本番なし。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)

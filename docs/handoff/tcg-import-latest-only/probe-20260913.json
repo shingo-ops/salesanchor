@@ -2425,5 +2425,23 @@
     "acceptance": "REVISE pending CI",
     "merged": false,
     "production": false
+  },
+  "stage2_ci_first": {
+    "head": "eab1609b1bf202c57fca2134952047abf4b1f054",
+    "pytest_job": 103687400896,
+    "passed": 3260,
+    "skipped": 95,
+    "errors": 8,
+    "warnings": 309,
+    "coverage_percent": 63.82,
+    "seconds": 106.81,
+    "stock_cases": "all8 named as fixture setup errors; none passed",
+    "cause": "empty tuple parameter binding on raw migration SQL",
+    "full_dryrun_job": 103687353037,
+    "full_dryrun_sql_count": 128,
+    "full_dryrun_rounds": 2,
+    "new_sql_in_full_dryrun": false,
+    "main_sync_head": "3c0bc15e9c9952b4a29fa7774357c36e887b1999",
+    "acceptance": "REVISE"
   }
 }

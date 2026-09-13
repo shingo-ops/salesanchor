@@ -70,6 +70,8 @@ EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの�
 
 EV-20260913-LINE-STORAGE-PR: PR3479 HEAD5edbe183をGitHub/.pr-number/remoteで直接確認。提出直前のmain更新で共通台帳2件が競合。自記録のみ追記位置を既存本文中へ調整し、他者記録を保持して読取統合検査。実PG開始待ち、検収REVISE/GO未発行/マージと本番なし。
 
+EV-20260913-LINE-STORAGE-CI-01: PR3479 eab1609bのCI実ログで3260成功/95skip/新規8群setup error、coverage63.82%。queryの空tuple渡しを公式仕様で照合、1行修正へ。全件dryrun128SQL2周成功だが新SQL対象外、合格根拠には不採用。main通常統合3c0bc15eで製品hash保持、GO/本番なし。
+
 ```text
 id: EV-20260910-LINE-ACCURACY-01
 date: 2026-09-10
