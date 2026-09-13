@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| Geminiの商品マスタ参照・作品IDのみ判断 | Agent | PR3458 GO受領、44fac147 CI2710成功、main追従 | 最新HEAD CI合格後にマージ/本番反映・固定最新取込で比較。原文差異は停止、精度未確認・配信0 | PR3458 / docs/handoff/tcg-product-master-growth/recon.md / EV-20260912-LINE-WORK-ID | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | Agent | 比較専用実装作成、ローカル静的チェック通過。設計PR3462は未マージ | 模擬/実PG CI確認と実装PR提出。本番比較・採用・配信は未実施 | docs/handoff/tcg-product-master-growth/recon.md / PR3462 / CARD-LINE-WORK-COMPARE-03 | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AL4ボタン実装・root検収APPROVE。共通100/旧305、266試験/72表示組/24操作組成功 | PR3461へ実装保存・最新CI確認、番号付きGO待ち。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / EV-20260913-FRONTEND-AL-IMPLEMENTATION | 2026-09-13 |
