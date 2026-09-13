@@ -24,3 +24,6 @@ root直接実行:
 am-implementation-manifest.jsonは製品3hash、archive hash、checkpoint内証跡hashを保持。checkpointは再現スクリプト/JSON/画像/ログで、依存物とbundleを含まない。prepare.cjsの作業パスを復元先へ合わせ、依存導入後に生成しserver.cjs→browser.cjs/operations.cjsで再現する。
 root実物照合・ローカル検収APPROVE。維持は32回帰と既存CI、新CIなし。表/報酬3/カレンダー色は別便。本便revertで戻せDB復元不要。
 PR3468実装保存、最新main統合後品質/CI確認へ。今回番号付きGO/マージ/本番は未実施。既存GO3461等は転用しない。
+
+
+2026-09-13 統合後確認: main b52a4defを通常merge（ad093b7b）。台帳末尾競合は両側の記録を保持し、完全同文の重複1件だけ整理。製品3hash/共有7hash不変。root直接実行で28files/311tests（coverage statements15.1%）、check:all（218warnings/0errors）、build、Storybookすべてexit0。ログはcheckpoint内am-integrated-*.log。merge時フックの対象外ItemComparison/reviewIssues既存59warningsは記録し、チェック無効化/製品修正なし。統合後の構文母数はmain108/305→本便114/299（本便+6/-6、他便追加8）。元の106/299検収結果を上書きしない。PR3468へ保存、最新GitHub CIと今回番号付きGO待ち。マージ/本番反映は未実施。

@@ -15,7 +15,7 @@
     }
   ],
   "archive": "am-implementation-checkpoint.tar.gz",
-  "archiveSha256": "99596896baa56e89f8bdcd7d1c5c6df18cd6afd80ce0552cc15a165141bc9ebf",
+  "archiveSha256": "da1e628605142d4c45cec2320adbd6d263c7cb2e66e22c4865b86e43a7bd3d7e",
   "files": [
     {
       "file": "am-generator-build.log",
@@ -40,6 +40,22 @@
     {
       "file": "am-generator-unit.log",
       "sha256": "7f44bac375e23a73a3d498656867bc6e99f2feacce2ab8b5d193edfa5da59754"
+    },
+    {
+      "file": "am-integrated-build.log",
+      "sha256": "c9742826c9634429297b7fa0534ca975be8c4ffc06984963a457eadb7e13a66e"
+    },
+    {
+      "file": "am-integrated-checkall.log",
+      "sha256": "89211a8f6381e135fadc8fe5e4407b57456738f61be5b87ca896089b8ec1233f"
+    },
+    {
+      "file": "am-integrated-coverage.log",
+      "sha256": "b0f3e79518210c040922079b300dbddcfa03582eddbb64b5338b338e1606ea43"
+    },
+    {
+      "file": "am-integrated-storybook.log",
+      "sha256": "1672ae417cb1cbcdd96e7d2b290bb02b7c2bc64bc6809f557cbe8021683f35a4"
     },
     {
       "file": "browser-result.json",
@@ -78,6 +94,14 @@
       "sha256": "1b8442f1da616a61d6af0005dbc4a90a4216150dd4cfbd929557bea2f25a107b"
     },
     {
+      "file": "integrated-head-counts.json",
+      "sha256": "81f9352715e8e0a21769849e4c5d1472a01044ff3d2bc3c51a24c7f5d5fc4e14"
+    },
+    {
+      "file": "integrated-main-counts.json",
+      "sha256": "667247338d4e9966a654f26d3fb10eeed09844c1b18c1a8a7b1f0398505f80e3"
+    },
+    {
       "file": "inverse.json",
       "sha256": "2560019b935e0e4c468fa732fa53677af6edd2df312e3d6eff9f5cb815af8800"
     },
@@ -111,5 +135,25 @@
   "counts": {
     "common": 106,
     "legacy": 299
+  },
+  "integration": {
+    "main": "b52a4def309d20d09f327ab19efcea0ccaacf3e5",
+    "head": "ad093b7b",
+    "unitFiles": 28,
+    "unitTests": 311,
+    "checks": [
+      "coverage",
+      "checkall",
+      "build",
+      "storybook"
+    ],
+    "countsMain": {
+      "common": 108,
+      "legacy": 305
+    },
+    "countsHead": {
+      "common": 114,
+      "legacy": 299
+    }
   }
 }

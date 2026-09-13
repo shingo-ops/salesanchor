@@ -2733,3 +2733,5 @@ EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
