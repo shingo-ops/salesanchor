@@ -983,3 +983,8 @@ POが限定修正・テスト追加の確認に「進める」と回答。設計
 寿命感知FakeClientはfactoryごと新規生成、ModelsはClient本体を保持しない。旧式の早期close検出1、text正常/空/None3、generate/text例外時close2の計6試験を既存比較テストへ追加。生成API使用0。make lint-ci終了0、ruff成功/Bandit高重大度0、mypyは既存警告（当該既存unused-ignoreを含む）で完全合格とは称さない。Docker未稼働につきローカルpytest未実行、実PG/単体は既存GitHub CIで確認する。
 
 POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関係を質問された。通常抽出はgemini_extraction_svc.py:185でclient変数保持、tcg_extraction.pyの100秒soft limit経路。比較サービスは通常抽出から参照されない（rgでcall_work_model定義1件のみ）。今回の接続保持不具合とは別の停止である。商品マスタを含むprompt追加が応答時間へ与えた影響は未測定で、因果を断定しない。タイムアウト修正/再抽出はこのカードに追加しない。
+
+
+### PR #3472 CI確認
+
+製品HEAD0197109272bdcfefab0cc1e447bdb7ad5d636552、Backend CI34739377763/job103676363729は2819 passed/95 skipped/失敗0、119.19秒、coverage63.80%。追加6試験を含め成功。自己確認APPROVE（Client寿命限定）、独立レビューではない。PR3472提出済み、GO未受領のprocess-artifacts gate以外失敗/実行中0を確認。実Gemini/本番変更/採用/配信0。最新HEADの最終検証結果はPR本文へ記録する。
