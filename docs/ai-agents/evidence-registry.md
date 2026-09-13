@@ -2652,3 +2652,5 @@ follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 ```
 
 2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
+
+EV-20260912-LINE-WORK-ID本番結果: PR3441 merge ee455fb1、CI34729142077 2698成功/95skip、deploy34729320369成功。実Gemini1回はinvalid product source spanで停止。旧結果更新0・配信0、精度未確認・結果採用保留。詳細はdocs/handoff/tcg-product-master-growth/recon.md「2026-09-13 PR #3441本番反映・再抽出停止記録」。

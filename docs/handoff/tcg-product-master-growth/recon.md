@@ -933,3 +933,18 @@ SQLはPGOPTIONS=-c default_transaction_read_only=onを使用（上記名称1件�
 PO原文「進めてくれ」を受領。gh pr viewでOPEN、HEAD e25b09a9887cde20b0c2a561e681b50baf850c28、mergedAt null、mergeStateStatus DIRTYを確認。前回Backend CI34663978933は2606 passed/95 skipped、失敗0、coverage62.53%。番号付きGOの承認経路は未充足。
 
 origin/main 5b21b3b8の追従でevidence-registry、商品マスタREADME、tasks/todoの3ファイルに追記位置の競合を確認。両方のテーマを保持して解消。製品コードの競合なし。runnerは双方のmigration登録を自動統合。追従後HEADのCIで再検証し、結果はPR #3441本文に記録する。Gemini実呼出し・本番再解析・配信は未実施。
+
+
+## 2026-09-13 PR #3441本番反映・再抽出停止記録
+
+POから番号付きGO #3441を受領（実メッセージ先頭に鉤括弧あり、PR本文に原文保持）。最終HEAD5c96611fのBackend CI34729142077は2698 passed/95 skipped、失敗0、coverage62.94%。全必須チェック成功を確認後、gh-pr-merge-safe.sh --mergeで09:58 JSTにマージ。merge SHA ee455fb1ba4c7ad407ed6506ee4fe515fce371a8。Deploy34729320369はsuccess。本番git HEAD一致、backend ENGINE_VERSION=name-first-v7-gemini-work-id、prompt=raw-extraction-v4-work-id-p1、追加列参照成功を直接確認。正式/api/healthはDB/Redis/Celery connected。最初に誤った/healthへ確認し404、その後正規パスをスクリプトから確認して成功した。
+
+変更前: 最新import_job536422ed-79c7-4a87-a887-09a02b97968f（09:31 JST）は44有効投稿、done37/empty6/error1、762解析/要確認166。error1はSoftTimeLimitExceeded。3配信接続を確認。9表の追加退避18558933 bytes、SHA256 cfb28a14f61a09841d190712b7b8c21df1bdfba7c30a002a93893f48127f5fa4。取込リンク・原文・3接続設定もローカル非公開で退避。退避SQLとレポートは/tmp保存であり長期保管とは称さない。
+
+本番反映後10:02:55 JST: 最新取込内でOP型番・要確認を含む投稿を明細数・ID昇順で選択。source8eff4338-34a8-4ea1-9d89-b6a99edd8350、旧1明細/要確認1。SELECT限定・READ ONLY接続で旧抽出/解析と現マスタを読み、transaction終了後にGemini実呼出し1回。呼出し前後マスタSHA一致。戻り値error/items0、error_message=`v3 extraction has an invalid product source span`。v4も共通パーサーのこの文言を使うため旧prompt動作とは判断しない。
+
+観測事実: パーサーはL0001またはL0001-L0005形式を要求。新promptはLine ID範囲と入力の[L0001]を指示するが、厳密な出力形式の例がない。既存extract_messageは例外時raw_responseを空にするため、今回の応答表記そのものは未確認。特定の括弧/区切り記号が原因とは断定しない。抽出エラーによりRAW一致比較と作品IDの正誤判定は成立していない。
+
+結果: 本番コード反映済み。新結果DB保存0、旧明細/訂正/解析更新0、配信0。精度向上未確認・結果採用保留。追加Gemini呼出しと再解析を停止。保留を解く設計は、行番号出力契約の明確化と非公開の診断記録、模擬応答の否定試験。POの検証失敗時停止指示により、本便では追加修正/再反映しない。同一AIの実装/自己確認であり独立レビューではない。
+
+一次根拠: PR https://github.com/shingo-ops/salesanchor/pull/3441 （GO原文・最終結果記録）、CI34729142077、Deploy34729320369、ローカル比較JSON SHA256 48b573dcc561e37db160c225afd5305c55524cdeac5ab06ab866165cdc9fd715。比較JSONは顧客情報を含むためリポジトリへ入れない。本番稼働と今回のデータ採用/配信を区別して保存した。
