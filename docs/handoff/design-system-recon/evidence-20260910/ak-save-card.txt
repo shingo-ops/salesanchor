@@ -1,0 +1,28 @@
+CARD-AK-SAVE-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AK-SAVE-02
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。path/原文/段階分離/L32照合○。
+担当: 同じbutton_generator。他者も作業中なので変更を戻さない。rootは文書・検収を完了してこのカード実行中に編集しない。
+目的: 検収済み12ボタンと設計/検証記録を保存する。
+許可と所有: 以下の明示ファイルのstage/commit、固定main ee455fb1ba4c7ad407ed6506ee4fe515fce371a8統合と追記文書競合解消。
+禁止: 製品追加編集、push/PR/remote merge/本番、新AI、保護/権限設定変更。
+根拠: rootによる通常144/pending48/操作36/再開6前後組成功、原文逆変換一致、本人品質全成功。manifestが固定hash正本。
+手順0: manifestのproducts4件を実ファイルと照合し、不一致なら停止。statusを確認する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git status --short
+手順1: 指定ファイルだけstageして検査する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git add -- docs/ai-agents/evidence-registry.md docs/handoff/design-system-recon/evidence-20260910/ak-implementation-checkpoint.tar.gz docs/handoff/design-system-recon/evidence-20260910/ak-implementation-manifest.json docs/handoff/design-system-recon/evidence-20260910/ak-page-form-card.txt docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md docs/handoff/design-system-recon/evidence-20260910/ak-save-card.txt docs/handoff/design-system-recon/recon.md docs/specs/design-system/design.md docs/specs/design-system/migration.md frontend/src/components/PageFormButtonMigration.test.tsx frontend/src/pages/companies/CompaniesPage.tsx frontend/src/pages/contacts/ContactsPage.tsx frontend/src/pages/suppliers/SuppliersPage.tsx tasks/todo.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff --cached --check
+手順2: 保存commitを作り、実在を確認する。hookが製品を変更したら次へ進まず報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git commit -m "feat: unify twelve page form actions with Button"
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git log -1 --format=fuller
+手順3: 固定mainを統合する。予測されるevidence-registry末尾追記の競合は両側原文を全て残して連結する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git merge ee455fb1ba4c7ad407ed6506ee4fe515fce371a8 --no-edit
+手順4: 文書競合がある場合、追記同士だけなら双方原文を保持して解消する。製品競合・同じ事実の意味的衝突は止めてrootへ返す。
+必要な解消ファイルだけstageし、git commit --no-editで統合を確定する。競合なしで確定済みなら追加commit不要。
+手順5: 製品4hashを再照合し、文書チェックとstatus/logを返す。pushせず停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && bash scripts/check-task-state.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git log -1 --format=fuller
+期待: 製品hash4/4保持、status空、最新mainを親に含むcommit。最後に全コマンドの原出力をrootへ返す。
+END OF CARD

@@ -39,6 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.services import line_source_names
 from app.services.tcg_import_progress import read_items, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
@@ -606,7 +607,10 @@ async def commit_pending_job(
     )
     db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
 
-    resolved_msgs, still_unresolved = resolve_suppliers(messages, db_suppliers)
+    if line_source_names.is_android(messages):
+        resolved_msgs, still_unresolved = line_source_names.resolve_android(messages, db_suppliers, await line_source_names.load_aliases(db))
+    else:
+        resolved_msgs, still_unresolved = resolve_suppliers(messages, db_suppliers)
     if still_unresolved:
         remaining_names = [u["display_name"] for u in still_unresolved]
         raise HTTPException(
