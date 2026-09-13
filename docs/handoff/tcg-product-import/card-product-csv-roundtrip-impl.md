@@ -66,4 +66,8 @@ Backend実PGは既存Docker可否を確認。不可なら未実施とし、親�
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl && git diff --check
 13製品だけの変更、7文書固定、依存lock変更0、全製品差分とSHA一覧、新規試験sourceを報告へ保存する。
 親が実差分/スクリーンショット/試験をレビューできる状態で停止。まだ製品commit/push/PR作成はせず、親の公開カードを待つ。
+実装詳細の明確化（固定設計の契約は変更しない）
+2MiB生バイト制限を先に検査する。csv.field_size_limitは同期読取のtry/finally内だけMAX_BYTESへ拡大し、awaitを挟まず元値へ必ず戻す。128KiB超セル、2MiB境界、読取例外後の復元を試験する。
+外側更新CSVはQUOTE_ALL。式先頭の可逆保護にはASCIIに加え全角＝＋－＠を含め、apostrophe/引用符/改行とともに往復試験する。Excelで保存・再読込後まで万能な式実行防止を保証しない。
+確認根拠: Python3.12 csv公式資料とOWASP CSV Injection（2026-09-13読取）。新しい依存や既存10列契約の変更はない。
 END OF CARD

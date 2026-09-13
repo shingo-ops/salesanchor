@@ -897,3 +897,7 @@ PO原文「合意、この内容を目標として進める、離席するので
 設計時のCSV codec対照：13種の空/日本語/空白/comma/quote/CRLF/式先頭/apostrophe値を語配列0〜2要素と商品名で組合せ、外側BOM CSV＋内側CSV＋可逆apostrophe処理の2379組が往復一致。設計用の純Python試作であり製品実装の試験ではない。実装後は現物codec/PGで検証する。frontend api.requestForm:173はPOST再送ループなしを直接確認。Playwright portはconfig.ts:20のPORT変数で固定可能、カード文言を実物へ合わせた。
 
 実装開始前停止の観測：公式new-worktree.sh96行がgrep部分一致のため、release-product-csv-roundtrip-designだけの実在を短いrelease-product-csv-roundtrip実在と誤判定。git worktree list --porcelainで実装場所なし、test -d失敗を親確認。cdガードの拒否は正常作動。script/guardを変更せず、部分一致しないrelease/product-csv-roundtrip-implへ正式カードを補正し同じ作成手順を使う。製品編集0。
+
+実装ソース保存時のガード停止：exec_commandのheredoc内の語削除SQLが実DBの不可逆操作として検出された。親の読取検索も同じ語の検出で拒否され、shellテキスト全体の誤分類と判明。permit/設定変更/SQL文字分割を行わず、通常の構造化tools.apply_patchでSQLをそのまま提示するコード編集として再申請し成功。DB接続/SQL実行はなし。正式編集経路で実装継続する。
+
+実装詳細の確認（2026-09-13）：2MiB未満でも標準csvのセル上限に達するため、同期読取のtry/finallyだけfield_size_limitを拡大して復元する方式を採用。生バイト2MiB制限は保持し、awaitを挟まない。大セル/境界/例外時復元を製品試験へ要求。OWASP公式 https://owasp.org/www-community/attacks/CSV_Injection を直接確認し、全角＝＋－＠も可逆保護対象に含め、外側更新CSVをQUOTE_ALLとする。Excel保存・再読込後まで万能な安全保証はしない。Context7不在の公式資料代替、固定設計§21の契約を満たす実装詳細としてカード追記。固定design SHAは変更しない。
