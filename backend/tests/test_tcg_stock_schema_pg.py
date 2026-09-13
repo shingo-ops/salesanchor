@@ -1,7 +1,7 @@
-"""Real disposable CI PostgreSQL contract. Source-removal negative case is not yet saved.
+"""Real disposable CI PostgreSQL contract, including source-removal refusal.
 
 Each fixture has its own database. CI service shutdown owns disposal.
-No source-removal acceptance is claimed until its blocked test can be saved.
+These tests require actual CI execution before PostgreSQL acceptance is claimed.
 """
 
 import copy
@@ -250,7 +250,25 @@ def test_event_integrity(pg):
     offer, event = make_applied(pg, refs)
     pg.commit()
     rejects(pg, lambda: query(pg, f"UPDATE {SCHEMA}.tcg_stock_events SET patch=%s WHERE id=%s", (Json({"quantity": 0}), event)))
-    # Source-removal negative acceptance remains unsaved pending authorization.
+    rejects(
+        pg,
+        lambda: query(
+            pg,
+            f"DELETE FROM {SCHEMA}.source_messages WHERE id=%s",
+            (refs["source"],),
+        ),
+        psycopg2.errors.ForeignKeyViolation,
+    )
+    assert query(
+        pg,
+        f"SELECT count(*) FROM {SCHEMA}.source_messages WHERE id=%s",
+        (refs["source"],),
+    ) == [(1,)]
+    assert query(
+        pg,
+        f"SELECT count(*) FROM {SCHEMA}.tcg_stock_events WHERE id=%s",
+        (event,),
+    ) == [(1,)]
     other_channel = query(pg, f"SELECT id FROM {SCHEMA}.supplier_channels WHERE id<>%s LIMIT 1", (refs["channel"],))[0][0]
     rejects(pg, lambda: query(pg, f"UPDATE {SCHEMA}.source_messages SET supplier_channel_id=%s WHERE id=%s", (other_channel, refs["source"])))
     rejects(pg, lambda: query(pg, f"UPDATE {SCHEMA}.source_messages SET line_posted_at=line_posted_at+interval '1 hour' WHERE id=%s", (refs["source"],)))
