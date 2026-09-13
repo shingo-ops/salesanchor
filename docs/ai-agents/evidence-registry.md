@@ -2940,3 +2940,5 @@ EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全
 EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
 
 EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する限定実装。固定729件で個別9種の誤候補除去/集合1件を保留、他719不変。正式CI未実行、ローカルlint/runner構文/diff成功。GO3481転用なし、本番未適用。recon CARD07節参照。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: PO「進める」で本セッション実装担当へ割当て。改訂2/カード08（設計PR3462 commit3b40ceea）に基づき新集合1/相互除外/登録安全性と商品86入力を実装。正式PG/CI待ち、本番登録・マージ・再解析未実施。recon CARD08実装着手節。

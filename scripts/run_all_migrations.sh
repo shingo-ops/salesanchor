@@ -632,3 +632,4 @@ run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
 run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
 run_sql migrations/20260913_020000_seed_onepiece_products.sql
 run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
+run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
