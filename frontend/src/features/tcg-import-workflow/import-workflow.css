@@ -25,3 +25,16 @@
 .pmg-workflow__error { color: var(--color-error); }
 .pmg-workflow__empty { color: var(--text-secondary); }
 @media (width <= 767px) { .pmg-workflow__stages { grid-template-columns: 1fr; } }
+
+.pmg-workflow__stage { display: flex; flex-direction: column; min-width: 0; }
+.pmg-workflow__stage-actions { margin-top: auto; padding-top: var(--space-4); display: grid; grid-template-rows: repeat(2, minmax(var(--space-10), auto)); gap: var(--space-2); }
+.pmg-workflow__stage-actions button { white-space: normal; }
+.pmg-workflow__segments { display: flex; height: var(--space-2); overflow: hidden; border-radius: var(--radius-sm); }
+.pmg-workflow__segment { flex-basis: 0; }
+.pmg-workflow__segment--succeeded { background: var(--success); }
+.pmg-workflow__segment--empty { background: var(--text-secondary); }
+.pmg-workflow__segment--failed { background: var(--color-error); }
+.pmg-workflow__segment--pending, .pmg-workflow__segment--running { background: var(--info); }
+.pmg-workflow__detail { min-width: 0; display: grid; gap: var(--space-3); }
+.pmg-workflow__detail details { padding: var(--space-3); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow-wrap: anywhere; }
+.pmg-workflow__raw { white-space: pre-wrap; overflow-wrap: anywhere; }
